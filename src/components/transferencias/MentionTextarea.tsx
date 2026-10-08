@@ -125,7 +125,7 @@ export function MentionTextarea({ id, name, rows = 16, placeholder, value, onCha
                 e.preventDefault();
                 selectUser(user);
               }}
-              className={`w-full text-left px-3 py-1.5 text-[13px] ${i === highlighted ? "bg-surface-hover text-fg" : "text-fg-muted hover:bg-surface-hover"}`}
+              className={`w-full text-left px-3 py-1.5 text-fs-3 ${i === highlighted ? "bg-surface-hover text-fg" : "text-fg-muted hover:bg-surface-hover"}`}
             >
               {user.name}
             </button>

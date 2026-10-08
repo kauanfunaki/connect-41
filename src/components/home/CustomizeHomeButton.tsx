@@ -130,7 +130,7 @@ export function CustomizeHomeButton({ selected, disponiveis, saveAction, resetAc
       </Button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Personalizar Home" maxWidth="max-w-lg">
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">
+        <p className="text-helper text-fg-muted mb-4">
           Escolha o que aparece na sua Home e em que ordem. Vale só pra você.
         </p>
 
@@ -143,7 +143,7 @@ export function CustomizeHomeButton({ selected, disponiveis, saveAction, resetAc
 
             return (
               <div key={slot}>
-                <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider mb-2">
+                <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wider mb-2">
                   {SLOT_LABEL[slot]}
                 </p>
                 <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
@@ -157,7 +157,7 @@ export function CustomizeHomeButton({ selected, disponiveis, saveAction, resetAc
                           onChange={() => toggle(entry.key)}
                         />
                         <label htmlFor={`widget-${entry.key}`} className="flex-1 min-w-0 cursor-pointer">
-                          <span className="block text-[13px] font-medium text-fg truncate">{def.label}</span>
+                          <span className="block text-fs-3 font-medium text-fg truncate">{def.label}</span>
                           <span className="block text-[11.5px] text-fg-muted truncate">{def.description}</span>
                         </label>
                         <div className="flex items-center gap-0.5 flex-shrink-0">

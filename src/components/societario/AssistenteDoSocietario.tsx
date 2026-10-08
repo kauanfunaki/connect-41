@@ -41,11 +41,11 @@ export function AssistenteDoSocietario() {
 
   return (
     <Card as="section" className="p-4 flex flex-col gap-3">
-      <h2 className="inline-flex items-center gap-1.5 text-[length:var(--fs-card-title)] font-semibold text-fg">
+      <h2 className="inline-flex items-center gap-1.5 text-card-title font-semibold text-fg">
         <Sparkles size={16} className="text-brand" aria-hidden />
         Assistente do Societário
       </h2>
-      <p className="text-[length:var(--fs-ui)] text-fg-secondary max-w-[62ch]">
+      <p className="text-ui text-fg-secondary max-w-[62ch]">
         Pergunte sobre a fila — o que está parado, o que está em exigência, o que dá para
         destravar. Ele lê os mesmos processos que você vê e{" "}
         <strong>não altera nada</strong>; toda mudança passa pelo seu “Aplicar”.
@@ -77,11 +77,11 @@ export function AssistenteDoSocietario() {
               O assistente parou antes de terminar — a resposta pode estar incompleta.
             </Aviso>
           )}
-          <p className="text-[length:var(--fs-ui)] text-fg whitespace-pre-wrap">{resposta.texto}</p>
+          <p className="text-ui text-fg whitespace-pre-wrap">{resposta.texto}</p>
 
           {propostas.length > 0 && (
             <div className="border-t border-border-soft pt-3 flex flex-col gap-2">
-              <p className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted">
+              <p className="text-micro uppercase tracking-wide text-fg-muted">
                 Sugestões — nada foi feito ainda
               </p>
               {propostas.map((p, i) => {
@@ -91,13 +91,13 @@ export function AssistenteDoSocietario() {
                     key={i}
                     className="flex flex-wrap items-center justify-between gap-2 border border-border rounded-md px-3 py-2"
                   >
-                    <span className="text-[length:var(--fs-ui)] text-fg">{descreverProposta(p)}</span>
+                    <span className="text-ui text-fg">{descreverProposta(p)}</span>
                     {feito === "ok" ? (
-                      <span className="text-[length:var(--fs-2)] text-success-fg">aplicado</span>
+                      <span className="text-fs-2 text-success-fg">aplicado</span>
                     ) : (
                       <div className="flex items-center gap-2">
                         {typeof feito === "string" && (
-                          <span className="text-[length:var(--fs-2)] text-danger">{feito}</span>
+                          <span className="text-fs-2 text-danger">{feito}</span>
                         )}
                         <Button
                           size="sm"

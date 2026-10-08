@@ -154,10 +154,10 @@ export function HandoffForm({
           <input type="hidden" name="entityId" value={fixedEntity.entityId} />
           {/* Rótulo/valor no padrão da ficha (era 11px sobre 14px). */}
           <div>
-            <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">
+            <p className="text-helper text-fg-muted mb-0.5">
               {fixedEntity.entityType === "COMPANY" ? "Empresa" : "Pessoa"}
             </p>
-            <p className="text-[length:var(--fs-body)] text-fg font-medium">{fixedEntity.entityName}</p>
+            <p className="text-body text-fg font-medium">{fixedEntity.entityName}</p>
           </div>
         </>
       ) : (
@@ -230,7 +230,7 @@ export function HandoffForm({
       {/* Grupo de caixas é <fieldset> com <legend> no estilo do rótulo de
           campo (30/09): o rótulo apontava para um id que não existia. */}
       <fieldset className="min-w-0 flex flex-col gap-1.5">
-        <legend className="text-[length:var(--fs-label)] font-medium leading-5 text-fg mb-1.5">
+        <legend className="text-label font-medium leading-5 text-fg mb-1.5">
           Setores de destino<span className="text-danger"> *</span>
         </legend>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 border border-border rounded-md px-3.5 py-3">
@@ -246,10 +246,10 @@ export function HandoffForm({
             />
           ))}
           {destinationOptions.length === 0 && (
-            <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhum setor disponível.</p>
+            <p className="text-helper text-fg-muted">Nenhum setor disponível.</p>
           )}
         </div>
-        <p className="text-[length:var(--fs-helper)] text-fg-muted">
+        <p className="text-helper text-fg-muted">
           Preenchido automaticamente quando o modelo escolhido já indica os setores — ajuste manualmente se precisar.
         </p>
       </fieldset>
@@ -288,7 +288,7 @@ export function HandoffForm({
       {selectedInOrder.length > 0 && (
         <div className="space-y-4 border-t border-border pt-5">
           {/* Título no estilo dos títulos de seção de formulário (FormSection). */}
-          <h3 className="text-[length:var(--fs-2)] font-semibold text-fg-muted uppercase tracking-wider">Instrução por setor</h3>
+          <h3 className="text-fs-2 font-semibold text-fg-muted uppercase tracking-wider">Instrução por setor</h3>
           {selectedInOrder.map((s) => (
             <CampoForm key={s.value} label={`Instrução para ${s.label}`} htmlFor={`instruction_${s.value}`}>
               <Textarea

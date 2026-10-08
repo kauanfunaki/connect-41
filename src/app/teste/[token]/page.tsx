@@ -73,7 +73,7 @@ export default async function TestePage({ params }: { params: Promise<{ token: s
 
         {link.type === "DISC" ? <DiscForm token={token} /> : <QuizForm token={token} questions={quizQuestions!} />}
 
-        <p className="text-[length:var(--fs-micro)] text-fg-muted mt-6 text-center">
+        <p className="text-micro text-fg-muted mt-6 text-center">
           Processo conduzido por {link.tenant.name}. Suas respostas são usadas apenas para este processo seletivo (LGPD).
         </p>
       </div>

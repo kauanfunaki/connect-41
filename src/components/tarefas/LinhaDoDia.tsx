@@ -36,10 +36,10 @@ export function LinhaDoDia({
         {ICONE[item.origem]}
       </span>
       <div className="min-w-0 flex-1">
-        <Link href={item.href} className="block text-[length:var(--fs-ui)] font-medium leading-snug text-fg hover:text-brand transition-colors break-words">
+        <Link href={item.href} className="block text-ui font-medium leading-snug text-fg hover:text-brand transition-colors break-words">
           {item.titulo}
         </Link>
-        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] text-fg-muted">
+        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-fs-2 text-fg-muted">
           <span>{ORIGEM[item.origem]}</span>
           <span aria-hidden>·</span>
           <span className="inline-flex items-center gap-1">

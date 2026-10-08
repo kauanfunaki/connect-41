@@ -100,12 +100,12 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
     <Card className="p-5">
       <div className="flex items-center gap-2 mb-1">
         <ClipboardList size={16} className="text-brand" />
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Teste</h2>
+        <h2 className="text-card-title font-semibold text-fg">Teste</h2>
       </div>
 
       {!link && (
         <>
-          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">Envie um link para o candidato responder um teste sozinho.</p>
+          <p className="text-ui text-fg-muted mb-3">Envie um link para o candidato responder um teste sozinho.</p>
           {/* O tipo e o "Enviar" na mesma linha: eram um em cima do outro,
               com o select numa coluna de 320px e o botão solto embaixo. */}
           {canManage && (
@@ -123,7 +123,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
 
       {link?.status === "PENDENTE" && (
         <>
-          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">
+          <p className="text-ui text-fg-muted mb-3">
             Aguardando resposta do candidato. Link expira em {link.expiresAtLabel}.
           </p>
           <div className="flex items-center gap-2 mb-3">
@@ -135,7 +135,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
               {copied ? "Copiado!" : "Copiar"}
             </Button>
           </div>
-          {emailNote && <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">{emailNote}</p>}
+          {emailNote && <p className="text-fs-2 text-fg-muted mb-3">{emailNote}</p>}
           {canManage && (
             // Era texto cinza sublinhado (30/09): botão não é link.
             <Button variant="secondary" size="sm" onClick={handleGerar} disabled={pending}>
@@ -148,7 +148,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
 
       {link?.status === "RESPONDIDO" && (
         <>
-          <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">Respondido em {link.submittedAtLabel}.</p>
+          <p className="text-fs-2 text-fg-muted mb-3">Respondido em {link.submittedAtLabel}.</p>
           {link.type === "DISC" ? (
             <AssessmentResult
               type="DISC"
@@ -170,7 +170,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
         </>
       )}
 
-      {error && <p className="text-[length:var(--fs-ui)] text-danger mt-3">{error}</p>}
+      {error && <p className="text-ui text-danger mt-3">{error}</p>}
     </Card>
   );
 }

@@ -52,8 +52,8 @@ export function EditarDocumentoCard({
   if (bloqueado) {
     return (
       <Card className="p-5 mt-4">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Corrigir documento</h2>
-        <p className="text-[length:var(--fs-helper)] text-fg-muted">
+        <h2 className="text-section font-semibold text-fg mb-1">Corrigir documento</h2>
+        <p className="text-helper text-fg-muted">
           Este documento já virou lançamento. Estorne antes de corrigir ou excluir — assim o
           financeiro não fica com valor diferente do da nota.
         </p>
@@ -65,8 +65,8 @@ export function EditarDocumentoCard({
     <Card className="p-5 mt-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Corrigir documento</h2>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted">
+          <h2 className="text-section font-semibold text-fg mb-1">Corrigir documento</h2>
+          <p className="text-helper text-fg-muted">
             {editadoEm
               ? `Corrigido à mão em ${editadoEm}. O que o XML dizia está na auditoria.`
               : "O XML é a fonte. Corrigir aqui faz o acervo divergir dele, e a mudança fica registrada na auditoria."}

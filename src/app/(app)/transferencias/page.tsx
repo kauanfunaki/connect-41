@@ -163,15 +163,15 @@ export default async function HandoffsPage({
                     <Selo tom={tomDaVariante(HANDOFF_PRIORITY_BADGE[h.priority])}>{HANDOFF_PRIORITY_LABEL[h.priority]}</Selo>
                   </div>
 
-                  <p className="text-[length:var(--fs-card-title)] font-semibold text-fg group-hover:text-brand transition-colors">
+                  <p className="text-card-title font-semibold text-fg group-hover:text-brand transition-colors">
                     {entityNames[h.entityId] ?? "(removido)"}
                   </p>
 
                   {h.message && (
-                    <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-1">{h.message}</p>
+                    <p className="text-helper text-fg-secondary mt-1">{h.message}</p>
                   )}
 
-                  <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
+                  <p className="text-helper text-fg-muted mt-1.5">
                     Solicitado por {h.requester.name} em{" "}
                     {formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
                   </p>

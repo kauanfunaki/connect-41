@@ -60,7 +60,7 @@ export default async function KanbanListPage() {
                   className="w-2 h-2 rounded-full flex-shrink-0"
                   style={{ background: sectorColors[sectorCode] ?? "var(--c41-sector-gestao)" }}
                 />
-                <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+                <h2 className="text-card-title font-semibold text-fg">
                   {sectorLabel(sectorLabels, sectorCode)}
                 </h2>
               </div>
@@ -77,8 +77,8 @@ export default async function KanbanListPage() {
                     style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
                     className="reveal-in p-4"
                   >
-                    <p className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">{p.name}</p>
-                    <p className="text-[length:var(--fs-2)] text-fg-muted">
+                    <p className="text-card-title font-semibold text-fg mb-1">{p.name}</p>
+                    <p className="text-fs-2 text-fg-muted">
                       {p._count.items} {p._count.items === 1 ? "item" : "itens"} ·{" "}
                       {p.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
                     </p>

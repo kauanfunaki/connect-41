@@ -147,7 +147,7 @@ export default async function ObrigacoesPage() {
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[1000px]">
                 <thead>
-                  <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-fs-1 uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Obrigação</th>
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Empresa" chave="empresa" />
@@ -190,7 +190,7 @@ export default async function ObrigacoesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className="block text-fg-secondary">{sectorLabel(labels, o.sectorCode)}</span>
-                        <span className="block text-[11px] text-fg-muted">kanban {o.pipeline.name}</span>
+                        <span className="block text-fs-1 text-fg-muted">kanban {o.pipeline.name}</span>
                       </td>
                       <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">{frequencyLabel(o)}</td>
                       <td className="px-4 py-3 text-fg-secondary">

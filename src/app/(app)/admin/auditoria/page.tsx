@@ -233,7 +233,7 @@ export default async function AuditoriaPage({
           <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
             <table className="w-full min-w-[760px]">
               <thead>
-                <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
+                <tr className="border-b border-border text-fs-1 uppercase tracking-wide text-fg-muted">
                   <th className="px-4 py-3">Quando</th>
                   <th className="px-4 py-3">
                     <FiltroDaColunaNaUrl rotulo="Usuário" chave="userId" opcoes={opcoesDeUsuario} />
@@ -265,7 +265,7 @@ export default async function AuditoriaPage({
                       </td>
                       <td className="px-4 py-3">
                         {detail ? (
-                          <span className="block max-w-[320px] text-[11px] text-fg-muted font-mono truncate" title={detail}>
+                          <span className="block max-w-[320px] text-fs-1 text-fg-muted font-mono truncate" title={detail}>
                             {detail}
                           </span>
                         ) : (

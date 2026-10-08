@@ -137,7 +137,7 @@ export default async function AgendaPage({
       <div className="flex-shrink-0">
         <PageHeader title="Agenda" subtitle={(podeAgendar ? VIEW_HELPER : VIEW_HELPER_SEM_REUNIAO)[view]} />
         {setoresComPrazo.length > 0 && (
-          <ul className="mb-3 -mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-fg-secondary" aria-label="Setores dos prazos">
+          <ul className="mb-3 -mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-fs-2 text-fg-secondary" aria-label="Setores dos prazos">
             {setoresComPrazo.map((code) => (
               <li key={code} className="inline-flex items-center gap-1.5">
                 <span className="size-2.5 rounded-[3px]" style={{ background: setores[code].cor }} aria-hidden />

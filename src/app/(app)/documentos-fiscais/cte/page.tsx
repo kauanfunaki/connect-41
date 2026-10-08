@@ -194,7 +194,7 @@ export default async function CtePage({
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                       <th className="px-3 py-2">Número</th>
                       <th className="px-3 py-2">Série</th>
                       <th className="px-3 py-2">Competência</th>
@@ -244,7 +244,7 @@ export default async function CtePage({
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                <p className="text-[12px] text-fg-muted">
+                <p className="text-fs-2 text-fg-muted">
                   {documentos.length} CT-e nesta página. O valor não vem na listagem — só dentro do
                   XML, por documento.
                 </p>

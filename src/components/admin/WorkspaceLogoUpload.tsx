@@ -99,7 +99,7 @@ export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogo
           className="hidden"
           onChange={handleFileChange}
         />
-        {error && <p className="mt-1.5 text-[12px] text-danger">{error}</p>}
+        {error && <p className="mt-1.5 text-fs-2 text-danger">{error}</p>}
       </div>
 
       <ImageCropModal

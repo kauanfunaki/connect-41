@@ -35,8 +35,8 @@ export default async function SetoresPage() {
                   style={{ background: s.color }}
                 />
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-fg truncate">{s.label}</p>
-                  <p className="text-[11px] text-fg-muted font-mono truncate">{s.code}</p>
+                  <p className="text-fs-3 font-medium text-fg truncate">{s.label}</p>
+                  <p className="text-fs-1 text-fg-muted font-mono truncate">{s.code}</p>
                 </div>
                 {!s.active && (
                   <Selo tom="neutro" className="flex-shrink-0">
@@ -54,7 +54,7 @@ export default async function SetoresPage() {
         </div>
       </div>
 
-      <p className="text-[11px] text-fg-muted mt-4">
+      <p className="text-fs-1 text-fg-muted mt-4">
         Setores não podem ser excluídos após criados (o código é referenciado em kanban,
         usuários e handoffs) — desative em vez de remover.
       </p>

@@ -84,12 +84,12 @@ export default async function CicloPage({
       />
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
+        <h2 className="text-card-title font-semibold text-fg mb-3">
           Avaliações {ciclo.evaluations.length > 0 && `(${ciclo.evaluations.length})`}
         </h2>
 
         {ciclo.evaluations.length === 0 ? (
-          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">Nenhuma avaliação registrada ainda.</p>
+          <p className="text-ui text-fg-muted mb-3">Nenhuma avaliação registrada ainda.</p>
         ) : (
           <>
             {/* No celular, uma linha por avaliação em vez da tabela de 560px com
@@ -125,7 +125,7 @@ export default async function CicloPage({
               <TabelaNoDesktop className="c41-tabela rounded-lg border border-border mb-4">
                 <table className="w-full min-w-[560px]">
                   <thead>
-                    <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                       <th className="px-4 py-3">Colaborador</th>
                       <th className="px-4 py-3">
                         <FiltroDaColuna rotulo="Média" chave="media" />

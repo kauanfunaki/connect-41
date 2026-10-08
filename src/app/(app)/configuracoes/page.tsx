@@ -60,12 +60,12 @@ export default async function ConfiguracoesPage() {
       <Secao titulo="Acesso" descricao="Seu papel e os setores em que você atua. Quem define é um administrador do workspace." icone={<ShieldCheck />}>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <dt className="text-[length:var(--fs-helper)] text-fg-muted">Papel</dt>
-            <dd className="text-[length:var(--fs-body)] text-fg mt-0.5">{roleLabel}</dd>
+            <dt className="text-helper text-fg-muted">Papel</dt>
+            <dd className="text-body text-fg mt-0.5">{roleLabel}</dd>
           </div>
           <div>
-            <dt className="text-[length:var(--fs-helper)] text-fg-muted">Setores</dt>
-            <dd className="text-[length:var(--fs-body)] text-fg mt-0.5">
+            <dt className="text-helper text-fg-muted">Setores</dt>
+            <dd className="text-body text-fg mt-0.5">
               {ctx.sectors.length > 0
                 ? ctx.sectors.map((code) => sectorLabel(sectorLabels, code)).join(", ")
                 : "Nenhum setor atribuído"}
@@ -101,7 +101,7 @@ export default async function ConfiguracoesPage() {
           href="/notificacoes"
           className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
         >
-          <span className="text-[13px] text-fg">Ver todas as notificações</span>
+          <span className="text-fs-3 text-fg">Ver todas as notificações</span>
           <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
         </Link>
         {/* 05/10/2026: os tipos que aparecem em cada aba do sino e da central. */}
@@ -109,7 +109,7 @@ export default async function ConfiguracoesPage() {
           href="/notificacoes?preferencias=abrir"
           className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
         >
-          <span className="text-[13px] text-fg">Escolher o que cada aba mostra</span>
+          <span className="text-fs-3 text-fg">Escolher o que cada aba mostra</span>
           <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
         </Link>
       </Secao>
@@ -153,8 +153,8 @@ function Secao({
           {icone}
         </span>
         <div className="min-w-0">
-          <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg leading-tight">{titulo}</h2>
-          {descricao && <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1 leading-relaxed max-w-[42ch]">{descricao}</p>}
+          <h2 className="font-display text-section font-semibold text-fg leading-tight">{titulo}</h2>
+          {descricao && <p className="text-helper text-fg-muted mt-1 leading-relaxed max-w-[42ch]">{descricao}</p>}
         </div>
       </div>
       <div className="min-w-0 space-y-3">{children}</div>

@@ -140,7 +140,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
           campo de texto ocupa o resto, e as bordas das colunas caem umas sob
           as outras de uma linha para a seguinte. */}
       <Card as="section" className="p-5">
-        <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-4">Dados pessoais</h2>
+        <h2 className="text-body font-semibold text-fg mb-4">Dados pessoais</h2>
         <FieldGrid columns="sm:grid-cols-6">
           <CampoForm label="CPF" htmlFor="cpf" className="sm:col-span-2">
             <Input id="cpf" name="cpf" type="text" defaultValue={defaults.cpf} placeholder="000.000.000-00" maxLength={14} />
@@ -167,7 +167,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
       </Card>
 
       <Card as="section" className="p-5">
-        <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-4">Endereço</h2>
+        <h2 className="text-body font-semibold text-fg mb-4">Endereço</h2>
         <FieldGrid columns="sm:grid-cols-6">
           <CampoForm label="CEP" htmlFor="zipCode" className="sm:col-span-2">
             <Input id="zipCode" name="zipCode" type="text" defaultValue={defaults.zipCode} placeholder="00000-000" maxLength={9} onBlur={handleCepBlur} />
@@ -194,7 +194,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
       </Card>
 
       <Card as="section" className="p-5">
-        <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-4">Dados bancários</h2>
+        <h2 className="text-body font-semibold text-fg mb-4">Dados bancários</h2>
         <FieldGrid columns="sm:grid-cols-6">
           <CampoForm label="Banco" htmlFor="bankName" className="sm:col-span-4">
             <Input id="bankName" name="bankName" type="text" defaultValue={defaults.bankName} maxLength={80} />
@@ -217,15 +217,15 @@ export function AdmissaoForm({ token, defaults }: Props) {
       </Card>
 
       <Card as="section" className="p-5">
-        <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-1">Dependentes</h2>
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">Filhos, cônjuge ou outros dependentes (imposto de renda / salário-família). Opcional.</p>
+        <h2 className="text-body font-semibold text-fg mb-1">Dependentes</h2>
+        <p className="text-helper text-fg-muted mb-4">Filhos, cônjuge ou outros dependentes (imposto de renda / salário-família). Opcional.</p>
 
         {deps.length > 0 && (
           <div className="space-y-4 mb-4">
             {deps.map((d, i) => (
               <div key={i} className="border border-border rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-[length:var(--fs-ui)] font-semibold text-fg">Dependente {i + 1}</span>
+                  <span className="text-ui font-semibold text-fg">Dependente {i + 1}</span>
                   {/* Era texto vermelho sublinhado (até 30/09): botão. */}
                   <Button variant="danger" size="xs" onClick={() => removeDep(i)}>
                     Remover
@@ -266,8 +266,8 @@ export function AdmissaoForm({ token, defaults }: Props) {
       </Card>
 
       <Card as="section" className="p-5">
-        <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-1">Documentos</h2>
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">PDF, JPG, PNG ou WEBP, até 10MB cada. Envie o que tiver em mãos — o RH confirma o restante depois.</p>
+        <h2 className="text-body font-semibold text-fg mb-1">Documentos</h2>
+        <p className="text-helper text-fg-muted mb-4">PDF, JPG, PNG ou WEBP, até 10MB cada. Envie o que tiver em mãos — o RH confirma o restante depois.</p>
         <div className="space-y-4">
           {DOC_FIELDS.map((d) => (
             <CampoForm key={d.field} label={d.label} htmlFor={d.field}>

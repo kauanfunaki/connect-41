@@ -134,7 +134,7 @@ export default async function ColaboradoresClientesPage({
         }
         acoes={
           ocultos > 0 ? (
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[length:var(--fs-2)] text-fg-muted">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-fs-2 text-fg-muted">
               <span>
                 {ocultos} colaborador{ocultos !== 1 ? "es" : ""} inativo{ocultos !== 1 ? "s" : ""} fora desta lista.
               </span>

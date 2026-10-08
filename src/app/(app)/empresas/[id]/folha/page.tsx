@@ -88,8 +88,8 @@ export default async function FolhaPage({
               href={`/empresas/${companyId}/folha/${c.id}`}
               className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors"
             >
-              <p className="text-[13px] text-fg">{MONTH_LABEL[c.month - 1]}/{c.year}</p>
-              <span className="text-[12px] text-fg-muted">
+              <p className="text-fs-3 text-fg">{MONTH_LABEL[c.month - 1]}/{c.year}</p>
+              <span className="text-fs-2 text-fg-muted">
                 {STATUS_LABEL[c.status]} · {c._count.entries} lançamento{c._count.entries !== 1 ? "s" : ""}
               </span>
             </Link>

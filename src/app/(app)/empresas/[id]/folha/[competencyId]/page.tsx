@@ -95,14 +95,14 @@ export default async function CompetenciaPage({
 
       {anomalies.length > 0 && (
         <div className="bg-surface border border-warning/30 rounded-lg p-5 mb-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Conferência assistida</h2>
-          <p className="text-[12px] text-fg-muted mb-3">
+          <h2 className="text-card-title font-semibold text-fg mb-1">Conferência assistida</h2>
+          <p className="text-fs-2 text-fg-muted mb-3">
             Pontos fora do padrão histórico — apontamento para revisão, não é cálculo trabalhista.
           </p>
           <div className="divide-y divide-border">
             {anomalies.map((a, idx) => (
               <div key={`${a.personId}-${a.kind}-${idx}`} className="py-2">
-                <p className="text-[13px] text-fg">
+                <p className="text-fs-3 text-fg">
                   <Link href={`/pessoas/${a.personId}`} className="text-brand hover:underline">{a.personName}</Link>
                   {" — "}{a.detail}
                 </p>
@@ -113,10 +113,10 @@ export default async function CompetenciaPage({
       )}
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Lançamentos</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-3">Lançamentos</h2>
 
         {competencia.entries.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhum lançamento ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhum lançamento ainda.</p>
         ) : (
           <div className="mb-3">
             {competencia.entries.map((e) => (

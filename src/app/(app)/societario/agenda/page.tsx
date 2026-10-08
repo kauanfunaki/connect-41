@@ -120,7 +120,7 @@ export default async function AgendaDePrazosPage({
               className={g.vencido ? "rounded-lg border border-danger/30 bg-danger-bg/40 px-3 pt-2" : undefined}
             >
               <h2
-                className={`text-[length:var(--fs-card-title)] font-semibold mb-1 ${
+                className={`text-card-title font-semibold mb-1 ${
                   g.vencido ? "text-danger" : g.chave === grupoAtual ? "text-brand" : "text-fg-secondary"
                 }`}
               >

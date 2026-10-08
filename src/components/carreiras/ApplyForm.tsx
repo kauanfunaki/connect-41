@@ -103,7 +103,7 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
           desciam o campo; a unidade foi para o R$ e o "min" do campo. */}
       <div className="border-t border-border pt-4">
         <fieldset className="space-y-3">
-          <legend className="text-[length:var(--fs-label)] font-medium text-fg">Algumas perguntas rápidas</legend>
+          <legend className="text-label font-medium text-fg">Algumas perguntas rápidas</legend>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <CampoForm label="Pretensão salarial" htmlFor="pretensaoSalarial" required helper="Por mês.">
               <Input id="pretensaoSalarial" name="pretensaoSalarial" type="number" inputMode="decimal" min={1} step="0.01" required prefix="R$" />
@@ -139,7 +139,7 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
 
       {/* Caixa no topo do texto: no celular a frase quebra em duas ou três
           linhas, e o `Checkbox` com rótulo centraliza a caixa no parágrafo. */}
-      <label htmlFor="consent" className="flex items-start gap-2.5 text-[length:var(--fs-label)] text-fg-secondary cursor-pointer">
+      <label htmlFor="consent" className="flex items-start gap-2.5 text-label text-fg-secondary cursor-pointer">
         <Checkbox id="consent" name="consent" value="true" className="mt-0.5" />
         <span>Autorizo o uso dos meus dados pessoais para participação neste processo seletivo (LGPD).</span>
       </label>

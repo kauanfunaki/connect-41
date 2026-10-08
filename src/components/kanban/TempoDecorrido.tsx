@@ -54,7 +54,7 @@ export function TempoDecorrido({
     <span className="inline-flex items-baseline gap-1.5" suppressHydrationWarning>
       <span className={`tnum ${className}`.trim()}>{formatarDecorrido(segundos)}</span>
       {mostrarApontamento && (
-        <span className="text-[11px] text-fg-muted tnum">
+        <span className="text-fs-1 text-fg-muted tnum">
           vale {minutos} min
         </span>
       )}

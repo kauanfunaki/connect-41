@@ -31,7 +31,7 @@ export function PrazoItem({ prazo, setores }: { prazo: PrazoDaAgenda; setores: S
     <Link
       href={prazo.href}
       data-dica={dica}
-      className="flex w-full min-w-0 items-center gap-1 h-5 pl-1 pr-1.5 rounded-[4px] border-l-2 text-[length:var(--fs-micro)] leading-none text-fg hover:brightness-95 dark:hover:brightness-125 transition-[filter]"
+      className="flex w-full min-w-0 items-center gap-1 h-5 pl-1 pr-1.5 rounded-[4px] border-l-2 text-micro leading-none text-fg hover:brightness-95 dark:hover:brightness-125 transition-[filter]"
       style={{ borderLeftColor: cor, background: `color-mix(in srgb, ${cor} 14%, transparent)` }}
     >
       <span className="flex-shrink-0 [&>svg]:size-[11px]" style={{ color: cor }} aria-hidden>

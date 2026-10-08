@@ -85,7 +85,7 @@ export default async function DepartamentosPage({
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {departments.map((d) => (
             <div key={d.id} className="flex items-center justify-between gap-4 px-4 py-3">
-              <p className="text-[13px] text-fg font-medium">{d.name}</p>
+              <p className="text-fs-3 text-fg font-medium">{d.name}</p>
               {canManage && (
                 <AcoesDoCadastro editarHref={`/empresas/${companyId}/departamentos/${d.id}/editar`} excluir={excluirDepartment.bind(null, d.id, companyId)} nome={d.name} />
               )}

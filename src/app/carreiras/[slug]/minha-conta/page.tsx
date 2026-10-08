@@ -74,15 +74,15 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
 
             {conta.testes.length > 0 && (
               <Card className="p-5 mb-4">
-                <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-3 inline-flex items-center gap-1.5">
+                <h2 className="text-body font-semibold text-fg mb-3 inline-flex items-center gap-1.5">
                   <ClipboardList size={16} className="text-brand" /> Testes para responder
                 </h2>
                 <ul className="space-y-2">
                   {conta.testes.map((t) => (
                     <li key={t.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                      <span className="min-w-0 text-[length:var(--fs-ui)] text-fg">
+                      <span className="min-w-0 text-ui text-fg">
                         {t.template?.name ?? (t.type === "DISC" ? "Perfil comportamental (DISC)" : "Teste")}
-                        <span className="text-fg-muted text-[length:var(--fs-2)]"> · até {formatInstantDate(t.expiresAt)}</span>
+                        <span className="text-fg-muted text-fs-2"> · até {formatInstantDate(t.expiresAt)}</span>
                       </span>
                       <Button href={`/teste/${t.token}`} variant="primary" size="sm">
                         Responder <ArrowRight size={13} />
@@ -101,8 +101,8 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                   <Card key={c.id} className="p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h2 className="text-[length:var(--fs-body)] font-semibold text-fg">{c.vaga.title}</h2>
-                        <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">
+                        <h2 className="text-body font-semibold text-fg">{c.vaga.title}</h2>
+                        <p className="text-fs-2 text-fg-muted mt-0.5">
                           {empresa} · inscrição em {formatCalendarDate(c.createdAt)}
                         </p>
                       </div>
@@ -118,7 +118,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                             <span
                               className={`h-1.5 rounded-full ${e.estado === "futura" ? "bg-border" : "bg-brand"} ${e.estado === "atual" ? "animate-pulse" : ""}`}
                             />
-                            <span className={`text-[length:var(--fs-micro)] ${e.estado === "atual" ? "text-brand font-medium" : e.estado === "feita" ? "text-fg-secondary" : "text-fg-muted"}`}>
+                            <span className={`text-micro ${e.estado === "atual" ? "text-brand font-medium" : e.estado === "feita" ? "text-fg-secondary" : "text-fg-muted"}`}>
                               {e.rotulo}
                             </span>
                           </li>
@@ -130,7 +130,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                       <ul className="mt-4 space-y-2">
                         {c.meetings.map((m) => (
                           <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
-                            <span className="min-w-0 text-[length:var(--fs-ui)] text-fg inline-flex items-center gap-1.5">
+                            <span className="min-w-0 text-ui text-fg inline-flex items-center gap-1.5">
                               <CalendarClock size={14} className="text-brand flex-shrink-0" />
                               Entrevista em {formatInstantDateTime(m.startAt, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                             </span>
@@ -153,7 +153,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
             </div>
 
             <Card className="p-5 mt-6">
-              <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-3">Meus dados</h2>
+              <h2 className="text-body font-semibold text-fg mb-3">Meus dados</h2>
               <AtualizarDados slug={slug} telefone={conta.telefone} />
             </Card>
 

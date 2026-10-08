@@ -115,7 +115,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       {doc.removedAtOrigin && (
         <Aviso icone={<AlertTriangle />} className="mb-4">
           <p className="font-semibold">Removido na origem</p>
-              <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-0.5">
+              <p className="text-helper text-fg-secondary mt-0.5">
                 O índice do SPED deixou de ter este documento — em geral porque o Portal Nacional
                 passou a mostrá-lo como cancelado ou substituído. Ele saiu da listagem, mas a linha
                 fica aqui: se já tiver virado lançamento, alguém precisa decidir o estorno.
@@ -127,7 +127,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       {estorno && (
         <Aviso icone={<AlertTriangle />} className="mb-4">
           <p className="font-semibold">Cancelada depois de lançada</p>
-              <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-0.5">
+              <p className="text-helper text-fg-secondary mt-0.5">
                 O emissor cancelou este documento e ele já tinha virado lançamento. O dinheiro está
                 lançado contra uma nota que não existe mais — o estorno é manual, no financeiro.
               </p>
@@ -135,7 +135,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       )}
 
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Documento</h2>
+        <h2 className="text-section font-semibold text-fg mb-4">Documento</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Tipo" value={TIPO_LABEL[doc.type]} />
           <InfoRow label="Emissão" value={formatCalendarDate(doc.issuedAt, { day: "2-digit", month: "long", year: "numeric" })} />
@@ -166,11 +166,11 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       </Card>
 
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Partes</h2>
+        <h2 className="text-section font-semibold text-fg mb-1">Partes</h2>
         {/* A direção é calculada, não guardada: é função do documento da empresa
             contra as duas pontas, e gravá-la criaria um campo que passa a mentir
             se o CNPJ do cadastro for corrigido. */}
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">
+        <p className="text-helper text-fg-muted mb-4">
           Direção: <span className="font-medium text-fg">{DIRECAO_LABEL[direcao]}</span>
           {direcao === "INDEFINIDA" && " — a empresa está nas duas pontas, ou em nenhuma"}
         </p>
@@ -183,8 +183,8 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       </Card>
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Destino</h2>
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">
+        <h2 className="text-section font-semibold text-fg mb-1">Destino</h2>
+        <p className="text-helper text-fg-muted mb-4">
           O que o BPO faz com este documento. É o único dos três eixos que é decisão nossa — origem e
           situação vêm de fora.
         </p>
@@ -253,8 +253,8 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           o espaçamento e o tamanho dos outros cartões da ficha. */}
       {doc.uploadedBy && (
         <Card className="p-5 mt-4">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Registro</h2>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted">
+          <h2 className="text-section font-semibold text-fg mb-1">Registro</h2>
+          <p className="text-helper text-fg-muted">
             Subido por {doc.uploadedBy.name} em {formatInstantDate(doc.createdAt)}.
           </p>
         </Card>

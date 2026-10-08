@@ -66,7 +66,7 @@ export default async function IaDoSocietarioPage() {
 
       {(!varreduraLigada || !ligado(AGENTE_CONTRATO)) && (
         // Revisão de 05/10: botão não é link — o caminho era texto azul no meio da frase.
-        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg-secondary">
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg-secondary">
           <p>
             {[!varreduraLigada && nome(AGENTE_VARREDURA), !ligado(AGENTE_CONTRATO) && nome(AGENTE_CONTRATO)].filter(Boolean).join(" e ")}{" "}
             {!varreduraLigada && !ligado(AGENTE_CONTRATO) ? "estão desligadas" : "está desligada"}. Um administrador liga em
@@ -79,7 +79,7 @@ export default async function IaDoSocietarioPage() {
       )}
 
       <section aria-labelledby="fila" className="mb-6 flex flex-col gap-2">
-        <h2 id="fila" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+        <h2 id="fila" className="text-card-title font-semibold text-fg">
           Esperando revisão ({pendentes.length})
         </h2>
         {pendentes.length === 0 ? (
@@ -95,13 +95,13 @@ export default async function IaDoSocietarioPage() {
               <li key={p.id}>
                 <Link href={`/societario/ia/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-2">
                   <div className="min-w-0">
-                    <p className="text-[14px] font-medium text-fg">{p.title}</p>
-                    <p className="text-[12px] text-fg-muted">
+                    <p className="text-fs-4 font-medium text-fg">{p.title}</p>
+                    <p className="text-fs-2 text-fg-muted">
                       {nome(p.agentCode)} · pedido por {p.createdBy?.name ?? "—"} em {formatInstantDate(p.createdAt)}
                       {p.confidence && ` · confiança ${CONFIANCA[p.confidence]}`}
                     </p>
                   </div>
-                  <span className="text-[13px] text-brand">Revisar →</span>
+                  <span className="text-fs-3 text-brand">Revisar →</span>
                 </Link>
               </li>
             ))}
@@ -111,40 +111,40 @@ export default async function IaDoSocietarioPage() {
 
       <section aria-labelledby="qualidade" className="mb-6 flex flex-col gap-2">
         <div>
-          <h2 id="qualidade" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+          <h2 id="qualidade" className="text-card-title font-semibold text-fg">
             Qualidade da IA, últimos 6 meses
           </h2>
-          <p className="text-[12px] text-fg-muted">
+          <p className="text-fs-2 text-fg-muted">
             Quanto do que a IA propõe é aprovado como veio, quanto precisa de ajuste e quanto é descartado — e quanto custou.
           </p>
         </div>
         {qualidade.length === 0 ? (
-          <p className="text-[13px] text-fg-muted">Ainda não há proposta para medir.</p>
+          <p className="text-fs-3 text-fg-muted">Ainda não há proposta para medir.</p>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {qualidade.map((q) => {
               const maior = Math.max(1, ...q.porMes.map((m) => m.total));
               return (
                 <Card key={q.agentCode} className="p-4 flex flex-col gap-3">
-                  <p className="text-[14px] font-semibold text-fg">{nome(q.agentCode)}</p>
-                  <dl className="grid grid-cols-3 gap-2 text-[12px]">
+                  <p className="text-fs-4 font-semibold text-fg">{nome(q.agentCode)}</p>
+                  <dl className="grid grid-cols-3 gap-2 text-fs-2">
                     <div>
                       <dt className="text-fg-muted">Propostas</dt>
-                      <dd className="text-[18px] font-semibold text-fg tabular-nums">{q.total}</dd>
+                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{q.total}</dd>
                     </div>
                     <div>
                       <dt className="text-fg-muted">Com ajuste</dt>
-                      <dd className="text-[18px] font-semibold text-fg tabular-nums">{pct(q.taxaDeEdicao)}</dd>
+                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{pct(q.taxaDeEdicao)}</dd>
                     </div>
                     <div>
                       <dt className="text-fg-muted">Rejeitadas</dt>
-                      <dd className="text-[18px] font-semibold text-fg tabular-nums">{pct(q.taxaDeRejeicao)}</dd>
+                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{pct(q.taxaDeRejeicao)}</dd>
                     </div>
                   </dl>
-                  <p className="text-[12px] text-fg-secondary tabular-nums">
+                  <p className="text-fs-2 text-fg-secondary tabular-nums">
                     {q.aprovadas} aprovadas como vieram · {q.editadas} com ajuste · {q.rejeitadas} rejeitadas · {q.pendentes} esperando
                   </p>
-                  <p className="text-[12px] text-fg-secondary tabular-nums">
+                  <p className="text-fs-2 text-fg-secondary tabular-nums">
                     Confiança que a IA declarou: {q.confianca.ALTA} alta · {q.confianca.MEDIA} média · {q.confianca.BAIXA} baixa
                   </p>
                   <div aria-label="Propostas por mês" className="flex items-end gap-2 h-16">
@@ -155,7 +155,7 @@ export default async function IaDoSocietarioPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-[12px] text-fg-muted">Custo no período: {formatarReaisDeCentavos(q.custoCentavos)}</p>
+                  <p className="text-fs-2 text-fg-muted">Custo no período: {formatarReaisDeCentavos(q.custoCentavos)}</p>
                 </Card>
               );
             })}
@@ -165,7 +165,7 @@ export default async function IaDoSocietarioPage() {
 
       {revisadas.length > 0 && (
         <section aria-labelledby="revisadas" className="flex flex-col gap-2">
-          <h2 id="revisadas" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+          <h2 id="revisadas" className="text-card-title font-semibold text-fg">
             Revisadas recentemente
           </h2>
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
@@ -173,8 +173,8 @@ export default async function IaDoSocietarioPage() {
               <li key={p.id}>
                 <Link href={`/societario/ia/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-2">
                   <div className="min-w-0">
-                    <p className="text-[13px] text-fg">{p.title}</p>
-                    <p className="text-[12px] text-fg-muted">
+                    <p className="text-fs-3 text-fg">{p.title}</p>
+                    <p className="text-fs-2 text-fg-muted">
                       {p.reviewedBy?.name ?? "—"} · {p.reviewedAt ? formatInstantDate(p.reviewedAt) : ""}
                     </p>
                   </div>

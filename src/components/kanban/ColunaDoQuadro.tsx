@@ -50,19 +50,19 @@ export function ColunaDoQuadro({
     >
       <div className="flex items-center gap-2 px-3 h-11 border-b border-border flex-shrink-0">
         {cor && <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: cor }} />}
-        <Titulo className="text-[length:var(--fs-kanban-title)] font-medium text-fg-secondary flex-1 truncate tracking-[-0.005em]">
+        <Titulo className="text-kanban-title font-medium text-fg-secondary flex-1 truncate tracking-[-0.005em]">
           {titulo}
         </Titulo>
-        <span className="text-[length:var(--fs-micro)] font-semibold text-fg-muted tnum leading-none px-2 py-1 rounded-full bg-surface-hover">
+        <span className="text-micro font-semibold text-fg-muted tnum leading-none px-2 py-1 rounded-full bg-surface-hover">
           {contagem}
         </span>
       </div>
-      {nota && <p className="px-3 pt-2 text-[length:var(--fs-micro)] text-fg-muted">{nota}</p>}
+      {nota && <p className="px-3 pt-2 text-micro text-fg-muted">{nota}</p>}
 
       <div className="scroll-y flex-1 overflow-y-auto p-2.5 space-y-2 min-h-[100px]">
         {contagem === 0 && (
           <div
-            className={`h-16 rounded-lg border-[1.5px] border-dashed flex items-center justify-center text-[length:var(--fs-2)] transition-colors ${
+            className={`h-16 rounded-lg border-[1.5px] border-dashed flex items-center justify-center text-fs-2 transition-colors ${
               destacada ? "border-brand text-brand" : "border-border-strong text-fg-muted"
             }`}
           >

@@ -104,7 +104,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           </InfoRow>
           <InfoRow label="Empresa">
             {lead.companyName ?? "—"}
-            {lead.cnpj && <span className="block text-[length:var(--fs-2)] text-fg-muted tabular-nums">CNPJ {formatCnpj(lead.cnpj)}</span>}
+            {lead.cnpj && <span className="block text-fs-2 text-fg-muted tabular-nums">CNPJ {formatCnpj(lead.cnpj)}</span>}
           </InfoRow>
           <InfoRow label="O que procura" className="sm:col-span-3">
             {lead.message ? <span className="whitespace-pre-wrap">{lead.message}</span> : <span className="text-fg-muted">Não escreveu nada.</span>}
@@ -122,7 +122,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       </Card>
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-6)] font-semibold text-fg mb-3">Acompanhamento</h2>
+        <h2 className="text-fs-6 font-semibold text-fg mb-3">Acompanhamento</h2>
         {podeAgir ? (
           <AcompanhamentoDoLead
             id={lead.id}

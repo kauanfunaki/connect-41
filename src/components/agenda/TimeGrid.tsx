@@ -39,7 +39,7 @@ const COMPACTA_ABAIXO_DA_FRACAO = 45 / (14 * 60);
 /** O rótulo da primeira hora, centrado na linha de baixo de quem o contém — onde as horas começam. */
 function RotuloDaPrimeiraHora({ hora }: { hora: number }) {
   return (
-    <span className="absolute right-2 bottom-0 translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted tnum leading-none">
+    <span className="absolute right-2 bottom-0 translate-y-1/2 text-micro text-fg-muted tnum leading-none">
       {rotuloDaHora(hora)}
     </span>
   );
@@ -134,8 +134,8 @@ export function TimeGrid({ days, meetings, actions, onSlotClick, prazos, setores
               key={d.dateKey}
               className={`text-center py-2.5 border-l border-b border-border ${d.isToday ? "bg-brand-subtle" : ""}`}
             >
-              <p className="text-[length:var(--fs-micro)] font-medium text-fg-muted uppercase tracking-wide">{weekdayLabel(d.dateKey)}</p>
-              <p className={`text-[15px] font-semibold tnum ${d.isToday ? "text-brand" : "text-fg"}`}>{dayNumber(d.dateKey)}</p>
+              <p className="text-micro font-medium text-fg-muted uppercase tracking-wide">{weekdayLabel(d.dateKey)}</p>
+              <p className={`text-fs-5 font-semibold tnum ${d.isToday ? "text-brand" : "text-fg"}`}>{dayNumber(d.dateKey)}</p>
             </div>
           ))}
         </div>
@@ -151,7 +151,7 @@ export function TimeGrid({ days, meetings, actions, onSlotClick, prazos, setores
         {temPrazo && (
           <div className="grid flex-shrink-0" style={{ gridTemplateColumns: gridTemplate }}>
             <div className="relative flex items-start justify-end pr-2 pt-1.5 min-h-9">
-              <span className="text-[length:var(--fs-micro)] font-medium text-fg-secondary leading-none">Prazos</span>
+              <span className="text-micro font-medium text-fg-secondary leading-none">Prazos</span>
               <RotuloDaPrimeiraHora hora={expediente.inicio} />
             </div>
             {days.map((d) => {
@@ -169,7 +169,7 @@ export function TimeGrid({ days, meetings, actions, onSlotClick, prazos, setores
                   {resto > 0 && (
                     <a
                       href={`/agenda?view=dia&date=${d.dateKey}`}
-                      className="block px-1 text-[length:var(--fs-micro)] font-medium text-fg-muted hover:text-brand transition-colors"
+                      className="block px-1 text-micro font-medium text-fg-muted hover:text-brand transition-colors"
                     >
                       +{resto} mais
                     </a>
@@ -193,7 +193,7 @@ export function TimeGrid({ days, meetings, actions, onSlotClick, prazos, setores
             {horas.map((h, i) => (
               <div key={h} className="relative">
                 {i > 0 && (
-                  <span className="absolute right-2 top-0 -translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted tnum leading-none">
+                  <span className="absolute right-2 top-0 -translate-y-1/2 text-micro text-fg-muted tnum leading-none">
                     {rotuloDaHora(h)}
                   </span>
                 )}
@@ -241,7 +241,7 @@ export function TimeGrid({ days, meetings, actions, onSlotClick, prazos, setores
         </div>
 
         {foraDoHorario > 0 && (
-          <div className="flex-shrink-0 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border px-3 py-1.5 text-[length:var(--fs-helper)] text-fg-muted">
+          <div className="flex-shrink-0 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border px-3 py-1.5 text-helper text-fg-muted">
             <Clock size={13} className="flex-shrink-0" aria-hidden />
             <p className="flex-1 min-w-0">
               {foraDoHorario === 1 ? "1 reunião fora do horário exibido" : `${foraDoHorario} reuniões fora do horário exibido`}{" "}

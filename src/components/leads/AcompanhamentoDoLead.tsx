@@ -87,8 +87,8 @@ export function AcompanhamentoDoLead({
         />
       </CampoForm>
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {erro && <span className="text-[length:var(--fs-2)] text-danger">{erro}</span>}
-        {salvo && !erro && <span className="text-[length:var(--fs-2)] text-success-fg">Salvo.</span>}
+        {erro && <span className="text-fs-2 text-danger">{erro}</span>}
+        {salvo && !erro && <span className="text-fs-2 text-success-fg">Salvo.</span>}
         <Button type="submit" loading={pendente}>
           Salvar
         </Button>

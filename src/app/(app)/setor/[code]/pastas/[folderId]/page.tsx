@@ -75,7 +75,7 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
       </div>
 
       <div>
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2.5">Listas</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-2.5">Listas</h2>
         {lists.length === 0 ? (
           <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)]">
             <EmptyState title="Nenhuma lista nesta pasta ainda" description="Crie a primeira lista pra começar a organizar as tarefas." />

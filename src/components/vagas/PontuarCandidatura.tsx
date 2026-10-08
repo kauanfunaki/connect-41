@@ -28,7 +28,7 @@ export function PontuarCandidatura({ vagaId, candidaturaId, rotulo }: { vagaId: 
       >
         <Sparkles size={13} /> {rotulo}
       </Button>
-      {erro && <span className="text-[length:var(--fs-micro)] text-danger max-w-[280px] text-right">{erro}</span>}
+      {erro && <span className="text-micro text-danger max-w-[280px] text-right">{erro}</span>}
     </div>
   );
 }

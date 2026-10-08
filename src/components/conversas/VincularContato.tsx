@@ -58,13 +58,13 @@ export function VincularContato({ contactLinkId, linkedLabel, canManage }: Props
   }
 
   if (!canManage) {
-    return linkedLabel ? <span className="text-[length:var(--fs-micro)] text-fg-muted">Vinculado a {linkedLabel}</span> : null;
+    return linkedLabel ? <span className="text-micro text-fg-muted">Vinculado a {linkedLabel}</span> : null;
   }
 
   if (linkedLabel) {
     return (
       <span className="inline-flex items-center gap-1">
-        <span className="text-[length:var(--fs-micro)] text-success-fg inline-flex items-center gap-1">
+        <span className="text-micro text-success-fg inline-flex items-center gap-1">
           <Link2 size={12} /> {linkedLabel}
         </span>
         <IconButton
@@ -77,7 +77,7 @@ export function VincularContato({ contactLinkId, linkedLabel, canManage }: Props
         >
           <Link2Off size={13} />
         </IconButton>
-        {error && <span className="text-[length:var(--fs-micro)] text-danger">{error}</span>}
+        {error && <span className="text-micro text-danger">{error}</span>}
       </span>
     );
   }
@@ -96,7 +96,7 @@ export function VincularContato({ contactLinkId, linkedLabel, canManage }: Props
       >
         {({ close }) => <BuscaDoVinculo salvando={isSaving} onEscolher={(alvo) => handleLink(alvo, close)} onFechar={close} />}
       </Popover>
-      {error && <span className="text-[length:var(--fs-micro)] text-danger">{error}</span>}
+      {error && <span className="text-micro text-danger">{error}</span>}
     </span>
   );
 }
@@ -139,7 +139,7 @@ function BuscaDoVinculo({
   return (
     <>
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-[length:var(--fs-2)] font-medium text-fg">Vincular a pessoa ou empresa</span>
+        <span className="text-fs-2 font-medium text-fg">Vincular a pessoa ou empresa</span>
         <IconButton size="sm" onClick={onFechar} aria-label="Fechar">
           <X size={14} />
         </IconButton>
@@ -157,7 +157,7 @@ function BuscaDoVinculo({
           </ItemDoMenu>
         ))}
         {query.trim().length >= 2 && results && results.companies.length === 0 && pessoas.length === 0 && (
-          <p className="text-[length:var(--fs-2)] text-fg-muted px-2 py-2">Nenhum resultado.</p>
+          <p className="text-fs-2 text-fg-muted px-2 py-2">Nenhum resultado.</p>
         )}
       </div>
     </>

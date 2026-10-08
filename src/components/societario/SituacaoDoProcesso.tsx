@@ -195,7 +195,7 @@ export function SituacaoDoProcesso({
               executar(pausa, motivo);
             }}
           >
-            <p className="text-[length:var(--fs-ui)] text-fg-secondary">{PAUSA[pausa].texto}</p>
+            <p className="text-ui text-fg-secondary">{PAUSA[pausa].texto}</p>
             <CampoForm label="Motivo" htmlFor="motivo-da-situacao" required>
               <Textarea
                 id="motivo-da-situacao"

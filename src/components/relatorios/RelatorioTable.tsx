@@ -99,7 +99,7 @@ export function RelatorioTable<T>({
                 <th
                   key={c.header}
                   scope="col"
-                  className={`px-4 py-2.5 text-[12px] font-medium text-fg-muted ${
+                  className={`px-4 py-2.5 text-fs-2 font-medium text-fg-muted ${
                     i === 0 ? "sticky left-0 z-[1] bg-[var(--c41-table-header-bg)]" : ""
                   }`}
                 >

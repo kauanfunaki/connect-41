@@ -84,7 +84,7 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
             <input type="hidden" name={`q_correct_${i}`} value={q.correctIndex} />
 
             <div className="flex items-center justify-between gap-3">
-              <label htmlFor={`pergunta-${i}`} className="text-[length:var(--fs-label)] font-medium text-fg">
+              <label htmlFor={`pergunta-${i}`} className="text-label font-medium text-fg">
                 Pergunta {i + 1}
               </label>
               {questions.length > 1 && (
@@ -104,8 +104,8 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
             />
 
             <fieldset className="space-y-2">
-              <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">
-                Alternativas <span className="font-normal text-fg-muted text-[length:var(--fs-helper)]">— marque a correta</span>
+              <legend className="text-label font-medium text-fg mb-1.5">
+                Alternativas <span className="font-normal text-fg-muted text-helper">— marque a correta</span>
               </legend>
               {q.options.map((opt, oi) => (
                 <div key={oi} className="flex items-center gap-2">
@@ -157,7 +157,7 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
         </Button>
       </div>
 
-      {state?.error && <p className="text-[length:var(--fs-ui)] text-danger">{state.error}</p>}
+      {state?.error && <p className="text-ui text-danger">{state.error}</p>}
 
       <FormFooter cancelHref={cancelHref} pending={isPending} submitLabel={defaults ? "Atualizar modelo" : "Criar modelo"} />
     </form>

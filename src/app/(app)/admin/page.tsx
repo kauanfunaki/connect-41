@@ -148,8 +148,8 @@ export default async function AdminPage() {
         {GROUP_ORDER.filter((g) => cards.some((c) => c.group === g)).map((groupKey) => (
           <section key={groupKey}>
             <div className="mb-3">
-              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{GROUP_LABEL[groupKey]}</h2>
-              <p className="text-[12px] text-fg-muted mt-0.5">{GROUP_HELPER[groupKey]}</p>
+              <h2 className="text-card-title font-semibold text-fg">{GROUP_LABEL[groupKey]}</h2>
+              <p className="text-fs-2 text-fg-muted mt-0.5">{GROUP_HELPER[groupKey]}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -168,7 +168,7 @@ export default async function AdminPage() {
                     </span>
 
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[14px] font-semibold text-fg">{c.title}</p>
+                      <p className="text-fs-4 font-semibold text-fg">{c.title}</p>
                       <ArrowRight
                         size={16}
                         className="text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"

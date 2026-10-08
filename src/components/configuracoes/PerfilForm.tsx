@@ -83,7 +83,7 @@ export function PerfilForm({ action, defaultName, email, photoUrl: initialPhotoU
           >
             {uploading ? "Enviando…" : "Alterar foto"}
           </Button>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">JPG, PNG ou WEBP, até 2MB.</p>
+          <p className="text-helper text-fg-muted mt-1.5">JPG, PNG ou WEBP, até 2MB.</p>
         </div>
         <input
           ref={fileInputRef}
