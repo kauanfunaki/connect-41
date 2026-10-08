@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Bell, Building2, House, Inbox, KeyRound, LogIn, Megaphone, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
+import { Bell, Building2, CircleUserRound, House, Inbox, KeyRound, LogIn, Megaphone, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Button } from "@/components/ui/Button";
@@ -31,6 +31,7 @@ const ICONES: Record<IconeDoPasso, React.ReactNode> = {
   processo: <ModuleIcon code="societario_processos" />,
   financeiro: <Wallet />,
   documentos: <ModuleIcon code="fiscal_documentos" />,
+  conta: <CircleUserRound />,
   senha: <KeyRound />,
 };
 
