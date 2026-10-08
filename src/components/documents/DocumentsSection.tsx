@@ -210,13 +210,9 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
                         <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-warning" title="Sensível" />
                       )}
                       {d.expiresAtLabel && (
-                        <span
-                          className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${
-                            d.expired ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning-fg"
-                          }`}
-                        >
+                        <Selo tom={d.expired ? "perigo" : "atencao"} className="absolute top-1.5 left-1.5">
                           {d.expired ? "Vencido" : "Vence"}
-                        </span>
+                        </Selo>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 px-2 py-1.5 border-t border-border bg-surface">
@@ -252,9 +248,7 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
                     </p>
                   </div>
                   {d.expiresAtLabel && (
-                    <Selo cor={d.expired
-                          ? "bg-danger/10 text-danger border-danger/25"
-                          : "bg-warning/10 text-warning-fg border-warning/25"} className="flex-shrink-0">
+                    <Selo tom={d.expired ? "perigo" : "atencao"} className="flex-shrink-0">
                       {d.expired ? `Vencido em ${d.expiresAtLabel}` : `Vence em ${d.expiresAtLabel}`}
                     </Selo>
                   )}

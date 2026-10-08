@@ -151,7 +151,7 @@ export default async function IaDoSocietarioPage() {
                     {q.porMes.map((m) => (
                       <div key={m.mes} className="flex-1 flex flex-col items-center gap-1">
                         <div className="w-full rounded-sm bg-brand/70" style={{ height: `${(m.total / maior) * 40}px`, minHeight: m.total ? 3 : 0 }} title={`${m.total}`} />
-                        <span className="text-[10px] text-fg-muted">{MES.format(new Date(`${m.mes}-15T12:00:00Z`))}</span>
+                        <span className="text-micro text-fg-muted">{MES.format(new Date(`${m.mes}-15T12:00:00Z`))}</span>
                       </div>
                     ))}
                   </div>

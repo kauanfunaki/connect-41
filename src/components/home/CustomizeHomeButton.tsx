@@ -158,7 +158,7 @@ export function CustomizeHomeButton({ selected, disponiveis, saveAction, resetAc
                         />
                         <label htmlFor={`widget-${entry.key}`} className="flex-1 min-w-0 cursor-pointer">
                           <span className="block text-fs-3 font-medium text-fg truncate">{def.label}</span>
-                          <span className="block text-[11.5px] text-fg-muted truncate">{def.description}</span>
+                          <span className="block text-micro text-fg-muted truncate">{def.description}</span>
                         </label>
                         <div className="flex items-center gap-0.5 flex-shrink-0">
                           {/* Setas de ordem: botão de ícone do app (30/09), e não texto com caixa emprestada. */}
