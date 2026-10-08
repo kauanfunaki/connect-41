@@ -29,7 +29,7 @@ export function AbrirCompetenciaForm({ action, companyId }: Props) {
         </CampoForm>
         <AlinhadoAoCampo className="col-span-2 sm:col-span-1">
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Abrindo…" : "Abrir Competência"}
+            {isPending ? "Abrindo…" : "Abrir competência"}
           </Button>
         </AlinhadoAoCampo>
       </div>

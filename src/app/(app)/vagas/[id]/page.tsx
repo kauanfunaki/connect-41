@@ -178,7 +178,7 @@ export default async function VagaPage({
             {vaga.status !== "ENCERRADA" ? (
               <ConfirmActionButton
                 action={encerrarAction}
-                label="Encerrar Vaga"
+                label="Encerrar vaga"
                 title={`Encerrar "${vaga.title}"?`}
                 description="A vaga sai das listagens ativas e do portal público. Os candidatos e o histórico do funil são preservados, e você pode reabrir a vaga depois."
                 confirmLabel="Encerrar"
@@ -187,7 +187,7 @@ export default async function VagaPage({
             ) : (
               <ConfirmActionButton
                 action={reabrirAction}
-                label="Reabrir Vaga"
+                label="Reabrir vaga"
                 title={`Reabrir "${vaga.title}"?`}
                 description="A vaga volta para o status Aberta e reaparece nas listagens. Se ela estava publicada no portal, volta a ficar visível."
                 confirmLabel="Reabrir"

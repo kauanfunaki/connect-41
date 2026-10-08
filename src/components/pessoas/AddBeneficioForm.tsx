@@ -34,13 +34,13 @@ export function AddBeneficioForm({ action, beneficios }: Props) {
             ))}
           </Select>
         </CampoForm>
-        <CampoForm label="Início da Vigência" htmlFor="startDate" required>
+        <CampoForm label="Início da vigência" htmlFor="startDate" required>
           <CampoData id="startDate" name="startDate" required />
         </CampoForm>
-        <CampoForm label="Valor Empresa" htmlFor="companyValue">
+        <CampoForm label="Valor empresa" htmlFor="companyValue">
           <Input id="companyValue" name="companyValue" type="number" step="0.01" prefix="R$" placeholder="0,00" />
         </CampoForm>
-        <CampoForm label="Valor Desconto" htmlFor="discountValue">
+        <CampoForm label="Valor desconto" htmlFor="discountValue">
           <Input id="discountValue" name="discountValue" type="number" step="0.01" prefix="R$" placeholder="0,00" />
         </CampoForm>
       </FieldGrid>
@@ -50,7 +50,7 @@ export function AddBeneficioForm({ action, beneficios }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Vinculando…" : "Vincular Benefício"}
+            {isPending ? "Vinculando…" : "Vincular benefício"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

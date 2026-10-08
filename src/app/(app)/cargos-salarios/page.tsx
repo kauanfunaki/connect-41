@@ -67,7 +67,7 @@ export default async function CargosSalariosPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Cargos e Salários"
+        title="Cargos e salários"
         subtitle={
           <>
             {rows.length} cargo{rows.length !== 1 ? "s" : ""} em {grupos.length} família

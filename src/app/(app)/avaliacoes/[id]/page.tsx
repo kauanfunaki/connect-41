@@ -78,7 +78,7 @@ export default async function CicloPage({
                 <form action={encerrarAction}>
                   <Button variant="secondary" size="sm" type="submit">
                     <Lock size={14} />
-                    Encerrar Ciclo
+                    Encerrar ciclo
                   </Button>
                 </form>
               )}

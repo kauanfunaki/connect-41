@@ -188,7 +188,7 @@ export default async function CandidatoPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
           <InfoRow
-            label="Data de Nascimento"
+            label="Data de nascimento"
             value={
               person.birthDate
                 ? formatCalendarDate(person.birthDate, { day: "2-digit", month: "long", year: "numeric" })

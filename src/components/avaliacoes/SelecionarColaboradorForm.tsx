@@ -40,7 +40,7 @@ export function SelecionarColaboradorForm({ cycleId, colaboradores }: Props) {
             disabled={!personId}
             onClick={() => router.push(`/avaliacoes/${cycleId}/avaliar/${personId}`)}
           >
-            Avaliar Colaborador
+            Avaliar colaborador
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

@@ -39,7 +39,7 @@ export default async function AvaliacoesPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Avaliações de Desempenho"
+        title="Avaliações de desempenho"
         subtitle={<>{ciclos.length} ciclo{ciclos.length !== 1 ? "s" : ""} de avaliação</>}
         // O criar no cabeçalho, com o formulário numa janela — era um formulário
         // aberto no topo da lista (escolha 5A do Kauan, 08/10/2026).

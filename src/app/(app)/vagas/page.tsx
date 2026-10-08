@@ -136,7 +136,7 @@ export default async function VagasPage({
           // Button — o botão de criar das outras listas (DRG-17, 07/10/2026).
           <Button href="/vagas/novo" variant="primary">
             <Plus size={14} />
-            Nova Vaga
+            Nova vaga
           </Button>
         )}</>}
       />

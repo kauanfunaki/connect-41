@@ -36,20 +36,20 @@ export function AddHoraExtraForm({ action }: Props) {
         <CampoForm label="Data" htmlFor="date" required>
           <CampoData id="date" name="date" required />
         </CampoForm>
-        <CampoForm label="Tipo de Dia" htmlFor="dayType">
+        <CampoForm label="Tipo de dia" htmlFor="dayType">
           <Select id="dayType" name="dayType" defaultValue="UTIL">
             {DAY_TYPE_OPTIONS.map((t) => (
               <option key={t} value={t}>{DAY_TYPE_LABEL[t]}</option>
             ))}
           </Select>
         </CampoForm>
-        <CampoForm label="Horas Devidas" htmlFor="owedHours">
+        <CampoForm label="Horas devidas" htmlFor="owedHours">
           <Input id="owedHours" name="owedHours" type="number" step="0.25" suffix="h" />
         </CampoForm>
-        <CampoForm label="Horas Trabalhadas" htmlFor="workedHours">
+        <CampoForm label="Horas trabalhadas" htmlFor="workedHours">
           <Input id="workedHours" name="workedHours" type="number" step="0.25" suffix="h" />
         </CampoForm>
-        <CampoForm label="Horas Extras" htmlFor="overtimeHours">
+        <CampoForm label="Horas extras" htmlFor="overtimeHours">
           <Input id="overtimeHours" name="overtimeHours" type="number" step="0.25" suffix="h" />
         </CampoForm>
         <CampoForm label="Adicional" htmlFor="additionalRate">
@@ -62,7 +62,7 @@ export function AddHoraExtraForm({ action }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Lançando…" : "Lançar Horas"}
+            {isPending ? "Lançando…" : "Lançar horas"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

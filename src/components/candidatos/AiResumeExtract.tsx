@@ -27,14 +27,14 @@ export function AiResumeExtract({ action }: Props) {
           ao lado do botão; agora o botão desce para a linha de baixo. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1 basis-64">
-          <h2 className="text-card-title font-semibold text-fg">Triagem de Currículo (IA)</h2>
+          <h2 className="text-card-title font-semibold text-fg">Triagem de currículo (IA)</h2>
           <p className="text-fs-2 text-fg-muted mt-0.5">
             Lê o PDF do currículo, preenche campos vazios da ficha e gera um resumo profissional.
           </p>
         </div>
         <Button type="button" onClick={handleClick} disabled={isPending} className="flex-shrink-0">
           <Sparkles size={14} />
-          {isPending ? "Analisando…" : "Analisar Currículo"}
+          {isPending ? "Analisando…" : "Analisar currículo"}
         </Button>
       </div>
 
