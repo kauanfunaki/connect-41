@@ -59,14 +59,20 @@ export function FormAlcada({ companyId, usuarios }: { companyId: string; usuario
         <CampoForm label="Teto" htmlFor="alcada-teto" required>
           <Input id="alcada-teto" name="maxAmount" prefix="R$" inputMode="decimal" placeholder="5.000,00" required />
         </CampoForm>
+        {/* Na linha dos campos, e não no `FormFooter`: o formulário é uma
+            linha só. O "Salvando…" vem do `loading` do botão (08/10/2026). */}
         <AlinhadoAoCampo>
-          <Button type="submit" disabled={pendente}>
-            {pendente ? "Salvando…" : "Salvar alçada"}
+          <Button type="submit" loading={pendente}>
+            Salvar alçada
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {salvo && <span className="text-[12px] text-success">Salvo.</span>}
-      {erro && <span className="text-[12px] text-danger">{erro}</span>}
+      {salvo && <p className="text-helper text-success">Salvo.</p>}
+      {erro && (
+        <p role="alert" className="text-helper font-medium text-danger">
+          {erro}
+        </p>
+      )}
     </form>
   );
 }

@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { Upload, Check } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Badge } from "@/components/ui/Badge";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { previsualizarImportacao, confirmarImportacao } from "@/app/(app)/lancamentos/actions";
@@ -82,13 +83,13 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
           depois de importar, para esquecer o arquivo já enviado. */}
       <FileDropzoneField key={versao} name="arquivo" accept=".csv" maxSizeMb={2} compacto onFileChange={ler} />
 
-      {pendente && <p className="text-[12px] text-fg-muted">Lendo…</p>}
-      {previa && !previa.ok && <p className="text-[13px] text-danger">{previa.erro}</p>}
-      {erro && <p className="text-[13px] text-danger">{erro}</p>}
+      {pendente && !previa && <p className="text-helper text-fg-muted">Lendo…</p>}
+      {previa && !previa.ok && <Aviso>{previa.erro}</Aviso>}
+      {erro && <Aviso>{erro}</Aviso>}
       {resultado && (
-        <p className="inline-flex items-center gap-1.5 text-[13px] text-success">
-          <Check size={14} /> {resultado}
-        </p>
+        <Aviso tom="sucesso" icone={<Check />}>
+          {resultado}
+        </Aviso>
       )}
 
       {previa?.ok && (
@@ -135,11 +136,23 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
               </tbody>
             </table>
           </div>
-          <div>
-            <Button size="sm" onClick={confirmar} disabled={pendente || validas.length === 0}>
-              Importar {validas.length} {validas.length === 1 ? "linha válida" : "linhas válidas"}
-            </Button>
-          </div>
+          {/* O rodapé padrão, à direita como o "Lançar" (08/10/2026): o
+              envio ficava à esquerda, embaixo da prévia. */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              confirmar();
+            }}
+          >
+            <FormFooter
+              pending={pendente}
+              submitLabel={`Importar ${validas.length} ${validas.length === 1 ? "linha válida" : "linhas válidas"}`}
+              pendingLabel="Importando…"
+              submitDisabled={validas.length === 0}
+              size="sm"
+              semDivisoria
+            />
+          </form>
         </>
       )}
     </Card>

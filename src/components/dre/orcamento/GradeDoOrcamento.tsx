@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Input } from "@/components/ui/Input";
 import { GRUPOS } from "@/lib/dre/estrutura";
 import { montarLinhas } from "@/lib/dre/calculo";
@@ -204,26 +204,31 @@ export function GradeDoOrcamento({
       </div>
 
       {/* Rodapé de formulário: a situação da grade à esquerda, o "Salvar
-          grade" (36px) por último, à direita. */}
+          grade" (36px) por último, à direita — o `FormFooter` desde 08/10. A
+          célula ilegível é erro, como o do envio; o resto é nota. */}
       {!somenteLeitura && (
-        <div className="flex flex-wrap items-center justify-end gap-3 mt-4">
-          <div className="mr-auto flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
-            {invalidas.size > 0 && (
-              <span className="text-[12px] text-danger">
-                {invalidas.size} {invalidas.size === 1 ? "célula ilegível" : "células ilegíveis"} — use valor positivo, como 1.234,56.
-              </span>
-            )}
-            {sujo && !pendente && invalidas.size === 0 && <span className="text-[12px] text-warning">Alterações não salvas.</span>}
-            {salvo && (
-              <span className="inline-flex items-center gap-1 text-[12px] text-success">
-                <Check size={14} /> Grade salva.
-              </span>
-            )}
-            {erro && <span className="text-[12px] text-danger">{erro}</span>}
-          </div>
-          <Button type="submit" disabled={pendente || invalidas.size > 0}>
-            {pendente ? "Salvando…" : "Salvar grade"}
-          </Button>
+        <div className="mt-4">
+          <FormFooter
+            pending={pendente}
+            submitLabel="Salvar grade"
+            submitDisabled={invalidas.size > 0}
+            semDivisoria
+            erro={
+              erro ??
+              (invalidas.size > 0
+                ? `${invalidas.size} ${invalidas.size === 1 ? "célula ilegível" : "células ilegíveis"} — use valor positivo, como 1.234,56.`
+                : null)
+            }
+            nota={
+              salvo ? (
+                <span className="inline-flex items-center gap-1 text-success">
+                  <Check size={14} /> Grade salva.
+                </span>
+              ) : sujo && !pendente ? (
+                <span className="text-warning">Alterações não salvas.</span>
+              ) : null
+            }
+          />
         </div>
       )}
     </form>

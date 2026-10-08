@@ -174,7 +174,13 @@ export function CriarAcordo({
           )}
 
           <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-            {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+            {/* Duas etapas (revisar, depois confirmar) — fora do `FormFooter`, mas
+                com o erro no desenho dele (08/10/2026). */}
+            {erro && (
+              <p role="alert" className="mr-auto text-helper font-medium text-danger">
+                {erro}
+              </p>
+            )}
             {!confirmando ? (
               <>
                 <Button variant="secondary" onClick={fechar}>
@@ -196,7 +202,8 @@ export function CriarAcordo({
                   Voltar
                 </Button>
                 <Button
-                  disabled={pendente}
+                  loading={pendente}
+                  loadingLabel="Criando…"
                   onClick={() => {
                     const dados = new FormData();
                     for (const id of selecionados) dados.append("entryIds", id);
@@ -218,7 +225,7 @@ export function CriarAcordo({
                     });
                   }}
                 >
-                  {pendente ? "Criando…" : `Confirmar: encerrar ${selecionados.size} título(s) e criar ${simulacao.length} parcela(s)`}
+                  {`Confirmar: encerrar ${selecionados.size} título(s) e criar ${simulacao.length} parcela(s)`}
                 </Button>
               </>
             )}

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Check, Upload } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Card } from "@/components/ui/Card";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { importarOfx, type ResumoDaImportacao } from "@/app/(app)/conciliacao/actions";
@@ -57,12 +57,9 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
       >
         <input type="hidden" name="bankAccountId" value={bankAccountId} />
         <FileDropzoneField key={versao} name="arquivo" accept=".ofx" maxSizeMb={MAXIMO_MB} compacto onFileChange={setArquivo} />
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={pendente || !arquivo}>
-            {pendente ? "Importando…" : "Importar"}
-          </Button>
-          {erro && <span className="text-[12px] text-danger">{erro}</span>}
-        </div>
+        {/* O rodapé padrão, à direita como o "Lançar" e o "Criar versão"
+            (08/10/2026): o "Importar" ficava à esquerda, embaixo do campo. */}
+        <FormFooter pending={pendente} submitLabel="Importar" pendingLabel="Importando…" submitDisabled={!arquivo} erro={erro} size="sm" semDivisoria />
       </form>
 
       {resumo && (

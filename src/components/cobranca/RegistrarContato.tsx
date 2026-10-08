@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -97,13 +97,13 @@ export function RegistrarContato({ entryId, hojeISO }: { entryId: string; hojeIS
       <CampoForm label="Anotação interna" htmlFor={`notas-${entryId}`} helper="Só a equipe vê. O portal mostra data, canal e resultado.">
         <Textarea id={`notas-${entryId}`} name="notas" rows={2} maxLength={TAMANHO_MAXIMO_DA_ANOTACAO} />
       </CampoForm>
-      <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-        {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-        {salvo && <span className="mr-auto text-[12px] text-success">Contato registrado.</span>}
-        <Button type="submit" disabled={pendente}>
-          {pendente ? "Registrando…" : "Registrar contato"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={pendente}
+        submitLabel="Registrar contato"
+        pendingLabel="Registrando…"
+        erro={erro}
+        nota={salvo && <span className="text-success">Contato registrado.</span>}
+      />
     </form>
   );
 }

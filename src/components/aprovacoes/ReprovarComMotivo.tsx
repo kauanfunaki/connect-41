@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { TAMANHO_MAXIMO_DO_MOTIVO } from "@/lib/financeiro/aprovacao/regras";
 
 /**
@@ -50,7 +51,7 @@ export function ReprovarComMotivo({
             });
           }}
         >
-          <p className="text-[13px] text-fg-secondary">{descricao}</p>
+          <p className="text-ui text-fg-secondary">{descricao}</p>
           <CampoForm label="Motivo" htmlFor={`motivo-${entryId}`} required helper="Quem lançou a conta recebe este motivo para corrigir ou cancelar.">
             <Textarea
               id={`motivo-${entryId}`}
@@ -61,15 +62,17 @@ export function ReprovarComMotivo({
               required
             />
           </CampoForm>
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-            {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-            <Button type="button" variant="secondary" onClick={() => setAberto(false)} disabled={pendente}>
-              Voltar
-            </Button>
-            <Button type="submit" variant="danger" disabled={pendente}>
-              {pendente ? "Reprovando…" : "Reprovar"}
-            </Button>
-          </div>
+          {/* "Voltar", e não "Cancelar": no portal e na fila, "Cancelar" ao
+              lado de "Reprovar" se lê como cancelar a conta. */}
+          <FormFooter
+            pending={pendente}
+            submitLabel="Reprovar"
+            pendingLabel="Reprovando…"
+            submitVariant="danger"
+            cancelLabel="Voltar"
+            onCancel={() => setAberto(false)}
+            erro={erro}
+          />
         </form>
       </Modal>
     </>

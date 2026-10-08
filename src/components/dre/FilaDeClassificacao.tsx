@@ -92,14 +92,15 @@ export function FilaDeClassificacao({ companyId, itens, excecoes }: Props) {
               </Select>
               <Button
                 variant="secondary"
-                disabled={ocupado === i.categoryId || !escolha[i.categoryId]}
+                loading={ocupado === i.categoryId}
+                disabled={!escolha[i.categoryId]}
                 onClick={() =>
                   correr(i.categoryId!, () =>
                     classificarCategoria(companyId, i.categoryId!, escolha[i.categoryId!]!)
                   )
                 }
               >
-                {ocupado === i.categoryId ? "Salvando…" : "Salvar"}
+                Salvar
               </Button>
             </div>
           ) : (
