@@ -46,6 +46,11 @@ export function PersonDetailTabs({
     { key: "history", label: "Histórico", icon: <History /> },
   ];
 
+  // Aba de verdade, e não aba que navega (07/10/2026): os painéis já vêm
+  // prontos do servidor e a troca é na hora, no cliente; a URL só guarda a aba
+  // (`router.replace`) para o "Voltar" e o link copiado. Por isso fica o `Tabs`
+  // (role="tab"), agora apontando para o painel (`tabpanel`), e não o
+  // `AbasDeLink` — com ele cada clique esperaria o servidor refazer a ficha.
   function handleChange(key: string) {
     setActive(key);
     router.replace(`${pathname}?tab=${key}`, { scroll: false });
@@ -53,8 +58,8 @@ export function PersonDetailTabs({
 
   return (
     <div>
-      <Tabs tabs={tabs} active={active} onChange={handleChange} className="mb-5" />
-      <div>
+      <Tabs tabs={tabs.map((t) => ({ ...t, panelId: "painel-da-pessoa" }))} active={active} onChange={handleChange} className="mb-5" />
+      <div role="tabpanel" id="painel-da-pessoa" aria-label={tabs.find((t) => t.key === active)?.label}>
         {active === "overview" && overview}
         {active === "vinculo" && vinculo}
         {active === "trabalhista" && trabalhista}
