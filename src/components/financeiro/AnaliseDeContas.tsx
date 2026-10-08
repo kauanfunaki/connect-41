@@ -2,8 +2,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { BarChart3 } from "lucide-react";
 import { faixasDeAtraso, rankingDeContrapartes, type ContaParaAnalise } from "@/lib/financeiro/analise";
 import { moeda, percentual } from "@/lib/financeiro/formato";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
-const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border";
+const CABECALHO = "text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border";
 
 /**
  * Faixas de atraso e ranking — a aba de análise de `/pagar` e `/receber`.
@@ -24,9 +25,9 @@ export function AnaliseDeContas({ linhas, hojeKey, aPagar }: { linhas: ContaPara
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <section>
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Faixas de atraso</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-2">Faixas de atraso</h2>
         <div className="c41-tabela border border-border rounded-lg bg-surface overflow-x-auto">
-          <table className="w-full min-w-[420px] text-[13px]">
+          <table className="w-full min-w-[420px] text-ui">
             <thead>
               <tr className={CABECALHO}>
                 <th className="py-2 pl-4 pr-3 font-medium">Faixa</th>
@@ -57,9 +58,9 @@ export function AnaliseDeContas({ linhas, hojeKey, aPagar }: { linhas: ContaPara
       </section>
 
       <section>
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">{aPagar ? "Maiores fornecedores em aberto" : "Maiores clientes em aberto"}</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-2">{aPagar ? "Maiores fornecedores em aberto" : "Maiores clientes em aberto"}</h2>
         <div className="c41-tabela border border-border rounded-lg bg-surface overflow-x-auto">
-          <table className="w-full min-w-[460px] text-[13px]">
+          <table className="w-full min-w-[460px] text-ui">
             <thead>
               <tr className={CABECALHO}>
                 <th className="py-2 pl-4 pr-3 font-medium">{aPagar ? "Fornecedor" : "Cliente"}</th>
@@ -73,7 +74,7 @@ export function AnaliseDeContas({ linhas, hojeKey, aPagar }: { linhas: ContaPara
                 <tr key={r.contraparteNome} className="border-b border-border-soft">
                   <td className="py-2 pl-4 pr-3">
                     <span className="font-medium">{r.contraparteNome}</span>
-                    <span className="block text-[11px] text-fg-muted">
+                    <span className="block text-micro text-fg-muted">
                       {r.quantidade} {r.quantidade === 1 ? "conta" : "contas"}
                     </span>
                   </td>
@@ -85,10 +86,10 @@ export function AnaliseDeContas({ linhas, hojeKey, aPagar }: { linhas: ContaPara
             </tbody>
           </table>
         </div>
-        <p className="text-[11px] text-fg-muted mt-2">
+        <NotaDeFonte>
           Vence hoje conta como a vencer. Cobrança e régua de inadimplência são outra etapa; esta aba só mostra onde está o
           dinheiro parado.
-        </p>
+        </NotaDeFonte>
       </section>
     </div>
   );

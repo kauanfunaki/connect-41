@@ -2,13 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { Upload, Check } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Badge } from "@/components/ui/Badge";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { previsualizarImportacao, confirmarImportacao } from "@/app/(app)/lancamentos/actions";
 import type { PreviaDaImportacao } from "@/lib/financeiro/importacaoCsv";
 import { moeda } from "@/lib/financeiro/formato";
+import { formatarCompetencia } from "@/lib/format";
+import { dataCurta } from "./conciliacao/data";
 
 const MODELO = "Tipo;Contraparte;Documento;Categoria;Competência;Vencimento;Valor;Descrição;Pago em;Centro de custo";
 
@@ -64,42 +67,42 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
     <Card className="p-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Upload size={16} className="text-brand" />
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Importar lançamentos por CSV</h2>
+        <h2 className="text-card-title font-semibold text-fg">Importar lançamentos por CSV</h2>
       </div>
-      <p className="text-[12px] text-fg-secondary max-w-[70ch]">
+      <p className="text-helper text-fg-secondary max-w-[70ch]">
         Uma linha por conta. Vírgula ou ponto e vírgula, datas em <code>dd/mm/aaaa</code> ou <code>aaaa-mm-dd</code>.
         Competência em branco herda o mês do vencimento. A categoria precisa existir no plano de contas com o mesmo
         tipo. Centro de custo é opcional e casa pelo nome ou pelo código de um centro ativo; em branco, vale o centro
         padrão da contraparte. Nada é gravado antes de você confirmar, e linha igual a um lançamento que já existe é
         ignorada.
       </p>
-      <pre className="text-[11px] bg-surface-hover border border-border rounded-md px-3 py-2 overflow-x-auto">{MODELO}</pre>
+      <pre className="text-micro bg-surface-hover border border-border rounded-md px-3 py-2 overflow-x-auto">{MODELO}</pre>
 
       {/* A mesma faixa do extrato OFX na conciliação — era o botão nativo do
           navegador, estilizado à mão. O teto de 2 MB é o da action. Remonta
           depois de importar, para esquecer o arquivo já enviado. */}
       <FileDropzoneField key={versao} name="arquivo" accept=".csv" maxSizeMb={2} compacto onFileChange={ler} />
 
-      {pendente && <p className="text-[12px] text-fg-muted">Lendo…</p>}
-      {previa && !previa.ok && <p className="text-[13px] text-danger">{previa.erro}</p>}
-      {erro && <p className="text-[13px] text-danger">{erro}</p>}
+      {pendente && !previa && <p className="text-helper text-fg-muted">Lendo…</p>}
+      {previa && !previa.ok && <Aviso>{previa.erro}</Aviso>}
+      {erro && <Aviso>{erro}</Aviso>}
       {resultado && (
-        <p className="inline-flex items-center gap-1.5 text-[13px] text-success">
-          <Check size={14} /> {resultado}
-        </p>
+        <Aviso tom="sucesso" icone={<Check />}>
+          {resultado}
+        </Aviso>
       )}
 
       {previa?.ok && (
         <>
-          <p className="text-[12px] text-fg-secondary">
+          <p className="text-helper text-fg-secondary">
             {arquivo}: {linhas.length} linhas · <strong>{validas.length} válidas</strong> ·{" "}
             {linhas.filter((l) => l.situacao === "duplicada").length} duplicadas ·{" "}
             {linhas.filter((l) => l.situacao === "erro").length} com erro
           </p>
           <div className="overflow-x-auto max-h-[420px] border border-border rounded-md">
-            <table className="w-full min-w-[760px] text-[12px]">
+            <table className="w-full min-w-[760px] text-fs-2">
               <thead className="sticky top-0 bg-surface">
-                <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 px-3 font-medium">Linha</th>
                   <th className="py-2 pr-3 font-medium">Situação</th>
                   <th className="py-2 pr-3 font-medium">Contraparte</th>
@@ -120,24 +123,36 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
                           <Badge variant={l.situacao === "erro" ? "danger" : "warning"}>
                             {l.situacao === "erro" ? "Erro" : "Duplicada"}
                           </Badge>
-                          <span className="text-[11px] text-fg-muted max-w-[260px]">{l.erro}</span>
+                          <span className="text-micro text-fg-muted max-w-[260px]">{l.erro}</span>
                         </div>
                       )}
                     </td>
                     <td className="py-2 pr-3">{l.situacao === "erro" ? "—" : l.dados.contraparteNome}</td>
-                    <td className="py-2 pr-3 tabular-nums">{l.situacao === "erro" ? "—" : l.dados.competencia}</td>
-                    <td className="py-2 pr-3 tabular-nums">{l.situacao === "erro" ? "—" : l.dados.vencimentoKey}</td>
+                    <td className="py-2 pr-3 tabular-nums">{l.situacao === "erro" ? "—" : formatarCompetencia(l.dados.competencia)}</td>
+                    <td className="py-2 pr-3 tabular-nums">{l.situacao === "erro" ? "—" : dataCurta(l.dados.vencimentoKey)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{l.situacao === "erro" ? "—" : moeda(l.dados.centavos)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div>
-            <Button size="sm" onClick={confirmar} disabled={pendente || validas.length === 0}>
-              Importar {validas.length} {validas.length === 1 ? "linha válida" : "linhas válidas"}
-            </Button>
-          </div>
+          {/* O rodapé padrão, à direita como o "Lançar" (08/10/2026): o
+              envio ficava à esquerda, embaixo da prévia. */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              confirmar();
+            }}
+          >
+            <FormFooter
+              pending={pendente}
+              submitLabel={`Importar ${validas.length} ${validas.length === 1 ? "linha válida" : "linhas válidas"}`}
+              pendingLabel="Importando…"
+              submitDisabled={validas.length === 0}
+              size="sm"
+              semDivisoria
+            />
+          </form>
         </>
       )}
     </Card>

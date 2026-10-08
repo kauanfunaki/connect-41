@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { FileText, AlertCircle } from "lucide-react";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
-import { Badge } from "@/components/ui/Badge";
+import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO, tomDoFechamento } from "./tomDaSituacao";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatInstantDate } from "@/lib/format";
-import { reaisDeCentavos, type SituacaoDaConta } from "@/lib/financeiro/contas";
+// Dinheiro e competência pelos helpers de `lib/format` (08/10/2026): a
+// competência era "09/2026" só aqui, e "Out/26" na DRE, no fluxo e no portal.
+import { formatInstantDate, formatarCompetencia, formatarReaisDeCentavos } from "@/lib/format";
+import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 import type { LinhaDaConta, TipoDeConta } from "@/lib/financeiro/data";
 import { AcoesDaConta } from "./AcoesDaConta";
 import { conferirConta, marcarComoPago, desfazerPagamento } from "@/lib/financeiro/acoes";
@@ -20,18 +23,6 @@ import { FORM_DO_CENTRO } from "@/lib/financeiro/centroDeCusto";
 import { MarcarTodasAsContas } from "./DefinirCentroDasContas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
-export function moeda(cents: number): string {
-  return MOEDA.format(reaisDeCentavos(cents));
-}
-
-/** "2026-09" → "09/2026", o jeito que a competência é falada no escritório. */
-export function competenciaNaTela(c: string): string {
-  const m = /^(\d{4})-(\d{2})$/.exec(c);
-  return m ? `${m[2]}/${m[1]}` : c;
-}
-
 export const SITUACAO_LABEL: Record<SituacaoDaConta, string> = {
   VENCIDA: "Vencida",
   VENCE_HOJE: "Vence hoje",
@@ -41,13 +32,15 @@ export const SITUACAO_LABEL: Record<SituacaoDaConta, string> = {
 };
 
 // Vencida é `danger` e vence-hoje é `warning`: a diferença entre "já custa" e
-// "ainda dá para resolver" precisa ser lida sem ninguém comparar datas.
-const SITUACAO_VARIANTE: Record<SituacaoDaConta, "danger" | "warning" | "info" | "success"> = {
-  VENCIDA: "danger",
-  VENCE_HOJE: "warning",
-  A_VENCER: "info",
-  PAGA: "success",
-  CANCELADA: "info",
+// "ainda dá para resolver" precisa ser lida sem ninguém comparar datas. As
+// cores vêm do mapa único do BPO (08/10/2026): a cancelada era `info`, o
+// mesmo azul de "A vencer" na mesma coluna.
+const SITUACAO_VARIANTE: Record<SituacaoDaConta, VarianteDoBadge> = {
+  VENCIDA: TOM_DA_SITUACAO.VENCIDA,
+  VENCE_HOJE: TOM_DA_SITUACAO.VENCE_HOJE,
+  A_VENCER: TOM_DA_SITUACAO.A_VENCER,
+  PAGA: TOM_DA_SITUACAO.PAGA,
+  CANCELADA: TOM_DA_SITUACAO.CANCELADA,
 };
 
 type Props = {
@@ -108,23 +101,29 @@ export function ContasTable({
   // tabela e o cartão não descolarem um do outro com o tempo.
   const selos = (l: LinhaDaConta) => (
     <>
-      <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{rotuloDaSituacao(l)}</Badge>
+      <Badge variant={l.situacao === "CANCELADA" ? tomDoFechamento(l.closeReason) : SITUACAO_VARIANTE[l.situacao]}>{rotuloDaSituacao(l)}</Badge>
       {cobranca && cobranca.get(l.id) && cobranca.get(l.id) !== "EM_DIA" && l.closeReason !== "PERDA" && (
         <Link href={`/cobranca/${l.id}`} className="inline-flex" title="Abrir na cobrança">
           <SeloDaCobranca situacao={cobranca.get(l.id) ?? null} />
         </Link>
       )}
-      {l.parcelaDeAcordo && !cobranca?.get(l.id) && <span className="text-[11px] text-fg-muted whitespace-nowrap">parcela de acordo</span>}
+      {l.parcelaDeAcordo && !cobranca?.get(l.id) && <span className="text-micro text-fg-muted whitespace-nowrap">parcela de acordo</span>}
       {/* Selo só enquanto pesa sobre a conta, ou aprovada ainda em aberto:
           depois de paga ou cancelada, a aprovação é histórico. */}
       {seloDeAprovacaoVisivel(l) && <SeloDaAprovacao status={l.approvalStatus} />}
     </>
   );
 
+  // Na tabela, a posição do "Conferir" só fica guardada quando alguma linha o
+  // tem — sem nenhuma a conferir, ela seria um vão à esquerda de todo "Pagar".
+  const algumaAConferir = linhas.some((l) => l.status === "PROVISORIO" && l.situacao !== "PAGA" && l.situacao !== "CANCELADA");
+
   // "Ver nota" e "abrir pendência" eram texto azul embaixo dos botões; desde
   // a conferência de 30/09 vão no menu "⋯" das ações da linha.
-  const acoes = (l: LinhaDaConta) => (
+  const acoes = (l: LinhaDaConta, emColunas = false) => (
     <AcoesDaConta
+      emColunas={emColunas}
+      comConferir={algumaAConferir}
       entryId={l.id}
       situacao={l.situacao}
       status={l.status}
@@ -153,7 +152,7 @@ export function ContasTable({
       empresa: l.empresaNome,
       categoria: l.categoriaNome ?? "",
       centro: l.centroDeCustoNome ?? "",
-      competencia: competenciaNaTela(l.competencia),
+      competencia: formatarCompetencia(l.competencia),
       situacao: rotuloDaSituacao(l),
     },
   }));
@@ -178,11 +177,11 @@ export function ContasTable({
                 />
               )}
               <div className="min-w-0 flex-1">
-                <TopoDoCartao nome={l.contraparteNome} valor={moeda(l.valorCentavos)} />
+                <TopoDoCartao nome={l.contraparteNome} valor={formatarReaisDeCentavos(l.valorCentavos)} />
                 {l.descricao && <InfoDoCartao className="break-words">{l.descricao}</InfoDoCartao>}
                 <InfoDoCartao className="mt-1 tabular-nums">
                   vence {formatInstantDate(l.vencimento)}
-                  {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {competenciaNaTela(l.competencia)}
+                  {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {formatarCompetencia(l.competencia)}
                 </InfoDoCartao>
                 <InfoDoCartao className="break-words">
                   {l.empresaNome}
@@ -190,7 +189,7 @@ export function ContasTable({
                   {mostrarCentro && l.centroDeCustoNome ? ` · ${l.centroDeCustoNome}` : ""}
                 </InfoDoCartao>
                 {!l.categoriaNome && (
-                  <span className="inline-flex items-center gap-1 text-warning text-[11.5px] mt-0.5">
+                  <span className="inline-flex items-center gap-1 text-warning text-micro mt-0.5">
                     <AlertCircle size={12} /> sem categoria
                   </span>
                 )}
@@ -210,7 +209,7 @@ export function ContasTable({
           Centralizada, com funil em cada coluna — conferência de 30/09. */}
       <TabelaFiltravel linhas={valoresDasLinhas}>
       <TabelaNoDesktop padrao>
-        <table className="w-full table-fixed min-w-[1100px] text-[length:var(--fs-ui)]">
+        <table className="w-full table-fixed min-w-[1100px] text-ui">
           <colgroup>
             {selecionarCentro && <col className="w-11" />}
             <col className="w-[116px]" />
@@ -219,10 +218,12 @@ export function ContasTable({
             <col className="w-[116px]" />
             <col className="w-[120px]" />
             <col className="w-[160px]" />
-            <col className="w-[216px]" />
+            {/* 256px (08/10/2026): "Conferir" + "Receber" + "⋯" pediam ~246px
+                com o recuo, e o "⋯" encostava na borda nos 216px de antes. */}
+            <col className="w-[256px]" />
           </colgroup>
           <thead>
-            <tr className="border-b border-border bg-table-header-bg text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+            <tr className="border-b border-border bg-table-header-bg text-micro font-semibold uppercase tracking-wide text-fg-muted">
               {selecionarCentro && (
                 <th className="pl-4 pr-1 py-3">
                   <MarcarTodasAsContas />
@@ -272,7 +273,7 @@ export function ContasTable({
                 <td className="px-4 py-3 whitespace-nowrap tabular-nums">
                   {formatInstantDate(l.vencimento)}
                   {l.pagoEm && (
-                    <span className="block text-[length:var(--fs-micro)] text-fg-muted">pago em {formatInstantDate(l.pagoEm)}</span>
+                    <span className="block text-micro text-fg-muted">pago em {formatInstantDate(l.pagoEm)}</span>
                   )}
                 </td>
                 <td className="px-4 py-3 min-w-0">
@@ -280,11 +281,11 @@ export function ContasTable({
                     {l.contraparteNome}
                   </span>
                   {l.descricao && (
-                    <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={l.descricao}>
+                    <span className="block text-micro text-fg-muted truncate" title={l.descricao}>
                       {l.descricao}
                     </span>
                   )}
-                  <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={l.empresaNome}>
+                  <span className="block text-micro text-fg-muted truncate" title={l.empresaNome}>
                     {l.empresaNome}
                   </span>
                 </td>
@@ -301,17 +302,17 @@ export function ContasTable({
                     </span>
                   )}
                   {mostrarCentro && (
-                    <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">
+                    <span className="block text-micro text-fg-muted truncate">
                       {l.centroDeCustoNome ?? "sem centro de custo"}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-fg-muted tabular-nums">{competenciaNaTela(l.competencia)}</td>
-                <td className="px-4 py-3 tabular-nums font-medium whitespace-nowrap">{moeda(l.valorCentavos)}</td>
+                <td className="px-4 py-3 text-fg-muted tabular-nums">{formatarCompetencia(l.competencia)}</td>
+                <td className="px-4 py-3 tabular-nums font-medium whitespace-nowrap">{formatarReaisDeCentavos(l.valorCentavos)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-1.5">{selos(l)}</div>
                 </td>
-                <td className="px-4 py-3">{acoes(l)}</td>
+                <td className="px-4 py-3">{acoes(l, true)}</td>
               </LinhaFiltravel>
             ))}
           </tbody>

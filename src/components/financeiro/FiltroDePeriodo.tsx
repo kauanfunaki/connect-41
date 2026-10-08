@@ -2,6 +2,7 @@ import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { CampoMes } from "@/components/ui/CampoMes";
 import { Button } from "@/components/ui/Button";
+import { SeletorDeEmpresaDoFiltro } from "./SeletorDeEmpresaDoFiltro";
 
 // `AbasDeLink` e `FaixaDeTotais` moravam aqui até 07/10/2026 e foram para
 // `components/ui` (servem telas de todos os setores). Ficam reexportadas para
@@ -22,6 +23,12 @@ type Props = {
   extras?: Record<string, string | undefined>;
   /** Campos a mais no mesmo formulário (ex.: centro de custo), antes do botão. */
   children?: React.ReactNode;
+  /**
+   * Sem mês e sem campos a mais, a empresa é a única escolha: troca e navega,
+   * sem "Aplicar" (08/10/2026, a regra do `SeletorDeEmpresaQueNavega`). Opção
+   * de cada tela, e não o padrão, porque o portal também usa este filtro.
+   */
+  navegaSozinho?: boolean;
 };
 
 /**
@@ -32,7 +39,18 @@ type Props = {
  * navegações — e o GET deixa a URL copiável, que é como relatório é mandado
  * para outra pessoa.
  */
-export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes, extras, children }: Props) {
+export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes, extras, children, navegaSozinho }: Props) {
+  if (navegaSozinho && empresas && mes === undefined && !children) {
+    return (
+      <SeletorDeEmpresaDoFiltro
+        acao={acao}
+        empresas={empresas}
+        empresaId={empresaId ?? null}
+        permitirTodas={permitirTodas}
+        extras={extras}
+      />
+    );
+  }
   return (
     <form method="get" action={acao} className="flex flex-wrap items-center gap-2 mb-4">
       {Object.entries(extras ?? {}).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}

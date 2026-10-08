@@ -142,6 +142,29 @@ export function totalizar(linhas: LinhaDeConta[]): Totais {
   return t;
 }
 
+/** O recorte da lista de contas: o de trabalho (padrão), só as vencidas, ou tudo. */
+export type RecorteDeContas = "abertas" | "vencidas" | "todas";
+
+/**
+ * Os totais que o topo mostra num recorte, a partir dos totais do filtro inteiro.
+ *
+ * Os totais são do recorte que está na tela — somar o que não está à vista
+ * faria o número do topo não bater com a lista embaixo. Até 08/10 isso saía de
+ * `totalizar` sobre as linhas já recortadas; com as somas feitas no banco
+ * (`listarContas`), o recorte zera o que ele esconde: em aberto não tem pago,
+ * e as vencidas não têm nem o de hoje nem o a vencer.
+ */
+export function totaisDoRecorte(t: Totais, recorte: RecorteDeContas): Totais {
+  if (recorte === "vencidas") return { vencido: t.vencido, venceHoje: 0, aVencer: 0, pago: 0, emAberto: t.vencido };
+  return {
+    vencido: t.vencido,
+    venceHoje: t.venceHoje,
+    aVencer: t.aVencer,
+    pago: recorte === "todas" ? t.pago : 0,
+    emAberto: t.emAberto,
+  };
+}
+
 const PESO_DA_SITUACAO: Record<SituacaoDaConta, number> = {
   // Vencido primeiro porque é o que já custa: multa, juros, fornecedor ligando.
   // Depois o que vence hoje, que ainda dá para resolver. Pago e cancelado vão

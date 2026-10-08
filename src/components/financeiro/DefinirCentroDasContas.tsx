@@ -113,8 +113,8 @@ export function DefinirCentroDasContas({ empresas }: { empresas: Empresa[] }) {
                 </optgroup>
               ))}
         </Select>
-        <Button type="submit" size="sm" disabled={pendente}>
-          {pendente ? "Aplicando…" : "Definir centro de custo"}
+        <Button type="submit" size="sm" loading={pendente} loadingLabel="Aplicando…">
+          Definir centro de custo
         </Button>
       </BulkActionBar>
     </form>

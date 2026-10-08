@@ -5,11 +5,12 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Cartao } from "@/components/shared/ListaResponsiva";
 import type { MesDoFluxo, Projecao, LinhaDoConsolidado } from "@/lib/financeiro/fluxo";
 import type { SaldoConsolidado } from "@/lib/financeiro/conciliacao/saldoConsolidado";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 
-const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border";
+const CABECALHO = "text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border";
 
 /**
  * O realizado em texto neutro, e só o saldo negativo em vermelho (07/10,
@@ -26,14 +27,17 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
   return (
     <>
       {/* No celular, um cartão por mês (02/10/2026): a tabela de cinco colunas
-          rolava de lado no portal e cortava os títulos. */}
-      <ul className="sm:hidden flex flex-col gap-2">
+          rolava de lado no portal e cortava os títulos. A troca é em `md`, e o
+          cartão é o `Cartao`, como nas outras listas (08/10/2026): em `sm`,
+          entre 640 e 768px o fluxo mostrava a tabela rolando e as irmãs, cartões. */}
+      <ul className="md:hidden flex flex-col gap-2">
         {meses.map((m) => (
-          <li key={m.competencia} className="rounded-lg border border-border bg-surface px-4 py-3">
+          <li key={m.competencia}>
+            <Cartao>
             <div className="flex items-baseline justify-between gap-3">
               <span className="font-medium text-fg">{m.rotulo}</span>
               <span className="text-right">
-                <span className="block text-[11px] text-fg-muted">Acumulado</span>
+                <span className="block text-micro text-fg-muted">Acumulado</span>
                 <span className={`tabular-nums font-semibold ${tomDoSaldo(m.saldoAcumulado)}`}>{moeda(m.saldoAcumulado)}</span>
               </span>
             </div>
@@ -42,11 +46,12 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
               <ParNoCartao rotulo="Saídas" valor={moeda(m.saidas)} />
               <ParNoCartao rotulo="Saldo do mês" valor={moeda(m.saldoDoMes)} tom={tomDoSaldo(m.saldoDoMes)} />
             </dl>
+            </Cartao>
           </li>
         ))}
       </ul>
-    <div className="hidden sm:block c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
-      <table className="w-full min-w-[720px] text-[13px]">
+    <div className="hidden md:block c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
+      <table className="w-full min-w-[720px] text-ui">
         <thead>
           <tr className={CABECALHO}>
             <th className="py-2 pl-4 pr-3 font-medium">Mês</th>
@@ -86,8 +91,8 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
 function ParNoCartao({ rotulo, valor, tom = "text-fg" }: { rotulo: string; valor: React.ReactNode; tom?: string }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] text-fg-muted">{rotulo}</dt>
-      <dd className={`text-[12.5px] tabular-nums ${tom}`}>{valor}</dd>
+      <dt className="text-micro text-fg-muted">{rotulo}</dt>
+      <dd className={`text-fs-2 tabular-nums ${tom}`}>{valor}</dd>
     </div>
   );
 }
@@ -96,6 +101,10 @@ function ParNoCartao({ rotulo, valor, tom = "text-fg" }: { rotulo: string; valor
  * Com saldo bancário, cada janela mostra também o **saldo projetado**: o das
  * contas mais os títulos até o fim dela. Sem saldo, fica só o resultado dos
  * títulos, como antes — somar zero seria afirmar um saldo que não se conhece.
+ *
+ * O valor em 18px (`text-section`) desde 08/10/2026: era 16, fora dos papéis
+ * da escala. Compacto de propósito — são seis janelas lado a lado, com duas
+ * linhas de apoio cada, o que a `FaixaDeTotais` não comporta.
  */
 export function CartoesDaProjecao({ projecao, saldoInicial = null }: { projecao: Projecao; saldoInicial?: number | null }) {
   return (
@@ -103,13 +112,13 @@ export function CartoesDaProjecao({ projecao, saldoInicial = null }: { projecao:
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {projecao.janelas.map((j) => (
           <Card key={j.dias} className="p-3">
-            <p className="text-[11px] text-fg-muted">Até {j.dias} dias</p>
-            <p className={`text-[16px] font-semibold tabular-nums mt-0.5 ${tomDoValor(j.saldo)}`}>{moeda(j.saldo)}</p>
-            <p className="text-[11px] text-fg-muted tabular-nums">
+            <p className="text-micro text-fg-muted">Até {j.dias} dias</p>
+            <p className={`text-section font-semibold tabular-nums mt-0.5 ${tomDoValor(j.saldo)}`}>{moeda(j.saldo)}</p>
+            <p className="text-micro text-fg-muted tabular-nums">
               +{moeda(j.entradas)} / −{moeda(j.saidas)}
             </p>
             {saldoInicial !== null && (
-              <p className={`text-[11px] tabular-nums mt-1 ${tomDoValor(saldoInicial + j.saldo)}`}>
+              <p className={`text-micro tabular-nums mt-1 ${tomDoValor(saldoInicial + j.saldo)}`}>
                 Saldo projetado: {moeda(saldoInicial + j.saldo)}
               </p>
             )}
@@ -117,7 +126,7 @@ export function CartoesDaProjecao({ projecao, saldoInicial = null }: { projecao:
         ))}
       </div>
       {(projecao.vencidos.entradas > 0 || projecao.vencidos.saidas > 0) && (
-        <p className="text-[12px] text-warning mt-3">
+        <p className="text-helper text-warning mt-3">
           Fora das janelas: {moeda(projecao.vencidos.entradas)} a receber e {moeda(projecao.vencidos.saidas)} a pagar já
           vencidos e não baixados.
         </p>
@@ -126,13 +135,17 @@ export function CartoesDaProjecao({ projecao, saldoInicial = null }: { projecao:
   );
 }
 
-/** O saldo das contas bancárias do escopo, vindo da conciliação. */
+/**
+ * O saldo das contas bancárias do escopo, vindo da conciliação. O número em
+ * 22px (`text-title`), o do valor da `FaixaDeTotais` (08/10/2026): era 20,
+ * fora da escala.
+ */
 export function QuadroDoSaldoBancario({ saldo }: { saldo: SaldoConsolidado }) {
   const dataCurta = (key: string) => `${key.slice(8, 10)}/${key.slice(5, 7)}/${key.slice(0, 4)}`;
   if (saldo.contas.length === 0) {
     return (
       // Revisão de 05/10: botão não é link — o destino era texto azul no meio da frase.
-      <Card className="p-4 mb-6 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted">
+      <Card className="p-4 mb-6 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted">
         <p>Nenhuma conta bancária ativa. Cadastre a conta e importe o extrato na Conciliação bancária para o fluxo mostrar o saldo real.</p>
         <Button href="/conciliacao" variant="secondary" size="xs">
           Abrir Conciliação bancária
@@ -143,15 +156,15 @@ export function QuadroDoSaldoBancario({ saldo }: { saldo: SaldoConsolidado }) {
   return (
     <Card className="p-4 mb-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-[12px] text-fg-muted">Saldo das contas</p>
-        {saldo.atualizadoAteKey && <p className="text-[11px] text-fg-muted">extrato até {dataCurta(saldo.atualizadoAteKey)}</p>}
+        <p className="text-helper text-fg-muted">Saldo das contas</p>
+        {saldo.atualizadoAteKey && <p className="text-micro text-fg-muted">extrato até {dataCurta(saldo.atualizadoAteKey)}</p>}
       </div>
-      <p className={`text-[20px] font-semibold tabular-nums ${saldo.centavos === null ? "text-fg-muted" : tomDoValor(saldo.centavos)}`}>
+      <p className={`text-title font-semibold tabular-nums ${saldo.centavos === null ? "text-fg-muted" : tomDoValor(saldo.centavos)}`}>
         {saldo.centavos === null ? "—" : moeda(saldo.centavos)}
       </p>
       <ul className="mt-2 flex flex-col gap-0.5">
         {saldo.contas.map((c) => (
-          <li key={c.id} className="flex items-baseline justify-between gap-2 text-[12px]">
+          <li key={c.id} className="flex items-baseline justify-between gap-2 text-fs-2">
             <span className="text-fg-secondary truncate">{c.nome}</span>
             <span className="tabular-nums">
               {c.saldo.centavos === null ? <span className="text-fg-muted">sem saldo</span> : moeda(c.saldo.centavos)}
@@ -161,7 +174,7 @@ export function QuadroDoSaldoBancario({ saldo }: { saldo: SaldoConsolidado }) {
         ))}
       </ul>
       {(saldo.contasSemSaldo > 0 || saldo.contasDivergentes > 0) && (
-        <p className="text-[11px] text-warning mt-2">
+        <p className="text-micro text-warning mt-2">
           {saldo.contasSemSaldo > 0 &&
             `${saldo.contasSemSaldo === 1 ? "1 conta ficou" : `${saldo.contasSemSaldo} contas ficaram`} fora do total por não ter saldo inicial nem extrato. `}
           {saldo.contasDivergentes > 0 &&
@@ -199,9 +212,10 @@ export function TabelaDoConsolidado({
   return (
     <>
       {/* No celular, um cartão por empresa — ver `TabelaDoRealizado`. */}
-      <ul className="sm:hidden flex flex-col gap-2">
+      <ul className="md:hidden flex flex-col gap-2">
         {linhas.map((l) => (
-          <li key={l.companyId} className="rounded-lg border border-border bg-surface px-4 py-3">
+          <li key={l.companyId}>
+            <Cartao>
             <p className="font-medium text-fg">{nomes.get(l.companyId) ?? "—"}</p>
             <dl className="mt-2 grid grid-cols-3 gap-2">
               <ParNoCartao rotulo="Pago no mês" valor={moeda(l.pago)} />
@@ -210,11 +224,12 @@ export function TabelaDoConsolidado({
               <ParNoCartao rotulo="Vencidas a pagar" valor={vencidas(l.companyId, l.vencidasPagar, "/pagar")} />
               <ParNoCartao rotulo="Vencidas a receber" valor={vencidas(l.companyId, l.vencidasReceber, "/receber")} />
             </dl>
+            </Cartao>
           </li>
         ))}
       </ul>
-    <div className="hidden sm:block c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
-      <table className="w-full min-w-[760px] text-[13px]">
+    <div className="hidden md:block c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
+      <table className="w-full min-w-[760px] text-ui">
         <thead>
           <tr className={CABECALHO}>
             <th className="py-2 pl-4 pr-3 font-medium">Empresa</th>

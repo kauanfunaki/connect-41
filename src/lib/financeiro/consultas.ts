@@ -29,7 +29,7 @@ export function whereDoEscopo(e: EscopoFinanceiro): Prisma.FinanceEntryWhereInpu
 }
 
 /** Início do dia de hoje em São Paulo — o corte de "vencida" que `situacaoDaConta` usa. */
-function inicioDeHoje(hojeKey: string): Date {
+export function inicioDeHoje(hojeKey: string): Date {
   return new Date(`${hojeKey}T00:00:00-03:00`);
 }
 
@@ -271,10 +271,22 @@ export type TotaisDoEscopo = Totais & { pagoDesde: Date | null };
  * `situacaoDaConta`/`totalizar`: cancelada fica fora de tudo; paga é status
  * PAGO ou com baixa; o resto se divide pelo vencimento contra o começo do dia
  * de hoje em São Paulo (o mesmo corte de `contasPorJanela`).
+ *
+ * A competência é opcional: as telas de contas da equipe (`listarContas`)
+ * somam pelo mesmo caminho desde 08/10, com o filtro de competência delas.
  */
-export async function totaisDoEscopo(e: EscopoFinanceiro, kind: "PAGAR" | "RECEBER", hojeKey: string): Promise<TotaisDoEscopo> {
+export async function totaisDoEscopo(
+  e: EscopoFinanceiro,
+  kind: "PAGAR" | "RECEBER",
+  hojeKey: string,
+  filtro: { competencia?: string } = {}
+): Promise<TotaisDoEscopo> {
   const prisma = getPrisma();
-  const doTipo: Prisma.FinanceEntryWhereInput = { ...whereDoEscopo(e), kind };
+  const doTipo: Prisma.FinanceEntryWhereInput = {
+    ...whereDoEscopo(e),
+    kind,
+    ...(filtro.competencia ? { competence: filtro.competencia } : {}),
+  };
   const emAberto: Prisma.FinanceEntryWhereInput = { ...doTipo, paidAt: null, status: { notIn: ["CANCELADO", "PAGO"] } };
   const hoje = inicioDeHoje(hojeKey);
   const amanha = inicioDeHoje(addDaysToKey(hojeKey, 1));

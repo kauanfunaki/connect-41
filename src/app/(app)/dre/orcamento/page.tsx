@@ -24,6 +24,7 @@ import { GRUPOS } from "@/lib/dre/estrutura";
 import { gradeDeLinhas, textoDaCelula } from "@/lib/dre/orcamento/grade";
 import { lerAno, versaoAprovada, versaoPadrao } from "@/lib/dre/orcamento/versoes";
 import { MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -132,20 +133,23 @@ export default async function OrcamentoPage({
       )}
 
       {!selecionada ? (
-        <EmptyState
-          title={`Nenhuma versão de orçamento em ${ano}`}
-          description="Crie uma versão vazia, copie outra versão com reajuste, ou parta do realizado de um ano anterior."
-          icon={<Target />}
-        />
+        // Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo.
+        <Card>
+          <EmptyState
+            title={`Nenhuma versão de orçamento em ${ano}`}
+            description="Crie uma versão vazia, copie outra versão com reajuste, ou parta do realizado de um ano anterior."
+            icon={<Target />}
+          />
+        </Card>
       ) : (
         <>
           <Card className="p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="text-[13px]">
+            <div className="text-ui">
               <p className="font-semibold text-fg flex items-center gap-2">
                 {selecionada.name} · {ano}
                 {selecionada.status === "APROVADO" ? <Badge variant="success">Aprovada</Badge> : <Badge variant="info">Rascunho</Badge>}
               </p>
-              <p className="text-[12px] text-fg-muted mt-0.5">
+              <p className="text-fs-2 text-fg-muted mt-0.5">
                 Criada por {selecionada.createdBy.name}
                 {selecionada.status === "APROVADO" && selecionada.approvedAt && (
                   <>
@@ -155,7 +159,7 @@ export default async function OrcamentoPage({
                 {" "}· atualizada em {formatInstantDate(selecionada.updatedAt)}
               </p>
               {selecionada.status === "RASCUNHO" && (
-                <p className="text-[12px] text-fg-muted mt-0.5">
+                <p className="text-fs-2 text-fg-muted mt-0.5">
                   {aprovada ? `A aprovada de ${ano} é "${aprovada.name}".` : `${ano} ainda não tem versão aprovada — a DRE não mostra orçado.`}
                 </p>
               )}
@@ -186,11 +190,11 @@ export default async function OrcamentoPage({
             grade={textos}
             somenteLeitura={selecionada.status === "APROVADO" || !podeEditar}
           />
-          <p className="text-[11px] text-fg-muted mt-3">
+          <NotaDeFonte>
             Valores positivos: o sinal vem do grupo — receita soma, despesa subtrai, como na DRE. Os subtotais usam a mesma
             estrutura da DRE econômica (a margem parte da receita bruta). Versão aprovada é somente leitura; para mudar,
             a coordenação reabre. Orçamento é da empresa inteira — não há orçado por centro de custo nem por categoria.
-          </p>
+          </NotaDeFonte>
         </>
       )}
     </PageContainer>

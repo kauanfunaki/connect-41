@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Check, Upload } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Card } from "@/components/ui/Card";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { importarOfx, type ResumoDaImportacao } from "@/app/(app)/conciliacao/actions";
@@ -25,9 +25,9 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
     <Card className="p-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Upload size={16} className="text-brand" />
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Importar extrato OFX</h2>
+        <h2 className="text-card-title font-semibold text-fg">Importar extrato OFX</h2>
       </div>
-      <p className="text-[12px] text-fg-secondary max-w-[70ch]">
+      <p className="text-helper text-fg-secondary max-w-[70ch]">
         Exporte o extrato em OFX (Money/Quicken) no internet banking. O arquivo precisa ser desta conta. Reimportar o
         mesmo período não duplica nada: o que já entrou é reconhecido e pulado.
       </p>
@@ -57,17 +57,14 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
       >
         <input type="hidden" name="bankAccountId" value={bankAccountId} />
         <FileDropzoneField key={versao} name="arquivo" accept=".ofx" maxSizeMb={MAXIMO_MB} compacto onFileChange={setArquivo} />
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={pendente || !arquivo}>
-            {pendente ? "Importando…" : "Importar"}
-          </Button>
-          {erro && <span className="text-[12px] text-danger">{erro}</span>}
-        </div>
+        {/* O rodapé padrão, à direita como o "Lançar" e o "Criar versão"
+            (08/10/2026): o "Importar" ficava à esquerda, embaixo do campo. */}
+        <FormFooter pending={pendente} submitLabel="Importar" pendingLabel="Importando…" submitDisabled={!arquivo} erro={erro} size="sm" semDivisoria />
       </form>
 
       {resumo && (
-        <div className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-          <p className="inline-flex items-center gap-1.5 text-[13px] text-success">
+        <div className="flex flex-col gap-1 text-fs-2 text-fg-secondary">
+          <p className="inline-flex items-center gap-1.5 text-ui text-success">
             <Check size={14} /> {resumo.novas} {resumo.novas === 1 ? "transação nova" : "transações novas"} de {resumo.lidas} lidas
             {resumo.repetidas > 0 && ` · ${resumo.repetidas} já estavam importadas`}
           </p>

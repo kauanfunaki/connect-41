@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { TAMANHO_MAXIMO_DO_MOTIVO } from "@/lib/financeiro/cobranca/regras";
 
 /**
@@ -60,7 +61,7 @@ export function AcaoComMotivo({
             });
           }}
         >
-          <p className="text-[13px] text-fg-secondary">{descricao}</p>
+          <p className="text-ui text-fg-secondary">{descricao}</p>
           <CampoForm label="Motivo" htmlFor="motivo-da-cobranca" required={motivoObrigatorio} helper={ajuda}>
             <Textarea
               id="motivo-da-cobranca"
@@ -71,15 +72,16 @@ export function AcaoComMotivo({
               required={motivoObrigatorio}
             />
           </CampoForm>
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-            {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-            <Button type="button" variant="secondary" onClick={() => setAberto(false)} disabled={pendente}>
-              Voltar
-            </Button>
-            <Button type="submit" variant={variante === "danger" ? "danger" : "primary"} disabled={pendente}>
-              {pendente ? "Salvando…" : confirmar}
-            </Button>
-          </div>
+          {/* "Voltar", e não "Cancelar": ao lado de "Desfazer acordo" ou
+              "Baixar por perda", "Cancelar" se lê como mais uma decisão. */}
+          <FormFooter
+            pending={pendente}
+            submitLabel={confirmar}
+            submitVariant={variante === "danger" ? "danger" : "primary"}
+            cancelLabel="Voltar"
+            onCancel={() => setAberto(false)}
+            erro={erro}
+          />
         </form>
       </Modal>
     </>
