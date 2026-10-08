@@ -99,7 +99,7 @@ export function ProfileMenu({ name, roleLabel, photoUrl, tenants, currentTenantI
           )}
 
           {(podeTrocarSetor || podeTrocarTenant) && <DropdownSeparator />}
-          <DropdownItem onClick={() => router.push("/configuracoes")}>Configurações do Perfil</DropdownItem>
+          <DropdownItem onClick={() => router.push("/configuracoes")}>Configurações do perfil</DropdownItem>
           <DropdownSeparator />
           <DropdownItem danger onClick={handleLogout}>
             Sair

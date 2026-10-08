@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -108,7 +108,7 @@ export function ChamadasDeIA({ chamadas, agora }: Props) {
                     )}
                   </td>
                   <td className="py-2.5 pr-3">
-                    <Badge variant={DESFECHO_VARIANTE[desfecho]}>{DESFECHO_LABEL[desfecho]}</Badge>
+                    <Selo tom={tomDaVariante(DESFECHO_VARIANTE[desfecho])}>{DESFECHO_LABEL[desfecho]}</Selo>
                     {c.error && (
                       <span className="block text-fs-1 text-fg-muted truncate max-w-[260px]" title={c.error}>
                         {c.error}

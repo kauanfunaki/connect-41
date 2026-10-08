@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Selo } from "@/components/ui/Selo";
+import { Badge } from "@/components/ui/Badge";
 import { DISC_LABEL, type DiscScores, type DiscDimension } from "@/lib/disc";
 
 type Props = {
@@ -28,10 +28,10 @@ export function DiscBars({ scores, primaryProfile, secondaryProfile, compact = f
 
   return (
     <div>
-      {/* O perfil em destaque: o `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026). */}
-      <Selo tom="marca" className="mb-3">
+      {/* O perfil é uma classificação: o `Badge` (escolha 2A, 08/10/2026). */}
+      <Badge variant="info" className="mb-3">
         Perfil {profileCode} — {profileLabel}
-      </Selo>
+      </Badge>
 
       <div className={compact ? "space-y-1.5" : "space-y-2.5"}>
         {DIMENSIONS.map((dim) => (

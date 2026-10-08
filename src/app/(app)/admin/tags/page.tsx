@@ -42,7 +42,7 @@ export default async function TagsPage() {
           href="/admin/tags/novo"
           variant="primary" className="font-medium"
         >
-          + Nova Tag
+          + Nova tag
         </Button></>}
       />
       {Object.keys(grouped).length === 0 ? (
@@ -56,7 +56,7 @@ export default async function TagsPage() {
                 href="/admin/tags/novo"
                 variant="primary" className="font-medium"
               >
-                + Nova Tag
+                + Nova tag
               </Button>
             }
           />

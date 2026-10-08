@@ -19,7 +19,12 @@ const VARIANT_CLASS: Record<VarianteDoBadge, string> = {
   neutral: "bg-surface-2 text-fg-muted border-border",
 };
 
-// Pílula pra categorias reais (não para "status ativo/inativo" — isso usa StatusDot).
+// Pílula para CATEGORIA em destaque: tipo, origem, setor, etiqueta de
+// classificação. Pela regra por papel (escolha 2A do Kauan, 08/10/2026), a
+// situação de uma linha ("Vencida", "Cancelada", "Em análise") é o `Selo`, e
+// ativo/inativo de cadastro é a bolinha (`StatusDot`) — ver o comentário do
+// `Selo`. Quem tem um mapa situação → variante passa a `Selo` com
+// `tomDaVariante`, sem reescrever o mapa.
 export function Badge({ variant, children, className = "" }: Props) {
   return (
     <span

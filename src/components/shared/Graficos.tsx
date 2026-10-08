@@ -130,7 +130,7 @@ export function SeloDaTendencia({ selo }: { selo: Selo }) {
       className={`inline-flex items-center gap-1 h-6 px-2 rounded-full text-fs-2 font-semibold tnum whitespace-nowrap ${COR_DO_SELO[selo.tom]}`}
       data-dica={selo.descricao}
     >
-      <span aria-hidden className="text-[10px]">
+      <span aria-hidden className="text-micro">
         {selo.seta}
       </span>
       <span aria-hidden>{selo.texto}</span>
