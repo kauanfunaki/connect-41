@@ -164,9 +164,12 @@ export default async function CandidatoPage({
         }
       />
 
-      {/* Tags / Skills — banco de talentos */}
+      {/* Tags / Skills — banco de talentos.
+          Títulos de seção da ficha em 18px (`text-section`), como na ficha de
+          pessoa e nos documentos logo abaixo — padrão aceito pelo Kauan em
+          08/10/2026; estavam em 14px. */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-1">Tags / Habilidades</h2>
+        <h2 className="text-section font-semibold text-fg mb-1">Tags / Habilidades</h2>
         <p className="text-fs-2 text-fg-muted mb-3">
           Torna o candidato pesquisável no banco de talentos, mesmo que não avance nesta vaga.
         </p>
@@ -184,7 +187,7 @@ export default async function CandidatoPage({
 
       {/* Identificação */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-4">Identificação</h2>
+        <h2 className="text-section font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
           <InfoRow
@@ -202,7 +205,7 @@ export default async function CandidatoPage({
 
       {/* Contato */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-4">Contato</h2>
+        <h2 className="text-section font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="E-mail" value={person.email} />
           <InfoRow label="Telefone" value={formatPhone(person.phone)} />
@@ -212,7 +215,7 @@ export default async function CandidatoPage({
       {/* Endereço */}
       {fullAddress && (
         <Card className="p-5 mb-4">
-          <h2 className="text-card-title font-semibold text-fg mb-4">Endereço</h2>
+          <h2 className="text-section font-semibold text-fg mb-4">Endereço</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
             <InfoRow label="Complemento" value={person.addressComplement} />
@@ -225,7 +228,7 @@ export default async function CandidatoPage({
 
       {/* Candidaturas */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-3">
+        <h2 className="text-section font-semibold text-fg mb-3">
           Candidaturas {candidaturas.length > 0 && `(${candidaturas.length})`}
         </h2>
 

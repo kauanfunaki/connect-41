@@ -229,9 +229,11 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
   );
 }
 
+// Título de seção da ficha em 18px (`text-section`) — padrão aceito pelo Kauan
+// em 08/10/2026 para as fichas; estava em 14px.
 function TituloDoCartao({ icone, titulo }: { icone: React.ReactNode; titulo: string }) {
   return (
-    <h2 className="flex items-center gap-2 text-card-title font-semibold text-fg">
+    <h2 className="flex items-center gap-2 text-section font-semibold text-fg">
       <span className="text-brand">{icone}</span>
       {titulo}
     </h2>

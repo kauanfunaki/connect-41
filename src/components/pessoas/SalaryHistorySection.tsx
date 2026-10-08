@@ -47,8 +47,10 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
 
   return (
     <Card className="p-5 mb-4">
-      {/* Título de cartão no token de cartão — era o de seção, 18px (DRG-10). */}
-      <h2 className="text-card-title font-semibold text-fg mb-4">Histórico salarial</h2>
+      {/* Título de seção da ficha em 18px (`text-section`), como os da visão
+          geral da pessoa — padrão aceito pelo Kauan em 08/10/2026. Estava em
+          14px desde a auditoria de 07/10 (DRG-10). */}
+      <h2 className="text-section font-semibold text-fg mb-4">Histórico salarial</h2>
 
       {history.length === 0 ? (
         <p className="text-helper text-fg-muted mb-4">Nenhum reajuste registrado ainda.</p>

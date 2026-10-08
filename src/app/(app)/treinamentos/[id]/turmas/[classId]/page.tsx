@@ -54,7 +54,7 @@ export default async function TurmaPage({
       />
 
       <Card className="p-5">
-        <h2 className="text-card-title font-semibold text-fg mb-3">
+        <h2 className="text-section font-semibold text-fg mb-3">
           Participantes {trainingClass.participants.length > 0 && `(${trainingClass.participants.length})`}
         </h2>
 
