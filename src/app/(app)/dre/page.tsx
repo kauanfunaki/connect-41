@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
+import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
 import { formatarCompetencia, formatarReaisDeCentavos as moeda } from "@/lib/format";
 import { FilaDeClassificacao, type ItemParaClassificar } from "@/components/dre/FilaDeClassificacao";
 import { dreDoMes, dreDoAnoDaEmpresa, mesesComMovimento } from "@/lib/dre/data";
@@ -174,7 +175,14 @@ export default async function DrePage({
     );
   }
 
-  const { resultado, categorias, lancamentos, fonte } = await dreDoMes(ctx.tenantId, companyId, escolhido);
+  // O mês anterior só entra na comparação quando teve movimento (pago,
+  // recebido ou importado): sem ele, "subiu 100%" sobre zero diria nada.
+  const anteriorAoEscolhido = escolhido.mes === 1 ? { ano: escolhido.ano - 1, mes: 12 } : { ano: escolhido.ano, mes: escolhido.mes - 1 };
+  const temAnterior = meses.some((m) => m.ano === anteriorAoEscolhido.ano && m.mes === anteriorAoEscolhido.mes);
+  const [{ resultado, categorias, lancamentos, fonte }, anterior] = await Promise.all([
+    dreDoMes(ctx.tenantId, companyId, escolhido),
+    temAnterior ? dreDoMes(ctx.tenantId, companyId, anteriorAoEscolhido) : Promise.resolve(null),
+  ]);
 
   const porNome = new Map(categorias.map((c) => [c.nome, c]));
   const itens: ItemParaClassificar[] = resultado.naoClassificado.map((n) => ({
@@ -219,6 +227,16 @@ export default async function DrePage({
             opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: rotuloDoMes(m) })),
           },
         ]}
+      />
+
+      {/* Os números do topo, como na DRE econômica (08/10/2026, escolha 9A do
+          Kauan: na DRE, o padrão entra nos números do topo e a tabela fica
+          como está). A tela de caixa abria direto nas 30 linhas da tabela. */}
+      <NumerosDaDre
+        resultado={resultado}
+        regime="caixa"
+        anterior={anterior ? { resultado: anterior.resultado, rotulo: rotuloDoMes(anteriorAoEscolhido) } : null}
+        className="mb-4"
       />
 
       {/* Existe porque a regra é um chute até o BPO confirmar — e um chute que
