@@ -46,11 +46,12 @@ function BlocoDaPrevia({ titulo, p }: { titulo: string; p: PreviaDeChamada }) {
   );
 }
 
-const SAUDE: Record<Saude, { rotulo: string; variante: "success" | "warning" | "danger" | "info" }> = {
+// "Desligada" neutra (07/10/2026), como na vitrine de integrações.
+const SAUDE: Record<Saude, { rotulo: string; variante: "success" | "warning" | "danger" | "info" | "neutral" }> = {
   nunca_rodou: { rotulo: "Não testada", variante: "info" },
   ok: { rotulo: "Conectada", variante: "success" },
   com_erro: { rotulo: "Com erro", variante: "danger" },
-  desligada: { rotulo: "Desligada", variante: "info" },
+  desligada: { rotulo: "Desligada", variante: "neutral" },
   parada: { rotulo: "Parada", variante: "warning" },
 };
 

@@ -8,7 +8,7 @@ import type { SaudeDoAgente } from "@/lib/ia/execucao";
 import type { GastoDoMes } from "@/lib/ia/custo";
 import { formatarReaisDeCentavos } from "@/lib/format";
 
-export type VarianteDeBadge = "success" | "warning" | "danger" | "info";
+export type VarianteDeBadge = "success" | "warning" | "danger" | "info" | "neutral";
 
 export const SAUDE_LABEL: Record<SaudeDoAgente, string> = {
   desligado: "Desligado",
@@ -29,7 +29,8 @@ export const SAUDE_LABEL: Record<SaudeDoAgente, string> = {
  * `lastError` fantasma do SPED, em outra roupa.
  */
 export const SAUDE_VARIANTE: Record<SaudeDoAgente, VarianteDeBadge> = {
-  desligado: "info",
+  // Desligado saiu de cena: neutro (07/10/2026), e não o azul de "Nunca usado".
+  desligado: "neutral",
   sem_chave: "warning",
   nunca_usado: "info",
   ok: "success",
