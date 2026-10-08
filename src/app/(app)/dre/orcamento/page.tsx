@@ -59,13 +59,17 @@ export default async function OrcamentoPage({
   const podeEditar = canActOnSector(ctx, setor);
   const coordena = canManageSector(ctx, setor);
 
-  const cabecalho = (
-    <PageHeader title="Orçamento" subtitle="Orçado por grupo da DRE, mês a mês — a versão aprovada é comparada com o realizado na DRE econômica." />
+  const cabecalho = (action?: React.ReactNode) => (
+    <PageHeader
+      title="Orçamento"
+      subtitle="Orçado por grupo da DRE, mês a mês — a versão aprovada é comparada com o realizado na DRE econômica."
+      action={action}
+    />
   );
   if (!companyId) {
     return (
       <PageContainer>
-        {cabecalho}
+        {cabecalho()}
         <EmptyState title="Nenhuma empresa ativa" icon={<Target />} />
       </PageContainer>
     );
@@ -101,7 +105,18 @@ export default async function OrcamentoPage({
 
   return (
     <PageContainer>
-      {cabecalho}
+      {/* "Nova versão" no cabeçalho, numa janela (escolha 5A, 08/10/2026): ficava
+          embaixo das abas e abria um cartão ali, empurrando a grade. */}
+      {cabecalho(
+        podeEditar ? (
+          <NovaVersao
+            companyId={companyId}
+            ano={ano}
+            jaTemVersao={doAno.length > 0}
+            versoes={todas.map((v) => ({ id: v.id, nome: v.name, ano: v.year, aprovada: v.status === "APROVADO" }))}
+          />
+        ) : undefined
+      )}
       <FiltroDePeriodo acao="/dre/orcamento" empresas={empresas} empresaId={companyId}>
         <Input compact type="number" name="ano" defaultValue={ano} min={2000} max={2100} className="w-24" aria-label="Ano" />
       </FiltroDePeriodo>
@@ -120,16 +135,6 @@ export default async function OrcamentoPage({
           }))}
           ativa={selecionada?.id ?? ""}
         />
-      )}
-      {podeEditar && (
-        <div className="mb-4">
-          <NovaVersao
-            companyId={companyId}
-            ano={ano}
-            jaTemVersao={doAno.length > 0}
-            versoes={todas.map((v) => ({ id: v.id, nome: v.name, ano: v.year, aprovada: v.status === "APROVADO" }))}
-          />
-        </div>
       )}
 
       {!selecionada ? (

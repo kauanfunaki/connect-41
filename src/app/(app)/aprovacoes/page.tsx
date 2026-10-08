@@ -9,7 +9,6 @@ import { nomeExibicao } from "@/lib/companyName";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Card } from "@/components/ui/Card";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltroDePeriodo, AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
@@ -18,7 +17,7 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { saoPauloParts } from "@/lib/agenda";
 import { DecisaoDaEquipe } from "@/components/aprovacoes/DecisaoDaEquipe";
 import { HistoricoDaAprovacao, SeloDaAprovacao, type EventoDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
-import { FormAlcada, AlternarAlcada } from "@/components/aprovacoes/FormAlcada";
+import { NovaAlcada, AlternarAlcada } from "@/components/aprovacoes/FormAlcada";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
@@ -69,11 +68,18 @@ export default async function AprovacoesPage({
       : []),
   ];
 
+  // "Nova alçada" no cabeçalho, na aba das alçadas (escolha 5A, 08/10/2026):
+  // era um cartão aberto no topo da aba. Os usuários do portal são os do grupo
+  // da empresa do filtro — a mesma consulta, que a aba fazia.
+  const usuariosDaAlcada =
+    aba === "alcadas" && empresaId ? await usuariosDoGrupoDaEmpresa(ctx.tenantId, empresaId) : [];
+
   return (
     <PageContainer>
       <PageHeader
         title="Aprovações"
         subtitle="Contas a pagar que esperam o “pode pagar” do cliente ou da coordenação. Aguardando e reprovada não são baixadas."
+        action={aba === "alcadas" ? <NovaAlcada companyId={empresaId} usuarios={usuariosDaAlcada} /> : undefined}
       />
       <div className="mt-4">
         <AbasDeLink abas={abas} ativa={aba} />
@@ -361,38 +367,22 @@ async function Alcadas({
   empresaId: string | null;
 }) {
   const prisma = getPrisma();
-  const [alcadas, usuarios] = await Promise.all([
-    prisma.portalApprovalLimit.findMany({
-      where: { tenantId, ...(empresaId ? { companyId: empresaId } : {}) },
-      select: {
-        id: true,
-        maxAmount: true,
-        active: true,
-        company: { select: { name: true, displayName: true } },
-        portalUser: { select: { name: true, email: true, active: true } },
-      },
-      orderBy: [{ companyId: "asc" }, { maxAmount: "desc" }],
-      take: 1000,
-    }),
-    empresaId ? usuariosDoGrupoDaEmpresa(tenantId, empresaId) : Promise.resolve([]),
-  ]);
+  const alcadas = await prisma.portalApprovalLimit.findMany({
+    where: { tenantId, ...(empresaId ? { companyId: empresaId } : {}) },
+    select: {
+      id: true,
+      maxAmount: true,
+      active: true,
+      company: { select: { name: true, displayName: true } },
+      portalUser: { select: { name: true, email: true, active: true } },
+    },
+    orderBy: [{ companyId: "asc" }, { maxAmount: "desc" }],
+    take: 1000,
+  });
 
   return (
     <>
       <FiltroDePeriodo acao="/aprovacoes" empresas={empresas} empresaId={empresaId} permitirTodas extras={{ aba: "alcadas" }} navegaSozinho />
-
-      <Card className="p-4 mb-4">
-        <h2 className="text-card-title font-semibold mb-1">Nova alçada</h2>
-        <p className="text-helper text-fg-muted mb-3">
-          O usuário do portal aprova contas a pagar desta empresa até o teto. A coordenação aprova sem teto. Com ao menos uma
-          alçada ativa, toda conta a pagar lançada em aberto na empresa nasce aguardando aprovação.
-        </p>
-        {empresaId ? (
-          <FormAlcada companyId={empresaId} usuarios={usuarios} />
-        ) : (
-          <p className="text-helper text-fg-muted">Escolha a empresa no filtro acima para cadastrar.</p>
-        )}
-      </Card>
 
       {/* No casco da fila ao lado, com a contagem na barra e o vazio dentro
           (08/10/2026). */}
