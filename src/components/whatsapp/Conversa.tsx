@@ -37,6 +37,7 @@ import type { ConversaDetalhada } from "@/lib/whatsapp/data";
 import type { PessoaDoAtendimento } from "@/lib/whatsapp/equipe";
 import { DESFECHOS, DESFECHOS_DA_TELA, rotuloDoDesfecho } from "@/lib/whatsapp/atendimentos";
 import { FichaNaConversa } from "./FichaNaConversa";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   conversa: ConversaDetalhada;
@@ -145,10 +146,9 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
         </div>
 
         {conversa.handoffReason && (
-          <p className="flex items-start gap-2 text-[length:var(--fs-2)] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
-            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          <Aviso tom="atencao" icone={<AlertTriangle />}>
             O assistente passou para você: {conversa.handoffReason}
-          </p>
+          </Aviso>
         )}
 
         {transferindo && (
@@ -369,9 +369,9 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
 
       <Card className="p-4 flex flex-col gap-2">
         {erro && (
-          <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+          <Aviso>
             {erro}
-          </p>
+          </Aviso>
         )}
         {resposta.pode ? (
           <>

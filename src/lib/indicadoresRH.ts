@@ -5,6 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { AVISO_DAS_FERIAS_DIAS, contarFerias } from "@/lib/home/paineis";
+import { formatarReais } from "@/lib/format";
 
 export type IndicadorCard = { label: string; value: string; hint?: string };
 
@@ -17,7 +18,7 @@ function fmtDecimal(n: number, digits = 1): string {
 }
 
 function fmtCurrency(v: unknown): string {
-  return v == null ? "—" : `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  return v == null ? "—" : formatarReais(Number(v));
 }
 
 export async function getIndicadoresRH(ctx: AuthContext): Promise<IndicadorCard[]> {

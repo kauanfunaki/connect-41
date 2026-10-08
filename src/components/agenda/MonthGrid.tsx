@@ -103,7 +103,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
                   title={`Ver ${weekdayLabel(d.dateKey)}, dia ${dayNumber(d.dateKey)}`}
                   className={`w-5 h-5 sm:w-6 sm:h-6 inline-flex items-center justify-center rounded-full text-[length:var(--fs-micro)] sm:text-[length:var(--fs-2)] tnum transition-colors ${
                     d.isToday
-                      ? "bg-brand text-on-brand font-semibold"
+                      ? "bg-brand-solid text-on-brand font-semibold"
                       : outside
                         ? "text-fg-muted/60 hover:bg-surface-hover"
                         : "text-fg hover:bg-surface-hover"

@@ -4,16 +4,12 @@ import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getRelatorioDistorcoes, type DistorcaoRow } from "@/lib/relatoriosRH";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
 import { RelatorioTable, RelatorioBadge } from "@/components/relatorios/RelatorioTable";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { TrendingDown, TrendingUp } from "lucide-react";
+import { formatarNumero, formatarReais } from "@/lib/format";
 
 export const metadata = { title: "Distorções salariais" };
 
-// Mesmo formato do fmtCurrency de indicadoresRH.ts — o Number() explícito é o
-// que a regra de lint usa pra distinguir moeda de data formatada na mão.
-function brl(v: number | null): string {
-  return v == null ? "—" : `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-}
 
 export default async function RelatorioDistorcoesPage() {
   const { ctx } = await abrirTelaDoModulo("gestao_indicadores_rh");
@@ -38,8 +34,8 @@ export default async function RelatorioDistorcoesPage() {
           cartões de total. O recorte fino fica no funil da coluna Situação. */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Abaixo da faixa", valor: String(abaixo), icone: <TrendingDown />, tom: abaixo > 0 ? "text-warning" : undefined },
-          { rotulo: "Acima da faixa", valor: String(acima), icone: <TrendingUp />, tom: acima > 0 ? "text-brand" : undefined },
+          { rotulo: "Abaixo da faixa", valor: formatarNumero(abaixo, 0), icone: <TrendingDown />, tom: abaixo > 0 ? "text-warning" : undefined },
+          { rotulo: "Acima da faixa", valor: formatarNumero(acima, 0), icone: <TrendingUp />, tom: acima > 0 ? "text-brand" : undefined },
         ]}
       />
 
@@ -63,8 +59,8 @@ export default async function RelatorioDistorcoesPage() {
               </RelatorioBadge>
             ),
           },
-          { header: "Salário", numeric: true, render: (r) => brl(r.salary) },
-          { header: "Faixa do cargo", numeric: true, render: (r) => `${brl(r.rangeMin)} – ${brl(r.rangeMax)}` },
+          { header: "Salário", numeric: true, render: (r) => formatarReais(r.salary) },
+          { header: "Faixa do cargo", numeric: true, render: (r) => `${formatarReais(r.rangeMin)} – ${formatarReais(r.rangeMax)}` },
           {
             header: "Desvio",
             numeric: true,

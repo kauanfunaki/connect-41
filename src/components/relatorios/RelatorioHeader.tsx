@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 
 type Props = {
@@ -8,16 +8,12 @@ type Props = {
   breadcrumb: string;
 };
 
+// A trilha pelo `Breadcrumb` compartilhado (07/10/2026, DRG-21): era montada
+// à mão, com `mb-3` onde as outras telas têm o respiro do componente.
 export function RelatorioHeader({ title, subtitle, breadcrumb }: Props) {
   return (
     <>
-      <div className="flex items-center gap-2 mb-3">
-        <Link href="/indicadores-rh" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Indicadores de RH
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">{breadcrumb}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Indicadores de RH", href: "/indicadores-rh" }, { label: breadcrumb }]} />
       <PageHeader title={title} subtitle={subtitle} />
     </>
   );

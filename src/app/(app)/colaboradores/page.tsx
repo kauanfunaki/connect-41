@@ -3,7 +3,8 @@ import { UserPlus, UserMinus, Palmtree } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
+import { formatarNumero } from "@/lib/format";
 
 // Hub que une Admissão (bloco 1), Rescisão/Desligamento (bloco 2) e Férias
 // (bloco 3) do levantamento de DP/RH — mesma decisão de agrupamento do
@@ -44,9 +45,9 @@ export default async function ColaboradoresPage() {
           "Desligamento" — um termo só para a lista. */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Admissões", valor: String(admissoes), icone: <UserPlus />, detalhe: "em andamento", href: "/admissoes" },
-          { rotulo: "Desligamentos", valor: String(desligamentos), icone: <UserMinus />, detalhe: "em processo", href: "/desligamentos" },
-          { rotulo: "Férias", valor: String(ferias), icone: <Palmtree />, detalhe: "em aberto", href: "/ferias" },
+          { rotulo: "Admissões", valor: formatarNumero(admissoes, 0), icone: <UserPlus />, detalhe: "em andamento", href: "/admissoes" },
+          { rotulo: "Desligamentos", valor: formatarNumero(desligamentos, 0), icone: <UserMinus />, detalhe: "em processo", href: "/desligamentos" },
+          { rotulo: "Férias", valor: formatarNumero(ferias, 0), icone: <Palmtree />, detalhe: "em aberto", href: "/ferias" },
         ]}
       />
     </PageContainer>

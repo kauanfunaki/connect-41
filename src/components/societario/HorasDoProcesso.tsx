@@ -12,6 +12,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { formatarDecorrido, minutosApontados, segundosDesde } from "@/lib/datetime";
 import type { HorasState } from "@/app/(app)/processos/horas-actions";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type LancamentoDeHoras = { id: string; quem: string; minutos: number; dia: string; nota: string | null; meu: boolean };
 
@@ -101,9 +102,9 @@ export function HorasDoProcesso({
 
       {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
       {erro && (
-        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {erro}
-        </p>
+        </Aviso>
       )}
 
       {abrirLancamento && podeAgir && (
@@ -127,9 +128,9 @@ export function HorasDoProcesso({
             </CampoForm>
           </FieldGrid>
           {estado && "error" in estado && (
-            <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+            <Aviso>
               {estado.error}
-            </p>
+            </Aviso>
           )}
           <FormFooter
             pending={lancando}

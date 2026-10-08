@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import type { PerfilState } from "@/app/(app)/configuracoes/actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: (prev: PerfilState, form: FormData) => Promise<PerfilState>;
@@ -59,14 +60,14 @@ export function PerfilForm({ action, defaultName, email, photoUrl: initialPhotoU
   return (
     <form action={formAction} className="space-y-6">
       {state && "error" in state && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
       {state && "success" in state && (
-        <p className="text-[13px] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">
+        <Aviso tom="sucesso">
           Perfil atualizado.
-        </p>
+        </Aviso>
       )}
 
       <div className="flex items-center gap-4">

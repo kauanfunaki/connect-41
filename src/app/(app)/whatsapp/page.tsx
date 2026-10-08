@@ -3,13 +3,14 @@ import { MessagesSquare, UserCheck, UserX } from "lucide-react";
 import { getAuthContext, canActOnSector, isFullWrite } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { ConversasLista } from "@/components/whatsapp/ConversasLista";
 import { EstadoDasConexoes } from "@/components/whatsapp/EstadoDasConexoes";
 import { listarConversas, saudeDasConexoes } from "@/lib/whatsapp/data";
 import { filtrarConversas, recorteDaUrl, type RecorteDaLista } from "@/lib/whatsapp/conversas";
 import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
 import { pessoasDoAtendimento } from "@/lib/whatsapp/equipe";
+import { formatarNumero } from "@/lib/format";
 
 const MODULE = "recrutamento_whatsapp";
 
@@ -63,10 +64,11 @@ export default async function ConversasDeWhatsappPage({
           const ativo = r.chave === recorte;
           return {
             rotulo: r.rotulo,
-            valor: String(n),
+            valor: formatarNumero(n, 0),
             icone: ICONE_DO_RECORTE[r.chave],
             tom: r.chave === "sem_responsavel" && n > 0 ? "text-warning" : undefined,
             detalhe: ativo ? "mostrando agora" : undefined,
+            ativo,
             href: r.chave === "todas" || ativo ? "/whatsapp" : `/whatsapp?ver=${r.chave}`,
           };
         })}

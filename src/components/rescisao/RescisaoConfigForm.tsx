@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { RESCISAO_CHECKLIST } from "@/lib/rescisaoChecklist";
 import type { RescisaoConfig, OrigemCampo } from "@/lib/rescisao/config";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type RescisaoConfigState = { error: string } | null;
 
@@ -62,7 +63,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
   return (
     <form action={formAction} className="space-y-6">
       {state?.error && (
-        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>
+        <Aviso>{state.error}</Aviso>
       )}
 
       <section>

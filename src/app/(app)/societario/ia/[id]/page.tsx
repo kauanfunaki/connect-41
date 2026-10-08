@@ -6,7 +6,7 @@ import { BackButton } from "@/components/shared/BackButton";
 import { Badge } from "@/components/ui/Badge";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarReais } from "@/lib/format";
 import { getPrisma } from "@/lib/prisma";
 import { agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { propostaDoSetor } from "@/lib/ia/propostas";
@@ -28,7 +28,6 @@ const STATUS = {
   REJEITADA: { rotulo: "Rejeitada", variante: "danger" },
 } as const;
 const CONFIANCA = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa" } as const;
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export default async function RevisarPropostaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -143,7 +142,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
           Arquivo: {payload.arquivo}
           {l.tipoDoDocumento && ` · ${l.tipoDoDocumento}`}
           {l.dataDoDocumento && ` de ${l.dataDoDocumento.split("-").reverse().join("/")}`}
-          {l.capitalSocial !== null && ` · capital social de ${MOEDA.format(l.capitalSocial)}`}
+          {l.capitalSocial !== null && ` · capital social de ${formatarReais(l.capitalSocial)}`}
           {" · "}
           <Link href={`/empresas/${empresa.id}/socios`} className="text-brand hover:underline">
             Sócios de {empresa.name}

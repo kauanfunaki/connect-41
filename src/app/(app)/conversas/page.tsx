@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { BackButton } from "@/components/shared/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings, ArrowLeft, ClipboardCheck, PenLine, Timer } from "lucide-react";
+import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings, ClipboardCheck, PenLine, Timer } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { getAuthContext, isFullAccess, canViewSector } from "@/lib/auth/context";
@@ -11,10 +12,11 @@ import { scopedChatwootConversationWhere } from "@/lib/auth/scope";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
 import { chaveDoSegmento, indexarVinculosPorNome, normalizarNomeAtendente } from "@/lib/chatwoot/evaluation";
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
-import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
 import { VincularContato } from "@/components/conversas/VincularContato";
@@ -254,9 +256,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
         <div className="bg-surface border border-brand/30 rounded-lg px-4 py-3 mb-4">
           <div className="flex items-center justify-between gap-2 mb-1">
             <p className="text-[length:var(--fs-2)] font-medium text-brand">Atendimento aberto</p>
-            <Button href="/conversas" variant="secondary" size="xs">
-              <ArrowLeft size={11} /> Voltar à lista
-            </Button>
+            <BackButton href="/conversas" rotulo="Voltar à lista" />
           </div>
           {focusedConversation ? (
             <AtendimentosAccordion atendimentos={[toResumo(focusedConversation)]} defaultOpenId={id} />
@@ -530,8 +530,8 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
                 os cartões de total do resto do Connect. */}
             <FaixaDeTotais
               itens={[
-                { rotulo: "Atendimentos avaliados", valor: String(total), icone: <ClipboardCheck /> },
-                { rotulo: "Nota média", valor: String(Math.round(soma("scoreSum") / total)), icone: <Gauge /> },
+                { rotulo: "Atendimentos avaliados", valor: formatarNumero(total, 0), icone: <ClipboardCheck /> },
+                { rotulo: "Nota média", valor: formatarNumero(Math.round(soma("scoreSum") / total), 0), icone: <Gauge /> },
                 { rotulo: "Escrita média", valor: `${Math.round(soma("writingSum") / total)}/50`, icone: <PenLine /> },
                 { rotulo: "SLA médio", valor: `${Math.round(soma("slaSum") / total)}/50`, icone: <Timer /> },
               ]}

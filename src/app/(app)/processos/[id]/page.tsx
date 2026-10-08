@@ -3,8 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { Selo } from "@/components/ui/Selo";
-import { TOM_DA_VARIANTE } from "@/components/societario/tomDoSelo";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
@@ -268,9 +267,9 @@ export default async function ProcessoDetalhePage({
           {/* Situação e prioridade em Selo: é a situação da ficha (regra de
               02/10 no Selo; auditoria de 07/10/2026). */}
           {encerradoSemConclusao ? (
-            <Selo tom="perigo">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Selo>
+            <Selo tom="neutro">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Selo>
           ) : (
-            <Selo tom={TOM_DA_VARIANTE[SITUACAO_VARIANTE[situacao]]}>{SITUACAO_LABEL[situacao]}</Selo>
+            <Selo tom={tomDaVariante(SITUACAO_VARIANTE[situacao])}>{SITUACAO_LABEL[situacao]}</Selo>
           )}
 
           {prazo.situacao === "sem_previsao" ? (
@@ -299,7 +298,7 @@ export default async function ProcessoDetalhePage({
           )}
 
           {processo.priority !== "NORMAL" && (
-            <Selo tom={TOM_DA_VARIANTE[PRIORIDADE_VARIANTE[processo.priority]]}>
+            <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[processo.priority])}>
               Prioridade {PRIORIDADE_LABEL[processo.priority].toLowerCase()}
             </Selo>
           )}

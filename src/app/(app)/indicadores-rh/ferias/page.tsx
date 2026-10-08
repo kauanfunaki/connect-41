@@ -1,10 +1,10 @@
 import { PageContainer } from "@/components/shared/PageContainer";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getRelatorioFerias, type FeriasRow, type FeriasSituacao } from "@/lib/relatoriosRH";
-import { formatCalendarDate } from "@/lib/format";
+import { formatCalendarDate, formatarNumero } from "@/lib/format";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
 import { RelatorioTable, RelatorioBadge, TOM_DO_TOTAL, type BadgeTone } from "@/components/relatorios/RelatorioTable";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { AlertTriangle, Clock, CalendarCheck, CheckCircle2 } from "lucide-react";
 
 export const metadata = { title: "Relatório de Férias" };
@@ -38,7 +38,7 @@ export default async function RelatorioFeriasPage() {
           { rotulo: "A vencer (60 dias)", n: count("A_VENCER"), tone: "warning" as const, icone: <Clock /> },
           { rotulo: "Programadas", n: count("PROGRAMADA"), tone: "brand" as const, icone: <CalendarCheck /> },
           { rotulo: "Em dia", n: count("EM_DIA"), tone: "neutral" as const, icone: <CheckCircle2 /> },
-        ].map((i) => ({ rotulo: i.rotulo, valor: String(i.n), icone: i.icone, tom: i.n > 0 ? TOM_DO_TOTAL[i.tone] : undefined }))}
+        ].map((i) => ({ rotulo: i.rotulo, valor: formatarNumero(i.n, 0), icone: i.icone, tom: i.n > 0 ? TOM_DO_TOTAL[i.tone] : undefined }))}
       />
 
       <RelatorioTable<FeriasRow>

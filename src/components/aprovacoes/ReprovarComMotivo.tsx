@@ -18,12 +18,15 @@ export function ReprovarComMotivo({
   descricao,
   acao,
   tamanho = "xs",
+  className,
 }: {
   entryId: string;
   /** O que está sendo reprovado, em uma linha — fornecedor e valor. */
   descricao: string;
   acao: (entryId: string, motivo: string) => Promise<{ error: string } | { ok: true }>;
-  tamanho?: "xs" | "sm";
+  /** `lg` nos cartões do portal no celular (07/10/2026): alvo de 40px, ao lado do "Aprovar". */
+  tamanho?: "xs" | "sm" | "lg";
+  className?: string;
 }) {
   const [aberto, setAberto] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -32,8 +35,8 @@ export function ReprovarComMotivo({
 
   return (
     <>
-      <Button variant="danger" size={tamanho} onClick={() => setAberto(true)}>
-        <XCircle size={12} /> Reprovar
+      <Button variant="danger" size={tamanho} className={className} onClick={() => setAberto(true)}>
+        <XCircle size={tamanho === "lg" ? 16 : 12} /> Reprovar
       </Button>
       <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Reprovar conta" maxWidth="max-w-md">
         <form

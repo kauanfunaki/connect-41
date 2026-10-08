@@ -12,6 +12,7 @@ import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { ConfirmacaoEnviada } from "@/components/publico/ConfirmacaoEnviada";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Defaults = {
   cpf: string; rg: string; pis: string; ctps: string; ctpsSerie: string; education: string; birthDate: string;
@@ -291,7 +292,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
       {/* O erro ia depois do botão, fora da vista de quem acabou de clicar
           no fim da página; agora fica logo acima dele. */}
       {error && (
-        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>
+        <Aviso>{error}</Aviso>
       )}
 
       <Button

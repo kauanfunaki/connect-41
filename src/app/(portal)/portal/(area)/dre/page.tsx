@@ -11,7 +11,8 @@ import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { dreDoMes, mesesComMovimento } from "@/lib/dre/data";
 import { serieEconomica } from "@/lib/dre/dataEconomica";
 import { comRotulosEconomicos } from "@/lib/dre/economica";
-import { competenciaValida, competenciaDe, partesDaCompetencia, rotuloDaCompetencia } from "@/lib/financeiro/periodo";
+import { competenciaValida, competenciaDe, partesDaCompetencia } from "@/lib/financeiro/periodo";
+import { formatarCompetencia } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +78,7 @@ export default async function PortalDrePage({
     conteudo =
       lancamentos === 0 ? (
         <Card>
-          <EmptyState icon={<FileText />} title={`Nenhum pagamento ou recebimento em ${rotuloDaCompetencia(mes)}`} />
+          <EmptyState icon={<FileText />} title={`Nenhum pagamento ou recebimento em ${formatarCompetencia(mes)}`} />
         </Card>
       ) : (
         <RelatorioDoDre resultado={resultado} />
@@ -88,7 +89,7 @@ export default async function PortalDrePage({
       // Mês só com perda ou diferença de acordo ainda tem resultado a mostrar.
       dre.lancamentos === 0 && dre.cobranca.perdas === 0 && dre.cobranca.acrescimosDeAcordo === 0 && dre.cobranca.descontosDeAcordo === 0 ? (
         <Card>
-          <EmptyState icon={<FileText />} title={`Nenhum lançamento com competência em ${rotuloDaCompetencia(mes)}`} />
+          <EmptyState icon={<FileText />} title={`Nenhum lançamento com competência em ${formatarCompetencia(mes)}`} />
         </Card>
       ) : (
         <RelatorioDoDre resultado={comRotulosEconomicos(dre.resultado)} />
@@ -117,7 +118,9 @@ export default async function PortalDrePage({
         />
       )}
       {conteudo}
-      <p className="text-[11px] text-fg-muted mt-3">
+      {/* Nota em `text-helper` (13px) desde 07/10/2026: era 11px, o tamanho do
+          cabeçalho de tabela, numa explicação que o cliente lê no celular. */}
+      <p className="text-helper text-fg-muted mt-3">
         {regime === "caixa"
           ? "Regime de caixa: o que foi efetivamente pago e recebido no mês."
           : "Regime de competência: o que pertence ao mês, pago ou não."}

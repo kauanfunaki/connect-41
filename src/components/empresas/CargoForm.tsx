@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { SENIORITY_ORDER, SENIORITY_LABEL } from "@/lib/cargoMatriz";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type CargoDefaultValues = {
   id?: string;
@@ -47,9 +48,9 @@ export function CargoForm({ action, companyId, cancelHref, defaultValues, famili
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       <div>

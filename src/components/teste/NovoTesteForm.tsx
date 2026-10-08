@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
+import { Aviso } from "@/components/ui/Aviso";
 import { Select } from "@/components/ui/Select";
 import { TestTypeSelect, type TemplateOption, type TestTypeValue } from "@/components/teste/TestTypeSelect";
 import { gerarLinkTeste } from "@/app/(app)/testes/actions";
@@ -66,7 +67,7 @@ export function NovoTesteForm({ candidatos, templates }: Props) {
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {error && <p className="text-[length:var(--fs-ui)] text-danger">{error}</p>}
+      {error && <Aviso>{error}</Aviso>}
     </form>
   );
 }

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -108,16 +107,13 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {folders.map((f) => (
               <div key={f.id} className="relative">
-                <Link
-                  href={`/setor/${code}/pastas/${f.id}`}
-                  className="flex items-center gap-2.5 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3 pr-10 transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5"
-                >
+                <Card href={`/setor/${code}/pastas/${f.id}`} className="flex items-center gap-2.5 px-4 py-3 pr-10">
                   <FolderIcon size={16} className="text-fg-muted flex-shrink-0" />
                   <div className="min-w-0">
                     <p className="text-[length:var(--fs-card-title)] font-semibold text-fg truncate">{f.name}</p>
                     <p className="text-[length:var(--fs-micro)] text-fg-muted">{f._count.pipelines} {f._count.pipelines === 1 ? "lista" : "listas"}</p>
                   </div>
-                </Link>
+                </Card>
                 {canCreate && (
                   <div className="absolute top-1/2 -translate-y-1/2 right-2.5">
                     <DeleteEntityMenu kind="pasta" name={f.name} action={excluirPasta.bind(null, f.id)} />

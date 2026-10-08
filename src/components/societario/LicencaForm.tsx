@@ -14,6 +14,7 @@ import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSele
 import { salvarLicenca, type LicencaState } from "@/app/(app)/licencas/actions";
 import { TIPOS_SUGERIDOS, MAX_TIPO, MAX_NUMERO, MAX_OBSERVACOES } from "@/lib/societario/licenca-form";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type OrgaoDaLicenca = { id: string; nome: string };
 
@@ -143,7 +144,7 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
       </CampoForm>
 
       {estado && "error" in estado && (
-        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{estado.error}</p>
+        <Aviso>{estado.error}</Aviso>
       )}
 
       <FormFooter

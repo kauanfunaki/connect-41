@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, BadgeCheck, CalendarClock, Receipt } from "lucide-react";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarReaisDeCentavos } from "@/lib/format";
 import {
   faixaDoPrazo,
   textoDoPrazo,
@@ -9,7 +9,6 @@ import {
   type TipoDePrazo,
 } from "@/lib/societario/prazos";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 const ICONE: Record<TipoDePrazo, typeof AlertTriangle> = {
   exigencia: AlertTriangle,
@@ -61,7 +60,7 @@ export function ListaDePrazos({ itens, hoje, mostrarResponsavel = false }: Props
                 o recuo é o ícone (16px) mais o espaço (8px). */}
             <div className="flex items-center gap-3 md:justify-end pl-6 md:pl-0">
               {item.valorCentavos !== null && (
-                <span className="text-[length:var(--fs-2)] tabular-nums text-fg-secondary">{MOEDA.format(item.valorCentavos / 100)}</span>
+                <span className="text-[length:var(--fs-2)] tabular-nums text-fg-secondary">{formatarReaisDeCentavos(item.valorCentavos)}</span>
               )}
               {item.data ? (
                 <span className={`text-[length:var(--fs-2)] whitespace-nowrap ${COR_DA_FAIXA[faixaDoPrazo(item.data, hoje)]}`}>

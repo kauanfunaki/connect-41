@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Inbox } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -25,9 +25,10 @@ export default async function NovaSolicitacaoPage() {
 
   return (
     <PageContainer>
-      <Link href="/portal/solicitacoes" className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg mb-3">
-        <ArrowLeft size={14} /> Solicitações
-      </Link>
+      {/* O "voltar" com destino fixo, no BackButton (07/10/2026): quem chega pelo
+          link do e-mail não tem histórico para onde voltar, e o link escrito
+          à mão tinha 20px de alvo. */}
+      <BackButton href="/portal/solicitacoes" rotulo="Solicitações" className="mb-3" />
       <PageHeader
         title="Nova solicitação"
         subtitle="Escolha o assunto e conte o que você precisa. A equipe certa recebe na hora e responde por aqui."

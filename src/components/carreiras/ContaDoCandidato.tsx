@@ -19,11 +19,13 @@ import {
   pedirLink,
   type RespostaDaConta,
 } from "@/app/carreiras/[slug]/minha-conta/actions";
+import { Aviso } from "@/components/ui/Aviso";
 
-function Aviso({ r }: { r: RespostaDaConta }) {
+// O retorno de uma ação da conta: erro ou confirmação.
+function RetornoDaConta({ r }: { r: RespostaDaConta }) {
   if (!r) return null;
-  if ("erro" in r) return <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{r.erro}</p>;
-  if (r.mensagem) return <p className="text-[length:var(--fs-ui)] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">{r.mensagem}</p>;
+  if ("erro" in r) return <Aviso>{r.erro}</Aviso>;
+  if (r.mensagem) return <Aviso tom="sucesso">{r.mensagem}</Aviso>;
   return null;
 }
 
@@ -38,7 +40,7 @@ export function PedirAcesso({ slug }: { slug: string }) {
       <Button type="submit" variant="primary" className="w-full" disabled={pendente}>
         {pendente ? "Enviando…" : enviado ? "Enviar de novo" : "Receber link de acesso"}
       </Button>
-      <Aviso r={estado} />
+      <RetornoDaConta r={estado} />
     </form>
   );
 }
@@ -51,7 +53,7 @@ export function Entrar({ slug, token }: { slug: string; token: string }) {
       <Button variant="primary" className="w-full" disabled={pendente} onClick={() => start(async () => setEstado(await entrarComLink(slug, token)))}>
         {pendente ? "Entrando…" : "Entrar e ver minhas candidaturas"}
       </Button>
-      <Aviso r={estado} />
+      <RetornoDaConta r={estado} />
     </div>
   );
 }
@@ -68,8 +70,8 @@ export function Desistir({ slug, candidaturaId, vaga }: { slug: string; candidat
     );
   }
   return (
-    <div className="rounded-md border border-warning/30 bg-warning-bg px-3 py-2 space-y-2">
-      <p className="text-[length:var(--fs-ui)] text-fg">Desistir de &ldquo;{vaga}&rdquo;? A equipe é avisada, e a candidatura não volta.</p>
+    <Aviso tom="atencao" className="space-y-2">
+      <p className="text-fg">Desistir de &ldquo;{vaga}&rdquo;? A equipe é avisada, e a candidatura não volta.</p>
       <div className="flex flex-wrap items-center gap-2">
         <Button size="xs" variant="secondary" onClick={() => setConfirmando(false)}>
           Cancelar
@@ -78,8 +80,8 @@ export function Desistir({ slug, candidaturaId, vaga }: { slug: string; candidat
           {pendente ? "Enviando…" : "Sim, desistir"}
         </Button>
       </div>
-      <Aviso r={estado} />
-    </div>
+      <RetornoDaConta r={estado} />
+    </Aviso>
   );
 }
 
@@ -100,7 +102,7 @@ export function AtualizarDados({ slug, telefone }: { slug: string; telefone: str
           {pendente ? "Salvando…" : "Salvar"}
         </Button>
       </div>
-      <Aviso r={estado} />
+      <RetornoDaConta r={estado} />
     </form>
   );
 }
@@ -133,7 +135,7 @@ export function PedirExclusao({ slug, pedidoEm }: { slug: string; pedidoEm: stri
           {pendente ? "Enviando…" : "Confirmar pedido"}
         </Button>
       </div>
-      <Aviso r={estado} />
+      <RetornoDaConta r={estado} />
     </div>
   );
 }

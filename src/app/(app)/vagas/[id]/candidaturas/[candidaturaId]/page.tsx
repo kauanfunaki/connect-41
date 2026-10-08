@@ -19,9 +19,8 @@ import { MeetingsSection } from "@/components/kanban/MeetingsSection";
 import { TesteCard } from "@/components/teste/TesteCard";
 import { STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel";
 import { CRITERIA, RECOMMENDATION_LABEL, consolidateScorecards, scorecardAverage } from "@/lib/scorecard";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 // Média do scorecard em pt-BR ("4,5", era "4.5") — DRG-02, 07/10/2026.
-import { num } from "@/lib/valora/formato";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { salvarScorecard, excluirScorecard } from "./actions";
 import { agendarEntrevista, excluirEntrevista } from "./meeting-actions";
@@ -29,6 +28,7 @@ import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
 import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 import { Selo } from "@/components/ui/Selo";
+import { Aviso } from "@/components/ui/Aviso";
 
 export default async function CandidaturaScorecardPage({
   params,
@@ -141,10 +141,10 @@ export default async function CandidaturaScorecardPage({
           É pedido legal (LGPD): fica à vista de quem abre a candidatura, e não
           só no sino de quem estava de plantão. */}
       {candidatura.person.dataDeletionRequestedAt && (
-        <p className="mb-4 text-[length:var(--fs-ui)] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
+        <Aviso tom="atencao" className="mb-4">
           O candidato pediu a exclusão dos dados pessoais (LGPD) em{" "}
           {formatInstantDate(candidatura.person.dataDeletionRequestedAt)}, pelo portal de vagas. Tratar o pedido na ficha do candidato.
-        </p>
+        </Aviso>
       )}
 
       <NotaDaTriagem
@@ -217,7 +217,7 @@ export default async function CandidaturaScorecardPage({
           <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[length:var(--fs-ui)] text-fg">
-              Média: <strong className="tnum">{consolidation.averageScore != null ? num(consolidation.averageScore, 1) : "—"}</strong>/5
+              Média: <strong className="tnum">{consolidation.averageScore != null ? formatarNumero(consolidation.averageScore, 1) : "—"}</strong>/5
             </span>
             <Selo tom="sucesso">
               {consolidation.tally.AVANCAR} avançar
@@ -249,7 +249,7 @@ export default async function CandidaturaScorecardPage({
                       {s.evaluator.id === ctx.userId && <span className="text-[length:var(--fs-micro)] text-fg-muted font-normal"> (você)</span>}
                     </p>
                     <div className="flex flex-shrink-0 items-center gap-2">
-                      <span className="text-[length:var(--fs-2)] text-fg-muted tnum">{avg != null ? `${num(avg, 1)}/5` : "sem nota"}</span>
+                      <span className="text-[length:var(--fs-2)] text-fg-muted tnum">{avg != null ? `${formatarNumero(avg, 1)}/5` : "sem nota"}</span>
                       <Selo cor={s.recommendation === "AVANCAR" ? "bg-success/10 text-success border-success/25"
                           : s.recommendation === "REPROVAR" ? "bg-danger/10 text-danger border-danger/25"
                           : "bg-warning/10 text-warning border-warning/25"}>

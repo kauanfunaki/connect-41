@@ -8,6 +8,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type ClienteDefaultValues = {
   id?: string;
@@ -33,9 +34,9 @@ export function ClienteForm({ action, cancelHref, defaultValues }: Props) {
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2" role="alert">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       <FormSection title="Cliente">

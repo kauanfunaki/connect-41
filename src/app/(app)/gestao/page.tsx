@@ -4,7 +4,7 @@ import { ArrowRight, CheckCircle2, Loader, PauseCircle, PlayCircle, UserX } from
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltroDeSetor } from "@/components/gestao/FiltroDeSetor";
 import { ItemDaGestao, SelosDoItem, ORIGEM } from "@/components/gestao/ItemDaGestao";
 import { getPrisma } from "@/lib/prisma";
@@ -14,6 +14,7 @@ import { itensDaGestao } from "@/lib/gestao/itens";
 import { ordemDeAtencao, precisaDeAtencao, podeVerSetor, type Coluna } from "@/lib/gestao/regras";
 import { inicioDoMes, nomesDasPessoas, pessoasPorSetor } from "@/lib/gestao/telas";
 import { reatribuirItem } from "./actions";
+import { formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,6 @@ const COLUNAS: { key: Coluna; titulo: string; vazio: string; icone: React.ReactN
   { key: "CONCLUIDO", titulo: "Concluídos (30 dias)", vazio: "Nada concluído nos últimos 30 dias.", icone: <CheckCircle2 /> },
 ];
 const POR_COLUNA = 8;
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export default async function PainelDeGestaoPage({ searchParams }: { searchParams: Promise<{ setor?: string }> }) {
   const g = await contextoDaGestao();
@@ -72,14 +72,14 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
               const n = porColuna.get(c.key)!.length;
               return {
                 rotulo: c.titulo,
-                valor: String(n),
+                valor: formatarNumero(n, 0),
                 icone: c.icone,
                 tom: c.key === "PARADO" && n > 0 ? "text-warning" : c.key === "CONCLUIDO" ? "text-success" : undefined,
               };
             }),
             {
               rotulo: "Sem responsável",
-              valor: String(semResponsavel),
+              valor: formatarNumero(semResponsavel, 0),
               icone: <UserX />,
               tom: semResponsavel > 0 ? "text-warning" : undefined,
               detalhe: "em aberto",
@@ -166,10 +166,10 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
           <Card className="p-4 text-[13px] text-fg-secondary flex flex-wrap gap-x-6 gap-y-1">
             <span>
               Taxas de órgão lançadas no Societário:{" "}
-              <strong className="text-fg tabular-nums">{MOEDA.format((lancadas._sum.amountCents ?? 0) / 100)}</strong> ({lancadas._count})
+              <strong className="text-fg tabular-nums">{formatarReaisDeCentavos(lancadas._sum.amountCents ?? 0)}</strong> ({lancadas._count})
             </span>
             <span>
-              Pagas no mês: <strong className="text-fg tabular-nums">{MOEDA.format((pagas._sum.amountCents ?? 0) / 100)}</strong> ({pagas._count})
+              Pagas no mês: <strong className="text-fg tabular-nums">{formatarReaisDeCentavos(pagas._sum.amountCents ?? 0)}</strong> ({pagas._count})
             </span>
           </Card>
         </section>

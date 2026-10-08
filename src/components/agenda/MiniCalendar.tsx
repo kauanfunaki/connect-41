@@ -150,7 +150,7 @@ export function MiniCalendar({ view, selectedKeys, referenceKey }: Props) {
                   onClick={() => pick(dateKey)}
                   className={`h-7 rounded-md text-[length:var(--fs-micro)] tnum transition-colors ${
                     isToday
-                      ? "bg-brand text-on-brand font-semibold"
+                      ? "bg-brand-solid text-on-brand font-semibold"
                       : highlighted
                         ? "bg-brand-subtle text-brand font-medium hover:bg-brand/15"
                         : inMonth
