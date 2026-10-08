@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { AlertTriangle, CheckCircle2, CircleDashed, MinusCircle, Palmtree, Settings2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { canManageSector } from "@/lib/auth/context";
@@ -22,15 +22,17 @@ import {
   resumirConferencia,
   statusPrazoPagamento,
 } from "@/lib/rescisaoChecklist";
-import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatarNumero, formatarReais } from "@/lib/format";
 import { calcularReferencia, avaliarDivergencia } from "@/lib/rescisao/referencia";
 import type { ReferenciaProps } from "@/components/rescisao/ItemConferenciaRow";
 import { salvarItemConferencia, salvarDadosRescisao } from "./actions";
 import { Selo } from "@/components/ui/Selo";
+import { Aviso } from "@/components/ui/Aviso";
 
-function brl(v: number | null): string | null {
-  if (v == null) return null;
-  return `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+/** `null` fica `null`: sem valor, o rótulo some em vez de virar travessão. Troca
+ *  por `formatarReais` de lib/format.ts quando a base o criar (DRG-01, 07/10). */
+function reais(v: number | null): string | null {
+  return v == null ? null : formatarReais(v);
 }
 
 export default async function ConferenciaRescisaoPage({
@@ -105,14 +107,14 @@ export default async function ConferenciaRescisaoPage({
     return {
       situacao: verba.situacao,
       valor: verba.valor,
-      valorLabel: brl(verba.valor),
+      valorLabel: reais(verba.valor),
       formula: verba.formula,
       fundamento: verba.fundamento,
       motivo: verba.motivo,
       premissas: verba.premissas,
       confianca: verba.confianca,
       delta,
-      deltaLabel: brl(delta),
+      deltaLabel: reais(delta),
       divergente,
     };
   }
@@ -152,16 +154,16 @@ export default async function ConferenciaRescisaoPage({
           continua com a barra de progresso e a lista de divergências. */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Conferidos", valor: String(resumo.conferidos), icone: <CheckCircle2 />, tom: resumo.conferidos > 0 ? "text-success" : undefined },
-          { rotulo: "Divergentes", valor: String(resumo.divergentes), icone: <AlertTriangle />, tom: resumo.divergentes > 0 ? "text-danger" : undefined },
-          { rotulo: "Pendentes", valor: String(resumo.pendentes), icone: <CircleDashed />, tom: resumo.pendentes > 0 ? "text-warning" : undefined },
-          { rotulo: "Não se aplica", valor: String(resumo.naoAplicaveis), icone: <MinusCircle />, tom: "text-fg-muted" },
+          { rotulo: "Conferidos", valor: formatarNumero(resumo.conferidos, 0), icone: <CheckCircle2 />, tom: resumo.conferidos > 0 ? "text-success-fg" : undefined },
+          { rotulo: "Divergentes", valor: formatarNumero(resumo.divergentes, 0), icone: <AlertTriangle />, tom: resumo.divergentes > 0 ? "text-danger" : undefined },
+          { rotulo: "Pendentes", valor: formatarNumero(resumo.pendentes, 0), icone: <CircleDashed />, tom: resumo.pendentes > 0 ? "text-warning-fg" : undefined },
+          { rotulo: "Não se aplica", valor: formatarNumero(resumo.naoAplicaveis, 0), icone: <MinusCircle />, tom: "text-fg-muted" },
         ]}
       />
 
       {/* Prazo legal — contagem de prazo é seguro fazer, cálculo de verba não. */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Dados da rescisão</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Dados da rescisão</h2>
         <DadosRescisaoForm
           action={salvarDadosRescisao.bind(null, id, terminationId)}
           defaults={{
@@ -192,7 +194,7 @@ export default async function ConferenciaRescisaoPage({
               {prazo.status === "VENCIDO" && (
                 <span className="text-danger font-medium">— vencido há {Math.abs(prazo.diasRestantes)} dia(s)</span>
               )}
-              {prazo.status === "VENCE_HOJE" && <span className="text-warning font-medium">— vence hoje</span>}
+              {prazo.status === "VENCE_HOJE" && <span className="text-warning-fg font-medium">— vence hoje</span>}
               {prazo.status === "NO_PRAZO" && (
                 <span className="text-fg-muted">— faltam {prazo.diasRestantes} dia(s)</span>
               )}
@@ -213,7 +215,7 @@ export default async function ConferenciaRescisaoPage({
       {referencia && (
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Cálculo de referência</h2>
+            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Cálculo de referência</h2>
             <span className="text-[11px] text-fg-muted">motor v{referencia.calculo.motorVersao}</span>
           </div>
           <p className="text-[12px] text-fg-muted mb-3">
@@ -223,11 +225,11 @@ export default async function ConferenciaRescisaoPage({
 
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <Selo tom="sucesso" className="tnum">
-              Proventos: {brl(referencia.calculo.totalProventos)}
+              Proventos: {formatarReais(referencia.calculo.totalProventos)}
             </Selo>
             {referencia.calculo.totalDescontos > 0 && (
               <Selo tom="perigo" className="tnum">
-                Descontos: {brl(referencia.calculo.totalDescontos)}
+                Descontos: {formatarReais(referencia.calculo.totalDescontos)}
               </Selo>
             )}
             <span className="text-[11px] text-fg-muted">
@@ -236,7 +238,7 @@ export default async function ConferenciaRescisaoPage({
           </div>
 
           {referencia.calculo.inputsFaltantes.length > 0 && (
-            <div className="rounded-md border border-warning/25 bg-warning/8 px-3 py-2 mb-3">
+            <Aviso tom="atencao" className="mb-3">
               <p className="text-[12px] font-medium text-fg mb-1">Faltam insumos para calcular tudo:</p>
               <ul className="space-y-0.5">
                 {referencia.calculo.inputsFaltantes.map((i, idx) => (
@@ -245,7 +247,7 @@ export default async function ConferenciaRescisaoPage({
                   </li>
                 ))}
               </ul>
-            </div>
+            </Aviso>
           )}
 
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-border">
@@ -272,7 +274,7 @@ export default async function ConferenciaRescisaoPage({
       {/* Resumo */}
       <Card className="p-5 mb-4">
         <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Resumo da conferência</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Resumo da conferência</h2>
           <span className="text-[12px] text-fg-muted tnum">{resumo.progressoPct}% tratado</span>
         </div>
         <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
@@ -304,7 +306,7 @@ export default async function ConferenciaRescisaoPage({
       {feriasEmAberto.length > 0 && (
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Férias em aberto (base de conferência)</h2>
+            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Férias em aberto (base de conferência)</h2>
             <Button href={`/pessoas/${id}/ferias`} variant="secondary" size="xs">
               <Palmtree size={12} />
               Abrir módulo de Férias
@@ -342,7 +344,7 @@ export default async function ConferenciaRescisaoPage({
       {/* Checklist agrupado */}
       {RESCISAO_GROUP_ORDER.map((group) => (
         <Card key={group} className="p-5 mb-4">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">{RESCISAO_GROUP_LABEL[group]}</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">{RESCISAO_GROUP_LABEL[group]}</h2>
           <div className="divide-y divide-border">
             {itemsByGroup(group).map((item) => (
               <ItemConferenciaRow

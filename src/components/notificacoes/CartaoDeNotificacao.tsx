@@ -62,8 +62,8 @@ const ICONES: Record<IconeDaNotificacao, typeof Bell> = {
 const TONS: Record<Tom, string> = {
   brand: "bg-brand-subtle text-brand",
   info: "bg-info-bg text-info",
-  success: "bg-success-bg text-success",
-  warning: "bg-warning-bg text-warning",
+  success: "bg-success-bg text-success-fg",
+  warning: "bg-warning-bg text-warning-fg",
   danger: "bg-danger-bg text-danger",
   neutral: "bg-surface-2 text-fg-muted",
 };

@@ -3,21 +3,24 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
 import {
   Building2,
-  Users,
   Clock,
   ArrowRightLeft,
+  MessageSquareWarning,
   ChevronRight,
   Video,
   ExternalLink,
 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { Button } from "@/components/ui/Button";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
 import { CustomizeHomeButton } from "@/components/home/CustomizeHomeButton";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
+import { numero } from "@/components/shared/Graficos";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/context";
-import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
+import { scopedCompanyWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { boardPath } from "@/lib/kanbanPaths";
@@ -26,6 +29,7 @@ import { parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKe
 import { acessoDosPaineis, type AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
 import { contarTarefas } from "@/lib/home/paineis";
 import { precarregarHistoricoDaHome } from "@/lib/home/historico";
+import { solicitacoesComRespostaAtrasada } from "@/lib/home/indicadores";
 import { FaixaCarregando, FaixaDeDestaques, type SetorDoDestaque } from "@/components/home/FaixaDeDestaques";
 import {
   PainelCarregando,
@@ -81,21 +85,18 @@ function formatRelativeTime(date: Date): string {
   return formatInstantDate(date, { day: "2-digit", month: "short" });
 }
 
-type DueBadgeInfo = { label: string; className: string };
+type DueBadgeInfo = { label: string; tom: TomDoSelo };
 
 // Classifica prazo em badge semântico — vencido some silenciosamente na versão
 // antiga (query só pegava dueDate >= hoje); aqui é o ponto central da tela.
 function classifyDueDate(dueDate: Date | null, todayStart: Date, todayEnd: Date): DueBadgeInfo | null {
   if (!dueDate) return null;
-  if (dueDate < todayStart) return { label: "Vencido", className: "bg-danger-bg text-danger" };
-  if (dueDate <= todayEnd) return { label: "Hoje", className: "bg-warning-bg text-warning" };
+  if (dueDate < todayStart) return { label: "Atrasada", tom: "perigo" };
+  if (dueDate <= todayEnd) return { label: "Hoje", tom: "atencao" };
   const tomorrowEnd = new Date(todayEnd);
   tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
-  if (dueDate <= tomorrowEnd) return { label: "Amanhã", className: "bg-surface-2 text-fg-secondary" };
-  return {
-    label: formatCalendarDate(dueDate, { day: "2-digit", month: "short" }),
-    className: "bg-surface-2 text-fg-muted",
-  };
+  if (dueDate <= tomorrowEnd) return { label: "Amanhã", tom: "neutro" };
+  return { label: formatCalendarDate(dueDate, { day: "2-digit", month: "short" }), tom: "neutro" };
 }
 
 function formatMeetingWhen(d: Date, todayStart: Date, todayEnd: Date): string {
@@ -136,7 +137,7 @@ export default async function HomePage() {
     tenant,
     companyActiveCount,
     newCompaniesThisMonth,
-    personCount,
+    solicitacoesAtrasadas,
     pendingHandoffsCount,
     openPipelineItemsRaw,
     recentActivitiesRaw,
@@ -149,7 +150,8 @@ export default async function HomePage() {
     prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }),
     prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), status: "ACTIVE" } }),
     prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), createdAt: { gte: monthStart } } }),
-    prisma.person.count({ where: { ...(await scopedPersonWhere(ctx)), type: "COLABORADOR" } }),
+    // No lugar da contagem de pessoas (08/10, escolha 7A): ver `lib/home/indicadores`.
+    solicitacoesComRespostaAtrasada(ctx, now),
     prisma.handoff.count({
       where: { AND: [scopedHandoffWhere(ctx), { sectors: { some: { status: { not: "DONE" } } } }] },
     }),
@@ -374,6 +376,7 @@ export default async function HomePage() {
   const disponiveis = widgetsDisponiveis(restrictedOpts);
   const topWidgets = visibleWidgets("top", selectedWidgets, restrictedOpts);
   const painelWidgets = visibleWidgets("paineis", selectedWidgets, restrictedOpts);
+  const abaixoDosPaineis = visibleWidgets("abaixo-dos-paineis", selectedWidgets, restrictedOpts);
   const mainWidgets = visibleWidgets("main", selectedWidgets, restrictedOpts);
   const sideWidgets = visibleWidgets("side", selectedWidgets, restrictedOpts);
   // Com uma das colunas vazia o grid de duas colunas jogaria a sobrevivente na
@@ -464,24 +467,37 @@ export default async function HomePage() {
     "painel-recrutamento": painelDoSetor("painel-recrutamento", PainelDeRecrutamento),
     "painel-certificados": painelDoSetor("painel-certificados", PainelDeCertificados),
 
+    // Abaixo dos painéis desde 08/10 (escolha 7A do Kauan): a faixa de
+    // destaques abre a tela, e isto é o resumo de consulta. Sem o canal de
+    // solicitações do portal, o quarto cartão não existe e a grade fica em três.
     indicadores: (
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div
+        className={`grid grid-cols-2 gap-3 mb-4 ${
+          solicitacoesAtrasadas
+            ? "sm:grid-cols-4"
+            : "sm:grid-cols-3 [&>:nth-child(3)]:col-span-2 sm:[&>:nth-child(3)]:col-span-1"
+        }`}
+      >
+        {/* O MetricCard formata o número em pt-BR (1.234). "Atrasadas", e não
+            "vencidos" (07/10): é o termo do painel de tarefas e da faixa para o
+            mesmo número — e a mesma cor: vermelho quando há atrasada, âmbar
+            quando só há as de hoje, como na faixa e no painel. */}
         <MetricCard
           href="/empresas"
           icon={<Building2 size={16} />}
           label="Empresas ativas"
           value={companyActiveCount}
           delay={0}
-          sub={newCompaniesThisMonth > 0 ? `+${newCompaniesThisMonth} este mês` : undefined}
+          sub={newCompaniesThisMonth > 0 ? `+${numero(newCompaniesThisMonth)} este mês` : undefined}
         />
         <MetricCard
           href="/kanban"
           icon={<Clock size={16} />}
-          label="Vencidos / hoje"
+          label="Atrasadas / hoje"
           value={vencidosCount + hojeCount}
           delay={40}
-          highlight={vencidosCount + hojeCount > 0}
-          sub={vencidosCount > 0 ? `${vencidosCount} vencido${vencidosCount !== 1 ? "s" : ""}` : undefined}
+          tom={vencidosCount > 0 ? "critico" : hojeCount > 0 ? "atencao" : undefined}
+          sub={vencidosCount > 0 ? `${numero(vencidosCount)} atrasada${vencidosCount !== 1 ? "s" : ""}` : undefined}
         />
         <MetricCard
           href="/transferencias?status=NEW"
@@ -492,13 +508,21 @@ export default async function HomePage() {
           highlight={pendingHandoffsCount > 0}
           sub={pendingHandoffsCount > 0 ? "em aberto" : undefined}
         />
-        <MetricCard
-          href="/pessoas"
-          icon={<Users size={16} />}
-          label="Pessoas cadastradas"
-          value={personCount}
-          delay={120}
-        />
+        {/* No lugar de "Pessoas cadastradas" (08/10, escolha 7A): um número
+            que pede ação — o cliente esperando a primeira resposta da equipe
+            além do prazo prometido. O porquê da escolha está em
+            `lib/home/indicadores`. Leva à fila no recorte "resposta atrasada". */}
+        {solicitacoesAtrasadas && (
+          <MetricCard
+            href={solicitacoesAtrasadas.href}
+            icon={<MessageSquareWarning size={16} />}
+            label="Solicitações atrasadas"
+            value={solicitacoesAtrasadas.quantas}
+            delay={120}
+            tom={solicitacoesAtrasadas.quantas > 0 ? "critico" : undefined}
+            sub={solicitacoesAtrasadas.quantas > 0 ? "sem resposta no prazo" : undefined}
+          />
+        )}
       </div>
     ),
 
@@ -516,14 +540,10 @@ export default async function HomePage() {
             </span>
           </p>
         </div>
-        <a
-          href={nextMeeting.meetingUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 flex-shrink-0 h-8 px-3 rounded-full bg-brand text-on-brand text-[12.5px] font-medium hover:bg-brand-hover transition-colors"
-        >
+        {/* `nativo`: a sala é endereço de fora do app (Meet/Teams). */}
+        <Button href={nextMeeting.meetingUrl} nativo target="_blank" rel="noopener noreferrer" size="sm" className="flex-shrink-0">
           Entrar <ExternalLink size={12} />
-        </a>
+        </Button>
       </div>
     ),
 
@@ -552,9 +572,9 @@ export default async function HomePage() {
                     </span>
                   </span>
                   {badge ? (
-                    <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${badge.className}`}>
+                    <Selo tom={badge.tom} className="flex-shrink-0">
                       {badge.label}
-                    </span>
+                    </Selo>
                   ) : (
                     <span className="flex-shrink-0 text-[length:var(--fs-helper)] text-fg-muted">Sem prazo</span>
                   )}
@@ -582,12 +602,9 @@ export default async function HomePage() {
                   <span className="font-medium">{entityNames[h.entityId] ?? "(removido)"}</span>
                   <span className="text-fg-muted">{" · "}{h.requester.name} · {formatRelativeTime(h.createdAt)}</span>
                 </p>
-                <Link
-                  href={`/transferencias/${h.id}`}
-                  className="flex-shrink-0 text-[12.5px] font-medium text-brand border border-brand/30 rounded-full px-3 py-1 hover:bg-brand-subtle transition-colors"
-                >
+                <Button href={`/transferencias/${h.id}`} variant="secondary" size="xs" className="flex-shrink-0">
                   Revisar
-                </Link>
+                </Button>
               </div>
             ))}
           </div>
@@ -753,6 +770,11 @@ export default async function HomePage() {
         </div>
       )}
 
+      {/* Entre os painéis e as colunas: os Indicadores (08/10, escolha 7A). */}
+      {abaixoDosPaineis.map((key) => (
+        <Fragment key={key}>{widgetNodes[key]}</Fragment>
+      ))}
+
       {/* Corpo: coluna principal (meu trabalho) + coluna lateral */}
       {(mainWidgets.length > 0 || sideWidgets.length > 0) && (
         <div className={`grid gap-4 ${twoColumns ? "grid-cols-1 lg:grid-cols-[1.7fr_1fr]" : "grid-cols-1"}`}>
@@ -774,7 +796,11 @@ export default async function HomePage() {
         </div>
       )}
 
-      {topWidgets.length === 0 && painelWidgets.length === 0 && mainWidgets.length === 0 && sideWidgets.length === 0 && (
+      {topWidgets.length === 0 &&
+        painelWidgets.length === 0 &&
+        abaixoDosPaineis.length === 0 &&
+        mainWidgets.length === 0 &&
+        sideWidgets.length === 0 && (
         <p className="text-[length:var(--fs-body)] text-fg-muted">
           Todos os blocos estão ocultos. Use <span className="text-fg font-medium">Personalizar</span> para trazer algum de volta.
         </p>

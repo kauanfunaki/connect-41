@@ -8,6 +8,9 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "./MenuDoRegistro";
 import { SeloDoDP } from "./rotulosDoDP";
+// Reais em pt-BR (era "R$ 350.5"). Troca por `formatarReais` de lib/format.ts
+// quando a base o criar (auditoria DRG-01, 07/10/2026).
+import { formatarReais } from "@/lib/format";
 
 const STATUS_LABEL: Record<BenefitStatus, string> = {
   ATIVO:     "Ativo",
@@ -18,11 +21,12 @@ const STATUS_LABEL: Record<BenefitStatus, string> = {
 };
 
 const STATUS_STYLE: Record<BenefitStatus, string> = {
-  ATIVO:     "bg-success/10 text-success border-success/25",
+  ATIVO:     "bg-success/10 text-success-fg border-success/25",
   INATIVO:   "bg-surface-2 text-fg-muted border-border",
-  SUSPENSO:  "bg-warning/10 text-warning border-warning/25",
-  PENDENTE:  "bg-warning/10 text-warning border-warning/25",
-  CANCELADO: "bg-danger/10 text-danger border-danger/25",
+  SUSPENSO:  "bg-warning/10 text-warning-fg border-warning/25",
+  PENDENTE:  "bg-warning/10 text-warning-fg border-warning/25",
+  // Cancelado saiu de cena: neutro, como o inativo (07/10/2026).
+  CANCELADO: "bg-surface-2 text-fg-muted border-border",
 };
 
 const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as BenefitStatus[];
@@ -52,12 +56,12 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] text-fg">{beneficio.benefitName}</p>
-          <p className="text-[12px] text-fg-muted">
+          <p className="text-[length:var(--fs-ui)] text-fg">{beneficio.benefitName}</p>
+          <p className="text-[length:var(--fs-2)] text-fg-muted">
             Desde {beneficio.startDateLabel}
             {beneficio.endDateLabel && ` até ${beneficio.endDateLabel}`}
-            {beneficio.companyValue && ` · empresa R$ ${beneficio.companyValue}`}
-            {beneficio.discountValue && ` · desconto R$ ${beneficio.discountValue}`}
+            {beneficio.companyValue && ` · empresa ${formatarReais(Number(beneficio.companyValue))}`}
+            {beneficio.discountValue && ` · desconto ${formatarReais(Number(beneficio.discountValue))}`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -85,7 +89,8 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
             </Select>
           </div>
           <div className="w-full sm:w-40">
-            <CampoData name="endDate" title="Fim da vigência" aria-label="Fim da vigência" />
+            {/* Sem rótulo visível, o campo dizia só "Escolher data" (DRG-16). */}
+            <CampoData name="endDate" title="Fim da vigência" aria-label="Fim da vigência" placeholder="Fim da vigência" />
           </div>
           <Button
             variant="secondary"

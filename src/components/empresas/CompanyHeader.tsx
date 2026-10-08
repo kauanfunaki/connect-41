@@ -181,7 +181,7 @@ export function CompanyHeader({
                   onClick={copyDocumento}
                   title={`Copiar ${rotuloDoc}`} aria-label={`Copiar ${rotuloDoc}`}
                 >
-                  {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                  {copied ? <Check size={14} className="text-success-fg" /> : <Copy size={14} />}
                   {formatDocumento(kind, cnpj, cpf)}
                 </Button>
               )}
@@ -220,7 +220,7 @@ export function CompanyHeader({
           {canRequestHandoff && (
             <Button href={`/transferencias/novo?entityType=COMPANY&entityId=${id}`} variant="secondary" size="sm">
               <ArrowRightLeft size={14} />
-              Solicitar Transferência
+              Solicitar transferência
             </Button>
           )}
           {canEdit && (

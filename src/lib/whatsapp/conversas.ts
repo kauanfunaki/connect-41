@@ -51,12 +51,18 @@ export const SITUACAO_LABEL: Record<SituacaoDaConversa, string> = {
   fora_da_janela: "Fora da janela",
 };
 
-export const SITUACAO_VARIANTE: Record<SituacaoDaConversa, "danger" | "warning" | "info" | "success"> = {
-  precisa_atencao: "danger",
-  com_robo: "success",
-  encerrada: "info",
-  nao_quer: "info",
-  fora_da_janela: "warning",
+/**
+ * O tom do `Selo` de cada situação. Era a variante do `Badge` (pílula de
+ * categoria) — a situação de uma linha é o `Selo` (auditoria DRG-05,
+ * 07/10/2026). O azul do `info` virou `marca`; a encerrada saiu de cena e é
+ * neutra, como o atendimento resolvido nas Conversas.
+ */
+export const SITUACAO_TOM: Record<SituacaoDaConversa, "perigo" | "atencao" | "marca" | "sucesso" | "neutro"> = {
+  precisa_atencao: "perigo",
+  com_robo: "sucesso",
+  encerrada: "neutro",
+  nao_quer: "marca",
+  fora_da_janela: "atencao",
 };
 
 export type VereditoDeResposta = { pode: true } | { pode: false; motivo: string };

@@ -74,9 +74,9 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
             }))}
           >
             <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
-              <table className="w-full min-w-[560px] text-[length:var(--fs-body)]">
+              <table className="w-full min-w-[560px]">
                 <thead>
-                  <tr className="border-b border-border text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-5 py-3">Nome</th>
                     <th className="px-5 py-3">CNPJ</th>
                     <th className="px-5 py-3">

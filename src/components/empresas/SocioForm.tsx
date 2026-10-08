@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Button } from "@/components/ui/Button";
 import { Copy } from "lucide-react";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: (prev: SocioState, form: FormData) => Promise<SocioState>;
@@ -76,9 +77,9 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       {/* As seções num bloco só: a última perde o divisor de baixo, e o do

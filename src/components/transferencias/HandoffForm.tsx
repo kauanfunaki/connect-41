@@ -14,6 +14,7 @@ import { formatCnpj } from "@/lib/format";
 import { MentionTextarea, type MentionUser } from "@/components/transferencias/MentionTextarea";
 import { SectorAssigneePicker } from "@/components/transferencias/SectorAssigneePicker";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 type EntityOption = { id: string; name: string; cnpj?: string | null };
 
@@ -197,9 +198,9 @@ export function HandoffForm({
       )}
 
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -287,7 +288,7 @@ export function HandoffForm({
       {selectedInOrder.length > 0 && (
         <div className="space-y-4 border-t border-border pt-5">
           {/* Título no estilo dos títulos de seção de formulário (FormSection). */}
-          <h3 className="text-[12.5px] font-semibold text-fg-muted uppercase tracking-wider">Instrução por setor</h3>
+          <h3 className="text-[length:var(--fs-2)] font-semibold text-fg-muted uppercase tracking-wider">Instrução por setor</h3>
           {selectedInOrder.map((s) => (
             <CampoForm key={s.value} label={`Instrução para ${s.label}`} htmlFor={`instruction_${s.value}`}>
               <Textarea
@@ -311,7 +312,7 @@ export function HandoffForm({
       <FormFooter
         pending={isPending}
         pendingLabel="Enviando…"
-        submitLabel="Solicitar Transferência"
+        submitLabel="Solicitar transferência"
         cancelHref={cancelHref}
       />
       {templateConfirmDialog}

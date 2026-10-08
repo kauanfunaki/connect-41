@@ -17,12 +17,20 @@ import { raizesDoAlcance, janelaDoMesCorrente, ehDataValida } from "@/lib/sped/r
 import { alcanceDaEquipe } from "../alcance";
 import { formatCnpj } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
 const POR_PAGINA = 100;
+
+/** O sentido que a API devolve cru ("saida", sem acento) em rótulo de tela (07/10/2026). */
+const SENTIDO_LABEL: Record<"entrada" | "saida" | "indefinido", string> = {
+  entrada: "Entrada",
+  saida: "Saída",
+  indefinido: "Indefinido",
+};
 
 /**
  * CT-e — consulta ao vivo no SPED, sem ingestão.
@@ -166,9 +174,9 @@ export default async function CtePage({
           </form>
 
           {erro ? (
-            <Card className="p-4 border-danger/40 bg-danger-bg">
-              <p className="text-[13px] text-fg">{erro}</p>
-            </Card>
+            <Aviso>
+              <p className="text-fg">{erro}</p>
+            </Aviso>
           ) : documentos.length === 0 ? (
             <Card>
               <EmptyState
@@ -184,7 +192,7 @@ export default async function CtePage({
                   raiz e rota — funil nas linhas da tela mentiria sobre as
                   outras páginas. */}
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-                <table className="w-full text-[length:var(--fs-ui)] border-collapse">
+                <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                       <th className="px-3 py-2">Número</th>
@@ -209,7 +217,7 @@ export default async function CtePage({
                               transportadora emitiu. `entrada` e `indefinido`
                               chamam atenção porque são a exceção. */}
                           <Badge variant={d.sentido === "saida" ? "info" : "warning"}>
-                            {d.sentido}
+                            {SENTIDO_LABEL[d.sentido] ?? d.sentido}
                           </Badge>
                         </td>
                         <td className="px-3 py-2">

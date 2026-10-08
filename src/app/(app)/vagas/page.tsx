@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ArrowRight, Briefcase, CheckCircle2, DoorOpen, Loader, XCircle } from "lucide-react";
+import { ArrowRight, Briefcase, CheckCircle2, DoorOpen, Loader, Plus, XCircle } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { VagaStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
@@ -14,9 +14,9 @@ import { Pagination } from "@/components/shared/Pagination";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { FiltroDaColunaNaUrl, FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { lerLista } from "@/lib/filtroNaUrl";
 import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE, VAGA_STATUS_ORDER } from "@/lib/vagaStatus";
 import { Selo } from "@/components/ui/Selo";
@@ -132,11 +132,11 @@ export default async function VagasPage({
         title="Vagas"
         subtitle={<>{total} vaga{total !== 1 ? "s" : ""}</>}
         action={<>{canCreateAny && (
-          <Button
-            href="/vagas/novo"
-            variant="primary" className="font-medium"
-          >
-            + Nova Vaga
+          // Ícone no lugar do "+" escrito, sem `font-medium` por cima do
+          // Button — o botão de criar das outras listas (DRG-17, 07/10/2026).
+          <Button href="/vagas/novo" variant="primary">
+            <Plus size={14} />
+            Nova Vaga
           </Button>
         )}</>}
       />
@@ -147,10 +147,11 @@ export default async function VagasPage({
       <FaixaDeTotais
         itens={VAGA_STATUS_ORDER.map((s) => ({
           rotulo: ROTULO_DO_CARTAO[s],
-          valor: String(contagem[s]),
+          valor: formatarNumero(contagem[s], 0),
           icone: ICONE_DO_STATUS[s],
           tom: s === "ENCERRADA" || s === "CANCELADA" ? "text-fg-muted" : undefined,
           detalhe: statusFilter === s ? "mostrando agora" : undefined,
+          ativo: statusFilter === s,
           href: buildUrl({ status: statusFilter === s ? undefined : s, page: undefined }),
         }))}
       />
@@ -188,11 +189,9 @@ export default async function VagasPage({
             description="Ajuste os filtros ou cadastre a primeira vaga do setor."
             action={
               canCreateAny && (
-                <Button
-                  href="/vagas/novo"
-                  variant="primary" className="font-medium"
-                >
-                  + Nova Vaga
+                <Button href="/vagas/novo" variant="primary">
+                  <Plus size={14} />
+                  Nova Vaga
                 </Button>
               )
             }
@@ -209,8 +208,8 @@ export default async function VagasPage({
                     </InfoDoCartao>
                     <PeDoCartao>
                       {seloDoStatus(v.status)}
-                      <span className="text-[11.5px] text-fg-muted tabular-nums">{candidatos(v._count.candidaturas)}</span>
-                      <span className="ml-auto text-[11.5px] text-fg-muted tabular-nums">
+                      <span className="text-[length:var(--fs-micro)] text-fg-muted tabular-nums">{candidatos(v._count.candidaturas)}</span>
+                      <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted tabular-nums">
                         {v.quantity} vaga{v.quantity !== 1 ? "s" : ""}
                       </span>
                     </PeDoCartao>
@@ -224,7 +223,7 @@ export default async function VagasPage({
                 centralizada, com o funil de setor. A lista é paginada, então o
                 funil filtra no servidor (`FiltroDaColunaNaUrl`). */}
             <TabelaNoDesktop padrao>
-              <table className="w-full table-fixed min-w-[900px] text-[length:var(--fs-ui)]">
+              <table className="w-full table-fixed min-w-[900px]">
                 <colgroup>
                   <col />
                   <col className="w-[160px]" />

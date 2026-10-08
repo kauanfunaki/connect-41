@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useDialog } from "@/components/ui/useDialog";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 
 type Props = {
   children: React.ReactNode;
@@ -33,15 +33,13 @@ export function KanbanItemModal({ children }: Props) {
           Agora os 4rem descontados são exatamente o padding do container, o
           que deixa 32px em cima e 32px embaixo. */}
       <div ref={panelRef} role="dialog" aria-modal="true" tabIndex={-1} aria-label="Detalhe do item" className="relative w-full min-h-full sm:min-h-0 sm:max-w-[94vw] xl:max-w-[1400px] bg-canvas sm:border sm:border-border sm:rounded-lg shadow-[var(--c41-shadow-lg)] sm:h-[calc(100vh-4rem)] overflow-y-auto lg:overflow-hidden">
-        <Button
-          variant="secondary"
-          size="md"
-          className="absolute top-4 right-4 z-10 w-9 bg-surface-hover hover:border-border-strong"
-          onClick={() => router.back()}
-          aria-label="Fechar"
-        >
+        {/* `IconButton`, como o do `Modal` (07/10/2026): era um `Button md`
+            forçado a `w-9`, e o `px-4` dele espremia o ícone até virar um
+            ponto. O cabeçalho do detalhe reserva o canto (`pr-12` em modal)
+            para o "Mais opções" não ficar por baixo deste botão. */}
+        <IconButton className="absolute top-4 right-4 z-10" onClick={() => router.back()} aria-label="Fechar">
           <X size={16} />
-        </Button>
+        </IconButton>
         <div className="p-6 sm:h-full sm:flex sm:flex-col sm:min-h-0">{children}</div>
       </div>
     </div>

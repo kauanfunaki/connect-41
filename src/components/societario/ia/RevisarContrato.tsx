@@ -9,6 +9,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { RejeitarProposta } from "./RejeitarProposta";
 import type { AcaoDaIa } from "@/app/(app)/societario/ia/actions";
 import type { PlanoDoContrato, SocioLido } from "@/lib/societario/contratoSocial";
+import { Aviso } from "@/components/ui/Aviso";
 
 const INTEIRO = new Intl.NumberFormat("pt-BR");
 const DUAS_CASAS = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -123,18 +124,20 @@ export function RevisarContrato({
   return (
     <div className="flex flex-col gap-4">
       {avisos.length > 0 && (
-        <ul className="rounded-lg border border-warning/40 bg-warning-bg px-4 py-3 text-[13px] text-fg flex flex-col gap-1">
-          {avisos.map((a) => (
-            <li key={a}>{a}</li>
-          ))}
-        </ul>
+        <Aviso tom="atencao">
+          <ul className="text-fg flex flex-col gap-1">
+            {avisos.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </Aviso>
       )}
 
       <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <table className="w-full min-w-[980px] text-[13px]">
+        <table className="w-full min-w-[980px] text-[length:var(--fs-ui)]">
           <thead className="border-b border-border">
             <tr>
-              <th className={`${TH} pl-3`}>Gravar</th>
+              <th className={`${TH} pl-3`}>Salvar</th>
               <th className={TH}>Nome</th>
               <th className={TH}>CPF / CNPJ</th>
               <th className={TH}>Participação</th>
@@ -149,7 +152,7 @@ export function RevisarContrato({
             {linhas.map((l, i) => (
               <tr key={i} className={l.incluir ? "" : "opacity-50"}>
                 <td className={`${TD} pl-3`}>
-                  <Checkbox id={`inc-${i}`} aria-label={`Gravar ${l.nome}`} checked={l.incluir} disabled={!podeAplicar} onChange={(e) => mudar(i, "incluir", e.target.checked)} />
+                  <Checkbox id={`inc-${i}`} aria-label={`Salvar ${l.nome}`} checked={l.incluir} disabled={!podeAplicar} onChange={(e) => mudar(i, "incluir", e.target.checked)} />
                 </td>
                 <td className={TD}>
                   <Input aria-label="Nome" value={l.nome} disabled={!podeAplicar} onChange={(e) => mudar(i, "nome", e.target.value)} className="min-w-52" />
@@ -193,10 +196,10 @@ export function RevisarContrato({
           )}
         </div>
         {plano.novos.length === 0 && plano.atualizar.length === 0 && (
-          <p className="text-[13px] text-fg-muted">Nada muda: o cadastro já está como o contrato.</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-muted">Nada muda: o cadastro já está como o contrato.</p>
         )}
         {plano.novos.length > 0 && (
-          <div className="text-[13px]">
+          <div className="text-[length:var(--fs-ui)]">
             <p className="font-medium text-fg">Entram como sócios novos</p>
             <ul className="list-disc pl-5 text-fg-secondary">
               {plano.novos.map((n) => (
@@ -206,7 +209,7 @@ export function RevisarContrato({
           </div>
         )}
         {plano.atualizar.length > 0 && (
-          <div className="text-[13px] flex flex-col gap-1">
+          <div className="text-[length:var(--fs-ui)] flex flex-col gap-1">
             <p className="font-medium text-fg">Já cadastrados, com dados que mudam</p>
             {plano.atualizar.map((a) => (
               <div key={a.id} className="text-fg-secondary">
@@ -217,12 +220,12 @@ export function RevisarContrato({
           </div>
         )}
         {plano.iguais.length > 0 && (
-          <p className="text-[13px] text-fg-muted">Sem mudança: {plano.iguais.map((i) => i.nomeNoCadastro).join(", ")}.</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-muted">Sem mudança: {plano.iguais.map((i) => i.nomeNoCadastro).join(", ")}.</p>
         )}
         {plano.foraDoContrato.length > 0 && (
           // Revisão de 05/10: botão não é link — "Sócios" era texto sublinhado no meio da frase.
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <p className="text-[13px] text-warning">
+            <p className="text-[length:var(--fs-ui)] text-warning-fg">
               No cadastro e fora deste contrato: {plano.foraDoContrato.map((f) => f.nome).join(", ")}. Ninguém sai sozinho — se saiu,
               registre a saída com a data na tela de sócios.
             </p>
@@ -233,31 +236,32 @@ export function RevisarContrato({
         )}
       </section>
 
-      {msg && <p className={`text-[13px] ${msg.tipo === "erro" ? "text-danger" : "text-success"}`}>{msg.texto}</p>}
+      {msg && <p className={`text-[length:var(--fs-ui)] ${msg.tipo === "erro" ? "text-danger" : "text-success-fg"}`}>{msg.texto}</p>}
 
       {/* Rodapé do formulário: rejeitar (a saída destrutiva) à esquerda, e o
           primário sozinho à direita. Estavam juntos, e o campo do motivo, ao
-          abrir, empurrava o "Gravar" para longe. */}
+          abrir, empurrava o "Salvar" para longe. "Salvar", e não "Gravar"
+          (07/10/2026): é o rótulo do resto do app (FormFooter). */}
       {podeAplicar && (
         <div className="flex flex-wrap items-start justify-between gap-3 pt-4 border-t border-border">
           <RejeitarProposta propostaId={propostaId} rejeitar={acoes.rejeitar} />
           <Button
             variant="primary"
             disabled={pendente || linhas.every((l) => !l.incluir) || previaVelha}
-            title={previaVelha ? "Atualize a prévia antes de gravar" : undefined}
+            title={previaVelha ? "Atualize a prévia antes de salvar" : undefined}
             onClick={() =>
               startTransition(async () => {
                 setMsg(null);
                 const r = await acoes.aplicar(propostaId, marcadas());
                 if ("error" in r) setMsg({ tipo: "erro", texto: r.error });
                 else {
-                  setMsg({ tipo: "ok", texto: r.mensagem ?? "Sócios gravados." });
+                  setMsg({ tipo: "ok", texto: r.mensagem ?? "Sócios salvos." });
                   router.refresh();
                 }
               })
             }
           >
-            {pendente ? "Gravando…" : "Gravar sócios"}
+            {pendente ? "Salvando…" : "Salvar sócios"}
           </Button>
         </div>
       )}

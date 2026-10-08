@@ -24,12 +24,13 @@ export type HomeWidgetKey =
 
 // Onde o bloco mora no layout. "top" ocupa a largura toda acima das colunas;
 // "paineis" é a grade de gráficos logo abaixo (30/09, a leitura "Power BI"
-// pedida pelo Kauan); "main" é a coluna larga da esquerda; "side" é a coluna
-// estreita da direita.
+// pedida pelo Kauan); "abaixo-dos-paineis" é a faixa larga entre os painéis e
+// as colunas (08/10, onde os Indicadores passaram a morar); "main" é a coluna
+// larga da esquerda; "side" é a coluna estreita da direita.
 // A ordem escolhida pelo usuário só reordena dentro da própria faixa — mover
 // "Agenda" pra antes de "Meu dia" não muda de coluna, e isso é proposital: o
 // layout de duas colunas é do Design System, não uma preferência.
-export type HomeWidgetSlot = "top" | "paineis" | "main" | "side";
+export type HomeWidgetSlot = "top" | "paineis" | "abaixo-dos-paineis" | "main" | "side";
 
 export type HomeWidgetDef = {
   key: HomeWidgetKey;
@@ -46,12 +47,13 @@ export type HomeWidgetDef = {
 };
 
 export const HOME_WIDGETS: HomeWidgetDef[] = [
-  {
-    key: "indicadores",
-    label: "Indicadores",
-    description: "Empresas ativas, vencidos/hoje, transferências e pessoas.",
-    slot: "top",
-  },
+  // Os Indicadores saíram do topo (escolha do Kauan na página de decisões,
+  // 08/10/2026 — 7A, "destaques primeiro"): a Home abria com quatro números
+  // de consulta, "Pessoas cadastradas" entre eles, antes da faixa que diz o
+  // que pede a pessoa. Moram agora abaixo dos painéis (ver o item deles, mais
+  // abaixo). O lugar é do layout, não da preferência: quem já personalizou
+  // continua com os mesmos blocos visíveis e ocultos e com a mesma ordem
+  // dentro de cada faixa — só os Indicadores descem.
   {
     key: "proxima-reuniao",
     label: "Próxima reunião",
@@ -60,7 +62,8 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
   },
   // Por último no topo (06/10): fica colada nos painéis que ela resume — e é
   // onde um bloco novo entra para quem já personalizou, então todo mundo a vê
-  // no mesmo lugar.
+  // no mesmo lugar. Sem os Indicadores em cima (08/10), é ela que abre a tela;
+  // a reunião do dia, quando há, é uma linha só acima dela.
   {
     key: "destaques",
     label: "Destaques",
@@ -121,6 +124,12 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
     description: "Vencidos, a renovar e vigentes.",
     slot: "paineis",
     doSetor: true,
+  },
+  {
+    key: "indicadores",
+    label: "Indicadores",
+    description: "Empresas ativas, tarefas atrasadas, transferências e solicitações atrasadas.",
+    slot: "abaixo-dos-paineis",
   },
   {
     key: "meu-dia",

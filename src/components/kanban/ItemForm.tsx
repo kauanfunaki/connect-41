@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import type { PipelineEntityType } from "@/generated/prisma/enums";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 type EntityOption = { id: string; name: string };
 type TagOption = { id: string; name: string; color: string };
@@ -33,9 +34,9 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
       <input type="hidden" name="entityType" value={entityType} />
 
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       <Field label={entityType === "COMPANY" ? "Empresa" : "Pessoa"} htmlFor="entityId" required>

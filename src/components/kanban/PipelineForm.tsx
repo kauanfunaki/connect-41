@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Plus } from "lucide-react";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { CampoForm as Field } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -8,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { normalizeAccentColor } from "@/lib/color";
 import { Button } from "@/components/ui/Button";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 const DEFAULT_COLORS = ["#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B"];
 
@@ -43,9 +45,9 @@ export function PipelineForm({ action, sectorOptions }: Props) {
   return (
     <form action={formAction} className="space-y-6">
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       {/* Os três dados numa linha (30/09): o tipo de entidade ficava sozinho
@@ -82,7 +84,7 @@ export function PipelineForm({ action, sectorOptions }: Props) {
           <h3 className="text-[length:var(--fs-label)] font-medium text-fg">Estágios</h3>
           {/* Era link azul (30/09): ação é botão. */}
           <Button variant="secondary" size="xs" type="button" onClick={addStage}>
-            + Adicionar estágio
+            <Plus size={14} /> Adicionar estágio
           </Button>
         </div>
 
@@ -131,7 +133,7 @@ export function PipelineForm({ action, sectorOptions }: Props) {
       <FormFooter
         pending={isPending}
         pendingLabel="Criando…"
-        submitLabel="Criar Kanban"
+        submitLabel="Criar kanban"
         cancelHref="/kanban"
       />
     </form>

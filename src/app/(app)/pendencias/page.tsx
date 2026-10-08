@@ -182,7 +182,6 @@ export default async function PendenciasPage({
                 </PeDoCartao>
               </Cartao>
             ))}
-            {limitado && <p className="text-[11px] text-fg-muted mt-1">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
           </CartoesNoCelular>
 
           <TabelaFiltravel
@@ -199,9 +198,9 @@ export default async function PendenciasPage({
             }))}
           >
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[860px] text-[13px]">
+            <table className="w-full min-w-[860px]">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 pr-3 font-medium">
                     <FiltroDaColuna rotulo="Pendência" campos={[{ chave: "tipo", rotulo: "Tipo" }]} />
                   </th>
@@ -232,7 +231,7 @@ export default async function PendenciasPage({
                       <Link href={`/pendencias/${l.id}`} className="font-medium text-brand hover:underline">
                         {l.titulo}
                       </Link>
-                      <span className="block text-[11px] text-fg-muted">
+                      <span className="block text-micro text-fg-muted">
                         {ROTULO_DO_TIPO[l.tipo]} · {l.mensagens} {l.mensagens === 1 ? "mensagem" : "mensagens"}
                         {l.anexos > 0 && (
                           <>
@@ -255,9 +254,12 @@ export default async function PendenciasPage({
                 ))}
               </tbody>
             </table>
-            {limitado && <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
           </TabelaNoDesktop>
           </TabelaFiltravel>
+          {/* Filho direto do casco, como em aprovações (08/10/2026): dentro da
+              tabela, o aviso perdia o recuo e a divisória do pé do cartão. Um só
+              para o cartão do celular e a tabela. */}
+          {limitado && <p className="text-micro text-fg-muted mt-3">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
           </>
         )}
       </CascoDaTabela>

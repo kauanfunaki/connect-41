@@ -12,6 +12,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { formatarDecorrido, minutosApontados, segundosDesde } from "@/lib/datetime";
 import type { HorasState } from "@/app/(app)/processos/horas-actions";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type LancamentoDeHoras = { id: string; quem: string; minutos: number; dia: string; nota: string | null; meu: boolean };
 
@@ -65,13 +66,16 @@ export function HorasDoProcesso({
     });
 
   return (
-    <Card className="p-4 flex flex-col gap-3">
+    <Card as="section" aria-labelledby="horas-do-processo" className="p-4 flex flex-col gap-3">
       {/* Botões `sm` no cabeçalho do cartão, como os das etapas do roteiro:
-          eram h-9, maiores que tudo o que o cartão tem embaixo. */}
+          eram h-9, maiores que tudo o que o cartão tem embaixo. Na coluna da
+          direita (08/10/2026) eles descem para baixo do título. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Horas trabalhadas</h2>
-          <p className="text-[12px] text-fg-muted">
+          {/* Título de seção da ficha em 18px (padrão aceito na página de
+              decisões, 08/10/2026) — era o de cartão em grade, 14px. */}
+          <h2 id="horas-do-processo" className="text-section font-semibold text-fg">Horas trabalhadas</h2>
+          <p className="text-[length:var(--fs-2)] text-fg-muted">
             {total > 0 ? `${duracao(total)} neste processo` : "Nenhuma hora lançada ainda."} Entram nas horas de operação da Gestão.
           </p>
         </div>
@@ -83,7 +87,7 @@ export function HorasDoProcesso({
                   Parar {formatarDecorrido(segundos)} · lança {minutosApontados(segundos)} min
                 </Button>
               ) : (
-                <span className="text-[12px] text-fg-muted">
+                <span className="text-[length:var(--fs-2)] text-fg-muted">
                   {cronometro.quem} está com o cronômetro ({formatarDecorrido(segundos)})
                 </span>
               )
@@ -99,15 +103,21 @@ export function HorasDoProcesso({
         )}
       </div>
 
-      {erro && <p className="text-[12px] text-danger">{erro}</p>}
+      {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
+      {erro && (
+        <Aviso>
+          {erro}
+        </Aviso>
+      )}
 
       {abrirLancamento && podeAgir && (
-        // Uma linha de campos em grade — horas e minutos estreitos, a data na
-        // largura dela, a nota com o resto — e os botões no rodapé. Era um
-        // flex-wrap com rótulos de 12px feitos à mão, e o "Lançar" quebrava
-        // para a linha de baixo conforme a largura.
+        // Campos em grade — horas e minutos estreitos, a data na largura dela —
+        // e os botões no rodapé. Era um flex-wrap com rótulos de 12px feitos à
+        // mão, e o "Lançar" quebrava para a linha de baixo conforme a largura.
+        // A nota ganhou linha própria em 08/10/2026: na coluna da direita do
+        // processo (uns 400px), ao lado das outras três ela ficava sem largura.
         <form action={lancar} className="flex flex-col gap-4 rounded-md bg-surface-2 p-4">
-          <FieldGrid columns="sm:grid-cols-[5.5rem_5.5rem_11rem_minmax(0,1fr)]">
+          <FieldGrid columns="sm:grid-cols-[4.5rem_4.5rem_minmax(0,11rem)]">
             <CampoForm label="Horas" htmlFor={`horas-${processId}`}>
               <Input id={`horas-${processId}`} name="horas" inputMode="decimal" placeholder="0" className="tabular-nums" />
             </CampoForm>
@@ -117,11 +127,15 @@ export function HorasDoProcesso({
             <CampoForm label="Dia" htmlFor={`dia-${processId}`}>
               <CampoData id={`dia-${processId}`} name="dia" />
             </CampoForm>
-            <CampoForm label="O que foi feito" htmlFor={`nota-${processId}`}>
-              <Input id={`nota-${processId}`} name="nota" maxLength={280} placeholder="Opcional" />
-            </CampoForm>
           </FieldGrid>
-          {estado && "error" in estado && <p className="text-[12px] text-danger">{estado.error}</p>}
+          <CampoForm label="O que foi feito" htmlFor={`nota-${processId}`}>
+            <Input id={`nota-${processId}`} name="nota" maxLength={280} placeholder="Opcional" />
+          </CampoForm>
+          {estado && "error" in estado && (
+            <Aviso>
+              {estado.error}
+            </Aviso>
+          )}
           <FormFooter
             pending={lancando}
             pendingLabel="Lançando…"
@@ -133,7 +147,7 @@ export function HorasDoProcesso({
       )}
 
       {lancamentos.length > 0 && (
-        <ul className="flex flex-col divide-y divide-border text-[12px]">
+        <ul className="flex flex-col divide-y divide-border text-[length:var(--fs-2)]">
           {lancamentos.map((l) => (
             <li key={l.id} className="flex items-center justify-between gap-2 py-1.5">
               <span className="text-fg-secondary">

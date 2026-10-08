@@ -95,22 +95,22 @@ export function FileDropzoneField({
       {escolhido ? (
         <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5">
           <span
-            className="grid place-items-center w-9 h-9 shrink-0 rounded-md bg-brand/10 text-[10px] font-semibold text-brand"
+            className="grid place-items-center w-9 h-9 shrink-0 rounded-md bg-brand/10 text-micro font-semibold text-brand"
             aria-hidden="true"
           >
             {extensaoDe(escolhido.name).slice(0, 4) || "?"}
           </span>
           <div className="flex-1 min-w-0">
-            <p className="truncate text-[length:var(--fs-body)] text-fg" title={escolhido.name}>
+            <p className="truncate text-body text-fg" title={escolhido.name}>
               {escolhido.name}
             </p>
-            <p className="text-[length:var(--fs-helper)] text-fg-muted">{formatarBytes(escolhido.size)}</p>
+            <p className="text-helper text-fg-muted">{formatarBytes(escolhido.size)}</p>
           </div>
           <button
             type="button"
             onClick={limpar}
             aria-label={`Remover ${escolhido.name}`}
-            className="shrink-0 p-1 rounded text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
+            className="shrink-0 p-1 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
           >
             <X size={15} />
           </button>
@@ -155,17 +155,17 @@ export function FileDropzoneField({
             <UploadCloud size={compacto ? 15 : 18} />
           </span>
           {compacto ? (
-            <span className="min-w-0 flex-1 text-[length:var(--fs-helper)] text-fg-muted truncate">
+            <span className="min-w-0 flex-1 text-helper text-fg-muted truncate">
               <span className="text-brand underline underline-offset-2">Escolher arquivo</span> ou
               arraste aqui · {formatosLegiveis} · até {maxSizeMb} MB
             </span>
           ) : (
             <>
-              <span className="text-[length:var(--fs-body)] text-fg">
+              <span className="text-body text-fg">
                 Arraste o arquivo aqui ou{" "}
                 <span className="text-brand underline underline-offset-2">clique para escolher</span>
               </span>
-              <span className="text-[length:var(--fs-helper)] text-fg-muted">
+              <span className="text-helper text-fg-muted">
                 {formatosLegiveis} · até {maxSizeMb} MB
               </span>
             </>
@@ -185,7 +185,7 @@ export function FileDropzoneField({
       />
 
       {erro && (
-        <p className="flex items-start gap-1.5 text-[length:var(--fs-helper)] text-danger" role="alert">
+        <p className="flex items-start gap-1.5 text-helper text-danger" role="alert">
           <AlertCircle size={13} className="mt-0.5 shrink-0" />
           {erro}
         </p>

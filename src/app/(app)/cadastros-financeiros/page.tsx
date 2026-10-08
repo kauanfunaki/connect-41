@@ -8,7 +8,10 @@ import { formatCnpj, formatCpf } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Card } from "@/components/ui/Card";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Badge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { Input } from "@/components/ui/Input";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
@@ -20,6 +23,7 @@ import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { NovaCategoriaDaEmpresa, LinhaDaDre, EsconderDoPadrao, EditarCategoriaDaEmpresa } from "@/components/financeiro/PlanoDaEmpresa";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -69,12 +73,16 @@ export default async function CadastrosFinanceirosPage({
   const empresas = await empresasDoSeletor(ctx.tenantId);
   const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
 
-  const cabecalho = (
+  // A ação da tela vai no cabeçalho, como em pendências e no resto do app
+  // (08/10/2026): o "Novo cadastro" ficava à direita da fileira do filtro.
+  const comAcao = (action?: React.ReactNode) => (
     <PageHeader
       title="Fornecedores e sacados"
       subtitle="As contrapartes, os centros de custo e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
+      action={action}
     />
   );
+  const cabecalho = comAcao();
   if (!companyId) {
     return (
       <PageContainer>
@@ -96,7 +104,7 @@ export default async function CadastrosFinanceirosPage({
     return (
       <PageContainer>
         {cabecalho}
-        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} />
+        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
         <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
         <AbaDoPlano tenantId={ctx.tenantId} companyId={companyId} podeEditar={podeEditar} />
       </PageContainer>
@@ -108,7 +116,7 @@ export default async function CadastrosFinanceirosPage({
       <PageContainer>
         {cabecalho}
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} />
+          <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
           {podeEditar && <NovoCentroDeCusto companyId={companyId} />}
         </div>
         <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
@@ -174,19 +182,22 @@ export default async function CadastrosFinanceirosPage({
 
   return (
     <PageContainer>
-      {cabecalho}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba: aba === "fornecedores" ? undefined : aba }} />
-        {podeEditar && <NovaContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} />}
-      </div>
+      {comAcao(podeEditar ? <NovaContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} /> : undefined)}
+      <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba: aba === "fornecedores" ? undefined : aba }} navegaSozinho />
       <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
 
-      <form method="get" action="/cadastros-financeiros" className="mb-4">
-        <input type="hidden" name="empresa" value={companyId} />
-        {aba !== "fornecedores" && <input type="hidden" name="aba" value={aba} />}
-        <Input compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome ou documento…" className="w-72 max-w-full" />
-      </form>
-
+      {/* No casco das listas irmãs, com a contagem e a busca na barra
+          (08/10/2026): a busca ficava solta acima da tabela, sem contagem. */}
+      <CascoDaTabela
+        contagem={contarItens(visiveis.length, "cadastro", "cadastros")}
+        busca={
+          <form method="get" action="/cadastros-financeiros">
+            <input type="hidden" name="empresa" value={companyId} />
+            {aba !== "fornecedores" && <input type="hidden" name="aba" value={aba} />}
+            <Input compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome ou documento…" aria-label="Buscar cadastro" className="w-72 max-w-full" />
+          </form>
+        }
+      >
       {visiveis.length === 0 ? (
         <EmptyState
           title={busca ? "Nada encontrado" : "Nenhum cadastro nesta aba"}
@@ -206,14 +217,14 @@ export default async function CadastrosFinanceirosPage({
                   <InfoDoCartao className="mt-1">
                     categoria padrão {c.defaultCategory?.name ?? "—"} · centro padrão {c.defaultCostCenter?.name ?? "—"}
                     {c.defaultCostCenter && !c.defaultCostCenter.active && (
-                      <span className="text-warning"> (inativo — não é herdado)</span>
+                      <span className="text-warning-fg"> (inativo — não é herdado)</span>
                     )}
                   </InfoDoCartao>
                   <InfoDoCartao className="tabular-nums">
                     {n.pagar} a pagar · {n.receber} a receber
                   </InfoDoCartao>
                   <PeDoCartao>
-                    {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+                    {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
                     {podeEditar && (
                       <span className="ml-auto">
                         <EditarContraparte
@@ -250,9 +261,9 @@ export default async function CadastrosFinanceirosPage({
             }))}
           >
           <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[920px] text-[13px]">
+          <table className="w-full min-w-[920px]">
             <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+              <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Nome" chave="nome" /></th>
                 <th className="py-2 pr-3 font-medium">Documento</th>
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Categoria padrão" chave="categoria" /></th>
@@ -270,20 +281,20 @@ export default async function CadastrosFinanceirosPage({
                   <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
                     <td className="py-2.5 pr-3">
                       <span className="font-medium">{c.name}</span>
-                      {c.email && <span className="block text-[11px] text-fg-muted">{c.email}</span>}
+                      {c.email && <span className="block text-micro text-fg-muted">{c.email}</span>}
                     </td>
                     <td className="py-2.5 pr-3 tabular-nums text-fg-secondary">{documento(c.document)}</td>
                     <td className="py-2.5 pr-3 text-fg-secondary">{c.defaultCategory?.name ?? "—"}</td>
                     <td className="py-2.5 pr-3 text-fg-secondary">
                       {c.defaultCostCenter?.name ?? "—"}
                       {c.defaultCostCenter && !c.defaultCostCenter.active && (
-                        <span className="block text-[11px] text-warning">inativo — não é herdado</span>
+                        <span className="block text-micro text-warning-fg">inativo — não é herdado</span>
                       )}
                     </td>
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.pagar}</td>
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.receber}</td>
                     <td className="py-2.5 pr-3">
-                      {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+                      {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
                     </td>
                     <td className="py-2.5">
                       {podeEditar && (
@@ -310,14 +321,15 @@ export default async function CadastrosFinanceirosPage({
           </table>
           </TabelaNoDesktop>
           </TabelaFiltravel>
-          <p className="text-[11px] text-fg-muted mt-3">
-            Inativo continua nas contas antigas e deixa de aparecer no lançamento manual. Cadastro não é apagado: a ficha é
-            o que liga as notas e as contas de um mesmo fornecedor. O e-mail é para onde vai o lembrete da régua de
-            cobrança — sacado sem e-mail fica fora dela. O centro padrão entra na próxima conta quando quem lança não
-            escolhe um centro.
-          </p>
         </>
       )}
+      </CascoDaTabela>
+      <NotaDeFonte>
+        Inativo continua nas contas antigas e deixa de aparecer no lançamento manual. Cadastro não é apagado: a ficha é
+        o que liga as notas e as contas de um mesmo fornecedor. O e-mail é para onde vai o lembrete da régua de
+        cobrança — sacado sem e-mail fica fora dela. O centro padrão entra na próxima conta quando quem lança não
+        escolhe um centro.
+      </NotaDeFonte>
     </PageContainer>
   );
 }
@@ -333,13 +345,16 @@ async function AbaDeCentros({
   centros: { id: string; name: string; code: string | null; active: boolean }[];
   podeEditar: boolean;
 }) {
+  // No casco, com a contagem na barra e o vazio dentro (08/10/2026).
   if (centros.length === 0) {
     return (
-      <EmptyState
-        title="Nenhum centro de custo nesta empresa"
-        description="Centro de custo é opcional: cadastre unidades, obras ou projetos para ver a DRE econômica por centro."
-        icon={<Layers />}
-      />
+      <CascoDaTabela contagem={contarItens(0, "centro de custo", "centros de custo")}>
+        <EmptyState
+          title="Nenhum centro de custo nesta empresa"
+          description="Centro de custo é opcional: cadastre unidades, obras ou projetos para ver a DRE econômica por centro."
+          icon={<Layers />}
+        />
+      </CascoDaTabela>
     );
   }
 
@@ -363,6 +378,7 @@ async function AbaDeCentros({
 
   return (
     <>
+      <CascoDaTabela contagem={contarItens(centros.length, "centro de custo", "centros de custo")}>
       <CartoesNoCelular>
         {centros.map((c) => (
           <Cartao key={c.id}>
@@ -371,7 +387,7 @@ async function AbaDeCentros({
               {lancamentos.get(c.id) ?? 0} lançamento(s) · padrão de {contrapartes.get(c.id) ?? 0} contraparte(s)
             </InfoDoCartao>
             <PeDoCartao>
-              {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+              {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
               {podeEditar && (
                 <span className="ml-auto">
                   <EditarCentroDeCusto centro={{ id: c.id, nome: c.name, codigo: c.code, ativo: c.active }} />
@@ -383,9 +399,9 @@ async function AbaDeCentros({
       </CartoesNoCelular>
 
       <TabelaNoDesktop padrao>
-      <table className="w-full min-w-[720px] text-[13px]">
+      <table className="w-full min-w-[720px]">
         <thead>
-          <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+          <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
             <th className="py-2 pr-3 font-medium">Nome</th>
             <th className="py-2 pr-3 font-medium">Código</th>
             <th className="py-2 pr-3 font-medium text-right">Lançamentos</th>
@@ -402,7 +418,7 @@ async function AbaDeCentros({
               <td className="py-2.5 pr-3 text-right tabular-nums">{lancamentos.get(c.id) ?? 0}</td>
               <td className="py-2.5 pr-3 text-right tabular-nums">{contrapartes.get(c.id) ?? 0}</td>
               <td className="py-2.5 pr-3">
-                {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+                {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
               </td>
               <td className="py-2.5">
                 {podeEditar && <EditarCentroDeCusto centro={{ id: c.id, nome: c.name, codigo: c.code, ativo: c.active }} />}
@@ -412,11 +428,12 @@ async function AbaDeCentros({
         </tbody>
       </table>
       </TabelaNoDesktop>
-      <p className="text-[11px] text-fg-muted mt-3">
+      </CascoDaTabela>
+      <NotaDeFonte>
         Um centro por lançamento, sem rateio. Inativo some dos seletores e da herança, e continua na DRE por centro com o que
         já foi lançado nele. Centro de custo não é apagado. Na importação por CSV, a coluna <code>centro_de_custo</code> casa
         pelo nome ou pelo código.
-      </p>
+      </NotaDeFonte>
     </>
   );
 }
@@ -451,7 +468,7 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <p className="text-[12px] text-fg-muted max-w-2xl">
+        <p className="text-helper text-fg-muted max-w-2xl">
           O plano padrão do escritório vale para todas as empresas. Aqui ele se ajusta a esta: categoria só dela, o que não se
           usa escondido e a linha da DRE trocada. Nada é apagado — o que já foi lançado continua na DRE.
           {daEmpresa > 0 && ` ${daEmpresa} categoria${daEmpresa > 1 ? "s" : ""} só desta empresa.`}
@@ -459,22 +476,36 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
         {podeEditar && <NovaCategoriaDaEmpresa companyId={companyId} linhas={linhas} grupos={grupos} />}
       </div>
       {categorias.length === 0 ? (
-        <EmptyState
-          title="Plano de contas vazio"
-          description="Carregue o plano padrão em Administração › Plano de contas, ou crie aqui uma categoria só desta empresa."
-          icon={<Layers />}
-        />
+        // Em cartão, como o vazio das outras abas (08/10/2026): solto, ele
+        // flutuava no fundo da tela.
+        <Card>
+          <EmptyState
+            title="Plano de contas vazio"
+            description="Carregue o plano padrão em Administração › Plano de contas, ou crie aqui uma categoria só desta empresa."
+            icon={<Layers />}
+          />
+        </Card>
       ) : (
         (["PAGAR", "RECEBER"] as const).map((kind) => {
           const doLado = categorias.filter((c) => c.kind === kind);
           if (doLado.length === 0) return null;
           return (
             <div key={kind} className="mb-6">
-              <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
+              <h3 className="text-card-title font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-                <table className="w-full min-w-[760px] text-[13px]">
+                {/* Largura fixa e as mesmas colunas nas duas tabelas
+                    (08/10/2026): cada uma calculava a sua, e "Categoria" e
+                    "Lançamentos" ficavam desalinhados entre Despesas e Receitas. */}
+                <table className="w-full table-fixed min-w-[1000px]">
+                  <colgroup>
+                    <col />
+                    <col className="w-[180px]" />
+                    <col className="w-[260px]" />
+                    <col className="w-[110px]" />
+                    <col className="w-[200px]" />
+                  </colgroup>
                   <thead>
-                    <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                    <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">Categoria</th>
                       <th className="py-2 pr-3 font-medium">Grupo do plano</th>
                       <th className="py-2 pr-3 font-medium">Linha da DRE nesta empresa</th>
@@ -490,12 +521,12 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
                         <tr key={c.id} className={`border-b border-border-soft align-top ${escondida || !c.active ? "opacity-60" : ""}`}>
                           <td className="py-2 pr-3">
                             <span className="font-medium">{c.name}</span>
-                            <span className="ml-2 inline-flex gap-1 align-middle">
+                            <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
                               {propria ? (
                                 <Badge variant="info">{c.omieCode ? "Do Omie" : "Desta empresa"}</Badge>
                               ) : null}
                               {escondida && <Badge variant="warning">Não usada aqui</Badge>}
-                              {!c.active && <Badge variant="warning">Inativa</Badge>}
+                              {!c.active && <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>}
                             </span>
                           </td>
                           <td className="py-2 pr-3 text-fg-secondary">{c.planGroup ?? "—"}</td>

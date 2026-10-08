@@ -11,6 +11,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltroDePeriodo, AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -199,7 +200,7 @@ async function Fila({
           {
             rotulo: "Aguardando",
             valor: String(aguardando?._count._all ?? 0),
-            tom: aguardando ? "text-warning" : "",
+            tom: aguardando ? "text-warning-fg" : "",
             icone: <Hourglass />,
             href: hrefSituacao("aguardando"),
           },
@@ -255,7 +256,7 @@ async function Fila({
                     {nomeExibicao(l.company)} · lançada por {l.createdBy?.name ?? "—"}
                   </InfoDoCartao>
                   {l.approvalStatus === "REPROVADO" && ultimoMotivo && (
-                    <span className="block text-[11px] text-danger mt-1 break-words">“{ultimoMotivo}”</span>
+                    <span className="block text-micro text-danger mt-1 break-words">“{ultimoMotivo}”</span>
                   )}
                   <PeDoCartao>
                     <SeloDaAprovacao status={l.approvalStatus} />
@@ -286,9 +287,9 @@ async function Fila({
               }))}
             >
             <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[960px] text-[13px]">
+            <table className="w-full min-w-[960px]">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 pr-3 font-medium">
                     <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
                   </th>
@@ -317,15 +318,15 @@ async function Fila({
                       <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{formatInstantDate(l.dueDate)}</td>
                       <td className="py-2.5 pr-3">
                         <span className="font-medium">{l.counterparty.name}</span>
-                        {l.description && <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">{l.description}</span>}
-                        <span className="block text-[11px] text-fg-muted">lançada por {l.createdBy?.name ?? "—"}</span>
+                        {l.description && <span className="block text-micro text-fg-muted truncate max-w-[240px]">{l.description}</span>}
+                        <span className="block text-micro text-fg-muted">lançada por {l.createdBy?.name ?? "—"}</span>
                       </td>
                       <td className="py-2.5 pr-3 text-fg-secondary">{nomeExibicao(l.company)}</td>
                       <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(valorCentavos)}</td>
                       <td className="py-2.5 pr-3">
                         <SeloDaAprovacao status={l.approvalStatus} />
                         {l.approvalStatus === "REPROVADO" && ultimoMotivo && (
-                          <span className="block text-[11px] text-danger mt-1 max-w-[260px]">“{ultimoMotivo}”</span>
+                          <span className="block text-micro text-danger mt-1 max-w-[260px]">“{ultimoMotivo}”</span>
                         )}
                         <HistoricoDaAprovacao eventos={eventos} />
                       </td>
@@ -343,7 +344,7 @@ async function Fila({
             </table>
             </TabelaNoDesktop>
             </TabelaFiltravel>
-            {linhas.length > LIMITE && <p className="text-[11px] text-fg-muted mt-3">Mostrando as {LIMITE} primeiras. Filtre por empresa.</p>}
+            {linhas.length > LIMITE && <p className="text-micro text-fg-muted mt-3">Mostrando as {LIMITE} primeiras. Filtre por empresa.</p>}
           </>
         )}
       </CascoDaTabela>
@@ -379,21 +380,24 @@ async function Alcadas({
 
   return (
     <>
-      <FiltroDePeriodo acao="/aprovacoes" empresas={empresas} empresaId={empresaId} permitirTodas extras={{ aba: "alcadas" }} />
+      <FiltroDePeriodo acao="/aprovacoes" empresas={empresas} empresaId={empresaId} permitirTodas extras={{ aba: "alcadas" }} navegaSozinho />
 
       <Card className="p-4 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-1">Nova alçada</h2>
-        <p className="text-[12px] text-fg-muted mb-3">
+        <h2 className="text-card-title font-semibold mb-1">Nova alçada</h2>
+        <p className="text-helper text-fg-muted mb-3">
           O usuário do portal aprova contas a pagar desta empresa até o teto. A coordenação aprova sem teto. Com ao menos uma
           alçada ativa, toda conta a pagar lançada em aberto na empresa nasce aguardando aprovação.
         </p>
         {empresaId ? (
           <FormAlcada companyId={empresaId} usuarios={usuarios} />
         ) : (
-          <p className="text-[12px] text-fg-muted">Escolha a empresa no filtro acima para cadastrar.</p>
+          <p className="text-helper text-fg-muted">Escolha a empresa no filtro acima para cadastrar.</p>
         )}
       </Card>
 
+      {/* No casco da fila ao lado, com a contagem na barra e o vazio dentro
+          (08/10/2026). */}
+      <CascoDaTabela contagem={contarItens(alcadas.length, "alçada", "alçadas")}>
       {alcadas.length === 0 ? (
         <EmptyState icon={<ShieldCheck />} title="Nenhuma alçada cadastrada" description="Sem alçada, as contas não entram em aprovação sozinhas." />
       ) : (
@@ -408,11 +412,11 @@ async function Alcadas({
                 <PeDoCartao>
                   {/* Alçada ativa de usuário desativado não conta — ver `whereDaAlcadaValida`. */}
                   {!a.portalUser.active ? (
-                    <Badge variant="warning">Usuário inativo</Badge>
+                    <Badge variant={TOM_DA_SITUACAO.INATIVA}>Usuário inativo</Badge>
                   ) : a.active ? (
-                    <Badge variant="success">Ativa</Badge>
+                    <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativa</Badge>
                   ) : (
-                    <Badge variant="info">Inativa</Badge>
+                    <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>
                   )}
                   <span className="ml-auto">
                     <AlternarAlcada id={a.id} ativa={a.active} />
@@ -423,9 +427,9 @@ async function Alcadas({
           </CartoesNoCelular>
 
           <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[720px] text-[13px]">
+          <table className="w-full min-w-[720px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+              <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium">Empresa</th>
                 <th className="py-2 pr-3 font-medium">Usuário do portal</th>
                 <th className="py-2 pr-3 font-medium text-right">Teto</th>
@@ -439,17 +443,17 @@ async function Alcadas({
                   <td className="py-2.5 pr-3">{nomeExibicao(a.company)}</td>
                   <td className="py-2.5 pr-3">
                     {a.portalUser.name}
-                    <span className="block text-[11px] text-fg-muted">{a.portalUser.email}</span>
+                    <span className="block text-micro text-fg-muted">{a.portalUser.email}</span>
                   </td>
                   <td className="py-2.5 pr-3 text-right tabular-nums">{moeda(centavosDeDecimal(a.maxAmount))}</td>
                   <td className="py-2.5 pr-3">
                     {/* Alçada ativa de usuário desativado não conta — ver `whereDaAlcadaValida`. */}
                     {!a.portalUser.active ? (
-                      <Badge variant="warning">Usuário inativo</Badge>
+                      <Badge variant={TOM_DA_SITUACAO.INATIVA}>Usuário inativo</Badge>
                     ) : a.active ? (
-                      <Badge variant="success">Ativa</Badge>
+                      <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativa</Badge>
                     ) : (
-                      <Badge variant="info">Inativa</Badge>
+                      <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>
                     )}
                   </td>
                   <td className="py-2.5">
@@ -462,6 +466,7 @@ async function Alcadas({
           </TabelaNoDesktop>
         </>
       )}
+      </CascoDaTabela>
     </>
   );
 }

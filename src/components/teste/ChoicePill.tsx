@@ -19,12 +19,12 @@ type Props = {
 export function ChoicePill({ name, checked, disabled, onSelect, label, ariaLabel, tone = "brand" }: Props) {
   const activeTone =
     tone === "brand"
-      ? "bg-brand text-on-brand border-brand"
+      ? "bg-brand-solid text-on-brand border-brand-solid"
       : "bg-fg-secondary text-surface border-fg-secondary";
 
   return (
     <label
-      className={`relative inline-flex items-center justify-center h-9 min-w-[68px] px-3 rounded-md border text-[13px] font-medium select-none transition-colors ${
+      className={`relative inline-flex items-center justify-center h-9 min-w-[68px] px-3 rounded-md border text-[length:var(--fs-ui)] font-medium select-none transition-colors ${
         disabled
           ? "border-border text-fg-muted opacity-50 cursor-not-allowed"
           : checked

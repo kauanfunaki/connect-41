@@ -75,19 +75,19 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
             value={company.name}
             className="sm:col-span-2"
           />
-          <InfoRow label="Nome Fantasia" value={company.tradeName} className="sm:col-span-2" />
+          <InfoRow label="Nome fantasia" value={company.tradeName} className="sm:col-span-2" />
           <InfoRow
             label={rotuloDoDocumento(company.kind)}
             value={formatDocumento(company.kind, company.cnpj, company.cpf)}
             mono
           />
           <InfoRow
-            label="Data de Abertura"
+            label="Data de abertura"
             value={company.foundationDate ? formatCalendarDate(company.foundationDate, { day: "2-digit", month: "long", year: "numeric" }) : null}
           />
           <InfoRow label="Nome no sistema" value={company.displayName} />
           <InfoRow label="ID" value={company.externalId} mono />
-          <InfoRow label="Regime Tributário" value={company.taxRegime} className="sm:col-span-2" />
+          <InfoRow label="Regime tributário" value={company.taxRegime} className="sm:col-span-2" />
           <InfoRow label="Cliente" value={company.clientGroup?.name ?? null} className="sm:col-span-2" />
         </div>
       </Card>

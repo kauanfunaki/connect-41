@@ -62,22 +62,29 @@ type PorUrl<K extends string> = Comum<K> & {
 // string de classe palavra por palavra. O divisor vira `first:border-l-0` (a
 // versão da agenda) e não "border-l só no segundo" (a do quadro): a primeira
 // escala para três segmentos, a segunda não.
-const CAIXA = "inline-flex rounded-lg border border-border overflow-hidden flex-shrink-0";
+//
+// Raio e recorte (07/10/2026): a caixa era `rounded-lg` (16px, raio de cartão)
+// num controle de 32px — virava pílula — e `overflow-hidden`, que cortava a
+// ponta do anel do segmento ativo e o anel de foco inteiro. Agora `rounded-md`
+// (10px, o de controle) e sem recorte: o primeiro e o último segmento levam o
+// raio de dentro da caixa (10px menos a borda), e o segmento com foco sobe
+// uma camada para o anel não ficar embaixo do vizinho.
+const CAIXA = "inline-flex rounded-md border border-border flex-shrink-0";
 const SEGMENTO =
-  "h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium border-l border-border first:border-l-0 transition-colors";
+  "h-8 px-3 flex items-center gap-1.5 text-fs-2 font-medium border-l border-border first:border-l-0 first:rounded-l-[calc(var(--radius-md)-1px)] last:rounded-r-[calc(var(--radius-md)-1px)] focus-visible:relative focus-visible:z-10 transition-colors";
 // A borda por dentro não é enfeite: no controle original o ativo tinha
 // `border-brand` junto do fundo, e é ela que fazia o trabalho de mostrar qual
 // está selecionado — `--c41-brand-subtle` é 8% de opacidade, fraco demais para
-// carregar isso sozinho. Vira sombra interna, e não borda, porque a caixa é
-// `overflow-hidden` e uma borda de verdade empurraria o layout.
+// carregar isso sozinho. Vira sombra interna, e não borda, porque uma borda de
+// verdade empurraria o layout.
 //
 // Os quatro semânticos usam os mesmos pares de token do `Badge`, para o mesmo
 // estado ler igual na lista e no detalhe.
 const ATIVO: Record<Tom, string> = {
   neutral: "bg-surface-hover text-fg",
   brand: "bg-brand-subtle text-brand shadow-[inset_0_0_0_1px_var(--c41-brand)]",
-  success: "bg-success-bg text-success shadow-[inset_0_0_0_1px_var(--c41-success)]",
-  warning: "bg-warning-bg text-warning shadow-[inset_0_0_0_1px_var(--c41-warning)]",
+  success: "bg-success-bg text-success-fg shadow-[inset_0_0_0_1px_var(--c41-success)]",
+  warning: "bg-warning-bg text-warning-fg shadow-[inset_0_0_0_1px_var(--c41-warning)]",
   danger: "bg-danger-bg text-danger shadow-[inset_0_0_0_1px_var(--c41-danger)]",
   info: "bg-info-bg text-info shadow-[inset_0_0_0_1px_var(--c41-info)]",
 };
@@ -111,9 +118,8 @@ const DESABILITADO = "disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-
  * nada. Links de navegação se marcam com `aria-current`, e é isso que este
  * componente faz.
  *
- * Sem `focus-visible:outline-none`: os dois call-sites originais dependiam do
- * anel padrão do navegador, e trocá-lo por um `ring` seria pior — a caixa tem
- * `overflow-hidden` e recortaria o anel.
+ * Sem anel próprio: vale o `:focus-visible` global, como no resto do app. A
+ * caixa já não recorta nada (ver `CAIXA`), então o anel aparece inteiro.
  */
 export function SegmentedControl<K extends string>({
   items,

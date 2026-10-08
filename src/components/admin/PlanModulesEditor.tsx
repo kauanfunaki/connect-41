@@ -107,7 +107,7 @@ export function PlanModulesEditor({ planId, allowedModuleCodes, action }: Props)
             >
               {isPending ? "Salvando…" : "Salvar"}
             </Button>
-            {saved && !isPending && <span className="text-[11px] text-success">Salvo.</span>}
+            {saved && !isPending && <span className="text-[11px] text-success-fg">Salvo.</span>}
           </div>
         </div>
       )}

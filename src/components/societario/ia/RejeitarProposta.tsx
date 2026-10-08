@@ -33,7 +33,7 @@ export function RejeitarProposta({ propostaId, rejeitar }: { propostaId: string;
         onChange={(e) => setMotivo(e.target.value)}
         placeholder="Por que a proposta não serve? (opcional)"
       />
-      {erro && <p className="text-[12px] text-danger">{erro}</p>}
+      {erro && <p className="text-[length:var(--fs-2)] text-danger">{erro}</p>}
       <div className="flex items-center justify-end gap-3">
         <Button variant="secondary" onClick={() => setAberto(false)} disabled={pendente}>
           Cancelar

@@ -66,8 +66,8 @@ export function NovaPendencia({
           // para a pendência — navegar direto engoliria a mensagem.
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <p className="text-[13px]">Pendência aberta.</p>
-              <p className="text-[12px] text-warning">{criada.aviso}</p>
+              <p className="text-ui">Pendência aberta.</p>
+              <p className="text-helper text-warning-fg">{criada.aviso}</p>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
               <Button variant="secondary" onClick={fechar}>
@@ -112,7 +112,7 @@ export function NovaPendencia({
                 <input type="hidden" name="companyId" value={lancamento.companyId} />
                 <input type="hidden" name="financeEntryId" value={lancamento.id} />
                 {/* Revisão de 05/10: botão não é link — o "sem vínculo" era texto azul. */}
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md border border-border bg-surface-2 px-3 py-2 text-[12px]">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md border border-border bg-surface-2 px-3 py-2 text-fs-2">
                   <span>
                     <span className="text-fg-muted">Vinculada ao lançamento </span>
                     <span className="font-medium">{lancamento.rotulo}</span>

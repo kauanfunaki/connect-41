@@ -66,10 +66,10 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
       <Card className="p-5">
         {link.status === "PENDENTE" ? (
           <>
-            <p className="text-[13px] text-fg-muted mb-3">
+            <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">
               Aguardando resposta do candidato. Link expira em {formatInstantDate(link.expiresAt)}.
             </p>
-            {linkUrl && <p className="text-[12px] text-fg-muted break-all mb-4">{linkUrl}</p>}
+            {linkUrl && <p className="text-[length:var(--fs-2)] text-fg-muted break-all mb-4">{linkUrl}</p>}
             {canManage && (
               <ExcluirComConfirmacao
                 action={excluirLinkTeste.bind(null, link.id)}
@@ -81,7 +81,7 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
           </>
         ) : (
           <>
-            <p className="text-[12px] text-fg-muted mb-4">
+            <p className="text-[length:var(--fs-2)] text-fg-muted mb-4">
               Respondido em {link.submittedAt ? formatInstantDate(link.submittedAt) : "—"}.
             </p>
             {link.type === "DISC" ? (

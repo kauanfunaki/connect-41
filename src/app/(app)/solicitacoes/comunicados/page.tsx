@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Megaphone, Plus } from "lucide-react";
 import { getAuthContext } from "@/lib/auth/context";
@@ -8,6 +7,7 @@ import { formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
@@ -55,24 +55,26 @@ export default async function ComunicadosPage() {
         <ul className="flex flex-col gap-2.5">
           {lista.map((c) => (
             <li key={c.id}>
-              <Link
+              {/* Cartão-link no desenho único (07/10/2026): o `Card` com `href`,
+                  o mesmo dos cartões do Kanban, Espaços e Transferências. */}
+              <Card
                 href={`/solicitacoes/comunicados/${c.id}`}
-                className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 rounded-lg border border-border bg-surface p-4 shadow-[var(--c41-shadow-xs)] hover:border-border-strong transition-colors"
+                className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 p-4"
               >
                 <span className="min-w-0 flex-1 basis-72">
-                  <span className="block text-[14px] font-semibold text-fg">{c.titulo}</span>
-                  <span className="block mt-0.5 text-[12.5px] text-fg-muted">
+                  <span className="block text-[length:var(--fs-card-title)] font-semibold text-fg">{c.titulo}</span>
+                  <span className="block mt-0.5 text-[length:var(--fs-2)] text-fg-muted">
                     {labels[c.setor] ?? c.setor} · {formatInstantDateTime(c.enviadoEm)}
                     {c.enviadoPor ? ` · ${c.enviadoPor}` : ""}
                   </span>
                 </span>
                 <span className="flex items-center gap-2">
                   {!c.avisosEnviados && <Badge variant="info">Enviando e-mails…</Badge>}
-                  <span className="text-[13px] text-fg-secondary tabular-nums">
+                  <span className="text-[length:var(--fs-ui)] text-fg-secondary tabular-nums">
                     Lido por {c.leram} de {c.clientes} {c.clientes === 1 ? "cliente" : "clientes"}
                   </span>
                 </span>
-              </Link>
+              </Card>
             </li>
           ))}
         </ul>

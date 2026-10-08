@@ -33,6 +33,12 @@ function cortado(el: HTMLElement): boolean {
  * - `title` dentro de tabela: aparece sempre, e o nativo é suspenso enquanto o
  *   mouse está em cima (senão saem os dois balões).
  * - `data-dica="…"` em qualquer lugar: opt-in explícito.
+ *
+ * Também no teclado e no toque (07/10/2026): a dica abre no foco por teclado
+ * (`:focus-visible`) e ao tocar no celular — o valor em reais de cada faixa
+ * dos gráficos da Home só existia na dica, e só o mouse a abria. No toque, o
+ * `mousedown` de compatibilidade que o navegador dispara logo depois não fecha
+ * a dica que acabou de abrir.
  */
 export function DicaFlutuante() {
   const [dica, setDica] = useState<Dica | null>(null);
@@ -59,11 +65,12 @@ export function DicaFlutuante() {
       return titulo || null;
     }
 
-    function entrar(e: MouseEvent) {
-      const el = e.target instanceof Element ? e.target.closest<HTMLElement>(ALVOS) : null;
-      if (el === atual) return;
+    function alvoDe(alvo: EventTarget | null): HTMLElement | null {
+      return alvo instanceof Element ? alvo.closest<HTMLElement>(ALVOS) : null;
+    }
+
+    function mostrar(el: HTMLElement, atraso: number) {
       soltar();
-      if (!el) return;
       const texto = textoDe(el);
       if (!texto) return;
       atual = el;
@@ -75,7 +82,52 @@ export function DicaFlutuante() {
         const r = el.getBoundingClientRect();
         const embaixo = r.top < 56;
         setDica({ texto, x: r.left + r.width / 2, y: embaixo ? r.bottom + 8 : r.top - 8, embaixo });
-      }, el.hasAttribute("data-dica-rapida") ? ATRASO_RAPIDO_MS : ATRASO_MS);
+      }, atraso);
+    }
+
+    function entrar(e: MouseEvent) {
+      const el = alvoDe(e.target);
+      if (el === atual) return;
+      if (!el) {
+        soltar();
+        return;
+      }
+      mostrar(el, el.hasAttribute("data-dica-rapida") ? ATRASO_RAPIDO_MS : ATRASO_MS);
+    }
+
+    // Toque: abre na hora; tocar fora fecha. Guarda o instante para o
+    // `mousedown` de compatibilidade, que chega em seguida, não fechar.
+    let toqueEm = 0;
+    function tocar(e: PointerEvent) {
+      if (e.pointerType !== "touch") return;
+      toqueEm = Date.now();
+      const el = alvoDe(e.target);
+      if (el === atual) return;
+      if (!el) {
+        soltar();
+        return;
+      }
+      mostrar(el, 0);
+    }
+
+    function pressionar() {
+      if (Date.now() - toqueEm < 800) return;
+      soltar();
+    }
+
+    // Teclado: só o foco visível — o clique também foca, e não deve abrir dica.
+    function focar(e: FocusEvent) {
+      const el = alvoDe(e.target);
+      if (!el || el === atual) return;
+      if (!(e.target instanceof Element) || !e.target.matches(":focus-visible")) return;
+      mostrar(el, ATRASO_RAPIDO_MS);
+    }
+
+    function desfocar(e: FocusEvent) {
+      if (!atual) return;
+      const para = e.relatedTarget;
+      if (para instanceof Node && atual.contains(para)) return;
+      soltar();
     }
 
     function sair(e: MouseEvent) {
@@ -87,13 +139,19 @@ export function DicaFlutuante() {
 
     document.addEventListener("mouseover", entrar);
     document.addEventListener("mouseout", sair);
-    document.addEventListener("mousedown", soltar);
+    document.addEventListener("pointerdown", tocar);
+    document.addEventListener("mousedown", pressionar);
+    document.addEventListener("focusin", focar);
+    document.addEventListener("focusout", desfocar);
     window.addEventListener("scroll", soltar, true);
     return () => {
       soltar();
       document.removeEventListener("mouseover", entrar);
       document.removeEventListener("mouseout", sair);
-      document.removeEventListener("mousedown", soltar);
+      document.removeEventListener("pointerdown", tocar);
+      document.removeEventListener("mousedown", pressionar);
+      document.removeEventListener("focusin", focar);
+      document.removeEventListener("focusout", desfocar);
       window.removeEventListener("scroll", soltar, true);
     };
   }, []);
@@ -107,7 +165,7 @@ export function DicaFlutuante() {
         top: dica.y,
         transform: `translate(-50%, ${dica.embaixo ? "0" : "-100%"})`,
       }}
-      className="pointer-events-none fixed z-[60] max-w-[min(360px,calc(100vw-2rem))] rounded-md bg-fg px-2.5 py-1.5 text-[12px] leading-snug font-medium text-surface shadow-[var(--c41-shadow-lg)] whitespace-pre-line break-words c41-dica-in"
+      className="pointer-events-none fixed z-[60] max-w-[min(360px,calc(100vw-2rem))] rounded-md bg-fg px-2.5 py-1.5 text-fs-2 leading-snug font-medium text-surface shadow-lg whitespace-pre-line break-words c41-dica-in"
     >
       {dica.texto}
     </div>,

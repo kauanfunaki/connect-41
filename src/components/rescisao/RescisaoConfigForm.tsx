@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { RESCISAO_CHECKLIST } from "@/lib/rescisaoChecklist";
 import type { RescisaoConfig, OrigemCampo } from "@/lib/rescisao/config";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type RescisaoConfigState = { error: string } | null;
 
@@ -62,12 +63,12 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
   return (
     <form action={formAction} className="space-y-6">
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>
+        <Aviso>{state.error}</Aviso>
       )}
 
       <section>
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Adicionais</h2>
-        <p className="text-[12px] text-fg-muted mb-3">
+        <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
           Os percentuais são fixos em lei — o que varia por empresa é o grau apurado no laudo e a incidência.
         </p>
         <FieldGrid>
@@ -189,7 +190,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
 
       <section className="pt-4 border-t border-border">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Verbas não praticadas</h2>
-        <p className="text-[12px] text-fg-muted mb-3">
+        <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
           Marcadas aqui deixam de entrar no total — mas continuam aparecendo na conferência com o valor que teriam,
           pra ninguém esconder verba devida sem querer.
         </p>
@@ -209,7 +210,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
 
       <section className="pt-4 border-t border-border">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Convenção coletiva</h2>
-        <p className="text-[12px] text-fg-muted mb-3">
+        <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
           Texto de orientação exibido ao conferente — <strong>não é regra executável</strong>. O motor não interpreta
           cláusula de CCT.
         </p>

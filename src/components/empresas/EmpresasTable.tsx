@@ -155,24 +155,24 @@ export function EmpresasTable({
                     JÁ é o nome de cima, e repetir é ruído. O ID do Acessórias
                     tem coluna própria desde 05/10. */}
                 {razaoSocialSecundaria(c) && (
-                  <span className="truncate text-[11.5px] font-normal text-fg-muted">{razaoSocialSecundaria(c)}</span>
+                  <span className="truncate text-[length:var(--fs-micro)] font-normal text-fg-muted">{razaoSocialSecundaria(c)}</span>
                 )}
               </span>
             </Link>
             {qtdFiliais > 0 && (
-              <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted tnum whitespace-nowrap">
+              <span className="ml-1 shrink-0 text-[length:var(--fs-micro)] text-fg-muted tnum whitespace-nowrap">
                 {qtdFiliais} {qtdFiliais === 1 ? "filial" : "filiais"}
               </span>
             )}
-            {ehFilial && <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted">filial</span>}
+            {ehFilial && <span className="ml-1 shrink-0 text-[length:var(--fs-micro)] text-fg-muted">filial</span>}
           </div>
         </td>
         {/* O ID do Acessórias em coluna própria (revisão de 05/10): embaixo do
             nome ele virava segunda linha e desalinhava o nome do logo redondo. */}
-        <td className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary tnum truncate" title={c.externalId ?? undefined}>
+        <td className="px-4 py-3 text-center text-fg-secondary tnum truncate" title={c.externalId ?? undefined}>
           {c.externalId ?? "—"}
         </td>
-        <td className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary tnum whitespace-nowrap">
+        <td className="px-4 py-3 text-center text-fg-secondary tnum whitespace-nowrap">
           {formatDocumento(c.kind, c.cnpj, c.cpf)}
         </td>
         <td className="px-4 py-3 text-center whitespace-nowrap">
@@ -181,11 +181,11 @@ export function EmpresasTable({
         {/* Resumido e sem quebra: o rótulo do Acessórias chega a 73 caracteres
             e esticava a linha em seis, empurrando as ações para fora da tela.
             O texto inteiro fica no title. */}
-        <td className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary truncate" title={c.taxRegime ?? undefined}>
+        <td className="px-4 py-3 text-center text-fg-secondary truncate" title={c.taxRegime ?? undefined}>
           {resumirRegime(c.taxRegime) ?? "—"}
         </td>
         <td
-          className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary truncate"
+          className="px-4 py-3 text-center text-fg-secondary truncate"
           title={c.city && c.stateCode ? `${c.city}/${c.stateCode}` : undefined}
         >
           {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
@@ -251,7 +251,7 @@ export function EmpresasTable({
               {/* `break-words` em vez de `truncate`: no cartão há altura de
                   sobra, e cortar o nome era um custo só da tabela. */}
               <span className="font-medium break-words">{nomeExibicao(c)}</span>
-              {secundaria && <span className="text-[11.5px] text-fg-muted break-words">{secundaria}</span>}
+              {secundaria && <span className="text-[length:var(--fs-micro)] text-fg-muted break-words">{secundaria}</span>}
             </span>
           </Link>
         </div>
@@ -390,7 +390,9 @@ export function EmpresasTable({
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
+      {/* `c41-tabela`: dentro do `CascoDaTabela`, no computador, o casco é o
+          cartão e este perde borda, fundo e sombra (globals.css). */}
+      <div className="c41-tabela bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
         {companies.length === 0 ? (
           <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" />
         ) : (
@@ -402,7 +404,7 @@ export function EmpresasTable({
             {canCreate && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todas" />
-                <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   Selecionar todas
                 </span>
               </div>
@@ -411,10 +413,10 @@ export function EmpresasTable({
               <Fragment key={`cartoes-${bloco.clientGroupId ?? "sem-cliente"}-${i}`}>
                 {bloco.mostrarCabecalho && (
                   <div className="px-3 py-2 border-b border-border bg-surface-2">
-                    <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                    <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                       {bloco.label}
                     </span>
-                    <span className="ml-2 text-[11.5px] text-fg-muted tnum">
+                    <span className="ml-2 text-[length:var(--fs-micro)] text-fg-muted tnum">
                       {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -434,8 +436,11 @@ export function EmpresasTable({
           {/* `table-fixed` + <colgroup>: com layout automático o navegador recalcula
               TODAS as larguras quando o conteúdo muda, então expandir uma matriz
               deslocava as colunas da tabela inteira. Larguras declaradas uma vez
-              deixam o expandir e o recolher inertes. */}
-          <table className="w-full table-fixed min-w-[960px] text-[length:var(--fs-body)]">
+              deixam o expandir e o recolher inertes.
+              Corpo em 13px, como toda tabela (escolha 3A do Kauan, 08/10/2026);
+              era 15px. Esta rola num contêiner próprio e não é filha direta da
+              `.c41-tabela`, então o tamanho vai aqui na <table>. */}
+          <table className="w-full table-fixed min-w-[960px] text-ui">
             <colgroup>
               {canCreate && <col className="w-11" />}
               {/* Nome não declara largura: fica com o espaço que sobrar. Em
@@ -468,14 +473,14 @@ export function EmpresasTable({
                     data de cadastro não decide nada numa lista operacional). O
                     ID do Acessórias, que tinha descido para a segunda linha do
                     nome, voltou a ter coluna estreita em 05/10. */}
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">ID</th>
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">ID</th>
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   {filtrosDeColuna ? <FiltroDaColunaNaUrl rotulo="Regime" chave="regime" opcoes={filtrosDeColuna.regime} /> : "Regime"}
                 </th>
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   {filtrosDeColuna ? (
                     <FiltroDaColunaNaUrl rotulo="Localização" chave="local" opcoes={filtrosDeColuna.local} align="right" />
                   ) : (
@@ -491,10 +496,10 @@ export function EmpresasTable({
                   {bloco.mostrarCabecalho && (
                     <tr className="border-b border-border bg-surface-2">
                       <td colSpan={colunas - 1} className="px-4 py-2">
-                        <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                        <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                           {bloco.label}
                         </span>
-                        <span className="ml-2 text-[11.5px] text-fg-muted tnum">
+                        <span className="ml-2 text-[length:var(--fs-micro)] text-fg-muted tnum">
                           {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
                         </span>
                       </td>

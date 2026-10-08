@@ -1,25 +1,27 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Clock, Download, ListChecks, Users, Wallet } from "lucide-react";
+import { Clock, Download, ListChecks, Timer, Users, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { MetricCard } from "@/components/ui/MetricCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna, type LinhaDoFiltro } from "@/components/shared/FiltroDeColunas";
 import { campoDeSetor } from "@/components/gestao/FiltroDeSetor";
 import { saoPauloParts } from "@/lib/agenda";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero, formatarReais, formatarHoras } from "@/lib/format";
 import { contextoDaGestao, recorteComFiltro } from "@/lib/gestao/acesso";
 import { custosDoTenant, horasDoPeriodo, periodoDaUrl } from "@/lib/gestao/horas";
 import { resumirHoras } from "@/lib/gestao/custo";
 import { nomesDasPessoas } from "@/lib/gestao/telas";
+// Reais e horas pelos formatadores que já existiam (Valora), no lugar das
+// cópias locais. Trocam por `formatarReais`/`formatarHoras` de lib/format.ts
+// quando a base os criar (auditoria DRG-01, 07/10/2026).
 
 export const dynamic = "force-dynamic";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const HORAS = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
-const h = (min: number) => `${HORAS.format(min / 60)} h`;
+const h = (min: number) => formatarHoras(min / 60);
 const CABECALHO = "border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted";
 
 /** O `TabelaFiltravel` quando a tabela traz todas as linhas; senão, a tabela sozinha. */
@@ -93,22 +95,24 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <MetricCard label={`Horas — ${periodo.rotulo.toLowerCase()}`} value={h(resumo.total.minutos)} icon={<Clock size={15} />} />
-        {podeVerCusto && (
-          <MetricCard
-            label="Custo das horas"
-            value={resumo.total.custo === null ? "—" : MOEDA.format(resumo.total.custo)}
-            icon={<Wallet size={15} />}
-          />
-        )}
-        <MetricCard label="Pessoas" value={resumo.porPessoa.length} icon={<Users size={15} />} />
-        <MetricCard label="Apontamentos" value={linhas.length} icon={<ListChecks size={15} />} />
-      </div>
+      {/* O mesmo cartão de total da aba Painel e das outras telas: era o
+          `MetricCard`, com o ícone do outro lado (auditoria DRG-12, 07/10/2026).
+          Sem o respiro da faixa: aqui quem espaça é o `gap` da coluna. */}
+      <FaixaDeTotais
+        className=""
+        itens={[
+          { rotulo: `Horas — ${periodo.rotulo.toLowerCase()}`, valor: h(resumo.total.minutos), icone: <Clock /> },
+          ...(podeVerCusto
+            ? [{ rotulo: "Custo das horas", valor: resumo.total.custo === null ? "—" : formatarReais(resumo.total.custo), icone: <Wallet /> }]
+            : []),
+          { rotulo: "Pessoas", valor: formatarNumero(resumo.porPessoa.length, 0), icone: <Users /> },
+          { rotulo: "Apontamentos", valor: formatarNumero(linhas.length, 0), icone: <ListChecks /> },
+        ]}
+      />
 
       {podeVerCusto && (resumo.minutosSemCusto > 0 || !configurado) && (
         // Revisão de 05/10: botão não é link — o "Custos no Valora" era texto azul.
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[12px] text-fg-secondary">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[length:var(--fs-2)] text-fg-secondary">
           <p>
             {!configurado
               ? "O custo das equipes ainda não foi preenchido no Valora, então as horas aparecem sem custo."
@@ -122,7 +126,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
 
       {linhas.length === 0 ? (
         <Card>
-          <EmptyState title="Nenhuma hora apontada no período" description="As horas entram pelo cronômetro ou pelo lançamento manual, no card e no processo." />
+          <EmptyState icon={<Timer />} title="Nenhuma hora apontada no período" description="As horas entram pelo cronômetro ou pelo lançamento manual, no card e no processo." />
         </Card>
       ) : (
         <>
@@ -132,7 +136,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
             <Card className="p-4 flex flex-col gap-2">
               <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Por setor</h2>
               <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-                <table className="w-full text-[length:var(--fs-ui)]">
+                <table className="w-full">
                   <thead>
                     <tr className={CABECALHO}>
                       <th className="px-3">Setor</th>
@@ -145,7 +149,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
                       <tr key={s.setor} className="border-b border-border">
                         <td className="px-3">{g.rotuloDoSetor(s.setor)}</td>
                         <td className="px-3 tabular-nums">{h(s.minutos)}</td>
-                        {podeVerCusto && <td className="px-3 tabular-nums text-fg-secondary">{s.custo === null ? "sem custo" : MOEDA.format(s.custo)}</td>}
+                        {podeVerCusto && <td className="px-3 tabular-nums text-fg-secondary">{s.custo === null ? "sem custo" : formatarReais(s.custo)}</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -155,7 +159,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
             <Card className="p-4 flex flex-col gap-2">
               <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Por pessoa</h2>
               <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-                <table className="w-full text-[length:var(--fs-ui)]">
+                <table className="w-full">
                   <thead>
                     <tr className={CABECALHO}>
                       <th className="px-3">Pessoa</th>
@@ -172,7 +176,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
                           </Link>
                         </td>
                         <td className="px-3 tabular-nums">{h(p.minutos)}</td>
-                        {podeVerCusto && <td className="px-3 tabular-nums text-fg-secondary">{p.custo === null ? "sem custo" : MOEDA.format(p.custo)}</td>}
+                        {podeVerCusto && <td className="px-3 tabular-nums text-fg-secondary">{p.custo === null ? "sem custo" : formatarReais(p.custo)}</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -185,12 +189,32 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
             <h2 id="apontamentos" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
               Apontamentos
             </h2>
+            {/* No celular, cartões em vez da rolagem lateral de 640px (auditoria
+                DRG-31, 07/10/2026). O funil por coluna é só da tabela. */}
+            <CartoesNoCelular>
+              {linhas.slice(0, 200).map((l) => (
+                <Cartao key={l.id}>
+                  <TopoDoCartao
+                    nome={
+                      <Link href={l.href} className="text-fg hover:text-brand transition-colors">
+                        {l.titulo}
+                      </Link>
+                    }
+                    valor={h(l.minutos)}
+                  />
+                  {l.nota && <InfoDoCartao>{l.nota}</InfoDoCartao>}
+                  <InfoDoCartao>
+                    {formatInstantDate(l.dia)} · {nomeDe.get(l.userId) ?? "—"} · {g.rotuloDoSetor(l.setor)}
+                  </InfoDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
             {/* Funil por coluna só quando a tabela traz todas as linhas: acima de
                 200 ela mostra um pedaço, e filtrar o pedaço mentiria sobre o
                 resto. Sem o `TabelaFiltravel`, o funil vira só o rótulo. */}
             <TabelaNoFiltro filtravel={linhas.length <= 200} linhas={apontamentos}>
-              <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-                <table className="w-full min-w-[640px] text-[length:var(--fs-ui)]">
+              <TabelaNoDesktop padrao>
+                <table className="w-full min-w-[640px]">
                   <thead>
                     <tr className={CABECALHO}>
                       <th className="px-3">
@@ -217,7 +241,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
                           <Link href={l.href} className="font-medium text-fg hover:text-brand transition-colors">
                             {l.titulo}
                           </Link>
-                          {l.nota && <span className="block text-[11px] text-fg-muted">{l.nota}</span>}
+                          {l.nota && <span className="block text-[length:var(--fs-micro)] text-fg-muted">{l.nota}</span>}
                         </td>
                         <td className="px-3">{g.rotuloDoSetor(l.setor)}</td>
                         <td className="px-3 tabular-nums">{h(l.minutos)}</td>
@@ -225,9 +249,9 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TabelaNoDesktop>
             </TabelaNoFiltro>
-            {linhas.length > 200 && <p className="text-[12px] text-fg-muted">Mostrando 200 de {linhas.length}. O CSV traz todos.</p>}
+            {linhas.length > 200 && <p className="text-[length:var(--fs-2)] text-fg-muted">Mostrando 200 de {linhas.length}. O CSV traz todos.</p>}
           </section>
         </>
       )}

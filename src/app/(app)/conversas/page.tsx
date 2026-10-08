@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { BackButton } from "@/components/shared/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings, ArrowLeft, ClipboardCheck, PenLine, Timer } from "lucide-react";
+import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings, ClipboardCheck, PenLine, Timer } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { getAuthContext, isFullAccess, canViewSector } from "@/lib/auth/context";
@@ -11,10 +12,11 @@ import { scopedChatwootConversationWhere } from "@/lib/auth/scope";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
 import { chaveDoSegmento, indexarVinculosPorNome, normalizarNomeAtendente } from "@/lib/chatwoot/evaluation";
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
-import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
 import { VincularContato } from "@/components/conversas/VincularContato";
@@ -253,20 +255,18 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
       {id && (
         <div className="bg-surface border border-brand/30 rounded-lg px-4 py-3 mb-4">
           <div className="flex items-center justify-between gap-2 mb-1">
-            <p className="text-[12px] font-medium text-brand">Atendimento aberto</p>
-            <Button href="/conversas" variant="secondary" size="xs">
-              <ArrowLeft size={11} /> Voltar à lista
-            </Button>
+            <p className="text-[length:var(--fs-2)] font-medium text-brand">Atendimento aberto</p>
+            <BackButton href="/conversas" rotulo="Voltar à lista" />
           </div>
           {focusedConversation ? (
             <AtendimentosAccordion atendimentos={[toResumo(focusedConversation)]} defaultOpenId={id} />
           ) : (
-            <p className="text-[13px] text-fg-muted py-2">Atendimento não encontrado ou fora do seu escopo.</p>
+            <p className="text-[length:var(--fs-ui)] text-fg-muted py-2">Atendimento não encontrado ou fora do seu escopo.</p>
           )}
         </div>
       )}
 
-      <p className="text-[12px] text-fg-muted mb-3">
+      <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
         {totalContacts} contato{totalContacts !== 1 ? "s" : ""}, {totalAtendimentos} atendimento{totalAtendimentos !== 1 ? "s" : ""} nesta página.
       </p>
 
@@ -300,7 +300,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
             const linkedLabel = link.person?.name ?? link.company?.name ?? null;
             const linkedHref = link.person ? `/pessoas/${link.person.id}` : link.company ? `/empresas/${link.company.id}` : null;
             return (
-              <div key={link.id} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3">
+              <Card key={link.id} className="px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="w-8 h-8 rounded-full bg-brand-subtle text-brand flex items-center justify-center flex-shrink-0">
@@ -308,13 +308,13 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
                     </span>
                     <div className="min-w-0">
                       {linkedHref ? (
-                        <Link href={linkedHref} className="text-[13.5px] font-medium text-fg hover:text-brand transition-colors truncate block">
+                        <Link href={linkedHref} className="text-[length:var(--fs-ui)] font-medium text-fg hover:text-brand transition-colors truncate block">
                           {displayName}
                         </Link>
                       ) : (
-                        <p className="text-[13.5px] font-medium text-fg truncate">{displayName}</p>
+                        <p className="text-[length:var(--fs-ui)] font-medium text-fg truncate">{displayName}</p>
                       )}
-                      <p className="text-[11.5px] text-fg-muted truncate">
+                      <p className="text-[length:var(--fs-micro)] text-fg-muted truncate">
                         {[link.chatwootEmail, link.chatwootPhoneE164].filter(Boolean).join(" · ") || "Sem e-mail/telefone no Chatwoot"}
                         {" · "}
                         {link.conversations.length} atendimento{link.conversations.length !== 1 ? "s" : ""}
@@ -324,25 +324,25 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
                   <VincularContato contactLinkId={link.id} linkedLabel={linkedLabel} canManage={canManageLinks} />
                 </div>
                 <AtendimentosAccordion atendimentos={link.conversations.map(toResumo)} defaultOpenId={id} />
-              </div>
+              </Card>
             );
           })}
 
           {orphanConversations.length > 0 && (
-            <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3">
+            <Card className="px-4 py-3">
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-8 h-8 rounded-full bg-surface-hover text-fg-muted flex items-center justify-center flex-shrink-0">
                   <HelpCircle size={15} />
                 </span>
                 <div>
-                  <p className="text-[13.5px] font-medium text-fg">Sem contato identificado</p>
-                  <p className="text-[11.5px] text-fg-muted">
+                  <p className="text-[length:var(--fs-ui)] font-medium text-fg">Sem contato identificado</p>
+                  <p className="text-[length:var(--fs-micro)] text-fg-muted">
                     {orphanConversations.length} atendimento{orphanConversations.length !== 1 ? "s" : ""} sem contato no Chatwoot
                   </p>
                 </div>
               </div>
               <AtendimentosAccordion atendimentos={orphanConversations.map(toResumo)} defaultOpenId={id} />
-            </div>
+            </Card>
           )}
         </div>
       )}
@@ -530,8 +530,8 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
                 os cartões de total do resto do Connect. */}
             <FaixaDeTotais
               itens={[
-                { rotulo: "Atendimentos avaliados", valor: String(total), icone: <ClipboardCheck /> },
-                { rotulo: "Nota média", valor: String(Math.round(soma("scoreSum") / total)), icone: <Gauge /> },
+                { rotulo: "Atendimentos avaliados", valor: formatarNumero(total, 0), icone: <ClipboardCheck /> },
+                { rotulo: "Nota média", valor: formatarNumero(Math.round(soma("scoreSum") / total), 0), icone: <Gauge /> },
                 { rotulo: "Escrita média", valor: `${Math.round(soma("writingSum") / total)}/50`, icone: <PenLine /> },
                 { rotulo: "SLA médio", valor: `${Math.round(soma("slaSum") / total)}/50`, icone: <Timer /> },
               ]}

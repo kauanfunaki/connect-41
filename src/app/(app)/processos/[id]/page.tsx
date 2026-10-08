@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
@@ -46,6 +46,7 @@ import { aplicarAviso, descartarAviso } from "../avisos-actions";
 import { AvisosDaJunta } from "@/components/societario/AvisosDaJunta";
 import { avisosPendentes } from "@/lib/societario/avisos";
 import { HorasDoProcesso } from "@/components/societario/HorasDoProcesso";
+import { ObservacoesDoProcesso } from "@/components/societario/ObservacoesDoProcesso";
 import { apagarHorasDoProcesso, iniciarCronometroDoProcesso, lancarHorasNoProcesso, pararCronometroDoProcesso } from "../horas-actions";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -263,10 +264,12 @@ export default async function ProcessoDetalhePage({
         }
         meta={
           <>
+          {/* Situação e prioridade em Selo: é a situação da ficha (regra de
+              02/10 no Selo; auditoria de 07/10/2026). */}
           {encerradoSemConclusao ? (
-            <Badge variant="danger">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Badge>
+            <Selo tom="neutro">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Selo>
           ) : (
-            <Badge variant={SITUACAO_VARIANTE[situacao]}>{SITUACAO_LABEL[situacao]}</Badge>
+            <Selo tom={tomDaVariante(SITUACAO_VARIANTE[situacao])}>{SITUACAO_LABEL[situacao]}</Selo>
           )}
 
           {prazo.situacao === "sem_previsao" ? (
@@ -295,9 +298,9 @@ export default async function ProcessoDetalhePage({
           )}
 
           {processo.priority !== "NORMAL" && (
-            <Badge variant={PRIORIDADE_VARIANTE[processo.priority]}>
+            <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[processo.priority])}>
               Prioridade {PRIORIDADE_LABEL[processo.priority].toLowerCase()}
-            </Badge>
+            </Selo>
           )}
 
           {combinado && processo.dueAt && (
@@ -306,7 +309,7 @@ export default async function ProcessoDetalhePage({
                 combinado.situacao === "vencido" || combinado.situacao === "hoje"
                   ? "text-danger font-medium"
                   : combinado.situacao === "proximo"
-                    ? "text-warning"
+                    ? "text-warning-fg"
                     : undefined
               }
             >
@@ -315,7 +318,9 @@ export default async function ProcessoDetalhePage({
           )}
 
           <span>Aberto em {formatInstantDate(processo.startedAt)}</span>
-          <span>{processo.owner?.name ?? "sem responsável"}</span>
+          {/* Com rótulo (07/10/2026): o nome solto entre a data e os botões não
+              dizia que era o responsável. */}
+          <span>{processo.owner ? `Responsável: ${processo.owner.name}` : "Sem responsável"}</span>
           {/* Revisão de 05/10: botão não é link — os dois atalhos eram texto azul. */}
           <Button href={`/processos/empresas/${processo.company.id}`} variant="secondary" size="xs">
             Visão societária
@@ -327,9 +332,12 @@ export default async function ProcessoDetalhePage({
         }
       />
 
-      <div className="mb-6 flex flex-col gap-3">
+      {/* Motivo e ações de situação são do processo inteiro: na largura toda,
+          acima das colunas. Concluído e sem motivo, a faixa fica vazia e some
+          (`empty:hidden`), sem deixar a margem. */}
+      <div className="mb-6 flex flex-col gap-3 empty:hidden">
         {processo.statusReason && (
-          <p className="text-[13px] text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
+          <p className="text-[length:var(--fs-ui)] text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
             <span className="font-medium">Motivo:</span> {processo.statusReason}
             {processo.statusChangedAt && (
               <span className="text-fg-muted"> · desde {formatInstantDate(processo.statusChangedAt)}</span>
@@ -337,104 +345,113 @@ export default async function ProcessoDetalhePage({
           </p>
         )}
         <SituacaoDoProcesso processoId={processo.id} status={processo.status} mudar={mudarSituacaoDoProcesso} />
-        {/* As observações já vinham na consulta e não apareciam em lugar
-            nenhum. É onde a importação do Trello (06/10) põe descrição,
-            checklists e comentários do cartão — fechado, porque é longo, e
-            só aqui: o portal não lê `notes`. */}
-        {processo.notes && (
-          <details className="rounded-md border border-border bg-surface-2 px-3 py-2">
-            <summary className="cursor-pointer text-[13px] font-medium text-fg">
-              Observações internas <span className="font-normal text-fg-muted">· só a equipe vê</span>
-            </summary>
-            <p className="mt-2 whitespace-pre-wrap break-words text-[12px] text-fg-secondary">{processo.notes}</p>
-          </details>
-        )}
       </div>
 
-      {/* Uma pilha só, com o mesmo respiro entre todas as seções — eram
-          mb-4/mt-4 soltos em cada bloco. O roteiro ganhou título, como as
-          outras seções da página. */}
-      <div className="flex flex-col gap-5">
-        {avisos.length > 0 && (
-          <section aria-labelledby="avisos-da-junta" className="flex flex-col gap-3">
-            <div className="flex flex-col gap-0.5">
-              <h2 id="avisos-da-junta" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
-                Avisos da Junta por e-mail
-              </h2>
-              <p className="text-[12px] text-fg-muted">
-                O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
-              </p>
-            </div>
-            <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} />
-          </section>
-        )}
+      {/* Duas colunas no computador (escolha do Kauan na página de decisões,
+          08/10/2026 — 10A): o roteiro à esquerda, e à direita o que se consulta
+          ao lado dele — taxas, horas, conversa e documentos. Era uma pilha só,
+          e Taxas, Horas e Conversa ficavam muito abaixo da dobra.
 
-        <section aria-labelledby="roteiro-do-processo" className="flex flex-col gap-3">
-          <h2 id="roteiro-do-processo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
-            Roteiro
-          </h2>
-          <RoteiroDoProcesso
-            etapas={etapas}
-            podeEditar={processo.concludedAt === null && !encerradoSemConclusao}
+          - Do `xl` para cima, e não do `lg`: com o menu de 240px, no `lg` o
+            conteúdo tem uns 736px e o roteiro ficaria com uns 300.
+          - A conversa vai para a direita junto com os documentos: é apoio do
+            roteiro, e assim as duas colunas, uma depois da outra, dão a mesma
+            ordem de hoje no celular — sem `order` de CSS, que deixaria a ordem
+            do leitor de tela diferente da que se vê.
+          - As observações ficam no alto da coluna do roteiro, onde já estavam:
+            são a história do processo (o cartão do Trello), fechadas numa linha.
+
+          Toda seção é um cartão com o título dentro (07/10/2026), com o mesmo
+          respiro entre elas. */}
+      <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_25rem] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_28rem]">
+        <div className="flex min-w-0 flex-col gap-5">
+          {/* As observações já vinham na consulta e não apareciam em lugar
+              nenhum. É onde a importação do Trello (06/10) põe descrição,
+              checklists e comentários do cartão — fechado, porque é longo, e
+              só aqui: o portal não lê `notes`. */}
+          {processo.notes && <ObservacoesDoProcesso texto={processo.notes} />}
+
+          {avisos.length > 0 && (
+            <Card as="section" aria-labelledby="avisos-da-junta" className="p-4 flex flex-col gap-4">
+              <div className="flex flex-col gap-0.5">
+                <h2 id="avisos-da-junta" className="text-section font-semibold text-fg">
+                  Avisos da Junta por e-mail
+                </h2>
+                <p className="text-[length:var(--fs-2)] text-fg-muted">
+                  O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
+                </p>
+              </div>
+              <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} embutido />
+            </Card>
+          )}
+
+          <Card as="section" aria-labelledby="roteiro-do-processo" className="p-4 flex flex-col gap-3">
+            <h2 id="roteiro-do-processo" className="text-section font-semibold text-fg">
+              Roteiro
+            </h2>
+            <RoteiroDoProcesso
+              etapas={etapas}
+              podeEditar={processo.concludedAt === null && !encerradoSemConclusao}
+              acoes={{
+                concluir: concluirEtapa,
+                dispensar: dispensarEtapa,
+                protocolar,
+                deferir: deferirProtocolo,
+                exigir: registrarExigencia,
+                resolverExigencia,
+                alternarItem: alternarItemDoChecklist,
+              }}
+            />
+          </Card>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-5">
+          <TaxasDoProcesso taxas={taxas} custo={custo} />
+
+          <HorasDoProcesso
+            processId={processo.id}
+            lancamentos={horas.map((h) => ({
+              id: h.id,
+              quem: h.user.name,
+              minutos: h.minutes,
+              dia: formatInstantDate(h.loggedOn),
+              nota: h.note,
+              meu: h.userId === ctx.userId,
+            }))}
+            cronometro={
+              processo.activeTimerUserId && processo.activeTimerStartedAt
+                ? {
+                    quem: donoDoCronometro ?? "Alguém",
+                    desdeIso: processo.activeTimerStartedAt.toISOString(),
+                    meu: processo.activeTimerUserId === ctx.userId,
+                  }
+                : null
+            }
+            podeAgir={processo.concludedAt === null}
             acoes={{
-              concluir: concluirEtapa,
-              dispensar: dispensarEtapa,
-              protocolar,
-              deferir: deferirProtocolo,
-              exigir: registrarExigencia,
-              resolverExigencia,
-              alternarItem: alternarItemDoChecklist,
+              iniciar: iniciarCronometroDoProcesso,
+              parar: pararCronometroDoProcesso,
+              lancar: lancarHorasNoProcesso,
+              apagar: apagarHorasDoProcesso,
             }}
           />
-        </section>
 
-        <TaxasDoProcesso taxas={taxas} custo={custo} />
-
-        <HorasDoProcesso
-          processId={processo.id}
-          lancamentos={horas.map((h) => ({
-            id: h.id,
-            quem: h.user.name,
-            minutos: h.minutes,
-            dia: formatInstantDate(h.loggedOn),
-            nota: h.note,
-            meu: h.userId === ctx.userId,
-          }))}
-          cronometro={
-            processo.activeTimerUserId && processo.activeTimerStartedAt
-              ? {
-                  quem: donoDoCronometro ?? "Alguém",
-                  desdeIso: processo.activeTimerStartedAt.toISOString(),
-                  meu: processo.activeTimerUserId === ctx.userId,
-                }
-              : null
-          }
-          podeAgir={processo.concludedAt === null}
-          acoes={{
-            iniciar: iniciarCronometroDoProcesso,
-            parar: pararCronometroDoProcesso,
-            lancar: lancarHorasNoProcesso,
-            apagar: apagarHorasDoProcesso,
-          }}
-        />
-
-        {/* Os dois cartões lado a lado com a mesma altura (a grade estica, o
-            cartão ocupa a célula inteira). */}
-        {conversa && (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <section aria-labelledby="conversa-do-processo" className="min-w-0">
-              <Card className="p-4 flex flex-col gap-4 h-full">
+          {/* Um embaixo do outro na coluna da direita — eram lado a lado
+              (3:2) numa faixa da largura toda. */}
+          {conversa && (
+            <>
+              <Card as="section" aria-labelledby="conversa-do-processo" className="p-4 flex flex-col gap-4">
                 <div className="flex flex-col gap-0.5">
-                  <h2 id="conversa-do-processo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+                  <h2 id="conversa-do-processo" className="text-section font-semibold text-fg">
                     Conversa com o cliente
                   </h2>
-                  <p className="text-[12px] text-fg-muted">
+                  <p className="text-[length:var(--fs-2)] text-fg-muted">
                     O cliente vê tudo o que for escrito aqui no portal, e é avisado por e-mail. Para anotação
                     interna, use as observações do processo.
                   </p>
                 </div>
                 {conversa.limitada && (
-                  <p className="text-[12px] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
+                  <p className="text-[length:var(--fs-2)] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
                 )}
                 {conversa.mensagens.length > 0 && (
                   <ConversaDaPendencia
@@ -451,10 +468,9 @@ export default async function ProcessoDetalhePage({
                   dica="Anexe PDF, PNG, JPG ou XML de até 10 MB."
                 />
               </Card>
-            </section>
-            <section aria-labelledby="documentos-do-processo" className="min-w-0">
-              <Card className="p-4 flex flex-col gap-4 h-full">
-                <h2 id="documentos-do-processo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+
+              <Card as="section" aria-labelledby="documentos-do-processo" className="p-4 flex flex-col gap-4">
+                <h2 id="documentos-do-processo" className="text-section font-semibold text-fg">
                   Documentos <span className="text-fg-muted font-normal tabular-nums">({conversa.documentos.length})</span>
                 </h2>
                 <DocumentosDoProcesso
@@ -466,12 +482,12 @@ export default async function ProcessoDetalhePage({
                   dica="O cliente vê e é avisado."
                 />
               </Card>
-            </section>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
-      <p className="mt-6 text-[11px] text-fg-muted">
+      <p className="mt-6 text-[length:var(--fs-micro)] text-fg-muted">
         Roteiro versão {processo.template.version} — congelado na abertura, para o processo não
         mudar embaixo de quem está tocando ele.
       </p>

@@ -25,15 +25,26 @@ export function SkeletonLine({ w = "w-40", h = "h-3.5" }: { w?: string; h?: stri
  *
  * `acao` é largura de botão, não de texto: a página real tem um controle ali, e
  * um esqueleto que o ignora faz o conteúdo pular na hora que chega.
+ *
+ * As medidas são as do `PageHeader` (07/10/2026): o traço do setor (3px + 12px),
+ * a linha do título de 30px, a do subtítulo de 14px e o `mb-7`. Eram uma barra
+ * de 24px e uma de 14px com `mb-5`, e a tela descia uns 40px quando chegava.
+ * O traço sai de verdade, na cor do setor: é estrutura, não conteúdo.
  */
 export function SkeletonPageHeader({ comAcao = false }: { comAcao?: boolean }) {
   return (
-    <div className="flex items-start justify-between gap-3 mb-5">
-      <div className="space-y-2">
-        <SkeletonLine w="w-44" h="h-6" />
-        <SkeletonLine w="w-80" h="h-3.5" />
+    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 mb-7">
+      <div className="min-w-0 flex-1 basis-[18rem]">
+        <span aria-hidden className="block h-[3px] w-7 rounded-full bg-[var(--c41-setor)] mb-3" />
+        {/* As alturas das linhas de texto do PageHeader: 30px × 1.25 e 14px × 1.625. */}
+        <div className="h-[2.375rem] flex items-center">
+          <SkeletonLine w="w-56" h="h-7" />
+        </div>
+        <div className="mt-2 h-[1.4375rem] flex items-center">
+          <SkeletonLine w="w-80 max-w-full" h="h-3.5" />
+        </div>
       </div>
-      {comAcao && <SkeletonLine w="w-40" h="h-8" />}
+      {comAcao && <SkeletonLine w="w-40" h="h-9" />}
     </div>
   );
 }
@@ -61,7 +72,7 @@ export function SkeletonMetrics({ cartoes = 4 }: { cartoes?: number }) {
   return (
     <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(11rem, 1fr))` }}>
       {Array.from({ length: cartoes }).map((_, i) => (
-        <div key={i} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3 space-y-2">
+        <div key={i} className="bg-surface border border-border rounded-lg shadow-xs px-4 py-3 space-y-2">
           <SkeletonLine w="w-24" h="h-3" />
           <SkeletonLine w="w-16" h="h-6" />
         </div>
@@ -91,7 +102,7 @@ export function SkeletonCardList({ cards = 4, linhas = 2 }: { cards?: number; li
   return (
     <div className="space-y-3">
       {Array.from({ length: cards }).map((_, i) => (
-        <div key={i} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3 space-y-2.5">
+        <div key={i} className="bg-surface border border-border rounded-lg shadow-xs px-4 py-3 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <SkeletonLine w="w-52" h="h-3.5" />
             <SkeletonLine w="w-20" h="h-3.5" />
@@ -119,7 +130,7 @@ export function SkeletonBlocks({ blocos = 3, linhas = 3 }: { blocos?: number; li
   return (
     <div className="space-y-4">
       {Array.from({ length: blocos }).map((_, i) => (
-        <div key={i} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 space-y-3">
+        <div key={i} className="bg-surface border border-border rounded-lg shadow-xs p-5 space-y-3">
           <SkeletonLine w="w-24" h="h-3" />
           {Array.from({ length: linhas }).map((_, j) => (
             <SkeletonLine key={j} w={j % 2 === 0 ? "w-64" : "w-48"} h="h-3.5" />
@@ -140,7 +151,7 @@ export function SkeletonTiles({ tiles = 6 }: { tiles?: number }) {
   return (
     <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(15rem, 1fr))" }}>
       {Array.from({ length: tiles }).map((_, i) => (
-        <div key={i} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 space-y-2.5">
+        <div key={i} className="bg-surface border border-border rounded-lg shadow-xs p-4 space-y-2.5">
           <SkeletonLine w="w-8" h="h-8" />
           <SkeletonLine w="w-32" h="h-3.5" />
           <SkeletonLine w="w-full" h="h-3" />
@@ -161,12 +172,12 @@ export function SkeletonTiles({ tiles = 6 }: { tiles?: number }) {
 export function SkeletonWorkspace() {
   return (
     <div className="flex gap-4 h-full min-h-96">
-      <div className="w-64 flex-shrink-0 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 space-y-3">
+      <div className="w-64 flex-shrink-0 bg-surface border border-border rounded-lg shadow-xs p-4 space-y-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <SkeletonLine key={i} w={i % 3 === 0 ? "w-40" : "w-32"} h="h-3.5" />
         ))}
       </div>
-      <div className="flex-1 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 space-y-3">
+      <div className="flex-1 bg-surface border border-border rounded-lg shadow-xs p-5 space-y-3">
         <SkeletonLine w="w-56" h="h-5" />
         {Array.from({ length: 8 }).map((_, i) => (
           <SkeletonLine key={i} w={i % 4 === 3 ? "w-2/3" : "w-full"} h="h-3" />

@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
-import { Gift } from "lucide-react";
+import { Gift, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { BenefitType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -73,7 +73,7 @@ export default async function BeneficiosPage({
               href={novoHref}
               variant="primary"
             >
-              + Novo Benefício
+              <Plus size={14} /> Novo benefício
             </Button>
           )
         }
@@ -91,7 +91,7 @@ export default async function BeneficiosPage({
                   href={novoHref}
                   variant="primary"
                 >
-                  + Cadastrar benefício
+                  <Plus size={14} /> Cadastrar benefício
                 </Button>
               )
             }

@@ -25,7 +25,9 @@ import {
 } from "@/app/(app)/conciliacao/actions";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
+import { formatarCompetencia } from "@/lib/format";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type LancamentoResumido = {
   id: string;
@@ -160,9 +162,9 @@ export function TransacoesDaConta({
         }))}
       >
       <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-        <table className="w-full min-w-[900px] text-[13px]">
+        <table className="w-full min-w-[900px]">
           <thead>
-            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pr-3 font-medium">
                 <FiltroDaColuna rotulo="Data" chave="data" tipo="data" />
               </th>
@@ -196,24 +198,24 @@ export function TransacoesDaConta({
                     <div className="flex flex-col gap-2 items-start">
                       {l.sugestao?.bloqueio ? (
                         <div className="flex flex-col gap-0.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-1.5 max-w-[420px]">
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-warning">
+                          <span className="inline-flex items-center gap-1 text-micro font-medium text-warning-fg">
                             <Lock size={12} /> Casa com uma conta travada na aprovação · {l.sugestao.motivo}
                           </span>
                           <ResumoDoLancamento l={l.sugestao} />
-                          <span className="text-[11px] text-fg-secondary">
+                          <span className="text-micro text-fg-secondary">
                             {l.sugestao.bloqueio} Não crie outro lançamento para esta transação: concilie depois da aprovação.
                           </span>
                         </div>
                       ) : l.sugestao ? (
                         <div className="flex flex-col gap-0.5 rounded-md border border-brand/30 bg-brand/5 px-2.5 py-1.5">
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-brand">
+                          <span className="inline-flex items-center gap-1 text-micro font-medium text-brand">
                             <Sparkles size={12} /> Sugestão · {l.sugestao.motivo}
                           </span>
                           <ResumoDoLancamento l={l.sugestao} />
                         </div>
                       ) : (
                         l.candidatosDeMesmoValor > 0 && (
-                          <span className="text-[11px] text-fg-muted">
+                          <span className="text-micro text-fg-muted">
                             {l.candidatosDeMesmoValor} {l.candidatosDeMesmoValor === 1 ? "lançamento" : "lançamentos"} de mesmo valor,
                             sem um claramente melhor — escolha. {avisoDeTravados(l.candidatosDeMesmoValor, l.travadosDeMesmoValor)}
                           </span>
@@ -255,7 +257,7 @@ export function TransacoesDaConta({
 
                   {l.status === "IGNORADA" && (
                     <div className="flex flex-col gap-1 items-start">
-                      <span className="text-[12px] text-fg-secondary">{l.ignoredReason}</span>
+                      <span className="text-fs-2 text-fg-secondary">{l.ignoredReason}</span>
                       {podeAgir && (
                         <Button variant="secondary" size="xs" onClick={() => reabrir(l)}>
                           <RotateCcw size={12} /> Reabrir
@@ -283,10 +285,10 @@ export function TransacoesDaConta({
 
 function ResumoDoLancamento({ l }: { l: LancamentoResumido }) {
   return (
-    <span className="text-[12px] text-fg-secondary">
+    <span className="text-fs-2 text-fg-secondary">
       <span className="font-medium text-fg">{l.contraparteNome}</span>
       {l.descricao && <span className="text-fg-muted"> · {l.descricao}</span>}
-      <span className="block text-[11px] text-fg-muted tabular-nums">
+      <span className="block text-micro text-fg-muted tabular-nums">
         {moeda(l.centavos)} · venc. {dataCurta(l.vencimentoKey)}
         {l.pagoEmKey && ` · baixa ${dataCurta(l.pagoEmKey)}`}
       </span>
@@ -350,7 +352,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
   return (
     <Modal open onClose={onClose} title="Escolher lançamentos" maxWidth="max-w-3xl">
       <div className="flex flex-col gap-4">
-        <p className="text-[12px] text-fg-secondary">
+        <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
           <strong className={tomDoValor(transacao.centavos)}>{moeda(transacao.centavos)}</strong>. Marque um ou mais
           lançamentos {transacao.centavos < 0 ? "a pagar" : "a receber"} cuja soma feche o valor no centavo.
@@ -370,14 +372,14 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
 
         <div className="max-h-[380px] overflow-y-auto border border-border rounded-md">
           {lista === null || carregando ? (
-            <p className="p-3 text-[12px] text-fg-muted">Carregando…</p>
+            <p className="p-3 text-fs-2 text-fg-muted">Carregando…</p>
           ) : lista.length === 0 ? (
-            <p className="p-3 text-[12px] text-fg-muted">
+            <p className="p-3 text-fs-2 text-fg-muted">
               Nenhum lançamento em aberto ou sem conciliação {busca ? "com esta busca" : "perto desta data"}. Busque pelo
               nome ou crie o lançamento.
             </p>
           ) : (
-            <table className="w-full text-[12px]">
+            <table className="w-full text-ui">
               <tbody>
                 {lista.map((l) => {
                   const id = `escolha-${l.id}`;
@@ -390,13 +392,13 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
                         <label htmlFor={id} className={l.bloqueio ? "cursor-not-allowed" : "cursor-pointer"}>
                           <span className={`font-medium ${l.bloqueio ? "text-fg-muted" : "text-fg"}`}>{l.contraparteNome}</span>
                           {l.descricao && <span className="text-fg-muted"> · {l.descricao}</span>}
-                          <span className="block text-[11px] text-fg-muted">
+                          <span className="block text-micro text-fg-muted">
                             venc. {dataCurta(l.vencimentoKey)}
-                            {l.pagoEmKey && ` · baixa ${dataCurta(l.pagoEmKey)}`} · comp. {l.competencia}
+                            {l.pagoEmKey && ` · baixa ${dataCurta(l.pagoEmKey)}`} · comp. {formatarCompetencia(l.competencia)}
                             {l.centavos === alvo && " · mesmo valor"}
                           </span>
                           {l.bloqueio && (
-                            <span className="flex items-center gap-1 text-[11px] text-warning">
+                            <span className="flex items-center gap-1 text-micro text-warning-fg">
                               <Lock size={12} className="flex-shrink-0" /> {l.bloqueio}
                             </span>
                           )}
@@ -410,35 +412,38 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
             </table>
           )}
         </div>
-        {limitado && <p className="text-[11px] text-fg-muted">Mostrando os 200 primeiros. Refine pela busca.</p>}
+        {limitado && <p className="text-micro text-fg-muted">Mostrando os 200 primeiros. Refine pela busca.</p>}
 
-        {erro && <p className="text-[12px] text-danger">{erro}</p>}
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-          <span className="mr-auto text-[12px] tabular-nums">
-            Selecionado: <strong>{moeda(soma)}</strong> de {moeda(alvo)}
-            {marcados.size > 0 && falta !== 0 && (
-              <span className="text-danger"> · {falta > 0 ? `faltam ${moeda(falta)}` : `passou ${moeda(-falta)}`}</span>
-            )}
-          </span>
-          <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button
-              disabled={salvando || marcados.size === 0 || falta !== 0}
-              onClick={() => {
-                setErro(null);
-                startSalvar(async () => {
-                  const r = await confirmarConciliacao(transacao.id, [...marcados.keys()]);
-                  if ("error" in r) setErro(r.error);
-                  else onClose();
-                });
-              }}
-            >
-              {salvando ? "Conciliando…" : "Conciliar"}
-            </Button>
-          </div>
-        </div>
+        {erro && <Aviso>{erro}</Aviso>}
+        {/* O rodapé padrão (08/10/2026), num formulário só dele: a soma do que
+            está marcado vai na nota, e o erro, acima, não a esconde. */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setErro(null);
+            startSalvar(async () => {
+              const r = await confirmarConciliacao(transacao.id, [...marcados.keys()]);
+              if ("error" in r) setErro(r.error);
+              else onClose();
+            });
+          }}
+        >
+          <FormFooter
+            pending={salvando}
+            submitLabel="Conciliar"
+            pendingLabel="Conciliando…"
+            onCancel={onClose}
+            submitDisabled={marcados.size === 0 || falta !== 0}
+            nota={
+              <span className="tabular-nums text-fg">
+                Selecionado: <strong>{moeda(soma)}</strong> de {moeda(alvo)}
+                {marcados.size > 0 && falta !== 0 && (
+                  <span className="text-danger"> · {falta > 0 ? `faltam ${moeda(falta)}` : `passou ${moeda(-falta)}`}</span>
+                )}
+              </span>
+            }
+          />
+        </form>
       </div>
     </Modal>
   );
@@ -494,19 +499,19 @@ function CriarLancamento({
         }}
       >
         <input type="hidden" name="transactionId" value={transacao.id} />
-        <p className="text-[12px] text-fg-secondary">
+        <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
           <strong className={tomDoValor(transacao.centavos)}>{moeda(transacao.centavos)}</strong>. O lançamento nasce pago
           nesta data, com este valor, e já conciliado.
         </p>
         {transacao.sugestao?.bloqueio && (
-          <p className="flex items-start gap-1.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-2 text-[12px] text-fg-secondary">
-            <Lock size={12} className="mt-0.5 shrink-0 text-warning" />
-            <span>
+          // O `Aviso` do app (08/10/2026), com o texto em `fg-secondary` como estava.
+          <Aviso tom="atencao" icone={<Lock />}>
+            <span className="text-fg-secondary">
               Esta transação parece liquidar <strong>{transacao.sugestao.contraparteNome}</strong>, que já existe e está travada
               na aprovação. Criar outro lançamento duplica a conta — concilie com ela depois de aprovada.
             </span>
-          </p>
+          </Aviso>
         )}
 
         <CampoForm label={kind === "PAGAR" ? "Fornecedor" : "Cliente (sacado)"} htmlFor="criar-contraparte" required>
@@ -610,7 +615,7 @@ function IgnorarTransacao({ transacao, onClose }: { transacao: LinhaDaTransacao;
           });
         }}
       >
-        <p className="text-[12px] text-fg-secondary">
+        <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} · {moeda(transacao.centavos)}. Ignorada sai das
           pendentes, mas continua no saldo da conta — o dinheiro passou por ela.
         </p>

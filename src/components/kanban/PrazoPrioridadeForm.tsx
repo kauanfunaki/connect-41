@@ -6,6 +6,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
@@ -19,9 +20,9 @@ export function PrazoPrioridadeForm({ action, dueDate, priority }: Props) {
   return (
     <form action={formAction} className="space-y-4">
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Prazo" htmlFor="dueDate">

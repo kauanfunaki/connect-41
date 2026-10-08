@@ -167,35 +167,35 @@ export function MeetingAlertOverlay() {
         aria-modal="true"
         tabIndex={-1}
         aria-labelledby={titleId}
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-xl"
+        className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg"
       >
         <div className="flex items-center gap-3 mb-4">
           <span className="w-11 h-11 rounded-lg bg-brand-subtle border border-brand/20 flex items-center justify-center text-brand flex-shrink-0">
             <Video size={20} />
           </span>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-brand uppercase tracking-wider">
+            <p className="c41-rotulo text-brand">
               {startsInMin > 0 ? `Reunião em ${startsInMin} min` : "Reunião em andamento"}
             </p>
-            <h2 id={titleId} className="text-[16px] font-display font-semibold text-fg truncate">
+            <h2 id={titleId} className="text-fs-6 font-display font-semibold text-fg truncate">
               {alert.title}
             </h2>
           </div>
         </div>
 
         <div className="space-y-2 mb-5">
-          <p className="flex items-center gap-2 text-[13px] text-fg-secondary">
+          <p className="flex items-center gap-2 text-ui text-fg-secondary">
             <Clock size={14} className="text-fg-muted flex-shrink-0" />
             {alert.startTimeLabel} – {alert.endTimeLabel} · {alert.provider}
           </p>
           {alert.companyName && (
-            <p className="flex items-center gap-2 text-[13px] text-fg-secondary">
+            <p className="flex items-center gap-2 text-ui text-fg-secondary">
               <Building2 size={14} className="text-fg-muted flex-shrink-0" />
               {alert.companyName}
             </p>
           )}
           {(alert.clientName || alert.sectorLabel) && (
-            <p className="flex items-center gap-2 text-[13px] text-fg-secondary">
+            <p className="flex items-center gap-2 text-ui text-fg-secondary">
               <Users size={14} className="text-fg-muted flex-shrink-0" />
               {[alert.clientName, alert.sectorLabel].filter(Boolean).join(" · ")}
             </p>
@@ -208,22 +208,20 @@ export function MeetingAlertOverlay() {
             size="lg"
             className="flex-1"
             onClick={handleOk}
-            disabled={pending}
+            loading={pending}
+            loadingLabel="Registrando…"
           >
-            {pending ? "Registrando…" : "OK, estou ciente"}
+            OK, estou ciente
           </Button>
-          <a
-            href={alert.meetingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-10 px-4 rounded-md border border-border-strong text-[13px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
-          >
+          {/* O `Button` com `nativo` (07/10/2026): era um <a> com a classe do
+              botão copiada, em 13px médio ao lado de um `lg` de 14px semibold. */}
+          <Button href={alert.meetingUrl} nativo target="_blank" rel="noopener noreferrer" variant="secondary" size="lg">
             Entrar <ExternalLink size={13} />
-          </a>
+          </Button>
         </div>
 
         {alerts.length > 1 && (
-          <p className="text-[12px] text-fg-muted mt-3 text-center">
+          <p className="text-fs-2 text-fg-muted mt-3 text-center">
             +{alerts.length - 1} outra{alerts.length > 2 ? "s" : ""} reunião{alerts.length > 2 ? "ões" : ""} próxima{alerts.length > 2 ? "s" : ""} aguardando ciência
           </p>
         )}

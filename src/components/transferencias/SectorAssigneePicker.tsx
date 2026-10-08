@@ -54,7 +54,7 @@ export function SectorAssigneePicker({ name, options, defaultValue = [] }: Props
             type="button"
             onClick={toggleOpen}
             aria-expanded={open}
-            className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-[12.5px] transition-colors ${
+            className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-[length:var(--fs-2)] transition-colors ${
               selectedUsers.length > 0
                 ? "border-border-strong text-fg"
                 : "border-dashed border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
@@ -100,7 +100,7 @@ export function SectorAssigneePicker({ name, options, defaultValue = [] }: Props
         selectedUsers.map((u) => (
           <span
             key={u.id}
-            className="inline-flex items-center gap-1 h-6 pl-2 pr-1 rounded-full bg-surface-2 text-[11.5px] text-fg-secondary"
+            className="inline-flex items-center gap-1 h-6 pl-2 pr-1 rounded-full bg-surface-2 text-[length:var(--fs-micro)] text-fg-secondary"
           >
             {u.name}
             <button

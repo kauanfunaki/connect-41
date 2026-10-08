@@ -143,10 +143,15 @@ export function PainelDoItem({
               agendar(false);
             }}
             style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
-            className="c41-surgir fixed z-50 w-[260px] max-h-[calc(100vh-16px)] overflow-y-auto scroll-y rounded-lg border border-border-strong bg-surface-elevated shadow-[var(--c41-shadow-lg)] p-2"
+            className="c41-surgir fixed z-50 w-[260px] max-h-[calc(100dvh-16px)] overflow-y-auto scroll-y rounded-lg border border-border-strong bg-surface-elevated shadow-lg p-2"
           >
-            <p className="px-2.5 pt-1.5 pb-2 mb-1 border-b border-border text-[11px] font-semibold uppercase tracking-wider" style={{ color: cor ?? "var(--c41-brand)" }}>
-              {titulo}
+            {/* Rótulo cinza com o ponto na cor do setor, como o título do grupo
+                no menu (07/10/2026): pintado na cor do setor, o texto de 11px
+                dava 3,1 a 3,7:1 no claro e 2,3:1 (Contábil) no escuro — a cor
+                do setor é acento pequeno, não texto. */}
+            <p className="c41-rotulo flex items-center gap-2 px-2.5 pt-1.5 pb-2 mb-1 border-b border-border">
+              <span aria-hidden className="inline-block size-2 rounded-full flex-shrink-0" style={{ backgroundColor: cor ?? "var(--c41-brand)" }} />
+              <span className="truncate">{titulo}</span>
             </p>
             <ul className="flex flex-col gap-0.5">
               {telas.map((t) => {
@@ -158,7 +163,7 @@ export function PainelDoItem({
                       role="menuitem"
                       aria-current={atual ? "page" : undefined}
                       onClick={() => setAberto(false)}
-                      className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13.5px] font-medium transition-colors ${
+                      className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-dropdown font-medium transition-colors ${
                         atual ? "bg-selected-bg text-brand" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
                       }`}
                     >

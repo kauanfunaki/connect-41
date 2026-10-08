@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 import { isUsableAccent, normalizeAccentColor } from "@/lib/color";
 import type { EditStagesState, StageInput } from "@/app/(app)/kanban/actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 const DEFAULT_COLORS = ["#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B"];
 const TYPE_LABEL: Record<StageDotType, string> = {
@@ -162,13 +163,13 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
           </Button>
 
           {colorAdjusted && (
-            <p className="text-[12px] text-fg-secondary bg-surface-hover border border-border rounded-md px-3 py-2">
+            <Aviso tom="neutro">
               A cor escolhida foi ajustada para o tom legível mais próximo — cores
               quase pretas somem no tema escuro e quase brancas somem no claro.
-            </p>
+            </Aviso>
           )}
 
-          {error && <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">{error}</p>}
+          {error && <Aviso>{error}</Aviso>}
 
           {/* Rodapé de modal no padrão (30/09): Cancelar à esquerda do
               primário, os dois à direita, com divisor. */}

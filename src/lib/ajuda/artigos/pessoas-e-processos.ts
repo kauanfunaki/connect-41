@@ -244,7 +244,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Criar uma vaga",
         passos: [
-          "Clique em “+ Nova Vaga”.",
+          "Clique em “Nova Vaga”.",
           "Em “Dados da vaga”, preencha o “Título da Vaga”, o “Setor” e a “Empresa”; complete “Cargo”, “Quantidade”, “Responsável” e “Prioridade”, se quiser.",
           "Para divulgar a vaga no portal público, marque “Publicar no portal de vagas” e preencha a “Descrição pública da vaga”, a “Modalidade”, o “Tipo de contrato” e o “Inscrições até”.",
           "Clique em “Salvar”.",
@@ -299,7 +299,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Cadastrar um candidato",
         passos: [
-          "Clique em “+ Novo Candidato”.",
+          "Clique em “Novo Candidato”.",
           "Preencha o “Nome” e os demais dados em “Identificação”, “Contato” e “Endereço”.",
           "Clique em “Salvar”.",
         ],
@@ -433,7 +433,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         passos: [
           "No topo da tela, escolha o “Candidato”.",
           "Em “Tipo de teste”, escolha “DISC (perfil comportamental)” ou um modelo de múltipla escolha.",
-          "Clique em “+ Novo teste”. Se o candidato tiver e-mail cadastrado, o link vai por e-mail.",
+          "Clique em “Enviar teste”. Se o candidato tiver e-mail cadastrado, o link vai por e-mail.",
           "Para ver o link, clique em “Abrir” na linha do teste. Ele vale por 7 dias.",
         ],
       },
@@ -449,7 +449,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Criar um modelo de múltipla escolha",
         passos: [
-          "Clique em “Modelos de teste” e depois em “+ Novo modelo”.",
+          "Clique em “Modelos de teste” e depois em “Novo modelo”.",
           "Preencha o “Nome do modelo” e, se quiser, a “Descrição”.",
           "Escreva cada pergunta, preencha as alternativas e marque a correta.",
           "Use “Adicionar alternativa” e “Adicionar pergunta” para incluir mais.",
@@ -503,9 +503,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pausar, retomar ou encerrar um processo",
         passos: [
-          "No topo do processo, clique em “Aguardando cliente” ou em “Suspender” para pausá-lo.",
-          "Para encerrar sem conclusão, clique em “Indeferido pelo órgão” ou em “Cancelar”.",
-          "Escreva o “Motivo” e clique em “Confirmar”.",
+          "No topo do processo, clique em “Esperar o cliente” ou em “Suspender” para pausá-lo; escreva o “Motivo” e clique em “Confirmar”.",
+          "Para encerrar sem conclusão, abra o menu ⋯ e escolha “Indeferir” ou “Cancelar”.",
+          "Escreva o “Motivo” e clique em “Indeferir” ou em “Cancelar o processo”.",
           "Para voltar a tocar o processo, clique em “Retomar”.",
         ],
       },

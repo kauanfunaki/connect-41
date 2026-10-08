@@ -3,6 +3,7 @@
 import { getPrisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth/password";
 import { consumePasswordResetToken } from "@/lib/auth/passwordReset";
+import { problemaDaSenhaNova } from "@/lib/portal/senha";
 
 export type EstadoDaRedefinicao = { error: string } | { success: true } | null;
 
@@ -18,8 +19,9 @@ export async function redefinirSenhaDoPortal(
   const confirmacao = String(form.get("confirmacao") ?? "");
 
   if (!token) return { error: "Link inválido." };
-  if (senha.length < 8) return { error: "A senha precisa ter ao menos 8 caracteres." };
-  if (senha !== confirmacao) return { error: "As senhas não coincidem." };
+  // A mesma regra da troca em "Minha conta" (08/10/2026).
+  const problema = problemaDaSenhaNova(senha, confirmacao);
+  if (problema) return { error: problema };
 
   const consumido = await consumePasswordResetToken(token);
   if (!consumido) return { error: "Este link expirou ou já foi usado. Solicite uma nova redefinição." };

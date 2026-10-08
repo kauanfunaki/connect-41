@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { getPrisma } from "@/lib/prisma";
 import { DescriptionEditor } from "@/components/kanban/DescriptionEditor";
 import { ActivityFeed, type FeedItem, type TaskMentionCandidate } from "@/components/kanban/ActivityFeed";
@@ -271,24 +272,19 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
   return (
     <div className={isModal ? "flex flex-col h-full min-h-0" : undefined}>
+      {/* A trilha pelo `Breadcrumb` compartilhado (07/10/2026) — era escrita à mão. */}
       {showBreadcrumb && (
-        <div className="flex items-center gap-2 mb-4">
-          <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-            Kanban
-          </Link>
-          <span className="text-fg-muted">/</span>
-          <Link
-            href={`/kanban/${id}`}
-            className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[160px]"
-          >
-            {pipeline.name}
-          </Link>
-          <span className="text-fg-muted">/</span>
-          <span className="text-[13px] text-fg truncate">{title}</span>
-        </div>
+        <Breadcrumb
+          className="mb-4!"
+          items={[
+            { label: "Kanban", href: "/kanban" },
+            { label: pipeline.name, href: `/kanban/${id}`, truncate: true },
+            { label: title, truncate: true },
+          ]}
+        />
       )}
 
-      <div className="mb-3">
+      <div className={isModal ? "mb-3 pr-12" : "mb-3"}>
         {item.parentItemId && (
           <Link
             href={`${basePath}/itens/${item.parentItemId}`}
@@ -298,7 +294,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           </Link>
         )}
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-[28px] leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
+          <h1 className="text-[length:var(--fs-display)] leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
             {title}
           </h1>
           {canDelete && <DeleteTaskButton entityName={title} deleteAction={deleteAction} />}

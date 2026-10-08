@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Inbox, Plus } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -6,7 +5,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
 import { SeloDaSolicitacao } from "@/components/solicitacoes/SelosDaSolicitacao";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { listarDoCliente } from "@/lib/solicitacoes/consultas";
@@ -44,14 +44,21 @@ export default async function PortalSolicitacoesPage({
         }
       />
 
-      <SegmentedControl
-        label="Quais solicitações"
-        active={recorte}
+      {/* O recorte no "Filtros", como Pendências, Processos e Exigências
+          (07/10/2026): era um SegmentedControl, que troca a visão da tela
+          (lista/quadro) e não filtra — a regra da conferência de 30/09. */}
+      <FiltrosDaTela
         className="mb-4"
-        items={[
-          { key: "abertas", label: "Em aberto", href: "/portal/solicitacoes" },
-          { key: "aguardando", label: "Aguardando você", href: "/portal/solicitacoes?recorte=aguardando" },
-          { key: "encerradas", label: "Encerradas", href: "/portal/solicitacoes?recorte=encerradas" },
+        campos={[
+          {
+            chave: "recorte",
+            rotulo: "Situação",
+            vazioLabel: "Em aberto",
+            opcoes: [
+              { value: "aguardando", label: "Aguardando você" },
+              { value: "encerradas", label: "Encerradas" },
+            ],
+          },
         ]}
       />
 
@@ -80,14 +87,12 @@ export default async function PortalSolicitacoesPage({
         <ul className="flex flex-col gap-2.5">
           {linhas.map((s) => (
             <li key={s.id}>
-              <Link
+              <CartaoDeLista
                 href={`/portal/solicitacoes/${s.id}`}
-                className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 rounded-lg border border-border bg-surface p-4 shadow-[var(--c41-shadow-xs)] hover:border-border-strong transition-colors"
-              >
-                <span className="min-w-0 flex-1 basis-64">
-                  <span className="block text-[11.5px] font-semibold uppercase tracking-wider text-fg-muted tabular-nums">Nº {s.numero}</span>
-                  <span className="block mt-0.5 text-[14px] font-semibold text-fg">{s.assunto}</span>
-                  <span className="block mt-0.5 text-[12.5px] text-fg-muted">
+                sobretitulo={`Nº ${s.numero}`}
+                titulo={s.assunto}
+                apoio={
+                  <span>
                     {s.empresaNome} ·{" "}
                     {s.respondidaEm
                       ? `respondida em ${formatInstantDate(s.respondidaEm)}`
@@ -95,9 +100,9 @@ export default async function PortalSolicitacoesPage({
                         ? `resposta até ${formatInstantDate(s.prazo)}`
                         : `atualizada em ${formatInstantDate(s.atualizadaEm)}`}
                   </span>
-                </span>
-                <SeloDaSolicitacao status={s.status} lado="CLIENTE" />
-              </Link>
+                }
+                selos={<SeloDaSolicitacao status={s.status} lado="CLIENTE" />}
+              />
             </li>
           ))}
         </ul>

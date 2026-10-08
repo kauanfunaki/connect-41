@@ -10,6 +10,7 @@ import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSele
 import type { ProcessoState } from "@/app/(app)/processos/actions";
 import { CamposDoProcesso } from "./CamposDoProcesso";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   empresas: Opcao[];
@@ -60,9 +61,9 @@ export function NovoProcessoForm({ empresas, tipos, responsaveis, responsavelPad
           />
 
           {estado?.error && (
-            <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+            <Aviso>
               {estado.error}
-            </p>
+            </Aviso>
           )}
 
           <FormFooter

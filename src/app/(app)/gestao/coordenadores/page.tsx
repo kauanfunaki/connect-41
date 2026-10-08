@@ -91,7 +91,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                 <InfoDoCartao>{setoresDe(pessoa)}</InfoDoCartao>
                 <PeDoCartao>
                   {pessoa.role === "SECTOR_ADMIN" && <Badge variant="info">Coordenação</Badge>}
-                  <span className={`text-[12px] ${c.parados ? "text-warning font-medium" : "text-fg-muted"}`}>{c.parados} parados</span>
+                  <span className={`text-[12px] ${c.parados ? "text-warning-fg font-medium" : "text-fg-muted"}`}>{c.parados} parados</span>
                   <span className={`text-[12px] ${c.vencidos ? "text-danger font-medium" : "text-fg-muted"}`}>{c.vencidos} vencidos</span>
                   <span className="text-[12px] text-fg-muted">{c.vencendo} vencendo</span>
                 </PeDoCartao>
@@ -108,7 +108,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
           {/* Casco padrão, centralizado (30/09). Sem funil: a pessoa é única
               por linha e o resto é número; o setor se escolhe no "Filtros". */}
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[760px] text-[length:var(--fs-ui)]">
+            <table className="w-full min-w-[760px]">
               <thead>
                 <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-3">Pessoa</th>
@@ -146,7 +146,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                     <td className={TD}>{c.porOrigem.PENDENCIA}</td>
                     <td className={TD}>{c.porOrigem.TRANSFERENCIA}</td>
                     <td className={TD}>{c.porOrigem.SOLICITACAO}</td>
-                    <td className={`${TD} ${c.parados ? "text-warning font-medium" : ""}`}>{c.parados}</td>
+                    <td className={`${TD} ${c.parados ? "text-warning-fg font-medium" : ""}`}>{c.parados}</td>
                     <td className={`${TD} ${c.vencidos ? "text-danger font-medium" : ""}`}>{c.vencidos}</td>
                     <td className={TD}>{c.vencendo}</td>
                   </tr>

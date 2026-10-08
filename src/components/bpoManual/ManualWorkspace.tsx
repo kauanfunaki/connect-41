@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight, FileText, Folder, ImagePlus, Plus, Trash2, X
 import { Input } from "@/components/ui/Input";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Popover } from "@/components/ui/Popover";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { formatInstantDate } from "@/lib/format";
 import type { ManualPageState } from "@/app/(app)/bpo-manual/actions";
@@ -45,34 +46,33 @@ const ICON_CHOICES = [
   "🔒", "👥", "💡", "📞", "🧮", "🖥️", "📅", "🎯", "📬", "💰",
 ];
 
+// O conteúdo do seletor de ícone. O painel é o `Popover` do app desde
+// 08/10/2026 — era um popover feito à mão (`fixed inset-0` para o clique fora
+// e `absolute` com `shadow-lg` do Tailwind, fora da escala de sombras), sem Esc.
 function IconPicker({ value, onChange, onClose }: { value: string | null; onChange: (icon: string | null) => void; onClose: () => void }) {
   return (
     <>
-      {/* backdrop transparente só pra capturar o clique-fora e fechar o popover */}
-      <div className="fixed inset-0 z-10" onClick={onClose} />
-      <div className="absolute z-20 top-full left-0 mt-1 w-60 rounded-md border border-border bg-surface shadow-lg p-2">
-        <div className="grid grid-cols-6 gap-0.5">
-          {ICON_CHOICES.map((icon) => (
-            <button
-              key={icon}
-              type="button"
-              onClick={() => { onChange(icon); onClose(); }}
-              className={`w-8 h-8 flex items-center justify-center rounded text-[17px] leading-none hover:bg-surface-hover ${value === icon ? "bg-brand-subtle" : ""}`}
-            >
-              {icon}
-            </button>
-          ))}
-        </div>
-        {value && (
+      <div className="grid grid-cols-6 gap-0.5">
+        {ICON_CHOICES.map((icon) => (
           <button
+            key={icon}
             type="button"
-            onClick={() => { onChange(null); onClose(); }}
-            className="mt-1.5 w-full flex items-center gap-1.5 text-[12px] text-fg-muted hover:text-danger px-1.5 py-1 rounded hover:bg-surface-hover transition-colors"
+            onClick={() => { onChange(icon); onClose(); }}
+            className={`w-8 h-8 flex items-center justify-center rounded-md text-fs-6 leading-none hover:bg-surface-hover ${value === icon ? "bg-brand-subtle" : ""}`}
           >
-            <X size={12} /> Remover ícone
+            {icon}
           </button>
-        )}
+        ))}
       </div>
+      {value && (
+        <button
+          type="button"
+          onClick={() => { onChange(null); onClose(); }}
+          className="mt-1.5 w-full flex items-center gap-1.5 text-fs-2 text-fg-muted hover:text-danger px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
+        >
+          <X size={12} /> Remover ícone
+        </button>
+      )}
     </>
   );
 }
@@ -80,20 +80,25 @@ function IconPicker({ value, onChange, onClose }: { value: string | null; onChan
 // Tipografia do conteúdo — a MESMA em leitura e em escrita. Antes existiam
 // duas: a de leitura aqui e a do campo de formulário dentro do RichTextEditor,
 // então entrar em edição reposicionava todo o texto na tela.
+//
+// Na escala desde 08/10/2026: o título da página (32px) era maior que o da
+// tela, "Repositório de Manuais" (30px), e invertia a hierarquia. Agora o
+// título da página é `--fs-title` (22), e o conteúdo desce a partir dele: h1
+// em 18, h2 em 16, h3 em 15 com peso — o corpo segue em 15 (`--fs-body`).
 const READING_CLASS =
-  "text-[15px] text-fg leading-[1.75] " +
+  "text-body text-fg leading-[1.75] " +
   "[&_p]:my-3 [&_p:first-child]:mt-0 " +
   // h1 e pre não têm botão na toolbar, mas a allowlist do sanitizador aceita
   // (src/lib/clientDocuments.ts) — colar de fora traz os dois.
-  "[&_h1]:text-[24px] [&_h1]:font-semibold [&_h1]:mt-8 [&_h1]:mb-2 [&_h1]:tracking-[-0.01em] " +
-  "[&_h2]:text-[20px] [&_h2]:font-semibold [&_h2]:mt-7 [&_h2]:mb-2 [&_h2]:tracking-[-0.01em] " +
-  "[&_h3]:text-[16px] [&_h3]:font-semibold [&_h3]:mt-5 [&_h3]:mb-1.5 " +
+  "[&_h1]:text-section [&_h1]:font-semibold [&_h1]:mt-8 [&_h1]:mb-2 [&_h1]:tracking-[-0.01em] " +
+  "[&_h2]:text-fs-6 [&_h2]:font-semibold [&_h2]:mt-7 [&_h2]:mb-2 [&_h2]:tracking-[-0.01em] " +
+  "[&_h3]:text-body [&_h3]:font-semibold [&_h3]:mt-5 [&_h3]:mb-1.5 " +
   "[&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_li]:my-1 " +
   "[&_a]:text-brand [&_a]:underline " +
   "[&_strong]:font-semibold [&_u]:underline [&_s]:line-through " +
   "[&_blockquote]:border-l-2 [&_blockquote]:border-border-strong [&_blockquote]:pl-4 [&_blockquote]:text-fg-secondary " +
-  "[&_code]:bg-surface-hover [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] " +
-  "[&_pre]:bg-surface-hover [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:text-[13px]";
+  "[&_code]:bg-surface-hover [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-ui " +
+  "[&_pre]:bg-surface-hover [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:text-ui";
 
 // Largura de leitura confortável, no espírito do Notion — texto corrido em
 // 1440px de tela vira uma linha longa demais pra acompanhar.
@@ -116,10 +121,10 @@ type SaveStatus = "idle" | "saving" | "saved" | "error";
 function SaveIndicator({ status, error }: { status: SaveStatus; error: string | null }) {
   if (status === "idle") return null;
   if (status === "error") {
-    return <span className="text-[12px] text-danger">{error ?? "Erro ao salvar"}</span>;
+    return <span className="text-fs-2 text-danger">{error ?? "Erro ao salvar"}</span>;
   }
   return (
-    <span className="text-[12px] text-fg-muted">
+    <span className="text-fs-2 text-fg-muted">
       {status === "saving" ? "Salvando…" : "Salvo"}
     </span>
   );
@@ -210,14 +215,14 @@ function CoverControls({
         </div>
       ) : null}
 
-      {error && <p className="text-[12px] text-danger px-6 pt-2">{error}</p>}
+      {error && <p className="text-helper text-danger px-6 pt-2">{error}</p>}
 
       {!coverUrl && (
         <div className={`${CANVAS_CLASS} !py-0 !pt-6`}>
           {/* Era texto solto (30/09): botão fantasma, discreto em cima da folha,
               com o texto alinhado ao título da página. */}
-          <Button variant="ghost" size="xs" className="-ml-2.5" onClick={() => fileInputRef.current?.click()} disabled={pending}>
-            <ImagePlus size={12} /> {pending ? "Enviando…" : "Adicionar capa"}
+          <Button variant="ghost" size="xs" className="-ml-2.5" onClick={() => fileInputRef.current?.click()} loading={pending} loadingLabel="Enviando…">
+            <ImagePlus size={12} /> Adicionar capa
           </Button>
         </div>
       )}
@@ -333,13 +338,13 @@ function PageCanvas({
               draftRef.current.title = e.target.value;
               scheduleSave();
             }}
-            className="w-full bg-transparent border-0 outline-none text-[32px] font-semibold text-fg tracking-[-0.02em] leading-tight placeholder:text-fg-muted"
+            className="w-full bg-transparent border-0 outline-none text-title font-semibold text-fg tracking-[-0.02em] leading-tight placeholder:text-fg-muted"
           />
         ) : (
-          <h1 className="text-[32px] font-semibold text-fg tracking-[-0.02em] leading-tight">{page.title}</h1>
+          <h1 className="text-title font-semibold text-fg tracking-[-0.02em] leading-tight">{page.title}</h1>
         )}
 
-        <p className="text-[12px] text-fg-muted mt-2 mb-8">
+        <p className="text-fs-2 text-fg-muted mt-2 mb-8">
           Criado por {page.createdByName} · atualizado em{" "}
           {formatInstantDate(new Date(page.updatedAt), { day: "2-digit", month: "short", year: "numeric" })}
         </p>
@@ -358,7 +363,7 @@ function PageCanvas({
         ) : page.content ? (
           <div className={READING_CLASS} dangerouslySetInnerHTML={{ __html: page.content }} />
         ) : (
-          <p className="text-[15px] text-fg-muted italic">Esta página ainda não tem conteúdo.</p>
+          <p className="text-body text-fg-muted italic">Esta página ainda não tem conteúdo.</p>
         )}
       </article>
     </div>
@@ -382,7 +387,6 @@ export function ManualWorkspace({
   const [newPageTitle, setNewPageTitle] = useState("");
   const [renamingDocId, setRenamingDocId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [iconPickerFor, setIconPickerFor] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
 
@@ -472,7 +476,7 @@ export function ManualWorkspace({
   if (documents.length === 0 && !canAct) {
     return (
       <Card>
-        <EmptyState icon={<FileText />} title="Nenhum documento ainda" description={`Peça à coordenação do setor ${setorRotulo} pra criar o primeiro documento do manual.`} />
+        <EmptyState icon={<FileText />} title="Nenhum documento ainda" description={`Peça à coordenação do setor ${setorRotulo} para criar o primeiro documento do manual.`} />
       </Card>
     );
   }
@@ -500,28 +504,34 @@ export function ManualWorkspace({
                   >
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </Button>
+                  {/* Alvo de 28px (08/10/2026): o botão do ícone tinha 18. */}
                   <div className="relative flex-shrink-0">
                     {canAct ? (
-                      <button
-                        type="button"
-                        onClick={() => setIconPickerFor(iconPickerFor === doc.id ? null : doc.id)}
-                        className="w-[18px] h-[18px] flex items-center justify-center rounded text-[14px] leading-none hover:bg-surface-hover"
-                        title="Escolher ícone"
-                        aria-label="Escolher ícone do documento"
+                      <Popover
+                        width={240}
+                        aria-label="Ícone do documento"
+                        trigger={({ toggle }) => (
+                          <button
+                            type="button"
+                            onClick={toggle}
+                            className="size-7 flex items-center justify-center rounded-md text-label leading-none hover:bg-surface-hover"
+                            title="Escolher ícone"
+                            aria-label="Escolher ícone do documento"
+                          >
+                            {doc.icon ?? <Folder size={14} className="text-fg-muted" />}
+                          </button>
+                        )}
                       >
-                        {doc.icon ?? <Folder size={14} className="text-fg-muted" />}
-                      </button>
+                        {({ close }) => (
+                          <IconPicker value={doc.icon} onChange={(icon) => submitDocumentIcon(doc.id, icon)} onClose={close} />
+                        )}
+                      </Popover>
                     ) : doc.icon ? (
-                      <span className="w-[18px] h-[18px] flex items-center justify-center text-[14px] leading-none">{doc.icon}</span>
+                      <span className="size-7 flex items-center justify-center text-label leading-none">{doc.icon}</span>
                     ) : (
-                      <Folder size={14} className="text-fg-muted" />
-                    )}
-                    {iconPickerFor === doc.id && (
-                      <IconPicker
-                        value={doc.icon}
-                        onChange={(icon) => submitDocumentIcon(doc.id, icon)}
-                        onClose={() => setIconPickerFor(null)}
-                      />
+                      <span className="size-7 flex items-center justify-center">
+                        <Folder size={14} className="text-fg-muted" />
+                      </span>
                     )}
                   </div>
                   {renamingDocId === doc.id ? (
@@ -531,7 +541,7 @@ export function ManualWorkspace({
                       onChange={(e) => setRenameValue(e.target.value)}
                       onBlur={() => submitRenameDocument(doc.id)}
                       onKeyDown={(e) => e.key === "Enter" && submitRenameDocument(doc.id)}
-                      className="flex-1 min-w-0 !h-7 px-2 text-[13px]"
+                      className="flex-1 min-w-0 !h-7 px-2 text-ui"
                     />
                   ) : (
                     <button
@@ -544,17 +554,20 @@ export function ManualWorkspace({
                           toggleExpanded(doc.id);
                         }
                       }}
-                      className="flex-1 min-w-0 text-left text-[13px] font-medium text-fg truncate py-1"
+                      className="flex-1 min-w-0 text-left text-ui font-medium text-fg truncate py-1"
                       title={canAct ? "Clique para renomear" : doc.title} aria-label={canAct ? "Clique para renomear" : doc.title}
                     >
                       {doc.title}
                     </button>
                   )}
+                  {/* Excluir aparece no hover, mas também no foco do teclado e sempre
+                      abaixo de `md`, onde não há hover — e com alvo de 28px
+                      (08/10/2026). Só no hover, teclado e toque não o achavam. */}
                   {canDelete && (
                     <button
                       type="button"
                       onClick={() => handleDeleteDocument(doc)}
-                      className="flex-shrink-0 text-fg-muted hover:text-danger p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="flex-shrink-0 size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-danger hover:bg-surface-hover md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity"
                       aria-label="Excluir documento"
                     >
                       <Trash2 size={12} />
@@ -569,7 +582,7 @@ export function ManualWorkspace({
                         <button
                           type="button"
                           onClick={() => selectPage(p.id)}
-                          className={`flex-1 min-w-0 flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-[12.5px] transition-colors truncate ${
+                          className={`flex-1 min-w-0 flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-fs-2 transition-colors truncate ${
                             activePageId === p.id ? "bg-brand-subtle text-brand font-medium" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
                           }`}
                         >
@@ -580,7 +593,7 @@ export function ManualWorkspace({
                           <button
                             type="button"
                             onClick={() => handleDeletePage(p)}
-                            className="flex-shrink-0 text-fg-muted hover:text-danger p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="flex-shrink-0 size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-danger hover:bg-surface-hover md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity"
                             aria-label="Excluir página"
                           >
                             <Trash2 size={12} />
@@ -601,7 +614,7 @@ export function ManualWorkspace({
                             if (e.key === "Escape") closeCreatePage();
                           }}
                           placeholder="Título da página…"
-                          className="w-full !h-7 px-2 text-[12.5px]"
+                          className="w-full !h-7 px-2 text-fs-2"
                         />
                       ) : (
                         <Button
@@ -634,7 +647,7 @@ export function ManualWorkspace({
                   if (e.key === "Escape") closeCreateDocument();
                 }}
                 placeholder="Título do documento…"
-                className="w-full !h-8 px-2 text-[13px]"
+                className="w-full !h-8 px-2 text-ui"
               />
             ) : (
               <Button variant="ghost" size="sm" className="w-full justify-start! px-2!" onClick={() => setCreatingDoc(true)}>
@@ -656,12 +669,19 @@ export function ManualWorkspace({
             updatePageAction={updatePageAction}
           />
         ) : (
-          <div className="h-full flex items-center justify-center text-[13px] text-fg-muted text-center px-6">
-            {documents.length === 0
-              ? canAct
-                ? "Crie um documento pra começar."
-                : "Nenhum documento no manual ainda."
-              : "Selecione ou crie uma página pra começar."}
+          // O vazio do app, com ícone (08/10/2026): era texto solto no meio da folha.
+          <div className="h-full flex items-center justify-center">
+            <EmptyState
+              icon={<FileText />}
+              title={documents.length === 0 ? "Nenhum documento no manual ainda" : "Nenhuma página aberta"}
+              description={
+                documents.length === 0
+                  ? canAct
+                    ? "Crie um documento para começar."
+                    : undefined
+                  : "Selecione ou crie uma página para começar."
+              }
+            />
           </div>
         )}
       </div>

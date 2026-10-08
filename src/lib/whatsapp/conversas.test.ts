@@ -7,7 +7,7 @@ import {
   ordenarConversas,
   telefoneLegivel,
   SITUACAO_LABEL,
-  SITUACAO_VARIANTE,
+  SITUACAO_TOM,
   type ConversaParaTela,
   type SituacaoDaConversa,
 } from "./conversas";
@@ -35,7 +35,7 @@ describe("situacaoDaConversa", () => {
   it("todo estado tem rótulo e cor", () => {
     for (const s of TODAS) {
       expect(SITUACAO_LABEL[s]).toBeTruthy();
-      expect(SITUACAO_VARIANTE[s]).toBeTruthy();
+      expect(SITUACAO_TOM[s]).toBeTruthy();
     }
   });
 
@@ -73,7 +73,7 @@ describe("situacaoDaConversa", () => {
   });
 
   it("só 'precisa de você' é vermelho", () => {
-    expect(TODAS.filter((s) => SITUACAO_VARIANTE[s] === "danger")).toEqual(["precisa_atencao"]);
+    expect(TODAS.filter((s) => SITUACAO_TOM[s] === "perigo")).toEqual(["precisa_atencao"]);
   });
 });
 

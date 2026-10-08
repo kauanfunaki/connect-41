@@ -36,9 +36,19 @@ function inicioDeHoje(agora: Date): Date {
   return new Date(`${saoPauloParts(agora).dateKey}T00:00:00-03:00`);
 }
 
-function whereDaEquipe(e: EscopoDaEquipe): Prisma.ServiceRequestWhereInput {
+/** O que a equipe enxerga da fila. A Home conta pelo mesmo recorte (`lib/home/indicadores.ts`). */
+export function whereDaEquipe(e: EscopoDaEquipe): Prisma.ServiceRequestWhereInput {
   if (e.setores === null) return { tenantId: e.tenantId };
   return { tenantId: e.tenantId, OR: [{ sectorCode: { in: e.setores } }, { assigneeId: e.userId }] };
+}
+
+/**
+ * "Resposta atrasada": em aberto, sem a primeira resposta e com o prazo num dia
+ * que já passou. O cartão da fila e o número dos Indicadores da Home (08/10/2026)
+ * leem daqui — um lugar só para a regra.
+ */
+export function whereDaRespostaAtrasada(agora: Date): Prisma.ServiceRequestWhereInput {
+  return { status: { in: EM_ABERTO }, firstResponseAt: null, responseDue: { lt: inicioDeHoje(agora) } };
 }
 
 export type LinhaDaFila = {
@@ -71,7 +81,6 @@ export async function listarParaEquipe(
   agora: Date
 ): Promise<{ linhas: LinhaDaFila[]; contadores: ContadoresDaFila; limitado: boolean }> {
   const prisma = getPrisma();
-  const hoje = inicioDeHoje(agora);
   const base: Prisma.ServiceRequestWhereInput = {
     AND: [
       whereDaEquipe(escopo),
@@ -79,7 +88,7 @@ export async function listarParaEquipe(
       filtros.empresaId ? { companyId: filtros.empresaId } : {},
     ],
   };
-  const atrasadas: Prisma.ServiceRequestWhereInput = { status: { in: EM_ABERTO }, firstResponseAt: null, responseDue: { lt: hoje } };
+  const atrasadas = whereDaRespostaAtrasada(agora);
 
   const doRecorte: Record<RecorteDaEquipe, Prisma.ServiceRequestWhereInput> = {
     abertas: { status: { in: EM_ABERTO } },

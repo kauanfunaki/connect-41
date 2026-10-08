@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Painel, numero } from "@/components/shared/Graficos";
 import { aprovacoesDoCliente } from "@/lib/financeiro/aprovacao/portal";
@@ -62,7 +64,7 @@ async function tentar<T>(bloco: string, consulta: () => Promise<T>): Promise<T |
 }
 
 function Indisponivel({ texto = "Não deu para carregar agora. Atualize a página em instantes." }: { texto?: string }) {
-  return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{texto}</p>;
+  return <p className="text-helper text-fg-muted py-1.5">{texto}</p>;
 }
 
 // ─── O que precisa de você ───────────────────────────────────────────────────
@@ -81,6 +83,9 @@ const ICONE_DA_ATENCAO: Record<ItemDaAtencao["chave"], React.ReactNode> = {
  * à tela já no recorte certo. Sem nada esperando, diz isso — aqui o "zero" é
  * a notícia, e não uma faixa a mais (era o contrário no aviso da antiga home,
  * que sumia).
+ *
+ * Filete de 4px (`h-1`) e sombra média, os do `Painel` que fica logo abaixo
+ * (07/10/2026): com 3px e a sombra `xs`, parecia um cartão de outra família.
  */
 export async function PrecisaDeVoce({
   escopo,
@@ -130,12 +135,12 @@ export async function PrecisaDeVoce({
   return (
     <section
       aria-labelledby="inicio-precisa-de-voce"
-      className="reveal-in relative mb-4 overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--c41-shadow-xs)]"
+      className="reveal-in relative mb-4 overflow-hidden rounded-lg border border-border bg-surface shadow-md"
     >
-      <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ background: filete }} />
+      <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: filete }} />
       <h2
         id="inicio-precisa-de-voce"
-        className="px-4 sm:px-5 pt-5 pb-3 font-display text-[length:var(--fs-section)] font-semibold text-fg leading-tight"
+        className="px-4 sm:px-5 pt-5 pb-3 font-display text-section font-semibold text-fg leading-tight"
       >
         O que precisa de você
       </h2>
@@ -146,12 +151,12 @@ export async function PrecisaDeVoce({
         </div>
       ) : itens.length === 0 ? (
         <div className="flex items-start gap-3 px-4 sm:px-5 pb-5">
-          <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+          <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-success/10 text-success-fg">
             <CircleCheck size={18} />
           </span>
           <div className="min-w-0">
-            <p className="text-[15px] font-semibold text-fg">Nada esperando por você</p>
-            <p className="mt-0.5 text-[length:var(--fs-helper)] text-fg-secondary leading-relaxed">
+            <p className="text-body font-semibold text-fg">Nada esperando por você</p>
+            <p className="mt-0.5 text-helper text-fg-secondary leading-relaxed">
               Quando a equipe precisar de algo seu, aparece aqui, e você recebe um aviso por e-mail.
             </p>
           </div>
@@ -165,15 +170,16 @@ export async function PrecisaDeVoce({
               <div className="flex min-w-0 flex-1 basis-60 items-center gap-3">
                 <span
                   className={`inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg [&>svg]:size-[18px] ${
-                    i.tom === "pedido" ? "bg-warning/10 text-warning" : "bg-brand-subtle text-brand"
+                    i.tom === "pedido" ? "bg-warning/10 text-warning-fg" : "bg-brand-subtle text-brand"
                   }`}
                 >
                   {ICONE_DA_ATENCAO[i.chave]}
                 </span>
-                <p className="min-w-0 text-[length:var(--fs-body)] text-fg leading-snug">
-                  <span className="mr-1.5 font-display text-[20px] font-semibold tabular-nums leading-none">{numero(i.quantidade)}</span>
+                {/* O número em 18px, pela tabela do globals.css (20 → 18). */}
+                <p className="min-w-0 text-body text-fg leading-snug">
+                  <span className="mr-1.5 font-display text-fs-7 font-semibold tabular-nums leading-none">{numero(i.quantidade)}</span>
                   {i.texto}
-                  {i.detalhe && <span className="mt-0.5 block text-[length:var(--fs-helper)] text-fg-muted tabular-nums">{i.detalhe}</span>}
+                  {i.detalhe && <span className="mt-0.5 block text-helper text-fg-muted tabular-nums">{i.detalhe}</span>}
                 </p>
               </div>
               <Button href={i.href} size="sm" variant={i.tom === "pedido" ? "primary" : "secondary"} className="w-full sm:w-auto">
@@ -194,11 +200,11 @@ type LinhaDoFinanceiro = { chave: string; rotulo: string; soma: SomaDeContas; hr
 function LinhaDeConta({ l }: { l: LinhaDoFinanceiro }) {
   const tem = l.soma.n > 0;
   const icone = !tem ? (
-    <CircleCheck size={16} className="text-success" aria-hidden />
+    <CircleCheck size={16} className="text-success-fg" aria-hidden />
   ) : l.vencida ? (
     <OctagonAlert size={16} className="text-danger" aria-hidden />
   ) : (
-    <CalendarClock size={16} className="text-warning" aria-hidden />
+    <CalendarClock size={16} className="text-warning-fg" aria-hidden />
   );
   return (
     <li>
@@ -207,14 +213,17 @@ function LinhaDeConta({ l }: { l: LinhaDoFinanceiro }) {
         className="flex items-center gap-3 rounded-md border border-border px-3 py-2.5 transition-colors hover:border-border-strong hover:bg-surface-hover"
       >
         <span className="flex-shrink-0">{icone}</span>
+        {/* Título do item em `text-card-title` e a linha de apoio em `text-ui`
+            (07/10/2026): o mesmo "título de item" saía em 13, 14 e 15px nesta
+            tela, e o apoio em 11px. */}
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-medium text-fg">{l.rotulo}</span>
-          <span className="block text-[length:var(--fs-micro)] text-fg-muted">
+          <span className="block truncate text-card-title font-medium text-fg">{l.rotulo}</span>
+          <span className="block text-ui text-fg-muted">
             {tem ? `${numero(l.soma.n)} ${l.soma.n === 1 ? "conta" : "contas"}` : "Nenhuma"}
           </span>
         </span>
         <span
-          className={`whitespace-nowrap text-[15px] font-semibold tabular-nums ${tem && l.vencida ? "text-danger" : tem ? "text-fg" : "text-fg-muted"}`}
+          className={`whitespace-nowrap text-body font-semibold tabular-nums ${tem && l.vencida ? "text-danger" : tem ? "text-fg" : "text-fg-muted"}`}
         >
           {moeda(l.soma.centavos)}
         </span>
@@ -287,7 +296,7 @@ export async function FinanceiroDoInicio({
       }
     >
       {!temNumeros ? (
-        <p className="text-[length:var(--fs-helper)] text-fg-secondary leading-relaxed">
+        <p className="text-helper text-fg-secondary leading-relaxed">
           O que entrou e saiu, o que vence daqui para frente e o resultado de cada mês das suas empresas.
         </p>
       ) : !contas ? (
@@ -326,7 +335,7 @@ export async function ProcessosDoInicio({ escopo, variasEmpresas }: { escopo: Es
       {!dados ? (
         <Indisponivel />
       ) : dados.recentes.length === 0 ? (
-        <p className="text-[length:var(--fs-helper)] text-fg-secondary leading-relaxed">
+        <p className="text-helper text-fg-secondary leading-relaxed">
           Nenhum processo em andamento agora. Quando a equipe abrir um para a sua empresa, ele aparece aqui com a situação.
         </p>
       ) : (
@@ -340,8 +349,8 @@ export async function ProcessosDoInicio({ escopo, variasEmpresas }: { escopo: Es
                   className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 rounded-md border border-border px-3 py-2.5 transition-colors hover:border-border-strong hover:bg-surface-hover"
                 >
                   <span className="min-w-0 flex-1 basis-40">
-                    <span className="block truncate text-[13px] font-medium text-fg">{p.titulo || p.tipoNome}</span>
-                    <span className="block truncate text-[length:var(--fs-micro)] text-fg-muted">
+                    <span className="block truncate text-card-title font-medium text-fg">{p.titulo || p.tipoNome}</span>
+                    <span className="block truncate text-ui text-fg-muted">
                       {apoio || `aberto em ${formatInstantDate(p.iniciadoEm)}`}
                     </span>
                   </span>
@@ -358,22 +367,26 @@ export async function ProcessosDoInicio({ escopo, variasEmpresas }: { escopo: Es
 
 // ─── Atalhos ─────────────────────────────────────────────────────────────────
 
+/**
+ * O `Card` com `href` (07/10/2026): este atalho era o cartão-link escrito à
+ * mão, com o mesmo hover — o desenho que o Card passou a ter. O foco é o anel
+ * global do app.
+ */
 function Atalho({ href, icone, titulo, descricao }: { href: string; icone: React.ReactNode; titulo: string; descricao: React.ReactNode }) {
   return (
     <li className="min-w-0">
-      <Link
-        href={href}
-        className="group flex h-full items-center gap-3 rounded-lg border border-border bg-surface p-4 shadow-[var(--c41-shadow-xs)] transition-[border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-      >
-        <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand [&>svg]:size-[18px]">
-          {icone}
+      <Card href={href} className="group h-full p-4">
+        <span className="flex h-full items-center gap-3">
+          <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand [&>svg]:size-[18px]">
+            {icone}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-card-title font-semibold text-fg">{titulo}</span>
+            <span className="block text-helper text-fg-muted leading-snug">{descricao}</span>
+          </span>
+          <ChevronRight size={16} className="flex-shrink-0 text-fg-muted transition-colors group-hover:text-fg" aria-hidden />
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[14px] font-semibold text-fg">{titulo}</span>
-          <span className="block text-[length:var(--fs-helper)] text-fg-muted leading-snug">{descricao}</span>
-        </span>
-        <ChevronRight size={16} className="flex-shrink-0 text-fg-muted transition-colors group-hover:text-fg" aria-hidden />
-      </Link>
+      </Card>
     </li>
   );
 }
@@ -393,9 +406,7 @@ export function AtalhosDoInicio({
 }) {
   return (
     <section aria-labelledby="inicio-atalhos" className="mb-4">
-      <h2 id="inicio-atalhos" className="mb-3 font-display text-[length:var(--fs-section)] font-semibold text-fg leading-tight">
-        Atalhos
-      </h2>
+      <TituloDeSecao id="inicio-atalhos">Atalhos</TituloDeSecao>
       <ul className={`grid grid-cols-1 gap-3 ${pedir ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
         {pedir && (
           <Atalho
@@ -433,17 +444,14 @@ export async function ContagemDosDocumentos({ alcance }: { alcance: AlcanceFisca
   );
 }
 
-/** O lugar do bloco enquanto a consulta dele roda. `className` leva o respiro de quem o usa. */
+/** O lugar do bloco enquanto a consulta dele roda. `className` leva o respiro de quem o usa. No `Card`. */
 export function BlocoCarregando({ baixo = false, className = "" }: { baixo?: boolean; className?: string }) {
   return (
-    <div
-      className={`min-w-0 rounded-lg border border-border bg-surface p-5 shadow-[var(--c41-shadow-xs)] ${baixo ? "min-h-[120px]" : "min-h-[220px]"} ${className}`.trim()}
-      aria-hidden
-    >
+    <Card className={`min-w-0 p-5 ${baixo ? "min-h-[120px]" : "min-h-[220px]"} ${className}`.trim()} aria-hidden>
       <div className="h-2.5 w-20 animate-pulse rounded-full bg-surface-hover" />
       <div className="mt-2.5 h-4 w-44 animate-pulse rounded-full bg-surface-hover" />
       <div className="mt-6 h-2.5 w-full animate-pulse rounded-full bg-surface-hover" />
       <div className="mt-3 h-2.5 w-4/5 animate-pulse rounded-full bg-surface-hover" />
-    </div>
+    </Card>
   );
 }

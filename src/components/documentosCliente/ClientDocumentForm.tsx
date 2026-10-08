@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: (prev: ClientDocumentState, form: FormData) => Promise<ClientDocumentState>;
@@ -26,7 +27,7 @@ export function ClientDocumentForm({ action, companyId, documentId, cancelHref, 
       {documentId && <input type="hidden" name="id" value={documentId} />}
 
       {state && "error" in state && state.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">{state.error}</p>
+        <Aviso>{state.error}</Aviso>
       )}
 
       <CampoForm label="Título" htmlFor="title" required>

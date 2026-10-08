@@ -77,7 +77,7 @@ export function VideoDoYouTube({
       <span aria-hidden className="absolute inset-0 bg-black/25 transition-colors group-hover:bg-black/15" />
       <span
         aria-hidden
-        className="absolute left-1/2 top-1/2 inline-flex size-14 sm:size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-brand text-on-brand shadow-[var(--c41-shadow-lg)] transition-transform group-hover:scale-105"
+        className="absolute left-1/2 top-1/2 inline-flex size-14 sm:size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-brand-solid text-on-brand shadow-[var(--c41-shadow-lg)] transition-transform group-hover:scale-105"
       >
         <Play size={24} className="ml-1" fill="currentColor" />
       </span>

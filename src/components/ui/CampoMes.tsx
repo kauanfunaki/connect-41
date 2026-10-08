@@ -135,7 +135,7 @@ export function CampoMes({
             aria-label="Limpar mês"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => escolher("")}
-            className="mr-1.5 p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-hover"
+            className="mr-1.5 p-0.5 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-hover"
           >
             <X size={13} />
           </button>

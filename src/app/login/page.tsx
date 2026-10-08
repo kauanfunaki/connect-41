@@ -2,13 +2,15 @@
 // O form faz POST direto para /api/auth/login-form que retorna um 303 HTTP real,
 // garantindo que o cookie esteja no browser antes do redirect para /.
 import Link from "next/link";
-import { AuthField, AUTH_INPUT } from "@/components/login/AuthShell";
 import { MolduraDaEquipe } from "@/components/login/MolduraDaEquipe";
-import { PasswordField } from "@/components/login/PasswordField";
-import { MailIcon } from "@/components/login/icons";
+import { MailIcon, LockIcon } from "@/components/login/icons";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
+import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
 
 const ERRORS: Record<string, string> = {
   "credenciais-invalidas": "E-mail ou senha incorretos.",
@@ -35,39 +37,41 @@ export default async function LoginPage({
       subtitulo="Acompanhe o trabalho do escritório: processos, prazos, pendências e agenda."
     >
       <Card className="p-6">
+        {/* Os campos do sistema, como no login do portal (07/10/2026): o
+            `Input` e o `CampoDeSenha`, com o asterisco de obrigatório e os
+            mesmos rótulos ("Mostrar o que foi digitado"). Antes eram uma cópia
+            do Input, com um olho em SVG próprio. O ícone dentro do campo fica
+            até o Kauan decidir se o portal também o ganha ou se os dois o
+            perdem. Os nomes `email` e `password` são os que
+            /api/auth/login-form lê. */}
         <form method="POST" action="/api/auth/login-form" className="space-y-4">
           {next && <input type="hidden" name="next" value={next} />}
-          <AuthField label="E-mail" htmlFor="email" icon={<MailIcon />}>
-            <input
+          <CampoForm label="E-mail" htmlFor="email" required>
+            <Input
               id="email"
               name="email"
               type="email"
               autoComplete="email"
               required
               placeholder="voce@41contabil.com.br"
-              className={AUTH_INPUT}
+              icon={<MailIcon />}
             />
-          </AuthField>
+          </CampoForm>
 
-          <PasswordField label="Senha" autoComplete="current-password" />
+          <CampoForm label="Senha" htmlFor="password" required>
+            <CampoDeSenha
+              id="password"
+              name="password"
+              autoComplete="current-password"
+              required
+              placeholder="••••••••"
+              icon={<LockIcon />}
+            />
+          </CampoForm>
 
-          {/* A caixa de marcar do sistema (ui/Checkbox), e o link no mesmo
-              tamanho do rótulo dela — eram 12px, menores que os rótulos de cima. */}
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <Checkbox id="remember" name="remember" label="Lembrar de mim" />
-            <Link
-              href="/login/esqueci-senha"
-              className="text-[length:var(--fs-label)] font-medium text-brand hover:underline"
-            >
-              Esqueceu a senha?
-            </Link>
-          </div>
+          <Checkbox id="remember" name="remember" label="Lembrar de mim" />
 
-          {errorMsg && (
-            <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
-              {errorMsg}
-            </p>
-          )}
+          {errorMsg && <Aviso>{errorMsg}</Aviso>}
 
           {/* `mt-1` é acréscimo, não sobreposição: a variante não define margem,
               então não depende da ordem no CSS gerado. O afundar ao clicar já vem
@@ -79,14 +83,22 @@ export default async function LoginPage({
           >
             Entrar
           </Button>
-
-          {/* Até 01/10/2026 havia aqui "Solicitar acesso", que abria chamado no
-              Hub da 41 Tech — virou canal de propaganda. Acesso quem libera é o
-              administrador de cada escritório. */}
-          <p className="text-center text-[13px] text-fg-muted">
-            Não tem acesso? Fale com quem administra o Connect na sua empresa.
-          </p>
         </form>
+
+        {/* O link embaixo do botão, centralizado e com o rótulo do portal
+            (07/10/2026) — era "Esqueceu a senha?" à direita da caixa de marcar. */}
+        <p className="mt-4 text-helper text-fg-muted text-center">
+          <Link href="/login/esqueci-senha" className="text-brand hover:underline">
+            Esqueci minha senha
+          </Link>
+        </p>
+
+        {/* Até 01/10/2026 havia aqui "Solicitar acesso", que abria chamado no
+            Hub da 41 Tech — virou canal de propaganda. Acesso quem libera é o
+            administrador de cada escritório. */}
+        <p className="mt-2 text-center text-ui text-fg-muted">
+          Não tem acesso? Fale com quem administra o Connect na sua empresa.
+        </p>
       </Card>
     </MolduraDaEquipe>
   );

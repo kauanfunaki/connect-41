@@ -9,7 +9,9 @@ import { formatInstantDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Badge } from "@/components/ui/Badge";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO, tomDoFechamento } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
@@ -23,6 +25,7 @@ import { podeCancelarManual } from "@/lib/financeiro/manual";
 import { moeda } from "@/lib/financeiro/formato";
 import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -31,17 +34,22 @@ const MODULE = "bpo_lancamentos";
 // é só o padrão.
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
+/** Teto da lista de uma empresa num mês — com aviso quando chega nele. */
+const LIMITE_DA_LISTA = 500;
+
 const ABAS = [
   { chave: "lista", rotulo: "Lançados à mão" },
   { chave: "novo", rotulo: "Novo lançamento" },
   { chave: "importar", rotulo: "Importar CSV" },
 ] as const;
 
-const STATUS: Record<string, { rotulo: string; variante: "success" | "warning" | "danger" | "info" }> = {
-  PROVISORIO: { rotulo: "A conferir", variante: "warning" },
-  CONFERIDO: { rotulo: "Em aberto", variante: "info" },
-  PAGO: { rotulo: "Liquidado", variante: "success" },
-  CANCELADO: { rotulo: "Cancelado", variante: "danger" },
+// As cores do mapa único do BPO (08/10/2026): o cancelado era `danger`, a
+// mesma cor de "Vencida" — e é histórico, não pede ação.
+const STATUS: Record<string, { rotulo: string; variante: VarianteDoBadge }> = {
+  PROVISORIO: { rotulo: "A conferir", variante: TOM_DA_SITUACAO.A_CONFERIR },
+  CONFERIDO: { rotulo: "Em aberto", variante: TOM_DA_SITUACAO.EM_ABERTO },
+  PAGO: { rotulo: "Pago", variante: TOM_DA_SITUACAO.PAGA },
+  CANCELADO: { rotulo: "Cancelado", variante: TOM_DA_SITUACAO.CANCELADA },
 };
 
 /**
@@ -101,6 +109,7 @@ export default async function LancamentosPage({
         empresaId={companyId}
         mes={aba === "lista" ? mes : undefined}
         extras={{ aba: aba === "lista" ? undefined : aba }}
+        navegaSozinho
       />
       <AbasDeLink abas={abas} ativa={aba} />
 
@@ -179,7 +188,7 @@ async function ListaDeManuais({
   mes: string;
   podeCancelar: boolean;
 }) {
-  const linhas = await prisma.financeEntry.findMany({
+  const encontradas = await prisma.financeEntry.findMany({
     where: { tenantId, companyId, competence: mes, fiscalDocumentId: null },
     select: {
       id: true,
@@ -196,125 +205,147 @@ async function ListaDeManuais({
       category: { select: { name: true } },
       costCenter: { select: { name: true } },
     },
-    orderBy: { dueDate: "asc" },
-    take: 500,
+    orderBy: [{ dueDate: "asc" }, { id: "asc" }],
+    // Um a mais que o teto, para saber se parou nele.
+    take: LIMITE_DA_LISTA + 1,
   });
-
-  if (linhas.length === 0) {
-    return (
-      <EmptyState
-        title="Nenhum lançamento manual nesta competência"
-        description="Use “Novo lançamento” para registrar uma conta sem nota, ou importe uma planilha."
-        icon={<NotebookPen />}
-      />
-    );
-  }
+  const limitado = encontradas.length > LIMITE_DA_LISTA;
+  const linhas = limitado ? encontradas.slice(0, LIMITE_DA_LISTA) : encontradas;
 
   // Renegociado e perda são cancelamentos com nome: a dívida seguiu num acordo,
   // ou alguém decidiu dar por perdida — "cancelado" diria outra coisa.
   const statusDe = (l: (typeof linhas)[number]) =>
-    l.closeReason === "RENEGOCIADO"
-      ? { rotulo: "Renegociado", variante: "info" as const }
-      : l.closeReason === "PERDA"
-        ? { rotulo: "Perda", variante: "danger" as const }
-        : STATUS[l.status]!;
+    l.closeReason === "RENEGOCIADO" || l.closeReason === "PERDA"
+      ? { rotulo: l.closeReason === "PERDA" ? "Perda" : "Renegociado", variante: tomDoFechamento(l.closeReason) }
+      : STATUS[l.status]!;
 
+  // O total da barra por lado, sem os cancelados: somar a pagar com a receber
+  // não diz nada, e o cancelado já saiu dos totais (ver a nota de rodapé).
+  const somaDe = (kind: "PAGAR" | "RECEBER") =>
+    linhas.filter((l) => l.kind === kind && l.status !== "CANCELADO").reduce((s, l) => s + centavosDeDecimal(l.amount), 0);
+
+  // No casco das listas irmãs (contas, pendências, cobrança), com a contagem
+  // e o total na barra — e o vazio dentro dele (08/10/2026). Era a tabela
+  // solta, sem contagem, e o vazio flutuando no fundo da tela. "Situação" e
+  // "pago em", como em contas a pagar e a receber (era "Status" e
+  // "liquidado em").
   return (
     <>
-      <CartoesNoCelular>
-        {linhas.map((l) => {
-          const status = statusDe(l);
-          return (
-            <Cartao key={l.id}>
-              <TopoDoCartao nome={l.counterparty.name} valor={moeda(centavosDeDecimal(l.amount))} />
-              {l.description && <InfoDoCartao>{l.description}</InfoDoCartao>}
-              <InfoDoCartao className="mt-1 tabular-nums">
-                vence {formatInstantDate(l.dueDate)}
-                {l.paidAt && ` · liquidado em ${formatInstantDate(l.paidAt)}`}
-              </InfoDoCartao>
-              <InfoDoCartao>
-                {l.category?.name ?? "sem categoria"}
-                {l.costCenter?.name ? ` · ${l.costCenter.name}` : ""}
-              </InfoDoCartao>
-              <PeDoCartao>
-                <span className={`text-[12px] font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success"}`}>
-                  {l.kind === "PAGAR" ? "A pagar" : "A receber"}
-                </span>
-                <Badge variant={status.variante}>{status.rotulo}</Badge>
-                {podeCancelar && podeCancelarManual(l).pode && (
-                  <span className="ml-auto">
-                    <CancelarLancamento entryId={l.id} />
-                  </span>
-                )}
-              </PeDoCartao>
-            </Cartao>
-          );
-        })}
-      </CartoesNoCelular>
-
-      <TabelaFiltravel
-        linhas={linhas.map((l) => ({
-          id: l.id,
-          valores: {
-            tipo: l.kind === "PAGAR" ? "A pagar" : "A receber",
-            contraparte: l.counterparty.name,
-            categoria: l.category?.name ?? "",
-            centro: l.costCenter?.name ?? "",
-            vencimento: saoPauloParts(l.dueDate).dateKey,
-            status: statusDe(l).rotulo,
-          },
-        }))}
+      <CascoDaTabela
+        contagem={contarItens(linhas.length, "lançamento", "lançamentos", limitado)}
+        total={linhas.length > 0 ? `a pagar ${moeda(somaDe("PAGAR"))} · a receber ${moeda(somaDe("RECEBER"))}` : undefined}
       >
-      <TabelaNoDesktop padrao>
-      <table className="w-full min-w-[880px] text-[13px]">
-        <thead>
-          <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Tipo" chave="tipo" /></th>
-            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Contraparte" chave="contraparte" /></th>
-            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Categoria" chave="categoria" /></th>
-            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Centro de custo" chave="centro" /></th>
-            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
-            <th className="py-2 pr-3 font-medium">Valor</th>
-            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Status" chave="status" align="right" /></th>
-            <th className="py-2 font-medium"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {linhas.map((l) => {
-            const status = statusDe(l);
-            return (
-              <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
-                <td className={`py-2.5 pr-3 text-[12px] font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success"}`}>
-                  {l.kind === "PAGAR" ? "A pagar" : "A receber"}
-                </td>
-                <td className="py-2.5 pr-3">
-                  <span className="font-medium">{l.counterparty.name}</span>
-                  {l.description && <span className="block text-[11px] text-fg-muted truncate max-w-[260px]">{l.description}</span>}
-                </td>
-                <td className="py-2.5 pr-3 text-fg-secondary">{l.category?.name ?? "—"}</td>
-                <td className="py-2.5 pr-3 text-fg-secondary">{l.costCenter?.name ?? "—"}</td>
-                <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">
-                  {formatInstantDate(l.dueDate)}
-                  {l.paidAt && <span className="block text-[11px] text-fg-muted">liquidado em {formatInstantDate(l.paidAt)}</span>}
-                </td>
-                <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(centavosDeDecimal(l.amount))}</td>
-                <td className="py-2.5 pr-3">
-                  <Badge variant={status.variante}>{status.rotulo}</Badge>
-                </td>
-                <td className="py-2.5">
-                  {podeCancelar && podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
-                </td>
-              </LinhaFiltravel>
-            );
-          })}
-        </tbody>
-      </table>
-      </TabelaNoDesktop>
-      </TabelaFiltravel>
-      <p className="text-[11px] text-fg-muted mt-3">
+        {linhas.length === 0 ? (
+          <EmptyState
+            title="Nenhum lançamento manual nesta competência"
+            description="Use “Novo lançamento” para registrar uma conta sem nota, ou importe uma planilha."
+            icon={<NotebookPen />}
+          />
+        ) : (
+          <>
+            <CartoesNoCelular>
+              {linhas.map((l) => {
+                const status = statusDe(l);
+                return (
+                  <Cartao key={l.id}>
+                    <TopoDoCartao nome={l.counterparty.name} valor={moeda(centavosDeDecimal(l.amount))} />
+                    {l.description && <InfoDoCartao>{l.description}</InfoDoCartao>}
+                    <InfoDoCartao className="mt-1 tabular-nums">
+                      vence {formatInstantDate(l.dueDate)}
+                      {l.paidAt && ` · pago em ${formatInstantDate(l.paidAt)}`}
+                    </InfoDoCartao>
+                    <InfoDoCartao>
+                      {l.category?.name ?? "sem categoria"}
+                      {l.costCenter?.name ? ` · ${l.costCenter.name}` : ""}
+                    </InfoDoCartao>
+                    <PeDoCartao>
+                      <span className={`text-fs-2 font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success-fg"}`}>
+                        {l.kind === "PAGAR" ? "A pagar" : "A receber"}
+                      </span>
+                      <Badge variant={status.variante}>{status.rotulo}</Badge>
+                      {podeCancelar && podeCancelarManual(l).pode && (
+                        <span className="ml-auto">
+                          <CancelarLancamento entryId={l.id} />
+                        </span>
+                      )}
+                    </PeDoCartao>
+                  </Cartao>
+                );
+              })}
+            </CartoesNoCelular>
+
+            <TabelaFiltravel
+              linhas={linhas.map((l) => ({
+                id: l.id,
+                valores: {
+                  tipo: l.kind === "PAGAR" ? "A pagar" : "A receber",
+                  contraparte: l.counterparty.name,
+                  categoria: l.category?.name ?? "",
+                  centro: l.costCenter?.name ?? "",
+                  vencimento: saoPauloParts(l.dueDate).dateKey,
+                  situacao: statusDe(l).rotulo,
+                },
+              }))}
+            >
+              <TabelaNoDesktop padrao>
+                <table className="w-full min-w-[880px]">
+                  <thead>
+                    <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Tipo" chave="tipo" /></th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Contraparte" chave="contraparte" /></th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Categoria" chave="categoria" /></th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Centro de custo" chave="centro" /></th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
+                      <th className="py-2 pr-3 font-medium">Valor</th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
+                      <th className="py-2 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {linhas.map((l) => {
+                      const status = statusDe(l);
+                      return (
+                        <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
+                          <td className={`py-2.5 pr-3 font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success-fg"}`}>
+                            {l.kind === "PAGAR" ? "A pagar" : "A receber"}
+                          </td>
+                          <td className="py-2.5 pr-3">
+                            <span className="font-medium">{l.counterparty.name}</span>
+                            {l.description && <span className="block text-micro text-fg-muted truncate max-w-[260px]">{l.description}</span>}
+                          </td>
+                          <td className="py-2.5 pr-3 text-fg-secondary">{l.category?.name ?? "—"}</td>
+                          <td className="py-2.5 pr-3 text-fg-secondary">{l.costCenter?.name ?? "—"}</td>
+                          <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">
+                            {formatInstantDate(l.dueDate)}
+                            {l.paidAt && <span className="block text-micro text-fg-muted">pago em {formatInstantDate(l.paidAt)}</span>}
+                          </td>
+                          <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(centavosDeDecimal(l.amount))}</td>
+                          <td className="py-2.5 pr-3">
+                            <Badge variant={status.variante}>{status.rotulo}</Badge>
+                          </td>
+                          <td className="py-2.5">
+                            {podeCancelar && podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
+                          </td>
+                        </LinhaFiltravel>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </TabelaNoDesktop>
+            </TabelaFiltravel>
+            {limitado && (
+              <p className="text-micro text-fg-muted mt-3">
+                Mostrando os {LIMITE_DA_LISTA} primeiros pelo vencimento. A lista é de uma empresa num mês; passar disto
+                costuma ser importação repetida.
+              </p>
+            )}
+          </>
+        )}
+      </CascoDaTabela>
+      <NotaDeFonte>
         Lançamento não é apagado: cancelar tira dos totais e fica no histórico de auditoria. A baixa de um lançamento
         em aberto é feita em Contas a pagar ou a receber, como a de qualquer conta.
-      </p>
+      </NotaDeFonte>
     </>
   );
 }

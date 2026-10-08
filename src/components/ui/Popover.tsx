@@ -56,7 +56,7 @@ export function Popover({ trigger, children, align = "left", width = 240, "aria-
         largura={width}
         align={align}
         aria-label={ariaLabel}
-        className="p-3 text-[length:var(--fs-dropdown)]"
+        className="p-3 text-dropdown"
       >
         {typeof children === "function" ? children({ close }) : children}
       </PainelFlutuante>
@@ -64,11 +64,20 @@ export function Popover({ trigger, children, align = "left", width = 240, "aria-
   );
 }
 
-/** Item de menu dentro do `Popover` — mesmo desenho do `DropdownItem`, com ícone. */
+/**
+ * Item de menu dentro do `Popover` (e do `Dropdown`) — mesmo desenho do
+ * `DropdownItem`, com ícone.
+ *
+ * Com `descricao` (07/10/2026), a variante de duas linhas: o ícone num selo azul,
+ * o título e uma linha de apoio embaixo — a do menu da ajuda, que tinha um
+ * `ItemDoMenu` local com o mesmo nome e outro desenho. Era um dos seis desenhos
+ * de linha de menu do app; o "Criar" da Home também passou a usar este.
+ */
 export function ItemDoMenu({
   onClick,
   href,
   icone,
+  descricao,
   danger = false,
   disabled = false,
   children,
@@ -76,14 +85,29 @@ export function ItemDoMenu({
   onClick?: () => void;
   href?: string;
   icone?: React.ReactNode;
+  /** Linha de apoio embaixo do título; troca para o desenho de duas linhas. */
+  descricao?: string;
   danger?: boolean;
   disabled?: boolean;
   children: React.ReactNode;
 }) {
-  const cls = `w-full flex items-center gap-2 text-left px-2 py-2 rounded-md text-[length:var(--fs-dropdown)] font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none ${
-    danger ? "text-danger hover:bg-danger-bg" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
-  }`;
-  const conteudo = (
+  const cor = danger ? "text-danger hover:bg-danger-bg" : "text-fg-secondary hover:bg-surface-hover hover:text-fg";
+  const cls = descricao
+    ? `w-full flex items-start gap-3 text-left px-2.5 py-2 rounded-md transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:pointer-events-none ${cor}`
+    : `w-full flex items-center gap-2 text-left px-2 py-2 rounded-md text-dropdown font-medium transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:pointer-events-none ${cor}`;
+  const conteudo = descricao ? (
+    <>
+      {icone && (
+        <span className="mt-0.5 inline-flex size-8 flex-shrink-0 items-center justify-center rounded-md bg-brand-subtle text-brand [&>svg]:w-4 [&>svg]:h-4">
+          {icone}
+        </span>
+      )}
+      <span className="flex flex-col min-w-0">
+        <span className="text-ui font-semibold text-fg">{children}</span>
+        <span className="text-fs-2 leading-snug text-fg-secondary">{descricao}</span>
+      </span>
+    </>
+  ) : (
     <>
       {icone && <span className="flex-shrink-0 text-fg-muted [&>svg]:w-3.5 [&>svg]:h-3.5">{icone}</span>}
       {children}

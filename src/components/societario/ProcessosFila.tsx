@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { saoPauloParts } from "@/lib/agenda";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDate } from "@/lib/format";
 import type { LinhaDaFila } from "@/lib/societario/fila";
@@ -33,10 +33,11 @@ export const SITUACAO_VARIANTE: Record<SituacaoDoProcesso, "danger" | "info" | "
   CONCLUIDO: "success",
 };
 
-const COR_DO_PRAZO_COMBINADO = {
+/** A cor do prazo combinado com o cliente — a fila e o kanban usam a mesma. */
+export const COR_DO_PRAZO_COMBINADO = {
   vencido: "text-danger font-medium",
   hoje: "text-danger font-medium",
-  proximo: "text-warning",
+  proximo: "text-warning-fg",
   folga: "text-fg-muted",
 } as const;
 
@@ -49,7 +50,7 @@ const COR_DO_PRAZO_COMBINADO = {
 export function PrazoCelula({ prazo }: { prazo: LinhaDaFila["prazo"] }) {
   if (prazo.situacao === "sem_previsao") {
     return (
-      <span className="text-[12px] text-fg-muted">
+      <span className="text-[length:var(--fs-2)] text-fg-muted">
         {prazo.dias} {prazo.dias === 1 ? "dia útil" : "dias úteis"} · sem previsão
       </span>
     );
@@ -58,14 +59,14 @@ export function PrazoCelula({ prazo }: { prazo: LinhaDaFila["prazo"] }) {
     prazo.situacao === "estourado"
       ? "text-danger"
       : prazo.situacao === "no_limite"
-        ? "text-warning"
+        ? "text-warning-fg"
         : "text-fg-secondary";
   const faixa =
     prazo.previstoMin !== null && prazo.previstoMin !== prazo.previstoMax
       ? `${prazo.previstoMin}–${prazo.previstoMax}`
       : String(prazo.previstoMax);
   return (
-    <span className={`text-[12px] font-medium ${cor}`}>
+    <span className={`text-[length:var(--fs-2)] font-medium ${cor}`}>
       <span className="tabular-nums">{prazo.dias}</span> de{" "}
       <span className="tabular-nums">{faixa}</span> dias úteis
       {prazo.situacao === "estourado" && " · estourado"}
@@ -95,7 +96,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
     return filtrado ? (
       <EmptyState
         title="Nenhum processo neste filtro"
-        description="Troque o recorte ou limpe os filtros acima para ver os outros."
+        description="Troque a busca ou o recorte, ou limpe os filtros acima, para ver os outros."
         icon={<Clock />}
       />
     ) : (
@@ -113,9 +114,9 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
   // Normal não ganha selo: selo em toda linha deixa de chamar atenção onde importa.
   const selos = (l: LinhaDaFila) => (
     <>
-      {l.prioridade !== "NORMAL" && <Badge variant={PRIORIDADE_VARIANTE[l.prioridade]}>{PRIORIDADE_LABEL[l.prioridade]}</Badge>}
+      {l.prioridade !== "NORMAL" && <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[l.prioridade])}>{PRIORIDADE_LABEL[l.prioridade]}</Selo>}
       {l.voltas > 0 && (
-        <span className="inline-flex items-center gap-1 text-[11px] text-danger whitespace-nowrap">
+        <span className="inline-flex items-center gap-1 text-[length:var(--fs-micro)] text-danger whitespace-nowrap">
           <AlertCircle size={12} />
           {l.voltas} {l.voltas === 1 ? "volta" : "voltas"}
         </span>
@@ -129,7 +130,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
       <>
         <PrazoCelula prazo={l.prazo} />
         {combinado && l.prazoCombinado && (
-          <span className={`block text-[11px] whitespace-nowrap ${COR_DO_PRAZO_COMBINADO[combinado.situacao]}`}>
+          <span className={`block text-[length:var(--fs-micro)] whitespace-nowrap ${COR_DO_PRAZO_COMBINADO[combinado.situacao]}`}>
             {combinado.texto} · {formatInstantDate(l.prazoCombinado)}
           </span>
         )}
@@ -150,10 +151,12 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
               </InfoDoCartao>
               <InfoDoCartao>{l.etapasAgora.length > 0 ? l.etapasAgora.join(" · ") : "Nada liberado no roteiro"}</InfoDoCartao>
               <div className="mt-1.5">{prazos(l)}</div>
+              {/* Situação e prioridade em Selo: é a situação de uma linha ou
+                  cartão (regra de 02/10 no Selo; auditoria de 07/10/2026). */}
               <PeDoCartao>
-                <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{SITUACAO_LABEL[l.situacao]}</Badge>
+                <Selo tom={tomDaVariante(SITUACAO_VARIANTE[l.situacao])}>{SITUACAO_LABEL[l.situacao]}</Selo>
                 {selos(l)}
-                <span className="ml-auto text-[11.5px] text-fg-muted">{l.responsavelNome ?? "sem responsável"}</span>
+                <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">{l.responsavelNome ?? "Sem responsável"}</span>
               </PeDoCartao>
             </Cartao>
           </Link>
@@ -174,7 +177,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
         }))}
       >
         <TabelaNoDesktop padrao>
-          <table className="w-full table-fixed min-w-[1040px] text-[length:var(--fs-ui)]">
+          <table className="w-full table-fixed min-w-[1040px]">
             <colgroup>
               <col />
               <col className="w-[120px]" />
@@ -244,10 +247,10 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                   </td>
                   <td className="px-4 py-3">{prazos(l)}</td>
                   <td className="px-4 py-3">
-                    <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{SITUACAO_LABEL[l.situacao]}</Badge>
+                    <Selo tom={tomDaVariante(SITUACAO_VARIANTE[l.situacao])}>{SITUACAO_LABEL[l.situacao]}</Selo>
                   </td>
                   <td className="px-4 py-3 text-fg-secondary truncate" title={l.responsavelNome ?? undefined}>
-                    {l.responsavelNome ?? <span className="text-fg-muted">sem responsável</span>}
+                    {l.responsavelNome ?? <span className="text-fg-muted">Sem responsável</span>}
                   </td>
                   <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(l.iniciadoEm)}</td>
                   <td className="px-4 py-3">

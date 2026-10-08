@@ -1,11 +1,12 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { Check, Undo2, CircleDollarSign, Send, MoreHorizontal, FileText, MessageSquareWarning } from "lucide-react";
+import { Check, Undo2, CircleDollarSign, Send, FileText, MessageSquareWarning } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CampoData } from "@/components/ui/CampoData";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import type { AcaoDeContaState } from "@/lib/financeiro/acoes";
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 import { FormFooter } from "@/components/ui/FormFooter";
@@ -38,6 +39,8 @@ export function AcoesDaConta({
   podeEnviar = false,
   notaHref = null,
   pendenciaHref = null,
+  emColunas = false,
+  comConferir = true,
 }: {
   entryId: string;
   situacao: SituacaoDaConta;
@@ -54,6 +57,10 @@ export function AcoesDaConta({
   notaHref?: string | null;
   /** Abrir pendência para o cliente sobre esta conta — só com o módulo ligado. */
   pendenciaHref?: string | null;
+  /** Na coluna da tabela: cada botão no mesmo lugar em todas as linhas (ver `vaga`). */
+  emColunas?: boolean;
+  /** Alguma linha da tabela tem "Conferir": só então a posição dele fica guardada nas outras. */
+  comConferir?: boolean;
 }) {
   const [erro, setErro] = useState<string | null>(null);
   const [erroDaBaixa, setErroDaBaixa] = useState<string | null>(null);
@@ -88,25 +95,9 @@ export function AcoesDaConta({
   const podeEnviarAgora = !paga && !cancelada && podeEnviar && !!acoes.enviarParaAprovacao;
   const temMenu = !!notaHref || (!!pendenciaHref && !cancelada) || podeEnviarAgora || paga;
 
+  // O gatilho é o do `MenuDeMaisAcoes` (08/10/2026): estava copiado à mão aqui.
   const menu = temMenu && (
-    <Popover
-      align="right"
-      width={220}
-      aria-label="Mais ações da conta"
-      trigger={({ open, toggle }) => (
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label="Mais ações"
-          aria-expanded={open}
-          className={`h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
-            open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
-          }`}
-        >
-          <MoreHorizontal size={14} />
-        </button>
-      )}
-    >
+    <MenuDeMaisAcoes rotulo="Mais ações" aria-label="Mais ações da conta" width={220}>
       {({ close }) => (
         <div className="flex flex-col gap-0.5">
           {notaHref && (
@@ -138,14 +129,49 @@ export function AcoesDaConta({
           )}
         </div>
       )}
-    </Popover>
+    </MenuDeMaisAcoes>
   );
+
+  // Na tabela, as três posições existem em toda linha (08/10/2026): a coluna é
+  // centralizada (conferência de 30/09), e com o "Conferir" só em algumas
+  // linhas o grupo mudava de largura — o "Pagar" da linha a conferir ficava
+  // 46px à esquerda dos outros, e o "⋯" de conta paga, no meio da célula. A
+  // posição vazia guarda o lugar com uma cópia invisível do botão, que mede o
+  // mesmo que ele em qualquer fonte; no cartão do celular não há coluna para
+  // alinhar, e ela não aparece.
+  const rotuloConferir = (
+    <>
+      <Check size={12} /> Conferir
+    </>
+  );
+  const rotuloDaBaixa = (
+    <>
+      <CircleDollarSign size={12} /> {aPagar ? "Pagar" : "Receber"}
+    </>
+  );
+  /** A posição vazia na tabela: o botão, invisível e fora do teclado e do leitor de tela. */
+  const vaga = (rotulo: React.ReactNode) =>
+    emColunas ? (
+      <span aria-hidden className="invisible inline-flex">
+        <Button variant="secondary" size="xs" tabIndex={-1}>
+          {rotulo}
+        </Button>
+      </span>
+    ) : null;
 
   if (cancelada || paga) {
     return (
       <div className="flex flex-col gap-1 items-start">
-        {menu || <span className="text-[11px] text-fg-muted">—</span>}
-        {erro && <span className="text-[11px] text-danger max-w-[220px]">{erro}</span>}
+        {emColunas ? (
+          <div className="flex items-center gap-1.5">
+            {comConferir && vaga(rotuloConferir)}
+            {vaga(rotuloDaBaixa)}
+            {menu || <span className="w-7 text-center text-micro text-fg-muted">—</span>}
+          </div>
+        ) : (
+          menu || <span className="text-micro text-fg-muted">—</span>
+        )}
+        {erro && <span className="text-micro text-danger max-w-[220px]">{erro}</span>}
       </div>
     );
   }
@@ -155,16 +181,18 @@ export function AcoesDaConta({
       <div className="flex items-center gap-1.5">
         {/* Conferir só aparece enquanto há o que conferir — botão que sempre
             recusa é ruído em toda linha. */}
-        {status === "PROVISORIO" && (
+        {status === "PROVISORIO" ? (
           <Button variant="secondary" size="xs" disabled={pendente} onClick={() => executar(() => acoes.conferir(entryId))}>
-            <Check size={12} /> Conferir
+            {rotuloConferir}
           </Button>
+        ) : (
+          comConferir && vaga(rotuloConferir)
         )}
         {/* Travado pela aprovação: o botão fica, desabilitado e com o motivo
             embaixo — sumir com ele faria a pessoa procurar a baixa noutro lugar. */}
         {bloqueioDeBaixa !== null ? (
           <Button variant="secondary" size="xs" disabled title={bloqueioDeBaixa}>
-            <CircleDollarSign size={12} /> {aPagar ? "Pagar" : "Receber"}
+            {rotuloDaBaixa}
           </Button>
         ) : (
           <Popover
@@ -181,7 +209,7 @@ export function AcoesDaConta({
                   toggle();
                 }}
               >
-                <CircleDollarSign size={12} /> {aPagar ? "Pagar" : "Receber"}
+                {rotuloDaBaixa}
               </Button>
             )}
           >
@@ -213,11 +241,11 @@ export function AcoesDaConta({
             )}
           </Popover>
         )}
-        {menu}
+        {menu || (emColunas && <span aria-hidden className="w-7 shrink-0" />)}
       </div>
-      {bloqueioDeBaixa && <span className="text-[11px] text-fg-muted max-w-[220px]">{bloqueioDeBaixa}</span>}
-      {erro && <span className="text-[11px] text-danger max-w-[220px]">{erro}</span>}
-      {aviso && <span className="text-[11px] text-warning max-w-[220px]">{aviso}</span>}
+      {bloqueioDeBaixa && <span className="text-micro text-fg-muted max-w-[220px]">{bloqueioDeBaixa}</span>}
+      {erro && <span className="text-micro text-danger max-w-[220px]">{erro}</span>}
+      {aviso && <span className="text-micro text-warning-fg max-w-[220px]">{aviso}</span>}
     </div>
   );
 }

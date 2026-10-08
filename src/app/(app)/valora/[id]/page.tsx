@@ -6,7 +6,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
+import { InfoRow } from "@/components/empresas/InfoRow";
 import { EditarProposta } from "@/components/valora/EditarProposta";
 import { acessoAoValora } from "@/lib/valora/servidor";
 import { brl, horas, num } from "@/lib/valora/formato";
@@ -16,10 +17,12 @@ import { MODELO_41, ROTULO_REGIME, type ParametrosPreco, type Perfil, type Resul
 
 export const dynamic = "force-dynamic";
 
-const SITUACAO: Record<string, { rotulo: string; variante: "info" | "success" | "danger" }> = {
-  ABERTA: { rotulo: "Em aberto", variante: "info" },
-  GANHA: { rotulo: "Ganha", variante: "success" },
-  PERDIDA: { rotulo: "Perdida", variante: "danger" },
+// Situação da proposta no `Selo` — era o `Badge`, a pílula de categoria
+// (auditoria DRG-05, 07/10/2026). O azul do "Em aberto" segue como `marca`.
+const SITUACAO: Record<string, { rotulo: string; tom: TomDoSelo }> = {
+  ABERTA: { rotulo: "Em aberto", tom: "marca" },
+  GANHA: { rotulo: "Ganha", tom: "sucesso" },
+  PERDIDA: { rotulo: "Perdida", tom: "perigo" },
 };
 
 const numero = (d: { toNumber(): number } | null) => (d === null ? null : d.toNumber());
@@ -71,7 +74,7 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
         select: { id: true, name: true, displayName: true },
       })
     : null;
-  const situacao = SITUACAO[p.status] ?? { rotulo: p.status, variante: "info" as const };
+  const situacao = SITUACAO[p.status] ?? { rotulo: p.status, tom: "marca" as const };
 
   // Os rótulos vêm do catálogo do modelo: o que mudou nos Parâmetros não muda o
   // nome de um campo. Chave que o catálogo não conhece aparece como foi gravada.
@@ -94,7 +97,7 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
         subtitle={`Simulada em ${formatInstantDate(p.createdAt)} por ${p.createdBy.name} · ${ROTULO_REGIME[perfil.regime] ?? perfil.regime}`}
         meta={
           <>
-            <Badge variant={situacao.variante}>{situacao.rotulo}</Badge>
+            <Selo tom={situacao.tom}>{situacao.rotulo}</Selo>
             {p.updatedAt.getTime() - p.createdAt.getTime() > 60_000 && <span>atualizada em {formatInstantDate(p.updatedAt)}</span>}
           </>
         }
@@ -111,14 +114,12 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
         <div className="flex flex-col gap-5 min-w-0">
           <Card className="p-5 flex flex-col gap-4">
             <TituloDoCartao icone={<MessageSquareText size={16} />} titulo="Retorno do cliente" />
-            <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 text-[13px]">
-              <Dado rotulo="Situação">
-                <Badge variant={situacao.variante}>{situacao.rotulo}</Badge>
-              </Dado>
-              <Dado rotulo="Preço oferecido">{brl(oferecido)}</Dado>
-              <Dado rotulo="Oferecido ÷ alvo">{oferecido && alvo ? `${num((oferecido / alvo) * 100, 0)}%` : "—"}</Dado>
-              <Dado rotulo="Preço do concorrente">{brl(concorrente)}</Dado>
-            </dl>
+            {/* A situação saiu daqui: já está no cabeçalho, em `meta` (DRG-23). */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+              <InfoRow label="Preço oferecido" value={brl(oferecido)} mono />
+              <InfoRow label="Oferecido ÷ alvo" value={oferecido && alvo ? `${num((oferecido / alvo) * 100, 0)}%` : "—"} mono />
+              <InfoRow label="Preço do concorrente" value={brl(concorrente)} mono />
+            </div>
             <div>
               <p className="text-[12px] font-medium text-fg-secondary mb-1">Motivo e observações</p>
               {p.motivo ? (
@@ -141,10 +142,10 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
 
           <Card className="p-5 flex flex-col gap-4">
             <TituloDoCartao icone={<ClipboardList size={16} />} titulo="O que a simulação considerou" />
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-[13px]">
-              <Dado rotulo="Regime">{ROTULO_REGIME[perfil.regime] ?? perfil.regime}</Dado>
-              <Dado rotulo="Movimento">{perfil.semMovimento ? "Empresa sem movimento" : "Com movimento"}</Dado>
-              <Dado rotulo="Setores contratados" largo>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+              <InfoRow label="Regime" value={ROTULO_REGIME[perfil.regime] ?? perfil.regime} />
+              <InfoRow label="Movimento" value={perfil.semMovimento ? "Empresa sem movimento" : "Com movimento"} />
+              <InfoRow label="Setores contratados" className="sm:col-span-2">
                 <span className="flex flex-wrap gap-1.5">
                   {perfil.setores.map((s) => (
                     <span key={s} className="inline-flex items-center h-6 px-2 rounded-full bg-surface-2 border border-border text-[12px] text-fg">
@@ -152,8 +153,8 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
                     </span>
                   ))}
                 </span>
-              </Dado>
-              <Dado rotulo="Volumes informados" largo>
+              </InfoRow>
+              <InfoRow label="Volumes informados" className="sm:col-span-2">
                 {volumes.length === 0 ? (
                   <span className="text-fg-muted">Nenhum</span>
                 ) : (
@@ -166,14 +167,14 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
                     ))}
                   </ul>
                 )}
-              </Dado>
-              <Dado rotulo="Situações do cliente" largo>
+              </InfoRow>
+              <InfoRow label="Situações do cliente" className="sm:col-span-2">
                 {marcadores.length === 0 ? <span className="text-fg-muted">Nenhuma marcada</span> : marcadores.join(" · ")}
-              </Dado>
-              <Dado rotulo="Complexidades" largo>
+              </InfoRow>
+              <InfoRow label="Complexidades" className="sm:col-span-2">
                 {complexidades.length === 0 ? <span className="text-fg-muted">Nenhuma</span> : complexidades.join(" · ")}
-              </Dado>
-            </dl>
+              </InfoRow>
+            </div>
           </Card>
         </div>
 
@@ -181,16 +182,16 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
           <TituloDoCartao icone={<Receipt size={16} />} titulo="Preço calculado no dia" />
           <div>
             <p className="text-[12px] text-fg-secondary">Honorário mensal (alvo)</p>
-            <p className="font-display text-[28px] font-semibold tabular-nums leading-tight">{brl(resultado.mensal?.alvo ?? alvo)}</p>
+            <p className="font-display text-[length:var(--fs-metric)] font-semibold tabular-nums leading-tight">{brl(resultado.mensal?.alvo ?? alvo)}</p>
             {resultado.parametros && <p className="text-[12px] text-fg-muted">com {resultado.parametros.margemAlvoPct}% de margem</p>}
           </div>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
-            <Dado rotulo="Piso">{brl(resultado.mensal?.piso)}</Dado>
-            <Dado rotulo="Tabela">{brl(resultado.mensal?.tabela)}</Dado>
-            {acesso.podeGerir && <Dado rotulo="Custo">{brl(resultado.mensal?.custo)}</Dado>}
-            <Dado rotulo="Horas/mês">{typeof resultado.horasMes === "number" ? horas(resultado.horasMes) : "—"}</Dado>
-            <Dado rotulo="Implantação (uma vez)">{brl(resultado.implantacao?.alvo)}</Dado>
-          </dl>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <InfoRow label="Piso" value={brl(resultado.mensal?.piso)} mono />
+            <InfoRow label="Tabela" value={brl(resultado.mensal?.tabela)} mono />
+            {acesso.podeGerir && <InfoRow label="Custo" value={brl(resultado.mensal?.custo)} mono />}
+            <InfoRow label="Horas/mês" value={typeof resultado.horasMes === "number" ? horas(resultado.horasMes) : "—"} mono />
+            <InfoRow label="Implantação (uma vez)" value={brl(resultado.implantacao?.alvo)} mono />
+          </div>
           {(resultado.setores?.length ?? 0) > 0 && (
             <div className="border-t border-border pt-3 flex flex-col gap-1.5 text-[13px]">
               {resultado.setores.map((s) => (
@@ -208,7 +209,7 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
             </div>
           )}
           {(resultado.avisos?.length ?? 0) > 0 && (
-            <ul className="flex flex-col gap-1 text-[12px] text-warning">
+            <ul className="flex flex-col gap-1 text-[12px] text-warning-fg">
               {resultado.avisos.map((a) => (
                 <li key={a} className="flex gap-1.5">
                   <AlertTriangle size={13} className="mt-0.5 flex-shrink-0" /> {a}
@@ -231,14 +232,5 @@ function TituloDoCartao({ icone, titulo }: { icone: React.ReactNode; titulo: str
       <span className="text-brand">{icone}</span>
       {titulo}
     </h2>
-  );
-}
-
-function Dado({ rotulo, children, largo = false }: { rotulo: string; children: React.ReactNode; largo?: boolean }) {
-  return (
-    <div className={`min-w-0 ${largo ? "sm:col-span-2" : ""}`}>
-      <dt className="text-[12px] text-fg-secondary mb-0.5">{rotulo}</dt>
-      <dd className="font-medium tabular-nums text-fg">{children}</dd>
-    </div>
   );
 }

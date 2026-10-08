@@ -1,4 +1,5 @@
 import { Selo } from "@/components/ui/Selo";
+import { formatarNumero } from "@/lib/format";
 import type {
   AbsenceStatus,
   AbsenceType,
@@ -42,12 +43,12 @@ export const SITUACAO_DO_AFASTAMENTO: Record<AbsenceStatus, string> = {
 
 export const COR_DO_AFASTAMENTO: Record<AbsenceStatus, string> = {
   LANCADO: "bg-surface-2 text-fg-muted border-border",
-  EM_ANALISE: "bg-warning/10 text-warning border-warning/25",
+  EM_ANALISE: "bg-warning/10 text-warning-fg border-warning/25",
   APROVADO: "bg-brand/10 text-brand border-brand/25",
   REPROVADO: "bg-danger/10 text-danger border-danger/25",
-  AFASTADO: "bg-warning/10 text-warning border-warning/25",
+  AFASTADO: "bg-warning/10 text-warning-fg border-warning/25",
   RETORNO_PREVISTO: "bg-brand/10 text-brand border-brand/25",
-  CONCLUIDO: "bg-success/10 text-success border-success/25",
+  CONCLUIDO: "bg-success/10 text-success-fg border-success/25",
 };
 
 export const TIPO_DO_DESLIGAMENTO: Record<TerminationType, string> = {
@@ -72,11 +73,13 @@ export const SITUACAO_DO_DESLIGAMENTO: Record<TerminationStatus, string> = {
 
 export const COR_DO_DESLIGAMENTO: Record<TerminationStatus, string> = {
   SOLICITADO: "bg-surface-2 text-fg-muted border-border",
-  EM_CALCULO: "bg-warning/10 text-warning border-warning/25",
-  DOCUMENTACAO_PENDENTE: "bg-warning/10 text-warning border-warning/25",
-  ASSINATURA_PENDENTE: "bg-warning/10 text-warning border-warning/25",
-  FINALIZADO: "bg-success/10 text-success border-success/25",
-  CANCELADO: "bg-danger/10 text-danger border-danger/25",
+  EM_CALCULO: "bg-warning/10 text-warning-fg border-warning/25",
+  DOCUMENTACAO_PENDENTE: "bg-warning/10 text-warning-fg border-warning/25",
+  ASSINATURA_PENDENTE: "bg-warning/10 text-warning-fg border-warning/25",
+  FINALIZADO: "bg-success/10 text-success-fg border-success/25",
+  // Cancelado saiu de cena: neutro, e não vermelho (07/10/2026 — o `neutral`
+  // do Badge que a base criou para "Cancelada", "Inativa", "Encerrada").
+  CANCELADO: "bg-surface-2 text-fg-muted border-border",
 };
 
 export const SITUACAO_DAS_FERIAS: Record<VacationStatus, string> = {
@@ -93,12 +96,12 @@ export const SITUACAO_DAS_FERIAS: Record<VacationStatus, string> = {
 export const COR_DAS_FERIAS: Record<VacationStatus, string> = {
   PLANEJADA: "bg-surface-2 text-fg-muted border-border",
   SOLICITADA: "bg-brand/10 text-brand border-brand/25",
-  EM_ANALISE: "bg-warning/10 text-warning border-warning/25",
+  EM_ANALISE: "bg-warning/10 text-warning-fg border-warning/25",
   APROVADA: "bg-brand/10 text-brand border-brand/25",
   PROGRAMADA: "bg-brand/10 text-brand border-brand/25",
-  EM_GOZO: "bg-success/10 text-success border-success/25",
-  CONCLUIDA: "bg-success/10 text-success border-success/25",
-  CANCELADA: "bg-danger/10 text-danger border-danger/25",
+  EM_GOZO: "bg-success/10 text-success-fg border-success/25",
+  CONCLUIDA: "bg-success/10 text-success-fg border-success/25",
+  CANCELADA: "bg-surface-2 text-fg-muted border-border",
 };
 
 export const TIPO_DO_DIA: Record<DayType, string> = {
@@ -119,8 +122,8 @@ export const SITUACAO_DA_HORA_EXTRA: Record<OvertimeStatus, string> = {
 
 export const COR_DA_HORA_EXTRA: Record<OvertimeStatus, string> = {
   LANCADO: "bg-surface-2 text-fg-muted border-border",
-  PENDENTE_APROVACAO: "bg-warning/10 text-warning border-warning/25",
-  APROVADO: "bg-success/10 text-success border-success/25",
+  PENDENTE_APROVACAO: "bg-warning/10 text-warning-fg border-warning/25",
+  APROVADO: "bg-success/10 text-success-fg border-success/25",
   REPROVADO: "bg-danger/10 text-danger border-danger/25",
   ENVIADO_FOLHA: "bg-brand/10 text-brand border-brand/25",
 };
@@ -136,9 +139,9 @@ export const SITUACAO_DA_ESCALA: Record<ScheduleStatus, string> = {
 export const COR_DA_ESCALA: Record<ScheduleStatus, string> = {
   PLANEJADA: "bg-surface-2 text-fg-muted border-border",
   CONFIRMADA: "bg-brand/10 text-brand border-brand/25",
-  ALTERADA: "bg-warning/10 text-warning border-warning/25",
-  CANCELADA: "bg-danger/10 text-danger border-danger/25",
-  REALIZADA: "bg-success/10 text-success border-success/25",
+  ALTERADA: "bg-warning/10 text-warning-fg border-warning/25",
+  CANCELADA: "bg-surface-2 text-fg-muted border-border",
+  REALIZADA: "bg-success/10 text-success-fg border-success/25",
 };
 
 export const SITUACAO_DO_PARTICIPANTE: Record<TrainingParticipantStatus, string> = {
@@ -154,12 +157,27 @@ export const SITUACAO_DO_PARTICIPANTE: Record<TrainingParticipantStatus, string>
 export const COR_DO_PARTICIPANTE: Record<TrainingParticipantStatus, string> = {
   PLANEJADO: "bg-surface-2 text-fg-muted border-border",
   CONVOCADO: "bg-brand/10 text-brand border-brand/25",
-  REALIZADO: "bg-success/10 text-success border-success/25",
-  AUSENTE: "bg-warning/10 text-warning border-warning/25",
+  REALIZADO: "bg-success/10 text-success-fg border-success/25",
+  AUSENTE: "bg-warning/10 text-warning-fg border-warning/25",
   REPROVADO: "bg-danger/10 text-danger border-danger/25",
-  CONCLUIDO: "bg-success/10 text-success border-success/25",
+  CONCLUIDO: "bg-success/10 text-success-fg border-success/25",
   VENCIDO: "bg-danger/10 text-danger border-danger/25",
 };
+
+/**
+ * Horas e notas do DP em pt-BR. O decimal do banco ia cru para a tela ("3.5h",
+ * média "8.25"), na mesma área em que Gestão e Valora mostram "3,5 h"
+ * (auditoria DRG-02, 07/10/2026). Duas casas porque as colunas são
+ * `Decimal(…, 2)`: "1,25 h" não pode virar "1,3 h" — por isso não é o
+ * `formatarHoras` (uma casa), e sim o `formatarNumero` com duas.
+ */
+export function horasDoDP(v: { toString(): string } | number): string {
+  return `${formatarNumero(Number(v.toString()), 2)} h`;
+}
+
+export function notaDoDP(v: { toString(): string } | number): string {
+  return formatarNumero(Number(v.toString()), 2);
+}
 
 /** O selo de situação nas tabelas de DP — a pílula com a cor de um dos mapas acima. */
 export function SeloDoDP({ cor, children }: { cor: string; children: React.ReactNode }) {

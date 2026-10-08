@@ -23,12 +23,12 @@ export function PageHeader({ title, subtitle, action, meta }: Props) {
             diz de quem ela é sem ocupar uma linha de texto. Fora de setor, e no
             portal, é o azul da marca. */}
         <span aria-hidden className="block h-[3px] w-7 rounded-full bg-[var(--c41-setor)] mb-3" />
-        <h1 className="text-[length:var(--fs-display)] font-bold text-fg tracking-[-0.02em] leading-tight">{title}</h1>
+        <h1 className="text-display font-bold text-fg tracking-[-0.02em] leading-tight">{title}</h1>
         {/* Subtítulo em 14px e no cinza do texto de apoio, não no "mudo" (revisão
             de 05/10: o Kauan achava títulos e descrições apagados demais). */}
-        {subtitle && <p className="text-[length:var(--fs-label)] text-fg-secondary mt-2 max-w-[78ch] leading-relaxed">{subtitle}</p>}
+        {subtitle && <p className="text-label text-fg-secondary mt-2 max-w-[78ch] leading-relaxed">{subtitle}</p>}
         {meta && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 text-[length:var(--fs-helper)] text-fg-secondary">{meta}</div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 text-helper text-fg-secondary">{meta}</div>
         )}
       </div>
       {action && <div className="flex-shrink-0">{action}</div>}

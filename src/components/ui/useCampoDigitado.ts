@@ -190,7 +190,7 @@ export const CLASSE_DO_TEXTO =
 
 /** A caixa com borda e anel de foco, igual à do `Input` com controle à direita. */
 export function classesDaCaixa({ compact, erro, disabled }: { compact: boolean; erro: boolean; disabled?: boolean }): string {
-  return `flex items-center ${compact ? "h-8 text-[13px]" : "h-9 text-[length:var(--fs-input)]"} rounded-md border bg-input-bg transition-colors ${
+  return `flex items-center ${compact ? "h-8 text-ui" : "h-9 text-input"} rounded-md border bg-input-bg transition-colors ${
     erro
       ? "border-danger focus-within:shadow-[0_0_0_3px_var(--c41-danger-bg)]"
       : "border-border-strong focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)]"

@@ -6,9 +6,9 @@ import { AlertTriangle, ArrowRight, CalendarClock, Palmtree } from "lucide-react
 import { getPrisma } from "@/lib/prisma";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { formatCalendarDate } from "@/lib/format";
+import { formatCalendarDate, formatarNumero } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { SITUACAO_DAS_FERIAS, COR_DAS_FERIAS, SeloDoDP } from "@/components/pessoas/rotulosDoDP";
@@ -48,13 +48,13 @@ export default async function FeriasPage() {
         itens={[
           {
             rotulo: "Vencidas",
-            valor: String(vencidas.length),
+            valor: formatarNumero(vencidas.length, 0),
             icone: <AlertTriangle />,
             tom: vencidas.length > 0 ? "text-danger" : undefined,
           },
           {
             rotulo: "A vencer / Programadas",
-            valor: String(aVencer.length),
+            valor: formatarNumero(aVencer.length, 0),
             icone: <CalendarClock />,
           },
         ]}
@@ -97,7 +97,7 @@ export default async function FeriasPage() {
             }))}
           >
             <TabelaNoDesktop padrao>
-              <table className="w-full min-w-[800px] text-[length:var(--fs-ui)]">
+              <table className="w-full min-w-[800px]">
                 <thead>
                   <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">

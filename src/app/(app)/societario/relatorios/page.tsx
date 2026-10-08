@@ -22,6 +22,7 @@ import {
   custoPorProcesso,
   totaisDeCusto,
 } from "@/lib/societario/relatorios";
+import { formatarReaisDeCentavos, formatarNumero } from "@/lib/format";
 
 const MODULE = "societario_relatorios";
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -30,10 +31,7 @@ const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
 export const dynamic = "force-dynamic";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const moeda = (c: number) => MOEDA.format(c / 100);
-const DECIMAL = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
-const numero = (n: number | null) => (n === null ? "—" : DECIMAL.format(n));
+const numero = (n: number | null) => (n === null ? "—" : formatarNumero(n, 1));
 
 const faixaPrevista = (min: number | null, max: number | null) =>
   max === null ? "sem previsão" : min !== null && min !== max ? `${min}–${max}` : String(max);
@@ -78,9 +76,12 @@ export default async function RelatoriosDoSocietarioPage({
 
   return (
     <PageContainer>
+      {/* O período escrito (07/10, auditoria dos gráficos): no padrão (90
+          dias) o Filtros não mostrava chip, e ele só aparecia no rótulo de um
+          dos cartões. Agora vai no subtítulo e no chip `sempreVisivel`. */}
       <PageHeader
         title="Relatórios do Societário"
-        subtitle="Processos abertos agora, mais os concluídos no período. Prazo em dias úteis, descontados os feriados do escritório."
+        subtitle={`Processos abertos agora, mais os concluídos nos últimos ${periodo.rotulo}. Prazo em dias úteis, descontados os feriados do escritório.`}
       />
 
       {/* O período no botão "Filtros" — eram pílulas (conferência de 30/09). */}
@@ -92,13 +93,22 @@ export default async function RelatoriosDoSocietarioPage({
             rotulo: "Período",
             vazioLabel: `Últimos ${PERIODOS[1].rotulo}`,
             opcoes: PERIODOS.filter((p) => p !== PERIODOS[1]).map((p) => ({ value: p.chave, label: `Últimos ${p.rotulo}` })),
+            // O período à vista também no padrão (G31): sem isto, "90 dias" só
+            // aparecia dentro do botão Filtros.
+            sempreVisivel: true,
           },
         ]}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <MetricCard label="Abertos agora" value={abertos.length} icon={<FolderOpen size={16} />} />
-        <MetricCard label="Abertos com prazo estourado" value={estouradosAbertos} highlight={estouradosAbertos > 0} icon={<AlertTriangle size={16} />} />
+        {/* Estourado é vermelho, como no painel de Processos da Home (era âmbar). */}
+        <MetricCard
+          label="Abertos com prazo estourado"
+          value={estouradosAbertos}
+          tom={estouradosAbertos > 0 ? "critico" : undefined}
+          icon={<AlertTriangle size={16} />}
+        />
         <MetricCard label={`Concluídos em ${periodo.rotulo}`} value={processos.length - abertos.length} icon={<CheckCircle2 size={16} />} />
         <MetricCard
           label="Processos com volta"
@@ -118,7 +128,7 @@ export default async function RelatoriosDoSocietarioPage({
             </p>
           </div>
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[760px] text-[13px]">
+            <table className="w-full min-w-[760px]">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className={TH}>Tipo</th>
@@ -173,7 +183,7 @@ export default async function RelatoriosDoSocietarioPage({
             <p className="text-[13px] text-fg-muted">Nenhuma volta de exigência no período.</p>
           ) : (
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[560px] text-[13px]">
+              <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Processo</th>
@@ -210,7 +220,7 @@ export default async function RelatoriosDoSocietarioPage({
             </p>
           </div>
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[680px] text-[13px]">
+            <table className="w-full min-w-[680px]">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className={TH}>Responsável</th>
@@ -250,9 +260,9 @@ export default async function RelatoriosDoSocietarioPage({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className={TITULO}>Custo em taxas por processo</h2>
             <p className="text-[13px] tabular-nums">
-              <strong>{moeda(totais.totalCentavos)}</strong>
+              <strong>{formatarReaisDeCentavos(totais.totalCentavos)}</strong>
               {totais.custoDasVoltasCentavos > 0 && (
-                <span className="text-warning"> · {moeda(totais.custoDasVoltasCentavos)} de reapresentação</span>
+                <span className="text-warning-fg"> · {formatarReaisDeCentavos(totais.custoDasVoltasCentavos)} de reapresentação</span>
               )}
             </p>
           </div>
@@ -260,7 +270,7 @@ export default async function RelatoriosDoSocietarioPage({
             <p className="text-[13px] text-fg-muted">Nenhuma taxa registrada nos processos do período.</p>
           ) : (
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[680px] text-[13px]">
+              <table className="w-full min-w-[680px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Processo</th>
@@ -279,10 +289,10 @@ export default async function RelatoriosDoSocietarioPage({
                         </Link>
                       </td>
                       <td className={TD}>{l.voltas}</td>
-                      <td className={TD}>{moeda(l.totalCentavos)}</td>
-                      <td className={TD}>{moeda(l.pagoCentavos)}</td>
-                      <td className={`${TD} ${l.custoDasVoltasCentavos > 0 ? "text-warning" : ""}`}>
-                        {moeda(l.custoDasVoltasCentavos)}
+                      <td className={TD}>{formatarReaisDeCentavos(l.totalCentavos)}</td>
+                      <td className={TD}>{formatarReaisDeCentavos(l.pagoCentavos)}</td>
+                      <td className={`${TD} ${l.custoDasVoltasCentavos > 0 ? "text-warning-fg" : ""}`}>
+                        {formatarReaisDeCentavos(l.custoDasVoltasCentavos)}
                       </td>
                     </tr>
                   ))}

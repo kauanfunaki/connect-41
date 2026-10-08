@@ -9,6 +9,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormSection } from "@/components/ui/FormSection";
 import { Input } from "@/components/ui/Input";
 import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   hasConfig: boolean;
@@ -47,15 +48,15 @@ export function SmtpConfigForm({ hasConfig, defaultValues }: Props) {
   return (
     <form ref={formRef} action={formAction} className="space-y-5">
       {state && "error" in state && state.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>
+        <Aviso>{state.error}</Aviso>
       )}
       {state && "success" in state && state.success && (
-        <p className="text-[13px] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">Configuração de e-mail salva.</p>
+        <Aviso tom="sucesso">Configuração de e-mail salva.</Aviso>
       )}
       {testResult && (
-        <p className={`text-[13px] rounded-md px-3 py-2 border ${testResult.ok ? "text-success bg-success/8 border-success/20" : "text-danger bg-danger/8 border-danger/20"}`}>
+        <Aviso tom={testResult.ok ? "sucesso" : "perigo"}>
           {testResult.message}
-        </p>
+        </Aviso>
       )}
 
       {/* Servidor, autenticação e remetente em seções: eram quatro blocos com

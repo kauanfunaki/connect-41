@@ -7,7 +7,7 @@ import { garantirAssuntosPadrao } from "@/lib/solicitacoes/assuntos";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { alternarAssunto } from "./actions";
 
@@ -46,7 +46,7 @@ export default async function AssuntosPage() {
           <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0 flex-1 basis-72">
               <p className={`text-[14px] font-semibold ${a.active ? "text-fg" : "text-fg-muted"}`}>
-                {a.label} {!a.active && <Badge variant="warning">Desativado</Badge>}
+                {a.label} {!a.active && <Selo tom="neutro">Inativo</Selo>}
               </p>
               {a.description && <p className="text-[12.5px] text-fg-muted mt-0.5">{a.description}</p>}
               <p className="text-[12px] text-fg-secondary mt-1">

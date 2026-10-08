@@ -4,6 +4,7 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, EyeOff, RefreshCw } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
+import { Contador } from "@/components/ui/Contador";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PainelFlutuante } from "@/components/ui/PainelFlutuante";
@@ -167,9 +168,9 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
         >
           <Bell size={17} />
           {contagemDoTopo > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-danger text-white text-[10px] font-semibold leading-none inline-flex items-center justify-center border-2 border-surface-hover">
-              {contagemDoTopo > 99 ? "99+" : contagemDoTopo}
-            </span>
+            // O `Contador` do sistema (07/10/2026): 11px, e não 10px, com o
+            // vermelho fixo (branco sobre o vermelho do escuro dava 3,17:1).
+            <Contador valor={contagemDoTopo} tom="alerta" pequeno className="absolute -top-1 -right-1 border-2 border-surface-hover" />
           )}
         </IconButton>
       </span>
@@ -182,10 +183,10 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
         align="right"
         folhaNoCelular
         aria-label="Notificações"
-        className="p-0! flex flex-col max-h-[min(620px,calc(100vh-80px))] overflow-hidden"
+        className="p-0! flex flex-col max-h-[min(620px,calc(100dvh-80px))] overflow-hidden"
       >
         <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2">
-          <p className="text-[15px] font-semibold text-fg">Notificações</p>
+          <p className="text-body font-semibold text-fg">Notificações</p>
           <IconButton size="sm" onClick={() => void carregar(aba)} title="Atualizar" aria-label="Atualizar notificações" disabled={carregando}>
             <RefreshCw size={14} className={carregando ? "animate-spin" : ""} />
           </IconButton>
@@ -194,7 +195,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
           <AbasDasNotificacoes ativa={aba} contagens={dados?.contagens ?? null} onEscolher={trocarAba} />
           {/* Nada some sem a pessoa saber: o que ela ocultou fica dito, com o atalho de volta. */}
           {!!dados?.ocultos && (
-            <div className="mt-1.5 flex items-center justify-between gap-2 px-1 text-[11px] text-fg-muted">
+            <div className="mt-1.5 flex items-center justify-between gap-2 px-1 text-micro text-fg-muted">
               <span className="inline-flex items-center gap-1">
                 <EyeOff size={12} /> {dados.ocultos} tipo{dados.ocultos === 1 ? "" : "s"} oculto{dados.ocultos === 1 ? "" : "s"}
               </span>
@@ -250,8 +251,8 @@ function ListaCarregando() {
         <div key={i} className="flex items-start gap-3 py-2">
           <span className="size-[34px] rounded-full bg-surface-2 animate-pulse" />
           <span className="flex-1 space-y-2 pt-1">
-            <span className="block h-3 w-2/5 rounded bg-surface-2 animate-pulse" />
-            <span className="block h-3 w-4/5 rounded bg-surface-2 animate-pulse" />
+            <span className="block h-3 w-2/5 rounded-sm bg-surface-2 animate-pulse" />
+            <span className="block h-3 w-4/5 rounded-sm bg-surface-2 animate-pulse" />
           </span>
         </div>
       ))}

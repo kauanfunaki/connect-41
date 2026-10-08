@@ -29,7 +29,7 @@ export function TabelaNoDesktop({ children, className = "", padrao = false }: { 
 }
 
 export function Cartao({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-3 py-2.5 ${className}`}>{children}</div>;
+  return <div className={`bg-surface border border-border rounded-lg shadow-xs px-3 py-2.5 ${className}`}>{children}</div>;
 }
 
 /** A primeira linha do cartão: o nome à esquerda, o valor à direita. É o par que se lê primeiro. */
@@ -42,9 +42,15 @@ export function TopoDoCartao({ nome, valor }: { nome: ReactNode; valor?: ReactNo
   );
 }
 
-/** Linha secundária do cartão — o que na tabela seria uma coluna estreita. */
+/**
+ * Linha secundária do cartão — o que na tabela seria uma coluna estreita.
+ *
+ * Em `--fs-ui` (13px) desde 07/10/2026: era o `--fs-micro` (11px), o papel do
+ * cabeçalho de tabela, e no celular o vencimento, o nº da nota e a emissão
+ * saíam no menor tamanho do app justamente onde não há tabela para ler.
+ */
 export function InfoDoCartao({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <span className={`block text-[length:var(--fs-micro)] text-fg-muted break-words ${className}`}>{children}</span>;
+  return <span className={`block text-ui text-fg-muted break-words ${className}`}>{children}</span>;
 }
 
 /** A faixa de selos e ações no pé do cartão. */

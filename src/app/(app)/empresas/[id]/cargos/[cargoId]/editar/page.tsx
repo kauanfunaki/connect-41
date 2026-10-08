@@ -50,7 +50,7 @@ export default async function EditarCargoPage({
       />
       <BackButton className="mb-3" />
 
-      <PageHeader title="Editar Cargo" subtitle={company.name} />
+      <PageHeader title="Editar cargo" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
         <Card className="p-6">

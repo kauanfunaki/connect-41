@@ -4,12 +4,12 @@ import { AlertTriangle, Hand, Hourglass, Inbox, Paperclip } from "lucide-react";
 import { getAuthContext } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { getSectorMaps, getActiveSectors } from "@/lib/sectors";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -81,36 +81,41 @@ export default async function SolicitacoesPage({
 
       <AbasDoAtendimento ativa="solicitacoes" />
 
-      {/* Cada cartão abre o recorte que ele conta. */}
+      {/* Cada cartão abre o recorte que ele conta, e o do recorte aberto fica
+          aceso (`ativo`, 07/10/2026). */}
       <div>
         <FaixaDeTotais
           itens={[
             {
               rotulo: "Novas",
-              valor: String(contadores.novas),
+              valor: formatarNumero(contadores.novas, 0),
               tom: contadores.novas > 0 ? "text-brand" : "",
               icone: <Inbox />,
               href: href({ recorte: "novas", atrasadas: undefined }),
+              ativo: recorte === "novas" && !atrasadas,
             },
             {
               rotulo: "Minhas",
-              valor: String(contadores.minhas),
+              valor: formatarNumero(contadores.minhas, 0),
               icone: <Hand />,
               href: href({ recorte: "minhas", atrasadas: undefined }),
+              ativo: recorte === "minhas" && !atrasadas,
             },
             {
               rotulo: "Resposta atrasada",
-              valor: String(contadores.atrasadas),
+              valor: formatarNumero(contadores.atrasadas, 0),
               tom: contadores.atrasadas > 0 ? "text-danger" : "",
               icone: <AlertTriangle />,
               href: href({ recorte: undefined, atrasadas: "1" }),
+              ativo: recorte === "abertas" && atrasadas,
             },
             {
               rotulo: "Aguardando cliente",
-              valor: String(contadores.aguardando),
+              valor: formatarNumero(contadores.aguardando, 0),
               tom: "text-fg-muted",
               icone: <Hourglass />,
               href: href({ recorte: "aguardando", atrasadas: undefined }),
+              ativo: recorte === "aguardando" && !atrasadas,
             },
           ]}
         />
@@ -180,7 +185,7 @@ export default async function SolicitacoesPage({
               }))}
             >
               <TabelaNoDesktop padrao>
-                <table className="w-full min-w-[960px] text-[13px]">
+                <table className="w-full min-w-[960px]">
                   <thead>
                     <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">

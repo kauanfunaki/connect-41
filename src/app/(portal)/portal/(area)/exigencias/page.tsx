@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TriangleAlert } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -6,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
+import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { exigenciasDoPortal } from "@/lib/societario/portal-data";
 import { formatInstantDate } from "@/lib/format";
@@ -54,24 +54,27 @@ export default async function PortalExigenciasPage({
           />
         </Card>
       ) : (
-        <ul className="flex flex-col gap-2">
+        // O cartão inteiro abre o processo da exigência (07/10/2026): era um
+        // link no meio da linha de apoio, um alvo do tamanho do nome.
+        <ul className="flex flex-col gap-2.5">
           {linhas.map((e) => (
             <li key={e.id}>
-              <Card className="p-4 flex flex-col gap-1">
-                <span className={`text-[12px] font-semibold ${e.resolvidaEm ? "text-fg-muted" : "text-warning"}`}>{e.orgao}</span>
-                <p className="text-[13px] text-fg whitespace-pre-line break-words">{e.descricao}</p>
-                <span className="text-[12px] text-fg-muted">
-                  <Link href={`/portal/processos/${e.processoId}`} className="text-brand hover:underline">
-                    {e.processoNome}
-                  </Link>
-                  {` · pedida em ${formatInstantDate(e.abertaEm)}`}
-                  {e.resolvidaEm
-                    ? ` · resolvida em ${formatInstantDate(e.resolvidaEm)}`
-                    : e.prazo
-                      ? ` · prazo do órgão ${formatInstantDate(e.prazo)}`
-                      : ""}
-                </span>
-              </Card>
+              <CartaoDeLista
+                href={`/portal/processos/${e.processoId}`}
+                sobretitulo={<span className={e.resolvidaEm ? undefined : "text-warning-fg"}>{e.orgao}</span>}
+                titulo={e.processoNome}
+                corpo={e.descricao}
+                apoio={
+                  <span>
+                    {`pedida em ${formatInstantDate(e.abertaEm)}`}
+                    {e.resolvidaEm
+                      ? ` · resolvida em ${formatInstantDate(e.resolvidaEm)}`
+                      : e.prazo
+                        ? ` · prazo do órgão ${formatInstantDate(e.prazo)}`
+                        : ""}
+                  </span>
+                }
+              />
             </li>
           ))}
         </ul>

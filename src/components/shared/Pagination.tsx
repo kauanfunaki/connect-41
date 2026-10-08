@@ -25,7 +25,7 @@ export function Pagination({ page, totalPages, temProxima = false, buildHref, to
 
   return (
     <nav className="flex flex-wrap items-center justify-between gap-3 mt-4" aria-label="Paginação">
-      <span className="text-[length:var(--fs-ui)] text-fg-muted tabular-nums">
+      <span className="text-ui text-fg-muted tabular-nums">
         Página <strong className="font-semibold text-fg">{page}</strong>
         {conhecida && ` de ${totalPages}`}
         {total !== undefined && ` · ${totalAproximado ? "mais de " : ""}${INTEIRO.format(total)} ${rotulo ?? "itens"}`}

@@ -36,7 +36,7 @@ export function LinhaDoDia({
         {ICONE[item.origem]}
       </span>
       <div className="min-w-0 flex-1">
-        <Link href={item.href} className="block text-[13.5px] font-medium leading-snug text-fg hover:text-brand transition-colors break-words">
+        <Link href={item.href} className="block text-[length:var(--fs-ui)] font-medium leading-snug text-fg hover:text-brand transition-colors break-words">
           {item.titulo}
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] text-fg-muted">
@@ -49,7 +49,7 @@ export function LinhaDoDia({
           {responsaveis && (
             <>
               <span aria-hidden>·</span>
-              <span className={responsaveis.length ? "" : "text-warning"}>{responsaveis.length ? responsaveis.join(", ") : "sem responsável"}</span>
+              <span className={responsaveis.length ? "" : "text-warning-fg"}>{responsaveis.length ? responsaveis.join(", ") : "sem responsável"}</span>
             </>
           )}
           <SelosDoItem c={c} />

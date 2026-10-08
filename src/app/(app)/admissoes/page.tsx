@@ -81,8 +81,8 @@ export default async function AdmissoesPage() {
                   <TopoDoCartao nome={l.nome} />
                   <InfoDoCartao>{[l.empresa, l.cargo].filter(Boolean).join(" · ") || "Sem empresa/cargo definidos"}</InfoDoCartao>
                   <PeDoCartao>
-                    <span className="text-[11.5px] text-fg-muted">{l.exames}</span>
-                    <span className="ml-auto text-[11.5px] text-fg-muted">{l.documentos} de admissão</span>
+                    <span className="text-[length:var(--fs-micro)] text-fg-muted">{l.exames}</span>
+                    <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">{l.documentos} de admissão</span>
                   </PeDoCartao>
                 </Cartao>
               </Link>
@@ -96,7 +96,7 @@ export default async function AdmissoesPage() {
             }))}
           >
             <TabelaNoDesktop padrao>
-              <table className="w-full min-w-[860px] text-[length:var(--fs-ui)]">
+              <table className="w-full min-w-[860px]">
                 <thead>
                   <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Colaborador</th>
@@ -133,7 +133,7 @@ export default async function AdmissoesPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-fg-secondary">{l.cargo ?? <span className="text-fg-muted">—</span>}</td>
-                      <td className={`px-4 py-3 ${l.situacaoDosExames === "Exames pendentes" ? "text-warning" : "text-fg-muted"}`}>
+                      <td className={`px-4 py-3 ${l.situacaoDosExames === "Exames pendentes" ? "text-warning-fg" : "text-fg-muted"}`}>
                         {l.exames}
                       </td>
                       <td className="px-4 py-3 text-fg-muted">{l.documentos}</td>

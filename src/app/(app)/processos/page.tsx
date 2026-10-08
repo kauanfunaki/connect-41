@@ -2,12 +2,13 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
-import { Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle } from "lucide-react";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle, Search } from "lucide-react";
+import { Input } from "@/components/ui/Input";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
-import { listarFila, contarPorSituacao, feriadosDoTenant } from "@/lib/societario/fila";
+import { listarFila, contarPorSituacao, feriadosDoTenant, filtrarPelaBusca } from "@/lib/societario/fila";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADES, PRIORIDADE_LABEL, ehPrioridade } from "@/lib/societario/prioridade";
 import { ProcessosFila, SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
@@ -21,6 +22,7 @@ import { abrirProcesso } from "./actions";
 import { contarAvisosPendentes } from "@/lib/societario/avisos";
 import { contarPendentesDoSetor } from "@/lib/ia/propostas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { formatarNumero } from "@/lib/format";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -92,16 +94,24 @@ export default async function ProcessosPage({
       ? params.responsavel
       : undefined;
   const prioridadeFiltro = ehPrioridade(params.prioridade) ? params.prioridade : undefined;
-  const filtroAtivo = Boolean(responsavelFiltro || prioridadeFiltro);
+  // A busca é texto livre: só aparada e com teto, para a URL não carregar um
+  // parágrafo colado por engano.
+  const busca = (params.q ?? "").trim().slice(0, 100);
+  const filtroAtivo = Boolean(responsavelFiltro || prioridadeFiltro || busca);
 
   // A fila inteira do filtro vem sempre: os contadores do recorte precisam do
   // total, e uma segunda consulta só para contar discordaria da primeira no
   // instante em que alguém gravasse algo entre as duas.
-  const todas = await listarFila(
-    ctx.tenantId,
-    { responsavelId: responsavelFiltro, prioridade: prioridadeFiltro },
-    feriados,
-    agora
+  // A busca entra antes dos contadores, como os outros filtros: o cartão
+  // "Em exigência" diz quantos da busca estão em exigência.
+  const todas = filtrarPelaBusca(
+    await listarFila(
+      ctx.tenantId,
+      { responsavelId: responsavelFiltro, prioridade: prioridadeFiltro },
+      feriados,
+      agora
+    ),
+    busca
   );
   const contagem = contarPorSituacao(todas);
   const linhas = recorte.situacao ? todas.filter((l) => l.situacao === recorte.situacao) : todas;
@@ -109,12 +119,17 @@ export default async function ProcessosPage({
   const filtrosNaUrl = new URLSearchParams();
   if (responsavelFiltro) filtrosNaUrl.set("responsavel", responsavelFiltro);
   if (prioridadeFiltro) filtrosNaUrl.set("prioridade", prioridadeFiltro);
+  if (busca) filtrosNaUrl.set("q", busca);
   const hrefDoRecorte = (chave: string) => {
     const q = new URLSearchParams(filtrosNaUrl);
     if (chave !== "todos") q.set("situacao", chave);
     const s = q.toString();
     return s ? `/processos?${s}` : "/processos";
   };
+  // O kanban não tem caixa de busca: levar o `q` para lá filtraria o quadro
+  // sem mostrar o porquê. Vão só os filtros que ele também tem.
+  const filtrosDoKanban = new URLSearchParams(filtrosNaUrl);
+  filtrosDoKanban.delete("q");
 
   return (
     <PageContainer>
@@ -127,7 +142,7 @@ export default async function ProcessosPage({
         {/* Eram três links de texto (30/09): botão não é link. O aviso da Junta
             mantém a cor de atenção — é trabalho esperando conferência. */}
         {avisosPendentes > 0 && (
-          <Button href="/processos/avisos" variant="secondary" className="text-warning! border-warning/40! hover:bg-warning-bg!">
+          <Button href="/processos/avisos" variant="secondary" className="text-warning-fg! border-warning/40! hover:bg-warning-bg!">
             <Mail size={14} />
             {avisosPendentes} {avisosPendentes === 1 ? "aviso da Junta" : "avisos da Junta"}
           </Button>
@@ -138,7 +153,7 @@ export default async function ProcessosPage({
             IA do Societário{propostasDaIa > 0 ? ` · ${propostasDaIa}` : ""}
           </Button>
         )}
-        <Button href={filtrosNaUrl.size > 0 ? `/processos/kanban?${filtrosNaUrl}` : "/processos/kanban"} variant="secondary">
+        <Button href={filtrosDoKanban.size > 0 ? `/processos/kanban?${filtrosDoKanban}` : "/processos/kanban"} variant="secondary">
           <Columns3 size={14} />
           Ver no kanban
         </Button>
@@ -171,10 +186,11 @@ export default async function ProcessosPage({
           const situacao = r.situacao!;
           return {
             rotulo: SITUACAO_LABEL[situacao],
-            valor: String(contagem[situacao]),
+            valor: formatarNumero(contagem[situacao], 0),
             icone: ICONE_DA_SITUACAO[situacao],
-            tom: situacao === "EM_EXIGENCIA" && contagem[situacao] > 0 ? "text-warning" : situacao === "SUSPENSO" && contagem[situacao] > 0 ? "text-danger" : undefined,
+            tom: situacao === "EM_EXIGENCIA" && contagem[situacao] > 0 ? "text-warning-fg" : situacao === "SUSPENSO" && contagem[situacao] > 0 ? "text-danger" : undefined,
             detalhe: r.chave === recorte.chave ? "mostrando agora" : undefined,
+            ativo: r.chave === recorte.chave,
             href: hrefDoRecorte(r.chave === recorte.chave ? "todos" : r.chave),
           };
         })}
@@ -185,6 +201,26 @@ export default async function ProcessosPage({
           e quem manda o link manda a mesma fila. */}
       <CascoDaTabela
         contagem={contarItens(linhas.length, "processo", "processos")}
+        busca={
+          // A busca no desenho de Certificados e do acervo fiscal (07/10/2026):
+          // GET, para o link copiado levar a mesma fila. Os filtros escolhidos
+          // vão junto nos campos escondidos — sem eles, buscar os apagaria.
+          <form method="get" action="/processos" className="max-w-full">
+            {recorte.chave !== "todos" && <input type="hidden" name="situacao" value={recorte.chave} />}
+            {responsavelFiltro && <input type="hidden" name="responsavel" value={responsavelFiltro} />}
+            {prioridadeFiltro && <input type="hidden" name="prioridade" value={prioridadeFiltro} />}
+            <Input
+              compact
+              type="search"
+              name="q"
+              icon={<Search />}
+              defaultValue={busca}
+              placeholder="Buscar por empresa, tipo, título ou responsável…"
+              aria-label="Buscar processo"
+              className="w-80 max-w-full"
+            />
+          </form>
+        }
         filtros={
           <FiltrosDaTela
             naBarra

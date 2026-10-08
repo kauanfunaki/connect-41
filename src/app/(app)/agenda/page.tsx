@@ -18,6 +18,7 @@ import { intervaloDaBusca } from "@/lib/agendaExpediente";
 import { carregarExpedientes } from "@/lib/agendaExpedienteDb";
 import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
 import { getSectorMaps } from "@/lib/sectors";
+import { Aviso } from "@/components/ui/Aviso";
 
 const VIEW_HELPER: Record<string, string> = {
   dia: "Os prazos e as reuniões do dia — clique num horário vazio para agendar.",
@@ -149,7 +150,7 @@ export default async function AgendaPage({
         {contasVencidas.length > 0 && (
           // "Reconectar agora" era link sublinhado no fim da frase (30/09): é a
           // ação do aviso, então é botão, à direita dele.
-          <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[length:var(--fs-helper)] text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
+          <Aviso className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
             <AlertTriangle size={14} className="flex-shrink-0" />
             <p className="flex-1 min-w-[16rem]">
               Sua conta {contasVencidas.join(" e ")} expirou — reuniões novas não vão gerar link até
@@ -158,7 +159,7 @@ export default async function AgendaPage({
             <Button href="/admin/integracoes" variant="danger" size="xs">
               <RefreshCw size={11} /> Reconectar agora
             </Button>
-          </div>
+          </Aviso>
         )}
       </div>
 

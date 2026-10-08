@@ -3,19 +3,11 @@ import { getPrisma } from "@/lib/prisma";
 import { hit, clientIp } from "@/lib/rateLimit";
 import { DiscForm } from "@/components/teste/DiscForm";
 import { QuizForm } from "@/components/teste/QuizForm";
+import { CheckCircle2, Clock, FileX, Link2Off } from "lucide-react";
+import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
+import { TelaDeAvisoPublica } from "@/components/publico/TelaDeAvisoPublica";
 
 export const metadata = { title: "Teste" };
-
-function TokenInvalido({ titulo, texto }: { titulo: string; texto: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="max-w-md text-center">
-        <h1 className="text-[18px] font-semibold text-fg mb-2">{titulo}</h1>
-        <p className="text-[13px] text-fg-muted">{texto}</p>
-      </div>
-    </div>
-  );
-}
 
 export default async function TestePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -26,20 +18,20 @@ export default async function TestePage({ params }: { params: Promise<{ token: s
   const link = await prisma.assessmentLink.findUnique({
     where: { token },
     include: {
-      tenant: { select: { name: true } },
+      tenant: { select: { name: true, logoUrl: true } },
       person: { select: { name: true } },
     },
   });
 
   if (!link) {
     hit(`teste-view-miss:${ip}`, 20, 10 * 60_000);
-    return <TokenInvalido titulo="Link inválido" texto="Este link de teste não existe ou foi digitado incorretamente. Solicite um novo ao recrutador." />;
+    return <TelaDeAvisoPublica icone={<Link2Off />} titulo="Link inválido" texto="Este link de teste não existe ou foi digitado incorretamente. Solicite um novo ao recrutador." />;
   }
   if (link.status !== "PENDENTE") {
-    return <TokenInvalido titulo="Teste já respondido" texto="Suas respostas já foram recebidas. Se precisar refazer o teste, entre em contato com o recrutador." />;
+    return <TelaDeAvisoPublica icone={<CheckCircle2 />} tom="sucesso" titulo="Teste já respondido" texto="Suas respostas já foram recebidas. Se precisar refazer o teste, entre em contato com o recrutador." />;
   }
   if (link.expiresAt < new Date()) {
-    return <TokenInvalido titulo="Link expirado" texto="Este link de teste expirou. Solicite um novo ao recrutador." />;
+    return <TelaDeAvisoPublica icone={<Clock />} titulo="Link expirado" texto="Este link de teste expirou. Solicite um novo ao recrutador." />;
   }
 
   // MULTIPLA_ESCOLHA busca o template à parte — select só id/text/options nas
@@ -55,7 +47,7 @@ export default async function TestePage({ params }: { params: Promise<{ token: s
       },
     });
     if (!template) {
-      return <TokenInvalido titulo="Teste indisponível" texto="O modelo deste teste não está mais disponível. Solicite um novo ao recrutador." />;
+      return <TelaDeAvisoPublica icone={<FileX />} titulo="Teste indisponível" texto="O modelo deste teste não está mais disponível. Solicite um novo ao recrutador." />;
     }
     quizTemplateName = template.name;
     quizQuestions = template.questions.map((q) => ({ id: q.id, text: q.text, options: q.options as string[] }));
@@ -64,18 +56,24 @@ export default async function TestePage({ params }: { params: Promise<{ token: s
   return (
     <div className="min-h-screen py-10 px-4">
       <div className="max-w-2xl mx-auto">
-        <header className="mb-6">
-          <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Olá, {link.person.name}!</h1>
-          <p className="text-[13px] text-fg-muted mt-1">
-            {link.tenant.name} convidou você a responder{" "}
-            {link.type === "DISC" ? "um teste de perfil comportamental (DISC)" : `o teste "${quizTemplateName}"`}. Leva
-            poucos minutos.
-          </p>
-        </header>
+        {/* O logo do escritório, como no portal de vagas (padrão aceito na
+            página de decisões, 08/10/2026): quem abre o link é de fora e
+            precisa reconhecer de quem é o pedido. */}
+        <CabecalhoPublico
+          logo={link.tenant.logoUrl ? { src: link.tenant.logoUrl, alt: link.tenant.name } : null}
+          titulo={<>Olá, {link.person.name}!</>}
+          subtitulo={
+            <>
+              {link.tenant.name} convidou você a responder{" "}
+              {link.type === "DISC" ? "um teste de perfil comportamental (DISC)" : `o teste "${quizTemplateName}"`}. Leva
+              poucos minutos.
+            </>
+          }
+        />
 
         {link.type === "DISC" ? <DiscForm token={token} /> : <QuizForm token={token} questions={quizQuestions!} />}
 
-        <p className="text-[11px] text-fg-muted mt-6 text-center">
+        <p className="text-[length:var(--fs-micro)] text-fg-muted mt-6 text-center">
           Processo conduzido por {link.tenant.name}. Suas respostas são usadas apenas para este processo seletivo (LGPD).
         </p>
       </div>

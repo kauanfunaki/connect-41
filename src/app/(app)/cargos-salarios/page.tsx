@@ -8,7 +8,9 @@ import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
+import { formatarReais } from "@/lib/format";
 import {
   agruparPorFamilia,
   detectarDivergenciasNome,
@@ -57,9 +59,6 @@ export default async function CargosSalariosPage() {
   const totalDegraus = grupos.reduce((sum, g) => sum + g.degrausInvertidos.length, 0);
   const semClassificacao = rows.filter((r) => !r.family || !r.seniority).length;
 
-  const fmt = (v: number | null) =>
-    v == null ? "—" : `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-
   const companyIdByCargo = new Map(cargos.map((c) => [c.id, c.company.id]));
 
   return (
@@ -78,18 +77,18 @@ export default async function CargosSalariosPage() {
       {(totalDegraus > 0 || divergencias.length > 0 || semClassificacao > 0) && (
         <Card className="p-5 mb-4 border-warning/30">
           <h2 className="flex items-center gap-1.5 text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
-            <AlertTriangle size={16} className="text-warning" />
+            <AlertTriangle size={16} className="text-warning-fg" />
             Pontos de atenção da estrutura
           </h2>
           <ul className="space-y-2">
             {totalDegraus > 0 && canViewSalary && (
-              <li className="text-[13px] text-fg-secondary">
+              <li className="text-[length:var(--fs-ui)] text-fg-secondary">
                 <strong className="text-fg">{totalDegraus} degrau(s) invertido(s)</strong> — nível mais alto com faixa
                 inicial menor que a do nível anterior na mesma família (detalhado abaixo).
               </li>
             )}
             {divergencias.length > 0 && (
-              <li className="text-[13px] text-fg-secondary">
+              <li className="text-[length:var(--fs-ui)] text-fg-secondary">
                 <strong className="text-fg">{divergencias.length} nome(s) com grafia divergente</strong> — mesmo cargo
                 escrito de formas diferentes:{" "}
                 {divergencias
@@ -100,7 +99,7 @@ export default async function CargosSalariosPage() {
               </li>
             )}
             {semClassificacao > 0 && (
-              <li className="text-[13px] text-fg-secondary">
+              <li className="text-[length:var(--fs-ui)] text-fg-secondary">
                 <strong className="text-fg">{semClassificacao} cargo(s) sem família ou nível</strong> — classifique na
                 ficha do cargo para entrarem na trilha.
               </li>
@@ -113,7 +112,7 @@ export default async function CargosSalariosPage() {
         <Card>
           <EmptyState
             icon={<IdCard />}
-            title="Nenhum cargo cadastrado ainda."
+            title="Nenhum cargo cadastrado ainda"
             description="Cadastre cargos na ficha de cada empresa."
           />
         </Card>
@@ -129,11 +128,47 @@ export default async function CargosSalariosPage() {
               <section key={g.family}>
                 <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
                   <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{g.label}</h2>
-                  <span className="text-[12px] text-fg-muted">
+                  <span className="text-[length:var(--fs-2)] text-fg-muted">
                     {g.cargos.length} cargo{g.cargos.length !== 1 ? "s" : ""} · {g.totalPessoas} colaborador
                     {g.totalPessoas !== 1 ? "es" : ""}
                   </span>
                 </div>
+
+                {/* No celular, um cartão por cargo em vez da tabela de 760px com
+                    rolagem lateral (auditoria DRG-31, 07/10/2026). */}
+                <CartoesNoCelular>
+                  {g.cargos.map((c) => (
+                    <Cartao key={c.id}>
+                      <TopoDoCartao
+                        nome={
+                          <Link
+                            href={`/empresas/${companyIdByCargo.get(c.id)}/cargos/${c.id}/editar`}
+                            className="text-fg hover:text-brand transition-colors"
+                          >
+                            {c.name}
+                          </Link>
+                        }
+                        valor={`${c.peopleCount} pessoa${c.peopleCount !== 1 ? "s" : ""}`}
+                      />
+                      <InfoDoCartao>{[c.companyName, c.area].filter(Boolean).join(" · ")}</InfoDoCartao>
+                      {canViewSalary && (
+                        <InfoDoCartao className="tabular-nums">
+                          {formatarReais(c.salaryRangeMin)} – {formatarReais(c.salaryRangeMax)}
+                        </InfoDoCartao>
+                      )}
+                      {(c.seniority || (invertidoIds.has(c.id) && canViewSalary)) && (
+                        <PeDoCartao>
+                          {c.seniority && (
+                            <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">{SENIORITY_LABEL[c.seniority]}</SeloDoDP>
+                          )}
+                          {invertidoIds.has(c.id) && canViewSalary && (
+                            <SeloDoDP cor="bg-warning/10 text-warning-fg border-warning/25">degrau invertido</SeloDoDP>
+                          )}
+                        </PeDoCartao>
+                      )}
+                    </Cartao>
+                  ))}
+                </CartoesNoCelular>
 
                 <TabelaFiltravel
                   linhas={g.cargos.map((c) => ({
@@ -145,8 +180,19 @@ export default async function CargosSalariosPage() {
                     },
                   }))}
                 >
-                  <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-                    <table className="w-full min-w-[760px] text-[length:var(--fs-ui)]">
+                  {/* Largura fixa por coluna, igual em todas as famílias: na
+                      largura automática, Nível, Cargo e Empresa mudavam de
+                      posição de um bloco para o outro (DRG-32, 07/10/2026). */}
+                  <TabelaNoDesktop padrao>
+                    <table className="w-full table-fixed min-w-[760px]">
+                      <colgroup>
+                        <col className="w-[132px]" />
+                        <col />
+                        <col className="w-[200px]" />
+                        <col className="w-[150px]" />
+                        <col className="w-[96px]" />
+                        {canViewSalary && <col className="w-[232px]" />}
+                      </colgroup>
                       <thead>
                         <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                           <th scope="col" className="px-4 py-3">
@@ -170,10 +216,10 @@ export default async function CargosSalariosPage() {
                               {c.seniority ? (
                                 <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">{SENIORITY_LABEL[c.seniority]}</SeloDoDP>
                               ) : (
-                                <span className="text-[12px] text-fg-muted">—</span>
+                                <span className="text-[length:var(--fs-2)] text-fg-muted">—</span>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-fg font-medium">
+                            <td className="px-4 py-3 text-fg font-semibold">
                               <Link
                                 href={`/empresas/${companyIdByCargo.get(c.id)}/cargos/${c.id}/editar`}
                                 className="hover:text-brand transition-colors"
@@ -182,7 +228,7 @@ export default async function CargosSalariosPage() {
                               </Link>
                               {invertidoIds.has(c.id) && canViewSalary && (
                                 <span className="ml-2 inline-flex">
-                                  <SeloDoDP cor="bg-warning/10 text-warning border-warning/25">degrau invertido</SeloDoDP>
+                                  <SeloDoDP cor="bg-warning/10 text-warning-fg border-warning/25">degrau invertido</SeloDoDP>
                                 </span>
                               )}
                             </td>
@@ -191,14 +237,14 @@ export default async function CargosSalariosPage() {
                             <td className="px-4 py-3 text-fg-muted tnum">{c.peopleCount}</td>
                             {canViewSalary && (
                               <td className="px-4 py-3 text-fg-muted tnum whitespace-nowrap">
-                                {fmt(c.salaryRangeMin)} – {fmt(c.salaryRangeMax)}
+                                {formatarReais(c.salaryRangeMin)} – {formatarReais(c.salaryRangeMax)}
                               </td>
                             )}
                           </LinhaFiltravel>
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </TabelaNoDesktop>
                 </TabelaFiltravel>
               </section>
             );
