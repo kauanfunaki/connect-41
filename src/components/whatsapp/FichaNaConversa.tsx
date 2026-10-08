@@ -12,7 +12,7 @@ export function FichaNaConversa({ ficha }: { ficha: FichaDaCandidatura }) {
   const resumo = resumoDasRespostas(ficha.respostas);
   const falta = faltaPerguntar(ficha.respostas);
   return (
-    <div className="basis-full mt-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-[length:var(--fs-2)] space-y-0.5">
+    <div className="basis-full mt-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-fs-2 space-y-0.5">
       <p>
         <span className="text-fg-muted">Triagem: </span>
         {ficha.nota ? (

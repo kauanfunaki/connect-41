@@ -63,7 +63,7 @@ function CartaoDeDestaque({
           <Sparkline pontos={linha} variante="faixa" className="size-full" />
         </div>
       )}
-      <p className="flex items-center gap-1.5 pr-6 text-[11px] font-semibold uppercase tracking-wider text-white/90 min-w-0">
+      <p className="flex items-center gap-1.5 pr-6 text-fs-1 font-semibold uppercase tracking-wider text-white/90 min-w-0">
         {/* No alerta o ícone diz "alerta" sem depender do vermelho. */}
         {d.alerta ? (
           <OctagonAlert className="size-3.5 flex-shrink-0" aria-hidden />
@@ -74,10 +74,10 @@ function CartaoDeDestaque({
           {setor.rotulo} · {d.titulo}
         </span>
       </p>
-      <p className="mt-2.5 font-display text-[length:var(--fs-metric)] font-bold leading-none tracking-tight tnum truncate c41-cortavel">
+      <p className="mt-2.5 font-display text-metric font-bold leading-none tracking-tight tnum truncate c41-cortavel">
         {valor}
       </p>
-      <p className="mt-2 text-[length:var(--fs-helper)] text-white/90 truncate">{d.apoio}</p>
+      <p className="mt-2 text-helper text-white/90 truncate">{d.apoio}</p>
       <ArrowUpRight
         className="absolute top-4 right-4 size-4 text-white/70 transition-colors group-hover/destaque:text-white"
         aria-hidden

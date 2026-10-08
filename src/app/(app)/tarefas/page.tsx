@@ -75,14 +75,14 @@ function Bloco({
   return (
     <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
       <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
-        <h2 className="flex items-center gap-2 text-[length:var(--fs-card-title)] font-semibold text-fg [&>svg]:size-4 [&>svg]:text-fg-muted">
+        <h2 className="flex items-center gap-2 text-card-title font-semibold text-fg [&>svg]:size-4 [&>svg]:text-fg-muted">
           {icone}
           {titulo}
         </h2>
-        <span className="text-[12px] text-fg-muted tnum">{lista.length}</span>
+        <span className="text-fs-2 text-fg-muted tnum">{lista.length}</span>
       </header>
       {lista.length === 0 ? (
-        <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">{vazio}</p>
+        <p className="px-4 py-5 text-body text-fg-muted">{vazio}</p>
       ) : (
         <ul className="divide-y divide-border">
           {lista.slice(0, POR_BLOCO).map((x) => (
@@ -97,7 +97,7 @@ function Bloco({
         </ul>
       )}
       {resto > 0 && (
-        <p className="px-4 py-2.5 border-t border-border text-[12px] text-fg-muted">
+        <p className="px-4 py-2.5 border-t border-border text-fs-2 text-fg-muted">
           + {resto} {resto === 1 ? "outro" : "outros"} — veja todos no{" "}
           <Link href="/kanban" className="font-medium text-fg-secondary hover:text-brand">
             quadro de tarefas
@@ -313,15 +313,15 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
           {visaoTime && (
             <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
               <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
-                <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Carga do time</h2>
+                <h2 className="text-card-title font-semibold text-fg">Carga do time</h2>
                 {semResponsavel > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[12px] font-medium text-warning-fg">
+                  <span className="inline-flex items-center gap-1 text-fs-2 font-medium text-warning-fg">
                     <UserX size={13} /> {semResponsavel} sem responsável
                   </span>
                 )}
               </header>
               {carga.length === 0 ? (
-                <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">Ninguém com item em aberto.</p>
+                <p className="px-4 py-5 text-body text-fg-muted">Ninguém com item em aberto.</p>
               ) : (
                 <div className="px-4 py-3.5">
                   <LinhasDeSituacao
@@ -337,10 +337,10 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
             <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
               <header className="flex items-center gap-2 px-4 py-3 border-b border-border">
                 <Video size={16} className="text-fg-muted" />
-                <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Próximas reuniões</h2>
+                <h2 className="text-card-title font-semibold text-fg">Próximas reuniões</h2>
               </header>
               {reunioes.length === 0 ? (
-                <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">Nenhuma reunião marcada.</p>
+                <p className="px-4 py-5 text-body text-fg-muted">Nenhuma reunião marcada.</p>
               ) : (
                 <ul className="divide-y divide-border">
                   {reunioes.map((m) => {
@@ -348,8 +348,8 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
                     return (
                       <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                         <div className="min-w-0">
-                          <p className="truncate text-[13px] font-medium text-fg">{m.title}</p>
-                          <p className="text-[12px] text-fg-muted tnum">
+                          <p className="truncate text-fs-3 font-medium text-fg">{m.title}</p>
+                          <p className="text-fs-2 text-fg-muted tnum">
                             {hoje ? "Hoje" : formatInstantDate(m.startAt, { weekday: "short", day: "2-digit", month: "2-digit" })},{" "}
                             {formatInstantTime(m.startAt, { hour: "2-digit", minute: "2-digit" })}
                           </p>
@@ -367,15 +367,15 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
 
           <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
             <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
-              <h2 className="flex items-center gap-2 text-[length:var(--fs-card-title)] font-semibold text-fg">
+              <h2 className="flex items-center gap-2 text-card-title font-semibold text-fg">
                 <CalendarDays size={16} className="text-fg-muted" /> Prazos da semana
               </h2>
-              <Link href="/agenda?view=semana" className="text-[12px] font-medium text-fg-secondary hover:text-brand">
+              <Link href="/agenda?view=semana" className="text-fs-2 font-medium text-fg-secondary hover:text-brand">
                 Abrir agenda
               </Link>
             </header>
             {diasComPrazo.length === 0 ? (
-              <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">
+              <p className="px-4 py-5 text-body text-fg-muted">
                 <Sparkles size={14} className="inline -mt-0.5 mr-1 text-fg-muted" />
                 Nenhum prazo nos seus setores nos próximos 7 dias.
               </p>
@@ -383,7 +383,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
               <ul className="divide-y divide-border">
                 {diasComPrazo.map((dia) => (
                   <li key={dia} className="px-4 py-2.5">
-                    <p className="mb-1.5 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    <p className="mb-1.5 text-micro font-semibold uppercase tracking-wide text-fg-muted">
                       {dia === hojeKey
                         ? "Hoje"
                         : dia === addDaysToKey(hojeKey, 1)

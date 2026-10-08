@@ -100,7 +100,7 @@ export function TemaSelector() {
               >
                 {ativo && <span className="size-2 rounded-full bg-brand" />}
               </span>
-              <span className={`text-[13px] font-semibold ${ativo ? "text-fg" : "text-fg-secondary"}`}>{o.rotulo}</span>
+              <span className={`text-fs-3 font-semibold ${ativo ? "text-fg" : "text-fg-secondary"}`}>{o.rotulo}</span>
             </span>
           </button>
         );

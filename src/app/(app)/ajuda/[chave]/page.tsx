@@ -48,7 +48,7 @@ export default async function ArtigoDeAjudaPage({
       {/* Onde a pessoa está: a central de ajuda e, dentro dela, este artigo
           (revisão de 05/10 — o "Ver toda a ajuda" no fim do cartão passava
           batido). "Voltar para a tela" só quando ela veio pelo "?". */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-3 text-[13px]">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-3 text-fs-3">
         <nav aria-label="Caminho" className="flex items-center gap-1.5 min-w-0">
           <Link href="/ajuda" className="inline-flex items-center gap-1.5 font-medium text-brand hover:underline flex-shrink-0">
             <LifeBuoy size={14} /> Central de ajuda
@@ -96,13 +96,13 @@ export default async function ArtigoDeAjudaPage({
           )}
           {artigo.secoes.map((s, i) => (
             <section key={s.titulo} aria-labelledby={`secao-${i}`} className="flex flex-col gap-3">
-              <h2 id={`secao-${i}`} className="text-[length:var(--fs-section)] font-semibold text-fg">
+              <h2 id={`secao-${i}`} className="text-section font-semibold text-fg">
                 {s.titulo}
               </h2>
               <ol className="flex flex-col gap-2">
                 {s.passos.map((passo, j) => (
-                  <li key={j} className="flex items-start gap-3 text-[14px] leading-relaxed text-fg">
-                    <span className="mt-0.5 inline-flex size-6 flex-shrink-0 items-center justify-center rounded-full bg-brand/10 text-[12px] font-semibold text-brand tabular-nums">
+                  <li key={j} className="flex items-start gap-3 text-fs-4 leading-relaxed text-fg">
+                    <span className="mt-0.5 inline-flex size-6 flex-shrink-0 items-center justify-center rounded-full bg-brand/10 text-fs-2 font-semibold text-brand tabular-nums">
                       {j + 1}
                     </span>
                     <span className="min-w-0 max-w-[72ch]">{passo}</span>
@@ -116,12 +116,12 @@ export default async function ArtigoDeAjudaPage({
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
           {artigo.dicas && artigo.dicas.length > 0 && (
             <Card className="p-4 flex flex-col gap-2.5">
-              <p className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-fg-muted">
+              <p className="flex items-center gap-2 text-fs-2 font-semibold uppercase tracking-wide text-fg-muted">
                 <Lightbulb size={14} className="text-warning-fg" /> Bom saber
               </p>
               <ul className="flex flex-col gap-2">
                 {artigo.dicas.map((d) => (
-                  <li key={d} className="text-[13px] leading-relaxed text-fg-secondary">
+                  <li key={d} className="text-fs-3 leading-relaxed text-fg-secondary">
                     {d}
                   </li>
                 ))}
@@ -129,11 +129,11 @@ export default async function ArtigoDeAjudaPage({
             </Card>
           )}
           <Card className="p-4 flex flex-col gap-2">
-            <p className="text-[12px] font-semibold uppercase tracking-wide text-fg-muted">Nesta página</p>
+            <p className="text-fs-2 font-semibold uppercase tracking-wide text-fg-muted">Nesta página</p>
             <ul className="flex flex-col gap-1.5">
               {artigo.secoes.map((s, i) => (
                 <li key={s.titulo}>
-                  <a href={`#secao-${i}`} className="text-[13px] text-brand hover:underline">
+                  <a href={`#secao-${i}`} className="text-fs-3 text-brand hover:underline">
                     {s.titulo}
                   </a>
                 </li>
@@ -143,10 +143,10 @@ export default async function ArtigoDeAjudaPage({
           {/* A saída para a central, em cartão próprio e com botão — era um
               "Ver toda a ajuda →" cinza no pé do cartão acima (05/10). */}
           <Card className="p-4 flex flex-col gap-2.5 bg-brand-subtle border-brand/25">
-            <p className="flex items-center gap-2 text-[14px] font-semibold text-fg">
+            <p className="flex items-center gap-2 text-fs-4 font-semibold text-fg">
               <LifeBuoy size={16} className="text-brand" /> Não achou o que procurava?
             </p>
-            <p className="text-[13px] leading-relaxed text-fg-secondary">
+            <p className="text-fs-3 leading-relaxed text-fg-secondary">
               A central de ajuda reúne o passo a passo de todas as telas que você usa, com busca.
             </p>
             <Button variant="secondary" size="sm" href="/ajuda" className="self-start">

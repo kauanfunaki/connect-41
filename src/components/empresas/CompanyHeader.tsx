@@ -165,19 +165,19 @@ export function CompanyHeader({
 
           <div className="min-w-0 pt-0.5">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-[length:var(--fs-section)] font-display font-semibold text-fg tracking-[-0.01em] truncate">
+              <h1 className="text-section font-display font-semibold text-fg tracking-[-0.01em] truncate">
                 {name}
               </h1>
               <StatusDot color={STATUS_COLOR[status]} label={STATUS_LABEL[status]} />
             </div>
 
-            {tradeName && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-0.5">{tradeName}</p>}
+            {tradeName && <p className="text-body text-fg-secondary mt-0.5">{tradeName}</p>}
 
             <div className="flex items-center gap-4 flex-wrap mt-2.5">
               {documento && (
                 <Button
                   variant="linkMuted"
-                  className="text-[length:var(--fs-helper)] tnum"
+                  className="text-helper tnum"
                   onClick={copyDocumento}
                   title={`Copiar ${rotuloDoc}`} aria-label={`Copiar ${rotuloDoc}`}
                 >
@@ -186,7 +186,7 @@ export function CompanyHeader({
                 </Button>
               )}
               {location && (
-                <span className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted">
+                <span className="inline-flex items-center gap-1.5 text-helper text-fg-muted">
                   <MapPin size={14} />
                   {location}
                 </span>
@@ -194,7 +194,7 @@ export function CompanyHeader({
               {email && (
                 <a
                   href={`mailto:${email}`}
-                  className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-helper text-fg-muted hover:text-fg transition-colors"
                 >
                   <Mail size={14} />
                   {email}
@@ -203,14 +203,14 @@ export function CompanyHeader({
               {phone && (
                 <a
                   href={`tel:${phone}`}
-                  className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-helper text-fg-muted hover:text-fg transition-colors"
                 >
                   <Phone size={14} />
                   {formatPhone(phone)}
                 </a>
               )}
             </div>
-            {logoError && <p className="text-[length:var(--fs-helper)] text-danger mt-1.5">{logoError}</p>}
+            {logoError && <p className="text-helper text-danger mt-1.5">{logoError}</p>}
           </div>
         </div>
 

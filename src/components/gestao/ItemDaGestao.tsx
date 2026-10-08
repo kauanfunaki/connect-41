@@ -56,10 +56,10 @@ export function ItemDaGestao({
     <li className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
       <div className="min-w-0 flex flex-col gap-1">
         {/* O hover e o peso do link de item das outras listas (DRG-35). */}
-        <Link href={item.href} className="text-[length:var(--fs-ui)] font-semibold text-fg hover:text-brand transition-colors break-words">
+        <Link href={item.href} className="text-ui font-semibold text-fg hover:text-brand transition-colors break-words">
           {item.titulo}
         </Link>
-        <div className="flex flex-wrap items-center gap-1.5 text-[length:var(--fs-2)] text-fg-muted">
+        <div className="flex flex-wrap items-center gap-1.5 text-fs-2 text-fg-muted">
           <span>{ORIGEM[item.origem]}</span>
           <span>· {rotuloDoSetor}</span>
           {!trocavel && <span>· {nomes.length ? nomes.join(", ") : "sem responsável"}</span>}

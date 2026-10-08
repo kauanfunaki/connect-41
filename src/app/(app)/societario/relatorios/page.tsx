@@ -41,8 +41,8 @@ const TD = "py-2 pr-3 tabular-nums";
 // Cartão de seção como o do detalhe do processo: título de 14px com a
 // explicação logo embaixo, e o conteúdo a um `gap` — eram `mb-1`/`mb-3` soltos.
 const SECAO = "p-4 flex flex-col gap-3";
-const TITULO = "text-[14px] font-semibold text-fg";
-const EXPLICACAO = "text-[12px] text-fg-muted";
+const TITULO = "text-fs-4 font-semibold text-fg";
+const EXPLICACAO = "text-fs-2 text-fg-muted";
 
 /** Quantas linhas de custo a tela mostra — o total soma todas. */
 const LINHAS_DE_CUSTO = 30;
@@ -130,7 +130,7 @@ export default async function RelatoriosDoSocietarioPage({
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[760px]">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className={TH}>Tipo</th>
                   <th className={TH}>Previsto</th>
                   <th className={TH}>Processos</th>
@@ -180,12 +180,12 @@ export default async function RelatoriosDoSocietarioPage({
             </p>
           </div>
           {maisVoltas.length === 0 ? (
-            <p className="text-[13px] text-fg-muted">Nenhuma volta de exigência no período.</p>
+            <p className="text-fs-3 text-fg-muted">Nenhuma volta de exigência no período.</p>
           ) : (
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[560px]">
                 <thead>
-                  <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Processo</th>
                     <th className={TH}>Voltas</th>
                     <th className={TH}>Dias úteis</th>
@@ -222,7 +222,7 @@ export default async function RelatoriosDoSocietarioPage({
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[680px]">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className={TH}>Responsável</th>
                   <th className={TH}>Concluídos</th>
                   <th className={TH}>Média de dias</th>
@@ -259,7 +259,7 @@ export default async function RelatoriosDoSocietarioPage({
         <Card as="section" className={SECAO}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className={TITULO}>Custo em taxas por processo</h2>
-            <p className="text-[13px] tabular-nums">
+            <p className="text-fs-3 tabular-nums">
               <strong>{formatarReaisDeCentavos(totais.totalCentavos)}</strong>
               {totais.custoDasVoltasCentavos > 0 && (
                 <span className="text-warning-fg"> · {formatarReaisDeCentavos(totais.custoDasVoltasCentavos)} de reapresentação</span>
@@ -267,12 +267,12 @@ export default async function RelatoriosDoSocietarioPage({
             </p>
           </div>
           {custos.length === 0 ? (
-            <p className="text-[13px] text-fg-muted">Nenhuma taxa registrada nos processos do período.</p>
+            <p className="text-fs-3 text-fg-muted">Nenhuma taxa registrada nos processos do período.</p>
           ) : (
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[680px]">
                 <thead>
-                  <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Processo</th>
                     <th className={TH}>Voltas</th>
                     <th className={TH}>Total</th>

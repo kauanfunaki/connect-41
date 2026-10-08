@@ -163,7 +163,7 @@ export default async function ConferenciaRescisaoPage({
 
       {/* Prazo legal — contagem de prazo é seguro fazer, cálculo de verba não. */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Dados da rescisão</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-3">Dados da rescisão</h2>
         <DadosRescisaoForm
           action={salvarDadosRescisao.bind(null, id, terminationId)}
           defaults={{
@@ -189,7 +189,7 @@ export default async function ConferenciaRescisaoPage({
                   : "bg-surface-2 border-border"
             }`}
           >
-            <p className="text-[13px] text-fg">
+            <p className="text-fs-3 text-fg">
               <strong>Prazo legal de pagamento:</strong> {formatCalendarDate(prazo.dueDate)}{" "}
               {prazo.status === "VENCIDO" && (
                 <span className="text-danger font-medium">— vencido há {Math.abs(prazo.diasRestantes)} dia(s)</span>
@@ -199,12 +199,12 @@ export default async function ConferenciaRescisaoPage({
                 <span className="text-fg-muted">— faltam {prazo.diasRestantes} dia(s)</span>
               )}
             </p>
-            <p className="text-[11px] text-fg-muted mt-1">
+            <p className="text-fs-1 text-fg-muted mt-1">
               CLT art. 477 §6 — 10 dias corridos contados do término do contrato.
             </p>
           </div>
         ) : (
-          <p className="text-[12px] text-fg-muted mt-4">
+          <p className="text-fs-2 text-fg-muted mt-4">
             Informe a data do término do contrato para o sistema acompanhar o prazo legal de pagamento.
           </p>
         )}
@@ -215,10 +215,10 @@ export default async function ConferenciaRescisaoPage({
       {referencia && (
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Cálculo de referência</h2>
-            <span className="text-[11px] text-fg-muted">motor v{referencia.calculo.motorVersao}</span>
+            <h2 className="text-card-title font-semibold text-fg">Cálculo de referência</h2>
+            <span className="text-fs-1 text-fg-muted">motor v{referencia.calculo.motorVersao}</span>
           </div>
-          <p className="text-[12px] text-fg-muted mb-3">
+          <p className="text-fs-2 text-fg-muted mb-3">
             Valor de referência para conferência — <strong className="text-fg-secondary">não é apuração oficial</strong>.
             Compare com o que a contabilidade enviou e registre a divergência quando houver.
           </p>
@@ -232,17 +232,17 @@ export default async function ConferenciaRescisaoPage({
                 Descontos: {formatarReais(referencia.calculo.totalDescontos)}
               </Selo>
             )}
-            <span className="text-[11px] text-fg-muted">
+            <span className="text-fs-1 text-fg-muted">
               INSS/IRRF não entram no cálculo — sem eles não há líquido a apresentar.
             </span>
           </div>
 
           {referencia.calculo.inputsFaltantes.length > 0 && (
             <Aviso tom="atencao" className="mb-3">
-              <p className="text-[12px] font-medium text-fg mb-1">Faltam insumos para calcular tudo:</p>
+              <p className="text-fs-2 font-medium text-fg mb-1">Faltam insumos para calcular tudo:</p>
               <ul className="space-y-0.5">
                 {referencia.calculo.inputsFaltantes.map((i, idx) => (
-                  <li key={idx} className="text-[12px] text-fg-secondary">
+                  <li key={idx} className="text-fs-2 text-fg-secondary">
                     · {i}
                   </li>
                 ))}
@@ -251,7 +251,7 @@ export default async function ConferenciaRescisaoPage({
           )}
 
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-border">
-            <p className="text-[11px] text-fg-muted">
+            <p className="text-fs-1 text-fg-muted">
               Médias em {referencia.config.valores.mediaMeses} meses · tolerância de{" "}
               {referencia.config.valores.toleranciaPct}%
               {referencia.config.valores.cctNome ? ` · CCT: ${referencia.config.valores.cctNome}` : ""}
@@ -264,7 +264,7 @@ export default async function ConferenciaRescisaoPage({
           </div>
 
           {referencia.config.valores.cctObservacoes && (
-            <p className="text-[12px] text-fg-secondary mt-2 whitespace-pre-wrap">
+            <p className="text-fs-2 text-fg-secondary mt-2 whitespace-pre-wrap">
               {referencia.config.valores.cctObservacoes}
             </p>
           )}
@@ -274,8 +274,8 @@ export default async function ConferenciaRescisaoPage({
       {/* Resumo */}
       <Card className="p-5 mb-4">
         <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Resumo da conferência</h2>
-          <span className="text-[12px] text-fg-muted tnum">{resumo.progressoPct}% tratado</span>
+          <h2 className="text-card-title font-semibold text-fg">Resumo da conferência</h2>
+          <span className="text-fs-2 text-fg-muted tnum">{resumo.progressoPct}% tratado</span>
         </div>
         <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
           <div
@@ -286,12 +286,12 @@ export default async function ConferenciaRescisaoPage({
 
         {divergentes.length > 0 && (
           <div className="mt-4 pt-3 border-t border-border">
-            <h3 className="text-[12px] font-semibold text-danger mb-2">
+            <h3 className="text-fs-2 font-semibold text-danger mb-2">
               Divergências a corrigir com a contabilidade
             </h3>
             <ul className="space-y-1.5">
               {divergentes.map((d) => (
-                <li key={d.id} className="text-[12px] text-fg-secondary">
+                <li key={d.id} className="text-fs-2 text-fg-secondary">
                   <strong className="text-fg">{d.itemKey.replace(/_/g, " ")}</strong>
                   {d.note ? ` — ${d.note}` : ""}
                 </li>
@@ -306,13 +306,13 @@ export default async function ConferenciaRescisaoPage({
       {feriasEmAberto.length > 0 && (
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
-            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Férias em aberto (base de conferência)</h2>
+            <h2 className="text-card-title font-semibold text-fg">Férias em aberto (base de conferência)</h2>
             <Button href={`/pessoas/${id}/ferias`} variant="secondary" size="xs">
               <Palmtree size={12} />
               Abrir módulo de Férias
             </Button>
           </div>
-          <p className="text-[12px] text-fg-muted mb-3">
+          <p className="text-fs-2 text-fg-muted mb-3">
             {feriasVencidas.length > 0
               ? `${feriasVencidas.length} período(s) com prazo de gozo vencido — devem constar como férias vencidas no TRCT.`
               : "Nenhum período vencido; os saldos abaixo entram como proporcionais."}
@@ -322,12 +322,12 @@ export default async function ConferenciaRescisaoPage({
               const vencida = v.concessivePeriodEnd != null && v.concessivePeriodEnd < hoje;
               return (
                 <div key={v.id} className="flex items-center justify-between gap-3 py-2 flex-wrap">
-                  <span className="text-[13px] text-fg">
+                  <span className="text-fs-3 text-fg">
                     {formatCalendarDate(v.acquisitivePeriodStart)} → {formatCalendarDate(v.acquisitivePeriodEnd)}
                     <span className="text-fg-muted"> · {v.days} dias</span>
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[12px] text-fg-muted">
+                    <span className="text-fs-2 text-fg-muted">
                       {v.concessivePeriodEnd ? `Gozo até ${formatCalendarDate(v.concessivePeriodEnd)}` : "Sem limite definido"}
                     </span>
                     <Selo cor={vencida ? "bg-danger/10 text-danger border-danger/25" : "bg-surface-2 text-fg-secondary border-border"}>
@@ -344,7 +344,7 @@ export default async function ConferenciaRescisaoPage({
       {/* Checklist agrupado */}
       {RESCISAO_GROUP_ORDER.map((group) => (
         <Card key={group} className="p-5 mb-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">{RESCISAO_GROUP_LABEL[group]}</h2>
+          <h2 className="text-card-title font-semibold text-fg mb-1">{RESCISAO_GROUP_LABEL[group]}</h2>
           <div className="divide-y divide-border">
             {itemsByGroup(group).map((item) => (
               <ItemConferenciaRow

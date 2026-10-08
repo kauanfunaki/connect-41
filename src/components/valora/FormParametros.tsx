@@ -69,8 +69,8 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
       }}
     >
       <Card className="p-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Custo de cada setor</h2>
-        <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
+        <h2 className="text-card-title font-semibold text-fg mb-1">Custo de cada setor</h2>
+        <p className="text-fs-2 text-fg-muted mb-3">
           Custo mensal da equipe: salários, encargos e benefícios de quem atende cliente. A capacidade e o fator vêm dos
           questionários — o fator encolhe os tempos declarados até a carteira caber nas horas da equipe.
         </p>
@@ -79,7 +79,7 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
         <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
           <table className="w-full min-w-[640px]">
             <thead>
-              <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+              <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                 <th className="px-3">Setor</th>
                 <th className="px-3">Custo mensal da equipe</th>
                 <th className="px-3">Capacidade (h/mês)</th>
@@ -141,7 +141,7 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
       </Card>
 
       <Card className="p-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Preço</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-4">Preço</h2>
         <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-3">
           {campoPreco("despesasFixasMes", "Despesas fixas do escritório", "Aluguel, sistemas, gestão e áreas de apoio. Rateadas por hora produtiva.", undefined, "R$")}
           {campoPreco("variaveisPct", "Custos variáveis", "Impostos, inadimplência e taxas — % sobre o preço.", "%")}
@@ -155,7 +155,7 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
           "Salvar parâmetros" (36px) por último. O erro fica acima dele. */}
       {podeEditar && (
         <div>
-          {erro && <p className="mb-3 text-right text-[length:var(--fs-helper)] font-medium text-danger">{erro}</p>}
+          {erro && <p className="mb-3 text-right text-helper font-medium text-danger">{erro}</p>}
           <FormFooter cancelHref="/valora" pending={pendente} submitLabel="Salvar parâmetros" />
         </div>
       )}

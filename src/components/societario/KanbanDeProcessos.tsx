@@ -51,23 +51,23 @@ export function KanbanDeProcessos({ colunas, agora }: Props) {
                   className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface p-3 hover:border-border-strong hover:bg-surface-hover transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-[length:var(--fs-kanban-title)] font-semibold leading-snug line-clamp-2">{l.empresaNome}</span>
+                    <span className="text-kanban-title font-semibold leading-snug line-clamp-2">{l.empresaNome}</span>
                     {/* Selo, e não Badge: é a situação do cartão (regra de 02/10 no Selo). */}
                     {l.prioridade !== "NORMAL" && (
                       <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[l.prioridade])}>{PRIORIDADE_LABEL[l.prioridade]}</Selo>
                     )}
                   </div>
-                  <span className="text-[length:var(--fs-kanban-meta)] text-fg-secondary truncate">
+                  <span className="text-kanban-meta text-fg-secondary truncate">
                     {l.tipoNome}
                     {l.titulo && ` — ${l.titulo}`}
                   </span>
                   <PrazoCelula prazo={l.prazo} />
                   {combinado && l.prazoCombinado && (
-                    <span className={`text-[length:var(--fs-micro)] ${COR_DO_PRAZO_COMBINADO[combinado.situacao]}`}>
+                    <span className={`text-micro ${COR_DO_PRAZO_COMBINADO[combinado.situacao]}`}>
                       {combinado.texto} · {formatInstantDate(l.prazoCombinado)}
                     </span>
                   )}
-                  <div className="flex items-center justify-between gap-2 text-[length:var(--fs-micro)] text-fg-muted">
+                  <div className="flex items-center justify-between gap-2 text-micro text-fg-muted">
                     <span className="truncate">{l.responsavelNome ?? "Sem responsável"}</span>
                     {l.voltas > 0 && (
                       <span className="inline-flex items-center gap-1 text-danger whitespace-nowrap">

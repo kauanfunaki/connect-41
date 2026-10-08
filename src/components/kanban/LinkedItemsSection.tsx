@@ -40,14 +40,14 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
   return (
     <div>
       {links.length === 0 && (
-        <p className="text-[12px] text-fg-muted italic mb-2">Nenhuma tarefa vinculada.</p>
+        <p className="text-fs-2 text-fg-muted italic mb-2">Nenhuma tarefa vinculada.</p>
       )}
 
       {links.length > 0 && (
         <div className="divide-y divide-border mb-3">
           {links.map((l) => (
             <div key={l.id} className="flex items-center justify-between gap-2 py-1.5 group">
-              <Link href={`${basePath}/itens/${l.id}`} className="text-[13px] text-fg hover:text-brand transition-colors truncate">
+              <Link href={`${basePath}/itens/${l.id}`} className="text-fs-3 text-fg hover:text-brand transition-colors truncate">
                 {l.name}
               </Link>
               {canAct && (
@@ -78,7 +78,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
             {matches.length > 0 && (
               <div className="mt-1 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] max-h-48 overflow-y-auto">
                 {showingRecents && (
-                  <p className="px-3 pt-2 pb-1 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Recentes</p>
+                  <p className="px-3 pt-2 pb-1 text-micro font-semibold uppercase tracking-wide text-fg-muted">Recentes</p>
                 )}
                 {matches.map((c) => (
                   <button
@@ -90,7 +90,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
                       setQuery("");
                       setPicking(false);
                     }}
-                    className="w-full text-left px-3 py-2 text-[13px] text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors truncate"
+                    className="w-full text-left px-3 py-2 text-fs-3 text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors truncate"
                   >
                     {c.name}
                   </button>

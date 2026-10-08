@@ -21,8 +21,8 @@ export default function CarreirasSemEmpresaPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-[440px] text-center">
-        <h1 className="text-[length:var(--fs-title)] font-semibold text-fg">Portal de vagas</h1>
-        <p className="text-[length:var(--fs-body)] text-fg-muted mt-2">
+        <h1 className="text-title font-semibold text-fg">Portal de vagas</h1>
+        <p className="text-body text-fg-muted mt-2">
           As vagas ficam na página de cada empresa. Use o link de carreiras que a empresa divulgou — ele termina com o
           nome dela, depois de <span className="font-mono">/carreiras/</span>.
         </p>

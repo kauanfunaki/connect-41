@@ -49,9 +49,9 @@ export default async function AssinaturaPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
             <Card className="p-5 h-full">
-              <p className="text-[length:var(--fs-helper)] text-fg-muted mb-1">Plano</p>
-              <p className="text-[18px] font-semibold text-fg">{subscription.plan.name}</p>
-              <p className="text-[13px] text-fg-muted mt-1">
+              <p className="text-helper text-fg-muted mb-1">Plano</p>
+              <p className="text-fs-7 font-semibold text-fg">{subscription.plan.name}</p>
+              <p className="text-fs-3 text-fg-muted mt-1">
                 {subscription.plan.billingType === "FLAT_MONTHLY"
                   ? `${fmt(subscription.plan.basePrice)}/mês`
                   : `${fmt(subscription.plan.pricePerUser)}/usuário/mês`}
@@ -59,7 +59,7 @@ export default async function AssinaturaPage() {
                 Status: {SUBSCRIPTION_STATUS_LABEL[subscription.status]}
               </p>
               {subscription.currentPeriodEnd && (
-                <p className="text-[12px] text-fg-muted mt-1">
+                <p className="text-fs-2 text-fg-muted mt-1">
                   Próxima renovação: {formatCalendarDate(subscription.currentPeriodEnd)}
                 </p>
               )}
@@ -67,8 +67,8 @@ export default async function AssinaturaPage() {
 
             {seatLimit != null && (
               <Card className="p-5 h-full">
-                <p className="text-[length:var(--fs-helper)] text-fg-muted mb-1">Usuários</p>
-                <p className="text-[18px] font-semibold text-fg tnum">{activeUsers} / {seatLimit}</p>
+                <p className="text-helper text-fg-muted mb-1">Usuários</p>
+                <p className="text-fs-7 font-semibold text-fg tnum">{activeUsers} / {seatLimit}</p>
                 <div className="w-full h-2 rounded-full bg-surface-2 mt-2 overflow-hidden">
                   <div
                     className={`h-full rounded-full ${seatsUsedPct === 100 ? "bg-danger" : "bg-brand"}`}
@@ -76,7 +76,7 @@ export default async function AssinaturaPage() {
                   />
                 </div>
                 {seatsUsedPct === 100 && (
-                  <p className="text-[12px] text-danger mt-2">
+                  <p className="text-fs-2 text-danger mt-2">
                     Limite atingido — novos usuários não podem ser criados até um upgrade.
                   </p>
                 )}
@@ -84,8 +84,8 @@ export default async function AssinaturaPage() {
             )}
 
             <Card className="p-5 h-full">
-              <p className="text-[length:var(--fs-helper)] text-fg-muted mb-1">Implantação</p>
-              <p className="text-[18px] font-semibold text-fg">
+              <p className="text-helper text-fg-muted mb-1">Implantação</p>
+              <p className="text-fs-7 font-semibold text-fg">
                 {subscription.setupFeePaidAt
                   ? `Paga em ${formatInstantDate(subscription.setupFeePaidAt)}`
                   : `Pendente${subscription.setupFeeAmount ? ` — ${fmt(subscription.setupFeeAmount)}` : ""}`}
@@ -93,7 +93,7 @@ export default async function AssinaturaPage() {
             </Card>
           </div>
 
-          <p className="text-[length:var(--fs-helper)] text-fg-muted">
+          <p className="text-helper text-fg-muted">
             Precisa de mais usuários ou trocar de plano? Entre em contato com a 41 Tech.
           </p>
         </div>

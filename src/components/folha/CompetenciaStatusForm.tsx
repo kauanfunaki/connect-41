@@ -49,7 +49,7 @@ export function CompetenciaStatusForm({ action, currentStatus }: Props) {
           {isPending ? "Salvando…" : "Atualizar Status"}
         </Button>
       </form>
-      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger mt-1">{state.error}</p>}
+      {state?.error && <p className="text-helper font-medium text-danger mt-1">{state.error}</p>}
     </div>
   );
 }

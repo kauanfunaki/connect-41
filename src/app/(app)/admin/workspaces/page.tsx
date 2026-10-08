@@ -35,8 +35,8 @@ export default async function WorkspacesPage() {
               <div className="flex items-center gap-3 min-w-0">
                 <AvatarImage src={t.logoUrl} name={t.name} size={32} shape="lg" fontSize={13} />
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-fg truncate">{t.name}</p>
-                  <p className="text-[11px] text-fg-muted font-mono truncate">{t.cnpj ? formatCnpj(t.cnpj) : t.slug}</p>
+                  <p className="text-fs-3 font-medium text-fg truncate">{t.name}</p>
+                  <p className="text-fs-1 text-fg-muted font-mono truncate">{t.cnpj ? formatCnpj(t.cnpj) : t.slug}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">

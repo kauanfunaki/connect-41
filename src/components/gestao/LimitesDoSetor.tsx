@@ -93,7 +93,7 @@ export function LimitesDoSetor({
           Salvar
         </Button>
       )}
-      {msg && <span className={`ml-2 text-[length:var(--fs-2)] ${msg.tipo === "erro" ? "text-danger" : "text-success-fg"}`}>{msg.texto}</span>}
+      {msg && <span className={`ml-2 text-fs-2 ${msg.tipo === "erro" ? "text-danger" : "text-success-fg"}`}>{msg.texto}</span>}
     </>
   );
 

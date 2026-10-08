@@ -112,7 +112,7 @@ export default async function AdminAtendentesPage() {
           <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
             <table className="w-full min-w-[640px]">
               <thead>
-                <tr className="border-b border-border text-[11px] text-fg-muted uppercase tracking-wide">
+                <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
                   <th className="px-4 py-3">Pessoa</th>
                   <th className="px-4 py-3">
                     <FiltroDaColuna rotulo="Conta (User)" chave="conta" align={hasChatwoot ? "left" : "right"} />
@@ -146,8 +146,8 @@ export default async function AdminAtendentesPage() {
 
       {hasChatwoot && (
         <section className="mt-10">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Papéis dos atendentes</h2>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 mb-4">
+          <h2 className="text-section font-semibold text-fg">Papéis dos atendentes</h2>
+          <p className="text-helper text-fg-muted mt-0.5 mb-4">
             <span className="font-medium text-fg">Recepção</span> é quem recebe o atendimento antes
             de passar para o setor — a barreira entre a nota de triagem e a de tratativa é a
             primeira resposta ao cliente de alguém que não está marcado assim.{" "}
@@ -172,7 +172,7 @@ export default async function AdminAtendentesPage() {
             <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
               <table className="w-full min-w-[560px]">
                 <thead>
-                  <tr className="border-b border-border text-[11px] text-fg-muted uppercase tracking-wide">
+                  <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
                     <th className="px-4 py-3">Atendente do Chatwoot</th>
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Recepção" chave="recepcao" />
@@ -188,8 +188,8 @@ export default async function AdminAtendentesPage() {
                     return (
                       <LinhaFiltravel key={r.chave} id={r.chave} className="border-b border-border">
                         <td className="px-4 py-3">
-                          <span className="text-[length:var(--fs-ui)] text-fg">{r.nome}</span>
-                          <span className="ml-2 text-[length:var(--fs-micro)] text-fg-muted tnum">
+                          <span className="text-ui text-fg">{r.nome}</span>
+                          <span className="ml-2 text-micro text-fg-muted tnum">
                             {r.mensagens > 0 ? `${r.mensagens} mensagens` : "sem mensagens ainda"}
                           </span>
                         </td>

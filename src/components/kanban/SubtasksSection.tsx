@@ -56,7 +56,7 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
   return (
     <div>
       {subtasks.length === 0 && (
-        <p className="text-[12px] text-fg-muted italic mb-2">Nenhuma subtarefa ainda.</p>
+        <p className="text-fs-2 text-fg-muted italic mb-2">Nenhuma subtarefa ainda.</p>
       )}
 
       {subtasks.length > 0 && (
@@ -87,11 +87,11 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
             </button>
             <Link
               href={`${basePath}/itens/${s.id}`}
-              className="flex-1 min-w-0 flex items-center gap-2 text-[13px] text-fg hover:text-brand transition-colors"
+              className="flex-1 min-w-0 flex items-center gap-2 text-fs-3 text-fg hover:text-brand transition-colors"
             >
               <span className={`truncate ${s.isTerminal ? "text-fg-muted" : ""}`}>{s.title}</span>
             </Link>
-            <span className="text-[11px] text-fg-muted flex-shrink-0">{s.stageName}</span>
+            <span className="text-fs-1 text-fg-muted flex-shrink-0">{s.stageName}</span>
             {canDelete && (
               <button
                 type="button"

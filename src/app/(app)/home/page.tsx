@@ -530,7 +530,7 @@ export default async function HomePage() {
       <div className="flex items-center justify-between gap-3 bg-brand-subtle border border-brand/20 rounded-lg px-4 py-3 mb-4">
         <div className="flex items-center gap-2.5 min-w-0">
           <Video size={16} className="text-brand flex-shrink-0" />
-          <p className="text-[length:var(--fs-body)] text-fg truncate">
+          <p className="text-body text-fg truncate">
             <span className="font-medium">{nextMeeting.title}</span>
             <span className="text-fg-muted">
               {" · "}
@@ -549,9 +549,9 @@ export default async function HomePage() {
 
     "meu-dia": (
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Meu dia</h2>
+        <h2 className="text-section font-semibold text-fg mb-3.5">Meu dia</h2>
         {meuDiaItems.length === 0 ? (
-          <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhum item com prazo ou atribuído a você.</p>
+          <p className="text-body text-fg-muted">Nenhum item com prazo ou atribuído a você.</p>
         ) : (
           <div className="space-y-1">
             {meuDiaItems.map((item) => {
@@ -562,7 +562,7 @@ export default async function HomePage() {
                   href={`${boardPath({ id: item.pipelineId })}/itens/${item.id}`}
                   className="flex items-center justify-between gap-3 py-2 group"
                 >
-                  <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
+                  <span className="text-body text-fg group-hover:text-brand transition-colors truncate min-w-0">
                     {item.title ?? (item.entityId ? entityNames[item.entityId] : null) ?? "(sem título)"}
                     <span className="text-fg-muted font-normal">
                       {" · "}
@@ -576,7 +576,7 @@ export default async function HomePage() {
                       {badge.label}
                     </Selo>
                   ) : (
-                    <span className="flex-shrink-0 text-[length:var(--fs-helper)] text-fg-muted">Sem prazo</span>
+                    <span className="flex-shrink-0 text-helper text-fg-muted">Sem prazo</span>
                   )}
                 </Link>
               );
@@ -588,14 +588,14 @@ export default async function HomePage() {
 
     transferencias: (
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Transferências a revisar</h2>
+        <h2 className="text-section font-semibold text-fg mb-3.5">Transferências a revisar</h2>
         {incomingHandoffsRaw.length === 0 ? (
-          <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma transferência aguardando o seu setor.</p>
+          <p className="text-body text-fg-muted">Nenhuma transferência aguardando o seu setor.</p>
         ) : (
           <div className="space-y-3">
             {incomingHandoffsRaw.map((h) => (
               <div key={h.id} className="flex items-center justify-between gap-3">
-                <p className="text-[length:var(--fs-body)] text-fg truncate min-w-0">
+                <p className="text-body text-fg truncate min-w-0">
                   {sectorLabels[h.fromSector] ?? h.fromSector} →{" "}
                   {h.sectors.map((s) => sectorLabels[s.sectorCode] ?? s.sectorCode).join(", ")}
                   {" · "}
@@ -614,22 +614,22 @@ export default async function HomePage() {
 
     workspace: (
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Visão do workspace</h2>
+        <h2 className="text-section font-semibold text-fg mb-3.5">Visão do workspace</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">
+            <p className="text-fs-1 font-medium text-fg-muted uppercase tracking-wide mb-2.5">
               Top {STAGE_CHART_LIMIT} · cards por estágio
             </p>
             <HorizontalBarChart data={stageChartData} emptyLabel="Nenhum card em aberto nos seus kanbans." />
             {stageChartHiddenCount > 0 && (
-              <p className="text-[11px] text-fg-muted mt-2.5">
+              <p className="text-fs-1 text-fg-muted mt-2.5">
                 + {stageChartHiddenCount} outro{stageChartHiddenCount !== 1 ? "s" : ""} estágio
                 {stageChartHiddenCount !== 1 ? "s" : ""} com menos cards
               </p>
             )}
           </div>
           <div>
-            <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">Movimentações (14 dias)</p>
+            <p className="text-fs-1 font-medium text-fg-muted uppercase tracking-wide mb-2.5">Movimentações (14 dias)</p>
             <TrendChart data={trendData} />
           </div>
         </div>
@@ -638,9 +638,9 @@ export default async function HomePage() {
 
     agenda: (
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Agenda</h2>
+        <h2 className="text-section font-semibold text-fg mb-3.5">Agenda</h2>
         {upcomingMeetings.length === 0 ? (
-          <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma reunião agendada.</p>
+          <p className="text-body text-fg-muted">Nenhuma reunião agendada.</p>
         ) : (
           <div className="space-y-2.5">
             {upcomingMeetings.map((m) => (
@@ -651,10 +651,10 @@ export default async function HomePage() {
                 rel="noopener noreferrer"
                 className="flex items-center justify-between gap-2 group"
               >
-                <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
+                <span className="text-body text-fg group-hover:text-brand transition-colors truncate min-w-0">
                   {m.title}
                 </span>
-                <span className="text-[length:var(--fs-helper)] text-fg-muted tnum flex-shrink-0">
+                <span className="text-helper text-fg-muted tnum flex-shrink-0">
                   {formatMeetingWhen(m.startAt, todayStart, todayEnd)}
                 </span>
               </a>
@@ -666,9 +666,9 @@ export default async function HomePage() {
 
     atividade: (
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Atividade</h2>
+        <h2 className="text-section font-semibold text-fg mb-3.5">Atividade</h2>
         {activityGroups.length === 0 ? (
-          <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
+          <p className="text-body text-fg-muted">Nenhuma atividade registrada ainda.</p>
         ) : (
           <div className="space-y-3">
             {activityGroups.map((g) => (
@@ -677,7 +677,7 @@ export default async function HomePage() {
                   {g.userName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[length:var(--fs-body)] text-fg-secondary leading-snug">
+                  <p className="text-body text-fg-secondary leading-snug">
                     <span className="font-medium text-fg group-hover:text-brand transition-colors">{g.userName}</span>{" "}
                     {g.count > 1 ? (
                       `fez ${g.count} alterações em `
@@ -686,7 +686,7 @@ export default async function HomePage() {
                     )}
                     <span className="font-medium">{(g.entityId ? entityNames[g.entityId] : null) ?? "(tarefa)"}</span>
                   </p>
-                  <p className="text-[length:var(--fs-helper)] text-fg-muted">{formatRelativeTime(g.createdAt)}</p>
+                  <p className="text-helper text-fg-muted">{formatRelativeTime(g.createdAt)}</p>
                 </div>
               </Link>
             ))}
@@ -697,7 +697,7 @@ export default async function HomePage() {
 
     setores: sectorWidgets.length > 0 && (
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">
+        <h2 className="text-section font-semibold text-fg mb-3.5">
           {sectorWidgets.length > 1 ? "Seus setores" : "Seu setor"}
         </h2>
         <div className="flex flex-col gap-2">
@@ -710,8 +710,8 @@ export default async function HomePage() {
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-fg truncate">{s.label}</p>
-                  <p className="text-[11px] text-fg-muted">
+                  <p className="text-fs-3 font-medium text-fg truncate">{s.label}</p>
+                  <p className="text-fs-1 text-fg-muted">
                     {s.openCount} aberto{s.openCount !== 1 ? "s" : ""}
                     {s.overdueCount > 0 && <span className="text-danger"> · {s.overdueCount} atrasado{s.overdueCount !== 1 ? "s" : ""}</span>}
                   </p>
@@ -735,7 +735,7 @@ export default async function HomePage() {
               : <>Aqui está um resumo do workspace {tenant?.name ? <span className="text-fg font-medium">{tenant.name}</span> : ""}</>}</>}
         action={
           <div className="flex items-center gap-3">
-            <p className="hidden sm:block text-[length:var(--fs-helper)] text-fg-muted tnum">{today}</p>
+            <p className="hidden sm:block text-helper text-fg-muted tnum">{today}</p>
             <CustomizeHomeButton
               selected={selectedWidgets}
               disponiveis={disponiveis}
@@ -801,7 +801,7 @@ export default async function HomePage() {
         abaixoDosPaineis.length === 0 &&
         mainWidgets.length === 0 &&
         sideWidgets.length === 0 && (
-        <p className="text-[length:var(--fs-body)] text-fg-muted">
+        <p className="text-body text-fg-muted">
           Todos os blocos estão ocultos. Use <span className="text-fg font-medium">Personalizar</span> para trazer algum de volta.
         </p>
       )}

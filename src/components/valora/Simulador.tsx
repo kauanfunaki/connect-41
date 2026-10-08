@@ -59,7 +59,7 @@ export function Simulador({
             `FieldGrid` e as caixas de marcar em grade, com título — eram uma
             fileira corrida, com "Empresa sem movimento" no meio dos setores. */}
         <Card className="p-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Cliente</h2>
+          <h2 className="text-card-title font-semibold text-fg mb-4">Cliente</h2>
           <FieldGrid>
             <CampoForm label="Nome" htmlFor="simulacao-cliente">
               <Input
@@ -81,7 +81,7 @@ export function Simulador({
             </CampoForm>
           </FieldGrid>
           <fieldset className="mt-4">
-            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Setores</legend>
+            <legend className="text-label font-medium text-fg mb-1.5">Setores</legend>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
               {catalogo.setores.map((s) => (
                 <Checkbox
@@ -102,7 +102,7 @@ export function Simulador({
             letras ("Alvarás e licenças que a empresa mantém"); em três colunas
             quebravam em duas linhas e desciam o campo em relação ao vizinho. */}
         <Card className="p-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Volumes</h2>
+          <h2 className="text-card-title font-semibold text-fg mb-4">Volumes</h2>
           <FieldGrid>
             {volumes.map((c) => (
               <CampoForm key={c.chave} label={c.rotulo} htmlFor={`simulacao-volume-${c.chave}`} helper={c.ajuda}>
@@ -121,7 +121,7 @@ export function Simulador({
         </Card>
 
         <Card className="p-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Operação</h2>
+          <h2 className="text-card-title font-semibold text-fg mb-4">Operação</h2>
           <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
             {marcadores.map((c) => (
               <div key={c.chave} className="min-w-0">
@@ -130,15 +130,15 @@ export function Simulador({
                   checked={!!perfil.marcadores[c.chave]}
                   onChange={(e) => muda({ marcadores: { ...perfil.marcadores, [c.chave]: e.target.checked } })}
                 />
-                {c.ajuda && <span className="block pl-6 mt-0.5 text-[length:var(--fs-helper)] text-fg-muted">{c.ajuda}</span>}
+                {c.ajuda && <span className="block pl-6 mt-0.5 text-helper text-fg-muted">{c.ajuda}</span>}
               </div>
             ))}
           </div>
         </Card>
 
         <Card className="p-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Situações que dão mais trabalho</h2>
-          <p className="text-[length:var(--fs-2)] text-fg-muted mb-4">O percentual é o que cada setor disse que a situação acrescenta ao tempo dele.</p>
+          <h2 className="text-card-title font-semibold text-fg mb-1">Situações que dão mais trabalho</h2>
+          <p className="text-fs-2 text-fg-muted mb-4">O percentual é o que cada setor disse que a situação acrescenta ao tempo dele.</p>
           <div className="grid gap-5 md:grid-cols-2">
             {catalogo.setores.map((s) => {
               const doSetor = catalogo.complexidades.filter((c) => c.setor === s.codigo);
@@ -148,7 +148,7 @@ export function Simulador({
               // inline-flex, e sem `flex-col` duas curtas dividiam a linha).
               return (
                 <fieldset key={s.codigo} className="min-w-0">
-                  <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">{s.nome}</legend>
+                  <legend className="text-label font-medium text-fg mb-1.5">{s.nome}</legend>
                   <div className="flex flex-col items-start gap-2">
                     {doSetor.map((c) => (
                       <Checkbox
@@ -171,13 +171,13 @@ export function Simulador({
 
         <Card className="p-4">
           <details>
-            <summary className="text-[length:var(--fs-label)] font-semibold text-fg cursor-pointer">Detalhamento por atividade</summary>
+            <summary className="text-label font-semibold text-fg cursor-pointer">Detalhamento por atividade</summary>
             {/* Casco padrão dentro do cartão (30/09); a atividade, texto
                 corrido com o código na frente, fica à esquerda. */}
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border mt-3">
               <table className="w-full min-w-[560px]">
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-3">Atividade</th>
                     <th className="px-3">Vezes/mês</th>
                     <th className="px-3">Min por vez</th>
@@ -203,7 +203,7 @@ export function Simulador({
                 </tbody>
               </table>
             </div>
-            <p className="text-[length:var(--fs-micro)] text-fg-muted mt-2">
+            <p className="text-micro text-fg-muted mt-2">
               Minutos já ajustados pela capacidade de cada equipe. A complexidade entra depois, no total do setor.
             </p>
           </details>
@@ -212,11 +212,11 @@ export function Simulador({
 
       <Card className="p-4 lg:sticky lg:top-4 space-y-4">
         <div>
-          <p className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted">Honorário mensal</p>
-          <p className="text-[length:var(--fs-metric)] font-semibold tabular-nums leading-tight">{brl(r.mensal.alvo)}</p>
-          <p className="text-[length:var(--fs-2)] text-fg-muted">alvo, com {parametros.margemAlvoPct}% de margem</p>
+          <p className="text-micro uppercase tracking-wide text-fg-muted">Honorário mensal</p>
+          <p className="text-metric font-semibold tabular-nums leading-tight">{brl(r.mensal.alvo)}</p>
+          <p className="text-fs-2 text-fg-muted">alvo, com {parametros.margemAlvoPct}% de margem</p>
         </div>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[length:var(--fs-2)]">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-fs-2">
           <div>
             <dt className="text-fg-muted">Piso</dt>
             <dd className="font-medium tabular-nums">{brl(r.mensal.piso)}</dd>
@@ -238,15 +238,15 @@ export function Simulador({
             <dd className="font-medium tabular-nums">{brl(r.implantacao.alvo)}</dd>
           </div>
         </dl>
-        <p className="text-[length:var(--fs-micro)] text-fg-muted">
+        <p className="text-micro text-fg-muted">
           Tabela é o preço de partida: dá {parametros.descontoMaximoPct}% de desconto e ainda chega ao alvo. Abaixo do piso,
           a {parametros.margemPisoPct > 0 ? `margem fica menor que ${parametros.margemPisoPct}%` : "empresa paga para atender"}.
         </p>
 
         {r.avulsos.length > 0 && (
           <div className="border-t border-border-soft pt-3">
-            <p className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted mb-1.5">Avulsos (por processo, fora da mensalidade)</p>
-            <div className="space-y-1 text-[length:var(--fs-2)]">
+            <p className="text-micro uppercase tracking-wide text-fg-muted mb-1.5">Avulsos (por processo, fora da mensalidade)</p>
+            <div className="space-y-1 text-fs-2">
               {r.avulsos.map((a) => (
                 <div key={a.id} className="flex justify-between gap-2">
                   <span className="min-w-0">{a.nome}</span>
@@ -257,7 +257,7 @@ export function Simulador({
           </div>
         )}
 
-        <div className="border-t border-border-soft pt-3 space-y-1.5 text-[length:var(--fs-2)]">
+        <div className="border-t border-border-soft pt-3 space-y-1.5 text-fs-2">
           {r.setores.map((s) => (
             <div key={s.codigo} className="flex justify-between gap-2">
               <span>
@@ -272,7 +272,7 @@ export function Simulador({
         </div>
 
         {r.avisos.length > 0 && (
-          <ul className="text-[length:var(--fs-micro)] text-warning-fg space-y-1 list-disc pl-4">
+          <ul className="text-micro text-warning-fg space-y-1 list-disc pl-4">
             {r.avisos.map((a) => (
               <li key={a}>{a}</li>
             ))}
@@ -306,7 +306,7 @@ export function Simulador({
             <Button type="submit" loading={pendente} disabled={pendente} className="w-full">
               <Save size={14} /> Salvar proposta
             </Button>
-            {erro && <p className="text-[length:var(--fs-2)] text-danger">{erro}</p>}
+            {erro && <p className="text-fs-2 text-danger">{erro}</p>}
           </form>
         )}
       </Card>

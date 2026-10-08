@@ -53,11 +53,11 @@ function NotaFiscal({ tipo, cor, numero, emitente, valor, data }: { tipo: string
         <Selo cor={cor}>{tipo}</Selo>
         <span className="text-[10.5px] text-[#6B7489] tabular-nums">Nº {numero}</span>
       </div>
-      <p className="text-[13px] font-semibold leading-tight">{emitente}</p>
+      <p className="text-fs-3 font-semibold leading-tight">{emitente}</p>
       <div className="border-t border-dashed border-[#DFE3EC]" />
       <div className="flex items-end justify-between">
         <span className="text-[10.5px] text-[#6B7489]">emitida em {data}</span>
-        <span className="text-[16px] font-semibold tabular-nums">{valor}</span>
+        <span className="text-fs-6 font-semibold tabular-nums">{valor}</span>
       </div>
     </div>
   );
@@ -160,38 +160,38 @@ function CenaDasAprovacoes() {
       </Cartao>
       <Cartao className="left-[10%] top-[16%] w-[80%] z-10 p-5 flex flex-col gap-4" entrar={120}>
         <div className="flex items-center justify-between">
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#6B7489]">
+          <span className="inline-flex items-center gap-1.5 text-fs-1 font-semibold uppercase tracking-wider text-[#6B7489]">
             <ShieldCheck size={14} className="text-[#1F5EEA]" /> Aguardando a sua aprovação
           </span>
           <Selo cor="verde">Dentro do teto</Selo>
         </div>
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[15px] font-semibold">OFICINA DO PAULO</p>
-            <p className="text-[12px] text-[#6B7489]">Manutenção preventiva · Transportes Modelo</p>
+            <p className="text-fs-5 font-semibold">OFICINA DO PAULO</p>
+            <p className="text-fs-2 text-[#6B7489]">Manutenção preventiva · Transportes Modelo</p>
             <p className="text-[11.5px] text-[#6B7489] mt-1">vence 09/10/2026</p>
           </div>
           <p className="text-[26px] font-semibold tabular-nums tracking-[-0.01em] whitespace-nowrap">R$ 1.560,00</p>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
-          <span className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#0E7A55] text-[13px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(14,122,85,0.7)]">
+          <span className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#0E7A55] text-fs-3 font-semibold text-white shadow-[0_6px_16px_-6px_rgba(14,122,85,0.7)]">
             <Check size={15} /> Aprovar
           </span>
-          <span className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#F1C9C4] text-[13px] font-semibold text-[#B3372C]">
+          <span className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#F1C9C4] text-fs-3 font-semibold text-[#B3372C]">
             <X size={15} /> Reprovar
           </span>
         </div>
       </Cartao>
       <Cartao className="left-[4%] bottom-[8%] w-[38%] z-20 p-3 flex flex-col gap-1" entrar={320}>
         <span className="text-[10.5px] font-semibold uppercase tracking-wider text-[#6B7489]">Seu teto</span>
-        <span className="text-[16px] font-semibold tabular-nums">R$ 5.000,00</span>
+        <span className="text-fs-6 font-semibold tabular-nums">R$ 5.000,00</span>
         <span className="text-[10.5px] text-[#6B7489]">por conta · acima disso, outra pessoa aprova</span>
       </Cartao>
       <Cartao className="right-[4%] bottom-[4%] w-[54%] z-20 p-3 flex items-center gap-2.5" entrar={480}>
         <CheckCircle2 size={22} className="text-[#0E7A55] flex-shrink-0" />
         <span className="min-w-0">
-          <span className="block text-[12px] font-semibold">Pagamento aprovado</span>
-          <span className="block text-[11px] text-[#6B7489] truncate">R$ 1.560,00 · o escritório já foi avisado</span>
+          <span className="block text-fs-2 font-semibold">Pagamento aprovado</span>
+          <span className="block text-fs-1 text-[#6B7489] truncate">R$ 1.560,00 · o escritório já foi avisado</span>
         </span>
       </Cartao>
     </>
@@ -216,7 +216,7 @@ function CenaDoCaixa() {
     <>
       <Cartao className="left-[5%] top-[5%] w-[90%] z-0 p-5 flex flex-col gap-3" entrar={0}>
         <div className="flex items-center justify-between">
-          <p className="text-[14px] font-semibold">Fluxo de caixa</p>
+          <p className="text-fs-4 font-semibold">Fluxo de caixa</p>
           <span className="flex items-center gap-3 text-[10.5px] text-[#6B7489]">
             <span className="inline-flex items-center gap-1">
               <span className="size-2 rounded-sm bg-[#0E7A55]" /> Entradas
@@ -254,10 +254,10 @@ function CenaDoCaixa() {
         </svg>
       </Cartao>
       <Cartao className="left-[2%] bottom-[3%] w-[48%] z-10 p-4 flex flex-col gap-1" entrar={300}>
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#6B7489]">
+        <span className="inline-flex items-center gap-1.5 text-fs-1 font-semibold text-[#6B7489]">
           <TrendingUp size={13} className="text-[#0E7A55]" /> Saldo projetado em 30 dias
         </span>
-        <span className="text-[22px] font-semibold tabular-nums tracking-[-0.01em] text-[#0E7A55]">R$ 15.014,00</span>
+        <span className="text-fs-8 font-semibold tabular-nums tracking-[-0.01em] text-[#0E7A55]">R$ 15.014,00</span>
         <span className="text-[10.5px] text-[#6B7489] tabular-nums">+R$ 36.700 a receber · −R$ 21.686 a pagar</span>
       </Cartao>
       <Cartao className="right-[3%] bottom-[10%] z-10 px-3 py-2 flex items-center gap-2 !rounded-full" entrar={480}>

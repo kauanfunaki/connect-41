@@ -111,14 +111,14 @@ export default async function HandoffDetailPage({
             {entity ? (
               <Link
                 href={entityHref}
-                className="text-[length:var(--fs-section)] font-display font-semibold text-fg hover:text-brand transition-colors"
+                className="text-section font-display font-semibold text-fg hover:text-brand transition-colors"
               >
                 {entity.name}
               </Link>
             ) : (
-              <p className="text-[length:var(--fs-section)] font-display font-semibold text-fg-muted">(removido)</p>
+              <p className="text-section font-display font-semibold text-fg-muted">(removido)</p>
             )}
-            <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
+            <p className="text-helper text-fg-muted mt-1">
               Solicitado por {handoff.requester.name} em{" "}
               {formatInstantDate(handoff.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
             </p>
@@ -127,18 +127,18 @@ export default async function HandoffDetailPage({
       </Card>
 
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Informações adicionais</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-2">Informações adicionais</h2>
         {handoff.message ? (
-          <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">
+          <p className="text-body text-fg-secondary whitespace-pre-wrap">
             <TextoComLinks texto={handoff.message} />
           </p>
         ) : (
-          <p className="text-[length:var(--fs-body)] text-fg-muted italic">Nenhuma informação geral adicionada.</p>
+          <p className="text-body text-fg-muted italic">Nenhuma informação geral adicionada.</p>
         )}
         {handoff.description && (
           <>
-            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2 mt-4">Descrição</h2>
-            <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">
+            <h2 className="text-card-title font-semibold text-fg mb-2 mt-4">Descrição</h2>
+            <p className="text-body text-fg-secondary whitespace-pre-wrap">
               <TextoComLinks texto={handoff.description} />
             </p>
           </>
@@ -184,18 +184,18 @@ export default async function HandoffDetailPage({
               </div>
 
               {!podeLerInstrucao ? (
-                <p className="text-[length:var(--fs-body)] text-fg-muted italic mb-3 flex items-center gap-1.5">
+                <p className="text-body text-fg-muted italic mb-3 flex items-center gap-1.5">
                   <Lock size={14} aria-hidden className="shrink-0" />
                   Instrução restrita ao setor {sectorLabel}.
                 </p>
               ) : s.instruction ? (
-                <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap mb-3">{s.instruction}</p>
+                <p className="text-body text-fg-secondary whitespace-pre-wrap mb-3">{s.instruction}</p>
               ) : (
-                <p className="text-[length:var(--fs-body)] text-fg-muted italic mb-3">Sem instrução específica para este setor.</p>
+                <p className="text-body text-fg-muted italic mb-3">Sem instrução específica para este setor.</p>
               )}
 
               <div className="flex items-center gap-2 pt-3 border-t border-border flex-wrap">
-                <span className="text-[12px] text-fg-muted">
+                <span className="text-fs-2 text-fg-muted">
                   {assigneeNames.length > 1 ? "Responsáveis:" : "Responsável:"}
                 </span>
                 {canManage ? (
@@ -212,13 +212,13 @@ export default async function HandoffDetailPage({
                       currentAssigneeId={s.assignees[0]?.user.id ?? null}
                     />
                     {assigneeNames.length > 1 && (
-                      <span className="text-[12px] text-fg-muted">
+                      <span className="text-fs-2 text-fg-muted">
                         + {assigneeNames.slice(1).join(", ")}
                       </span>
                     )}
                   </>
                 ) : (
-                  <span className="text-[12px] text-fg">
+                  <span className="text-fs-2 text-fg">
                     {assigneeNames.length > 0 ? assigneeNames.join(", ") : "Sem responsável"}
                   </span>
                 )}
@@ -226,7 +226,7 @@ export default async function HandoffDetailPage({
                     fato finalizou — dados migrados do modelo antigo podiam ter
                     resolvedAt preenchido em setor ainda "Resolvendo". */}
                 {s.status === "DONE" && s.resolvedAt && (
-                  <span className="text-[12px] text-fg-muted ml-auto">
+                  <span className="text-fs-2 text-fg-muted ml-auto">
                     Finalizada em {formatInstantDateTime(s.resolvedAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </span>
                 )}
@@ -238,13 +238,13 @@ export default async function HandoffDetailPage({
 
       {views.length > 0 && (
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2 flex items-center gap-1.5">
+          <h2 className="text-card-title font-semibold text-fg mb-2 flex items-center gap-1.5">
             <Eye size={14} className="text-fg-muted" />
             Visualizado por
           </h2>
           <div className="space-y-1.5">
             {views.map((v) => (
-              <p key={v.id} className="text-[13px] text-fg-secondary">
+              <p key={v.id} className="text-fs-3 text-fg-secondary">
                 <span className="font-medium text-fg">{v.user.name}</span>{" "}
                 <span className="text-fg-muted">
                   em {formatInstantDateTime(v.viewedAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}

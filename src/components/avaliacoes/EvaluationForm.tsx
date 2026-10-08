@@ -51,7 +51,7 @@ export function EvaluationForm({ action, competencies, cancelHref, defaultValues
               <div key={c.id} className="flex items-center justify-between gap-4 min-w-0">
                 <label
                   htmlFor={`score_${c.id}`}
-                  className="min-w-0 text-[length:var(--fs-label)] font-medium leading-5 text-fg"
+                  className="min-w-0 text-label font-medium leading-5 text-fg"
                 >
                   {c.name}
                 </label>

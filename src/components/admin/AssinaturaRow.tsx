@@ -62,7 +62,7 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
     return (
       <form action={formAction} className="px-4 py-4 bg-surface-hover space-y-4">
         <input type="hidden" name="tenantId" value={tenant.id} />
-        <p className="text-[13px] text-fg font-medium">{tenant.name}</p>
+        <p className="text-fs-3 text-fg font-medium">{tenant.name}</p>
         <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-3">
           <CampoForm label="Modo de gestão" htmlFor={`${id}-modo`}>
             <Select id={`${id}-modo`} name="managementMode" defaultValue={tenant.managementMode}>
@@ -126,7 +126,7 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
             placeholder="Contrato, negociação…"
           />
         </CampoForm>
-        {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+        {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
         {state?.needsSeatConfirm && (
           <Checkbox
             id={`${id}-confirma-limite`}
@@ -145,8 +145,8 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3">
       <div className="min-w-0">
-        <p className="text-[13px] text-fg font-medium">{tenant.name}</p>
-        <p className="text-[11px] text-fg-muted mt-0.5">
+        <p className="text-fs-3 text-fg font-medium">{tenant.name}</p>
+        <p className="text-fs-1 text-fg-muted mt-0.5">
           {MANAGEMENT_MODE_LABEL[tenant.managementMode]}
           {subscription ? (
             <>
@@ -159,12 +159,12 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
           )}
         </p>
         {readOnlyActive && (
-          <p className="text-[11px] text-danger mt-1">
+          <p className="text-fs-1 text-danger mt-1">
             Somente leitura ativo — este workspace não consegue criar nem editar.
           </p>
         )}
         {readOnlyInert && (
-          <p className="text-[11px] text-warning-fg mt-1">
+          <p className="text-fs-1 text-warning-fg mt-1">
             Status de inadimplência sem efeito: somente leitura só se aplica a workspaces
             em Autoatendimento. Mude o modo de gestão para bloquear de fato.
           </p>

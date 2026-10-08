@@ -59,14 +59,14 @@ export function PessoasFilterButton({
       {({ close }) => (
         <div className="space-y-3">
           <div className="space-y-1">
-            <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">Situação</p>
+            <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">Situação</p>
             <div className="space-y-0.5">
               {SITUACOES.map((s) => (
                 <Link
                   key={s.value || "padrao"}
                   href={buildUrl({ situacao: s.value || undefined })}
                   onClick={close}
-                  className={`block px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+                  className={`block px-2.5 py-1.5 rounded-lg text-fs-3 font-medium transition-colors ${
                     (situacao ?? "") === s.value
                       ? "bg-brand-subtle text-brand"
                       : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
@@ -80,13 +80,13 @@ export function PessoasFilterButton({
 
           {mostrarEmpresa && (
             <div className="space-y-2">
-              <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">Empresa</p>
+              <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">Empresa</p>
               <CompanyFilterSelect companies={companies} value={companyId ?? ""} className="w-full" />
               {companyId && (
                 <Link
                   href={buildUrl({ companyId: undefined })}
                   onClick={close}
-                  className="block text-[12px] text-fg-muted hover:text-fg px-1"
+                  className="block text-fs-2 text-fg-muted hover:text-fg px-1"
                 >
                   Limpar filtro de empresa
                 </Link>

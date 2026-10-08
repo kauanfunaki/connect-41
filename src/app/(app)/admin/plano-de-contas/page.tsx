@@ -59,7 +59,7 @@ export default async function PlanoDeContasPage() {
           </div>
         }
       />
-      <p className="text-[12px] text-fg-muted -mt-2 mb-4 max-w-3xl">
+      <p className="text-fs-2 text-fg-muted -mt-2 mb-4 max-w-3xl">
         Este é o plano padrão do escritório, que toda empresa herda. Cada empresa ajusta o dela — categoria própria, o que não
         usa escondido, outra linha da DRE — em Fornecedores e sacados › Plano de contas.
       </p>
@@ -67,10 +67,10 @@ export default async function PlanoDeContasPage() {
       {ativasParaPagar === 0 && (
         <Card className="mb-6 border-warning/30 bg-warning/8">
           <div className="px-4 py-3 space-y-1">
-            <p className="text-[13px] font-medium text-fg">
+            <p className="text-fs-3 font-medium text-fg">
               Nenhuma categoria ativa em contas a pagar
             </p>
-            <p className="text-[12px] text-fg-muted">
+            <p className="text-fs-2 text-fg-muted">
               Enquanto isso, nenhum documento fiscal vira conta a pagar: o lançamento é recusado
               por falta de categoria. Cadastre ao menos uma para destravar o fluxo.
             </p>
@@ -98,11 +98,11 @@ export default async function PlanoDeContasPage() {
             return (
               <div key={kind}>
                 <div className="flex items-baseline gap-2 mb-2">
-                  <h2 className="text-[15px] font-medium text-fg">{titulo}</h2>
-                  <span className="text-[12px] text-fg-muted">{nota}</span>
+                  <h2 className="text-fs-5 font-medium text-fg">{titulo}</h2>
+                  <span className="text-fs-2 text-fg-muted">{nota}</span>
                 </div>
                 {doLado.length === 0 ? (
-                  <p className="text-[13px] text-fg-muted px-4 py-3 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)]">
+                  <p className="text-fs-3 text-fg-muted px-4 py-3 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)]">
                     Nenhuma categoria deste lado.
                   </p>
                 ) : (
@@ -149,7 +149,7 @@ export default async function PlanoDeContasPage() {
                       <TabelaNoDesktop padrao>
                         <table className="w-full min-w-[820px]">
                           <thead>
-                            <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
+                            <tr className="border-b border-border text-fs-1 uppercase tracking-wide text-fg-muted">
                               <th className="px-4 py-3">Categoria</th>
                               <th className="px-4 py-3">
                                 <FiltroDaColuna rotulo="Grupo" chave="grupo" />

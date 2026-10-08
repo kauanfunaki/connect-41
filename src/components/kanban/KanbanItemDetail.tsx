@@ -288,13 +288,13 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         {item.parentItemId && (
           <Link
             href={`${basePath}/itens/${item.parentItemId}`}
-            className="text-[12px] text-fg-muted hover:text-fg transition-colors inline-block mb-1"
+            className="text-fs-2 text-fg-muted hover:text-fg transition-colors inline-block mb-1"
           >
             ← Subtarefa de &quot;{parentEntityName}&quot;
           </Link>
         )}
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-[length:var(--fs-display)] leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
+          <h1 className="text-display leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
             {title}
           </h1>
           {canDelete && <DeleteTaskButton entityName={title} deleteAction={deleteAction} />}
@@ -303,7 +303,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             da empresa/pessoa segue ao lado quando a tarefa tem título próprio. */}
         {entity && (
           <div className="flex flex-wrap items-center gap-2 mt-1">
-            {item.title && <span className="text-[13px] text-fg-muted">{entity.name}</span>}
+            {item.title && <span className="text-fs-3 text-fg-muted">{entity.name}</span>}
             <Button
               href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
               variant="secondary"

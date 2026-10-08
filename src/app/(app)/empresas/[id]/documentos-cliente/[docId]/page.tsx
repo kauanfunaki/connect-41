@@ -93,13 +93,13 @@ export default async function DocumentoClienteDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
           <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Conteúdo</h2>
+            <h2 className="text-card-title font-semibold text-fg mb-4">Conteúdo</h2>
             <div
-              className="text-[14px] text-fg leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-[16px] [&_h2]:font-semibold"
+              className="text-fs-4 text-fg leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-fs-6 [&_h2]:font-semibold"
               dangerouslySetInnerHTML={{ __html: document.bodyHtml }}
             />
             {document.fileName && (
-              <p className="text-[12px] text-fg-muted mt-4 border-t border-border pt-3">
+              <p className="text-fs-2 text-fg-muted mt-4 border-t border-border pt-3">
                 Anexo: {document.fileName}
               </p>
             )}
@@ -107,7 +107,7 @@ export default async function DocumentoClienteDetailPage({
 
           {canManage && document.status === "PUBLISHED" && (
             <Card className="p-5">
-              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Enviar por e-mail</h2>
+              <h2 className="text-card-title font-semibold text-fg mb-4">Enviar por e-mail</h2>
               <SendDocumentForm action={enviarDocumento} documentId={document.id} companyId={companyId} companyEmail={company.email} />
             </Card>
           )}
@@ -115,53 +115,53 @@ export default async function DocumentoClienteDetailPage({
 
         <div className="space-y-5">
           <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Prova de recebimento</h2>
-            <p className="text-[12px] text-fg-muted mb-4">
+            <h2 className="text-card-title font-semibold text-fg mb-1">Prova de recebimento</h2>
+            <p className="text-fs-2 text-fg-muted mb-4">
               Cada abertura do link e download do anexo fica registrado com data/hora e IP.
             </p>
 
             {document.recipients.length === 0 ? (
-              <p className="text-[13px] text-fg-muted">Ainda não enviado a ninguém.</p>
+              <p className="text-fs-3 text-fg-muted">Ainda não enviado a ninguém.</p>
             ) : (
               <div className="space-y-4">
                 {document.recipients.map((r) => (
                   <div key={r.id} className="border border-border rounded-md p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[13px] text-fg font-medium truncate">{r.email}</p>
+                      <p className="text-fs-3 text-fg font-medium truncate">{r.email}</p>
                       {canManage && (
                         <ResendRecipientButton action={reenviarParaDestinatario.bind(null, r.id, companyId)} />
                       )}
                     </div>
-                    <p className="text-[11px] text-fg-muted mt-1">
+                    <p className="text-fs-1 text-fg-muted mt-1">
                       enviado em {r.sentAt ? formatInstantDateTime(r.sentAt) : "—"}
                     </p>
                     {r.firstViewedAt ? (
-                      <p className="text-[11px] text-success-fg mt-0.5">
+                      <p className="text-fs-1 text-success-fg mt-0.5">
                         primeira visualização: {formatInstantDateTimeComSegundos(r.firstViewedAt)}
                       </p>
                     ) : (
-                      <p className="text-[11px] text-warning-fg mt-0.5">ainda não visualizado</p>
+                      <p className="text-fs-1 text-warning-fg mt-0.5">ainda não visualizado</p>
                     )}
                     {document.requiresSignature &&
                       (r.signedAt ? (
-                        <p className="text-[11px] text-success-fg mt-0.5 flex items-center gap-1.5">
+                        <p className="text-fs-1 text-success-fg mt-0.5 flex items-center gap-1.5">
                           <PenLine size={11} />
                           assinado por {r.signerName ?? "—"} em {formatInstantDateTimeComSegundos(r.signedAt)}
                         </p>
                       ) : (
-                        <p className="text-[11px] text-warning-fg mt-0.5">assinatura pendente</p>
+                        <p className="text-fs-1 text-warning-fg mt-0.5">assinatura pendente</p>
                       ))}
 
                     {r.views.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-border space-y-1">
                         {r.views.slice(0, 5).map((v) => (
-                          <p key={v.id} className="text-[11px] text-fg-muted flex items-center gap-1.5">
+                          <p key={v.id} className="text-fs-1 text-fg-muted flex items-center gap-1.5">
                             {v.action === "VIEWED" ? <Eye size={11} /> : v.action === "SIGNED" ? <PenLine size={11} /> : <Download size={11} />}
                             {formatInstantDateTimeComSegundos(v.viewedAt)} · {v.ipAddress}
                           </p>
                         ))}
                         {r.views.length > 5 && (
-                          <p className="text-[11px] text-fg-muted">+ {r.views.length - 5} evento(s) anterior(es)</p>
+                          <p className="text-fs-1 text-fg-muted">+ {r.views.length - 5} evento(s) anterior(es)</p>
                         )}
                       </div>
                     )}

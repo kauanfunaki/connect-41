@@ -112,7 +112,7 @@ export function PedirExclusao({ slug, pedidoEm }: { slug: string; pedidoEm: stri
   const [estado, setEstado] = useState<RespostaDaConta>(null);
   const [pendente, start] = useTransition();
   if (pedidoEm) {
-    return <p className="text-[length:var(--fs-ui)] text-fg-secondary">Você pediu a exclusão dos seus dados em {pedidoEm}. A equipe responsável vai tratar o pedido.</p>;
+    return <p className="text-ui text-fg-secondary">Você pediu a exclusão dos seus dados em {pedidoEm}. A equipe responsável vai tratar o pedido.</p>;
   }
   if (!confirmando) {
     return (
@@ -123,7 +123,7 @@ export function PedirExclusao({ slug, pedidoEm }: { slug: string; pedidoEm: stri
   }
   return (
     <div className="rounded-md border border-border px-3 py-2 space-y-2 text-left">
-      <p className="text-[length:var(--fs-ui)] text-fg">
+      <p className="text-ui text-fg">
         A equipe recebe o pedido e exclui seus dados pessoais, a não ser que haja obrigação legal de guardá-los (por exemplo, se você
         for contratado). Enquanto o pedido é tratado, suas candidaturas continuam como estão.
       </p>

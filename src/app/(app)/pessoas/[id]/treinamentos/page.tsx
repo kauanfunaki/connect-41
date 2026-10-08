@@ -47,7 +47,7 @@ export default async function TreinamentosPessoaPage({
 
       {trainingParticipations.length === 0 ? (
         <Card className="p-5">
-          <p className="text-[13px] text-fg-muted">Nenhum treinamento registrado ainda.</p>
+          <p className="text-fs-3 text-fg-muted">Nenhum treinamento registrado ainda.</p>
         </Card>
       ) : (
         <>
@@ -88,7 +88,7 @@ export default async function TreinamentosPessoaPage({
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[560px]">
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Treinamento" chave="treinamento" />
                     </th>

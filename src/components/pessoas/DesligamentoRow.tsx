@@ -38,11 +38,11 @@ export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, r
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[length:var(--fs-ui)] text-fg">
+          <p className="text-ui text-fg">
             {TIPO_DO_DESLIGAMENTO[desligamento.type]} — solicitado em {desligamento.requestedAtLabel}
             {desligamento.finalizedAtLabel && ` · finalizado em ${desligamento.finalizedAtLabel}`}
           </p>
-          {desligamento.reason && <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">{desligamento.reason}</p>}
+          {desligamento.reason && <p className="text-fs-2 text-fg-muted mt-0.5">{desligamento.reason}</p>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={COR_DO_DESLIGAMENTO[desligamento.status]}>{SITUACAO_DO_DESLIGAMENTO[desligamento.status]}</SeloDoDP>
@@ -61,7 +61,7 @@ export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, r
         </Button>
         {desligamento.conferencia && (
           <>
-            <span className="text-[length:var(--fs-2)] text-fg-muted tnum">{desligamento.conferencia.progressoPct}% tratado</span>
+            <span className="text-fs-2 text-fg-muted tnum">{desligamento.conferencia.progressoPct}% tratado</span>
             {desligamento.conferencia.divergentes > 0 && (
               <SeloDoDP cor="bg-danger/10 text-danger border-danger/25">{desligamento.conferencia.divergentes} divergência(s)</SeloDoDP>
             )}
@@ -100,7 +100,7 @@ export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, r
         </form>
       )}
 
-      {state?.error && <p className="mt-2 text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+      {state?.error && <p className="mt-2 text-helper font-medium text-danger">{state.error}</p>}
     </div>
   );
 }

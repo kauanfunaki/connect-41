@@ -34,11 +34,11 @@ export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: P
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[length:var(--fs-ui)] text-fg">
+          <p className="text-ui text-fg">
             {entry.dateLabel} — {TIPO_DO_DIA[entry.dayType]}
             {entry.overtimeHours && ` · ${horasDoDP(entry.overtimeHours)} extras`}
           </p>
-          {entry.justification && <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">{entry.justification}</p>}
+          {entry.justification && <p className="text-fs-2 text-fg-muted mt-0.5">{entry.justification}</p>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={COR_DA_HORA_EXTRA[entry.status]}>{SITUACAO_DA_HORA_EXTRA[entry.status]}</SeloDoDP>
@@ -75,7 +75,7 @@ export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: P
         </form>
       )}
 
-      {state?.error && <p className="mt-2 text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+      {state?.error && <p className="mt-2 text-helper font-medium text-danger">{state.error}</p>}
     </div>
   );
 }

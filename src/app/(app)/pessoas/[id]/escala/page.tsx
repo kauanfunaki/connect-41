@@ -59,7 +59,7 @@ export default async function EscalaPage({
 
       <Card className="p-5">
         {escala.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhuma escala montada ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhuma escala montada ainda.</p>
         ) : (
           <div>
             {escala.map((e) => (

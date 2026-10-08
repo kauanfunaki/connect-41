@@ -116,7 +116,7 @@ export function RevisarContrato({
       }
     });
 
-  const TH = "py-2 pr-2 text-left font-semibold text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted whitespace-nowrap";
+  const TH = "py-2 pr-2 text-left font-semibold text-micro uppercase tracking-wide text-fg-muted whitespace-nowrap";
   // Tudo centralizado na altura da linha: as caixas de marcar tinham `pt-3`
   // chutado para acompanhar o Input, e ficavam 4px acima do centro dele.
   const TD = "py-2 pr-2 align-middle";
@@ -134,7 +134,7 @@ export function RevisarContrato({
       )}
 
       <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <table className="w-full min-w-[980px] text-[length:var(--fs-ui)]">
+        <table className="w-full min-w-[980px] text-ui">
           <thead className="border-b border-border">
             <tr>
               <th className={`${TH} pl-3`}>Salvar</th>
@@ -186,7 +186,7 @@ export function RevisarContrato({
 
       <section aria-labelledby="previa" className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 id="previa" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+          <h3 id="previa" className="text-card-title font-semibold text-fg">
             O que vai mudar no cadastro de sócios
           </h3>
           {podeAplicar && previaVelha && (
@@ -196,10 +196,10 @@ export function RevisarContrato({
           )}
         </div>
         {plano.novos.length === 0 && plano.atualizar.length === 0 && (
-          <p className="text-[length:var(--fs-ui)] text-fg-muted">Nada muda: o cadastro já está como o contrato.</p>
+          <p className="text-ui text-fg-muted">Nada muda: o cadastro já está como o contrato.</p>
         )}
         {plano.novos.length > 0 && (
-          <div className="text-[length:var(--fs-ui)]">
+          <div className="text-ui">
             <p className="font-medium text-fg">Entram como sócios novos</p>
             <ul className="list-disc pl-5 text-fg-secondary">
               {plano.novos.map((n) => (
@@ -209,7 +209,7 @@ export function RevisarContrato({
           </div>
         )}
         {plano.atualizar.length > 0 && (
-          <div className="text-[length:var(--fs-ui)] flex flex-col gap-1">
+          <div className="text-ui flex flex-col gap-1">
             <p className="font-medium text-fg">Já cadastrados, com dados que mudam</p>
             {plano.atualizar.map((a) => (
               <div key={a.id} className="text-fg-secondary">
@@ -220,12 +220,12 @@ export function RevisarContrato({
           </div>
         )}
         {plano.iguais.length > 0 && (
-          <p className="text-[length:var(--fs-ui)] text-fg-muted">Sem mudança: {plano.iguais.map((i) => i.nomeNoCadastro).join(", ")}.</p>
+          <p className="text-ui text-fg-muted">Sem mudança: {plano.iguais.map((i) => i.nomeNoCadastro).join(", ")}.</p>
         )}
         {plano.foraDoContrato.length > 0 && (
           // Revisão de 05/10: botão não é link — "Sócios" era texto sublinhado no meio da frase.
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <p className="text-[length:var(--fs-ui)] text-warning-fg">
+            <p className="text-ui text-warning-fg">
               No cadastro e fora deste contrato: {plano.foraDoContrato.map((f) => f.nome).join(", ")}. Ninguém sai sozinho — se saiu,
               registre a saída com a data na tela de sócios.
             </p>
@@ -236,7 +236,7 @@ export function RevisarContrato({
         )}
       </section>
 
-      {msg && <p className={`text-[length:var(--fs-ui)] ${msg.tipo === "erro" ? "text-danger" : "text-success-fg"}`}>{msg.texto}</p>}
+      {msg && <p className={`text-ui ${msg.tipo === "erro" ? "text-danger" : "text-success-fg"}`}>{msg.texto}</p>}
 
       {/* Rodapé do formulário: rejeitar (a saída destrutiva) à esquerda, e o
           primário sozinho à direita. Estavam juntos, e o campo do motivo, ao

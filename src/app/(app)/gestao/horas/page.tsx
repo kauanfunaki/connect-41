@@ -22,7 +22,7 @@ import { nomesDasPessoas } from "@/lib/gestao/telas";
 export const dynamic = "force-dynamic";
 
 const h = (min: number) => formatarHoras(min / 60);
-const CABECALHO = "border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted";
+const CABECALHO = "border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted";
 
 /** O `TabelaFiltravel` quando a tabela traz todas as linhas; senão, a tabela sozinha. */
 function TabelaNoFiltro({ filtravel, linhas, children }: { filtravel: boolean; linhas: LinhaDoFiltro[]; children: React.ReactNode }) {
@@ -112,7 +112,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
 
       {podeVerCusto && (resumo.minutosSemCusto > 0 || !configurado) && (
         // Revisão de 05/10: botão não é link — o "Custos no Valora" era texto azul.
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[length:var(--fs-2)] text-fg-secondary">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-2 text-fg-secondary">
           <p>
             {!configurado
               ? "O custo das equipes ainda não foi preenchido no Valora, então as horas aparecem sem custo."
@@ -134,7 +134,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
               cabeçalho, que a tabela sem ele deixava a coluna do custo sem nome. */}
           <div className="grid gap-3 lg:grid-cols-2">
             <Card className="p-4 flex flex-col gap-2">
-              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Por setor</h2>
+              <h2 className="text-card-title font-semibold text-fg">Por setor</h2>
               <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
                 <table className="w-full">
                   <thead>
@@ -157,7 +157,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
               </div>
             </Card>
             <Card className="p-4 flex flex-col gap-2">
-              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Por pessoa</h2>
+              <h2 className="text-card-title font-semibold text-fg">Por pessoa</h2>
               <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
                 <table className="w-full">
                   <thead>
@@ -186,7 +186,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
           </div>
 
           <section aria-labelledby="apontamentos" className="flex flex-col gap-2">
-            <h2 id="apontamentos" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+            <h2 id="apontamentos" className="text-card-title font-semibold text-fg">
               Apontamentos
             </h2>
             {/* No celular, cartões em vez da rolagem lateral de 640px (auditoria
@@ -241,7 +241,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
                           <Link href={l.href} className="font-medium text-fg hover:text-brand transition-colors">
                             {l.titulo}
                           </Link>
-                          {l.nota && <span className="block text-[length:var(--fs-micro)] text-fg-muted">{l.nota}</span>}
+                          {l.nota && <span className="block text-micro text-fg-muted">{l.nota}</span>}
                         </td>
                         <td className="px-3">{g.rotuloDoSetor(l.setor)}</td>
                         <td className="px-3 tabular-nums">{h(l.minutos)}</td>
@@ -251,7 +251,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
                 </table>
               </TabelaNoDesktop>
             </TabelaNoFiltro>
-            {linhas.length > 200 && <p className="text-[length:var(--fs-2)] text-fg-muted">Mostrando 200 de {linhas.length}. O CSV traz todos.</p>}
+            {linhas.length > 200 && <p className="text-fs-2 text-fg-muted">Mostrando 200 de {linhas.length}. O CSV traz todos.</p>}
           </section>
         </>
       )}

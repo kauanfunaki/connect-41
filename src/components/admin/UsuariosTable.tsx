@@ -123,7 +123,7 @@ export function UsuariosTable({
         {u.sectors.slice(0, 3).map((s) => (
           <span
             key={s.code}
-            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-medium bg-surface-hover text-fg-secondary border border-border"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-fs-1 font-medium bg-surface-hover text-fg-secondary border border-border"
           >
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
             {s.label}
@@ -132,7 +132,7 @@ export function UsuariosTable({
         {u.sectors.length > 3 && (
           <span
             title={u.sectors.slice(3).map((s) => s.label).join(", ")}
-            className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium bg-surface-hover text-fg-muted border border-border cursor-default"
+            className="inline-flex items-center px-2 py-1 rounded-full text-fs-1 font-medium bg-surface-hover text-fg-muted border border-border cursor-default"
           >
             +{u.sectors.length - 3}
           </span>
@@ -177,12 +177,12 @@ export function UsuariosTable({
             >
               {u.name}
             </Link>
-            {isSelf && <span className="text-[12px] text-fg-muted ml-1.5">(você)</span>}
+            {isSelf && <span className="text-fs-2 text-fg-muted ml-1.5">(você)</span>}
             <p className="text-[11.5px] text-fg-muted break-all">{u.email}</p>
           </div>
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-fg-secondary">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-fs-2 text-fg-secondary">
           <StatusDot
             color={u.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
             label={u.active ? "Ativo" : "Inativo"}
@@ -298,7 +298,7 @@ export function UsuariosTable({
                       <Link href={`/admin/usuarios/${u.id}/editar`} className="font-medium text-fg hover:text-brand transition-colors">
                         {u.name}
                       </Link>
-                      {isSelf && <span className="text-[12px] text-fg-muted ml-1.5">(você)</span>}
+                      {isSelf && <span className="text-fs-2 text-fg-muted ml-1.5">(você)</span>}
                     </td>
                     <td className="px-4 py-3 text-fg-secondary">{u.email}</td>
                     <td className="px-4 py-3 text-fg-secondary">{u.roleLabel}</td>

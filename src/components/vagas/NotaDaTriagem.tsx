@@ -56,8 +56,8 @@ export function NotaDaTriagem({
     <Card className="p-5 mb-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Triagem do currículo</h2>
-          <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">A nota só ordena os candidatos da vaga — quem avança ou reprova é o recrutador.</p>
+          <h2 className="text-card-title font-semibold text-fg">Triagem do currículo</h2>
+          <p className="text-fs-2 text-fg-muted mt-0.5">A nota só ordena os candidatos da vaga — quem avança ou reprova é o recrutador.</p>
         </div>
         {podePontuar && versaoAtual !== null && (
           <PontuarCandidatura vagaId={vagaId} candidaturaId={candidaturaId} rotulo={ultima ? "Pontuar de novo" : "Pontuar agora"} />
@@ -65,7 +65,7 @@ export function NotaDaTriagem({
       </div>
 
       {!ultima ? (
-        <p className="text-[length:var(--fs-ui)] text-fg-muted">
+        <p className="text-ui text-fg-muted">
           {versaoAtual === null ? "A vaga ainda não tem requisitos de triagem." : "Ainda sem nota nesta candidatura."}
           {falha === FALHA_SEM_CURRICULO && versaoAtual !== null ? (
             // Currículo é opcional no portal: não é erro do sistema, é o que a
@@ -85,20 +85,20 @@ export function NotaDaTriagem({
       ) : (
         <>
           <div className="flex flex-wrap items-baseline gap-3 mb-2">
-            <span className="text-[length:var(--fs-metric)] font-semibold tnum leading-none">{ultima.score}</span>
-            <span className="text-[length:var(--fs-ui)] font-medium">{ROTULO_DA_FAIXA[ultima.faixa]}</span>
-            <span className="text-[length:var(--fs-micro)] text-fg-muted">
+            <span className="text-metric font-semibold tnum leading-none">{ultima.score}</span>
+            <span className="text-ui font-medium">{ROTULO_DA_FAIXA[ultima.faixa]}</span>
+            <span className="text-micro text-fg-muted">
               requisitos v{ultima.versao}
               {versaoAtual !== null && ultima.versao !== versaoAtual && " (versão anterior — pontue de novo)"} · {formatInstantDateTime(ultima.createdAt)}
             </span>
           </div>
-          {ultima.resumo && <p className="text-[length:var(--fs-ui)] text-fg-secondary mb-3">{ultima.resumo}</p>}
+          {ultima.resumo && <p className="text-ui text-fg-secondary mb-3">{ultima.resumo}</p>}
           {/* Casco padrão dentro do cartão (`.c41-tabela`, polimento de
               30/09): cabeçalho com fundo, respiro nas pontas e centralizada. */}
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[620px]">
               <thead>
-                <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 px-3">Requisito</th>
                   <th className="py-2 px-3">Veredito</th>
                   <th className="py-2 px-3">Evidência no currículo</th>
@@ -112,7 +112,7 @@ export function NotaDaTriagem({
                     <tr key={r.id} className="border-b border-border-soft align-top">
                       <td className="py-1.5 px-3">
                         {r.texto}
-                        <span className="block text-[length:var(--fs-micro)] text-fg-muted">
+                        <span className="block text-micro text-fg-muted">
                           {r.tipo === "OBRIGATORIO" ? "obrigatório" : "desejável"} · peso {r.peso}
                         </span>
                       </td>
@@ -126,8 +126,8 @@ export function NotaDaTriagem({
           </div>
           {anteriores.length > 0 && (
             <details className="mt-3">
-              <summary className="text-[length:var(--fs-2)] text-fg-muted cursor-pointer">Notas anteriores ({anteriores.length})</summary>
-              <ul className="mt-1.5 space-y-0.5 text-[length:var(--fs-2)] text-fg-secondary">
+              <summary className="text-fs-2 text-fg-muted cursor-pointer">Notas anteriores ({anteriores.length})</summary>
+              <ul className="mt-1.5 space-y-0.5 text-fs-2 text-fg-secondary">
                 {anteriores.map((n) => (
                   <li key={n.id} className="tnum">
                     {n.score} · {ROTULO_DA_FAIXA[n.faixa]} · requisitos v{n.versao} · {formatInstantDateTime(n.createdAt)}

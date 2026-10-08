@@ -49,7 +49,7 @@ export default async function FeriasPage({
 
       <Card className="p-5">
         {vacations.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhuma férias programada ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhuma férias programada ainda.</p>
         ) : (
           <div>
             {vacations.map((v) => (

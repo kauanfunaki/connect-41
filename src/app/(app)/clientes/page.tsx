@@ -80,7 +80,7 @@ export default async function ClientesPage({
 
         {/* Revisão de 05/10: botão não é link — o "Mostrar todos" era texto azul. */}
         {ocultos > 0 && (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[length:var(--fs-2)] text-fg-muted mb-4">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mb-4">
             <p>
               {ocultos} cliente{ocultos !== 1 ? "s" : ""} inativo{ocultos !== 1 ? "s" : ""} fora desta lista.
             </p>

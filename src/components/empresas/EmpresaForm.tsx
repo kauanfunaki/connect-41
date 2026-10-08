@@ -375,7 +375,7 @@ export function EmpresaForm({
                       placeholder="00.000.000/0000-00"
                     />
                     {fetching && (
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted animate-pulse">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-micro text-fg-muted animate-pulse">
                         buscando…
                       </span>
                     )}
@@ -618,12 +618,12 @@ export function EmpresaForm({
               </CampoForm>
             </FieldGrid>
             {defaultValues?.id ? (
-              <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
+              <p className="text-helper text-fg-muted italic">
                 Responsável por setor/serviço (Contábil → João, etc.) é gerenciado no card
                 &quot;Serviços contratados&quot; da ficha da empresa, não neste formulário.
               </p>
             ) : (
-              <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
+              <p className="text-helper text-fg-muted italic">
                 Após salvar, adicione os setores contratados e seus responsáveis na ficha da empresa.
               </p>
             )}

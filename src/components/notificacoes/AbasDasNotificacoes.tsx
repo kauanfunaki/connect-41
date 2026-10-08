@@ -36,7 +36,7 @@ export function AbasDasNotificacoes({
             aria-selected={eAtiva}
             title={a.descricao}
             onClick={() => onEscolher(a.chave)}
-            className={`flex-1 min-w-fit inline-flex items-center justify-center gap-1 h-8 px-2 rounded-md text-[12px] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+            className={`flex-1 min-w-fit inline-flex items-center justify-center gap-1 h-8 px-2 rounded-md text-fs-2 font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand ${
               eAtiva ? "bg-surface-elevated text-fg shadow-[var(--c41-shadow-xs)]" : "text-fg-muted hover:text-fg"
             }`}
           >

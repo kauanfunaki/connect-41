@@ -86,8 +86,8 @@ export default async function TurnosPage({
           {turnos.map((t) => (
             <div key={t.id} className="flex items-center justify-between gap-4 px-4 py-3">
               <div>
-                <p className="text-[13px] text-fg font-medium">{t.name}</p>
-                <p className="text-[12px] text-fg-muted">{t.startTime} — {t.endTime}</p>
+                <p className="text-fs-3 text-fg font-medium">{t.name}</p>
+                <p className="text-fs-2 text-fg-muted">{t.startTime} — {t.endTime}</p>
               </div>
               {canManage && (
                 <AcoesDoCadastro editarHref={`/empresas/${companyId}/turnos/${t.id}/editar`} excluir={excluirTurno.bind(null, t.id, companyId)} nome={t.name} />

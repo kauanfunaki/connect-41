@@ -35,11 +35,11 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[length:var(--fs-ui)] text-fg">
+          <p className="text-ui text-fg">
             Aquisitivo: {ferias.acquisitivePeriodLabel} · {ferias.days} dias
           </p>
           {ferias.concessivePeriodLabel && (
-            <p className="text-[length:var(--fs-2)] text-fg-muted">Concessivo: {ferias.concessivePeriodLabel}</p>
+            <p className="text-fs-2 text-fg-muted">Concessivo: {ferias.concessivePeriodLabel}</p>
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -88,7 +88,7 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
         </form>
       )}
 
-      {state?.error && <p className="mt-2 text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+      {state?.error && <p className="mt-2 text-helper font-medium text-danger">{state.error}</p>}
     </div>
   );
 }

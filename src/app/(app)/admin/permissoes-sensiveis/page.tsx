@@ -44,7 +44,7 @@ export default async function PermissoesSensiveisPage() {
       <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
         <table className="w-full min-w-[560px]">
           <thead>
-            <tr className="border-b border-border text-[11px] text-fg-muted uppercase tracking-wide">
+            <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
               <th className="px-4 py-3">Papel</th>
               {FIELD_GROUPS.map((f) => (
                 <th key={f.code} className="px-4 py-3">
@@ -57,8 +57,8 @@ export default async function PermissoesSensiveisPage() {
             {ROLES.map((r) => (
               <tr key={r.code} className="border-b border-border">
                 <td className="px-4 py-3">
-                  <p className="text-[13px] text-fg font-medium">{r.label}</p>
-                  <p className="text-[11px] text-fg-muted">{r.hint}</p>
+                  <p className="text-fs-3 text-fg font-medium">{r.label}</p>
+                  <p className="text-fs-1 text-fg-muted">{r.hint}</p>
                 </td>
                 {FIELD_GROUPS.map((f) => (
                   <td key={f.code} className="px-4 py-3">
@@ -75,7 +75,7 @@ export default async function PermissoesSensiveisPage() {
         </table>
       </div>
 
-      <p className="text-[12px] text-fg-muted mt-3">
+      <p className="text-fs-2 text-fg-muted mt-3">
         Suporte (SUPER_ADMIN) sempre tem acesso — não aparece na matriz.
       </p>
     </PageContainer>

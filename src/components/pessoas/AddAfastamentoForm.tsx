@@ -75,7 +75,7 @@ export function AddAfastamentoForm({ action, canEditMedical }: Props) {
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

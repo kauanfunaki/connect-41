@@ -49,7 +49,7 @@ export default async function ExamesPage({
 
       <Card className="p-5">
         {exames.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhum exame registrado ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhum exame registrado ainda.</p>
         ) : (
           <div>
             {exames.map((e) => (
