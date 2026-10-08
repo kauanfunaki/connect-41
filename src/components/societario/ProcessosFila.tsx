@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { saoPauloParts } from "@/lib/agenda";
-import { Selo } from "@/components/ui/Selo";
-import { TOM_DA_VARIANTE } from "./tomDoSelo";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDate } from "@/lib/format";
 import type { LinhaDaFila } from "@/lib/societario/fila";
@@ -115,7 +114,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
   // Normal não ganha selo: selo em toda linha deixa de chamar atenção onde importa.
   const selos = (l: LinhaDaFila) => (
     <>
-      {l.prioridade !== "NORMAL" && <Selo tom={TOM_DA_VARIANTE[PRIORIDADE_VARIANTE[l.prioridade]]}>{PRIORIDADE_LABEL[l.prioridade]}</Selo>}
+      {l.prioridade !== "NORMAL" && <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[l.prioridade])}>{PRIORIDADE_LABEL[l.prioridade]}</Selo>}
       {l.voltas > 0 && (
         <span className="inline-flex items-center gap-1 text-[length:var(--fs-micro)] text-danger whitespace-nowrap">
           <AlertCircle size={12} />
@@ -155,7 +154,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
               {/* Situação e prioridade em Selo: é a situação de uma linha ou
                   cartão (regra de 02/10 no Selo; auditoria de 07/10/2026). */}
               <PeDoCartao>
-                <Selo tom={TOM_DA_VARIANTE[SITUACAO_VARIANTE[l.situacao]]}>{SITUACAO_LABEL[l.situacao]}</Selo>
+                <Selo tom={tomDaVariante(SITUACAO_VARIANTE[l.situacao])}>{SITUACAO_LABEL[l.situacao]}</Selo>
                 {selos(l)}
                 <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">{l.responsavelNome ?? "Sem responsável"}</span>
               </PeDoCartao>
@@ -248,7 +247,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                   </td>
                   <td className="px-4 py-3">{prazos(l)}</td>
                   <td className="px-4 py-3">
-                    <Selo tom={TOM_DA_VARIANTE[SITUACAO_VARIANTE[l.situacao]]}>{SITUACAO_LABEL[l.situacao]}</Selo>
+                    <Selo tom={tomDaVariante(SITUACAO_VARIANTE[l.situacao])}>{SITUACAO_LABEL[l.situacao]}</Selo>
                   </td>
                   <td className="px-4 py-3 text-fg-secondary truncate" title={l.responsavelNome ?? undefined}>
                     {l.responsavelNome ?? <span className="text-fg-muted">Sem responsável</span>}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { Select } from "@/components/ui/Select";
@@ -49,11 +50,12 @@ const STATUS_LABEL = {
   CANCELADO: "Cancelado",
 } as const;
 
+// Cancelado saiu de cena: neutro (07/10/2026), o `neutral` do Badge.
 const STATUS_VARIANTE = {
   PROVISORIO: "warning",
   CONFERIDO: "info",
   PAGO: "success",
-  CANCELADO: "danger",
+  CANCELADO: "neutral",
 } as const;
 
 export function LancamentoCard({
@@ -99,7 +101,7 @@ export function LancamentoCard({
             <Badge variant={lancamento.kind === "PAGAR" ? "warning" : "success"}>
               {lancamento.kind === "PAGAR" ? "A pagar" : "A receber"}
             </Badge>
-            <Badge variant={STATUS_VARIANTE[lancamento.status]}>{STATUS_LABEL[lancamento.status]}</Badge>
+            <Selo tom={tomDaVariante(STATUS_VARIANTE[lancamento.status])}>{STATUS_LABEL[lancamento.status]}</Selo>
           </div>
           {/* Rótulo em cima e valor embaixo, como as fichas "Documento" e
               "Partes" logo acima — era rótulo à esquerda e valor empurrado
