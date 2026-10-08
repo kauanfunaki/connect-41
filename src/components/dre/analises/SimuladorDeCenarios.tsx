@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Input } from "@/components/ui/Input";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -49,41 +49,37 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="p-4 flex flex-col gap-5">
         <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Premissas</h3>
-        {/* As duas escolhas por botão ganharam rótulo em cima, como os campos
-            abaixo — o "Partir de:" era texto solto no começo da fileira. */}
+        {/* As duas escolhas ganharam rótulo em cima, como os campos abaixo — o
+            "Partir de:" era texto solto no começo da fileira. São um
+            `SegmentedControl` desde 08/10/2026: eram fileiras de `Button` que
+            alternavam primário e secundário, a "pílula que parece filtro e aba"
+            que a conferência de 30/09 aboliu. */}
         {bases.length > 1 && (
-          <fieldset>
-            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Partir de</legend>
-            <div className="flex flex-wrap gap-2">
-              {bases.map((b) => (
-                <Button key={b.chave} size="sm" variant={b.chave === baseEscolhida.chave ? "primary" : "secondary"} onClick={() => setChaveDaBase(b.chave)}>
-                  {b.rotulo}
-                </Button>
-              ))}
-            </div>
-          </fieldset>
-        )}
-        <fieldset>
-          <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Cenário</legend>
-          <div className="flex flex-wrap gap-2">
-            {CENARIOS_PRONTOS.map((c) => (
-              <Button
-                key={c.chave}
-                size="sm"
-                variant={pronto === c.chave ? "primary" : "secondary"}
-                onClick={() => {
-                  setPronto(c.chave);
-                  setPremissas(c.premissas);
-                }}
-              >
-                {c.rotulo}
-              </Button>
-            ))}
-            <Button size="sm" variant={pronto === "personalizado" ? "primary" : "secondary"} onClick={() => setPronto("personalizado")}>
-              Personalizado
-            </Button>
+          <div>
+            <p className="text-label font-medium text-fg mb-1.5">Partir de</p>
+            <SegmentedControl
+              label="Partir de"
+              active={baseEscolhida.chave}
+              items={bases.map((b) => ({ key: b.chave, label: b.rotulo }))}
+              onChange={setChaveDaBase}
+              className="max-w-full flex-wrap"
+            />
           </div>
-        </fieldset>
+        )}
+        <div>
+          <p className="text-label font-medium text-fg mb-1.5">Cenário</p>
+          <SegmentedControl
+            label="Cenário"
+            active={pronto}
+            items={[...CENARIOS_PRONTOS.map((c) => ({ key: c.chave, label: c.rotulo })), { key: "personalizado", label: "Personalizado" }]}
+            onChange={(chave) => {
+              setPronto(chave);
+              const c = CENARIOS_PRONTOS.find((x) => x.chave === chave);
+              if (c) setPremissas(c.premissas);
+            }}
+            className="max-w-full flex-wrap"
+          />
+        </div>
         <FieldGrid>
           {CAMPOS.map((c) => (
             <CampoForm key={c.chave} label={c.rotulo} htmlFor={`premissa-${c.chave}`} helper={c.dica}>
