@@ -10,7 +10,7 @@ import { formatCalendarDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
-import { TIPO_DO_DIA } from "@/components/pessoas/rotulosDoDP";
+import { TIPO_DO_DIA, horasDoDP } from "@/components/pessoas/rotulosDoDP";
 
 export default async function HorasExtrasPage() {
   const { ctx } = await abrirTelaDoModulo("dp_horas_extras");
@@ -39,7 +39,7 @@ export default async function HorasExtrasPage() {
             {entries.map((o) => (
               <Link key={o.id} href={`/pessoas/${o.person.id}/horas-extras`} className="block">
                 <Cartao className="hover:border-brand/40 transition-colors">
-                  <TopoDoCartao nome={o.person.name} valor={o.overtimeHours ? `${o.overtimeHours.toString()}h` : undefined} />
+                  <TopoDoCartao nome={o.person.name} valor={o.overtimeHours ? horasDoDP(o.overtimeHours) : undefined} />
                   <InfoDoCartao>
                     {formatCalendarDate(o.date)} · {TIPO_DO_DIA[o.dayType]}
                   </InfoDoCartao>
@@ -61,7 +61,7 @@ export default async function HorasExtrasPage() {
             }))}
           >
             <TabelaNoDesktop padrao>
-              <table className="w-full min-w-[720px] text-[length:var(--fs-ui)]">
+              <table className="w-full min-w-[720px]">
                 <thead>
                   <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">
@@ -89,7 +89,7 @@ export default async function HorasExtrasPage() {
                       </td>
                       <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatCalendarDate(o.date)}</td>
                       <td className="px-4 py-3 text-fg-secondary">{TIPO_DO_DIA[o.dayType]}</td>
-                      <td className="px-4 py-3 text-fg-secondary">{o.overtimeHours ? `${o.overtimeHours.toString()}h` : "—"}</td>
+                      <td className="px-4 py-3 text-fg-secondary">{o.overtimeHours ? horasDoDP(o.overtimeHours) : "—"}</td>
                       <td className="px-4 py-3">
                         {/* Abre a aba de horas extras da ficha — é lá que se aprova. */}
                         <Button href={`/pessoas/${o.person.id}/horas-extras`} variant="secondary" size="xs">

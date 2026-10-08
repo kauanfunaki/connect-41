@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { KeyRound, AlertTriangle, CalendarClock, CalendarRange, Search, Unlink } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { MetricCard } from "@/components/ui/MetricCard";
@@ -27,11 +27,14 @@ const ABAS = [
   { chave: "substituidos", rotulo: "Substituídos" },
 ] as const;
 
-const VARIANTE: Record<SituacaoDoCertificado, "danger" | "warning" | "success" | "info"> = {
-  vencido: "danger",
-  a_renovar: "warning",
-  vigente: "success",
-  substituido: "info",
+// Selo, e não Badge: é a situação da linha (regra de 02/10 no Selo.tsx;
+// auditoria de 07/10/2026). O substituído saiu de cena: neutro, e não o azul
+// (o `neutral` do Badge, da mesma data).
+const TOM: Record<SituacaoDoCertificado, TomDoSelo> = {
+  vencido: "perigo",
+  a_renovar: "atencao",
+  vigente: "sucesso",
+  substituido: "neutro",
 };
 
 /**
@@ -85,7 +88,15 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Vencidos" value={emUso.filter((c) => c.situacao === "vencido").length} highlight icon={<AlertTriangle size={15} />} href={href("renovar")} />
+        {/* Vermelho, como o painel da Home e o selo da linha — e só quando há
+            vencido: era âmbar até com zero (`highlight` sem condição). */}
+        <MetricCard
+          label="Vencidos"
+          value={emUso.filter((c) => c.situacao === "vencido").length}
+          tom={emUso.some((c) => c.situacao === "vencido") ? "critico" : undefined}
+          icon={<AlertTriangle size={15} />}
+          href={href("renovar")}
+        />
         <MetricCard label="Vencem em 30 dias" value={emUso.filter((c) => c.dias >= 0 && c.dias <= 30).length} icon={<CalendarClock size={15} />} href={href("renovar")} />
         <MetricCard label="Vencem em 60 dias" value={emUso.filter((c) => c.dias >= 0 && c.dias <= 60).length} icon={<CalendarRange size={15} />} href={href("renovar")} />
         <MetricCard label="Sem empresa no Connect" value={emUso.filter((c) => !c.company).length} icon={<Unlink size={15} />} href={href("sem-empresa")} />
@@ -151,9 +162,9 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
                     {c.tipo === "CPF" ? "e-CPF" : "e-CNPJ"} · {documento(c)}
                   </InfoDoCartao>
                   <InfoDoCartao>cofre: {c.cofreEntrada ?? "—"}</InfoDoCartao>
-                  {c.conferir && <InfoDoCartao className="text-warning">{c.conferir}</InfoDoCartao>}
+                  {c.conferir && <InfoDoCartao className="text-warning-fg">{c.conferir}</InfoDoCartao>}
                   <PeDoCartao>
-                    <Badge variant={VARIANTE[c.situacao]}>{ROTULO_DA_SITUACAO[c.situacao]}</Badge>
+                    <Selo tom={TOM[c.situacao]}>{ROTULO_DA_SITUACAO[c.situacao]}</Selo>
                   </PeDoCartao>
                 </Cartao>
               ))}
@@ -172,9 +183,9 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
               }))}
             >
             <TabelaNoDesktop padrao>
-              <table className="w-full min-w-[980px] text-[13px]">
+              <table className="w-full min-w-[980px]">
                 <thead>
-                  <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Titular" chave="titular" /></th>
                     <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Documento" campos={[{ chave: "tipo", rotulo: "Tipo" }]} /></th>
                     <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
@@ -188,26 +199,27 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
                     <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
                       <td className="py-2.5 pr-3">
                         {c.company ? (
-                          <Link href={`/empresas/${c.company.id}`} className="font-medium hover:underline">
+                          // O link da célula principal no desenho da fila (07/10/2026).
+                          <Link href={`/empresas/${c.company.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
                             {nomeExibicao(c.company)}
                           </Link>
                         ) : (
-                          <span className="font-medium">{c.titular}</span>
+                          <span className="font-semibold">{c.titular}</span>
                         )}
-                        {!c.company && <span className="block text-[11px] text-fg-muted">sem empresa no Connect</span>}
+                        {!c.company && <span className="block text-[length:var(--fs-micro)] text-fg-muted">sem empresa no Connect</span>}
                       </td>
                       <td className="py-2.5 pr-3 tabular-nums text-fg-secondary">
                         {documento(c)}
-                        <span className="block text-[11px] text-fg-muted">{c.tipo === "CPF" ? "e-CPF" : "e-CNPJ"}</span>
+                        <span className="block text-[length:var(--fs-micro)] text-fg-muted">{c.tipo === "CPF" ? "e-CPF" : "e-CNPJ"}</span>
                       </td>
                       <td className="py-2.5 pr-3 tabular-nums">{formatCalendarDate(c.expiresAt)}</td>
                       <td className="py-2.5 pr-3 text-right tabular-nums">{c.situacao === "substituido" ? "—" : c.dias}</td>
                       <td className="py-2.5 pr-3">
-                        <Badge variant={VARIANTE[c.situacao]}>{ROTULO_DA_SITUACAO[c.situacao]}</Badge>
+                        <Selo tom={TOM[c.situacao]}>{ROTULO_DA_SITUACAO[c.situacao]}</Selo>
                       </td>
                       <td className="py-2.5 text-fg-secondary">
                         {c.cofreEntrada ?? "—"}
-                        {c.conferir && <span className="block text-[11px] text-warning">{c.conferir}</span>}
+                        {c.conferir && <span className="block text-[length:var(--fs-micro)] text-warning-fg">{c.conferir}</span>}
                       </td>
                     </LinhaFiltravel>
                   ))}
@@ -215,7 +227,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
               </table>
             </TabelaNoDesktop>
             </TabelaFiltravel>
-            <p className="text-[11px] text-fg-muted mt-3">
+            <p className="text-[length:var(--fs-micro)] text-fg-muted mt-3">
               Vencimento lido de dentro do certificado. Quando o mesmo CNPJ/CPF tem um certificado mais novo, o antigo vira
               &ldquo;substituído&rdquo; e para de avisar. Avisos saem para o setor a 60, 30, 15 e 7 dias e no vencimento.
               {ultimaImportacao && <> Última importação: {formatInstantDate(ultimaImportacao)}.</>}

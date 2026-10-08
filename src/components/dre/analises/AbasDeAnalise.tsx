@@ -16,10 +16,12 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { NotaDeFonte as NotaDeFonteDoApp } from "@/components/shared/NotaDeFonte";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { Cascata, type PassoDaCascata } from "@/components/shared/Graficos";
 import { saoPauloParts } from "@/lib/agenda";
 import {
   serieEconomica,
@@ -31,6 +33,7 @@ import {
 import {
   reconciliarLucroCaixa,
   compararResultados,
+  type PassoDaReconciliacao,
   resultadoDePorGrupo,
   atrasoMedioEmDias,
   projetarSerie,
@@ -63,21 +66,21 @@ import { mesesDoAcumulado } from "@/lib/dre/orcamento/variacao";
 type Base = { tenantId: string; companyId: string; mes: string };
 
 const TH = "py-2 pr-3 font-medium";
-const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border";
+const CABECALHO = "text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border";
 
+/**
+ * A nota de rodapé compartilhada (08/10/2026: nasceu aqui e foi para
+ * `shared`). Nas Análises ela leva o ⓘ, como antes; se todas as telas passam
+ * a levá-lo é decisão do Kauan.
+ */
 function NotaDeFonte({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="flex items-start gap-1.5 text-[11px] text-fg-muted mt-3">
-      <Info size={12} className="mt-0.5 shrink-0" />
-      <span>{children}</span>
-    </p>
-  );
+  return <NotaDeFonteDoApp icone={<Info size={12} />}>{children}</NotaDeFonteDoApp>;
 }
 
 function TabelaComparada({ linhas, rotuloA, rotuloB, destacarAcima }: { linhas: LinhaComparada[]; rotuloA: string; rotuloB: string; destacarAcima?: number }) {
   return (
     <div className="overflow-x-auto border border-border rounded-lg bg-surface">
-      <table className="w-full min-w-[640px] text-[13px]">
+      <table className="w-full min-w-[640px] text-ui">
         <thead>
           <tr className={CABECALHO}>
             <th className={`${TH} pl-4`}>Linha</th>
@@ -96,7 +99,7 @@ function TabelaComparada({ linhas, rotuloA, rotuloB, destacarAcima }: { linhas: 
                 <td className="py-2 pr-3 text-right tabular-nums">{moeda(l.atual)}</td>
                 <td className="py-2 pr-3 text-right tabular-nums">{moeda(l.comparado)}</td>
                 <td className={`py-2 pr-3 text-right tabular-nums ${tomDoValor(l.diferenca)}`}>{moeda(l.diferenca)}</td>
-                <td className={`py-2 pr-4 text-right tabular-nums ${relevante ? "text-warning font-semibold" : "text-fg-muted"}`}>
+                <td className={`py-2 pr-4 text-right tabular-nums ${relevante ? "text-warning-fg font-semibold" : "text-fg-muted"}`}>
                   <span className="inline-flex items-center gap-1">
                     {relevante && <AlertTriangle size={12} />}
                     {percentual(l.variacao)}
@@ -147,16 +150,16 @@ export async function AbaEconomicoFinanceiro({ tenantId, companyId, mes }: Base)
       <TabelaComparada linhas={linhas} rotuloA="Competência" rotuloB="Caixa" destacarAcima={0.15} />
       <div className="grid gap-3 sm:grid-cols-2 mt-4">
         <Card className="p-4">
-          <p className="text-[12px] text-fg-muted">Atraso médio de recebimento</p>
-          <p className="text-[20px] font-semibold tabular-nums mt-1">{dias(atrasoReceber)}</p>
-          <p className="text-[11px] text-fg-muted mt-1">
+          <p className="text-helper text-fg-muted">Atraso médio de recebimento</p>
+          <p className="text-title font-semibold tabular-nums mt-1">{dias(atrasoReceber)}</p>
+          <p className="text-micro text-fg-muted mt-1">
             Dias entre o vencimento e o recebimento, nos {pares.RECEBER.length} títulos recebidos no mês. Positivo é atraso.
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-[12px] text-fg-muted">Atraso médio de pagamento</p>
-          <p className="text-[20px] font-semibold tabular-nums mt-1">{dias(atrasoPagar)}</p>
-          <p className="text-[11px] text-fg-muted mt-1">
+          <p className="text-helper text-fg-muted">Atraso médio de pagamento</p>
+          <p className="text-title font-semibold tabular-nums mt-1">{dias(atrasoPagar)}</p>
+          <p className="text-micro text-fg-muted mt-1">
             Dias entre o vencimento e o pagamento, nos {pares.PAGAR.length} títulos pagos no mês.
           </p>
         </Card>
@@ -172,40 +175,31 @@ export async function AbaEconomicoFinanceiro({ tenantId, companyId, mes }: Base)
 
 // ─── Reconciliação ──────────────────────────────────────────────────────────
 
+/** Os passos da ponte como degraus da `Cascata`. */
+function passosDaCascata(passos: PassoDaReconciliacao[]): PassoDaCascata[] {
+  return passos.map((p) => ({ chave: p.code, rotulo: p.label, valor: p.centavos, tipo: p.tipo }));
+}
+
 export async function AbaReconciliacao({ tenantId, companyId, mes }: Base) {
   const { conjuntos, mapeamento } = await dadosDaReconciliacao(tenantId, companyId, mes);
   const passos = reconciliarLucroCaixa(conjuntos, mapeamento);
-  const maior = Math.max(1, ...passos.map((p) => Math.abs(p.centavos)));
 
   return (
     <>
-      <div className="overflow-x-auto border border-border rounded-lg bg-surface">
-        <table className="w-full min-w-[600px] text-[13px]">
-          <thead>
-            <tr className={CABECALHO}>
-              <th className={`${TH} pl-4`}>Passo</th>
-              <th className={`${TH} text-right`}>Valor</th>
-              <th className={`${TH} pr-4 hidden sm:table-cell w-[30%]`}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {passos.map((p) => (
-              <tr key={p.code} className={`border-b border-border-soft ${p.tipo === "total" ? "bg-surface-hover font-medium" : ""}`}>
-                <td className={`py-2 pl-4 pr-3 ${p.tipo === "total" ? "text-fg" : "text-fg-secondary"}`}>{p.label}</td>
-                <td className={`py-2 pr-3 text-right tabular-nums whitespace-nowrap ${p.centavos < 0 ? "text-danger" : ""}`}>{moeda(p.centavos)}</td>
-                <td className="py-2 pr-4 hidden sm:table-cell">
-                  <div className="h-2.5 w-full rounded bg-border-soft overflow-hidden">
-                    <div
-                      className={`h-full ${p.centavos < 0 ? "bg-danger" : "bg-success"}`}
-                      style={{ width: `${(Math.abs(p.centavos) / maior) * 100}%` }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* A ponte como cascata (08/10/2026, escolha 9A do Kauan: nas análises
+          da DRE, os gráficos de apoio no padrão da Home). Era uma tabela com
+          barras de magnitude alinhadas à esquerda, verdes e vermelhas pelo
+          sinal, e os totais pareciam mais um ajuste. Agora os totais saem do
+          zero em cinza e cada ajuste flutua de onde o anterior parou, no azul
+          do que soma ou no mais claro do que subtrai — o sinal vai escrito. */}
+      <Card className="p-5">
+        <Cascata
+          titulo={`Do resultado de ${rotuloDaCompetencia(mes)} à variação de caixa, em R$`}
+          passos={passosDaCascata(passos)}
+          formatar={moeda}
+          vazio={`Nenhum lançamento com competência ou baixa em ${rotuloDaCompetencia(mes)}.`}
+        />
+      </Card>
       <NotaDeFonte>
         A ponte fecha no centavo, sem &ldquo;ajuste de timing&rdquo;: cada lançamento cai em exatamente um grupo — competência
         e caixa no mês, só competência, ou só caixa. {conjuntos.soCompetencia.length} lançamentos do mês não liquidados no
@@ -435,7 +429,7 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
         ]}
       />
       <div className="overflow-x-auto border border-border rounded-lg bg-surface">
-        <table className="w-full min-w-[680px] text-[13px]">
+        <table className="w-full min-w-[680px] text-ui">
           <thead>
             <tr className={CABECALHO}>
               <th className={`${TH} pl-4`}>Mês</th>
@@ -453,7 +447,7 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
               return (
                 <tr key={c} className="border-b border-border-soft text-fg-muted">
                   <td className="py-2 pl-4 pr-3">
-                    {rotuloDaCompetencia(c)} <span className="text-[11px]">realizado</span>
+                    {rotuloDaCompetencia(c)} <span className="text-micro">realizado</span>
                   </td>
                   <td className="py-2 pr-3 text-right tabular-nums">{moeda(valorDaLinha(r, "receita_bruta"))}</td>
                   {temOrcado && celulaOrcada(c, "receita_bruta")}
@@ -577,19 +571,21 @@ export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
     <>
       {CATEGORIAS.map((cat) => (
         <section key={cat} className="mb-5">
-          <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">{cat}</h3>
+          <h3 className="text-card-title font-semibold text-fg mb-2">{cat}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {indicadores
               .filter((i) => i.categoria === cat)
               .map((i) => (
-                // Mesmo padding (p-4) e mesmo tamanho de número (20px) dos
-                // cartões de atraso médio da primeira aba — eram p-3.5 e 19px.
+                // Mesmo padding (p-4) e mesmo tamanho de número dos cartões de
+                // atraso médio da primeira aba — eram p-3.5 e 19px. O número em
+                // 22px (`text-title`, o da FaixaDeTotais) desde 08/10/2026: os
+                // 20px de antes ficavam fora da escala.
                 <Card key={i.codigo} className="p-4 flex flex-col gap-1">
-                  <p className="text-[12px] text-fg-muted">{i.rotulo}</p>
-                  <p className={`text-[20px] font-semibold tabular-nums ${i.valor === null ? "text-fg-muted" : ""}`}>{valorDoIndicador(i)}</p>
-                  <p className="text-[11px] text-fg-muted font-mono">{i.formula}</p>
-                  <p className="text-[11px] text-fg-muted">{i.leitura}</p>
-                  {i.motivo && <p className="text-[11px] italic text-warning">{i.motivo}</p>}
+                  <p className="text-helper text-fg-muted">{i.rotulo}</p>
+                  <p className={`text-title font-semibold tabular-nums ${i.valor === null ? "text-fg-muted" : ""}`}>{valorDoIndicador(i)}</p>
+                  <p className="text-micro text-fg-muted font-mono">{i.formula}</p>
+                  <p className="text-micro text-fg-muted">{i.leitura}</p>
+                  {i.motivo && <p className="text-micro italic text-warning-fg">{i.motivo}</p>}
                 </Card>
               ))}
           </div>
@@ -672,7 +668,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
                 key={p.chave}
                 href={href(p.chave)}
                 aria-current={ativa ? "page" : undefined}
-                className={`relative flex items-start gap-2 pl-3.5 pr-2 py-2 rounded-r-md text-[length:var(--fs-ui)] leading-snug transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+                className={`relative flex items-start gap-2 pl-3.5 pr-2 py-2 rounded-r-md text-ui leading-snug transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
                   ativa ? "text-brand font-medium" : "text-fg-secondary hover:text-fg hover:bg-surface-hover"
                 }`}
               >
@@ -687,21 +683,21 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
         <div className="min-w-0">
           {!resposta && (
             <Card className="p-5">
-              <p className="text-[13px] text-fg-muted">Escolha uma pergunta para ver o diagnóstico de {rotuloDaCompetencia(mes)}.</p>
+              <p className="text-ui text-fg-muted">Escolha uma pergunta para ver o diagnóstico de {rotuloDaCompetencia(mes)}.</p>
             </Card>
           )}
 
           {resposta && (
             <Card className="p-5 flex flex-col gap-4">
               <div className="flex items-start justify-between gap-3">
-                <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{resposta.titulo}</h3>
+                <h3 className="text-card-title font-semibold text-fg">{resposta.titulo}</h3>
                 <Badge variant={COR_DA_PRIORIDADE[resposta.prioridade]}>Prioridade {resposta.prioridade.toLowerCase()}</Badge>
               </div>
               <Secao titulo="Diagnóstico" texto={resposta.diagnostico} />
               {resposta.evidencias.length > 0 && (
                 <div>
-                  <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">Evidências</p>
-                  <ul className="flex flex-col gap-0.5 text-[13px] text-fg-secondary">
+                  <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Evidências</p>
+                  <ul className="flex flex-col gap-0.5 text-ui text-fg-secondary">
                     {resposta.evidencias.map((e) => (
                       <li key={e}>· {e}</li>
                     ))}
@@ -715,8 +711,8 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
               </div>
               {resposta.planoDeAcao.length > 0 && (
                 <div>
-                  <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">Plano de ação</p>
-                  <ol className="list-decimal pl-5 text-[13px] flex flex-col gap-0.5">
+                  <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Plano de ação</p>
+                  <ol className="list-decimal pl-5 text-ui flex flex-col gap-0.5">
                     {resposta.planoDeAcao.map((p) => (
                       <li key={p}>{p}</li>
                     ))}
@@ -749,8 +745,8 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
 function Secao({ titulo, texto }: { titulo: string; texto: string }) {
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">{titulo}</p>
-      <p className="text-[13px] text-fg">{texto}</p>
+      <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">{titulo}</p>
+      <p className="text-ui text-fg">{texto}</p>
     </div>
   );
 }

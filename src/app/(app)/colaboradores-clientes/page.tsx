@@ -1,11 +1,11 @@
 import { Pagination } from "@/components/shared/Pagination";
 import { Plus, Users } from "lucide-react";
-import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { PessoasTable } from "@/components/pessoas/PessoasTable";
 import { PessoasFilterButton } from "@/components/pessoas/PessoasFilterButton";
 import { getPrisma } from "@/lib/prisma";
@@ -116,33 +116,36 @@ export default async function ColaboradoresClientesPage({
         }
       />
 
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex-1 max-w-xs">
-          <DebouncedSearchInput placeholder="Buscar por nome…" />
-        </div>
-        <PessoasFilterButton
-          search={search}
-          companyId={companyId}
-          companies={companies.map((c) => ({ id: c.id, name: nomeExibicao(c) }))}
-          situacao={situacaoSelecionada(situacaoFiltro)}
-          mostrarEmpresa
-        />
-      </div>
-
-      {/* Revisão de 05/10: botão não é link — o "Mostrar todos" era texto azul. */}
-      {ocultos > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted mb-4">
-          <p>
-            {ocultos} colaborador{ocultos !== 1 ? "es" : ""} inativo{ocultos !== 1 ? "s" : ""} fora desta lista.
-          </p>
-          <Button href={buildUrl({ situacao: SITUACAO_TODOS, page: "1" })} variant="ghost" size="xs">
-            Mostrar todos
-          </Button>
-        </div>
-      )}
-
-      {people.length === 0 ? (
-        <Card>
+      {/* No casco das listas do Recrutamento (DRG-13, 07/10/2026): contagem na
+          barra, busca e Filtros à direita — eram soltos acima da tabela — e o
+          aviso dos inativos com o "Mostrar todos" nas ações da barra.
+          Revisão de 05/10: botão não é link — o "Mostrar todos" era texto azul. */}
+      <CascoDaTabela
+        contagem={contarItens(total, "colaborador", "colaboradores")}
+        busca={<DebouncedSearchInput placeholder="Buscar por nome…" className="w-64 max-w-full" />}
+        filtros={
+          <PessoasFilterButton
+            search={search}
+            companyId={companyId}
+            companies={companies.map((c) => ({ id: c.id, name: nomeExibicao(c) }))}
+            situacao={situacaoSelecionada(situacaoFiltro)}
+            mostrarEmpresa
+          />
+        }
+        acoes={
+          ocultos > 0 ? (
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[length:var(--fs-2)] text-fg-muted">
+              <span>
+                {ocultos} colaborador{ocultos !== 1 ? "es" : ""} inativo{ocultos !== 1 ? "s" : ""} fora desta lista.
+              </span>
+              <Button href={buildUrl({ situacao: SITUACAO_TODOS, page: "1" })} variant="ghost" size="xs">
+                Mostrar todos
+              </Button>
+            </span>
+          ) : undefined
+        }
+      >
+        {people.length === 0 ? (
           <EmptyState
             icon={<Users />}
             title={search || companyId ? "Nenhum colaborador encontrado" : "Nenhum colaborador cadastrado ainda"}
@@ -161,26 +164,27 @@ export default async function ColaboradoresClientesPage({
               ) : undefined
             }
           />
-        </Card>
-      ) : (
-        <PessoasTable
-          people={people.map((p) => ({
-            id: p.id,
-            name: p.name,
-            active: p.active,
-            cpf: p.cpf,
-            email: p.email,
-            photoUrl: p.photoUrl,
-            companyName: p.currentCompany ? nomeExibicao(p.currentCompany) : null,
-            companyId: p.currentCompany?.id ?? null,
-            createdAtLabel: formatInstantDate(p.createdAt),
-            linkedUserName: p.linkedUser?.name ?? null,
-          }))}
-          showLinkedUser={false}
-          canCreate={canCreate}
-          definirAtivoPessoasEmMassa={definirAtivoPessoasEmMassa}
-        />
-      )}
+        ) : (
+          <PessoasTable
+            people={people.map((p) => ({
+              id: p.id,
+              name: p.name,
+              active: p.active,
+              cpf: p.cpf,
+              email: p.email,
+              photoUrl: p.photoUrl,
+              companyName: p.currentCompany ? nomeExibicao(p.currentCompany) : null,
+              companyId: p.currentCompany?.id ?? null,
+              createdAtLabel: formatInstantDate(p.createdAt),
+              linkedUserName: p.linkedUser?.name ?? null,
+            }))}
+            showLinkedUser={false}
+            canCreate={canCreate}
+            definirAtivoPessoasEmMassa={definirAtivoPessoasEmMassa}
+            noCasco
+          />
+        )}
+      </CascoDaTabela>
 
       <Pagination page={pageNum} totalPages={totalPages} buildHref={(n) => buildUrl({ page: String(n) })} total={total} rotulo="colaboradores" />
     </PageContainer>

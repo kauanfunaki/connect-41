@@ -3,13 +3,14 @@ import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getSectorUsers } from "@/lib/sectorUsers";
-import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
+import { formatInstantDate, formatInstantDateTime, formatarCompetencia } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Button } from "@/components/ui/Button";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
 import { RegistrarContato } from "@/components/cobranca/RegistrarContato";
@@ -80,13 +81,13 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
         title={l.sacadoNome}
         subtitle={
           <>
-            {l.empresaNome} · {moeda(l.valorCentavos)} · venceu em {formatInstantDate(l.vencimento)} · competência {t.competencia}
+            {l.empresaNome} · {moeda(l.valorCentavos)} · venceu em {formatInstantDate(l.vencimento)} · competência {formatarCompetencia(t.competencia)}
           </>
         }
         meta={
           <>
             <SeloDaCobranca situacao={l.situacao} />
-        {l.situacao === null && <Badge variant={t.status === "PAGO" ? "success" : "info"}>{t.status === "PAGO" ? "Pago" : "Cancelado"}</Badge>}
+        {l.situacao === null && <Badge variant={t.status === "PAGO" ? TOM_DA_SITUACAO.PAGA : TOM_DA_SITUACAO.CANCELADA}>{t.status === "PAGO" ? "Pago" : "Cancelado"}</Badge>}
             {emAberto && l.diasDeAtraso > 0 && (
               <span>
                 {l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`} de atraso · {FAIXAS_DE_ATRASO.find((f) => f.chave === l.faixa)?.rotulo}
@@ -99,22 +100,22 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
 
       {t.perda && (
         <Card className="p-4 mb-4 border-danger/40">
-          <p className="text-[13px]">
+          <p className="text-ui">
             <strong>Baixado por perda</strong>
             {t.perda.em ? ` em ${formatInstantDate(t.perda.em)}` : ""}
             {t.perda.por ? ` por ${t.perda.por}` : ""}.
           </p>
-          {t.perda.motivo && <p className="text-[12px] text-fg-secondary mt-1">“{t.perda.motivo}”</p>}
-          <p className="text-[11px] text-fg-muted mt-1">
-            A receita continua na competência {t.competencia}; a perda é despesa (outras despesas) na competência da data da perda.
+          {t.perda.motivo && <p className="text-helper text-fg-secondary mt-1">“{t.perda.motivo}”</p>}
+          <p className="text-micro text-fg-muted mt-1">
+            A receita continua na competência {formatarCompetencia(t.competencia)}; a perda é despesa (outras despesas) na competência da data da perda.
           </p>
         </Card>
       )}
 
       <Card className="p-4 mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-ui">
           <div className="min-w-0">
-            <span className="block text-[length:var(--fs-helper)] text-fg-muted mb-1">Responsável</span>
+            <span className="block text-helper text-fg-muted mb-1">Responsável</span>
             {podeAgir ? (
               <AtribuirResponsavel entryId={l.id} atual={l.responsavelId} usuarios={usuarios} />
             ) : (
@@ -122,13 +123,13 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
             )}
           </div>
           <div className="min-w-0">
-            <span className="block text-[length:var(--fs-helper)] text-fg-muted mb-1">E-mail do sacado</span>
+            <span className="block text-helper text-fg-muted mb-1">E-mail do sacado</span>
             {l.sacadoEmail ? (
               <span className="block break-words">{l.sacadoEmail}</span>
             ) : (
               // Revisão de 05/10: botão não é link — era "cadastrar" em texto azul.
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                <span className="text-warning">sem e-mail</span>
+                <span className="text-warning-fg">sem e-mail</span>
                 <Button href={`/cadastros-financeiros?empresa=${l.empresaId}&aba=sacados`} variant="secondary" size="xs">
                   Cadastrar e-mail
                 </Button>
@@ -136,7 +137,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
             )}
           </div>
           <div className="min-w-0">
-            <span className="block text-[length:var(--fs-helper)] text-fg-muted mb-1">Régua</span>
+            <span className="block text-helper text-fg-muted mb-1">Régua</span>
             {l.regua.enviar !== null ? <span>passo de {l.regua.enviar} dias na próxima execução</span> : <span className="text-fg-secondary">{ROTULO_DO_MOTIVO[l.regua.motivo]}</span>}
           </div>
         </div>
@@ -162,7 +163,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
                 variante="danger"
                 tamanho="sm"
                 titulo="Baixa por perda"
-                descricao={`${l.sacadoNome} · ${moeda(l.valorCentavos)}. O título sai do em aberto e do aging; a receita da competência ${t.competencia} não muda, e a perda entra como despesa neste mês.`}
+                descricao={`${l.sacadoNome} · ${moeda(l.valorCentavos)}. O título sai do em aberto e do aging; a receita da competência ${formatarCompetencia(t.competencia)} não muda, e a perda entra como despesa neste mês.`}
                 confirmar="Baixar por perda"
                 motivoObrigatorio
                 ajuda="Fica registrado no histórico do título."
@@ -179,8 +180,8 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
                 acao={reverterPerda.bind(null, l.id)}
               />
             )}
-            {!gerencia && (perda.pode || reverter.pode) && <span className="text-[11px] text-fg-muted">Baixa e reversão por perda são da coordenação.</span>}
-            {emAberto && !perda.pode && l.diasDeAtraso > 0 && gerencia && <span className="text-[11px] text-fg-muted">{perda.motivo}</span>}
+            {!gerencia && (perda.pode || reverter.pode) && <span className="text-micro text-fg-muted">Baixa e reversão por perda são da coordenação.</span>}
+            {emAberto && !perda.pode && l.diasDeAtraso > 0 && gerencia && <span className="text-micro text-fg-muted">{perda.motivo}</span>}
           </div>
         )}
       </Card>
@@ -190,49 +191,55 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
 
       {podeAgir && (l.situacao !== null || t.closeReason === "PERDA") && t.closeReason !== "RENEGOCIADO" && (
         <Card className="p-4 mb-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-3">Registrar contato</h2>
+          <h2 className="text-card-title font-semibold mb-3">Registrar contato</h2>
           <RegistrarContato entryId={l.id} hojeISO={hojeKey} />
         </Card>
       )}
 
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-2">Histórico</h2>
-      {historico.length === 0 ? (
-        <p className="text-[12px] text-fg-muted mb-4">Nenhum contato registrado.</p>
-      ) : (
-        <ol className="flex flex-col gap-2 mb-5">
-          {historico.map((h) =>
-            h.tipo === "contato" ? (
-              <li key={`c-${h.c.id}`} className="rounded-md border border-border px-3 py-2 text-[13px]">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="tabular-nums font-medium">{formatInstantDate(h.c.em)}</span>
-                  <span>{ROTULO_DO_CANAL[h.c.canal]}</span>
-                  <Badge variant={h.c.resultado === "CONTESTOU" ? "warning" : h.c.resultado === "PROMETEU_PAGAR" ? "info" : "info"}>
-                    {ROTULO_DO_RESULTADO[h.c.resultado]}
-                  </Badge>
-                  {h.c.proximaAcao && <span className="text-[12px] text-fg-muted">próxima ação {formatInstantDate(h.c.proximaAcao)}</span>}
-                  <span className="text-[11px] text-fg-muted ml-auto">
-                    {h.c.por ?? "—"} · registrado {formatInstantDateTime(h.c.registradoEm)}
-                  </span>
-                </div>
-                {h.c.notas && <p className="text-[12px] text-fg-secondary mt-1 whitespace-pre-wrap">{h.c.notas}</p>}
-              </li>
-            ) : (
-              <li key={`e-${h.e.id}`} className="px-3 py-1.5 text-[12px] text-fg-secondary">
-                <span className="tabular-nums">{formatInstantDateTime(h.e.em)}</span> · {ROTULO_DO_EVENTO[h.e.tipo] ?? h.e.tipo}
-                {h.e.motivo ? ` — ${h.e.motivo}` : ""}
-                {h.e.por ? <span className="text-fg-muted"> · {h.e.por}</span> : null}
-              </li>
-            )
-          )}
-        </ol>
-      )}
+      {/* Seções em cartão com o título dentro, como "Registrar contato" e o
+          acordo logo acima (08/10/2026): "Histórico" e "Lembretes da régua"
+          eram os únicos títulos soltos no fundo da ficha. O contato registrado
+          é um bloco de leitura: `rounded-lg`, como os cartões, e o corpo da
+          anotação em 15px (o papel de mensagem na escala); data e autor
+          continuam no tamanho de metadado. */}
+      <Card className="p-4 mb-4">
+        <h2 className="text-card-title font-semibold mb-3">Histórico</h2>
+        {historico.length === 0 ? (
+          <p className="text-helper text-fg-muted">Nenhum contato registrado.</p>
+        ) : (
+          <ol className="flex flex-col gap-2">
+            {historico.map((h) =>
+              h.tipo === "contato" ? (
+                <li key={`c-${h.c.id}`} className="rounded-lg border border-border px-3 py-2 text-ui">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="tabular-nums font-medium">{formatInstantDate(h.c.em)}</span>
+                    <span>{ROTULO_DO_CANAL[h.c.canal]}</span>
+                    <Badge variant={h.c.resultado === "CONTESTOU" ? "warning" : "info"}>{ROTULO_DO_RESULTADO[h.c.resultado]}</Badge>
+                    {h.c.proximaAcao && <span className="text-fs-2 text-fg-muted">próxima ação {formatInstantDate(h.c.proximaAcao)}</span>}
+                    <span className="text-micro text-fg-muted ml-auto">
+                      {h.c.por ?? "—"} · registrado {formatInstantDateTime(h.c.registradoEm)}
+                    </span>
+                  </div>
+                  {h.c.notas && <p className="text-body text-fg-secondary mt-1 whitespace-pre-wrap">{h.c.notas}</p>}
+                </li>
+              ) : (
+                <li key={`e-${h.e.id}`} className="px-3 py-1.5 text-fs-2 text-fg-secondary">
+                  <span className="tabular-nums">{formatInstantDateTime(h.e.em)}</span> · {ROTULO_DO_EVENTO[h.e.tipo] ?? h.e.tipo}
+                  {h.e.motivo ? ` — ${h.e.motivo}` : ""}
+                  {h.e.por ? <span className="text-fg-muted"> · {h.e.por}</span> : null}
+                </li>
+              )
+            )}
+          </ol>
+        )}
+      </Card>
 
       {t.envios.length > 0 && (
-        <>
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-2">Lembretes da régua</h2>
+        <Card className="p-4 mb-4">
+          <h2 className="text-card-title font-semibold mb-3">Lembretes da régua</h2>
           {/* Colunas fixas a partir de sm: com itens soltos, o e-mail e o selo
               mudavam de lugar conforme a largura da data de cada linha. */}
-          <ul className="flex flex-col gap-1.5 text-[12px] mb-4">
+          <ul className="flex flex-col gap-1.5 text-fs-2">
             {t.envios.map((e) => (
               <li key={e.step} className="grid grid-cols-1 sm:grid-cols-[9.5rem_7.5rem_minmax(0,1fr)_auto] sm:items-center gap-x-3 gap-y-0.5">
                 <span className="tabular-nums">{formatInstantDateTime(e.sentAt)}</span>
@@ -245,7 +252,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
               </li>
             ))}
           </ul>
-        </>
+        </Card>
       )}
     </PageContainer>
   );
@@ -256,18 +263,18 @@ function ResumoDoAcordoCard({ titulo, acordo, destaque }: { titulo: string; acor
     <Card className="p-4 mb-4">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold">{titulo}</h2>
+          <h2 className="text-card-title font-semibold">{titulo}</h2>
           <SeloDoAcordo status={acordo.status} />
         </div>
         <Button href={`/cobranca?aba=acordos&empresa=${acordo.empresaId}`} variant="secondary" size="xs">
           Ver nos acordos
         </Button>
       </div>
-      <p className="text-[12px] text-fg-muted tabular-nums mb-2">
+      <p className="text-fs-2 text-fg-muted tabular-nums mb-2">
         {formatInstantDate(acordo.acordadoEm)} · originais {moeda(acordo.originalCentavos)} → acordado {moeda(acordo.acordadoCentavos)} ·{" "}
         {acordo.resumo.pagas}/{acordo.resumo.total} pagas · {moeda(acordo.resumo.emAbertoCentavos)} em aberto
       </p>
-      <ul className="flex flex-col gap-1 text-[12px]">
+      <ul className="flex flex-col gap-1 text-fs-2">
         {acordo.parcelas.map((p, i) => (
           // Colunas fixas: número, vencimento e valor caem um embaixo do outro.
           <li
@@ -280,13 +287,13 @@ function ResumoDoAcordoCard({ titulo, acordo, destaque }: { titulo: string; acor
             <span>{formatInstantDate(p.vencimento)}</span>
             <span className="text-right">{moeda(p.valorCentavos)}</span>
             {p.pagoEm ? (
-              <Badge variant="success">Paga</Badge>
+              <Badge variant={TOM_DA_SITUACAO.PAGA}>Paga</Badge>
             ) : p.closeReason === "PERDA" ? (
-              <Badge variant="danger">Perda</Badge>
+              <Badge variant={TOM_DA_SITUACAO.PERDA}>Perda</Badge>
             ) : p.closeReason === "RENEGOCIADO" ? (
-              <Badge variant="info">Renegociada</Badge>
+              <Badge variant={TOM_DA_SITUACAO.RENEGOCIADA}>Renegociada</Badge>
             ) : p.status === "CANCELADO" ? (
-              <Badge variant="info">Cancelada</Badge>
+              <Badge variant={TOM_DA_SITUACAO.CANCELADA}>Cancelada</Badge>
             ) : p.id === destaque ? null : (
               <Button href={`/cobranca/${p.id}`} variant="ghost" size="xs">
                 Abrir

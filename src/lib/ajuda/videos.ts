@@ -1,8 +1,10 @@
 // Os vídeos de passo a passo da ajuda — o único lugar dos links (05/10/2026).
 //
 // Decisão do Kauan em 05/10: os vídeos ficam no YouTube, não listados, e tocam
-// dentro da própria página (player do youtube-nocookie), no artigo da tela e na
-// seção "Vídeos" da central. Substituiu o campo `video` do artigo, que nunca
+// dentro da própria página (player do youtube-nocookie), só onde a pessoa abre
+// a ajuda daquela tela ou daquele assunto: no artigo da tela e dentro do passo
+// aberto. A seção "Vídeos" do topo da central, que repetia tudo, saiu em
+// 08/10/2026 a pedido do Kauan. Substituiu o campo `video` do artigo, que nunca
 // chegou a ser preenchido — assim não há duas fontes.
 //
 // Para pôr um vídeo no ar: cole o link entre as aspas, do jeito que o YouTube
@@ -118,10 +120,10 @@ export const VIDEOS_DO_CONNECT: Readonly<Record<string, string>> = {
 /**
  * Vídeos dos primeiros passos da central de ajuda do Connect (06/10/2026), pela
  * chave do passo (`PRIMEIROS_PASSOS`, em `components/ajuda/CentralDeAjuda.tsx`).
- * O vídeo toca dentro do passo aberto e entra na seção "Vídeos" da central.
+ * O vídeo toca dentro do passo aberto.
  *
  * "meu-dia" e "transferir" não têm vídeo próprio: o do artigo (18 e 24) serve
- * — cole o mesmo link, e a seção "Vídeos" mostra uma vez só.
+ * — cole o mesmo link.
  */
 export const VIDEOS_DOS_PRIMEIROS_PASSOS: Readonly<Record<string, string>> = {
   // 19 — Achar qualquer coisa com Ctrl+K
@@ -138,8 +140,8 @@ export const VIDEOS_DOS_PRIMEIROS_PASSOS: Readonly<Record<string, string>> = {
 
 /**
  * Vídeos do portal do cliente, pela chave do passo (`lib/portal/ajuda.ts`).
- * O vídeo toca dentro do passo e entra na seção "Vídeos" da ajuda do portal —
- * só para quem enxerga o passo (o módulo dele ligado).
+ * O vídeo toca dentro do passo aberto — só para quem enxerga o passo (o módulo
+ * dele ligado).
  */
 export const VIDEOS_DO_PORTAL: Readonly<Record<string, string>> = {
   // Publicados pelo Kauan em 07/10/2026 (não listados).

@@ -27,14 +27,22 @@ type Row = {
   linkedUserName: string | null;
 };
 
+const MOLDURA = "bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]";
+
 type Props = {
   people: Row[];
   canCreate: boolean;
   showLinkedUser?: boolean;
   definirAtivoPessoasEmMassa: (ids: string[], ativo: boolean) => Promise<void>;
+  /**
+   * Dentro do `CascoDaTabela` (Colaboradores de clientes, 07/10/2026): no
+   * computador quem desenha a moldura é o casco, junto com a barra; no celular
+   * a barra é um cartão próprio, e a lista de cartões ganha o seu.
+   */
+  noCasco?: boolean;
 };
 
-export function PessoasTable({ people, canCreate, showLinkedUser = false, definirAtivoPessoasEmMassa }: Props) {
+export function PessoasTable({ people, canCreate, showLinkedUser = false, definirAtivoPessoasEmMassa, noCasco = false }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // Um diálogo só, servindo a ação em massa e a da linha — duas confirmações separadas
   // divergiriam no texto na primeira alteração.
@@ -124,7 +132,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
             <span className="flex flex-col min-w-0">
               <span className="font-medium break-words">{p.name}</span>
               {p.email && (
-                <span className="text-[11.5px] text-fg-muted break-all">{p.email}</span>
+                <span className="text-[length:var(--fs-micro)] text-fg-muted break-all">{p.email}</span>
               )}
             </span>
           </Link>
@@ -170,18 +178,20 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
+      {/* `c41-tabela`: dentro do `CascoDaTabela`, no computador, o casco é o
+          cartão e este perde borda, fundo e sombra (globals.css). */}
+      <div className={noCasco ? "" : `c41-tabela ${MOLDURA}`}>
         {people.length === 0 ? (
           <EmptyState icon={<Users />} title="Nenhuma pessoa encontrada" />
         ) : (
           <>
           {/* Abaixo de md, cartões; de md para cima, a tabela. As duas
               compartilham a seleção — quem esconde uma delas é o CSS. */}
-          <div className="md:hidden">
+          <div className={`md:hidden ${noCasco ? MOLDURA : ""}`.trim()}>
             {canCreate && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todas" />
-                <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   Selecionar todas
                 </span>
               </div>
@@ -193,7 +203,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
               do navegador filtraria só a página aberta. O de tabela paginada é o
               `FiltroDaColunaNaUrl`, que depende da página filtrar no servidor. */}
           <div className="c41-tabela scroll-x overflow-x-auto hidden md:block">
-          <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">
+          <table className="w-full min-w-[860px]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
@@ -201,14 +211,14 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
                     <Checkbox checked={allSelected} onChange={toggleAll} />
                   </th>
                 )}
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CPF</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">CPF</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   {showLinkedUser ? "Conta de acesso" : "Empresa"}
                 </th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>

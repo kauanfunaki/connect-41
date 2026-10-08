@@ -10,6 +10,7 @@ import { SimpleMarkdown } from "@/components/shared/SimpleMarkdown";
 import { buildJobPostingJsonLd, buildJobSummary, publicUrl } from "@/lib/jobPostingSchema";
 import { emitirCarimbo } from "@/lib/carreiras/antiRobo";
 import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
+import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 import { beneficiosDaVaga, localDaVaga, whereDoPrazo } from "@/lib/carreiras/portal";
 
 // Dinâmica de propósito: o formulário leva um carimbo de tempo assinado na hora
@@ -129,14 +130,18 @@ export default async function VagaPublicaPage({
           <ArrowLeft size={14} /> Todas as vagas
         </Button>
 
-        <header className="mt-4 mb-6">
-          <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">{vaga.title}</h1>
-          <p className="text-[13px] text-fg-muted mt-1">
-            {companyLabel}
-            {local && ` · ${local}`}
-            {vaga.cargo && ` · ${vaga.cargo.name}`}
-            {vaga.quantity > 1 && ` · ${vaga.quantity} vagas`}
-          </p>
+        <CabecalhoPublico
+          className="mt-4 mb-6"
+          titulo={vaga.title}
+          subtitulo={
+            <>
+              {companyLabel}
+              {local && ` · ${local}`}
+              {vaga.cargo && ` · ${vaga.cargo.name}`}
+              {vaga.quantity > 1 && ` · ${vaga.quantity} vagas`}
+            </>
+          }
+        >
           <div className="mt-3">
             <EtiquetasDaVaga
               workMode={vaga.workMode}
@@ -146,28 +151,28 @@ export default async function VagaPublicaPage({
               showSalary={vaga.showSalary}
             />
           </div>
-          <p className="text-[11px] text-fg-muted mt-2">
+          <p className="text-[length:var(--fs-micro)] text-fg-muted mt-2">
             Publicada em {formatCalendarDate(vaga.openedAt)}
             {vaga.applicationDeadline && (
               <> · <strong className="font-medium text-fg-secondary">inscrições até {formatCalendarDate(vaga.applicationDeadline)}</strong></>
             )}
           </p>
-        </header>
+        </CabecalhoPublico>
 
         {vaga.publicDescription && (
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-6">
-            <SimpleMarkdown text={vaga.publicDescription} className="text-[13.5px] text-fg leading-relaxed" />
-          </div>
+          <Card className="p-5 mb-6">
+            <SimpleMarkdown text={vaga.publicDescription} className="text-[length:var(--fs-ui)] text-fg leading-relaxed" />
+          </Card>
         )}
 
         {beneficios.length > 0 && (
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-6">
-            <h2 className="text-[15px] font-semibold text-fg mb-3">Benefícios</h2>
+          <Card className="p-5 mb-6">
+            <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-3">Benefícios</h2>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
               {beneficios.map((b) => (
                 // O ponto mora numa caixa da altura da linha (h-5 = leading-5)
                 // e centraliza nela — era `mt-[7px]`, acertado no olho.
-                <li key={b} className="text-[13px] leading-5 text-fg flex items-start gap-2">
+                <li key={b} className="text-[length:var(--fs-ui)] leading-5 text-fg flex items-start gap-2">
                   <span className="flex h-5 items-center flex-shrink-0" aria-hidden="true">
                     <span className="w-1.5 h-1.5 rounded-full bg-brand" />
                   </span>
@@ -175,15 +180,15 @@ export default async function VagaPublicaPage({
                 </li>
               ))}
             </ul>
-          </div>
+          </Card>
         )}
 
         <Card className="p-5">
-          <h2 className="text-[15px] font-semibold text-fg mb-4">Candidatar-se</h2>
+          <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-4">Candidatar-se</h2>
           <ApplyForm slug={slug} vagaId={vaga.id} carimbo={emitirCarimbo(new Date())} />
         </Card>
 
-        <p className="text-[11px] text-fg-muted mt-6 text-center">
+        <p className="text-[length:var(--fs-micro)] text-fg-muted mt-6 text-center">
           Processo seletivo conduzido por {tenant.name}.
         </p>
       </div>

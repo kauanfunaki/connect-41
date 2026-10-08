@@ -79,8 +79,10 @@ export const SITUACAO_LABEL: Record<SituacaoDaLicenca, string> = {
   vencida: "Vencida",
 };
 
-export const SITUACAO_VARIANTE: Record<SituacaoDaLicenca, "success" | "warning" | "danger" | "info"> = {
-  revogada: "info",
+// Revogada saiu de cena: neutro (07/10/2026), e não o azul de "Sem validade"
+// e dos outros avisos — é o `neutral` do Badge, que a base criou para isso.
+export const SITUACAO_VARIANTE: Record<SituacaoDaLicenca, "success" | "warning" | "danger" | "info" | "neutral"> = {
+  revogada: "neutral",
   sem_validade: "info",
   vigente: "success",
   a_renovar: "warning",

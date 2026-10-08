@@ -104,8 +104,8 @@ export function TaskFieldsPanel({
 
   return (
     <div className="border-b border-border pb-3 mb-4">
-      {/* Status */}
-      <FieldRow icon={<Circle size={14} />} label="Status">
+      {/* Situação — "Status" era o único rótulo em inglês do cartão (07/10/2026). */}
+      <FieldRow icon={<Circle size={14} />} label="Situação">
         {canAct ? (
           <Dropdown
             trigger={({ open, toggle }) => (
@@ -239,7 +239,7 @@ export function TaskFieldsPanel({
           )
         ) : canAct ? (
           <Button type="button" variant="secondary" size="xs" onClick={() => startTransition(() => startTimerAction())}>
-            <Play size={11} /> Start
+            <Play size={11} /> Iniciar
           </Button>
         ) : (
           <span className="text-[13px] text-fg-muted">—</span>

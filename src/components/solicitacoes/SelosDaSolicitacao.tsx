@@ -9,19 +9,20 @@ import {
 
 // A cor diz de quem é a vez para quem está olhando: do lado da equipe, a nova
 // é o que a fila precisa destacar; do lado do cliente, é o "aguardando você".
-const DA_EQUIPE: Record<StatusDaSolicitacao, "success" | "warning" | "danger" | "info"> = {
+// A cancelada não é a vez de ninguém: neutra (07/10/2026), o `neutral` do Badge.
+const DA_EQUIPE: Record<StatusDaSolicitacao, "success" | "warning" | "danger" | "info" | "neutral"> = {
   ABERTA: "warning",
   EM_ANDAMENTO: "info",
   AGUARDANDO_CLIENTE: "info",
   CONCLUIDA: "success",
-  CANCELADA: "danger",
+  CANCELADA: "neutral",
 };
-const DO_CLIENTE: Record<StatusDaSolicitacao, "success" | "warning" | "danger" | "info"> = {
+const DO_CLIENTE: Record<StatusDaSolicitacao, "success" | "warning" | "danger" | "info" | "neutral"> = {
   ABERTA: "info",
   EM_ANDAMENTO: "info",
   AGUARDANDO_CLIENTE: "warning",
   CONCLUIDA: "success",
-  CANCELADA: "danger",
+  CANCELADA: "neutral",
 };
 
 export function SeloDaSolicitacao({ status, lado }: { status: StatusDaSolicitacao; lado: "EQUIPE" | "CLIENTE" }) {

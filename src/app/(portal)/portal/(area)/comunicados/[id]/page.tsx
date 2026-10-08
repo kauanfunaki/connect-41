@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Paperclip } from "lucide-react";
+import { Paperclip } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -30,17 +30,23 @@ export default async function PortalComunicadoPage({ params }: { params: Promise
 
   return (
     <PageContainer>
-      <Link href="/portal/comunicados" className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg mb-3">
-        <ArrowLeft size={14} /> Comunicados
-      </Link>
+      {/* O "voltar" com destino fixo, no BackButton (07/10/2026): quem chega pelo
+          link do e-mail não tem histórico para onde voltar, e o link escrito
+          à mão tinha 20px de alvo. */}
+      <BackButton href="/portal/comunicados" rotulo="Comunicados" className="mb-3" />
       <PageHeader title={c.titulo} subtitle={<>{labels[c.setor] ?? c.setor} · {formatInstantDateTime(c.enviadoEm)}</>} />
-      <Card className="p-5">
-        <p className="text-[14px] text-fg whitespace-pre-wrap break-words leading-relaxed">{c.texto}</p>
+      {/* Texto de leitura (padrão aceito na página de decisões, 08/10/2026): no
+          máximo 72 caracteres por linha e no tamanho de leitura (15px). Na
+          largura toda da tela eram ~170 caracteres por linha, em 14px. O
+          cartão acompanha (`max-w-3xl`), para não sobrar meia tela vazia
+          dentro dele. */}
+      <Card className="p-5 max-w-3xl">
+        <p className="max-w-[72ch] text-body text-fg whitespace-pre-wrap break-words leading-relaxed">{c.texto}</p>
         {c.anexos.length > 0 && (
           <ul className="mt-4 flex flex-col gap-1">
             {c.anexos.map((a) => (
               <li key={a.id}>
-                <a href={`/portal/comunicados/anexos/${a.id}`} className="inline-flex items-center gap-1.5 text-[12.5px] text-brand hover:underline break-all">
+                <a href={`/portal/comunicados/anexos/${a.id}`} className="inline-flex items-center gap-1.5 text-fs-2 text-brand hover:underline break-all">
                   <Paperclip size={12} className="shrink-0" /> {a.fileName}
                   <span className="text-fg-muted">· {formatarBytes(a.sizeBytes)}</span>
                 </a>
@@ -49,11 +55,12 @@ export default async function PortalComunicadoPage({ params }: { params: Promise
           </ul>
         )}
       </Card>
-      {/* Revisão de 05/10: botão não é link — "solicitação" era texto azul no meio da frase. */}
+      {/* Revisão de 05/10: botão não é link — "solicitação" era texto azul no meio da frase.
+          "Nova solicitação" (07/10/2026), o nome do mesmo botão nas Solicitações e na Ajuda. */}
       <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <p className="text-[12.5px] text-fg-muted">Dúvida sobre este comunicado?</p>
+        <p className="text-fs-2 text-fg-muted">Dúvida sobre este comunicado?</p>
         <Button href="/portal/solicitacoes/nova" variant="secondary" size="sm">
-          Abrir solicitação
+          Nova solicitação
         </Button>
       </div>
     </PageContainer>

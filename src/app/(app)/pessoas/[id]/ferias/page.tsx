@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -46,7 +47,7 @@ export default async function FeriasPage({
       <BackButton className="mb-3" />
       <PageHeader title="Férias" />
 
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+      <Card className="p-5">
         {vacations.length === 0 ? (
           <p className="text-[13px] text-fg-muted mb-3">Nenhuma férias programada ainda.</p>
         ) : (
@@ -73,7 +74,7 @@ export default async function FeriasPage({
         )}
 
         {canEdit && <AddFeriasForm action={criarFeriasAction} />}
-      </div>
+      </Card>
     </PageContainer>
   );
 }

@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
@@ -38,13 +38,13 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
 
   return (
     <PageContainer>
-      <Link href="/portal/pendencias" className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg mb-3">
-        <ArrowLeft size={14} /> Pendências
-      </Link>
-      {/* Os selos no `action` do cabeçalho: ficavam numa linha solta entre o
-          título e a conversa, 40px abaixo de um e 16px acima da outra. Assim
-          vão à direita do título no desktop e descem para baixo dele no
-          celular, e a conversa fica à distância de sempre. */}
+      {/* O "voltar" com destino fixo, no BackButton (07/10/2026): quem chega pelo
+          link do e-mail não tem histórico para onde voltar, e o link escrito
+          à mão tinha 20px de alvo. */}
+      <BackButton href="/portal/pendencias" rotulo="Pendências" className="mb-3" />
+      {/* Os selos no `meta` do cabeçalho, embaixo do título, como no detalhe
+          da equipe (07/10/2026). Ficavam numa linha solta entre o título e a
+          conversa e, depois, no `action`, à direita — um terceiro lugar. */}
       <PageHeader
         title={p.titulo}
         subtitle={
@@ -53,11 +53,11 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
             {p.prazo && <> · prazo {formatInstantDate(p.prazo)}</>}
           </>
         }
-        action={
-          <div className="flex flex-wrap items-center gap-2">
+        meta={
+          <>
             <SeloDoStatus status={p.status} lado="CLIENTE" />
             <SeloDoPrazo situacao={p.situacaoDoPrazo} status={p.status} />
-          </div>
+          </>
         }
       />
 
@@ -74,13 +74,15 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
             alvo={p.id}
             acao={responderPendenciaCliente}
             rotulo="Enviar resposta"
-            dica="Anexe PDF, PNG, JPG ou XML de até 10 MB. A equipe é avisada quando você responde."
+            dica="A equipe é avisada quando você responde."
           />
         </Card>
       ) : (
-        <p className="mt-5 text-[12px] text-fg-muted">
+        // Aviso neutro onde estaria o campo de resposta (07/10/2026): era um
+        // parágrafo cinza de 12px, fácil de passar batido.
+        <Aviso tom="neutro" className="mt-5">
           Esta pendência foi encerrada pela equipe. Se ainda houver algo a tratar, fale com o seu contato no escritório.
-        </p>
+        </Aviso>
       )}
     </PageContainer>
   );

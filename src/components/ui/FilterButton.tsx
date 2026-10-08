@@ -28,7 +28,7 @@ export function FilterButton({ activeCount = 0, align = "right", width = 260, ch
           onClick={toggle}
           // h-8 desde 30/09: a busca compacta e os botões sm da mesma barra têm 32px,
           // e o Filtros com 36px era o único degrau da linha.
-          className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-[length:var(--fs-button-sm)] font-semibold transition-colors flex-shrink-0 ${
+          className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-button-sm font-semibold transition-colors flex-shrink-0 ${
             activeCount > 0 || open
               ? "border-brand/40 bg-brand-subtle text-fg"
               : "border-border-strong text-fg-secondary hover:bg-surface-hover"
@@ -48,7 +48,7 @@ export function FilterButton({ activeCount = 0, align = "right", width = 260, ch
 export function FilterButtonSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">{label}</p>
+      <p className="c41-rotulo px-1">{label}</p>
       {children}
     </div>
   );

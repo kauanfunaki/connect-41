@@ -32,7 +32,8 @@ export function ResolverExigencia({
       <Button
         variant="secondary"
         size="xs"
-        disabled={pendente}
+        loading={pendente}
+        loadingLabel="Marcando…"
         className="whitespace-nowrap"
         onClick={() => {
           setErro(null);
@@ -43,9 +44,9 @@ export function ResolverExigencia({
           });
         }}
       >
-        <Check size={12} /> {pendente ? "Salvando…" : "Marcar como cumprida"}
+        <Check size={12} /> Marcar como cumprida
       </Button>
-      {erro && <span className="text-[11px] text-danger">{erro}</span>}
+      {erro && <span role="alert" className="text-[length:var(--fs-micro)] text-danger">{erro}</span>}
     </div>
   );
 }

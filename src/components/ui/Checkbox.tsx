@@ -11,7 +11,7 @@ export function Checkbox({ label, helper, className = "", id, ...rest }: Props) 
   const input = <input type="checkbox" id={id} className={`c41-checkbox ${className}`.trim()} {...rest} />;
   if (!label) return input;
   const rotulo = (
-    <label htmlFor={id} className="inline-flex items-start gap-2 text-[length:var(--fs-label)] leading-5 text-fg-secondary cursor-pointer">
+    <label htmlFor={id} className="inline-flex items-start gap-2 text-label leading-5 text-fg-secondary cursor-pointer">
       <span className="flex h-5 flex-shrink-0 items-center">{input}</span>
       <span>{label}</span>
     </label>
@@ -21,7 +21,7 @@ export function Checkbox({ label, helper, className = "", id, ...rest }: Props) 
   return (
     <div className="flex flex-col gap-0.5">
       {rotulo}
-      <p className="pl-[26px] text-[length:var(--fs-helper)] text-fg-muted leading-snug">{helper}</p>
+      <p className="pl-[26px] text-helper text-fg-muted leading-snug">{helper}</p>
     </div>
   );
 }

@@ -1,13 +1,12 @@
 import { Card } from "@/components/ui/Card";
-import { formatInstantDate } from "@/lib/format";
-import { saoPauloParts } from "@/lib/agenda";
+import { Selo } from "@/components/ui/Selo";
+import { formatInstantDate, formatarReaisDeCentavos } from "@/lib/format";
 import type { TaxaNaTela } from "@/lib/societario/licencas-data";
 import type { CustoDoProcesso } from "@/lib/societario/licencas";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { EnviarTaxaAoCliente } from "./EnviarTaxaAoCliente";
+import { Aviso } from "@/components/ui/Aviso";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const moeda = (c: number) => MOEDA.format(c / 100);
 
 type Props = { taxas: TaxaNaTela[]; custo: CustoDoProcesso };
 
@@ -17,43 +16,48 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
   const aPagar = custo.totalCentavos - custo.pagoCentavos;
 
   return (
-    <Card as="section" className="p-4 flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Taxas</h2>
-        <p className="text-[13px] tabular-nums text-fg">
-          <strong>{moeda(custo.totalCentavos)}</strong>
-          {aPagar > 0 && <span className="text-warning"> · {moeda(aPagar)} a pagar</span>}
+    <Card as="section" aria-labelledby="taxas-do-processo" className="p-4 flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        {/* Título de seção da ficha em 18px (padrão aceito na página de
+            decisões, 08/10/2026) — era o de cartão em grade, 14px. */}
+        <h2 id="taxas-do-processo" className="text-section font-semibold text-fg">Taxas</h2>
+        <p className="text-[length:var(--fs-ui)] tabular-nums text-fg">
+          <strong>{formatarReaisDeCentavos(custo.totalCentavos)}</strong>
+          {aPagar > 0 && <span className="text-warning-fg"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
         </p>
       </div>
 
       {/* O número que dá causa ao prazo: "trinta dias" sozinho não conta a
           história que "trinta dias e duas guias a mais" conta. */}
       {custo.custoDasVoltasCentavos > 0 && (
-        <p className="text-[12px] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
-          <strong>{moeda(custo.custoDasVoltasCentavos)}</strong> vieram de reapresentação — guia
+        <Aviso tom="atencao">
+          <strong>{formatarReaisDeCentavos(custo.custoDasVoltasCentavos)}</strong> vieram de reapresentação — guia
           paga de novo porque o processo voltou.
-        </p>
+        </Aviso>
       )}
 
-      {/* Casco padrão, com funil (02/10/2026) — era uma tabela solta, à esquerda. */}
+      {/* Casco padrão, com funil (02/10/2026) — era uma tabela solta, à esquerda.
+          Três colunas desde 08/10/2026: com Taxas na coluna da direita do
+          processo (10A da página de decisões), as cinco colunas pediam 560px
+          e rolavam de lado num cartão de 400. Órgão e vencimento descem para
+          a linha de baixo da taxa — o que se procura na coluna é quanto e se
+          está paga —, e com eles saem os dois funis, que numa lista de
+          poucas taxas por processo pouco recortavam. */}
       <TabelaFiltravel
         linhas={taxas.map((t) => ({
           id: t.id,
           valores: {
             taxa: t.description,
-            orgao: t.orgaoNome ?? "",
-            vencimento: t.dueDate ? saoPauloParts(t.dueDate).dateKey : "",
-            situacao: t.paidAt ? "Pago" : "Em aberto",
+            // "Paga" (a taxa), como na visão societária — o funil dizia "Pago".
+            situacao: t.paidAt ? "Paga" : "Em aberto",
           },
         }))}
       >
       <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[560px] text-[13px]">
+        <table className="w-full min-w-[20rem] text-[length:var(--fs-ui)]">
           <thead>
-            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Taxa" chave="taxa" /></th>
-              <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Órgão" chave="orgao" /></th>
-              <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
               <th className="py-2 pr-3 font-medium">Valor</th>
               <th className="py-2 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
             </tr>
@@ -62,11 +66,16 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
             {taxas.map((t) => (
               <LinhaFiltravel key={t.id} id={t.id} className="border-b border-border-soft">
                 <td className="py-2.5 pr-3">
-                  <span className="text-fg">{t.description}</span>
+                  <span className="text-fg break-words">{t.description}</span>
+                  {(t.orgaoNome || t.dueDate) && (
+                    <span className="block text-[length:var(--fs-micro)] text-fg-muted tabular-nums">
+                      {[t.orgaoNome, t.dueDate && `vence ${formatInstantDate(t.dueDate)}`].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
                   {/* Primeira via é o caminho normal; da segunda em diante é
                       volta, e é isso que o rótulo diz. */}
                   {t.attempt !== null && t.attempt >= 2 && (
-                    <span className="block text-[11px] text-warning">{t.attempt}ª apresentação</span>
+                    <span className="block text-[length:var(--fs-micro)] text-warning-fg">{t.attempt}ª apresentação</span>
                   )}
                   {t.envio && (
                     <div className="mt-2">
@@ -74,16 +83,18 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                     </div>
                   )}
                 </td>
-                <td className="py-2.5 pr-3 text-fg-muted">{t.orgaoNome ?? "—"}</td>
-                <td className="py-2.5 pr-3 tabular-nums text-fg-secondary whitespace-nowrap">
-                  {t.dueDate ? formatInstantDate(t.dueDate) : "—"}
-                </td>
-                <td className="py-2.5 pr-3 tabular-nums">{moeda(t.amountCents)}</td>
-                <td className="py-2.5 text-[12px]">
+                <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{formatarReaisDeCentavos(t.amountCents)}</td>
+                {/* A mesma leitura da visão societária (07/10/2026): Selo "Paga" /
+                    "Em aberto", e o dia do pagamento embaixo. Era texto colorido
+                    em minúscula aqui e Badge lá. */}
+                <td className="py-2.5">
                   {t.paidAt ? (
-                    <span className="text-success">pago em {formatInstantDate(t.paidAt)}</span>
+                    <>
+                      <Selo tom="sucesso">Paga</Selo>
+                      <span className="block mt-1 text-[length:var(--fs-micro)] text-fg-muted">em {formatInstantDate(t.paidAt)}</span>
+                    </>
                   ) : (
-                    <span className="text-warning">em aberto</span>
+                    <Selo tom="atencao">Em aberto</Selo>
                   )}
                 </td>
               </LinhaFiltravel>

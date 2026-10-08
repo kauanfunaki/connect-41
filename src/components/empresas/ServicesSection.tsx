@@ -91,7 +91,7 @@ export function ServicesSection({
             const options = usersBySector[s.sectorCode] ?? [];
             return (
               <div key={s.id} className="flex items-center justify-between gap-3 flex-wrap min-h-9 py-2 first:pt-0 last:pb-0">
-                <span className="inline-flex items-center gap-1.5 bg-surface-hover border border-border text-fg-secondary text-[12.5px] font-medium px-2.5 py-1 rounded-full">
+                <span className="inline-flex items-center gap-1.5 bg-surface-hover border border-border text-fg-secondary text-[length:var(--fs-2)] font-medium px-2.5 py-1 rounded-full">
                   <span
                     className="w-[7px] h-[7px] rounded-full flex-shrink-0"
                     style={{ background: s.status === "ACTIVE" ? (sectorColors[s.sectorCode] ?? "var(--c41-fg-muted)") : "var(--c41-fg-muted)" }}

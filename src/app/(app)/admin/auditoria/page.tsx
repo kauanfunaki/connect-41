@@ -231,7 +231,7 @@ export default async function AuditoriaPage({
           // paginada, então o funil de usuário e de ação filtra no servidor
           // (`FiltroDaColunaNaUrl`), com as contagens da base inteira.
           <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-            <table className="w-full min-w-[760px] text-[13px]">
+            <table className="w-full min-w-[760px]">
               <thead>
                 <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
                   <th className="px-4 py-3">Quando</th>

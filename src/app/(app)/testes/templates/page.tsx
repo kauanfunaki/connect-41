@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { FileQuestion } from "lucide-react";
+import { FileQuestion, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -53,12 +53,13 @@ export default async function TemplatesPage() {
       <PageHeader
         title="Modelos de teste"
         subtitle={<>{templates.length} modelo{templates.length !== 1 ? "s" : ""} — testes de múltipla escolha reutilizáveis (Português, Matemática...)</>}
-        action={<><Button
-          href="/testes/templates/novo"
-          variant="primary" className="font-medium"
-        >
-          + Novo modelo
-        </Button></>}
+        action={
+          // Ícone no lugar do "+" escrito (DRG-17, 07/10/2026).
+          <Button href="/testes/templates/novo" variant="primary">
+            <Plus size={14} />
+            Novo modelo
+          </Button>
+        }
       />
       {templates.length === 0 ? (
         <Card>
@@ -67,11 +68,9 @@ export default async function TemplatesPage() {
             title="Nenhum modelo cadastrado"
             description="Crie um modelo de teste (ex: Português Básico) pra reaproveitar em vários candidatos."
             action={
-              <Button
-                href="/testes/templates/novo"
-                variant="primary" className="font-medium"
-              >
-                + Novo modelo
+              <Button href="/testes/templates/novo" variant="primary">
+                <Plus size={14} />
+                Novo modelo
               </Button>
             }
           />
@@ -102,7 +101,7 @@ export default async function TemplatesPage() {
             linhas={templates.map((t) => ({ id: t.id, valores: { situacao: t.active ? "Ativo" : "Arquivado" } }))}
           >
             <TabelaNoDesktop padrao>
-              <table className="w-full table-fixed min-w-[720px] text-[length:var(--fs-ui)]">
+              <table className="w-full table-fixed min-w-[720px]">
                 <colgroup>
                   <col />
                   <col className="w-[120px]" />

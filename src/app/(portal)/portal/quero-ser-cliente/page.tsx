@@ -35,7 +35,7 @@ export default async function QueroSerClientePage() {
         <FichaQueroSerCliente carimbo={emitirCarimbo(new Date())} escritorio={escritorio.nome} action={enviarFichaDoPortal} />
       ) : (
         <Card className="p-6">
-          <p className="text-[length:var(--fs-body)] text-fg-secondary leading-relaxed">
+          <p className="text-body text-fg-secondary leading-relaxed">
             A ficha não está recebendo cadastros agora. Tente de novo mais tarde — ou fale com o escritório pelos canais de
             sempre.
           </p>

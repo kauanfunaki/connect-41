@@ -23,10 +23,10 @@ const STATUS_STYLE: Record<ExameAdmissionalStatus, string> = {
   SOLICITADO:             "bg-surface-2 text-fg-muted border-border",
   AGENDADO:               "bg-brand/10 text-brand border-brand/25",
   REALIZADO:              "bg-brand/10 text-brand border-brand/25",
-  ASO_PENDENTE:           "bg-warning/10 text-warning border-warning/25",
-  ASO_APTO:               "bg-success/10 text-success border-success/25",
+  ASO_PENDENTE:           "bg-warning/10 text-warning-fg border-warning/25",
+  ASO_APTO:               "bg-success/10 text-success-fg border-success/25",
   ASO_INAPTO:             "bg-danger/10 text-danger border-danger/25",
-  ASO_APTO_COM_RESTRICAO: "bg-warning/10 text-warning border-warning/25",
+  ASO_APTO_COM_RESTRICAO: "bg-warning/10 text-warning-fg border-warning/25",
 };
 
 const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as ExameAdmissionalStatus[];
@@ -56,13 +56,13 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] text-fg font-medium">{exame.clinicName ?? "Clínica não informada"}</p>
-          <p className="text-[12px] text-fg-muted">
+          <p className="text-[length:var(--fs-ui)] text-fg font-medium">{exame.clinicName ?? "Clínica não informada"}</p>
+          <p className="text-[length:var(--fs-2)] text-fg-muted">
             {exame.scheduledAtLabel && `Agendado: ${exame.scheduledAtLabel}`}
             {exame.performedAtLabel && ` · Realizado: ${exame.performedAtLabel}`}
             {exame.asoDueDateLabel && ` · Prazo ASO: ${exame.asoDueDateLabel}`}
           </p>
-          {exame.notes && <p className="text-[12px] text-fg-muted mt-0.5">{exame.notes}</p>}
+          {exame.notes && <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">{exame.notes}</p>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={STATUS_STYLE[exame.status]}>{STATUS_LABEL[exame.status]}</SeloDoDP>
@@ -89,7 +89,8 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
             </Select>
           </div>
           <div className="w-full sm:w-40">
-            <CampoData name="performedAt" title="Data de realização" aria-label="Data de realização" />
+            {/* Sem rótulo visível, o campo dizia só "Escolher data" (DRG-16). */}
+            <CampoData name="performedAt" title="Data de realização" aria-label="Data de realização" placeholder="Realização" />
           </div>
           <Button
             variant="secondary"

@@ -67,7 +67,7 @@ const DEPTH_STEP = 20; // cada nível de subtarefa
 // borda, que eram padding do casco até o polimento de 30/09 e agora são da
 // própria célula (o cabeçalho com fundo precisa encostar na borda).
 const DOT_COL = "w-[104px]";
-// Alinha "+ Adicionar Tarefa" e o alvo de soltar com o texto dos itens.
+// Alinha "Adicionar tarefa" e o alvo de soltar com o texto dos itens.
 const CONTENT_OFFSET = 104;
 
 const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
@@ -96,7 +96,9 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="w-5 h-5 rounded-full bg-surface-hover border-2 flex items-center justify-center text-[9px] font-medium text-fg-secondary"
+        // 24px (07/10/2026): as iniciais saíram de 9px para os 11px da escala,
+        // e não cabiam duas letras dentro da borda de prioridade num círculo de 20px.
+        className="w-6 h-6 rounded-full bg-surface-hover border-2 flex items-center justify-center text-[length:var(--fs-micro)] font-medium text-fg-secondary"
         style={{ borderColor: PRIORITY_COLOR[a.priority] ?? PRIORITY_COLOR[0] }}
       >
         {a.name.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
@@ -231,14 +233,14 @@ function Row({
           {tags.length > 0 && (
             <div className="flex items-center gap-1 min-w-0">
               <span
-                className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full truncate"
+                className="inline-flex items-center text-[length:var(--fs-micro)] font-medium px-1.5 py-0.5 rounded-full truncate"
                 style={{ background: `${tags[0].color}1A`, color: tags[0].color }}
               >
                 {tags[0].name}
               </span>
               {tags.length > 1 && (
                 <span
-                  className="inline-flex items-center flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-surface-hover text-fg-muted tnum"
+                  className="inline-flex items-center flex-shrink-0 text-[length:var(--fs-micro)] font-medium px-1.5 py-0.5 rounded-full bg-surface-hover text-fg-muted tnum"
                   title={tags.slice(1).map((t) => t.name).join(", ")}
                 >
                   +{tags.length - 1}
@@ -260,7 +262,7 @@ function Row({
 
         {/* Prazo e menu dividem a última célula de propósito: as tabelas desta
             tela declaram colSpan={5} em vários pontos (cabeçalho de status,
-            alvo de soltar, "+ Adicionar Tarefa"), e uma 6ª coluna obrigaria a
+            alvo de soltar, "Adicionar tarefa"), e uma 6ª coluna obrigaria a
             revisar todos eles para ganhar 24px. */}
         <td className="py-2 pr-4 w-[120px] text-right">
           <div className="flex items-center justify-end gap-1">
@@ -384,7 +386,7 @@ function TaskCard({
             {tags.map((t) => (
               <span
                 key={t.id}
-                className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                className="inline-flex items-center text-[length:var(--fs-micro)] font-medium px-1.5 py-0.5 rounded-full"
                 style={{ background: `${t.color}1A`, color: t.color }}
               >
                 {t.name}
@@ -552,7 +554,7 @@ function AddTaskInline({ stageId, createTaskAction }: { stageId: string; createT
     // Era texto solto (linkMuted) até 30/09: é ação, então é botão — fantasma,
     // para não pesar em cada grupo, e com o texto alinhado ao título dos itens.
     <Button variant="ghost" size="xs" type="button" onClick={() => setAdding(true)} className="-ml-2.5">
-      <Plus size={11} /> Adicionar Tarefa
+      <Plus size={11} /> Adicionar tarefa
     </Button>
   );
 }
@@ -876,7 +878,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
             ))}
           </div>
 
-          <table className="hidden md:table w-full border-collapse">
+          <table className="hidden md:table w-full border-collapse text-ui">
             {/* O fundo precisa estar em cada <th>, não no <thead>: background em
                 thead/tr não pinta de forma confiável com position:sticky, e as
                 linhas apareciam por trás do cabeçalho ao rolar. A borda inferior

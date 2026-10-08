@@ -120,11 +120,11 @@ export function FileDropzone({
         >
           <UploadCloud size={20} />
         </span>
-        <span className="text-[length:var(--fs-body)] font-medium text-fg">
+        <span className="text-body font-medium text-fg">
           Arraste {multiple ? "os arquivos" : "o arquivo"} aqui ou{" "}
           <span className="text-brand underline underline-offset-2">clique para escolher</span>
         </span>
-        <span className="text-[length:var(--fs-helper)] text-fg-muted">
+        <span className="text-helper text-fg-muted">
           {formatosLegiveis} · até {maxSizeMb} MB
         </span>
         <input
@@ -147,7 +147,7 @@ export function FileDropzone({
       {recusados.length > 0 && (
         <ul className="flex flex-col gap-1" role="alert">
           {recusados.map((r) => (
-            <li key={r} className="flex items-start gap-1.5 text-[length:var(--fs-helper)] text-danger">
+            <li key={r} className="flex items-start gap-1.5 text-helper text-danger">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
               {r}
             </li>
@@ -166,7 +166,7 @@ export function FileDropzone({
                 className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5"
               >
                 <span
-                  className="grid place-items-center w-9 h-9 shrink-0 rounded-md text-[10px] font-semibold text-white"
+                  className="grid place-items-center w-9 h-9 shrink-0 rounded-md text-micro font-semibold text-white"
                   style={{ background: COR_POR_EXT[ext] ?? "var(--c41-fg-muted)" }}
                   aria-hidden="true"
                 >
@@ -174,10 +174,10 @@ export function FileDropzone({
                 </span>
 
                 <div className="flex-1 min-w-0">
-                  <p className="truncate text-[length:var(--fs-body)] text-fg" title={a.file.name}>
+                  <p className="truncate text-body text-fg" title={a.file.name}>
                     {a.file.name}
                   </p>
-                  <p className="flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted">
+                  <p className="flex items-center gap-1.5 text-helper text-fg-muted">
                     {a.estado === "enviando" ? (
                       <>
                         <Loader2 size={12} className="animate-spin" />
@@ -185,7 +185,7 @@ export function FileDropzone({
                       </>
                     ) : a.estado === "concluido" ? (
                       <>
-                        <CheckCircle2 size={12} className="text-success" />
+                        <CheckCircle2 size={12} className="text-success-fg" />
                         Enviado · {formatarBytes(a.file.size)}
                       </>
                     ) : a.estado === "erro" ? (
@@ -222,7 +222,7 @@ export function FileDropzone({
                     type="button"
                     onClick={() => onRemover(a.id)}
                     aria-label={`Remover ${a.file.name}`}
-                    className="shrink-0 p-1 rounded text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
+                    className="shrink-0 p-1 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
                   >
                     <X size={15} />
                   </button>

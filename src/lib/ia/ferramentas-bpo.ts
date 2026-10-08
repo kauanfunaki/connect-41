@@ -117,7 +117,8 @@ export const FERRAMENTAS_DE_BPO: Record<string, FerramentaRegistrada> = {
           pago: reais(r.totais.pago),
           emAberto: reais(r.totais.emAberto),
         },
-        contasNoRecorte: r.linhas.length,
+        // A contagem do banco: as linhas param em `LIMITE_DE_CONTAS` (08/10).
+        contasNoRecorte: r.totalNoRecorte,
         mostrando: Math.min(r.linhas.length, LINHAS),
         link: link(tipo === "PAGAR" ? "/pagar" : "/receber", { empresa: empresa?.id, competencia, recorte }),
         contas: r.linhas.slice(0, LINHAS).map((l) => ({

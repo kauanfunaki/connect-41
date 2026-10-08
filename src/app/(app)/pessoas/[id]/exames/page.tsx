@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -46,7 +47,7 @@ export default async function ExamesPage({
       <BackButton className="mb-3" />
       <PageHeader title="Exames Admissionais" />
 
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+      <Card className="p-5">
         {exames.length === 0 ? (
           <p className="text-[13px] text-fg-muted mb-3">Nenhum exame registrado ainda.</p>
         ) : (
@@ -72,7 +73,7 @@ export default async function ExamesPage({
         )}
 
         {canEdit && <AddExameForm action={criarExameAction} />}
-      </div>
+      </Card>
     </PageContainer>
   );
 }

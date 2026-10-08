@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Send } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { CampoDeAnexos } from "./CampoDeAnexos";
@@ -73,13 +72,17 @@ export function ResponderPendencia({
         <CampoDeAnexos idBase={`anexo-${alvo}`} />
       </CampoForm>
       {extras}
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-        <Button type="submit" disabled={pendente}>
-          <Send size={14} /> {pendente ? "Enviando…" : rotulo}
-        </Button>
-      </div>
-      {aviso && <p className="text-[12px] text-warning">{aviso}</p>}
+      {/* O rodapé padrão (08/10/2026), sem a divisória: a mensagem e os
+          anexos já fecham o bloco. O aviso de envio (e-mail que não saiu)
+          entra como nota, no lugar do erro. */}
+      <FormFooter
+        pending={pendente}
+        submitLabel={rotulo}
+        pendingLabel="Enviando…"
+        erro={erro}
+        nota={aviso && <span className="text-warning-fg">{aviso}</span>}
+        semDivisoria
+      />
     </form>
   );
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { BotaoFixarTela } from "@/components/setor/BotaoFixarTela";
-import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { agruparModulos, slugDoGrupo, type GrupoDeModulo } from "@/lib/module-catalog";
 
 export type ModuloDoSetor = { code: string; label: string; description: string };

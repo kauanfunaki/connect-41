@@ -10,7 +10,10 @@ import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { SalaryHistorySection } from "@/components/pessoas/SalaryHistorySection";
-import { formatCalendarDate } from "@/lib/format";
+import { formatCalendarDate, formatarReais } from "@/lib/format";
+// Era `R$ ${decimal}` ("R$ 3500.5"). `brl` é o formatador de reais que já
+// existia (Valora); troca pelo `formatarReais` de lib/format.ts quando a base
+// o criar (auditoria DRG-01, 07/10/2026).
 import { registrarReajuste } from "./actions";
 
 export default async function SalarioPage({
@@ -71,7 +74,7 @@ export default async function SalarioPage({
           {canViewSalary && (
             <InfoRow
               label="Salário Atual"
-              value={person.currentSalary != null ? `R$ ${person.currentSalary.toString()}` : null}
+              value={person.currentSalary != null ? formatarReais(Number(person.currentSalary)) : null}
             />
           )}
           {canViewBank && (

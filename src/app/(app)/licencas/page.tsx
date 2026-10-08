@@ -9,11 +9,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { LicencasFila } from "@/components/societario/LicencasFila";
 import { NovaLicenca } from "@/components/societario/LicencaForm";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { resumoDasLicencas } from "@/lib/societario/licencas-data";
 import { situacaoDaLicenca, AVISO_EM_DIAS, type SituacaoDaLicenca } from "@/lib/societario/licencas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { formatarNumero } from "@/lib/format";
 
 const RECORTES: { chave: string; rotulo: string; situacao: SituacaoDaLicenca | null }[] = [
   { chave: "atencao", rotulo: "Precisa de ação", situacao: null },
@@ -84,34 +85,38 @@ export default async function LicencasPage({
         itens={[
           {
             rotulo: "Precisa de ação",
-            valor: String(vencidas + aRenovar),
+            valor: formatarNumero(vencidas + aRenovar, 0),
             icone: <ListChecks />,
-            tom: vencidas + aRenovar > 0 ? "text-warning" : undefined,
+            tom: vencidas + aRenovar > 0 ? "text-warning-fg" : undefined,
             detalhe: chave === "atencao" ? "mostrando agora" : undefined,
+            ativo: chave === "atencao",
             href: "/licencas",
           },
           {
             rotulo: "Vencidas",
-            valor: String(vencidas),
+            valor: formatarNumero(vencidas, 0),
             icone: <AlertTriangle />,
             tom: vencidas > 0 ? "text-danger" : undefined,
             detalhe: chave === "vencida" ? "mostrando agora" : undefined,
+            ativo: chave === "vencida",
             href: "/licencas?recorte=vencida",
           },
           {
             rotulo: "A renovar",
-            valor: String(aRenovar),
+            valor: formatarNumero(aRenovar, 0),
             icone: <CalendarClock />,
-            tom: aRenovar > 0 ? "text-warning" : undefined,
+            tom: aRenovar > 0 ? "text-warning-fg" : undefined,
             detalhe: chave === "renovar" ? "mostrando agora" : undefined,
+            ativo: chave === "renovar",
             href: "/licencas?recorte=renovar",
           },
           {
             rotulo: "Vigentes",
-            valor: String(linhas.filter((l) => situacaoDaLicenca(l, hoje) === "vigente").length),
+            valor: formatarNumero(linhas.filter((l) => situacaoDaLicenca(l, hoje) === "vigente").length, 0),
             icone: <ShieldCheck />,
-            tom: "text-success",
+            tom: "text-success-fg",
             detalhe: chave === "vigente" ? "mostrando agora" : undefined,
+            ativo: chave === "vigente",
             href: "/licencas?recorte=vigente",
           },
         ]}

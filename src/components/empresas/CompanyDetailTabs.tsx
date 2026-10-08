@@ -42,7 +42,7 @@ export function CompanyDetailTabs({
   );
 
   const tabs = [
-    { key: "overview", label: "Visão Geral", icon: <LayoutGrid /> },
+    { key: "overview", label: "Visão geral", icon: <LayoutGrid /> },
     { key: "filiais", label: `Filiais${filiaisCount ? ` (${filiaisCount})` : ""}`, icon: <Network /> },
     { key: "people", label: `Pessoas${peopleCount ? ` (${peopleCount})` : ""}`, icon: <Users /> },
     { key: "operations", label: "RH & Operação", icon: <Briefcase /> },
@@ -51,6 +51,11 @@ export function CompanyDetailTabs({
     { key: "history", label: "Histórico", icon: <History /> },
   ];
 
+  // Aba de verdade, e não aba que navega (07/10/2026): os painéis já vêm
+  // prontos do servidor e a troca é na hora, no cliente; a URL só guarda a aba
+  // (`router.replace`) para o "Voltar" e o link copiado. Por isso fica o `Tabs`
+  // (role="tab"), agora apontando para o painel (`tabpanel`), e não o
+  // `AbasDeLink` — com ele cada clique esperaria o servidor refazer a ficha.
   function handleChange(key: string) {
     setActive(key);
     router.replace(`${pathname}?tab=${key}`, { scroll: false });
@@ -58,8 +63,8 @@ export function CompanyDetailTabs({
 
   return (
     <div>
-      <Tabs tabs={tabs} active={active} onChange={handleChange} className="mb-5" />
-      <div>
+      <Tabs tabs={tabs.map((t) => ({ ...t, panelId: "painel-da-empresa" }))} active={active} onChange={handleChange} className="mb-5" />
+      <div role="tabpanel" id="painel-da-empresa" aria-label={tabs.find((t) => t.key === active)?.label}>
         {active === "overview" && overview}
         {active === "filiais" && filiais}
         {active === "people" && people}

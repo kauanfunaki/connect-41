@@ -10,13 +10,10 @@ import { Textarea } from "@/components/ui/Textarea";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { IconButton } from "@/components/ui/IconButton";
+import { Selo } from "@/components/ui/Selo";
 import { ROTULO_DA_FAIXA, type Faixa } from "@/lib/recrutamento/triagem";
-
-// O desenho do `Button` secondary xs num `<a>` comum: o currículo é rota de
-// arquivo (/api), e o `Link` do Next que o `Button` usa com `href` tentaria
-// pré-carregá-lo só de o cartão aparecer na tela.
-const BOTAO_XS_EM_ANCORA =
-  "inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-md border border-border-strong text-[length:var(--fs-button-sm)] font-semibold text-fg hover:bg-surface-hover transition-colors active:translate-y-px";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type FunnelCard = {
   id: string;
@@ -33,8 +30,8 @@ export type FunnelCard = {
 };
 
 const COR_DA_FAIXA: Record<Faixa, string> = {
-  COMPATIVEL: "bg-success-bg text-success border-success/40",
-  PARCIAL: "bg-warning-bg text-warning border-warning/40",
+  COMPATIVEL: "bg-success-bg text-success-fg border-success/40",
+  PARCIAL: "bg-warning-bg text-warning-fg border-warning/40",
   INCOMPATIVEL: "bg-surface-2 text-fg-muted border-border",
 };
 
@@ -113,9 +110,9 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
   return (
     <>
       {error && (
-        <p role="alert" className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mb-3">
+        <Aviso className="mb-3">
           {error}
-        </p>
+        </Aviso>
       )}
 
       <div className="scroll-x overflow-x-auto flex gap-3 pb-1">
@@ -145,10 +142,10 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
               }`}
             >
               <div className="flex items-center justify-between mb-2 px-1">
-                <span className={`text-[12px] font-semibold ${isContratado ? "text-success" : "text-fg"}`}>
+                <span className={`text-[length:var(--fs-2)] font-semibold ${isContratado ? "text-success-fg" : "text-fg"}`}>
                   {STAGE_LABEL[stage]}
                 </span>
-                <span className="text-[11px] text-fg-muted tnum">{stageCards.length}</span>
+                <span className="text-[length:var(--fs-micro)] text-fg-muted tnum">{stageCards.length}</span>
               </div>
 
               <div className="space-y-2 min-h-[40px]">
@@ -166,12 +163,12 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                     } ${draggingId === c.id ? "opacity-50" : ""}`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-semibold flex items-center justify-center">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 text-brand text-[length:var(--fs-micro)] font-semibold flex items-center justify-center">
                         {initials(c.personName)}
                       </span>
                       <Link
                         href={`/candidatos/${c.personId}`}
-                        className="min-w-0 text-[13px] text-fg hover:text-brand transition-colors truncate"
+                        className="min-w-0 text-[length:var(--fs-ui)] text-fg hover:text-brand transition-colors truncate"
                       >
                         {c.personName}
                       </Link>
@@ -179,17 +176,23 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
 
                     {c.nota && (
                       <p className="mt-1.5 pl-8">
-                        <span
-                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-medium tnum ${COR_DA_FAIXA[c.nota.faixa]} ${c.nota.desatualizada ? "opacity-60" : ""}`}
-                          title={c.nota.desatualizada ? "Nota dada com uma versão anterior dos requisitos" : "Nota da triagem — só ordena, não reprova"}
-                        >
-                          {c.nota.score} · {ROTULO_DA_FAIXA[c.nota.faixa]}
-                          {c.nota.desatualizada && " · versão anterior"}
+                        {/* O `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026); o
+                            raio menor, na escala (`rounded-sm`, era o `rounded`
+                            de 4px), segue distinguindo a nota dos selos de
+                            situação (DRG-26). */}
+                        <span title={c.nota.desatualizada ? "Nota dada com uma versão anterior dos requisitos" : "Nota da triagem — só ordena, não reprova"}>
+                          <Selo
+                            cor={COR_DA_FAIXA[c.nota.faixa]}
+                            className={`gap-1 rounded-sm! tnum ${c.nota.desatualizada ? "opacity-60" : ""}`}
+                          >
+                            {c.nota.score} · {ROTULO_DA_FAIXA[c.nota.faixa]}
+                            {c.nota.desatualizada && " · versão anterior"}
+                          </Selo>
                         </span>
                       </p>
                     )}
-                    {c.respostas && <p className="text-[11px] text-fg-secondary mt-1.5 pl-8 tnum">{c.respostas}</p>}
-                    {c.origin && <p className="text-[11px] text-fg-muted mt-1.5 pl-8">via {c.origin}</p>}
+                    {c.respostas && <p className="text-[length:var(--fs-micro)] text-fg-secondary mt-1.5 pl-8 tnum">{c.respostas}</p>}
+                    {c.origin && <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1.5 pl-8">via {c.origin}</p>}
 
                     {/* Alternativa acessível ao arraste: o board era só
                         drag-and-drop de mouse, então quem usa teclado ou leitor
@@ -227,9 +230,12 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                         Avaliar{c.scorecardCount > 0 ? ` (${c.scorecardCount})` : ""}
                       </Button>
                       {c.hasResume && (
-                        <a href={`/api/resumes/${c.id}`} className={BOTAO_XS_EM_ANCORA}>
+                        // `nativo`: o currículo é rota de arquivo (/api), e o
+                        // `Link` do Button com `href` puro tentaria
+                        // pré-carregá-lo só de o cartão aparecer na tela.
+                        <Button href={`/api/resumes/${c.id}`} nativo variant="secondary" size="xs">
                           <FileText size={11} /> Currículo
-                        </a>
+                        </Button>
                       )}
                       {canManage && !isContratado && (
                         <Popover
@@ -237,17 +243,20 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                           width={180}
                           aria-label={`Encerrar a candidatura de ${c.personName}`}
                           trigger={({ open, toggle }) => (
-                            <button
-                              type="button"
+                            // O `IconButton` do app, com 36px no celular — o
+                            // botão à mão tinha 28px, pequeno para o dedo
+                            // (auditoria DRG-37, 07/10/2026).
+                            <IconButton
+                              size="sm"
+                              variant="framed"
+                              active={open}
                               onClick={toggle}
                               aria-label={`Mais ações para ${c.personName}`}
                               aria-expanded={open}
-                              className={`ml-auto h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
-                                open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
-                              }`}
+                              className="max-md:w-9 max-md:h-9"
                             >
                               <MoreHorizontal size={14} />
-                            </button>
+                            </IconButton>
                           )}
                         >
                           {({ close }) => (
@@ -278,7 +287,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                     </div>
                   </article>
                 ))}
-                {stageCards.length === 0 && <p className="text-[11px] text-fg-muted text-center py-3">—</p>}
+                {stageCards.length === 0 && <p className="text-[length:var(--fs-micro)] text-fg-muted text-center py-3">—</p>}
               </div>
             </section>
           );

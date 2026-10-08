@@ -23,19 +23,19 @@ const CONTATO = "marcos@41contabil.com.br";
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-[16px] font-semibold text-fg">{titulo}</h2>
-      <div className="flex flex-col gap-2 text-[14px] leading-relaxed text-fg">{children}</div>
+      <h2 className="text-fs-6 font-semibold text-fg">{titulo}</h2>
+      <div className="flex flex-col gap-2 text-fs-4 leading-relaxed text-fg">{children}</div>
     </section>
   );
 }
 
 export default function PoliticaDePrivacidadePage() {
   return (
-    <main className="min-h-screen px-4 py-10">
+    <main className="min-h-dvh px-4 py-10">
       <article className="mx-auto w-full max-w-[720px] flex flex-col gap-6">
         <header className="flex flex-col gap-1">
-          <h1 className="text-[length:var(--fs-title)] font-semibold text-fg">Política de Privacidade</h1>
-          <p className="text-[13px] text-fg-muted">Portal do Cliente · Portal 41 · atualizada em {ATUALIZADA_EM}</p>
+          <h1 className="text-title font-semibold text-fg">Política de Privacidade</h1>
+          <p className="text-ui text-fg-muted">Portal do Cliente · Portal 41 · atualizada em {ATUALIZADA_EM}</p>
         </header>
 
         <Secao titulo="Quem somos">

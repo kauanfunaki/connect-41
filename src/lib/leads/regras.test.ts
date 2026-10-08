@@ -11,7 +11,7 @@ import {
   RECORTES_DOS_LEADS,
   ROTULO_DO_STATUS,
   STATUS_DO_LEAD,
-  VARIANTE_DO_STATUS,
+  TOM_DO_STATUS,
 } from "./regras";
 
 // CNPJ com dígito verificador certo (o da 41 TEC, que está na política de privacidade).
@@ -104,7 +104,7 @@ describe("situação e origem", () => {
   it("todo status tem rótulo e cor", () => {
     for (const s of STATUS_DO_LEAD) {
       expect(ROTULO_DO_STATUS[s]).toBeTruthy();
-      expect(VARIANTE_DO_STATUS[s]).toBeTruthy();
+      expect(TOM_DO_STATUS[s]).toBeTruthy();
     }
   });
 

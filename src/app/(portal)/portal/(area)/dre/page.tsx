@@ -6,12 +6,20 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
+import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { dreDoMes, mesesComMovimento } from "@/lib/dre/data";
 import { serieEconomica } from "@/lib/dre/dataEconomica";
 import { comRotulosEconomicos } from "@/lib/dre/economica";
-import { competenciaValida, competenciaDe, partesDaCompetencia, rotuloDaCompetencia } from "@/lib/financeiro/periodo";
+import {
+  competenciaValida,
+  competenciaDe,
+  partesDaCompetencia,
+  rotuloDaCompetencia,
+  somarMeses,
+} from "@/lib/financeiro/periodo";
+import { formatarCompetencia } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -72,26 +80,59 @@ export default async function PortalDrePage({
       </Card>
     );
   } else if (regime === "caixa") {
-    const { ano, mes: m } = partesDaCompetencia(mes);
-    const { resultado, lancamentos } = await dreDoMes(escopo.tenantId, companyId, { ano, mes: m });
+    // Os números do topo com a comparação ao mês anterior, como em /dre (9A da
+    // página de decisões, 08/10/2026). O mês anterior só entra quando teve
+    // movimento: sem ele, "subiu 100%" sobre zero diria nada ao cliente.
+    const mesAnterior = somarMeses(mes, -1);
+    const temAnterior = meses.some((x) => competenciaDe(x.ano, x.mes) === mesAnterior);
+    const [{ resultado, lancamentos }, doAnterior] = await Promise.all([
+      dreDoMes(escopo.tenantId, companyId, partesDaCompetencia(mes)),
+      temAnterior ? dreDoMes(escopo.tenantId, companyId, partesDaCompetencia(mesAnterior)) : Promise.resolve(null),
+    ]);
     conteudo =
       lancamentos === 0 ? (
         <Card>
-          <EmptyState icon={<FileText />} title={`Nenhum pagamento ou recebimento em ${rotuloDaCompetencia(mes)}`} />
+          <EmptyState icon={<FileText />} title={`Nenhum pagamento ou recebimento em ${formatarCompetencia(mes)}`} />
         </Card>
       ) : (
-        <RelatorioDoDre resultado={resultado} />
+        <>
+          <NumerosDaDre
+            resultado={resultado}
+            regime="caixa"
+            anterior={doAnterior ? { resultado: doAnterior.resultado, rotulo: rotuloDaCompetencia(mesAnterior) } : null}
+            className="mb-4"
+          />
+          <RelatorioDoDre resultado={resultado} />
+        </>
       );
   } else {
-    const dre = (await serieEconomica(escopo.tenantId, companyId, [mes])).get(mes)!;
+    // O mês anterior vem na mesma consulta, como em /dre/economica.
+    const mesAnterior = somarMeses(mes, -1);
+    const serie = await serieEconomica(escopo.tenantId, companyId, [mes, mesAnterior]);
+    const dre = serie.get(mes)!;
+    const temResultado = (d: typeof dre) =>
+      d.lancamentos > 0 || d.cobranca.perdas !== 0 || d.cobranca.acrescimosDeAcordo !== 0 || d.cobranca.descontosDeAcordo !== 0;
+    const doAnterior = serie.get(mesAnterior);
     conteudo =
       // Mês só com perda ou diferença de acordo ainda tem resultado a mostrar.
-      dre.lancamentos === 0 && dre.cobranca.perdas === 0 && dre.cobranca.acrescimosDeAcordo === 0 && dre.cobranca.descontosDeAcordo === 0 ? (
+      !temResultado(dre) ? (
         <Card>
-          <EmptyState icon={<FileText />} title={`Nenhum lançamento com competência em ${rotuloDaCompetencia(mes)}`} />
+          <EmptyState icon={<FileText />} title={`Nenhum lançamento com competência em ${formatarCompetencia(mes)}`} />
         </Card>
       ) : (
-        <RelatorioDoDre resultado={comRotulosEconomicos(dre.resultado)} />
+        <>
+          <NumerosDaDre
+            resultado={dre.resultado}
+            regime="competencia"
+            anterior={
+              doAnterior && temResultado(doAnterior)
+                ? { resultado: doAnterior.resultado, rotulo: rotuloDaCompetencia(mesAnterior) }
+                : null
+            }
+            className="mb-4"
+          />
+          <RelatorioDoDre resultado={comRotulosEconomicos(dre.resultado)} />
+        </>
       );
   }
 
@@ -117,7 +158,9 @@ export default async function PortalDrePage({
         />
       )}
       {conteudo}
-      <p className="text-[11px] text-fg-muted mt-3">
+      {/* Nota em `text-helper` (13px) desde 07/10/2026: era 11px, o tamanho do
+          cabeçalho de tabela, numa explicação que o cliente lê no celular. */}
+      <p className="text-helper text-fg-muted mt-3">
         {regime === "caixa"
           ? "Regime de caixa: o que foi efetivamente pago e recebido no mês."
           : "Regime de competência: o que pertence ao mês, pago ou não."}

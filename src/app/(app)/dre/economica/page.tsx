@@ -8,12 +8,14 @@ import { getPrisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { RelatorioOrcadoRealizado } from "@/components/dre/RelatorioOrcadoRealizado";
-import { FiltroDePeriodo, AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
+import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import {
   competenciaValida,
@@ -22,16 +24,18 @@ import {
   rotuloDaCompetencia,
   competenciaDoInstante,
   partesDaCompetencia,
+  somarMeses,
 } from "@/lib/financeiro/periodo";
 import { serieEconomica, competenciasDaEmpresa, quadroPorCentroDoPeriodo } from "@/lib/dre/dataEconomica";
-import { comRotulosEconomicos, valorDaLinha, fracaoDaLinha, LINHA_DE_RESULTADO, LINHA_OPERACIONAL } from "@/lib/dre/economica";
+import { comRotulosEconomicos } from "@/lib/dre/economica";
 import { resultadoDePorGrupo, somarPorGrupo } from "@/lib/dre/analises";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
-import { moeda, percentual, tomDoValor } from "@/lib/financeiro/formato";
+import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { lerFiltroDeCentro, valorDoFiltroDeCentro, SEM_CENTRO } from "@/lib/financeiro/centroDeCusto";
 import { orcamentosAprovados, orcamentoLigado } from "@/lib/dre/orcamento/dados";
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
 import { mesesDoAcumulado } from "@/lib/dre/orcamento/variacao";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -116,8 +120,12 @@ export default async function DreEconomicaPage({
   const querOrcado = comOrcamento && filtro.tipo === "todos" && visao !== "12meses";
   const orcamento = querOrcado ? (await orcamentosAprovados(ctx.tenantId, companyId, [ano])).get(ano) ?? null : null;
   // Com orçado, a série cobre o acumulado do ano mesmo na visão do mês — é o
-  // bloco "acumulado" da comparação. Uma consulta só.
-  const competenciasDaSerie = orcamento && visao === "mes" ? acumuladoDoAno(mes) : competencias;
+  // bloco "acumulado" da comparação. Uma consulta só. Na visão do mês, ela
+  // leva também o mês anterior, para os números do topo dizerem contra o quê
+  // (08/10/2026) — um mês a mais na mesma consulta, não uma consulta nova.
+  const mesAnterior = somarMeses(mes, -1);
+  const competenciasDaSerie =
+    visao === "mes" ? [...new Set([...(orcamento ? acumuladoDoAno(mes) : competencias), mesAnterior])] : competencias;
 
   const [serie, quadro] = await Promise.all([
     serieEconomica(ctx.tenantId, companyId, competenciasDaSerie, filtro),
@@ -142,6 +150,16 @@ export default async function DreEconomicaPage({
     visao === "mes" ? serie.get(mes)!.resultado : resultadoDePorGrupo(somarPorGrupo(meses.map((m) => m.resultado.porGrupo)))
   );
   const imposto = impostoForaDoResultado(resultado);
+  // Sem lançamento nem ajuste da cobrança no mês anterior, sem comparação.
+  const doAnterior = visao === "mes" ? serie.get(mesAnterior) : undefined;
+  const anterior =
+    doAnterior &&
+    (doAnterior.lancamentos > 0 ||
+      doAnterior.cobranca.acrescimosDeAcordo !== 0 ||
+      doAnterior.cobranca.descontosDeAcordo !== 0 ||
+      doAnterior.cobranca.perdas !== 0)
+      ? { resultado: doAnterior.resultado, rotulo: rotuloDaCompetencia(mesAnterior) }
+      : null;
 
   const comparacao = orcamento
     ? {
@@ -189,7 +207,7 @@ export default async function DreEconomicaPage({
 
       {/* Revisão de 05/10: botão não é link — os atalhos desta tela eram texto azul. */}
       {nomeDoFiltro && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-secondary mb-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-secondary mb-3">
           <p>
             Filtrado pelo centro de custo <strong>{nomeDoFiltro}</strong> — lançamentos, acordos e perdas dele.
             {comOrcamento && " Orçado × realizado só aparece sem filtro de centro, porque o orçamento é da empresa inteira."}
@@ -201,34 +219,33 @@ export default async function DreEconomicaPage({
       )}
 
       {lancamentos === 0 && !temCobranca && !comparacao ? (
-        <EmptyState
-          title={`Nenhum lançamento com competência em ${periodo}${nomeDoFiltro ? ` em ${nomeDoFiltro}` : ""}`}
-          description="A DRE econômica soma os lançamentos pela competência. Contas lançadas por nota ou à mão aparecem aqui no mês a que pertencem."
-          icon={<FileText />}
-        />
+        // Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo.
+        <Card>
+          <EmptyState
+            title={`Nenhum lançamento com competência em ${periodo}${nomeDoFiltro ? ` em ${nomeDoFiltro}` : ""}`}
+            description="A DRE econômica soma os lançamentos pela competência. Contas lançadas por nota ou à mão aparecem aqui no mês a que pertencem."
+            icon={<FileText />}
+          />
+        </Card>
       ) : (
         <>
-          <FaixaDeTotais
-            itens={[
-              { rotulo: "Receita bruta", valor: moeda(valorDaLinha(resultado, "receita_bruta")) },
-              {
-                rotulo: "Margem de contribuição",
-                valor: `${moeda(valorDaLinha(resultado, "margem_contribuicao"))} · ${percentual(fracaoDaLinha(resultado, "margem_contribuicao_pct"))}`,
-              },
-              { rotulo: "Resultado operacional", valor: moeda(valorDaLinha(resultado, LINHA_OPERACIONAL)), tom: tomDoValor(valorDaLinha(resultado, LINHA_OPERACIONAL)) },
-              { rotulo: "Resultado do período", valor: moeda(valorDaLinha(resultado, LINHA_DE_RESULTADO)), tom: tomDoValor(valorDaLinha(resultado, LINHA_DE_RESULTADO)) },
-            ]}
-          />
+          {/* Os números do topo no padrão novo (08/10/2026, escolha 9A do
+              Kauan): a margem com o percentual no detalhe, e não colado no
+              valor, onde cortava; os resultados sem o verde do sinal; e, na
+              visão do mês, a comparação com o mês anterior. */}
+          <NumerosDaDre resultado={resultado} regime="competencia" anterior={anterior} />
 
           {/* Provisório entra no resultado — a obrigação existe —, mas é o
               pedaço do número que ninguém conferiu. Dizer quantos são é o que
               separa "resultado" de "resultado a confirmar". */}
+          {/* O `Aviso` do app (08/10/2026), com o texto em `fg`: são frases
+              longas, e o âmbar como cor de texto fica abaixo do contraste AA. */}
           {(provisorios > 0 || naoClassificado !== 0 || imposto !== 0) && (
-            <Card className="p-4 mb-4 border-warning/40 bg-warning-bg">
-              <ul className="flex flex-col gap-1.5 text-[13px] text-fg">
+            <Aviso tom="atencao" className="mb-4">
+              <ul className="flex flex-col gap-1.5 text-fg">
                 {provisorios > 0 && (
                   <li className="flex items-start gap-2">
-                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
+                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning-fg" />
                     <span>
                       <strong>{provisorios}</strong> {provisorios === 1 ? "lançamento ainda a conferir entra" : "lançamentos ainda a conferir entram"} neste resultado.
                     </span>
@@ -236,7 +253,7 @@ export default async function DreEconomicaPage({
                 )}
                 {naoClassificado !== 0 && (
                   <li className="flex items-start gap-2">
-                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
+                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning-fg" />
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                       <span>
                         <strong>{moeda(Math.abs(naoClassificado))}</strong> sem grupo no DRE e fora do resultado. O de-para é o
@@ -250,7 +267,7 @@ export default async function DreEconomicaPage({
                 )}
                 {imposto !== 0 && (
                   <li className="flex items-start gap-2">
-                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
+                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning-fg" />
                     <span>
                       <strong>{moeda(Math.abs(imposto))}</strong> de impostos sobre a receita não entram no resultado — a margem parte da
                       Receita Bruta, a mesma regra da DRE de caixa.
@@ -258,18 +275,18 @@ export default async function DreEconomicaPage({
                   </li>
                 )}
               </ul>
-            </Card>
+            </Aviso>
           )}
 
           {temCobranca && (
             <Card className="p-4 mb-4">
-              <p className="text-[13px] text-fg">
+              <p className="text-ui text-fg">
                 Da cobrança neste período:
                 {cobranca.acrescimos !== 0 && <> acréscimos de acordo <strong className="tabular-nums">{moeda(cobranca.acrescimos)}</strong> em outras receitas;</>}
                 {cobranca.descontos !== 0 && <> descontos de acordo <strong className="tabular-nums">{moeda(Math.abs(cobranca.descontos))}</strong> em outras despesas;</>}
                 {cobranca.perdas !== 0 && <> perdas com clientes <strong className="tabular-nums">{moeda(Math.abs(cobranca.perdas))}</strong> em outras despesas.</>}
               </p>
-              <p className="text-[11px] text-fg-muted mt-1">
+              <p className="text-micro text-fg-muted mt-1">
                 Título renegociado ou perdido continua como receita na competência dele; parcela de acordo não é receita, é recebimento.
                 {centros.length > 0 && " A perda segue o centro do título; a diferença de acordo, o centro comum dos títulos renegociados."}
               </p>
@@ -279,11 +296,11 @@ export default async function DreEconomicaPage({
           {comparacao && orcamento ? (
             <>
               <RelatorioOrcadoRealizado mes={comparacao.mes} acumulado={comparacao.acumulado} />
-              <p className="text-[11px] text-fg-muted mt-2">
+              <NotaDeFonte>
                 Orçado da versão aprovada <strong>{orcamento.nome}</strong> de {ano}. Var. R$ é realizado − orçado na convenção
                 da DRE (despesa negativa); verde é melhor que o orçado — receita acima ou despesa abaixo —, vermelho é pior. Sem
                 orçado na linha, a variação % fica em branco.
-              </p>
+              </NotaDeFonte>
               <Button href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} variant="secondary" size="xs" className="mt-2">
                 Abrir orçamento
               </Button>
@@ -296,7 +313,7 @@ export default async function DreEconomicaPage({
 
       {/* Sem versão aprovada, um aviso discreto em vez de a comparação sumir sem explicação. */}
       {querOrcado && !orcamento && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted mt-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mt-3">
           <p>Sem orçamento aprovado para {ano} — o orçado × realizado aparece aqui quando houver.</p>
           <Button href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} variant="secondary" size="xs">
             Abrir orçamento
@@ -304,22 +321,22 @@ export default async function DreEconomicaPage({
         </div>
       )}
       {comOrcamento && filtro.tipo === "todos" && visao === "12meses" && (
-        <p className="text-[12px] text-fg-muted mt-3">Orçado × realizado nas visões Mês e Acumulado no ano.</p>
+        <p className="text-helper text-fg-muted mt-3">Orçado × realizado nas visões Mês e Acumulado no ano.</p>
       )}
 
       {quadro && (
         <Card className="p-0 overflow-hidden mt-5">
           <div className="px-4 pt-3 pb-2">
-            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Resultado por centro de custo — {periodo}</h2>
-            <p className="text-[11px] text-fg-muted mt-0.5">
+            <h2 className="text-card-title font-semibold text-fg">Resultado por centro de custo — {periodo}</h2>
+            <p className="text-micro text-fg-muted mt-0.5">
               Um centro por lançamento, sem rateio: as linhas somam a DRE da empresa sem filtro. Despesas somam todos os grupos de
               pagamento; o resultado segue a estrutura da DRE (impostos sobre a receita ficam fora dele).
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-[13px]">
+            <table className="w-full min-w-[620px] text-ui">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-y border-border">
+                <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-y border-border">
                   <th className="py-2 pl-4 pr-3 font-medium">Centro de custo</th>
                   <th className="py-2 pr-3 font-medium text-right">Receita bruta</th>
                   <th className="py-2 pr-3 font-medium text-right">Despesas</th>
@@ -339,8 +356,8 @@ export default async function DreEconomicaPage({
                         >
                           {l.nome}
                         </Link>
-                        {l.codigo && <span className="text-[11px] text-fg-muted"> · {l.codigo}</span>}
-                        {!l.ativo && <span className="text-[11px] text-fg-muted"> (inativo)</span>}
+                        {l.codigo && <span className="text-micro text-fg-muted"> · {l.codigo}</span>}
+                        {!l.ativo && <span className="text-micro text-fg-muted"> (inativo)</span>}
                       </td>
                       <td className="py-2 pr-3 text-right tabular-nums">{moeda(l.receitaBruta)}</td>
                       <td className={`py-2 pr-3 text-right tabular-nums ${l.despesas < 0 ? "text-danger" : ""}`}>{moeda(l.despesas)}</td>
@@ -360,12 +377,12 @@ export default async function DreEconomicaPage({
         </Card>
       )}
 
-      <p className="text-[11px] text-fg-muted mt-3">
+      <NotaDeFonte>
         {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} com competência em {periodo}
         {nomeDoFiltro ? ` (${nomeDoFiltro})` : ""}, cancelados e parcelas de acordo fora.
         {" "}Regime de <strong>competência</strong>: o que foi pago ou recebido está na DRE de caixa. O import do Omie
         não entra aqui — é export de pagamentos, sem competência. A diferença entre os dois regimes está na reconciliação.
-      </p>
+      </NotaDeFonte>
       <div className="flex flex-wrap items-center gap-2 mt-1.5">
         <Button href={`/dre?empresa=${companyId}`} variant="ghost" size="xs">
           Abrir DRE de caixa

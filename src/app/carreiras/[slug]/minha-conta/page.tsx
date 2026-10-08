@@ -5,6 +5,8 @@ import { ArrowLeft, ArrowRight, CalendarClock, ClipboardList, LogOut, Video } fr
 import { getPrisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Selo } from "@/components/ui/Selo";
+import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { cookieDaSessao, dadosDaConta, emailDaSessao } from "@/lib/carreiras/conta";
 import { situacaoParaCandidato, type Tom } from "@/lib/carreiras/situacaoDoCandidato";
@@ -18,7 +20,7 @@ export const metadata: Metadata = { title: "Minhas candidaturas", robots: { inde
 
 const COR_DO_TOM: Record<Tom, string> = {
   andamento: "bg-brand/10 text-brand border-brand/25",
-  aprovada: "bg-success/10 text-success border-success/25",
+  aprovada: "bg-success/10 text-success-fg border-success/25",
   encerrada: "bg-surface-2 text-fg-secondary border-border",
   desistiu: "bg-surface-2 text-fg-muted border-border",
 };
@@ -42,41 +44,45 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
 
         {!conta ? (
           <div className="mt-4 max-w-md mx-auto">
-            <header className="mb-6 text-center">
-              <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Minhas candidaturas</h1>
-              <p className="text-[13px] text-fg-muted mt-1">
-                Acompanhe suas inscrições em {tenant.name}. Enviamos um link de acesso para o e-mail da inscrição — sem senha.
-              </p>
-            </header>
+            <CabecalhoPublico
+              centralizado
+              titulo="Minhas candidaturas"
+              subtitulo={
+                <>
+                  Acompanhe suas inscrições em {tenant.name}. Enviamos um link de acesso para o e-mail da inscrição — sem senha.
+                </>
+              }
+            />
             <Card className="p-5">
               <PedirAcesso slug={slug} />
             </Card>
           </div>
         ) : (
           <>
-            <header className="mt-4 mb-6 flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Olá, {conta.nome.split(" ")[0]}</h1>
-                <p className="text-[13px] text-fg-muted mt-1">Suas candidaturas em {tenant.name}.</p>
-              </div>
-              <form action={sair.bind(null, slug)}>
-                <Button type="submit" variant="secondary" size="sm">
-                  <LogOut size={13} /> Sair
-                </Button>
-              </form>
-            </header>
+            <CabecalhoPublico
+              className="mt-4 mb-6"
+              titulo={<>Olá, {conta.nome.split(" ")[0]}</>}
+              subtitulo={<>Suas candidaturas em {tenant.name}.</>}
+              acao={
+                <form action={sair.bind(null, slug)}>
+                  <Button type="submit" variant="secondary" size="sm">
+                    <LogOut size={13} /> Sair
+                  </Button>
+                </form>
+              }
+            />
 
             {conta.testes.length > 0 && (
               <Card className="p-5 mb-4">
-                <h2 className="text-[15px] font-semibold text-fg mb-3 inline-flex items-center gap-1.5">
+                <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-3 inline-flex items-center gap-1.5">
                   <ClipboardList size={16} className="text-brand" /> Testes para responder
                 </h2>
                 <ul className="space-y-2">
                   {conta.testes.map((t) => (
                     <li key={t.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                      <span className="min-w-0 text-[13px] text-fg">
+                      <span className="min-w-0 text-[length:var(--fs-ui)] text-fg">
                         {t.template?.name ?? (t.type === "DISC" ? "Perfil comportamental (DISC)" : "Teste")}
-                        <span className="text-fg-muted text-[12px]"> · até {formatInstantDate(t.expiresAt)}</span>
+                        <span className="text-fg-muted text-[length:var(--fs-2)]"> · até {formatInstantDate(t.expiresAt)}</span>
                       </span>
                       <Button href={`/teste/${t.token}`} variant="primary" size="sm">
                         Responder <ArrowRight size={13} />
@@ -95,14 +101,14 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                   <Card key={c.id} className="p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h2 className="text-[15px] font-semibold text-fg">{c.vaga.title}</h2>
-                        <p className="text-[12px] text-fg-muted mt-0.5">
+                        <h2 className="text-[length:var(--fs-body)] font-semibold text-fg">{c.vaga.title}</h2>
+                        <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">
                           {empresa} · inscrição em {formatCalendarDate(c.createdAt)}
                         </p>
                       </div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${COR_DO_TOM[s.tom]}`}>
-                        {s.titulo}
-                      </span>
+                      {/* O selo do app com o mapa da tela — era a pílula à mão
+                          com as mesmas classes (DRG-06, 07/10/2026). */}
+                      <Selo cor={COR_DO_TOM[s.tom]}>{s.titulo}</Selo>
                     </div>
 
                     {s.linhaDoTempo && (
@@ -112,7 +118,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                             <span
                               className={`h-1.5 rounded-full ${e.estado === "futura" ? "bg-border" : "bg-brand"} ${e.estado === "atual" ? "animate-pulse" : ""}`}
                             />
-                            <span className={`text-[11px] ${e.estado === "atual" ? "text-brand font-medium" : e.estado === "feita" ? "text-fg-secondary" : "text-fg-muted"}`}>
+                            <span className={`text-[length:var(--fs-micro)] ${e.estado === "atual" ? "text-brand font-medium" : e.estado === "feita" ? "text-fg-secondary" : "text-fg-muted"}`}>
                               {e.rotulo}
                             </span>
                           </li>
@@ -124,7 +130,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                       <ul className="mt-4 space-y-2">
                         {c.meetings.map((m) => (
                           <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
-                            <span className="min-w-0 text-[13px] text-fg inline-flex items-center gap-1.5">
+                            <span className="min-w-0 text-[length:var(--fs-ui)] text-fg inline-flex items-center gap-1.5">
                               <CalendarClock size={14} className="text-brand flex-shrink-0" />
                               Entrevista em {formatInstantDateTime(m.startAt, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                             </span>
@@ -147,7 +153,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
             </div>
 
             <Card className="p-5 mt-6">
-              <h2 className="text-[15px] font-semibold text-fg mb-3">Meus dados</h2>
+              <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-3">Meus dados</h2>
               <AtualizarDados slug={slug} telefone={conta.telefone} />
             </Card>
 

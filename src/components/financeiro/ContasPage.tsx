@@ -9,13 +9,15 @@ import { nomeExibicao } from "@/lib/companyName";
 import { listarContas, competenciasComContas, type TipoDeConta } from "@/lib/financeiro/data";
 import { saoPauloParts } from "@/lib/agenda";
 import { getModuleDef } from "@/lib/module-catalog";
-import { ContasTable, moeda, competenciaNaTela } from "./ContasTable";
+import { ContasTable } from "./ContasTable";
 import { AnaliseDeContas } from "./AnaliseDeContas";
 import { AbasDeLink, FaixaDeTotais } from "./FiltroDePeriodo";
 import { situacoesDeCobranca, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
 import { DefinirCentroDasContas } from "./DefinirCentroDasContas";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { Aviso } from "@/components/ui/Aviso";
+import { formatarCompetencia, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
 
 const RECORTES = [
   { chave: "abertas", rotulo: "Em aberto" },
@@ -149,7 +151,7 @@ export async function ContasPage({
       chave: "competencia",
       rotulo: "Competência",
       vazioLabel: "Todas",
-      opcoes: competencias.map((c) => ({ value: c, label: competenciaNaTela(c) })),
+      opcoes: competencias.map((c) => ({ value: c, label: formatarCompetencia(c) })),
     },
     {
       chave: "empresa",
@@ -172,31 +174,37 @@ export async function ContasPage({
         }
       />
 
-      {/* Quatro números, e o primeiro é o que a pessoa procura: quanto falta.
-          Vencido em destaque porque é o que já custa. Os dois primeiros são
-          atalho para o recorte que eles contam. */}
+      {/* Os números do topo, e o primeiro é o que a pessoa procura: quanto
+          falta. Vencido em destaque porque é o que já custa. Os dois primeiros
+          são atalho para o recorte que eles contam.
+          "Pago"/"Recebido" só no recorte que traz as liquidadas (07/10): os
+          totais são do recorte, então em "Em aberto" (o padrão) e "Vencidas"
+          o cartão saía sempre R$ 0,00 — e verde. Cor neutra, como no portal:
+          é histórico, não pede ação. */}
       <FaixaDeTotais
         itens={[
           {
             rotulo: "Em aberto",
-            valor: moeda(resultado.totais.emAberto),
+            valor: formatarReaisDeCentavos(resultado.totais.emAberto),
             icone: <Wallet />,
             href: aba === "contas" ? comParam("recorte", undefined) : undefined,
           },
           {
             rotulo: "Vencido",
-            valor: moeda(resultado.totais.vencido),
+            valor: formatarReaisDeCentavos(resultado.totais.vencido),
             tom: resultado.totais.vencido > 0 ? "text-danger" : undefined,
             icone: <AlertTriangle />,
             href: aba === "contas" ? comParam("recorte", "vencidas") : undefined,
           },
           {
             rotulo: "Vence hoje",
-            valor: moeda(resultado.totais.venceHoje),
-            tom: resultado.totais.venceHoje > 0 ? "text-warning" : undefined,
+            valor: formatarReaisDeCentavos(resultado.totais.venceHoje),
+            tom: resultado.totais.venceHoje > 0 ? "text-warning-fg" : undefined,
             icone: <CalendarClock />,
           },
-          { rotulo: aPagar ? "Pago" : "Recebido", valor: moeda(resultado.totais.pago), tom: "text-success", icone: <CheckCircle2 /> },
+          ...(recorte === "todas"
+            ? [{ rotulo: aPagar ? "Pago" : "Recebido", valor: formatarReaisDeCentavos(resultado.totais.pago), tom: "text-fg-muted", icone: <CheckCircle2 /> }]
+            : []),
         ]}
       />
 
@@ -213,13 +221,19 @@ export async function ContasPage({
       {aba === "analise" ? (
         <>
           <FiltrosDaTela campos={filtros} className="mb-4" />
+          {resultado.limitada && (
+            <Aviso tom="atencao" className="mb-4">
+              A análise considera as {formatarNumero(resultado.linhas.length, 0)} contas de vencimento mais antigo, de{" "}
+              {formatarNumero(resultado.totalNoRecorte, 0)} em aberto. Filtre por competência ou empresa para ver o resto.
+            </Aviso>
+          )}
           <AnaliseDeContas linhas={resultado.linhas} hojeKey={saoPauloParts(agora).dateKey} aPagar={aPagar} />
         </>
       ) : (
         <>
           {podeDefinirCentro && resultado.linhas.length > 0 && <DefinirCentroDasContas empresas={empresasComCentros} />}
           <CascoDaTabela
-            contagem={contarItens(resultado.linhas.length, "conta", "contas")}
+            contagem={contarItens(resultado.linhas.length, "conta", "contas", resultado.limitada)}
             filtros={<FiltrosDaTela campos={filtros} naBarra />}
           >
             <ContasTable
@@ -233,6 +247,14 @@ export async function ContasPage({
               selecionarCentro={podeDefinirCentro}
               mostrarCentro={podeDefinirCentro}
             />
+            {/* Os totais do topo são do recorte inteiro (somados no banco); só
+                a lista para no teto — e diz que parou (08/10/2026). */}
+            {resultado.limitada && (
+              <p className="text-micro text-fg-muted mt-3">
+                Mostrando {formatarNumero(resultado.linhas.length, 0)} de {formatarNumero(resultado.totalNoRecorte, 0)} contas.
+                Os totais acima somam todas. Filtre por competência ou empresa para ver o resto na lista.
+              </p>
+            )}
           </CascoDaTabela>
         </>
       )}

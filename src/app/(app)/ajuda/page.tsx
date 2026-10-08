@@ -11,7 +11,8 @@ import { videoDoArtigo } from "@/lib/ajuda/videos";
 
 /**
  * O endereço do passo a passo da tela, se ela tem artigo, e o vídeo do artigo,
- * se já tem (05/10/2026 — o vídeo vai junto para a seção "Vídeos" da central).
+ * se já tem (05/10/2026). O vídeo toca no artigo; na central, o cartão da tela
+ * só ganha a etiqueta "Vídeo" (08/10/2026).
  */
 function ajudaDaTela(codigo: string | undefined, caminho: string): Pick<TelaDaAjuda, "artigo" | "video"> {
   const artigo = (codigo ? artigoDaChave(codigo) : null) ?? (caminho.startsWith("/") ? artigoDoCaminho(caminho) : null);

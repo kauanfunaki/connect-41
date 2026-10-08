@@ -6,6 +6,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 
 export function SignatureForm({ token, documentTitle }: { token: string; documentTitle: string }) {
   const router = useRouter();
@@ -61,7 +62,7 @@ export function SignatureForm({ token, documentTitle }: { token: string; documen
         {isSubmitting ? "Assinando…" : "Assinar documento"}
       </Button>
       {error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">{error}</p>
+        <Aviso>{error}</Aviso>
       )}
     </form>
   );

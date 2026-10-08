@@ -26,6 +26,7 @@ import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { getIndicadoresRH } from "@/lib/indicadoresRH";
+import { AVISO_DAS_FERIAS_DIAS } from "@/lib/home/paineis";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ExportIndicadoresButtons } from "@/components/indicadoresRH/ExportIndicadoresButtons";
@@ -71,11 +72,11 @@ const ICONE_DO_INDICADOR: Record<string, React.ReactNode> = {
   Headcount: <Users size={15} />,
   "Admissões (30 dias)": <UserPlus size={15} />,
   "Demissões (30 dias)": <UserMinus size={15} />,
-  Turnover: <Repeat size={15} />,
+  "Turnover (30 dias)": <Repeat size={15} />,
   "Absenteísmo (30 dias)": <Stethoscope size={15} />,
   "Horas Extras (30 dias)": <Clock size={15} />,
   "Férias Vencidas": <Palmtree size={15} />,
-  "Férias a Vencer": <CalendarClock size={15} />,
+  [`Férias a Vencer (${AVISO_DAS_FERIAS_DIAS} dias)`]: <CalendarClock size={15} />,
   "Vagas Abertas": <Briefcase size={15} />,
   "Candidatos por Vaga": <UsersRound size={15} />,
   "Taxa de Aprovação": <ThumbsUp size={15} />,
@@ -114,8 +115,9 @@ export default async function IndicadoresRhPage() {
             value={c.value}
             sub={c.hint}
             icon={ICONE_DO_INDICADOR[c.label] ?? <BarChart3 size={15} />}
-            // Férias vencida é passivo consumado — o único número que pede atenção.
-            highlight={c.label === "Férias Vencidas" && c.value !== "0"}
+            // Férias vencida é passivo consumado — o único número que pede
+            // atenção. Vermelho, como na Home e em /ferias (era âmbar).
+            tom={c.label === "Férias Vencidas" && c.value !== "0" ? "critico" : undefined}
             delay={i * 20}
           />
         ))}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Sparkles } from "lucide-react";
 import type { AiSummaryState } from "@/app/(app)/empresas/[id]/ai-actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: () => Promise<AiSummaryState>;
@@ -33,14 +34,14 @@ export function AiCompanySummary({ action }: Props) {
         </div>
         <Button type="button" onClick={handleClick} disabled={isPending} className="flex-shrink-0">
           <Sparkles size={14} />
-          {isPending ? "Gerando…" : "Gerar Resumo"}
+          {isPending ? "Gerando…" : "Gerar resumo"}
         </Button>
       </div>
 
       {state && "error" in state && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2 mt-4">
+        <Aviso className="mt-4">
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       {state && "summary" in state && (

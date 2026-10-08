@@ -133,7 +133,9 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
+      {/* `c41-tabela`: dentro do `CascoDaTabela`, no computador, o casco é o
+          cartão e este perde borda, fundo e sombra (globals.css). */}
+      <div className="c41-tabela bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
       {clientes.length === 0 ? (
         <EmptyState icon={<Building2 />} title="Nenhum cliente encontrado" />
       ) : (
@@ -143,7 +145,7 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
             {canCreate && selecionaveis.length > 0 && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={todosMarcados} onChange={marcarTodos} aria-label="Selecionar todos" />
-                <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   Selecionar todos
                 </span>
               </div>
@@ -155,7 +157,7 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
               do navegador filtraria só a página aberta. O de tabela paginada é o
               `FiltroDaColunaNaUrl`, que depende da página filtrar no servidor. */}
           <div className="c41-tabela scroll-x overflow-x-auto hidden md:block">
-          <table className="w-full min-w-[640px] text-[length:var(--fs-body)]">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
@@ -163,10 +165,10 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
                     <Checkbox checked={todosMarcados} onChange={marcarTodos} aria-label="Selecionar todos" />
                   </th>
                 )}
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Raiz do CNPJ</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Empresas</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Situação</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Raiz do CNPJ</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Empresas</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Situação</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>

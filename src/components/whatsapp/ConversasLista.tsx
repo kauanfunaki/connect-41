@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MessageSquare, X } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -17,7 +17,7 @@ import {
   resumoDoLote,
   MAX_NO_LOTE,
   SITUACAO_LABEL,
-  SITUACAO_VARIANTE,
+  SITUACAO_TOM,
   type AcaoEmLote,
   type ResultadoDoLote,
 } from "@/lib/whatsapp/conversas";
@@ -104,7 +104,7 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
       {/* A barra do lote: fica no topo enquanto se rola a lista. */}
       <div
         className={`sticky top-2 z-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2 transition-colors ${
-          selecionadas.length > 0 ? "border-brand/40 bg-surface shadow-sm" : "border-transparent"
+          selecionadas.length > 0 ? "border-brand/40 bg-surface shadow-[var(--c41-shadow-xs)]" : "border-transparent"
         }`}
         role="toolbar"
         aria-label="Ações nas conversas selecionadas"
@@ -153,7 +153,7 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
             <Button size="sm" variant="ghost" disabled={ocupado} onClick={() => setMarcadas(new Set())} className="ml-auto">
               <X size={14} /> Limpar
             </Button>
-            <p className="basis-full text-[11px] text-fg-muted">
+            <p className="basis-full text-[length:var(--fs-micro)] text-fg-muted">
               Nada é enviado aos candidatos. Cada conversa passa pela mesma regra de quando é feita uma por vez — a que não
               puder, fica de fora com o motivo.
             </p>
@@ -164,11 +164,11 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
       {retorno && (
         <div
           role="status"
-          className={`rounded-md border px-3 py-2 text-[13px] ${retorno.erro ? "border-danger/30 bg-danger/5 text-danger" : "border-border bg-surface text-fg"}`}
+          className={`rounded-md border px-3 py-2 text-[length:var(--fs-ui)] ${retorno.erro ? "border-danger/30 bg-danger/5 text-danger" : "border-border bg-surface text-fg"}`}
         >
           <p>{retorno.texto}</p>
           {retorno.puladas.length > 0 && (
-            <ul className="mt-1 text-[12px] text-fg-secondary">
+            <ul className="mt-1 text-[length:var(--fs-2)] text-fg-secondary">
               {retorno.puladas.map((p, i) => (
                 <li key={`${p.nome}-${i}`}>
                   {p.nome}: {p.motivo}
@@ -201,17 +201,17 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-fg">{c.nome ?? telefoneLegivel(c.waPhone)}</span>
-                    <Badge variant={SITUACAO_VARIANTE[situacao]}>{SITUACAO_LABEL[situacao]}</Badge>
+                    <Selo tom={SITUACAO_TOM[situacao]}>{SITUACAO_LABEL[situacao]}</Selo>
                     {c.responsavel ? (
-                      <span className="text-[11px] text-fg-secondary">
+                      <span className="text-[length:var(--fs-micro)] text-fg-secondary">
                         {c.responsavel.id === userId ? "com você" : `com ${c.responsavel.nome}`}
                       </span>
                     ) : (
                       c.handoffAt &&
-                      !c.optedOutAt && <span className="text-[11px] text-danger font-medium">ninguém assumiu</span>
+                      !c.optedOutAt && <span className="text-[length:var(--fs-micro)] text-danger font-medium">ninguém assumiu</span>
                     )}
                     {c.naoRespondidas > 0 && (
-                      <span className="text-[11px] text-danger font-medium">
+                      <span className="text-[length:var(--fs-micro)] text-danger font-medium">
                         {c.naoRespondidas === 1 ? "1 sem resposta" : `${c.naoRespondidas} sem resposta`}
                       </span>
                     )}
@@ -219,15 +219,15 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
                   {/* Sem vínculo, o telefone é a única identidade que temos —
                       e quem vai atender precisa dele à mão para ligar. */}
                   {c.nome && (
-                    <p className="text-[11px] text-fg-muted mt-0.5">
+                    <p className="text-[length:var(--fs-micro)] text-fg-muted mt-0.5">
                       {telefoneLegivel(c.waPhone)}
                       {c.vaga && ` · ${c.vaga}`}
                     </p>
                   )}
-                  {c.ultimaMensagem && <p className="text-[13px] text-fg-secondary mt-1 truncate max-w-[52ch]">{c.ultimaMensagem}</p>}
-                  {c.handoffReason && <p className="text-[11px] text-warning mt-1">passou para você: {c.handoffReason}</p>}
+                  {c.ultimaMensagem && <p className="text-[length:var(--fs-ui)] text-fg-secondary mt-1 truncate max-w-[52ch]">{c.ultimaMensagem}</p>}
+                  {c.handoffReason && <p className="text-[length:var(--fs-micro)] text-warning-fg mt-1">passou para você: {c.handoffReason}</p>}
                 </div>
-                <span className="text-[11px] text-fg-muted whitespace-nowrap tabular-nums shrink-0">
+                <span className="text-[length:var(--fs-micro)] text-fg-muted whitespace-nowrap tabular-nums shrink-0">
                   {c.ultimaMensagemEm ? formatInstantDateTime(c.ultimaMensagemEm) : "—"}
                 </span>
               </div>

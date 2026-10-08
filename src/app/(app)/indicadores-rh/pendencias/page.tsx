@@ -1,10 +1,10 @@
 import { PageContainer } from "@/components/shared/PageContainer";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getRelatorioPendencias, type PendenciaRow } from "@/lib/relatoriosRH";
-import { formatCalendarDate } from "@/lib/format";
+import { formatCalendarDate, formatarNumero } from "@/lib/format";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
 import { RelatorioTable, RelatorioBadge, TOM_DO_TOTAL, type BadgeTone } from "@/components/relatorios/RelatorioTable";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FileWarning, Stethoscope, UserPlus, CalendarClock } from "lucide-react";
 
 export const metadata = { title: "Pendências documentais e operacionais" };
@@ -38,7 +38,7 @@ export default async function RelatorioPendenciasPage() {
           { rotulo: "Exames sem ASO", n: count("EXAME_PENDENTE"), tone: "warning" as const, icone: <Stethoscope /> },
           { rotulo: "Admissões incompletas", n: count("ADMISSAO_INCOMPLETA"), tone: "warning" as const, icone: <UserPlus /> },
           { rotulo: "Vencendo em 30 dias", n: count("DOCUMENTO_VENCENDO"), tone: "neutral" as const, icone: <CalendarClock /> },
-        ].map((i) => ({ rotulo: i.rotulo, valor: String(i.n), icone: i.icone, tom: i.n > 0 ? TOM_DO_TOTAL[i.tone] : undefined }))}
+        ].map((i) => ({ rotulo: i.rotulo, valor: formatarNumero(i.n, 0), icone: i.icone, tom: i.n > 0 ? TOM_DO_TOTAL[i.tone] : undefined }))}
       />
 
       <RelatorioTable<PendenciaRow>

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "success" | "link" | "linkMuted";
-type Size = "xs" | "sm" | "md" | "lg";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "dangerSolid" | "success" | "link" | "linkMuted";
+type Size = "xs" | "sm" | "md" | "lg" | "icon";
 
 type CommonProps = {
   variant?: Variant;
@@ -27,6 +27,8 @@ type ButtonProps = CommonProps &
     loading?: boolean;
     /** O que aparece enquanto carrega — "Enviando…", "Criando…". Padrão: "Salvando…". */
     loadingLabel?: string;
+    /** O React 19 entrega o `ref` como prop: a confirmação foca o botão de confirmar. */
+    ref?: React.Ref<HTMLButtonElement>;
   };
 
 type LinkProps = CommonProps &
@@ -42,6 +44,12 @@ type LinkProps = CommonProps &
      *  simples. O <Link> pré-carregaria a rota — gerando o arquivo só de a tela
      *  abrir — e tentaria navegar dentro do app ao clicar. */
     download?: boolean | string;
+    /** Um `<a>` simples, sem o `<Link>` (07/10/2026): endereço de fora do app
+     *  (a reunião do Teams, a autorização de uma integração) ou rota que o
+     *  navegador abre (PDF). Quatro telas copiavam a classe do botão num `<a>`
+     *  porque o `href` virava `<Link>` — pré-carga e navegação por dentro do
+     *  app, que ali não servem. Combine com `target`/`rel` quando for o caso. */
+    nativo?: boolean;
   };
 
 type Props = ButtonProps | LinkProps;
@@ -57,10 +65,18 @@ type Props = ButtonProps | LinkProps;
 //   com 10 consumidores) é borda translúcida, sem fundo em repouso, tingindo
 //   levemente no hover — adotado aqui ao pé da letra.
 const VARIANT_CLASS: Record<Variant, string> = {
-  primary: "bg-brand text-on-brand hover:bg-brand-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)]",
+  // `brand-solid`, e não `brand` (07/10/2026): no escuro o `brand` vira o
+  // brand-400, bom para texto azul, mas o branco em cima dele dava 3,28:1. O
+  // preenchimento fica no azul 41 nos dois temas (ver globals.css).
+  primary: "bg-brand-solid text-on-brand hover:bg-brand-solid-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)]",
   secondary: "border border-border-strong text-fg hover:bg-surface-hover",
   ghost: "bg-transparent text-fg-secondary hover:bg-surface-hover hover:text-fg",
   danger: "border border-danger/30 text-danger hover:bg-danger/8",
+  // O vermelho cheio da confirmação destrutiva (07/10/2026), que o
+  // ConfirmDialog escrevia à mão em `bg-danger text-white` — 3,17:1 no escuro.
+  // Tom fixo nos dois temas (4,99:1). Se a confirmação vai continuar cheia ou
+  // virar contorno é decisão do Kauan; por ora é só a de lá que usa.
+  dangerSolid: "bg-danger-solid text-white hover:bg-danger-solid/90 shadow-xs",
   // Simétrica ao danger, de propósito: o par que o app já usava era
   // "border-danger/30 text-danger" e "border-success/30 text-success", e o
   // desenho semântico do app é contorno, não preenchimento.
@@ -69,7 +85,7 @@ const VARIANT_CLASS: Record<Variant, string> = {
   // exceção de uma tela cada: `bg-success text-white` na conclusão de admissão
   // (é o botão primário daquela ficha, que por acaso é verde) e o "Concluir
   // tarefa" do kanban, que fica neutro em repouso e só esverdeia no hover.
-  success: "border border-success/30 text-success hover:bg-success/8",
+  success: "border border-success/30 text-success-fg hover:bg-success/8",
   // ─── As duas variantes sem caixa ──────────────────────────────────────────
   //
   // Medidas em 09/09 ao converter o kanban: 13 dos botões crus são texto
@@ -96,15 +112,20 @@ const SIZE_CLASS: Record<Size, string> = {
   // 09/09, o app escreve `text-[12px]` em 56 dos 59 botões `h-8` e em 9 dos 12
   // `h-7`. A medição original que o comentário abaixo cita só tinha coberto o
   // `md` — onde 13px estava certo (54 contra 28).
-  xs: "h-7 px-2.5 text-[length:var(--fs-button-sm)]",
-  sm: "h-8 px-3 text-[length:var(--fs-button-sm)]",
-  md: "h-9 px-4 text-[length:var(--fs-ui)]",
+  xs: "h-7 px-2.5 text-button-sm",
+  sm: "h-8 px-3 text-button-sm",
+  md: "h-9 px-4 text-ui",
   // `lg` existe para formulário de página cheia — candidatura em /carreiras,
   // admissão, assinatura de documento, seletor de tema, DISC e quiz. São telas
   // onde o botão é o destino da página inteira, e não um controle numa barra.
   // Os que estavam em `h-11` descem para cá: 4px a menos vale mais que um
   // sétimo tamanho para três call-sites.
-  lg: "h-10 px-5 text-[14px]",
+  lg: "h-10 px-5 text-label",
+  // Quadrado de 36px, sem padding, para um botão só de ícone na altura do `md`
+  // (07/10/2026). O `w-9` por cima do `md` deixava o `px-4` espremer o ícone até
+  // virar um ponto (o fechar do cartão do Kanban); quem acertava escrevia
+  // `w-9 px-0!`. Fora de uma fileira de botões `md`, prefira o `IconButton`.
+  icon: "h-9 w-9 px-0 text-ui",
 };
 
 // `active:translate-y-px`: o botão afunda 1px ao ser pressionado (polimento de
@@ -125,7 +146,7 @@ export function Button(props: Props) {
     : `${BASE} ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`.trim();
 
   if (props.href !== undefined) {
-    const { href, download, ...rest } = omitCommon(props);
+    const { href, download, nativo, prefetch, ...rest } = omitCommon(props);
     if (download) {
       return (
         <a href={href} download={download === true ? "" : download} className={cls} {...rest}>
@@ -133,8 +154,15 @@ export function Button(props: Props) {
         </a>
       );
     }
+    if (nativo) {
+      return (
+        <a href={href} className={cls} {...rest}>
+          {children}
+        </a>
+      );
+    }
     return (
-      <Link href={href} className={cls} {...rest}>
+      <Link href={href} prefetch={prefetch} className={cls} {...rest}>
         {children}
       </Link>
     );

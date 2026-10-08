@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -45,6 +45,7 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
@@ -90,7 +91,7 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
   if (telas.length === 0) return null;
   return (
     <>
-      <p className="flex items-center gap-1.5 px-2.5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+      <p className="c41-rotulo flex items-center gap-1.5 px-2.5 pt-4 pb-1.5">
         <Pin size={11} className="flex-shrink-0" />
         Fixadas
       </p>
@@ -101,6 +102,17 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
   );
 }
 
+
+// A partir de lg a lateral é coluna fixa; abaixo, gaveta. No servidor vale
+// "tela grande": a gaveta só fica inerte depois da hidratação, no celular.
+const TELA_GRANDE = "(min-width: 1024px)";
+function assinarTela(aviso: () => void) {
+  const mq = window.matchMedia(TELA_GRANDE);
+  mq.addEventListener("change", aviso);
+  return () => mq.removeEventListener("change", aviso);
+}
+const lerTela = () => window.matchMedia(TELA_GRANDE).matches;
+const lerTelaNoServidor = () => true;
 
 type Props = {
   tenantId: string;
@@ -177,12 +189,29 @@ export function AppShell({
   const corDoSetor = activeSector?.color;
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
   const podeTrocar = sectors.length > 1 || accessibleTenants.length > 1;
+  // A gaveta fechada (abaixo de lg) só saía da tela com translate: os links
+  // seguiam no Tab e no leitor de tela. `inert` tira os dois; Esc fecha
+  // (07/10/2026, junto com o PortalShell).
+  const telaGrande = useSyncExternalStore(assinarTela, lerTela, lerTelaNoServidor);
+  const gavetaFechada = !telaGrande && !mobileOpen;
+  useEffect(() => {
+    if (!mobileOpen) return;
+    function tecla(e: KeyboardEvent) {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      e.preventDefault();
+      setMobileOpen(false);
+    }
+    document.addEventListener("keydown", tecla);
+    return () => document.removeEventListener("keydown", tecla);
+  }, [mobileOpen]);
 
   return (
     // `--c41-setor` leva a cor do setor ativo a tudo que está dentro: a barra
     // do item ativo, o traço do título, o brilho da direita (globals.css).
+    // `h-dvh`, e não `h-screen` (07/10/2026): no navegador do celular 100vh é
+    // maior que a área visível, e o pé da página ficava atrás da barra dele.
     <div
-      className="flex h-screen overflow-hidden bg-canvas"
+      className="flex h-dvh overflow-hidden bg-canvas"
       style={activeSector ? ({ "--c41-setor": activeSector.color } as React.CSSProperties) : undefined}
     >
       {/* Backdrop — só em telas pequenas, quando a sidebar vira drawer sobreposto. */}
@@ -198,6 +227,8 @@ export function AppShell({
       {/* Abaixo de lg: fixa fora da tela (drawer), deslizando por cima do conteúdo.
           Em lg+: volta a ser a coluna estática de sempre (translate-x-0, static). */}
       <aside
+        id="menu-lateral"
+        inert={gavetaFechada}
         className={`w-[240px] flex-shrink-0 flex flex-col border-r border-border bg-sidebar-bg fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out lg:static lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
@@ -214,7 +245,7 @@ export function AppShell({
             onClick={() => setMobileOpen(false)}
             aria-label="Ir para o Início"
             data-dica="Início"
-            className="inline-flex items-center rounded-md px-2 py-1 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            className="inline-flex items-center rounded-md px-2 py-1 transition-opacity hover:opacity-80"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -229,14 +260,16 @@ export function AppShell({
               className="hidden dark:block h-8 w-auto object-contain flex-shrink-0"
             />
           </Link>
-          <Button
-            variant="linkMuted"
-            className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2"
+          {/* Alvo de 40px (07/10/2026): o `Button linkMuted` tinha o tamanho do
+              ícone, 18px, abaixo do mínimo de toque. */}
+          <IconButton
+            size="xl"
+            className="lg:hidden absolute right-2 top-1/2 -translate-y-1/2"
             onClick={() => setMobileOpen(false)}
             aria-label="Fechar menu"
           >
             <X size={18} />
-          </Button>
+          </IconButton>
         </div>
 
         {/* A busca no lugar do cartão de setor e escritório (02/10): trocar de
@@ -279,7 +312,7 @@ export function AppShell({
                   setor Gestão (pedido do Kauan: o Geral é só o que serve a
                   todos). "Meu dia" subiu para logo abaixo do Início — é a
                   primeira tela do expediente. */}
-              <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
+              <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
                 Geral
               </p>
               <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Espaços" />
@@ -298,7 +331,7 @@ export function AppShell({
               <TelasFixadas telas={telasFixadas} />
 
               {activeSectorModules.length > 0 && (
-                <p className="flex items-center gap-2 px-2.5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+                <p className="c41-rotulo flex items-center gap-2 px-2.5 pt-4 pb-1.5">
                   <span
                     aria-hidden
                     className="inline-block size-2 rounded-full flex-shrink-0"
@@ -343,7 +376,7 @@ export function AppShell({
             </>
           ) : (
             <>
-              <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
+              <p className="c41-rotulo px-2.5 pb-1.5">
                 Geral
               </p>
               <NavItem href="/home" icon={<Home size={16} />} label="Início" />
@@ -359,7 +392,7 @@ export function AppShell({
 
               {sectors.length > 0 && (
                 <>
-                  <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
+                  <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
                     Meus Setores
                   </p>
                   {/* Sem painel ao lado: o clique entra no ambiente do setor
@@ -393,14 +426,18 @@ export function AppShell({
             rolou ? "border-border" : "border-transparent"
           }`}
         >
-          <button
-            type="button"
+          {/* 40px de alvo (era o ícone, 20px) e `-ml-2` para o ícone seguir
+              onde estava; diz se a gaveta está aberta (07/10/2026). */}
+          <IconButton
+            size="xl"
             onClick={() => setMobileOpen(true)}
             aria-label="Abrir menu"
-            className="lg:hidden flex-shrink-0 text-fg-secondary hover:text-fg transition-colors"
+            aria-expanded={mobileOpen}
+            aria-controls="menu-lateral"
+            className="lg:hidden -ml-2"
           >
             <Menu size={20} />
-          </button>
+          </IconButton>
           <div className="flex-1 min-w-0 flex items-center">
             {/* Onde estou: o escritório e o setor ativo, que o cartão embaixo
                 da logo mostrava até a busca ficar com o lugar dele (02/10). */}
@@ -410,7 +447,7 @@ export function AppShell({
               onClick={() => setTrocaAberta(true)}
               disabled={!podeTrocar}
               data-dica={podeTrocar ? "Trocar setor ou escritório" : undefined}
-              className="hidden lg:flex items-center gap-2 min-w-0 text-[13px] rounded-md -ml-1.5 px-1.5 py-1 transition-colors enabled:hover:bg-surface-hover disabled:cursor-default"
+              className="hidden lg:flex items-center gap-2 min-w-0 text-ui rounded-md -ml-1.5 px-1.5 py-1 transition-colors enabled:hover:bg-surface-hover disabled:cursor-default"
             >
               <AvatarImage src={tenantAtual?.logoUrl ?? null} name={tenantAtual?.name ?? "—"} size={22} shape="lg" fontSize={10} />
               <span className="font-medium text-fg truncate">{tenantAtual?.name ?? "—"}</span>
@@ -445,19 +482,19 @@ export function AppShell({
             {/* Configurações saiu do rodapé da sidebar para o topo, só o ícone,
                 ao lado de notificação e perfil (pedido de 30/09). Admin cai na
                 administração do workspace; os outros, na própria conta. */}
-            <Link
+            {/* O `IconButton` com `href` (07/10/2026), no lugar da cópia à mão
+                do `framed lg`. */}
+            <IconButton
               href={canOpenAdmin ? "/admin" : "/configuracoes"}
+              variant="framed"
+              size="lg"
+              active={emConfiguracoes}
               aria-label="Configurações"
               data-dica="Configurações"
               aria-current={emConfiguracoes ? "page" : undefined}
-              className={`w-[38px] h-[38px] inline-flex items-center justify-center rounded-md border transition-colors ${
-                emConfiguracoes
-                  ? "bg-surface border-border-strong text-fg shadow-sm"
-                  : "bg-surface-hover border-border text-fg-secondary hover:text-fg hover:border-border-strong"
-              }`}
             >
               <Settings size={16} />
-            </Link>
+            </IconButton>
             <ProfileMenu
               name={profileName}
               roleLabel={profileRoleLabel}
@@ -482,7 +519,7 @@ export function AppShell({
         </header>
 
         {subscriptionReadOnly && (
-          <div className="flex-shrink-0 bg-danger/10 border-b border-danger/20 px-4 py-2 text-[13px] text-danger flex items-center justify-center gap-2 text-center">
+          <div className="flex-shrink-0 bg-danger/10 border-b border-danger/20 px-4 py-2 text-ui text-danger flex items-center justify-center gap-2 text-center">
             Assinatura pendente — este workspace está em modo somente leitura.{" "}
             {/* Em MANAGED a tela /assinatura dá 404 (é a 41 Tech quem administra),
                 então o link viraria um beco sem saída — vira instrução de contato.

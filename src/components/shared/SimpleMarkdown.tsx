@@ -49,7 +49,7 @@ export function SimpleMarkdown({ text, className }: { text: string; className?: 
     <div className={className}>
       {blocks.map((block, i) => {
         if (block.type === "heading") {
-          const sizeClass = block.level === 1 ? "text-[16px] mt-4 mb-2" : block.level === 2 ? "text-[14.5px] mt-3 mb-1.5" : "text-[13.5px] mt-2 mb-1";
+          const sizeClass = block.level === 1 ? "text-fs-6 mt-4 mb-2" : block.level === 2 ? "text-label mt-3 mb-1.5" : "text-ui mt-2 mb-1";
           return (
             <p key={i} className={`font-semibold text-fg first:mt-0 ${sizeClass}`}>
               {renderInline(block.lines[0])}

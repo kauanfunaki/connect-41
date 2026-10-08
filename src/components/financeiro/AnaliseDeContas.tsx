@@ -1,9 +1,71 @@
+import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { BarChart3 } from "lucide-react";
-import { faixasDeAtraso, rankingDeContrapartes, type ContaParaAnalise } from "@/lib/financeiro/analise";
+import { BarraDeSituacao, BarrasRanqueadas, type LinhaRanqueada, type Segmento, type Tom } from "@/components/shared/Graficos";
+import {
+  faixasDeAtraso,
+  rankingDeContrapartes,
+  type ChaveDaFaixa,
+  type ContaParaAnalise,
+  type FaixaCalculada,
+  type PosicaoNoRanking,
+} from "@/lib/financeiro/analise";
 import { moeda, percentual } from "@/lib/financeiro/formato";
+import { formatarNumero } from "@/lib/format";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
-const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border";
+/** Quantos nomes o ranking mostra. */
+const NO_RANKING = 10;
+
+/**
+ * O tom de cada faixa de atraso (08/10/2026, escolha 9A do Kauan na página de
+ * decisões: a Análise de contas com os gráficos da Home). "A vencer" no
+ * "próximo" da marca, o mesmo do painel de contas da Home — cujo "Abrir" traz
+ * para esta tela —; até 30 dias de atraso em atenção, acima disso em crítico.
+ * Antes, as cinco faixas vencidas no mesmo vermelho e "a vencer" num azul de
+ * aviso que nenhum gráfico usava.
+ */
+const TOM_DA_FAIXA: Record<ChaveDaFaixa, Tom> = {
+  a_vencer: "proximo",
+  d1_15: "atencao",
+  d16_30: "atencao",
+  d31_60: "critico",
+  d61_90: "critico",
+  acima_90: "critico",
+};
+
+/**
+ * As faixas como segmentos da `BarraDeSituacao`: o comprimento conta as contas
+ * e o R$ vai escrito ao lado, como no painel da Home. Faixa vazia fica neutra
+ * — zero não pinta o ícone da legenda de vermelho.
+ */
+export function segmentosDasFaixas(faixas: FaixaCalculada[]): Segmento[] {
+  return faixas.map((f) => ({
+    chave: f.chave,
+    rotulo: f.rotulo,
+    valor: f.quantidade,
+    tom: f.quantidade > 0 ? TOM_DA_FAIXA[f.chave] : "neutro",
+    detalhe: moeda(f.centavos),
+  }));
+}
+
+/**
+ * O ranking como barras em dinheiro: o comprimento é o que está em aberto, o
+ * pedaço vencido em crítico e o resto no "próximo". Vence hoje fica em "a
+ * vencer", a mesma régua das faixas.
+ */
+export function linhasDoRanking(ranking: PosicaoNoRanking[]): LinhaRanqueada[] {
+  return ranking.map((r) => ({
+    chave: r.contraparteNome,
+    rotulo: r.contraparteNome,
+    sublabel: `${formatarNumero(r.quantidade, 0)} ${r.quantidade === 1 ? "conta" : "contas"} · ${percentual(r.participacao)} do em aberto`,
+    segmentos: [
+      { chave: "vencido", rotulo: "Vencido", valor: r.vencido, tom: "critico" },
+      { chave: "a_vencer", rotulo: "A vencer", valor: r.emAberto - r.vencido, tom: "proximo" },
+    ],
+    nota: r.vencido > 0 ? `${moeda(r.vencido)} vencido` : undefined,
+  }));
+}
 
 /**
  * Faixas de atraso e ranking — a aba de análise de `/pagar` e `/receber`.
@@ -11,85 +73,61 @@ const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted b
  * Recebe as mesmas linhas da lista, no recorte "em aberto": a soma das faixas
  * tem de bater com o número do topo da tela, e só bate se as duas vierem da
  * mesma consulta.
+ *
+ * Desde 08/10/2026 (escolha 9A), os dois blocos são os gráficos da Home — a
+ * `BarraDeSituacao` e as `BarrasRanqueadas` —, com legenda, valor escrito e
+ * tabela para leitor de tela. Eram duas tabelas com uma barra de 8px desenhada
+ * à mão, sem legenda e escondida do leitor de tela.
  */
 export function AnaliseDeContas({ linhas, hojeKey, aPagar }: { linhas: ContaParaAnalise[]; hojeKey: string; aPagar: boolean }) {
   const faixas = faixasDeAtraso(linhas, hojeKey);
-  const ranking = rankingDeContrapartes(linhas, 10);
+  const todos = rankingDeContrapartes(linhas, Number.MAX_SAFE_INTEGER);
   const total = faixas.reduce((n, f) => n + f.centavos, 0);
+  const contas = faixas.reduce((n, f) => n + f.quantidade, 0);
 
   if (total === 0) {
     return <EmptyState title="Nada em aberto para analisar" icon={<BarChart3 />} />;
   }
 
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <section>
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Faixas de atraso</h2>
-        <div className="c41-tabela border border-border rounded-lg bg-surface overflow-x-auto">
-          <table className="w-full min-w-[420px] text-[13px]">
-            <thead>
-              <tr className={CABECALHO}>
-                <th className="py-2 pl-4 pr-3 font-medium">Faixa</th>
-                <th className="py-2 pr-3 font-medium text-right">Contas</th>
-                <th className="py-2 pr-3 font-medium text-right">Valor</th>
-                <th className="py-2 pr-4 font-medium w-[30%]"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {faixas.map((f) => (
-                <tr key={f.chave} className="border-b border-border-soft">
-                  <td className={`py-2 pl-4 pr-3 ${f.chave === "a_vencer" ? "text-fg-secondary" : "text-danger"}`}>{f.rotulo}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums">{f.quantidade}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums font-medium">{moeda(f.centavos)}</td>
-                  <td className="py-2 pr-4">
-                    <div className="h-2 rounded bg-border-soft overflow-hidden" aria-hidden>
-                      <div
-                        className={`h-full ${f.chave === "a_vencer" ? "bg-info" : "bg-danger"}`}
-                        style={{ width: `${(f.centavos / total) * 100}%` }}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+  const quem = aPagar ? "fornecedores" : "clientes";
+  const restantes = todos.length - NO_RANKING;
 
-      <section>
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">{aPagar ? "Maiores fornecedores em aberto" : "Maiores clientes em aberto"}</h2>
-        <div className="c41-tabela border border-border rounded-lg bg-surface overflow-x-auto">
-          <table className="w-full min-w-[460px] text-[13px]">
-            <thead>
-              <tr className={CABECALHO}>
-                <th className="py-2 pl-4 pr-3 font-medium">{aPagar ? "Fornecedor" : "Cliente"}</th>
-                <th className="py-2 pr-3 font-medium text-right">Em aberto</th>
-                <th className="py-2 pr-3 font-medium text-right">Vencido</th>
-                <th className="py-2 pr-4 font-medium text-right">Participação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ranking.map((r) => (
-                <tr key={r.contraparteNome} className="border-b border-border-soft">
-                  <td className="py-2 pl-4 pr-3">
-                    <span className="font-medium">{r.contraparteNome}</span>
-                    <span className="block text-[11px] text-fg-muted">
-                      {r.quantidade} {r.quantidade === 1 ? "conta" : "contas"}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums">{moeda(r.emAberto)}</td>
-                  <td className={`py-2 pr-3 text-right tabular-nums ${r.vencido > 0 ? "text-danger" : "text-fg-muted"}`}>{moeda(r.vencido)}</td>
-                  <td className="py-2 pr-4 text-right tabular-nums">{percentual(r.participacao)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="text-[11px] text-fg-muted mt-2">
-          Vence hoje conta como a vencer. Cobrança e régua de inadimplência são outra etapa; esta aba só mostra onde está o
-          dinheiro parado.
-        </p>
-      </section>
-    </div>
+  return (
+    <>
+      <div className="grid gap-4 lg:grid-cols-2 items-start">
+        <Card as="section" className="p-5 min-w-0">
+          <h2 className="text-card-title font-semibold text-fg">Faixas de atraso</h2>
+          <p className="text-helper text-fg-muted mt-0.5">
+            {moeda(total)} em aberto, em {formatarNumero(contas, 0)} {contas === 1 ? "conta" : "contas"}.
+          </p>
+          <div className="mt-4">
+            <BarraDeSituacao titulo="Contas por dias de atraso" segmentos={segmentosDasFaixas(faixas)} />
+          </div>
+        </Card>
+
+        <Card as="section" className="p-5 min-w-0">
+          <h2 className="text-card-title font-semibold text-fg">{aPagar ? "Maiores fornecedores em aberto" : "Maiores clientes em aberto"}</h2>
+          <p className="text-helper text-fg-muted mt-0.5">
+            {todos.length > NO_RANKING ? `Os ${NO_RANKING} ${quem} com mais dinheiro em aberto.` : `Os ${quem} com dinheiro em aberto.`}
+          </p>
+          <div className="mt-4">
+            <BarrasRanqueadas
+              titulo={aPagar ? "Maiores fornecedores em aberto" : "Maiores clientes em aberto"}
+              linhas={linhasDoRanking(todos.slice(0, NO_RANKING))}
+              formatar={moeda}
+            />
+          </div>
+          {restantes > 0 && (
+            <p className="text-micro text-fg-muted mt-3">
+              + {formatarNumero(restantes, 0)} {restantes === 1 ? (aPagar ? "fornecedor" : "cliente") : quem} com menos em aberto
+            </p>
+          )}
+        </Card>
+      </div>
+      <NotaDeFonte>
+        Vence hoje conta como a vencer. Cobrança e régua de inadimplência são outra etapa; esta aba só mostra onde está o
+        dinheiro parado.
+      </NotaDeFonte>
+    </>
   );
 }

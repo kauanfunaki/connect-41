@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Columns3 } from "lucide-react";
+import { Columns3, Plus } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
@@ -38,7 +37,7 @@ export default async function KanbanListPage() {
             href="/kanban/novo"
             variant="primary"
           >
-            + Novo Kanban
+            <Plus size={14} /> Novo kanban
           </Button>
         )}</>}
       />
@@ -49,7 +48,7 @@ export default async function KanbanListPage() {
             title="Nenhum kanban cadastrado ainda"
             description="Crie o primeiro kanban do setor pra começar a organizar o funil."
             // Era um <button> dentro de um <Link> (HTML inválido): o Button com href já é o link.
-            action={canCreate ? <Button href="/kanban/novo">+ Novo Kanban</Button> : undefined}
+            action={canCreate ? <Button href="/kanban/novo"><Plus size={14} /> Novo kanban</Button> : undefined}
           />
         </Card>
       ) : (
@@ -59,26 +58,31 @@ export default async function KanbanListPage() {
               <div className="flex items-center gap-2 mb-3">
                 <span
                   className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ background: sectorColors[sectorCode] ?? "#586577" }}
+                  style={{ background: sectorColors[sectorCode] ?? "var(--c41-sector-gestao)" }}
                 />
-                <h2 className="text-[15px] font-medium text-fg">
+                <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">
                   {sectorLabel(sectorLabels, sectorCode)}
                 </h2>
               </div>
+              {/* Cartão-link no desenho único (07/10/2026): o `Card` com `href`
+              (borda azul, sombra e sobe 2px no hover — o mesmo da
+              FaixaDeTotais) e título em --fs-card-title. Eram três hovers e
+              três tamanhos de título entre Kanban, Espaços, Pastas,
+              Comunicados e Transferências. */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {list.map((p, i) => (
-                  <Link
+                  <Card
                     key={p.id}
                     href={boardPath(p)}
                     style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
-                    className="reveal-in bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
+                    className="reveal-in p-4"
                   >
-                    <p className="text-[13px] font-medium text-fg mb-1">{p.name}</p>
-                    <p className="text-[12px] text-fg-muted">
+                    <p className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">{p.name}</p>
+                    <p className="text-[length:var(--fs-2)] text-fg-muted">
                       {p._count.items} {p._count.items === 1 ? "item" : "itens"} ·{" "}
                       {p.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
                     </p>
-                  </Link>
+                  </Card>
                 ))}
               </div>
             </div>

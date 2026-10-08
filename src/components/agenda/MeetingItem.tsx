@@ -65,11 +65,14 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
   const start = new Date(meeting.startAt);
   const end = new Date(meeting.endAt);
   const isGoogle = meeting.provider === "GOOGLE";
-  const accent = isGoogle ? "var(--c41-brand)" : "#7C5CBF";
-
-  const blockStyle = isGoogle
-    ? undefined
-    : { background: "rgba(124,92,191,0.16)", borderLeft: "2.5px solid #7C5CBF" };
+  // A cor é a do provedor. O Teams usa o azul de informação (padrão aceito
+  // pelo Kauan na página de decisões, 08/10/2026): era o roxo do DP (#7C5CBF,
+  // o `--c41-sector-dprh`), e numa agenda em que o prazo vem na cor do setor a
+  // reunião do Teams lia como prazo do DP. Pelo token, o escuro vem junto — o
+  // título no fundo do bloco foi de 2,9:1 para 4,9:1 lá (e de 4,1 para 4,5:1
+  // no claro).
+  const accent = isGoogle ? "var(--c41-brand)" : "var(--c41-info)";
+  const fundo = isGoogle ? "var(--c41-brand-subtle)" : "var(--c41-info-bg)";
 
   const trigger =
     variant === "block" ? (
@@ -79,9 +82,8 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        style={blockStyle}
-        className={`w-full h-full rounded-md pl-1.5 pr-1 py-1 text-left overflow-hidden block ${
-          isGoogle ? "bg-brand-subtle border-l-[2.5px] border-brand" : ""
+        className={`w-full h-full rounded-md pl-1.5 pr-1 py-1 text-left overflow-hidden block border-l-[2.5px] ${
+          isGoogle ? "bg-brand-subtle border-brand" : "bg-info-bg border-info"
         }`}
       >
         <p className="text-[11px] font-medium truncate leading-tight" style={{ color: accent }}>
@@ -129,8 +131,8 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
             <div>
               <p className="text-[14px] font-semibold text-fg leading-snug">{meeting.title}</p>
               <span
-                className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium"
-                style={{ color: accent, background: isGoogle ? "var(--c41-brand-subtle)" : "rgba(124,92,191,0.14)" }}
+                className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-[length:var(--fs-micro)] font-medium"
+                style={{ color: accent, background: fundo }}
               >
                 {PROVIDER_LABEL[meeting.provider]}
               </span>
@@ -168,13 +170,13 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
                       <span
                         key={a.id}
                         title={a.name}
-                        className="w-5 h-5 rounded-full bg-brand-subtle text-brand border border-surface-elevated flex items-center justify-center text-[9px] font-semibold"
+                        className="w-5 h-5 rounded-full bg-brand-subtle text-brand border border-surface-elevated flex items-center justify-center text-[length:var(--fs-micro)] font-semibold"
                       >
                         {initialsFromName(a.name)}
                       </span>
                     ))}
                   </div>
-                  <p className="text-[11.5px] text-fg-muted truncate">
+                  <p className="text-[length:var(--fs-micro)] text-fg-muted truncate">
                     {meeting.attendees.map((a) => a.name).join(", ")}
                   </p>
                 </div>

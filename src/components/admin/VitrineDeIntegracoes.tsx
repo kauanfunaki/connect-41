@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { salvarConexao, type ConexaoState } from "@/app/(app)/admin/integracoes/conexao-actions";
 import type { IntegracaoNaTela } from "@/lib/integracoes/data";
 import type { Saude } from "@/lib/integracoes/execucao";
+import { Aviso } from "@/components/ui/Aviso";
 
 const SAUDE_LABEL: Record<Saude, string> = {
   nunca_rodou: "Nunca rodou",
@@ -23,11 +24,12 @@ const SAUDE_LABEL: Record<Saude, string> = {
 
 // `parada` é warning e não info: é o silêncio — ligada, sem erro, e sem rodar
 // há tempo demais. Foi assim que o SPED passou três dias parecendo saudável.
-const SAUDE_VARIANTE: Record<Saude, "success" | "warning" | "danger" | "info"> = {
+// `desligada` é neutra (07/10/2026): saiu de cena, não é aviso.
+const SAUDE_VARIANTE: Record<Saude, "success" | "warning" | "danger" | "info" | "neutral"> = {
   nunca_rodou: "info",
   ok: "success",
   com_erro: "danger",
-  desligada: "info",
+  desligada: "neutral",
   parada: "warning",
 };
 
@@ -94,9 +96,9 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
           "não funciona" sem dizer qual campo falta faz a pessoa tentar de novo
           igual. */}
       {i.conectada && i.faltando.length > 0 && (
-        <p className="text-[12px] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
+        <Aviso tom="atencao">
           Falta preencher: {i.faltando.join(", ")}.
-        </p>
+        </Aviso>
       )}
 
       {/* A URL que se cadastra do outro lado (Meta, Evolution). Sem ela, quem
@@ -108,15 +110,15 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
             {urlPublica ? `${urlPublica.replace(/\/+$/, "")}${i.caminhoDoWebhook}` : i.caminhoDoWebhook}
           </code>
           {!urlPublica && (
-            <span className="text-warning"> — APP_PUBLIC_URL não configurada: complete com o domínio do Connect</span>
+            <span className="text-warning-fg"> — APP_PUBLIC_URL não configurada: complete com o domínio do Connect</span>
           )}
         </p>
       )}
 
       {i.lastError && (
-        <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 break-words">
+        <Aviso className="break-words">
           Último erro: {i.lastError}
-        </p>
+        </Aviso>
       )}
 
       {/* Botão, e não texto azul (polimento de 30/09): abre o formulário. */}
@@ -140,14 +142,14 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
           <input type="hidden" name="instanceKey" value={i.instanceKey} />
 
           {state && "error" in state && (
-            <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+            <Aviso>
               {state.error}
-            </p>
+            </Aviso>
           )}
           {state && "success" in state && (
-            <p className="text-[13px] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">
+            <Aviso tom="sucesso">
               Conexão salva.
-            </p>
+            </Aviso>
           )}
 
           <FieldGrid>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, BadgeCheck, CalendarClock, Receipt } from "lucide-react";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarReaisDeCentavos } from "@/lib/format";
 import {
   faixaDoPrazo,
   textoDoPrazo,
@@ -9,7 +9,6 @@ import {
   type TipoDePrazo,
 } from "@/lib/societario/prazos";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 const ICONE: Record<TipoDePrazo, typeof AlertTriangle> = {
   exigencia: AlertTriangle,
@@ -23,7 +22,7 @@ const ICONE: Record<TipoDePrazo, typeof AlertTriangle> = {
 const COR_DA_FAIXA = {
   vencido: "text-danger font-medium",
   hoje: "text-danger font-medium",
-  semana: "text-warning",
+  semana: "text-warning-fg",
   depois: "text-fg-muted",
 } as const;
 
@@ -49,8 +48,8 @@ export function ListaDePrazos({ itens, hoje, mostrarResponsavel = false }: Props
             <div className="min-w-0 flex items-start gap-2">
               <Icone size={16} className="mt-0.5 shrink-0 text-fg-muted" aria-hidden />
               <div className="min-w-0 flex flex-col gap-0.5">
-                <span className="text-[13px] font-medium truncate">{item.titulo}</span>
-                <span className="text-[12px] text-fg-muted truncate">
+                <span className="text-[length:var(--fs-ui)] font-medium truncate">{item.titulo}</span>
+                <span className="text-[length:var(--fs-2)] text-fg-muted truncate">
                   {TIPO_DE_PRAZO_LABEL[item.tipo]} · {item.empresaNome}
                   {item.detalhe && ` · ${item.detalhe}`}
                   {mostrarResponsavel && ` · ${item.responsavelNome ?? "sem responsável"}`}
@@ -61,14 +60,14 @@ export function ListaDePrazos({ itens, hoje, mostrarResponsavel = false }: Props
                 o recuo é o ícone (16px) mais o espaço (8px). */}
             <div className="flex items-center gap-3 md:justify-end pl-6 md:pl-0">
               {item.valorCentavos !== null && (
-                <span className="text-[12px] tabular-nums text-fg-secondary">{MOEDA.format(item.valorCentavos / 100)}</span>
+                <span className="text-[length:var(--fs-2)] tabular-nums text-fg-secondary">{formatarReaisDeCentavos(item.valorCentavos)}</span>
               )}
               {item.data ? (
-                <span className={`text-[12px] whitespace-nowrap ${COR_DA_FAIXA[faixaDoPrazo(item.data, hoje)]}`}>
+                <span className={`text-[length:var(--fs-2)] whitespace-nowrap ${COR_DA_FAIXA[faixaDoPrazo(item.data, hoje)]}`}>
                   {textoDoPrazo(item.data, hoje)} · {formatInstantDate(item.data)}
                 </span>
               ) : (
-                <span className="text-[12px] text-fg-muted whitespace-nowrap">sem data</span>
+                <span className="text-[length:var(--fs-2)] text-fg-muted whitespace-nowrap">sem data</span>
               )}
             </div>
           </Link>

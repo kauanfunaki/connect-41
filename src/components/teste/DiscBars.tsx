@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Selo } from "@/components/ui/Selo";
 import { DISC_LABEL, type DiscScores, type DiscDimension } from "@/lib/disc";
 
 type Props = {
@@ -27,18 +28,19 @@ export function DiscBars({ scores, primaryProfile, secondaryProfile, compact = f
 
   return (
     <div>
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-brand/10 text-brand border border-brand/25 mb-3">
+      {/* O perfil em destaque: o `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026). */}
+      <Selo tom="marca" className="mb-3">
         Perfil {profileCode} — {profileLabel}
-      </span>
+      </Selo>
 
       <div className={compact ? "space-y-1.5" : "space-y-2.5"}>
         {DIMENSIONS.map((dim) => (
           <div key={dim} className="flex items-center gap-2">
-            <span className="w-5 text-[11px] font-medium text-fg-muted">{dim}</span>
+            <span className="w-5 text-[length:var(--fs-micro)] font-medium text-fg-muted">{dim}</span>
             <div className="flex-1 h-2 rounded-full bg-surface-2 overflow-hidden">
               <div className={`h-full rounded-full ${DIM_COLOR[dim]}`} style={{ width: `${scores[dim].pct}%` }} />
             </div>
-            <span className="w-9 text-right text-[11px] text-fg-muted tnum">{scores[dim].pct}%</span>
+            <span className="w-9 text-right text-[length:var(--fs-micro)] text-fg-muted tnum">{scores[dim].pct}%</span>
           </div>
         ))}
       </div>

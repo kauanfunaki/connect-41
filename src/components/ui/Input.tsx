@@ -21,7 +21,7 @@ type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, "prefix"> & {
 };
 
 export function Input({ error = false, icon, prefix, suffix, direita, compact = false, className = "", disabled, readOnly, ...rest }: Props) {
-  const sizeClass = compact ? "h-8 text-[13px]" : "h-9 text-[length:var(--fs-input)]";
+  const sizeClass = compact ? "h-8 text-ui" : "h-9 text-input";
   // `w-full` é o padrão de formulário; quem passa largura própria (o mês do
   // filtro, as horas do processo) quer a dele. Com os dois, o `w-40` perdia
   // para o `w-full` no CSS, e o filtro de mês esticava pela tela inteira,
@@ -38,19 +38,29 @@ export function Input({ error = false, icon, prefix, suffix, direita, compact = 
             : "border-border-strong focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)]"
         } has-[:disabled]:opacity-[var(--c41-disabled-op)] ${className}`.trim()}
       >
+        {/* O ícone também aqui (07/10/2026): sem ele, a senha com o olho perdia
+            o cadeado que o e-mail logo acima mantinha. */}
+        {icon && (
+          <span className="flex items-center pl-3 text-fg-muted [&>svg]:w-4 [&>svg]:h-4 pointer-events-none">{icon}</span>
+        )}
         {prefix && (
-          <span className="flex items-center px-3 text-[length:var(--fs-helper)] text-fg-muted border-r border-border select-none whitespace-nowrap">
+          <span className="flex items-center px-3 text-helper text-fg-muted border-r border-border select-none whitespace-nowrap">
             {prefix}
           </span>
         )}
+        {/* `focus-visible:shadow-none!`: o anel é da caixa (focus-within). O
+            `:focus-visible` global do globals.css, fora das camadas do
+            Tailwind, desenhava um segundo anel aqui dentro — o traço vertical
+            que aparecia ao lado do "R$" e do olho da senha (07/10/2026). O
+            mesmo que os campos de data já faziam (`useCampoDigitado`). */}
         <input
           disabled={disabled}
           readOnly={readOnly}
-          className={`flex-1 min-w-0 px-3 bg-transparent ${compact ? "text-[13px]" : "text-[length:var(--fs-input)]"} text-fg placeholder:text-fg-muted outline-none`}
+          className={`flex-1 min-w-0 ${icon ? "pl-2.5 pr-3" : "px-3"} bg-transparent ${compact ? "text-ui" : "text-input"} text-fg placeholder:text-fg-muted outline-none focus-visible:shadow-none!`}
           {...rest}
         />
         {suffix && (
-          <span className="flex items-center px-3 text-[length:var(--fs-helper)] text-fg-muted border-l border-border select-none whitespace-nowrap">
+          <span className="flex items-center px-3 text-helper text-fg-muted border-l border-border select-none whitespace-nowrap">
             {suffix}
           </span>
         )}
@@ -59,13 +69,16 @@ export function Input({ error = false, icon, prefix, suffix, direita, compact = 
     );
   }
 
+  // No campo simples o anel é do próprio input. Com erro, o `!`: o
+  // `:focus-visible` global vence as utilidades do Tailwind e trocava o anel
+  // vermelho pelo azul justamente no campo que tem erro.
   const input = (
     <input
       disabled={disabled}
       readOnly={readOnly}
       className={`${largura} ${sizeClass} ${icon ? "pl-9" : "px-3"} pr-3 rounded-md border bg-input-bg text-fg placeholder:text-fg-muted outline-none transition-colors ${
         error
-          ? "border-danger focus:shadow-[0_0_0_3px_var(--c41-danger-bg)]"
+          ? "border-danger focus:shadow-[0_0_0_3px_var(--c41-danger-bg)]!"
           : "border-border-strong focus:border-brand focus:shadow-[0_0_0_3px_var(--c41-focus-ring)]"
       } ${readOnly ? "bg-transparent border-dashed" : ""} disabled:opacity-[var(--c41-disabled-op)] ${className}`.trim()}
       {...rest}

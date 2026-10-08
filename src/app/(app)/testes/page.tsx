@@ -11,10 +11,10 @@ import { Pagination } from "@/components/shared/Pagination";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { FiltroDaColunaNaUrl, FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NovoTesteForm } from "@/components/teste/NovoTesteForm";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { lerLista } from "@/lib/filtroNaUrl";
 import type { AssessmentLinkStatus } from "@/generated/prisma/enums";
 import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
@@ -33,8 +33,8 @@ const STATUS_LABEL: Record<AssessmentLinkStatus, string> = {
 };
 
 const STATUS_STYLE: Record<AssessmentLinkStatus, string> = {
-  PENDENTE: "bg-warning/10 text-warning border-warning/25",
-  RESPONDIDO: "bg-success/10 text-success border-success/25",
+  PENDENTE: "bg-warning/10 text-warning-fg border-warning/25",
+  RESPONDIDO: "bg-success/10 text-success-fg border-success/25",
 };
 
 const STATUS_ORDEM: AssessmentLinkStatus[] = ["PENDENTE", "RESPONDIDO"];
@@ -195,18 +195,20 @@ export default async function TestesPage({
         itens={[
           {
             rotulo: "Aguardando resposta",
-            valor: String(contagem.PENDENTE),
+            valor: formatarNumero(contagem.PENDENTE, 0),
             icone: <Hourglass />,
-            tom: contagem.PENDENTE > 0 ? "text-warning" : undefined,
+            tom: contagem.PENDENTE > 0 ? "text-warning-fg" : undefined,
             detalhe: statusFilter === "PENDENTE" ? "mostrando agora" : undefined,
+            ativo: statusFilter === "PENDENTE",
             href: buildUrl({ status: statusFilter === "PENDENTE" ? undefined : "PENDENTE", page: undefined }),
           },
           {
             rotulo: "Respondidos",
-            valor: String(contagem.RESPONDIDO),
+            valor: formatarNumero(contagem.RESPONDIDO, 0),
             icone: <CheckCircle2 />,
-            tom: "text-success",
+            tom: "text-success-fg",
             detalhe: statusFilter === "RESPONDIDO" ? "mostrando agora" : undefined,
+            ativo: statusFilter === "RESPONDIDO",
             href: buildUrl({ status: statusFilter === "RESPONDIDO" ? undefined : "RESPONDIDO", page: undefined }),
           },
         ]}
@@ -250,7 +252,7 @@ export default async function TestesPage({
                     <PeDoCartao>
                       {seloDoStatus(l.status)}
                       {resultado(l)}
-                      <span className="ml-auto text-[11.5px] text-fg-muted">enviado em {formatInstantDate(l.createdAt)}</span>
+                      <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">enviado em {formatInstantDate(l.createdAt)}</span>
                     </PeDoCartao>
                   </Cartao>
                 </Link>
@@ -260,7 +262,7 @@ export default async function TestesPage({
             {/* Era uma lista de linhas-link com tudo numa frase (até 30/09).
                 Virou tabela no padrão do Connect, com o funil de teste. */}
             <TabelaNoDesktop padrao>
-              <table className="w-full table-fixed min-w-[880px] text-[length:var(--fs-ui)]">
+              <table className="w-full table-fixed min-w-[880px]">
                 <colgroup>
                   <col />
                   <col className="w-[180px]" />

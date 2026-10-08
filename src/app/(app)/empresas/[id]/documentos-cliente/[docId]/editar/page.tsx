@@ -46,7 +46,7 @@ export default async function EditarDocumentoClientePage({
       />
       <BackButton className="mb-3" />
 
-      <PageHeader title="Editar Documento" />
+      <PageHeader title="Editar documento" />
 
       <div className="w-full max-w-[860px]">
         {alreadySent ? (

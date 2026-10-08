@@ -33,7 +33,7 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
   return (
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[13px] text-fg">
+        <p className="text-[length:var(--fs-ui)] text-fg">
           {escala.dateLabel}
           {escala.shiftName && ` — ${escala.shiftName}`}
           {escala.dayOff && " · Folga"}

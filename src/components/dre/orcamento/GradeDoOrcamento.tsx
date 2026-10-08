@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Input } from "@/components/ui/Input";
 import { GRUPOS } from "@/lib/dre/estrutura";
 import { montarLinhas } from "@/lib/dre/calculo";
@@ -96,9 +96,9 @@ export function GradeDoOrcamento({
       <input type="hidden" name="lidoEm" value={lidoEm} />
 
       <div className="overflow-x-auto border border-border rounded-lg bg-surface">
-        <table className="w-full min-w-[1480px] text-[12px]">
+        <table className="w-full min-w-[1480px] text-fs-2">
           <thead>
-            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pl-3 pr-2 font-medium text-left sticky left-0 bg-surface min-w-[220px]">Grupo da DRE</th>
               {ROTULOS_DOS_MESES.map((m) => (
                 <th key={m} className={TH}>
@@ -115,7 +115,7 @@ export function GradeDoOrcamento({
                 <tr key={grupo.code} className="border-b border-border-soft">
                   <td className="py-1.5 pl-3 pr-2 text-fg-secondary sticky left-0 bg-surface">
                     {grupo.label}
-                    <span className="block text-[10px] text-fg-muted">{grupo.origem === "recebimento" ? "receita (+)" : "despesa (−)"}</span>
+                    <span className="block text-micro text-fg-muted">{grupo.origem === "recebimento" ? "receita (+)" : "despesa (−)"}</span>
                   </td>
                   {MESES.map((m, i) => {
                     const nome = campoDaCelula(grupo.code, m);
@@ -204,26 +204,31 @@ export function GradeDoOrcamento({
       </div>
 
       {/* Rodapé de formulário: a situação da grade à esquerda, o "Salvar
-          grade" (36px) por último, à direita. */}
+          grade" (36px) por último, à direita — o `FormFooter` desde 08/10. A
+          célula ilegível é erro, como o do envio; o resto é nota. */}
       {!somenteLeitura && (
-        <div className="flex flex-wrap items-center justify-end gap-3 mt-4">
-          <div className="mr-auto flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
-            {invalidas.size > 0 && (
-              <span className="text-[12px] text-danger">
-                {invalidas.size} {invalidas.size === 1 ? "célula ilegível" : "células ilegíveis"} — use valor positivo, como 1.234,56.
-              </span>
-            )}
-            {sujo && !pendente && invalidas.size === 0 && <span className="text-[12px] text-warning">Alterações não salvas.</span>}
-            {salvo && (
-              <span className="inline-flex items-center gap-1 text-[12px] text-success">
-                <Check size={14} /> Grade salva.
-              </span>
-            )}
-            {erro && <span className="text-[12px] text-danger">{erro}</span>}
-          </div>
-          <Button type="submit" disabled={pendente || invalidas.size > 0}>
-            {pendente ? "Salvando…" : "Salvar grade"}
-          </Button>
+        <div className="mt-4">
+          <FormFooter
+            pending={pendente}
+            submitLabel="Salvar grade"
+            submitDisabled={invalidas.size > 0}
+            semDivisoria
+            erro={
+              erro ??
+              (invalidas.size > 0
+                ? `${invalidas.size} ${invalidas.size === 1 ? "célula ilegível" : "células ilegíveis"} — use valor positivo, como 1.234,56.`
+                : null)
+            }
+            nota={
+              salvo ? (
+                <span className="inline-flex items-center gap-1 text-success-fg">
+                  <Check size={14} /> Grade salva.
+                </span>
+              ) : sujo && !pendente ? (
+                <span className="text-warning-fg">Alterações não salvas.</span>
+              ) : null
+            }
+          />
         </div>
       )}
     </form>

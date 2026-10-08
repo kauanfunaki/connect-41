@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -56,7 +57,7 @@ export default async function BeneficiosPessoaPage({
       <BackButton className="mb-3" />
       <PageHeader title="Benefícios" />
 
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+      <Card className="p-5">
         {beneficios.length === 0 ? (
           <p className="text-[13px] text-fg-muted mb-3">Nenhum benefício vinculado ainda.</p>
         ) : (
@@ -82,7 +83,7 @@ export default async function BeneficiosPessoaPage({
         )}
 
         {canEdit && <AddBeneficioForm action={vincularBeneficioAction} beneficios={beneficiosDisponiveis} />}
-      </div>
+      </Card>
     </PageContainer>
   );
 }

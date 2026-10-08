@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type FinanceCategoryDefaultValues = {
   id?: string;
@@ -47,9 +48,9 @@ export function FinanceCategoryForm({
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       {isEdit && (
@@ -108,7 +109,7 @@ export function FinanceCategoryForm({
             é o que precisa ser reclassificado, e escondê-lo faria a pessoa
             perder o valor antigo sem saber que perdeu. */}
         {valorAntigoSolto && (
-          <p className="text-[length:var(--fs-helper)] text-warning">
+          <p className="text-[length:var(--fs-helper)] text-warning-fg">
             Esta categoria estava marcada como <strong>{defaultValues?.dreGroup}</strong>, que não é
             um grupo do DRE. Escolha um acima — enquanto não escolher, ela não soma em nenhuma linha.
           </p>

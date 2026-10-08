@@ -16,7 +16,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { ConfigurarTarefasButton } from "@/components/tarefas/ConfigurarTarefasButton";
 import { LinhaDoDia } from "@/components/tarefas/LinhaDoDia";
 import { PrazoItem } from "@/components/agenda/PrazoItem";
@@ -25,12 +25,13 @@ import { getAuthContext, scopedSectors } from "@/lib/auth/context";
 import { getSectorMaps, getActiveSectors } from "@/lib/sectors";
 import { parseTaskWidgets, visibleTaskWidgets, type TaskWidgetKey } from "@/lib/taskWidgets";
 import { itensDaGestao } from "@/lib/gestao/itens";
-import { cargaPorPessoa, recorteDaGestao } from "@/lib/gestao/regras";
+import { cargaPorPessoa, recorteDaGestao, type CargaDaPessoa } from "@/lib/gestao/regras";
+import { LinhasDeSituacao, type LinhaDeSituacao, type Segmento } from "@/components/shared/Graficos";
 import { nomesDasPessoas } from "@/lib/gestao/telas";
 import { andando, paraComecar, pedeAgora, resumirDia } from "@/lib/meuDia";
 import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
 import { addDaysToKey, saoPauloParts, weekdayLabel } from "@/lib/agenda";
-import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatInstantTime, formatarNumero } from "@/lib/format";
 import { salvarWidgetsSetor, restaurarWidgetsSetor } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -114,6 +115,29 @@ function Bloco({
       )}
     </section>
   );
+}
+
+/**
+ * A carga de uma pessoa como linha do gráfico de situação (07/10, auditoria
+ * dos gráficos): era uma barrinha de 6px à mão com "2 atrasados · 1 parado" em
+ * texto. Cada item cai numa situação só — a mais urgente, na régua do topo
+ * da tela (`resumirDia`): atrasado, parado, vence em breve, e o resto em dia.
+ */
+function linhaDaCarga(p: CargaDaPessoa, nome: string): LinhaDeSituacao {
+  const n = { atrasado: 0, parado: 0, vencendo: 0, em_dia: 0 };
+  for (const { c } of p.itens) {
+    if (c.prazo?.situacao === "VENCIDO") n.atrasado++;
+    else if (c.coluna === "PARADO") n.parado++;
+    else if (c.prazo?.situacao === "VENCENDO") n.vencendo++;
+    else n.em_dia++;
+  }
+  const segmentos: Segmento[] = [
+    { chave: "atrasado", rotulo: "Atrasados", valor: n.atrasado, tom: "critico" },
+    { chave: "parado", rotulo: "Parados", valor: n.parado, tom: "atencao" },
+    { chave: "vencendo", rotulo: "Vencem em breve", valor: n.vencendo, tom: "proximo" },
+    { chave: "em_dia", rotulo: "Em dia", valor: n.em_dia, tom: "neutro" },
+  ];
+  return { chave: p.userId, rotulo: nome, segmentos };
 }
 
 export default async function MeuDiaPage({ searchParams }: { searchParams: Promise<{ visao?: string }> }) {
@@ -236,31 +260,31 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
         itens={[
           {
             rotulo: "Atrasados",
-            valor: String(resumo.atrasados),
+            valor: formatarNumero(resumo.atrasados, 0),
             icone: <AlarmClock />,
             tom: resumo.atrasados > 0 ? "text-danger" : undefined,
             detalhe: "prazo já passou",
           },
           {
             rotulo: "Vencem em breve",
-            valor: String(resumo.vencendo),
+            valor: formatarNumero(resumo.vencendo, 0),
             icone: <CalendarClock />,
-            tom: resumo.vencendo > 0 ? "text-warning" : undefined,
+            tom: resumo.vencendo > 0 ? "text-warning-fg" : undefined,
             detalhe: "nos próximos dias",
           },
           {
             rotulo: "Parados",
-            valor: String(resumo.parados),
+            valor: formatarNumero(resumo.parados, 0),
             icone: <PauseCircle />,
-            tom: resumo.parados > 0 ? "text-warning" : undefined,
+            tom: resumo.parados > 0 ? "text-warning-fg" : undefined,
             detalhe: "sem movimento ou esperando",
           },
-          { rotulo: "Em andamento", valor: String(resumo.andamento), icone: <Loader />, detalhe: "alguém está fazendo" },
+          { rotulo: "Em andamento", valor: formatarNumero(resumo.andamento, 0), icone: <Loader />, detalhe: "alguém está fazendo" },
           {
             rotulo: "Feitos na semana",
-            valor: String(resumo.concluidosNaSemana),
+            valor: formatarNumero(resumo.concluidosNaSemana, 0),
             icone: <CheckCircle2 />,
-            tom: resumo.concluidosNaSemana > 0 ? "text-success" : undefined,
+            tom: resumo.concluidosNaSemana > 0 ? "text-success-fg" : undefined,
             detalhe: "últimos 7 dias",
           },
         ]}
@@ -291,7 +315,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
               <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
                 <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Carga do time</h2>
                 {semResponsavel > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[12px] font-medium text-warning">
+                  <span className="inline-flex items-center gap-1 text-[12px] font-medium text-warning-fg">
                     <UserX size={13} /> {semResponsavel} sem responsável
                   </span>
                 )}
@@ -299,26 +323,12 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
               {carga.length === 0 ? (
                 <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">Ninguém com item em aberto.</p>
               ) : (
-                <ul className="divide-y divide-border">
-                  {carga.slice(0, 10).map((p) => {
-                    const maior = Math.max(1, ...carga.map((x) => x.abertos));
-                    return (
-                      <li key={p.userId} className="px-4 py-2.5">
-                        <div className="flex items-center justify-between gap-3 text-[13px]">
-                          <span className="truncate font-medium text-fg">{nomeDe.get(p.userId) ?? "—"}</span>
-                          <span className="flex-shrink-0 text-fg-muted tnum">{p.abertos} em aberto</span>
-                        </div>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <span className="h-1.5 flex-1 rounded-full bg-surface-hover overflow-hidden">
-                            <span className="block h-full rounded-full bg-brand" style={{ width: `${(p.abertos / maior) * 100}%` }} />
-                          </span>
-                          {p.vencidos > 0 && <span className="text-[11px] font-medium text-danger tnum">{p.vencidos} atrasado{p.vencidos === 1 ? "" : "s"}</span>}
-                          {p.parados > 0 && <span className="text-[11px] font-medium text-warning tnum">{p.parados} parado{p.parados === 1 ? "" : "s"}</span>}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="px-4 py-3.5">
+                  <LinhasDeSituacao
+                    titulo="Itens em aberto por pessoa e situação"
+                    linhas={carga.slice(0, 10).map((p) => linhaDaCarga(p, nomeDe.get(p.userId) ?? "—"))}
+                  />
+                </div>
               )}
             </section>
           )}
@@ -373,7 +383,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
               <ul className="divide-y divide-border">
                 {diasComPrazo.map((dia) => (
                   <li key={dia} className="px-4 py-2.5">
-                    <p className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                    <p className="mb-1.5 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                       {dia === hojeKey
                         ? "Hoje"
                         : dia === addDaysToKey(hojeKey, 1)

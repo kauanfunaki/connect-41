@@ -6,6 +6,7 @@ import { Landmark } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import type { PreviaDaReceita, SocioState } from "@/app/(app)/empresas/[id]/socios/actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Linha = { nome: string; qualificacao: string | null; entrada: string | null; documento: string | null };
 
@@ -16,13 +17,13 @@ function Lista({ titulo, linhas, vazio }: { titulo: string; linhas: Linha[]; vaz
     <section className="flex flex-col gap-1.5">
       <h3 className="text-[12px] font-semibold uppercase tracking-wide text-fg-muted">{titulo}</h3>
       {linhas.length === 0 ? (
-        <p className="text-[12.5px] text-fg-muted">{vazio}</p>
+        <p className="text-[length:var(--fs-2)] text-fg-muted">{vazio}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-border border border-border rounded-md">
           {linhas.map((l) => (
             <li key={`${l.nome}-${l.documento}`} className="px-3 py-2 flex flex-col gap-0.5">
               <span className="text-[13px] text-fg break-words">{l.nome}</span>
-              <span className="text-[11.5px] text-fg-muted">
+              <span className="text-[length:var(--fs-micro)] text-fg-muted">
                 {[l.qualificacao, l.documento, l.entrada ? `desde ${data(l.entrada)}` : null].filter(Boolean).join(" · ")}
               </span>
             </li>
@@ -88,7 +89,7 @@ export function BuscarSociosNaReceita({
             <p className="text-[13px] text-danger">{resultado.erro}</p>
           ) : (
             <>
-              <p className="text-[12.5px] text-fg-secondary">
+              <p className="text-[length:var(--fs-2)] text-fg-secondary">
                 A Receita informa quem é sócio, o papel e a data de entrada. Participação, quotas e endereço vêm do
                 contrato social e continuam sendo preenchidos à mão.
               </p>
@@ -99,17 +100,17 @@ export function BuscarSociosNaReceita({
                 vazio="Nenhum dos cadastrados aparece na Receita."
               />
               {resultado.foraDaReceita.length > 0 && (
-                <section className="flex flex-col gap-1 rounded-md border border-warning/40 bg-warning-bg px-3 py-2">
-                  <span className="text-[12.5px] font-medium text-warning">Não aparecem mais na Receita</span>
-                  <span className="text-[12.5px] text-fg">{resultado.foraDaReceita.map((f) => f.nome).join(", ")}</span>
-                  <span className="text-[11.5px] text-fg-muted">
+                <Aviso tom="atencao" className="flex flex-col gap-1">
+                  <span className="text-[length:var(--fs-2)] font-medium text-warning-fg">Não aparecem mais na Receita</span>
+                  <span className="text-[length:var(--fs-2)] text-fg">{resultado.foraDaReceita.map((f) => f.nome).join(", ")}</span>
+                  <span className="text-[length:var(--fs-micro)] text-fg-muted">
                     Provável saída. Nada muda sozinho: registre a saída com a data do distrato ou da alteração.
                   </span>
-                </section>
+                </Aviso>
               )}
             </>
           )}
-          {erro && <p className="text-[12.5px] text-danger">{erro}</p>}
+          {erro && <p className="text-[length:var(--fs-2)] text-danger">{erro}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" disabled={pendente} onClick={() => setAberto(false)}>
               Fechar

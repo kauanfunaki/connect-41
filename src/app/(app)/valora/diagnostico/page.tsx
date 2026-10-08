@@ -7,17 +7,16 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CircleDashed, Clock, Handshake, TrendingDown } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { acessoAoValora, configDoValora } from "@/lib/valora/servidor";
 import { custosDoTenant, horasDoPeriodo, periodoDaUrl } from "@/lib/gestao/horas";
 import { diagnosticarCarteira, type PropostaGanha } from "@/lib/gestao/custo";
+import { formatarNumero, formatarReais } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const UMA_CASA = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 
 // Diagnóstico da carteira (29/09): a "Calculadora de preço" do 41-gestao, que
 // olhava para trás — o custo real das horas apontadas contra o honorário —
@@ -65,16 +64,18 @@ export default async function DiagnosticoDaCarteiraPage() {
       {/* Os números do topo no cartão padrão, com ícone (30/09). */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Clientes com proposta fechada", valor: String(propostas.length), icone: <Handshake /> },
-          { rotulo: "Com horas apontadas", valor: String(linhas.length), icone: <Clock /> },
+          { rotulo: "Clientes com proposta fechada", valor: formatarNumero(propostas.length, 0), icone: <Handshake /> },
+          { rotulo: "Com horas apontadas", valor: formatarNumero(linhas.length, 0), icone: <Clock /> },
           {
             rotulo: "Abaixo da margem mínima",
-            valor: String(abaixoDoPiso),
+            valor: formatarNumero(abaixoDoPiso, 0),
             icone: <TrendingDown />,
-            tom: abaixoDoPiso > 0 ? "text-warning" : undefined,
+            // Crítico, como o selo da margem abaixo do piso na tabela (07/10):
+            // o cartão era âmbar e o selo, vermelho, para a mesma situação.
+            tom: abaixoDoPiso > 0 ? "text-danger" : undefined,
             detalhe: `piso de ${cfg.parametros.margemPisoPct}%`,
           },
-          { rotulo: "Sem horas no período", valor: String(semHoras), icone: <CircleDashed />, tom: "text-fg-muted" },
+          { rotulo: "Sem horas no período", valor: formatarNumero(semHoras, 0), icone: <CircleDashed />, tom: "text-fg-muted" },
         ]}
       />
 
@@ -100,7 +101,7 @@ export default async function DiagnosticoDaCarteiraPage() {
           {/* Casco padrão, centralizado (30/09). Sem funil: um cliente por
               linha, e o resto é valor — nada que se repita para filtrar. */}
           <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-            <table className="w-full min-w-[820px] text-[length:var(--fs-ui)]">
+            <table className="w-full min-w-[820px]">
               <thead>
                 <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-3">Cliente</th>
@@ -120,21 +121,21 @@ export default async function DiagnosticoDaCarteiraPage() {
                       </Link>
                       {l.temHoraSemCusto && <span className="block text-[11px] text-fg-muted">tem horas em setor sem custo no Valora</span>}
                     </td>
-                    <td className="px-3 tabular-nums">{MOEDA.format(l.honorario)}</td>
-                    <td className="px-3 tabular-nums">{UMA_CASA.format(l.horasMes)} h</td>
-                    <td className="px-3 tabular-nums">{MOEDA.format(l.custoMes)}</td>
+                    <td className="px-3 tabular-nums">{formatarReais(l.honorario)}</td>
+                    <td className="px-3 tabular-nums">{formatarNumero(l.horasMes, 1)} h</td>
+                    <td className="px-3 tabular-nums">{formatarReais(l.custoMes)}</td>
                     <td className="px-3 tabular-nums">
                       {l.margemPct === null ? (
                         "—"
                       ) : l.margemPct < cfg.parametros.margemPisoPct ? (
-                        <Badge variant="danger">{UMA_CASA.format(l.margemPct)}%</Badge>
+                        <Badge variant="danger">{formatarNumero(l.margemPct, 1)}%</Badge>
                       ) : l.margemPct < cfg.parametros.margemAlvoPct ? (
-                        <Badge variant="warning">{UMA_CASA.format(l.margemPct)}%</Badge>
+                        <Badge variant="warning">{formatarNumero(l.margemPct, 1)}%</Badge>
                       ) : (
-                        <Badge variant="success">{UMA_CASA.format(l.margemPct)}%</Badge>
+                        <Badge variant="success">{formatarNumero(l.margemPct, 1)}%</Badge>
                       )}
                     </td>
-                    <td className="px-3 tabular-nums text-fg-secondary">{l.alvo === null ? "—" : MOEDA.format(l.alvo)}</td>
+                    <td className="px-3 tabular-nums text-fg-secondary">{l.alvo === null ? "—" : formatarReais(l.alvo)}</td>
                   </tr>
                 ))}
               </tbody>

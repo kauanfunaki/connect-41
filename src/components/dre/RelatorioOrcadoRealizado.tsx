@@ -6,7 +6,7 @@ import { moeda, percentual } from "@/lib/financeiro/formato";
 
 // A cor sai da avaliação (receita acima é melhor, despesa acima é pior), não do
 // sinal do número — ver `src/lib/dre/orcamento/variacao.ts`.
-const TOM: Record<Avaliacao, string> = { melhor: "text-success", pior: "text-danger", igual: "text-fg-muted" };
+const TOM: Record<Avaliacao, string> = { melhor: "text-success-fg", pior: "text-danger", igual: "text-fg-muted" };
 const TITULO: Record<Avaliacao, string> = { melhor: "Melhor que o orçado", pior: "Pior que o orçado", igual: "Igual ao orçado" };
 
 const TH = "py-2 px-2 font-medium text-right whitespace-nowrap";
@@ -18,8 +18,8 @@ function Celulas({ code, tipo, bloco, divisor }: { code: string; tipo: "grupo" |
   if (tipo === "percentual") {
     return (
       <>
-        <td className={`py-1 px-2 text-right text-[11px] text-fg-muted tabular-nums ${borda}`}>{percentual(fracaoDaLinha(bloco.realizado, code))}</td>
-        <td className="py-1 px-2 text-right text-[11px] text-fg-muted tabular-nums">{percentual(fracaoDaLinha(bloco.orcado, code))}</td>
+        <td className={`py-1 px-2 text-right text-micro text-fg-muted tabular-nums ${borda}`}>{percentual(fracaoDaLinha(bloco.realizado, code))}</td>
+        <td className="py-1 px-2 text-right text-micro text-fg-muted tabular-nums">{percentual(fracaoDaLinha(bloco.orcado, code))}</td>
         <td />
         <td />
       </>
@@ -53,9 +53,9 @@ export function RelatorioOrcadoRealizado({ mes, acumulado }: { mes: Bloco; acumu
   return (
     <Card className="p-0 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1040px] text-[13px]">
+        <table className="w-full min-w-[1040px] text-ui">
           <thead>
-            <tr className="text-[11px] uppercase tracking-wide text-fg-muted">
+            <tr className="text-micro uppercase tracking-wide text-fg-muted">
               <th className="py-2 pl-4 pr-3 font-medium text-left" rowSpan={2}>
                 Linha
               </th>
@@ -66,7 +66,7 @@ export function RelatorioOrcadoRealizado({ mes, acumulado }: { mes: Bloco; acumu
                 {acumulado.rotulo}
               </th>
             </tr>
-            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
               <th className={`${TH} border-l border-border`}>Realizado</th>
               <th className={TH}>Orçado</th>
               <th className={TH}>Var. R$</th>
@@ -88,7 +88,7 @@ export function RelatorioOrcadoRealizado({ mes, acumulado }: { mes: Bloco; acumu
                 <td
                   className={
                     l.tipo === "percentual"
-                      ? "py-1 pl-4 pr-3 text-[11px] text-fg-muted"
+                      ? "py-1 pl-4 pr-3 text-micro text-fg-muted"
                       : `py-2 pl-4 pr-3 ${l.destaque ? "font-semibold text-fg" : l.tipo === "subtotal" ? "font-medium text-fg" : "text-fg-secondary"}`
                   }
                 >

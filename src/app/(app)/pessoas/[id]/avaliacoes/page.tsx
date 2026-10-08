@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
@@ -8,6 +9,8 @@ import { BackButton } from "@/components/shared/BackButton";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { notaDoDP } from "@/components/pessoas/rotulosDoDP";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 
 export default async function AvaliacoesPessoaPage({
   params,
@@ -42,54 +45,73 @@ export default async function AvaliacoesPessoaPage({
       <PageHeader title="Avaliações de Desempenho" />
 
       {evaluations.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+        <Card className="p-5">
           <p className="text-[13px] text-fg-muted">Nenhuma avaliação registrada ainda.</p>
-        </div>
+        </Card>
       ) : (
-        // Era uma lista de linhas com o ciclo em link azul (até 30/09); virou
-        // tabela no casco padrão, com funil na média.
-        <TabelaFiltravel
-          linhas={evaluations.map((e) => ({
-            id: e.id,
-            valores: { media: e.averageScore != null ? e.averageScore.toString() : "Sem nota" },
-          }))}
-        >
-          <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-            <table className="w-full min-w-[560px] text-[length:var(--fs-ui)]">
-              <thead>
-                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
-                  <th className="px-4 py-3">Ciclo</th>
-                  <th className="px-4 py-3">
-                    <FiltroDaColuna rotulo="Média" chave="media" />
-                  </th>
-                  <th className="px-4 py-3">Plano de desenvolvimento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {evaluations.map((e) => (
-                  <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/avaliacoes/${e.cycle.id}/avaliar/${id}`}
-                        className="font-semibold text-fg hover:text-brand transition-colors"
-                      >
-                        {e.cycle.name}
-                      </Link>
-                    </td>
-                    <td className={`px-4 py-3 ${e.averageScore != null ? "text-fg-secondary" : "text-fg-muted"}`}>
-                      {e.averageScore != null ? e.averageScore.toString() : "Sem nota"}
-                    </td>
-                    <td className="px-4 py-3 text-fg-muted">
-                      <span className="block max-w-[360px] truncate" title={e.developmentPlan ?? undefined}>
-                        {e.developmentPlan ?? "—"}
-                      </span>
-                    </td>
-                  </LinhaFiltravel>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </TabelaFiltravel>
+        <>
+          {/* No celular, um cartão por avaliação em vez da tabela de 560px com
+              rolagem lateral (auditoria DRG-31, 07/10/2026). */}
+          <CartoesNoCelular>
+            {evaluations.map((e) => (
+              <Cartao key={e.id}>
+                <TopoDoCartao
+                  nome={
+                    <Link href={`/avaliacoes/${e.cycle.id}/avaliar/${id}`} className="text-fg hover:text-brand transition-colors">
+                      {e.cycle.name}
+                    </Link>
+                  }
+                  valor={e.averageScore != null ? notaDoDP(e.averageScore) : "Sem nota"}
+                />
+                {e.developmentPlan && <InfoDoCartao>{e.developmentPlan}</InfoDoCartao>}
+              </Cartao>
+            ))}
+          </CartoesNoCelular>
+          {/* Era uma lista de linhas com o ciclo em link azul (até 30/09); virou
+              tabela no casco padrão, com funil na média. */}
+          <TabelaFiltravel
+            linhas={evaluations.map((e) => ({
+              id: e.id,
+              valores: { media: e.averageScore != null ? notaDoDP(e.averageScore) : "Sem nota" },
+            }))}
+          >
+            <TabelaNoDesktop padrao>
+              <table className="w-full min-w-[560px]">
+                <thead>
+                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    <th className="px-4 py-3">Ciclo</th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Média" chave="media" />
+                    </th>
+                    <th className="px-4 py-3">Plano de desenvolvimento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evaluations.map((e) => (
+                    <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border">
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/avaliacoes/${e.cycle.id}/avaliar/${id}`}
+                          className="font-semibold text-fg hover:text-brand transition-colors"
+                        >
+                          {e.cycle.name}
+                        </Link>
+                      </td>
+                      <td className={`px-4 py-3 ${e.averageScore != null ? "text-fg-secondary" : "text-fg-muted"}`}>
+                        {e.averageScore != null ? notaDoDP(e.averageScore) : "Sem nota"}
+                      </td>
+                      <td className="px-4 py-3 text-fg-muted">
+                        <span className="block max-w-[360px] truncate" title={e.developmentPlan ?? undefined}>
+                          {e.developmentPlan ?? "—"}
+                        </span>
+                      </td>
+                    </LinhaFiltravel>
+                  ))}
+                </tbody>
+              </table>
+            </TabelaNoDesktop>
+          </TabelaFiltravel>
+        </>
       )}
     </PageContainer>
   );

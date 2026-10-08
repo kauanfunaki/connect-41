@@ -1,6 +1,6 @@
 import { Pagination } from "@/components/shared/Pagination";
-import { Building2 } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import { Building2, Plus } from "lucide-react";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
@@ -72,25 +72,15 @@ export default async function ClientesPage({
       <div id="cadastros-content">
         <PageHeader
           title="Clientes"
-          subtitle={
-            <>
-              {total} cliente{total !== 1 ? "s" : ""} — cada um agrupa uma ou mais empresas
-            </>
-          }
+          subtitle="Cada cliente agrupa uma ou mais empresas."
           action={
-            <>{canCreate && <Button href="/clientes/novo" variant="primary">+ Novo Cliente</Button>}</>
+            <>{canCreate && <Button href="/clientes/novo" variant="primary"><Plus size={14} /> Novo cliente</Button>}</>
           }
         />
 
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex-1 max-w-xs">
-            <DebouncedSearchInput placeholder="Buscar por nome…" />
-          </div>
-        </div>
-
         {/* Revisão de 05/10: botão não é link — o "Mostrar todos" era texto azul. */}
         {ocultos > 0 && (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted mb-4">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[length:var(--fs-2)] text-fg-muted mb-4">
             <p>
               {ocultos} cliente{ocultos !== 1 ? "s" : ""} inativo{ocultos !== 1 ? "s" : ""} fora desta lista.
             </p>
@@ -100,23 +90,29 @@ export default async function ClientesPage({
           </div>
         )}
 
+        {/* Contagem, busca e filtro na barra do casco (07/10/2026), como as
+            filas irmãs de 05/10: eram a busca e o filtro soltos acima da
+            tabela, a contagem no subtítulo e o vazio num cartão à parte. O
+            painel do Filtros continua o mesmo (modelo aprovado), na barra. */}
+        <CascoDaTabela
+          contagem={contarItens(total, "cliente", "clientes")}
+          busca={<DebouncedSearchInput placeholder="Buscar por nome…" className="w-72 max-w-full" />}
+        >
         {clientes.length === 0 ? (
-          <Card>
-            <EmptyState
-              icon={<Building2 />}
-              title={search ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado ainda"}
-              description={
-                search
-                  ? "Tente ajustar a busca."
-                  : "O cliente é o nível acima da empresa: um cliente pode ter vários CNPJs."
-              }
-              action={
-                !search && canCreate ? (
-                  <Button href="/clientes/novo">+ Novo Cliente</Button>
-                ) : undefined
-              }
-            />
-          </Card>
+          <EmptyState
+            icon={<Building2 />}
+            title={search ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado ainda"}
+            description={
+              search
+                ? "Tente ajustar a busca."
+                : "O cliente é o nível acima da empresa: um cliente pode ter vários CNPJs."
+            }
+            action={
+              !search && canCreate ? (
+                <Button href="/clientes/novo"><Plus size={14} /> Novo cliente</Button>
+              ) : undefined
+            }
+          />
         ) : (
           <ClientesTable
             inativarEmMassa={inativarClientesEmMassa}
@@ -131,6 +127,7 @@ export default async function ClientesPage({
             alternarAtivo={alternarAtivoCliente}
           />
         )}
+        </CascoDaTabela>
 
         <Pagination page={pageNum} totalPages={totalPages} buildHref={(n) => buildUrl({ page: String(n) })} total={total} rotulo="clientes" />
       </div>

@@ -5,13 +5,14 @@ import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getSectorUsers } from "@/lib/sectorUsers";
-import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
+import { formatInstantDate, formatInstantDateTime, formatarCompetencia } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Button } from "@/components/ui/Button";
 import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -152,7 +153,7 @@ async function Fila({
           {
             rotulo: "Sacado sem e-mail",
             valor: String(fila.totais.semEmail),
-            tom: fila.totais.semEmail > 0 ? "text-warning" : "text-fg-muted",
+            tom: fila.totais.semEmail > 0 ? "text-warning-fg" : "text-fg-muted",
             icone: <MailX />,
           },
         ]}
@@ -160,10 +161,10 @@ async function Fila({
 
       {fila.paraHoje.length > 0 && (
         <Card className="p-4 mb-4 border-warning/40">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-2 flex items-center gap-2">
-            <AlarmClock size={16} className="text-warning" /> Próximas ações de hoje
+          <h2 className="text-card-title font-semibold mb-2 flex items-center gap-2">
+            <AlarmClock size={16} className="text-warning-fg" /> Próximas ações de hoje
           </h2>
-          <ul className="flex flex-col gap-1.5 text-[13px]">
+          <ul className="flex flex-col gap-1.5 text-ui">
             {fila.paraHoje.slice(0, 30).map((l) => (
               <li key={l.id} className="flex flex-wrap items-center gap-2">
                 <Link href={`/cobranca/${l.id}`} className="text-brand hover:underline font-medium">
@@ -172,12 +173,12 @@ async function Fila({
                 <span className="text-fg-muted">{l.empresaNome}</span>
                 <span className="tabular-nums">{moeda(l.valorCentavos)}</span>
                 {l.acao.quandoKey && l.acao.quandoKey < hojeKey ? (
-                  <span className="text-[12px] text-danger">agendada para {dataDaChave(l.acao.quandoKey)}</span>
+                  <span className="text-fs-2 text-danger">agendada para {dataDaChave(l.acao.quandoKey)}</span>
                 ) : (
-                  <span className="text-[12px] text-fg-muted">hoje</span>
+                  <span className="text-fs-2 text-fg-muted">hoje</span>
                 )}
-                {l.ultimoContato && <span className="text-[12px] text-fg-muted">· {ROTULO_DO_RESULTADO[l.ultimoContato.resultado]}</span>}
-                {l.responsavelNome && <span className="text-[12px] text-fg-muted">· {l.responsavelNome}</span>}
+                {l.ultimoContato && <span className="text-fs-2 text-fg-muted">· {ROTULO_DO_RESULTADO[l.ultimoContato.resultado]}</span>}
+                {l.responsavelNome && <span className="text-fs-2 text-fg-muted">· {l.responsavelNome}</span>}
               </li>
             ))}
           </ul>
@@ -224,7 +225,7 @@ async function Fila({
         ) : (
           <TabelaDaFila linhas={fila.linhas} hojeKey={hojeKey} />
         )}
-        {fila.limitado && <p className="text-[11px] text-fg-muted mt-3">A fila passou de 2.000 títulos — mostrando os mais antigos. Filtre por empresa.</p>}
+        {fila.limitado && <p className="text-micro text-fg-muted mt-3">A fila passou de 2.000 títulos — mostrando os mais antigos. Filtre por empresa.</p>}
       </CascoDaTabela>
     </>
   );
@@ -256,13 +257,13 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
             {l.acao.quandoKey && (
               <InfoDoCartao className="tabular-nums">
                 próxima ação{" "}
-                <span className={l.acao.quandoKey < hojeKey ? "text-danger" : l.acao.paraHoje ? "text-warning font-medium" : ""}>
+                <span className={l.acao.quandoKey < hojeKey ? "text-danger" : l.acao.paraHoje ? "text-warning-fg font-medium" : ""}>
                   {dataDaChave(l.acao.quandoKey)}
                 </span>
                 {l.responsavelNome ? ` · ${l.responsavelNome}` : ""}
               </InfoDoCartao>
             )}
-            <InfoDoCartao className={l.regua.enviar === null && l.regua.motivo === "SEM_EMAIL" ? "text-warning" : ""}>
+            <InfoDoCartao className={l.regua.enviar === null && l.regua.motivo === "SEM_EMAIL" ? "text-warning-fg" : ""}>
               {regua(l)}
             </InfoDoCartao>
             {l.ultimoContato && (
@@ -296,9 +297,9 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
         }))}
       >
       <TabelaNoDesktop padrao>
-      <table className="w-full min-w-[1080px] text-[13px]">
+      <table className="w-full min-w-[1080px]">
         <thead>
-          <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+          <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
             <th className="py-2 pr-3 font-medium">
               <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
             </th>
@@ -332,25 +333,25 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
             <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
               <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">
                 {formatInstantDate(l.vencimento)}
-                <span className="block text-[11px] text-fg-muted">{l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`}</span>
+                <span className="block text-micro text-fg-muted">{l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`}</span>
               </td>
               <td className="py-2.5 pr-3">
                 <span className="font-medium">{l.sacadoNome}</span>
-                <span className="block text-[11px] text-fg-muted">{l.empresaNome}</span>
-                {l.parcelaDeAcordo && <span className="block text-[11px] text-fg-muted">parcela de acordo</span>}
+                <span className="block text-micro text-fg-muted">{l.empresaNome}</span>
+                {l.parcelaDeAcordo && <span className="block text-micro text-fg-muted">parcela de acordo</span>}
               </td>
               <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(l.valorCentavos)}</td>
               <td className="py-2.5 pr-3">
                 <SeloDaCobranca situacao={l.situacao} />
                 {l.ultimoContato && (
-                  <span className="block text-[11px] text-fg-muted mt-1">
+                  <span className="block text-micro text-fg-muted mt-1">
                     {formatInstantDate(l.ultimoContato.em)} · {ROTULO_DO_CANAL[l.ultimoContato.canal]} · {ROTULO_DO_RESULTADO[l.ultimoContato.resultado]}
                   </span>
                 )}
               </td>
               <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">
                 {l.acao.quandoKey ? (
-                  <span className={l.acao.quandoKey < hojeKey ? "text-danger" : l.acao.paraHoje ? "text-warning font-medium" : ""}>
+                  <span className={l.acao.quandoKey < hojeKey ? "text-danger" : l.acao.paraHoje ? "text-warning-fg font-medium" : ""}>
                     {dataDaChave(l.acao.quandoKey)}
                   </span>
                 ) : (
@@ -358,13 +359,13 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
                 )}
               </td>
               <td className="py-2.5 pr-3 text-fg-secondary">{l.responsavelNome ?? <span className="text-fg-muted">—</span>}</td>
-              <td className="py-2.5 pr-3 text-[12px]">
+              <td className="py-2.5 pr-3">
                 {l.regua.enviar !== null ? (
                   <span className="inline-flex items-center gap-1 text-brand">
                     <Mail size={12} /> passo de {l.regua.enviar} dias
                   </span>
                 ) : l.regua.motivo === "SEM_EMAIL" ? (
-                  <span className="text-warning">{ROTULO_DO_MOTIVO[l.regua.motivo]}</span>
+                  <span className="text-warning-fg">{ROTULO_DO_MOTIVO[l.regua.motivo]}</span>
                 ) : (
                   <span className="text-fg-muted">{ROTULO_DO_MOTIVO[l.regua.motivo]}</span>
                 )}
@@ -419,7 +420,9 @@ async function Acordos({
       />
 
       {acordos.length === 0 ? (
-        <EmptyState icon={<Handshake />} title="Nenhum acordo" description="Acordos nascem no título vencido, na fila: escolha os títulos do sacado e simule as parcelas." />
+        <Card>
+          <EmptyState icon={<Handshake />} title="Nenhum acordo" description="Acordos nascem no título vencido, na fila: escolha os títulos do sacado e simule as parcelas." />
+        </Card>
       ) : (
         <div className="flex flex-col gap-3">
           {acordos.map((a) => {
@@ -429,25 +432,25 @@ async function Acordos({
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[14px] font-semibold">{a.sacadoNome}</span>
+                      <span className="text-card-title font-semibold">{a.sacadoNome}</span>
                       <SeloDoAcordo status={a.status} />
                     </div>
-                    <p className="text-[12px] text-fg-muted mt-0.5">
+                    <p className="text-fs-2 text-fg-muted mt-0.5">
                       {a.empresaNome} · acordado em {formatInstantDate(a.acordadoEm)}
                       {a.criadoPor ? ` por ${a.criadoPor}` : ""}
                       {a.encerradoEm && a.status !== "ATIVO" ? ` · ${ROTULO_DO_ACORDO[a.status].toLowerCase()} em ${formatInstantDate(a.encerradoEm)}` : ""}
                     </p>
-                    <p className="text-[12px] mt-1 tabular-nums">
+                    <p className="text-fs-2 mt-1 tabular-nums">
                       Originais {moeda(a.originalCentavos)} → acordado <strong>{moeda(a.acordadoCentavos)}</strong>
                       {a.diferencaCentavos !== 0 && (
-                        <span className={a.diferencaCentavos > 0 ? "text-success" : "text-danger"}>
+                        <span className={a.diferencaCentavos > 0 ? "text-success-fg" : "text-danger"}>
                           {" "}
                           ({a.diferencaCentavos > 0 ? "acréscimo" : "desconto"} de {moeda(Math.abs(a.diferencaCentavos))})
                         </span>
                       )}{" "}
                       · {a.resumo.pagas}/{a.resumo.total} pagas · {moeda(a.resumo.pagoCentavos)} recebido
                     </p>
-                    {a.notas && <p className="text-[12px] text-fg-secondary mt-1 max-w-[720px]">{a.notas}</p>}
+                    {a.notas && <p className="text-helper text-fg-secondary mt-1 max-w-[720px]">{a.notas}</p>}
                   </div>
                   {podeAgir && (
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -470,15 +473,15 @@ async function Acordos({
                           acao={desfazerAcordo.bind(null, a.id)}
                         />
                       ) : (
-                        (a.status === "ATIVO" || a.status === "QUEBRADO") && <span className="text-[11px] text-fg-muted max-w-[220px]">{desfazer.motivo}</span>
+                        (a.status === "ATIVO" || a.status === "QUEBRADO") && <span className="text-micro text-fg-muted max-w-[220px]">{desfazer.motivo}</span>
                       )}
                     </div>
                   )}
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="overflow-x-auto">
-                    <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">Parcelas</p>
-                    <table className="w-full text-[12px]">
+                    <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Parcelas</p>
+                    <table className="w-full text-ui">
                       <tbody>
                         {a.parcelas.map((p, i) => (
                           <tr key={p.id} className="border-b border-border-soft">
@@ -489,13 +492,13 @@ async function Acordos({
                             <td className="py-1 pr-3 tabular-nums text-right">{moeda(p.valorCentavos)}</td>
                             <td className="py-1">
                               {p.pagoEm ? (
-                                <Badge variant="success">Paga em {formatInstantDate(p.pagoEm)}</Badge>
+                                <Badge variant={TOM_DA_SITUACAO.PAGA}>Paga em {formatInstantDate(p.pagoEm)}</Badge>
                               ) : p.closeReason === "PERDA" ? (
-                                <Badge variant="danger">Perda</Badge>
+                                <Badge variant={TOM_DA_SITUACAO.PERDA}>Perda</Badge>
                               ) : p.closeReason === "RENEGOCIADO" ? (
-                                <Badge variant="info">Renegociada</Badge>
+                                <Badge variant={TOM_DA_SITUACAO.RENEGOCIADA}>Renegociada</Badge>
                               ) : p.status === "CANCELADO" ? (
-                                <Badge variant="info">Cancelada</Badge>
+                                <Badge variant={TOM_DA_SITUACAO.CANCELADA}>Cancelada</Badge>
                               ) : (
                                 <Button href={`/cobranca/${p.id}`} variant="secondary" size="xs">
                                   Em aberto <ArrowRight size={12} />
@@ -508,13 +511,13 @@ async function Acordos({
                     </table>
                   </div>
                   <div className="overflow-x-auto">
-                    <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">Títulos originais</p>
-                    <table className="w-full text-[12px]">
+                    <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Títulos originais</p>
+                    <table className="w-full text-ui">
                       <tbody>
                         {a.originais.map((o) => (
                           <tr key={o.id} className="border-b border-border-soft">
                             <td className="py-1 pr-3 tabular-nums">venc. {formatInstantDate(o.vencimento)}</td>
-                            <td className="py-1 pr-3 tabular-nums">comp. {o.competencia}</td>
+                            <td className="py-1 pr-3 tabular-nums">comp. {formatarCompetencia(o.competencia)}</td>
                             <td className="py-1 pr-3 tabular-nums text-right">{moeda(o.valorCentavos)}</td>
                             <td className="py-1 text-fg-muted truncate max-w-[200px]">
                               <Link href={`/cobranca/${o.id}`} className="hover:underline">
@@ -546,30 +549,30 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
     <>
       <Card className="p-4 mb-4">
         <div className="flex flex-wrap items-center gap-2 mb-1">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold">Régua de lembretes por e-mail</h2>
-          {d.config.ligada ? <Badge variant="success">Ligada</Badge> : <Badge variant="info">Desligada</Badge>}
+          <h2 className="text-card-title font-semibold">Régua de lembretes por e-mail</h2>
+          {d.config.ligada ? <Badge variant={TOM_DA_SITUACAO.LIGADA}>Ligada</Badge> : <Badge variant={TOM_DA_SITUACAO.DESLIGADA}>Desligada</Badge>}
         </div>
-        <p className="text-[12px] text-fg-muted mb-3 max-w-[860px]">
+        <p className="text-helper text-fg-muted mb-3 max-w-[860px]">
           Um e-mail ao sacado em cada passo de atraso, pelo SMTP do escritório, em nome da empresa credora — com valor, vencimento e
           dias de atraso, sem link. Pausa quando o título está em acordo, quando o último contato contestou, e enquanto a data de
           pagamento prometida não passou. Sacado sem e-mail fica fora. A execução diária é agendada fora do Connect.
         </p>
         <ConfigDaRegua ligada={d.config.ligada} passos={d.config.passosTexto} podeEditar={gerencia} />
-        {!gerencia && <p className="text-[11px] text-fg-muted mt-2">Só a coordenação altera a régua.</p>}
+        {!gerencia && <p className="text-micro text-fg-muted mt-2">Só a coordenação altera a régua.</p>}
       </Card>
 
       <Card className="p-4 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-1">Empresas fora da régua</h2>
-        <p className="text-[12px] text-fg-muted mb-3">Para o cliente que cobra os próprios sacados. A fila continua mostrando os títulos.</p>
+        <h2 className="text-card-title font-semibold mb-1">Empresas fora da régua</h2>
+        <p className="text-helper text-fg-muted mb-3">Para o cliente que cobra os próprios sacados. A fila continua mostrando os títulos.</p>
         {gerencia && <EmpresaNaRegua empresas={empresas.filter((e) => !fora.has(e.id))} fora />}
         {d.foraDaRegua.length === 0 ? (
-          <p className="text-[12px] text-fg-muted mt-3">Nenhuma empresa fora.</p>
+          <p className="text-helper text-fg-muted mt-3">Nenhuma empresa fora.</p>
         ) : (
-          <ul className="flex flex-col gap-1.5 mt-3 text-[13px]">
+          <ul className="flex flex-col gap-1.5 mt-3 text-ui">
             {d.foraDaRegua.map((f) => (
               <li key={f.companyId} className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{f.empresaNome}</span>
-                <span className="text-[11px] text-fg-muted">
+                <span className="text-micro text-fg-muted">
                   desde {formatInstantDate(f.desde)}
                   {f.por ? ` · ${f.por}` : ""}
                 </span>
@@ -580,8 +583,11 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
         )}
       </Card>
 
-      <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold">Últimos envios</h2>
+      {/* Seção em cartão com o título dentro, como as duas de cima (08/10/2026):
+          "Últimos envios" era o único título solto no fundo da tela. */}
+      <Card className="p-4">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <h2 className="text-card-title font-semibold">Últimos envios</h2>
         {d.errosNaSemana > 0 && <Badge variant="danger">{d.errosNaSemana} com erro nos últimos 7 dias</Badge>}
       </div>
       {d.envios.length === 0 ? (
@@ -607,7 +613,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
                 <PeDoCartao>
                   {e.ok ? <Badge variant="success">Enviado</Badge> : <Badge variant="danger">Erro</Badge>}
                 </PeDoCartao>
-                {!e.ok && e.erro && <span className="block text-[11px] text-danger mt-1 break-words">{e.erro}</span>}
+                {!e.ok && e.erro && <span className="block text-micro text-danger mt-1 break-words">{e.erro}</span>}
               </Cartao>
             ))}
           </CartoesNoCelular>
@@ -626,9 +632,9 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
             }))}
           >
           <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[880px] text-[13px]">
+          <table className="w-full min-w-[880px]">
             <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+              <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium">
                   <FiltroDaColuna rotulo="Quando" chave="quando" tipo="data" />
                 </th>
@@ -661,14 +667,14 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
                     <Link href={`/cobranca/${e.entryId}`} className="font-medium hover:underline">
                       {e.sacadoNome}
                     </Link>
-                    <span className="block text-[11px] text-fg-muted">{e.empresaNome}</span>
+                    <span className="block text-micro text-fg-muted">{e.empresaNome}</span>
                   </td>
                   <td className="py-2 pr-3 text-fg-secondary">{e.para}</td>
                   <td className="py-2 pr-3 tabular-nums">{e.passo} dias</td>
                   <td className="py-2 pr-3 text-right tabular-nums">{moeda(e.valorCentavos)}</td>
                   <td className="py-2">
                     {e.ok ? <Badge variant="success">Enviado</Badge> : <Badge variant="danger">Erro</Badge>}
-                    {!e.ok && e.erro && <span className="block text-[11px] text-danger mt-1 max-w-[280px]">{e.erro}</span>}
+                    {!e.ok && e.erro && <span className="block text-micro text-danger mt-1 max-w-[280px]">{e.erro}</span>}
                   </td>
                 </LinhaFiltravel>
               ))}
@@ -678,6 +684,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
           </TabelaFiltravel>
         </>
       )}
+      </Card>
     </>
   );
 }

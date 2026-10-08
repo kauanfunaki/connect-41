@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Pencil, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -29,6 +30,8 @@ import { adicionarCandidato, moverEtapaCandidatura, encerrarCandidatura } from "
 import { podeAgirNaVaga, ehCoordenadorDoRecrutamento, SETOR_RECRUTAMENTO } from "@/lib/recrutamento/acessoVagas";
 import { AcessoDosRecrutadores } from "@/components/vagas/AcessoDosRecrutadores";
 import { Selo } from "@/components/ui/Selo";
+import { InfoRow } from "@/components/empresas/InfoRow";
+import { Funil } from "@/components/shared/Graficos";
 
 const PRIORITY_LABEL: Record<VagaPrioridade, string> = {
   BAIXA: "Baixa",
@@ -154,15 +157,16 @@ export default async function VagaPage({
       {/* Selo, empresa e ações dentro do próprio `PageHeader` (polimento de
           30/09): eram um cabeçalho montado em volta dele, e o selo ficava
           centrado na margem de baixo do título, e não no título. "Editar" era
-          um link desenhado à mão como botão. */}
+          um link desenhado à mão como botão.
+          07/10/2026 (auditoria DRG-23): o selo saiu do título para o `meta`,
+          criado em 02/10 para "selos e datas embaixo do título" — o mesmo
+          lugar do lead e da proposta do Valora. */}
       <PageHeader
-        title={
-          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-            {vaga.title}
-            <Selo cor={VAGA_STATUS_STYLE[vaga.status]}>
-              {VAGA_STATUS_LABEL[vaga.status]}
-            </Selo>
-          </span>
+        title={vaga.title}
+        meta={
+          <Selo cor={VAGA_STATUS_STYLE[vaga.status]}>
+            {VAGA_STATUS_LABEL[vaga.status]}
+          </Selo>
         }
         subtitle={<>{vaga.company.name} · {sectorLabels[vaga.sectorCode] ?? vaga.sectorCode}</>}
         action={
@@ -197,7 +201,7 @@ export default async function VagaPage({
       />
 
       {/* Detalhes */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+      <Card className="p-5 mb-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Detalhes</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-4">
           <InfoRow label="Cargo" value={vaga.cargo?.name} />
@@ -217,7 +221,7 @@ export default async function VagaPage({
         {vaga.notes && (
           <div className="mt-3 pt-3 border-t border-border">
             <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">Observações</p>
-            <p className="text-[13px] text-fg whitespace-pre-wrap">{vaga.notes}</p>
+            <p className="text-[length:var(--fs-ui)] text-fg whitespace-pre-wrap">{vaga.notes}</p>
           </div>
         )}
         {vaga.isPublic && tenantSlug && (
@@ -227,13 +231,13 @@ export default async function VagaPage({
               href={`${publicBaseUrl}/carreiras/${tenantSlug}/${vaga.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[13px] text-brand hover:underline break-all"
+              className="text-[length:var(--fs-ui)] text-brand hover:underline break-all"
             >
               {publicBaseUrl}/carreiras/{tenantSlug}/{vaga.id}
             </a>
           </div>
         )}
-      </div>
+      </Card>
 
       {coordenaRecrutamento && (
         <AcessoDosRecrutadores
@@ -256,7 +260,7 @@ export default async function VagaPage({
       />
 
       {/* Funil de recrutamento */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+      <Card className="p-5 mb-4">
         <div className="flex items-center justify-between gap-3 mb-4">
           <h2 className="min-w-0 text-[length:var(--fs-card-title)] font-semibold text-fg">
             Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
@@ -273,18 +277,20 @@ export default async function VagaPage({
           <p className="text-[13px] text-fg-muted">Nenhum candidato vinculado ainda.</p>
         ) : (
           <>
-            {/* Conversão por etapa */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-5">
-              {funnelStats.stages.map((s) => (
-                <div key={s.stage} className="rounded-lg border border-border bg-surface-2 p-2.5">
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted uppercase tracking-wide truncate">{s.label}</p>
-                  <p className="text-[18px] font-semibold text-fg tnum">{s.conversionPct}%</p>
-                  <div className="h-1 rounded-full bg-border mt-1 overflow-hidden">
-                    <div className="h-full bg-brand rounded-full" style={{ width: `${s.conversionPct}%` }} />
-                  </div>
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1">{s.reached} alcançaram</p>
-                </div>
-              ))}
+            {/* Conversão por etapa: o mesmo Funil do painel da Home (07/10,
+                auditoria dos gráficos). Eram cinco cartões à mão com "% do
+                total", enquanto o painel mostra a passagem da etapa anterior
+                — o mesmo funil com dois desenhos e duas "conversões". Agora as
+                duas leituras estão no gráfico, e a nota diz qual é qual. */}
+            <div className="mb-5 max-w-2xl">
+              <Funil
+                titulo="Candidaturas que chegaram a cada etapa"
+                etapas={funnelStats.stages.map((s) => ({ chave: s.stage, rotulo: s.label, valor: s.reached }))}
+              />
+              <p className="mt-2 text-[length:var(--fs-micro)] text-fg-muted">
+                A barra é a parte do total de candidaturas que chegou a cada etapa; o percentual ao lado é quantas passaram da etapa
+                anterior.
+              </p>
             </div>
 
             {/* Board arrastável */}
@@ -335,16 +341,7 @@ export default async function VagaPage({
             <AssistenteDaVaga vagaId={vaga.id} />
           </div>
         )}
-      </div>
+      </Card>
     </PageContainer>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">{label}</p>
-      <p className="text-[13px] text-fg">{value ?? "—"}</p>
-    </div>
   );
 }

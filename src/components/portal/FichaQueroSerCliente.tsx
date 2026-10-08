@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 import { MAX_MENSAGEM_DA_FICHA, type CampoDaFicha } from "@/lib/leads/regras";
 import type { ResultadoDaFichaDoPortal } from "@/app/(portal)/portal/quero-ser-cliente/actions";
 
@@ -34,11 +35,11 @@ export function FichaQueroSerCliente({ carimbo, escritorio, action }: Props) {
   if (enviado) {
     return (
       <Card className="p-6 text-center">
-        <span className="mx-auto mb-4 inline-flex size-12 items-center justify-center rounded-full bg-success/10 text-success">
+        <span className="mx-auto mb-4 inline-flex size-12 items-center justify-center rounded-full bg-success/10 text-success-fg">
           <CheckCircle2 size={24} />
         </span>
-        <h2 className="text-[length:var(--fs-6)] font-semibold text-fg">Recebemos seus dados</h2>
-        <p className="mt-2 text-[length:var(--fs-body)] text-fg-secondary leading-relaxed">
+        <h2 className="text-fs-6 font-semibold text-fg">Recebemos seus dados</h2>
+        <p className="mt-2 text-body text-fg-secondary leading-relaxed">
           {enviado.primeiroNome ? `Obrigado, ${enviado.primeiroNome}. ` : "Obrigado. "}A equipe comercial de {escritorio} vai entrar em
           contato pelo e-mail ou WhatsApp que você informou.
         </p>
@@ -149,16 +150,13 @@ export function FichaQueroSerCliente({ carimbo, escritorio, action }: Props) {
               </>
             }
           />
-          {erroDo("aceite") && <p className="pl-[26px] text-[length:var(--fs-helper)] font-medium text-danger">{erroDo("aceite")}</p>}
+          {erroDo("aceite") && <p className="pl-[26px] text-helper font-medium text-danger">{erroDo("aceite")}</p>}
         </div>
 
-        {erro && !erro.campo && (
-          <p role="alert" className="text-[length:var(--fs-helper)] text-danger">
-            {erro.texto}
-          </p>
-        )}
+        {/* O erro do formulário no `Aviso` (07/10/2026), como o login e a senha nova. */}
+        {erro && !erro.campo && <Aviso>{erro.texto}</Aviso>}
 
-        <Button type="submit" loading={pendente} loadingLabel="Enviando…" className="w-full justify-center">
+        <Button type="submit" size="lg" loading={pendente} loadingLabel="Enviando…" className="w-full justify-center">
           Enviar
         </Button>
 

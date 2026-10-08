@@ -9,6 +9,7 @@ import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { enviarTaxaAoCliente, type EnvioDaTaxaState } from "@/app/(app)/processos/actions";
 import { validarGuia } from "@/lib/societario/arquivamento";
 import type { EnvioDaTaxa } from "@/lib/societario/licencas-data";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = { taxaId: string; descricao: string; envio: EnvioDaTaxa };
 
@@ -68,7 +69,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
       </Button>
 
       <Modal open={aberto} onClose={fechar} title="Enviar guia ao cliente" maxWidth="max-w-lg">
-        <form onSubmit={enviar} className="flex flex-col gap-4 text-[13px]">
+        <form onSubmit={enviar} className="flex flex-col gap-4 text-[length:var(--fs-ui)]">
           <input type="hidden" name="taxaId" value={taxaId} />
 
           <p className="text-fg-secondary">{descricao}</p>
@@ -101,7 +102,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
           {/* Contato sem e-mail e e-mail digitado errado dão no mesmo — a pessoa
               não recebe — e só aparecem aqui. */}
           {envio.descartados.length > 0 && (
-            <div className="text-[12px] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
+            <Aviso tom="atencao">
               <p className="font-medium mb-0.5">Ficam de fora</p>
               <ul className="flex flex-col gap-0.5">
                 {envio.descartados.map((x, i) => (
@@ -110,7 +111,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
                   </li>
                 ))}
               </ul>
-            </div>
+            </Aviso>
           )}
 
           {/* O campo de arquivo do sistema, e não o input nativo estilizado à
@@ -128,21 +129,21 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
           )}
 
           {estado && "error" in estado && (
-            <p className="text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{estado.error}</p>
+            <Aviso>{estado.error}</Aviso>
           )}
 
           {estado && "ok" in estado && (
-            <div className="text-success bg-success/8 border border-success/20 rounded-md px-3 py-2 flex flex-col gap-1">
+            <Aviso tom="sucesso" className="flex flex-col gap-1">
               <span className="flex items-center gap-1.5 font-medium">
                 <Check size={14} /> Enviado para {estado.enviados}{" "}
                 {estado.enviados === 1 ? "contato" : "contatos"}
               </span>
               {estado.recusados.length > 0 && (
-                <span className="text-warning break-all">
+                <span className="text-warning-fg break-all">
                   Recusado pelo servidor de e-mail: {estado.recusados.join(", ")}
                 </span>
               )}
-            </div>
+            </Aviso>
           )}
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">

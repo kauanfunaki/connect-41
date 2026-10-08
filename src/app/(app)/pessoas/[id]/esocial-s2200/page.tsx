@@ -9,9 +9,10 @@ import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { buildS2200Preview } from "@/lib/esocialS2200";
-import { formatCalendarDate } from "@/lib/format";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { formatCalendarDate, formatarNumero } from "@/lib/format";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CheckCircle2, CircleDashed } from "lucide-react";
+import { Aviso } from "@/components/ui/Aviso";
 
 export default async function EsocialS2200Page({
   params,
@@ -81,13 +82,13 @@ export default async function EsocialS2200Page({
       />
 
       {/* Aviso honesto: não é transmissão oficial */}
-      <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-4">
-        <p className="text-[length:var(--fs-helper)] text-fg">
+      <Aviso tom="atencao" className="mb-4">
+        <p className="text-fg">
           <strong>Rascunho para conferência.</strong> Esta tela não gera XML, não assina e não transmite ao eSocial —
           a transmissão oficial continua no software de folha da empresa. Serve para verificar, a partir dos dados da
           admissão, o que já está preenchido e o que ainda falta para o S-2200.
         </p>
-      </div>
+      </Aviso>
 
       {/* Resumo de completude — eram dois selos soltos (até 30/09); viraram
           os cartões de total. */}
@@ -95,15 +96,15 @@ export default async function EsocialS2200Page({
         itens={[
           {
             rotulo: `Campo${preview.filledCount !== 1 ? "s" : ""} preenchido${preview.filledCount !== 1 ? "s" : ""}`,
-            valor: String(preview.filledCount),
+            valor: formatarNumero(preview.filledCount, 0),
             icone: <CheckCircle2 />,
-            tom: "text-success",
+            tom: "text-success-fg",
           },
           {
             rotulo: `Campo${preview.pendingCount !== 1 ? "s" : ""} pendente${preview.pendingCount !== 1 ? "s" : ""}`,
-            valor: String(preview.pendingCount),
+            valor: formatarNumero(preview.pendingCount, 0),
             icone: <CircleDashed />,
-            tom: preview.pendingCount > 0 ? "text-warning" : "text-fg-muted",
+            tom: preview.pendingCount > 0 ? "text-warning-fg" : "text-fg-muted",
           },
         ]}
       />
@@ -114,7 +115,7 @@ export default async function EsocialS2200Page({
           // 11px e valor de 13px aqui, 13/15 lá — a mesma informação parecia
           // de outro tamanho. Três colunas no desktop.
           <Card key={g.title} className="p-5">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">{g.title}</h2>
+            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">{g.title}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
               {g.fields.map((f) => (
                 <div key={f.label} className="min-w-0">
@@ -126,7 +127,7 @@ export default async function EsocialS2200Page({
                   ) : f.value ? (
                     <p className="text-[length:var(--fs-body)] text-fg break-words">{f.value}</p>
                   ) : (
-                    <p className="text-[length:var(--fs-body)] text-warning">Pendente</p>
+                    <p className="text-[length:var(--fs-body)] text-warning-fg">Pendente</p>
                   )}
                 </div>
               ))}
@@ -136,7 +137,7 @@ export default async function EsocialS2200Page({
 
         {/* Dependentes */}
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Dependentes</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Dependentes</h2>
           {preview.dependentes.length === 0 ? (
             <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhum dependente informado.</p>
           ) : (

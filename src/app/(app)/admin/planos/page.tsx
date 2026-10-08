@@ -11,6 +11,7 @@ import { PlanModulesEditor } from "@/components/admin/PlanModulesEditor";
 import { MANAGEMENT_MODE_LABEL, BILLING_TYPE_LABEL } from "@/lib/subscription-labels";
 import { NovoPlanoForm } from "@/components/admin/NovoPlanoForm";
 import { alternarPlano, atualizarModulosPlano } from "./actions";
+import { formatarReais } from "@/lib/format";
 
 export default async function PlanosPage() {
   const ctx = await getAuthContext();
@@ -22,7 +23,7 @@ export default async function PlanosPage() {
     include: { _count: { select: { subscriptions: true } } },
   });
 
-  const fmt = (v: unknown) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  const fmt = (v: unknown) => formatarReais(Number(v));
 
   return (
     <PageContainer>

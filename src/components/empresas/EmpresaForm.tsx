@@ -16,6 +16,7 @@ import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatCnpj, formatCpf, formatPhone, formatCep } from "@/lib/format";
 import { NOVO_CLIENTE } from "@/lib/clientGroups";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
+import { Aviso } from "@/components/ui/Aviso";
 
 const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
   { value: "ACTIVE",   label: "Ativo" },
@@ -328,9 +329,9 @@ export function EmpresaForm({
         {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
         {state?.error && (
-          <p className="mb-4 text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
+          <Aviso className="mb-4">
             {state.error}
-          </p>
+          </Aviso>
         )}
 
         {/* ── 1. Identificação ─────────────────────────── */}
@@ -403,7 +404,7 @@ export function EmpresaForm({
                 />
               </CampoForm>
               {!ehPF && (
-                <CampoForm label="Nome Fantasia" htmlFor="tradeName" className="sm:col-span-2">
+                <CampoForm label="Nome fantasia" htmlFor="tradeName" className="sm:col-span-2">
                   <Input id="tradeName" name="tradeName" type="text" value={values.tradeName} placeholder="Como é conhecida" />
                 </CampoForm>
               )}
@@ -422,7 +423,7 @@ export function EmpresaForm({
                   placeholder={values.name || "BLD MOGI - SP"}
                 />
               </CampoForm>
-              <CampoForm label="Regime Tributário" htmlFor="taxRegime" className="sm:col-span-2">
+              <CampoForm label="Regime tributário" htmlFor="taxRegime" className="sm:col-span-2">
                 <Select id="taxRegime" name="taxRegime" value={values.taxRegime}>
                   <option value="">Selecionar…</option>
                   {/* Valor legado fora da lista atual (ex: "Simples Nacional" genérico) —
@@ -585,7 +586,7 @@ export function EmpresaForm({
                   <Input id="nire" name="nire" type="text" value={values.nire} placeholder="41300012345" />
                 </CampoForm>
               )}
-              <CampoForm label="Data de Abertura" htmlFor="foundationDate">
+              <CampoForm label="Data de abertura" htmlFor="foundationDate">
                 <CampoData
                   id="foundationDate"
                   name="foundationDate"
@@ -642,11 +643,11 @@ export function EmpresaForm({
                   : { label: "CNPJ", value: values.cnpj ? formatCnpj(values.cnpj) : "" },
                 { label: "Status", value: STATUS_LABEL[values.status as CompanyStatus] },
                 { label: ehPF ? "Nome" : "Razão Social", value: values.name },
-                { label: "Nome Fantasia", value: values.tradeName },
+                { label: "Nome fantasia", value: values.tradeName },
                 { label: "Nome no sistema", value: values.displayName },
                 { label: "Cliente", value: clientLabel },
                 { label: "Empresa matriz", value: matrizLabel },
-                { label: "Regime Tributário", value: values.taxRegime },
+                { label: "Regime tributário", value: values.taxRegime },
                 { label: "ID", value: values.externalId },
               ]}
             />
@@ -678,7 +679,7 @@ export function EmpresaForm({
                 ...(ehPF ? [] : [{ label: "Inscrição Estadual", value: values.stateRegistration }]),
                 { label: "Inscrição Municipal", value: values.municipalRegistration },
                 ...(ehPF ? [] : [{ label: "NIRE", value: values.nire }]),
-                { label: "Data de Abertura", value: values.foundationDate },
+                { label: "Data de abertura", value: values.foundationDate },
                 ...(ehPF
                   ? []
                   : [

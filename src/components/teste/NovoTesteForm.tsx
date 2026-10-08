@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
+import { Aviso } from "@/components/ui/Aviso";
 import { Select } from "@/components/ui/Select";
 import { TestTypeSelect, type TemplateOption, type TestTypeValue } from "@/components/teste/TestTypeSelect";
 import { gerarLinkTeste } from "@/app/(app)/testes/actions";
@@ -60,11 +61,13 @@ export function NovoTesteForm({ candidatos, templates }: Props) {
         <TestTypeSelect templates={templates} value={testType} onChange={setTestType} id="novo-teste-type" />
         <AlinhadoAoCampo>
           <Button type="submit" disabled={pending || !personId} className="w-full sm:w-auto">
-            {pending ? "Enviando…" : "+ Novo teste"}
+            {/* Mesmo rótulo do cartão de teste da candidatura: as duas mandam
+                o link ao candidato (DRG-17, 07/10/2026). */}
+            {pending ? "Enviando…" : "Enviar teste"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {error && <p className="text-[13px] text-danger">{error}</p>}
+      {error && <Aviso>{error}</Aviso>}
     </form>
   );
 }

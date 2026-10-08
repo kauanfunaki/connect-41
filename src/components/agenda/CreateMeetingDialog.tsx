@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useId, useRef } from "react";
+import { useActionState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
-import { useDialog } from "@/components/ui/useDialog";
-import { X } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { CampoDataHora } from "@/components/ui/CampoDataHora";
@@ -32,6 +32,9 @@ type Props = {
 // direto pela Agenda. Componente remonta a cada abertura (o pai só o
 // renderiza quando open=true), então defaultValue reflete sempre o slot
 // clicado mais recente sem precisar de estado controlado.
+//
+// No `Modal` e com o `FormFooter` (07/10/2026): era uma janela escrita à mão,
+// com fundo, título e "X" diferentes dos outros modais e sem o portal.
 export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogle, hasMicrosoft, allUsers, companies, onClose }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const hasAnyProvider = hasGoogle || hasMicrosoft;
@@ -43,113 +46,71 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPending, state]);
 
-  const titleId = useId();
+  // Fechar (Esc, clique fora, "X") espera o envio terminar.
   const handleClose = useCallback(() => {
     if (!isPending) onClose();
   }, [isPending, onClose]);
-  const panelRef = useDialog(true, handleClose);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !isPending) onClose();
-      }}
-    >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        tabIndex={-1}
-        aria-labelledby={titleId}
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-[var(--c41-shadow-lg)]"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 id={titleId} className="text-[length:var(--fs-section)] font-semibold text-fg">
-            Nova reunião
-          </h2>
-          <Button
-            variant="linkMuted"
-            className="disabled:opacity-60"
-            onClick={onClose}
-            disabled={isPending}
-            aria-label="Fechar"
-          >
-            <X size={16} />
+    <Modal open onClose={handleClose} title="Nova reunião">
+      {!hasAnyProvider ? (
+        // Revisão de 05/10: botão não é link — o destino era texto azul no meio da frase.
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <p className="text-[length:var(--fs-body)] text-fg-muted">Conecte sua conta Google ou Microsoft antes de agendar.</p>
+          <Button href="/admin/integracoes" variant="secondary" size="sm">
+            Abrir Integrações
           </Button>
         </div>
+      ) : (
+        <form action={formAction} className="space-y-3">
+          <CampoForm label="Título" htmlFor="title" required>
+            <Input id="title" name="title" required placeholder="Ex: Alinhamento semanal" />
+          </CampoForm>
 
-        {!hasAnyProvider ? (
-          // Revisão de 05/10: botão não é link — o destino era texto azul no meio da frase.
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <p className="text-[length:var(--fs-body)] text-fg-muted">Conecte sua conta Google ou Microsoft antes de agendar.</p>
-            <Button href="/admin/integracoes" variant="secondary" size="sm">
-              Abrir Integrações
-            </Button>
+          <div className="grid grid-cols-1 gap-3">
+            <CampoForm label="Início" htmlFor="startAt" required>
+              <CampoDataHora id="startAt" name="startAt" required defaultValue={initialStart} />
+            </CampoForm>
+            <CampoForm label="Fim" htmlFor="endAt" required>
+              <CampoDataHora id="endAt" name="endAt" required defaultValue={initialEnd} />
+            </CampoForm>
           </div>
-        ) : (
-          <form action={formAction} className="space-y-3">
-            <CampoForm label="Título" htmlFor="title" required>
-              <Input id="title" name="title" required placeholder="Ex: Alinhamento semanal" />
+
+          <CampoForm label="Provedor" htmlFor="provider" required>
+            <Select id="provider" name="provider" required>
+              {hasGoogle && <option value="GOOGLE">Google Meet</option>}
+              {hasMicrosoft && <option value="MICROSOFT">Microsoft Teams</option>}
+            </Select>
+          </CampoForm>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <CampoForm label="Empresa" htmlFor="companyId">
+              <SearchableSelect
+                id="companyId"
+                name="companyId"
+                options={opcoesDeEmpresa(companies)}
+                avatar
+                lembrarRecentes="empresas"
+                vazioLabel="Nenhuma"
+                placeholder="Buscar empresa…"
+              />
             </CampoForm>
-
-            <div className="grid grid-cols-1 gap-3">
-              <CampoForm label="Início" htmlFor="startAt" required>
-                <CampoDataHora id="startAt" name="startAt" required defaultValue={initialStart} />
-              </CampoForm>
-              <CampoForm label="Fim" htmlFor="endAt" required>
-                <CampoDataHora id="endAt" name="endAt" required defaultValue={initialEnd} />
-              </CampoForm>
-            </div>
-
-            <CampoForm label="Provedor" htmlFor="provider" required>
-              <Select id="provider" name="provider" required>
-                {hasGoogle && <option value="GOOGLE">Google Meet</option>}
-                {hasMicrosoft && <option value="MICROSOFT">Microsoft Teams</option>}
-              </Select>
+            <CampoForm label="Cliente(s)" htmlFor="clientName" helper="Separe por vírgula, se houver mais de um">
+              <Input id="clientName" name="clientName" placeholder="Ex: Bruno, Maria" />
             </CampoForm>
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <CampoForm label="Empresa" htmlFor="companyId">
-                <SearchableSelect
-                  id="companyId"
-                  name="companyId"
-                  options={opcoesDeEmpresa(companies)}
-                  avatar
-                  lembrarRecentes="empresas"
-                  vazioLabel="Nenhuma"
-                  placeholder="Buscar empresa…"
-                />
-              </CampoForm>
-              <CampoForm label="Cliente(s)" htmlFor="clientName" helper="Separe por vírgula, se houver mais de um">
-                <Input id="clientName" name="clientName" placeholder="Ex: Bruno, Maria" />
-              </CampoForm>
-            </div>
+          <AttendeePicker users={allUsers} />
 
-            <AttendeePicker users={allUsers} />
-
-            {state?.error && <p className="text-[length:var(--fs-helper)] text-danger">{state.error}</p>}
-
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <Button
-                variant="secondary"
-                size="md"
-                onClick={onClose}
-                disabled={isPending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={isPending}
-                variant="primary" className="font-medium disabled:opacity-60"
-              >
-                {isPending ? "Agendando…" : "Agendar"}
-             </Button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+          <FormFooter
+            pending={isPending}
+            submitLabel="Agendar"
+            pendingLabel="Agendando…"
+            onCancel={onClose}
+            erro={state?.error}
+          />
+        </form>
+      )}
+    </Modal>
   );
 }

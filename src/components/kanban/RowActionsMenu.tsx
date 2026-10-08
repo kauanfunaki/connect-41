@@ -12,7 +12,7 @@ type Props = {
 
 // Menu "…" da linha de tarefa na visão de lista. Até aqui excluir uma tarefa
 // exigia abrir o detalhe dela — o que, numa lista de dezenas de itens criados
-// pelo "+ Adicionar Tarefa", significava um round-trip por exclusão.
+// pelo "Adicionar tarefa", significava um round-trip por exclusão.
 //
 // Irmão do <Link> do título, não filho: o clique não pode navegar. A linha é
 // `draggable`, então o gatilho também para a propagação — sem isso, mirar no

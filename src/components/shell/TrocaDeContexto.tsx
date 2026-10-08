@@ -73,7 +73,7 @@ export function TrocaDeContexto({
         {sectors.length > 1 && (
           <section aria-labelledby="troca-setor" className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 id="troca-setor" className="text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-muted">
+              <h3 id="troca-setor" className="c41-rotulo">
                 Setor
               </h3>
               {sectors.length > SETORES_PARA_BUSCAR && (
@@ -113,7 +113,7 @@ export function TrocaDeContexto({
                     ocupado={trocando === s.code}
                     onClick={() => irParaSetor(s.code)}
                     marca={
-                      <span className="inline-flex size-8 items-center justify-center rounded-md" style={{ backgroundColor: `${s.color}22` }}>
+                      <span className="inline-flex size-8 items-center justify-center rounded-md" style={{ backgroundColor: `color-mix(in srgb, ${s.color} 13%, transparent)` }}>
                         <span className="size-2.5 rounded-full" style={{ backgroundColor: s.color }} />
                       </span>
                     }
@@ -122,13 +122,13 @@ export function TrocaDeContexto({
                 </li>
               ))}
             </ul>
-            {termo && setores.length === 0 && <p className="text-[13px] text-fg-muted">Nenhum setor com esse nome.</p>}
+            {termo && setores.length === 0 && <p className="text-ui text-fg-muted">Nenhum setor com esse nome.</p>}
           </section>
         )}
 
         {tenants.length > 1 && (
           <section aria-labelledby="troca-escritorio" className="flex flex-col gap-3">
-            <h3 id="troca-escritorio" className="text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-muted">
+            <h3 id="troca-escritorio" className="c41-rotulo">
               Escritório
             </h3>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -145,7 +145,7 @@ export function TrocaDeContexto({
                 </li>
               ))}
             </ul>
-            <p className="text-[12px] text-fg-muted">Trocar de escritório volta para todos os setores.</p>
+            <p className="text-fs-2 text-fg-muted">Trocar de escritório volta para todos os setores.</p>
           </section>
         )}
       </div>
@@ -174,14 +174,14 @@ function Opcao({
       onClick={onClick}
       disabled={ocupado}
       aria-current={ativo ? "true" : undefined}
-      className={`w-full h-full flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors disabled:opacity-60 ${
+      className={`w-full h-full flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors disabled:opacity-[var(--c41-disabled-op)] ${
         ativo ? "border-brand bg-brand/5" : "border-border bg-surface hover:border-border-strong hover:bg-surface-hover"
       }`}
     >
       {marca}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13.5px] font-semibold text-fg">{titulo}</span>
-        {(detalhe || ocupado) && <span className="block truncate text-[11.5px] text-fg-muted">{ocupado ? "Trocando…" : detalhe}</span>}
+        <span className="block truncate text-ui font-semibold text-fg">{titulo}</span>
+        {(detalhe || ocupado) && <span className="block truncate text-micro text-fg-muted">{ocupado ? "Trocando…" : detalhe}</span>}
       </span>
       {ativo && <Check size={15} className="flex-shrink-0 text-brand" />}
     </button>

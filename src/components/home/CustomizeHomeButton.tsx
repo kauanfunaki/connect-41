@@ -17,11 +17,14 @@ import type { ActionState } from "@/lib/actionState";
 const SLOT_LABEL: Record<HomeWidgetSlot, string> = {
   top: "Topo",
   paineis: "Painéis",
+  "abaixo-dos-paineis": "Abaixo dos painéis",
   main: "Coluna principal",
   side: "Coluna lateral",
 };
 
-const SLOT_ORDER: HomeWidgetSlot[] = ["top", "paineis", "main", "side"];
+// A ordem da tela, de cima para baixo (os Indicadores descem para depois dos
+// painéis em 08/10 — escolha 7A do Kauan).
+const SLOT_ORDER: HomeWidgetSlot[] = ["top", "paineis", "abaixo-dos-paineis", "main", "side"];
 
 type Entry = { key: HomeWidgetKey; visible: boolean };
 

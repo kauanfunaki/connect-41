@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { CampoMes } from "@/components/ui/CampoMes";
@@ -202,19 +202,23 @@ export function FormLancamentoManual({
           </CampoForm>
         </FieldGrid>
 
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-          {salvo && (
-            <span className="mr-auto inline-flex items-center gap-1.5 text-[12px] text-success">
-              <Check size={14} className="flex-shrink-0" /> Lançado. Ele já aparece nas contas e na DRE.
-              {/* Empresa com alçada: a conta nasce aguardando, e a baixa fica travada até alguém aprovar. */}
-              {aguardando && " Aguardando aprovação antes da baixa."}
-            </span>
-          )}
-          {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-          <Button type="submit" disabled={pendente} className="w-full sm:w-auto">
-            {pendente ? "Lançando…" : "Lançar"}
-          </Button>
-        </div>
+        {/* O rodapé padrão (08/10/2026): era escrito à mão, com o erro em 12px
+            e "Lançando…" num ternário. */}
+        <FormFooter
+          pending={pendente}
+          submitLabel="Lançar"
+          pendingLabel="Lançando…"
+          erro={erro}
+          nota={
+            salvo && (
+              <span className="inline-flex items-center gap-1.5 text-success-fg">
+                <Check size={14} className="flex-shrink-0" /> Lançado. Ele já aparece nas contas e na DRE.
+                {/* Empresa com alçada: a conta nasce aguardando, e a baixa fica travada até alguém aprovar. */}
+                {aguardando && " Aguardando aprovação antes da baixa."}
+              </span>
+            )
+          }
+        />
       </form>
     </Card>
   );

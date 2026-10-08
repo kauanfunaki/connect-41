@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { moeda } from "@/lib/financeiro/formato";
+import { formatarCompetencia } from "@/lib/format";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
 import { gerarParcelas, MAXIMO_DE_PARCELAS, TAMANHO_MAXIMO_DA_NOTA } from "@/lib/financeiro/cobranca/acordo";
 import { criarAcordo } from "@/app/(app)/cobranca/actions";
@@ -84,7 +85,7 @@ export function CriarAcordo({
             deixavam o conteúdo 20px mais para dentro que o título. */}
         <div className="flex flex-col gap-4">
           <fieldset>
-            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Títulos vencidos deste sacado nesta empresa</legend>
+            <legend className="text-label font-medium text-fg mb-1.5">Títulos vencidos deste sacado nesta empresa</legend>
             <div className="flex flex-col items-start gap-2 max-h-48 overflow-y-auto">
               {candidatos.map((c) => (
                 <Checkbox
@@ -100,14 +101,14 @@ export function CriarAcordo({
                   }}
                   label={
                     <span className="tabular-nums">
-                      venc. {c.vencimentoLabel} · {moeda(c.valorCentavos)} · comp. {c.competencia}
+                      venc. {c.vencimentoLabel} · {moeda(c.valorCentavos)} · comp. {formatarCompetencia(c.competencia)}
                       {c.descricao ? ` · ${c.descricao}` : ""}
                     </span>
                   }
                 />
               ))}
             </div>
-            <p className="text-[12px] text-fg-muted mt-2">
+            <p className="text-helper text-fg-muted mt-2">
               Soma dos originais: <strong className="tabular-nums text-fg">{moeda(original)}</strong>
             </p>
           </fieldset>
@@ -139,7 +140,7 @@ export function CriarAcordo({
 
           {simulacao.length > 0 && (
             <div className="rounded-md border border-border p-3">
-              <p className="text-[12px] text-fg-secondary mb-2">
+              <p className="text-helper text-fg-secondary mb-2">
                 {diferenca > 0 ? (
                   <>Acréscimo de <strong className="tabular-nums">{moeda(diferenca)}</strong> — outras receitas na DRE econômica deste mês.</>
                 ) : diferenca < 0 ? (
@@ -149,9 +150,9 @@ export function CriarAcordo({
                 )}{" "}
                 Os originais continuam como receita na competência deles.
               </p>
-              <table className="w-full text-[12px]">
+              <table className="w-full text-ui">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className="py-1 pr-3 font-medium">Parcela</th>
                     <th className="py-1 pr-3 font-medium">Vencimento</th>
                     <th className="py-1 font-medium text-right">Valor</th>
@@ -173,7 +174,13 @@ export function CriarAcordo({
           )}
 
           <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-            {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+            {/* Duas etapas (revisar, depois confirmar) — fora do `FormFooter`, mas
+                com o erro no desenho dele (08/10/2026). */}
+            {erro && (
+              <p role="alert" className="mr-auto text-helper font-medium text-danger">
+                {erro}
+              </p>
+            )}
             {!confirmando ? (
               <>
                 <Button variant="secondary" onClick={fechar}>
@@ -195,7 +202,8 @@ export function CriarAcordo({
                   Voltar
                 </Button>
                 <Button
-                  disabled={pendente}
+                  loading={pendente}
+                  loadingLabel="Criando…"
                   onClick={() => {
                     const dados = new FormData();
                     for (const id of selecionados) dados.append("entryIds", id);
@@ -217,7 +225,7 @@ export function CriarAcordo({
                     });
                   }}
                 >
-                  {pendente ? "Criando…" : `Confirmar: encerrar ${selecionados.size} título(s) e criar ${simulacao.length} parcela(s)`}
+                  {`Confirmar: encerrar ${selecionados.size} título(s) e criar ${simulacao.length} parcela(s)`}
                 </Button>
               </>
             )}

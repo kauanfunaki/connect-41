@@ -35,11 +35,11 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] text-fg">
+          <p className="text-[length:var(--fs-ui)] text-fg">
             Aquisitivo: {ferias.acquisitivePeriodLabel} · {ferias.days} dias
           </p>
           {ferias.concessivePeriodLabel && (
-            <p className="text-[12px] text-fg-muted">Concessivo: {ferias.concessivePeriodLabel}</p>
+            <p className="text-[length:var(--fs-2)] text-fg-muted">Concessivo: {ferias.concessivePeriodLabel}</p>
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -69,11 +69,13 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
               ))}
             </Select>
           </div>
+          {/* Sem rótulo visível, os dois campos diziam "Escolher data", lado a
+              lado, sem dizer qual era qual (auditoria DRG-16, 07/10/2026). */}
           <div className="w-full sm:w-40">
-            <CampoData name="startDate" title="Data de início" aria-label="Data de início" />
+            <CampoData name="startDate" title="Data de início" aria-label="Data de início" placeholder="Início" />
           </div>
           <div className="w-full sm:w-40">
-            <CampoData name="returnDate" title="Data de retorno" aria-label="Data de retorno" />
+            <CampoData name="returnDate" title="Data de retorno" aria-label="Data de retorno" placeholder="Retorno" />
           </div>
           <Button
             variant="secondary"

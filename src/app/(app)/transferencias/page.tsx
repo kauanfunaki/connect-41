@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ArrowRightLeft, ArrowRight, Inbox, Loader, CheckCircle2 } from "lucide-react";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { ArrowRightLeft, ArrowRight, Inbox, Loader, CheckCircle2, Plus } from "lucide-react";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
@@ -10,9 +9,9 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { SectorChip } from "@/components/ui/SectorChip";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   aggregateHandoffStatus,
@@ -91,7 +90,7 @@ export default async function HandoffsPage({
             href="/transferencias/novo"
             variant="primary"
           >
-            + Nova Transferência
+            <Plus size={14} /> Nova transferência
           </Button>
         )}</>}
       />
@@ -101,10 +100,11 @@ export default async function HandoffsPage({
       <FaixaDeTotais
         itens={FILTER_TABS.map((t) => ({
           rotulo: t.label,
-          valor: String(contagem[t.value]),
+          valor: formatarNumero(contagem[t.value], 0),
           icone: t.value === "NEW" ? <Inbox /> : t.value === "IN_PROGRESS" ? <Loader /> : <CheckCircle2 />,
-          tom: t.value === "NEW" ? (contagem.NEW > 0 ? "text-warning" : undefined) : t.value === "DONE" ? "text-success" : undefined,
+          tom: t.value === "NEW" ? (contagem.NEW > 0 ? "text-warning-fg" : undefined) : t.value === "DONE" ? "text-success-fg" : undefined,
           detalhe: t.value === statusFilter ? "mostrando agora" : undefined,
+          ativo: t.value === statusFilter,
           href: hrefDaSituacao(t.value),
         }))}
       />
@@ -139,44 +139,43 @@ export default async function HandoffsPage({
           {handoffs.map((h) => {
             const aggregate = aggregateHandoffStatus(h.sectors.map((s) => s.status));
             return (
-              <Card
-                key={h.id}
-                className="p-4 transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-px"
-              >
-                <Link href={`/transferencias/${h.id}`} className="group flex items-start gap-3">
-                  <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
-                    <ArrowRightLeft size={16} />
-                  </span>
+              // O cartão inteiro é o link (07/10/2026): o Link morava dentro do
+              // `p-4` do Card, a borda acendia no cartão todo e os 16px da margem
+              // não clicavam. O `Card` com `href`, no hover dos cartões-link.
+              <Card key={h.id} href={`/transferencias/${h.id}`} className="group flex items-start gap-3 p-4">
+                <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
+                  <ArrowRightLeft size={16} />
+                </span>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <SectorChip label={sectorLabels[h.fromSector] ?? h.fromSector} color={sectorColors[h.fromSector] ?? "#586577"} />
-                      <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
-                      {h.sectors.map((s) => (
-                        <SectorChip
-                          key={s.sectorCode}
-                          label={sectorLabels[s.sectorCode] ?? s.sectorCode}
-                          color={sectorColors[s.sectorCode] ?? "#586577"}
-                        />
-                      ))}
-                      <Badge variant={HANDOFF_STATUS_BADGE[aggregate]}>{HANDOFF_STATUS_LABEL[aggregate]}</Badge>
-                      <Badge variant={HANDOFF_PRIORITY_BADGE[h.priority]}>{HANDOFF_PRIORITY_LABEL[h.priority]}</Badge>
-                    </div>
-
-                    <p className="text-[length:var(--fs-body)] font-medium text-fg group-hover:text-brand transition-colors">
-                      {entityNames[h.entityId] ?? "(removido)"}
-                    </p>
-
-                    {h.message && (
-                      <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-1">{h.message}</p>
-                    )}
-
-                    <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
-                      Solicitado por {h.requester.name} em{" "}
-                      {formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
-                    </p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <SectorChip label={sectorLabels[h.fromSector] ?? h.fromSector} color={sectorColors[h.fromSector] ?? "#586577"} />
+                    <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
+                    {h.sectors.map((s) => (
+                      <SectorChip
+                        key={s.sectorCode}
+                        label={sectorLabels[s.sectorCode] ?? s.sectorCode}
+                        color={sectorColors[s.sectorCode] ?? "#586577"}
+                      />
+                    ))}
+                    {/* Selo, e não Badge: é a situação do cartão (regra de 02/10 no Selo). */}
+                    <Selo tom={tomDaVariante(HANDOFF_STATUS_BADGE[aggregate])}>{HANDOFF_STATUS_LABEL[aggregate]}</Selo>
+                    <Selo tom={tomDaVariante(HANDOFF_PRIORITY_BADGE[h.priority])}>{HANDOFF_PRIORITY_LABEL[h.priority]}</Selo>
                   </div>
-                </Link>
+
+                  <p className="text-[length:var(--fs-card-title)] font-semibold text-fg group-hover:text-brand transition-colors">
+                    {entityNames[h.entityId] ?? "(removido)"}
+                  </p>
+
+                  {h.message && (
+                    <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-1">{h.message}</p>
+                  )}
+
+                  <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
+                    Solicitado por {h.requester.name} em{" "}
+                    {formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
+                  </p>
+                </div>
               </Card>
             );
           })}

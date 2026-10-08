@@ -9,6 +9,7 @@ import { UsuariosTable } from "@/components/admin/UsuariosTable";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { canAddUser } from "@/lib/subscriptions";
 import { alternarAtivoUsuario, alternarAtivoEmMassa, atribuirSetorEmMassa } from "./actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 export default async function UsuariosPage() {
   const ctx = await getAuthContext();
@@ -49,9 +50,9 @@ export default async function UsuariosPage() {
         )}</>}
       />
       {!seatCheck.allowed && (
-        <div className="mb-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2">
-          <p className="text-[12.5px] text-fg">{seatCheck.reason}</p>
-        </div>
+        <Aviso tom="atencao" className="mb-4">
+          <p className="text-fg">{seatCheck.reason}</p>
+        </Aviso>
       )}
 
       <UsuariosTable

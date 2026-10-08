@@ -4,12 +4,12 @@ import { AlertTriangle, CheckCircle2, Hourglass, MessageCircleReply, MessageSqua
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { getActiveSectors, getSectorMaps } from "@/lib/sectors";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -93,30 +93,34 @@ export default async function PedidosAoClientePage({
           itens={[
             {
               rotulo: "Aguardando cliente",
-              valor: String(contadores.aguardando),
+              valor: formatarNumero(contadores.aguardando, 0),
               icone: <Hourglass />,
               href: href({ recorte: "aguardando", vencidas: undefined }),
+              ativo: recorte === "aguardando" && !vencidas,
             },
             {
               rotulo: "Respondidas",
-              valor: String(contadores.respondidas),
+              valor: formatarNumero(contadores.respondidas, 0),
               tom: contadores.respondidas > 0 ? "text-brand" : "",
               icone: <MessageCircleReply />,
               href: href({ recorte: "respondidas", vencidas: undefined }),
+              ativo: recorte === "respondidas" && !vencidas,
             },
             {
               rotulo: "Vencidas",
-              valor: String(contadores.vencidas),
+              valor: formatarNumero(contadores.vencidas, 0),
               tom: contadores.vencidas > 0 ? "text-danger" : "",
               icone: <AlertTriangle />,
               href: href({ recorte: undefined, vencidas: "1" }),
+              ativo: recorte === "andamento" && vencidas,
             },
             {
               rotulo: "Encerradas",
-              valor: String(contadores.encerradas),
+              valor: formatarNumero(contadores.encerradas, 0),
               tom: "text-fg-muted",
               icone: <CheckCircle2 />,
               href: href({ recorte: "encerradas", vencidas: undefined }),
+              ativo: recorte === "encerradas" && !vencidas,
             },
           ]}
         />
@@ -189,7 +193,7 @@ export default async function PedidosAoClientePage({
               }))}
             >
               <TabelaNoDesktop padrao>
-                <table className="w-full min-w-[920px] text-[13px]">
+                <table className="w-full min-w-[920px]">
                   <thead>
                     <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">

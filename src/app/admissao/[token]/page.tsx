@@ -1,20 +1,12 @@
 import { headers } from "next/headers";
 import { getPrisma } from "@/lib/prisma";
 import { hit, clientIp } from "@/lib/rateLimit";
+import { CheckCircle2, Clock, Link2Off } from "lucide-react";
 import { AdmissaoForm } from "@/components/admissao/AdmissaoForm";
+import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
+import { TelaDeAvisoPublica } from "@/components/publico/TelaDeAvisoPublica";
 
 export const metadata = { title: "Admissão" };
-
-function TokenInvalido({ titulo, texto }: { titulo: string; texto: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="max-w-md text-center">
-        <h1 className="text-[18px] font-semibold text-fg mb-2">{titulo}</h1>
-        <p className="text-[13px] text-fg-muted">{texto}</p>
-      </div>
-    </div>
-  );
-}
 
 export default async function AdmissaoPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -25,7 +17,7 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ token
   const link = await prisma.admissaoLink.findUnique({
     where: { token },
     include: {
-      tenant: { select: { name: true } },
+      tenant: { select: { name: true, logoUrl: true } },
       person: {
         select: {
           name: true, cpf: true, rg: true, pis: true, ctps: true, ctpsSerie: true, education: true,
@@ -40,13 +32,13 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ token
 
   if (!link) {
     hit(`admissao-view-miss:${ip}`, 20, 10 * 60_000);
-    return <TokenInvalido titulo="Link inválido" texto="Este link de admissão não existe ou foi digitado incorretamente. Solicite um novo ao RH." />;
+    return <TelaDeAvisoPublica icone={<Link2Off />} titulo="Link inválido" texto="Este link de admissão não existe ou foi digitado incorretamente. Solicite um novo ao RH." />;
   }
   if (link.status !== "PENDENTE") {
-    return <TokenInvalido titulo="Admissão já enviada" texto="Seus dados já foram recebidos. Se precisar corrigir algo, entre em contato com o RH." />;
+    return <TelaDeAvisoPublica icone={<CheckCircle2 />} tom="sucesso" titulo="Admissão já enviada" texto="Seus dados já foram recebidos. Se precisar corrigir algo, entre em contato com o RH." />;
   }
   if (link.expiresAt < new Date()) {
-    return <TokenInvalido titulo="Link expirado" texto="Este link de admissão expirou. Solicite um novo ao RH." />;
+    return <TelaDeAvisoPublica icone={<Clock />} titulo="Link expirado" texto="Este link de admissão expirou. Solicite um novo ao RH." />;
   }
 
   const p = link.person;
@@ -55,13 +47,19 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ token
   return (
     <div className="min-h-screen py-10 px-4">
       <div className="max-w-2xl mx-auto">
-        <header className="mb-6">
-          <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Bem-vindo(a), {p.name}!</h1>
-          <p className="text-[13px] text-fg-muted mt-1">
-            Preencha seus dados e envie seus documentos para concluir sua admissão
-            {p.currentCompany ? ` na ${p.currentCompany.name}` : ""}. Leva poucos minutos.
-          </p>
-        </header>
+        {/* O logo do escritório, como no portal de vagas (padrão aceito na
+            página de decisões, 08/10/2026): quem abre o link é de fora e
+            precisa reconhecer de quem é o pedido. */}
+        <CabecalhoPublico
+          logo={link.tenant.logoUrl ? { src: link.tenant.logoUrl, alt: link.tenant.name } : null}
+          titulo={<>Bem-vindo(a), {p.name}!</>}
+          subtitulo={
+            <>
+              Preencha seus dados e envie seus documentos para concluir sua admissão
+              {p.currentCompany ? ` na ${p.currentCompany.name}` : ""}. Leva poucos minutos.
+            </>
+          }
+        />
 
         <AdmissaoForm
           token={token}
@@ -87,7 +85,7 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ token
           }}
         />
 
-        <p className="text-[11px] text-fg-muted mt-6 text-center">
+        <p className="text-[length:var(--fs-micro)] text-fg-muted mt-6 text-center">
           Processo conduzido por {link.tenant.name}. Seus dados são usados apenas para sua admissão (LGPD).
         </p>
       </div>

@@ -1,7 +1,7 @@
 import { Pagination } from "@/components/shared/Pagination";
-import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -87,34 +87,20 @@ export default async function PessoasPage({
       {/* Header */}
       <PageHeader
         title="Pessoas"
-        subtitle={<>{`${total} funcionário${total !== 1 ? "s" : ""} interno${total !== 1 ? "s" : ""} do escritório`}</>}
+        subtitle="Os funcionários internos do escritório."
         action={<>{canCreate && (
           <Button
             href="/pessoas/nova?internal=1"
             variant="primary"
           >
-            + Nova Pessoa
+            <Plus size={14} /> Nova pessoa
           </Button>
         )}</>}
       />
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex-1 max-w-xs">
-          <DebouncedSearchInput placeholder="Buscar por nome…" />
-        </div>
-
-        {/* Sem filtro de empresa: interno da 41 não tem empresa cliente. */}
-        <PessoasFilterButton
-          search={search}
-          situacao={situacaoSelecionada(situacaoFiltro)}
-          mostrarEmpresa={false}
-        />
-      </div>
-
       {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
       {ocultos > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted mb-4">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[length:var(--fs-2)] text-fg-muted mb-4">
           <p>
             {ocultos} pessoa{ocultos !== 1 ? "s" : ""} inativa{ocultos !== 1 ? "s" : ""} fora desta lista.
           </p>
@@ -124,24 +110,33 @@ export default async function PessoasPage({
         </div>
       )}
 
-      {/* Table */}
+      {/* Contagem, busca e filtro na barra do casco (07/10/2026), como as
+          filas irmãs de 05/10: eram a busca e o filtro soltos acima da
+          tabela, a contagem no subtítulo e o vazio num cartão à parte. O
+          painel do Filtros continua o mesmo (modelo aprovado), na barra. */}
+      <CascoDaTabela
+        contagem={contarItens(total, "pessoa", "pessoas")}
+        busca={<DebouncedSearchInput placeholder="Buscar por nome…" className="w-72 max-w-full" />}
+        filtros={
+          // Sem filtro de empresa: interno da 41 não tem empresa cliente.
+          <PessoasFilterButton search={search} situacao={situacaoSelecionada(situacaoFiltro)} mostrarEmpresa={false} />
+        }
+      >
       {people.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={<Users />}
-            title={search ? "Nenhuma pessoa encontrada" : "Nenhuma pessoa cadastrada ainda"}
-            description={
-              search
-                ? "Tente ajustar a busca."
-                : "São os funcionários do próprio escritório. O pessoal das empresas clientes fica em Colaboradores de clientes."
-            }
-            action={
-              !search && canCreate ? (
-                <Button href="/pessoas/nova?internal=1">+ Nova Pessoa</Button>
-              ) : undefined
-            }
-          />
-        </Card>
+        <EmptyState
+          icon={<Users />}
+          title={search ? "Nenhuma pessoa encontrada" : "Nenhuma pessoa cadastrada ainda"}
+          description={
+            search
+              ? "Tente ajustar a busca."
+              : "São os funcionários do próprio escritório. O pessoal das empresas clientes fica em Colaboradores de clientes."
+          }
+          action={
+            !search && canCreate ? (
+              <Button href="/pessoas/nova?internal=1"><Plus size={14} /> Nova pessoa</Button>
+            ) : undefined
+          }
+        />
       ) : (
         <PessoasTable
           people={people.map((p) => ({
@@ -161,6 +156,7 @@ export default async function PessoasPage({
           definirAtivoPessoasEmMassa={definirAtivoPessoasEmMassa}
         />
       )}
+      </CascoDaTabela>
 
       <Pagination page={pageNum} totalPages={totalPages} buildHref={(n) => buildUrl({ page: String(n) })} total={total} rotulo="pessoas" />
       </div>

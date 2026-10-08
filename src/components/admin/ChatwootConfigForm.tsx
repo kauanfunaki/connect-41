@@ -13,6 +13,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   hasConfig: boolean;
@@ -65,18 +66,18 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
       {hasConfig && <form id={idDoRemover} action={removeAction} className="hidden" />}
       <form ref={formRef} action={formAction} className="space-y-4">
         {state && "error" in state && state.error && (
-          <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>
+          <Aviso>{state.error}</Aviso>
         )}
         {state && "success" in state && state.success && (
-          <p className="text-[13px] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">Conexão com o Chatwoot salva.</p>
+          <Aviso tom="sucesso">Conexão com o Chatwoot salva.</Aviso>
         )}
         {removeState && "success" in removeState && removeState.success && (
-          <p className="text-[13px] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">Conexão removida.</p>
+          <Aviso tom="sucesso">Conexão removida.</Aviso>
         )}
         {testResult && (
-          <p className={`text-[13px] rounded-md px-3 py-2 border ${testResult.ok ? "text-success bg-success/8 border-success/20" : "text-danger bg-danger/8 border-danger/20"}`}>
+          <Aviso tom={testResult.ok ? "sucesso" : "perigo"}>
             {testResult.message}
-          </p>
+          </Aviso>
         )}
 
         {/* O ID da conta é um número curto: coluna estreita ao lado da URL.
@@ -153,9 +154,9 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
             )}
           </div>
           {syncResult && (
-            <p className={`mt-2 text-[13px] rounded-md px-3 py-2 border ${syncResult.ok ? "text-success bg-success/8 border-success/20" : "text-danger bg-danger/8 border-danger/20"}`}>
+            <Aviso tom={syncResult.ok ? "sucesso" : "perigo"} className="mt-2">
               {syncResult.message}
-            </p>
+            </Aviso>
           )}
         </div>
       )}

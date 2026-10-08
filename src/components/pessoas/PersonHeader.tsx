@@ -18,7 +18,7 @@ const TYPE_LABEL: Record<PersonType, string> = {
 
 const TYPE_STYLE: Record<PersonType, string> = {
   CANDIDATO: "bg-brand/10 text-brand border-brand/25",
-  COLABORADOR: "bg-success/10 text-success border-success/25",
+  COLABORADOR: "bg-success/10 text-success-fg border-success/25",
 };
 
 const STATUS_LABEL: Record<PersonEmploymentStatus, string> = {
@@ -98,7 +98,7 @@ export function PersonHeader({
                   onClick={copyCpf}
                   title="Copiar CPF" aria-label="Copiar CPF"
                 >
-                  {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                  {copied ? <Check size={14} className="text-success-fg" /> : <Copy size={14} />}
                   {maskCpf(cpf)}
                 </Button>
               )}
@@ -138,7 +138,7 @@ export function PersonHeader({
           {canRequestHandoff && (
             <Button href={`/transferencias/novo?entityType=PERSON&entityId=${id}`} variant="secondary" size="sm">
               <ArrowRightLeft size={14} />
-              Solicitar Transferência
+              Solicitar transferência
             </Button>
           )}
           {canEdit && (
