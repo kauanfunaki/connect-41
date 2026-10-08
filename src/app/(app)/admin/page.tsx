@@ -174,7 +174,7 @@ export default async function AdminPage() {
                         className="text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"
                       />
                     </div>
-                    <p className="text-[12.5px] text-fg-muted mt-1 leading-relaxed">{c.description}</p>
+                    <p className="text-fs-2 text-fg-muted mt-1 leading-relaxed">{c.description}</p>
                   </Link>
                 ))}
             </div>

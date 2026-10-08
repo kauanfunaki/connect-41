@@ -100,7 +100,7 @@ function CenaDoMeuDia() {
     <>
       <Cartao className="left-[2%] top-[3%] w-[65%] p-4 flex flex-col gap-3" entrar={0}>
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-[17px] font-semibold leading-tight">Meu dia</p>
+          <p className="text-fs-6 font-semibold leading-tight">Meu dia</p>
           <p className="text-[10.5px] text-[#6B7489] truncate">Segunda-feira, 19 de outubro</p>
         </div>
         <div className="rounded-xl border border-[#E9ECF3] overflow-hidden">
@@ -371,6 +371,9 @@ function CenaDaAgenda() {
               <span className="flex flex-col">
                 {horas.map((h, i) => (
                   <span key={h} className="relative h-7 border-t border-[#F0F2F6]">
+                    {/* A hora fica em 9px, abaixo da escala, de propósito (08/10/2026): é a
+                        miniatura de uma semana, com a célula de ~60px e o título da reunião
+                        em 9,5px ao lado — em 11px a hora passaria do título e da célula. */}
                     {d.reuniao?.linha === i && (
                       <span className="absolute inset-x-0 top-0.5 rounded-[5px] bg-[#1F5EEA] px-1.5 py-0.5 text-white">
                         <span className="block text-[9px] font-semibold leading-tight tabular-nums">{d.reuniao.hora}</span>
