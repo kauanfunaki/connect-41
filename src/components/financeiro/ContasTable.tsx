@@ -116,8 +116,9 @@ export function ContasTable({
 
   // "Ver nota" e "abrir pendência" eram texto azul embaixo dos botões; desde
   // a conferência de 30/09 vão no menu "⋯" das ações da linha.
-  const acoes = (l: LinhaDaConta) => (
+  const acoes = (l: LinhaDaConta, emColunas = false) => (
     <AcoesDaConta
+      emColunas={emColunas}
       entryId={l.id}
       situacao={l.situacao}
       status={l.status}
@@ -212,7 +213,9 @@ export function ContasTable({
             <col className="w-[116px]" />
             <col className="w-[120px]" />
             <col className="w-[160px]" />
-            <col className="w-[216px]" />
+            {/* 256px (08/10/2026): "Conferir" + "Receber" + "⋯" pediam ~246px
+                com o recuo, e o "⋯" encostava na borda nos 216px de antes. */}
+            <col className="w-[256px]" />
           </colgroup>
           <thead>
             <tr className="border-b border-border bg-table-header-bg text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
@@ -304,7 +307,7 @@ export function ContasTable({
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-1.5">{selos(l)}</div>
                 </td>
-                <td className="px-4 py-3">{acoes(l)}</td>
+                <td className="px-4 py-3">{acoes(l, true)}</td>
               </LinhaFiltravel>
             ))}
           </tbody>
