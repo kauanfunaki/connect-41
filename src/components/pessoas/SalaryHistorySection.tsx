@@ -109,7 +109,9 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
           larguras soltas, que quebrava em lugares diferentes conforme a tela,
           e o rótulo "Novo Cargo (promoção)" não cabia na coluna. Agora é a
           grade dos formulários da ficha, com o botão alinhado ao campo. */}
-      <form action={formAction} className="border-t border-border pt-5">
+      <form action={formAction} className="border-t border-border pt-5 space-y-4">
+        {/* Bloco do "novo" com nome, acima dos campos (5A, 08/10/2026). */}
+        <h3 className="c41-rotulo">Novo reajuste</h3>
         <FieldGrid columns="sm:grid-cols-2 xl:grid-cols-[180px_180px_minmax(0,240px)_minmax(0,1fr)_auto]">
           <CampoForm label="Novo Salário" htmlFor="newSalary" required>
             <Input id="newSalary" name="newSalary" type="number" step="0.01" required prefix="R$" placeholder="0,00" />

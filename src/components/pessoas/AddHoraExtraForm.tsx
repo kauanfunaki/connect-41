@@ -30,6 +30,8 @@ export function AddHoraExtraForm({ action }: Props) {
   // justificativa, como nos outros formulários da ficha.
   return (
     <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
+      {/* Bloco do "novo" com nome, acima dos campos (5A, 08/10/2026). */}
+      <h3 className="c41-rotulo">Novo lançamento</h3>
       <FieldGrid columns="sm:grid-cols-3 lg:grid-cols-6">
         <CampoForm label="Data" htmlFor="date" required>
           <CampoData id="date" name="date" required />

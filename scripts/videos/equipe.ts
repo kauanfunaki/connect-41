@@ -2001,9 +2001,11 @@ function videosDoDp(): DefinicaoDeVideo[] {
       async executar(r) {
         await r.ir("/avaliacoes");
         await r.cartaz(SELO, "Avaliações de desempenho", "Ciclos, notas por competência e plano de desenvolvimento");
-        await r.digitar(main(r).getByRole("textbox", { name: /^Nome do Ciclo/ }), "Avaliação 2026.2", "No topo, preencha o Nome do Ciclo…");
-        await digitarData(r, main(r).getByRole("combobox", { name: /^Início/ }), daquiA(0), "…o Início e, se já souber, o Fim.");
-        await r.clicar(main(r).getByRole("button", { name: "Criar Ciclo" }), "Clique em Criar Ciclo.");
+        await r.clicar(main(r).getByRole("button", { name: "Novo ciclo" }), "Para abrir um ciclo, clique em Novo ciclo.");
+        const novoCiclo = dialogo(r, "Novo ciclo de avaliação");
+        await r.digitar(novoCiclo.getByRole("textbox", { name: /^Nome do ciclo/ }), "Avaliação 2026.2", "Preencha o Nome do ciclo…");
+        await digitarData(r, novoCiclo.getByRole("combobox", { name: /^Início/ }), daquiA(0), "…o Início e, se já souber, o Fim.");
+        await r.clicar(novoCiclo.getByRole("button", { name: "Criar ciclo" }), "Clique em Criar ciclo.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await main(r).getByRole("button", { name: "Avaliar Colaborador" }).waitFor({ timeout: 20000 });

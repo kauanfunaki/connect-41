@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-import { Pencil, UserPlus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
@@ -261,17 +261,11 @@ export default async function VagaPage({
 
       {/* Funil de recrutamento */}
       <Card className="p-5 mb-4">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <h2 className="min-w-0 text-card-title font-semibold text-fg">
-            Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
-          </h2>
-          {/* Era link de texto azul (30/09): botão não é link. */}
-          {canAct && (
-            <Button href="/candidatos/nova" variant="secondary" size="xs">
-              <UserPlus size={11} /> Novo Candidato
-            </Button>
-          )}
-        </div>
+        {/* O "Novo candidato" saiu daqui para o bloco "Nova candidatura",
+            acima do formulário de vincular (5A, 08/10/2026). */}
+        <h2 className="mb-4 text-card-title font-semibold text-fg">
+          Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
+        </h2>
 
         {vaga.candidaturas.length === 0 ? (
           <p className="text-fs-3 text-fg-muted">Nenhum candidato vinculado ainda.</p>
@@ -331,7 +325,11 @@ export default async function VagaPage({
           </>
         )}
 
-        {canAct && <div className="mt-4"><AddCandidatoForm action={addCandidatoAction} candidatos={candidatos} /></div>}
+        {canAct && (
+          <div className="mt-4">
+            <AddCandidatoForm action={addCandidatoAction} candidatos={candidatos} novoCandidatoHref="/candidatos/nova" />
+          </div>
+        )}
 
         {/* Quem não pode agir na vaga também não pergunta ao assistente: as
             sugestões dele são movimentos no funil, e sugerir o que a pessoa não

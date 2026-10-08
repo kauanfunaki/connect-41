@@ -65,13 +65,8 @@ export default async function TemplatesPage() {
           <EmptyState
             icon={<FileQuestion />}
             title="Nenhum modelo cadastrado"
-            description="Crie um modelo de teste (ex: Português Básico) pra reaproveitar em vários candidatos."
-            action={
-              <Button href="/testes/templates/novo" variant="primary">
-                <Plus size={14} />
-                Novo modelo
-              </Button>
-            }
+            // Sem repetir o botão de criar: ele mora no cabeçalho (5A, 08/10/2026).
+            description="Crie um modelo de teste (ex.: Português básico) para reaproveitar em vários candidatos, em “Novo modelo”."
           />
         </Card>
       ) : (
