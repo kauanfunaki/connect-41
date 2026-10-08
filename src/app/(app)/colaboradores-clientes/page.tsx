@@ -110,7 +110,7 @@ export default async function ColaboradoresClientesPage({
           canCreate ? (
             <Button href="/pessoas/nova?tipo=cliente" variant="primary">
               <Plus size={14} />
-              Novo Colaborador
+              Novo colaborador
             </Button>
           ) : undefined
         }

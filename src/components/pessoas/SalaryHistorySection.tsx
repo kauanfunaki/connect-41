@@ -48,7 +48,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
   return (
     <Card className="p-5 mb-4">
       {/* Título de cartão no token de cartão — era o de seção, 18px (DRG-10). */}
-      <h2 className="text-card-title font-semibold text-fg mb-4">Histórico Salarial</h2>
+      <h2 className="text-card-title font-semibold text-fg mb-4">Histórico salarial</h2>
 
       {history.length === 0 ? (
         <p className="text-helper text-fg-muted mb-4">Nenhum reajuste registrado ainda.</p>
@@ -113,10 +113,10 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
         {/* Bloco do "novo" com nome, acima dos campos (5A, 08/10/2026). */}
         <h3 className="c41-rotulo">Novo reajuste</h3>
         <FieldGrid columns="sm:grid-cols-2 xl:grid-cols-[180px_180px_minmax(0,240px)_minmax(0,1fr)_auto]">
-          <CampoForm label="Novo Salário" htmlFor="newSalary" required>
+          <CampoForm label="Novo salário" htmlFor="newSalary" required>
             <Input id="newSalary" name="newSalary" type="number" step="0.01" required prefix="R$" placeholder="0,00" />
           </CampoForm>
-          <CampoForm label="Data do Reajuste" htmlFor="effectiveDate" required>
+          <CampoForm label="Data do reajuste" htmlFor="effectiveDate" required>
             <CampoData id="effectiveDate" name="effectiveDate" required />
           </CampoForm>
           <CampoForm label="Novo cargo" htmlFor="cargoId" helper="Só em promoção.">
@@ -132,7 +132,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
           </CampoForm>
           <AlinhadoAoCampo>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Registrando…" : "Registrar Reajuste"}
+              {isPending ? "Registrando…" : "Registrar reajuste"}
             </Button>
           </AlinhadoAoCampo>
         </FieldGrid>

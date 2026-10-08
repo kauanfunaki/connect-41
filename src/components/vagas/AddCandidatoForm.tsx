@@ -51,7 +51,7 @@ export function AddCandidatoForm({ action, candidatos, novoCandidatoHref }: Prop
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
-            {isPending ? "Vinculando…" : "Vincular Candidato"}
+            {isPending ? "Vinculando…" : "Vincular candidato"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

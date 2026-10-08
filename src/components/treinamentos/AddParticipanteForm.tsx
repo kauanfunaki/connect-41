@@ -21,7 +21,7 @@ export function AddParticipanteForm({ action, candidatos }: Props) {
     <form action={formAction} className="border-t border-border pt-4 space-y-3">
       {/* Bloco do "novo" com nome, acima do campo (5A, 08/10/2026). */}
       <h3 className="c41-rotulo">Novo participante</h3>
-      {/* Mesmo desenho do "Avaliar Colaborador" do ciclo: escolha + ação na
+      {/* Mesmo desenho do "Avaliar colaborador" do ciclo: escolha + ação na
           mesma linha, o botão alinhado ao controle e não ao rótulo. */}
       <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_auto]" className="max-w-xl">
         <CampoForm label="Colaborador" htmlFor="personId" required>
@@ -34,7 +34,7 @@ export function AddParticipanteForm({ action, candidatos }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Adicionando…" : "Adicionar Participante"}
+            {isPending ? "Adicionando…" : "Adicionar participante"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

@@ -52,7 +52,7 @@ export function AddFeriasForm({ action }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Programando…" : "Programar Férias"}
+            {isPending ? "Programando…" : "Programar férias"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

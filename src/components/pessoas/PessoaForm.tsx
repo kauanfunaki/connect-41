@@ -397,7 +397,7 @@ export function PessoaForm({
               <CampoForm label="RG" htmlFor="rg">
                 <Input id="rg" name="rg" type="text" value={values.rg} placeholder="00.000.000-0" maxLength={14} />
               </CampoForm>
-              <CampoForm label="Data de Nascimento" htmlFor="birthDate">
+              <CampoForm label="Data de nascimento" htmlFor="birthDate">
                 <CampoData
                   id="birthDate"
                   name="birthDate"
@@ -441,7 +441,7 @@ export function PessoaForm({
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
             <FieldGrid columns="sm:grid-cols-[180px_1fr_120px]">
-              <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche Logradouro, Bairro, Cidade e UF automaticamente.">
+              <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche logradouro, bairro, cidade e UF automaticamente.">
                 <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} placeholder="00000-000" maxLength={9} />
               </CampoForm>
               <CampoForm label="Logradouro" htmlFor="addressStreet">
@@ -519,7 +519,7 @@ export function PessoaForm({
                     ))}
                   </Select>
                 </CampoForm>
-                <CampoForm label="Data de Admissão" htmlFor="admissionDate">
+                <CampoForm label="Data de admissão" htmlFor="admissionDate">
                   <CampoData
                     id="admissionDate"
                     name="admissionDate"
@@ -527,7 +527,7 @@ export function PessoaForm({
                     onChange={(v) => setValues((prev) => ({ ...prev, admissionDate: v }))}
                   />
                 </CampoForm>
-                <CampoForm label="Data de Demissão" htmlFor="dismissalDate">
+                <CampoForm label="Data de demissão" htmlFor="dismissalDate">
                   <CampoData
                     id="dismissalDate"
                     name="dismissalDate"
@@ -538,10 +538,10 @@ export function PessoaForm({
                 <CampoForm label="Jornada" htmlFor="workShift">
                   <Input id="workShift" name="workShift" type="text" placeholder="ex: 08h-18h" value={values.workShift} />
                 </CampoForm>
-                <CampoForm label="Carga Horária Semanal" htmlFor="weeklyWorkHours">
+                <CampoForm label="Carga horária semanal" htmlFor="weeklyWorkHours">
                   <Input id="weeklyWorkHours" name="weeklyWorkHours" type="number" step="0.5" suffix="h" value={values.weeklyWorkHours} />
                 </CampoForm>
-                <CampoForm label="Carga Horária Mensal" htmlFor="monthlyWorkHours">
+                <CampoForm label="Carga horária mensal" htmlFor="monthlyWorkHours">
                   <Input id="monthlyWorkHours" name="monthlyWorkHours" type="number" step="0.5" suffix="h" value={values.monthlyWorkHours} />
                 </CampoForm>
               </FieldGrid>
@@ -605,7 +605,7 @@ export function PessoaForm({
             <FormSection title="Dados bancários e salário">
               {canEditSensitive ? (
                 <FieldGrid columns={GRADE}>
-                  <CampoForm label="Salário Atual" htmlFor="currentSalary">
+                  <CampoForm label="Salário atual" htmlFor="currentSalary">
                     <Input id="currentSalary" name="currentSalary" type="number" step="0.01" prefix="R$" placeholder="0,00" value={values.currentSalary} />
                   </CampoForm>
                   <CampoForm label="Banco" htmlFor="bankName">
@@ -617,7 +617,7 @@ export function PessoaForm({
                   <CampoForm label="Conta" htmlFor="bankAccount">
                     <Input id="bankAccount" name="bankAccount" type="text" value={values.bankAccount} />
                   </CampoForm>
-                  <CampoForm label="Tipo de Conta" htmlFor="bankAccountType">
+                  <CampoForm label="Tipo de conta" htmlFor="bankAccountType">
                     <Input id="bankAccountType" name="bankAccountType" type="text" value={values.bankAccountType} />
                   </CampoForm>
                 </FieldGrid>

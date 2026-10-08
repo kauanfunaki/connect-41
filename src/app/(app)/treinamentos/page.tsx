@@ -39,7 +39,7 @@ export default async function TreinamentosPage() {
   const novo = canManage && (
     <Button href="/treinamentos/novo" variant="primary">
       <Plus size={14} />
-      Novo Treinamento
+      Novo treinamento
     </Button>
   );
 

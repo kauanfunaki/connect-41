@@ -47,7 +47,7 @@ export default async function AfastamentosPage({
         atual="Afastamentos"
       />
       <BackButton className="mb-3" />
-      <PageHeader title="Afastamentos e Atestados" />
+      <PageHeader title="Afastamentos e atestados" />
 
       <Card className="p-5">
         {absences.length === 0 ? (

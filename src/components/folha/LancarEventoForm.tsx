@@ -35,27 +35,27 @@ export function LancarEventoForm({ action, colaboradores }: Props) {
             placeholder="Buscar colaborador…"
           />
         </CampoForm>
-        <CampoForm label="Salário Bruto" htmlFor="grossSalary" required>
+        <CampoForm label="Salário bruto" htmlFor="grossSalary" required>
           <Input id="grossSalary" name="grossSalary" type="number" step="0.01" required prefix="R$" placeholder="0,00" />
         </CampoForm>
 
-        <CampoForm label="Dias Trabalhados" htmlFor="workedDays">
+        <CampoForm label="Dias trabalhados" htmlFor="workedDays">
           <Input id="workedDays" name="workedDays" type="number" min={0} max={31} />
         </CampoForm>
         <CampoForm label="Faltas" htmlFor="missedDays">
           <Input id="missedDays" name="missedDays" type="number" min={0} />
         </CampoForm>
-        <CampoForm label="Dias de Férias" htmlFor="vacationDays">
+        <CampoForm label="Dias de férias" htmlFor="vacationDays">
           <Input id="vacationDays" name="vacationDays" type="number" min={0} />
         </CampoForm>
-        <CampoForm label="Dias de Afastamento" htmlFor="absenceDays">
+        <CampoForm label="Dias de afastamento" htmlFor="absenceDays">
           <Input id="absenceDays" name="absenceDays" type="number" min={0} />
         </CampoForm>
 
-        <CampoForm label="Horas Extras" htmlFor="overtimeHours">
+        <CampoForm label="Horas extras" htmlFor="overtimeHours">
           <Input id="overtimeHours" name="overtimeHours" type="number" step="0.25" suffix="h" />
         </CampoForm>
-        <CampoForm label="Adicional Noturno" htmlFor="nightShiftAllowance">
+        <CampoForm label="Adicional noturno" htmlFor="nightShiftAllowance">
           <Input id="nightShiftAllowance" name="nightShiftAllowance" type="number" step="0.01" prefix="R$" placeholder="0,00" />
         </CampoForm>
         <CampoForm label="Periculosidade" htmlFor="hazardPay">
@@ -65,10 +65,10 @@ export function LancarEventoForm({ action, colaboradores }: Props) {
           <Input id="unhealthyPay" name="unhealthyPay" type="number" step="0.01" prefix="R$" placeholder="0,00" />
         </CampoForm>
 
-        <CampoForm label="13º Salário" htmlFor="thirteenthSalary">
+        <CampoForm label="13º salário" htmlFor="thirteenthSalary">
           <Input id="thirteenthSalary" name="thirteenthSalary" type="number" step="0.01" prefix="R$" placeholder="0,00" />
         </CampoForm>
-        <CampoForm label="Salário Família" htmlFor="familyAllowance">
+        <CampoForm label="Salário-família" htmlFor="familyAllowance">
           <Input id="familyAllowance" name="familyAllowance" type="number" step="0.01" prefix="R$" placeholder="0,00" />
         </CampoForm>
         <CampoForm label="Benefícios" htmlFor="benefitsTotal">
@@ -86,7 +86,7 @@ export function LancarEventoForm({ action, colaboradores }: Props) {
       <div className="flex flex-wrap items-center justify-end gap-3">
         {state?.error && <p className="mr-auto text-helper font-medium text-danger">{state.error}</p>}
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Lançando…" : "Lançar Evento"}
+          {isPending ? "Lançando…" : "Lançar evento"}
         </Button>
       </div>
     </form>
