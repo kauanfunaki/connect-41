@@ -560,7 +560,7 @@ export function ChatDeIA({
           type="button"
           onClick={() => abrirChat()}
           aria-label={`Abrir o chat — ${agente.titulo}`}
-          title={`Perguntar à ${agente.titulo}`}
+          data-dica={`Perguntar à ${agente.titulo}`}
           className="c41-borda-girando relative rounded-full p-[2px] shadow-lg transition-transform hover:-translate-y-0.5 outline-none"
         >
           <span className="flex items-center gap-2 h-11 pl-1.5 pr-1.5 sm:pr-4 rounded-full bg-surface-elevated">
@@ -596,7 +596,7 @@ export function ChatDeIA({
           width={220}
           aria-label="Mais opções do chat"
           trigger={({ toggle }) => (
-            <button type="button" onClick={toggle} className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Mais opções" title="Mais opções">
+            <button type="button" onClick={toggle} className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Mais opções" data-dica="Mais opções">
               <MoreHorizontal size={16} />
             </button>
           )}
@@ -644,7 +644,7 @@ export function ChatDeIA({
                       {formatInstantDateTime(new Date(c.atualizadaEm), { dateStyle: "short", timeStyle: "short" })}
                     </span>
                   </button>
-                  <button type="button" onClick={() => apagar(c.id)} className="p-2 text-fg-muted hover:text-danger" aria-label="Apagar conversa" title="Apagar">
+                  <button type="button" onClick={() => apagar(c.id)} className="p-2 text-fg-muted hover:text-danger" aria-label="Apagar conversa" data-dica="Apagar">
                     <Trash2 size={14} />
                   </button>
                 </li>
@@ -1103,7 +1103,7 @@ function BotaoDeAcao({
       onClick={onClick}
       aria-label={rotulo}
       aria-pressed={ativo}
-      title={rotulo}
+      data-dica={rotulo}
       className={`size-6 inline-flex items-center justify-center rounded-md hover:bg-surface-hover ${ativo ? "text-brand bg-brand/10" : "text-fg-muted hover:text-fg"}`}
     >
       {children}

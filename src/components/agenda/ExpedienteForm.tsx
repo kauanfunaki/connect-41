@@ -5,6 +5,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Select } from "@/components/ui/Select";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 import {
   descreverExpediente,
   duracaoEmHoras,
@@ -62,38 +63,20 @@ export function ExpedienteForm({ action, valor, doEscritorio }: Props) {
   return (
     <form action={formAction} className="space-y-5">
       {doEscritorio && (
-        <div role="radiogroup" aria-label="Horário da agenda" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[
-            { valor: "escritorio", rotulo: "Usar o do escritório", dica: descreverExpediente(doEscritorio.expediente) },
-            { valor: "proprio", rotulo: "Definir o meu", dica: "Para quem trabalha em outro turno — à noite ou de madrugada." },
-          ].map((o) => {
-            const marcado = (o.valor === "proprio") === proprio;
-            return (
-              <label
-                key={o.valor}
-                className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 transition-colors ${
-                  marcado ? "border-brand bg-brand-subtle shadow-[inset_0_0_0_1px_var(--c41-brand)]" : "border-border bg-surface hover:border-border-strong"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="modo"
-                  value={o.valor}
-                  checked={marcado}
-                  onChange={() => {
-                    setProprio(o.valor === "proprio");
-                    setMexidoApos(state);
-                  }}
-                  className="mt-1 accent-[var(--c41-brand)]"
-                />
-                <span className="min-w-0">
-                  <span className="block text-ui font-semibold text-fg">{o.rotulo}</span>
-                  <span className="block text-fs-2 text-fg-muted leading-snug">{o.dica}</span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
+        <RadioGroup
+          name="modo"
+          aria-label="Horário da agenda"
+          colunas="sm:grid-cols-2"
+          valor={proprio ? "proprio" : "escritorio"}
+          onChange={(v) => {
+            setProprio(v === "proprio");
+            setMexidoApos(state);
+          }}
+          opcoes={[
+            { valor: "escritorio", rotulo: "Usar o do escritório", descricao: descreverExpediente(doEscritorio.expediente) },
+            { valor: "proprio", rotulo: "Definir o meu", descricao: "Para quem trabalha em outro turno — à noite ou de madrugada." },
+          ]}
+        />
       )}
 
       {proprio && (

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import type { PayrollEntryState } from "@/app/(app)/empresas/[id]/folha/[competencyId]/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoNumero } from "@/components/ui/CampoNumero";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 type PersonOption = { id: string; name: string };
@@ -40,16 +41,16 @@ export function LancarEventoForm({ action, colaboradores }: Props) {
         </CampoForm>
 
         <CampoForm label="Dias trabalhados" htmlFor="workedDays">
-          <Input id="workedDays" name="workedDays" type="number" min={0} max={31} />
+          <CampoNumero id="workedDays" name="workedDays" min={0} max={31} />
         </CampoForm>
         <CampoForm label="Faltas" htmlFor="missedDays">
-          <Input id="missedDays" name="missedDays" type="number" min={0} />
+          <CampoNumero id="missedDays" name="missedDays" min={0} />
         </CampoForm>
         <CampoForm label="Dias de férias" htmlFor="vacationDays">
-          <Input id="vacationDays" name="vacationDays" type="number" min={0} />
+          <CampoNumero id="vacationDays" name="vacationDays" min={0} />
         </CampoForm>
         <CampoForm label="Dias de afastamento" htmlFor="absenceDays">
-          <Input id="absenceDays" name="absenceDays" type="number" min={0} />
+          <CampoNumero id="absenceDays" name="absenceDays" min={0} />
         </CampoForm>
 
         <CampoForm label="Horas extras" htmlFor="overtimeHours">

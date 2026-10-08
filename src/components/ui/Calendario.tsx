@@ -141,7 +141,7 @@ export function Calendario({ valor, periodo, previa = false, onEscolher, min, ma
           disabled={bloqueado}
           aria-label={`${dataParaLeitura(dia)}${feriado ? `, feriado: ${feriado}` : ""}${ehHoje ? ", hoje" : ""}`}
           aria-current={ehHoje ? "date" : undefined}
-          title={feriado}
+          data-dica={feriado || undefined}
           onClick={() => onEscolher(dia)}
           onMouseEnter={() => setPassando(dia)}
           onFocus={() => setFoco(dia)}
