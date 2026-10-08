@@ -1459,10 +1459,10 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await r.apontar(
-          main(r).getByRole("button", { name: /Adicionar Tarefa/ }).first(),
-          "Na visão Lista, Adicionar Tarefa cria uma tarefa no grupo do status: digite o nome e aperte Enter."
+          main(r).getByRole("button", { name: /Adicionar tarefa/ }).first(),
+          "Na visão Lista, Adicionar tarefa cria uma tarefa no grupo do status: digite o nome e aperte Enter."
         );
-        await r.apontar(main(r).getByRole("button", { name: "+ Item" }).or(main(r).getByRole("link", { name: "+ Item" })).first(), "+ Item inclui uma empresa ou pessoa na lista.");
+        await r.apontar(main(r).getByRole("link", { name: "Nova tarefa" }).first(), "Nova tarefa cria a tarefa de uma empresa ou pessoa, com prazo, prioridade e responsáveis.");
         await r.apontar(main(r).getByRole("button", { name: /^Filtros/ }).first(), "A busca e o botão Filtros filtram por responsável, criador, etiqueta, prioridade e prazo.");
         await r.clicar(
           main(r).getByRole("group", { name: "Visão do pipeline" }).getByRole("button", { name: /Quadro/ }),

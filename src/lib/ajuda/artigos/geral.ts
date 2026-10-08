@@ -54,7 +54,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Meu dia",
     caminhos: ["/tarefas"],
     resumo:
-      "Tudo o que é seu, de todos os setores, numa tela só: processos, cards, pendências, transferências e solicitações, na ordem do que é mais urgente.",
+      "Tudo o que é seu, de todos os setores, numa tela só: processos, tarefas, pendências, transferências e solicitações, na ordem do que é mais urgente.",
     secoes: [
       {
         titulo: "Como começar o dia pelo Meu dia",
@@ -62,7 +62,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Clique em “Meu dia”, logo abaixo de “Início” na barra lateral.",
           "Confira os números do topo: “Atrasados”, “Vencem em breve”, “Parados”, “Em andamento” e “Feitos na semana”.",
           "Comece pela lista “Pede você agora”: ela traz o que está atrasado, vencendo ou parado, do mais urgente para o menos urgente.",
-          "Clique no título de um item para abri-lo. O ícone e o rótulo dizem de onde ele vem (processo, card, pendência, transferência ou solicitação) e a bolinha colorida mostra o setor.",
+          "Clique no título de um item para abri-lo. O ícone e o rótulo dizem de onde ele vem (processo, tarefa, pendência, transferência ou solicitação) e a bolinha colorida mostra o setor.",
           "Depois, siga pelas listas “Em andamento” e “Para começar”.",
         ],
       },
@@ -302,7 +302,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Espaços",
     caminhos: ["/kanban", "/setor"],
     resumo:
-      "As listas e quadros de tarefas de cada setor, organizados em espaços e pastas. Cada tarefa é um card com status, responsáveis, prazo e comentários.",
+      "As listas e quadros de tarefas de cada setor, organizados em espaços e pastas. Cada tarefa tem situação, responsáveis, prazo e comentários.",
     secoes: [
       {
         titulo: "Como encontrar uma lista de tarefas",
@@ -317,18 +317,18 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como criar espaços, pastas, listas e tarefas",
         passos: [
-          "Na tela de Espaços, clique em “Novo Espaço”, dê um “Nome” e clique em “Criar”.",
+          "Na tela de Espaços, clique em “Novo espaço”, dê um “Nome” e clique em “Criar”.",
           "Dentro do espaço, clique em “Nova pasta” ou “Nova lista”, dê um nome e clique em “Criar”.",
           "Na lista, clique em “Editar lista” para ajustar os estágios das colunas.",
-          "Para criar uma tarefa, na visão “Lista”, clique em “Adicionar Tarefa” no grupo do status, digite o nome e aperte Enter.",
-          "Para incluir uma empresa ou pessoa na lista, clique em “+ Item”, escolha quem é e clique em “Adicionar”.",
+          "Para criar uma tarefa, na visão “Lista”, clique em “Adicionar tarefa” no grupo do status, digite o nome e aperte Enter.",
+          "Para criar a tarefa de uma empresa ou pessoa, clique em “Nova tarefa”, escolha quem é e clique em “Criar tarefa”.",
         ],
       },
       {
-        titulo: "Como trabalhar em um card",
+        titulo: "Como trabalhar em uma tarefa",
         passos: [
-          "Clique no nome da tarefa para abrir o card. No “Quadro”, você também pode arrastar o card para outra coluna.",
-          "Em “Status”, escolha a etapa em que a tarefa está.",
+          "Clique no nome da tarefa para abri-la. No “Quadro”, você também pode arrastar a tarefa para outra coluna.",
+          "Em “Situação”, escolha a etapa em que a tarefa está.",
           "Em “Responsáveis”, marque quem faz a tarefa; em “Participantes”, quem acompanha.",
           "Preencha “Datas”, “Prioridade” e “Etiquetas”, e use “Subtarefas”, “Checklist” e “Anexos” quando precisar.",
           "Em “Comentários e atividade”, escreva no campo de comentário, use @ para mencionar alguém e clique em “Comentar”.",
@@ -337,7 +337,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "Criar espaços, pastas, listas e tarefas é para o gestor do setor e os administradores. Quem é do setor comenta e atualiza os cards.",
+      "Criar espaços, pastas, listas e tarefas é para o gestor do setor e os administradores. Quem é do setor comenta e atualiza as tarefas.",
       "Excluir um espaço, uma pasta ou uma lista não pode ser desfeito.",
       "A tela “Kanban” reúne num lugar só os quadros de todos os seus setores.",
     ],
