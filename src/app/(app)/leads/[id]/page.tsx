@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { BackButton } from "@/components/shared/BackButton";
 import { getPrisma } from "@/lib/prisma";
 import { canActOnSector, canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
@@ -67,9 +66,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
   return (
     <PageContainer>
-      <Link href="/leads" className="inline-flex items-center gap-1.5 text-[length:var(--fs-ui)] text-fg-muted hover:text-fg mb-3">
-        <ArrowLeft size={14} /> Leads
-      </Link>
+      <BackButton href="/leads" rotulo="Leads" className="mb-3" />
       <PageHeader
         title={lead.name}
         subtitle={`${lead.companyName ?? "Empresa não informada"} · ${rotuloDaOrigem(lead.source)} · recebido em ${formatInstantDateTime(lead.createdAt, QUANDO)}`}
