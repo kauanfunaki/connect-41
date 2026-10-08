@@ -5,6 +5,7 @@ import { sanitizeDocumentHtml, recordClientDocumentView } from "@/lib/clientDocu
 import { SignatureForm } from "@/components/documentosCliente/SignatureForm";
 import { formatInstantDateTimeComSegundos } from "@/lib/format";
 import { Download, Link2Off } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 export const metadata = { title: "Documento" };
 
@@ -74,19 +75,15 @@ export default async function ClientDocumentViewPage({
           dangerouslySetInnerHTML={{ __html: bodyHtml }}
         />
 
-        {/* `<a>` cru, e não o Button com href: o Button vira <Link>, e o
-            prefetch dele chamaria a rota do arquivo (que registra DOWNLOADED)
-            sem ninguém ter clicado. As classes são as do Button primário `lg`,
-            o tamanho do "Assinar documento" logo abaixo — eram 13px e peso
-            médio. */}
+        {/* `nativo` (um `<a>` simples), e não o Button com href puro: este
+            vira <Link>, e o prefetch dele chamaria a rota do arquivo (que
+            registra DOWNLOADED) sem ninguém ter clicado. Tamanho `lg`, o do
+            "Assinar documento" logo abaixo. */}
         {doc.fileUrl && (
-          <a
-            href={`/d/${token}/arquivo`}
-            className="inline-flex items-center justify-center gap-1.5 max-w-full h-10 px-5 mt-5 rounded-md bg-brand text-on-brand text-[14px] font-semibold hover:bg-brand-hover transition-colors"
-          >
+          <Button href={`/d/${token}/arquivo`} nativo size="lg" className="max-w-full mt-5">
             <Download size={16} className="flex-shrink-0" />
             <span className="truncate">Baixar anexo{doc.fileName ? `: ${doc.fileName}` : ""}</span>
-          </a>
+          </Button>
         )}
 
         {doc.requiresSignature &&
