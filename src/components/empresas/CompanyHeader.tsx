@@ -138,7 +138,7 @@ export function CompanyHeader({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingLogo}
-                  title={logoUrl ? "Trocar foto" : "Adicionar foto"} aria-label={logoUrl ? "Trocar foto" : "Adicionar foto"}
+                  data-dica={logoUrl ? "Trocar foto" : "Adicionar foto"} aria-label={logoUrl ? "Trocar foto" : "Adicionar foto"}
                   className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/45 text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity disabled:opacity-100 disabled:cursor-wait"
                 >
                   <Camera size={16} />
@@ -148,7 +148,7 @@ export function CompanyHeader({
                     type="button"
                     onClick={handleLogoRemove}
                     disabled={uploadingLogo}
-                    title="Remover foto" aria-label="Remover foto"
+                    data-dica="Remover foto" aria-label="Remover foto"
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-surface border border-border-strong text-fg-muted hover:text-danger flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X size={11} />
@@ -181,7 +181,7 @@ export function CompanyHeader({
                   variant="linkMuted"
                   className="text-helper tnum"
                   onClick={copyDocumento}
-                  title={`Copiar ${rotuloDoc}`} aria-label={`Copiar ${rotuloDoc}`}
+                  data-dica={`Copiar ${rotuloDoc}`} aria-label={`Copiar ${rotuloDoc}`}
                 >
                   {copied ? <Check size={14} className="text-success-fg" /> : <Copy size={14} />}
                   {formatDocumento(kind, cnpj, cpf)}
