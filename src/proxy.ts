@@ -78,6 +78,11 @@ const PUBLIC_PATHS = [
   // AssessmentLink internamente; token inexistente é rate-limited por IP.
   "/teste/",
   "/api/teste/",
+  // Logo do escritório (só ele: o nome do arquivo é o id do escritório e a rota
+  // aceita só imagem). Aparece em telas de quem não tem sessão da equipe — vagas,
+  // admissão, teste do candidato e a entrada do portal —, e com 401 a imagem
+  // simplesmente não aparecia (08/10/2026).
+  "/api/workspace-logos/",
   // Webhook do Chatwoot — chamado pelo próprio Chatwoot, sem sessão de
   // usuário. A autenticação de verdade é a assinatura HMAC
   // (X-Chatwoot-Signature), verificada dentro da rota contra o segredo da
