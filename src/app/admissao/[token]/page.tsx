@@ -17,7 +17,7 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ token
   const link = await prisma.admissaoLink.findUnique({
     where: { token },
     include: {
-      tenant: { select: { name: true } },
+      tenant: { select: { name: true, logoUrl: true } },
       person: {
         select: {
           name: true, cpf: true, rg: true, pis: true, ctps: true, ctpsSerie: true, education: true,
@@ -47,7 +47,11 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ token
   return (
     <div className="min-h-screen py-10 px-4">
       <div className="max-w-2xl mx-auto">
+        {/* O logo do escritório, como no portal de vagas (padrão aceito na
+            página de decisões, 08/10/2026): quem abre o link é de fora e
+            precisa reconhecer de quem é o pedido. */}
         <CabecalhoPublico
+          logo={link.tenant.logoUrl ? { src: link.tenant.logoUrl, alt: link.tenant.name } : null}
           titulo={<>Bem-vindo(a), {p.name}!</>}
           subtitulo={
             <>
