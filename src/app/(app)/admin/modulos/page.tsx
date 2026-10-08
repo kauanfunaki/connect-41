@@ -52,17 +52,17 @@ export default async function ModulosPage() {
         <div className="space-y-6">
           {Object.entries(grouped).map(([sectorCode, list]) => (
             <div key={sectorCode}>
-              <h2 className="text-[15px] font-medium text-fg mb-2">
+              <h2 className="text-fs-5 font-medium text-fg mb-2">
                 {sectorLabel(sectorLabels, sectorCode)}
               </h2>
               <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
                 {list.map((m) => (
                   <div key={m.code} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-[13px] text-fg">{m.label}</p>
-                      <p className="text-[11px] text-fg-muted">{m.description}</p>
+                      <p className="text-fs-3 text-fg">{m.label}</p>
+                      <p className="text-fs-1 text-fg-muted">{m.description}</p>
                       {m.sectorCode !== m.catalogSectorCode && (
-                        <p className="text-[11px] text-fg-muted mt-0.5">
+                        <p className="text-fs-1 text-fg-muted mt-0.5">
                           Transferido — origem: {sectorLabel(sectorLabels, m.catalogSectorCode)}
                         </p>
                       )}

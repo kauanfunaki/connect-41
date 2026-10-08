@@ -81,7 +81,7 @@ export default async function DiagnosticoDaCarteiraPage() {
 
       {!custos.configurado && (
         // Revisão de 05/10: botão não é link — o destino era texto azul no fim da frase.
-        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg-secondary">
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg-secondary">
           <p>O custo das equipes ainda não foi preenchido nos parâmetros, então o custo real sai zerado.</p>
           <Button href="/valora/parametros" variant="secondary" size="xs">
             Preencher parâmetros
@@ -103,7 +103,7 @@ export default async function DiagnosticoDaCarteiraPage() {
           <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
             <table className="w-full min-w-[820px]">
               <thead>
-                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-3">Cliente</th>
                   <th className="px-3">Honorário</th>
                   <th className="px-3">Horas/mês</th>
@@ -119,7 +119,7 @@ export default async function DiagnosticoDaCarteiraPage() {
                       <Link href={`/empresas/${l.companyId}`} className="font-medium text-fg hover:text-brand transition-colors">
                         {l.cliente}
                       </Link>
-                      {l.temHoraSemCusto && <span className="block text-[11px] text-fg-muted">tem horas em setor sem custo no Valora</span>}
+                      {l.temHoraSemCusto && <span className="block text-fs-1 text-fg-muted">tem horas em setor sem custo no Valora</span>}
                     </td>
                     <td className="px-3 tabular-nums">{formatarReais(l.honorario)}</td>
                     <td className="px-3 tabular-nums">{formatarNumero(l.horasMes, 1)} h</td>
@@ -141,7 +141,7 @@ export default async function DiagnosticoDaCarteiraPage() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-[12px] text-fg-muted">
+          <p className="mt-3 text-fs-2 text-fg-muted">
             Margem real = (honorário − impostos e variáveis de {cfg.parametros.variaveisPct}% − custo real) ÷ honorário. Vermelho: abaixo do piso de{" "}
             {cfg.parametros.margemPisoPct}%; amarelo: abaixo do alvo de {cfg.parametros.margemAlvoPct}%.
           </p>

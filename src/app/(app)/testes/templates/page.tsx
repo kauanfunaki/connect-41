@@ -110,7 +110,7 @@ export default async function TemplatesPage() {
                   <col className="w-[150px]" />
                 </colgroup>
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Modelo</th>
                     <th className="px-4 py-3">Perguntas</th>
                     <th className="px-4 py-3">Usado</th>

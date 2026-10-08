@@ -64,7 +64,7 @@ const DEP_REL_LABEL: Record<string, string> = {
 
 // Mesma grade e mesmo título da ficha de empresa (CompanyOverviewSection).
 const GRADE = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4";
-const TITULO = "text-[length:var(--fs-section)] font-semibold text-fg mb-4";
+const TITULO = "text-section font-semibold text-fg mb-4";
 
 const VINCULO_LINKS: OperationLink[] = [
   { href: "escala", label: "Escala de Trabalho", description: "Turnos e dias de folga", icon: <CalendarClock size={16} /> },
@@ -253,7 +253,7 @@ export default async function PessoaPage({
         {person.isInternal && (
           <Card className="p-5 h-full">
             <h2 className={TITULO}>Conta de acesso</h2>
-            <p className="text-[length:var(--fs-body)] text-fg break-words">
+            <p className="text-body text-fg break-words">
               {linkedUser ? `${linkedUser.name} (${linkedUser.email})` : "Não vinculada"}
             </p>
             {/* Era um link de texto (até 30/09): é uma ação, virou botão. */}
@@ -270,7 +270,7 @@ export default async function PessoaPage({
       {person.notes && (
         <Card className="p-5">
           <h2 className={TITULO}>Observações</h2>
-          <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{person.notes}</p>
+          <p className="text-body text-fg-secondary whitespace-pre-wrap">{person.notes}</p>
         </Card>
       )}
     </div>
@@ -328,13 +328,13 @@ export default async function PessoaPage({
       {/* Dependentes */}
       {person.type === "COLABORADOR" && dependentes.length > 0 && (
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-2">Dependentes</h2>
+          <h2 className="text-section font-semibold text-fg mb-2">Dependentes</h2>
           <div className="divide-y divide-border">
             {dependentes.map((d) => (
               <div key={d.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
-                  <p className="text-[length:var(--fs-body)] text-fg">{d.name}</p>
-                  <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5">
+                  <p className="text-body text-fg">{d.name}</p>
+                  <p className="text-helper text-fg-muted mt-0.5">
                     {DEP_REL_LABEL[d.relationship] ?? d.relationship}
                     {d.birthDate && ` · ${formatCalendarDate(d.birthDate)}`}
                     {d.cpf && ` · CPF ${maskCpf(d.cpf)}`}

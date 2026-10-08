@@ -61,7 +61,7 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
 
       {/* Aviso e ação na mesma linha, e os dois cartões com o mesmo padding. */}
       <Card className="p-5 mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="min-w-0 text-[length:var(--fs-body)] text-fg-secondary">
+        <p className="min-w-0 text-body text-fg-secondary">
           Cada campo mostra de onde vem o valor atual. Alterar aqui afeta só esta empresa.
         </p>
         {/* Era link de texto sublinhado (30/09): é ação, então é botão. */}

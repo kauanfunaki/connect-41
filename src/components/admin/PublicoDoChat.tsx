@@ -19,8 +19,8 @@ export function PublicoDoChat({ todos, disponivel }: { todos: boolean; disponive
     <Card className="p-4 flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[14px] font-semibold text-fg">Chat de IA no canto da tela</p>
-          <p className="text-[12px] text-fg-secondary max-w-[62ch]">
+          <p className="text-fs-4 font-semibold text-fg">Chat de IA no canto da tela</p>
+          <p className="text-fs-2 text-fg-secondary max-w-[62ch]">
             Aparece para quem tem acesso a alguma IA ligada abaixo — a do setor (hoje, Societário, Recrutamento, Fiscal, BPO e DP) ou a Ajuda do
             Connect. Cada pessoa tem até 30 perguntas por dia, e as conversas são apagadas 90 dias depois da última
             mensagem.
@@ -42,13 +42,13 @@ export function PublicoDoChat({ todos, disponivel }: { todos: boolean; disponive
           }}
         />
       </div>
-      <p className="text-[12px] text-fg-muted">
+      <p className="text-fs-2 text-fg-muted">
         {valor ? "Todos os usuários (menos somente leitura) veem o chat." : "Piloto: só coordenadores e administradores veem o chat."}
       </p>
       {!disponivel && (
-        <p className="text-[12px] text-warning-fg">A configuração do chat ainda não está no banco — falta rodar a migration.</p>
+        <p className="text-fs-2 text-warning-fg">A configuração do chat ainda não está no banco — falta rodar a migration.</p>
       )}
-      {erro && <p className="text-[12px] text-danger">{erro}</p>}
+      {erro && <p className="text-fs-2 text-danger">{erro}</p>}
     </Card>
   );
 }

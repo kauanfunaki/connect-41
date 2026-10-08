@@ -32,8 +32,8 @@ export default async function ParametrosDoValoraPage() {
       <FormParametros catalogo={catalogo} parametros={parametros} podeEditar={acesso.podeGerir} />
 
       <Card className="p-4 mt-6">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Catálogo de atividades</h2>
-        <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
+        <h2 className="text-card-title font-semibold text-fg mb-1">Catálogo de atividades</h2>
+        <p className="text-fs-2 text-fg-muted mb-3">
           Tempo por execução declarado por cada setor, antes do fator. Muda quando os questionários são refeitos — não por
           aqui.
         </p>
@@ -42,7 +42,7 @@ export default async function ParametrosDoValoraPage() {
           const quandoEntra = (a: (typeof atividades)[number]) => (a.condicao ? (campos.get(a.condicao) ?? "Tem funcionários") : "Sempre");
           return (
             <details key={s.codigo} className="border-t border-border-soft py-2">
-              <summary className="cursor-pointer text-[length:var(--fs-ui)] font-medium">
+              <summary className="cursor-pointer text-ui font-medium">
                 {s.nome} <span className="text-fg-muted font-normal">· {atividades.length} atividades</span>
               </summary>
               {/* Casco padrão, com funil em frequência e em "quando entra" — as
@@ -57,7 +57,7 @@ export default async function ParametrosDoValoraPage() {
                 <div className="c41-tabela overflow-x-auto rounded-lg border border-border mt-2">
                   <table className="w-full min-w-[820px]">
                     <thead>
-                      <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                      <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                         <th className="px-3">Atividade</th>
                         <th className="px-3">
                           <FiltroDaColuna rotulo="Frequência" chave="frequencia" />
@@ -87,7 +87,7 @@ export default async function ParametrosDoValoraPage() {
                           <td className="px-3 text-fg-secondary">
                             {quandoEntra(a)}
                             {a.quantidade.tipo === "volume" && (
-                              <span className="block text-[length:var(--fs-micro)] text-fg-muted">
+                              <span className="block text-micro text-fg-muted">
                                 × {campos.get(a.quantidade.campo) ?? a.quantidade.campo}
                                 {a.quantidade.fator !== undefined && ` × ${num(a.quantidade.fator, 2)}`}
                               </span>

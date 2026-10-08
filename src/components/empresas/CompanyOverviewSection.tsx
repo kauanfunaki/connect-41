@@ -50,7 +50,7 @@ type Props = {
 // duas colunas de meia tela aqui, três ali —, e com a ficha na largura toda
 // um CNPJ ficava a 600px do rótulo vizinho. Nome e lista ocupam duas colunas.
 const GRADE = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4";
-const TITULO = "text-[length:var(--fs-section)] font-semibold text-fg mb-4";
+const TITULO = "text-section font-semibold text-fg mb-4";
 
 export function CompanyOverviewSection({ company, customFields }: Props) {
   const ehPF = company.kind === "PESSOA_FISICA";

@@ -13,8 +13,8 @@ export default function NotFound() {
         <span className="w-10 h-10 rounded-lg bg-surface-hover text-fg-muted flex items-center justify-center">
           <FileQuestion size={18} />
         </span>
-        <h1 className="text-[18px] font-semibold text-fg">Página não encontrada.</h1>
-        <p className="text-[13px] text-fg-muted">
+        <h1 className="text-fs-7 font-semibold text-fg">Página não encontrada.</h1>
+        <p className="text-fs-3 text-fg-muted">
           O endereço que você tentou acessar não existe.
         </p>
         <Button href="/home" className="mt-1">

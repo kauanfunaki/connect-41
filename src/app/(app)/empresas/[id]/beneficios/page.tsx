@@ -102,8 +102,8 @@ export default async function BeneficiosPage({
           {beneficios.map((b) => (
             <div key={b.id} className="flex items-center justify-between gap-4 px-4 py-3">
               <div>
-                <p className="text-[13px] text-fg font-medium">{b.name}</p>
-                <p className="text-[12px] text-fg-muted">{TYPE_LABEL[b.type]}</p>
+                <p className="text-fs-3 text-fg font-medium">{b.name}</p>
+                <p className="text-fs-2 text-fg-muted">{TYPE_LABEL[b.type]}</p>
               </div>
               {canManage && (
                 <AcoesDoCadastro editarHref={`/empresas/${companyId}/beneficios/${b.id}/editar`} excluir={excluirBeneficio.bind(null, b.id, companyId)} nome={b.name} />

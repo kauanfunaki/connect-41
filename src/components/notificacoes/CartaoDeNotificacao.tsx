@@ -145,19 +145,19 @@ export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onArquivar, on
         className="min-w-0 flex-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-md"
       >
         <span className="flex items-baseline gap-2">
-          <span className={`text-[13px] text-fg truncate ${n.lida ? "font-medium" : "font-semibold"}`}>{n.titulo}</span>
+          <span className={`text-fs-3 text-fg truncate ${n.lida ? "font-medium" : "font-semibold"}`}>{n.titulo}</span>
           {!n.lida && <span aria-label="não lida" className="flex-shrink-0 size-1.5 rounded-full bg-brand translate-y-[-1px]" />}
         </span>
-        <span className="block text-[13px] text-fg-secondary leading-snug mt-0.5 line-clamp-2">{n.mensagem}</span>
+        <span className="block text-fs-3 text-fg-secondary leading-snug mt-0.5 line-clamp-2">{n.mensagem}</span>
         <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-          {n.autor && <span className="text-[11px] font-medium text-fg-secondary">{n.autor.nome}</span>}
+          {n.autor && <span className="text-fs-1 font-medium text-fg-secondary">{n.autor.nome}</span>}
           {n.chip && Chip && (
-            <span className="inline-flex max-w-full items-center gap-1 h-5 px-1.5 rounded-md border border-border bg-surface text-[11px] font-medium text-fg-secondary">
+            <span className="inline-flex max-w-full items-center gap-1 h-5 px-1.5 rounded-md border border-border bg-surface text-fs-1 font-medium text-fg-secondary">
               <Chip size={11} className="flex-shrink-0 text-fg-muted" />
               <span className="truncate">{n.chip.rotulo}</span>
             </span>
           )}
-          {!semTempo && <span className="text-[11px] text-fg-muted tabular-nums">{tempoRelativo(new Date(n.criadaEm))}</span>}
+          {!semTempo && <span className="text-fs-1 text-fg-muted tabular-nums">{tempoRelativo(new Date(n.criadaEm))}</span>}
         </span>
       </button>
       {/* Ações no hover (e no foco, para o teclado). Sempre visíveis no toque. */}

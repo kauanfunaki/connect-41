@@ -127,7 +127,7 @@ const COR_DO_SELO: Record<TomDaTendencia, string> = {
 export function SeloDaTendencia({ selo }: { selo: Selo }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 h-6 px-2 rounded-full text-[12px] font-semibold tnum whitespace-nowrap ${COR_DO_SELO[selo.tom]}`}
+      className={`inline-flex items-center gap-1 h-6 px-2 rounded-full text-fs-2 font-semibold tnum whitespace-nowrap ${COR_DO_SELO[selo.tom]}`}
       data-dica={selo.descricao}
     >
       <span aria-hidden className="text-[10px]">
@@ -228,7 +228,7 @@ export function Painel({
   const linha = destaque?.tendencia?.linha ?? null;
   const numeroPrincipal = destaque && (
     <span
-      className="min-w-0 max-w-full font-display text-[length:var(--fs-metric)] font-bold leading-none tracking-tight tnum truncate c41-cortavel"
+      className="min-w-0 max-w-full font-display text-metric font-bold leading-none tracking-tight tnum truncate c41-cortavel"
       style={destaque.tom && destaque.tom !== "neutro" ? { color: COR_DO_TOM[destaque.tom] } : undefined}
     >
       {destaque.valor}
@@ -248,16 +248,16 @@ export function Painel({
       <span className="absolute inset-x-0 top-0 h-1" style={{ background: corDoSetor }} aria-hidden />
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+          <p className="flex items-center gap-1.5 text-fs-1 font-semibold uppercase tracking-wider text-fg-muted">
             <span className="size-1.5 rounded-full" style={{ background: corDoSetor }} aria-hidden />
             {setor}
           </p>
-          <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg leading-tight mt-1">{titulo}</h2>
+          <h2 className="font-display text-section font-semibold text-fg leading-tight mt-1">{titulo}</h2>
         </div>
         {href && (
           <Link
             href={href}
-            className="inline-flex items-center gap-1 h-7 px-2.5 -mr-1.5 rounded-md text-[12px] font-medium text-fg-secondary hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0"
+            className="inline-flex items-center gap-1 h-7 px-2.5 -mr-1.5 rounded-md text-fs-2 font-medium text-fg-secondary hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0"
           >
             Abrir <ArrowUpRight size={13} />
           </Link>
@@ -273,12 +273,12 @@ export function Painel({
               {numeroPrincipal}
               <SeloDaTendencia selo={selo} />
             </p>
-            <p className="mt-1.5 text-[length:var(--fs-helper)] text-fg-muted truncate">{destaque.legenda}</p>
+            <p className="mt-1.5 text-helper text-fg-muted truncate">{destaque.legenda}</p>
           </div>
         ) : (
           <p className="mt-3 flex items-baseline gap-2 min-w-0">
             {numeroPrincipal}
-            <span className="text-[length:var(--fs-helper)] text-fg-muted truncate">{destaque.legenda}</span>
+            <span className="text-helper text-fg-muted truncate">{destaque.legenda}</span>
           </p>
         ))}
       {/* Na cor da série (o azul), não na do setor: o vermelho do Fiscal ou o
@@ -286,7 +286,7 @@ export function Painel({
       {linha && <Sparkline pontos={linha} className="mt-3 h-11" />}
 
       <div className="mt-4 flex-1 min-w-0">{children}</div>
-      {rodape && <div className="mt-4 pt-3 border-t border-border text-[length:var(--fs-helper)] text-fg-muted">{rodape}</div>}
+      {rodape && <div className="mt-4 pt-3 border-t border-border text-helper text-fg-muted">{rodape}</div>}
     </section>
   );
 }
@@ -348,7 +348,7 @@ function Legenda({ segmentos, comValores = true }: { segmentos: Segmento[]; comV
           </>
         );
         return (
-          <li key={s.chave} className="text-[12px]">
+          <li key={s.chave} className="text-fs-2">
             {s.href && comValores ? (
               <Link href={s.href} className="inline-flex items-center gap-1.5 rounded-sm hover:underline underline-offset-2 decoration-border-strong">
                 {conteudo}
@@ -397,13 +397,13 @@ export function BarraDeSituacao({
   return (
     <div className="min-w-0">
       {titulo && (
-        <p className="flex items-baseline justify-between gap-2 text-[12px] mb-0.5">
+        <p className="flex items-baseline justify-between gap-2 text-fs-2 mb-0.5">
           <span className="font-medium text-fg-secondary">{titulo}</span>
           <span className="text-fg-muted tnum">{numero(total)}</span>
         </p>
       )}
       {total === 0 ? (
-        <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>
+        <p className="text-helper text-fg-muted py-1.5">{vazio}</p>
       ) : (
         <>
           <Pilha segmentos={segmentos} />
@@ -453,7 +453,7 @@ export function LinhasDeSituacao({
   const maior = Math.max(1, ...linhas.map((l) => l.segmentos.reduce((s, x) => s + x.valor, 0)));
 
   if (linhas.length === 0) {
-    return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>;
+    return <p className="text-helper text-fg-muted py-1.5">{vazio}</p>;
   }
 
   return (
@@ -464,8 +464,8 @@ export function LinhasDeSituacao({
           const total = l.segmentos.reduce((s, x) => s + x.valor, 0);
           const rotulo = (
             <>
-              <span className="block text-[12px] text-fg-secondary truncate">{l.rotulo}</span>
-              {l.sublabel && <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">{l.sublabel}</span>}
+              <span className="block text-fs-2 text-fg-secondary truncate">{l.rotulo}</span>
+              {l.sublabel && <span className="block text-micro text-fg-muted truncate">{l.sublabel}</span>}
             </>
           );
           return (
@@ -483,14 +483,14 @@ export function LinhasDeSituacao({
                 <div className="flex-1 min-w-0">
                   <Pilha segmentos={l.segmentos} largura={(total / maior) * 100} />
                 </div>
-                <span className="w-8 text-right text-[12px] font-medium text-fg tnum flex-shrink-0">{numero(total)}</span>
+                <span className="w-8 text-right text-fs-2 font-medium text-fg tnum flex-shrink-0">{numero(total)}</span>
               </div>
             </div>
           );
         })}
       </div>
       {restantes !== undefined && restantes > 0 && (
-        <p className="text-[length:var(--fs-micro)] text-fg-muted mt-2">
+        <p className="text-micro text-fg-muted mt-2">
           + {restantes} {restantes === 1 ? "outra categoria" : "outras categorias"} com menos itens
         </p>
       )}
@@ -521,7 +521,7 @@ export function Rosca({
   vazio?: string;
 }) {
   const total = segmentos.reduce((s, x) => s + x.valor, 0);
-  if (total === 0) return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>;
+  if (total === 0) return <p className="text-helper text-fg-muted py-1.5">{vazio}</p>;
 
   // Anel de 16 (era 11, 06/10): mais grosso, e o raio recua para o anel com
   // hover (18) ainda caber no viewBox de 100.
@@ -564,8 +564,8 @@ export function Rosca({
           ))}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="font-display text-[length:var(--fs-title)] font-bold text-fg leading-none tnum">{numero(total)}</span>
-          <span className="text-[length:var(--fs-micro)] text-fg-muted mt-1">{legendaDoTotal}</span>
+          <span className="font-display text-title font-bold text-fg leading-none tnum">{numero(total)}</span>
+          <span className="text-micro text-fg-muted mt-1">{legendaDoTotal}</span>
         </div>
       </div>
       <ul className="flex-1 min-w-[9rem] space-y-1.5">
@@ -579,7 +579,7 @@ export function Rosca({
             </>
           );
           return (
-            <li key={s.chave} className="text-[12px]">
+            <li key={s.chave} className="text-fs-2">
               {s.href ? (
                 <Link href={s.href} className="flex items-center gap-1.5 rounded-sm -mx-1 px-1 py-0.5 hover:bg-surface-hover">
                   {conteudo}
@@ -621,11 +621,11 @@ export function Colunas({
   vazio?: string;
 }) {
   const maior = Math.max(0, ...colunas.map((c) => c.valor));
-  if (maior === 0) return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>;
+  if (maior === 0) return <p className="text-helper text-fg-muted py-1.5">{vazio}</p>;
 
   return (
     <div className="min-w-0">
-      <p className="text-[12px] font-medium text-fg-secondary mb-2">{titulo}</p>
+      <p className="text-fs-2 font-medium text-fg-secondary mb-2">{titulo}</p>
       {/* O `pt-5` guarda o lugar do rótulo da coluna mais alta: a altura da
           coluna é percentual da área de baixo, e o rótulo sobe para o vão. */}
       <div className={`group/colunas relative flex items-end gap-[3px] h-36 pt-5 border-b border-border ${COMPACTO_COLUNAS}`}>
@@ -643,7 +643,7 @@ export function Colunas({
             >
               {c.valor > 0 && (
                 <span
-                  className={`shrink-0 text-[length:var(--fs-micro)] tnum mb-1 whitespace-nowrap ${
+                  className={`shrink-0 text-micro tnum mb-1 whitespace-nowrap ${
                     c.valor === maior || c.destaque ? "font-semibold text-fg" : "font-medium text-fg-secondary"
                   }`}
                 >
@@ -662,7 +662,7 @@ export function Colunas({
       </div>
       <div className="flex gap-[3px] mt-1.5">
         {colunas.map((c) => (
-          <span key={c.chave} className="flex-1 min-w-0 text-center text-[length:var(--fs-micro)] text-fg-muted truncate">
+          <span key={c.chave} className="flex-1 min-w-0 text-center text-micro text-fg-muted truncate">
             {c.rotulo}
           </span>
         ))}
@@ -687,7 +687,7 @@ export type Etapa = { chave: string; rotulo: string; valor: number; href?: strin
  */
 export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: string; etapas: Etapa[]; vazio?: string }) {
   const maior = Math.max(0, ...etapas.map((e) => e.valor));
-  if (maior === 0) return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>;
+  if (maior === 0) return <p className="text-helper text-fg-muted py-1.5">{vazio}</p>;
 
   const leituras = etapas.map((e, i) => {
     const anterior = i > 0 ? etapas[i - 1].valor : null;
@@ -703,7 +703,7 @@ export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: st
         const { doTotal, passagem } = leituras[i];
         const conteudo = (
           <>
-            <span className="text-[12px] text-fg-secondary truncate">{e.rotulo}</span>
+            <span className="text-fs-2 text-fg-secondary truncate">{e.rotulo}</span>
             <span className="flex h-[26px] items-center justify-center min-w-0">
               {e.valor > 0 && (
                 <span
@@ -715,8 +715,8 @@ export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: st
                 />
               )}
             </span>
-            <span className="text-right text-[12px] font-medium text-fg tnum">{numero(e.valor)}</span>
-            <span className="text-right text-[length:var(--fs-micro)] text-fg-muted tnum">{passagem ?? ""}</span>
+            <span className="text-right text-fs-2 font-medium text-fg tnum">{numero(e.valor)}</span>
+            <span className="text-right text-micro text-fg-muted tnum">{passagem ?? ""}</span>
           </>
         );
         const cls = "group/etapa grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_2.5rem_2.25rem] items-center gap-2 rounded-sm";

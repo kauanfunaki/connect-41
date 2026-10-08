@@ -36,8 +36,8 @@ export function CabecalhoPublico({
 }) {
   const texto = (
     <div className="min-w-0">
-      <h1 className="text-[length:var(--fs-title)] font-semibold text-fg tracking-[-0.01em]">{titulo}</h1>
-      {subtitulo && <p className="text-[length:var(--fs-ui)] text-fg-muted mt-1">{subtitulo}</p>}
+      <h1 className="text-title font-semibold text-fg tracking-[-0.01em]">{titulo}</h1>
+      {subtitulo && <p className="text-ui text-fg-muted mt-1">{subtitulo}</p>}
       {children}
     </div>
   );

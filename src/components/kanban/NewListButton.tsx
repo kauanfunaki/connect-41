@@ -46,7 +46,7 @@ export function NewListButton({ action }: Props) {
               <Plus size={12} /> descrição
             </Button>
           )}
-          {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+          {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
           {/* Rodapé de modal no padrão (30/09): Cancelar e Criar à direita,
               com divisor — era um "Criar" de largura inteira, sem Cancelar. */}
           <FormFooter

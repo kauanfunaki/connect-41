@@ -41,7 +41,7 @@ export function AddCandidatoForm({ action, candidatos }: Props) {
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {state?.error && <p className="text-[length:var(--fs-ui)] text-danger">{state.error}</p>}
+      {state?.error && <p className="text-ui text-danger">{state.error}</p>}
     </form>
   );
 }

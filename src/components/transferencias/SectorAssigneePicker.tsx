@@ -35,7 +35,7 @@ export function SectorAssigneePicker({ name, options, defaultValue = [] }: Props
   }
 
   if (options.length === 0) {
-    return <p className="text-[12px] text-fg-muted">Nenhum membro elegível neste setor.</p>;
+    return <p className="text-fs-2 text-fg-muted">Nenhum membro elegível neste setor.</p>;
   }
 
   const label =
@@ -54,7 +54,7 @@ export function SectorAssigneePicker({ name, options, defaultValue = [] }: Props
             type="button"
             onClick={toggleOpen}
             aria-expanded={open}
-            className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-[length:var(--fs-2)] transition-colors ${
+            className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-fs-2 transition-colors ${
               selectedUsers.length > 0
                 ? "border-border-strong text-fg"
                 : "border-dashed border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
@@ -79,12 +79,12 @@ export function SectorAssigneePicker({ name, options, defaultValue = [] }: Props
                 vários seguidos, e fechar a cada clique obrigaria a reabrir. */}
             <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto">
               {filtered.length === 0 ? (
-                <p className="text-[12px] text-fg-muted py-1">Nenhum responsável encontrado.</p>
+                <p className="text-fs-2 text-fg-muted py-1">Nenhum responsável encontrado.</p>
               ) : (
                 filtered.map((u) => (
                   <label
                     key={u.id}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer text-[12px] text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer text-fs-2 text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
                   >
                     <Checkbox checked={selectedIds.includes(u.id)} onChange={() => toggle(u.id)} />
                     {u.name}
@@ -100,7 +100,7 @@ export function SectorAssigneePicker({ name, options, defaultValue = [] }: Props
         selectedUsers.map((u) => (
           <span
             key={u.id}
-            className="inline-flex items-center gap-1 h-6 pl-2 pr-1 rounded-full bg-surface-2 text-[length:var(--fs-micro)] text-fg-secondary"
+            className="inline-flex items-center gap-1 h-6 pl-2 pr-1 rounded-full bg-surface-2 text-micro text-fg-secondary"
           >
             {u.name}
             <button

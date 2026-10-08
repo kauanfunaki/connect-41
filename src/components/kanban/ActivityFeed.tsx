@@ -86,12 +86,12 @@ function TaskMentionPicker({ candidates, onPick }: { candidates: TaskMentionCand
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => { onPick(c); setOpen(false); setQuery(""); }}
-                className="w-full text-left px-2 py-1.5 rounded-md text-[12px] text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors truncate"
+                className="w-full text-left px-2 py-1.5 rounded-md text-fs-2 text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors truncate"
               >
                 {c.name}
               </button>
             ))}
-            {matches.length === 0 && <p className="text-[11px] text-fg-muted px-2 py-1.5">Nenhuma tarefa encontrada</p>}
+            {matches.length === 0 && <p className="text-fs-1 text-fg-muted px-2 py-1.5">Nenhuma tarefa encontrada</p>}
           </div>
         </div>
       )}
@@ -117,7 +117,7 @@ type Attachment = { id: string; fileName: string; url: string };
 function AttachmentChip({ attachment, onRemove }: { attachment: Attachment; onRemove: () => void }) {
   const isImage = IMAGE_EXT.includes(fileExt(attachment.fileName));
   return (
-    <span className="inline-flex items-center gap-1.5 pl-1 pr-1.5 py-1 rounded-md border border-border bg-surface-hover text-[12px] text-fg-secondary">
+    <span className="inline-flex items-center gap-1.5 pl-1 pr-1.5 py-1 rounded-md border border-border bg-surface-hover text-fs-2 text-fg-secondary">
       {isImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={attachment.url} alt="" className="w-5 h-5 rounded object-cover flex-shrink-0" />
@@ -243,7 +243,7 @@ function Composer({
             <AttachmentChip key={a.id} attachment={a} onRemove={() => setAttachments((prev) => prev.filter((x) => x.id !== a.id))} />
           ))}
           {mentionedTasks.map((t) => (
-            <span key={t.id} className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md border border-border bg-surface-hover text-[12px] text-fg-secondary">
+            <span key={t.id} className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md border border-border bg-surface-hover text-fs-2 text-fg-secondary">
               <LinkIcon size={11} className="text-fg-muted flex-shrink-0" />
               <span className="truncate max-w-[160px]">{t.name}</span>
               <IconButton
@@ -273,7 +273,7 @@ function Composer({
         <input ref={fileInputRef} type="file" accept={ANEXO_ACCEPT} className="hidden" onChange={handleFile} />
         {uploading && uploadNome && (
           <span className="flex items-center gap-2 min-w-0 max-w-[220px]">
-            <span className="truncate text-[length:var(--fs-micro)] text-fg-muted" title={uploadNome}>
+            <span className="truncate text-micro text-fg-muted" title={uploadNome}>
               {uploadNome}
             </span>
             <span
@@ -289,7 +289,7 @@ function Composer({
                 style={{ width: `${uploadPct}%` }}
               />
             </span>
-            <span className="text-[length:var(--fs-micro)] text-fg-muted tnum">{uploadPct}%</span>
+            <span className="text-micro text-fg-muted tnum">{uploadPct}%</span>
           </span>
         )}
         <TaskMentionPicker
@@ -320,7 +320,7 @@ function Composer({
       {/* Fora da barra de ações: ali o texto seria espremido entre os botões e
           cortado justamente quando explica por que o anexo não subiu. */}
       {uploadErro && (
-        <p className="text-[length:var(--fs-micro)] text-danger px-1" role="alert">
+        <p className="text-micro text-danger px-1" role="alert">
           {uploadErro}
         </p>
       )}
@@ -329,7 +329,7 @@ function Composer({
 }
 
 /** Botão de ação do comentário: o `ghost xs` mais baixo e com a letra do rodapé. */
-const ACAO_DO_COMENTARIO = "h-6! px-2! text-[11px]! font-medium!";
+const ACAO_DO_COMENTARIO = "h-6! px-2! text-fs-1! font-medium!";
 
 function CommentActions({
   canAct,
@@ -399,8 +399,8 @@ function Comment({
       <AvatarImage src={null} name={item.userName} size={24} fontSize={11} />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-[length:var(--fs-helper)] text-fg font-medium">{item.userName}</p>
-          <span className="font-mono text-[11px] text-fg-muted whitespace-nowrap flex-shrink-0">
+          <p className="text-helper text-fg font-medium">{item.userName}</p>
+          <span className="font-mono text-fs-1 text-fg-muted whitespace-nowrap flex-shrink-0">
             {item.createdAtLabel}{item.edited && " · editado"}
           </span>
         </div>
@@ -419,7 +419,7 @@ function Comment({
             />
           </div>
         ) : (
-          <p className="text-[length:var(--fs-body)] text-fg-secondary mt-0.5 whitespace-pre-wrap">
+          <p className="text-body text-fg-secondary mt-0.5 whitespace-pre-wrap">
             {item.content ? renderRichText(item.content, mentionUsers) : null}
           </p>
         )}
@@ -441,12 +441,12 @@ function Comment({
                 <AvatarImage src={null} name={r.userName} size={20} fontSize={11} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[11px] text-fg font-medium">{r.userName}</p>
-                    <span className="font-mono text-[length:var(--fs-micro)] text-fg-muted whitespace-nowrap flex-shrink-0">
+                    <p className="text-fs-1 text-fg font-medium">{r.userName}</p>
+                    <span className="font-mono text-micro text-fg-muted whitespace-nowrap flex-shrink-0">
                       {r.createdAtLabel}{r.edited && " · editado"}
                     </span>
                   </div>
-                  <p className="text-[length:var(--fs-helper)] text-fg-secondary whitespace-pre-wrap">
+                  <p className="text-helper text-fg-secondary whitespace-pre-wrap">
                     {r.content ? renderRichText(r.content, mentionUsers) : null}
                   </p>
                   {r.canModify && (
@@ -514,7 +514,7 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
   return (
     <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 flex flex-col h-full min-h-[400px]">
       <div className="flex items-center justify-between gap-2 mb-3 flex-shrink-0">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Comentários e atividade</h2>
+        <h2 className="text-card-title font-semibold text-fg">Comentários e atividade</h2>
         <div className="flex items-center gap-2">
           {items.length > 0 && (
             <Button
@@ -555,11 +555,11 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
           devolve parte do espaço ao card pra não estreitar as mensagens. */}
       <div className="scroll-y flex-1 overflow-y-auto min-h-0 pr-3 -mr-2">
         {items.length === 0 ? (
-          <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
+          <p className="text-helper text-fg-muted">Nenhuma atividade registrada ainda.</p>
         ) : (
           <>
             {!detailed && hiddenCount > 0 && (
-              <p className="text-[11px] text-fg-muted pb-2">
+              <p className="text-fs-1 text-fg-muted pb-2">
                 {hiddenCount} evento{hiddenCount > 1 ? "s" : ""} oculto{hiddenCount > 1 ? "s" : ""} acima
               </p>
             )}
@@ -588,11 +588,11 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-[length:var(--fs-body)] text-fg font-medium leading-snug">{a.label}</p>
-                      <span className="font-mono text-[11px] text-fg-muted whitespace-nowrap flex-shrink-0">{a.createdAtLabel}</span>
+                      <p className="text-body text-fg font-medium leading-snug">{a.label}</p>
+                      <span className="font-mono text-fs-1 text-fg-muted whitespace-nowrap flex-shrink-0">{a.createdAtLabel}</span>
                     </div>
-                    <p className="text-[length:var(--fs-helper)] text-fg-muted">{a.userName}</p>
-                    {a.content && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-1">{renderRichText(a.content, mentionUsers)}</p>}
+                    <p className="text-helper text-fg-muted">{a.userName}</p>
+                    {a.content && <p className="text-body text-fg-secondary mt-1">{renderRichText(a.content, mentionUsers)}</p>}
                   </div>
                 </div>
               )

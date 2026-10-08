@@ -49,7 +49,7 @@ export default async function HorasExtrasPage({
 
       <Card className="p-5">
         {overtimeEntries.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhum lançamento de horas extras ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhum lançamento de horas extras ainda.</p>
         ) : (
           <div>
             {overtimeEntries.map((o) => (

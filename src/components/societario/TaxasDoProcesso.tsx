@@ -21,7 +21,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
         {/* Título de seção da ficha em 18px (padrão aceito na página de
             decisões, 08/10/2026) — era o de cartão em grade, 14px. */}
         <h2 id="taxas-do-processo" className="text-section font-semibold text-fg">Taxas</h2>
-        <p className="text-[length:var(--fs-ui)] tabular-nums text-fg">
+        <p className="text-ui tabular-nums text-fg">
           <strong>{formatarReaisDeCentavos(custo.totalCentavos)}</strong>
           {aPagar > 0 && <span className="text-warning-fg"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
         </p>
@@ -54,9 +54,9 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
         }))}
       >
       <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[20rem] text-[length:var(--fs-ui)]">
+        <table className="w-full min-w-[20rem] text-ui">
           <thead>
-            <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Taxa" chave="taxa" /></th>
               <th className="py-2 pr-3 font-medium">Valor</th>
               <th className="py-2 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
@@ -68,14 +68,14 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                 <td className="py-2.5 pr-3">
                   <span className="text-fg break-words">{t.description}</span>
                   {(t.orgaoNome || t.dueDate) && (
-                    <span className="block text-[length:var(--fs-micro)] text-fg-muted tabular-nums">
+                    <span className="block text-micro text-fg-muted tabular-nums">
                       {[t.orgaoNome, t.dueDate && `vence ${formatInstantDate(t.dueDate)}`].filter(Boolean).join(" · ")}
                     </span>
                   )}
                   {/* Primeira via é o caminho normal; da segunda em diante é
                       volta, e é isso que o rótulo diz. */}
                   {t.attempt !== null && t.attempt >= 2 && (
-                    <span className="block text-[length:var(--fs-micro)] text-warning-fg">{t.attempt}ª apresentação</span>
+                    <span className="block text-micro text-warning-fg">{t.attempt}ª apresentação</span>
                   )}
                   {t.envio && (
                     <div className="mt-2">
@@ -91,7 +91,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                   {t.paidAt ? (
                     <>
                       <Selo tom="sucesso">Paga</Selo>
-                      <span className="block mt-1 text-[length:var(--fs-micro)] text-fg-muted">em {formatInstantDate(t.paidAt)}</span>
+                      <span className="block mt-1 text-micro text-fg-muted">em {formatInstantDate(t.paidAt)}</span>
                     </>
                   ) : (
                     <Selo tom="atencao">Em aberto</Selo>

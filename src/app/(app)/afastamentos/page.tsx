@@ -60,7 +60,7 @@ export default async function AfastamentosPage() {
                   </InfoDoCartao>
                   <PeDoCartao>
                     <SeloDoDP cor={COR_DO_AFASTAMENTO[a.status]}>{SITUACAO_DO_AFASTAMENTO[a.status]}</SeloDoDP>
-                    <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">{TIPO_DO_AFASTAMENTO[a.type]}</span>
+                    <span className="ml-auto text-micro text-fg-muted">{TIPO_DO_AFASTAMENTO[a.type]}</span>
                   </PeDoCartao>
                 </Cartao>
               </Link>
@@ -84,7 +84,7 @@ export default async function AfastamentosPage() {
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[860px]">
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Colaborador" chave="colaborador" />
                     </th>

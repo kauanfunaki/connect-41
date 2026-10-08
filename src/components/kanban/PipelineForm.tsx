@@ -81,7 +81,7 @@ export function PipelineForm({ action, sectorOptions }: Props) {
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           {/* Título do grupo no estilo do rótulo de campo (era 11px caixa-alta). */}
-          <h3 className="text-[length:var(--fs-label)] font-medium text-fg">Estágios</h3>
+          <h3 className="text-label font-medium text-fg">Estágios</h3>
           {/* Era link azul (30/09): ação é botão. */}
           <Button variant="secondary" size="xs" type="button" onClick={addStage}>
             <Plus size={14} /> Adicionar estágio

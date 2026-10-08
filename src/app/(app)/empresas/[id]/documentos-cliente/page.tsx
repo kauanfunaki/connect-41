@@ -94,8 +94,8 @@ export default async function DocumentosClientePage({
                 className="flex items-center justify-between px-4 py-3 hover:bg-surface-hover transition-colors"
               >
                 <div>
-                  <p className="text-[13px] text-fg font-medium">{d.title}</p>
-                  <p className="text-[12px] text-fg-muted mt-0.5">
+                  <p className="text-fs-3 text-fg font-medium">{d.title}</p>
+                  <p className="text-fs-2 text-fg-muted mt-0.5">
                     criado em {formatInstantDate(d.createdAt)}
                     {d.recipients.length > 0 && ` · ${d.recipients.length} destinatário${d.recipients.length !== 1 ? "s" : ""} (${viewedCount} visualizou${viewedCount !== 1 ? "ram" : ""})`}
                   </p>

@@ -337,7 +337,7 @@ export default async function ProcessoDetalhePage({
           (`empty:hidden`), sem deixar a margem. */}
       <div className="mb-6 flex flex-col gap-3 empty:hidden">
         {processo.statusReason && (
-          <p className="text-[length:var(--fs-ui)] text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
+          <p className="text-ui text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
             <span className="font-medium">Motivo:</span> {processo.statusReason}
             {processo.statusChangedAt && (
               <span className="text-fg-muted"> · desde {formatInstantDate(processo.statusChangedAt)}</span>
@@ -377,7 +377,7 @@ export default async function ProcessoDetalhePage({
                 <h2 id="avisos-da-junta" className="text-section font-semibold text-fg">
                   Avisos da Junta por e-mail
                 </h2>
-                <p className="text-[length:var(--fs-2)] text-fg-muted">
+                <p className="text-fs-2 text-fg-muted">
                   O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
                 </p>
               </div>
@@ -445,13 +445,13 @@ export default async function ProcessoDetalhePage({
                   <h2 id="conversa-do-processo" className="text-section font-semibold text-fg">
                     Conversa com o cliente
                   </h2>
-                  <p className="text-[length:var(--fs-2)] text-fg-muted">
+                  <p className="text-fs-2 text-fg-muted">
                     O cliente vê tudo o que for escrito aqui no portal, e é avisado por e-mail. Para anotação
                     interna, use as observações do processo.
                   </p>
                 </div>
                 {conversa.limitada && (
-                  <p className="text-[length:var(--fs-2)] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
+                  <p className="text-fs-2 text-fg-muted">Mostrando só as mensagens mais recentes.</p>
                 )}
                 {conversa.mensagens.length > 0 && (
                   <ConversaDaPendencia
@@ -487,7 +487,7 @@ export default async function ProcessoDetalhePage({
         </div>
       </div>
 
-      <p className="mt-6 text-[length:var(--fs-micro)] text-fg-muted">
+      <p className="mt-6 text-micro text-fg-muted">
         Roteiro versão {processo.template.version} — congelado na abertura, para o processo não
         mudar embaixo de quem está tocando ele.
       </p>

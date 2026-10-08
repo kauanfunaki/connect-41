@@ -116,7 +116,7 @@ export function EditarProposta({ proposta }: { proposta: Proposta }) {
               placeholder="Fechou por…, perdeu para…, combinamos…"
             />
           </CampoForm>
-          {erro && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{erro}</p>}
+          {erro && <p className="text-helper font-medium text-danger">{erro}</p>}
           <FormFooter
             pending={pendente}
             onCancel={() => setAberto(false)}

@@ -50,7 +50,7 @@ export const COR_DO_PRAZO_COMBINADO = {
 export function PrazoCelula({ prazo }: { prazo: LinhaDaFila["prazo"] }) {
   if (prazo.situacao === "sem_previsao") {
     return (
-      <span className="text-[length:var(--fs-2)] text-fg-muted">
+      <span className="text-fs-2 text-fg-muted">
         {prazo.dias} {prazo.dias === 1 ? "dia útil" : "dias úteis"} · sem previsão
       </span>
     );
@@ -66,7 +66,7 @@ export function PrazoCelula({ prazo }: { prazo: LinhaDaFila["prazo"] }) {
       ? `${prazo.previstoMin}–${prazo.previstoMax}`
       : String(prazo.previstoMax);
   return (
-    <span className={`text-[length:var(--fs-2)] font-medium ${cor}`}>
+    <span className={`text-fs-2 font-medium ${cor}`}>
       <span className="tabular-nums">{prazo.dias}</span> de{" "}
       <span className="tabular-nums">{faixa}</span> dias úteis
       {prazo.situacao === "estourado" && " · estourado"}
@@ -116,7 +116,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
     <>
       {l.prioridade !== "NORMAL" && <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[l.prioridade])}>{PRIORIDADE_LABEL[l.prioridade]}</Selo>}
       {l.voltas > 0 && (
-        <span className="inline-flex items-center gap-1 text-[length:var(--fs-micro)] text-danger whitespace-nowrap">
+        <span className="inline-flex items-center gap-1 text-micro text-danger whitespace-nowrap">
           <AlertCircle size={12} />
           {l.voltas} {l.voltas === 1 ? "volta" : "voltas"}
         </span>
@@ -130,7 +130,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
       <>
         <PrazoCelula prazo={l.prazo} />
         {combinado && l.prazoCombinado && (
-          <span className={`block text-[length:var(--fs-micro)] whitespace-nowrap ${COR_DO_PRAZO_COMBINADO[combinado.situacao]}`}>
+          <span className={`block text-micro whitespace-nowrap ${COR_DO_PRAZO_COMBINADO[combinado.situacao]}`}>
             {combinado.texto} · {formatInstantDate(l.prazoCombinado)}
           </span>
         )}
@@ -156,7 +156,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
               <PeDoCartao>
                 <Selo tom={tomDaVariante(SITUACAO_VARIANTE[l.situacao])}>{SITUACAO_LABEL[l.situacao]}</Selo>
                 {selos(l)}
-                <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">{l.responsavelNome ?? "Sem responsável"}</span>
+                <span className="ml-auto text-micro text-fg-muted">{l.responsavelNome ?? "Sem responsável"}</span>
               </PeDoCartao>
             </Cartao>
           </Link>
@@ -188,7 +188,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
               <col className="w-[96px]" />
             </colgroup>
             <thead>
-              <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+              <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                 <th className="px-4 py-3">
                   <FiltroDaColuna
                     rotulo="Processo"
@@ -227,12 +227,12 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                     >
                       {l.empresaNome}
                     </Link>
-                    <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={l.titulo ?? l.tipoNome}>
+                    <span className="block text-micro text-fg-muted truncate" title={l.titulo ?? l.tipoNome}>
                       {l.tipoNome}
                       {l.titulo ? ` · ${l.titulo}` : ""}
                     </span>
                     <span
-                      className="block text-[length:var(--fs-micro)] text-fg-muted truncate"
+                      className="block text-micro text-fg-muted truncate"
                       title={l.etapasAgora.join(" · ") || undefined}
                     >
                       {l.etapasAgora.length > 0 ? l.etapasAgora.join(" · ") : "Nada liberado no roteiro"}

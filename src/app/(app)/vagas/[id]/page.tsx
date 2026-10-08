@@ -202,7 +202,7 @@ export default async function VagaPage({
 
       {/* Detalhes */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Detalhes</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-4">Detalhes</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-4">
           <InfoRow label="Cargo" value={vaga.cargo?.name} />
           <InfoRow label="Quantidade" value={String(vaga.quantity)} />
@@ -220,18 +220,18 @@ export default async function VagaPage({
         </div>
         {vaga.notes && (
           <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">Observações</p>
-            <p className="text-[length:var(--fs-ui)] text-fg whitespace-pre-wrap">{vaga.notes}</p>
+            <p className="text-helper text-fg-muted mb-0.5">Observações</p>
+            <p className="text-ui text-fg whitespace-pre-wrap">{vaga.notes}</p>
           </div>
         )}
         {vaga.isPublic && tenantSlug && (
           <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">Portal público</p>
+            <p className="text-helper text-fg-muted mb-0.5">Portal público</p>
             <a
               href={`${publicBaseUrl}/carreiras/${tenantSlug}/${vaga.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[length:var(--fs-ui)] text-brand hover:underline break-all"
+              className="text-ui text-brand hover:underline break-all"
             >
               {publicBaseUrl}/carreiras/{tenantSlug}/{vaga.id}
             </a>
@@ -262,7 +262,7 @@ export default async function VagaPage({
       {/* Funil de recrutamento */}
       <Card className="p-5 mb-4">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <h2 className="min-w-0 text-[length:var(--fs-card-title)] font-semibold text-fg">
+          <h2 className="min-w-0 text-card-title font-semibold text-fg">
             Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
           </h2>
           {/* Era link de texto azul (30/09): botão não é link. */}
@@ -274,7 +274,7 @@ export default async function VagaPage({
         </div>
 
         {vaga.candidaturas.length === 0 ? (
-          <p className="text-[13px] text-fg-muted">Nenhum candidato vinculado ainda.</p>
+          <p className="text-fs-3 text-fg-muted">Nenhum candidato vinculado ainda.</p>
         ) : (
           <>
             {/* Conversão por etapa: o mesmo Funil do painel da Home (07/10,
@@ -287,7 +287,7 @@ export default async function VagaPage({
                 titulo="Candidaturas que chegaram a cada etapa"
                 etapas={funnelStats.stages.map((s) => ({ chave: s.stage, rotulo: s.label, valor: s.reached }))}
               />
-              <p className="mt-2 text-[length:var(--fs-micro)] text-fg-muted">
+              <p className="mt-2 text-micro text-fg-muted">
                 A barra é a parte do total de candidaturas que chegou a cada etapa; o percentual ao lado é quantas passaram da etapa
                 anterior.
               </p>
@@ -302,7 +302,7 @@ export default async function VagaPage({
               encerrarAction={encerrarCandidaturaAction}
             />
             {canManage && (
-              <p className="text-[11px] text-fg-muted mt-2">
+              <p className="text-fs-1 text-fg-muted mt-2">
                 Arraste os candidatos entre as etapas. Soltar em “Contratado” inicia a admissão.
               </p>
             )}
@@ -310,12 +310,12 @@ export default async function VagaPage({
             {/* Encerrados */}
             {encerrados.length > 0 && (
               <div className="mt-5 pt-4 border-t border-border">
-                <h3 className="text-[12px] font-semibold text-fg-muted mb-2">
+                <h3 className="text-fs-2 font-semibold text-fg-muted mb-2">
                   Encerrados ({encerrados.length})
                 </h3>
                 <div className="space-y-1.5">
                   {encerrados.map((c) => (
-                    <div key={c.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[12px]">
+                    <div key={c.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-fs-2">
                       <Link href={`/candidatos/${c.person.id}`} className="min-w-0 text-fg-secondary hover:text-brand transition-colors">
                         {c.person.name}
                       </Link>

@@ -90,7 +90,7 @@ export function PersonAccessLinkRow({
               ))}
             </Select>
           ) : (
-            <p className="text-[13px] text-fg truncate">{user ? `${user.name} (${user.email})` : "Não vinculado"}</p>
+            <p className="text-fs-3 text-fg truncate">{user ? `${user.name} (${user.email})` : "Não vinculado"}</p>
           )}
         </div>
       </td>
@@ -113,7 +113,7 @@ export function PersonAccessLinkRow({
                 ))}
               </Select>
             ) : (
-              <p className="text-[13px] text-fg truncate">{currentAgentLink?.chatwootAgentName ?? "Não vinculado"}</p>
+              <p className="text-fs-3 text-fg truncate">{currentAgentLink?.chatwootAgentName ?? "Não vinculado"}</p>
             )}
           </div>
         </td>

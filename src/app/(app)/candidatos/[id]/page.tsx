@@ -153,8 +153,8 @@ export default async function CandidatoPage({
 
       {/* Tags / Skills — banco de talentos */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Tags / Habilidades</h2>
-        <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
+        <h2 className="text-card-title font-semibold text-fg mb-1">Tags / Habilidades</h2>
+        <p className="text-fs-2 text-fg-muted mb-3">
           Torna o candidato pesquisável no banco de talentos, mesmo que não avance nesta vaga.
         </p>
         <TagToggleList
@@ -171,7 +171,7 @@ export default async function CandidatoPage({
 
       {/* Identificação */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Identificação</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
           <InfoRow
@@ -189,7 +189,7 @@ export default async function CandidatoPage({
 
       {/* Contato */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Contato</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="E-mail" value={person.email} />
           <InfoRow label="Telefone" value={formatPhone(person.phone)} />
@@ -199,7 +199,7 @@ export default async function CandidatoPage({
       {/* Endereço */}
       {fullAddress && (
         <Card className="p-5 mb-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Endereço</h2>
+          <h2 className="text-card-title font-semibold text-fg mb-4">Endereço</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
             <InfoRow label="Complemento" value={person.addressComplement} />
@@ -212,21 +212,21 @@ export default async function CandidatoPage({
 
       {/* Candidaturas */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
+        <h2 className="text-card-title font-semibold text-fg mb-3">
           Candidaturas {candidaturas.length > 0 && `(${candidaturas.length})`}
         </h2>
 
         {candidaturas.length === 0 ? (
-          <p className="text-[length:var(--fs-ui)] text-fg-muted">Ainda não foi vinculado a nenhuma vaga.</p>
+          <p className="text-ui text-fg-muted">Ainda não foi vinculado a nenhuma vaga.</p>
         ) : (
           <div className="divide-y divide-border">
             {candidaturas.map((c) => (
               <div key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2.5">
-                <Link href={`/vagas/${c.vaga.id}`} className="min-w-0 text-[length:var(--fs-ui)] text-brand hover:underline">
+                <Link href={`/vagas/${c.vaga.id}`} className="min-w-0 text-ui text-brand hover:underline">
                   {c.vaga.title}
                 </Link>
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="min-w-0 truncate text-[length:var(--fs-2)] text-fg-muted">{c.vaga.company.name}</span>
+                  <span className="min-w-0 truncate text-fs-2 text-fg-muted">{c.vaga.company.name}</span>
                   <Selo cor="bg-surface-2 text-fg-secondary border-border" className="flex-shrink-0">
                     {CANDIDATURA_STATUS_LABEL[c.status]}
                   </Selo>

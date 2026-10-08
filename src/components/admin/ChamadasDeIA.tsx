@@ -53,7 +53,7 @@ export function ChamadasDeIA({ chamadas, agora }: Props) {
       <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
         <table className="w-full min-w-[820px]">
           <thead>
-            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pr-3">
                 <FiltroDaColuna rotulo="Quando" chave="quando" tipo="data" />
               </th>
@@ -80,14 +80,14 @@ export function ChamadasDeIA({ chamadas, agora }: Props) {
                   </td>
                   <td className="py-2.5 pr-3">
                     <span className="font-medium">{c.agentLabel}</span>
-                    <span className="block text-[11px] text-fg-muted">{c.model}</span>
+                    <span className="block text-fs-1 text-fg-muted">{c.model}</span>
                   </td>
                   <td className="py-2.5 pr-3 text-fg-secondary">
                     {c.userName ?? TRIGGER_LABEL[c.trigger] ?? c.trigger}
                   </td>
                   <td className="py-2.5 pr-3 text-fg-muted">
                     {c.entityType ? (
-                      <span className="font-mono text-[11px]">
+                      <span className="font-mono text-fs-1">
                         {c.entityType}
                         {c.entityId ? `:${c.entityId.slice(0, 8)}` : ""}
                       </span>
@@ -110,7 +110,7 @@ export function ChamadasDeIA({ chamadas, agora }: Props) {
                   <td className="py-2.5 pr-3">
                     <Badge variant={DESFECHO_VARIANTE[desfecho]}>{DESFECHO_LABEL[desfecho]}</Badge>
                     {c.error && (
-                      <span className="block text-[11px] text-fg-muted truncate max-w-[260px]" title={c.error}>
+                      <span className="block text-fs-1 text-fg-muted truncate max-w-[260px]" title={c.error}>
                         {c.error}
                       </span>
                     )}

@@ -95,7 +95,7 @@ export default async function AgentesDeIAPage() {
           },
         ]}
       />
-      <p className="text-[12px] text-fg-muted -mt-2 mb-5">
+      <p className="text-fs-2 text-fg-muted -mt-2 mb-5">
         O mês começa à meia-noite de São Paulo. Os valores usam a tabela de preço escrita em{" "}
         {formatInstantDate(new Date(PRECOS_ESCRITOS_EM))} — enquanto ela não for conferida contra a
         página de preços do provedor, quem protege de verdade é o teto de chamadas.
@@ -104,16 +104,16 @@ export default async function AgentesDeIAPage() {
       <section className="flex flex-col gap-3 mb-8" aria-labelledby="agentes-do-chat">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
           <div>
-            <h2 id="agentes-do-chat" className="text-[length:var(--fs-section)] font-semibold text-fg">
+            <h2 id="agentes-do-chat" className="text-section font-semibold text-fg">
               Agentes — chat de IA
             </h2>
-            <p className="text-[13px] text-fg-secondary max-w-[70ch]">
+            <p className="text-fs-3 text-fg-secondary max-w-[70ch]">
               As IAs que conversam no chat do canto inferior direito, uma por setor, e a Ajuda do Connect. Ligar um
               agente aqui é o que o faz aparecer no chat para quem opera aquele setor. O do Societário também atende o
               cartão de perguntas da fila de processos.
             </p>
           </div>
-          <p className="text-[13px] tabular-nums text-fg-secondary">{moeda(gastoDe(doChat))} no mês</p>
+          <p className="text-fs-3 tabular-nums text-fg-secondary">{moeda(gastoDe(doChat))} no mês</p>
         </div>
         <PublicoDoChat todos={audiencia === "TODOS"} disponivel={audiencia !== null} />
         {painel && <PainelDoOrquestrador dados={painel} />}
@@ -126,19 +126,19 @@ export default async function AgentesDeIAPage() {
       <section className="flex flex-col gap-3 mb-8" aria-labelledby="outras-funcoes">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
           <div>
-            <h2 id="outras-funcoes" className="text-[length:var(--fs-section)] font-semibold text-fg">
+            <h2 id="outras-funcoes" className="text-section font-semibold text-fg">
               Outras utilizações de IA
             </h2>
-            <p className="text-[13px] text-fg-secondary max-w-[70ch]">
+            <p className="text-fs-3 text-fg-secondary max-w-[70ch]">
               Funções que usam IA dentro de uma tela ou em segundo plano — ler currículo, pontuar candidato, resumir
               empresa, atender no WhatsApp. Não aparecem no chat.
             </p>
           </div>
-          <p className="text-[13px] tabular-nums text-fg-secondary">{moeda(gastoDe(outras))} no mês</p>
+          <p className="text-fs-3 tabular-nums text-fg-secondary">{moeda(gastoDe(outras))} no mês</p>
         </div>
         {[...porSetor.entries()].map(([setor, ls]) => (
           <div key={setor} className="flex flex-col gap-3">
-            <p className="text-[11px] uppercase tracking-wide text-fg-muted pt-1">{setor}</p>
+            <p className="text-fs-1 uppercase tracking-wide text-fg-muted pt-1">{setor}</p>
             {ls.map((linha) => (
               <AgenteCard key={linha.def.code} linha={linha} podeEditar />
             ))}
@@ -149,8 +149,8 @@ export default async function AgentesDeIAPage() {
       {/* Mesmo cabeçalho das duas seções de cima (era 15px contra 17px). */}
       <section className="flex flex-col gap-3">
         <div className="border-b border-border pb-2">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Últimas chamadas</h2>
-          <p className="text-[13px] text-fg-secondary">
+          <h2 className="text-section font-semibold text-fg">Últimas chamadas</h2>
+          <p className="text-fs-3 text-fg-secondary">
             Quem pediu, sobre o quê e como terminou. É a resposta para “por que esse texto apareceu
             nesta ficha”.
           </p>

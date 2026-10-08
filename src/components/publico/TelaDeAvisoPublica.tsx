@@ -39,8 +39,8 @@ export function TelaDeAvisoPublica({
         <span className={`w-10 h-10 rounded-lg flex items-center justify-center [&>svg]:w-[18px] [&>svg]:h-[18px] ${COR_DO_ICONE[tom]}`}>
           {icone}
         </span>
-        <h1 className="text-[length:var(--fs-section)] font-semibold text-fg">{titulo}</h1>
-        <p className="text-[length:var(--fs-ui)] text-fg-muted">{texto}</p>
+        <h1 className="text-section font-semibold text-fg">{titulo}</h1>
+        <p className="text-ui text-fg-muted">{texto}</p>
         {children}
       </div>
     </div>

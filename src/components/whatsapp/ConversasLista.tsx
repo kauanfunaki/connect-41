@@ -153,7 +153,7 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
             <Button size="sm" variant="ghost" disabled={ocupado} onClick={() => setMarcadas(new Set())} className="ml-auto">
               <X size={14} /> Limpar
             </Button>
-            <p className="basis-full text-[length:var(--fs-micro)] text-fg-muted">
+            <p className="basis-full text-micro text-fg-muted">
               Nada é enviado aos candidatos. Cada conversa passa pela mesma regra de quando é feita uma por vez — a que não
               puder, fica de fora com o motivo.
             </p>
@@ -164,11 +164,11 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
       {retorno && (
         <div
           role="status"
-          className={`rounded-md border px-3 py-2 text-[length:var(--fs-ui)] ${retorno.erro ? "border-danger/30 bg-danger/5 text-danger" : "border-border bg-surface text-fg"}`}
+          className={`rounded-md border px-3 py-2 text-ui ${retorno.erro ? "border-danger/30 bg-danger/5 text-danger" : "border-border bg-surface text-fg"}`}
         >
           <p>{retorno.texto}</p>
           {retorno.puladas.length > 0 && (
-            <ul className="mt-1 text-[length:var(--fs-2)] text-fg-secondary">
+            <ul className="mt-1 text-fs-2 text-fg-secondary">
               {retorno.puladas.map((p, i) => (
                 <li key={`${p.nome}-${i}`}>
                   {p.nome}: {p.motivo}
@@ -203,15 +203,15 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
                     <span className="font-medium text-fg">{c.nome ?? telefoneLegivel(c.waPhone)}</span>
                     <Selo tom={SITUACAO_TOM[situacao]}>{SITUACAO_LABEL[situacao]}</Selo>
                     {c.responsavel ? (
-                      <span className="text-[length:var(--fs-micro)] text-fg-secondary">
+                      <span className="text-micro text-fg-secondary">
                         {c.responsavel.id === userId ? "com você" : `com ${c.responsavel.nome}`}
                       </span>
                     ) : (
                       c.handoffAt &&
-                      !c.optedOutAt && <span className="text-[length:var(--fs-micro)] text-danger font-medium">ninguém assumiu</span>
+                      !c.optedOutAt && <span className="text-micro text-danger font-medium">ninguém assumiu</span>
                     )}
                     {c.naoRespondidas > 0 && (
-                      <span className="text-[length:var(--fs-micro)] text-danger font-medium">
+                      <span className="text-micro text-danger font-medium">
                         {c.naoRespondidas === 1 ? "1 sem resposta" : `${c.naoRespondidas} sem resposta`}
                       </span>
                     )}
@@ -219,15 +219,15 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
                   {/* Sem vínculo, o telefone é a única identidade que temos —
                       e quem vai atender precisa dele à mão para ligar. */}
                   {c.nome && (
-                    <p className="text-[length:var(--fs-micro)] text-fg-muted mt-0.5">
+                    <p className="text-micro text-fg-muted mt-0.5">
                       {telefoneLegivel(c.waPhone)}
                       {c.vaga && ` · ${c.vaga}`}
                     </p>
                   )}
-                  {c.ultimaMensagem && <p className="text-[length:var(--fs-ui)] text-fg-secondary mt-1 truncate max-w-[52ch]">{c.ultimaMensagem}</p>}
-                  {c.handoffReason && <p className="text-[length:var(--fs-micro)] text-warning-fg mt-1">passou para você: {c.handoffReason}</p>}
+                  {c.ultimaMensagem && <p className="text-ui text-fg-secondary mt-1 truncate max-w-[52ch]">{c.ultimaMensagem}</p>}
+                  {c.handoffReason && <p className="text-micro text-warning-fg mt-1">passou para você: {c.handoffReason}</p>}
                 </div>
-                <span className="text-[length:var(--fs-micro)] text-fg-muted whitespace-nowrap tabular-nums shrink-0">
+                <span className="text-micro text-fg-muted whitespace-nowrap tabular-nums shrink-0">
                   {c.ultimaMensagemEm ? formatInstantDateTime(c.ultimaMensagemEm) : "—"}
                 </span>
               </div>

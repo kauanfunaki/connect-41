@@ -75,7 +75,7 @@ export function HorasDoProcesso({
           {/* Título de seção da ficha em 18px (padrão aceito na página de
               decisões, 08/10/2026) — era o de cartão em grade, 14px. */}
           <h2 id="horas-do-processo" className="text-section font-semibold text-fg">Horas trabalhadas</h2>
-          <p className="text-[length:var(--fs-2)] text-fg-muted">
+          <p className="text-fs-2 text-fg-muted">
             {total > 0 ? `${duracao(total)} neste processo` : "Nenhuma hora lançada ainda."} Entram nas horas de operação da Gestão.
           </p>
         </div>
@@ -87,7 +87,7 @@ export function HorasDoProcesso({
                   Parar {formatarDecorrido(segundos)} · lança {minutosApontados(segundos)} min
                 </Button>
               ) : (
-                <span className="text-[length:var(--fs-2)] text-fg-muted">
+                <span className="text-fs-2 text-fg-muted">
                   {cronometro.quem} está com o cronômetro ({formatarDecorrido(segundos)})
                 </span>
               )
@@ -147,7 +147,7 @@ export function HorasDoProcesso({
       )}
 
       {lancamentos.length > 0 && (
-        <ul className="flex flex-col divide-y divide-border text-[length:var(--fs-2)]">
+        <ul className="flex flex-col divide-y divide-border text-fs-2">
           {lancamentos.map((l) => (
             <li key={l.id} className="flex items-center justify-between gap-2 py-1.5">
               <span className="text-fg-secondary">

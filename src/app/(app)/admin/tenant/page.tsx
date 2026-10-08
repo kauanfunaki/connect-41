@@ -50,8 +50,8 @@ export default async function TenantPage() {
         {/* Horário da Agenda (05/10/2026): o padrão de quem não definiu um
             próprio em /configuracoes. */}
         <div className="mt-10 mb-4">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Horário da Agenda</h2>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5">
+          <h2 className="text-section font-semibold text-fg">Horário da Agenda</h2>
+          <p className="text-helper text-fg-muted mt-0.5">
             As horas que a grade de dia e de semana mostra. Vale para todo o escritório; cada pessoa pode trocar pelo seu em Configurações.
           </p>
         </div>
@@ -61,8 +61,8 @@ export default async function TenantPage() {
         </Card>
 
         <div className="mt-10 mb-4">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">E-mail (SMTP)</h2>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5">
+          <h2 className="text-section font-semibold text-fg">E-mail (SMTP)</h2>
+          <p className="text-helper text-fg-muted mt-0.5">
             Usado para enviar documentos a clientes com prova de recebimento. Cada workspace usa sua própria conta de e-mail.
           </p>
         </div>

@@ -26,8 +26,8 @@ export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
   return (
     <Card className="p-4 flex flex-col gap-4">
       <div>
-        <p className="text-[14px] font-semibold text-fg">Orquestrador do chat — últimos {DIAS_DO_PAINEL} dias</p>
-        <p className="text-[12px] text-fg-secondary max-w-[70ch]">
+        <p className="text-fs-4 font-semibold text-fg">Orquestrador do chat — últimos {DIAS_DO_PAINEL} dias</p>
+        <p className="text-fs-2 text-fg-secondary max-w-[70ch]">
           Cada IA reconhece pergunta de outro setor e a passa adiante: para a IA daquele setor, se a pessoa tiver acesso,
           ou como sugestão de transferência. Aqui só aparecem contagens — o que foi perguntado fica com quem perguntou
           (a exceção são as respostas marcadas como “não ajudou”, no quadro de avaliação).
@@ -35,13 +35,13 @@ export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
       </div>
 
       {dados.perguntas.length === 0 ? (
-        <p className="text-[13px] text-fg-muted">Nenhuma pergunta no chat neste período.</p>
+        <p className="text-fs-3 text-fg-muted">Nenhuma pergunta no chat neste período.</p>
       ) : (
         <div className="flex flex-col gap-1">
-          <p className="text-[11px] uppercase tracking-wide text-fg-muted">Perguntas por IA</p>
+          <p className="text-fs-1 uppercase tracking-wide text-fg-muted">Perguntas por IA</p>
           <ul className="flex flex-col">
             {dados.perguntas.map((p) => (
-              <li key={p.agentCode} className="flex flex-wrap items-baseline gap-x-3 py-1.5 border-b border-border-soft last:border-0 text-[13px]">
+              <li key={p.agentCode} className="flex flex-wrap items-baseline gap-x-3 py-1.5 border-b border-border-soft last:border-0 text-fs-3">
                 <span className="flex-1 min-w-[10rem] text-fg">{nomeDaIa(p.agentCode)}</span>
                 <span className="tabular-nums text-fg">{p.perguntas} perguntas</span>
                 <span className="tabular-nums text-fg-muted">{p.pessoas} {p.pessoas === 1 ? "pessoa" : "pessoas"}</span>
@@ -54,10 +54,10 @@ export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
 
       {dados.encaminhamentos.length > 0 && (
         <div className="flex flex-col gap-1">
-          <p className="text-[11px] uppercase tracking-wide text-fg-muted">Passadas para outro setor</p>
+          <p className="text-fs-1 uppercase tracking-wide text-fg-muted">Passadas para outro setor</p>
           <ul className="flex flex-col">
             {dados.encaminhamentos.map((e) => (
-              <li key={`${e.de}-${e.para}`} className="flex flex-wrap items-baseline gap-x-3 py-1.5 border-b border-border-soft last:border-0 text-[13px]">
+              <li key={`${e.de}-${e.para}`} className="flex flex-wrap items-baseline gap-x-3 py-1.5 border-b border-border-soft last:border-0 text-fs-3">
                 <span className="flex-1 min-w-[12rem] text-fg">
                   {nomeDaIa(e.de)} → {SETOR[e.para] ?? e.para}
                 </span>
@@ -71,7 +71,7 @@ export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
       )}
 
       {semIa > 0 && (
-        <p className="text-[13px] text-warning-fg">
+        <p className="text-fs-3 text-warning-fg">
           {semIa} {semIa === 1 ? "pergunta não era" : "perguntas não eram"} de nenhum setor com IA — é o sinal de qual
           IA construir a seguir.
         </p>

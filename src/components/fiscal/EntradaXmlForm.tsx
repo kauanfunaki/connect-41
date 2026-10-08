@@ -105,7 +105,7 @@ export function EntradaXmlForm({ empresas, action }: Props) {
             />
           </CampoForm>
 
-          {erro && <p className="text-[length:var(--fs-helper)] text-danger">{erro}</p>}
+          {erro && <p className="text-helper text-danger">{erro}</p>}
 
           {/* Rodapé padrão da página de formulário: Cancelar volta ao acervo,
               o primário por último, os dois à direita. */}
@@ -122,8 +122,8 @@ export function EntradaXmlForm({ empresas, action }: Props) {
 
       {vereditos && (
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Resultado</h2>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">
+          <h2 className="text-section font-semibold text-fg mb-1">Resultado</h2>
+          <p className="text-helper text-fg-muted mb-4">
             {vereditos.filter((v) => v.situacao === "aceito").length} de {vereditos.length} entraram no acervo.
             Cada arquivo tem seu veredito — nada é aceito ou recusado em bloco.
           </p>
@@ -134,8 +134,8 @@ export function EntradaXmlForm({ empresas, action }: Props) {
                 <li key={`${v.arquivo}-${i}`} className="flex items-start gap-3 py-2.5">
                   <span className={`flex-shrink-0 mt-0.5 ${ap.classe}`}>{ap.icone}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[length:var(--fs-ui)] text-fg truncate">{v.arquivo}</p>
-                    <p className="text-[length:var(--fs-micro)] text-fg-muted">
+                    <p className="text-ui text-fg truncate">{v.arquivo}</p>
+                    <p className="text-micro text-fg-muted">
                       <span className={ap.classe}>{ap.rotulo}</span>
                       {" · "}
                       {v.situacao === "aceito" ? `em ${v.empresa}` : v.detalhe}

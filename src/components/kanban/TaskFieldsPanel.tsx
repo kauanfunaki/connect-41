@@ -36,7 +36,7 @@ function FieldRow({ icon, label, children }: { icon: React.ReactNode; label: str
     // min-h-9: a linha tem a mesma altura com texto, selo ou botão do lado
     // direito — antes cada propriedade subia ou descia conforme o conteúdo.
     <div className="flex items-center gap-3 py-1 min-h-9">
-      <div className="flex items-center gap-2 w-40 flex-shrink-0 text-[13px] text-fg-muted">
+      <div className="flex items-center gap-2 w-40 flex-shrink-0 text-fs-3 text-fg-muted">
         {icon}
         {label}
       </div>
@@ -130,7 +130,7 @@ export function TaskFieldsPanel({
             ))}
           </Dropdown>
         ) : (
-          <span className="text-[13px] text-fg">{currentStageName}</span>
+          <span className="text-fs-3 text-fg">{currentStageName}</span>
         )}
       </FieldRow>
 
@@ -141,7 +141,7 @@ export function TaskFieldsPanel({
             <Dropdown
               width={260}
               trigger={({ open, toggle }) => (
-                <button type="button" onClick={toggle} aria-expanded={open} className="text-[13px] text-fg hover:text-brand transition-colors">
+                <button type="button" onClick={toggle} aria-expanded={open} className="text-fs-3 text-fg hover:text-brand transition-colors">
                   {hasResponsaveis ? selectedUsers.map((u) => u.name).join(", ") : <span className="text-fg-muted">Vazio</span>}
                 </button>
               )}
@@ -149,7 +149,7 @@ export function TaskFieldsPanel({
               <AssigneeToggleList allUsers={allUsers} selectedIds={selectedUserIds} toggleAction={assigneeToggleAction} />
             </Dropdown>
           ) : (
-            <span className="text-[13px] text-fg">{hasResponsaveis ? selectedUsers.map((u) => u.name).join(", ") : "—"}</span>
+            <span className="text-fs-3 text-fg">{hasResponsaveis ? selectedUsers.map((u) => u.name).join(", ") : "—"}</span>
           )}
         </FieldRow>
       )}
@@ -161,7 +161,7 @@ export function TaskFieldsPanel({
             <Dropdown
               width={260}
               trigger={({ open, toggle }) => (
-                <button type="button" onClick={toggle} aria-expanded={open} className="text-[13px] text-fg hover:text-brand transition-colors">
+                <button type="button" onClick={toggle} aria-expanded={open} className="text-fs-3 text-fg hover:text-brand transition-colors">
                   {hasParticipantes ? selectedWatchers.map((u) => u.name).join(", ") : <span className="text-fg-muted">Vazio</span>}
                 </button>
               )}
@@ -169,7 +169,7 @@ export function TaskFieldsPanel({
               <AssigneeToggleList allUsers={allUsers} selectedIds={selectedWatcherIds} toggleAction={watcherToggleAction} />
             </Dropdown>
           ) : (
-            <span className="text-[13px] text-fg">{hasParticipantes ? selectedWatchers.map((u) => u.name).join(", ") : "—"}</span>
+            <span className="text-fs-3 text-fg">{hasParticipantes ? selectedWatchers.map((u) => u.name).join(", ") : "—"}</span>
           )}
         </FieldRow>
       )}
@@ -187,7 +187,7 @@ export function TaskFieldsPanel({
               datesAction={datesAction}
             />
           ) : (
-            <span className="text-[13px] text-fg flex items-center gap-1.5">
+            <span className="text-fs-3 text-fg flex items-center gap-1.5">
               {startDate ? formatDateBR(startDate.slice(0, 10)) : "—"} → {dueDate ? formatDateBR(dueDate.slice(0, 10)) : "—"}
               {recurring && <Repeat size={12} className="text-fg-muted" />}
             </span>
@@ -200,7 +200,7 @@ export function TaskFieldsPanel({
         {canAct ? (
           <PriorityPopover priority={priority} dueDate={dueDate} startDate={startDate} recurring={recurring} recurrenceFrequency={recurrenceFrequency} datesAction={datesAction} />
         ) : (
-          <span className="text-[13px] text-fg flex items-center gap-1.5">
+          <span className="text-fs-3 text-fg flex items-center gap-1.5">
             <Flag size={12} style={{ color: PRIORITY_COLOR[priority] }} /> {PRIORITY_LABEL[priority]}
           </span>
         )}
@@ -218,7 +218,7 @@ export function TaskFieldsPanel({
         {activeTimer ? (
           activeTimer.userId === currentUserId ? (
             <span className="inline-flex items-center gap-2">
-              <TempoDecorrido key={activeTimer.startedAt} startedAt={activeTimer.startedAt} className="text-[12px] font-medium text-fg" mostrarApontamento />
+              <TempoDecorrido key={activeTimer.startedAt} startedAt={activeTimer.startedAt} className="text-fs-2 font-medium text-fg" mostrarApontamento />
               <Button
                 variant="danger"
                 size="xs"
@@ -232,7 +232,7 @@ export function TaskFieldsPanel({
             // Vale para quem não está rastreando também: o "…" antigo não dizia
             // se o colega tinha começado agora ou esquecido o cronômetro ligado
             // desde ontem.
-            <span className="inline-flex items-center gap-1 text-[12px] text-fg-muted">
+            <span className="inline-flex items-center gap-1 text-fs-2 text-fg-muted">
               {activeTimer.userName} está rastreando há{" "}
               <TempoDecorrido key={activeTimer.startedAt} startedAt={activeTimer.startedAt} className="font-medium text-fg-secondary" />
             </span>
@@ -242,7 +242,7 @@ export function TaskFieldsPanel({
             <Play size={11} /> Iniciar
           </Button>
         ) : (
-          <span className="text-[13px] text-fg-muted">—</span>
+          <span className="text-fs-3 text-fg-muted">—</span>
         )}
       </FieldRow>
 
@@ -256,12 +256,12 @@ export function TaskFieldsPanel({
                 <button type="button" onClick={toggle} aria-expanded={open} className="flex items-center gap-1 flex-wrap">
                   {hasEtiquetas ? (
                     selectedTags.map((t) => (
-                      <span key={t.id} className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: `${t.color}1A`, color: t.color }}>
+                      <span key={t.id} className="inline-flex items-center text-fs-1 font-medium px-2 py-0.5 rounded-full" style={{ background: `${t.color}1A`, color: t.color }}>
                         {t.name}
                       </span>
                     ))
                   ) : (
-                    <span className="text-[13px] text-fg-muted">Vazio</span>
+                    <span className="text-fs-3 text-fg-muted">Vazio</span>
                   )}
                 </button>
               )}
@@ -271,7 +271,7 @@ export function TaskFieldsPanel({
           ) : (
             <div className="flex items-center gap-1 flex-wrap">
               {selectedTags.map((t) => (
-                <span key={t.id} className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: `${t.color}1A`, color: t.color }}>
+                <span key={t.id} className="inline-flex items-center text-fs-1 font-medium px-2 py-0.5 rounded-full" style={{ background: `${t.color}1A`, color: t.color }}>
                   {t.name}
                 </span>
               ))}
@@ -320,7 +320,7 @@ function DatesPopover({
     <Dropdown
       width={240}
       trigger={({ open, toggle }) => (
-        <button type="button" onClick={toggle} aria-expanded={open} disabled={isPending} className="text-[13px] text-fg hover:text-brand transition-colors flex items-center gap-1.5">
+        <button type="button" onClick={toggle} aria-expanded={open} disabled={isPending} className="text-fs-3 text-fg hover:text-brand transition-colors flex items-center gap-1.5">
           {start ? formatDateBR(start) : "Início"} → {end ? formatDateBR(end) : "Fim"}
           {recurring && <Repeat size={12} className="text-fg-muted" />}
         </button>
@@ -376,7 +376,7 @@ function PriorityPopover({
     <Dropdown
       width={160}
       trigger={({ open, toggle }) => (
-        <button type="button" onClick={toggle} aria-expanded={open} className="text-[13px] text-fg hover:text-brand transition-colors flex items-center gap-1.5">
+        <button type="button" onClick={toggle} aria-expanded={open} className="text-fs-3 text-fg hover:text-brand transition-colors flex items-center gap-1.5">
           <Flag size={12} style={{ color: PRIORITY_COLOR[current] }} /> {PRIORITY_LABEL[current]}
         </button>
       )}
@@ -400,14 +400,14 @@ function EstimatePopover({
   const [value, setValue] = useState(estimateMinutes != null ? String(estimateMinutes) : "");
 
   if (!canAct) {
-    return <span className="text-[13px] text-fg-muted">{estimateMinutes != null ? `${estimateMinutes} min` : "—"}</span>;
+    return <span className="text-fs-3 text-fg-muted">{estimateMinutes != null ? `${estimateMinutes} min` : "—"}</span>;
   }
 
   return (
     <Dropdown
       width={160}
       trigger={({ open, toggle }) => (
-        <button type="button" onClick={toggle} aria-expanded={open} className="text-[13px] hover:text-brand transition-colors">
+        <button type="button" onClick={toggle} aria-expanded={open} className="text-fs-3 hover:text-brand transition-colors">
           {estimateMinutes != null ? <span className="text-fg">{estimateMinutes} min</span> : <span className="text-fg-muted">Vazio</span>}
         </button>
       )}

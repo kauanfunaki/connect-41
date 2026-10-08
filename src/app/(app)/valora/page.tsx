@@ -178,7 +178,7 @@ export default async function ValoraPage() {
               <TabelaNoDesktop padrao>
                 <table className="w-full min-w-[920px]">
                   <thead>
-                    <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                       <th className="px-3">Cliente</th>
                       <th className="px-3">
                         <FiltroDaColuna rotulo="Regime" chave="regime" />
@@ -213,7 +213,7 @@ export default async function ValoraPage() {
                           <Link href={`/valora/${p.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
                             {p.cliente}
                           </Link>
-                          {p.motivo && <span className="block text-[length:var(--fs-micro)] text-fg-muted">{p.motivo}</span>}
+                          {p.motivo && <span className="block text-micro text-fg-muted">{p.motivo}</span>}
                         </td>
                         <td className="px-3 text-fg-secondary">{p.regime}</td>
                         <td className="px-3 tabular-nums">{brl(p.precoAlvo)}</td>
@@ -224,7 +224,7 @@ export default async function ValoraPage() {
                         </td>
                         <td className="px-3 text-fg-secondary whitespace-nowrap">
                           {formatInstantDate(p.createdAt)}
-                          <span className="block text-[length:var(--fs-micro)] text-fg-muted">{p.createdBy.name}</span>
+                          <span className="block text-micro text-fg-muted">{p.createdBy.name}</span>
                         </td>
                         <td className="px-3">{acesso.podeSimular && <EditarProposta proposta={p} />}</td>
                       </LinhaFiltravel>
@@ -233,7 +233,7 @@ export default async function ValoraPage() {
                 </table>
               </TabelaNoDesktop>
             </TabelaFiltravel>
-            <p className="text-[length:var(--fs-micro)] text-fg-muted mt-3">
+            <p className="text-micro text-fg-muted mt-3">
               O alvo é a foto do dia em que a proposta foi salva: mudar custos ou margem em Parâmetros não reescreve propostas
               antigas.
             </p>

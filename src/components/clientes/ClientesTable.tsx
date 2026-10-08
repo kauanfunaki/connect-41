@@ -105,7 +105,7 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
           <p className="font-medium text-fg break-words min-w-0 flex-1">{c.name}</p>
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-fg-secondary">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-fs-2 text-fg-secondary">
           <StatusDot
             color={c.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
             label={c.active ? "Ativo" : "Inativo"}
@@ -145,7 +145,7 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
             {canCreate && selecionaveis.length > 0 && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={todosMarcados} onChange={marcarTodos} aria-label="Selecionar todos" />
-                <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">
                   Selecionar todos
                 </span>
               </div>
@@ -165,10 +165,10 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
                     <Checkbox checked={todosMarcados} onChange={marcarTodos} aria-label="Selecionar todos" />
                   </th>
                 )}
-                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Raiz do CNPJ</th>
-                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Empresas</th>
-                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Situação</th>
+                <th className="px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted">Raiz do CNPJ</th>
+                <th className="px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted">Empresas</th>
+                <th className="px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted">Situação</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>

@@ -98,7 +98,7 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
         }}
         // 24px (07/10/2026): as iniciais saíram de 9px para os 11px da escala,
         // e não cabiam duas letras dentro da borda de prioridade num círculo de 20px.
-        className="w-6 h-6 rounded-full bg-surface-hover border-2 flex items-center justify-center text-[length:var(--fs-micro)] font-medium text-fg-secondary"
+        className="w-6 h-6 rounded-full bg-surface-hover border-2 flex items-center justify-center text-micro font-medium text-fg-secondary"
         style={{ borderColor: PRIORITY_COLOR[a.priority] ?? PRIORITY_COLOR[0] }}
       >
         {a.name.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
@@ -117,7 +117,7 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
                 startTransition(() => priorityAction(itemId, a.id, p));
                 setOpen(false);
               }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-fs-2 text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
             >
               <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: PRIORITY_COLOR[p] }} />
               {PRIORITY_LABEL[p]}
@@ -213,12 +213,12 @@ function Row({
           <div className="flex items-center gap-2 min-w-0">
             <Link
               href={`${basePath}/itens/${item.id}`}
-              className={`text-[13px] text-fg group-hover:text-brand transition-colors truncate min-w-0 ${isTerminal ? "text-fg-muted" : ""}`}
+              className={`text-fs-3 text-fg group-hover:text-brand transition-colors truncate min-w-0 ${isTerminal ? "text-fg-muted" : ""}`}
             >
               {item.entityName}
             </Link>
             {hasSubtasks && (
-              <span className="text-[11px] text-fg-muted flex-shrink-0 tnum">
+              <span className="text-fs-1 text-fg-muted flex-shrink-0 tnum">
                 {(item as TaskRow).subtasks!.filter((s) => s.isTerminal).length}/{(item as TaskRow).subtasks!.length}
               </span>
             )}
@@ -233,14 +233,14 @@ function Row({
           {tags.length > 0 && (
             <div className="flex items-center gap-1 min-w-0">
               <span
-                className="inline-flex items-center text-[length:var(--fs-micro)] font-medium px-1.5 py-0.5 rounded-full truncate"
+                className="inline-flex items-center text-micro font-medium px-1.5 py-0.5 rounded-full truncate"
                 style={{ background: `${tags[0].color}1A`, color: tags[0].color }}
               >
                 {tags[0].name}
               </span>
               {tags.length > 1 && (
                 <span
-                  className="inline-flex items-center flex-shrink-0 text-[length:var(--fs-micro)] font-medium px-1.5 py-0.5 rounded-full bg-surface-hover text-fg-muted tnum"
+                  className="inline-flex items-center flex-shrink-0 text-micro font-medium px-1.5 py-0.5 rounded-full bg-surface-hover text-fg-muted tnum"
                   title={tags.slice(1).map((t) => t.name).join(", ")}
                 >
                   +{tags.length - 1}
@@ -267,7 +267,7 @@ function Row({
         <td className="py-2 pr-4 w-[120px] text-right">
           <div className="flex items-center justify-end gap-1">
             {dueDate && (
-              <span className={`inline-flex items-center gap-1 text-[11px] tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
+              <span className={`inline-flex items-center gap-1 text-fs-1 tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
                 {item.recurring && <Repeat size={10} />}
                 {formatCalendarDate(new Date(dueDate), { day: "2-digit", month: "short" })}
               </span>
@@ -356,7 +356,7 @@ function TaskCard({
 
           <Link
             href={`${basePath}/itens/${item.id}`}
-            className={`flex-1 min-w-0 text-[13px] leading-snug ${isTerminal ? "text-fg-muted" : "text-fg"}`}
+            className={`flex-1 min-w-0 text-fs-3 leading-snug ${isTerminal ? "text-fg-muted" : "text-fg"}`}
           >
             {item.entityName}
           </Link>
@@ -369,7 +369,7 @@ function TaskCard({
               onClick={() => setExpanded((v) => !v)}
               aria-label={expanded ? "Recolher subtarefas" : "Expandir subtarefas"}
             >
-              <span className="text-[11px] tnum">
+              <span className="text-fs-1 tnum">
                 {(item as TaskRow).subtasks!.filter((s) => s.isTerminal).length}/{(item as TaskRow).subtasks!.length}
               </span>
               <ChevronRight size={14} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
@@ -386,7 +386,7 @@ function TaskCard({
             {tags.map((t) => (
               <span
                 key={t.id}
-                className="inline-flex items-center text-[length:var(--fs-micro)] font-medium px-1.5 py-0.5 rounded-full"
+                className="inline-flex items-center text-micro font-medium px-1.5 py-0.5 rounded-full"
                 style={{ background: `${t.color}1A`, color: t.color }}
               >
                 {t.name}
@@ -403,7 +403,7 @@ function TaskCard({
               ))}
             </div>
             {dueDate && (
-              <span className={`inline-flex items-center gap-1 text-[11px] tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
+              <span className={`inline-flex items-center gap-1 text-fs-1 tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
                 {item.recurring && <Repeat size={10} />}
                 {formatCalendarDate(new Date(dueDate), { day: "2-digit", month: "short" })}
               </span>
@@ -508,12 +508,12 @@ function StageGroupHeader({
         <h3
           onClick={() => canAct && setEditingName(true)}
           style={{ background: badgeColor, color: "#FFFFFF" }}
-          className={`inline-flex items-center h-[22px] px-2 rounded-md text-[11px] font-semibold uppercase tracking-wide ${canAct ? "cursor-text" : ""}`}
+          className={`inline-flex items-center h-[22px] px-2 rounded-md text-fs-1 font-semibold uppercase tracking-wide ${canAct ? "cursor-text" : ""}`}
         >
           {stage.name}
         </h3>
       )}
-      <span className="text-[11px] text-fg-muted tnum">{count}</span>
+      <span className="text-fs-1 text-fg-muted tnum">{count}</span>
     </div>
   );
 }
@@ -632,7 +632,7 @@ function StageGroup({
           {items.length === 0 && dragId && (
             <tr>
               <td colSpan={5} className="h-8" style={{ paddingLeft: CONTENT_OFFSET }}>
-                <p className="text-[11px] text-fg-muted">Solte aqui para mover</p>
+                <p className="text-fs-1 text-fg-muted">Solte aqui para mover</p>
               </td>
             </tr>
           )}
@@ -891,16 +891,16 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
             <thead className="sticky top-0 z-10">
               <tr className="text-left">
                 <th className={`${DOT_COL} bg-table-header-bg pt-2.5 pb-2 border-b border-border`} />
-                <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 border-b border-border">
+                <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 border-b border-border">
                   <FiltroDaColuna rotulo="Tarefa" chave="tarefa" />
                 </th>
-                <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-44 border-b border-border">
+                <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-44 border-b border-border">
                   <FiltroDaColuna rotulo="Tags" chave="tags" />
                 </th>
-                <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-24 border-b border-border">
+                <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-24 border-b border-border">
                   <FiltroDaColuna rotulo="Responsáveis" chave="responsaveis" align="right" />
                 </th>
-                <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[120px] text-right border-b border-border">
+                <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[120px] text-right border-b border-border">
                   <FiltroDaColuna rotulo="Prazo" chave="prazo" tipo="data" align="right" />
                 </th>
               </tr>

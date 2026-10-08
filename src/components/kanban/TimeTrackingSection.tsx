@@ -64,8 +64,8 @@ export function TimeTrackingSection({ canAct, estimateMinutes, entries, estimate
   return (
     <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Tempo</h2>
-        <div className="flex items-center gap-3 text-[11px] text-fg-muted">
+        <h2 className="text-card-title font-semibold text-fg">Tempo</h2>
+        <div className="flex items-center gap-3 text-fs-1 text-fg-muted">
           {editingEstimate ? (
             <div className="flex items-center gap-1.5">
               <Input
@@ -106,12 +106,12 @@ export function TimeTrackingSection({ canAct, estimateMinutes, entries, estimate
           {entries.map((e) => (
             <div key={e.id} className="flex items-center justify-between gap-2 py-1.5 group">
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] text-fg">
+                <p className="text-fs-3 text-fg">
                   <span className="font-medium">{formatMinutes(e.minutes)}</span>
                   {" · "}
                   <span className="text-fg-muted">{e.userName} · {e.loggedOnLabel}</span>
                 </p>
-                {e.note && <p className="text-[12px] text-fg-muted truncate">{e.note}</p>}
+                {e.note && <p className="text-fs-2 text-fg-muted truncate">{e.note}</p>}
               </div>
               {e.canDelete && (
                 <IconButton

@@ -144,13 +144,13 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
               <div key={s.id} className="flex items-start justify-between gap-4 px-4 py-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[13px] text-fg font-medium break-words">{s.name}</p>
+                    <p className="text-fs-3 text-fg font-medium break-words">{s.name}</p>
                     {s.administrator && <Badge variant="info">Administrador</Badge>}
                     {s.sharePercent !== null && (
-                      <span className="text-[length:var(--fs-micro)] text-fg-muted tabular-nums">{Number(s.sharePercent)}%</span>
+                      <span className="text-micro text-fg-muted tabular-nums">{Number(s.sharePercent)}%</span>
                     )}
                   </div>
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted tabular-nums mt-0.5">
+                  <p className="text-micro text-fg-muted tabular-nums mt-0.5">
                     {[
                       s.qualification,
                       documento(s.document, s.documentMasked),
@@ -162,7 +162,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted break-words">{endereco(s)}</p>
+                  <p className="text-micro text-fg-muted break-words">{endereco(s)}</p>
                 </div>
                 {podeEditar && (
                   <div className="shrink-0">
@@ -182,15 +182,15 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
 
           {exSocios.length > 0 && (
             <section className="mb-4" aria-labelledby="ex-socios">
-              <h2 id="ex-socios" className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">
+              <h2 id="ex-socios" className="text-card-title font-semibold text-fg mb-2">
                 Ex-sócios
               </h2>
               <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
                 {exSocios.map((s) => (
                   <div key={s.id} className="flex items-start justify-between gap-4 px-4 py-2.5">
                     <div className="min-w-0">
-                      <p className="text-[13px] text-fg-secondary break-words">{s.name}</p>
-                      <p className="text-[length:var(--fs-micro)] text-fg-muted tabular-nums">
+                      <p className="text-fs-3 text-fg-secondary break-words">{s.name}</p>
+                      <p className="text-micro text-fg-muted tabular-nums">
                         {s.entryDate ? `${formatInstantDate(s.entryDate)} a ` : "até "}
                         {formatInstantDate(s.exitDate!)}
                         {s.qualification ? ` · ${s.qualification}` : ""}
@@ -210,8 +210,8 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
           {/* O que o cadastro responde, dito na tela — senão ele vira uma lista
               que ninguém sabe para que serve. */}
           <Card className="p-4">
-            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">O que isto responde na viabilidade</h2>
-            <p className="text-[length:var(--fs-2)] text-fg-secondary">
+            <h2 className="text-card-title font-semibold text-fg mb-2">O que isto responde na viabilidade</h2>
+            <p className="text-fs-2 text-fg-secondary">
               <strong>Reside no local?</strong>{" "}
               {resideNoLocal === true ? (
                 <Badge variant="success">Sim</Badge>
@@ -222,13 +222,13 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
               )}
             </p>
             {resideNoLocal === null && (
-              <p className="text-[12px] text-fg-muted mt-1">
+              <p className="text-fs-2 text-fg-muted mt-1">
                 {socios.length === 0
                   ? "Não há sócio atual para comparar: todos têm saída registrada. Cadastre o quadro vigente, ou quem preenche o Empresa Fácil responde à mão."
                   : "Falta CEP ou número em algum endereço, ou só um dos lados tem complemento. Enquanto for assim, quem preenche o Empresa Fácil responde essa pergunta à mão."}
               </p>
             )}
-            <p className="text-[12px] text-fg-muted mt-2 tabular-nums">
+            <p className="text-fs-2 text-fg-muted mt-2 tabular-nums">
               Participações somam {PERCENTUAL.format(soma)}%
               {participacoes.some((p) => p.sharePercent === null) && " — há sócio sem participação preenchida"}.
             </p>

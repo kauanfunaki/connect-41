@@ -69,7 +69,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
       </Button>
 
       <Modal open={aberto} onClose={fechar} title="Enviar guia ao cliente" maxWidth="max-w-lg">
-        <form onSubmit={enviar} className="flex flex-col gap-4 text-[length:var(--fs-ui)]">
+        <form onSubmit={enviar} className="flex flex-col gap-4 text-ui">
           <input type="hidden" name="taxaId" value={taxaId} />
 
           <p className="text-fg-secondary">{descricao}</p>
@@ -78,7 +78,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
               tamanho de helper) — eram títulos de 11px em caixa alta. */}
           <dl className="flex flex-col gap-3">
             <div className="flex flex-col gap-1 min-w-0">
-              <dt className="text-[length:var(--fs-helper)] text-fg-muted">Vai para</dt>
+              <dt className="text-helper text-fg-muted">Vai para</dt>
               <dd>
                 {semDestinatario ? (
                   <p className="text-danger">Nenhum contato desta empresa tem e-mail válido. Corrija o cadastro antes.</p>
@@ -94,7 +94,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
               </dd>
             </div>
             <div className="flex flex-col gap-1 min-w-0">
-              <dt className="text-[length:var(--fs-helper)] text-fg-muted">Arquivado como</dt>
+              <dt className="text-helper text-fg-muted">Arquivado como</dt>
               <dd className="text-fg break-words">{envio.caminho}</dd>
             </div>
           </dl>

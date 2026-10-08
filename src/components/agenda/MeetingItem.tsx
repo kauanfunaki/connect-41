@@ -86,11 +86,11 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
           isGoogle ? "bg-brand-subtle border-brand" : "bg-info-bg border-info"
         }`}
       >
-        <p className="text-[11px] font-medium truncate leading-tight" style={{ color: accent }}>
+        <p className="text-fs-1 font-medium truncate leading-tight" style={{ color: accent }}>
           {meeting.title}
         </p>
         {!compact && (
-          <p className="text-[length:var(--fs-micro)] text-fg-muted truncate leading-tight">
+          <p className="text-micro text-fg-muted truncate leading-tight">
             {meeting.company ? meeting.company.name : formatTime(start)}
           </p>
         )}
@@ -106,8 +106,8 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
         className="w-full flex items-center gap-1 px-1 py-[3px] rounded text-left hover:bg-surface-hover transition-colors"
       >
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: accent }} />
-        <span className="text-[length:var(--fs-micro)] text-fg-muted tnum flex-shrink-0">{formatTime(start)}</span>
-        <span className="text-[length:var(--fs-micro)] text-fg truncate min-w-0">{meeting.title}</span>
+        <span className="text-micro text-fg-muted tnum flex-shrink-0">{formatTime(start)}</span>
+        <span className="text-micro text-fg truncate min-w-0">{meeting.title}</span>
       </button>
     );
 
@@ -129,9 +129,9 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
 
           <div className="p-3.5 space-y-3">
             <div>
-              <p className="text-[14px] font-semibold text-fg leading-snug">{meeting.title}</p>
+              <p className="text-fs-4 font-semibold text-fg leading-snug">{meeting.title}</p>
               <span
-                className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-[length:var(--fs-micro)] font-medium"
+                className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-micro font-medium"
                 style={{ color: accent, background: fundo }}
               >
                 {PROVIDER_LABEL[meeting.provider]}
@@ -139,7 +139,7 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-[12px] text-fg-secondary">
+              <div className="flex items-center gap-2 text-fs-2 text-fg-secondary">
                 <Calendar size={13} className="text-fg-muted flex-shrink-0" />
                 <span className="capitalize">{formatDayLabel(start)}</span>
                 <span className="text-fg-muted">·</span>
@@ -147,7 +147,7 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
               </div>
 
               {meeting.company && (
-                <div className="flex items-start gap-2 text-[12px] text-fg-secondary">
+                <div className="flex items-start gap-2 text-fs-2 text-fg-secondary">
                   <Building2 size={13} className="text-fg-muted flex-shrink-0 mt-0.5" />
                   <span>
                     <span className="text-fg font-medium">{meeting.company.name}</span>
@@ -157,7 +157,7 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
               )}
 
               {meeting.clientName && (
-                <div className="flex items-start gap-2 text-[12px] text-fg-secondary">
+                <div className="flex items-start gap-2 text-fs-2 text-fg-secondary">
                   <Users size={13} className="text-fg-muted flex-shrink-0 mt-0.5" />
                   <span className="text-fg">{meeting.clientName}</span>
                 </div>
@@ -170,13 +170,13 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
                       <span
                         key={a.id}
                         title={a.name}
-                        className="w-5 h-5 rounded-full bg-brand-subtle text-brand border border-surface-elevated flex items-center justify-center text-[length:var(--fs-micro)] font-semibold"
+                        className="w-5 h-5 rounded-full bg-brand-subtle text-brand border border-surface-elevated flex items-center justify-center text-micro font-semibold"
                       >
                         {initialsFromName(a.name)}
                       </span>
                     ))}
                   </div>
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted truncate">
+                  <p className="text-micro text-fg-muted truncate">
                     {meeting.attendees.map((a) => a.name).join(", ")}
                   </p>
                 </div>

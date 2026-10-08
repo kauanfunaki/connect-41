@@ -48,10 +48,10 @@ export default async function PlanosPage() {
           {plans.map((p) => (
             <div key={p.id} className="flex items-start justify-between px-4 py-3 gap-4">
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] text-fg font-medium">
+                <p className="text-fs-3 text-fg font-medium">
                   {p.name} {!p.active && <span className="text-fg-muted font-normal">(inativo)</span>}
                 </p>
-                <p className="text-[11px] text-fg-muted mt-0.5">
+                <p className="text-fs-1 text-fg-muted mt-0.5">
                   {MANAGEMENT_MODE_LABEL[p.managementMode]} · {BILLING_TYPE_LABEL[p.billingType]} ·{" "}
                   {p.billingType === "FLAT_MONTHLY" ? `${fmt(p.basePrice)}/mês` : `${fmt(p.pricePerUser)}/usuário/mês`}
                   {" · "}implantação {fmt(p.setupFee)}

@@ -79,7 +79,7 @@ export function PersonHeader({
 
           <div className="min-w-0 pt-0.5">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-[length:var(--fs-section)] font-display font-semibold text-fg tracking-[-0.01em] truncate">
+              <h1 className="text-section font-display font-semibold text-fg tracking-[-0.01em] truncate">
                 {name}
               </h1>
               <Selo cor={TYPE_STYLE[type]}>
@@ -94,7 +94,7 @@ export function PersonHeader({
               {cpf && (
                 <Button
                   variant="linkMuted"
-                  className="text-[length:var(--fs-helper)] tnum"
+                  className="text-helper tnum"
                   onClick={copyCpf}
                   title="Copiar CPF" aria-label="Copiar CPF"
                 >
@@ -105,7 +105,7 @@ export function PersonHeader({
               {companyId && companyName && (
                 <Link
                   href={`/empresas/${companyId}`}
-                  className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-helper text-fg-muted hover:text-fg transition-colors"
                 >
                   <Building2 size={14} />
                   {companyName}
@@ -114,7 +114,7 @@ export function PersonHeader({
               {email && (
                 <a
                   href={`mailto:${email}`}
-                  className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-helper text-fg-muted hover:text-fg transition-colors"
                 >
                   <Mail size={14} />
                   {email}
@@ -123,7 +123,7 @@ export function PersonHeader({
               {phone && (
                 <a
                   href={`tel:${phone}`}
-                  className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-helper text-fg-muted hover:text-fg transition-colors"
                 >
                   <Phone size={14} />
                   {formatPhone(phone)}

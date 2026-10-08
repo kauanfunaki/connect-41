@@ -24,8 +24,8 @@ export default function DocumentoError({
         <span className="w-10 h-10 rounded-lg bg-danger/10 text-danger flex items-center justify-center">
           <AlertTriangle size={18} />
         </span>
-        <h1 className="text-[18px] font-semibold text-fg">Algo deu errado</h1>
-        <p className="text-[13px] text-fg-muted">
+        <h1 className="text-fs-7 font-semibold text-fg">Algo deu errado</h1>
+        <p className="text-fs-3 text-fg-muted">
           Não foi possível carregar este documento. Tente novamente ou entre em contato com quem enviou o link.
         </p>
         <Button type="button" onClick={reset} className="mt-1">

@@ -96,7 +96,7 @@ export default async function MinhaAreaPage() {
             grupos[faixa].length === 0 ? null : (
               <section key={faixa}>
                 <h2
-                  className={`text-[length:var(--fs-card-title)] font-semibold mb-1 ${faixa === "vencido" ? "text-danger" : "text-fg-secondary"}`}
+                  className={`text-card-title font-semibold mb-1 ${faixa === "vencido" ? "text-danger" : "text-fg-secondary"}`}
                 >
                   {FAIXA_LABEL[faixa]} <span className="tabular-nums text-fg-muted font-normal">{grupos[faixa].length}</span>
                 </h2>
@@ -106,7 +106,7 @@ export default async function MinhaAreaPage() {
           )}
           {semData.length > 0 && (
             <section>
-              <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-1 text-fg-secondary">
+              <h2 className="text-card-title font-semibold mb-1 text-fg-secondary">
                 Sem data <span className="tabular-nums text-fg-muted font-normal">{semData.length}</span>
               </h2>
               <ListaDePrazos itens={semData} hoje={agora} />

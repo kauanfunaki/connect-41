@@ -216,7 +216,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           </Button>
         )}
 
-        <span className="text-[12px] text-fg-muted ml-auto flex-shrink-0">
+        <span className="text-fs-2 text-fg-muted ml-auto flex-shrink-0">
           {filtered.length} de {items.length}
         </span>
       </div>

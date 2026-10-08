@@ -88,7 +88,7 @@ function ChecklistRow({
           <IconButton type="button" size="md" onClick={() => setEditing(false)} aria-label="Cancelar" className="flex-shrink-0"><X size={14} /></IconButton>
         </div>
       ) : (
-        <span className={`text-[13px] flex-1 min-w-0 truncate ${item.done ? "text-fg-muted line-through" : "text-fg"}`}>
+        <span className={`text-fs-3 flex-1 min-w-0 truncate ${item.done ? "text-fg-muted line-through" : "text-fg"}`}>
           {item.text}
         </span>
       )}
@@ -139,7 +139,7 @@ export function ChecklistSection({ canAct, items, createAction, toggleAction, ed
   return (
     <div>
       {items.length === 0 && (
-        <p className="text-[12px] text-fg-muted italic mb-2">Checklist vazia.</p>
+        <p className="text-fs-2 text-fg-muted italic mb-2">Checklist vazia.</p>
       )}
 
       {items.length > 0 && (

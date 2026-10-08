@@ -73,7 +73,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
       <div className="grid grid-cols-7 border-b border-border flex-shrink-0">
         {WEEKDAY_HEADER.map((label) => (
           <div key={label} className="text-center py-2 border-l border-border first:border-l-0">
-            <p className="text-[length:var(--fs-micro)] font-medium text-fg-muted uppercase tracking-wide">{label}</p>
+            <p className="text-micro font-medium text-fg-muted uppercase tracking-wide">{label}</p>
           </div>
         ))}
       </div>
@@ -101,7 +101,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
                 <Link
                   href={`/agenda?view=dia&date=${d.dateKey}`}
                   title={`Ver ${weekdayLabel(d.dateKey)}, dia ${dayNumber(d.dateKey)}`}
-                  className={`w-5 h-5 sm:w-6 sm:h-6 inline-flex items-center justify-center rounded-full text-[length:var(--fs-micro)] sm:text-[length:var(--fs-2)] tnum transition-colors ${
+                  className={`w-5 h-5 sm:w-6 sm:h-6 inline-flex items-center justify-center rounded-full text-micro sm:text-fs-2 tnum transition-colors ${
                     d.isToday
                       ? "bg-brand-solid text-on-brand font-semibold"
                       : outside
@@ -115,7 +115,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
                   type="button"
                   onClick={() => onDayClick(d.dateKey)}
                   aria-label={`Criar reunião em ${d.dateKey}`}
-                  className="hidden sm:inline-flex w-5 h-5 items-center justify-center rounded text-fg-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-surface-hover transition-opacity text-[length:var(--fs-label)] leading-none"
+                  className="hidden sm:inline-flex w-5 h-5 items-center justify-center rounded text-fg-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-surface-hover transition-opacity text-label leading-none"
                 >
                   +
                 </button>}
@@ -132,7 +132,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
                 {overflow > 0 && (
                   <Link
                     href={`/agenda?view=dia&date=${d.dateKey}`}
-                    className="block px-1 text-[length:var(--fs-micro)] font-medium text-fg-muted hover:text-brand transition-colors"
+                    className="block px-1 text-micro font-medium text-fg-muted hover:text-brand transition-colors"
                   >
                     +{overflow} mais
                   </Link>
@@ -157,7 +157,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
                       style={{ background: m.provider === "GOOGLE" ? "var(--c41-brand)" : "var(--c41-info)" }}
                     />
                   ))}
-                  {dayMeetings.length > 4 && <span className="text-[length:var(--fs-micro)] text-fg-muted tnum">+{dayMeetings.length - 4}</span>}
+                  {dayMeetings.length > 4 && <span className="text-micro text-fg-muted tnum">+{dayMeetings.length - 4}</span>}
                 </Link>
               )}
             </div>
