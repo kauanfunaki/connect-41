@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/Button";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { saoPauloParts } from "@/lib/agenda";
 import { EditarProposta } from "@/components/valora/EditarProposta";
 import { acessoAoValora } from "@/lib/valora/servidor";
 import { brl } from "@/lib/valora/formato";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { ROTULO_REGIME, type Perfil } from "@/lib/valora/motor";
 
 export const dynamic = "force-dynamic";
@@ -102,8 +102,8 @@ export default async function ValoraPage() {
       {/* Os números do topo no cartão padrão, com ícone (30/09). */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Em aberto", valor: String(linhas.filter((p) => p.status === "ABERTA").length), icone: <Hourglass /> },
-          { rotulo: "Ganhas", valor: String(ganhas), icone: <Trophy />, tom: ganhas > 0 ? "text-success" : undefined },
+          { rotulo: "Em aberto", valor: formatarNumero(linhas.filter((p) => p.status === "ABERTA").length, 0), icone: <Hourglass /> },
+          { rotulo: "Ganhas", valor: formatarNumero(ganhas, 0), icone: <Trophy />, tom: ganhas > 0 ? "text-success" : undefined },
           {
             rotulo: "Taxa de fechamento",
             valor: decididas ? `${Math.round((ganhas / decididas) * 100)}%` : "—",

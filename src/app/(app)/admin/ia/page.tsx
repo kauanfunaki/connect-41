@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Activity, CircleHelp, Wallet } from "lucide-react";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -11,7 +11,7 @@ import { ChamadasDeIA } from "@/components/admin/ChamadasDeIA";
 import { listarAgentes, ultimasChamadas } from "@/lib/ia/data";
 import { PRECOS_ESCRITOS_EM } from "@/lib/ia/custo";
 import { moeda } from "@/lib/ia/tela";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { PublicoDoChat } from "@/components/admin/PublicoDoChat";
 import { audienciaDoChat } from "@/lib/ia/chat/agentes";
 import { painelDoOrquestrador } from "@/lib/ia/chat/painel";
@@ -86,10 +86,10 @@ export default async function AgentesDeIAPage() {
       <FaixaDeTotais
         itens={[
           { rotulo: "Gasto no mês", valor: moeda(totalCentavos), icone: <Wallet /> },
-          { rotulo: "Chamadas", valor: String(totalChamadas), icone: <Activity /> },
+          { rotulo: "Chamadas", valor: formatarNumero(totalChamadas, 0), icone: <Activity /> },
           {
             rotulo: "Sem custo apurado",
-            valor: String(totalSemCusto),
+            valor: formatarNumero(totalSemCusto, 0),
             icone: <CircleHelp />,
             tom: totalSemCusto > 0 ? "text-warning" : "text-fg-muted",
           },

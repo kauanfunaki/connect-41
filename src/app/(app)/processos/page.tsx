@@ -4,7 +4,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle, Search } from "lucide-react";
 import { Input } from "@/components/ui/Input";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -22,6 +22,7 @@ import { abrirProcesso } from "./actions";
 import { contarAvisosPendentes } from "@/lib/societario/avisos";
 import { contarPendentesDoSetor } from "@/lib/ia/propostas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { formatarNumero } from "@/lib/format";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -185,10 +186,11 @@ export default async function ProcessosPage({
           const situacao = r.situacao!;
           return {
             rotulo: SITUACAO_LABEL[situacao],
-            valor: String(contagem[situacao]),
+            valor: formatarNumero(contagem[situacao], 0),
             icone: ICONE_DA_SITUACAO[situacao],
             tom: situacao === "EM_EXIGENCIA" && contagem[situacao] > 0 ? "text-warning" : situacao === "SUSPENSO" && contagem[situacao] > 0 ? "text-danger" : undefined,
             detalhe: r.chave === recorte.chave ? "mostrando agora" : undefined,
+            ativo: r.chave === recorte.chave,
             href: hrefDoRecorte(r.chave === recorte.chave ? "todos" : r.chave),
           };
         })}

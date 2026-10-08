@@ -14,9 +14,9 @@ import { Pagination } from "@/components/shared/Pagination";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { FiltroDaColunaNaUrl, FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { lerLista } from "@/lib/filtroNaUrl";
 import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE, VAGA_STATUS_ORDER } from "@/lib/vagaStatus";
 import { Selo } from "@/components/ui/Selo";
@@ -147,10 +147,11 @@ export default async function VagasPage({
       <FaixaDeTotais
         itens={VAGA_STATUS_ORDER.map((s) => ({
           rotulo: ROTULO_DO_CARTAO[s],
-          valor: String(contagem[s]),
+          valor: formatarNumero(contagem[s], 0),
           icone: ICONE_DO_STATUS[s],
           tom: s === "ENCERRADA" || s === "CANCELADA" ? "text-fg-muted" : undefined,
           detalhe: statusFilter === s ? "mostrando agora" : undefined,
+          ativo: statusFilter === s,
           href: buildUrl({ status: statusFilter === s ? undefined : s, page: undefined }),
         }))}
       />

@@ -7,11 +7,11 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Card } from "@/components/ui/Card";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { visaoDoCliente, type ProcessoDoCliente } from "@/lib/societario/painel-data";
 import { listarLicencas } from "@/lib/societario/licencas-data";
@@ -130,16 +130,16 @@ export default async function VisaoSocietariaDoClientePage({
       <FaixaDeTotais
         className="mb-6"
         itens={[
-          { rotulo: "Processos abertos", valor: String(visao.abertos.length), icone: <FolderOpen /> },
+          { rotulo: "Processos abertos", valor: formatarNumero(visao.abertos.length, 0), icone: <FolderOpen /> },
           {
             rotulo: "Exigências abertas",
-            valor: String(exigenciasAbertas),
+            valor: formatarNumero(exigenciasAbertas, 0),
             icone: <AlertTriangle />,
             tom: exigenciasAbertas > 0 ? "text-warning" : undefined,
           },
           {
             rotulo: "Licenças vencendo",
-            valor: String(vencendo),
+            valor: formatarNumero(vencendo, 0),
             icone: <CalendarClock />,
             // Vermelho quando já há vencida, como o selo da fila de Licenças.
             tom: vencidas > 0 ? "text-danger" : vencendo > 0 ? "text-warning" : undefined,

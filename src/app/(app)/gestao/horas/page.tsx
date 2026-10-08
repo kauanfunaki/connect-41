@@ -4,13 +4,13 @@ import { Clock, Download, ListChecks, Timer, Users, Wallet } from "lucide-react"
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna, type LinhaDoFiltro } from "@/components/shared/FiltroDeColunas";
 import { campoDeSetor } from "@/components/gestao/FiltroDeSetor";
 import { saoPauloParts } from "@/lib/agenda";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { contextoDaGestao, recorteComFiltro } from "@/lib/gestao/acesso";
 import { custosDoTenant, horasDoPeriodo, periodoDaUrl } from "@/lib/gestao/horas";
 import { resumirHoras } from "@/lib/gestao/custo";
@@ -106,8 +106,8 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
           ...(podeVerCusto
             ? [{ rotulo: "Custo das horas", valor: resumo.total.custo === null ? "—" : brl(resumo.total.custo), icone: <Wallet /> }]
             : []),
-          { rotulo: "Pessoas", valor: String(resumo.porPessoa.length), icone: <Users /> },
-          { rotulo: "Apontamentos", valor: String(linhas.length), icone: <ListChecks /> },
+          { rotulo: "Pessoas", valor: formatarNumero(resumo.porPessoa.length, 0), icone: <Users /> },
+          { rotulo: "Apontamentos", valor: formatarNumero(linhas.length, 0), icone: <ListChecks /> },
         ]}
       />
 
