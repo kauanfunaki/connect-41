@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
 import { ROTULO_DA_ACAO, type AcaoDeSituacao, type StatusDoProcesso } from "@/lib/societario/processo";
 import type { ProcessoState } from "@/app/(app)/processos/actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 const AJUDA: Record<Exclude<AcaoDeSituacao, "retomar">, { titulo: string; texto: string; exemplo: string }> = {
   aguardar_cliente: {
@@ -112,9 +113,9 @@ export function SituacaoDoProcesso({
       </div>
       {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
       {erro && !acao && (
-        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {erro}
-        </p>
+        </Aviso>
       )}
 
       <Modal open={acao !== null} onClose={() => !pendente && setAcao(null)} title={acao ? AJUDA[acao].titulo : undefined}>
@@ -139,7 +140,7 @@ export function SituacaoDoProcesso({
               />
             </CampoForm>
             {erro && (
-              <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{erro}</p>
+              <Aviso>{erro}</Aviso>
             )}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
               <Button type="button" variant="secondary" disabled={pendente} onClick={() => setAcao(null)}>

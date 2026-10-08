@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   canAct: boolean;
@@ -20,8 +21,8 @@ export function CompletionBanner({ canAct, isCompleted, completedByLabel, conclu
 
   if (isCompleted) {
     return (
-      <div className="flex items-center justify-between gap-3 mb-4 px-4 py-2.5 rounded-lg bg-success/10 border border-success/25">
-        <div className="flex items-center gap-2 text-[13px] text-success font-medium">
+      <Aviso tom="sucesso" className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2 font-medium">
           <CheckCircle2 size={16} />
           {completedByLabel ?? "Tarefa concluída"}
         </div>
@@ -35,7 +36,7 @@ export function CompletionBanner({ canAct, isCompleted, completedByLabel, conclu
             <RotateCcw size={12} /> Reabrir
           </Button>
         )}
-      </div>
+      </Aviso>
     );
   }
 

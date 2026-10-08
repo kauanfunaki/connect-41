@@ -20,6 +20,7 @@ import { ContasOmie } from "@/components/admin/ContasOmie";
 import { listarContasOmie } from "@/lib/integracoes/omie/contas";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { desconectarIntegracao } from "./actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 const ERROR_LABEL: Record<string, string> = {
   "sem-permissao": "Sem permissão para conectar integrações.",
@@ -91,14 +92,14 @@ export default async function IntegracoesPage({
       {/* O retorno do Google/Microsoft cai aqui: o aviso vem logo abaixo do
           título, e não depois da vitrine, onde ficava fora da tela. */}
       {error && (
-        <p className="mb-4 text-[13px] text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
+        <Aviso className="mb-4">
           {ERROR_LABEL[error] ?? "Erro ao conectar integração."}
-        </p>
+        </Aviso>
       )}
       {connected && (
-        <p className="mb-4 text-[13px] text-success bg-success-bg border border-success/30 rounded-lg px-3 py-2">
+        <Aviso tom="sucesso" className="mb-4">
           Conta {connected === "google" ? "Google" : "Microsoft"} conectada com sucesso.
-        </p>
+        </Aviso>
       )}
 
       {/* ─── A vitrine ──────────────────────────────────────────────────────

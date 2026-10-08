@@ -6,6 +6,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { CampoHora } from "@/components/ui/CampoHora";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type WorkShiftDefaultValues = {
   id?: string;
@@ -30,9 +31,9 @@ export function WorkShiftForm({ action, companyId, cancelHref, defaultValues }: 
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       {/* Horário na largura de um horário: em três terços iguais, o "08:00"

@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatInstantDate } from "@/lib/format";
 import type { AvisoState } from "@/app/(app)/processos/avisos-actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type AvisoNaTela = {
   id: string;
@@ -188,9 +189,9 @@ function CartaoDoAviso({
 
       {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
       {erro && (
-        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {erro}
-        </p>
+        </Aviso>
       )}
 
       {/* Descartar tira o aviso da fila: fica separado, à esquerda, e o

@@ -6,6 +6,7 @@ import type { TaxaNaTela } from "@/lib/societario/licencas-data";
 import type { CustoDoProcesso } from "@/lib/societario/licencas";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { EnviarTaxaAoCliente } from "./EnviarTaxaAoCliente";
+import { Aviso } from "@/components/ui/Aviso";
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const moeda = (c: number) => MOEDA.format(c / 100);
@@ -30,10 +31,10 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
       {/* O número que dá causa ao prazo: "trinta dias" sozinho não conta a
           história que "trinta dias e duas guias a mais" conta. */}
       {custo.custoDasVoltasCentavos > 0 && (
-        <p className="text-[length:var(--fs-2)] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
+        <Aviso tom="atencao">
           <strong>{moeda(custo.custoDasVoltasCentavos)}</strong> vieram de reapresentação — guia
           paga de novo porque o processo voltou.
-        </p>
+        </Aviso>
       )}
 
       {/* Casco padrão, com funil (02/10/2026) — era uma tabela solta, à esquerda. */}

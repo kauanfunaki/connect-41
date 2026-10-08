@@ -9,6 +9,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { RejeitarProposta } from "./RejeitarProposta";
 import type { AcaoDaIa } from "@/app/(app)/societario/ia/actions";
 import type { PlanoDoContrato, SocioLido } from "@/lib/societario/contratoSocial";
+import { Aviso } from "@/components/ui/Aviso";
 
 const INTEIRO = new Intl.NumberFormat("pt-BR");
 const DUAS_CASAS = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -123,11 +124,13 @@ export function RevisarContrato({
   return (
     <div className="flex flex-col gap-4">
       {avisos.length > 0 && (
-        <ul className="rounded-lg border border-warning/40 bg-warning-bg px-4 py-3 text-[length:var(--fs-ui)] text-fg flex flex-col gap-1">
-          {avisos.map((a) => (
-            <li key={a}>{a}</li>
-          ))}
-        </ul>
+        <Aviso tom="atencao">
+          <ul className="text-fg flex flex-col gap-1">
+            {avisos.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </Aviso>
       )}
 
       <div className="overflow-x-auto rounded-lg border border-border bg-surface">

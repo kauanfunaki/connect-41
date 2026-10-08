@@ -12,6 +12,7 @@ import { buildS2200Preview } from "@/lib/esocialS2200";
 import { formatCalendarDate } from "@/lib/format";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { CheckCircle2, CircleDashed } from "lucide-react";
+import { Aviso } from "@/components/ui/Aviso";
 
 export default async function EsocialS2200Page({
   params,
@@ -81,13 +82,13 @@ export default async function EsocialS2200Page({
       />
 
       {/* Aviso honesto: não é transmissão oficial */}
-      <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-4">
-        <p className="text-[length:var(--fs-helper)] text-fg">
+      <Aviso tom="atencao" className="mb-4">
+        <p className="text-fg">
           <strong>Rascunho para conferência.</strong> Esta tela não gera XML, não assina e não transmite ao eSocial —
           a transmissão oficial continua no software de folha da empresa. Serve para verificar, a partir dos dados da
           admissão, o que já está preenchido e o que ainda falta para o S-2200.
         </p>
-      </div>
+      </Aviso>
 
       {/* Resumo de completude — eram dois selos soltos (até 30/09); viraram
           os cartões de total. */}

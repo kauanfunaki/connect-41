@@ -5,6 +5,7 @@ import type { DepartmentState } from "@/app/(app)/empresas/[id]/departamentos/ac
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: (prev: DepartmentState, form: FormData) => Promise<DepartmentState>;
@@ -22,9 +23,9 @@ export function DepartmentForm({ action, companyId, cancelHref, defaultValues }:
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       <CampoForm label="Nome do Departamento" htmlFor="name" required>

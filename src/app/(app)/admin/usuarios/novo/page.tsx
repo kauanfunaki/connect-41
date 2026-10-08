@@ -11,6 +11,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { assignableRoles, ROLE_OPTIONS } from "@/lib/roles";
 import { getSectorMaps } from "@/lib/sectors";
 import { canAddUser } from "@/lib/subscriptions";
+import { Aviso } from "@/components/ui/Aviso";
 
 export default async function NovoUsuarioPage() {
   const ctx = await getAuthContext();
@@ -28,9 +29,9 @@ export default async function NovoUsuarioPage() {
       <PageContainer>
         <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Novo Usuário" }]} />
 
-        <div className="rounded-lg border border-warning/30 bg-warning-bg px-4 py-3">
-          <p className="text-[13px] text-fg">{seatCheck.reason}</p>
-        </div>
+        <Aviso tom="atencao">
+          <p className="text-fg">{seatCheck.reason}</p>
+        </Aviso>
 
         <Button href="/admin/usuarios" variant="secondary" className="mt-4">
           <ArrowLeft size={14} /> Voltar para Usuários

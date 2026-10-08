@@ -16,6 +16,7 @@ import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatCnpj, formatCpf, formatPhone, formatCep } from "@/lib/format";
 import { NOVO_CLIENTE } from "@/lib/clientGroups";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
+import { Aviso } from "@/components/ui/Aviso";
 
 const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
   { value: "ACTIVE",   label: "Ativo" },
@@ -328,9 +329,9 @@ export function EmpresaForm({
         {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
         {state?.error && (
-          <p className="mb-4 text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
+          <Aviso className="mb-4">
             {state.error}
-          </p>
+          </Aviso>
         )}
 
         {/* ── 1. Identificação ─────────────────────────── */}

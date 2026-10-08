@@ -19,6 +19,7 @@ import {
   resumoDoGasto,
 } from "@/lib/ia/tela";
 import type { LinhaDeAgente } from "@/lib/ia/data";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   linha: LinhaDeAgente;
@@ -102,14 +103,14 @@ export function AgenteCard({ linha, podeEditar }: Props) {
               <input type="hidden" name="agentCode" value={linha.def.code} />
 
               {state && "error" in state && (
-                <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+                <Aviso>
                   {state.error}
-                </p>
+                </Aviso>
               )}
               {state && "success" in state && (
-                <p className="text-[13px] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">
+                <Aviso tom="sucesso">
                   Configuração salva.
-                </p>
+                </Aviso>
               )}
 
               <Checkbox

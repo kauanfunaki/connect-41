@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Sparkles } from "lucide-react";
 import type { AiExtractState } from "@/app/(app)/candidatos/[id]/ai-actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: () => Promise<AiExtractState>;
@@ -38,9 +39,9 @@ export function AiResumeExtract({ action }: Props) {
       </div>
 
       {state && "error" in state && (
-        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
+        <Aviso className="mt-3">
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       {state && "summary" in state && (

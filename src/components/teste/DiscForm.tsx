@@ -9,6 +9,7 @@ import { ChoicePill } from "./ChoicePill";
 import { useTestDraft } from "./useTestDraft";
 import { Button } from "@/components/ui/Button";
 import { ConfirmacaoEnviada } from "@/components/publico/ConfirmacaoEnviada";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = { token: string };
 
@@ -232,9 +233,9 @@ export function DiscForm({ token }: Props) {
       </Button>
 
       {error && (
-        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {error}
-        </p>
+        </Aviso>
       )}
     </form>
   );

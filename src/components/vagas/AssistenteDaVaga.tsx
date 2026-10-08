@@ -10,6 +10,7 @@ import {
   type RespostaDoAssistente,
 } from "@/app/(app)/vagas/[id]/ia-actions";
 import type { PropostaDeEscrita } from "@/lib/ia/ferramentas";
+import { Aviso } from "@/components/ui/Aviso";
 
 const ETAPA_LABEL: Record<string, string> = {
   TRIAGEM: "Triagem",
@@ -83,18 +84,17 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
       </div>
 
       {resposta && "error" in resposta && (
-        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {resposta.error}
-        </p>
+        </Aviso>
       )}
 
       {resposta && "texto" in resposta && (
         <div className="flex flex-col gap-3">
           {resposta.truncado && (
-            <p className="flex items-start gap-2 text-[length:var(--fs-2)] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
-              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+            <Aviso tom="atencao" icone={<AlertTriangle />}>
               O assistente parou antes de terminar — a resposta pode estar incompleta.
-            </p>
+            </Aviso>
           )}
           <p className="text-[length:var(--fs-ui)] text-fg whitespace-pre-wrap">{resposta.texto}</p>
 
