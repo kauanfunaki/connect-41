@@ -2,8 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Send } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Search } from "lucide-react";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -184,12 +184,9 @@ export function NovoComunicadoForm({
         <CampoDeAnexos idBase="comunicado-anexo" />
       </CampoForm>
 
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        {erro && <span className="mr-auto text-[length:var(--fs-2)] text-danger">{erro}</span>}
-        <Button type="submit">
-          <Send size={14} /> Enviar comunicado
-        </Button>
-      </div>
+      {/* O rodapé padrão (08/10/2026). O envio espera na confirmação, que já
+          mostra o "Enviando…"; aqui não há o que carregar. */}
+      <FormFooter pending={false} submitLabel="Enviar comunicado" erro={erro} semDivisoria />
       {dialog}
     </form>
   );

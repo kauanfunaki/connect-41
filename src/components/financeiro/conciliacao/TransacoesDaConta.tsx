@@ -27,6 +27,7 @@ import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
 import { formatarCompetencia } from "@/lib/format";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type LancamentoResumido = {
   id: string;
@@ -413,33 +414,36 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
         </div>
         {limitado && <p className="text-[11px] text-fg-muted">Mostrando os 200 primeiros. Refine pela busca.</p>}
 
-        {erro && <p className="text-[12px] text-danger">{erro}</p>}
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-          <span className="mr-auto text-[12px] tabular-nums">
-            Selecionado: <strong>{moeda(soma)}</strong> de {moeda(alvo)}
-            {marcados.size > 0 && falta !== 0 && (
-              <span className="text-danger"> · {falta > 0 ? `faltam ${moeda(falta)}` : `passou ${moeda(-falta)}`}</span>
-            )}
-          </span>
-          <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button
-              disabled={salvando || marcados.size === 0 || falta !== 0}
-              onClick={() => {
-                setErro(null);
-                startSalvar(async () => {
-                  const r = await confirmarConciliacao(transacao.id, [...marcados.keys()]);
-                  if ("error" in r) setErro(r.error);
-                  else onClose();
-                });
-              }}
-            >
-              {salvando ? "Conciliando…" : "Conciliar"}
-            </Button>
-          </div>
-        </div>
+        {erro && <Aviso>{erro}</Aviso>}
+        {/* O rodapé padrão (08/10/2026), num formulário só dele: a soma do que
+            está marcado vai na nota, e o erro, acima, não a esconde. */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setErro(null);
+            startSalvar(async () => {
+              const r = await confirmarConciliacao(transacao.id, [...marcados.keys()]);
+              if ("error" in r) setErro(r.error);
+              else onClose();
+            });
+          }}
+        >
+          <FormFooter
+            pending={salvando}
+            submitLabel="Conciliar"
+            pendingLabel="Conciliando…"
+            onCancel={onClose}
+            submitDisabled={marcados.size === 0 || falta !== 0}
+            nota={
+              <span className="tabular-nums text-fg">
+                Selecionado: <strong>{moeda(soma)}</strong> de {moeda(alvo)}
+                {marcados.size > 0 && falta !== 0 && (
+                  <span className="text-danger"> · {falta > 0 ? `faltam ${moeda(falta)}` : `passou ${moeda(-falta)}`}</span>
+                )}
+              </span>
+            }
+          />
+        </form>
       </div>
     </Modal>
   );

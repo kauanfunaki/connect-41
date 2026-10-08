@@ -216,8 +216,8 @@ function CoverControls({
         <div className={`${CANVAS_CLASS} !py-0 !pt-6`}>
           {/* Era texto solto (30/09): botão fantasma, discreto em cima da folha,
               com o texto alinhado ao título da página. */}
-          <Button variant="ghost" size="xs" className="-ml-2.5" onClick={() => fileInputRef.current?.click()} disabled={pending}>
-            <ImagePlus size={12} /> {pending ? "Enviando…" : "Adicionar capa"}
+          <Button variant="ghost" size="xs" className="-ml-2.5" onClick={() => fileInputRef.current?.click()} loading={pending} loadingLabel="Enviando…">
+            <ImagePlus size={12} /> Adicionar capa
           </Button>
         </div>
       )}
