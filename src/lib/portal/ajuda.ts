@@ -23,6 +23,7 @@ export type IconeDoPasso =
   | "processo"
   | "financeiro"
   | "documentos"
+  | "conta"
   | "senha";
 
 type Linha = string | { texto: string; modulos: readonly string[] };
@@ -221,6 +222,21 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     passos: [
       "Nas telas que mostram uma empresa por vez, use o campo de empresa no topo.",
       "Digite parte do nome para achar a empresa mais rápido.",
+    ],
+  },
+  // Minha conta (08/10/2026, 12A da página de decisões): a troca de senha
+  // logado, as empresas do acesso e o tema.
+  {
+    chave: "conta",
+    titulo: "Trocar a senha e o tema",
+    resumo: "Em Minha conta: a sua senha, as empresas do seu acesso e o tema claro ou escuro.",
+    icone: "conta",
+    passos: [
+      "No menu, clique em Minha conta, logo acima de Ajuda e Sair.",
+      "Em Senha, digite a senha atual e a nova, com ao menos 8 caracteres. Repita a nova em Confirme a nova senha e clique em Salvar senha.",
+      "Entra com o Google e nunca criou uma senha, ou esqueceu a atual? Clique em Enviar link para criar senha e abra o link que chega no seu e-mail.",
+      "Em Empresas, veja as empresas que o seu acesso enxerga. Para incluir ou tirar uma, fale com o escritório.",
+      "Em Tema, escolha Do aparelho, Claro ou Escuro. Do aparelho segue o tema do seu celular ou computador.",
     ],
   },
   {

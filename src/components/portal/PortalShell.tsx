@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { CircleHelp, LogOut, Menu, X } from "lucide-react";
+import { CircleHelp, CircleUserRound, LogOut, Menu, X } from "lucide-react";
 import { NavItem, classeDoItem } from "@/components/shell/NavLink";
 import { IconButton } from "@/components/ui/IconButton";
 import { iconeDaTela } from "@/components/portal/iconeDaTela";
@@ -135,8 +135,11 @@ export function PortalShell({
         </nav>
 
         {/* Ajuda no rodapé, junto do sair: vale para qualquer tela, e no menu
-            de telas ela se misturaria com o trabalho. */}
+            de telas ela se misturaria com o trabalho. "Minha conta" (senha,
+            empresas e tema) entra acima das duas pelo mesmo motivo — escolha
+            do Kauan na página de decisões, 08/10/2026. */}
         <div className="border-t border-border px-3 py-3 flex-shrink-0 space-y-0.5" onClick={() => setMenuAberto(false)}>
+          <NavItem href="/portal/conta" icon={<CircleUserRound />} label="Minha conta" />
           <NavItem href="/portal/ajuda" icon={<CircleHelp />} label="Ajuda" />
           <form action={sairDoPortal}>
             <button
