@@ -9,7 +9,10 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
+import { Selo } from "@/components/ui/Selo";
+// O nível (júnior, pleno, sênior) é categoria do cargo: `Badge`. O "degrau
+// invertido" é um alerta sobre o cargo: `Selo` (escolha 2A do Kauan, 08/10/2026).
+import { Badge } from "@/components/ui/Badge";
 import { formatarReais } from "@/lib/format";
 import {
   agruparPorFamilia,
@@ -159,10 +162,10 @@ export default async function CargosSalariosPage() {
                       {(c.seniority || (invertidoIds.has(c.id) && canViewSalary)) && (
                         <PeDoCartao>
                           {c.seniority && (
-                            <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">{SENIORITY_LABEL[c.seniority]}</SeloDoDP>
+                            <Badge variant="info">{SENIORITY_LABEL[c.seniority]}</Badge>
                           )}
                           {invertidoIds.has(c.id) && canViewSalary && (
-                            <SeloDoDP cor="bg-warning/10 text-warning-fg border-warning/25">degrau invertido</SeloDoDP>
+                            <Selo tom="atencao">Degrau invertido</Selo>
                           )}
                         </PeDoCartao>
                       )}
@@ -214,7 +217,7 @@ export default async function CargosSalariosPage() {
                           <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border">
                             <td className="px-4 py-3">
                               {c.seniority ? (
-                                <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">{SENIORITY_LABEL[c.seniority]}</SeloDoDP>
+                                <Badge variant="info">{SENIORITY_LABEL[c.seniority]}</Badge>
                               ) : (
                                 <span className="text-fs-2 text-fg-muted">—</span>
                               )}
@@ -228,7 +231,7 @@ export default async function CargosSalariosPage() {
                               </Link>
                               {invertidoIds.has(c.id) && canViewSalary && (
                                 <span className="ml-2 inline-flex">
-                                  <SeloDoDP cor="bg-warning/10 text-warning-fg border-warning/25">degrau invertido</SeloDoDP>
+                                  <Selo tom="atencao">Degrau invertido</Selo>
                                 </span>
                               )}
                             </td>

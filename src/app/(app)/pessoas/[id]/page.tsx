@@ -25,7 +25,8 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
 import { AdmissaoCard } from "@/components/pessoas/AdmissaoCard";
-import { SeloDoDP, horasDoDP } from "@/components/pessoas/rotulosDoDP";
+import { horasDoDP } from "@/components/pessoas/rotulosDoDP";
+import { Badge } from "@/components/ui/Badge";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
@@ -340,9 +341,11 @@ export default async function PessoaPage({
                     {d.cpf && ` · CPF ${maskCpf(d.cpf)}`}
                   </p>
                 </div>
+                {/* IR e salário-família classificam o dependente: categoria, então
+                    `Badge` — o `Selo` é para situação (2A, 08/10/2026). */}
                 <div className="flex gap-1.5 flex-shrink-0">
-                  {d.isIRDependent && <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">IR</SeloDoDP>}
-                  {d.isSalarioFamilia && <SeloDoDP cor="bg-surface-2 text-fg-muted border-border">Salário-família</SeloDoDP>}
+                  {d.isIRDependent && <Badge variant="info">IR</Badge>}
+                  {d.isSalarioFamilia && <Badge variant="neutral">Salário-família</Badge>}
                 </div>
               </div>
             ))}

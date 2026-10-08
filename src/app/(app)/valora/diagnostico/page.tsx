@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CircleDashed, Clock, Handshake, TrendingDown } from "lucide-react";
@@ -125,14 +125,16 @@ export default async function DiagnosticoDaCarteiraPage() {
                     <td className="px-3 tabular-nums">{formatarNumero(l.horasMes, 1)} h</td>
                     <td className="px-3 tabular-nums">{formatarReais(l.custoMes)}</td>
                     <td className="px-3 tabular-nums">
+                      {/* A margem contra o piso e o alvo é a situação do cliente: o
+                          `Selo`, e não o `Badge` de categoria (2A, 08/10/2026). */}
                       {l.margemPct === null ? (
                         "—"
                       ) : l.margemPct < cfg.parametros.margemPisoPct ? (
-                        <Badge variant="danger">{formatarNumero(l.margemPct, 1)}%</Badge>
+                        <Selo tom="perigo">{formatarNumero(l.margemPct, 1)}%</Selo>
                       ) : l.margemPct < cfg.parametros.margemAlvoPct ? (
-                        <Badge variant="warning">{formatarNumero(l.margemPct, 1)}%</Badge>
+                        <Selo tom="atencao">{formatarNumero(l.margemPct, 1)}%</Selo>
                       ) : (
-                        <Badge variant="success">{formatarNumero(l.margemPct, 1)}%</Badge>
+                        <Selo tom="sucesso">{formatarNumero(l.margemPct, 1)}%</Selo>
                       )}
                     </td>
                     <td className="px-3 tabular-nums text-fg-secondary">{l.alvo === null ? "—" : formatarReais(l.alvo)}</td>
