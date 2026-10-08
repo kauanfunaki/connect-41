@@ -3,6 +3,7 @@ import { Bell, Building2, House, Inbox, KeyRound, LogIn, Megaphone, MessagesSqua
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { iconeDaTela } from "@/components/portal/iconeDaTela";
 import { CentralDeAjuda, type PassoDaAjuda, type TelaDaAjuda } from "@/components/ajuda/CentralDeAjuda";
@@ -76,10 +77,11 @@ export default async function AjudaDoPortalPage() {
         exemploDeBusca="Ex.: aprovar pagamento, senha, celular…"
         focarBusca={false}
         rodape={
-          <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-surface p-5 shadow-[var(--c41-shadow-xs)]">
+          // O `Card` (07/10/2026): era ele escrito à mão.
+          <Card as="section" className="flex flex-wrap items-center justify-between gap-4 p-5">
             <div className="min-w-0 flex-1 basis-64">
-              <p className="text-[14px] font-semibold text-fg">Não achou o que procurava?</p>
-              <p className="mt-0.5 text-[length:var(--fs-helper)] text-fg-muted">
+              <p className="text-card-title font-semibold text-fg">Não achou o que procurava?</p>
+              <p className="mt-0.5 text-helper text-fg-muted">
                 {temSolicitacoes
                   ? "Abra uma solicitação. A equipe certa recebe na hora e responde por lá."
                   : temConversa
@@ -97,7 +99,7 @@ export default async function AjudaDoPortalPage() {
                 <MessagesSquare size={14} /> Abrir a Conversa
               </Button>
             )}
-          </section>
+          </Card>
         }
       />
     </PageContainer>
