@@ -64,7 +64,7 @@ export default async function ComunicacaoPage({
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fg">
             <span>A conversa saiu do portal: agora o cliente fala com a equipe pelas Solicitações. Esta tela fica como histórico.</span>
             <Button href="/solicitacoes" variant="secondary" size="xs">
-              Abrir Solicitações
+              Abrir solicitações
             </Button>
           </span>
         </Aviso>

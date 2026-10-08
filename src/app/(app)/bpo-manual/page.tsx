@@ -56,7 +56,7 @@ export default async function BpoManualPage() {
           o cabeçalho aninhado num bloco com margem própria. */}
       <div className="flex-shrink-0">
         <PageHeader
-          title="Repositório de Manuais"
+          title="Repositório de manuais"
           subtitle="Instruções internas do setor — escritas pelos colaboradores para alinhamento em ausências e férias."
         />
       </div>
