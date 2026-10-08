@@ -6,7 +6,7 @@ import { ArrowRight, Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
-import { AddCicloForm } from "@/components/avaliacoes/AddCicloForm";
+import { NovoCiclo } from "@/components/avaliacoes/AddCicloForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -41,16 +41,17 @@ export default async function AvaliacoesPage() {
       <PageHeader
         title="Avaliações de Desempenho"
         subtitle={<>{ciclos.length} ciclo{ciclos.length !== 1 ? "s" : ""} de avaliação</>}
+        // O criar no cabeçalho, com o formulário numa janela — era um formulário
+        // aberto no topo da lista (escolha 5A do Kauan, 08/10/2026).
+        action={canManage ? <NovoCiclo action={criarCiclo} /> : undefined}
       />
-
-      {canManage && <AddCicloForm action={criarCiclo} />}
 
       {ciclos.length === 0 ? (
         <Card>
           <EmptyState
             icon={<Star />}
             title="Nenhum ciclo de avaliação criado"
-            description={canManage ? "Use o formulário acima para abrir o primeiro ciclo de avaliação de desempenho." : "Nenhum ciclo de avaliação foi aberto ainda."}
+            description={canManage ? "Abra o primeiro ciclo de avaliação de desempenho em “Novo ciclo”." : "Nenhum ciclo de avaliação foi aberto ainda."}
           />
         </Card>
       ) : (

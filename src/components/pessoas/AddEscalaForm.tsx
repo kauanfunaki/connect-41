@@ -25,6 +25,8 @@ export function AddEscalaForm({ action, shifts }: Props) {
   // controle, e o botão alinha com as observações.
   return (
     <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
+      {/* Bloco do "novo" com nome, acima dos campos (5A, 08/10/2026). */}
+      <h3 className="c41-rotulo">Novo dia na escala</h3>
       <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[180px_minmax(0,260px)_auto] lg:justify-start">
         <CampoForm label="Data" htmlFor="date" required>
           <CampoData id="date" name="date" required />

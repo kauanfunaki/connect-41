@@ -32,6 +32,9 @@ export function AddAfastamentoForm({ action, canEditMedical }: Props) {
   // neles, e o botão alinhado ao campo do lado.
   return (
     <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
+      {/* O bloco do "novo" com nome, acima dos campos: vinha logo abaixo do
+          último registro, separado só pelo fio (escolha 5A do Kauan, 08/10/2026). */}
+      <h3 className="c41-rotulo">Novo afastamento</h3>
       <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_repeat(2,minmax(0,180px))_120px]">
         <CampoForm label="Tipo" htmlFor="type" required>
           <Select id="type" name="type" required>

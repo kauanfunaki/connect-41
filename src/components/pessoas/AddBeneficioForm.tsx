@@ -23,6 +23,8 @@ export function AddBeneficioForm({ action, beneficios }: Props) {
   // neles; botão alinhado ao campo de observações.
   return (
     <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
+      {/* Bloco do "novo" com nome, acima dos campos (5A, 08/10/2026). */}
+      <h3 className="c41-rotulo">Novo benefício</h3>
       <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_repeat(3,minmax(0,180px))]">
         <CampoForm label="Benefício" htmlFor="benefitId" required>
           <Select id="benefitId" name="benefitId" required>

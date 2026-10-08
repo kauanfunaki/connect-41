@@ -19,7 +19,9 @@ export function SelecionarColaboradorForm({ cycleId, colaboradores }: Props) {
   const [personId, setPersonId] = useState("");
 
   return (
-    <div className="border-t border-border pt-4">
+    <div className="border-t border-border pt-4 space-y-3">
+      {/* Bloco do "novo" com nome, acima do campo (5A, 08/10/2026). */}
+      <h3 className="c41-rotulo">Nova avaliação</h3>
       {/* Era um flex sem quebra: no celular o botão espremia a busca. */}
       <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_auto]" className="max-w-xl">
         <CampoForm label="Colaborador" htmlFor="personId">

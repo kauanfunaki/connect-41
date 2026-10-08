@@ -202,8 +202,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Abrir um ciclo de avaliação",
         passos: [
-          "No topo da tela, preencha o “Nome do Ciclo”, o “Início” e, se já souber, o “Fim”.",
-          "Clique em “Criar Ciclo”.",
+          "Clique em “Novo ciclo”.",
+          "Na janela, preencha o “Nome do ciclo”, o “Início” e, se já souber, o “Fim”.",
+          "Clique em “Criar ciclo”.",
           "O ciclo já abre, com a situação “Aberto”. Para voltar a ele depois, clique em “Abrir” na lista.",
         ],
       },
@@ -254,7 +255,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         titulo: "Vincular candidatos e movê-los pelo funil",
         passos: [
           "Abra a vaga e vá até “Funil de recrutamento”.",
-          "Logo abaixo do funil, escolha o “Candidato”, informe a “Origem” (por exemplo, LinkedIn) e clique em “Vincular Candidato”. Se a pessoa ainda não está no banco, clique em “Novo Candidato”.",
+          "Logo abaixo do funil, em “Nova candidatura”, escolha o “Candidato”, informe a “Origem” (por exemplo, LinkedIn) e clique em “Vincular candidato”. Se a pessoa ainda não está no banco, clique em “Novo candidato”, ao lado do nome do bloco.",
           "Arraste o cartão do candidato entre as etapas “Triagem”, “Entrevista”, “Teste”, “Proposta” e “Contratado”, ou escolha a etapa na lista do próprio cartão.",
           "Para tirar alguém do funil, clique no botão “⋯” do cartão e escolha “Reprovar” ou “Desistiu”.",
           "Informe o “Motivo”, se quiser, e confirme. O candidato vai para a faixa de encerrados.",
