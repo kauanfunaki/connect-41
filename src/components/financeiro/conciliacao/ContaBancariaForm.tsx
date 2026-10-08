@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Power, PowerOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CampoData } from "@/components/ui/CampoData";
@@ -10,6 +10,8 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { salvarContaBancaria, alterarContaAtiva } from "@/app/(app)/conciliacao/actions";
 import { FormFooter } from "@/components/ui/FormFooter";
 
@@ -123,32 +125,42 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
   );
 }
 
+/**
+ * Inativar ou reativar a conta, no menu "⋯" ao lado do "Editar" (08/10/2026) —
+ * a regra de 30/09 (`AcoesDeLinha`): o que tira da operação fica longe de um
+ * clique acidental. Os dois botões ficavam lado a lado, "Editar | Inativar".
+ */
 export function AlternarContaAtiva({ bankAccountId, ativa }: { bankAccountId: string; ativa: boolean }) {
   const { dialog, requestConfirm } = useConfirm();
   return (
     <>
-      <Button
-        variant="secondary"
-        size="xs"
-        onClick={() =>
-          requestConfirm(
-            ativa
-              ? {
-                  title: "Inativar esta conta?",
-                  description: "Ela deixa de aceitar extrato novo. O histórico importado e as conciliações ficam como estão.",
-                  confirmLabel: "Inativar",
-                  destructive: true,
+      <MenuDeMaisAcoes rotulo="Mais ações" aria-label="Ações da conta bancária" width={200}>
+        {({ close }) => (
+          <ItemDoMenu
+            icone={ativa ? <PowerOff /> : <Power />}
+            danger={ativa}
+            onClick={() => {
+              close();
+              requestConfirm(
+                ativa
+                  ? {
+                      title: "Inativar esta conta?",
+                      description: "Ela deixa de aceitar extrato novo. O histórico importado e as conciliações ficam como estão.",
+                      confirmLabel: "Inativar",
+                      destructive: true,
+                    }
+                  : { title: "Reativar esta conta?", confirmLabel: "Reativar" },
+                async () => {
+                  const r = await alterarContaAtiva(bankAccountId, !ativa);
+                  if ("error" in r) throw new Error(r.error);
                 }
-              : { title: "Reativar esta conta?", confirmLabel: "Reativar" },
-            async () => {
-              const r = await alterarContaAtiva(bankAccountId, !ativa);
-              if ("error" in r) throw new Error(r.error);
-            }
-          )
-        }
-      >
-        {ativa ? "Inativar" : "Reativar"}
-      </Button>
+              );
+            }}
+          >
+            {ativa ? "Inativar conta" : "Reativar conta"}
+          </ItemDoMenu>
+        )}
+      </MenuDeMaisAcoes>
       {dialog}
     </>
   );

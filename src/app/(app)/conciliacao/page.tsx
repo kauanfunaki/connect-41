@@ -131,13 +131,16 @@ export default async function ConciliacaoPage({
 
   return (
     <PageContainer>
-      {cabecalho}
+      {/* "Nova conta" é da empresa toda: vai no cabeçalho da tela, como em
+          pendências e no resto do app (08/10/2026) — ficava ao lado do h2. */}
+      <PageHeader
+        title="Conciliação bancária"
+        subtitle="O extrato do banco contra os lançamentos: o que já foi pago, o que falta lançar e se o saldo fecha."
+        action={podeAgir ? <ContaBancariaForm companyId={companyId} /> : undefined}
+      />
       <FiltroDePeriodo acao="/conciliacao" empresas={empresas} empresaId={companyId} navegaSozinho />
 
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Contas bancárias</h2>
-        {podeAgir && <ContaBancariaForm companyId={companyId} />}
-      </div>
+      <h2 className="text-card-title font-semibold text-fg mb-3">Contas bancárias</h2>
 
       {contas.length === 0 ? (
         <Card className="mb-6">
@@ -501,8 +504,9 @@ async function ExtratoDaConta({
             <input type="hidden" name="conta" value={conta.id} />
             {situacao.chave !== "pendentes" && <input type="hidden" name="situacao" value={situacao.chave} />}
             <CampoPeriodo compact nomeDe="de" nomeAte="ate" defaultDe={de ?? ""} defaultAte={ate ?? ""} className="w-72 max-w-full" />
+            {/* "Aplicar", como os outros filtros por formulário (08/10/2026). */}
             <Button type="submit" variant="secondary" size="sm">
-              Filtrar período
+              Aplicar
             </Button>
             {(de || ate) && (
               <Button
