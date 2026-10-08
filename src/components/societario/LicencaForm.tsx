@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { ChevronDown, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoComSugestoes } from "@/components/ui/CampoComSugestoes";
 import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -82,31 +83,16 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
         required
         helper="Escolha uma sugestão ou escreva como o órgão chama."
       >
-        {/* O triângulo preto do `<input list>` some e entra o chevron do
-            `Select` (07/10/2026): o campo ficava com o indicador nativo do
-            navegador ao lado dos selects do sistema. O indicador continua
-            lá, transparente, e abre as sugestões no clique. */}
-        <div className="relative">
-          <Input
-            id={`${prefixo}-tipo`}
-            name="kind"
-            list={`${prefixo}-tipos`}
-            maxLength={MAX_TIPO}
-            defaultValue={licenca?.kind ?? ""}
-            required
-            className="pr-8! [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-          />
-          <ChevronDown
-            size={14}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-fg-muted pointer-events-none"
-            aria-hidden
-          />
-        </div>
-        <datalist id={`${prefixo}-tipos`}>
-          {TIPOS_SUGERIDOS.map((t) => (
-            <option key={t} value={t} />
-          ))}
-        </datalist>
+        {/* Sugestões próprias (08/10/2026), no lugar do `<datalist>`: a lista
+            do navegador vinha misturada ao histórico do Chrome e sem o tema. */}
+        <CampoComSugestoes
+          id={`${prefixo}-tipo`}
+          name="kind"
+          sugestoes={TIPOS_SUGERIDOS}
+          maxLength={MAX_TIPO}
+          defaultValue={licenca?.kind ?? ""}
+          required
+        />
       </CampoForm>
 
       {/* Número é curto: coluna estreita, e o órgão fica com o resto. */}
