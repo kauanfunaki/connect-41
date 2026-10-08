@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileStack, Loader, TriangleAlert, Hourglass, CheckCircle2 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -8,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
+import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { processosDoPortal, type ProcessoNoPortal } from "@/lib/societario/portal-data";
@@ -57,7 +57,13 @@ export default async function PortalProcessosPage({
 
   return (
     <PageContainer>
-      <PortalCabecalho titulo="Processos" descricao="Abertura, alterações, baixa e licenças das suas empresas." />
+      {/* Sem o "Só leitura" (07/10/2026): no detalhe o cliente manda documentos
+          e escreve para a equipe. */}
+      <PortalCabecalho
+        titulo="Processos"
+        descricao="Abertura, alterações, baixa e licenças das suas empresas."
+        somenteLeitura={false}
+      />
 
       {/* Números que levam ao recorte, e o recorte no "Filtros" — eram abas
           (regra da conferência de 30/09). */}
@@ -70,12 +76,13 @@ export default async function PortalProcessosPage({
             detalhe: recorte === "abertos" ? "mostrando agora" : undefined,
             href: "/portal/processos",
           },
+          // Sem atalho (07/10/2026): não há recorte de "com exigência", e o
+          // cartão subia no hover para levar à mesma lista, sem filtro.
           {
             rotulo: "Com exigência do órgão",
             valor: String(emExigencia),
             tom: emExigencia > 0 ? "text-warning" : "",
             icone: <TriangleAlert />,
-            href: "/portal/processos",
           },
           {
             rotulo: "Aguardando você",
@@ -125,32 +132,35 @@ export default async function PortalProcessosPage({
           />
         </Card>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-2.5">
           {linhas.map((p) => (
             <li key={p.id}>
-              <Card className="p-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div className="min-w-0 flex flex-col gap-0.5">
-                  <Link href={`/portal/processos/${p.id}`} className="font-medium text-brand hover:underline break-words">
-                    {p.titulo || p.tipoNome}
-                  </Link>
-                  <span className="text-[12px] text-fg-muted">
-                    {p.titulo ? `${p.tipoNome} · ` : ""}
-                    {variasEmpresas ? `${p.empresaNome} · ` : ""}
-                    aberto em {formatInstantDate(p.iniciadoEm)}
-                    {p.concluidoEm ? ` · concluído em ${formatInstantDate(p.concluidoEm)}` : ""}
-                  </span>
-                  {p.motivo && <span className="text-[12px] text-fg break-words">{p.motivo}</span>}
-                  <span className="text-[12px] text-fg-muted">{p.previsao}</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 md:justify-end shrink-0">
-                  {p.progresso.total > 0 && (
-                    <span className="text-[12px] text-fg-muted tabular-nums">
-                      {p.progresso.feitas} de {p.progresso.total} etapas
+              <CartaoDeLista
+                href={`/portal/processos/${p.id}`}
+                titulo={p.titulo || p.tipoNome}
+                corpo={p.motivo || undefined}
+                apoio={
+                  <>
+                    <span>
+                      {p.titulo ? `${p.tipoNome} · ` : ""}
+                      {variasEmpresas ? `${p.empresaNome} · ` : ""}
+                      aberto em {formatInstantDate(p.iniciadoEm)}
+                      {p.concluidoEm ? ` · concluído em ${formatInstantDate(p.concluidoEm)}` : ""}
                     </span>
-                  )}
-                  <Badge variant={VARIANTE_PARA_CLIENTE[p.situacao]}>{SITUACAO_PARA_CLIENTE[p.situacao].rotulo}</Badge>
-                </div>
-              </Card>
+                    <span>{p.previsao}</span>
+                  </>
+                }
+                selos={
+                  <>
+                    {p.progresso.total > 0 && (
+                      <span className="text-ui text-fg-muted tabular-nums">
+                        {p.progresso.feitas} de {p.progresso.total} etapas
+                      </span>
+                    )}
+                    <Badge variant={VARIANTE_PARA_CLIENTE[p.situacao]}>{SITUACAO_PARA_CLIENTE[p.situacao].rotulo}</Badge>
+                  </>
+                }
+              />
             </li>
           ))}
         </ul>
