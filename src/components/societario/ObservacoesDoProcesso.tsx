@@ -29,11 +29,11 @@ export function ObservacoesDoProcesso({ texto }: { texto: string }) {
 
   return (
     <details className="rounded-md border border-border bg-surface-2 px-3 py-2">
-      <summary className="cursor-pointer text-[length:var(--fs-ui)] font-medium text-fg">
+      <summary className="cursor-pointer text-ui font-medium text-fg">
         Observações internas <span className="font-normal text-fg-muted">· só a equipe vê</span>
       </summary>
       <div
-        className={`mt-2 whitespace-pre-wrap break-words text-[length:var(--fs-label)] leading-relaxed text-fg-secondary ${
+        className={`mt-2 whitespace-pre-wrap break-words text-label leading-relaxed text-fg-secondary ${
           longo && !tudo ? "max-h-96 overflow-y-auto pr-2" : ""
         }`}
       >

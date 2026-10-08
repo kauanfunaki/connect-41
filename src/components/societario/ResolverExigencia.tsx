@@ -46,7 +46,7 @@ export function ResolverExigencia({
       >
         <Check size={12} /> Marcar como cumprida
       </Button>
-      {erro && <span role="alert" className="text-[length:var(--fs-micro)] text-danger">{erro}</span>}
+      {erro && <span role="alert" className="text-micro text-danger">{erro}</span>}
     </div>
   );
 }

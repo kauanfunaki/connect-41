@@ -124,7 +124,7 @@ export default async function IndicadoresRhPage() {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Relatórios</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-3">Relatórios</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {relatorios.map((r) => (
             <Link
@@ -136,13 +136,13 @@ export default async function IndicadoresRhPage() {
                 {r.icon}
               </span>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[13px] font-semibold text-fg">{r.label}</p>
+                <p className="text-fs-3 font-semibold text-fg">{r.label}</p>
                 <ArrowRight
                   size={14}
                   className="text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"
                 />
               </div>
-              <p className="text-[12px] text-fg-muted mt-1 leading-relaxed">{r.description}</p>
+              <p className="text-fs-2 text-fg-muted mt-1 leading-relaxed">{r.description}</p>
             </Link>
           ))}
         </div>

@@ -27,8 +27,8 @@ export function AiResumeExtract({ action }: Props) {
           ao lado do botão; agora o botão desce para a linha de baixo. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1 basis-64">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Triagem de Currículo (IA)</h2>
-          <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">
+          <h2 className="text-card-title font-semibold text-fg">Triagem de Currículo (IA)</h2>
+          <p className="text-fs-2 text-fg-muted mt-0.5">
             Lê o PDF do currículo, preenche campos vazios da ficha e gera um resumo profissional.
           </p>
         </div>
@@ -46,8 +46,8 @@ export function AiResumeExtract({ action }: Props) {
 
       {state && "summary" in state && (
         <div className="mt-3 space-y-2">
-          <p className="text-[length:var(--fs-ui)] text-fg leading-relaxed whitespace-pre-wrap">{state.summary}</p>
-          <p className="text-[length:var(--fs-2)] text-fg-muted">
+          <p className="text-ui text-fg leading-relaxed whitespace-pre-wrap">{state.summary}</p>
+          <p className="text-fs-2 text-fg-muted">
             {state.filled.length > 0
               ? `Campos preenchidos automaticamente: ${state.filled.join(", ")}.`
               : "Nenhum campo vazio para preencher — a ficha já estava completa."}

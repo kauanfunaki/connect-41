@@ -207,7 +207,7 @@ export function CentralDeNotificacoes({
                 type="button"
                 aria-current={ativa ? "page" : undefined}
                 onClick={() => irPara({ aba: a.chave, arquivadas: false })}
-                className={`flex items-center gap-2.5 h-10 px-2.5 rounded-lg text-left text-[14px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                className={`flex items-center gap-2.5 h-10 px-2.5 rounded-lg text-left text-fs-4 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                   ativa ? "bg-surface-elevated text-fg font-semibold shadow-[var(--c41-shadow-xs)] border border-border" : "text-fg-secondary hover:bg-surface-hover"
                 }`}
               >
@@ -221,7 +221,7 @@ export function CentralDeNotificacoes({
             type="button"
             aria-current={filtros.arquivadas ? "page" : undefined}
             onClick={() => irPara({ arquivadas: true })}
-            className={`mt-1.5 flex items-center gap-2.5 h-10 px-2.5 rounded-lg text-left text-[14px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+            className={`mt-1.5 flex items-center gap-2.5 h-10 px-2.5 rounded-lg text-left text-fs-4 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand ${
               filtros.arquivadas ? "bg-surface-elevated text-fg font-semibold shadow-[var(--c41-shadow-xs)] border border-border" : "text-fg-secondary hover:bg-surface-hover"
             }`}
           >
@@ -231,7 +231,7 @@ export function CentralDeNotificacoes({
         </nav>
 
         <div className="border-t border-border pt-4 flex flex-col gap-3">
-          <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-fg-muted">Preferências</p>
+          <p className="px-1 text-fs-1 font-semibold uppercase tracking-[0.04em] text-fg-muted">Preferências</p>
           <Button variant="secondary" size="sm" className="self-start" onClick={() => setPrefsAbertas(true)}>
             <SlidersHorizontal size={14} /> O que cada aba mostra
           </Button>
@@ -245,8 +245,8 @@ export function CentralDeNotificacoes({
           <div className="flex items-center gap-3 min-w-0">
             <IconeDaNotificacao icone={cabecalho.icone} tom={cabecalho.tom} />
             <div className="min-w-0">
-              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{cabecalho.rotulo}</h2>
-              <p className="text-[12px] text-fg-muted">{cabecalho.descricao}</p>
+              <h2 className="text-card-title font-semibold text-fg">{cabecalho.rotulo}</h2>
+              <p className="text-fs-2 text-fg-muted">{cabecalho.descricao}</p>
             </div>
           </div>
           {!filtros.arquivadas && (
@@ -263,7 +263,7 @@ export function CentralDeNotificacoes({
 
         {/* Nada some sem a pessoa saber: o que ela desligou fica dito aqui, com o atalho de volta. */}
         {!filtros.arquivadas && ocultos.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-5 py-2 border-b border-border text-[12px] text-fg-secondary">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-5 py-2 border-b border-border text-fs-2 text-fg-secondary">
             <span className="inline-flex items-center gap-1.5">
               <EyeOff size={13} className="text-fg-muted" />
               {ocultos.length} tipo{ocultos.length === 1 ? "" : "s"} de notificação oculto{ocultos.length === 1 ? "" : "s"} nas abas.
@@ -344,11 +344,11 @@ export function CentralDeNotificacoes({
           <div className="px-3 sm:px-5 py-4 flex flex-col gap-6">
             {grupos.map((g) => (
               <div key={g.chave}>
-                <p className="mb-2 text-[12px] font-semibold text-fg-muted">{g.titulo}</p>
+                <p className="mb-2 text-fs-2 font-semibold text-fg-muted">{g.titulo}</p>
                 <ol className="flex flex-col">
                   {g.itens.map((n) => (
                     <li key={n.id} className="grid grid-cols-[44px_minmax(0,1fr)] gap-2">
-                      <span className="pt-3.5 text-right text-[12px] text-fg-muted tabular-nums">{hora(new Date(n.criadaEm))}</span>
+                      <span className="pt-3.5 text-right text-fs-2 text-fg-muted tabular-nums">{hora(new Date(n.criadaEm))}</span>
                       <div className="relative pl-3 border-l border-border">
                         <span aria-hidden className={`absolute -left-[4.5px] top-[18px] size-2 rounded-full ${n.lida ? "bg-border-strong" : "bg-brand"}`} />
                         <CartaoDeNotificacao

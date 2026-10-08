@@ -57,7 +57,7 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
       <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+            <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
               <th className="px-4 py-3">
                 <FiltroDaColuna rotulo="Lista" chave="lista" />
               </th>
@@ -97,7 +97,7 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
                         <div className="w-24 h-1.5 rounded-full bg-surface-hover overflow-hidden">
                           <div className="h-full bg-brand" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-[11px] text-fg-muted tnum flex-shrink-0">
+                        <span className="text-fs-1 text-fg-muted tnum flex-shrink-0">
                           {l.done}/{l.total}
                         </span>
                       </div>

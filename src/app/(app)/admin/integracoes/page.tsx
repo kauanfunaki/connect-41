@@ -109,8 +109,8 @@ export default async function IntegracoesPage({
       {podeConfigurar && integracoesDoCatalogo.length > 0 && (
         <section className="mb-8 flex flex-col gap-3">
           <div>
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Plugins e conexões</h2>
-            <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 max-w-[62ch]">
+            <h2 className="text-section font-semibold text-fg">Plugins e conexões</h2>
+            <p className="text-helper text-fg-muted mt-0.5 max-w-[62ch]">
               Os sistemas que o Connect sabe operar. Cada um guarda a própria credencial, cifrada,
               e registra as execuções.
             </p>
@@ -126,7 +126,7 @@ export default async function IntegracoesPage({
       {/* As contas de reunião não tinham título, e pareciam parte da vitrine
           de cima. Mesmo cabeçalho das outras seções da tela. */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg flex items-center gap-1.5">
+        <h2 className="text-section font-semibold text-fg flex items-center gap-1.5">
           <Video size={16} className="text-brand" /> Reuniões
         </h2>
         <Card className={`p-5 flex items-center justify-between gap-4 ${!isGoogleConfigured() ? "opacity-60" : ""}`}>
@@ -135,22 +135,22 @@ export default async function IntegracoesPage({
               <Video size={18} />
             </span>
             <div className="min-w-0">
-              <p className="text-[14px] font-medium text-fg">Google Calendar / Meet</p>
+              <p className="text-fs-4 font-medium text-fg">Google Calendar / Meet</p>
               {!isGoogleConfigured() ? (
-                <p className="text-[12px] text-fg-muted">
+                <p className="text-fs-2 text-fg-muted">
                   Indisponível — credenciais do Google não configuradas no servidor (GOOGLE_CLIENT_ID/SECRET)
                   {google ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}
                 </p>
               ) : google && googleHealth === "NEEDS_RECONNECT" ? (
-                <p className="text-[12px] text-danger flex items-center gap-1">
+                <p className="text-fs-2 text-danger flex items-center gap-1">
                   <AlertTriangle size={12} /> Conexão expirada{google.accountEmail ? ` (${google.accountEmail})` : ""} — reconecte para voltar a agendar
                 </p>
               ) : google ? (
-                <p className="text-[12px] text-success-fg flex items-center gap-1">
+                <p className="text-fs-2 text-success-fg flex items-center gap-1">
                   <Check size={12} /> Conectado {google.accountEmail ? `como ${google.accountEmail}` : ""}
                 </p>
               ) : (
-                <p className="text-[12px] text-fg-muted">Não conectado</p>
+                <p className="text-fs-2 text-fg-muted">Não conectado</p>
               )}
             </div>
           </div>
@@ -173,22 +173,22 @@ export default async function IntegracoesPage({
               <Video size={18} />
             </span>
             <div className="min-w-0">
-              <p className="text-[14px] font-medium text-fg">Microsoft Teams / Outlook</p>
+              <p className="text-fs-4 font-medium text-fg">Microsoft Teams / Outlook</p>
               {!isMicrosoftConfigured() ? (
-                <p className="text-[12px] text-fg-muted">
+                <p className="text-fs-2 text-fg-muted">
                   Indisponível — credenciais da Microsoft não configuradas no servidor (MICROSOFT_CLIENT_ID/SECRET)
                   {microsoft ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}
                 </p>
               ) : microsoft && microsoftHealth === "NEEDS_RECONNECT" ? (
-                <p className="text-[12px] text-danger flex items-center gap-1">
+                <p className="text-fs-2 text-danger flex items-center gap-1">
                   <AlertTriangle size={12} /> Conexão expirada{microsoft.accountEmail ? ` (${microsoft.accountEmail})` : ""} — reconecte para voltar a agendar
                 </p>
               ) : microsoft ? (
-                <p className="text-[12px] text-success-fg flex items-center gap-1">
+                <p className="text-fs-2 text-success-fg flex items-center gap-1">
                   <Check size={12} /> Conectado {microsoft.accountEmail ? `como ${microsoft.accountEmail}` : ""}
                 </p>
               ) : (
-                <p className="text-[12px] text-fg-muted">Não conectado</p>
+                <p className="text-fs-2 text-fg-muted">Não conectado</p>
               )}
             </div>
           </div>
@@ -206,10 +206,10 @@ export default async function IntegracoesPage({
       {canManageAi && (
         <div className="mt-8">
           <div className="mb-3">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg flex items-center gap-1.5">
+            <h2 className="text-section font-semibold text-fg flex items-center gap-1.5">
               <Sparkles size={16} className="text-brand" /> Inteligência Artificial
             </h2>
-            <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 max-w-[70ch]">
+            <p className="text-helper text-fg-muted mt-0.5 max-w-[70ch]">
               Chave usada por todos os agentes de IA do Connect (triagem de currículo, atendimento
               do WhatsApp, resumos). Cada escritório usa a própria conta — sem configurar aqui, a IA
               fica desligada.
@@ -227,10 +227,10 @@ export default async function IntegracoesPage({
       {canManageChatwoot && (
         <div className="mt-8">
           <div className="mb-3">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg flex items-center gap-1.5">
+            <h2 className="text-section font-semibold text-fg flex items-center gap-1.5">
               <MessageCircle size={16} className="text-brand" /> Chatwoot
             </h2>
-            <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 max-w-[70ch]">
+            <p className="text-helper text-fg-muted mt-0.5 max-w-[70ch]">
               Histórico de conversas vinculado às empresas e pessoas cadastradas, somente leitura por enquanto. Ver
               conversas em <span className="font-medium text-fg">Conversas</span> no menu lateral.
             </p>

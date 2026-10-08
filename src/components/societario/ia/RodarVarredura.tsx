@@ -25,7 +25,7 @@ export function RodarVarredura({ rodar, desligada }: { rodar: () => Promise<Acao
       >
         {pendente ? "Varrendo…" : "Rodar varredura"}
       </Button>
-      {msg && <p className={`text-[length:var(--fs-2)] max-w-sm text-right ${msg.tipo === "erro" ? "text-danger" : "text-fg-muted"}`}>{msg.texto}</p>}
+      {msg && <p className={`text-fs-2 max-w-sm text-right ${msg.tipo === "erro" ? "text-danger" : "text-fg-muted"}`}>{msg.texto}</p>}
     </div>
   );
 }

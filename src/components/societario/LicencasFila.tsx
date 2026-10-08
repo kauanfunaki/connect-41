@@ -128,7 +128,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
         <TabelaNoDesktop padrao>
           <table className="w-full min-w-[920px]">
             <thead>
-              <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
+              <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Empresa" chave="empresa" /></th>
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Licença" chave="licenca" /></th>
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Órgão" chave="orgao" /></th>
@@ -150,7 +150,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
                     <td className="py-2.5 pr-3 text-fg-secondary">
                       {l.kind}
                       {l.notes && (
-                        <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate max-w-[240px]">{l.notes}</span>
+                        <span className="block text-micro text-fg-muted truncate max-w-[240px]">{l.notes}</span>
                       )}
                     </td>
                     <td className="py-2.5 pr-3 text-fg-muted">{l.orgaoNome ?? "—"}</td>
@@ -159,7 +159,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
                       {l.expiresAt ? (
                         <>
                           {formatInstantDate(l.expiresAt)}
-                          {prazo && <span className="block text-[length:var(--fs-micro)] text-fg-muted">{prazo}</span>}
+                          {prazo && <span className="block text-micro text-fg-muted">{prazo}</span>}
                         </>
                       ) : (
                         <span className="text-fg-muted">não vence</span>

@@ -63,7 +63,7 @@ function Formulario({ ocultos, onFechar, onSalvo }: { ocultos: string[]; onFecha
 
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-[13px] text-fg-secondary leading-relaxed">
+      <p className="text-fs-3 text-fg-secondary leading-relaxed">
         Desmarque o que você não quer ver. O tipo desmarcado sai do sino e das abas e não manda aviso no celular, mas continua
         guardado: marque de novo e ele volta, com o que chegou nesse meio-tempo.
       </p>
@@ -74,7 +74,7 @@ function Formulario({ ocultos, onFechar, onSalvo }: { ocultos: string[]; onFecha
         return (
           <section key={g.aba} aria-labelledby={`pref-${g.aba}`}>
             <div className="flex items-center justify-between gap-3 border-b border-border pb-1.5 mb-2.5">
-              <h3 id={`pref-${g.aba}`} className="text-[11px] font-semibold uppercase tracking-[0.04em] text-fg-muted">
+              <h3 id={`pref-${g.aba}`} className="text-fs-1 font-semibold uppercase tracking-[0.04em] text-fg-muted">
                 {g.rotulo} <span className="font-normal normal-case tracking-normal">· {ligados} de {tipos.length}</span>
               </h3>
               <Button size="xs" variant="ghost" onClick={() => alternar(tipos, ligados < tipos.length)}>
@@ -102,10 +102,10 @@ function Formulario({ ocultos, onFechar, onSalvo }: { ocultos: string[]; onFecha
         );
       })}
 
-      {erro && <p className="text-[13px] text-danger">{erro}</p>}
+      {erro && <p className="text-fs-3 text-danger">{erro}</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        <p className="text-[12px] text-fg-muted">
+        <p className="text-fs-2 text-fg-muted">
           {desligados.size === 0 ? "Tudo ligado." : `${desligados.size} tipo${desligados.size === 1 ? "" : "s"} oculto${desligados.size === 1 ? "" : "s"}.`}
         </p>
         <div className="flex items-center gap-2">

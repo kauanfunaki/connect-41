@@ -158,7 +158,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                   </PeDoCartao>
                 </Cartao>
               ))}
-              {limitado && <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1">Mostrando os {LIMITE} mais recentes. Filtre para ver o resto.</p>}
+              {limitado && <p className="text-micro text-fg-muted mt-1">Mostrando os {LIMITE} mais recentes. Filtre para ver o resto.</p>}
             </CartoesNoCelular>
 
             <TabelaFiltravel
@@ -177,7 +177,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
               <TabelaNoDesktop padrao>
                 <table className="w-full min-w-[900px]">
                   <thead>
-                    <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
+                    <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">
                         <FiltroDaColuna
                           rotulo="Nome e empresa"
@@ -215,11 +215,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                           <Link href={`/leads/${l.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
                             {l.name}
                           </Link>
-                          <span className="block text-[length:var(--fs-micro)] text-fg-muted">{l.companyName ?? "Empresa não informada"}</span>
+                          <span className="block text-micro text-fg-muted">{l.companyName ?? "Empresa não informada"}</span>
                         </td>
                         <td className="py-2.5 pr-3 text-fg-secondary">
                           <span className="block break-all">{l.email ?? "—"}</span>
-                          <span className="block text-[length:var(--fs-micro)] text-fg-muted tabular-nums">{l.phone ? formatPhone(l.phone) : "—"}</span>
+                          <span className="block text-micro text-fg-muted tabular-nums">{l.phone ? formatPhone(l.phone) : "—"}</span>
                         </td>
                         <td className="py-2.5 pr-3 text-fg-secondary">{rotuloDaOrigem(l.source)}</td>
                         <td className="py-2.5 pr-3">
@@ -233,7 +233,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                     ))}
                   </tbody>
                 </table>
-                {limitado && <p className="text-[length:var(--fs-micro)] text-fg-muted mt-3">Mostrando os {LIMITE} mais recentes. Filtre para ver o resto.</p>}
+                {limitado && <p className="text-micro text-fg-muted mt-3">Mostrando os {LIMITE} mais recentes. Filtre para ver o resto.</p>}
               </TabelaNoDesktop>
             </TabelaFiltravel>
           </>

@@ -49,7 +49,7 @@ export function CompetenciaRow({ competencia, updateAction, deleteAction }: Prop
             semDivisoria
           />
         </div>
-        {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+        {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
       </form>
     );
   }
@@ -57,8 +57,8 @@ export function CompetenciaRow({ competencia, updateAction, deleteAction }: Prop
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-2.5">
       <div className="min-w-0">
-        <p className="text-[13px] text-fg">{competencia.name}</p>
-        {competencia.description && <p className="text-[12px] text-fg-muted">{competencia.description}</p>}
+        <p className="text-fs-3 text-fg">{competencia.name}</p>
+        {competencia.description && <p className="text-fs-2 text-fg-muted">{competencia.description}</p>}
       </div>
       {/* Editar é botão e Excluir vai no "⋯" (polimento de 30/09). */}
       <AcoesDoItem

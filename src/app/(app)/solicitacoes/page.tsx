@@ -166,7 +166,7 @@ export default async function SolicitacoesPage({
                   </PeDoCartao>
                 </Cartao>
               ))}
-              {limitado && <p className="text-[11px] text-fg-muted mt-1">Mostrando as 500 mais recentes. Filtre por setor ou empresa para ver o resto.</p>}
+              {limitado && <p className="text-fs-1 text-fg-muted mt-1">Mostrando as 500 mais recentes. Filtre por setor ou empresa para ver o resto.</p>}
             </CartoesNoCelular>
 
             <TabelaFiltravel
@@ -187,7 +187,7 @@ export default async function SolicitacoesPage({
               <TabelaNoDesktop padrao>
                 <table className="w-full min-w-[960px]">
                   <thead>
-                    <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                    <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">
                         <FiltroDaColuna rotulo="Solicitação" campos={[{ chave: "assunto", rotulo: "Assunto" }]} />
                       </th>
@@ -227,7 +227,7 @@ export default async function SolicitacoesPage({
                           <Link href={`/solicitacoes/${l.id}`} className="font-medium text-brand hover:underline">
                             Nº {l.numero} · {l.assunto}
                           </Link>
-                          <span className="block text-[11px] text-fg-muted">
+                          <span className="block text-fs-1 text-fg-muted">
                             {l.mensagens} {l.mensagens === 1 ? "mensagem" : "mensagens"}
                             {l.anexos > 0 && (
                               <>
@@ -240,7 +240,7 @@ export default async function SolicitacoesPage({
                         <td className="py-2.5 pr-3 text-fg-secondary">{l.empresaNome}</td>
                         <td className="py-2.5 pr-3">
                           <span className="block text-fg-secondary">{labels[l.setor] ?? l.setor}</span>
-                          <span className="block text-[11px] text-fg-muted">{l.responsavel ?? "Sem responsável"}</span>
+                          <span className="block text-fs-1 text-fg-muted">{l.responsavel ?? "Sem responsável"}</span>
                         </td>
                         <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{formatInstantDate(l.prazo)}</td>
                         <td className="py-2.5 pr-3">
@@ -254,7 +254,7 @@ export default async function SolicitacoesPage({
                     ))}
                   </tbody>
                 </table>
-                {limitado && <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 mais recentes. Filtre por setor ou empresa para ver o resto.</p>}
+                {limitado && <p className="text-fs-1 text-fg-muted mt-3">Mostrando as 500 mais recentes. Filtre por setor ou empresa para ver o resto.</p>}
               </TabelaNoDesktop>
             </TabelaFiltravel>
           </>

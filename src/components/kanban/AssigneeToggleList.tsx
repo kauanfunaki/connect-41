@@ -16,7 +16,7 @@ type Props = {
 function UserRow({ user, active, onToggle }: { user: UserOption; active: boolean; onToggle: () => void }) {
   return (
     <label
-      className={`cursor-pointer flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] transition-colors ${
+      className={`cursor-pointer flex items-center gap-2 px-2 py-1.5 rounded-md text-fs-2 transition-colors ${
         active ? "text-fg" : "text-fg-muted hover:text-fg hover:bg-surface-hover"
       }`}
     >
@@ -57,7 +57,7 @@ export function AssigneeToggleList({ allUsers, selectedIds, toggleAction }: Prop
   );
 
   if (allUsers.length === 0) {
-    return <p className="text-[12px] text-fg-muted">Nenhum usuário disponível neste setor.</p>;
+    return <p className="text-fs-2 text-fg-muted">Nenhum usuário disponível neste setor.</p>;
   }
 
   return (
@@ -67,7 +67,7 @@ export function AssigneeToggleList({ allUsers, selectedIds, toggleAction }: Prop
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Buscar responsável…"
         icon={<Search size={14} />}
-        className="h-8 text-[12px]"
+        className="h-8 text-fs-2"
       />
 
       <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto">
@@ -75,7 +75,7 @@ export function AssigneeToggleList({ allUsers, selectedIds, toggleAction }: Prop
           <UserRow key={u.id} user={u} active onToggle={() => toggle(u.id)} />
         ))}
         {availableUsers.length === 0 && selectedUsers.length === 0 ? (
-          <p className="text-[12px] text-fg-muted py-1">
+          <p className="text-fs-2 text-fg-muted py-1">
             {normalizedQuery ? "Nenhum responsável encontrado." : "Nenhum usuário disponível."}
           </p>
         ) : (

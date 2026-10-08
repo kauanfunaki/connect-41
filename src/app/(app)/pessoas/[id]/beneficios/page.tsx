@@ -59,7 +59,7 @@ export default async function BeneficiosPessoaPage({
 
       <Card className="p-5">
         {beneficios.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhum benefício vinculado ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhum benefício vinculado ainda.</p>
         ) : (
           <div>
             {beneficios.map((b) => (

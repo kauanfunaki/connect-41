@@ -18,7 +18,7 @@ function Chip({ tag, active, onClick }: { tag: TagOption; active: boolean; onCli
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[12px] font-medium transition-colors ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-fs-2 font-medium transition-colors ${
         active ? "border-transparent" : "border-border text-fg-muted hover:text-fg"
       }`}
       style={active ? { background: `${tag.color}1A`, color: tag.color, borderColor: `${tag.color}40` } : undefined}
@@ -60,7 +60,7 @@ export function TagToggleList({ allTags, selectedIds, toggleAction }: Props) {
   );
 
   if (allTags.length === 0) {
-    return <p className="text-[12px] text-fg-muted">Nenhuma tag cadastrada para este setor.</p>;
+    return <p className="text-fs-2 text-fg-muted">Nenhuma tag cadastrada para este setor.</p>;
   }
 
   return (
@@ -78,12 +78,12 @@ export function TagToggleList({ allTags, selectedIds, toggleAction }: Props) {
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Buscar tag…"
         icon={<Search size={14} />}
-        className="h-8 text-[12px]"
+        className="h-8 text-fs-2"
       />
 
       <div className="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto">
         {availableTags.length === 0 ? (
-          <p className="text-[12px] text-fg-muted py-1">
+          <p className="text-fs-2 text-fg-muted py-1">
             {normalizedQuery ? "Nenhuma tag encontrada." : "Todas as tags já foram selecionadas."}
           </p>
         ) : (

@@ -47,7 +47,7 @@ function FormDaSaida({
           Voltar
         </Button>
       </div>
-      {state?.error && <span className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</span>}
+      {state?.error && <span className="text-helper font-medium text-danger">{state.error}</span>}
     </form>
   );
 }

@@ -40,7 +40,7 @@ const TH = "py-2 pr-3 font-medium";
 // Cartão de seção: título de 14px, como no detalhe do processo, e o respiro
 // entre título e conteúdo pelo `gap` — era `mb-1`, com a tabela colada no título.
 const SECAO = "p-4 flex flex-col gap-3";
-const TITULO = "text-[length:var(--fs-card-title)] font-semibold text-fg";
+const TITULO = "text-card-title font-semibold text-fg";
 // O link da célula no desenho da fila de processos (07/10/2026): negrito, cor
 // do texto e azul só no hover — aqui era azul sublinhado, um dos quatro
 // desenhos do módulo.
@@ -53,19 +53,19 @@ function LinhaDeProcesso({ p }: { p: ProcessoDoCliente }) {
       className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-x-6 gap-y-1 px-1 py-3 border-b border-border-soft hover:bg-surface-hover transition-colors"
     >
       <div className="min-w-0 flex items-center gap-2 flex-wrap">
-        <span className="text-[length:var(--fs-ui)] font-semibold">{p.tipoNome}</span>
-        {p.titulo && <span className="text-[length:var(--fs-2)] text-fg-secondary truncate">{p.titulo}</span>}
+        <span className="text-ui font-semibold">{p.tipoNome}</span>
+        {p.titulo && <span className="text-fs-2 text-fg-secondary truncate">{p.titulo}</span>}
         {p.prioridade !== "NORMAL" && (
           <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[p.prioridade])}>{PRIORIDADE_LABEL[p.prioridade]}</Selo>
         )}
         {p.voltas > 0 && (
-          <span className="inline-flex items-center gap-1 text-[length:var(--fs-micro)] text-danger">
+          <span className="inline-flex items-center gap-1 text-micro text-danger">
             <AlertCircle size={12} />
             {p.voltas} {p.voltas === 1 ? "volta" : "voltas"}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-4 md:justify-end flex-wrap text-[length:var(--fs-2)] text-fg-muted">
+      <div className="flex items-center gap-4 md:justify-end flex-wrap text-fs-2 text-fg-muted">
         <PrazoCelula prazo={p.prazo} />
         {/* Selo, e não Badge: é a situação da linha (regra de 02/10 no Selo). */}
         {p.cancelado ? (
@@ -157,7 +157,7 @@ export default async function VisaoSocietariaDoClientePage({
         <Card as="section" className={SECAO}>
           <h2 className={TITULO}>Processos abertos</h2>
           {visao.abertos.length === 0 ? (
-            <p className="text-[length:var(--fs-ui)] text-fg-muted">Nenhum processo aberto para esta empresa.</p>
+            <p className="text-ui text-fg-muted">Nenhum processo aberto para esta empresa.</p>
           ) : (
             <div>
               {visao.abertos.map((p) => (
@@ -170,7 +170,7 @@ export default async function VisaoSocietariaDoClientePage({
         <Card as="section" className={SECAO}>
           <h2 className={TITULO}>Licenças</h2>
           {licencas.length === 0 ? (
-            <p className="text-[length:var(--fs-ui)] text-fg-muted">Nenhuma licença cadastrada.</p>
+            <p className="text-ui text-fg-muted">Nenhuma licença cadastrada.</p>
           ) : (
             <TabelaFiltravel
               linhas={licencas.map((l, i) => ({
@@ -186,7 +186,7 @@ export default async function VisaoSocietariaDoClientePage({
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[560px]">
                 <thead>
-                  <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}><FiltroDaColuna rotulo="Licença" chave="licenca" /></th>
                     <th className={TH}><FiltroDaColuna rotulo="Órgão" chave="orgao" /></th>
                     <th className={TH}><FiltroDaColuna rotulo="Validade" chave="validade" tipo="data" align="right" /></th>
@@ -204,7 +204,7 @@ export default async function VisaoSocietariaDoClientePage({
                       <td className="py-2 pr-3 tabular-nums whitespace-nowrap">
                         {l.expiresAt ? formatInstantDate(l.expiresAt) : "sem validade"}
                         {l.expiresAt && !l.revokedAt && (situacoes[i] === "vencida" || situacoes[i] === "a_renovar") && (
-                          <span className="block text-[length:var(--fs-micro)] text-fg-muted">{textoDoPrazo(l.expiresAt, agora)}</span>
+                          <span className="block text-micro text-fg-muted">{textoDoPrazo(l.expiresAt, agora)}</span>
                         )}
                       </td>
                       <td className="py-2 pr-3">
@@ -224,7 +224,7 @@ export default async function VisaoSocietariaDoClientePage({
         <Card as="section" className={SECAO}>
           <h2 className={TITULO}>Exigências</h2>
           {visao.exigencias.length === 0 ? (
-            <p className="text-[length:var(--fs-ui)] text-fg-muted">Nenhuma exigência nos processos desta empresa.</p>
+            <p className="text-ui text-fg-muted">Nenhuma exigência nos processos desta empresa.</p>
           ) : (
             <TabelaFiltravel
               linhas={visao.exigencias.map((e) => ({
@@ -240,7 +240,7 @@ export default async function VisaoSocietariaDoClientePage({
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[640px]">
                 <thead>
-                  <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Exigência</th>
                     <th className={TH}>
                       {/* O órgão vem embaixo do processo, e filtra junto. */}
@@ -265,7 +265,7 @@ export default async function VisaoSocietariaDoClientePage({
                           {e.tipoNome}
                         </Link>
                         {/* "Apresentação", o termo do roteiro e das taxas — dizia "tentativa". */}
-                        <span className="block text-[length:var(--fs-micro)] text-fg-muted">
+                        <span className="block text-micro text-fg-muted">
                           {e.orgaoNome} · {e.tentativa}ª apresentação
                         </span>
                       </td>
@@ -288,7 +288,7 @@ export default async function VisaoSocietariaDoClientePage({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className={TITULO}>Taxas</h2>
             {visao.taxas.length > 0 && (
-              <p className="text-[length:var(--fs-ui)] tabular-nums">
+              <p className="text-ui tabular-nums">
                 <strong>{formatarReaisDeCentavos(visao.custo.totalCentavos)}</strong>
                 <span className="text-fg-muted"> · {formatarReaisDeCentavos(visao.custo.pagoCentavos)} pagos</span>
                 {aPagar > 0 && <span className="text-warning-fg"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
@@ -296,12 +296,12 @@ export default async function VisaoSocietariaDoClientePage({
             )}
           </div>
           {visao.custo.custoDasVoltasCentavos > 0 && (
-            <p className="text-[length:var(--fs-2)] text-warning-fg">
+            <p className="text-fs-2 text-warning-fg">
               {formatarReaisDeCentavos(visao.custo.custoDasVoltasCentavos)} vieram de reapresentação.
             </p>
           )}
           {visao.taxas.length === 0 ? (
-            <p className="text-[length:var(--fs-ui)] text-fg-muted">Nenhuma taxa registrada.</p>
+            <p className="text-ui text-fg-muted">Nenhuma taxa registrada.</p>
           ) : (
             <TabelaFiltravel
               linhas={visao.taxas.map((t) => ({
@@ -317,7 +317,7 @@ export default async function VisaoSocietariaDoClientePage({
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[600px]">
                 <thead>
-                  <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}><FiltroDaColuna rotulo="Taxa" chave="taxa" /></th>
                     <th className={TH}><FiltroDaColuna rotulo="Processo" chave="processo" /></th>
                     <th className={TH}>Valor</th>
@@ -331,7 +331,7 @@ export default async function VisaoSocietariaDoClientePage({
                       <td className="py-2 pr-3">
                         {t.descricao}
                         {t.attempt !== null && t.attempt >= 2 && (
-                          <span className="block text-[length:var(--fs-micro)] text-warning-fg">{t.attempt}ª apresentação</span>
+                          <span className="block text-micro text-warning-fg">{t.attempt}ª apresentação</span>
                         )}
                       </td>
                       <td className="py-2 pr-3 whitespace-nowrap">
@@ -362,7 +362,7 @@ export default async function VisaoSocietariaDoClientePage({
         <Card as="section" className={SECAO}>
           <h2 className={TITULO}>Processos encerrados</h2>
           {visao.encerrados.length === 0 ? (
-            <p className="text-[length:var(--fs-ui)] text-fg-muted">Nenhum processo concluído ou cancelado.</p>
+            <p className="text-ui text-fg-muted">Nenhum processo concluído ou cancelado.</p>
           ) : (
             <div>
               {visao.encerrados.map((p) => (

@@ -109,11 +109,11 @@ export function AgentCard({
         className="group h-full w-full min-w-0 text-left bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
       >
         <AvatarImage src={avatarUrl} name={label} size={44} bordered={false} className="mb-3" />
-        <p className="text-[14px] font-semibold text-fg truncate">{label}</p>
-        <p className="text-[12px] text-fg-muted truncate">
+        <p className="text-fs-4 font-semibold text-fg truncate">{label}</p>
+        <p className="text-fs-2 text-fg-muted truncate">
           {count} atendimento{count !== 1 ? "s" : ""} avaliado{count !== 1 ? "s" : ""}
         </p>
-        <span className="inline-flex items-center gap-1 text-[12px] font-medium text-brand mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span className="inline-flex items-center gap-1 text-fs-2 font-medium text-brand mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
           Ver avaliação <ChevronRight size={13} />
         </span>
       </button>
@@ -127,15 +127,15 @@ export function AgentCard({
         {selected ? (
           <div className="space-y-4">
             <div>
-              <p className="text-[13px] text-fg-muted">{selected.evaluatedAtLabel}</p>
+              <p className="text-fs-3 text-fg-muted">{selected.evaluatedAtLabel}</p>
               <div className="flex items-center gap-4 mt-2">
-                <span className="text-[26px] font-semibold text-fg tabular-nums">{selected.score}<span className="text-[14px] text-fg-muted">/100</span></span>
-                <span className="text-[13px] text-fg-muted">Escrita {selected.writingScore}/50 · SLA {selected.slaScore}/50</span>
+                <span className="text-[26px] font-semibold text-fg tabular-nums">{selected.score}<span className="text-fs-4 text-fg-muted">/100</span></span>
+                <span className="text-fs-3 text-fg-muted">Escrita {selected.writingScore}/50 · SLA {selected.slaScore}/50</span>
               </div>
             </div>
             <div>
-              <h3 className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide mb-1.5">Justificativa da IA</h3>
-              <p className="text-[13px] text-fg leading-relaxed whitespace-pre-wrap">{selected.reasoning}</p>
+              <h3 className="text-fs-2 font-semibold text-fg-muted uppercase tracking-wide mb-1.5">Justificativa da IA</h3>
+              <p className="text-fs-3 text-fg leading-relaxed whitespace-pre-wrap">{selected.reasoning}</p>
             </div>
             {/* Eram dois links sublinhados (30/09): as duas são ações, e tirar
                 da avaliação muda a nota de alguém — botão de perigo. */}
@@ -154,7 +154,7 @@ export function AgentCard({
                 </Button>
               )}
             </div>
-            {erroExclusao && <p className="text-[13px] text-danger">{erroExclusao}</p>}
+            {erroExclusao && <p className="text-fs-3 text-danger">{erroExclusao}</p>}
             <ConfirmDialog
               open={confirmandoExclusao}
               title="Tirar da avaliação?"
@@ -172,21 +172,21 @@ export function AgentCard({
               <ScoreRing score={avgScore} size={128} />
               <div className="flex items-center gap-5 mt-3">
                 <div className="text-center">
-                  <p className="text-[15px] font-semibold text-fg tabular-nums">{avgWriting.toFixed(0)}<span className="text-[11px] text-fg-muted">/50</span></p>
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted">Escrita</p>
+                  <p className="text-fs-5 font-semibold text-fg tabular-nums">{avgWriting.toFixed(0)}<span className="text-fs-1 text-fg-muted">/50</span></p>
+                  <p className="text-micro text-fg-muted">Escrita</p>
                 </div>
                 <div className="w-px h-8 bg-border" />
                 <div className="text-center">
-                  <p className="text-[15px] font-semibold text-fg tabular-nums">{avgSla.toFixed(0)}<span className="text-[11px] text-fg-muted">/50</span></p>
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted">SLA</p>
+                  <p className="text-fs-5 font-semibold text-fg tabular-nums">{avgSla.toFixed(0)}<span className="text-fs-1 text-fg-muted">/50</span></p>
+                  <p className="text-micro text-fg-muted">SLA</p>
                 </div>
               </div>
-              {linkedUserLabel && <p className="text-[11px] text-fg-muted mt-2">Vinculado a {linkedUserLabel}</p>}
+              {linkedUserLabel && <p className="text-fs-1 text-fg-muted mt-2">Vinculado a {linkedUserLabel}</p>}
             </div>
 
             <div className="bg-surface-hover rounded-lg p-3.5">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <h3 className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide inline-flex items-center gap-1.5">
+                <h3 className="text-fs-2 font-semibold text-fg-muted uppercase tracking-wide inline-flex items-center gap-1.5">
                   <Sparkles size={14} className="text-brand" /> Resumo geral
                 </h3>
                 {canGenerateSummary && (
@@ -197,8 +197,8 @@ export function AgentCard({
               </div>
               {summary ? (
                 <>
-                  <p className="text-[13px] text-fg leading-relaxed">{summary.text}</p>
-                  <p className="text-[11px] text-fg-muted mt-2">
+                  <p className="text-fs-3 text-fg leading-relaxed">{summary.text}</p>
+                  <p className="text-fs-1 text-fg-muted mt-2">
                     Gerado em {summary.generatedAtLabel} · baseado em {summary.evaluationCount} atendimento{summary.evaluationCount !== 1 ? "s" : ""}
                   </p>
                   {summary.examples.length > 0 && (
@@ -209,7 +209,7 @@ export function AgentCard({
                           type="button"
                           onClick={() => openExample(ex.conversationId)}
                           title={ex.note} aria-label={ex.note}
-                          className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-border text-[11px] text-fg-secondary hover:text-fg hover:border-border-strong hover:bg-surface transition-colors"
+                          className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-border text-fs-1 text-fg-secondary hover:text-fg hover:border-border-strong hover:bg-surface transition-colors"
                         >
                           Exemplo {i + 1}
                         </button>
@@ -218,7 +218,7 @@ export function AgentCard({
                   )}
                 </>
               ) : (
-                <p className="text-[13px] text-fg-muted">
+                <p className="text-fs-3 text-fg-muted">
                   {canGenerateSummary
                     ? "Ainda não gerado — clique em \"Gerar resumo\" pra consolidar os padrões recorrentes deste atendente."
                     : "Nenhum resumo gerado ainda."}
@@ -227,7 +227,7 @@ export function AgentCard({
             </div>
 
             <div>
-              <h3 className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide mb-2">Atendimentos avaliados</h3>
+              <h3 className="text-fs-2 font-semibold text-fg-muted uppercase tracking-wide mb-2">Atendimentos avaliados</h3>
               <div className="divide-y divide-border">
                 {evaluations.map((ev) => (
                   <button
@@ -237,10 +237,10 @@ export function AgentCard({
                     className="w-full flex items-center justify-between gap-3 py-2.5 text-left hover:bg-surface-hover -mx-1 px-1 rounded-md transition-colors"
                   >
                     <div className="min-w-0">
-                      <p className="text-[13px] text-fg truncate">{ev.evaluatedAtLabel}</p>
-                      <p className="text-[12px] text-fg-muted truncate">{ev.reasoning}</p>
+                      <p className="text-fs-3 text-fg truncate">{ev.evaluatedAtLabel}</p>
+                      <p className="text-fs-2 text-fg-muted truncate">{ev.reasoning}</p>
                     </div>
-                    <span className="flex-shrink-0 text-[13px] font-medium text-fg tabular-nums">{ev.score}</span>
+                    <span className="flex-shrink-0 text-fs-3 font-medium text-fg tabular-nums">{ev.score}</span>
                   </button>
                 ))}
               </div>

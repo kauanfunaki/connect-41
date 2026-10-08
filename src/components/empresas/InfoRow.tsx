@@ -17,20 +17,20 @@ type Props = {
 export function InfoRow({ label, value, mono, href, className = "", children }: Props) {
   return (
     <div className={`min-w-0 ${className}`.trim()}>
-      <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">{label}</p>
+      <p className="text-helper text-fg-muted mb-0.5">{label}</p>
       {children ? (
-        <div className="text-[length:var(--fs-body)] text-fg break-words">{children}</div>
+        <div className="text-body text-fg break-words">{children}</div>
       ) : href ? (
         <a
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className={`text-[length:var(--fs-body)] text-brand hover:underline break-words ${mono ? "tnum" : ""}`}
+          className={`text-body text-brand hover:underline break-words ${mono ? "tnum" : ""}`}
         >
           {value ?? "—"}
         </a>
       ) : (
-        <p className={`text-[length:var(--fs-body)] text-fg break-words ${mono ? "tnum" : ""}`}>{value || "—"}</p>
+        <p className={`text-body text-fg break-words ${mono ? "tnum" : ""}`}>{value || "—"}</p>
       )}
     </div>
   );

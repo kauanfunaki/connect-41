@@ -126,7 +126,7 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
                 {isSelf ? (
                   <>
                     <input type="hidden" name="active" value="on" />
-                    <p className="text-[length:var(--fs-helper)] text-fg-muted">
+                    <p className="text-helper text-fg-muted">
                       Ativo (você não pode desativar sua própria conta)
                     </p>
                   </>
@@ -144,7 +144,7 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
 
           <div role="group" aria-labelledby="setores-com-acesso" className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-              <p id="setores-com-acesso" className="text-[length:var(--fs-label)] font-medium text-fg">
+              <p id="setores-com-acesso" className="text-label font-medium text-fg">
                 Setores com acesso
                 <span className="text-fg-muted font-normal ml-1.5">
                   ({selectedSectors.size} de {sectorOptions.length})
@@ -170,7 +170,7 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
                 </Button>
               </div>
             </div>
-            <p className="text-[length:var(--fs-helper)] text-fg-muted">
+            <p className="text-helper text-fg-muted">
               Escolha só os setores que este usuário precisa acessar — evite marcar todos por padrão, isso deixa a listagem poluída.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -179,7 +179,7 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
                 return (
                   <label
                     key={s.value}
-                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-[12px] transition-colors cursor-pointer ${
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-fs-2 transition-colors cursor-pointer ${
                       checked
                         ? "border-brand/40 bg-brand/8 text-fg font-medium"
                         : "border-border text-fg-secondary hover:bg-surface-2"

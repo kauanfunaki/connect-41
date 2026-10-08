@@ -15,15 +15,15 @@ const data = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") :
 function Lista({ titulo, linhas, vazio }: { titulo: string; linhas: Linha[]; vazio: string }) {
   return (
     <section className="flex flex-col gap-1.5">
-      <h3 className="text-[12px] font-semibold uppercase tracking-wide text-fg-muted">{titulo}</h3>
+      <h3 className="text-fs-2 font-semibold uppercase tracking-wide text-fg-muted">{titulo}</h3>
       {linhas.length === 0 ? (
-        <p className="text-[length:var(--fs-2)] text-fg-muted">{vazio}</p>
+        <p className="text-fs-2 text-fg-muted">{vazio}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-border border border-border rounded-md">
           {linhas.map((l) => (
             <li key={`${l.nome}-${l.documento}`} className="px-3 py-2 flex flex-col gap-0.5">
-              <span className="text-[13px] text-fg break-words">{l.nome}</span>
-              <span className="text-[length:var(--fs-micro)] text-fg-muted">
+              <span className="text-fs-3 text-fg break-words">{l.nome}</span>
+              <span className="text-micro text-fg-muted">
                 {[l.qualificacao, l.documento, l.entrada ? `desde ${data(l.entrada)}` : null].filter(Boolean).join(" · ")}
               </span>
             </li>
@@ -84,12 +84,12 @@ export function BuscarSociosNaReceita({
       <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Sócios na Receita" maxWidth="max-w-lg">
         <div className="flex flex-col gap-4">
           {!resultado ? (
-            <p className="text-[13px] text-fg-muted">Consultando o CNPJ na Receita…</p>
+            <p className="text-fs-3 text-fg-muted">Consultando o CNPJ na Receita…</p>
           ) : !resultado.ok ? (
-            <p className="text-[13px] text-danger">{resultado.erro}</p>
+            <p className="text-fs-3 text-danger">{resultado.erro}</p>
           ) : (
             <>
-              <p className="text-[length:var(--fs-2)] text-fg-secondary">
+              <p className="text-fs-2 text-fg-secondary">
                 A Receita informa quem é sócio, o papel e a data de entrada. Participação, quotas e endereço vêm do
                 contrato social e continuam sendo preenchidos à mão.
               </p>
@@ -101,16 +101,16 @@ export function BuscarSociosNaReceita({
               />
               {resultado.foraDaReceita.length > 0 && (
                 <Aviso tom="atencao" className="flex flex-col gap-1">
-                  <span className="text-[length:var(--fs-2)] font-medium text-warning-fg">Não aparecem mais na Receita</span>
-                  <span className="text-[length:var(--fs-2)] text-fg">{resultado.foraDaReceita.map((f) => f.nome).join(", ")}</span>
-                  <span className="text-[length:var(--fs-micro)] text-fg-muted">
+                  <span className="text-fs-2 font-medium text-warning-fg">Não aparecem mais na Receita</span>
+                  <span className="text-fs-2 text-fg">{resultado.foraDaReceita.map((f) => f.nome).join(", ")}</span>
+                  <span className="text-micro text-fg-muted">
                     Provável saída. Nada muda sozinho: registre a saída com a data do distrato ou da alteração.
                   </span>
                 </Aviso>
               )}
             </>
           )}
-          {erro && <p className="text-[length:var(--fs-2)] text-danger">{erro}</p>}
+          {erro && <p className="text-fs-2 text-danger">{erro}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" disabled={pendente} onClick={() => setAberto(false)}>
               Fechar

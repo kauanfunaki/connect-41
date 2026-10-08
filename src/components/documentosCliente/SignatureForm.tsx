@@ -39,8 +39,8 @@ export function SignatureForm({ token, documentTitle }: { token: string; documen
   return (
     <form onSubmit={handleSubmit} className="bg-surface border border-brand/30 rounded-lg p-5 mt-5 space-y-4">
       <div>
-        <h2 className="text-[15px] font-semibold text-fg">Assinatura eletrônica</h2>
-        <p className="text-[12px] text-fg-muted mt-0.5">
+        <h2 className="text-fs-5 font-semibold text-fg">Assinatura eletrônica</h2>
+        <p className="text-fs-2 text-fg-muted mt-0.5">
           Confirme seu nome completo para registrar o aceite deste documento. Ficam registrados nome, data/hora e IP.
         </p>
       </div>

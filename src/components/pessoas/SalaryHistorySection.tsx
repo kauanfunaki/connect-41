@@ -48,10 +48,10 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
   return (
     <Card className="p-5 mb-4">
       {/* Título de cartão no token de cartão — era o de seção, 18px (DRG-10). */}
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Histórico Salarial</h2>
+      <h2 className="text-card-title font-semibold text-fg mb-4">Histórico Salarial</h2>
 
       {history.length === 0 ? (
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">Nenhum reajuste registrado ainda.</p>
+        <p className="text-helper text-fg-muted mb-4">Nenhum reajuste registrado ainda.</p>
       ) : (
         <>
           {/* No celular, uma linha por reajuste em vez da tabela de 640px com
@@ -75,7 +75,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
           <TabelaNoDesktop className="c41-tabela rounded-lg border border-border mb-4">
             <table className="w-full min-w-[640px]">
               <thead>
-                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-4 py-3">Vigência</th>
                   <th className="px-4 py-3">Salário</th>
                   <th className="px-4 py-3">Variação</th>

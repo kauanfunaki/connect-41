@@ -33,7 +33,7 @@ export function AbrirCompetenciaForm({ action, companyId }: Props) {
           </Button>
         </AlinhadoAoCampo>
       </div>
-      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

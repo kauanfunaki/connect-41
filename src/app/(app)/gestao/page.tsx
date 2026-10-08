@@ -89,7 +89,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
 
       <section aria-labelledby="atencao" className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="atencao" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+          <h2 id="atencao" className="text-card-title font-semibold text-fg">
             Precisam de atenção ({atencao.length})
           </h2>
           {atencao.length > 12 && (
@@ -120,7 +120,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
       </section>
 
       <section aria-labelledby="ciclo" className="flex flex-col gap-2">
-        <h2 id="ciclo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+        <h2 id="ciclo" className="text-card-title font-semibold text-fg">
           O ciclo do trabalho
         </h2>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -128,19 +128,19 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
             const lista = porColuna.get(col.key)!.sort(ordenarColuna);
             return (
               <Card key={col.key} className="p-4 flex flex-col gap-2 min-w-0">
-                <p className="text-[13px] font-semibold text-fg">
+                <p className="text-fs-3 font-semibold text-fg">
                   {col.titulo} <span className="text-fg-muted font-normal tabular-nums">({lista.length})</span>
                 </p>
                 {lista.length === 0 ? (
-                  <p className="text-[12px] text-fg-muted">{col.vazio}</p>
+                  <p className="text-fs-2 text-fg-muted">{col.vazio}</p>
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {lista.slice(0, POR_COLUNA).map((x) => (
                       <li key={`${x.item.origem}:${x.item.id}`} className="flex flex-col gap-0.5 min-w-0">
-                        <Link href={x.item.href} className="text-[12px] text-fg hover:underline break-words">
+                        <Link href={x.item.href} className="text-fs-2 text-fg hover:underline break-words">
                           {x.item.titulo}
                         </Link>
-                        <div className="flex flex-wrap items-center gap-1 text-[11px] text-fg-muted">
+                        <div className="flex flex-wrap items-center gap-1 text-fs-1 text-fg-muted">
                           <span>
                             {ORIGEM[x.item.origem]} · {g.rotuloDoSetor(x.item.setor)} ·{" "}
                             {x.item.responsaveis.length ? x.item.responsaveis.map((u) => nomeDe.get(u) ?? "—").join(", ") : "sem responsável"}
@@ -149,7 +149,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
                         </div>
                       </li>
                     ))}
-                    {lista.length > POR_COLUNA && <li className="text-[11px] text-fg-muted">e mais {lista.length - POR_COLUNA}</li>}
+                    {lista.length > POR_COLUNA && <li className="text-fs-1 text-fg-muted">e mais {lista.length - POR_COLUNA}</li>}
                   </ul>
                 )}
               </Card>
@@ -160,10 +160,10 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
 
       {verTaxas && lancadas && pagas && (
         <section aria-labelledby="custos" className="flex flex-col gap-2">
-          <h2 id="custos" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+          <h2 id="custos" className="text-card-title font-semibold text-fg">
             Custos do mês
           </h2>
-          <Card className="p-4 text-[13px] text-fg-secondary flex flex-wrap gap-x-6 gap-y-1">
+          <Card className="p-4 text-fs-3 text-fg-secondary flex flex-wrap gap-x-6 gap-y-1">
             <span>
               Taxas de órgão lançadas no Societário:{" "}
               <strong className="text-fg tabular-nums">{formatarReaisDeCentavos(lancadas._sum.amountCents ?? 0)}</strong> ({lancadas._count})

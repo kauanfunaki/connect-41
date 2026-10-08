@@ -46,7 +46,7 @@ function Mensagens({ conversationId }: { conversationId: string }) {
   }, [conversationId]);
 
   if (messages === null) {
-    return <p className="text-[length:var(--fs-2)] text-fg-muted py-4 text-center">Carregando mensagens…</p>;
+    return <p className="text-fs-2 text-fg-muted py-4 text-center">Carregando mensagens…</p>;
   }
 
   async function handleLoadOlder() {
@@ -71,14 +71,14 @@ function Mensagens({ conversationId }: { conversationId: string }) {
         </Button>
       )}
 
-      {messages.length === 0 && <p className="text-[length:var(--fs-2)] text-fg-muted py-3 text-center">Nenhuma mensagem neste atendimento.</p>}
+      {messages.length === 0 && <p className="text-fs-2 text-fg-muted py-3 text-center">Nenhuma mensagem neste atendimento.</p>}
 
       {messages.map((m) => {
         const isOutgoing = m.messageType === "outgoing";
         return (
           <div key={m.id} className={`flex ${isOutgoing ? "justify-end" : "justify-start"}`}>
             <div
-              className={`max-w-[80%] rounded-lg px-3 py-2 text-[length:var(--fs-ui)] ${
+              className={`max-w-[80%] rounded-lg px-3 py-2 text-ui ${
                 m.isPrivate
                   ? "bg-warning/10 border border-warning/30"
                   : isOutgoing
@@ -86,7 +86,7 @@ function Mensagens({ conversationId }: { conversationId: string }) {
                     : "bg-surface-hover border border-border"
               }`}
             >
-              <div className={`text-[length:var(--fs-micro)] mb-0.5 ${isOutgoing ? "text-on-brand/70" : "text-fg-muted"}`}>
+              <div className={`text-micro mb-0.5 ${isOutgoing ? "text-on-brand/70" : "text-fg-muted"}`}>
                 {m.senderLabel ?? (isOutgoing ? "Atendente" : "Contato")}
                 {m.isPrivate ? " · nota interna" : ""}
               </div>
@@ -97,12 +97,12 @@ function Mensagens({ conversationId }: { conversationId: string }) {
                   href={a.url}
                   target="_blank"
                   rel="noreferrer"
-                  className={`mt-1 flex items-center gap-1.5 text-[length:var(--fs-2)] underline ${isOutgoing ? "text-on-brand" : "text-brand"}`}
+                  className={`mt-1 flex items-center gap-1.5 text-fs-2 underline ${isOutgoing ? "text-on-brand" : "text-brand"}`}
                 >
                   <Paperclip size={12} /> {a.fileType}
                 </a>
               ))}
-              <div className={`text-[length:var(--fs-micro)] mt-1 ${isOutgoing ? "text-on-brand/60" : "text-fg-muted"}`}>{m.createdAtLabel}</div>
+              <div className={`text-micro mt-1 ${isOutgoing ? "text-on-brand/60" : "text-fg-muted"}`}>{m.createdAtLabel}</div>
             </div>
           </div>
         );
@@ -128,7 +128,7 @@ export function AtendimentosAccordion({ atendimentos, defaultOpenId }: { atendim
   }
 
   if (atendimentos.length === 0) {
-    return <p className="text-[length:var(--fs-2)] text-fg-muted py-3">Nenhum atendimento registrado.</p>;
+    return <p className="text-fs-2 text-fg-muted py-3">Nenhum atendimento registrado.</p>;
   }
 
   return (
@@ -147,13 +147,13 @@ export function AtendimentosAccordion({ atendimentos, defaultOpenId }: { atendim
               className="w-full flex items-center gap-2.5 px-1 py-2.5 text-left hover:bg-surface-hover rounded-md transition-colors"
             >
               <span className="text-fg-muted flex-shrink-0">{isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
-              <span className="text-[length:var(--fs-2)] font-medium text-fg flex-shrink-0 tabular-nums">{a.dateLabel}</span>
-              <span className="text-[length:var(--fs-2)] text-fg-muted flex-shrink-0">{a.channelLabel}</span>
+              <span className="text-fs-2 font-medium text-fg flex-shrink-0 tabular-nums">{a.dateLabel}</span>
+              <span className="text-fs-2 text-fg-muted flex-shrink-0">{a.channelLabel}</span>
               <Selo tom={STATUS_BADGE[a.status] ?? STATUS_BADGE.resolved} className="flex-shrink-0">
                 {a.statusLabel}
               </Selo>
-              {a.assigneeLabel && <span className="text-[length:var(--fs-micro)] text-fg-muted flex-shrink-0 hidden sm:inline">{a.assigneeLabel}</span>}
-              <span className="text-[length:var(--fs-2)] text-fg-muted truncate min-w-0">
+              {a.assigneeLabel && <span className="text-micro text-fg-muted flex-shrink-0 hidden sm:inline">{a.assigneeLabel}</span>}
+              <span className="text-fs-2 text-fg-muted truncate min-w-0">
                 {a.messageCount != null ? `${a.messageCount} ${a.messageCount === 1 ? "mensagem" : "mensagens"}` : "—"}
               </span>
             </button>

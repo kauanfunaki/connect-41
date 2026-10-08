@@ -74,17 +74,17 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Icone size={16} className="text-fg-muted shrink-0" />
-            <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{i.label}</h3>
+            <h3 className="text-card-title font-semibold text-fg">{i.label}</h3>
             {i.conectada ? (
               <Badge variant={SAUDE_VARIANTE[i.saude]}>{SAUDE_LABEL[i.saude]}</Badge>
             ) : (
-              <span className="text-[11px] text-fg-muted border border-border rounded px-1.5 py-0.5">
+              <span className="text-fs-1 text-fg-muted border border-border rounded px-1.5 py-0.5">
                 não conectada
               </span>
             )}
           </div>
-          <p className="text-[13px] text-fg-secondary mt-1 max-w-[62ch]">{i.description}</p>
-          <p className="text-[11px] text-fg-muted mt-1">
+          <p className="text-fs-3 text-fg-secondary mt-1 max-w-[62ch]">{i.description}</p>
+          <p className="text-fs-1 text-fg-muted mt-1">
             {i.vendor} · {NATUREZA_LABEL[i.natureza]}
             {i.sectorCode && ` · setor ${i.sectorCode}`}
             {i.nomeDoCliente && ` · ${i.nomeDoCliente}`}
@@ -104,7 +104,7 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
       {/* A URL que se cadastra do outro lado (Meta, Evolution). Sem ela, quem
           configura precisaria descobrir o id da conexão no banco. */}
       {i.caminhoDoWebhook && (
-        <p className="text-[12px] text-fg-secondary break-all">
+        <p className="text-fs-2 text-fg-secondary break-all">
           <span className="text-fg-muted">URL do webhook: </span>
           <code className="text-fg">
             {urlPublica ? `${urlPublica.replace(/\/+$/, "")}${i.caminhoDoWebhook}` : i.caminhoDoWebhook}
@@ -206,7 +206,7 @@ export function VitrineVazia() {
   return (
     <Card className="p-6 text-center">
       <Plug size={22} className="mx-auto text-fg-muted mb-2" />
-      <p className="text-[13px] text-fg-secondary">
+      <p className="text-fs-3 text-fg-secondary">
         Nenhuma integração no catálogo ainda.
       </p>
     </Card>

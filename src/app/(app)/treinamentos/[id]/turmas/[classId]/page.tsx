@@ -54,12 +54,12 @@ export default async function TurmaPage({
       />
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
+        <h2 className="text-card-title font-semibold text-fg mb-3">
           Participantes {trainingClass.participants.length > 0 && `(${trainingClass.participants.length})`}
         </h2>
 
         {trainingClass.participants.length === 0 ? (
-          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">Nenhum participante ainda.</p>
+          <p className="text-ui text-fg-muted mb-3">Nenhum participante ainda.</p>
         ) : (
           <div className="mb-3">
             {trainingClass.participants.map((p) => (

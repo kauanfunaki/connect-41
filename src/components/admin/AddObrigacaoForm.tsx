@@ -131,7 +131,7 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
       </FieldGrid>
 
       <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-        <p className="mr-auto min-w-0 text-[length:var(--fs-helper)] text-fg-muted">
+        <p className="mr-auto min-w-0 text-helper text-fg-muted">
           {FREQUENCY_HINTS[frequency]}
           {selected ? ` Kanban: "${selected.name}" (${selected.sectorLabel}).` : ""}
         </p>
@@ -139,7 +139,7 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
           {isPending ? "Cadastrando…" : "Cadastrar Obrigação"}
         </Button>
       </div>
-      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

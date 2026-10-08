@@ -124,11 +124,11 @@ function TipoCard({
       <span className="inline-flex w-10 h-10 rounded-lg bg-brand-subtle text-brand items-center justify-center">
         {icon}
       </span>
-      <span className="flex items-center gap-1 text-[length:var(--fs-6)] font-semibold text-fg">
+      <span className="flex items-center gap-1 text-fs-6 font-semibold text-fg">
         {title}
         <ChevronRight size={16} className="text-fg-muted group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
       </span>
-      <span className="text-[length:var(--fs-helper)] text-fg-muted leading-relaxed">{description}</span>
+      <span className="text-helper text-fg-muted leading-relaxed">{description}</span>
     </Link>
   );
 }

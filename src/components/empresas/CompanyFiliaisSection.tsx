@@ -51,12 +51,12 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
     <div className="space-y-4">
       {matriz && (
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Esta empresa é filial de</h2>
+          <h2 className="text-section font-semibold text-fg mb-3">Esta empresa é filial de</h2>
           <Link href={`/empresas/${matriz.id}`} className="font-medium text-fg hover:text-brand transition-colors">
             {nomeExibicao(matriz)}
           </Link>
           {matriz.cnpj && (
-            <span className="ml-2 text-[length:var(--fs-helper)] text-fg-muted tnum">{formatCnpj(matriz.cnpj)}</span>
+            <span className="ml-2 text-helper text-fg-muted tnum">{formatCnpj(matriz.cnpj)}</span>
           )}
         </Card>
       )}
@@ -66,7 +66,7 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
           status e de localização filtra no navegador. */}
       {filiais.length > 0 && (
         <section>
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Filiais ({filiais.length})</h2>
+          <h2 className="text-section font-semibold text-fg mb-3">Filiais ({filiais.length})</h2>
           <TabelaFiltravel
             linhas={filiais.map((f) => ({
               id: f.id,
@@ -76,7 +76,7 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
             <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
               <table className="w-full min-w-[560px]">
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-5 py-3">Nome</th>
                     <th className="px-5 py-3">CNPJ</th>
                     <th className="px-5 py-3">

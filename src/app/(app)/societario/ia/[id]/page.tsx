@@ -42,7 +42,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
   const s = STATUS[proposta.status];
 
   const cabecalho = (
-    <div className="mb-4 flex flex-wrap items-center gap-2 text-[12px] text-fg-muted">
+    <div className="mb-4 flex flex-wrap items-center gap-2 text-fs-2 text-fg-muted">
       <Badge variant={s.variante}>{s.rotulo}</Badge>
       <span>{agenteDoCatalogo(proposta.agentCode)?.label ?? proposta.agentCode}</span>
       <span>· pedido por {proposta.createdBy?.name ?? "—"} em {formatInstantDate(proposta.createdAt)}</span>
@@ -55,7 +55,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
     </div>
   );
   const motivo = proposta.status === "REJEITADA" && proposta.notes && (
-    <p className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg">
+    <p className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg">
       <span className="font-medium">Motivo da rejeição:</span> {proposta.notes}
     </p>
   );
@@ -138,7 +138,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
         />
         {cabecalho}
         {motivo}
-        <p className="mb-4 text-[13px] text-fg-secondary">
+        <p className="mb-4 text-fs-3 text-fg-secondary">
           Arquivo: {payload.arquivo}
           {l.tipoDoDocumento && ` · ${l.tipoDoDocumento}`}
           {l.dataDoDocumento && ` de ${l.dataDoDocumento.split("-").reverse().join("/")}`}
