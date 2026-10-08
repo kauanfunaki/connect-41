@@ -25,9 +25,9 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
     <Card className="p-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Upload size={16} className="text-brand" />
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Importar extrato OFX</h2>
+        <h2 className="text-card-title font-semibold text-fg">Importar extrato OFX</h2>
       </div>
-      <p className="text-[12px] text-fg-secondary max-w-[70ch]">
+      <p className="text-helper text-fg-secondary max-w-[70ch]">
         Exporte o extrato em OFX (Money/Quicken) no internet banking. O arquivo precisa ser desta conta. Reimportar o
         mesmo período não duplica nada: o que já entrou é reconhecido e pulado.
       </p>
@@ -63,8 +63,8 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
       </form>
 
       {resumo && (
-        <div className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-          <p className="inline-flex items-center gap-1.5 text-[13px] text-success">
+        <div className="flex flex-col gap-1 text-fs-2 text-fg-secondary">
+          <p className="inline-flex items-center gap-1.5 text-ui text-success">
             <Check size={14} /> {resumo.novas} {resumo.novas === 1 ? "transação nova" : "transações novas"} de {resumo.lidas} lidas
             {resumo.repetidas > 0 && ` · ${resumo.repetidas} já estavam importadas`}
           </p>

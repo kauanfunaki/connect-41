@@ -34,7 +34,7 @@ export function SeloDaAprovacao({ status }: { status: StatusDeAprovacao }) {
 export function HistoricoDaAprovacao({ eventos }: { eventos: EventoDaAprovacao[] }) {
   if (eventos.length === 0) return null;
   return (
-    <details className="mt-1 text-[11px]">
+    <details className="mt-1 text-micro">
       <summary className="cursor-pointer text-fg-muted hover:text-fg">Histórico ({eventos.length})</summary>
       <ol className="mt-1.5 flex flex-col gap-1 border-l border-border pl-2.5">
         {eventos.map((e) => (

@@ -107,7 +107,7 @@ export function NovoComunicadoForm({
       </CampoForm>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-[length:var(--fs-label)] font-medium text-fg">
+        <legend className="mb-2 text-label font-medium text-fg">
           Para quem <span className="text-danger">*</span>
         </legend>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -127,13 +127,13 @@ export function NovoComunicadoForm({
                 className="mt-1 accent-[var(--c41-brand)]"
               />
               <span className="min-w-0">
-                <span className="block text-[length:var(--fs-ui)] font-semibold text-fg">{p.rotulo}</span>
-                <span className="block text-[12px] text-fg-muted leading-snug">{p.dica}</span>
+                <span className="block text-ui font-semibold text-fg">{p.rotulo}</span>
+                <span className="block text-fs-2 text-fg-muted leading-snug">{p.dica}</span>
               </span>
             </label>
           ))}
         </div>
-        <p className="text-[length:var(--fs-2)] text-fg-secondary tabular-nums">
+        <p className="text-fs-2 text-fg-secondary tabular-nums">
           {quantos} {quantos === 1 ? "cliente recebe" : "clientes recebem"}
           {publico === "SETOR" && !setor && " — escolha o setor"}
         </p>
@@ -167,9 +167,9 @@ export function NovoComunicadoForm({
               </li>
             ))}
             {filtrados.length > MOSTRAR_ATE && (
-              <li className="px-2.5 py-1.5 text-[12px] text-fg-muted">Mostrando {MOSTRAR_ATE}. Busque pelo nome para achar o resto.</li>
+              <li className="px-2.5 py-1.5 text-fs-2 text-fg-muted">Mostrando {MOSTRAR_ATE}. Busque pelo nome para achar o resto.</li>
             )}
-            {filtrados.length === 0 && <li className="px-2.5 py-1.5 text-[12px] text-fg-muted">Nenhum cliente com esse nome.</li>}
+            {filtrados.length === 0 && <li className="px-2.5 py-1.5 text-fs-2 text-fg-muted">Nenhum cliente com esse nome.</li>}
           </ul>
           {/* Os marcados que a busca escondeu continuam indo: o checkbox some da tela, não do envio. */}
           {Array.from(escolhidos)

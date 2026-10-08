@@ -261,9 +261,9 @@ export default async function CadastrosFinanceirosPage({
             }))}
           >
           <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[920px] text-[13px]">
+          <table className="w-full min-w-[920px] text-ui">
             <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+              <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Nome" chave="nome" /></th>
                 <th className="py-2 pr-3 font-medium">Documento</th>
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Categoria padrão" chave="categoria" /></th>
@@ -281,14 +281,14 @@ export default async function CadastrosFinanceirosPage({
                   <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
                     <td className="py-2.5 pr-3">
                       <span className="font-medium">{c.name}</span>
-                      {c.email && <span className="block text-[11px] text-fg-muted">{c.email}</span>}
+                      {c.email && <span className="block text-micro text-fg-muted">{c.email}</span>}
                     </td>
                     <td className="py-2.5 pr-3 tabular-nums text-fg-secondary">{documento(c.document)}</td>
                     <td className="py-2.5 pr-3 text-fg-secondary">{c.defaultCategory?.name ?? "—"}</td>
                     <td className="py-2.5 pr-3 text-fg-secondary">
                       {c.defaultCostCenter?.name ?? "—"}
                       {c.defaultCostCenter && !c.defaultCostCenter.active && (
-                        <span className="block text-[11px] text-warning">inativo — não é herdado</span>
+                        <span className="block text-micro text-warning">inativo — não é herdado</span>
                       )}
                     </td>
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.pagar}</td>
@@ -399,9 +399,9 @@ async function AbaDeCentros({
       </CartoesNoCelular>
 
       <TabelaNoDesktop padrao>
-      <table className="w-full min-w-[720px] text-[13px]">
+      <table className="w-full min-w-[720px] text-ui">
         <thead>
-          <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+          <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
             <th className="py-2 pr-3 font-medium">Nome</th>
             <th className="py-2 pr-3 font-medium">Código</th>
             <th className="py-2 pr-3 font-medium text-right">Lançamentos</th>
@@ -468,7 +468,7 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <p className="text-[12px] text-fg-muted max-w-2xl">
+        <p className="text-helper text-fg-muted max-w-2xl">
           O plano padrão do escritório vale para todas as empresas. Aqui ele se ajusta a esta: categoria só dela, o que não se
           usa escondido e a linha da DRE trocada. Nada é apagado — o que já foi lançado continua na DRE.
           {daEmpresa > 0 && ` ${daEmpresa} categoria${daEmpresa > 1 ? "s" : ""} só desta empresa.`}
@@ -491,7 +491,7 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
           if (doLado.length === 0) return null;
           return (
             <div key={kind} className="mb-6">
-              <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
+              <h3 className="text-card-title font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
                 {/* Largura fixa e as mesmas colunas nas duas tabelas
                     (08/10/2026): cada uma calculava a sua, e "Categoria" e
@@ -505,7 +505,7 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
                     <col className="w-[200px]" />
                   </colgroup>
                   <thead>
-                    <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                    <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">Categoria</th>
                       <th className="py-2 pr-3 font-medium">Grupo do plano</th>
                       <th className="py-2 pr-3 font-medium">Linha da DRE nesta empresa</th>

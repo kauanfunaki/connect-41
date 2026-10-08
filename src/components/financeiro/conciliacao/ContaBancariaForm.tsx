@@ -99,7 +99,7 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
               </CampoForm>
             </FieldGrid>
             {travado && (
-              <p className="text-[length:var(--fs-helper)] text-fg-muted">
+              <p className="text-helper text-fg-muted">
                 Banco e número não mudam depois do primeiro extrato importado: são eles que conferem o arquivo.
               </p>
             )}

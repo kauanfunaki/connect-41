@@ -48,7 +48,7 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="p-4 flex flex-col gap-5">
-        <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Premissas</h3>
+        <h3 className="text-card-title font-semibold text-fg">Premissas</h3>
         {/* As duas escolhas ganharam rótulo em cima, como os campos abaixo — o
             "Partir de:" era texto solto no começo da fileira. São um
             `SegmentedControl` desde 08/10/2026: eram fileiras de `Button` que
@@ -100,9 +100,9 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
       </Card>
 
       <Card className="p-0 overflow-hidden">
-        <table className="w-full text-[13px]">
+        <table className="w-full text-ui">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pl-4 pr-3 font-medium">Linha</th>
               <th className="py-2 pr-3 font-medium text-right">{baseEscolhida.chave === "orcamento" ? "Orçado" : "Mês real"}</th>
               <th className="py-2 pr-4 font-medium text-right">Simulado</th>
@@ -119,15 +119,15 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
                   <td className="py-2 pr-3 text-right tabular-nums">{moeda(b)}</td>
                   <td className={`py-2 pr-4 text-right tabular-nums font-medium ${s !== b ? tomDoValor(s - b) : ""}`}>
                     {moeda(s)}
-                    {s !== b && <span className="block text-[11px]">{s - b > 0 ? "+" : ""}{moeda(s - b)}</span>}
+                    {s !== b && <span className="block text-micro">{s - b > 0 ? "+" : ""}{moeda(s - b)}</span>}
                   </td>
                 </tr>
               );
             })}
             <tr>
-              <td className="py-2 pl-4 pr-3 text-[11px] text-fg-muted">Margem do período simulada</td>
+              <td className="py-2 pl-4 pr-3 text-micro text-fg-muted">Margem do período simulada</td>
               <td />
-              <td className="py-2 pr-4 text-right text-[12px] tabular-nums">
+              <td className="py-2 pr-4 text-right text-fs-2 tabular-nums">
                 {percentual(receitaSimulada === 0 ? null : valor(simulado, LINHA_DE_RESULTADO) / receitaSimulada)}
               </td>
             </tr>

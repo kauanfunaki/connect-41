@@ -144,12 +144,12 @@ export default async function OrcamentoPage({
       ) : (
         <>
           <Card className="p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="text-[13px]">
+            <div className="text-ui">
               <p className="font-semibold text-fg flex items-center gap-2">
                 {selecionada.name} · {ano}
                 {selecionada.status === "APROVADO" ? <Badge variant="success">Aprovada</Badge> : <Badge variant="info">Rascunho</Badge>}
               </p>
-              <p className="text-[12px] text-fg-muted mt-0.5">
+              <p className="text-fs-2 text-fg-muted mt-0.5">
                 Criada por {selecionada.createdBy.name}
                 {selecionada.status === "APROVADO" && selecionada.approvedAt && (
                   <>
@@ -159,7 +159,7 @@ export default async function OrcamentoPage({
                 {" "}· atualizada em {formatInstantDate(selecionada.updatedAt)}
               </p>
               {selecionada.status === "RASCUNHO" && (
-                <p className="text-[12px] text-fg-muted mt-0.5">
+                <p className="text-fs-2 text-fg-muted mt-0.5">
                   {aprovada ? `A aprovada de ${ano} é "${aprovada.name}".` : `${ano} ainda não tem versão aprovada — a DRE não mostra orçado.`}
                 </p>
               )}

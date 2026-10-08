@@ -100,22 +100,22 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
 
       {t.perda && (
         <Card className="p-4 mb-4 border-danger/40">
-          <p className="text-[13px]">
+          <p className="text-ui">
             <strong>Baixado por perda</strong>
             {t.perda.em ? ` em ${formatInstantDate(t.perda.em)}` : ""}
             {t.perda.por ? ` por ${t.perda.por}` : ""}.
           </p>
-          {t.perda.motivo && <p className="text-[12px] text-fg-secondary mt-1">“{t.perda.motivo}”</p>}
-          <p className="text-[11px] text-fg-muted mt-1">
+          {t.perda.motivo && <p className="text-helper text-fg-secondary mt-1">“{t.perda.motivo}”</p>}
+          <p className="text-micro text-fg-muted mt-1">
             A receita continua na competência {formatarCompetencia(t.competencia)}; a perda é despesa (outras despesas) na competência da data da perda.
           </p>
         </Card>
       )}
 
       <Card className="p-4 mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[13px]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-ui">
           <div className="min-w-0">
-            <span className="block text-[length:var(--fs-helper)] text-fg-muted mb-1">Responsável</span>
+            <span className="block text-helper text-fg-muted mb-1">Responsável</span>
             {podeAgir ? (
               <AtribuirResponsavel entryId={l.id} atual={l.responsavelId} usuarios={usuarios} />
             ) : (
@@ -123,7 +123,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
             )}
           </div>
           <div className="min-w-0">
-            <span className="block text-[length:var(--fs-helper)] text-fg-muted mb-1">E-mail do sacado</span>
+            <span className="block text-helper text-fg-muted mb-1">E-mail do sacado</span>
             {l.sacadoEmail ? (
               <span className="block break-words">{l.sacadoEmail}</span>
             ) : (
@@ -137,7 +137,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
             )}
           </div>
           <div className="min-w-0">
-            <span className="block text-[length:var(--fs-helper)] text-fg-muted mb-1">Régua</span>
+            <span className="block text-helper text-fg-muted mb-1">Régua</span>
             {l.regua.enviar !== null ? <span>passo de {l.regua.enviar} dias na próxima execução</span> : <span className="text-fg-secondary">{ROTULO_DO_MOTIVO[l.regua.motivo]}</span>}
           </div>
         </div>
@@ -180,8 +180,8 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
                 acao={reverterPerda.bind(null, l.id)}
               />
             )}
-            {!gerencia && (perda.pode || reverter.pode) && <span className="text-[11px] text-fg-muted">Baixa e reversão por perda são da coordenação.</span>}
-            {emAberto && !perda.pode && l.diasDeAtraso > 0 && gerencia && <span className="text-[11px] text-fg-muted">{perda.motivo}</span>}
+            {!gerencia && (perda.pode || reverter.pode) && <span className="text-micro text-fg-muted">Baixa e reversão por perda são da coordenação.</span>}
+            {emAberto && !perda.pode && l.diasDeAtraso > 0 && gerencia && <span className="text-micro text-fg-muted">{perda.motivo}</span>}
           </div>
         )}
       </Card>
@@ -191,7 +191,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
 
       {podeAgir && (l.situacao !== null || t.closeReason === "PERDA") && t.closeReason !== "RENEGOCIADO" && (
         <Card className="p-4 mb-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-3">Registrar contato</h2>
+          <h2 className="text-card-title font-semibold mb-3">Registrar contato</h2>
           <RegistrarContato entryId={l.id} hojeISO={hojeKey} />
         </Card>
       )}
@@ -263,18 +263,18 @@ function ResumoDoAcordoCard({ titulo, acordo, destaque }: { titulo: string; acor
     <Card className="p-4 mb-4">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold">{titulo}</h2>
+          <h2 className="text-card-title font-semibold">{titulo}</h2>
           <SeloDoAcordo status={acordo.status} />
         </div>
         <Button href={`/cobranca?aba=acordos&empresa=${acordo.empresaId}`} variant="secondary" size="xs">
           Ver nos acordos
         </Button>
       </div>
-      <p className="text-[12px] text-fg-muted tabular-nums mb-2">
+      <p className="text-fs-2 text-fg-muted tabular-nums mb-2">
         {formatInstantDate(acordo.acordadoEm)} · originais {moeda(acordo.originalCentavos)} → acordado {moeda(acordo.acordadoCentavos)} ·{" "}
         {acordo.resumo.pagas}/{acordo.resumo.total} pagas · {moeda(acordo.resumo.emAbertoCentavos)} em aberto
       </p>
-      <ul className="flex flex-col gap-1 text-[12px]">
+      <ul className="flex flex-col gap-1 text-fs-2">
         {acordo.parcelas.map((p, i) => (
           // Colunas fixas: número, vencimento e valor caem um embaixo do outro.
           <li

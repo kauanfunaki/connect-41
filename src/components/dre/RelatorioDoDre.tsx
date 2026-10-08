@@ -10,14 +10,14 @@ export function RelatorioDoDre({ resultado }: Props) {
   return (
     <Card className="p-0 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[520px] text-[13px]">
+        <table className="w-full min-w-[520px] text-ui">
           <tbody>
             {resultado.linhas.map((l) => {
               if (l.tipo === "percentual") {
                 return (
                   <tr key={l.code} className="border-b border-border-soft">
-                    <td className="py-1 pl-4 pr-3 text-[11px] text-fg-muted">{l.label}</td>
-                    <td className="py-1 pr-4 text-right text-[11px] text-fg-muted tabular-nums">
+                    <td className="py-1 pl-4 pr-3 text-micro text-fg-muted">{l.label}</td>
+                    <td className="py-1 pr-4 text-right text-micro text-fg-muted tabular-nums">
                       {/* Vazio, e não "0%": a planilha escreve IF(x=0,"") e é a
                           leitura certa — "não dá para calcular" não é zero. */}
                       {l.fracao === null ? "—" : PCT.format(l.fracao)}

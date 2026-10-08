@@ -96,9 +96,9 @@ export function GradeDoOrcamento({
       <input type="hidden" name="lidoEm" value={lidoEm} />
 
       <div className="overflow-x-auto border border-border rounded-lg bg-surface">
-        <table className="w-full min-w-[1480px] text-[12px]">
+        <table className="w-full min-w-[1480px] text-fs-2">
           <thead>
-            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pl-3 pr-2 font-medium text-left sticky left-0 bg-surface min-w-[220px]">Grupo da DRE</th>
               {ROTULOS_DOS_MESES.map((m) => (
                 <th key={m} className={TH}>
@@ -115,7 +115,7 @@ export function GradeDoOrcamento({
                 <tr key={grupo.code} className="border-b border-border-soft">
                   <td className="py-1.5 pl-3 pr-2 text-fg-secondary sticky left-0 bg-surface">
                     {grupo.label}
-                    <span className="block text-[10px] text-fg-muted">{grupo.origem === "recebimento" ? "receita (+)" : "despesa (−)"}</span>
+                    <span className="block text-micro text-fg-muted">{grupo.origem === "recebimento" ? "receita (+)" : "despesa (−)"}</span>
                   </td>
                   {MESES.map((m, i) => {
                     const nome = campoDaCelula(grupo.code, m);

@@ -67,7 +67,7 @@ export function AcoesDaPendencia({ id, status }: { id: string; status: StatusDaP
           <RotateCcw size={13} /> Reabrir
         </Button>
       )}
-      {erro && <span className="text-[12px] text-danger">{erro}</span>}
+      {erro && <span className="text-fs-2 text-danger">{erro}</span>}
       {dialog}
     </div>
   );

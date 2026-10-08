@@ -85,7 +85,7 @@ export function CriarAcordo({
             deixavam o conteúdo 20px mais para dentro que o título. */}
         <div className="flex flex-col gap-4">
           <fieldset>
-            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Títulos vencidos deste sacado nesta empresa</legend>
+            <legend className="text-label font-medium text-fg mb-1.5">Títulos vencidos deste sacado nesta empresa</legend>
             <div className="flex flex-col items-start gap-2 max-h-48 overflow-y-auto">
               {candidatos.map((c) => (
                 <Checkbox
@@ -108,7 +108,7 @@ export function CriarAcordo({
                 />
               ))}
             </div>
-            <p className="text-[12px] text-fg-muted mt-2">
+            <p className="text-helper text-fg-muted mt-2">
               Soma dos originais: <strong className="tabular-nums text-fg">{moeda(original)}</strong>
             </p>
           </fieldset>
@@ -140,7 +140,7 @@ export function CriarAcordo({
 
           {simulacao.length > 0 && (
             <div className="rounded-md border border-border p-3">
-              <p className="text-[12px] text-fg-secondary mb-2">
+              <p className="text-helper text-fg-secondary mb-2">
                 {diferenca > 0 ? (
                   <>Acréscimo de <strong className="tabular-nums">{moeda(diferenca)}</strong> — outras receitas na DRE econômica deste mês.</>
                 ) : diferenca < 0 ? (
@@ -150,9 +150,9 @@ export function CriarAcordo({
                 )}{" "}
                 Os originais continuam como receita na competência deles.
               </p>
-              <table className="w-full text-[12px]">
+              <table className="w-full text-fs-2">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className="py-1 pr-3 font-medium">Parcela</th>
                     <th className="py-1 pr-3 font-medium">Vencimento</th>
                     <th className="py-1 font-medium text-right">Valor</th>
