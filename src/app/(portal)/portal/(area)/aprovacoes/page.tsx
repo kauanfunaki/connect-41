@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
@@ -37,19 +37,25 @@ export default async function PortalAprovacoesPage() {
         ]}
       />
 
+      {/* Aviso neutro (07/10/2026): era um parágrafo cinza de 12px, logo onde o
+          cliente procurava o botão de aprovar. */}
       {!temAlcada && (
-        <p className="text-[12px] text-fg-muted mb-3">
+        <Aviso tom="neutro" className="mb-3">
           Você não tem alçada de aprovação cadastrada — as contas aparecem aqui só para acompanhamento.
-        </p>
+        </Aviso>
       )}
 
-      {contas.length === 0 ? (
-        <Card>
-          <EmptyState icon={<ShieldCheck />} title="Nada aguardando aprovação" description="Quando houver conta a pagar esperando o seu “pode pagar”, ela aparece aqui e você recebe um e-mail." />
-        </Card>
-      ) : (
-        <AprovacoesDoPortal contas={contas} />
-      )}
+      {/* A lista vazia entra no casco, como em Pendências: a barra diz "0 contas". */}
+      <AprovacoesDoPortal
+        contas={contas}
+        vazio={
+          <EmptyState
+            icon={<ShieldCheck />}
+            title="Nada aguardando aprovação"
+            description="Quando houver conta a pagar esperando o seu “pode pagar”, ela aparece aqui e você recebe um e-mail."
+          />
+        }
+      />
     </PageContainer>
   );
 }
