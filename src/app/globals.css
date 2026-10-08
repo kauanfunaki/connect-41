@@ -472,6 +472,20 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 /* O interruptor mora em ui/Switch (08/10/2026). A pílula `.c41-toggle-active`
    que ficava aqui era uma das três versões soltas que ele substituiu. */
 
+/* ----- Campo numérico sem as setinhas do navegador (08/10/2026) — eram 56
+   campos com o par de setas do sistema, cada navegador num desenho. As setas
+   ↑↓ do teclado seguem andando; onde o clique ajudava (contagem pequena), o
+   `CampoNumero` traz − e + próprios. ----- */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* ----- Scrollbar customizada — c41-scrollbar / scroll-y / scroll-x ----- */
 .c41-scrollbar, .scroll-y, .scroll-x {
   scrollbar-width: thin;

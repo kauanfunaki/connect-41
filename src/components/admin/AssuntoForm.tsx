@@ -5,6 +5,7 @@ import type { AssuntoState } from "@/app/(app)/admin/assuntos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoNumero } from "@/components/ui/CampoNumero";
 import { Select } from "@/components/ui/Select";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { PRAZO_MAXIMO, PRAZO_MINIMO } from "@/lib/solicitacoes/regras";
@@ -68,10 +69,9 @@ export function AssuntoForm({
           required
           helper="O cliente vê este prazo ao escolher o assunto."
         >
-          <Input
+          <CampoNumero
             id="responseDays"
             name="responseDays"
-            type="number"
             required
             min={PRAZO_MINIMO}
             max={PRAZO_MAXIMO}
