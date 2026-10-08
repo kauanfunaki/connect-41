@@ -38,6 +38,7 @@ import {
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -549,12 +550,12 @@ async function ExtratoDaConta({
           </>
         )}
       </CascoDaTabela>
-      <p className="text-[11px] text-fg-muted mt-3">
+      <NotaDeFonte>
         A sugestão aparece só quando um lançamento de mesmo valor se destaca pela data e pelo nome — nada é conciliado
         sem confirmação. Conciliar marca os lançamentos como pagos na data do extrato; desfazer devolve o estado anterior.
         Em conta ligada ao Omie, a linha que bate no valor e no dia com uma única baixa já conciliada lá sai da fila
         sozinha, como “Conciliada no Omie”.
-      </p>
+      </NotaDeFonte>
     </>
   );
 }
