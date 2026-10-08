@@ -20,8 +20,8 @@ export default async function NovaTagPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Tags", href: "/admin/tags" }, { label: "Nova Tag" }]} />
-      <PageHeader title="Nova Tag" />
+      <Breadcrumb items={[{ label: "Tags", href: "/admin/tags" }, { label: "Nova tag" }]} />
+      <PageHeader title="Nova tag" />
 
       <div className="max-w-[720px]">
         <Card className="p-6">

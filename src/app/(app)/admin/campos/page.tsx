@@ -46,13 +46,13 @@ export default async function CamposPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Campos Customizados"
+        title="Campos customizados"
         subtitle={<>{fields.length} campo{fields.length !== 1 ? "s" : ""} configurado{fields.length !== 1 ? "s" : ""}</>}
         action={<><Button
           href="/admin/campos/novo"
           variant="primary" className="font-medium"
         >
-          + Novo Campo
+          + Novo campo
         </Button></>}
       />
       {Object.keys(grouped).length === 0 ? (
@@ -66,7 +66,7 @@ export default async function CamposPage() {
                 href="/admin/campos/novo"
                 variant="primary" className="font-medium"
               >
-                + Novo Campo
+                + Novo campo
               </Button>
             }
           />

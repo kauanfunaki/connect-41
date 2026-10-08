@@ -44,7 +44,7 @@ export default async function AdminPortalPage() {
       <BackButton className="mb-3" />
       {/* A explicação era um parágrafo solto depois do cabeçalho; é o subtítulo dele. */}
       <PageHeader
-        title="Acessos do Portal"
+        title="Acessos do portal"
         subtitle="Contas de clientes que entram no portal para ver os próprios documentos fiscais. Cada conta
           enxerga as empresas de um cliente — e só elas."
         action={

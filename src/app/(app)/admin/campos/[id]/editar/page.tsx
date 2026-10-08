@@ -23,8 +23,8 @@ export default async function EditarCampoPage({
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Campos Customizados", href: "/admin/campos" }, { label: "Editar" }]} />
-      <PageHeader title="Editar Campo" />
+      <Breadcrumb items={[{ label: "Campos customizados", href: "/admin/campos" }, { label: "Editar" }]} />
+      <PageHeader title="Editar campo" />
 
       <div className="max-w-[720px]">
         <Card className="p-6">

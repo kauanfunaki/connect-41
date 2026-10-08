@@ -25,7 +25,7 @@ export default async function WorkspacesPage() {
           href="/admin/workspaces/novo"
           variant="primary" className="font-medium"
         >
-          + Novo Workspace
+          + Novo workspace
         </Button></>}
       />
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">

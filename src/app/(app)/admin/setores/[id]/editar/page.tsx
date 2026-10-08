@@ -24,7 +24,7 @@ export default async function EditarSetorPage({
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Setores", href: "/admin/setores" }, { label: "Editar" }]} />
-      <PageHeader title="Editar Setor" />
+      <PageHeader title="Editar setor" />
 
       <div className="max-w-[720px]">
         <Card className="p-6">

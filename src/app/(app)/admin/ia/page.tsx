@@ -65,7 +65,7 @@ export default async function AgentesDeIAPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Inteligência Artificial"
+        title="Inteligência artificial"
         subtitle="Os agentes do chat e as demais funções de IA: o que fizeram neste mês, quanto custou e até onde podem ir. Só administradores veem esta tela."
       />
 

@@ -22,7 +22,7 @@ export default async function SetoresPage() {
           href="/admin/setores/novo"
           variant="primary" className="font-medium"
         >
-          + Novo Setor
+          + Novo setor
         </Button></>}
       />
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 // por rota autenticada. Mudou o comportamento, muda aqui e a data de atualização.
 
 export const metadata: Metadata = {
-  title: "Política de Privacidade · Portal 41",
+  title: "Política de privacidade · Portal 41",
   description: "Como o Portal do Cliente da 41 trata os seus dados.",
 };
 
@@ -34,7 +34,7 @@ export default function PoliticaDePrivacidadePage() {
     <main className="min-h-dvh px-4 py-10">
       <article className="mx-auto w-full max-w-[720px] flex flex-col gap-6">
         <header className="flex flex-col gap-1">
-          <h1 className="text-title font-semibold text-fg">Política de Privacidade</h1>
+          <h1 className="text-title font-semibold text-fg">Política de privacidade</h1>
           <p className="text-ui text-fg-muted">Portal do Cliente · Portal 41 · atualizada em {ATUALIZADA_EM}</p>
         </header>
 

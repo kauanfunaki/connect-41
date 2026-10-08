@@ -207,7 +207,7 @@ export default async function IntegracoesPage({
         <div className="mt-8">
           <div className="mb-3">
             <h2 className="text-section font-semibold text-fg flex items-center gap-1.5">
-              <Sparkles size={16} className="text-brand" /> Inteligência Artificial
+              <Sparkles size={16} className="text-brand" /> Inteligência artificial
             </h2>
             <p className="text-helper text-fg-muted mt-0.5 max-w-[70ch]">
               Chave usada por todos os agentes de IA do Connect (triagem de currículo, atendimento
