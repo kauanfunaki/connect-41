@@ -420,7 +420,9 @@ async function Acordos({
       />
 
       {acordos.length === 0 ? (
-        <EmptyState icon={<Handshake />} title="Nenhum acordo" description="Acordos nascem no título vencido, na fila: escolha os títulos do sacado e simule as parcelas." />
+        <Card>
+          <EmptyState icon={<Handshake />} title="Nenhum acordo" description="Acordos nascem no título vencido, na fila: escolha os títulos do sacado e simule as parcelas." />
+        </Card>
       ) : (
         <div className="flex flex-col gap-3">
           {acordos.map((a) => {
@@ -581,8 +583,11 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
         )}
       </Card>
 
-      <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold">Últimos envios</h2>
+      {/* Seção em cartão com o título dentro, como as duas de cima (08/10/2026):
+          "Últimos envios" era o único título solto no fundo da tela. */}
+      <Card className="p-4">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <h2 className="text-card-title font-semibold">Últimos envios</h2>
         {d.errosNaSemana > 0 && <Badge variant="danger">{d.errosNaSemana} com erro nos últimos 7 dias</Badge>}
       </div>
       {d.envios.length === 0 ? (
@@ -679,6 +684,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
           </TabelaFiltravel>
         </>
       )}
+      </Card>
     </>
   );
 }
