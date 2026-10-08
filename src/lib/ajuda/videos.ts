@@ -23,24 +23,25 @@ import { idDoVideo } from "./youtube";
  * logo abaixo. Ex.: `bpo_contas_pagar: "https://youtu.be/xxxxxxxxxxx",`
  */
 export const VIDEOS_DO_CONNECT: Readonly<Record<string, string>> = {
+  // 01 a 09 publicados pelo Kauan em 08/10/2026 (não listados).
   // 01 — Contas a pagar
-  bpo_contas_pagar: "",
+  bpo_contas_pagar: "https://youtu.be/0kB56K30TQ8",
   // 02 — Contas a receber
-  bpo_contas_receber: "",
+  bpo_contas_receber: "https://youtu.be/hJwePmIAHrA",
   // 03 — Lançamentos
-  bpo_lancamentos: "",
+  bpo_lancamentos: "https://youtu.be/jMojHPUD-XI",
   // 04 — Fluxo de caixa
-  bpo_fluxo_caixa: "",
+  bpo_fluxo_caixa: "https://youtu.be/EhnhJ7JbmiU",
   // 05 — Conciliação bancária
-  bpo_conciliacao: "",
+  bpo_conciliacao: "https://youtu.be/IxA0CNK1RZw",
   // 06 — Fornecedores e sacados
-  bpo_cadastros: "",
+  bpo_cadastros: "https://youtu.be/8X5TjP5YXmA",
   // 07 — Pendências ao cliente
-  bpo_pendencias: "",
+  bpo_pendencias: "https://youtu.be/rZ-eQXMKH-E",
   // 08 — Aprovações
-  bpo_aprovacoes: "",
+  bpo_aprovacoes: "https://youtu.be/o3TnAXzUXFA",
   // 09 — Cobrança
-  bpo_cobranca: "",
+  bpo_cobranca: "https://youtu.be/ADKuhGzXmtc",
   // 10 — Conversa com o cliente
   bpo_comunicacao: "",
   // 11 — Repositório de Senhas
