@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Painel, numero } from "@/components/shared/Graficos";
 import { aprovacoesDoCliente } from "@/lib/financeiro/aprovacao/portal";
@@ -405,9 +406,7 @@ export function AtalhosDoInicio({
 }) {
   return (
     <section aria-labelledby="inicio-atalhos" className="mb-4">
-      <h2 id="inicio-atalhos" className="mb-3 font-display text-section font-semibold text-fg leading-tight">
-        Atalhos
-      </h2>
+      <TituloDeSecao id="inicio-atalhos">Atalhos</TituloDeSecao>
       <ul className={`grid grid-cols-1 gap-3 ${pedir ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
         {pedir && (
           <Atalho
