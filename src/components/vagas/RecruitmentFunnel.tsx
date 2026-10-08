@@ -14,12 +14,6 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Selo } from "@/components/ui/Selo";
 import { ROTULO_DA_FAIXA, type Faixa } from "@/lib/recrutamento/triagem";
 
-// O desenho do `Button` secondary xs num `<a>` comum: o currículo é rota de
-// arquivo (/api), e o `Link` do Next que o `Button` usa com `href` tentaria
-// pré-carregá-lo só de o cartão aparecer na tela.
-const BOTAO_XS_EM_ANCORA =
-  "inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-md border border-border-strong text-[length:var(--fs-button-sm)] font-semibold text-fg hover:bg-surface-hover transition-colors active:translate-y-px";
-
 export type FunnelCard = {
   id: string;
   personId: string;
@@ -235,9 +229,12 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                         Avaliar{c.scorecardCount > 0 ? ` (${c.scorecardCount})` : ""}
                       </Button>
                       {c.hasResume && (
-                        <a href={`/api/resumes/${c.id}`} className={BOTAO_XS_EM_ANCORA}>
+                        // `nativo`: o currículo é rota de arquivo (/api), e o
+                        // `Link` do Button com `href` puro tentaria
+                        // pré-carregá-lo só de o cartão aparecer na tela.
+                        <Button href={`/api/resumes/${c.id}`} nativo variant="secondary" size="xs">
                           <FileText size={11} /> Currículo
-                        </a>
+                        </Button>
                       )}
                       {canManage && !isContratado && (
                         <Popover

@@ -157,16 +157,12 @@ export default async function IntegracoesPage({
             (google ? (
               <DisconnectButton action={desconectarIntegracao.bind(null, "GOOGLE")} />
             ) : (
-              // <a>, e não o Button com href: a rota de API redireciona para o
-              // Google, e o <Link> do Button tentaria navegar pelo roteador.
-              // As classes são as do Button primário md, para os dois lado a
-              // lado (Conectar e Desconectar) terem o mesmo corpo.
-              <a
-                href="/api/integrations/google/connect"
-                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[length:var(--fs-ui)] font-semibold hover:bg-brand-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)] transition-colors inline-flex items-center justify-center flex-shrink-0"
-              >
+              // `nativo`: a rota de API redireciona para o Google, e o <Link>
+              // do Button com href tentaria navegar pelo roteador. Primário md,
+              // o mesmo corpo do Desconectar ao lado.
+              <Button href="/api/integrations/google/connect" nativo className="flex-shrink-0">
                 Conectar
-              </a>
+              </Button>
             ))}
         </Card>
 
@@ -199,12 +195,9 @@ export default async function IntegracoesPage({
             (microsoft ? (
               <DisconnectButton action={desconectarIntegracao.bind(null, "MICROSOFT")} />
             ) : (
-              <a
-                href="/api/integrations/microsoft/connect"
-                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[length:var(--fs-ui)] font-semibold hover:bg-brand-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)] transition-colors inline-flex items-center justify-center flex-shrink-0"
-              >
+              <Button href="/api/integrations/microsoft/connect" nativo className="flex-shrink-0">
                 Conectar
-              </a>
+              </Button>
             ))}
         </Card>
       </section>
