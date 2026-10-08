@@ -3,9 +3,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
 import {
   Building2,
-  Users,
   Clock,
   ArrowRightLeft,
+  MessageSquareWarning,
   ChevronRight,
   Video,
   ExternalLink,
@@ -20,7 +20,7 @@ import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
 import { numero } from "@/components/shared/Graficos";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/context";
-import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
+import { scopedCompanyWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { boardPath } from "@/lib/kanbanPaths";
@@ -29,6 +29,7 @@ import { parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKe
 import { acessoDosPaineis, type AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
 import { contarTarefas } from "@/lib/home/paineis";
 import { precarregarHistoricoDaHome } from "@/lib/home/historico";
+import { solicitacoesComRespostaAtrasada } from "@/lib/home/indicadores";
 import { FaixaCarregando, FaixaDeDestaques, type SetorDoDestaque } from "@/components/home/FaixaDeDestaques";
 import {
   PainelCarregando,
@@ -136,7 +137,7 @@ export default async function HomePage() {
     tenant,
     companyActiveCount,
     newCompaniesThisMonth,
-    personCount,
+    solicitacoesAtrasadas,
     pendingHandoffsCount,
     openPipelineItemsRaw,
     recentActivitiesRaw,
@@ -149,7 +150,8 @@ export default async function HomePage() {
     prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }),
     prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), status: "ACTIVE" } }),
     prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), createdAt: { gte: monthStart } } }),
-    prisma.person.count({ where: { ...(await scopedPersonWhere(ctx)), type: "COLABORADOR" } }),
+    // No lugar da contagem de pessoas (08/10, escolha 7A): ver `lib/home/indicadores`.
+    solicitacoesComRespostaAtrasada(ctx, now),
     prisma.handoff.count({
       where: { AND: [scopedHandoffWhere(ctx), { sectors: { some: { status: { not: "DONE" } } } }] },
     }),
@@ -374,6 +376,7 @@ export default async function HomePage() {
   const disponiveis = widgetsDisponiveis(restrictedOpts);
   const topWidgets = visibleWidgets("top", selectedWidgets, restrictedOpts);
   const painelWidgets = visibleWidgets("paineis", selectedWidgets, restrictedOpts);
+  const abaixoDosPaineis = visibleWidgets("abaixo-dos-paineis", selectedWidgets, restrictedOpts);
   const mainWidgets = visibleWidgets("main", selectedWidgets, restrictedOpts);
   const sideWidgets = visibleWidgets("side", selectedWidgets, restrictedOpts);
   // Com uma das colunas vazia o grid de duas colunas jogaria a sobrevivente na
@@ -464,8 +467,17 @@ export default async function HomePage() {
     "painel-recrutamento": painelDoSetor("painel-recrutamento", PainelDeRecrutamento),
     "painel-certificados": painelDoSetor("painel-certificados", PainelDeCertificados),
 
+    // Abaixo dos painéis desde 08/10 (escolha 7A do Kauan): a faixa de
+    // destaques abre a tela, e isto é o resumo de consulta. Sem o canal de
+    // solicitações do portal, o quarto cartão não existe e a grade fica em três.
     indicadores: (
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div
+        className={`grid grid-cols-2 gap-3 mb-4 ${
+          solicitacoesAtrasadas
+            ? "sm:grid-cols-4"
+            : "sm:grid-cols-3 [&>:nth-child(3)]:col-span-2 sm:[&>:nth-child(3)]:col-span-1"
+        }`}
+      >
         {/* O MetricCard formata o número em pt-BR (1.234). "Atrasadas", e não
             "vencidos" (07/10): é o termo do painel de tarefas e da faixa para o
             mesmo número — e a mesma cor: vermelho quando há atrasada, âmbar
@@ -496,13 +508,21 @@ export default async function HomePage() {
           highlight={pendingHandoffsCount > 0}
           sub={pendingHandoffsCount > 0 ? "em aberto" : undefined}
         />
-        <MetricCard
-          href="/pessoas"
-          icon={<Users size={16} />}
-          label="Pessoas cadastradas"
-          value={personCount}
-          delay={120}
-        />
+        {/* No lugar de "Pessoas cadastradas" (08/10, escolha 7A): um número
+            que pede ação — o cliente esperando a primeira resposta da equipe
+            além do prazo prometido. O porquê da escolha está em
+            `lib/home/indicadores`. Leva à fila no recorte "resposta atrasada". */}
+        {solicitacoesAtrasadas && (
+          <MetricCard
+            href={solicitacoesAtrasadas.href}
+            icon={<MessageSquareWarning size={16} />}
+            label="Solicitações atrasadas"
+            value={solicitacoesAtrasadas.quantas}
+            delay={120}
+            tom={solicitacoesAtrasadas.quantas > 0 ? "critico" : undefined}
+            sub={solicitacoesAtrasadas.quantas > 0 ? "sem resposta no prazo" : undefined}
+          />
+        )}
       </div>
     ),
 
@@ -750,6 +770,11 @@ export default async function HomePage() {
         </div>
       )}
 
+      {/* Entre os painéis e as colunas: os Indicadores (08/10, escolha 7A). */}
+      {abaixoDosPaineis.map((key) => (
+        <Fragment key={key}>{widgetNodes[key]}</Fragment>
+      ))}
+
       {/* Corpo: coluna principal (meu trabalho) + coluna lateral */}
       {(mainWidgets.length > 0 || sideWidgets.length > 0) && (
         <div className={`grid gap-4 ${twoColumns ? "grid-cols-1 lg:grid-cols-[1.7fr_1fr]" : "grid-cols-1"}`}>
@@ -771,7 +796,11 @@ export default async function HomePage() {
         </div>
       )}
 
-      {topWidgets.length === 0 && painelWidgets.length === 0 && mainWidgets.length === 0 && sideWidgets.length === 0 && (
+      {topWidgets.length === 0 &&
+        painelWidgets.length === 0 &&
+        abaixoDosPaineis.length === 0 &&
+        mainWidgets.length === 0 &&
+        sideWidgets.length === 0 && (
         <p className="text-[length:var(--fs-body)] text-fg-muted">
           Todos os blocos estão ocultos. Use <span className="text-fg font-medium">Personalizar</span> para trazer algum de volta.
         </p>
