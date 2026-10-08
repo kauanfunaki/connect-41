@@ -115,7 +115,7 @@ export default async function EsocialS2200Page({
           // 11px e valor de 13px aqui, 13/15 lá — a mesma informação parecia
           // de outro tamanho. Três colunas no desktop.
           <Card key={g.title} className="p-5">
-            <h2 className="text-card-title font-semibold text-fg mb-4">{g.title}</h2>
+            <h2 className="text-section font-semibold text-fg mb-4">{g.title}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
               {g.fields.map((f) => (
                 <div key={f.label} className="min-w-0">
@@ -137,7 +137,7 @@ export default async function EsocialS2200Page({
 
         {/* Dependentes */}
         <Card className="p-5">
-          <h2 className="text-card-title font-semibold text-fg mb-4">Dependentes</h2>
+          <h2 className="text-section font-semibold text-fg mb-4">Dependentes</h2>
           {preview.dependentes.length === 0 ? (
             <p className="text-helper text-fg-muted">Nenhum dependente informado.</p>
           ) : (

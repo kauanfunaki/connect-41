@@ -22,7 +22,8 @@ import { TesteCard } from "@/components/teste/TesteCard";
 import type { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
-import { Selo } from "@/components/ui/Selo";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
+import { StatusDot } from "@/components/shared/StatusDot";
 // O par rótulo/valor das fichas: a cópia local daqui tinha o valor em 13px, e
 // a ficha da vaga e a de pessoa em 15px (auditoria DRG-11, 07/10/2026).
 import { InfoRow } from "@/components/empresas/InfoRow";
@@ -34,6 +35,18 @@ const CANDIDATURA_STATUS_LABEL: Record<ProcessoSeletivoStatus, string> = {
   DESISTENTE:   "Desistente",
   CONTRATADO:   "Contratado",
   ENCERRADO:    "Encerrado",
+};
+
+// A situação da candidatura no tom do papel (escolha 2A do Kauan, 08/10/2026):
+// em curso em azul, aprovada e contratada em verde, e o que saiu de cena —
+// reprovada, desistente, encerrada — em cinza. Era o mesmo cinza para todas.
+const TOM_DA_CANDIDATURA: Record<ProcessoSeletivoStatus, TomDoSelo> = {
+  EM_ANDAMENTO: "marca",
+  APROVADO:     "sucesso",
+  REPROVADO:    "neutro",
+  DESISTENTE:   "neutro",
+  CONTRATADO:   "sucesso",
+  ENCERRADO:    "neutro",
 };
 
 export default async function CandidatoPage({
@@ -127,16 +140,16 @@ export default async function CandidatoPage({
       {/* Selo, CPF e ações dentro do próprio `PageHeader` (polimento de
           30/09), como na ficha da vaga. "Editar" era um link desenhado à mão
           como botão. */}
+      {/* Ativo/inativo de cadastro é a bolinha, como na lista de candidatos
+          (escolha 2A, 08/10/2026), e mora no `meta`, embaixo do título — era
+          um selo colado ao nome. */}
       <PageHeader
-        title={
-          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-            {person.name}
-            <Selo cor={person.active
-                  ? "bg-success/10 text-success-fg border-success/25"
-                  : "bg-surface-2 text-fg-muted border-border"}>
-              {person.active ? "Ativo" : "Inativo"}
-            </Selo>
-          </span>
+        title={person.name}
+        meta={
+          <StatusDot
+            color={person.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
+            label={person.active ? "Ativo" : "Inativo"}
+          />
         }
         subtitle={person.cpf ? <span className="tnum">CPF: {maskCpf(person.cpf)}</span> : undefined}
         action={
@@ -151,9 +164,12 @@ export default async function CandidatoPage({
         }
       />
 
-      {/* Tags / Skills — banco de talentos */}
+      {/* Tags / Skills — banco de talentos.
+          Títulos de seção da ficha em 18px (`text-section`), como na ficha de
+          pessoa e nos documentos logo abaixo — padrão aceito pelo Kauan em
+          08/10/2026; estavam em 14px. */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-1">Tags / Habilidades</h2>
+        <h2 className="text-section font-semibold text-fg mb-1">Tags / Habilidades</h2>
         <p className="text-fs-2 text-fg-muted mb-3">
           Torna o candidato pesquisável no banco de talentos, mesmo que não avance nesta vaga.
         </p>
@@ -171,11 +187,11 @@ export default async function CandidatoPage({
 
       {/* Identificação */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-4">Identificação</h2>
+        <h2 className="text-section font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
           <InfoRow
-            label="Data de Nascimento"
+            label="Data de nascimento"
             value={
               person.birthDate
                 ? formatCalendarDate(person.birthDate, { day: "2-digit", month: "long", year: "numeric" })
@@ -189,7 +205,7 @@ export default async function CandidatoPage({
 
       {/* Contato */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-4">Contato</h2>
+        <h2 className="text-section font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="E-mail" value={person.email} />
           <InfoRow label="Telefone" value={formatPhone(person.phone)} />
@@ -199,7 +215,7 @@ export default async function CandidatoPage({
       {/* Endereço */}
       {fullAddress && (
         <Card className="p-5 mb-4">
-          <h2 className="text-card-title font-semibold text-fg mb-4">Endereço</h2>
+          <h2 className="text-section font-semibold text-fg mb-4">Endereço</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
             <InfoRow label="Complemento" value={person.addressComplement} />
@@ -212,7 +228,7 @@ export default async function CandidatoPage({
 
       {/* Candidaturas */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-3">
+        <h2 className="text-section font-semibold text-fg mb-3">
           Candidaturas {candidaturas.length > 0 && `(${candidaturas.length})`}
         </h2>
 
@@ -227,7 +243,7 @@ export default async function CandidatoPage({
                 </Link>
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="min-w-0 truncate text-fs-2 text-fg-muted">{c.vaga.company.name}</span>
-                  <Selo cor="bg-surface-2 text-fg-secondary border-border" className="flex-shrink-0">
+                  <Selo tom={TOM_DA_CANDIDATURA[c.status]} className="flex-shrink-0">
                     {CANDIDATURA_STATUS_LABEL[c.status]}
                   </Selo>
                 </div>

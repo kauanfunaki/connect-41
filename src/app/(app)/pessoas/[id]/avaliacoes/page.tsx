@@ -39,10 +39,10 @@ export default async function AvaliacoesPessoaPage({
         isInternal={person.isInternal}
         personId={id}
         personName={person.name}
-        atual="Avaliações de Desempenho"
+        atual="Avaliações de desempenho"
       />
       <BackButton className="mb-3" />
-      <PageHeader title="Avaliações de Desempenho" />
+      <PageHeader title="Avaliações de desempenho" />
 
       {evaluations.length === 0 ? (
         <Card className="p-5">

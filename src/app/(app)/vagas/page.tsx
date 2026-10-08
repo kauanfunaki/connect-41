@@ -136,7 +136,7 @@ export default async function VagasPage({
           // Button — o botão de criar das outras listas (DRG-17, 07/10/2026).
           <Button href="/vagas/novo" variant="primary">
             <Plus size={14} />
-            Nova Vaga
+            Nova vaga
           </Button>
         )}</>}
       />
@@ -183,18 +183,11 @@ export default async function VagasPage({
         <FiltrosDasColunasNaUrl colunas={[{ chave: "sectorCode", rotulo: "Setor" }]} />
 
         {vagas.length === 0 ? (
+          // Sem repetir o botão de criar: ele mora no cabeçalho (5A, 08/10/2026).
           <EmptyState
             icon={<Briefcase />}
             title="Nenhuma vaga encontrada"
-            description="Ajuste os filtros ou cadastre a primeira vaga do setor."
-            action={
-              canCreateAny && (
-                <Button href="/vagas/novo" variant="primary">
-                  <Plus size={14} />
-                  Nova Vaga
-                </Button>
-              )
-            }
+            description="Ajuste os filtros ou cadastre a primeira vaga do setor em “Nova vaga”."
           />
         ) : (
           <>

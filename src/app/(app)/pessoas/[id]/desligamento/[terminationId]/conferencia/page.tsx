@@ -162,8 +162,10 @@ export default async function ConferenciaRescisaoPage({
       />
 
       {/* Prazo legal — contagem de prazo é seguro fazer, cálculo de verba não. */}
+      {/* Títulos de seção da ficha em 18px (`text-section`) — padrão aceito
+          pelo Kauan em 08/10/2026 para as fichas; estavam em 14px. */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-3">Dados da rescisão</h2>
+        <h2 className="text-section font-semibold text-fg mb-3">Dados da rescisão</h2>
         <DadosRescisaoForm
           action={salvarDadosRescisao.bind(null, id, terminationId)}
           defaults={{
@@ -215,7 +217,7 @@ export default async function ConferenciaRescisaoPage({
       {referencia && (
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-            <h2 className="text-card-title font-semibold text-fg">Cálculo de referência</h2>
+            <h2 className="text-section font-semibold text-fg">Cálculo de referência</h2>
             <span className="text-fs-1 text-fg-muted">motor v{referencia.calculo.motorVersao}</span>
           </div>
           <p className="text-fs-2 text-fg-muted mb-3">
@@ -274,7 +276,7 @@ export default async function ConferenciaRescisaoPage({
       {/* Resumo */}
       <Card className="p-5 mb-4">
         <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-          <h2 className="text-card-title font-semibold text-fg">Resumo da conferência</h2>
+          <h2 className="text-section font-semibold text-fg">Resumo da conferência</h2>
           <span className="text-fs-2 text-fg-muted tnum">{resumo.progressoPct}% tratado</span>
         </div>
         <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
@@ -306,7 +308,7 @@ export default async function ConferenciaRescisaoPage({
       {feriasEmAberto.length > 0 && (
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
-            <h2 className="text-card-title font-semibold text-fg">Férias em aberto (base de conferência)</h2>
+            <h2 className="text-section font-semibold text-fg">Férias em aberto (base de conferência)</h2>
             <Button href={`/pessoas/${id}/ferias`} variant="secondary" size="xs">
               <Palmtree size={12} />
               Abrir módulo de Férias
@@ -344,7 +346,7 @@ export default async function ConferenciaRescisaoPage({
       {/* Checklist agrupado */}
       {RESCISAO_GROUP_ORDER.map((group) => (
         <Card key={group} className="p-5 mb-4">
-          <h2 className="text-card-title font-semibold text-fg mb-1">{RESCISAO_GROUP_LABEL[group]}</h2>
+          <h2 className="text-section font-semibold text-fg mb-1">{RESCISAO_GROUP_LABEL[group]}</h2>
           <div className="divide-y divide-border">
             {itemsByGroup(group).map((item) => (
               <ItemConferenciaRow

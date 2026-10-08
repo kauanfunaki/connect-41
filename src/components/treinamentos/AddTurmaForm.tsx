@@ -16,7 +16,10 @@ export function AddTurmaForm({ action }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
-    <form action={formAction} className="border-t border-border pt-4 space-y-2">
+    <form action={formAction} className="border-t border-border pt-4 space-y-3">
+      {/* Bloco do "novo" com nome, acima dos campos — era o botão "Nova turma"
+          no fim da linha, sem dizer do que era o formulário (5A, 08/10/2026). */}
+      <h3 className="c41-rotulo">Nova turma</h3>
       {/* Era uma fila de larguras soltas (w-40/w-40/w-48) com o botão no
           items-end; agora é grade, com o botão alinhado ao controle. */}
       <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)_auto]">
@@ -31,7 +34,7 @@ export function AddTurmaForm({ action }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Criando…" : "Nova Turma"}
+            {isPending ? "Criando…" : "Criar turma"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

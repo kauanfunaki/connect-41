@@ -39,7 +39,7 @@ export default async function TreinamentosPage() {
   const novo = canManage && (
     <Button href="/treinamentos/novo" variant="primary">
       <Plus size={14} />
-      Novo Treinamento
+      Novo treinamento
     </Button>
   );
 
@@ -52,11 +52,11 @@ export default async function TreinamentosPage() {
       />
       {treinamentos.length === 0 ? (
         <Card>
+          {/* Sem repetir o botão de criar: ele mora no cabeçalho (5A, 08/10/2026). */}
           <EmptyState
             icon={<GraduationCap />}
             title="Nenhum treinamento cadastrado"
             description="Cadastre treinamentos e organize turmas para os colaboradores."
-            action={novo || undefined}
           />
         </Card>
       ) : (

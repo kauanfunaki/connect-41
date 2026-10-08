@@ -42,10 +42,10 @@ export default async function ExamesPage({
         isInternal={person.isInternal}
         personId={id}
         personName={person.name}
-        atual="Exames Admissionais"
+        atual="Exames admissionais"
       />
       <BackButton className="mb-3" />
-      <PageHeader title="Exames Admissionais" />
+      <PageHeader title="Exames admissionais" />
 
       <Card className="p-5">
         {exames.length === 0 ? (

@@ -13,17 +13,16 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, 
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { AcoesDoModelo } from "@/components/teste/AcoesDoModelo";
 import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
-import { Selo } from "@/components/ui/Selo";
+import { StatusDot } from "@/components/shared/StatusDot";
 
+// Ativo/arquivado é situação de cadastro: a bolinha, como em Candidatos e
+// Colaboradores de clientes (escolha 2A do Kauan, 08/10/2026) — era o selo.
 function seloDoModelo(ativo: boolean) {
-  return ativo ? (
-    <Selo tom="sucesso">
-      Ativo
-    </Selo>
-  ) : (
-    <Selo tom="neutro">
-      Arquivado
-    </Selo>
+  return (
+    <StatusDot
+      color={ativo ? "var(--c41-success)" : "var(--c41-fg-muted)"}
+      label={ativo ? "Ativo" : "Arquivado"}
+    />
   );
 }
 
@@ -66,13 +65,8 @@ export default async function TemplatesPage() {
           <EmptyState
             icon={<FileQuestion />}
             title="Nenhum modelo cadastrado"
-            description="Crie um modelo de teste (ex: Português Básico) pra reaproveitar em vários candidatos."
-            action={
-              <Button href="/testes/templates/novo" variant="primary">
-                <Plus size={14} />
-                Novo modelo
-              </Button>
-            }
+            // Sem repetir o botão de criar: ele mora no cabeçalho (5A, 08/10/2026).
+            description="Crie um modelo de teste (ex.: Português básico) para reaproveitar em vários candidatos, em “Novo modelo”."
           />
         </Card>
       ) : (

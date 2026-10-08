@@ -16,6 +16,7 @@ import { formatCalendarDate, formatInstantDate } from "@/lib/format";
 import { notaDoDP } from "@/components/pessoas/rotulosDoDP";
 import { saoPauloParts } from "@/lib/agenda";
 import { Button } from "@/components/ui/Button";
+import { Selo } from "@/components/ui/Selo";
 import { TabelaNoDesktop, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 
 export default async function CicloPage({
@@ -63,8 +64,12 @@ export default async function CicloPage({
           <>
             {formatCalendarDate(ciclo.startDate)}
             {ciclo.endDate && ` — ${formatCalendarDate(ciclo.endDate)}`}
-            {!ciclo.active && " · Encerrado"}
           </>
+        }
+        // A situação do ciclo no `Selo`, como na lista — era " · Encerrado" no
+        // fim do período, e o aberto não dizia nada (2A, 08/10/2026).
+        meta={
+          ciclo.active ? <Selo tom="sucesso">Aberto</Selo> : <Selo tom="neutro">Encerrado</Selo>
         }
         action={
           canManage && (
@@ -73,7 +78,7 @@ export default async function CicloPage({
                 <form action={encerrarAction}>
                   <Button variant="secondary" size="sm" type="submit">
                     <Lock size={14} />
-                    Encerrar Ciclo
+                    Encerrar ciclo
                   </Button>
                 </form>
               )}
@@ -84,7 +89,7 @@ export default async function CicloPage({
       />
 
       <Card className="p-5">
-        <h2 className="text-card-title font-semibold text-fg mb-3">
+        <h2 className="text-section font-semibold text-fg mb-3">
           Avaliações {ciclo.evaluations.length > 0 && `(${ciclo.evaluations.length})`}
         </h2>
 

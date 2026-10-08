@@ -35,7 +35,7 @@ export default async function EscalasPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Escala — Próximos 30 dias"
+        title="Escala — próximos 30 dias"
         subtitle={<>{entries.length} lançamento{entries.length !== 1 ? "s" : ""} de escala</>}
       />
 
