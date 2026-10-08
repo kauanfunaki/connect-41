@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { Cascata, type PassoDaCascata } from "@/components/shared/Graficos";
 import { saoPauloParts } from "@/lib/agenda";
 import {
   serieEconomica,
@@ -32,6 +33,7 @@ import {
 import {
   reconciliarLucroCaixa,
   compararResultados,
+  type PassoDaReconciliacao,
   resultadoDePorGrupo,
   atrasoMedioEmDias,
   projetarSerie,
@@ -173,40 +175,31 @@ export async function AbaEconomicoFinanceiro({ tenantId, companyId, mes }: Base)
 
 // ─── Reconciliação ──────────────────────────────────────────────────────────
 
+/** Os passos da ponte como degraus da `Cascata`. */
+function passosDaCascata(passos: PassoDaReconciliacao[]): PassoDaCascata[] {
+  return passos.map((p) => ({ chave: p.code, rotulo: p.label, valor: p.centavos, tipo: p.tipo }));
+}
+
 export async function AbaReconciliacao({ tenantId, companyId, mes }: Base) {
   const { conjuntos, mapeamento } = await dadosDaReconciliacao(tenantId, companyId, mes);
   const passos = reconciliarLucroCaixa(conjuntos, mapeamento);
-  const maior = Math.max(1, ...passos.map((p) => Math.abs(p.centavos)));
 
   return (
     <>
-      <div className="overflow-x-auto border border-border rounded-lg bg-surface">
-        <table className="w-full min-w-[600px] text-ui">
-          <thead>
-            <tr className={CABECALHO}>
-              <th className={`${TH} pl-4`}>Passo</th>
-              <th className={`${TH} text-right`}>Valor</th>
-              <th className={`${TH} pr-4 hidden sm:table-cell w-[30%]`}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {passos.map((p) => (
-              <tr key={p.code} className={`border-b border-border-soft ${p.tipo === "total" ? "bg-surface-hover font-medium" : ""}`}>
-                <td className={`py-2 pl-4 pr-3 ${p.tipo === "total" ? "text-fg" : "text-fg-secondary"}`}>{p.label}</td>
-                <td className={`py-2 pr-3 text-right tabular-nums whitespace-nowrap ${p.centavos < 0 ? "text-danger" : ""}`}>{moeda(p.centavos)}</td>
-                <td className="py-2 pr-4 hidden sm:table-cell">
-                  <div className="h-2.5 w-full rounded bg-border-soft overflow-hidden">
-                    <div
-                      className={`h-full ${p.centavos < 0 ? "bg-danger" : "bg-success"}`}
-                      style={{ width: `${(Math.abs(p.centavos) / maior) * 100}%` }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* A ponte como cascata (08/10/2026, escolha 9A do Kauan: nas análises
+          da DRE, os gráficos de apoio no padrão da Home). Era uma tabela com
+          barras de magnitude alinhadas à esquerda, verdes e vermelhas pelo
+          sinal, e os totais pareciam mais um ajuste. Agora os totais saem do
+          zero em cinza e cada ajuste flutua de onde o anterior parou, no azul
+          do que soma ou no mais claro do que subtrai — o sinal vai escrito. */}
+      <Card className="p-5">
+        <Cascata
+          titulo={`Do resultado de ${rotuloDaCompetencia(mes)} à variação de caixa, em R$`}
+          passos={passosDaCascata(passos)}
+          formatar={moeda}
+          vazio={`Nenhum lançamento com competência ou baixa em ${rotuloDaCompetencia(mes)}.`}
+        />
+      </Card>
       <NotaDeFonte>
         A ponte fecha no centavo, sem &ldquo;ajuste de timing&rdquo;: cada lançamento cai em exatamente um grupo — competência
         e caixa no mês, só competência, ou só caixa. {conjuntos.soCompetencia.length} lançamentos do mês não liquidados no

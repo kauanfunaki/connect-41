@@ -14,7 +14,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { RelatorioOrcadoRealizado } from "@/components/dre/RelatorioOrcadoRealizado";
-import { FiltroDePeriodo, AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
+import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import {
   competenciaValida,
@@ -23,12 +24,13 @@ import {
   rotuloDaCompetencia,
   competenciaDoInstante,
   partesDaCompetencia,
+  somarMeses,
 } from "@/lib/financeiro/periodo";
 import { serieEconomica, competenciasDaEmpresa, quadroPorCentroDoPeriodo } from "@/lib/dre/dataEconomica";
-import { comRotulosEconomicos, valorDaLinha, fracaoDaLinha, LINHA_DE_RESULTADO, LINHA_OPERACIONAL } from "@/lib/dre/economica";
+import { comRotulosEconomicos } from "@/lib/dre/economica";
 import { resultadoDePorGrupo, somarPorGrupo } from "@/lib/dre/analises";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
-import { moeda, percentual, tomDoValor } from "@/lib/financeiro/formato";
+import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { lerFiltroDeCentro, valorDoFiltroDeCentro, SEM_CENTRO } from "@/lib/financeiro/centroDeCusto";
 import { orcamentosAprovados, orcamentoLigado } from "@/lib/dre/orcamento/dados";
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
@@ -118,8 +120,12 @@ export default async function DreEconomicaPage({
   const querOrcado = comOrcamento && filtro.tipo === "todos" && visao !== "12meses";
   const orcamento = querOrcado ? (await orcamentosAprovados(ctx.tenantId, companyId, [ano])).get(ano) ?? null : null;
   // Com orçado, a série cobre o acumulado do ano mesmo na visão do mês — é o
-  // bloco "acumulado" da comparação. Uma consulta só.
-  const competenciasDaSerie = orcamento && visao === "mes" ? acumuladoDoAno(mes) : competencias;
+  // bloco "acumulado" da comparação. Uma consulta só. Na visão do mês, ela
+  // leva também o mês anterior, para os números do topo dizerem contra o quê
+  // (08/10/2026) — um mês a mais na mesma consulta, não uma consulta nova.
+  const mesAnterior = somarMeses(mes, -1);
+  const competenciasDaSerie =
+    visao === "mes" ? [...new Set([...(orcamento ? acumuladoDoAno(mes) : competencias), mesAnterior])] : competencias;
 
   const [serie, quadro] = await Promise.all([
     serieEconomica(ctx.tenantId, companyId, competenciasDaSerie, filtro),
@@ -144,6 +150,16 @@ export default async function DreEconomicaPage({
     visao === "mes" ? serie.get(mes)!.resultado : resultadoDePorGrupo(somarPorGrupo(meses.map((m) => m.resultado.porGrupo)))
   );
   const imposto = impostoForaDoResultado(resultado);
+  // Sem lançamento nem ajuste da cobrança no mês anterior, sem comparação.
+  const doAnterior = visao === "mes" ? serie.get(mesAnterior) : undefined;
+  const anterior =
+    doAnterior &&
+    (doAnterior.lancamentos > 0 ||
+      doAnterior.cobranca.acrescimosDeAcordo !== 0 ||
+      doAnterior.cobranca.descontosDeAcordo !== 0 ||
+      doAnterior.cobranca.perdas !== 0)
+      ? { resultado: doAnterior.resultado, rotulo: rotuloDaCompetencia(mesAnterior) }
+      : null;
 
   const comparacao = orcamento
     ? {
@@ -213,17 +229,11 @@ export default async function DreEconomicaPage({
         </Card>
       ) : (
         <>
-          <FaixaDeTotais
-            itens={[
-              { rotulo: "Receita bruta", valor: moeda(valorDaLinha(resultado, "receita_bruta")) },
-              {
-                rotulo: "Margem de contribuição",
-                valor: `${moeda(valorDaLinha(resultado, "margem_contribuicao"))} · ${percentual(fracaoDaLinha(resultado, "margem_contribuicao_pct"))}`,
-              },
-              { rotulo: "Resultado operacional", valor: moeda(valorDaLinha(resultado, LINHA_OPERACIONAL)), tom: tomDoValor(valorDaLinha(resultado, LINHA_OPERACIONAL)) },
-              { rotulo: "Resultado do período", valor: moeda(valorDaLinha(resultado, LINHA_DE_RESULTADO)), tom: tomDoValor(valorDaLinha(resultado, LINHA_DE_RESULTADO)) },
-            ]}
-          />
+          {/* Os números do topo no padrão novo (08/10/2026, escolha 9A do
+              Kauan): a margem com o percentual no detalhe, e não colado no
+              valor, onde cortava; os resultados sem o verde do sinal; e, na
+              visão do mês, a comparação com o mês anterior. */}
+          <NumerosDaDre resultado={resultado} regime="competencia" anterior={anterior} />
 
           {/* Provisório entra no resultado — a obrigação existe —, mas é o
               pedaço do número que ninguém conferiu. Dizer quantos são é o que
