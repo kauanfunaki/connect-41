@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { Accordion } from "@/components/ui/Accordion";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltroDeSetor } from "@/components/gestao/FiltroDeSetor";
@@ -96,10 +97,9 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                   <span className="text-fs-2 text-fg-muted">{c.vencendo} vencendo</span>
                 </PeDoCartao>
                 {c.itens.length > 0 && (
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-fs-2 text-fg-secondary">Ver os itens</summary>
+                  <Accordion className="mt-2" classeDoCabecalho="text-fs-2 text-fg-secondary" titulo="Ver os itens">
                     {itensDa(c)}
-                  </details>
+                  </Accordion>
                 )}
               </Cartao>
             ))}
@@ -127,18 +127,23 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                 {linhas.map(({ pessoa, carga: c }) => (
                   <tr key={pessoa.id} className="border-b border-border align-top">
                     <td className="px-3">
-                      <details>
-                        <summary className="cursor-pointer font-medium text-fg">
-                          {pessoa.name}{" "}
-                          {pessoa.role === "SECTOR_ADMIN" && (
-                            <Badge variant="info" className="ml-1">
-                              Coordenação
-                            </Badge>
-                          )}
-                          <span className="block text-fs-1 font-normal text-fg-muted">{setoresDe(pessoa)}</span>
-                        </summary>
+                      <Accordion
+                        centralizado
+                        classeDoCabecalho="font-medium text-fg"
+                        titulo={
+                          <>
+                            {pessoa.name}{" "}
+                            {pessoa.role === "SECTOR_ADMIN" && (
+                              <Badge variant="info" className="ml-1">
+                                Coordenação
+                              </Badge>
+                            )}
+                            <span className="block text-fs-1 font-normal text-fg-muted">{setoresDe(pessoa)}</span>
+                          </>
+                        }
+                      >
                         {itensDa(c)}
-                      </details>
+                      </Accordion>
                     </td>
                     <td className={`${TD} font-semibold text-fg`}>{c.abertos}</td>
                     <td className={TD}>{c.porOrigem.PROCESSO}</td>

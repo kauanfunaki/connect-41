@@ -1,3 +1,4 @@
+import { Accordion } from "@/components/ui/Accordion";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { formatInstantDateTime } from "@/lib/format";
 import { ROTULO_DA_APROVACAO, type StatusDeAprovacao } from "@/lib/financeiro/aprovacao/regras";
@@ -35,8 +36,13 @@ export function SeloDaAprovacao({ status }: { status: StatusDeAprovacao }) {
 export function HistoricoDaAprovacao({ eventos }: { eventos: EventoDaAprovacao[] }) {
   if (eventos.length === 0) return null;
   return (
-    <details className="mt-1 text-micro">
-      <summary className="cursor-pointer text-fg-muted hover:text-fg">Histórico ({eventos.length})</summary>
+    // Centrado: mora na célula da tabela padrão das aprovações.
+    <Accordion
+      centralizado
+      className="mt-1 text-micro"
+      classeDoCabecalho="text-fg-muted hover:text-fg"
+      titulo={`Histórico (${eventos.length})`}
+    >
       <ol className="mt-1.5 flex flex-col gap-1 border-l border-border pl-2.5">
         {eventos.map((e) => (
           <li key={e.id}>
@@ -45,6 +51,6 @@ export function HistoricoDaAprovacao({ eventos }: { eventos: EventoDaAprovacao[]
           </li>
         ))}
       </ol>
-    </details>
+    </Accordion>
   );
 }

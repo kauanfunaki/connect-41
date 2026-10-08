@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { Accordion } from "@/components/ui/Accordion";
 import { Button } from "@/components/ui/Button";
 // O da base (07/10/2026): a frente do Societário tinha feito o seu ao mesmo
 // tempo (lib/textoComLinks), e os dois separavam o texto do mesmo jeito.
@@ -28,10 +29,15 @@ export function ObservacoesDoProcesso({ texto }: { texto: string }) {
   const longo = texto.split("\n").length > LINHAS_ANTES_DE_CORTAR || texto.length > CARACTERES_ANTES_DE_CORTAR;
 
   return (
-    <details className="rounded-md border border-border bg-surface-2 px-3 py-2">
-      <summary className="cursor-pointer text-ui font-medium text-fg">
-        Observações internas <span className="font-normal text-fg-muted">· só a equipe vê</span>
-      </summary>
+    <Accordion
+      className="rounded-md border border-border bg-surface-2 px-3 py-2"
+      classeDoCabecalho="w-full text-ui font-medium text-fg"
+      titulo={
+        <>
+          Observações internas <span className="font-normal text-fg-muted">· só a equipe vê</span>
+        </>
+      }
+    >
       <div
         className={`mt-2 whitespace-pre-wrap break-words text-label leading-relaxed text-fg-secondary ${
           longo && !tudo ? "max-h-96 overflow-y-auto pr-2" : ""
@@ -45,6 +51,6 @@ export function ObservacoesDoProcesso({ texto }: { texto: string }) {
           {tudo ? "Mostrar menos" : "Ver tudo"}
         </Button>
       )}
-    </details>
+    </Accordion>
   );
 }
