@@ -221,11 +221,11 @@ export function GradeDoOrcamento({
             }
             nota={
               salvo ? (
-                <span className="inline-flex items-center gap-1 text-success">
+                <span className="inline-flex items-center gap-1 text-success-fg">
                   <Check size={14} /> Grade salva.
                 </span>
               ) : sujo && !pendente ? (
-                <span className="text-warning">Alterações não salvas.</span>
+                <span className="text-warning-fg">Alterações não salvas.</span>
               ) : null
             }
           />

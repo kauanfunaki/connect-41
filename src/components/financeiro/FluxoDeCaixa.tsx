@@ -168,7 +168,7 @@ export function CartoesDaProjecao({ projecao, saldoInicial = null }: { projecao:
         ))}
       </div>
       {(projecao.vencidos.entradas > 0 || projecao.vencidos.saidas > 0) && (
-        <p className="text-helper text-warning mt-3">
+        <p className="text-helper text-warning-fg mt-3">
           Fora das janelas: {moeda(projecao.vencidos.entradas)} a receber e {moeda(projecao.vencidos.saidas)} a pagar já
           vencidos e não baixados.
         </p>
@@ -216,7 +216,7 @@ export function QuadroDoSaldoBancario({ saldo }: { saldo: SaldoConsolidado }) {
         ))}
       </ul>
       {(saldo.contasSemSaldo > 0 || saldo.contasDivergentes > 0) && (
-        <p className="text-micro text-warning mt-2">
+        <p className="text-micro text-warning-fg mt-2">
           {saldo.contasSemSaldo > 0 &&
             `${saldo.contasSemSaldo === 1 ? "1 conta ficou" : `${saldo.contasSemSaldo} contas ficaram`} fora do total por não ter saldo inicial nem extrato. `}
           {saldo.contasDivergentes > 0 &&
