@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { FileText, AlertCircle } from "lucide-react";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
-import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
+import type { VarianteDoBadge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { TOM_DA_SITUACAO, tomDoFechamento } from "./tomDaSituacao";
 import { EmptyState } from "@/components/ui/EmptyState";
 // Dinheiro e competência pelos helpers de `lib/format` (08/10/2026): a
@@ -98,10 +99,14 @@ export function ContasTable({
     l.closeReason === "RENEGOCIADO" ? "Renegociada" : l.closeReason === "PERDA" ? "Perda" : SITUACAO_LABEL[l.situacao];
 
   // Os selos e as ações são os mesmos nas duas formas; ficam em função para a
-  // tabela e o cartão não descolarem um do outro com o tempo.
+  // tabela e o cartão não descolarem um do outro com o tempo. Situação da
+  // linha no `Selo` miúdo, e não no `Badge` (escolha 2A, 08/10/2026): a linha
+  // de /receber empilhava dois Badges de 24px.
   const selos = (l: LinhaDaConta) => (
     <>
-      <Badge variant={l.situacao === "CANCELADA" ? tomDoFechamento(l.closeReason) : SITUACAO_VARIANTE[l.situacao]}>{rotuloDaSituacao(l)}</Badge>
+      <Selo tom={tomDaVariante(l.situacao === "CANCELADA" ? tomDoFechamento(l.closeReason) : SITUACAO_VARIANTE[l.situacao])}>
+        {rotuloDaSituacao(l)}
+      </Selo>
       {cobranca && cobranca.get(l.id) && cobranca.get(l.id) !== "EM_DIA" && l.closeReason !== "PERDA" && (
         <Link href={`/cobranca/${l.id}`} className="inline-flex" title="Abrir na cobrança">
           <SeloDaCobranca situacao={cobranca.get(l.id) ?? null} />

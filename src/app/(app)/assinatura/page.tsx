@@ -33,7 +33,7 @@ export default async function AssinaturaPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Minha Assinatura"
+        title="Minha assinatura"
         subtitle="Plano contratado e uso atual."
       />
 

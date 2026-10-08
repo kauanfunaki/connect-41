@@ -16,8 +16,13 @@ import type { VarianteDoBadge } from "@/components/ui/Badge";
  * - `warning` — pede atenção ou espera alguém: vence hoje, a conferir;
  * - `info`    — em curso, sem urgência: a vencer, em aberto, renegociada;
  * - `success` — resolvido ou valendo: paga, ativa, ligada;
- * - `neutral` — saiu de cena: cancelada, inativa, desligada, encerrada. É
- *   histórico, não pede ação — e não pode ter a cor de quem pede.
+ * - `neutral` — saiu de cena: cancelada, inativa, desligada, encerrada,
+ *   ignorada, desfeita. É histórico, não pede ação — e não pode ter a cor de
+ *   quem pede.
+ *
+ * Situação de uma linha sai no `Selo` (`tomDaVariante(TOM_DA_SITUACAO.X)`);
+ * ativo/inativo de cadastro, na bolinha (`StatusDot`) — escolha 2A do Kauan,
+ * 08/10/2026. O `Badge` fica para categoria em destaque.
  */
 export const TOM_DA_SITUACAO = {
   VENCIDA: "danger",
@@ -34,6 +39,10 @@ export const TOM_DA_SITUACAO = {
   INATIVA: "neutral",
   DESLIGADA: "neutral",
   ENCERRADA: "neutral",
+  // Transação do extrato posta de lado, acordo desfeito (08/10/2026): eram
+  // `info` e `warning`, cores de quem ainda está em curso.
+  IGNORADA: "neutral",
+  DESFEITA: "neutral",
 } as const satisfies Record<string, VarianteDoBadge>;
 
 /**

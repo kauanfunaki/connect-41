@@ -1,83 +1,115 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Power, PowerOff } from "lucide-react";
+import { Plus, Power, PowerOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
+import { Modal } from "@/components/ui/Modal";
+import { FormFooter } from "@/components/ui/FormFooter";
+import { useToast } from "@/components/ui/Toast";
 import { salvarAlcada, alternarAlcada } from "@/app/(app)/aprovacoes/actions";
 
 /**
- * Cadastro de alçada para a empresa já escolhida no filtro.
+ * "Nova alçada" no cabeçalho da tela, com o cadastro numa janela (escolha 5A
+ * do Kauan, 08/10/2026). Era um cartão "Nova alçada" aberto no topo da aba,
+ * com o formulário numa linha só.
  *
- * A empresa vem do GET, e não de um select aqui, porque a lista de usuários
- * depende dela (só os do grupo da empresa) — e montar essa dependência no
- * navegador exigiria mandar os usuários de todos os grupos para a tela.
- * Salvar de novo para o mesmo usuário atualiza o teto e reativa.
+ * A empresa vem do filtro (GET), e não de um select aqui, porque a lista de
+ * usuários depende dela (só os do grupo da empresa) — e montar essa
+ * dependência no navegador exigiria mandar os usuários de todos os grupos
+ * para a tela. Sem empresa escolhida, a janela diz onde escolher. Salvar de
+ * novo para o mesmo usuário atualiza o teto e reativa.
  */
-export function FormAlcada({ companyId, usuarios }: { companyId: string; usuarios: { id: string; nome: string; email: string }[] }) {
+export function NovaAlcada({
+  companyId,
+  usuarios,
+}: {
+  companyId: string | null;
+  usuarios: { id: string; nome: string; email: string }[];
+}) {
+  const toast = useToast();
+  const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [salvo, setSalvo] = useState(false);
   const [pendente, startTransition] = useTransition();
-
-  if (usuarios.length === 0) {
-    return <p className="text-helper text-fg-muted">Nenhum usuário ativo do portal no grupo desta empresa. Cadastre o acesso do cliente antes.</p>;
-  }
+  const fechar = () => !pendente && setAberto(false);
 
   return (
-    <form
-      className="flex flex-col gap-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const dados = new FormData(e.currentTarget);
-        setErro(null);
-        setSalvo(false);
-        startTransition(async () => {
-          const r = await salvarAlcada(dados);
-          if ("error" in r) setErro(r.error);
-          else setSalvo(true);
-        });
-      }}
-    >
-      <input type="hidden" name="companyId" value={companyId} />
-      {/* Grade com o botão em AlinhadoAoCampo: era flex com items-end, e o
-          botão de 32px ficava 4px mais baixo que os campos de 36px. */}
-      <FieldGrid columns="md:grid-cols-[minmax(0,22rem)_12rem_auto]">
-        <CampoForm label="Usuário do portal" htmlFor="alcada-usuario" required>
-          <Select id="alcada-usuario" name="portalUserId" required defaultValue="">
-            <option value="" disabled>
-              Escolha
-            </option>
-            {usuarios.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nome} · {u.email}
-              </option>
-            ))}
-          </Select>
-        </CampoForm>
-        <CampoForm label="Teto" htmlFor="alcada-teto" required>
-          <Input id="alcada-teto" name="maxAmount" prefix="R$" inputMode="decimal" placeholder="5.000,00" required />
-        </CampoForm>
-        {/* Na linha dos campos, e não no `FormFooter`: o formulário é uma
-            linha só. O "Salvando…" vem do `loading` do botão (08/10/2026). */}
-        <AlinhadoAoCampo>
-          <Button type="submit" loading={pendente}>
-            Salvar alçada
-          </Button>
-        </AlinhadoAoCampo>
-      </FieldGrid>
-      {salvo && <p className="text-helper text-success-fg">Salvo.</p>}
-      {erro && (
-        <p role="alert" className="text-helper font-medium text-danger">
-          {erro}
-        </p>
-      )}
-    </form>
+    <>
+      <Button
+        onClick={() => {
+          setErro(null);
+          setAberto(true);
+        }}
+      >
+        <Plus size={14} /> Nova alçada
+      </Button>
+      <Modal open={aberto} onClose={fechar} title="Nova alçada" maxWidth="max-w-lg">
+        <div className="flex flex-col gap-4">
+          <p className="text-helper text-fg-secondary">
+            O usuário do portal aprova contas a pagar desta empresa até o teto. A coordenação aprova sem teto. Com ao menos
+            uma alçada ativa, toda conta a pagar lançada em aberto na empresa nasce aguardando aprovação.
+          </p>
+          {!companyId || usuarios.length === 0 ? (
+            <>
+              <p className="text-helper text-fg-muted">
+                {!companyId
+                  ? "Escolha a empresa no filtro da aba Alçadas para cadastrar."
+                  : "Nenhum usuário ativo do portal no grupo desta empresa. Cadastre o acesso do cliente antes."}
+              </p>
+              <div className="flex justify-end pt-4 mt-2 border-t border-border">
+                <Button variant="secondary" onClick={fechar}>
+                  Fechar
+                </Button>
+              </div>
+            </>
+          ) : (
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const dados = new FormData(e.currentTarget);
+                setErro(null);
+                startTransition(async () => {
+                  const r = await salvarAlcada(dados);
+                  if ("error" in r) {
+                    setErro(r.error);
+                    return;
+                  }
+                  setAberto(false);
+                  toast.success("Alçada salva.");
+                });
+              }}
+            >
+              <input type="hidden" name="companyId" value={companyId} />
+              <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_11rem]">
+                <CampoForm label="Usuário do portal" htmlFor="alcada-usuario" required>
+                  <Select id="alcada-usuario" name="portalUserId" required defaultValue="">
+                    <option value="" disabled>
+                      Escolha
+                    </option>
+                    {usuarios.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.nome} · {u.email}
+                      </option>
+                    ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Teto" htmlFor="alcada-teto" required>
+                  <Input id="alcada-teto" name="maxAmount" prefix="R$" inputMode="decimal" placeholder="5.000,00" required />
+                </CampoForm>
+              </FieldGrid>
+              <FormFooter pending={pendente} submitLabel="Salvar alçada" onCancel={fechar} erro={erro} />
+            </form>
+          )}
+        </div>
+      </Modal>
+    </>
   );
 }
 

@@ -11,8 +11,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
+import { StatusDot } from "@/components/shared/StatusDot";
 import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
 import { Button } from "@/components/ui/Button";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
@@ -174,7 +173,8 @@ export default async function ConciliacaoPage({
                       </span>
                     )}
                   </div>
-                  {!c.active && <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>}
+                  {/* Ativo/inativo de cadastro é a bolinha (escolha 2A, 08/10/2026). */}
+                  {!c.active && <StatusDot color="var(--c41-fg-muted)" label="Inativa" className="flex-shrink-0" />}
                 </div>
                 <BlocoDoSaldo situacao={saldos.get(c.id)!} />
                 {/* mt-auto: os botões ficam no pé do cartão, na mesma altura
