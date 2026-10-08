@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { Switch } from "@/components/ui/Switch";
 
 type Props = {
   action: (ligado: boolean) => Promise<void>;
@@ -34,22 +35,16 @@ export function ToggleAgenteButton({
     return <span className="text-ui text-fg-muted">{ligado ? rotuloLigado : "—"}</span>;
   }
 
-  const rotulo = ligado
-    ? `Tirar ${nome} de ${rotuloLigado.toLowerCase()}`
-    : `Marcar ${nome} como ${rotuloLigado.toLowerCase()}`;
-
+  // Nome fixo ("Recepção: Fulano") e o estado no `aria-checked` — antes era um
+  // botão `aria-pressed` cujo nome trocava a cada clique.
   return (
-    <button
-      type="button"
+    <Switch
+      checked={ligado}
+      onCheckedChange={(proximo) => startTransition(() => void action(proximo))}
       disabled={pending}
-      onClick={() => startTransition(() => void action(!ligado))}
-      title={rotulo}
-      aria-label={rotulo}
-      aria-pressed={ligado}
-      className={`c41-toggle-active ${ligado ? "is-on" : ""}`}
-    >
-      {ligado ? rotuloLigado : rotuloDesligado}
-      <span className="switch" />
-    </button>
+      rotulo={ligado ? rotuloLigado : rotuloDesligado}
+      aria-label={`${rotuloLigado}: ${nome}`}
+      className="min-w-[7.5rem]"
+    />
   );
 }

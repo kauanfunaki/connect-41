@@ -1,16 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { SELETOR_DOS_ALVOS, devolverTitulo, suspenderTitulo, textoDaDica, type TituloGuardado } from "./dicaDoTitulo";
 
 type Dica = { texto: string; x: number; y: number; embaixo: boolean };
 
-/**
- * O que ganha a dica: texto cortado de tabela, `title` de tabela, quem pedir
- * com `data-dica` e texto cortado fora de tabela marcado com `c41-cortavel`
- * (o valor dos cartões de total).
- */
-const ALVOS = "[data-dica], table .truncate, table [title], .truncate.c41-cortavel";
 const ATRASO_MS = 300;
 /** Gráfico (`data-dica-rapida`): quem passa o mouse numa barra está lendo, não passando. */
 const ATRASO_RAPIDO_MS = 60;
@@ -19,20 +14,47 @@ function cortado(el: HTMLElement): boolean {
   return el.scrollWidth > el.clientWidth + 1;
 }
 
+// Montada em mais de um layout (o raiz, o da equipe, o do portal): só a
+// primeira ainda montada escuta a página — duas escutando trocariam o mesmo
+// `title` e abririam dois balões. Quando ela sai, a seguinte assume.
+let instancias: symbol[] = [];
+const avisos = new Set<() => void>();
+function avisar() {
+  avisos.forEach((a) => a());
+}
+function assinar(aviso: () => void) {
+  avisos.add(aviso);
+  return () => {
+    avisos.delete(aviso);
+  };
+}
+function registrar(id: symbol) {
+  instancias = [...instancias, id];
+  avisar();
+  return () => {
+    instancias = instancias.filter((i) => i !== id);
+    avisar();
+  };
+}
+
 /**
- * A dica do Connect para texto que a tabela abreviou.
+ * A dica do Connect — para texto cortado e para todo `title` da interface.
  *
  * Um componente só, montado no layout, que escuta o mouse na página inteira —
- * e não um `<Tooltip>` em volta de cada célula: são centenas de células com
- * `truncate` em dezenas de telas, e a regra ("mostrar o nome inteiro do que foi
- * cortado") é a mesma em todas. Pedido do Kauan na conferência de 30/09: o
- * `title` nativo já mostrava o texto, mas cru, com atraso de sistema e sem
- * tema escuro.
+ * e não um `<Tooltip>` em volta de cada elemento: são centenas de células com
+ * `truncate` e de botões com `title` em dezenas de telas, e a regra é a mesma
+ * em todas. Pedido do Kauan na conferência de 30/09: o `title` nativo já
+ * mostrava o texto, mas cru, com atraso de sistema e sem tema escuro.
  *
- * - `.truncate` dentro de tabela: só aparece **quando o texto foi cortado**.
- * - `title` dentro de tabela: aparece sempre, e o nativo é suspenso enquanto o
- *   mouse está em cima (senão saem os dois balões).
- * - `data-dica="…"` em qualquer lugar: opt-in explícito.
+ * - `.truncate` dentro de tabela (ou com `title`, em qualquer lugar): só
+ *   aparece **quando o texto foi cortado** — e o balão do sistema não sai
+ *   quando coube inteiro.
+ * - `title` em qualquer lugar (08/10/2026; antes, só em tabela): aparece
+ *   sempre, e o nativo é suspenso enquanto a dica está aberta — o que ele
+ *   dizia ao leitor de tela vai para `aria-label`/`aria-description` nesse
+ *   meio-tempo (ver `suspenderTitulo`).
+ * - `data-dica="…"` em qualquer lugar: opt-in explícito, sem `title` nenhum —
+ *   o caminho dos componentes de base (`IconButton`, `MenuDeMaisAcoes`…).
  *
  * Também no teclado e no toque (07/10/2026): a dica abre no foco por teclado
  * (`:focus-visible`) e ao tocar no celular — o valor em reais de cada faixa
@@ -41,43 +63,38 @@ function cortado(el: HTMLElement): boolean {
  * a dica que acabou de abrir.
  */
 export function DicaFlutuante() {
+  const [id] = useState(() => Symbol("dica"));
+  const ativa = useSyncExternalStore(assinar, () => instancias[0] === id, () => false);
   const [dica, setDica] = useState<Dica | null>(null);
 
+  useEffect(() => registrar(id), [id]);
+
   useEffect(() => {
+    if (!ativa) return;
     let atual: HTMLElement | null = null;
-    let tituloGuardado: string | null = null;
+    let guardado: TituloGuardado | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     function soltar() {
       clearTimeout(timer);
-      if (atual && tituloGuardado !== null) atual.setAttribute("title", tituloGuardado);
+      if (atual && guardado) devolverTitulo(atual, guardado);
       atual = null;
-      tituloGuardado = null;
+      guardado = null;
       setDica(null);
     }
 
-    function textoDe(el: HTMLElement): string | null {
-      if (el.dataset.dica) return el.dataset.dica;
-      const titulo = el.getAttribute("title");
-      // Texto cortado: a dica só existe se o corte existe. Célula que coube
-      // inteira não precisa repetir o que já está à vista.
-      if (el.classList.contains("truncate")) return cortado(el) ? (titulo || el.textContent?.trim() || null) : null;
-      return titulo || null;
-    }
-
     function alvoDe(alvo: EventTarget | null): HTMLElement | null {
-      return alvo instanceof Element ? alvo.closest<HTMLElement>(ALVOS) : null;
+      return alvo instanceof Element ? alvo.closest<HTMLElement>(SELETOR_DOS_ALVOS) : null;
     }
 
     function mostrar(el: HTMLElement, atraso: number) {
       soltar();
-      const texto = textoDe(el);
-      if (!texto) return;
+      const texto = textoDaDica(el, () => cortado(el));
+      // O `title` sai mesmo sem dica: no texto cortado que coube inteiro, o
+      // balão do sistema repetiria o que já está à vista.
       atual = el;
-      if (el.hasAttribute("title")) {
-        tituloGuardado = el.getAttribute("title");
-        el.removeAttribute("title");
-      }
+      guardado = suspenderTitulo(el);
+      if (!texto) return;
       timer = setTimeout(() => {
         const r = el.getBoundingClientRect();
         const embaixo = r.top < 56;
@@ -137,12 +154,19 @@ export function DicaFlutuante() {
       soltar();
     }
 
+    // Esc fecha a dica, como o balão do sistema (sem marcar o evento: quem
+    // está embaixo — um modal — continua recebendo o Esc).
+    function tecla(e: KeyboardEvent) {
+      if (e.key === "Escape" && atual) soltar();
+    }
+
     document.addEventListener("mouseover", entrar);
     document.addEventListener("mouseout", sair);
     document.addEventListener("pointerdown", tocar);
     document.addEventListener("mousedown", pressionar);
     document.addEventListener("focusin", focar);
     document.addEventListener("focusout", desfocar);
+    document.addEventListener("keydown", tecla);
     window.addEventListener("scroll", soltar, true);
     return () => {
       soltar();
@@ -152,11 +176,12 @@ export function DicaFlutuante() {
       document.removeEventListener("mousedown", pressionar);
       document.removeEventListener("focusin", focar);
       document.removeEventListener("focusout", desfocar);
+      document.removeEventListener("keydown", tecla);
       window.removeEventListener("scroll", soltar, true);
     };
-  }, []);
+  }, [ativa]);
 
-  if (!dica) return null;
+  if (!ativa || !dica) return null;
   return createPortal(
     <div
       role="tooltip"

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoNumero } from "@/components/ui/CampoNumero";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -115,10 +116,9 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
         <h2 className="text-card-title font-semibold text-fg mb-3">Médias de variáveis</h2>
         <FieldGrid columns="sm:grid-cols-3">
           <CampoForm label="Janela" htmlFor="mediaMeses" helper={heranca("mediaMeses") ?? "Entre 3 e 12."}>
-            <Input
+            <CampoNumero
               id="mediaMeses"
               name="mediaMeses"
-              type="number"
               min={3}
               max={12}
               suffix="meses"

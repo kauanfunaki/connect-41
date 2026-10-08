@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import type { TagState } from "@/app/(app)/admin/tags/actions";
-import { SECTOR_COLOR_PALETTE } from "@/lib/sector-constants";
+import { SeletorDeCor } from "@/components/ui/SeletorDeCor";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
@@ -72,30 +72,7 @@ export function TagForm({ action, cancelHref, sectorOptions, defaultValues }: Pr
       {/* O rótulo "Cor" era 12px, menor que o dos campos de cima. */}
       <fieldset>
         <legend className="text-label font-medium text-fg mb-1.5">Cor</legend>
-        <div className="flex flex-wrap items-center gap-2">
-          {SECTOR_COLOR_PALETTE.map((c) => (
-            <label key={c} className="cursor-pointer">
-              <input
-                type="radio"
-                name="colorRadio"
-                value={c}
-                aria-label={`Cor ${c}`}
-                defaultChecked={(defaultValues?.color ?? SECTOR_COLOR_PALETTE[0]) === c}
-                className="peer sr-only"
-                onChange={(e) => {
-                  const form = e.currentTarget.closest("form");
-                  const colorInput = form?.querySelector<HTMLInputElement>('input[name="color"]');
-                  if (colorInput) colorInput.value = c;
-                }}
-              />
-              <span
-                className="block w-7 h-7 rounded-full border-2 border-transparent peer-checked:border-fg transition-colors"
-                style={{ background: c }}
-              />
-            </label>
-          ))}
-          <input type="hidden" name="color" defaultValue={defaultValues?.color ?? SECTOR_COLOR_PALETTE[0]} />
-        </div>
+        <SeletorDeCor name="color" valorInicial={defaultValues?.color} corLivre={false} aria-label="Cor da tag" />
       </fieldset>
 
       <FormFooter

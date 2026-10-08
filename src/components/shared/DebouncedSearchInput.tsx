@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 
 type Props = {
   paramName?: string;
@@ -38,13 +37,14 @@ export function DebouncedSearchInput({ paramName = "search", placeholder, classN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
+  // A caixa de busca do app, com o "limpar" próprio: apagar volta a lista
+  // inteira pelo mesmo debounce de quem digita.
   return (
-    <Input
+    <CampoDeBusca
       compact={compact}
       value={value}
       onChange={(e) => setValue(e.target.value)}
       placeholder={placeholder}
-      icon={<Search size={14} />}
       className={className}
     />
   );

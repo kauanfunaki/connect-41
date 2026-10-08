@@ -7,6 +7,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Radio, RadioGroup } from "@/components/ui/RadioGroup";
 import type { TemplateState } from "@/app/(app)/testes/templates/actions";
 
 type QuestionRow = { text: string; options: string[]; correctIndex: number };
@@ -103,19 +104,21 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
               maxLength={500}
             />
 
-            <fieldset className="space-y-2">
-              <legend className="text-label font-medium text-fg mb-1.5">
-                Alternativas <span className="font-normal text-fg-muted text-helper">— marque a correta</span>
-              </legend>
+            {/* A bolinha ao lado do campo de cada alternativa: o arranjo é
+                desta tela, o grupo (setas, nome, foco) é do RadioGroup. */}
+            <RadioGroup
+              variante="linha"
+              legenda={
+                <>
+                  Alternativas <span className="font-normal text-fg-muted text-helper">— marque a correta</span>
+                </>
+              }
+              valor={String(q.correctIndex)}
+              onChange={(v) => updateQuestion(i, { correctIndex: Number(v) })}
+            >
               {q.options.map((opt, oi) => (
                 <div key={oi} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={q.correctIndex === oi}
-                    onChange={() => updateQuestion(i, { correctIndex: oi })}
-                    aria-label={`Alternativa ${oi + 1} é a correta`}
-                    className="w-4 h-4 flex-shrink-0 accent-brand cursor-pointer"
-                  />
+                  <Radio valor={String(oi)} aria-label={`Alternativa ${oi + 1} é a correta`} />
                   <div className="flex-1 min-w-0">
                     <Input
                       type="text"
@@ -140,11 +143,13 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
                 </div>
               ))}
               {q.options.length < 6 && (
-                <Button variant="secondary" size="sm" onClick={() => addOption(i)}>
-                  <Plus size={14} /> Adicionar alternativa
-                </Button>
+                <div>
+                  <Button variant="secondary" size="sm" onClick={() => addOption(i)}>
+                    <Plus size={14} /> Adicionar alternativa
+                  </Button>
+                </div>
               )}
-            </fieldset>
+            </RadioGroup>
           </div>
         ))}
       </div>
