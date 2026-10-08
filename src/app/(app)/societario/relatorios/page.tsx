@@ -101,7 +101,13 @@ export default async function RelatoriosDoSocietarioPage({
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <MetricCard label="Abertos agora" value={abertos.length} icon={<FolderOpen size={16} />} />
-        <MetricCard label="Abertos com prazo estourado" value={estouradosAbertos} highlight={estouradosAbertos > 0} icon={<AlertTriangle size={16} />} />
+        {/* Estourado é vermelho, como no painel de Processos da Home (era âmbar). */}
+        <MetricCard
+          label="Abertos com prazo estourado"
+          value={estouradosAbertos}
+          tom={estouradosAbertos > 0 ? "critico" : undefined}
+          icon={<AlertTriangle size={16} />}
+        />
         <MetricCard label={`Concluídos em ${periodo.rotulo}`} value={processos.length - abertos.length} icon={<CheckCircle2 size={16} />} />
         <MetricCard
           label="Processos com volta"
