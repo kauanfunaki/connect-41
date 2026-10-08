@@ -1,4 +1,4 @@
-import { ChartColumn, House, Megaphone, TriangleAlert } from "lucide-react";
+import { ChartColumn, FileCheck, House, Megaphone, TriangleAlert } from "lucide-react";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import type { TelaDoPortal } from "@/lib/portal/telas";
 
@@ -10,5 +10,7 @@ export function iconeDaTela(t: TelaDoPortal): React.ReactNode {
   if (t.href === "/portal/relatorios") return <ChartColumn size={16} />;
   if (t.href === "/portal/exigencias") return <TriangleAlert size={16} />;
   if (t.href === "/portal/comunicados") return <Megaphone size={16} />;
+  // O mesmo ícone de "Envios ao cliente" na ficha da empresa (08/10/2026).
+  if (t.href === "/portal/envios") return <FileCheck size={16} />;
   return <ModuleIcon code={t.modulo ?? "fiscal_documentos"} />;
 }
