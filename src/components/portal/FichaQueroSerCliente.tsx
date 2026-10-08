@@ -156,7 +156,7 @@ export function FichaQueroSerCliente({ carimbo, escritorio, action }: Props) {
         {/* O erro do formulário no `Aviso` (07/10/2026), como o login e a senha nova. */}
         {erro && !erro.campo && <Aviso>{erro.texto}</Aviso>}
 
-        <Button type="submit" loading={pendente} loadingLabel="Enviando…" className="w-full justify-center">
+        <Button type="submit" size="lg" loading={pendente} loadingLabel="Enviando…" className="w-full justify-center">
           Enviar
         </Button>
 

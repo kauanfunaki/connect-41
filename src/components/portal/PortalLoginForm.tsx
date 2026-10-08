@@ -39,6 +39,11 @@ type Props = {
  * três formulários da entrada saíam com três desenhos de erro (texto vermelho
  * solto, caixa vermelha, caixa âmbar), e o "senha incorreta" não era anunciado
  * pelo leitor de tela. O botão de enviar usa o `loading` do Button, como lá.
+ *
+ * O "Entrar" em `lg` (padrão aceito na página de decisões, 08/10/2026): é o
+ * destino da página inteira, aberta no celular, o caso para que o `lg` do
+ * Button existe. Só o botão principal; o do Google e os de apoio ficam como
+ * estão. O mesmo no "Salvar senha" da senha nova e no "Enviar" da ficha.
  */
 export function PortalLoginForm({ escolhaDoGoogle = null, avisoDoGoogle = null, ...resto }: Props) {
   const router = useRouter();
@@ -120,7 +125,7 @@ function Entrada({
             ))}
           </fieldset>
 
-          <Button type="submit" loading={pendente} loadingLabel="Entrando…" className="w-full justify-center">
+          <Button type="submit" size="lg" loading={pendente} loadingLabel="Entrando…" className="w-full justify-center">
             Entrar
           </Button>
 
@@ -168,7 +173,7 @@ function Entrada({
 
         {estado && "erro" in estado && <Aviso>{estado.erro}</Aviso>}
 
-        <Button type="submit" loading={pendente} loadingLabel="Entrando…" className="w-full justify-center">
+        <Button type="submit" size="lg" loading={pendente} loadingLabel="Entrando…" className="w-full justify-center">
           Entrar
         </Button>
       </form>
