@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
+import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -54,7 +55,8 @@ export default async function PortalCobrancaPage() {
         ]}
       />
 
-      <h2 className="text-card-title font-semibold text-fg mb-2">Títulos em cobrança</h2>
+      {/* Títulos de seção no desenho do Início (`TituloDeSecao`, 08/10/2026). */}
+      <TituloDeSecao>Títulos em cobrança</TituloDeSecao>
       {/* No casco da tabela (07/10/2026), como a cobrança da equipe: quantos
           títulos e quanto somam na barra, e a lista vazia dentro dele. */}
       <CascoDaTabela
@@ -168,7 +170,7 @@ export default async function PortalCobrancaPage() {
       )}
       </CascoDaTabela>
 
-      <h2 className="text-card-title font-semibold text-fg mb-2">Acordos</h2>
+      <TituloDeSecao>Acordos</TituloDeSecao>
       {acordos.length === 0 ? (
         <Card>
           <EmptyState icon={<Handshake />} title="Nenhum acordo" description="Quando uma dívida for renegociada em parcelas, o acordo aparece aqui." />

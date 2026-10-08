@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LogoDoEscritorio } from "./LogoDoEscritorio";
 
 /**
  * O topo das telas públicas — portal de vagas, conta do candidato, link de
@@ -8,9 +9,10 @@ import type { ReactNode } from "react";
  * de apoio em 13px: sete cópias iguais que podiam derivar uma a uma. O desenho
  * é o mesmo de antes, com os tamanhos nos tokens.
  *
- * - `logo`: só o portal de vagas mostra o logo do escritório. Levar o logo para
- *   os links de admissão e de teste é decisão do Kauan (DRG-29), por isso a
- *   prop é opcional e as outras telas não passam nada.
+ * - `logo`: o logo do escritório, no portal de vagas e nos links de admissão
+ *   e de teste (DRG-29, padrão aceito na página de decisões, 08/10/2026). A
+ *   conta do candidato não passa nada. Sem logo cadastrado, a tela segue só
+ *   com o texto.
  * - `acao`: o que fica à direita do título (o "Sair" da conta do candidato).
  * - `children`: o que vem embaixo do subtítulo (as etiquetas da vaga).
  */
@@ -47,8 +49,7 @@ export function CabecalhoPublico({
         .trim()}
     >
       {logo && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logo.src} alt={logo.alt} className={`h-12 mb-4 object-contain ${centralizado ? "mx-auto" : ""}`.trim()} />
+        <LogoDoEscritorio src={logo.src} alt={logo.alt} className={`h-12 mb-4 object-contain ${centralizado ? "mx-auto" : ""}`.trim()} />
       )}
       {texto}
       {acao}

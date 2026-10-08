@@ -7,6 +7,7 @@ import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import type { EstadoDaRedefinicao } from "@/app/(portal)/portal/redefinir-senha/actions";
+import { DICA_DA_SENHA } from "@/lib/portal/senha";
 
 type Props = {
   token: string;
@@ -38,7 +39,7 @@ export function RedefinirSenhaPortalForm({ token, action }: Props) {
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="token" value={token} />
 
-        <CampoForm label="Nova senha" htmlFor="senha" helper="Ao menos 8 caracteres." required>
+        <CampoForm label="Nova senha" htmlFor="senha" helper={DICA_DA_SENHA} required>
           <CampoDeSenha id="senha" name="senha" autoComplete="new-password" required autoFocus />
         </CampoForm>
 
@@ -48,7 +49,7 @@ export function RedefinirSenhaPortalForm({ token, action }: Props) {
 
         {estado && "error" in estado && <Aviso>{estado.error}</Aviso>}
 
-        <Button type="submit" loading={pendente} loadingLabel="Salvando…" className="w-full justify-center">
+        <Button type="submit" size="lg" loading={pendente} loadingLabel="Salvando…" className="w-full justify-center">
           Salvar senha
         </Button>
       </form>
