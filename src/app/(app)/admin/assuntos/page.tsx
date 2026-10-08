@@ -49,7 +49,7 @@ export default async function AssuntosPage() {
               <p className={`flex flex-wrap items-center gap-x-2.5 text-fs-4 font-semibold ${a.active ? "text-fg" : "text-fg-muted"}`}>
                 {a.label} {!a.active && <StatusDot color="var(--c41-fg-muted)" label="Inativo" className="font-normal" />}
               </p>
-              {a.description && <p className="text-[12.5px] text-fg-muted mt-0.5">{a.description}</p>}
+              {a.description && <p className="text-fs-2 text-fg-muted mt-0.5">{a.description}</p>}
               <p className="text-fs-2 text-fg-secondary mt-1">
                 {labels[a.sectorCode] ?? a.sectorCode} · responde em até {a.responseDays} {a.responseDays === 1 ? "dia útil" : "dias úteis"} ·{" "}
                 {a._count.requests} {a._count.requests === 1 ? "solicitação" : "solicitações"}

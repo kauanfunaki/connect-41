@@ -45,7 +45,7 @@ export function MolduraDeEntrada({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="h-7 w-auto" />
             <p className="mt-7 text-fs-1 font-semibold uppercase tracking-[0.1em] text-white/60">{rotulo}</p>
-            <h1 className="mt-1.5 text-[26px] font-semibold tracking-[-0.01em] leading-tight">{titulo}</h1>
+            <h1 className="mt-1.5 text-title font-semibold tracking-[-0.01em] leading-tight">{titulo}</h1>
             <p className="mt-2 text-fs-4 leading-relaxed text-white/75 max-w-[36ch]">{subtitulo}</p>
           </div>
         </div>

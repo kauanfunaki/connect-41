@@ -178,7 +178,7 @@ export function UsuariosTable({
               {u.name}
             </Link>
             {isSelf && <span className="text-fs-2 text-fg-muted ml-1.5">(você)</span>}
-            <p className="text-[11.5px] text-fg-muted break-all">{u.email}</p>
+            <p className="text-micro text-fg-muted break-all">{u.email}</p>
           </div>
         </div>
 
@@ -229,7 +229,7 @@ export function UsuariosTable({
       <div className="md:hidden bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
         <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
           <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
-          <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+          <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">
             Selecionar todos
           </span>
         </div>
@@ -256,7 +256,7 @@ export function UsuariosTable({
         <div className="c41-tabela scroll-x overflow-x-auto hidden md:block bg-surface border border-border rounded-lg">
           <table className="w-full min-w-[900px]">
             <thead>
-              <tr className="border-b border-border bg-table-header-bg text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+              <tr className="border-b border-border bg-table-header-bg text-micro font-semibold uppercase tracking-wide text-fg-muted">
                 <th className="w-10 px-4 py-3">
                   <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
                 </th>
