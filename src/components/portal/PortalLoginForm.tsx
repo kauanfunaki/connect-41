@@ -11,6 +11,7 @@ import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 import type { EstadoDoLogin } from "@/app/(portal)/portal/login/actions";
 
 type Escolha = Extract<NonNullable<EstadoDoLogin>, { escolher: unknown }>["escolher"];
@@ -99,31 +100,14 @@ function Entrada({
           <input type="hidden" name="escolha" value={estado.escolher.token} />
           <input type="hidden" name="lembrar" value={estado.escolher.lembrar ? "1" : "0"} />
           {/* Título do grupo no estilo do rótulo do CampoForm. Cada opção é um
-              alvo de ao menos 44px (é tela de celular), com o rádio centrado
-              nas duas linhas e a escolhida marcada na borda. */}
-          <fieldset className="space-y-2">
-            <legend className="text-label font-medium text-fg mb-1.5">
-              Este e-mail tem acesso a mais de um cliente. Em qual você quer entrar?
-            </legend>
-            {estado.escolher.opcoes.map((o, i) => (
-              <label
-                key={o.id}
-                className="flex items-center gap-3 min-h-11 rounded-md border border-border-strong px-3 py-2 cursor-pointer transition-colors hover:bg-surface-hover has-[:checked]:border-brand has-[:checked]:bg-brand/8"
-              >
-                <input
-                  type="radio"
-                  name="conta"
-                  value={o.id}
-                  defaultChecked={i === 0}
-                  className="size-4 flex-shrink-0 accent-[var(--c41-brand)]"
-                />
-                <span className="min-w-0">
-                  <span className="block text-body text-fg break-words">{o.cliente}</span>
-                  <span className="block text-helper text-fg-muted break-words">{o.escritorio}</span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
+              alvo de ao menos 44px (é tela de celular), com a escolhida
+              marcada na borda. */}
+          <RadioGroup
+            name="conta"
+            legenda="Este e-mail tem acesso a mais de um cliente. Em qual você quer entrar?"
+            valorInicial={estado.escolher.opcoes[0]?.id}
+            opcoes={estado.escolher.opcoes.map((o) => ({ valor: o.id, rotulo: o.cliente, descricao: o.escritorio }))}
+          />
 
           <Button type="submit" size="lg" loading={pendente} loadingLabel="Entrando…" className="w-full justify-center">
             Entrar

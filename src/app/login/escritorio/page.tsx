@@ -8,6 +8,7 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 
 const ERROS: Record<string, string> = {
   "fora-da-lista": "Escolha um dos escritórios da lista.",
@@ -66,29 +67,18 @@ export default async function EscolherEscritorioPage({ searchParams }: { searchP
       <Card className="p-6">
         <form method="POST" action={`${CAMINHO_DA_ESCOLHA_DA_EQUIPE}/entrar`} className="space-y-4">
           {/* O mesmo desenho da escolha de cliente do portal: cada opção é um
-              alvo de ao menos 44px, com o rádio e a logo centrados e a
+              alvo de ao menos 44px, com a bolinha e a logo centradas e a
               escolhida marcada na borda. */}
-          <fieldset className="space-y-2">
-            <legend className="text-label font-medium text-fg mb-1.5">
-              Em qual escritório você quer entrar?
-            </legend>
-            {opcoes.map((o, i) => (
-              <label
-                key={o.id}
-                className="flex items-center gap-3 min-h-11 rounded-md border border-border-strong px-3 py-2 cursor-pointer transition-colors hover:bg-surface-hover has-[:checked]:border-brand has-[:checked]:bg-brand/8"
-              >
-                <input
-                  type="radio"
-                  name="conta"
-                  value={o.id}
-                  defaultChecked={i === 0}
-                  className="size-4 flex-shrink-0 accent-[var(--c41-brand)]"
-                />
-                <AvatarImage src={o.logoUrl} name={o.escritorio} size={32} shape="lg" fontSize={12} />
-                <span className="min-w-0 text-body text-fg break-words">{o.escritorio}</span>
-              </label>
-            ))}
-          </fieldset>
+          <RadioGroup
+            name="conta"
+            legenda="Em qual escritório você quer entrar?"
+            valorInicial={opcoes[0].id}
+            opcoes={opcoes.map((o) => ({
+              valor: o.id,
+              rotulo: o.escritorio,
+              icone: <AvatarImage src={o.logoUrl} name={o.escritorio} size={32} shape="lg" fontSize={12} />,
+            }))}
+          />
 
           {mensagem && (
             <Aviso>{mensagem}</Aviso>
