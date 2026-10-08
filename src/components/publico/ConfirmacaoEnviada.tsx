@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 export function ConfirmacaoEnviada({ titulo, texto, children }: { titulo: string; texto: string; children?: ReactNode }) {
   return (
     <div role="status" className="bg-success/10 border border-success/25 rounded-lg p-6 text-center">
-      <p className="text-[length:var(--fs-body)] font-semibold text-success">{titulo}</p>
+      <p className="text-[length:var(--fs-body)] font-semibold text-success-fg">{titulo}</p>
       <p className="text-[length:var(--fs-ui)] text-fg-muted mt-1">{texto}</p>
       {children}
     </div>

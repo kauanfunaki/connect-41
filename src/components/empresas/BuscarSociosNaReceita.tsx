@@ -101,7 +101,7 @@ export function BuscarSociosNaReceita({
               />
               {resultado.foraDaReceita.length > 0 && (
                 <Aviso tom="atencao" className="flex flex-col gap-1">
-                  <span className="text-[length:var(--fs-2)] font-medium text-warning">Não aparecem mais na Receita</span>
+                  <span className="text-[length:var(--fs-2)] font-medium text-warning-fg">Não aparecem mais na Receita</span>
                   <span className="text-[length:var(--fs-2)] text-fg">{resultado.foraDaReceita.map((f) => f.nome).join(", ")}</span>
                   <span className="text-[length:var(--fs-micro)] text-fg-muted">
                     Provável saída. Nada muda sozinho: registre a saída com a data do distrato ou da alteração.

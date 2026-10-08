@@ -93,7 +93,7 @@ export function AssistenteDoSocietario() {
                   >
                     <span className="text-[length:var(--fs-ui)] text-fg">{descreverProposta(p)}</span>
                     {feito === "ok" ? (
-                      <span className="text-[length:var(--fs-2)] text-success">aplicado</span>
+                      <span className="text-[length:var(--fs-2)] text-success-fg">aplicado</span>
                     ) : (
                       <div className="flex items-center gap-2">
                         {typeof feito === "string" && (

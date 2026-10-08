@@ -72,7 +72,7 @@ export default async function MinhaAreaPage() {
             rotulo: "Hoje",
             valor: formatarNumero(grupos.hoje.length, 0),
             icone: <CalendarClock />,
-            tom: grupos.hoje.length > 0 ? "text-warning" : undefined,
+            tom: grupos.hoje.length > 0 ? "text-warning-fg" : undefined,
           },
           { rotulo: "Próximos 7 dias", valor: formatarNumero(grupos.semana.length, 0), icone: <CalendarRange /> },
           {

@@ -262,7 +262,7 @@ export default async function RelatoriosDoSocietarioPage({
             <p className="text-[13px] tabular-nums">
               <strong>{formatarReaisDeCentavos(totais.totalCentavos)}</strong>
               {totais.custoDasVoltasCentavos > 0 && (
-                <span className="text-warning"> · {formatarReaisDeCentavos(totais.custoDasVoltasCentavos)} de reapresentação</span>
+                <span className="text-warning-fg"> · {formatarReaisDeCentavos(totais.custoDasVoltasCentavos)} de reapresentação</span>
               )}
             </p>
           </div>
@@ -291,7 +291,7 @@ export default async function RelatoriosDoSocietarioPage({
                       <td className={TD}>{l.voltas}</td>
                       <td className={TD}>{formatarReaisDeCentavos(l.totalCentavos)}</td>
                       <td className={TD}>{formatarReaisDeCentavos(l.pagoCentavos)}</td>
-                      <td className={`${TD} ${l.custoDasVoltasCentavos > 0 ? "text-warning" : ""}`}>
+                      <td className={`${TD} ${l.custoDasVoltasCentavos > 0 ? "text-warning-fg" : ""}`}>
                         {formatarReaisDeCentavos(l.custoDasVoltasCentavos)}
                       </td>
                     </tr>

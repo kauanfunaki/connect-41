@@ -262,7 +262,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                           // dizer "Lendo…": o aviso fica aqui, onde o resultado vai aparecer.
                           <span className="block text-[11px] mt-1 text-fg-muted">Consultando o Omie…</span>
                         ) : teste[c.companyId] ? (
-                          <span className={`block text-[11px] mt-1 ${teste[c.companyId].ok ? "text-success" : "text-danger"}`}>{teste[c.companyId].texto}</span>
+                          <span className={`block text-[11px] mt-1 ${teste[c.companyId].ok ? "text-success-fg" : "text-danger"}`}>{teste[c.companyId].texto}</span>
                         ) : (
                           c.lastError && <span className="block text-[11px] mt-1 text-danger">{c.lastError}</span>
                         )}

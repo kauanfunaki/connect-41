@@ -103,7 +103,7 @@ export default async function ValoraPage() {
       <FaixaDeTotais
         itens={[
           { rotulo: "Em aberto", valor: formatarNumero(linhas.filter((p) => p.status === "ABERTA").length, 0), icone: <Hourglass /> },
-          { rotulo: "Ganhas", valor: formatarNumero(ganhas, 0), icone: <Trophy />, tom: ganhas > 0 ? "text-success" : undefined },
+          { rotulo: "Ganhas", valor: formatarNumero(ganhas, 0), icone: <Trophy />, tom: ganhas > 0 ? "text-success-fg" : undefined },
           {
             rotulo: "Taxa de fechamento",
             valor: decididas ? `${Math.round((ganhas / decididas) * 100)}%` : "—",

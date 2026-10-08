@@ -259,7 +259,7 @@ async function ListaDeManuais({
                       {l.costCenter?.name ? ` · ${l.costCenter.name}` : ""}
                     </InfoDoCartao>
                     <PeDoCartao>
-                      <span className={`text-fs-2 font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success"}`}>
+                      <span className={`text-fs-2 font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success-fg"}`}>
                         {l.kind === "PAGAR" ? "A pagar" : "A receber"}
                       </span>
                       <Badge variant={status.variante}>{status.rotulo}</Badge>
@@ -306,7 +306,7 @@ async function ListaDeManuais({
                       const status = statusDe(l);
                       return (
                         <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
-                          <td className={`py-2.5 pr-3 text-fs-2 font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success"}`}>
+                          <td className={`py-2.5 pr-3 text-fs-2 font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success-fg"}`}>
                             {l.kind === "PAGAR" ? "A pagar" : "A receber"}
                           </td>
                           <td className="py-2.5 pr-3">

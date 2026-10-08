@@ -170,7 +170,7 @@ function CartaoDoAviso({
             </div>
           )}
           {desfecho === "DEFERIDO" && aviso.sugestao !== "DEFERIDO" && (
-            <p className="text-[length:var(--fs-2)] text-warning">
+            <p className="text-[length:var(--fs-2)] text-warning-fg">
               O sistema não leu “deferido” neste e-mail. Confirme no texto antes de marcar.
             </p>
           )}

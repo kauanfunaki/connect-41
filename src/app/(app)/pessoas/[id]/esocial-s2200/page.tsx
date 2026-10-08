@@ -98,13 +98,13 @@ export default async function EsocialS2200Page({
             rotulo: `Campo${preview.filledCount !== 1 ? "s" : ""} preenchido${preview.filledCount !== 1 ? "s" : ""}`,
             valor: formatarNumero(preview.filledCount, 0),
             icone: <CheckCircle2 />,
-            tom: "text-success",
+            tom: "text-success-fg",
           },
           {
             rotulo: `Campo${preview.pendingCount !== 1 ? "s" : ""} pendente${preview.pendingCount !== 1 ? "s" : ""}`,
             valor: formatarNumero(preview.pendingCount, 0),
             icone: <CircleDashed />,
-            tom: preview.pendingCount > 0 ? "text-warning" : "text-fg-muted",
+            tom: preview.pendingCount > 0 ? "text-warning-fg" : "text-fg-muted",
           },
         ]}
       />
@@ -127,7 +127,7 @@ export default async function EsocialS2200Page({
                   ) : f.value ? (
                     <p className="text-[length:var(--fs-body)] text-fg break-words">{f.value}</p>
                   ) : (
-                    <p className="text-[length:var(--fs-body)] text-warning">Pendente</p>
+                    <p className="text-[length:var(--fs-body)] text-warning-fg">Pendente</p>
                   )}
                 </div>
               ))}

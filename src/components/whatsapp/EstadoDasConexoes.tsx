@@ -6,8 +6,8 @@ import type { ConexaoNaTela } from "@/lib/whatsapp/data";
 import type { NivelDeSaude } from "@/lib/whatsapp/saude";
 
 const ESTILO: Record<NivelDeSaude, { icone: typeof CheckCircle2; cor: string; borda: string }> = {
-  ok: { icone: CheckCircle2, cor: "text-success", borda: "border-border" },
-  atencao: { icone: AlertTriangle, cor: "text-warning", borda: "border-warning/40" },
+  ok: { icone: CheckCircle2, cor: "text-success-fg", borda: "border-border" },
+  atencao: { icone: AlertTriangle, cor: "text-warning-fg", borda: "border-warning/40" },
   problema: { icone: XCircle, cor: "text-danger", borda: "border-danger/40" },
 };
 

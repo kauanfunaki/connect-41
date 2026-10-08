@@ -270,7 +270,7 @@ function BlocoDoSaldo({ situacao }: { situacao: SituacaoDoSaldo }) {
           {linha(`Saldo calculado${data}`, moeda(situacao.calculadoNaDataCentavos), tomDoValor(situacao.calculadoNaDataCentavos))}
           {linha(`Saldo do banco${data}`, moeda(situacao.bancoCentavos), tomDoValor(situacao.bancoCentavos))}
           {situacao.divergenciaCentavos === 0 ? (
-            linha("Divergência", "Fecha no centavo", "text-success")
+            linha("Divergência", "Fecha no centavo", "text-success-fg")
           ) : (
             linha("Divergência", moeda(situacao.divergenciaCentavos), "text-danger")
           )}

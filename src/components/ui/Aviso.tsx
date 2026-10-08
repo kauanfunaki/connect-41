@@ -3,11 +3,12 @@ export type TomDoAviso = "perigo" | "atencao" | "sucesso" | "info" | "marca" | "
 // Os tons seguem a receita que o app já escrevia à mão (07/10/2026): fundo a
 // 8%, borda a 20% e o texto na cor do tom — `bg-danger/8 border-danger/20` em
 // 49 lugares, `bg-success/8 border-success/20` em 14. As variantes de fundo
-// `-bg` com borda /30 (outros 30 lugares) convergem para esta.
+// `-bg` com borda /30 (outros 30 lugares) convergem para esta. No verde e no
+// âmbar o texto usa o tom de letra (`-fg`, escolha 1A do Kauan, 08/10/2026).
 const COR: Record<TomDoAviso, string> = {
   perigo: "text-danger bg-danger/8 border-danger/20",
-  atencao: "text-warning bg-warning/8 border-warning/20",
-  sucesso: "text-success bg-success/8 border-success/20",
+  atencao: "text-warning-fg bg-warning/8 border-warning/20",
+  sucesso: "text-success-fg bg-success/8 border-success/20",
   info: "text-info bg-info/8 border-info/20",
   marca: "text-brand bg-brand/8 border-brand/20",
   neutro: "text-fg-secondary bg-surface-2 border-border",

@@ -198,7 +198,7 @@ export function TransacoesDaConta({
                     <div className="flex flex-col gap-2 items-start">
                       {l.sugestao?.bloqueio ? (
                         <div className="flex flex-col gap-0.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-1.5 max-w-[420px]">
-                          <span className="inline-flex items-center gap-1 text-micro font-medium text-warning">
+                          <span className="inline-flex items-center gap-1 text-micro font-medium text-warning-fg">
                             <Lock size={12} /> Casa com uma conta travada na aprovação · {l.sugestao.motivo}
                           </span>
                           <ResumoDoLancamento l={l.sugestao} />
@@ -398,7 +398,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
                             {l.centavos === alvo && " · mesmo valor"}
                           </span>
                           {l.bloqueio && (
-                            <span className="flex items-center gap-1 text-micro text-warning">
+                            <span className="flex items-center gap-1 text-micro text-warning-fg">
                               <Lock size={12} className="flex-shrink-0" /> {l.bloqueio}
                             </span>
                           )}

@@ -146,7 +146,7 @@ export default async function IntegracoesPage({
                   <AlertTriangle size={12} /> Conexão expirada{google.accountEmail ? ` (${google.accountEmail})` : ""} — reconecte para voltar a agendar
                 </p>
               ) : google ? (
-                <p className="text-[12px] text-success flex items-center gap-1">
+                <p className="text-[12px] text-success-fg flex items-center gap-1">
                   <Check size={12} /> Conectado {google.accountEmail ? `como ${google.accountEmail}` : ""}
                 </p>
               ) : (
@@ -184,7 +184,7 @@ export default async function IntegracoesPage({
                   <AlertTriangle size={12} /> Conexão expirada{microsoft.accountEmail ? ` (${microsoft.accountEmail})` : ""} — reconecte para voltar a agendar
                 </p>
               ) : microsoft ? (
-                <p className="text-[12px] text-success flex items-center gap-1">
+                <p className="text-[12px] text-success-fg flex items-center gap-1">
                   <Check size={12} /> Conectado {microsoft.accountEmail ? `como ${microsoft.accountEmail}` : ""}
                 </p>
               ) : (

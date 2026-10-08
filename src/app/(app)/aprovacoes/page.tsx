@@ -200,7 +200,7 @@ async function Fila({
           {
             rotulo: "Aguardando",
             valor: String(aguardando?._count._all ?? 0),
-            tom: aguardando ? "text-warning" : "",
+            tom: aguardando ? "text-warning-fg" : "",
             icone: <Hourglass />,
             href: hrefSituacao("aguardando"),
           },

@@ -77,7 +77,7 @@ export default async function CargosSalariosPage() {
       {(totalDegraus > 0 || divergencias.length > 0 || semClassificacao > 0) && (
         <Card className="p-5 mb-4 border-warning/30">
           <h2 className="flex items-center gap-1.5 text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
-            <AlertTriangle size={16} className="text-warning" />
+            <AlertTriangle size={16} className="text-warning-fg" />
             Pontos de atenção da estrutura
           </h2>
           <ul className="space-y-2">
@@ -162,7 +162,7 @@ export default async function CargosSalariosPage() {
                             <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">{SENIORITY_LABEL[c.seniority]}</SeloDoDP>
                           )}
                           {invertidoIds.has(c.id) && canViewSalary && (
-                            <SeloDoDP cor="bg-warning/10 text-warning border-warning/25">degrau invertido</SeloDoDP>
+                            <SeloDoDP cor="bg-warning/10 text-warning-fg border-warning/25">degrau invertido</SeloDoDP>
                           )}
                         </PeDoCartao>
                       )}
@@ -228,7 +228,7 @@ export default async function CargosSalariosPage() {
                               </Link>
                               {invertidoIds.has(c.id) && canViewSalary && (
                                 <span className="ml-2 inline-flex">
-                                  <SeloDoDP cor="bg-warning/10 text-warning border-warning/25">degrau invertido</SeloDoDP>
+                                  <SeloDoDP cor="bg-warning/10 text-warning-fg border-warning/25">degrau invertido</SeloDoDP>
                                 </span>
                               )}
                             </td>

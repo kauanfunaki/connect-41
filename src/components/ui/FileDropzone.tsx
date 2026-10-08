@@ -185,7 +185,7 @@ export function FileDropzone({
                       </>
                     ) : a.estado === "concluido" ? (
                       <>
-                        <CheckCircle2 size={12} className="text-success" />
+                        <CheckCircle2 size={12} className="text-success-fg" />
                         Enviado · {formatarBytes(a.file.size)}
                       </>
                     ) : a.estado === "erro" ? (

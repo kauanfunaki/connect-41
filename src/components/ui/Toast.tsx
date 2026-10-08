@@ -100,7 +100,7 @@ const ICONE: Record<ToastKind, React.ReactNode> = {
 };
 
 const COR_DO_ICONE: Record<ToastKind, string> = {
-  success: "text-success",
+  success: "text-success-fg",
   error: "text-danger",
   info: "text-brand",
 };

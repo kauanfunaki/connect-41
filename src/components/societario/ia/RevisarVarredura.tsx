@@ -106,7 +106,7 @@ export function RevisarVarredura({
         })}
       </ul>
 
-      {msg && <p className={`text-[length:var(--fs-ui)] ${msg.tipo === "erro" ? "text-danger" : "text-success"}`}>{msg.texto}</p>}
+      {msg && <p className={`text-[length:var(--fs-ui)] ${msg.tipo === "erro" ? "text-danger" : "text-success-fg"}`}>{msg.texto}</p>}
 
       {/* Mesmo rodapé da revisão de contrato: rejeitar à esquerda, primário à direita. */}
       {podeAplicar && (

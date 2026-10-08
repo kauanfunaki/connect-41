@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Minhas candidaturas", robots: { inde
 
 const COR_DO_TOM: Record<Tom, string> = {
   andamento: "bg-brand/10 text-brand border-brand/25",
-  aprovada: "bg-success/10 text-success border-success/25",
+  aprovada: "bg-success/10 text-success-fg border-success/25",
   encerrada: "bg-surface-2 text-fg-secondary border-border",
   desistiu: "bg-surface-2 text-fg-muted border-border",
 };

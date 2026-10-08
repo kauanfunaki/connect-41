@@ -39,7 +39,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
 
   const variacao = (h: SalaryChangeItem) =>
     h.changePercent ? (
-      <span className={Number(h.changePercent) >= 0 ? "text-success" : "text-danger"}>
+      <span className={Number(h.changePercent) >= 0 ? "text-success-fg" : "text-danger"}>
         {Number(h.changePercent) >= 0 ? "+" : ""}
         {formatarNumero(Number(h.changePercent), 2)}%
       </span>

@@ -85,7 +85,7 @@ const VARIANT_CLASS: Record<Variant, string> = {
   // exceção de uma tela cada: `bg-success text-white` na conclusão de admissão
   // (é o botão primário daquela ficha, que por acaso é verde) e o "Concluir
   // tarefa" do kanban, que fica neutro em repouso e só esverdeia no hover.
-  success: "border border-success/30 text-success hover:bg-success/8",
+  success: "border border-success/30 text-success-fg hover:bg-success/8",
   // ─── As duas variantes sem caixa ──────────────────────────────────────────
   //
   // Medidas em 09/09 ao converter o kanban: 13 dos botões crus são texto

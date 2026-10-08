@@ -33,8 +33,8 @@ const STATUS_LABEL: Record<AssessmentLinkStatus, string> = {
 };
 
 const STATUS_STYLE: Record<AssessmentLinkStatus, string> = {
-  PENDENTE: "bg-warning/10 text-warning border-warning/25",
-  RESPONDIDO: "bg-success/10 text-success border-success/25",
+  PENDENTE: "bg-warning/10 text-warning-fg border-warning/25",
+  RESPONDIDO: "bg-success/10 text-success-fg border-success/25",
 };
 
 const STATUS_ORDEM: AssessmentLinkStatus[] = ["PENDENTE", "RESPONDIDO"];
@@ -197,7 +197,7 @@ export default async function TestesPage({
             rotulo: "Aguardando resposta",
             valor: formatarNumero(contagem.PENDENTE, 0),
             icone: <Hourglass />,
-            tom: contagem.PENDENTE > 0 ? "text-warning" : undefined,
+            tom: contagem.PENDENTE > 0 ? "text-warning-fg" : undefined,
             detalhe: statusFilter === "PENDENTE" ? "mostrando agora" : undefined,
             ativo: statusFilter === "PENDENTE",
             href: buildUrl({ status: statusFilter === "PENDENTE" ? undefined : "PENDENTE", page: undefined }),
@@ -206,7 +206,7 @@ export default async function TestesPage({
             rotulo: "Respondidos",
             valor: formatarNumero(contagem.RESPONDIDO, 0),
             icone: <CheckCircle2 />,
-            tom: "text-success",
+            tom: "text-success-fg",
             detalhe: statusFilter === "RESPONDIDO" ? "mostrando agora" : undefined,
             ativo: statusFilter === "RESPONDIDO",
             href: buildUrl({ status: statusFilter === "RESPONDIDO" ? undefined : "RESPONDIDO", page: undefined }),
