@@ -24,11 +24,12 @@ const SAUDE_LABEL: Record<Saude, string> = {
 
 // `parada` é warning e não info: é o silêncio — ligada, sem erro, e sem rodar
 // há tempo demais. Foi assim que o SPED passou três dias parecendo saudável.
-const SAUDE_VARIANTE: Record<Saude, "success" | "warning" | "danger" | "info"> = {
+// `desligada` é neutra (07/10/2026): saiu de cena, não é aviso.
+const SAUDE_VARIANTE: Record<Saude, "success" | "warning" | "danger" | "info" | "neutral"> = {
   nunca_rodou: "info",
   ok: "success",
   com_erro: "danger",
-  desligada: "info",
+  desligada: "neutral",
   parada: "warning",
 };
 
