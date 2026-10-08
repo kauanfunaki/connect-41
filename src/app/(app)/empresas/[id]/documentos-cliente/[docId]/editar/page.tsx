@@ -6,7 +6,6 @@ import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { ClientDocumentForm } from "@/components/documentosCliente/ClientDocumentForm";
 import { atualizarDocumento } from "../../actions";
 
@@ -40,11 +39,11 @@ export default async function EditarDocumentoClientePage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Documentos para cliente", href: `/empresas/${companyId}/documentos-cliente`, truncate: true },
           { label: "Editar" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Editar documento" />
 

@@ -6,7 +6,6 @@ import { BenefitCatalogForm } from "@/components/empresas/BenefitCatalogForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { atualizarBeneficio } from "../../actions";
 
 export default async function EditarBeneficioPage({
@@ -34,11 +33,11 @@ export default async function EditarBeneficioPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Benefícios", href: `/empresas/${companyId}/beneficios` },
           { label: "Editar" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Editar benefício" subtitle={company.name} />
 

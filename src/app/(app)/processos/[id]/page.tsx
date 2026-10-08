@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -241,7 +241,15 @@ export default async function ProcessoDetalhePage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "Voltar" (padrão aceito em 08/10/2026): o processo
+          tem pai fixo — a fila e, dentro dela, a visão societária da empresa. */}
+      <Breadcrumb
+        items={[
+          { label: "Processos", href: "/processos" },
+          { label: empresaNome, href: `/processos/empresas/${processo.company.id}`, truncate: true },
+          { label: processo.type.name },
+        ]}
+      />
 
       {/* Título do processo como subtítulo do cabeçalho e "Editar dados" no
           `action`: o PageHeader dentro de uma coluna própria deixava o título

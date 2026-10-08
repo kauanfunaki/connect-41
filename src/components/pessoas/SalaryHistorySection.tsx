@@ -48,7 +48,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
   return (
     <Card className="p-5 mb-4">
       {/* Título de cartão no token de cartão — era o de seção, 18px (DRG-10). */}
-      <h2 className="text-card-title font-semibold text-fg mb-4">Histórico salarial</h2>
+      <h2 className="text-section font-semibold text-fg mb-4">Histórico salarial</h2>
 
       {history.length === 0 ? (
         <p className="text-helper text-fg-muted mb-4">Nenhum reajuste registrado ainda.</p>

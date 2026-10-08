@@ -5,7 +5,6 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -40,8 +39,8 @@ export default async function AvaliacoesPessoaPage({
         personId={id}
         personName={person.name}
         atual="Avaliações de desempenho"
+        aba="trabalhista"
       />
-      <BackButton className="mb-3" />
       <PageHeader title="Avaliações de desempenho" />
 
       {evaluations.length === 0 ? (
