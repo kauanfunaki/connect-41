@@ -7,6 +7,7 @@ import {
   centavosDeDecimal,
   podeMarcarPago,
   podeConferir,
+  totaisDoRecorte,
   type LinhaDeConta,
 } from "./contas";
 
@@ -86,6 +87,40 @@ describe("totalizar", () => {
 
   it("lista vazia dá tudo zero, não indefinido", () => {
     expect(totalizar([]).emAberto).toBe(0);
+  });
+});
+
+// Os totais vêm do banco, do filtro inteiro (08/10); o recorte zera o que ele
+// não mostra, para o topo continuar batendo com a lista — como fazia o
+// `totalizar` sobre as linhas recortadas.
+describe("totaisDoRecorte", () => {
+  const tudo = { vencido: 5_000, venceHoje: 2_500, aVencer: 1_000, pago: 9_999, emAberto: 8_500 };
+
+  it("em aberto (o padrão) não traz o pago", () => {
+    expect(totaisDoRecorte(tudo, "abertas")).toEqual({ ...tudo, pago: 0 });
+  });
+
+  it("vencidas só traz o vencido, e o em aberto é ele", () => {
+    expect(totaisDoRecorte(tudo, "vencidas")).toEqual({ vencido: 5_000, venceHoje: 0, aVencer: 0, pago: 0, emAberto: 5_000 });
+  });
+
+  it("todas traz tudo, sem alterar o objeto recebido", () => {
+    const t = totaisDoRecorte(tudo, "todas");
+    expect(t).toEqual(tudo);
+    expect(t).not.toBe(tudo);
+  });
+
+  it("bate com o totalizar das linhas recortadas", () => {
+    const linhas = [
+      conta({ id: "1", situacao: "VENCIDA", valorCentavos: 5_000 }),
+      conta({ id: "2", situacao: "VENCE_HOJE", valorCentavos: 2_500 }),
+      conta({ id: "3", situacao: "A_VENCER", valorCentavos: 1_000 }),
+      conta({ id: "4", situacao: "PAGA", valorCentavos: 9_999 }),
+      conta({ id: "5", situacao: "CANCELADA", valorCentavos: 7_777 }),
+    ];
+    const doBanco = totalizar(linhas);
+    expect(totaisDoRecorte(doBanco, "abertas")).toEqual(totalizar(linhas.filter((l) => emAberto(l.situacao))));
+    expect(totaisDoRecorte(doBanco, "vencidas")).toEqual(totalizar(linhas.filter((l) => l.situacao === "VENCIDA")));
   });
 });
 
