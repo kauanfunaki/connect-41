@@ -9,7 +9,6 @@ import { getSectorMaps, getAllSectors } from "@/lib/sectors";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { listDocuments } from "@/lib/documents";
 import { formatCalendarDate, formatInstantDate } from "@/lib/format";
-import { BackButton } from "@/components/shared/BackButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CompanyHeader } from "@/components/empresas/CompanyHeader";
@@ -127,7 +126,6 @@ export default async function EmpresaPage({
           { label: company.name, truncate: true },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <CompanyHeader
         id={company.id}

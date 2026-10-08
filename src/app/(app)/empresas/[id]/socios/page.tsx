@@ -13,7 +13,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { BackButton } from "@/components/shared/BackButton";
 import { BuscarSociosNaReceita } from "@/components/empresas/BuscarSociosNaReceita";
 import { AcoesDoSocio } from "@/components/empresas/RegistrarSaidaDoSocio";
 import { moeda } from "@/lib/financeiro/formato";
@@ -96,11 +95,10 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Sócios" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="Sócios"

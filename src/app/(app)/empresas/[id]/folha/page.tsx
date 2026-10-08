@@ -12,7 +12,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { abrirCompetencia } from "./actions";
 
 const STATUS_LABEL: Record<PayrollStatus, string> = {
@@ -59,11 +58,10 @@ export default async function FolhaPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Folha de pagamento" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="Folha de pagamento"

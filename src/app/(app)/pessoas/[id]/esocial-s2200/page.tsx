@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
-import { BackButton } from "@/components/shared/BackButton";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -73,8 +72,8 @@ export default async function EsocialS2200Page({
         personId={id}
         personName={person.name}
         atual="eSocial S-2200"
+        aba="trabalhista"
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="eSocial S-2200 — rascunho"

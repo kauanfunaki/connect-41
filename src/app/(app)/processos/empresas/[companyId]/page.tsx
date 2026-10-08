@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Card } from "@/components/ui/Card";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
@@ -109,7 +109,12 @@ export default async function VisaoSocietariaDoClientePage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      <Breadcrumb
+        items={[
+          { label: "Processos", href: "/processos" },
+          { label: visao.empresa.nome, truncate: true },
+        ]}
+      />
       <PageHeader
         title={visao.empresa.nome}
         subtitle={

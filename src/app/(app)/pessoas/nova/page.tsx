@@ -92,7 +92,6 @@ export default async function NovaPessoaPage({
         }
       />
 
-      <BackButton className="mb-3" />
       <PageHeader title={kind === "interno" ? "Novo funcionário interno" : "Novo colaborador de cliente"} />
 
       <PessoaForm

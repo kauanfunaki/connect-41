@@ -9,7 +9,6 @@ import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { listDocuments } from "@/lib/documents";
@@ -129,15 +128,18 @@ export default async function ConferenciaRescisaoPage({
       <Breadcrumb
         items={[
           {
-            label: person.isInternal ? "Cadastros" : "Colaboradores de clientes",
+            label: person.isInternal ? "Cadastros" : "Recrutamento",
             href: person.isInternal ? "/pessoas" : "/colaboradores-clientes",
           },
-          { label: person.name, href: `/pessoas/${id}`, truncate: true },
+          {
+            label: person.isInternal ? "Pessoas" : "Colaboradores de clientes",
+            href: person.isInternal ? "/pessoas" : "/colaboradores-clientes",
+          },
+          { label: person.name, href: `/pessoas/${id}?tab=trabalhista`, truncate: true },
           { label: "Desligamento", href: `/pessoas/${id}/desligamento` },
           { label: "Conferência" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="Conferência da rescisão"

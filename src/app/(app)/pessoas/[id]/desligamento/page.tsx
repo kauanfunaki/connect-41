@@ -4,7 +4,6 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
@@ -46,8 +45,8 @@ export default async function DesligamentoPage({
         personId={id}
         personName={person.name}
         atual="Desligamento"
+        aba="trabalhista"
       />
-      <BackButton className="mb-3" />
       <PageHeader title="Desligamento" />
 
       <Card className="p-5">

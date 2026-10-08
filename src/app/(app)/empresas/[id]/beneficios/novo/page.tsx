@@ -6,7 +6,6 @@ import { BenefitCatalogForm } from "@/components/empresas/BenefitCatalogForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { criarBeneficio } from "../actions";
 
 export default async function NovoBeneficioPage({
@@ -31,11 +30,11 @@ export default async function NovoBeneficioPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Benefícios", href: `/empresas/${companyId}/beneficios` },
           { label: "Novo" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Novo benefício" subtitle={company.name} />
 
