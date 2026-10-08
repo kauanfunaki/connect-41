@@ -1195,24 +1195,24 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         );
         await r.clicar(main(r).getByRole("link", { name: /MERCADO BOM PREÇO LTDA/ }).first(), "Clique no nome da empresa para abrir a ficha.");
         await r.esperarTela(/\/empresas\/[^/]+$/);
-        await r.apontar(main(r).getByRole("heading", { name: "Identificação" }), "Em Visão Geral ficam os dados cadastrais e os serviços contratados.");
+        await r.apontar(main(r).getByRole("heading", { name: "Identificação" }), "Em Visão geral ficam os dados cadastrais e os serviços contratados.");
         await r.apontar(
           main(r).getByRole("tablist"),
-          "As abas trazem o resto: filiais, pessoas, RH & Operação, documentos, conversas e histórico."
+          "As abas trazem o resto: filiais, pessoas, RH & operação, documentos, conversas e histórico."
         );
-        await r.clicar(main(r).getByRole("tab", { name: "RH & Operação" }), "Em RH & Operação: sócios, cargos, departamentos, benefícios, turnos, folha e documentos para o cliente.");
+        await r.clicar(main(r).getByRole("tab", { name: "RH & operação" }), "Em RH & operação: sócios, cargos, departamentos, benefícios, turnos, folha e documentos para o cliente.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(900);
         await r.apontar(
-          main(r).getByRole("link", { name: "Solicitar Transferência" }),
-          "Para passar um assunto da empresa a outro setor, Solicitar Transferência."
+          main(r).getByRole("link", { name: "Solicitar transferência" }),
+          "Para passar um assunto da empresa a outro setor, Solicitar transferência."
         );
         await r.clicar(main(r).getByRole("link", { name: "Empresas", exact: true }).first());
         await r.esperarTela(/\/(empresas|cadastros)/);
         await r.clicar(main(r).getByRole("button", { name: "Mais ações" }).first(), "Na linha, os três pontinhos ao lado de Editar guardam Inativar — e Reativar, para as inativas.");
         await r.pausa(1200);
         await r.page.keyboard.press("Escape");
-        await r.clicar(main(r).getByRole("link", { name: "+ Nova Empresa" }), "Para cadastrar, clique em + Nova Empresa.");
+        await r.clicar(main(r).getByRole("link", { name: "Nova empresa" }), "Para cadastrar, clique em Nova empresa.");
         await r.esperarTela("/empresas/nova");
         await r.apontar(
           main(r).getByRole("textbox", { name: "CNPJ" }),
@@ -1243,7 +1243,7 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.esperarTela(/\/pessoas\/[^/]+$/);
         await r.apontar(
           main(r).getByRole("tablist"),
-          "Visão Geral, Vínculo, Dados Trabalhistas, Documentos, Conversas e Histórico: tudo da pessoa."
+          "Visão geral, Vínculo, Dados trabalhistas, Documentos, Conversas e Histórico: tudo da pessoa."
         );
         const vinculo = main(r).getByRole("tab", { name: "Vínculo" });
         if (await vinculo.count()) {
@@ -1252,11 +1252,11 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
           await r.pausa(800);
         }
         await r.apontar(
-          main(r).getByRole("link", { name: "Solicitar Transferência" }),
-          "Solicitar Transferência passa um assunto da pessoa a outro setor."
+          main(r).getByRole("link", { name: "Solicitar transferência" }),
+          "Solicitar transferência passa um assunto da pessoa a outro setor."
         );
         await r.ir("/pessoas");
-        await r.apontar(main(r).getByRole("link", { name: "+ Nova Pessoa" }), "Para cadastrar, + Nova Pessoa: preencha cada etapa, Avançar → e Confirmar e salvar.");
+        await r.apontar(main(r).getByRole("link", { name: "Nova pessoa" }), "Para cadastrar, Nova pessoa: preencha cada etapa, Avançar → e Confirmar e salvar.");
         await r.clicar(main(r).getByRole("button", { name: "Mais ações" }).first(), "Os três pontinhos da linha guardam Inativar e Reativar.");
         await r.pausa(1200);
         await r.page.keyboard.press("Escape");
@@ -1423,7 +1423,7 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         // não o fecha (06/10): um clique no vazio da barra lateral fecha.
         await r.page.mouse.click(60, 860);
         await r.pausa(400);
-        const grade = r.page.getByRole("radiogroup", { name: "Horário da Agenda" });
+        const grade = r.page.getByRole("radiogroup", { name: "Horário da agenda" });
         await r.rolarAte(grade);
         await r.apontar(grade, "Em Agenda, escolha Usar o do escritório ou Definir o meu.");
         await r.clicar(grade.getByRole("radio", { name: /^Definir o meu/ }));
@@ -1821,11 +1821,11 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await r.page.waitForURL(/\/ferias/, { timeout: 20000 });
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(800);
-        const programar = main(r).getByRole("button", { name: "Programar Férias" });
+        const programar = main(r).getByRole("button", { name: "Programar férias" });
         await r.rolarAte(programar);
         await r.apontar(
           programar,
-          "Para um período novo, preencha o aquisitivo e, se souber, o concessivo, os dias, o abono e o parcelamento. Depois, Programar Férias."
+          "Para um período novo, preencha o aquisitivo e, se souber, o concessivo, os dias, o abono e o parcelamento. Depois, Programar férias."
         );
         const atualizar = main(r).getByRole("button", { name: "Atualizar" }).first();
         if (await atualizar.count()) await r.apontar(atualizar, "Para andar com um período já lançado, escolha a nova situação, as datas e clique em Atualizar.");
@@ -1839,7 +1839,7 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await r.pausa(800);
         await r.apontar(
           main(r).getByRole("heading", { level: 1 }),
-          "O desligamento se registra na ficha: Dados Trabalhistas → Desligamento, com o tipo e o motivo."
+          "O desligamento se registra na ficha: Dados trabalhistas → Desligamento, com o tipo e o motivo."
         );
         const trct = main(r).getByRole("link", { name: /Conferência do TRCT/ }).or(main(r).getByRole("button", { name: /Conferência do TRCT/ })).first();
         if (await trct.count()) await r.apontar(trct, "A cada passo, a nova situação e Atualizar. Conferência do TRCT confere a rescisão item a item.");
@@ -1871,8 +1871,8 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await selecionar(r, main(r).getByRole("combobox", { name: /^Tipo/ }), /Atestado parcial/, "Para registrar um novo, escolha o Tipo…");
-        await digitarData(r, main(r).getByRole("combobox", { name: /^Data de Início/ }), daquiA(0), "…a Data de Início e, se souber, o retorno e os dias perdidos.");
-        await r.clicar(main(r).getByRole("button", { name: "Registrar Ausência" }), "Clique em Registrar Ausência.");
+        await digitarData(r, main(r).getByRole("combobox", { name: /^Data de início/ }), daquiA(0), "…a Data de início e, se souber, o retorno e os dias perdidos.");
+        await r.clicar(main(r).getByRole("button", { name: "Registrar ausência" }), "Clique em Registrar ausência.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await r.soltar();
@@ -1898,11 +1898,11 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await r.clicar(main(r).getByRole("button", { name: "Atualizar" }).first(), "…e clique em Atualizar. Depois da folha, a situação é Enviado para folha.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
-        await digitarData(r, main(r).getByRole("combobox", { name: /^Data/ }).last(), daquiA(-1), "Para lançar, informe a Data e o Tipo de Dia…");
-        await r.digitar(main(r).getByRole("spinbutton", { name: "Horas Trabalhadas" }), "10", "…as horas devidas, trabalhadas e extras, e o adicional…");
-        await r.digitar(main(r).getByRole("spinbutton", { name: "Horas Extras" }), "2");
+        await digitarData(r, main(r).getByRole("combobox", { name: /^Data/ }).last(), daquiA(-1), "Para lançar, informe a Data e o Tipo de dia…");
+        await r.digitar(main(r).getByRole("spinbutton", { name: "Horas trabalhadas" }), "10", "…as horas devidas, trabalhadas e extras, e o adicional…");
+        await r.digitar(main(r).getByRole("spinbutton", { name: "Horas extras" }), "2");
         await r.digitar(main(r).getByRole("textbox", { name: "Justificativa" }), "Inventário de fim de mês.", "…e a Justificativa.");
-        await r.clicar(main(r).getByRole("button", { name: "Lançar Horas" }), "Clique em Lançar Horas: o lançamento entra pendente de aprovação.");
+        await r.clicar(main(r).getByRole("button", { name: "Lançar horas" }), "Clique em Lançar horas: o lançamento entra pendente de aprovação.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await r.soltar();
@@ -1926,8 +1926,8 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await r.clicar(main(r).getByRole("tab", { name: "Vínculo" }), "…vá à aba Vínculo…");
         await r.pausa(800);
         await r.clicar(
-          main(r).getByRole("link", { name: /Escala de Trabalho/ }).or(main(r).getByRole("button", { name: /Escala de Trabalho/ })).first(),
-          "…e clique em Escala de Trabalho."
+          main(r).getByRole("link", { name: /Escala de trabalho/ }).or(main(r).getByRole("button", { name: /Escala de trabalho/ })).first(),
+          "…e clique em Escala de trabalho."
         );
         await r.page.waitForURL(/\/escala/, { timeout: 20000 });
         await r.page.waitForLoadState("networkidle").catch(() => {});
@@ -1935,7 +1935,7 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await digitarData(r, main(r).getByRole("combobox", { name: /^Data/ }).last(), daquiA(2), "Informe a Data e escolha o Turno.");
         const folga = main(r).getByRole("checkbox", { name: /Folga/ });
         if (await folga.count()) await r.apontar(folga, "Marque Folga ou Feriado, se for o caso.");
-        await r.clicar(main(r).getByRole("button", { name: "Adicionar à Escala" }), "Clique em Adicionar à Escala.");
+        await r.clicar(main(r).getByRole("button", { name: "Adicionar à escala" }), "Clique em Adicionar à escala.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await r.ir("/escalas");
@@ -2295,7 +2295,7 @@ function videosDaGestao(): DefinicaoDeVideo[] {
         await r.pausa(1000);
         await r.legenda("Na ficha, preencha Família de cargos, Nível de senioridade e a faixa: inicial, intermediária e final. Depois, Salvar.");
         await r.soltar();
-        await encerramento(r, "Cargo novo se cadastra na ficha da empresa: RH & Operação → Cargos → + Novo Cargo.");
+        await encerramento(r, "Cargo novo se cadastra na ficha da empresa: RH & operação → Cargos → Novo cargo.");
       },
     },
     {

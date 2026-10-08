@@ -52,7 +52,7 @@ export function AddDesligamentoForm({ action }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Registrando…" : "Registrar Desligamento"}
+            {isPending ? "Registrando…" : "Registrar desligamento"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

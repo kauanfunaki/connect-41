@@ -350,8 +350,8 @@ export function EmpresaForm({
             <FieldGrid columns={GRADE}>
               <CampoForm label="Tipo de cadastro" htmlFor="kind">
                 <Select id="kind" name="kind" value={values.kind}>
-                  <option value="PESSOA_JURIDICA">Pessoa Jurídica</option>
-                  <option value="PESSOA_FISICA">Pessoa Física</option>
+                  <option value="PESSOA_JURIDICA">Pessoa jurídica</option>
+                  <option value="PESSOA_FISICA">Pessoa física</option>
                 </Select>
               </CampoForm>
               {ehPF ? (
@@ -393,7 +393,7 @@ export function EmpresaForm({
                 <Input id="externalId" name="externalId" type="text" value={values.externalId} placeholder="Ex: 12345" />
               </CampoForm>
 
-              <CampoForm label={ehPF ? "Nome" : "Razão Social"} htmlFor="name" required className="sm:col-span-2">
+              <CampoForm label={ehPF ? "Nome" : "Razão social"} htmlFor="name" required className="sm:col-span-2">
                 <Input
                   id="name"
                   name="name"
@@ -412,7 +412,7 @@ export function EmpresaForm({
                 label="Nome no sistema"
                 htmlFor="displayName"
                 className="sm:col-span-2"
-                helper="Como esta empresa aparece nas listas. Útil quando matriz e filiais dividem a mesma razão social — ex: “BLD MOGI - SP”. Em branco, usa a Razão Social."
+                helper="Como esta empresa aparece nas listas. Útil quando matriz e filiais dividem a mesma razão social — ex: “BLD MOGI - SP”. Em branco, usa a razão social."
               >
                 <Input
                   id="displayName"
@@ -507,7 +507,7 @@ export function EmpresaForm({
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
             <FieldGrid columns="sm:grid-cols-[180px_1fr_120px]">
-              <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche Logradouro, Bairro, Cidade e UF automaticamente.">
+              <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche logradouro, bairro, cidade e UF automaticamente.">
                 <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} placeholder="00000-000" maxLength={9} />
               </CampoForm>
               <CampoForm label="Logradouro" htmlFor="addressStreet">
@@ -574,11 +574,11 @@ export function EmpresaForm({
                 no resto da linha de baixo. */}
             <FieldGrid columns={GRADE}>
               {!ehPF && (
-                <CampoForm label="Inscrição Estadual" htmlFor="stateRegistration">
+                <CampoForm label="Inscrição estadual" htmlFor="stateRegistration">
                   <Input id="stateRegistration" name="stateRegistration" type="text" value={values.stateRegistration} placeholder="000.000.000-0" />
                 </CampoForm>
               )}
-              <CampoForm label="Inscrição Municipal" htmlFor="municipalRegistration">
+              <CampoForm label="Inscrição municipal" htmlFor="municipalRegistration">
                 <Input id="municipalRegistration" name="municipalRegistration" type="text" value={values.municipalRegistration} placeholder="000000-0" />
               </CampoForm>
               {!ehPF && (
@@ -597,10 +597,10 @@ export function EmpresaForm({
               </CampoForm>
               {!ehPF && (
                 <>
-                  <CampoForm label="CNAE Principal" htmlFor="cnaePrincipal" helper="Código da atividade principal, ex: 6920-6/01">
+                  <CampoForm label="CNAE principal" htmlFor="cnaePrincipal" helper="Código da atividade principal, ex: 6920-6/01">
                     <Input id="cnaePrincipal" name="cnaePrincipal" type="text" value={values.cnaePrincipal} placeholder="0000-0/00" />
                   </CampoForm>
-                  <CampoForm label="CNAEs Secundários" htmlFor="cnaeSecundarios" helper="Separe por vírgula, se houver mais de um" className="lg:col-span-3">
+                  <CampoForm label="CNAEs secundários" htmlFor="cnaeSecundarios" helper="Separe por vírgula, se houver mais de um" className="lg:col-span-3">
                     <Input id="cnaeSecundarios" name="cnaeSecundarios" type="text" value={values.cnaeSecundarios} placeholder="0000-0/00, 0000-0/00" />
                   </CampoForm>
                 </>
@@ -642,7 +642,7 @@ export function EmpresaForm({
                   ? { label: "CPF", value: values.cpf ? formatCpf(values.cpf) : "" }
                   : { label: "CNPJ", value: values.cnpj ? formatCnpj(values.cnpj) : "" },
                 { label: "Status", value: STATUS_LABEL[values.status as CompanyStatus] },
-                { label: ehPF ? "Nome" : "Razão Social", value: values.name },
+                { label: ehPF ? "Nome" : "Razão social", value: values.name },
                 { label: "Nome fantasia", value: values.tradeName },
                 { label: "Nome no sistema", value: values.displayName },
                 { label: "Cliente", value: clientLabel },
@@ -676,15 +676,15 @@ export function EmpresaForm({
               title="Dados fiscais"
               onEdit={() => goTo(3)}
               items={[
-                ...(ehPF ? [] : [{ label: "Inscrição Estadual", value: values.stateRegistration }]),
-                { label: "Inscrição Municipal", value: values.municipalRegistration },
+                ...(ehPF ? [] : [{ label: "Inscrição estadual", value: values.stateRegistration }]),
+                { label: "Inscrição municipal", value: values.municipalRegistration },
                 ...(ehPF ? [] : [{ label: "NIRE", value: values.nire }]),
                 { label: "Data de abertura", value: values.foundationDate },
                 ...(ehPF
                   ? []
                   : [
-                      { label: "CNAE Principal", value: values.cnaePrincipal },
-                      { label: "CNAEs Secundários", value: values.cnaeSecundarios },
+                      { label: "CNAE principal", value: values.cnaePrincipal },
+                      { label: "CNAEs secundários", value: values.cnaeSecundarios },
                     ]),
               ]}
             />

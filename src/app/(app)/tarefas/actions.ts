@@ -21,7 +21,7 @@ export async function salvarWidgetsSetor(
 ): Promise<ActionState> {
   const ctx = await getAuthContext();
   if (!ctx.userId || !ctx.tenantId) return { error: "Não autenticado" };
-  if (!podeConfigurar(ctx.role)) return { error: "Só o super admin configura a tela de Tarefas." };
+  if (!podeConfigurar(ctx.role)) return { error: "Só o super admin configura o Meu dia." };
   if (!sectorCode) return { error: "Setor não informado." };
 
   const prisma = getPrisma();
@@ -44,7 +44,7 @@ export async function salvarWidgetsSetor(
     });
   } catch (err) {
     console.error("[salvarWidgetsSetor]", err);
-    return { error: "Erro ao salvar a configuração da tela de Tarefas." };
+    return { error: "Erro ao salvar a configuração do Meu dia." };
   }
 
   revalidatePath("/tarefas");
@@ -56,14 +56,14 @@ export async function salvarWidgetsSetor(
 export async function restaurarWidgetsSetor(sectorCode: string): Promise<ActionState> {
   const ctx = await getAuthContext();
   if (!ctx.userId || !ctx.tenantId) return { error: "Não autenticado" };
-  if (!podeConfigurar(ctx.role)) return { error: "Só o super admin configura a tela de Tarefas." };
+  if (!podeConfigurar(ctx.role)) return { error: "Só o super admin configura o Meu dia." };
 
   try {
     const prisma = getPrisma();
     await prisma.sectorTaskView.deleteMany({ where: { tenantId: ctx.tenantId, sectorCode } });
   } catch (err) {
     console.error("[restaurarWidgetsSetor]", err);
-    return { error: "Erro ao restaurar a tela de Tarefas." };
+    return { error: "Erro ao restaurar o Meu dia." };
   }
 
   revalidatePath("/tarefas");

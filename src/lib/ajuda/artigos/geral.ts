@@ -113,16 +113,16 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como consultar a ficha de uma empresa",
         passos: [
           "Clique no nome da empresa na lista.",
-          "Em “Visão Geral”, veja os dados cadastrais e os “Serviços contratados”. Clique em “Gerar Resumo” para um resumo dos últimos 90 dias.",
+          "Em “Visão geral”, veja os dados cadastrais e os “Serviços contratados”. Clique em “Gerar resumo” para um resumo dos últimos 90 dias.",
           "Use as abas “Filiais”, “Pessoas”, “Documentos”, “Conversas” e “Histórico” para o restante das informações.",
-          "Na aba “RH & Operação”, entre em “Sócios”, “Cargos”, “Departamentos”, “Benefícios”, “Turnos”, “Folha de Pagamento” e “Documentos para Cliente”.",
-          "Para passar um assunto da empresa a outro setor, clique em “Solicitar Transferência”.",
+          "Na aba “RH & operação”, entre em “Sócios”, “Cargos”, “Departamentos”, “Benefícios”, “Turnos”, “Folha de pagamento” e “Documentos para cliente”.",
+          "Para passar um assunto da empresa a outro setor, clique em “Solicitar transferência”.",
         ],
       },
       {
         titulo: "Como cadastrar uma empresa",
         passos: [
-          "Na lista, clique em “+ Nova Empresa”.",
+          "Na lista, clique em “Nova empresa”.",
           "Escolha o “Tipo de cadastro”. Com CNPJ, os dados se preenchem sozinhos ao completar os dígitos.",
           "Confira e complete os campos de cada etapa, clicando em “Avançar →”.",
           "Na última etapa, revise o resumo e clique em “Confirmar e salvar”.",
@@ -165,17 +165,17 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como consultar a ficha de uma pessoa",
         passos: [
-          "Em “Visão Geral”, veja identificação, contato, endereço e a “Conta de acesso” ao Connect.",
+          "Em “Visão geral”, veja identificação, contato, endereço e a “Conta de acesso” ao Connect.",
           "Em “Vínculo”, veja a empresa, o cargo e o departamento.",
-          "Em “Dados Trabalhistas”, veja admissão, jornada, carga horária e dependentes.",
+          "Em “Dados trabalhistas”, veja admissão, jornada, carga horária e dependentes.",
           "Use “Documentos”, “Conversas” e “Histórico” para os arquivos, os atendimentos e as movimentações nos quadros.",
-          "Para passar um assunto da pessoa a outro setor, clique em “Solicitar Transferência”.",
+          "Para passar um assunto da pessoa a outro setor, clique em “Solicitar transferência”.",
         ],
       },
       {
         titulo: "Como cadastrar um funcionário interno",
         passos: [
-          "Na lista, clique em “+ Nova Pessoa”.",
+          "Na lista, clique em “Nova pessoa”.",
           "Preencha os dados de cada etapa e clique em “Avançar →”.",
           "Na última etapa, clique em “Confirmar e salvar”.",
           "Para mudar algo depois, abra a ficha e clique em “Editar”.",
@@ -602,8 +602,8 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como cadastrar um cargo novo",
         passos: [
           "Abra a ficha da empresa em “Cadastros” → “Empresas”.",
-          "Na aba “RH & Operação”, clique em “Cargos”.",
-          "Clique em “+ Novo Cargo”, preencha os campos e clique em “Salvar”.",
+          "Na aba “RH & operação”, clique em “Cargos”.",
+          "Clique em “Novo cargo”, preencha os campos e clique em “Salvar”.",
         ],
       },
     ],

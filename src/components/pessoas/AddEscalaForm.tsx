@@ -50,7 +50,7 @@ export function AddEscalaForm({ action, shifts }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Adicionando…" : "Adicionar à Escala"}
+            {isPending ? "Adicionando…" : "Adicionar à escala"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

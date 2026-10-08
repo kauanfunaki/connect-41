@@ -42,10 +42,10 @@ export default async function HorasExtrasPage({
         isInternal={person.isInternal}
         personId={id}
         personName={person.name}
-        atual="Horas Extras"
+        atual="Horas extras"
       />
       <BackButton className="mb-3" />
-      <PageHeader title="Horas Extras" />
+      <PageHeader title="Horas extras" />
 
       <Card className="p-5">
         {overtimeEntries.length === 0 ? (

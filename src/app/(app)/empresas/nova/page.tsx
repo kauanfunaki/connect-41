@@ -20,7 +20,7 @@ export default async function NovaEmpresaPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Cadastros", href: "/empresas" }, { label: "Empresas", href: "/empresas" }, { label: "Nova Empresa" }]} />
+      <Breadcrumb items={[{ label: "Cadastros", href: "/empresas" }, { label: "Empresas", href: "/empresas" }, { label: "Nova empresa" }]} />
 
       <BackButton className="mb-3" />
 

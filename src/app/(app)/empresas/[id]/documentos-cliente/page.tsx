@@ -45,13 +45,13 @@ export default async function DocumentosClientePage({
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
           { label: company.name, href: `/empresas/${companyId}`, truncate: true },
-          { label: "Documentos para Cliente" },
+          { label: "Documentos para cliente" },
         ]}
       />
       <BackButton className="mb-3" />
 
       <PageHeader
-        title="Documentos para Cliente"
+        title="Documentos para cliente"
         subtitle={`${documentos.length} documento${documentos.length !== 1 ? "s" : ""} — envio por e-mail com prova de recebimento`}
         action={
           canManage && (
