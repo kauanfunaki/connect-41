@@ -131,7 +131,7 @@ export default async function ConciliacaoPage({
   return (
     <PageContainer>
       {cabecalho}
-      <FiltroDePeriodo acao="/conciliacao" empresas={empresas} empresaId={companyId} />
+      <FiltroDePeriodo acao="/conciliacao" empresas={empresas} empresaId={companyId} navegaSozinho />
 
       <div className="flex items-center justify-between gap-3 mb-3">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Contas bancárias</h2>

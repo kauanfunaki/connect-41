@@ -380,7 +380,7 @@ async function Alcadas({
 
   return (
     <>
-      <FiltroDePeriodo acao="/aprovacoes" empresas={empresas} empresaId={empresaId} permitirTodas extras={{ aba: "alcadas" }} />
+      <FiltroDePeriodo acao="/aprovacoes" empresas={empresas} empresaId={empresaId} permitirTodas extras={{ aba: "alcadas" }} navegaSozinho />
 
       <Card className="p-4 mb-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-1">Nova alçada</h2>

@@ -104,6 +104,7 @@ export default async function LancamentosPage({
         empresaId={companyId}
         mes={aba === "lista" ? mes : undefined}
         extras={{ aba: aba === "lista" ? undefined : aba }}
+        navegaSozinho
       />
       <AbasDeLink abas={abas} ativa={aba} />
 
