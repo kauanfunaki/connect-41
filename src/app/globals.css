@@ -447,28 +447,6 @@ h1, h2, h3 { font-family: var(--font-display); }
   box-shadow: 0 0 0 3px var(--c41-focus-ring);
 }
 
-/* ----- Select (ui/Select) — o chevron é JSX no componente; aqui só o dropdown
-   nativo de opções, que não herda os tokens do tema. ----- */
-.c41-select option {
-  background: var(--c41-surface-elevated);
-  color: var(--c41-fg);
-}
-
-/* ----- Inputs de data/hora nativos — indicador discreto, consistente nos dois
-   temas (color-scheme no :root já rende o ícone/popup certo por tema). ----- */
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  opacity: 0.55;
-  cursor: pointer;
-  transition: opacity 0.12s;
-}
-input[type="date"]::-webkit-calendar-picker-indicator:hover,
-input[type="time"]::-webkit-calendar-picker-indicator:hover,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 0.9;
-}
-
 /* ----- ToggleActiveButton — pílula com switch, success quando ligado ----- */
 .c41-toggle-active {
   display: inline-flex; align-items: center; gap: 8px;
