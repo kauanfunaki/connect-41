@@ -12,6 +12,8 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
+import { StatusDot } from "@/components/shared/StatusDot";
 import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Button } from "@/components/ui/Button";
 import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
@@ -491,14 +493,15 @@ async function Acordos({
                             <td className="py-1 pr-3 tabular-nums">{formatInstantDate(p.vencimento)}</td>
                             <td className="py-1 pr-3 tabular-nums text-right">{moeda(p.valorCentavos)}</td>
                             <td className="py-1">
+                              {/* Situação da parcela no `Selo` miúdo (escolha 2A, 08/10/2026). */}
                               {p.pagoEm ? (
-                                <Badge variant={TOM_DA_SITUACAO.PAGA}>Paga em {formatInstantDate(p.pagoEm)}</Badge>
+                                <Selo tom={tomDaVariante(TOM_DA_SITUACAO.PAGA)}>Paga em {formatInstantDate(p.pagoEm)}</Selo>
                               ) : p.closeReason === "PERDA" ? (
-                                <Badge variant={TOM_DA_SITUACAO.PERDA}>Perda</Badge>
+                                <Selo tom={tomDaVariante(TOM_DA_SITUACAO.PERDA)}>Perda</Selo>
                               ) : p.closeReason === "RENEGOCIADO" ? (
-                                <Badge variant={TOM_DA_SITUACAO.RENEGOCIADA}>Renegociada</Badge>
+                                <Selo tom={tomDaVariante(TOM_DA_SITUACAO.RENEGOCIADA)}>Renegociada</Selo>
                               ) : p.status === "CANCELADO" ? (
-                                <Badge variant={TOM_DA_SITUACAO.CANCELADA}>Cancelada</Badge>
+                                <Selo tom={tomDaVariante(TOM_DA_SITUACAO.CANCELADA)}>Cancelada</Selo>
                               ) : (
                                 <Button href={`/cobranca/${p.id}`} variant="secondary" size="xs">
                                   Em aberto <ArrowRight size={12} />
@@ -550,7 +553,11 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
       <Card className="p-4 mb-4">
         <div className="flex flex-wrap items-center gap-2 mb-1">
           <h2 className="text-card-title font-semibold">Régua de lembretes por e-mail</h2>
-          {d.config.ligada ? <Badge variant={TOM_DA_SITUACAO.LIGADA}>Ligada</Badge> : <Badge variant={TOM_DA_SITUACAO.DESLIGADA}>Desligada</Badge>}
+          {/* Ligada/desligada é o ativo/inativo da régua: a bolinha (escolha 2A, 08/10/2026). */}
+          <StatusDot
+            color={d.config.ligada ? "var(--c41-success)" : "var(--c41-fg-muted)"}
+            label={d.config.ligada ? "Ligada" : "Desligada"}
+          />
         </div>
         <p className="text-helper text-fg-muted mb-3 max-w-[860px]">
           Um e-mail ao sacado em cada passo de atraso, pelo SMTP do escritório, em nome da empresa credora — com valor, vencimento e
@@ -611,7 +618,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
                 </InfoDoCartao>
                 <InfoDoCartao>para {e.para}</InfoDoCartao>
                 <PeDoCartao>
-                  {e.ok ? <Badge variant="success">Enviado</Badge> : <Badge variant="danger">Erro</Badge>}
+                  {e.ok ? <Selo tom="sucesso">Enviado</Selo> : <Selo tom="perigo">Erro</Selo>}
                 </PeDoCartao>
                 {!e.ok && e.erro && <span className="block text-micro text-danger mt-1 break-words">{e.erro}</span>}
               </Cartao>
@@ -673,7 +680,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
                   <td className="py-2 pr-3 tabular-nums">{e.passo} dias</td>
                   <td className="py-2 pr-3 text-right tabular-nums">{moeda(e.valorCentavos)}</td>
                   <td className="py-2">
-                    {e.ok ? <Badge variant="success">Enviado</Badge> : <Badge variant="danger">Erro</Badge>}
+                    {e.ok ? <Selo tom="sucesso">Enviado</Selo> : <Selo tom="perigo">Erro</Selo>}
                     {!e.ok && e.erro && <span className="block text-micro text-danger mt-1 max-w-[280px]">{e.erro}</span>}
                   </td>
                 </LinhaFiltravel>

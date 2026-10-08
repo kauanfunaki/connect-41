@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Badge } from "@/components/ui/Badge";
-import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
+import { StatusDot } from "@/components/shared/StatusDot";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { Input } from "@/components/ui/Input";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
@@ -37,6 +37,15 @@ const ABAS = [
   { chave: "centros", rotulo: "Centros de custo", icone: <Layers /> },
   { chave: "plano", rotulo: "Plano de contas", icone: <ListTree /> },
 ] as const;
+
+/**
+ * Ativo/inativo do cadastro — contraparte e centro de custo — na bolinha, e não
+ * no selo de situação (escolha 2A do Kauan, 08/10/2026). Era um `Badge` verde
+ * ou cinza em cada linha.
+ */
+function Ativo({ ativo }: { ativo: boolean }) {
+  return <StatusDot color={ativo ? "var(--c41-success)" : "var(--c41-fg-muted)"} label={ativo ? "Ativo" : "Inativo"} />;
+}
 
 function documento(d: string | null): string {
   if (!d) return "—";
@@ -224,7 +233,7 @@ export default async function CadastrosFinanceirosPage({
                     {n.pagar} a pagar · {n.receber} a receber
                   </InfoDoCartao>
                   <PeDoCartao>
-                    {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
+                    <Ativo ativo={c.active} />
                     {podeEditar && (
                       <span className="ml-auto">
                         <EditarContraparte
@@ -294,7 +303,7 @@ export default async function CadastrosFinanceirosPage({
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.pagar}</td>
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.receber}</td>
                     <td className="py-2.5 pr-3">
-                      {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
+                      <Ativo ativo={c.active} />
                     </td>
                     <td className="py-2.5">
                       {podeEditar && (
@@ -387,7 +396,7 @@ async function AbaDeCentros({
               {lancamentos.get(c.id) ?? 0} lançamento(s) · padrão de {contrapartes.get(c.id) ?? 0} contraparte(s)
             </InfoDoCartao>
             <PeDoCartao>
-              {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
+              <Ativo ativo={c.active} />
               {podeEditar && (
                 <span className="ml-auto">
                   <EditarCentroDeCusto centro={{ id: c.id, nome: c.name, codigo: c.code, ativo: c.active }} />
@@ -418,7 +427,7 @@ async function AbaDeCentros({
               <td className="py-2.5 pr-3 text-right tabular-nums">{lancamentos.get(c.id) ?? 0}</td>
               <td className="py-2.5 pr-3 text-right tabular-nums">{contrapartes.get(c.id) ?? 0}</td>
               <td className="py-2.5 pr-3">
-                {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
+                <Ativo ativo={c.active} />
               </td>
               <td className="py-2.5">
                 {podeEditar && <EditarCentroDeCusto centro={{ id: c.id, nome: c.name, codigo: c.code, ativo: c.active }} />}
@@ -525,8 +534,10 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
                               {propria ? (
                                 <Badge variant="info">{c.omieCode ? "Do Omie" : "Desta empresa"}</Badge>
                               ) : null}
-                              {escondida && <Badge variant="warning">Não usada aqui</Badge>}
-                              {!c.active && <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>}
+                              {/* Origem é categoria (Badge); escondida e inativa são o
+                                  ativo/inativo da categoria nesta empresa (bolinha). */}
+                              {escondida && <StatusDot color="var(--c41-fg-muted)" label="Não usada aqui" />}
+                              {!c.active && <StatusDot color="var(--c41-fg-muted)" label="Inativa" />}
                             </span>
                           </td>
                           <td className="py-2 pr-3 text-fg-secondary">{c.planGroup ?? "—"}</td>
