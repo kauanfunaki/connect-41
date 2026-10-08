@@ -66,7 +66,7 @@ export default async function ComunicacaoPage({
         </div>
       )}
 
-      <FiltroDePeriodo acao="/comunicacao" empresas={empresas} empresaId={selecionada?.id ?? null} permitirTodas />
+      <FiltroDePeriodo acao="/comunicacao" empresas={empresas} empresaId={selecionada?.id ?? null} permitirTodas navegaSozinho />
 
       {selecionada && conversa ? (
         <>

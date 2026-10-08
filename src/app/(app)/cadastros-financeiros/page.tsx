@@ -97,7 +97,7 @@ export default async function CadastrosFinanceirosPage({
     return (
       <PageContainer>
         {cabecalho}
-        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} />
+        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
         <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
         <AbaDoPlano tenantId={ctx.tenantId} companyId={companyId} podeEditar={podeEditar} />
       </PageContainer>
@@ -109,7 +109,7 @@ export default async function CadastrosFinanceirosPage({
       <PageContainer>
         {cabecalho}
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} />
+          <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
           {podeEditar && <NovoCentroDeCusto companyId={companyId} />}
         </div>
         <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
@@ -177,7 +177,7 @@ export default async function CadastrosFinanceirosPage({
     <PageContainer>
       {cabecalho}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba: aba === "fornecedores" ? undefined : aba }} />
+        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba: aba === "fornecedores" ? undefined : aba }} navegaSozinho />
         {podeEditar && <NovaContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} />}
       </div>
       <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
