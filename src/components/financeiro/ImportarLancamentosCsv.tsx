@@ -9,6 +9,8 @@ import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { previsualizarImportacao, confirmarImportacao } from "@/app/(app)/lancamentos/actions";
 import type { PreviaDaImportacao } from "@/lib/financeiro/importacaoCsv";
 import { moeda } from "@/lib/financeiro/formato";
+import { formatarCompetencia } from "@/lib/format";
+import { dataCurta } from "./conciliacao/data";
 
 const MODELO = "Tipo;Contraparte;Documento;Categoria;Competência;Vencimento;Valor;Descrição;Pago em;Centro de custo";
 
@@ -125,8 +127,8 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
                       )}
                     </td>
                     <td className="py-2 pr-3">{l.situacao === "erro" ? "—" : l.dados.contraparteNome}</td>
-                    <td className="py-2 pr-3 tabular-nums">{l.situacao === "erro" ? "—" : l.dados.competencia}</td>
-                    <td className="py-2 pr-3 tabular-nums">{l.situacao === "erro" ? "—" : l.dados.vencimentoKey}</td>
+                    <td className="py-2 pr-3 tabular-nums">{l.situacao === "erro" ? "—" : formatarCompetencia(l.dados.competencia)}</td>
+                    <td className="py-2 pr-3 tabular-nums">{l.situacao === "erro" ? "—" : dataCurta(l.dados.vencimentoKey)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{l.situacao === "erro" ? "—" : moeda(l.dados.centavos)}</td>
                   </tr>
                 ))}

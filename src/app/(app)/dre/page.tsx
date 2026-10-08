@@ -9,7 +9,8 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { RelatorioDoDre, moeda } from "@/components/dre/RelatorioDoDre";
+import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
+import { formatarCompetencia, formatarReaisDeCentavos as moeda } from "@/lib/format";
 import { FilaDeClassificacao, type ItemParaClassificar } from "@/components/dre/FilaDeClassificacao";
 import { dreDoMes, dreDoAnoDaEmpresa, mesesComMovimento } from "@/lib/dre/data";
 import { dreDoAno } from "@/lib/dre/anual";
@@ -18,11 +19,16 @@ import { ImportarDoOmie } from "@/components/dre/ImportarDoOmie";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
 import { OPCOES_PADRAO, TRANSFERENCIA } from "@/lib/dre/estrutura";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { competenciaDe } from "@/lib/financeiro/periodo";
 
-const MESES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
+/**
+ * O mês do DRE no formato de competência do app, "Out/26" (08/10/2026). Era
+ * "Outubro/2026" só aqui, enquanto a DRE econômica, as análises e o fluxo
+ * diziam "Out/26".
+ */
+function rotuloDoMes(m: { ano: number; mes: number }): string {
+  return formatarCompetencia(competenciaDe(m.ano, m.mes));
+}
 
 type EmpresaNaAba = {
   id: string;
@@ -103,7 +109,7 @@ export default async function DrePage({
         </div>
         <FiltrosDaTela
           className="mb-4"
-          campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
+          campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
         />
         {/* Os dois avisos que só a visão mensal tinha. Uma categoria que
             some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
@@ -190,7 +196,7 @@ export default async function DrePage({
           aparecia sem dizer de quando. */}
       <PageHeader
         title="DRE"
-        subtitle={`Demonstrativo de resultado de caixa de ${MESES[escolhido.mes - 1]}/${escolhido.ano} — monta do que foi pago e recebido no mês.`}
+        subtitle={`Demonstrativo de resultado de caixa de ${rotuloDoMes(escolhido)} — monta do que foi pago e recebido no mês.`}
       />
 
       <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
@@ -206,8 +212,9 @@ export default async function DrePage({
           {
             chave: "mes",
             rotulo: "Mês",
-            vazioLabel: meses[0] ? `Mais recente (${MESES[meses[0].mes - 1]}/${meses[0].ano})` : "Mais recente",
-            opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: `${MESES[m.mes - 1]}/${m.ano}` })),
+            vazioLabel: meses[0] ? `Mais recente (${rotuloDoMes(meses[0])})` : "Mais recente",
+            sempreVisivel: true,
+            opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: rotuloDoMes(m) })),
           },
         ]}
       />
@@ -251,7 +258,7 @@ export default async function DrePage({
 
       <p className="text-[11px] text-fg-muted mt-3">
         {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} pagos ou recebidos em{" "}
-        {MESES[escolhido.mes - 1]}/{escolhido.ano}
+        {rotuloDoMes(escolhido)}
         {transferencias !== 0 &&
           ` · ${moeda(transferencias)} em transferências entre contas, fora do DRE`}
         {/* Diferente de zero significa que algo entrou e não foi somado em lugar

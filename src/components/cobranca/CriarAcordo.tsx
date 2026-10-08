@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { moeda } from "@/lib/financeiro/formato";
+import { formatarCompetencia } from "@/lib/format";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
 import { gerarParcelas, MAXIMO_DE_PARCELAS, TAMANHO_MAXIMO_DA_NOTA } from "@/lib/financeiro/cobranca/acordo";
 import { criarAcordo } from "@/app/(app)/cobranca/actions";
@@ -100,7 +101,7 @@ export function CriarAcordo({
                   }}
                   label={
                     <span className="tabular-nums">
-                      venc. {c.vencimentoLabel} · {moeda(c.valorCentavos)} · comp. {c.competencia}
+                      venc. {c.vencimentoLabel} · {moeda(c.valorCentavos)} · comp. {formatarCompetencia(c.competencia)}
                       {c.descricao ? ` · ${c.descricao}` : ""}
                     </span>
                   }

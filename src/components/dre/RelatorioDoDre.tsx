@@ -1,12 +1,8 @@
 import { Card } from "@/components/ui/Card";
 import type { ResultadoDoDre } from "@/lib/dre/calculo";
+import { formatarReaisDeCentavos } from "@/lib/format";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const PCT = new Intl.NumberFormat("pt-BR", { style: "percent", minimumFractionDigits: 1 });
-
-export function moeda(centavos: number): string {
-  return MOEDA.format(centavos / 100);
-}
 
 type Props = { resultado: ResultadoDoDre };
 
@@ -52,7 +48,7 @@ export function RelatorioDoDre({ resultado }: Props) {
                       l.destaque ? "font-semibold" : ""
                     } ${negativo ? "text-danger" : "text-fg"}`}
                   >
-                    {moeda(l.centavos ?? 0)}
+                    {formatarReaisDeCentavos(l.centavos ?? 0)}
                   </td>
                 </tr>
               );

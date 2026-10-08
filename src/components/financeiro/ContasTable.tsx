@@ -4,8 +4,10 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
 import { TOM_DA_SITUACAO, tomDoFechamento } from "./tomDaSituacao";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatInstantDate } from "@/lib/format";
-import { reaisDeCentavos, type SituacaoDaConta } from "@/lib/financeiro/contas";
+// Dinheiro e competência pelos helpers de `lib/format` (08/10/2026): a
+// competência era "09/2026" só aqui, e "Out/26" na DRE, no fluxo e no portal.
+import { formatInstantDate, formatarCompetencia, formatarReaisDeCentavos } from "@/lib/format";
+import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 import type { LinhaDaConta, TipoDeConta } from "@/lib/financeiro/data";
 import { AcoesDaConta } from "./AcoesDaConta";
 import { conferirConta, marcarComoPago, desfazerPagamento } from "@/lib/financeiro/acoes";
@@ -20,18 +22,6 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { FORM_DO_CENTRO } from "@/lib/financeiro/centroDeCusto";
 import { MarcarTodasAsContas } from "./DefinirCentroDasContas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
-export function moeda(cents: number): string {
-  return MOEDA.format(reaisDeCentavos(cents));
-}
-
-/** "2026-09" → "09/2026", o jeito que a competência é falada no escritório. */
-export function competenciaNaTela(c: string): string {
-  const m = /^(\d{4})-(\d{2})$/.exec(c);
-  return m ? `${m[2]}/${m[1]}` : c;
-}
 
 export const SITUACAO_LABEL: Record<SituacaoDaConta, string> = {
   VENCIDA: "Vencida",
@@ -156,7 +146,7 @@ export function ContasTable({
       empresa: l.empresaNome,
       categoria: l.categoriaNome ?? "",
       centro: l.centroDeCustoNome ?? "",
-      competencia: competenciaNaTela(l.competencia),
+      competencia: formatarCompetencia(l.competencia),
       situacao: rotuloDaSituacao(l),
     },
   }));
@@ -181,11 +171,11 @@ export function ContasTable({
                 />
               )}
               <div className="min-w-0 flex-1">
-                <TopoDoCartao nome={l.contraparteNome} valor={moeda(l.valorCentavos)} />
+                <TopoDoCartao nome={l.contraparteNome} valor={formatarReaisDeCentavos(l.valorCentavos)} />
                 {l.descricao && <InfoDoCartao className="break-words">{l.descricao}</InfoDoCartao>}
                 <InfoDoCartao className="mt-1 tabular-nums">
                   vence {formatInstantDate(l.vencimento)}
-                  {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {competenciaNaTela(l.competencia)}
+                  {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {formatarCompetencia(l.competencia)}
                 </InfoDoCartao>
                 <InfoDoCartao className="break-words">
                   {l.empresaNome}
@@ -309,8 +299,8 @@ export function ContasTable({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-fg-muted tabular-nums">{competenciaNaTela(l.competencia)}</td>
-                <td className="px-4 py-3 tabular-nums font-medium whitespace-nowrap">{moeda(l.valorCentavos)}</td>
+                <td className="px-4 py-3 text-fg-muted tabular-nums">{formatarCompetencia(l.competencia)}</td>
+                <td className="px-4 py-3 tabular-nums font-medium whitespace-nowrap">{formatarReaisDeCentavos(l.valorCentavos)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-1.5">{selos(l)}</div>
                 </td>

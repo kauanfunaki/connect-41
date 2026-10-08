@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
 import { classificarCategoria, voltarAoPadrao, type AcaoDoDre } from "@/app/(app)/dre/actions";
-import { moeda } from "./RelatorioDoDre";
+import { formatarReaisDeCentavos as moeda } from "@/lib/format";
 
 export type ItemParaClassificar = {
   categoria: string;
