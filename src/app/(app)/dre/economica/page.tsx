@@ -8,6 +8,7 @@ import { getPrisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
@@ -227,9 +228,11 @@ export default async function DreEconomicaPage({
           {/* Provisório entra no resultado — a obrigação existe —, mas é o
               pedaço do número que ninguém conferiu. Dizer quantos são é o que
               separa "resultado" de "resultado a confirmar". */}
+          {/* O `Aviso` do app (08/10/2026), com o texto em `fg`: são frases
+              longas, e o âmbar como cor de texto fica abaixo do contraste AA. */}
           {(provisorios > 0 || naoClassificado !== 0 || imposto !== 0) && (
-            <Card className="p-4 mb-4 border-warning/40 bg-warning-bg">
-              <ul className="flex flex-col gap-1.5 text-[13px] text-fg">
+            <Aviso tom="atencao" className="mb-4">
+              <ul className="flex flex-col gap-1.5 text-fg">
                 {provisorios > 0 && (
                   <li className="flex items-start gap-2">
                     <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
@@ -262,7 +265,7 @@ export default async function DreEconomicaPage({
                   </li>
                 )}
               </ul>
-            </Card>
+            </Aviso>
           )}
 
           {temCobranca && (

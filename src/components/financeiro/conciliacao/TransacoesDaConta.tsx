@@ -505,13 +505,13 @@ function CriarLancamento({
           nesta data, com este valor, e já conciliado.
         </p>
         {transacao.sugestao?.bloqueio && (
-          <p className="flex items-start gap-1.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-2 text-[12px] text-fg-secondary">
-            <Lock size={12} className="mt-0.5 shrink-0 text-warning" />
-            <span>
+          // O `Aviso` do app (08/10/2026), com o texto em `fg-secondary` como estava.
+          <Aviso tom="atencao" icone={<Lock />}>
+            <span className="text-fg-secondary">
               Esta transação parece liquidar <strong>{transacao.sugestao.contraparteNome}</strong>, que já existe e está travada
               na aprovação. Criar outro lançamento duplica a conta — concilie com ela depois de aprovada.
             </span>
-          </p>
+          </Aviso>
         )}
 
         <CampoForm label={kind === "PAGAR" ? "Fornecedor" : "Cliente (sacado)"} htmlFor="criar-contraparte" required>

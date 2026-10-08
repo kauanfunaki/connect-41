@@ -8,6 +8,7 @@ import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQ
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { formatarCompetencia, formatarReaisDeCentavos as moeda } from "@/lib/format";
@@ -116,19 +117,18 @@ export default async function DrePage({
             some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
             passam onde um grande não passaria. */}
         {impostoDoAno !== 0 && (
-          <Card className="p-4 mb-4 border-warning/40 bg-warning-bg">
-            <p className="flex items-start gap-2 text-[13px] text-fg">
-              <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
-              <span>
-                <strong>{moeda(Math.abs(impostoDoAno))}</strong> de impostos sobre a receita saíram
-                do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — a
-                margem de contribuição parte da Receita Bruta, como na planilha do BPO.
-                <span className="block text-[12px] text-fg-secondary mt-1">
-                  Reproduzido de propósito. Confirmar com o BPO se é assim mesmo.
-                </span>
+          // O `Aviso` do app (08/10/2026), com o texto em `fg`: o parágrafo é
+          // longo, e o âmbar como cor de texto fica abaixo do contraste AA.
+          <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
+            <span className="text-fg">
+              <strong>{moeda(Math.abs(impostoDoAno))}</strong> de impostos sobre a receita saíram
+              do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — a
+              margem de contribuição parte da Receita Bruta, como na planilha do BPO.
+              <span className="block text-fs-2 text-fg-secondary mt-1">
+                Reproduzido de propósito. Confirmar com o BPO se é assim mesmo.
               </span>
-            </p>
-          </Card>
+            </span>
+          </Aviso>
         )}
 
         <div className="mb-4">
@@ -224,20 +224,19 @@ export default async function DrePage({
       {/* Existe porque a regra é um chute até o BPO confirmar — e um chute que
           muda o resultado precisa aparecer na tela, não só no código. */}
       {impostoDeFora !== 0 && (
-        <Card className="p-4 mb-4 border-warning/40 bg-warning-bg">
-          <p className="flex items-start gap-2 text-[13px] text-fg">
-            <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
-            <span>
-              <strong>{moeda(Math.abs(impostoDeFora))}</strong> de impostos sobre a receita saíram do
-              caixa e <strong>não entram</strong> no resultado abaixo — a margem de contribuição parte
-              da Receita Bruta, como na planilha que o BPO usa hoje.
-              <span className="block text-[12px] text-fg-secondary mt-1">
-                Reproduzido de propósito, para o número bater com o que o cliente já recebe.
-                Confirmar com o BPO se é assim mesmo.
-              </span>
+        // O `Aviso` do app (08/10/2026), com o texto em `fg`: o parágrafo é
+        // longo, e o âmbar como cor de texto fica abaixo do contraste AA.
+        <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
+          <span className="text-fg">
+            <strong>{moeda(Math.abs(impostoDeFora))}</strong> de impostos sobre a receita saíram do
+            caixa e <strong>não entram</strong> no resultado abaixo — a margem de contribuição parte
+            da Receita Bruta, como na planilha que o BPO usa hoje.
+            <span className="block text-fs-2 text-fg-secondary mt-1">
+              Reproduzido de propósito, para o número bater com o que o cliente já recebe.
+              Confirmar com o BPO se é assim mesmo.
             </span>
-          </p>
-        </Card>
+          </span>
+        </Aviso>
       )}
 
       {/* De onde saiu o número. Relatório que muda de fonte sem avisar é
