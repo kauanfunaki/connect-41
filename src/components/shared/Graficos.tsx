@@ -15,7 +15,8 @@ import type { Selo, Tendencia, TomDaTendencia } from "@/lib/home/tendencia";
 //   também está escrito na legenda ou na tabela acessível (07/10).
 // Paleta validada (claro e escuro) com o validador do método: crítico,
 // atenção e "próximo" passam na separação para daltonismo; o cinza neutro é
-// o "sem situação" de propósito.
+// o "sem situação" de propósito. O "ok" passou a passar também em 08/10,
+// com o verde mais claro da área do gráfico (ver `VERDE_DA_AREA`).
 //
 // Cor e volume (06/10, opção B escolhida pelo Kauan — achou os gráficos
 // bons, mas apagados): o mesmo conteúdo com mais presença, em todas as telas
@@ -26,6 +27,7 @@ import type { Selo, Tendencia, TomDaTendencia } from "@/lib/home/tendencia";
 
 export type Tom = "critico" | "atencao" | "ok" | "proximo" | "neutro";
 
+/** A cor da situação em texto e ícone: o número do painel e o ícone da legenda. */
 const COR_DO_TOM: Record<Tom, string> = {
   critico: "var(--c41-danger)",
   atencao: "var(--c41-warning)",
@@ -33,6 +35,36 @@ const COR_DO_TOM: Record<Tom, string> = {
   proximo: "var(--c41-grafico-proximo)",
   neutro: "var(--c41-grafico-neutro)",
 };
+
+/**
+ * "Em dia" na área do gráfico — fatia, segmento de barra — num verde mais
+ * claro (escolha do Kauan na página de decisões, 08/10/2026 — 8A). Com o
+ * verde dos selos, "ok" e "crítico" quase não se separavam para quem tem
+ * daltonismo vermelho-verde: ΔE 3,8 no claro e 6,9 no escuro (OKLab ×100,
+ * simulação Machado, o validador do método de dataviz). Mais claro, o estado
+ * sem ação recua e o vermelho fica sendo a marca mais escura, a que chama o
+ * olho. Só aqui: selos, textos, o número do painel e o ícone da legenda
+ * continuam no `--c41-success`.
+ *
+ * Sem token novo no `globals.css`, derivado dos que existem: metade do verde
+ * do tema com o verde do tema escuro (o mesmo matiz, mais claro — no escuro
+ * os dois são o mesmo) e 10% de branco. Clarear só com branco não serve: o
+ * verde perde croma e encosta no cinza de "sem previsão", que fica ao lado
+ * dele na barra dos Processos.
+ *
+ * Medido contra crítico, atenção e neutro, em todos os pares:
+ * - claro (#4EBB86 sobre #FFFFFF): daltonismo ΔE ≥ 8,3 (era 3,8 contra o
+ *   crítico); visão normal ≥ 16,1; contraste 2,39:1 com o cartão (era 3,59).
+ *   Abaixo de 3:1, como o âmbar de status do método: a separação vem do vão
+ *   de 3px entre as fatias, do ícone e do rótulo na legenda e da tabela
+ *   `sr-only` — que todo gráfico daqui já tem.
+ * - escuro (#5CD19A sobre #1C1A22): daltonismo ΔE ≥ 9,3 contra o crítico
+ *   (era 6,9); contraste 9,05:1.
+ */
+const VERDE_DA_AREA = "color-mix(in oklab, color-mix(in oklab, var(--c41-success) 50%, var(--c41-success-dark)) 90%, white)";
+
+/** A cor da marca do gráfico (barra, fatia). Difere da `COR_DO_TOM` só no "ok". */
+const COR_DA_AREA: Record<Tom, string> = { ...COR_DO_TOM, ok: VERDE_DA_AREA };
 
 export type Segmento = {
   chave: string;
@@ -274,7 +306,7 @@ function Pilha({ segmentos, largura = 100 }: { segmentos: Segmento[]; largura?: 
         const barra = (
           <span
             className="block h-[18px] w-full rounded-[5px] transition-opacity duration-150 group-hover/pilha:opacity-45 group-hover/seg:opacity-100!"
-            style={{ background: COR_DO_TOM[s.tom] }}
+            style={{ background: COR_DA_AREA[s.tom] }}
           />
         );
         const comum = {
@@ -518,7 +550,10 @@ export function Rosca({
               cy="50"
               r={r}
               fill="none"
-              stroke={COR_DO_TOM[f.tom]}
+              // Em `style`, e não no atributo `stroke`: o verde da área é um
+              // `color-mix()`, que é CSS — o atributo de apresentação do SVG
+              // não garante a leitura de função de cor em todo navegador.
+              style={{ stroke: COR_DA_AREA[f.tom] }}
               strokeWidth="16"
               strokeDasharray={`${f.dash} ${c - f.dash}`}
               strokeDashoffset={f.offset}
