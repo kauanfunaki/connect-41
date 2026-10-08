@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { Input } from "@/components/ui/Input";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
@@ -213,7 +214,7 @@ export default async function CadastrosFinanceirosPage({
                     {n.pagar} a pagar · {n.receber} a receber
                   </InfoDoCartao>
                   <PeDoCartao>
-                    {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+                    {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
                     {podeEditar && (
                       <span className="ml-auto">
                         <EditarContraparte
@@ -283,7 +284,7 @@ export default async function CadastrosFinanceirosPage({
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.pagar}</td>
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.receber}</td>
                     <td className="py-2.5 pr-3">
-                      {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+                      {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
                     </td>
                     <td className="py-2.5">
                       {podeEditar && (
@@ -371,7 +372,7 @@ async function AbaDeCentros({
               {lancamentos.get(c.id) ?? 0} lançamento(s) · padrão de {contrapartes.get(c.id) ?? 0} contraparte(s)
             </InfoDoCartao>
             <PeDoCartao>
-              {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+              {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
               {podeEditar && (
                 <span className="ml-auto">
                   <EditarCentroDeCusto centro={{ id: c.id, nome: c.name, codigo: c.code, ativo: c.active }} />
@@ -402,7 +403,7 @@ async function AbaDeCentros({
               <td className="py-2.5 pr-3 text-right tabular-nums">{lancamentos.get(c.id) ?? 0}</td>
               <td className="py-2.5 pr-3 text-right tabular-nums">{contrapartes.get(c.id) ?? 0}</td>
               <td className="py-2.5 pr-3">
-                {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+                {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
               </td>
               <td className="py-2.5">
                 {podeEditar && <EditarCentroDeCusto centro={{ id: c.id, nome: c.name, codigo: c.code, ativo: c.active }} />}
@@ -495,7 +496,7 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
                                 <Badge variant="info">{c.omieCode ? "Do Omie" : "Desta empresa"}</Badge>
                               ) : null}
                               {escondida && <Badge variant="warning">Não usada aqui</Badge>}
-                              {!c.active && <Badge variant="warning">Inativa</Badge>}
+                              {!c.active && <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>}
                             </span>
                           </td>
                           <td className="py-2 pr-3 text-fg-secondary">{c.planGroup ?? "—"}</td>

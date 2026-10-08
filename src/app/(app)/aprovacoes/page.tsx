@@ -11,6 +11,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltroDePeriodo, AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -408,11 +409,11 @@ async function Alcadas({
                 <PeDoCartao>
                   {/* Alçada ativa de usuário desativado não conta — ver `whereDaAlcadaValida`. */}
                   {!a.portalUser.active ? (
-                    <Badge variant="warning">Usuário inativo</Badge>
+                    <Badge variant={TOM_DA_SITUACAO.INATIVA}>Usuário inativo</Badge>
                   ) : a.active ? (
-                    <Badge variant="success">Ativa</Badge>
+                    <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativa</Badge>
                   ) : (
-                    <Badge variant="info">Inativa</Badge>
+                    <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>
                   )}
                   <span className="ml-auto">
                     <AlternarAlcada id={a.id} ativa={a.active} />
@@ -445,11 +446,11 @@ async function Alcadas({
                   <td className="py-2.5 pr-3">
                     {/* Alçada ativa de usuário desativado não conta — ver `whereDaAlcadaValida`. */}
                     {!a.portalUser.active ? (
-                      <Badge variant="warning">Usuário inativo</Badge>
+                      <Badge variant={TOM_DA_SITUACAO.INATIVA}>Usuário inativo</Badge>
                     ) : a.active ? (
-                      <Badge variant="success">Ativa</Badge>
+                      <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativa</Badge>
                     ) : (
-                      <Badge variant="info">Inativa</Badge>
+                      <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>
                     )}
                   </td>
                   <td className="py-2.5">
