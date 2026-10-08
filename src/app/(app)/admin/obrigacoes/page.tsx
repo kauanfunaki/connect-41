@@ -7,7 +7,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AddObrigacaoForm } from "@/components/admin/AddObrigacaoForm";
+import { NovaObrigacao } from "@/components/admin/AddObrigacaoForm";
 import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { ToggleObrigacaoButton } from "@/components/admin/ToggleObrigacaoButton";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -90,13 +90,14 @@ export default async function ObrigacoesPage() {
         subtitle="DAS, DCTF, folha, título bancário diário, contas a receber semanais e afins — o Connect
           gera automaticamente o item de kanban na frequência escolhida (diária, semanal, quinzenal
           ou mensal), com vencimento prorrogado para o próximo dia útil."
-      />
-
-      <AddObrigacaoForm
-        action={criarObrigacao}
-        companies={companies}
-        pipelines={pipelines.map((p) => ({ ...p, sectorLabel: sectorLabel(labels, p.sectorCode) }))}
-        users={users}
+        action={
+          <NovaObrigacao
+            action={criarObrigacao}
+            companies={companies}
+            pipelines={pipelines.map((p) => ({ ...p, sectorLabel: sectorLabel(labels, p.sectorCode) }))}
+            users={users}
+          />
+        }
       />
 
       {obligations.length === 0 ? (
@@ -104,7 +105,7 @@ export default async function ObrigacoesPage() {
           <EmptyState
             icon={<CalendarClock />}
             title="Nenhuma obrigação recorrente cadastrada"
-            description="Use o formulário acima para cadastrar obrigações como DAS, DCTF e folha — o Connect gera o item de kanban todo mês automaticamente."
+            description="Cadastre em “Nova obrigação” as obrigações como DAS, DCTF e folha — o Connect gera o item de kanban todo mês automaticamente."
           />
         </Card>
       ) : (

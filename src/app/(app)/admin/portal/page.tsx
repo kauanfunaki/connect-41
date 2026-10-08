@@ -8,7 +8,7 @@ import { Users2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { formatInstantDate } from "@/lib/format";
-import { PortalAcessosList } from "@/components/portal/PortalAcessosList";
+import { NovoAcessoDoPortal, PortalAcessosList } from "@/components/portal/PortalAcessosList";
 import { criarAcessoDoPortal, enviarLinkDeSenha, alternarAcessoDoPortal } from "./actions";
 
 // Quem do lado do cliente entra no portal. Tela de administração do tenant, não
@@ -47,6 +47,14 @@ export default async function AdminPortalPage() {
         title="Acessos do Portal"
         subtitle="Contas de clientes que entram no portal para ver os próprios documentos fiscais. Cada conta
           enxerga as empresas de um cliente — e só elas."
+        action={
+          grupos.length > 0 && (
+            <NovoAcessoDoPortal
+              clientes={grupos.map((g) => ({ id: g.id, nome: g.name, empresas: g._count.companies }))}
+              criarAction={criarAcessoDoPortal}
+            />
+          )
+        }
       />
 
       {grupos.length === 0 ? (
@@ -67,8 +75,6 @@ export default async function AdminPortalPage() {
             cliente: a.clientGroup.name,
             ultimoAcesso: a.lastLoginAt ? formatInstantDate(a.lastLoginAt) : null,
           }))}
-          clientes={grupos.map((g) => ({ id: g.id, nome: g.name, empresas: g._count.companies }))}
-          criarAction={criarAcessoDoPortal}
           enviarLinkAction={enviarLinkDeSenha}
           alternarAction={alternarAcessoDoPortal}
         />

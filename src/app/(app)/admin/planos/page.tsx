@@ -6,6 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { StatusDot } from "@/components/shared/StatusDot";
 import { TogglePlanoButton } from "@/components/admin/TogglePlanoButton";
 import { PlanModulesEditor } from "@/components/admin/PlanModulesEditor";
 import { MANAGEMENT_MODE_LABEL, BILLING_TYPE_LABEL } from "@/lib/subscription-labels";
@@ -31,25 +32,27 @@ export default async function PlanosPage() {
         title="Planos"
         subtitle="Catálogo comercial — frente 1 (gerenciado pela 41 Tech, valor fixo) e frente 2
           (autoatendimento, por usuário). Implantação é cobrada nos dois cenários."
+        action={<NovoPlanoForm />}
       />
 
-      <NovoPlanoForm />
-
       {plans.length === 0 ? (
-        <Card className="mt-6">
+        <Card>
           <EmptyState
             icon={<Package />}
             title="Nenhum plano cadastrado"
-            description="Use o formulário acima para criar o primeiro plano do catálogo comercial."
+            description="Crie em “Novo plano” o primeiro plano do catálogo comercial."
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border mt-6">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {plans.map((p) => (
             <div key={p.id} className="flex items-start justify-between px-4 py-3 gap-4">
               <div className="min-w-0 flex-1">
-                <p className="text-fs-3 text-fg font-medium">
-                  {p.name} {!p.active && <span className="text-fg-muted font-normal">(inativo)</span>}
+                {/* Inativo pela bolinha, a do ativo/inativo de cadastro (escolha
+                    2A, 08/10/2026) — era "(inativo)" em cinza colado no nome. */}
+                <p className="flex flex-wrap items-center gap-x-2.5 text-fs-3 text-fg font-medium">
+                  {p.name}
+                  {!p.active && <StatusDot color="var(--c41-fg-muted)" label="Inativo" className="font-normal" />}
                 </p>
                 <p className="text-fs-1 text-fg-muted mt-0.5">
                   {MANAGEMENT_MODE_LABEL[p.managementMode]} · {BILLING_TYPE_LABEL[p.billingType]} ·{" "}

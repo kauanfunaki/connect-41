@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { JanelaDeCadastro } from "@/components/admin/JanelaDeCadastro";
 import { criarPlano, type PlanoState } from "@/app/(app)/admin/planos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -9,25 +9,31 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { FormFooter } from "@/components/ui/FormFooter";
 
+/**
+ * O "+ Novo plano" do cabeçalho de /admin/planos, que abre o formulário numa
+ * janela (escolha 5A, 08/10/2026). Era um botão solto embaixo do cabeçalho que
+ * virava um cartão de formulário no mesmo lugar.
+ */
 export function NovoPlanoForm() {
-  const [open, setOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState<PlanoState, FormData>(criarPlano, null);
-  const [billingType, setBillingType] = useState<"FLAT_MONTHLY" | "PER_USER_MONTHLY">("FLAT_MONTHLY");
+  return (
+    <JanelaDeCadastro rotulo="Novo plano" maxWidth="max-w-2xl">
+      {(fechar) => <FormularioDoPlano onSucesso={fechar} onCancelar={fechar} />}
+    </JanelaDeCadastro>
+  );
+}
 
-  // Fechado, só o botão. Aberto, o botão some e o formulário traz o próprio
-  // rodapé (Cancelar, Criar plano) — antes o "Cancelar" era o mesmo botão lá
-  // em cima, longe do "Criar plano", que ficava sozinho embaixo à esquerda.
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Novo plano</Button>;
-  }
+function FormularioDoPlano({ onSucesso, onCancelar }: { onSucesso: () => void; onCancelar: () => void }) {
+  const [state, formAction, isPending] = useActionState<PlanoState, FormData>(async (anterior, form) => {
+    const r = await criarPlano(anterior, form);
+    if (!r) onSucesso();
+    return r;
+  }, null);
+  const [billingType, setBillingType] = useState<"FLAT_MONTHLY" | "PER_USER_MONTHLY">("FLAT_MONTHLY");
 
   // Os campos só tinham placeholder: preenchidos, ninguém sabia mais o que era
   // cada valor. Agora têm rótulo, como todo formulário.
   return (
-    <form
-      action={formAction}
-      className="p-4 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] space-y-4 max-w-2xl"
-    >
+    <form action={formAction} className="space-y-4">
       <CampoForm label="Nome do plano" htmlFor="plano-nome" required>
         <Input id="plano-nome" name="name" required placeholder="Ex: Gerenciado Essencial" />
       </CampoForm>
@@ -71,7 +77,7 @@ export function NovoPlanoForm() {
         pending={isPending}
         pendingLabel="Criando…"
         submitLabel="Criar plano"
-        onCancel={() => setOpen(false)}
+        onCancel={onCancelar}
         erro={state?.error}
       />
     </form>
