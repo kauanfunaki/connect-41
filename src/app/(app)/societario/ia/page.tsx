@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -26,11 +26,13 @@ const MODULE = "societario_processos";
 
 export const dynamic = "force-dynamic";
 
+// A situação da proposta é Selo (escolha 2A, 08/10/2026); a rejeitada saiu de
+// cena — não pede ação —, então é neutra, como a indeferida do processo.
 const STATUS = {
   PENDENTE: { rotulo: "Esperando revisão", variante: "info" },
   APROVADA: { rotulo: "Aprovada", variante: "success" },
   EDITADA: { rotulo: "Aprovada com ajuste", variante: "warning" },
-  REJEITADA: { rotulo: "Rejeitada", variante: "danger" },
+  REJEITADA: { rotulo: "Rejeitada", variante: "neutral" },
 } as const;
 
 const CONFIANCA = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa" } as const;
@@ -178,7 +180,7 @@ export default async function IaDoSocietarioPage() {
                       {p.reviewedBy?.name ?? "—"} · {p.reviewedAt ? formatInstantDate(p.reviewedAt) : ""}
                     </p>
                   </div>
-                  <Badge variant={STATUS[p.status].variante}>{STATUS[p.status].rotulo}</Badge>
+                  <Selo tom={tomDaVariante(STATUS[p.status].variante)}>{STATUS[p.status].rotulo}</Selo>
                 </Link>
               </li>
             ))}

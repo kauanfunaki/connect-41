@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { StatusDot } from "@/components/shared/StatusDot";
+import { Selo } from "@/components/ui/Selo";
 import { formatCalendarDate } from "@/lib/format";
 import { stripRichText } from "@/lib/richText";
 import { ColunaDoQuadro } from "./ColunaDoQuadro";
@@ -156,12 +156,11 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                             })}
                           </span>
                         )}
+                        {/* Prioridade no Selo, como na fila de processos: a
+                            bolinha fica para ativo/inativo de cadastro (2A,
+                            08/10/2026). */}
                         {item.priority > 0 && (
-                          <StatusDot
-                            color="var(--c41-warning)"
-                            label={item.priority >= 2 ? "Urgente" : "Alta"}
-                            className="text-kanban-meta"
-                          />
+                          <Selo tom="atencao">{item.priority >= 2 ? "Urgente" : "Alta"}</Selo>
                         )}
                       </div>
 

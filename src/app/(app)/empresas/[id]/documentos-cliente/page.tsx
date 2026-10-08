@@ -10,7 +10,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { BackButton } from "@/components/shared/BackButton";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { formatInstantDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -100,9 +100,9 @@ export default async function DocumentosClientePage({
                     {d.recipients.length > 0 && ` · ${d.recipients.length} destinatário${d.recipients.length !== 1 ? "s" : ""} (${viewedCount} visualizou${viewedCount !== 1 ? "ram" : ""})`}
                   </p>
                 </div>
-                <Badge variant={d.status === "PUBLISHED" ? "success" : "warning"}>
+                <Selo tom={d.status === "PUBLISHED" ? "sucesso" : "atencao"}>
                   {d.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
-                </Badge>
+                </Selo>
               </Link>
             );
           })}

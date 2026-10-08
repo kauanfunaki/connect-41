@@ -7,6 +7,7 @@ import { formatCnpj, formatCpf, formatInstantDate } from "@/lib/format";
 import { algumSocioResideNoEndereco, somaDasParticipacoes } from "@/lib/societario/socios";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -214,11 +215,11 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
             <p className="text-fs-2 text-fg-secondary">
               <strong>Reside no local?</strong>{" "}
               {resideNoLocal === true ? (
-                <Badge variant="success">Sim</Badge>
+                <Selo tom="sucesso">Sim</Selo>
               ) : resideNoLocal === false ? (
-                <Badge variant="info">Não</Badge>
+                <Selo tom="marca">Não</Selo>
               ) : (
-                <Badge variant="warning">Não dá para afirmar</Badge>
+                <Selo tom="atencao">Não dá para afirmar</Selo>
               )}
             </p>
             {resideNoLocal === null && (
