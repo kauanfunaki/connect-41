@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRightLeft, ArrowRight, Inbox, Loader, CheckCircle2, Plus } from "lucide-react";
@@ -142,12 +141,8 @@ export default async function HandoffsPage({
             return (
               // O cartão inteiro é o link (07/10/2026): o Link morava dentro do
               // `p-4` do Card, a borda acendia no cartão todo e os 16px da margem
-              // não clicavam. Hover no desenho único dos cartões-link.
-              <Link
-                key={h.id}
-                href={`/transferencias/${h.id}`}
-                className="group flex items-start gap-3 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5"
-              >
+              // não clicavam. O `Card` com `href`, no hover dos cartões-link.
+              <Card key={h.id} href={`/transferencias/${h.id}`} className="group flex items-start gap-3 p-4">
                 <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
                   <ArrowRightLeft size={16} />
                 </span>
@@ -181,7 +176,7 @@ export default async function HandoffsPage({
                     {formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
                   </p>
                 </div>
-              </Link>
+              </Card>
             );
           })}
         </div>

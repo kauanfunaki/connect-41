@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Megaphone, Plus } from "lucide-react";
 import { getAuthContext } from "@/lib/auth/context";
@@ -8,6 +7,7 @@ import { formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
@@ -55,11 +55,11 @@ export default async function ComunicadosPage() {
         <ul className="flex flex-col gap-2.5">
           {lista.map((c) => (
             <li key={c.id}>
-              <Link
+              {/* Cartão-link no desenho único (07/10/2026): o `Card` com `href`,
+                  o mesmo dos cartões do Kanban, Espaços e Transferências. */}
+              <Card
                 href={`/solicitacoes/comunicados/${c.id}`}
-                // Cartão-link no desenho único (07/10/2026): o mesmo hover dos
-                // cartões do Kanban, Espaços e Transferências.
-                className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 rounded-lg border border-border bg-surface p-4 shadow-[var(--c41-shadow-xs)] transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5"
+                className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 p-4"
               >
                 <span className="min-w-0 flex-1 basis-72">
                   <span className="block text-[length:var(--fs-card-title)] font-semibold text-fg">{c.titulo}</span>
@@ -74,7 +74,7 @@ export default async function ComunicadosPage() {
                     Lido por {c.leram} de {c.clientes} {c.clientes === 1 ? "cliente" : "clientes"}
                   </span>
                 </span>
-              </Link>
+              </Card>
             </li>
           ))}
         </ul>

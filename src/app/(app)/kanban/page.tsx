@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Columns3, Plus } from "lucide-react";
@@ -65,24 +64,25 @@ export default async function KanbanListPage() {
                   {sectorLabel(sectorLabels, sectorCode)}
                 </h2>
               </div>
-              {/* Cartão-link no desenho único (07/10/2026): borda azul, sombra e sobe
-              2px no hover — o mesmo da FaixaDeTotais —, e título em
-              --fs-card-title. Eram três hovers e três tamanhos de título
-              entre Kanban, Espaços, Pastas, Comunicados e Transferências. */}
+              {/* Cartão-link no desenho único (07/10/2026): o `Card` com `href`
+              (borda azul, sombra e sobe 2px no hover — o mesmo da
+              FaixaDeTotais) e título em --fs-card-title. Eram três hovers e
+              três tamanhos de título entre Kanban, Espaços, Pastas,
+              Comunicados e Transferências. */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {list.map((p, i) => (
-                  <Link
+                  <Card
                     key={p.id}
                     href={boardPath(p)}
                     style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
-                    className="reveal-in bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5"
+                    className="reveal-in p-4"
                   >
                     <p className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">{p.name}</p>
                     <p className="text-[length:var(--fs-2)] text-fg-muted">
                       {p._count.items} {p._count.items === 1 ? "item" : "itens"} ·{" "}
                       {p.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
                     </p>
-                  </Link>
+                  </Card>
                 ))}
               </div>
             </div>
