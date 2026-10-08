@@ -5,7 +5,7 @@ import { Upload, Check } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { FormFooter } from "@/components/ui/FormFooter";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { previsualizarImportacao, confirmarImportacao } from "@/app/(app)/lancamentos/actions";
 import type { PreviaDaImportacao } from "@/lib/financeiro/importacaoCsv";
@@ -116,13 +116,14 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
                   <tr key={l.numero} className="border-b border-border-soft align-top">
                     <td className="py-2 px-3 tabular-nums text-fg-muted">{l.numero}</td>
                     <td className="py-2 pr-3">
+                      {/* Situação da linha da prévia: o `Selo` miúdo (escolha 2A, 08/10/2026). */}
                       {l.situacao === "valida" ? (
-                        <Badge variant="success">{l.dados.kind === "PAGAR" ? "A pagar" : "A receber"}</Badge>
+                        <Selo tom="sucesso">{l.dados.kind === "PAGAR" ? "A pagar" : "A receber"}</Selo>
                       ) : (
-                        <div className="flex flex-col gap-1">
-                          <Badge variant={l.situacao === "erro" ? "danger" : "warning"}>
+                        <div className="flex flex-col items-start gap-1">
+                          <Selo tom={l.situacao === "erro" ? "perigo" : "atencao"}>
                             {l.situacao === "erro" ? "Erro" : "Duplicada"}
-                          </Badge>
+                          </Selo>
                           <span className="text-micro text-fg-muted max-w-[260px]">{l.erro}</span>
                         </div>
                       )}

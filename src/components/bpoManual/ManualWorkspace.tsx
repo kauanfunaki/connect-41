@@ -82,7 +82,7 @@ function IconPicker({ value, onChange, onClose }: { value: string | null; onChan
 // então entrar em edição reposicionava todo o texto na tela.
 //
 // Na escala desde 08/10/2026: o título da página (32px) era maior que o da
-// tela, "Repositório de Manuais" (30px), e invertia a hierarquia. Agora o
+// tela, "Repositório de manuais" (30px), e invertia a hierarquia. Agora o
 // título da página é `--fs-title` (22), e o conteúdo desce a partir dele: h1
 // em 18, h2 em 16, h3 em 15 com peso — o corpo segue em 15 (`--fs-body`).
 const READING_CLASS =

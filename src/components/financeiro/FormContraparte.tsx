@@ -40,14 +40,14 @@ export function NovaContraparte({ companyId, categorias, centros = [] }: { compa
 
   return (
     <>
+      {/* No cabeçalho da tela, no tamanho dos outros botões de criar (5A, 08/10/2026). */}
       <Button
-        size="sm"
         onClick={() => {
           setErro(null);
           setAberto(true);
         }}
       >
-        <Plus size={13} /> Novo cadastro
+        <Plus size={14} /> Novo cadastro
       </Button>
       <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Novo cadastro" maxWidth="max-w-xl">
         <form

@@ -124,7 +124,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Lançar uma conta sem nota",
         passos: [
           "Escolha a empresa em “Buscar empresa…” e clique em “Aplicar”.",
-          "Clique na aba “Novo lançamento”.",
+          "Clique em “Novo lançamento”, no topo da tela.",
           "Em “Tipo”, escolha “Conta a pagar” ou “Conta a receber” e selecione o “Fornecedor” ou o “Cliente (sacado)”. Se ele ainda não existe, escolha “+ Cadastrar nova contraparte”.",
           "Escolha a “Categoria” (obrigatória em conta a pagar) e preencha “Competência” (o mês a que a conta pertence), “Vencimento” e “Valor”.",
           "Se a conta já foi paga ou recebida, informe a data em “Já pago em” ou “Já recebido em”. Se não, deixe em branco.",
@@ -134,7 +134,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Importar lançamentos de uma planilha",
         passos: [
-          "Escolha a empresa e clique na aba “Importar CSV”.",
+          "Escolha a empresa e clique em “Importar CSV”, no topo da tela.",
           "Monte a planilha com as colunas do modelo mostrado na tela e salve em CSV (texto separado por vírgula ou ponto e vírgula).",
           "Clique em “Escolher arquivo” ou arraste o arquivo para a faixa.",
           "Confira a prévia: cada linha aparece como válida, “Duplicada” ou “Erro”, com o motivo.",
@@ -144,7 +144,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Consultar e cancelar o que foi lançado à mão",
         passos: [
-          "Clique na aba “Lançados à mão”.",
+          "Abra “Lançamentos” no menu. Se estiver lançando ou importando, volte pela trilha, em “Lançamentos”.",
           "Escolha a empresa e o mês e clique em “Aplicar”.",
           "Veja a situação de cada um: “A conferir”, “Em aberto”, “Liquidado” ou “Cancelado”.",
           "Para cancelar, clique em “Cancelar” na linha e confirme em “Cancelar lançamento”.",
@@ -154,7 +154,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     dicas: [
       "Cancelar não apaga: o lançamento sai dos totais e fica no histórico. Para desfazer, só com um lançamento novo.",
       "Lançamento já pago só é cancelado depois de desfazer a baixa em Contas a pagar ou a receber, que é onde também se registra o pagamento.",
-      "As abas “Novo lançamento” e “Importar CSV” só aparecem para quem atua no setor. Em empresa com alçada de aprovação, a conta a pagar nasce aguardando aprovação.",
+      "Os botões “Novo lançamento” e “Importar CSV” só aparecem para quem atua no setor. Em empresa com alçada de aprovação, a conta a pagar nasce aguardando aprovação.",
     ],
   },
 
@@ -288,7 +288,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Clique na aba “Plano de contas”. O plano de contas é a lista de categorias de receita e despesa.",
           "Para mudar onde uma categoria entra na DRE desta empresa, escolha outra opção em “Linha da DRE nesta empresa”. A troca é gravada na hora.",
           "Para esconder uma categoria do padrão que a empresa não usa, clique em “Não usar nesta empresa”.",
-          "Para criar uma categoria só desta empresa, clique em “Categoria só desta empresa”, preencha “Nome”, “Tipo”, “Grupo do plano” e “Linha da DRE” e clique em “Cadastrar”.",
+          "Para criar uma categoria só desta empresa, clique em “Nova categoria”, no topo da tela, preencha “Nome”, “Tipo”, “Grupo do plano” e “Linha da DRE” e clique em “Cadastrar”.",
         ],
       },
     ],
@@ -358,7 +358,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Clique na aba “Alçadas”.",
           "Escolha a empresa em “Buscar empresa…” e clique em “Aplicar”.",
-          "Em “Nova alçada”, escolha o “Usuário do portal” e informe o “Teto”, o valor máximo que ele pode aprovar.",
+          "Clique em “Nova alçada”, no topo da tela, escolha o “Usuário do portal” e informe o “Teto”, o valor máximo que ele pode aprovar.",
           "Clique em “Salvar alçada”.",
           "Para suspender uma alçada, clique em “Desativar” na lista; para voltar, em “Reativar”.",
         ],
@@ -475,10 +475,10 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
-  // ─── Repositório de Senhas ────────────────────────────────────────────────
+  // ─── Repositório de senhas ────────────────────────────────────────────────
   {
     chave: "bpo_senhas",
-    titulo: "Repositório de Senhas",
+    titulo: "Repositório de senhas",
     caminhos: ["/bpo-senhas"],
     resumo:
       "Guarda as credenciais de portais, bancos e sistemas dos clientes num lugar só, com registro de quem consultou cada senha.",
@@ -518,10 +518,10 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
-  // ─── Repositório de Manuais ───────────────────────────────────────────────
+  // ─── Repositório de manuais ───────────────────────────────────────────────
   {
     chave: "bpo_manual",
-    titulo: "Repositório de Manuais",
+    titulo: "Repositório de manuais",
     caminhos: ["/bpo-manual"],
     resumo:
       "Instruções internas escritas pela própria equipe, organizadas em documentos e páginas, para ninguém ficar sem saber o que fazer em ausências e férias.",
@@ -715,7 +715,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Criar uma versão do orçamento",
         passos: [
           "Escolha a empresa em “Buscar empresa…”, digite o ano e clique em “Aplicar”.",
-          "Clique em “Nova versão” e dê o nome em “Nome da versão”.",
+          "Clique em “Nova versão”, no topo da tela, e dê o nome em “Nome da versão”.",
           "Em “Partir de”, escolha “Grade vazia”, “Outra versão, com reajuste” ou “Realizado de um ano, com reajuste”.",
           "Se partir de outra versão ou do realizado, escolha a origem e informe o “Reajuste” em percentual.",
           "Clique em “Criar versão”.",

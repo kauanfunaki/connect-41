@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Badge } from "@/components/ui/Badge";
-import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
+import { StatusDot } from "@/components/shared/StatusDot";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { Input } from "@/components/ui/Input";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
@@ -37,6 +37,15 @@ const ABAS = [
   { chave: "centros", rotulo: "Centros de custo", icone: <Layers /> },
   { chave: "plano", rotulo: "Plano de contas", icone: <ListTree /> },
 ] as const;
+
+/**
+ * Ativo/inativo do cadastro — contraparte e centro de custo — na bolinha, e não
+ * no selo de situação (escolha 2A do Kauan, 08/10/2026). Era um `Badge` verde
+ * ou cinza em cada linha.
+ */
+function Ativo({ ativo }: { ativo: boolean }) {
+  return <StatusDot color={ativo ? "var(--c41-success)" : "var(--c41-fg-muted)"} label={ativo ? "Ativo" : "Inativo"} />;
+}
 
 function documento(d: string | null): string {
   if (!d) return "—";
@@ -101,12 +110,22 @@ export default async function CadastrosFinanceirosPage({
   });
 
   if (aba === "plano") {
+    // O topo vai para dentro da aba porque o "Nova categoria" do cabeçalho
+    // precisa dos grupos do plano, que só a aba consulta.
     return (
       <PageContainer>
-        {cabecalho}
-        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
-        <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
-        <AbaDoPlano tenantId={ctx.tenantId} companyId={companyId} podeEditar={podeEditar} />
+        <AbaDoPlano
+          tenantId={ctx.tenantId}
+          companyId={companyId}
+          podeEditar={podeEditar}
+          topo={(acao) => (
+            <>
+              {comAcao(acao)}
+              <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
+              <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
+            </>
+          )}
+        />
       </PageContainer>
     );
   }
@@ -114,11 +133,10 @@ export default async function CadastrosFinanceirosPage({
   if (aba === "centros") {
     return (
       <PageContainer>
-        {cabecalho}
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
-          {podeEditar && <NovoCentroDeCusto companyId={companyId} />}
-        </div>
+        {/* "Novo centro de custo" no cabeçalho, como o "Novo cadastro" das
+            outras abas (escolha 5A, 08/10/2026): ficava à direita do filtro. */}
+        {comAcao(podeEditar ? <NovoCentroDeCusto companyId={companyId} /> : undefined)}
+        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
         <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
         <AbaDeCentros tenantId={ctx.tenantId} companyId={companyId} centros={centros} podeEditar={podeEditar} />
       </PageContainer>
@@ -224,7 +242,7 @@ export default async function CadastrosFinanceirosPage({
                     {n.pagar} a pagar · {n.receber} a receber
                   </InfoDoCartao>
                   <PeDoCartao>
-                    {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
+                    <Ativo ativo={c.active} />
                     {podeEditar && (
                       <span className="ml-auto">
                         <EditarContraparte
@@ -294,7 +312,7 @@ export default async function CadastrosFinanceirosPage({
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.pagar}</td>
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.receber}</td>
                     <td className="py-2.5 pr-3">
-                      {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
+                      <Ativo ativo={c.active} />
                     </td>
                     <td className="py-2.5">
                       {podeEditar && (
@@ -387,7 +405,7 @@ async function AbaDeCentros({
               {lancamentos.get(c.id) ?? 0} lançamento(s) · padrão de {contrapartes.get(c.id) ?? 0} contraparte(s)
             </InfoDoCartao>
             <PeDoCartao>
-              {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
+              <Ativo ativo={c.active} />
               {podeEditar && (
                 <span className="ml-auto">
                   <EditarCentroDeCusto centro={{ id: c.id, nome: c.name, codigo: c.code, ativo: c.active }} />
@@ -418,7 +436,7 @@ async function AbaDeCentros({
               <td className="py-2.5 pr-3 text-right tabular-nums">{lancamentos.get(c.id) ?? 0}</td>
               <td className="py-2.5 pr-3 text-right tabular-nums">{contrapartes.get(c.id) ?? 0}</td>
               <td className="py-2.5 pr-3">
-                {c.active ? <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativo</Badge> : <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativo</Badge>}
+                <Ativo ativo={c.active} />
               </td>
               <td className="py-2.5">
                 {podeEditar && <EditarCentroDeCusto centro={{ id: c.id, nome: c.name, codigo: c.code, ativo: c.active }} />}
@@ -442,7 +460,18 @@ async function AbaDeCentros({
  * O plano de contas **desta empresa**: o padrão do escritório, o que a empresa
  * escondeu dele e as categorias só dela (criadas aqui ou trazidas do Omie).
  */
-async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: string; companyId: string; podeEditar: boolean }) {
+async function AbaDoPlano({
+  tenantId,
+  companyId,
+  podeEditar,
+  topo,
+}: {
+  tenantId: string;
+  companyId: string;
+  podeEditar: boolean;
+  /** Cabeçalho, filtro e abas da tela, com a ação de criar no cabeçalho. */
+  topo: (acao?: React.ReactNode) => React.ReactNode;
+}) {
   const prisma = getPrisma();
   const [categorias, ocultas, excecoes, uso] = await Promise.all([
     prisma.financeCategory.findMany({
@@ -467,14 +496,14 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <p className="text-helper text-fg-muted max-w-2xl">
-          O plano padrão do escritório vale para todas as empresas. Aqui ele se ajusta a esta: categoria só dela, o que não se
-          usa escondido e a linha da DRE trocada. Nada é apagado — o que já foi lançado continua na DRE.
-          {daEmpresa > 0 && ` ${daEmpresa} categoria${daEmpresa > 1 ? "s" : ""} só desta empresa.`}
-        </p>
-        {podeEditar && <NovaCategoriaDaEmpresa companyId={companyId} linhas={linhas} grupos={grupos} />}
-      </div>
+      {/* "Nova categoria" no cabeçalho da tela (escolha 5A, 08/10/2026): era
+          "Categoria só desta empresa", à direita deste parágrafo. */}
+      {topo(podeEditar ? <NovaCategoriaDaEmpresa companyId={companyId} linhas={linhas} grupos={grupos} /> : undefined)}
+      <p className="text-helper text-fg-muted max-w-2xl mb-3">
+        O plano padrão do escritório vale para todas as empresas. Aqui ele se ajusta a esta: categoria só dela, o que não se
+        usa escondido e a linha da DRE trocada. Nada é apagado — o que já foi lançado continua na DRE.
+        {daEmpresa > 0 && ` ${daEmpresa} categoria${daEmpresa > 1 ? "s" : ""} só desta empresa.`}
+      </p>
       {categorias.length === 0 ? (
         // Em cartão, como o vazio das outras abas (08/10/2026): solto, ele
         // flutuava no fundo da tela.
@@ -525,8 +554,10 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
                               {propria ? (
                                 <Badge variant="info">{c.omieCode ? "Do Omie" : "Desta empresa"}</Badge>
                               ) : null}
-                              {escondida && <Badge variant="warning">Não usada aqui</Badge>}
-                              {!c.active && <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>}
+                              {/* Origem é categoria (Badge); escondida e inativa são o
+                                  ativo/inativo da categoria nesta empresa (bolinha). */}
+                              {escondida && <StatusDot color="var(--c41-fg-muted)" label="Não usada aqui" />}
+                              {!c.active && <StatusDot color="var(--c41-fg-muted)" label="Inativa" />}
                             </span>
                           </td>
                           <td className="py-2 pr-3 text-fg-secondary">{c.planGroup ?? "—"}</td>

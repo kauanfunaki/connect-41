@@ -33,14 +33,14 @@ export function NovoCentroDeCusto({ companyId }: { companyId: string }) {
 
   return (
     <>
+      {/* No cabeçalho da tela, no tamanho dos outros botões de criar (5A, 08/10/2026). */}
       <Button
-        size="sm"
         onClick={() => {
           setErro(null);
           setAberto(true);
         }}
       >
-        <Plus size={13} /> Novo centro de custo
+        <Plus size={14} /> Novo centro de custo
       </Button>
       <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Novo centro de custo" maxWidth="max-w-lg">
         <form

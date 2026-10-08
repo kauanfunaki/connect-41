@@ -106,14 +106,15 @@ export default async function DrePage({
           title="DRE"
           subtitle="Demonstrativo de resultado de caixa — os doze meses lado a lado."
         />
-        <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
-        <div className="mt-4">
-          <AbasDaVisao companyId={companyId} ativa="ano" ano={anoEscolhido} />
+        {/* Empresa e período, depois as abas — a ordem da família da DRE
+            (padrão aceito pelo Kauan em 08/10/2026). */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
+          <FiltrosDaTela
+            campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
+          />
         </div>
-        <FiltrosDaTela
-          className="mb-4"
-          campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
-        />
+        <AbasDaVisao companyId={companyId} ativa="ano" ano={anoEscolhido} />
         {/* Os dois avisos que só a visão mensal tinha. Uma categoria que
             some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
             passam onde um grande não passaria. */}
@@ -209,25 +210,26 @@ export default async function DrePage({
         subtitle={`Demonstrativo de resultado de caixa de ${rotuloDoMes(escolhido)} — monta do que foi pago e recebido no mês.`}
       />
 
-      <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
-
-      <div className="mt-4">
-        <AbasDaVisao companyId={companyId} ativa="mes" ano={escolhido.ano} />
+      {/* Empresa e período, depois as abas, os números do topo e a tabela — a
+          ordem da família da DRE, como na DRE econômica, nas análises e no
+          orçamento (padrão aceito pelo Kauan em 08/10/2026). O mês vinha
+          embaixo das abas. Numa lista com busca, e não 18 pílulas numa
+          fileira — a regra da conferência de 30/09 para competência. */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
+        <FiltrosDaTela
+          campos={[
+            {
+              chave: "mes",
+              rotulo: "Mês",
+              vazioLabel: meses[0] ? `Mais recente (${rotuloDoMes(meses[0])})` : "Mais recente",
+              sempreVisivel: true,
+              opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: rotuloDoMes(m) })),
+            },
+          ]}
+        />
       </div>
-      {/* O mês numa lista com busca, e não 18 pílulas numa fileira — a regra
-          da conferência de 30/09 para competência. */}
-      <FiltrosDaTela
-        className="mb-4"
-        campos={[
-          {
-            chave: "mes",
-            rotulo: "Mês",
-            vazioLabel: meses[0] ? `Mais recente (${rotuloDoMes(meses[0])})` : "Mais recente",
-            sempreVisivel: true,
-            opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: rotuloDoMes(m) })),
-          },
-        ]}
-      />
+      <AbasDaVisao companyId={companyId} ativa="mes" ano={escolhido.ano} />
 
       {/* Os números do topo, como na DRE econômica (08/10/2026, escolha 9A do
           Kauan: na DRE, o padrão entra nos números do topo e a tabela fica

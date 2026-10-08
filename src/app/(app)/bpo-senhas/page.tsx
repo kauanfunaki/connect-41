@@ -43,7 +43,7 @@ export default async function BpoSenhasPage() {
           menu — a regra de contas a pagar. Subtítulo no próprio PageHeader
           (30/09), e "Nova credencial" no `action`, como as outras telas. */}
       <PageHeader
-        title="Repositório de Senhas"
+        title="Repositório de senhas"
         subtitle="Credenciais de portais, bancos e sistemas de clientes — centralizadas com auditoria de acesso."
         action={canManage ? <NewCredentialModal companies={companies} createAction={criarCredencial} /> : undefined}
       />

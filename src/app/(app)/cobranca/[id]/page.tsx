@@ -10,6 +10,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Button } from "@/components/ui/Button";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
@@ -87,7 +88,11 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
         meta={
           <>
             <SeloDaCobranca situacao={l.situacao} />
-        {l.situacao === null && <Badge variant={t.status === "PAGO" ? TOM_DA_SITUACAO.PAGA : TOM_DA_SITUACAO.CANCELADA}>{t.status === "PAGO" ? "Pago" : "Cancelado"}</Badge>}
+            {l.situacao === null && (
+              <Selo tom={tomDaVariante(t.status === "PAGO" ? TOM_DA_SITUACAO.PAGA : TOM_DA_SITUACAO.CANCELADA)}>
+                {t.status === "PAGO" ? "Pago" : "Cancelado"}
+              </Selo>
+            )}
             {emAberto && l.diasDeAtraso > 0 && (
               <span>
                 {l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`} de atraso · {FAIXAS_DE_ATRASO.find((f) => f.chave === l.faixa)?.rotulo}
@@ -214,6 +219,8 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="tabular-nums font-medium">{formatInstantDate(h.c.em)}</span>
                     <span>{ROTULO_DO_CANAL[h.c.canal]}</span>
+                    {/* O resultado classifica o contato (categoria), não é situação
+                        que muda: fica no `Badge` (regra 2A, 08/10/2026). */}
                     <Badge variant={h.c.resultado === "CONTESTOU" ? "warning" : "info"}>{ROTULO_DO_RESULTADO[h.c.resultado]}</Badge>
                     {h.c.proximaAcao && <span className="text-fs-2 text-fg-muted">próxima ação {formatInstantDate(h.c.proximaAcao)}</span>}
                     <span className="text-micro text-fg-muted ml-auto">
@@ -247,7 +254,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
                 <span className="text-fg-muted truncate" title={e.to}>
                   {e.to}
                 </span>
-                <span>{e.ok ? <Badge variant="success">Enviado</Badge> : <Badge variant="danger">Erro</Badge>}</span>
+                <span>{e.ok ? <Selo tom="sucesso">Enviado</Selo> : <Selo tom="perigo">Erro</Selo>}</span>
                 {!e.ok && e.error && <span className="text-danger sm:col-span-4">{e.error}</span>}
               </li>
             ))}
@@ -287,13 +294,13 @@ function ResumoDoAcordoCard({ titulo, acordo, destaque }: { titulo: string; acor
             <span>{formatInstantDate(p.vencimento)}</span>
             <span className="text-right">{moeda(p.valorCentavos)}</span>
             {p.pagoEm ? (
-              <Badge variant={TOM_DA_SITUACAO.PAGA}>Paga</Badge>
+              <Selo tom={tomDaVariante(TOM_DA_SITUACAO.PAGA)}>Paga</Selo>
             ) : p.closeReason === "PERDA" ? (
-              <Badge variant={TOM_DA_SITUACAO.PERDA}>Perda</Badge>
+              <Selo tom={tomDaVariante(TOM_DA_SITUACAO.PERDA)}>Perda</Selo>
             ) : p.closeReason === "RENEGOCIADO" ? (
-              <Badge variant={TOM_DA_SITUACAO.RENEGOCIADA}>Renegociada</Badge>
+              <Selo tom={tomDaVariante(TOM_DA_SITUACAO.RENEGOCIADA)}>Renegociada</Selo>
             ) : p.status === "CANCELADO" ? (
-              <Badge variant={TOM_DA_SITUACAO.CANCELADA}>Cancelada</Badge>
+              <Selo tom={tomDaVariante(TOM_DA_SITUACAO.CANCELADA)}>Cancelada</Selo>
             ) : p.id === destaque ? null : (
               <Button href={`/cobranca/${p.id}`} variant="ghost" size="xs">
                 Abrir
