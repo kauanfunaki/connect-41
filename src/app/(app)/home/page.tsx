@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { Button } from "@/components/ui/Button";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
 import { CustomizeHomeButton } from "@/components/home/CustomizeHomeButton";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
@@ -82,21 +84,18 @@ function formatRelativeTime(date: Date): string {
   return formatInstantDate(date, { day: "2-digit", month: "short" });
 }
 
-type DueBadgeInfo = { label: string; className: string };
+type DueBadgeInfo = { label: string; tom: TomDoSelo };
 
 // Classifica prazo em badge semântico — vencido some silenciosamente na versão
 // antiga (query só pegava dueDate >= hoje); aqui é o ponto central da tela.
 function classifyDueDate(dueDate: Date | null, todayStart: Date, todayEnd: Date): DueBadgeInfo | null {
   if (!dueDate) return null;
-  if (dueDate < todayStart) return { label: "Atrasada", className: "bg-danger-bg text-danger" };
-  if (dueDate <= todayEnd) return { label: "Hoje", className: "bg-warning-bg text-warning" };
+  if (dueDate < todayStart) return { label: "Atrasada", tom: "perigo" };
+  if (dueDate <= todayEnd) return { label: "Hoje", tom: "atencao" };
   const tomorrowEnd = new Date(todayEnd);
   tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
-  if (dueDate <= tomorrowEnd) return { label: "Amanhã", className: "bg-surface-2 text-fg-secondary" };
-  return {
-    label: formatCalendarDate(dueDate, { day: "2-digit", month: "short" }),
-    className: "bg-surface-2 text-fg-muted",
-  };
+  if (dueDate <= tomorrowEnd) return { label: "Amanhã", tom: "neutro" };
+  return { label: formatCalendarDate(dueDate, { day: "2-digit", month: "short" }), tom: "neutro" };
 }
 
 function formatMeetingWhen(d: Date, todayStart: Date, todayEnd: Date): string {
@@ -467,14 +466,15 @@ export default async function HomePage() {
 
     indicadores: (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        {/* Os valores passam por `numero()`: o MetricCard imprime o que recebe,
-            e acima de 999 sairia "1234". "Atrasadas", e não "vencidos" (07/10):
-            é o termo do painel de tarefas e da faixa para o mesmo número. */}
+        {/* O MetricCard formata o número em pt-BR (1.234). "Atrasadas", e não
+            "vencidos" (07/10): é o termo do painel de tarefas e da faixa para o
+            mesmo número — e a mesma cor: vermelho quando há atrasada, âmbar
+            quando só há as de hoje, como na faixa e no painel. */}
         <MetricCard
           href="/empresas"
           icon={<Building2 size={16} />}
           label="Empresas ativas"
-          value={numero(companyActiveCount)}
+          value={companyActiveCount}
           delay={0}
           sub={newCompaniesThisMonth > 0 ? `+${numero(newCompaniesThisMonth)} este mês` : undefined}
         />
@@ -482,16 +482,16 @@ export default async function HomePage() {
           href="/kanban"
           icon={<Clock size={16} />}
           label="Atrasadas / hoje"
-          value={numero(vencidosCount + hojeCount)}
+          value={vencidosCount + hojeCount}
           delay={40}
-          highlight={vencidosCount + hojeCount > 0}
+          tom={vencidosCount > 0 ? "critico" : hojeCount > 0 ? "atencao" : undefined}
           sub={vencidosCount > 0 ? `${numero(vencidosCount)} atrasada${vencidosCount !== 1 ? "s" : ""}` : undefined}
         />
         <MetricCard
           href="/transferencias?status=NEW"
           icon={<ArrowRightLeft size={16} />}
           label="Transferências"
-          value={numero(pendingHandoffsCount)}
+          value={pendingHandoffsCount}
           delay={80}
           highlight={pendingHandoffsCount > 0}
           sub={pendingHandoffsCount > 0 ? "em aberto" : undefined}
@@ -500,7 +500,7 @@ export default async function HomePage() {
           href="/pessoas"
           icon={<Users size={16} />}
           label="Pessoas cadastradas"
-          value={numero(personCount)}
+          value={personCount}
           delay={120}
         />
       </div>
@@ -520,14 +520,10 @@ export default async function HomePage() {
             </span>
           </p>
         </div>
-        <a
-          href={nextMeeting.meetingUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 flex-shrink-0 h-8 px-3 rounded-full bg-brand text-on-brand text-[12.5px] font-medium hover:bg-brand-hover transition-colors"
-        >
+        {/* `nativo`: a sala é endereço de fora do app (Meet/Teams). */}
+        <Button href={nextMeeting.meetingUrl} nativo target="_blank" rel="noopener noreferrer" size="sm" className="flex-shrink-0">
           Entrar <ExternalLink size={12} />
-        </a>
+        </Button>
       </div>
     ),
 
@@ -556,9 +552,9 @@ export default async function HomePage() {
                     </span>
                   </span>
                   {badge ? (
-                    <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${badge.className}`}>
+                    <Selo tom={badge.tom} className="flex-shrink-0">
                       {badge.label}
-                    </span>
+                    </Selo>
                   ) : (
                     <span className="flex-shrink-0 text-[length:var(--fs-helper)] text-fg-muted">Sem prazo</span>
                   )}
@@ -586,12 +582,9 @@ export default async function HomePage() {
                   <span className="font-medium">{entityNames[h.entityId] ?? "(removido)"}</span>
                   <span className="text-fg-muted">{" · "}{h.requester.name} · {formatRelativeTime(h.createdAt)}</span>
                 </p>
-                <Link
-                  href={`/transferencias/${h.id}`}
-                  className="flex-shrink-0 text-[12.5px] font-medium text-brand border border-brand/30 rounded-full px-3 py-1 hover:bg-brand-subtle transition-colors"
-                >
+                <Button href={`/transferencias/${h.id}`} variant="secondary" size="xs" className="flex-shrink-0">
                   Revisar
-                </Link>
+                </Button>
               </div>
             ))}
           </div>
