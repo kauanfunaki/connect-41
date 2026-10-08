@@ -22,6 +22,7 @@ import {
   custoPorProcesso,
   totaisDeCusto,
 } from "@/lib/societario/relatorios";
+import { formatarReaisDeCentavos, formatarNumero } from "@/lib/format";
 
 const MODULE = "societario_relatorios";
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -30,10 +31,7 @@ const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
 export const dynamic = "force-dynamic";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const moeda = (c: number) => MOEDA.format(c / 100);
-const DECIMAL = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
-const numero = (n: number | null) => (n === null ? "—" : DECIMAL.format(n));
+const numero = (n: number | null) => (n === null ? "—" : formatarNumero(n, 1));
 
 const faixaPrevista = (min: number | null, max: number | null) =>
   max === null ? "sem previsão" : min !== null && min !== max ? `${min}–${max}` : String(max);
@@ -262,9 +260,9 @@ export default async function RelatoriosDoSocietarioPage({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className={TITULO}>Custo em taxas por processo</h2>
             <p className="text-[13px] tabular-nums">
-              <strong>{moeda(totais.totalCentavos)}</strong>
+              <strong>{formatarReaisDeCentavos(totais.totalCentavos)}</strong>
               {totais.custoDasVoltasCentavos > 0 && (
-                <span className="text-warning"> · {moeda(totais.custoDasVoltasCentavos)} de reapresentação</span>
+                <span className="text-warning"> · {formatarReaisDeCentavos(totais.custoDasVoltasCentavos)} de reapresentação</span>
               )}
             </p>
           </div>
@@ -291,10 +289,10 @@ export default async function RelatoriosDoSocietarioPage({
                         </Link>
                       </td>
                       <td className={TD}>{l.voltas}</td>
-                      <td className={TD}>{moeda(l.totalCentavos)}</td>
-                      <td className={TD}>{moeda(l.pagoCentavos)}</td>
+                      <td className={TD}>{formatarReaisDeCentavos(l.totalCentavos)}</td>
+                      <td className={TD}>{formatarReaisDeCentavos(l.pagoCentavos)}</td>
                       <td className={`${TD} ${l.custoDasVoltasCentavos > 0 ? "text-warning" : ""}`}>
-                        {moeda(l.custoDasVoltasCentavos)}
+                        {formatarReaisDeCentavos(l.custoDasVoltasCentavos)}
                       </td>
                     </tr>
                   ))}

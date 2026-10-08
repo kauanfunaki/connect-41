@@ -22,18 +22,17 @@ import {
   resumirConferencia,
   statusPrazoPagamento,
 } from "@/lib/rescisaoChecklist";
-import { formatCalendarDate, formatInstantDate, formatarNumero } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatarNumero, formatarReais } from "@/lib/format";
 import { calcularReferencia, avaliarDivergencia } from "@/lib/rescisao/referencia";
 import type { ReferenciaProps } from "@/components/rescisao/ItemConferenciaRow";
 import { salvarItemConferencia, salvarDadosRescisao } from "./actions";
 import { Selo } from "@/components/ui/Selo";
-import { brl } from "@/lib/valora/formato";
 import { Aviso } from "@/components/ui/Aviso";
 
 /** `null` fica `null`: sem valor, o rótulo some em vez de virar travessão. Troca
  *  por `formatarReais` de lib/format.ts quando a base o criar (DRG-01, 07/10). */
 function reais(v: number | null): string | null {
-  return v == null ? null : brl(v);
+  return v == null ? null : formatarReais(v);
 }
 
 export default async function ConferenciaRescisaoPage({
@@ -226,11 +225,11 @@ export default async function ConferenciaRescisaoPage({
 
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <Selo tom="sucesso" className="tnum">
-              Proventos: {brl(referencia.calculo.totalProventos)}
+              Proventos: {formatarReais(referencia.calculo.totalProventos)}
             </Selo>
             {referencia.calculo.totalDescontos > 0 && (
               <Selo tom="perigo" className="tnum">
-                Descontos: {brl(referencia.calculo.totalDescontos)}
+                Descontos: {formatarReais(referencia.calculo.totalDescontos)}
               </Selo>
             )}
             <span className="text-[11px] text-fg-muted">

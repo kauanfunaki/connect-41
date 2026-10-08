@@ -12,7 +12,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CornerDownLeft } from "lucide-react";
 import { Selo } from "@/components/ui/Selo";
 import { FormFooter } from "@/components/ui/FormFooter";
-import { brl } from "@/lib/valora/formato";
+import { formatarReais } from "@/lib/format";
 
 export type CheckState = {
   status: "PENDENTE" | "CONFERIDO" | "DIVERGENTE" | "NAO_APLICAVEL";
@@ -73,7 +73,7 @@ const STATUS_STYLE: Record<CheckState["status"], string> = {
  * quando a base o criar.
  */
 function reaisDoInformado(v: string): string {
-  return brl(Number(v.replace(/\./g, "").replace(",", ".")));
+  return formatarReais(Number(v.replace(/\./g, "").replace(",", ".")));
 }
 
 const STATUS_LABEL: Record<CheckState["status"], string> = {

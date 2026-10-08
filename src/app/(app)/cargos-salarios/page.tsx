@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
-import { brl } from "@/lib/valora/formato";
+import { formatarReais } from "@/lib/format";
 import {
   agruparPorFamilia,
   detectarDivergenciasNome,
@@ -153,7 +153,7 @@ export default async function CargosSalariosPage() {
                       <InfoDoCartao>{[c.companyName, c.area].filter(Boolean).join(" · ")}</InfoDoCartao>
                       {canViewSalary && (
                         <InfoDoCartao className="tabular-nums">
-                          {brl(c.salaryRangeMin)} – {brl(c.salaryRangeMax)}
+                          {formatarReais(c.salaryRangeMin)} – {formatarReais(c.salaryRangeMax)}
                         </InfoDoCartao>
                       )}
                       {(c.seniority || (invertidoIds.has(c.id) && canViewSalary)) && (
@@ -237,7 +237,7 @@ export default async function CargosSalariosPage() {
                             <td className="px-4 py-3 text-fg-muted tnum">{c.peopleCount}</td>
                             {canViewSalary && (
                               <td className="px-4 py-3 text-fg-muted tnum whitespace-nowrap">
-                                {brl(c.salaryRangeMin)} – {brl(c.salaryRangeMax)}
+                                {formatarReais(c.salaryRangeMin)} – {formatarReais(c.salaryRangeMax)}
                               </td>
                             )}
                           </LinhaFiltravel>

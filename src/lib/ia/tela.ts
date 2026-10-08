@@ -6,6 +6,7 @@
 
 import type { SaudeDoAgente } from "@/lib/ia/execucao";
 import type { GastoDoMes } from "@/lib/ia/custo";
+import { formatarReaisDeCentavos } from "@/lib/format";
 
 export type VarianteDeBadge = "success" | "warning" | "danger" | "info";
 
@@ -73,10 +74,9 @@ export function fracaoDoTeto(
   return Math.min(1, Math.max(0, Math.max(reais, chamadas)));
 }
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export function moeda(centavos: number): string {
-  return MOEDA.format(centavos / 100);
+  return formatarReaisDeCentavos(centavos);
 }
 
 /**

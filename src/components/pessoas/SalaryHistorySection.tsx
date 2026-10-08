@@ -13,7 +13,7 @@ import { TabelaNoDesktop, TopoDoCartao, InfoDoCartao } from "@/components/shared
 // Reais e percentual em pt-BR: o decimal do banco chegava cru ("R$ 3500.5",
 // "12.5%"). Troca por `formatarReais` de lib/format.ts quando a base o criar
 // (auditoria DRG-01, 07/10/2026).
-import { brl, num } from "@/lib/valora/formato";
+import { formatarReais, formatarNumero } from "@/lib/format";
 import { Aviso } from "@/components/ui/Aviso";
 
 export type SalaryChangeItem = {
@@ -41,7 +41,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
     h.changePercent ? (
       <span className={Number(h.changePercent) >= 0 ? "text-success" : "text-danger"}>
         {Number(h.changePercent) >= 0 ? "+" : ""}
-        {num(Number(h.changePercent), 2)}%
+        {formatarNumero(Number(h.changePercent), 2)}%
       </span>
     ) : null;
 
@@ -60,9 +60,9 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
           <ul className="md:hidden divide-y divide-border border-y border-border mb-4">
             {history.map((h) => (
               <li key={h.id} className="py-2.5">
-                <TopoDoCartao nome={h.effectiveDateLabel} valor={brl(Number(h.newSalary))} />
+                <TopoDoCartao nome={h.effectiveDateLabel} valor={formatarReais(Number(h.newSalary))} />
                 <InfoDoCartao>
-                  {h.previousSalary && <>antes {brl(Number(h.previousSalary))} </>}
+                  {h.previousSalary && <>antes {formatarReais(Number(h.previousSalary))} </>}
                   {variacao(h)}
                   {h.cargoName && <> · {h.cargoName}</>}
                 </InfoDoCartao>
@@ -88,7 +88,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
                   <tr key={h.id} className="border-b border-border">
                     <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{h.effectiveDateLabel}</td>
                     <td className="px-4 py-3 text-fg whitespace-nowrap">
-                      {h.previousSalary ? <span className="text-fg-muted">{brl(Number(h.previousSalary))} → </span> : ""}{brl(Number(h.newSalary))}
+                      {h.previousSalary ? <span className="text-fg-muted">{formatarReais(Number(h.previousSalary))} → </span> : ""}{formatarReais(Number(h.newSalary))}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{variacao(h) ?? <span className="text-fg-muted">—</span>}</td>
                     <td className="px-4 py-3 text-fg-secondary">{h.cargoName ?? <span className="text-fg-muted">—</span>}</td>

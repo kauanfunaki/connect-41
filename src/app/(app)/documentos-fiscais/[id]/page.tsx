@@ -22,7 +22,7 @@ import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { direcaoDoLancamento, precisaDeEstorno } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { nomeExibicao } from "@/lib/companyName";
-import { formatCalendarDate, formatInstantDate, formatCnpj, formatCpf } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatCnpj, formatCpf, formatarReais, formatarCompetencia } from "@/lib/format";
 import {
   TIPO_LABEL,
   ORIGEM_LABEL,
@@ -31,7 +31,6 @@ import {
   DESTINO_LABEL,
   DESTINO_VARIANTE,
   DIRECAO_LABEL,
-  competenciaLegivel,
 } from "@/lib/fiscal/rotulos";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { Aviso } from "@/components/ui/Aviso";
@@ -40,7 +39,6 @@ import { Aviso } from "@/components/ui/Aviso";
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 /** CNPJ tem 14 dígitos, CPF tem 11 — o próprio dado diz como se formata. */
 function documentoLegivel(valor: string | null): string {
@@ -105,7 +103,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           cabeçalho entre o título e ele. */}
       <PageHeader
         title={`${TIPO_LABEL[doc.type]} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`}
-        subtitle={`${nomeExibicao(doc.company)} · ${competenciaLegivel(doc.competence)}`}
+        subtitle={`${nomeExibicao(doc.company)} · ${formatarCompetencia(doc.competence)}`}
         action={
           <div className="flex items-center gap-1.5">
             <Selo tom={tomDaVariante(SITUACAO_VARIANTE[doc.situation])}>{SITUACAO_LABEL[doc.situation]}</Selo>
@@ -143,7 +141,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           <InfoRow label="Emissão" value={formatCalendarDate(doc.issuedAt, { day: "2-digit", month: "long", year: "numeric" })} />
           <InfoRow
             label="Valor total"
-            value={doc.amount === null ? "Não veio do índice" : MOEDA.format(Number(doc.amount))}
+            value={doc.amount === null ? "Não veio do índice" : formatarReais(Number(doc.amount))}
           />
           {/* Só aparece quando há o que subtrair. Sem esta linha, a conta a
               pagar sairia por um número que não está em lugar nenhum da ficha —
@@ -151,10 +149,10 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           {doc.netAmount !== null && (
             <InfoRow
               label="Líquido a pagar"
-              value={`${MOEDA.format(Number(doc.netAmount))} — retido ${MOEDA.format(Number(doc.retentionsTotal ?? 0))}`}
+              value={`${formatarReais(Number(doc.netAmount))} — retido ${formatarReais(Number(doc.retentionsTotal ?? 0))}`}
             />
           )}
-          <InfoRow label="Competência" value={competenciaLegivel(doc.competence)} />
+          <InfoRow label="Competência" value={formatarCompetencia(doc.competence)} />
           <InfoRow label="Chave de acesso" value={doc.accessKey} mono />
           <InfoRow
             label="Origem"
@@ -214,7 +212,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
                 kind: doc.financeEntry.kind,
                 status: doc.financeEntry.status,
                 dueDateLabel: formatCalendarDate(doc.financeEntry.dueDate),
-                amountLabel: MOEDA.format(Number(doc.financeEntry.amount)),
+                amountLabel: formatarReais(Number(doc.financeEntry.amount)),
                 categoria: doc.financeEntry.category?.name ?? null,
                 contraparte: doc.financeEntry.counterparty.name,
                 centroDeCusto: doc.financeEntry.costCenter?.name ?? null,

@@ -11,7 +11,7 @@ import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
-import { formatInstantDate, formatarNumero } from "@/lib/format";
+import { formatInstantDate, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { visaoDoCliente, type ProcessoDoCliente } from "@/lib/societario/painel-data";
 import { listarLicencas } from "@/lib/societario/licencas-data";
@@ -33,8 +33,6 @@ const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
 export const dynamic = "force-dynamic";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const moeda = (c: number) => MOEDA.format(c / 100);
 /** Dia em ISO (AAAA-MM-DD) para o funil — no fuso de São Paulo, como o `formatInstantDate` mostra. */
 const dia = (d: Date | null) => (d ? saoPauloParts(d).dateKey : "");
 
@@ -147,10 +145,10 @@ export default async function VisaoSocietariaDoClientePage({
           },
           {
             rotulo: "Taxas a pagar",
-            valor: moeda(aPagar),
+            valor: formatarReaisDeCentavos(aPagar),
             icone: <Receipt />,
             tom: aPagar > 0 ? "text-warning" : undefined,
-            detalhe: `de ${moeda(visao.custo.totalCentavos)}`,
+            detalhe: `de ${formatarReaisDeCentavos(visao.custo.totalCentavos)}`,
           },
         ]}
       />
@@ -291,15 +289,15 @@ export default async function VisaoSocietariaDoClientePage({
             <h2 className={TITULO}>Taxas</h2>
             {visao.taxas.length > 0 && (
               <p className="text-[length:var(--fs-ui)] tabular-nums">
-                <strong>{moeda(visao.custo.totalCentavos)}</strong>
-                <span className="text-fg-muted"> · {moeda(visao.custo.pagoCentavos)} pagos</span>
-                {aPagar > 0 && <span className="text-warning"> · {moeda(aPagar)} a pagar</span>}
+                <strong>{formatarReaisDeCentavos(visao.custo.totalCentavos)}</strong>
+                <span className="text-fg-muted"> · {formatarReaisDeCentavos(visao.custo.pagoCentavos)} pagos</span>
+                {aPagar > 0 && <span className="text-warning"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
               </p>
             )}
           </div>
           {visao.custo.custoDasVoltasCentavos > 0 && (
             <p className="text-[length:var(--fs-2)] text-warning">
-              {moeda(visao.custo.custoDasVoltasCentavos)} vieram de reapresentação.
+              {formatarReaisDeCentavos(visao.custo.custoDasVoltasCentavos)} vieram de reapresentação.
             </p>
           )}
           {visao.taxas.length === 0 ? (
@@ -345,7 +343,7 @@ export default async function VisaoSocietariaDoClientePage({
                           <span className="text-fg-muted">avulsa</span>
                         )}
                       </td>
-                      <td className="py-2 pr-3 tabular-nums">{moeda(t.amountCents)}</td>
+                      <td className="py-2 pr-3 tabular-nums">{formatarReaisDeCentavos(t.amountCents)}</td>
                       <td className="py-2 pr-3 tabular-nums whitespace-nowrap">
                         {t.dueDate ? formatInstantDate(t.dueDate) : "—"}
                       </td>
