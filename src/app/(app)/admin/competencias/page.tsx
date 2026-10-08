@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { AddCompetenciaForm } from "@/components/admin/AddCompetenciaForm";
+import { NovaCompetencia } from "@/components/admin/AddCompetenciaForm";
 import { CompetenciaRow } from "@/components/admin/CompetenciaRow";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -25,18 +25,15 @@ export default async function CompetenciasPage() {
       <PageHeader
         title="Competências"
         subtitle={<>{competencias.length} competência{competencias.length !== 1 ? "s" : ""} cadastrada{competencias.length !== 1 ? "s" : ""} — usadas nas avaliações de desempenho</>}
+        action={<NovaCompetencia action={criarCompetencia} />}
       />
-
-      <Card className="p-4 mb-6">
-        <AddCompetenciaForm action={criarCompetencia} />
-      </Card>
 
       {competencias.length === 0 ? (
         <Card>
           <EmptyState
             icon={<Star />}
             title="Nenhuma competência cadastrada"
-            description="Use o formulário acima para cadastrar as competências usadas nas avaliações de desempenho."
+            description="Cadastre em “Nova competência” as competências usadas nas avaliações de desempenho."
           />
         </Card>
       ) : (

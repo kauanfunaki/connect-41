@@ -2,7 +2,18 @@
 // ("Programada", "Vencida", "Em análise"). 11px, sempre o mesmo desenho — antes
 // eram pílulas de 10, 11 e 12px montadas à mão em cada tela (02/10/2026).
 //
-// O `Badge` continua para categoria em destaque (24px); o `Selo` é o miúdo.
+// Uma regra por papel (escolha 2A do Kauan, 08/10/2026), para o app todo:
+// - SITUAÇÃO de uma linha ou registro ("Vencida", "Cancelada", "Em análise",
+//   "Concluída", "Aguardando você") → `Selo`, este aqui;
+// - CATEGORIA em destaque (tipo, origem, setor, etiqueta de classificação) →
+//   `Badge`;
+// - ATIVO/INATIVO de um cadastro (usuário, setor, acesso) → a bolinha,
+//   `StatusDot`.
+// Situação encerrada — cancelada, encerrada, indeferida, revogada,
+// substituída, desligada, inativa — vai em `neutro`: é histórico, não pede
+// ação, e não pode ter a cor de quem pede. As exceções decididas por escrito,
+// com data, no código (nota fiscal cancelada e vaga cancelada em vermelho)
+// continuam valendo.
 //
 // `tom` cobre as cinco cores de situação. Os mapas de cor que as telas já têm
 // (situação → classes) entram por `cor`, sem precisar virar `tom`.

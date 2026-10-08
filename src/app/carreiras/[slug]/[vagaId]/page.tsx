@@ -83,7 +83,7 @@ export async function generateMetadata({
       title,
       description,
       ...(url ? { url } : {}),
-      siteName: `Trabalhe Conosco — ${tenant.name}`,
+      siteName: `Trabalhe conosco — ${tenant.name}`,
       locale: "pt_BR",
     },
     twitter: { card: "summary", title, description },

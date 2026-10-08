@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
+import { JanelaDeCadastro } from "@/components/admin/JanelaDeCadastro";
 import type { ObligationState } from "@/app/(app)/admin/obrigacoes/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -38,8 +39,30 @@ const FREQUENCY_HINTS: Record<Frequency, string> = {
   MONTHLY: "Gera 1 item por mês, no dia escolhido; vencimento prorroga para o próximo dia útil.",
 };
 
-export function AddObrigacaoForm({ action, companies, pipelines, users }: Props) {
-  const [state, formAction, isPending] = useActionState(action, null);
+/** O "+ Nova obrigação" do cabeçalho de /admin/obrigacoes. */
+export function NovaObrigacao(props: Props) {
+  return (
+    <JanelaDeCadastro rotulo="Nova obrigação" maxWidth="max-w-3xl">
+      {(fechar) => <AddObrigacaoForm {...props} onSucesso={fechar} onCancelar={fechar} />}
+    </JanelaDeCadastro>
+  );
+}
+
+// Na janela do "+ Nova obrigação", no cabeçalho da tela (escolha 5A,
+// 08/10/2026): o formulário morava aberto num cartão no topo da lista.
+export function AddObrigacaoForm({
+  action,
+  companies,
+  pipelines,
+  users,
+  onSucesso,
+  onCancelar,
+}: Props & { onSucesso: () => void; onCancelar: () => void }) {
+  const [state, formAction, isPending] = useActionState(async (anterior: ObligationState, form: FormData) => {
+    const r = await action(anterior, form);
+    if (!r) onSucesso();
+    return r;
+  }, null);
   const [pipelineId, setPipelineId] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("MONTHLY");
   const selected = pipelines.find((p) => p.id === pipelineId);
@@ -50,10 +73,7 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
   // dois dígitos), e o título, que é o nome da obrigação, vinha por último.
   const temDia = frequency !== "DAILY";
   return (
-    <form
-      action={formAction}
-      className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-6 space-y-4"
-    >
+    <form action={formAction} className="space-y-4">
       <FieldGrid>
         <CampoForm label="Título da obrigação" htmlFor="title" required>
           <Input id="title" name="title" type="text" required placeholder="ex: DAS — Simples Nacional" maxLength={160} />
@@ -130,16 +150,19 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
         </CampoForm>
       </FieldGrid>
 
-      <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-        <p className="mr-auto min-w-0 text-helper text-fg-muted">
-          {FREQUENCY_HINTS[frequency]}
-          {selected ? ` Kanban: "${selected.name}" (${selected.sectorLabel}).` : ""}
-        </p>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Cadastrando…" : "Cadastrar Obrigação"}
-        </Button>
-      </div>
-      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
+      <FormFooter
+        pending={isPending}
+        pendingLabel="Cadastrando…"
+        submitLabel="Cadastrar obrigação"
+        onCancel={onCancelar}
+        erro={state?.error}
+        nota={
+          <>
+            {FREQUENCY_HINTS[frequency]}
+            {selected ? ` Kanban: "${selected.name}" (${selected.sectorLabel}).` : ""}
+          </>
+        }
+      />
     </form>
   );
 }

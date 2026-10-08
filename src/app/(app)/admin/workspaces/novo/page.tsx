@@ -13,8 +13,8 @@ export default async function NovoWorkspacePage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Workspaces", href: "/admin/workspaces" }, { label: "Novo Workspace" }]} />
-      <PageHeader title="Novo Workspace" />
+      <Breadcrumb items={[{ label: "Workspaces", href: "/admin/workspaces" }, { label: "Novo workspace" }]} />
+      <PageHeader title="Novo workspace" />
 
       <div className="max-w-[720px]">
         <Card className="p-6">

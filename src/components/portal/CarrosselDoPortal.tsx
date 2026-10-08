@@ -78,7 +78,7 @@ function CenaDasNotas() {
       <Cartao className="left-[2%] bottom-[6%] w-[44%] z-20 px-3.5 py-2.5 flex items-center gap-2" entrar={380}>
         <Search size={15} className="text-[#6B7489] flex-shrink-0" />
         <span className="text-[12.5px] text-[#6B7489] flex-1 truncate">Buscar nota ou CNPJ…</span>
-        <span className="rounded-md bg-[#EEF0F5] px-1.5 py-0.5 text-[10px] font-semibold text-[#4B5468]">Filtros</span>
+        <span className="rounded-md bg-[#EEF0F5] px-1.5 py-0.5 text-fs-1 font-semibold text-[#4B5468]">Filtros</span>
       </Cartao>
       <Cartao className="right-[3%] top-[10%] z-20 px-3 py-2 flex items-center gap-2 !rounded-full" entrar={520}>
         <Sparkles size={13} className="text-[#1F5EEA]" />
@@ -105,15 +105,15 @@ function CenaDasPendencias() {
             <span className="h-1 w-12 rounded-full bg-[#D3D8E3]" />
           </div>
           <div className="px-3.5 pt-3 pb-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6B7489]">Grupo Modelo</p>
-            <p className="text-[17px] font-semibold">Pendências</p>
+            <p className="text-fs-1 font-semibold uppercase tracking-wider text-[#6B7489]">Grupo Modelo</p>
+            <p className="text-fs-6 font-semibold">Pendências</p>
           </div>
           <div className="px-2.5 flex flex-col gap-2">
             {itens.map((i) => (
               <div key={i.titulo} className="rounded-xl bg-white p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.06)] flex flex-col gap-1.5">
                 <p className="text-[11.5px] font-semibold leading-snug text-[#1F5EEA]">{i.titulo}</p>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] text-[#6B7489]">{i.prazo}</span>
+                  <span className="text-fs-1 text-[#6B7489]">{i.prazo}</span>
                   {i.selo}
                 </div>
               </div>
@@ -129,7 +129,7 @@ function CenaDasPendencias() {
         <span className="min-w-0">
           <span className="flex items-center justify-between gap-2">
             <span className="text-[11.5px] font-semibold">Nova pendência</span>
-            <span className="text-[10px] text-[#6B7489]">agora</span>
+            <span className="text-fs-1 text-[#6B7489]">agora</span>
           </span>
           <span className="block text-[11.5px] text-[#444D61] leading-snug">Enviar o extrato bancário de setembro</span>
         </span>
@@ -171,7 +171,7 @@ function CenaDasAprovacoes() {
             <p className="text-fs-2 text-[#6B7489]">Manutenção preventiva · Transportes Modelo</p>
             <p className="text-[11.5px] text-[#6B7489] mt-1">vence 09/10/2026</p>
           </div>
-          <p className="text-[26px] font-semibold tabular-nums tracking-[-0.01em] whitespace-nowrap">R$ 1.560,00</p>
+          <p className="text-title font-semibold tabular-nums tracking-[-0.01em] whitespace-nowrap">R$ 1.560,00</p>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
           <span className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#0E7A55] text-fs-3 font-semibold text-white shadow-[0_6px_16px_-6px_rgba(14,122,85,0.7)]">

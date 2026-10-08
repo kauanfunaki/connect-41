@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -41,11 +41,9 @@ export function AgenteCard({ linha, podeEditar }: Props) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-card-title font-semibold text-fg">{linha.def.label}</h3>
-            <Badge variant={SAUDE_VARIANTE[linha.saude]}>{SAUDE_LABEL[linha.saude]}</Badge>
+            <Selo tom={tomDaVariante(SAUDE_VARIANTE[linha.saude])}>{SAUDE_LABEL[linha.saude]}</Selo>
             {linha.temOverride && (
-              <span className="text-fs-1 text-fg-muted border border-border rounded px-1.5 py-0.5">
-                configurado
-              </span>
+              <Selo tom="neutro">configurado</Selo>
             )}
           </div>
           <p className="text-fs-3 text-fg-secondary mt-1 max-w-[60ch]">{linha.def.description}</p>

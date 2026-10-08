@@ -13,8 +13,8 @@ export default async function NovoSetorPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Setores", href: "/admin/setores" }, { label: "Novo Setor" }]} />
-      <PageHeader title="Novo Setor" />
+      <Breadcrumb items={[{ label: "Setores", href: "/admin/setores" }, { label: "Novo setor" }]} />
+      <PageHeader title="Novo setor" />
 
       <div className="max-w-[720px]">
         <Card className="p-6">

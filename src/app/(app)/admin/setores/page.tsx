@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllSectors } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Selo } from "@/components/ui/Selo";
+import { StatusDot } from "@/components/shared/StatusDot";
 
 export default async function SetoresPage() {
   const ctx = await getAuthContext();
@@ -22,7 +22,7 @@ export default async function SetoresPage() {
           href="/admin/setores/novo"
           variant="primary" className="font-medium"
         >
-          + Novo Setor
+          + Novo setor
         </Button></>}
       />
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
@@ -38,11 +38,8 @@ export default async function SetoresPage() {
                   <p className="text-fs-3 font-medium text-fg truncate">{s.label}</p>
                   <p className="text-fs-1 text-fg-muted font-mono truncate">{s.code}</p>
                 </div>
-                {!s.active && (
-                  <Selo tom="neutro" className="flex-shrink-0">
-                    Inativo
-                  </Selo>
-                )}
+                {/* Inativo pela bolinha, a do ativo/inativo de cadastro (escolha 2A, 08/10/2026). */}
+                {!s.active && <StatusDot color="var(--c41-fg-muted)" label="Inativo" className="flex-shrink-0" />}
               </div>
               {/* Botão, e não texto cinza (polimento de 30/09). Sem "⋯":
                   setor não se exclui, e desativar é pela edição. */}

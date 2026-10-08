@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { Wallet } from "lucide-react";
 import { SeloDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
+import type { VarianteDoBadge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "./PortalCabecalho";
@@ -118,7 +119,7 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
                 </InfoDoCartao>
               )}
               <PeDoCartao>
-                <Badge variant={SITUACAO[c.situacao].variante}>{rotuloDa(c.situacao)}</Badge>
+                <Selo tom={tomDaVariante(SITUACAO[c.situacao].variante)}>{rotuloDa(c.situacao)}</Selo>
                 {c.aprovacao &&
                   (c.aprovacao === "AGUARDANDO" && linkDaAprovacao ? (
                     <Link href="/portal/aprovacoes" className="inline-flex" title="Abrir as aprovações">
@@ -188,7 +189,7 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
                   <td className="py-2.5 pr-3 tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
                   <td className="py-2.5">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant={SITUACAO[c.situacao].variante}>{rotuloDa(c.situacao)}</Badge>
+                      <Selo tom={tomDaVariante(SITUACAO[c.situacao].variante)}>{rotuloDa(c.situacao)}</Selo>
                       {/* O mesmo selo que a equipe vê: "vencida" sem ele parece descuido do
                           escritório, quando a conta está esperando a aprovação do próprio cliente. */}
                       {c.aprovacao &&

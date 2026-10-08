@@ -27,7 +27,7 @@ export default async function NovoUsuarioPage() {
   if (!seatCheck.allowed) {
     return (
       <PageContainer>
-        <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Novo Usuário" }]} />
+        <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Novo usuário" }]} />
 
         <Aviso tom="atencao">
           <p className="text-fg">{seatCheck.reason}</p>
@@ -42,8 +42,8 @@ export default async function NovoUsuarioPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Novo Usuário" }]} />
-      <PageHeader title="Novo Usuário" />
+      <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Novo usuário" }]} />
+      <PageHeader title="Novo usuário" />
 
       <div className="max-w-[720px]">
         <Card className="p-6">

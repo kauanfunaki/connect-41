@@ -1423,7 +1423,7 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         );
         await r.clicar(reuniao.getByRole("button", { name: "Fechar" }));
         await r.clicar(r.page.getByRole("banner").getByRole("button", { name: "Menu do usuário" }), "O horário da grade é ajustável: clique na sua foto, no alto…");
-        await r.clicar(r.page.getByRole("button", { name: "Configurações do Perfil" }), "…e em Configurações do Perfil.");
+        await r.clicar(r.page.getByRole("button", { name: "Configurações do perfil" }), "…e em Configurações do perfil.");
         await r.page.waitForURL(/\/configuracoes/, { timeout: 20000 });
         await r.page.waitForLoadState("networkidle").catch(() => {});
         // O menu do usuário continua aberto depois de trocar de tela, e o Esc

@@ -69,7 +69,7 @@ export default async function ClientDocumentViewPage({
     <div className="min-h-screen py-10 px-4">
       <div className="max-w-2xl mx-auto">
         <p className="text-fs-2 text-fg-muted mb-1">{doc.company.name}</p>
-        <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-6">{doc.title}</h1>
+        <h1 className="text-title font-semibold text-fg tracking-[-0.01em] mb-6">{doc.title}</h1>
 
         <div
           className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 sm:p-6 text-fs-4 text-fg leading-relaxed [&_a]:text-brand [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-fs-7 [&_h1]:font-semibold [&_h2]:text-fs-6 [&_h2]:font-semibold [&_h3]:text-fs-4 [&_h3]:font-semibold"
