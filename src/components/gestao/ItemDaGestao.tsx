@@ -6,7 +6,7 @@ import type { AcaoDaGestao } from "@/app/(app)/gestao/actions";
 
 export const ORIGEM: Record<Origem, string> = {
   PROCESSO: "Processo",
-  CARD: "Card",
+  CARD: "Tarefa",
   PENDENCIA: "Pendência",
   TRANSFERENCIA: "Transferência",
   SOLICITACAO: "Solicitação",

@@ -93,7 +93,7 @@ export type VereditoDeChamada =
 /** O texto que a tela mostra. Fica junto do motivo para não divergirem. */
 const TEXTO: Record<MotivoDeRecusa, string> = {
   desligado: "Este agente está desligado para esta empresa.",
-  sem_chave: "Nenhuma chave de IA configurada. Configure em Integrações › Inteligência Artificial.",
+  sem_chave: "Nenhuma chave de IA configurada. Configure em Integrações › Inteligência artificial.",
   teto_de_reais: "O teto de gasto de IA deste mês foi atingido.",
   teto_de_chamadas: "O teto de chamadas de IA deste mês foi atingido.",
 };

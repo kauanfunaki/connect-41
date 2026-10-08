@@ -35,15 +35,17 @@ export const SITUACAO_PARA_CLIENTE: Record<SituacaoParaCliente, { rotulo: string
   CANCELADO: { rotulo: "Cancelado", explicacao: "Processo encerrado sem conclusão." },
 };
 
-export const VARIANTE_PARA_CLIENTE: Record<SituacaoParaCliente, "success" | "warning" | "info" | "danger"> = {
+// Cancelado e indeferido encerram o processo: cinza, como toda situação que
+// saiu de cena (escolha 2A do Kauan, 08/10/2026). Eram vermelhos.
+export const VARIANTE_PARA_CLIENTE: Record<SituacaoParaCliente, "success" | "warning" | "info" | "danger" | "neutral"> = {
   EM_ANDAMENTO: "info",
   AGUARDANDO_ORGAO: "info",
   EM_EXIGENCIA: "warning",
   AGUARDANDO_CLIENTE: "warning",
   SUSPENSO: "danger",
   CONCLUIDO: "success",
-  CANCELADO: "danger",
-  INDEFERIDO: "danger",
+  CANCELADO: "neutral",
+  INDEFERIDO: "neutral",
 };
 
 export function situacaoParaCliente(situacao: SituacaoDoProcesso, status: StatusDoProcesso): SituacaoParaCliente {

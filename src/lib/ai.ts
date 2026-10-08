@@ -89,7 +89,7 @@ type AiCredentials = { provider: AiProvider; apiKey: string; modelDoTenant: stri
  * (`ehBloqueioDoAgente`), e parar o lote sem marcar candidatura nenhuma.
  */
 export const CHAVE_DE_IA_ILEGIVEL =
-  "A chave de IA deste escritório não pôde ser lida. Cadastre-a de novo em Integrações › Inteligência Artificial.";
+  "A chave de IA deste escritório não pôde ser lida. Cadastre-a de novo em Integrações › Inteligência artificial.";
 
 async function resolveCredentials(tenantId: string): Promise<AiCredentials | null> {
   const prisma = getPrisma();
