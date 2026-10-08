@@ -181,3 +181,50 @@ export function videoDoPassoDoPortal(chave: string): string | null {
 export function videoDoPrimeiroPasso(chave: string): string | null {
   return linkValido(VIDEOS_DOS_PRIMEIROS_PASSOS, chave);
 }
+
+// ─── Miniaturas (08/10/2026) ────────────────────────────────────────────────
+//
+// As miniaturas no desenho que o Kauan escolheu (título e tela, com a área do
+// vídeo) moram em `public/miniaturas/`, geradas das próprias gravações — as
+// mesmas que ele sobe no YouTube. A ajuda mostra a nossa direto, sem esperar a
+// miniatura personalizada do YouTube. O arquivo leva a chave do vídeo: a do
+// Connect com ":" virando "-", a dos primeiros passos com "primeiros-passos-"
+// e a do portal com "portal-" na frente.
+
+/** "meu-dia" e "transferir" usam o vídeo do artigo (18 e 24) — e a miniatura dele. */
+const MINIATURA_DO_ARTIGO: Readonly<Record<string, string>> = {
+  "meu-dia": "geral-meu-dia",
+  transferir: "geral-transferencias",
+};
+
+const GRUPOS = [
+  ["connect", VIDEOS_DO_CONNECT],
+  ["passos", VIDEOS_DOS_PRIMEIROS_PASSOS],
+  ["portal", VIDEOS_DO_PORTAL],
+] as const;
+
+function nomeDaMiniatura(grupo: (typeof GRUPOS)[number][0], chave: string): string {
+  if (grupo === "portal") return `portal-${chave}`;
+  if (grupo === "passos") return MINIATURA_DO_ARTIGO[chave] ?? `primeiros-passos-${chave}`;
+  return chave.replace(/:/g, "-");
+}
+
+/** Toda miniatura que a ajuda pode pedir — o teste confere que cada uma existe em `public/`. */
+export function todasAsMiniaturas(): string[] {
+  return GRUPOS.flatMap(([grupo, mapa]) => Object.keys(mapa).map((chave) => `/miniaturas/${nomeDaMiniatura(grupo, chave)}.jpg`));
+}
+
+/**
+ * A nossa miniatura do vídeo, achada pelo link (o player só recebe o link), ou
+ * `null` quando o link não é de nenhum vídeo da ajuda — aí vale a do YouTube.
+ */
+export function miniaturaDoVideo(link: string): string | null {
+  const id = idDoVideo(link);
+  if (!id) return null;
+  for (const [grupo, mapa] of GRUPOS) {
+    for (const [chave, outro] of Object.entries(mapa)) {
+      if (idDoVideo(outro) === id) return `/miniaturas/${nomeDaMiniatura(grupo, chave)}.jpg`;
+    }
+  }
+  return null;
+}
