@@ -269,14 +269,14 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
             rotulo: "Vencem em breve",
             valor: formatarNumero(resumo.vencendo, 0),
             icone: <CalendarClock />,
-            tom: resumo.vencendo > 0 ? "text-warning" : undefined,
+            tom: resumo.vencendo > 0 ? "text-warning-fg" : undefined,
             detalhe: "nos próximos dias",
           },
           {
             rotulo: "Parados",
             valor: formatarNumero(resumo.parados, 0),
             icone: <PauseCircle />,
-            tom: resumo.parados > 0 ? "text-warning" : undefined,
+            tom: resumo.parados > 0 ? "text-warning-fg" : undefined,
             detalhe: "sem movimento ou esperando",
           },
           { rotulo: "Em andamento", valor: formatarNumero(resumo.andamento, 0), icone: <Loader />, detalhe: "alguém está fazendo" },
@@ -284,7 +284,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
             rotulo: "Feitos na semana",
             valor: formatarNumero(resumo.concluidosNaSemana, 0),
             icone: <CheckCircle2 />,
-            tom: resumo.concluidosNaSemana > 0 ? "text-success" : undefined,
+            tom: resumo.concluidosNaSemana > 0 ? "text-success-fg" : undefined,
             detalhe: "últimos 7 dias",
           },
         ]}
@@ -315,7 +315,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
               <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
                 <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Carga do time</h2>
                 {semResponsavel > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[12px] font-medium text-warning">
+                  <span className="inline-flex items-center gap-1 text-[12px] font-medium text-warning-fg">
                     <UserX size={13} /> {semResponsavel} sem responsável
                   </span>
                 )}

@@ -14,7 +14,7 @@ export const VAGA_STATUS_LABEL: Record<VagaStatus, string> = {
 // aberta/em andamento são estados saudáveis (verde/azul), encerrada é neutra
 // (concluiu, não é "sucesso" nem alerta) e cancelada é o desfecho negativo.
 export const VAGA_STATUS_STYLE: Record<VagaStatus, string> = {
-  ABERTA: "bg-success/10 text-success border-success/25",
+  ABERTA: "bg-success/10 text-success-fg border-success/25",
   EM_ANDAMENTO: "bg-brand/10 text-brand border-brand/25",
   ENCERRADA: "bg-surface-2 text-fg-secondary border-border",
   CANCELADA: "bg-danger/10 text-danger border-danger/25",

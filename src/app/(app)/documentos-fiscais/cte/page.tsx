@@ -192,7 +192,7 @@ export default async function CtePage({
                   raiz e rota — funil nas linhas da tela mentiria sobre as
                   outras páginas. */}
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-                <table className="w-full text-[length:var(--fs-ui)] border-collapse">
+                <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                       <th className="px-3 py-2">Número</th>

@@ -209,7 +209,7 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
             </div>
           )}
           {(resultado.avisos?.length ?? 0) > 0 && (
-            <ul className="flex flex-col gap-1 text-[12px] text-warning">
+            <ul className="flex flex-col gap-1 text-[12px] text-warning-fg">
               {resultado.avisos.map((a) => (
                 <li key={a} className="flex gap-1.5">
                   <AlertTriangle size={13} className="mt-0.5 flex-shrink-0" /> {a}

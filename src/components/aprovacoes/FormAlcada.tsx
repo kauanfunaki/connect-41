@@ -71,7 +71,7 @@ export function FormAlcada({ companyId, usuarios }: { companyId: string; usuario
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {salvo && <p className="text-helper text-success">Salvo.</p>}
+      {salvo && <p className="text-helper text-success-fg">Salvo.</p>}
       {erro && (
         <p role="alert" className="text-helper font-medium text-danger">
           {erro}

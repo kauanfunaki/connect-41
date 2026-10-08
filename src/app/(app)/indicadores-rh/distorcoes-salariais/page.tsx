@@ -34,7 +34,7 @@ export default async function RelatorioDistorcoesPage() {
           cartões de total. O recorte fino fica no funil da coluna Situação. */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Abaixo da faixa", valor: formatarNumero(abaixo, 0), icone: <TrendingDown />, tom: abaixo > 0 ? "text-warning" : undefined },
+          { rotulo: "Abaixo da faixa", valor: formatarNumero(abaixo, 0), icone: <TrendingDown />, tom: abaixo > 0 ? "text-warning-fg" : undefined },
           { rotulo: "Acima da faixa", valor: formatarNumero(acima, 0), icone: <TrendingUp />, tom: acima > 0 ? "text-brand" : undefined },
         ]}
       />
@@ -65,7 +65,7 @@ export default async function RelatorioDistorcoesPage() {
             header: "Desvio",
             numeric: true,
             render: (r) => (
-              <span className={r.tipo === "ABAIXO_FAIXA" ? "text-warning font-medium" : "text-brand font-medium"}>
+              <span className={r.tipo === "ABAIXO_FAIXA" ? "text-warning-fg font-medium" : "text-brand font-medium"}>
                 {r.desvioPct != null ? `${r.desvioPct > 0 ? "+" : ""}${r.desvioPct}%` : "—"}
               </span>
             ),

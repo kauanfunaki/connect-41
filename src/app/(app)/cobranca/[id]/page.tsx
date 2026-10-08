@@ -129,7 +129,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
             ) : (
               // Revisão de 05/10: botão não é link — era "cadastrar" em texto azul.
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                <span className="text-warning">sem e-mail</span>
+                <span className="text-warning-fg">sem e-mail</span>
                 <Button href={`/cadastros-financeiros?empresa=${l.empresaId}&aba=sacados`} variant="secondary" size="xs">
                   Cadastrar e-mail
                 </Button>

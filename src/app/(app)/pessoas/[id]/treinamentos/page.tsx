@@ -86,7 +86,7 @@ export default async function TreinamentosPessoaPage({
             }))}
           >
             <TabelaNoDesktop padrao>
-              <table className="w-full min-w-[560px] text-[length:var(--fs-ui)]">
+              <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">

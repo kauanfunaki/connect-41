@@ -211,7 +211,7 @@ export function FormLancamentoManual({
           erro={erro}
           nota={
             salvo && (
-              <span className="inline-flex items-center gap-1.5 text-success">
+              <span className="inline-flex items-center gap-1.5 text-success-fg">
                 <Check size={14} className="flex-shrink-0" /> Lançado. Ele já aparece nas contas e na DRE.
                 {/* Empresa com alçada: a conta nasce aguardando, e a baixa fica travada até alguém aprovar. */}
                 {aguardando && " Aguardando aprovação antes da baixa."}

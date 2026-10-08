@@ -142,7 +142,7 @@ export default async function ProcessosPage({
         {/* Eram três links de texto (30/09): botão não é link. O aviso da Junta
             mantém a cor de atenção — é trabalho esperando conferência. */}
         {avisosPendentes > 0 && (
-          <Button href="/processos/avisos" variant="secondary" className="text-warning! border-warning/40! hover:bg-warning-bg!">
+          <Button href="/processos/avisos" variant="secondary" className="text-warning-fg! border-warning/40! hover:bg-warning-bg!">
             <Mail size={14} />
             {avisosPendentes} {avisosPendentes === 1 ? "aviso da Junta" : "avisos da Junta"}
           </Button>
@@ -188,7 +188,7 @@ export default async function ProcessosPage({
             rotulo: SITUACAO_LABEL[situacao],
             valor: formatarNumero(contagem[situacao], 0),
             icone: ICONE_DA_SITUACAO[situacao],
-            tom: situacao === "EM_EXIGENCIA" && contagem[situacao] > 0 ? "text-warning" : situacao === "SUSPENSO" && contagem[situacao] > 0 ? "text-danger" : undefined,
+            tom: situacao === "EM_EXIGENCIA" && contagem[situacao] > 0 ? "text-warning-fg" : situacao === "SUSPENSO" && contagem[situacao] > 0 ? "text-danger" : undefined,
             detalhe: r.chave === recorte.chave ? "mostrando agora" : undefined,
             ativo: r.chave === recorte.chave,
             href: hrefDoRecorte(r.chave === recorte.chave ? "todos" : r.chave),

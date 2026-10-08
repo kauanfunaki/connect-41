@@ -117,7 +117,7 @@ export default async function DocumentosFiscaisPage({
               rotulo: d === "PENDENTE" ? "Pendentes de decisão" : d === "LANCADO" ? "Lançados" : "Ignorados",
               valor: `${INTEIRO.format(resumo[d].total)}${resumo[d].limitado ? "+" : ""}`,
               icone: d === "PENDENTE" ? <Hourglass /> : d === "LANCADO" ? <CheckCircle2 /> : <EyeOff />,
-              tom: d === "LANCADO" ? "text-success" : d === "IGNORADO" ? "text-fg-muted" : undefined,
+              tom: d === "LANCADO" ? "text-success-fg" : d === "IGNORADO" ? "text-fg-muted" : undefined,
               detalhe: params.destino === d ? "mostrando agora" : undefined,
               ativo: params.destino === d,
               href: hrefDoDestino(d),

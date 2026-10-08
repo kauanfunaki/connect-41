@@ -103,7 +103,7 @@ export default async function ValoraPage() {
       <FaixaDeTotais
         itens={[
           { rotulo: "Em aberto", valor: formatarNumero(linhas.filter((p) => p.status === "ABERTA").length, 0), icone: <Hourglass /> },
-          { rotulo: "Ganhas", valor: formatarNumero(ganhas, 0), icone: <Trophy />, tom: ganhas > 0 ? "text-success" : undefined },
+          { rotulo: "Ganhas", valor: formatarNumero(ganhas, 0), icone: <Trophy />, tom: ganhas > 0 ? "text-success-fg" : undefined },
           {
             rotulo: "Taxa de fechamento",
             valor: decididas ? `${Math.round((ganhas / decididas) * 100)}%` : "—",
@@ -176,7 +176,7 @@ export default async function ValoraPage() {
               }))}
             >
               <TabelaNoDesktop padrao>
-                <table className="w-full min-w-[920px] text-[length:var(--fs-ui)]">
+                <table className="w-full min-w-[920px]">
                   <thead>
                     <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                       <th className="px-3">Cliente</th>

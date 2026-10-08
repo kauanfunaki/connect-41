@@ -153,7 +153,7 @@ async function Fila({
           {
             rotulo: "Sacado sem e-mail",
             valor: String(fila.totais.semEmail),
-            tom: fila.totais.semEmail > 0 ? "text-warning" : "text-fg-muted",
+            tom: fila.totais.semEmail > 0 ? "text-warning-fg" : "text-fg-muted",
             icone: <MailX />,
           },
         ]}
@@ -162,7 +162,7 @@ async function Fila({
       {fila.paraHoje.length > 0 && (
         <Card className="p-4 mb-4 border-warning/40">
           <h2 className="text-card-title font-semibold mb-2 flex items-center gap-2">
-            <AlarmClock size={16} className="text-warning" /> Próximas ações de hoje
+            <AlarmClock size={16} className="text-warning-fg" /> Próximas ações de hoje
           </h2>
           <ul className="flex flex-col gap-1.5 text-ui">
             {fila.paraHoje.slice(0, 30).map((l) => (
@@ -257,13 +257,13 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
             {l.acao.quandoKey && (
               <InfoDoCartao className="tabular-nums">
                 próxima ação{" "}
-                <span className={l.acao.quandoKey < hojeKey ? "text-danger" : l.acao.paraHoje ? "text-warning font-medium" : ""}>
+                <span className={l.acao.quandoKey < hojeKey ? "text-danger" : l.acao.paraHoje ? "text-warning-fg font-medium" : ""}>
                   {dataDaChave(l.acao.quandoKey)}
                 </span>
                 {l.responsavelNome ? ` · ${l.responsavelNome}` : ""}
               </InfoDoCartao>
             )}
-            <InfoDoCartao className={l.regua.enviar === null && l.regua.motivo === "SEM_EMAIL" ? "text-warning" : ""}>
+            <InfoDoCartao className={l.regua.enviar === null && l.regua.motivo === "SEM_EMAIL" ? "text-warning-fg" : ""}>
               {regua(l)}
             </InfoDoCartao>
             {l.ultimoContato && (
@@ -297,7 +297,7 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
         }))}
       >
       <TabelaNoDesktop padrao>
-      <table className="w-full min-w-[1080px] text-ui">
+      <table className="w-full min-w-[1080px]">
         <thead>
           <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
             <th className="py-2 pr-3 font-medium">
@@ -351,7 +351,7 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
               </td>
               <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">
                 {l.acao.quandoKey ? (
-                  <span className={l.acao.quandoKey < hojeKey ? "text-danger" : l.acao.paraHoje ? "text-warning font-medium" : ""}>
+                  <span className={l.acao.quandoKey < hojeKey ? "text-danger" : l.acao.paraHoje ? "text-warning-fg font-medium" : ""}>
                     {dataDaChave(l.acao.quandoKey)}
                   </span>
                 ) : (
@@ -359,13 +359,13 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
                 )}
               </td>
               <td className="py-2.5 pr-3 text-fg-secondary">{l.responsavelNome ?? <span className="text-fg-muted">—</span>}</td>
-              <td className="py-2.5 pr-3 text-fs-2">
+              <td className="py-2.5 pr-3">
                 {l.regua.enviar !== null ? (
                   <span className="inline-flex items-center gap-1 text-brand">
                     <Mail size={12} /> passo de {l.regua.enviar} dias
                   </span>
                 ) : l.regua.motivo === "SEM_EMAIL" ? (
-                  <span className="text-warning">{ROTULO_DO_MOTIVO[l.regua.motivo]}</span>
+                  <span className="text-warning-fg">{ROTULO_DO_MOTIVO[l.regua.motivo]}</span>
                 ) : (
                   <span className="text-fg-muted">{ROTULO_DO_MOTIVO[l.regua.motivo]}</span>
                 )}
@@ -443,7 +443,7 @@ async function Acordos({
                     <p className="text-fs-2 mt-1 tabular-nums">
                       Originais {moeda(a.originalCentavos)} → acordado <strong>{moeda(a.acordadoCentavos)}</strong>
                       {a.diferencaCentavos !== 0 && (
-                        <span className={a.diferencaCentavos > 0 ? "text-success" : "text-danger"}>
+                        <span className={a.diferencaCentavos > 0 ? "text-success-fg" : "text-danger"}>
                           {" "}
                           ({a.diferencaCentavos > 0 ? "acréscimo" : "desconto"} de {moeda(Math.abs(a.diferencaCentavos))})
                         </span>
@@ -481,7 +481,7 @@ async function Acordos({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="overflow-x-auto">
                     <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Parcelas</p>
-                    <table className="w-full text-fs-2">
+                    <table className="w-full text-ui">
                       <tbody>
                         {a.parcelas.map((p, i) => (
                           <tr key={p.id} className="border-b border-border-soft">
@@ -512,7 +512,7 @@ async function Acordos({
                   </div>
                   <div className="overflow-x-auto">
                     <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Títulos originais</p>
-                    <table className="w-full text-fs-2">
+                    <table className="w-full text-ui">
                       <tbody>
                         {a.originais.map((o) => (
                           <tr key={o.id} className="border-b border-border-soft">
@@ -632,7 +632,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
             }))}
           >
           <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[880px] text-ui">
+          <table className="w-full min-w-[880px]">
             <thead>
               <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium">

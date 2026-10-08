@@ -49,7 +49,7 @@ export function CompletionBanner({ canAct, isCompleted, completedByLabel, conclu
     <Button
       variant="secondary"
       size="sm"
-      className="mb-4 hover:text-success hover:border-success/40 hover:bg-success/5"
+      className="mb-4 hover:text-success-fg hover:border-success/40 hover:bg-success/5"
       disabled={isPending}
       onClick={() => startTransition(() => concluirAction())}
     >

@@ -31,7 +31,7 @@ export default async function AvaliacoesPage() {
   const avaliacoes = (n: number) => `${n} avaliação${n !== 1 ? "ões" : ""}`;
   const selo = (ativo: boolean) =>
     ativo ? (
-      <SeloDoDP cor="bg-success/10 text-success border-success/25">Aberto</SeloDoDP>
+      <SeloDoDP cor="bg-success/10 text-success-fg border-success/25">Aberto</SeloDoDP>
     ) : (
       <SeloDoDP cor="bg-surface-2 text-fg-muted border-border">Encerrado</SeloDoDP>
     );
@@ -82,7 +82,7 @@ export default async function AvaliacoesPage() {
             }))}
           >
             <TabelaNoDesktop padrao>
-              <table className="w-full min-w-[720px] text-[length:var(--fs-ui)]">
+              <table className="w-full min-w-[720px]">
                 <thead>
                   <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Ciclo</th>

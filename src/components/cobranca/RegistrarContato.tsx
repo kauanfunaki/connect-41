@@ -102,7 +102,7 @@ export function RegistrarContato({ entryId, hojeISO }: { entryId: string; hojeIS
         submitLabel="Registrar contato"
         pendingLabel="Registrando…"
         erro={erro}
-        nota={salvo && <span className="text-success">Contato registrado.</span>}
+        nota={salvo && <span className="text-success-fg">Contato registrado.</span>}
       />
     </form>
   );

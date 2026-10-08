@@ -225,7 +225,7 @@ export function RevisarContrato({
         {plano.foraDoContrato.length > 0 && (
           // Revisão de 05/10: botão não é link — "Sócios" era texto sublinhado no meio da frase.
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <p className="text-[length:var(--fs-ui)] text-warning">
+            <p className="text-[length:var(--fs-ui)] text-warning-fg">
               No cadastro e fora deste contrato: {plano.foraDoContrato.map((f) => f.nome).join(", ")}. Ninguém sai sozinho — se saiu,
               registre a saída com a data na tela de sócios.
             </p>
@@ -236,7 +236,7 @@ export function RevisarContrato({
         )}
       </section>
 
-      {msg && <p className={`text-[length:var(--fs-ui)] ${msg.tipo === "erro" ? "text-danger" : "text-success"}`}>{msg.texto}</p>}
+      {msg && <p className={`text-[length:var(--fs-ui)] ${msg.tipo === "erro" ? "text-danger" : "text-success-fg"}`}>{msg.texto}</p>}
 
       {/* Rodapé do formulário: rejeitar (a saída destrutiva) à esquerda, e o
           primário sozinho à direita. Estavam juntos, e o campo do motivo, ao

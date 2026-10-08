@@ -126,7 +126,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
         }))}
       >
         <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[920px] text-[length:var(--fs-ui)]">
+          <table className="w-full min-w-[920px]">
             <thead>
               <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Empresa" chave="empresa" /></th>

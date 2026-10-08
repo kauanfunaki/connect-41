@@ -9,8 +9,8 @@ export type BadgeTone = "danger" | "warning" | "success" | "neutral" | "brand";
 
 const TONE_CLASS: Record<BadgeTone, string> = {
   danger: "bg-danger/10 text-danger border-danger/25",
-  warning: "bg-warning/10 text-warning border-warning/25",
-  success: "bg-success/10 text-success border-success/25",
+  warning: "bg-warning/10 text-warning-fg border-warning/25",
+  success: "bg-success/10 text-success-fg border-success/25",
   brand: "bg-brand/10 text-brand border-brand/25",
   neutral: "bg-surface-2 text-fg-secondary border-border",
 };
@@ -26,8 +26,8 @@ export function RelatorioBadge({ tone, children }: { tone: BadgeTone; children: 
 /** A cor do número no cartão de total (`FaixaDeTotais`) para cada tom de selo. */
 export const TOM_DO_TOTAL: Record<BadgeTone, string | undefined> = {
   danger: "text-danger",
-  warning: "text-warning",
-  success: "text-success",
+  warning: "text-warning-fg",
+  success: "text-success-fg",
   brand: "text-brand",
   neutral: undefined,
 };
@@ -92,7 +92,7 @@ export function RelatorioTable<T>({
       }))}
     >
       <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
-        <table className="w-full text-[13px]" style={{ minWidth }}>
+        <table className="w-full" style={{ minWidth }}>
           <thead>
             <tr className="border-b border-border">
               {columns.map((c, i) => (

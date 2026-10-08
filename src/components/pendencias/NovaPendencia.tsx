@@ -67,7 +67,7 @@ export function NovaPendencia({
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <p className="text-ui">Pendência aberta.</p>
-              <p className="text-helper text-warning">{criada.aviso}</p>
+              <p className="text-helper text-warning-fg">{criada.aviso}</p>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
               <Button variant="secondary" onClick={fechar}>

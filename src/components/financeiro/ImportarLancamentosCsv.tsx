@@ -100,7 +100,7 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
             {linhas.filter((l) => l.situacao === "erro").length} com erro
           </p>
           <div className="overflow-x-auto max-h-[420px] border border-border rounded-md">
-            <table className="w-full min-w-[760px] text-fs-2">
+            <table className="w-full min-w-[760px] text-ui">
               <thead className="sticky top-0 bg-surface">
                 <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 px-3 font-medium">Linha</th>

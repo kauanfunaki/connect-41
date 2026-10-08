@@ -101,7 +101,7 @@ export default async function DiagnosticoDaCarteiraPage() {
           {/* Casco padrão, centralizado (30/09). Sem funil: um cliente por
               linha, e o resto é valor — nada que se repita para filtrar. */}
           <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-            <table className="w-full min-w-[820px] text-[length:var(--fs-ui)]">
+            <table className="w-full min-w-[820px]">
               <thead>
                 <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-3">Cliente</th>

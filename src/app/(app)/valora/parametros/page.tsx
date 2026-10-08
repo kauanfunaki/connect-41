@@ -55,7 +55,7 @@ export default async function ParametrosDoValoraPage() {
                 }))}
               >
                 <div className="c41-tabela overflow-x-auto rounded-lg border border-border mt-2">
-                  <table className="w-full min-w-[820px] text-[length:var(--fs-2)]">
+                  <table className="w-full min-w-[820px]">
                     <thead>
                       <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                         <th className="px-3">Atividade</th>

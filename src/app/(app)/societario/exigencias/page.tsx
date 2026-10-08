@@ -63,7 +63,7 @@ export default async function ExigenciasPage({
     const faixa = e.dueAt && !e.resolvedAt ? faixaDoPrazo(e.dueAt, agora) : null;
     if (!faixa || !e.dueAt) return null;
     const cor =
-      faixa === "vencido" || faixa === "hoje" ? "text-danger font-medium" : faixa === "semana" ? "text-warning" : "text-fg-muted";
+      faixa === "vencido" || faixa === "hoje" ? "text-danger font-medium" : faixa === "semana" ? "text-warning-fg" : "text-fg-muted";
     return <span className={`block text-[length:var(--fs-micro)] ${cor}`}>{textoDoPrazo(e.dueAt, agora)}</span>;
   };
   // Selo, e não Badge: é a situação da linha (regra de 02/10 no Selo).
@@ -164,7 +164,7 @@ export default async function ExigenciasPage({
             }))}
           >
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[860px] text-[length:var(--fs-ui)]">
+            <table className="w-full min-w-[860px]">
               <thead>
                 <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 pr-3 font-medium">Exigência</th>

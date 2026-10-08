@@ -100,7 +100,7 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
         {/* Casco padrão (30/09). Sem funil: é uma linha por setor, de ajuste,
             e o setor já se escolhe no "Filtros" acima. */}
         <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[520px] text-[length:var(--fs-ui)]">
+          <table className="w-full min-w-[520px]">
             <thead>
               <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                 <th className="px-3">Setor</th>

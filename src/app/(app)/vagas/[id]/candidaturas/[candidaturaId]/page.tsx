@@ -250,9 +250,9 @@ export default async function CandidaturaScorecardPage({
                     </p>
                     <div className="flex flex-shrink-0 items-center gap-2">
                       <span className="text-[length:var(--fs-2)] text-fg-muted tnum">{avg != null ? `${formatarNumero(avg, 1)}/5` : "sem nota"}</span>
-                      <Selo cor={s.recommendation === "AVANCAR" ? "bg-success/10 text-success border-success/25"
+                      <Selo cor={s.recommendation === "AVANCAR" ? "bg-success/10 text-success-fg border-success/25"
                           : s.recommendation === "REPROVAR" ? "bg-danger/10 text-danger border-danger/25"
-                          : "bg-warning/10 text-warning border-warning/25"}>
+                          : "bg-warning/10 text-warning-fg border-warning/25"}>
                         {RECOMMENDATION_LABEL[s.recommendation]}
                       </Selo>
                     </div>

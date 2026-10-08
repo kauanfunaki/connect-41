@@ -74,14 +74,14 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
                 rotulo: c.titulo,
                 valor: formatarNumero(n, 0),
                 icone: c.icone,
-                tom: c.key === "PARADO" && n > 0 ? "text-warning" : c.key === "CONCLUIDO" ? "text-success" : undefined,
+                tom: c.key === "PARADO" && n > 0 ? "text-warning-fg" : c.key === "CONCLUIDO" ? "text-success-fg" : undefined,
               };
             }),
             {
               rotulo: "Sem responsável",
               valor: formatarNumero(semResponsavel, 0),
               icone: <UserX />,
-              tom: semResponsavel > 0 ? "text-warning" : undefined,
+              tom: semResponsavel > 0 ? "text-warning-fg" : undefined,
               detalhe: "em aberto",
             },
           ]}
