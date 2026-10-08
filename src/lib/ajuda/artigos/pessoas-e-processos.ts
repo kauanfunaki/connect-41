@@ -432,9 +432,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Enviar um teste a um candidato",
         passos: [
-          "No topo da tela, escolha o “Candidato”.",
+          "Clique em “Enviar teste”, à direita do título, e escolha o “Candidato” na janela.",
           "Em “Tipo de teste”, escolha “DISC (perfil comportamental)” ou um modelo de múltipla escolha.",
-          "Clique em “Enviar teste”. Se o candidato tiver e-mail cadastrado, o link vai por e-mail.",
+          "Clique em “Enviar teste”, no fim da janela. Se o candidato tiver e-mail cadastrado, o link vai por e-mail.",
           "Para ver o link, clique em “Abrir” na linha do teste. Ele vale por 7 dias.",
         ],
       },

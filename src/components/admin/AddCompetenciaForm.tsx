@@ -5,7 +5,7 @@ import type { CompetencyState } from "@/app/(app)/admin/competencias/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { FormFooter } from "@/components/ui/FormFooter";
-import { JanelaDeCadastro } from "@/components/admin/JanelaDeCadastro";
+import { JanelaDeCadastro } from "@/components/shared/JanelaDeCadastro";
 
 type Props = {
   action: (prev: CompetencyState, form: FormData) => Promise<CompetencyState>;

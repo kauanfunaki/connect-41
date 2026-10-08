@@ -2171,9 +2171,11 @@ function videosDoRecrutamento(): DefinicaoDeVideo[] {
       async executar(r) {
         await r.ir("/testes");
         await r.cartaz(SELO, "Testes", "Perfil comportamental (DISC) e múltipla escolha");
-        await selecionar(r, main(r).getByRole("combobox", { name: /^Candidato/ }), "Isabela Freitas", "No topo, escolha o Candidato…");
-        await r.apontar(main(r).getByRole("combobox", { name: "Tipo de teste" }), "…o Tipo de teste: DISC ou um modelo de múltipla escolha…");
-        await r.clicar(main(r).getByRole("button", { name: "Enviar teste" }), "…e clique em Enviar teste. Com e-mail cadastrado, o link vai por e-mail.");
+        await r.clicar(main(r).getByRole("button", { name: "Enviar teste" }), "Para mandar um teste, clique em Enviar teste.");
+        const envio = dialogo(r, "Enviar teste");
+        await selecionar(r, envio.getByRole("combobox", { name: /^Candidato/ }), "Isabela Freitas", "Escolha o Candidato…");
+        await r.apontar(envio.getByRole("combobox", { name: "Tipo de teste" }), "…o Tipo de teste: DISC ou um modelo de múltipla escolha…");
+        await r.clicar(envio.getByRole("button", { name: "Enviar teste" }), "…e clique em Enviar teste. Com e-mail cadastrado, o link vai por e-mail.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1200);
         await r.apontar(main(r).getByRole("link", { name: "Abrir" }).first(), "Abrir mostra o link, que vale por 7 dias, e o resultado quando chegar.");

@@ -7,7 +7,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { CampoData } from "@/components/ui/CampoData";
 import { FormFooter } from "@/components/ui/FormFooter";
-import { JanelaDeCadastro } from "@/components/admin/JanelaDeCadastro";
+import { JanelaDeCadastro } from "@/components/shared/JanelaDeCadastro";
 
 /** O "+ Novo feriado" do cabeçalho de /admin/feriados. */
 export function NovoFeriado({ action }: { action: Props["action"] }) {

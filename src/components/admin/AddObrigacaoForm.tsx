@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { FormFooter } from "@/components/ui/FormFooter";
-import { JanelaDeCadastro } from "@/components/admin/JanelaDeCadastro";
+import { JanelaDeCadastro } from "@/components/shared/JanelaDeCadastro";
 import type { ObligationState } from "@/app/(app)/admin/obrigacoes/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
