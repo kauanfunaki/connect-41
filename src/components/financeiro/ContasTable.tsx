@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { FileText, AlertCircle } from "lucide-react";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
-import { Badge } from "@/components/ui/Badge";
+import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO, tomDoFechamento } from "./tomDaSituacao";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDate } from "@/lib/format";
 import { reaisDeCentavos, type SituacaoDaConta } from "@/lib/financeiro/contas";
@@ -41,13 +42,15 @@ export const SITUACAO_LABEL: Record<SituacaoDaConta, string> = {
 };
 
 // Vencida é `danger` e vence-hoje é `warning`: a diferença entre "já custa" e
-// "ainda dá para resolver" precisa ser lida sem ninguém comparar datas.
-const SITUACAO_VARIANTE: Record<SituacaoDaConta, "danger" | "warning" | "info" | "success"> = {
-  VENCIDA: "danger",
-  VENCE_HOJE: "warning",
-  A_VENCER: "info",
-  PAGA: "success",
-  CANCELADA: "info",
+// "ainda dá para resolver" precisa ser lida sem ninguém comparar datas. As
+// cores vêm do mapa único do BPO (08/10/2026): a cancelada era `info`, o
+// mesmo azul de "A vencer" na mesma coluna.
+const SITUACAO_VARIANTE: Record<SituacaoDaConta, VarianteDoBadge> = {
+  VENCIDA: TOM_DA_SITUACAO.VENCIDA,
+  VENCE_HOJE: TOM_DA_SITUACAO.VENCE_HOJE,
+  A_VENCER: TOM_DA_SITUACAO.A_VENCER,
+  PAGA: TOM_DA_SITUACAO.PAGA,
+  CANCELADA: TOM_DA_SITUACAO.CANCELADA,
 };
 
 type Props = {
@@ -108,7 +111,7 @@ export function ContasTable({
   // tabela e o cartão não descolarem um do outro com o tempo.
   const selos = (l: LinhaDaConta) => (
     <>
-      <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{rotuloDaSituacao(l)}</Badge>
+      <Badge variant={l.situacao === "CANCELADA" ? tomDoFechamento(l.closeReason) : SITUACAO_VARIANTE[l.situacao]}>{rotuloDaSituacao(l)}</Badge>
       {cobranca && cobranca.get(l.id) && cobranca.get(l.id) !== "EM_DIA" && l.closeReason !== "PERDA" && (
         <Link href={`/cobranca/${l.id}`} className="inline-flex" title="Abrir na cobrança">
           <SeloDaCobranca situacao={cobranca.get(l.id) ?? null} />

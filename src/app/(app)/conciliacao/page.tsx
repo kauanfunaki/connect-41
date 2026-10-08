@@ -12,6 +12,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
 import { Button } from "@/components/ui/Button";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
@@ -169,7 +170,7 @@ export default async function ConciliacaoPage({
                       </span>
                     )}
                   </div>
-                  {!c.active && <Badge variant="danger">Inativa</Badge>}
+                  {!c.active && <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>}
                 </div>
                 <BlocoDoSaldo situacao={saldos.get(c.id)!} />
                 {/* mt-auto: os botões ficam no pé do cartão, na mesma altura

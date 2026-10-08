@@ -9,7 +9,8 @@ import { formatInstantDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Badge } from "@/components/ui/Badge";
+import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO, tomDoFechamento } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
@@ -37,11 +38,13 @@ const ABAS = [
   { chave: "importar", rotulo: "Importar CSV" },
 ] as const;
 
-const STATUS: Record<string, { rotulo: string; variante: "success" | "warning" | "danger" | "info" }> = {
-  PROVISORIO: { rotulo: "A conferir", variante: "warning" },
-  CONFERIDO: { rotulo: "Em aberto", variante: "info" },
-  PAGO: { rotulo: "Liquidado", variante: "success" },
-  CANCELADO: { rotulo: "Cancelado", variante: "danger" },
+// As cores do mapa único do BPO (08/10/2026): o cancelado era `danger`, a
+// mesma cor de "Vencida" — e é histórico, não pede ação.
+const STATUS: Record<string, { rotulo: string; variante: VarianteDoBadge }> = {
+  PROVISORIO: { rotulo: "A conferir", variante: TOM_DA_SITUACAO.A_CONFERIR },
+  CONFERIDO: { rotulo: "Em aberto", variante: TOM_DA_SITUACAO.EM_ABERTO },
+  PAGO: { rotulo: "Liquidado", variante: TOM_DA_SITUACAO.PAGA },
+  CANCELADO: { rotulo: "Cancelado", variante: TOM_DA_SITUACAO.CANCELADA },
 };
 
 /**
@@ -213,11 +216,9 @@ async function ListaDeManuais({
   // Renegociado e perda são cancelamentos com nome: a dívida seguiu num acordo,
   // ou alguém decidiu dar por perdida — "cancelado" diria outra coisa.
   const statusDe = (l: (typeof linhas)[number]) =>
-    l.closeReason === "RENEGOCIADO"
-      ? { rotulo: "Renegociado", variante: "info" as const }
-      : l.closeReason === "PERDA"
-        ? { rotulo: "Perda", variante: "danger" as const }
-        : STATUS[l.status]!;
+    l.closeReason === "RENEGOCIADO" || l.closeReason === "PERDA"
+      ? { rotulo: l.closeReason === "PERDA" ? "Perda" : "Renegociado", variante: tomDoFechamento(l.closeReason) }
+      : STATUS[l.status]!;
 
   return (
     <>

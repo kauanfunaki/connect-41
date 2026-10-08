@@ -12,6 +12,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Button } from "@/components/ui/Button";
 import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -489,13 +490,13 @@ async function Acordos({
                             <td className="py-1 pr-3 tabular-nums text-right">{moeda(p.valorCentavos)}</td>
                             <td className="py-1">
                               {p.pagoEm ? (
-                                <Badge variant="success">Paga em {formatInstantDate(p.pagoEm)}</Badge>
+                                <Badge variant={TOM_DA_SITUACAO.PAGA}>Paga em {formatInstantDate(p.pagoEm)}</Badge>
                               ) : p.closeReason === "PERDA" ? (
-                                <Badge variant="danger">Perda</Badge>
+                                <Badge variant={TOM_DA_SITUACAO.PERDA}>Perda</Badge>
                               ) : p.closeReason === "RENEGOCIADO" ? (
-                                <Badge variant="info">Renegociada</Badge>
+                                <Badge variant={TOM_DA_SITUACAO.RENEGOCIADA}>Renegociada</Badge>
                               ) : p.status === "CANCELADO" ? (
-                                <Badge variant="info">Cancelada</Badge>
+                                <Badge variant={TOM_DA_SITUACAO.CANCELADA}>Cancelada</Badge>
                               ) : (
                                 <Button href={`/cobranca/${p.id}`} variant="secondary" size="xs">
                                   Em aberto <ArrowRight size={12} />
@@ -547,7 +548,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
       <Card className="p-4 mb-4">
         <div className="flex flex-wrap items-center gap-2 mb-1">
           <h2 className="text-[length:var(--fs-card-title)] font-semibold">Régua de lembretes por e-mail</h2>
-          {d.config.ligada ? <Badge variant="success">Ligada</Badge> : <Badge variant="info">Desligada</Badge>}
+          {d.config.ligada ? <Badge variant={TOM_DA_SITUACAO.LIGADA}>Ligada</Badge> : <Badge variant={TOM_DA_SITUACAO.DESLIGADA}>Desligada</Badge>}
         </div>
         <p className="text-[12px] text-fg-muted mb-3 max-w-[860px]">
           Um e-mail ao sacado em cada passo de atraso, pelo SMTP do escritório, em nome da empresa credora — com valor, vencimento e

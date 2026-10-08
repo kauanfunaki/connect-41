@@ -10,6 +10,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Button } from "@/components/ui/Button";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
 import { RegistrarContato } from "@/components/cobranca/RegistrarContato";
@@ -86,7 +87,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
         meta={
           <>
             <SeloDaCobranca situacao={l.situacao} />
-        {l.situacao === null && <Badge variant={t.status === "PAGO" ? "success" : "info"}>{t.status === "PAGO" ? "Pago" : "Cancelado"}</Badge>}
+        {l.situacao === null && <Badge variant={t.status === "PAGO" ? TOM_DA_SITUACAO.PAGA : TOM_DA_SITUACAO.CANCELADA}>{t.status === "PAGO" ? "Pago" : "Cancelado"}</Badge>}
             {emAberto && l.diasDeAtraso > 0 && (
               <span>
                 {l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`} de atraso · {FAIXAS_DE_ATRASO.find((f) => f.chave === l.faixa)?.rotulo}
@@ -280,13 +281,13 @@ function ResumoDoAcordoCard({ titulo, acordo, destaque }: { titulo: string; acor
             <span>{formatInstantDate(p.vencimento)}</span>
             <span className="text-right">{moeda(p.valorCentavos)}</span>
             {p.pagoEm ? (
-              <Badge variant="success">Paga</Badge>
+              <Badge variant={TOM_DA_SITUACAO.PAGA}>Paga</Badge>
             ) : p.closeReason === "PERDA" ? (
-              <Badge variant="danger">Perda</Badge>
+              <Badge variant={TOM_DA_SITUACAO.PERDA}>Perda</Badge>
             ) : p.closeReason === "RENEGOCIADO" ? (
-              <Badge variant="info">Renegociada</Badge>
+              <Badge variant={TOM_DA_SITUACAO.RENEGOCIADA}>Renegociada</Badge>
             ) : p.status === "CANCELADO" ? (
-              <Badge variant="info">Cancelada</Badge>
+              <Badge variant={TOM_DA_SITUACAO.CANCELADA}>Cancelada</Badge>
             ) : p.id === destaque ? null : (
               <Button href={`/cobranca/${p.id}`} variant="ghost" size="xs">
                 Abrir
