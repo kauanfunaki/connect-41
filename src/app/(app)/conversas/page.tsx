@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { BackButton } from "@/components/shared/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings, ArrowLeft, ClipboardCheck, PenLine, Timer } from "lucide-react";
+import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings, ClipboardCheck, PenLine, Timer } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { getAuthContext, isFullAccess, canViewSector } from "@/lib/auth/context";
@@ -255,9 +256,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
         <div className="bg-surface border border-brand/30 rounded-lg px-4 py-3 mb-4">
           <div className="flex items-center justify-between gap-2 mb-1">
             <p className="text-[length:var(--fs-2)] font-medium text-brand">Atendimento aberto</p>
-            <Button href="/conversas" variant="secondary" size="xs">
-              <ArrowLeft size={11} /> Voltar à lista
-            </Button>
+            <BackButton href="/conversas" rotulo="Voltar à lista" />
           </div>
           {focusedConversation ? (
             <AtendimentosAccordion atendimentos={[toResumo(focusedConversation)]} defaultOpenId={id} />

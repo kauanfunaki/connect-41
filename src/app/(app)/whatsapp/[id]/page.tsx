@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { BackButton } from "@/components/shared/BackButton";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -41,12 +40,7 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
 
   return (
     <PageContainer>
-      <Link
-        href="/whatsapp"
-        className="inline-flex items-center gap-1.5 text-[length:var(--fs-ui)] text-fg-muted hover:text-fg transition-colors mb-3"
-      >
-        <ArrowLeft size={14} /> Conversas
-      </Link>
+      <BackButton href="/whatsapp" rotulo="Conversas" className="mb-3" />
       <Conversa
         conversa={conversa}
         agora={agora}
