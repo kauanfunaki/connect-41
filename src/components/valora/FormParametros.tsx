@@ -77,7 +77,7 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
         {/* Casco padrão dentro do cartão (30/09). Sem funil: é uma linha por
             setor, para preencher. */}
         <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[640px] text-[length:var(--fs-ui)]">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                 <th className="px-3">Setor</th>

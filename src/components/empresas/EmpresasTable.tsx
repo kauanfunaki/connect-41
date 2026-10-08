@@ -169,10 +169,10 @@ export function EmpresasTable({
         </td>
         {/* O ID do Acessórias em coluna própria (revisão de 05/10): embaixo do
             nome ele virava segunda linha e desalinhava o nome do logo redondo. */}
-        <td className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary tnum truncate" title={c.externalId ?? undefined}>
+        <td className="px-4 py-3 text-center text-fg-secondary tnum truncate" title={c.externalId ?? undefined}>
           {c.externalId ?? "—"}
         </td>
-        <td className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary tnum whitespace-nowrap">
+        <td className="px-4 py-3 text-center text-fg-secondary tnum whitespace-nowrap">
           {formatDocumento(c.kind, c.cnpj, c.cpf)}
         </td>
         <td className="px-4 py-3 text-center whitespace-nowrap">
@@ -181,11 +181,11 @@ export function EmpresasTable({
         {/* Resumido e sem quebra: o rótulo do Acessórias chega a 73 caracteres
             e esticava a linha em seis, empurrando as ações para fora da tela.
             O texto inteiro fica no title. */}
-        <td className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary truncate" title={c.taxRegime ?? undefined}>
+        <td className="px-4 py-3 text-center text-fg-secondary truncate" title={c.taxRegime ?? undefined}>
           {resumirRegime(c.taxRegime) ?? "—"}
         </td>
         <td
-          className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary truncate"
+          className="px-4 py-3 text-center text-fg-secondary truncate"
           title={c.city && c.stateCode ? `${c.city}/${c.stateCode}` : undefined}
         >
           {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
@@ -436,8 +436,11 @@ export function EmpresasTable({
           {/* `table-fixed` + <colgroup>: com layout automático o navegador recalcula
               TODAS as larguras quando o conteúdo muda, então expandir uma matriz
               deslocava as colunas da tabela inteira. Larguras declaradas uma vez
-              deixam o expandir e o recolher inertes. */}
-          <table className="w-full table-fixed min-w-[960px] text-[length:var(--fs-body)]">
+              deixam o expandir e o recolher inertes.
+              Corpo em 13px, como toda tabela (escolha 3A do Kauan, 08/10/2026);
+              era 15px. Esta rola num contêiner próprio e não é filha direta da
+              `.c41-tabela`, então o tamanho vai aqui na <table>. */}
+          <table className="w-full table-fixed min-w-[960px] text-ui">
             <colgroup>
               {canCreate && <col className="w-11" />}
               {/* Nome não declara largura: fica com o espaço que sobrar. Em

@@ -118,7 +118,7 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
           se recalculam a cada filtro aplicado e a tabela "dança" — foi o mesmo
           defeito corrigido na listagem de empresas em 02/09. */}
       <TabelaNoDesktop padrao>
-        <table className="w-full table-fixed min-w-[1080px] text-[length:var(--fs-ui)]">
+        <table className="w-full table-fixed min-w-[1080px]">
           <colgroup>
             <col className="w-[92px]" />
             <col className="w-[132px]" />

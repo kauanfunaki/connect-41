@@ -225,7 +225,7 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
                     </p>
                   )}
                   {c.ultimaMensagem && <p className="text-[length:var(--fs-ui)] text-fg-secondary mt-1 truncate max-w-[52ch]">{c.ultimaMensagem}</p>}
-                  {c.handoffReason && <p className="text-[length:var(--fs-micro)] text-warning mt-1">passou para você: {c.handoffReason}</p>}
+                  {c.handoffReason && <p className="text-[length:var(--fs-micro)] text-warning-fg mt-1">passou para você: {c.handoffReason}</p>}
                 </div>
                 <span className="text-[length:var(--fs-micro)] text-fg-muted whitespace-nowrap tabular-nums shrink-0">
                   {c.ultimaMensagemEm ? formatInstantDateTime(c.ultimaMensagemEm) : "—"}

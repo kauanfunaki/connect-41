@@ -150,7 +150,7 @@ export function CriarAcordo({
                 )}{" "}
                 Os originais continuam como receita na competência deles.
               </p>
-              <table className="w-full text-fs-2">
+              <table className="w-full text-ui">
                 <thead>
                   <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className="py-1 pr-3 font-medium">Parcela</th>

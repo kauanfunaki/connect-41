@@ -198,7 +198,7 @@ export default async function PendenciasPage({
             }))}
           >
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[860px] text-ui">
+            <table className="w-full min-w-[860px]">
               <thead>
                 <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 pr-3 font-medium">

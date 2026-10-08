@@ -162,7 +162,7 @@ export function TransacoesDaConta({
         }))}
       >
       <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-        <table className="w-full min-w-[900px] text-ui">
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pr-3 font-medium">
@@ -198,7 +198,7 @@ export function TransacoesDaConta({
                     <div className="flex flex-col gap-2 items-start">
                       {l.sugestao?.bloqueio ? (
                         <div className="flex flex-col gap-0.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-1.5 max-w-[420px]">
-                          <span className="inline-flex items-center gap-1 text-micro font-medium text-warning">
+                          <span className="inline-flex items-center gap-1 text-micro font-medium text-warning-fg">
                             <Lock size={12} /> Casa com uma conta travada na aprovação · {l.sugestao.motivo}
                           </span>
                           <ResumoDoLancamento l={l.sugestao} />
@@ -379,7 +379,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
               nome ou crie o lançamento.
             </p>
           ) : (
-            <table className="w-full text-fs-2">
+            <table className="w-full text-ui">
               <tbody>
                 {lista.map((l) => {
                   const id = `escolha-${l.id}`;
@@ -398,7 +398,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
                             {l.centavos === alvo && " · mesmo valor"}
                           </span>
                           {l.bloqueio && (
-                            <span className="flex items-center gap-1 text-micro text-warning">
+                            <span className="flex items-center gap-1 text-micro text-warning-fg">
                               <Lock size={12} className="flex-shrink-0" /> {l.bloqueio}
                             </span>
                           )}

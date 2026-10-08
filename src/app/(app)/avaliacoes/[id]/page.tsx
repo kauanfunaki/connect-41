@@ -123,7 +123,7 @@ export default async function CicloPage({
               }))}
             >
               <TabelaNoDesktop className="c41-tabela rounded-lg border border-border mb-4">
-                <table className="w-full min-w-[560px] text-[length:var(--fs-ui)]">
+                <table className="w-full min-w-[560px]">
                   <thead>
                     <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                       <th className="px-4 py-3">Colaborador</th>

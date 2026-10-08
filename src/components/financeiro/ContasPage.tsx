@@ -199,7 +199,7 @@ export async function ContasPage({
           {
             rotulo: "Vence hoje",
             valor: formatarReaisDeCentavos(resultado.totais.venceHoje),
-            tom: resultado.totais.venceHoje > 0 ? "text-warning" : undefined,
+            tom: resultado.totais.venceHoje > 0 ? "text-warning-fg" : undefined,
             icone: <CalendarClock />,
           },
           ...(recorte === "todas"

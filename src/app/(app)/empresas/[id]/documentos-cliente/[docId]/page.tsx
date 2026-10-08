@@ -136,20 +136,20 @@ export default async function DocumentoClienteDetailPage({
                       enviado em {r.sentAt ? formatInstantDateTime(r.sentAt) : "—"}
                     </p>
                     {r.firstViewedAt ? (
-                      <p className="text-[11px] text-success mt-0.5">
+                      <p className="text-[11px] text-success-fg mt-0.5">
                         primeira visualização: {formatInstantDateTimeComSegundos(r.firstViewedAt)}
                       </p>
                     ) : (
-                      <p className="text-[11px] text-warning mt-0.5">ainda não visualizado</p>
+                      <p className="text-[11px] text-warning-fg mt-0.5">ainda não visualizado</p>
                     )}
                     {document.requiresSignature &&
                       (r.signedAt ? (
-                        <p className="text-[11px] text-success mt-0.5 flex items-center gap-1.5">
+                        <p className="text-[11px] text-success-fg mt-0.5 flex items-center gap-1.5">
                           <PenLine size={11} />
                           assinado por {r.signerName ?? "—"} em {formatInstantDateTimeComSegundos(r.signedAt)}
                         </p>
                       ) : (
-                        <p className="text-[11px] text-warning mt-0.5">assinatura pendente</p>
+                        <p className="text-[11px] text-warning-fg mt-0.5">assinatura pendente</p>
                       ))}
 
                     {r.views.length > 0 && (

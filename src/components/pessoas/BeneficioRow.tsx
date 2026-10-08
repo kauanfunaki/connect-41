@@ -21,10 +21,10 @@ const STATUS_LABEL: Record<BenefitStatus, string> = {
 };
 
 const STATUS_STYLE: Record<BenefitStatus, string> = {
-  ATIVO:     "bg-success/10 text-success border-success/25",
+  ATIVO:     "bg-success/10 text-success-fg border-success/25",
   INATIVO:   "bg-surface-2 text-fg-muted border-border",
-  SUSPENSO:  "bg-warning/10 text-warning border-warning/25",
-  PENDENTE:  "bg-warning/10 text-warning border-warning/25",
+  SUSPENSO:  "bg-warning/10 text-warning-fg border-warning/25",
+  PENDENTE:  "bg-warning/10 text-warning-fg border-warning/25",
   // Cancelado saiu de cena: neutro, como o inativo (07/10/2026).
   CANCELADO: "bg-surface-2 text-fg-muted border-border",
 };

@@ -61,9 +61,9 @@ export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
                 <span className="flex-1 min-w-[12rem] text-fg">
                   {nomeDaIa(e.de)} → {SETOR[e.para] ?? e.para}
                 </span>
-                {e.respondidas > 0 && <span className="tabular-nums text-success">{e.respondidas} respondidas lá</span>}
+                {e.respondidas > 0 && <span className="tabular-nums text-success-fg">{e.respondidas} respondidas lá</span>}
                 {e.transferencias > 0 && <span className="tabular-nums text-fg">{e.transferencias} viraram sugestão de transferência</span>}
-                {e.semDestino > 0 && <span className="tabular-nums text-warning">{e.semDestino} sem destino</span>}
+                {e.semDestino > 0 && <span className="tabular-nums text-warning-fg">{e.semDestino} sem destino</span>}
               </li>
             ))}
           </ul>
@@ -71,7 +71,7 @@ export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
       )}
 
       {semIa > 0 && (
-        <p className="text-[13px] text-warning">
+        <p className="text-[13px] text-warning-fg">
           {semIa} {semIa === 1 ? "pergunta não era" : "perguntas não eram"} de nenhum setor com IA — é o sinal de qual
           IA construir a seguir.
         </p>

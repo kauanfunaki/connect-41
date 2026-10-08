@@ -136,7 +136,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
             <Card className="p-4 flex flex-col gap-2">
               <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Por setor</h2>
               <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-                <table className="w-full text-[length:var(--fs-ui)]">
+                <table className="w-full">
                   <thead>
                     <tr className={CABECALHO}>
                       <th className="px-3">Setor</th>
@@ -159,7 +159,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
             <Card className="p-4 flex flex-col gap-2">
               <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Por pessoa</h2>
               <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-                <table className="w-full text-[length:var(--fs-ui)]">
+                <table className="w-full">
                   <thead>
                     <tr className={CABECALHO}>
                       <th className="px-3">Pessoa</th>
@@ -214,7 +214,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
                 resto. Sem o `TabelaFiltravel`, o funil vira só o rótulo. */}
             <TabelaNoFiltro filtravel={linhas.length <= 200} linhas={apontamentos}>
               <TabelaNoDesktop padrao>
-                <table className="w-full min-w-[640px] text-[length:var(--fs-ui)]">
+                <table className="w-full min-w-[640px]">
                   <thead>
                     <tr className={CABECALHO}>
                       <th className="px-3">

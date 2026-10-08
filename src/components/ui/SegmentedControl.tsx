@@ -83,8 +83,8 @@ const SEGMENTO =
 const ATIVO: Record<Tom, string> = {
   neutral: "bg-surface-hover text-fg",
   brand: "bg-brand-subtle text-brand shadow-[inset_0_0_0_1px_var(--c41-brand)]",
-  success: "bg-success-bg text-success shadow-[inset_0_0_0_1px_var(--c41-success)]",
-  warning: "bg-warning-bg text-warning shadow-[inset_0_0_0_1px_var(--c41-warning)]",
+  success: "bg-success-bg text-success-fg shadow-[inset_0_0_0_1px_var(--c41-success)]",
+  warning: "bg-warning-bg text-warning-fg shadow-[inset_0_0_0_1px_var(--c41-warning)]",
   danger: "bg-danger-bg text-danger shadow-[inset_0_0_0_1px_var(--c41-danger)]",
   info: "bg-info-bg text-info shadow-[inset_0_0_0_1px_var(--c41-info)]",
 };

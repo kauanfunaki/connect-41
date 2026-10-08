@@ -117,7 +117,7 @@ export default async function ArtigoDeAjudaPage({
           {artigo.dicas && artigo.dicas.length > 0 && (
             <Card className="p-4 flex flex-col gap-2.5">
               <p className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-fg-muted">
-                <Lightbulb size={14} className="text-warning" /> Bom saber
+                <Lightbulb size={14} className="text-warning-fg" /> Bom saber
               </p>
               <ul className="flex flex-col gap-2">
                 {artigo.dicas.map((d) => (

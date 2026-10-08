@@ -55,7 +55,7 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
       }))}
     >
       <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-        <table className="w-full text-[length:var(--fs-ui)]">
+        <table className="w-full">
           <thead>
             <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
               <th className="px-4 py-3">
@@ -105,10 +105,10 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
                       <span className="text-fg-muted">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-[12px] text-fg-muted whitespace-nowrap hidden md:table-cell">
+                  <td className="px-4 py-2.5 text-fg-muted whitespace-nowrap hidden md:table-cell">
                     {l.startDate ? formatCalendarDate(l.startDate, DATA_CURTA) : "—"}
                   </td>
-                  <td className="px-4 py-2.5 text-[12px] text-fg-muted whitespace-nowrap hidden md:table-cell">
+                  <td className="px-4 py-2.5 text-fg-muted whitespace-nowrap hidden md:table-cell">
                     {l.endDate ? formatCalendarDate(l.endDate, DATA_CURTA) : "—"}
                   </td>
                   {deleteAction && (

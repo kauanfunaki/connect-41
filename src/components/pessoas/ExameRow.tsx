@@ -23,10 +23,10 @@ const STATUS_STYLE: Record<ExameAdmissionalStatus, string> = {
   SOLICITADO:             "bg-surface-2 text-fg-muted border-border",
   AGENDADO:               "bg-brand/10 text-brand border-brand/25",
   REALIZADO:              "bg-brand/10 text-brand border-brand/25",
-  ASO_PENDENTE:           "bg-warning/10 text-warning border-warning/25",
-  ASO_APTO:               "bg-success/10 text-success border-success/25",
+  ASO_PENDENTE:           "bg-warning/10 text-warning-fg border-warning/25",
+  ASO_APTO:               "bg-success/10 text-success-fg border-success/25",
   ASO_INAPTO:             "bg-danger/10 text-danger border-danger/25",
-  ASO_APTO_COM_RESTRICAO: "bg-warning/10 text-warning border-warning/25",
+  ASO_APTO_COM_RESTRICAO: "bg-warning/10 text-warning-fg border-warning/25",
 };
 
 const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as ExameAdmissionalStatus[];

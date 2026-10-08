@@ -29,11 +29,11 @@ const APARENCIA: Record<
   Veredito["situacao"],
   { icone: React.ReactNode; classe: string; rotulo: string }
 > = {
-  aceito: { icone: <CheckCircle2 size={16} />, classe: "text-success", rotulo: "Aceito" },
-  duplicata: { icone: <Copy size={16} />, classe: "text-warning", rotulo: "Duplicata" },
+  aceito: { icone: <CheckCircle2 size={16} />, classe: "text-success-fg", rotulo: "Aceito" },
+  duplicata: { icone: <Copy size={16} />, classe: "text-warning-fg", rotulo: "Duplicata" },
   invalido: { icone: <XCircle size={16} />, classe: "text-danger", rotulo: "Inválido" },
   empresa_nao_cadastrada: { icone: <Building2 size={16} />, classe: "text-danger", rotulo: "Empresa não cadastrada" },
-  ambigua: { icone: <HelpCircle size={16} />, classe: "text-warning", rotulo: "Ambígua" },
+  ambigua: { icone: <HelpCircle size={16} />, classe: "text-warning-fg", rotulo: "Ambígua" },
 };
 
 export function EntradaXmlForm({ empresas, action }: Props) {

@@ -49,7 +49,7 @@ export function LinhaDoDia({
           {responsaveis && (
             <>
               <span aria-hidden>·</span>
-              <span className={responsaveis.length ? "" : "text-warning"}>{responsaveis.length ? responsaveis.join(", ") : "sem responsável"}</span>
+              <span className={responsaveis.length ? "" : "text-warning-fg"}>{responsaveis.length ? responsaveis.join(", ") : "sem responsável"}</span>
             </>
           )}
           <SelosDoItem c={c} />

@@ -229,7 +229,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
           linhas={contas.map((c) => ({ id: c.companyId, valores: { situacao: SAUDE[c.saude].rotulo } }))}
         >
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[720px] text-[13px]">
+            <table className="w-full min-w-[720px]">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 pr-3">Empresa</th>
@@ -262,7 +262,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                           // dizer "Lendo…": o aviso fica aqui, onde o resultado vai aparecer.
                           <span className="block text-[11px] mt-1 text-fg-muted">Consultando o Omie…</span>
                         ) : teste[c.companyId] ? (
-                          <span className={`block text-[11px] mt-1 ${teste[c.companyId].ok ? "text-success" : "text-danger"}`}>{teste[c.companyId].texto}</span>
+                          <span className={`block text-[11px] mt-1 ${teste[c.companyId].ok ? "text-success-fg" : "text-danger"}`}>{teste[c.companyId].texto}</span>
                         ) : (
                           c.lastError && <span className="block text-[11px] mt-1 text-danger">{c.lastError}</span>
                         )}

@@ -61,7 +61,7 @@ const STATUS_OPTIONS = [
 
 const STATUS_STYLE: Record<CheckState["status"], string> = {
   PENDENTE: "bg-surface-2 text-fg-muted border-border",
-  CONFERIDO: "bg-success/10 text-success border-success/25",
+  CONFERIDO: "bg-success/10 text-success-fg border-success/25",
   DIVERGENTE: "bg-danger/10 text-danger border-danger/25",
   NAO_APLICAVEL: "bg-surface-2 text-fg-secondary border-border",
 };

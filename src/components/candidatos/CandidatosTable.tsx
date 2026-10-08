@@ -176,7 +176,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
               A coluna Tags ganhou o funil: a lista é paginada, então ele
               filtra no servidor (`FiltroDaColunaNaUrl`). */}
           <div className="c41-tabela scroll-x overflow-x-auto hidden md:block">
-          <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">
+          <table className="w-full min-w-[860px]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (

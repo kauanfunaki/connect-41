@@ -64,7 +64,7 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
 
       {resumo && (
         <div className="flex flex-col gap-1 text-fs-2 text-fg-secondary">
-          <p className="inline-flex items-center gap-1.5 text-ui text-success">
+          <p className="inline-flex items-center gap-1.5 text-ui text-success-fg">
             <Check size={14} /> {resumo.novas} {resumo.novas === 1 ? "transação nova" : "transações novas"} de {resumo.lidas} lidas
             {resumo.repetidas > 0 && ` · ${resumo.repetidas} já estavam importadas`}
           </p>
@@ -87,7 +87,7 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
           )}
           {resumo.zeradas > 0 && <p>{resumo.zeradas} com valor zero não foram importadas.</p>}
           {resumo.avisos.map((a) => (
-            <p key={a} className="text-warning">
+            <p key={a} className="text-warning-fg">
               {a}
             </p>
           ))}

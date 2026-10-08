@@ -78,7 +78,7 @@ export function AgenteCard({ linha, podeEditar }: Props) {
         {!linha.temPrecoConhecido && (
           // Vale dizer antes de gastar, e não só depois: com este modelo, o
           // teto em reais não vai proteger nada.
-          <span className="text-warning">sem preço na tabela — o gasto não será apurado</span>
+          <span className="text-warning-fg">sem preço na tabela — o gasto não será apurado</span>
         )}
         {linha.def.ferramentas.length === 0 && <span>não usa ferramentas</span>}
         <span>{linha.def.escreve ? "escreve sozinho" : "propõe, não escreve"}</span>

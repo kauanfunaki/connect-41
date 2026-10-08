@@ -128,7 +128,7 @@ export default async function RelatoriosDoSocietarioPage({
             </p>
           </div>
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[760px] text-[13px]">
+            <table className="w-full min-w-[760px]">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className={TH}>Tipo</th>
@@ -183,7 +183,7 @@ export default async function RelatoriosDoSocietarioPage({
             <p className="text-[13px] text-fg-muted">Nenhuma volta de exigência no período.</p>
           ) : (
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[560px] text-[13px]">
+              <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Processo</th>
@@ -220,7 +220,7 @@ export default async function RelatoriosDoSocietarioPage({
             </p>
           </div>
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[680px] text-[13px]">
+            <table className="w-full min-w-[680px]">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className={TH}>Responsável</th>
@@ -262,7 +262,7 @@ export default async function RelatoriosDoSocietarioPage({
             <p className="text-[13px] tabular-nums">
               <strong>{formatarReaisDeCentavos(totais.totalCentavos)}</strong>
               {totais.custoDasVoltasCentavos > 0 && (
-                <span className="text-warning"> · {formatarReaisDeCentavos(totais.custoDasVoltasCentavos)} de reapresentação</span>
+                <span className="text-warning-fg"> · {formatarReaisDeCentavos(totais.custoDasVoltasCentavos)} de reapresentação</span>
               )}
             </p>
           </div>
@@ -270,7 +270,7 @@ export default async function RelatoriosDoSocietarioPage({
             <p className="text-[13px] text-fg-muted">Nenhuma taxa registrada nos processos do período.</p>
           ) : (
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[680px] text-[13px]">
+              <table className="w-full min-w-[680px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Processo</th>
@@ -291,7 +291,7 @@ export default async function RelatoriosDoSocietarioPage({
                       <td className={TD}>{l.voltas}</td>
                       <td className={TD}>{formatarReaisDeCentavos(l.totalCentavos)}</td>
                       <td className={TD}>{formatarReaisDeCentavos(l.pagoCentavos)}</td>
-                      <td className={`${TD} ${l.custoDasVoltasCentavos > 0 ? "text-warning" : ""}`}>
+                      <td className={`${TD} ${l.custoDasVoltasCentavos > 0 ? "text-warning-fg" : ""}`}>
                         {formatarReaisDeCentavos(l.custoDasVoltasCentavos)}
                       </td>
                     </tr>

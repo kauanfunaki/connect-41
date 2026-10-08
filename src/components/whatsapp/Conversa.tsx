@@ -275,7 +275,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
             </p>
           )}
           {conversa.vinculoAutomatico === "nao_confirmou" && (
-            <p className="text-[length:var(--fs-2)] text-warning">
+            <p className="text-[length:var(--fs-2)] text-warning-fg">
               O vínculo automático não confirmou quem é (ou foi desfeito). Só se liga à mão.
             </p>
           )}
@@ -350,7 +350,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
                   {/* Bloqueada é o rascunho que o robô ia mandar e não mandou.
                       Mostrar é o que permite a quem assumiu aproveitar ou
                       descartar com conhecimento de causa. */}
-                  {m.status === "BLOQUEADA" && <span className="text-warning">· não enviada</span>}
+                  {m.status === "BLOQUEADA" && <span className="text-warning-fg">· não enviada</span>}
                   {m.status === "FALHOU" && <span className="text-danger">· falhou</span>}
                 </p>
                 {/* O motivo aparece também na falha de envio: é justamente o

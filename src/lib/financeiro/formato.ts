@@ -27,5 +27,5 @@ export function dias(valor: number | null): string {
 
 /** Classe de cor para um valor com sinal. */
 export function tomDoValor(centavos: number): string {
-  return centavos < 0 ? "text-danger" : centavos > 0 ? "text-success" : "text-fg-muted";
+  return centavos < 0 ? "text-danger" : centavos > 0 ? "text-success-fg" : "text-fg-muted";
 }

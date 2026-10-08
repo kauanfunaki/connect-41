@@ -245,7 +245,7 @@ export function AcoesDaConta({
       </div>
       {bloqueioDeBaixa && <span className="text-micro text-fg-muted max-w-[220px]">{bloqueioDeBaixa}</span>}
       {erro && <span className="text-micro text-danger max-w-[220px]">{erro}</span>}
-      {aviso && <span className="text-micro text-warning max-w-[220px]">{aviso}</span>}
+      {aviso && <span className="text-micro text-warning-fg max-w-[220px]">{aviso}</span>}
     </div>
   );
 }

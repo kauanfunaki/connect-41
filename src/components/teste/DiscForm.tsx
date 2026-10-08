@@ -178,7 +178,7 @@ export function DiscForm({ token }: Props) {
             >
               <legend className="text-[length:var(--fs-micro)] text-fg-muted px-1">
                 Bloco {i + 1} de {TOTAL_BLOCKS}
-                {complete && <span className="text-success"> · ok</span>}
+                {complete && <span className="text-success-fg"> · ok</span>}
               </legend>
 
               {/* Uma linha por palavra (em vez de tabela de 3 colunas): em 375px

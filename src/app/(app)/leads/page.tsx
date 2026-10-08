@@ -175,7 +175,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
               }))}
             >
               <TabelaNoDesktop padrao>
-                <table className="w-full min-w-[900px] text-[length:var(--fs-ui)]">
+                <table className="w-full min-w-[900px]">
                   <thead>
                     <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">

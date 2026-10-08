@@ -4,7 +4,7 @@ type Tom = "neutro" | "sucesso" | "perigo";
 
 const COR_DO_ICONE: Record<Tom, string> = {
   neutro: "bg-surface-2 text-fg-muted",
-  sucesso: "bg-success/10 text-success",
+  sucesso: "bg-success/10 text-success-fg",
   perigo: "bg-danger/10 text-danger",
 };
 

@@ -109,7 +109,7 @@ export function FinanceCategoryForm({
             é o que precisa ser reclassificado, e escondê-lo faria a pessoa
             perder o valor antigo sem saber que perdeu. */}
         {valorAntigoSolto && (
-          <p className="text-[length:var(--fs-helper)] text-warning">
+          <p className="text-[length:var(--fs-helper)] text-warning-fg">
             Esta categoria estava marcada como <strong>{defaultValues?.dreGroup}</strong>, que não é
             um grupo do DRE. Escolha um acima — enquanto não escolher, ela não soma em nenhuma linha.
           </p>

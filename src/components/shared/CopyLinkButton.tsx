@@ -30,7 +30,7 @@ export function CopyLinkButton({
   if (variant === "botao") {
     return (
       <Button variant="secondary" size="xs" onClick={handleCopy} title="Copiar link da reunião" className={className}>
-        {copied ? <Check size={11} className="text-success" /> : <Copy size={11} />}
+        {copied ? <Check size={11} className="text-success-fg" /> : <Copy size={11} />}
         {copied ? "Copiado" : "Copiar link"}
       </Button>
     );
@@ -43,7 +43,7 @@ export function CopyLinkButton({
       title="Copiar link da reunião" aria-label="Copiar link da reunião"
       className={`inline-flex items-center gap-1 text-fs-2 text-fg-muted hover:text-fg transition-colors ${className}`.trim()}
     >
-      {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
+      {copied ? <Check size={12} className="text-success-fg" /> : <Copy size={12} />}
       {copied ? "Copiado" : "Copiar link"}
     </button>
   );

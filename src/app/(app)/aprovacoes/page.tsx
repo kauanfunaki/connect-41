@@ -200,7 +200,7 @@ async function Fila({
           {
             rotulo: "Aguardando",
             valor: String(aguardando?._count._all ?? 0),
-            tom: aguardando ? "text-warning" : "",
+            tom: aguardando ? "text-warning-fg" : "",
             icone: <Hourglass />,
             href: hrefSituacao("aguardando"),
           },
@@ -287,7 +287,7 @@ async function Fila({
               }))}
             >
             <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[960px] text-ui">
+            <table className="w-full min-w-[960px]">
               <thead>
                 <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 pr-3 font-medium">
@@ -427,7 +427,7 @@ async function Alcadas({
           </CartoesNoCelular>
 
           <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[720px] text-ui">
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium">Empresa</th>
