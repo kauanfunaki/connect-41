@@ -2,7 +2,7 @@
 
 import { useId, useState, useTransition } from "react";
 import { Download, Eye, FileSearch, KeyRound, Plus, PlugZap, RefreshCw } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -256,7 +256,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                       <td className="py-2.5 pr-3 font-medium">{c.empresa}</td>
                       <td className="py-2.5 pr-3 text-fg-secondary tnum">{c.appKey || "—"}</td>
                       <td className="py-2.5 pr-3">
-                        <Badge variant={SAUDE[c.saude].variante}>{SAUDE[c.saude].rotulo}</Badge>
+                        <Selo tom={tomDaVariante(SAUDE[c.saude].variante)}>{SAUDE[c.saude].rotulo}</Selo>
                         {testando === c.companyId || lendo === c.companyId ? (
                           // A consulta que saiu do "⋯" não tem mais botão para
                           // dizer "Lendo…": o aviso fica aqui, onde o resultado vai aparecer.
