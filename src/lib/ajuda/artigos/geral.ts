@@ -575,7 +575,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
   // ─── Cargos e Salários ─────────────────────────────────────────────────────
   {
     chave: "gestao_cargos_salarios",
-    titulo: "Cargos e Salários",
+    titulo: "Cargos e salários",
     caminhos: ["/cargos-salarios"],
     resumo:
       "A matriz de cargos de todas as empresas, agrupada por família e nível de senioridade, com as faixas salariais e os pontos da estrutura que precisam de correção.",
@@ -583,7 +583,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como ler a matriz",
         passos: [
-          "Entre no setor e abra “Cargos e Salários” na barra lateral.",
+          "Entre no setor e abra “Cargos e salários” na barra lateral.",
           "Cada bloco é uma família de cargos, com a quantidade de cargos e de colaboradores.",
           "Em cada linha, veja o “Nível”, o “Cargo”, a “Empresa”, a “Área”, as “Pessoas” no cargo e a “Faixa salarial”.",
           "Use o funil das colunas “Nível”, “Empresa” e “Área” para filtrar a família.",

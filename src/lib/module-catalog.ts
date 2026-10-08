@@ -273,7 +273,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "dp_horas_extras",
-    label: "Horas Extras",
+    label: "Horas extras",
     sectorCode: "dp",
     description: "Lançamentos de horas extras pendentes de aprovação",
     defaultEnabled: true,
@@ -300,7 +300,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "dp_avaliacoes",
-    label: "Avaliações de Desempenho",
+    label: "Avaliações de desempenho",
     sectorCode: "dp",
     description: "Ciclos de avaliação por competência",
     defaultEnabled: true,
@@ -309,7 +309,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "gestao_cargos_salarios",
-    label: "Cargos e Salários",
+    label: "Cargos e salários",
     sectorCode: "gestao",
     description: "Matriz de cargos, áreas e faixas salariais de todas as empresas",
     defaultEnabled: true,
@@ -358,7 +358,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "bpo_senhas",
-    label: "Repositório de Senhas",
+    label: "Repositório de senhas",
     sectorCode: "bpo",
     description: "Credenciais de portais, bancos e sistemas de clientes centralizadas com auditoria de acesso",
     defaultEnabled: true,
@@ -367,7 +367,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "bpo_manual",
-    label: "Repositório de Manuais",
+    label: "Repositório de manuais",
     sectorCode: "bpo",
     description: "Instruções internas escritas pelos colaboradores para alinhamento em ausências e férias",
     defaultEnabled: true,
@@ -376,7 +376,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "fiscal_documentos",
-    label: "Documentos Fiscais",
+    label: "Documentos fiscais",
     sectorCode: "fiscal",
     description: "Acervo de NF-e, NFC-e, CT-e e NFS-e por empresa e competência, com entrada de XML e destino no financeiro",
     // Desligado por padrão, ao contrário dos outros: é o primeiro módulo do

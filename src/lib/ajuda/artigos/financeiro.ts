@@ -750,7 +750,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
   // ─── Documentos Fiscais ───────────────────────────────────────────────────
   {
     chave: "fiscal_documentos",
-    titulo: "Documentos Fiscais",
+    titulo: "Documentos fiscais",
     caminhos: ["/documentos-fiscais"],
     resumo:
       "Acervo das notas fiscais eletrônicas (NF-e, NFC-e e NFS-e) de cada empresa por competência. Aqui você traz o que falta e decide o que vira conta a pagar ou a receber — nada é emitido nesta tela.",
