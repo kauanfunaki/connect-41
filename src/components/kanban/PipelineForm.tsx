@@ -53,13 +53,13 @@ export function PipelineForm({ action, sectorOptions }: Props) {
       {/* Os três dados numa linha (30/09): o tipo de entidade ficava sozinho
           numa linha de largura inteira embaixo do par nome/setor. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Field label="Nome do Kanban" htmlFor="name" required>
+        <Field label="Nome do kanban" htmlFor="name" required>
           <Input
             id="name"
             name="name"
             type="text"
             required
-            placeholder="Ex: Funil de Vagas"
+            placeholder="Ex.: Funil de vagas"
           />
         </Field>
         <Field label="Setor" htmlFor="sectorCode" required>
@@ -70,7 +70,7 @@ export function PipelineForm({ action, sectorOptions }: Props) {
             ))}
           </Select>
         </Field>
-        <Field label="Tipo de Entidade" htmlFor="entityType" required>
+        <Field label="Tipo de entidade" htmlFor="entityType" required>
           <Select id="entityType" name="entityType" required defaultValue="COMPANY">
             <option value="COMPANY">Empresas</option>
             <option value="PERSON">Pessoas</option>

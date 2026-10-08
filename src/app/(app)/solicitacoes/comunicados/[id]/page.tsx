@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { carregarComunicado } from "@/lib/comunicados/consultas";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +68,7 @@ export default async function ComunicadoPage({ params }: { params: Promise<{ id:
           <div key={g.grupoId} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
             <span className="text-fs-3 font-medium text-fg">{g.nome}</span>
             {g.leitores.length === 0 ? (
-              <Badge variant="warning">Ainda não leu</Badge>
+              <Selo tom="atencao">Ainda não leu</Selo>
             ) : (
               <span className="text-fs-2 text-fg-secondary">
                 {g.leitores.map((l) => `${l.nome} em ${formatInstantDateTime(l.em)}`).join(" · ")}

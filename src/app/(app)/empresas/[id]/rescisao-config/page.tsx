@@ -8,7 +8,6 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { RescisaoConfigForm } from "@/components/rescisao/RescisaoConfigForm";
 import { resolveRescisaoConfig } from "@/lib/rescisao/config";
 import { salvarConfigEmpresa } from "@/app/(app)/admin/rescisao/actions";
@@ -48,11 +47,10 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Cálculo de rescisão" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="Cálculo de rescisão"

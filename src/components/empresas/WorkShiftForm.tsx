@@ -39,7 +39,7 @@ export function WorkShiftForm({ action, companyId, cancelHref, defaultValues }: 
       {/* Horário na largura de um horário: em três terços iguais, o "08:00"
           ficava do tamanho do nome do turno. */}
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_140px] gap-4">
-        <CampoForm label="Nome do Turno" htmlFor="name" required>
+        <CampoForm label="Nome do turno" htmlFor="name" required>
           <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
         </CampoForm>
         <CampoForm label="Início" htmlFor="startTime" required>

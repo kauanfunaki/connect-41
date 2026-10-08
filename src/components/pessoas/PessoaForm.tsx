@@ -563,7 +563,7 @@ export function PessoaForm({
                 <CampoForm label="CTPS" htmlFor="ctps">
                   <Input id="ctps" name="ctps" type="text" value={values.ctps} placeholder="0000000" />
                 </CampoForm>
-                <CampoForm label="CTPS Série" htmlFor="ctpsSerie">
+                <CampoForm label="Série da CTPS" htmlFor="ctpsSerie">
                   <Input id="ctpsSerie" name="ctpsSerie" type="text" value={values.ctpsSerie} placeholder="000-0" />
                 </CampoForm>
                 <CampoForm label="Escolaridade" htmlFor="education">
@@ -635,7 +635,7 @@ export function PessoaForm({
           <FormSection title={stepLabels[4]}>
             {isEditing ? (
               <p className="text-body text-fg-secondary">
-                A lista de documentos e o upload ficam na ficha da pessoa, na aba própria de Documentos.
+                A lista de documentos e o upload ficam na ficha da pessoa, na aba própria, Documentos.
               </p>
             ) : (
               <div className="space-y-4">

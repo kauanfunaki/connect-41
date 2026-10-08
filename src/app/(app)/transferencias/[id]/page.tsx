@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRightLeft, ArrowRight, Eye, Lock } from "lucide-react";
+import { ArrowRight, Eye, Lock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { getSectorUsers } from "@/lib/sectorUsers";
@@ -9,6 +9,7 @@ import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { TextoComLinks } from "@/components/shared/TextoComLinks";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
@@ -87,15 +88,30 @@ export default async function HandoffDetailPage({
         ]}
       />
 
-      <Card className="p-6 mb-4">
-        <div className="flex items-start gap-3 min-w-0">
-          <span className="w-10 h-10 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
-            <ArrowRightLeft size={18} />
-          </span>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-2">
+      {/* O cabeçalho de registro de trabalho do processo e do lead — PageHeader
+          com a situação no `meta` (padrão aceito em 08/10/2026). Era um cartão
+          próprio, com o nome em 18px e sem título de página (h1). */}
+      <PageHeader
+        title={
+          entity ? (
+            <Link href={entityHref} className="hover:text-brand transition-colors">
+              {entity.name}
+            </Link>
+          ) : (
+            <span className="text-fg-muted">(removido)</span>
+          )
+        }
+        subtitle={
+          <>
+            Solicitado por {handoff.requester.name} em{" "}
+            {formatInstantDate(handoff.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
+          </>
+        }
+        meta={
+          <>
+            <span className="inline-flex items-center gap-2 flex-wrap">
               <SectorChip label={sectorLabels[handoff.fromSector] ?? handoff.fromSector} color={sectorColors[handoff.fromSector] ?? "#586577"} />
-              <ArrowRight size={14} className="text-fg-muted flex-shrink-0" />
+              <ArrowRight size={14} className="text-fg-muted flex-shrink-0" aria-label="para" />
               {handoff.sectors.map((s) => (
                 <SectorChip
                   key={s.sectorCode}
@@ -103,31 +119,17 @@ export default async function HandoffDetailPage({
                   color={sectorColors[s.sectorCode] ?? "#586577"}
                 />
               ))}
-              <Selo tom={tomDaVariante(HANDOFF_STATUS_BADGE[aggregate])}>{HANDOFF_STATUS_LABEL[aggregate]}</Selo>
-              <Selo tom={tomDaVariante(HANDOFF_PRIORITY_BADGE[handoff.priority])}>
-                Prioridade {HANDOFF_PRIORITY_LABEL[handoff.priority].toLowerCase()}
-              </Selo>
-            </div>
-            {entity ? (
-              <Link
-                href={entityHref}
-                className="text-section font-display font-semibold text-fg hover:text-brand transition-colors"
-              >
-                {entity.name}
-              </Link>
-            ) : (
-              <p className="text-section font-display font-semibold text-fg-muted">(removido)</p>
-            )}
-            <p className="text-helper text-fg-muted mt-1">
-              Solicitado por {handoff.requester.name} em{" "}
-              {formatInstantDate(handoff.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
-            </p>
-          </div>
-        </div>
-      </Card>
+            </span>
+            <Selo tom={tomDaVariante(HANDOFF_STATUS_BADGE[aggregate])}>{HANDOFF_STATUS_LABEL[aggregate]}</Selo>
+            <Selo tom={tomDaVariante(HANDOFF_PRIORITY_BADGE[handoff.priority])}>
+              Prioridade {HANDOFF_PRIORITY_LABEL[handoff.priority].toLowerCase()}
+            </Selo>
+          </>
+        }
+      />
 
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-2">Informações adicionais</h2>
+        <h2 className="text-section font-semibold text-fg mb-2">Informações adicionais</h2>
         {handoff.message ? (
           <p className="text-body text-fg-secondary whitespace-pre-wrap">
             <TextoComLinks texto={handoff.message} />
@@ -137,7 +139,7 @@ export default async function HandoffDetailPage({
         )}
         {handoff.description && (
           <>
-            <h2 className="text-card-title font-semibold text-fg mb-2 mt-4">Descrição</h2>
+            <h2 className="text-section font-semibold text-fg mb-2 mt-5">Descrição</h2>
             <p className="text-body text-fg-secondary whitespace-pre-wrap">
               <TextoComLinks texto={handoff.description} />
             </p>
@@ -238,8 +240,8 @@ export default async function HandoffDetailPage({
 
       {views.length > 0 && (
         <Card className="p-5">
-          <h2 className="text-card-title font-semibold text-fg mb-2 flex items-center gap-1.5">
-            <Eye size={14} className="text-fg-muted" />
+          <h2 className="text-section font-semibold text-fg mb-2 flex items-center gap-2">
+            <Eye size={16} className="text-fg-muted" />
             Visualizado por
           </h2>
           <div className="space-y-1.5">

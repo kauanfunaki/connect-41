@@ -18,11 +18,13 @@ const STATUS_LABEL: Record<CompanyStatus, string> = {
   CHURNED: "Cancelado",
 };
 
+// Cancelado é cadastro que saiu de cena, como o inativo: bolinha cinza, e não
+// vermelha (escolha 2A, 08/10/2026 — situação encerrada em neutro).
 const STATUS_COLOR: Record<CompanyStatus, string> = {
   PROSPECT: "var(--c41-warning)",
   ACTIVE: "var(--c41-success)",
   INACTIVE: "var(--c41-fg-muted)",
-  CHURNED: "var(--c41-danger)",
+  CHURNED: "var(--c41-fg-muted)",
 };
 
 type Props = {

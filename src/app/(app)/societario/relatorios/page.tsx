@@ -6,6 +6,7 @@ import { MetricCard } from "@/components/ui/MetricCard";
 import { FolderOpen, AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Card } from "@/components/ui/Card";
+import { Selo } from "@/components/ui/Selo";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
@@ -202,7 +203,7 @@ export default async function RelatoriosDoSocietarioPage({
                       </td>
                       <td className={`${TD} text-danger font-medium`}>{p.voltas}</td>
                       <td className={TD}>{p.prazo.dias}</td>
-                      <td className="py-2 pr-3 text-fg-secondary">{p.concluidoEm ? "Concluído" : "Aberto"}</td>
+                      <td className="py-2 pr-3">{p.concluidoEm ? <Selo tom="sucesso">Concluído</Selo> : <Selo tom="marca">Aberto</Selo>}</td>
                     </tr>
                   ))}
                 </tbody>

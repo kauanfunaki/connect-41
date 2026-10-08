@@ -1202,24 +1202,24 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         );
         await r.clicar(main(r).getByRole("link", { name: /MERCADO BOM PREÇO LTDA/ }).first(), "Clique no nome da empresa para abrir a ficha.");
         await r.esperarTela(/\/empresas\/[^/]+$/);
-        await r.apontar(main(r).getByRole("heading", { name: "Identificação" }), "Em Visão Geral ficam os dados cadastrais e os serviços contratados.");
+        await r.apontar(main(r).getByRole("heading", { name: "Identificação" }), "Em Visão geral ficam os dados cadastrais e os serviços contratados.");
         await r.apontar(
           main(r).getByRole("tablist"),
-          "As abas trazem o resto: filiais, pessoas, RH & Operação, documentos, conversas e histórico."
+          "As abas trazem o resto: filiais, pessoas, RH & operação, documentos, conversas e histórico."
         );
-        await r.clicar(main(r).getByRole("tab", { name: "RH & Operação" }), "Em RH & Operação: sócios, cargos, departamentos, benefícios, turnos, folha e documentos para o cliente.");
+        await r.clicar(main(r).getByRole("tab", { name: "RH & operação" }), "Em RH & operação: sócios, cargos, departamentos, benefícios, turnos, folha e documentos para o cliente.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(900);
         await r.apontar(
-          main(r).getByRole("link", { name: "Solicitar Transferência" }),
-          "Para passar um assunto da empresa a outro setor, Solicitar Transferência."
+          main(r).getByRole("link", { name: "Solicitar transferência" }),
+          "Para passar um assunto da empresa a outro setor, Solicitar transferência."
         );
         await r.clicar(main(r).getByRole("link", { name: "Empresas", exact: true }).first());
         await r.esperarTela(/\/(empresas|cadastros)/);
         await r.clicar(main(r).getByRole("button", { name: "Mais ações" }).first(), "Na linha, os três pontinhos ao lado de Editar guardam Inativar — e Reativar, para as inativas.");
         await r.pausa(1200);
         await r.page.keyboard.press("Escape");
-        await r.clicar(main(r).getByRole("link", { name: "+ Nova Empresa" }), "Para cadastrar, clique em + Nova Empresa.");
+        await r.clicar(main(r).getByRole("link", { name: "Nova empresa" }), "Para cadastrar, clique em Nova empresa.");
         await r.esperarTela("/empresas/nova");
         await r.apontar(
           main(r).getByRole("textbox", { name: "CNPJ" }),
@@ -1250,7 +1250,7 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.esperarTela(/\/pessoas\/[^/]+$/);
         await r.apontar(
           main(r).getByRole("tablist"),
-          "Visão Geral, Vínculo, Dados Trabalhistas, Documentos, Conversas e Histórico: tudo da pessoa."
+          "Visão geral, Vínculo, Dados trabalhistas, Documentos, Conversas e Histórico: tudo da pessoa."
         );
         const vinculo = main(r).getByRole("tab", { name: "Vínculo" });
         if (await vinculo.count()) {
@@ -1259,11 +1259,11 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
           await r.pausa(800);
         }
         await r.apontar(
-          main(r).getByRole("link", { name: "Solicitar Transferência" }),
-          "Solicitar Transferência passa um assunto da pessoa a outro setor."
+          main(r).getByRole("link", { name: "Solicitar transferência" }),
+          "Solicitar transferência passa um assunto da pessoa a outro setor."
         );
         await r.ir("/pessoas");
-        await r.apontar(main(r).getByRole("link", { name: "+ Nova Pessoa" }), "Para cadastrar, + Nova Pessoa: preencha cada etapa, Avançar → e Confirmar e salvar.");
+        await r.apontar(main(r).getByRole("link", { name: "Nova pessoa" }), "Para cadastrar, Nova pessoa: preencha cada etapa, Avançar → e Confirmar e salvar.");
         await r.clicar(main(r).getByRole("button", { name: "Mais ações" }).first(), "Os três pontinhos da linha guardam Inativar e Reativar.");
         await r.pausa(1200);
         await r.page.keyboard.press("Escape");
@@ -1430,7 +1430,7 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         // não o fecha (06/10): um clique no vazio da barra lateral fecha.
         await r.page.mouse.click(60, 860);
         await r.pausa(400);
-        const grade = r.page.getByRole("radiogroup", { name: "Horário da Agenda" });
+        const grade = r.page.getByRole("radiogroup", { name: "Horário da agenda" });
         await r.rolarAte(grade);
         await r.apontar(grade, "Em Agenda, escolha Usar o do escritório ou Definir o meu.");
         await r.clicar(grade.getByRole("radio", { name: /^Definir o meu/ }));
@@ -1466,10 +1466,10 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await r.apontar(
-          main(r).getByRole("button", { name: /Adicionar Tarefa/ }).first(),
-          "Na visão Lista, Adicionar Tarefa cria uma tarefa no grupo do status: digite o nome e aperte Enter."
+          main(r).getByRole("button", { name: /Adicionar tarefa/ }).first(),
+          "Na visão Lista, Adicionar tarefa cria uma tarefa no grupo do status: digite o nome e aperte Enter."
         );
-        await r.apontar(main(r).getByRole("button", { name: "+ Item" }).or(main(r).getByRole("link", { name: "+ Item" })).first(), "+ Item inclui uma empresa ou pessoa na lista.");
+        await r.apontar(main(r).getByRole("link", { name: "Nova tarefa" }).first(), "Nova tarefa cria a tarefa de uma empresa ou pessoa, com prazo, prioridade e responsáveis.");
         await r.apontar(main(r).getByRole("button", { name: /^Filtros/ }).first(), "A busca e o botão Filtros filtram por responsável, criador, etiqueta, prioridade e prazo.");
         await r.clicar(
           main(r).getByRole("group", { name: "Visão do pipeline" }).getByRole("button", { name: /Quadro/ }),
@@ -2306,7 +2306,7 @@ function videosDaGestao(): DefinicaoDeVideo[] {
         await r.pausa(1000);
         await r.legenda("Na ficha, preencha Família de cargos, Nível de senioridade e a faixa: inicial, intermediária e final. Depois, Salvar.");
         await r.soltar();
-        await encerramento(r, "Cargo novo se cadastra na ficha da empresa: RH & Operação → Cargos → + Novo Cargo.");
+        await encerramento(r, "Cargo novo se cadastra na ficha da empresa: RH & operação → Cargos → Novo cargo.");
       },
     },
     {

@@ -77,7 +77,7 @@ async function validateCompany(
   ignoreId?: string
 ): Promise<string | null> {
   const ehPF = data.kind === CompanyKind.PESSOA_FISICA;
-  if (!data.name) return ehPF ? "Nome é obrigatório." : "Razão Social é obrigatória.";
+  if (!data.name) return ehPF ? "O nome é obrigatório." : "A razão social é obrigatória.";
 
   const documento = ehPF ? data.cpf : data.cnpj;
   const rotulo = rotuloDoDocumento(data.kind);

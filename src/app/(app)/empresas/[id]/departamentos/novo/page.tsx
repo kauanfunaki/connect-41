@@ -6,7 +6,6 @@ import { DepartmentForm } from "@/components/empresas/DepartmentForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { criarDepartment } from "../actions";
 
 export default async function NovoDepartmentPage({
@@ -31,11 +30,11 @@ export default async function NovoDepartmentPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Departamentos", href: `/empresas/${companyId}/departamentos` },
           { label: "Novo" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Novo departamento" subtitle={company.name} />
 

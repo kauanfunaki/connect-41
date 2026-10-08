@@ -15,7 +15,7 @@ export async function gerarResumoEmpresa(companyId: string): Promise<AiSummarySt
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
   if (!(await isAiConfigured(ctx.tenantId))) {
-    return { error: "IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial." };
+    return { error: "IA não configurada. Cadastre uma chave em Integrações → Inteligência artificial." };
   }
 
   const prisma = getPrisma();

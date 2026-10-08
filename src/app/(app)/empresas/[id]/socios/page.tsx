@@ -7,12 +7,12 @@ import { formatCnpj, formatCpf, formatInstantDate } from "@/lib/format";
 import { algumSocioResideNoEndereco, somaDasParticipacoes } from "@/lib/societario/socios";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { BackButton } from "@/components/shared/BackButton";
 import { BuscarSociosNaReceita } from "@/components/empresas/BuscarSociosNaReceita";
 import { AcoesDoSocio } from "@/components/empresas/RegistrarSaidaDoSocio";
 import { moeda } from "@/lib/financeiro/formato";
@@ -95,11 +95,10 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Sócios" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="Sócios"
@@ -214,11 +213,11 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
             <p className="text-fs-2 text-fg-secondary">
               <strong>Reside no local?</strong>{" "}
               {resideNoLocal === true ? (
-                <Badge variant="success">Sim</Badge>
+                <Selo tom="sucesso">Sim</Selo>
               ) : resideNoLocal === false ? (
-                <Badge variant="info">Não</Badge>
+                <Selo tom="marca">Não</Selo>
               ) : (
-                <Badge variant="warning">Não dá para afirmar</Badge>
+                <Selo tom="atencao">Não dá para afirmar</Selo>
               )}
             </p>
             {resideNoLocal === null && (

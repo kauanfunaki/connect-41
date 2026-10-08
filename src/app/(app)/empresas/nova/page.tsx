@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
@@ -20,9 +19,8 @@ export default async function NovaEmpresaPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Cadastros", href: "/empresas" }, { label: "Empresas", href: "/empresas" }, { label: "Nova Empresa" }]} />
+      <Breadcrumb items={[{ label: "Cadastros", href: "/empresas" }, { label: "Empresas", href: "/empresas" }, { label: "Nova empresa" }]} />
 
-      <BackButton className="mb-3" />
 
       <PageHeader title="Nova empresa" />
 

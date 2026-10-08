@@ -24,7 +24,7 @@ export function LerContratoSocial({
 
   if (!aberto) {
     return (
-      <Button variant="secondary" onClick={() => setAberto(true)} disabled={desligada} title={desligada ? "Ligue a Leitura de contrato social em Administração › Inteligência Artificial" : undefined}>
+      <Button variant="secondary" onClick={() => setAberto(true)} disabled={desligada} title={desligada ? "Ligue a leitura de contrato social em Administração › Inteligência artificial" : undefined}>
         Ler contrato social (IA)
       </Button>
     );

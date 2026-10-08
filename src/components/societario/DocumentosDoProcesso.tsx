@@ -41,31 +41,9 @@ export function DocumentosDoProcesso({
 
   return (
     <div className="flex flex-col gap-3">
-      {documentos.length === 0 ? (
-        <p className="text-ui text-fg-muted">Nenhum documento neste processo ainda.</p>
-      ) : (
-        <ul className="flex flex-col">
-          {documentos.map((d) => (
-            <li key={d.id} className="flex flex-wrap items-start gap-x-3 gap-y-0.5 py-2 border-b border-border-soft last:border-0">
-              <FileText size={16} className="mt-0.5 shrink-0 text-fg-muted" aria-hidden />
-              <div className="flex-1 min-w-48 flex flex-col gap-0.5">
-                <a href={`${baseDoDownload}/${d.id}`} className="text-ui text-brand hover:underline break-all">
-                  {d.fileName}
-                </a>
-                {d.descricao && <span className="text-fs-2 text-fg break-words">{d.descricao}</span>}
-                <span className="text-micro text-fg-muted">
-                  {d.lado === ladoDeQuemVe ? d.enviadoPor : `${d.enviadoPor} · ${d.lado === "EQUIPE" ? "equipe" : "cliente"}`} ·{" "}
-                  {formatInstantDateTime(d.enviadoEm)} · {formatarBytes(d.sizeBytes)}
-                  {d.naConversa && " · na conversa"}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {aviso && <p className="text-fs-2 text-warning-fg">{aviso}</p>}
-
+      {/* O "Adicionar documentos" e o bloco de envio ficam acima da lista, como o
+          "Lançar horas" das Horas (escolha 5A, 08/10/2026): o novo de um
+          sub-registro da ficha abre em cima, e não no fim da lista. */}
       {aberto ? (
         <form
           key={versao}
@@ -115,6 +93,31 @@ export function DocumentosDoProcesso({
         <Button type="button" size="sm" variant="secondary" className="self-start" onClick={() => setAberto(true)}>
           <Upload size={14} /> Adicionar documentos
         </Button>
+      )}
+
+      {aviso && <p className="text-fs-2 text-warning-fg">{aviso}</p>}
+
+      {documentos.length === 0 ? (
+        <p className="text-ui text-fg-muted">Nenhum documento neste processo ainda.</p>
+      ) : (
+        <ul className="flex flex-col">
+          {documentos.map((d) => (
+            <li key={d.id} className="flex flex-wrap items-start gap-x-3 gap-y-0.5 py-2 border-b border-border-soft last:border-0">
+              <FileText size={16} className="mt-0.5 shrink-0 text-fg-muted" aria-hidden />
+              <div className="flex-1 min-w-48 flex flex-col gap-0.5">
+                <a href={`${baseDoDownload}/${d.id}`} className="text-ui text-brand hover:underline break-all">
+                  {d.fileName}
+                </a>
+                {d.descricao && <span className="text-fs-2 text-fg break-words">{d.descricao}</span>}
+                <span className="text-micro text-fg-muted">
+                  {d.lado === ladoDeQuemVe ? d.enviadoPor : `${d.enviadoPor} · ${d.lado === "EQUIPE" ? "equipe" : "cliente"}`} ·{" "}
+                  {formatInstantDateTime(d.enviadoEm)} · {formatarBytes(d.sizeBytes)}
+                  {d.naConversa && " · na conversa"}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

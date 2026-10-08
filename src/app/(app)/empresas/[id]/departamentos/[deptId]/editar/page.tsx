@@ -6,7 +6,6 @@ import { DepartmentForm } from "@/components/empresas/DepartmentForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { atualizarDepartment } from "../../actions";
 
 export default async function EditarDepartmentPage({
@@ -34,11 +33,11 @@ export default async function EditarDepartmentPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Departamentos", href: `/empresas/${companyId}/departamentos` },
           { label: "Editar" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Editar departamento" subtitle={company.name} />
 
