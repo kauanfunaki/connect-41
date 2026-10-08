@@ -134,7 +134,7 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
   {
     key: "meu-dia",
     label: "Meu dia",
-    description: "Tarefas atribuídas a você e itens com prazo.",
+    description: "Tarefas atribuídas a você ou com prazo.",
     slot: "main",
   },
   {

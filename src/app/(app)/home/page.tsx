@@ -552,7 +552,7 @@ export default async function HomePage() {
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-section font-semibold text-fg mb-3.5">Meu dia</h2>
         {meuDiaItems.length === 0 ? (
-          <p className="text-body text-fg-muted">Nenhum item com prazo ou atribuído a você.</p>
+          <p className="text-body text-fg-muted">Nenhuma tarefa com prazo ou atribuída a você.</p>
         ) : (
           <div className="space-y-1">
             {meuDiaItems.map((item) => {
@@ -619,13 +619,13 @@ export default async function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
             <p className="text-fs-1 font-medium text-fg-muted uppercase tracking-wide mb-2.5">
-              Top {STAGE_CHART_LIMIT} · cards por estágio
+              Top {STAGE_CHART_LIMIT} · tarefas por estágio
             </p>
-            <HorizontalBarChart data={stageChartData} emptyLabel="Nenhum card em aberto nos seus kanbans." />
+            <HorizontalBarChart data={stageChartData} emptyLabel="Nenhuma tarefa em aberto nos seus kanbans." />
             {stageChartHiddenCount > 0 && (
               <p className="text-fs-1 text-fg-muted mt-2.5">
                 + {stageChartHiddenCount} outro{stageChartHiddenCount !== 1 ? "s" : ""} estágio
-                {stageChartHiddenCount !== 1 ? "s" : ""} com menos cards
+                {stageChartHiddenCount !== 1 ? "s" : ""} com menos tarefas
               </p>
             )}
           </div>

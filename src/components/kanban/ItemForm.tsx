@@ -66,7 +66,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
           id="description"
           name="description"
           rows={3}
-          placeholder="Adicione uma descrição para este card..."
+          placeholder="Adicione uma descrição para esta tarefa…"
         />
       </Field>
 
@@ -110,8 +110,8 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
           contrário e alinhado à esquerda. */}
       <FormFooter
         pending={isPending}
-        pendingLabel="Adicionando…"
-        submitLabel="Adicionar"
+        pendingLabel="Criando…"
+        submitLabel="Criar tarefa"
         cancelHref={cancelHref}
       />
     </form>
