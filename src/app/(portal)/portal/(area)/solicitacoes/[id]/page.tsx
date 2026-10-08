@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
@@ -38,9 +39,11 @@ export default async function PortalSolicitacaoPage({
 
   return (
     <PageContainer>
-      <Link href="/portal/solicitacoes" className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg mb-3">
-        <ArrowLeft size={14} /> Solicitações
-      </Link>
+      {/* O "voltar" com destino fixo, no BackButton (07/10/2026): quem chega pelo
+          link do e-mail não tem histórico para onde voltar, e o link escrito
+          à mão tinha 20px de alvo. */}
+      <BackButton href="/portal/solicitacoes" rotulo="Solicitações" className="mb-3" />
+      {/* O selo no `meta`, embaixo do título, como no detalhe da equipe (07/10/2026). */}
       <PageHeader
         title={`Solicitação nº ${s.numero}`}
         subtitle={
@@ -48,21 +51,18 @@ export default async function PortalSolicitacaoPage({
             {s.assunto} · {s.empresaNome}
           </>
         }
-        action={<SeloDaSolicitacao status={s.status} lado="CLIENTE" />}
+        meta={<SeloDaSolicitacao status={s.status} lado="CLIENTE" />}
       />
 
       {nova === "1" && (
-        <p className="mb-4 flex items-start gap-2 rounded-lg border border-success/40 bg-success-bg px-4 py-3 text-[13px] text-fg">
-          <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-success" />
-          <span>
-            Recebemos a sua solicitação nº {s.numero}. A equipe responde até <strong>{formatInstantDate(s.prazo)}</strong>, e você é avisado
-            por e-mail quando ela responder.
-          </span>
-        </p>
+        <Aviso tom="sucesso" icone={<CheckCircle2 />} className="mb-4">
+          Recebemos a sua solicitação nº {s.numero}. A equipe responde até <strong>{formatInstantDate(s.prazo)}</strong>, e você é avisado
+          por e-mail quando ela responder.
+        </Aviso>
       )}
 
       {nova !== "1" && aberta && !s.respondidaEm && (
-        <p className="mb-4 text-[13px] text-fg-secondary">
+        <p className="mb-4 text-ui text-fg-secondary">
           A equipe responde até <strong>{formatInstantDate(s.prazo)}</strong>.
         </p>
       )}
@@ -75,7 +75,9 @@ export default async function PortalSolicitacaoPage({
       />
 
       {s.status === "CANCELADA" ? (
-        <p className="mt-5 text-[12.5px] text-fg-muted">Esta solicitação foi cancelada. Se precisar, abra uma nova.</p>
+        <Aviso tom="neutro" className="mt-5">
+          Esta solicitação foi cancelada. Se precisar, abra uma nova.
+        </Aviso>
       ) : (
         <Card className="mt-5 p-4">
           <ResponderPendencia
@@ -85,7 +87,7 @@ export default async function PortalSolicitacaoPage({
             dica={
               s.status === "CONCLUIDA"
                 ? "A equipe concluiu esta solicitação. Se ainda faltar algo, responda aqui: ela volta para a equipe."
-                : "Anexe PDF, PNG, JPG ou XML de até 10 MB. A equipe é avisada na hora."
+                : "A equipe é avisada na hora."
             }
           />
         </Card>
