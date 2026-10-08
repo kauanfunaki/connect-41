@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { useTestDraft } from "./useTestDraft";
 import { Button } from "@/components/ui/Button";
 import { ConfirmacaoEnviada } from "@/components/publico/ConfirmacaoEnviada";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Question = { id: string; text: string; options: string[] };
 type Props = { token: string; questions: Question[] };
@@ -218,9 +219,9 @@ export function QuizForm({ token, questions }: Props) {
       </Button>
 
       {error && (
-        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {error}
-        </p>
+        </Aviso>
       )}
     </form>
   );

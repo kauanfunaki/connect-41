@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { atualizarDadosDoProcesso, type ProcessoState } from "@/app/(app)/processos/actions";
 import { CamposDoProcesso, type ValoresDoProcesso } from "./CamposDoProcesso";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   processoId: string;
@@ -49,7 +50,7 @@ function Formulario({ processoId, responsaveis, valores, onFechar }: Props & { o
       <CamposDoProcesso prefixo={`editar-${processoId}`} responsaveis={responsaveis} valores={valores} />
 
       {estado?.error && (
-        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{estado.error}</p>
+        <Aviso>{estado.error}</Aviso>
       )}
 
       <FormFooter

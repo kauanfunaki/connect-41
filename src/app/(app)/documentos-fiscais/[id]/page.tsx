@@ -34,6 +34,7 @@ import {
   competenciaLegivel,
 } from "@/lib/fiscal/rotulos";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { Aviso } from "@/components/ui/Aviso";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -114,37 +115,25 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       />
 
       {doc.removedAtOrigin && (
-        <Card className="p-4 mb-4 border-danger/40 bg-danger-bg">
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle size={16} className="text-danger flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[length:var(--fs-ui)] font-semibold text-danger">Removido na origem</p>
+        <Aviso icone={<AlertTriangle />} className="mb-4">
+          <p className="font-semibold">Removido na origem</p>
               <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-0.5">
                 O índice do SPED deixou de ter este documento — em geral porque o Portal Nacional
                 passou a mostrá-lo como cancelado ou substituído. Ele saiu da listagem, mas a linha
                 fica aqui: se já tiver virado lançamento, alguém precisa decidir o estorno.
                 {doc.removedAtOriginAt ? ` Detectado em ${formatInstantDate(doc.removedAtOriginAt)}.` : ""}
               </p>
-            </div>
-          </div>
-        </Card>
+        </Aviso>
       )}
 
       {estorno && (
-        <Card className="p-4 mb-4 border-danger/40 bg-danger-bg">
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle size={16} className="text-danger flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[length:var(--fs-ui)] font-semibold text-danger">
-                Cancelada depois de lançada
-              </p>
+        <Aviso icone={<AlertTriangle />} className="mb-4">
+          <p className="font-semibold">Cancelada depois de lançada</p>
               <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-0.5">
                 O emissor cancelou este documento e ele já tinha virado lançamento. O dinheiro está
                 lançado contra uma nota que não existe mais — o estorno é manual, no financeiro.
               </p>
-            </div>
-          </div>
-        </Card>
+        </Aviso>
       )}
 
       <Card className="p-5 mb-4">

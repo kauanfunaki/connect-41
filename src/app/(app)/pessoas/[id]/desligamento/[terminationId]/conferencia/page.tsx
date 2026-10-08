@@ -28,6 +28,7 @@ import type { ReferenciaProps } from "@/components/rescisao/ItemConferenciaRow";
 import { salvarItemConferencia, salvarDadosRescisao } from "./actions";
 import { Selo } from "@/components/ui/Selo";
 import { brl } from "@/lib/valora/formato";
+import { Aviso } from "@/components/ui/Aviso";
 
 /** `null` fica `null`: sem valor, o rótulo some em vez de virar travessão. Troca
  *  por `formatarReais` de lib/format.ts quando a base o criar (DRG-01, 07/10). */
@@ -238,7 +239,7 @@ export default async function ConferenciaRescisaoPage({
           </div>
 
           {referencia.calculo.inputsFaltantes.length > 0 && (
-            <div className="rounded-md border border-warning/25 bg-warning/8 px-3 py-2 mb-3">
+            <Aviso tom="atencao" className="mb-3">
               <p className="text-[12px] font-medium text-fg mb-1">Faltam insumos para calcular tudo:</p>
               <ul className="space-y-0.5">
                 {referencia.calculo.inputsFaltantes.map((i, idx) => (
@@ -247,7 +248,7 @@ export default async function ConferenciaRescisaoPage({
                   </li>
                 ))}
               </ul>
-            </div>
+            </Aviso>
           )}
 
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-border">

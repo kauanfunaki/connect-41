@@ -14,6 +14,7 @@ import { TabelaNoDesktop, TopoDoCartao, InfoDoCartao } from "@/components/shared
 // "12.5%"). Troca por `formatarReais` de lib/format.ts quando a base o criar
 // (auditoria DRG-01, 07/10/2026).
 import { brl, num } from "@/lib/valora/formato";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type SalaryChangeItem = {
   id: string;
@@ -135,9 +136,9 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
         </FieldGrid>
       </form>
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2 mt-3">
+        <Aviso className="mt-3">
           {state.error}
-        </p>
+        </Aviso>
       )}
     </Card>
   );

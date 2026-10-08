@@ -6,6 +6,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: (prev: WorkspaceState, form: FormData) => Promise<WorkspaceState>;
@@ -18,9 +19,9 @@ export function WorkspaceForm({ action, cancelHref }: Props) {
   return (
     <form action={formAction} className="space-y-6">
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       {/* CNPJ na mesma linha, na largura dele: tem 18 caracteres. */}

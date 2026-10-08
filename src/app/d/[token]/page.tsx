@@ -6,6 +6,7 @@ import { SignatureForm } from "@/components/documentosCliente/SignatureForm";
 import { formatInstantDateTimeComSegundos } from "@/lib/format";
 import { Download, Link2Off } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 
 export const metadata = { title: "Documento" };
 
@@ -88,12 +89,12 @@ export default async function ClientDocumentViewPage({
 
         {doc.requiresSignature &&
           (recipient.signedAt ? (
-            <div className="bg-success/10 border border-success/25 rounded-lg p-4 mt-5">
-              <p className="text-[14px] font-semibold text-success">Documento assinado</p>
+            <Aviso tom="sucesso" className="mt-5">
+              <p className="font-semibold">Documento assinado</p>
               <p className="text-[12px] text-fg-muted mt-1">
                 Assinado por {recipient.signerName ?? "—"} em {formatInstantDateTimeComSegundos(recipient.signedAt)}.
               </p>
-            </div>
+            </Aviso>
           ) : (
             <SignatureForm token={token} documentTitle={doc.title} />
           ))}

@@ -9,6 +9,7 @@ import { CampoDeAnexos } from "@/components/pendencias/CampoDeAnexos";
 import { formatInstantDateTime } from "@/lib/format";
 import { formatarBytes } from "@/lib/fileSize";
 import type { DocumentoDoProcesso } from "@/lib/societario/conversa";
+import { Aviso } from "@/components/ui/Aviso";
 
 type RespostaDaAcao = { error: string } | { ok: true; aviso?: string | null };
 
@@ -93,9 +94,9 @@ export function DocumentosDoProcesso({
           <CampoDeAnexos idBase={`doc-${processId}`} />
           {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
           {erro && (
-            <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+            <Aviso>
               {erro}
-            </p>
+            </Aviso>
           )}
           {/* Rodapé no padrão: Cancelar à esquerda do primário, os dois à
               direita — o erro, que ficava espremido na mesma linha, sobe. */}

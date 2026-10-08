@@ -11,6 +11,7 @@ import { Selo } from "@/components/ui/Selo";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { formatInstantDate } from "@/lib/format";
 import type { ProcessoState } from "@/app/(app)/processos/actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type ExigenciaNaTela = {
   id: string;
@@ -301,9 +302,9 @@ function EtapaDoRoteiro({
       )}
 
       {erro && (
-        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {erro}
-        </p>
+        </Aviso>
       )}
     </div>
   );

@@ -10,6 +10,7 @@ import { UFS } from "@/lib/ufs";
 import { Button } from "@/components/ui/Button";
 import { ConfirmacaoEnviada } from "@/components/publico/ConfirmacaoEnviada";
 import { MAX_MB_DO_CURRICULO } from "@/lib/curriculo";
+import { Aviso } from "@/components/ui/Aviso";
 
 const DISPONIBILIDADES = ["Imediata", "Em até 15 dias", "Em até 30 dias", "Mais de 30 dias"];
 
@@ -154,7 +155,7 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
       </Button>
 
       {error && (
-        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>
+        <Aviso>{error}</Aviso>
       )}
     </form>
   );

@@ -13,6 +13,7 @@ import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 import { IconButton } from "@/components/ui/IconButton";
 import { Selo } from "@/components/ui/Selo";
 import { ROTULO_DA_FAIXA, type Faixa } from "@/lib/recrutamento/triagem";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type FunnelCard = {
   id: string;
@@ -109,9 +110,9 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
   return (
     <>
       {error && (
-        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mb-3">
+        <Aviso className="mb-3">
           {error}
-        </p>
+        </Aviso>
       )}
 
       <div className="scroll-x overflow-x-auto flex gap-3 pb-1">

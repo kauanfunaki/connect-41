@@ -12,6 +12,7 @@ import type { EdicaoState } from "@/app/(app)/documentos-fiscais/[id]/editar";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Empresa = EmpresaParaEscolher & { nome: string };
 
@@ -82,14 +83,14 @@ export function EditarDocumentoCard({
             <input type="hidden" name="id" value={documentoId} />
 
             {state && "error" in state && (
-              <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+              <Aviso>
                 {state.error}
-              </p>
+              </Aviso>
             )}
             {state && "ok" in state && (
-              <p className="text-[13px] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">
+              <Aviso tom="sucesso">
                 Correção salva.
-              </p>
+              </Aviso>
             )}
 
             <CampoForm label="Empresa" htmlFor="companyId">

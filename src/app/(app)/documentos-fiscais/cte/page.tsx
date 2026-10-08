@@ -17,6 +17,7 @@ import { raizesDoAlcance, janelaDoMesCorrente, ehDataValida } from "@/lib/sped/r
 import { alcanceDaEquipe } from "../alcance";
 import { formatCnpj } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -173,9 +174,9 @@ export default async function CtePage({
           </form>
 
           {erro ? (
-            <Card className="p-4 border-danger/40 bg-danger-bg">
-              <p className="text-[13px] text-fg">{erro}</p>
-            </Card>
+            <Aviso>
+              <p className="text-fg">{erro}</p>
+            </Aviso>
           ) : documentos.length === 0 ? (
             <Card>
               <EmptyState

@@ -5,7 +5,6 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { AgenteCard } from "@/components/admin/AgenteCard";
 import { ChamadasDeIA } from "@/components/admin/ChamadasDeIA";
@@ -21,6 +20,7 @@ import { AvaliacoesDoChat } from "@/components/admin/AvaliacoesDoChat";
 import { AGENTES_DO_CHAT } from "@/lib/ia/chat/regras";
 import { getSectorMaps } from "@/lib/sectors";
 import type { LinhaDeAgente } from "@/lib/ia/data";
+import { Aviso } from "@/components/ui/Aviso";
 
 // Teto de gasto e chave de IA são configuração do tenant inteiro, não de setor
 // — mesmo critério da tela de Integrações.
@@ -71,12 +71,12 @@ export default async function AgentesDeIAPage() {
 
       {!config && (
         // Revisão de 05/10: botão não é link — o "Cadastrar em Integrações" era texto azul.
-        <Card className="p-4 mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-warning/40 bg-warning-bg">
-          <p className="text-[13px] text-fg">Nenhuma chave de IA cadastrada para esta empresa — nenhum agente roda sem ela.</p>
+        <Aviso tom="atencao" className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className="text-fg">Nenhuma chave de IA cadastrada para esta empresa — nenhum agente roda sem ela.</p>
           <Button href="/admin/integracoes" variant="secondary" size="sm">
             Cadastrar em Integrações
           </Button>
-        </Card>
+        </Aviso>
       )}
 
       {/* Os números do mês em cartão, como nas outras telas (polimento de

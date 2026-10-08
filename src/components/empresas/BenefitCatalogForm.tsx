@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 const TYPE_LABEL: Record<BenefitType, string> = {
   VALE_REFEICAO:       "Vale-refeição",
@@ -48,9 +49,9 @@ export function BenefitCatalogForm({ action, companyId, cancelHref, defaultValue
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
