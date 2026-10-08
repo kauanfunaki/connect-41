@@ -7,6 +7,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { SeletorDeCor } from "@/components/ui/SeletorDeCor";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 import { isUsableAccent, normalizeAccentColor } from "@/lib/color";
 import type { EditStagesState, StageInput } from "@/app/(app)/kanban/actions";
@@ -117,12 +118,11 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
                     <GripVertical size={13} />
                   </IconButton>
                 </div>
-                <input
-                  type="color"
-                  value={row.color}
-                  onChange={(e) => updateColor(i, e.target.value)}
+                <SeletorDeCor
+                  modo="botao"
+                  valor={row.color}
+                  onChange={(cor) => updateColor(i, cor)}
                   aria-label={`Cor do estágio ${i + 1}`}
-                  className="w-9 h-9 rounded-md border border-border-strong bg-canvas cursor-pointer flex-shrink-0"
                 />
                 <Input
                   aria-label={`Título do estágio ${i + 1}`}

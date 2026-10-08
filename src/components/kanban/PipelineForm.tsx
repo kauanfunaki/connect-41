@@ -6,6 +6,7 @@ import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { CampoForm as Field } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { SeletorDeCor } from "@/components/ui/SeletorDeCor";
 import { normalizeAccentColor } from "@/lib/color";
 import { Button } from "@/components/ui/Button";
 import { FormFooter } from "@/components/ui/FormFooter";
@@ -91,13 +92,12 @@ export function PipelineForm({ action, sectorOptions }: Props) {
         <div className="space-y-2">
           {stages.map((stage, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input
-                type="color"
+              <SeletorDeCor
+                modo="botao"
                 name="stageColor"
-                value={stage.color}
-                onChange={(e) => updateStage(i, "color", normalizeAccentColor(e.target.value))}
+                valor={stage.color}
+                onChange={(cor) => updateStage(i, "color", normalizeAccentColor(cor))}
                 aria-label={`Cor do estágio ${i + 1}`}
-                className="w-9 h-9 rounded-md border border-border-strong bg-canvas cursor-pointer flex-shrink-0"
               />
               <div className="flex-1 min-w-0">
                 <Input
