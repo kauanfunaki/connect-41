@@ -153,7 +153,8 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
                     <span
                       key={m.id}
                       className="w-1.5 h-1.5 rounded-full"
-                      style={{ background: m.provider === "GOOGLE" ? "var(--c41-brand)" : "#7C5CBF" }}
+                      // Teams no azul de informação, e não no roxo do DP (08/10) — ver MeetingItem.
+                      style={{ background: m.provider === "GOOGLE" ? "var(--c41-brand)" : "var(--c41-info)" }}
                     />
                   ))}
                   {dayMeetings.length > 4 && <span className="text-[length:var(--fs-micro)] text-fg-muted tnum">+{dayMeetings.length - 4}</span>}
