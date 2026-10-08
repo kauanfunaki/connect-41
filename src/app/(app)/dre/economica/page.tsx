@@ -245,7 +245,7 @@ export default async function DreEconomicaPage({
               <ul className="flex flex-col gap-1.5 text-fg">
                 {provisorios > 0 && (
                   <li className="flex items-start gap-2">
-                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
+                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning-fg" />
                     <span>
                       <strong>{provisorios}</strong> {provisorios === 1 ? "lançamento ainda a conferir entra" : "lançamentos ainda a conferir entram"} neste resultado.
                     </span>
@@ -253,7 +253,7 @@ export default async function DreEconomicaPage({
                 )}
                 {naoClassificado !== 0 && (
                   <li className="flex items-start gap-2">
-                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
+                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning-fg" />
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                       <span>
                         <strong>{moeda(Math.abs(naoClassificado))}</strong> sem grupo no DRE e fora do resultado. O de-para é o
@@ -267,7 +267,7 @@ export default async function DreEconomicaPage({
                 )}
                 {imposto !== 0 && (
                   <li className="flex items-start gap-2">
-                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
+                    <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning-fg" />
                     <span>
                       <strong>{moeda(Math.abs(imposto))}</strong> de impostos sobre a receita não entram no resultado — a margem parte da
                       Receita Bruta, a mesma regra da DRE de caixa.

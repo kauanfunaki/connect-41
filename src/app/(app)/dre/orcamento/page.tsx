@@ -116,7 +116,7 @@ export default async function OrcamentoPage({
             chave: v.id,
             rotulo: v.status === "APROVADO" ? `${v.name} · aprovada` : v.name,
             href: href(v.id),
-            icone: v.status === "APROVADO" ? <BadgeCheck className="text-success" /> : <FilePen />,
+            icone: v.status === "APROVADO" ? <BadgeCheck className="text-success-fg" /> : <FilePen />,
           }))}
           ativa={selecionada?.id ?? ""}
         />

@@ -88,7 +88,7 @@ export function ImportarDoOmie({ companyId }: { companyId: string }) {
               </span>
             )}
             {estado.ignoradas > 0 && (
-              <span className="text-warning">
+              <span className="text-warning-fg">
                 {estado.ignoradas}{" "}
                 {estado.ignoradas === 1 ? "linha ignorada" : "linhas ignoradas"} — sem data ou sem
                 valor

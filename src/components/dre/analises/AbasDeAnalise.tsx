@@ -99,7 +99,7 @@ function TabelaComparada({ linhas, rotuloA, rotuloB, destacarAcima }: { linhas: 
                 <td className="py-2 pr-3 text-right tabular-nums">{moeda(l.atual)}</td>
                 <td className="py-2 pr-3 text-right tabular-nums">{moeda(l.comparado)}</td>
                 <td className={`py-2 pr-3 text-right tabular-nums ${tomDoValor(l.diferenca)}`}>{moeda(l.diferenca)}</td>
-                <td className={`py-2 pr-4 text-right tabular-nums ${relevante ? "text-warning font-semibold" : "text-fg-muted"}`}>
+                <td className={`py-2 pr-4 text-right tabular-nums ${relevante ? "text-warning-fg font-semibold" : "text-fg-muted"}`}>
                   <span className="inline-flex items-center gap-1">
                     {relevante && <AlertTriangle size={12} />}
                     {percentual(l.variacao)}
@@ -585,7 +585,7 @@ export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
                   <p className={`text-title font-semibold tabular-nums ${i.valor === null ? "text-fg-muted" : ""}`}>{valorDoIndicador(i)}</p>
                   <p className="text-micro text-fg-muted font-mono">{i.formula}</p>
                   <p className="text-micro text-fg-muted">{i.leitura}</p>
-                  {i.motivo && <p className="text-micro italic text-warning">{i.motivo}</p>}
+                  {i.motivo && <p className="text-micro italic text-warning-fg">{i.motivo}</p>}
                 </Card>
               ))}
           </div>
