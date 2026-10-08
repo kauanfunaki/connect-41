@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { CampoDeAnexos } from "@/components/pendencias/CampoDeAnexos";
 import { normalizar } from "@/lib/buscaDeTelas";
@@ -106,38 +107,21 @@ export function NovoComunicadoForm({
         <Textarea id="comunicado-texto" name="texto" rows={8} maxLength={10_000} required />
       </CampoForm>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-label font-medium text-fg">
-          Para quem <span className="text-danger">*</span>
-        </legend>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {PUBLICOS.map((p) => (
-            <label
-              key={p.valor}
-              className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 transition-colors ${
-                publico === p.valor ? "border-brand bg-brand-subtle shadow-[inset_0_0_0_1px_var(--c41-brand)]" : "border-border bg-surface hover:border-border-strong"
-              }`}
-            >
-              <input
-                type="radio"
-                name="publico"
-                value={p.valor}
-                checked={publico === p.valor}
-                onChange={() => setPublico(p.valor)}
-                className="mt-1 accent-[var(--c41-brand)]"
-              />
-              <span className="min-w-0">
-                <span className="block text-ui font-semibold text-fg">{p.rotulo}</span>
-                <span className="block text-fs-2 text-fg-muted leading-snug">{p.dica}</span>
-              </span>
-            </label>
-          ))}
-        </div>
+      <div className="flex flex-col gap-2">
+        <RadioGroup
+          name="publico"
+          legenda="Para quem"
+          required
+          colunas="sm:grid-cols-3"
+          valor={publico}
+          onChange={setPublico}
+          opcoes={PUBLICOS.map((p) => ({ valor: p.valor, rotulo: p.rotulo, descricao: p.dica }))}
+        />
         <p className="text-fs-2 text-fg-secondary tabular-nums">
           {quantos} {quantos === 1 ? "cliente recebe" : "clientes recebem"}
           {publico === "SETOR" && !setor && " — escolha o setor"}
         </p>
-      </fieldset>
+      </div>
 
       {publico === "ESCOLHIDOS" && (
         <div className="rounded-lg border border-border bg-surface">

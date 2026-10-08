@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { Moon, Smartphone, Sun } from "lucide-react";
 import { applyPreferencia, readPreferencia, type PreferenciaDeTema } from "@/lib/theme";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 
 const OPCOES: { valor: PreferenciaDeTema; rotulo: string; icone: React.ReactNode }[] = [
   { valor: "system", rotulo: "Do aparelho", icone: <Smartphone /> },
@@ -21,7 +22,7 @@ const nadaNoServidor = () => null;
  * Do aparelho · Claro · Escuro, e "Do aparelho" é o padrão de quem nunca
  * escolheu (ver `lib/theme.ts`). O mesmo cookie da equipe.
  *
- * Rádios de verdade, no desenho da escolha de cliente do login: cada opção é
+ * O `RadioGroup` em cartões, como a escolha de cliente do login: cada opção é
  * um alvo de 44px, com a escolhida marcada na borda — a tela é aberta no
  * celular. Escolher já aplica; não há "salvar".
  */
@@ -36,29 +37,13 @@ export function TemaDoPortal() {
   }
 
   return (
-    <fieldset>
-      <legend className="sr-only">Tema do portal</legend>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        {OPCOES.map((o) => (
-          <label
-            key={o.valor}
-            className="flex items-center gap-3 min-h-11 rounded-md border border-border-strong px-3 py-2 cursor-pointer transition-colors hover:bg-surface-hover has-[:checked]:border-brand has-[:checked]:bg-brand/8"
-          >
-            <input
-              type="radio"
-              name="tema"
-              value={o.valor}
-              checked={atual === o.valor}
-              onChange={() => escolher(o.valor)}
-              className="size-4 flex-shrink-0 accent-[var(--c41-brand)]"
-            />
-            <span aria-hidden className="text-fg-secondary [&>svg]:size-4">
-              {o.icone}
-            </span>
-            <span className="text-body text-fg">{o.rotulo}</span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    <RadioGroup
+      legenda="Tema do portal"
+      legendaOculta
+      colunas="sm:grid-cols-3"
+      valor={atual}
+      onChange={escolher}
+      opcoes={OPCOES.map((o) => ({ valor: o.valor, rotulo: o.rotulo, icone: o.icone }))}
+    />
   );
 }
