@@ -19,6 +19,7 @@ const NADA: ContagensDaAtencao = {
   solicitacoesAguardando: null,
   solicitacoesRespondidas: null,
   processosAguardando: null,
+  envios: null,
   comunicados: null,
 };
 
@@ -35,6 +36,7 @@ describe("oQuePrecisaDeVoce — o topo do Início", () => {
           solicitacoesAguardando: 0,
           solicitacoesRespondidas: 0,
           processosAguardando: 0,
+          envios: 0,
           comunicados: 0,
         },
         moeda
@@ -50,6 +52,7 @@ describe("oQuePrecisaDeVoce — o topo do Início", () => {
         solicitacoesAguardando: 3,
         solicitacoesRespondidas: 1,
         processosAguardando: 1,
+        envios: 2,
         comunicados: 4,
       },
       moeda
@@ -59,10 +62,11 @@ describe("oQuePrecisaDeVoce — o topo do Início", () => {
       "pendencias",
       "solicitacoesAguardando",
       "processosAguardando",
+      "envios",
       "solicitacoesRespondidas",
       "comunicados",
     ]);
-    expect(itens.map((i) => i.tom)).toEqual(["pedido", "pedido", "pedido", "pedido", "aviso", "aviso"]);
+    expect(itens.map((i) => i.tom)).toEqual(["pedido", "pedido", "pedido", "pedido", "pedido", "aviso", "aviso"]);
   });
 
   it("concorda em número", () => {
@@ -79,6 +83,15 @@ describe("oQuePrecisaDeVoce — o topo do Início", () => {
     expect(aprovacao.quantidade).toBe(2);
     expect(aprovacao.detalhe).toBe("R$ 1500.00 no total");
     expect(aprovacao.acao).toBe("Aprovar");
+  });
+
+  it("documento do escritório esperando aceite é pedido, e leva aos documentos (08/10/2026)", () => {
+    const [um] = oQuePrecisaDeVoce({ ...NADA, envios: 1 }, moeda);
+    expect(um).toMatchObject({ chave: "envios", tom: "pedido", href: "/portal/envios", texto: "documento esperando o seu aceite" });
+    const [varios] = oQuePrecisaDeVoce({ ...NADA, envios: 3 }, moeda);
+    expect(varios.texto).toBe("documentos esperando o seu aceite");
+    // Sem a tela (null) ou sem nada esperando (0), não entra.
+    expect(oQuePrecisaDeVoce({ ...NADA, envios: 0 }, moeda)).toEqual([]);
   });
 
   it("cada botão leva à tela já no recorte do que espera o cliente", () => {
@@ -101,6 +114,7 @@ describe("oQuePrecisaDeVoce — o topo do Início", () => {
         solicitacoesAguardando: 1,
         solicitacoesRespondidas: 1,
         processosAguardando: 1,
+        envios: 1,
         comunicados: 1,
       },
       moeda
@@ -148,9 +162,9 @@ describe("blocosDoInicio — o mesmo critério do menu", () => {
     expect(blocosDoInicio(telas(["bpo_aprovacoes"])).atencao.aprovacoes).toBe(true);
   });
 
-  it("com o canal do portal: pendências, solicitações e comunicados — e pedir é uma solicitação nova", () => {
+  it("com o canal do portal: pendências, solicitações, comunicados e envios — e pedir é uma solicitação nova", () => {
     const b = blocosDoInicio(telas(["portal_solicitacoes"]));
-    expect(b.atencao).toMatchObject({ pendencias: true, solicitacoes: true, comunicados: true });
+    expect(b.atencao).toMatchObject({ pendencias: true, solicitacoes: true, comunicados: true, envios: true });
     expect(b.pedir).toEqual({ href: "/portal/solicitacoes/nova", rotulo: "Pedir algo à equipe" });
   });
 
