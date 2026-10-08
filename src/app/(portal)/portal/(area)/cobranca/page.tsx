@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Handshake } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
@@ -213,12 +213,12 @@ export default async function PortalCobrancaPage() {
                     <span className="w-28 shrink-0">vence {formatInstantDate(p.vencimento)}</span>
                     <span className="w-24 shrink-0 text-right font-medium">{moeda(p.valorCentavos)}</span>
                     {p.pagoEm ? (
-                      <Badge variant="success">Paga em {formatInstantDate(p.pagoEm)}</Badge>
+                      <Selo tom="sucesso">Paga em {formatInstantDate(p.pagoEm)}</Selo>
                     ) : p.status === "CANCELADO" ? (
                       // Neutro (07/10/2026): no `info` era o mesmo azul de "A vencer".
-                      <Badge variant="neutral">Encerrada</Badge>
+                      <Selo tom="neutro">Encerrada</Selo>
                     ) : (
-                      <Badge variant="warning">Em aberto</Badge>
+                      <Selo tom="atencao">Em aberto</Selo>
                     )}
                   </li>
                 ))}

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { ChevronDown, Plug, Bot, RefreshCw, Zap } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -76,11 +76,9 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
             <Icone size={16} className="text-fg-muted shrink-0" />
             <h3 className="text-card-title font-semibold text-fg">{i.label}</h3>
             {i.conectada ? (
-              <Badge variant={SAUDE_VARIANTE[i.saude]}>{SAUDE_LABEL[i.saude]}</Badge>
+              <Selo tom={tomDaVariante(SAUDE_VARIANTE[i.saude])}>{SAUDE_LABEL[i.saude]}</Selo>
             ) : (
-              <span className="text-fs-1 text-fg-muted border border-border rounded px-1.5 py-0.5">
-                não conectada
-              </span>
+              <Selo tom="neutro">não conectada</Selo>
             )}
           </div>
           <p className="text-fs-3 text-fg-secondary mt-1 max-w-[62ch]">{i.description}</p>

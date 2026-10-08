@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Selo } from "@/components/ui/Selo";
+import { Badge } from "@/components/ui/Badge";
 import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Pagination } from "@/components/shared/Pagination";
@@ -217,11 +217,12 @@ export default async function CarreirasPage({
                           {v.area && ` · ${v.area}`}
                         </p>
                       </div>
-                      {/* O selo do app — era uma pílula à mão de 10px (DRG-06). */}
+                      {/* Categoria da vaga, no `Badge` como as etiquetas de baixo
+                          (escolha 2A, 08/10/2026) — era uma pílula à mão de 10px. */}
                       {v.quantity > 1 && (
-                        <Selo tom="marca" className="flex-shrink-0">
+                        <Badge variant="info" className="flex-shrink-0">
                           {v.quantity} vagas
-                        </Selo>
+                        </Badge>
                       )}
                     </div>
                     <div className="mt-2.5">

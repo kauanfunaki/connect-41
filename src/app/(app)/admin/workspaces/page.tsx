@@ -7,7 +7,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { formatCnpj } from "@/lib/format";
-import { Selo } from "@/components/ui/Selo";
+import { StatusDot } from "@/components/shared/StatusDot";
 
 export default async function WorkspacesPage() {
   const ctx = await getAuthContext();
@@ -40,11 +40,8 @@ export default async function WorkspacesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
-                {!t.active && (
-                  <Selo tom="neutro">
-                    Inativo
-                  </Selo>
-                )}
+                {/* Inativo pela bolinha, a do ativo/inativo de cadastro (escolha 2A, 08/10/2026). */}
+                {!t.active && <StatusDot color="var(--c41-fg-muted)" label="Inativo" />}
                 {/* Botão, e não texto cinza (polimento de 30/09). */}
                 <Button href={`/admin/workspaces/${t.id}`} variant="secondary" size="xs">
                   <KeyRound size={11} /> Gerenciar acesso

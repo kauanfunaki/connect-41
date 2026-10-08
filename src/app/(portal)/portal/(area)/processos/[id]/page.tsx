@@ -4,13 +4,13 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { SeloDoProcesso } from "@/components/portal/SeloDoProcesso";
 import { Aviso } from "@/components/ui/Aviso";
 import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { processoDoPortal } from "@/lib/societario/portal-data";
-import { SITUACAO_PARA_CLIENTE, STATUS_DA_ETAPA_PARA_CLIENTE, VARIANTE_PARA_CLIENTE } from "@/lib/societario/portal";
+import { SITUACAO_PARA_CLIENTE, STATUS_DA_ETAPA_PARA_CLIENTE } from "@/lib/societario/portal";
 import { moeda } from "@/lib/financeiro/formato";
 import { formatInstantDate } from "@/lib/format";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
@@ -67,7 +67,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
         }
         meta={
           <>
-            <Badge variant={VARIANTE_PARA_CLIENTE[p.situacao]}>{situacao.rotulo}</Badge>
+            <SeloDoProcesso situacao={p.situacao} />
             {p.progresso.total > 0 && (
               <span className="tabular-nums">
                 {p.progresso.feitas} de {p.progresso.total} etapas concluídas
