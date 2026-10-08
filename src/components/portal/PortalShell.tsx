@@ -172,7 +172,12 @@ export function PortalShell({
           </IconButton>
           <span className="text-fs-4 font-medium text-fg truncate">{grupoNome ?? "Portal do cliente"}</span>
         </header>
-        <main className="c41-atmosfera scroll-y scroll-gutter-stable flex-1 overflow-y-auto">{children}</main>
+        {/* O `relative` faz do <main> o bloco de contenção dos elementos com
+          `position: absolute` da página (o campo de arquivo escondido com
+          `sr-only`, por exemplo). Sem ele, o elemento escapava da rolagem de
+          dentro e esticava a página: no detalhe do processo do portal, a tela
+          inteira rolava e o casco subia junto (relato do Kauan, 08/10/2026). */}
+        <main className="c41-atmosfera scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
