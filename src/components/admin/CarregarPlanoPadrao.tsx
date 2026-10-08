@@ -22,7 +22,7 @@ export function CarregarPlanoPadrao() {
         <Button variant="secondary" onClick={() => { setMensagem(null); setConfirmando(true); }}>
           <Download size={14} /> Carregar o plano padrão
         </Button>
-        {mensagem && <span className={`text-[12px] ${mensagem.ok ? "text-success" : "text-danger"}`}>{mensagem.texto}</span>}
+        {mensagem && <span className={`text-[12px] ${mensagem.ok ? "text-success-fg" : "text-danger"}`}>{mensagem.texto}</span>}
       </span>
     );
   }

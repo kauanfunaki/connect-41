@@ -181,7 +181,7 @@ export function CompanyHeader({
                   onClick={copyDocumento}
                   title={`Copiar ${rotuloDoc}`} aria-label={`Copiar ${rotuloDoc}`}
                 >
-                  {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                  {copied ? <Check size={14} className="text-success-fg" /> : <Copy size={14} />}
                   {formatDocumento(kind, cnpj, cpf)}
                 </Button>
               )}

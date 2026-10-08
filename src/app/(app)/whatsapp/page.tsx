@@ -66,7 +66,7 @@ export default async function ConversasDeWhatsappPage({
             rotulo: r.rotulo,
             valor: formatarNumero(n, 0),
             icone: ICONE_DO_RECORTE[r.chave],
-            tom: r.chave === "sem_responsavel" && n > 0 ? "text-warning" : undefined,
+            tom: r.chave === "sem_responsavel" && n > 0 ? "text-warning-fg" : undefined,
             detalhe: ativo ? "mostrando agora" : undefined,
             ativo,
             href: r.chave === "todas" || ativo ? "/whatsapp" : `/whatsapp?ver=${r.chave}`,

@@ -24,8 +24,8 @@ export type NotaParaTela = {
 };
 
 const COR_DO_VEREDITO: Record<Veredito, string> = {
-  SIM: "text-success",
-  PARCIAL: "text-warning",
+  SIM: "text-success-fg",
+  PARCIAL: "text-warning-fg",
   NAO: "text-danger",
   SEM_EVIDENCIA: "text-fg-muted",
 };
@@ -76,7 +76,7 @@ export function NotaDaTriagem({
           ) : (
             falha &&
             versaoAtual !== null && (
-              <span className="block text-warning mt-1">
+              <span className="block text-warning-fg mt-1">
                 A pontuação falhou: {falha} A pontuação automática não tenta de novo — use o botão depois de resolver.
               </span>
             )

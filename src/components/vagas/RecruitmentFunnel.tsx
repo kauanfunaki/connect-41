@@ -30,8 +30,8 @@ export type FunnelCard = {
 };
 
 const COR_DA_FAIXA: Record<Faixa, string> = {
-  COMPATIVEL: "bg-success-bg text-success border-success/40",
-  PARCIAL: "bg-warning-bg text-warning border-warning/40",
+  COMPATIVEL: "bg-success-bg text-success-fg border-success/40",
+  PARCIAL: "bg-warning-bg text-warning-fg border-warning/40",
   INCOMPATIVEL: "bg-surface-2 text-fg-muted border-border",
 };
 
@@ -142,7 +142,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
               }`}
             >
               <div className="flex items-center justify-between mb-2 px-1">
-                <span className={`text-[length:var(--fs-2)] font-semibold ${isContratado ? "text-success" : "text-fg"}`}>
+                <span className={`text-[length:var(--fs-2)] font-semibold ${isContratado ? "text-success-fg" : "text-fg"}`}>
                   {STAGE_LABEL[stage]}
                 </span>
                 <span className="text-[length:var(--fs-micro)] text-fg-muted tnum">{stageCards.length}</span>

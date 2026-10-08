@@ -64,7 +64,7 @@ export function VincularContato({ contactLinkId, linkedLabel, canManage }: Props
   if (linkedLabel) {
     return (
       <span className="inline-flex items-center gap-1">
-        <span className="text-[length:var(--fs-micro)] text-success inline-flex items-center gap-1">
+        <span className="text-[length:var(--fs-micro)] text-success-fg inline-flex items-center gap-1">
           <Link2 size={12} /> {linkedLabel}
         </span>
         <IconButton

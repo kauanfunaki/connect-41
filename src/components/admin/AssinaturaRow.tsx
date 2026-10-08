@@ -164,7 +164,7 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
           </p>
         )}
         {readOnlyInert && (
-          <p className="text-[11px] text-warning mt-1">
+          <p className="text-[11px] text-warning-fg mt-1">
             Status de inadimplência sem efeito: somente leitura só se aplica a workspaces
             em Autoatendimento. Mude o modo de gestão para bloquear de fato.
           </p>

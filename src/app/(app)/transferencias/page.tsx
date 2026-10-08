@@ -102,7 +102,7 @@ export default async function HandoffsPage({
           rotulo: t.label,
           valor: formatarNumero(contagem[t.value], 0),
           icone: t.value === "NEW" ? <Inbox /> : t.value === "IN_PROGRESS" ? <Loader /> : <CheckCircle2 />,
-          tom: t.value === "NEW" ? (contagem.NEW > 0 ? "text-warning" : undefined) : t.value === "DONE" ? "text-success" : undefined,
+          tom: t.value === "NEW" ? (contagem.NEW > 0 ? "text-warning-fg" : undefined) : t.value === "DONE" ? "text-success-fg" : undefined,
           detalhe: t.value === statusFilter ? "mostrando agora" : undefined,
           ativo: t.value === statusFilter,
           href: hrefDaSituacao(t.value),

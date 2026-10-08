@@ -189,7 +189,7 @@ export function ContasTable({
                   {mostrarCentro && l.centroDeCustoNome ? ` · ${l.centroDeCustoNome}` : ""}
                 </InfoDoCartao>
                 {!l.categoriaNome && (
-                  <span className="inline-flex items-center gap-1 text-warning text-micro mt-0.5">
+                  <span className="inline-flex items-center gap-1 text-warning-fg text-micro mt-0.5">
                     <AlertCircle size={12} /> sem categoria
                   </span>
                 )}
@@ -297,7 +297,7 @@ export function ContasTable({
                   ) : (
                     // Categoria é obrigatória em PAGAR (`categoriaObrigatoria`), então
                     // a ausência aqui é pendência de classificação, não campo vazio.
-                    <span className="inline-flex items-center gap-1 text-warning">
+                    <span className="inline-flex items-center gap-1 text-warning-fg">
                       <AlertCircle size={12} /> sem categoria
                     </span>
                   )}

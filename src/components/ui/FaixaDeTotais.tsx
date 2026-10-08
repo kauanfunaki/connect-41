@@ -21,8 +21,8 @@ export type ItemDeTotal = {
 /** A cor do selo do ícone sai do tom do valor, para os dois não brigarem. */
 function seloDoTom(tom?: string): string {
   if (tom?.includes("danger")) return "bg-danger/10 text-danger";
-  if (tom?.includes("warning")) return "bg-warning/10 text-warning";
-  if (tom?.includes("success")) return "bg-success/10 text-success";
+  if (tom?.includes("warning")) return "bg-warning/10 text-warning-fg";
+  if (tom?.includes("success")) return "bg-success/10 text-success-fg";
   if (tom?.includes("muted")) return "bg-surface-2 text-fg-muted";
   return "bg-brand-subtle text-brand";
 }

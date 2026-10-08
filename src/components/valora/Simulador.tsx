@@ -272,7 +272,7 @@ export function Simulador({
         </div>
 
         {r.avisos.length > 0 && (
-          <ul className="text-[length:var(--fs-micro)] text-warning space-y-1 list-disc pl-4">
+          <ul className="text-[length:var(--fs-micro)] text-warning-fg space-y-1 list-disc pl-4">
             {r.avisos.map((a) => (
               <li key={a}>{a}</li>
             ))}

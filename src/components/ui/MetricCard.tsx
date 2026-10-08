@@ -35,8 +35,8 @@ type Props = {
 
 const COR_DO_TOM: Record<TomDaMetrica, { selo: string; valor: string }> = {
   critico: { selo: "bg-danger/10 text-danger", valor: "text-danger" },
-  atencao: { selo: "bg-warning/10 text-warning", valor: "text-warning" },
-  ok: { selo: "bg-success/10 text-success", valor: "text-success" },
+  atencao: { selo: "bg-warning/10 text-warning-fg", valor: "text-warning-fg" },
+  ok: { selo: "bg-success/10 text-success-fg", valor: "text-success-fg" },
   neutro: { selo: "bg-surface-2 text-fg-muted", valor: "text-fg-muted" },
 };
 const PADRAO = { selo: "bg-brand-subtle text-brand", valor: "text-fg" };

@@ -72,7 +72,7 @@ export function ConfigDaRegua({ ligada, passos, podeEditar }: { ligada: boolean;
               {erro}
             </span>
           )}
-          {salvo && <span className="text-helper text-success">Salvo.</span>}
+          {salvo && <span className="text-helper text-success-fg">Salvo.</span>}
         </AlinhadoAoCampo>
       )}
       {dialog}

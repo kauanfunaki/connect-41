@@ -37,7 +37,7 @@ export const SITUACAO_VARIANTE: Record<SituacaoDoProcesso, "danger" | "info" | "
 export const COR_DO_PRAZO_COMBINADO = {
   vencido: "text-danger font-medium",
   hoje: "text-danger font-medium",
-  proximo: "text-warning",
+  proximo: "text-warning-fg",
   folga: "text-fg-muted",
 } as const;
 
@@ -59,7 +59,7 @@ export function PrazoCelula({ prazo }: { prazo: LinhaDaFila["prazo"] }) {
     prazo.situacao === "estourado"
       ? "text-danger"
       : prazo.situacao === "no_limite"
-        ? "text-warning"
+        ? "text-warning-fg"
         : "text-fg-secondary";
   const faixa =
     prazo.previstoMin !== null && prazo.previstoMin !== prazo.previstoMax

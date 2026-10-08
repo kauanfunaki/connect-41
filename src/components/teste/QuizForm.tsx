@@ -159,7 +159,7 @@ export function QuizForm({ token, questions }: Props) {
             >
               <legend className="text-[length:var(--fs-micro)] text-fg-muted px-1">
                 Pergunta {qi + 1} de {questions.length}
-                {selected != null && <span className="text-success"> · ok</span>}
+                {selected != null && <span className="text-success-fg"> · ok</span>}
               </legend>
 
               <p className="text-[length:var(--fs-label)] font-medium text-fg mb-3">{q.text}</p>

@@ -133,21 +133,21 @@ export default async function VisaoSocietariaDoClientePage({
             rotulo: "Exigências abertas",
             valor: formatarNumero(exigenciasAbertas, 0),
             icone: <AlertTriangle />,
-            tom: exigenciasAbertas > 0 ? "text-warning" : undefined,
+            tom: exigenciasAbertas > 0 ? "text-warning-fg" : undefined,
           },
           {
             rotulo: "Licenças vencendo",
             valor: formatarNumero(vencendo, 0),
             icone: <CalendarClock />,
             // Vermelho quando já há vencida, como o selo da fila de Licenças.
-            tom: vencidas > 0 ? "text-danger" : vencendo > 0 ? "text-warning" : undefined,
+            tom: vencidas > 0 ? "text-danger" : vencendo > 0 ? "text-warning-fg" : undefined,
             detalhe: vencidas > 0 ? `${vencidas} ${vencidas === 1 ? "vencida" : "vencidas"}` : undefined,
           },
           {
             rotulo: "Taxas a pagar",
             valor: formatarReaisDeCentavos(aPagar),
             icone: <Receipt />,
-            tom: aPagar > 0 ? "text-warning" : undefined,
+            tom: aPagar > 0 ? "text-warning-fg" : undefined,
             detalhe: `de ${formatarReaisDeCentavos(visao.custo.totalCentavos)}`,
           },
         ]}
@@ -291,12 +291,12 @@ export default async function VisaoSocietariaDoClientePage({
               <p className="text-[length:var(--fs-ui)] tabular-nums">
                 <strong>{formatarReaisDeCentavos(visao.custo.totalCentavos)}</strong>
                 <span className="text-fg-muted"> · {formatarReaisDeCentavos(visao.custo.pagoCentavos)} pagos</span>
-                {aPagar > 0 && <span className="text-warning"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
+                {aPagar > 0 && <span className="text-warning-fg"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
               </p>
             )}
           </div>
           {visao.custo.custoDasVoltasCentavos > 0 && (
-            <p className="text-[length:var(--fs-2)] text-warning">
+            <p className="text-[length:var(--fs-2)] text-warning-fg">
               {formatarReaisDeCentavos(visao.custo.custoDasVoltasCentavos)} vieram de reapresentação.
             </p>
           )}
@@ -331,7 +331,7 @@ export default async function VisaoSocietariaDoClientePage({
                       <td className="py-2 pr-3">
                         {t.descricao}
                         {t.attempt !== null && t.attempt >= 2 && (
-                          <span className="block text-[length:var(--fs-micro)] text-warning">{t.attempt}ª apresentação</span>
+                          <span className="block text-[length:var(--fs-micro)] text-warning-fg">{t.attempt}ª apresentação</span>
                         )}
                       </td>
                       <td className="py-2 pr-3 whitespace-nowrap">

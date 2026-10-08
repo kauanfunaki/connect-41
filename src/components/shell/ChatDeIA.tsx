@@ -707,7 +707,7 @@ export function ChatDeIA({
                       <TextoDaResposta texto={m.texto} citados={m.citados} />
                     </div>
                     {m.truncada && (
-                      <p className="flex items-start gap-1.5 text-micro text-warning">
+                      <p className="flex items-start gap-1.5 text-micro text-warning-fg">
                         <AlertTriangle size={12} className="mt-0.5 shrink-0" /> A IA parou antes de terminar — a resposta pode estar incompleta.
                       </p>
                     )}
@@ -778,7 +778,7 @@ export function ChatDeIA({
           >
             {editando && (
               <div className="mb-2 flex items-start gap-2 rounded-lg bg-warning-bg px-3 py-2 text-fs-2 text-fg-secondary">
-                <Pencil size={13} className="mt-0.5 flex-shrink-0 text-warning" />
+                <Pencil size={13} className="mt-0.5 flex-shrink-0 text-warning-fg" />
                 <span className="flex-1">Editando a pergunta — o que veio depois dela será substituído ao enviar.</span>
                 <Button variant="ghost" size="xs" onClick={cancelarEdicao}>
                   Cancelar
@@ -983,7 +983,7 @@ function CartoesDeDecisao({
                   Revisar e abrir
                 </Button>
               ) : p.aplicada ? (
-                <span className="inline-flex items-center gap-1 text-fs-2 font-medium text-success">
+                <span className="inline-flex items-center gap-1 text-fs-2 font-medium text-success-fg">
                   <Check size={13} /> Aplicado
                 </span>
               ) : p.recusada ? (

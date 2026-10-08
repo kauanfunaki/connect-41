@@ -6,9 +6,11 @@ type Props = {
   className?: string;
 };
 
+// Verde e âmbar na letra pelo tom de letra (`-fg`, escolha 1A do Kauan,
+// 08/10/2026); fundo e borda seguem no tom cheio.
 const VARIANT_CLASS: Record<VarianteDoBadge, string> = {
-  success: "bg-success-bg text-success border-success/40",
-  warning: "bg-warning-bg text-warning border-warning/40",
+  success: "bg-success-bg text-success-fg border-success/40",
+  warning: "bg-warning-bg text-warning-fg border-warning/40",
   danger: "bg-danger-bg text-danger border-danger/40",
   info: "bg-info-bg text-info border-info/40",
   // O que saiu de cena — "Cancelada", "Inativa", "Encerrada", "Desligada"

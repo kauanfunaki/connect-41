@@ -46,7 +46,7 @@ export function PublicoDoChat({ todos, disponivel }: { todos: boolean; disponive
         {valor ? "Todos os usuários (menos somente leitura) veem o chat." : "Piloto: só coordenadores e administradores veem o chat."}
       </p>
       {!disponivel && (
-        <p className="text-[12px] text-warning">A configuração do chat ainda não está no banco — falta rodar a migration.</p>
+        <p className="text-[12px] text-warning-fg">A configuração do chat ainda não está no banco — falta rodar a migration.</p>
       )}
       {erro && <p className="text-[12px] text-danger">{erro}</p>}
     </Card>

@@ -72,7 +72,7 @@ export function DecisaoDaEquipe({
       </div>
       {typeof decidir === "string" && <span className="text-micro text-fg-muted max-w-[260px]">{decidir}</span>}
       {erro && <span className="text-micro text-danger max-w-[260px]">{erro}</span>}
-      {aviso && <span className="text-micro text-warning max-w-[260px]">{aviso}</span>}
+      {aviso && <span className="text-micro text-warning-fg max-w-[260px]">{aviso}</span>}
       {dialog}
     </div>
   );

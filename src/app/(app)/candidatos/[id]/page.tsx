@@ -132,7 +132,7 @@ export default async function CandidatoPage({
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             {person.name}
             <Selo cor={person.active
-                  ? "bg-success/10 text-success border-success/25"
+                  ? "bg-success/10 text-success-fg border-success/25"
                   : "bg-surface-2 text-fg-muted border-border"}>
               {person.active ? "Ativo" : "Inativo"}
             </Selo>

@@ -22,7 +22,7 @@ const ICONE: Record<TipoDePrazo, typeof AlertTriangle> = {
 const COR_DA_FAIXA = {
   vencido: "text-danger font-medium",
   hoje: "text-danger font-medium",
-  semana: "text-warning",
+  semana: "text-warning-fg",
   depois: "text-fg-muted",
 } as const;
 

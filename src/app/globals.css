@@ -69,6 +69,23 @@
   --c41-success-bg:      rgba(30,154,99,.10);
   --c41-warning:         var(--c41-warning-light);
   --c41-warning-bg:      rgba(185,121,26,.10);
+  /* Tom de LETRA do verde e do âmbar (escolha 1A do Kauan na página de
+     decisões, 08/10/2026) — o mesmo degrau que o --c41-fg-muted ganhou.
+     Como letra, o #1E9A63 e o #B9791A rendiam 3,59 e 3,61:1 no branco e
+     3,20 e 3,24:1 sobre a própria tinta de 10% (o fundo do Selo e do Badge):
+     reprova AA (4,5:1) justo nos selos de 11-13px ("Pago", "Vence hoje").
+     Estes tons, no mesmo matiz, passam em todas as superfícies claras:
+       verde #177A4E — branco 5,34 · canvas 4,84 · surface-hover 4,69 ·
+                       tinta de 8/10% 4,89/4,78 · brand-subtle 4,76
+       âmbar #93600F — branco 5,36 · canvas 4,85 · surface-hover 4,70 ·
+                       tinta de 8/10% 4,89/4,81 · brand-subtle 4,77
+     Só para texto (e o ícone que o acompanha): preenchimento, borda, fundo,
+     ponto e gráfico seguem no --c41-success/--c41-warning. No escuro o token
+     de letra é o próprio tom do escuro, que já passa (7,1:1 ou mais no
+     elevado; 6,5:1 sobre a tinta de 14%). Utilitários: `text-success-fg`,
+     `text-warning-fg`. */
+  --c41-success-fg:      #177A4E;
+  --c41-warning-fg:      #93600F;
   --c41-danger:          var(--c41-danger-light);
   --c41-danger-bg:       rgba(201,58,80,.10);
   --c41-info:            var(--c41-info-light);
@@ -121,6 +138,9 @@
   --c41-success-bg:      rgba(63,204,143,.14);
   --c41-warning:         var(--c41-warning-dark);
   --c41-warning-bg:      rgba(227,174,78,.14);
+  /* A letra no escuro é o próprio tom (ver o claro). */
+  --c41-success-fg:      var(--c41-success-dark);
+  --c41-warning-fg:      var(--c41-warning-dark);
   --c41-danger:          var(--c41-danger-dark);
   --c41-danger-bg:       rgba(235,100,120,.14);
   --c41-info:            var(--c41-info-dark);
@@ -166,6 +186,8 @@
     --c41-success-bg:      rgba(63,204,143,.14);
     --c41-warning:         var(--c41-warning-dark);
     --c41-warning-bg:      rgba(227,174,78,.14);
+    --c41-success-fg:      var(--c41-success-dark);
+    --c41-warning-fg:      var(--c41-warning-dark);
     --c41-danger:          var(--c41-danger-dark);
     --c41-danger-bg:       rgba(235,100,120,.14);
     --c41-info:            var(--c41-info-dark);
@@ -229,6 +251,8 @@
 
   --color-success:var(--c41-success); --color-success-bg:var(--c41-success-bg);
   --color-warning:var(--c41-warning); --color-warning-bg:var(--c41-warning-bg);
+  /* Letra verde e âmbar: `text-success-fg`, `text-warning-fg` (ver --c41-success-fg). */
+  --color-success-fg:var(--c41-success-fg); --color-warning-fg:var(--c41-warning-fg);
   --color-danger:var(--c41-danger);   --color-danger-bg:var(--c41-danger-bg);
   --color-info:var(--c41-info);       --color-info-bg:var(--c41-info-bg);
 
@@ -465,7 +489,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   background: var(--c41-fg-muted); top: 2px; left: 2px; transition: left .15s, background .15s;
 }
 .c41-toggle-active.is-on {
-  color: var(--c41-success);
+  color: var(--c41-success-fg);
   border-color: color-mix(in srgb, var(--c41-success) 40%, transparent);
 }
 .c41-toggle-active.is-on .switch { background: var(--c41-success); }

@@ -162,7 +162,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
                     {c.tipo === "CPF" ? "e-CPF" : "e-CNPJ"} · {documento(c)}
                   </InfoDoCartao>
                   <InfoDoCartao>cofre: {c.cofreEntrada ?? "—"}</InfoDoCartao>
-                  {c.conferir && <InfoDoCartao className="text-warning">{c.conferir}</InfoDoCartao>}
+                  {c.conferir && <InfoDoCartao className="text-warning-fg">{c.conferir}</InfoDoCartao>}
                   <PeDoCartao>
                     <Selo tom={TOM[c.situacao]}>{ROTULO_DA_SITUACAO[c.situacao]}</Selo>
                   </PeDoCartao>
@@ -219,7 +219,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
                       </td>
                       <td className="py-2.5 text-fg-secondary">
                         {c.cofreEntrada ?? "—"}
-                        {c.conferir && <span className="block text-[length:var(--fs-micro)] text-warning">{c.conferir}</span>}
+                        {c.conferir && <span className="block text-[length:var(--fs-micro)] text-warning-fg">{c.conferir}</span>}
                       </td>
                     </LinhaFiltravel>
                   ))}

@@ -80,7 +80,7 @@ export function ResponderPendencia({
         submitLabel={rotulo}
         pendingLabel="Enviando…"
         erro={erro}
-        nota={aviso && <span className="text-warning">{aviso}</span>}
+        nota={aviso && <span className="text-warning-fg">{aviso}</span>}
         semDivisoria
       />
     </form>

@@ -91,7 +91,7 @@ export default async function AgentesDeIAPage() {
             rotulo: "Sem custo apurado",
             valor: formatarNumero(totalSemCusto, 0),
             icone: <CircleHelp />,
-            tom: totalSemCusto > 0 ? "text-warning" : "text-fg-muted",
+            tom: totalSemCusto > 0 ? "text-warning-fg" : "text-fg-muted",
           },
         ]}
       />

@@ -212,7 +212,7 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
                       {d.expiresAtLabel && (
                         <span
                           className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${
-                            d.expired ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning"
+                            d.expired ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning-fg"
                           }`}
                         >
                           {d.expired ? "Vencido" : "Vence"}
@@ -254,7 +254,7 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
                   {d.expiresAtLabel && (
                     <Selo cor={d.expired
                           ? "bg-danger/10 text-danger border-danger/25"
-                          : "bg-warning/10 text-warning border-warning/25"} className="flex-shrink-0">
+                          : "bg-warning/10 text-warning-fg border-warning/25"} className="flex-shrink-0">
                       {d.expired ? `Vencido em ${d.expiresAtLabel}` : `Vence em ${d.expiresAtLabel}`}
                     </Selo>
                   )}

@@ -100,7 +100,7 @@ export function ChamadasDeIA({ chamadas, agora }: Props) {
                         graça, e mostrar zero aqui seria a mesma mentira que o
                         resto da fundação evita. */}
                     {c.costCents === null ? (
-                      <span className="text-warning" title="Modelo fora da tabela de preço">
+                      <span className="text-warning-fg" title="Modelo fora da tabela de preço">
                         não apurado
                       </span>
                     ) : (

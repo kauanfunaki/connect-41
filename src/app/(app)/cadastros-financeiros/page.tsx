@@ -217,7 +217,7 @@ export default async function CadastrosFinanceirosPage({
                   <InfoDoCartao className="mt-1">
                     categoria padrão {c.defaultCategory?.name ?? "—"} · centro padrão {c.defaultCostCenter?.name ?? "—"}
                     {c.defaultCostCenter && !c.defaultCostCenter.active && (
-                      <span className="text-warning"> (inativo — não é herdado)</span>
+                      <span className="text-warning-fg"> (inativo — não é herdado)</span>
                     )}
                   </InfoDoCartao>
                   <InfoDoCartao className="tabular-nums">
@@ -288,7 +288,7 @@ export default async function CadastrosFinanceirosPage({
                     <td className="py-2.5 pr-3 text-fg-secondary">
                       {c.defaultCostCenter?.name ?? "—"}
                       {c.defaultCostCenter && !c.defaultCostCenter.active && (
-                        <span className="block text-micro text-warning">inativo — não é herdado</span>
+                        <span className="block text-micro text-warning-fg">inativo — não é herdado</span>
                       )}
                     </td>
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.pagar}</td>

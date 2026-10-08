@@ -110,7 +110,7 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
             {urlPublica ? `${urlPublica.replace(/\/+$/, "")}${i.caminhoDoWebhook}` : i.caminhoDoWebhook}
           </code>
           {!urlPublica && (
-            <span className="text-warning"> — APP_PUBLIC_URL não configurada: complete com o domínio do Connect</span>
+            <span className="text-warning-fg"> — APP_PUBLIC_URL não configurada: complete com o domínio do Connect</span>
           )}
         </p>
       )}

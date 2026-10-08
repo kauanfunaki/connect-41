@@ -63,7 +63,7 @@ export default async function ExigenciasPage({
     const faixa = e.dueAt && !e.resolvedAt ? faixaDoPrazo(e.dueAt, agora) : null;
     if (!faixa || !e.dueAt) return null;
     const cor =
-      faixa === "vencido" || faixa === "hoje" ? "text-danger font-medium" : faixa === "semana" ? "text-warning" : "text-fg-muted";
+      faixa === "vencido" || faixa === "hoje" ? "text-danger font-medium" : faixa === "semana" ? "text-warning-fg" : "text-fg-muted";
     return <span className={`block text-[length:var(--fs-micro)] ${cor}`}>{textoDoPrazo(e.dueAt, agora)}</span>;
   };
   // Selo, e não Badge: é a situação da linha (regra de 02/10 no Selo).

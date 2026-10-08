@@ -154,9 +154,9 @@ export default async function ConferenciaRescisaoPage({
           continua com a barra de progresso e a lista de divergências. */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Conferidos", valor: formatarNumero(resumo.conferidos, 0), icone: <CheckCircle2 />, tom: resumo.conferidos > 0 ? "text-success" : undefined },
+          { rotulo: "Conferidos", valor: formatarNumero(resumo.conferidos, 0), icone: <CheckCircle2 />, tom: resumo.conferidos > 0 ? "text-success-fg" : undefined },
           { rotulo: "Divergentes", valor: formatarNumero(resumo.divergentes, 0), icone: <AlertTriangle />, tom: resumo.divergentes > 0 ? "text-danger" : undefined },
-          { rotulo: "Pendentes", valor: formatarNumero(resumo.pendentes, 0), icone: <CircleDashed />, tom: resumo.pendentes > 0 ? "text-warning" : undefined },
+          { rotulo: "Pendentes", valor: formatarNumero(resumo.pendentes, 0), icone: <CircleDashed />, tom: resumo.pendentes > 0 ? "text-warning-fg" : undefined },
           { rotulo: "Não se aplica", valor: formatarNumero(resumo.naoAplicaveis, 0), icone: <MinusCircle />, tom: "text-fg-muted" },
         ]}
       />
@@ -194,7 +194,7 @@ export default async function ConferenciaRescisaoPage({
               {prazo.status === "VENCIDO" && (
                 <span className="text-danger font-medium">— vencido há {Math.abs(prazo.diasRestantes)} dia(s)</span>
               )}
-              {prazo.status === "VENCE_HOJE" && <span className="text-warning font-medium">— vence hoje</span>}
+              {prazo.status === "VENCE_HOJE" && <span className="text-warning-fg font-medium">— vence hoje</span>}
               {prazo.status === "NO_PRAZO" && (
                 <span className="text-fg-muted">— faltam {prazo.diasRestantes} dia(s)</span>
               )}
