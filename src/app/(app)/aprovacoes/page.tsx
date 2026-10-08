@@ -10,8 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
+import { StatusDot } from "@/components/shared/StatusDot";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltroDePeriodo, AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -410,14 +409,7 @@ async function Alcadas({
                   {a.portalUser.name} · {a.portalUser.email}
                 </InfoDoCartao>
                 <PeDoCartao>
-                  {/* Alçada ativa de usuário desativado não conta — ver `whereDaAlcadaValida`. */}
-                  {!a.portalUser.active ? (
-                    <Badge variant={TOM_DA_SITUACAO.INATIVA}>Usuário inativo</Badge>
-                  ) : a.active ? (
-                    <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativa</Badge>
-                  ) : (
-                    <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>
-                  )}
+                  <SituacaoDaAlcada ativa={a.active} usuarioAtivo={a.portalUser.active} />
                   <span className="ml-auto">
                     <AlternarAlcada id={a.id} ativa={a.active} />
                   </span>
@@ -447,14 +439,7 @@ async function Alcadas({
                   </td>
                   <td className="py-2.5 pr-3 text-right tabular-nums">{moeda(centavosDeDecimal(a.maxAmount))}</td>
                   <td className="py-2.5 pr-3">
-                    {/* Alçada ativa de usuário desativado não conta — ver `whereDaAlcadaValida`. */}
-                    {!a.portalUser.active ? (
-                      <Badge variant={TOM_DA_SITUACAO.INATIVA}>Usuário inativo</Badge>
-                    ) : a.active ? (
-                      <Badge variant={TOM_DA_SITUACAO.ATIVA}>Ativa</Badge>
-                    ) : (
-                      <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>
-                    )}
+                    <SituacaoDaAlcada ativa={a.active} usuarioAtivo={a.portalUser.active} />
                   </td>
                   <td className="py-2.5">
                     <AlternarAlcada id={a.id} ativa={a.active} />
@@ -468,6 +453,21 @@ async function Alcadas({
       )}
       </CascoDaTabela>
     </>
+  );
+}
+
+/**
+ * Ativa ou inativa — o ativo/inativo de um cadastro, então a bolinha, e não o
+ * selo de situação (escolha 2A do Kauan, 08/10/2026). Alçada ativa de usuário
+ * desativado não conta — ver `whereDaAlcadaValida` —, e diz o porquê.
+ */
+function SituacaoDaAlcada({ ativa, usuarioAtivo }: { ativa: boolean; usuarioAtivo: boolean }) {
+  const valendo = ativa && usuarioAtivo;
+  return (
+    <StatusDot
+      color={valendo ? "var(--c41-success)" : "var(--c41-fg-muted)"}
+      label={!usuarioAtivo ? "Usuário inativo" : ativa ? "Ativa" : "Inativa"}
+    />
   );
 }
 

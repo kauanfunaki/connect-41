@@ -10,7 +10,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
-import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
+import type { VarianteDoBadge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { TOM_DA_SITUACAO, tomDoFechamento } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -262,7 +263,7 @@ async function ListaDeManuais({
                       <span className={`text-fs-2 font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success-fg"}`}>
                         {l.kind === "PAGAR" ? "A pagar" : "A receber"}
                       </span>
-                      <Badge variant={status.variante}>{status.rotulo}</Badge>
+                      <Selo tom={tomDaVariante(status.variante)}>{status.rotulo}</Selo>
                       {podeCancelar && podeCancelarManual(l).pode && (
                         <span className="ml-auto">
                           <CancelarLancamento entryId={l.id} />
@@ -321,7 +322,7 @@ async function ListaDeManuais({
                           </td>
                           <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(centavosDeDecimal(l.amount))}</td>
                           <td className="py-2.5 pr-3">
-                            <Badge variant={status.variante}>{status.rotulo}</Badge>
+                            <Selo tom={tomDaVariante(status.variante)}>{status.rotulo}</Selo>
                           </td>
                           <td className="py-2.5">
                             {podeCancelar && podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}

@@ -10,7 +10,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
@@ -126,7 +126,8 @@ export default async function ComunicacaoPage({
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-fg">{c.empresaNome}</span>
-                {c.resumo.esperandoEscritorio && <Badge variant="warning">Esperando o escritório</Badge>}
+                {/* Situação da conversa: o `Selo` miúdo (escolha 2A, 08/10/2026). */}
+                {c.resumo.esperandoEscritorio && <Selo tom="atencao">Esperando o escritório</Selo>}
                 <span className="ml-auto text-micro text-fg-muted tabular-nums">
                   {c.resumo.ultima && formatInstantDateTime(c.resumo.ultima.criadaEm)}
                 </span>

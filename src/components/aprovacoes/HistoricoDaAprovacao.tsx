@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { formatInstantDateTime } from "@/lib/format";
 import { ROTULO_DA_APROVACAO, type StatusDeAprovacao } from "@/lib/financeiro/aprovacao/regras";
 
@@ -25,9 +25,10 @@ const VARIANTE: Record<StatusDeAprovacao, "success" | "warning" | "danger" | "in
   REPROVADO: "danger",
 };
 
+/** No `Selo` miúdo, como a situação da conta ao lado (escolha 2A, 08/10/2026). */
 export function SeloDaAprovacao({ status }: { status: StatusDeAprovacao }) {
   if (status === "NAO_REQUER") return null;
-  return <Badge variant={VARIANTE[status]}>{ROTULO_DA_APROVACAO[status]}</Badge>;
+  return <Selo tom={tomDaVariante(VARIANTE[status])}>{ROTULO_DA_APROVACAO[status]}</Selo>;
 }
 
 /** O histórico inteiro, recolhido — a linha mostra o estado; quem quer o porquê abre. */

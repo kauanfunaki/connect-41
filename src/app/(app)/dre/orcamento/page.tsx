@@ -9,7 +9,7 @@ import { formatInstantDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -109,7 +109,7 @@ export default async function OrcamentoPage({
       {/* As versões do ano são abas, e não pílulas (conferência de 30/09):
           escolher uma troca a grade inteira, o cabeçalho e as ações — é outra
           tela, não um recorte da mesma. A aprovada leva o selo no ícone e no
-          nome, que a aba não tem lugar para o `Badge`. */}
+          nome, que a aba não tem lugar para o selo. */}
       {doAno.length > 0 && (
         <AbasDeLink
           abas={doAno.map((v) => ({
@@ -147,7 +147,8 @@ export default async function OrcamentoPage({
             <div className="text-ui">
               <p className="font-semibold text-fg flex items-center gap-2">
                 {selecionada.name} · {ano}
-                {selecionada.status === "APROVADO" ? <Badge variant="success">Aprovada</Badge> : <Badge variant="info">Rascunho</Badge>}
+                {/* Situação da versão: o `Selo` miúdo (escolha 2A, 08/10/2026). */}
+                {selecionada.status === "APROVADO" ? <Selo tom="sucesso">Aprovada</Selo> : <Selo tom="marca">Rascunho</Selo>}
               </p>
               <p className="text-fs-2 text-fg-muted mt-0.5">
                 Criada por {selecionada.createdBy.name}
