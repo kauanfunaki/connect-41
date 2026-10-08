@@ -82,7 +82,7 @@ function Mensagens({ conversationId }: { conversationId: string }) {
                 m.isPrivate
                   ? "bg-warning/10 border border-warning/30"
                   : isOutgoing
-                    ? "bg-brand text-on-brand"
+                    ? "bg-brand-solid text-on-brand"
                     : "bg-surface-hover border border-border"
               }`}
             >
