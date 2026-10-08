@@ -494,6 +494,59 @@ input[type="search"]::-webkit-search-decoration {
   appearance: none;
 }
 
+/* ----- Controle deslizante (ui/Deslizante, 08/10/2026): trilho de 4px, a
+   parte percorrida no azul 41 e o polegar branco com borda azul — no lugar
+   do trilho e da bolinha do sistema. O percorrido vem do `--progresso` que o
+   componente calcula (no Firefox, do `::-moz-range-progress`). ----- */
+.c41-deslizante {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+.c41-deslizante:disabled { opacity: var(--c41-disabled-op); cursor: not-allowed; }
+/* O anel vai no polegar, não na caixa inteira do controle. */
+.c41-deslizante:focus-visible { box-shadow: none; }
+.c41-deslizante::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 100px;
+  background: linear-gradient(to right, var(--c41-brand-solid) var(--progresso, 0%), var(--c41-border-strong) var(--progresso, 0%));
+}
+.c41-deslizante::-moz-range-track { height: 4px; border-radius: 100px; background: var(--c41-border-strong); }
+.c41-deslizante::-moz-range-progress { height: 4px; border-radius: 100px; background: var(--c41-brand-solid); }
+.c41-deslizante::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 16px; height: 16px;
+  margin-top: -6px; /* (4px do trilho − 16px do polegar) ÷ 2 */
+  border-radius: 50%;
+  border: 2px solid var(--c41-brand-solid);
+  background: var(--c41-surface);
+  box-shadow: var(--c41-shadow-xs);
+  transition: transform .12s, box-shadow .12s;
+}
+.c41-deslizante::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--c41-brand-solid);
+  background: var(--c41-surface);
+  box-shadow: var(--c41-shadow-xs);
+  transition: transform .12s, box-shadow .12s;
+}
+.c41-deslizante:hover::-webkit-slider-thumb { transform: scale(1.1); }
+.c41-deslizante:hover::-moz-range-thumb { transform: scale(1.1); }
+.c41-deslizante:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--c41-focus-ring); }
+.c41-deslizante:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px var(--c41-focus-ring); }
+/* Uma regra por navegador: numa lista, o seletor que um deles não conhece
+   derruba a regra inteira. */
+@media (prefers-reduced-motion: reduce) {
+  .c41-deslizante::-webkit-slider-thumb { transition: none; }
+  .c41-deslizante::-moz-range-thumb { transition: none; }
+}
+
 /* ----- Scrollbar customizada — c41-scrollbar / scroll-y / scroll-x ----- */
 .c41-scrollbar, .scroll-y, .scroll-x {
   scrollbar-width: thin;
