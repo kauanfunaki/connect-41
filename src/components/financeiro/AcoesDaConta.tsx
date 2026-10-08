@@ -40,6 +40,7 @@ export function AcoesDaConta({
   notaHref = null,
   pendenciaHref = null,
   emColunas = false,
+  comConferir = true,
 }: {
   entryId: string;
   situacao: SituacaoDaConta;
@@ -58,6 +59,8 @@ export function AcoesDaConta({
   pendenciaHref?: string | null;
   /** Na coluna da tabela: cada botão no mesmo lugar em todas as linhas (ver `vaga`). */
   emColunas?: boolean;
+  /** Alguma linha da tabela tem "Conferir": só então a posição dele fica guardada nas outras. */
+  comConferir?: boolean;
 }) {
   const [erro, setErro] = useState<string | null>(null);
   const [erroDaBaixa, setErroDaBaixa] = useState<string | null>(null);
@@ -161,7 +164,7 @@ export function AcoesDaConta({
       <div className="flex flex-col gap-1 items-start">
         {emColunas ? (
           <div className="flex items-center gap-1.5">
-            {vaga(rotuloConferir)}
+            {comConferir && vaga(rotuloConferir)}
             {vaga(rotuloDaBaixa)}
             {menu || <span className="w-7 text-center text-micro text-fg-muted">—</span>}
           </div>
@@ -183,7 +186,7 @@ export function AcoesDaConta({
             {rotuloConferir}
           </Button>
         ) : (
-          vaga(rotuloConferir)
+          comConferir && vaga(rotuloConferir)
         )}
         {/* Travado pela aprovação: o botão fica, desabilitado e com o motivo
             embaixo — sumir com ele faria a pessoa procurar a baixa noutro lugar. */}

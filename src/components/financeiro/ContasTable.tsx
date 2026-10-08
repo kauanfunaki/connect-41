@@ -114,11 +114,16 @@ export function ContasTable({
     </>
   );
 
+  // Na tabela, a posição do "Conferir" só fica guardada quando alguma linha o
+  // tem — sem nenhuma a conferir, ela seria um vão à esquerda de todo "Pagar".
+  const algumaAConferir = linhas.some((l) => l.status === "PROVISORIO" && l.situacao !== "PAGA" && l.situacao !== "CANCELADA");
+
   // "Ver nota" e "abrir pendência" eram texto azul embaixo dos botões; desde
   // a conferência de 30/09 vão no menu "⋯" das ações da linha.
   const acoes = (l: LinhaDaConta, emColunas = false) => (
     <AcoesDaConta
       emColunas={emColunas}
+      comConferir={algumaAConferir}
       entryId={l.id}
       situacao={l.situacao}
       status={l.status}
