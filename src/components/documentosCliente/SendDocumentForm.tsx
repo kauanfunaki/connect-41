@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import type { ClientDocumentState } from "@/app/(app)/empresas/[id]/documentos-cliente/actions";
+import type { ClientDocumentState } from "@/app/(app)/solicitacoes/envios/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { EmailChipsInput } from "@/components/documentosCliente/EmailChipsInput";
