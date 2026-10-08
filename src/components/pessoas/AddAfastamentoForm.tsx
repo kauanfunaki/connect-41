@@ -40,7 +40,7 @@ export function AddAfastamentoForm({ action, canEditMedical }: Props) {
             ))}
           </Select>
         </CampoForm>
-        <CampoForm label="Data de Início" htmlFor="startDate" required>
+        <CampoForm label="Data de início" htmlFor="startDate" required>
           <CampoData id="startDate" name="startDate" required />
         </CampoForm>
         <CampoForm label="Retorno previsto" htmlFor="returnDate">
@@ -56,7 +56,7 @@ export function AddAfastamentoForm({ action, canEditMedical }: Props) {
           <CampoForm label="Motivo" htmlFor="reason">
             <Input id="reason" name="reason" type="text" />
           </CampoForm>
-          <CampoForm label="Local de Atendimento" htmlFor="location">
+          <CampoForm label="Local de atendimento" htmlFor="location">
             <Input id="location" name="location" type="text" />
           </CampoForm>
           <CampoForm label="Profissional/Conselho" htmlFor="professional">
@@ -71,7 +71,7 @@ export function AddAfastamentoForm({ action, canEditMedical }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Registrando…" : "Registrar Ausência"}
+            {isPending ? "Registrando…" : "Registrar ausência"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

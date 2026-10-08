@@ -14,7 +14,7 @@ export default async function NovoClientePage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Cadastros", href: "/clientes" }, { label: "Clientes", href: "/clientes" }, { label: "Novo Cliente" }]} />
+      <Breadcrumb items={[{ label: "Cadastros", href: "/clientes" }, { label: "Clientes", href: "/clientes" }, { label: "Novo cliente" }]} />
       <BackButton className="mb-3" />
       <PageHeader title="Novo cliente" />
       {/* No cartão de 720px dos outros cadastros curtos (30/09): solto na

@@ -10,9 +10,9 @@ import type { PipelineState } from "@/app/(app)/kanban/actions";
 // Estágios padrão usados pelas Listas criadas pelo fluxo simplificado
 // ("Nova lista") — mesmo conjunto já em uso nos boards do BPO.
 const DEFAULT_STAGES = [
-  { name: "A Fazer", order: 0, color: "#586577", isTerminal: false },
-  { name: "Em Andamento", order: 1, color: "#2563EB", isTerminal: false },
-  { name: "Aguardando Cliente", order: 2, color: "#CA8A04", isTerminal: false },
+  { name: "A fazer", order: 0, color: "#586577", isTerminal: false },
+  { name: "Em andamento", order: 1, color: "#2563EB", isTerminal: false },
+  { name: "Aguardando cliente", order: 2, color: "#CA8A04", isTerminal: false },
   { name: "Concluído", order: 3, color: "#059669", isTerminal: true },
 ];
 

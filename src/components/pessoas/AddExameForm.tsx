@@ -24,7 +24,7 @@ export function AddExameForm({ action }: Props) {
         <CampoForm label="Clínica" htmlFor="clinicName" className="sm:col-span-2 lg:col-span-1">
           <Input id="clinicName" name="clinicName" type="text" />
         </CampoForm>
-        <CampoForm label="Data Agendada" htmlFor="scheduledAt">
+        <CampoForm label="Data agendada" htmlFor="scheduledAt">
           <CampoData id="scheduledAt" name="scheduledAt" />
         </CampoForm>
         <CampoForm label="Prazo do ASO" htmlFor="asoDueDate">
@@ -37,7 +37,7 @@ export function AddExameForm({ action }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Registrando…" : "Solicitar Exame"}
+            {isPending ? "Registrando…" : "Solicitar exame"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>

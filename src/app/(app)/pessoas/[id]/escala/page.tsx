@@ -52,10 +52,10 @@ export default async function EscalaPage({
         isInternal={person.isInternal}
         personId={id}
         personName={person.name}
-        atual="Escala de Trabalho"
+        atual="Escala de trabalho"
       />
       <BackButton className="mb-3" />
-      <PageHeader title="Escala de Trabalho" />
+      <PageHeader title="Escala de trabalho" />
 
       <Card className="p-5">
         {escala.length === 0 ? (

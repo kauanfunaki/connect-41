@@ -309,7 +309,7 @@ export default async function ConferenciaRescisaoPage({
             <h2 className="text-card-title font-semibold text-fg">Férias em aberto (base de conferência)</h2>
             <Button href={`/pessoas/${id}/ferias`} variant="secondary" size="xs">
               <Palmtree size={12} />
-              Abrir módulo de Férias
+              Abrir módulo de férias
             </Button>
           </div>
           <p className="text-fs-2 text-fg-muted mb-3">

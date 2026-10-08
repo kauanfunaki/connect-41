@@ -52,7 +52,7 @@ export default async function DocumentoClienteDetailPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: "Documentos para Cliente", href: `/empresas/${companyId}/documentos-cliente`, truncate: true },
+          { label: "Documentos para cliente", href: `/empresas/${companyId}/documentos-cliente`, truncate: true },
           { label: document.title, truncate: true },
         ]}
       />

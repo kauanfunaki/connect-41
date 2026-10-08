@@ -83,17 +83,17 @@ export default async function NovaPessoaPage({
       <Breadcrumb
         items={
           kind === "interno"
-            ? [{ label: "Cadastros", href: "/pessoas" }, { label: "Pessoas", href: "/pessoas" }, { label: "Nova Pessoa" }]
+            ? [{ label: "Cadastros", href: "/pessoas" }, { label: "Pessoas", href: "/pessoas" }, { label: "Nova pessoa" }]
             : [
                 { label: "Recrutamento", href: "/colaboradores-clientes" },
                 { label: "Colaboradores de clientes", href: "/colaboradores-clientes" },
-                { label: "Novo Colaborador" },
+                { label: "Novo colaborador" },
               ]
         }
       />
 
       <BackButton className="mb-3" />
-      <PageHeader title={kind === "interno" ? "Novo Funcionário Interno" : "Novo Colaborador de Cliente"} />
+      <PageHeader title={kind === "interno" ? "Novo funcionário interno" : "Novo colaborador de cliente"} />
 
       <PessoaForm
         action={criarPessoa}

@@ -20,7 +20,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Em “Colaboradores”, clique no cartão “Admissões” para ver quem está com a admissão em andamento.",
           "Confira as colunas “Exames” e “Documentos de admissão”. No filtro da coluna “Exames”, escolha “Exames pendentes” para ver só quem ainda depende da clínica.",
           "Clique em “Abrir” na linha do colaborador para ir à ficha dele.",
-          "Na aba “Visão Geral”, no quadro “Admissão digital”, clique em “Gerar link de admissão” e use “Copiar” para mandar o link ao colaborador preencher os próprios dados.",
+          "Na aba “Visão geral”, no quadro “Admissão digital”, clique em “Gerar link de admissão” e use “Copiar” para mandar o link ao colaborador preencher os próprios dados.",
           "Quando os dados chegarem, confira as informações e os documentos e clique em “Concluir admissão”. A situação do colaborador passa para Ativo.",
         ],
       },
@@ -30,15 +30,15 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Clique no cartão “Férias”. A lista mostra primeiro as férias vencidas e depois as que estão a vencer ou programadas.",
           "Clique em “Abrir” na linha do colaborador para ir à tela de férias da ficha.",
           "Para lançar um novo período, preencha “Início do aquisitivo” e “Fim do aquisitivo” e, se já souber, o concessivo, os “Dias”, “Abono pecuniário” e “Parcelamento”.",
-          "Clique em “Programar Férias”.",
+          "Clique em “Programar férias”.",
           "Para andar com um período já lançado, escolha a nova situação, informe as datas de início e de retorno e clique em “Atualizar”.",
         ],
       },
       {
         titulo: "Registrar e acompanhar um desligamento",
         passos: [
-          "Abra a ficha do colaborador, vá à aba “Dados Trabalhistas” e clique em “Desligamento”.",
-          "Escolha o “Tipo”, preencha o “Motivo” e as “Observações”, se quiser, e clique em “Registrar Desligamento”.",
+          "Abra a ficha do colaborador, vá à aba “Dados trabalhistas” e clique em “Desligamento”.",
+          "Escolha o “Tipo”, preencha o “Motivo” e as “Observações”, se quiser, e clique em “Registrar desligamento”.",
           "A cada mudança no andamento, escolha a nova situação (de “Solicitado” até “Finalizado”) e clique em “Atualizar”.",
           "Clique em “Conferência do TRCT” para conferir a rescisão item a item.",
           "Para ver todos os desligamentos em andamento, clique no cartão “Rescisões” em “Colaboradores”.",
@@ -63,10 +63,10 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Registrar um afastamento ou atestado",
         passos: [
-          "Abra a ficha do colaborador, vá à aba “Dados Trabalhistas” e clique em “Afastamentos”.",
+          "Abra a ficha do colaborador, vá à aba “Dados trabalhistas” e clique em “Afastamentos”.",
           "Escolha o “Tipo”: “Falta”, “Atestado parcial”, “Atestado integral”, “Licença”, “Afastamento” ou “Retorno”.",
-          "Informe a “Data de Início” e, se souber, o “Retorno previsto” e os “Dias perdidos”.",
-          "Clique em “Registrar Ausência”.",
+          "Informe a “Data de início” e, se souber, o “Retorno previsto” e os “Dias perdidos”.",
+          "Clique em “Registrar ausência”.",
         ],
       },
       {
@@ -82,7 +82,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
     dicas: [
       "A lista mostra só os registros em “Em análise”, “Afastado” e “Retorno previsto”. Um registro novo entra como “Lançado” e só aparece aqui depois que a situação muda.",
       "Registrar uma “Licença” ou um “Afastamento” muda a situação do colaborador para afastado.",
-      "“Motivo”, “Local de Atendimento” e “Profissional/Conselho” são dados médicos: só aparecem para quem tem permissão de ver esse tipo de dado.",
+      "“Motivo”, “Local de atendimento” e “Profissional/Conselho” são dados médicos: só aparecem para quem tem permissão de ver esse tipo de dado.",
     ],
   },
 
@@ -96,10 +96,10 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Lançar horas extras",
         passos: [
-          "Abra a ficha do colaborador, vá à aba “Dados Trabalhistas” e clique em “Horas Extras”.",
-          "Informe a “Data” e o “Tipo de Dia”.",
-          "Preencha “Horas Devidas”, “Horas Trabalhadas”, “Horas Extras” e “Adicional”, conforme o caso, e a “Justificativa”.",
-          "Clique em “Lançar Horas”. O lançamento entra pendente de aprovação e aparece em “Horas Extras”.",
+          "Abra a ficha do colaborador, vá à aba “Dados trabalhistas” e clique em “Horas extras”.",
+          "Informe a “Data” e o “Tipo de dia”.",
+          "Preencha “Horas devidas”, “Horas trabalhadas”, “Horas extras” e “Adicional”, conforme o caso, e a “Justificativa”.",
+          "Clique em “Lançar horas”. O lançamento entra pendente de aprovação e aparece em “Horas Extras”.",
         ],
       },
       {
@@ -129,10 +129,10 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Montar a escala de um colaborador",
         passos: [
-          "Abra a ficha do colaborador, vá à aba “Vínculo” e clique em “Escala de Trabalho”.",
+          "Abra a ficha do colaborador, vá à aba “Vínculo” e clique em “Escala de trabalho”.",
           "Informe a “Data” e escolha o “Turno”.",
           "Marque “Folga” ou “Feriado”, se for o caso, e escreva “Observações” se precisar.",
-          "Clique em “Adicionar à Escala”. Se a data estiver nos próximos 30 dias, ela aparece em “Escalas”.",
+          "Clique em “Adicionar à escala”. Se a data estiver nos próximos 30 dias, ela aparece em “Escalas”.",
         ],
       },
       {

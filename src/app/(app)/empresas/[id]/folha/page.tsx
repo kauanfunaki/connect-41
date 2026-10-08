@@ -60,13 +60,13 @@ export default async function FolhaPage({
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
           { label: company.name, href: `/empresas/${companyId}`, truncate: true },
-          { label: "Folha de Pagamento" },
+          { label: "Folha de pagamento" },
         ]}
       />
       <BackButton className="mb-3" />
 
       <PageHeader
-        title="Folha de Pagamento"
+        title="Folha de pagamento"
         subtitle={`${competencias.length} competência${competencias.length !== 1 ? "s" : ""} — controle e conferência de lançamentos, não motor de cálculo`}
       />
 
