@@ -72,7 +72,7 @@ export default async function PortalComunicacaoPage({
                 conversa && (
                   <>
                     {conversa.limitada && (
-                      <p className="text-[11px] text-fg-muted mb-2">Mostrando as 300 mensagens mais recentes.</p>
+                      <p className="text-helper text-fg-muted mb-2">Mostrando as 300 mensagens mais recentes.</p>
                     )}
                     <ConversaDaPendencia
                       mensagens={conversa.mensagens}
@@ -89,7 +89,7 @@ export default async function PortalComunicacaoPage({
                   campo="companyId"
                   acao={enviarMensagemCliente}
                   rotulo="Enviar mensagem"
-                  dica="Anexe PDF, PNG, JPG ou XML de até 10 MB. A equipe é avisada quando você escreve."
+                  dica="A equipe é avisada quando você escreve."
                 />
               </Card>
             </>
