@@ -332,7 +332,10 @@ export default async function ProcessoDetalhePage({
         }
       />
 
-      <div className="mb-6 flex flex-col gap-3">
+      {/* Motivo e ações de situação são do processo inteiro: na largura toda,
+          acima das colunas. Concluído e sem motivo, a faixa fica vazia e some
+          (`empty:hidden`), sem deixar a margem. */}
+      <div className="mb-6 flex flex-col gap-3 empty:hidden">
         {processo.statusReason && (
           <p className="text-[length:var(--fs-ui)] text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
             <span className="font-medium">Motivo:</span> {processo.statusReason}
@@ -342,90 +345,104 @@ export default async function ProcessoDetalhePage({
           </p>
         )}
         <SituacaoDoProcesso processoId={processo.id} status={processo.status} mudar={mudarSituacaoDoProcesso} />
-        {/* As observações já vinham na consulta e não apareciam em lugar
-            nenhum. É onde a importação do Trello (06/10) põe descrição,
-            checklists e comentários do cartão — fechado, porque é longo, e
-            só aqui: o portal não lê `notes`. */}
-        {processo.notes && <ObservacoesDoProcesso texto={processo.notes} />}
       </div>
 
-      {/* Uma pilha só, com o mesmo respiro entre todas as seções — eram
-          mb-4/mt-4 soltos em cada bloco. Toda seção é um cartão com o título
-          dentro (07/10/2026): Avisos e Roteiro eram as duas com o título
-          solto no fundo, enquanto Taxas, Horas, Conversa e Documentos já
-          eram cartão. */}
-      <div className="flex flex-col gap-5">
-        {avisos.length > 0 && (
-          <Card as="section" aria-labelledby="avisos-da-junta" className="p-4 flex flex-col gap-4">
-            <div className="flex flex-col gap-0.5">
-              <h2 id="avisos-da-junta" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
-                Avisos da Junta por e-mail
-              </h2>
-              <p className="text-[length:var(--fs-2)] text-fg-muted">
-                O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
-              </p>
-            </div>
-            <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} embutido />
-          </Card>
-        )}
+      {/* Duas colunas no computador (escolha do Kauan na página de decisões,
+          08/10/2026 — 10A): o roteiro à esquerda, e à direita o que se consulta
+          ao lado dele — taxas, horas, conversa e documentos. Era uma pilha só,
+          e Taxas, Horas e Conversa ficavam muito abaixo da dobra.
 
-        <Card as="section" aria-labelledby="roteiro-do-processo" className="p-4 flex flex-col gap-3">
-          <h2 id="roteiro-do-processo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
-            Roteiro
-          </h2>
-          <RoteiroDoProcesso
-            etapas={etapas}
-            podeEditar={processo.concludedAt === null && !encerradoSemConclusao}
+          - Do `xl` para cima, e não do `lg`: com o menu de 240px, no `lg` o
+            conteúdo tem uns 736px e o roteiro ficaria com uns 300.
+          - A conversa vai para a direita junto com os documentos: é apoio do
+            roteiro, e assim as duas colunas, uma depois da outra, dão a mesma
+            ordem de hoje no celular — sem `order` de CSS, que deixaria a ordem
+            do leitor de tela diferente da que se vê.
+          - As observações ficam no alto da coluna do roteiro, onde já estavam:
+            são a história do processo (o cartão do Trello), fechadas numa linha.
+
+          Toda seção é um cartão com o título dentro (07/10/2026), com o mesmo
+          respiro entre elas. */}
+      <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_25rem] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_28rem]">
+        <div className="flex min-w-0 flex-col gap-5">
+          {/* As observações já vinham na consulta e não apareciam em lugar
+              nenhum. É onde a importação do Trello (06/10) põe descrição,
+              checklists e comentários do cartão — fechado, porque é longo, e
+              só aqui: o portal não lê `notes`. */}
+          {processo.notes && <ObservacoesDoProcesso texto={processo.notes} />}
+
+          {avisos.length > 0 && (
+            <Card as="section" aria-labelledby="avisos-da-junta" className="p-4 flex flex-col gap-4">
+              <div className="flex flex-col gap-0.5">
+                <h2 id="avisos-da-junta" className="text-section font-semibold text-fg">
+                  Avisos da Junta por e-mail
+                </h2>
+                <p className="text-[length:var(--fs-2)] text-fg-muted">
+                  O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
+                </p>
+              </div>
+              <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} embutido />
+            </Card>
+          )}
+
+          <Card as="section" aria-labelledby="roteiro-do-processo" className="p-4 flex flex-col gap-3">
+            <h2 id="roteiro-do-processo" className="text-section font-semibold text-fg">
+              Roteiro
+            </h2>
+            <RoteiroDoProcesso
+              etapas={etapas}
+              podeEditar={processo.concludedAt === null && !encerradoSemConclusao}
+              acoes={{
+                concluir: concluirEtapa,
+                dispensar: dispensarEtapa,
+                protocolar,
+                deferir: deferirProtocolo,
+                exigir: registrarExigencia,
+                resolverExigencia,
+                alternarItem: alternarItemDoChecklist,
+              }}
+            />
+          </Card>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-5">
+          <TaxasDoProcesso taxas={taxas} custo={custo} />
+
+          <HorasDoProcesso
+            processId={processo.id}
+            lancamentos={horas.map((h) => ({
+              id: h.id,
+              quem: h.user.name,
+              minutos: h.minutes,
+              dia: formatInstantDate(h.loggedOn),
+              nota: h.note,
+              meu: h.userId === ctx.userId,
+            }))}
+            cronometro={
+              processo.activeTimerUserId && processo.activeTimerStartedAt
+                ? {
+                    quem: donoDoCronometro ?? "Alguém",
+                    desdeIso: processo.activeTimerStartedAt.toISOString(),
+                    meu: processo.activeTimerUserId === ctx.userId,
+                  }
+                : null
+            }
+            podeAgir={processo.concludedAt === null}
             acoes={{
-              concluir: concluirEtapa,
-              dispensar: dispensarEtapa,
-              protocolar,
-              deferir: deferirProtocolo,
-              exigir: registrarExigencia,
-              resolverExigencia,
-              alternarItem: alternarItemDoChecklist,
+              iniciar: iniciarCronometroDoProcesso,
+              parar: pararCronometroDoProcesso,
+              lancar: lancarHorasNoProcesso,
+              apagar: apagarHorasDoProcesso,
             }}
           />
-        </Card>
 
-        <TaxasDoProcesso taxas={taxas} custo={custo} />
-
-        <HorasDoProcesso
-          processId={processo.id}
-          lancamentos={horas.map((h) => ({
-            id: h.id,
-            quem: h.user.name,
-            minutos: h.minutes,
-            dia: formatInstantDate(h.loggedOn),
-            nota: h.note,
-            meu: h.userId === ctx.userId,
-          }))}
-          cronometro={
-            processo.activeTimerUserId && processo.activeTimerStartedAt
-              ? {
-                  quem: donoDoCronometro ?? "Alguém",
-                  desdeIso: processo.activeTimerStartedAt.toISOString(),
-                  meu: processo.activeTimerUserId === ctx.userId,
-                }
-              : null
-          }
-          podeAgir={processo.concludedAt === null}
-          acoes={{
-            iniciar: iniciarCronometroDoProcesso,
-            parar: pararCronometroDoProcesso,
-            lancar: lancarHorasNoProcesso,
-            apagar: apagarHorasDoProcesso,
-          }}
-        />
-
-        {/* Os dois cartões lado a lado com a mesma altura (a grade estica, o
-            cartão ocupa a célula inteira). */}
-        {conversa && (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <section aria-labelledby="conversa-do-processo" className="min-w-0">
-              <Card className="p-4 flex flex-col gap-4 h-full">
+          {/* Um embaixo do outro na coluna da direita — eram lado a lado
+              (3:2) numa faixa da largura toda. */}
+          {conversa && (
+            <>
+              <Card as="section" aria-labelledby="conversa-do-processo" className="p-4 flex flex-col gap-4">
                 <div className="flex flex-col gap-0.5">
-                  <h2 id="conversa-do-processo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+                  <h2 id="conversa-do-processo" className="text-section font-semibold text-fg">
                     Conversa com o cliente
                   </h2>
                   <p className="text-[length:var(--fs-2)] text-fg-muted">
@@ -451,10 +468,9 @@ export default async function ProcessoDetalhePage({
                   dica="Anexe PDF, PNG, JPG ou XML de até 10 MB."
                 />
               </Card>
-            </section>
-            <section aria-labelledby="documentos-do-processo" className="min-w-0">
-              <Card className="p-4 flex flex-col gap-4 h-full">
-                <h2 id="documentos-do-processo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+
+              <Card as="section" aria-labelledby="documentos-do-processo" className="p-4 flex flex-col gap-4">
+                <h2 id="documentos-do-processo" className="text-section font-semibold text-fg">
                   Documentos <span className="text-fg-muted font-normal tabular-nums">({conversa.documentos.length})</span>
                 </h2>
                 <DocumentosDoProcesso
@@ -466,9 +482,9 @@ export default async function ProcessoDetalhePage({
                   dica="O cliente vê e é avisado."
                 />
               </Card>
-            </section>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       <p className="mt-6 text-[length:var(--fs-micro)] text-fg-muted">
