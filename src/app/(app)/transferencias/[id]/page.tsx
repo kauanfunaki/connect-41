@@ -9,6 +9,7 @@ import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
+import { TextoComLinks } from "@/components/shared/TextoComLinks";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { SectorChip } from "@/components/ui/SectorChip";
@@ -128,14 +129,18 @@ export default async function HandoffDetailPage({
       <Card className="p-5 mb-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Informações adicionais</h2>
         {handoff.message ? (
-          <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{handoff.message}</p>
+          <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">
+            <TextoComLinks texto={handoff.message} />
+          </p>
         ) : (
           <p className="text-[length:var(--fs-body)] text-fg-muted italic">Nenhuma informação geral adicionada.</p>
         )}
         {handoff.description && (
           <>
             <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2 mt-4">Descrição</h2>
-            <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{handoff.description}</p>
+            <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">
+              <TextoComLinks texto={handoff.description} />
+            </p>
           </>
         )}
       </Card>
