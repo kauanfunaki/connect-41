@@ -42,7 +42,7 @@ const ICONES: Record<IconeDoPasso, React.ReactNode> = {
  * o cliente nunca lê sobre uma tela que não tem.
  *
  * Os vídeos (05/10/2026) chegam junto com os passos (`passosDoPortal`, links em
- * `lib/ajuda/videos.ts`): tocam dentro do passo e na seção "Vídeos" do topo.
+ * `lib/ajuda/videos.ts`) e tocam só dentro do passo aberto (08/10/2026).
  */
 export default async function AjudaDoPortalPage() {
   const sessao = await getPortalSession();
