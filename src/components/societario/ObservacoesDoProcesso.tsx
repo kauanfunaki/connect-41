@@ -3,33 +3,9 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { partesComLinks } from "@/lib/textoComLinks";
-
-/**
- * Texto corrido com os endereços clicáveis, abrindo em outra aba. As quebras
- * de linha ficam por conta de quem envolve (`whitespace-pre-wrap`).
- */
-export function TextoComLinks({ texto }: { texto: string }) {
-  return (
-    <>
-      {partesComLinks(texto).map((p, i) =>
-        p.tipo === "texto" ? (
-          p.texto
-        ) : (
-          <a
-            key={i}
-            href={p.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-brand underline underline-offset-2 decoration-brand/40 hover:decoration-brand [overflow-wrap:anywhere]"
-          >
-            {p.url}
-          </a>
-        )
-      )}
-    </>
-  );
-}
+// O da base (07/10/2026): a frente do Societário tinha feito o seu ao mesmo
+// tempo (lib/textoComLinks), e os dois separavam o texto do mesmo jeito.
+import { TextoComLinks } from "@/components/shared/TextoComLinks";
 
 // Acima disto o texto passa da altura da caixa (max-h-96, umas 17 linhas de
 // 14px) e ganha "Ver tudo". Conta por linha e por tamanho porque o Trello
