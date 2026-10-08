@@ -89,7 +89,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
   // ─── DP: Horas extras ─────────────────────────────────────────────────────
   {
     chave: "dp_horas_extras",
-    titulo: "Horas Extras",
+    titulo: "Horas extras",
     caminhos: ["/horas-extras"],
     resumo: "Reúne os lançamentos de horas extras de todos os colaboradores que estão aguardando aprovação.",
     secoes: [
@@ -99,13 +99,13 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Abra a ficha do colaborador, vá à aba “Dados trabalhistas” e clique em “Horas extras”.",
           "Informe a “Data” e o “Tipo de dia”.",
           "Preencha “Horas devidas”, “Horas trabalhadas”, “Horas extras” e “Adicional”, conforme o caso, e a “Justificativa”.",
-          "Clique em “Lançar horas”. O lançamento entra pendente de aprovação e aparece em “Horas Extras”.",
+          "Clique em “Lançar horas”. O lançamento entra pendente de aprovação e aparece em “Horas extras”.",
         ],
       },
       {
         titulo: "Aprovar ou reprovar um lançamento",
         passos: [
-          "Em “Horas Extras”, use os filtros das colunas “Colaborador”, “Data” e “Tipo do dia”, se precisar.",
+          "Em “Horas extras”, use os filtros das colunas “Colaborador”, “Data” e “Tipo do dia”, se precisar.",
           "Clique em “Abrir” na linha do lançamento.",
           "Escolha a situação “Aprovado” ou “Reprovado” e clique em “Atualizar”.",
           "Depois de mandar o lançamento para a folha, escolha “Enviado para folha” e clique em “Atualizar”.",
@@ -194,7 +194,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
   // ─── DP: Avaliações de desempenho ─────────────────────────────────────────
   {
     chave: "dp_avaliacoes",
-    titulo: "Avaliações de Desempenho",
+    titulo: "Avaliações de desempenho",
     caminhos: ["/avaliacoes"],
     resumo:
       "Organiza as avaliações de desempenho em ciclos. Cada ciclo reúne as notas por competência dos colaboradores avaliados e o plano de desenvolvimento de cada um.",
