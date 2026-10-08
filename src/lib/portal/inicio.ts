@@ -22,6 +22,8 @@ export type ContagensDaAtencao = {
   solicitacoesAguardando: number | null;
   solicitacoesRespondidas: number | null;
   processosAguardando: number | null;
+  /** Envios ao cliente que pedem aceite e ainda não têm nenhum (08/10/2026). */
+  envios: number | null;
   comunicados: number | null;
 };
 
@@ -29,7 +31,7 @@ export type ContagensDaAtencao = {
 export type TomDaAtencao = "pedido" | "aviso";
 
 export type ItemDaAtencao = {
-  chave: "aprovacoes" | "pendencias" | "solicitacoesAguardando" | "processosAguardando" | "solicitacoesRespondidas" | "comunicados";
+  chave: "aprovacoes" | "pendencias" | "solicitacoesAguardando" | "processosAguardando" | "envios" | "solicitacoesRespondidas" | "comunicados";
   quantidade: number;
   /** O que vem depois do número: "contas a pagar esperando a sua aprovação". */
   texto: string;
@@ -100,6 +102,18 @@ export function oQuePrecisaDeVoce(
       texto: concorda(c.processosAguardando, "processo parado esperando algo seu", "processos parados esperando algo seu"),
       href: "/portal/processos?recorte=aguardando",
       acao: "Ver o que falta",
+      tom: "pedido",
+    });
+  }
+  // O aceite é do cliente: um aceite dado por qualquer pessoa da empresa tira
+  // o documento daqui (a mesma régua da tela e da equipe).
+  if (c.envios && c.envios > 0) {
+    itens.push({
+      chave: "envios",
+      quantidade: c.envios,
+      texto: concorda(c.envios, "documento esperando o seu aceite", "documentos esperando o seu aceite"),
+      href: "/portal/envios",
+      acao: "Ler e aceitar",
       tom: "pedido",
     });
   }
@@ -176,6 +190,7 @@ export type BlocosDoInicio = {
     pendencias: boolean;
     solicitacoes: boolean;
     processos: boolean;
+    envios: boolean;
     comunicados: boolean;
   };
   financeiro: {
@@ -214,6 +229,7 @@ export function blocosDoInicio(telas: ReadonlySet<string>): BlocosDoInicio {
       pendencias: telas.has("/portal/pendencias"),
       solicitacoes: telas.has("/portal/solicitacoes"),
       processos: telas.has("/portal/processos"),
+      envios: telas.has("/portal/envios"),
       comunicados: telas.has("/portal/comunicados"),
     },
     financeiro: temFinanceiro
