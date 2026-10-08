@@ -486,6 +486,14 @@ input[type="number"] {
   appearance: textfield;
 }
 
+/* ----- Busca sem o "X" do Chrome — quem limpa é o botão próprio do
+   `CampoDeBusca`, no desenho do resto do app (08/10/2026). ----- */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 /* ----- Scrollbar customizada — c41-scrollbar / scroll-y / scroll-x ----- */
 .c41-scrollbar, .scroll-y, .scroll-x {
   scrollbar-width: thin;

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { classesDaCaixa, larguraDoCampo } from "@/components/ui/useCampoDigitado";
+import { digitarNoCampo } from "@/components/ui/digitarNoCampo";
 
 type Limites = { min?: number; max?: number; step?: number };
 
@@ -31,14 +32,6 @@ export function passoDoNumero(atual: string, direcao: 1 | -1, { min, max, step =
   // 0.1 + 0.2: arredonda nas casas do passo e da base, como o campo nativo.
   const casas = Math.max(casasDecimais(passo), casasDecimais(base));
   return String(Number(alvo.toFixed(casas)));
-}
-
-/** Troca o valor como se a pessoa tivesse digitado: o `onChange` do React e o `change` do formulário disparam. */
-function digitar(input: HTMLInputElement, valor: string) {
-  const definir = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-  definir?.call(input, valor);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 function numeroOuUndefined(v: number | string | undefined): number | undefined {
@@ -109,7 +102,7 @@ export function CampoNumero({
     const input = inputRef.current;
     if (!input || travado) return;
     const novo = passoDoNumero(input.value, direcao, limites);
-    if (novo !== input.value) digitar(input, novo);
+    if (novo !== input.value) digitarNoCampo(input, novo);
   }
 
   const inteiro = limites.step === undefined || Number.isInteger(limites.step);
