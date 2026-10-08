@@ -469,33 +469,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   opacity: 0.9;
 }
 
-/* ----- ToggleActiveButton — pílula com switch, success quando ligado ----- */
-.c41-toggle-active {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 34px; padding: 0 4px 0 12px;
-  border-radius: 100px; border: 1px solid var(--c41-border-strong);
-  background: var(--c41-surface-hover);
-  font-size: var(--fs-badge); font-weight: 600;
-  color: var(--c41-fg-secondary);
-  transition: color .12s, border-color .12s;
-}
-.c41-toggle-active .switch {
-  width: 32px; height: 18px; border-radius: 100px;
-  background: var(--c41-border-strong); position: relative; flex-shrink: 0;
-  transition: background .15s;
-}
-.c41-toggle-active .switch::after {
-  content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%;
-  background: var(--c41-fg-muted); top: 2px; left: 2px; transition: left .15s, background .15s;
-}
-.c41-toggle-active.is-on {
-  color: var(--c41-success-fg);
-  border-color: color-mix(in srgb, var(--c41-success) 40%, transparent);
-}
-.c41-toggle-active.is-on .switch { background: var(--c41-success); }
-.c41-toggle-active.is-on .switch::after { background: #fff; left: 16px; }
-.c41-toggle-active:disabled,
-.c41-toggle-active[aria-disabled="true"] { opacity: var(--c41-disabled-op); cursor: not-allowed; }
+/* O interruptor mora em ui/Switch (08/10/2026). A pílula `.c41-toggle-active`
+   que ficava aqui era uma das três versões soltas que ele substituiu. */
 
 /* ----- Scrollbar customizada — c41-scrollbar / scroll-y / scroll-x ----- */
 .c41-scrollbar, .scroll-y, .scroll-x {
