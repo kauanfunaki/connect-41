@@ -1,12 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, type AuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedVagaWhere } from "@/lib/auth/scope";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { boardPath } from "@/lib/kanbanPaths";
 import { digitsOnly } from "@/lib/validation/common";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { nomeExibicao } from "@/lib/companyName";
 
 const LIMIT = 5;
+
+// O processo do Societário entra na busca (07/10/2026): achar "a Ótica
+// Alvorada" na fila de 174 processos importados exigia rolar ou abrir o funil.
+// O gate é o mesmo da fila e do detalhe (`/processos`, `/processos/[id]`): o
+// setor que opera o módulo neste escritório, no nível de agir, e o módulo
+// ligado. Quem não abre a ficha não vê o resultado.
+const MODULO_DE_PROCESSOS = "societario_processos";
+
+async function abreProcessos(ctx: AuthContext): Promise<boolean> {
+  if (!ctx.tenantId) return false;
+  const [setor, ligado] = await Promise.all([
+    setorDoModulo(ctx.tenantId, MODULO_DE_PROCESSOS),
+    isModuleEnabled(ctx.tenantId, MODULO_DE_PROCESSOS),
+  ]);
+  return ligado && canActOnSector(ctx, setor ?? "societario");
+}
+
+const ENCERRADO: Partial<Record<string, string>> = { CONCLUIDO: "Concluído", CANCELADO: "Cancelado", INDEFERIDO: "Indeferido" };
 
 export async function GET(req: NextRequest) {
   const ctx = await getAuthContext();
@@ -14,15 +34,15 @@ export async function GET(req: NextRequest) {
 
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) {
-    return NextResponse.json({ companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [], tarefas: [] });
+    return NextResponse.json({ companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [], tarefas: [], processos: [] });
   }
 
   const prisma = getPrisma();
   const cnpjDigits = digitsOnly(q);
   // A ficha do candidato só abre para quem alcança o módulo de Candidatos
   // (02/10/2026); listar para os outros levaria a um 404.
-  const veCandidatos = await podeNoModulo(ctx, "recrutamento_candidatos", "ver");
-  const [companies, people, candidatos, pipelines, vagas, documentos, tarefaItems] = await Promise.all([
+  const [veCandidatos, veProcessos] = await Promise.all([podeNoModulo(ctx, "recrutamento_candidatos", "ver"), abreProcessos(ctx)]);
+  const [companies, people, candidatos, pipelines, vagas, documentos, tarefaItems, processos] = await Promise.all([
     prisma.company.findMany({
       where: {
         ...(await scopedCompanyWhere(ctx)),
@@ -87,6 +107,31 @@ export async function GET(req: NextRequest) {
       take: LIMIT,
       select: { id: true, title: true, entityId: true, entityType: true, pipeline: { select: { id: true, sectorCode: true } } },
     }),
+    // Processo: pela empresa (razão social ou apelido), pelo tipo ou pelo
+    // título que diferencia dois do mesmo tipo. Os encerrados também — o
+    // detalhe abre —, os mexidos por último primeiro.
+    veProcessos
+      ? prisma.process.findMany({
+          where: {
+            tenantId: ctx.tenantId,
+            OR: [
+              { title: { contains: q } },
+              { company: { name: { contains: q } } },
+              { company: { displayName: { contains: q } } },
+              { type: { name: { contains: q } } },
+            ],
+          },
+          orderBy: { updatedAt: "desc" },
+          take: LIMIT,
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            company: { select: { name: true, displayName: true } },
+            type: { select: { name: true } },
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
   const tarefaEntityIds = { COMPANY: new Set<string>(), PERSON: new Set<string>() };
@@ -116,6 +161,11 @@ export async function GET(req: NextRequest) {
       id: t.id,
       name: t.title ?? (t.entityId ? tarefaEntityNames[t.entityId] : null) ?? "(sem título)",
       href: `${boardPath(t.pipeline)}/itens/${t.id}`,
+    })),
+    processos: processos.map((p) => ({
+      id: p.id,
+      name: `${nomeExibicao(p.company)} · ${p.type.name}${p.title ? ` · ${p.title}` : ""}`,
+      detalhe: ENCERRADO[p.status],
     })),
   });
 }
