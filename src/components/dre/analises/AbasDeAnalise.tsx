@@ -149,14 +149,14 @@ export async function AbaEconomicoFinanceiro({ tenantId, companyId, mes }: Base)
       <div className="grid gap-3 sm:grid-cols-2 mt-4">
         <Card className="p-4">
           <p className="text-[12px] text-fg-muted">Atraso médio de recebimento</p>
-          <p className="text-[20px] font-semibold tabular-nums mt-1">{dias(atrasoReceber)}</p>
+          <p className="text-title font-semibold tabular-nums mt-1">{dias(atrasoReceber)}</p>
           <p className="text-[11px] text-fg-muted mt-1">
             Dias entre o vencimento e o recebimento, nos {pares.RECEBER.length} títulos recebidos no mês. Positivo é atraso.
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-[12px] text-fg-muted">Atraso médio de pagamento</p>
-          <p className="text-[20px] font-semibold tabular-nums mt-1">{dias(atrasoPagar)}</p>
+          <p className="text-title font-semibold tabular-nums mt-1">{dias(atrasoPagar)}</p>
           <p className="text-[11px] text-fg-muted mt-1">
             Dias entre o vencimento e o pagamento, nos {pares.PAGAR.length} títulos pagos no mês.
           </p>
@@ -583,11 +583,13 @@ export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
             {indicadores
               .filter((i) => i.categoria === cat)
               .map((i) => (
-                // Mesmo padding (p-4) e mesmo tamanho de número (20px) dos
-                // cartões de atraso médio da primeira aba — eram p-3.5 e 19px.
+                // Mesmo padding (p-4) e mesmo tamanho de número dos cartões de
+                // atraso médio da primeira aba — eram p-3.5 e 19px. O número em
+                // 22px (`text-title`, o da FaixaDeTotais) desde 08/10/2026: os
+                // 20px de antes ficavam fora da escala.
                 <Card key={i.codigo} className="p-4 flex flex-col gap-1">
                   <p className="text-[12px] text-fg-muted">{i.rotulo}</p>
-                  <p className={`text-[20px] font-semibold tabular-nums ${i.valor === null ? "text-fg-muted" : ""}`}>{valorDoIndicador(i)}</p>
+                  <p className={`text-title font-semibold tabular-nums ${i.valor === null ? "text-fg-muted" : ""}`}>{valorDoIndicador(i)}</p>
                   <p className="text-[11px] text-fg-muted font-mono">{i.formula}</p>
                   <p className="text-[11px] text-fg-muted">{i.leitura}</p>
                   {i.motivo && <p className="text-[11px] italic text-warning">{i.motivo}</p>}
