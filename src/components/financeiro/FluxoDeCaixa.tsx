@@ -6,9 +6,10 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Cartao } from "@/components/shared/ListaResponsiva";
+import { ColunasPareadas, numeroCurto } from "@/components/shared/Graficos";
 import type { MesDoFluxo, Projecao, LinhaDoConsolidado } from "@/lib/financeiro/fluxo";
 import type { SaldoConsolidado } from "@/lib/financeiro/conciliacao/saldoConsolidado";
-import { moeda, tomDoValor } from "@/lib/financeiro/formato";
+import { moeda } from "@/lib/financeiro/formato";
 
 const CABECALHO = "text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border";
 
@@ -17,15 +18,63 @@ const CABECALHO = "text-left text-micro uppercase tracking-wide text-fg-muted bo
  * auditoria dos gráficos): entrada e saída são categoria, não situação — a
  * coluna inteira verde ou vermelha, até "R$ 0,00", gastava a cor que avisa.
  * O "−" do valor já diz o sinal.
+ *
+ * Desde 08/10/2026 vale para todo saldo desta tela — projeção, saldo das
+ * contas e consolidado por empresa —, que ainda pintavam o positivo de verde
+ * (escolha 9A do Kauan na página de decisões: zero sem cor, e cor só no que
+ * pede atenção).
  */
 function tomDoSaldo(centavos: number): string {
   return centavos < 0 ? "text-danger" : centavos === 0 ? "text-fg-muted" : "text-fg";
 }
 
+/** "17,2 mil" em cima da coluna — o "R$" está no título do gráfico. */
+function reaisCurtos(centavos: number): string {
+  return numeroCurto(centavos / 100);
+}
+
+/**
+ * Entradas × saídas mês a mês, acima da tabela (08/10/2026, escolha 9A do
+ * Kauan: o Fluxo com os gráficos da Home). Substitui as duas barrinhas de 6px
+ * verde e vermelha da última coluna, que não tinham legenda nem leitura para
+ * leitor de tela: agora são colunas pareadas no azul da marca — o que sai dois
+ * degraus mais claro —, com o total de cada série na legenda, a dica com o
+ * saldo do mês e a tabela acessível. Mês sem movimento não desenha coluna.
+ * Duas séries, e não uma de saldo, como as barrinhas já faziam: entrada alta
+ * com saída alta é outro mês que entrada baixa com saída baixa, com o mesmo
+ * saldo.
+ */
+function GraficoDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
+  if (meses.length === 0) return null;
+  const periodo = meses.length === 1 ? meses[0]!.rotulo : `${meses[0]!.rotulo} a ${meses.at(-1)!.rotulo}`;
+  return (
+    <Card className="p-4 mb-3">
+      <ColunasPareadas
+        titulo={`Entradas e saídas por mês, em R$ — ${periodo}`}
+        series={["Entradas", "Saídas"]}
+        pares={meses.map((m) => ({
+          chave: m.competencia,
+          rotulo: m.rotulo,
+          valores: [m.entradas, m.saidas],
+          dica: `Saldo do mês: ${moeda(m.saldoDoMes)}`,
+        }))}
+        formatar={moeda}
+        formatarCurto={reaisCurtos}
+        vazio="Nenhuma entrada ou saída baixada no período."
+      />
+    </Card>
+  );
+}
+
+/**
+ * O realizado: o gráfico de entradas × saídas e, embaixo, a tabela (cartões no
+ * celular). O gráfico mora aqui dentro, e não na página, para o portal — que
+ * usa este mesmo componente — recebê-lo sem mudar a tela dele.
+ */
 export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
-  const maior = Math.max(1, ...meses.flatMap((m) => [m.entradas, m.saidas]));
   return (
     <>
+      <GraficoDoRealizado meses={meses} />
       {/* No celular, um cartão por mês (02/10/2026): a tabela de cinco colunas
           rolava de lado no portal e cortava os títulos. A troca é em `md`, e o
           cartão é o `Cartao`, como nas outras listas (08/10/2026): em `sm`,
@@ -42,8 +91,8 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
               </span>
             </div>
             <dl className="mt-2 grid grid-cols-3 gap-2">
-              <ParNoCartao rotulo="Entradas" valor={moeda(m.entradas)} />
-              <ParNoCartao rotulo="Saídas" valor={moeda(m.saidas)} />
+              <ParNoCartao rotulo="Entradas" valor={moeda(m.entradas)} tom={m.entradas === 0 ? "text-fg-muted" : undefined} />
+              <ParNoCartao rotulo="Saídas" valor={moeda(m.saidas)} tom={m.saidas === 0 ? "text-fg-muted" : undefined} />
               <ParNoCartao rotulo="Saldo do mês" valor={moeda(m.saldoDoMes)} tom={tomDoSaldo(m.saldoDoMes)} />
             </dl>
             </Cartao>
@@ -51,33 +100,26 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
         ))}
       </ul>
     <div className="hidden md:block c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
-      <table className="w-full min-w-[720px] text-ui">
+      {/* Sem a coluna das barrinhas desde 08/10/2026: o gráfico acima faz o
+          papel delas. Entrada zerada fica em cinza, como o saldo zerado. */}
+      <table className="w-full min-w-[600px] text-ui">
         <thead>
           <tr className={CABECALHO}>
             <th className="py-2 pl-4 pr-3 font-medium">Mês</th>
             <th className="py-2 pr-3 font-medium text-right">Entradas</th>
             <th className="py-2 pr-3 font-medium text-right">Saídas</th>
             <th className="py-2 pr-3 font-medium text-right">Saldo do mês</th>
-            <th className="py-2 pr-3 font-medium text-right">Acumulado</th>
-            <th className="py-2 pr-4 font-medium w-[22%] hidden md:table-cell"></th>
+            <th className="py-2 pr-4 font-medium text-right">Acumulado</th>
           </tr>
         </thead>
         <tbody>
           {meses.map((m) => (
             <tr key={m.competencia} className="border-b border-border-soft">
               <td className="py-2 pl-4 pr-3 font-medium">{m.rotulo}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">{moeda(m.entradas)}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">{moeda(m.saidas)}</td>
+              <td className={`py-2 pr-3 text-right tabular-nums ${m.entradas === 0 ? "text-fg-muted" : ""}`}>{moeda(m.entradas)}</td>
+              <td className={`py-2 pr-3 text-right tabular-nums ${m.saidas === 0 ? "text-fg-muted" : ""}`}>{moeda(m.saidas)}</td>
               <td className={`py-2 pr-3 text-right tabular-nums ${tomDoSaldo(m.saldoDoMes)}`}>{moeda(m.saldoDoMes)}</td>
-              <td className={`py-2 pr-3 text-right tabular-nums font-medium ${tomDoSaldo(m.saldoAcumulado)}`}>{moeda(m.saldoAcumulado)}</td>
-              <td className="py-2 pr-4 hidden md:table-cell">
-                {/* Duas barras, e não uma de saldo: entrada alta com saída alta é
-                    outro mês que entrada baixa com saída baixa, com o mesmo saldo. */}
-                <div className="flex flex-col gap-0.5 items-start!" aria-hidden>
-                  <div className="h-1.5 rounded bg-success" style={{ width: `${(m.entradas / maior) * 100}%` }} />
-                  <div className="h-1.5 rounded bg-danger" style={{ width: `${(m.saidas / maior) * 100}%` }} />
-                </div>
-              </td>
+              <td className={`py-2 pr-4 text-right tabular-nums font-medium ${tomDoSaldo(m.saldoAcumulado)}`}>{moeda(m.saldoAcumulado)}</td>
             </tr>
           ))}
         </tbody>
@@ -113,13 +155,13 @@ export function CartoesDaProjecao({ projecao, saldoInicial = null }: { projecao:
         {projecao.janelas.map((j) => (
           <Card key={j.dias} className="p-3">
             <p className="text-micro text-fg-muted">Até {j.dias} dias</p>
-            <p className={`text-section font-semibold tabular-nums mt-0.5 ${tomDoValor(j.saldo)}`}>{moeda(j.saldo)}</p>
+            <p className={`text-section font-semibold tabular-nums mt-0.5 ${tomDoSaldo(j.saldo)}`}>{moeda(j.saldo)}</p>
             <p className="text-micro text-fg-muted tabular-nums">
               +{moeda(j.entradas)} / −{moeda(j.saidas)}
             </p>
             {saldoInicial !== null && (
-              <p className={`text-micro tabular-nums mt-1 ${tomDoValor(saldoInicial + j.saldo)}`}>
-                Saldo projetado: {moeda(saldoInicial + j.saldo)}
+              <p className="text-micro tabular-nums mt-1 text-fg-muted">
+                Saldo projetado: <span className={tomDoSaldo(saldoInicial + j.saldo)}>{moeda(saldoInicial + j.saldo)}</span>
               </p>
             )}
           </Card>
@@ -159,7 +201,7 @@ export function QuadroDoSaldoBancario({ saldo }: { saldo: SaldoConsolidado }) {
         <p className="text-helper text-fg-muted">Saldo das contas</p>
         {saldo.atualizadoAteKey && <p className="text-micro text-fg-muted">extrato até {dataCurta(saldo.atualizadoAteKey)}</p>}
       </div>
-      <p className={`text-title font-semibold tabular-nums ${saldo.centavos === null ? "text-fg-muted" : tomDoValor(saldo.centavos)}`}>
+      <p className={`text-title font-semibold tabular-nums ${saldo.centavos === null ? "text-fg-muted" : tomDoSaldo(saldo.centavos)}`}>
         {saldo.centavos === null ? "—" : moeda(saldo.centavos)}
       </p>
       <ul className="mt-2 flex flex-col gap-0.5">
@@ -220,7 +262,7 @@ export function TabelaDoConsolidado({
             <dl className="mt-2 grid grid-cols-3 gap-2">
               <ParNoCartao rotulo="Pago no mês" valor={moeda(l.pago)} />
               <ParNoCartao rotulo="Recebido" valor={moeda(l.recebido)} />
-              <ParNoCartao rotulo="Saldo" valor={moeda(l.saldo)} tom={tomDoValor(l.saldo)} />
+              <ParNoCartao rotulo="Saldo" valor={moeda(l.saldo)} tom={tomDoSaldo(l.saldo)} />
               <ParNoCartao rotulo="Vencidas a pagar" valor={vencidas(l.companyId, l.vencidasPagar, "/pagar")} />
               <ParNoCartao rotulo="Vencidas a receber" valor={vencidas(l.companyId, l.vencidasReceber, "/receber")} />
             </dl>
@@ -246,7 +288,7 @@ export function TabelaDoConsolidado({
               <td className="py-2 pl-4 pr-3 font-medium">{nomes.get(l.companyId) ?? "—"}</td>
               <td className="py-2 pr-3 text-right tabular-nums">{moeda(l.pago)}</td>
               <td className="py-2 pr-3 text-right tabular-nums">{moeda(l.recebido)}</td>
-              <td className={`py-2 pr-3 text-right tabular-nums ${tomDoValor(l.saldo)}`}>{moeda(l.saldo)}</td>
+              <td className={`py-2 pr-3 text-right tabular-nums ${tomDoSaldo(l.saldo)}`}>{moeda(l.saldo)}</td>
               <td className="py-2 pr-3 text-right tabular-nums">{vencidas(l.companyId, l.vencidasPagar, "/pagar")}</td>
               <td className="py-2 pr-4 text-right tabular-nums">{vencidas(l.companyId, l.vencidasReceber, "/receber")}</td>
             </tr>
