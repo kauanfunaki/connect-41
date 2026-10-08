@@ -110,12 +110,22 @@ export default async function CadastrosFinanceirosPage({
   });
 
   if (aba === "plano") {
+    // O topo vai para dentro da aba porque o "Nova categoria" do cabeçalho
+    // precisa dos grupos do plano, que só a aba consulta.
     return (
       <PageContainer>
-        {cabecalho}
-        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
-        <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
-        <AbaDoPlano tenantId={ctx.tenantId} companyId={companyId} podeEditar={podeEditar} />
+        <AbaDoPlano
+          tenantId={ctx.tenantId}
+          companyId={companyId}
+          podeEditar={podeEditar}
+          topo={(acao) => (
+            <>
+              {comAcao(acao)}
+              <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
+              <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
+            </>
+          )}
+        />
       </PageContainer>
     );
   }
@@ -123,11 +133,10 @@ export default async function CadastrosFinanceirosPage({
   if (aba === "centros") {
     return (
       <PageContainer>
-        {cabecalho}
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
-          {podeEditar && <NovoCentroDeCusto companyId={companyId} />}
-        </div>
+        {/* "Novo centro de custo" no cabeçalho, como o "Novo cadastro" das
+            outras abas (escolha 5A, 08/10/2026): ficava à direita do filtro. */}
+        {comAcao(podeEditar ? <NovoCentroDeCusto companyId={companyId} /> : undefined)}
+        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
         <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
         <AbaDeCentros tenantId={ctx.tenantId} companyId={companyId} centros={centros} podeEditar={podeEditar} />
       </PageContainer>
@@ -451,7 +460,18 @@ async function AbaDeCentros({
  * O plano de contas **desta empresa**: o padrão do escritório, o que a empresa
  * escondeu dele e as categorias só dela (criadas aqui ou trazidas do Omie).
  */
-async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: string; companyId: string; podeEditar: boolean }) {
+async function AbaDoPlano({
+  tenantId,
+  companyId,
+  podeEditar,
+  topo,
+}: {
+  tenantId: string;
+  companyId: string;
+  podeEditar: boolean;
+  /** Cabeçalho, filtro e abas da tela, com a ação de criar no cabeçalho. */
+  topo: (acao?: React.ReactNode) => React.ReactNode;
+}) {
   const prisma = getPrisma();
   const [categorias, ocultas, excecoes, uso] = await Promise.all([
     prisma.financeCategory.findMany({
@@ -476,14 +496,14 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <p className="text-helper text-fg-muted max-w-2xl">
-          O plano padrão do escritório vale para todas as empresas. Aqui ele se ajusta a esta: categoria só dela, o que não se
-          usa escondido e a linha da DRE trocada. Nada é apagado — o que já foi lançado continua na DRE.
-          {daEmpresa > 0 && ` ${daEmpresa} categoria${daEmpresa > 1 ? "s" : ""} só desta empresa.`}
-        </p>
-        {podeEditar && <NovaCategoriaDaEmpresa companyId={companyId} linhas={linhas} grupos={grupos} />}
-      </div>
+      {/* "Nova categoria" no cabeçalho da tela (escolha 5A, 08/10/2026): era
+          "Categoria só desta empresa", à direita deste parágrafo. */}
+      {topo(podeEditar ? <NovaCategoriaDaEmpresa companyId={companyId} linhas={linhas} grupos={grupos} /> : undefined)}
+      <p className="text-helper text-fg-muted max-w-2xl mb-3">
+        O plano padrão do escritório vale para todas as empresas. Aqui ele se ajusta a esta: categoria só dela, o que não se
+        usa escondido e a linha da DRE trocada. Nada é apagado — o que já foi lançado continua na DRE.
+        {daEmpresa > 0 && ` ${daEmpresa} categoria${daEmpresa > 1 ? "s" : ""} só desta empresa.`}
+      </p>
       {categorias.length === 0 ? (
         // Em cartão, como o vazio das outras abas (08/10/2026): solto, ele
         // flutuava no fundo da tela.

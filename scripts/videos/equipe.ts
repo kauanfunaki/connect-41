@@ -278,7 +278,7 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         await r.cartaz(SELO, "Lançamentos", "Contas sem nota fiscal, lançadas à mão ou por planilha");
         await r.legenda("Aluguel, folha, pró-labore, tarifas: o que não nasce de nota fiscal é lançado aqui.");
         await escolherEmpresa(r, "Transportes Modelo");
-        await r.clicar(main(r).getByRole("link", { name: "Novo lançamento" }), "Clique na aba Novo lançamento.");
+        await r.clicar(main(r).getByRole("link", { name: "Novo lançamento" }), "Clique em Novo lançamento, no topo da tela.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(600);
         await r.apontar(main(r).getByRole("combobox", { name: /^Tipo/ }), "Em Tipo, escolha Conta a pagar ou Conta a receber.");
@@ -298,7 +298,9 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         await r.clicar(main(r).getByRole("button", { name: "Lançar" }), "Clique em Lançar. A conta já aparece em Contas a pagar e na DRE.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1200);
-        await r.clicar(main(r).getByRole("link", { name: "Importar CSV" }), "Para lançar muitas de uma vez, use a aba Importar CSV.");
+        await r.clicar(main(r).getByRole("link", { name: "Lançamentos" }), "Volte para a lista pela trilha, em Lançamentos.");
+        await r.page.waitForLoadState("networkidle").catch(() => {});
+        await r.clicar(main(r).getByRole("link", { name: "Importar CSV" }), "Para lançar muitas de uma vez, use Importar CSV, ao lado.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.apontar(main(r).getByText(/^Tipo;Contraparte;Documento/), "Monte a planilha com estas colunas e salve em CSV.");
         await r.anexar(
@@ -316,7 +318,7 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         );
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1200);
-        await r.clicar(main(r).getByRole("link", { name: "Lançados à mão" }), "Em Lançados à mão ficam os lançamentos da empresa no mês…");
+        await r.clicar(main(r).getByRole("link", { name: "Lançamentos" }), "Na lista de Lançamentos ficam os lançados à mão da empresa no mês…");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(600);
         await r.apontar(main(r).getByRole("table").first(), "…com a situação de cada um: a conferir, em aberto, liquidado ou cancelado.");
@@ -479,8 +481,8 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
           "Não usar nesta empresa esconde uma categoria do padrão que ela não usa."
         );
         await r.apontar(
-          main(r).getByRole("button", { name: "Categoria só desta empresa" }),
-          "E Categoria só desta empresa cria uma categoria própria."
+          main(r).getByRole("button", { name: "Nova categoria" }),
+          "E Nova categoria cria uma categoria só desta empresa."
         );
         await r.soltar();
         await encerramento(r, "O e-mail do sacado é para onde vão os lembretes da régua de cobrança.");
@@ -553,10 +555,14 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         await r.clicar(main(r).getByRole("link", { name: "Alçadas" }), "Na aba Alçadas fica quem aprova, no portal, e até quanto.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await escolherEmpresa(r, "Transportes Modelo", "Escolha a empresa e clique em Aplicar.");
-        await r.apontar(
-          main(r).getByRole("heading", { name: "Nova alçada" }),
-          "Em Nova alçada, escolha o Usuário do portal, informe o Teto e clique em Salvar alçada."
+        await r.clicar(main(r).getByRole("button", { name: "Nova alçada" }), "Clique em Nova alçada, no topo da tela…");
+        const alcada = dialogo(r, "Nova alçada");
+        await r.apontarGrupo(
+          alcada.getByRole("combobox", { name: /^Usuário do portal/ }),
+          alcada.getByRole("textbox", { name: /^Teto/ }),
+          "…escolha o Usuário do portal, informe o Teto e clique em Salvar alçada."
         );
+        await r.clicar(alcada.getByRole("button", { name: "Cancelar" }));
         await r.apontar(main(r).getByRole("button", { name: "Desativar" }).first(), "Para suspender uma alçada, Desativar. Para voltar, Reativar.");
         await r.clicar(main(r).getByRole("link", { name: "Fila" }), "Na aba Fila ficam as contas esperando decisão.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
@@ -876,17 +882,18 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         await r.cartaz(SELO, "Orçamento", "As versões do orçado do ano, por grupo da DRE");
         await escolherEmpresa(r, "Transportes Modelo", "Escolha a empresa, o ano e clique em Aplicar.");
         await r.clicar(main(r).getByRole("button", { name: "Nova versão" }), "Clique em Nova versão.");
-        await r.digitar(main(r).getByRole("textbox", { name: /^Nome da versão/ }), "Revisão de outubro", "Dê o nome da versão…");
+        const versao = dialogo(r, /^Nova versão/);
+        await r.digitar(versao.getByRole("textbox", { name: /^Nome da versão/ }), "Revisão de outubro", "Dê o nome da versão…");
         await selecionar(
           r,
-          main(r).getByRole("combobox", { name: "Partir de" }),
+          versao.getByRole("combobox", { name: "Partir de" }),
           "Outra versão, com reajuste",
           "…e escolha de onde partir: grade vazia, outra versão ou o realizado de um ano, com reajuste."
         );
-        await selecionar(r, main(r).getByRole("combobox", { name: /^Versão de origem/ }), /Orçamento/, "Escolha a versão de origem…");
-        const reajuste = main(r).getByRole("textbox", { name: /Reajuste/ }).or(main(r).getByRole("spinbutton", { name: /Reajuste/ }));
+        await selecionar(r, versao.getByRole("combobox", { name: /^Versão de origem/ }), /Orçamento/, "Escolha a versão de origem…");
+        const reajuste = versao.getByRole("textbox", { name: /Reajuste/ }).or(versao.getByRole("spinbutton", { name: /Reajuste/ }));
         if (await reajuste.count()) await r.digitar(reajuste.first(), "5", "…e o Reajuste, em percentual: vale para cada célula.");
-        await r.clicar(main(r).getByRole("button", { name: "Criar versão" }), "Clique em Criar versão.");
+        await r.clicar(versao.getByRole("button", { name: "Criar versão" }), "Clique em Criar versão.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1200);
         const celula = main(r).getByRole("table").first().getByRole("textbox").first();
