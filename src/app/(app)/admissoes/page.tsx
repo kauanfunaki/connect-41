@@ -96,7 +96,7 @@ export default async function AdmissoesPage() {
             }))}
           >
             <TabelaNoDesktop padrao>
-              <table className="w-full min-w-[860px] text-[length:var(--fs-ui)]">
+              <table className="w-full min-w-[860px]">
                 <thead>
                   <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Colaborador</th>

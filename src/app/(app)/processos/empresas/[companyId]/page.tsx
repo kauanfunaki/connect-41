@@ -184,7 +184,7 @@ export default async function VisaoSocietariaDoClientePage({
               }))}
             >
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[560px] text-[length:var(--fs-ui)]">
+              <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}><FiltroDaColuna rotulo="Licença" chave="licenca" /></th>
@@ -238,7 +238,7 @@ export default async function VisaoSocietariaDoClientePage({
               }))}
             >
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[640px] text-[length:var(--fs-ui)]">
+              <table className="w-full min-w-[640px]">
                 <thead>
                   <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Exigência</th>
@@ -315,7 +315,7 @@ export default async function VisaoSocietariaDoClientePage({
               }))}
             >
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[600px] text-[length:var(--fs-ui)]">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}><FiltroDaColuna rotulo="Taxa" chave="taxa" /></th>

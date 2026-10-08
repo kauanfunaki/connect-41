@@ -164,7 +164,7 @@ export default async function ExigenciasPage({
             }))}
           >
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[860px] text-[length:var(--fs-ui)]">
+            <table className="w-full min-w-[860px]">
               <thead>
                 <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 pr-3 font-medium">Exigência</th>

@@ -193,7 +193,7 @@ export default async function PedidosAoClientePage({
               }))}
             >
               <TabelaNoDesktop padrao>
-                <table className="w-full min-w-[920px] text-[13px]">
+                <table className="w-full min-w-[920px]">
                   <thead>
                     <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">

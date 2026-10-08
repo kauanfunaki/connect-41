@@ -177,7 +177,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
         }))}
       >
         <TabelaNoDesktop padrao>
-          <table className="w-full table-fixed min-w-[1040px] text-[length:var(--fs-ui)]">
+          <table className="w-full table-fixed min-w-[1040px]">
             <colgroup>
               <col />
               <col className="w-[120px]" />

@@ -209,7 +209,7 @@ export function ContasTable({
           Centralizada, com funil em cada coluna — conferência de 30/09. */}
       <TabelaFiltravel linhas={valoresDasLinhas}>
       <TabelaNoDesktop padrao>
-        <table className="w-full table-fixed min-w-[1100px] text-ui">
+        <table className="w-full table-fixed min-w-[1100px]">
           <colgroup>
             {selecionarCentro && <col className="w-11" />}
             <col className="w-[116px]" />

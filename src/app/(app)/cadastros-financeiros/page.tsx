@@ -261,7 +261,7 @@ export default async function CadastrosFinanceirosPage({
             }))}
           >
           <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[920px] text-ui">
+          <table className="w-full min-w-[920px]">
             <thead>
               <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Nome" chave="nome" /></th>
@@ -399,7 +399,7 @@ async function AbaDeCentros({
       </CartoesNoCelular>
 
       <TabelaNoDesktop padrao>
-      <table className="w-full min-w-[720px] text-ui">
+      <table className="w-full min-w-[720px]">
         <thead>
           <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
             <th className="py-2 pr-3 font-medium">Nome</th>
@@ -496,7 +496,7 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
                 {/* Largura fixa e as mesmas colunas nas duas tabelas
                     (08/10/2026): cada uma calculava a sua, e "Categoria" e
                     "Lançamentos" ficavam desalinhados entre Despesas e Receitas. */}
-                <table className="w-full table-fixed min-w-[1000px] text-ui">
+                <table className="w-full table-fixed min-w-[1000px]">
                   <colgroup>
                     <col />
                     <col className="w-[180px]" />

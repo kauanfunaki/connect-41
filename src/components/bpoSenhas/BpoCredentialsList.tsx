@@ -327,7 +327,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
           }))}
         >
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[760px] text-body">
+            <table className="w-full min-w-[760px]">
               <thead>
                 <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-4 py-3">Título</th>

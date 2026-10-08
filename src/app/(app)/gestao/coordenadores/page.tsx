@@ -108,7 +108,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
           {/* Casco padrão, centralizado (30/09). Sem funil: a pessoa é única
               por linha e o resto é número; o setor se escolhe no "Filtros". */}
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[760px] text-[length:var(--fs-ui)]">
+            <table className="w-full min-w-[760px]">
               <thead>
                 <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-3">Pessoa</th>

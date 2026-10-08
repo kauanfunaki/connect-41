@@ -184,7 +184,7 @@ export default async function CargosSalariosPage() {
                       largura automática, Nível, Cargo e Empresa mudavam de
                       posição de um bloco para o outro (DRG-32, 07/10/2026). */}
                   <TabelaNoDesktop padrao>
-                    <table className="w-full table-fixed min-w-[760px] text-[length:var(--fs-ui)]">
+                    <table className="w-full table-fixed min-w-[760px]">
                       <colgroup>
                         <col className="w-[132px]" />
                         <col />

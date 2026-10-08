@@ -101,7 +101,7 @@ export default async function TemplatesPage() {
             linhas={templates.map((t) => ({ id: t.id, valores: { situacao: t.active ? "Ativo" : "Arquivado" } }))}
           >
             <TabelaNoDesktop padrao>
-              <table className="w-full table-fixed min-w-[720px] text-[length:var(--fs-ui)]">
+              <table className="w-full table-fixed min-w-[720px]">
                 <colgroup>
                   <col />
                   <col className="w-[120px]" />

@@ -128,7 +128,7 @@ export default async function RelatoriosDoSocietarioPage({
             </p>
           </div>
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[760px] text-[13px]">
+            <table className="w-full min-w-[760px]">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className={TH}>Tipo</th>
@@ -183,7 +183,7 @@ export default async function RelatoriosDoSocietarioPage({
             <p className="text-[13px] text-fg-muted">Nenhuma volta de exigência no período.</p>
           ) : (
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[560px] text-[13px]">
+              <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Processo</th>
@@ -220,7 +220,7 @@ export default async function RelatoriosDoSocietarioPage({
             </p>
           </div>
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[680px] text-[13px]">
+            <table className="w-full min-w-[680px]">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className={TH}>Responsável</th>
@@ -270,7 +270,7 @@ export default async function RelatoriosDoSocietarioPage({
             <p className="text-[13px] text-fg-muted">Nenhuma taxa registrada nos processos do período.</p>
           ) : (
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[680px] text-[13px]">
+              <table className="w-full min-w-[680px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Processo</th>

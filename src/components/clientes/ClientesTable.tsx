@@ -157,7 +157,7 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
               do navegador filtraria só a página aberta. O de tabela paginada é o
               `FiltroDaColunaNaUrl`, que depende da página filtrar no servidor. */}
           <div className="c41-tabela scroll-x overflow-x-auto hidden md:block">
-          <table className="w-full min-w-[640px] text-[length:var(--fs-body)]">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (

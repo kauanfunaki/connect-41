@@ -92,7 +92,7 @@ export function RelatorioTable<T>({
       }))}
     >
       <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
-        <table className="w-full text-[13px]" style={{ minWidth }}>
+        <table className="w-full" style={{ minWidth }}>
           <thead>
             <tr className="border-b border-border">
               {columns.map((c, i) => (

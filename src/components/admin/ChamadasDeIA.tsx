@@ -51,7 +51,7 @@ export function ChamadasDeIA({ chamadas, agora }: Props) {
       }))}
     >
       <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-        <table className="w-full min-w-[820px] text-[13px]">
+        <table className="w-full min-w-[820px]">
           <thead>
             <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pr-3">

@@ -183,7 +183,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
               }))}
             >
             <TabelaNoDesktop padrao>
-              <table className="w-full min-w-[980px] text-[13px]">
+              <table className="w-full min-w-[980px]">
                 <thead>
                   <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Titular" chave="titular" /></th>
