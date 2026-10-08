@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { IBM_Plex_Sans, IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { SCRIPT_DO_TEMA } from "@/lib/theme";
+import { ValidacaoDosFormularios } from "@/components/ui/ValidacaoDosFormularios";
 
 const plexSans = IBM_Plex_Sans({
   variable: "--font-ibm-plex-sans",
@@ -55,6 +56,9 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-canvas text-fg font-sans">
         {children}
+        {/* O balão próprio no lugar do "Preencha este campo" do navegador, em
+            todo formulário do app — equipe, portal e telas públicas. */}
+        <ValidacaoDosFormularios />
       </body>
     </html>
   );
