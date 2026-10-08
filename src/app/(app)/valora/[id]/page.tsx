@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
+import { Badge } from "@/components/ui/Badge";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { EditarProposta } from "@/components/valora/EditarProposta";
 import { acessoAoValora } from "@/lib/valora/servidor";
@@ -146,11 +147,13 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
               <InfoRow label="Regime" value={ROTULO_REGIME[perfil.regime] ?? perfil.regime} />
               <InfoRow label="Movimento" value={perfil.semMovimento ? "Empresa sem movimento" : "Com movimento"} />
               <InfoRow label="Setores contratados" className="sm:col-span-2">
+                {/* Setor é categoria: o `Badge`, no lugar da pílula montada à mão
+                    (escolha 2A do Kauan, 08/10/2026). */}
                 <span className="flex flex-wrap gap-1.5">
                   {perfil.setores.map((s) => (
-                    <span key={s} className="inline-flex items-center h-6 px-2 rounded-full bg-surface-2 border border-border text-fs-2 text-fg">
+                    <Badge key={s} variant="neutral">
                       {nomeDoSetor(s)}
-                    </span>
+                    </Badge>
                   ))}
                 </span>
               </InfoRow>
