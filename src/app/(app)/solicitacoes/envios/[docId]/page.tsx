@@ -144,8 +144,12 @@ export default async function EnvioPage({
               dangerouslySetInnerHTML={{ __html: document.bodyHtml }}
             />
             {document.fileName && (
-              <p className="text-fs-2 text-fg-muted mt-4 border-t border-border pt-3">
-                Anexo: {document.fileName}
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-fs-2 text-fg-muted mt-4 border-t border-border pt-3">
+                <span className="min-w-0 truncate">Anexo: {document.fileName}</span>
+                {/* A equipe também baixa o anexo (08/10/2026); não conta como abertura do cliente. */}
+                <Button href={`/solicitacoes/envios/${document.id}/arquivo`} download variant="secondary" size="sm">
+                  <Download size={13} /> Baixar
+                </Button>
               </p>
             )}
           </Card>

@@ -60,6 +60,38 @@ const eslintConfig = defineConfig([
           selector: 'JSXOpeningElement[name.name="textarea"]',
           message: "Use o componente Textarea de @/components/ui/Textarea em vez de <textarea> cru.",
         },
+        // Nada nativo do navegador na interface (pedido do Kauan, 08/10/2026):
+        // cada controle abaixo tem o seu componente próprio em @/components/ui.
+        {
+          // Rádio invisível por baixo de desenho próprio (opacity-0 ou sr-only,
+          // como o ChoicePill do teste) continua permitido.
+          selector:
+            'JSXOpeningElement[name.name="input"]:has(JSXAttribute[name.name="type"] Literal[value="radio"]):not(:has(JSXAttribute[name.name="className"] Literal[value=/sr-only|opacity-0/]))',
+          message: "Use RadioGroup/Radio de @/components/ui/RadioGroup em vez da bolinha de rádio do navegador.",
+        },
+        {
+          selector:
+            'JSXOpeningElement[name.name=/^(Input|input)$/]:has(JSXAttribute[name.name="type"] Literal[value="color"])',
+          message: "Use SeletorDeCor de @/components/ui/SeletorDeCor em vez do seletor de cor do sistema.",
+        },
+        {
+          selector:
+            'JSXOpeningElement[name.name=/^(Input|input)$/]:has(JSXAttribute[name.name="type"] Literal[value="range"])',
+          message: "Use Deslizante de @/components/ui/Deslizante em vez do controle deslizante do navegador.",
+        },
+        {
+          selector: 'JSXOpeningElement[name.name="datalist"]',
+          message: "Use CampoComSugestoes de @/components/ui/CampoComSugestoes em vez do <datalist> do navegador.",
+        },
+        {
+          selector: 'JSXOpeningElement[name.name=/^(details|summary)$/]',
+          message: "Use Accordion ou BlocoRecolhivel de @/components/ui em vez de <details>/<summary>.",
+        },
+        {
+          selector:
+            'CallExpression[callee.name=/^(confirm|alert|prompt)$/], CallExpression[callee.object.name="window"][callee.property.name=/^(confirm|alert|prompt)$/]',
+          message: "Use useConfirm/ConfirmDialog e o Toast de @/components/ui em vez de confirm()/alert()/prompt() do navegador.",
+        },
         {
           selector: 'CallExpression[callee.property.name=/^toLocale(Date|Time)String$/]',
           message:

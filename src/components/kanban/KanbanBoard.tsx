@@ -7,6 +7,7 @@ import { formatCalendarDate } from "@/lib/format";
 import { stripRichText } from "@/lib/richText";
 import { ColunaDoQuadro } from "./ColunaDoQuadro";
 import { AvatarImage } from "@/components/shared/AvatarImage";
+import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 
 type Stage = { id: string; name: string; color: string | null; isTerminal?: boolean };
 type Tag = { id: string; name: string; color: string };
@@ -131,13 +132,9 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                   {item.tags && item.tags.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1 mt-2">
                       {item.tags.map((t) => (
-                        <span
-                          key={t.id}
-                          className="inline-flex items-center gap-1 text-fs-1 font-medium px-2 py-0.5 rounded-full"
-                          style={{ background: `${t.color}1A`, color: t.color }}
-                        >
+                        <EtiquetaColorida key={t.id} cor={t.color}>
                           {t.name}
-                        </span>
+                        </EtiquetaColorida>
                       ))}
                     </div>
                   )}
