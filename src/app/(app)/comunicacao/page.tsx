@@ -1,13 +1,11 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { MessagesSquare } from "lucide-react";
+import { Building2, ClipboardList, MessagesSquare, Paperclip, Clock } from "lucide-react";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
@@ -15,9 +13,20 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
+import {
+  AcaoRapida,
+  BarraDoPainel,
+  CaixaDeConversas,
+  CartaoDeConversa,
+  ColunaDaLista,
+  LinhasDeInfo,
+  PainelDeConversa,
+  PainelVazio,
+} from "@/components/conversas/caixa/Caixa";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { conversaDaEmpresa, empresasComConversa } from "@/lib/financeiro/comunicacao/consultas";
 import { previa, MODULO_DE_COMUNICACAO } from "@/lib/financeiro/comunicacao/regras";
+import { quandoCurto, vizinhas } from "@/lib/conversas/caixa";
 import { enviarMensagemEquipe } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -25,11 +34,10 @@ export const dynamic = "force-dynamic";
 const MODULE = MODULO_DE_COMUNICACAO;
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
-// A conversa livre com o cliente, do lado da equipe.
-//
-// Uma tela só: a lista de quem tem conversa, e — com `?empresa=` — a conversa
-// daquela empresa com a caixa de escrever. Sem empresa escolhida, a lista já é
-// a resposta da pergunta da manhã: quem está esperando o escritório.
+// A conversa livre com o cliente, do lado da equipe — na caixa de conversas
+// (09/10/2026): quem tem conversa à esquerda, quem está esperando o escritório
+// primeiro; a conversa escolhida (`?empresa=`) no painel, com a caixa de
+// escrever. O seletor de empresa em cima começa conversa com quem não tem.
 export default async function ComunicacaoPage({
   searchParams,
 }: {
@@ -47,19 +55,107 @@ export default async function ComunicacaoPage({
   const { empresa: companyId } = await searchParams;
   const escopo = { tenantId: ctx.tenantId, companyIds: null };
   const [empresas, conversas] = await Promise.all([empresasDoSeletor(ctx.tenantId), empresasComConversa(escopo)]);
-  const selecionada = companyId ? empresas.find((e) => e.id === companyId) ?? null : null;
+  const selecionada = companyId ? (empresas.find((e) => e.id === companyId) ?? null) : null;
   const conversa = selecionada ? await conversaDaEmpresa(escopo, selecionada.id) : null;
+  const agora = new Date();
+
+  const lista = conversas.map((c) => ({ id: c.empresaId, ...c }));
+  const { anterior, proxima } = selecionada ? vizinhas(lista, selecionada.id) : { anterior: null, proxima: null };
+  const resumo = selecionada ? conversas.find((c) => c.empresaId === selecionada.id)?.resumo : undefined;
+  const ultima = conversa?.mensagens.at(-1);
+
+  const painel =
+    selecionada && conversa ? (
+      <PainelDeConversa
+        barra={
+          <BarraDoPainel
+            fecharHref="/comunicacao"
+            anteriorHref={anterior ? `/comunicacao?empresa=${anterior.id}` : null}
+            proximaHref={proxima ? `/comunicacao?empresa=${proxima.id}` : null}
+            data={ultima ? `Última mensagem: ${formatInstantDateTime(ultima.criadaEm)}` : null}
+          />
+        }
+        etiquetas={[
+          resumo?.esperandoEscritorio ? (
+            <Selo key="e" tom="atencao">
+              Esperando o escritório
+            </Selo>
+          ) : null,
+          <span key="m">
+            {conversa.mensagens.length} {conversa.mensagens.length === 1 ? "mensagem" : "mensagens"}
+          </span>,
+        ]}
+        titulo={selecionada.nome}
+        acoes={
+          <>
+            <AcaoRapida icone={<Building2 />} href={`/empresas/${selecionada.id}`}>
+              Abrir empresa
+            </AcaoRapida>
+            {substituida && (
+              <AcaoRapida icone={<ClipboardList />} href="/solicitacoes">
+                Abrir solicitações
+              </AcaoRapida>
+            )}
+          </>
+        }
+        infos={
+          <LinhasDeInfo
+            itens={[
+              { icone: <MessagesSquare />, rotulo: "Mensagens", valor: <span className="tabular-nums">{conversa.mensagens.length}</span> },
+              { icone: <Paperclip />, rotulo: "Anexos", valor: <span className="tabular-nums">{resumo?.anexos ?? 0}</span> },
+              {
+                icone: <Clock />,
+                rotulo: "Última",
+                valor: ultima ? `${ultima.lado === "CLIENTE" ? "do cliente" : "da equipe"}, ${formatInstantDateTime(ultima.criadaEm)}` : "—",
+              },
+            ]}
+          />
+        }
+      >
+        <div className="px-5 sm:px-6 py-4 border-t border-border-soft flex flex-col gap-4">
+          {conversa.mensagens.length === 0 ? (
+            <EmptyState
+              icon={<MessagesSquare />}
+              title="Nenhuma mensagem ainda"
+              description={podeAgir ? "Escreva abaixo: o cliente recebe um aviso por e-mail e lê no portal." : "Esta empresa não tem conversa."}
+            />
+          ) : (
+            <>
+              {conversa.limitada && <p className="text-micro text-fg-muted">Mostrando as 300 mensagens mais recentes.</p>}
+              <ConversaDaPendencia mensagens={conversa.mensagens} baseDoDownload="/api/comunicacao/anexos" ladoDeQuemVe="EQUIPE" />
+            </>
+          )}
+          {podeAgir && (
+            <div className="rounded-lg border border-border p-4">
+              <ResponderPendencia
+                alvo={selecionada.id}
+                campo="companyId"
+                acao={enviarMensagemEquipe}
+                rotulo="Enviar mensagem"
+                dica="O cliente recebe um e-mail avisando que há mensagem nova — o conteúdo fica só no portal."
+              />
+            </div>
+          )}
+        </div>
+      </PainelDeConversa>
+    ) : (
+      <PainelVazio
+        icone={<MessagesSquare />}
+        titulo="Escolha uma conversa"
+        texto={
+          conversas.some((c) => c.resumo.esperandoEscritorio)
+            ? "As que estão esperando o escritório vêm primeiro na lista. Use ↑↓ no painel para passar de uma para outra."
+            : "Abra uma conversa à esquerda, ou escolha uma empresa acima para começar."
+        }
+      />
+    );
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Conversa com o cliente"
-        subtitle="Recado livre por empresa, com anexos. Pedido com prazo é pendência."
-      />
+      <PageHeader title="Conversa com o cliente" subtitle="Recado livre por empresa, com anexos. Pedido com prazo é pendência." />
 
       {substituida && (
         // Revisão de 05/10: botão não é link — "Solicitações" era texto azul no meio da frase.
-        // O `Aviso` do app (08/10/2026), com o texto em `fg` como estava.
         <Aviso tom="info" className="mb-4">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fg">
             <span>A conversa saiu do portal: agora o cliente fala com a equipe pelas Solicitações. Esta tela fica como histórico.</span>
@@ -72,79 +168,34 @@ export default async function ComunicacaoPage({
 
       <FiltroDePeriodo acao="/comunicacao" empresas={empresas} empresaId={selecionada?.id ?? null} permitirTodas navegaSozinho />
 
-      {selecionada && conversa ? (
-        <>
-          <h2 className="text-card-title font-semibold text-fg mb-3">{selecionada.nome}</h2>
-          {conversa.mensagens.length === 0 ? (
-            <Card className="mb-4">
-              <EmptyState
-                icon={<MessagesSquare />}
-                title="Nenhuma mensagem ainda"
-                description="Escreva abaixo: o cliente recebe um aviso por e-mail e lê no portal."
-              />
-            </Card>
-          ) : (
-            <>
-              {conversa.limitada && (
-                <p className="text-micro text-fg-muted mb-2">Mostrando as 300 mensagens mais recentes.</p>
-              )}
-              <ConversaDaPendencia
-                mensagens={conversa.mensagens}
-                baseDoDownload="/api/comunicacao/anexos"
-                ladoDeQuemVe="EQUIPE"
-              />
-            </>
-          )}
-
-          {podeAgir && (
-            <Card className="mt-5 p-4">
-              <ResponderPendencia
-                alvo={selecionada.id}
-                campo="companyId"
-                acao={enviarMensagemEquipe}
-                rotulo="Enviar mensagem"
-                dica="O cliente recebe um e-mail avisando que há mensagem nova — o conteúdo fica só no portal."
-              />
-            </Card>
-          )}
-        </>
-      ) : conversas.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={<MessagesSquare />}
-            title="Nenhuma conversa ainda"
-            description="Escolha uma empresa acima para começar."
-          />
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {conversas.map((c) => (
-            <Link
-              key={c.empresaId}
-              href={`/comunicacao?empresa=${c.empresaId}`}
-              className="block bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3 hover:border-border-strong hover:bg-surface-hover transition-colors"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium text-fg">{c.empresaNome}</span>
-                {/* Situação da conversa: o `Selo` miúdo (escolha 2A, 08/10/2026). */}
-                {c.resumo.esperandoEscritorio && <Selo tom="atencao">Esperando o escritório</Selo>}
-                <span className="ml-auto text-micro text-fg-muted tabular-nums">
-                  {c.resumo.ultima && formatInstantDateTime(c.resumo.ultima.criadaEm)}
-                </span>
-              </div>
-              {c.resumo.ultima && (
-                <p className="text-fs-2 text-fg-muted mt-1 break-words">
-                  {c.resumo.ultima.lado === "CLIENTE" ? "Cliente" : "Equipe"}: {previa(c.resumo.ultima.corpo)}
-                </p>
-              )}
-              <p className="text-micro text-fg-muted mt-0.5">
-                {c.resumo.mensagens} {c.resumo.mensagens === 1 ? "mensagem" : "mensagens"}
-                {c.resumo.anexos > 0 && ` · ${c.resumo.anexos} ${c.resumo.anexos === 1 ? "anexo" : "anexos"}`}
-              </p>
-            </Link>
-          ))}
-        </div>
-      )}
+      <CaixaDeConversas
+        aberta={!!(selecionada && conversa)}
+        altura={substituida ? "lg:h-[calc(100dvh-21rem)]" : "lg:h-[calc(100dvh-17rem)]"}
+        lista={
+          <ColunaDaLista>
+            {conversas.length === 0 ? (
+              <EmptyState icon={<MessagesSquare />} title="Nenhuma conversa ainda" description="Escolha uma empresa acima para começar." />
+            ) : (
+              conversas.map((c) => (
+                <CartaoDeConversa
+                  key={c.empresaId}
+                  href={`/comunicacao?empresa=${c.empresaId}`}
+                  nome={c.empresaNome}
+                  nomeDasIniciais={c.empresaNome}
+                  selo={c.resumo.esperandoEscritorio ? { tom: "atencao", texto: "Esperando o escritório" } : null}
+                  quando={quandoCurto(c.resumo.ultima?.criadaEm ?? null, agora)}
+                  contexto={`${c.resumo.mensagens} ${c.resumo.mensagens === 1 ? "mensagem" : "mensagens"}${
+                    c.resumo.anexos > 0 ? ` · ${c.resumo.anexos} ${c.resumo.anexos === 1 ? "anexo" : "anexos"}` : ""
+                  }`}
+                  previa={c.resumo.ultima ? `${c.resumo.ultima.lado === "CLIENTE" ? "Cliente" : "Equipe"}: ${previa(c.resumo.ultima.corpo)}` : null}
+                  selecionada={c.empresaId === selecionada?.id}
+                />
+              ))
+            )}
+          </ColunaDaLista>
+        }
+        painel={painel}
+      />
     </PageContainer>
   );
 }

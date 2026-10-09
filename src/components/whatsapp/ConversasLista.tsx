@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, X } from "lucide-react";
-import { Selo } from "@/components/ui/Selo";
+import { CheckSquare, MessageSquare, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { formatInstantDateTime } from "@/lib/format";
+import { CartaoDeConversa, ColunaDaLista } from "@/components/conversas/caixa/Caixa";
+import { quandoCurto } from "@/lib/conversas/caixa";
 import {
   situacaoDaConversa,
   telefoneLegivel,
@@ -36,37 +35,47 @@ type Props = {
   filtrada?: boolean;
   /** Para quem dá para transferir — quem atende o WhatsApp do setor. */
   pessoas: PessoaDoAtendimento[];
+  /** A conversa aberta no painel, para o cartão acender. */
+  abertaId?: string | null;
+  /** O recorte da URL (`?ver=`), que o cartão leva junto ao abrir. */
+  sufixo: string;
 };
 
 /** O valor do seletor de transferência que quer dizer "o assistente". */
 const ASSISTENTE = "__assistente__";
 
-export function ConversasLista({ conversas, agora, userId, filtrada = false, pessoas }: Props) {
+/**
+ * A lista do atendimento em cartões (09/10/2026, desenho da caixa de
+ * conversas). A busca filtra na hora; "Selecionar" liga as caixas do lote —
+ * transferir ou encerrar várias de uma vez, como antes.
+ */
+export function ConversasLista({ conversas, agora, userId, filtrada = false, pessoas, abertaId, sufixo }: Props) {
   const router = useRouter();
+  const [busca, setBusca] = useState("");
+  const [selecionando, setSelecionando] = useState(false);
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set());
   const [para, setPara] = useState("");
   const [desfecho, setDesfecho] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [retorno, setRetorno] = useState<{ texto: string; puladas: ResultadoDoLote["puladas"]; erro: boolean } | null>(null);
 
-  if (conversas.length === 0 && filtrada) {
-    return <EmptyState title="Nada neste recorte" description="Nenhuma conversa se encaixa aqui agora." icon={<MessageSquare />} />;
-  }
-  if (conversas.length === 0) {
-    return (
-      <EmptyState
-        title="Nenhuma conversa ainda"
-        description="Quando um candidato escrever para o número do Recrutamento, a conversa aparece aqui."
-        icon={<MessageSquare />}
-      />
+  const visiveis = useMemo(() => {
+    const t = busca.trim().toLowerCase();
+    const digitos = t.replace(/\D/g, "");
+    if (!t) return conversas;
+    return conversas.filter(
+      (c) =>
+        (c.nome ?? "").toLowerCase().includes(t) ||
+        (c.vaga ?? "").toLowerCase().includes(t) ||
+        (digitos.length >= 3 && c.waPhone.includes(digitos))
     );
-  }
+  }, [busca, conversas]);
 
-  // A seleção vale só para o que está na tela: trocar de recorte não leva junto
-  // conversa escondida.
-  const visiveis = new Set(conversas.map((c) => c.id));
-  const selecionadas = [...marcadas].filter((id) => visiveis.has(id));
-  const todas = selecionadas.length === conversas.length;
+  // A seleção vale só para o que está na tela: trocar de recorte ou buscar não
+  // leva junto conversa escondida.
+  const ids = new Set(visiveis.map((c) => c.id));
+  const selecionadas = [...marcadas].filter((id) => ids.has(id));
+  const todas = visiveis.length > 0 && selecionadas.length === visiveis.length;
 
   function alternar(id: string) {
     setRetorno(null);
@@ -78,9 +87,11 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
     });
   }
 
-  function alternarTodas() {
-    setRetorno(null);
-    setMarcadas(todas ? new Set() : new Set(conversas.slice(0, MAX_NO_LOTE).map((c) => c.id)));
+  function sairDaSelecao() {
+    setSelecionando(false);
+    setMarcadas(new Set());
+    setPara("");
+    setDesfecho("");
   }
 
   async function aplicar(acao: AcaoEmLote) {
@@ -93,33 +104,51 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
       return;
     }
     setRetorno({ texto: resumoDoLote(r, acao.tipo), puladas: r.puladas, erro: false });
-    setMarcadas(new Set());
-    setPara("");
-    setDesfecho("");
+    sairDaSelecao();
     router.refresh();
   }
 
-  return (
-    <div className="flex flex-col gap-2">
-      {/* A barra do lote: fica no topo enquanto se rola a lista. */}
-      <div
-        className={`sticky top-2 z-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2 transition-colors ${
-          selecionadas.length > 0 ? "border-brand/40 bg-surface shadow-[var(--c41-shadow-xs)]" : "border-transparent"
-        }`}
-        role="toolbar"
-        aria-label="Ações nas conversas selecionadas"
-      >
+  const topo = (
+    <div className="flex items-center gap-2 mb-2">
+      <Input
+        compact
+        type="search"
+        icon={<Search size={14} />}
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+        placeholder="Nome, telefone ou vaga"
+        aria-label="Buscar conversa"
+        className="flex-1"
+      />
+      {conversas.length > 0 &&
+        (selecionando ? (
+          <Button size="sm" variant="ghost" onClick={sairDaSelecao}>
+            <X size={14} /> Cancelar
+          </Button>
+        ) : (
+          <Button size="sm" variant="secondary" onClick={() => setSelecionando(true)} title="Transferir ou encerrar várias">
+            <CheckSquare size={14} /> Selecionar
+          </Button>
+        ))}
+    </div>
+  );
+
+  const lote =
+    selecionando && (
+      <div className="rounded-lg border border-brand/40 bg-surface shadow-[var(--c41-shadow-xs)] p-3 flex flex-col gap-2" role="toolbar" aria-label="Ações nas conversas selecionadas">
         <Checkbox
           id="marcar-todas"
           checked={todas}
-          onChange={alternarTodas}
+          onChange={() => {
+            setRetorno(null);
+            setMarcadas(todas ? new Set() : new Set(visiveis.slice(0, MAX_NO_LOTE).map((c) => c.id)));
+          }}
           label={selecionadas.length > 0 ? `${selecionadas.length} selecionada${selecionadas.length === 1 ? "" : "s"}` : "Selecionar todas"}
         />
         {selecionadas.length > 0 && (
           <>
-            <span className="hidden sm:block h-5 w-px bg-border" aria-hidden />
             <div className="flex items-center gap-1.5">
-              <Select compact aria-label="Transferir para" value={para} onChange={(e) => setPara(e.target.value)} className="w-52">
+              <Select compact aria-label="Transferir para" value={para} onChange={(e) => setPara(e.target.value)} className="flex-1 min-w-0">
                 <option value="">Transferir para…</option>
                 <option value={ASSISTENTE}>O assistente</option>
                 {pessoas.map((p) => (
@@ -138,7 +167,7 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
               </Button>
             </div>
             <div className="flex items-center gap-1.5">
-              <Select compact aria-label="Encerrar como" value={desfecho} onChange={(e) => setDesfecho(e.target.value)} className="w-56">
+              <Select compact aria-label="Encerrar como" value={desfecho} onChange={(e) => setDesfecho(e.target.value)} className="flex-1 min-w-0">
                 <option value="">Encerrar como…</option>
                 {DESFECHOS_DA_TELA.map((d) => (
                   <option key={d} value={d}>
@@ -150,91 +179,89 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
                 Encerrar
               </Button>
             </div>
-            <Button size="sm" variant="ghost" disabled={ocupado} onClick={() => setMarcadas(new Set())} className="ml-auto">
-              <X size={14} /> Limpar
-            </Button>
-            <p className="basis-full text-micro text-fg-muted">
-              Nada é enviado aos candidatos. Cada conversa passa pela mesma regra de quando é feita uma por vez — a que não
-              puder, fica de fora com o motivo.
+            <p className="text-micro text-fg-muted">
+              Nada é enviado aos candidatos. Cada conversa passa pela mesma regra de quando é feita uma por vez — a que não puder, fica de
+              fora com o motivo.
             </p>
           </>
         )}
       </div>
+    );
 
-      {retorno && (
-        <div
-          role="status"
-          className={`rounded-md border px-3 py-2 text-ui ${retorno.erro ? "border-danger/30 bg-danger/5 text-danger" : "border-border bg-surface text-fg"}`}
-        >
-          <p>{retorno.texto}</p>
-          {retorno.puladas.length > 0 && (
-            <ul className="mt-1 text-fs-2 text-fg-secondary">
-              {retorno.puladas.map((p, i) => (
-                <li key={`${p.nome}-${i}`}>
-                  {p.nome}: {p.motivo}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+  const avisoDoLote = retorno && (
+    <div
+      role="status"
+      className={`rounded-md border px-3 py-2 text-ui ${retorno.erro ? "border-danger/30 bg-danger/5 text-danger" : "border-border bg-surface text-fg"}`}
+    >
+      <p>{retorno.texto}</p>
+      {retorno.puladas.length > 0 && (
+        <ul className="mt-1 text-fs-2 text-fg-secondary">
+          {retorno.puladas.map((p, i) => (
+            <li key={`${p.nome}-${i}`}>
+              {p.nome}: {p.motivo}
+            </li>
+          ))}
+        </ul>
       )}
-
-      {conversas.map((c) => {
-        const situacao = situacaoDaConversa(c, agora);
-        const marcada = marcadas.has(c.id);
-        return (
-          // A borda acende no hover, como os cartões das outras filas (30/09).
-          <Card
-            key={c.id}
-            className={`p-0 overflow-hidden flex items-stretch transition-colors ${marcada ? "border-brand/60 bg-brand/5" : "hover:border-brand/40"}`}
-          >
-            {/* A caixa fora do link: marcar não abre a conversa. */}
-            <label className="flex items-start pl-3.5 pr-1 pt-4 cursor-pointer">
-              <Checkbox
-                checked={marcada}
-                onChange={() => alternar(c.id)}
-                aria-label={`Selecionar a conversa com ${c.nome ?? telefoneLegivel(c.waPhone)}`}
-              />
-            </label>
-            <Link href={`/whatsapp/${c.id}`} className="block flex-1 min-w-0 p-3.5 pl-2.5 hover:bg-surface-hover transition-colors">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-fg">{c.nome ?? telefoneLegivel(c.waPhone)}</span>
-                    <Selo tom={SITUACAO_TOM[situacao]}>{SITUACAO_LABEL[situacao]}</Selo>
-                    {c.responsavel ? (
-                      <span className="text-micro text-fg-secondary">
-                        {c.responsavel.id === userId ? "com você" : `com ${c.responsavel.nome}`}
-                      </span>
-                    ) : (
-                      c.handoffAt &&
-                      !c.optedOutAt && <span className="text-micro text-danger font-medium">ninguém assumiu</span>
-                    )}
-                    {c.naoRespondidas > 0 && (
-                      <span className="text-micro text-danger font-medium">
-                        {c.naoRespondidas === 1 ? "1 sem resposta" : `${c.naoRespondidas} sem resposta`}
-                      </span>
-                    )}
-                  </div>
-                  {/* Sem vínculo, o telefone é a única identidade que temos —
-                      e quem vai atender precisa dele à mão para ligar. */}
-                  {c.nome && (
-                    <p className="text-micro text-fg-muted mt-0.5">
-                      {telefoneLegivel(c.waPhone)}
-                      {c.vaga && ` · ${c.vaga}`}
-                    </p>
-                  )}
-                  {c.ultimaMensagem && <p className="text-ui text-fg-secondary mt-1 truncate max-w-[52ch]">{c.ultimaMensagem}</p>}
-                  {c.handoffReason && <p className="text-micro text-warning-fg mt-1">passou para você: {c.handoffReason}</p>}
-                </div>
-                <span className="text-micro text-fg-muted whitespace-nowrap tabular-nums shrink-0">
-                  {c.ultimaMensagemEm ? formatInstantDateTime(c.ultimaMensagemEm) : "—"}
-                </span>
-              </div>
-            </Link>
-          </Card>
-        );
-      })}
     </div>
+  );
+
+  return (
+    <ColunaDaLista topo={topo} rodape={lote || undefined}>
+      {avisoDoLote}
+      {visiveis.length === 0 ? (
+        <EmptyState
+          title={busca ? "Nada encontrado" : filtrada ? "Nada neste recorte" : "Nenhuma conversa ainda"}
+          description={
+            busca
+              ? "Busque pelo nome, pelo telefone ou pela vaga."
+              : filtrada
+                ? "Nenhuma conversa se encaixa aqui agora."
+                : "Quando um candidato escrever para o número do Recrutamento, a conversa aparece aqui."
+          }
+          icon={<MessageSquare />}
+        />
+      ) : (
+        visiveis.map((c) => {
+          const situacao = situacaoDaConversa(c, agora);
+          const nome = c.nome ?? telefoneLegivel(c.waPhone);
+          const comQuem = c.responsavel
+            ? c.responsavel.id === userId
+              ? "com você"
+              : `com ${c.responsavel.nome}`
+            : c.handoffAt && !c.optedOutAt
+              ? "ninguém assumiu"
+              : null;
+          return (
+            <CartaoDeConversa
+              key={c.id}
+              href={`/whatsapp/${c.id}${sufixo}`}
+              nome={nome}
+              nomeDasIniciais={c.nome}
+              selo={{ tom: SITUACAO_TOM[situacao], texto: SITUACAO_LABEL[situacao] }}
+              quando={quandoCurto(c.ultimaMensagemEm, agora)}
+              contexto={
+                <>
+                  {comQuem && <span className={comQuem === "ninguém assumiu" ? "text-danger font-medium" : undefined}>{comQuem}</span>}
+                  {comQuem && (c.vaga || c.nome) && " · "}
+                  {c.vaga ?? (c.nome ? telefoneLegivel(c.waPhone) : null)}
+                </>
+              }
+              previa={c.ultimaMensagem}
+              naoLidas={c.naoRespondidas}
+              rotuloDasNaoLidas={c.naoRespondidas === 1 ? "mensagem sem resposta" : "mensagens sem resposta"}
+              selecionada={c.id === abertaId}
+              antes={
+                selecionando ? (
+                  <label className="flex items-start pl-3 pt-3.5 cursor-pointer">
+                    <Checkbox checked={marcadas.has(c.id)} onChange={() => alternar(c.id)} aria-label={`Selecionar a conversa com ${nome}`} />
+                  </label>
+                ) : undefined
+              }
+            />
+          );
+        })
+      )}
+    </ColunaDaLista>
   );
 }
