@@ -28,12 +28,29 @@ export type Armazenamento = {
     arquivos: File[]
   ) => Promise<{ ok: true; anexos: AnexoGravado[] } | { ok: false; erro: string }>;
   apagarAnexosGravados: (anexos: AnexoGravado[]) => Promise<void>;
+  /** Apaga do disco de vez, pelo `fileUrl` gravado. Best-effort: arquivo que já não existe não é erro. */
+  apagarArquivos: (fileUrls: string[]) => Promise<void>;
   lerAnexo: (fileUrl: string) => Promise<Buffer | null>;
 };
 
+/** Quem confere cada arquivo antes de gravar: tamanho, tipo pelos bytes e nome saneado. */
+export type ValidadorDeArquivo = (
+  nome: string,
+  bytes: Uint8Array
+) => { ok: true; nome: string; tipo: { mime: string; ext: string } } | { ok: false; erro: string };
+
+export type OpcoesDoArmazenamento = {
+  /** Padrão: `validarAnexo` (PDF, imagem e XML). O Drive passa o dele, com Word, Excel e texto. */
+  validar?: ValidadorDeArquivo;
+  /** Padrão: `MAXIMO_DE_ANEXOS`. */
+  maximoPorEnvio?: number;
+};
+
 /** O armazenamento de uma pasta sob `storage/`. */
-export function criarArmazenamento(pasta: string): Armazenamento {
+export function criarArmazenamento(pasta: string, opcoes: OpcoesDoArmazenamento = {}): Armazenamento {
   const raiz = path.join(process.cwd(), "storage", pasta);
+  const validar = opcoes.validar ?? validarAnexo;
+  const maximo = opcoes.maximoPorEnvio ?? MAXIMO_DE_ANEXOS;
 
   /**
    * Caminho em disco. `fileUrl` é sempre "<tenantId>/<uuid>.<ext>", gravado por
@@ -52,14 +69,14 @@ export function criarArmazenamento(pasta: string): Armazenamento {
      * arquivo recusado não deixa os outros órfãos no disco.
      */
     async gravarAnexos(tenantId, arquivos) {
-      if (arquivos.length > MAXIMO_DE_ANEXOS) {
-        return { ok: false, erro: `No máximo ${MAXIMO_DE_ANEXOS} anexos por mensagem.` };
+      if (arquivos.length > maximo) {
+        return { ok: false, erro: maximo === 1 ? "Um arquivo por vez." : `No máximo ${maximo} anexos por mensagem.` };
       }
 
       const conferidos: { bytes: Uint8Array; nome: string; mime: string; ext: string }[] = [];
       for (const arquivo of arquivos) {
         const bytes = new Uint8Array(await arquivo.arrayBuffer());
-        const v = validarAnexo(arquivo.name, bytes);
+        const v = validar(arquivo.name, bytes);
         if (!v.ok) return { ok: false, erro: v.erro };
         conferidos.push({ bytes, nome: v.nome, mime: v.tipo.mime, ext: v.tipo.ext });
       }
@@ -78,6 +95,10 @@ export function criarArmazenamento(pasta: string): Armazenamento {
     /** Desfaz a gravação quando a transação do banco não vingou. Best-effort. */
     async apagarAnexosGravados(anexos) {
       await Promise.all(anexos.map((a) => unlink(caminhoDoAnexo(a.fileUrl)).catch(() => undefined)));
+    },
+
+    async apagarArquivos(fileUrls) {
+      await Promise.all(fileUrls.map((u) => unlink(caminhoDoAnexo(u)).catch(() => undefined)));
     },
 
     async lerAnexo(fileUrl) {

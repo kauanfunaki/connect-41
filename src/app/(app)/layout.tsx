@@ -74,6 +74,7 @@ export default async function AppLayout({
     }));
   // A fila das solicitações do portal mora no menu Geral (ver MODULOS_DO_MENU_GERAL).
   const solicitacoesLigadas = moduleStates.some((m) => m.code === "portal_solicitacoes" && m.enabled);
+  const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
   const activeSectorModules = activeSector
     ? moduleStates
         .filter((m) => m.enabled && m.sectorCode === activeSector.code && !MODULOS_DO_MENU_GERAL.has(m.code))
@@ -138,6 +139,7 @@ export default async function AppLayout({
         canOpenAdmin={canOpenAdmin}
         unreadCount={unreadCount}
         solicitacoesLigadas={solicitacoesLigadas}
+        arquivosLigados={arquivosLigados}
         profileName={me?.name ?? "Usuário"}
         profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
         profilePhotoUrl={me?.photoUrl ?? null}
