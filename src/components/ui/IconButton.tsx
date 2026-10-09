@@ -62,17 +62,21 @@ export function classeDoIconButton({
 }
 
 export function IconButton(props: ComoBotao | ComoLink) {
-  const { active = false, hasDot = false, size = "md", variant = "ghost", className = "", children } = props;
+  const { active = false, hasDot = false, size = "md", variant = "ghost", className = "", children, title } = props;
   const cls = `${hasDot ? "relative " : ""}${classeDoIconButton({ size, variant, active })} ${className}`.trim();
   const ponto = hasDot && (
     <span className="absolute top-[7px] right-2 w-[7px] h-[7px] rounded-full bg-danger border-2 border-surface-hover" />
   );
+  // O `title` vira a dica do Connect (`data-dica`, ver DicaFlutuante) e não o
+  // balão do sistema (08/10/2026). Botão só de ícone: sem `aria-label`, o
+  // `title` era o nome dele — e continua sendo, agora no `aria-label`.
+  const dica = title ? { "data-dica": title, "aria-label": props["aria-label"] ?? title } : {};
 
   if (props.href !== undefined) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { active: _a, hasDot: _h, size: _s, variant: _v, className: _c, children: _ch, href, ...rest } = props;
+    const { active: _a, hasDot: _h, size: _s, variant: _v, className: _c, children: _ch, title: _t, href, ...rest } = props;
     return (
-      <Link href={href} className={cls} {...rest}>
+      <Link href={href} className={cls} {...rest} {...dica}>
         {children}
         {ponto}
       </Link>
@@ -80,9 +84,9 @@ export function IconButton(props: ComoBotao | ComoLink) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { active: _a, hasDot: _h, size: _s, variant: _v, className: _c, children: _ch, href: _href, ...rest } = props;
+  const { active: _a, hasDot: _h, size: _s, variant: _v, className: _c, children: _ch, title: _t, href: _href, ...rest } = props;
   return (
-    <button type={rest.type ?? "button"} className={cls} {...rest}>
+    <button type={rest.type ?? "button"} className={cls} {...rest} {...dica}>
       {children}
       {ponto}
     </button>

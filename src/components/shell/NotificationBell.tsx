@@ -162,7 +162,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
           size="lg"
           active={aberto}
           onClick={alternar}
-          title="Notificações"
+          data-dica="Notificações"
           aria-label={contagemDoTopo > 0 ? `Notificações, ${contagemDoTopo} não lidas` : "Notificações"}
           aria-expanded={aberto}
         >

@@ -39,7 +39,7 @@ export function MenuDeMaisAcoes({
           onClick={toggle}
           aria-label={rotulo}
           aria-expanded={open}
-          title={rotulo}
+          data-dica={rotulo}
           className={`${size === "md" ? "h-8 w-8" : "h-7 w-7"} rounded-md border inline-flex items-center justify-center transition-colors ${
             open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
           }`}

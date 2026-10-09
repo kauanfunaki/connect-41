@@ -51,7 +51,7 @@ export function EntityOverflowMenu({ deleteAction, nome, deleteDescription, chil
             type="button"
             onClick={toggle}
             aria-label="Mais ações"
-            title="Mais ações"
+            data-dica="Mais ações"
             className="h-8 w-8 rounded-md border border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center justify-center"
           >
             <MoreHorizontal size={15} />

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { ArrowDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 import { useTestDraft } from "./useTestDraft";
 import { Button } from "@/components/ui/Button";
 import { ConfirmacaoEnviada } from "@/components/publico/ConfirmacaoEnviada";
@@ -164,37 +165,15 @@ export function QuizForm({ token, questions }: Props) {
 
               <p className="text-label font-medium text-fg mb-3">{q.text}</p>
 
-              {/* Alternativa inteira é o alvo (não só o rádio de 13px). */}
-              <div className="space-y-2">
-                {q.options.map((opt, oi) => {
-                  const isChecked = selected === oi;
-                  return (
-                    <label
-                      key={oi}
-                      className={`relative flex items-center gap-2.5 min-h-11 px-3 py-2 rounded-md border text-label cursor-pointer transition-colors ${
-                        isChecked
-                          ? "border-brand bg-brand/8 text-fg"
-                          : "border-border-strong text-fg-secondary hover:border-brand hover:text-fg"
-                      } has-[:focus-visible]:shadow-[0_0_0_3px_var(--c41-focus-ring)]`}
-                    >
-                      <input
-                        type="radio"
-                        name={`q-${q.id}`}
-                        checked={isChecked}
-                        onChange={() => setAnswer(q.id, oi)}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <span
-                        aria-hidden="true"
-                        className={`flex-shrink-0 w-4 h-4 rounded-full border-2 transition-colors ${
-                          isChecked ? "border-brand bg-brand shadow-[inset_0_0_0_2.5px_var(--c41-surface)]" : "border-border-strong"
-                        }`}
-                      />
-                      {opt}
-                    </label>
-                  );
-                })}
-              </div>
+              {/* Alternativa inteira é o alvo (não só o rádio de 13px) — o
+                  cartão do RadioGroup, o mesmo da escolha de cliente. */}
+              <RadioGroup
+                name={`q-${q.id}`}
+                aria-label={q.text}
+                valor={selected == null ? null : String(selected)}
+                onChange={(v) => setAnswer(q.id, Number(v))}
+                opcoes={q.options.map((opt, oi) => ({ valor: String(oi), rotulo: opt }))}
+              />
             </fieldset>
           );
         })}
