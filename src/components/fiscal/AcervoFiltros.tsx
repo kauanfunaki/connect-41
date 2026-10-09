@@ -1,8 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { nomeExibicao } from "@/lib/companyName";
 import { TIPO_LABEL, DESTINO_LABEL } from "@/lib/fiscal/rotulos";
@@ -48,12 +47,10 @@ export function BuscaDoAcervo() {
     >
       {/* `key` no valor da URL: sem isto, voltar no navegador deixaria a
           busca antiga escrita na caixa, com a lista já sem ela. */}
-      <Input
+      <CampoDeBusca
         key={params.get("q") ?? ""}
         name="q"
-        type="search"
         compact
-        icon={<Search />}
         defaultValue={params.get("q") ?? ""}
         placeholder="Número, contraparte ou chave de acesso"
         aria-label="Buscar documento"

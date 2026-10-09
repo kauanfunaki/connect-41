@@ -15,8 +15,8 @@ import {
   Send,
   SunMoon,
   Bell,
-  ChevronDown,
 } from "lucide-react";
+import { Accordion } from "@/components/ui/Accordion";
 import { Input } from "@/components/ui/Input";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { VideoDoYouTube } from "@/components/ajuda/VideoDoYouTube";
@@ -200,9 +200,27 @@ export function CentralDeAjuda({
 
   const nada = filtrado.passos.length === 0 && filtrado.gerais.length === 0 && filtrado.setores.length === 0;
 
-  // Os passos abertos — o vídeo de dentro só existe com o passo aberto, para
-  // não seguir tocando escondido quando a pessoa fecha o passo.
-  const [passosAbertos, setPassosAbertos] = useState<ReadonlySet<string>>(() => new Set());
+  // Os passos abertos. Com busca, todos abrem (o achado pode estar em qualquer
+  // um); sem busca, todos fecham — e no meio vale o clique da pessoa: guarda-se
+  // só o que ela trocou em relação a essa regra, zerado quando a busca começa
+  // ou acaba. Era o `open={Boolean(termo)}` do `<details>`. O vídeo de dentro
+  // só existe com o passo aberto, para não seguir tocando escondido.
+  const comBusca = Boolean(termo);
+  const [trocados, setTrocados] = useState<ReadonlySet<string>>(() => new Set());
+  const [comBuscaAntes, setComBuscaAntes] = useState(comBusca);
+  if (comBusca !== comBuscaAntes) {
+    setComBuscaAntes(comBusca);
+    setTrocados(new Set());
+  }
+  const passoAberto = (chave: string) => comBusca !== trocados.has(chave);
+  function alternarPasso(chave: string) {
+    setTrocados((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(chave)) proximo.delete(chave);
+      else proximo.add(chave);
+      return proximo;
+    });
+  }
 
   return (
     <div className="space-y-10">
@@ -242,33 +260,29 @@ export function CentralDeAjuda({
           <h2 className="font-display text-section font-semibold text-fg mb-3">Primeiros passos</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
             {filtrado.passos.map((p) => (
-              <details
+              <Accordion
                 key={p.chave}
                 id={`passo-${p.chave}`}
-                open={Boolean(termo)}
-                onToggle={(e) => {
-                  const aberto = e.currentTarget.open;
-                  setPassosAbertos((atual) => {
-                    if (aberto === atual.has(p.chave)) return atual;
-                    const proximo = new Set(atual);
-                    if (aberto) proximo.add(p.chave);
-                    else proximo.delete(p.chave);
-                    return proximo;
-                  });
-                }}
-                className="group scroll-mt-6 rounded-lg border border-border bg-surface shadow-[var(--c41-shadow-xs)] open:border-border-strong transition-colors"
+                aberto={passoAberto(p.chave)}
+                onAbertoChange={() => alternarPasso(p.chave)}
+                chevron="fim"
+                className={`scroll-mt-6 rounded-lg border bg-surface shadow-[var(--c41-shadow-xs)] transition-colors ${
+                  passoAberto(p.chave) ? "border-border-strong" : "border-border"
+                }`}
+                classeDoCabecalho="w-full p-4"
+                titulo={
+                  <span className="flex items-start gap-3">
+                    <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand [&>svg]:size-[17px]">
+                      {p.icone}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-fs-4 font-semibold text-fg">{p.titulo}</span>
+                      <span className="block text-helper text-fg-muted mt-0.5">{p.resumo}</span>
+                    </span>
+                  </span>
+                }
               >
-                <summary className="flex cursor-pointer list-none items-start gap-3 p-4 [&::-webkit-details-marker]:hidden">
-                  <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand [&>svg]:size-[17px]">
-                    {p.icone}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-fs-4 font-semibold text-fg">{p.titulo}</span>
-                    <span className="block text-helper text-fg-muted mt-0.5">{p.resumo}</span>
-                  </span>
-                  <ChevronDown size={16} className="mt-1 flex-shrink-0 text-fg-muted transition-transform group-open:rotate-180" />
-                </summary>
-                {p.video && passosAbertos.has(p.chave) && (
+                {p.video && passoAberto(p.chave) && (
                   <div className="px-4 pb-3 sm:pl-[3.75rem]">
                     <VideoDoYouTube link={p.video} titulo={p.titulo} />
                   </div>
@@ -280,7 +294,7 @@ export function CentralDeAjuda({
                     </li>
                   ))}
                 </ol>
-              </details>
+              </Accordion>
             ))}
           </div>
         </section>

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import type { SetorState } from "@/app/(app)/admin/setores/actions";
-import { SECTOR_COLOR_PALETTE } from "@/lib/sector-constants";
+import { SeletorDeCor } from "@/components/ui/SeletorDeCor";
 import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -64,30 +64,7 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
 
       <fieldset>
         <legend className="text-label font-medium text-fg mb-1.5">Cor</legend>
-        <div className="flex flex-wrap items-center gap-2">
-          {SECTOR_COLOR_PALETTE.map((c) => (
-            <label key={c} className="cursor-pointer">
-              <input
-                type="radio"
-                name="colorRadio"
-                value={c}
-                aria-label={`Cor ${c}`}
-                defaultChecked={(defaultValues?.color ?? SECTOR_COLOR_PALETTE[0]) === c}
-                className="peer sr-only"
-                onChange={(e) => {
-                  const form = e.currentTarget.closest("form");
-                  const colorInput = form?.querySelector<HTMLInputElement>('input[name="color"]');
-                  if (colorInput) colorInput.value = c;
-                }}
-              />
-              <span
-                className="block w-7 h-7 rounded-full border-2 border-transparent peer-checked:border-fg transition-colors"
-                style={{ background: c }}
-              />
-            </label>
-          ))}
-          <input type="hidden" name="color" defaultValue={defaultValues?.color ?? SECTOR_COLOR_PALETTE[0]} />
-        </div>
+        <SeletorDeCor name="color" valorInicial={defaultValues?.color} corLivre={false} aria-label="Cor do setor" />
       </fieldset>
 
       {/* Ordem é um número de um ou dois dígitos: coluna estreita. A caixa de

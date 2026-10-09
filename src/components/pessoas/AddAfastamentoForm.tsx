@@ -7,6 +7,7 @@ import { AbsenceType } from "@/generated/prisma/enums";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoNumero } from "@/components/ui/CampoNumero";
 import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 
@@ -50,7 +51,7 @@ export function AddAfastamentoForm({ action, canEditMedical }: Props) {
           <CampoData id="returnDate" name="returnDate" />
         </CampoForm>
         <CampoForm label="Dias perdidos" htmlFor="lostDays">
-          <Input id="lostDays" name="lostDays" type="number" min={0} />
+          <CampoNumero id="lostDays" name="lostDays" min={0} />
         </CampoForm>
       </FieldGrid>
 

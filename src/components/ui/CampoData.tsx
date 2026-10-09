@@ -122,7 +122,8 @@ export function CampoData({
   }
 
   return (
-    <div className={`relative ${larguraDoCampo(className)} ${className}`.trim()} title={title}>
+    // O `title` de quem usa vira a dica do Connect (o campo tem o próprio `aria-label`).
+    <div className={`relative ${larguraDoCampo(className)} ${className}`.trim()} data-dica={title || undefined}>
       {name && <input type="hidden" name={name} value={campo.valor} />}
       <div ref={caixaRef} className={classesDaCaixa({ compact, erro: error || Boolean(campo.erro), disabled })}>
         <button

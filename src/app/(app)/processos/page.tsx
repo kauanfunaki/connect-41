@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
-import { Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle, Search } from "lucide-react";
-import { Input } from "@/components/ui/Input";
+import { Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle } from "lucide-react";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
@@ -209,11 +209,9 @@ export default async function ProcessosPage({
             {recorte.chave !== "todos" && <input type="hidden" name="situacao" value={recorte.chave} />}
             {responsavelFiltro && <input type="hidden" name="responsavel" value={responsavelFiltro} />}
             {prioridadeFiltro && <input type="hidden" name="prioridade" value={prioridadeFiltro} />}
-            <Input
+            <CampoDeBusca
               compact
-              type="search"
               name="q"
-              icon={<Search />}
               defaultValue={busca}
               placeholder="Buscar por empresa, tipo, título ou responsável…"
               aria-label="Buscar processo"

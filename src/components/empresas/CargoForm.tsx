@@ -6,6 +6,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormSection } from "@/components/ui/FormSection";
 import { Input } from "@/components/ui/Input";
+import { CampoComSugestoes } from "@/components/ui/CampoComSugestoes";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormFooter } from "@/components/ui/FormFooter";
@@ -73,21 +74,14 @@ export function CargoForm({ action, companyId, cancelHref, defaultValues, famili
               htmlFor="family"
               helper="Agrupa a mesma trilha em níveis diferentes (ex: Contábil, Fiscal, Atendimento)."
             >
-              <Input
+              <CampoComSugestoes
                 id="family"
                 name="family"
                 type="text"
-                list="familias-existentes"
+                sugestoes={familiasExistentes}
                 defaultValue={defaultValues?.family ?? ""}
                 placeholder="ex: Contábil"
               />
-              {familiasExistentes.length > 0 && (
-                <datalist id="familias-existentes">
-                  {familiasExistentes.map((f) => (
-                    <option key={f} value={f} />
-                  ))}
-                </datalist>
-              )}
             </CampoForm>
             <CampoForm label="Nível de senioridade" htmlFor="seniority">
               <Select id="seniority" name="seniority" defaultValue={defaultValues?.seniority ?? ""}>

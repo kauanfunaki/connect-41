@@ -8,6 +8,7 @@ import { UFS } from "@/lib/ufs";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
+import { CampoNumero } from "@/components/ui/CampoNumero";
 import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -118,7 +119,7 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
               </Select>
             </CampoForm>
             <CampoForm label="Quantidade" htmlFor="quantity">
-              <Input id="quantity" name="quantity" type="number" min={1} defaultValue={defaultValues?.quantity ?? 1} />
+              <CampoNumero id="quantity" name="quantity" min={1} defaultValue={defaultValues?.quantity ?? 1} />
             </CampoForm>
           </FieldGrid>
 

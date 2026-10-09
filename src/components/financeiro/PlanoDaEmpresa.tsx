@@ -4,6 +4,7 @@ import { useId, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CampoComSugestoes } from "@/components/ui/CampoComSugestoes";
 import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -88,12 +89,7 @@ export function NovaCategoriaDaEmpresa({ companyId, linhas, grupos }: { companyI
               </Select>
             </CampoForm>
             <CampoForm label="Grupo do plano" htmlFor={`${id}-grupo`}>
-              <Input id={`${id}-grupo`} name="grupoDoPlano" list={`${id}-grupos`} maxLength={120} placeholder="Ex.: CMV / CSV" />
-              <datalist id={`${id}-grupos`}>
-                {grupos.map((g) => (
-                  <option key={g} value={g} />
-                ))}
-              </datalist>
+              <CampoComSugestoes id={`${id}-grupo`} name="grupoDoPlano" sugestoes={grupos} maxLength={120} placeholder="Ex.: CMV / CSV" />
             </CampoForm>
           </FieldGrid>
           <CampoForm label="Linha da DRE" htmlFor={`${id}-linha`}>

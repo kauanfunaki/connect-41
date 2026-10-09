@@ -8,6 +8,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoNumero } from "@/components/ui/CampoNumero";
 import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -86,10 +87,9 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
             </Select>
           </CampoForm>
           <CampoForm label="Limite de usuários" htmlFor={`${id}-limite`} helper="Só vale no autoatendimento (self-service).">
-            <Input
+            <CampoNumero
               id={`${id}-limite`}
               name="seatLimit"
-              type="number"
               min={1}
               defaultValue={subscription?.seatLimit ?? ""}
             />
