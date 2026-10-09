@@ -52,6 +52,11 @@ const nextConfig: NextConfig = {
     // mesmo teto padrão do proxy (`proxyClientMaxBodySize`): subir só este
     // faria o corpo ser cortado lá antes de chegar aqui.
     serverActions: { bodySizeLimit: "10mb" },
+    // O corpo que o proxy guarda antes de repassar à rota (padrão 10 MB; acima
+    // disso ele corta o corpo). Os Arquivos (09/10/2026) aceitam 10 MB por
+    // arquivo numa rota (/api/arquivos/enviar e /portal/arquivos/enviar), e o
+    // envelope multipart precisa caber junto: 1 MB de folga.
+    proxyClientMaxBodySize: "11mb",
   },
   async headers() {
     return [

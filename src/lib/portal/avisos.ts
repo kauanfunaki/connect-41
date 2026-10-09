@@ -17,7 +17,8 @@ export type AvisoDoPortal =
   | { tipo: "processo"; motivo: "mensagem" | "documento"; processoNome: string; processId: string }
   | { tipo: "aprovacao"; quantidade: number }
   | { tipo: "solicitacao"; motivo: "resposta" | "aguardando" | "concluida"; numero: number; assunto: string; id: string }
-  | { tipo: "comunicado"; titulo: string; id: string };
+  | { tipo: "comunicado"; titulo: string; id: string }
+  | { tipo: "arquivos"; empresaNome: string; companyId: string; pastaId: string };
 
 export type TextoEmPush = { title: string; body: string; url: string };
 
@@ -71,6 +72,14 @@ export function textoDoAviso(aviso: AvisoDoPortal): TextoEmPush {
     case "comunicado":
       // O título de um aviso geral, escrito para muitos clientes — o mesmo do e-mail.
       return { title: "Novo comunicado do escritório", body: aviso.titulo, url: `/portal/comunicados/${aviso.id}` };
+    case "arquivos":
+      // Só a empresa: o nome da pasta pode dizer demais na tela de bloqueio
+      // ("Rescisão do Fulano"). Ele vai no e-mail, que é do próprio cliente.
+      return {
+        title: "Arquivos do escritório",
+        body: `O escritório compartilhou arquivos de ${aviso.empresaNome}.`,
+        url: `/portal/arquivos?empresa=${aviso.companyId}&pasta=${aviso.pastaId}`,
+      };
   }
 }
 

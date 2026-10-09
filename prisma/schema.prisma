@@ -606,6 +606,9 @@ model Tenant {
   candidatoAcessos          CandidatoAcesso[]
   leads                     Lead[]
 
+  driveFolders              DriveFolder[]
+  driveFiles                DriveFile[]
+  driveTemplateFolders      DriveTemplateFolder[]
   @@map("tenants")
 }
 
@@ -851,6 +854,7 @@ model User {
   vagasRecrutadoresDefinidos  VagaRecrutador[]           @relation("VagaRecrutadorDefinidoPor")
   leadsAtribuidos             Lead[]                     @relation("LeadResponsavel")
 
+  driveFilesEnviados          DriveFile[]                @relation("DriveFileEnviadoPor")
   @@unique([tenantId, email])
   @@index([tenantId])
   @@map("users")
@@ -939,6 +943,8 @@ model PortalUser {
   financeApprovalEvents    FinanceApprovalEvent[]    @relation("FinanceApprovalEventPortal")
   pushSubscriptions        PortalPushSubscription[]
 
+  driveFilesEnviados       DriveFile[]               @relation("DriveFileEnviadoPeloCliente")
+  driveAcessos             DriveFileAccess[]
   @@unique([tenantId, email])
   @@index([tenantId, clientGroupId])
   @@map("portal_users")
@@ -1126,6 +1132,7 @@ model Company {
   // 2026-09-03 e vive em src/lib/companyTaxId.ts: empresa sem documento não
   // recebe documento fiscal. A constraint garante a unicidade; quem garante a
   // regra é o tipo, não o banco.
+  driveFolders          DriveFolder[]
   @@unique([tenantId, cnpj])
   // Mesmo desenho do CNPJ, para o cliente pessoa física. Dois índices únicos
   // separados, e não um sobre um campo só de documento: o par (tenant, CPF) e
@@ -6528,4 +6535,128 @@ model Lead {
   @@index([tenantId, status, createdAt])
   @@index([tenantId, assigneeId, status])
   @@map("leads")
+}
+
+// ─── Arquivos (Drive) ────────────────────────────────────────────────────────
+//
+// Pedido do Kauan em 09/10/2026, no modelo do diretório do Acessórias: ao salvar
+// um arquivo no Connect, a pessoa escolhe a pasta; os arquivos ficam no Connect
+// (storage/drive, no volume do EasyPanel); uma pasta pode ser compartilhada com
+// o cliente pelo portal. Regras em src/lib/drive/.
+
+enum DriveAccessKind {
+  VIEW // abriu para ver (PDF ou imagem, no navegador)
+  DOWNLOAD
+}
+
+/// Pasta do Drive. Da empresa (`companyId`) ou interna do escritório (`companyId` NULL).
+model DriveFolder {
+  id          String  @id @default(uuid())
+  tenantId    String
+  /// Empresa dona da pasta. NULL = pasta interna do escritório.
+  companyId   String?
+  /// NULL = primeiro nível (da empresa, ou das pastas internas).
+  parentId    String?
+  name        String  @db.VarChar(120)
+  /// Setor dono: só o setor (e quem vê tudo) enxerga e mexe — e vale para
+  /// tudo que está dentro. NULL = quem vê a empresa vê a pasta.
+  sectorCode  String? @db.VarChar(40)
+  /// Pasta da casa, criada pelo Connect: "enviados" (o que o cliente manda pelo
+  /// portal) ou "modelo:<id do DriveTemplateFolder>". Não muda de nome, de
+  /// lugar, nem vai para a lixeira.
+  systemKey   String? @db.VarChar(60)
+  /// O cliente vê a pasta, e tudo que está dentro dela, no portal.
+  sharedWithPortal Boolean @default(false)
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  /// Na lixeira desde. Some de vez 30 dias depois (src/lib/drive/lixeira.ts).
+  deletedAt   DateTime?
+  deletedById String?
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id])
+  company  Company?      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parent   DriveFolder?  @relation("DriveFolderArvore", fields: [parentId], references: [id], onDelete: Cascade)
+  children DriveFolder[] @relation("DriveFolderArvore")
+  files    DriveFile[]
+
+  // Uma pasta da casa por empresa. Pasta comum tem systemKey NULL, e NULL não
+  // colide com NULL no MySQL.
+  @@unique([tenantId, companyId, systemKey])
+  @@index([tenantId, companyId, parentId])
+  @@index([tenantId, deletedAt])
+  // A limpeza da lixeira (src/lib/drive/lixeira.ts) varre todos os escritórios.
+  @@index([deletedAt])
+  @@map("drive_folders")
+}
+
+/// Arquivo do Drive. Em disco em storage/drive/<storageKey>.
+model DriveFile {
+  id         String @id @default(uuid())
+  tenantId   String
+  folderId   String
+  name       String @db.VarChar(160)
+  /// "<tenantId>/<uuid>.<ext>" sob storage/drive — nunca vem de quem envia.
+  storageKey String @db.VarChar(255)
+  mimeType   String @db.VarChar(120)
+  sizeBytes  Int
+  uploadedByUserId       String?
+  /// Preenchido quando o cliente mandou pelo portal.
+  uploadedByPortalUserId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  deletedById String?
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  folder           DriveFolder       @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  uploadedByUser   User?             @relation("DriveFileEnviadoPor", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  uploadedByPortal PortalUser?       @relation("DriveFileEnviadoPeloCliente", fields: [uploadedByPortalUserId], references: [id], onDelete: SetNull)
+  accesses         DriveFileAccess[]
+
+  @@index([tenantId, folderId])
+  @@index([tenantId, deletedAt])
+  // A limpeza da lixeira (src/lib/drive/lixeira.ts) varre todos os escritórios.
+  @@index([deletedAt])
+  @@index([tenantId, uploadedByPortalUserId, createdAt])
+  @@map("drive_files")
+}
+
+/// Prova de que o cliente abriu ou baixou um arquivo compartilhado. Nunca deduplicado.
+model DriveFileAccess {
+  id           String          @id @default(uuid())
+  fileId       String
+  portalUserId String?
+  kind         DriveAccessKind
+  ipAddress    String?         @db.VarChar(64)
+  userAgent    String?         @db.VarChar(255)
+  createdAt    DateTime        @default(now())
+
+  file       DriveFile   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  portalUser PortalUser? @relation(fields: [portalUserId], references: [id], onDelete: SetNull)
+
+  @@index([fileId, createdAt])
+  @@map("drive_file_accesses")
+}
+
+/// O modelo de pastas que toda empresa ganha ao abrir os Arquivos (/admin/arquivos).
+model DriveTemplateFolder {
+  id               String   @id @default(uuid())
+  tenantId         String
+  name             String   @db.VarChar(120)
+  sectorCode       String?  @db.VarChar(40)
+  sharedWithPortal Boolean  @default(false)
+  position         Int      @default(0)
+  /// Desligada: empresa nova não ganha mais; as que já têm a pasta continuam com ela.
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  // Nome não repete no modelo — e é o que segura o modelo padrão de ser criado
+  // duas vezes quando duas pessoas abrem os Arquivos ao mesmo tempo.
+  @@unique([tenantId, name])
+  @@index([tenantId, position])
+  @@map("drive_template_folders")
 }

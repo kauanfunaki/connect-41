@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { ArrowRight, Blocks, CalendarDays, CreditCard, EyeOff, Globe, Headset, Inbox, Landmark, Layers, Puzzle, Receipt, Repeat, Scale, ScrollText, Settings2, ShieldCheck, Sparkles, Tag, Target, Users2, Video } from "lucide-react";
+import { ArrowRight, Blocks, CalendarDays, CreditCard, EyeOff, Globe, Headset, Inbox, Landmark, Layers, Puzzle, Receipt, Repeat, Scale, ScrollText, Settings2, ShieldCheck, Sparkles, Tag, Target, Users2, Video, FolderTree } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { getPrisma } from "@/lib/prisma";
@@ -131,7 +131,8 @@ export default async function AdminPage() {
       { group: "integracoes", href: "/admin/atendentes", icon: <Headset size={20} />, title: "Atendentes e vínculos", description: "Conta de acesso, atendente do Chatwoot e quem é da recepção/triagem" },
       { group: "integracoes", href: "/admin/ia", icon: <Sparkles size={20} />, title: "Inteligência artificial", description: "Agentes do chat e demais funções de IA: uso, custo e limites" },
       { group: "workspace", href: "/admin/portal", icon: <Users2 size={20} />, title: "Acessos do portal", description: "Contas de clientes que entram no portal para ver os próprios documentos" },
-      { group: "catalogos", href: "/admin/assuntos", icon: <Inbox size={20} />, title: "Assuntos das solicitações", description: "O que o cliente escolhe ao pedir algo pelo portal: setor que atende e prazo de resposta" }
+      { group: "catalogos", href: "/admin/assuntos", icon: <Inbox size={20} />, title: "Assuntos das solicitações", description: "O que o cliente escolhe ao pedir algo pelo portal: setor que atende e prazo de resposta" },
+      { group: "catalogos", href: "/admin/arquivos", icon: <FolderTree size={20} />, title: "Modelo de pastas", description: "As pastas que toda empresa ganha nos Arquivos, com o setor de cada uma e o que nasce no portal" }
     );
   }
 

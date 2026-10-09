@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { LayoutGrid, Users, Briefcase, FileText, History, MessageCircle, Network } from "lucide-react";
+import { LayoutGrid, Users, Briefcase, FileText, FolderOpen, History, MessageCircle, Network } from "lucide-react";
 import { Tabs } from "@/components/ui/Tabs";
 
 type Props = {
@@ -17,6 +17,8 @@ type Props = {
   history: React.ReactNode;
   conversations: React.ReactNode;
   conversationsCount: number;
+  /** As pastas da empresa nos Arquivos. Ausente com o módulo desligado — e aí a aba some. */
+  files?: React.ReactNode;
 };
 
 export function CompanyDetailTabs({
@@ -31,11 +33,12 @@ export function CompanyDetailTabs({
   history,
   conversations,
   conversationsCount,
+  files,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const validTabs = ["overview", "filiais", "people", "operations", "documents", "conversations", "history"];
+  const validTabs = ["overview", "filiais", "people", "operations", "documents", ...(files ? ["files"] : []), "conversations", "history"];
   const tabFromUrl = searchParams.get("tab");
   const [active, setActive] = useState(
     tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "overview"
@@ -47,6 +50,7 @@ export function CompanyDetailTabs({
     { key: "people", label: `Pessoas${peopleCount ? ` (${peopleCount})` : ""}`, icon: <Users /> },
     { key: "operations", label: "RH & operação", icon: <Briefcase /> },
     { key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> },
+    ...(files ? [{ key: "files", label: "Arquivos", icon: <FolderOpen /> }] : []),
     { key: "conversations", label: `Conversas${conversationsCount ? ` (${conversationsCount})` : ""}`, icon: <MessageCircle /> },
     { key: "history", label: "Histórico", icon: <History /> },
   ];
@@ -70,6 +74,7 @@ export function CompanyDetailTabs({
         {active === "people" && people}
         {active === "operations" && operations}
         {active === "documents" && documents}
+        {active === "files" && files}
         {active === "conversations" && conversations}
         {active === "history" && history}
       </div>

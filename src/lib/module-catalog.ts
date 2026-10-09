@@ -33,6 +33,7 @@ export type IconeDeModulo =
   | "ClipboardList"
   | "Clock"
   | "FileSpreadsheet"
+  | "FolderOpen"
   | "Funnel"
   | "GraduationCap"
   | "HandCoins"
@@ -183,6 +184,19 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
     icon: "Inbox",
     group: "Atendimento",
+  },
+  {
+    // Arquivos (09/10/2026), no modelo do diretório do Acessórias: pastas de
+    // cada empresa e internas do escritório, com o que fica compartilhado com o
+    // cliente pelo portal e o que ele manda. Como as Solicitações, é do menu
+    // Geral — todo setor guarda arquivo —, e a Controladoria só liga e desliga.
+    code: "arquivos",
+    label: "Arquivos",
+    sectorCode: "controladoria",
+    description: "Pastas de cada empresa e do escritório: o que a equipe guarda, o que fica compartilhado com o cliente no portal e o que ele envia",
+    defaultEnabled: true,
+    icon: "FolderOpen",
+    group: "Documentos",
   },
   {
     // Primeiro módulo do Comercial (05/10/2026): quem quer ser cliente, vindo
@@ -613,6 +627,7 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 export const MODULE_ROUTES: Record<string, string> = {
   controladoria_conversas: "/conversas",
   portal_solicitacoes:     "/solicitacoes",
+  arquivos:                "/arquivos",
   tech_certificados:       "/certificados",
   comercial_leads:         "/leads",
   recrutamento_vagas:      "/vagas",
@@ -660,7 +675,7 @@ export const MODULE_ROUTES: Record<string, string> = {
  * Módulos cuja tela fica no menu **Geral**, para todos, e não na lista de
  * telas do setor dono: o setor só serve para ligar e desligar o módulo.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes"]);
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos"]);
 
 export function getModuleRoute(code: string): string | undefined {
   return MODULE_ROUTES[code];

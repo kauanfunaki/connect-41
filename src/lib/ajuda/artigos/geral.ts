@@ -343,6 +343,52 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
   },
 
+  // ─── Arquivos ──────────────────────────────────────────────────────────────
+  {
+    chave: "arquivos",
+    titulo: "Arquivos",
+    caminhos: ["/arquivos"],
+    resumo:
+      "As pastas de cada empresa e as do escritório. Cada empresa já nasce com as pastas do modelo e com “Enviados pelo cliente”, onde cai o que o cliente manda pelo portal. Pasta compartilhada aparece no portal do cliente, com tudo que está dentro.",
+    secoes: [
+      {
+        titulo: "Como achar as pastas de uma empresa",
+        passos: [
+          "Abra “Arquivos” na barra lateral e busque a empresa pelo nome ou pelo CNPJ. Pela ficha da empresa, a aba “Arquivos” mostra as mesmas pastas.",
+          "Clique numa pasta para abrir. A trilha no topo leva de volta a qualquer nível.",
+          "Para achar um arquivo sem saber a pasta, use a busca no topo: ela olha o nome dos arquivos em todas as pastas da empresa.",
+          "Em “Chegou do cliente”, no início dos Arquivos, estão os arquivos que os clientes mandaram pelo portal nos últimos 30 dias.",
+        ],
+      },
+      {
+        titulo: "Como enviar arquivos e organizar",
+        passos: [
+          "Abra a pasta e clique em “Enviar arquivos”. Arraste os arquivos ou clique para escolher, e depois em “Enviar”. Cada arquivo pode ter até 10 MB.",
+          "Para criar uma pasta, clique em “Nova pasta”. Em “Quem vê”, escolha “Só” um setor quando a pasta for só dele — vale para tudo que estiver dentro.",
+          "No “…” de cada pasta ou arquivo, use “Renomear”, “Mover” ou “Mandar para a lixeira”. As pastas do modelo não mudam de nome nem de lugar.",
+          "O que vai para a lixeira fica 30 dias em “Lixeira”, no início dos Arquivos, e dá para restaurar. Depois disso some de vez.",
+        ],
+      },
+      {
+        titulo: "Como compartilhar uma pasta com o cliente",
+        passos: [
+          "Abra a pasta e clique em “Compartilhar”. Ligue “Mostrar no portal do cliente” e clique em “Salvar”.",
+          "O cliente vê a pasta e tudo que está dentro dela, e baixa os arquivos. Ele não muda nem apaga nada.",
+          "Para avisar, marque “Avisar o cliente agora”: vai um e-mail para quem tem acesso ao portal da empresa e um aviso no celular de quem ativou.",
+          "Na linha de cada arquivo de uma pasta compartilhada aparece se o cliente abriu, quantas vezes e quando foi a última.",
+        ],
+      },
+      {
+        titulo: "O que acontece quando o cliente envia",
+        passos: [
+          "O cliente manda pelo portal, em “Arquivos” → “Enviar arquivos”. Tudo vai para “Enviados pelo cliente” da empresa.",
+          "Os responsáveis da empresa em cada setor são avisados no sino. Sem responsável, o aviso vai para o setor que cuida dos Arquivos.",
+          "Clique no aviso para abrir “Enviados pelo cliente” e mova cada arquivo para a pasta certa.",
+        ],
+      },
+    ],
+  },
+
   // ─── Solicitações dos clientes ────────────────────────────────────────────
   {
     chave: "portal_solicitacoes",
