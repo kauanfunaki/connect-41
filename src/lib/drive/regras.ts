@@ -11,7 +11,8 @@
 // propriedades que importam herdam para baixo: o setor dono de uma pasta vale
 // para tudo que está dentro dela, e o compartilhamento também.
 
-import { canAct, canActOnSector, canViewSector, type AuthContext } from "@/lib/auth/context";
+import { canAct, canActOnSector, canViewSector } from "@/lib/auth/papeis";
+import type { AuthContext } from "@/lib/auth/context";
 
 export const MODULO_ARQUIVOS = "arquivos";
 
@@ -83,7 +84,7 @@ export function caminhoNaLixeira(caminho: readonly PastaDoDrive[]): boolean {
 
 /** Vê a pasta: todo setor dono no caminho precisa estar ao alcance de quem pede. */
 export function podeVerCaminho(quem: QuemPede, caminho: readonly PastaDoDrive[]): boolean {
-  return setoresDoCaminho(caminho).every((s) => canViewSector(quem as AuthContext, s));
+  return setoresDoCaminho(caminho).every((s) => canViewSector(quem, s));
 }
 
 /**
@@ -93,7 +94,7 @@ export function podeVerCaminho(quem: QuemPede, caminho: readonly PastaDoDrive[])
  */
 export function podeMexerNoCaminho(quem: QuemPede, caminho: readonly PastaDoDrive[]): boolean {
   if (quem.subscriptionReadOnly || !canAct(quem.role)) return false;
-  return setoresDoCaminho(caminho).every((s) => canActOnSector(quem as AuthContext, s));
+  return setoresDoCaminho(caminho).every((s) => canActOnSector(quem, s));
 }
 
 /** Escrita fora de qualquer pasta (criar pasta no primeiro nível). */
@@ -103,7 +104,7 @@ export function podeMexerNoDrive(quem: QuemPede): boolean {
 
 /** Pode tornar uma pasta "só do setor X": precisa poder agir no setor X. */
 export function podeRestringirAoSetor(quem: QuemPede, setor: string): boolean {
-  return podeMexerNoDrive(quem) && canActOnSector(quem as AuthContext, setor);
+  return podeMexerNoDrive(quem) && canActOnSector(quem, setor);
 }
 
 /** Pasta da casa (modelo ou "Enviados pelo cliente"): não muda de nome, de lugar, nem vai para a lixeira. */
