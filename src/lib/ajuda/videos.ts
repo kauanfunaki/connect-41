@@ -23,7 +23,7 @@ import { idDoVideo } from "./youtube";
  * logo abaixo. Ex.: `bpo_contas_pagar: "https://youtu.be/xxxxxxxxxxx",`
  */
 export const VIDEOS_DO_CONNECT: Readonly<Record<string, string>> = {
-  // 01 a 09 publicados pelo Kauan em 08/10/2026 (não listados).
+  // Publicados pelo Kauan (não listados): 01 a 09 em 08/10/2026, 10 a 49 em 09/10/2026.
   // 01 — Contas a pagar
   bpo_contas_pagar: "https://youtu.be/0kB56K30TQ8",
   // 02 — Contas a receber
@@ -43,79 +43,79 @@ export const VIDEOS_DO_CONNECT: Readonly<Record<string, string>> = {
   // 09 — Cobrança
   bpo_cobranca: "https://youtu.be/ADKuhGzXmtc",
   // 10 — Conversa com o cliente
-  bpo_comunicacao: "",
+  bpo_comunicacao: "https://youtu.be/lHt_EQBTwuI",
   // 11 — Repositório de Senhas
-  bpo_senhas: "",
+  bpo_senhas: "https://youtu.be/i5qB4BlRXM0",
   // 12 — Repositório de Manuais
-  bpo_manual: "",
+  bpo_manual: "https://youtu.be/DSNfhaAsIu0",
   // 13 — DRE
-  bpo_dre: "",
+  bpo_dre: "https://youtu.be/3qYY3YDohwE",
   // 14 — DRE econômica
-  dre_economica: "",
+  dre_economica: "https://youtu.be/LJsogBUqWwg",
   // 15 — Análises gerenciais
-  dre_analises: "",
+  dre_analises: "https://youtu.be/GcAeeM8kW5g",
   // 16 — Orçamento
-  dre_orcamento: "",
+  dre_orcamento: "https://youtu.be/EGktE5sUs24",
   // 17 — Início
-  "geral:inicio": "",
+  "geral:inicio": "https://youtu.be/DsVuJTkFY0M",
   // 18 — Meu dia
-  "geral:meu-dia": "",
+  "geral:meu-dia": "https://youtu.be/jbVIA86OQnU",
   // 22 — Empresas
-  "geral:empresas": "",
+  "geral:empresas": "https://youtu.be/INRVrkZGFqs",
   // 23 — Pessoas
-  "geral:pessoas": "",
+  "geral:pessoas": "https://youtu.be/pQETZUdooyA",
   // 24 — Transferências
-  "geral:transferencias": "",
+  "geral:transferencias": "https://youtu.be/rFH270LezMM",
   // 25 — Solicitações dos clientes
-  portal_solicitacoes: "",
+  portal_solicitacoes: "https://youtu.be/x47rnxWK3Qk",
   // 26 — Agenda
-  "geral:agenda": "",
+  "geral:agenda": "https://youtu.be/49vVH6XRqso",
   // 27 — Espaços
-  "geral:espacos": "",
+  "geral:espacos": "https://youtu.be/TIPh0ImN27U",
   // 28 — Certificados digitais
-  tech_certificados: "",
+  tech_certificados: "https://youtu.be/YNyRwDTNkKg",
   // 29 — Leads
-  comercial_leads: "",
+  comercial_leads: "https://youtu.be/_iJ9-Z_OcSk",
   // 30 — Processos
-  societario_processos: "",
+  societario_processos: "https://youtu.be/iGrwpKkt0ss",
   // 31 — Licenças
-  societario_licencas: "",
+  societario_licencas: "https://youtu.be/hiVUf6G5JUM",
   // 32 — Minha área
-  societario_minha_area: "",
+  societario_minha_area: "https://youtu.be/d8Yij3hOvJg",
   // 33 — Exigências e prazos
-  societario_prazos: "",
+  societario_prazos: "https://youtu.be/ItdxOgPuL5A",
   // 34 — Relatórios do Societário
-  societario_relatorios: "",
+  societario_relatorios: "https://youtu.be/4TrDmzaexFs",
   // 35 — Colaboradores
-  dp_colaboradores: "",
+  dp_colaboradores: "https://youtu.be/SGUHvdkNj9k",
   // 36 — Afastamentos
-  dp_afastamentos: "",
+  dp_afastamentos: "https://youtu.be/9DY2_9GnMMw",
   // 37 — Horas extras
-  dp_horas_extras: "",
+  dp_horas_extras: "https://youtu.be/RTlvwcruKw0",
   // 38 — Escalas
-  dp_escalas: "",
+  dp_escalas: "https://youtu.be/iarQ7Q9GM_Y",
   // 39 — Treinamentos
-  dp_treinamentos: "",
+  dp_treinamentos: "https://youtu.be/CMALI9yVHng",
   // 40 — Avaliações de desempenho
-  dp_avaliacoes: "",
+  dp_avaliacoes: "https://youtu.be/PT7Kws7qdBY",
   // 41 — Vagas
-  recrutamento_vagas: "",
+  recrutamento_vagas: "https://youtu.be/_V5xIdyFxHQ",
   // 42 — Candidatos
-  recrutamento_candidatos: "",
+  recrutamento_candidatos: "https://youtu.be/KaWSE8KeLbs",
   // 43 — Colaboradores de clientes
-  recrutamento_colaboradores_clientes: "",
+  recrutamento_colaboradores_clientes: "https://youtu.be/yHAOvLguxlA",
   // 44 — Testes
-  recrutamento_testes: "",
+  recrutamento_testes: "https://youtu.be/AWodslVl2RA",
   // 45 — Documentos fiscais
-  fiscal_documentos: "",
+  fiscal_documentos: "https://youtu.be/K3Kb8usYG-c",
   // 46 — Painel de Gestão
-  gestao_painel: "",
+  gestao_painel: "https://youtu.be/A8UINtDcNgc",
   // 47 — Cargos e Salários
-  gestao_cargos_salarios: "",
+  gestao_cargos_salarios: "https://youtu.be/jFzwt1f0Q5Q",
   // 48 — Indicadores de RH
-  gestao_indicadores_rh: "",
+  gestao_indicadores_rh: "https://youtu.be/xrjf1VRaq7s",
   // 49 — Valora
-  gestao_valora: "",
+  gestao_valora: "https://youtu.be/1oidghBVR4o",
 };
 
 /**
@@ -128,15 +128,15 @@ export const VIDEOS_DO_CONNECT: Readonly<Record<string, string>> = {
  */
 export const VIDEOS_DOS_PRIMEIROS_PASSOS: Readonly<Record<string, string>> = {
   // 19 — Achar qualquer coisa com Ctrl+K
-  busca: "",
+  busca: "https://youtu.be/aRjRKnFZyPA",
   // 20 — Trabalhar dentro de um setor
-  setor: "",
+  setor: "https://youtu.be/EqjC9OIAgu4",
   // 21 — Filtrar uma lista
-  filtros: "",
+  filtros: "https://youtu.be/N0Ja1N2ASGE",
   // 18 — o mesmo vídeo do artigo Meu dia
-  "meu-dia": "",
+  "meu-dia": "https://youtu.be/jbVIA86OQnU",
   // 24 — o mesmo vídeo do artigo Transferências
-  transferir: "",
+  transferir: "https://youtu.be/rFH270LezMM",
 };
 
 /**
