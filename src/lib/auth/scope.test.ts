@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   scopedHandoffWhere,
   scopedPipelineWhere,
+  accessiblePipelineWhere,
   scopedSpaceWhere,
   scopedVagaWhere,
   scopedAssessmentLinkWhere,
@@ -101,5 +102,19 @@ describe("handoff ignora o setor ativo", () => {
       tenantId: "t1",
       requestedBy: "u1",
     });
+  });
+});
+
+
+describe("links de Kanban usam permissões sem filtrar pelo setor ativo", () => {
+  it("administrador pode abrir um Kanban de outro setor no mesmo tenant", () => {
+    expect(accessiblePipelineWhere(ctx("ADMIN", [], "bpo"))).toEqual({ tenantId: "t1" });
+  });
+  it("pessoa com vários setores pode abrir todos os setores permitidos", () => {
+    expect(accessiblePipelineWhere(ctx("SECTOR_USER", ["bpo", "tech"], "bpo"))).toEqual({ tenantId: "t1", sectorCode: { in: ["bpo", "tech"] } });
+  });
+  it("não libera setores sem permissão nem outro tenant", () => {
+    expect(accessiblePipelineWhere(ctx("SECTOR_USER", ["bpo"], "tech"))).toEqual({ tenantId: "t1", sectorCode: { in: ["bpo"] } });
+    expect(accessiblePipelineWhere(ctx("SECTOR_USER", [], "tech"))).toEqual({ tenantId: "t1", sectorCode: "__none__" });
   });
 });

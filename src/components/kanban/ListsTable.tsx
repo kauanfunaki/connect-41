@@ -69,7 +69,7 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
                 <FiltroDaColuna rotulo="Término" chave="termino" tipo="data" align="right" />
               </th>
               {deleteAction && (
-                <th className="px-4 py-3 w-14">
+                <th className="px-4 py-3 w-28">
                   <span className="sr-only">Ações</span>
                 </th>
               )}

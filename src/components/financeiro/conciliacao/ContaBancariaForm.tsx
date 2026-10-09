@@ -110,7 +110,7 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
             <CampoForm label="Saldo inicial" htmlFor={`${prefixo}-saldo`} helper="Opcional. Negativo se começou no cheque especial.">
               <Input id={`${prefixo}-saldo`} name="openingBalance" prefix="R$" inputMode="decimal" placeholder="-1.234,56" defaultValue={conta?.saldoInicial ?? ""} />
             </CampoForm>
-            <CampoForm label="Saldo no início do dia" htmlFor={`${prefixo}-saldo-data`} helper="O extrato é somado a partir desta data, inclusive.">
+            <CampoForm label="Data do saldo inicial" htmlFor={`${prefixo}-saldo-data`} helper="Informe o dia ao qual o saldo inicial se refere, antes das movimentações. O extrato é somado a partir desse dia, inclusive.">
               <CampoData id={`${prefixo}-saldo-data`} name="openingBalanceDate" defaultValue={conta?.saldoInicialKey ?? ""} />
             </CampoForm>
           </FieldGrid>

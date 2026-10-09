@@ -6,7 +6,7 @@ import { Pencil, GripVertical, Trash2, Plus } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { Switch } from "@/components/ui/Switch";
 import { SeletorDeCor } from "@/components/ui/SeletorDeCor";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 import { isUsableAccent, normalizeAccentColor } from "@/lib/color";
@@ -14,12 +14,6 @@ import type { EditStagesState, StageInput } from "@/app/(app)/kanban/actions";
 import { Aviso } from "@/components/ui/Aviso";
 
 const DEFAULT_COLORS = ["#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B"];
-const TYPE_LABEL: Record<StageDotType, string> = {
-  NOT_STARTED: "Não iniciado",
-  IN_PROGRESS: "Em andamento",
-  PENDING: "Pendente",
-  DONE: "Concluído",
-};
 
 type Row = { id?: string; name: string; color: string; type: StageDotType };
 
@@ -106,7 +100,7 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
             <span className="w-7 flex-shrink-0" />
             <span className="w-9 flex-shrink-0" />
             <span className="flex-1 min-w-0 text-fs-1 font-medium text-fg-muted">Título do estágio</span>
-            <span className="w-[150px] flex-shrink-0 text-fs-1 font-medium text-fg-muted">Status da bolinha</span>
+            <span className="w-[150px] flex-shrink-0 text-fs-1 font-medium text-fg-muted">Conclui tarefas</span>
             <span className="w-3.5 flex-shrink-0" />
             {rows.length > 1 && <span className="w-7 flex-shrink-0" />}
           </div>
@@ -131,16 +125,9 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
                   placeholder={`Estágio ${i + 1}`}
                   className="flex-1 min-w-0"
                 />
-                <Select
-                  aria-label={`Status da bolinha do estágio ${i + 1}`}
-                  value={row.type}
-                  onChange={(e) => update(i, { type: e.target.value as StageDotType })}
-                  className="w-[150px] flex-shrink-0"
-                >
-                  {(Object.keys(TYPE_LABEL) as StageDotType[]).map((t) => (
-                    <option key={t} value={t}>{TYPE_LABEL[t]}</option>
-                  ))}
-                </Select>
+                <div className="w-[150px] flex-shrink-0">
+                  <Switch checked={row.type === "DONE"} onCheckedChange={(checked) => update(i, { type: checked ? "DONE" : "NOT_STARTED" })} rotulo="Conclui tarefas" aria-label={`Conclui tarefas no estágio ${i + 1}`} size="sm" />
+                </div>
                 <StageDot color={row.color} type={row.type} />
                 {rows.length > 1 && (
                   <IconButton

@@ -1,7 +1,9 @@
 "use client";
 
+import { Children, Fragment, isValidElement, type ReactNode } from "react";
+import { Button } from "@/components/ui/Button";
 import { MoreHorizontal } from "lucide-react";
-import { Popover } from "@/components/ui/Popover";
+import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 
 type Props = {
   children: React.ComponentProps<typeof Popover>["children"];
@@ -16,6 +18,16 @@ type Props = {
   size?: "sm" | "md";
 };
 
+// Fragmentos e agrupadores não contam como ações; condições falsas também não.
+function itensVisiveis(conteudo: ReactNode): ReactNode[] {
+  return Children.toArray(conteudo).flatMap((item) => {
+    if (isValidElement<{ children?: ReactNode }>(item) && (item.type === Fragment || item.type === "div")) {
+      return itensVisiveis(item.props.children);
+    }
+    return [item];
+  });
+}
+
 // O "⋯" das ações que saem da linha (regra de 30/09: "botão não é link; o que
 // leva para fora da linha vai num menu ⋯"). Era o mesmo gatilho copiado em seis
 // componentes — AcoesDeLinha, AcoesDaLicenca, AcoesDoItem, AcoesDoCadastro,
@@ -28,6 +40,21 @@ export function MenuDeMaisAcoes({
   align = "right",
   size = "sm",
 }: Props) {
+  const conteudo = typeof children === "function" ? children({ close: () => {} }) : children;
+  const itens = itensVisiveis(conteudo);
+  if (itens.length === 0) return null;
+  const unico = itens[0];
+  if (itens.length === 1 && isValidElement<React.ComponentProps<typeof ItemDoMenu>>(unico) && unico.type === ItemDoMenu) {
+    const { onClick, href, icone, descricao, danger, disabled, children: texto } = unico.props;
+    const tamanho = size === "md" ? "sm" : "xs";
+    // Uma ação direta precisa conservar o rótulo em uma linha: na célula de
+    // uma tabela, encolher o botão quebrava "Abrir pendência" além da altura.
+    const classe = "shrink-0 whitespace-nowrap [&>svg]:size-3.5 [&>svg]:shrink-0";
+    if (href && !disabled) {
+      return <Button href={href} onClick={onClick} variant={danger ? "danger" : "secondary"} size={tamanho} title={descricao} className={classe}>{icone}{texto}</Button>;
+    }
+    return <Button type="button" onClick={onClick} disabled={disabled} variant={danger ? "danger" : "secondary"} size={tamanho} title={descricao} className={classe}>{icone}{texto}</Button>;
+  }
   return (
     <Popover
       align={align}

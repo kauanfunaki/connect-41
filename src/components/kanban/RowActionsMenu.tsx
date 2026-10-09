@@ -1,7 +1,7 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
-import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
+import { Trash2 } from "lucide-react";
+
 import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
 
@@ -27,38 +27,10 @@ export function RowActionsMenu({ name, onDelete }: Props) {
       onDragStart={(e) => e.preventDefault()}
       onClick={(e) => e.stopPropagation()}
     >
-      <Dropdown
-        align="right"
-        width={180}
-        trigger={({ open, toggle }) => (
-          <Button
-            variant="linkMuted"
-            className="p-0.5 rounded hover:bg-surface-hover"
-            onClick={toggle}
-            aria-expanded={open}
-            aria-label={`Opções de ${name}`}
-          >
-            <MoreHorizontal size={14} />
-          </Button>
-        )}
-      >
-        <DropdownItem
-          danger
-          onClick={() =>
-            requestConfirm(
-              {
-                title: `Excluir "${name}"?`,
-                description: "Subtarefas, comentários e anexos vão junto. Esta ação não pode ser desfeita.",
-                destructive: true,
-                confirmLabel: "Excluir",
-              },
-              onDelete
-            )
-          }
-        >
-          Excluir tarefa
-        </DropdownItem>
-      </Dropdown>
+      <Button variant="danger" size="xs" aria-label={`Excluir tarefa ${name}`}
+        onClick={() => requestConfirm({ title: `Excluir "${name}"?`, description: "Subtarefas, comentários e anexos vão junto. Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Excluir" }, onDelete)}>
+        <Trash2 size={12} /> Excluir
+      </Button>
       {dialog}
     </span>
   );

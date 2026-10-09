@@ -1,7 +1,7 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
-import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
+import { Trash2 } from "lucide-react";
+
 import { useConfirm } from "@/components/ui/useConfirm";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { Button } from "@/components/ui/Button";
@@ -43,25 +43,9 @@ export function DeleteEntityMenu({ kind, name, action }: Props) {
 
   return (
     <>
-      <Dropdown
-        align="right"
-        width={180}
-        trigger={({ open, toggle }) => (
-          <Button
-            variant="linkMuted"
-            className="p-1 rounded-md hover:bg-surface-hover"
-            onClick={toggle}
-            aria-expanded={open}
-            aria-label={`Opções de ${name}`}
-          >
-            <MoreHorizontal size={15} />
-          </Button>
-        )}
-      >
-        <DropdownItem danger onClick={handleDelete}>
-          Excluir {kind}
-        </DropdownItem>
-      </Dropdown>
+      <Button variant="danger" size="xs" onClick={handleDelete} aria-label={`Excluir ${kind} ${name}`}>
+        <Trash2 size={12} /> Excluir
+      </Button>
       {dialog}
     </>
   );

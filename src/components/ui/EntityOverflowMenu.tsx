@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { Children, useState, useTransition } from "react";
+import { MoreHorizontal, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
@@ -43,7 +44,11 @@ export function EntityOverflowMenu({ deleteAction, nome, deleteDescription, chil
 
   return (
     <>
-      <Dropdown
+      {Children.count(children) === 0 ? (
+        <Button variant="danger" size="sm" onClick={() => { setError(null); setConfirmOpen(true); }}>
+          <Trash2 size={13} /> Excluir
+        </Button>
+      ) : (<Dropdown
         align="right"
         width={180}
         trigger={({ toggle }) => (
@@ -68,7 +73,7 @@ export function EntityOverflowMenu({ deleteAction, nome, deleteDescription, chil
         >
           Excluir
         </DropdownItem>
-      </Dropdown>
+      </Dropdown>)}
 
       <ConfirmDialog
         open={confirmOpen}

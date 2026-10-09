@@ -11,7 +11,7 @@ import { EditPipelineStagesModal } from "@/components/kanban/EditPipelineStagesM
 import { PageContainer } from "@/components/shared/PageContainer";
 import { moverItem, reordenarItem, duplicarPipeline, renomearEstagio, atualizarEstagios, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa, excluirItem } from "../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
+import { accessiblePipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
 function daysSince(d: Date): number {
   return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
@@ -27,7 +27,7 @@ export default async function KanbanBoardPage({
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({
-    where: { id, ...scopedPipelineWhere(ctx) },
+    where: { id, ...accessiblePipelineWhere(ctx) },
     include: {
       space: { select: { id: true, name: true } },
       folder: { select: { id: true, name: true } },
@@ -180,7 +180,7 @@ export default async function KanbanBoardPage({
           canAddItem && (
           <div className="flex items-center gap-2">
             <EditPipelineStagesModal
-              initialStages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color ?? "#586577", type: s.type }))}
+              initialStages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color ?? "#586577", type: s.isTerminal ? "DONE" : s.type === "DONE" ? "NOT_STARTED" : s.type }))}
               action={atualizarEstagios.bind(null, id)}
             />
             {duplicateEntities.length > 0 && (

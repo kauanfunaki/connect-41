@@ -107,7 +107,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {folders.map((f) => (
               <div key={f.id} className="relative">
-                <Card href={`/setor/${code}/pastas/${f.id}`} className="flex items-center gap-2.5 px-4 py-3 pr-10">
+                <Card href={`/setor/${code}/pastas/${f.id}`} className="flex items-center gap-2.5 px-4 py-3 pr-28">
                   <FolderIcon size={16} className="text-fg-muted flex-shrink-0" />
                   <div className="min-w-0">
                     <p className="text-card-title font-semibold text-fg truncate">{f.name}</p>

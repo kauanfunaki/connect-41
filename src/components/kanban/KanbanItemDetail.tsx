@@ -43,7 +43,7 @@ import {
 } from "@/app/(app)/kanban/actions";
 import { boardPath } from "@/lib/kanbanPaths";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
-import { scopedPipelineWhere } from "@/lib/auth/scope";
+import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
 
@@ -88,7 +88,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const prisma = getPrisma();
   const [pipeline, item] = await Promise.all([
     prisma.pipeline.findFirst({
-      where: { id, ...scopedPipelineWhere(ctx) },
+      where: { id, ...accessiblePipelineWhere(ctx) },
       include: { stages: { orderBy: { order: "asc" } } },
     }),
     prisma.pipelineItem.findFirst({

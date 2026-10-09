@@ -16,6 +16,8 @@ type Props = {
   value: number | string;
   /** Torna o card clicável. Sem href, vira um bloco estático. */
   href?: string;
+  /** Filtros usam navegação completa para não reaproveitar uma árvore RSC de outro recorte. */
+  navegacaoCompleta?: boolean;
   /** Ícone à esquerda do label — herda a cor do tom. */
   icon?: React.ReactNode;
   /** Texto de apoio ao lado do valor, ex: "+3 este mês", "2 vencidos". */
@@ -96,6 +98,7 @@ export function MetricCard({
   iconeDoTom: comIconeDoTom = true,
   highlight = false,
   ativo = false,
+  navegacaoCompleta = false,
   delay = 0,
 }: Props) {
   const tomEfetivo: TomDaMetrica | undefined = tom ?? (highlight ? "atencao" : undefined);
@@ -133,21 +136,22 @@ export function MetricCard({
   );
 
   const cls = `reveal-in min-w-0 border rounded-lg px-4 py-3.5 flex flex-col gap-2 shadow-xs transition-[border-color,box-shadow,transform] duration-150 ${
-    ativo ? "bg-brand-subtle border-brand/50" : "bg-surface border-border"
+    ativo ? "bg-brand-subtle border-brand ring-2 ring-brand" : "bg-surface border-border"
   }`;
   const atual = ativo ? ("true" as const) : undefined;
 
   // Sem anel de foco próprio: o `:focus-visible` global já desenha o dele.
   if (href) {
+    const Destino = navegacaoCompleta ? "a" : Link;
     return (
-      <Link
+      <Destino
         href={href}
         aria-current={atual}
         style={{ animationDelay: `${delay}ms` }}
         className={`${cls} hover:border-brand/40 hover:-translate-y-0.5 hover:shadow-md`}
       >
         {content}
-      </Link>
+      </Destino>
     );
   }
   return (

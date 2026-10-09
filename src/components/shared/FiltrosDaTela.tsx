@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Check, Search, X } from "lucide-react";
 import { FilterButton } from "@/components/ui/FilterButton";
 import { Input } from "@/components/ui/Input";
@@ -57,7 +57,6 @@ export function FiltrosDaTela({
    *  o painel abre para a esquerda e as etiquetas vêm antes do botão. */
   naBarra?: boolean;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [campoAberto, setCampoAberto] = useState(campos[0]?.chave ?? "");
@@ -110,7 +109,7 @@ export function FiltrosDaTela({
           {filtrado && (
             <button
               type="button"
-              onClick={() => router.push(hrefCom(c.chave, ""))}
+              onClick={() => window.location.assign(hrefCom(c.chave, ""))}
               aria-label={`Tirar o filtro de ${c.rotulo.toLowerCase()}`}
               className="inline-flex items-center justify-center w-5 h-5 rounded-full text-fg-muted hover:text-fg hover:bg-surface-hover"
             >
@@ -183,7 +182,7 @@ export function FiltrosDaTela({
                           aria-selected={escolhida}
                           onClick={() => {
                             close();
-                            router.push(hrefCom(campo.chave, o.value));
+                            window.location.assign(hrefCom(campo.chave, escolhida ? "" : o.value));
                           }}
                           className={`w-full flex items-center justify-between gap-2 text-left px-2.5 py-1.5 rounded-md text-ui transition-colors ${
                             escolhida ? "bg-brand-subtle text-brand font-medium" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
@@ -215,7 +214,7 @@ export function FiltrosDaTela({
                   q.delete("pagina");
                   q.delete("page");
                   const s = q.toString();
-                  router.push(s ? `${pathname}?${s}` : pathname);
+                  window.location.assign(s ? `${pathname}?${s}` : pathname);
                 }}
               >
                 Limpar filtros

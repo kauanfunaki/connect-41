@@ -194,7 +194,7 @@ export function EmpresasTable({
             as ações eram a primeira coisa a sair. Sem borda, porque agora ela
             apareceria o tempo todo sem haver rolagem. */}
         <td
-          className={`px-4 py-3 text-center whitespace-nowrap sticky right-0 ${
+          className={`px-4 py-3 text-center whitespace-nowrap sticky right-0 z-10 ${
             selected.has(c.id) ? "bg-selected-bg" : "bg-surface"
           }`}
         >
@@ -350,6 +350,7 @@ export function EmpresasTable({
         title: `Inativar ${row.name}?`,
         description: "Ela sai da listagem padrão e passa a aparecer só no filtro de inativos. Dá para reativar depois.",
         confirmLabel: "Inativar",
+        destructive: true,
       },
       aplicar
     );
@@ -362,6 +363,7 @@ export function EmpresasTable({
         title: `Inativar ${quantas} empresa${quantas !== 1 ? "s" : ""}?`,
         description: "Elas saem da listagem padrão e passam a aparecer só no filtro de inativos. Dá para reativar depois.",
         confirmLabel: "Inativar",
+        destructive: true,
       },
       () => {
         const ids = Array.from(selected);
@@ -440,7 +442,7 @@ export function EmpresasTable({
               Corpo em 13px, como toda tabela (escolha 3A do Kauan, 08/10/2026);
               era 15px. Esta rola num contêiner próprio e não é filha direta da
               `.c41-tabela`, então o tamanho vai aqui na <table>. */}
-          <table className="w-full table-fixed min-w-[960px] text-ui">
+          <table className="w-full table-fixed min-w-[1100px] text-ui">
             <colgroup>
               {canCreate && <col className="w-11" />}
               {/* Nome não declara largura: fica com o espaço que sobrar. Em
@@ -459,7 +461,7 @@ export function EmpresasTable({
               <col className="w-[112px]" />
               <col className="w-[150px]" />
               <col className="w-[148px]" />
-              <col className="w-[124px]" />
+              <col className="w-[220px]" />
             </colgroup>
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
@@ -487,7 +489,7 @@ export function EmpresasTable({
                     "Localização"
                   )}
                 </th>
-                <th className="px-4 py-3 sticky right-0 bg-table-header-bg" />
+                <th className="px-4 py-3 sticky right-0 z-10 bg-table-header-bg text-micro font-semibold uppercase text-fg-muted">Ações</th>
               </tr>
             </thead>
             <tbody>

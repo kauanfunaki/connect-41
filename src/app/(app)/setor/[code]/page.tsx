@@ -93,7 +93,7 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
                 <div className="h-full flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5 overflow-hidden">
                   <span className="h-[3px] flex-shrink-0" style={{ background: s.color }} aria-hidden />
                   <Link href={`/setor/${code}/espacos/${s.id}`} className="group block px-4 pt-3.5 pb-3">
-                    <p className="text-card-title font-semibold text-fg group-hover:text-brand transition-colors pr-8 truncate">
+                    <p className="text-card-title font-semibold text-fg group-hover:text-brand transition-colors pr-24 truncate">
                       {s.name}
                     </p>
                     <p className="mt-1 flex items-center gap-3 text-fs-2 text-fg-muted">
