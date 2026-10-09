@@ -62,6 +62,7 @@ export default async function PlanosPage() {
                 </p>
                 <PlanModulesEditor
                   planId={p.id}
+                  nomeDoPlano={p.name}
                   allowedModuleCodes={Array.isArray(p.allowedModuleCodes) ? (p.allowedModuleCodes as string[]) : null}
                   action={atualizarModulosPlano}
                 />
