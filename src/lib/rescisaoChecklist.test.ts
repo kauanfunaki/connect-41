@@ -7,7 +7,9 @@ import {
   prazoPagamento,
   statusPrazoPagamento,
   resumirConferencia,
+  gruposDeVerbas,
 } from "./rescisaoChecklist";
+import { contagemDoBloco, marcarGrupo, quantosNoConjunto } from "./listaEmBlocos";
 
 describe("RESCISAO_CHECKLIST", () => {
   it("tem chaves únicas e todos os grupos representados", () => {
@@ -105,5 +107,28 @@ describe("resumirConferencia", () => {
     const r = resumirConferencia([{ itemKey: "item_que_nao_existe_mais", status: "CONFERIDO" }]);
     expect(r.conferidos).toBe(0);
     expect(r.pendentes).toBe(RESCISAO_CHECK_KEYS.length);
+  });
+});
+
+describe("verbas não praticadas (configuração da rescisão)", () => {
+  it("agrupa só os itens de valor, na ordem da conferência, sem Prazos e documentos", () => {
+    const grupos = gruposDeVerbas();
+    expect(grupos.map((g) => g.chave)).toEqual(["VERBAS", "DESCONTOS", "MEDIAS"]);
+    expect(grupos.map((g) => g.rotulo)).toEqual(["Verbas rescisórias", "Descontos e apontamentos", "Médias e variáveis"]);
+    expect(grupos.every((g) => g.itens.every((i) => i.hasValue && i.group === g.chave))).toBe(true);
+    // Os mesmos itens que a tela mostrava antes, numa lista só.
+    expect(grupos.flatMap((g) => g.itens.map((i) => i.key))).toEqual(RESCISAO_CHECKLIST.filter((i) => i.hasValue).map((i) => i.key));
+  });
+
+  it("marcar o grupo das verbas: conta, marca todas e desmarca sem mexer nos outros grupos", () => {
+    const [verbas] = gruposDeVerbas();
+    const chaves = verbas.itens.map((i) => i.key);
+    const inicio = new Set(["fgts_multa", "inss_irrf"]);
+    expect(contagemDoBloco(quantosNoConjunto(inicio, chaves), chaves.length, { um: "marcada", varios: "marcadas" })).toBe("1 de 8 marcadas");
+    const tudo = marcarGrupo(inicio, chaves, true);
+    expect(quantosNoConjunto(tudo, chaves)).toBe(8);
+    expect(tudo.has("inss_irrf")).toBe(true);
+    const nada = marcarGrupo(tudo, chaves, false);
+    expect([...nada]).toEqual(["inss_irrf"]);
   });
 });

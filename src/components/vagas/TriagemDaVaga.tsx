@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
@@ -9,11 +9,21 @@ import { Badge } from "@/components/ui/Badge";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { SegmentedControl, type SegmentItem } from "@/components/ui/SegmentedControl";
 import { pontuarPassoDoLote, salvarRequisitosDaVaga } from "@/app/(app)/vagas/[id]/triagem-actions";
 import { CORTES_PADRAO, ROTULO_DA_FAIXA, type Faixa, type Requisito } from "@/lib/recrutamento/triagem";
 
 type Linha = { tipo: Requisito["tipo"]; texto: string; peso: 1 | 2 | 3 };
+
+// O tipo pinta como o `Badge` da lista logo abaixo (Obrigatório em âmbar,
+// Desejável neutro): a mesma informação lê igual na edição e na leitura — é o
+// caso do `tone` por item do SegmentedControl.
+const TIPOS: SegmentItem<Linha["tipo"]>[] = [
+  { key: "OBRIGATORIO", label: "Obrigatório", tone: "warning" },
+  { key: "DESEJAVEL", label: "Desejável", tone: "neutral" },
+];
+
+const PESOS = [1, 2, 3] as const;
 
 type Props = {
   vagaId: string;
@@ -107,24 +117,23 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
       </div>
 
       {/* Edição no tamanho de formulário (h-9), com cada requisito numa grade
-          de colunas fixas: eram controles de barra (h-8) com lixeira de 28px
-          numa linha que quebrava onde calhasse, e as notas de corte tinham
-          rótulo montado à mão. No celular o texto do requisito desce para a
+          de colunas fixas. O tipo é um seletor de duas posições e o peso, três
+          pontos (escolha A da página "Telas pesadas", 08/10/2026): eram dois
+          seletores por linha, que pediam abrir a lista para ver ou trocar, e o
+          peso só se lia de perto. No celular o texto do requisito desce para a
           linha de baixo, inteiro. */}
       {editando ? (
         <div className="space-y-5">
           <fieldset className="space-y-2">
             <legend className="text-label font-medium text-fg mb-1.5">Requisitos</legend>
             {linhas.map((l, i) => (
-              <div key={i} className="grid grid-cols-[minmax(0,1fr)_104px_auto] sm:grid-cols-[144px_minmax(0,1fr)_104px_auto] items-center gap-2">
-                <Select
-                  value={l.tipo}
-                  onChange={(e) => muda(i, { tipo: e.target.value as Linha["tipo"] })}
-                  aria-label={`Tipo do requisito ${i + 1}`}
-                >
-                  <option value="OBRIGATORIO">Obrigatório</option>
-                  <option value="DESEJAVEL">Desejável</option>
-                </Select>
+              <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)_auto] sm:grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2">
+                <SegmentedControl
+                  items={TIPOS}
+                  active={l.tipo}
+                  onChange={(tipo) => muda(i, { tipo })}
+                  label={`Tipo do requisito ${i + 1}`}
+                />
                 <Input
                   value={l.texto}
                   maxLength={300}
@@ -133,15 +142,12 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
                   aria-label={`Requisito ${i + 1}`}
                   className="col-span-3 order-last sm:col-span-1 sm:order-none"
                 />
-                <Select
-                  value={String(l.peso)}
-                  onChange={(e) => muda(i, { peso: Number(e.target.value) as Linha["peso"] })}
-                  aria-label={`Peso do requisito ${i + 1}`}
-                >
-                  <option value="1">Peso 1</option>
-                  <option value="2">Peso 2</option>
-                  <option value="3">Peso 3</option>
-                </Select>
+                <PesoEmPontos
+                  valor={l.peso}
+                  onChange={(peso) => muda(i, { peso })}
+                  rotulo={`Peso do requisito ${i + 1}`}
+                  className="justify-self-end sm:justify-self-auto"
+                />
                 <Button
                   variant="ghost"
                   size="icon"
@@ -178,7 +184,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
               </CampoForm>
             </FieldGrid>
             <p className="text-helper text-fg-muted">
-              Obrigatório pesa o dobro. Localidade não entra aqui: cidade não é avaliada pela IA, o recrutador confere.
+              O peso vai de um a três pontos, e obrigatório pesa o dobro. Localidade não entra aqui: cidade não é avaliada pela IA, o recrutador confere.
             </p>
           </div>
 
@@ -258,5 +264,55 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
         </div>
       )}
     </Card>
+  );
+}
+
+/**
+ * O peso do requisito em três pontos (●●○): pintados até o peso escolhido.
+ *
+ * Cada ponto é um rádio de verdade, transparente por cima do desenho — as
+ * setas do teclado trocam o peso, e o leitor de tela anuncia "Peso 2 de 3"
+ * (o mesmo texto da dica, para quem passa o mouse). O alvo é de 24px, maior
+ * que o ponto; o anel de foco envolve o ponto da vez.
+ */
+function PesoEmPontos({
+  valor,
+  onChange,
+  rotulo,
+  className = "",
+}: {
+  valor: Linha["peso"];
+  onChange: (peso: Linha["peso"]) => void;
+  rotulo: string;
+  className?: string;
+}) {
+  const nome = useId();
+  return (
+    <div role="radiogroup" aria-label={rotulo} className={`flex items-center ${className}`.trim()}>
+      {PESOS.map((p) => {
+        const dica = `Peso ${p} de ${PESOS.length}`;
+        return (
+          <label
+            key={p}
+            data-dica={dica}
+            className="relative inline-flex size-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-surface-hover has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-focus-ring"
+          >
+            <input
+              type="radio"
+              name={nome}
+              value={p}
+              checked={valor === p}
+              onChange={() => onChange(p)}
+              aria-label={dica}
+              className="absolute inset-0 m-0 size-full cursor-pointer appearance-none rounded-full opacity-0"
+            />
+            <span
+              aria-hidden
+              className={`pointer-events-none size-2.5 rounded-full border-[1.5px] border-brand transition-colors ${p <= valor ? "bg-brand" : ""}`}
+            />
+          </label>
+        );
+      })}
+    </div>
   );
 }
