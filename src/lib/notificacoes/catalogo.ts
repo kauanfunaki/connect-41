@@ -82,6 +82,7 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   client_request_answered: c("solicitacao", "success", "Pendência respondida"),
   finance_approval_approved: c("aprovado", "success", "Aprovação concedida"),
   finance_approval_rejected: c("recusado", "danger", "Aprovação recusada"),
+  ARQUIVO_DO_CLIENTE: c("documento", "info", "Arquivo enviado pelo cliente"),
 
   // ── Alertas ──
   VACATION_EXPIRING: a("prazo", "warning", "Férias vencendo"),

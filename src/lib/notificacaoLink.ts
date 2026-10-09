@@ -26,6 +26,9 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   // Lead novo do Comercial (05/10/2026): abre a ficha do lead.
   if (n.type.startsWith("LEAD_")) return `/leads/${n.entityId}`;
   if (n.type === "client_request_answered") return `/pendencias/${n.entityId}`;
+  // Arquivo que o cliente mandou pelo portal (09/10/2026): abre a pasta
+  // "Enviados pelo cliente" da empresa — `pasta=enviados` é resolvido na página.
+  if (n.type === "ARQUIVO_DO_CLIENTE") return `/arquivos/empresa/${n.entityId}?pasta=enviados`;
   if (n.entityType === "COMPANY") return `/empresas/${n.entityId}`;
   if (n.entityType === "PERSON") return `/pessoas/${n.entityId}`;
   // Menção e comentário guardam o id do card (desde 02/10/2026): o card solto,

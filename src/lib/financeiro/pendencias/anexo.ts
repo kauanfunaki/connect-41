@@ -85,7 +85,7 @@ function nomeSemCaminhoNemControle(nome: string): string {
  * Os caracteres de controle são filtrados por código, e não por regex com
  * escapes: é o jeito de este arquivo nunca carregar um byte de controle.
  */
-export function sanearNomeDoArquivo(nome: string, ext: TipoDoAnexo["ext"]): string {
+export function sanearNomeDoArquivo(nome: string, ext: string): string {
   const limpo = nomeSemCaminhoNemControle(nome);
 
   // Tira a extensão que veio e põe a do conteúdo.

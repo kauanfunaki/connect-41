@@ -97,6 +97,15 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     secao: "Com a equipe",
     descricao: "Documentos que o escritório mandou para você ler, baixar e, quando pedido, dar o aceite.",
   },
+  // Os Arquivos (09/10/2026): as pastas que o escritório compartilhou com o
+  // cliente, e "Enviados pelo cliente" para ele mandar os dele.
+  {
+    href: "/portal/arquivos",
+    rotulo: "Arquivos",
+    modulo: "arquivos",
+    secao: "Com a equipe",
+    descricao: "Pastas que o escritório compartilhou com você, e onde você manda os seus arquivos.",
+  },
   {
     href: "/portal/pendencias",
     rotulo: "Pendências",

@@ -935,6 +935,37 @@ export async function sendNovidadeNoProcessoEmail(input: SendNovidadeNoProcessoE
   return enviarAvisoIndividual(input.tenantId, "sendNovidadeNoProcessoEmail", mensagens);
 }
 
+export type SendArquivosCompartilhadosEmailInput = {
+  tenantId: string;
+  destinatarios: { email: string; nome: string }[];
+  companyId: string;
+  empresaNome: string;
+  pastaId: string;
+  pastaNome: string;
+};
+
+// A equipe compartilhou uma pasta dos Arquivos com o cliente e pediu para avisar
+// (09/10/2026). O e-mail diz qual pasta e de qual empresa; os arquivos ficam
+// atrás do login do portal, como nos outros avisos.
+export async function sendArquivosCompartilhadosEmail(input: SendArquivosCompartilhadosEmailInput): Promise<ResultadoDoAviso> {
+  const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const url = `${baseUrl}/portal/arquivos?empresa=${encodeURIComponent(input.companyId)}&pasta=${encodeURIComponent(input.pastaId)}`;
+  const mensagens = input.destinatarios.map((d) => ({
+    to: d.email,
+    subject: `Arquivos de ${input.empresaNome} no portal`,
+    html: emailShell(
+      `
+    <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+      Olá, ${escapeHtml(d.nome)}. A equipe compartilhou arquivos de <strong>${escapeHtml(input.empresaNome)}</strong> na pasta <strong>${escapeHtml(input.pastaNome)}</strong>.
+    </p>
+    ${botaoDoEmail(url, "Ver no portal")}
+  `,
+      "Portal do cliente"
+    ),
+  }));
+  return enviarAvisoIndividual(input.tenantId, "sendArquivosCompartilhadosEmail", mensagens);
+}
+
 export type SendAprovacaoPendenteEmailInput = {
   tenantId: string;
   destinatarios: { email: string; nome: string; quantidade: number }[];
