@@ -261,6 +261,52 @@ export async function anexosDoConnect(ctx: AuthContext, companyId: string): Prom
   return grupos.filter((g) => g.itens.length > 0);
 }
 
+/**
+ * Quantos anexos cada empresa tem nos módulos, ao alcance de quem pede — o
+ * número da lista de empresas dos Arquivos. Uma consulta por origem para a
+ * página inteira, com as mesmas réguas de `anexosDoConnect` (sem o teto de 200
+ * por origem, que é da listagem).
+ */
+export async function totaisDoConnect(ctx: AuthContext, companyIds: string[]): Promise<Map<string, number>> {
+  const total = new Map<string, number>();
+  if (companyIds.length === 0) return total;
+  const prisma = getPrisma();
+  const t = ctx.tenantId;
+  const ok = await origensAoAlcance(ctx);
+  const somar = (companyId: string | null | undefined, n = 1) => {
+    if (companyId) total.set(companyId, (total.get(companyId) ?? 0) + n);
+  };
+
+  const [documentos, solicitacoes, pendencias, processos, envios, conversa] = await Promise.all([
+    prisma.document.groupBy({ by: ["entityId"], where: { tenantId: t, entityType: "COMPANY", entityId: { in: companyIds } }, _count: { _all: true } }),
+    ok.has("solicitacoes")
+      ? prisma.serviceRequestAttachment.findMany({
+          where: { request: { tenantId: t, companyId: { in: companyIds } } },
+          select: { request: { select: { companyId: true, sectorCode: true, assigneeId: true } } },
+        })
+      : Promise.resolve([]),
+    ok.has("pendencias")
+      ? prisma.clientRequestAttachment.findMany({ where: { request: { tenantId: t, companyId: { in: companyIds } } }, select: { request: { select: { companyId: true } } } })
+      : Promise.resolve([]),
+    ok.has("processos")
+      ? prisma.processDocument.findMany({ where: { tenantId: t, process: { companyId: { in: companyIds } } }, select: { process: { select: { companyId: true } } } })
+      : Promise.resolve([]),
+    ok.has("envios")
+      ? prisma.clientDocument.groupBy({ by: ["companyId"], where: { tenantId: t, companyId: { in: companyIds }, fileUrl: { not: null } }, _count: { _all: true } })
+      : Promise.resolve([]),
+    ok.has("conversa")
+      ? prisma.companyMessageAttachment.findMany({ where: { tenantId: t, message: { companyId: { in: companyIds } } }, select: { message: { select: { companyId: true } } } })
+      : Promise.resolve([]),
+  ]);
+  for (const d of documentos) somar(d.entityId, d._count._all);
+  for (const a of solicitacoes) if (podeVerSolicitacao(ctx, a.request)) somar(a.request.companyId);
+  for (const a of pendencias) somar(a.request.companyId);
+  for (const a of processos) somar(a.process.companyId);
+  for (const d of envios) somar(d.companyId, d._count._all);
+  for (const a of conversa) somar(a.message.companyId);
+  return total;
+}
+
 /** Quantos anexos a empresa tem nos módulos, ao alcance de quem pede — para a linha da pasta "Do Connect". */
 export async function totalDoConnect(ctx: AuthContext, companyId: string): Promise<number> {
   return (await anexosDoConnect(ctx, companyId)).reduce((n, g) => n + g.itens.length, 0);

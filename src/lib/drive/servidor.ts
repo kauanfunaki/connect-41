@@ -217,6 +217,13 @@ export async function navegadorDaEquipe(
   }
   const atual = caminho.at(-1) ?? null;
 
+  // Abrir "Enviados pelo cliente" é ver o que o cliente mandou: deixa de ser
+  // novidade na lista de empresas dos Arquivos (o "!" da etiqueta).
+  if (atual?.systemKey === CHAVE_ENVIADOS) {
+    const visto = { seenAt: new Date(), seenByUserId: ctx.userId || null };
+    await prisma.driveFolderSeen.upsert({ where: { folderId: atual.id }, create: { folderId: atual.id, tenantId, ...visto }, update: visto });
+  }
+
   const filhas = ordenarPastas(
     pastas.filter((p) => p.parentId === (pastaId ?? null) && p.deletedAt === null && visivel(p)),
     posicao

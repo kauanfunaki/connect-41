@@ -1,58 +1,52 @@
 import Link from "next/link";
-import { Building2, FolderInput, FolderTree, Search, Trash2 } from "lucide-react";
+import { Building2, CircleAlert, FolderInput, FolderTree, Search, Trash2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
+import { Pagination } from "@/components/shared/Pagination";
 import { isFullWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Selo } from "@/components/ui/Selo";
 import { IconeDoArquivo } from "@/components/arquivos/IconeDoArquivo";
-import { nomeExibicao } from "@/lib/companyName";
 import { formatCnpj, formatInstantDateTime } from "@/lib/format";
-import { digitsOnly } from "@/lib/validation/common";
 import { chegouDoCliente } from "@/lib/drive/servidor";
+import { empresasDosArquivos } from "@/lib/drive/empresas";
 import { abrirArquivos } from "./acesso";
 
-const LIMITE_DE_EMPRESAS = 60;
+/** "Chegou do cliente" curto: o "!" de cada empresa já aponta o resto. */
+const ENVIOS_RECENTES = 6;
 const QUANDO: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "short" };
 
 /**
  * Início dos Arquivos (09/10/2026): o que chegou dos clientes pelo portal, as
  * pastas do escritório e a lista das empresas para abrir as pastas de cada uma.
  * A busca de empresa é por GET (`?empresa=`), como nas outras listas.
+ *
+ * A lista de empresas cabe na tela (10/2026, pedido do Kauan): 12 por página,
+ * quem tem envio novo do cliente primeiro, e à direita a etiqueta com quantos
+ * documentos a empresa tem — âmbar com "!" e o número de novos quando o
+ * cliente mandou algo que ninguém da equipe abriu ainda.
  */
-export default async function ArquivosPage({ searchParams }: { searchParams: Promise<{ empresa?: string }> }) {
+export default async function ArquivosPage({ searchParams }: { searchParams: Promise<{ empresa?: string; pagina?: string }> }) {
   const ctx = await abrirArquivos();
-  const { empresa: termoBruto } = await searchParams;
+  const { empresa: termoBruto, pagina: paginaBruta } = await searchParams;
   const termo = termoBruto?.trim() ?? "";
-  const digitos = digitsOnly(termo);
   const prisma = getPrisma();
 
-  const [recentes, internas, encontradas] = await Promise.all([
-    chegouDoCliente(ctx),
+  const [recentes, internas, lista] = await Promise.all([
+    chegouDoCliente(ctx, ENVIOS_RECENTES),
     prisma.driveFolder.count({ where: { tenantId: ctx.tenantId, companyId: null, parentId: null, deletedAt: null } }),
-    prisma.company.findMany({
-      where: {
-        tenantId: ctx.tenantId,
-        ...(termo
-          ? {
-              OR: [
-                { name: { contains: termo } },
-                { displayName: { contains: termo } },
-                { tradeName: { contains: termo } },
-                ...(digitos && digitos.length >= 3 ? [{ cnpj: { contains: digitos } }] : []),
-              ],
-            }
-          : { status: "ACTIVE" as const }),
-      },
-      orderBy: { name: "asc" },
-      take: LIMITE_DE_EMPRESAS + 1,
-      select: { id: true, name: true, displayName: true, cnpj: true },
-    }),
+    empresasDosArquivos(ctx, { termo, pagina: Number(paginaBruta) || 1 }),
   ]);
-  const limitado = encontradas.length > LIMITE_DE_EMPRESAS;
-  const empresas = encontradas.slice(0, LIMITE_DE_EMPRESAS).sort((a, b) => nomeExibicao(a).localeCompare(nomeExibicao(b), "pt-BR"));
+  const hrefDaPagina = (n: number) => {
+    const q = new URLSearchParams();
+    if (termo) q.set("empresa", termo);
+    if (n > 1) q.set("pagina", String(n));
+    const t = q.toString();
+    return `/arquivos${t ? `?${t}` : ""}`;
+  };
 
   return (
     <PageContainer>
@@ -140,26 +134,51 @@ export default async function ArquivosPage({ searchParams }: { searchParams: Pro
               />
             </form>
           </div>
-          {empresas.length === 0 ? (
+          {lista.comNovidade > 0 && (
+            <p className="text-micro text-fg-muted -mt-1">
+              {lista.comNovidade === 1 ? "1 empresa com" : `${lista.comNovidade} empresas com`} envio do cliente ainda não aberto — aparecem
+              primeiro, com <CircleAlert size={11} className="inline -mt-0.5 text-warning-fg" aria-label="exclamação" />.
+            </p>
+          )}
+          {lista.itens.length === 0 ? (
             <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" description="Busque pelo nome, pelo apelido ou pelo CNPJ." />
           ) : (
             <ul className="bg-surface border border-border rounded-lg divide-y divide-border">
-              {empresas.map((e) => (
-                <li key={e.id}>
-                  <Link href={`/arquivos/empresa/${e.id}`} className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors">
-                    <Building2 size={16} className="text-fg-muted shrink-0" aria-hidden />
-                    <span className="min-w-0 flex-1 text-fs-3 font-medium text-fg truncate">{nomeExibicao(e)}</span>
-                    {e.cnpj && <span className="text-micro text-fg-muted tabular-nums shrink-0 hidden sm:inline">{formatCnpj(e.cnpj)}</span>}
-                  </Link>
-                </li>
-              ))}
+              {lista.itens.map((e) => {
+                const rotulo =
+                  e.novos > 0
+                    ? `${e.novos} ${e.novos === 1 ? "envio novo" : "envios novos"} do cliente · ${e.documentos} ${e.documentos === 1 ? "documento" : "documentos"}`
+                    : `${e.documentos} ${e.documentos === 1 ? "documento" : "documentos"}`;
+                return (
+                  <li key={e.id}>
+                    <Link
+                      href={`/arquivos/empresa/${e.id}${e.novos > 0 ? "?pasta=enviados" : ""}`}
+                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors"
+                    >
+                      <Building2 size={16} className="text-fg-muted shrink-0" aria-hidden />
+                      <span className="min-w-0 flex-1 text-fs-3 font-medium text-fg truncate">{e.nome}</span>
+                      {e.cnpj && <span className="text-micro text-fg-muted tabular-nums shrink-0 hidden sm:inline">{formatCnpj(e.cnpj)}</span>}
+                      {/* A etiqueta: quantos documentos (Arquivos + Do Connect);
+                          com envio novo do cliente, "!" e quantos são novos. */}
+                      {e.novos > 0 ? (
+                        <Selo tom="atencao" className="shrink-0 gap-1 tabular-nums">
+                          <CircleAlert size={12} aria-hidden />
+                          <span>{e.novos}</span>
+                          <span className="sr-only">{rotulo}</span>
+                        </Selo>
+                      ) : (
+                        <Selo tom="neutro" className="shrink-0 tabular-nums">
+                          <span aria-hidden>{e.documentos}</span>
+                          <span className="sr-only">{rotulo}</span>
+                        </Selo>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
-          {limitado && (
-            <p className="text-micro text-fg-muted">
-              {termo ? `Mostrando as ${LIMITE_DE_EMPRESAS} primeiras. Refine a busca para achar a sua.` : `Mostrando ${LIMITE_DE_EMPRESAS} empresas ativas. Busque pelo nome ou CNPJ para achar as outras.`}
-            </p>
-          )}
+          <Pagination page={lista.pagina} totalPages={lista.paginas} total={lista.total} rotulo="empresas" buildHref={hrefDaPagina} />
         </section>
       </div>
     </PageContainer>
