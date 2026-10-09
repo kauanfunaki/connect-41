@@ -4,6 +4,7 @@ import type { UserRole } from "@/generated/prisma/enums";
 import { getPrisma } from "@/lib/prisma";
 import { isSubscriptionReadOnly, canSelfRegularize } from "@/lib/subscription-policy";
 import { HEADER_SETOR_ATIVO, resolveActiveSector, sectorScope } from "@/lib/auth/activeSector";
+import { isFullAccess } from "./papeis";
 
 export interface AuthContext {
   userId: string;
@@ -84,39 +85,9 @@ export function scopedSectors(ctx: AuthContext): string[] | null {
   return sectorScope(ctx.activeSector, ctx.sectors, isFullAccess(ctx.role));
 }
 
-// SUPER_ADMIN e ADMIN enxergam/gerenciam tudo do tenant; READONLY enxerga tudo mas nunca escreve.
-export function isFullAccess(role: UserRole): boolean {
-  return role === "SUPER_ADMIN" || role === "ADMIN" || role === "READONLY";
-}
-
-export function isFullWrite(role: UserRole): boolean {
-  return role === "SUPER_ADMIN" || role === "ADMIN";
-}
-
-// Pode criar/editar/excluir (fora do escopo estrito de setor de pipeline).
-export function canWrite(role: UserRole): boolean {
-  return role === "SUPER_ADMIN" || role === "ADMIN" || role === "SECTOR_ADMIN";
-}
-
-// Pode registrar atividade (nota, mudança de estágio) — inclui SECTOR_USER.
-export function canAct(role: UserRole): boolean {
-  return role !== "READONLY";
-}
-
-export function canManageSector(ctx: AuthContext, sectorCode: string): boolean {
-  if (ctx.subscriptionReadOnly) return false;
-  if (isFullWrite(ctx.role)) return true;
-  if (ctx.role === "READONLY") return false;
-  return ctx.role === "SECTOR_ADMIN" && ctx.sectors.includes(sectorCode);
-}
-
-export function canActOnSector(ctx: AuthContext, sectorCode: string): boolean {
-  if (ctx.subscriptionReadOnly) return false;
-  if (isFullAccess(ctx.role)) return ctx.role !== "READONLY";
-  return ctx.sectors.includes(sectorCode);
-}
-
-export function canViewSector(ctx: AuthContext, sectorCode: string): boolean {
-  if (isFullAccess(ctx.role)) return true;
-  return ctx.sectors.includes(sectorCode);
-}
+// As regras de papel (isFullAccess, canAct, canViewSector...) moram em
+// ./papeis.ts desde 09/10/2026: são funções puras, e este arquivo depende de
+// next/headers e do Prisma — componente de cliente e o motor de alertas (que
+// roda na instrumentação) não podem importar daqui. Reexportadas para quem já
+// importava deste arquivo.
+export { isFullAccess, isFullWrite, canWrite, canAct, canManageSector, canActOnSector, canViewSector } from "./papeis";

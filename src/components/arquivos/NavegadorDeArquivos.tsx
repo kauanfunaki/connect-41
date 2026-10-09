@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  Blocks,
+  CalendarClock,
   Download,
   Eye,
   Folder,
@@ -30,12 +32,14 @@ import { ItemDoMenu } from "@/components/ui/Popover";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { formatarBytes } from "@/lib/fileSize";
-import { formatInstantDateTime } from "@/lib/format";
+import { formatCalendarDate, formatInstantDateTime } from "@/lib/format";
+import { situacaoDoVencimento } from "@/lib/drive/regras";
 import { enderecoDaPasta, rotuloDeItens, type ArquivoNaTela, type NavegadorNaTela, type PastaNaTela, type ResultadoDaBusca } from "@/lib/drive/tela";
 import {
   alterarSetorDaPasta,
   compartilharPasta,
   criarPasta,
+  definirVencimento,
   excluirArquivo,
   excluirPasta,
   moverArquivo,
@@ -46,7 +50,7 @@ import {
 } from "@/app/(app)/arquivos/actions";
 import { IconeDoArquivo } from "./IconeDoArquivo";
 import { EnvioDeArquivos } from "./EnvioDeArquivos";
-import { DialogoDeCompartilhar, DialogoDeMover, DialogoDeNome, DialogoDeSetor } from "./DialogosDoDrive";
+import { DialogoDeCompartilhar, DialogoDeMover, DialogoDeNome, DialogoDeSetor, DialogoDeVencimento } from "./DialogosDoDrive";
 
 type Props = {
   dados: NavegadorNaTela;
@@ -64,6 +68,7 @@ type Dialogo =
   | { tipo: "moverPasta"; pasta: { id: string; parentId: string | null } }
   | { tipo: "compartilhar"; pasta: { id: string; nome: string; compartilhada: boolean; compartilhadaPor: string | null; fixa: boolean } }
   | { tipo: "renomearArquivo"; arquivo: ArquivoNaTela }
+  | { tipo: "vencimento"; arquivo: ArquivoNaTela }
   | { tipo: "moverArquivo"; arquivo: ArquivoNaTela & { pastaId: string } };
 
 const QUANDO: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "short" };
@@ -333,13 +338,31 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, busca }: Props)
                   onExcluir={() => confirmarExclusao("pasta", p.id, p.nome)}
                 />
               ))}
+              {naEmpresa && !pasta && (
+                <li>
+                  <Link
+                    href={enderecoDaPasta(base, "do-connect")}
+                    className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors"
+                  >
+                    <Blocks size={18} className="text-fg-muted shrink-0" aria-hidden />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-fs-3 font-medium text-fg">Do Connect</span>
+                      <span className="block text-micro text-fg-muted truncate">
+                        Os anexos que já estão nas solicitações, pendências, processos, envios e na ficha. Só leitura.
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              )}
               {dados.arquivos.map((a) => (
                 <LinhaDoArquivo
                   key={a.id}
                   arquivo={a}
+                  hoje={dados.hoje}
                   podeMexer={podeMexer}
                   mostrarCliente={naEmpresa && !!(pasta?.compartilhada || pasta?.compartilhadaPor)}
                   onRenomear={() => abrir({ tipo: "renomearArquivo", arquivo: a })}
+                  onVencimento={() => abrir({ tipo: "vencimento", arquivo: a })}
                   onMover={() => pasta && abrir({ tipo: "moverArquivo", arquivo: { ...a, pastaId: pasta.id } })}
                   onExcluir={() => confirmarExclusao("arquivo", a.id, a.nome)}
                 />
@@ -386,6 +409,17 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, busca }: Props)
           erro={erro}
           pendente={pendente}
           onSalvar={(nome) => executar(() => renomearArquivo(dialogo.arquivo.id, nome), "Arquivo renomeado.")}
+        />
+      )}
+      {dialogo?.tipo === "vencimento" && (
+        <DialogoDeVencimento
+          open
+          onClose={() => setDialogo(null)}
+          arquivoNome={dialogo.arquivo.nome}
+          atual={dialogo.arquivo.venceEm}
+          erro={erro}
+          pendente={pendente}
+          onSalvar={(data) => executar(() => definirVencimento(dialogo.arquivo.id, data), data ? "Vencimento salvo." : "Vencimento retirado.")}
         />
       )}
       {dialogo?.tipo === "setorPasta" && (
@@ -520,20 +554,26 @@ function LinhaDaPasta({
 
 function LinhaDoArquivo({
   arquivo,
+  hoje,
   podeMexer,
   mostrarCliente,
   onRenomear,
+  onVencimento,
   onMover,
   onExcluir,
 }: {
   arquivo: ArquivoNaTela;
+  hoje: string;
   podeMexer: boolean;
   /** A pasta está no portal: vale mostrar se o cliente abriu. */
   mostrarCliente: boolean;
   onRenomear: () => void;
+  onVencimento: () => void;
   onMover: () => void;
   onExcluir: () => void;
 }) {
+  const vencimento = situacaoDoVencimento(arquivo.venceEm, hoje);
+  const dataDoVencimento = arquivo.venceEm ? formatCalendarDate(new Date(`${arquivo.venceEm}T00:00:00Z`)) : null;
   return (
     <li className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors">
       <IconeDoArquivo nome={arquivo.nome} />
@@ -552,6 +592,11 @@ function LinhaDoArquivo({
           {formatInstantDateTime(new Date(arquivo.enviadoEm), QUANDO)}
         </p>
       </div>
+      {vencimento && (
+        <Selo tom={vencimento === "vencido" ? "perigo" : vencimento === "vence-logo" ? "atencao" : "neutro"} className="shrink-0">
+          <CalendarClock size={10} aria-hidden /> {vencimento === "vencido" ? `Venceu ${dataDoVencimento}` : `Vence ${dataDoVencimento}`}
+        </Selo>
+      )}
       {mostrarCliente && (
         <span
           className="hidden sm:inline text-micro text-fg-muted tabular-nums shrink-0"
@@ -575,6 +620,9 @@ function LinhaDoArquivo({
           <>
             <ItemDoMenu icone={<Pencil size={14} />} onClick={onRenomear}>
               Renomear
+            </ItemDoMenu>
+            <ItemDoMenu icone={<CalendarClock size={14} />} onClick={onVencimento}>
+              Vencimento
             </ItemDoMenu>
             <ItemDoMenu icone={<MoveRight size={14} />} onClick={onMover}>
               Mover

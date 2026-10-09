@@ -20,6 +20,7 @@ import {
   caminhoDaPasta,
   caminhoNaLixeira,
   ehPastaDaCasa,
+  lerVencimento,
   mapaDePastas,
   moverCriaCiclo,
   podeMexerNoCaminho,
@@ -29,7 +30,9 @@ import {
   validarNomeDaPasta,
   validarNomeDoArquivo,
 } from "@/lib/drive/regras";
-import { arquivoParaAEquipe, empresaDoDrive, pastaParaAEquipe, pastasDoEscopo } from "@/lib/drive/servidor";
+import { arquivoParaAEquipe, destinosDaEmpresa, empresaDoDrive, guardarCopias, pastaParaAEquipe, pastasDoEscopo } from "@/lib/drive/servidor";
+import { lerDoConnect, ORIGENS_DO_CONNECT, type OrigemDoConnect } from "@/lib/drive/doConnect";
+import type { DestinoNaTela } from "@/lib/drive/tela";
 import { avisarClienteDaPasta } from "@/lib/drive/avisos";
 
 export type ResultadoDaAcao = { error: string } | { ok: true; aviso?: string | null };
@@ -296,6 +299,27 @@ export async function renomearArquivo(id: string, nome: string): Promise<Resulta
   return { ok: true };
 }
 
+/** Define (ou tira, com `null`) o vencimento do arquivo. "AAAA-MM-DD", gravado à meia-noite UTC como toda data-calendário. */
+export async function definirVencimento(id: string, data: string | null): Promise<ResultadoDaAcao> {
+  const ctx = await contexto();
+  if ("error" in ctx) return ctx;
+  const alvo = await arquivoParaMexer(ctx, id);
+  if ("error" in alvo) return alvo;
+  const venceEm = lerVencimento(data);
+  if (venceEm === undefined) return { error: "Data de vencimento inválida." };
+  await getPrisma().driveFile.update({ where: { id }, data: { expiresAt: venceEm ? new Date(`${venceEm}T00:00:00Z`) : null } });
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "drive.file_expiry",
+    entityType: "DriveFile",
+    entityId: id,
+    metadata: { venceEm },
+  });
+  revalidar(alvo.pasta.companyId);
+  return { ok: true };
+}
+
 export async function moverArquivo(id: string, destinoId: string): Promise<ResultadoDaAcao> {
   const ctx = await contexto();
   if ("error" in ctx) return ctx;
@@ -378,5 +402,39 @@ export async function restaurar(tipo: "pasta" | "arquivo", id: string): Promise<
     entityId: id,
   });
   revalidar(companyId);
+  return { ok: true };
+}
+
+// ─── Cópias para as pastas ───────────────────────────────────────────────────
+
+/**
+ * As pastas da empresa onde a pessoa pode guardar uma cópia — o campo
+ * "Guardar também em Arquivos" dos formulários em que a empresa é escolhida
+ * na hora (nova pendência, novo envio). `null` some com o campo.
+ */
+export async function destinosParaGuardar(companyId: string): Promise<DestinoNaTela[] | null> {
+  const ctx = await getAuthContext();
+  if (!ctx.userId || !ctx.tenantId || !companyId) return null;
+  return destinosDaEmpresa(ctx, companyId);
+}
+
+/** "Guardar numa pasta", no "Do Connect": copia o anexo do módulo para uma pasta de verdade da mesma empresa. */
+export async function guardarDoConnect(origem: OrigemDoConnect, id: string, pastaId: string): Promise<ResultadoDaAcao> {
+  const ctx = await contexto();
+  if ("error" in ctx) return ctx;
+  if (!ORIGENS_DO_CONNECT.includes(origem)) return { error: "Origem desconhecida." };
+  const item = await lerDoConnect(ctx, origem, id);
+  if (!item) return { error: "Anexo não encontrado." };
+  const r = await guardarCopias(ctx, { pastaId, companyId: item.companyId, arquivos: [{ nome: item.nome, conteudo: item.conteudo }] });
+  if (r.guardados === 0) return { error: r.erro ?? "Não deu para guardar a cópia." };
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "drive.file_copy_from_module",
+    entityType: "DriveFolder",
+    entityId: pastaId,
+    metadata: { origem, id, companyId: item.companyId },
+  });
+  revalidar(item.companyId);
   return { ok: true };
 }

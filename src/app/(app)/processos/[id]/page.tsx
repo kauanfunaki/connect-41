@@ -42,6 +42,8 @@ import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { DocumentosDoProcesso } from "@/components/societario/DocumentosDoProcesso";
 import { conversaDoProcesso } from "@/lib/societario/conversa";
 import { enviarMensagemNoProcesso, adicionarDocumentosAoProcesso } from "../conversa-actions";
+import { CampoGuardarNosArquivos } from "@/components/arquivos/CampoGuardarNosArquivos";
+import { destinosDaEmpresa } from "@/lib/drive/servidor";
 import { aplicarAviso, descartarAviso } from "../avisos-actions";
 import { AvisosDaJunta } from "@/components/societario/AvisosDaJunta";
 import { avisosPendentes } from "@/lib/societario/avisos";
@@ -226,10 +228,11 @@ export default async function ProcessoDetalhePage({
       : Promise.resolve(null),
   ]);
 
-  const [{ taxas, custo }, conversa, avisos] = await Promise.all([
+  const [{ taxas, custo }, conversa, avisos, destinos] = await Promise.all([
     taxasDoProcesso(ctx.tenantId, processo.id),
     conversaDoProcesso({ tenantId: ctx.tenantId, companyIds: null }, processo.id),
     avisosPendentes(ctx.tenantId, processo.id),
+    destinosDaEmpresa(ctx, processo.company.id),
   ]);
 
   // O responsável atual entra na lista mesmo que tenha saído do setor — senão o
@@ -474,6 +477,7 @@ export default async function ProcessoDetalhePage({
                   acao={enviarMensagemNoProcesso}
                   rotulo="Enviar ao cliente"
                   dica="Anexe PDF, PNG, JPG ou XML de até 10 MB."
+                  extras={<CampoGuardarNosArquivos companyId={processo.company.id} destinos={destinos} id="processo-msg-guardar" />}
                 />
               </Card>
 
@@ -488,6 +492,7 @@ export default async function ProcessoDetalhePage({
                   acao={adicionarDocumentosAoProcesso}
                   ladoDeQuemVe="EQUIPE"
                   dica="O cliente vê e é avisado."
+                  extras={<CampoGuardarNosArquivos companyId={processo.company.id} destinos={destinos} id="processo-doc-guardar" />}
                 />
               </Card>
             </>

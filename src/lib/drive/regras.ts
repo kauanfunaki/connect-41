@@ -11,7 +11,8 @@
 // propriedades que importam herdam para baixo: o setor dono de uma pasta vale
 // para tudo que está dentro dela, e o compartilhamento também.
 
-import { canAct, canActOnSector, canViewSector, type AuthContext } from "@/lib/auth/context";
+import { canAct, canActOnSector, canViewSector } from "@/lib/auth/papeis";
+import type { AuthContext } from "@/lib/auth/context";
 
 export const MODULO_ARQUIVOS = "arquivos";
 
@@ -83,7 +84,7 @@ export function caminhoNaLixeira(caminho: readonly PastaDoDrive[]): boolean {
 
 /** Vê a pasta: todo setor dono no caminho precisa estar ao alcance de quem pede. */
 export function podeVerCaminho(quem: QuemPede, caminho: readonly PastaDoDrive[]): boolean {
-  return setoresDoCaminho(caminho).every((s) => canViewSector(quem as AuthContext, s));
+  return setoresDoCaminho(caminho).every((s) => canViewSector(quem, s));
 }
 
 /**
@@ -93,7 +94,7 @@ export function podeVerCaminho(quem: QuemPede, caminho: readonly PastaDoDrive[])
  */
 export function podeMexerNoCaminho(quem: QuemPede, caminho: readonly PastaDoDrive[]): boolean {
   if (quem.subscriptionReadOnly || !canAct(quem.role)) return false;
-  return setoresDoCaminho(caminho).every((s) => canActOnSector(quem as AuthContext, s));
+  return setoresDoCaminho(caminho).every((s) => canActOnSector(quem, s));
 }
 
 /** Escrita fora de qualquer pasta (criar pasta no primeiro nível). */
@@ -103,7 +104,7 @@ export function podeMexerNoDrive(quem: QuemPede): boolean {
 
 /** Pode tornar uma pasta "só do setor X": precisa poder agir no setor X. */
 export function podeRestringirAoSetor(quem: QuemPede, setor: string): boolean {
-  return podeMexerNoDrive(quem) && canActOnSector(quem as AuthContext, setor);
+  return podeMexerNoDrive(quem) && canActOnSector(quem, setor);
 }
 
 /** Pasta da casa (modelo ou "Enviados pelo cliente"): não muda de nome, de lugar, nem vai para a lixeira. */
@@ -203,6 +204,60 @@ export const MODELO_PADRAO: readonly PastaDoModelo[] = [
   { name: "Guias", sectorCode: null, sharedWithPortal: true },
   { name: "Certidões", sectorCode: null, sharedWithPortal: true },
 ];
+
+// ─── Vencimento ──────────────────────────────────────────────────────────────
+
+/** Com quantos dias de antecedência o arquivo que vence passa a pedir atenção (o mesmo do alerta). */
+export const DIAS_DE_AVISO_DO_VENCIMENTO = 30;
+
+/** "AAAA-MM-DD" válido, ou `null` para tirar o vencimento. `undefined` quando o texto não é uma data. */
+export function lerVencimento(bruto: string | null | undefined): string | null | undefined {
+  const t = (bruto ?? "").trim();
+  if (!t) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return undefined;
+  const d = new Date(`${t}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== t ? undefined : t;
+}
+
+export type SituacaoDoVencimento = "vencido" | "vence-logo" | "em-dia";
+
+/** Dias de `de` até `ate`, as duas "AAAA-MM-DD" (negativo quando `ate` já passou). */
+export function diasEntre(de: string, ate: string): number {
+  return Math.round((Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
+}
+
+/** Marcos do alerta de vencimento: 30 e 7 dias antes, e no dia. Depois disso, um aviso de vencido. */
+export const FAIXAS_DO_VENCIMENTO = [30, 7, 0] as const;
+export type FaixaDoVencimento = (typeof FAIXAS_DO_VENCIMENTO)[number] | "vencido";
+
+/**
+ * Em que faixa de aviso o arquivo está hoje — a menor que ainda cobre os dias
+ * que faltam, como nos certificados: quem põe o vencimento a 10 dias recebe o
+ * aviso de 7, e não o de 30 atrasado. `null` = longe de vencer.
+ */
+export function faixaDoVencimento(venceEm: string, hoje: string): FaixaDoVencimento | null {
+  const dias = diasEntre(hoje, venceEm);
+  if (dias < 0) return "vencido";
+  const cobre = FAIXAS_DO_VENCIMENTO.filter((f) => dias <= f);
+  return cobre.length ? cobre[cobre.length - 1] : null;
+}
+
+/** O texto do sino. Cabe nos 255 do aviso. */
+export function textoDoVencimento(input: { arquivo: string; onde: string; venceEm: string; hoje: string }): string {
+  const dias = diasEntre(input.hoje, input.venceEm);
+  const data = input.venceEm.split("-").reverse().join("/");
+  const quando = dias < 0 ? `venceu em ${data}` : dias === 0 ? "vence hoje" : `vence em ${dias} dia(s), ${data}`;
+  return `“${input.arquivo}” (${input.onde}) ${quando}.`.slice(0, 255);
+}
+
+/** Compara datas-calendário em texto ("AAAA-MM-DD"), sem fuso no meio. */
+export function situacaoDoVencimento(venceEm: string | null, hoje: string): SituacaoDoVencimento | null {
+  if (!venceEm) return null;
+  if (venceEm < hoje) return "vencido";
+  const limite = new Date(`${hoje}T00:00:00Z`);
+  limite.setUTCDate(limite.getUTCDate() + DIAS_DE_AVISO_DO_VENCIMENTO);
+  return venceEm <= limite.toISOString().slice(0, 10) ? "vence-logo" : "em-dia";
+}
 
 // ─── Avisos ──────────────────────────────────────────────────────────────────
 
