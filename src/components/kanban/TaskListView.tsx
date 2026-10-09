@@ -12,6 +12,7 @@ import { darkenUntilReadableOnWhiteText } from "@/lib/color";
 import { RowActionsMenu } from "@/components/kanban/RowActionsMenu";
 import { Button } from "@/components/ui/Button";
 import { TabelaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -232,12 +233,9 @@ function Row({
         <td className="py-2 pr-2 w-44">
           {tags.length > 0 && (
             <div className="flex items-center gap-1 min-w-0">
-              <span
-                className="inline-flex items-center text-micro font-medium px-1.5 py-0.5 rounded-full truncate"
-                style={{ background: `${tags[0].color}1A`, color: tags[0].color }}
-              >
+              <EtiquetaColorida cor={tags[0].color} className="min-w-0">
                 {tags[0].name}
-              </span>
+              </EtiquetaColorida>
               {tags.length > 1 && (
                 <span
                   className="inline-flex items-center flex-shrink-0 text-micro font-medium px-1.5 py-0.5 rounded-full bg-surface-hover text-fg-muted tnum"
@@ -384,13 +382,9 @@ function TaskCard({
         {tags.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap">
             {tags.map((t) => (
-              <span
-                key={t.id}
-                className="inline-flex items-center text-micro font-medium px-1.5 py-0.5 rounded-full"
-                style={{ background: `${t.color}1A`, color: t.color }}
-              >
+              <EtiquetaColorida key={t.id} cor={t.color}>
                 {t.name}
-              </span>
+              </EtiquetaColorida>
             ))}
           </div>
         )}
