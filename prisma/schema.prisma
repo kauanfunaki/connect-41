@@ -6696,6 +6696,7 @@ model DriveFolder {
   parent   DriveFolder?  @relation("DriveFolderArvore", fields: [parentId], references: [id], onDelete: Cascade)
   children DriveFolder[] @relation("DriveFolderArvore")
   files    DriveFile[]
+  vista    DriveFolderSeen?
 
   // Uma pasta da casa por empresa. Pasta comum tem systemKey NULL, e NULL não
   // colide com NULL no MySQL.
@@ -6705,6 +6706,22 @@ model DriveFolder {
   // A limpeza da lixeira (src/lib/drive/lixeira.ts) varre todos os escritórios.
   @@index([deletedAt])
   @@map("drive_folders")
+}
+
+/// Até quando a equipe viu o que o cliente mandou numa pasta — na prática, a
+/// "Enviados pelo cliente" de cada empresa. O que chegou depois é novidade, e a
+/// lista de empresas dos Arquivos mostra com "!" (10/2026). Marca quando alguém
+/// da equipe abre a pasta: é ali que os envios aparecem.
+model DriveFolderSeen {
+  folderId     String   @id
+  tenantId     String
+  seenAt       DateTime
+  seenByUserId String?
+
+  folder DriveFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("drive_folder_seen")
 }
 
 /// Arquivo do Drive. Em disco em storage/drive/<storageKey>.
