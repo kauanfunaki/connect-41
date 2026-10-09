@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useConfirm } from "@/components/ui/useConfirm";
 import type { OpcaoDoFunil } from "@/lib/filtrosDaListaDeEmpresas";
 import { StatusDot } from "@/components/shared/StatusDot";
+import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 
 const TH = "px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted";
 
@@ -83,13 +84,9 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
     return (
       <div className="flex flex-wrap gap-1">
         {c.tags.map((t) => (
-          <span
-            key={t.id}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-micro font-medium border"
-            style={{ background: `${t.color}1A`, color: t.color, borderColor: `${t.color}40` }}
-          >
+          <EtiquetaColorida key={t.id} cor={t.color}>
             {t.name}
-          </span>
+          </EtiquetaColorida>
         ))}
       </div>
     );

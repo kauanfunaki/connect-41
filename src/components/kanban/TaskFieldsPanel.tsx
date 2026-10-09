@@ -13,6 +13,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { TagToggleList } from "@/components/kanban/TagToggleList";
 import { AssigneeToggleList } from "@/components/kanban/AssigneeToggleList";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
+import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 
 type StageOption = { id: string; name: string };
 type TagOption = { id: string; name: string; color: string };
@@ -256,9 +257,9 @@ export function TaskFieldsPanel({
                 <button type="button" onClick={toggle} aria-expanded={open} className="flex items-center gap-1 flex-wrap">
                   {hasEtiquetas ? (
                     selectedTags.map((t) => (
-                      <span key={t.id} className="inline-flex items-center text-fs-1 font-medium px-2 py-0.5 rounded-full" style={{ background: `${t.color}1A`, color: t.color }}>
+                      <EtiquetaColorida key={t.id} cor={t.color}>
                         {t.name}
-                      </span>
+                      </EtiquetaColorida>
                     ))
                   ) : (
                     <span className="text-fs-3 text-fg-muted">Vazio</span>
@@ -271,9 +272,9 @@ export function TaskFieldsPanel({
           ) : (
             <div className="flex items-center gap-1 flex-wrap">
               {selectedTags.map((t) => (
-                <span key={t.id} className="inline-flex items-center text-fs-1 font-medium px-2 py-0.5 rounded-full" style={{ background: `${t.color}1A`, color: t.color }}>
+                <EtiquetaColorida key={t.id} cor={t.color}>
                   {t.name}
-                </span>
+                </EtiquetaColorida>
               ))}
             </div>
           )}
