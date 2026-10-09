@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { ChevronDown, Plug, Bot, RefreshCw, Zap } from "lucide-react";
+import { useActionState, useRef, useState } from "react";
+import { ChevronDown, FileKey, Plug, Bot, RefreshCw, Zap } from "lucide-react";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -166,14 +166,18 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
                     guardado ? `Guardado. Deixe em branco para manter. ${c.help ?? ""}` : c.help
                   }
                 >
-                  <Input
-                    id={`${i.code}-${c.name}`}
-                    name={c.name}
-                    type={c.type === "secret" ? "password" : c.type === "url" ? "url" : "text"}
-                    autoComplete="off"
-                    defaultValue={i.valores[c.name] ?? ""}
-                    placeholder={guardado ? "•••• (preenchido)" : ""}
-                  />
+                  {c.type === "certificado" ? (
+                    <CampoDeCertificado id={`${i.code}-${c.name}`} name={c.name} guardado={guardado} />
+                  ) : (
+                    <Input
+                      id={`${i.code}-${c.name}`}
+                      name={c.name}
+                      type={c.type === "secret" ? "password" : c.type === "url" ? "url" : "text"}
+                      autoComplete="off"
+                      defaultValue={i.valores[c.name] ?? ""}
+                      placeholder={guardado ? "•••• (preenchido)" : ""}
+                    />
+                  )}
                 </CampoForm>
               );
             })}
@@ -197,6 +201,32 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
         </form>
       )}
     </Card>
+  );
+}
+
+/**
+ * O .pfx do certificado A1. Vai no próprio formulário (o arquivo segue no
+ * FormData) e nunca volta para a tela: guardado, aparece só como "guardado".
+ */
+function CampoDeCertificado({ id, name, guardado }: { id: string; name: string; guardado: boolean }) {
+  const entrada = useRef<HTMLInputElement>(null);
+  const [arquivo, setArquivo] = useState<string | null>(null);
+  return (
+    <div className="flex flex-wrap items-center gap-2 min-h-9">
+      <input
+        ref={entrada}
+        id={id}
+        name={name}
+        type="file"
+        accept=".pfx,.p12,application/x-pkcs12"
+        className="sr-only"
+        onChange={(e) => setArquivo(e.target.files?.[0]?.name ?? null)}
+      />
+      <Button type="button" variant="secondary" size="sm" onClick={() => entrada.current?.click()}>
+        <FileKey size={14} /> {arquivo || guardado ? "Trocar arquivo" : "Escolher arquivo"}
+      </Button>
+      <span className="text-ui text-fg-muted truncate min-w-0">{arquivo ?? (guardado ? "Certificado guardado" : "Nenhum arquivo")}</span>
+    </div>
   );
 }
 

@@ -31,6 +31,7 @@ const TIPOS_INDIRETOS = [
   "DRIVE_FILE_EXPIRING",
   "AUTORIZACAO_VALIDAR",
   "AUTORIZACAO_VENCENDO",
+  "SERPRO_CONFERENCIA",
 ];
 
 function arquivos(dir: string, out: string[] = []): string[] {

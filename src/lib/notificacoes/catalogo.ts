@@ -95,6 +95,7 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   DRIVE_FILE_EXPIRING: a("documento", "warning", "Arquivo a vencer"),
   AUTORIZACAO_VALIDAR: a("prazo", "warning", "Autorização de acesso a validar"),
   AUTORIZACAO_VENCENDO: a("documento", "warning", "Autorização de acesso a vencer"),
+  SERPRO_CONFERENCIA: a("documento", "info", "Conferência no Serpro"),
   ADMISSAO_STALE: a("alerta", "warning", "Admissão parada"),
   HANDOFF_STALE: a("alerta", "warning", "Transferência parada"),
   FINANCE_CONTAS_DIA: a("dinheiro", "info", "Contas do dia"),
