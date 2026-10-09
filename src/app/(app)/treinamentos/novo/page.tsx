@@ -15,7 +15,7 @@ export default async function NovoTreinamentoPage() {
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Treinamentos", href: "/treinamentos" }, { label: "Novo" }]} />
-      <PageHeader title="Novo Treinamento" />
+      <PageHeader title="Novo treinamento" />
 
       <Card className="p-6">
         <TrainingForm action={criarTreinamento} cancelHref="/treinamentos" />

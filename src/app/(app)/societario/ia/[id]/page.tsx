@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { formatInstantDate, formatarReais } from "@/lib/format";
@@ -25,7 +25,7 @@ const STATUS = {
   PENDENTE: { rotulo: "Esperando revisão", variante: "info" },
   APROVADA: { rotulo: "Aprovada", variante: "success" },
   EDITADA: { rotulo: "Aprovada com ajuste", variante: "warning" },
-  REJEITADA: { rotulo: "Rejeitada", variante: "danger" },
+  REJEITADA: { rotulo: "Rejeitada", variante: "neutral" },
 } as const;
 const CONFIANCA = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa" } as const;
 
@@ -42,8 +42,8 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
   const s = STATUS[proposta.status];
 
   const cabecalho = (
-    <div className="mb-4 flex flex-wrap items-center gap-2 text-[12px] text-fg-muted">
-      <Badge variant={s.variante}>{s.rotulo}</Badge>
+    <div className="mb-4 flex flex-wrap items-center gap-2 text-fs-2 text-fg-muted">
+      <Selo tom={tomDaVariante(s.variante)}>{s.rotulo}</Selo>
       <span>{agenteDoCatalogo(proposta.agentCode)?.label ?? proposta.agentCode}</span>
       <span>· pedido por {proposta.createdBy?.name ?? "—"} em {formatInstantDate(proposta.createdAt)}</span>
       {proposta.confidence && <span>· confiança declarada pela IA: {CONFIANCA[proposta.confidence]}</span>}
@@ -55,7 +55,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
     </div>
   );
   const motivo = proposta.status === "REJEITADA" && proposta.notes && (
-    <p className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg">
+    <p className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg">
       <span className="font-medium">Motivo da rejeição:</span> {proposta.notes}
     </p>
   );
@@ -138,7 +138,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
         />
         {cabecalho}
         {motivo}
-        <p className="mb-4 text-[13px] text-fg-secondary">
+        <p className="mb-4 text-fs-3 text-fg-secondary">
           Arquivo: {payload.arquivo}
           {l.tipoDoDocumento && ` · ${l.tipoDoDocumento}`}
           {l.dataDoDocumento && ` de ${l.dataDoDocumento.split("-").reverse().join("/")}`}

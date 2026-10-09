@@ -40,7 +40,7 @@ export function EmpresasFilterButton({ statusFilter, tabs }: Props) {
           <Link
             href={buildUrl(undefined)}
             onClick={close}
-            className={`block px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+            className={`block px-2.5 py-1.5 rounded-lg text-fs-3 font-medium transition-colors ${
               !statusFilter ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
             }`}
           >
@@ -51,7 +51,7 @@ export function EmpresasFilterButton({ statusFilter, tabs }: Props) {
               key={tab.value}
               href={buildUrl(tab.value)}
               onClick={close}
-              className={`block px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+              className={`block px-2.5 py-1.5 rounded-lg text-fs-3 font-medium transition-colors ${
                 tab.value === statusFilter ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
               }`}
             >
@@ -62,7 +62,7 @@ export function EmpresasFilterButton({ statusFilter, tabs }: Props) {
             <Link
               href={buildUrl(STATUS_TODOS)}
               onClick={close}
-              className={`block px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+              className={`block px-2.5 py-1.5 rounded-lg text-fs-3 font-medium transition-colors ${
                 statusFilter === STATUS_TODOS
                   ? "bg-brand-subtle text-brand"
                   : "text-fg-secondary hover:bg-surface-hover hover:text-fg"

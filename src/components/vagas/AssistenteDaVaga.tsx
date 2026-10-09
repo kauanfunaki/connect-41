@@ -62,9 +62,9 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
     <section className="flex flex-col gap-3 border-t border-border pt-5">
       <div className="flex items-center gap-2">
         <Sparkles size={16} className="text-brand" />
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Assistente da vaga</h2>
+        <h2 className="text-card-title font-semibold text-fg">Assistente da vaga</h2>
       </div>
-      <p className="text-[length:var(--fs-ui)] text-fg-secondary max-w-[60ch]">
+      <p className="text-ui text-fg-secondary max-w-[60ch]">
         Pergunte sobre os candidatos desta vaga. O assistente lê as fichas e as entrevistas e pode
         sugerir movimentos — <strong>ele não altera nada</strong>; toda mudança passa pelo seu
         “Aplicar”.
@@ -96,11 +96,11 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
               O assistente parou antes de terminar — a resposta pode estar incompleta.
             </Aviso>
           )}
-          <p className="text-[length:var(--fs-ui)] text-fg whitespace-pre-wrap">{resposta.texto}</p>
+          <p className="text-ui text-fg whitespace-pre-wrap">{resposta.texto}</p>
 
           {propostas.length > 0 && (
             <div className="border-t border-border-soft pt-3 flex flex-col gap-2">
-              <p className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted">
+              <p className="text-micro uppercase tracking-wide text-fg-muted">
                 Sugestões — nada foi feito ainda
               </p>
               {propostas.map((p, i) => {
@@ -110,13 +110,13 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
                     key={i}
                     className="flex flex-wrap items-center justify-between gap-2 border border-border rounded-md px-3 py-2"
                   >
-                    <span className="min-w-0 text-[length:var(--fs-ui)] text-fg">{descreverProposta(p)}</span>
+                    <span className="min-w-0 text-ui text-fg">{descreverProposta(p)}</span>
                     {feito === "ok" ? (
-                      <span className="text-[length:var(--fs-2)] text-success-fg">aplicado</span>
+                      <span className="text-fs-2 text-success-fg">aplicado</span>
                     ) : (
                       <div className="flex items-center gap-2">
                         {typeof feito === "string" && (
-                          <span className="text-[length:var(--fs-2)] text-danger">{feito}</span>
+                          <span className="text-fs-2 text-danger">{feito}</span>
                         )}
                         <Button
                           size="sm"

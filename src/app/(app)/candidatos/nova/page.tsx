@@ -14,8 +14,8 @@ export default async function NovoCandidatoPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Candidatos", href: "/candidatos" }, { label: "Novo Candidato" }]} />
-      <PageHeader title="Novo Candidato" />
+      <Breadcrumb items={[{ label: "Candidatos", href: "/candidatos" }, { label: "Novo candidato" }]} />
+      <PageHeader title="Novo candidato" />
 
       <Card className="p-6">
         <CandidatoForm action={criarCandidato} cancelHref="/candidatos" />

@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CircleDashed, Clock, Handshake, TrendingDown } from "lucide-react";
@@ -81,7 +81,7 @@ export default async function DiagnosticoDaCarteiraPage() {
 
       {!custos.configurado && (
         // Revisão de 05/10: botão não é link — o destino era texto azul no fim da frase.
-        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg-secondary">
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg-secondary">
           <p>O custo das equipes ainda não foi preenchido nos parâmetros, então o custo real sai zerado.</p>
           <Button href="/valora/parametros" variant="secondary" size="xs">
             Preencher parâmetros
@@ -103,7 +103,7 @@ export default async function DiagnosticoDaCarteiraPage() {
           <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
             <table className="w-full min-w-[820px]">
               <thead>
-                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-3">Cliente</th>
                   <th className="px-3">Honorário</th>
                   <th className="px-3">Horas/mês</th>
@@ -119,20 +119,22 @@ export default async function DiagnosticoDaCarteiraPage() {
                       <Link href={`/empresas/${l.companyId}`} className="font-medium text-fg hover:text-brand transition-colors">
                         {l.cliente}
                       </Link>
-                      {l.temHoraSemCusto && <span className="block text-[11px] text-fg-muted">tem horas em setor sem custo no Valora</span>}
+                      {l.temHoraSemCusto && <span className="block text-fs-1 text-fg-muted">tem horas em setor sem custo no Valora</span>}
                     </td>
                     <td className="px-3 tabular-nums">{formatarReais(l.honorario)}</td>
                     <td className="px-3 tabular-nums">{formatarNumero(l.horasMes, 1)} h</td>
                     <td className="px-3 tabular-nums">{formatarReais(l.custoMes)}</td>
                     <td className="px-3 tabular-nums">
+                      {/* A margem contra o piso e o alvo é a situação do cliente: o
+                          `Selo`, e não o `Badge` de categoria (2A, 08/10/2026). */}
                       {l.margemPct === null ? (
                         "—"
                       ) : l.margemPct < cfg.parametros.margemPisoPct ? (
-                        <Badge variant="danger">{formatarNumero(l.margemPct, 1)}%</Badge>
+                        <Selo tom="perigo">{formatarNumero(l.margemPct, 1)}%</Selo>
                       ) : l.margemPct < cfg.parametros.margemAlvoPct ? (
-                        <Badge variant="warning">{formatarNumero(l.margemPct, 1)}%</Badge>
+                        <Selo tom="atencao">{formatarNumero(l.margemPct, 1)}%</Selo>
                       ) : (
-                        <Badge variant="success">{formatarNumero(l.margemPct, 1)}%</Badge>
+                        <Selo tom="sucesso">{formatarNumero(l.margemPct, 1)}%</Selo>
                       )}
                     </td>
                     <td className="px-3 tabular-nums text-fg-secondary">{l.alvo === null ? "—" : formatarReais(l.alvo)}</td>
@@ -141,7 +143,7 @@ export default async function DiagnosticoDaCarteiraPage() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-[12px] text-fg-muted">
+          <p className="mt-3 text-fs-2 text-fg-muted">
             Margem real = (honorário − impostos e variáveis de {cfg.parametros.variaveisPct}% − custo real) ÷ honorário. Vermelho: abaixo do piso de{" "}
             {cfg.parametros.margemPisoPct}%; amarelo: abaixo do alvo de {cfg.parametros.margemAlvoPct}%.
           </p>

@@ -136,7 +136,7 @@ export default async function VagasPage({
           // Button — o botão de criar das outras listas (DRG-17, 07/10/2026).
           <Button href="/vagas/novo" variant="primary">
             <Plus size={14} />
-            Nova Vaga
+            Nova vaga
           </Button>
         )}</>}
       />
@@ -183,18 +183,11 @@ export default async function VagasPage({
         <FiltrosDasColunasNaUrl colunas={[{ chave: "sectorCode", rotulo: "Setor" }]} />
 
         {vagas.length === 0 ? (
+          // Sem repetir o botão de criar: ele mora no cabeçalho (5A, 08/10/2026).
           <EmptyState
             icon={<Briefcase />}
             title="Nenhuma vaga encontrada"
-            description="Ajuste os filtros ou cadastre a primeira vaga do setor."
-            action={
-              canCreateAny && (
-                <Button href="/vagas/novo" variant="primary">
-                  <Plus size={14} />
-                  Nova Vaga
-                </Button>
-              )
-            }
+            description="Ajuste os filtros ou cadastre a primeira vaga do setor em “Nova vaga”."
           />
         ) : (
           <>
@@ -208,8 +201,8 @@ export default async function VagasPage({
                     </InfoDoCartao>
                     <PeDoCartao>
                       {seloDoStatus(v.status)}
-                      <span className="text-[length:var(--fs-micro)] text-fg-muted tabular-nums">{candidatos(v._count.candidaturas)}</span>
-                      <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted tabular-nums">
+                      <span className="text-micro text-fg-muted tabular-nums">{candidatos(v._count.candidaturas)}</span>
+                      <span className="ml-auto text-micro text-fg-muted tabular-nums">
                         {v.quantity} vaga{v.quantity !== 1 ? "s" : ""}
                       </span>
                     </PeDoCartao>
@@ -234,7 +227,7 @@ export default async function VagasPage({
                   <col className="w-[96px]" />
                 </colgroup>
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Vaga</th>
                     <th className="px-4 py-3">
                       <FiltroDaColunaNaUrl rotulo="Setor" chave="sectorCode" opcoes={opcoesDeSetor} />
@@ -259,7 +252,7 @@ export default async function VagasPage({
                         >
                           {v.title}
                         </Link>
-                        <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={v.company.name}>
+                        <span className="block text-micro text-fg-muted truncate" title={v.company.name}>
                           {v.company.name}
                         </span>
                       </td>

@@ -156,10 +156,10 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
     <div className={compact ? "" : "bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5"}>
       {/* Título no tamanho dos outros cartões das fichas de empresa e de
           pessoa, onde esta seção é uma aba (era 14px, os vizinhos 18px). */}
-      {!compact && <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Documentos</h2>}
+      {!compact && <h2 className="text-section font-semibold text-fg mb-4">Documentos</h2>}
 
       {documents.length === 0 ? (
-        <p className="text-[13px] text-fg-muted mb-4">Nenhum documento anexado ainda.</p>
+        <p className="text-fs-3 text-fg-muted mb-4">Nenhum documento anexado ainda.</p>
       ) : (
         <>
           {images.length > 0 && (
@@ -202,7 +202,7 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
                     <div className="relative h-20 flex flex-col items-center justify-center gap-1">
                       <FileText size={26} style={{ color: EXT_COLOR[ext] ?? "var(--c41-fg-muted)" }} />
                       {ext && (
-                        <span className="text-[length:var(--fs-micro)] font-semibold tracking-wide" style={{ color: EXT_COLOR[ext] ?? "var(--c41-fg-muted)" }}>
+                        <span className="text-micro font-semibold tracking-wide" style={{ color: EXT_COLOR[ext] ?? "var(--c41-fg-muted)" }}>
                           {ext}
                         </span>
                       )}
@@ -210,17 +210,13 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
                         <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-warning" title="Sensível" />
                       )}
                       {d.expiresAtLabel && (
-                        <span
-                          className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${
-                            d.expired ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning-fg"
-                          }`}
-                        >
+                        <Selo tom={d.expired ? "perigo" : "atencao"} className="absolute top-1.5 left-1.5">
                           {d.expired ? "Vencido" : "Vence"}
-                        </span>
+                        </Selo>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 px-2 py-1.5 border-t border-border bg-surface">
-                      <span className="flex-1 min-w-0 text-[11px] text-fg truncate">{d.fileName}</span>
+                      <span className="flex-1 min-w-0 text-fs-1 text-fg truncate">{d.fileName}</span>
                       <AvatarImage
                         src={d.uploadedByPhotoUrl ?? null}
                         name={d.uploadedByName}
@@ -242,19 +238,17 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
                   <div className="min-w-0">
                     <a
                       href={`/api/documents/${d.id}`}
-                      className="text-[13px] text-brand hover:underline break-words"
+                      className="text-fs-3 text-brand hover:underline break-words"
                     >
                       {d.fileName}
                     </a>
-                    <p className="text-[11px] text-fg-muted mt-0.5">
+                    <p className="text-fs-1 text-fg-muted mt-0.5">
                       {CATEGORY_LABEL[d.category]} · enviado por {d.uploadedByName} em {d.createdAtLabel}
                       {d.sensitive && " · sensível"}
                     </p>
                   </div>
                   {d.expiresAtLabel && (
-                    <Selo cor={d.expired
-                          ? "bg-danger/10 text-danger border-danger/25"
-                          : "bg-warning/10 text-warning-fg border-warning/25"} className="flex-shrink-0">
+                    <Selo tom={d.expired ? "perigo" : "atencao"} className="flex-shrink-0">
                       {d.expired ? `Vencido em ${d.expiresAtLabel}` : `Vence em ${d.expiresAtLabel}`}
                     </Selo>
                   )}

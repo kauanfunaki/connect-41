@@ -155,7 +155,7 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
 
         <FormSection title="Endereço">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <p className="min-w-0 flex-1 basis-64 text-[length:var(--fs-helper)] text-fg-muted">
+            <p className="min-w-0 flex-1 basis-64 text-helper text-fg-muted">
               É daqui que sai a resposta de “Reside no local?” na viabilidade do Empresa Fácil. Sem CEP e número, a pergunta
               volta a ser respondida à mão.
             </p>

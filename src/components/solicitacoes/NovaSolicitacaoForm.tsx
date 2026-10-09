@@ -69,7 +69,7 @@ export function NovaSolicitacaoForm({
       )}
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-[length:var(--fs-label)] font-medium text-fg">
+        <legend className="mb-2 text-label font-medium text-fg">
           Assunto <span className="text-danger">*</span>
         </legend>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -92,9 +92,9 @@ export function NovaSolicitacaoForm({
                   required
                 />
                 <span className="min-w-0">
-                  <span className="block text-[14px] font-semibold text-fg">{a.label}</span>
-                  {a.description && <span className="block mt-0.5 text-[length:var(--fs-2)] text-fg-muted leading-snug">{a.description}</span>}
-                  <span className="block mt-1.5 text-[12px] font-medium text-fg-secondary">
+                  <span className="block text-fs-4 font-semibold text-fg">{a.label}</span>
+                  {a.description && <span className="block mt-0.5 text-fs-2 text-fg-muted leading-snug">{a.description}</span>}
+                  <span className="block mt-1.5 text-fs-2 font-medium text-fg-secondary">
                     Resposta em até {a.responseDays} {a.responseDays === 1 ? "dia útil" : "dias úteis"}
                   </span>
                 </span>
@@ -118,7 +118,7 @@ export function NovaSolicitacaoForm({
       </CampoForm>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {erro && <span className="mr-auto text-[length:var(--fs-2)] text-danger">{erro}</span>}
+        {erro && <span className="mr-auto text-fs-2 text-danger">{erro}</span>}
         <Button type="submit" disabled={pendente}>
           <Send size={14} /> {pendente ? "Enviando…" : "Enviar solicitação"}
         </Button>

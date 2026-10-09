@@ -180,13 +180,15 @@ export default async function TestesPage({
         title="Testes"
         subtitle={<>{total} teste{total !== 1 ? "s" : ""}</>}
         action={<>{canCreate && (
-          // Era um link de texto cinza (30/09): botão não é link.
-          <Button href="/testes/templates" variant="secondary">
-            <FileQuestion size={14} /> Modelos de teste
-          </Button>
+          <>
+            {/* Era um link de texto cinza (30/09): botão não é link. */}
+            <Button href="/testes/templates" variant="secondary">
+              <FileQuestion size={14} /> Modelos de teste
+            </Button>
+            <NovoTesteForm candidatos={candidatos} templates={templates} />
+          </>
         )}</>}
       />
-      {canCreate && <NovoTesteForm candidatos={candidatos} templates={templates} />}
 
       {/* As duas situações em cartão, com a contagem — eram pílulas sem número
           e um "Limpar" (conferência de 30/09). Clicar no cartão do recorte
@@ -252,7 +254,7 @@ export default async function TestesPage({
                     <PeDoCartao>
                       {seloDoStatus(l.status)}
                       {resultado(l)}
-                      <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">enviado em {formatInstantDate(l.createdAt)}</span>
+                      <span className="ml-auto text-micro text-fg-muted">enviado em {formatInstantDate(l.createdAt)}</span>
                     </PeDoCartao>
                   </Cartao>
                 </Link>
@@ -273,7 +275,7 @@ export default async function TestesPage({
                   <col className="w-[96px]" />
                 </colgroup>
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Candidato</th>
                     <th className="px-4 py-3">
                       <FiltroDaColunaNaUrl rotulo="Teste" chave="teste" opcoes={opcoesDeTeste} />

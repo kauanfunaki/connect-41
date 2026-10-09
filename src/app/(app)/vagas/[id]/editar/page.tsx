@@ -48,7 +48,7 @@ export default async function EditarVagaPage({
       <Breadcrumb
         items={[{ label: "Vagas", href: "/vagas" }, { label: vaga.title, href: `/vagas/${id}`, truncate: true }, { label: "Editar" }]}
       />
-      <PageHeader title="Editar Vaga" />
+      <PageHeader title="Editar vaga" />
 
       <Card className="p-6">
         <VagaForm

@@ -44,9 +44,9 @@ export function MolduraDeEntrada({
           <div className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="h-7 w-auto" />
-            <p className="mt-7 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/60">{rotulo}</p>
-            <h1 className="mt-1.5 text-[26px] font-semibold tracking-[-0.01em] leading-tight">{titulo}</h1>
-            <p className="mt-2 text-[14px] leading-relaxed text-white/75 max-w-[36ch]">{subtitulo}</p>
+            <p className="mt-7 text-fs-1 font-semibold uppercase tracking-[0.1em] text-white/60">{rotulo}</p>
+            <h1 className="mt-1.5 text-title font-semibold tracking-[-0.01em] leading-tight">{titulo}</h1>
+            <p className="mt-2 text-fs-4 leading-relaxed text-white/75 max-w-[36ch]">{subtitulo}</p>
           </div>
         </div>
 
@@ -80,9 +80,9 @@ export function MolduraDeEntrada({
         <div className="relative flex-1 flex flex-col items-center justify-start lg:justify-center px-4 lg:px-10 pb-10 lg:py-24 -mt-20 lg:mt-0">
           <div className="w-full max-w-[400px]">
             <div className="hidden lg:block mb-7">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-brand">{rotulo}</p>
-              <h1 className="mt-2 text-[30px] font-semibold text-fg tracking-[-0.015em] leading-tight [text-wrap:balance]">{titulo}</h1>
-              <p className="mt-2 text-[14px] leading-relaxed text-fg-secondary">{subtitulo}</p>
+              <p className="text-fs-2 font-semibold uppercase tracking-[0.08em] text-brand">{rotulo}</p>
+              <h1 className="mt-2 text-fs-9 font-semibold text-fg tracking-[-0.015em] leading-tight [text-wrap:balance]">{titulo}</h1>
+              <p className="mt-2 text-fs-4 leading-relaxed text-fg-secondary">{subtitulo}</p>
             </div>
             <div className="[&>*]:shadow-[0_20px_50px_-24px_rgba(18,52,125,0.35)]">{children}</div>
           </div>

@@ -38,8 +38,8 @@ export function ScoreRing({ score, size = 128, strokeWidth = 10, label }: Props)
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[28px] font-semibold text-fg tabular-nums leading-none">{Math.round(clamped)}</span>
-        {label && <span className="text-[11px] text-fg-muted mt-1">{label}</span>}
+        <span className="text-metric font-semibold text-fg tabular-nums leading-none">{Math.round(clamped)}</span>
+        {label && <span className="text-fs-1 text-fg-muted mt-1">{label}</span>}
       </div>
     </div>
   );

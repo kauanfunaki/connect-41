@@ -9,8 +9,7 @@ import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { formatInstantDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -44,14 +43,13 @@ export default async function DocumentosClientePage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
-          { label: "Documentos para Cliente" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
+          { label: "Documentos para cliente" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
-        title="Documentos para Cliente"
+        title="Documentos para cliente"
         subtitle={`${documentos.length} documento${documentos.length !== 1 ? "s" : ""} — envio por e-mail com prova de recebimento`}
         action={
           canManage && (
@@ -94,15 +92,15 @@ export default async function DocumentosClientePage({
                 className="flex items-center justify-between px-4 py-3 hover:bg-surface-hover transition-colors"
               >
                 <div>
-                  <p className="text-[13px] text-fg font-medium">{d.title}</p>
-                  <p className="text-[12px] text-fg-muted mt-0.5">
+                  <p className="text-fs-3 text-fg font-medium">{d.title}</p>
+                  <p className="text-fs-2 text-fg-muted mt-0.5">
                     criado em {formatInstantDate(d.createdAt)}
                     {d.recipients.length > 0 && ` · ${d.recipients.length} destinatário${d.recipients.length !== 1 ? "s" : ""} (${viewedCount} visualizou${viewedCount !== 1 ? "ram" : ""})`}
                   </p>
                 </div>
-                <Badge variant={d.status === "PUBLISHED" ? "success" : "warning"}>
+                <Selo tom={d.status === "PUBLISHED" ? "sucesso" : "atencao"}>
                   {d.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
-                </Badge>
+                </Selo>
               </Link>
             );
           })}

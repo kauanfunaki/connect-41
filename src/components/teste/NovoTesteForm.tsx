@@ -3,18 +3,32 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Aviso } from "@/components/ui/Aviso";
 import { Select } from "@/components/ui/Select";
 import { TestTypeSelect, type TemplateOption, type TestTypeValue } from "@/components/teste/TestTypeSelect";
 import { gerarLinkTeste } from "@/app/(app)/testes/actions";
+import { JanelaDeCadastro } from "@/components/shared/JanelaDeCadastro";
 
 type PersonOption = { id: string; name: string };
 
 type Props = { candidatos: PersonOption[]; templates: TemplateOption[] };
 
-export function NovoTesteForm({ candidatos, templates }: Props) {
+/**
+ * "Enviar teste" no cabeçalho de /testes, com o formulário numa janela
+ * (escolha 5A do Kauan, 08/10/2026). Até aqui o formulário morava aberto no
+ * topo da lista.
+ */
+export function NovoTesteForm(props: Props) {
+  return (
+    <JanelaDeCadastro rotulo="Enviar teste">
+      {(fechar) => <FormularioDoTeste {...props} aoEnviar={fechar} />}
+    </JanelaDeCadastro>
+  );
+}
+
+function FormularioDoTeste({ candidatos, templates, aoEnviar }: Props & { aoEnviar: () => void }) {
   const router = useRouter();
   const [personId, setPersonId] = useState("");
   const [testType, setTestType] = useState<TestTypeValue>({ type: "DISC" });
@@ -37,19 +51,16 @@ export function NovoTesteForm({ candidatos, templates }: Props) {
         setError(result.error);
         return;
       }
-      setPersonId("");
       router.refresh();
+      aoEnviar();
     } finally {
       setPending(false);
     }
   }
 
   return (
-    // Grade, e não `flex items-end` com larguras fixas (w-64/w-56): no celular
-    // os campos estouravam a tela, e o botão só ficava alinhado enquanto
-    // nenhum campo tivesse texto de ajuda embaixo.
-    <form onSubmit={handleSubmit} className="border-b border-border pb-4 mb-4 space-y-3">
-      <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:grid-cols-[320px_280px_auto]">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <FieldGrid columns="">
         <CampoForm label="Candidato" htmlFor="personId" required>
           <Select id="personId" value={personId} onChange={(e) => setPersonId(e.target.value)} required>
             <option value="">Selecione</option>
@@ -59,15 +70,15 @@ export function NovoTesteForm({ candidatos, templates }: Props) {
           </Select>
         </CampoForm>
         <TestTypeSelect templates={templates} value={testType} onChange={setTestType} id="novo-teste-type" />
-        <AlinhadoAoCampo>
-          <Button type="submit" disabled={pending || !personId} className="w-full sm:w-auto">
-            {/* Mesmo rótulo do cartão de teste da candidatura: as duas mandam
-                o link ao candidato (DRG-17, 07/10/2026). */}
-            {pending ? "Enviando…" : "Enviar teste"}
-          </Button>
-        </AlinhadoAoCampo>
       </FieldGrid>
       {error && <Aviso>{error}</Aviso>}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={pending || !personId} className="w-full sm:w-auto">
+          {/* Mesmo rótulo do cartão de teste da candidatura: as duas mandam
+              o link ao candidato (DRG-17, 07/10/2026). */}
+          {pending ? "Enviando…" : "Enviar teste"}
+        </Button>
+      </div>
     </form>
   );
 }

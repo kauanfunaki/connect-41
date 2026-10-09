@@ -25,7 +25,7 @@ export default async function HorasExtrasPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Horas Extras Pendentes"
+        title="Horas extras pendentes"
         subtitle={<>{entries.length} lançamento{entries.length !== 1 ? "s" : ""} aguardando aprovação</>}
       />
 
@@ -63,7 +63,7 @@ export default async function HorasExtrasPage() {
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[720px]">
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Colaborador" chave="colaborador" />
                     </th>

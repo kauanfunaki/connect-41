@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -26,11 +26,13 @@ const MODULE = "societario_processos";
 
 export const dynamic = "force-dynamic";
 
+// A situação da proposta é Selo (escolha 2A, 08/10/2026); a rejeitada saiu de
+// cena — não pede ação —, então é neutra, como a indeferida do processo.
 const STATUS = {
   PENDENTE: { rotulo: "Esperando revisão", variante: "info" },
   APROVADA: { rotulo: "Aprovada", variante: "success" },
   EDITADA: { rotulo: "Aprovada com ajuste", variante: "warning" },
-  REJEITADA: { rotulo: "Rejeitada", variante: "danger" },
+  REJEITADA: { rotulo: "Rejeitada", variante: "neutral" },
 } as const;
 
 const CONFIANCA = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa" } as const;
@@ -66,20 +68,20 @@ export default async function IaDoSocietarioPage() {
 
       {(!varreduraLigada || !ligado(AGENTE_CONTRATO)) && (
         // Revisão de 05/10: botão não é link — o caminho era texto azul no meio da frase.
-        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg-secondary">
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg-secondary">
           <p>
             {[!varreduraLigada && nome(AGENTE_VARREDURA), !ligado(AGENTE_CONTRATO) && nome(AGENTE_CONTRATO)].filter(Boolean).join(" e ")}{" "}
             {!varreduraLigada && !ligado(AGENTE_CONTRATO) ? "estão desligadas" : "está desligada"}. Um administrador liga em
-            Administração › Inteligência Artificial. A leitura de contrato social fica na tela de sócios de cada empresa.
+            Administração › Inteligência artificial. A leitura de contrato social fica na tela de sócios de cada empresa.
           </p>
           <Button href="/admin/ia" variant="secondary" size="xs">
-            Abrir Inteligência Artificial
+            Abrir Inteligência artificial
           </Button>
         </div>
       )}
 
       <section aria-labelledby="fila" className="mb-6 flex flex-col gap-2">
-        <h2 id="fila" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+        <h2 id="fila" className="text-card-title font-semibold text-fg">
           Esperando revisão ({pendentes.length})
         </h2>
         {pendentes.length === 0 ? (
@@ -95,13 +97,13 @@ export default async function IaDoSocietarioPage() {
               <li key={p.id}>
                 <Link href={`/societario/ia/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-2">
                   <div className="min-w-0">
-                    <p className="text-[14px] font-medium text-fg">{p.title}</p>
-                    <p className="text-[12px] text-fg-muted">
+                    <p className="text-fs-4 font-medium text-fg">{p.title}</p>
+                    <p className="text-fs-2 text-fg-muted">
                       {nome(p.agentCode)} · pedido por {p.createdBy?.name ?? "—"} em {formatInstantDate(p.createdAt)}
                       {p.confidence && ` · confiança ${CONFIANCA[p.confidence]}`}
                     </p>
                   </div>
-                  <span className="text-[13px] text-brand">Revisar →</span>
+                  <span className="text-fs-3 text-brand">Revisar →</span>
                 </Link>
               </li>
             ))}
@@ -111,51 +113,51 @@ export default async function IaDoSocietarioPage() {
 
       <section aria-labelledby="qualidade" className="mb-6 flex flex-col gap-2">
         <div>
-          <h2 id="qualidade" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+          <h2 id="qualidade" className="text-card-title font-semibold text-fg">
             Qualidade da IA, últimos 6 meses
           </h2>
-          <p className="text-[12px] text-fg-muted">
+          <p className="text-fs-2 text-fg-muted">
             Quanto do que a IA propõe é aprovado como veio, quanto precisa de ajuste e quanto é descartado — e quanto custou.
           </p>
         </div>
         {qualidade.length === 0 ? (
-          <p className="text-[13px] text-fg-muted">Ainda não há proposta para medir.</p>
+          <p className="text-fs-3 text-fg-muted">Ainda não há proposta para medir.</p>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {qualidade.map((q) => {
               const maior = Math.max(1, ...q.porMes.map((m) => m.total));
               return (
                 <Card key={q.agentCode} className="p-4 flex flex-col gap-3">
-                  <p className="text-[14px] font-semibold text-fg">{nome(q.agentCode)}</p>
-                  <dl className="grid grid-cols-3 gap-2 text-[12px]">
+                  <p className="text-fs-4 font-semibold text-fg">{nome(q.agentCode)}</p>
+                  <dl className="grid grid-cols-3 gap-2 text-fs-2">
                     <div>
                       <dt className="text-fg-muted">Propostas</dt>
-                      <dd className="text-[18px] font-semibold text-fg tabular-nums">{q.total}</dd>
+                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{q.total}</dd>
                     </div>
                     <div>
                       <dt className="text-fg-muted">Com ajuste</dt>
-                      <dd className="text-[18px] font-semibold text-fg tabular-nums">{pct(q.taxaDeEdicao)}</dd>
+                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{pct(q.taxaDeEdicao)}</dd>
                     </div>
                     <div>
                       <dt className="text-fg-muted">Rejeitadas</dt>
-                      <dd className="text-[18px] font-semibold text-fg tabular-nums">{pct(q.taxaDeRejeicao)}</dd>
+                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{pct(q.taxaDeRejeicao)}</dd>
                     </div>
                   </dl>
-                  <p className="text-[12px] text-fg-secondary tabular-nums">
+                  <p className="text-fs-2 text-fg-secondary tabular-nums">
                     {q.aprovadas} aprovadas como vieram · {q.editadas} com ajuste · {q.rejeitadas} rejeitadas · {q.pendentes} esperando
                   </p>
-                  <p className="text-[12px] text-fg-secondary tabular-nums">
+                  <p className="text-fs-2 text-fg-secondary tabular-nums">
                     Confiança que a IA declarou: {q.confianca.ALTA} alta · {q.confianca.MEDIA} média · {q.confianca.BAIXA} baixa
                   </p>
                   <div aria-label="Propostas por mês" className="flex items-end gap-2 h-16">
                     {q.porMes.map((m) => (
                       <div key={m.mes} className="flex-1 flex flex-col items-center gap-1">
                         <div className="w-full rounded-sm bg-brand/70" style={{ height: `${(m.total / maior) * 40}px`, minHeight: m.total ? 3 : 0 }} title={`${m.total}`} />
-                        <span className="text-[10px] text-fg-muted">{MES.format(new Date(`${m.mes}-15T12:00:00Z`))}</span>
+                        <span className="text-micro text-fg-muted">{MES.format(new Date(`${m.mes}-15T12:00:00Z`))}</span>
                       </div>
                     ))}
                   </div>
-                  <p className="text-[12px] text-fg-muted">Custo no período: {formatarReaisDeCentavos(q.custoCentavos)}</p>
+                  <p className="text-fs-2 text-fg-muted">Custo no período: {formatarReaisDeCentavos(q.custoCentavos)}</p>
                 </Card>
               );
             })}
@@ -165,7 +167,7 @@ export default async function IaDoSocietarioPage() {
 
       {revisadas.length > 0 && (
         <section aria-labelledby="revisadas" className="flex flex-col gap-2">
-          <h2 id="revisadas" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+          <h2 id="revisadas" className="text-card-title font-semibold text-fg">
             Revisadas recentemente
           </h2>
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
@@ -173,12 +175,12 @@ export default async function IaDoSocietarioPage() {
               <li key={p.id}>
                 <Link href={`/societario/ia/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-2">
                   <div className="min-w-0">
-                    <p className="text-[13px] text-fg">{p.title}</p>
-                    <p className="text-[12px] text-fg-muted">
+                    <p className="text-fs-3 text-fg">{p.title}</p>
+                    <p className="text-fs-2 text-fg-muted">
                       {p.reviewedBy?.name ?? "—"} · {p.reviewedAt ? formatInstantDate(p.reviewedAt) : ""}
                     </p>
                   </div>
-                  <Badge variant={STATUS[p.status].variante}>{STATUS[p.status].rotulo}</Badge>
+                  <Selo tom={tomDaVariante(STATUS[p.status].variante)}>{STATUS[p.status].rotulo}</Selo>
                 </Link>
               </li>
             ))}

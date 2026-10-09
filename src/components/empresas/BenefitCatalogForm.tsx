@@ -67,7 +67,7 @@ export function BenefitCatalogForm({ action, companyId, cancelHref, defaultValue
         </CampoForm>
       </div>
 
-      <CampoForm label="Regra de Elegibilidade" htmlFor="eligibilityRule">
+      <CampoForm label="Regra de elegibilidade" htmlFor="eligibilityRule">
         <Textarea id="eligibilityRule" name="eligibilityRule" rows={2} defaultValue={defaultValues?.eligibilityRule ?? ""} />
       </CampoForm>
 

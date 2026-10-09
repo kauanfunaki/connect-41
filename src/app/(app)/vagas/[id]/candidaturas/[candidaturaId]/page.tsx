@@ -211,12 +211,13 @@ export default async function CandidaturaScorecardPage({
         />
       </div>
 
-      {/* Consolidado */}
+      {/* Consolidado. Títulos de seção da ficha em 18px (`text-section`) —
+          padrão aceito pelo Kauan em 08/10/2026; estavam em 14px. */}
       {consolidation.count > 0 && (
         <Card className="p-5 mb-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
+          <h2 className="text-section font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-[length:var(--fs-ui)] text-fg">
+            <span className="text-ui text-fg">
               Média: <strong className="tnum">{consolidation.averageScore != null ? formatarNumero(consolidation.averageScore, 1) : "—"}</strong>/5
             </span>
             <Selo tom="sucesso">
@@ -234,9 +235,9 @@ export default async function CandidaturaScorecardPage({
 
       {/* Pareceres */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Pareceres</h2>
+        <h2 className="text-section font-semibold text-fg mb-3">Pareceres</h2>
         {candidatura.scorecards.length === 0 ? (
-          <p className="text-[length:var(--fs-ui)] text-fg-muted">Nenhum parecer ainda.</p>
+          <p className="text-ui text-fg-muted">Nenhum parecer ainda.</p>
         ) : (
           <div className="divide-y divide-border">
             {candidatura.scorecards.map((s) => {
@@ -244,12 +245,12 @@ export default async function CandidaturaScorecardPage({
               return (
                 <div key={s.id} className="py-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="min-w-0 text-[length:var(--fs-ui)] font-medium text-fg">
+                    <p className="min-w-0 text-ui font-medium text-fg">
                       {s.evaluator.name}
-                      {s.evaluator.id === ctx.userId && <span className="text-[length:var(--fs-micro)] text-fg-muted font-normal"> (você)</span>}
+                      {s.evaluator.id === ctx.userId && <span className="text-micro text-fg-muted font-normal"> (você)</span>}
                     </p>
                     <div className="flex flex-shrink-0 items-center gap-2">
-                      <span className="text-[length:var(--fs-2)] text-fg-muted tnum">{avg != null ? `${formatarNumero(avg, 1)}/5` : "sem nota"}</span>
+                      <span className="text-fs-2 text-fg-muted tnum">{avg != null ? `${formatarNumero(avg, 1)}/5` : "sem nota"}</span>
                       <Selo cor={s.recommendation === "AVANCAR" ? "bg-success/10 text-success-fg border-success/25"
                           : s.recommendation === "REPROVAR" ? "bg-danger/10 text-danger border-danger/25"
                           : "bg-warning/10 text-warning-fg border-warning/25"}>
@@ -259,14 +260,14 @@ export default async function CandidaturaScorecardPage({
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
                     {CRITERIA.map((c) => (
-                      <span key={c.key} className="text-[length:var(--fs-micro)] text-fg-muted">
+                      <span key={c.key} className="text-micro text-fg-muted">
                         {c.label}: <span className="text-fg tnum">{s[c.key] ?? "—"}</span>
                       </span>
                     ))}
                   </div>
-                  {s.notes && <p className="text-[length:var(--fs-2)] text-fg-secondary mt-1.5 whitespace-pre-wrap">{s.notes}</p>}
+                  {s.notes && <p className="text-fs-2 text-fg-secondary mt-1.5 whitespace-pre-wrap">{s.notes}</p>}
                   <div className="flex items-center gap-3 mt-1.5">
-                    <span className="text-[length:var(--fs-micro)] text-fg-muted">{formatInstantDate(s.createdAt)}</span>
+                    <span className="text-micro text-fg-muted">{formatInstantDate(s.createdAt)}</span>
                     {s.evaluator.id === ctx.userId && (
                       <ExcluirComConfirmacao
                         action={excluirScorecard.bind(null, vagaId, candidaturaId, s.id)}
@@ -284,7 +285,7 @@ export default async function CandidaturaScorecardPage({
       {/* Meu parecer */}
       {canAct && (
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">{myScorecard ? "Editar meu parecer" : "Adicionar meu parecer"}</h2>
+          <h2 className="text-section font-semibold text-fg mb-3">{myScorecard ? "Editar meu parecer" : "Adicionar meu parecer"}</h2>
           <ScorecardForm
             action={salvarScorecard.bind(null, vagaId, candidaturaId)}
             defaults={

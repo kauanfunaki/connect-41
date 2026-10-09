@@ -135,11 +135,11 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
 
       {hasConfig && webhookUrl && (
         <div className="pt-4 border-t border-border">
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mb-1.5">
+          <p className="text-helper text-fg-muted mb-1.5">
             Cole esta URL na tela de Webhooks do Chatwoot (Configurações → Integrações → Webhooks) para receber
             atualizações incrementais:
           </p>
-          <code className="block text-[12px] bg-surface-hover border border-border rounded-md px-3 py-2 break-all">{webhookUrl}</code>
+          <code className="block text-fs-2 bg-surface-hover border border-border rounded-md px-3 py-2 break-all">{webhookUrl}</code>
         </div>
       )}
 
@@ -150,7 +150,7 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
               {isSyncing ? "Sincronizando…" : "Sincronizar agora"}
             </Button>
             {lastSyncAtLabel && (
-              <span className="text-[length:var(--fs-helper)] text-fg-muted">Última sincronização: {lastSyncAtLabel}</span>
+              <span className="text-helper text-fg-muted">Última sincronização: {lastSyncAtLabel}</span>
             )}
           </div>
           {syncResult && (

@@ -104,7 +104,7 @@ export function QuizForm({ token, questions }: Props) {
     <form onSubmit={handleSubmit} className="space-y-4">
       {hadDraft && (
         <div className="bg-brand/8 border border-brand/25 rounded-lg px-4 py-3 flex items-start justify-between gap-3">
-          <p className="text-[length:var(--fs-ui)] text-fg">
+          <p className="text-ui text-fg">
             Recuperamos as respostas que você já tinha marcado neste link. Continue de onde parou.
           </p>
           <Button variant="secondary" size="xs" className="flex-shrink-0" onClick={dismissRestoredNotice}>
@@ -114,13 +114,13 @@ export function QuizForm({ token, questions }: Props) {
       )}
 
       <Card as="section" className="p-5">
-        <p className="text-[length:var(--fs-ui)] text-fg-secondary">Escolha uma alternativa em cada pergunta.</p>
-        <p className="text-[length:var(--fs-2)] text-fg-muted mt-2">Suas respostas ficam salvas neste aparelho enquanto você responde.</p>
+        <p className="text-ui text-fg-secondary">Escolha uma alternativa em cada pergunta.</p>
+        <p className="text-fs-2 text-fg-muted mt-2">Suas respostas ficam salvas neste aparelho enquanto você responde.</p>
       </Card>
 
       <div className="sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-canvas/95 backdrop-blur border-b border-border">
         <div className="flex items-center justify-between gap-3 mb-1.5">
-          <span className="text-[length:var(--fs-2)] font-medium text-fg">
+          <span className="text-fs-2 font-medium text-fg">
             {answeredCount} de {questions.length} respondidas
           </span>
           {!allAnswered && answeredCount > 0 && (
@@ -157,12 +157,12 @@ export function QuizForm({ token, questions }: Props) {
                 selected != null ? "border-border" : "border-border-strong"
               }`}
             >
-              <legend className="text-[length:var(--fs-micro)] text-fg-muted px-1">
+              <legend className="text-micro text-fg-muted px-1">
                 Pergunta {qi + 1} de {questions.length}
                 {selected != null && <span className="text-success-fg"> · ok</span>}
               </legend>
 
-              <p className="text-[length:var(--fs-label)] font-medium text-fg mb-3">{q.text}</p>
+              <p className="text-label font-medium text-fg mb-3">{q.text}</p>
 
               {/* Alternativa inteira é o alvo (não só o rádio de 13px). */}
               <div className="space-y-2">
@@ -171,7 +171,7 @@ export function QuizForm({ token, questions }: Props) {
                   return (
                     <label
                       key={oi}
-                      className={`relative flex items-center gap-2.5 min-h-11 px-3 py-2 rounded-md border text-[length:var(--fs-label)] cursor-pointer transition-colors ${
+                      className={`relative flex items-center gap-2.5 min-h-11 px-3 py-2 rounded-md border text-label cursor-pointer transition-colors ${
                         isChecked
                           ? "border-brand bg-brand/8 text-fg"
                           : "border-border-strong text-fg-secondary hover:border-brand hover:text-fg"
@@ -203,7 +203,7 @@ export function QuizForm({ token, questions }: Props) {
       {/* Caixa no topo do texto, e não centrada nele: no celular a frase
           quebra em três linhas, e o `Checkbox` com rótulo centraliza a caixa
           no meio do parágrafo. */}
-      <label htmlFor="consent" className="flex items-start gap-2.5 text-[length:var(--fs-label)] text-fg-secondary cursor-pointer">
+      <label htmlFor="consent" className="flex items-start gap-2.5 text-label text-fg-secondary cursor-pointer">
         <Checkbox id="consent" name="consent" value="true" className="mt-0.5" />
         <span>Confirmo que as respostas são minhas e autorizo o uso dos meus dados pessoais para este processo seletivo (LGPD).</span>
       </label>

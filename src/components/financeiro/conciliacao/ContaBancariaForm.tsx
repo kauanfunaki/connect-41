@@ -51,8 +51,9 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
           Editar
         </Button>
       ) : (
-        <Button size="sm" onClick={() => setAberto(true)}>
-          <Plus size={13} /> Nova conta
+        // No cabeçalho da tela, no tamanho dos outros botões de criar (5A, 08/10/2026).
+        <Button onClick={() => setAberto(true)}>
+          <Plus size={14} /> Nova conta
         </Button>
       )}
       <Modal open={aberto} onClose={() => setAberto(false)} title={conta ? "Editar conta bancária" : "Nova conta bancária"} maxWidth="max-w-xl">

@@ -83,7 +83,7 @@ export async function generateMetadata({
       title,
       description,
       ...(url ? { url } : {}),
-      siteName: `Trabalhe Conosco — ${tenant.name}`,
+      siteName: `Trabalhe conosco — ${tenant.name}`,
       locale: "pt_BR",
     },
     twitter: { card: "summary", title, description },
@@ -151,7 +151,7 @@ export default async function VagaPublicaPage({
               showSalary={vaga.showSalary}
             />
           </div>
-          <p className="text-[length:var(--fs-micro)] text-fg-muted mt-2">
+          <p className="text-micro text-fg-muted mt-2">
             Publicada em {formatCalendarDate(vaga.openedAt)}
             {vaga.applicationDeadline && (
               <> · <strong className="font-medium text-fg-secondary">inscrições até {formatCalendarDate(vaga.applicationDeadline)}</strong></>
@@ -161,18 +161,18 @@ export default async function VagaPublicaPage({
 
         {vaga.publicDescription && (
           <Card className="p-5 mb-6">
-            <SimpleMarkdown text={vaga.publicDescription} className="text-[length:var(--fs-ui)] text-fg leading-relaxed" />
+            <SimpleMarkdown text={vaga.publicDescription} className="text-ui text-fg leading-relaxed" />
           </Card>
         )}
 
         {beneficios.length > 0 && (
           <Card className="p-5 mb-6">
-            <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-3">Benefícios</h2>
+            <h2 className="text-body font-semibold text-fg mb-3">Benefícios</h2>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
               {beneficios.map((b) => (
                 // O ponto mora numa caixa da altura da linha (h-5 = leading-5)
                 // e centraliza nela — era `mt-[7px]`, acertado no olho.
-                <li key={b} className="text-[length:var(--fs-ui)] leading-5 text-fg flex items-start gap-2">
+                <li key={b} className="text-ui leading-5 text-fg flex items-start gap-2">
                   <span className="flex h-5 items-center flex-shrink-0" aria-hidden="true">
                     <span className="w-1.5 h-1.5 rounded-full bg-brand" />
                   </span>
@@ -184,11 +184,11 @@ export default async function VagaPublicaPage({
         )}
 
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-body)] font-semibold text-fg mb-4">Candidatar-se</h2>
+          <h2 className="text-body font-semibold text-fg mb-4">Candidatar-se</h2>
           <ApplyForm slug={slug} vagaId={vaga.id} carimbo={emitirCarimbo(new Date())} />
         </Card>
 
-        <p className="text-[length:var(--fs-micro)] text-fg-muted mt-6 text-center">
+        <p className="text-micro text-fg-muted mt-6 text-center">
           Processo seletivo conduzido por {tenant.name}.
         </p>
       </div>

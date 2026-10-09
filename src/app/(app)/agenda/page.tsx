@@ -1,7 +1,6 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { getPrisma } from "@/lib/prisma";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { getAuthContext } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { getMeetingIntegrationHealth } from "@/lib/integrations/health";
@@ -133,56 +132,61 @@ export default async function AgendaPage({
   return (
     // A Agenda é uma tela de relance: o calendário se ajusta à altura que sobra
     // em vez de a página rolar. Mesmo arranjo de /kanban/[id] e /bpo-manual.
+    //
+    // O cabeçalho é desenhado pelo AgendaCalendar (08/10/2026, escolha 5A): o
+    // "Nova reunião" mora nas ações do cabeçalho, como o botão de criar das
+    // outras telas, e abre a janela que vive no estado do calendário. A legenda
+    // e o aviso de conta vencida entram logo abaixo dele, por `antesDaGrade`.
     <PageContainer className="h-full flex flex-col">
-      <div className="flex-shrink-0">
-        <PageHeader title="Agenda" subtitle={(podeAgendar ? VIEW_HELPER : VIEW_HELPER_SEM_REUNIAO)[view]} />
-        {setoresComPrazo.length > 0 && (
-          <ul className="mb-3 -mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-fg-secondary" aria-label="Setores dos prazos">
-            {setoresComPrazo.map((code) => (
-              <li key={code} className="inline-flex items-center gap-1.5">
-                <span className="size-2.5 rounded-[3px]" style={{ background: setores[code].cor }} aria-hidden />
-                {setores[code].rotulo}
-              </li>
-            ))}
-          </ul>
-        )}
+      <AgendaCalendar
+        titulo="Agenda"
+        subtitulo={(podeAgendar ? VIEW_HELPER : VIEW_HELPER_SEM_REUNIAO)[view]}
+        antesDaGrade={
+          <>
+            {setoresComPrazo.length > 0 && (
+              <ul className="mb-3 -mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-fs-2 text-fg-secondary" aria-label="Setores dos prazos">
+                {setoresComPrazo.map((code) => (
+                  <li key={code} className="inline-flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-[3px]" style={{ background: setores[code].cor }} aria-hidden />
+                    {setores[code].rotulo}
+                  </li>
+                ))}
+              </ul>
+            )}
 
-        {contasVencidas.length > 0 && (
-          // "Reconectar agora" era link sublinhado no fim da frase (30/09): é a
-          // ação do aviso, então é botão, à direita dele.
-          <Aviso className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <AlertTriangle size={14} className="flex-shrink-0" />
-            <p className="flex-1 min-w-[16rem]">
-              Sua conta {contasVencidas.join(" e ")} expirou — reuniões novas não vão gerar link até
-              você reconectar.
-            </p>
-            <Button href="/admin/integracoes" variant="danger" size="xs">
-              <RefreshCw size={11} /> Reconectar agora
-            </Button>
-          </Aviso>
-        )}
-      </div>
-
-      <div className="flex-1 min-h-0">
-        <AgendaCalendar
-          view={view}
-          dateKey={dateKey}
-          days={calendarDays}
-          meetings={meetings}
-          createAction={criarReuniaoAvulsa}
-          editAction={editarReuniaoAvulsa}
-          deleteAction={excluirReuniaoAvulsa}
-          hasGoogle={hasGoogle}
-          hasMicrosoft={hasMicrosoft}
-          allUsers={allUsers}
-          companies={companies}
-          currentUserId={ctx.userId}
-          prazos={prazos}
-          setores={setores}
-          podeAgendar={podeAgendar}
-          expediente={expediente}
-        />
-      </div>
+            {contasVencidas.length > 0 && (
+              // "Reconectar agora" era link sublinhado no fim da frase (30/09): é a
+              // ação do aviso, então é botão, à direita dele.
+              <Aviso className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <AlertTriangle size={14} className="flex-shrink-0" />
+                <p className="flex-1 min-w-[16rem]">
+                  Sua conta {contasVencidas.join(" e ")} expirou — reuniões novas não vão gerar link até
+                  você reconectar.
+                </p>
+                <Button href="/admin/integracoes" variant="danger" size="xs">
+                  <RefreshCw size={11} /> Reconectar agora
+                </Button>
+              </Aviso>
+            )}
+          </>
+        }
+        view={view}
+        dateKey={dateKey}
+        days={calendarDays}
+        meetings={meetings}
+        createAction={criarReuniaoAvulsa}
+        editAction={editarReuniaoAvulsa}
+        deleteAction={excluirReuniaoAvulsa}
+        hasGoogle={hasGoogle}
+        hasMicrosoft={hasMicrosoft}
+        allUsers={allUsers}
+        companies={companies}
+        currentUserId={ctx.userId}
+        prazos={prazos}
+        setores={setores}
+        podeAgendar={podeAgendar}
+        expediente={expediente}
+      />
     </PageContainer>
   );
 }

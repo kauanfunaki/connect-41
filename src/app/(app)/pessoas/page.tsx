@@ -100,7 +100,7 @@ export default async function PessoasPage({
 
       {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
       {ocultos > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[length:var(--fs-2)] text-fg-muted mb-4">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mb-4">
           <p>
             {ocultos} pessoa{ocultos !== 1 ? "s" : ""} inativa{ocultos !== 1 ? "s" : ""} fora desta lista.
           </p>

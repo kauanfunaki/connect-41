@@ -18,14 +18,14 @@ import {
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { excluirPessoa } from "../actions";
-import { BackButton } from "@/components/shared/BackButton";
 import { Button } from "@/components/ui/Button";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
 import { AdmissaoCard } from "@/components/pessoas/AdmissaoCard";
-import { SeloDoDP, horasDoDP } from "@/components/pessoas/rotulosDoDP";
+import { horasDoDP } from "@/components/pessoas/rotulosDoDP";
+import { Badge } from "@/components/ui/Badge";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
@@ -64,10 +64,10 @@ const DEP_REL_LABEL: Record<string, string> = {
 
 // Mesma grade e mesmo título da ficha de empresa (CompanyOverviewSection).
 const GRADE = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4";
-const TITULO = "text-[length:var(--fs-section)] font-semibold text-fg mb-4";
+const TITULO = "text-section font-semibold text-fg mb-4";
 
 const VINCULO_LINKS: OperationLink[] = [
-  { href: "escala", label: "Escala de Trabalho", description: "Turnos e dias de folga", icon: <CalendarClock size={16} /> },
+  { href: "escala", label: "Escala de trabalho", description: "Turnos e dias de folga", icon: <CalendarClock size={16} /> },
   { href: "beneficios", label: "Benefícios", description: "Vale-refeição, plano de saúde e outros", icon: <Gift size={16} /> },
 ];
 
@@ -76,9 +76,9 @@ const TRABALHISTA_LINKS: OperationLink[] = [
   { href: "ferias", label: "Férias", description: "Períodos aquisitivo e concessivo", icon: <Palmtree size={16} /> },
   { href: "afastamentos", label: "Afastamentos", description: "Afastamentos e atestados", icon: <Stethoscope size={16} /> },
   { href: "desligamento", label: "Desligamento", description: "Processo de desligamento, se houver", icon: <UserMinus size={16} /> },
-  { href: "horas-extras", label: "Horas Extras", description: "Lançamentos e aprovações", icon: <Clock size={16} /> },
-  { href: "exames", label: "Exames Admissionais", description: "Exames e ASO", icon: <ClipboardCheck size={16} /> },
-  { href: "avaliacoes", label: "Avaliações de Desempenho", description: "Ciclos de avaliação", icon: <Star size={16} /> },
+  { href: "horas-extras", label: "Horas extras", description: "Lançamentos e aprovações", icon: <Clock size={16} /> },
+  { href: "exames", label: "Exames admissionais", description: "Exames e ASO", icon: <ClipboardCheck size={16} /> },
+  { href: "avaliacoes", label: "Avaliações de desempenho", description: "Ciclos de avaliação", icon: <Star size={16} /> },
   { href: "treinamentos", label: "Treinamentos", description: "Turmas e participações", icon: <GraduationCap size={16} /> },
   { href: "esocial-s2200", label: "eSocial S-2200 (rascunho)", description: "Conferência dos dados de admissão", icon: <FileSpreadsheet size={16} /> },
 ];
@@ -215,7 +215,7 @@ export default async function PessoaPage({
           <InfoRow label="Nome" value={person.name} className="sm:col-span-2" />
           <InfoRow label="Tipo" value={TYPE_LABEL[person.type]} />
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
-          <InfoRow label="Data de Nascimento" value={person.birthDate ? dataLonga(person.birthDate) : null} />
+          <InfoRow label="Data de nascimento" value={person.birthDate ? dataLonga(person.birthDate) : null} />
           <InfoRow label="RG" value={person.rg} mono />
           <InfoRow label="PIS" value={person.pis} mono />
           <InfoRow label="CTPS" value={[person.ctps, person.ctpsSerie].filter(Boolean).join(" / ") || null} mono />
@@ -253,14 +253,14 @@ export default async function PessoaPage({
         {person.isInternal && (
           <Card className="p-5 h-full">
             <h2 className={TITULO}>Conta de acesso</h2>
-            <p className="text-[length:var(--fs-body)] text-fg break-words">
+            <p className="text-body text-fg break-words">
               {linkedUser ? `${linkedUser.name} (${linkedUser.email})` : "Não vinculada"}
             </p>
             {/* Era um link de texto (até 30/09): é uma ação, virou botão. */}
             {canEdit && (
               <Button href="/admin/atendentes" variant="secondary" size="sm" className="mt-4">
                 <KeyRound size={14} />
-                Gerenciar vínculo em Admin → Vínculos de Acesso
+                Gerenciar vínculo em Admin → Vínculos de acesso
               </Button>
             )}
           </Card>
@@ -270,7 +270,7 @@ export default async function PessoaPage({
       {person.notes && (
         <Card className="p-5">
           <h2 className={TITULO}>Observações</h2>
-          <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{person.notes}</p>
+          <p className="text-body text-fg-secondary whitespace-pre-wrap">{person.notes}</p>
         </Card>
       )}
     </div>
@@ -304,21 +304,21 @@ export default async function PessoaPage({
 
   const trabalhistaContent = (
     <div className="space-y-4">
-      {/* Dados Trabalhistas */}
+      {/* Dados trabalhistas */}
       {person.type === "COLABORADOR" && (
         <Card className="p-5">
-          <h2 className={TITULO}>Dados Trabalhistas</h2>
+          <h2 className={TITULO}>Dados trabalhistas</h2>
           <div className={GRADE}>
             <InfoRow label="Status" value={STATUS_LABEL[person.employmentStatus]} />
-            <InfoRow label="Data de Admissão" value={person.admissionDate ? dataLonga(person.admissionDate) : null} />
-            <InfoRow label="Data de Demissão" value={person.dismissalDate ? dataLonga(person.dismissalDate) : null} />
+            <InfoRow label="Data de admissão" value={person.admissionDate ? dataLonga(person.admissionDate) : null} />
+            <InfoRow label="Data de demissão" value={person.dismissalDate ? dataLonga(person.dismissalDate) : null} />
             <InfoRow label="Jornada" value={person.workShift} />
             <InfoRow
-              label="Carga Horária Semanal"
+              label="Carga horária semanal"
               value={person.weeklyWorkHours != null ? horasDoDP(person.weeklyWorkHours) : null}
             />
             <InfoRow
-              label="Carga Horária Mensal"
+              label="Carga horária mensal"
               value={person.monthlyWorkHours != null ? horasDoDP(person.monthlyWorkHours) : null}
             />
           </div>
@@ -328,21 +328,23 @@ export default async function PessoaPage({
       {/* Dependentes */}
       {person.type === "COLABORADOR" && dependentes.length > 0 && (
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-2">Dependentes</h2>
+          <h2 className="text-section font-semibold text-fg mb-2">Dependentes</h2>
           <div className="divide-y divide-border">
             {dependentes.map((d) => (
               <div key={d.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
-                  <p className="text-[length:var(--fs-body)] text-fg">{d.name}</p>
-                  <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5">
+                  <p className="text-body text-fg">{d.name}</p>
+                  <p className="text-helper text-fg-muted mt-0.5">
                     {DEP_REL_LABEL[d.relationship] ?? d.relationship}
                     {d.birthDate && ` · ${formatCalendarDate(d.birthDate)}`}
                     {d.cpf && ` · CPF ${maskCpf(d.cpf)}`}
                   </p>
                 </div>
+                {/* IR e salário-família classificam o dependente: categoria, então
+                    `Badge` — o `Selo` é para situação (2A, 08/10/2026). */}
                 <div className="flex gap-1.5 flex-shrink-0">
-                  {d.isIRDependent && <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">IR</SeloDoDP>}
-                  {d.isSalarioFamilia && <SeloDoDP cor="bg-surface-2 text-fg-muted border-border">Salário-família</SeloDoDP>}
+                  {d.isIRDependent && <Badge variant="info">IR</Badge>}
+                  {d.isSalarioFamilia && <Badge variant="neutral">Salário-família</Badge>}
                 </div>
               </div>
             ))}
@@ -357,7 +359,7 @@ export default async function PessoaPage({
       {/* Campos Adicionais (setoriais) */}
       {customFields.length > 0 && (
         <Card className="p-5">
-          <h2 className={TITULO}>Campos Adicionais</h2>
+          <h2 className={TITULO}>Campos adicionais</h2>
           <div className={GRADE}>
             {customFields.map((f) => (
               <InfoRow
@@ -416,7 +418,6 @@ export default async function PessoaPage({
       {/* A lista de origem depende de quem é a pessoa (ver PessoaBreadcrumb);
           era uma cópia à mão da mesma trilha das sub-páginas até 30/09. */}
       <PessoaBreadcrumb isInternal={person.isInternal} personId={id} personName={person.name} />
-      <BackButton className="mb-3" />
 
       <PersonHeader
         id={id}

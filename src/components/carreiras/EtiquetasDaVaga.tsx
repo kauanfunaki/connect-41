@@ -1,7 +1,7 @@
 import { Banknote, Briefcase, MapPin } from "lucide-react";
 import type { VagaContrato, VagaModalidade } from "@/generated/prisma/enums";
 import { CONTRATO_LABEL, MODALIDADE_LABEL, faixaSalarialLegivel } from "@/lib/carreiras/portal";
-import { Selo } from "@/components/ui/Selo";
+import { Badge } from "@/components/ui/Badge";
 
 type Props = {
   workMode: VagaModalidade | null;
@@ -13,7 +13,8 @@ type Props = {
 
 /**
  * Modalidade, contrato e salário da vaga — o que o candidato quer saber antes de abrir.
- * Cada etiqueta é o `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026).
+ * Cada etiqueta é o `Badge`: são categorias da vaga, não a situação dela (regra por
+ * papel, escolha 2A do Kauan, 08/10/2026). Antes, pílula à mão; em 07/10, o `Selo`.
  */
 export function EtiquetasDaVaga(v: Props) {
   const salario = faixaSalarialLegivel(v);
@@ -25,15 +26,10 @@ export function EtiquetasDaVaga(v: Props) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {itens.map((i) => (
-        <Selo
-          key={i.texto}
-          tom={i.destaque ? "sucesso" : undefined}
-          cor={i.destaque ? undefined : "bg-surface-2 text-fg-secondary border-border"}
-          className="gap-1 tabular-nums"
-        >
+        <Badge key={i.texto} variant={i.destaque ? "success" : "neutral"} className="gap-1 tabular-nums">
           {i.icone}
           {i.texto}
-        </Selo>
+        </Badge>
       ))}
     </div>
   );

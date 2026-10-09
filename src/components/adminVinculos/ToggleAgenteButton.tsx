@@ -31,7 +31,7 @@ export function ToggleAgenteButton({
   const [pending, startTransition] = useTransition();
 
   if (!canEdit) {
-    return <span className="text-[length:var(--fs-ui)] text-fg-muted">{ligado ? rotuloLigado : "—"}</span>;
+    return <span className="text-ui text-fg-muted">{ligado ? rotuloLigado : "—"}</span>;
   }
 
   const rotulo = ligado

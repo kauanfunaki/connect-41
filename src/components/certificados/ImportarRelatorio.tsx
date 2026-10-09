@@ -61,7 +61,7 @@ export function ImportarRelatorio() {
         <Upload size={14} /> Importar relatório
       </Button>
       {mensagem && (
-        <span className={`text-[11px] max-w-[420px] text-right ${mensagem.tom === "erro" ? "text-danger" : "text-fg-muted"}`}>{mensagem.texto}</span>
+        <span className={`text-fs-1 max-w-[420px] text-right ${mensagem.tom === "erro" ? "text-danger" : "text-fg-muted"}`}>{mensagem.texto}</span>
       )}
     </div>
   );

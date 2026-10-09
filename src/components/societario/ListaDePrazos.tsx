@@ -48,8 +48,8 @@ export function ListaDePrazos({ itens, hoje, mostrarResponsavel = false }: Props
             <div className="min-w-0 flex items-start gap-2">
               <Icone size={16} className="mt-0.5 shrink-0 text-fg-muted" aria-hidden />
               <div className="min-w-0 flex flex-col gap-0.5">
-                <span className="text-[length:var(--fs-ui)] font-medium truncate">{item.titulo}</span>
-                <span className="text-[length:var(--fs-2)] text-fg-muted truncate">
+                <span className="text-ui font-medium truncate">{item.titulo}</span>
+                <span className="text-fs-2 text-fg-muted truncate">
                   {TIPO_DE_PRAZO_LABEL[item.tipo]} · {item.empresaNome}
                   {item.detalhe && ` · ${item.detalhe}`}
                   {mostrarResponsavel && ` · ${item.responsavelNome ?? "sem responsável"}`}
@@ -60,14 +60,14 @@ export function ListaDePrazos({ itens, hoje, mostrarResponsavel = false }: Props
                 o recuo é o ícone (16px) mais o espaço (8px). */}
             <div className="flex items-center gap-3 md:justify-end pl-6 md:pl-0">
               {item.valorCentavos !== null && (
-                <span className="text-[length:var(--fs-2)] tabular-nums text-fg-secondary">{formatarReaisDeCentavos(item.valorCentavos)}</span>
+                <span className="text-fs-2 tabular-nums text-fg-secondary">{formatarReaisDeCentavos(item.valorCentavos)}</span>
               )}
               {item.data ? (
-                <span className={`text-[length:var(--fs-2)] whitespace-nowrap ${COR_DA_FAIXA[faixaDoPrazo(item.data, hoje)]}`}>
+                <span className={`text-fs-2 whitespace-nowrap ${COR_DA_FAIXA[faixaDoPrazo(item.data, hoje)]}`}>
                   {textoDoPrazo(item.data, hoje)} · {formatInstantDate(item.data)}
                 </span>
               ) : (
-                <span className="text-[length:var(--fs-2)] text-fg-muted whitespace-nowrap">sem data</span>
+                <span className="text-fs-2 text-fg-muted whitespace-nowrap">sem data</span>
               )}
             </div>
           </Link>

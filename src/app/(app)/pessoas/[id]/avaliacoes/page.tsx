@@ -5,7 +5,6 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -39,14 +38,14 @@ export default async function AvaliacoesPessoaPage({
         isInternal={person.isInternal}
         personId={id}
         personName={person.name}
-        atual="Avaliações de Desempenho"
+        atual="Avaliações de desempenho"
+        aba="trabalhista"
       />
-      <BackButton className="mb-3" />
-      <PageHeader title="Avaliações de Desempenho" />
+      <PageHeader title="Avaliações de desempenho" />
 
       {evaluations.length === 0 ? (
         <Card className="p-5">
-          <p className="text-[13px] text-fg-muted">Nenhuma avaliação registrada ainda.</p>
+          <p className="text-fs-3 text-fg-muted">Nenhuma avaliação registrada ainda.</p>
         </Card>
       ) : (
         <>
@@ -78,7 +77,7 @@ export default async function AvaliacoesPessoaPage({
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[560px]">
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Ciclo</th>
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Média" chave="media" />

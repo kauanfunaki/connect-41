@@ -41,8 +41,8 @@ const PARA_O_CLIENTE = [
 function Bloco({ titulo, itens }: { titulo: string; itens: string[] }) {
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-[var(--c41-shadow-xs)]">
-      <h2 className="text-[16px] font-semibold text-fg">{titulo}</h2>
-      <ul className="list-disc pl-5 flex flex-col gap-1.5 text-[14px] leading-relaxed text-fg">
+      <h2 className="text-fs-6 font-semibold text-fg">{titulo}</h2>
+      <ul className="list-disc pl-5 flex flex-col gap-1.5 text-fs-4 leading-relaxed text-fg">
         {itens.map((item) => (
           <li key={item}>{item}</li>
         ))}
@@ -61,8 +61,8 @@ export default function SobreOConnectPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="hidden dark:block h-9 w-auto self-start" />
           <div className="flex flex-col gap-2">
-            <h1 className="text-[length:var(--fs-title)] font-bold text-fg">Connect</h1>
-            <p className="max-w-[60ch] text-[16px] leading-relaxed text-fg-secondary">
+            <h1 className="text-title font-bold text-fg">Connect</h1>
+            <p className="max-w-[60ch] text-fs-6 leading-relaxed text-fg-secondary">
               A plataforma em que o escritório de contabilidade organiza o trabalho da equipe e atende os clientes. A
               equipe trabalha no Connect; o cliente acompanha tudo pelo Portal do Cliente, no computador ou no celular.
             </p>
@@ -81,8 +81,8 @@ export default function SobreOConnectPage() {
         </div>
 
         <section className="flex flex-col gap-2">
-          <h2 className="text-[16px] font-semibold text-fg">Entrar com o Google</h2>
-          <p className="max-w-[72ch] text-[14px] leading-relaxed text-fg">
+          <h2 className="text-fs-6 font-semibold text-fg">Entrar com o Google</h2>
+          <p className="max-w-[72ch] text-fs-4 leading-relaxed text-fg">
             No Portal do Cliente, é possível entrar com a conta Google. Usamos apenas o e-mail e o nome que o Google
             confirma, para encontrar o acesso que o escritório criou para você. Não guardamos nada da sua conta Google e
             não criamos conta sozinhos. Os detalhes estão na{" "}
@@ -93,7 +93,7 @@ export default function SobreOConnectPage() {
           </p>
         </section>
 
-        <footer className="flex flex-col gap-1 border-t border-border pt-4 text-[13px] text-fg-muted">
+        <footer className="flex flex-col gap-1 border-t border-border pt-4 text-fs-3 text-fg-muted">
           <p>
             O Connect é desenvolvido e operado pela 41 TEC LTDA (CNPJ 64.620.403/0001-16), Rua Anne Frank, 2210,
             Boqueirão, Curitiba/PR.

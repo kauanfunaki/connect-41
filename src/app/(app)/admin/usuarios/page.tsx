@@ -37,15 +37,15 @@ export default async function UsuariosPage() {
             href="/admin/usuarios/novo"
             variant="primary" className="font-medium"
           >
-            + Novo Usuário
+            + Novo usuário
           </Button>
         ) : (
           <span
             title={seatCheck.reason}
             aria-disabled="true"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-surface-2 text-fg-muted text-[13px] font-medium cursor-not-allowed select-none"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-surface-2 text-fg-muted text-fs-3 font-medium cursor-not-allowed select-none"
           >
-            + Novo Usuário
+            + Novo usuário
           </span>
         )}</>}
       />

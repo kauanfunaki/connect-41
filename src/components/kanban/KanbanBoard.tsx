@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { StatusDot } from "@/components/shared/StatusDot";
+import { Selo } from "@/components/ui/Selo";
 import { formatCalendarDate } from "@/lib/format";
 import { stripRichText } from "@/lib/richText";
 import { ColunaDoQuadro } from "./ColunaDoQuadro";
@@ -74,7 +74,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
             titulo={stage.name}
             cor={color}
             contagem={stageItems.length}
-            vazio={isDragOver ? "Soltar aqui" : "Nenhum item"}
+            vazio={isDragOver ? "Soltar aqui" : "Nenhuma tarefa"}
             destacada={isDragOver}
             onDragOver={(e) => {
               e.preventDefault();
@@ -112,18 +112,18 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                   } ${draggingId === item.id ? "opacity-90 shadow-[var(--c41-shadow-lg)] rotate-[-1.5deg]" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[length:var(--fs-kanban-title)] font-semibold text-fg leading-snug truncate group-hover:text-fg transition-colors">
+                    <p className="text-kanban-title font-semibold text-fg leading-snug truncate group-hover:text-fg transition-colors">
                       {item.entityName}
                     </p>
                     {item.daysInStage !== undefined && (
-                      <span className="text-[length:var(--fs-kanban-meta)] text-fg-muted tnum flex-shrink-0 leading-snug">
+                      <span className="text-kanban-meta text-fg-muted tnum flex-shrink-0 leading-snug">
                         {item.daysInStage}d
                       </span>
                     )}
                   </div>
 
                   {item.subtaskTotal !== undefined && item.subtaskTotal > 0 && (
-                    <p className="text-[length:var(--fs-kanban-meta)] text-fg-muted mt-1.5">
+                    <p className="text-kanban-meta text-fg-muted mt-1.5">
                       {item.subtaskDone}/{item.subtaskTotal} subtarefas
                     </p>
                   )}
@@ -133,7 +133,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                       {item.tags.map((t) => (
                         <span
                           key={t.id}
-                          className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full"
+                          className="inline-flex items-center gap-1 text-fs-1 font-medium px-2 py-0.5 rounded-full"
                           style={{ background: `${t.color}1A`, color: t.color }}
                         >
                           {t.name}
@@ -147,7 +147,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                       <div className="flex items-center gap-2 min-w-0">
                         {item.dueDate && (
                           <span
-                            className={`text-[length:var(--fs-kanban-meta)] tnum ${overdue ? "text-danger font-semibold" : "text-fg-muted"}`}
+                            className={`text-kanban-meta tnum ${overdue ? "text-danger font-semibold" : "text-fg-muted"}`}
                           >
                             {overdue && "⚠ "}
                             {formatCalendarDate(new Date(item.dueDate), {
@@ -156,12 +156,11 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                             })}
                           </span>
                         )}
+                        {/* Prioridade no Selo, como na fila de processos: a
+                            bolinha fica para ativo/inativo de cadastro (2A,
+                            08/10/2026). */}
                         {item.priority > 0 && (
-                          <StatusDot
-                            color="var(--c41-warning)"
-                            label={item.priority >= 2 ? "Urgente" : "Alta"}
-                            className="text-[length:var(--fs-kanban-meta)]"
-                          />
+                          <Selo tom="atencao">{item.priority >= 2 ? "Urgente" : "Alta"}</Selo>
                         )}
                       </div>
 
@@ -175,7 +174,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                             </span>
                           ))}
                           {item.assignees.length > 3 && (
-                            <span className="w-5 h-5 rounded-full bg-surface-hover border border-border text-[length:var(--fs-micro)] font-medium text-fg-muted flex items-center justify-center">
+                            <span className="w-5 h-5 rounded-full bg-surface-hover border border-border text-micro font-medium text-fg-muted flex items-center justify-center">
                               +{item.assignees.length - 3}
                             </span>
                           )}
@@ -185,7 +184,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                   )}
 
                   {item.lastActivity && (
-                    <p className="text-[11px] text-fg-muted mt-2 pt-2 border-t border-border truncate">
+                    <p className="text-fs-1 text-fg-muted mt-2 pt-2 border-t border-border truncate">
                       {stripRichText(item.lastActivity)}
                     </p>
                   )}

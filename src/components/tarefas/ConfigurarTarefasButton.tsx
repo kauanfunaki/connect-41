@@ -107,7 +107,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
       </Button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Configurar o Meu dia" maxWidth="max-w-lg">
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">
+        <p className="text-helper text-fg-muted mb-4">
           Escolha o que aparece no Meu dia para cada setor. Vale para todo mundo do
           setor — quem participa de mais de um vê a soma dos blocos.
         </p>
@@ -131,7 +131,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
 
             return (
               <div key={slot}>
-                <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider mb-2">
+                <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wider mb-2">
                   {SLOT_LABEL[slot]}
                 </p>
                 <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
@@ -143,8 +143,8 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
                         onChange={() => toggle(def.key)}
                       />
                       <label htmlFor={`task-widget-${def.key}`} className="flex-1 min-w-0 cursor-pointer">
-                        <span className="block text-[13px] font-medium text-fg truncate">{def.label}</span>
-                        <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">{def.description}</span>
+                        <span className="block text-fs-3 font-medium text-fg truncate">{def.label}</span>
+                        <span className="block text-micro text-fg-muted truncate">{def.description}</span>
                       </label>
                     </div>
                   ))}
@@ -155,7 +155,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
         </div>
 
         {selected.length === 0 && (
-          <p className="text-[12px] text-fg-secondary bg-surface-hover border border-border rounded-md px-3 py-2 mt-4">
+          <p className="text-fs-2 text-fg-secondary bg-surface-hover border border-border rounded-md px-3 py-2 mt-4">
             Sem nenhum bloco marcado, quem é só de {sectorLabel} vai abrir o Meu dia numa
             tela vazia. É uma escolha válida enquanto o setor não tiver módulos próprios —
             só não é acidente.

@@ -47,11 +47,13 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
 
   return (
     <Card className="p-5 mb-4">
-      {/* Título de cartão no token de cartão — era o de seção, 18px (DRG-10). */}
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Histórico Salarial</h2>
+      {/* Título de seção da ficha em 18px (`text-section`), como os da visão
+          geral da pessoa — padrão aceito pelo Kauan em 08/10/2026. Estava em
+          14px desde a auditoria de 07/10 (DRG-10). */}
+      <h2 className="text-section font-semibold text-fg mb-4">Histórico salarial</h2>
 
       {history.length === 0 ? (
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">Nenhum reajuste registrado ainda.</p>
+        <p className="text-helper text-fg-muted mb-4">Nenhum reajuste registrado ainda.</p>
       ) : (
         <>
           {/* No celular, uma linha por reajuste em vez da tabela de 640px com
@@ -75,7 +77,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
           <TabelaNoDesktop className="c41-tabela rounded-lg border border-border mb-4">
             <table className="w-full min-w-[640px]">
               <thead>
-                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-4 py-3">Vigência</th>
                   <th className="px-4 py-3">Salário</th>
                   <th className="px-4 py-3">Variação</th>
@@ -109,12 +111,14 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
           larguras soltas, que quebrava em lugares diferentes conforme a tela,
           e o rótulo "Novo Cargo (promoção)" não cabia na coluna. Agora é a
           grade dos formulários da ficha, com o botão alinhado ao campo. */}
-      <form action={formAction} className="border-t border-border pt-5">
+      <form action={formAction} className="border-t border-border pt-5 space-y-4">
+        {/* Bloco do "novo" com nome, acima dos campos (5A, 08/10/2026). */}
+        <h3 className="c41-rotulo">Novo reajuste</h3>
         <FieldGrid columns="sm:grid-cols-2 xl:grid-cols-[180px_180px_minmax(0,240px)_minmax(0,1fr)_auto]">
-          <CampoForm label="Novo Salário" htmlFor="newSalary" required>
+          <CampoForm label="Novo salário" htmlFor="newSalary" required>
             <Input id="newSalary" name="newSalary" type="number" step="0.01" required prefix="R$" placeholder="0,00" />
           </CampoForm>
-          <CampoForm label="Data do Reajuste" htmlFor="effectiveDate" required>
+          <CampoForm label="Data do reajuste" htmlFor="effectiveDate" required>
             <CampoData id="effectiveDate" name="effectiveDate" required />
           </CampoForm>
           <CampoForm label="Novo cargo" htmlFor="cargoId" helper="Só em promoção.">
@@ -130,7 +134,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
           </CampoForm>
           <AlinhadoAoCampo>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Registrando…" : "Registrar Reajuste"}
+              {isPending ? "Registrando…" : "Registrar reajuste"}
             </Button>
           </AlinhadoAoCampo>
         </FieldGrid>

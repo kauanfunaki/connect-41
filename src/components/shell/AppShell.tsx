@@ -535,8 +535,13 @@ export function AppShell({
         )}
 
         {/* Page content */}
+        {/* O `relative` faz do <main> o bloco de contenção dos elementos com
+          `position: absolute` da página (o campo de arquivo escondido com
+          `sr-only`, por exemplo). Sem ele, o elemento escapava da rolagem de
+          dentro e esticava a página: no detalhe do processo do portal, a tela
+          inteira rolava e o casco subia junto (relato do Kauan, 08/10/2026). */}
         <main
-          className="scroll-y scroll-gutter-stable flex-1 overflow-y-auto"
+          className="scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto"
           onScroll={(e) => setRolou(e.currentTarget.scrollTop > 0)}
         >
           {/* Anota a tela aberta como recente (no navegador) — é o que o Ctrl+K

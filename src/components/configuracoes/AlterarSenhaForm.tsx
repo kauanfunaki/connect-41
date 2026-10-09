@@ -54,7 +54,7 @@ export function AlterarSenhaForm({ action }: Props) {
         </Aviso>
       )}
 
-      <p className="text-[length:var(--fs-helper)] text-fg-muted">
+      <p className="text-helper text-fg-muted">
         Ao trocar a senha, todas as sessões abertas são encerradas — inclusive esta. Você vai precisar entrar de novo.
       </p>
 

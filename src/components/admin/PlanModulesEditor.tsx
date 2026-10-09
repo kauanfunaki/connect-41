@@ -80,7 +80,7 @@ export function PlanModulesEditor({ planId, allowedModuleCodes, action }: Props)
             <div className="space-y-3 max-h-56 overflow-y-auto pl-1">
               {MODULES_BY_SECTOR.map((group) => (
                 <div key={group.sectorCode}>
-                  <p className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-[0.06em] text-fg-muted mb-1">
+                  <p className="text-micro font-semibold uppercase tracking-[0.06em] text-fg-muted mb-1">
                     {sectorLabelOf(group.sectorCode)}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5">
@@ -107,7 +107,7 @@ export function PlanModulesEditor({ planId, allowedModuleCodes, action }: Props)
             >
               {isPending ? "Salvando…" : "Salvar"}
             </Button>
-            {saved && !isPending && <span className="text-[11px] text-success-fg">Salvo.</span>}
+            {saved && !isPending && <span className="text-fs-1 text-success-fg">Salvo.</span>}
           </div>
         </div>
       )}

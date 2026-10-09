@@ -28,7 +28,7 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Pipelines</h2>
+        <h2 className="text-section font-semibold text-fg mb-4">Pipelines</h2>
         {pipelineItems.length === 0 ? (
           <EmptyState icon={<Columns3 />} title="Nenhum pipeline vinculado" description={`Esta ${entityLabel} ainda não está em nenhum Kanban.`} />
         ) : (
@@ -37,7 +37,7 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
               <Link
                 key={p.id}
                 href={`${boardPath({ id: p.pipelineId })}/itens/${p.id}`}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[length:var(--fs-helper)] font-medium bg-surface-hover border border-border text-fg-secondary hover:text-fg hover:border-border-strong transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-helper font-medium bg-surface-hover border border-border text-fg-secondary hover:text-fg hover:border-border-strong transition-colors"
               >
                 {p.pipelineName}
                 <span className="text-fg-muted">· {p.stageName}</span>
@@ -48,7 +48,7 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
       </Card>
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Atividades</h2>
+        <h2 className="text-section font-semibold text-fg mb-4">Atividades</h2>
         <ActivityTimeline activities={activities} emptyLabel="Nenhuma atividade registrada nos pipelines desta empresa." />
       </Card>
     </div>

@@ -63,7 +63,7 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
       </FieldGrid>
 
       <fieldset>
-        <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Cor</legend>
+        <legend className="text-label font-medium text-fg mb-1.5">Cor</legend>
         <div className="flex flex-wrap items-center gap-2">
           {SECTOR_COLOR_PALETTE.map((c) => (
             <label key={c} className="cursor-pointer">

@@ -278,7 +278,7 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         await r.cartaz(SELO, "Lançamentos", "Contas sem nota fiscal, lançadas à mão ou por planilha");
         await r.legenda("Aluguel, folha, pró-labore, tarifas: o que não nasce de nota fiscal é lançado aqui.");
         await escolherEmpresa(r, "Transportes Modelo");
-        await r.clicar(main(r).getByRole("link", { name: "Novo lançamento" }), "Clique na aba Novo lançamento.");
+        await r.clicar(main(r).getByRole("link", { name: "Novo lançamento" }), "Clique em Novo lançamento, no topo da tela.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(600);
         await r.apontar(main(r).getByRole("combobox", { name: /^Tipo/ }), "Em Tipo, escolha Conta a pagar ou Conta a receber.");
@@ -298,7 +298,9 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         await r.clicar(main(r).getByRole("button", { name: "Lançar" }), "Clique em Lançar. A conta já aparece em Contas a pagar e na DRE.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1200);
-        await r.clicar(main(r).getByRole("link", { name: "Importar CSV" }), "Para lançar muitas de uma vez, use a aba Importar CSV.");
+        await r.clicar(main(r).getByRole("link", { name: "Lançamentos" }), "Volte para a lista pela trilha, em Lançamentos.");
+        await r.page.waitForLoadState("networkidle").catch(() => {});
+        await r.clicar(main(r).getByRole("link", { name: "Importar CSV" }), "Para lançar muitas de uma vez, use Importar CSV, ao lado.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.apontar(main(r).getByText(/^Tipo;Contraparte;Documento/), "Monte a planilha com estas colunas e salve em CSV.");
         await r.anexar(
@@ -316,7 +318,7 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         );
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1200);
-        await r.clicar(main(r).getByRole("link", { name: "Lançados à mão" }), "Em Lançados à mão ficam os lançamentos da empresa no mês…");
+        await r.clicar(main(r).getByRole("link", { name: "Lançamentos" }), "Na lista de Lançamentos ficam os lançados à mão da empresa no mês…");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(600);
         await r.apontar(main(r).getByRole("table").first(), "…com a situação de cada um: a conferir, em aberto, liquidado ou cancelado.");
@@ -479,8 +481,8 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
           "Não usar nesta empresa esconde uma categoria do padrão que ela não usa."
         );
         await r.apontar(
-          main(r).getByRole("button", { name: "Categoria só desta empresa" }),
-          "E Categoria só desta empresa cria uma categoria própria."
+          main(r).getByRole("button", { name: "Nova categoria" }),
+          "E Nova categoria cria uma categoria só desta empresa."
         );
         await r.soltar();
         await encerramento(r, "O e-mail do sacado é para onde vão os lembretes da régua de cobrança.");
@@ -553,10 +555,14 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         await r.clicar(main(r).getByRole("link", { name: "Alçadas" }), "Na aba Alçadas fica quem aprova, no portal, e até quanto.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await escolherEmpresa(r, "Transportes Modelo", "Escolha a empresa e clique em Aplicar.");
-        await r.apontar(
-          main(r).getByRole("heading", { name: "Nova alçada" }),
-          "Em Nova alçada, escolha o Usuário do portal, informe o Teto e clique em Salvar alçada."
+        await r.clicar(main(r).getByRole("button", { name: "Nova alçada" }), "Clique em Nova alçada, no topo da tela…");
+        const alcada = dialogo(r, "Nova alçada");
+        await r.apontarGrupo(
+          alcada.getByRole("combobox", { name: /^Usuário do portal/ }),
+          alcada.getByRole("textbox", { name: /^Teto/ }),
+          "…escolha o Usuário do portal, informe o Teto e clique em Salvar alçada."
         );
+        await r.clicar(alcada.getByRole("button", { name: "Cancelar" }));
         await r.apontar(main(r).getByRole("button", { name: "Desativar" }).first(), "Para suspender uma alçada, Desativar. Para voltar, Reativar.");
         await r.clicar(main(r).getByRole("link", { name: "Fila" }), "Na aba Fila ficam as contas esperando decisão.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
@@ -876,17 +882,18 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         await r.cartaz(SELO, "Orçamento", "As versões do orçado do ano, por grupo da DRE");
         await escolherEmpresa(r, "Transportes Modelo", "Escolha a empresa, o ano e clique em Aplicar.");
         await r.clicar(main(r).getByRole("button", { name: "Nova versão" }), "Clique em Nova versão.");
-        await r.digitar(main(r).getByRole("textbox", { name: /^Nome da versão/ }), "Revisão de outubro", "Dê o nome da versão…");
+        const versao = dialogo(r, /^Nova versão/);
+        await r.digitar(versao.getByRole("textbox", { name: /^Nome da versão/ }), "Revisão de outubro", "Dê o nome da versão…");
         await selecionar(
           r,
-          main(r).getByRole("combobox", { name: "Partir de" }),
+          versao.getByRole("combobox", { name: "Partir de" }),
           "Outra versão, com reajuste",
           "…e escolha de onde partir: grade vazia, outra versão ou o realizado de um ano, com reajuste."
         );
-        await selecionar(r, main(r).getByRole("combobox", { name: /^Versão de origem/ }), /Orçamento/, "Escolha a versão de origem…");
-        const reajuste = main(r).getByRole("textbox", { name: /Reajuste/ }).or(main(r).getByRole("spinbutton", { name: /Reajuste/ }));
+        await selecionar(r, versao.getByRole("combobox", { name: /^Versão de origem/ }), /Orçamento/, "Escolha a versão de origem…");
+        const reajuste = versao.getByRole("textbox", { name: /Reajuste/ }).or(versao.getByRole("spinbutton", { name: /Reajuste/ }));
         if (await reajuste.count()) await r.digitar(reajuste.first(), "5", "…e o Reajuste, em percentual: vale para cada célula.");
-        await r.clicar(main(r).getByRole("button", { name: "Criar versão" }), "Clique em Criar versão.");
+        await r.clicar(versao.getByRole("button", { name: "Criar versão" }), "Clique em Criar versão.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1200);
         const celula = main(r).getByRole("table").first().getByRole("textbox").first();
@@ -1195,24 +1202,24 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         );
         await r.clicar(main(r).getByRole("link", { name: /MERCADO BOM PREÇO LTDA/ }).first(), "Clique no nome da empresa para abrir a ficha.");
         await r.esperarTela(/\/empresas\/[^/]+$/);
-        await r.apontar(main(r).getByRole("heading", { name: "Identificação" }), "Em Visão Geral ficam os dados cadastrais e os serviços contratados.");
+        await r.apontar(main(r).getByRole("heading", { name: "Identificação" }), "Em Visão geral ficam os dados cadastrais e os serviços contratados.");
         await r.apontar(
           main(r).getByRole("tablist"),
-          "As abas trazem o resto: filiais, pessoas, RH & Operação, documentos, conversas e histórico."
+          "As abas trazem o resto: filiais, pessoas, RH & operação, documentos, conversas e histórico."
         );
-        await r.clicar(main(r).getByRole("tab", { name: "RH & Operação" }), "Em RH & Operação: sócios, cargos, departamentos, benefícios, turnos, folha e documentos para o cliente.");
+        await r.clicar(main(r).getByRole("tab", { name: "RH & operação" }), "Em RH & operação: sócios, cargos, departamentos, benefícios, turnos, folha e documentos para o cliente.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(900);
         await r.apontar(
-          main(r).getByRole("link", { name: "Solicitar Transferência" }),
-          "Para passar um assunto da empresa a outro setor, Solicitar Transferência."
+          main(r).getByRole("link", { name: "Solicitar transferência" }),
+          "Para passar um assunto da empresa a outro setor, Solicitar transferência."
         );
         await r.clicar(main(r).getByRole("link", { name: "Empresas", exact: true }).first());
         await r.esperarTela(/\/(empresas|cadastros)/);
         await r.clicar(main(r).getByRole("button", { name: "Mais ações" }).first(), "Na linha, os três pontinhos ao lado de Editar guardam Inativar — e Reativar, para as inativas.");
         await r.pausa(1200);
         await r.page.keyboard.press("Escape");
-        await r.clicar(main(r).getByRole("link", { name: "+ Nova Empresa" }), "Para cadastrar, clique em + Nova Empresa.");
+        await r.clicar(main(r).getByRole("link", { name: "Nova empresa" }), "Para cadastrar, clique em Nova empresa.");
         await r.esperarTela("/empresas/nova");
         await r.apontar(
           main(r).getByRole("textbox", { name: "CNPJ" }),
@@ -1243,7 +1250,7 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.esperarTela(/\/pessoas\/[^/]+$/);
         await r.apontar(
           main(r).getByRole("tablist"),
-          "Visão Geral, Vínculo, Dados Trabalhistas, Documentos, Conversas e Histórico: tudo da pessoa."
+          "Visão geral, Vínculo, Dados trabalhistas, Documentos, Conversas e Histórico: tudo da pessoa."
         );
         const vinculo = main(r).getByRole("tab", { name: "Vínculo" });
         if (await vinculo.count()) {
@@ -1252,11 +1259,11 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
           await r.pausa(800);
         }
         await r.apontar(
-          main(r).getByRole("link", { name: "Solicitar Transferência" }),
-          "Solicitar Transferência passa um assunto da pessoa a outro setor."
+          main(r).getByRole("link", { name: "Solicitar transferência" }),
+          "Solicitar transferência passa um assunto da pessoa a outro setor."
         );
         await r.ir("/pessoas");
-        await r.apontar(main(r).getByRole("link", { name: "+ Nova Pessoa" }), "Para cadastrar, + Nova Pessoa: preencha cada etapa, Avançar → e Confirmar e salvar.");
+        await r.apontar(main(r).getByRole("link", { name: "Nova pessoa" }), "Para cadastrar, Nova pessoa: preencha cada etapa, Avançar → e Confirmar e salvar.");
         await r.clicar(main(r).getByRole("button", { name: "Mais ações" }).first(), "Os três pontinhos da linha guardam Inativar e Reativar.");
         await r.pausa(1200);
         await r.page.keyboard.press("Escape");
@@ -1416,14 +1423,14 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         );
         await r.clicar(reuniao.getByRole("button", { name: "Fechar" }));
         await r.clicar(r.page.getByRole("banner").getByRole("button", { name: "Menu do usuário" }), "O horário da grade é ajustável: clique na sua foto, no alto…");
-        await r.clicar(r.page.getByRole("button", { name: "Configurações do Perfil" }), "…e em Configurações do Perfil.");
+        await r.clicar(r.page.getByRole("button", { name: "Configurações do perfil" }), "…e em Configurações do perfil.");
         await r.page.waitForURL(/\/configuracoes/, { timeout: 20000 });
         await r.page.waitForLoadState("networkidle").catch(() => {});
         // O menu do usuário continua aberto depois de trocar de tela, e o Esc
         // não o fecha (06/10): um clique no vazio da barra lateral fecha.
         await r.page.mouse.click(60, 860);
         await r.pausa(400);
-        const grade = r.page.getByRole("radiogroup", { name: "Horário da Agenda" });
+        const grade = r.page.getByRole("radiogroup", { name: "Horário da agenda" });
         await r.rolarAte(grade);
         await r.apontar(grade, "Em Agenda, escolha Usar o do escritório ou Definir o meu.");
         await r.clicar(grade.getByRole("radio", { name: /^Definir o meu/ }));
@@ -1459,10 +1466,10 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await r.apontar(
-          main(r).getByRole("button", { name: /Adicionar Tarefa/ }).first(),
-          "Na visão Lista, Adicionar Tarefa cria uma tarefa no grupo do status: digite o nome e aperte Enter."
+          main(r).getByRole("button", { name: /Adicionar tarefa/ }).first(),
+          "Na visão Lista, Adicionar tarefa cria uma tarefa no grupo do status: digite o nome e aperte Enter."
         );
-        await r.apontar(main(r).getByRole("button", { name: "+ Item" }).or(main(r).getByRole("link", { name: "+ Item" })).first(), "+ Item inclui uma empresa ou pessoa na lista.");
+        await r.apontar(main(r).getByRole("link", { name: "Nova tarefa" }).first(), "Nova tarefa cria a tarefa de uma empresa ou pessoa, com prazo, prioridade e responsáveis.");
         await r.apontar(main(r).getByRole("button", { name: /^Filtros/ }).first(), "A busca e o botão Filtros filtram por responsável, criador, etiqueta, prioridade e prazo.");
         await r.clicar(
           main(r).getByRole("group", { name: "Visão do pipeline" }).getByRole("button", { name: /Quadro/ }),
@@ -1821,16 +1828,16 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await r.page.waitForURL(/\/ferias/, { timeout: 20000 });
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(800);
-        const programar = main(r).getByRole("button", { name: "Programar Férias" });
+        const programar = main(r).getByRole("button", { name: "Programar férias" });
         await r.rolarAte(programar);
         await r.apontar(
           programar,
-          "Para um período novo, preencha o aquisitivo e, se souber, o concessivo, os dias, o abono e o parcelamento. Depois, Programar Férias."
+          "Para um período novo, preencha o aquisitivo e, se souber, o concessivo, os dias, o abono e o parcelamento. Depois, Programar férias."
         );
         const atualizar = main(r).getByRole("button", { name: "Atualizar" }).first();
         if (await atualizar.count()) await r.apontar(atualizar, "Para andar com um período já lançado, escolha a nova situação, as datas e clique em Atualizar.");
         await r.ir("/colaboradores");
-        await r.clicar(main(r).getByRole("link", { name: /^Rescisões/ }), "E em Rescisões, os desligamentos em andamento.");
+        await r.clicar(main(r).getByRole("link", { name: /^Desligamentos/ }), "E em Desligamentos, os desligamentos em andamento.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(800);
         await r.clicar(main(r).getByRole("link", { name: "Abrir" }).first());
@@ -1839,7 +1846,7 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await r.pausa(800);
         await r.apontar(
           main(r).getByRole("heading", { level: 1 }),
-          "O desligamento se registra na ficha: Dados Trabalhistas → Desligamento, com o tipo e o motivo."
+          "O desligamento se registra na ficha: Dados trabalhistas → Desligamento, com o tipo e o motivo."
         );
         const trct = main(r).getByRole("link", { name: /Conferência do TRCT/ }).or(main(r).getByRole("button", { name: /Conferência do TRCT/ })).first();
         if (await trct.count()) await r.apontar(trct, "A cada passo, a nova situação e Atualizar. Conferência do TRCT confere a rescisão item a item.");
@@ -1871,8 +1878,8 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await selecionar(r, main(r).getByRole("combobox", { name: /^Tipo/ }), /Atestado parcial/, "Para registrar um novo, escolha o Tipo…");
-        await digitarData(r, main(r).getByRole("combobox", { name: /^Data de Início/ }), daquiA(0), "…a Data de Início e, se souber, o retorno e os dias perdidos.");
-        await r.clicar(main(r).getByRole("button", { name: "Registrar Ausência" }), "Clique em Registrar Ausência.");
+        await digitarData(r, main(r).getByRole("combobox", { name: /^Data de início/ }), daquiA(0), "…a Data de início e, se souber, o retorno e os dias perdidos.");
+        await r.clicar(main(r).getByRole("button", { name: "Registrar ausência" }), "Clique em Registrar ausência.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await r.soltar();
@@ -1898,11 +1905,11 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await r.clicar(main(r).getByRole("button", { name: "Atualizar" }).first(), "…e clique em Atualizar. Depois da folha, a situação é Enviado para folha.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
-        await digitarData(r, main(r).getByRole("combobox", { name: /^Data/ }).last(), daquiA(-1), "Para lançar, informe a Data e o Tipo de Dia…");
-        await r.digitar(main(r).getByRole("spinbutton", { name: "Horas Trabalhadas" }), "10", "…as horas devidas, trabalhadas e extras, e o adicional…");
-        await r.digitar(main(r).getByRole("spinbutton", { name: "Horas Extras" }), "2");
+        await digitarData(r, main(r).getByRole("combobox", { name: /^Data/ }).last(), daquiA(-1), "Para lançar, informe a Data e o Tipo de dia…");
+        await r.digitar(main(r).getByRole("spinbutton", { name: "Horas trabalhadas" }), "10", "…as horas devidas, trabalhadas e extras, e o adicional…");
+        await r.digitar(main(r).getByRole("spinbutton", { name: "Horas extras" }), "2");
         await r.digitar(main(r).getByRole("textbox", { name: "Justificativa" }), "Inventário de fim de mês.", "…e a Justificativa.");
-        await r.clicar(main(r).getByRole("button", { name: "Lançar Horas" }), "Clique em Lançar Horas: o lançamento entra pendente de aprovação.");
+        await r.clicar(main(r).getByRole("button", { name: "Lançar horas" }), "Clique em Lançar horas: o lançamento entra pendente de aprovação.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await r.soltar();
@@ -1926,8 +1933,8 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await r.clicar(main(r).getByRole("tab", { name: "Vínculo" }), "…vá à aba Vínculo…");
         await r.pausa(800);
         await r.clicar(
-          main(r).getByRole("link", { name: /Escala de Trabalho/ }).or(main(r).getByRole("button", { name: /Escala de Trabalho/ })).first(),
-          "…e clique em Escala de Trabalho."
+          main(r).getByRole("link", { name: /Escala de trabalho/ }).or(main(r).getByRole("button", { name: /Escala de trabalho/ })).first(),
+          "…e clique em Escala de trabalho."
         );
         await r.page.waitForURL(/\/escala/, { timeout: 20000 });
         await r.page.waitForLoadState("networkidle").catch(() => {});
@@ -1935,7 +1942,7 @@ function videosDoDp(): DefinicaoDeVideo[] {
         await digitarData(r, main(r).getByRole("combobox", { name: /^Data/ }).last(), daquiA(2), "Informe a Data e escolha o Turno.");
         const folga = main(r).getByRole("checkbox", { name: /Folga/ });
         if (await folga.count()) await r.apontar(folga, "Marque Folga ou Feriado, se for o caso.");
-        await r.clicar(main(r).getByRole("button", { name: "Adicionar à Escala" }), "Clique em Adicionar à Escala.");
+        await r.clicar(main(r).getByRole("button", { name: "Adicionar à escala" }), "Clique em Adicionar à escala.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         await r.ir("/escalas");
@@ -1955,11 +1962,11 @@ function videosDoDp(): DefinicaoDeVideo[] {
       async executar(r) {
         await r.ir("/treinamentos");
         await r.cartaz(SELO, "Treinamentos", "O catálogo de treinamentos, as turmas e os participantes");
-        await r.clicar(main(r).getByRole("link", { name: "Novo Treinamento" }).first(), "Clique em Novo Treinamento.");
+        await r.clicar(main(r).getByRole("link", { name: "Novo treinamento" }).first(), "Clique em Novo treinamento.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(600);
-        await r.digitar(main(r).getByRole("textbox", { name: /^Nome do Treinamento/ }), "NR-35 — Trabalho em altura", "Preencha o Nome do Treinamento…");
-        const carga = main(r).getByRole("spinbutton", { name: /Carga Horária/ });
+        await r.digitar(main(r).getByRole("textbox", { name: /^Nome do treinamento/ }), "NR-35 — Trabalho em altura", "Preencha o Nome do treinamento…");
+        const carga = main(r).getByRole("spinbutton", { name: /Carga horária/ });
         if (await carga.count()) await r.digitar(carga, "8", "…e, se quiser, a descrição, a carga horária e a validade em meses.");
         const validade = main(r).getByRole("spinbutton", { name: /Validade/ });
         if (await validade.count()) await r.digitar(validade, "24");
@@ -1971,13 +1978,13 @@ function videosDoDp(): DefinicaoDeVideo[] {
           await r.clicar(main(r).getByRole("link", { name: "Abrir" }).first(), "Na lista, Abrir no treinamento.");
           await r.page.waitForLoadState("networkidle").catch(() => {});
         }
-        await digitarData(r, main(r).getByRole("combobox", { name: /^Data/ }).first(), daquiA(10), "No quadro Turmas, informe a Data e, se quiser, o Turno e o Instrutor.");
-        await r.clicar(main(r).getByRole("button", { name: "Nova Turma" }), "Clique em Nova Turma: a turma abre em seguida.");
+        await digitarData(r, main(r).getByRole("combobox", { name: /^Data/ }).first(), daquiA(10), "No quadro Turmas, em Nova turma, informe a Data e, se quiser, o Turno e o Instrutor.");
+        await r.clicar(main(r).getByRole("button", { name: "Criar turma" }), "Clique em Criar turma: a turma abre em seguida.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
-        await main(r).getByRole("button", { name: "Adicionar Participante" }).waitFor({ timeout: 20000 });
+        await main(r).getByRole("button", { name: "Adicionar participante" }).waitFor({ timeout: 20000 });
         await r.pausa(800);
         await selecionar(r, main(r).getByRole("combobox", { name: /^Colaborador/ }), /Rodrigo Pereira/, "Escolha o Colaborador…");
-        await r.clicar(main(r).getByRole("button", { name: "Adicionar Participante" }), "…e clique em Adicionar Participante.");
+        await r.clicar(main(r).getByRole("button", { name: "Adicionar participante" }), "…e clique em Adicionar participante.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
         const situacao = main(r).getByRole("combobox").filter({ hasText: /Convocado/ }).first();
@@ -2001,12 +2008,14 @@ function videosDoDp(): DefinicaoDeVideo[] {
       async executar(r) {
         await r.ir("/avaliacoes");
         await r.cartaz(SELO, "Avaliações de desempenho", "Ciclos, notas por competência e plano de desenvolvimento");
-        await r.digitar(main(r).getByRole("textbox", { name: /^Nome do Ciclo/ }), "Avaliação 2026.2", "No topo, preencha o Nome do Ciclo…");
-        await digitarData(r, main(r).getByRole("combobox", { name: /^Início/ }), daquiA(0), "…o Início e, se já souber, o Fim.");
-        await r.clicar(main(r).getByRole("button", { name: "Criar Ciclo" }), "Clique em Criar Ciclo.");
+        await r.clicar(main(r).getByRole("button", { name: "Novo ciclo" }), "Para abrir um ciclo, clique em Novo ciclo.");
+        const novoCiclo = dialogo(r, "Novo ciclo de avaliação");
+        await r.digitar(novoCiclo.getByRole("textbox", { name: /^Nome do ciclo/ }), "Avaliação 2026.2", "Preencha o Nome do ciclo…");
+        await digitarData(r, novoCiclo.getByRole("combobox", { name: /^Início/ }), daquiA(0), "…o Início e, se já souber, o Fim.");
+        await r.clicar(novoCiclo.getByRole("button", { name: "Criar ciclo" }), "Clique em Criar ciclo.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
-        await main(r).getByRole("button", { name: "Avaliar Colaborador" }).waitFor({ timeout: 20000 });
+        await main(r).getByRole("button", { name: "Avaliar colaborador" }).waitFor({ timeout: 20000 });
         await r.apontar(main(r).getByRole("heading", { level: 1 }), "O ciclo abre em seguida. Na lista, ele aparece como Aberto.");
         await r.escolher(
           main(r).getByRole("button", { name: /^Colaborador/ }).or(main(r).getByRole("combobox", { name: /^Colaborador/ })).first(),
@@ -2014,7 +2023,7 @@ function videosDoDp(): DefinicaoDeVideo[] {
           r.page.getByRole("option", { name: /Rodrigo Pereira/ }).first(),
           "Busque o colaborador…"
         );
-        await r.clicar(main(r).getByRole("button", { name: "Avaliar Colaborador" }), "…e clique em Avaliar Colaborador.");
+        await r.clicar(main(r).getByRole("button", { name: "Avaliar colaborador" }), "…e clique em Avaliar colaborador.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(900);
         const notas = main(r).getByRole("spinbutton");
@@ -2022,13 +2031,13 @@ function videosDoDp(): DefinicaoDeVideo[] {
         for (let i = 0; i < n; i++) {
           await r.digitar(notas.nth(i), String([8, 9, 7, 9][i]), i === 0 ? "Em Notas por Competência, dê de 0 a 10 a cada competência." : undefined);
         }
-        const plano = main(r).getByRole("textbox", { name: /Plano de Desenvolvimento/ });
+        const plano = main(r).getByRole("textbox", { name: /Plano de desenvolvimento/ });
         if (await plano.count()) await r.digitar(plano, "Curso de Excel avançado no próximo trimestre.", "Em Desenvolvimento: observações, plano e prazo de melhoria.");
-        await r.clicar(main(r).getByRole("button", { name: "Salvar Avaliação" }), "Clique em Salvar Avaliação: a média aparece na tabela do ciclo.");
+        await r.clicar(main(r).getByRole("button", { name: "Salvar avaliação" }), "Clique em Salvar avaliação: a média aparece na tabela do ciclo.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1000);
-        const encerrar = main(r).getByRole("button", { name: "Encerrar Ciclo" });
-        if (await encerrar.count()) await r.apontar(encerrar, "Com todas feitas, Encerrar Ciclo. Encerrado, ele não aceita novas avaliações.");
+        const encerrar = main(r).getByRole("button", { name: "Encerrar ciclo" });
+        if (await encerrar.count()) await r.apontar(encerrar, "Com todas feitas, Encerrar ciclo. Encerrado, ele não aceita novas avaliações.");
         await r.soltar();
         await encerramento(r, "As competências vêm de Admin → Competências.");
       },
@@ -2049,10 +2058,10 @@ function videosDoRecrutamento(): DefinicaoDeVideo[] {
       async executar(r) {
         await r.ir("/vagas");
         await r.cartaz(SELO, "Vagas", "Criar a vaga e mover os candidatos pelo funil");
-        await r.clicar(main(r).getByRole("link", { name: "+ Nova Vaga" }), "Para criar uma vaga, clique em + Nova Vaga.");
+        await r.clicar(main(r).getByRole("link", { name: "Nova vaga" }), "Para criar uma vaga, clique em Nova vaga.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(800);
-        await r.digitar(main(r).getByRole("textbox", { name: /^Título da Vaga/ }), "Assistente fiscal", "Em Dados da vaga, preencha o Título, o Setor e a Empresa…");
+        await r.digitar(main(r).getByRole("textbox", { name: /^Título da vaga/ }), "Assistente fiscal", "Em Dados da vaga, preencha o Título, o Setor e a Empresa…");
         await r.apontar(
           main(r).getByText(/Publicar no portal de vagas/).first(),
           "Para divulgar no portal público, marque Publicar no portal de vagas e preencha a descrição pública, a modalidade e as datas."
@@ -2112,15 +2121,15 @@ function videosDoRecrutamento(): DefinicaoDeVideo[] {
         await r.pausa(800);
         const tags = main(r).getByRole("heading", { name: /Tags/ }).first();
         if (await tags.count()) await r.apontar(tags, "Em Tags / Habilidades, marque o que descreve a pessoa: fica fácil de achar depois.");
-        const analisar = main(r).getByRole("button", { name: /Analisar Currículo/ });
-        if (await analisar.count()) await r.apontar(analisar, "Em Triagem de Currículo (IA), Analisar Currículo lê o PDF e resume o perfil.");
+        const analisar = main(r).getByRole("button", { name: /Analisar currículo/ });
+        if (await analisar.count()) await r.apontar(analisar, "Em Triagem de currículo (IA), Analisar currículo lê o PDF e resume o perfil.");
         const teste = main(r).getByRole("button", { name: /Enviar teste/ });
         if (await teste.count()) await r.apontar(teste, "Em Teste, escolha o tipo e Enviar teste.");
         await r.ir("/candidatos");
         await r.clicar(main(r).getByRole("checkbox", { name: "Selecionar Felipe Carvalho" }), "Para inativar em massa, marque os candidatos…");
         await r.apontar(main(r).getByRole("button", { name: "Inativar" }), "…e clique em Inativar.");
         await r.clicar(main(r).getByRole("checkbox", { name: "Selecionar Felipe Carvalho" }));
-        await r.apontar(main(r).getByRole("link", { name: "+ Novo Candidato" }), "Para cadastrar, + Novo Candidato: nome, contato, endereço e Salvar.");
+        await r.apontar(main(r).getByRole("link", { name: "Novo candidato" }), "Para cadastrar, Novo candidato: nome, contato, endereço e Salvar.");
         await r.soltar();
         await encerramento(r, "A análise do currículo precisa de um PDF na ficha.");
       },
@@ -2142,7 +2151,7 @@ function videosDoRecrutamento(): DefinicaoDeVideo[] {
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.apontar(main(r).getByRole("tablist"), "Na ficha ficam as férias, os afastamentos, o desligamento e os outros registros do DP.");
         await r.ir("/colaboradores-clientes");
-        await r.clicar(main(r).getByRole("link", { name: "Novo Colaborador" }), "Para cadastrar, clique em Novo Colaborador.");
+        await r.clicar(main(r).getByRole("link", { name: "Novo colaborador" }), "Para cadastrar, clique em Novo colaborador.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(800);
         await r.apontar(
@@ -2162,9 +2171,11 @@ function videosDoRecrutamento(): DefinicaoDeVideo[] {
       async executar(r) {
         await r.ir("/testes");
         await r.cartaz(SELO, "Testes", "Perfil comportamental (DISC) e múltipla escolha");
-        await selecionar(r, main(r).getByRole("combobox", { name: /^Candidato/ }), "Isabela Freitas", "No topo, escolha o Candidato…");
-        await r.apontar(main(r).getByRole("combobox", { name: "Tipo de teste" }), "…o Tipo de teste: DISC ou um modelo de múltipla escolha…");
-        await r.clicar(main(r).getByRole("button", { name: "+ Novo teste" }), "…e clique em + Novo teste. Com e-mail cadastrado, o link vai por e-mail.");
+        await r.clicar(main(r).getByRole("button", { name: "Enviar teste" }), "Para mandar um teste, clique em Enviar teste.");
+        const envio = dialogo(r, "Enviar teste");
+        await selecionar(r, envio.getByRole("combobox", { name: /^Candidato/ }), "Isabela Freitas", "Escolha o Candidato…");
+        await r.apontar(envio.getByRole("combobox", { name: "Tipo de teste" }), "…o Tipo de teste: DISC ou um modelo de múltipla escolha…");
+        await r.clicar(envio.getByRole("button", { name: "Enviar teste" }), "…e clique em Enviar teste. Com e-mail cadastrado, o link vai por e-mail.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1200);
         await r.apontar(main(r).getByRole("link", { name: "Abrir" }).first(), "Abrir mostra o link, que vale por 7 dias, e o resultado quando chegar.");
@@ -2295,7 +2306,7 @@ function videosDaGestao(): DefinicaoDeVideo[] {
         await r.pausa(1000);
         await r.legenda("Na ficha, preencha Família de cargos, Nível de senioridade e a faixa: inicial, intermediária e final. Depois, Salvar.");
         await r.soltar();
-        await encerramento(r, "Cargo novo se cadastra na ficha da empresa: RH & Operação → Cargos → + Novo Cargo.");
+        await encerramento(r, "Cargo novo se cadastra na ficha da empresa: RH & operação → Cargos → Novo cargo.");
       },
     },
     {
@@ -2308,7 +2319,7 @@ function videosDaGestao(): DefinicaoDeVideo[] {
         await r.ir("/indicadores-rh");
         await r.cartaz(SELO, "Indicadores de RH", "Headcount, turnover, férias, vagas e custo de folha");
         await r.apontar(main(r).getByText("Headcount", { exact: true }), "Cada cartão é um número, com a linha que diz o que ele conta.");
-        await r.apontar(main(r).getByText("Férias Vencidas", { exact: true }), "Férias vencidas fica destacado quando há alguma: é o número que pede ação.");
+        await r.apontar(main(r).getByText("Férias vencidas", { exact: true }), "Férias vencidas fica destacado quando há alguma: é o número que pede ação.");
         const relatorios = main(r).getByRole("heading", { name: "Relatórios" });
         await r.rolarAte(relatorios);
         await r.apontar(relatorios, "Em Relatórios: férias, treinamentos, pendências e distorções salariais — a lista de quem precisa de ação.");

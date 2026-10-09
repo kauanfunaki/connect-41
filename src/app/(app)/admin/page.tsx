@@ -54,9 +54,9 @@ export default async function AdminPage() {
       { group: "workspace", href: "/admin/usuarios", icon: <ShieldCheck size={20} />, title: "Usuários", description: "Contas, papéis e acesso a setores" },
       { group: "workspace", href: "/admin/setores", icon: <Layers size={20} />, title: "Setores", description: "Catálogo de setores/cargos do tenant" },
       { group: "workspace", href: "/admin/modulos", icon: <Blocks size={20} />, title: "Módulos", description: "Ativação de módulos plugáveis por setor" },
-      { group: "workspace", href: "/admin/tenant", icon: <Settings2 size={20} />, title: "Empresa (Tenant)", description: "Dados do workspace, horário da Agenda e e-mail (SMTP)" },
-      { group: "workspace", href: "/admin/permissoes-sensiveis", icon: <EyeOff size={20} />, title: "Campos Sensíveis", description: "Quem vê salário, dados bancários, médicos e documentos" },
-      { group: "catalogos", href: "/admin/obrigacoes", icon: <Repeat size={20} />, title: "Obrigações Recorrentes", description: "DAS, DCTF, folha — itens de kanban gerados todo mês" }
+      { group: "workspace", href: "/admin/tenant", icon: <Settings2 size={20} />, title: "Empresa (tenant)", description: "Dados do workspace, horário da Agenda e e-mail (SMTP)" },
+      { group: "workspace", href: "/admin/permissoes-sensiveis", icon: <EyeOff size={20} />, title: "Campos sensíveis", description: "Quem vê salário, dados bancários, médicos e documentos" },
+      { group: "catalogos", href: "/admin/obrigacoes", icon: <Repeat size={20} />, title: "Obrigações recorrentes", description: "DAS, DCTF, folha — itens de kanban gerados todo mês" }
     );
   }
 
@@ -101,16 +101,16 @@ export default async function AdminPage() {
         group: "assinatura",
         href: "/assinatura",
         icon: <CreditCard size={20} />,
-        title: "Minha Assinatura",
+        title: "Minha assinatura",
         description: "Plano contratado, usuários ativos e limite do plano",
       });
     }
   }
 
   cards.push(
-    { group: "catalogos", href: "/admin/campos", icon: <Puzzle size={20} />, title: "Campos Customizados", description: "Campos extras por setor e entidade" },
+    { group: "catalogos", href: "/admin/campos", icon: <Puzzle size={20} />, title: "Campos customizados", description: "Campos extras por setor e entidade" },
     { group: "catalogos", href: "/admin/tags", icon: <Tag size={20} />, title: "Tags", description: "Tags coloridas reaproveitáveis no Kanban" },
-    { group: "catalogos", href: "/admin/plano-de-contas", icon: <Landmark size={20} />, title: "Plano de Contas", description: "Categorias que classificam o lançamento do documento fiscal" }
+    { group: "catalogos", href: "/admin/plano-de-contas", icon: <Landmark size={20} />, title: "Plano de contas", description: "Categorias que classificam o lançamento do documento fiscal" }
   );
 
   if (canManageMeetings(ctx)) {
@@ -127,10 +127,10 @@ export default async function AdminPage() {
     cards.push(
       { group: "catalogos", href: "/admin/feriados", icon: <CalendarDays size={20} />, title: "Feriados", description: "Catálogo de feriados usado na Escala de Trabalho" },
       { group: "catalogos", href: "/admin/competencias", icon: <Target size={20} />, title: "Competências", description: "Catálogo usado nas avaliações de desempenho" },
-      { group: "catalogos", href: "/admin/rescisao", icon: <Scale size={20} />, title: "Cálculo de Rescisão", description: "Padrão do escritório para a conferência do TRCT" },
-      { group: "integracoes", href: "/admin/atendentes", icon: <Headset size={20} />, title: "Atendentes e Vínculos", description: "Conta de acesso, atendente do Chatwoot e quem é da recepção/triagem" },
-      { group: "integracoes", href: "/admin/ia", icon: <Sparkles size={20} />, title: "Inteligência Artificial", description: "Agentes do chat e demais funções de IA: uso, custo e limites" },
-      { group: "workspace", href: "/admin/portal", icon: <Users2 size={20} />, title: "Acessos do Portal", description: "Contas de clientes que entram no portal para ver os próprios documentos" },
+      { group: "catalogos", href: "/admin/rescisao", icon: <Scale size={20} />, title: "Cálculo de rescisão", description: "Padrão do escritório para a conferência do TRCT" },
+      { group: "integracoes", href: "/admin/atendentes", icon: <Headset size={20} />, title: "Atendentes e vínculos", description: "Conta de acesso, atendente do Chatwoot e quem é da recepção/triagem" },
+      { group: "integracoes", href: "/admin/ia", icon: <Sparkles size={20} />, title: "Inteligência artificial", description: "Agentes do chat e demais funções de IA: uso, custo e limites" },
+      { group: "workspace", href: "/admin/portal", icon: <Users2 size={20} />, title: "Acessos do portal", description: "Contas de clientes que entram no portal para ver os próprios documentos" },
       { group: "catalogos", href: "/admin/assuntos", icon: <Inbox size={20} />, title: "Assuntos das solicitações", description: "O que o cliente escolhe ao pedir algo pelo portal: setor que atende e prazo de resposta" }
     );
   }
@@ -148,8 +148,8 @@ export default async function AdminPage() {
         {GROUP_ORDER.filter((g) => cards.some((c) => c.group === g)).map((groupKey) => (
           <section key={groupKey}>
             <div className="mb-3">
-              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{GROUP_LABEL[groupKey]}</h2>
-              <p className="text-[12px] text-fg-muted mt-0.5">{GROUP_HELPER[groupKey]}</p>
+              <h2 className="text-card-title font-semibold text-fg">{GROUP_LABEL[groupKey]}</h2>
+              <p className="text-fs-2 text-fg-muted mt-0.5">{GROUP_HELPER[groupKey]}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -168,13 +168,13 @@ export default async function AdminPage() {
                     </span>
 
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[14px] font-semibold text-fg">{c.title}</p>
+                      <p className="text-fs-4 font-semibold text-fg">{c.title}</p>
                       <ArrowRight
                         size={16}
                         className="text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"
                       />
                     </div>
-                    <p className="text-[12.5px] text-fg-muted mt-1 leading-relaxed">{c.description}</p>
+                    <p className="text-fs-2 text-fg-muted mt-1 leading-relaxed">{c.description}</p>
                   </Link>
                 ))}
             </div>

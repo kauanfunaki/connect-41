@@ -8,7 +8,6 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { RescisaoConfigForm } from "@/components/rescisao/RescisaoConfigForm";
 import { resolveRescisaoConfig } from "@/lib/rescisao/config";
 import { salvarConfigEmpresa } from "@/app/(app)/admin/rescisao/actions";
@@ -48,11 +47,10 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Cálculo de rescisão" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="Cálculo de rescisão"
@@ -61,7 +59,7 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
 
       {/* Aviso e ação na mesma linha, e os dois cartões com o mesmo padding. */}
       <Card className="p-5 mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="min-w-0 text-[length:var(--fs-body)] text-fg-secondary">
+        <p className="min-w-0 text-body text-fg-secondary">
           Cada campo mostra de onde vem o valor atual. Alterar aqui afeta só esta empresa.
         </p>
         {/* Era link de texto sublinhado (30/09): é ação, então é botão. */}

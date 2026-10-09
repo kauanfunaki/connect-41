@@ -7,7 +7,7 @@ import { garantirAssuntosPadrao } from "@/lib/solicitacoes/assuntos";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
-import { Selo } from "@/components/ui/Selo";
+import { StatusDot } from "@/components/shared/StatusDot";
 import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { alternarAssunto } from "./actions";
 
@@ -45,11 +45,12 @@ export default async function AssuntosPage() {
         {assuntos.map((a) => (
           <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0 flex-1 basis-72">
-              <p className={`text-[14px] font-semibold ${a.active ? "text-fg" : "text-fg-muted"}`}>
-                {a.label} {!a.active && <Selo tom="neutro">Inativo</Selo>}
+              {/* Inativo pela bolinha, a do ativo/inativo de cadastro (escolha 2A, 08/10/2026). */}
+              <p className={`flex flex-wrap items-center gap-x-2.5 text-fs-4 font-semibold ${a.active ? "text-fg" : "text-fg-muted"}`}>
+                {a.label} {!a.active && <StatusDot color="var(--c41-fg-muted)" label="Inativo" className="font-normal" />}
               </p>
-              {a.description && <p className="text-[12.5px] text-fg-muted mt-0.5">{a.description}</p>}
-              <p className="text-[12px] text-fg-secondary mt-1">
+              {a.description && <p className="text-fs-2 text-fg-muted mt-0.5">{a.description}</p>}
+              <p className="text-fs-2 text-fg-secondary mt-1">
                 {labels[a.sectorCode] ?? a.sectorCode} · responde em até {a.responseDays} {a.responseDays === 1 ? "dia útil" : "dias úteis"} ·{" "}
                 {a._count.requests} {a._count.requests === 1 ? "solicitação" : "solicitações"}
               </p>

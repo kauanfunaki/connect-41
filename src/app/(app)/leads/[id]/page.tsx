@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { getPrisma } from "@/lib/prisma";
 import { canActOnSector, canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
@@ -66,7 +66,14 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
   return (
     <PageContainer>
-      <BackButton href="/leads" rotulo="Leads" className="mb-3" />
+      {/* Trilha no lugar do "← Leads" (padrão aceito em 08/10/2026): a ficha
+          do lead tem pai fixo, como a do processo. */}
+      <Breadcrumb
+        items={[
+          { label: "Leads", href: "/leads" },
+          { label: lead.name, truncate: true },
+        ]}
+      />
       <PageHeader
         title={lead.name}
         subtitle={`${lead.companyName ?? "Empresa não informada"} · ${rotuloDaOrigem(lead.source)} · recebido em ${formatInstantDateTime(lead.createdAt, QUANDO)}`}
@@ -104,7 +111,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           </InfoRow>
           <InfoRow label="Empresa">
             {lead.companyName ?? "—"}
-            {lead.cnpj && <span className="block text-[length:var(--fs-2)] text-fg-muted tabular-nums">CNPJ {formatCnpj(lead.cnpj)}</span>}
+            {lead.cnpj && <span className="block text-fs-2 text-fg-muted tabular-nums">CNPJ {formatCnpj(lead.cnpj)}</span>}
           </InfoRow>
           <InfoRow label="O que procura" className="sm:col-span-3">
             {lead.message ? <span className="whitespace-pre-wrap">{lead.message}</span> : <span className="text-fg-muted">Não escreveu nada.</span>}
@@ -122,7 +129,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       </Card>
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-6)] font-semibold text-fg mb-3">Acompanhamento</h2>
+        <h2 className="text-section font-semibold text-fg mb-3">Acompanhamento</h2>
         {podeAgir ? (
           <AcompanhamentoDoLead
             id={lead.id}

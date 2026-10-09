@@ -64,7 +64,7 @@ export default async function AdmissoesPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Admissões em Andamento"
+        title="Admissões em andamento"
         subtitle={<>{people.length} colaborador{people.length !== 1 ? "es" : ""} em processo de admissão</>}
       />
 
@@ -81,8 +81,8 @@ export default async function AdmissoesPage() {
                   <TopoDoCartao nome={l.nome} />
                   <InfoDoCartao>{[l.empresa, l.cargo].filter(Boolean).join(" · ") || "Sem empresa/cargo definidos"}</InfoDoCartao>
                   <PeDoCartao>
-                    <span className="text-[length:var(--fs-micro)] text-fg-muted">{l.exames}</span>
-                    <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">{l.documentos} de admissão</span>
+                    <span className="text-micro text-fg-muted">{l.exames}</span>
+                    <span className="ml-auto text-micro text-fg-muted">{l.documentos} de admissão</span>
                   </PeDoCartao>
                 </Cartao>
               </Link>
@@ -98,7 +98,7 @@ export default async function AdmissoesPage() {
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[860px]">
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Colaborador</th>
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Empresa" chave="empresa" />

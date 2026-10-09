@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Megaphone } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
@@ -42,7 +42,7 @@ export default async function PortalComunicadosPage() {
                     {labels[c.setor] ?? c.setor} · {formatInstantDate(c.enviadoEm)}
                   </span>
                 }
-                selos={!c.lido ? <Badge variant="info">Novo</Badge> : undefined}
+                selos={!c.lido ? <Selo tom="marca">Novo</Selo> : undefined}
                 destaque={!c.lido}
               />
             </li>

@@ -10,7 +10,6 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { BackButton } from "@/components/shared/BackButton";
 import { excluirDepartment } from "./actions";
 
 export default async function DepartamentosPage({
@@ -42,11 +41,10 @@ export default async function DepartamentosPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Departamentos" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="Departamentos"
@@ -85,7 +83,7 @@ export default async function DepartamentosPage({
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {departments.map((d) => (
             <div key={d.id} className="flex items-center justify-between gap-4 px-4 py-3">
-              <p className="text-[13px] text-fg font-medium">{d.name}</p>
+              <p className="text-fs-3 text-fg font-medium">{d.name}</p>
               {canManage && (
                 <AcoesDoCadastro editarHref={`/empresas/${companyId}/departamentos/${d.id}/editar`} excluir={excluirDepartment.bind(null, d.id, companyId)} nome={d.name} />
               )}

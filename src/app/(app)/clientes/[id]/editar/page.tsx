@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -31,7 +30,6 @@ export default async function EditarClientePage({
           { label: cliente.name, truncate: true },
         ]}
       />
-      <BackButton className="mb-3" />
       <PageHeader title="Editar cliente" />
       <div className="w-full max-w-[720px]">
         <Card className="p-6">

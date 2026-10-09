@@ -64,7 +64,7 @@ export default async function ExigenciasPage({
     if (!faixa || !e.dueAt) return null;
     const cor =
       faixa === "vencido" || faixa === "hoje" ? "text-danger font-medium" : faixa === "semana" ? "text-warning-fg" : "text-fg-muted";
-    return <span className={`block text-[length:var(--fs-micro)] ${cor}`}>{textoDoPrazo(e.dueAt, agora)}</span>;
+    return <span className={`block text-micro ${cor}`}>{textoDoPrazo(e.dueAt, agora)}</span>;
   };
   // Selo, e não Badge: é a situação da linha (regra de 02/10 no Selo).
   const seloDaSituacao = (e: LinhaDeExigencia) =>
@@ -81,7 +81,7 @@ export default async function ExigenciasPage({
   // "Apresentação", o termo do roteiro e das taxas — aqui dizia "tentativa".
   // A apresentação diz se esta é a primeira exigência ou mais uma volta.
   const apresentacao = (e: LinhaDeExigencia) =>
-    e.tentativa > 1 ? <span className="block text-[length:var(--fs-micro)] text-danger">{e.tentativa}ª apresentação</span> : null;
+    e.tentativa > 1 ? <span className="block text-micro text-danger">{e.tentativa}ª apresentação</span> : null;
   const acao = (e: LinhaDeExigencia) =>
     podeAgir && !e.resolvedAt && e.processoAberto ? <ResolverExigencia exigenciaId={e.id} resolver={resolverExigencia} /> : null;
 
@@ -137,14 +137,14 @@ export default async function ExigenciasPage({
                   valor={e.dueAt ? formatInstantDate(e.dueAt) : <span className="font-normal text-fg-muted">sem prazo</span>}
                 />
                 {prazoEmFaixa(e) && <div className="text-right">{prazoEmFaixa(e)}</div>}
-                <p className={`mt-1 text-[length:var(--fs-ui)] break-words ${e.resolvedAt ? "text-fg-muted" : "text-fg"}`}>{e.descricao}</p>
+                <p className={`mt-1 text-ui break-words ${e.resolvedAt ? "text-fg-muted" : "text-fg"}`}>{e.descricao}</p>
                 <InfoDoCartao className="mt-1">
                   {linkDoProcesso(e)} · {e.orgaoNome}
                 </InfoDoCartao>
                 {apresentacao(e)}
                 <PeDoCartao>
                   {seloDaSituacao(e)}
-                  <span className="text-[length:var(--fs-micro)] text-fg-muted">{e.responsavelNome ?? "Sem responsável"}</span>
+                  <span className="text-micro text-fg-muted">{e.responsavelNome ?? "Sem responsável"}</span>
                   <div className="ml-auto">{acao(e)}</div>
                 </PeDoCartao>
               </Cartao>
@@ -166,7 +166,7 @@ export default async function ExigenciasPage({
           <TabelaNoDesktop padrao>
             <table className="w-full min-w-[860px]">
               <thead>
-                <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 pr-3 font-medium">Exigência</th>
                   <th className="py-2 pr-3 font-medium">
                     <FiltroDaColuna
@@ -191,13 +191,13 @@ export default async function ExigenciasPage({
                   <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border-soft align-top">
                     <td className="py-2.5 pr-3 max-w-[320px]">
                       <span className={e.resolvedAt ? "text-fg-muted" : "text-fg"}>{e.descricao}</span>
-                      <span className="block text-[length:var(--fs-micro)] text-fg-muted">Aberta em {formatInstantDate(e.raisedAt)}</span>
+                      <span className="block text-micro text-fg-muted">Aberta em {formatInstantDate(e.raisedAt)}</span>
                     </td>
                     <td className="py-2.5 pr-3">
                       {linkDoProcesso(e)}
                       <Link
                         href={`/processos/empresas/${e.empresaId}`}
-                        className="block text-[length:var(--fs-2)] text-fg-muted hover:underline"
+                        className="block text-fs-2 text-fg-muted hover:underline"
                       >
                         {e.empresaNome}
                       </Link>
@@ -219,7 +219,7 @@ export default async function ExigenciasPage({
                     <td className="py-2.5 pr-3 whitespace-nowrap">
                       {seloDaSituacao(e)}
                       {e.resolvedAt && (
-                        <span className="block mt-1 text-[length:var(--fs-micro)] text-fg-muted">{formatInstantDate(e.resolvedAt)}</span>
+                        <span className="block mt-1 text-micro text-fg-muted">{formatInstantDate(e.resolvedAt)}</span>
                       )}
                     </td>
                     <td className="py-2.5 pr-3 whitespace-nowrap text-fg-secondary">

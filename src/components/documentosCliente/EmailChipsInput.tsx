@@ -59,7 +59,7 @@ export function EmailChipsInput({ name, id, placeholder = "contador@empresa.com"
         {emails.map((email) => (
           <span
             key={email}
-            className="inline-flex items-center gap-1 h-6 pl-2 pr-1 rounded-full bg-brand-subtle text-brand text-[12px] font-medium"
+            className="inline-flex items-center gap-1 h-6 pl-2 pr-1 rounded-full bg-brand-subtle text-brand text-fs-2 font-medium"
           >
             {email}
             <button
@@ -80,10 +80,10 @@ export function EmailChipsInput({ name, id, placeholder = "contador@empresa.com"
           onKeyDown={onKeyDown}
           onBlur={() => commit(draft)}
           placeholder={emails.length === 0 ? placeholder : ""}
-          className="flex-1 min-w-[140px] bg-transparent outline-none text-[length:var(--fs-input)] text-fg placeholder:text-fg-muted py-1"
+          className="flex-1 min-w-[140px] bg-transparent outline-none text-input text-fg placeholder:text-fg-muted py-1"
         />
       </div>
-      {error && <p className="text-[12px] text-danger mt-1">{error}</p>}
+      {error && <p className="text-fs-2 text-danger mt-1">{error}</p>}
       <input type="hidden" id={id} name={name} value={emails.join(",")} readOnly />
     </div>
   );

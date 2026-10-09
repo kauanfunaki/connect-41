@@ -13,7 +13,7 @@ import { useConfirm } from "@/components/ui/useConfirm";
 import type { OpcaoDoFunil } from "@/lib/filtrosDaListaDeEmpresas";
 import { StatusDot } from "@/components/shared/StatusDot";
 
-const TH = "px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted";
+const TH = "px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted";
 
 type Row = {
   id: string;
@@ -85,7 +85,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
         {c.tags.map((t) => (
           <span
             key={t.id}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[length:var(--fs-micro)] font-medium border"
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-micro font-medium border"
             style={{ background: `${t.color}1A`, color: t.color, borderColor: `${t.color}40` }}
           >
             {t.name}
@@ -126,7 +126,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
             <Link href={`/candidatos/${c.id}`} className="font-semibold text-fg hover:text-brand transition-colors break-words">
               {c.name}
             </Link>
-            {c.email && <p className="text-[length:var(--fs-micro)] text-fg-muted break-all">{c.email}</p>}
+            {c.email && <p className="text-micro text-fg-muted break-all">{c.email}</p>}
           </div>
           {canCreate && (
             <Button variant="secondary" size="xs" href={`/candidatos/${c.id}/editar`} className="shrink-0">
@@ -135,7 +135,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
           )}
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[length:var(--fs-2)] text-fg-muted">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-fs-2 text-fg-muted">
           {pilulaStatus(c)}
           {cpf !== "—" && <span className="tnum">{cpf}</span>}
           {/* Sem coluna para explicar o número, ele vem com a palavra junto. */}
@@ -165,7 +165,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
             {canCreate && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
-                <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Selecionar todos</span>
+                <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">Selecionar todos</span>
               </div>
             )}
             {candidatos.map((c) => cartaoCandidato(c))}

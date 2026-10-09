@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { atualizarPessoa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -59,7 +58,6 @@ export default async function EditarPessoaPage({
         personName={person.name}
         atual="Editar"
       />
-      <BackButton className="mb-3" />
       <PageHeader title="Editar pessoa" />
 
         <PessoaForm

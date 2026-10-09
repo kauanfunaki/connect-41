@@ -37,9 +37,9 @@ export function DestinoControl({ documentoId, destinoAtual, motivoAtual, podeDec
   if (!podeDecidir) {
     return (
       <div>
-        <p className="text-[length:var(--fs-ui)] text-fg">{DESTINO_LABEL[destinoAtual]}</p>
-        {motivoAtual && <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">{motivoAtual}</p>}
-        <p className="text-[length:var(--fs-micro)] text-fg-muted mt-2">
+        <p className="text-ui text-fg">{DESTINO_LABEL[destinoAtual]}</p>
+        {motivoAtual && <p className="text-helper text-fg-muted mt-1">{motivoAtual}</p>}
+        <p className="text-micro text-fg-muted mt-2">
           Só a coordenação do fiscal altera o destino.
         </p>
       </div>
@@ -79,7 +79,7 @@ export function DestinoControl({ documentoId, destinoAtual, motivoAtual, podeDec
       />
 
       {destinoAtual === "IGNORADO" && motivoAtual && !pedindoMotivo && (
-        <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-3">
+        <p className="text-helper text-fg-secondary mt-3">
           <span className="text-fg-muted">Motivo:</span> {motivoAtual}
         </p>
       )}
@@ -111,7 +111,7 @@ export function DestinoControl({ documentoId, destinoAtual, motivoAtual, podeDec
         </div>
       )}
 
-      {erro && <p className="text-[length:var(--fs-helper)] text-danger mt-3">{erro}</p>}
+      {erro && <p className="text-helper text-danger mt-3">{erro}</p>}
     </div>
   );
 }

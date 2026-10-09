@@ -66,7 +66,7 @@ function plural(n: number, um: string, varios: string): string {
 function PainelIndisponivel({ setor, titulo, href }: { setor: SetorDoPainel; titulo: string; href: string }) {
   return (
     <Painel setor={setor.rotulo} cor={setor.cor} titulo={titulo} href={href}>
-      <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">Não deu para carregar agora. Atualize a página em instantes.</p>
+      <p className="text-helper text-fg-muted py-1.5">Não deu para carregar agora. Atualize a página em instantes.</p>
     </Painel>
   );
 }
@@ -403,8 +403,8 @@ export async function PainelDoDP({ ctx, setor }: Base) {
             >
               <span className="text-fg-muted [&>svg]:size-4 flex-shrink-0">{a.icone}</span>
               <span className="min-w-0">
-                <span className="block font-display text-[length:var(--fs-body)] font-semibold text-fg leading-tight tnum">{numero(a.valor)}</span>
-                <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">
+                <span className="block font-display text-body font-semibold text-fg leading-tight tnum">{numero(a.valor)}</span>
+                <span className="block text-micro text-fg-muted truncate">
                   {a.rotulo} {a.detalhe}
                 </span>
               </span>

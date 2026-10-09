@@ -14,7 +14,6 @@ import { ImportarFolhaCsvForm } from "@/components/folha/ImportarFolhaCsvForm";
 import { PayrollEntryRow } from "@/components/folha/PayrollEntryRow";
 import { CompetenciaStatusForm } from "@/components/folha/CompetenciaStatusForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { detectPayrollAnomalies } from "@/lib/payrollAnomalies";
 
@@ -76,11 +75,11 @@ export default async function CompetenciaPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Folha", href: `/empresas/${companyId}/folha` },
           { label: `${MONTH_LABEL[competencia.month - 1]}/${competencia.year}` },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title={<>{MONTH_LABEL[competencia.month - 1]}/{competencia.year} — {company.name}</>}
@@ -95,14 +94,14 @@ export default async function CompetenciaPage({
 
       {anomalies.length > 0 && (
         <div className="bg-surface border border-warning/30 rounded-lg p-5 mb-4">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Conferência assistida</h2>
-          <p className="text-[12px] text-fg-muted mb-3">
+          <h2 className="text-card-title font-semibold text-fg mb-1">Conferência assistida</h2>
+          <p className="text-fs-2 text-fg-muted mb-3">
             Pontos fora do padrão histórico — apontamento para revisão, não é cálculo trabalhista.
           </p>
           <div className="divide-y divide-border">
             {anomalies.map((a, idx) => (
               <div key={`${a.personId}-${a.kind}-${idx}`} className="py-2">
-                <p className="text-[13px] text-fg">
+                <p className="text-fs-3 text-fg">
                   <Link href={`/pessoas/${a.personId}`} className="text-brand hover:underline">{a.personName}</Link>
                   {" — "}{a.detail}
                 </p>
@@ -113,10 +112,10 @@ export default async function CompetenciaPage({
       )}
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Lançamentos</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-3">Lançamentos</h2>
 
         {competencia.entries.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhum lançamento ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhum lançamento ainda.</p>
         ) : (
           <div className="mb-3">
             {competencia.entries.map((e) => (

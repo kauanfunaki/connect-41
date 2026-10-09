@@ -9,16 +9,19 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { maskCpf, formatPhone } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
-import { Selo } from "@/components/ui/Selo";
+import { Badge } from "@/components/ui/Badge";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO: "Candidato",
   COLABORADOR: "Colaborador",
 };
 
-const TYPE_STYLE: Record<PersonType, string> = {
-  CANDIDATO: "bg-brand/10 text-brand border-brand/25",
-  COLABORADOR: "bg-success/10 text-success-fg border-success/25",
+// O tipo é categoria — Badge; a situação do vínculo é a bolinha (escolha 2A,
+// 08/10/2026). A bolinha era sempre cinza, até em "Ativo", que na lista de
+// pessoas é verde: agora tem a cor da situação, e o desligado fica neutro.
+const TYPE_VARIANT: Record<PersonType, "info" | "success"> = {
+  CANDIDATO: "info",
+  COLABORADOR: "success",
 };
 
 const STATUS_LABEL: Record<PersonEmploymentStatus, string> = {
@@ -27,6 +30,14 @@ const STATUS_LABEL: Record<PersonEmploymentStatus, string> = {
   EM_FERIAS: "Em férias",
   AFASTADO: "Afastado",
   DESLIGADO: "Desligado",
+};
+
+const STATUS_COLOR: Record<PersonEmploymentStatus, string> = {
+  ADMISSAO_EM_ANDAMENTO: "var(--c41-brand)",
+  ATIVO: "var(--c41-success)",
+  EM_FERIAS: "var(--c41-warning)",
+  AFASTADO: "var(--c41-warning)",
+  DESLIGADO: "var(--c41-fg-muted)",
 };
 
 type Props = {
@@ -79,14 +90,12 @@ export function PersonHeader({
 
           <div className="min-w-0 pt-0.5">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-[length:var(--fs-section)] font-display font-semibold text-fg tracking-[-0.01em] truncate">
+              <h1 className="text-section font-display font-semibold text-fg tracking-[-0.01em] truncate">
                 {name}
               </h1>
-              <Selo cor={TYPE_STYLE[type]}>
-                {TYPE_LABEL[type]}
-              </Selo>
+              <Badge variant={TYPE_VARIANT[type]}>{TYPE_LABEL[type]}</Badge>
               {type === "COLABORADOR" && (
-                <StatusDot color="var(--c41-fg-muted)" label={STATUS_LABEL[employmentStatus]} />
+                <StatusDot color={STATUS_COLOR[employmentStatus]} label={STATUS_LABEL[employmentStatus]} />
               )}
             </div>
 
@@ -94,7 +103,7 @@ export function PersonHeader({
               {cpf && (
                 <Button
                   variant="linkMuted"
-                  className="text-[length:var(--fs-helper)] tnum"
+                  className="text-helper tnum"
                   onClick={copyCpf}
                   title="Copiar CPF" aria-label="Copiar CPF"
                 >
@@ -105,7 +114,7 @@ export function PersonHeader({
               {companyId && companyName && (
                 <Link
                   href={`/empresas/${companyId}`}
-                  className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-helper text-fg-muted hover:text-fg transition-colors"
                 >
                   <Building2 size={14} />
                   {companyName}
@@ -114,7 +123,7 @@ export function PersonHeader({
               {email && (
                 <a
                   href={`mailto:${email}`}
-                  className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-helper text-fg-muted hover:text-fg transition-colors"
                 >
                   <Mail size={14} />
                   {email}
@@ -123,7 +132,7 @@ export function PersonHeader({
               {phone && (
                 <a
                   href={`tel:${phone}`}
-                  className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-helper text-fg-muted hover:text-fg transition-colors"
                 >
                   <Phone size={14} />
                   {formatPhone(phone)}

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { NotebookPen } from "lucide-react";
+import { NotebookPen, Plus, Upload } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -7,14 +7,17 @@ import { getModuleDef } from "@/lib/module-catalog";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
-import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
+import type { VarianteDoBadge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { TOM_DA_SITUACAO, tomDoFechamento } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
-import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { FormLancamentoManual } from "@/components/financeiro/FormLancamentoManual";
 import { ImportarLancamentosCsv } from "@/components/financeiro/ImportarLancamentosCsv";
 import { CancelarLancamento } from "@/components/financeiro/CancelarLancamento";
@@ -37,10 +40,17 @@ const SECTOR = getModuleDef(MODULE)!.sectorCode;
 /** Teto da lista de uma empresa num mês — com aviso quando chega nele. */
 const LIMITE_DA_LISTA = 500;
 
-const ABAS = [
-  { chave: "lista", rotulo: "Lançados à mão" },
-  { chave: "novo", rotulo: "Novo lançamento" },
-  { chave: "importar", rotulo: "Importar CSV" },
+/**
+ * As três telas da rota, pelo `?aba=`: a lista, o lançamento à mão e a
+ * importação. Até 08/10/2026 eram três abas ("Lançados à mão", "Novo
+ * lançamento", "Importar CSV"); pela escolha 5A do Kauan, criar mora no
+ * cabeçalho — "+ Novo lançamento" e "Importar CSV" abrem a tela própria de
+ * cada um, com a trilha de volta para a lista.
+ */
+const TELAS = [
+  { chave: "lista", titulo: "Lançamentos" },
+  { chave: "novo", titulo: "Novo lançamento" },
+  { chave: "importar", titulo: "Importar lançamentos" },
 ] as const;
 
 // As cores do mapa único do BPO (08/10/2026): o cancelado era `danger`, a
@@ -70,8 +80,11 @@ export default async function LancamentosPage({
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
-  const aba = ABAS.find((a) => a.chave === params.aba)?.chave ?? "lista";
   const podeLancar = canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  // Sem permissão para lançar, a tela de criar não existe: cai na lista.
+  const pedida = TELAS.find((t) => t.chave === params.aba) ?? TELAS[0];
+  const tela = pedida.chave === "lista" || podeLancar ? pedida : TELAS[0];
+  const aba = tela.chave;
   const agora = new Date();
   const hojeKey = saoPauloParts(agora).dateKey;
   const mes = competenciaValida(params.mes) ?? competenciaDoInstante(agora);
@@ -79,30 +92,55 @@ export default async function LancamentosPage({
   const empresas = await empresasDoSeletor(ctx.tenantId);
   const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
 
-  const cabecalho = (
+  const cabecalho = (action?: React.ReactNode) => (
     <PageHeader
       title="Lançamentos"
       subtitle="Contas que não nascem de nota fiscal — lançadas à mão ou importadas de planilha."
+      action={action}
     />
   );
 
   if (!companyId) {
     return (
       <PageContainer>
-        {cabecalho}
+        {cabecalho()}
         <EmptyState title="Nenhuma empresa ativa" icon={<NotebookPen />} />
       </PageContainer>
     );
   }
 
   const href = (chave: string) => `/lancamentos?empresa=${companyId}&mes=${mes}${chave === "lista" ? "" : `&aba=${chave}`}`;
-  const abas = ABAS.filter((a) => a.chave === "lista" || podeLancar).map((a) => ({ ...a, href: href(a.chave) }));
 
   const prisma = getPrisma();
 
   return (
     <PageContainer>
-      {cabecalho}
+      {aba === "lista" ? (
+        cabecalho(
+          podeLancar ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button href={href("importar")} variant="secondary">
+                <Upload size={14} /> Importar CSV
+              </Button>
+              <Button href={href("novo")}>
+                <Plus size={14} /> Novo lançamento
+              </Button>
+            </div>
+          ) : undefined
+        )
+      ) : (
+        <>
+          <Breadcrumb items={[{ label: "Lançamentos", href: href("lista") }, { label: tela.titulo }]} />
+          <PageHeader
+            title={tela.titulo}
+            subtitle={
+              aba === "novo"
+                ? "Uma conta sem nota fiscal — aluguel, folha, pró-labore, tarifa. Ela entra em Contas a pagar ou a receber como as outras."
+                : "Muitas contas de uma vez, de uma planilha em CSV. Nada é gravado antes da sua confirmação."
+            }
+          />
+        </>
+      )}
       <FiltroDePeriodo
         acao="/lancamentos"
         empresas={empresas}
@@ -111,13 +149,10 @@ export default async function LancamentosPage({
         extras={{ aba: aba === "lista" ? undefined : aba }}
         navegaSozinho
       />
-      <AbasDeLink abas={abas} ativa={aba} />
 
-      {aba === "novo" && podeLancar && (
-        <FormularioDaEmpresa companyId={companyId} tenantId={ctx.tenantId} hojeKey={hojeKey} mes={mes} />
-      )}
+      {aba === "novo" && <FormularioDaEmpresa companyId={companyId} tenantId={ctx.tenantId} hojeKey={hojeKey} mes={mes} />}
 
-      {aba === "importar" && podeLancar && <ImportarLancamentosCsv companyId={companyId} />}
+      {aba === "importar" && <ImportarLancamentosCsv companyId={companyId} />}
 
       {aba === "lista" && (
         <ListaDeManuais
@@ -238,7 +273,7 @@ async function ListaDeManuais({
         {linhas.length === 0 ? (
           <EmptyState
             title="Nenhum lançamento manual nesta competência"
-            description="Use “Novo lançamento” para registrar uma conta sem nota, ou importe uma planilha."
+            description="Use “Novo lançamento”, no topo da tela, para registrar uma conta sem nota, ou importe uma planilha."
             icon={<NotebookPen />}
           />
         ) : (
@@ -262,7 +297,7 @@ async function ListaDeManuais({
                       <span className={`text-fs-2 font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success-fg"}`}>
                         {l.kind === "PAGAR" ? "A pagar" : "A receber"}
                       </span>
-                      <Badge variant={status.variante}>{status.rotulo}</Badge>
+                      <Selo tom={tomDaVariante(status.variante)}>{status.rotulo}</Selo>
                       {podeCancelar && podeCancelarManual(l).pode && (
                         <span className="ml-auto">
                           <CancelarLancamento entryId={l.id} />
@@ -321,7 +356,7 @@ async function ListaDeManuais({
                           </td>
                           <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(centavosDeDecimal(l.amount))}</td>
                           <td className="py-2.5 pr-3">
-                            <Badge variant={status.variante}>{status.rotulo}</Badge>
+                            <Selo tom={tomDaVariante(status.variante)}>{status.rotulo}</Selo>
                           </td>
                           <td className="py-2.5">
                             {podeCancelar && podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}

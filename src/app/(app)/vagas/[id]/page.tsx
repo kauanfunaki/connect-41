@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-import { Pencil, UserPlus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
@@ -178,7 +178,7 @@ export default async function VagaPage({
             {vaga.status !== "ENCERRADA" ? (
               <ConfirmActionButton
                 action={encerrarAction}
-                label="Encerrar Vaga"
+                label="Encerrar vaga"
                 title={`Encerrar "${vaga.title}"?`}
                 description="A vaga sai das listagens ativas e do portal público. Os candidatos e o histórico do funil são preservados, e você pode reabrir a vaga depois."
                 confirmLabel="Encerrar"
@@ -187,7 +187,7 @@ export default async function VagaPage({
             ) : (
               <ConfirmActionButton
                 action={reabrirAction}
-                label="Reabrir Vaga"
+                label="Reabrir vaga"
                 title={`Reabrir "${vaga.title}"?`}
                 description="A vaga volta para o status Aberta e reaparece nas listagens. Se ela estava publicada no portal, volta a ficar visível."
                 confirmLabel="Reabrir"
@@ -200,9 +200,11 @@ export default async function VagaPage({
         }
       />
 
-      {/* Detalhes */}
+      {/* Detalhes. Títulos de seção da ficha em 18px (`text-section`) — padrão
+          aceito pelo Kauan em 08/10/2026 para as fichas; estavam em 14px. O
+          Assistente, cartão dentro do cartão do funil, fica no título de cartão. */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Detalhes</h2>
+        <h2 className="text-section font-semibold text-fg mb-4">Detalhes</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-4">
           <InfoRow label="Cargo" value={vaga.cargo?.name} />
           <InfoRow label="Quantidade" value={String(vaga.quantity)} />
@@ -220,18 +222,18 @@ export default async function VagaPage({
         </div>
         {vaga.notes && (
           <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">Observações</p>
-            <p className="text-[length:var(--fs-ui)] text-fg whitespace-pre-wrap">{vaga.notes}</p>
+            <p className="text-helper text-fg-muted mb-0.5">Observações</p>
+            <p className="text-ui text-fg whitespace-pre-wrap">{vaga.notes}</p>
           </div>
         )}
         {vaga.isPublic && tenantSlug && (
           <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">Portal público</p>
+            <p className="text-helper text-fg-muted mb-0.5">Portal público</p>
             <a
               href={`${publicBaseUrl}/carreiras/${tenantSlug}/${vaga.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[length:var(--fs-ui)] text-brand hover:underline break-all"
+              className="text-ui text-brand hover:underline break-all"
             >
               {publicBaseUrl}/carreiras/{tenantSlug}/{vaga.id}
             </a>
@@ -261,20 +263,14 @@ export default async function VagaPage({
 
       {/* Funil de recrutamento */}
       <Card className="p-5 mb-4">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <h2 className="min-w-0 text-[length:var(--fs-card-title)] font-semibold text-fg">
-            Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
-          </h2>
-          {/* Era link de texto azul (30/09): botão não é link. */}
-          {canAct && (
-            <Button href="/candidatos/nova" variant="secondary" size="xs">
-              <UserPlus size={11} /> Novo Candidato
-            </Button>
-          )}
-        </div>
+        {/* O "Novo candidato" saiu daqui para o bloco "Nova candidatura",
+            acima do formulário de vincular (5A, 08/10/2026). */}
+        <h2 className="mb-4 text-section font-semibold text-fg">
+          Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
+        </h2>
 
         {vaga.candidaturas.length === 0 ? (
-          <p className="text-[13px] text-fg-muted">Nenhum candidato vinculado ainda.</p>
+          <p className="text-fs-3 text-fg-muted">Nenhum candidato vinculado ainda.</p>
         ) : (
           <>
             {/* Conversão por etapa: o mesmo Funil do painel da Home (07/10,
@@ -287,7 +283,7 @@ export default async function VagaPage({
                 titulo="Candidaturas que chegaram a cada etapa"
                 etapas={funnelStats.stages.map((s) => ({ chave: s.stage, rotulo: s.label, valor: s.reached }))}
               />
-              <p className="mt-2 text-[length:var(--fs-micro)] text-fg-muted">
+              <p className="mt-2 text-micro text-fg-muted">
                 A barra é a parte do total de candidaturas que chegou a cada etapa; o percentual ao lado é quantas passaram da etapa
                 anterior.
               </p>
@@ -302,7 +298,7 @@ export default async function VagaPage({
               encerrarAction={encerrarCandidaturaAction}
             />
             {canManage && (
-              <p className="text-[11px] text-fg-muted mt-2">
+              <p className="text-fs-1 text-fg-muted mt-2">
                 Arraste os candidatos entre as etapas. Soltar em “Contratado” inicia a admissão.
               </p>
             )}
@@ -310,12 +306,12 @@ export default async function VagaPage({
             {/* Encerrados */}
             {encerrados.length > 0 && (
               <div className="mt-5 pt-4 border-t border-border">
-                <h3 className="text-[12px] font-semibold text-fg-muted mb-2">
+                <h3 className="text-fs-2 font-semibold text-fg-muted mb-2">
                   Encerrados ({encerrados.length})
                 </h3>
                 <div className="space-y-1.5">
                   {encerrados.map((c) => (
-                    <div key={c.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[12px]">
+                    <div key={c.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-fs-2">
                       <Link href={`/candidatos/${c.person.id}`} className="min-w-0 text-fg-secondary hover:text-brand transition-colors">
                         {c.person.name}
                       </Link>
@@ -331,7 +327,11 @@ export default async function VagaPage({
           </>
         )}
 
-        {canAct && <div className="mt-4"><AddCandidatoForm action={addCandidatoAction} candidatos={candidatos} /></div>}
+        {canAct && (
+          <div className="mt-4">
+            <AddCandidatoForm action={addCandidatoAction} candidatos={candidatos} novoCandidatoHref="/candidatos/nova" />
+          </div>
+        )}
 
         {/* Quem não pode agir na vaga também não pergunta ao assistente: as
             sugestões dele são movimentos no funil, e sugerir o que a pessoa não

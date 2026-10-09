@@ -11,7 +11,6 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { BackButton } from "@/components/shared/BackButton";
 import { excluirBeneficio } from "./actions";
 
 const TYPE_LABEL: Record<BenefitType, string> = {
@@ -58,11 +57,10 @@ export default async function BeneficiosPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Benefícios" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="Benefícios"
@@ -102,8 +100,8 @@ export default async function BeneficiosPage({
           {beneficios.map((b) => (
             <div key={b.id} className="flex items-center justify-between gap-4 px-4 py-3">
               <div>
-                <p className="text-[13px] text-fg font-medium">{b.name}</p>
-                <p className="text-[12px] text-fg-muted">{TYPE_LABEL[b.type]}</p>
+                <p className="text-fs-3 text-fg font-medium">{b.name}</p>
+                <p className="text-fs-2 text-fg-muted">{TYPE_LABEL[b.type]}</p>
               </div>
               {canManage && (
                 <AcoesDoCadastro editarHref={`/empresas/${companyId}/beneficios/${b.id}/editar`} excluir={excluirBeneficio.bind(null, b.id, companyId)} nome={b.name} />

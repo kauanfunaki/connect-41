@@ -66,19 +66,19 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
           id="description"
           name="description"
           rows={3}
-          placeholder="Adicione uma descrição para este card..."
+          placeholder="Adicione uma descrição para esta tarefa…"
         />
       </Field>
 
       {tags.length > 0 && (
         // Grupo com título no estilo do rótulo de campo (era um <p> de 12px).
         <fieldset className="min-w-0">
-          <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Tags</legend>
+          <legend className="text-label font-medium text-fg mb-1.5">Tags</legend>
           <div className="flex flex-wrap gap-2">
             {tags.map((t) => (
               <label
                 key={t.id}
-                className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border text-[12px] text-fg-secondary has-checked:border-transparent has-checked:text-fg transition-colors"
+                className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border text-fs-2 text-fg-secondary has-checked:border-transparent has-checked:text-fg transition-colors"
                 style={{ background: "transparent" }}
               >
                 <input type="checkbox" name="tags" value={t.id} className="sr-only peer" />
@@ -110,8 +110,8 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
           contrário e alinhado à esquerda. */}
       <FormFooter
         pending={isPending}
-        pendingLabel="Adicionando…"
-        submitLabel="Adicionar"
+        pendingLabel="Criando…"
+        submitLabel="Criar tarefa"
         cancelHref={cancelHref}
       />
     </form>

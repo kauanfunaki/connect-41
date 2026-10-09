@@ -29,7 +29,7 @@ export function HorizontalBarChart({
 }) {
   const total = data.reduce((sum, d) => sum + d.value, 0);
   if (data.length === 0 || total === 0) {
-    return <p className="text-[13px] text-fg-muted">{emptyLabel}</p>;
+    return <p className="text-fs-3 text-fg-muted">{emptyLabel}</p>;
   }
 
   const max = Math.max(1, ...data.map((d) => d.value));
@@ -42,8 +42,8 @@ export function HorizontalBarChart({
             className="w-[124px] flex-shrink-0 min-w-0"
             title={d.sublabel ? `${d.label} · ${d.sublabel}` : d.label}
           >
-            <span className="block text-[12px] text-fg-secondary truncate">{d.label}</span>
-            {d.sublabel && <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">{d.sublabel}</span>}
+            <span className="block text-fs-2 text-fg-secondary truncate">{d.label}</span>
+            {d.sublabel && <span className="block text-micro text-fg-muted truncate">{d.sublabel}</span>}
           </span>
           <div className="flex-1 h-[18px] rounded-[5px] bg-surface-2 overflow-hidden">
             <div
@@ -52,7 +52,7 @@ export function HorizontalBarChart({
               title={`${d.label}: ${d.value}`}
             />
           </div>
-          <span className="text-[12px] font-medium text-fg tnum w-6 text-right flex-shrink-0">{d.value}</span>
+          <span className="text-fs-2 font-medium text-fg tnum w-6 text-right flex-shrink-0">{d.value}</span>
         </div>
       ))}
     </div>
@@ -74,7 +74,7 @@ export function TrendChart({
 }) {
   const total = data.reduce((sum, d) => sum + d.value, 0);
   if (data.length === 0 || total === 0) {
-    return <p className="text-[13px] text-fg-muted">{emptyLabel}</p>;
+    return <p className="text-fs-3 text-fg-muted">{emptyLabel}</p>;
   }
 
   const w = 100;
@@ -121,7 +121,7 @@ export function TrendChart({
           />
         ))}
       </div>
-      <div className="flex justify-between mt-1.5 text-[length:var(--fs-micro)] text-fg-muted">
+      <div className="flex justify-between mt-1.5 text-micro text-fg-muted">
         <span>{data[0].label}</span>
         <span>{data[data.length - 1].label}</span>
       </div>

@@ -73,7 +73,7 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
       )}
 
       {isEdit && (
-        <p className="text-[length:var(--fs-helper)] text-fg-muted">
+        <p className="text-helper text-fg-muted">
           Setor e tipo de entidade não podem ser alterados após criado — exclua e recrie o campo se precisar mudar.
         </p>
       )}

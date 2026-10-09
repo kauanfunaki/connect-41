@@ -152,7 +152,7 @@ export function RoteiroDoProcesso({
     return (
       <li key={posicao} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
         {paralelo && (
-          <p className="text-[length:var(--fs-micro)] text-fg-muted uppercase tracking-wide">
+          <p className="text-micro text-fg-muted uppercase tracking-wide">
             {grupo[0].grupoParalelo ?? "Em paralelo"} · correm ao mesmo tempo
           </p>
         )}
@@ -249,21 +249,21 @@ function EtapaDoRoteiro({
   return (
     <div className={`flex flex-col gap-3 ${caixa}`.trim()}>
       <div className="flex items-start gap-2">
-        <span className="text-[length:var(--fs-micro)] font-mono text-fg-muted mt-0.5 tabular-nums">{etapa.posicao}</span>
+        <span className="text-micro font-mono text-fg-muted mt-0.5 tabular-nums">{etapa.posicao}</span>
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`text-[length:var(--fs-ui)] font-semibold ${encerrada ? "text-fg-muted" : ""}`}>
+            <span className={`text-ui font-semibold ${encerrada ? "text-fg-muted" : ""}`}>
               {etapa.rotulo}
             </span>
             <span title={EXECUTOR_TITULO[etapa.executorEsperado]} className="inline-flex text-fg-muted">
               <Icone size={14} />
             </span>
-            {etapa.orgaoNome && <span className="text-[length:var(--fs-micro)] text-fg-muted">{etapa.orgaoNome}</span>}
+            {etapa.orgaoNome && <span className="text-micro text-fg-muted">{etapa.orgaoNome}</span>}
             {etapa.opcional && !encerrada && (
-              <span className="text-[length:var(--fs-micro)] text-fg-muted">· opcional</span>
+              <span className="text-micro text-fg-muted">· opcional</span>
             )}
           </div>
-          {etapa.descricao && <p className="text-[length:var(--fs-2)] text-fg-muted">{etapa.descricao}</p>}
+          {etapa.descricao && <p className="text-fs-2 text-fg-muted">{etapa.descricao}</p>}
         </div>
         {etapa.status === "CONCLUIDA" && <Check size={16} className="text-success-fg shrink-0" aria-label="Concluída" />}
         {etapa.status === "DISPENSADA" && (
@@ -286,7 +286,7 @@ function EtapaDoRoteiro({
               disabled={!podeEditar || encerrada || pendente}
               onChange={(e) => executar(`item-${item.id}`, () => acoes.alternarItem(item.id, e.target.checked))}
               label={
-                <span className={`text-[length:var(--fs-2)] ${item.feito ? "line-through text-fg-muted" : ""}`}>
+                <span className={`text-fs-2 ${item.feito ? "line-through text-fg-muted" : ""}`}>
                   {item.rotulo}
                   {!item.obrigatorio && <span className="text-fg-muted"> · opcional</span>}
                 </span>
@@ -402,11 +402,11 @@ function Protocolo({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2 flex-wrap text-[length:var(--fs-2)]">
+      <div className="flex items-center gap-2 flex-wrap text-fs-2">
         <span className="text-fg-muted tabular-nums">
           {protocolo.tentativa}ª apresentação
         </span>
-        {protocolo.numero && <span className="font-mono text-[length:var(--fs-micro)]">{protocolo.numero}</span>}
+        {protocolo.numero && <span className="font-mono text-micro">{protocolo.numero}</span>}
         <span className="text-fg-muted">{formatInstantDate(protocolo.enviadoEm)}</span>
         {/* Selo, e não Badge: é a situação de uma linha (regra de 02/10 no Selo). */}
         {protocolo.desfecho === "DEFERIDO" && <Selo tom="sucesso">Deferido</Selo>}
@@ -423,7 +423,7 @@ function Protocolo({
           mudou" parecem a mesma coisa sem isto, e aí ninguém sabe se pode
           confiar no automático. */}
       {protocolo.desfecho === "PENDENTE" && (
-        <span className="text-[length:var(--fs-micro)] text-fg-muted">
+        <span className="text-micro text-fg-muted">
           {protocolo.erroDaVerificacao
             ? `Última verificação falhou: ${protocolo.erroDaVerificacao}`
             : protocolo.verificadoEm
@@ -435,13 +435,13 @@ function Protocolo({
       {protocolo.exigencias.map((ex) => (
         <div
           key={ex.id}
-          className="text-[length:var(--fs-2)] rounded-md border border-warning/30 bg-warning/8 px-3 py-2 flex flex-col gap-1.5"
+          className="text-fs-2 rounded-md border border-warning/30 bg-warning/8 px-3 py-2 flex flex-col gap-1.5"
         >
           <span className="flex items-start gap-1.5">
             <AlertTriangle size={14} className="text-warning-fg mt-px shrink-0" />
             <span className={ex.resolvidaEm ? "line-through text-fg-muted" : ""}>{ex.descricao}</span>
           </span>
-          <span className="text-[length:var(--fs-micro)] text-fg-muted">
+          <span className="text-micro text-fg-muted">
             {ex.prazoAte ? `Prazo do órgão: ${formatInstantDate(ex.prazoAte)}` : "Sem prazo do órgão"}
             {ex.resolvidaEm && ` · cumprida em ${formatInstantDate(ex.resolvidaEm)}`}
           </span>

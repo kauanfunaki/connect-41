@@ -63,8 +63,8 @@ export function CarrosselDeEntrada({ rotulo, slides }: { rotulo: string; slides:
                 <s.Cena />
               </div>
               <div className="text-center max-w-[460px] mx-auto">
-                <h2 className="text-[24px] font-semibold text-white tracking-[-0.01em] leading-snug [text-wrap:balance]">{s.titulo}</h2>
-                <p className="mt-2.5 text-[14px] leading-relaxed text-white/70 [text-wrap:pretty]">{s.texto}</p>
+                <h2 className="text-title font-semibold text-white tracking-[-0.01em] leading-snug [text-wrap:balance]">{s.titulo}</h2>
+                <p className="mt-2.5 text-fs-4 leading-relaxed text-white/70 [text-wrap:pretty]">{s.texto}</p>
               </div>
             </div>
           );
@@ -90,7 +90,7 @@ export function CarrosselDeEntrada({ rotulo, slides }: { rotulo: string; slides:
         ))}
       </div>
 
-      <p className="text-center text-[11px] text-white/40 -mt-6">Ilustrações com dados fictícios.</p>
+      <p className="text-center text-fs-1 text-white/40 -mt-6">Ilustrações com dados fictícios.</p>
     </section>
   );
 }

@@ -4,7 +4,6 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
@@ -42,14 +41,14 @@ export default async function HorasExtrasPage({
         isInternal={person.isInternal}
         personId={id}
         personName={person.name}
-        atual="Horas Extras"
+        atual="Horas extras"
+        aba="trabalhista"
       />
-      <BackButton className="mb-3" />
-      <PageHeader title="Horas Extras" />
+      <PageHeader title="Horas extras" />
 
       <Card className="p-5">
         {overtimeEntries.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhum lançamento de horas extras ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhum lançamento de horas extras ainda.</p>
         ) : (
           <div>
             {overtimeEntries.map((o) => (

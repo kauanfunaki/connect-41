@@ -33,7 +33,7 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
   return (
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[length:var(--fs-ui)] text-fg">
+        <p className="text-ui text-fg">
           {escala.dateLabel}
           {escala.shiftName && ` — ${escala.shiftName}`}
           {escala.dayOff && " · Folga"}
@@ -74,7 +74,7 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
         </form>
       )}
 
-      {state?.error && <p className="mt-2 text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+      {state?.error && <p className="mt-2 text-helper font-medium text-danger">{state.error}</p>}
     </div>
   );
 }

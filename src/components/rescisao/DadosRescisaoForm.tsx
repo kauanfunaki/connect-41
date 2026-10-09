@@ -124,7 +124,7 @@ export function DadosRescisaoForm({ action, defaults, canEdit }: Props) {
 
       {(canEdit || state?.error) && (
         <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-          {state?.error && <p className="mr-auto text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+          {state?.error && <p className="mr-auto text-helper font-medium text-danger">{state.error}</p>}
           {canEdit && (
             <Button type="submit" disabled={isPending}>
               {isPending ? "Salvando…" : "Salvar dados"}

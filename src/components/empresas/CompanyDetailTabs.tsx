@@ -45,7 +45,7 @@ export function CompanyDetailTabs({
     { key: "overview", label: "Visão geral", icon: <LayoutGrid /> },
     { key: "filiais", label: `Filiais${filiaisCount ? ` (${filiaisCount})` : ""}`, icon: <Network /> },
     { key: "people", label: `Pessoas${peopleCount ? ` (${peopleCount})` : ""}`, icon: <Users /> },
-    { key: "operations", label: "RH & Operação", icon: <Briefcase /> },
+    { key: "operations", label: "RH & operação", icon: <Briefcase /> },
     { key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> },
     { key: "conversations", label: `Conversas${conversationsCount ? ` (${conversationsCount})` : ""}`, icon: <MessageCircle /> },
     { key: "history", label: "Histórico", icon: <History /> },
