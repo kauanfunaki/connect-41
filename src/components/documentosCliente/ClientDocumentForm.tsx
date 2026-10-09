@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import type { ClientDocumentState } from "@/app/(app)/solicitacoes/envios/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -10,6 +10,7 @@ import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
+import { CampoGuardarNosArquivos } from "@/components/arquivos/CampoGuardarNosArquivos";
 
 type Props = {
   action: (prev: ClientDocumentState, form: FormData) => Promise<ClientDocumentState>;
@@ -28,6 +29,8 @@ type Props = {
 
 export function ClientDocumentForm({ action, companyId, empresas, documentId, cancelHref, defaultValues }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
+  // A empresa do envio, para o "Guardar também em Arquivos" buscar as pastas dela.
+  const [empresaId, setEmpresaId] = useState<string | null>(companyId ?? null);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -48,6 +51,7 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
             avatar
             lembrarRecentes="empresas"
             placeholder="Buscar empresa…"
+            onChange={(v) => setEmpresaId(v || null)}
           />
         </CampoForm>
       )}
@@ -69,6 +73,7 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
       >
         <FileDropzoneField id="file" name="file" accept=".jpg,.jpeg,.png,.webp,.pdf" maxSizeMb={10} />
       </CampoForm>
+      <CampoGuardarNosArquivos companyId={empresaId} id="envio-guardar-em-pasta" />
 
       <div className="border-t border-border pt-4">
         <Checkbox

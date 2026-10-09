@@ -4,7 +4,9 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { NavegadorDeArquivos } from "@/components/arquivos/NavegadorDeArquivos";
-import { buscarNoDrive, navegadorDaEquipe, pastaDeEnviados } from "@/lib/drive/servidor";
+import { buscarNoDrive, destinosDaEmpresa, empresaDoDrive, navegadorDaEquipe, pastaDeEnviados } from "@/lib/drive/servidor";
+import { anexosDoConnect } from "@/lib/drive/doConnect";
+import { PastaDoConnect } from "@/components/arquivos/PastaDoConnect";
 import { abrirArquivos } from "../../acesso";
 
 /**
@@ -23,6 +25,27 @@ export default async function ArquivosDaEmpresaPage({
   const ctx = await abrirArquivos();
   const { id } = await params;
   const { pasta, busca } = await searchParams;
+
+  // "Do Connect": os anexos dos módulos, só leitura, por origem.
+  if (pasta === "do-connect" && !busca) {
+    const empresa = await empresaDoDrive(ctx.tenantId, id);
+    if (!empresa) notFound();
+    const [grupos, destinos] = await Promise.all([anexosDoConnect(ctx, id), destinosDaEmpresa(ctx, id)]);
+    return (
+      <PageContainer>
+        <PageHeader
+          title={empresa.nome}
+          subtitle="Arquivos da empresa. O que estiver numa pasta compartilhada aparece no portal do cliente."
+          action={
+            <Button href={`/empresas/${id}`} variant="secondary" size="sm">
+              <Building2 size={14} /> Ficha da empresa
+            </Button>
+          }
+        />
+        <PastaDoConnect grupos={grupos} destinos={destinos ?? []} base={`/arquivos/empresa/${id}`} />
+      </PageContainer>
+    );
+  }
 
   const pastaId = pasta === "enviados" ? await pastaDeEnviados(ctx.tenantId, id).catch(() => null) : pasta || null;
   const [dados, resultados] = await Promise.all([

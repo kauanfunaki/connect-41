@@ -386,6 +386,32 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Clique no aviso para abrir “Enviados pelo cliente” e mova cada arquivo para a pasta certa.",
         ],
       },
+      {
+        titulo: "Como ver os anexos que já estão no Connect",
+        passos: [
+          "Nas pastas de uma empresa, abra “Do Connect”. Ali estão os anexos das solicitações, pendências, processos do Societário, envios ao cliente e os documentos da ficha, por origem.",
+          "Cada grupo começa fechado; clique para abrir. O nome baixa o arquivo, e a linha de baixo leva à solicitação, à pendência ou ao processo de onde ele veio.",
+          "Para organizar, use “Guardar numa pasta” no “…”: uma cópia vai para a pasta escolhida, e o anexo continua onde estava.",
+        ],
+      },
+      {
+        titulo: "Como guardar um anexo nos Arquivos ao mesmo tempo",
+        passos: [
+          "Ao responder uma solicitação ou uma pendência, abrir uma pendência, mandar documento num processo ou criar um envio ao cliente, escolha a pasta em “Guardar também em Arquivos”.",
+          "O anexo segue no módulo como sempre, e uma cópia vai para a pasta da empresa.",
+        ],
+      },
+      {
+        titulo: "Como pôr vencimento num documento",
+        passos: [
+          "No “…” do arquivo, clique em “Vencimento”, escolha a data e salve.",
+          "A linha do arquivo mostra quando vence; a 30 dias, o selo fica amarelo, e vencido, vermelho.",
+          "Quem cuida da empresa é avisado 30 e 7 dias antes, no dia e quando vence. Em pasta de um setor, o aviso vai para o setor.",
+        ],
+      },
+    ],
+    dicas: [
+      "Com os Arquivos ligados, a aba “Documentos” da ficha da empresa dá lugar à aba “Arquivos”. Os documentos que estavam lá aparecem em “Do Connect”, e os vencimentos deles continuam avisando.",
     ],
   },
 

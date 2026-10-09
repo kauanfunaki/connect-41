@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
+import { guardarTambemNosArquivos } from "@/lib/drive/guardarTambem";
 import { nomeExibicao } from "@/lib/companyName";
 import { validarResposta } from "@/lib/financeiro/pendencias/regras";
 import { arquivosDoFormulario } from "@/lib/financeiro/pendencias/armazenamento";
@@ -39,7 +40,7 @@ async function contexto(formData: FormData) {
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo não habilitado." };
   const processo = await processoNoEscopo({ tenantId: ctx.tenantId, companyIds: null }, String(formData.get("processId") ?? ""));
   if (!processo) return { ok: false as const, erro: "Processo não encontrado." };
-  return { ok: true as const, tenantId: ctx.tenantId, userId: ctx.userId || null, ctxUserId: ctx.userId, processo };
+  return { ok: true as const, ctx, tenantId: ctx.tenantId, userId: ctx.userId || null, ctxUserId: ctx.userId, processo };
 }
 
 type Processo = NonNullable<Awaited<ReturnType<typeof processoNoEscopo>>>;
@@ -100,6 +101,8 @@ export async function enviarMensagemNoProcesso(formData: FormData): Promise<Resu
     anexos: gravados.anexos,
   });
 
+  // "Guardar também em Arquivos": cópia na pasta escolhida, depois de gravado.
+  const avisoDaCopia = await guardarTambemNosArquivos(c.ctx, formData, c.processo.companyId, arquivos);
   const aviso = await avisarCliente(c.tenantId, c.processo, "mensagem");
   await logAudit({
     tenantId: c.tenantId,
@@ -110,7 +113,7 @@ export async function enviarMensagemNoProcesso(formData: FormData): Promise<Resu
     metadata: { mensagemId, anexos: gravados.anexos.length },
   });
   revalidar(c.processo.id);
-  return { ok: true, aviso };
+  return { ok: true, aviso: [aviso, avisoDaCopia].filter(Boolean).join(" ") || null };
 }
 
 export async function adicionarDocumentosAoProcesso(formData: FormData): Promise<ResultadoNoProcesso> {
@@ -133,6 +136,7 @@ export async function adicionarDocumentosAoProcesso(formData: FormData): Promise
     anexos: gravados.anexos,
   });
 
+  const avisoDaCopia = await guardarTambemNosArquivos(c.ctx, formData, c.processo.companyId, arquivos);
   const aviso = await avisarCliente(c.tenantId, c.processo, "documento");
   await logAudit({
     tenantId: c.tenantId,
@@ -143,5 +147,5 @@ export async function adicionarDocumentosAoProcesso(formData: FormData): Promise
     metadata: { arquivos: gravados.anexos.map((a) => a.fileName) },
   });
   revalidar(c.processo.id);
-  return { ok: true, aviso };
+  return { ok: true, aviso: [aviso, avisoDaCopia].filter(Boolean).join(" ") || null };
 }

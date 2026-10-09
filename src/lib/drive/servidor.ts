@@ -12,11 +12,14 @@ import type { AuthContext } from "@/lib/auth/context";
 import { criarArmazenamento } from "@/lib/financeiro/pendencias/armazenamento";
 import { getAllSectors } from "@/lib/sectors";
 import { nomeExibicao } from "@/lib/companyName";
+import { saoPauloParts } from "@/lib/agenda";
+import { isModuleEnabled } from "@/lib/modules";
 import { validarArquivoDoDrive } from "./tipoDoArquivo";
 import {
   CHAVE_ENVIADOS,
   DIAS_NA_LIXEIRA,
   MODELO_PADRAO,
+  MODULO_ARQUIVOS,
   NOME_DE_ENVIADOS,
   caminhoDaPasta,
   caminhoDoCliente,
@@ -130,6 +133,7 @@ const SELECT_ARQUIVO = {
   sizeBytes: true,
   mimeType: true,
   createdAt: true,
+  expiresAt: true,
   folderId: true,
   uploadedByPortalUserId: true,
   uploadedByUser: { select: { name: true } },
@@ -144,6 +148,7 @@ type ArquivoDoBanco = {
   sizeBytes: number;
   mimeType: string;
   createdAt: Date;
+  expiresAt: Date | null;
   uploadedByPortalUserId: string | null;
   uploadedByUser: { name: string } | null;
   uploadedByPortal: { name: string } | null;
@@ -171,6 +176,7 @@ function arquivoNaTela(a: ArquivoDoBanco): ArquivoNaTela {
     peloCliente: a.uploadedByPortalUserId !== null,
     acessosDoCliente: a._count.accesses,
     ultimoAcessoDoCliente: a.accesses[0]?.createdAt.toISOString() ?? null,
+    venceEm: a.expiresAt ? a.expiresAt.toISOString().slice(0, 10) : null,
   };
 }
 
@@ -258,12 +264,7 @@ export async function navegadorDaEquipe(
     itens: (arquivosPorPasta.get(p.id) ?? 0) + (subpastasPorPasta.get(p.id) ?? 0),
   }));
 
-  const destinos: DestinoNaTela[] = pastas
-    .filter((p) => p.deletedAt === null)
-    .map((p) => ({ p, c: caminhoDaPasta(p.id, mapa) }))
-    .filter((x): x is { p: PastaDoDrive; c: PastaDoDrive[] } => !!x.c && !caminhoNaLixeira(x.c) && podeMexerNoCaminho(ctx, x.c))
-    .map(({ c }) => ({ id: c.at(-1)!.id, rotulo: c.map((p) => p.name).join(" › "), caminhoIds: c.map((p) => p.id) }))
-    .sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { sensitivity: "base", numeric: true }));
+  const destinos = destinosDoEscopo(ctx, pastas, mapa);
 
   const setores = todosOsSetores
     .filter((s) => s.active && podeRestringirAoSetor(ctx, s.code))
@@ -290,7 +291,61 @@ export async function navegadorDaEquipe(
     setores,
     destinos,
     uso: { arquivos: uso._count._all, bytes: uso._sum.sizeBytes ?? 0 },
+    hoje: saoPauloParts(new Date()).dateKey,
   };
+}
+
+/** As pastas do escopo onde quem pede pode pôr arquivo, com o caminho para reconhecer ("Fiscal › 2026"). */
+function destinosDoEscopo(ctx: AuthContext, pastas: PastaDoDrive[], mapa: ReadonlyMap<string, PastaDoDrive>): DestinoNaTela[] {
+  return pastas
+    .filter((p) => p.deletedAt === null)
+    .map((p) => caminhoDaPasta(p.id, mapa))
+    .filter((c): c is PastaDoDrive[] => !!c && !caminhoNaLixeira(c) && podeMexerNoCaminho(ctx, c))
+    .map((c) => ({ id: c.at(-1)!.id, rotulo: c.map((p) => p.name).join(" › "), caminhoIds: c.map((p) => p.id) }))
+    .sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { sensitivity: "base", numeric: true }));
+}
+
+/**
+ * As pastas de uma empresa onde quem pede pode guardar uma cópia — para o
+ * "Guardar também em Arquivos" dos módulos. `null` com o módulo desligado ou a
+ * empresa fora do escritório: o campo some.
+ */
+export async function destinosDaEmpresa(ctx: AuthContext, companyId: string): Promise<DestinoNaTela[] | null> {
+  if (!(await isModuleEnabled(ctx.tenantId, MODULO_ARQUIVOS))) return null;
+  if (!(await empresaDoDrive(ctx.tenantId, companyId))) return null;
+  await garantirPastasDaEmpresa(ctx.tenantId, companyId);
+  const pastas = await pastasDoEscopo(ctx.tenantId, companyId);
+  return destinosDoEscopo(ctx, pastas, mapaDePastas(pastas));
+}
+
+/**
+ * Guarda cópias numa pasta da empresa: o "Guardar também em Arquivos" dos
+ * módulos e o "Guardar numa pasta" do "Do Connect". A pasta tem de ser da
+ * mesma empresa do anexo e estar ao alcance de quem guarda; cada arquivo passa
+ * pela conferência de tipo do Drive, como um envio comum.
+ */
+export async function guardarCopias(
+  ctx: AuthContext,
+  input: { pastaId: string; companyId: string; arquivos: { nome: string; conteudo: Uint8Array }[] }
+): Promise<{ guardados: number; erro: string | null }> {
+  if (!(await isModuleEnabled(ctx.tenantId, MODULO_ARQUIVOS))) return { guardados: 0, erro: "Os Arquivos estão desligados neste escritório." };
+  const alvo = await pastaParaAEquipe(ctx, input.pastaId);
+  if (!alvo || alvo.pasta.companyId !== input.companyId) return { guardados: 0, erro: "A pasta escolhida não é desta empresa." };
+  if (!podeMexerNoCaminho(ctx, alvo.caminho)) return { guardados: 0, erro: "Você não pode guardar arquivos nessa pasta." };
+
+  let guardados = 0;
+  const erros: string[] = [];
+  for (const a of input.arquivos) {
+    const r = await guardarArquivo({
+      tenantId: ctx.tenantId,
+      folderId: alvo.pasta.id,
+      arquivo: new File([new Uint8Array(a.conteudo)], a.nome),
+      uploadedByUserId: ctx.userId,
+    });
+    if (r.ok) guardados++;
+    else erros.push(r.erro);
+  }
+  return { guardados, erro: erros.length ? erros.join(" ") : null };
 }
 
 /** Busca por nome de arquivo dentro do escopo, respeitando setor e lixeira. */
