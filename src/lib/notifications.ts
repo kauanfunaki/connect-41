@@ -16,6 +16,21 @@ export type NotifyInput = {
   actorUserId?: string | null;
 };
 
+/** O tamanho da coluna `notifications.message` (`VarChar(255)` no schema). */
+export const LIMITE_DA_MENSAGEM = 255;
+
+/**
+ * A mensagem do jeito que cabe na coluna (08/10/2026). A Gestão e a varredura
+ * do Societário cortavam em 480, e a coluna tem 255: a gravação falhava e a
+ * notificação se perdia inteira. Cortar aqui vale para todo aviso; o push do
+ * celular, que não tem coluna, continua com o texto todo.
+ */
+export function mensagemQueCabe(mensagem: string): string {
+  const limpa = mensagem.trim();
+  if (limpa.length <= LIMITE_DA_MENSAGEM) return limpa;
+  return limpa.slice(0, LIMITE_DA_MENSAGEM - 1).trimEnd() + "…";
+}
+
 // O mesmo link do sino e da página de notificações — ver src/lib/notificacaoLink.ts.
 function buildNotificationUrl(input: NotifyInput): string {
   return linkDaNotificacao(input) ?? "/notificacoes";
@@ -46,7 +61,7 @@ export async function notifyUser(userId: string, input: NotifyInput): Promise<vo
       tenantId: input.tenantId,
       userId,
       type: input.type,
-      message: input.message,
+      message: mensagemQueCabe(input.message),
       entityType: input.entityType,
       entityId: input.entityId,
       actorUserId: input.actorUserId || null,
@@ -81,7 +96,7 @@ export async function notifySector(sectorCode: string, input: NotifyInput): Prom
       tenantId: input.tenantId,
       userId: u.id,
       type: input.type,
-      message: input.message,
+      message: mensagemQueCabe(input.message),
       entityType: input.entityType,
       entityId: input.entityId,
       actorUserId: input.actorUserId || null,

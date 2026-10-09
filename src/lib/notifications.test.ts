@@ -30,7 +30,7 @@ vi.mock("@/lib/prisma", () => ({
 
 vi.mock("@/lib/webPush", () => ({ sendWebPushToUser }));
 
-const { notifySector, notifyUser } = await import("./notifications");
+const { notifySector, notifyUser, mensagemQueCabe, LIMITE_DA_MENSAGEM } = await import("./notifications");
 
 describe("notifySector — quem recebe", () => {
   beforeEach(() => {
@@ -118,5 +118,29 @@ describe("notifyUser — autor e preferências", () => {
     await notifyUser("u-1", { tenantId: "t-1", type: "COMMENT", message: "m", actorUserId: "u-2" });
     expect(create.mock.calls[0][0].data).toMatchObject({ userId: "u-1", type: "COMMENT", actorUserId: "u-2" });
     expect(sendWebPushToUser).not.toHaveBeenCalled();
+  });
+});
+
+// A coluna `message` é VarChar(255) e havia quem mandasse 480 (08/10/2026).
+describe("mensagem que cabe na coluna", () => {
+  it("mensagem curta fica como veio, sem espaço nas pontas", () => {
+    expect(mensagemQueCabe("  Prazo vence hoje  ")).toBe("Prazo vence hoje");
+  });
+
+  it("mensagem longa é cortada em 255 com reticências", () => {
+    const longa = "Processo parado há 12 dias: ".concat("x".repeat(470));
+    const cortada = mensagemQueCabe(longa);
+    expect(cortada.length).toBe(LIMITE_DA_MENSAGEM);
+    expect(cortada.endsWith("…")).toBe(true);
+  });
+
+  it("notifyUser grava cortado e manda o texto inteiro no push", async () => {
+    create.mockReset().mockResolvedValue({});
+    ocultos.mockReset().mockResolvedValue([]);
+    sendWebPushToUser.mockReset();
+    const longa = "a".repeat(480);
+    await notifyUser("u-1", { tenantId: "t-1", type: "GESTAO_PARADO", message: longa });
+    expect(create.mock.calls[0][0].data.message.length).toBe(LIMITE_DA_MENSAGEM);
+    expect(sendWebPushToUser.mock.calls[0][2].body).toBe(longa);
   });
 });
