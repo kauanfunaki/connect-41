@@ -92,6 +92,17 @@ export const OPCOES_DE_REGIME: readonly string[] = [
 // existiam com as MESMAS regras, em SQL. Mudou uma regra aqui, muda lá também —
 // o teste "bate com o rótulo do Acessórias" segura o lado de cá.
 
+/** Nome curto do regime, para coluna e filtro. */
+export const ROTULO_DO_TIPO_DE_REGIME: Record<TaxRegimeKind, string> = {
+  SIMPLES_NACIONAL: "Simples Nacional",
+  MEI: "MEI",
+  LUCRO_PRESUMIDO: "Lucro Presumido",
+  LUCRO_REAL: "Lucro Real",
+  IMUNE_ISENTA: "Imune ou isenta",
+  PRODUTOR_RURAL: "Produtor rural",
+  DOMESTICA: "Doméstica",
+};
+
 export type CamposDoRegime = {
   taxRegime: string | null;
   taxRegimeKind: TaxRegimeKind | null;
