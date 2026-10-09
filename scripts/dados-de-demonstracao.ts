@@ -45,6 +45,7 @@
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { randomBytes } from "node:crypto";
+import { camposDoRegime } from "../src/lib/taxRegime";
 
 const MARCA = "[demo]";
 const SLUG_DO_TENANT = "41tech";
@@ -198,7 +199,7 @@ async function criar(p: PrismaClient, tenantId: string, autorId: string, outroAu
       neighborhood: "CENTRO",
       city: "CURITIBA",
       stateCode: "PR",
-      taxRegime: "SIMPLES_NACIONAL",
+      ...camposDoRegime("SIMPLES_NACIONAL"),
       // Explícito: o default do schema é PROSPECT, e `empresasDoSeletor` só
       // lista ACTIVE. Sem isto a empresa aparece nas listas de contas (que
       // filtram por tenant) e **não** no seletor da conciliação e da DRE — que

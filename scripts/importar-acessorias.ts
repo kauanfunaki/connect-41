@@ -24,6 +24,7 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { CompanyStatus, PersonType } from "../src/generated/prisma/enums";
 import { cnpjRoot } from "../src/lib/clientGroups";
 import { lerPlanilhaAcessorias, planejarImportacao } from "../src/lib/importAcessorias";
+import { camposDoRegime } from "../src/lib/taxRegime";
 
 const aplicar = process.argv.includes("--aplicar");
 const arquivo = process.argv.slice(2).find((a) => !a.startsWith("--"));
@@ -172,7 +173,7 @@ async function main() {
         tradeName: e.tradeName,
         cnpj: e.cnpj,
         externalId: e.externalId,
-        taxRegime: e.taxRegime,
+        ...camposDoRegime(e.taxRegime),
         foundationDate: e.foundationDate,
         zipCode: e.zipCode,
         addressStreet: e.addressStreet,
