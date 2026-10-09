@@ -8,6 +8,8 @@
 // Assim a divergência fica rastreável e reportável sem o sistema assumir
 // responsabilidade sobre o número.
 
+import type { Grupo } from "@/lib/listaEmBlocos";
+
 export type RescisaoCheckGroup = "VERBAS" | "DESCONTOS" | "MEDIAS" | "PRAZOS_DOCS";
 
 export type RescisaoCheckItem = {
@@ -69,6 +71,23 @@ export function itemsByGroup(group: RescisaoCheckGroup): RescisaoCheckItem[] {
 }
 
 export const RESCISAO_GROUP_ORDER: RescisaoCheckGroup[] = ["VERBAS", "DESCONTOS", "MEDIAS", "PRAZOS_DOCS"];
+
+// ─── Verbas não praticadas (configuração da rescisão) ────────────────────────
+
+/**
+ * Os itens de valor de cada grupo, na ordem da conferência — é o que a
+ * configuração da rescisão deixa marcar como "não praticada". Grupo sem item
+ * de valor (Prazos e documentos) não entra: não há número a tirar do total.
+ * Sai no formato de `listaEmBlocos` (chave, rótulo, itens), o dos blocos que
+ * recolhem.
+ */
+export function gruposDeVerbas(): Grupo<RescisaoCheckItem>[] {
+  return RESCISAO_GROUP_ORDER.map((group) => ({
+    chave: group,
+    rotulo: RESCISAO_GROUP_LABEL[group],
+    itens: itemsByGroup(group).filter((i) => i.hasValue),
+  })).filter((g) => g.itens.length > 0);
+}
 
 // ─── Prazo legal ─────────────────────────────────────────────────────────────
 
