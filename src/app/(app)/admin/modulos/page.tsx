@@ -5,8 +5,7 @@ import { LayoutGrid } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
-import { ToggleModuleButton } from "@/components/admin/ToggleModuleButton";
-import { SetorDoModuloSelect } from "@/components/admin/SetorDoModuloSelect";
+import { ModulosPorSetor, type SetorDaLista } from "@/components/admin/ModulosPorSetor";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { alternarModulo, transferirModulo } from "./actions";
@@ -15,7 +14,7 @@ export default async function ModulosPage() {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
 
-  const [modules, { labels: sectorLabels, options: setoresAtivos }] = await Promise.all([
+  const [modules, { labels: sectorLabels, colors: sectorColors, options: setoresAtivos }] = await Promise.all([
     getTenantModuleStates(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
   ]);
@@ -33,6 +32,26 @@ export default async function ModulosPage() {
     return acc;
   }, {});
 
+  // Cada setor num bloco que recolhe, com a busca no topo (escolha "Módulos A",
+  // 08/10/2026). A lista vive no navegador; as actions são as de sempre, presas
+  // a cada módulo aqui.
+  const setores: SetorDaLista[] = Object.entries(grouped).map(([sectorCode, list]) => ({
+    chave: sectorCode,
+    rotulo: sectorLabel(sectorLabels, sectorCode),
+    cor: sectorColors[sectorCode],
+    itens: list.map((m) => ({
+      code: m.code,
+      nome: m.label,
+      descricao: m.description,
+      ligado: m.enabled,
+      setor: m.sectorCode,
+      origem: m.sectorCode !== m.catalogSectorCode ? sectorLabel(sectorLabels, m.catalogSectorCode) : null,
+      opcoesDeSetor: opcoesDeSetor(m.sectorCode),
+      alternar: alternarModulo.bind(null, m.code, !m.enabled),
+      transferir: transferirModulo.bind(null, m.code),
+    })),
+  }));
+
   return (
     <PageContainer>
       <PageHeader
@@ -49,43 +68,7 @@ export default async function ModulosPage() {
           />
         </Card>
       ) : (
-        <div className="space-y-6">
-          {Object.entries(grouped).map(([sectorCode, list]) => (
-            <div key={sectorCode}>
-              <h2 className="text-fs-5 font-medium text-fg mb-2">
-                {sectorLabel(sectorLabels, sectorCode)}
-              </h2>
-              <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-                {list.map((m) => (
-                  <div key={m.code} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
-                    <div className="min-w-0">
-                      <p className="text-fs-3 text-fg">{m.label}</p>
-                      <p className="text-fs-1 text-fg-muted">{m.description}</p>
-                      {m.sectorCode !== m.catalogSectorCode && (
-                        <p className="text-fs-1 text-fg-muted mt-0.5">
-                          Transferido — origem: {sectorLabel(sectorLabels, m.catalogSectorCode)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <SetorDoModuloSelect
-                        action={transferirModulo.bind(null, m.code)}
-                        atual={m.sectorCode}
-                        opcoes={opcoesDeSetor(m.sectorCode)}
-                        nome={m.label}
-                      />
-                      <ToggleModuleButton
-                        action={alternarModulo.bind(null, m.code, !m.enabled)}
-                        enabled={m.enabled}
-                        nome={m.label}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <ModulosPorSetor setores={setores} />
       )}
     </PageContainer>
   );
