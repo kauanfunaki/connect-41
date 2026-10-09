@@ -264,7 +264,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pontuar os currículos com a IA",
         passos: [
-          "Na seção “Triagem de currículos”, escreva cada requisito e escolha “Obrigatório” ou “Desejável” e o peso.",
+          "Na seção “Triagem de currículos”, escreva cada requisito, escolha “Obrigatório” ou “Desejável” e marque o peso nos três pontos, de um a três.",
           "Clique em “Adicionar requisito” para incluir outros e ajuste “Compatível a partir de” e “Parcial a partir de”, se quiser.",
           "Clique em “Salvar requisitos”.",
           "Clique em “Pontuar pendentes” para a IA dar nota aos currículos ainda sem nota, ou em “Reprocessar todas” para refazer todas.",
