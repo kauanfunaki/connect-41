@@ -180,10 +180,27 @@ const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um :
 /** O andamento numa frase: o que aconteceu por último e o prazo que corre. */
 export function andamentoDaAutorizacao(
   situacao: Situacao,
-  r: Pick<RegistroDaAutorizacao, "requestedAt" | "receivedAt" | "expiresAt"> & { allServices: boolean; services: string | null; notes: string | null; atualizadaEm: string } | null,
+  r:
+    | (Pick<RegistroDaAutorizacao, "requestedAt" | "receivedAt" | "expiresAt"> & {
+        allServices: boolean;
+        services: string | null;
+        notes: string | null;
+        atualizadaEm: string;
+        conferidaEm?: string | null;
+      })
+    | null,
   hoje: string
 ): string {
   if (!r) return "—";
+  const frase = fraseDoAndamento(situacao, r, hoje);
+  return r.conferidaEm ? `${frase} · conferida no Serpro em ${dataBr(r.conferidaEm)}` : frase;
+}
+
+function fraseDoAndamento(
+  situacao: Situacao,
+  r: Pick<RegistroDaAutorizacao, "requestedAt" | "receivedAt" | "expiresAt"> & { allServices: boolean; services: string | null; notes: string | null; atualizadaEm: string },
+  hoje: string
+): string {
   switch (situacao) {
     case "pedida":
       return r.requestedAt ? `Pedida em ${dataBr(r.requestedAt)} (há ${plural(diasEntre(r.requestedAt, hoje), "dia", "dias")})` : "Pedida";

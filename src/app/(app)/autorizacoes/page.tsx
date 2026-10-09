@@ -12,7 +12,7 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, 
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
-import { AtualizarEmLote, BotaoDaAutorizacao, PedidoAoCliente } from "@/components/autorizacoes/DialogosDaAutorizacao";
+import { AtualizarEmLote, BotaoDaAutorizacao, ConferirNoSerpro, PedidoAoCliente } from "@/components/autorizacoes/DialogosDaAutorizacao";
 import { TOM_DA_SITUACAO } from "@/components/autorizacoes/AutorizacaoNaFicha";
 import { acessoAsAutorizacoes, carteiraDasAutorizacoes, quemRecebe, sugestaoDeQuemRecebe } from "@/lib/autorizacoes/servidor";
 import {
@@ -29,6 +29,9 @@ import {
 } from "@/lib/autorizacoes/regras";
 import { ROTULO_DO_TIPO_DE_REGIME } from "@/lib/taxRegime";
 import { hojeIso } from "@/lib/datas/calendario";
+import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
+import { conferenciaEmAndamento, estimativaDaConferencia } from "@/lib/autorizacoes/serpro";
+import { reais } from "@/lib/serpro/regras";
 import { getAuthContext } from "@/lib/auth/context";
 import type { TaxRegimeKind } from "@/generated/prisma/enums";
 
@@ -74,6 +77,14 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
     sugestaoDeQuemRecebe(acesso.tenantId),
   ]);
 
+  // A ligação com o Serpro (09/10/2026): conferir um cliente ou a carteira.
+  // Sem ligação pronta, nada do Serpro aparece; com conexão salva, o consumo.
+  const serpro = await configuracaoDoSerpro(acesso.tenantId);
+  const serproPronto = acesso.podeEditar && prontidaoDoSerpro(serpro).pronta;
+  const [emAndamento, estimativa] = serproPronto
+    ? await Promise.all([conferenciaEmAndamento(acesso.tenantId), estimativaDaConferencia(acesso.tenantId)])
+    : [null, null];
+
   const visiveis = linhas
     .filter(
       (l) =>
@@ -103,9 +114,32 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
           <div className="flex flex-wrap gap-2 justify-end">
             <PedidoAoCliente texto={recebe ? textoDoPedido(recebe) : null} quemRecebe={recebe} sugestao={sugestao} podeConfigurar={acesso.podeConfigurar} />
             {acesso.podeEditar && <AtualizarEmLote hoje={hoje} />}
+            {estimativa && !emAndamento && (
+              <ConferirNoSerpro
+                estimativa={{
+                  clientes: estimativa.clientes,
+                  custo: reais(estimativa.custoCentavos),
+                  mesDepois: reais(estimativa.mesDepoisCentavos),
+                  teto: reais(estimativa.tetoCentavos),
+                  passaDoTeto: estimativa.mesDepoisCentavos > estimativa.tetoCentavos,
+                }}
+              />
+            )}
+            {serpro && (
+              <Link href="/autorizacoes/consumo" className="inline-flex items-center h-8 px-2 text-ui text-fg-muted hover:text-brand transition-colors">
+                Consumo do Serpro
+              </Link>
+            )}
           </div>
         }
       />
+
+      {emAndamento && (
+        <Aviso tom="info" className="mb-4">
+          Conferência no Serpro em andamento: {emAndamento.feitas} de {emAndamento.total} clientes. Roda em lotes a cada 15 minutos, e o aviso
+          chega no sino quando terminar.
+        </Aviso>
+      )}
 
       {!recebe && (
         <Aviso tom="atencao" className="mb-4">
@@ -184,7 +218,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                   <InfoDoCartao>{andamentoDaAutorizacao(l.situacao, l.registro, hoje)}</InfoDoCartao>
                   <PeDoCartao>
                     <Selo tom={TOM_DA_SITUACAO[l.situacao]}>{ROTULO_DA_SITUACAO[l.situacao]}</Selo>
-                    {acesso.podeEditar && <BotaoDaAutorizacao chave={l.chave} nome={l.empresa.nome} documento={l.documento} registro={l.registro} hoje={hoje} />}
+                    {acesso.podeEditar && <BotaoDaAutorizacao chave={l.chave} nome={l.empresa.nome} documento={l.documento} registro={l.registro} hoje={hoje} serpro={serproPronto} />}
                   </PeDoCartao>
                 </Cartao>
               ))}
@@ -245,7 +279,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                         </td>
                         {acesso.podeEditar && (
                           <td className="py-2.5 text-right">
-                            <BotaoDaAutorizacao chave={l.chave} nome={l.empresa.nome} documento={l.documento} registro={l.registro} hoje={hoje} />
+                            <BotaoDaAutorizacao chave={l.chave} nome={l.empresa.nome} documento={l.documento} registro={l.registro} hoje={hoje} serpro={serproPronto} />
                           </td>
                         )}
                       </LinhaFiltravel>

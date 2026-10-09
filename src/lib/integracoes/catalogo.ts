@@ -16,8 +16,11 @@ export type CampoDeIntegracao = {
    * `secret` nunca volta para a tela depois de salvo — o formulário mostra
    * "•••• (preenchido)" e só grava quando alguém digita algo novo. Sem esta
    * distinção, editar o rótulo de uma conexão devolveria a senha ao navegador.
+   *
+   * `certificado` é um arquivo .pfx (A1), guardado em base64 dentro da
+   * configuração cifrada. Para a tela é um segredo: nunca volta, só "guardado".
    */
-  type: "text" | "secret" | "url";
+  type: "text" | "secret" | "url" | "certificado";
   required: boolean;
   help?: string;
 };
@@ -277,6 +280,57 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
       },
     ],
   },
+  {
+    // Preparação para o Serpro (09/10/2026). O contratante autentica com o
+    // e-CNPJ dele (mTLS) e a chave da Loja; o certificado fica na configuração
+    // cifrada e só sai dela para abrir a conexão com o Serpro. Onde guardar o A1
+    // é decisão pendente da coordenação — trocar a origem do certificado não
+    // muda o resto. O termo de autorização (software house) também espera a
+    // decisão de em nome de quem contratar: até lá, contratante = escritório.
+    code: "serpro_integra_contador",
+    label: "Serpro — Integra Contador",
+    vendor: "Serpro",
+    natureza: "API",
+    sectorCode: "fiscal",
+    description:
+      "Consultas, guias e declarações na Receita Federal em nome dos clientes, cobradas por chamada — começa pela conferência das autorizações de acesso",
+    defaultEnabled: false,
+    campos: [
+      {
+        name: "consumerKey",
+        label: "Consumer Key",
+        type: "text",
+        required: true,
+        help: "Área do Cliente do Serpro › Chaves de Acesso.",
+      },
+      {
+        name: "consumerSecret",
+        label: "Consumer Secret",
+        type: "secret",
+        required: true,
+      },
+      {
+        name: "certificado",
+        label: "Certificado e-CNPJ A1 (.pfx)",
+        type: "certificado",
+        required: true,
+        help: "O mesmo e-CNPJ usado na contratação. Fica cifrado no Connect e só é usado na conexão com o Serpro.",
+      },
+      {
+        name: "senhaDoCertificado",
+        label: "Senha do certificado",
+        type: "secret",
+        required: true,
+      },
+      {
+        name: "tetoMensal",
+        label: "Teto mensal (R$)",
+        type: "text",
+        required: true,
+        help: "Acima disso o Connect não faz chamadas cobradas até o mês virar. O Serpro cobra de R$ 0,06 a R$ 0,40 por chamada, conforme o tipo e o volume do mês.",
+      },
+    ],
+  },
 ];
 
 export function integracaoDoCatalogo(code: string): IntegracaoDef | null {
@@ -344,7 +398,7 @@ export function configParaTela(
       saida[campo.name] = "";
       continue;
     }
-    saida[campo.name] = campo.type === "secret" ? "" : valor;
+    saida[campo.name] = campo.type === "secret" || campo.type === "certificado" ? "" : valor;
   }
   return saida;
 }
@@ -355,7 +409,7 @@ export function segredosPreenchidos(
   config: Record<string, unknown>
 ): string[] {
   return def.campos
-    .filter((c) => c.type === "secret")
+    .filter((c) => c.type === "secret" || c.type === "certificado")
     .filter((c) => typeof config[c.name] === "string" && (config[c.name] as string) !== "")
     .map((c) => c.name);
 }

@@ -5,6 +5,9 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { integracaoDoCatalogo } from "@/lib/integracoes/catalogo";
 import { salvarIntegracao } from "@/lib/integracoes/data";
+import { TAMANHO_MAXIMO_DO_CERTIFICADO } from "@/lib/serpro/certificado";
+import { validarConfigDoSerpro } from "@/lib/serpro/cliente";
+import { CODIGO_DA_INTEGRACAO } from "@/lib/serpro/regras";
 
 export type ConexaoState = { error: string } | { success: true } | null;
 
@@ -30,6 +33,14 @@ export async function salvarConexao(_prev: ConexaoState, form: FormData): Promis
   const campos: Record<string, unknown> = {};
   for (const c of def.campos) {
     const v = form.get(c.name);
+    if (c.type === "certificado") {
+      // Arquivo vazio = ninguém escolheu: mantém o guardado (ver mesclarConfig).
+      if (v instanceof File && v.size > 0) {
+        if (v.size > TAMANHO_MAXIMO_DO_CERTIFICADO) return { error: "Arquivo grande demais para um certificado A1." };
+        campos[c.name] = Buffer.from(await v.arrayBuffer()).toString("base64");
+      }
+      continue;
+    }
     if (typeof v === "string") campos[c.name] = v;
   }
 
@@ -39,6 +50,7 @@ export async function salvarConexao(_prev: ConexaoState, form: FormData): Promis
     instanceKey,
     enabled: form.get("enabled") === "on",
     campos,
+    validar: code === CODIGO_DA_INTEGRACAO ? validarConfigDoSerpro : undefined,
   });
 
   if (!r.ok) return { error: r.erro };

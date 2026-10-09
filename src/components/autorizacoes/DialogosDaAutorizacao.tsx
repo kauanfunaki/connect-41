@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ClipboardList, Copy, ListChecks } from "lucide-react";
+import { ClipboardList, Copy, ListChecks, ShieldCheck } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -13,7 +13,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Aviso } from "@/components/ui/Aviso";
 import { useToast } from "@/components/ui/Toast";
-import { atualizarAutorizacao, atualizarEmLote, definirQuemRecebeAction } from "@/app/(app)/autorizacoes/actions";
+import { atualizarAutorizacao, atualizarEmLote, conferirNoSerproAction, definirQuemRecebeAction, pedirConferenciaGeralAction } from "@/app/(app)/autorizacoes/actions";
 import { prazoParaValidar, ROTULO_DO_STATUS, STATUS, type EntradaDaAutorizacao, type StatusDaAutorizacao } from "@/lib/autorizacoes/regras";
 import type { AutorizacaoNaTela, ResumoDoLote } from "@/lib/autorizacoes/servidor";
 
@@ -141,6 +141,7 @@ export function BotaoDaAutorizacao({
   registro,
   hoje,
   rotulo = "Atualizar",
+  serpro = false,
 }: {
   chave: string;
   nome: string;
@@ -148,11 +149,14 @@ export function BotaoDaAutorizacao({
   registro: AutorizacaoNaTela | null;
   hoje: string;
   rotulo?: string;
+  /** A ligação com o Serpro está pronta: o diálogo oferece conferir lá. */
+  serpro?: boolean;
 }) {
   const [aberto, setAberto] = useState(false);
   const [campos, setCampos] = useState<Campos>(() => camposIniciais(registro, hoje));
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
+  const [conferindo, startConferencia] = useTransition();
   const router = useRouter();
   const toast = useToast();
 
@@ -195,8 +199,109 @@ export function BotaoDaAutorizacao({
               {erro}
             </p>
           )}
-          <Rodape onClose={() => setAberto(false)} pendente={pendente} rotulo="Salvar" />
+          {serpro && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
+              <span className="text-ui text-fg-secondary min-w-0">Em vez de marcar à mão, pergunte ao Serpro (uma consulta, cobrada).</span>
+              <Button
+                type="button"
+                size="xs"
+                variant="secondary"
+                loading={conferindo}
+                disabled={pendente}
+                onClick={() => {
+                  setErro(null);
+                  startConferencia(async () => {
+                    const r = await conferirNoSerproAction(chave);
+                    if (!r.ok) {
+                      setErro(r.erro);
+                      return;
+                    }
+                    toast.success(r.texto);
+                    setAberto(false);
+                    router.refresh();
+                  });
+                }}
+              >
+                <ShieldCheck size={14} /> Conferir no Serpro
+              </Button>
+            </div>
+          )}
+          <Rodape onClose={() => setAberto(false)} pendente={pendente || conferindo} rotulo="Salvar" />
         </form>
+      </Modal>
+    </>
+  );
+}
+
+/**
+ * Conferir a carteira inteira no Serpro. Mostra quanto vai custar antes —
+ * cada cliente é uma consulta cobrada — e roda em lotes pelo agendador.
+ */
+export function ConferirNoSerpro({
+  estimativa,
+}: {
+  estimativa: { clientes: number; custo: string; mesDepois: string; teto: string; passaDoTeto: boolean };
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
+  const router = useRouter();
+  const toast = useToast();
+  return (
+    <>
+      <Button size="sm" variant="secondary" onClick={() => setAberto(true)}>
+        <ShieldCheck size={14} /> Conferir no Serpro
+      </Button>
+      <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Conferir no Serpro" maxWidth="max-w-lg">
+        <div className="flex flex-col gap-4">
+          <p className="text-ui text-fg-secondary">
+            O Connect pergunta ao Serpro, cliente por cliente, se o escritório tem a autorização de acesso — e atualiza a lista com o que voltar.
+            Quem já tem fica ativa, com a validade; a validada que não aparece mais vira cancelada.
+          </p>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-ui">
+            <dt className="text-fg-muted">Clientes</dt>
+            <dd className="tabular-nums">{estimativa.clientes} (sem os marcados como “Não se aplica”)</dd>
+            <dt className="text-fg-muted">Custo</dt>
+            <dd className="tabular-nums">cerca de {estimativa.custo}</dd>
+            <dt className="text-fg-muted">O mês fica em</dt>
+            <dd className="tabular-nums">
+              {estimativa.mesDepois}, de um teto de {estimativa.teto}
+            </dd>
+          </dl>
+          {estimativa.passaDoTeto && (
+            <Aviso tom="atencao">Passa do teto do mês: a conferência para quando chegar nele. Para ir até o fim, aumente o teto em Administração › Integrações.</Aviso>
+          )}
+          <p className="text-ui text-fg-muted">Roda aos poucos, 40 clientes a cada 15 minutos. Você recebe um aviso no sino quando terminar.</p>
+          {erro && (
+            <p className="text-fs-3 text-danger" role="alert">
+              {erro}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setAberto(false)} disabled={pendente}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              loading={pendente}
+              onClick={() => {
+                setErro(null);
+                startTransition(async () => {
+                  const r = await pedirConferenciaGeralAction();
+                  if (!r.ok) {
+                    setErro(r.erro);
+                    return;
+                  }
+                  toast.success(`Conferência de ${r.clientes} clientes pedida.`);
+                  setAberto(false);
+                  router.refresh();
+                });
+              }}
+            >
+              Conferir {estimativa.clientes} clientes
+            </Button>
+          </div>
+        </div>
       </Modal>
     </>
   );
