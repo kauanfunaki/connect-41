@@ -3,7 +3,9 @@
 import { useEffect, useState, useTransition } from "react";
 import { Check, ListChecks, Plus, EyeOff, Undo2, RotateCcw, Sparkles, Lock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import type { VarianteDoBadge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Input } from "@/components/ui/Input";
 import { CampoMes } from "@/components/ui/CampoMes";
 import { Select } from "@/components/ui/Select";
@@ -64,10 +66,12 @@ type Contraparte = { id: string; nome: string; documento: string | null; default
 type Centro = { id: string; nome: string };
 type Categoria = { id: string; nome: string; kind: "PAGAR" | "RECEBER" };
 
-const STATUS: Record<LinhaDaTransacao["status"], { rotulo: string; variante: "success" | "warning" | "info" }> = {
+// Situação da transação no `Selo` miúdo (escolha 2A, 08/10/2026). Ignorada é
+// encerrada — saiu da fila de propósito —, então neutra, como no mapa do BPO.
+const STATUS: Record<LinhaDaTransacao["status"], { rotulo: string; variante: VarianteDoBadge }> = {
   PENDENTE: { rotulo: "Pendente", variante: "warning" },
   CONCILIADA: { rotulo: "Conciliada", variante: "success" },
-  IGNORADA: { rotulo: "Ignorada", variante: "info" },
+  IGNORADA: { rotulo: "Ignorada", variante: TOM_DA_SITUACAO.IGNORADA },
 };
 
 function descricaoDaTransacao(l: Pick<LinhaDaTransacao, "memo" | "nome">): string {
@@ -191,7 +195,7 @@ export function TransacoesDaConta({
                   {moeda(l.centavos)}
                 </td>
                 <td className="py-2.5 pr-3">
-                  <Badge variant={STATUS[l.status].variante}>{rotuloDoStatus(l)}</Badge>
+                  <Selo tom={tomDaVariante(STATUS[l.status].variante)}>{rotuloDoStatus(l)}</Selo>
                 </td>
                 <td className="py-2.5">
                   {l.status === "PENDENTE" && (

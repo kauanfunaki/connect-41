@@ -185,7 +185,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[980px]">
                 <thead>
-                  <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Titular" chave="titular" /></th>
                     <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Documento" campos={[{ chave: "tipo", rotulo: "Tipo" }]} /></th>
                     <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
@@ -206,11 +206,11 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
                         ) : (
                           <span className="font-semibold">{c.titular}</span>
                         )}
-                        {!c.company && <span className="block text-[length:var(--fs-micro)] text-fg-muted">sem empresa no Connect</span>}
+                        {!c.company && <span className="block text-micro text-fg-muted">sem empresa no Connect</span>}
                       </td>
                       <td className="py-2.5 pr-3 tabular-nums text-fg-secondary">
                         {documento(c)}
-                        <span className="block text-[length:var(--fs-micro)] text-fg-muted">{c.tipo === "CPF" ? "e-CPF" : "e-CNPJ"}</span>
+                        <span className="block text-micro text-fg-muted">{c.tipo === "CPF" ? "e-CPF" : "e-CNPJ"}</span>
                       </td>
                       <td className="py-2.5 pr-3 tabular-nums">{formatCalendarDate(c.expiresAt)}</td>
                       <td className="py-2.5 pr-3 text-right tabular-nums">{c.situacao === "substituido" ? "—" : c.dias}</td>
@@ -219,7 +219,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
                       </td>
                       <td className="py-2.5 text-fg-secondary">
                         {c.cofreEntrada ?? "—"}
-                        {c.conferir && <span className="block text-[length:var(--fs-micro)] text-warning-fg">{c.conferir}</span>}
+                        {c.conferir && <span className="block text-micro text-warning-fg">{c.conferir}</span>}
                       </td>
                     </LinhaFiltravel>
                   ))}
@@ -227,7 +227,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
               </table>
             </TabelaNoDesktop>
             </TabelaFiltravel>
-            <p className="text-[length:var(--fs-micro)] text-fg-muted mt-3">
+            <p className="text-micro text-fg-muted mt-3">
               Vencimento lido de dentro do certificado. Quando o mesmo CNPJ/CPF tem um certificado mais novo, o antigo vira
               &ldquo;substituído&rdquo; e para de avisar. Avisos saem para o setor a 60, 30, 15 e 7 dias e no vencimento.
               {ultimaImportacao && <> Última importação: {formatInstantDate(ultimaImportacao)}.</>}

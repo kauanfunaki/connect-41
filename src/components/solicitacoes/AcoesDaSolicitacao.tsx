@@ -127,8 +127,8 @@ export function AcoesDaSolicitacao({
           </Button>
         )}
       </div>
-      {erro && <span className="text-[12px] text-danger">{erro}</span>}
-      {aviso && <span className="text-[12px] text-warning-fg">{aviso}</span>}
+      {erro && <span className="text-fs-2 text-danger">{erro}</span>}
+      {aviso && <span className="text-fs-2 text-warning-fg">{aviso}</span>}
       {dialog}
 
       <Modal open={encaminhando} onClose={() => !pendente && setEncaminhando(false)} title="Encaminhar para outro setor">

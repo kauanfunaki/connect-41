@@ -12,7 +12,7 @@ import {
   OctagonAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { SeloDoProcesso } from "@/components/portal/SeloDoProcesso";
 import { Card } from "@/components/ui/Card";
 import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
@@ -24,7 +24,6 @@ import { moeda } from "@/lib/financeiro/formato";
 import { solicitacoesAguardandoCliente, solicitacoesComRespostaDaEquipe } from "@/lib/solicitacoes/consultas";
 import { comunicadosNaoLidos } from "@/lib/comunicados/consultas";
 import { processosAguardandoCliente, processosEmAndamentoDoPortal } from "@/lib/societario/portal-data";
-import { SITUACAO_PARA_CLIENTE, VARIANTE_PARA_CLIENTE } from "@/lib/societario/portal";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { contarDocumentos } from "@/lib/fiscal/data";
 import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
@@ -354,7 +353,7 @@ export async function ProcessosDoInicio({ escopo, variasEmpresas }: { escopo: Es
                       {apoio || `aberto em ${formatInstantDate(p.iniciadoEm)}`}
                     </span>
                   </span>
-                  <Badge variant={VARIANTE_PARA_CLIENTE[p.situacao]}>{SITUACAO_PARA_CLIENTE[p.situacao].rotulo}</Badge>
+                  <SeloDoProcesso situacao={p.situacao} />
                 </Link>
               </li>
             );

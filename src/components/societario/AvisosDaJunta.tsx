@@ -37,7 +37,7 @@ type Acoes = {
 const SUGESTAO: Record<AvisoNaTela["sugestao"], { rotulo: string; tom: TomDoSelo }> = {
   DEFERIDO: { rotulo: "Parece deferido", tom: "sucesso" },
   EXIGENCIA: { rotulo: "Parece exigência", tom: "atencao" },
-  CANCELADO: { rotulo: "Parece cancelado", tom: "perigo" },
+  CANCELADO: { rotulo: "Parece cancelado", tom: "neutro" },
   REVISAR: { rotulo: "Conferir", tom: "marca" },
 };
 
@@ -103,7 +103,7 @@ function CartaoDoAviso({
 
   const conteudo = (
     <>
-      <div className="flex flex-wrap items-center gap-2 text-[length:var(--fs-2)] text-fg-muted">
+      <div className="flex flex-wrap items-center gap-2 text-fs-2 text-fg-muted">
         {/* Selo: é a situação do aviso, não uma categoria (regra de 02/10 no Selo). */}
         <Selo tom={sugestao.tom}>{sugestao.rotulo}</Selo>
         <span>Recebido em {formatInstantDate(aviso.recebidoEm)}</span>
@@ -118,7 +118,7 @@ function CartaoDoAviso({
           ))}
       </div>
 
-      {aviso.assunto && <p className="text-[length:var(--fs-ui)] font-medium text-fg">{aviso.assunto}</p>}
+      {aviso.assunto && <p className="text-ui font-medium text-fg">{aviso.assunto}</p>}
 
       <div>
         {/* Revisão de 05/10: botão não é link — o abre-e-fecha era texto azul. */}
@@ -127,7 +127,7 @@ function CartaoDoAviso({
           {abrirTexto ? "Esconder o e-mail" : "Ler o e-mail do órgão"}
         </Button>
         {abrirTexto && (
-          <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md bg-surface-2 p-3 text-[length:var(--fs-2)] text-fg-secondary font-sans">
+          <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md bg-surface-2 p-3 text-fs-2 text-fg-secondary font-sans">
             {aviso.remetente ? `De: ${aviso.remetente}\n\n` : ""}
             {aviso.corpo}
           </pre>
@@ -170,19 +170,19 @@ function CartaoDoAviso({
             </div>
           )}
           {desfecho === "DEFERIDO" && aviso.sugestao !== "DEFERIDO" && (
-            <p className="text-[length:var(--fs-2)] text-warning-fg">
+            <p className="text-fs-2 text-warning-fg">
               O sistema não leu “deferido” neste e-mail. Confirme no texto antes de marcar.
             </p>
           )}
         </div>
       ) : (
         !mostrarProcesso && (
-          <p className="text-[length:var(--fs-2)] text-fg-muted">O protocolo deste aviso já foi resolvido. Descarte se não houver nada novo.</p>
+          <p className="text-fs-2 text-fg-muted">O protocolo deste aviso já foi resolvido. Descarte se não houver nada novo.</p>
         )
       )}
 
       {aviso.sugestao === "CANCELADO" && (
-        <p className="text-[length:var(--fs-2)] text-fg-muted">
+        <p className="text-fs-2 text-fg-muted">
           Cancelamento e reaproveitamento se tratam no processo (situação e novo protocolo). Depois, descarte o aviso.
         </p>
       )}

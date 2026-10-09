@@ -29,11 +29,11 @@ export function AbrirCompetenciaForm({ action, companyId }: Props) {
         </CampoForm>
         <AlinhadoAoCampo className="col-span-2 sm:col-span-1">
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Abrindo…" : "Abrir Competência"}
+            {isPending ? "Abrindo…" : "Abrir competência"}
           </Button>
         </AlinhadoAoCampo>
       </div>
-      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

@@ -397,7 +397,7 @@ export function PessoaForm({
               <CampoForm label="RG" htmlFor="rg">
                 <Input id="rg" name="rg" type="text" value={values.rg} placeholder="00.000.000-0" maxLength={14} />
               </CampoForm>
-              <CampoForm label="Data de Nascimento" htmlFor="birthDate">
+              <CampoForm label="Data de nascimento" htmlFor="birthDate">
                 <CampoData
                   id="birthDate"
                   name="birthDate"
@@ -441,7 +441,7 @@ export function PessoaForm({
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
             <FieldGrid columns="sm:grid-cols-[180px_1fr_120px]">
-              <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche Logradouro, Bairro, Cidade e UF automaticamente.">
+              <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche logradouro, bairro, cidade e UF automaticamente.">
                 <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} placeholder="00000-000" maxLength={9} />
               </CampoForm>
               <CampoForm label="Logradouro" htmlFor="addressStreet">
@@ -472,12 +472,12 @@ export function PessoaForm({
         <div data-step={2} className={step === 2 ? "" : "hidden"}>
           <FormSection title={stepLabels[2]}>
             {!showEmployment ? (
-              <p className="text-[length:var(--fs-helper)] text-fg-muted">
+              <p className="text-helper text-fg-muted">
                 Para contatos de empresas clientes, guardamos só a empresa, o cargo e o departamento —
                 jornada, admissão e folha só existem para colaboradores internos.
               </p>
             ) : (
-              <p className="text-[length:var(--fs-helper)] text-fg-muted">
+              <p className="text-helper text-fg-muted">
                 Colaborador interno é da própria equipe do workspace, não de uma empresa cliente —
                 por isso não pede empresa/cargo/departamento aqui.
               </p>
@@ -519,7 +519,7 @@ export function PessoaForm({
                     ))}
                   </Select>
                 </CampoForm>
-                <CampoForm label="Data de Admissão" htmlFor="admissionDate">
+                <CampoForm label="Data de admissão" htmlFor="admissionDate">
                   <CampoData
                     id="admissionDate"
                     name="admissionDate"
@@ -527,7 +527,7 @@ export function PessoaForm({
                     onChange={(v) => setValues((prev) => ({ ...prev, admissionDate: v }))}
                   />
                 </CampoForm>
-                <CampoForm label="Data de Demissão" htmlFor="dismissalDate">
+                <CampoForm label="Data de demissão" htmlFor="dismissalDate">
                   <CampoData
                     id="dismissalDate"
                     name="dismissalDate"
@@ -538,10 +538,10 @@ export function PessoaForm({
                 <CampoForm label="Jornada" htmlFor="workShift">
                   <Input id="workShift" name="workShift" type="text" placeholder="ex: 08h-18h" value={values.workShift} />
                 </CampoForm>
-                <CampoForm label="Carga Horária Semanal" htmlFor="weeklyWorkHours">
+                <CampoForm label="Carga horária semanal" htmlFor="weeklyWorkHours">
                   <Input id="weeklyWorkHours" name="weeklyWorkHours" type="number" step="0.5" suffix="h" value={values.weeklyWorkHours} />
                 </CampoForm>
-                <CampoForm label="Carga Horária Mensal" htmlFor="monthlyWorkHours">
+                <CampoForm label="Carga horária mensal" htmlFor="monthlyWorkHours">
                   <Input id="monthlyWorkHours" name="monthlyWorkHours" type="number" step="0.5" suffix="h" value={values.monthlyWorkHours} />
                 </CampoForm>
               </FieldGrid>
@@ -563,7 +563,7 @@ export function PessoaForm({
                 <CampoForm label="CTPS" htmlFor="ctps">
                   <Input id="ctps" name="ctps" type="text" value={values.ctps} placeholder="0000000" />
                 </CampoForm>
-                <CampoForm label="CTPS Série" htmlFor="ctpsSerie">
+                <CampoForm label="Série da CTPS" htmlFor="ctpsSerie">
                   <Input id="ctpsSerie" name="ctpsSerie" type="text" value={values.ctpsSerie} placeholder="000-0" />
                 </CampoForm>
                 <CampoForm label="Escolaridade" htmlFor="education">
@@ -591,7 +591,7 @@ export function PessoaForm({
             </CampoForm>
 
             {showEmployment && (
-              <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
+              <p className="text-helper text-fg-muted italic">
                 Benefícios são gerenciados na ficha do colaborador depois de criada.
               </p>
             )}
@@ -605,7 +605,7 @@ export function PessoaForm({
             <FormSection title="Dados bancários e salário">
               {canEditSensitive ? (
                 <FieldGrid columns={GRADE}>
-                  <CampoForm label="Salário Atual" htmlFor="currentSalary">
+                  <CampoForm label="Salário atual" htmlFor="currentSalary">
                     <Input id="currentSalary" name="currentSalary" type="number" step="0.01" prefix="R$" placeholder="0,00" value={values.currentSalary} />
                   </CampoForm>
                   <CampoForm label="Banco" htmlFor="bankName">
@@ -617,12 +617,12 @@ export function PessoaForm({
                   <CampoForm label="Conta" htmlFor="bankAccount">
                     <Input id="bankAccount" name="bankAccount" type="text" value={values.bankAccount} />
                   </CampoForm>
-                  <CampoForm label="Tipo de Conta" htmlFor="bankAccountType">
+                  <CampoForm label="Tipo de conta" htmlFor="bankAccountType">
                     <Input id="bankAccountType" name="bankAccountType" type="text" value={values.bankAccountType} />
                   </CampoForm>
                 </FieldGrid>
               ) : (
-                <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
+                <p className="text-helper text-fg-muted italic">
                   Dados bancários e salário são sensíveis — seu papel não tem permissão para ver ou editar esses campos.
                 </p>
               )}
@@ -634,12 +634,12 @@ export function PessoaForm({
         <div data-step={4} className={step === 4 ? "" : "hidden"}>
           <FormSection title={stepLabels[4]}>
             {isEditing ? (
-              <p className="text-[length:var(--fs-body)] text-fg-secondary">
-                A lista de documentos e o upload ficam na ficha da pessoa, na aba própria de Documentos.
+              <p className="text-body text-fg-secondary">
+                A lista de documentos e o upload ficam na ficha da pessoa, na aba própria, Documentos.
               </p>
             ) : (
               <div className="space-y-4">
-                <p className="text-[length:var(--fs-body)] text-fg-secondary">
+                <p className="text-body text-fg-secondary">
                   Os arquivos ficam aguardando aqui e são enviados assim que a pessoa for criada, na
                   última etapa.
                 </p>
@@ -679,12 +679,12 @@ export function PessoaForm({
                 </FieldGrid>
 
                 {pendingDocs.length === 0 ? (
-                  <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhum documento adicionado ainda.</p>
+                  <p className="text-helper text-fg-muted">Nenhum documento adicionado ainda.</p>
                 ) : (
                   <ul className="border border-border rounded-md divide-y divide-border">
                     {pendingDocs.map((d, i) => (
                       <li key={i} className="flex items-center justify-between gap-3 px-3 py-2">
-                        <span className="min-w-0 text-[length:var(--fs-ui)] text-fg truncate">
+                        <span className="min-w-0 text-ui text-fg truncate">
                           {d.file.name}
                           <span className="text-fg-muted"> · {CATEGORY_LABEL[d.category]}</span>
                         </span>
@@ -702,7 +702,7 @@ export function PessoaForm({
                   </ul>
                 )}
 
-                {uploadError && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{uploadError}</p>}
+                {uploadError && <p className="text-helper font-medium text-danger">{uploadError}</p>}
               </div>
             )}
           </FormSection>

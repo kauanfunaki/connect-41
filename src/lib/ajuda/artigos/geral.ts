@@ -54,7 +54,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Meu dia",
     caminhos: ["/tarefas"],
     resumo:
-      "Tudo o que é seu, de todos os setores, numa tela só: processos, cards, pendências, transferências e solicitações, na ordem do que é mais urgente.",
+      "Tudo o que é seu, de todos os setores, numa tela só: processos, tarefas, pendências, transferências e solicitações, na ordem do que é mais urgente.",
     secoes: [
       {
         titulo: "Como começar o dia pelo Meu dia",
@@ -62,7 +62,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Clique em “Meu dia”, logo abaixo de “Início” na barra lateral.",
           "Confira os números do topo: “Atrasados”, “Vencem em breve”, “Parados”, “Em andamento” e “Feitos na semana”.",
           "Comece pela lista “Pede você agora”: ela traz o que está atrasado, vencendo ou parado, do mais urgente para o menos urgente.",
-          "Clique no título de um item para abri-lo. O ícone e o rótulo dizem de onde ele vem (processo, card, pendência, transferência ou solicitação) e a bolinha colorida mostra o setor.",
+          "Clique no título de um item para abri-lo. O ícone e o rótulo dizem de onde ele vem (processo, tarefa, pendência, transferência ou solicitação) e a bolinha colorida mostra o setor.",
           "Depois, siga pelas listas “Em andamento” e “Para começar”.",
         ],
       },
@@ -113,16 +113,16 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como consultar a ficha de uma empresa",
         passos: [
           "Clique no nome da empresa na lista.",
-          "Em “Visão Geral”, veja os dados cadastrais e os “Serviços contratados”. Clique em “Gerar Resumo” para um resumo dos últimos 90 dias.",
+          "Em “Visão geral”, veja os dados cadastrais e os “Serviços contratados”. Clique em “Gerar resumo” para um resumo dos últimos 90 dias.",
           "Use as abas “Filiais”, “Pessoas”, “Documentos”, “Conversas” e “Histórico” para o restante das informações.",
-          "Na aba “RH & Operação”, entre em “Sócios”, “Cargos”, “Departamentos”, “Benefícios”, “Turnos”, “Folha de Pagamento” e “Documentos para Cliente”.",
-          "Para passar um assunto da empresa a outro setor, clique em “Solicitar Transferência”.",
+          "Na aba “RH & operação”, entre em “Sócios”, “Cargos”, “Departamentos”, “Benefícios”, “Turnos”, “Folha de pagamento” e “Documentos para cliente”.",
+          "Para passar um assunto da empresa a outro setor, clique em “Solicitar transferência”.",
         ],
       },
       {
         titulo: "Como cadastrar uma empresa",
         passos: [
-          "Na lista, clique em “+ Nova Empresa”.",
+          "Na lista, clique em “Nova empresa”.",
           "Escolha o “Tipo de cadastro”. Com CNPJ, os dados se preenchem sozinhos ao completar os dígitos.",
           "Confira e complete os campos de cada etapa, clicando em “Avançar →”.",
           "Na última etapa, revise o resumo e clique em “Confirmar e salvar”.",
@@ -165,17 +165,17 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como consultar a ficha de uma pessoa",
         passos: [
-          "Em “Visão Geral”, veja identificação, contato, endereço e a “Conta de acesso” ao Connect.",
+          "Em “Visão geral”, veja identificação, contato, endereço e a “Conta de acesso” ao Connect.",
           "Em “Vínculo”, veja a empresa, o cargo e o departamento.",
-          "Em “Dados Trabalhistas”, veja admissão, jornada, carga horária e dependentes.",
+          "Em “Dados trabalhistas”, veja admissão, jornada, carga horária e dependentes.",
           "Use “Documentos”, “Conversas” e “Histórico” para os arquivos, os atendimentos e as movimentações nos quadros.",
-          "Para passar um assunto da pessoa a outro setor, clique em “Solicitar Transferência”.",
+          "Para passar um assunto da pessoa a outro setor, clique em “Solicitar transferência”.",
         ],
       },
       {
         titulo: "Como cadastrar um funcionário interno",
         passos: [
-          "Na lista, clique em “+ Nova Pessoa”.",
+          "Na lista, clique em “Nova pessoa”.",
           "Preencha os dados de cada etapa e clique em “Avançar →”.",
           "Na última etapa, clique em “Confirmar e salvar”.",
           "Para mudar algo depois, abra a ficha e clique em “Editar”.",
@@ -280,14 +280,14 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como mudar o horário da grade",
         passos: [
-          "Clique na sua foto, no alto da tela, e em “Configurações do Perfil”.",
+          "Clique na sua foto, no alto da tela, e em “Configurações do perfil”.",
           "Em “Agenda”, escolha “Usar o do escritório” ou “Definir o meu”.",
           "Para definir o seu, escolha o “Início” e o “Fim” e clique em “Salvar”. Um fim antes do início termina no dia seguinte — 22:00 às 6:00, por exemplo.",
         ],
       },
     ],
     dicas: [
-      "O horário padrão do escritório é definido por um administrador, em Administração → Empresa (Tenant).",
+      "O horário padrão do escritório é definido por um administrador, em Administração → Empresa (tenant).",
       "Quando o horário passa da meia-noite, a madrugada aparece na coluna do dia anterior: uma reunião à 1:00 de terça fica na coluna de segunda. Os prazos continuam no dia do calendário.",
       "Reunião fora do horário exibido não some: a grade avisa quantas ficaram de fora, e elas aparecem na visão de mês.",
       "Para agendar, conecte antes a sua conta Google ou Microsoft: a janela de nova reunião traz o link “Configurações → Integrações”.",
@@ -302,7 +302,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Espaços",
     caminhos: ["/kanban", "/setor"],
     resumo:
-      "As listas e quadros de tarefas de cada setor, organizados em espaços e pastas. Cada tarefa é um card com status, responsáveis, prazo e comentários.",
+      "As listas e quadros de tarefas de cada setor, organizados em espaços e pastas. Cada tarefa tem situação, responsáveis, prazo e comentários.",
     secoes: [
       {
         titulo: "Como encontrar uma lista de tarefas",
@@ -317,18 +317,18 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como criar espaços, pastas, listas e tarefas",
         passos: [
-          "Na tela de Espaços, clique em “Novo Espaço”, dê um “Nome” e clique em “Criar”.",
+          "Na tela de Espaços, clique em “Novo espaço”, dê um “Nome” e clique em “Criar”.",
           "Dentro do espaço, clique em “Nova pasta” ou “Nova lista”, dê um nome e clique em “Criar”.",
           "Na lista, clique em “Editar lista” para ajustar os estágios das colunas.",
-          "Para criar uma tarefa, na visão “Lista”, clique em “Adicionar Tarefa” no grupo do status, digite o nome e aperte Enter.",
-          "Para incluir uma empresa ou pessoa na lista, clique em “+ Item”, escolha quem é e clique em “Adicionar”.",
+          "Para criar uma tarefa, na visão “Lista”, clique em “Adicionar tarefa” no grupo do status, digite o nome e aperte Enter.",
+          "Para criar a tarefa de uma empresa ou pessoa, clique em “Nova tarefa”, escolha quem é e clique em “Criar tarefa”.",
         ],
       },
       {
-        titulo: "Como trabalhar em um card",
+        titulo: "Como trabalhar em uma tarefa",
         passos: [
-          "Clique no nome da tarefa para abrir o card. No “Quadro”, você também pode arrastar o card para outra coluna.",
-          "Em “Status”, escolha a etapa em que a tarefa está.",
+          "Clique no nome da tarefa para abri-la. No “Quadro”, você também pode arrastar a tarefa para outra coluna.",
+          "Em “Situação”, escolha a etapa em que a tarefa está.",
           "Em “Responsáveis”, marque quem faz a tarefa; em “Participantes”, quem acompanha.",
           "Preencha “Datas”, “Prioridade” e “Etiquetas”, e use “Subtarefas”, “Checklist” e “Anexos” quando precisar.",
           "Em “Comentários e atividade”, escreva no campo de comentário, use @ para mencionar alguém e clique em “Comentar”.",
@@ -337,7 +337,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "Criar espaços, pastas, listas e tarefas é para o gestor do setor e os administradores. Quem é do setor comenta e atualiza os cards.",
+      "Criar espaços, pastas, listas e tarefas é para o gestor do setor e os administradores. Quem é do setor comenta e atualiza as tarefas.",
       "Excluir um espaço, uma pasta ou uma lista não pode ser desfeito.",
       "A tela “Kanban” reúne num lugar só os quadros de todos os seus setores.",
     ],
@@ -575,7 +575,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
   // ─── Cargos e Salários ─────────────────────────────────────────────────────
   {
     chave: "gestao_cargos_salarios",
-    titulo: "Cargos e Salários",
+    titulo: "Cargos e salários",
     caminhos: ["/cargos-salarios"],
     resumo:
       "A matriz de cargos de todas as empresas, agrupada por família e nível de senioridade, com as faixas salariais e os pontos da estrutura que precisam de correção.",
@@ -583,7 +583,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como ler a matriz",
         passos: [
-          "Entre no setor e abra “Cargos e Salários” na barra lateral.",
+          "Entre no setor e abra “Cargos e salários” na barra lateral.",
           "Cada bloco é uma família de cargos, com a quantidade de cargos e de colaboradores.",
           "Em cada linha, veja o “Nível”, o “Cargo”, a “Empresa”, a “Área”, as “Pessoas” no cargo e a “Faixa salarial”.",
           "Use o funil das colunas “Nível”, “Empresa” e “Área” para filtrar a família.",
@@ -602,8 +602,8 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como cadastrar um cargo novo",
         passos: [
           "Abra a ficha da empresa em “Cadastros” → “Empresas”.",
-          "Na aba “RH & Operação”, clique em “Cargos”.",
-          "Clique em “+ Novo Cargo”, preencha os campos e clique em “Salvar”.",
+          "Na aba “RH & operação”, clique em “Cargos”.",
+          "Clique em “Novo cargo”, preencha os campos e clique em “Salvar”.",
         ],
       },
     ],
@@ -626,7 +626,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como ler os indicadores",
         passos: [
           "Entre no setor e abra “Indicadores de RH” na barra lateral.",
-          "Cada cartão é um número, como “Headcount”, “Turnover (30 dias)”, “Absenteísmo (30 dias)”, “Férias Vencidas”, “Vagas Abertas” e “Custo de Folha (mês atual)”.",
+          "Cada cartão é um número, como “Headcount”, “Turnover (30 dias)”, “Absenteísmo (30 dias)”, “Férias vencidas”, “Vagas abertas” e “Custo de folha (mês atual)”.",
           "Leia a linha abaixo do número: ela diz o que ele conta.",
         ],
       },
@@ -650,7 +650,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     dicas: [
       "Os números vêm do que é lançado no DP e no Recrutamento: se um dado parece errado, corrija na origem.",
       "O relatório “Distorções salariais” só aparece para quem tem permissão de ver salários.",
-      "O cartão “Férias Vencidas” fica destacado quando há alguma, porque é o número que pede ação.",
+      "O cartão “Férias vencidas” fica destacado quando há alguma, porque é o número que pede ação.",
     ],
   },
 

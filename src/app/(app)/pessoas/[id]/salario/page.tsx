@@ -5,7 +5,6 @@ import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { InfoRow } from "@/components/empresas/InfoRow";
-import { BackButton } from "@/components/shared/BackButton";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -63,9 +62,9 @@ export default async function SalarioPage({
         personId={id}
         personName={person.name}
         atual="Salário"
+        aba="trabalhista"
       />
-      <BackButton className="mb-3" />
-      <PageHeader title="Dados Bancários e Salário" />
+      <PageHeader title="Dados bancários e salário" />
 
       {/* Mesma grade de rótulo/valor da ficha (30/09): os cinco dados numa
           linha no desktop, em vez de duas colunas de meia tela. */}
@@ -73,7 +72,7 @@ export default async function SalarioPage({
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-4">
           {canViewSalary && (
             <InfoRow
-              label="Salário Atual"
+              label="Salário atual"
               value={person.currentSalary != null ? formatarReais(Number(person.currentSalary)) : null}
             />
           )}
@@ -82,7 +81,7 @@ export default async function SalarioPage({
               <InfoRow label="Banco" value={person.bankName} />
               <InfoRow label="Agência" value={person.bankAgency} mono />
               <InfoRow label="Conta" value={person.bankAccount} mono />
-              <InfoRow label="Tipo de Conta" value={person.bankAccountType} />
+              <InfoRow label="Tipo de conta" value={person.bankAccountType} />
             </>
           )}
         </div>

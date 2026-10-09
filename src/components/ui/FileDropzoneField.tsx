@@ -91,7 +91,9 @@ export function FileDropzoneField({
   const formatosLegiveis = formatosDoAccept(accept);
 
   return (
-    <div className="flex flex-col gap-2">
+    // `relative`: o <input> escondido (`sr-only`, absoluto) fica preso aqui,
+    // e não solto na página (08/10/2026).
+    <div className="relative flex flex-col gap-2">
       {escolhido ? (
         <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5">
           <span

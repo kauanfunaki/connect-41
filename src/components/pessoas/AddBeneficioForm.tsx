@@ -23,6 +23,8 @@ export function AddBeneficioForm({ action, beneficios }: Props) {
   // neles; botão alinhado ao campo de observações.
   return (
     <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
+      {/* Bloco do "novo" com nome, acima dos campos (5A, 08/10/2026). */}
+      <h3 className="c41-rotulo">Novo benefício</h3>
       <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_repeat(3,minmax(0,180px))]">
         <CampoForm label="Benefício" htmlFor="benefitId" required>
           <Select id="benefitId" name="benefitId" required>
@@ -32,13 +34,13 @@ export function AddBeneficioForm({ action, beneficios }: Props) {
             ))}
           </Select>
         </CampoForm>
-        <CampoForm label="Início da Vigência" htmlFor="startDate" required>
+        <CampoForm label="Início da vigência" htmlFor="startDate" required>
           <CampoData id="startDate" name="startDate" required />
         </CampoForm>
-        <CampoForm label="Valor Empresa" htmlFor="companyValue">
+        <CampoForm label="Valor empresa" htmlFor="companyValue">
           <Input id="companyValue" name="companyValue" type="number" step="0.01" prefix="R$" placeholder="0,00" />
         </CampoForm>
-        <CampoForm label="Valor Desconto" htmlFor="discountValue">
+        <CampoForm label="Valor desconto" htmlFor="discountValue">
           <Input id="discountValue" name="discountValue" type="number" step="0.01" prefix="R$" placeholder="0,00" />
         </CampoForm>
       </FieldGrid>
@@ -48,11 +50,11 @@ export function AddBeneficioForm({ action, beneficios }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Vinculando…" : "Vincular Benefício"}
+            {isPending ? "Vinculando…" : "Vincular benefício"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

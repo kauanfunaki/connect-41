@@ -10,7 +10,6 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { BackButton } from "@/components/shared/BackButton";
 import { excluirCargo } from "./actions";
 
 export default async function CargosPage({
@@ -42,11 +41,10 @@ export default async function CargosPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Cargos" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="Cargos"
@@ -86,8 +84,8 @@ export default async function CargosPage({
           {cargos.map((c) => (
             <div key={c.id} className="flex items-center justify-between gap-4 px-4 py-3">
               <div>
-                <p className="text-[13px] text-fg font-medium">{c.name}</p>
-                {c.area && <p className="text-[12px] text-fg-muted">{c.area}</p>}
+                <p className="text-fs-3 text-fg font-medium">{c.name}</p>
+                {c.area && <p className="text-fs-2 text-fg-muted">{c.area}</p>}
               </div>
               {canManage && (
                 <AcoesDoCadastro editarHref={`/empresas/${companyId}/cargos/${c.id}/editar`} excluir={excluirCargo.bind(null, c.id, companyId)} nome={c.name} />

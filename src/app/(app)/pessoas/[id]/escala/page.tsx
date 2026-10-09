@@ -4,7 +4,6 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
@@ -52,14 +51,14 @@ export default async function EscalaPage({
         isInternal={person.isInternal}
         personId={id}
         personName={person.name}
-        atual="Escala de Trabalho"
+        atual="Escala de trabalho"
+        aba="vinculo"
       />
-      <BackButton className="mb-3" />
-      <PageHeader title="Escala de Trabalho" />
+      <PageHeader title="Escala de trabalho" />
 
       <Card className="p-5">
         {escala.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhuma escala montada ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhuma escala montada ainda.</p>
         ) : (
           <div>
             {escala.map((e) => (

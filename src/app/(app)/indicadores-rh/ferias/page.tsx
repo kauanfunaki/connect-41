@@ -7,7 +7,7 @@ import { RelatorioTable, RelatorioBadge, TOM_DO_TOTAL, type BadgeTone } from "@/
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { AlertTriangle, Clock, CalendarCheck, CheckCircle2 } from "lucide-react";
 
-export const metadata = { title: "Relatório de Férias" };
+export const metadata = { title: "Relatório de férias" };
 
 const SITUACAO: Record<FeriasSituacao, { label: string; tone: BadgeTone }> = {
   VENCIDA: { label: "Vencida", tone: "danger" },
@@ -26,7 +26,7 @@ export default async function RelatorioFeriasPage() {
     <PageContainer>
       <RelatorioHeader
         breadcrumb="Férias"
-        title="Relatório de Férias"
+        title="Relatório de férias"
         subtitle="Períodos aquisitivos em aberto, por urgência. Vencida é passivo consumado; a vencer ainda dá pra programar."
       />
 

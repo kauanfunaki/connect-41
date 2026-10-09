@@ -25,8 +25,8 @@ export default function HomeError({
         <span className="w-10 h-10 rounded-lg bg-danger/10 text-danger flex items-center justify-center">
           <AlertTriangle size={18} />
         </span>
-        <p className="text-[14px] font-semibold text-fg">Não foi possível carregar o resumo do workspace.</p>
-        <p className="text-[13px] text-fg-muted max-w-[360px]">
+        <p className="text-fs-4 font-semibold text-fg">Não foi possível carregar o resumo do workspace.</p>
+        <p className="text-fs-3 text-fg-muted max-w-[360px]">
           Algo deu errado ao montar o dashboard. Tente novamente — se persistir, os módulos continuam acessíveis pela barra lateral.
         </p>
         <Button

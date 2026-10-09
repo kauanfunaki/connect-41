@@ -81,7 +81,7 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
       <div>
         <FormSection title="Dados da vaga">
           <FieldGrid>
-            <CampoForm label="Título da Vaga" htmlFor="title" required>
+            <CampoForm label="Título da vaga" htmlFor="title" required>
               <Input id="title" name="title" type="text" required defaultValue={defaultValues?.title ?? ""} />
             </CampoForm>
             <CampoForm label="Setor" htmlFor="sectorCode" required>

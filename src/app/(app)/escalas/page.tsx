@@ -35,7 +35,7 @@ export default async function EscalasPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Escala — Próximos 30 dias"
+        title="Escala — próximos 30 dias"
         subtitle={<>{entries.length} lançamento{entries.length !== 1 ? "s" : ""} de escala</>}
       />
 
@@ -79,7 +79,7 @@ export default async function EscalasPage() {
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[760px]">
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Data" chave="data" tipo="data" />
                     </th>

@@ -46,13 +46,13 @@ export default async function CamposPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Campos Customizados"
+        title="Campos customizados"
         subtitle={<>{fields.length} campo{fields.length !== 1 ? "s" : ""} configurado{fields.length !== 1 ? "s" : ""}</>}
         action={<><Button
           href="/admin/campos/novo"
           variant="primary" className="font-medium"
         >
-          + Novo Campo
+          + Novo campo
         </Button></>}
       />
       {Object.keys(grouped).length === 0 ? (
@@ -66,7 +66,7 @@ export default async function CamposPage() {
                 href="/admin/campos/novo"
                 variant="primary" className="font-medium"
               >
-                + Novo Campo
+                + Novo campo
               </Button>
             }
           />
@@ -77,7 +77,7 @@ export default async function CamposPage() {
             const [sectorCode, entityType] = key.split("::");
             return (
               <div key={key}>
-                <h2 className="text-[15px] font-medium text-fg mb-2">
+                <h2 className="text-fs-5 font-medium text-fg mb-2">
                   {sectorLabel(sectorLabels, sectorCode)} ·{" "}
                   {entityType === "COMPANY" ? "Empresas" : "Pessoas"}
                 </h2>
@@ -85,10 +85,10 @@ export default async function CamposPage() {
                   {list.map((f) => (
                     <div key={f.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                       <div className="min-w-0">
-                        <p className="text-[13px] text-fg">
+                        <p className="text-fs-3 text-fg">
                           {f.label} {f.required && <span className="text-danger">*</span>}
                         </p>
-                        <p className="text-[11px] text-fg-muted">
+                        <p className="text-fs-1 text-fg-muted">
                           {FIELD_TYPE_LABEL[f.fieldType] ?? f.fieldType} · <span className="font-mono">{f.key}</span>
                         </p>
                       </div>

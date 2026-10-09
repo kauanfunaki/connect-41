@@ -146,8 +146,8 @@ export function PushNotificationToggle({
     // chaves VAPID não tem botão ao lado.
     <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-4 flex items-center justify-between gap-4">
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium text-fg">Notificações no navegador</p>
-        <p className="text-[12px] text-fg-muted mt-0.5">
+        <p className="text-fs-3 font-medium text-fg">Notificações no navegador</p>
+        <p className="text-fs-2 text-fg-muted mt-0.5">
           {status === "unconfigured"
             ? "Indisponível neste ambiente: faltam as chaves VAPID (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT). Um administrador precisa configurá-las nas variáveis de ambiente do servidor e reiniciar — não é necessário rebuild."
             : status === "denied"
@@ -156,7 +156,7 @@ export function PushNotificationToggle({
                 ? "Ativadas neste navegador."
                 : descricao}
         </p>
-        {error && <p className="text-[length:var(--fs-helper)] font-medium text-danger mt-1">{error}</p>}
+        {error && <p className="text-helper font-medium text-danger mt-1">{error}</p>}
       </div>
       {status !== "denied" && status !== "loading" && status !== "unconfigured" && (
         <Button

@@ -21,7 +21,7 @@ const ESTILO: Record<NivelDeSaude, { icone: typeof CheckCircle2; cor: string; bo
 export function EstadoDasConexoes({ conexoes, podeConfigurar }: { conexoes: ConexaoNaTela[]; podeConfigurar: boolean }) {
   if (conexoes.length === 0) {
     return (
-      <Card className="p-4 mb-4 flex flex-wrap items-center justify-between gap-3 text-[length:var(--fs-ui)] text-fg-muted">
+      <Card className="p-4 mb-4 flex flex-wrap items-center justify-between gap-3 text-ui text-fg-muted">
         Nenhum número de WhatsApp conectado.
         {/* Botão, e não link de texto (30/09): é a ação de conectar. */}
         {podeConfigurar && (
@@ -44,7 +44,7 @@ export function EstadoDasConexoes({ conexoes, podeConfigurar }: { conexoes: Cone
               <div className="flex items-start gap-2 min-w-0">
                 <Icone size={16} className={`${estilo.cor} mt-0.5 shrink-0`} />
                 <div className="min-w-0">
-                  <p className="text-[length:var(--fs-ui)] font-medium text-fg">
+                  <p className="text-ui font-medium text-fg">
                     {c.saude.titulo}
                     <span className="font-normal text-fg-muted">
                       {" · "}
@@ -53,13 +53,13 @@ export function EstadoDasConexoes({ conexoes, podeConfigurar }: { conexoes: Cone
                     </span>
                   </p>
                   {c.saude.motivos.map((motivo) => (
-                    <p key={motivo} className="text-[length:var(--fs-2)] text-fg-secondary mt-0.5 break-words">
+                    <p key={motivo} className="text-fs-2 text-fg-secondary mt-0.5 break-words">
                       {motivo}
                     </p>
                   ))}
                 </div>
               </div>
-              <p className="text-[length:var(--fs-micro)] text-fg-muted">
+              <p className="text-micro text-fg-muted">
                 {c.ultimaEntradaEm
                   ? `Última mensagem recebida: ${formatInstantDateTime(c.ultimaEntradaEm)}`
                   : "Nenhuma mensagem recebida ainda"}

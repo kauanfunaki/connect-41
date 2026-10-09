@@ -115,8 +115,9 @@ export function NewCredentialModal({ companies, createAction }: { companies: Com
 
   return (
     <>
-      <Button type="button" size="sm" onClick={() => setOpen(true)}>
-        <Plus size={13} /> Nova credencial
+      {/* No tamanho dos outros botões de criar do cabeçalho (5A, 08/10/2026). */}
+      <Button type="button" onClick={() => setOpen(true)}>
+        <Plus size={14} /> Nova credencial
       </Button>
       <Modal open={open} onClose={() => setOpen(false)} title="Nova credencial" maxWidth="max-w-md">
         <form action={formAction} className="flex flex-col gap-4">

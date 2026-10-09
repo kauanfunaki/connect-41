@@ -7,7 +7,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AddObrigacaoForm } from "@/components/admin/AddObrigacaoForm";
+import { NovaObrigacao } from "@/components/admin/AddObrigacaoForm";
 import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { ToggleObrigacaoButton } from "@/components/admin/ToggleObrigacaoButton";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -86,17 +86,18 @@ export default async function ObrigacoesPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Obrigações Recorrentes"
+        title="Obrigações recorrentes"
         subtitle="DAS, DCTF, folha, título bancário diário, contas a receber semanais e afins — o Connect
           gera automaticamente o item de kanban na frequência escolhida (diária, semanal, quinzenal
           ou mensal), com vencimento prorrogado para o próximo dia útil."
-      />
-
-      <AddObrigacaoForm
-        action={criarObrigacao}
-        companies={companies}
-        pipelines={pipelines.map((p) => ({ ...p, sectorLabel: sectorLabel(labels, p.sectorCode) }))}
-        users={users}
+        action={
+          <NovaObrigacao
+            action={criarObrigacao}
+            companies={companies}
+            pipelines={pipelines.map((p) => ({ ...p, sectorLabel: sectorLabel(labels, p.sectorCode) }))}
+            users={users}
+          />
+        }
       />
 
       {obligations.length === 0 ? (
@@ -104,7 +105,7 @@ export default async function ObrigacoesPage() {
           <EmptyState
             icon={<CalendarClock />}
             title="Nenhuma obrigação recorrente cadastrada"
-            description="Use o formulário acima para cadastrar obrigações como DAS, DCTF e folha — o Connect gera o item de kanban todo mês automaticamente."
+            description="Cadastre em “Nova obrigação” as obrigações como DAS, DCTF e folha — o Connect gera o item de kanban todo mês automaticamente."
           />
         </Card>
       ) : (
@@ -147,7 +148,7 @@ export default async function ObrigacoesPage() {
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[1000px]">
                 <thead>
-                  <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-fs-1 uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Obrigação</th>
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Empresa" chave="empresa" />
@@ -190,7 +191,7 @@ export default async function ObrigacoesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className="block text-fg-secondary">{sectorLabel(labels, o.sectorCode)}</span>
-                        <span className="block text-[11px] text-fg-muted">kanban {o.pipeline.name}</span>
+                        <span className="block text-fs-1 text-fg-muted">kanban {o.pipeline.name}</span>
                       </td>
                       <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">{frequencyLabel(o)}</td>
                       <td className="px-4 py-3 text-fg-secondary">

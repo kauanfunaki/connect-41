@@ -39,7 +39,7 @@ const STATUS_COLOR: Record<CompanyStatus, string> = {
   PROSPECT: "var(--c41-warning)",
   ACTIVE:   "var(--c41-success)",
   INACTIVE: "var(--c41-fg-muted)",
-  CHURNED:  "var(--c41-danger)",
+  CHURNED:  "var(--c41-fg-muted)",
 };
 
 // PROSPECT entrou na lista: sem ele, empresa em prospecção só era alcançável pelo
@@ -188,7 +188,7 @@ export default async function EmpresasPage({
           existe — o filtro continuava ativo na URL, invisível. */}
       {cliente && (
         <div className="flex items-center gap-2 mb-4">
-          <span className="inline-flex items-center gap-2 h-7 pl-3 pr-2 rounded-full bg-brand/10 text-brand text-[length:var(--fs-2)] font-medium">
+          <span className="inline-flex items-center gap-2 h-7 pl-3 pr-2 rounded-full bg-brand/10 text-brand text-fs-2 font-medium">
             Cliente: {clienteFiltrado?.name ?? "desconhecido"}
             <Link
               href={buildUrl({ cliente: undefined, page: "1" })}
@@ -198,7 +198,7 @@ export default async function EmpresasPage({
               ×
             </Link>
           </span>
-          <span className="text-[length:var(--fs-2)] text-fg-muted">
+          <span className="text-fs-2 text-fg-muted">
             A busca e os filtros só enxergam as empresas deste cliente.
           </span>
         </div>
@@ -207,7 +207,7 @@ export default async function EmpresasPage({
       {/* Esconder sem avisar faria a base parecer menor do que é. */}
       {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
       {ocultas > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[length:var(--fs-2)] text-fg-muted mb-4">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mb-4">
           <p>
             {ocultas} empresa{ocultas !== 1 ? "s" : ""} inativa{ocultas !== 1 ? "s" : ""} ou cancelada
             {ocultas !== 1 ? "s" : ""} fora desta lista.

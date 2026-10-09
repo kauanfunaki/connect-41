@@ -51,7 +51,7 @@ export function EvaluationForm({ action, competencies, cancelHref, defaultValues
               <div key={c.id} className="flex items-center justify-between gap-4 min-w-0">
                 <label
                   htmlFor={`score_${c.id}`}
-                  className="min-w-0 text-[length:var(--fs-label)] font-medium leading-5 text-fg"
+                  className="min-w-0 text-label font-medium leading-5 text-fg"
                 >
                   {c.name}
                 </label>
@@ -76,18 +76,18 @@ export function EvaluationForm({ action, competencies, cancelHref, defaultValues
           </CampoForm>
           {/* O plano (texto longo) ia lado a lado com o prazo (uma data), e a
               caixa de texto ficava da altura de três campos do vizinho. */}
-          <CampoForm label="Plano de Desenvolvimento" htmlFor="developmentPlan">
+          <CampoForm label="Plano de desenvolvimento" htmlFor="developmentPlan">
             <Textarea id="developmentPlan" name="developmentPlan" rows={3} defaultValue={defaultValues?.developmentPlan ?? ""} />
           </CampoForm>
           <FieldGrid columns="sm:grid-cols-[180px]">
-            <CampoForm label="Prazo de Melhoria" htmlFor="improvementDeadline">
+            <CampoForm label="Prazo de melhoria" htmlFor="improvementDeadline">
               <CampoData id="improvementDeadline" name="improvementDeadline" defaultValue={defaultValues?.improvementDeadline ?? ""} />
             </CampoForm>
           </FieldGrid>
         </FormSection>
       </div>
 
-      <FormFooter cancelHref={cancelHref} pending={isPending} submitLabel="Salvar Avaliação" />
+      <FormFooter cancelHref={cancelHref} pending={isPending} submitLabel="Salvar avaliação" />
     </form>
   );
 }

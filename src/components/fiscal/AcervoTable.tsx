@@ -78,7 +78,7 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
     <>
       {d.situation === "CANCELADA" && <Selo tom={tomDaVariante(SITUACAO_VARIANTE[d.situation])}>{SITUACAO_LABEL[d.situation]}</Selo>}
       <Selo tom={tomDaVariante(DESTINO_VARIANTE[d.destination])}>{DESTINO_LABEL[d.destination]}</Selo>
-      {estorno && <span className="text-[length:var(--fs-micro)] font-semibold text-danger">estornar</span>}
+      {estorno && <span className="text-micro font-semibold text-danger">estornar</span>}
     </>
   );
 
@@ -129,7 +129,7 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
             <col className="w-[172px]" />
           </colgroup>
           <thead>
-            <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+            <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
               <th className="px-4 py-3">Tipo</th>
               <th className="px-4 py-3">Número</th>
               <th className="px-4 py-3">Empresa / contraparte</th>
@@ -148,13 +148,13 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
                   <span className="block text-fg truncate" title={nomeExibicao(d.company)}>
                     {nomeExibicao(d.company)}
                   </span>
-                  <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={contraparte ?? undefined}>
+                  <span className="block text-micro text-fg-muted truncate" title={contraparte ?? undefined}>
                     {contraparte ?? "—"}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">
                   <span className="block">{formatCalendarDate(d.issuedAt)}</span>
-                  <span className="block text-[length:var(--fs-micro)] text-fg-muted">{formatarCompetencia(d.competence)}</span>
+                  <span className="block text-micro text-fg-muted">{formatarCompetencia(d.competence)}</span>
                 </td>
                 <td className="px-4 py-3 tnum whitespace-nowrap text-fg">{valor(d)}</td>
                 <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">{direcao}</td>

@@ -41,7 +41,7 @@ export async function extrairDadosCurriculo(personId: string): Promise<AiExtract
   if (!ctx.tenantId) return { error: "Não autenticado" };
   if (!(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir"))) return { error: "Sem permissão." };
   if (!(await isAiConfigured(ctx.tenantId))) {
-    return { error: "IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial." };
+    return { error: "IA não configurada. Cadastre uma chave em Integrações → Inteligência artificial." };
   }
 
   const prisma = getPrisma();

@@ -103,13 +103,13 @@ const VARIANT_CLASS: Record<Variant, string> = {
 /** Variantes que não têm caixa — sem altura, sem padding, sem peso próprio. */
 const SEM_CAIXA = new Set<Variant>(["link", "linkMuted"]);
 
-// px-4/text-[length:var(--fs-ui)] no md também vieram de medição: o `h-9`
+// px-4/text-ui no md também vieram de medição: o `h-9`
 // real do app aparece esmagadoramente com padding 16px e texto 13px — não
 // os 18px/15px que este componente declarava (--fs-button, que ninguém
 // media até então).
 const SIZE_CLASS: Record<Size, string> = {
   // xs e sm em 12px, e não nos 13px que este componente declarava: medido em
-  // 09/09, o app escreve `text-[12px]` em 56 dos 59 botões `h-8` e em 9 dos 12
+  // 09/09, o app escreve `text-fs-2` em 56 dos 59 botões `h-8` e em 9 dos 12
   // `h-7`. A medição original que o comentário abaixo cita só tinha coberto o
   // `md` — onde 13px estava certo (54 contra 28).
   xs: "h-7 px-2.5 text-button-sm",

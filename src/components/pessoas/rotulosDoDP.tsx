@@ -45,7 +45,9 @@ export const COR_DO_AFASTAMENTO: Record<AbsenceStatus, string> = {
   LANCADO: "bg-surface-2 text-fg-muted border-border",
   EM_ANALISE: "bg-warning/10 text-warning-fg border-warning/25",
   APROVADO: "bg-brand/10 text-brand border-brand/25",
-  REPROVADO: "bg-danger/10 text-danger border-danger/25",
+  // Reprovado é o pedido indeferido: saiu de cena, em cinza, como o cancelado
+  // (escolha 2A do Kauan, 08/10/2026 — situação encerrada é neutra).
+  REPROVADO: "bg-surface-2 text-fg-muted border-border",
   AFASTADO: "bg-warning/10 text-warning-fg border-warning/25",
   RETORNO_PREVISTO: "bg-brand/10 text-brand border-brand/25",
   CONCLUIDO: "bg-success/10 text-success-fg border-success/25",
@@ -124,7 +126,8 @@ export const COR_DA_HORA_EXTRA: Record<OvertimeStatus, string> = {
   LANCADO: "bg-surface-2 text-fg-muted border-border",
   PENDENTE_APROVACAO: "bg-warning/10 text-warning-fg border-warning/25",
   APROVADO: "bg-success/10 text-success-fg border-success/25",
-  REPROVADO: "bg-danger/10 text-danger border-danger/25",
+  // Lançamento reprovado é indeferido: neutro (2A, 08/10/2026).
+  REPROVADO: "bg-surface-2 text-fg-muted border-border",
   ENVIADO_FOLHA: "bg-brand/10 text-brand border-brand/25",
 };
 

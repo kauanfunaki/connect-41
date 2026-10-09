@@ -4,7 +4,6 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
@@ -45,13 +44,13 @@ export default async function AfastamentosPage({
         personId={id}
         personName={person.name}
         atual="Afastamentos"
+        aba="trabalhista"
       />
-      <BackButton className="mb-3" />
-      <PageHeader title="Afastamentos e Atestados" />
+      <PageHeader title="Afastamentos e atestados" />
 
       <Card className="p-5">
         {absences.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhum afastamento registrado ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhum afastamento registrado ainda.</p>
         ) : (
           <div>
             {absences.map((a) => (

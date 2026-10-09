@@ -54,7 +54,7 @@ export function FinanceCategoryForm({
       )}
 
       {isEdit && (
-        <p className="text-[length:var(--fs-helper)] text-fg-muted">
+        <p className="text-helper text-fg-muted">
           O lado do plano não pode ser alterado depois de criado — mudá-lo viraria o sinal de
           todo lançamento já classificado nesta categoria.
         </p>
@@ -109,7 +109,7 @@ export function FinanceCategoryForm({
             é o que precisa ser reclassificado, e escondê-lo faria a pessoa
             perder o valor antigo sem saber que perdeu. */}
         {valorAntigoSolto && (
-          <p className="text-[length:var(--fs-helper)] text-warning-fg">
+          <p className="text-helper text-warning-fg">
             Esta categoria estava marcada como <strong>{defaultValues?.dreGroup}</strong>, que não é
             um grupo do DRE. Escolha um acima — enquanto não escolher, ela não soma em nenhuma linha.
           </p>

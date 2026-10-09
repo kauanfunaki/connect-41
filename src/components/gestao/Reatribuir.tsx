@@ -50,7 +50,7 @@ export function Reatribuir({
           </option>
         ))}
       </Select>
-      {erro && <span className="text-[length:var(--fs-micro)] text-danger">{erro}</span>}
+      {erro && <span className="text-micro text-danger">{erro}</span>}
     </div>
   );
 }

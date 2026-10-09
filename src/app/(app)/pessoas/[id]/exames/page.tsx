@@ -4,7 +4,6 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
@@ -42,14 +41,14 @@ export default async function ExamesPage({
         isInternal={person.isInternal}
         personId={id}
         personName={person.name}
-        atual="Exames Admissionais"
+        atual="Exames admissionais"
+        aba="trabalhista"
       />
-      <BackButton className="mb-3" />
-      <PageHeader title="Exames Admissionais" />
+      <PageHeader title="Exames admissionais" />
 
       <Card className="p-5">
         {exames.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhum exame registrado ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhum exame registrado ainda.</p>
         ) : (
           <div>
             {exames.map((e) => (

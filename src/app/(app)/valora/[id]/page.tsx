@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
+import { Badge } from "@/components/ui/Badge";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { EditarProposta } from "@/components/valora/EditarProposta";
 import { acessoAoValora } from "@/lib/valora/servidor";
@@ -121,17 +122,17 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
               <InfoRow label="Preço do concorrente" value={brl(concorrente)} mono />
             </div>
             <div>
-              <p className="text-[12px] font-medium text-fg-secondary mb-1">Motivo e observações</p>
+              <p className="text-fs-2 font-medium text-fg-secondary mb-1">Motivo e observações</p>
               {p.motivo ? (
-                <p className="text-[14px] leading-relaxed text-fg whitespace-pre-line">{p.motivo}</p>
+                <p className="text-fs-4 leading-relaxed text-fg whitespace-pre-line">{p.motivo}</p>
               ) : (
-                <p className="text-[13px] text-fg-muted">
+                <p className="text-fs-3 text-fg-muted">
                   Nada registrado ainda.{acesso.podeSimular ? " Use “Registrar retorno” para anotar o que o cliente disse." : ""}
                 </p>
               )}
             </div>
             {empresa && (
-              <p className="flex items-center gap-2 text-[13px] text-fg-secondary">
+              <p className="flex items-center gap-2 text-fs-3 text-fg-secondary">
                 <Building2 size={14} className="text-fg-muted" /> Cliente no Connect:{" "}
                 <Link href={`/empresas/${empresa.id}`} className="font-medium text-brand hover:underline">
                   {nomeExibicao(empresa)}
@@ -146,11 +147,13 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
               <InfoRow label="Regime" value={ROTULO_REGIME[perfil.regime] ?? perfil.regime} />
               <InfoRow label="Movimento" value={perfil.semMovimento ? "Empresa sem movimento" : "Com movimento"} />
               <InfoRow label="Setores contratados" className="sm:col-span-2">
+                {/* Setor é categoria: o `Badge`, no lugar da pílula montada à mão
+                    (escolha 2A do Kauan, 08/10/2026). */}
                 <span className="flex flex-wrap gap-1.5">
                   {perfil.setores.map((s) => (
-                    <span key={s} className="inline-flex items-center h-6 px-2 rounded-full bg-surface-2 border border-border text-[12px] text-fg">
+                    <Badge key={s} variant="neutral">
                       {nomeDoSetor(s)}
-                    </span>
+                    </Badge>
                   ))}
                 </span>
               </InfoRow>
@@ -181,9 +184,9 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
         <Card className="p-5 flex flex-col gap-4 lg:sticky lg:top-4">
           <TituloDoCartao icone={<Receipt size={16} />} titulo="Preço calculado no dia" />
           <div>
-            <p className="text-[12px] text-fg-secondary">Honorário mensal (alvo)</p>
-            <p className="font-display text-[length:var(--fs-metric)] font-semibold tabular-nums leading-tight">{brl(resultado.mensal?.alvo ?? alvo)}</p>
-            {resultado.parametros && <p className="text-[12px] text-fg-muted">com {resultado.parametros.margemAlvoPct}% de margem</p>}
+            <p className="text-fs-2 text-fg-secondary">Honorário mensal (alvo)</p>
+            <p className="font-display text-metric font-semibold tabular-nums leading-tight">{brl(resultado.mensal?.alvo ?? alvo)}</p>
+            {resultado.parametros && <p className="text-fs-2 text-fg-muted">com {resultado.parametros.margemAlvoPct}% de margem</p>}
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             <InfoRow label="Piso" value={brl(resultado.mensal?.piso)} mono />
@@ -193,7 +196,7 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
             <InfoRow label="Implantação (uma vez)" value={brl(resultado.implantacao?.alvo)} mono />
           </div>
           {(resultado.setores?.length ?? 0) > 0 && (
-            <div className="border-t border-border pt-3 flex flex-col gap-1.5 text-[13px]">
+            <div className="border-t border-border pt-3 flex flex-col gap-1.5 text-fs-3">
               {resultado.setores.map((s) => (
                 <div key={s.codigo} className="flex justify-between gap-2">
                   <span>
@@ -209,7 +212,7 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
             </div>
           )}
           {(resultado.avisos?.length ?? 0) > 0 && (
-            <ul className="flex flex-col gap-1 text-[12px] text-warning-fg">
+            <ul className="flex flex-col gap-1 text-fs-2 text-warning-fg">
               {resultado.avisos.map((a) => (
                 <li key={a} className="flex gap-1.5">
                   <AlertTriangle size={13} className="mt-0.5 flex-shrink-0" /> {a}
@@ -217,7 +220,7 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
               ))}
             </ul>
           )}
-          <p className="text-[12px] text-fg-muted border-t border-border pt-3">
+          <p className="text-fs-2 text-fg-muted border-t border-border pt-3">
             É a foto do dia em que a proposta foi salva: mudar custos ou margem em Parâmetros não reescreve esta conta.
           </p>
         </Card>
@@ -226,9 +229,11 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
   );
 }
 
+// Título de seção da ficha em 18px (`text-section`) — padrão aceito pelo Kauan
+// em 08/10/2026 para as fichas; estava em 14px.
 function TituloDoCartao({ icone, titulo }: { icone: React.ReactNode; titulo: string }) {
   return (
-    <h2 className="flex items-center gap-2 text-[length:var(--fs-card-title)] font-semibold text-fg">
+    <h2 className="flex items-center gap-2 text-section font-semibold text-fg">
       <span className="text-brand">{icone}</span>
       {titulo}
     </h2>

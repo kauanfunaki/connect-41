@@ -55,7 +55,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
           title="Chatwoot não configurado"
           description={
             isFullAccess(ctx.role)
-              ? "Configure a conexão em Admin → Integrações para ver o histórico de conversas aqui."
+              ? "Configure a conexão em Administração › Integrações para ver o histórico de conversas aqui."
               : "Peça a um administrador para configurar a integração com o Chatwoot em Integrações."
           }
           action={
@@ -83,7 +83,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
         title="Conversas"
         subtitle={
           view === "avaliacao"
-            ? "Nota de 0-100 (Escrita + SLA) por atendimento resolvido no Chatwoot — gerada automaticamente pela IA."
+            ? "Nota de 0-100 (escrita + SLA) por atendimento resolvido no Chatwoot — gerada automaticamente pela IA."
             : "Auditoria de atendimentos do Chatwoot. Somente leitura."
         }
         action={
@@ -255,18 +255,18 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
       {id && (
         <div className="bg-surface border border-brand/30 rounded-lg px-4 py-3 mb-4">
           <div className="flex items-center justify-between gap-2 mb-1">
-            <p className="text-[length:var(--fs-2)] font-medium text-brand">Atendimento aberto</p>
+            <p className="text-fs-2 font-medium text-brand">Atendimento aberto</p>
             <BackButton href="/conversas" rotulo="Voltar à lista" />
           </div>
           {focusedConversation ? (
             <AtendimentosAccordion atendimentos={[toResumo(focusedConversation)]} defaultOpenId={id} />
           ) : (
-            <p className="text-[length:var(--fs-ui)] text-fg-muted py-2">Atendimento não encontrado ou fora do seu escopo.</p>
+            <p className="text-ui text-fg-muted py-2">Atendimento não encontrado ou fora do seu escopo.</p>
           )}
         </div>
       )}
 
-      <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
+      <p className="text-fs-2 text-fg-muted mb-3">
         {totalContacts} contato{totalContacts !== 1 ? "s" : ""}, {totalAtendimentos} atendimento{totalAtendimentos !== 1 ? "s" : ""} nesta página.
       </p>
 
@@ -308,13 +308,13 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
                     </span>
                     <div className="min-w-0">
                       {linkedHref ? (
-                        <Link href={linkedHref} className="text-[length:var(--fs-ui)] font-medium text-fg hover:text-brand transition-colors truncate block">
+                        <Link href={linkedHref} className="text-ui font-medium text-fg hover:text-brand transition-colors truncate block">
                           {displayName}
                         </Link>
                       ) : (
-                        <p className="text-[length:var(--fs-ui)] font-medium text-fg truncate">{displayName}</p>
+                        <p className="text-ui font-medium text-fg truncate">{displayName}</p>
                       )}
-                      <p className="text-[length:var(--fs-micro)] text-fg-muted truncate">
+                      <p className="text-micro text-fg-muted truncate">
                         {[link.chatwootEmail, link.chatwootPhoneE164].filter(Boolean).join(" · ") || "Sem e-mail/telefone no Chatwoot"}
                         {" · "}
                         {link.conversations.length} atendimento{link.conversations.length !== 1 ? "s" : ""}
@@ -335,8 +335,8 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
                   <HelpCircle size={15} />
                 </span>
                 <div>
-                  <p className="text-[length:var(--fs-ui)] font-medium text-fg">Sem contato identificado</p>
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted">
+                  <p className="text-ui font-medium text-fg">Sem contato identificado</p>
+                  <p className="text-micro text-fg-muted">
                     {orphanConversations.length} atendimento{orphanConversations.length !== 1 ? "s" : ""} sem contato no Chatwoot
                   </p>
                 </div>
@@ -523,8 +523,8 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
 
         return (
           <section key={secao.tipo}>
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">{secao.titulo}</h2>
-            <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 mb-4">{secao.descricao}</p>
+            <h2 className="text-section font-semibold text-fg">{secao.titulo}</h2>
+            <p className="text-helper text-fg-muted mt-0.5 mb-4">{secao.descricao}</p>
 
             {/* Eram quatro células coladas numa grade de 1px (até 30/09): viraram
                 os cartões de total do resto do Connect. */}

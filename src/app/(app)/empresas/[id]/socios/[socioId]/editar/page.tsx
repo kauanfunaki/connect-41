@@ -7,7 +7,6 @@ import { campoDaData } from "@/lib/societario/datas";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { atualizarSocio } from "../../actions";
 
 export default async function EditarSocioPage({
@@ -57,11 +56,11 @@ export default async function EditarSocioPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Sócios", href: `/empresas/${companyId}/socios` },
           { label: socio.name, truncate: true },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Editar sócio" subtitle={company.name} />
 

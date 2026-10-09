@@ -3,6 +3,10 @@ import { ArrowRightLeft, FileSignature, Inbox, MessageSquareWarning, SquareKanba
 import { SelosDoItem, ORIGEM } from "@/components/gestao/ItemDaGestao";
 import type { Classificacao, ItemDeTrabalho, Origem } from "@/lib/gestao/regras";
 
+// "Tarefa", e não "Card": é o nome da tarefa do Kanban em todo lugar (padrão
+// aceito em 08/10/2026). O mapa da Gestão segue o dela.
+const ROTULO_DA_ORIGEM: Record<Origem, string> = { ...ORIGEM, CARD: "Tarefa" };
+
 const ICONE: Record<Origem, React.ReactNode> = {
   PROCESSO: <FileSignature />,
   CARD: <SquareKanban />,
@@ -36,11 +40,11 @@ export function LinhaDoDia({
         {ICONE[item.origem]}
       </span>
       <div className="min-w-0 flex-1">
-        <Link href={item.href} className="block text-[length:var(--fs-ui)] font-medium leading-snug text-fg hover:text-brand transition-colors break-words">
+        <Link href={item.href} className="block text-ui font-medium leading-snug text-fg hover:text-brand transition-colors break-words">
           {item.titulo}
         </Link>
-        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] text-fg-muted">
-          <span>{ORIGEM[item.origem]}</span>
+        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-fs-2 text-fg-muted">
+          <span>{ROTULO_DA_ORIGEM[item.origem]}</span>
           <span aria-hidden>·</span>
           <span className="inline-flex items-center gap-1">
             <span className="size-1.5 rounded-full" style={{ background: setor.cor }} aria-hidden />
@@ -49,7 +53,7 @@ export function LinhaDoDia({
           {responsaveis && (
             <>
               <span aria-hidden>·</span>
-              <span className={responsaveis.length ? "" : "text-warning-fg"}>{responsaveis.length ? responsaveis.join(", ") : "sem responsável"}</span>
+              <span className={responsaveis.length ? "" : "text-warning-fg"}>{responsaveis.length ? responsaveis.join(", ") : "Sem responsável"}</span>
             </>
           )}
           <SelosDoItem c={c} />

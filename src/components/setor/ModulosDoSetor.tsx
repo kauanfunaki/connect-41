@@ -60,7 +60,7 @@ export function ModulosDoSetor({
             {/* Com um grupo só na tela o título do grupo repetiria o subtítulo da
                 página, que já diz o nome dele. */}
             {visiveis.length > 1 && (
-              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted mb-2.5">{grupo}</h2>
+              <h2 className="text-fs-1 font-semibold uppercase tracking-wider text-fg-muted mb-2.5">{grupo}</h2>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {itens.map((m) => (
@@ -78,9 +78,9 @@ export function ModulosDoSetor({
                       >
                         <ModuleIcon code={m.code} size={17} />
                       </span>
-                      <p className="text-[14px] font-semibold text-fg leading-tight">{m.label}</p>
+                      <p className="text-fs-4 font-semibold text-fg leading-tight">{m.label}</p>
                     </div>
-                    <p className="text-[12.5px] text-fg-muted mt-2 leading-relaxed">{m.description}</p>
+                    <p className="text-fs-2 text-fg-muted mt-2 leading-relaxed">{m.description}</p>
                   </Link>
                   <div className="absolute top-3 right-3">
                     <BotaoFixarTela code={m.code} fixada={fixada.has(m.code)} />

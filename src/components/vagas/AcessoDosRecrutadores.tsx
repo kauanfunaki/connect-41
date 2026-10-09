@@ -62,8 +62,8 @@ export function AcessoDosRecrutadores({ vagaId, restrita, escolhidos, recrutador
     <Card className="p-5 mb-4">
       <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
         <div>
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Quem do Recrutamento vê esta vaga</h2>
-          <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">{resumo}</p>
+          <h2 className="text-section font-semibold text-fg">Quem do Recrutamento vê esta vaga</h2>
+          <p className="text-fs-2 text-fg-muted mt-0.5">{resumo}</p>
         </div>
         <SegmentedControl<Modo>
           label="Quem do Recrutamento vê esta vaga"
@@ -78,7 +78,7 @@ export function AcessoDosRecrutadores({ vagaId, restrita, escolhidos, recrutador
 
       {modo === "escolhidos" &&
         (recrutadores.length === 0 ? (
-          <p className="text-[length:var(--fs-ui)] text-fg-muted">Não há recrutadores ativos no setor.</p>
+          <p className="text-ui text-fg-muted">Não há recrutadores ativos no setor.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-1">
             {recrutadores.map((r) => (

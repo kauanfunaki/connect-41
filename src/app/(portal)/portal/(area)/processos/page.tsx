@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { FileStack, Loader, TriangleAlert, Hourglass, CheckCircle2 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { SeloDoProcesso } from "@/components/portal/SeloDoProcesso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -11,7 +11,6 @@ import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { processosDoPortal, type ProcessoNoPortal } from "@/lib/societario/portal-data";
-import { SITUACAO_PARA_CLIENTE, VARIANTE_PARA_CLIENTE } from "@/lib/societario/portal";
 import { formatInstantDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -157,7 +156,7 @@ export default async function PortalProcessosPage({
                         {p.progresso.feitas} de {p.progresso.total} etapas
                       </span>
                     )}
-                    <Badge variant={VARIANTE_PARA_CLIENTE[p.situacao]}>{SITUACAO_PARA_CLIENTE[p.situacao].rotulo}</Badge>
+                    <SeloDoProcesso situacao={p.situacao} />
                   </>
                 }
               />

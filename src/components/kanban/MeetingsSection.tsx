@@ -48,7 +48,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
   return (
     <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mt-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg flex items-center gap-1.5">
+        <h2 className="text-card-title font-semibold text-fg flex items-center gap-1.5">
           <Video size={14} className="text-fg-muted" />
           Reuniões
         </h2>
@@ -75,7 +75,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
           {!hasAnyProvider ? (
             // Revisão de 05/10: botão não é link — o destino era texto azul no meio da frase.
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <p className="text-[12px] text-fg-muted">Conecte sua conta Google ou Microsoft antes de agendar.</p>
+              <p className="text-fs-2 text-fg-muted">Conecte sua conta Google ou Microsoft antes de agendar.</p>
               <Button href="/admin/integracoes" variant="secondary" size="xs">
                 Abrir Integrações
               </Button>
@@ -116,20 +116,20 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
               </Button>
             </>
           )}
-          {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+          {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
         </form>
       )}
 
       {meetings.length === 0 ? (
-        <p className="text-[13px] text-fg-muted">Nenhuma reunião agendada.</p>
+        <p className="text-fs-3 text-fg-muted">Nenhuma reunião agendada.</p>
       ) : (
         <div className="space-y-2">
           {meetings.map((m) => (
             <div key={m.id} className="px-3 py-2 rounded-lg bg-surface-hover border border-border">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[13px] text-fg font-medium truncate">{m.title}</p>
-                  <p className="text-[11px] text-fg-muted">
+                  <p className="text-fs-3 text-fg font-medium truncate">{m.title}</p>
+                  <p className="text-fs-1 text-fg-muted">
                     {PROVIDER_LABEL[m.provider]} ·{" "}
                     {formatInstantDateTime(new Date(m.startAt), { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </p>
@@ -158,7 +158,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                 </div>
               </div>
               {m.attendees.length > 0 && (
-                <p className="text-[11px] text-fg-muted mt-1.5">
+                <p className="text-fs-1 text-fg-muted mt-1.5">
                   Responsáveis: {m.attendees.map((a) => a.name).join(", ")}
                 </p>
               )}

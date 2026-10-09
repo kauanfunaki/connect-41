@@ -195,7 +195,7 @@ export default async function KanbanBoardPage({
               href={`/kanban/${id}/novo-item`}
               variant="primary"
             >
-              <Plus size={14} /> Item
+              <Plus size={14} /> Nova tarefa
             </Button>
           </div>
           )

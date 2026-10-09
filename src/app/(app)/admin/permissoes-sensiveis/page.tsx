@@ -10,17 +10,17 @@ import type { UserRole, SensitiveFieldGroup } from "@/generated/prisma/enums";
 // SUPER_ADMIN fica de fora da matriz — tem bypass hardcoded em
 // canViewSensitiveField e nunca consulta FieldPermission.
 const ROLES: { code: UserRole; label: string; hint: string }[] = [
-  { code: "ADMIN", label: "Admin", hint: "Administra o tenant" },
-  { code: "SECTOR_ADMIN", label: "Admin de Setor", hint: "CRUD no(s) próprio(s) setor(es)" },
-  { code: "SECTOR_USER", label: "Usuário de Setor", hint: "Leitura + atividades no setor" },
-  { code: "READONLY", label: "Somente Leitura", hint: "Diretoria — leitura geral" },
+  { code: "ADMIN", label: "Administrador", hint: "Administra o tenant" },
+  { code: "SECTOR_ADMIN", label: "Gestor de setor", hint: "CRUD no(s) próprio(s) setor(es)" },
+  { code: "SECTOR_USER", label: "Colaborador", hint: "Leitura + atividades no setor" },
+  { code: "READONLY", label: "Somente leitura", hint: "Diretoria — leitura geral" },
 ];
 
 const FIELD_GROUPS: { code: SensitiveFieldGroup; label: string }[] = [
   { code: "SALARIO", label: "Salário" },
-  { code: "DADOS_BANCARIOS", label: "Dados Bancários" },
-  { code: "DADOS_MEDICOS", label: "Dados Médicos" },
-  { code: "DOCUMENTOS_PESSOAIS", label: "Documentos Pessoais" },
+  { code: "DADOS_BANCARIOS", label: "Dados bancários" },
+  { code: "DADOS_MEDICOS", label: "Dados médicos" },
+  { code: "DOCUMENTOS_PESSOAIS", label: "Documentos pessoais" },
 ];
 
 export default async function PermissoesSensiveisPage() {
@@ -34,9 +34,9 @@ export default async function PermissoesSensiveisPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Permissões de Campos Sensíveis"
+        title="Permissões de campos sensíveis"
         subtitle="Quem pode ver salário, dados bancários, dados médicos e documentos pessoais.
-          Sem concessão explícita, o acesso é negado — inclusive para Admin. Toda mudança fica na auditoria."
+          Sem concessão explícita, o acesso é negado — inclusive para o administrador. Toda mudança fica na auditoria."
       />
 
       {/* Casco padrão (polimento de 30/09). Sem funil: é uma matriz fixa de
@@ -44,7 +44,7 @@ export default async function PermissoesSensiveisPage() {
       <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
         <table className="w-full min-w-[560px]">
           <thead>
-            <tr className="border-b border-border text-[11px] text-fg-muted uppercase tracking-wide">
+            <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
               <th className="px-4 py-3">Papel</th>
               {FIELD_GROUPS.map((f) => (
                 <th key={f.code} className="px-4 py-3">
@@ -57,8 +57,8 @@ export default async function PermissoesSensiveisPage() {
             {ROLES.map((r) => (
               <tr key={r.code} className="border-b border-border">
                 <td className="px-4 py-3">
-                  <p className="text-[13px] text-fg font-medium">{r.label}</p>
-                  <p className="text-[11px] text-fg-muted">{r.hint}</p>
+                  <p className="text-fs-3 text-fg font-medium">{r.label}</p>
+                  <p className="text-fs-1 text-fg-muted">{r.hint}</p>
                 </td>
                 {FIELD_GROUPS.map((f) => (
                   <td key={f.code} className="px-4 py-3">
@@ -75,7 +75,7 @@ export default async function PermissoesSensiveisPage() {
         </table>
       </div>
 
-      <p className="text-[12px] text-fg-muted mt-3">
+      <p className="text-fs-2 text-fg-muted mt-3">
         Suporte (SUPER_ADMIN) sempre tem acesso — não aparece na matriz.
       </p>
     </PageContainer>

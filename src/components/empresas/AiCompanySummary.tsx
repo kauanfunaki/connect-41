@@ -27,8 +27,8 @@ export function AiCompanySummary({ action }: Props) {
     <Card className="p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Resumo IA — últimos 90 dias</h2>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5">
+          <h2 className="text-section font-semibold text-fg">Resumo IA — últimos 90 dias</h2>
+          <p className="text-helper text-fg-muted mt-0.5">
             Consolida reuniões, transferências, kanban e documentos num briefing pré-reunião.
           </p>
         </div>
@@ -45,7 +45,7 @@ export function AiCompanySummary({ action }: Props) {
       )}
 
       {state && "summary" in state && (
-        <div className="mt-4 text-[length:var(--fs-body)] text-fg leading-relaxed whitespace-pre-wrap">{state.summary}</div>
+        <div className="mt-4 text-body text-fg leading-relaxed whitespace-pre-wrap">{state.summary}</div>
       )}
     </Card>
   );

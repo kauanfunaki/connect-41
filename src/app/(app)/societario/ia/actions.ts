@@ -47,7 +47,7 @@ async function coordenacao() {
 
 function mensagemDeErroDaIa(err: unknown): string {
   const m = err instanceof Error ? err.message : "";
-  if (/desligad/i.test(m)) return "Esta função de IA está desligada. Ligue em Administração › Inteligência Artificial.";
+  if (/desligad/i.test(m)) return "Esta função de IA está desligada. Ligue em Administração › Inteligência artificial.";
   if (/chave|api key|configur/i.test(m)) return "O escritório não tem chave de IA configurada.";
   if (/teto|limite/i.test(m)) return "O teto de gasto desta função de IA no mês foi atingido.";
   return "A IA não conseguiu responder agora. Tente de novo em alguns minutos.";

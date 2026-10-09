@@ -34,6 +34,8 @@ export function AddDesligamentoForm({ action }: Props) {
   // ficha — tipo e motivo numa linha, observações e botão na outra.
   return (
     <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
+      {/* Bloco do "novo" com nome, acima dos campos (5A, 08/10/2026). */}
+      <h3 className="c41-rotulo">Novo desligamento</h3>
       <FieldGrid columns="sm:grid-cols-[260px_1fr]">
         <CampoForm label="Tipo" htmlFor="type" required>
           <Select id="type" name="type" required>
@@ -52,11 +54,11 @@ export function AddDesligamentoForm({ action }: Props) {
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Registrando…" : "Registrar Desligamento"}
+            {isPending ? "Registrando…" : "Registrar desligamento"}
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

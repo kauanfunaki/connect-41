@@ -39,7 +39,7 @@ export function TagForm({ action, cancelHref, sectorOptions, defaultValues }: Pr
       )}
 
       {isEdit && (
-        <p className="text-[length:var(--fs-helper)] text-fg-muted">
+        <p className="text-helper text-fg-muted">
           O setor não pode ser alterado após criado — exclua e recrie a tag se precisar mudar.
         </p>
       )}
@@ -71,7 +71,7 @@ export function TagForm({ action, cancelHref, sectorOptions, defaultValues }: Pr
 
       {/* O rótulo "Cor" era 12px, menor que o dos campos de cima. */}
       <fieldset>
-        <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Cor</legend>
+        <legend className="text-label font-medium text-fg mb-1.5">Cor</legend>
         <div className="flex flex-wrap items-center gap-2">
           {SECTOR_COLOR_PALETTE.map((c) => (
             <label key={c} className="cursor-pointer">

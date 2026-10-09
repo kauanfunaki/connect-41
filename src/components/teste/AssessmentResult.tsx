@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Selo } from "@/components/ui/Selo";
+import { Badge } from "@/components/ui/Badge";
 import { DiscBars } from "./DiscBars";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
@@ -41,14 +41,14 @@ export function AssessmentResult(props: Props) {
   const { scores, templateName, compact, detailHref } = props;
   return (
     <div>
-      {/* O resultado em destaque: o `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026). */}
-      <Selo tom="marca" className="mb-3">
+      {/* O resultado em destaque, no `Badge` da classificação, como o perfil do DISC (escolha 2A, 08/10/2026). */}
+      <Badge variant="info" className="mb-3">
         {scores.correct} de {scores.total} acertos ({scores.pct}%)
-      </Selo>
+      </Badge>
       <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
         <div className="h-full rounded-full bg-brand" style={{ width: `${scores.pct}%` }} />
       </div>
-      {!compact && <p className="text-[length:var(--fs-2)] text-fg-muted mt-2">{templateName}</p>}
+      {!compact && <p className="text-fs-2 text-fg-muted mt-2">{templateName}</p>}
       {compact && detailHref && (
         <Button href={detailHref} variant="secondary" size="xs" className="mt-3">
           Ver detalhe completo <ArrowRight size={11} />

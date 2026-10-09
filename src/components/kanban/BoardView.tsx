@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/Input";
 import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { contarItens } from "@/components/shared/CascoDaTabela";
+import { formatarNumero } from "@/lib/format";
 
 type Item = TaskRow & {
   tags?: { id: string; name: string; color: string }[];
@@ -130,95 +132,101 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           ]}
         />
 
-        <div className="w-56">
-          <Input
-            compact
-            icon={<Search size={14} />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar título, descrição…"
-          />
-        </div>
+        {/* A contagem à esquerda, como na barra do casco das outras listas
+            (padrão aceito em 08/10/2026) — era "3 de 3" solto na ponta direita.
+            Busca e Filtros vão para a direita. */}
+        <p className="text-ui min-w-0">
+          <span className="font-semibold text-fg">{contarItens(filtered.length, "tarefa", "tarefas")}</span>
+          {filtered.length !== items.length && <span className="text-fg-muted tabular-nums"> de {formatarNumero(items.length, 0)}</span>}
+        </p>
 
-        {/* Painel ancorado compartilhado (o mesmo de /empresas e /conversas).
-            Antes era um botão próprio abrindo um Modal com as categorias em
-            duas etapas — escolher "Responsável", só então ver o campo. Aqui os
-            filtros são estado de cliente e aplicam na hora, então não há
-            "Aplicar": mostrar todos de uma vez é estritamente melhor. */}
-        <FilterButton activeCount={activeFilterCount - (search ? 1 : 0)} align="left" width={240}>
-          <div className="space-y-3">
-            {allAssignees.length > 0 && (
-              <FilterButtonSection label="Responsável">
-                <Select compact aria-label="Responsável" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
-                  <option value="">Todo responsável</option>
-                  <option value={NO_ASSIGNEE}>Sem responsável</option>
-                  {allAssignees.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </Select>
-              </FilterButtonSection>
-            )}
-
-            {allCreators.length > 0 && (
-              <FilterButtonSection label="Criador">
-                <Select compact aria-label="Criador" value={creatorFilter} onChange={(e) => setCreatorFilter(e.target.value)}>
-                  <option value="">Todo criador</option>
-                  {allCreators.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </Select>
-              </FilterButtonSection>
-            )}
-
-            {allTags.length > 0 && (
-              <FilterButtonSection label="Etiqueta">
-                <Select compact aria-label="Etiqueta" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
-                  <option value="">Toda etiqueta</option>
-                  {allTags.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </Select>
-              </FilterButtonSection>
-            )}
-
-            <FilterButtonSection label="Prioridade">
-              <Select compact aria-label="Prioridade" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
-                {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </Select>
-            </FilterButtonSection>
-
-            <FilterButtonSection label="Prazo">
-              <Select compact aria-label="Prazo" value={dueFilter} onChange={(e) => setDueFilter(e.target.value)}>
-                {DUE_FILTERS.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </Select>
-            </FilterButtonSection>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="w-56">
+            <Input
+              compact
+              icon={<Search size={14} />}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar título, descrição…"
+            />
           </div>
-        </FilterButton>
 
-        {/* Era texto solto (30/09): ação é botão, no desenho do "Limpar filtros
-            das colunas" das tabelas. */}
-        {activeFilterCount > 0 && (
-          // `sm` (h-8), a altura da busca e do Filtros ao lado — era `xs`, um
-          // degrau abaixo na mesma barra.
-          <Button
-            variant="secondary"
-            size="sm"
-            type="button"
-            onClick={() => {
-            setSearch(""); setAssigneeFilter(""); setCreatorFilter(""); setTagFilter(""); setPriorityFilter(""); setDueFilter("");
-            }}
-          >
-            <X size={14} /> Limpar filtros
-          </Button>
-        )}
+          {/* Painel ancorado compartilhado (o mesmo de /empresas e /conversas).
+              Antes era um botão próprio abrindo um Modal com as categorias em
+              duas etapas — escolher "Responsável", só então ver o campo. Aqui os
+              filtros são estado de cliente e aplicam na hora, então não há
+              "Aplicar": mostrar todos de uma vez é estritamente melhor. */}
+          <FilterButton activeCount={activeFilterCount - (search ? 1 : 0)} align="right" width={240}>
+            <div className="space-y-3">
+              {allAssignees.length > 0 && (
+                <FilterButtonSection label="Responsável">
+                  <Select compact aria-label="Responsável" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
+                    <option value="">Todo responsável</option>
+                    <option value={NO_ASSIGNEE}>Sem responsável</option>
+                    {allAssignees.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </Select>
+                </FilterButtonSection>
+              )}
 
-        <span className="text-[12px] text-fg-muted ml-auto flex-shrink-0">
-          {filtered.length} de {items.length}
-        </span>
+              {allCreators.length > 0 && (
+                <FilterButtonSection label="Criador">
+                  <Select compact aria-label="Criador" value={creatorFilter} onChange={(e) => setCreatorFilter(e.target.value)}>
+                    <option value="">Todo criador</option>
+                    {allCreators.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </Select>
+                </FilterButtonSection>
+              )}
+
+              {allTags.length > 0 && (
+                <FilterButtonSection label="Etiqueta">
+                  <Select compact aria-label="Etiqueta" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+                    <option value="">Toda etiqueta</option>
+                    {allTags.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </Select>
+                </FilterButtonSection>
+              )}
+
+              <FilterButtonSection label="Prioridade">
+                <Select compact aria-label="Prioridade" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+                  {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </Select>
+              </FilterButtonSection>
+
+              <FilterButtonSection label="Prazo">
+                <Select compact aria-label="Prazo" value={dueFilter} onChange={(e) => setDueFilter(e.target.value)}>
+                  {DUE_FILTERS.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </Select>
+              </FilterButtonSection>
+            </div>
+          </FilterButton>
+
+          {/* Era texto solto (30/09): ação é botão, no desenho do "Limpar filtros
+              das colunas" das tabelas. */}
+          {activeFilterCount > 0 && (
+            // `sm` (h-8), a altura da busca e do Filtros ao lado — era `xs`, um
+            // degrau abaixo na mesma barra.
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              onClick={() => {
+              setSearch(""); setAssigneeFilter(""); setCreatorFilter(""); setTagFilter(""); setPriorityFilter(""); setDueFilter("");
+              }}
+            >
+              <X size={14} /> Limpar filtros
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 min-h-0">

@@ -7,7 +7,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { formatCnpj } from "@/lib/format";
-import { Selo } from "@/components/ui/Selo";
+import { StatusDot } from "@/components/shared/StatusDot";
 
 export default async function WorkspacesPage() {
   const ctx = await getAuthContext();
@@ -25,7 +25,7 @@ export default async function WorkspacesPage() {
           href="/admin/workspaces/novo"
           variant="primary" className="font-medium"
         >
-          + Novo Workspace
+          + Novo workspace
         </Button></>}
       />
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
@@ -35,16 +35,13 @@ export default async function WorkspacesPage() {
               <div className="flex items-center gap-3 min-w-0">
                 <AvatarImage src={t.logoUrl} name={t.name} size={32} shape="lg" fontSize={13} />
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-fg truncate">{t.name}</p>
-                  <p className="text-[11px] text-fg-muted font-mono truncate">{t.cnpj ? formatCnpj(t.cnpj) : t.slug}</p>
+                  <p className="text-fs-3 font-medium text-fg truncate">{t.name}</p>
+                  <p className="text-fs-1 text-fg-muted font-mono truncate">{t.cnpj ? formatCnpj(t.cnpj) : t.slug}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
-                {!t.active && (
-                  <Selo tom="neutro">
-                    Inativo
-                  </Selo>
-                )}
+                {/* Inativo pela bolinha, a do ativo/inativo de cadastro (escolha 2A, 08/10/2026). */}
+                {!t.active && <StatusDot color="var(--c41-fg-muted)" label="Inativo" />}
                 {/* Botão, e não texto cinza (polimento de 30/09). */}
                 <Button href={`/admin/workspaces/${t.id}`} variant="secondary" size="xs">
                   <KeyRound size={11} /> Gerenciar acesso

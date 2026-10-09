@@ -7,7 +7,7 @@ import { RelatorioTable, RelatorioBadge, TOM_DO_TOTAL, type BadgeTone } from "@/
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { AlertTriangle, Clock, CircleDashed, CheckCircle2 } from "lucide-react";
 
-export const metadata = { title: "Relatório de Treinamentos" };
+export const metadata = { title: "Relatório de treinamentos" };
 
 const SITUACAO: Record<TreinamentoSituacao, { label: string; tone: BadgeTone }> = {
   VENCIDO: { label: "Vencido", tone: "danger" },
@@ -27,7 +27,7 @@ export default async function RelatorioTreinamentosPage() {
     <PageContainer>
       <RelatorioHeader
         breadcrumb="Treinamentos"
-        title="Relatório de Treinamentos"
+        title="Relatório de treinamentos"
         subtitle="Validade calculada a partir da data da turma e da validade do treinamento — reciclagem vencida aparece no topo."
       />
 

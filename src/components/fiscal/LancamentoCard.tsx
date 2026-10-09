@@ -86,11 +86,11 @@ export function LancamentoCard({
 
   return (
     <Card className="p-5 mt-4">
-      <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Lançamento</h2>
+      <h2 className="text-section font-semibold text-fg mb-1">Lançamento</h2>
 
       {lancamento ? (
         <>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">
+          <p className="text-helper text-fg-muted mb-4">
             {/* "Provisório" só significa alguma coisa se a tela disser o que
                 falta: nasce a conferir, e alguém precisa olhar. */}
             {lancamento.status === "PROVISORIO"
@@ -138,14 +138,14 @@ export function LancamentoCard({
           )}
         </>
       ) : impedimento ? (
-        <p className="text-[length:var(--fs-helper)] text-fg-secondary">{impedimento}</p>
+        <p className="text-helper text-fg-secondary">{impedimento}</p>
       ) : !podeDecidir ? (
-        <p className="text-[length:var(--fs-helper)] text-fg-muted">
+        <p className="text-helper text-fg-muted">
           Este documento ainda não virou lançamento. Só a coordenação do fiscal lança.
         </p>
       ) : (
         <>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">
+          <p className="text-helper text-fg-muted mb-4">
             Vira conta <span className="font-medium text-fg">{direcao === "PAGAR" ? "a pagar" : "a receber"}</span> da
             empresa. Nasce como <span className="font-medium text-fg">provisório</span> — alguém confere depois.
           </p>
@@ -205,7 +205,7 @@ export function LancamentoCard({
         </>
       )}
 
-      {erro && <p className="text-[length:var(--fs-helper)] text-danger mt-3">{erro}</p>}
+      {erro && <p className="text-helper text-danger mt-3">{erro}</p>}
     </Card>
   );
 }
@@ -214,8 +214,8 @@ export function LancamentoCard({
 function ItemDaFicha({ rotulo, valor, numerico = false }: { rotulo: string; valor: string; numerico?: boolean }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">{rotulo}</dt>
-      <dd className={`text-[length:var(--fs-body)] text-fg truncate ${numerico ? "tnum" : ""}`}>{valor}</dd>
+      <dt className="text-helper text-fg-muted mb-0.5">{rotulo}</dt>
+      <dd className={`text-body text-fg truncate ${numerico ? "tnum" : ""}`}>{valor}</dd>
     </div>
   );
 }

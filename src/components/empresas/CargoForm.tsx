@@ -56,7 +56,7 @@ export function CargoForm({ action, companyId, cancelHref, defaultValues, famili
       <div>
         <FormSection title="Cargo">
           <FieldGrid>
-            <CampoForm label="Nome do Cargo" htmlFor="name" required>
+            <CampoForm label="Nome do cargo" htmlFor="name" required>
               <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
             </CampoForm>
             <CampoForm label="Área" htmlFor="area">

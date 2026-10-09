@@ -12,7 +12,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { abrirCompetencia } from "./actions";
 
 const STATUS_LABEL: Record<PayrollStatus, string> = {
@@ -59,14 +58,13 @@ export default async function FolhaPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
-          { label: "Folha de Pagamento" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
+          { label: "Folha de pagamento" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
-        title="Folha de Pagamento"
+        title="Folha de pagamento"
         subtitle={`${competencias.length} competência${competencias.length !== 1 ? "s" : ""} — controle e conferência de lançamentos, não motor de cálculo`}
       />
 
@@ -88,8 +86,8 @@ export default async function FolhaPage({
               href={`/empresas/${companyId}/folha/${c.id}`}
               className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors"
             >
-              <p className="text-[13px] text-fg">{MONTH_LABEL[c.month - 1]}/{c.year}</p>
-              <span className="text-[12px] text-fg-muted">
+              <p className="text-fs-3 text-fg">{MONTH_LABEL[c.month - 1]}/{c.year}</p>
+              <span className="text-fs-2 text-fg-muted">
                 {STATUS_LABEL[c.status]} · {c._count.entries} lançamento{c._count.entries !== 1 ? "s" : ""}
               </span>
             </Link>

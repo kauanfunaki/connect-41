@@ -9,7 +9,10 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
+import { Selo } from "@/components/ui/Selo";
+// O nível (júnior, pleno, sênior) é categoria do cargo: `Badge`. O "degrau
+// invertido" é um alerta sobre o cargo: `Selo` (escolha 2A do Kauan, 08/10/2026).
+import { Badge } from "@/components/ui/Badge";
 import { formatarReais } from "@/lib/format";
 import {
   agruparPorFamilia,
@@ -64,7 +67,7 @@ export default async function CargosSalariosPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Cargos e Salários"
+        title="Cargos e salários"
         subtitle={
           <>
             {rows.length} cargo{rows.length !== 1 ? "s" : ""} em {grupos.length} família
@@ -76,19 +79,19 @@ export default async function CargosSalariosPage() {
       {/* Achados estruturais primeiro: é o que a implantação precisa corrigir. */}
       {(totalDegraus > 0 || divergencias.length > 0 || semClassificacao > 0) && (
         <Card className="p-5 mb-4 border-warning/30">
-          <h2 className="flex items-center gap-1.5 text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
+          <h2 className="flex items-center gap-1.5 text-card-title font-semibold text-fg mb-3">
             <AlertTriangle size={16} className="text-warning-fg" />
             Pontos de atenção da estrutura
           </h2>
           <ul className="space-y-2">
             {totalDegraus > 0 && canViewSalary && (
-              <li className="text-[length:var(--fs-ui)] text-fg-secondary">
+              <li className="text-ui text-fg-secondary">
                 <strong className="text-fg">{totalDegraus} degrau(s) invertido(s)</strong> — nível mais alto com faixa
                 inicial menor que a do nível anterior na mesma família (detalhado abaixo).
               </li>
             )}
             {divergencias.length > 0 && (
-              <li className="text-[length:var(--fs-ui)] text-fg-secondary">
+              <li className="text-ui text-fg-secondary">
                 <strong className="text-fg">{divergencias.length} nome(s) com grafia divergente</strong> — mesmo cargo
                 escrito de formas diferentes:{" "}
                 {divergencias
@@ -99,7 +102,7 @@ export default async function CargosSalariosPage() {
               </li>
             )}
             {semClassificacao > 0 && (
-              <li className="text-[length:var(--fs-ui)] text-fg-secondary">
+              <li className="text-ui text-fg-secondary">
                 <strong className="text-fg">{semClassificacao} cargo(s) sem família ou nível</strong> — classifique na
                 ficha do cargo para entrarem na trilha.
               </li>
@@ -127,8 +130,8 @@ export default async function CargosSalariosPage() {
             return (
               <section key={g.family}>
                 <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-                  <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{g.label}</h2>
-                  <span className="text-[length:var(--fs-2)] text-fg-muted">
+                  <h2 className="text-card-title font-semibold text-fg">{g.label}</h2>
+                  <span className="text-fs-2 text-fg-muted">
                     {g.cargos.length} cargo{g.cargos.length !== 1 ? "s" : ""} · {g.totalPessoas} colaborador
                     {g.totalPessoas !== 1 ? "es" : ""}
                   </span>
@@ -159,10 +162,10 @@ export default async function CargosSalariosPage() {
                       {(c.seniority || (invertidoIds.has(c.id) && canViewSalary)) && (
                         <PeDoCartao>
                           {c.seniority && (
-                            <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">{SENIORITY_LABEL[c.seniority]}</SeloDoDP>
+                            <Badge variant="info">{SENIORITY_LABEL[c.seniority]}</Badge>
                           )}
                           {invertidoIds.has(c.id) && canViewSalary && (
-                            <SeloDoDP cor="bg-warning/10 text-warning-fg border-warning/25">degrau invertido</SeloDoDP>
+                            <Selo tom="atencao">Degrau invertido</Selo>
                           )}
                         </PeDoCartao>
                       )}
@@ -194,7 +197,7 @@ export default async function CargosSalariosPage() {
                         {canViewSalary && <col className="w-[232px]" />}
                       </colgroup>
                       <thead>
-                        <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                        <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                           <th scope="col" className="px-4 py-3">
                             <FiltroDaColuna rotulo="Nível" chave="nivel" />
                           </th>
@@ -214,9 +217,9 @@ export default async function CargosSalariosPage() {
                           <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border">
                             <td className="px-4 py-3">
                               {c.seniority ? (
-                                <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">{SENIORITY_LABEL[c.seniority]}</SeloDoDP>
+                                <Badge variant="info">{SENIORITY_LABEL[c.seniority]}</Badge>
                               ) : (
-                                <span className="text-[length:var(--fs-2)] text-fg-muted">—</span>
+                                <span className="text-fs-2 text-fg-muted">—</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-fg font-semibold">
@@ -228,7 +231,7 @@ export default async function CargosSalariosPage() {
                               </Link>
                               {invertidoIds.has(c.id) && canViewSalary && (
                                 <span className="ml-2 inline-flex">
-                                  <SeloDoDP cor="bg-warning/10 text-warning-fg border-warning/25">degrau invertido</SeloDoDP>
+                                  <Selo tom="atencao">Degrau invertido</Selo>
                                 </span>
                               )}
                             </td>

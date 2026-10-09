@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { getAuthContext } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { getActiveSectors, getSectorMaps } from "@/lib/sectors";
@@ -35,9 +35,16 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
 
   return (
     <PageContainer>
-      <Link href="/solicitacoes" className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg mb-3">
-        <ArrowLeft size={14} /> Solicitações
-      </Link>
+      {/* Trilha no lugar do "← Solicitações" escrito à mão, e a situação no
+          `meta`, embaixo do título — o desenho de registro de trabalho do
+          processo e do lead (padrões aceitos em 08/10/2026). Era no `action`,
+          do outro lado da tela. */}
+      <Breadcrumb
+        items={[
+          { label: "Solicitações", href: "/solicitacoes" },
+          { label: `Nº ${s.numero}` },
+        ]}
+      />
       <PageHeader
         title={`Solicitação nº ${s.numero}`}
         subtitle={
@@ -49,29 +56,29 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
             · {labels[s.setor] ?? s.setor}
           </>
         }
-        action={
-          <div className="flex flex-wrap items-center gap-2">
+        meta={
+          <>
             <SeloDaSolicitacao status={s.status} lado="EQUIPE" />
             <SeloDoPrazoDeResposta situacao={s.situacao} />
-          </div>
+          </>
         }
       />
 
       <Card className="mb-5 p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3 text-[13px] min-w-0 flex-1">
+          <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3 text-fs-3 min-w-0 flex-1">
             <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted">Aberta por</dt>
+              <dt className="text-fs-1 font-semibold uppercase tracking-wider text-fg-muted">Aberta por</dt>
               <dd className="mt-0.5 text-fg">
                 {s.abertaPor} · {formatInstantDateTime(s.abertaEm)}
               </dd>
             </div>
             <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted">Responsável</dt>
+              <dt className="text-fs-1 font-semibold uppercase tracking-wider text-fg-muted">Responsável</dt>
               <dd className="mt-0.5 text-fg">{s.responsavel?.nome ?? "Ninguém assumiu"}</dd>
             </div>
             <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+              <dt className="text-fs-1 font-semibold uppercase tracking-wider text-fg-muted">
                 {s.respondidaEm ? "Primeira resposta" : "Resposta prometida até"}
               </dt>
               <dd className="mt-0.5 text-fg tabular-nums">
@@ -80,7 +87,7 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
             </div>
             {!aberta && s.encerradaEm && (
               <div className="sm:col-span-3">
-                <dt className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted">Encerrada</dt>
+                <dt className="text-fs-1 font-semibold uppercase tracking-wider text-fg-muted">Encerrada</dt>
                 <dd className="mt-0.5 text-fg">
                   {formatInstantDateTime(s.encerradaEm)}
                   {s.encerradaPor ? ` · ${s.encerradaPor}` : " · pelo cliente"}

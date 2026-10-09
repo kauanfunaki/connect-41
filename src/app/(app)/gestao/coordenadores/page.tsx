@@ -55,15 +55,15 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
   // centralizado: a célula é centralizada (`.c41-tabela`), a leitura não.
   const itensDa = (c: CargaDaPessoa) =>
     c.itens.length === 0 ? (
-      <p className="mt-2 text-[12px] text-fg-muted">Nada em aberto.</p>
+      <p className="mt-2 text-fs-2 text-fg-muted">Nada em aberto.</p>
     ) : (
       <ul className="mt-2 mx-auto w-fit max-w-full flex flex-col gap-1.5 text-left">
         {c.itens.sort(ordemDeAtencao).map((x) => (
           <li key={`${x.item.origem}:${x.item.id}`} className="flex flex-col">
-            <Link href={x.item.href} className="text-[12px] text-fg hover:underline">
+            <Link href={x.item.href} className="text-fs-2 text-fg hover:underline">
               {x.item.titulo}
             </Link>
-            <span className="flex flex-wrap items-center gap-1 text-[11px] text-fg-muted">
+            <span className="flex flex-wrap items-center gap-1 text-fs-1 text-fg-muted">
               {ORIGEM[x.item.origem]} · {g.rotuloDoSetor(x.item.setor)} <SelosDoItem c={x.c} />
             </span>
           </li>
@@ -91,13 +91,13 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                 <InfoDoCartao>{setoresDe(pessoa)}</InfoDoCartao>
                 <PeDoCartao>
                   {pessoa.role === "SECTOR_ADMIN" && <Badge variant="info">Coordenação</Badge>}
-                  <span className={`text-[12px] ${c.parados ? "text-warning-fg font-medium" : "text-fg-muted"}`}>{c.parados} parados</span>
-                  <span className={`text-[12px] ${c.vencidos ? "text-danger font-medium" : "text-fg-muted"}`}>{c.vencidos} vencidos</span>
-                  <span className="text-[12px] text-fg-muted">{c.vencendo} vencendo</span>
+                  <span className={`text-fs-2 ${c.parados ? "text-warning-fg font-medium" : "text-fg-muted"}`}>{c.parados} parados</span>
+                  <span className={`text-fs-2 ${c.vencidos ? "text-danger font-medium" : "text-fg-muted"}`}>{c.vencidos} vencidos</span>
+                  <span className="text-fs-2 text-fg-muted">{c.vencendo} vencendo</span>
                 </PeDoCartao>
                 {c.itens.length > 0 && (
                   <details className="mt-2">
-                    <summary className="cursor-pointer text-[12px] text-fg-secondary">Ver os itens</summary>
+                    <summary className="cursor-pointer text-fs-2 text-fg-secondary">Ver os itens</summary>
                     {itensDa(c)}
                   </details>
                 )}
@@ -110,7 +110,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
           <TabelaNoDesktop padrao>
             <table className="w-full min-w-[760px]">
               <thead>
-                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-3">Pessoa</th>
                   <th className="px-3">Em aberto</th>
                   <th className="px-3">Processos</th>
@@ -135,7 +135,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                               Coordenação
                             </Badge>
                           )}
-                          <span className="block text-[11px] font-normal text-fg-muted">{setoresDe(pessoa)}</span>
+                          <span className="block text-fs-1 font-normal text-fg-muted">{setoresDe(pessoa)}</span>
                         </summary>
                         {itensDa(c)}
                       </details>
@@ -159,19 +159,19 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
 
       {semDono.length > 0 && (
         <section aria-labelledby="sem-dono" className="flex flex-col gap-2">
-          <h2 id="sem-dono" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
+          <h2 id="sem-dono" className="text-card-title font-semibold text-fg">
             Sem responsável ({semDono.length})
           </h2>
-          <p className="text-[12px] text-fg-muted">
+          <p className="text-fs-2 text-fg-muted">
             Em aberto e sem ninguém designado. Os alertas destes vão para a coordenação do setor. Troque o responsável no painel ou nos alertas.
           </p>
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
             {semDono.slice(0, 50).map((x) => (
               <li key={`${x.item.origem}:${x.item.id}`} className="px-4 py-2 flex flex-col">
-                <Link href={x.item.href} className="text-[13px] text-fg hover:underline">
+                <Link href={x.item.href} className="text-fs-3 text-fg hover:underline">
                   {x.item.titulo}
                 </Link>
-                <span className="flex flex-wrap items-center gap-1 text-[11px] text-fg-muted">
+                <span className="flex flex-wrap items-center gap-1 text-fs-1 text-fg-muted">
                   {ORIGEM[x.item.origem]} · {g.rotuloDoSetor(x.item.setor)} <SelosDoItem c={x.c} />
                 </span>
               </li>

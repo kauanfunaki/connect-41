@@ -83,17 +83,16 @@ export default async function NovaPessoaPage({
       <Breadcrumb
         items={
           kind === "interno"
-            ? [{ label: "Cadastros", href: "/pessoas" }, { label: "Pessoas", href: "/pessoas" }, { label: "Nova Pessoa" }]
+            ? [{ label: "Cadastros", href: "/pessoas" }, { label: "Pessoas", href: "/pessoas" }, { label: "Nova pessoa" }]
             : [
                 { label: "Recrutamento", href: "/colaboradores-clientes" },
                 { label: "Colaboradores de clientes", href: "/colaboradores-clientes" },
-                { label: "Novo Colaborador" },
+                { label: "Novo colaborador" },
               ]
         }
       />
 
-      <BackButton className="mb-3" />
-      <PageHeader title={kind === "interno" ? "Novo Funcionário Interno" : "Novo Colaborador de Cliente"} />
+      <PageHeader title={kind === "interno" ? "Novo funcionário interno" : "Novo colaborador de cliente"} />
 
       <PessoaForm
         action={criarPessoa}
@@ -124,11 +123,11 @@ function TipoCard({
       <span className="inline-flex w-10 h-10 rounded-lg bg-brand-subtle text-brand items-center justify-center">
         {icon}
       </span>
-      <span className="flex items-center gap-1 text-[length:var(--fs-6)] font-semibold text-fg">
+      <span className="flex items-center gap-1 text-fs-6 font-semibold text-fg">
         {title}
         <ChevronRight size={16} className="text-fg-muted group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
       </span>
-      <span className="text-[length:var(--fs-helper)] text-fg-muted leading-relaxed">{description}</span>
+      <span className="text-helper text-fg-muted leading-relaxed">{description}</span>
     </Link>
   );
 }

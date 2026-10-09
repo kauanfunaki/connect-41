@@ -63,7 +63,7 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
                 placeholder="Nome completo"
               />
             </CampoForm>
-            <CampoForm label="Data de Nascimento" htmlFor="birthDate">
+            <CampoForm label="Data de nascimento" htmlFor="birthDate">
               <CampoData
                 id="birthDate"
                 name="birthDate"

@@ -31,7 +31,7 @@ export default async function DesligamentosPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Desligamentos em Andamento"
+        title="Desligamentos em andamento"
         subtitle={<>{terminations.length} desligamento{terminations.length !== 1 ? "s" : ""} em processo</>}
       />
 
@@ -72,7 +72,7 @@ export default async function DesligamentosPage() {
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[760px]">
                 <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Colaborador</th>
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Tipo" chave="tipo" />

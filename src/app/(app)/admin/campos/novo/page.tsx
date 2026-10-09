@@ -20,8 +20,8 @@ export default async function NovoCampoPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Campos Customizados", href: "/admin/campos" }, { label: "Novo Campo" }]} />
-      <PageHeader title="Novo Campo" />
+      <Breadcrumb items={[{ label: "Campos customizados", href: "/admin/campos" }, { label: "Novo campo" }]} />
+      <PageHeader title="Novo campo" />
 
       <div className="max-w-[720px]">
         <Card className="p-6">

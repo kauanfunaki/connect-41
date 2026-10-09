@@ -57,8 +57,9 @@ export function NovaPendencia({
 
   return (
     <>
-      <Button size="sm" onClick={() => setAberto(true)}>
-        <Plus size={13} /> {deOutrosSetores ? "Novo pedido ao cliente" : "Nova pendência"}
+      {/* No cabeçalho da tela, no tamanho dos outros botões de criar (5A, 08/10/2026). */}
+      <Button onClick={() => setAberto(true)}>
+        <Plus size={14} /> {deOutrosSetores ? "Novo pedido ao cliente" : "Nova pendência"}
       </Button>
       <Modal open={aberto} onClose={fechar} title={deOutrosSetores ? "Novo pedido ao cliente" : "Nova pendência ao cliente"} maxWidth="max-w-xl">
         {criada ? (

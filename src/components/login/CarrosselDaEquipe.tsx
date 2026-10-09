@@ -100,7 +100,7 @@ function CenaDoMeuDia() {
     <>
       <Cartao className="left-[2%] top-[3%] w-[65%] p-4 flex flex-col gap-3" entrar={0}>
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-[17px] font-semibold leading-tight">Meu dia</p>
+          <p className="text-fs-6 font-semibold leading-tight">Meu dia</p>
           <p className="text-[10.5px] text-[#6B7489] truncate">Segunda-feira, 19 de outubro</p>
         </div>
         <div className="rounded-xl border border-[#E9ECF3] overflow-hidden">
@@ -115,7 +115,7 @@ function CenaDoMeuDia() {
                 <i.Icone size={14} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[12px] font-semibold leading-snug truncate">{i.titulo}</span>
+                <span className="block text-fs-2 font-semibold leading-snug truncate">{i.titulo}</span>
                 <span className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10.5px] text-[#6B7489]">
                   <span>{i.origem}</span>
                   <span>·</span>
@@ -131,8 +131,8 @@ function CenaDoMeuDia() {
       <Cartao className="right-[2%] top-[9%] w-[31%] z-10 p-3.5 flex flex-col gap-2" entrar={200}>
         {numeros.map((n) => (
           <span key={n.rotulo} className="flex items-baseline justify-between gap-2">
-            <span className="min-w-0 truncate text-[11px] text-[#6B7489]">{n.rotulo}</span>
-            <span className={`flex-shrink-0 text-[18px] font-semibold tabular-nums leading-none ${n.tom}`}>{n.valor}</span>
+            <span className="min-w-0 truncate text-fs-1 text-[#6B7489]">{n.rotulo}</span>
+            <span className={`flex-shrink-0 text-fs-7 font-semibold tabular-nums leading-none ${n.tom}`}>{n.valor}</span>
           </span>
         ))}
       </Cartao>
@@ -148,8 +148,8 @@ function CenaDoMeuDia() {
       </Cartao>
       {/* Meu dia × Meu time, a troca do coordenador */}
       <Cartao className="left-[5%] bottom-[4%] z-20 p-1 flex items-center gap-0.5 !rounded-full" entrar={520}>
-        <span className="rounded-full bg-[#1F5EEA] px-3 py-1 text-[11px] font-semibold text-white">Meu dia</span>
-        <span className="rounded-full px-3 py-1 text-[11px] font-semibold text-[#4B5468]">Meu time</span>
+        <span className="rounded-full bg-[#1F5EEA] px-3 py-1 text-fs-1 font-semibold text-white">Meu dia</span>
+        <span className="rounded-full px-3 py-1 text-fs-1 font-semibold text-[#4B5468]">Meu time</span>
       </Cartao>
     </>
   );
@@ -160,7 +160,7 @@ function CenaDoMeuDia() {
 function CenaDosProcessos() {
   const linhas: { tipo: string; empresa: string; selo: React.ReactNode; prazo: string; tom: string }[] = [
     {
-      tipo: "Alteração Contratual",
+      tipo: "Alteração contratual",
       empresa: "Padaria Bom Grão",
       selo: <Selo cor="ambar">Em exigência</Selo>,
       prazo: "8 de 4–7 dias úteis",
@@ -190,7 +190,7 @@ function CenaDosProcessos() {
   return (
     <>
       <Cartao className="left-[2%] top-[3%] w-[60%] p-4 flex flex-col gap-2.5" entrar={0}>
-        <p className="text-[15px] font-semibold leading-tight">Processos</p>
+        <p className="text-fs-5 font-semibold leading-tight">Processos</p>
         <span className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-semibold">
           <span className="rounded-full bg-[#141824] px-2 py-0.5 text-white">Todos 12</span>
           <span className="rounded-full bg-[#EEF0F5] px-2 py-0.5 text-[#4B5468]">Em exigência 2</span>
@@ -200,7 +200,7 @@ function CenaDosProcessos() {
           {linhas.map((l) => (
             <div key={l.tipo} className="flex items-center justify-between gap-3 py-2 border-t border-[#F0F2F6]">
               <span className="min-w-0">
-                <span className="block text-[12px] font-semibold leading-snug truncate">{l.tipo}</span>
+                <span className="block text-fs-2 font-semibold leading-snug truncate">{l.tipo}</span>
                 <span className="block text-[10.5px] text-[#6B7489] truncate">{l.empresa}</span>
               </span>
               <span className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -219,7 +219,7 @@ function CenaDosProcessos() {
         </span>
         <ol className="flex flex-col gap-1.5">
           {etapas.map((e) => (
-            <li key={e.rotulo} className="flex items-center gap-2 text-[11px]">
+            <li key={e.rotulo} className="flex items-center gap-2 text-fs-1">
               {e.feita ? (
                 <span className="inline-flex size-4 flex-shrink-0 items-center justify-center rounded-full bg-[#0E7A55] text-white">
                   <Check size={10} strokeWidth={3} />
@@ -241,7 +241,7 @@ function CenaDosProcessos() {
         </span>
         <span className="min-w-0">
           <span className="block text-[11.5px] font-semibold">Exigência da Junta · Padaria Bom Grão</span>
-          <span className="block text-[11px] text-[#444D61] leading-snug">Falta a assinatura de um sócio no contrato.</span>
+          <span className="block text-fs-1 text-[#444D61] leading-snug">Falta a assinatura de um sócio no contrato.</span>
         </span>
       </Cartao>
     </>
@@ -271,16 +271,16 @@ function CenaDasContas() {
             <span className="inline-flex items-center gap-1 text-[10.5px] text-[#6B7489] whitespace-nowrap">
               <t.Icone size={12} className="flex-shrink-0" /> {t.rotulo}
             </span>
-            <span className={`text-[15px] font-semibold tabular-nums tracking-[-0.01em] truncate ${t.tom}`}>{t.valor}</span>
+            <span className={`text-fs-5 font-semibold tabular-nums tracking-[-0.01em] truncate ${t.tom}`}>{t.valor}</span>
           </span>
         ))}
       </Cartao>
       <Cartao className="left-[2%] top-[25%] w-[64%] z-10 p-4 flex flex-col gap-1" entrar={160}>
-        <p className="text-[14px] font-semibold mb-1">Contas a pagar</p>
+        <p className="text-fs-4 font-semibold mb-1">Contas a pagar</p>
         {contas.map((c) => (
           <div key={c.fornecedor} className="flex items-center justify-between gap-3 py-1.5 border-t border-[#F0F2F6]">
             <span className="min-w-0">
-              <span className="block text-[12px] font-semibold leading-snug truncate">{c.fornecedor}</span>
+              <span className="block text-fs-2 font-semibold leading-snug truncate">{c.fornecedor}</span>
               <span className="block text-[10.5px] text-[#6B7489] truncate">{c.empresa}</span>
             </span>
             <span className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -302,7 +302,7 @@ function CenaDasContas() {
       <Cartao className="left-[8%] bottom-[4%] w-[58%] z-20 p-3 flex flex-col gap-2" entrar={500}>
         <span className="flex items-center justify-between gap-3">
           <span className="min-w-0 text-[11.5px] font-semibold truncate">Imobiliária Central · R$ 7.800,00</span>
-          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-lg bg-[#EEF0F5] px-2.5 py-1 text-[11px] font-semibold text-[#8A93A6]">
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-lg bg-[#EEF0F5] px-2.5 py-1 text-fs-1 font-semibold text-[#8A93A6]">
             <Lock size={11} /> Pagar
           </span>
         </span>
@@ -328,7 +328,7 @@ function CenaDaAgenda() {
     {
       dia: "Qua 21",
       prazos: [
-        { titulo: "Alteração Contratual", setor: "societario" },
+        { titulo: "Alteração contratual", setor: "societario" },
         { titulo: "Exame de Bruno Alves", setor: "dp" },
       ],
       reuniao: { hora: "14:30", titulo: "Alinhamento com o cliente", linha: 2 },
@@ -342,7 +342,7 @@ function CenaDaAgenda() {
       <Cartao className="left-[2%] top-[2%] w-[96%] p-4 flex flex-col gap-3" entrar={0}>
         <div className="flex items-center justify-between gap-3">
           <span className="min-w-0">
-            <span className="block text-[15px] font-semibold leading-tight">Agenda</span>
+            <span className="block text-fs-5 font-semibold leading-tight">Agenda</span>
             <span className="block text-[10.5px] text-[#6B7489]">19 a 23 de outubro</span>
           </span>
           <span className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-[#EEF0F5] p-0.5 text-[10.5px] font-semibold text-[#4B5468]">
@@ -371,6 +371,9 @@ function CenaDaAgenda() {
               <span className="flex flex-col">
                 {horas.map((h, i) => (
                   <span key={h} className="relative h-7 border-t border-[#F0F2F6]">
+                    {/* A hora fica em 9px, abaixo da escala, de propósito (08/10/2026): é a
+                        miniatura de uma semana, com a célula de ~60px e o título da reunião
+                        em 9,5px ao lado — em 11px a hora passaria do título e da célula. */}
                     {d.reuniao?.linha === i && (
                       <span className="absolute inset-x-0 top-0.5 rounded-[5px] bg-[#1F5EEA] px-1.5 py-0.5 text-white">
                         <span className="block text-[9px] font-semibold leading-tight tabular-nums">{d.reuniao.hora}</span>

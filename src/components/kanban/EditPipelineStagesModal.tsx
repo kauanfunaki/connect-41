@@ -104,8 +104,8 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
           <div className="flex items-center gap-2 px-0.5">
             <span className="w-7 flex-shrink-0" />
             <span className="w-9 flex-shrink-0" />
-            <span className="flex-1 min-w-0 text-[11px] font-medium text-fg-muted">Título do estágio</span>
-            <span className="w-[150px] flex-shrink-0 text-[11px] font-medium text-fg-muted">Status da bolinha</span>
+            <span className="flex-1 min-w-0 text-fs-1 font-medium text-fg-muted">Título do estágio</span>
+            <span className="w-[150px] flex-shrink-0 text-fs-1 font-medium text-fg-muted">Status da bolinha</span>
             <span className="w-3.5 flex-shrink-0" />
             {rows.length > 1 && <span className="w-7 flex-shrink-0" />}
           </div>

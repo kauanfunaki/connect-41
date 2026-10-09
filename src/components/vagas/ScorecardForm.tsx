@@ -56,7 +56,7 @@ export function ScorecardForm({ action, defaults }: Props) {
         <Textarea id="notes" name="notes" rows={3} defaultValue={defaults?.notes ?? ""} placeholder="Pontos fortes, ressalvas, contexto da entrevista…" />
       </CampoForm>
 
-      {state?.error && <p className="text-[length:var(--fs-ui)] text-danger">{state.error}</p>}
+      {state?.error && <p className="text-ui text-danger">{state.error}</p>}
 
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button type="submit" disabled={isPending}>

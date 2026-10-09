@@ -52,16 +52,17 @@ export function NovaCategoriaDaEmpresa({ companyId, linhas, grupos }: { companyI
 
   return (
     <>
+      {/* No cabeçalho da tela, no tamanho dos outros botões de criar (escolha
+          5A, 08/10/2026): era "Categoria só desta empresa", ao lado do parágrafo. */}
       <Button
-        size="sm"
         onClick={() => {
           setErro(null);
           setAberto(true);
         }}
       >
-        <Plus size={13} /> Categoria só desta empresa
+        <Plus size={14} /> Nova categoria
       </Button>
-      <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Categoria só desta empresa" maxWidth="max-w-xl">
+      <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Nova categoria só desta empresa" maxWidth="max-w-xl">
         <form
           className="flex flex-col gap-4"
           onSubmit={(e) => {

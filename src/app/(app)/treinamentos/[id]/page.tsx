@@ -67,17 +67,17 @@ export default async function TreinamentoPage({
 
       {training.description && (
         <Card className="p-5 mb-4">
-          <p className="text-[length:var(--fs-ui)] text-fg whitespace-pre-wrap">{training.description}</p>
+          <p className="text-ui text-fg whitespace-pre-wrap">{training.description}</p>
         </Card>
       )}
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
+        <h2 className="text-section font-semibold text-fg mb-3">
           Turmas {training.classes.length > 0 && `(${training.classes.length})`}
         </h2>
 
         {training.classes.length === 0 ? (
-          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">Nenhuma turma criada ainda.</p>
+          <p className="text-ui text-fg-muted mb-3">Nenhuma turma criada ainda.</p>
         ) : (
           <>
             {/* No celular, uma linha por turma em vez da tabela de 640px com
@@ -128,7 +128,7 @@ export default async function TreinamentoPage({
               <TabelaNoDesktop className="c41-tabela rounded-lg border border-border mb-4">
                 <table className="w-full min-w-[640px]">
                   <thead>
-                    <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                       <th className="px-4 py-3">
                         <FiltroDaColuna rotulo="Data" chave="data" tipo="data" />
                       </th>

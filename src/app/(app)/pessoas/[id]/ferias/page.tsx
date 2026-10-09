@@ -4,7 +4,6 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
@@ -43,13 +42,13 @@ export default async function FeriasPage({
         personId={id}
         personName={person.name}
         atual="Férias"
+        aba="trabalhista"
       />
-      <BackButton className="mb-3" />
       <PageHeader title="Férias" />
 
       <Card className="p-5">
         {vacations.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhuma férias programada ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhuma férias programada ainda.</p>
         ) : (
           <div>
             {vacations.map((v) => (

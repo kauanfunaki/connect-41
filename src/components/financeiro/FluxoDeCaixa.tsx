@@ -190,7 +190,7 @@ export function QuadroDoSaldoBancario({ saldo }: { saldo: SaldoConsolidado }) {
       <Card className="p-4 mb-6 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted">
         <p>Nenhuma conta bancária ativa. Cadastre a conta e importe o extrato na Conciliação bancária para o fluxo mostrar o saldo real.</p>
         <Button href="/conciliacao" variant="secondary" size="xs">
-          Abrir Conciliação bancária
+          Abrir conciliação bancária
         </Button>
       </Card>
     );

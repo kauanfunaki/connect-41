@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Aviso } from "@/components/ui/Aviso";
 import { useToast } from "@/components/ui/Toast";
@@ -27,6 +27,11 @@ export type ContaParaAprovar = {
   /** Calculado no servidor com a alçada vigente; a action confere de novo. */
   dentroDoTeto: boolean;
 };
+
+/** Dentro ou fora do teto é a situação da conta para quem aprova: o `Selo` miúdo (escolha 2A, 08/10/2026). */
+function SeloDoTeto({ dentro }: { dentro: boolean }) {
+  return dentro ? <Selo tom="sucesso">Dentro do teto</Selo> : <Selo tom="atencao">Fora do teto</Selo>;
+}
 
 /**
  * A lista do cliente, com aprovação em lote.
@@ -165,7 +170,7 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
                         vence {formatInstantDate(c.vencimento)} · {c.empresa}
                       </InfoDoCartao>
                       <PeDoCartao>
-                        {c.dentroDoTeto ? <Badge variant="success">Dentro do teto</Badge> : <Badge variant="warning">Fora do teto</Badge>}
+                        <SeloDoTeto dentro={c.dentroDoTeto} />
                       </PeDoCartao>
                     </div>
                   </div>
@@ -245,7 +250,7 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
                         <td className="py-2.5 pr-3 text-fg-secondary">{c.empresa}</td>
                         <td className="py-2.5 pr-3 tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
                         <td className="py-2.5 pr-3">
-                          {c.dentroDoTeto ? <Badge variant="success">Dentro do teto</Badge> : <Badge variant="warning">Fora do teto</Badge>}
+                          <SeloDoTeto dentro={c.dentroDoTeto} />
                         </td>
                         <td className="py-2.5">
                           {c.dentroDoTeto ? (

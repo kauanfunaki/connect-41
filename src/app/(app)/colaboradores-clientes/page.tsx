@@ -110,7 +110,7 @@ export default async function ColaboradoresClientesPage({
           canCreate ? (
             <Button href="/pessoas/nova?tipo=cliente" variant="primary">
               <Plus size={14} />
-              Novo Colaborador
+              Novo colaborador
             </Button>
           ) : undefined
         }
@@ -134,7 +134,7 @@ export default async function ColaboradoresClientesPage({
         }
         acoes={
           ocultos > 0 ? (
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[length:var(--fs-2)] text-fg-muted">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-fs-2 text-fg-muted">
               <span>
                 {ocultos} colaborador{ocultos !== 1 ? "es" : ""} inativo{ocultos !== 1 ? "s" : ""} fora desta lista.
               </span>
@@ -154,15 +154,7 @@ export default async function ColaboradoresClientesPage({
                 ? "Tente ajustar a busca ou os filtros."
                 : "São as pessoas que trabalham nas empresas clientes, não a equipe do escritório."
             }
-            action={
-              // Era um <Button> dentro de um <Link> — botão dentro de link.
-              !search && !companyId && canCreate ? (
-                <Button href="/pessoas/nova?tipo=cliente">
-                  <Plus size={14} />
-                  Novo Colaborador
-                </Button>
-              ) : undefined
-            }
+            // Sem repetir o botão de criar: ele mora no cabeçalho (5A, 08/10/2026).
           />
         ) : (
           <PessoasTable

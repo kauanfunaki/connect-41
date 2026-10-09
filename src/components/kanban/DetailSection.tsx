@@ -35,8 +35,8 @@ export function DetailSection({ title, summary, defaultOpen = false, children }:
           size={14}
           className={`flex-shrink-0 text-fg-muted transition-transform ${open ? "" : "-rotate-90"}`}
         />
-        <span className="text-[13px] font-semibold text-fg group-hover:text-brand transition-colors">{title}</span>
-        {summary != null && <span className="text-[11px] text-fg-muted tnum">{summary}</span>}
+        <span className="text-fs-3 font-semibold text-fg group-hover:text-brand transition-colors">{title}</span>
+        {summary != null && <span className="text-fs-1 text-fg-muted tnum">{summary}</span>}
       </button>
 
       {open && <div className="pb-4 pl-[22px]">{children}</div>}

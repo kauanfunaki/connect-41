@@ -4,7 +4,6 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
@@ -53,13 +52,13 @@ export default async function BeneficiosPessoaPage({
         personId={id}
         personName={person.name}
         atual="Benefícios"
+        aba="vinculo"
       />
-      <BackButton className="mb-3" />
       <PageHeader title="Benefícios" />
 
       <Card className="p-5">
         {beneficios.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhum benefício vinculado ainda.</p>
+          <p className="text-fs-3 text-fg-muted mb-3">Nenhum benefício vinculado ainda.</p>
         ) : (
           <div>
             {beneficios.map((b) => (

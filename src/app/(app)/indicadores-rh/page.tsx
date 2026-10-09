@@ -74,18 +74,18 @@ const ICONE_DO_INDICADOR: Record<string, React.ReactNode> = {
   "Demissões (30 dias)": <UserMinus size={15} />,
   "Turnover (30 dias)": <Repeat size={15} />,
   "Absenteísmo (30 dias)": <Stethoscope size={15} />,
-  "Horas Extras (30 dias)": <Clock size={15} />,
-  "Férias Vencidas": <Palmtree size={15} />,
-  [`Férias a Vencer (${AVISO_DAS_FERIAS_DIAS} dias)`]: <CalendarClock size={15} />,
-  "Vagas Abertas": <Briefcase size={15} />,
-  "Candidatos por Vaga": <UsersRound size={15} />,
-  "Taxa de Aprovação": <ThumbsUp size={15} />,
-  "Taxa de Reprovação": <ThumbsDown size={15} />,
-  "Tempo Médio de Contratação": <Timer size={15} />,
-  "Treinamentos Realizados (90 dias)": <GraduationCap size={15} />,
-  "Desempenho Médio": <Star size={15} />,
-  "Custo de Folha (mês atual)": <Wallet size={15} />,
-  "Custo de Benefícios (ativos)": <Gift size={15} />,
+  "Horas extras (30 dias)": <Clock size={15} />,
+  "Férias vencidas": <Palmtree size={15} />,
+  [`Férias a vencer (${AVISO_DAS_FERIAS_DIAS} dias)`]: <CalendarClock size={15} />,
+  "Vagas abertas": <Briefcase size={15} />,
+  "Candidatos por vaga": <UsersRound size={15} />,
+  "Taxa de aprovação": <ThumbsUp size={15} />,
+  "Taxa de reprovação": <ThumbsDown size={15} />,
+  "Tempo médio de contratação": <Timer size={15} />,
+  "Treinamentos realizados (90 dias)": <GraduationCap size={15} />,
+  "Desempenho médio": <Star size={15} />,
+  "Custo de folha (mês atual)": <Wallet size={15} />,
+  "Custo de benefícios (ativos)": <Gift size={15} />,
 };
 
 export default async function IndicadoresRhPage() {
@@ -117,14 +117,14 @@ export default async function IndicadoresRhPage() {
             icon={ICONE_DO_INDICADOR[c.label] ?? <BarChart3 size={15} />}
             // Férias vencida é passivo consumado — o único número que pede
             // atenção. Vermelho, como na Home e em /ferias (era âmbar).
-            tom={c.label === "Férias Vencidas" && c.value !== "0" ? "critico" : undefined}
+            tom={c.label === "Férias vencidas" && c.value !== "0" ? "critico" : undefined}
             delay={i * 20}
           />
         ))}
       </div>
 
       <div className="mt-8">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Relatórios</h2>
+        <h2 className="text-card-title font-semibold text-fg mb-3">Relatórios</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {relatorios.map((r) => (
             <Link
@@ -136,13 +136,13 @@ export default async function IndicadoresRhPage() {
                 {r.icon}
               </span>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[13px] font-semibold text-fg">{r.label}</p>
+                <p className="text-fs-3 font-semibold text-fg">{r.label}</p>
                 <ArrowRight
                   size={14}
                   className="text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"
                 />
               </div>
-              <p className="text-[12px] text-fg-muted mt-1 leading-relaxed">{r.description}</p>
+              <p className="text-fs-2 text-fg-muted mt-1 leading-relaxed">{r.description}</p>
             </Link>
           ))}
         </div>

@@ -6,7 +6,6 @@ import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { ClientDocumentForm } from "@/components/documentosCliente/ClientDocumentForm";
 import { atualizarDocumento } from "../../actions";
 
@@ -40,17 +39,17 @@ export default async function EditarDocumentoClientePage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: "Documentos para Cliente", href: `/empresas/${companyId}/documentos-cliente`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
+          { label: "Documentos para cliente", href: `/empresas/${companyId}/documentos-cliente`, truncate: true },
           { label: "Editar" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Editar documento" />
 
       <div className="w-full max-w-[860px]">
         {alreadySent ? (
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6 text-[13px] text-fg-muted">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6 text-fs-3 text-fg-muted">
             Este documento já foi enviado a pelo menos um destinatário e não pode mais ser editado — o link de visualização precisa sempre mostrar o mesmo conteúdo que foi de fato recebido. Crie um novo documento se precisar alterar o conteúdo.
           </div>
         ) : (

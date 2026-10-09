@@ -213,8 +213,8 @@ export function CentralDeAjuda({
           className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full opacity-60 blur-3xl"
           style={{ background: "radial-gradient(circle, var(--c41-brand-subtle), transparent 70%)" }}
         />
-        <p className="relative font-display text-[22px] sm:text-[26px] font-semibold text-fg leading-tight">Como podemos ajudar?</p>
-        <p className="relative mt-1.5 text-[length:var(--fs-body)] text-fg-muted max-w-[60ch]">{introducao}</p>
+        <p className="relative font-display text-fs-8 sm:text-[26px] font-semibold text-fg leading-tight">Como podemos ajudar?</p>
+        <p className="relative mt-1.5 text-body text-fg-muted max-w-[60ch]">{introducao}</p>
         <div className="relative mt-5 max-w-xl">
           <Input
             icon={<Search />}
@@ -228,7 +228,7 @@ export function CentralDeAjuda({
       </div>
 
       {nada && (
-        <p className="text-[length:var(--fs-body)] text-fg-muted">
+        <p className="text-body text-fg-muted">
           Nada encontrado para <span className="font-medium text-fg">&ldquo;{busca}&rdquo;</span>. Tente outra palavra, ou o nome da tela.
         </p>
       )}
@@ -239,7 +239,7 @@ export function CentralDeAjuda({
 
       {filtrado.passos.length > 0 && (
         <section>
-          <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg mb-3">Primeiros passos</h2>
+          <h2 className="font-display text-section font-semibold text-fg mb-3">Primeiros passos</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
             {filtrado.passos.map((p) => (
               <details
@@ -263,8 +263,8 @@ export function CentralDeAjuda({
                     {p.icone}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-semibold text-fg">{p.titulo}</span>
-                    <span className="block text-[length:var(--fs-helper)] text-fg-muted mt-0.5">{p.resumo}</span>
+                    <span className="block text-fs-4 font-semibold text-fg">{p.titulo}</span>
+                    <span className="block text-helper text-fg-muted mt-0.5">{p.resumo}</span>
                   </span>
                   <ChevronDown size={16} className="mt-1 flex-shrink-0 text-fg-muted transition-transform group-open:rotate-180" />
                 </summary>
@@ -273,9 +273,9 @@ export function CentralDeAjuda({
                     <VideoDoYouTube link={p.video} titulo={p.titulo} />
                   </div>
                 )}
-                <ol className="px-4 pb-4 pl-[3.75rem] space-y-1.5 list-decimal marker:text-fg-muted marker:text-[12px]">
+                <ol className="px-4 pb-4 pl-[3.75rem] space-y-1.5 list-decimal marker:text-fg-muted marker:text-fs-2">
                   {p.passos.map((passo) => (
-                    <li key={passo} className="text-[13px] text-fg-secondary leading-relaxed pl-1">
+                    <li key={passo} className="text-fs-3 text-fg-secondary leading-relaxed pl-1">
                       {passo}
                     </li>
                   ))}
@@ -288,7 +288,7 @@ export function CentralDeAjuda({
 
       {filtrado.gerais.length > 0 && (
         <section>
-          <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg mb-3">{tituloDasTelas}</h2>
+          <h2 className="font-display text-section font-semibold text-fg mb-3">{tituloDasTelas}</h2>
           <ListaDeTelas telas={filtrado.gerais} />
         </section>
       )}
@@ -296,7 +296,7 @@ export function CentralDeAjuda({
       {filtrado.setores.map((s) => (
         <section key={s.code}>
           <div className="flex items-center justify-between gap-3 mb-3">
-            <h2 className="flex items-center gap-2 font-display text-[length:var(--fs-section)] font-semibold text-fg">
+            <h2 className="flex items-center gap-2 font-display text-section font-semibold text-fg">
               <span className="size-2.5 rounded-full flex-shrink-0" style={{ background: s.cor }} aria-hidden />
               {s.rotulo}
             </h2>

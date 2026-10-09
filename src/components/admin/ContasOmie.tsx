@@ -2,7 +2,7 @@
 
 import { useId, useState, useTransition } from "react";
 import { Download, Eye, FileSearch, KeyRound, Plus, PlugZap, RefreshCw } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -24,12 +24,12 @@ type Previa = { nfe: PreviaDeChamada; nfse: PreviaDeChamada } | { erro: string }
 function BlocoDaPrevia({ titulo, p }: { titulo: string; p: PreviaDeChamada }) {
   return (
     <div className="min-w-0">
-      <p className="text-[12px] font-semibold mb-1">{titulo}</p>
+      <p className="text-fs-2 font-semibold mb-1">{titulo}</p>
       {!p.ok ? (
-        <p className="text-[12px] text-danger">{p.erro}</p>
+        <p className="text-fs-2 text-danger">{p.erro}</p>
       ) : (
         <div className="max-h-72 overflow-auto rounded border border-border-soft">
-          <table className="w-full text-[11px]">
+          <table className="w-full text-fs-1">
             <tbody>
               {p.estrutura.map((l) => (
                 <tr key={l.caminho} className="border-b border-border-soft align-top">
@@ -194,8 +194,8 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
     <Card className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
-          <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Omie por empresa</h3>
-          <p className="text-[12px] text-fg-muted mt-0.5 max-w-[680px]">
+          <h3 className="text-card-title font-semibold text-fg">Omie por empresa</h3>
+          <p className="text-fs-2 text-fg-muted mt-0.5 max-w-[680px]">
             Uma conta do Omie para cada empresa cliente do BPO. A App Key e o App Secret ficam no Omie da empresa, em
             Configurações › Aplicativos — login e senha não servem para a API. &ldquo;Testar&rdquo; lê os dados da empresa
             no Omie e confere o CNPJ, para pegar chave colada na empresa errada. As notas de saída emitidas no Omie entram no
@@ -219,7 +219,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
       )}
 
       {contas.length === 0 ? (
-        <p className="text-[13px] text-fg-muted">Nenhuma empresa com conta do Omie cadastrada ainda.</p>
+        <p className="text-fs-3 text-fg-muted">Nenhuma empresa com conta do Omie cadastrada ainda.</p>
       ) : (
         // Casco padrão dentro do cartão e funil na situação (polimento de
         // 30/09). As ações eram cinco textos cinza e dois botões na mesma
@@ -231,7 +231,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[720px]">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 pr-3">Empresa</th>
                   <th className="py-2 pr-3">App Key</th>
                   <th className="py-2 pr-3">
@@ -247,7 +247,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                   editando === c.companyId ? (
                     <tr key={c.companyId} className="border-b border-border-soft">
                       <td colSpan={4} className="py-3 text-left!">
-                        <p className="text-[12px] font-medium mb-2">{c.empresa}</p>
+                        <p className="text-fs-2 font-medium mb-2">{c.empresa}</p>
                         <FormConta empresas={[]} inicial={{ companyId: c.companyId, appKey: c.appKey }} onFim={() => setEditando(null)} />
                       </td>
                     </tr>
@@ -256,15 +256,15 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                       <td className="py-2.5 pr-3 font-medium">{c.empresa}</td>
                       <td className="py-2.5 pr-3 text-fg-secondary tnum">{c.appKey || "—"}</td>
                       <td className="py-2.5 pr-3">
-                        <Badge variant={SAUDE[c.saude].variante}>{SAUDE[c.saude].rotulo}</Badge>
+                        <Selo tom={tomDaVariante(SAUDE[c.saude].variante)}>{SAUDE[c.saude].rotulo}</Selo>
                         {testando === c.companyId || lendo === c.companyId ? (
                           // A consulta que saiu do "⋯" não tem mais botão para
                           // dizer "Lendo…": o aviso fica aqui, onde o resultado vai aparecer.
-                          <span className="block text-[11px] mt-1 text-fg-muted">Consultando o Omie…</span>
+                          <span className="block text-fs-1 mt-1 text-fg-muted">Consultando o Omie…</span>
                         ) : teste[c.companyId] ? (
-                          <span className={`block text-[11px] mt-1 ${teste[c.companyId].ok ? "text-success-fg" : "text-danger"}`}>{teste[c.companyId].texto}</span>
+                          <span className={`block text-fs-1 mt-1 ${teste[c.companyId].ok ? "text-success-fg" : "text-danger"}`}>{teste[c.companyId].texto}</span>
                         ) : (
-                          c.lastError && <span className="block text-[11px] mt-1 text-danger">{c.lastError}</span>
+                          c.lastError && <span className="block text-fs-1 mt-1 text-danger">{c.lastError}</span>
                         )}
                       </td>
                       <td className="py-2.5 whitespace-nowrap">
@@ -344,12 +344,12 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                             linha a linha: alinhado à esquerda, fora da regra de
                             centralizar do casco. */}
                         <td colSpan={4} className="py-3 text-left!">
-                          <p className="text-[12px] mb-2">
+                          <p className="text-fs-2 mb-2">
                             <span className="font-medium">Prévia das notas — {c.empresa}.</span>{" "}
                             <span className="text-fg-muted">Só leitura: nada foi gravado no Connect nem alterado no Omie.</span>
                           </p>
                           {"erro" in p ? (
-                            <p className="text-[12px] text-danger">{p.erro}</p>
+                            <p className="text-fs-2 text-danger">{p.erro}</p>
                           ) : (
                             <div className="grid gap-3 lg:grid-cols-2">
                               <BlocoDaPrevia titulo="NF-e (produtos/nfconsultar · ListarNF)" p={p.nfe} />

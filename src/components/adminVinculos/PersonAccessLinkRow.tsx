@@ -67,7 +67,7 @@ export function PersonAccessLinkRow({
       <td className="px-4 py-3">
         <Link
           href={`/pessoas/${personId}`}
-          className="block max-w-[280px] text-[13.5px] text-fg hover:text-brand transition-colors truncate"
+          className="block max-w-[280px] text-ui text-fg hover:text-brand transition-colors truncate"
           title={personName}
         >
           {personName}
@@ -90,7 +90,7 @@ export function PersonAccessLinkRow({
               ))}
             </Select>
           ) : (
-            <p className="text-[13px] text-fg truncate">{user ? `${user.name} (${user.email})` : "Não vinculado"}</p>
+            <p className="text-fs-3 text-fg truncate">{user ? `${user.name} (${user.email})` : "Não vinculado"}</p>
           )}
         </div>
       </td>
@@ -113,7 +113,7 @@ export function PersonAccessLinkRow({
                 ))}
               </Select>
             ) : (
-              <p className="text-[13px] text-fg truncate">{currentAgentLink?.chatwootAgentName ?? "Não vinculado"}</p>
+              <p className="text-fs-3 text-fg truncate">{currentAgentLink?.chatwootAgentName ?? "Não vinculado"}</p>
             )}
           </div>
         </td>

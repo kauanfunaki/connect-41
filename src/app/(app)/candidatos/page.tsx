@@ -131,7 +131,7 @@ export default async function CandidatosPage({
           // Button — o botão de criar das outras listas (DRG-17, 07/10/2026).
           <Button href="/candidatos/nova" variant="primary">
             <Plus size={14} />
-            Novo Candidato
+            Novo candidato
           </Button>
         )}</>}
       />

@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Selo } from "@/components/ui/Selo";
+import { Badge } from "@/components/ui/Badge";
 import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Pagination } from "@/components/shared/Pagination";
@@ -40,7 +40,7 @@ export async function generateMetadata({
   });
   if (!tenant || !tenant.active) return { title: "Vagas abertas" };
 
-  const title = `Trabalhe Conosco — ${tenant.name}`;
+  const title = `Trabalhe conosco — ${tenant.name}`;
   const description = `Confira as vagas abertas na ${tenant.name} e candidate-se online.`;
   const url = publicUrl(`/carreiras/${slug}`);
 
@@ -114,7 +114,7 @@ export default async function CarreirasPage({
           centralizado
           className="mb-8"
           logo={tenant.logoUrl ? { src: tenant.logoUrl, alt: tenant.name } : null}
-          titulo="Trabalhe Conosco"
+          titulo="Trabalhe conosco"
           subtitulo={<>Vagas abertas — {tenant.name}</>}
         >
           {/* Botão, e não link de texto (30/09): é a porta de entrada da conta
@@ -164,7 +164,7 @@ export default async function CarreirasPage({
               />
             </div>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[length:var(--fs-2)] text-fg-muted tabular-nums">
+              <p className="text-fs-2 text-fg-muted tabular-nums">
                 {filtradas.length === 1 ? "1 vaga" : `${filtradas.length} vagas`}
                 {filtrando && ` de ${todas.length}`}
               </p>
@@ -210,18 +210,19 @@ export default async function CarreirasPage({
                   <Link href={`/carreiras/${slug}/${v.id}`} className="block p-5 rounded-lg">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h2 className="text-[length:var(--fs-body)] font-semibold text-fg">{v.title}</h2>
-                        <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">
+                        <h2 className="text-body font-semibold text-fg">{v.title}</h2>
+                        <p className="text-fs-2 text-fg-muted mt-0.5">
                           {v.empresa}
                           {local && ` · ${local}`}
                           {v.area && ` · ${v.area}`}
                         </p>
                       </div>
-                      {/* O selo do app — era uma pílula à mão de 10px (DRG-06). */}
+                      {/* Categoria da vaga, no `Badge` como as etiquetas de baixo
+                          (escolha 2A, 08/10/2026) — era uma pílula à mão de 10px. */}
                       {v.quantity > 1 && (
-                        <Selo tom="marca" className="flex-shrink-0">
+                        <Badge variant="info" className="flex-shrink-0">
                           {v.quantity} vagas
-                        </Selo>
+                        </Badge>
                       )}
                     </div>
                     <div className="mt-2.5">
@@ -234,9 +235,9 @@ export default async function CarreirasPage({
                       />
                     </div>
                     {v.publicDescription && (
-                      <p className="text-[length:var(--fs-2)] text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
+                      <p className="text-fs-2 text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
                     )}
-                    <p className="text-[length:var(--fs-micro)] text-fg-muted mt-2">
+                    <p className="text-micro text-fg-muted mt-2">
                       Publicada em {formatCalendarDate(v.openedAt)}
                       {v.applicationDeadline && ` · inscrições até ${formatCalendarDate(v.applicationDeadline)}`}
                     </p>

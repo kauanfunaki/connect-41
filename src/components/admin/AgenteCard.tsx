@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -40,19 +40,17 @@ export function AgenteCard({ linha, podeEditar }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{linha.def.label}</h3>
-            <Badge variant={SAUDE_VARIANTE[linha.saude]}>{SAUDE_LABEL[linha.saude]}</Badge>
+            <h3 className="text-card-title font-semibold text-fg">{linha.def.label}</h3>
+            <Selo tom={tomDaVariante(SAUDE_VARIANTE[linha.saude])}>{SAUDE_LABEL[linha.saude]}</Selo>
             {linha.temOverride && (
-              <span className="text-[11px] text-fg-muted border border-border rounded px-1.5 py-0.5">
-                configurado
-              </span>
+              <Selo tom="neutro">configurado</Selo>
             )}
           </div>
-          <p className="text-[13px] text-fg-secondary mt-1 max-w-[60ch]">{linha.def.description}</p>
+          <p className="text-fs-3 text-fg-secondary mt-1 max-w-[60ch]">{linha.def.description}</p>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-[13px] tabular-nums font-medium text-fg">{resumoDoGasto(linha.gasto)}</p>
-          <p className="text-[11px] text-fg-muted">neste mês</p>
+          <p className="text-fs-3 tabular-nums font-medium text-fg">{resumoDoGasto(linha.gasto)}</p>
+          <p className="text-fs-1 text-fg-muted">neste mês</p>
         </div>
       </div>
 
@@ -64,14 +62,14 @@ export function AgenteCard({ linha, podeEditar }: Props) {
             style={{ width: `${Math.round(fracao * 100)}%` }}
           />
         </div>
-        <span className="text-[11px] text-fg-muted tabular-nums whitespace-nowrap">
+        <span className="text-fs-1 text-fg-muted tabular-nums whitespace-nowrap">
           teto {moeda(linha.tetoMensalCentavos)} · {linha.tetoMensalChamadas} chamadas
         </span>
       </div>
 
-      <p className="text-[12px] text-fg-muted">{SAUDE_EXPLICACAO[linha.saude]}</p>
+      <p className="text-fs-2 text-fg-muted">{SAUDE_EXPLICACAO[linha.saude]}</p>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-fg-muted">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-fs-2 text-fg-muted">
         <span>
           modelo <code className="text-fg-secondary">{linha.model}</code>
         </span>
