@@ -115,9 +115,16 @@ function Atalho({ className = "" }: { className?: string }) {
 export function GlobalSearch({
   telas = [],
   variante = "topo",
+  atalho,
 }: {
   telas?: TelaNavegavel[];
   variante?: "topo" | "lateral";
+  /**
+   * Esta é a busca que o Ctrl+K abre. Sem a prop, vale a regra do tamanho da
+   * tela (lateral no computador, topo no celular); com o menu lateral
+   * recolhido (08/10/2026), o casco passa o atalho para a busca do topo.
+   */
+  atalho?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(EMPTY);
@@ -162,7 +169,8 @@ export function GlobalSearch({
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         const telaGrande = window.matchMedia("(min-width: 1024px)").matches;
-        if ((variante === "lateral") !== telaGrande) return;
+        const minha = atalho ?? (variante === "lateral") === telaGrande;
+        if (!minha) return;
         e.preventDefault();
         setMobileExpanded(true);
         setOpen(true);
@@ -171,7 +179,7 @@ export function GlobalSearch({
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [variante]);
+  }, [variante, atalho]);
 
   useEffect(() => {
     if (query.trim().length < 2) return;
