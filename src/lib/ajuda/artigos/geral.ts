@@ -355,6 +355,8 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como achar as pastas de uma empresa",
         passos: [
           "Abra “Arquivos” na barra lateral e busque a empresa pelo nome ou pelo CNPJ. Pela ficha da empresa, a aba “Arquivos” mostra as mesmas pastas.",
+          "Na lista de empresas, o número à direita é quantos documentos a empresa tem (pastas e “Do Connect”). Âmbar com “!” é envio do cliente que ninguém da equipe abriu ainda: a empresa vem no topo, e o clique abre direto em “Enviados pelo cliente”.",
+          "A lista mostra 12 empresas por página — primeiro as com envio novo, depois as com movimento mais recente. Use “Próxima” ou a busca para achar as outras.",
           "Clique numa pasta para abrir. A trilha no topo leva de volta a qualquer nível.",
           "Para achar um arquivo sem saber a pasta, use a busca no topo: ela olha o nome dos arquivos em todas as pastas da empresa.",
           "Em “Chegou do cliente”, no início dos Arquivos, estão os arquivos que os clientes mandaram pelo portal nos últimos 30 dias.",
