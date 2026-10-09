@@ -104,6 +104,11 @@ describe("totaisDoRecorte", () => {
     expect(totaisDoRecorte(tudo, "vencidas")).toEqual({ vencido: 5_000, venceHoje: 0, aVencer: 0, pago: 0, emAberto: 5_000 });
   });
 
+  it("a vencer e vence hoje totalizam somente suas faixas", () => {
+    expect(totaisDoRecorte(tudo, "avencer")).toEqual({ vencido: 0, venceHoje: 0, aVencer: 1_000, pago: 0, emAberto: 1_000 });
+    expect(totaisDoRecorte(tudo, "hoje")).toEqual({ vencido: 0, venceHoje: 2_500, aVencer: 0, pago: 0, emAberto: 2_500 });
+  });
+
   it("todas traz tudo, sem alterar o objeto recebido", () => {
     const t = totaisDoRecorte(tudo, "todas");
     expect(t).toEqual(tudo);

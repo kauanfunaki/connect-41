@@ -85,6 +85,7 @@ export function FaixaDeTotais({ itens, className = "mb-5" }: { itens: ItemDeTota
           label={i.rotulo}
           value={i.valor}
           href={i.href}
+          navegacaoCompleta={i.ativo !== undefined}
           icon={i.icone}
           detalhe={i.detalhe}
           tom={tomDaClasse(i.tom)}

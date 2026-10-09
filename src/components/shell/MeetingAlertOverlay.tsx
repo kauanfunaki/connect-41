@@ -4,7 +4,6 @@ import { useCallback, useEffect, useId, useRef, useState, useTransition } from "
 import { useDialog } from "@/components/ui/useDialog";
 import { Video, Clock, Building2, Users, ExternalLink } from "lucide-react";
 import {
-  buscarAlertasReuniao,
   confirmarCienciaReuniao,
   type MeetingAlert,
 } from "@/app/(app)/agenda/alert-actions";
@@ -27,19 +26,20 @@ export function MeetingAlertOverlay() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const originalTitleRef = useRef<string | null>(null);
 
-  // Aba de uma versão anterior do Connect: a action não existe mais no
-  // servidor, e insistir só enche o log a cada 45 s. Para até recarregar.
-  const versaoAntigaRef = useRef(false);
-
+  // Consultas periódicas usam JSON, sem Server Action nem atualização da árvore
+  // de navegação: um alerta em segundo plano não pode reverter um filtro recém-aplicado.
+  const pedidoRef = useRef(0);
   const refresh = useCallback(async () => {
-    if (versaoAntigaRef.current) return;
+    const pedido = ++pedidoRef.current;
     try {
-      const next = await buscarAlertasReuniao();
+      const res = await fetch("/api/agenda/alertas", { cache: "no-store" });
+      if (!res.ok) return;
+      const next: MeetingAlert[] = await res.json();
+      if (pedido !== pedidoRef.current) return;
       setAlerts(next);
       setFetchedAt(Date.now());
-    } catch (err) {
-      if (tratarVersaoAntiga(err)) versaoAntigaRef.current = true;
-      // senão, erro de rede transitório — tenta de novo no próximo ciclo
+    } catch {
+      // Erro de rede transitório: tenta de novo no próximo ciclo.
     }
   }, []);
 

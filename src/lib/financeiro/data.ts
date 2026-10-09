@@ -5,7 +5,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { saoPauloParts } from "@/lib/agenda";
+import { saoPauloParts, addDaysToKey } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import {
   situacaoDaConta,
@@ -83,6 +83,9 @@ const ABERTAS: Prisma.FinanceEntryWhereInput = { paidAt: null, status: { notIn: 
  */
 export function whereDoRecorte(recorte: RecorteDeContas, hojeKey: string): Prisma.FinanceEntryWhereInput {
   if (recorte === "todas") return {};
+  const amanha = inicioDeHoje(addDaysToKey(hojeKey, 1));
+  if (recorte === "avencer") return { ...ABERTAS, dueDate: { gte: amanha } };
+  if (recorte === "hoje") return { ...ABERTAS, dueDate: { gte: inicioDeHoje(hojeKey), lt: amanha } };
   if (recorte === "vencidas") return { ...ABERTAS, dueDate: { lt: inicioDeHoje(hojeKey) } };
   return ABERTAS;
 }

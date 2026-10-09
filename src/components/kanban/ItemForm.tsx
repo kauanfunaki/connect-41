@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/Input";
 import { useActionState } from "react";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm as Field } from "@/components/ui/CampoForm";
@@ -23,9 +25,13 @@ type Props = {
   tags?: TagOption[];
   sectorUsers?: UserOption[];
   cancelHref: string;
+  stages: { id: string; name: string }[];
+  initialStageId?: string;
+  emModal?: boolean;
 };
 
-export function ItemForm({ action, pipelineId, entityType, entities, tags = [], sectorUsers = [], cancelHref }: Props) {
+export function ItemForm({ action, pipelineId, entityType, entities, tags = [], sectorUsers = [], cancelHref, stages, initialStageId, emModal = false }: Props) {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
@@ -39,8 +45,16 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
         </Aviso>
       )}
 
-      <Field label={entityType === "COMPANY" ? "Empresa" : "Pessoa"} htmlFor="entityId" required>
-        <Select id="entityId" name="entityId" required>
+      <Field label="Título da tarefa" htmlFor="title" helper="Informe um título ou selecione uma empresa/pessoa.">
+        <Input id="title" name="title" autoFocus placeholder="Ex.: Conferir documentos" />
+      </Field>
+      <Field label="Estágio" htmlFor="stageId" required>
+        <Select id="stageId" name="stageId" defaultValue={initialStageId ?? stages[0]?.id} required>
+          {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
+        </Select>
+      </Field>
+      <Field label={entityType === "COMPANY" ? "Empresa" : "Pessoa"} htmlFor="entityId">
+        <Select id="entityId" name="entityId">
           <option value="">Selecionar…</option>
           {entities.map((e) => (
             <option key={e.id} value={e.id}>{e.name}</option>
@@ -112,7 +126,8 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
         pending={isPending}
         pendingLabel="Criando…"
         submitLabel="Criar tarefa"
-        cancelHref={cancelHref}
+        cancelHref={emModal ? undefined : cancelHref}
+        onCancel={emModal ? () => router.back() : undefined}
       />
     </form>
   );

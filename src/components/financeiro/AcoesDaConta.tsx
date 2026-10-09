@@ -132,13 +132,9 @@ export function AcoesDaConta({
     </MenuDeMaisAcoes>
   );
 
-  // Na tabela, as três posições existem em toda linha (08/10/2026): a coluna é
-  // centralizada (conferência de 30/09), e com o "Conferir" só em algumas
-  // linhas o grupo mudava de largura — o "Pagar" da linha a conferir ficava
-  // 46px à esquerda dos outros, e o "⋯" de conta paga, no meio da célula. A
-  // posição vazia guarda o lugar com uma cópia invisível do botão, que mede o
-  // mesmo que ele em qualquer fonte; no cartão do celular não há coluna para
-  // alinhar, e ela não aparece.
+  // Na tabela, conferir e baixar têm posições fixas na primeira linha; as
+  // ações extras ficam na segunda, sempre alinhadas à mesma borda direita
+  // da baixa. O tamanho de uma ação única não pode deslocar os outros botões.
   const rotuloConferir = (
     <>
       <Check size={12} /> Conferir
@@ -153,45 +149,58 @@ export function AcoesDaConta({
   const vaga = (rotulo: React.ReactNode) =>
     emColunas ? (
       <span aria-hidden className="invisible inline-flex">
-        <Button variant="secondary" size="xs" tabIndex={-1}>
+        <Button variant="secondary" size="xs" tabIndex={-1} className="whitespace-nowrap">
           {rotulo}
         </Button>
       </span>
     ) : null;
 
+  function disporAcoes(conferir: React.ReactNode, baixa: React.ReactNode) {
+    if (emColunas) {
+      return (
+        <div className={`grid w-full gap-1.5 ${comConferir ? "grid-cols-2" : "grid-cols-1"}`}>
+          {comConferir && <div className="flex items-center justify-start">{conferir}</div>}
+          <div className="flex items-center justify-end">{baixa}</div>
+          <div className="col-span-full flex min-h-7 items-center justify-end">
+            {menu || (paga || cancelada ? <span className="w-7 text-center text-micro text-fg-muted">—</span> : null)}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="flex max-w-full flex-wrap items-center gap-1.5 [&>*]:shrink-0 [&>button]:whitespace-nowrap">
+        {conferir}
+        {baixa}
+        {menu || (paga || cancelada ? <span className="text-micro text-fg-muted">—</span> : null)}
+      </div>
+    );
+  }
+
   if (cancelada || paga) {
     return (
-      <div className="flex flex-col gap-1 items-start">
-        {emColunas ? (
-          <div className="flex items-center gap-1.5">
-            {comConferir && vaga(rotuloConferir)}
-            {vaga(rotuloDaBaixa)}
-            {menu || <span className="w-7 text-center text-micro text-fg-muted">—</span>}
-          </div>
-        ) : (
-          menu || <span className="text-micro text-fg-muted">—</span>
-        )}
+      <div className={`flex min-w-0 max-w-full flex-col gap-1 items-start ${emColunas ? "w-full" : ""}`}>
+        {disporAcoes(comConferir && vaga(rotuloConferir), vaga(rotuloDaBaixa))}
         {erro && <span className="text-micro text-danger max-w-[220px]">{erro}</span>}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1 items-start">
-      <div className="flex items-center gap-1.5">
-        {/* Conferir só aparece enquanto há o que conferir — botão que sempre
-            recusa é ruído em toda linha. */}
-        {status === "PROVISORIO" ? (
-          <Button variant="secondary" size="xs" disabled={pendente} onClick={() => executar(() => acoes.conferir(entryId))}>
+    <div className={`flex min-w-0 max-w-full flex-col gap-1 items-start ${emColunas ? "w-full" : ""}`}>
+      {disporAcoes(
+        /* Conferir só aparece enquanto há o que conferir — botão que sempre
+           recusa é ruído em toda linha. */
+        status === "PROVISORIO" ? (
+          <Button variant="secondary" size="xs" className="whitespace-nowrap" disabled={pendente} onClick={() => executar(() => acoes.conferir(entryId))}>
             {rotuloConferir}
           </Button>
         ) : (
           comConferir && vaga(rotuloConferir)
-        )}
-        {/* Travado pela aprovação: o botão fica, desabilitado e com o motivo
-            embaixo — sumir com ele faria a pessoa procurar a baixa noutro lugar. */}
-        {bloqueioDeBaixa !== null ? (
-          <Button variant="secondary" size="xs" disabled title={bloqueioDeBaixa}>
+        ),
+        /* Travado pela aprovação: o botão fica, desabilitado e com o motivo
+           embaixo — sumir com ele faria a pessoa procurar a baixa noutro lugar. */
+        bloqueioDeBaixa !== null ? (
+          <Button variant="secondary" size="xs" className="whitespace-nowrap" disabled title={bloqueioDeBaixa}>
             {rotuloDaBaixa}
           </Button>
         ) : (
@@ -203,6 +212,7 @@ export function AcoesDaConta({
               <Button
                 variant="secondary"
                 size="xs"
+                className="whitespace-nowrap"
                 onClick={() => {
                   setErroDaBaixa(null);
                   setData(hojeISO);
@@ -240,9 +250,8 @@ export function AcoesDaConta({
               </form>
             )}
           </Popover>
-        )}
-        {menu || (emColunas && <span aria-hidden className="w-7 shrink-0" />)}
-      </div>
+        )
+      )}
       {bloqueioDeBaixa && <span className="text-micro text-fg-muted max-w-[220px]">{bloqueioDeBaixa}</span>}
       {erro && <span className="text-micro text-danger max-w-[220px]">{erro}</span>}
       {aviso && <span className="text-micro text-warning-fg max-w-[220px]">{aviso}</span>}

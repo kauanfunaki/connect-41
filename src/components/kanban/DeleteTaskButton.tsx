@@ -1,8 +1,8 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
-import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
-import { IconButton } from "@/components/ui/IconButton";
+import { Trash2 } from "lucide-react";
+
+import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 type Props = {
@@ -19,19 +19,9 @@ export function DeleteTaskButton({ entityName, deleteAction }: Props) {
 
   return (
     <>
-      <Dropdown
-        align="right"
-        width={180}
-        trigger={({ open, toggle }) => (
-          <IconButton onClick={toggle} aria-expanded={open} aria-label="Mais opções">
-            <MoreHorizontal size={16} />
-          </IconButton>
-        )}
-      >
-        <DropdownItem danger onClick={handleDelete}>
-          Excluir tarefa
-        </DropdownItem>
-      </Dropdown>
+      <Button variant="danger" size="xs" onClick={handleDelete}>
+        <Trash2 size={13} /> Excluir tarefa
+      </Button>
       {dialog}
     </>
   );
