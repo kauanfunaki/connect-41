@@ -52,14 +52,36 @@ async function escolherEmpresa(r: Roteiro, busca: string, legenda = "Escolha a e
 
 /** Escolhe uma opção num `<select>` comum, com o anel e o clique visíveis. */
 async function selecionar(r: Roteiro, campo: Locator, opcao: string | { label: string } | RegExp, legenda?: string) {
-  await r.apontar(campo, legenda);
-  if (opcao instanceof RegExp) {
-    const valor = await campo.locator("option").filter({ hasText: opcao }).first().getAttribute("value");
-    await campo.selectOption(valor ?? "");
-  } else {
-    await campo.selectOption(opcao);
+  // O seletor do Connect (08/10/2026, #141) é um botão "combobox" com a lista
+  // num painel próprio; o `<select>` de verdade fica escondido ao lado, só para
+  // o formulário. Gravar como a pessoa faz: abrir e clicar na opção.
+  const tag = await campo.evaluate((el) => el.tagName.toLowerCase());
+  if (tag === "select") {
+    await r.apontar(campo, legenda);
+    if (opcao instanceof RegExp) {
+      const valor = await campo.locator("option").filter({ hasText: opcao }).first().getAttribute("value");
+      await campo.selectOption(valor ?? "");
+    } else {
+      await campo.selectOption(opcao);
+    }
+    await r.pausa(600);
+    return;
   }
-  await r.pausa(600);
+  let rotulo: string | RegExp = opcao instanceof RegExp ? opcao : typeof opcao === "string" ? opcao : opcao.label;
+  if (typeof opcao === "string") {
+    // Quem chama às vezes passa o value: o texto da opção vem do <select> escondido.
+    const doValor = await campo
+      .locator("xpath=preceding-sibling::select[1]")
+      .locator(`option[value="${opcao.replace(/"/g, '\\"')}"]`)
+      .first()
+      .textContent({ timeout: 1000 })
+      .catch(() => null);
+    if (doValor?.trim()) rotulo = doValor.trim();
+  }
+  await r.clicar(campo, legenda);
+  const opcaoNaLista = r.page.getByRole("listbox").last().getByRole("option", typeof rotulo === "string" ? { name: rotulo, exact: true } : { name: rotulo });
+  await r.clicar(opcaoNaLista.first());
+  await r.pausa(400);
 }
 
 /** Datas do Connect (`CampoData`): digitar vale, com máscara; Tab fecha o calendário. */
@@ -462,7 +484,7 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
           main(r).getByRole("link", { name: "Todos" }),
           "As abas Fornecedores, Sacados e Todos separam os cadastros. O que ainda não tem conta aparece nas duas primeiras."
         );
-        await r.apontar(main(r).getByRole("textbox", { name: /Buscar por nome/ }), "Busque pelo nome ou documento e tecle Enter.");
+        await r.apontar(main(r).getByPlaceholder(/Buscar por nome/), "Busque pelo nome ou documento e tecle Enter.");
         await r.apontar(
           main(r).getByRole("button", { name: "Editar" }).first(),
           "Em Editar, mude os dados — ou a Situação para Inativo. Cadastro não é apagado."
@@ -1187,10 +1209,10 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.cartaz(SELO, "Empresas", "A lista e a ficha das empresas atendidas");
         await r.clicar(barraLateral(r).getByRole("link", { name: "Cadastros" }), "Abra Cadastros na barra lateral e fique na aba Empresas.");
         await r.esperarTela(/\/(empresas|cadastros)/);
-        await r.digitar(main(r).getByRole("textbox", { name: /Buscar por nome/ }), "bom", "Digite parte do nome ou do ID para achar uma empresa.");
+        await r.digitar(main(r).getByPlaceholder(/Buscar por nome/), "bom", "Digite parte do nome ou do ID para achar uma empresa.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(900);
-        await main(r).getByRole("textbox", { name: /Buscar por nome/ }).fill("");
+        await main(r).getByPlaceholder(/Buscar por nome/).fill("");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.apontar(
           main(r).getByRole("button", { name: /^Filtros/ }),
@@ -1226,7 +1248,8 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
           "Escolha o Tipo de cadastro. Com CNPJ, os dados se preenchem sozinhos ao completar os dígitos."
         );
         await r.apontar(
-          main(r).getByRole("tablist"),
+          // As etapas viraram lista numerada (07/10/2026), não mais abas.
+          main(r).getByRole("list").filter({ hasText: "Identificação" }).first(),
           "Complete cada etapa e clique em Avançar →. Na última, revise e clique em Confirmar e salvar."
         );
         await r.soltar();
@@ -1244,7 +1267,7 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.cartaz(SELO, "Pessoas", "Os funcionários do escritório e a ficha de cada um");
         await r.clicar(main(r).getByRole("tab", { name: "Pessoas" }), "Em Cadastros, clique na aba Pessoas.");
         await r.esperarTela(/\/pessoas/);
-        await r.apontar(main(r).getByRole("textbox", { name: /Buscar por nome/ }), "Busque pelo nome.");
+        await r.apontar(main(r).getByPlaceholder(/Buscar por nome/), "Busque pelo nome.");
         await r.apontar(main(r).getByRole("button", { name: /^Filtros/ }), "Para ver quem está inativo, Filtros → Situação: Inativos ou Todos.");
         await r.clicar(main(r).getByRole("link", { name: /Ana Beatriz Correia/ }).first(), "Clique no nome para abrir a ficha.");
         await r.esperarTela(/\/pessoas\/[^/]+$/);
@@ -2113,10 +2136,10 @@ function videosDoRecrutamento(): DefinicaoDeVideo[] {
       async executar(r) {
         await r.ir("/candidatos");
         await r.cartaz(SELO, "Candidatos", "O banco de talentos do escritório");
-        await r.digitar(main(r).getByRole("textbox", { name: /Buscar por nome/ }), "Isabela", "Busque pelo nome, e-mail ou CPF.");
+        await r.digitar(main(r).getByPlaceholder(/Buscar por nome/), "Isabela", "Busque pelo nome, e-mail ou CPF.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(900);
-        await main(r).getByRole("textbox", { name: /Buscar por nome/ }).fill("");
+        await main(r).getByPlaceholder(/Buscar por nome/).fill("");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.apontar(main(r).getByRole("button", { name: "Filtrar a coluna tags" }), "O filtro da coluna Tags acha quem tem uma habilidade.");
         await r.apontar(main(r).getByRole("button", { name: /^Filtros/ }), "A lista mostra os ativos. Para ver os inativos, Filtros → Situação.");
@@ -2149,7 +2172,7 @@ function videosDoRecrutamento(): DefinicaoDeVideo[] {
         await r.ir("/colaboradores-clientes");
         await r.cartaz(SELO, "Colaboradores de clientes", "Quem trabalha nas empresas clientes");
         await r.legenda("É este cadastro que alimenta a admissão, as férias e a rescisão no DP.");
-        await r.apontar(main(r).getByRole("textbox", { name: /Buscar por nome/ }), "Busque pelo nome…");
+        await r.apontar(main(r).getByPlaceholder(/Buscar por nome/), "Busque pelo nome…");
         await r.apontar(main(r).getByRole("button", { name: /^Filtros/ }), "…e use Filtros para a Empresa e a Situação.");
         await r.clicar(main(r).getByRole("link", { name: /Aline Fernandes/ }).first(), "Clique no nome para abrir a ficha.");
         await r.page.waitForURL(/\/pessoas\/[^/]+$/, { timeout: 20000 });
