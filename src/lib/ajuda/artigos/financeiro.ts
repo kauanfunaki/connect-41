@@ -399,9 +399,9 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Abrir uma conversa",
         passos: [
-          "Ao abrir a tela, a lista mostra as empresas que já têm conversa, com a última mensagem.",
+          "Ao abrir a tela, a lista à esquerda mostra as empresas que já têm conversa, com a última mensagem. As que estão esperando o escritório vêm primeiro.",
           "O selo “Esperando o escritório” indica que o cliente escreveu por último.",
-          "Clique na empresa para abrir a conversa.",
+          "Clique na empresa para abrir a conversa no painel ao lado. Use ↑ e ↓ para passar para a anterior ou a próxima, e o X para fechar.",
           "Para falar com outra empresa, escolha-a em “Buscar empresa…” e clique em “Aplicar”.",
         ],
       },

@@ -495,14 +495,15 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Entre no setor e abra “Conversas” na barra lateral. A aba “Atendimentos” vem aberta.",
           "Busque pelo contato, pela empresa ou por um trecho da mensagem no campo de busca.",
           "Clique em “Filtros” para escolher “Período”, “Atendente”, “Status” e “Canal”.",
-          "Cada cartão é um contato. Clique em um atendimento para ver as mensagens.",
-          "Clique no nome do contato para abrir a ficha da pessoa ou da empresa ligada a ele.",
+          "Cada cartão da lista é um contato, com a situação e a hora do último atendimento. Clique nele para abrir o contato no painel ao lado.",
+          "No painel, em “Atendimentos”, clique num atendimento para ver as mensagens. Use ↑ e ↓ para passar para o contato anterior ou o próximo.",
+          "Para abrir a ficha da pessoa ou da empresa ligada ao contato, clique em “Abrir pessoa” ou “Abrir empresa”, abaixo do nome.",
         ],
       },
       {
         titulo: "Como ligar um contato a uma pessoa ou empresa",
         passos: [
-          "No cartão do contato sem vínculo, clique em “Vincular”.",
+          "Abra o contato sem vínculo e clique em “Vincular”, abaixo do nome.",
           "Digite pelo menos duas letras do nome e escolha a pessoa ou a empresa.",
           "Para desfazer, clique em “Desvincular”, o ícone ao lado do nome vinculado.",
         ],
