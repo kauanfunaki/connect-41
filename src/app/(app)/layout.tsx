@@ -77,7 +77,7 @@ export default async function AppLayout({
   const activeSectorModules = activeSector
     ? moduleStates
         .filter((m) => m.enabled && m.sectorCode === activeSector.code && !MODULOS_DO_MENU_GERAL.has(m.code))
-        .map((m) => ({ code: m.code, label: m.label, href: getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
+        .map((m) => ({ code: m.code, label: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "Solicitações dos clientes" : m.label, href: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "/solicitacoes" : getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
   // abrir agora — fixada de módulo desligado depois continua guardada, só não

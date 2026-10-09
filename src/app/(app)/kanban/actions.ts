@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PipelineEntityType, ActivityType, RecurringFrequency, StageType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
-import { scopedPipelineWhere } from "@/lib/auth/scope";
+import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
 import { minutosApontados, segundosDesde } from "@/lib/datetime";
 import { findMentionedUserIds } from "@/lib/handoffMentions";
@@ -147,18 +147,19 @@ export async function criarItem(
 
   const prisma = getPrisma();
 
-  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...scopedPipelineWhere(ctx) } });
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...accessiblePipelineWhere(ctx) } });
   if (!pipeline) return { error: "Kanban não encontrado ou fora do seu escopo." };
   if (!canManageSector(ctx, pipeline.sectorCode)) {
     return { error: "Sem permissão para adicionar tarefas neste setor." };
   }
 
   try {
+    const selectedStageId = (form.get("stageId") as string | null)?.trim();
     const firstStage = await prisma.pipelineStage.findFirst({
-      where: { pipelineId },
+      where: { pipelineId, ...(selectedStageId ? { id: selectedStageId } : {}) },
       orderBy: { order: "asc" },
     });
-    if (!firstStage) return { error: "Kanban sem estágios configurados" };
+    if (!firstStage) return { error: "Estágio inválido ou kanban sem estágios configurados" };
 
     const item = await prisma.pipelineItem.create({
       data: {
@@ -201,7 +202,7 @@ export async function criarTarefaRapida(pipelineId: string, stageId: string, tit
   if (!tenantId || !trimmed) return;
 
   const prisma = getPrisma();
-  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...scopedPipelineWhere(ctx) } });
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...accessiblePipelineWhere(ctx) } });
   if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
 
   const stage = await prisma.pipelineStage.findFirst({ where: { id: stageId, pipelineId } });
@@ -1407,7 +1408,7 @@ export async function duplicarPipeline(
 
   const prisma = getPrisma();
   const source = await prisma.pipeline.findFirst({
-    where: { id: sourcePipelineId, ...scopedPipelineWhere(ctx) },
+    where: { id: sourcePipelineId, ...accessiblePipelineWhere(ctx) },
     include: {
       stages: { orderBy: { order: "asc" } },
       items: {

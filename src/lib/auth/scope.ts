@@ -35,6 +35,11 @@ export async function scopedPersonWhere(ctx: AuthContext) {
   return { tenantId: ctx.tenantId };
 }
 
+/** Abrir um link de Kanban usa permissões, sem o filtro de navegação do setor ativo. */
+export function accessiblePipelineWhere(ctx: AuthContext) {
+  return sectorWhere({ ...ctx, activeSector: null });
+}
+
 export function scopedPipelineWhere(ctx: AuthContext) {
   return sectorWhere(ctx);
 }

@@ -61,7 +61,9 @@ export default async function HandoffsPage({
     (h) => aggregateHandoffStatus(h.sectors.map((s) => s.status)) === statusFilter
   );
   const hrefDaSituacao = (s: HandoffSectorStatus) =>
-    `/transferencias?status=${s}${prioridadeFiltro ? `&prioridade=${prioridadeFiltro}` : ""}`;
+    status === s
+      ? `/transferencias${prioridadeFiltro ? `?prioridade=${prioridadeFiltro}` : ""}`
+      : `/transferencias?status=${s}${prioridadeFiltro ? `&prioridade=${prioridadeFiltro}` : ""}`;
 
   // Resolve nomes das entidades (Company ou Person)
   const companyIds = handoffs.filter((h) => h.entityType === "COMPANY").map((h) => h.entityId);
@@ -103,8 +105,8 @@ export default async function HandoffsPage({
           valor: formatarNumero(contagem[t.value], 0),
           icone: t.value === "NEW" ? <Inbox /> : t.value === "IN_PROGRESS" ? <Loader /> : <CheckCircle2 />,
           tom: t.value === "NEW" ? (contagem.NEW > 0 ? "text-warning-fg" : undefined) : t.value === "DONE" ? "text-success-fg" : undefined,
-          detalhe: t.value === statusFilter ? "mostrando agora" : undefined,
-          ativo: t.value === statusFilter,
+          detalhe: t.value === status ? "mostrando agora" : undefined,
+          ativo: t.value === status,
           href: hrefDaSituacao(t.value),
         }))}
       />
@@ -115,7 +117,7 @@ export default async function HandoffsPage({
             chave: "status",
             rotulo: "Situação",
             vazioLabel: "Novas",
-            opcoes: FILTER_TABS.filter((t) => t.value !== "NEW").map((t) => ({ value: t.value, label: t.label })),
+            opcoes: FILTER_TABS.map((t) => ({ value: t.value, label: t.label })),
           },
           {
             chave: "prioridade",

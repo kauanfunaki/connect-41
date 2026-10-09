@@ -207,7 +207,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Escolha a empresa em “Buscar empresa…” e clique em “Aplicar”.",
           "Clique em “Nova conta”.",
           "Preencha “Nome da conta”, “Tipo”, “Banco (COMPE)” (o código do banco, como 001 ou 341), “Agência” e “Conta com dígito”.",
-          "Se quiser conferir o saldo, informe o “Saldo inicial” e a data em “Saldo no início do dia”.",
+          "Se quiser conferir o saldo, informe o “Saldo inicial” e a data em “Data do saldo inicial”.",
           "Clique em “Salvar”.",
         ],
       },

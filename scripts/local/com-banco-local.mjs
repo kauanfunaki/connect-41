@@ -12,7 +12,8 @@
 // família de guarda do `BANCO_ESPERADO`: comando de banco no lugar errado não
 // avisa, só estraga.
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, cpSync } from "node:fs";
+import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const ARQUIVO = ".env.localdev";
@@ -42,6 +43,14 @@ const [comando, ...args] = process.argv.slice(2);
 if (!comando) {
   console.error("Uso: node scripts/local/com-banco-local.mjs <comando> [args…]");
   process.exit(1);
+}
+
+// O Next standalone não copia automaticamente todos os arquivos públicos.
+// Preparar a cada início também cobre uma pasta public já existente só com uploads.
+if (comando === "node" && args[0] && resolve(args[0]) === resolve(".next/standalone/server.js")) {
+  for (const [origem, destino] of [["public", ".next/standalone/public"], [".next/static", ".next/standalone/.next/static"]]) {
+    if (existsSync(origem)) cpSync(origem, destino, { recursive: true });
+  }
 }
 
 // O que vem do arquivo GANHA do ambiente do terminal: uma DATABASE_URL de

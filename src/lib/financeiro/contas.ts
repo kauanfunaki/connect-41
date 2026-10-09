@@ -143,7 +143,7 @@ export function totalizar(linhas: LinhaDeConta[]): Totais {
 }
 
 /** O recorte da lista de contas: o de trabalho (padrão), só as vencidas, ou tudo. */
-export type RecorteDeContas = "abertas" | "vencidas" | "todas";
+export type RecorteDeContas = "abertas" | "avencer" | "hoje" | "vencidas" | "todas";
 
 /**
  * Os totais que o topo mostra num recorte, a partir dos totais do filtro inteiro.
@@ -155,6 +155,8 @@ export type RecorteDeContas = "abertas" | "vencidas" | "todas";
  * e as vencidas não têm nem o de hoje nem o a vencer.
  */
 export function totaisDoRecorte(t: Totais, recorte: RecorteDeContas): Totais {
+  if (recorte === "avencer") return { vencido: 0, venceHoje: 0, aVencer: t.aVencer, pago: 0, emAberto: t.aVencer };
+  if (recorte === "hoje") return { vencido: 0, venceHoje: t.venceHoje, aVencer: 0, pago: 0, emAberto: t.venceHoje };
   if (recorte === "vencidas") return { vencido: t.vencido, venceHoje: 0, aVencer: 0, pago: 0, emAberto: t.vencido };
   return {
     vencido: t.vencido,

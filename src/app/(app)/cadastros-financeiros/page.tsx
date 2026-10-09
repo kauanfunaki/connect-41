@@ -59,7 +59,7 @@ function documento(d: string | null): string {
  * (`FinanceCounterparty`), porque o mesmo CNPJ costuma ser as duas coisas. As
  * abas não são tabelas diferentes: o papel sai do movimento. Fornecedor é quem
  * tem conta a pagar, sacado é quem tem conta a receber, e a ficha ainda sem
- * movimento aparece nas duas até a primeira conta dizer o que ela é.
+ * movimento aparece em Todos até a primeira conta dizer o que ela é.
  *
  * Centros de custo moram aqui porque são cadastro da mesma empresa, com a mesma
  * permissão, e a contraparte aponta para eles como centro padrão.
@@ -188,8 +188,7 @@ export default async function CadastrosFinanceirosPage({
   const busca = (params.q ?? "").trim().toLowerCase();
   const visiveis = contrapartes.filter((c) => {
     const n = contas.get(c.id) ?? { pagar: 0, receber: 0 };
-    const semMovimento = n.pagar === 0 && n.receber === 0;
-    const naAba = aba === "todos" || semMovimento || (aba === "fornecedores" ? n.pagar > 0 : n.receber > 0);
+    const naAba = aba === "todos" || (aba === "fornecedores" ? n.pagar > 0 : n.receber > 0);
     const naBusca = !busca || c.name.toLowerCase().includes(busca) || (c.document ?? "").includes(busca.replace(/\D/g, "") || "\u0000");
     return naAba && naBusca;
   });
@@ -203,6 +202,15 @@ export default async function CadastrosFinanceirosPage({
       {comAcao(podeEditar ? <NovaContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} /> : undefined)}
       <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba: aba === "fornecedores" ? undefined : aba }} navegaSozinho />
       <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
+
+      <p className="mb-4 text-helper text-fg-secondary">
+        {aba === "fornecedores"
+          ? "Fornecedores são os cadastros com contas a pagar nesta empresa."
+          : aba === "sacados"
+            ? "Sacados são os clientes ou devedores com contas a receber nesta empresa."
+            : "Todos os cadastros desta empresa, incluindo os que ainda não têm movimentação."}
+        {" "}Uma mesma ficha pode aparecer nas duas abas quando tem contas a pagar e a receber. Cadastros sem movimentação ficam em Todos.
+      </p>
 
       {/* No casco das listas irmãs, com a contagem e a busca na barra
           (08/10/2026): a busca ficava solta acima da tabela, sem contagem. */}

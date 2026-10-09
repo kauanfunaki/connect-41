@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ChevronRight, ChevronDown, Plus, Repeat } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
+import { prazoDaTarefa } from "@/lib/kanbanPrazo";
 import { formatCalendarDate } from "@/lib/format";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -78,16 +79,22 @@ const PRIORITY_COLOR: Record<number, string> = {
   2: "var(--c41-danger)",
 };
 
-function isOverdue(dueDate: string | null | undefined): boolean {
-  return !!dueDate && new Date(dueDate).getTime() < Date.now();
-}
 
 function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow; itemId: string; canAct: boolean; priorityAction: Props["priorityAction"] }) {
   const [open, setOpen] = useState(false);
   const [, startTransition] = useTransition();
+  const menuRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const fora = (e: PointerEvent) => { if (!menuRef.current?.contains(e.target as Node)) setOpen(false); };
+    const tecla = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", fora);
+    document.addEventListener("keydown", tecla);
+    return () => { document.removeEventListener("pointerdown", fora); document.removeEventListener("keydown", tecla); };
+  }, [open]);
 
   return (
-    <span className="relative">
+    <span ref={menuRef} className="relative">
       <button
         type="button"
         data-dica={`${a.name} · ${PRIORITY_LABEL[a.priority] ?? "Normal"}`} aria-label={`${a.name} · ${PRIORITY_LABEL[a.priority] ?? "Normal"}`}
@@ -262,12 +269,12 @@ function Row({
             tela declaram colSpan={5} em vários pontos (cabeçalho de status,
             alvo de soltar, "Adicionar tarefa"), e uma 6ª coluna obrigaria a
             revisar todos eles para ganhar 24px. */}
-        <td className="py-2 pr-4 w-[120px] text-right">
+        <td className="py-2 pr-4 w-[300px] text-right">
           <div className="flex items-center justify-end gap-1">
             {dueDate && (
-              <span className={`inline-flex items-center gap-1 text-fs-1 tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
+              <span className={`inline-flex items-center gap-1 text-ui font-medium tnum whitespace-nowrap ${prazoDaTarefa(dueDate, isTerminal).classe}`}>
                 {item.recurring && <Repeat size={10} />}
-                {formatCalendarDate(new Date(dueDate), { day: "2-digit", month: "short" })}
+                {formatCalendarDate(new Date(dueDate))} · {prazoDaTarefa(dueDate, isTerminal).rotulo}
               </span>
             )}
             {canAct && deleteAction && (
@@ -397,9 +404,9 @@ function TaskCard({
               ))}
             </div>
             {dueDate && (
-              <span className={`inline-flex items-center gap-1 text-fs-1 tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
+              <span className={`inline-flex items-center gap-1 text-ui font-medium tnum whitespace-nowrap ${prazoDaTarefa(dueDate, isTerminal).classe}`}>
                 {item.recurring && <Repeat size={10} />}
-                {formatCalendarDate(new Date(dueDate), { day: "2-digit", month: "short" })}
+                {formatCalendarDate(new Date(dueDate))} · {prazoDaTarefa(dueDate, isTerminal).rotulo}
               </span>
             )}
           </div>
@@ -512,49 +519,13 @@ function StageGroupHeader({
   );
 }
 
-// Criação rápida por status — mesmo comportamento nas duas visões.
-function AddTaskInline({ stageId, createTaskAction }: { stageId: string; createTaskAction: Props["createTaskAction"] }) {
-  const [adding, setAdding] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [, startTransition] = useTransition();
-
-  function addTask() {
-    const title = newTitle.trim();
-    if (!title) { setAdding(false); return; }
-    startTransition(() => createTaskAction(stageId, title));
-    setNewTitle("");
-  }
-
-  if (adding) {
-    return (
-      <Input
-        value={newTitle}
-        onChange={(e) => setNewTitle(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") addTask();
-          if (e.key === "Escape") { setAdding(false); setNewTitle(""); }
-        }}
-        onBlur={() => { if (!newTitle.trim()) setAdding(false); }}
-        autoFocus
-        compact
-        aria-label="Nome da nova tarefa"
-        placeholder="Nome da tarefa…"
-        className="max-w-xs"
-      />
-    );
-  }
-
-  return (
-    // Era texto solto (linkMuted) até 30/09: é ação, então é botão — fantasma,
-    // para não pesar em cada grupo, e com o texto alinhado ao título dos itens.
-    <Button variant="ghost" size="xs" type="button" onClick={() => setAdding(true)} className="-ml-2.5">
-      <Plus size={11} /> Adicionar tarefa
-    </Button>
-  );
+// O mesmo formulário em modal para todos os pontos de criação, com o estágio escolhido.
+function AddTaskInline({ stageId, basePath }: { stageId: string; basePath: string }) {
+  return <Button variant="ghost" size="xs" href={`${basePath}/novo-item?estagio=${encodeURIComponent(stageId)}`} className="-ml-2.5"><Plus size={11} /> Adicionar tarefa</Button>;
 }
 
 function StageGroup({
-  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, deleteAction,
+  stage, items, basePath, canAct, renameStageAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, deleteAction,
   dragId, onDragStartRow, onDragEndRow, onDropStage, onDropOnRow,
 }: {
   stage: StageOption;
@@ -634,7 +605,7 @@ function StageGroup({
           {canAct && (
             <tr>
               <td colSpan={5} className="py-1.5" style={{ paddingLeft: CONTENT_OFFSET }}>
-                <AddTaskInline stageId={stage.id} createTaskAction={createTaskAction} />
+                <AddTaskInline stageId={stage.id} basePath={basePath} />
               </td>
             </tr>
           )}
@@ -645,7 +616,7 @@ function StageGroup({
 }
 
 function StageGroupCards({
-  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, moveAction, deleteAction,
+  stage, items, basePath, canAct, renameStageAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, moveAction, deleteAction,
 }: {
   stage: StageOption;
   items: TaskRow[];
@@ -696,7 +667,7 @@ function StageGroupCards({
 
           {canAct && (
             <div className="px-1 pt-0.5">
-              <AddTaskInline stageId={stage.id} createTaskAction={createTaskAction} />
+              <AddTaskInline stageId={stage.id} basePath={basePath} />
             </div>
           )}
         </div>
@@ -894,7 +865,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
                 <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-24 border-b border-border">
                   <FiltroDaColuna rotulo="Responsáveis" chave="responsaveis" align="right" />
                 </th>
-                <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[120px] text-right border-b border-border">
+                <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[300px] text-right border-b border-border">
                   <FiltroDaColuna rotulo="Prazo" chave="prazo" tipo="data" align="right" />
                 </th>
               </tr>

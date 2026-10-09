@@ -95,7 +95,7 @@ export default async function PedidosAoClientePage({
               rotulo: "Aguardando cliente",
               valor: formatarNumero(contadores.aguardando, 0),
               icone: <Hourglass />,
-              href: href({ recorte: "aguardando", vencidas: undefined }),
+              href: href({ recorte: recorte === "aguardando" && !vencidas ? undefined : "aguardando", vencidas: undefined }),
               ativo: recorte === "aguardando" && !vencidas,
             },
             {
@@ -103,7 +103,7 @@ export default async function PedidosAoClientePage({
               valor: formatarNumero(contadores.respondidas, 0),
               tom: contadores.respondidas > 0 ? "text-brand" : "",
               icone: <MessageCircleReply />,
-              href: href({ recorte: "respondidas", vencidas: undefined }),
+              href: href({ recorte: recorte === "respondidas" && !vencidas ? undefined : "respondidas", vencidas: undefined }),
               ativo: recorte === "respondidas" && !vencidas,
             },
             {
@@ -111,7 +111,7 @@ export default async function PedidosAoClientePage({
               valor: formatarNumero(contadores.vencidas, 0),
               tom: contadores.vencidas > 0 ? "text-danger" : "",
               icone: <AlertTriangle />,
-              href: href({ recorte: undefined, vencidas: "1" }),
+              href: href({ recorte: undefined, vencidas: recorte === "andamento" && vencidas ? undefined : "1" }),
               ativo: recorte === "andamento" && vencidas,
             },
             {
@@ -119,7 +119,7 @@ export default async function PedidosAoClientePage({
               valor: formatarNumero(contadores.encerradas, 0),
               tom: "text-fg-muted",
               icone: <CheckCircle2 />,
-              href: href({ recorte: "encerradas", vencidas: undefined }),
+              href: href({ recorte: recorte === "encerradas" && !vencidas ? undefined : "encerradas", vencidas: undefined }),
               ativo: recorte === "encerradas" && !vencidas,
             },
           ]}
