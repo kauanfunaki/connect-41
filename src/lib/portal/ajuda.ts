@@ -16,6 +16,7 @@ export type IconeDoPasso =
   | "solicitacao"
   | "comunicado"
   | "envio"
+  | "arquivos"
   | "sino"
   | "empresas"
   | "pendencia"
@@ -146,6 +147,19 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
       "Quando o documento pede o seu aceite, ele aparece no Início, em \"O que precisa de você\". Confira o Nome completo, marque \"Li e concordo\" e clique em Assinar documento.",
       "Ficam registrados o seu nome, a data e a hora. Basta um aceite por documento: depois dele, a tela mostra quem aceitou e quando.",
       "Se o documento também chegou por e-mail, o link do e-mail abre o mesmo documento.",
+    ],
+  },
+  {
+    chave: "arquivos",
+    titulo: "Ver as pastas do escritório e mandar arquivos",
+    resumo: "As pastas que o escritório compartilhou com você, e onde você manda os seus arquivos para a equipe.",
+    icone: "arquivos",
+    modulos: ["arquivos"],
+    passos: [
+      "Abra Arquivos. Se você tem mais de uma empresa, escolha a empresa no topo.",
+      "Clique numa pasta para ver o que tem dentro. PDF e imagem abrem no navegador; os outros arquivos são baixados.",
+      "Para mandar arquivos ao escritório, clique em Enviar arquivos, arraste os arquivos ou clique para escolher, e depois em Enviar. Eles vão para a pasta Enviados pelo cliente, e a equipe é avisada.",
+      "Cada arquivo pode ter até 10 MB. Vale PDF, imagem, XML, Word, Excel, ZIP e texto (TXT, CSV, OFX).",
     ],
   },
   {

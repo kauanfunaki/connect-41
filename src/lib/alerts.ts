@@ -761,6 +761,15 @@ export function startAlertScheduler(): void {
         if (r.generated > 0) console.log("[obligations] itens gerados", r);
       })
       .catch((err) => console.error("[obligations] falha na geração", err));
+    // A lixeira dos Arquivos (09/10/2026): o que passou de 30 dias some do
+    // banco e do disco. Lote pequeno por passada; sem nada vencido, são duas
+    // consultas por índice.
+    import("@/lib/drive/lixeira")
+      .then(({ esvaziarLixeiraVencida }) => esvaziarLixeiraVencida())
+      .then((r) => {
+        if (r.arquivos > 0 || r.pastas > 0) console.log("[drive] lixeira esvaziada", r);
+      })
+      .catch((err) => console.error("[drive] falha ao esvaziar a lixeira", err));
   };
 
   run(); // primeira execução já na subida, não espera os 15min iniciais

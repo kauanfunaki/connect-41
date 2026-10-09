@@ -24,6 +24,7 @@ const ICONES: Record<IconeDoPasso, React.ReactNode> = {
   solicitacao: <Inbox />,
   comunicado: <Megaphone />,
   envio: <FileCheck />,
+  arquivos: <ModuleIcon code="arquivos" />,
   sino: <Bell />,
   empresas: <Building2 />,
   pendencia: <ModuleIcon code="bpo_pendencias" />,

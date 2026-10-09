@@ -13,6 +13,10 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CompanyHeader } from "@/components/empresas/CompanyHeader";
 import { CompanyDetailTabs } from "@/components/empresas/CompanyDetailTabs";
+import { NavegadorDeArquivos } from "@/components/arquivos/NavegadorDeArquivos";
+import { navegadorDaEquipe } from "@/lib/drive/servidor";
+import { MODULO_ARQUIVOS } from "@/lib/drive/regras";
+import { isModuleEnabled } from "@/lib/modules";
 import { CompanyFiliaisSection } from "@/components/empresas/CompanyFiliaisSection";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import type { CompanyStatus } from "@/generated/prisma/enums";
@@ -68,6 +72,11 @@ export default async function EmpresaPage({
   });
 
   if (!company) notFound();
+
+  // A aba Arquivos (09/10/2026): o primeiro nível das pastas da empresa. Abrir
+  // uma pasta leva à tela dos Arquivos — a ficha não é refeita a cada clique.
+  const arquivos =
+    ctx.tenantId && (await isModuleEnabled(ctx.tenantId, MODULO_ARQUIVOS)) ? await navegadorDaEquipe(ctx, company.id, null) : null;
 
   const deleteAction = excluirEmpresa.bind(null, id);
 
@@ -192,6 +201,11 @@ export default async function EmpresaPage({
               expired: d.expiresAt != null && d.expiresAt < new Date(),
             }))}
           />
+        }
+        files={
+          arquivos ? (
+            <NavegadorDeArquivos dados={arquivos} base={`/arquivos/empresa/${company.id}`} rotuloDaRaiz="Pastas da empresa" />
+          ) : undefined
         }
         conversations={
           <Card className="px-4 py-2">
