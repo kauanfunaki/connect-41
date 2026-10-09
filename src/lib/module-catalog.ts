@@ -47,6 +47,7 @@ export type IconeDeModulo =
   | "Network"
   | "Receipt"
   | "ReceiptText"
+  | "ShieldCheck"
   | "SquarePen"
   | "Star"
   | "Stethoscope"
@@ -402,6 +403,18 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Documentos",
   },
   {
+    // Preparação para o Serpro (09/10/2026): a Autorização de Acesso de cada
+    // cliente na Receita Federal, que o Integra Contador confere em cada
+    // chamada. Ligado por padrão: é só a carteira com a situação de cada um.
+    code: "fiscal_autorizacoes",
+    label: "Autorizações de acesso",
+    sectorCode: "fiscal",
+    description: "Quais clientes já autorizaram o escritório na Receita Federal (a antiga procuração do e-CAC), quem falta pedir e o que vence",
+    defaultEnabled: true,
+    icon: "ShieldCheck",
+    group: "Documentos",
+  },
+  {
     code: "societario_licencas",
     label: "Licenças",
     sectorCode: "societario",
@@ -649,6 +662,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_dre:                 "/dre",
   bpo_manual:              "/bpo-manual",
   fiscal_documentos:       "/documentos-fiscais",
+  fiscal_autorizacoes:     "/autorizacoes",
   societario_processos:    "/processos",
   societario_licencas:     "/licencas",
   // Fora de `/processos` de propósito: a sidebar marca ativo por prefixo, e

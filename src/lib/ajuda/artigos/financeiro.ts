@@ -747,6 +747,61 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
+  // ─── Autorizações de acesso ───────────────────────────────────────────────
+  {
+    chave: "fiscal_autorizacoes",
+    titulo: "Autorizações de acesso",
+    caminhos: ["/autorizacoes"],
+    resumo:
+      "Quais clientes já autorizaram o escritório na Receita Federal (a antiga procuração do e-CAC), quem falta pedir, o que está esperando validação no Portal e o que vai vencer. A tela não fala com a Receita: a situação é marcada pelo setor.",
+    secoes: [
+      {
+        titulo: "Ver quem falta",
+        passos: [
+          "Abra “Autorizações de acesso” na barra lateral do setor Fiscal.",
+          "A lista abre em “Pendentes”, com o mais urgente em cima: o que precisa ser validado no Portal, o que caiu ou venceu, o que vence em 60 dias e o que falta pedir.",
+          "Clique nos cartões “Validar no Portal”, “Falta pedir”, “Com o cliente” ou “Ativas” para ver só aquele grupo.",
+          "Para filtrar por regime (por exemplo, só o Simples Nacional), clique em “Filtros” e escolha em “Regime”.",
+          "Cada linha é uma raiz de CNPJ: a autorização dada pela matriz vale para as filiais, que aparecem embaixo do nome.",
+        ],
+      },
+      {
+        titulo: "Pedir a autorização ao cliente",
+        passos: [
+          "Clique em “Como pedir ao cliente”.",
+          "Na primeira vez, a coordenação do setor clica em “Definir”, em “Quem recebe as autorizações”, e informa o nome e o CNPJ do escritório contábil. É esse CNPJ que vai no texto.",
+          "Clique em “Copiar texto”.",
+          "Mande o texto ao cliente pelo WhatsApp ou por e-mail. Ele traz o passo a passo do Portal de Serviços da Receita, com o CNPJ do escritório.",
+          "Na linha do cliente, clique em “Atualizar”, escolha “Pedida ao cliente” e clique em “Salvar”.",
+        ],
+      },
+      {
+        titulo: "Registrar o cadastro e a validação",
+        passos: [
+          "Quando o cliente avisar que cadastrou, clique em “Atualizar”, escolha “Cliente cadastrou (falta validar)” e informe o dia. A tela mostra até quando validar.",
+          "Valide no Portal de Serviços da Receita, aba “Recebidas”, em até 30 dias. Depois disso a autorização cai e o cliente precisa cadastrar de novo.",
+          "De volta ao Connect, clique em “Atualizar”, escolha “Validada” e preencha “Válida até” com a data do Portal.",
+          "Se o cliente escolheu só alguns serviços, desmarque “Todos os serviços” e informe os códigos.",
+        ],
+      },
+      {
+        titulo: "Atualizar vários clientes de uma vez",
+        passos: [
+          "Clique em “Atualizar em lote”.",
+          "Cole os CNPJs (por exemplo, os da aba “Recebidas” do Portal). Pode colar com nome, pontuação e em qualquer ordem.",
+          "Escolha a situação e as datas, e clique em “Atualizar”.",
+          "Confira o resultado: quantos clientes foram atualizados e quais documentos não têm empresa no Connect.",
+        ],
+      },
+    ],
+    dicas: [
+      "O setor recebe aviso faltando 10 e 3 dias para o prazo de validação e no último dia, e 60, 30 e 7 dias antes do fim da validade.",
+      "A situação também aparece na ficha da empresa, na “Visão geral”, com o botão de atualizar.",
+      "Use “Não se aplica” para o cliente que não precisa (por exemplo, o MEI que só emite a guia, que dispensa autorização).",
+      "Marcar e atualizar é de quem atua no setor Fiscal; os demais só consultam.",
+    ],
+  },
+
   // ─── Documentos Fiscais ───────────────────────────────────────────────────
   {
     chave: "fiscal_documentos",

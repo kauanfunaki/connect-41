@@ -71,6 +71,21 @@ enum TaxRegimeKind {
   DOMESTICA
 }
 
+// Onde está a Autorização de Acesso da Receita Federal de um cliente (ver o
+// model AccessAuthorization). Sem linha nenhuma = o escritório ainda não pediu.
+enum AccessAuthorizationStatus {
+  /// O escritório pediu ao cliente; ele ainda não cadastrou no Portal.
+  REQUESTED
+  /// O cliente cadastrou: o escritório tem 30 dias para validar, ou ela cai.
+  PENDING_VALIDATION
+  /// Validada pelo escritório. Vale até `expiresAt`.
+  ACTIVE
+  /// Cancelada por uma das partes, ou caiu sem validação.
+  CANCELLED
+  /// O setor decidiu que este cliente não precisa (ex.: só emite DAS do MEI).
+  NOT_APPLICABLE
+}
+
 enum ServiceStatus {
   PENDING
   ACTIVE
@@ -609,6 +624,8 @@ model Tenant {
   driveFolders              DriveFolder[]
   driveFiles                DriveFile[]
   driveTemplateFolders      DriveTemplateFolder[]
+  accessAuthorizations      AccessAuthorization[]
+  accessAuthorizationGrantee AccessAuthorizationGrantee?
   @@map("tenants")
 }
 
@@ -6377,6 +6394,68 @@ model DigitalCertificate {
   @@index([tenantId, expiresAt])
   @@index([tenantId, companyId])
   @@map("digital_certificates")
+}
+
+/// Autorização de Acesso da Receita Federal — a procuração eletrônica do e-CAC,
+/// que mudou de nome em dez/2025. O cliente autoriza o escritório no Portal de
+/// Serviços da RFB e o escritório tem 30 dias para validar, ou ela cai. É o que
+/// o Integra Contador (Serpro) confere em cada chamada feita em nome do cliente;
+/// o registro existe antes do contrato para o Fiscal começar a pedir já.
+///
+/// Uma por raiz de CNPJ (ou por CPF), e não por empresa: a autorização dada pela
+/// matriz vale para as filiais (regra da procuração do e-CAC). Por isso a chave
+/// é o documento, como nos certificados, e não `companyId` — a filial lê a da
+/// raiz, e apagar e recadastrar a empresa não perde o histórico.
+model AccessAuthorization {
+  id          String                    @id @default(uuid())
+  tenantId    String
+  /// Raiz do CNPJ (8 dígitos) ou CPF (11). Só dígitos.
+  documento   String                    @db.VarChar(14)
+  status      AccessAuthorizationStatus
+  /// Os quatro abaixo são dias de calendário, gravados ao meio-dia UTC.
+  /// Dia em que o escritório pediu ao cliente.
+  requestedAt DateTime?
+  /// Dia em que o cliente cadastrou no Portal — conta os 30 dias para validar.
+  receivedAt  DateTime?
+  validatedAt DateTime?
+  /// Fim da validade escolhida pelo cliente (no máximo 5 anos).
+  expiresAt   DateTime?
+  /// "Todos os serviços" no Portal, que inclui os que vierem depois. false = só
+  /// os códigos de `services`.
+  allServices Boolean                   @default(true)
+  services    String?                   @db.VarChar(500)
+  notes       String?                   @db.Text
+  /// MANUAL (o setor marcou) ou SERPRO (a consulta de procurações conferiu).
+  checkedVia  String                    @default("MANUAL") @db.VarChar(10)
+  checkedAt   DateTime?
+  updatedByUserId String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, documento])
+  @@index([tenantId, status])
+  @@index([tenantId, expiresAt])
+  @@map("access_authorizations")
+}
+
+/// Quem recebe as Autorizações de Acesso: o CNPJ que o cliente informa no
+/// Portal. Configuração própria, e não o CNPJ do tenant, porque o workspace
+/// pode estar no nome de uma empresa e o escritório contábil que atua na
+/// Receita ser outra. Sem linha = não definido, e a tela não monta o pedido.
+model AccessAuthorizationGrantee {
+  tenantId        String   @id
+  name            String   @db.VarChar(120)
+  /// Só dígitos.
+  cnpj            String   @db.VarChar(14)
+  updatedByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("access_authorization_grantees")
 }
 
 // ── Triagem de currículos (R1) ─────────────────────────────────────────────
