@@ -29,6 +29,8 @@ const TIPOS_INDIRETOS = [
   "GESTAO_PRAZO",
   "ARQUIVO_DO_CLIENTE",
   "DRIVE_FILE_EXPIRING",
+  "AUTORIZACAO_VALIDAR",
+  "AUTORIZACAO_VENCENDO",
 ];
 
 function arquivos(dir: string, out: string[] = []): string[] {

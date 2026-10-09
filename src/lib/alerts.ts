@@ -33,6 +33,17 @@ import {
   textoDoVencimento,
 } from "@/lib/drive/regras";
 import { SELECT_PASTA } from "@/lib/drive/servidor";
+import { representantesDasChaves, setorDasAutorizacoes } from "@/lib/autorizacoes/servidor";
+import {
+  diasEntre as diasAteODia,
+  faixaDeAviso as faixaDaAutorizacao,
+  FAIXAS_DA_VALIDACAO,
+  FAIXAS_DO_VENCIMENTO as FAIXAS_DA_VALIDADE,
+  MODULO_AUTORIZACOES,
+  prazoParaValidar,
+  textoDoAvisoDeValidacao,
+  textoDoAvisoDeVencimento,
+} from "@/lib/autorizacoes/regras";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -697,6 +708,58 @@ export async function checkArquivosVencendo(tenantId: string, today: Date): Prom
   return sent;
 }
 
+// Autorização de acesso na Receita (09/10/2026, preparação para o Serpro):
+// o prazo de 30 dias para o escritório validar no Portal — faltando 10 e 3
+// dias, no último dia e quando cai — e o fim da validade — 60, 30 e 7 dias
+// antes, no dia e vencida. Um aviso por faixa, uma vez só, para o setor do
+// módulo. A chave leva a data do evento (cadastro, validade): um pedido novo
+// depois de cair, ou a renovação, volta a avisar. O aviso abre a ficha da
+// matriz, onde está o botão de atualizar. Empresa inativa não avisa.
+// Exportada para o teste ponta a ponta rodar só esta checagem no banco local.
+export async function checkAutorizacoes(tenantId: string, today: Date): Promise<number> {
+  if (!(await isModuleEnabled(tenantId, MODULO_AUTORIZACOES))) return 0;
+  const prisma = getPrisma();
+  const hoje = saoPauloParts(new Date()).dateKey;
+  const limite = new Date(`${hoje}T12:00:00Z`);
+  limite.setUTCDate(limite.getUTCDate() + FAIXAS_DA_VALIDADE[0]);
+
+  const registros = await prisma.accessAuthorization.findMany({
+    where: {
+      tenantId,
+      OR: [{ status: "PENDING_VALIDATION", receivedAt: { not: null } }, { status: "ACTIVE", expiresAt: { not: null, lte: limite } }],
+    },
+    select: { id: true, documento: true, status: true, receivedAt: true, expiresAt: true },
+  });
+  if (registros.length === 0) return 0;
+  const empresas = await representantesDasChaves(tenantId);
+  const setor = await setorDasAutorizacoes(tenantId);
+
+  let sent = 0;
+  for (const r of registros) {
+    const empresa = empresas.get(r.documento);
+    if (!empresa) continue;
+    const validar = r.status === "PENDING_VALIDATION";
+    const data = (validar ? prazoParaValidar(r.receivedAt!.toISOString().slice(0, 10)) : r.expiresAt!.toISOString().slice(0, 10));
+    const faixa = faixaDaAutorizacao(diasAteODia(hoje, data), validar ? FAIXAS_DA_VALIDACAO : FAIXAS_DA_VALIDADE);
+    if (faixa === null) continue;
+    // Caiu há muito tempo: ninguém avisou na época (o módulo estava desligado, ou
+    // o registro veio tarde). Avisar agora seria barulho sobre coisa velha.
+    if (faixa === "passou" && diasAteODia(data, hoje) > 7) continue;
+    const tipo = validar ? "AUTORIZACAO_VALIDAR" : "AUTORIZACAO_VENCENDO";
+    if (!(await reservarPorChave(tenantId, `${tipo}:${r.id}:${data}:${faixa}`, today))) continue;
+
+    await notifySector(setor, {
+      tenantId,
+      type: tipo,
+      message: validar ? textoDoAvisoDeValidacao(empresa.nome, data, hoje) : textoDoAvisoDeVencimento(empresa.nome, data, hoje),
+      entityType: "COMPANY",
+      entityId: empresa.id,
+    });
+    sent++;
+  }
+  return sent;
+}
+
 // ─── Gestão: processo ou card parado, prazo vencendo ─────────────────────────
 //
 // Veio do painel 41-gestao (29/09). A regra de "parado" e de "prazo" é a de
@@ -784,6 +847,7 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["orçamento", () => checkOrcamentoEstourado(tenantId, today)],
     ["certificados", () => checkCertificadosVencendo(tenantId, today)],
     ["arquivos", () => checkArquivosVencendo(tenantId, today)],
+    ["autorizações", () => checkAutorizacoes(tenantId, today)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],
   ];
 
