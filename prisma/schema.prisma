@@ -626,6 +626,7 @@ model Tenant {
   driveTemplateFolders      DriveTemplateFolder[]
   accessAuthorizations      AccessAuthorization[]
   accessAuthorizationGrantee AccessAuthorizationGrantee?
+  serproCalls               SerproCall[]
   @@map("tenants")
 }
 
@@ -6456,6 +6457,43 @@ model AccessAuthorizationGrantee {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("access_authorization_grantees")
+}
+
+/// Cada chamada ao Integra Contador do Serpro, cobrada ou não.
+///
+/// Existe porque o Serpro cobra por chamada, pós-pago, por faixa de consumo do
+/// mês: o custo do mês e o teto são contados daqui. Cobrada = resposta 200, 202
+/// ou 403 nos caminhos Consultar, Emitir e Declarar (Apoiar e Monitorar são de
+/// graça). O preço não fica na linha: depende da faixa que o mês atingir.
+/// O corpo da resposta não é guardado — pode ter dado fiscal do cliente.
+model SerproCall {
+  id              String   @id @default(uuid())
+  tenantId        String
+  /// Apoiar, Consultar, Declarar, Emitir ou Monitorar.
+  caminho         String   @db.VarChar(12)
+  idSistema       String   @db.VarChar(40)
+  idServico       String   @db.VarChar(60)
+  /// CNPJ ou CPF do contribuinte, só dígitos.
+  contribuinte    String   @db.VarChar(14)
+  /// Nulo quando não houve resposta (rede, tempo esgotado do lado de cá).
+  httpStatus      Int?
+  cobrada         Boolean
+  /// CONSULTA, EMISSAO ou DECLARACAO; nulo nos caminhos gratuitos.
+  tipoDeCobranca  String?  @db.VarChar(12)
+  /// Códigos das mensagens do Serpro, separados por vírgula.
+  mensagens       String?  @db.VarChar(500)
+  duracaoMs       Int
+  /// Quem pediu, quando foi uma pessoa; nulo no agendador.
+  userId          String?
+  /// De onde veio: "autorizacoes", "teste"…
+  origem          String   @db.VarChar(40)
+  createdAt       DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, idServico, contribuinte])
+  @@map("serpro_calls")
 }
 
 // ── Triagem de currículos (R1) ─────────────────────────────────────────────

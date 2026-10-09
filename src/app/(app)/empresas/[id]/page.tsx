@@ -20,6 +20,7 @@ import { isModuleEnabled } from "@/lib/modules";
 import { acessoAsAutorizacoes, autorizacaoDaEmpresa } from "@/lib/autorizacoes/servidor";
 import { AutorizacaoNaFicha } from "@/components/autorizacoes/AutorizacaoNaFicha";
 import { hojeIso } from "@/lib/datas/calendario";
+import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { CompanyFiliaisSection } from "@/components/empresas/CompanyFiliaisSection";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import type { CompanyStatus } from "@/generated/prisma/enums";
@@ -85,6 +86,7 @@ export default async function EmpresaPage({
   // quem vê o setor do módulo (o Fiscal).
   const acessoAutorizacao = await acessoAsAutorizacoes(ctx);
   const autorizacao = acessoAutorizacao ? await autorizacaoDaEmpresa(ctx.tenantId, company.id) : null;
+  const serproPronto = !!acessoAutorizacao?.podeEditar && prontidaoDoSerpro(await configuracaoDoSerpro(ctx.tenantId)).pronta;
 
   const deleteAction = excluirEmpresa.bind(null, id);
 
@@ -174,7 +176,7 @@ export default async function EmpresaPage({
             <AiCompanySummary action={gerarResumoEmpresa.bind(null, company.id)} />
             <CompanyOverviewSection company={company} customFields={customFields} />
             {autorizacao && (
-              <AutorizacaoNaFicha dados={autorizacao} nome={nomeExibicao(company)} hoje={hojeIso()} podeEditar={acessoAutorizacao!.podeEditar} />
+              <AutorizacaoNaFicha dados={autorizacao} nome={nomeExibicao(company)} hoje={hojeIso()} podeEditar={acessoAutorizacao!.podeEditar} serpro={serproPronto} />
             )}
             <ServicesSection
               companyId={company.id}

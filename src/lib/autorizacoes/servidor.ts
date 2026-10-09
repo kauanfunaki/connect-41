@@ -113,6 +113,8 @@ export type AutorizacaoNaTela = {
   services: string | null;
   notes: string | null;
   conferidaPeloSerpro: boolean;
+  /** Dia da última conferência pelo Serpro. */
+  conferidaEm: string | null;
   atualizadaPor: string | null;
   atualizadaEm: string;
 };
@@ -127,6 +129,7 @@ type Registro = {
   services: string | null;
   notes: string | null;
   checkedVia: string;
+  checkedAt: Date | null;
   updatedByUserId: string | null;
   updatedAt: Date;
 };
@@ -142,6 +145,7 @@ function paraTela(r: Registro, nomes: Map<string, string>): AutorizacaoNaTela {
     services: r.services,
     notes: r.notes,
     conferidaPeloSerpro: r.checkedVia === "SERPRO",
+    conferidaEm: r.checkedVia === "SERPRO" && r.checkedAt ? r.checkedAt.toISOString().slice(0, 10) : null,
     atualizadaPor: r.updatedByUserId ? (nomes.get(r.updatedByUserId) ?? null) : null,
     atualizadaEm: r.updatedAt.toISOString(),
   };
@@ -211,13 +215,18 @@ async function empresasAtivasPorChave(tenantId: string): Promise<{ porChave: Map
   return { porChave, semDocumento };
 }
 
-/** Quem representa cada chave nos avisos: a matriz, com o nome da tela. Só empresas ativas. */
-export async function representantesDasChaves(tenantId: string): Promise<Map<string, { id: string; nome: string }>> {
+/**
+ * Quem representa cada chave: a matriz, com o nome da tela e o documento
+ * completo (o Serpro consulta pelo CNPJ inteiro, não pela raiz). Só ativas.
+ */
+export async function representantesDasChaves(tenantId: string): Promise<Map<string, { id: string; nome: string; documento: string }>> {
   const { porChave } = await empresasAtivasPorChave(tenantId);
-  return new Map([...porChave.entries()].map(([chave, grupo]) => {
-    const rep = representante(grupo);
-    return [chave, { id: rep.id, nome: nomeExibicao(rep) }];
-  }));
+  return new Map(
+    [...porChave.entries()].map(([chave, grupo]) => {
+      const rep = representante(grupo);
+      return [chave, { id: rep.id, nome: nomeExibicao(rep), documento: (rep.kind === "PESSOA_FISICA" ? rep.cpf : rep.cnpj) ?? "" }];
+    })
+  );
 }
 
 /**
