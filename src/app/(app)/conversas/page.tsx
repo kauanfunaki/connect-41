@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { BackButton } from "@/components/shared/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings, ClipboardCheck, PenLine, Timer } from "lucide-react";
+import { MessageCircle, Building2, User, Gauge, Settings, ClipboardCheck, PenLine, Timer, Mail, Phone, Headset } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { getAuthContext, isFullAccess, canViewSector } from "@/lib/auth/context";
@@ -18,7 +16,9 @@ import { Pagination } from "@/components/shared/Pagination";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
+import { AtendimentosAccordion, STATUS_BADGE } from "@/components/conversas/AtendimentosAccordion";
+import { AcaoRapida, BarraDoPainel, CaixaDeConversas, CartaoDeConversa, ColunaDaLista, LinhasDeInfo, PainelDeConversa, PainelVazio } from "@/components/conversas/caixa/Caixa";
+import { quandoCurto } from "@/lib/conversas/caixa";
 import { VincularContato } from "@/components/conversas/VincularContato";
 import { ConversasFilterBar } from "@/components/conversas/ConversasFilterBar";
 import { AgentCard } from "@/components/avaliacaoAtendimentos/AgentCard";
@@ -30,6 +30,8 @@ const PER_PAGE = 15; // contatos por página (cada um pode ter N atendimentos)
 type SearchParams = {
   search?: string; status?: string; canal?: string; atendente?: string;
   de?: string; ate?: string; page?: string; id?: string; view?: string;
+  /** O contato aberto no painel (id do vínculo do Chatwoot, ou "sem-contato"). */
+  contato?: string;
 };
 
 // Visão de auditoria: agrupada por contato, com os atendimentos (janelas de
@@ -114,7 +116,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
 type Ctx = Awaited<ReturnType<typeof getAuthContext>>;
 
 async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: SearchParams }) {
-  const { search, status, canal, atendente, de, ate, page, id } = params;
+  const { search, status, canal, atendente, de, ate, page, id, contato } = params;
   const prisma = getPrisma();
 
   // "Abrir conversa em Conversas" (vindo da Avaliação) manda ?id=X — busca
@@ -233,7 +235,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
 
   function buildUrl(extra: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, status, canal, atendente, de, ate, page, ...extra };
+    const merged = { search, status, canal, atendente, de, ate, page, contato, id, ...extra };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
     return `/conversas?${q.toString()}`;
   }
@@ -248,31 +250,171 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
     messageCount: c.messageCount,
   });
 
+  // ── A caixa de conversas (09/10/2026) ──────────────────────────────────────
+  // Cada contato é um cartão; o escolhido (`?contato=`) abre no painel com os
+  // atendimentos. "Abrir conversa em Conversas" (?id=) abre o contato daquele
+  // atendimento com ele expandido — mesmo fora da página ou dos filtros.
+  const agora = new Date();
+  const SEM_CONTATO = "sem-contato";
+  const nomeDoContato = (l: { person: { name: string } | null; company: { name: string } | null; chatwootName: string | null; chatwootEmail: string | null; chatwootPhoneE164: string | null }) =>
+    l.person?.name ?? l.company?.name ?? l.chatwootName ?? l.chatwootEmail ?? l.chatwootPhoneE164 ?? "Contato sem identificação";
+  const escolhido = contato ?? (focusedConversation ? (focusedConversation.contactLinkId ?? SEM_CONTATO) : null);
+
+  const contatoAberto =
+    escolhido && escolhido !== SEM_CONTATO
+      ? (links.find((l) => l.id === escolhido) ??
+        (await prisma.chatwootContactLink.findFirst({
+          where: { id: escolhido, tenantId: ctx.tenantId },
+          include: {
+            person: { select: { id: true, name: true } },
+            company: { select: { id: true, name: true } },
+            conversations: { where: scopedChatwootConversationWhere(ctx), orderBy: { lastActivityAt: "desc" } },
+          },
+        })))
+      : null;
+  const orfasAbertas =
+    escolhido === SEM_CONTATO
+      ? focusedConversation && !focusedConversation.contactLinkId && !orphanConversations.some((c) => c.id === focusedConversation.id)
+        ? [focusedConversation, ...orphanConversations]
+        : orphanConversations
+      : [];
+
+  // ↑↓ andam pelos cartões da página, com "sem contato" no fim.
+  const ordem = [...links.map((l) => l.id), ...(orphanConversations.length > 0 ? [SEM_CONTATO] : [])];
+  const posicao = escolhido ? ordem.indexOf(escolhido) : -1;
+  const hrefDoContato = (c: string | null) => (c ? buildUrl({ contato: c, id: undefined }) : null);
+
+  const cartoes = (
+    <>
+      {links.map((link) => {
+        const ultima = link.conversations[0];
+        const nome = nomeDoContato(link);
+        return (
+          <CartaoDeConversa
+            key={link.id}
+            href={buildUrl({ contato: link.id, id: undefined })}
+            nome={nome}
+            nomeDasIniciais={link.person?.name ?? link.company?.name ?? link.chatwootName ?? null}
+            selo={ultima ? { tom: STATUS_BADGE[ultima.status] ?? "neutro", texto: statusLabel(ultima.status) } : null}
+            quando={quandoCurto(ultima?.lastActivityAt ?? null, agora)}
+            contexto={[
+              ultima ? channelLabel(ultima.channel) : null,
+              ultima?.assigneeLabel ?? null,
+              `${link.conversations.length} atendimento${link.conversations.length !== 1 ? "s" : ""}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            previa={ultima?.lastMessagePreview ?? null}
+            selecionada={escolhido === link.id}
+          />
+        );
+      })}
+      {orphanConversations.length > 0 && (
+        <CartaoDeConversa
+          href={buildUrl({ contato: SEM_CONTATO, id: undefined })}
+          nome="Sem contato identificado"
+          nomeDasIniciais={null}
+          quando={quandoCurto(orphanConversations[0]?.lastActivityAt ?? null, agora)}
+          contexto={`${orphanConversations.length} atendimento${orphanConversations.length !== 1 ? "s" : ""} sem contato no Chatwoot`}
+          selecionada={escolhido === SEM_CONTATO}
+        />
+      )}
+    </>
+  );
+
+  const barra = (data: Date | null | undefined) => (
+    <BarraDoPainel
+      fecharHref={buildUrl({ contato: undefined, id: undefined })}
+      anteriorHref={posicao > 0 ? hrefDoContato(ordem[posicao - 1]!) : null}
+      proximaHref={posicao >= 0 && posicao < ordem.length - 1 ? hrefDoContato(ordem[posicao + 1]!) : null}
+      data={data ? `Último atendimento: ${formatInstantDate(data)}` : null}
+    />
+  );
+
+  let painel: React.ReactNode;
+  if (contatoAberto) {
+    const nome = nomeDoContato(contatoAberto);
+    const linkedLabel = contatoAberto.person?.name ?? contatoAberto.company?.name ?? null;
+    const linkedHref = contatoAberto.person ? `/pessoas/${contatoAberto.person.id}` : contatoAberto.company ? `/empresas/${contatoAberto.company.id}` : null;
+    const ultima = contatoAberto.conversations[0];
+    const canais = [...new Set(contatoAberto.conversations.map((c) => channelLabel(c.channel)))];
+    painel = (
+      <PainelDeConversa
+        barra={barra(ultima?.lastActivityAt)}
+        etiquetas={[
+          ...canais.map((c) => <span key={c}>{c}</span>),
+          linkedLabel ? <span key="v">Vinculado a {linkedLabel}</span> : <span key="v" className="text-fg-muted">Sem vínculo no Connect</span>,
+        ]}
+        titulo={nome}
+        acoes={
+          <>
+            {linkedHref && (
+              <AcaoRapida icone={contatoAberto.person ? <User /> : <Building2 />} href={linkedHref}>
+                Abrir {contatoAberto.person ? "pessoa" : "empresa"}
+              </AcaoRapida>
+            )}
+            <span className="pl-2">
+              <VincularContato contactLinkId={contatoAberto.id} linkedLabel={linkedLabel} canManage={canManageLinks} />
+            </span>
+          </>
+        }
+        infos={
+          <LinhasDeInfo
+            itens={[
+              { icone: <Mail />, rotulo: "E-mail", valor: contatoAberto.chatwootEmail ?? <span className="text-fg-muted">—</span>, copiar: contatoAberto.chatwootEmail },
+              {
+                icone: <Phone />,
+                rotulo: "Telefone",
+                valor: contatoAberto.chatwootPhoneE164 ? <span className="tabular-nums">{contatoAberto.chatwootPhoneE164}</span> : <span className="text-fg-muted">—</span>,
+                copiar: contatoAberto.chatwootPhoneE164,
+              },
+              { icone: <MessageCircle />, rotulo: "Atendimentos", valor: <span className="tabular-nums">{contatoAberto.conversations.length}</span> },
+              { icone: <Headset />, rotulo: "Último atendente", valor: ultima?.assigneeLabel ?? <span className="text-fg-muted">sem atendente</span> },
+            ]}
+          />
+        }
+      >
+        <div className="px-5 sm:px-6 py-4 border-t border-border-soft">
+          <h3 className="text-card-title font-semibold text-fg mb-2">Atendimentos</h3>
+          {contatoAberto.conversations.length === 0 ? (
+            <p className="text-ui text-fg-muted">Nenhum atendimento ao seu alcance.</p>
+          ) : (
+            <AtendimentosAccordion atendimentos={contatoAberto.conversations.map(toResumo)} defaultOpenId={id} />
+          )}
+        </div>
+      </PainelDeConversa>
+    );
+  } else if (escolhido === SEM_CONTATO && orfasAbertas.length > 0) {
+    painel = (
+      <PainelDeConversa
+        barra={barra(orfasAbertas[0]?.lastActivityAt)}
+        titulo="Sem contato identificado"
+        subtitulo="Atendimentos que chegaram do Chatwoot sem contato. Somente leitura."
+      >
+        <div className="px-5 sm:px-6 py-4 border-t border-border-soft">
+          <AtendimentosAccordion atendimentos={orfasAbertas.map(toResumo)} defaultOpenId={id} />
+        </div>
+      </PainelDeConversa>
+    );
+  } else {
+    painel = (
+      <PainelVazio
+        icone={<MessageCircle />}
+        titulo={id ? "Atendimento não encontrado" : "Escolha um contato"}
+        texto={
+          id
+            ? "O atendimento não existe mais ou está fora do seu escopo."
+            : "Os atendimentos de cada contato aparecem aqui, com as mensagens. Use ↑↓ no painel para passar de um contato para outro."
+        }
+      />
+    );
+  }
+
   const totalAtendimentos = links.reduce((sum, l) => sum + l.conversations.length, 0) + orphanConversations.length;
 
   return (
     <>
-      {id && (
-        <div className="bg-surface border border-brand/30 rounded-lg px-4 py-3 mb-4">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <p className="text-fs-2 font-medium text-brand">Atendimento aberto</p>
-            <BackButton href="/conversas" rotulo="Voltar à lista" />
-          </div>
-          {focusedConversation ? (
-            <AtendimentosAccordion atendimentos={[toResumo(focusedConversation)]} defaultOpenId={id} />
-          ) : (
-            <p className="text-ui text-fg-muted py-2">Atendimento não encontrado ou fora do seu escopo.</p>
-          )}
-        </div>
-      )}
-
-      <p className="text-fs-2 text-fg-muted mb-3">
-        {totalContacts} contato{totalContacts !== 1 ? "s" : ""}, {totalAtendimentos} atendimento{totalAtendimentos !== 1 ? "s" : ""} nesta página.
-      </p>
-
-      {/* Filtros: busca + botão "Filtros" (período, atendente, status e canal).
-          O canal era uma fileira de pílulas embaixo (até 30/09): filtro mora no
-          botão, não em pílula. */}
+      {/* Filtros: busca + botão "Filtros" (período, atendente, status e canal). */}
       <ConversasFilterBar
         search={search ?? ""}
         status={status ?? ""}
@@ -284,75 +426,38 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
         canais={channelLabels.length > 1 ? channelLabels : []}
       />
 
-      {links.length === 0 && orphanConversations.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={<MessageCircle />}
-            title="Nenhum atendimento encontrado"
-            description="Tente ajustar a busca ou os filtros, ou aguarde a próxima sincronização."
-          />
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {links.map((link) => {
-            const displayName =
-              link.person?.name ?? link.company?.name ?? link.chatwootName ?? link.chatwootEmail ?? link.chatwootPhoneE164 ?? "Contato sem identificação";
-            const linkedLabel = link.person?.name ?? link.company?.name ?? null;
-            const linkedHref = link.person ? `/pessoas/${link.person.id}` : link.company ? `/empresas/${link.company.id}` : null;
-            return (
-              <Card key={link.id} className="px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-8 h-8 rounded-full bg-brand-subtle text-brand flex items-center justify-center flex-shrink-0">
-                      {link.company && !link.person ? <Building2 size={15} /> : <User size={15} />}
-                    </span>
-                    <div className="min-w-0">
-                      {linkedHref ? (
-                        <Link href={linkedHref} className="text-ui font-medium text-fg hover:text-brand transition-colors truncate block">
-                          {displayName}
-                        </Link>
-                      ) : (
-                        <p className="text-ui font-medium text-fg truncate">{displayName}</p>
-                      )}
-                      <p className="text-micro text-fg-muted truncate">
-                        {[link.chatwootEmail, link.chatwootPhoneE164].filter(Boolean).join(" · ") || "Sem e-mail/telefone no Chatwoot"}
-                        {" · "}
-                        {link.conversations.length} atendimento{link.conversations.length !== 1 ? "s" : ""}
-                      </p>
-                    </div>
-                  </div>
-                  <VincularContato contactLinkId={link.id} linkedLabel={linkedLabel} canManage={canManageLinks} />
-                </div>
-                <AtendimentosAccordion atendimentos={link.conversations.map(toResumo)} defaultOpenId={id} />
-              </Card>
-            );
-          })}
-
-          {orphanConversations.length > 0 && (
-            <Card className="px-4 py-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="w-8 h-8 rounded-full bg-surface-hover text-fg-muted flex items-center justify-center flex-shrink-0">
-                  <HelpCircle size={15} />
-                </span>
-                <div>
-                  <p className="text-ui font-medium text-fg">Sem contato identificado</p>
-                  <p className="text-micro text-fg-muted">
-                    {orphanConversations.length} atendimento{orphanConversations.length !== 1 ? "s" : ""} sem contato no Chatwoot
-                  </p>
-                </div>
-              </div>
-              <AtendimentosAccordion atendimentos={orphanConversations.map(toResumo)} defaultOpenId={id} />
-            </Card>
-          )}
-        </div>
-      )}
-
-      <Pagination
-        page={pageNum}
-        totalPages={totalPages}
-        buildHref={(p) => buildUrl({ page: String(p) })}
-        total={totalContacts}
-        rotulo={totalContacts === 1 ? "contato" : "contatos"}
+      <CaixaDeConversas
+        aberta={!!(contatoAberto || (escolhido === SEM_CONTATO && orfasAbertas.length > 0))}
+        altura="lg:h-[calc(100dvh-20rem)]"
+        lista={
+          <ColunaDaLista
+            topo={
+              <p className="text-micro text-fg-muted mb-2">
+                {totalContacts} contato{totalContacts !== 1 ? "s" : ""} · {totalAtendimentos} atendimento{totalAtendimentos !== 1 ? "s" : ""} nesta página
+              </p>
+            }
+            rodape={
+              <Pagination
+                page={pageNum}
+                totalPages={totalPages}
+                buildHref={(p) => buildUrl({ page: String(p), contato: undefined, id: undefined })}
+                total={totalContacts}
+                rotulo={totalContacts === 1 ? "contato" : "contatos"}
+              />
+            }
+          >
+            {links.length === 0 && orphanConversations.length === 0 ? (
+              <EmptyState
+                icon={<MessageCircle />}
+                title="Nenhum atendimento encontrado"
+                description="Tente ajustar a busca ou os filtros, ou aguarde a próxima sincronização."
+              />
+            ) : (
+              cartoes
+            )}
+          </ColunaDaLista>
+        }
+        painel={painel}
       />
     </>
   );

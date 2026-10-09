@@ -383,17 +383,27 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         titulo: "Encontrar a conversa que precisa de você",
         passos: [
           "Confira no topo o estado do número: um aviso em amarelo ou vermelho indica problema na conexão.",
-          "Clique no cartão “Sem responsável” para ver as conversas que o assistente passou adiante e ninguém assumiu, ou em “Minhas” para ver as suas.",
-          "Clique na conversa para abri-la. Se o assistente passou para uma pessoa, o motivo aparece logo abaixo do nome do candidato.",
+          "Clique em “Sem responsável”, acima da lista, para ver as conversas que o assistente passou adiante e ninguém assumiu, ou em “Minhas” para ver as suas. O número ao lado é quantas há.",
+          "Use a busca da lista para achar pelo nome, pelo telefone ou pela vaga. O balão azul com número à direita do cartão são as mensagens sem resposta.",
+          "Clique no cartão para abrir a conversa no painel ao lado. Se o assistente passou para uma pessoa, o motivo aparece no topo do painel.",
+          "No painel, use as setas ↑ e ↓ (ou as do teclado) para passar para a conversa anterior ou a próxima, e o X (ou Esc) para fechar.",
         ],
       },
       {
         titulo: "Assumir, responder e devolver uma conversa",
         passos: [
-          "Clique em “Assumir” para ficar com a conversa.",
-          "Escreva no campo de resposta e clique em “Enviar”. Responder também assume a conversa, e o assistente para de responder nela.",
-          "Para deixar a conversa sem responsável, clique em “Soltar”.",
-          "Para o assistente voltar a atender, clique em “Devolver ao assistente”.",
+          "Clique em “Assumir”, abaixo do nome, para ficar com a conversa.",
+          "Na aba “Conversa”, escreva no campo de resposta e clique em “Enviar” (ou Ctrl+Enter). Responder também assume a conversa, e o assistente para de responder nela.",
+          "Para deixar a conversa sem responsável, clique no “…” do topo do painel e em “Soltar a conversa”.",
+          "Para o assistente voltar a atender, clique no “…” e em “Devolver ao assistente”.",
+        ],
+      },
+      {
+        titulo: "Transferir ou encerrar várias conversas de uma vez",
+        passos: [
+          "Clique em “Selecionar”, ao lado da busca da lista.",
+          "Marque as conversas, ou “Selecionar todas”, no fim da lista.",
+          "Escolha para quem transferir ou como encerrar e clique no botão ao lado. A que não puder, fica de fora com o motivo.",
         ],
       },
       {
@@ -407,10 +417,10 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Ligar a conversa a uma candidatura",
         passos: [
-          "Se a conversa ainda não está ligada, vá ao campo “Quem é esta pessoa?”.",
-          "Escolha a candidatura. Só aparecem as candidaturas em andamento.",
-          "Clique em “Ligar”. Só depois disso o assistente consulta o processo do candidato.",
-          "Se ligou à pessoa errada, clique em “desfazer”.",
+          "Se a conversa ainda não está ligada, abra a aba “Ligar à candidatura”, embaixo do painel.",
+          "Em “Quem é esta pessoa?”, escolha a candidatura. Só aparecem as candidaturas em andamento.",
+          "Clique em “Ligar”. Só depois disso o assistente consulta o processo do candidato, e a nota da triagem aparece nos dados do painel.",
+          "Se ligou à pessoa errada, clique no “…” do topo do painel e em “Desfazer o vínculo com a candidatura”.",
         ],
       },
     ],
