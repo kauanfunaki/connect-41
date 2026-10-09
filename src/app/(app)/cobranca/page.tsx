@@ -134,11 +134,28 @@ async function Fila({
   ]);
   const hojeKey = saoPauloParts(new Date()).dateKey;
 
+  // Trocar o cartão de situação conserva empresa, atraso e responsável.
+  function hrefDaSituacao(valor: string) {
+    const q = new URLSearchParams();
+    if (empresaId) q.set("empresa", empresaId);
+    if (faixa) q.set("faixa", faixa);
+    if (responsavelBruto) q.set("responsavel", responsavelBruto);
+    if (params.situacao !== valor) q.set("situacao", valor);
+    const busca = q.toString();
+    return busca ? `/cobranca?${busca}` : "/cobranca";
+  }
+
   return (
     <>
       <FaixaDeTotais
         itens={[
-          { rotulo: situacao === "PERDA" ? "Títulos perdidos" : "Títulos vencidos", valor: String(fila.totais.titulos), icone: <FileWarning /> },
+          {
+            rotulo: situacao === "PERDA" ? "Títulos perdidos" : "Títulos vencidos",
+            valor: String(fila.totais.titulos),
+            icone: <FileWarning />,
+            href: hrefDaSituacao(situacao === "PERDA" ? "PERDA" : "VENCIDOS"),
+            ativo: params.situacao === "VENCIDOS" || situacao === "PERDA",
+          },
           {
             rotulo: "Valor",
             valor: moeda(fila.totais.centavos),
@@ -150,7 +167,8 @@ async function Fila({
             valor: String(fila.totais.semContato),
             tom: fila.totais.semContato > 0 ? "text-danger" : "",
             icone: <PhoneOff />,
-            href: `/cobranca?situacao=VENCIDO_SEM_CONTATO${empresaId ? `&empresa=${empresaId}` : ""}`,
+            href: hrefDaSituacao("VENCIDO_SEM_CONTATO"),
+            ativo: situacao === "VENCIDO_SEM_CONTATO",
           },
           {
             rotulo: "Sacado sem e-mail",
@@ -202,7 +220,7 @@ async function Fila({
                 chave: "situacao",
                 rotulo: "Situação",
                 vazioLabel: "Todas as situações",
-                opcoes: SITUACOES.map((s) => ({ value: s, label: ROTULO_DA_SITUACAO[s] })),
+                opcoes: [{ value: "VENCIDOS", label: "Títulos vencidos" }, ...SITUACOES.map((s) => ({ value: s, label: ROTULO_DA_SITUACAO[s] }))],
               },
               {
                 chave: "responsavel",

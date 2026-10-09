@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -18,6 +18,13 @@ import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDa
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Aviso } from "@/components/ui/Aviso";
 import { formatarCompetencia, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
+
+const RECORTES_A_PAGAR = [
+  { chave: "avencer", rotulo: "A vencer" },
+  { chave: "vencidas", rotulo: "Vencido" },
+  { chave: "hoje", rotulo: "Vence hoje" },
+  { chave: "todas", rotulo: "Todas" },
+] as const;
 
 const RECORTES = [
   { chave: "abertas", rotulo: "Em aberto" },
@@ -52,11 +59,21 @@ export async function ContasPage({
   if (!(await isModuleEnabled(ctx.tenantId, modulo))) notFound();
 
   const params = await searchParams;
+  const aPagar = kind === "PAGAR";
+  const recortes = aPagar ? RECORTES_A_PAGAR : RECORTES;
+  // Favoritos antigos deixam de aplicar o filtro que foi removido.
+  if (aPagar && params.recorte === "abertas") {
+    const q = new URLSearchParams();
+    for (const [chave, valor] of Object.entries(params)) {
+      if (valor && chave !== "recorte") q.set(chave, valor);
+    }
+    redirect(q.size ? `/pagar?${q}` : "/pagar");
+  }
   // A análise lê sempre o recorte "em aberto": faixa de atraso de conta paga
   // não existe, e a soma das faixas precisa bater com o total do topo.
   const aba = params.aba === "analise" ? "analise" : "contas";
   const recorte =
-    aba === "analise" ? "abertas" : RECORTES.find((r) => r.chave === params.recorte)?.chave ?? "abertas";
+    aba === "analise" ? "abertas" : recortes.find((r) => r.chave === params.recorte)?.chave ?? "todas";
 
   const prisma = getPrisma();
   const agora = new Date();
@@ -92,7 +109,6 @@ export async function ContasPage({
     prisma.financeEntry.groupBy({ by: ["companyId"], where: { tenantId: ctx.tenantId, kind } }),
   ]);
 
-  const aPagar = kind === "PAGAR";
   const base = aPagar ? "/pagar" : "/receber";
   // Selo de cobrança só em a receber, e só na aba de contas — a análise não lista título.
   const cobranca =
@@ -126,7 +142,7 @@ export async function ContasPage({
     const q = new URLSearchParams();
     if (params.competencia) q.set("competencia", params.competencia);
     if (params.empresa) q.set("empresa", params.empresa);
-    if (recorte !== "abertas") q.set("recorte", recorte);
+    if (recorte !== "todas" && (!aPagar || recorte !== "abertas")) q.set("recorte", recorte);
     if (aba === "analise") q.set("aba", "analise");
     if (valor) q.set(chave, valor);
     else q.delete(chave);
@@ -142,8 +158,8 @@ export async function ContasPage({
           {
             chave: "recorte",
             rotulo: "Situação",
-            vazioLabel: "Em aberto",
-            opcoes: RECORTES.filter((r) => r.chave !== "abertas").map((r) => ({ value: r.chave, label: r.rotulo })),
+            vazioLabel: "Todas",
+            opcoes: recortes.filter((r) => r.chave !== "todas").map((r) => ({ value: r.chave, label: r.rotulo })),
           },
         ]
       : []),
@@ -174,37 +190,39 @@ export async function ContasPage({
         }
       />
 
-      {/* Os números do topo, e o primeiro é o que a pessoa procura: quanto
-          falta. Vencido em destaque porque é o que já custa. Os dois primeiros
-          são atalho para o recorte que eles contam.
-          "Pago"/"Recebido" só no recorte que traz as liquidadas (07/10): os
-          totais são do recorte, então em "Em aberto" (o padrão) e "Vencidas"
-          o cartão saía sempre R$ 0,00 — e verde. Cor neutra, como no portal:
-          é histórico, não pede ação. */}
+      {/* Os quatro cartões permanecem na mesma grade em todos os recortes.
+          Pago/Recebido mostra zero quando as contas liquidadas ficam fora do filtro. */}
       <FaixaDeTotais
         itens={[
           {
-            rotulo: "Em aberto",
-            valor: formatarReaisDeCentavos(resultado.totais.emAberto),
+            rotulo: aPagar ? "A vencer" : "Em aberto",
+            valor: formatarReaisDeCentavos(aPagar ? resultado.totais.aVencer : resultado.totais.emAberto),
             icone: <Wallet />,
-            href: aba === "contas" ? comParam("recorte", undefined) : undefined,
+            href: aba === "contas" ? comParam("recorte", params.recorte === (aPagar ? "avencer" : "abertas") ? undefined : (aPagar ? "avencer" : "abertas")) : undefined,
+            ativo: aba === "contas" && params.recorte === (aPagar ? "avencer" : "abertas"),
           },
           {
             rotulo: "Vencido",
             valor: formatarReaisDeCentavos(resultado.totais.vencido),
             tom: resultado.totais.vencido > 0 ? "text-danger" : undefined,
             icone: <AlertTriangle />,
-            href: aba === "contas" ? comParam("recorte", "vencidas") : undefined,
+            href: aba === "contas" ? comParam("recorte", params.recorte === "vencidas" ? undefined : "vencidas") : undefined,
+            ativo: aba === "contas" && params.recorte === "vencidas",
           },
           {
             rotulo: "Vence hoje",
             valor: formatarReaisDeCentavos(resultado.totais.venceHoje),
             tom: resultado.totais.venceHoje > 0 ? "text-warning-fg" : undefined,
             icone: <CalendarClock />,
+            href: aPagar && aba === "contas" ? comParam("recorte", params.recorte === "hoje" ? undefined : "hoje") : undefined,
+            ativo: aPagar ? aba === "contas" && params.recorte === "hoje" : undefined,
           },
-          ...(recorte === "todas"
-            ? [{ rotulo: aPagar ? "Pago" : "Recebido", valor: formatarReaisDeCentavos(resultado.totais.pago), tom: "text-fg-muted", icone: <CheckCircle2 /> }]
-            : []),
+          {
+            rotulo: aPagar ? "Pago" : "Recebido",
+            valor: formatarReaisDeCentavos(resultado.totais.pago),
+            tom: "text-fg-muted",
+            icone: <CheckCircle2 />,
+          },
         ]}
       />
 

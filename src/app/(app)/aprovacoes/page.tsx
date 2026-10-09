@@ -207,7 +207,8 @@ async function Fila({
             valor: String(aguardando?._count._all ?? 0),
             tom: aguardando ? "text-warning-fg" : "",
             icone: <Hourglass />,
-            href: hrefSituacao("aguardando"),
+            href: hrefSituacao(situacao.chave === "aguardando" ? "todas" : "aguardando"),
+            ativo: situacao.chave === "aguardando",
           },
           { rotulo: "Valor aguardando", valor: moeda(aguardando?._sum.amount ? centavosDeDecimal(aguardando._sum.amount) : 0), icone: <Wallet /> },
           {
@@ -215,7 +216,8 @@ async function Fila({
             valor: String(reprovadas?._count._all ?? 0),
             tom: reprovadas ? "text-danger" : "",
             icone: <XCircle />,
-            href: hrefSituacao("reprovadas"),
+            href: hrefSituacao(situacao.chave === "reprovadas" ? "todas" : "reprovadas"),
+            ativo: situacao.chave === "reprovadas",
           },
           {
             rotulo: "Valor reprovado",

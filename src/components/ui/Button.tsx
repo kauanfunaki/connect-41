@@ -132,12 +132,12 @@ const SIZE_CLASS: Record<Size, string> = {
 // 30/09) — o retorno tátil que faltava num app de muito clique. Desabilitado
 // não afunda.
 const BASE =
-  "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold transition-[color,background-color,border-color,box-shadow,transform] duration-150 active:translate-y-px disabled:active:translate-y-0 disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed";
+  "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md font-semibold transition-[color,background-color,border-color,box-shadow,transform] duration-150 active:translate-y-px disabled:active:translate-y-0 disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed";
 
 // Sem `justify-center`, sem `font-semibold` e sem raio de botão: o alvo é uma
 // palavra no meio de uma frase, não um controle com área própria.
 const BASE_SEM_CAIXA =
-  "inline-flex items-center gap-1 transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed";
+  "inline-flex cursor-pointer items-center gap-1 transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed";
 
 export function Button(props: Props) {
   const { variant = "primary", size = "md", className = "", children } = props;

@@ -91,14 +91,14 @@ export default async function SolicitacoesPage({
               valor: formatarNumero(contadores.novas, 0),
               tom: contadores.novas > 0 ? "text-brand" : "",
               icone: <Inbox />,
-              href: href({ recorte: "novas", atrasadas: undefined }),
+              href: href({ recorte: recorte === "novas" && !atrasadas ? undefined : "novas", atrasadas: undefined }),
               ativo: recorte === "novas" && !atrasadas,
             },
             {
               rotulo: "Minhas",
               valor: formatarNumero(contadores.minhas, 0),
               icone: <Hand />,
-              href: href({ recorte: "minhas", atrasadas: undefined }),
+              href: href({ recorte: recorte === "minhas" && !atrasadas ? undefined : "minhas", atrasadas: undefined }),
               ativo: recorte === "minhas" && !atrasadas,
             },
             {
@@ -106,7 +106,7 @@ export default async function SolicitacoesPage({
               valor: formatarNumero(contadores.atrasadas, 0),
               tom: contadores.atrasadas > 0 ? "text-danger" : "",
               icone: <AlertTriangle />,
-              href: href({ recorte: undefined, atrasadas: "1" }),
+              href: href({ recorte: undefined, atrasadas: recorte === "abertas" && atrasadas ? undefined : "1" }),
               ativo: recorte === "abertas" && atrasadas,
             },
             {
@@ -114,7 +114,7 @@ export default async function SolicitacoesPage({
               valor: formatarNumero(contadores.aguardando, 0),
               tom: "text-fg-muted",
               icone: <Hourglass />,
-              href: href({ recorte: "aguardando", atrasadas: undefined }),
+              href: href({ recorte: recorte === "aguardando" && !atrasadas ? undefined : "aguardando", atrasadas: undefined }),
               ativo: recorte === "aguardando" && !atrasadas,
             },
           ]}

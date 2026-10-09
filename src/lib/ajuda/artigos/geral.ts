@@ -131,7 +131,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como inativar ou reativar uma empresa",
         passos: [
-          "Na linha da empresa, clique nos três pontinhos ao lado de “Editar” e escolha “Inativar”.",
+          "Na linha da empresa, clique em “Inativar” ao lado de “Editar”.",
           "Confirme na janela que abrir.",
           "Para trazer de volta, clique em “Filtros”, escolha “Inativo” e, no mesmo menu da linha, clique em “Reativar”.",
           "Para mudar várias de uma vez, marque as caixas à esquerda e use “Inativar”, ou escolha o novo status e clique em “Alterar status”.",
@@ -184,7 +184,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como inativar ou reativar uma pessoa",
         passos: [
-          "Na linha da pessoa, clique nos três pontinhos ao lado de “Editar” e escolha “Inativar”.",
+          "Na linha da pessoa, clique em “Inativar” ao lado de “Editar”.",
           "Para inativar várias de uma vez, marque as caixas à esquerda e clique em “Inativar”.",
           "Para reativar, filtre por “Inativos” e escolha “Reativar” no mesmo menu da linha.",
         ],

@@ -58,7 +58,7 @@ export function classeDoIconButton({
   variant = "ghost",
   active = false,
 }: { size?: Size; variant?: Variant; active?: boolean } = {}): string {
-  return `inline-flex items-center justify-center flex-shrink-0 rounded-md transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant](active)}`;
+  return `inline-flex cursor-pointer items-center justify-center flex-shrink-0 rounded-md transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant](active)}`;
 }
 
 export function IconButton(props: ComoBotao | ComoLink) {

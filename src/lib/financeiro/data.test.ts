@@ -65,6 +65,16 @@ describe("whereDoRecorte", () => {
     expect(whereDoRecorte("vencidas", "2026-10-08")).toEqual({ ...abertas, dueDate: { lt: HOJE } });
   });
 
+  it("a vencer começa à meia-noite de amanhã em Brasília, sem pagas/canceladas", () => {
+    expect(whereDoRecorte("avencer", "2026-10-08")).toEqual({ ...abertas, dueDate: { gte: new Date("2026-10-09T00:00:00-03:00") } });
+  });
+  it("vence hoje inclui o começo de hoje e exclui o de amanhã", () => {
+    expect(whereDoRecorte("hoje", "2026-10-08")).toEqual({ ...abertas, dueDate: { gte: HOJE, lt: new Date("2026-10-09T00:00:00-03:00") } });
+  });
+  it("a janela de hoje atravessa a virada do mês corretamente", () => {
+    expect(whereDoRecorte("hoje", "2026-10-31")).toEqual({ ...abertas, dueDate: { gte: new Date("2026-10-31T00:00:00-03:00"), lt: new Date("2026-11-01T00:00:00-03:00") } });
+  });
+
   it("todas: sem cláusula", () => {
     expect(whereDoRecorte("todas", "2026-10-08")).toEqual({});
   });
