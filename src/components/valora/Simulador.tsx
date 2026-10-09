@@ -25,6 +25,23 @@ import {
 } from "@/lib/valora/motor";
 import { brl, horas, num } from "@/lib/valora/formato";
 
+/** A bolinha do bloco de cada setor, na cor do setor no Connect. */
+const COR_DO_SETOR: Record<string, string> = {
+  FIS: "var(--c41-sector-fiscal)",
+  CTB: "var(--c41-sector-contabil)",
+  DP: "var(--c41-sector-dprh)",
+  SOC: "var(--c41-sector-societario)",
+};
+
+/**
+ * O catálogo é gerado da planilha (`modelo.ts`, "não editar à mão") e tem
+ * rótulo que veio em minúscula ("recalculos"); a tela mostra com a primeira
+ * maiúscula. O conserto de verdade é na planilha.
+ */
+function comMaiuscula(texto: string): string {
+  return texto.charAt(0).toLocaleUpperCase("pt-BR") + texto.slice(1);
+}
+
 /**
  * Preenchido com o cliente, na reunião: cada pergunta alimenta uma atividade do
  * catálogo, e o preço muda na hora. O cálculo roda aqui para responder rápido e é
@@ -53,6 +70,11 @@ export function Simulador({
 
   const volumes = catalogo.campos.filter((c) => c.tipo === "volume");
   const marcadores = catalogo.campos.filter((c) => c.tipo === "marcador");
+  // Só os setores marcados, na ordem do catálogo, e só os que têm situação.
+  const setoresComSituacoes = catalogo.setores
+    .filter((s) => perfil.setores.includes(s.codigo))
+    .map((setor) => ({ setor, situacoes: catalogo.complexidades.filter((c) => c.setor === setor.codigo) }))
+    .filter((g) => g.situacoes.length > 0);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_22rem] items-start">
@@ -139,34 +161,58 @@ export function Simulador({
         <Card className="p-4">
           <h2 className="text-card-title font-semibold text-fg mb-1">Situações que dão mais trabalho</h2>
           <p className="text-fs-2 text-fg-muted mb-4">O percentual é o que cada setor disse que a situação acrescenta ao tempo dele.</p>
-          <div className="grid gap-5 md:grid-cols-2">
-            {catalogo.setores.map((s) => {
-              const doSetor = catalogo.complexidades.filter((c) => c.setor === s.codigo);
-              if (doSetor.length === 0) return null;
-              // Um grupo por setor, com o título no desenho de rótulo de campo;
-              // as caixas uma embaixo da outra (a `Checkbox` com rótulo é
-              // inline-flex, e sem `flex-col` duas curtas dividiam a linha).
-              return (
-                <fieldset key={s.codigo} className="min-w-0">
-                  <legend className="text-label font-medium text-fg mb-1.5">{s.nome}</legend>
-                  <div className="flex flex-col items-start gap-2">
-                    {doSetor.map((c) => (
-                      <Checkbox
-                        key={c.id}
-                        label={
-                          <>
-                            {c.nome} <span className="text-fg-muted tabular-nums">+{c.pct}%</span>
-                          </>
-                        }
-                        checked={perfil.complexidades.includes(c.id)}
-                        onChange={(e) => muda({ complexidades: alterna(perfil.complexidades, c.id, e.target.checked) })}
-                      />
-                    ))}
-                  </div>
-                </fieldset>
-              );
-            })}
-          </div>
+          {/* Um bloco recolhível por setor MARCADO, fechado de início, com o
+              resumo na linha (escolha D do Kauan na página "Valora sem
+              poluição", 08/10/2026). Eram 34 caixas sempre à mostra — inclusive
+              as dos setores que o cliente nem contrata, que o cálculo já
+              ignorava (`calculo.ts` só soma as do setor da proposta). */}
+          {setoresComSituacoes.length === 0 ? (
+            <p className="text-ui text-fg-muted">Marque um setor no cartão Cliente para ver as situações dele.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {setoresComSituacoes.map(({ setor: s, situacoes }) => {
+                const marcadas = situacoes.filter((c) => perfil.complexidades.includes(c.id));
+                const soma = marcadas.reduce((t, c) => t + c.pct, 0);
+                return (
+                  <Accordion
+                    key={s.codigo}
+                    className="rounded-lg border border-border"
+                    classeDoCabecalho="w-full px-3 py-2.5 text-ui"
+                    classeDoConteudo="px-3 pb-3"
+                    titulo={
+                      <span className="flex w-full min-w-0 items-center gap-2">
+                        <span
+                          aria-hidden
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ background: COR_DO_SETOR[s.codigo] ?? "var(--c41-fg-muted)" }}
+                        />
+                        <span className="font-semibold text-fg">{s.nome}</span>
+                        <span className="ml-auto text-fg-muted tabular-nums">
+                          {marcadas.length} de {situacoes.length} {situacoes.length === 1 ? "marcada" : "marcadas"}
+                          {soma > 0 && <> · +{num(soma)}%</>}
+                        </span>
+                      </span>
+                    }
+                  >
+                    <div className="flex flex-col items-start gap-2 pt-1">
+                      {situacoes.map((c) => (
+                        <Checkbox
+                          key={c.id}
+                          label={
+                            <>
+                              {comMaiuscula(c.nome)} <span className="text-fg-muted tabular-nums">+{c.pct}%</span>
+                            </>
+                          }
+                          checked={perfil.complexidades.includes(c.id)}
+                          onChange={(e) => muda({ complexidades: alterna(perfil.complexidades, c.id, e.target.checked) })}
+                        />
+                      ))}
+                    </div>
+                  </Accordion>
+                );
+              })}
+            </div>
+          )}
         </Card>
 
         <Card className="p-4">
