@@ -33,6 +33,8 @@ export type ArquivoNaTela = {
   /** Quantas vezes alguém do cliente abriu ou baixou, e quando foi a última. */
   acessosDoCliente: number;
   ultimoAcessoDoCliente: string | null;
+  /** Vencimento do documento, "AAAA-MM-DD", quando tem. */
+  venceEm: string | null;
 };
 
 /** Uma pasta para onde dá para mover algo, com o caminho para a pessoa reconhecer. */
@@ -65,10 +67,15 @@ export type NavegadorNaTela = {
   setores: SetorNaTela[];
   destinos: DestinoNaTela[];
   uso: { arquivos: number; bytes: number };
+  /** Hoje em Brasília, "AAAA-MM-DD" — para o selo do vencimento sair igual no servidor e no navegador. */
+  hoje: string;
 };
 
 /** Resultado de uma busca por nome dentro de uma empresa (ou das pastas internas). */
 export type ResultadoDaBusca = ArquivoNaTela & { pastaId: string; pastaRotulo: string };
+
+/** O nome do campo "Guardar também em Arquivos" nos formulários dos módulos (lido por src/lib/drive/guardarTambem.ts). */
+export const CAMPO_DA_PASTA = "guardarEmPasta";
 
 /** O endereço de uma pasta, na tela da equipe. `base` é a tela onde o navegador está montado. */
 export function enderecoDaPasta(base: string, pastaId: string | null, extra?: Record<string, string>): string {

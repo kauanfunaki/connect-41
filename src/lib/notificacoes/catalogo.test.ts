@@ -27,6 +27,8 @@ const TIPOS_INDIRETOS = [
   "FINANCE_CONTAS_DIA",
   "GESTAO_PARADO",
   "GESTAO_PRAZO",
+  "ARQUIVO_DO_CLIENTE",
+  "DRIVE_FILE_EXPIRING",
 ];
 
 function arquivos(dir: string, out: string[] = []): string[] {

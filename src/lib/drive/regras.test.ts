@@ -4,6 +4,9 @@ import {
   caminhoDoCliente,
   clienteVeCaminho,
   CHAVE_ENVIADOS,
+  faixaDoVencimento,
+  lerVencimento,
+  textoDoVencimento,
   mapaDePastas,
   moverCriaCiclo,
   ordenarPastas,
@@ -11,6 +14,7 @@ import {
   podeRestringirAoSetor,
   podeVerCaminho,
   raizesDoCliente,
+  situacaoDoVencimento,
   validarNomeDaPasta,
   validarNomeDoArquivo,
   type PastaDoDrive,
@@ -196,5 +200,50 @@ describe("ordenarPastas", () => {
       "Pasta 10",
       "zeta",
     ]);
+  });
+});
+
+describe("vencimento", () => {
+  it("lê a data do campo, e vazio tira o vencimento", () => {
+    expect(lerVencimento("2026-11-30")).toBe("2026-11-30");
+    expect(lerVencimento("  ")).toBeNull();
+    expect(lerVencimento(null)).toBeNull();
+  });
+
+  it("recusa o que não é data de verdade", () => {
+    expect(lerVencimento("30/11/2026")).toBeUndefined();
+    expect(lerVencimento("2026-02-30")).toBeUndefined();
+    expect(lerVencimento("2026-13-01")).toBeUndefined();
+  });
+
+  it("vencido, vence logo (até 30 dias) ou em dia", () => {
+    expect(situacaoDoVencimento(null, "2026-10-09")).toBeNull();
+    expect(situacaoDoVencimento("2026-10-08", "2026-10-09")).toBe("vencido");
+    expect(situacaoDoVencimento("2026-10-09", "2026-10-09")).toBe("vence-logo");
+    expect(situacaoDoVencimento("2026-11-08", "2026-10-09")).toBe("vence-logo");
+    expect(situacaoDoVencimento("2026-11-09", "2026-10-09")).toBe("em-dia");
+  });
+
+  it("atravessa a virada do ano sem fuso no meio", () => {
+    expect(situacaoDoVencimento("2027-01-10", "2026-12-20")).toBe("vence-logo");
+  });
+});
+
+describe("alerta de vencimento", () => {
+  it("faixas de 30, 7 e 0 dias, e vencido depois", () => {
+    expect(faixaDoVencimento("2026-12-31", "2026-10-09")).toBeNull();
+    expect(faixaDoVencimento("2026-11-08", "2026-10-09")).toBe(30);
+    expect(faixaDoVencimento("2026-10-19", "2026-10-09")).toBe(30);
+    expect(faixaDoVencimento("2026-10-16", "2026-10-09")).toBe(7);
+    expect(faixaDoVencimento("2026-10-09", "2026-10-09")).toBe(0);
+    expect(faixaDoVencimento("2026-10-08", "2026-10-09")).toBe("vencido");
+  });
+
+  it("o texto diz quando vence, com a data no formato daqui", () => {
+    expect(textoDoVencimento({ arquivo: "Alvará.pdf", onde: "Padaria Pão Bom", venceEm: "2026-10-16", hoje: "2026-10-09" })).toBe(
+      "“Alvará.pdf” (Padaria Pão Bom) vence em 7 dia(s), 16/10/2026."
+    );
+    expect(textoDoVencimento({ arquivo: "a.pdf", onde: "X", venceEm: "2026-10-09", hoje: "2026-10-09" })).toContain("vence hoje");
+    expect(textoDoVencimento({ arquivo: "a.pdf", onde: "X", venceEm: "2026-10-01", hoje: "2026-10-09" })).toContain("venceu em 01/10/2026");
   });
 });

@@ -6603,6 +6603,11 @@ model DriveFile {
   uploadedByUserId       String?
   /// Preenchido quando o cliente mandou pelo portal.
   uploadedByPortalUserId String?
+  /// Vencimento do documento (contrato, procuração, certidão, alvará) —
+  /// meia-noite UTC, como toda data-calendário. Alimenta o alerta
+  /// DRIVE_FILE_EXPIRING (src/lib/alerts.ts). Veio com a aba Documentos da
+  /// empresa, que se juntou aos Arquivos em 09/10/2026.
+  expiresAt   DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -6619,6 +6624,7 @@ model DriveFile {
   // A limpeza da lixeira (src/lib/drive/lixeira.ts) varre todos os escritórios.
   @@index([deletedAt])
   @@index([tenantId, uploadedByPortalUserId, createdAt])
+  @@index([tenantId, expiresAt])
   @@map("drive_files")
 }
 

@@ -25,6 +25,7 @@ export function DocumentosDoProcesso({
   acao,
   ladoDeQuemVe,
   dica,
+  extras,
 }: {
   processId: string;
   documentos: DocumentoDoProcesso[];
@@ -32,6 +33,8 @@ export function DocumentosDoProcesso({
   acao: (formData: FormData) => Promise<RespostaDaAcao>;
   ladoDeQuemVe: "EQUIPE" | "CLIENTE";
   dica?: string;
+  /** Campos a mais no envio — na equipe, o "Guardar também em Arquivos". */
+  extras?: React.ReactNode;
 }) {
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -70,6 +73,7 @@ export function DocumentosDoProcesso({
             <Input id={`doc-desc-${processId}`} name="descricao" maxLength={200} placeholder="Ex.: Contrato social registrado" />
           </CampoForm>
           <CampoDeAnexos idBase={`doc-${processId}`} />
+          {extras}
           {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
           {erro && (
             <Aviso>

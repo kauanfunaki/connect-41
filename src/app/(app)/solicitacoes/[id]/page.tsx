@@ -17,6 +17,8 @@ import { carregarSolicitacao } from "@/lib/solicitacoes/consultas";
 import { podeAgirNaSolicitacao, podeVerSolicitacao } from "@/lib/solicitacoes/acesso";
 import { emAberto } from "@/lib/solicitacoes/regras";
 import { responderSolicitacaoEquipe } from "../actions";
+import { CampoGuardarNosArquivos } from "@/components/arquivos/CampoGuardarNosArquivos";
+import { destinosDaEmpresa } from "@/lib/drive/servidor";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +32,11 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
   // Setor alheio responde "não encontrada", igual a uma que não existe.
   if (!s || !podeVerSolicitacao(ctx, { sectorCode: s.setor, assigneeId: s.assigneeId })) notFound();
   const podeAgir = podeAgirNaSolicitacao(ctx, { sectorCode: s.setor, assigneeId: s.assigneeId });
-  const [ativos, { labels }] = await Promise.all([getActiveSectors(ctx.tenantId), getSectorMaps(ctx.tenantId)]);
+  const [ativos, { labels }, destinos] = await Promise.all([
+    getActiveSectors(ctx.tenantId),
+    getSectorMaps(ctx.tenantId),
+    podeAgir ? destinosDaEmpresa(ctx, s.empresaId) : Promise.resolve(null),
+  ]);
   const aberta = emAberto(s.status);
 
   return (
@@ -125,7 +131,12 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
                 ? "O cliente recebe um e-mail avisando que há resposta — o texto fica só no portal."
                 : "Solicitação encerrada: reabra para responder ao cliente. A nota interna continua valendo."
             }
-            extras={<CamposDaRespostaDaEquipe id={s.id} />}
+            extras={
+              <>
+                <CamposDaRespostaDaEquipe id={s.id} />
+                <CampoGuardarNosArquivos companyId={s.empresaId} destinos={destinos} />
+              </>
+            }
           />
         </Card>
       )}

@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Switch } from "@/components/ui/Switch";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { CampoData } from "@/components/ui/CampoData";
 import type { DestinoNaTela, SetorNaTela } from "@/lib/drive/tela";
 
 type Fechar = { open: boolean; onClose: () => void };
@@ -77,6 +78,41 @@ export function DialogoDeNome({
         )}
         {erro && <p className="text-fs-3 text-danger" role="alert">{erro}</p>}
         <Rodape onClose={onClose} pendente={pendente} rotulo={rotulo} desabilitado={!nome.trim()} />
+      </form>
+    </Modal>
+  );
+}
+
+/** O vencimento de um arquivo (contrato, procuração, certidão). Vazio tira o vencimento. */
+export function DialogoDeVencimento({
+  open,
+  onClose,
+  arquivoNome,
+  atual,
+  erro,
+  pendente,
+  onSalvar,
+}: Fechar & { arquivoNome: string; atual: string | null; erro: string | null; pendente: boolean; onSalvar: (data: string | null) => void }) {
+  const [data, setData] = useState(atual ?? "");
+  return (
+    <Modal open={open} onClose={onClose} title="Vencimento">
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSalvar(data || null);
+        }}
+      >
+        <p className="text-fs-3 text-fg-secondary truncate">{arquivoNome}</p>
+        <CampoForm
+          label="Vence em"
+          htmlFor="drive-vencimento"
+          helper="Quem cuida da empresa é avisado 30 dias antes e no dia. Deixe em branco para tirar o vencimento."
+        >
+          <CampoData id="drive-vencimento" value={data} onChange={setData} />
+        </CampoForm>
+        {erro && <p className="text-fs-3 text-danger" role="alert">{erro}</p>}
+        <Rodape onClose={onClose} pendente={pendente} rotulo="Salvar" />
       </form>
     </Modal>
   );
@@ -171,6 +207,45 @@ export function DialogoDeMover({
         )}
         {erro && <p className="text-fs-3 text-danger" role="alert">{erro}</p>}
         <Rodape onClose={onClose} pendente={pendente} rotulo="Mover" desabilitado={oQue === "arquivo" && !destino} />
+      </form>
+    </Modal>
+  );
+}
+
+/** "Guardar numa pasta", no Do Connect: escolhe a pasta da empresa onde vai a cópia. */
+export function DialogoDeGuardar({
+  open,
+  onClose,
+  arquivoNome,
+  destinos,
+  erro,
+  pendente,
+  onSalvar,
+}: Fechar & { arquivoNome: string; destinos: DestinoNaTela[]; erro: string | null; pendente: boolean; onSalvar: (pastaId: string) => void }) {
+  const [destino, setDestino] = useState(destinos[0]?.id ?? "");
+  return (
+    <Modal open={open} onClose={onClose} title="Guardar numa pasta" maxWidth="max-w-lg">
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (destino) onSalvar(destino);
+        }}
+      >
+        <p className="text-fs-3 text-fg-secondary">
+          Uma cópia de <strong className="text-fg">{arquivoNome}</strong> vai para a pasta escolhida. O anexo continua onde está.
+        </p>
+        <CampoForm label="Pasta" htmlFor="drive-guardar">
+          <Select id="drive-guardar" value={destino} onChange={(e) => setDestino(e.target.value)}>
+            {destinos.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.rotulo}
+              </option>
+            ))}
+          </Select>
+        </CampoForm>
+        {erro && <p className="text-fs-3 text-danger" role="alert">{erro}</p>}
+        <Rodape onClose={onClose} pendente={pendente} rotulo="Guardar" desabilitado={!destino} />
       </form>
     </Modal>
   );

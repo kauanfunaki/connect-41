@@ -18,6 +18,8 @@ import { passosPorExtenso, rotuloDoPasso, situacaoDoLembrete } from "@/lib/finan
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
 import { responderPendenciaEquipe } from "../actions";
+import { CampoGuardarNosArquivos } from "@/components/arquivos/CampoGuardarNosArquivos";
+import { destinosDaEmpresa } from "@/lib/drive/servidor";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,7 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
   const setor = setorDaPendencia(p.setor, padrao);
   if (!canViewSector(ctx, setor)) notFound();
   const podeAgir = canActOnSector(ctx, setor);
+  const destinos = podeAgir && emAndamento(p.status) ? await destinosDaEmpresa(ctx, p.empresaId) : null;
 
   return (
     <PageContainer>
@@ -117,6 +120,7 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
             alvo={p.id}
             acao={responderPendenciaEquipe}
             dica="Responder devolve a pendência para o cliente, que recebe um e-mail só com o título e o link."
+            extras={<CampoGuardarNosArquivos companyId={p.empresaId} destinos={destinos} />}
           />
         </Card>
       )}

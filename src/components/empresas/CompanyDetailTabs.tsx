@@ -12,8 +12,9 @@ type Props = {
   filiais: React.ReactNode;
   filiaisCount: number;
   operations: React.ReactNode;
-  documents: React.ReactNode;
-  documentsCount: number;
+  /** A aba Documentos antiga. Ausente com os Arquivos ligados — os documentos vão para lá. */
+  documents?: React.ReactNode;
+  documentsCount?: number;
   history: React.ReactNode;
   conversations: React.ReactNode;
   conversationsCount: number;
@@ -38,8 +39,15 @@ export function CompanyDetailTabs({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const validTabs = ["overview", "filiais", "people", "operations", "documents", ...(files ? ["files"] : []), "conversations", "history"];
-  const tabFromUrl = searchParams.get("tab");
+  const validTabs = [
+    "overview", "filiais", "people", "operations",
+    ...(documents ? ["documents"] : []), ...(files ? ["files"] : []),
+    "conversations", "history",
+  ];
+  // Link antigo para a aba que não existe mais cai na outra: "documents" vira
+  // "files" com os Arquivos ligados, e vice-versa.
+  const pedida = searchParams.get("tab");
+  const tabFromUrl = pedida === "documents" && !documents ? "files" : pedida === "files" && !files ? "documents" : pedida;
   const [active, setActive] = useState(
     tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "overview"
   );
@@ -49,7 +57,7 @@ export function CompanyDetailTabs({
     { key: "filiais", label: `Filiais${filiaisCount ? ` (${filiaisCount})` : ""}`, icon: <Network /> },
     { key: "people", label: `Pessoas${peopleCount ? ` (${peopleCount})` : ""}`, icon: <Users /> },
     { key: "operations", label: "RH & operação", icon: <Briefcase /> },
-    { key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> },
+    ...(documents ? [{ key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> }] : []),
     ...(files ? [{ key: "files", label: "Arquivos", icon: <FolderOpen /> }] : []),
     { key: "conversations", label: `Conversas${conversationsCount ? ` (${conversationsCount})` : ""}`, icon: <MessageCircle /> },
     { key: "history", label: "Histórico", icon: <History /> },

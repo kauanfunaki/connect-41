@@ -15,6 +15,7 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { getActiveSectors } from "@/lib/sectors";
 import { logAudit } from "@/lib/audit";
+import { guardarTambemNosArquivos } from "@/lib/drive/guardarTambem";
 import {
   transicao,
   validarCamposDaPendencia,
@@ -113,7 +114,8 @@ export async function criarPendencia(formData: FormData): Promise<ResultadoDaPen
     if (!lancamento) return { error: "O lançamento vinculado não é desta empresa." };
   }
 
-  const gravados = await gravarAnexos(c.tenantId, arquivosDoFormulario(formData, "anexos"));
+  const arquivos = arquivosDoFormulario(formData, "anexos");
+  const gravados = await gravarAnexos(c.tenantId, arquivos);
   if (!gravados.ok) return { error: gravados.erro };
 
   let id: string;
@@ -148,6 +150,9 @@ export async function criarPendencia(formData: FormData): Promise<ResultadoDaPen
     throw err;
   }
 
+  // "Guardar também em Arquivos": cópia na pasta escolhida, depois de gravado.
+  const avisoDaCopia = await guardarTambemNosArquivos(c.ctx, formData, empresa.id, arquivos);
+
   const aviso = await avisarClienteDaPendencia({
     tenantId: c.tenantId,
     companyId: empresa.id,
@@ -175,7 +180,7 @@ export async function criarPendencia(formData: FormData): Promise<ResultadoDaPen
   });
 
   revalidar(id);
-  return { ok: true, id, aviso: resumoDoAviso(aviso) };
+  return { ok: true, id, aviso: [resumoDoAviso(aviso), avisoDaCopia].filter(Boolean).join(" ") || null };
 }
 
 /**
@@ -226,6 +231,8 @@ export async function responderPendenciaEquipe(formData: FormData): Promise<Resu
     throw err;
   }
 
+  const avisoDaCopia = await guardarTambemNosArquivos(c.ctx, formData, p.companyId, arquivos);
+
   const aviso = await avisarClienteDaPendencia({
     tenantId: c.tenantId,
     companyId: p.companyId,
@@ -244,7 +251,7 @@ export async function responderPendenciaEquipe(formData: FormData): Promise<Resu
   });
 
   revalidar(p.id);
-  return { ok: true, aviso: resumoDoAviso(aviso) };
+  return { ok: true, aviso: [resumoDoAviso(aviso), avisoDaCopia].filter(Boolean).join(" ") || null };
 }
 
 type Tx = Prisma.TransactionClient;

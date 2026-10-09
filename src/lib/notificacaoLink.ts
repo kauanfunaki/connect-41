@@ -29,6 +29,9 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   // Arquivo que o cliente mandou pelo portal (09/10/2026): abre a pasta
   // "Enviados pelo cliente" da empresa — `pasta=enviados` é resolvido na página.
   if (n.type === "ARQUIVO_DO_CLIENTE") return `/arquivos/empresa/${n.entityId}?pasta=enviados`;
+  // Arquivo com vencimento: o id é o da pasta, e /arquivos/pasta/[id] leva à
+  // tela certa (da empresa ou das internas).
+  if (n.type === "DRIVE_FILE_EXPIRING") return `/arquivos/pasta/${n.entityId}`;
   if (n.entityType === "COMPANY") return `/empresas/${n.entityId}`;
   if (n.entityType === "PERSON") return `/pessoas/${n.entityId}`;
   // Menção e comentário guardam o id do card (desde 02/10/2026): o card solto,

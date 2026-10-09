@@ -13,6 +13,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { getActiveSectors } from "@/lib/sectors";
 import { logAudit } from "@/lib/audit";
+import { guardarTambemNosArquivos } from "@/lib/drive/guardarTambem";
 import { nomeExibicao } from "@/lib/companyName";
 import { arquivosDoFormulario } from "@/lib/financeiro/pendencias/armazenamento";
 import { validarResposta } from "@/lib/financeiro/pendencias/regras";
@@ -127,6 +128,9 @@ export async function responderSolicitacaoEquipe(formData: FormData): Promise<Re
     throw err;
   }
 
+  // "Guardar também em Arquivos": cópia na pasta escolhida, depois de gravado.
+  const avisoDaCopia = await guardarTambemNosArquivos(ctx, formData, s.companyId, arquivos);
+
   let aviso: string | null = null;
   if (!interna) {
     const r = await avisarClienteDaSolicitacao(
@@ -146,7 +150,7 @@ export async function responderSolicitacaoEquipe(formData: FormData): Promise<Re
   });
 
   revalidar(s.id);
-  return { ok: true, aviso };
+  return { ok: true, aviso: [aviso, avisoDaCopia].filter(Boolean).join(" ") || null };
 }
 
 /** Muda só o status (e quem encerrou), para as ações sem mensagem. */
