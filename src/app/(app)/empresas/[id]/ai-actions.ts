@@ -75,7 +75,9 @@ export async function gerarResumoEmpresa(companyId: string): Promise<AiSummarySt
     lines.push(`[Kanban ${i.pipeline.name} · ${i.pipeline.sectorCode}] etapa "${i.stage.name}"${i.dueDate ? ` · vence ${formatCalendarDate(i.dueDate)}` : ""}${i.description ? ` · ${i.description.slice(0, 160)}` : ""}`);
   }
   for (const d of clientDocs) {
-    lines.push(`[Documento] ${formatInstantDate(d.createdAt)} — "${d.title}" · ${d.status === "PUBLISHED" ? "publicado" : "rascunho"}`);
+    // "Envio ao cliente" desde 08/10/2026 (era "Documentos para cliente"): o
+    // nome da aba em Solicitações, para o resumo falar a língua da tela.
+    lines.push(`[Envio ao cliente] ${formatInstantDate(d.createdAt)} — "${d.title}" · ${d.status === "PUBLISHED" ? "publicado" : "rascunho"}`);
   }
 
   if (lines.length === 0) {

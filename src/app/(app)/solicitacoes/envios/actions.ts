@@ -1,5 +1,11 @@
 "use server";
 
+// As ações dos envios ao cliente — o antigo "Documentos para cliente", que até
+// 08/10/2026 morava na ficha da empresa (/empresas/{id}/documentos-cliente) e
+// agora é a aba "Envios" da central de Solicitações. As regras não mudaram:
+// mesmo alcance (`scopedCompanyWhere`), mesmo papel para escrever (`canWrite`),
+// e documento enviado não se edita nem se exclui.
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
@@ -12,8 +18,15 @@ import {
   generateRecipientToken,
 } from "@/lib/clientDocuments";
 import { sendClientDocumentEmail } from "@/lib/email/sendMail";
+import { emailDoDestinatario, rotaDoEnvio, rotaDosEnvios } from "@/lib/envios/regras";
 
 export type ClientDocumentState = { error: string } | { success: true } | null;
+
+/** A lista e a ficha do envio, depois de qualquer mudança. */
+function revalidarEnvio(id?: string) {
+  revalidatePath(rotaDosEnvios());
+  if (id) revalidatePath(rotaDoEnvio(id));
+}
 
 async function assertCompanyInScope(companyId: string, ctx: Awaited<ReturnType<typeof getAuthContext>>) {
   const prisma = getPrisma();
@@ -29,7 +42,9 @@ function parseExtraEmails(raw: string): string[] {
     new Set(
       raw
         .split(/[\n,;]+/)
-        .map((e) => e.trim())
+        // Minúsculas, como o portal guarda o e-mail de quem entra: é por ele que
+        // a pessoa do portal reencontra a linha que o e-mail criou (08/10/2026).
+        .map(emailDoDestinatario)
         .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
     )
   );
@@ -40,7 +55,10 @@ export async function criarDocumento(_prev: ClientDocumentState, form: FormData)
   if (!ctx.tenantId) return { error: "Não autenticado" };
   if (!canWrite(ctx.role)) return { error: "Sem permissão para criar documentos." };
 
-  const companyId = form.get("companyId") as string;
+  // A empresa vem do campo da tela de novo envio (ou já escolhida pelo
+  // `?empresa=`, quando se chega pela ficha da empresa).
+  const companyId = String(form.get("companyId") ?? "");
+  if (!companyId) return { error: "Escolha a empresa do envio." };
   const company = await assertCompanyInScope(companyId, ctx);
   if (!company) return { error: "Empresa não encontrada ou fora do seu escopo." };
 
@@ -77,8 +95,8 @@ export async function criarDocumento(_prev: ClientDocumentState, form: FormData)
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.create", entityType: "ClientDocument", entityId: document.id, metadata: { title, companyId } });
 
-  revalidatePath(`/empresas/${companyId}/documentos-cliente`);
-  redirect(`/empresas/${companyId}/documentos-cliente/${document.id}`);
+  revalidarEnvio();
+  redirect(rotaDoEnvio(document.id));
 }
 
 export async function atualizarDocumento(_prev: ClientDocumentState, form: FormData): Promise<ClientDocumentState> {
@@ -94,14 +112,16 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
   const prisma = getPrisma();
   const existing = await prisma.clientDocument.findFirst({
     where: { id, tenantId: ctx.tenantId, companyId },
-    include: { recipients: { select: { sentAt: true } } },
+    include: { recipients: { select: { sentAt: true, firstViewedAt: true } } },
   });
   if (!existing) return { error: "Documento não encontrado." };
 
   // Trava de integridade: uma vez enviado, o conteúdo não pode mais mudar —
   // senão o link já aberto pelo cliente mostraria algo diferente do que foi
-  // de fato visualizado, o que invalida a prova de recebimento.
-  if (existing.recipients.some((r) => r.sentAt)) {
+  // de fato visualizado, o que invalida a prova de recebimento. Desde que o
+  // publicado aparece no portal (08/10/2026), publicar já é mandar: a tela só
+  // oferece "Editar" no rascunho, e a ação confere o mesmo.
+  if (existing.status !== "DRAFT" || existing.recipients.some((r) => r.sentAt || r.firstViewedAt)) {
     return { error: "Este documento já foi enviado a algum destinatário e não pode mais ser editado. Crie um novo documento se precisar alterar o conteúdo." };
   }
 
@@ -134,8 +154,8 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.update", entityType: "ClientDocument", entityId: id, metadata: { title } });
 
-  revalidatePath(`/empresas/${companyId}/documentos-cliente/${id}`);
-  redirect(`/empresas/${companyId}/documentos-cliente/${id}`);
+  revalidarEnvio(id);
+  redirect(rotaDoEnvio(id));
 }
 
 export async function excluirDocumento(id: string, companyId: string): Promise<void> {
@@ -153,10 +173,11 @@ export async function excluirDocumento(id: string, companyId: string): Promise<v
   await prisma.clientDocument.delete({ where: { id } });
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.delete", entityType: "ClientDocument", entityId: id });
 
-  revalidatePath(`/empresas/${companyId}/documentos-cliente`);
+  revalidarEnvio();
   // De volta à lista (achado do polimento de 30/09): a exclusão é chamada da
-  // página do próprio documento, que deixa de existir.
-  redirect(`/empresas/${companyId}/documentos-cliente`);
+  // página do próprio documento, que deixa de existir. A lista volta filtrada
+  // na empresa do envio, como quem chega pela ficha da empresa.
+  redirect(rotaDosEnvios(companyId));
 }
 
 export async function publicarDocumento(id: string, companyId: string): Promise<void> {
@@ -171,7 +192,7 @@ export async function publicarDocumento(id: string, companyId: string): Promise<
   await prisma.clientDocument.update({ where: { id }, data: { status: "PUBLISHED", publishedAt: new Date() } });
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.publish", entityType: "ClientDocument", entityId: id });
 
-  revalidatePath(`/empresas/${companyId}/documentos-cliente/${id}`);
+  revalidarEnvio(id);
 }
 
 export async function enviarDocumento(_prev: ClientDocumentState, form: FormData): Promise<ClientDocumentState> {
@@ -192,7 +213,7 @@ export async function enviarDocumento(_prev: ClientDocumentState, form: FormData
   const useCompanyEmail = form.get("useCompanyEmail") === "on";
   const extraEmailsRaw = (form.get("extraEmails") as string) ?? "";
   const emails = new Set(parseExtraEmails(extraEmailsRaw));
-  if (useCompanyEmail && company.email) emails.add(company.email);
+  if (useCompanyEmail && company.email) emails.add(emailDoDestinatario(company.email));
 
   if (emails.size === 0) {
     return { error: "Informe ao menos um e-mail de destino (o e-mail da empresa não está cadastrado ou nenhum e-mail avulso foi informado)." };
@@ -232,7 +253,7 @@ export async function enviarDocumento(_prev: ClientDocumentState, form: FormData
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.send", entityType: "ClientDocument", entityId: documentId, metadata: { emails: Array.from(emails) } });
 
-  revalidatePath(`/empresas/${companyId}/documentos-cliente/${documentId}`);
+  revalidarEnvio(documentId);
   return { success: true };
 }
 
@@ -266,5 +287,5 @@ export async function reenviarParaDestinatario(recipientId: string, companyId: s
     await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.resend", entityType: "ClientDocument", entityId: recipient.clientDocumentId, metadata: { email: recipient.email } });
   }
 
-  revalidatePath(`/empresas/${companyId}/documentos-cliente/${recipient.clientDocumentId}`);
+  revalidarEnvio(recipient.clientDocumentId);
 }

@@ -15,6 +15,7 @@ export type IconeDoPasso =
   | "celular"
   | "solicitacao"
   | "comunicado"
+  | "envio"
   | "sino"
   | "empresas"
   | "pendencia"
@@ -129,6 +130,22 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
       "Abra Comunicados. Os que você ainda não leu aparecem destacados, com a etiqueta Novo.",
       "Clique para ler o texto inteiro e baixar os anexos.",
       "Dúvida sobre um comunicado? Abra uma solicitação.",
+    ],
+  },
+  // Os envios ao cliente no portal (08/10/2026): até então só chegavam pelo
+  // link do e-mail, que segue valendo para quem não tem portal.
+  {
+    chave: "envio",
+    titulo: "Ler e aceitar um documento do escritório",
+    resumo: "Guia, contrato, orientação: o documento que o escritório manda para as suas empresas, com o aceite quando pedido.",
+    icone: "envio",
+    modulos: ["portal_solicitacoes"],
+    passos: [
+      "Abra Documentos do escritório. Os que você ainda não abriu aparecem destacados, com a etiqueta Novo.",
+      "Clique no documento para ler o texto. Se houver anexo, clique em Baixar anexo.",
+      "Quando o documento pede o seu aceite, ele aparece no Início, em \"O que precisa de você\". Confira o Nome completo, marque \"Li e concordo\" e clique em Assinar documento.",
+      "Ficam registrados o seu nome, a data e a hora. Basta um aceite por documento: depois dele, a tela mostra quem aceitou e quando.",
+      "Se o documento também chegou por e-mail, o link do e-mail abre o mesmo documento.",
     ],
   },
   {

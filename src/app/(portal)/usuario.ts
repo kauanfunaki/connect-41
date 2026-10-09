@@ -57,7 +57,9 @@ export async function clienteAtivoDoPortal() {
   const prisma = getPrisma();
   const usuario = await prisma.portalUser.findFirst({
     where: { id: sessao.sub, tenantId: sessao.tenantId, clientGroupId: sessao.clientGroupId, active: true },
-    select: { id: true, name: true },
+    // O e-mail é a ponte com os envios ao cliente (08/10/2026): é por ele que o
+    // portal acha — ou cria — a linha de destinatário da pessoa.
+    select: { id: true, name: true, email: true },
   });
   if (!usuario) return null;
   const [alcance, modulos] = await Promise.all([alcanceDoCliente(sessao), getEnabledModuleCodes(sessao.tenantId)]);
