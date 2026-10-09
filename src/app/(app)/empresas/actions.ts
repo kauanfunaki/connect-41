@@ -15,6 +15,7 @@ import { logAudit } from "@/lib/audit";
 import { cnpjRoot, lerEscolhaDeCliente } from "@/lib/clientGroups";
 import { validarMatriz } from "@/lib/companyHierarchyDb";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
+import { camposDoRegime } from "@/lib/taxRegime";
 
 export type EmpresaState = { error: string } | null;
 
@@ -26,7 +27,9 @@ function companyData(form: FormData) {
     kind:                  lerKind(form),
     cnpj:                  digitsOnly(pick(form, "cnpj")),
     cpf:                   digitsOnly(pick(form, "cpf")),
-    taxRegime:             pick(form, "taxRegime"),
+    // O texto e os quatro campos derivados dele (regime, sem movimento,
+    // funcionários, pró-labore) — nunca um sem os outros.
+    ...camposDoRegime(pick(form, "taxRegime")),
     externalId:            pick(form, "externalId"),
     foundationDate:        pickDate(form, "foundationDate"),
     cnaePrincipal:         pick(form, "cnaePrincipal"),

@@ -53,6 +53,24 @@ enum CompanyKind {
   PESSOA_FISICA // identificada por CPF, no lugar do CNPJ
 }
 
+// O regime de `Company.taxRegime` em forma de dado (09/10/2026). O texto vem do
+// Acessórias ("Simples Nacional - Comércio ou Serviço - Com Pró-labore - Com
+// Funcionários") e continua sendo o que a tela mostra e edita; este enum e os
+// campos `tax*` ao lado dele são derivados do texto a cada gravação, por
+// `camposDoRegime()` em src/lib/taxRegime.ts. Existem para o que precisa
+// perguntar ao banco — qual guia buscar no Serpro para cada cliente, obrigação
+// por regime — sem casar texto em cada consulta. "Indefinido" e texto que não
+// se reconhece ficam NULL.
+enum TaxRegimeKind {
+  SIMPLES_NACIONAL
+  MEI
+  LUCRO_PRESUMIDO
+  LUCRO_REAL
+  IMUNE_ISENTA
+  PRODUTOR_RURAL
+  DOMESTICA
+}
+
 enum ServiceStatus {
   PENDING
   ACTIVE
@@ -1002,6 +1020,16 @@ model Company {
   // e o casamento do XML fiscal precisa saber qual dos dois está lendo.
   cpf                   String?       @db.VarChar(14)
   taxRegime             String?       @db.VarChar(100) // Regime Tributário — algumas opções (ex: "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Com Funcionários") passam de 60 chars, causavam P2000 ao salvar
+  // Os quatro abaixo são derivados de `taxRegime` a cada gravação — nunca
+  // escritos à mão. Toda escrita de `taxRegime` passa por `camposDoRegime()`
+  // (src/lib/taxRegime.ts), que devolve os cinco campos juntos.
+  taxRegimeKind         TaxRegimeKind?
+  /// "Sem Movimento" ou "Inativa": não há apuração nem guia no mês.
+  taxNoMovement         Boolean       @default(false)
+  /// Com funcionários. NULL quando o rótulo não diz (Presumido e Real não dizem).
+  taxHasEmployees       Boolean?
+  /// Com pró-labore. NULL quando o rótulo não diz.
+  taxHasProLabore       Boolean?
   externalId            String?       @db.VarChar(60) // ID manual do sistema de domínio (ex: Acessorias) — sem sincronização
   foundationDate        DateTime? // Data de abertura da empresa
   cnaePrincipal         String?       @db.VarChar(20) // Código CNAE principal, ex: 6920-6/01
@@ -1107,6 +1135,7 @@ model Company {
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, clientGroupId])
+  @@index([tenantId, taxRegimeKind])
   @@map("companies")
 }
 
