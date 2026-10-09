@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
@@ -8,7 +8,9 @@ import { CampoNumero } from "@/components/ui/CampoNumero";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { RESCISAO_CHECKLIST } from "@/lib/rescisaoChecklist";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
+import { gruposDeVerbas } from "@/lib/rescisaoChecklist";
+import { contagemDoBloco, marcarGrupo, quantosNoConjunto } from "@/lib/listaEmBlocos";
 import type { RescisaoConfig, OrigemCampo } from "@/lib/rescisao/config";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
@@ -58,8 +60,6 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
   // não sabe o que está vindo do padrão do escritório.
   const heranca = (campo: keyof RescisaoConfig) =>
     nivelEmpresa && origem ? `Origem: ${ORIGEM_LABEL[origem[campo]]}` : undefined;
-
-  const verbasDesabilitadas = new Set(valores.verbasDesabilitadas);
 
   return (
     <form action={formAction} className="space-y-6">
@@ -194,18 +194,13 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
           Marcadas aqui deixam de entrar no total — mas continuam aparecendo na conferência com o valor que teriam,
           pra ninguém esconder verba devida sem querer.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-          {RESCISAO_CHECKLIST.filter((i) => i.hasValue).map((i) => (
-            <Checkbox
-              key={i.key}
-              name="verbasDesabilitadas"
-              value={i.key}
-              defaultChecked={verbasDesabilitadas.has(i.key)}
-              disabled={!canEdit}
-              label={i.label}
-            />
-          ))}
-        </div>
+        {/* A chave remonta o bloco quando o que está gravado muda (depois de
+            salvar), para a marcação partir do valor novo. */}
+        <VerbasNaoPraticadas
+          key={valores.verbasDesabilitadas.join(",")}
+          iniciais={valores.verbasDesabilitadas}
+          canEdit={canEdit}
+        />
       </section>
 
       <section className="pt-4 border-t border-border">
@@ -244,5 +239,81 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
         </div>
       )}
     </form>
+  );
+}
+
+const GRUPOS_DE_VERBAS = gruposDeVerbas();
+const PALAVRA = { um: "marcada", varios: "marcadas" };
+
+/**
+ * As verbas que a empresa não pratica, por grupo da conferência (escolha A da
+ * página "Telas pesadas", 08/10/2026): cada grupo num `BlocoRecolhivel` que
+ * começa fechado, com "2 de 8 marcadas" na linha e "Marcar o grupo" ao lado.
+ * Eram as quinze caixas abertas numa lista só. Prazos e documentos não entra:
+ * não tem verba de valor para tirar do total.
+ *
+ * As caixas são controladas e sem `name`; o que vai para o formulário são os
+ * campos escondidos, um por verba marcada — o mesmo `verbasDesabilitadas` de
+ * antes. Assim "Marcar o grupo" vale com o bloco fechado. Quando o React limpa
+ * o formulário depois de enviar, a marcação volta ao que está gravado, como
+ * faria a caixa não controlada (a mesma regra do `Switch`).
+ */
+function VerbasNaoPraticadas({ iniciais, canEdit }: { iniciais: string[]; canEdit: boolean }) {
+  const [marcadas, setMarcadas] = useState(() => new Set(iniciais));
+  const raiz = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const form = raiz.current?.closest("form");
+    if (!form) return;
+    const voltar = () => setMarcadas(new Set(iniciais));
+    form.addEventListener("reset", voltar);
+    return () => form.removeEventListener("reset", voltar);
+  }, [iniciais]);
+
+  const marcar = (chaves: string[], ligar: boolean) => setMarcadas((atual) => marcarGrupo(atual, chaves, ligar));
+
+  return (
+    <div ref={raiz} className="flex flex-col gap-2">
+      {[...marcadas].map((chave) => (
+        <input key={chave} type="hidden" name="verbasDesabilitadas" value={chave} />
+      ))}
+      {GRUPOS_DE_VERBAS.map((g) => {
+        const chaves = g.itens.map((i) => i.key);
+        const n = quantosNoConjunto(marcadas, chaves);
+        const todas = n === chaves.length;
+        return (
+          <BlocoRecolhivel
+            key={g.chave}
+            titulo={g.rotulo}
+            resumo={contagemDoBloco(n, chaves.length, PALAVRA)}
+            espacoDaAcao="pr-36"
+            acao={
+              canEdit && (
+                <Button
+                  variant="link"
+                  className="text-ui leading-5"
+                  onClick={() => marcar(chaves, !todas)}
+                  aria-label={`${todas ? "Desmarcar" : "Marcar"} o grupo ${g.rotulo}`}
+                >
+                  {todas ? "Desmarcar o grupo" : "Marcar o grupo"}
+                </Button>
+              )
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 pt-1">
+              {g.itens.map((i) => (
+                <Checkbox
+                  key={i.key}
+                  checked={marcadas.has(i.key)}
+                  onChange={(e) => marcar([i.key], e.target.checked)}
+                  disabled={!canEdit}
+                  label={i.label}
+                />
+              ))}
+            </div>
+          </BlocoRecolhivel>
+        );
+      })}
+    </div>
   );
 }
