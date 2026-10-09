@@ -86,6 +86,17 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     secao: "Com a equipe",
     descricao: "Avisos do escritório para você: recesso, prazos, orientações.",
   },
+  // Os envios ao cliente (08/10/2026), que até então só chegavam por link no
+  // e-mail. "Documentos do escritório", e não "Envios": é o nome do lado de
+  // quem recebe — o portal chama a 41 de "escritório" em todo canto —, e
+  // separa estes dos "Documentos fiscais", que são as notas das empresas.
+  {
+    href: "/portal/envios",
+    rotulo: "Documentos do escritório",
+    modulo: "portal_solicitacoes",
+    secao: "Com a equipe",
+    descricao: "Documentos que o escritório mandou para você ler, baixar e, quando pedido, dar o aceite.",
+  },
   {
     href: "/portal/pendencias",
     rotulo: "Pendências",

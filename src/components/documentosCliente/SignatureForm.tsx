@@ -8,10 +8,39 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 
-export function SignatureForm({ token, documentTitle }: { token: string; documentTitle: string }) {
+/**
+ * O aceite eletrônico de um documento enviado ao cliente — o mesmo formulário
+ * na página pública do link por e-mail e no portal (08/10/2026):
+ * - com `token`, posta na rota pública `/d/{token}/assinar` (quem abre não tem login);
+ * - com `acao`, chama a server action do portal, que confere a sessão e o
+ *   alcance do cliente.
+ * As duas pontas validam pela mesma regra (`lib/envios/regras.ts`).
+ */
+export function SignatureForm({
+  token,
+  acao,
+  documentTitle,
+  nomePadrao,
+}: {
+  token?: string;
+  acao?: (form: FormData) => Promise<{ error: string } | { ok: true }>;
+  documentTitle: string;
+  /** O nome que já se conhece (o da conta do portal); a pessoa pode corrigir. */
+  nomePadrao?: string;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function enviar(form: FormData): Promise<string | null> {
+    if (acao) {
+      const r = await acao(form);
+      return "error" in r ? r.error : null;
+    }
+    const res = await fetch(`/d/${token}/assinar`, { method: "POST", body: form });
+    const body = await res.json();
+    return res.ok ? null : (body.error ?? "Não foi possível assinar. Tente novamente.");
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -22,10 +51,9 @@ export function SignatureForm({ token, documentTitle }: { token: string; documen
     form.set("consent", form.get("consent") ? "true" : "false");
 
     try {
-      const res = await fetch(`/d/${token}/assinar`, { method: "POST", body: form });
-      const body = await res.json();
-      if (!res.ok) {
-        setError(body.error ?? "Não foi possível assinar. Tente novamente.");
+      const erro = await enviar(form);
+      if (erro) {
+        setError(erro);
         return;
       }
       router.refresh(); // re-renderiza a página, que passa a mostrar "assinado"
@@ -45,7 +73,7 @@ export function SignatureForm({ token, documentTitle }: { token: string; documen
         </p>
       </div>
       <CampoForm label="Nome completo" htmlFor="signerName" required>
-        <Input id="signerName" name="signerName" type="text" required minLength={3} maxLength={180} />
+        <Input id="signerName" name="signerName" type="text" required minLength={3} maxLength={180} defaultValue={nomePadrao} />
       </CampoForm>
       <Checkbox
         name="consent"

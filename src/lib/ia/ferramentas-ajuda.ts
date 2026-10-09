@@ -27,7 +27,12 @@ export const TELAS_GERAIS = [
   { tela: "Meu dia", caminho: "/tarefas", descricao: "O que é seu para hoje: o que venceu, o que vence, o que parou e o que está andando, de todos os setores. Coordenador vê também o time." },
   { tela: "Cadastros", caminho: "/empresas", descricao: "Empresas, pessoas e clientes do escritório." },
   { tela: "Transferências", caminho: "/transferencias", descricao: "Passar um assunto para outro setor, com prazo e prioridade." },
-  { tela: "Solicitações", caminho: "/solicitacoes", descricao: "O que os clientes pedem pelo portal, por assunto: cada setor vê e responde as suas, com prazo de resposta." },
+  {
+    tela: "Solicitações",
+    caminho: "/solicitacoes",
+    descricao:
+      "O que os clientes pedem pelo portal, por assunto: cada setor vê e responde as suas, com prazo de resposta. Nas abas, os pedidos ao cliente, os comunicados e os envios (documentos ao cliente com prova de leitura e aceite, em /solicitacoes/envios).",
+  },
   { tela: "Agenda", caminho: "/agenda", descricao: "Os prazos dos seus setores no calendário e, para coordenadores, as reuniões." },
   { tela: "Espaços", caminho: "/setor/{setor}", descricao: "As listas e quadros de tarefas do setor, organizados em espaços e pastas." },
   { tela: "Busca", caminho: "Ctrl+K", descricao: "Acha qualquer tela, empresa ou pessoa pelo nome." },

@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleCheck,
   CircleHelp,
+  FileCheck,
   FileText,
   Megaphone,
   MessageSquarePlus,
@@ -23,6 +24,7 @@ import { contasPorJanela, type SomaDeContas } from "@/lib/financeiro/consultas";
 import { moeda } from "@/lib/financeiro/formato";
 import { solicitacoesAguardandoCliente, solicitacoesComRespostaDaEquipe } from "@/lib/solicitacoes/consultas";
 import { comunicadosNaoLidos } from "@/lib/comunicados/consultas";
+import { enviosAguardandoAceite } from "@/lib/envios/consultas";
 import { processosAguardandoCliente, processosEmAndamentoDoPortal } from "@/lib/societario/portal-data";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { contarDocumentos } from "@/lib/fiscal/data";
@@ -73,6 +75,7 @@ const ICONE_DA_ATENCAO: Record<ItemDaAtencao["chave"], React.ReactNode> = {
   pendencias: <ModuleIcon code="bpo_pendencias" />,
   solicitacoesAguardando: <ModuleIcon code="portal_solicitacoes" />,
   processosAguardando: <ModuleIcon code="societario_processos" />,
+  envios: <FileCheck />,
   solicitacoesRespondidas: <MessagesSquare />,
   comunicados: <Megaphone />,
 };
@@ -107,12 +110,14 @@ export async function PrecisaDeVoce({
       atencao.processos ? processosAguardandoCliente(escopo.tenantId, escopo.companyIds) : null,
       // Comunicado vai para o cliente (grupo), não para a empresa: a escolha de empresa não o afeta.
       atencao.comunicados ? comunicadosNaoLidos(escopo.tenantId, clientGroupId, portalUserId) : null,
+      // O envio é de uma empresa: este segue a escolha de empresa (08/10/2026).
+      atencao.envios ? enviosAguardandoAceite(escopo) : null,
     ])
   );
 
   let itens: ItemDaAtencao[] = [];
   if (dados) {
-    const [aprovacoes, pendencias, solicitacoesAguardando, solicitacoesRespondidas, processosAguardando, comunicados] = dados;
+    const [aprovacoes, pendencias, solicitacoesAguardando, solicitacoesRespondidas, processosAguardando, comunicados, envios] = dados;
     // Só as que este cliente pode aprovar (dentro do teto dele) — as outras
     // são acompanhamento, e não "precisa de você".
     const aprovar = aprovacoes?.contas.filter((c) => c.dentroDoTeto) ?? null;
@@ -123,6 +128,7 @@ export async function PrecisaDeVoce({
         solicitacoesAguardando,
         solicitacoesRespondidas,
         processosAguardando,
+        envios,
         comunicados,
       },
       moeda

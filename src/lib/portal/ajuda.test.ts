@@ -37,6 +37,13 @@ describe("passosDoPortal — o cliente só lê sobre o que está no menu dele", 
     expect(chaves(["portal_solicitacoes"])).toContain("pendencia");
   });
 
+  it("os documentos do escritório (envios) entram com o canal do portal, como a tela no menu (08/10/2026)", () => {
+    expect(chaves([])).not.toContain("envio");
+    expect(chaves(["portal_solicitacoes"])).toContain("envio");
+    const doMenu = telasVisiveis(new Set(["portal_solicitacoes"])).find((t) => t.href === "/portal/envios");
+    expect(doMenu).toMatchObject({ rotulo: "Documentos do escritório", secao: "Com a equipe" });
+  });
+
   it("trocar de empresa só aparece para quem tem mais de uma", () => {
     expect(chaves([])).not.toContain("empresa");
     expect(chaves([], true)).toContain("empresa");
@@ -69,7 +76,7 @@ describe("passosDoPortal — o cliente só lê sobre o que está no menu dele", 
 
   it("todo passo que aparece tem ao menos uma linha", () => {
     const todos = passosDoPortal(new Set(TELAS_DO_PORTAL.flatMap((t) => (t.modulo ? [t.modulo] : []))), { variasEmpresas: true });
-    expect(todos.length).toBe(14);
+    expect(todos.length).toBe(15);
     for (const p of todos) expect(p.passos.length).toBeGreaterThan(0);
   });
 });
@@ -98,6 +105,7 @@ describe("telasVisiveis — a mesma régua do menu", () => {
       "/portal/documentos",
       "/portal/solicitacoes",
       "/portal/comunicados",
+      "/portal/envios",
       "/portal/pendencias",
     ]);
   });
