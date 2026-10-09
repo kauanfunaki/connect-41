@@ -92,6 +92,7 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   RESCISAO_PRAZO: a("prazo", "danger", "Prazo de rescisão"),
   DOC_EXPIRING: a("documento", "warning", "Documento a vencer"),
   CERT_EXPIRING: a("documento", "warning", "Certificado a vencer"),
+  DRIVE_FILE_EXPIRING: a("documento", "warning", "Arquivo a vencer"),
   ADMISSAO_STALE: a("alerta", "warning", "Admissão parada"),
   HANDOFF_STALE: a("alerta", "warning", "Transferência parada"),
   FINANCE_CONTAS_DIA: a("dinheiro", "info", "Contas do dia"),

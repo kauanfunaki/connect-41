@@ -22,6 +22,17 @@ import { orcamentosAprovados, MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/da
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
 import { itensDaGestao } from "@/lib/gestao/itens";
 import { pedidosAoClienteLigados } from "@/lib/financeiro/pendencias/setor";
+import {
+  DIAS_DE_AVISO_DO_VENCIMENTO,
+  MODULO_ARQUIVOS,
+  caminhoDaPasta,
+  caminhoNaLixeira,
+  faixaDoVencimento,
+  mapaDePastas,
+  setoresDoCaminho,
+  textoDoVencimento,
+} from "@/lib/drive/regras";
+import { SELECT_PASTA } from "@/lib/drive/servidor";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -612,6 +623,80 @@ async function checkCertificadosVencendo(tenantId: string, today: Date): Promise
   return sent;
 }
 
+// Arquivo dos Arquivos (Drive) com vencimento — contrato, procuração, certidão,
+// alvará (09/10/2026, quando a aba Documentos da empresa se juntou aos
+// Arquivos). Faixas de 30 e 7 dias, no dia, e vencido; um aviso por faixa,
+// uma vez só na vida do arquivo, como nos certificados.
+//
+// Quem é avisado respeita a pasta: pasta de setor avisa o setor (quem não vê a
+// pasta não fica sabendo do arquivo); fora disso, quem cuida da empresa (os
+// responsáveis de cada setor e o da empresa), depois quem enviou, e por fim o
+// setor que opera o módulo. O aviso abre a pasta do arquivo.
+// Exportada para o teste ponta a ponta rodar só esta checagem no banco local.
+export async function checkArquivosVencendo(tenantId: string, today: Date): Promise<number> {
+  if (!(await isModuleEnabled(tenantId, MODULO_ARQUIVOS))) return 0;
+  const prisma = getPrisma();
+  const hoje = saoPauloParts(new Date()).dateKey;
+  const limite = new Date(`${hoje}T00:00:00Z`);
+  limite.setUTCDate(limite.getUTCDate() + DIAS_DE_AVISO_DO_VENCIMENTO);
+
+  const arquivos = await prisma.driveFile.findMany({
+    where: { tenantId, deletedAt: null, expiresAt: { not: null, lte: limite } },
+    select: { id: true, name: true, expiresAt: true, folderId: true, uploadedByUserId: true, folder: { select: { companyId: true } } },
+    take: 500,
+  });
+  if (arquivos.length === 0) return 0;
+
+  const escopos = new Set(arquivos.map((a) => a.folder.companyId));
+  const ids = [...escopos].filter((x): x is string => x !== null);
+  const [pastas, empresas, servicos] = await Promise.all([
+    prisma.driveFolder.findMany({
+      where: { tenantId, OR: [{ companyId: { in: ids } }, ...(escopos.has(null) ? [{ companyId: null }] : [])] },
+      select: SELECT_PASTA,
+    }),
+    prisma.company.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true, displayName: true, responsibleUserId: true } }),
+    prisma.companyService.findMany({
+      where: { tenantId, companyId: { in: ids }, status: "ACTIVE", responsibleUserId: { not: null } },
+      select: { companyId: true, responsibleUserId: true },
+    }),
+  ]);
+  const mapa = mapaDePastas(pastas);
+  const empresaPorId = new Map(empresas.map((e) => [e.id, e]));
+  const setorDoDrive = (await setorDoModulo(tenantId, MODULO_ARQUIVOS)) ?? getModuleDef(MODULO_ARQUIVOS)!.sectorCode;
+
+  let sent = 0;
+  for (const a of arquivos) {
+    const caminho = caminhoDaPasta(a.folderId, mapa);
+    if (!caminho || caminhoNaLixeira(caminho)) continue;
+    const venceEm = a.expiresAt!.toISOString().slice(0, 10);
+    const faixa = faixaDoVencimento(venceEm, hoje);
+    if (faixa === null) continue;
+    if (!(await reservarPorChave(tenantId, `DRIVE_FILE_EXPIRING:${a.id}:${faixa}`, today))) continue;
+
+    const empresa = a.folder.companyId ? empresaPorId.get(a.folder.companyId) : undefined;
+    const aviso = {
+      tenantId,
+      type: "DRIVE_FILE_EXPIRING",
+      message: textoDoVencimento({ arquivo: a.name, onde: empresa ? nomeExibicao(empresa) : "pastas do escritório", venceEm, hoje }),
+      entityId: a.folderId,
+    };
+    const setores = setoresDoCaminho(caminho);
+    if (setores.length > 0) {
+      for (const s of setores) await notifySector(s, aviso);
+    } else {
+      const pessoas = new Set<string>(
+        servicos.filter((s) => s.companyId === a.folder.companyId).map((s) => s.responsibleUserId!)
+      );
+      if (empresa?.responsibleUserId) pessoas.add(empresa.responsibleUserId);
+      if (pessoas.size === 0 && a.uploadedByUserId) pessoas.add(a.uploadedByUserId);
+      if (pessoas.size > 0) for (const id of pessoas) await notifyUser(id, aviso);
+      else await notifySector(setorDoDrive, aviso);
+    }
+    sent++;
+  }
+  return sent;
+}
+
 // ─── Gestão: processo ou card parado, prazo vencendo ─────────────────────────
 //
 // Veio do painel 41-gestao (29/09). A regra de "parado" e de "prazo" é a de
@@ -698,6 +783,7 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["solicitações", () => checkSolicitacoesNoPrazo(tenantId, today)],
     ["orçamento", () => checkOrcamentoEstourado(tenantId, today)],
     ["certificados", () => checkCertificadosVencendo(tenantId, today)],
+    ["arquivos", () => checkArquivosVencendo(tenantId, today)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],
   ];
 

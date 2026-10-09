@@ -35,7 +35,8 @@ type Grupo = { rotulo: string; opcoes: Opcao[] };
 function documentHref(entityType: DocumentEntityType, entityId: string): string {
   switch (entityType) {
     case "PERSON": return `/pessoas/${entityId}`;
-    case "COMPANY": return `/empresas/${entityId}`;
+    // A aba Arquivos (ou Documentos, com os Arquivos desligados — a ficha troca sozinha).
+    case "COMPANY": return `/empresas/${entityId}?tab=files`;
     case "VAGA": return `/vagas/${entityId}`;
     case "PIPELINE_ITEM": return "/kanban";
   }

@@ -12,6 +12,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { logAudit } from "@/lib/audit";
+import { guardarTambemNosArquivos } from "@/lib/drive/guardarTambem";
 import {
   sanitizeDocumentHtml,
   saveClientDocumentFile,
@@ -95,6 +96,10 @@ export async function criarDocumento(_prev: ClientDocumentState, form: FormData)
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.create", entityType: "ClientDocument", entityId: document.id, metadata: { title, companyId } });
 
+  // "Guardar também em Arquivos". A action termina em redirect, sem onde mostrar
+  // aviso: a falha da cópia fica só no log (o envio foi salvo de qualquer jeito).
+  if (fileData && file instanceof File) await guardarTambemNosArquivos(ctx, form, companyId, [file]);
+
   revalidarEnvio();
   redirect(rotaDoEnvio(document.id));
 }
@@ -153,6 +158,8 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
   });
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.update", entityType: "ClientDocument", entityId: id, metadata: { title } });
+
+  if (fileData && file instanceof File) await guardarTambemNosArquivos(ctx, form, companyId, [file]);
 
   revalidarEnvio(id);
   redirect(rotaDoEnvio(id));

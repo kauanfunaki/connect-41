@@ -83,7 +83,9 @@ export default async function EmpresaPage({
   const [companySectors, sectorMaps, documents, pipelineItems, activities] = await Promise.all([
     getCompanySectors(ctx.tenantId, id),
     getSectorMaps(ctx.tenantId),
-    listDocuments(ctx.tenantId, "COMPANY", id),
+    // Com os Arquivos ligados, a aba Documentos sai da ficha (09/10/2026): os
+    // documentos antigos aparecem em Arquivos › "Do Connect".
+    arquivos ? Promise.resolve([]) : listDocuments(ctx.tenantId, "COMPANY", id),
     prisma.pipelineItem.findMany({
       where: { tenantId: ctx.tenantId, entityType: "COMPANY", entityId: id },
       include: { pipeline: { select: { id: true, name: true, sectorCode: true } }, stage: { select: { name: true } } },
@@ -157,7 +159,7 @@ export default async function EmpresaPage({
       <CompanyDetailTabs
         peopleCount={company.people.length}
         filiaisCount={company.filiais.length}
-        documentsCount={documents.length}
+        documentsCount={arquivos ? undefined : documents.length}
         conversationsCount={conversations.length}
         overview={
           <div className="space-y-4">
@@ -186,21 +188,23 @@ export default async function EmpresaPage({
         people={<CompanyPeopleSection companyId={company.id} people={company.people} />}
         operations={<CompanyOperationsSection companyId={company.id} />}
         documents={
-          <DocumentsSection
-            entityType="COMPANY"
-            entityId={company.id}
-            canUpload={canEdit}
-            documents={documents.map((d) => ({
-              id: d.id,
-              fileName: d.fileName,
-              category: d.category,
-              sensitive: d.sensitive,
-              uploadedByName: d.uploadedBy.name,
-              createdAtLabel: formatInstantDate(d.createdAt),
-              expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
-              expired: d.expiresAt != null && d.expiresAt < new Date(),
-            }))}
-          />
+          arquivos ? undefined : (
+            <DocumentsSection
+              entityType="COMPANY"
+              entityId={company.id}
+              canUpload={canEdit}
+              documents={documents.map((d) => ({
+                id: d.id,
+                fileName: d.fileName,
+                category: d.category,
+                sensitive: d.sensitive,
+                uploadedByName: d.uploadedBy.name,
+                createdAtLabel: formatInstantDate(d.createdAt),
+                expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
+                expired: d.expiresAt != null && d.expiresAt < new Date(),
+              }))}
+            />
+          )
         }
         files={
           arquivos ? (

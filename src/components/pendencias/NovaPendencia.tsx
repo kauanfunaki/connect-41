@@ -12,6 +12,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
 import { criarPendencia } from "@/app/(app)/pendencias/actions";
+import { CampoGuardarNosArquivos } from "@/components/arquivos/CampoGuardarNosArquivos";
 import { ROTULO_DO_TIPO, TIPOS_DA_PENDENCIA, LIMITE_DO_TITULO } from "@/lib/financeiro/pendencias/regras";
 import { CampoDeAnexos } from "./CampoDeAnexos";
 import { FormFooter } from "@/components/ui/FormFooter";
@@ -47,6 +48,8 @@ export function NovaPendencia({
   const [aberto, setAberto] = useState(abertoDeInicio);
   const [erro, setErro] = useState<string | null>(null);
   const [criada, setCriada] = useState<{ id: string; aviso: string } | null>(null);
+  // A empresa escolhida, para o "Guardar também em Arquivos" buscar as pastas dela.
+  const [empresaId, setEmpresaId] = useState<string | null>(lancamento?.companyId ?? empresaPadrao ?? null);
   const [pendente, startTransition] = useTransition();
 
   function fechar() {
@@ -126,7 +129,13 @@ export function NovaPendencia({
               </>
             ) : (
               <CampoForm label="Empresa" htmlFor="pendencia-empresa" required>
-                <Select id="pendencia-empresa" name="companyId" defaultValue={empresaPadrao ?? ""} required>
+                <Select
+                  id="pendencia-empresa"
+                  name="companyId"
+                  defaultValue={empresaPadrao ?? ""}
+                  required
+                  onChange={(e) => setEmpresaId(e.target.value || null)}
+                >
                   <option value="" disabled>
                     Escolha a empresa
                   </option>
@@ -170,6 +179,7 @@ export function NovaPendencia({
             <CampoForm label="Anexos" htmlFor="pendencia-anexo-0" helper="PDF, PNG, JPG ou XML, até 10 MB cada.">
               <CampoDeAnexos idBase="pendencia-anexo" />
             </CampoForm>
+            <CampoGuardarNosArquivos companyId={empresaId} id="pendencia-guardar-em-pasta" />
 
             <FormFooter
               pending={pendente}
