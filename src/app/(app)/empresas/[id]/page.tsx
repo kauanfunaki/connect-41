@@ -17,6 +17,9 @@ import { NavegadorDeArquivos } from "@/components/arquivos/NavegadorDeArquivos";
 import { navegadorDaEquipe } from "@/lib/drive/servidor";
 import { MODULO_ARQUIVOS } from "@/lib/drive/regras";
 import { isModuleEnabled } from "@/lib/modules";
+import { acessoAsAutorizacoes, autorizacaoDaEmpresa } from "@/lib/autorizacoes/servidor";
+import { AutorizacaoNaFicha } from "@/components/autorizacoes/AutorizacaoNaFicha";
+import { hojeIso } from "@/lib/datas/calendario";
 import { CompanyFiliaisSection } from "@/components/empresas/CompanyFiliaisSection";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import type { CompanyStatus } from "@/generated/prisma/enums";
@@ -77,6 +80,11 @@ export default async function EmpresaPage({
   // uma pasta leva à tela dos Arquivos — a ficha não é refeita a cada clique.
   const arquivos =
     ctx.tenantId && (await isModuleEnabled(ctx.tenantId, MODULO_ARQUIVOS)) ? await navegadorDaEquipe(ctx, company.id, null) : null;
+
+  // Autorização de acesso na Receita (09/10/2026): a da raiz do CNPJ, para
+  // quem vê o setor do módulo (o Fiscal).
+  const acessoAutorizacao = await acessoAsAutorizacoes(ctx);
+  const autorizacao = acessoAutorizacao ? await autorizacaoDaEmpresa(ctx.tenantId, company.id) : null;
 
   const deleteAction = excluirEmpresa.bind(null, id);
 
@@ -165,6 +173,9 @@ export default async function EmpresaPage({
           <div className="space-y-4">
             <AiCompanySummary action={gerarResumoEmpresa.bind(null, company.id)} />
             <CompanyOverviewSection company={company} customFields={customFields} />
+            {autorizacao && (
+              <AutorizacaoNaFicha dados={autorizacao} nome={nomeExibicao(company)} hoje={hojeIso()} podeEditar={acessoAutorizacao!.podeEditar} />
+            )}
             <ServicesSection
               companyId={company.id}
               services={company.services}
