@@ -24,11 +24,14 @@ export function AutorizacaoNaFicha({
   nome,
   hoje,
   podeEditar,
+  serpro = false,
 }: {
   dados: AutorizacaoDaEmpresa;
   nome: string;
   hoje: string;
   podeEditar: boolean;
+  /** A ligação com o Serpro está pronta: o diálogo oferece conferir lá. */
+  serpro?: boolean;
 }) {
   return (
     <Card className="p-5">
@@ -53,7 +56,7 @@ export function AutorizacaoNaFicha({
           </span>
           {podeEditar && (
             <span className="ml-auto">
-              <BotaoDaAutorizacao chave={dados.chave} nome={nome} documento={dados.documento} registro={dados.registro} hoje={hoje} />
+              <BotaoDaAutorizacao chave={dados.chave} nome={nome} documento={dados.documento} registro={dados.registro} hoje={hoje} serpro={serpro} />
             </span>
           )}
         </div>

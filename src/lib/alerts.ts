@@ -34,6 +34,7 @@ import {
 } from "@/lib/drive/regras";
 import { SELECT_PASTA } from "@/lib/drive/servidor";
 import { representantesDasChaves, setorDasAutorizacoes } from "@/lib/autorizacoes/servidor";
+import { processarConferencias } from "@/lib/autorizacoes/serpro";
 import {
   diasEntre as diasAteODia,
   faixaDeAviso as faixaDaAutorizacao,
@@ -848,6 +849,9 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["certificados", () => checkCertificadosVencendo(tenantId, today)],
     ["arquivos", () => checkArquivosVencendo(tenantId, today)],
     ["autorizações", () => checkAutorizacoes(tenantId, today)],
+    // Não é alerta: é o lote da conferência das autorizações no Serpro, que
+    // anda aqui porque precisa de um relógio e o agendador já roda por tenant.
+    ["serpro", () => processarConferencias(tenantId)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],
   ];
 

@@ -793,8 +793,18 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Confira o resultado: quantos clientes foram atualizados e quais documentos não têm empresa no Connect.",
         ],
       },
+      {
+        titulo: "Conferir no Serpro",
+        passos: [
+          "Com o Serpro ligado (Administração › Integrações), abra “Atualizar” num cliente e clique em “Conferir no Serpro”. A situação é atualizada com o que o Serpro disser.",
+          "Para conferir todos, clique em “Conferir no Serpro” no topo da tela, confira o custo e o teto do mês e confirme.",
+          "A conferência roda aos poucos, em lotes a cada 15 minutos. O andamento aparece no topo da tela e o aviso chega no sino quando terminar.",
+          "Em “Consumo do Serpro” você vê as chamadas cobradas do mês, o custo estimado e o teto.",
+        ],
+      },
     ],
     dicas: [
+      "Cada conferência no Serpro é uma consulta cobrada. Quando o mês chega no teto, o Connect para de chamar até o mês virar.",
       "O setor recebe aviso faltando 10 e 3 dias para o prazo de validação e no último dia, e 60, 30 e 7 dias antes do fim da validade.",
       "A situação também aparece na ficha da empresa, na “Visão geral”, com o botão de atualizar.",
       "Use “Não se aplica” para o cliente que não precisa (por exemplo, o MEI que só emite a guia, que dispensa autorização).",

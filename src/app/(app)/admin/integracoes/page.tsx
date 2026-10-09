@@ -20,6 +20,9 @@ import { ContasOmie } from "@/components/admin/ContasOmie";
 import { listarContasOmie } from "@/lib/integracoes/omie/contas";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { desconectarIntegracao } from "./actions";
+import { ServicoDoSerpro } from "@/components/admin/ServicoDoSerpro";
+import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
+import { formatCnpj } from "@/lib/format";
 import { Aviso } from "@/components/ui/Aviso";
 
 const ERROR_LABEL: Record<string, string> = {
@@ -67,6 +70,10 @@ export default async function IntegracoesPage({
   const [contasOmie, empresasParaOmie] = podeConfigurar
     ? await Promise.all([listarContasOmie(ctx.tenantId!, new Date()), empresasDoSeletor(ctx.tenantId!)])
     : [[], []];
+
+  // Serpro (09/10/2026): com a conexão salva, o certificado lido e o teste.
+  const serpro = podeConfigurar ? await configuracaoDoSerpro(ctx.tenantId!) : null;
+  const prontidaoSerpro = serpro ? prontidaoDoSerpro(serpro) : null;
 
   const canManageAi = isFullWrite(ctx.role);
   const aiConfig = canManageAi ? await prisma.tenantAiConfig.findUnique({ where: { tenantId: ctx.tenantId } }) : null;
@@ -119,6 +126,20 @@ export default async function IntegracoesPage({
             integracoes={integracoesDoCatalogo}
             urlPublica={process.env.APP_PUBLIC_URL ?? null}
           />
+          {serpro && (
+            <ServicoDoSerpro
+              certificado={
+                serpro.certificado?.ok
+                  ? {
+                      titular: serpro.certificado.titular,
+                      cnpj: serpro.certificado.cnpj ? formatCnpj(serpro.certificado.cnpj) : null,
+                      validoAte: serpro.certificado.validoAte,
+                    }
+                  : null
+              }
+              motivo={prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null}
+            />
+          )}
           <ContasOmie contas={contasOmie} empresas={empresasParaOmie} />
         </section>
       )}

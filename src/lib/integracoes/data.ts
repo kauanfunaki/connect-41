@@ -151,6 +151,11 @@ export async function salvarIntegracao(params: {
   label?: string | null;
   enabled?: boolean;
   campos: Record<string, unknown>;
+  /**
+   * Conferência própria da integração, sobre a configuração já mesclada (o
+   * certificado novo com a senha guardada, por exemplo). Devolve o erro, ou null.
+   */
+  validar?: (config: Record<string, string>) => string | null;
 }): Promise<ResultadoDeSalvar> {
   const def = integracaoDoCatalogo(params.code);
   if (!def) return { ok: false, erro: "Integração desconhecida." };
@@ -171,6 +176,8 @@ export async function salvarIntegracao(params: {
 
   const atual = existente ? lerConfig(existente.configEnc) : {};
   const config = mesclarConfig(def, atual, params.campos);
+  const invalido = params.validar?.(config);
+  if (invalido) return { ok: false, erro: invalido };
 
   const faltando = camposFaltando(def, config);
   // Ligar com credencial faltando produziria um 401 que parece problema do
