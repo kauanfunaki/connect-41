@@ -1,7 +1,7 @@
 // Modelos de texto para o campo "Descrição" (e as instruções por setor) da
 // Transferência — mesmos padrões usados no Acessórias, portados como
 // referência de conteúdo (não são dados de tenant, não têm tela de edição —
-// lista fixa em código, como TAX_REGIME_OPTIONS em EmpresaForm.tsx).
+// lista fixa em código, como OPCOES_DE_REGIME em src/lib/taxRegime.ts).
 //
 // Cada modelo já vem separado em duas partes, espelhando os dois campos do
 // formulário: `message` = título + empresa/CNPJ + origem + breve resumo (a

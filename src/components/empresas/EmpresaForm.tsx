@@ -15,6 +15,7 @@ import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatCnpj, formatCpf, formatPhone, formatCep } from "@/lib/format";
 import { NOVO_CLIENTE } from "@/lib/clientGroups";
+import { OPCOES_DE_REGIME } from "@/lib/taxRegime";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 import { Aviso } from "@/components/ui/Aviso";
 
@@ -27,25 +28,6 @@ const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto", ACTIVE: "Ativo", INACTIVE: "Inativo", CHURNED: "Cancelado",
 };
-
-const TAX_REGIME_OPTIONS = [
-  "Indefinido",
-  "Domésticas - CEI",
-  "Imune/Isenta",
-  "Lucro Presumido - Comércio Indústria e Serviço",
-  "Lucro Presumido - Sem Movimento",
-  "Lucro Real - Comércio Indústria e Serviço",
-  "Lucro Real - Sem Movimento",
-  "Lucro Real Inativa - Sem Funcionários e Com Pro-Labóre",
-  "MEI - Com Funcionário",
-  "MEI - Sem Funcionário",
-  "Produtor Rural",
-  "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Com Funcionários",
-  "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Sem Funcionários",
-  "Simples Nacional - Comércio ou Serviço - Sem Pró-labore - Com Funcionários",
-  "Simples Nacional - Comércio ou Serviço - Sem Pró-labore - Sem Funcionários",
-  "Simples Nacional - Serviço ou Comércio - Sem Movimento",
-];
 
 const STEP_LABELS = ["Identificação", "Endereço", "Contato", "Dados fiscais", "Responsáveis", "Revisão"];
 
@@ -428,10 +410,10 @@ export function EmpresaForm({
                   <option value="">Selecionar…</option>
                   {/* Valor legado fora da lista atual (ex: "Simples Nacional" genérico) —
                       mantido como opção pra edição não perder/trocar o dado silenciosamente. */}
-                  {defaultValues?.taxRegime && !TAX_REGIME_OPTIONS.includes(defaultValues.taxRegime) && (
+                  {defaultValues?.taxRegime && !OPCOES_DE_REGIME.includes(defaultValues.taxRegime) && (
                     <option value={defaultValues.taxRegime}>{defaultValues.taxRegime} (antigo)</option>
                   )}
-                  {TAX_REGIME_OPTIONS.map((r) => (
+                  {OPCOES_DE_REGIME.map((r) => (
                     <option key={r} value={r}>{r}</option>
                   ))}
                 </Select>
