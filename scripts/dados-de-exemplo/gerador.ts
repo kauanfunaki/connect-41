@@ -31,6 +31,7 @@
 // - reuniões na agenda (opcional: sem Google, são só leitura).
 
 import type { getPrisma } from "../../src/lib/prisma";
+import { camposDoRegime } from "../../src/lib/taxRegime";
 import { aplicarAjustes, calcular, MODELO_41, normalizarPerfil, type AjusteSetor, type ParametrosPreco } from "../../src/lib/valora/motor";
 
 type Prisma = ReturnType<typeof getPrisma>;
@@ -140,7 +141,7 @@ export async function carregarDadosDeExemplo(
         source: FONTE,
         city: e.cidade,
         stateCode: "PR",
-        taxRegime: e.regime,
+        ...camposDoRegime(e.regime),
         cnaePrincipal: e.cnae,
         clientGroupId: grupo.id,
         responsibleUserId: adminId,
