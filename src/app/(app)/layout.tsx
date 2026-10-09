@@ -1,4 +1,6 @@
+import { cookies } from "next/headers";
 import { AppShell } from "@/components/shell/AppShell";
+import { COOKIE_DO_MENU_LATERAL, menuRecolhidoDoCookie } from "@/lib/menuLateral";
 import { SessionKeeper } from "@/components/shell/SessionKeeper";
 import { MeetingAlertOverlay } from "@/components/shell/MeetingAlertOverlay";
 import { AvisoDeVersaoNova } from "@/components/shell/AvisoDeVersaoNova";
@@ -142,6 +144,7 @@ export default async function AppLayout({
         subscriptionReadOnly={ctx.subscriptionReadOnly}
         canSelfRegularizeSubscription={ctx.canSelfRegularizeSubscription}
         paresDeAjuda={PARES_DE_CAMINHO}
+        menuRecolhidoInicial={menuRecolhidoDoCookie((await cookies()).get(COOKIE_DO_MENU_LATERAL)?.value)}
       >
         <SessionKeeper />
         <MeetingAlertOverlay />

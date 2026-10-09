@@ -26,6 +26,8 @@ import {
   ChevronDown,
   ClipboardCheck,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pin,
   X,
   Building2,
@@ -41,6 +43,7 @@ import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { trocarSetor } from "@/components/shell/contexto";
+import { cookieDoMenuLateral } from "@/lib/menuLateral";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
@@ -146,6 +149,8 @@ type Props = {
   canSelfRegularizeSubscription?: boolean;
   /** Que artigo da ajuda explica cada tela — o "?" do topo abre o da tela aberta. */
   paresDeAjuda?: readonly ParDeCaminho[];
+  /** O menu lateral começa recolhido no computador — a escolha guardada no cookie. */
+  menuRecolhidoInicial?: boolean;
   children: React.ReactNode;
 };
 
@@ -171,9 +176,19 @@ export function AppShell({
   subscriptionReadOnly = false,
   canSelfRegularizeSubscription = false,
   paresDeAjuda = [],
+  menuRecolhidoInicial = false,
   children,
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  // O menu lateral recolhido no computador (08/10/2026): o botão à esquerda da
+  // troca de setor tira a lateral da frente e devolve. A escolha fica num
+  // cookie que o layout lê, para a página já nascer do jeito que ficou.
+  const [menuRecolhido, setMenuRecolhido] = useState(menuRecolhidoInicial);
+  const alternarMenu = () =>
+    setMenuRecolhido((atual) => {
+      document.cookie = cookieDoMenuLateral(!atual);
+      return !atual;
+    });
   const [trocaAberta, setTrocaAberta] = useState(false);
   // Cabeçalho aberto (05/10): sem fundo nem borda, o brilho passa por trás dele.
   // A borda volta quando o conteúdo rola, para a tabela não sumir numa linha
@@ -194,6 +209,8 @@ export function AppShell({
   // (07/10/2026, junto com o PortalShell).
   const telaGrande = useSyncExternalStore(assinarTela, lerTela, lerTelaNoServidor);
   const gavetaFechada = !telaGrande && !mobileOpen;
+  // Recolhida no computador, a lateral também sai do Tab e do leitor de tela.
+  const lateralFora = gavetaFechada || (telaGrande && menuRecolhido);
   useEffect(() => {
     if (!mobileOpen) return;
     function tecla(e: KeyboardEvent) {
@@ -228,10 +245,10 @@ export function AppShell({
           Em lg+: volta a ser a coluna estática de sempre (translate-x-0, static). */}
       <aside
         id="menu-lateral"
-        inert={gavetaFechada}
-        className={`w-[240px] flex-shrink-0 flex flex-col border-r border-border bg-sidebar-bg fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out lg:static lg:translate-x-0 ${
+        inert={lateralFora}
+        className={`w-[240px] flex-shrink-0 flex flex-col border-r border-border bg-sidebar-bg fixed inset-y-0 left-0 z-50 transition-[translate,margin-left] duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } ${menuRecolhido ? "lg:-ml-[240px]" : ""}`}
       >
         {/* Logo — a mesma altura do cabeçalho (60px), para as duas linhas de baixo
             se encontrarem; eram 56px, e a logo ficava 4px acima do "41 Tech" (02/10/2026).
@@ -276,7 +293,7 @@ export function AppShell({
             setor ou de escritório foi para o menu do usuário. Abaixo de lg a
             lateral é gaveta, e a busca fica no topo. */}
         <div className="hidden lg:block px-3 pt-3 pb-1">
-          <GlobalSearch telas={telasNavegaveis} variante="lateral" />
+          <GlobalSearch telas={telasNavegaveis} variante="lateral" atalho={telaGrande && !menuRecolhido} />
         </div>
 
         {/* Nav */}
@@ -438,7 +455,20 @@ export function AppShell({
           >
             <Menu size={20} />
           </IconButton>
-          <div className="flex-1 min-w-0 flex items-center">
+          {/* Recolher e mostrar o menu lateral no computador (08/10/2026), à
+              esquerda da troca de setor; no celular a lateral já é gaveta. */}
+          <IconButton
+            size="xl"
+            onClick={alternarMenu}
+            aria-label={menuRecolhido ? "Mostrar o menu lateral" : "Recolher o menu lateral"}
+            data-dica={menuRecolhido ? "Mostrar o menu" : "Recolher o menu"}
+            aria-expanded={!menuRecolhido}
+            aria-controls="menu-lateral"
+            className="hidden lg:inline-flex -ml-2"
+          >
+            {menuRecolhido ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+          </IconButton>
+          <div className="flex-1 min-w-0 flex items-center gap-3">
             {/* Onde estou: o escritório e o setor ativo, que o cartão embaixo
                 da logo mostrava até a busca ficar com o lugar dele (02/10). */}
             {/* Clicar nele abre a troca de setor e escritório (02/10/2026). */}
@@ -467,8 +497,11 @@ export function AppShell({
               ) : null}
               {podeTrocar && <ChevronDown size={13} aria-hidden className="flex-shrink-0 text-fg-muted" />}
             </button>
-            <div className="lg:hidden flex-1 min-w-0">
-              <GlobalSearch telas={telasNavegaveis} />
+            {/* A busca do topo é a do celular; no computador ela mora na
+                lateral — e vem para cá quando a lateral está recolhida, com o
+                Ctrl+K junto. */}
+            <div className={`flex-1 min-w-0 ${menuRecolhido ? "" : "lg:hidden"}`}>
+              <GlobalSearch telas={telasNavegaveis} atalho={!telaGrande || menuRecolhido} />
             </div>
           </div>
 
