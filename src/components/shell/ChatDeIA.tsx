@@ -25,7 +25,8 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
-import { OrbeDaIA } from "@/components/shell/OrbeDaIA";
+import { Ligia, type EstadoDaLigia } from "@/components/ia/Ligia";
+import { especialidadeDoAgente, NOME_DA_ASSISTENTE } from "@/lib/ia/ligia";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { partesComCitacoes, type Citado } from "@/lib/ia/chat/citacoes";
 import { ACEITA_NO_CAMPO, conferirEscolha, separarAnexos } from "@/lib/ia/chat/anexos-regras";
@@ -194,10 +195,19 @@ async function copiarTexto(texto: string): Promise<boolean> {
 
 const ALTURA_MAXIMA_DO_CAMPO = 6 * 20 + 8; // seis linhas
 
+/** Quanto tempo a Lígia fica com cara de "deu certo" depois de uma resposta ou proposta concluída. */
+const TEMPO_DE_COMEMORAR = 2800;
+
 /**
  * O chat de IA do canto inferior direito, em todas as telas internas
  * (redesenho de 02/10/2026 — referências do Untitled UI, "referência, não
  * cópia"). Desenho em Projects/Connect-41/Chat-de-IA-Redesign-2026-10-01.
+ *
+ * Desde 13/10/2026 quem atende é a Lígia, assistente do Connect (decisão do
+ * Kauan): o mesmo rosto e o mesmo nome em todos os setores, com o setor
+ * embaixo do nome — no lugar de "IA do BPO", "IA do DP"… O rosto muda com a
+ * conversa: pensando enquanto a resposta chega, "deu certo" por um instante
+ * depois de uma resposta ou proposta aplicada, e preocupada no erro.
  *
  * Só aparece para quem tem ao menos um agente disponível (`agentes`, calculado
  * no servidor pelo layout). A pergunta vai pela rota `/api/ia/chat`, que
@@ -212,7 +222,7 @@ export function ChatDeIA({
   agentes: AgenteDoChat[];
   /** Nome de quem está usando — o "Oi, Camila" das boas-vindas. */
   nome: string;
-  /** Cor de cada setor: o orbe leva a cor do setor do agente. */
+  /** Cor de cada setor: a borda do botão leva a cor do setor do agente. */
   coresDosSetores: Record<string, string>;
 }) {
   const pathname = usePathname();
@@ -243,6 +253,21 @@ export function ChatDeIA({
   const [arquivos, setArquivos] = useState<File[]>([]);
   const seletorDeArquivoRef = useRef<HTMLInputElement>(null);
   const jaAbriu = useSyncExternalStore(assinarJaAbriu, lerJaAbriu, () => true);
+  // O "deu certo" da Lígia: liga numa resposta ou proposta concluída e se
+  // desliga sozinho — não é um estado da conversa, é uma reação.
+  const [comemorando, setComemorando] = useState(false);
+  const comemoracaoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const comemorar = useCallback(() => {
+    if (comemoracaoRef.current) clearTimeout(comemoracaoRef.current);
+    setComemorando(true);
+    comemoracaoRef.current = setTimeout(() => setComemorando(false), TEMPO_DE_COMEMORAR);
+  }, []);
+  useEffect(
+    () => () => {
+      if (comemoracaoRef.current) clearTimeout(comemoracaoRef.current);
+    },
+    []
+  );
 
   const agentePadrao = agentes[0]?.code ?? "";
   const agentCode = escolhido && agentes.some((a) => a.code === escolhido) ? escolhido : agentePadrao;
@@ -290,6 +315,15 @@ export function ChatDeIA({
   const corDoOrbe = { "--orbe-b": (agente.setor && coresDosSetores[agente.setor]) || undefined } as React.CSSProperties;
   const primeiroNome = nome.trim().split(/\s+/)[0] ?? "";
   const ultimaResposta = [...mensagens].reverse().find((x) => x.papel === "assistente");
+  // Pensando ganha de tudo; depois o erro (o da tela ou a última resposta que
+  // falhou); o "deu certo" só por um instante; senão, parada.
+  const estadoDaLigia: EstadoDaLigia = enviando
+    ? "pensando"
+    : erro || mensagens.at(-1)?.falhou
+      ? "naoConsegui"
+      : comemorando
+        ? "deuCerto"
+        : "parada";
   // Resposta a uma pergunta com arquivo não tem Refazer: o arquivo não ficou guardado.
   const semRefazer = new Set<string>();
   let comArquivo = false;
@@ -350,6 +384,8 @@ export function ChatDeIA({
       setPergunta(t);
       if (comArquivos.length) setArquivos(comArquivos);
     };
+    // A última resposta chegou inteira? É o que faz a Lígia comemorar no fim.
+    let respondeu = false;
     try {
       let pedido: RequestInit;
       if (comArquivos.length) {
@@ -386,14 +422,17 @@ export function ChatDeIA({
           else if (e.tipo === "mensagem") {
             setMensagens((ms) => [...ms, e.mensagem]);
             if (e.mensagem.papel === "usuario") setPasso("Pensando…");
+            else respondeu = !e.mensagem.falhou;
           } else if (e.tipo === "erro") {
+            respondeu = false;
             setErro(e.texto);
             if (!res.ok) devolver();
           }
         }
       }
+      if (respondeu) comemorar();
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Falha ao falar com a IA.");
+      setErro(err instanceof Error ? err.message : "Não deu para falar com a Lígia agora. Tente de novo.");
       devolver();
     } finally {
       setPasso(null);
@@ -412,6 +451,7 @@ export function ChatDeIA({
     setMensagens((ms) =>
       ms.map((x) => (x.id === m.id ? { ...x, propostas: x.propostas.map((p, i) => (i === indice ? { ...p, aplicada: true } : p)) } : x))
     );
+    comemorar();
     // A tela de trás mudou (a etapa foi concluída): recarrega o que ela mostra.
     router.refresh();
   }
@@ -531,10 +571,11 @@ export function ChatDeIA({
 
   // ─── O botão do canto ─────────────────────────────────────────────────────
   //
-  // Pílula com o nome do agente do setor e o orbe, com a borda girando devagar
-  // (pedido de 01/10: o círculo genérico passou batido para quem olhou a
-  // plataforma). No celular, volta a ser círculo. Até a primeira abertura, um
-  // anel pulsa em volta — o balão de dica que vinha junto saiu em 13/10/2026.
+  // Pílula com o rosto da Lígia, o nome e o setor embaixo, com a borda girando
+  // devagar (pedido de 01/10: o círculo genérico passou batido para quem olhou
+  // a plataforma). No celular, só o rosto, num círculo de 48 px. Até a
+  // primeira abertura, um anel pulsa em volta — o balão de dica que vinha junto
+  // saiu em 13/10/2026 (PR #163); o anel ficou.
   if (!aberto) {
     return (
       <div className="fixed bottom-4 right-4 z-40" style={corDoOrbe}>
@@ -543,13 +584,16 @@ export function ChatDeIA({
           ref={botaoRef}
           type="button"
           onClick={abrirChat}
-          aria-label={`Abrir o chat — ${agente.titulo}`}
-          data-dica={`Perguntar à ${agente.titulo}`}
+          aria-label={`Falar com a ${NOME_DA_ASSISTENTE}, assistente do Connect — ${agente.especialidade}`}
+          data-dica={`Falar com a ${NOME_DA_ASSISTENTE}`}
           className="c41-borda-girando relative rounded-full p-[2px] shadow-lg transition-transform hover:-translate-y-0.5 outline-none"
         >
-          <span className="flex items-center gap-2 h-11 pl-1.5 pr-1.5 sm:pr-4 rounded-full bg-surface-elevated">
-            <OrbeDaIA tamanho={32} />
-            <span className="hidden sm:inline text-label font-semibold text-fg whitespace-nowrap">{agente.titulo}</span>
+          <span className="flex items-center gap-2 h-11 px-1 sm:pr-4 rounded-full bg-surface-elevated">
+            <Ligia tamanho={36} estado={estadoDaLigia} />
+            <span className="hidden sm:flex flex-col items-start text-left leading-tight">
+              <span className="text-label font-semibold text-fg whitespace-nowrap">{NOME_DA_ASSISTENTE}</span>
+              <span className="text-micro text-fg-muted whitespace-nowrap">{agente.especialidade}</span>
+            </span>
           </span>
         </button>
       </div>
@@ -572,7 +616,7 @@ export function ChatDeIA({
       <section
         style={corDoOrbe}
         className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] overflow-hidden"
-        aria-label="Chat de IA"
+        aria-label={`Chat com a ${NOME_DA_ASSISTENTE}`}
       >
         <header className="flex items-center gap-2.5 px-4 py-3">
           {vendoHistorico ? (
@@ -580,9 +624,17 @@ export function ChatDeIA({
               <ArrowLeft size={16} />
             </button>
           ) : (
-            <OrbeDaIA tamanho={28} />
+            <Ligia tamanho={32} estado={estadoDaLigia} />
           )}
-          <p className="flex-1 min-w-0 text-label font-semibold text-fg truncate">{vendoHistorico ? "Conversas" : agente.titulo}</p>
+          {vendoHistorico ? (
+            <p className="flex-1 min-w-0 text-label font-semibold text-fg truncate">Conversas</p>
+          ) : (
+            // O nome e, embaixo, o setor que ela atende nesta conversa.
+            <div className="flex-1 min-w-0 leading-tight">
+              <p className="text-label font-semibold text-fg truncate">{NOME_DA_ASSISTENTE}</p>
+              <p className="text-micro text-fg-muted truncate">{agente.especialidade}</p>
+            </div>
+          )}
           <Popover
             align="right"
             width={220}
@@ -632,7 +684,7 @@ export function ChatDeIA({
                     <button type="button" onClick={() => abrir(c.id)} className="flex-1 min-w-0 text-left px-3 py-2.5">
                       <span className="block text-ui text-fg truncate">{c.titulo}</span>
                       <span className="block text-micro text-fg-muted">
-                        {agentes.find((a) => a.code === c.agentCode)?.titulo ?? "IA"} ·{" "}
+                        {especialidadeDoAgente(c.agentCode) ?? NOME_DA_ASSISTENTE} ·{" "}
                         {formatInstantDateTime(new Date(c.atualizadaEm), { dateStyle: "short", timeStyle: "short" })}
                       </span>
                     </button>
@@ -649,9 +701,11 @@ export function ChatDeIA({
             <div className="flex-1 overflow-y-auto px-4 pt-2 pb-4 flex flex-col gap-5">
               {mensagens.length === 0 && !enviando && (
                 <div className="flex flex-col items-center text-center pt-8 pb-2">
-                  <OrbeDaIA tamanho={56} />
-                  <p className="mt-4 text-section font-semibold text-fg">{primeiroNome ? `Oi, ${primeiroNome}` : "Oi"}</p>
-                  <p className="text-body text-fg-secondary">Como posso ajudar?</p>
+                  <Ligia tamanho={64} estado={estadoDaLigia} />
+                  <p className="mt-4 text-section font-semibold text-fg">
+                    {primeiroNome ? `Oi, ${primeiroNome}! Eu sou a ${NOME_DA_ASSISTENTE}.` : `Oi! Eu sou a ${NOME_DA_ASSISTENTE}.`}
+                  </p>
+                  <p className="text-body text-fg-secondary">Em que posso ajudar?</p>
                   <p className="mt-3 max-w-[300px] text-fs-2 text-fg-muted leading-relaxed">
                     Consulto o Connect com o mesmo acesso que você tem e <strong className="text-fg-secondary">não altero nada sozinha</strong> — sugestão
                     só vale depois do seu “Aplicar”.
@@ -692,7 +746,11 @@ export function ChatDeIA({
                   </div>
                 ) : (
                   <div key={m.id} className="group flex items-start gap-2.5">
-                    <OrbeDaIA tamanho={24} className="mt-0.5" />
+                    <Ligia
+                      tamanho={24}
+                      className="mt-0.5"
+                      estado={m.falhou ? "naoConsegui" : m.id === ultimaResposta?.id && comemorando ? "deuCerto" : "parada"}
+                    />
                     <div className="min-w-0 flex-1 flex flex-col gap-2">
                       {m.contexto && <span className="c41-rotulo text-brand">{m.contexto}</span>}
                       <div className={`text-ui leading-relaxed break-words ${m.falhou ? "rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-danger" : "text-fg"}`}>
@@ -700,7 +758,7 @@ export function ChatDeIA({
                       </div>
                       {m.truncada && (
                         <p className="flex items-start gap-1.5 text-micro text-warning-fg">
-                          <AlertTriangle size={12} className="mt-0.5 shrink-0" /> A IA parou antes de terminar — a resposta pode estar incompleta.
+                          <AlertTriangle size={12} className="mt-0.5 shrink-0" /> A {NOME_DA_ASSISTENTE} parou antes de terminar — a resposta pode estar incompleta.
                         </p>
                       )}
                       <CartoesDeDecisao
@@ -752,7 +810,7 @@ export function ChatDeIA({
   
               {passo && (
                 <p className="flex items-center gap-2.5 text-fs-2 text-fg-muted">
-                  <OrbeDaIA tamanho={24} />
+                  <Ligia tamanho={24} estado="pensando" />
                   {passo}
                 </p>
               )}
@@ -814,7 +872,7 @@ export function ChatDeIA({
                     }}
                     rows={1}
                     maxLength={2000}
-                    placeholder={`Pergunte à ${agente.titulo}…`}
+                    placeholder={`Pergunte à ${NOME_DA_ASSISTENTE}…`}
                     className="min-h-0! flex-1 border-0! bg-transparent! px-0! py-1! text-label! leading-5 shadow-none! focus:shadow-none! focus-visible:shadow-none! overflow-y-auto"
                     aria-label="Pergunta"
                     disabled={enviando}
@@ -869,9 +927,10 @@ export function ChatDeIA({
 }
 
 /**
- * Com quem conversar, embaixo do campo — minimalista, como o "UUI v12.8 ▾" da
- * referência. Só aparece com mais de um agente; com a conversa começada, mostra
- * o nome travado, porque a conversa pertence a um agente.
+ * Em qual setor conversar, embaixo do campo — minimalista, como o "UUI v12.8 ▾"
+ * da referência. Só aparece com mais de um agente; com a conversa começada,
+ * mostra o setor travado, porque a conversa pertence a um agente. Desde a Lígia
+ * (13/10/2026) a lista é de setores: quem atende é sempre ela.
  */
 function SeletorDoAgente({
   agentes,
@@ -887,15 +946,15 @@ function SeletorDoAgente({
   if (agentes.length < 2) return <span />;
   if (travado) {
     return (
-      <span className="px-1.5 text-fs-2 text-fg-muted" title="A conversa é com este agente. Para falar com outro, comece uma nova.">
-        {atual.titulo}
+      <span className="px-1.5 text-fs-2 text-fg-muted" title="Esta conversa é deste setor. Para falar de outro, comece uma nova.">
+        {atual.especialidade}
       </span>
     );
   }
   return (
     <Popover
       width={220}
-      aria-label="Com qual IA conversar"
+      aria-label="Em qual setor conversar"
       trigger={({ toggle, open }) => (
         <button
           type="button"
@@ -903,7 +962,7 @@ function SeletorDoAgente({
           aria-expanded={open}
           className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-fs-2 font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover"
         >
-          {atual.titulo}
+          {atual.especialidade}
           <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       )}
@@ -919,7 +978,7 @@ function SeletorDoAgente({
                 close();
               }}
             >
-              {a.titulo}
+              {a.especialidade}
             </ItemDoMenu>
           ))}
         </div>

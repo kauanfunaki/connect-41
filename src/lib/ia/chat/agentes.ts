@@ -24,11 +24,22 @@ import { acessoDoRecrutador } from "@/lib/recrutamento/acessoVagas";
 import { recorteDaGestao } from "@/lib/gestao/regras";
 import { MODULO_GESTAO } from "@/lib/gestao/acesso";
 import { setoresDaEquipe } from "./citacoes";
+import {
+  apresentacaoDaLigia,
+  cumprimentoDaLigia,
+  especialidadeDoAgente,
+  NOME_DA_ASSISTENTE,
+  primeiroNomeParaOPrompt,
+} from "@/lib/ia/ligia";
 
 export type AgenteDoChat = {
   code: string;
-  /** Nome curto no topo do chat. */
-  titulo: string;
+  /**
+   * O que a Lígia atende neste agente, escrito embaixo do nome dela no chat
+   * ("BPO Financeiro"). Até 13/10/2026 era o `titulo` "IA do BPO" — cada
+   * setor com o seu nome; agora o nome é um só (`src/lib/ia/ligia.ts`).
+   */
+  especialidade: string;
   sugestoes: string[];
   /** O setor que a pessoa precisa operar — `null` na Ajuda, que serve a todos. */
   setor: string | null;
@@ -36,7 +47,6 @@ export type AgenteDoChat = {
 
 type Config = {
   code: string;
-  titulo: string;
   sugestoes: string[];
   /** Módulo cujo setor decide o acesso (segue a transferência de módulo). */
   modulo: string | null;
@@ -85,19 +95,23 @@ export const GUARDA_DO_ENCAMINHADO =
   "\n\nEsta pergunta já foi encaminhada a você por outra IA do Connect. Responda você mesma com as suas " +
   "ferramentas — mesmo que seja para dizer que não achou ou que o Connect não tem esse dado. Não encaminhe de novo.";
 
+// O começo de cada texto abaixo dizia "Você é a IA do {setor}". Desde a Lígia
+// (13/10/2026) quem ela é vem de `apresentacaoDaLigia`, antes deste texto; aqui
+// fica só o que o agente atende — conteúdo, ferramentas e regras sem mudança.
 const AJUDA =
-  "Você é a Ajuda do Connect, a plataforma interna do escritório de contabilidade. Você explica como usar o " +
+  "Você atende a Ajuda do Connect, a plataforma interna do escritório de contabilidade. Você explica como usar o " +
   "sistema: onde fica cada função, o que cada tela faz e o que dizem os manuais que o próprio escritório escreveu. " +
   "Consulte as ferramentas antes de responder — use listar_minhas_telas para dizer onde fica algo (cite o caminho, " +
   "ex.: /pagar) e buscar_nos_manuais para procedimentos. Nunca invente tela, botão ou procedimento: se não achar, " +
   "diga que não achou e sugira a quem perguntar.\n" +
   "Você NÃO tem acesso aos dados do escritório (empresas, lançamentos, processos). Se a pergunta for sobre os dados " +
-  "de um setor, diga que a IA daquele setor responde isso, quando estiver disponível no chat.\n" +
+  "de um setor, diga que isso é com a Lígia daquele setor (o setor se escolhe embaixo do campo do chat), quando ele " +
+  "estiver disponível para a pessoa.\n" +
   "Pergunta de COMO FAZER algo no Connect é sempre sua — inclusive \"como faço uma transferência para outro setor\", " +
   "que é uma dúvida sobre a tela Transferências (/transferencias), e não um pedido de transferência: responda você.";
 
 const RECRUTAMENTO =
-  "Você é a IA do Recrutamento de um escritório de contabilidade. Você ajuda o recrutador a enxergar as vagas e " +
+  "Você atende o Recrutamento de um escritório de contabilidade. Você ajuda o recrutador a enxergar as vagas e " +
   "os candidatos do setor: o que está parado, quem chegou, quem ainda não foi triado, onde está cada candidato. " +
   "Consulte as ferramentas antes de responder — comece por listar_vagas; para achar alguém pelo nome, use " +
   "buscar_candidato. Nunca invente candidato, nota, etapa ou vaga.\n" +
@@ -107,7 +121,7 @@ const RECRUTAMENTO =
   "claro que é sugestão a confirmar. Nunca sugira reprovar alguém só pela nota da triagem.";
 
 const FISCAL =
-  "Você é a IA do Fiscal de um escritório de contabilidade. Você responde sobre o acervo de documentos fiscais " +
+  "Você atende o Fiscal de um escritório de contabilidade. Você responde sobre o acervo de documentos fiscais " +
   "(NF-e, NFC-e, CT-e e NFS-e) das empresas clientes: o que cada empresa emitiu e recebeu no mês, o que ainda está " +
   "pendente de lançamento no financeiro, notas canceladas e com XML incompleto.\n" +
   "Consulte as ferramentas antes de responder — nunca invente número, valor ou nota. Para qualquer pergunta sobre " +
@@ -121,7 +135,7 @@ const FISCAL =
   "BPO direto, sem consultar nada antes.";
 
 const BPO =
-  "Você é a IA do BPO de um escritório de contabilidade que faz o financeiro terceirizado de empresas clientes. " +
+  "Você atende o BPO de um escritório de contabilidade que faz o financeiro terceirizado de empresas clientes. " +
   "Você responde sobre contas a pagar e a receber, o DRE do mês, as pendências com o cliente, a conciliação " +
   "bancária e as contas aguardando aprovação do cliente.\n" +
   "Consulte as ferramentas antes de responder — nunca invente valor, conta ou prazo. Para perguntas sobre uma " +
@@ -132,7 +146,7 @@ const BPO =
   "vazio, diga que os dados ainda não estão no Connect (a importação do Omie traz).";
 
 const DP =
-  "Você é a IA do DP (Departamento Pessoal) de um escritório de contabilidade que cuida dos colaboradores das " +
+  "Você atende o DP (Departamento Pessoal) de um escritório de contabilidade que cuida dos colaboradores das " +
   "empresas clientes. Você responde sobre quem está ativo, em férias, afastado ou em admissão; férias perto de " +
   "vencer (vencidas são pagas em dobro); rescisões em andamento e o prazo legal de pagamento (10 dias do término, " +
   "CLT art. 477 §6º); e horas extras ainda não enviadas para a folha.\n" +
@@ -147,7 +161,6 @@ const DP =
 const CONFIGS: Config[] = [
   {
     code: "assistente_do_dp",
-    titulo: "IA do DP",
     modulo: "dp_colaboradores",
     sistema: DP,
     sugestoes: [
@@ -158,7 +171,6 @@ const CONFIGS: Config[] = [
   },
   {
     code: "assistente_do_bpo",
-    titulo: "IA do BPO",
     modulo: "bpo_contas_pagar",
     sistema: BPO,
     sugestoes: [
@@ -169,7 +181,6 @@ const CONFIGS: Config[] = [
   },
   {
     code: "assistente_do_fiscal",
-    titulo: "IA do Fiscal",
     modulo: "fiscal_documentos",
     sistema: FISCAL,
     sugestoes: [
@@ -180,7 +191,6 @@ const CONFIGS: Config[] = [
   },
   {
     code: "assistente_do_recrutamento",
-    titulo: "IA do Recrutamento",
     modulo: "recrutamento_vagas",
     sistema: RECRUTAMENTO,
     sugestoes: [
@@ -191,7 +201,6 @@ const CONFIGS: Config[] = [
   },
   {
     code: "assistente_do_societario",
-    titulo: "IA do Societário",
     modulo: "societario_processos",
     sistema: SISTEMA_DO_SOCIETARIO,
     sugestoes: [
@@ -202,7 +211,6 @@ const CONFIGS: Config[] = [
   },
   {
     code: "ajuda_do_connect",
-    titulo: "Ajuda do Connect",
     modulo: null,
     sistema: AJUDA,
     sugestoes: ["Onde eu vejo as contas a pagar?", "Como faço uma transferência para outro setor?", "O que tem nos manuais do meu setor?"],
@@ -213,8 +221,34 @@ export function configDoChat(code: string): Config | undefined {
   return CONFIGS.find((c) => c.code === code);
 }
 
-export function sistemaDoChat(code: string): string {
-  return (configDoChat(code)?.sistema ?? AJUDA) + GUARDA_DO_CHAT;
+/**
+ * O texto de instrução de um agente do chat. Desde 13/10/2026 começa pela
+ * Lígia — quem ela é e o jeito de falar —, depois vem o que o agente atende e
+ * a guarda do chat, iguais ao que eram (a apresentação não mexe em
+ * ferramenta, regra nem cerca), e no fim o cumprimento desta resposta.
+ *
+ * `primeiraResposta` decide o cumprimento ("Oi, Camila!"): só na primeira
+ * resposta da conversa. Sem a opção, ela não cumprimenta.
+ */
+export function sistemaDoChat(
+  code: string,
+  { primeiroNome = null, primeiraResposta = false }: { primeiroNome?: string | null; primeiraResposta?: boolean } = {}
+): string {
+  const config = configDoChat(code);
+  const apresentacao = apresentacaoDaLigia(especialidadeDoAgente(config?.code ?? "ajuda_do_connect") ?? NOME_DA_ASSISTENTE);
+  return `${apresentacao}\n\n${config?.sistema ?? AJUDA}${GUARDA_DO_CHAT}\n\n${cumprimentoDaLigia({ primeiroNome, primeiraResposta })}`;
+}
+
+/** O primeiro nome de quem pergunta, para a Lígia cumprimentar — `null` se não achar. */
+export async function primeiroNomeDaPessoa(userId: string): Promise<string | null> {
+  try {
+    const pessoa = await getPrisma().user.findUnique({ where: { id: userId }, select: { name: true } });
+    return primeiroNomeParaOPrompt(pessoa?.name);
+  } catch (err) {
+    // Sem o nome ela só cumprimenta com "Oi!" — não vale derrubar a pergunta.
+    console.error("[chat-ia] nome de quem pergunta", err);
+    return null;
+  }
 }
 
 /** O público do chat neste escritório. Tabela ausente (migration não rodou) = chat escondido. */
@@ -251,7 +285,7 @@ export async function agentesDoChat(ctx: AuthContext): Promise<AgenteDoChat[]> {
       setor = (await setorDoModulo(ctx.tenantId, c.modulo)) ?? getModuleDef(c.modulo)?.sectorCode ?? null;
       if (!setor || !canActOnSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, c.modulo))) continue;
     }
-    disponiveis.push({ code: c.code, titulo: c.titulo, sugestoes: c.sugestoes, setor });
+    disponiveis.push({ code: c.code, especialidade: especialidadeDoAgente(c.code) ?? NOME_DA_ASSISTENTE, sugestoes: c.sugestoes, setor });
   }
   const ativo = ctx.activeSector;
   return disponiveis.sort((a, b) => Number(b.setor !== null && b.setor === ativo) - Number(a.setor !== null && a.setor === ativo));
