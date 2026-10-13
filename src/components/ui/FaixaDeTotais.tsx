@@ -75,8 +75,39 @@ const COLUNAS: Record<number, string> = {
   6: "md:grid-cols-3 xl:grid-cols-6",
 };
 
-/** `className` troca o respiro de baixo (padrão `mb-5`): em coluna com `gap`, passe "". */
-export function FaixaDeTotais({ itens, className = "mb-5" }: { itens: ItemDeTotal[]; className?: string }) {
+/**
+ * Qual cartão vira o número principal da tela — cheio de azul, com letra
+ * branca (paleta B "Mais azul", escolha do Kauan em 13/10/2026). É o primeiro,
+ * que nas telas é o total ("A pagar", "Em aberto"), e só um por faixa. Fica de
+ * fora:
+ * - faixa de filtro (algum item com `ativo` definido): ali o azul cheio se
+ *   confundiria com o recorte escolhido, que já é marcado em azul;
+ * - primeiro número com situação (vencido, vence logo, pago, sem situação): a
+ *   cor da situação vem antes da ênfase;
+ * - faixa de um número só, que não tem o que destacar.
+ */
+export function indiceDoDestaque(itens: ItemDeTotal[]): number | null {
+  if (itens.length < 2) return null;
+  if (itens.some((i) => i.ativo !== undefined)) return null;
+  const tom = tomDaClasse(itens[0].tom);
+  if (tom && tom !== "marca") return null;
+  return 0;
+}
+
+/**
+ * `className` troca o respiro de baixo (padrão `mb-5`): em coluna com `gap`, passe "".
+ * `destaque={false}` tira o cartão azul da tela que não quiser (ver `indiceDoDestaque`).
+ */
+export function FaixaDeTotais({
+  itens,
+  className = "mb-5",
+  destaque = true,
+}: {
+  itens: ItemDeTotal[];
+  className?: string;
+  destaque?: boolean;
+}) {
+  const principal = destaque ? indiceDoDestaque(itens) : null;
   return (
     <div className={`grid grid-cols-2 ${COLUNAS[itens.length] ?? "xl:grid-cols-4"} gap-3 sm:gap-4 ${className}`.trim()}>
       {itens.map((i, n) => (
@@ -91,6 +122,7 @@ export function FaixaDeTotais({ itens, className = "mb-5" }: { itens: ItemDeTota
           tom={tomDaClasse(i.tom)}
           iconeDoTom={false}
           ativo={i.ativo}
+          destaque={n === principal}
           delay={n * 40}
         />
       ))}

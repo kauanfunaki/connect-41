@@ -47,6 +47,12 @@ type Props = {
    * "mostrando agora" no detalhe dizia qual era.
    */
   ativo?: boolean;
+  /**
+   * O número principal da tela, num cartão cheio de azul com letra branca
+   * (paleta B "Mais azul", 13/10/2026). Um por tela: quem decide é a
+   * `FaixaDeTotais` (`indiceDoDestaque`). O tom não pinta o valor aqui.
+   */
+  destaque?: boolean;
   /** Atraso do stagger de entrada, em ms. */
   delay?: number;
 };
@@ -60,6 +66,7 @@ const COR_DO_TOM: Record<TomDaMetrica, { selo: string; valor: string }> = {
   marca: { selo: "bg-brand-subtle text-brand", valor: "text-brand" },
 };
 const PADRAO = { selo: "bg-brand-subtle text-brand", valor: "text-fg" };
+const DESTAQUE = { selo: "bg-on-brand/15 text-on-brand", valor: "text-on-brand" };
 
 function iconeDoTom(tom: TomDaMetrica | undefined): React.ReactNode {
   if (tom === "critico") return <OctagonAlert size={15} aria-hidden />;
@@ -98,11 +105,15 @@ export function MetricCard({
   iconeDoTom: comIconeDoTom = true,
   highlight = false,
   ativo = false,
+  destaque = false,
   navegacaoCompleta = false,
   delay = 0,
 }: Props) {
   const tomEfetivo: TomDaMetrica | undefined = tom ?? (highlight ? "atencao" : undefined);
-  const cores = tomEfetivo ? COR_DO_TOM[tomEfetivo] : PADRAO;
+  const cores = destaque ? DESTAQUE : tomEfetivo ? COR_DO_TOM[tomEfetivo] : PADRAO;
+  // Branco a 90% no rótulo e no detalhe: 4,7:1 no começo do degradê (brand-600).
+  const corDoRotulo = destaque ? "text-on-brand/90" : "text-fg-secondary";
+  const corDoApoio = destaque ? "text-on-brand/90" : "text-fg-muted";
   const iconeFinal = icon ?? (tom && comIconeDoTom ? iconeDoTom(tom) : null);
   const content = (
     <>
@@ -114,7 +125,7 @@ export function MetricCard({
             {iconeFinal}
           </span>
         )}
-        <p className="min-w-0 text-helper leading-snug text-fg-secondary truncate max-sm:whitespace-normal max-sm:line-clamp-2 c41-cortavel">
+        <p className={`min-w-0 text-helper leading-snug ${corDoRotulo} truncate max-sm:whitespace-normal max-sm:line-clamp-2 c41-cortavel`}>
           {label}
         </p>
       </div>
@@ -129,15 +140,22 @@ export function MetricCard({
           {typeof value === "number" ? NUMERO.format(value) : value}
         </p>
         {comparacao}
-        {sub && <span className="text-micro text-fg-muted truncate">{sub}</span>}
+        {sub && <span className={`text-micro ${corDoApoio} truncate`}>{sub}</span>}
       </div>
-      {detalhe && <p className="-mt-0.5 text-micro text-fg-muted truncate c41-cortavel">{detalhe}</p>}
+      {detalhe && <p className={`-mt-0.5 text-micro ${corDoApoio} truncate c41-cortavel`}>{detalhe}</p>}
     </>
   );
 
-  const cls = `reveal-in min-w-0 border rounded-lg px-4 py-3.5 flex flex-col gap-2 shadow-xs transition-[border-color,box-shadow,transform] duration-150 ${
-    ativo ? "bg-brand-subtle border-brand ring-2 ring-brand" : "bg-surface border-border"
-  }`;
+  // Destaque que também é o recorte ativo: o anel solto do cartão, porque o
+  // fundo já é azul.
+  const fundo = destaque
+    ? `bg-[linear-gradient(135deg,var(--c41-destaque-numero-de),var(--c41-destaque-numero-ate))] border-transparent ${
+        ativo ? "ring-2 ring-brand ring-offset-2 ring-offset-canvas" : ""
+      }`
+    : ativo
+      ? "bg-brand-subtle border-brand ring-2 ring-brand"
+      : "bg-surface border-border";
+  const cls = `reveal-in min-w-0 border rounded-lg px-4 py-3.5 flex flex-col gap-2 shadow-xs transition-[border-color,box-shadow,transform] duration-150 ${fundo}`;
   const atual = ativo ? ("true" as const) : undefined;
 
   // Sem anel de foco próprio: o `:focus-visible` global já desenha o dele.
@@ -148,7 +166,7 @@ export function MetricCard({
         href={href}
         aria-current={atual}
         style={{ animationDelay: `${delay}ms` }}
-        className={`${cls} hover:border-brand/40 hover:-translate-y-0.5 hover:shadow-md`}
+        className={`${cls} ${destaque ? "" : "hover:border-brand/40"} hover:-translate-y-0.5 hover:shadow-md`}
       >
         {content}
       </Destino>
