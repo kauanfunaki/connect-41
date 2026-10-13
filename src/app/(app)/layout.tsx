@@ -4,6 +4,7 @@ import { COOKIE_DO_MENU_LATERAL, menuRecolhidoDoCookie } from "@/lib/menuLateral
 import { SessionKeeper } from "@/components/shell/SessionKeeper";
 import { MeetingAlertOverlay } from "@/components/shell/MeetingAlertOverlay";
 import { AvisoDeVersaoNova } from "@/components/shell/AvisoDeVersaoNova";
+import { TutorialDaEquipe } from "@/components/tutorial/TutorialDaEquipe";
 import { DicaFlutuante } from "@/components/shared/DicaFlutuante";
 import { ToastProvider } from "@/components/ui/Toast";
 import { getSectorMaps } from "@/lib/sectors";
@@ -149,6 +150,7 @@ export default async function AppLayout({
         menuRecolhidoInicial={menuRecolhidoDoCookie((await cookies()).get(COOKIE_DO_MENU_LATERAL)?.value)}
       >
         <SessionKeeper />
+        <TutorialDaEquipe />
         <MeetingAlertOverlay />
         <AvisoDeVersaoNova />
         <DicaFlutuante />
