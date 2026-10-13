@@ -8,7 +8,9 @@ import {
   NOME_DA_ASSISTENTE,
   nomeDaAssistente,
   primeiroNomeParaOPrompt,
+  semCumprimento,
 } from "./ligia";
+import { sistemaDoChat } from "@/lib/ia/chat/agentes";
 
 // A Lígia (decisão do Kauan, 13/10/2026): um nome só para a IA do chat, com o
 // setor embaixo — no lugar de "IA do BPO", "IA do DP"…
@@ -106,5 +108,34 @@ describe("cumprimentoDaLigia", () => {
 
   it("sem o nome, cumprimenta com um 'Oi!'", () => {
     expect(cumprimentoDaLigia({ primeiroNome: null, primeiraResposta: true })).toContain('"Oi!"');
+  });
+});
+
+describe("semCumprimento", () => {
+  it("tira o 'Oi, Kauan!' do começo de uma resposta que não devia cumprimentar", () => {
+    expect(semCumprimento("Oi, Kauan!\n**3 pendências** esperando o cliente.")).toBe("**3 pendências** esperando o cliente.");
+    expect(semCumprimento("Olá Camila! segue o resumo.")).toBe("Segue o resumo.");
+    expect(semCumprimento("Oi! Encontrei 2 férias.")).toBe("Encontrei 2 férias.");
+  });
+
+  it("não mexe no resto, nem em resposta sem cumprimento", () => {
+    expect(semCumprimento("**3 pendências** — oi, tudo certo.")).toBe("**3 pendências** — oi, tudo certo.");
+    expect(semCumprimento("Oito contas vencidas.")).toBe("Oito contas vencidas.");
+    expect(semCumprimento("Oi!")).toBe("Oi!");
+  });
+});
+
+describe("o jeito de escrever no chat (13/10/2026)", () => {
+  const t = sistemaDoChat("assistente_do_bpo");
+  it("pede resumo primeiro, itens em lista com o principal em negrito e o link da ferramenta como botão", () => {
+    expect(t).toContain("UMA linha de resumo");
+    expect(t).toContain("o nome do item em negrito");
+    expect(t).toContain("numa linha sozinha, copiado exatamente como veio");
+    expect(t).not.toContain("Não use tabelas nem títulos");
+  });
+
+  it("proíbe código interno e id na resposta", () => {
+    expect(t).toContain("Nunca mostre código interno (SEM_PRAZO");
+    expect(t).toContain("Nunca mostre id interno");
   });
 });

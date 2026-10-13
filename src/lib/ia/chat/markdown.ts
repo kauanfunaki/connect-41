@@ -25,6 +25,9 @@
 
 import { CITACAO, type TipoCitado } from "./citacoes";
 import { ehCaminhoInterno, ehTelaConhecida, nomeDaTela } from "./telas";
+import { codigoEmPalavras } from "@/lib/ia/legivel";
+
+export { codigoEmPalavras };
 
 export type Trecho =
   | { t: "texto"; v: string }
@@ -86,41 +89,6 @@ export function ocultarIds(texto: string): string {
     .replace(/\(\s*\)/g, "");
 }
 
-/** As palavras de código que perdem o acento no banco. */
-const ACENTOS: Readonly<Record<string, string>> = {
-  ANALISE: "análise",
-  CALCULO: "cálculo",
-  CONCLUIDO: "concluído",
-  CONCLUIDA: "concluída",
-  LANCADO: "lançado",
-  LANCADA: "lançada",
-  LANCAMENTO: "lançamento",
-  INFORMACAO: "informação",
-  CONFIRMACAO: "confirmação",
-  APROVACAO: "aprovação",
-  EXIGENCIA: "exigência",
-  ORGAO: "órgão",
-  ADMISSAO: "admissão",
-  RESCISAO: "rescisão",
-  NAO: "não",
-  PROVISORIO: "provisório",
-  DOCUMENTACAO: "documentação",
-  SOLICITACAO: "solicitação",
-  FERIAS: "férias",
-  TERMINO: "término",
-  CONTRIBUICAO: "contribuição",
-  CLASSIFICACAO: "classificação",
-};
-
-/** Os de mais de uma palavra que não saem bem só trocando "_" por espaço. */
-const CODIGOS_COMPOSTOS: Readonly<Record<string, string>> = {
-  PENDENTE_APROVACAO: "pendente de aprovação",
-  ENVIADO_FOLHA: "enviado para a folha",
-  NAO_REQUER: "não requer aprovação",
-  TERMINO_CONTRATO: "término de contrato",
-  ACORDO_484A: "acordo entre as partes",
-};
-
 /** As situações de uma palavra só que aparecem cruas — só estas: sigla e nome próprio ficam. */
 const CODIGOS_SIMPLES = new Set([
   "ABERTA", "ABERTO", "VENCIDA", "VENCIDO", "VENCIDAS", "PENDENTE", "PENDENTES", "LANCADO", "LANCADA",
@@ -130,15 +98,6 @@ const CODIGOS_SIMPLES = new Set([
   "PROGRAMADA", "CONFERIDO", "PROVISORIO", "ENCERRADA", "ENCERRADO", "PAUSADA", "TRIAGEM", "ENTREVISTA",
   "CONTRATADO", "DESISTENTE", "PARCIAL", "COMPLETO", "LANCADOS", "IGNORADOS",
 ]);
-
-function palavraDeCodigo(p: string): string {
-  return ACENTOS[p] ?? p.toLowerCase();
-}
-
-/** "SEM_PRAZO" → "sem prazo"; "EM_ANALISE" → "em análise". */
-export function codigoEmPalavras(codigo: string): string {
-  return CODIGOS_COMPOSTOS[codigo] ?? codigo.split("_").filter(Boolean).map(palavraDeCodigo).join(" ");
-}
 
 /**
  * Troca código de situação que escapou para o texto por palavra. Com "_" é
@@ -154,7 +113,7 @@ export function humanizarCodigos(texto: string): string {
       const antes = todo.slice(0, i).match(/([\p{L}]+)[ \t]*$/u)?.[1];
       const depois = todo.slice(i + c.length).match(/^[ \t]*([\p{L}]+)/u)?.[1];
       const maiuscula = (p?: string) => Boolean(p && p.length > 1 && p === p.toUpperCase() && p !== p.toLowerCase());
-      return maiuscula(antes) || maiuscula(depois) ? c : palavraDeCodigo(c);
+      return maiuscula(antes) || maiuscula(depois) ? c : codigoEmPalavras(c);
     });
 }
 

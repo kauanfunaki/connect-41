@@ -24,6 +24,19 @@ import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferram
 import { listarDocumentos, resumoPorDestino } from "@/lib/fiscal/data";
 import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
 import { nomeExibicao } from "@/lib/companyName";
+import { DESTINO_LABEL, SITUACAO_LABEL, TIPO_LABEL } from "@/lib/fiscal/rotulos";
+import { chavesLegiveis, linkDaTela, mesLegivel, situacaoLegivel } from "@/lib/ia/legivel";
+
+/** A situação da empresa no escritório, como o cadastro escreve. */
+const SITUACAO_DA_EMPRESA: Readonly<Record<string, string>> = {
+  PROSPECT: "prospecto",
+  ACTIVE: "ativa",
+  INACTIVE: "inativa",
+  CHURNED: "cancelada",
+};
+
+/** "No financeiro", em palavras: pendentes, lançados, ignorados. */
+const NO_FINANCEIRO: Readonly<Record<string, string>> = { PENDENTE: "pendentes", LANCADO: "lançados", IGNORADO: "ignorados" };
 
 function alcance(ctx: ContextoDaFerramenta): AlcanceFiscal {
   return { tipo: "TENANT", tenantId: ctx.tenantId };
@@ -150,7 +163,9 @@ export const FERRAMENTAS_DE_FISCAL: Record<string, FerramentaRegistrada> = {
         nome: nomeExibicao(e),
         razaoSocial: e.name,
         documento: e.cnpj ?? e.cpf,
-        situacaoNoEscritorio: e.status,
+        situacaoNoEscritorio: situacaoLegivel(e.status, SITUACAO_DA_EMPRESA),
+        // A ficha da empresa — para citar pelo nome, nunca pelo id.
+        link: linkDaTela(nomeExibicao(e), `/empresas/${e.id}`),
       }));
     },
   },
@@ -217,11 +232,11 @@ export const FERRAMENTAS_DE_FISCAL: Record<string, FerramentaRegistrada> = {
       return {
         empresa: nomeExibicao(empresa),
         competencia,
-        emitidas: somarPorTipo(emitidas),
-        recebidas: somarPorTipo(recebidas),
-        noFinanceiro: porDestino,
+        emitidas: chavesLegiveis(somarPorTipo(emitidas), TIPO_LABEL),
+        recebidas: chavesLegiveis(somarPorTipo(recebidas), TIPO_LABEL),
+        noFinanceiro: chavesLegiveis(porDestino, NO_FINANCEIRO),
         comXmlIncompleto: todas.filter((g) => g.completude === "PARCIAL").reduce((n, g) => n + g._count._all, 0),
-        link: linkDoAcervo({ empresa: empresa.id, competencia }),
+        link: linkDaTela(`Abrir os documentos de ${mesLegivel(competencia)}`, linkDoAcervo({ empresa: empresa.id, competencia })),
       };
     },
   },
@@ -256,18 +271,18 @@ export const FERRAMENTAS_DE_FISCAL: Record<string, FerramentaRegistrada> = {
         total: r.total,
         haMaisQueOTotal: r.totalLimitado,
         mostrando: r.documentos.length,
-        link: linkDoAcervo({ empresa: empresa.id, competencia, tipo, destino }),
+        link: linkDaTela(`Abrir os documentos de ${mesLegivel(competencia)}`, linkDoAcervo({ empresa: empresa.id, competencia, tipo, destino })),
         documentos: r.documentos.map((d) => ({
-          tipo: d.type,
+          tipo: TIPO_LABEL[d.type] ?? d.type,
           numero: d.series ? `${d.number}/${d.series}` : d.number,
           emitente: d.issuerName,
           destinatario: d.recipientName,
           valor: d.amount === null ? null : Number(d.amount),
           emitidaEm: d.issuedAt.toISOString().slice(0, 10),
-          situacao: d.situation,
-          destino: d.destination,
+          situacao: situacaoLegivel(d.situation, SITUACAO_LABEL),
+          noFinanceiro: situacaoLegivel(d.destination, DESTINO_LABEL),
           xmlIncompleto: d.completude === "PARCIAL",
-          link: `/documentos-fiscais/${d.id}`,
+          link: linkDaTela(`${TIPO_LABEL[d.type] ?? d.type} ${d.series ? `${d.number}/${d.series}` : d.number}`, `/documentos-fiscais/${d.id}`),
         })),
       };
     },
@@ -296,7 +311,7 @@ export const FERRAMENTAS_DE_FISCAL: Record<string, FerramentaRegistrada> = {
         pendentes: fmt(r.PENDENTE),
         lancados: fmt(r.LANCADO),
         ignorados: fmt(r.IGNORADO),
-        link: linkDoAcervo({ empresa: empresa?.id, destino: "PENDENTE" }),
+        link: linkDaTela("Abrir os documentos pendentes de lançamento", linkDoAcervo({ empresa: empresa?.id, destino: "PENDENTE" })),
       };
     },
   },
