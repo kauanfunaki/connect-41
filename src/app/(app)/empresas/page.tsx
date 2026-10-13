@@ -10,7 +10,7 @@ import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { EmpresasFilterButton } from "@/components/empresas/EmpresasFilterButton";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { EmpresasTable } from "@/components/empresas/EmpresasTable";
 import { idsDaPagina } from "@/lib/companyHierarchy";
@@ -23,7 +23,6 @@ import {
   STATUS_TODOS,
 } from "@/lib/companyStatusFilter";
 import { atualizarStatusEmMassa, excluirEmpresasEmMassa } from "./actions";
-import { podeExcluirCadastros } from "@/lib/exclusao/comum";
 import { Pagination } from "@/components/shared/Pagination";
 import { opcoesDeRegime, ondeDoRegime, opcoesDeLocal, ondeDoLocal } from "@/lib/filtrosDaListaDeEmpresas";
 import { lerLista } from "@/lib/filtroNaUrl";
@@ -272,7 +271,7 @@ export default async function EmpresasPage({
             parentCompanyId: c.parentCompanyId,
           }))}
           canCreate={canCreate}
-          podeExcluir={podeExcluirCadastros(ctx)}
+          podeExcluir={podeExcluir(ctx)}
           statusLabel={STATUS_LABEL}
           statusColor={STATUS_COLOR}
           atualizarStatusEmMassa={atualizarStatusEmMassa}

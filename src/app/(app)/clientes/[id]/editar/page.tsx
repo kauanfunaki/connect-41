@@ -14,12 +14,11 @@ import {
   resumoDoClienteParaExcluir,
   excluirCliente,
 } from "../../actions";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { cnpjRoot } from "@/lib/clientGroups";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatCnpj } from "@/lib/format";
-import { podeExcluirDeVerdade } from "@/lib/exclusaoConfirmada";
 
 export default async function EditarClientePage({
   params,
@@ -61,7 +60,7 @@ export default async function EditarClientePage({
       <PageHeader
         title="Editar cliente"
         action={
-          podeExcluirDeVerdade(ctx) && (
+          podeExcluir(ctx) && (
             <BotaoExcluirCliente
               cliente={{ id: cliente.id, nome: cliente.name }}
               resumoAction={resumoDoClienteParaExcluir}

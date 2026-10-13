@@ -23,13 +23,13 @@ import {
   mensagemDeErro,
   n,
   nomeDoAtor,
-  SEM_PERMISSAO_PARA_EXCLUIR,
-  podeExcluir,
+  papelExclui,
   registrarExclusao,
   validarModo,
   type Passo,
   type Tx,
 } from "./comum";
+import { SO_ADMIN_EXCLUI } from "@/lib/auth/papeis";
 import { anotar, apagarArquivos, curriculosSemUso, juntarArquivos, semArquivos, totalDeArquivos, type ArquivosDoCadastro } from "./arquivos";
 import { PLANO_DA_PESSOA, arquivosDasPessoas, itensDasPessoas } from "./pessoa";
 import { LIGACOES, contagem } from "./registro";
@@ -402,7 +402,7 @@ export type PedidoDaEmpresa = {
  * os arquivos do disco.
  */
 export async function excluirEmpresaDeVez(prisma: PrismaClient, pedido: PedidoDaEmpresa): Promise<ResultadoDaExclusao> {
-  if (!pedido.tenantId || !podeExcluir(pedido.ator.role)) return { ok: false, erro: SEM_PERMISSAO_PARA_EXCLUIR };
+  if (!pedido.tenantId || !papelExclui(pedido.ator.role)) return { ok: false, erro: SO_ADMIN_EXCLUI };
 
   let arquivos: ArquivosDoCadastro = semArquivos();
   let saida: { nome: string; resumo: string[] };
@@ -478,7 +478,7 @@ export async function excluirEmpresasEmMassa(
   prisma: PrismaClient,
   pedido: { tenantId: string; ator: { id: string; role: string }; ids: string[] }
 ): Promise<ResultadoEmMassa | { erro: string }> {
-  if (!pedido.tenantId || !podeExcluir(pedido.ator.role)) return { erro: SEM_PERMISSAO_PARA_EXCLUIR };
+  if (!pedido.tenantId || !papelExclui(pedido.ator.role)) return { erro: SO_ADMIN_EXCLUI };
   const ids = [...new Set(pedido.ids.filter((id) => typeof id === "string" && id))];
   if (ids.length === 0) return { excluidas: [], recusadas: [] };
   if (ids.length > LIMITE_EM_MASSA) return { erro: `Selecione no máximo ${LIMITE_EM_MASSA} empresas por vez.` };

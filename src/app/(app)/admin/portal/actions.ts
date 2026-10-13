@@ -3,7 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite, podeExcluir } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { hashPassword } from "@/lib/auth/password";
 import { createPasswordResetToken } from "@/lib/auth/passwordReset";
@@ -12,7 +12,6 @@ import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import {
   CONTAGEM_DO_ACESSO,
   confirmacaoConfere,
-  podeExcluirDeVerdade,
   resumirHistoricoDoAcesso,
   type HistoricoDoAcesso,
 } from "@/lib/exclusaoConfirmada";
@@ -322,7 +321,7 @@ export type ResumoDoAcessoParaExcluir = {
 /** Conta o que está ligado ao acesso, para a janela de exclusão. Só leitura. */
 export async function resumoDoAcessoParaExcluir(id: string): Promise<{ erro: string } | ResumoDoAcessoParaExcluir> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !podeExcluirDeVerdade(ctx)) return { erro: "Só administradores excluem acessos do portal." };
+  if (!ctx.tenantId || !podeExcluir(ctx)) return { erro: "Só administradores excluem acessos do portal." };
 
   const conta = await getPrisma().portalUser.findFirst({
     where: { id, tenantId: ctx.tenantId },
@@ -355,7 +354,7 @@ export async function resumoDoAcessoParaExcluir(id: string): Promise<{ erro: str
  */
 export async function excluirAcessoDoPortal(id: string, confirmacao: string): Promise<{ erro: string } | { ok: true }> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !podeExcluirDeVerdade(ctx)) return { erro: "Só administradores excluem acessos do portal." };
+  if (!ctx.tenantId || !podeExcluir(ctx)) return { erro: "Só administradores excluem acessos do portal." };
 
   const prisma = getPrisma();
   const conta = await prisma.portalUser.findFirst({

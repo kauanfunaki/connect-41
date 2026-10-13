@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite, podeExcluir } from "@/lib/auth/context";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getSectorMaps } from "@/lib/sectors";
 import { UsuariosTable } from "@/components/admin/UsuariosTable";
@@ -10,7 +10,6 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { canAddUser } from "@/lib/subscriptions";
 import { alternarAtivoUsuario, alternarAtivoEmMassa, atribuirSetorEmMassa } from "./actions";
 import { Aviso } from "@/components/ui/Aviso";
-import { podeExcluirCadastros } from "@/lib/exclusao/comum";
 
 export default async function UsuariosPage() {
   const ctx = await getAuthContext();
@@ -70,7 +69,7 @@ export default async function UsuariosPage() {
           })),
         }))}
         currentUserId={ctx.userId}
-        podeExcluir={podeExcluirCadastros(ctx)}
+        podeExcluir={podeExcluir(ctx)}
         sectorOptions={sectorOptions}
         alternarAtivoUsuario={alternarAtivoUsuario}
         alternarAtivoEmMassa={alternarAtivoEmMassa}

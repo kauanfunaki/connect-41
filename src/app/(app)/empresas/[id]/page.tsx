@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { adicionarServico, atribuirResponsavelServico } from "../actions";
-import { podeExcluirCadastros } from "@/lib/exclusao/comum";
 import { getAuthContext, canWrite, isFullWrite, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
@@ -171,7 +170,7 @@ export default async function EmpresaPage({
         canEdit={canEdit}
         canRemoveLogo={podeExcluir(ctx)}
         canRequestHandoff={canRequestHandoff}
-        podeExcluir={podeExcluirCadastros(ctx)}
+        podeExcluir={podeExcluir(ctx)}
       />
 
       <CompanyDetailTabs
