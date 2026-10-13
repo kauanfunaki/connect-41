@@ -14,6 +14,10 @@ function preparar(s: Cenario) {
 }
 
 describe("cenário fiscal exclusivamente local", () => {
+  it("concentra parâmetros na configuração e começa contribuições no fechamento", () => {
+    expect(PAGINAS_FISCAIS.filter((p) => p.abas.some(([aba]) => aba === "parametros")).map((p) => p.pagina)).toEqual(["configuracoes"]);
+    expect(PAGINAS_FISCAIS.find((p) => p.pagina === "contribuicoes")?.abas[0][0]).toBe("fechamento");
+  });
   it("fornece três empresas, filiais, duas competências e cenários independentes", () => {
     const s = criarCenario();
     expect(s.empresas).toHaveLength(3);
