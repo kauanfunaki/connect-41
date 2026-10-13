@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -139,10 +139,15 @@ function TextoDaResposta({ texto, citados = {} }: { texto: string; citados?: Rec
   );
 }
 
-// ─── "Já abriu o chat?" — o anel pulsa e a dica aparece até a primeira vez ───
+// ─── "Já abriu o chat?" — o anel em volta do botão pulsa até a primeira vez ───
 //
 // Em localStorage, por pessoa e navegador. Se não der para ler ou gravar
 // (janela anônima, bloqueio), conta como já aberto: não pulsa à toa.
+//
+// Até 13/10/2026 isto também mostrava o balão "Pergunte à IA do {setor}" com a
+// primeira sugestão. Saiu a pedido do Kauan: voltava a cada abertura do
+// Connect — o "x" do balão não ficava guardado, e cada endereço de setor tem o
+// seu localStorage. O anel ficou: é discreto e some na primeira abertura.
 const CHAVE_JA_ABRIU = "c41:chat-ia:ja-abriu";
 const EVENTO_JA_ABRIU = "c41:chat-ia";
 function lerJaAbriu(): boolean {
@@ -229,7 +234,6 @@ export function ChatDeIA({
   /** A resposta com os motivos do 👎 abertos. */
   const [motivosDe, setMotivosDe] = useState<string | null>(null);
   const [copiada, setCopiada] = useState<string | null>(null);
-  const [dicaFechada, setDicaFechada] = useState(false);
   // A pergunta sendo editada: o campo leva o texto dela, e ao enviar ela e o
   // que veio depois ficam substituídos.
   const [editando, setEditando] = useState<MensagemNaTela | null>(null);
@@ -247,32 +251,31 @@ export function ChatDeIA({
     fimRef.current?.scrollIntoView({ block: "end" });
   }, [mensagens, passo, aberto]);
 
+  // Fechar pelo X, pelo Esc ou pelo clique fora devolve o foco ao botão do
+  // canto, que volta no lugar do painel — sem isso o foco caía no <body> e
+  // quem usa teclado recomeçava do topo da página (13/10/2026).
+  const botaoRef = useRef<HTMLButtonElement>(null);
+  const devolverFocoRef = useRef(false);
+  const fecharChat = useCallback(() => {
+    devolverFocoRef.current = true;
+    setAberto(false);
+  }, []);
+  useEffect(() => {
+    if (aberto || !devolverFocoRef.current) return;
+    devolverFocoRef.current = false;
+    botaoRef.current?.focus();
+  }, [aberto]);
+
   useEffect(() => {
     if (!aberto) return;
     const fechar = (e: KeyboardEvent) => {
       // Esc com um menu aberto por cima (o do agente, o ⋯) fecha só o menu:
       // o menu marca o Esc como usado.
-      if (e.key === "Escape" && !e.defaultPrevented) setAberto(false);
+      if (e.key === "Escape" && !e.defaultPrevented) fecharChat();
     };
     window.addEventListener("keydown", fechar);
     return () => window.removeEventListener("keydown", fechar);
-  }, [aberto]);
-
-  // Clicar fora fecha o chat (pedido de 02/10/2026). O clique dentro — também
-  // nos menus e janelas que o chat abre por portal (o ⋯, o agente, uma
-  // confirmação) — passa pelo onMouseDown da seção, porque o evento do React
-  // sobe pela árvore do React, e não pela do DOM; o do documento vem depois e
-  // só fecha se ninguém marcou. A marca vale para aquele clique só.
-  const cliqueDentroRef = useRef(false);
-  useEffect(() => {
-    if (!aberto) return;
-    const aoClicar = () => {
-      if (!cliqueDentroRef.current) setAberto(false);
-      cliqueDentroRef.current = false;
-    };
-    document.addEventListener("mousedown", aoClicar);
-    return () => document.removeEventListener("mousedown", aoClicar);
-  }, [aberto]);
+  }, [aberto, fecharChat]);
 
   // O campo cresce com o texto, de uma a seis linhas — e volta ao enviar.
   useLayoutEffect(() => {
@@ -295,10 +298,9 @@ export function ChatDeIA({
     else if (comArquivo) semRefazer.add(x.id);
   }
 
-  function abrirChat(prefixo?: string) {
+  function abrirChat() {
     marcarJaAbriu();
     setAberto(true);
-    if (prefixo) setPergunta(prefixo);
     requestAnimationFrame(() => campoRef.current?.focus());
   }
 
@@ -532,33 +534,15 @@ export function ChatDeIA({
   // Pílula com o nome do agente do setor e o orbe, com a borda girando devagar
   // (pedido de 01/10: o círculo genérico passou batido para quem olhou a
   // plataforma). No celular, volta a ser círculo. Até a primeira abertura, um
-  // anel pulsa e uma dica mostra a primeira sugestão — uma vez só.
+  // anel pulsa em volta — o balão de dica que vinha junto saiu em 13/10/2026.
   if (!aberto) {
-    const sugestao = agente.sugestoes[0];
-    const mostrarDica = !jaAbriu && !dicaFechada && Boolean(sugestao);
     return (
       <div className="fixed bottom-4 right-4 z-40" style={corDoOrbe}>
-        {mostrarDica && (
-          <div className="c41-surgir absolute bottom-full right-0 mb-3 w-64 rounded-lg border border-border bg-surface-elevated p-3 shadow-lg">
-            <button
-              type="button"
-              onClick={() => setDicaFechada(true)}
-              aria-label="Fechar a dica"
-              className="absolute top-2 right-2 p-0.5 rounded-sm text-fg-muted hover:text-fg"
-            >
-              <X size={13} />
-            </button>
-            <p className="pr-5 text-fs-2 font-semibold text-fg">Pergunte à {agente.titulo}</p>
-            {/* Revisão de 05/10: botão não é link — a sugestão era texto azul. Quebra linha, por isso a altura livre. */}
-            <Button variant="secondary" size="xs" onClick={() => abrirChat(sugestao)} className="mt-1 h-auto py-1.5 text-left whitespace-normal">
-              “{sugestao}”
-            </Button>
-          </div>
-        )}
         {!jaAbriu && <span aria-hidden className="c41-chamar absolute inset-0 rounded-full bg-brand/40" />}
         <button
+          ref={botaoRef}
           type="button"
-          onClick={() => abrirChat()}
+          onClick={abrirChat}
           aria-label={`Abrir o chat — ${agente.titulo}`}
           data-dica={`Perguntar à ${agente.titulo}`}
           className="c41-borda-girando relative rounded-full p-[2px] shadow-lg transition-transform hover:-translate-y-0.5 outline-none"
@@ -574,304 +558,313 @@ export function ChatDeIA({
 
   // ─── O painel ─────────────────────────────────────────────────────────────
   return (
-    <section
-      style={corDoOrbe}
-      onMouseDown={() => {
-        cliqueDentroRef.current = true;
-      }}
-      className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] overflow-hidden"
-      aria-label="Chat de IA"
-    >
-      <header className="flex items-center gap-2.5 px-4 py-3">
-        {vendoHistorico ? (
-          <button type="button" onClick={() => setVendoHistorico(false)} className="p-1 -ml-1 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Voltar">
-            <ArrowLeft size={16} />
-          </button>
-        ) : (
-          <OrbeDaIA tamanho={28} />
-        )}
-        <p className="flex-1 min-w-0 text-label font-semibold text-fg truncate">{vendoHistorico ? "Conversas" : agente.titulo}</p>
-        <Popover
-          align="right"
-          width={220}
-          aria-label="Mais opções do chat"
-          trigger={({ toggle }) => (
-            <button type="button" onClick={toggle} className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Mais opções" data-dica="Mais opções">
-              <MoreHorizontal size={16} />
+    <>
+      {/* Clicar fora só fecha o chat (13/10/2026). Desde 02/10 o clique fora
+          fechava, mas era um `mousedown` no documento: o clique seguia para o que
+          estava embaixo, e um botão do Connect funcionava junto. Agora uma camada
+          transparente cobre a página enquanto o chat está aberto — o mesmo
+          desenho do fundo da gaveta do menu (AppShell), sem a cor — e o clique
+          ou toque nela fecha e para ali. Fecha no `click`, e não no `mousedown`:
+          sumir no meio do clique deixaria o soltar cair no que está embaixo.
+          Os menus do chat (o ⋯, o agente) abrem por portal em z-[60], acima dela;
+          no celular o painel ocupa a tela toda e a cobre. */}
+      <div aria-hidden className="fixed inset-0 z-40" onClick={fecharChat} />
+      <section
+        style={corDoOrbe}
+        className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] overflow-hidden"
+        aria-label="Chat de IA"
+      >
+        <header className="flex items-center gap-2.5 px-4 py-3">
+          {vendoHistorico ? (
+            <button type="button" onClick={() => setVendoHistorico(false)} className="p-1 -ml-1 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Voltar">
+              <ArrowLeft size={16} />
             </button>
-          )}
-        >
-          {({ close }) => (
-            <>
-              <ItemDoMenu
-                icone={<Plus />}
-                onClick={() => {
-                  close();
-                  novaConversa();
-                }}
-              >
-                Nova conversa
-              </ItemDoMenu>
-              <ItemDoMenu
-                icone={<History />}
-                onClick={() => {
-                  close();
-                  void verHistorico();
-                }}
-              >
-                Conversas anteriores
-              </ItemDoMenu>
-            </>
-          )}
-        </Popover>
-        <button type="button" onClick={() => setAberto(false)} className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Fechar o chat">
-          <X size={16} />
-        </button>
-      </header>
-
-      {vendoHistorico ? (
-        <div className="flex-1 overflow-y-auto px-2 pb-2">
-          {conversas.length === 0 ? (
-            <p className="p-3 text-ui text-fg-muted">Nenhuma conversa ainda. Elas ficam guardadas por 90 dias.</p>
           ) : (
-            <ul className="flex flex-col">
-              {conversas.map((c) => (
-                <li key={c.id} className="flex items-center gap-1 rounded-lg hover:bg-surface-hover">
-                  <button type="button" onClick={() => abrir(c.id)} className="flex-1 min-w-0 text-left px-3 py-2.5">
-                    <span className="block text-ui text-fg truncate">{c.titulo}</span>
-                    <span className="block text-micro text-fg-muted">
-                      {agentes.find((a) => a.code === c.agentCode)?.titulo ?? "IA"} ·{" "}
-                      {formatInstantDateTime(new Date(c.atualizadaEm), { dateStyle: "short", timeStyle: "short" })}
-                    </span>
-                  </button>
-                  <button type="button" onClick={() => apagar(c.id)} className="p-2 text-fg-muted hover:text-danger" aria-label="Apagar conversa" data-dica="Apagar">
-                    <Trash2 size={14} />
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <OrbeDaIA tamanho={28} />
           )}
-        </div>
-      ) : (
-        <>
-          <div className="flex-1 overflow-y-auto px-4 pt-2 pb-4 flex flex-col gap-5">
-            {mensagens.length === 0 && !enviando && (
-              <div className="flex flex-col items-center text-center pt-8 pb-2">
-                <OrbeDaIA tamanho={56} />
-                <p className="mt-4 text-section font-semibold text-fg">{primeiroNome ? `Oi, ${primeiroNome}` : "Oi"}</p>
-                <p className="text-body text-fg-secondary">Como posso ajudar?</p>
-                <p className="mt-3 max-w-[300px] text-fs-2 text-fg-muted leading-relaxed">
-                  Consulto o Connect com o mesmo acesso que você tem e <strong className="text-fg-secondary">não altero nada sozinha</strong> — sugestão
-                  só vale depois do seu “Aplicar”.
-                </p>
-                <div className="mt-5 flex flex-wrap justify-center gap-2">
-                  {agente.sugestoes.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => enviar(s)}
-                      className="inline-flex items-center gap-1.5 max-w-full text-left text-fs-2 text-fg-secondary border border-border rounded-full px-3 py-1.5 hover:border-brand hover:text-brand transition-colors"
-                    >
-                      <MessageSquareText size={13} className="flex-shrink-0 text-brand" />
-                      <span className="truncate">{s}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <p className="flex-1 min-w-0 text-label font-semibold text-fg truncate">{vendoHistorico ? "Conversas" : agente.titulo}</p>
+          <Popover
+            align="right"
+            width={220}
+            aria-label="Mais opções do chat"
+            trigger={({ toggle }) => (
+              <button type="button" onClick={toggle} className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Mais opções" data-dica="Mais opções">
+                <MoreHorizontal size={16} />
+              </button>
             )}
-
-            {mensagens.map((m) =>
-              m.papel === "usuario" ? (
-                <div key={m.id} className="group self-end max-w-[85%] flex flex-col items-end gap-1">
-                  <BalaoDaPergunta texto={m.texto} />
-                  <span className="flex items-center gap-1.5">
-                    {m.contexto && <span className="text-micro text-fg-muted truncate max-w-[200px]">{m.contexto}</span>}
-                    <AcoesDaMensagem>
-                      {!enviando && (
-                        <BotaoDeAcao rotulo="Editar" onClick={() => comecarEdicao(m)}>
-                          <Pencil size={13} />
-                        </BotaoDeAcao>
-                      )}
-                      <BotaoDeAcao rotulo={copiada === m.id ? "Copiado" : "Copiar"} onClick={() => void copiar(m)}>
-                        {copiada === m.id ? <Check size={13} /> : <Copy size={13} />}
-                      </BotaoDeAcao>
-                    </AcoesDaMensagem>
-                  </span>
-                </div>
-              ) : (
-                <div key={m.id} className="group flex items-start gap-2.5">
-                  <OrbeDaIA tamanho={24} className="mt-0.5" />
-                  <div className="min-w-0 flex-1 flex flex-col gap-2">
-                    {m.contexto && <span className="c41-rotulo text-brand">{m.contexto}</span>}
-                    <div className={`text-ui leading-relaxed break-words ${m.falhou ? "rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-danger" : "text-fg"}`}>
-                      <TextoDaResposta texto={m.texto} citados={m.citados} />
-                    </div>
-                    {m.truncada && (
-                      <p className="flex items-start gap-1.5 text-micro text-warning-fg">
-                        <AlertTriangle size={12} className="mt-0.5 shrink-0" /> A IA parou antes de terminar — a resposta pode estar incompleta.
-                      </p>
-                    )}
-                    <CartoesDeDecisao
-                      m={m}
-                      aplicando={aplicando}
-                      onAplicar={(i) => void aplicar(m, i)}
-                      onRecusar={(i) => void recusar(m, i)}
-                      onAplicarTodas={() => void aplicarTodas(m)}
-                      onAbrirTransferencia={() => setAberto(false)}
-                    />
-                    {/* Respostas rápidas: só na última resposta, e não enquanto a próxima está saindo. */}
-                    {m.id === ultimaResposta?.id && !enviando && (
-                      <RespostasRapidas opcoes={m.propostas.flatMap((p) => opcoesDeRespostaRapida(p))} onEscolher={(t) => void enviar(t)} />
-                    )}
-                    <AcoesDaMensagem fixo={m.avaliacao !== null}>
-                      <BotaoDeAcao rotulo={copiada === m.id ? "Copiado" : "Copiar"} onClick={() => void copiar(m)}>
-                        {copiada === m.id ? <Check size={13} /> : <Copy size={13} />}
-                      </BotaoDeAcao>
-                      {!enviando && !semRefazer.has(m.id) && (
-                        <BotaoDeAcao rotulo="Refazer a resposta" onClick={() => void refazer(m)}>
-                          <RotateCcw size={13} />
-                        </BotaoDeAcao>
-                      )}
-                      {!m.falhou && (
-                        <>
-                          <BotaoDeAcao rotulo="Resposta útil" ativo={m.avaliacao === "boa"} onClick={() => cliqueNoPolegar(m, "boa")}>
-                            <ThumbsUp size={13} />
-                          </BotaoDeAcao>
-                          <BotaoDeAcao rotulo="Resposta não ajudou" ativo={m.avaliacao === "ruim"} onClick={() => cliqueNoPolegar(m, "ruim")}>
-                            <ThumbsDown size={13} />
-                          </BotaoDeAcao>
-                        </>
-                      )}
-                    </AcoesDaMensagem>
-                    {motivosDe === m.id && m.avaliacao === "ruim" && (
-                      <MotivosDoNao
-                        escolhido={m.motivo}
-                        onEscolher={(motivo) => {
-                          setMotivosDe(null);
-                          void avaliar(m, "ruim", motivo === m.motivo ? null : motivo);
-                        }}
-                        onFechar={() => setMotivosDe(null)}
-                      />
-                    )}
+          >
+            {({ close }) => (
+              <>
+                <ItemDoMenu
+                  icone={<Plus />}
+                  onClick={() => {
+                    close();
+                    novaConversa();
+                  }}
+                >
+                  Nova conversa
+                </ItemDoMenu>
+                <ItemDoMenu
+                  icone={<History />}
+                  onClick={() => {
+                    close();
+                    void verHistorico();
+                  }}
+                >
+                  Conversas anteriores
+                </ItemDoMenu>
+              </>
+            )}
+          </Popover>
+          <button type="button" onClick={fecharChat} className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Fechar o chat">
+            <X size={16} />
+          </button>
+        </header>
+  
+        {vendoHistorico ? (
+          <div className="flex-1 overflow-y-auto px-2 pb-2">
+            {conversas.length === 0 ? (
+              <p className="p-3 text-ui text-fg-muted">Nenhuma conversa ainda. Elas ficam guardadas por 90 dias.</p>
+            ) : (
+              <ul className="flex flex-col">
+                {conversas.map((c) => (
+                  <li key={c.id} className="flex items-center gap-1 rounded-lg hover:bg-surface-hover">
+                    <button type="button" onClick={() => abrir(c.id)} className="flex-1 min-w-0 text-left px-3 py-2.5">
+                      <span className="block text-ui text-fg truncate">{c.titulo}</span>
+                      <span className="block text-micro text-fg-muted">
+                        {agentes.find((a) => a.code === c.agentCode)?.titulo ?? "IA"} ·{" "}
+                        {formatInstantDateTime(new Date(c.atualizadaEm), { dateStyle: "short", timeStyle: "short" })}
+                      </span>
+                    </button>
+                    <button type="button" onClick={() => apagar(c.id)} className="p-2 text-fg-muted hover:text-danger" aria-label="Apagar conversa" data-dica="Apagar">
+                      <Trash2 size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto px-4 pt-2 pb-4 flex flex-col gap-5">
+              {mensagens.length === 0 && !enviando && (
+                <div className="flex flex-col items-center text-center pt-8 pb-2">
+                  <OrbeDaIA tamanho={56} />
+                  <p className="mt-4 text-section font-semibold text-fg">{primeiroNome ? `Oi, ${primeiroNome}` : "Oi"}</p>
+                  <p className="text-body text-fg-secondary">Como posso ajudar?</p>
+                  <p className="mt-3 max-w-[300px] text-fs-2 text-fg-muted leading-relaxed">
+                    Consulto o Connect com o mesmo acesso que você tem e <strong className="text-fg-secondary">não altero nada sozinha</strong> — sugestão
+                    só vale depois do seu “Aplicar”.
+                  </p>
+                  <div className="mt-5 flex flex-wrap justify-center gap-2">
+                    {agente.sugestoes.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => enviar(s)}
+                        className="inline-flex items-center gap-1.5 max-w-full text-left text-fs-2 text-fg-secondary border border-border rounded-full px-3 py-1.5 hover:border-brand hover:text-brand transition-colors"
+                      >
+                        <MessageSquareText size={13} className="flex-shrink-0 text-brand" />
+                        <span className="truncate">{s}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )
-            )}
-
-            {passo && (
-              <p className="flex items-center gap-2.5 text-fs-2 text-fg-muted">
-                <OrbeDaIA tamanho={24} />
-                {passo}
-              </p>
-            )}
-            {erro && <p className="text-fs-2 text-danger">{erro}</p>}
-            <div ref={fimRef} />
-          </div>
-
-          {/* ── O campo: caixa arredondada, o enviar dentro, e embaixo o agente ── */}
-          <form
-            className="px-3 pb-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void enviarDoCampo(pergunta);
-            }}
-          >
-            {editando && (
-              <div className="mb-2 flex items-start gap-2 rounded-lg bg-warning-bg px-3 py-2 text-fs-2 text-fg-secondary">
-                <Pencil size={13} className="mt-0.5 flex-shrink-0 text-warning-fg" />
-                <span className="flex-1">Editando a pergunta — o que veio depois dela será substituído ao enviar.</span>
-                <Button variant="ghost" size="xs" onClick={cancelarEdicao}>
-                  Cancelar
-                </Button>
-              </div>
-            )}
-            <div className="rounded-lg border border-border-strong bg-surface focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
-              {arquivos.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5">
-                  {arquivos.map((f, i) => (
-                    <span key={`${f.name}-${i}`} className="inline-flex max-w-[220px] items-center gap-1.5 rounded-lg border border-border bg-surface-2 py-1 pl-2 pr-1 text-fs-2 text-fg">
-                      <FileText size={13} className="flex-shrink-0 text-brand" />
-                      <span className="truncate">{f.name}</span>
-                      <span className="flex-shrink-0 text-fg-muted tabular-nums">{Math.max(1, Math.round(f.size / 1024))} KB</span>
-                      <button
-                        type="button"
-                        onClick={() => setArquivos((a) => a.filter((_, j) => j !== i))}
-                        aria-label={`Tirar ${f.name}`}
-                        className="p-0.5 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-hover"
-                      >
-                        <X size={12} />
-                      </button>
+              )}
+  
+              {mensagens.map((m) =>
+                m.papel === "usuario" ? (
+                  <div key={m.id} className="group self-end max-w-[85%] flex flex-col items-end gap-1">
+                    <BalaoDaPergunta texto={m.texto} />
+                    <span className="flex items-center gap-1.5">
+                      {m.contexto && <span className="text-micro text-fg-muted truncate max-w-[200px]">{m.contexto}</span>}
+                      <AcoesDaMensagem>
+                        {!enviando && (
+                          <BotaoDeAcao rotulo="Editar" onClick={() => comecarEdicao(m)}>
+                            <Pencil size={13} />
+                          </BotaoDeAcao>
+                        )}
+                        <BotaoDeAcao rotulo={copiada === m.id ? "Copiado" : "Copiar"} onClick={() => void copiar(m)}>
+                          {copiada === m.id ? <Check size={13} /> : <Copy size={13} />}
+                        </BotaoDeAcao>
+                      </AcoesDaMensagem>
                     </span>
-                  ))}
-                  <span className="text-micro text-fg-muted">Vale só para esta pergunta — não fica guardado.</span>
+                  </div>
+                ) : (
+                  <div key={m.id} className="group flex items-start gap-2.5">
+                    <OrbeDaIA tamanho={24} className="mt-0.5" />
+                    <div className="min-w-0 flex-1 flex flex-col gap-2">
+                      {m.contexto && <span className="c41-rotulo text-brand">{m.contexto}</span>}
+                      <div className={`text-ui leading-relaxed break-words ${m.falhou ? "rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-danger" : "text-fg"}`}>
+                        <TextoDaResposta texto={m.texto} citados={m.citados} />
+                      </div>
+                      {m.truncada && (
+                        <p className="flex items-start gap-1.5 text-micro text-warning-fg">
+                          <AlertTriangle size={12} className="mt-0.5 shrink-0" /> A IA parou antes de terminar — a resposta pode estar incompleta.
+                        </p>
+                      )}
+                      <CartoesDeDecisao
+                        m={m}
+                        aplicando={aplicando}
+                        onAplicar={(i) => void aplicar(m, i)}
+                        onRecusar={(i) => void recusar(m, i)}
+                        onAplicarTodas={() => void aplicarTodas(m)}
+                        onAbrirTransferencia={() => setAberto(false)}
+                      />
+                      {/* Respostas rápidas: só na última resposta, e não enquanto a próxima está saindo. */}
+                      {m.id === ultimaResposta?.id && !enviando && (
+                        <RespostasRapidas opcoes={m.propostas.flatMap((p) => opcoesDeRespostaRapida(p))} onEscolher={(t) => void enviar(t)} />
+                      )}
+                      <AcoesDaMensagem fixo={m.avaliacao !== null}>
+                        <BotaoDeAcao rotulo={copiada === m.id ? "Copiado" : "Copiar"} onClick={() => void copiar(m)}>
+                          {copiada === m.id ? <Check size={13} /> : <Copy size={13} />}
+                        </BotaoDeAcao>
+                        {!enviando && !semRefazer.has(m.id) && (
+                          <BotaoDeAcao rotulo="Refazer a resposta" onClick={() => void refazer(m)}>
+                            <RotateCcw size={13} />
+                          </BotaoDeAcao>
+                        )}
+                        {!m.falhou && (
+                          <>
+                            <BotaoDeAcao rotulo="Resposta útil" ativo={m.avaliacao === "boa"} onClick={() => cliqueNoPolegar(m, "boa")}>
+                              <ThumbsUp size={13} />
+                            </BotaoDeAcao>
+                            <BotaoDeAcao rotulo="Resposta não ajudou" ativo={m.avaliacao === "ruim"} onClick={() => cliqueNoPolegar(m, "ruim")}>
+                              <ThumbsDown size={13} />
+                            </BotaoDeAcao>
+                          </>
+                        )}
+                      </AcoesDaMensagem>
+                      {motivosDe === m.id && m.avaliacao === "ruim" && (
+                        <MotivosDoNao
+                          escolhido={m.motivo}
+                          onEscolher={(motivo) => {
+                            setMotivosDe(null);
+                            void avaliar(m, "ruim", motivo === m.motivo ? null : motivo);
+                          }}
+                          onFechar={() => setMotivosDe(null)}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )
+              )}
+  
+              {passo && (
+                <p className="flex items-center gap-2.5 text-fs-2 text-fg-muted">
+                  <OrbeDaIA tamanho={24} />
+                  {passo}
+                </p>
+              )}
+              {erro && <p className="text-fs-2 text-danger">{erro}</p>}
+              <div ref={fimRef} />
+            </div>
+  
+            {/* ── O campo: caixa arredondada, o enviar dentro, e embaixo o agente ── */}
+            <form
+              className="px-3 pb-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void enviarDoCampo(pergunta);
+              }}
+            >
+              {editando && (
+                <div className="mb-2 flex items-start gap-2 rounded-lg bg-warning-bg px-3 py-2 text-fs-2 text-fg-secondary">
+                  <Pencil size={13} className="mt-0.5 flex-shrink-0 text-warning-fg" />
+                  <span className="flex-1">Editando a pergunta — o que veio depois dela será substituído ao enviar.</span>
+                  <Button variant="ghost" size="xs" onClick={cancelarEdicao}>
+                    Cancelar
+                  </Button>
                 </div>
               )}
-              <div className="flex items-end gap-2 pl-3.5 pr-2 pt-2.5">
-                <Textarea
-                  ref={campoRef}
-                  value={pergunta}
-                  onChange={(e) => setPergunta(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      void enviarDoCampo(pergunta);
-                    } else if (e.key === "Escape" && editando) {
-                      e.preventDefault();
-                      cancelarEdicao();
-                    }
-                  }}
-                  rows={1}
-                  maxLength={2000}
-                  placeholder={`Pergunte à ${agente.titulo}…`}
-                  className="min-h-0! flex-1 border-0! bg-transparent! px-0! py-1! text-label! leading-5 shadow-none! focus:shadow-none! focus-visible:shadow-none! overflow-y-auto"
-                  aria-label="Pergunta"
-                  disabled={enviando}
-                />
-                <button
-                  type="submit"
-                  disabled={enviando || !pergunta.trim()}
-                  aria-label="Enviar"
-                  className="mb-0.5 size-8 flex-shrink-0 inline-flex items-center justify-center rounded-full bg-brand text-on-brand hover:bg-brand-hover disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed transition-colors"
-                >
-                  <ArrowUp size={16} />
-                </button>
-              </div>
-              <div className="flex items-center justify-between gap-2 px-2 pb-1.5 pt-1">
-                <SeletorDoAgente
-                  agentes={agentes}
-                  atual={agente}
-                  travado={Boolean(conversaId)}
-                  onEscolher={(code) => setEscolhido(code)}
-                />
-                <span className="flex items-center gap-2">
-                  <span className="hidden sm:inline text-micro text-fg-muted">Enter envia</span>
-                  <input
-                    ref={seletorDeArquivoRef}
-                    type="file"
-                    multiple
-                    accept={ACEITA_NO_CAMPO}
-                    className="hidden"
-                    onChange={(e) => {
-                      escolherArquivos(e.target.files);
-                      e.target.value = "";
+              <div className="rounded-lg border border-border-strong bg-surface focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
+                {arquivos.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5">
+                    {arquivos.map((f, i) => (
+                      <span key={`${f.name}-${i}`} className="inline-flex max-w-[220px] items-center gap-1.5 rounded-lg border border-border bg-surface-2 py-1 pl-2 pr-1 text-fs-2 text-fg">
+                        <FileText size={13} className="flex-shrink-0 text-brand" />
+                        <span className="truncate">{f.name}</span>
+                        <span className="flex-shrink-0 text-fg-muted tabular-nums">{Math.max(1, Math.round(f.size / 1024))} KB</span>
+                        <button
+                          type="button"
+                          onClick={() => setArquivos((a) => a.filter((_, j) => j !== i))}
+                          aria-label={`Tirar ${f.name}`}
+                          className="p-0.5 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-hover"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                    <span className="text-micro text-fg-muted">Vale só para esta pergunta — não fica guardado.</span>
+                  </div>
+                )}
+                <div className="flex items-end gap-2 pl-3.5 pr-2 pt-2.5">
+                  <Textarea
+                    ref={campoRef}
+                    value={pergunta}
+                    onChange={(e) => setPergunta(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void enviarDoCampo(pergunta);
+                      } else if (e.key === "Escape" && editando) {
+                        e.preventDefault();
+                        cancelarEdicao();
+                      }
                     }}
+                    rows={1}
+                    maxLength={2000}
+                    placeholder={`Pergunte à ${agente.titulo}…`}
+                    className="min-h-0! flex-1 border-0! bg-transparent! px-0! py-1! text-label! leading-5 shadow-none! focus:shadow-none! focus-visible:shadow-none! overflow-y-auto"
+                    aria-label="Pergunta"
+                    disabled={enviando}
                   />
                   <button
-                    type="button"
-                    onClick={() => seletorDeArquivoRef.current?.click()}
-                    disabled={enviando}
-                    title="PDF, imagem ou planilha — até 3 arquivos e 10 MB"
-                    className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-fs-2 font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)]"
+                    type="submit"
+                    disabled={enviando || !pergunta.trim()}
+                    aria-label="Enviar"
+                    className="mb-0.5 size-8 flex-shrink-0 inline-flex items-center justify-center rounded-full bg-brand text-on-brand hover:bg-brand-hover disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed transition-colors"
                   >
-                    <Paperclip size={13} /> Anexar
+                    <ArrowUp size={16} />
                   </button>
-                </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 px-2 pb-1.5 pt-1">
+                  <SeletorDoAgente
+                    agentes={agentes}
+                    atual={agente}
+                    travado={Boolean(conversaId)}
+                    onEscolher={(code) => setEscolhido(code)}
+                  />
+                  <span className="flex items-center gap-2">
+                    <span className="hidden sm:inline text-micro text-fg-muted">Enter envia</span>
+                    <input
+                      ref={seletorDeArquivoRef}
+                      type="file"
+                      multiple
+                      accept={ACEITA_NO_CAMPO}
+                      className="hidden"
+                      onChange={(e) => {
+                        escolherArquivos(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => seletorDeArquivoRef.current?.click()}
+                      disabled={enviando}
+                      title="PDF, imagem ou planilha — até 3 arquivos e 10 MB"
+                      className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-fs-2 font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)]"
+                    >
+                      <Paperclip size={13} /> Anexar
+                    </button>
+                  </span>
+                </div>
               </div>
-            </div>
-          </form>
-        </>
-      )}
-    </section>
+            </form>
+          </>
+        )}
+      </section>
+    </>
   );
 }
 
