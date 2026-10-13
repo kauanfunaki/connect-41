@@ -67,6 +67,24 @@ export function refreshCookieOptions(maxAge: number): CookieOptions {
   return base(REFRESH_COOKIE_PATH, maxAge);
 }
 
+/**
+ * A marca de cada entrada no Connect (13/10/2026): um valor novo a cada login,
+ * que a tela consegue ler — por isso sem `httpOnly`; não é segredo e não dá
+ * acesso a nada. A Lígia usa para dar as boas-vindas uma vez por entrada, e não
+ * a cada recarregar da página (`src/lib/ia/chat/boasVindas.ts`). Mesmo
+ * `domain` da sessão, para valer nos endereços por setor.
+ */
+export const ENTRADA_COOKIE = "c41_entrada";
+
+export function entradaCookieOptions(maxAge: number): Omit<CookieOptions, "httpOnly"> & { httpOnly: false } {
+  return { ...base("/", maxAge), httpOnly: false };
+}
+
+/** Um valor novo para a marca da entrada: o instante e um pedaço aleatório, em base 36. */
+export function novaEntrada(agora = Date.now()): string {
+  return `${agora.toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
 // Mesmos TTLs de antes: 15 min para o access (igual ao JWT_ACCESS_TTL) e 7 dias
 // para o refresh.
 export const ACCESS_MAX_AGE = 15 * UM_MINUTO;

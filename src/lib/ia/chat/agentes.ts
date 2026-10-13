@@ -44,6 +44,11 @@ export type AgenteDoChat = {
   sugestoes: string[];
   /** O setor que a pessoa precisa operar — `null` na Ajuda, que serve a todos. */
   setor: string | null;
+  /**
+   * É a Lígia do setor que a pessoa está usando agora? Só ela dá as boas-vindas
+   * depois do login (13/10/2026 — `boasVindas.ts`).
+   */
+  doSetorAtivo: boolean;
 };
 
 type Config = {
@@ -309,10 +314,15 @@ export async function agentesDoChat(ctx: AuthContext): Promise<AgenteDoChat[]> {
       setor = (await setorDoModulo(ctx.tenantId, c.modulo)) ?? getModuleDef(c.modulo)?.sectorCode ?? null;
       if (!setor || !canActOnSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, c.modulo))) continue;
     }
-    disponiveis.push({ code: c.code, especialidade: especialidadeDoAgente(c.code) ?? NOME_DA_ASSISTENTE, sugestoes: c.sugestoes, setor });
+    disponiveis.push({
+      code: c.code,
+      especialidade: especialidadeDoAgente(c.code) ?? NOME_DA_ASSISTENTE,
+      sugestoes: c.sugestoes,
+      setor,
+      doSetorAtivo: setor !== null && setor === ctx.activeSector,
+    });
   }
-  const ativo = ctx.activeSector;
-  return disponiveis.sort((a, b) => Number(b.setor !== null && b.setor === ativo) - Number(a.setor !== null && a.setor === ativo));
+  return disponiveis.sort((a, b) => Number(b.doSetorAtivo) - Number(a.doSetorAtivo));
 }
 
 /** Os setores que a pessoa enxerga — o recorte da Ajuda. */
