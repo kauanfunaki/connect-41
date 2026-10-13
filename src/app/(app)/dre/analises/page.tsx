@@ -16,6 +16,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import {
   AbaEconomicoFinanceiro,
   AbaReconciliacao,
@@ -65,29 +68,47 @@ export default async function AnalisesPage({
 
   const params = await searchParams;
   const aba = ABAS.find((a) => a.chave === params.aba)?.chave ?? "economico-financeiro";
+  // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
+  // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
+  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  const companyId = empresa?.id ?? null;
 
-  if (!companyId) {
+  if (!empresa || !companyId) {
     return (
       <PageContainer>
         <PageHeader title="Análises gerenciais" />
-        <EmptyState title="Nenhuma empresa ativa" icon={<FileText />} />
+        {empresas.length === 0 ? (
+          <EmptyState title="Nenhuma empresa ativa" icon={<FileText />} />
+        ) : (
+          <>
+            <FiltroDaEmpresa acao="/dre/analises" empresas={empresas} valor={null} manter={{ aba, mes: params.mes }} />
+            <EscolhaAEmpresa escolha={escolha} porQue="As análises são de uma empresa por vez." />
+          </>
+        )}
       </PageContainer>
     );
   }
+
+  // Todo formulário desta tela grava na empresa escolhida — o rodapé diz qual.
+  const comEmpresa = (tela: React.ReactNode) => (
+    <EmpresaDaTela empresa={{ nome: empresa.nome, cnpj: empresa.cnpj }}>{tela}</EmpresaDaTela>
+  );
 
   const comMovimento = await competenciasDaEmpresa(ctx.tenantId, companyId);
   const mes = competenciaValida(params.mes) ?? comMovimento[0] ?? competenciaDoInstante(new Date());
   const base = { tenantId: ctx.tenantId, companyId, mes };
 
-  return (
+  return comEmpresa(
     <PageContainer>
       <PageHeader
         title="Análises gerenciais"
         subtitle={`Sobre a DRE por competência e o caixa de ${rotuloDaCompetencia(mes)} — cálculo determinístico, sem IA externa.`}
       />
-      <FiltroDePeriodo acao="/dre/analises" empresas={empresas} empresaId={companyId} mes={mes} extras={{ aba }} />
+      {/* A empresa navega sozinha (e vira a última aberta); o mês, com "Aplicar". */}
+      <FiltroDaEmpresa acao="/dre/analises" empresas={empresas} valor={companyId} manter={{ aba, mes }}>
+        <FiltroDePeriodo acao="/dre/analises" mes={mes} extras={{ empresa: companyId, aba }} naFileira />
+      </FiltroDaEmpresa>
       <AbasDeLink
         abas={ABAS.map((a) => ({ ...a, href: `/dre/analises?aba=${a.chave}&empresa=${companyId}&mes=${mes}` }))}
         ativa={aba}

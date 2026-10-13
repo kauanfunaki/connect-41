@@ -2,6 +2,7 @@ import { Building2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import type { EscolhaDaEmpresa } from "@/lib/empresas/escolhaDaEmpresa";
 import { SeletorDeEmpresaDaTela, type PropsDoSeletorDeEmpresa } from "./SeletorDeEmpresaDaTela";
 
 /**
@@ -30,16 +31,18 @@ export function FiltroDaEmpresa({
  * primeira da lista — escolher por alguém é como se grava na empresa errada.
  */
 export function EscolhaAEmpresa({
-  motivo,
+  escolha,
   porQue = "Esta tela mostra uma empresa por vez.",
   todasHref,
 }: {
-  motivo: "nenhuma" | "invalida";
+  /** A escolha da tela; só "escolher" diz por quê (sem empresa, ou a da URL não vale). */
+  escolha: EscolhaDaEmpresa;
   /** A frase que explica por que a tela pede uma empresa. */
   porQue?: string;
   /** Onde a tela oferece "Todas as empresas", o atalho para elas. */
   todasHref?: string;
 }) {
+  const motivo = escolha.tipo === "escolher" ? escolha.motivo : "nenhuma";
   return (
     <Card>
       <EmptyState
