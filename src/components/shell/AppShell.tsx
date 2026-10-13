@@ -100,7 +100,7 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
         Fixadas
       </p>
       {telas.map((t) => (
-        <NavItem key={t.code} href={t.href} icon={<ModuleIcon code={t.code} />} label={t.label} />
+        <NavItem key={t.code} href={t.href} exact={t.href === "/fiscal"} icon={<ModuleIcon code={t.code} />} label={t.label} />
       ))}
     </>
   );
@@ -372,7 +372,7 @@ export function AppShell({
                         <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
                       </PainelDoItem>
                     ) : (
-                      <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
+                      <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />
                     )
                   );
                 }

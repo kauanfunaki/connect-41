@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { caminhoDoMenuAtivo as ativa } from "@/lib/caminhoDoMenu";
 
 export type TelaDoPainel = { label: string; href: string; icon?: React.ReactNode };
 
@@ -12,11 +13,6 @@ const EVENTO_ABRIU = "c41-painel-do-item";
 
 const ABRE_MS = 90;
 const FECHA_MS = 180;
-
-function ativa(pathname: string, href: string): boolean {
-  const base = href.split("?")[0];
-  return pathname === base || pathname.startsWith(`${base}/`);
-}
 
 /**
  * O painel que abre **ao lado da sidebar** quando o mouse para num item que tem
