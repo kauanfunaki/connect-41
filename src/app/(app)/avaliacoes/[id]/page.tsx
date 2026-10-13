@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { ArrowRight, Lock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { excluirCiclo, encerrarCiclo } from "../actions";
@@ -27,6 +27,8 @@ export default async function CicloPage({
   const { id } = await params;
   const { ctx, setor } = await abrirTelaDoModulo("dp_avaliacoes");
   const canManage = canManageSector(ctx, setor);
+  // Excluir ciclo: só o administrador (13/10/2026). Encerrar segue com o gestor.
+  const canDelete = canManage && podeExcluir(ctx);
 
   const prisma = getPrisma();
   const ciclo = await prisma.evaluationCycle.findFirst({
@@ -72,7 +74,7 @@ export default async function CicloPage({
           ciclo.active ? <Selo tom="sucesso">Aberto</Selo> : <Selo tom="neutro">Encerrado</Selo>
         }
         action={
-          canManage && (
+          canManage && (ciclo.active || canDelete) && (
             <div className="flex items-center gap-2">
               {ciclo.active && (
                 <form action={encerrarAction}>
@@ -82,7 +84,7 @@ export default async function CicloPage({
                   </Button>
                 </form>
               )}
-              <DeleteButton action={deleteAction} nome={ciclo.name} />
+              {canDelete && <DeleteButton action={deleteAction} nome={ciclo.name} />}
             </div>
           )
         }

@@ -44,7 +44,8 @@ export type BeneficioItem = {
 type Props = {
   beneficio: BeneficioItem;
   updateAction: (prev: BenefitAssignmentState, form: FormData) => Promise<BenefitAssignmentState>;
-  removeAction: () => Promise<void>;
+  /** Só para o administrador (13/10/2026): sem ela, o "⋯" de remover não aparece. */
+  removeAction?: () => Promise<void>;
   canManage: boolean;
 };
 
@@ -67,7 +68,7 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={STATUS_STYLE[beneficio.status]}>{STATUS_LABEL[beneficio.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
-          {canManage && <MenuDoRegistro titulo="Remover este benefício do colaborador?" onRemover={removeAction} />}
+          {canManage && removeAction && <MenuDoRegistro titulo="Remover este benefício do colaborador?" onRemover={removeAction} />}
         </div>
       </div>
 

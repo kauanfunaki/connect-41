@@ -22,7 +22,8 @@ export type EscalaItem = {
 type Props = {
   escala: EscalaItem;
   updateAction: (prev: ScheduleState, form: FormData) => Promise<ScheduleState>;
-  removeAction: () => Promise<void>;
+  /** Só para o administrador (13/10/2026): sem ela, o "⋯" de remover não aparece. */
+  removeAction?: () => Promise<void>;
   canManage: boolean;
 };
 
@@ -42,7 +43,7 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={COR_DA_ESCALA[escala.status]}>{SITUACAO_DA_ESCALA[escala.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
-          {canManage && <MenuDoRegistro titulo="Remover este dia da escala?" onRemover={removeAction} />}
+          {canManage && removeAction && <MenuDoRegistro titulo="Remover este dia da escala?" onRemover={removeAction} />}
         </div>
       </div>
 

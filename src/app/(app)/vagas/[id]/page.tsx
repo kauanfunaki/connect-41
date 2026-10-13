@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { VagaPrioridade } from "@/generated/prisma/enums";
 import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE } from "@/lib/vagaStatus";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
@@ -194,7 +194,8 @@ export default async function VagaPage({
                 successMessage="Vaga reaberta."
               />
             )}
-            <DeleteButton action={deleteAction} nome={vaga.title} />
+            {/* Excluir vaga: só o administrador (13/10/2026). Encerrar segue com o gestor. */}
+            {podeExcluir(ctx) && <DeleteButton action={deleteAction} nome={vaga.title} />}
           </div>
           )
         }

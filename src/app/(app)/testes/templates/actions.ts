@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { logAudit } from "@/lib/audit";
 import { setorDoModulo } from "@/lib/modules";
@@ -162,7 +162,8 @@ export async function atualizarTemplate(_prev: TemplateState, form: FormData): P
 // usa alternarAtivoTemplate (arquivar) em vez de excluir.
 export async function excluirTemplate(id: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !ctx.userId) return;
+  // Excluir modelo: só o administrador (13/10/2026). O gestor arquiva.
+  if (!ctx.tenantId || !ctx.userId || !podeExcluir(ctx)) return;
 
   const prisma = getPrisma();
   const existing = await prisma.assessmentTemplate.findFirst({ where: { id, tenantId: ctx.tenantId } });

@@ -23,7 +23,8 @@ export type FeriasItem = {
 type Props = {
   ferias: FeriasItem;
   updateAction: (prev: VacationState, form: FormData) => Promise<VacationState>;
-  removeAction: () => Promise<void>;
+  /** Só para o administrador (13/10/2026): sem ela, o "⋯" de remover não aparece. */
+  removeAction?: () => Promise<void>;
   canManage: boolean;
 };
 
@@ -48,7 +49,7 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
           )}
           <SeloDoDP cor={COR_DAS_FERIAS[ferias.status]}>{SITUACAO_DAS_FERIAS[ferias.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
-          {canManage && <MenuDoRegistro titulo="Remover este registro de férias?" onRemover={removeAction} />}
+          {canManage && removeAction && <MenuDoRegistro titulo="Remover este registro de férias?" onRemover={removeAction} />}
         </div>
       </div>
 
