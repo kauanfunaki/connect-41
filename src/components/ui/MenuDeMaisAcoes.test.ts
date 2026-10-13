@@ -22,7 +22,9 @@ describe("menus de ações", () => {
     expect(render(item("Inativar", true))).toContain('disabled=""');
   });
   it("permite manter uma consulta secundária recolhida sem alterar o padrão", () => {
-    const html = renderToStaticMarkup(React.createElement(MenuDeMaisAcoes, { sempreMenu: true }, item("Ver relatório")));
+    // O terceiro argumento fornece children; os tipos do React ainda o exigem em props.
+    const props = { sempreMenu: true } as React.ComponentProps<typeof MenuDeMaisAcoes>;
+    const html = renderToStaticMarkup(React.createElement(MenuDeMaisAcoes, props, item("Ver relatório")));
     expect(html).toContain("Mais ações");
     expect(html).not.toContain("Ver relatório");
     expect(render(item("Ver relatório"))).toContain("Ver relatório");

@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowRight, Check, CheckCircle2, History, LayoutGrid, ListChecks } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Check, CheckCircle2, History, ListChecks } from "lucide-react";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { fluxoDaCompetencia } from "@/lib/fiscal/previa/fluxo";
 import { PAGINAS_FISCAIS, documentosDoContexto, mesmoEscopo, totaisDoContexto } from "@/lib/fiscal/previa/cenario";
 import { useFiscal } from "./ContextoFiscal";
@@ -25,22 +25,11 @@ export function PainelFiscal({ visao }: { visao: string }) {
     <AbasDeLink ativa={visao} className="rounded-t-md bg-surface [&>a[aria-current=page]]:bg-selected-bg" abas={[
       { chave: "resumo", rotulo: "Visão geral", href: "/fiscal", icone: <ListChecks /> },
       { chave: "historico", rotulo: "Histórico", href: "/fiscal?visao=historico", icone: <History /> },
-      { chave: "areas", rotulo: "Todas as áreas", href: "/fiscal?visao=areas", icone: <LayoutGrid /> },
     ]} />
 
     {visao === "historico" ? <BlocoFiscal titulo="Histórico da competência" descricao="Ações registradas para a empresa, o estabelecimento e o período selecionados.">
       <TabelaFiscal vazio="Nenhuma ação registrada nesta competência." colunas={["Quando", "O que aconteceu"]} linhas={atividades.map((a) => ({ id: a.id, celulas: [dataFiscal(a.criadoEm), a.mensagem] }))} />
-    </BlocoFiscal> : visao === "areas" ? <div>
-      <h2 className="text-card-title font-semibold text-fg">Escolha a área que precisa consultar</h2>
-      <p className="mb-5 mt-1 text-ui text-fg-secondary">Para seguir a ordem do trabalho, volte à Visão geral. Aqui você pode abrir qualquer área disponível.</p>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {PAGINAS_FISCAIS.filter((p) => p.pagina !== "painel" && modulos.includes(p.modulo)).map((p) => <Card key={p.pagina} href={p.caminho} className="p-5">
-          <div className="mb-3 flex items-center justify-between text-brand"><ModuleIcon code={p.modulo} /><ArrowRight size={16} /></div>
-          <h3 className="text-label font-semibold text-fg">{p.titulo}</h3>
-          <p className="mt-2 text-ui text-fg-secondary">{p.descricao}</p>
-        </Card>)}
-      </div>
-    </div> : <>
+    </BlocoFiscal> : <>
       <Card className="border-brand/30 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="max-w-2xl">
@@ -63,10 +52,13 @@ export function PainelFiscal({ visao }: { visao: string }) {
       <BlocoFiscal titulo="Caminho da competência" descricao="Uma etapa por vez. O destaque acima indica onde continuar." acao={<span className="text-ui font-semibold text-brand">{progresso}%</span>}>
         <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label="Progresso da competência" aria-valuenow={progresso} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${progresso}%` }} /></div>
         <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {etapas.map((e, i) => <li key={e.titulo} aria-current={i === proxima ? "step" : undefined} className={`flex gap-3 rounded-md border p-4 ${i === proxima ? "border-brand/40 bg-selected-bg" : "border-border"}`}>
-            <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-ui font-semibold ${e.completa ? "bg-success-bg text-success-fg" : i === proxima ? "bg-brand-solid text-on-brand" : "bg-surface-2 text-fg-muted"}`}>{e.completa ? <Check size={16} aria-hidden /> : i + 1}</span>
-            <div><h3 className="text-label font-semibold text-fg">{e.titulo}</h3><p className="mt-1 text-helper text-fg-secondary">{e.resumo}</p><p className={`mt-2 text-helper font-medium ${e.completa ? "text-success-fg" : i === proxima ? "text-brand" : "text-fg-muted"}`}>{e.completa ? "Concluída" : i === proxima ? "Etapa atual" : "A seguir"}</p></div>
-          </li>)}
+          {etapas.map((e, i) => {
+            const destino = PAGINAS_FISCAIS.find((p) => p.modulo === e.modulo);
+            const clicavel = i === proxima && destino && modulos.includes(e.modulo);
+            const classe = `flex h-full gap-3 rounded-md border p-4 ${i === proxima ? "border-brand/40 bg-selected-bg" : "border-border"}`;
+            const conteudo = <><span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-ui font-semibold ${e.completa ? "bg-success-bg text-success-fg" : i === proxima ? "bg-brand-solid text-on-brand" : "bg-surface-2 text-fg-muted"}`}>{e.completa ? <Check size={16} aria-hidden /> : i + 1}</span><div><h3 className="text-label font-semibold text-fg">{e.titulo}</h3><p className="mt-1 text-helper text-fg-secondary">{e.resumo}</p><p className={`mt-2 text-helper font-medium ${e.completa ? "text-success-fg" : i === proxima ? "text-brand" : "text-fg-muted"}`}>{e.completa ? "Concluída" : i === proxima ? clicavel ? "Etapa atual · abrir" : "Etapa atual" : "A seguir"}</p></div></>;
+            return <li key={e.titulo} aria-current={i === proxima ? "step" : undefined}>{clicavel ? <Link href={`${destino.caminho}?aba=${e.aba}`} aria-label={`Abrir etapa ${i + 1}: ${e.titulo}`} className={`${classe} cursor-pointer transition-colors hover:border-brand hover:bg-brand-subtle`}>{conteudo}</Link> : <div className={classe}>{conteudo}</div>}</li>;
+          })}
         </ol>
       </BlocoFiscal>
       {proxima < 0 && <p className="flex items-center gap-2 text-ui text-success-fg"><CheckCircle2 size={16} />Todas as etapas deste recorte foram concluídas.</p>}

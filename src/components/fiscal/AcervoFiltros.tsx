@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { nomeExibicao } from "@/lib/companyName";
@@ -22,7 +22,6 @@ type Empresa = { id: string; name: string; displayName: string | null };
  * continua ao lado dele, porque se digita.
  */
 export function BuscaDoAcervo() {
-  const router = useRouter();
   const params = useSearchParams();
 
   function buscar(valor: string) {
@@ -33,7 +32,9 @@ export function BuscaDoAcervo() {
     // tela abrir vazia quando o novo filtro tem menos resultados que a página
     // em que a pessoa estava.
     q.delete("pagina");
-    router.push(`?${q.toString()}`);
+    // Como os cartões e o painel de filtros: faz a consulta completa ao
+    // servidor, sem depender de uma árvore de outro recorte no cache RSC.
+    window.location.assign(`/documentos-fiscais${q.size ? `?${q.toString()}` : ""}`);
   }
 
   return (
