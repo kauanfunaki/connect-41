@@ -8,7 +8,7 @@ import { Upload, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { MenuFiscal as MenuDeMaisAcoes } from "./MenuFiscal";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { useFiscal, classeSelectFiscal } from "./ContextoFiscal";
 import { AcoesFiscais, AtalhoFiscal, BlocoFiscal, CampoFiscal, ListaDocumentos, MetricasFiscais, TabelaFiscal, dataFiscal, reais } from "./Compartilhados";
