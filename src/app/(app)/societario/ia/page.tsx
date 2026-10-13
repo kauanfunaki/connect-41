@@ -19,7 +19,9 @@ import { rodarVarreduraAction } from "./actions";
 
 // A IA do Societário (29/09): as funções do protótipo do Marcos — varredura de
 // pendências, leitura de contrato social, fila de aprovação e painel de
-// qualidade — numa tela só, da coordenação do setor.
+// qualidade — numa tela só, da coordenação do setor. Desde 13/10/2026 a IA do
+// Connect se apresenta como a Lígia (`src/lib/ia/ligia.ts`), e a tela leva o
+// nome dela com o setor, como no chat.
 
 const SECTOR = "societario";
 const MODULE = "societario_processos";
@@ -61,8 +63,8 @@ export default async function IaDoSocietarioPage() {
     <PageContainer>
       <BackButton className="mb-3" />
       <PageHeader
-        title="IA do Societário"
-        subtitle="A IA propõe; a coordenação aprova, corrige ou rejeita. Nada é gravado sem aprovação."
+        title="Lígia · Societário"
+        subtitle="A Lígia propõe; a coordenação aprova, corrige ou rejeita. Nada é gravado sem aprovação."
         action={<RodarVarredura rodar={rodarVarreduraAction} desligada={!varreduraLigada} />}
       />
 
