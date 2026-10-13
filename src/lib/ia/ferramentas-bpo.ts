@@ -13,6 +13,7 @@
 // As leituras são as das telas (`listarContas`, `dreDoMes`, `listarPendencias`)
 // — o agente vê o mesmo número que a pessoa vê, calculado pelo mesmo código.
 
+import { TODAS_AS_EMPRESAS } from "@/lib/empresas/escolhaDaEmpresa";
 import { getPrisma } from "@/lib/prisma";
 import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferramentas";
 import { listarContas } from "@/lib/financeiro/data";
@@ -120,7 +121,8 @@ export const FERRAMENTAS_DE_BPO: Record<string, FerramentaRegistrada> = {
         // A contagem do banco: as linhas param em `LIMITE_DE_CONTAS` (08/10).
         contasNoRecorte: r.totalNoRecorte,
         mostrando: Math.min(r.linhas.length, LINHAS),
-        link: link(tipo === "PAGAR" ? "/pagar" : "/receber", { empresa: empresa?.id, competencia, recorte }),
+        // Sem empresa, a resposta é de todas — e o link diz isso, ou a tela abriria na última aberta.
+        link: link(tipo === "PAGAR" ? "/pagar" : "/receber", { empresa: empresa?.id ?? TODAS_AS_EMPRESAS, competencia, recorte }),
         contas: r.linhas.slice(0, LINHAS).map((l) => ({
           empresa: l.empresaNome,
           contraparte: l.contraparteNome,

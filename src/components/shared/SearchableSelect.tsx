@@ -52,6 +52,13 @@ type Props = {
    * mesmas. Telas diferentes com a mesma lista usam a mesma chave.
    */
   lembrarRecentes?: string;
+  /**
+   * O texto do campo fechado quando nada está escolhido, no lugar do
+   * `vazioLabel` (13/10/2026). Para a tela que oferece "Todas as empresas" mas
+   * ainda não tem escolha nenhuma: o campo diz "Escolha a empresa…", e não
+   * "Todas", que ela não está mostrando.
+   */
+  textoSemValor?: string;
 };
 
 /** Até quantas opções a lista mostra; acima disso, pede para refinar a busca. */
@@ -127,6 +134,7 @@ export function SearchableSelect({
   "aria-label": ariaLabel,
   avatar = false,
   lembrarRecentes,
+  textoSemValor,
 }: Props) {
   const [valor, setValor] = useState(defaultValue);
   const [query, setQuery] = useState("");
@@ -206,7 +214,7 @@ export function SearchableSelect({
     }
   }
 
-  const texto = selecionada ? selecionada.label : vazioLabel ?? placeholder;
+  const texto = selecionada ? selecionada.label : textoSemValor ?? vazioLabel ?? placeholder;
   const tamanhoDoAvatar = compact ? 18 : 20;
 
   function linha(o: Opcao, indice: number) {

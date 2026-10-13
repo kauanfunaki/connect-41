@@ -1,4 +1,7 @@
+"use client";
+
 import { Button } from "@/components/ui/Button";
+import { EmpresaDoRegistro } from "@/components/empresas/EmpresaDaTela";
 
 type Props = {
   pending: boolean;
@@ -33,6 +36,10 @@ type Props = {
 // direita. Antes servia só à página com link; o mesmo rodapé era repetido à
 // mão em ~30 modais, com erro em 12 ou 13px, "Salvando…" escrito à mão, o
 // Cancelar às vezes travado no envio e às vezes não (02/10/2026).
+//
+// Nas telas de uma empresa por vez (`EmpresaDaTela`), a empresa em que o
+// registro cai aparece colada nos botões (13/10/2026) — "Empresa: BLD". Fora
+// delas, nada muda.
 export function FormFooter({
   pending,
   submitLabel = "Salvar",
@@ -58,6 +65,7 @@ export function FormFooter({
       ) : nota ? (
         <p className="mr-auto text-helper text-fg-muted">{nota}</p>
       ) : null}
+      <EmpresaDoRegistro />
       {cancelHref !== undefined ? (
         <Button href={cancelHref} variant="secondary" size={size}>
           {cancelLabel}
