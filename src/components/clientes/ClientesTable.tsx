@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Building2 } from "lucide-react";
+import { Building2, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,9 @@ import { StatusDot } from "@/components/shared/StatusDot";
 import { AcoesDeLinha } from "@/components/shared/AcoesDeLinha";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { useExclusaoDeCliente, type AcoesDeExclusaoDoCliente } from "@/components/clientes/ExclusaoDeCliente";
 
 type Row = {
   id: string;
@@ -24,12 +27,16 @@ type Props = {
   canCreate: boolean;
   alternarAtivo: (id: string) => Promise<{ error: string } | null>;
   inativarEmMassa: (ids: string[]) => Promise<void>;
+  /** Só ADMIN e SUPER_ADMIN veem o "Excluir" (as actions conferem de novo). */
+  podeExcluir: boolean;
+  exclusao: AcoesDeExclusaoDoCliente;
 };
 
-export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMassa }: Props) {
+export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMassa, podeExcluir, exclusao }: Props) {
   const [, startTransition] = useTransition();
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const { dialog, requestConfirm } = useConfirm();
+  const { abrir: abrirExclusao, dialogo: dialogoDeExclusao } = useExclusaoDeCliente(exclusao);
 
   // Só cliente ativo entra na seleção: a única ação em massa é inativar, e
   // marcar quem já está inativo sugeriria que algo aconteceria com ele.
@@ -69,13 +76,33 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
     );
   }
 
+  // Excluir vai no "⋯", longe do Editar e do Inativar (regra de 30/09: a ação
+  // que destrói não fica a um clique de quem só queria editar).
   function acoesCliente(c: Row) {
     return (
-      <AcoesDeLinha
-        foraDeOperacao={!c.active}
-        onToggle={() => startTransition(() => { void alternarAtivo(c.id); })}
-        editarHref={`/clientes/${c.id}/editar`}
-      />
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        <AcoesDeLinha
+          foraDeOperacao={!c.active}
+          onToggle={() => startTransition(() => { void alternarAtivo(c.id); })}
+          editarHref={`/clientes/${c.id}/editar`}
+        />
+        {podeExcluir && (
+          <MenuDeMaisAcoes rotulo={`Mais ações de ${c.name}`} sempreMenu>
+            {({ close }) => (
+              <ItemDoMenu
+                icone={<Trash2 />}
+                danger
+                onClick={() => {
+                  close();
+                  abrirExclusao({ id: c.id, nome: c.name });
+                }}
+              >
+                Excluir
+              </ItemDoMenu>
+            )}
+          </MenuDeMaisAcoes>
+        )}
+      </span>
     );
   }
 
@@ -224,15 +251,16 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
       )}
       </div>
 
-      {/* Só inativar. Excluir não existe de propósito: a FK de
-          `Company.clientGroupId` é `ON DELETE SET NULL`, então apagar um
-          cliente desvincularia as empresas dele em silêncio. */}
+      {/* Em massa, só inativar. Excluir é um por um, pelo "⋯" da linha: a
+          janela mostra o que sai junto de cada cliente (os acessos do portal)
+          e o que fica sem cliente (as empresas). */}
       <BulkActionBar count={selecionados.size} onClear={() => setSelecionados(new Set())}>
         <Button variant="danger" size="sm" onClick={inativarSelecionados}>
           Inativar
         </Button>
       </BulkActionBar>
       {dialog}
+      {dialogoDeExclusao}
     </>
   );
 }

@@ -11,7 +11,8 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { formatCnpj } from "@/lib/format";
 import { ClientesTable } from "@/components/clientes/ClientesTable";
-import { alternarAtivoCliente, inativarClientesEmMassa } from "./actions";
+import { podeExcluirDeVerdade } from "@/lib/exclusaoConfirmada";
+import { alternarAtivoCliente, inativarClientesEmMassa, resumoDoClienteParaExcluir, excluirCliente } from "./actions";
 
 const PER_PAGE = 20;
 
@@ -125,6 +126,8 @@ export default async function ClientesPage({
             }))}
             canCreate={canCreate}
             alternarAtivo={alternarAtivoCliente}
+            podeExcluir={podeExcluirDeVerdade(ctx)}
+            exclusao={{ resumoAction: resumoDoClienteParaExcluir, excluirAction: excluirCliente }}
           />
         )}
         </CascoDaTabela>

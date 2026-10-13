@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
-import { getPortalSession } from "@/lib/auth/portal";
+import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { respostaDoAnexo } from "@/lib/financeiro/pendencias/armazenamento";
 import { anexosDoComunicado } from "@/lib/comunicados/avisos";
 
 // Anexo de comunicado pelo cliente: só se o comunicado foi para o grupo dele.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const sessao = await getPortalSession();
+  const sessao = await sessaoAtivaDoPortal();
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!(await getEnabledModuleCodes(sessao.tenantId)).has("portal_solicitacoes")) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
 
