@@ -17,7 +17,7 @@
 // rótulo além do código faz esse trabalho aproveitar, em vez de exigir que
 // alguém reescreva doze linhas para o relatório sair.
 
-import { GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { DESCONSIDERAR, GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
 
 /** Normaliza para comparar: sem acento, sem caixa, espaço colapsado. */
 function chave(texto: string): string {
@@ -36,6 +36,10 @@ for (const g of GRUPOS) {
 }
 POR_CHAVE.set(chave(TRANSFERENCIA), TRANSFERENCIA);
 POR_CHAVE.set(chave("Transferência entre contas"), TRANSFERENCIA);
+// O código e o rótulo do seletor (13/10/2026) — `dreGroup` é texto livre, e
+// quem digitar o rótulo no plano tem de cair no mesmo lugar de quem escolheu.
+POR_CHAVE.set(chave(DESCONSIDERAR), DESCONSIDERAR);
+POR_CHAVE.set(chave("Desconsiderar no DRE"), DESCONSIDERAR);
 
 /**
  * O código de grupo que este texto significa, ou `null`.

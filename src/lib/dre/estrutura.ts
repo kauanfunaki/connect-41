@@ -88,6 +88,50 @@ export const NAO_CLASSIFICADO = "nao_classificado";
  */
 export const TRANSFERENCIA = "transferencia";
 
+/**
+ * Categoria que a empresa decidiu **não considerar** no DRE (pedido do Kauan,
+ * 13/10/2026).
+ *
+ * Fica fora de todas as linhas e fora do não classificado — sai da fila de
+ * classificação, que é o que a escolha quer dizer. Não é transferência: marcar
+ * como transferência o que não é transferência só para tirar da fila faria a
+ * tela afirmar uma coisa falsa. Aqui o motivo tem nome próprio, o valor
+ * continua somado em `porGrupo[DESCONSIDERAR]` (a conferência de fechamento
+ * segue zerando) e a tela mostra quanto ficou de fora.
+ */
+export const DESCONSIDERAR = "desconsiderar";
+
+/**
+ * As escolhas que tiram a categoria do resultado, com o rótulo do seletor.
+ * Vêm depois dos doze grupos em todo seletor de grupo do DRE — a fila, o plano
+ * do escritório e o plano da empresa —, para os três dizerem a mesma coisa.
+ */
+export const FORA_DO_RESULTADO: { code: string; label: string }[] = [
+  { code: TRANSFERENCIA, label: "Transferência entre contas (fora do DRE)" },
+  { code: DESCONSIDERAR, label: "Desconsiderar no DRE" },
+];
+
+/** Os doze grupos e as duas escolhas de fora, na ordem dos seletores. */
+export const ESCOLHAS_DE_GRUPO: { code: string; label: string }[] = [
+  ...GRUPOS.map((g) => ({ code: g.code, label: g.label })),
+  ...FORA_DO_RESULTADO,
+];
+
+/** O rótulo de um código de grupo, ou o próprio texto quando não é um. */
+export function rotuloDoGrupo(code: string): string {
+  return ESCOLHAS_DE_GRUPO.find((g) => g.code === code)?.label ?? code;
+}
+
+/**
+ * O grupo aceita lançamento deste lado? Os de fora do resultado aceitam os
+ * dois — transferência e desconsiderada não somam em linha nenhuma, então a
+ * conferência de origem não tem o que proteger.
+ */
+export function grupoAceitaOrigem(code: string, origem: OrigemDoGrupo): boolean {
+  const grupo = grupoPorCodigo(code);
+  return grupo ? grupo.origem === origem : FORA_DO_RESULTADO.some((f) => f.code === code);
+}
+
 // ─── As linhas do relatório ─────────────────────────────────────────────────
 
 export type LinhaDoDre =

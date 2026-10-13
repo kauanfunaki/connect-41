@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { AlertTriangle, FileText, CalendarDays, CalendarRange, FileSpreadsheet } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, type AuthContext } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -14,14 +14,16 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
 import { formatarCompetencia, formatarReaisDeCentavos as moeda } from "@/lib/format";
-import { FilaDeClassificacao, type ItemParaClassificar } from "@/components/dre/FilaDeClassificacao";
+import { AvisoDeSemGrupo, BotaoDeClassificar, PainelDeClassificacao } from "@/components/dre/PainelDeClassificacao";
 import { dreDoMes, dreDoAnoDaEmpresa, mesesComMovimento } from "@/lib/dre/data";
 import { dreDoAno } from "@/lib/dre/anual";
 import { RelatorioAnual } from "@/components/dre/RelatorioAnual";
 import { ImportarDoOmie } from "@/components/dre/ImportarDoOmie";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
 import { OPCOES_PADRAO, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { desconsideradasDoPeriodo, excecoesDaEmpresa, itensDaFila, totalForaDasLinhas, type ItemDaFila } from "@/lib/dre/fila";
 import { podeAbrirADre } from "@/lib/dre/acesso";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { competenciaDe } from "@/lib/financeiro/periodo";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
@@ -84,71 +86,70 @@ export default async function DrePage({
       meses: porMes,
       categorias: categoriasDoAno,
       naoClassificado: soltosDoAno,
+      desconsiderado: desconsideradoDoAno,
+      fontesDoSemCategoria,
+      temMesImportado,
       impostoForaDoResultado: impostoDoAno,
     } = await dreDoAnoDaEmpresa(ctx.tenantId, companyId, anoEscolhido);
     const anual = dreDoAno(porMes);
 
-    const porNomeAno = new Map(categoriasDoAno.map((c) => [c.nome, c]));
-    const itensDoAno: ItemParaClassificar[] = soltosDoAno.map((n) => ({
-      categoria: n.categoria,
-      centavos: n.centavos,
-      origem: n.origem,
-      categoryId: porNomeAno.get(n.categoria)?.id ?? null,
-    }));
-    const excecoesDoAno = categoriasDoAno
-      .filter((c) => c.origem === "excecao")
-      .map((c) => ({ categoryId: c.id, nome: c.nome, grupo: c.grupo! }));
+    // O ano mistura meses importados e meses do financeiro.
+    const fila = itensDaFila(soltosDoAno, categoriasDoAno, { temImport: temMesImportado, doSemCategoria: fontesDoSemCategoria });
 
     return (
       <PageContainer>
-        <PageHeader
-          title="DRE"
-          subtitle="Demonstrativo de resultado de caixa — os doze meses lado a lado."
-          action={<ExportarNoModeloDoBpo href={`/dre/exportar?empresa=${companyId}&visao=ano&ano=${anoEscolhido}`} />}
-        />
-        {/* Empresa e período, depois as abas — a ordem da família da DRE
-            (padrão aceito pelo Kauan em 08/10/2026). */}
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
-          <FiltrosDaTela
-            campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
+        <PainelDeClassificacao
+          companyId={companyId}
+          itens={fila}
+          contas={await linksDasContas(ctx, companyId, fila)}
+          excecoes={excecoesDaEmpresa(categoriasDoAno)}
+          desconsideradas={desconsideradasDoPeriodo(desconsideradoDoAno, categoriasDoAno)}
+        >
+          <PageHeader
+            title="DRE"
+            subtitle="Demonstrativo de resultado de caixa — os doze meses lado a lado."
+            action={<AcoesDoTopo companyId={companyId} exportar={`/dre/exportar?empresa=${companyId}&visao=ano&ano=${anoEscolhido}`} />}
           />
-        </div>
-        <AbasDaVisao companyId={companyId} ativa="ano" ano={anoEscolhido} />
-        {/* Os dois avisos que só a visão mensal tinha. Uma categoria que
-            some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
-            passam onde um grande não passaria. */}
-        {impostoDoAno !== 0 && (
-          // O `Aviso` do app (08/10/2026), com o texto em `fg`: o parágrafo é
-          // longo, e o âmbar como cor de texto fica abaixo do contraste AA.
-          <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
-            <span className="text-fg">
-              <strong>{moeda(Math.abs(impostoDoAno))}</strong> de impostos sobre a receita saíram
-              do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — a
-              margem de contribuição parte da Receita Bruta, como na planilha do BPO.
-              <span className="block text-fs-2 text-fg-secondary mt-1">
-                Reproduzido de propósito. Confirmar com o BPO se é assim mesmo.
+          {/* Empresa e período, depois as abas — a ordem da família da DRE
+              (padrão aceito pelo Kauan em 08/10/2026). */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
+            <FiltrosDaTela
+              campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
+            />
+            <BotaoDeClassificar />
+          </div>
+          <AbasDaVisao companyId={companyId} ativa="ano" ano={anoEscolhido} />
+          {/* Os dois avisos que só a visão mensal tinha. Uma categoria que
+              some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
+              passam onde um grande não passaria. */}
+          {impostoDoAno !== 0 && (
+            // O `Aviso` do app (08/10/2026), com o texto em `fg`: o parágrafo é
+            // longo, e o âmbar como cor de texto fica abaixo do contraste AA.
+            <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
+              <span className="text-fg">
+                <strong>{moeda(Math.abs(impostoDoAno))}</strong> de impostos sobre a receita saíram
+                do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — a
+                margem de contribuição parte da Receita Bruta, como na planilha do BPO.
+                <span className="block text-fs-2 text-fg-secondary mt-1">
+                  Reproduzido de propósito. Confirmar com o BPO se é assim mesmo.
+                </span>
               </span>
-            </span>
-          </Aviso>
-        )}
+            </Aviso>
+          )}
+          <AvisoDeSemGrupo />
 
-        <div className="mb-4">
-          <FilaDeClassificacao
-            companyId={companyId}
-            itens={itensDoAno}
-            excecoes={excecoesDoAno}
-          />
-        </div>
-
-        <RelatorioAnual anual={anual} />
-        <NotaDeFonte>
-          {/* A média divide pelos meses com movimento, como o AVERAGE do Excel:
-              dividir por doze em setembro diz que a empresa faturou 25% menos. */}
-          A coluna <strong>Média</strong> divide por {anual.mesesComMovimento}{" "}
-          {anual.mesesComMovimento === 1 ? "mês com movimento" : "meses com movimento"}, não por doze.
-          Os percentuais do ano saem dos valores somados, não da média dos percentuais mensais.
-        </NotaDeFonte>
+          <RelatorioAnual anual={anual} />
+          <NotaDeFonte>
+            {/* A média divide pelos meses com movimento, como o AVERAGE do Excel:
+                dividir por doze em setembro diz que a empresa faturou 25% menos. */}
+            A coluna <strong>Média</strong> divide por {anual.mesesComMovimento}{" "}
+            {anual.mesesComMovimento === 1 ? "mês com movimento" : "meses com movimento"}, não por doze.
+            Os percentuais do ano saem dos valores somados, não da média dos percentuais mensais.
+            {desconsideradoDoAno.length > 0 &&
+              ` · ${moeda(totalForaDasLinhas(desconsideradoDoAno))} desconsiderados no ano, fora do DRE`}
+          </NotaDeFonte>
+        </PainelDeClassificacao>
       </PageContainer>
     );
   }
@@ -158,20 +159,22 @@ export default async function DrePage({
   if (!escolhido) {
     return (
       <PageContainer>
-        <PageHeader title="DRE" subtitle="Demonstrativo de resultado, por empresa e mês." />
+        {/* "Importar do Omie" no cabeçalho, como nas telas com movimento: é
+            aqui que quem ainda monta o DRE fora do Connect começa. */}
+        <PageHeader
+          title="DRE"
+          subtitle="Demonstrativo de resultado, por empresa e mês."
+          action={<ImportarDoOmie companyId={companyId} />}
+        />
         <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
         {/* Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo. */}
         <Card className="mt-4">
           <EmptyState
             title="Nenhum pagamento ou recebimento nesta empresa"
-            description="O DRE é de caixa: ele monta a partir do que foi efetivamente pago e recebido, não do que foi lançado."
+            description="O DRE é de caixa: ele monta a partir do que foi efetivamente pago e recebido, não do que foi lançado. Quem ainda monta o DRE no Omie pode começar por “Importar do Omie”, no topo."
             icon={<FileText />}
           />
         </Card>
-        {/* É aqui que quem ainda monta o DRE fora do Connect começa. */}
-        <div className="mt-4">
-          <ImportarDoOmie companyId={companyId} />
-        </div>
       </PageContainer>
     );
   }
@@ -185,117 +188,133 @@ export default async function DrePage({
     temAnterior ? dreDoMes(ctx.tenantId, companyId, anteriorAoEscolhido) : Promise.resolve(null),
   ]);
 
-  const porNome = new Map(categorias.map((c) => [c.nome, c]));
-  const itens: ItemParaClassificar[] = resultado.naoClassificado.map((n) => ({
-    categoria: n.categoria,
-    centavos: n.centavos,
-    origem: n.origem,
-    categoryId: porNome.get(n.categoria)?.id ?? null,
-  }));
-
-  const excecoes = categorias
-    .filter((c) => c.origem === "excecao")
-    .map((c) => ({ categoryId: c.id, nome: c.nome, grupo: c.grupo! }));
+  const fila = itensDaFila(resultado.naoClassificado, categorias, {
+    temImport: fonte.tipo === "import",
+    doSemCategoria: [fonte.tipo],
+  });
 
   const impostoDeFora = impostoForaDoResultado(resultado, OPCOES_PADRAO);
   const transferencias = resultado.porGrupo[TRANSFERENCIA] ?? 0;
 
   return (
     <PageContainer>
-      {/* O mês escrito na tela (07/10, auditoria dos gráficos): ficava só
-          dentro do botão Filtros ("Mais recente (…)"), e a tabela inteira
-          aparecia sem dizer de quando. */}
-      <PageHeader
-        title="DRE"
-        subtitle={`Demonstrativo de resultado de caixa de ${rotuloDoMes(escolhido)} — monta do que foi pago e recebido no mês.`}
-        action={
-          <ExportarNoModeloDoBpo
-            href={`/dre/exportar?empresa=${companyId}&visao=mes&mes=${escolhido.ano}-${escolhido.mes}`}
-          />
-        }
-      />
-
-      {/* Empresa e período, depois as abas, os números do topo e a tabela — a
-          ordem da família da DRE, como na DRE econômica, nas análises e no
-          orçamento (padrão aceito pelo Kauan em 08/10/2026). O mês vinha
-          embaixo das abas. Numa lista com busca, e não 18 pílulas numa
-          fileira — a regra da conferência de 30/09 para competência. */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
-        <FiltrosDaTela
-          campos={[
-            {
-              chave: "mes",
-              rotulo: "Mês",
-              vazioLabel: meses[0] ? `Mais recente (${rotuloDoMes(meses[0])})` : "Mais recente",
-              sempreVisivel: true,
-              opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: rotuloDoMes(m) })),
-            },
-          ]}
+      <PainelDeClassificacao
+        companyId={companyId}
+        itens={fila}
+        contas={await linksDasContas(ctx, companyId, fila)}
+        excecoes={excecoesDaEmpresa(categorias)}
+        desconsideradas={desconsideradasDoPeriodo(resultado.desconsiderado, categorias)}
+      >
+        {/* O mês escrito na tela (07/10, auditoria dos gráficos): ficava só
+            dentro do botão Filtros ("Mais recente (…)"), e a tabela inteira
+            aparecia sem dizer de quando. */}
+        <PageHeader
+          title="DRE"
+          subtitle={`Demonstrativo de resultado de caixa de ${rotuloDoMes(escolhido)} — monta do que foi pago e recebido no mês.`}
+          action={
+            <AcoesDoTopo
+              companyId={companyId}
+              exportar={`/dre/exportar?empresa=${companyId}&visao=mes&mes=${escolhido.ano}-${escolhido.mes}`}
+            />
+          }
         />
-      </div>
-      <AbasDaVisao companyId={companyId} ativa="mes" ano={escolhido.ano} />
 
-      {/* Os números do topo, como na DRE econômica (08/10/2026, escolha 9A do
-          Kauan: na DRE, o padrão entra nos números do topo e a tabela fica
-          como está). A tela de caixa abria direto nas 30 linhas da tabela. */}
-      <NumerosDaDre
-        resultado={resultado}
-        regime="caixa"
-        anterior={anterior ? { resultado: anterior.resultado, rotulo: rotuloDoMes(anteriorAoEscolhido) } : null}
-        className="mb-4"
-      />
+        {/* Empresa e período, depois as abas, os números do topo e a tabela — a
+            ordem da família da DRE, como na DRE econômica, nas análises e no
+            orçamento (padrão aceito pelo Kauan em 08/10/2026). O mês vinha
+            embaixo das abas. Numa lista com busca, e não 18 pílulas numa
+            fileira — a regra da conferência de 30/09 para competência. */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
+          <FiltrosDaTela
+            campos={[
+              {
+                chave: "mes",
+                rotulo: "Mês",
+                vazioLabel: meses[0] ? `Mais recente (${rotuloDoMes(meses[0])})` : "Mais recente",
+                sempreVisivel: true,
+                opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: rotuloDoMes(m) })),
+              },
+            ]}
+          />
+          <BotaoDeClassificar />
+        </div>
+        <AbasDaVisao companyId={companyId} ativa="mes" ano={escolhido.ano} />
 
-      {/* Existe porque a regra é um chute até o BPO confirmar — e um chute que
-          muda o resultado precisa aparecer na tela, não só no código. */}
-      {impostoDeFora !== 0 && (
-        // O `Aviso` do app (08/10/2026), com o texto em `fg`: o parágrafo é
-        // longo, e o âmbar como cor de texto fica abaixo do contraste AA.
-        <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
-          <span className="text-fg">
-            <strong>{moeda(Math.abs(impostoDeFora))}</strong> de impostos sobre a receita saíram do
-            caixa e <strong>não entram</strong> no resultado abaixo — a margem de contribuição parte
-            da Receita Bruta, como na planilha que o BPO usa hoje.
-            <span className="block text-fs-2 text-fg-secondary mt-1">
-              Reproduzido de propósito, para o número bater com o que o cliente já recebe.
-              Confirmar com o BPO se é assim mesmo.
+        {/* Os números do topo, como na DRE econômica (08/10/2026, escolha 9A do
+            Kauan: na DRE, o padrão entra nos números do topo e a tabela fica
+            como está). A tela de caixa abria direto nas 30 linhas da tabela. */}
+        <NumerosDaDre
+          resultado={resultado}
+          regime="caixa"
+          anterior={anterior ? { resultado: anterior.resultado, rotulo: rotuloDoMes(anteriorAoEscolhido) } : null}
+          className="mb-4"
+        />
+
+        {/* Existe porque a regra é um chute até o BPO confirmar — e um chute que
+            muda o resultado precisa aparecer na tela, não só no código. */}
+        {impostoDeFora !== 0 && (
+          // O `Aviso` do app (08/10/2026), com o texto em `fg`: o parágrafo é
+          // longo, e o âmbar como cor de texto fica abaixo do contraste AA.
+          <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
+            <span className="text-fg">
+              <strong>{moeda(Math.abs(impostoDeFora))}</strong> de impostos sobre a receita saíram do
+              caixa e <strong>não entram</strong> no resultado abaixo — a margem de contribuição parte
+              da Receita Bruta, como na planilha que o BPO usa hoje.
+              <span className="block text-fs-2 text-fg-secondary mt-1">
+                Reproduzido de propósito, para o número bater com o que o cliente já recebe.
+                Confirmar com o BPO se é assim mesmo.
+              </span>
             </span>
-          </span>
-        </Aviso>
-      )}
-
-      {/* De onde saiu o número. Relatório que muda de fonte sem avisar é
-          relatório em que ninguém confia duas vezes. */}
-      <p className="text-micro text-fg-muted mb-3">
-        {fonte.tipo === "import"
-          ? `Montado do arquivo importado do Omie${fonte.arquivos.length > 0 ? ` (${[...new Set(fonte.arquivos)].join(", ")})` : ""}.`
-          : "Montado dos lançamentos pagos e recebidos no Connect."}
-      </p>
-
-      <FilaDeClassificacao companyId={companyId} itens={itens} excecoes={excecoes} />
-
-      <div className="mt-4">
-        <RelatorioDoDre resultado={resultado} />
-      </div>
-
-      <div className="mt-4">
-        <ImportarDoOmie companyId={companyId} />
-      </div>
-
-      <NotaDeFonte>
-        {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} pagos ou recebidos em{" "}
-        {rotuloDoMes(escolhido)}
-        {transferencias !== 0 &&
-          ` · ${moeda(transferencias)} em transferências entre contas, fora do DRE`}
-        {/* Diferente de zero significa que algo entrou e não foi somado em lugar
-            nenhum. É a conferência que a planilha faz à mão, nas abas Check. */}
-        {resultado.diferencaDeFechamento !== 0 && (
-          <span className="text-danger">
-            {" "}· atenção: {moeda(resultado.diferencaDeFechamento)} não fecharam
-          </span>
+          </Aviso>
         )}
-      </NotaDeFonte>
+
+        {/* O que falta classificar, em uma linha que abre o painel — a fila
+            inteira aqui fazia rolar (13/10/2026). */}
+        <AvisoDeSemGrupo />
+
+        {/* De onde saiu o número. Relatório que muda de fonte sem avisar é
+            relatório em que ninguém confia duas vezes. */}
+        <p className="text-micro text-fg-muted mb-3">
+          {fonte.tipo === "import"
+            ? `Montado do arquivo importado do Omie${fonte.arquivos.length > 0 ? ` (${[...new Set(fonte.arquivos)].join(", ")})` : ""}.`
+            : "Montado dos lançamentos pagos e recebidos no Connect."}
+        </p>
+
+        <RelatorioDoDre resultado={resultado} />
+
+        <NotaDeFonte>
+          {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} pagos ou recebidos em{" "}
+          {rotuloDoMes(escolhido)}
+          {transferencias !== 0 &&
+            ` · ${moeda(transferencias)} em transferências entre contas, fora do DRE`}
+          {/* O desconsiderado tem o resumo dele no painel de classificação;
+              aqui só o número, como a transferência. */}
+          {resultado.desconsiderado.length > 0 &&
+            ` · ${moeda(totalForaDasLinhas(resultado.desconsiderado))} desconsiderados, fora do DRE`}
+          {/* Diferente de zero significa que algo entrou e não foi somado em lugar
+              nenhum. É a conferência que a planilha faz à mão, nas abas Check. */}
+          {resultado.diferencaDeFechamento !== 0 && (
+            <span className="text-danger">
+              {" "}· atenção: {moeda(resultado.diferencaDeFechamento)} não fecharam
+            </span>
+          )}
+        </NotaDeFonte>
+      </PainelDeClassificacao>
     </PageContainer>
+  );
+}
+
+/**
+ * As ações do topo: trazer do Omie e levar no modelo do BPO, lado a lado
+ * (13/10/2026 — o import era um cartão no pé da tela).
+ */
+function AcoesDoTopo({ companyId, exportar }: { companyId: string; exportar: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ImportarDoOmie companyId={companyId} />
+      <ExportarNoModeloDoBpo href={exportar} />
+    </div>
   );
 }
 
@@ -323,6 +342,28 @@ function AbasDaVisao({ companyId, ativa, ano }: { companyId: string; ativa: "mes
       ]}
     />
   );
+}
+
+type LinksDasContas = { pagamento: string | null; recebimento: string | null };
+
+/**
+ * O link "Ver as contas" do lançamento sem categoria do financeiro, com o
+ * mesmo gate de `ContasPage` (setor do módulo e módulo ligado) — link para uma
+ * tela que responde 404 é pior que nenhum. Só consulta quando a fila tem esse
+ * caso.
+ */
+async function linksDasContas(ctx: AuthContext, companyId: string, fila: ItemDaFila[]): Promise<LinksDasContas> {
+  const precisa = fila.some((i) => i.acao.tipo === "sem-categoria" && i.acao.fontes.includes("financeiro"));
+  if (!precisa || !ctx.tenantId) return { pagamento: null, recebimento: null };
+  const pode = async (modulo: string) => {
+    const setor = await setorDoModulo(ctx.tenantId, modulo);
+    return !!setor && canActOnSector(ctx, setor) && (await isModuleEnabled(ctx.tenantId, modulo));
+  };
+  const [pagar, receber] = await Promise.all([pode("bpo_contas_pagar"), pode("bpo_contas_receber")]);
+  return {
+    pagamento: pagar ? `/pagar?empresa=${companyId}` : null,
+    recebimento: receber ? `/receber?empresa=${companyId}` : null,
+  };
 }
 
 function SeletorDeEmpresa({

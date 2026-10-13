@@ -18,8 +18,8 @@
 // meses fechados divide por nove, não por doze — e é o certo: dividir por doze
 // em setembro diz que a empresa faturou 25% menos do que faturou.
 
-import { montarLinhas, type ValorDaLinha } from "@/lib/dre/calculo";
-import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA, OPCOES_PADRAO, type OpcoesDoDre } from "@/lib/dre/estrutura";
+import { chaveDaCategoria, montarLinhas, type DetalheDosGrupos, type ValorDaLinha } from "@/lib/dre/calculo";
+import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA, DESCONSIDERAR, OPCOES_PADRAO, type OpcoesDoDre } from "@/lib/dre/estrutura";
 
 export type MesDoAno = {
   mes: number;
@@ -27,7 +27,12 @@ export type MesDoAno = {
   porGrupo: Record<string, number>;
   /** Houve movimento? Mês sem nada não entra na média. */
   temMovimento: boolean;
+  /** As categorias de cada grupo naquele mês — o `porCategoria` do cálculo. */
+  porCategoria?: DetalheDosGrupos;
 };
+
+/** Uma categoria ao longo das colunas do ano, na ordem delas (12 meses, média, ano). */
+export type CategoriaNoAno = { categoria: string; valores: number[] };
 
 export type ColunaDoAno = {
   /** 1 a 12, ou `null` nas colunas de soma e média. */
@@ -40,6 +45,13 @@ export type DreAnual = {
   colunas: ColunaDoAno[];
   /** Quantos meses entraram na média. Zero quando o ano está vazio. */
   mesesComMovimento: number;
+  /**
+   * As categorias de cada grupo nas quatorze colunas (13/10/2026) — o que a
+   * linha do relatório abre. Do maior total do ano para o menor. A média de
+   * cada categoria divide pelos mesmos meses da média do grupo; arredondada
+   * por categoria, pode não somar ao centavo a média da linha.
+   */
+  detalhe: Record<string, CategoriaNoAno[]>;
 };
 
 export const ROTULO_DO_MES = [
@@ -47,7 +59,7 @@ export const ROTULO_DO_MES = [
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",
 ];
 
-const TODOS_OS_GRUPOS = [...GRUPOS.map((g) => g.code), NAO_CLASSIFICADO, TRANSFERENCIA];
+const TODOS_OS_GRUPOS = [...GRUPOS.map((g) => g.code), NAO_CLASSIFICADO, TRANSFERENCIA, DESCONSIDERAR];
 
 /**
  * Monta as quatorze colunas: doze meses, soma e média.
@@ -84,7 +96,40 @@ export function dreDoAno(meses: MesDoAno[], opcoes: OpcoesDoDre = OPCOES_PADRAO)
   colunas.push({ mes: null, rotulo: "Média", linhas: montarLinhas(media, opcoes) });
   colunas.push({ mes: null, rotulo: "Ano", linhas: montarLinhas(soma, opcoes) });
 
-  return { colunas, mesesComMovimento: comMovimento.length };
+  return { colunas, mesesComMovimento: comMovimento.length, detalhe: detalheDoAno(comMovimento) };
+}
+
+/**
+ * As categorias de cada grupo, mês a mês, com a média e o total do ano. A
+ * mesma categoria em meses diferentes é uma linha só, pela chave do de-para —
+ * com o nome do primeiro mês em que apareceu.
+ */
+function detalheDoAno(meses: MesDoAno[]): Record<string, CategoriaNoAno[]> {
+  const porGrupo = new Map<string, Map<string, { categoria: string; meses: number[] }>>();
+  for (const m of meses) {
+    for (const [grupo, categorias] of Object.entries(m.porCategoria ?? {})) {
+      let doGrupo = porGrupo.get(grupo);
+      if (!doGrupo) porGrupo.set(grupo, (doGrupo = new Map()));
+      for (const c of categorias) {
+        const chave = chaveDaCategoria(c.categoria);
+        let linha = doGrupo.get(chave);
+        if (!linha) doGrupo.set(chave, (linha = { categoria: c.categoria, meses: new Array<number>(12).fill(0) }));
+        linha.meses[m.mes - 1]! += c.centavos;
+      }
+    }
+  }
+
+  const detalhe: Record<string, CategoriaNoAno[]> = {};
+  for (const [grupo, doGrupo] of porGrupo) {
+    detalhe[grupo] = [...doGrupo.values()]
+      .map((c) => {
+        const ano = c.meses.reduce((a, b) => a + b, 0);
+        const media = meses.length === 0 ? 0 : Math.round(ano / meses.length);
+        return { categoria: c.categoria, valores: [...c.meses, media, ano] };
+      })
+      .sort((a, b) => Math.abs(b.valores[13]!) - Math.abs(a.valores[13]!));
+  }
+  return detalhe;
 }
 
 /**

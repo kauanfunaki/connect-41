@@ -14,9 +14,11 @@ import { ondeDaEmpresa, padraoAntesDaEmpresa } from "@/lib/financeiro/planoDeCon
 import {
   calcularDre,
   impostoForaDoResultado,
+  SEM_CATEGORIA,
   type LancamentoDoDre,
   type Mapeamento,
   type ResultadoDoDre,
+  type ValorDaCategoria,
 } from "@/lib/dre/calculo";
 import { resolverCategorias, type CategoriaResolvida } from "@/lib/dre/mapeamento";
 import { OPCOES_PADRAO, type OpcoesDoDre } from "@/lib/dre/estrutura";
@@ -282,40 +284,68 @@ export async function dreDoAnoDaEmpresa(
    * escondia — uma categoria que some R$ 200 por mês some R$ 2.400 no ano, e
    * doze avisos pequenos passam despercebidos onde um grande não passaria.
    */
-  naoClassificado: { categoria: string; centavos: number; origem: "recebimento" | "pagamento" }[];
+  naoClassificado: ValorDaCategoria[];
+  /** O desconsiderado do ano, somado por categoria — o resumo da tela (13/10/2026). */
+  desconsiderado: ValorDaCategoria[];
+  /**
+   * De que fonte veio o "(sem categoria)" do ano (13/10/2026). O ano mistura
+   * meses importados e meses do financeiro, e o que dizer na fila muda: linha
+   * do Omie sem categoria se corrige no Omie; conta sem categoria, na origem
+   * dela. Vazio quando não houve nada sem categoria.
+   */
+  fontesDoSemCategoria: FonteDoDre["tipo"][];
+  /** Algum mês do ano saiu de arquivo importado — só aí a fila pode criar categoria do arquivo. */
+  temMesImportado: boolean;
   /** Impostos do ano que não entram no resultado. Zero quando a opção muda. */
   impostoForaDoResultado: number;
 }> {
-  const { porMes, mapeamento, categorias } = await lancamentosDoAno(tenantId, companyId, ano);
+  const { porMes, mapeamento, categorias, mesesImportados } = await lancamentosDoAno(tenantId, companyId, ano);
 
   const meses: MesDoAno[] = [];
   // Somado no laço, e não num segundo passe: os mesmos doze cálculos já
   // devolvem tudo que a tela precisa.
   const soltosNoAno = new Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>();
+  const desconsideradosNoAno = new Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>();
+  const fontesDoSemCategoria = new Set<FonteDoDre["tipo"]>();
   let impostos = 0;
 
   for (let mes = 1; mes <= 12; mes++) {
     const lista = porMes.get(mes) ?? [];
     const r = calcularDre(lista, mapeamento, opcoes);
-    meses.push({ mes, porGrupo: r.porGrupo, temMovimento: lista.length > 0 });
+    meses.push({ mes, porGrupo: r.porGrupo, temMovimento: lista.length > 0, porCategoria: r.porCategoria });
     impostos += impostoForaDoResultado(r, opcoes);
-    for (const n of r.naoClassificado) {
-      const atual = soltosNoAno.get(n.categoria);
-      soltosNoAno.set(n.categoria, {
-        centavos: (atual?.centavos ?? 0) + n.centavos,
-        origem: n.origem,
-      });
+    somarNoAno(soltosNoAno, r.naoClassificado);
+    somarNoAno(desconsideradosNoAno, r.desconsiderado);
+    if (r.naoClassificado.some((n) => n.categoria === SEM_CATEGORIA)) {
+      fontesDoSemCategoria.add(mesesImportados.has(mes) ? "import" : "financeiro");
     }
   }
 
   return {
     meses,
     categorias,
-    naoClassificado: [...soltosNoAno.entries()]
-      .map(([categoria, v]) => ({ categoria, centavos: v.centavos, origem: v.origem }))
-      .sort((a, b) => Math.abs(b.centavos) - Math.abs(a.centavos)),
+    naoClassificado: doMaiorParaOMenor(soltosNoAno),
+    desconsiderado: doMaiorParaOMenor(desconsideradosNoAno),
+    fontesDoSemCategoria: [...fontesDoSemCategoria],
+    temMesImportado: mesesImportados.size > 0,
     impostoForaDoResultado: impostos,
   };
+}
+
+function somarNoAno(
+  noAno: Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>,
+  doMes: ValorDaCategoria[]
+): void {
+  for (const n of doMes) {
+    const atual = noAno.get(n.categoria);
+    noAno.set(n.categoria, { centavos: (atual?.centavos ?? 0) + n.centavos, origem: n.origem });
+  }
+}
+
+function doMaiorParaOMenor(mapa: Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>): ValorDaCategoria[] {
+  return [...mapa.entries()]
+    .map(([categoria, v]) => ({ categoria, centavos: v.centavos, origem: v.origem }))
+    .sort((a, b) => Math.abs(b.centavos) - Math.abs(a.centavos));
 }
 
 /** O que entra no DRE de um ano, mês a mês, antes de virar relatório. */
@@ -324,6 +354,8 @@ export type LancamentosDoAno = {
   porMes: Map<number, LancamentoDoDre[]>;
   mapeamento: Mapeamento;
   categorias: CategoriaResolvida[];
+  /** Os meses que saíram do arquivo importado, e não do financeiro. */
+  mesesImportados: Set<number>;
 };
 
 /**
@@ -398,5 +430,5 @@ export async function lancamentosDoAno(
     porMes.set(mes, lista);
   }
 
-  return { porMes, mapeamento, categorias: resolvidas };
+  return { porMes, mapeamento, categorias: resolvidas, mesesImportados: mesImportado };
 }
