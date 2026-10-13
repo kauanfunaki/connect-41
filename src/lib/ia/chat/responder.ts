@@ -130,7 +130,7 @@ export async function prepararPerguntaDoChat(
       // O arquivo não fica: a conversa guarda só "📎 nome" (ver `anexos.ts`).
       const anexos = corpo.anexos ?? [];
       const textoGravado = anexos.length ? `${pergunta}\n\n${linhaDosAnexos(anexos)}` : pergunta;
-      const minha = await gravarMensagem({ conversaId: conversa.id, papel: "usuario", texto: textoGravado, contexto: contexto?.rotulo });
+      const minha = await gravarMensagem({ conversaId: conversa.id, papel: "usuario", texto: textoGravado, contexto: contexto?.rotulo ?? null });
       enviar({ tipo: "mensagem", mensagem: minha });
 
       // Os ids que esta execução viu de verdade — o resultado das ferramentas e o
