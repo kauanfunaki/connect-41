@@ -10,6 +10,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { canAddUser } from "@/lib/subscriptions";
 import { alternarAtivoUsuario, alternarAtivoEmMassa, atribuirSetorEmMassa } from "./actions";
 import { Aviso } from "@/components/ui/Aviso";
+import { podeExcluirCadastros } from "@/lib/exclusao/comum";
 
 export default async function UsuariosPage() {
   const ctx = await getAuthContext();
@@ -69,6 +70,7 @@ export default async function UsuariosPage() {
           })),
         }))}
         currentUserId={ctx.userId}
+        podeExcluir={podeExcluirCadastros(ctx)}
         sectorOptions={sectorOptions}
         alternarAtivoUsuario={alternarAtivoUsuario}
         alternarAtivoEmMassa={alternarAtivoEmMassa}
