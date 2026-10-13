@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
-import { getPortalSession } from "@/lib/auth/portal";
+import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { respostaDoAnexo } from "@/lib/financeiro/pendencias/armazenamento";
@@ -11,7 +11,7 @@ import { anexosDaConversa } from "@/lib/financeiro/comunicacao/armazenamento";
 // só sai se a mensagem for de uma empresa do grupo dele — inclusive os que a
 // própria equipe anexou.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const sessao = await getPortalSession();
+  const sessao = await sessaoAtivaDoPortal();
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const modulos = await getEnabledModuleCodes(sessao.tenantId);
   if (!modulos.has("bpo_comunicacao")) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });

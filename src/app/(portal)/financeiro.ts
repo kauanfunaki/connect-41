@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getPortalSession } from "@/lib/auth/portal";
+import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import type { EscopoFinanceiro } from "@/lib/financeiro/consultas";
 import { alcanceDoCliente } from "./alcance";
@@ -15,7 +15,7 @@ import { alcanceDoCliente } from "./alcance";
  * na equipe não pode tê-lo aberto para o cliente pela porta do portal.
  */
 export async function contextoFinanceiroDoPortal() {
-  const sessao = await getPortalSession();
+  const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
 
   const [alcance, modulos] = await Promise.all([alcanceDoCliente(sessao), getEnabledModuleCodes(sessao.tenantId)]);
