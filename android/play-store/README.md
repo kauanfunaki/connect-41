@@ -82,7 +82,7 @@ usar só a empresa `[demo]`.
 | Tags | Contabilidade, Finanças empresariais |
 | E-mail | `marcos@41contabil.com.br` |
 | Site | `https://41contabil.com.br` |
-| Política de privacidade | `https://appteste.useconnect.com.br/portal/privacidade` |
+| Política de privacidade | `https://app.useconnect.com.br/portal/privacidade` |
 
 A política é a página `src/app/(portal)/portal/privacidade/page.tsx`, pública
 (sem login). Se o endereço definitivo do portal mudar, a URL muda junto.
@@ -159,11 +159,11 @@ para analytics, diagnóstico de falhas.
      esse SHA-256 ao que já está lá, separado por vírgula (os dois convivem — o
      da nossa keystore segue valendo para o APK de fora da loja). Reiniciar o
      serviço para a variável valer.
-  3. Conferir: `https://appteste.useconnect.com.br/.well-known/assetlinks.json`
+  3. Conferir: `https://app.useconnect.com.br/.well-known/assetlinks.json`
      deve listar os dois.
 
 ## Decisão em aberto
 
-O app aponta para `appteste.useconnect.com.br` (`twa-manifest.json`: `host`).
+O app aponta para `app.useconnect.com.br` (`twa-manifest.json`: `host`).
 Trocar de endereço depois exige nova versão na loja; o nome do pacote
 (`br.com.useconnect.portal`) **não muda nunca** depois de publicado.
