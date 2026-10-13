@@ -131,7 +131,7 @@ function luminanceOf({ r, g, b }: Rgb): number {
 // direto sobre eles, sem pílula por trás — então uma cor perto do preto some no
 // tema escuro e uma perto do branco some no claro.
 const SURFACE_LIGHT_LUMINANCE = 1; // #FFFFFF
-const SURFACE_DARK_LUMINANCE = 0.011; // #1C1A22
+const SURFACE_DARK_LUMINANCE = 0.012; // #141D30 (paleta B, 13/10/2026; era #1C1A22, 0.011)
 
 // Piso de contraste exigido contra os dois fundos.
 //

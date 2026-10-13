@@ -6,8 +6,8 @@ import { applyPreferencia, readPreferencia, type PreferenciaDeTema } from "@/lib
 // Cores fixas da miniatura, e não os tokens: o cartão de "escuro" tem de
 // parecer escuro mesmo com a tela em tema claro, e vice-versa. São os valores
 // de --c41-canvas / sidebar / surface / border de cada tema (globals.css).
-const CLARO = { fundo: "#F4F3F7", lateral: "#FFFFFF", cartao: "#FFFFFF", linha: "#E4E1EA", texto: "#D3CFDC" };
-const ESCURO = { fundo: "#141219", lateral: "#18151D", cartao: "#1C1A22", linha: "#2A2732", texto: "#3A3643" };
+const CLARO = { fundo: "#EEF3FD", lateral: "#FFFFFF", cartao: "#FFFFFF", linha: "#DBE3F4", texto: "#C3D0EC" };
+const ESCURO = { fundo: "#0D1322", lateral: "#101828", cartao: "#141D30", linha: "#202C46", texto: "#2E3B58" };
 const MARCA = "#1F5EEA";
 
 type Paleta = typeof CLARO;
