@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullAccess } from "@/lib/auth/context";
+import { getAuthContext, isFullAccess, isFullWrite, podeExcluir } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { ensureMessagesLoaded, loadOlderMessages } from "@/lib/chatwoot/conversations";
 import { chaveDoAtendente, indexarVinculosPorNome, lerChaveDeSegmento } from "@/lib/chatwoot/evaluation";
@@ -65,15 +65,16 @@ export async function carregarMensagensAntigas(conversationId: string): Promise<
 
 // Vínculo manual — nunca sobrescrito por sincronização automática (ver
 // upsertContactLink em src/lib/chatwoot/sync.ts). Só quem administra o tenant
-// resolve ambiguidades (contato ASSISTED/UNLINKED), mesmo critério de
-// isFullAccess usado para dado sensível em outros módulos.
+// resolve ambiguidades (contato ASSISTED/UNLINKED). Era `isFullAccess`, que
+// inclui o perfil Somente leitura: ele vinculava e desvinculava. Desde
+// 13/10/2026 é `isFullWrite` (e desvincular, `podeExcluir`).
 export async function vincularContatoChatwoot(
   contactLinkId: string,
   target: { personId?: string; companyId?: string }
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false, error: "Não autenticado" };
-  if (!isFullAccess(ctx.role)) return { ok: false, error: "Sem permissão para vincular contatos." };
+  if (!isFullWrite(ctx.role) || ctx.subscriptionReadOnly) return { ok: false, error: "Sem permissão para vincular contatos." };
 
   const prisma = getPrisma();
   const link = await prisma.chatwootContactLink.findFirst({ where: { id: contactLinkId, tenantId: ctx.tenantId } });
@@ -100,7 +101,7 @@ export async function vincularContatoChatwoot(
 export async function desvincularContatoChatwoot(contactLinkId: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false, error: "Não autenticado" };
-  if (!isFullAccess(ctx.role)) return { ok: false, error: "Sem permissão para desvincular contatos." };
+  if (!podeExcluir(ctx)) return { ok: false, error: "Sem permissão para desvincular contatos." };
 
   const prisma = getPrisma();
   const link = await prisma.chatwootContactLink.findFirst({ where: { id: contactLinkId, tenantId: ctx.tenantId } });

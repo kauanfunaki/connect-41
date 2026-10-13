@@ -14,6 +14,8 @@ export type MeetingRow = {
   company: { id: string; name: string; externalId: string | null } | null;
   clientName: string | null;
   createdByUserId: string;
+  /** Criada pela Agenda — sem card de Kanban nem candidatura. Só esta se exclui daqui. */
+  avulsa: boolean;
 };
 
 export type CalendarDay = { dateKey: string; isToday: boolean };
@@ -24,7 +26,8 @@ export type CompanyOption = { id: string; name: string };
 // popover de reunião — agrupadas pra não arrastar 5 props soltas por 3 níveis.
 export type MeetingActions = {
   editAction: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
-  deleteAction: (meetingId: string) => Promise<void>;
+  /** Só para o administrador (13/10/2026). */
+  deleteAction?: (meetingId: string) => Promise<void>;
   allUsers: UserOption[];
   companies: CompanyOption[];
   currentUserId: string;
