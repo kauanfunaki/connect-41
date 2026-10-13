@@ -39,8 +39,9 @@ import {
   perguntasDeHoje,
 } from "@/lib/ia/chat/conversas";
 import { filtrarCitacoes, idsNoTexto } from "@/lib/ia/chat/citacoes";
+import { filtrarLinks, linksDasFerramentas, trocarIdsPorLinks } from "@/lib/ia/chat/links";
 import { linhaDosAnexos, type AnexoDaPergunta } from "@/lib/ia/chat/anexos";
-import { nomeDaAssistente } from "@/lib/ia/ligia";
+import { nomeDaAssistente, semCumprimento } from "@/lib/ia/ligia";
 import {
   contextoDaTela,
   descricaoDaTransferencia,
@@ -65,6 +66,11 @@ export type PedidoDoChat = {
   agentCode?: unknown;
   pergunta?: unknown;
   caminho?: unknown;
+  /**
+   * A tela já mostrou as boas-vindas da Lígia com o "Oi, {nome}!" (13/10/2026):
+   * a primeira resposta não cumprimenta de novo.
+   */
+  jaCumprimentada?: unknown;
   /** Já lidos e conferidos pela rota (`lerAnexos`). Vão só com esta pergunta. */
   anexos?: AnexoDaPergunta[];
 };
@@ -121,8 +127,11 @@ export async function prepararPerguntaDoChat(
 
   const { labels } = await getSectorMaps(ctx.tenantId);
   const escopo = await escopoDoAgente(ctx, agente.code, Object.keys(labels));
-  // Para a Lígia cumprimentar pelo nome na primeira resposta (13/10/2026).
+  // Para a Lígia cumprimentar pelo nome na primeira resposta (13/10/2026) —
+  // e só nela: com histórico, ou depois das boas-vindas da tela, não.
   const primeiroNome = await primeiroNomeDaPessoa(ctx.userId);
+  const jaCumprimentada = corpo.jaCumprimentada === true || corpo.jaCumprimentada === "1";
+  const podeCumprimentar = historico.length === 0 && !jaCumprimentada;
 
   return {
     executar: async (enviar) => {
@@ -137,6 +146,9 @@ export async function prepararPerguntaDoChat(
       // contexto da tela, que o servidor conferiu. Só eles viram cartão com foto
       // na resposta (ver `citacoes.ts`).
       const idsVistos = new Set<string>(idsNoTexto(contexto?.texto ?? ""));
+      // O que as ferramentas devolveram, como foi ao modelo: é daqui que saem os
+      // links que podem ficar na resposta (ver `links.ts`).
+      const resultados: string[] = [];
 
       /** Uma ida a um agente do chat, com o recorte e o contexto dele. */
       const perguntarA = async (alvo: AgenteDoChat, comHistorico: boolean, aviso: "encaminhada" | "proprio_setor" | null = null) => {
@@ -147,7 +159,7 @@ export async function prepararPerguntaDoChat(
           system:
             // O "Oi, Camila!" só na primeira resposta da conversa — e não na
             // passada por outro setor, que chega logo depois do primeiro "Oi".
-            sistemaDoChat(alvo.code, { primeiroNome, primeiraResposta: historico.length === 0 && aviso !== "encaminhada" }) +
+            sistemaDoChat(alvo.code, { primeiroNome, primeiraResposta: podeCumprimentar && aviso !== "encaminhada" }) +
             (ctxDoAlvo ? `\n\n${ctxDoAlvo.texto}` : "") +
             (aviso === "encaminhada" ? GUARDA_DO_ENCAMINHADO : aviso === "proprio_setor" ? GUARDA_DO_PROPRIO_SETOR : ""),
           pergunta,
@@ -157,9 +169,21 @@ export async function prepararPerguntaDoChat(
           aoUsarFerramenta: (nome) => enviar({ tipo: "passo", texto: textoDoPasso(nome) }),
           anexos,
           aoReceberResultado: (_nome, conteudo, erro) => {
-            if (!erro) for (const id of idsNoTexto(conteudo)) idsVistos.add(id);
+            if (erro) return;
+            for (const id of idsNoTexto(conteudo)) idsVistos.add(id);
+            resultados.push(conteudo);
           },
         });
+      };
+      /**
+       * O texto que fica gravado: citação só com id visto, link só com caminho
+       * que uma ferramenta devolveu, id solto trocado pelo link do item, e sem
+       * "Oi" onde não cabe cumprimento.
+       */
+      const textoFinal = (valor: string, cumprimenta: boolean) => {
+        const links = linksDasFerramentas(resultados);
+        const t = trocarIdsPorLinks(filtrarLinks(filtrarCitacoes(valor, idsVistos), links), links);
+        return cumprimenta ? t : semCumprimento(t);
       };
       const propostasDe = (r: Awaited<ReturnType<typeof perguntarA>>): PropostaGravada[] =>
         r.propostas
@@ -210,7 +234,7 @@ export async function prepararPerguntaDoChat(
         const resposta = await gravarMensagem({
           conversaId: conversa.id,
           papel: "assistente",
-          texto: filtrarCitacoes(r.valor || (pedido ? "Essa pergunta é de outro setor." : "Não consegui montar uma resposta."), idsVistos),
+          texto: textoFinal(r.valor || (pedido ? "Essa pergunta é de outro setor." : "Não consegui montar uma resposta."), podeCumprimentar),
           propostas: [...(await rotularPropostas(dono.tenantId, propostasDe(r))), ...extras],
           runId: (r as { runId?: string }).runId ?? null,
           truncada: r.truncado,
@@ -240,7 +264,7 @@ export async function prepararPerguntaDoChat(
           const resposta2 = await gravarMensagem({
             conversaId: conversa.id,
             papel: "assistente",
-            texto: filtrarCitacoes(r2.valor || "Não consegui montar uma resposta.", idsVistos),
+            texto: textoFinal(r2.valor || "Não consegui montar uma resposta.", false),
             propostas: await rotularPropostas(dono.tenantId, propostasDe(r2)),
             runId: (r2 as { runId?: string }).runId ?? null,
             truncada: r2.truncado,

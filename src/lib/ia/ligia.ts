@@ -88,7 +88,23 @@ export function apresentacaoDaLigia(especialidade: string): string {
  */
 export function cumprimentoDaLigia({ primeiroNome, primeiraResposta }: { primeiroNome: string | null; primeiraResposta: boolean }): string {
   if (!primeiraResposta) return "Cumprimento: a conversa já começou — não cumprimente de novo, vá direto ao ponto.";
+  // Na primeira, o "Oi" fica numa linha sozinha: o resumo da resposta vem logo abaixo, em destaque.
   return primeiroNome
-    ? `Cumprimento: esta é a primeira resposta da conversa — comece com "Oi, ${primeiroNome}!" e emende a resposta.`
-    : 'Cumprimento: esta é a primeira resposta da conversa — comece com "Oi!" e emende a resposta.';
+    ? `Cumprimento: esta é a primeira resposta da conversa — comece com "Oi, ${primeiroNome}!" numa linha sozinha e, na linha de baixo, o resumo.`
+    : 'Cumprimento: esta é a primeira resposta da conversa — comece com "Oi!" numa linha sozinha e, na linha de baixo, o resumo.';
+}
+
+/**
+ * Tira o "Oi, Kauan!" do começo de uma resposta que não devia cumprimentar
+ * (13/10/2026): a instrução já diz para não repetir, mas o Kauan viu o "Oi"
+ * voltar — isto garante. Só o cumprimento do começo, até o primeiro "!", ","
+ * ou "."; o resto da resposta fica como está.
+ */
+export function semCumprimento(texto: string): string {
+  const sem = texto.replace(
+    /^\s*(?:oi|olá|ola|bom dia|boa tarde|boa noite)(?:\s*,?\s*\p{Lu}[\p{L}'-]*)?\s*[!.,]+[ \t]*(?:\r?\n)*/iu,
+    ""
+  );
+  if (sem === texto || !sem.trim()) return texto;
+  return sem.charAt(0).toUpperCase() + sem.slice(1);
 }

@@ -19,6 +19,8 @@ import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferram
 import { lerCandidatos, lerCandidatura, lerVaga } from "@/lib/ia/ferramentas-recrutamento";
 import { setoresDoEscopo } from "@/lib/ia/ferramentas-ajuda";
 import { ondeAsVagasVisiveis, regraPeloAcesso } from "@/lib/recrutamento/acessoVagas";
+import { VAGA_STATUS_LABEL } from "@/lib/vagaStatus";
+import { chavesLegiveis, linkDaTela, situacaoLegivel } from "@/lib/ia/legivel";
 
 /**
  * O `where` das vagas que a pessoa pode ver: as dos setores em que atua e, para
@@ -100,12 +102,14 @@ export const FERRAMENTAS_DE_RECRUTAMENTO_DO_SETOR: Record<string, FerramentaRegi
         return {
           vagaId: v.id,
           titulo: v.title,
+          // A ficha da vaga, para a Lígia apontar pelo título — nunca pelo id.
+          link: linkDaTela(v.title, `/vagas/${v.id}`),
           empresa: v.company.tradeName || v.company.name,
-          status: v.status,
-          prioridade: v.priority,
+          status: situacaoLegivel(v.status, VAGA_STATUS_LABEL),
+          prioridade: situacaoLegivel(v.priority),
           vagas: v.quantity,
           diasAberta: Math.floor((agora - v.openedAt.getTime()) / DIA),
-          candidatosEmAndamentoPorEtapa: porEtapa,
+          candidatosEmAndamentoPorEtapa: chavesLegiveis(porEtapa),
           chegaramNosUltimos7Dias: v.candidaturas.filter((c) => agora - c.createdAt.getTime() <= 7 * DIA).length,
           semNotaDaTriagem: v.candidaturas.filter((c) => c._count.notas === 0).length,
         };
@@ -178,16 +182,17 @@ export const FERRAMENTAS_DE_RECRUTAMENTO_DO_SETOR: Record<string, FerramentaRegi
           stage: true,
           status: true,
           createdAt: true,
-          person: { select: { name: true } },
+          person: { select: { id: true, name: true } },
           vaga: { select: { id: true, title: true } },
         },
       });
       return linhas.map((c) => ({
         candidaturaId: c.id,
         nome: c.person.name,
-        vaga: { vagaId: c.vaga.id, titulo: c.vaga.title },
-        etapa: c.stage,
-        situacao: c.status,
+        link: linkDaTela(c.person.name, `/candidatos/${c.person.id}`),
+        vaga: { vagaId: c.vaga.id, titulo: c.vaga.title, link: linkDaTela(c.vaga.title, `/vagas/${c.vaga.id}`) },
+        etapa: situacaoLegivel(c.stage),
+        situacao: situacaoLegivel(c.status),
         inscritoEm: c.createdAt.toISOString().slice(0, 10),
       }));
     },
