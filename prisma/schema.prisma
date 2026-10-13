@@ -5054,6 +5054,43 @@ model UserLastCompany {
   @@map("user_last_companies")
 }
 
+/// De quem é a linha de `TutorialVisto`: conta da equipe ou cliente do portal.
+/// O mesmo desenho de `PasswordResetSubject` — sem ele, o id de um cliente do
+/// portal e o de uma conta da equipe cairiam na mesma coluna sem dizer de quem.
+enum TutorialSubject {
+  USER
+  PORTAL_USER
+}
+
+/// Quem já passou pelo tutorial do primeiro acesso (13/10/2026) — o da equipe
+/// e o do portal do cliente, como o do 41 Tech Hub. Ver `src/lib/tutorial/`.
+///
+/// Uma linha por pessoa e tutorial, gravada quando ela termina ou pula: com a
+/// linha na versão atual, o tutorial não abre sozinho de novo. `version` é a do
+/// conteúdo que a pessoa viu — quando o tutorial muda de verdade, sobe a versão
+/// no código e ele volta a abrir uma vez para todo mundo.
+///
+/// `userId` é o id de `users` (subject USER) ou de `portal_users`
+/// (PORTAL_USER). **Sem relação (FK), de propósito**, como `UserLastCompany`:
+/// é marca de leitura, não dado. A exclusão de usuário apaga as linhas dele
+/// (`src/lib/exclusao/usuario.ts`) e a de acesso do portal, as do acesso.
+///
+/// Tabela própria, e não coluna em `User` ou `PortalUser`, pela ordem do
+/// deploy: o Prisma lê todas as colunas do model, e uma coluna nova lida antes
+/// da migration derrubaria o login. Sem a tabela, o tutorial só não abre.
+model TutorialVisto {
+  subject     TutorialSubject
+  userId      String
+  tutorial    String          @db.VarChar(40)
+  tenantId    String
+  version     Int
+  completedAt DateTime        @default(now())
+
+  @@id([subject, userId, tutorial])
+  @@index([tenantId])
+  @@map("tutoriais_vistos")
+}
+
 // Auditoria de acesso — quem revelou/copiou a senha e quando. Não impede
 // acesso de ninguém do setor, só dá rastreabilidade (informação sensível).
 model BpoCredentialView {

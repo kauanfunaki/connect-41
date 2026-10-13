@@ -37,6 +37,7 @@ import { SO_ADMIN_EXCLUI } from "@/lib/auth/papeis";
 import { apagarArquivos, curriculosSemUso, juntarArquivos, semArquivos, totalDeArquivos, type ArquivosDoCadastro } from "./arquivos";
 import { PLANO_DA_PESSOA, arquivosDasPessoas, itensDasPessoas } from "./pessoa";
 import { LIGACOES } from "./registro";
+import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import type { ModoDaExclusao, Previa, ResultadoDaExclusao } from "./tipos";
 
 /** `id`: quem sai. `para`: o administrador que exclui e herda o que foi criado. */
@@ -192,6 +193,21 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
   },
   // A "última empresa aberta" da conta.
   { modelo: "UserLastCompany", acao: "apagar", executar: (tx, a) => n(tx.userLastCompany.deleteMany({ where: { userId: a.id } })) },
+  // O tutorial do primeiro acesso que a conta já viu (13/10/2026) — só as
+  // linhas da equipe: a mesma coluna guarda ids de acessos do portal. Sem a
+  // tabela (deploy antes da migration), não há o que apagar, e a exclusão segue.
+  {
+    modelo: "TutorialVisto",
+    acao: "apagar",
+    executar: async (tx, a) => {
+      try {
+        return await n(tx.tutorialVisto.deleteMany({ where: { subject: "USER", userId: a.id } }));
+      } catch (err) {
+        if (isPrismaMissingTableError(err)) return 0;
+        throw err;
+      }
+    },
+  },
 
   // Setores, preferências, notificações, conversas com a Lígia, atribuições e
   // acessos vão em cascata; a auditoria e os autores opcionais ficam, sem o
