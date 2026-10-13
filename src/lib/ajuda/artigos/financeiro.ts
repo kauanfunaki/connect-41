@@ -18,7 +18,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Encontrar as contas que você procura",
         passos: [
           "Use os cartões do topo: “Em aberto”, “Vencido” e “Vence hoje” — com a “Situação” em “Todas”, aparece também o “Pago”. Clique em “Em aberto” ou “Vencido” para ver só essas contas.",
-          "Clique em “Filtros” e escolha a “Situação” (“Vencidas” ou “Todas”), a “Competência” (o mês a que a conta pertence) ou a “Empresa”.",
+          "Clique em “Filtros” e escolha a “Situação” (“Vencidas” ou “Todas”) ou a “Competência” (o mês a que a conta pertence). A empresa se escolhe em “Empresa”, no topo: a tela abre na última empresa que você abriu, e “Todas as empresas” mostra o escritório inteiro.",
           "Para refinar a lista, clique no ícone de filtro ao lado do nome da coluna, como “Vencimento”, “Fornecedor” ou “Categoria”.",
           "Contas marcadas com “sem categoria” ainda precisam ser classificadas.",
           "Na aba “Análise — atraso e ranking”, veja as “Faixas de atraso” e os “Maiores fornecedores em aberto”.",
@@ -72,7 +72,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Encontrar as contas que você procura",
         passos: [
           "Use os cartões do topo: “Em aberto”, “Vencido” e “Vence hoje” — com a “Situação” em “Todas”, aparece também o “Recebido”. Clique em “Em aberto” ou “Vencido” para ver só essas contas.",
-          "Clique em “Filtros” e escolha a “Situação” (“Vencidas” ou “Todas”), a “Competência” (o mês a que a conta pertence) ou a “Empresa”.",
+          "Clique em “Filtros” e escolha a “Situação” (“Vencidas” ou “Todas”) ou a “Competência” (o mês a que a conta pertence). A empresa se escolhe em “Empresa”, no topo: a tela abre na última empresa que você abriu, e “Todas as empresas” mostra o escritório inteiro.",
           "Para refinar a lista, clique no ícone de filtro ao lado do nome da coluna, como “Vencimento”, “Cliente” ou “Categoria”.",
           "Na aba “Análise — atraso e ranking”, veja as “Faixas de atraso” e os “Maiores clientes em aberto”.",
         ],
@@ -123,7 +123,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Lançar uma conta sem nota",
         passos: [
-          "Escolha a empresa em “Buscar empresa…” e clique em “Aplicar”.",
+          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu.",
           "Clique em “Novo lançamento”, no topo da tela.",
           "Em “Tipo”, escolha “Conta a pagar” ou “Conta a receber” e selecione o “Fornecedor” ou o “Cliente (sacado)”. Se ele ainda não existe, escolha “+ Cadastrar nova contraparte”.",
           "Escolha a “Categoria” (obrigatória em conta a pagar) e preencha “Competência” (o mês a que a conta pertence), “Vencimento” e “Valor”.",
@@ -134,7 +134,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Importar lançamentos de uma planilha",
         passos: [
-          "Escolha a empresa e clique em “Importar CSV”, no topo da tela.",
+          "Confira a empresa em “Empresa” e clique em “Importar CSV”, no topo da tela.",
           "Monte a planilha com as colunas do modelo mostrado na tela e salve em CSV (texto separado por vírgula ou ponto e vírgula).",
           "Clique em “Escolher arquivo” ou arraste o arquivo para a faixa.",
           "Confira a prévia: cada linha aparece como válida, “Duplicada” ou “Erro”, com o motivo.",
@@ -145,7 +145,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Consultar e cancelar o que foi lançado à mão",
         passos: [
           "Abra “Lançamentos” no menu. Se estiver lançando ou importando, volte pela trilha, em “Lançamentos”.",
-          "Escolha a empresa e o mês e clique em “Aplicar”.",
+          "Escolha a empresa em “Empresa”; depois o mês, e clique em “Aplicar”.",
           "Veja a situação de cada um: “A conferir”, “Em aberto”, “Liquidado” ou “Cancelado”.",
           "Para cancelar, clique em “Cancelar” na linha e confirme em “Cancelar lançamento”.",
         ],
@@ -164,12 +164,12 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     titulo: "Fluxo de caixa",
     caminhos: ["/fluxo-de-caixa"],
     resumo:
-      "Mostra o que entrou e saiu nos últimos meses e o que as contas em aberto indicam que vai entrar e sair, por empresa ou de todas juntas.",
+      "Mostra o que entrou e saiu nos últimos meses e o que as contas em aberto indicam que vai entrar e sair, uma empresa por vez — e, na aba “Por empresa”, todas lado a lado.",
     secoes: [
       {
         titulo: "Ver o realizado e a projeção",
         passos: [
-          "Em “Buscar empresa…”, escolha uma empresa ou deixe “Todas as empresas”.",
+          "Em “Empresa”, no topo, escolha a empresa — o realizado e a projeção são de uma empresa por vez. A soma de todas, mês a mês, fica na aba “Por empresa”.",
           "Escolha o mês e clique em “Aplicar”.",
           "Na aba “Realizado e projeção”, o quadro “Saldo das contas” mostra o saldo bancário que vem da conciliação.",
           "A tabela do realizado traz entradas, saídas e saldo dos seis meses até o mês escolhido, pela data em que as contas foram pagas ou recebidas.",
@@ -204,7 +204,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Cadastrar a conta bancária",
         passos: [
-          "Escolha a empresa em “Buscar empresa…” e clique em “Aplicar”.",
+          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu.",
           "Clique em “Nova conta”.",
           "Preencha “Nome da conta”, “Tipo”, “Banco (COMPE)” (o código do banco, como 001 ou 341), “Agência” e “Conta com dígito”.",
           "Se quiser conferir o saldo, informe o “Saldo inicial” e a data em “Data do saldo inicial”.",
@@ -257,7 +257,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Cadastrar um fornecedor ou sacado",
         passos: [
-          "Escolha a empresa em “Buscar empresa…” e clique em “Aplicar”.",
+          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu.",
           "Clique em “Novo cadastro”.",
           "Preencha “Nome” e, se tiver, “CPF ou CNPJ” e “E-mail”.",
           "Escolha a “Categoria padrão” e o “Centro de custo padrão”, que a próxima conta dessa contraparte herda.",
@@ -357,7 +357,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Cadastrar uma alçada",
         passos: [
           "Clique na aba “Alçadas”.",
-          "Escolha a empresa em “Buscar empresa…” e clique em “Aplicar”.",
+          "Escolha a empresa em “Empresa”. A tela troca sozinha.",
           "Clique em “Nova alçada”, no topo da tela, escolha o “Usuário do portal” e informe o “Teto”, o valor máximo que ele pode aprovar.",
           "Clique em “Salvar alçada”.",
           "Para suspender uma alçada, clique em “Desativar” na lista; para voltar, em “Reativar”.",
@@ -402,7 +402,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Ao abrir a tela, a lista à esquerda mostra as empresas que já têm conversa, com a última mensagem. As que estão esperando o escritório vêm primeiro.",
           "O selo “Esperando o escritório” indica que o cliente escreveu por último.",
           "Clique na empresa para abrir a conversa no painel ao lado. Use ↑ e ↓ para passar para a anterior ou a próxima, e o X para fechar.",
-          "Para falar com outra empresa, escolha-a em “Buscar empresa…” e clique em “Aplicar”.",
+          "Para falar com outra empresa, escolha-a em “Empresa”, no topo. A tela troca sozinha.",
         ],
       },
       {
@@ -433,7 +433,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Na aba “Fila”, veja os cartões “Títulos vencidos”, “Valor”, “Sem contato” e “Sacado sem e-mail”.",
           "Comece pelo quadro “Próximas ações de hoje”, com os contatos agendados para o dia.",
-          "Clique em “Filtros” para escolher “Empresa”, “Atraso”, “Situação” ou “Responsável” (“Meus” mostra só os seus).",
+          "A fila abre na última empresa que você abriu; troque em “Empresa”, no topo, ou escolha “Todas as empresas”. Clique em “Filtros” para escolher “Atraso”, “Situação” ou “Responsável” (“Meus” mostra só os seus).",
           "Clique em “Abrir” na linha do título para ver os detalhes e agir.",
         ],
       },
@@ -570,7 +570,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Ver o DRE de um mês",
         passos: [
-          "Escolha a empresa em “Buscar empresa…”. A tela troca sozinha.",
+          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu.",
           "Na aba “Por mês”, o DRE abre no mês mais recente com movimento.",
           "Para ver outro mês, clique em “Filtros” e escolha o “Mês”.",
           "Confira, abaixo do relatório, quantos lançamentos entraram e se algum valor não fechou.",
@@ -621,7 +621,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Ver o resultado do período",
         passos: [
-          "Escolha a empresa em “Buscar empresa…”, o mês, e clique em “Aplicar”.",
+          "Escolha a empresa em “Empresa” (a tela troca sozinha); depois o mês, e clique em “Aplicar”.",
           "Escolha a visão nas abas: “Mês”, “Acumulado no ano” ou “Últimos 12 meses”.",
           "Leia os cartões do topo: “Receita bruta”, “Margem de contribuição”, “Resultado operacional” e “Resultado do período”.",
           "Confira os avisos em amarelo, como lançamentos ainda a conferir que entram no resultado.",
@@ -662,7 +662,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Abrir uma análise",
         passos: [
-          "Escolha a empresa em “Buscar empresa…”, o mês, e clique em “Aplicar”.",
+          "Escolha a empresa em “Empresa” (a tela troca sozinha); depois o mês, e clique em “Aplicar”.",
           "Clique na aba da análise. Trocar de aba mantém a empresa e o mês.",
           "“Econômico × financeiro” põe o resultado por competência ao lado do caixa e mostra os atrasos médios.",
           "“Reconciliação lucro → caixa” explica, passo a passo, por que o lucro do mês é diferente do caixa.",
@@ -714,7 +714,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Criar uma versão do orçamento",
         passos: [
-          "Escolha a empresa em “Buscar empresa…”, digite o ano e clique em “Aplicar”.",
+          "Escolha a empresa em “Empresa” (a tela troca sozinha); depois digite o ano e clique em “Aplicar”.",
           "Clique em “Nova versão”, no topo da tela, e dê o nome em “Nome da versão”.",
           "Em “Partir de”, escolha “Grade vazia”, “Outra versão, com reajuste” ou “Realizado de um ano, com reajuste”.",
           "Se partir de outra versão ou do realizado, escolha a origem e informe o “Reajuste” em percentual.",
@@ -825,7 +825,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Use os cartões “Pendentes de decisão”, “Lançados” e “Ignorados” para ver cada grupo.",
           "Busque em “Número, contraparte ou chave de acesso” (o código de 44 dígitos da nota) e tecle Enter.",
-          "Clique em “Filtros” para escolher “Empresa”, “Competência”, “Tipo” ou “Destino”.",
+          "O acervo mostra uma empresa por vez: escolha em “Empresa”, no topo (a tela abre na última empresa que você abriu). Clique em “Filtros” para escolher “Competência”, “Tipo” ou “Destino”.",
           "Clique no número do documento para abrir a ficha.",
         ],
       },
