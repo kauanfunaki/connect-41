@@ -50,6 +50,7 @@ import {
 } from "@/app/(app)/arquivos/actions";
 import { IconeDoArquivo } from "./IconeDoArquivo";
 import { EnvioDeArquivos } from "./EnvioDeArquivos";
+import { BaixarPastaEmZip } from "./BaixarPastaEmZip";
 import { DialogoDeCompartilhar, DialogoDeMover, DialogoDeNome, DialogoDeSetor, DialogoDeVencimento } from "./DialogosDoDrive";
 
 type Props = {
@@ -208,6 +209,9 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, busca }: Props)
               </div>
             )}
             {!pasta && <div className="mr-auto" />}
+
+            {/* Baixar vale para quem vê a pasta, como o "Baixar" de cada arquivo — inclusive o só leitura. */}
+            {pasta && !vazio && <BaixarPastaEmZip url={`/api/arquivos/pasta/${pasta.id}/zip`} />}
 
             {podeMexer && (
               <>
