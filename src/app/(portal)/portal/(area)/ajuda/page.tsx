@@ -12,6 +12,9 @@ import { getEnabledModuleCodes } from "@/lib/modules";
 import { passosDoPortal, type IconeDoPasso } from "@/lib/portal/ajuda";
 import { telasVisiveis } from "@/lib/portal/telas";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
+import { montarTutorialDoPortal } from "@/lib/tutorial/servidor";
+import { BotaoVerTutorial } from "@/components/tutorial/TutorialDoPrimeiroAcesso";
+import { concluirTutorialDoPortal } from "@/app/(portal)/portal/tutorial-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +55,12 @@ export default async function AjudaDoPortalPage() {
   const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
 
-  const [ligados, alcance] = await Promise.all([getEnabledModuleCodes(sessao.tenantId), alcanceDoCliente(sessao)]);
+  // O tutorial do primeiro acesso, para rever (13/10/2026).
+  const [ligados, alcance, tutorial] = await Promise.all([
+    getEnabledModuleCodes(sessao.tenantId),
+    alcanceDoCliente(sessao),
+    montarTutorialDoPortal(sessao),
+  ]);
   const modulos = new Set(ligados);
   const variasEmpresas = alcance.tipo === "EMPRESAS" && alcance.companyIds.length > 1;
 
@@ -70,7 +78,12 @@ export default async function AjudaDoPortalPage() {
 
   return (
     <PageContainer>
-      <PortalCabecalho titulo="Ajuda" descricao="Como fazer cada coisa no portal." somenteLeitura={false} />
+      <PortalCabecalho
+        titulo="Ajuda"
+        descricao="Como fazer cada coisa no portal."
+        somenteLeitura={false}
+        acao={<BotaoVerTutorial tutorial={tutorial} concluir={concluirTutorialDoPortal} />}
+      />
       <CentralDeAjuda
         gerais={telas}
         setores={[]}

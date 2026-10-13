@@ -15,11 +15,14 @@ export function PortalCabecalho({
   titulo,
   descricao,
   somenteLeitura = true,
+  acao,
 }: {
   titulo: string;
   descricao: string;
   /** Pendências e aprovações são as telas em que o cliente escreve — lá o "Só leitura" mentiria. */
   somenteLeitura?: boolean;
+  /** Botão à direita do título — o "Ver o tutorial de novo" da Ajuda (13/10/2026). */
+  acao?: React.ReactNode;
 }) {
   return (
     <PageHeader
@@ -30,6 +33,7 @@ export function PortalCabecalho({
           {somenteLeitura && " Só leitura."}
         </>
       }
+      action={acao}
     />
   );
 }
