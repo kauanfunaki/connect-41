@@ -37,13 +37,15 @@ function isActivePath(pathname: string, href: string): boolean {
 /**
  * O desenho de todo item da sidebar. O item encosta na borda esquerda da
  * coluna (`-ml-3`) para a barra do ativo ficar colada nela; por isso o fundo
- * arredonda só à direita. Ativo: fundo de seleção, texto azul e a barra **na
- * cor do setor** — o fio que liga o menu ao traço do título da tela
- * (polimento de 30/09). Eram quatro cópias destas classes, uma por tipo de item.
+ * arredonda só à direita. Ativo: cheio de azul com letra e ícone brancos
+ * (paleta B "Mais azul", 13/10/2026; antes era o fundo de seleção claro com
+ * texto azul) e a barra **na cor do setor** — o fio que liga o menu ao traço
+ * do título da tela (polimento de 30/09). Eram quatro cópias destas classes,
+ * uma por tipo de item.
  */
 export function classeDoItem(active: boolean, extra = ""): string {
   return `relative flex items-center gap-2.5 py-2 pr-2.5 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-r-lg transition-colors ${
-    active ? "text-brand bg-selected-bg" : "text-fg-secondary hover:text-fg hover:bg-surface-hover"
+    active ? "text-on-brand bg-brand-solid" : "text-fg-secondary hover:text-fg hover:bg-surface-hover"
   } ${extra}`.trim();
 }
 
@@ -61,7 +63,7 @@ export function NavItem({ href, icon, label, exact = false }: NavItemProps) {
       className={classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
-      <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
+      <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>
       {label}
     </Link>
   );
@@ -100,10 +102,10 @@ export function GrupoNavItem({
       className={classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
-      <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
+      <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>
       <span className="truncate">{label}</span>
       {/* Sem alfa (07/10/2026): o cinza a 70% dava 3,0:1 e os números quase sumiam. */}
-      <span className={`ml-auto text-micro tabular-nums ${active ? "text-brand" : "text-fg-muted"}`}>
+      <span className={`ml-auto text-micro tabular-nums ${active ? "text-on-brand/80" : "text-fg-muted"}`}>
         {itens.length}
       </span>
     </Link>
@@ -132,7 +134,7 @@ export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
       className={classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
-      <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
+      <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>
       {label}
     </Link>
   );
