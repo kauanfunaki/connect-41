@@ -23,6 +23,7 @@ import {
   STATUS_TODOS,
 } from "@/lib/companyStatusFilter";
 import { atualizarStatusEmMassa, excluirEmpresasEmMassa } from "./actions";
+import { podeExcluirCadastros } from "@/lib/exclusao/comum";
 import { Pagination } from "@/components/shared/Pagination";
 import { opcoesDeRegime, ondeDoRegime, opcoesDeLocal, ondeDoLocal } from "@/lib/filtrosDaListaDeEmpresas";
 import { lerLista } from "@/lib/filtroNaUrl";
@@ -71,7 +72,6 @@ export default async function EmpresasPage({
   const locais = lerLista(local);
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
-  const isSuperAdmin = ctx.role === "SUPER_ADMIN";
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
@@ -272,7 +272,7 @@ export default async function EmpresasPage({
             parentCompanyId: c.parentCompanyId,
           }))}
           canCreate={canCreate}
-          isSuperAdmin={isSuperAdmin}
+          podeExcluir={podeExcluirCadastros(ctx)}
           statusLabel={STATUS_LABEL}
           statusColor={STATUS_COLOR}
           atualizarStatusEmMassa={atualizarStatusEmMassa}
