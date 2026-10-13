@@ -38,6 +38,29 @@ describe("textos do chat", () => {
     expect(codigo).not.toContain("OrbeDaIA");
   });
 
+  // O botão do canto é só o desenho (13/10/2026): nome e setor saíram da
+  // vista, mas continuam no nome acessível e na dica ao passar o mouse.
+  it("o botão do canto mostra só a Lígia e guarda nome e setor no aria-label e na dica", () => {
+    // Sem o \r do checkout no Windows (autocrlf): o fim do bloco é procurado pela quebra de linha.
+    const codigo = semComentarios(readFileSync(path.join(RAIZ, "src/components/shell/ChatDeIA.tsx"), "utf-8").replace(/\r\n/g, "\n"));
+    const inicio = codigo.indexOf("if (!aberto) {");
+    const fim = codigo.indexOf("\n  }\n", inicio);
+    expect(inicio).toBeGreaterThan(-1);
+    expect(fim).toBeGreaterThan(inicio);
+    const botao = codigo.slice(inicio, fim);
+    expect(botao).toContain("aria-label={`Falar com a ${NOME_DA_ASSISTENTE}, assistente do Connect — ${agente.especialidade}`}");
+    expect(botao).toContain("data-dica={`${NOME_DA_ASSISTENTE} · ${agente.especialidade}`}");
+    expect(botao).not.toMatch(/>\s*\{(NOME_DA_ASSISTENTE|agente\.especialidade)\}\s*</);
+    expect(botao).not.toContain("title=");
+  });
+
+  it("o brilho do botão para com prefers-reduced-motion", () => {
+    const css = readFileSync(path.join(RAIZ, "src/app/globals.css"), "utf-8").replace(/\r\n/g, "\n");
+    const semMovimento = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/g)].map((m) => m[1]).join("\n");
+    expect(semMovimento).toMatch(/\.c41-chamar\b[^{]*\{\s*animation: none/);
+    expect(css).not.toContain("c41-borda-girando");
+  });
+
   it("o tira-comentários não come texto de verdade", () => {
     expect(semComentarios('const a = "https://x"; // fora\n/* bloco */ b')).toBe('const a = "https://x"; \n b');
   });
