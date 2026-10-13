@@ -31,7 +31,7 @@ function ListaDeEmpresas({ indice, value, favoritas, onChange, onFavoritar, clos
           <button type="button" aria-pressed={value === empresa.id} onClick={() => { onChange(empresa.id); close(); }} className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2.5 py-2.5 text-left text-ui text-fg">
             <span className="min-w-0 flex-1 break-words">{empresa.nome}</span>{value === empresa.id && <Check size={15} aria-hidden className="shrink-0 text-brand" />}
           </button>
-          <IconButton title={`${favorita ? "Remover dos favoritos" : "Favoritar"}: ${empresa.nome}`} aria-pressed={favorita} className={favorita ? "mr-1 text-warning-fg" : "mr-1"} onClick={() => onFavoritar(empresa.id)}><Star size={16} fill={favorita ? "currentColor" : "none"} /></IconButton>
+          <IconButton title={`${favorita ? "Remover dos favoritos" : "Favoritar"}: ${empresa.nome}`} aria-pressed={favorita} className={favorita ? "mr-1 text-warning-fg! hover:text-warning-fg!" : "mr-1"} onClick={() => onFavoritar(empresa.id)}><Star size={16} fill={favorita ? "currentColor" : "none"} /></IconButton>
         </li>;
       })}
       {resultado.total === 0 && <li className="px-2 py-4 text-ui text-fg-secondary">Nenhuma empresa encontrada.</li>}
