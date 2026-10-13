@@ -54,6 +54,11 @@ export type DadosDoPedido = {
   valor: string;
   competencia: string;
   descricao: string;
+  /** A categoria no Omie (`cCodCateg`) — obrigatória. */
+  categoria: string;
+  /** Opcionais: só para o serviço sem código municipal nem LC 116 no cadastro. */
+  codigoServicoMunicipal: string;
+  codigoLC116: string;
   /** A caixa "isto emite uma nota de verdade" marcada — conferida aqui também. */
   confirmado: boolean;
 };
@@ -73,6 +78,9 @@ export async function emitirNfseAction(
       valorCentavos: centavosDeTexto(dados.valor),
       competencia: dados.competencia,
       descricao: dados.descricao ?? "",
+      categoria: dados.categoria ?? "",
+      codigoServicoMunicipal: dados.codigoServicoMunicipal ?? "",
+      codigoLC116: dados.codigoLC116 ?? "",
     },
     competenciaDoInstante(new Date())
   );
@@ -94,6 +102,10 @@ export async function emitirNfseAction(
       servicoCodigoOmie: v.pedido.servicoCodigo,
       valorCentavos: v.pedido.valorCentavos,
       competencia: v.pedido.competencia,
+      // A emissão não tem coluna para estes: o registro é onde ficam.
+      categoria: v.pedido.categoria,
+      codigoServicoMunicipal: v.pedido.codigoServicoMunicipal,
+      codigoLC116: v.pedido.codigoLC116,
       estado: r.estado,
     },
   });
