@@ -65,7 +65,6 @@ function semFiltro(caminho: string): string {
 export function ehCaminhoInterno(href: string): boolean {
   if (typeof href !== "string" || href.length < 2 || href.length > 500) return false;
   if (!href.startsWith("/") || href.startsWith("//")) return false;
-  // eslint-disable-next-line no-control-regex
   return !/[\\\s\u0000-\u001f\u007f]/.test(href);
 }
 
