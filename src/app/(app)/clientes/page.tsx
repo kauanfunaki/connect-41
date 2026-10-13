@@ -8,10 +8,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { formatCnpj } from "@/lib/format";
 import { ClientesTable } from "@/components/clientes/ClientesTable";
-import { podeExcluirDeVerdade } from "@/lib/exclusaoConfirmada";
 import { alternarAtivoCliente, inativarClientesEmMassa, resumoDoClienteParaExcluir, excluirCliente } from "./actions";
 
 const PER_PAGE = 20;
@@ -126,7 +125,7 @@ export default async function ClientesPage({
             }))}
             canCreate={canCreate}
             alternarAtivo={alternarAtivoCliente}
-            podeExcluir={podeExcluirDeVerdade(ctx)}
+            podeExcluir={podeExcluir(ctx)}
             exclusao={{ resumoAction: resumoDoClienteParaExcluir, excluirAction: excluirCliente }}
           />
         )}

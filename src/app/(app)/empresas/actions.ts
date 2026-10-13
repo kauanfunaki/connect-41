@@ -15,7 +15,8 @@ import { cnpjRoot, lerEscolhaDeCliente } from "@/lib/clientGroups";
 import { validarMatriz } from "@/lib/companyHierarchyDb";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
 import { camposDoRegime } from "@/lib/taxRegime";
-import { ASSINATURA_SOMENTE_LEITURA, SEM_PERMISSAO_PARA_EXCLUIR, podeExcluir } from "@/lib/exclusao/comum";
+import { ASSINATURA_SOMENTE_LEITURA, papelExclui } from "@/lib/exclusao/comum";
+import { SO_ADMIN_EXCLUI } from "@/lib/auth/papeis";
 import { excluirEmpresasEmMassa as excluirEmpresasEmMassaDeVez } from "@/lib/exclusao/empresa";
 import type { ResultadoEmMassa } from "@/lib/exclusao/tipos";
 
@@ -312,7 +313,7 @@ export async function atualizarStatusEmMassa(ids: string[], status: CompanyStatu
 export async function excluirEmpresasEmMassa(ids: string[]): Promise<ResultadoEmMassa | { erro: string }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { erro: "Não autenticado." };
-  if (!podeExcluir(ctx.role)) return { erro: SEM_PERMISSAO_PARA_EXCLUIR };
+  if (!papelExclui(ctx.role)) return { erro: SO_ADMIN_EXCLUI };
   if (ctx.subscriptionReadOnly) return { erro: ASSINATURA_SOMENTE_LEITURA };
   if (!Array.isArray(ids)) return { erro: "Pedido inválido." };
 

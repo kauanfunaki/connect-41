@@ -81,12 +81,3 @@ export type ResultadoEmMassa = {
   recusadas: { id: string; nome: string; motivo: string }[];
 };
 
-/**
- * O nome digitado confere com o do cadastro? Ignora espaços nas pontas e
- * repetidos, e maiúscula/minúscula — razão social vem em caixa alta, e
- * exigir o Caps Lock não protege nada. Acento e pontuação contam.
- */
-export function nomeConfere(digitado: string | undefined | null, nome: string): boolean {
-  const normal = (s: string) => s.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
-  return !!digitado && normal(digitado) !== "" && normal(digitado) === normal(nome);
-}

@@ -10,8 +10,8 @@ import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { excluirCadastro, previaDaExclusao } from "@/app/(app)/exclusao-actions";
+import { confirmacaoConfere } from "@/lib/exclusaoConfirmada";
 import {
-  nomeConfere,
   type Efeito,
   type ItemDaPrevia,
   type Previa,
@@ -136,7 +136,7 @@ export function ExcluirCadastro({ tipo, id, nome, aberto, onFechar, depois = "na
   }
 
   const exigeNome = !!previa && (previa.temHistorico || (incluirOpcao && !!previa.opcao?.trazHistorico));
-  const nomeOk = !!previa && nomeConfere(digitado, previa.nome);
+  const nomeOk = !!previa && confirmacaoConfere(digitado, [previa.nome]);
 
   function confirmar() {
     if (!previa) return;

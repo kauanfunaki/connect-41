@@ -30,7 +30,7 @@ describe("actions da exclusão", () => {
   for (const role of ["SECTOR_ADMIN", "SECTOR_USER", "READONLY"]) {
     it(`${role}: nem prévia, nem exclusão, nem massa — e nada toca no banco`, async () => {
       ctx.role = role;
-      const erro = "Só administradores podem excluir cadastros.";
+      const erro = "Só o Administrador ou o Super Admin pode excluir.";
       expect(await previaDaExclusao("empresa", "e1")).toEqual({ erro });
       for (const tipo of ["empresa", "pessoa", "usuario"] as const) {
         expect(await excluirCadastro({ tipo, id: "x", modo: "completo", confirmacao: "x" })).toEqual({ ok: false, erro });

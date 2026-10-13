@@ -7,8 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Plus, Users2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { podeExcluirDeVerdade } from "@/lib/exclusaoConfirmada";
+import { getAuthContext, isFullWrite, podeExcluir } from "@/lib/auth/context";
 import { formatInstantDate } from "@/lib/format";
 import { NovoAcessoDoPortal, PortalAcessosList } from "@/components/portal/PortalAcessosList";
 import {
@@ -96,7 +95,7 @@ export default async function AdminPortalPage() {
           editarAction={editarAcessoDoPortal}
           resumoParaExcluirAction={resumoDoAcessoParaExcluir}
           excluirAction={excluirAcessoDoPortal}
-          podeExcluir={podeExcluirDeVerdade(ctx)}
+          podeExcluir={podeExcluir(ctx)}
         />
       )}
     </PageContainer>
