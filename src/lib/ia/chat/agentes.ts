@@ -24,6 +24,7 @@ import { acessoDoRecrutador } from "@/lib/recrutamento/acessoVagas";
 import { recorteDaGestao } from "@/lib/gestao/regras";
 import { MODULO_GESTAO } from "@/lib/gestao/acesso";
 import { setoresDaEquipe } from "./citacoes";
+import { nomeDaTela, rotuloDaTela } from "./telas";
 import {
   apresentacaoDaLigia,
   cumprimentoDaLigia,
@@ -371,7 +372,7 @@ export async function contextoParaOAgente(
   ctx: AuthContext,
   agentCode: string,
   tela: ContextoDaTela | null
-): Promise<{ rotulo: string; texto: string } | null> {
+): Promise<{ rotulo: string | null; texto: string } | null> {
   if (!tela || !ctx.tenantId) return null;
   const tenantId = ctx.tenantId;
   if (tela.tipo === "empresa" || tela.tipo === "documento_fiscal") {
@@ -431,7 +432,13 @@ export async function contextoParaOAgente(
     };
   }
   if (tela.tipo !== "tela") return null;
-  return { rotulo: tela.caminho, texto: `A pessoa está na tela ${tela.caminho} do Connect.` };
+  // Embaixo da pergunta vai o nome da tela ("Em Solicitações"), nunca o
+  // caminho (pedido do Kauan, 13/10/2026); tela sem nome conhecido não mostra
+  // nada. A Lígia recebe os dois.
+  const nome = nomeDaTela(tela.caminho);
+  return nome
+    ? { rotulo: rotuloDaTela(tela.caminho), texto: `A pessoa está na tela "${nome}" do Connect (${tela.caminho}).` }
+    : { rotulo: null, texto: `A pessoa está na tela ${tela.caminho} do Connect.` };
 }
 
 /**

@@ -30,6 +30,7 @@ import { especialidadeDoAgente, NOME_DA_ASSISTENTE } from "@/lib/ia/ligia";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { partesComCitacoes, type Citado } from "@/lib/ia/chat/citacoes";
 import { ACEITA_NO_CAMPO, conferirEscolha, separarAnexos } from "@/lib/ia/chat/anexos-regras";
+import { contextoParaMostrar } from "@/lib/ia/chat/telas";
 import { formatInstantDateTime } from "@/lib/format";
 import type { AgenteDoChat } from "@/lib/ia/chat/agentes";
 import type { ConversaNaLista, MensagemNaTela } from "@/lib/ia/chat/conversas";
@@ -729,7 +730,9 @@ export function ChatDeIA({
                   <div key={m.id} className="group self-end max-w-[85%] flex flex-col items-end gap-1">
                     <BalaoDaPergunta texto={m.texto} />
                     <span className="flex items-center gap-1.5">
-                      {m.contexto && <span className="text-micro text-fg-muted truncate max-w-[200px]">{m.contexto}</span>}
+                      {contextoParaMostrar(m.contexto) && (
+                        <span className="text-micro text-fg-muted truncate max-w-[200px]">{contextoParaMostrar(m.contexto)}</span>
+                      )}
                       <AcoesDaMensagem>
                         {!enviando && (
                           <BotaoDeAcao rotulo="Editar" onClick={() => comecarEdicao(m)}>
