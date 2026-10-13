@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import jwt from "jsonwebtoken";
 import { NextRequest } from "next/server";
 import { proxy } from "./proxy";
@@ -109,5 +109,60 @@ describe("o mesmo e-mail em dois escritórios (duas contas)", () => {
       papel: "SECTOR_ADMIN",
       setores: "dp",
     });
+  });
+});
+
+describe("a `/` do endereço principal é o site (13/10/2026)", () => {
+  // O site só existe no host principal, e o domínio vem de APP_DOMAIN. Fora
+  // destes testes ele fica apagado, como no resto do arquivo.
+  beforeEach(() => {
+    process.env.APP_DOMAIN = "useconnect.com.br";
+  });
+  afterEach(() => {
+    delete process.env.APP_DOMAIN;
+  });
+
+  /** Uma visita sem sessão nenhuma, no host dado. */
+  function visitar(host: string, caminho: string) {
+    return proxy(new NextRequest(`https://${host}${caminho}`, { headers: new Headers({ host }) }));
+  }
+
+  it("sem sessão, a `/` do host principal passa direto para a página", async () => {
+    for (const host of ["useconnect.com.br", "www.useconnect.com.br", "UseConnect.com.br:443"]) {
+      const res = await visitar(host, "/");
+      expect(res.headers.get("location")).toBeNull();
+      expect(res.headers.get("x-middleware-next")).toBe("1");
+    }
+  });
+
+  it("no app. e nos setores, a `/` sem sessão vai para o login, como antes", async () => {
+    for (const host of ["app.useconnect.com.br", "bpo.useconnect.com.br"]) {
+      const res = await visitar(host, "/");
+      expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+    }
+  });
+
+  it("só a `/`: o resto do host principal continua pedindo sessão", async () => {
+    for (const caminho of ["/home", "/empresas", "/configuracoes"]) {
+      const res = await visitar("useconnect.com.br", caminho);
+      expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+    }
+    const api = await visitar("useconnect.com.br", "/api/qualquer");
+    expect(api.status).toBe(401);
+  });
+
+  it("sem APP_DOMAIN, nenhum host vira site", async () => {
+    delete process.env.APP_DOMAIN;
+    const res = await visitar("useconnect.com.br", "/");
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+  });
+
+  it("cabeçalhos de identidade forjados não passam nem na `/` do site", async () => {
+    const res = await proxy(
+      new NextRequest("https://useconnect.com.br/", {
+        headers: new Headers({ host: "useconnect.com.br", "x-tenant-id": "escritorio-b", "x-user-role": "SUPER_ADMIN" }),
+      }),
+    );
+    expect(identidade(res)).toMatchObject({ escritorio: null, papel: null });
   });
 });

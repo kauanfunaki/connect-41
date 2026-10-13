@@ -250,7 +250,9 @@ function CenaDosProcessos() {
 
 // ─── 3. Contas: os totais, a lista, a aprovada e a que espera o cliente ───────
 
-function CenaDasContas() {
+// Exportada (13/10/2026): o site de apresentação mostra esta cena, parada, como
+// imagem da coluna "Para a equipe do escritório" (components/site).
+export function CenaDasContas() {
   const totais: { rotulo: string; valor: string; tom: string; Icone: LucideIcon }[] = [
     { rotulo: "Em aberto", valor: "R$ 48.320", tom: "", Icone: Wallet },
     { rotulo: "Vencido", valor: "R$ 2.180", tom: "text-[#B3372C]", Icone: AlertTriangle },
