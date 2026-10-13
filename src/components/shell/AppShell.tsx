@@ -44,7 +44,7 @@ import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { trocarSetor } from "@/components/shell/contexto";
-import { cookieDoMenuLateral } from "@/lib/menuLateral";
+import { cookieDoMenuLateral, SO_NA_COLUNA, SO_NA_GAVETA, TELA_GRANDE } from "@/lib/menuLateral";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
@@ -109,7 +109,6 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
 
 // A partir de lg a lateral é coluna fixa; abaixo, gaveta. No servidor vale
 // "tela grande": a gaveta só fica inerte depois da hidratação, no celular.
-const TELA_GRANDE = "(min-width: 1024px)";
 function assinarTela(aviso: () => void) {
   const mq = window.matchMedia(TELA_GRANDE);
   mq.addEventListener("change", aviso);
@@ -285,7 +284,7 @@ export function AppShell({
               ícone, 18px, abaixo do mínimo de toque. */}
           <IconButton
             size="xl"
-            className="lg:hidden absolute right-2 top-1/2 -translate-y-1/2"
+            className={`${SO_NA_GAVETA} absolute right-2 top-1/2 -translate-y-1/2`}
             onClick={() => setMobileOpen(false)}
             aria-label="Fechar menu"
           >
@@ -457,12 +456,15 @@ export function AppShell({
             aria-label="Abrir menu"
             aria-expanded={mobileOpen}
             aria-controls="menu-lateral"
-            className="lg:hidden -ml-2"
+            className={`${SO_NA_GAVETA} -ml-2`}
           >
             <Menu size={20} />
           </IconButton>
           {/* Recolher e mostrar o menu lateral no computador (08/10/2026), à
-              esquerda da troca de setor; no celular a lateral já é gaveta. */}
+              esquerda da troca de setor; no celular a lateral já é gaveta.
+              Um botão de menu por vez (13/10/2026): este só com a coluna
+              fixa, o hambúrguer só na gaveta — o porquê do `max-lg:hidden`, e
+              não `hidden lg:inline-flex`, está em menuLateral.ts. */}
           <IconButton
             size="xl"
             onClick={alternarMenu}
@@ -470,7 +472,7 @@ export function AppShell({
             data-dica={menuRecolhido ? "Mostrar o menu" : "Recolher o menu"}
             aria-expanded={!menuRecolhido}
             aria-controls="menu-lateral"
-            className="hidden lg:inline-flex -ml-2"
+            className={`${SO_NA_COLUNA} -ml-2`}
           >
             {menuRecolhido ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
           </IconButton>
