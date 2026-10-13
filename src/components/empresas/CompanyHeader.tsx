@@ -41,6 +41,8 @@ type Props = {
   phone: string | null;
   logoUrl: string | null;
   canEdit: boolean;
+  /** Remover a foto é só do administrador (13/10/2026); trocar segue com quem edita. */
+  canRemoveLogo?: boolean;
   canRequestHandoff: boolean;
   /** Só administrador exclui (13/10/2026) — o diálogo mostra o que está ligado antes. */
   podeExcluir: boolean;
@@ -60,6 +62,7 @@ export function CompanyHeader({
   phone,
   logoUrl: initialLogoUrl,
   canEdit,
+  canRemoveLogo = false,
   canRequestHandoff,
   podeExcluir,
 }: Props) {
@@ -144,7 +147,7 @@ export function CompanyHeader({
                 >
                   <Camera size={16} />
                 </button>
-                {logoUrl && (
+                {logoUrl && canRemoveLogo && (
                   <button
                     type="button"
                     onClick={handleLogoRemove}

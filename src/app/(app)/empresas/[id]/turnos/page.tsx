@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { Clock, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { AcoesDoCadastro } from "@/components/empresas/AcoesDoCadastro";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -88,7 +88,7 @@ export default async function TurnosPage({
                 <p className="text-fs-2 text-fg-muted">{t.startTime} — {t.endTime}</p>
               </div>
               {canManage && (
-                <AcoesDoCadastro editarHref={`/empresas/${companyId}/turnos/${t.id}/editar`} excluir={excluirTurno.bind(null, t.id, companyId)} nome={t.name} />
+                <AcoesDoCadastro editarHref={`/empresas/${companyId}/turnos/${t.id}/editar`} excluir={podeExcluir(ctx) ? excluirTurno.bind(null, t.id, companyId) : undefined} nome={t.name} />
               )}
             </div>
           ))}
