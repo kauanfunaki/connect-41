@@ -82,3 +82,30 @@ export function valorDoSeletor(e: EscolhaDaEmpresa): string | null {
 export function empresaNaUrl(e: EscolhaDaEmpresa): string | undefined {
   return valorDoSeletor(e) ?? undefined;
 }
+
+/**
+ * Como "Todas as empresas" vai para a URL:
+ * - `explicita` — `?empresa=todas`, nas telas pesadas, que sem parâmetro abrem
+ *   na última empresa;
+ * - `padrao` — sem o parâmetro, nas telas leves, cujo padrão já é todas.
+ */
+export type ModoDeTodas = "explicita" | "padrao";
+
+/**
+ * O endereço da tela com a empresa escolhida no seletor. `empresa` vazia é a
+ * escolha "Todas as empresas". Os parâmetros de `manter` (aba, mês, visão…)
+ * seguem; os outros saem — filtro de uma empresa (centro de custo, conta
+ * bancária, página) não serve para a próxima.
+ */
+export function hrefDaEmpresa(
+  acao: string,
+  empresa: string,
+  opcoes: { manter?: Record<string, string | undefined>; todas?: ModoDeTodas } = {}
+): string {
+  const q = new URLSearchParams();
+  for (const [chave, valor] of Object.entries(opcoes.manter ?? {})) if (valor && chave !== "empresa") q.set(chave, valor);
+  if (empresa) q.set("empresa", empresa);
+  else if (opcoes.todas === "explicita") q.set("empresa", TODAS_AS_EMPRESAS);
+  const s = q.toString();
+  return s ? `${acao}?${s}` : acao;
+}
