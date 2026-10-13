@@ -140,15 +140,17 @@ function TextoDaResposta({ texto, citados = {} }: { texto: string; citados?: Rec
   );
 }
 
-// ─── "Já abriu o chat?" — o anel em volta do botão pulsa até a primeira vez ───
+// ─── "Já abriu o chat?" — o brilho atrás da Lígia respira até a primeira vez ───
 //
 // Em localStorage, por pessoa e navegador. Se não der para ler ou gravar
-// (janela anônima, bloqueio), conta como já aberto: não pulsa à toa.
+// (janela anônima, bloqueio), conta como já aberto: não brilha à toa.
 //
 // Até 13/10/2026 isto também mostrava o balão "Pergunte à IA do {setor}" com a
 // primeira sugestão. Saiu a pedido do Kauan: voltava a cada abertura do
 // Connect — o "x" do balão não ficava guardado, e cada endereço de setor tem o
-// seu localStorage. O anel ficou: é discreto e some na primeira abertura.
+// seu localStorage. O chamado ficou: é discreto e some na primeira abertura —
+// era um anel pulsando em volta da pílula e, desde o botão só com o desenho
+// (13/10/2026), é um brilho suave atrás dela.
 const CHAVE_JA_ABRIU = "c41:chat-ia:ja-abriu";
 const EVENTO_JA_ABRIU = "c41:chat-ia";
 function lerJaAbriu(): boolean {
@@ -217,13 +219,10 @@ const TEMPO_DE_COMEMORAR = 2800;
 export function ChatDeIA({
   agentes,
   nome,
-  coresDosSetores,
 }: {
   agentes: AgenteDoChat[];
   /** Nome de quem está usando — o "Oi, Camila" das boas-vindas. */
   nome: string;
-  /** Cor de cada setor: a borda do botão leva a cor do setor do agente. */
-  coresDosSetores: Record<string, string>;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -312,7 +311,6 @@ export function ChatDeIA({
 
   if (agentes.length === 0) return null;
   const agente = agentes.find((a) => a.code === agentCode) ?? agentes[0]!;
-  const corDoOrbe = { "--orbe-b": (agente.setor && coresDosSetores[agente.setor]) || undefined } as React.CSSProperties;
   const primeiroNome = nome.trim().split(/\s+/)[0] ?? "";
   const ultimaResposta = [...mensagens].reverse().find((x) => x.papel === "assistente");
   // Pensando ganha de tudo; depois o erro (o da tela ou a última resposta que
@@ -571,30 +569,31 @@ export function ChatDeIA({
 
   // ─── O botão do canto ─────────────────────────────────────────────────────
   //
-  // Pílula com o rosto da Lígia, o nome e o setor embaixo, com a borda girando
-  // devagar (pedido de 01/10: o círculo genérico passou batido para quem olhou
-  // a plataforma). No celular, só o rosto, num círculo de 48 px. Até a
-  // primeira abertura, um anel pulsa em volta — o balão de dica que vinha junto
-  // saiu em 13/10/2026 (PR #163); o anel ficou.
+  // Só a Lígia, 56 px no computador e 48 px no celular (pedido do Kauan,
+  // 13/10/2026): o nome e o setor ocupavam espaço demais na pílula, e o
+  // desenho sozinho, sem pílula, borda girando, fundo nem folga em volta, fica
+  // mais visível. O anel do próprio desenho faz o papel de borda. A margem
+  // que sobra dentro do desenho é a do nó girando no "pensando".
+  //
+  // Nome e setor continuam no `aria-label` e na dica ao passar o mouse (a
+  // `DicaFlutuante`, por `data-dica`). O anel de foco é o de todo o Connect
+  // (`:focus-visible` em globals.css): só no teclado, não no clique. A sombra
+  // leve segue o contorno do desenho e existe para o anel não sumir sobre
+  // fundo azul (`.c41-ligia-flutuante`). Até a primeira abertura, um brilho
+  // suave respira atrás dela (`.c41-chamar`).
   if (!aberto) {
     return (
-      <div className="fixed bottom-4 right-4 z-40" style={corDoOrbe}>
-        {!jaAbriu && <span aria-hidden className="c41-chamar absolute inset-0 rounded-full bg-brand/40" />}
+      <div className="fixed bottom-4 right-4 z-40">
+        {!jaAbriu && <span aria-hidden className="c41-chamar pointer-events-none absolute -inset-2" />}
         <button
           ref={botaoRef}
           type="button"
           onClick={abrirChat}
           aria-label={`Falar com a ${NOME_DA_ASSISTENTE}, assistente do Connect — ${agente.especialidade}`}
-          data-dica={`Falar com a ${NOME_DA_ASSISTENTE}`}
-          className="c41-borda-girando relative rounded-full p-[2px] shadow-lg transition-transform hover:-translate-y-0.5 outline-none"
+          data-dica={`${NOME_DA_ASSISTENTE} · ${agente.especialidade}`}
+          className="relative flex size-12 sm:size-14 rounded-full outline-none transition-transform hover:-translate-y-0.5 motion-reduce:transition-none"
         >
-          <span className="flex items-center gap-2 h-11 px-1 sm:pr-4 rounded-full bg-surface-elevated">
-            <Ligia tamanho={36} estado={estadoDaLigia} />
-            <span className="hidden sm:flex flex-col items-start text-left leading-tight">
-              <span className="text-label font-semibold text-fg whitespace-nowrap">{NOME_DA_ASSISTENTE}</span>
-              <span className="text-micro text-fg-muted whitespace-nowrap">{agente.especialidade}</span>
-            </span>
-          </span>
+          <Ligia tamanho={56} estado={estadoDaLigia} className="c41-ligia-flutuante size-full" />
         </button>
       </div>
     );
@@ -614,7 +613,6 @@ export function ChatDeIA({
           no celular o painel ocupa a tela toda e a cobre. */}
       <div aria-hidden className="fixed inset-0 z-40" onClick={fecharChat} />
       <section
-        style={corDoOrbe}
         className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] overflow-hidden"
         aria-label={`Chat com a ${NOME_DA_ASSISTENTE}`}
       >
