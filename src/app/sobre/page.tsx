@@ -1,42 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { CONTATO, PARA_A_EQUIPE, PARA_O_CLIENTE, QUEM_OPERA } from "@/lib/site/textos";
 
 // A página pública do Connect — sem sessão (06/10/2026).
 //
 // Existe por causa da verificação do app no Google (o "Entrar com o Google" do
 // portal): o Google confere uma página inicial no domínio verificado, que diga
 // o que o app faz e aponte a política de privacidade, e ela não pode estar
-// atrás de login — a raiz do Connect leva direto ao /login. Quando o Connect
-// mudar para app.useconnect.com.br e o site de apresentação ocupar o endereço
-// principal, este texto vai para o site.
+// atrás de login — a raiz do Connect leva direto ao /login.
 //
-// O texto descreve o que o Connect faz hoje. Mudou o produto, muda aqui.
+// Com o site de apresentação na `/` do endereço principal (13/10/2026), esta
+// página continua igual: é ela que o Google confere. As listas, o contato e o
+// rodapé moram em lib/site/textos, que o site também usa — mudou o produto,
+// muda lá.
 
 export const metadata: Metadata = {
   title: "Connect · plataforma do escritório de contabilidade",
   description:
     "O Connect é a plataforma em que o escritório de contabilidade organiza o trabalho da equipe e atende os clientes pelo Portal do Cliente.",
 };
-
-const CONTATO = "marcos@41contabil.com.br";
-
-const PARA_A_EQUIPE = [
-  "Processos societários com etapas, exigências e prazos em dias úteis",
-  "Financeiro dos clientes: contas a pagar e a receber, conciliação bancária e DRE",
-  "Documentos fiscais das empresas atendidas",
-  "Departamento pessoal e recrutamento",
-  "Agenda, tarefas e o Meu dia, com a opção de conectar o Google Agenda para marcar reuniões",
-];
-
-const PARA_O_CLIENTE = [
-  "Documentos fiscais das suas empresas",
-  "Pendências e pedidos do escritório, respondidos com o arquivo junto",
-  "Aprovação de pagamentos",
-  "Financeiro: contas, fluxo de caixa e DRE",
-  "Solicitações ao escritório e comunicados",
-  "Andamento dos processos da sua empresa",
-];
 
 function Bloco({ titulo, itens }: { titulo: string; itens: string[] }) {
   return (
@@ -94,10 +77,7 @@ export default function SobreOConnectPage() {
         </section>
 
         <footer className="flex flex-col gap-1 border-t border-border pt-4 text-fs-3 text-fg-muted">
-          <p>
-            O Connect é desenvolvido e operado pela 41 TEC LTDA (CNPJ 64.620.403/0001-16), Rua Anne Frank, 2210,
-            Boqueirão, Curitiba/PR.
-          </p>
+          <p>{QUEM_OPERA}</p>
           <p>
             <Link href="/portal/privacidade" className="text-brand hover:underline">
               Política de privacidade
