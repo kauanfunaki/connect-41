@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
-import { Power, PowerOff, Send, UsersRound } from "lucide-react";
+import { useActionState, useState, useTransition } from "react";
+import { Pencil, Power, PowerOff, Send, Trash2, UsersRound } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/useConfirm";
@@ -11,40 +11,56 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, 
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
 import { JanelaDeCadastro } from "@/components/shared/JanelaDeCadastro";
+import { Modal } from "@/components/ui/Modal";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 import { StatusDot } from "@/components/shared/StatusDot";
-import type { EstadoDoAcesso } from "@/app/(app)/admin/portal/actions";
+import { ExclusaoConfirmada, ListaDaExclusao } from "@/components/ui/ExclusaoConfirmada";
+import { mensagemDoEmailRepetido, saidaParaOEmailRepetido } from "@/lib/portal/acessoExistente";
+import type { EstadoDoAcesso, ResumoDoAcessoParaExcluir } from "@/app/(app)/admin/portal/actions";
 
 type Acesso = {
   id: string;
   nome: string;
   email: string;
   ativo: boolean;
+  clienteId: string;
   cliente: string;
   ultimoAcesso: string | null;
 };
 
 type Cliente = { id: string; nome: string; empresas: number };
 
-type CriarAcesso = (anterior: EstadoDoAcesso, form: FormData) => Promise<EstadoDoAcesso>;
+type AcaoDoFormulario = (anterior: EstadoDoAcesso, form: FormData) => Promise<EstadoDoAcesso>;
 
 type Props = {
   acessos: Acesso[];
+  /** Os clientes ativos — as opções do "Editar". */
+  clientes: Cliente[];
   enviarLinkAction: (id: string) => Promise<{ error: string } | { ok: true }>;
   alternarAction: (id: string, ativo: boolean) => Promise<void>;
+  editarAction: AcaoDoFormulario;
+  resumoParaExcluirAction: (id: string) => Promise<{ erro: string } | ResumoDoAcessoParaExcluir>;
+  excluirAction: (id: string, confirmacao: string) => Promise<{ erro: string } | { ok: true }>;
+  /** Só ADMIN e SUPER_ADMIN veem o "Excluir" (a action confere de novo). */
+  podeExcluir: boolean;
 };
+
+function rotuloDoCliente(c: Cliente): string {
+  return `${c.nome} (${c.empresas} ${c.empresas === 1 ? "empresa" : "empresas"})`;
+}
 
 /**
  * O "+ Novo acesso" do cabeçalho de /admin/portal, que abre o formulário numa
  * janela (escolha 5A, 08/10/2026). Morava num cartão aberto acima da lista,
  * com a lista embaixo sob um segundo título ("Acessos").
  */
-export function NovoAcessoDoPortal({ clientes, criarAction }: { clientes: Cliente[]; criarAction: CriarAcesso }) {
+export function NovoAcessoDoPortal({ clientes, criarAction }: { clientes: Cliente[]; criarAction: AcaoDoFormulario }) {
   return (
     <JanelaDeCadastro rotulo="Novo acesso" maxWidth="max-w-xl">
       {(fechar) => <FormularioDoAcesso clientes={clientes} criarAction={criarAction} fechar={fechar} />}
@@ -52,32 +68,54 @@ export function NovoAcessoDoPortal({ clientes, criarAction }: { clientes: Client
   );
 }
 
-function FormularioDoAcesso({ clientes, criarAction, fechar }: { clientes: Cliente[]; criarAction: CriarAcesso; fechar: () => void }) {
+function FormularioDoAcesso({ clientes, criarAction, fechar }: { clientes: Cliente[]; criarAction: AcaoDoFormulario; fechar: () => void }) {
   const toast = useToast();
+  // Campos controlados: depois do aviso de e-mail repetido, o "Reativar e
+  // passar" reenvia o formulário com o que está na tela — o React 19 limpa os
+  // campos não controlados ao fim de cada envio.
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [clienteId, setClienteId] = useState("");
+
   // Deu certo: a janela fecha e o retorno vai para o aviso que some sozinho
   // — quando o e-mail não sai, o aviso diz isso e o que fazer.
   const [estado, formAction, criando] = useActionState<EstadoDoAcesso, FormData>(async (anterior, form) => {
     const r = await criarAction(anterior, form);
     if (r && "ok" in r) {
       if (r.aviso) toast.show(r.aviso, "info");
-      else toast.success("Acesso criado e link enviado.");
+      else toast.success(r.mensagem ?? "Acesso criado e link enviado.");
       fechar();
     }
     return r;
   }, null);
 
+  // O aviso do e-mail repetido vale para o e-mail que foi conferido; trocou o
+  // e-mail no campo, ele sai e o envio volta a ser o de criar.
+  const existente =
+    estado && "erro" in estado && estado.existente && estado.existente.email === email.trim().toLowerCase()
+      ? estado.existente
+      : undefined;
+  const escolhido = clientes.find((c) => c.id === clienteId) ?? null;
+  const saida = existente ? saidaParaOEmailRepetido(existente, escolhido) : null;
+  const erroComum = estado && "erro" in estado && !estado.existente ? estado.erro : undefined;
+
   return (
     <form action={formAction} className="space-y-4">
+      {/* Com o aviso de e-mail repetido na tela, o Enter num campo enviaria
+          pelo primeiro botão de envio do formulário — o "Reativar e passar".
+          Um botão desligado antes dele faz o Enter não fazer nada: reaproveitar
+          um acesso é sempre um clique de propósito. */}
+      {existente && <button type="submit" disabled hidden aria-hidden tabIndex={-1} />}
       <p className="text-helper text-fg-muted">
         A conta nasce <span className="font-medium text-fg">sem senha</span> — nem quem cria sabe
         qual é. O cliente recebe por e-mail um link para definir a dele.
       </p>
       <FieldGrid>
         <CampoForm label="Nome" htmlFor="nome" required>
-          <Input id="nome" name="nome" required placeholder="Quem vai acessar" />
+          <Input id="nome" name="nome" required placeholder="Quem vai acessar" value={nome} onChange={(e) => setNome(e.target.value)} />
         </CampoForm>
         <CampoForm label="E-mail" htmlFor="email" required>
-          <Input id="email" name="email" type="email" required />
+          <Input id="email" name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </CampoForm>
         <CampoForm
           label="Cliente"
@@ -86,28 +124,137 @@ function FormularioDoAcesso({ clientes, criarAction, fechar }: { clientes: Clien
           required
           className="sm:col-span-2"
         >
-          <Select id="clientGroupId" name="clientGroupId" required defaultValue="">
+          <Select id="clientGroupId" name="clientGroupId" required value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
             <option value="" disabled>
               Escolha…
             </option>
             {clientes.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.nome} ({c.empresas} {c.empresas === 1 ? "empresa" : "empresas"})
+                {rotuloDoCliente(c)}
               </option>
             ))}
           </Select>
         </CampoForm>
       </FieldGrid>
+
+      {existente && (
+        <Aviso tom="atencao">
+          <p>{mensagemDoEmailRepetido(existente, clienteId)}</p>
+          {saida && (
+            <>
+              <p className="mt-1.5 text-fg-secondary">{saida.explicacao}</p>
+              <div className="mt-2.5">
+                {/* Volta para a mesma action, com os campos como estão na tela;
+                    o `reaproveitar` diz qual acesso a pessoa viu. */}
+                <Button type="submit" name="reaproveitar" value={existente.id} variant="secondary" size="sm" disabled={criando}>
+                  {saida.botao}
+                </Button>
+              </div>
+            </>
+          )}
+        </Aviso>
+      )}
+
       <FormFooter
         pending={criando}
-        pendingLabel="Criando…"
+        pendingLabel="Enviando…"
         submitLabel="Criar acesso"
+        onCancel={fechar}
+        erro={erroComum}
+        submitDisabled={!!existente}
+      />
+    </form>
+  );
+}
+
+/**
+ * Editar nome, e-mail e cliente de um acesso (13/10/2026). Trocar o cliente
+ * tira a pessoa do portal na hora — a janela avisa antes de salvar.
+ */
+function EditarAcesso({
+  acesso,
+  clientes,
+  editarAction,
+  fechar,
+}: {
+  acesso: Acesso;
+  clientes: Cliente[];
+  editarAction: AcaoDoFormulario;
+  fechar: () => void;
+}) {
+  const toast = useToast();
+  const [nome, setNome] = useState(acesso.nome);
+  const [email, setEmail] = useState(acesso.email);
+  const [clienteId, setClienteId] = useState(acesso.clienteId);
+
+  const [estado, formAction, salvando] = useActionState<EstadoDoAcesso, FormData>(async (anterior, form) => {
+    const r = await editarAction(anterior, form);
+    if (r && "ok" in r) {
+      toast.success(r.mensagem ?? "Acesso atualizado.");
+      fechar();
+    }
+    return r;
+  }, null);
+
+  // O cliente atual pode estar inativo (fora da lista de ativos): entra como
+  // opção, marcado, para o formulário não trocá-lo sem a pessoa pedir.
+  const atualNaLista = clientes.some((c) => c.id === acesso.clienteId);
+  const novo = clientes.find((c) => c.id === clienteId);
+  const trocaDeCliente = clienteId !== acesso.clienteId;
+
+  return (
+    <form action={formAction} className="space-y-4">
+      <input type="hidden" name="id" value={acesso.id} />
+      <FieldGrid>
+        <CampoForm label="Nome" htmlFor="editar-nome" required>
+          <Input id="editar-nome" name="nome" required value={nome} onChange={(e) => setNome(e.target.value)} />
+        </CampoForm>
+        <CampoForm label="E-mail" htmlFor="editar-email" required helper="É o e-mail com que a pessoa entra no portal.">
+          <Input id="editar-email" name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        </CampoForm>
+        <CampoForm
+          label="Cliente"
+          htmlFor="editar-cliente"
+          helper="Define quais empresas esta conta enxerga."
+          required
+          className="sm:col-span-2"
+        >
+          <Select id="editar-cliente" name="clientGroupId" required value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
+            {!atualNaLista && <option value={acesso.clienteId}>{acesso.cliente} (inativo)</option>}
+            {clientes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {rotuloDoCliente(c)}
+              </option>
+            ))}
+          </Select>
+        </CampoForm>
+      </FieldGrid>
+
+      {trocaDeCliente && novo && (
+        <Aviso tom="atencao">
+          Ao salvar, {acesso.nome} sai do portal e precisa entrar de novo. Passa a ver só as empresas de {novo.nome}, e
+          deixa de ver as de {acesso.cliente}. Os limites de aprovação de pagamento que tinha nas empresas de{" "}
+          {acesso.cliente} são desligados.
+        </Aviso>
+      )}
+
+      <FormFooter
+        pending={salvando}
         onCancel={fechar}
         erro={estado && "erro" in estado ? estado.erro : undefined}
       />
     </form>
   );
 }
+
+type Exclusao = {
+  acesso: Acesso;
+  resumo: ResumoDoAcessoParaExcluir | null;
+  /** A contagem não veio. */
+  erroDoResumo: string | null;
+  /** A exclusão voltou com erro (nome que não confere, por exemplo). */
+  erro: string | null;
+};
 
 /**
  * Os acessos do portal, na tela da equipe (/admin/portal).
@@ -117,11 +264,25 @@ function FormularioDoAcesso({ clientes, criarAction, fechar }: { clientes: Clien
  * no aviso que some sozinho — aparecia embaixo da tabela, longe do botão
  * clicado —; e o "Desativar" pede confirmação, porque corta na hora o acesso
  * do cliente. Reativar não pede: não tira nada de ninguém.
+ *
+ * 13/10/2026: "Editar" (nome, e-mail, cliente) e "Excluir" de verdade no "⋯".
  */
-export function PortalAcessosList({ acessos, enviarLinkAction, alternarAction }: Props) {
+export function PortalAcessosList({
+  acessos,
+  clientes,
+  enviarLinkAction,
+  alternarAction,
+  editarAction,
+  resumoParaExcluirAction,
+  excluirAction,
+  podeExcluir,
+}: Props) {
   const [pendente, startTransition] = useTransition();
+  const [excluindo, startExcluir] = useTransition();
   const toast = useToast();
   const { dialog, requestConfirm } = useConfirm();
+  const [editando, setEditando] = useState<Acesso | null>(null);
+  const [exclusao, setExclusao] = useState<Exclusao | null>(null);
 
   function enviarLink(a: Acesso) {
     startTransition(async () => {
@@ -147,9 +308,41 @@ export function PortalAcessosList({ acessos, enviarLinkAction, alternarAction }:
     );
   }
 
-  // "Enviar link" é botão; desativar/reativar vai no "⋯" — era texto cinza
-  // colado no "Enviar link", a um clique de tirar o acesso de um cliente
-  // (polimento de 30/09).
+  // A contagem do que está ligado vem quando a janela abre — no clique, não
+  // num efeito: a action chega por prop e muda de identidade a cada
+  // revalidação.
+  function abrirExclusao(a: Acesso) {
+    setExclusao({ acesso: a, resumo: null, erroDoResumo: null, erro: null });
+    resumoParaExcluirAction(a.id)
+      .catch(() => ({ erro: "Não foi possível conferir o que está ligado a este acesso. Tente de novo." }))
+      .then((r) =>
+        setExclusao((atual) =>
+          atual && atual.acesso.id === a.id
+            ? "erro" in r
+              ? { ...atual, erroDoResumo: r.erro }
+              : { ...atual, resumo: r }
+            : atual
+        )
+      );
+  }
+
+  function excluir(digitado: string) {
+    if (!exclusao) return;
+    const alvo = exclusao.acesso;
+    startExcluir(async () => {
+      const r = await excluirAction(alvo.id, digitado).catch(() => ({ erro: "Não foi possível excluir. Tente de novo." }));
+      if ("erro" in r) {
+        setExclusao((atual) => (atual ? { ...atual, erro: r.erro } : atual));
+        return;
+      }
+      toast.success(`Acesso de ${alvo.nome} excluído.`);
+      setExclusao(null);
+    });
+  }
+
+  // "Enviar link" é botão; editar, desativar/reativar e excluir vão no "⋯" —
+  // era texto cinza colado no "Enviar link", a um clique de tirar o acesso de
+  // um cliente (polimento de 30/09).
   function acoes(a: Acesso) {
     return (
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
@@ -158,22 +351,50 @@ export function PortalAcessosList({ acessos, enviarLinkAction, alternarAction }:
         </Button>
         <MenuDeMaisAcoes rotulo={`Mais ações de ${a.nome}`}>
           {(fechar) => (
-            <ItemDoMenu
-              icone={a.ativo ? <PowerOff /> : <Power />}
-              danger={a.ativo}
-              disabled={pendente}
-              onClick={() => {
-                fechar();
-                alternar(a);
-              }}
-            >
-              {a.ativo ? "Desativar" : "Reativar"}
-            </ItemDoMenu>
+            <>
+              <ItemDoMenu
+                icone={<Pencil />}
+                disabled={pendente}
+                onClick={() => {
+                  fechar();
+                  setEditando(a);
+                }}
+              >
+                Editar
+              </ItemDoMenu>
+              <ItemDoMenu
+                icone={a.ativo ? <PowerOff /> : <Power />}
+                danger={a.ativo}
+                disabled={pendente}
+                onClick={() => {
+                  fechar();
+                  alternar(a);
+                }}
+              >
+                {a.ativo ? "Desativar" : "Reativar"}
+              </ItemDoMenu>
+              {podeExcluir && (
+                <ItemDoMenu
+                  icone={<Trash2 />}
+                  danger
+                  disabled={pendente}
+                  onClick={() => {
+                    fechar();
+                    abrirExclusao(a);
+                  }}
+                >
+                  Excluir
+                </ItemDoMenu>
+              )}
+            </>
           )}
         </MenuDeMaisAcoes>
       </span>
     );
   }
+
+  const resumo = exclusao?.resumo;
+  const semHistorico = resumo && resumo.historico.ficam.length === 0 && resumo.historico.apagados.length === 0;
 
   return (
     <>
@@ -261,6 +482,54 @@ export function PortalAcessosList({ acessos, enviarLinkAction, alternarAction }:
         </CascoDaTabela>
       </div>
       {dialog}
+
+      <Modal open={editando !== null} onClose={() => setEditando(null)} title="Editar acesso" maxWidth="max-w-xl">
+        {editando && (
+          <EditarAcesso
+            key={editando.id}
+            acesso={editando}
+            clientes={clientes}
+            editarAction={editarAction}
+            fechar={() => setEditando(null)}
+          />
+        )}
+      </Modal>
+
+      {exclusao && (
+        <ExclusaoConfirmada
+          key={exclusao.acesso.id}
+          titulo={`Excluir o acesso de ${exclusao.acesso.nome}?`}
+          descricao="O acesso é apagado de vez, e o e-mail fica livre para um acesso novo."
+          nome={exclusao.acesso.nome}
+          alternativas={[exclusao.acesso.email]}
+          rotuloDoBotao="Excluir acesso"
+          carregando={!resumo && !exclusao.erroDoResumo}
+          indisponivel={!!exclusao.erroDoResumo}
+          pending={excluindo}
+          erro={exclusao.erroDoResumo ?? exclusao.erro}
+          onConfirm={excluir}
+          onCancel={() => {
+            if (!excluindo) setExclusao(null);
+          }}
+        >
+          {resumo && (
+            <>
+              <p className="text-ui text-fg-secondary">
+                {resumo.email} · cliente {resumo.cliente}
+              </p>
+              {semHistorico ? (
+                <Aviso tom="neutro">Este acesso não tem nada registrado no portal. Só ele é apagado.</Aviso>
+              ) : (
+                <>
+                  <ListaDaExclusao titulo="Continuam guardados, sem o nome de quem fez:" itens={resumo.historico.ficam} />
+                  <ListaDaExclusao titulo="São apagados junto:" itens={resumo.historico.apagados} />
+                </>
+              )}
+              <p className="text-helper text-fg-muted">Se a pessoa estiver com o portal aberto, ela sai na próxima tela.</p>
+            </>
+          )}
+        </ExclusaoConfirmada>
+      )}
     </>
   );
 }

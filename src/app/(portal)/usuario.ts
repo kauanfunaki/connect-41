@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getPrisma } from "@/lib/prisma";
 import { getPortalSession } from "@/lib/auth/portal";
 import { getEnabledModuleCodes } from "@/lib/modules";
@@ -22,14 +23,26 @@ export async function contasAtivasDoPortal(email: string): Promise<{ id: string;
 }
 
 /**
- * A sessão do portal, se o token vale **e** a conta continua ativa.
+ * A sessão do portal, se o token vale **e** a conta continua existindo, ativa
+ * e no mesmo cliente que o token diz.
  *
  * Com o "lembrar de mim" (05/10/2026) o token vive 30 dias: confiar só nele
  * deixaria uma conta desativada lendo o portal por um mês. O layout da área do
  * cliente e o login passam por aqui; as ações que escrevem já conferiam
  * (`clienteAtivoDoPortal`).
+ *
+ * Desde 13/10/2026 as telas e os downloads de leitura também passam por aqui,
+ * e não mais direto pelo `getPortalSession`. O token é sem estado — não há
+ * tabela de sessões do portal para revogar —, e o layout não roda de novo a
+ * cada navegação entre telas. Com o acesso podendo trocar de cliente ou ser
+ * excluído, uma tela que confiasse só no token mostraria as empresas do
+ * cliente antigo até ele vencer. Conferir o `clientGroupId` no banco é o que
+ * derruba a sessão.
+ *
+ * `cache` por requisição: layout e tela fazem a mesma pergunta na mesma
+ * renderização. Fora de uma renderização (rota de download), só repassa.
  */
-export async function sessaoAtivaDoPortal(): Promise<PortalAccessTokenPayload | null> {
+export const sessaoAtivaDoPortal = cache(async (): Promise<PortalAccessTokenPayload | null> => {
   const sessao = await getPortalSession();
   if (!sessao) return null;
   const ativa = await getPrisma().portalUser.findFirst({
@@ -37,7 +50,7 @@ export async function sessaoAtivaDoPortal(): Promise<PortalAccessTokenPayload | 
     select: { id: true },
   });
   return ativa ? sessao : null;
-}
+});
 
 /**
  * O cliente que está **escrevendo** pelo portal: sessão, empresas e módulos,
