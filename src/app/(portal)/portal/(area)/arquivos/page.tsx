@@ -9,6 +9,7 @@ import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
 import { IconeDoArquivo } from "@/components/arquivos/IconeDoArquivo";
 import { EnviarArquivosDoCliente } from "@/components/arquivos/EnviarArquivosDoCliente";
+import { BaixarPastaEmZip } from "@/components/arquivos/BaixarPastaEmZip";
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { formatarBytes } from "@/lib/fileSize";
@@ -24,7 +25,8 @@ const QUANDO: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "sho
 /**
  * Arquivos no portal do cliente (09/10/2026): as pastas que o escritório
  * compartilhou com ele, por empresa, e o envio para "Enviados pelo cliente".
- * O cliente vê e baixa; não muda nem apaga nada do que o escritório organizou.
+ * O cliente vê e baixa (um arquivo, ou a pasta inteira num zip — desde 13/10);
+ * não muda nem apaga nada do que o escritório organizou.
  */
 export default async function PortalArquivosPage({ searchParams }: { searchParams: Promise<{ empresa?: string; pasta?: string }> }) {
   const cliente = await clienteAtivoDoPortal();
@@ -77,6 +79,9 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
                     ]}
                   />
                 </div>
+                {dados.pasta && (dados.subpastas.length > 0 || dados.arquivos.length > 0) && (
+                  <BaixarPastaEmZip url={`/portal/arquivos/pasta/${dados.pasta.id}/zip`} />
+                )}
                 <EnviarArquivosDoCliente companyId={dados.empresa.id} empresaNome={dados.empresa.nome} />
               </div>
 
