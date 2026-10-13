@@ -48,6 +48,10 @@ if (!comando) {
 // O Next standalone não copia automaticamente todos os arquivos públicos.
 // Preparar a cada início também cobre uma pasta public já existente só com uploads.
 if (comando === "node" && args[0] && resolve(args[0]) === resolve(".next/standalone/server.js")) {
+  if (!existsSync(args[0])) {
+    console.error("Standalone ausente: encerre o servidor anterior com Ctrl+C e rode npm run build. Depois execute este comando novamente.");
+    process.exit(1);
+  }
   for (const [origem, destino] of [["public", ".next/standalone/public"], [".next/static", ".next/standalone/.next/static"]]) {
     if (existsSync(origem)) cpSync(origem, destino, { recursive: true });
   }
