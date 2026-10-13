@@ -15,13 +15,16 @@ import {
   lerStatusDaOS,
   mensagensEmTexto,
   notaParaOAcervo,
+  osDaPagina,
   parametrosDoIncluirOS,
   servicosDaPagina,
+  sugestoesDasOS,
   validarPedido,
 } from "./emissao";
 
-// As respostas abaixo seguem a documentação pública do Omie (13/10/2026), não
-// resposta real — é o que a prévia vai confirmar ou corrigir.
+// As respostas abaixo seguem a documentação pública do Omie (13/10/2026) e,
+// onde está dito, a forma da prévia real da MULTI (13/10/2026) — com valores
+// inventados, porque a prévia sai mascarada.
 
 describe("listas do Omie para a tela", () => {
   it("lê os clientes, só dígitos no documento, e deixa o inativo de fora", () => {
@@ -41,6 +44,23 @@ describe("listas do Omie para a tela", () => {
       { codigo: "2485994", nome: "TOMADOR UM LTDA", documento: "12345678000190", cidade: "CURITIBA (PR) / PR" },
       { codigo: "777", nome: "Só Fantasia", documento: "12345678909", cidade: null },
     ]);
+    expect(r.bloqueados).toEqual([]);
+  });
+
+  it("cliente com faturamento bloqueado no Omie fica fora da lista, e o código volta à parte (forma da prévia real)", () => {
+    const cliente = (codigo: number, bloquear: string) => ({
+      codigo_cliente_omie: codigo,
+      cnpj_cpf: "12.345.678/0001-90",
+      razao_social: `CLIENTE ${codigo}`,
+      nome_fantasia: "",
+      inativo: "N",
+      bloquear_faturamento: bloquear,
+      pessoa_fisica: "N",
+      tags: [],
+    });
+    const r = clientesDaPagina({ pagina: 1, total_de_paginas: 281, clientes_cadastro: [cliente(101, "N"), cliente(102, "S"), cliente(103, "")] });
+    expect(r.clientes.map((c) => c.codigo)).toEqual(["101", "103"]);
+    expect(r.bloqueados).toEqual(["102"]);
   });
 
   it("lê os serviços, com cabeçalho em objeto ou em lista", () => {
@@ -55,14 +75,99 @@ describe("listas do Omie para a tela", () => {
       ],
     });
     expect(r.servicos).toEqual([
-      { codigo: "2342423", codigoInterno: "SRV001", descricao: "Manutenção de máquinas", precoUnitario: 150.5, categoria: "1.01.02" },
-      { codigo: "11", codigoInterno: null, descricao: "Consultoria", precoUnitario: 1234.56, categoria: null },
+      {
+        codigo: "2342423",
+        codigoInterno: "SRV001",
+        descricao: "Manutenção de máquinas",
+        precoUnitario: 150.5,
+        categoria: "1.01.02",
+        codigoMunicipal: null,
+        codigoLC116: null,
+        naUltimaOS: null,
+      },
+      { codigo: "11", codigoInterno: null, descricao: "Consultoria", precoUnitario: 1234.56, categoria: null, codigoMunicipal: null, codigoLC116: null, naUltimaOS: null },
     ]);
   });
 
+  it("o serviço da prévia real: sem categoria e sem código municipal no cadastro", () => {
+    const r = servicosDaPagina({
+      nPagina: 1,
+      nTotPaginas: 23,
+      cadastros: [
+        {
+          cabecalho: { cCodigo: "SRV00001", cDescricao: "Assessoria contábil", cCodCateg: "", cCodLC116: "17.19", cCodServMun: "", cIdTrib: "01", nPrecoUnit: 0 },
+          info: { inativo: "N" },
+          intListar: { nCodServ: 4455667788, cCodIntServ: "" },
+          impostos: { nAliqISS: 2, cRetISS: "N" },
+        },
+      ],
+    });
+    expect(r.totalDePaginas).toBe(23);
+    expect(r.servicos[0]).toMatchObject({ codigo: "4455667788", categoria: null, codigoMunicipal: null, codigoLC116: "17.19" });
+  });
+
   it("resposta com outro formato vira lista vazia, sem quebrar", () => {
-    expect(clientesDaPagina({ outra: [] })).toEqual({ clientes: [], totalDePaginas: 1 });
+    expect(clientesDaPagina({ outra: [] })).toEqual({ clientes: [], bloqueados: [], totalDePaginas: 1 });
     expect(servicosDaPagina("texto")).toEqual({ servicos: [], totalDePaginas: 1 });
+    expect(osDaPagina(null)).toEqual([]);
+  });
+});
+
+describe("o que as OS já emitidas sugerem (forma do ListarOS da prévia real)", () => {
+  const os = (p: { nCodOS: number; cNumOS: string; cancelada?: string; faturada?: string; categ?: string; itens?: Record<string, unknown>[] }) => ({
+    Cabecalho: { nCodOS: p.nCodOS, cNumOS: p.cNumOS, nCodCli: 101, cEtapa: "60", nQtdeParc: 1, nValorTotal: 1500, cCodParc: "000" },
+    InfoCadastro: { cFaturada: p.faturada ?? "S", cCancelada: p.cancelada ?? "N", cAmbiente: "P" },
+    InformacoesAdicionais: { cCodCateg: p.categ ?? "", nCodCC: 998877, cCidPrestServ: "CURITIBA (PR)", cNumPedido: "", cContato: "" },
+    Parcelas: [],
+    ServicosPrestados: p.itens ?? [],
+    Email: { cEnvBoleto: "N", cEnvLink: "N", cEnvRecibo: "N" },
+  });
+  const item = (nCodServico: number, mun: string, lc: string) => ({
+    nCodServico,
+    cCodServLC116: lc,
+    cCodServMun: mun,
+    cTribServ: "01",
+    cRetemISS: "N",
+    cDescServ: "x",
+    nQtde: 1,
+    nValUnit: 1500,
+    impostos: {},
+  });
+
+  it("lê a lista e põe a OS mais nova primeiro, mesmo se o Omie ignorar a ordem pedida", () => {
+    const lista = osDaPagina({ pagina: 1, total_de_paginas: 19, osCadastro: [os({ nCodOS: 900, cNumOS: "9" }), os({ nCodOS: 1200, cNumOS: "12" }), os({ nCodOS: 1100, cNumOS: "11" })] });
+    expect(lista.map((o) => o.codigo)).toEqual(["1200", "1100", "900"]);
+    expect(lista[0]).toMatchObject({ numero: "12", faturada: true, cancelada: false, categoria: null, servicos: [] });
+  });
+
+  it("sugere a categoria da OS mais recente não cancelada — a cancelada pode ter caído pelo código errado", () => {
+    const lista = osDaPagina({
+      osCadastro: [
+        os({ nCodOS: 1300, cNumOS: "13", cancelada: "S", categ: "9.99.99" }),
+        os({ nCodOS: 1200, cNumOS: "12", categ: "1.01.02" }),
+        os({ nCodOS: 1100, cNumOS: "11", categ: "1.01.03" }),
+      ],
+    });
+    expect(sugestoesDasOS(lista).categoria).toEqual({ codigo: "1.01.02", numeroOS: "12" });
+  });
+
+  it("e, por serviço, os códigos fiscais da OS mais recente que o usou", () => {
+    const lista = osDaPagina({
+      osCadastro: [
+        os({ nCodOS: 1300, cNumOS: "13", cancelada: "S", itens: [item(55, "0000", "9.99")] }),
+        os({ nCodOS: 1200, cNumOS: "12", itens: [item(55, "010701", "1.07"), item(66, "", "")] }),
+        os({ nCodOS: 1100, cNumOS: "11", itens: [item(55, "999999", "1.07"), item(66, "171901", "")] }),
+      ],
+    });
+    expect(sugestoesDasOS(lista).porServico).toEqual({
+      "55": { codigoMunicipal: "010701", codigoLC116: "1.07", numeroOS: "12" },
+      "66": { codigoMunicipal: "171901", codigoLC116: null, numeroOS: "11" },
+    });
+  });
+
+  it("sem OS com categoria, não sugere nada", () => {
+    expect(sugestoesDasOS(osDaPagina({ osCadastro: [os({ nCodOS: 1, cNumOS: "1" })] }))).toEqual({ categoria: null, porServico: {} });
+    expect(sugestoesDasOS([])).toEqual({ categoria: null, porServico: {} });
   });
 });
 
@@ -96,12 +201,30 @@ describe("quem emite: a empresa precisa ser a da conta do Omie", () => {
 });
 
 describe("o pedido", () => {
-  const bruto = { tomadorCodigo: "2485994", servicoCodigo: "2342423", valorCentavos: 15050, competencia: "2026-10", descricao: "  Manutenção preventiva de outubro  " };
+  const bruto = {
+    tomadorCodigo: "2485994",
+    servicoCodigo: "2342423",
+    valorCentavos: 15050,
+    competencia: "2026-10",
+    descricao: "  Manutenção preventiva de outubro  ",
+    categoria: " 1.01.02 ",
+    codigoServicoMunicipal: "",
+    codigoLC116: "",
+  };
 
   it("aceita o pedido completo e limpa a descrição", () => {
     expect(validarPedido(bruto, "2026-10")).toEqual({
       ok: true,
-      pedido: { tomadorCodigo: "2485994", servicoCodigo: "2342423", valorCentavos: 15050, competencia: "2026-10", descricao: "Manutenção preventiva de outubro" },
+      pedido: {
+        tomadorCodigo: "2485994",
+        servicoCodigo: "2342423",
+        valorCentavos: 15050,
+        competencia: "2026-10",
+        descricao: "Manutenção preventiva de outubro",
+        categoria: "1.01.02",
+        codigoServicoMunicipal: null,
+        codigoLC116: null,
+      },
     });
     const semDescricao = validarPedido({ ...bruto, descricao: "   " }, "2026-10");
     expect(semDescricao.ok && semDescricao.pedido.descricao).toBeNull();
@@ -115,6 +238,19 @@ describe("o pedido", () => {
     expect(validarPedido({ ...bruto, descricao: "x".repeat(2001) }, "2026-10")).toMatchObject({ ok: false });
   });
 
+  it("sem categoria a OS não sai — o serviço da MULTI não tem, e a OS real tem", () => {
+    expect(validarPedido({ ...bruto, categoria: "  " }, "2026-10")).toEqual({ ok: false, erro: "Informe a categoria no Omie: a ordem de serviço não sai sem ela." });
+    expect(validarPedido({ ...bruto, categoria: "1.01 02" }, "2026-10")).toMatchObject({ ok: false });
+    expect(validarPedido({ ...bruto, categoria: "1".repeat(21) }, "2026-10")).toMatchObject({ ok: false });
+  });
+
+  it("os códigos de serviço são opcionais, e conferidos quando vêm", () => {
+    const com = validarPedido({ ...bruto, codigoServicoMunicipal: " 010701 ", codigoLC116: "1.07" }, "2026-10");
+    expect(com).toMatchObject({ ok: true, pedido: { codigoServicoMunicipal: "010701", codigoLC116: "1.07" } });
+    expect(validarPedido({ ...bruto, codigoServicoMunicipal: "01 07" }, "2026-10")).toMatchObject({ ok: false });
+    expect(validarPedido({ ...bruto, codigoLC116: "x".repeat(21) }, "2026-10")).toMatchObject({ ok: false });
+  });
+
   it("só a competência do mês corrente — o Omie não recebe competência pela API", () => {
     expect(competenciaPermitida("2026-10", "2026-10")).toBeNull();
     expect(competenciaPermitida("2026-09", "2026-10")).toContain("10/2026");
@@ -125,22 +261,34 @@ describe("o pedido", () => {
   it("monta o IncluirOS com o id da emissão como código de integração", () => {
     const ok = validarPedido(bruto, "2026-10");
     if (!ok.ok) throw new Error("pedido devia passar");
-    expect(parametrosDoIncluirOS({ emissaoId: "emissao-1", pedido: ok.pedido, categoria: "1.01.02", hoje: "13/10/2026" })).toEqual({
+    expect(parametrosDoIncluirOS({ emissaoId: "emissao-1", pedido: ok.pedido, hoje: "13/10/2026" })).toEqual({
       Cabecalho: { cCodIntOS: "emissao-1", nCodCli: 2485994, dDtPrevisao: "13/10/2026", cEtapa: "10", nQtdeParc: 1 },
       InformacoesAdicionais: { cCodCateg: "1.01.02" },
       ServicosPrestados: [{ nCodServico: 2342423, nQtde: 1, nValUnit: 150.5, cDescServ: "Manutenção preventiva de outubro" }],
     });
   });
 
-  it("sem descrição nem categoria, deixa o cadastro do Omie valer", () => {
-    const p = parametrosDoIncluirOS({
-      emissaoId: "e",
-      pedido: { tomadorCodigo: "1", servicoCodigo: "2", valorCentavos: 100, competencia: "2026-10", descricao: null },
-      categoria: null,
-      hoje: "01/10/2026",
-    });
-    expect(p).not.toHaveProperty("InformacoesAdicionais");
-    expect((p.ServicosPrestados as Record<string, unknown>[])[0]).not.toHaveProperty("cDescServ");
+  const minimo = {
+    tomadorCodigo: "1",
+    servicoCodigo: "2",
+    valorCentavos: 100,
+    competencia: "2026-10",
+    descricao: null,
+    categoria: "1.01.02",
+    codigoServicoMunicipal: null,
+    codigoLC116: null,
+  };
+
+  it("sem descrição nem códigos, deixa o cadastro do Omie valer — mas a categoria vai sempre", () => {
+    const p = parametrosDoIncluirOS({ emissaoId: "e", pedido: minimo, hoje: "01/10/2026" });
+    expect(p.InformacoesAdicionais).toEqual({ cCodCateg: "1.01.02" });
+    const item = (p.ServicosPrestados as Record<string, unknown>[])[0];
+    expect(item).toEqual({ nCodServico: 2, nQtde: 1, nValUnit: 1 });
+  });
+
+  it("os códigos informados vão no item da OS, com os nomes da documentação", () => {
+    const p = parametrosDoIncluirOS({ emissaoId: "e", pedido: { ...minimo, codigoServicoMunicipal: "010701", codigoLC116: "1.07" }, hoje: "01/10/2026" });
+    expect((p.ServicosPrestados as Record<string, unknown>[])[0]).toMatchObject({ cCodServMun: "010701", cCodServLC116: "1.07" });
   });
 
   it("a data do Omie é a de Brasília", () => {
@@ -170,7 +318,57 @@ describe("respostas da OS", () => {
     cHrFat: "22:30:00",
   };
 
-  it("lê o StatusOS com o RPS e as mensagens da prefeitura", () => {
+  // A forma do StatusOS da prévia real (13/10/2026): o link vem em `danfe`, não
+  // em `cUrlNfse`; as mensagens sem `cSituacao`; `nNfse` em texto.
+  const rpsReal = (p: { status: string; nNfse: string; danfe?: string; xml_distr?: string }) => ({
+    cCNPJ: "11222333000181",
+    cCodVerif: "AB12CD34",
+    cInscrMunicipal: 123456,
+    cProtocolo: "987654321",
+    cStatusLote: p.status,
+    cStatusRps: p.status,
+    danfe: p.danfe ?? "",
+    xml_distr: p.xml_distr ?? "",
+    mensagens: [{ cCodigo: "L000", cDescricao: "Lote processado", cCorrecao: "" }],
+    nLote: 77,
+    nNfse: p.nNfse,
+    nRps: "1234",
+  });
+  const statusReal = { cEtapa: "60", cCancelada: "N", cFaturada: "S", cAmbiente: "P", dDtFat: "13/10/2026", cUrlPdfRecibo: "https://app.omie.com.br/recibo/x" };
+
+  it("nota autorizada na forma real: o link é o `danfe`", () => {
+    const s = lerStatusDaOS({
+      ...statusReal,
+      ListaRpsNfse: [rpsReal({ status: "004", nNfse: "000000456", danfe: "https://app.omie.com.br/nfse/456.pdf", xml_distr: "https://app.omie.com.br/nfse/456.xml" })],
+    });
+    expect(s.rps[0]).toEqual({
+      status: "004",
+      numeroNfse: "456",
+      codigoVerificacao: "AB12CD34",
+      cnpjPrestador: "11222333000181",
+      url: "https://app.omie.com.br/nfse/456.pdf",
+      mensagens: [{ codigo: "L000", descricao: "Lote processado", correcao: null, situacao: null }],
+    });
+    expect(desfechoDoStatus(s)).toMatchObject({ estado: "AUTORIZADA", nfse: { numero: "456", url: "https://app.omie.com.br/nfse/456.pdf" } });
+  });
+
+  it("OS faturada e cancelada na forma real (005/005): cancelada", () => {
+    const s = lerStatusDaOS({ ...statusReal, cCancelada: "S", ListaRpsNfse: [rpsReal({ status: "005", nNfse: "455", danfe: "https://app.omie.com.br/nfse/455.pdf" })] });
+    expect(desfechoDoStatus(s).estado).toBe("CANCELADA");
+  });
+
+  it("só link http(s) vira link — o `href` da tela não recebe outra coisa", () => {
+    const url = (danfe: string, extra: Record<string, unknown> = {}) =>
+      lerStatusDaOS({ ...statusReal, ListaRpsNfse: [{ ...rpsReal({ status: "004", nNfse: "1", danfe }), ...extra }] }).rps[0].url;
+    expect(url("javascript:alert(1)")).toBeNull();
+    expect(url("<?xml version='1.0'?><nfse/>")).toBeNull();
+    // Sem `danfe`, as alternativas da documentação.
+    expect(url("", { cUrlNfse: "https://prefeitura.exemplo/nfse?n=1" })).toBe("https://prefeitura.exemplo/nfse?n=1");
+    expect(url("", { cUrlPdfDest: "http://prefeitura.exemplo/pdf/1" })).toBe("http://prefeitura.exemplo/pdf/1");
+    expect(url("")).toBeNull();
+  });
+
+  it("lê o StatusOS com o RPS e as mensagens da prefeitura (forma da documentação)", () => {
     const s = lerStatusDaOS({
       ...statusBase,
       ListaRpsNfse: [

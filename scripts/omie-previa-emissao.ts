@@ -13,17 +13,18 @@
 // tela e o cron usam, e imprime a FORMA de cada resposta:
 //
 //   geral/empresas    ListarEmpresas         — por qual CNPJ a nota sairia
-//   geral/clientes    ListarClientes         — os tomadores da tela
-//   servicos/servico  ListarCadastroServico  — os serviços da tela
-//   servicos/os       ListarOS               — as últimas ordens de serviço
-//   servicos/os       StatusOS               — o que o cron lê (da OS faturada mais recente)
+//   geral/clientes    ListarClientes         — os tomadores da tela (e os bloqueados)
+//   servicos/servico  ListarCadastroServico  — os serviços da tela, todas as páginas
+//   servicos/os       ListarOS               — as últimas OS: a categoria sugerida
+//   servicos/os       StatusOS               — o que o cron lê, da OS faturada e
+//                                              NÃO cancelada mais recente
 //
-// O que conferir na saída, contra emissao.ts: os nomes das listas
-// (`clientes_cadastro`, `cadastros`, `ListaRpsNfse`), `intListar.nCodServ`,
-// `cabecalho.cCodCateg`, o formato de `dDtFat`, os valores de `cFaturada`,
-// `cAmbiente`, `cStatusRps` — e se o `StatusOS` de uma OS faturada traz mesmo o
-// `ListaRpsNfse` com `nNfse` (se vier vazio, o StatusOS pode precisar de
-// `lRps`/`lMsg`, e o cron não veria a autorização).
+// A primeira rodada (13/10/2026, MULTI) confirmou os nomes das listas e mostrou
+// o `StatusOS` de uma OS cancelada (005/005). Esta rodada é para ver o de uma
+// nota autorizada: `nNfse` preenchido, o `cStatusRps` que vem nela (o código
+// trata 004 como sucesso) e se `danfe` e `xml_distr` são link ou o XML inteiro.
+// Se a primeira página de OS não tiver nenhuma faturada e não cancelada, a
+// prévia diz e não chama o StatusOS.
 //
 // ── O que ela NÃO faz ───────────────────────────────────────────────────────
 //
@@ -40,9 +41,20 @@ import { empresasDaResposta, type CredencialOmie } from "@/lib/integracoes/omie/
 import { instanciaDaEmpresa, PREFIXO_DA_EMPRESA } from "@/lib/integracoes/omie/contas";
 import { chamarOmieNaFila, idDaConta } from "@/lib/integracoes/omie/fila";
 import { estruturaSemDados } from "@/lib/integracoes/omie/estrutura";
-import { clientesDaPagina, conferirEmissor, servicosDaPagina } from "@/lib/integracoes/omie/emissao";
+import {
+  clientesDaPagina,
+  conferirEmissor,
+  desfechoDoStatus,
+  lerStatusDaOS,
+  osDaPagina,
+  servicosDaPagina,
+  sugestoesDasOS,
+  type ServicoDoOmie,
+} from "@/lib/integracoes/omie/emissao";
 
 const SO_LEITURA = new Set(["ListarEmpresas", "ListarClientes", "ListarCadastroServico", "ListarOS", "StatusOS"]);
+/** O mesmo teto da tela: 10 páginas de 50 serviços. */
+const MAX_PAGINAS_DE_SERVICO = 10;
 
 function argumento(nome: string): string | undefined {
   const i = process.argv.indexOf(nome);
@@ -50,11 +62,13 @@ function argumento(nome: string): string | undefined {
   return process.argv.find((a) => a.startsWith(`${nome}=`))?.split("=")[1];
 }
 
-async function chamar(cred: CredencialOmie, modulo: string, call: string, param: Record<string, unknown>): Promise<unknown | null> {
+/** Chama e imprime a forma da resposta; com `mostrar` falso, só chama (as páginas seguintes de uma lista). */
+async function chamar(cred: CredencialOmie, modulo: string, call: string, param: Record<string, unknown>, mostrar = true): Promise<unknown | null> {
   if (!SO_LEITURA.has(call)) throw new Error(`A prévia só lê: ${call} não está na lista.`);
   console.log(`\n── ${modulo} ${call}  ${JSON.stringify(param)}`);
   try {
     const corpo = await chamarOmieNaFila(cred, modulo, call, param);
+    if (!mostrar) return corpo;
     const linhas = estruturaSemDados(corpo);
     const largura = Math.min(70, Math.max(...linhas.map((l) => l.caminho.length), 10));
     for (const l of linhas) console.log(`   ${l.caminho.padEnd(largura)}  ${l.tipo.padEnd(10)}  ${l.exemplo}`);
@@ -69,6 +83,15 @@ async function chamar(cred: CredencialOmie, modulo: string, call: string, param:
 
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj => (v && typeof v === "object" && !Array.isArray(v) ? (v as Obj) : {});
+
+/** O tipo de um campo de texto, sem o conteúdo: é o que decide se `danfe`/`xml_distr` cabem num link. */
+function formaDoTexto(v: unknown): string {
+  const t = v === null || v === undefined ? "" : String(v).trim();
+  if (!t) return "vazio";
+  if (/^https?:\/\//i.test(t)) return `link http(s), ${t.length} caracteres`;
+  if (t.startsWith("<")) return `XML inteiro, ${t.length} caracteres`;
+  return `outro texto, ${t.length} caracteres`;
+}
 
 async function listarContas() {
   const prisma = getPrisma();
@@ -121,28 +144,56 @@ async function main() {
   console.log(`\n   → a conta lista ${empresasDaConta.length} empresa(s); o documento desta empresa no Connect está entre elas: ${conferencia.pode ? "SIM" : "NÃO"}`);
 
   // 2. Tomadores e serviços, como a tela lê.
-  const corpoClientes = await chamar(cred, "geral/clientes", "ListarClientes", { pagina: 1, registros_por_pagina: 5, apenas_importado_api: "N" });
+  const corpoClientes = await chamar(cred, "geral/clientes", "ListarClientes", { pagina: 1, registros_por_pagina: 50, apenas_importado_api: "N" });
   if (corpoClientes) {
     const r = clientesDaPagina(corpoClientes);
-    console.log(`\n   → a tela leria ${r.clientes.length} tomador(es) ativo(s) nesta página, de ${r.totalDePaginas} página(s) de 5`);
-  }
-  const corpoServicos = await chamar(cred, "servicos/servico", "ListarCadastroServico", { nPagina: 1, nRegPorPagina: 5 });
-  if (corpoServicos) {
-    const r = servicosDaPagina(corpoServicos);
-    console.log(`\n   → a tela leria ${r.servicos.length} serviço(s) ativo(s) nesta página; com categoria: ${r.servicos.filter((s) => s.categoria).length}`);
+    console.log(
+      `\n   → nesta página, a tela leria ${r.clientes.length} tomador(es) ativo(s); ${r.bloqueados.length} com faturamento bloqueado ficam de fora — de ${r.totalDePaginas} página(s) de 50`
+    );
   }
 
-  // 3. As últimas OS, e o StatusOS da faturada mais recente — o que o cron lê.
-  const corpoOs = await chamar(cred, "servicos/os", "ListarOS", { pagina: 1, registros_por_pagina: 5, apenas_importado_api: "N", ordem_decrescente: "S" });
-  const lista = Array.isArray(obj(corpoOs).osCadastro) ? (obj(corpoOs).osCadastro as unknown[]) : [];
-  const faturada = lista.find((os) => String(obj(obj(os).InfoCadastro).cFaturada ?? "").toUpperCase() === "S") ?? lista[0];
-  const nCodOS = obj(obj(faturada).Cabecalho).nCodOS;
-  if (nCodOS) {
-    const ehFaturada = faturada !== lista[0] || String(obj(obj(faturada).InfoCadastro).cFaturada ?? "").toUpperCase() === "S";
-    console.log(`\n   → StatusOS da OS ${ehFaturada ? "faturada " : ""}mais recente da lista`);
-    await chamar(cred, "servicos/os", "StatusOS", { nCodOS });
+  // Todas as páginas de serviço (a forma só da primeira), para contar os códigos fiscais dos ativos.
+  const servicos: ServicoDoOmie[] = [];
+  let paginasDeServico = 1;
+  for (let pagina = 1; pagina <= Math.min(paginasDeServico, MAX_PAGINAS_DE_SERVICO); pagina++) {
+    const corpo = await chamar(cred, "servicos/servico", "ListarCadastroServico", { nPagina: pagina, nRegPorPagina: 50 }, pagina === 1);
+    if (!corpo) break;
+    const r = servicosDaPagina(corpo);
+    servicos.push(...r.servicos);
+    paginasDeServico = r.totalDePaginas;
+  }
+  const quantos = (f: (s: ServicoDoOmie) => unknown) => servicos.filter(f).length;
+  console.log(`\n   → serviços ativos lidos: ${servicos.length}${paginasDeServico > MAX_PAGINAS_DE_SERVICO ? ` (parou em ${MAX_PAGINAS_DE_SERVICO} de ${paginasDeServico} páginas)` : ""}`);
+  console.log(`     com cCodCateg: ${quantos((s) => s.categoria)} · com cCodServMun: ${quantos((s) => s.codigoMunicipal)} · com cCodLC116: ${quantos((s) => s.codigoLC116)}`);
+  console.log(`     sem cCodServMun nem cCodLC116 (a tela mostra o aviso da prefeitura): ${quantos((s) => !s.codigoMunicipal && !s.codigoLC116)}`);
+
+  // 3. As últimas OS: a categoria sugerida, e o StatusOS da faturada e não cancelada mais recente.
+  const corpoOs = await chamar(cred, "servicos/os", "ListarOS", { pagina: 1, registros_por_pagina: 50, apenas_importado_api: "N", ordem_decrescente: "S" });
+  const lista = osDaPagina(corpoOs);
+  const sugestoes = sugestoesDasOS(lista);
+  console.log(`\n   → ${lista.length} OS na primeira página; canceladas: ${lista.filter((os) => os.cancelada === true).length}`);
+  console.log(`     categoria sugerida (a da OS mais recente não cancelada): ${sugestoes.categoria ? "SIM" : "NÃO — a tela vai pedir a categoria"}`);
+  console.log(`     serviços com código municipal ou LC 116 numa OS recente: ${Object.keys(sugestoes.porServico).length}`);
+
+  const autorizada = lista.find((os) => os.faturada === true && os.cancelada !== true);
+  if (!autorizada) {
+    console.log(
+      lista.length === 0
+        ? "\n   → nenhuma OS na conta para ler o StatusOS (a primeira nota do piloto vai ser a primeira OS)."
+        : `\n   → nenhuma OS faturada e não cancelada entre as ${lista.length} da primeira página — sem StatusOS de nota autorizada desta vez.`
+    );
   } else {
-    console.log("\n   → nenhuma OS na conta para ler o StatusOS (a primeira nota do piloto vai ser a primeira OS).");
+    console.log("\n   → StatusOS da OS faturada e não cancelada mais recente");
+    const corpoStatus = await chamar(cred, "servicos/os", "StatusOS", { nCodOS: Number(autorizada.codigo) });
+    if (corpoStatus) {
+      const status = lerStatusDaOS(corpoStatus);
+      const listaDeRps = obj(corpoStatus).ListaRpsNfse;
+      const bruto = Array.isArray(listaDeRps) ? obj(listaDeRps.at(-1)) : {};
+      const rps = status.rps.at(-1);
+      console.log(`\n   → RPS na resposta: ${status.rps.length}; o último: cStatusRps "${String(bruto.cStatusRps ?? "")}", cStatusLote "${String(bruto.cStatusLote ?? "")}"`);
+      console.log(`     nNfse: ${rps?.numeroNfse ? "preenchido" : "VAZIO"} · danfe: ${formaDoTexto(bruto.danfe)} · xml_distr: ${formaDoTexto(bruto.xml_distr)}`);
+      console.log(`     o Connect daria: ${desfechoDoStatus(status).estado}${rps?.url ? ", com o link da nota" : ", SEM link da nota"}`);
+    }
   }
 
   console.log("\nFim da prévia. Nada foi criado nem alterado no Omie, e nada foi gravado no Connect.");

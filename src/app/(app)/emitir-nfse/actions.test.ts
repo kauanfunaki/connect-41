@@ -47,6 +47,9 @@ const pedido = () => ({
   valor: "10,00",
   competencia: competenciaDeAgora(),
   descricao: "Teste do piloto",
+  categoria: "1.01.02",
+  codigoServicoMunicipal: "",
+  codigoLC116: "",
   confirmado: true,
 });
 
@@ -65,7 +68,16 @@ describe("as ações de Emitir NFS-e", () => {
       tenantId: "t1",
       companyId: "c1",
       userId: "u1",
-      pedido: { tomadorCodigo: "2485994", servicoCodigo: "2342423", valorCentavos: 1000, competencia: competenciaDeAgora(), descricao: "Teste do piloto" },
+      pedido: {
+        tomadorCodigo: "2485994",
+        servicoCodigo: "2342423",
+        valorCentavos: 1000,
+        competencia: competenciaDeAgora(),
+        descricao: "Teste do piloto",
+        categoria: "1.01.02",
+        codigoServicoMunicipal: null,
+        codigoLC116: null,
+      },
     });
     expect(await cancelarEmissaoAction("e1")).toEqual({ ok: true, mensagem: null });
     expect(logAudit.mock.calls.map((c) => (c[0] as { action: string }).action)).toEqual(["integration.omie.nfse_emitir", "integration.omie.nfse_cancelar"]);
@@ -109,6 +121,8 @@ describe("as ações de Emitir NFS-e", () => {
     ctx = perfil("SECTOR_ADMIN", ["bpo"]);
     expect(await emitirNfseAction({ ...pedido(), valor: "0" })).toMatchObject({ ok: false });
     expect(await emitirNfseAction({ ...pedido(), competencia: "2020-01" })).toMatchObject({ ok: false });
+    // Sem categoria a OS não sai.
+    expect(await emitirNfseAction({ ...pedido(), categoria: "" })).toMatchObject({ ok: false });
     expect(servidor.emitirNfse).not.toHaveBeenCalled();
   });
 
