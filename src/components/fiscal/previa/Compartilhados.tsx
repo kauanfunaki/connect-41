@@ -17,7 +17,7 @@ export const reais = (valor: number) => new Intl.NumberFormat("pt-BR", { style: 
 export const dataFiscal = (valor: string) => new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(valor));
 export function EstadoFiscal({ children }: { children: string }) {
   const tom = /Erro|Rejeitado|pendências|revisão/i.test(children) ? "text-warning-fg" : /Aprovado|Classificado|Entregue|Concluída|Conciliado|Fechado/i.test(children) ? "text-success-fg" : "text-fg-secondary";
-  return <span className={`inline-flex items-center gap-1.5 text-helper font-medium ${tom}`}><span className="size-1.5 shrink-0 rounded-full bg-current" />{children}</span>;
+  return <span className={`inline-flex items-center justify-center text-helper font-medium ${tom}`}>{children}</span>;
 }
 export function BlocoFiscal({ titulo, descricao, acao, children }: { titulo: string; descricao?: string; acao?: ReactNode; children: ReactNode }) {
   return <Card className="overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4"><div><h2 className="text-card-title font-semibold text-fg">{titulo}</h2>{descricao && <p className="mt-1 text-helper text-fg-secondary">{descricao}</p>}</div>{acao}</div><div className="p-5">{children}</div></Card>;
@@ -27,7 +27,7 @@ export function MetricasFiscais({ itens }: { itens: [string, ReactNode, string?]
 }
 export function TabelaFiscal({ colunas, linhas, vazio = "Nenhum item neste filtro." }: { colunas: string[]; linhas: { id: string; celulas: ReactNode[] }[]; vazio?: string }) {
   if (!linhas.length) return <EmptyState icon={<FileText />} title={vazio} description="Troque os filtros ou use as ações de teste para adicionar informações." />;
-  return <div className="overflow-x-auto"><table className="w-full text-left text-ui"><thead><tr className="border-b border-border text-helper text-fg-secondary">{colunas.map((c, i) => <th key={`${c}-${i}`} scope="col" className={`whitespace-nowrap px-3 py-2.5 font-medium ${c === "Ações" || c === "Ação" ? "text-center" : ""}`}>{c}</th>)}</tr></thead><tbody>{linhas.map((l) => <tr key={l.id} className="border-b border-border last:border-0 hover:bg-surface-hover">{l.celulas.map((c, i) => <td key={i} className="px-3 py-3 align-middle text-fg">{colunas[i] === "Ações" || colunas[i] === "Ação" ? <div className="flex items-center justify-center">{c}</div> : c}</td>)}</tr>)}</tbody></table></div>;
+  return <div className="overflow-x-auto"><table className="w-full text-center text-ui"><thead><tr className="border-b border-border text-helper text-fg-secondary">{colunas.map((c, i) => <th key={`${c}-${i}`} scope="col" className="whitespace-nowrap px-3 py-2.5 text-center align-middle font-medium">{c}</th>)}</tr></thead><tbody>{linhas.map((l) => <tr key={l.id} className="border-b border-border last:border-0 hover:bg-surface-hover">{l.celulas.map((c, i) => <td key={i} className="px-3 py-3 text-center align-middle text-fg"><div className="flex items-center justify-center">{c}</div></td>)}</tr>)}</tbody></table></div>;
 }
 export function CampoFiscal({ nome, children }: { nome: string; children: ReactNode }) {
   const id = useId();

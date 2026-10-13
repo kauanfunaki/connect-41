@@ -87,7 +87,7 @@ Depois de um pull, pare o servidor com Ctrl+C e rode:
 
 ```powershell
 node scripts/local/atualizar-banco.mjs --aplicar
-npm run build
+npm run build:local
 ```
 
 O atualizador aceita apenas adições de schema e salva um backup em
@@ -95,8 +95,10 @@ O atualizador aceita apenas adições de schema e salva um backup em
 altera senhas. Sem `--aplicar`, mostra apenas a comparação. Use somente com o
 container `connect41-local` na porta 3307; não é um migrador de produção.
 
-O build no Windows recusa iniciar enquanto houver um standalone rodando,
-evitando que o Next apague arquivos antes de encontrar a pasta bloqueada.
+O comando opcional `build:local` no Windows recusa iniciar enquanto houver um
+standalone rodando, evitando que o Next apague arquivos antes de encontrar a
+pasta bloqueada. O `build` compartilhado permanece igual em outras máquinas e CI;
+nenhuma atualização do banco é executada automaticamente por esses comandos.
 
 ## Subir o Connect
 

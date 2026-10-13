@@ -415,9 +415,9 @@ export const MODULE_CATALOG: ModuleDef[] = [
     ["fiscal_acervo", "Documentos e importações", "Acervo, serviços, contratos, importação e cobertura com dados fictícios", "ReceiptText", "Documentos"],
     ["fiscal_icms_ipi", "ICMS e IPI", "Apuração, demonstrativo, ajustes e DCIP/DIME em teste", "FileSpreadsheet", "Apuração"],
     ["fiscal_contribuicoes", "PIS e COFINS", "Parâmetros, ajustes, fechamento e SPED Contribuições em teste", "Receipt", "Apuração"],
-    ["fiscal_entregas", "Arquivos e entregas", "Versões de SPED, validação, Domínio e entregas simuladas", "CheckCheck", "Conferência"],
-    ["fiscal_conferencia", "Contábil e financeiro", "De-para, lançamentos e confronto de documentos em teste", "Landmark", "Conferência"],
-    ["fiscal_configuracoes", "Configurações fiscais", "Empresas fictícias, parâmetros, de-para CFOP e fontes das regras", "Building2", "Cadastros"],
+    ["fiscal_entregas", "Arquivos e entregas", "Versões de SPED, validação e entregas simuladas", "CheckCheck", "Conferência"],
+    ["fiscal_conferencia", "Conferência fiscal", "Prévia financeira e confronto de documentos em teste", "Landmark", "Conferência"],
+    ["fiscal_configuracoes", "Configurações fiscais", "Parâmetros e consulta de regras fiscais por CFOP e fonte", "Building2", "Cadastros"],
   ] satisfies [string, string, string, IconeDeModulo, GrupoDeModulo][]).map(([code, label, description, icon, group]) => ({
     code, label, description, icon, group, sectorCode: "fiscal", defaultEnabled: true,
   })),
