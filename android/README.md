@@ -59,7 +59,7 @@ de execução, pelo mesmo motivo do `VAPID_PUBLIC_KEY` (ver `src/lib/vapid.ts`).
 Confira que ficou de pé:
 
 ```bash
-curl https://appteste.useconnect.com.br/.well-known/assetlinks.json
+curl https://app.useconnect.com.br/.well-known/assetlinks.json
 ```
 
 Tem de vir um array com o seu fingerprint dentro. **Array vazio significa que a
@@ -73,7 +73,7 @@ variável não chegou** — e o app vai abrir com a barra do Chrome no topo.
 
 ```bash
 cd android
-bubblewrap init --manifest=https://appteste.useconnect.com.br/portal/manifest.webmanifest
+bubblewrap init --manifest=https://app.useconnect.com.br/portal/manifest.webmanifest
 bubblewrap build
 ```
 
@@ -87,12 +87,34 @@ Para instalar num celular ligado por USB:
 bubblewrap install
 ```
 
+## 4. Versão nova do app (o projeto já existe na máquina)
+
+O `init` acima é só da primeira vez. Depois, a pasta `android/` da sua máquina
+já tem o projeto Android que o Bubblewrap gerou (fora do git), e a versão nova
+sai do `twa-manifest.json` atualizado:
+
+```bash
+cd android
+bubblewrap update --skipVersionUpgrade
+bubblewrap build
+```
+
+O `--skipVersionUpgrade` usa a versão que já está no `twa-manifest.json` (sem
+ele, o Bubblewrap soma mais um por conta própria). Mesma keystore e mesmo nome
+de pacote: o APK novo **instala por cima** do antigo, sem desinstalar.
+
+**Versão 3 (1.1.0), 13/10/2026: o endereço novo.** O app passou de
+`appteste.useconnect.com.br` para `app.useconnect.com.br`, o endereço do Connect
+desde 09/10 (os `{setor}teste.` ficaram para os protótipos do Marcos). Antes de gerar, confira
+`curl https://app.useconnect.com.br/.well-known/assetlinks.json` (tem de trazer
+o fingerprint); depois, instale por cima da versão 2 e veja o app abrir sem a
+barra do Chrome no topo.
+
 ## Decisões que ficaram em aberto
 
-**O host.** O manifesto aponta para `appteste.useconnect.com.br`, que é o
-endereço de hoje. O TWA amarra o app a **uma origem**: trocar o domínio depois
-exige um app novo, com o assetlinks no domínio novo. Vale decidir o endereço
-definitivo do portal antes de mandar o APK para alguém de fora.
+**O host.** Decidido em 13/10/2026: `app.useconnect.com.br`, o endereço
+definitivo do Connect. O TWA amarra o app a **uma origem**: trocar o domínio
+depois exige um app novo, com o assetlinks no domínio novo.
 
 **O nome do pacote.** `br.com.useconnect.portal` é o identificador do app no
 Android, e **não muda depois de publicado**. Se a ideia for um app por cliente,
