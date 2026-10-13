@@ -10,7 +10,7 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { getPersonSectors, getApplicableCustomFields, saveCustomFieldValues } from "@/lib/customFields";
 import { pick, pickDate } from "@/lib/forms";
-import { isPrismaUniqueError, isPrismaForeignKeyError } from "@/lib/prismaErrors";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { validatePersonForm } from "@/lib/validation/person";
 import type { ActionState } from "@/lib/actionState";
 import { logAudit } from "@/lib/audit";
@@ -173,43 +173,9 @@ export async function atualizarPessoa(
   redirect(`/pessoas/${id}`);
 }
 
-export async function excluirPessoa(id: string): Promise<PessoaState> {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWriteEntity(ctx)) return { error: "Sem permissão." };
-
-  const prisma = getPrisma();
-
-  const existing = await prisma.person.findFirst({
-    where: { id, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
-    select: { id: true, name: true },
-  });
-  if (!existing) return { error: "Pessoa não encontrada ou fora do seu escopo." };
-
-  try {
-    await prisma.person.delete({ where: { id } });
-  } catch (err) {
-    if (isPrismaForeignKeyError(err)) {
-      return {
-        error:
-          "Esta pessoa tem registros vinculados (candidaturas, férias, folha, etc.) e não pode ser excluída. Use “Inativar” para arquivá-la mantendo o histórico.",
-      };
-    }
-    console.error("[excluirPessoa]", err);
-    return { error: "Erro ao excluir pessoa." };
-  }
-
-  await logAudit({
-    tenantId: ctx.tenantId,
-    userId: ctx.userId,
-    action: "person.delete",
-    entityType: "Person",
-    entityId: id,
-    metadata: { name: existing.name },
-  });
-
-  revalidatePath("/pessoas");
-  redirect("/pessoas");
-}
+// A exclusão de uma pessoa saiu daqui em 13/10/2026: é o diálogo
+// ExcluirCadastro (src/components/exclusao), com a prévia do que está ligado,
+// pelas ações de src/app/(app)/exclusao-actions.ts. Só administrador exclui.
 
 /**
  * Liga/desliga pessoas em massa.

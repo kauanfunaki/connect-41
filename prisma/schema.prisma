@@ -4455,10 +4455,17 @@ model HandoffView {
 // Trilha de auditoria — quem fez o quê, quando. Somente leitura pela UI
 // (/admin/auditoria, restrito a SUPER_ADMIN); nunca editável ou excluível
 // pelo app. Best-effort: falha ao gravar log nunca deve derrubar a ação real.
+//
+// Desde 13/10/2026 o usuário pode ser excluído de verdade (src/lib/exclusao):
+// a linha da trilha sobrevive a quem agiu. `userId` vira nulo (SetNull) e o
+// nome fica em `actorName`, gravado junto de cada linha nova.
 model AuditLog {
   id         String   @id @default(uuid())
   tenantId   String
-  userId     String
+  userId     String?
+  /// Nome de quem agiu, no momento em que agiu — é o que a trilha mostra
+  /// depois que o usuário é excluído.
+  actorName  String?  @db.VarChar(120)
   action     String   @db.VarChar(60) // ex: "company.create", "sector.update"
   entityType String?  @db.VarChar(40) // livre (Company, Person, Sector, Tag...) — não usa o enum EntityType, que só cobre Company/Person
   entityId   String?
@@ -4466,7 +4473,7 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
-  user   User   @relation(fields: [userId], references: [id])
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, createdAt])
   @@index([tenantId, entityType, entityId])
