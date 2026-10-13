@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { FileText } from "lucide-react";
-import { getPortalSession } from "@/lib/auth/portal";
+import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { listarDocumentos, competenciasDisponiveis } from "@/lib/fiscal/data";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
@@ -25,7 +25,7 @@ export default async function PortalDocumentosPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const sessao = await getPortalSession();
+  const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
 
   const params = await searchParams;

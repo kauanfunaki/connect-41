@@ -425,11 +425,15 @@ export function EmpresaForm({
               empresa: seção própria, para não se misturarem aos nomes. */}
           <FormSection title="Cliente e matriz">
             <FieldGrid columns={GRADE}>
+              {/* O texto de ajuda dizia "Empresa sozinha não precisa" — e sem
+                  cliente a empresa não aparece no portal (o alcance da conta
+                  é o cliente). A lista segue só com clientes ativos; um
+                  inativo se reativa em Cadastros → Clientes (13/10/2026). */}
               <CampoForm
                 label="Cliente"
                 htmlFor="clientGroupId"
                 className="sm:col-span-2"
-                helper="Só quando este cliente tem mais de uma empresa. Empresa sozinha não precisa."
+                helper="Sem cliente, a empresa não aparece no portal do cliente. A lista mostra só clientes ativos."
               >
                 {/* Mesmo motivo da matriz: são 340 clientes. O "+ Novo
                     cliente" entra como primeira opção da lista. */}

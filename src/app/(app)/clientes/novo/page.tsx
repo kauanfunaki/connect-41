@@ -4,7 +4,7 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
-import { criarCliente } from "../actions";
+import { criarCliente, empresasComARaiz } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 
 export default async function NovoClientePage() {
@@ -19,7 +19,7 @@ export default async function NovoClientePage() {
           largura da tela, o nome ia de uma borda à outra. */}
       <div className="w-full max-w-[720px]">
         <Card className="p-6">
-          <ClienteForm action={criarCliente} cancelHref="/clientes" />
+          <ClienteForm action={criarCliente} cancelHref="/clientes" buscarEmpresasDaRaiz={empresasComARaiz} />
         </Card>
       </div>
     </PageContainer>

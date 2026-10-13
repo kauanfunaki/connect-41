@@ -20,6 +20,10 @@ type Props = {
   onCancel: () => void;
   /** Campo extra antes dos botões (ex: motivo da reprovação no funil). */
   children?: React.ReactNode;
+  /** Trava o confirmar — a exclusão que pede o nome digitado (13/10/2026). */
+  confirmDisabled?: boolean;
+  /** Largura do painel. Padrão `max-w-sm`; a exclusão com a lista do que vai junto pede mais. */
+  largura?: string;
 };
 
 // Diálogo de confirmação temático — substitui o confirm() nativo, que quebra o
@@ -44,6 +48,8 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   children,
+  confirmDisabled = false,
+  largura = "max-w-sm",
 }: Props) {
   const confirmRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -77,7 +83,7 @@ export function ConfirmDialog({
         aria-modal="true"
         tabIndex={-1}
         aria-labelledby={titleId}
-        className="c41-surgir w-full max-w-sm rounded-lg border border-border-strong bg-surface-elevated p-5 shadow-lg"
+        className={`c41-surgir w-full ${largura} max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg border border-border-strong bg-surface-elevated p-5 shadow-lg`}
       >
         <h2 id={titleId} className="text-dialog-title font-semibold text-fg mb-1.5">
           {title}
@@ -96,6 +102,7 @@ export function ConfirmDialog({
             ref={confirmRef}
             variant={destructive ? "dangerSolid" : "primary"}
             onClick={onConfirm}
+            disabled={confirmDisabled}
             loading={pending}
             loadingLabel={pendingLabel}
           >

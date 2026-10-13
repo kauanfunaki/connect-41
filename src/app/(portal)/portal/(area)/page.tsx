@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getPortalSession } from "@/lib/auth/portal";
+import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
@@ -46,7 +46,7 @@ export default async function InicioDoPortalPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const sessao = await getPortalSession();
+  const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
 
   const params = await searchParams;
