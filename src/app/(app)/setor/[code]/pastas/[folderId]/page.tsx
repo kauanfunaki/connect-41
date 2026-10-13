@@ -7,7 +7,7 @@ import { ListsTable, type ListRow } from "@/components/kanban/ListsTable";
 import { NewListButton } from "@/components/kanban/NewListButton";
 import { criarListaSimples, excluirLista } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, canViewSector, podeExcluir } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 
 function toListRow(p: {
@@ -84,7 +84,7 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
           <ListsTable
             lists={lists.map(toListRow)}
             basePath="/kanban"
-            deleteAction={canCreate ? excluirLista : undefined}
+            deleteAction={podeExcluir(ctx) ? excluirLista : undefined}
           />
         )}
       </div>

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { VagaStatus, VagaPrioridade, VagaContrato, VagaModalidade } from "@/generated/prisma/enums";
 import { validarFaixa } from "@/lib/carreiras/portal";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 
 export type VagaState = { error: string } | null;
@@ -154,7 +154,8 @@ export async function reabrirVaga(id: string): Promise<{ error: string } | null>
 
 export async function excluirVaga(id: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId) return;
+  // Excluir vaga: só o administrador (13/10/2026). Era o gestor do setor.
+  if (!ctx.tenantId || !podeExcluir(ctx)) return;
 
   const prisma = getPrisma();
   const existing = await prisma.vaga.findFirst({ where: { id, ...scopedVagaWhere(ctx) } });

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PersonEmploymentStatus, PersonType, RecruitmentStage } from "@/generated/prisma/enums";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
@@ -145,25 +145,4 @@ export async function encerrarCandidatura(
 
   revalidatePath(`/vagas/${vagaId}`);
   return null;
-}
-
-export async function removerCandidatura(vagaId: string, candidaturaId: string): Promise<void> {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId) return;
-
-  const prisma = getPrisma();
-  const vaga = await prisma.vaga.findFirst({ where: { id: vagaId, ...scopedVagaWhere(ctx) } });
-  if (!vaga || !canManageSector(ctx, vaga.sectorCode)) return;
-
-  const existing = await prisma.candidatura.findFirst({ where: { id: candidaturaId, vagaId } });
-  if (!existing) return;
-
-  try {
-    await prisma.candidatura.delete({ where: { id: candidaturaId } });
-  } catch (err) {
-    console.error("[removerCandidatura]", err);
-    return;
-  }
-
-  revalidatePath(`/vagas/${vagaId}`);
 }

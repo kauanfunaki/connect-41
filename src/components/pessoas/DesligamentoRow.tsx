@@ -26,7 +26,8 @@ type Props = {
   desligamento: DesligamentoItem;
   conferenciaHref: string;
   updateAction: (prev: TerminationState, form: FormData) => Promise<TerminationState>;
-  removeAction: () => Promise<void>;
+  /** Só para o administrador (13/10/2026): sem ela, o "⋯" de remover não aparece. */
+  removeAction?: () => Promise<void>;
   canManage: boolean;
 };
 
@@ -47,7 +48,7 @@ export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, r
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={COR_DO_DESLIGAMENTO[desligamento.status]}>{SITUACAO_DO_DESLIGAMENTO[desligamento.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
-          {canManage && <MenuDoRegistro titulo="Remover este registro de desligamento?" onRemover={removeAction} />}
+          {canManage && removeAction && <MenuDoRegistro titulo="Remover este registro de desligamento?" onRemover={removeAction} />}
         </div>
       </div>
 

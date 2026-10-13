@@ -294,7 +294,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Clique na reunião no calendário.",
           "Clique em “Entrar” para abrir a chamada, ou em “Copiar link” para mandar a alguém.",
           "Se foi você quem criou a reunião, clique em “Editar” para mudar título, horário, empresa ou participantes.",
-          "Para cancelar, clique em “Excluir” e confirme.",
+          "Para cancelar uma reunião criada na Agenda, clique em “Excluir” e confirme. Excluir é só do Administrador ou do Super Admin.",
         ],
       },
       {
@@ -358,7 +358,8 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Criar espaços, pastas, listas e tarefas é para o gestor do setor e os administradores. Quem é do setor comenta e atualiza as tarefas.",
-      "Excluir um espaço, uma pasta ou uma lista não pode ser desfeito.",
+      "Excluir tarefa, subtarefa, comentário, item do checklist, coluna, espaço, pasta ou lista é só do Administrador ou do Super Admin, e não pode ser desfeito. Quem escreveu um comentário corrige pelo “Editar”.",
+      "Hora apontada errada se corrige no card, em “Horas apontadas”: clique no lápis do lançamento.",
       "A tela “Kanban” reúne num lugar só os quadros de todos os seus setores.",
     ],
   },
@@ -625,7 +626,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     dicas: [
       "Quando chega um lead, todo mundo do setor é avisado no sino. Se o setor não tem ninguém, os administradores do escritório é que são avisados.",
       "Mudar a situação, o responsável e as observações fica na auditoria do escritório.",
-      "“Excluir” aparece para o coordenador do setor e para os administradores.",
+      "“Excluir” aparece só para o Administrador e o Super Admin.",
     ],
   },
 
@@ -676,7 +677,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     dicas: [
       "Administradores e quem é do setor Gestão veem todos os setores. O gestor de um setor vê só os setores que coordena.",
       "Só o gestor do setor ou o administrador muda os limites de alerta daquele setor.",
-      "As horas entram pelo cronômetro ou pelo lançamento manual, no card e no processo.",
+      "As horas entram pelo cronômetro ou pelo lançamento manual, no card e no processo. Para corrigir um lançamento, clique no lápis ao lado dele.",
     ],
   },
 

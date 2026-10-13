@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { formatInstantDate } from "@/lib/format";
 import { BpoCredentialsList, NewCredentialModal } from "@/components/bpoSenhas/BpoCredentialsList";
 import { criarCredencial, atualizarCredencial, excluirCredencial, revelarCredencial } from "./actions";
@@ -64,7 +64,8 @@ export default async function BpoSenhasPage() {
         canManage={canManage}
         setorRotulo={setorRotulo}
         updateAction={atualizarCredencial}
-        deleteAction={excluirCredencial}
+        // Excluir senha do cofre: só o administrador (13/10/2026).
+        deleteAction={podeExcluir(ctx) ? excluirCredencial : undefined}
         revealAction={revelarCredencial}
       />
     </PageContainer>

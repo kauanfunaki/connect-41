@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { ScheduleStatus } from "@/generated/prisma/enums";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { findVacationConflictForDate } from "@/lib/scheduleVacationConflict";
@@ -108,7 +108,8 @@ export async function atualizarEscala(
 
 export async function excluirEscala(personId: string, entryId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_escalas", "gerir"))) return;
+  // Excluir: só o administrador (13/10/2026). Antes, quem gere o módulo no setor.
+  if (!ctx.tenantId || !podeExcluir(ctx) || !(await podeNoModulo(ctx, "dp_escalas", "gerir"))) return;
   if (!(await assertPersonInScope(personId, ctx))) return;
 
   const prisma = getPrisma();

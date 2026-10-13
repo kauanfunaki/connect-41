@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Eye, Download, PenLine, Pencil } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { isModuleEnabled } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
@@ -112,7 +112,8 @@ export default async function EnvioPage({
                 <Pencil size={14} />
                 Editar
               </Button>
-              {document.recipients.length === 0 && (
+              {/* Rascunho: descarta quem escreveu, ou o administrador (13/10/2026). */}
+              {document.recipients.length === 0 && (document.createdById === ctx.userId || podeExcluir(ctx)) && (
                 <DeleteButton action={excluirDocumento.bind(null, document.id, companyId)} nome={document.title} />
               )}
               {/* Com confirmação desde 08/10/2026: publicar deixou de ser um passo

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
 import { boardPath } from "@/lib/kanbanPaths";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 
@@ -118,12 +118,14 @@ export async function criarListaSimples(
 // exigir esvaziar antes é a mesma regra que a exclusão de estágio já aplica
 // ("Mova as tarefas de X antes de excluir esse estágio").
 //
-// Só quem administra o setor exclui, o mesmo teto de quem cria.
+// Excluir é só do administrador (13/10/2026) — antes era o gestor do setor,
+// o mesmo teto de quem cria. Criar segue com o gestor.
 
 export async function excluirEspaco(spaceId: string): Promise<PipelineState> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
+  if (!podeExcluir(ctx)) return { error: SO_ADMIN_EXCLUI };
 
   const prisma = getPrisma();
   const space = await prisma.space.findFirst({
@@ -155,6 +157,7 @@ export async function excluirPasta(folderId: string): Promise<PipelineState> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
+  if (!podeExcluir(ctx)) return { error: SO_ADMIN_EXCLUI };
 
   const prisma = getPrisma();
   const folder = await prisma.folder.findFirst({
@@ -185,6 +188,7 @@ export async function excluirLista(pipelineId: string): Promise<PipelineState> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
+  if (!podeExcluir(ctx)) return { error: SO_ADMIN_EXCLUI };
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({

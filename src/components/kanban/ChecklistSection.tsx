@@ -11,6 +11,8 @@ export type ChecklistItemData = { id: string; text: string; done: boolean };
 
 type Props = {
   canAct: boolean;
+  /** Excluir item do checklist é só do administrador (13/10/2026). */
+  canDelete: boolean;
   items: ChecklistItemData[];
   createAction: (text: string) => Promise<void>;
   toggleAction: (id: string, done: boolean) => Promise<void>;
@@ -20,10 +22,11 @@ type Props = {
 };
 
 function ChecklistRow({
-  item, canAct, toggleAction, editAction, deleteAction, dragging, onDragStart, onDragOver, onDrop, onDragEnd,
+  item, canAct, canDelete, toggleAction, editAction, deleteAction, dragging, onDragStart, onDragOver, onDrop, onDragEnd,
 }: {
   item: ChecklistItemData;
   canAct: boolean;
+  canDelete: boolean;
   toggleAction: Props["toggleAction"];
   editAction: Props["editAction"];
   deleteAction: Props["deleteAction"];
@@ -96,14 +99,16 @@ function ChecklistRow({
       {canAct && !editing && (
         <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <IconButton type="button" size="sm" onClick={() => setEditing(true)} aria-label="Editar item"><Pencil size={13} /></IconButton>
-          <IconButton type="button" size="sm" onClick={() => startTransition(() => deleteAction(item.id))} aria-label="Excluir item"><Trash2 size={13} /></IconButton>
+          {canDelete && (
+            <IconButton type="button" size="sm" onClick={() => startTransition(() => deleteAction(item.id))} aria-label="Excluir item"><Trash2 size={13} /></IconButton>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-export function ChecklistSection({ canAct, items, createAction, toggleAction, editAction, deleteAction, reorderAction }: Props) {
+export function ChecklistSection({ canAct, canDelete, items, createAction, toggleAction, editAction, deleteAction, reorderAction }: Props) {
   const [newText, setNewText] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -154,6 +159,7 @@ export function ChecklistSection({ canAct, items, createAction, toggleAction, ed
             key={item.id}
             item={item}
             canAct={canAct}
+            canDelete={canDelete}
             toggleAction={toggleAction}
             editAction={editAction}
             deleteAction={deleteAction}

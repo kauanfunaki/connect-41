@@ -90,4 +90,4 @@ export function scopedSectors(ctx: AuthContext): string[] | null {
 // next/headers e do Prisma — componente de cliente e o motor de alertas (que
 // roda na instrumentação) não podem importar daqui. Reexportadas para quem já
 // importava deste arquivo.
-export { isFullAccess, isFullWrite, canWrite, canAct, canManageSector, canActOnSector, canViewSector } from "./papeis";
+export { isFullAccess, isFullWrite, canWrite, canAct, canManageSector, canActOnSector, canViewSector, podeExcluir, SO_ADMIN_EXCLUI } from "./papeis";

@@ -207,18 +207,21 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
                 <Pencil size={11} /> Editar
               </Button>
             )}
-            <Button
-              variant="danger"
-              size="xs"
-              onClick={() =>
-                requestConfirm(
-                  { title: "Excluir esta reunião?", destructive: true, confirmLabel: "Excluir" },
-                  () => actions.deleteAction(meeting.id)
-                )
-              }
-            >
-              <Trash2 size={11} /> Excluir
-            </Button>
+            {/* Excluir: só o administrador, e só a reunião avulsa (13/10/2026). */}
+            {actions.deleteAction && meeting.avulsa && (
+              <Button
+                variant="danger"
+                size="xs"
+                onClick={() =>
+                  requestConfirm(
+                    { title: "Excluir esta reunião?", destructive: true, confirmLabel: "Excluir" },
+                    () => actions.deleteAction?.(meeting.id) ?? Promise.resolve()
+                  )
+                }
+              >
+                <Trash2 size={11} /> Excluir
+              </Button>
+            )}
           </div>
         </div>
       )}

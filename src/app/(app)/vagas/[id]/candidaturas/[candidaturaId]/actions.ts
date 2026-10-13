@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { InterviewRecommendation } from "@/generated/prisma/enums";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 
@@ -74,12 +74,13 @@ export async function salvarScorecard(
 
 export async function excluirScorecard(vagaId: string, candidaturaId: string, scorecardId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !ctx.userId) return;
+  // Excluir parecer: só o administrador (13/10/2026). Quem avaliou corrige o
+  // próprio parecer reenviando o formulário ("Editar meu parecer").
+  if (!ctx.tenantId || !ctx.userId || !podeExcluir(ctx)) return;
 
   const prisma = getPrisma();
-  // Só o próprio avaliador remove o seu parecer.
   const scorecard = await prisma.interviewScorecard.findFirst({
-    where: { id: scorecardId, candidaturaId, tenantId: ctx.tenantId, evaluatorUserId: ctx.userId },
+    where: { id: scorecardId, candidaturaId, tenantId: ctx.tenantId },
   });
   if (!scorecard) return;
 

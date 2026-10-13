@@ -20,12 +20,15 @@ type Row = { id?: string; name: string; color: string; type: StageDotType };
 type Props = {
   initialStages: { id: string; name: string; color: string; type: StageDotType }[];
   action: (stages: StageInput[]) => Promise<EditStagesState>;
+  /** Tirar coluna que já existe é só do administrador (13/10/2026). A linha
+   *  nova, ainda não salva, qualquer um que edita a lista tira. */
+  podeExcluirColuna: boolean;
 };
 
 // Botão "Editar lista" — CRUD completo de estágios (nome, cor, tipo/bolinha,
 // ordem, exclusão) num modal só, reconciliado de uma vez pela action
 // atualizarEstagios ao salvar.
-export function EditPipelineStagesModal({ initialStages, action }: Props) {
+export function EditPipelineStagesModal({ initialStages, action, podeExcluirColuna }: Props) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>(initialStages);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +64,9 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
   function removeRow(i: number) {
     setRows((prev) => prev.filter((_, idx) => idx !== i));
   }
+
+  const mostraLixeira = (row: Row) => rows.length > 1 && (podeExcluirColuna || !row.id);
+  const algumaLixeira = rows.some(mostraLixeira);
 
   function move(i: number, direction: "up" | "down") {
     setRows((prev) => {
@@ -102,7 +108,7 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
             <span className="flex-1 min-w-0 text-fs-1 font-medium text-fg-muted">Título do estágio</span>
             <span className="w-[150px] flex-shrink-0 text-fs-1 font-medium text-fg-muted">Conclui tarefas</span>
             <span className="w-3.5 flex-shrink-0" />
-            {rows.length > 1 && <span className="w-7 flex-shrink-0" />}
+            {algumaLixeira && <span className="w-7 flex-shrink-0" />}
           </div>
           <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
             {rows.map((row, i) => (
@@ -129,7 +135,7 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
                   <Switch checked={row.type === "DONE"} onCheckedChange={(checked) => update(i, { type: checked ? "DONE" : "NOT_STARTED" })} rotulo="Conclui tarefas" aria-label={`Conclui tarefas no estágio ${i + 1}`} size="sm" />
                 </div>
                 <StageDot color={row.color} type={row.type} />
-                {rows.length > 1 && (
+                {mostraLixeira(row) ? (
                   <IconButton
                     type="button"
                     size="sm"
@@ -139,6 +145,8 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
                   >
                     <Trash2 size={14} />
                   </IconButton>
+                ) : (
+                  algumaLixeira && <span className="w-7 flex-shrink-0" aria-hidden="true" />
                 )}
               </div>
             ))}

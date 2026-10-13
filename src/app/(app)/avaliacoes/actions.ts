@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 
 export type EvaluationCycleState = { error: string } | null;
@@ -53,7 +53,8 @@ export async function encerrarCiclo(id: string): Promise<void> {
 
 export async function excluirCiclo(id: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_avaliacoes", "gerir"))) return;
+  // Excluir: só o administrador (13/10/2026). Era quem gere o módulo no setor.
+  if (!ctx.tenantId || !podeExcluir(ctx) || !(await podeNoModulo(ctx, "dp_avaliacoes", "gerir"))) return;
 
   const prisma = getPrisma();
   const existing = await prisma.evaluationCycle.findFirst({ where: { id, tenantId: ctx.tenantId } });

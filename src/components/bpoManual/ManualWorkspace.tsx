@@ -135,12 +135,14 @@ function SaveIndicator({ status, error }: { status: SaveStatus; error: string | 
 // exigir "entrar em edição" e depois "descer a tela e salvar o documento" era
 // um caminho inventado — nenhuma dessas duas etapas tinha efeito sobre ela.
 function CoverControls({
-  pageId, coverUrl, onChange, canAct,
+  pageId, coverUrl, onChange, canAct, canDelete,
 }: {
   pageId: string;
   coverUrl: string | null;
   onChange: (url: string | null) => void;
   canAct: boolean;
+  /** Remover a capa é só do administrador (13/10/2026); trocar segue com quem escreve. */
+  canDelete: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState(false);
@@ -170,8 +172,11 @@ function CoverControls({
     setPending(true);
     setError(null);
     try {
-      await fetch(`/api/bpo-manual/pages/${pageId}/cover`, { method: "DELETE" });
-      onChange(null);
+      const res = await fetch(`/api/bpo-manual/pages/${pageId}/cover`, { method: "DELETE" });
+      if (res.ok) onChange(null);
+      else setError(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Erro ao remover a capa.");
+    } catch {
+      setError("Erro ao remover a capa.");
     } finally {
       setPending(false);
     }
@@ -202,15 +207,17 @@ function CoverControls({
             >
               Trocar capa
             </Button>
-            <Button
-              variant="secondary"
-              size="xs"
-              className="bg-surface/90 hover:text-danger"
-              onClick={handleRemove}
-              disabled={pending}
-            >
-              Remover
-            </Button>
+            {canDelete && (
+              <Button
+                variant="secondary"
+                size="xs"
+                className="bg-surface/90 hover:text-danger"
+                onClick={handleRemove}
+                disabled={pending}
+              >
+                Remover
+              </Button>
+            )}
           </div>
         </div>
       ) : null}
@@ -239,10 +246,11 @@ function CoverControls({
 // pra achar "Salvar"). Aqui a capa tem controles próprios e o texto grava
 // sozinho, com o estado da gravação visível no topo.
 function PageCanvas({
-  page, canAct, updatePageAction,
+  page, canAct, canDelete, updatePageAction,
 }: {
   page: ManualPageData;
   canAct: boolean;
+  canDelete: boolean;
   updatePageAction: Props["updatePageAction"];
 }) {
   const [coverUrl, setCoverUrl] = useState(page.coverImageUrl);
@@ -325,7 +333,7 @@ function PageCanvas({
         </div>
       )}
 
-      <CoverControls pageId={page.id} coverUrl={coverUrl} onChange={setCoverUrl} canAct={canAct} />
+      <CoverControls pageId={page.id} coverUrl={coverUrl} onChange={setCoverUrl} canAct={canAct} canDelete={canDelete} />
 
       <article className={CANVAS_CLASS}>
         {canAct ? (
@@ -666,6 +674,7 @@ export function ManualWorkspace({
             key={activePage.id}
             page={activePage}
             canAct={canAct}
+            canDelete={canDelete}
             updatePageAction={updatePageAction}
           />
         ) : (

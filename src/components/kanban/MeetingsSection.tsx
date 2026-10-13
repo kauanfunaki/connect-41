@@ -33,7 +33,8 @@ type Props = {
   hasMicrosoft: boolean;
   allUsers: SectorUser[];
   scheduleAction: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
-  deleteAction: (meetingId: string) => Promise<void>;
+  /** Só para o administrador (13/10/2026); sem ela, a lixeira não aparece. */
+  deleteAction?: (meetingId: string) => Promise<void>;
 };
 
 const PROVIDER_LABEL: Record<MeetingProvider, string> = { GOOGLE: "Google Meet", MICROSOFT: "MS Teams" };
@@ -140,7 +141,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                   <Button href={m.meetingUrl} target="_blank" rel="noopener noreferrer" variant="secondary" size="xs">
                     Entrar <ExternalLink size={11} />
                   </Button>
-                  {canSchedule && (
+                  {canSchedule && deleteAction && (
                     <button
                       type="button"
                       onClick={() =>

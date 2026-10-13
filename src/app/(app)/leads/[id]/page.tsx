@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { getPrisma } from "@/lib/prisma";
-import { canActOnSector, canManageSector } from "@/lib/auth/context";
+import { canActOnSector, canManageSector, podeExcluir as podeExcluirNoEscritorio } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatCnpj, formatInstantDateTime, formatPhone } from "@/lib/format";
@@ -54,7 +54,8 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   if (!lead) notFound();
 
   const podeAgir = canActOnSector(ctx, setor);
-  const podeExcluir = canManageSector(ctx, setor);
+  // Excluir lead: só o administrador (13/10/2026) — era a coordenação do setor.
+  const podeExcluir = canManageSector(ctx, setor) && podeExcluirNoEscritorio(ctx);
   const doSetor = podeAgir ? await getSectorUsers(ctx.tenantId, setor) : [];
   // Quem já é o responsável continua na lista mesmo se saiu do setor — senão o
   // seletor mostraria "Sem responsável" e salvar tiraria a pessoa sem querer.

@@ -190,6 +190,8 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
     acao: "apagar",
     executar: (tx, a) => n(tx.passwordResetToken.deleteMany({ where: { userId: a.id, subject: "USER" } })),
   },
+  // A "última empresa aberta" da conta.
+  { modelo: "UserLastCompany", acao: "apagar", executar: (tx, a) => n(tx.userLastCompany.deleteMany({ where: { userId: a.id } })) },
 
   // Setores, preferências, notificações, conversas com a Lígia, atribuições e
   // acessos vão em cascata; a auditoria e os autores opcionais ficam, sem o

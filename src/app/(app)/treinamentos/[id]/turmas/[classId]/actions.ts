@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { TrainingParticipantStatus } from "@/generated/prisma/enums";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
@@ -71,7 +71,8 @@ export async function atualizarParticipante(
 
 export async function removerParticipante(trainingId: string, classId: string, participantId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_treinamentos", "gerir"))) return;
+  // Excluir: só o administrador (13/10/2026). Era quem gere o módulo no setor.
+  if (!ctx.tenantId || !podeExcluir(ctx) || !(await podeNoModulo(ctx, "dp_treinamentos", "gerir"))) return;
 
   const prisma = getPrisma();
   const existing = await prisma.trainingParticipant.findFirst({ where: { id: participantId, tenantId: ctx.tenantId, classId } });

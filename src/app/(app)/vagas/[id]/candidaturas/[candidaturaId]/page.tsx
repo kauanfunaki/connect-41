@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
@@ -195,7 +195,7 @@ export default async function CandidaturaScorecardPage({
           hasMicrosoft={hasMicrosoft}
           allUsers={allUsers}
           scheduleAction={agendarEntrevista.bind(null, vagaId, candidaturaId)}
-          deleteAction={excluirEntrevista.bind(null, vagaId, candidaturaId)}
+          deleteAction={podeExcluir(ctx) ? excluirEntrevista.bind(null, vagaId, candidaturaId) : undefined}
         />
       )}
 
@@ -268,10 +268,11 @@ export default async function CandidaturaScorecardPage({
                   {s.notes && <p className="text-fs-2 text-fg-secondary mt-1.5 whitespace-pre-wrap">{s.notes}</p>}
                   <div className="flex items-center gap-3 mt-1.5">
                     <span className="text-micro text-fg-muted">{formatInstantDate(s.createdAt)}</span>
-                    {s.evaluator.id === ctx.userId && (
+                    {/* Excluir parecer: só o administrador (13/10/2026). O autor edita o seu no "Editar meu parecer". */}
+                    {podeExcluir(ctx) && (
                       <ExcluirComConfirmacao
                         action={excluirScorecard.bind(null, vagaId, candidaturaId, s.id)}
-                        titulo="Excluir o seu parecer?"
+                        titulo={s.evaluator.id === ctx.userId ? "Excluir o seu parecer?" : "Excluir este parecer?"}
                       />
                     )}
                   </div>
