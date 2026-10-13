@@ -179,7 +179,7 @@ describe("código de situação que escapou", () => {
   });
 
   it("sigla e nome de empresa em maiúsculas ficam", () => {
-    for (const t of ["BLD LOGISTICA LTDA", "TRANSPORTES ATIVO LTDA", "NF-e, CT-e, DRE, BPO, CNPJ", "PADARIA ABERTA"]) {
+    for (const t of ["BLD LOGISTICA LTDA", "TRANSPORTES ATIVO LTDA", "NF-e, CT-e, DRE, BPO, CNPJ", "PADARIA ABERTA", "EXTRATO_SETEMBRO.pdf", "PENDENTE.xml"]) {
       expect(humanizarCodigos(t)).toBe(t);
     }
   });

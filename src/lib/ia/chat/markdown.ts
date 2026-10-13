@@ -107,8 +107,8 @@ const CODIGOS_SIMPLES = new Set([
  */
 export function humanizarCodigos(texto: string): string {
   return texto
-    .replace(/(?<![\p{L}\p{N}_-])[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+(?![\p{L}\p{N}_-])/gu, (c) => codigoEmPalavras(c))
-    .replace(/(?<![\p{L}\p{N}_-])[A-Z]{4,}(?![\p{L}\p{N}_-])/gu, (c, i: number, todo: string) => {
+    .replace(/(?<![\p{L}\p{N}_.-])[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+(?![\p{L}\p{N}_-]|\.[\p{L}\p{N}])/gu, (c) => codigoEmPalavras(c))
+    .replace(/(?<![\p{L}\p{N}_.-])[A-Z]{4,}(?![\p{L}\p{N}_-]|\.[\p{L}\p{N}])/gu, (c, i: number, todo: string) => {
       if (!CODIGOS_SIMPLES.has(c)) return c;
       const antes = todo.slice(0, i).match(/([\p{L}]+)[ \t]*$/u)?.[1];
       const depois = todo.slice(i + c.length).match(/^[ \t]*([\p{L}]+)/u)?.[1];
