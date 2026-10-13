@@ -102,7 +102,11 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
         // "Lançamento vinculado:" corrido na mesma linha do link.
         <Card className="mb-4 p-4 text-ui">
           <p className="text-helper text-fg-muted mb-0.5">Lançamento vinculado</p>
-          <Link href={p.lancamento.kind === "PAGAR" ? "/pagar?recorte=todas" : "/receber?recorte=todas"} className="text-brand hover:underline">
+          {/* Na empresa da pendência: sem ela, a tela de contas abriria na última empresa aberta. */}
+          <Link
+            href={`${p.lancamento.kind === "PAGAR" ? "/pagar" : "/receber"}?recorte=todas&empresa=${encodeURIComponent(p.empresaId)}`}
+            className="text-brand hover:underline"
+          >
             {p.lancamento.kind === "PAGAR" ? "a pagar" : "a receber"} · {p.lancamento.contraparteNome} ·{" "}
             {moeda(centavosDeDecimal(p.lancamento.valor))} · vence {formatInstantDate(p.lancamento.vencimento)}
           </Link>

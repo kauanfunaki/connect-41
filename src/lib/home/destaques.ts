@@ -14,6 +14,7 @@
 //   depois o volume; dentro de cada grupo, a ordem de ORDEM_DOS_PAINEIS.
 // - Até três. Com menos candidatos, os que houver; sem nenhum, nada.
 
+import { TODAS_AS_EMPRESAS } from "@/lib/empresas/escolhaDaEmpresa";
 import { moeda } from "@/lib/financeiro/formato";
 import type { HomeWidgetKey } from "@/lib/homeWidgets";
 import type { MetricaDaHome } from "./metricas";
@@ -88,19 +89,19 @@ function candidatoDoPainel(painel: HomeWidgetKey, n: NumerosDaHome): Candidato |
       if (!c) return null;
       if (c.verPagar && c.pagar.vencida.n > 0) {
         const v = c.pagar.vencida;
-        return { metrica: "pagar_vencido", alerta: true, titulo: "A pagar vencido", valor: v.centavos, apoio: plural(v.n, "conta vencida", "contas vencidas"), href: "/pagar?recorte=vencidas" };
+        return { metrica: "pagar_vencido", alerta: true, titulo: "A pagar vencido", valor: v.centavos, apoio: plural(v.n, "conta vencida", "contas vencidas"), href: `/pagar?recorte=vencidas&empresa=${TODAS_AS_EMPRESAS}` };
       }
       if (c.verReceber && c.receber.vencida.n > 0) {
         const v = c.receber.vencida;
-        return { metrica: "receber_vencido", alerta: true, titulo: "A receber vencido", valor: v.centavos, apoio: plural(v.n, "conta vencida", "contas vencidas"), href: "/receber?recorte=vencidas" };
+        return { metrica: "receber_vencido", alerta: true, titulo: "A receber vencido", valor: v.centavos, apoio: plural(v.n, "conta vencida", "contas vencidas"), href: `/receber?recorte=vencidas&empresa=${TODAS_AS_EMPRESAS}` };
       }
       const pagar = totalDaCarteira(c.pagar);
       if (c.verPagar && pagar.n > 0) {
-        return { metrica: "pagar_aberto", alerta: false, titulo: "Em aberto", valor: pagar.centavos, apoio: plural(pagar.n, "conta a pagar", "contas a pagar"), href: "/pagar" };
+        return { metrica: "pagar_aberto", alerta: false, titulo: "Em aberto", valor: pagar.centavos, apoio: plural(pagar.n, "conta a pagar", "contas a pagar"), href: `/pagar?empresa=${TODAS_AS_EMPRESAS}` };
       }
       const receber = totalDaCarteira(c.receber);
       if (c.verReceber && receber.n > 0) {
-        return { metrica: "receber_aberto", alerta: false, titulo: "Em aberto", valor: receber.centavos, apoio: plural(receber.n, "conta a receber", "contas a receber"), href: "/receber" };
+        return { metrica: "receber_aberto", alerta: false, titulo: "Em aberto", valor: receber.centavos, apoio: plural(receber.n, "conta a receber", "contas a receber"), href: `/receber?empresa=${TODAS_AS_EMPRESAS}` };
       }
       return null;
     }
@@ -178,7 +179,7 @@ function candidatoDoPainel(painel: HomeWidgetKey, n: NumerosDaHome): Candidato |
     case "painel-semanas": {
       const s = n.semanas?.estaSemana;
       if (!s || s.n === 0) return null;
-      return { metrica: "pagar_esta_semana", alerta: false, titulo: "A pagar esta semana", valor: s.centavos, apoio: `${plural(s.n, "conta", "contas")} até domingo`, href: "/pagar" };
+      return { metrica: "pagar_esta_semana", alerta: false, titulo: "A pagar esta semana", valor: s.centavos, apoio: `${plural(s.n, "conta", "contas")} até domingo`, href: `/pagar?empresa=${TODAS_AS_EMPRESAS}` };
     }
 
     default:

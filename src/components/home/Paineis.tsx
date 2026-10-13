@@ -15,6 +15,7 @@ import {
   dadosDosProcessos,
 } from "@/lib/home/dadosDosPaineis";
 import type { AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
+import { TODAS_AS_EMPRESAS } from "@/lib/empresas/escolhaDaEmpresa";
 import {
   BarraDeSituacao,
   Colunas,
@@ -137,6 +138,11 @@ const FAIXAS_DAS_CONTAS: { chave: FaixaDeVencimento; rotulo: string; tom: Tom }[
   { chave: "depois", rotulo: "Depois", tom: "neutro" },
 ];
 
+// Os números do painel são do escritório inteiro; os links levam a "Todas as
+// empresas", explícito — sem o parâmetro, as contas abririam na última empresa
+// aberta pela pessoa (13/10/2026) e não bateriam com o número clicado.
+const TODAS = `empresa=${TODAS_AS_EMPRESAS}`;
+
 function segmentosDaCarteira(faixas: Record<FaixaDeVencimento, Soma>, tela: "/pagar" | "/receber"): Segmento[] {
   return FAIXAS_DAS_CONTAS.map((f) => ({
     chave: f.chave,
@@ -144,7 +150,7 @@ function segmentosDaCarteira(faixas: Record<FaixaDeVencimento, Soma>, tela: "/pa
     tom: f.tom,
     valor: faixas[f.chave].n,
     detalhe: moeda(faixas[f.chave].centavos),
-    href: f.chave === "vencida" ? `${tela}?recorte=vencidas` : tela,
+    href: f.chave === "vencida" ? `${tela}?recorte=vencidas&${TODAS}` : `${tela}?${TODAS}`,
   }));
 }
 
@@ -153,7 +159,7 @@ export async function PainelDeContas({ ctx, acesso, setor }: Base) {
   const verPagar = acesso.modulos.has("bpo_contas_pagar");
   const verReceber = acesso.modulos.has("bpo_contas_receber");
   const titulo = "Contas a pagar e a receber";
-  const href = verPagar ? "/pagar" : "/receber";
+  const href = verPagar ? `/pagar?${TODAS}` : `/receber?${TODAS}`;
   if (!carteira) return <PainelIndisponivel setor={setor} titulo={titulo} href={href} />;
   const { pagar, receber } = carteira;
   const principal = verPagar ? pagar : receber;
@@ -193,7 +199,7 @@ export async function PainelDeContas({ ctx, acesso, setor }: Base) {
 
 export async function PainelDeSemanas({ ctx, setor }: Base) {
   const carteira = await dadosDaCarteira(ctx.tenantId);
-  if (!carteira) return <PainelIndisponivel setor={setor} titulo="A pagar nas próximas semanas" href="/pagar" />;
+  if (!carteira) return <PainelIndisponivel setor={setor} titulo="A pagar nas próximas semanas" href={`/pagar?${TODAS}`} />;
   const { semanas } = carteira;
   const total = semanas.reduce((s, x) => s + x.centavos, 0);
   const dia = (key: string) => formatCalendarDate(new Date(`${key}T12:00:00Z`), { day: "2-digit", month: "2-digit" });
@@ -204,7 +210,7 @@ export async function PainelDeSemanas({ ctx, setor }: Base) {
       setor={setor.rotulo}
       cor={setor.cor}
       titulo="A pagar nas próximas semanas"
-      href="/pagar"
+      href={`/pagar?${TODAS}`}
       destaque={{ valor: moeda(total), legenda: "em seis semanas", tendencia: t.pagar_seis_semanas }}
     >
       <Colunas

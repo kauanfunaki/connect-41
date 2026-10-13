@@ -14,7 +14,9 @@ import { Card } from "@/components/ui/Card";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
 import { Button } from "@/components/ui/Button";
-import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { ContaBancariaForm, AlternarContaAtiva } from "@/components/financeiro/conciliacao/ContaBancariaForm";
 import { ImportarOfx } from "@/components/financeiro/conciliacao/ImportarOfx";
@@ -86,8 +88,12 @@ export default async function ConciliacaoPage({
   const tenantId = ctx.tenantId;
 
   const params = await searchParams;
+  // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
+  // (13/10/2026). Era a primeira em ordem alfabética: conciliar, cadastrar
+  // conta e importar OFX gravavam nela sem ninguém ter escolhido.
   const empresas = await empresasDoSeletor(tenantId);
-  const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
+  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  const companyId = empresa?.id ?? null;
 
   const cabecalho = (
     <PageHeader
@@ -96,14 +102,29 @@ export default async function ConciliacaoPage({
     />
   );
 
-  if (!companyId) {
+  // Trocar de empresa não leva a conta escolhida: a conta é de uma empresa só.
+  const filtroDaEmpresa = <FiltroDaEmpresa acao="/conciliacao" empresas={empresas} valor={companyId} />;
+
+  if (!empresa || !companyId) {
     return (
       <PageContainer>
         {cabecalho}
-        <EmptyState title="Nenhuma empresa ativa" icon={<Landmark />} />
+        {empresas.length === 0 ? (
+          <EmptyState title="Nenhuma empresa ativa" icon={<Landmark />} />
+        ) : (
+          <>
+            {filtroDaEmpresa}
+            <EscolhaAEmpresa escolha={escolha} porQue="O extrato, as contas bancárias e os lançamentos conferidos são de uma empresa por vez." />
+          </>
+        )}
       </PageContainer>
     );
   }
+
+  // Todo formulário desta tela grava na empresa escolhida — o rodapé diz qual.
+  const comEmpresa = (tela: React.ReactNode) => (
+    <EmpresaDaTela empresa={{ nome: empresa.nome, cnpj: empresa.cnpj }}>{tela}</EmpresaDaTela>
+  );
 
   const prisma = getPrisma();
   const contas = await prisma.bankAccount.findMany({
@@ -128,7 +149,7 @@ export default async function ConciliacaoPage({
 
   const conta = contas.find((c) => c.id === params.conta) ?? contas.find((c) => c.active) ?? contas[0] ?? null;
 
-  return (
+  return comEmpresa(
     <PageContainer>
       {/* "Nova conta" é da empresa toda: vai no cabeçalho da tela, como em
           pendências e no resto do app (08/10/2026) — ficava ao lado do h2. */}
@@ -137,7 +158,7 @@ export default async function ConciliacaoPage({
         subtitle="O extrato do banco contra os lançamentos: o que já foi pago, o que falta lançar e se o saldo fecha."
         action={podeAgir ? <ContaBancariaForm companyId={companyId} /> : undefined}
       />
-      <FiltroDePeriodo acao="/conciliacao" empresas={empresas} empresaId={companyId} navegaSozinho />
+      {filtroDaEmpresa}
 
       <h2 className="text-card-title font-semibold text-fg mb-3">Contas bancárias</h2>
 

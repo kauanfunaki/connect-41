@@ -3,11 +3,8 @@
 import { useSearchParams } from "next/navigation";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
-import { nomeExibicao } from "@/lib/companyName";
 import { TIPO_LABEL, DESTINO_LABEL } from "@/lib/fiscal/rotulos";
 import { formatarCompetencia } from "@/lib/format";
-
-type Empresa = { id: string; name: string; displayName: string | null };
 
 /**
  * A busca e o botão "Filtros" do acervo, cada um na sua vaga da barra do
@@ -61,17 +58,15 @@ export function BuscaDoAcervo() {
   );
 }
 
-export function FiltrosDoAcervo({ empresas, competencias }: { empresas: Empresa[]; competencias: string[] }) {
+/**
+ * Competência, tipo e destino. A empresa saiu daqui em 13/10/2026: é o
+ * seletor da fileira de cima, e o acervo mostra uma empresa por vez.
+ */
+export function FiltrosDoAcervo({ competencias }: { competencias: string[] }) {
   return (
     <FiltrosDaTela
       naBarra
       campos={[
-        {
-          chave: "empresa",
-          rotulo: "Empresa",
-          vazioLabel: "Todas",
-          opcoes: empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) })),
-        },
         {
           chave: "competencia",
           rotulo: "Competência",

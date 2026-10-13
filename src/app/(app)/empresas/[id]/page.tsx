@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { adicionarServico, atribuirResponsavelServico } from "../actions";
 import { podeExcluirCadastros } from "@/lib/exclusao/comum";
@@ -36,6 +37,7 @@ import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccord
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { safeFindConversations } from "@/lib/chatwoot/conversations";
 import { gerarResumoEmpresa } from "./ai-actions";
+import { gravarUltimaEmpresa } from "@/lib/empresas/ultimaEmpresa";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -77,6 +79,12 @@ export default async function EmpresaPage({
   });
 
   if (!company) notFound();
+
+  // A ficha aberta vira a última empresa da pessoa (13/10/2026): as telas de
+  // uma empresa por vez (Lançamentos, Conciliação, DRE…) abrem nela. Depois da
+  // resposta, para não atrasar a ficha; erro ao gravar não chega à tela.
+  const empresaAberta = company.id;
+  after(() => gravarUltimaEmpresa(ctx, empresaAberta));
 
   // A aba Arquivos (09/10/2026): o primeiro nível das pastas da empresa. Abrir
   // uma pasta leva à tela dos Arquivos — a ficha não é refeita a cada clique.
