@@ -5762,7 +5762,8 @@ model OmieEmissao {
   nfseCodigoVerificacao String?   @db.VarChar(50)
   /// CNPJ do prestador que a prefeitura devolveu — confere com o da empresa.
   nfseCnpjPrestador     String?   @db.VarChar(14)
-  /// Link da nota na prefeitura (`cUrlNfse`), quando o Omie devolve.
+  /// Link da nota que o `StatusOS` devolve — `danfe` na resposta real
+  /// (13/10/2026); `cUrlNfse`/`cUrlPdfDest` da documentação ficam de reserva.
   nfseUrl               String?   @db.Text
   /// "P" produção, "H" homologação (`cAmbiente`). Nota de homologação não vai
   /// para o acervo: não existe para a prefeitura.
