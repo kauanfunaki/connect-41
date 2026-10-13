@@ -627,6 +627,7 @@ model Tenant {
   accessAuthorizations      AccessAuthorization[]
   accessAuthorizationGrantee AccessAuthorizationGrantee?
   serproCalls               SerproCall[]
+  omieEmissoes              OmieEmissao[]
   @@map("tenants")
 }
 
@@ -1119,6 +1120,7 @@ model Company {
   chatwootContactLinks     ChatwootContactLink[]
   bpoCredentials           BpoCredential[]
   fiscalDocuments          FiscalDocument[]
+  omieEmissoes             OmieEmissao[]
   financeCounterparties    FinanceCounterparty[]
   financeEntries           FinanceEntry[]
   bankAccounts             BankAccount[]
@@ -2479,6 +2481,8 @@ model FiscalDocument {
   company      Company       @relation(fields: [companyId], references: [id])
   uploadedBy   User?         @relation(fields: [uploadedById], references: [id])
   financeEntry FinanceEntry?
+  /// A emissão pelo Connect (via Omie) que gerou esta nota, quando foi assim.
+  omieEmissao  OmieEmissao?
 
   @@unique([tenantId, dedupKey])
   // O nome é citado num FORCE INDEX em src/lib/fiscal/data.ts
@@ -5686,6 +5690,105 @@ model IntegrationRun {
   @@index([integrationId, startedAt])
   @@index([tenantId, ok])
   @@map("integration_runs")
+}
+
+/// Em que pé está uma nota pedida pelo Connect ao Omie (Fase 2, 13/10/2026).
+///
+/// A ordem é a do Omie: o Connect cria a ordem de serviço (`IncluirOS`) e pede o
+/// faturamento (`FaturarOS`); o Omie manda o RPS à prefeitura, e a resposta só
+/// chega depois — o cron consulta (`StatusOS`) até ela vir. Cancelar é ato
+/// posterior, que vale tanto para nota autorizada quanto para OS que ficou
+/// criada no Omie sem nota.
+enum OmieEmissaoEstado {
+  /// A linha nasceu e o Connect está falando com o Omie. Se ficar assim, o
+  /// processo caiu no meio — o cron pergunta ao Omie pelo código de integração.
+  ENVIANDO
+  /// O Omie aceitou a OS e o faturamento; a prefeitura ainda não respondeu.
+  PROCESSANDO
+  /// A prefeitura devolveu o número da NFS-e.
+  AUTORIZADA
+  /// O Omie ou a prefeitura recusou. A mensagem diz o porquê, como veio.
+  REJEITADA
+  /// Cancelada depois — pelo Connect (`CancelarOS`) ou na tela do Omie.
+  CANCELADA
+}
+
+/// Só NFS-e por enquanto. NF-e é a Fase 3 do plano (pedido de venda, não OS).
+enum OmieEmissaoTipo {
+  NFSE
+}
+
+/// Uma nota pedida pelo Connect ao Omie da empresa (Fase 2 do plano de
+/// 23/09/2026, decidida pelo Kauan em 13/10/2026).
+///
+/// Emitir é ato tributário em nome do cliente: a linha guarda **o que foi
+/// pedido e por quem** antes de qualquer chamada ao Omie, e não é apagada. O
+/// "quem" e o "quando" de cada ação também vão para o `AuditLog`.
+///
+/// Os códigos do Omie são texto: são inteiros que passam do limite de `Int` em
+/// conta antiga, e aqui só servem para ser devolvidos ao Omie como vieram.
+model OmieEmissao {
+  id        String            @id @default(uuid())
+  tenantId  String
+  /// A empresa do Connect que pediu — é a dona da conta do Omie usada
+  /// (`TenantIntegration` com `instanceKey = "empresa:{companyId}"`).
+  companyId String
+  tipo      OmieEmissaoTipo   @default(NFSE)
+  estado    OmieEmissaoEstado @default(ENVIANDO)
+
+  // ── O que foi pedido ──────────────────────────────────────────────────────
+  /// `codigo_cliente_omie` do tomador, escolhido da lista do próprio Omie.
+  tomadorCodigoOmie String  @db.VarChar(20)
+  tomadorNome       String  @db.VarChar(180)
+  /// CNPJ ou CPF do tomador, só dígitos, como o Omie tinha no cadastro.
+  tomadorDocumento  String? @db.VarChar(14)
+  /// `nCodServ` do serviço, escolhido do cadastro de serviços do Omie.
+  servicoCodigoOmie String  @db.VarChar(20)
+  servicoDescricao  String  @db.VarChar(180)
+  valor             Decimal @db.Decimal(12, 2)
+  /// "AAAA-MM". Ver `competenciaPermitida` — o Omie não recebe competência
+  /// pela API (documentação conferida em 13/10/2026).
+  competencia       String  @db.VarChar(7)
+  /// A discriminação do serviço na nota. Nula usa a do cadastro do serviço.
+  descricao         String? @db.Text
+  pedidoPorId       String
+
+  // ── O lado do Omie ────────────────────────────────────────────────────────
+  /// `nCodOS`, depois do `IncluirOS`. O `cCodIntOS` mandado é o `id` desta
+  /// linha — é o que deixa perguntar ao Omie por uma OS cuja resposta se perdeu.
+  omieCodigoOS          String?   @db.VarChar(20)
+  omieNumeroOS          String?   @db.VarChar(20)
+  nfseNumero            String?   @db.VarChar(20)
+  nfseCodigoVerificacao String?   @db.VarChar(50)
+  /// CNPJ do prestador que a prefeitura devolveu — confere com o da empresa.
+  nfseCnpjPrestador     String?   @db.VarChar(14)
+  /// Link da nota na prefeitura (`cUrlNfse`), quando o Omie devolve.
+  nfseUrl               String?   @db.Text
+  /// "P" produção, "H" homologação (`cAmbiente`). Nota de homologação não vai
+  /// para o acervo: não existe para a prefeitura.
+  ambiente              String?   @db.VarChar(1)
+  faturadaEm            DateTime?
+  /// A última mensagem do Omie ou da prefeitura, **como veio** — a tela mostra
+  /// esta, e não uma tradução nossa que pode esconder o motivo real.
+  mensagem              String?   @db.Text
+  ultimaConsultaEm      DateTime?
+  consultas             Int       @default(0)
+  canceladaEm           DateTime?
+  canceladaPorId        String?
+  /// A linha do acervo fiscal que a nota autorizada virou (ou reconheceu).
+  fiscalDocumentId      String?   @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  company        Company         @relation(fields: [companyId], references: [id])
+  fiscalDocument FiscalDocument? @relation(fields: [fiscalDocumentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, companyId, createdAt])
+  /// O cron procura por estado — só `ENVIANDO` e `PROCESSANDO` recentes.
+  @@index([estado, createdAt])
+  @@map("omie_emissoes")
 }
 
 /// Quem disparou uma chamada de IA.
