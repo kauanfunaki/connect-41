@@ -20,7 +20,7 @@ import { NovaContraparte, EditarContraparte } from "@/components/financeiro/Form
 import { NovoCentroDeCusto, EditarCentroDeCusto } from "@/components/financeiro/FormCentroDeCusto";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
-import { GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { ESCOLHAS_DE_GRUPO } from "@/lib/dre/estrutura";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { NovaCategoriaDaEmpresa, LinhaDaDre, EsconderDoPadrao, EditarCategoriaDaEmpresa } from "@/components/financeiro/PlanoDaEmpresa";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
@@ -494,10 +494,9 @@ async function AbaDoPlano({
   const oculta = new Set(ocultas.map((o) => o.categoryId));
   const excecao = new Map(excecoes.map((e) => [e.categoryId, e.grupo]));
   const lancamentos = new Map(uso.map((u) => [u.categoryId, u._count._all]));
-  const linhas = [
-    ...GRUPOS.map((g) => ({ code: g.code, label: g.label })),
-    { code: TRANSFERENCIA, label: "Fora do resultado (transferência)" },
-  ];
+  // Os doze grupos e as escolhas de fora do resultado — transferência e
+  // "desconsiderar" (13/10/2026) —, as mesmas da fila da DRE.
+  const linhas = ESCOLHAS_DE_GRUPO;
   const rotulo = (codigo: string | null) => (codigo ? (linhas.find((l) => l.code === grupoDeTexto(codigo))?.label ?? codigo) : "sem linha");
   const grupos = [...new Set(categorias.map((c) => c.planGroup).filter((g): g is string => !!g))].sort();
   const daEmpresa = categorias.filter((c) => c.companyId).length;

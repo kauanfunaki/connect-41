@@ -712,6 +712,42 @@ input[type="search"]::-webkit-search-decoration {
 .c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td).c41-a-esquerda > .flex-col {
   align-items: flex-start;
 }
+/* O funil da coluna fora da centralização do rótulo (pedido do Kauan,
+   13/10/2026). O par rótulo + funil centralizava junto, e o rótulo ficava à
+   esquerda do eixo das células. Agora o cabeçalho (`CabecalhoComFunil`, em
+   FiltroDeColunas.tsx) ocupa a largura da célula: o funil vai para a borda
+   direita, e um par invisível dele à esquerda (o ::before, da mesma largura
+   que funil + respiro) deixa o rótulo no centro exato da coluna. Tudo em
+   fluxo, sem posição absoluta: quando a coluna é estreita, o par invisível
+   encolhe primeiro e o rótulo encosta à esquerda, com o funil logo depois —
+   o rótulo nunca passa por baixo do botão. O anel de foco do funil cabe no
+   respiro da célula. Vem depois das regras de cima porque tem a mesma
+   especificidade e precisa ganhar o `justify-content`. */
+.c41-tabela > table > thead > tr > th > .c41-cabecalho-com-funil {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+}
+.c41-tabela > table > thead > tr > th > .c41-cabecalho-com-funil::before {
+  content: "";
+  flex: 0 1 1.5rem;
+}
+.c41-tabela > table > thead > tr > th > .c41-cabecalho-com-funil > .c41-cabecalho-rotulo {
+  margin-inline: auto;
+}
+.c41-tabela > table > thead > tr > th > .c41-cabecalho-com-funil > .c41-cabecalho-funil {
+  flex-shrink: 0;
+  margin-left: 0.25rem;
+}
+/* Na coluna à esquerda o rótulo segue à esquerda, e o funil também vai para a
+   borda direita. */
+.c41-tabela > table > thead > tr > th.c41-a-esquerda > .c41-cabecalho-com-funil::before {
+  content: none;
+}
+.c41-tabela > table > thead > tr > th.c41-a-esquerda > .c41-cabecalho-com-funil > .c41-cabecalho-rotulo {
+  margin-left: 0;
+}
 /* Sublinha com largura máxima (descrição cortada) centraliza como bloco. */
 .c41-tabela > table > tbody > tr > td > .block {
   margin-inline: auto;

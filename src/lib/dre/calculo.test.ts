@@ -9,7 +9,16 @@ import {
 } from "./calculo";
 import { MAPEAMENTO_PADRAO } from "./mapeamento-padrao";
 import { OUTUBRO_2025, ESPERADO_OUTUBRO_2025 } from "./outubro-2025.fixture";
-import { GRUPOS, LINHAS, NAO_CLASSIFICADO, TRANSFERENCIA, OPCOES_PADRAO } from "./estrutura";
+import {
+  GRUPOS,
+  LINHAS,
+  NAO_CLASSIFICADO,
+  TRANSFERENCIA,
+  DESCONSIDERAR,
+  OPCOES_PADRAO,
+  grupoAceitaOrigem,
+  rotuloDoGrupo,
+} from "./estrutura";
 
 const PADRAO = montarMapeamento(MAPEAMENTO_PADRAO);
 
@@ -177,6 +186,91 @@ describe("classificação", () => {
     expect(r.porGrupo[NAO_CLASSIFICADO]).toBe(0);
     expect(centavosDaLinha(r, "fluxo_de_caixa_livre")).toBe(0);
     expect(r.diferencaDeFechamento).toBe(0);
+  });
+});
+
+// A linha do relatório abre nas categorias (13/10/2026, teste da Amanda).
+describe("o detalhe de cada linha", () => {
+  const r = calcularDre(
+    [
+      l("Clientes - Venda de Mercadoria Fabricadas", 1_000, "recebimento"),
+      l("Frete", -100, "pagamento"),
+      l("  FRETE ", -50, "pagamento"),
+      l("Compra de Matéria Prima - Bobina", -400, "pagamento"),
+      l("Coisa Nova", -70, "pagamento"),
+      { categoria: null, grupo: "outras_despesas", valorCentavos: -30_00, origem: "pagamento", perda: true },
+    ],
+    PADRAO
+  );
+
+  it("o grupo abre nas categorias, do maior para o menor, e a soma é a da linha", () => {
+    const cmv = r.porCategoria.cmv!;
+    expect(cmv.map((c) => [c.categoria, c.centavos])).toEqual([
+      ["Compra de Matéria Prima - Bobina", -40_000],
+      ["Frete", -15_000],
+    ]);
+    expect(cmv.reduce((s, c) => s + c.centavos, 0)).toBe(centavosDaLinha(r, "cmv"));
+  });
+
+  it("o sem grupo e o lançamento de grupo fixo não se confundem com categoria", () => {
+    expect(Object.values(r.porCategoria).flat().some((c) => c.categoria === "Coisa Nova")).toBe(false);
+    expect(r.porCategoria.outras_despesas).toEqual([{ categoria: "Perda com clientes", centavos: -3_000, origem: "pagamento" }]);
+  });
+});
+
+// Pedido do Kauan, 13/10/2026: tirar uma categoria do DRE sem fingir que é
+// transferência — fora das linhas, fora da fila, e com o valor à mostra.
+describe("desconsiderar", () => {
+  const mapa = montarMapeamento([
+    ...MAPEAMENTO_PADRAO,
+    { categoria: "Compra de Moldes", grupo: DESCONSIDERAR },
+    { categoria: "Reembolso de sócio", grupo: DESCONSIDERAR },
+  ]);
+  const lancamentos = [
+    l("Clientes - Venda de Mercadoria Fabricadas", 1_000, "recebimento"),
+    l("Frete", -100, "pagamento"),
+    l("Compra de Moldes", -300, "pagamento"),
+    l("  compra de  MOLDES ", -50, "pagamento"),
+    l("Reembolso de sócio", 80, "recebimento"),
+  ];
+  const r = calcularDre(lancamentos, mapa);
+  const semElas = calcularDre(lancamentos.filter((x) => !/moldes|reembolso/i.test(x.categoria ?? "")), mapa);
+
+  it("fica fora de todas as linhas: o relatório é o mesmo de sem elas", () => {
+    expect(r.linhas).toEqual(semElas.linhas);
+  });
+
+  it("não vai para a fila de não classificados", () => {
+    expect(r.porGrupo[NAO_CLASSIFICADO]).toBe(0);
+    expect(r.naoClassificado).toEqual([]);
+  });
+
+  it("o total fica no grupo dele, e a conferência de fechamento segue zerando", () => {
+    expect(r.porGrupo[DESCONSIDERAR]).toBe(-35_000 + 8_000);
+    expect(r.diferencaDeFechamento).toBe(0);
+  });
+
+  // Pelo nome como chegou, como a fila de não classificados: o grupo casa pela
+  // chave, a lista mostra o que o arquivo escreveu.
+  it("a lista diz quais, por categoria, do maior para o menor", () => {
+    expect(r.desconsiderado.map((d) => [d.categoria, d.centavos, d.origem])).toEqual([
+      ["Compra de Moldes", -30_000, "pagamento"],
+      ["Reembolso de sócio", 8_000, "recebimento"],
+      ["compra de  MOLDES", -5_000, "pagamento"],
+    ]);
+  });
+
+  it("aceita os dois lados — como a transferência, não soma em linha nenhuma", () => {
+    expect(grupoAceitaOrigem(DESCONSIDERAR, "pagamento")).toBe(true);
+    expect(grupoAceitaOrigem(DESCONSIDERAR, "recebimento")).toBe(true);
+    expect(grupoAceitaOrigem("receita_bruta", "pagamento")).toBe(false);
+    expect(grupoAceitaOrigem("cmv", "pagamento")).toBe(true);
+    expect(grupoAceitaOrigem("inventado", "pagamento")).toBe(false);
+  });
+
+  it("tem rótulo próprio, diferente do da transferência", () => {
+    expect(rotuloDoGrupo(DESCONSIDERAR)).toBe("Desconsiderar no DRE");
+    expect(rotuloDoGrupo(TRANSFERENCIA)).not.toBe(rotuloDoGrupo(DESCONSIDERAR));
   });
 });
 

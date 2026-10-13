@@ -12,13 +12,16 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, 
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { CarregarPlanoPadrao } from "@/components/admin/CarregarPlanoPadrao";
-import { GRUPOS } from "@/lib/dre/estrutura";
+import { rotuloDoGrupo } from "@/lib/dre/estrutura";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { alternarCategoria } from "./actions";
 
 /** A linha da DRE pelo nome que a tela mostra; texto que não é grupo conhecido aparece como está. */
 function linhaDaDre(dreGroup: string): string {
-  return GRUPOS.find((g) => g.code === grupoDeTexto(dreGroup))?.label ?? dreGroup;
+  // Pelo rótulo das escolhas do seletor, que inclui as de fora do resultado
+  // (transferência e desconsiderar, 13/10/2026) — antes saía "transferencia".
+  const codigo = grupoDeTexto(dreGroup);
+  return codigo ? rotuloDoGrupo(codigo) : dreGroup;
 }
 
 const LADOS = [

@@ -30,8 +30,8 @@
 // também o valor já calculado: é o que aparece em quem abre sem recalcular (a
 // pré-visualização do e-mail, do Drive, do celular), e é o que os testes leem.
 
-import { grupoDoLancamento, chaveDaCategoria, type LancamentoDoDre, type Mapeamento } from "@/lib/dre/calculo";
-import { GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { grupoDoLancamento, chaveDaCategoria, SEM_CATEGORIA, type LancamentoDoDre, type Mapeamento } from "@/lib/dre/calculo";
+import { DESCONSIDERAR, GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
 
 export type CodigoDoBloco =
   | "receita"
@@ -117,6 +117,13 @@ const ROTULO = {
 
 export const ROTULO_FORA_SEM_GRUPO = "Fora do DRE — sem grupo";
 export const ROTULO_FORA_TRANSFERENCIA = "Fora do DRE — transferência entre contas";
+/**
+ * Categoria que a empresa mandou desconsiderar (13/10/2026). Como a
+ * transferência, fica fora das linhas de propósito e não liga o aviso de "sem
+ * grupo" — mas aparece na conferência, com o motivo, para quem recebe o
+ * arquivo saber que o valor existiu e foi tirado.
+ */
+export const ROTULO_FORA_DESCONSIDERADA = "Fora do DRE — desconsiderada";
 
 /**
  * O aviso embaixo da DRE quando algo ficou sem grupo. O modelo não tem onde pôr
@@ -222,7 +229,7 @@ type Acumulado = {
 
 /** Nome que aparece na linha: o primeiro com que a categoria chegou. */
 function nomeDe(l: LancamentoDoDre): string {
-  return l.categoria?.trim() || "(sem categoria)";
+  return l.categoria?.trim() || SEM_CATEGORIA;
 }
 
 export function montarDreNoModeloDoBpo(entrada: EntradaDoModelo): PlanilhaDoModelo {
@@ -238,6 +245,7 @@ export function montarDreNoModeloDoBpo(entrada: EntradaDoModelo): PlanilhaDoMode
   const porBloco = new Map<CodigoDoBloco, Map<string, Acumulado>>();
   const foraSemGrupo = new Map<string, Acumulado>();
   const foraTransferencia = new Map<string, Acumulado>();
+  const foraDesconsiderada = new Map<string, Acumulado>();
 
   const acumular = (mapa: Map<string, Acumulado>, chave: string, l: LancamentoDoDre, grupo: string, coluna: number) => {
     let a = mapa.get(chave);
@@ -252,8 +260,8 @@ export function montarDreNoModeloDoBpo(entrada: EntradaDoModelo): PlanilhaDoMode
     for (const l of coluna.lancamentos) {
       const grupo = grupoDoLancamento(l, mapeamento);
       const chave = chaveDaCategoria(nomeDe(l));
-      if (grupo === TRANSFERENCIA) {
-        acumular(foraTransferencia, `${l.origem}|${chave}`, l, grupo, i);
+      if (grupo === TRANSFERENCIA || grupo === DESCONSIDERAR) {
+        acumular(grupo === TRANSFERENCIA ? foraTransferencia : foraDesconsiderada, `${l.origem}|${chave}`, l, grupo, i);
         continue;
       }
       const bloco = grupo === null ? undefined : BLOCO_DO_GRUPO.get(grupo);
@@ -484,6 +492,7 @@ export function montarDreNoModeloDoBpo(entrada: EntradaDoModelo): PlanilhaDoMode
     conferencia: [
       ...fora(foraSemGrupo, ROTULO_FORA_SEM_GRUPO),
       ...fora(foraTransferencia, ROTULO_FORA_TRANSFERENCIA),
+      ...fora(foraDesconsiderada, ROTULO_FORA_DESCONSIDERADA),
       ...conferenciaDoDre,
     ],
     temSemGrupo: foraSemGrupo.size > 0,
