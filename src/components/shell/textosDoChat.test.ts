@@ -48,10 +48,24 @@ describe("textos do chat", () => {
     expect(inicio).toBeGreaterThan(-1);
     expect(fim).toBeGreaterThan(inicio);
     const botao = codigo.slice(inicio, fim);
-    expect(botao).toContain("aria-label={`Falar com a ${NOME_DA_ASSISTENTE}, assistente do Connect — ${agente.especialidade}`}");
+    // Com mensagem nova, o aviso vai junto no nome acessível ("… — BPO. 1 mensagem nova da Lígia").
+    expect(botao).toContain("aria-label={`Falar com a ${NOME_DA_ASSISTENTE}, assistente do Connect — ${agente.especialidade}${aviso ? `. ${aviso}` : \"\"}`}");
     expect(botao).toContain("data-dica={`${NOME_DA_ASSISTENTE} · ${agente.especialidade}`}");
     expect(botao).not.toMatch(/>\s*\{(NOME_DA_ASSISTENTE|agente\.especialidade)\}\s*</);
     expect(botao).not.toContain("title=");
+  });
+
+  // Pedido do Kauan (13/10/2026): o campo não diz mais "Enter envia" — o Enter continua enviando.
+  it("o campo não mostra o 'Enter envia', e o Enter continua mandando a pergunta", () => {
+    const codigo = semComentarios(readFileSync(path.join(RAIZ, "src/components/shell/ChatDeIA.tsx"), "utf-8"));
+    expect(codigo).not.toMatch(/Enter envia/i);
+    expect(codigo).toContain('e.key === "Enter" && !e.shiftKey');
+  });
+
+  it("embaixo da pergunta vai o nome da tela, nunca o caminho cru", () => {
+    const codigo = semComentarios(readFileSync(path.join(RAIZ, "src/components/shell/ChatDeIA.tsx"), "utf-8"));
+    expect(codigo).toContain("contextoParaMostrar(m.contexto)");
+    expect(codigo).not.toMatch(/\{m\.contexto\}/);
   });
 
   it("o brilho do botão para com prefers-reduced-motion", () => {
