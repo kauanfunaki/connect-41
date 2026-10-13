@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
-import { pedidosAoClienteLigados, setorDaPendencia, setorPadraoDasPendencias } from "@/lib/financeiro/pendencias/setor";
+import { setorDaPendencia } from "@/lib/financeiro/pendencias/setor";
+import { podeAbrirPendencia, reguaDasPendencias } from "@/lib/financeiro/pendencias/acesso";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -27,21 +28,22 @@ export const dynamic = "force-dynamic";
 export default async function PendenciaPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  if (!(await pedidosAoClienteLigados(ctx.tenantId))) notFound();
+  const regua = await reguaDasPendencias(ctx.tenantId);
+  if (!regua.ligados) notFound();
 
   const { id } = await params;
   const agora = new Date();
-  const [p, lembretes, padrao, { labels }] = await Promise.all([
+  const [p, lembretes, { labels }] = await Promise.all([
     carregarPendencia({ tenantId: ctx.tenantId, companyIds: null }, id, agora),
     lembretesDaPendencia(ctx.tenantId, id),
-    setorPadraoDasPendencias(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
   ]);
   if (!p) notFound();
   // O setor é o da pendência (01/10: qualquer setor pede ao cliente). Setor
-  // alheio responde "não encontrada", igual a uma que não existe.
-  const setor = setorDaPendencia(p.setor, padrao);
-  if (!canViewSector(ctx, setor)) notFound();
+  // alheio responde "não encontrada", igual a uma que não existe. A régua é a
+  // mesma da rota de download dos anexos e do "Do Connect" (`podeAbrirPendencia`).
+  if (!podeAbrirPendencia(ctx, regua, { tenantId: ctx.tenantId, sectorCode: p.setor })) notFound();
+  const setor = setorDaPendencia(p.setor, regua.padrao);
   const podeAgir = canActOnSector(ctx, setor);
   const destinos = podeAgir && emAndamento(p.status) ? await destinosDaEmpresa(ctx, p.empresaId) : null;
 
