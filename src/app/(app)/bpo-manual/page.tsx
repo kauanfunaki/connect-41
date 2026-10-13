@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { ManualWorkspace } from "@/components/bpoManual/ManualWorkspace";
 import {
   criarDocumentoManual,
@@ -31,7 +31,8 @@ export default async function BpoManualPage() {
   const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
   if (!canActOnSector(ctx, setor)) notFound();
   const canAct = canActOnSector(ctx, setor);
-  const canDelete = canManageSector(ctx, setor);
+  // Excluir documento, página e capa do manual: só o administrador (13/10/2026).
+  const canDelete = canManageSector(ctx, setor) && podeExcluir(ctx);
   // O vazio cita quem coordena o setor que opera o módulo, e não "o BPO" (05/10/2026).
   const setorRotulo = sectorLabel((await getSectorMaps(ctx.tenantId)).labels, setor);
 

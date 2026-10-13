@@ -19,7 +19,8 @@ type Empresa = EmpresaParaEscolher & { nome: string };
 type Props = {
   documentoId: string;
   acao: (prev: EdicaoState, form: FormData) => Promise<EdicaoState>;
-  excluir: () => Promise<{ error: string } | { ok: true }>;
+  /** Só para o administrador (13/10/2026); sem ele, a ficha não mostra o Excluir. */
+  excluir?: () => Promise<{ error: string } | { ok: true }>;
   empresas: Empresa[];
   /** Documento com lançamento não se edita: a ficha explica por quê. */
   bloqueado: boolean;
@@ -166,6 +167,7 @@ export function EditarDocumentoCard({
             />
           </form>
 
+          {excluir && (
           <div className="mt-6 pt-4 border-t border-border">
             {/* Era um fluxo de confirmação escrito à mão — dois estados, dois
                 botões e a mensagem de erro. O `DeleteButton` já faz os três,
@@ -182,6 +184,7 @@ export function EditarDocumentoCard({
               description="Some da lista e do portal do cliente. O mesmo XML pode ser reimportado depois."
             />
           </div>
+          )}
         </>
       )}
     </Card>
