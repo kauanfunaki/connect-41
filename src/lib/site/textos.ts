@@ -8,9 +8,19 @@
 
 export const CONTATO = "marcos@41contabil.com.br";
 
+/**
+ * A empresa que desenvolve e opera o Connect, em partes: o "Sobre nós" do site
+ * usa o nome e a cidade, e o rodapé (abaixo) a frase inteira.
+ */
+export const EMPRESA = {
+  nome: "41 TEC LTDA",
+  cnpj: "64.620.403/0001-16",
+  endereco: "Rua Anne Frank, 2210, Boqueirão",
+  cidade: "Curitiba/PR",
+};
+
 /** Quem desenvolve e opera o Connect — o rodapé das páginas públicas. */
-export const QUEM_OPERA =
-  "O Connect é desenvolvido e operado pela 41 TEC LTDA (CNPJ 64.620.403/0001-16), Rua Anne Frank, 2210, Boqueirão, Curitiba/PR.";
+export const QUEM_OPERA = `O Connect é desenvolvido e operado pela ${EMPRESA.nome} (CNPJ ${EMPRESA.cnpj}), ${EMPRESA.endereco}, ${EMPRESA.cidade}.`;
 
 export const PARA_A_EQUIPE = [
   "Processos societários com etapas, exigências e prazos em dias úteis",
