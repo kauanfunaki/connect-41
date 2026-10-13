@@ -36,7 +36,7 @@ export type AgenteDoChat = {
   code: string;
   /**
    * O que a Lígia atende neste agente, escrito embaixo do nome dela no chat
-   * ("BPO Financeiro"). Até 13/10/2026 era o `titulo` "IA do BPO" — cada
+   * ("BPO", "Departamento Pessoal"). Até 13/10/2026 era o `titulo` "IA do BPO" — cada
    * setor com o seu nome; agora o nome é um só (`src/lib/ia/ligia.ts`).
    */
   especialidade: string;

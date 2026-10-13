@@ -892,7 +892,6 @@ export function ChatDeIA({
                     onEscolher={(code) => setEscolhido(code)}
                   />
                   <span className="flex items-center gap-2">
-                    <span className="hidden sm:inline text-micro text-fg-muted">Enter envia</span>
                     <input
                       ref={seletorDeArquivoRef}
                       type="file"
