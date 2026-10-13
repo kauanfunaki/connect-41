@@ -88,6 +88,17 @@ export function podeVerCaminho(quem: QuemPede, caminho: readonly PastaDoDrive[])
 }
 
 /**
+ * A régua da equipe para abrir uma pasta e baixar o que está nela: o caminho
+ * existe (sem pai faltando nem ciclo), nada nele está na lixeira e todo setor
+ * dono está ao alcance de quem pede. É a conta de `pastaParaAEquipe`
+ * (./servidor.ts), por onde passa o download de um arquivo avulso, e a do zip
+ * da pasta (./baixarPasta.ts) — as duas chamam esta função.
+ */
+export function equipeAlcancaCaminho(quem: QuemPede, caminho: readonly PastaDoDrive[] | null): boolean {
+  return !!caminho && !caminhoNaLixeira(caminho) && podeVerCaminho(quem, caminho);
+}
+
+/**
  * Mexe na pasta (enviar, criar, renomear, mover, excluir, compartilhar): além
  * de ver, precisa poder agir — o READONLY vê tudo e não mexe em nada, e a
  * assinatura vencida trava a escrita de todos.

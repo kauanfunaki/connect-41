@@ -27,6 +27,7 @@ import {
   chaveDoModelo,
   clienteVeCaminho,
   ehPastaDaCasa,
+  equipeAlcancaCaminho,
   mapaDePastas,
   ordenarPastas,
   podeMexerNoCaminho,
@@ -389,7 +390,7 @@ export async function pastaParaAEquipe(ctx: AuthContext, pastaId: string) {
   const pastas = await pastasDoEscopo(ctx.tenantId, pasta.companyId);
   const mapa = mapaDePastas(pastas);
   const caminho = caminhoDaPasta(pasta.id, mapa);
-  if (!caminho || caminhoNaLixeira(caminho) || !podeVerCaminho(ctx, caminho)) return null;
+  if (!caminho || !equipeAlcancaCaminho(ctx, caminho)) return null;
   return { pasta, caminho, pastas, mapa };
 }
 
