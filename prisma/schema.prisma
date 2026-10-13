@@ -5018,6 +5018,35 @@ model UserPinnedModule {
   @@map("user_pinned_modules")
 }
 
+/// A última empresa que a pessoa abriu neste workspace (13/10/2026): a ficha
+/// em `/empresas/[id]` ou a escolha no seletor de empresa das telas. É o padrão
+/// das telas que mostram uma empresa por vez (Lançamentos, Conciliação, DRE…)
+/// e das pesadas (Contas a pagar, Documentos fiscais…), quando a URL não diz
+/// qual — ver `src/lib/empresas/ultimaEmpresa.ts`.
+///
+/// Uma linha por pessoa e workspace, gravada por cima. Fica no banco, e não no
+/// navegador, para valer em qualquer computador.
+///
+/// **Sem relação (FK) com usuário, empresa ou tenant, de propósito.** É
+/// preferência, não dado: a leitura confere que a empresa ainda existe, é do
+/// tenant e aparece na tela — e, se não, a tela pede para escolher. Empresa
+/// excluída deixa a linha órfã, que não atrapalha nada; e a exclusão de
+/// empresa, pessoa e usuário não ganha mais uma tabela para limpar.
+///
+/// Tabela própria, e não coluna em `User` ou `UserPreference`, pela ordem do
+/// deploy (o mesmo motivo de `UserPinnedModule`): o Prisma lê todas as colunas
+/// do model, e uma coluna nova em `users` lida antes da migration derrubaria o
+/// login.
+model UserLastCompany {
+  userId    String
+  tenantId  String
+  companyId String
+  openedAt  DateTime @default(now())
+
+  @@id([userId, tenantId])
+  @@map("user_last_companies")
+}
+
 // Auditoria de acesso — quem revelou/copiou a senha e quando. Não impede
 // acesso de ninguém do setor, só dá rastreabilidade (informação sensível).
 model BpoCredentialView {
