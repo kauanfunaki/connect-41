@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { CADASTROS_LAST_TAB_KEY, type CadastrosTab } from "@/lib/cadastrosNav";
+import { caminhoDoMenuAtivo as isActivePath } from "@/lib/caminhoDoMenu";
 
 function subscribeToStorage(callback: () => void) {
   window.addEventListener("storage", callback);
@@ -29,10 +30,6 @@ type NavItemProps = {
    */
   exact?: boolean;
 };
-
-function isActivePath(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 /**
  * O desenho de todo item da sidebar. O item encosta na borda esquerda da
@@ -60,6 +57,7 @@ export function NavItem({ href, icon, label, exact = false }: NavItemProps) {
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
@@ -99,6 +97,7 @@ export function GrupoNavItem({
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}

@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
 @layer base {
-  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary,
-  select:not(:disabled), input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled) {
+  a[href]:not([aria-disabled="true"]), button:not(:disabled), summary,
+  :is([role="button"], [role="tab"], [role="menuitem"]):not([aria-disabled="true"]),
+  select:not(:disabled),
+  input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"]):not(:disabled) {
     cursor: pointer;
   }
-  button:disabled, select:disabled { cursor: not-allowed; }
+  button:disabled, select:disabled, input:disabled, [aria-disabled="true"] { cursor: not-allowed; }
 }
 
 /* Tema escuro acionado por data-theme="dark" no <html> (não só prefers) */

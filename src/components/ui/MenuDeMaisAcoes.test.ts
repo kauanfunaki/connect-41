@@ -21,6 +21,12 @@ describe("menus de ações", () => {
   it("mantém ação única desabilitada", () => {
     expect(render(item("Inativar", true))).toContain('disabled=""');
   });
+  it("permite manter uma consulta secundária recolhida sem alterar o padrão", () => {
+    const html = renderToStaticMarkup(React.createElement(MenuDeMaisAcoes, { sempreMenu: true }, item("Ver relatório")));
+    expect(html).toContain("Mais ações");
+    expect(html).not.toContain("Ver relatório");
+    expect(render(item("Ver relatório"))).toContain("Ver relatório");
+  });
   it("mantém menu quando há duas ações", () => {
     expect(render(React.createElement(React.Fragment, null, item("Excluir"), item("Inativar")))).toContain("Mais ações");
   });
