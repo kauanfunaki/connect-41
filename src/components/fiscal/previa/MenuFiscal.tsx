@@ -2,7 +2,7 @@
 
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 
-/** O Fiscal reserva a linha para a ação principal; consultas ficam no menu. */
+/** Segue o padrão do Connect: ação única direta, várias opções no menu. */
 export function MenuFiscal(props: React.ComponentProps<typeof MenuDeMaisAcoes>) {
-  return <MenuDeMaisAcoes {...props} sempreMenu />;
+  return <MenuDeMaisAcoes {...props} />;
 }

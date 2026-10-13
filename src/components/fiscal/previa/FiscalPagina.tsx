@@ -24,7 +24,7 @@ export function FiscalPagina({ pagina }: { pagina: PaginaFiscal }) {
   const trocarAba = (nova: string) => { const query = new URLSearchParams(searchParams.toString()); query.set("aba", nova); window.history.pushState(null, "", `${pathname}?${query.toString()}`); };
   const key = `${pagina}-${aba}-${cenario.contexto.empresaId}-${cenario.contexto.estabelecimentoId}-${cenario.contexto.competencia}`;
   const visaoPedida = searchParams.get("visao");
-  const visao = visaoPedida === "historico" || visaoPedida === "areas" ? visaoPedida : "resumo";
+  const visao = visaoPedida === "historico" ? visaoPedida : "resumo";
   return <><PageHeader title={definicao.titulo} subtitle={definicao.descricao} />
     {pagina !== "painel" && modulos.includes("fiscal_painel") && <Button href="/fiscal" variant="link" className="mb-5 text-ui"><ArrowLeft size={14} />Voltar ao caminho da competência</Button>}
     {abas.length > 0 && <Tabs className="mb-5" active={aba} tabs={abas.map(([key, label]) => ({ key, label, panelId: "painel-fiscal" }))} onChange={trocarAba} />}<div id="painel-fiscal" role={abas.length ? "tabpanel" : undefined} aria-label={abas.find(([chave]) => chave === aba)?.[1]} key={key}>

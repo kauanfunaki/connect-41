@@ -11,7 +11,7 @@ As nove telas de teste ficam em `/fiscal`, no setor Fiscal. Todas usam dados fic
 | Importações, quarentena, cobertura | Documentos e importações: Importações, Quarentena, Cobertura |
 | Classificação, decisões em lote e histórico | Classificação: Produtos, Contratos e recibos, Decisões registradas |
 | Apuração, demonstrativo ICMS, ajustes, DCIP/DIME | ICMS e IPI: Apuração, Demonstrativo, Ajustes, DCIP e DIME |
-| Contribuições, fechamento, demonstrativo, SPED Contribuições | PIS e COFINS: Parâmetros, Ajustes, Decisões por registro, Fechamento, Demonstrativo, SPED Contribuições |
+| Contribuições, fechamento, demonstrativo, SPED Contribuições | PIS e COFINS: Fechamento, Ajustes, Decisões por registro, Demonstrativo, SPED Contribuições |
 | SPED gerados, validação, Domínio, entrega | Arquivos e entregas: SPED gerados, Validação, SPED da Domínio, Entregas |
 | Executar, execuções, erros | Execuções: Executar, Fila, Histórico, Erros |
 | Contábil, Financeiro | Contábil e financeiro: De-para contábil, Lançamentos, Prévia financeira, Confronto de documentos |
@@ -32,18 +32,26 @@ Os filtros de empresa, estabelecimento e competência são compartilhados. As ab
 
 ## Organização do fluxo
 
-O painel oferece três visões: **Visão geral**, **Histórico** e **Todas as áreas**.
+O painel oferece duas visões: **Visão geral** e **Histórico**.
 A visão geral destaca somente a próxima ação da competência e mostra seis
-etapas: receber, classificar, apurar/fechar, gerar, validar e entregar. O histórico
-e o catálogo de áreas deixam de competir com o trabalho principal na mesma tela.
+etapas: receber, classificar, apurar/fechar, gerar, validar e entregar. A etapa
+atual também é clicável; as demais áreas continuam acessíveis pelo menu lateral,
+sem uma segunda listagem de atalhos no painel.
 A orientação usa a última versão de cada obrigação e estabelecimento; uma
 entrega antiga não conclui uma versão recém-gerada.
 
 Empresa, estabelecimento e período ficam resumidos em um bloco que se expande
 para alteração. A classificação usa seleção em lote, com detalhes no número do
-documento. Relatórios, logs e ações secundárias ficam no menu **⋯**. O detalhamento
+documento. Ações únicas aparecem diretamente; o menu **⋯** reúne múltiplas opções. O detalhamento
 por CFOP fica recolhido até ser solicitado. Botões e links habilitados usam cursor
 de clique; controles desabilitados mantêm o cursor de indisponível.
+
+O seletor de empresas tem busca por nome ou CNPJ, ignora acentos e limita a lista
+a 50 resultados visíveis. Favoritos ficam no topo e são guardados neste navegador
+por usuário e escritório, independentemente do cenário. As prévias têm navegação
+de volta ao modal anterior. Remover ajustes e salvar parâmetros exigem confirmação.
+Os parâmetros compartilhados dos quatro impostos ficam somente em Configurações
+fiscais; o antigo link de parâmetros em PIS e COFINS redireciona para lá.
 
 ## Dados locais e acesso
 

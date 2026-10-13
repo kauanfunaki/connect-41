@@ -3,7 +3,7 @@
 import { Select } from "@/components/ui/Select";
 
 import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from "react";
-import { FlaskConical, RotateCcw, ArrowRight } from "lucide-react";
+import { FlaskConical, RotateCcw, ArrowRight, ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -14,13 +14,16 @@ import { ItemDoMenu } from "@/components/ui/Popover";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { COMPETENCIAS, chaveDoCenario, criarCenario, executarAcao, lerCenario, precisaRevisar, type AcaoFiscal, type Cenario, type ContextoFiscal } from "@/lib/fiscal/previa/cenario";
 import { ultimasVersoesDoContexto } from "@/lib/fiscal/previa/fluxo";
+import { chaveDasEmpresasFavoritas, lerEmpresasFavoritas } from "@/lib/fiscal/previa/empresasFavoritas";
+import { SeletorEmpresaFiscal } from "./SeletorEmpresaFiscal";
 
-type Estado = { cenario: Cenario; pronto: boolean; armazenamento: boolean; resultado: { mensagem: string; erro?: boolean } | null };
-type Evento = { tipo: "carregar"; cenario: Cenario; armazenamento: boolean; recuperado: boolean } | { tipo: "acao"; acao: AcaoFiscal; contexto: ContextoFiscal; id: string; agora: string } | { tipo: "armazenamento" } | { tipo: "restaurar" };
+type Estado = { cenario: Cenario; favoritas: string[]; pronto: boolean; armazenamento: boolean; resultado: { mensagem: string; erro?: boolean } | null };
+type Evento = { tipo: "carregar"; cenario: Cenario; favoritas: string[]; armazenamento: boolean; recuperado: boolean } | { tipo: "acao"; acao: AcaoFiscal; contexto: ContextoFiscal; id: string; agora: string } | { tipo: "favoritar"; empresaId: string } | { tipo: "armazenamento" } | { tipo: "restaurar" };
 function reduzir(estado: Estado, evento: Evento): Estado {
-  if (evento.tipo === "carregar") return { cenario: evento.cenario, pronto: true, armazenamento: evento.armazenamento, resultado: evento.recuperado ? { mensagem: "Os dados locais estavam incompatíveis. O cenário inicial foi restaurado." } : null };
+  if (evento.tipo === "carregar") return { cenario: evento.cenario, favoritas: evento.favoritas, pronto: true, armazenamento: evento.armazenamento, resultado: evento.recuperado ? { mensagem: "Os dados locais estavam incompatíveis. O cenário inicial foi restaurado." } : null };
   if (evento.tipo === "armazenamento") return { ...estado, armazenamento: false };
   if (evento.tipo === "restaurar") return { ...estado, cenario: criarCenario(), resultado: { mensagem: "Dados de teste restaurados para este usuário e escritório." } };
+  if (evento.tipo === "favoritar") return { ...estado, favoritas: estado.favoritas.includes(evento.empresaId) ? estado.favoritas.filter((id) => id !== evento.empresaId) : [...estado.favoritas, evento.empresaId] };
   const resultado = executarAcao(estado.cenario, evento.acao, evento.contexto, evento.agora, evento.id);
   return { ...estado, cenario: resultado.cenario, resultado: { mensagem: resultado.mensagem, erro: resultado.erro } };
 }
@@ -35,23 +38,30 @@ export function useFiscal() {
 export const classeSelectFiscal = "w-full";
 
 export function ContextoFiscalProvider({ children, tenantId, userId, modulos, integrado }: { children: ReactNode; tenantId: string; userId: string; modulos: string[]; integrado: boolean }) {
-  const [estado, dispatch] = useReducer(reduzir, undefined, () => ({ cenario: criarCenario(), pronto: false, armazenamento: true, resultado: null }));
-  const [previa, setPrevia] = useState<{ titulo: string; conteudo: ReactNode } | null>(null);
+  const [estado, dispatch] = useReducer(reduzir, undefined, () => ({ cenario: criarCenario(), favoritas: [], pronto: false, armazenamento: true, resultado: null }));
+  const [previas, setPrevias] = useState<{ titulo: string; conteudo: ReactNode }[]>([]);
+  const previa = previas.at(-1);
   const [restaurar, setRestaurar] = useState(false);
   const chave = chaveDoCenario(tenantId, userId);
+  const chaveFavoritas = chaveDasEmpresasFavoritas(tenantId, userId);
   useEffect(() => {
     try {
       const bruto = localStorage.getItem(chave);
       const salvo = lerCenario(bruto);
-      dispatch({ tipo: "carregar", cenario: salvo ?? criarCenario(), armazenamento: true, recuperado: bruto !== null && salvo === null });
-    } catch { dispatch({ tipo: "carregar", cenario: criarCenario(), armazenamento: false, recuperado: false }); }
-  }, [chave]);
+      dispatch({ tipo: "carregar", cenario: salvo ?? criarCenario(), favoritas: lerEmpresasFavoritas(localStorage.getItem(chaveFavoritas)), armazenamento: true, recuperado: bruto !== null && salvo === null });
+    } catch { dispatch({ tipo: "carregar", cenario: criarCenario(), favoritas: [], armazenamento: false, recuperado: false }); }
+  }, [chave, chaveFavoritas]);
   useEffect(() => {
     // Não gravar antes da leitura evita apagar o cenário salvo durante a hidratação.
     if (!estado.pronto || !estado.armazenamento) return;
     try { localStorage.setItem(chave, JSON.stringify(estado.cenario)); }
     catch { dispatch({ tipo: "armazenamento" }); }
   }, [chave, estado.cenario, estado.pronto, estado.armazenamento]);
+  useEffect(() => {
+    if (!estado.pronto || !estado.armazenamento) return;
+    try { localStorage.setItem(chaveFavoritas, JSON.stringify(estado.favoritas)); }
+    catch { dispatch({ tipo: "armazenamento" }); }
+  }, [chaveFavoritas, estado.favoritas, estado.pronto, estado.armazenamento]);
   const simular = (acao: AcaoFiscal) => {
     if (estado.pronto) dispatch({ tipo: "acao", acao, contexto: estado.cenario.contexto, id: crypto.randomUUID(), agora: new Date().toISOString() });
   };
@@ -59,7 +69,7 @@ export function ContextoFiscalProvider({ children, tenantId, userId, modulos, in
   const empresa = cenario.empresas.find((e) => e.id === cenario.contexto.empresaId)!;
   const revisoes = ultimasVersoesDoContexto(cenario).filter((a) => precisaRevisar(cenario, a)).length;
   return (
-    <FiscalContext.Provider value={{ ...estado, simular, visualizar: (titulo, conteudo) => setPrevia({ titulo, conteudo }), modulos, integrado }}>
+    <FiscalContext.Provider value={{ ...estado, simular, visualizar: (titulo, conteudo) => setPrevias((atuais) => [...atuais, { titulo, conteudo }]), modulos, integrado }}>
       <PageContainer>
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -81,11 +91,9 @@ export function ContextoFiscalProvider({ children, tenantId, userId, modulos, in
           </span>}
         >
           <div className="grid gap-3 sm:grid-cols-3">
-            <label htmlFor="fiscal-empresa" className="text-helper text-fg-secondary">Empresa de teste
-              <Select id="fiscal-empresa" aria-label="Empresa de teste" className={`${classeSelectFiscal} mt-1.5`} disabled={!estado.pronto} value={empresa.id} onChange={(e) => simular({ tipo: "contexto", contexto: { ...cenario.contexto, empresaId: e.target.value, estabelecimentoId: "" } })}>
-                {cenario.empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
-              </Select>
-            </label>
+            <div className="text-helper text-fg-secondary"><label htmlFor="fiscal-empresa">Empresa de teste</label>
+              <SeletorEmpresaFiscal empresas={cenario.empresas} disabled={!estado.pronto} value={empresa.id} favoritas={estado.favoritas} onChange={(id) => simular({ tipo: "contexto", contexto: { ...cenario.contexto, empresaId: id, estabelecimentoId: "" } })} onFavoritar={(empresaId) => dispatch({ tipo: "favoritar", empresaId })} />
+            </div>
             <label htmlFor="fiscal-estabelecimento" className="text-helper text-fg-secondary">Estabelecimento
               <Select id="fiscal-estabelecimento" aria-label="Estabelecimento" className={`${classeSelectFiscal} mt-1.5`} disabled={!estado.pronto} value={cenario.contexto.estabelecimentoId} onChange={(e) => simular({ tipo: "contexto", contexto: { ...cenario.contexto, estabelecimentoId: e.target.value } })}>
                 <option value="">Todos os estabelecimentos</option>
@@ -104,11 +112,14 @@ export function ContextoFiscalProvider({ children, tenantId, userId, modulos, in
         {estado.pronto ? children : <Card className="p-8 text-ui text-fg-secondary" role="status">Carregando seu cenário de teste…</Card>}
         <p className="mt-7 text-helper text-fg-muted">Prévia visual do Fiscal · cálculos, arquivos e protocolos demonstrativos.</p>
       </PageContainer>
-      <Modal open={!!previa} title={previa?.titulo} onClose={() => setPrevia(null)} maxWidth="max-w-3xl">
+      <Modal open={!!previa} title={previa?.titulo} onClose={() => setPrevias([])} maxWidth="max-w-3xl">
         <p className="mb-4 mt-1 text-helper text-fg-secondary">Modo de teste · esta prévia usa apenas informações fictícias.</p>
         {previa?.conteudo}
         {estado.resultado && <p role={estado.resultado.erro ? "alert" : "status"} className={`mt-4 rounded-md border border-border p-3 text-ui ${estado.resultado.erro ? "text-warning-fg" : "text-success-fg"}`}>{estado.resultado.mensagem}</p>}
-        <Button variant="secondary" className="mt-5" onClick={() => setPrevia(null)}>Fechar prévia</Button>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          {previas.length > 1 && <Button variant="secondary" onClick={() => setPrevias((atuais) => atuais.slice(0, -1))}><ArrowLeft size={14} />Voltar para {previas.at(-2)?.titulo}</Button>}
+          <Button variant="secondary" onClick={() => setPrevias([])}>Fechar prévia</Button>
+        </div>
       </Modal>
       <Modal open={restaurar} title="Restaurar dados de teste" onClose={() => setRestaurar(false)}>
         <p className="my-4 text-ui text-fg-secondary">As alterações fictícias deste usuário e escritório serão substituídas pelo cenário inicial.</p>
