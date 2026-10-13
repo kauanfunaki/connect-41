@@ -913,3 +913,18 @@ tr.c41-linha:hover > :first-child {
 @media (prefers-reduced-motion: reduce) {
   .c41-dica-in { animation: none; }
 }
+
+/* ----- Site de apresentação (13/10/2026, versão 2): os cartões do bloco de
+   destaque flutuam devagar, cada um no seu tempo (o atraso e a duração vêm no
+   `style` de cada um). Só no computador, onde eles ficam soltos nos cantos —
+   no celular viram uma faixa parada —, e nunca com o "reduzir movimento" do
+   aparelho ligado. Anima o `transform`; a inclinação dos cartões é a
+   propriedade `rotate` (utilitário `rotate-*`), num elemento de dentro, e não
+   briga com ele. ----- */
+@keyframes c41-flutua {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+@media (width >= 64rem) and (prefers-reduced-motion: no-preference) {
+  .c41-flutua { animation: c41-flutua 7s ease-in-out infinite; }
+}
