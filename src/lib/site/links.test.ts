@@ -28,11 +28,12 @@ describe("enderecoDoApp", () => {
 });
 
 describe("linksDoSite", () => {
-  it("monta os quatro links do site no endereço do Connect", () => {
+  it("monta os cinco links do site no endereço do Connect", () => {
     expect(linksDoSite("https://app.useconnect.com.br")).toEqual({
       portal: "https://app.useconnect.com.br/portal/login",
       vagas: "https://app.useconnect.com.br/carreiras",
       entrar: "https://app.useconnect.com.br/login",
+      abrir: "https://app.useconnect.com.br/home",
       privacidade: "https://app.useconnect.com.br/portal/privacidade",
     });
   });
@@ -42,6 +43,7 @@ describe("linksDoSite", () => {
       portal: "/portal/login",
       vagas: "/carreiras",
       entrar: "/login",
+      abrir: "/home",
       privacidade: "/portal/privacidade",
     });
   });
