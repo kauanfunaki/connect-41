@@ -18,6 +18,9 @@ import { TOM_DA_SITUACAO, tomDoFechamento } from "@/components/financeiro/tomDaS
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { FormLancamentoManual } from "@/components/financeiro/FormLancamentoManual";
 import { ImportarLancamentosCsv } from "@/components/financeiro/ImportarLancamentosCsv";
 import { CancelarLancamento } from "@/components/financeiro/CancelarLancamento";
@@ -89,8 +92,12 @@ export default async function LancamentosPage({
   const hojeKey = saoPauloParts(agora).dateKey;
   const mes = competenciaValida(params.mes) ?? competenciaDoInstante(agora);
 
+  // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede.
+  // Até 13/10/2026 caía na primeira em ordem alfabética, e quem lançava sem
+  // olhar o seletor gravava na empresa errada.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
+  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  const companyId = empresa?.id ?? null;
 
   const cabecalho = (action?: React.ReactNode) => (
     <PageHeader
@@ -100,20 +107,49 @@ export default async function LancamentosPage({
     />
   );
 
-  if (!companyId) {
+  // A empresa primeiro, na fileira de cima; o mês, na lista, ao lado dela.
+  const filtroDaEmpresa = (
+    <FiltroDaEmpresa
+      acao="/lancamentos"
+      empresas={empresas}
+      valor={companyId}
+      manter={{ mes: aba === "lista" ? mes : undefined, aba: aba === "lista" ? undefined : aba }}
+    >
+      {aba === "lista" && companyId && (
+        <FiltroDePeriodo acao="/lancamentos" mes={mes} extras={{ empresa: companyId }} naFileira />
+      )}
+    </FiltroDaEmpresa>
+  );
+
+  if (!empresa || !companyId) {
     return (
       <PageContainer>
         {cabecalho()}
-        <EmptyState title="Nenhuma empresa ativa" icon={<NotebookPen />} />
+        {empresas.length === 0 ? (
+          <EmptyState title="Nenhuma empresa ativa" icon={<NotebookPen />} />
+        ) : (
+          <>
+            {filtroDaEmpresa}
+            <EscolhaAEmpresa
+              escolha={escolha}
+              porQue="Os lançamentos são de uma empresa por vez."
+            />
+          </>
+        )}
       </PageContainer>
     );
   }
+
+  // Todo formulário desta tela grava na empresa escolhida — o rodapé diz qual.
+  const comEmpresa = (tela: React.ReactNode) => (
+    <EmpresaDaTela empresa={{ nome: empresa.nome, cnpj: empresa.cnpj }}>{tela}</EmpresaDaTela>
+  );
 
   const href = (chave: string) => `/lancamentos?empresa=${companyId}&mes=${mes}${chave === "lista" ? "" : `&aba=${chave}`}`;
 
   const prisma = getPrisma();
 
-  return (
+  return comEmpresa(
     <PageContainer>
       {aba === "lista" ? (
         cabecalho(
@@ -141,14 +177,7 @@ export default async function LancamentosPage({
           />
         </>
       )}
-      <FiltroDePeriodo
-        acao="/lancamentos"
-        empresas={empresas}
-        empresaId={companyId}
-        mes={aba === "lista" ? mes : undefined}
-        extras={{ aba: aba === "lista" ? undefined : aba }}
-        navegaSozinho
-      />
+      {filtroDaEmpresa}
 
       {aba === "novo" && <FormularioDaEmpresa companyId={companyId} tenantId={ctx.tenantId} hojeKey={hojeKey} mes={mes} />}
 

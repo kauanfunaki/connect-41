@@ -20,7 +20,9 @@ import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
-import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { NovaNfse } from "@/components/omie/NovaNfse";
 import { CancelarEmissao } from "@/components/omie/CancelarEmissao";
 
@@ -84,7 +86,11 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
 
   const contas = (await listarContasOmie(ctx.tenantId, agora)).filter((c) => c.enabled);
   const empresas = contas.length > 0 ? await empresasDoSeletor(ctx.tenantId, contas.map((c) => c.companyId)) : [];
-  const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : (empresas[0]?.id ?? null);
+  // A empresa da URL, a última aberta pela pessoa, a única com conta do Omie —
+  // ou nenhuma, e a tela pede (13/10/2026). Era a primeira em ordem alfabética:
+  // a nota sairia pela empresa que ninguém escolheu.
+  const { escolha, empresa: escolhida } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  const companyId = escolhida?.id ?? null;
 
   const cabecalho = (
     <PageHeader
@@ -93,7 +99,17 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
     />
   );
 
-  if (!companyId) {
+  if (empresas.length > 0 && !companyId) {
+    return (
+      <PageContainer>
+        {cabecalho}
+        <FiltroDaEmpresa acao="/emitir-nfse" empresas={empresas} valor={null} />
+        <EscolhaAEmpresa escolha={escolha} porQue="A nota sai pelo Omie de uma empresa por vez." />
+      </PageContainer>
+    );
+  }
+
+  if (!companyId || !escolhida) {
     return (
       <PageContainer>
         {cabecalho}
@@ -108,6 +124,9 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
   }
 
   const empresa = empresas.find((e) => e.id === companyId)!;
+  const comEmpresa = (tela: React.ReactNode) => (
+    <EmpresaDaTela empresa={{ nome: empresa.nome, cnpj: empresa.cnpj }}>{tela}</EmpresaDaTela>
+  );
   const conta = contas.find((c) => c.companyId === companyId)!;
   const [emissoes, compartilhada] = await Promise.all([
     listarEmissoes(ctx.tenantId, companyId, LIMITE_DA_LISTA + 1),
@@ -116,13 +135,12 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
   const limitado = emissoes.length > LIMITE_DA_LISTA;
   const linhas = limitado ? emissoes.slice(0, LIMITE_DA_LISTA) : emissoes;
 
-  return (
+  // A nota sai pela empresa escolhida — o rodapé do "Nova NFS-e" diz qual.
+  return comEmpresa(
     <PageContainer>
       {cabecalho}
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <SeletorDeEmpresaQueNavega empresas={empresas} empresaId={companyId} acao="/emitir-nfse" />
-      </div>
+      <FiltroDaEmpresa acao="/emitir-nfse" empresas={empresas} valor={companyId} />
 
       <div className="flex flex-col gap-2 mb-4">
         {conta.saude === "com_erro" && conta.lastError && (
