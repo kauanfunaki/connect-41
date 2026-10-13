@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
-import { AlertTriangle, FileText, CalendarDays, CalendarRange } from "lucide-react";
+import { AlertTriangle, FileText, CalendarDays, CalendarRange, FileSpreadsheet } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -20,7 +21,7 @@ import { RelatorioAnual } from "@/components/dre/RelatorioAnual";
 import { ImportarDoOmie } from "@/components/dre/ImportarDoOmie";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
 import { OPCOES_PADRAO, TRANSFERENCIA } from "@/lib/dre/estrutura";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { podeAbrirADre } from "@/lib/dre/acesso";
 import { competenciaDe } from "@/lib/financeiro/periodo";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
@@ -42,17 +43,15 @@ type EmpresaNaAba = {
   parentCompanyId: string | null;
 };
 
-// O DRE nasce como entrega do BPO, mas o gate é o setor que opera o módulo
-// neste tenant — num cliente ele pode ser do Financeiro (ver `setorDoModulo`).
+// O gate — setor que opera o módulo e módulo ligado — mora em `podeAbrirADre`,
+// a mesma régua da rota que exporta no modelo do BPO (13/10/2026).
 export default async function DrePage({
   searchParams,
 }: {
   searchParams: Promise<{ empresa?: string; mes?: string; visao?: string; ano?: string }>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, "bpo_dre")) ?? "bpo")) notFound();
-  // Módulo desligado no escritório, tela fora — como a DRE econômica e as análises (05/10/2026).
-  if (!(await isModuleEnabled(ctx.tenantId, "bpo_dre"))) notFound();
+  if (!(await podeAbrirADre(ctx))) notFound();
 
   const { empresa, mes, visao, ano } = await searchParams;
   const prisma = getPrisma();
@@ -105,6 +104,7 @@ export default async function DrePage({
         <PageHeader
           title="DRE"
           subtitle="Demonstrativo de resultado de caixa — os doze meses lado a lado."
+          action={<ExportarNoModeloDoBpo href={`/dre/exportar?empresa=${companyId}&visao=ano&ano=${anoEscolhido}`} />}
         />
         {/* Empresa e período, depois as abas — a ordem da família da DRE
             (padrão aceito pelo Kauan em 08/10/2026). */}
@@ -208,6 +208,11 @@ export default async function DrePage({
       <PageHeader
         title="DRE"
         subtitle={`Demonstrativo de resultado de caixa de ${rotuloDoMes(escolhido)} — monta do que foi pago e recebido no mês.`}
+        action={
+          <ExportarNoModeloDoBpo
+            href={`/dre/exportar?empresa=${companyId}&visao=mes&mes=${escolhido.ano}-${escolhido.mes}`}
+          />
+        }
       />
 
       {/* Empresa e período, depois as abas, os números do topo e a tabela — a
@@ -291,6 +296,19 @@ export default async function DrePage({
         )}
       </NotaDeFonte>
     </PageContainer>
+  );
+}
+
+/**
+ * A DRE da tela no desenho da planilha que o BPO entrega (13/10/2026): mesma
+ * empresa, mesmo período. `download`, e não `<Link>`: o pré-carregamento
+ * geraria a planilha só de a tela abrir.
+ */
+function ExportarNoModeloDoBpo({ href }: { href: string }) {
+  return (
+    <Button href={href} download variant="secondary" size="sm">
+      <FileSpreadsheet size={14} /> Exportar no modelo do BPO
+    </Button>
   );
 }
 
