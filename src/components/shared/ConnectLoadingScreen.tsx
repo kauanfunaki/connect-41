@@ -97,11 +97,11 @@ export function renderConnectLoadingScreenHTML(words: string[] = CONNECT_LOADING
 
 export const CONNECT_LOADING_STYLES = `
 .connect-loading-screen {
-  --cls-bg: var(--c41-canvas, #F4F3F7);
+  --cls-bg: var(--c41-canvas, #EEF3FD);
   --cls-surface: var(--c41-surface, #FFFFFF);
-  --cls-border: var(--c41-border, #E4E1EA);
-  --cls-fg: var(--c41-fg, #1C1A22);
-  --cls-fg-muted: var(--c41-fg-muted, #8B8695);
+  --cls-border: var(--c41-border, #DBE3F4);
+  --cls-fg: var(--c41-fg, #0F1A33);
+  --cls-fg-muted: var(--c41-fg-muted, #56627C);
   --cls-primary: var(--c41-brand, #1F5EEA);
   position: fixed;
   inset: 0;
@@ -116,11 +116,11 @@ export const CONNECT_LOADING_STYLES = `
 }
 
 [data-theme="dark"] .connect-loading-screen {
-  --cls-bg: var(--c41-canvas, #141219);
-  --cls-surface: var(--c41-surface, #1C1A22);
-  --cls-border: var(--c41-border, rgba(255,255,255,.08));
-  --cls-fg: var(--c41-fg, #F5F3F8);
-  --cls-fg-muted: var(--c41-fg-muted, #8B8695);
+  --cls-bg: var(--c41-canvas, #0D1322);
+  --cls-surface: var(--c41-surface, #141D30);
+  --cls-border: var(--c41-border, rgba(140,170,255,.11));
+  --cls-fg: var(--c41-fg, #EEF3FF);
+  --cls-fg-muted: var(--c41-fg-muted, #8494B4);
   /* mais claro que o --c41-brand padrão do app (brand-500) — aqui o azul
      precisa se destacar sozinho num fundo escuro, sem texto/borda ao redor
      pra ajudar no contraste, então usamos um degrau mais claro da escala. */

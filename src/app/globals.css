@@ -30,7 +30,7 @@
   --c41-success-dark:#3FCC8F; --c41-success-light:#1E9A63;
   --c41-warning-dark:#E3AE4E; --c41-warning-light:#B9791A;
   --c41-danger-dark:#EB6478;  --c41-danger-light:#C93A50;
-  --c41-info-dark:#5B9FE3;    --c41-info-light:#2C6FBE;
+  --c41-info-dark:#5B9FE3;    --c41-info-light:#245BB0;
 
   /* cores por setor — acento pequeno (dot/chip/border-left), nunca fundo inteiro */
   --c41-sector-tech:#2E6FB8; --c41-sector-dprh:#7C5CBF; --c41-sector-recrutamento:#1E8E5A;
@@ -38,28 +38,35 @@
   --c41-sector-contabil:#4F46E5; --c41-sector-bpo:#B7791F; --c41-sector-comercial:#E15A2B;
   --c41-sector-corretora:#0891B2; --c41-sector-gestao:#586577;
 
-  /* superfícies/texto — TEMA CLARO */
-  --c41-canvas:          #F4F3F7;
+  /* superfícies/texto — TEMA CLARO
+     Paleta B "Mais azul" (escolha do Kauan em 13/10/2026, página Cores do
+     Connect): os cinzas puxavam para o roxo e brigavam com o azul da marca;
+     agora fundo, bordas e textos são do mesmo azul, o fundo levemente azulado,
+     o cabeçalho das tabelas em azul-claro (`--c41-table-header-*`), o item
+     ativo do menu cheio de azul (NavLink) e o número principal da tela num
+     cartão azul (`--c41-destaque-numero-*`, FaixaDeTotais). */
+  --c41-canvas:          #EEF3FD;
   --c41-sidebar-bg:      #FFFFFF;
   --c41-topbar-bg:       #FFFFFF;
   --c41-surface:         #FFFFFF;
-  --c41-surface-hover:   #F1EFF6;
+  --c41-surface-hover:   #E6EDFB;
   --c41-surface-elevated:#FFFFFF;
-  --c41-input-bg:        #FBFAFC;
-  --c41-table-header-bg: #F7F6FA;
-  --c41-border:          #E4E1EA;
-  --c41-border-strong:   #D3CFDC;
-  --c41-fg:              #1C1A22;
-  --c41-fg-secondary:    #514C5C;
-  /* Era #8B8695, que rende só 3.53:1 sobre branco e 3.20:1 sobre o canvas —
-     reprova WCAG AA (4.5:1) e é a cor de quase todo texto secundário do app,
-     boa parte dele em 11-12px. Este tom mantém o mesmo matiz roxo-acinzentado
-     e passa em todas as superfícies claras (pior caso 5.07:1 no canvas).
-     O valor do tema escuro não muda: lá o original já rende 5.17:1. */
-  --c41-fg-muted:        #6B6577;
+  --c41-input-bg:        #F8FAFF;
+  --c41-table-header-bg: #E8EFFD;
+  --c41-table-header-fg: #1F4FC2;
+  --c41-border:          #DBE3F4;
+  --c41-border-strong:   #C3D0EC;
+  --c41-fg:              #0F1A33;
+  --c41-fg-secondary:    #3D4A66;
+  /* É a cor de quase todo texto secundário do app, boa parte dele em 11-12px,
+     então precisa de 4.5:1 (WCAG AA) em todas as superfícies claras. Foi
+     #8B8695 (3.20:1 no canvas, reprovava), depois #6B6577; na paleta B passou
+     ao azul-acinzentado: 5.49:1 no canvas, 5.2:1 no surface-hover. No escuro,
+     #8494B4: 5.5:1 no surface e 4.55:1 no elevado. */
+  --c41-fg-muted:        #56627C;
   --c41-brand:           var(--c41-brand-600);
   --c41-brand-hover:     var(--c41-brand-700);
-  --c41-brand-subtle:    rgba(31,94,234,.08);
+  --c41-brand-subtle:    rgba(31,94,234,.10);
   --c41-on-brand:        #FFFFFF;
   /* Preenchimento com texto branco em cima (07/10/2026): botão primário,
      contador, dia escolhido do calendário. É o próprio azul 41 (brand-600),
@@ -97,12 +104,12 @@
   --c41-danger:          var(--c41-danger-light);
   --c41-danger-bg:       rgba(201,58,80,.10);
   --c41-info:            var(--c41-info-light);
-  --c41-info-bg:         rgba(44,111,190,.10);
+  --c41-info-bg:         rgba(36,91,176,.13);
   /* Gráficos (painéis da Home, 30/09): "próximo" é o passo da marca para o
      que vem adiante; "neutro" é o sem-situação. Validados contra a superfície
      com o validador do método de dataviz. */
   --c41-grafico-proximo: var(--c41-brand-500);
-  --c41-grafico-neutro:  #958FA3;
+  --c41-grafico-neutro:  #8E98AE;
   /* Colunas (06/10, opção B "cor e volume"): degradê do 500 para o 700. A
      coluna destacada ("esta semana") segue dois degraus mais clara — é o
      "próximo" de antes, agora em degradê também. */
@@ -111,36 +118,38 @@
   --c41-grafico-coluna-destaque-topo: var(--c41-brand-300);
   --c41-grafico-coluna-destaque-base: var(--c41-brand-500);
   --c41-focus-ring:      rgba(31,94,234,.35);
-  --c41-selected-bg:     rgba(31,94,234,.08);
+  --c41-selected-bg:     rgba(31,94,234,.10);
   --c41-disabled-op:     .45;
-  --c41-shadow-sm:       0 2px 8px rgba(20,15,30,.07);
-  --c41-shadow-lg:       0 20px 48px rgba(20,15,30,.14);
-  --c41-scrollbar-thumb:       rgba(20,15,30,.16);
-  --c41-scrollbar-thumb-hover: rgba(20,15,30,.28);
-  --c41-scrollbar-thumb-active:rgba(20,15,30,.4);
+  --c41-shadow-sm:       0 2px 8px rgba(15,26,51,.07);
+  --c41-shadow-lg:       0 20px 48px rgba(15,26,51,.14);
+  --c41-scrollbar-thumb:       rgba(15,26,51,.16);
+  --c41-scrollbar-thumb-hover: rgba(15,26,51,.28);
+  --c41-scrollbar-thumb-active:rgba(15,26,51,.4);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --c41-canvas:          #141219;
-  --c41-sidebar-bg:      #18151D;
-  --c41-topbar-bg:       #141219;
-  --c41-surface:         #1C1A22;
-  --c41-surface-hover:   #24222C;
-  --c41-surface-elevated:#2A2732;
-  --c41-input-bg:        #1A1820;
-  --c41-table-header-bg: #1F1C26;
-  --c41-border:          rgba(255,255,255,.08);
-  --c41-border-strong:   rgba(255,255,255,.16);
-  --c41-fg:              #F5F3F8;
-  --c41-fg-secondary:    #BDB8C7;
-  --c41-fg-muted:        #8B8695;
-  /* mais claro que o brand-500 anterior — contraste melhor pra texto/ícone
-     em fundo escuro (nav ativo, abas, links, botões). Ver ConnectLoadingScreen,
-     que já usava esse degrau por causa desse mesmo problema de visibilidade. */
-  --c41-brand:           var(--c41-brand-400);
-  --c41-brand-hover:     var(--c41-brand-500);
-  --c41-brand-subtle:    rgba(92,139,240,.20);
+  --c41-canvas:          #0D1322;
+  --c41-sidebar-bg:      #101828;
+  --c41-topbar-bg:       #0D1322;
+  --c41-surface:         #141D30;
+  --c41-surface-hover:   #1B2640;
+  --c41-surface-elevated:#202C46;
+  --c41-input-bg:        #111A2B;
+  --c41-table-header-bg: #182339;
+  --c41-table-header-fg: #8FB0FF;
+  --c41-border:          rgba(140,170,255,.11);
+  --c41-border-strong:   rgba(140,170,255,.22);
+  --c41-fg:              #EEF3FF;
+  --c41-fg-secondary:    #B5C2DD;
+  --c41-fg-muted:        #8494B4;
+  /* O azul como TEXTO no escuro (abas, links, ícones): entre o brand-300 e o
+     brand-400, mais claro que o 400 de antes para ler bem sobre o fundo azul-
+     -escuro da paleta B (13/10/2026). Preenchimento com letra branca continua
+     no --c41-brand-solid (brand-600). */
+  --c41-brand:           #7AA3FF;
+  --c41-brand-hover:     var(--c41-brand-300);
+  --c41-brand-subtle:    rgba(122,163,255,.18);
   --c41-on-brand:        #FFFFFF;
   --c41-success:         var(--c41-success-dark);
   --c41-success-bg:      rgba(63,204,143,.14);
@@ -154,7 +163,7 @@
   --c41-info:            var(--c41-info-dark);
   --c41-info-bg:         rgba(91,159,227,.14);
   --c41-grafico-proximo: var(--c41-brand-400);
-  --c41-grafico-neutro:  #6E6879;
+  --c41-grafico-neutro:  #5F6B85;
   /* No escuro um degrau acima: o 700 some no fundo (2,5:1). */
   --c41-grafico-coluna-topo:          var(--c41-brand-400);
   --c41-grafico-coluna-base:          var(--c41-brand-600);
@@ -173,22 +182,23 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
     color-scheme: dark;
-    --c41-canvas:          #141219;
-    --c41-sidebar-bg:      #18151D;
-    --c41-topbar-bg:       #141219;
-    --c41-surface:         #1C1A22;
-    --c41-surface-hover:   #24222C;
-    --c41-surface-elevated:#2A2732;
-    --c41-input-bg:        #1A1820;
-    --c41-table-header-bg: #1F1C26;
-    --c41-border:          rgba(255,255,255,.08);
-    --c41-border-strong:   rgba(255,255,255,.16);
-    --c41-fg:              #F5F3F8;
-    --c41-fg-secondary:    #BDB8C7;
-    --c41-fg-muted:        #8B8695;
-    --c41-brand:           var(--c41-brand-400);
-    --c41-brand-hover:     var(--c41-brand-500);
-    --c41-brand-subtle:    rgba(92,139,240,.20);
+    --c41-canvas:          #0D1322;
+    --c41-sidebar-bg:      #101828;
+    --c41-topbar-bg:       #0D1322;
+    --c41-surface:         #141D30;
+    --c41-surface-hover:   #1B2640;
+    --c41-surface-elevated:#202C46;
+    --c41-input-bg:        #111A2B;
+    --c41-table-header-bg: #182339;
+    --c41-table-header-fg: #8FB0FF;
+    --c41-border:          rgba(140,170,255,.11);
+    --c41-border-strong:   rgba(140,170,255,.22);
+    --c41-fg:              #EEF3FF;
+    --c41-fg-secondary:    #B5C2DD;
+    --c41-fg-muted:        #8494B4;
+    --c41-brand:           #7AA3FF;
+    --c41-brand-hover:     var(--c41-brand-300);
+    --c41-brand-subtle:    rgba(122,163,255,.18);
     --c41-on-brand:        #FFFFFF;
     --c41-success:         var(--c41-success-dark);
     --c41-success-bg:      rgba(63,204,143,.14);
@@ -201,7 +211,7 @@
     --c41-info:            var(--c41-info-dark);
     --c41-info-bg:         rgba(91,159,227,.14);
     --c41-grafico-proximo: var(--c41-brand-400);
-    --c41-grafico-neutro:  #6E6879;
+    --c41-grafico-neutro:  #5F6B85;
     --c41-grafico-coluna-topo:          var(--c41-brand-400);
     --c41-grafico-coluna-base:          var(--c41-brand-600);
     --c41-grafico-coluna-destaque-topo: var(--c41-brand-200);
@@ -227,6 +237,7 @@
   --color-surface-elevated:var(--c41-surface-elevated);
   --color-input-bg:        var(--c41-input-bg);
   --color-table-header-bg: var(--c41-table-header-bg);
+  --color-table-header-fg: var(--c41-table-header-fg);
   --color-border:          var(--c41-border);
   --color-border-strong:   var(--c41-border-strong);
   /* Divisória entre linhas de tabela. Usada em 46 arquivos sem nunca ter sido
@@ -656,7 +667,7 @@ input[type="search"]::-webkit-search-decoration {
   font-size: var(--fs-micro);
   text-transform: uppercase;
   letter-spacing: 0.025em;
-  color: var(--c41-fg-muted);
+  color: var(--c41-table-header-fg);
 }
 .c41-tabela > table > :is(thead, tbody) > tr > :is(th, td):first-child {
   padding-left: 1rem;
@@ -714,9 +725,9 @@ input[type="search"]::-webkit-search-decoration {
    tela chegando, o painel abrindo.
    ========================================================================== */
 :root {
-  --c41-shadow-xs: 0 1px 2px rgba(20,15,30,.06);
-  --c41-shadow-md: 0 10px 28px -8px rgba(20,15,30,.16);
-  --c41-glow:      rgba(31,94,234,.11);
+  --c41-shadow-xs: 0 1px 2px rgba(15,26,51,.06);
+  --c41-shadow-md: 0 10px 28px -8px rgba(15,26,51,.16);
+  --c41-glow:      rgba(31,94,234,.16);
   /* Cor do setor ativo. O AppShell troca por `activeSector.color`; fora de
      setor (e no portal) é o azul da marca. */
   --c41-setor:     var(--c41-brand);
@@ -729,17 +740,24 @@ input[type="search"]::-webkit-search-decoration {
   --c41-destaque-ate:        var(--c41-brand-900);
   --c41-destaque-alerta-de:  #B23A4F;
   --c41-destaque-alerta-ate: #6E1F31;
+  /* O número principal de cada tela (paleta B "Mais azul", escolha do Kauan em
+     13/10/2026): o primeiro cartão da FaixaDeTotais, cheio de azul com letra
+     branca. Mais claro que a faixa da Home: branco sobre o brand-600 dá 5,46:1. */
+  --c41-destaque-numero-de:  var(--c41-brand-600);
+  --c41-destaque-numero-ate: var(--c41-brand-700);
 }
 :root[data-theme="dark"] {
   --c41-shadow-xs: 0 1px 2px rgba(0,0,0,.45);
   --c41-shadow-md: 0 12px 32px -8px rgba(0,0,0,.65);
-  --c41-glow:      rgba(92,139,240,.15);
+  --c41-glow:      rgba(80,130,255,.22);
+  --c41-destaque-numero-ate: var(--c41-brand-800);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --c41-shadow-xs: 0 1px 2px rgba(0,0,0,.45);
     --c41-shadow-md: 0 12px 32px -8px rgba(0,0,0,.65);
-    --c41-glow:      rgba(92,139,240,.15);
+    --c41-glow:      rgba(80,130,255,.22);
+    --c41-destaque-numero-ate: var(--c41-brand-800);
   }
 }
 
