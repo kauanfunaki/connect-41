@@ -29,6 +29,12 @@ type Props = {
    * de cada tela, e não o padrão, porque o portal também usa este filtro.
    */
   navegaSozinho?: boolean;
+  /**
+   * Dentro da fileira da empresa (`FiltroDaEmpresa`, 13/10/2026): o formulário
+   * não monta caixa própria, e mês e "Aplicar" entram na mesma linha do
+   * seletor, que navega sozinho.
+   */
+  naFileira?: boolean;
 };
 
 /**
@@ -39,7 +45,7 @@ type Props = {
  * navegações — e o GET deixa a URL copiável, que é como relatório é mandado
  * para outra pessoa.
  */
-export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes, extras, children, navegaSozinho }: Props) {
+export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes, extras, children, navegaSozinho, naFileira }: Props) {
   if (navegaSozinho && empresas && mes === undefined && !children) {
     return (
       <SeletorDeEmpresaDoFiltro
@@ -52,7 +58,7 @@ export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes,
     );
   }
   return (
-    <form method="get" action={acao} className="flex flex-wrap items-center gap-2 mb-4">
+    <form method="get" action={acao} className={naFileira ? "contents" : "flex flex-wrap items-center gap-2 mb-4"}>
       {Object.entries(extras ?? {}).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
       {empresas && (
         // Com busca, e não `<select>`: a lista de empresas é longa (quase

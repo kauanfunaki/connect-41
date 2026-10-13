@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TODAS_AS_EMPRESAS, empresaNaUrl, idDaEscolha, resolverEmpresaDaTela, valorDoSeletor } from "./escolhaDaEmpresa";
+import { TODAS_AS_EMPRESAS, empresaNaUrl, hrefDaEmpresa, idDaEscolha, resolverEmpresaDaTela, valorDoSeletor } from "./escolhaDaEmpresa";
 
 // As empresas em ordem alfabética, como `empresasDoSeletor` devolve: a primeira
 // é a que as telas de uma empresa por vez abriam sozinhas até 13/10/2026.
@@ -84,5 +84,24 @@ describe("o valor da escolha no seletor e nos links", () => {
     // "Todas" vai explícita nos links da tela: sem o parâmetro, a tela voltaria para a última.
     expect([empresaNaUrl(empresa), empresaNaUrl(todas), empresaNaUrl(nenhuma)]).toEqual(["beta", TODAS_AS_EMPRESAS, undefined]);
     expect([idDaEscolha(empresa), idDaEscolha(todas), idDaEscolha(nenhuma)]).toEqual(["beta", null, null]);
+  });
+});
+
+describe("hrefDaEmpresa — para onde o seletor leva", () => {
+  it("leva a empresa e os parâmetros que a tela mantém", () => {
+    expect(hrefDaEmpresa("/lancamentos", "bld", { manter: { mes: "2026-10", aba: undefined } })).toBe("/lancamentos?mes=2026-10&empresa=bld");
+  });
+
+  it("não duplica a empresa que vinha em `manter`", () => {
+    expect(hrefDaEmpresa("/dre", "fiel", { manter: { empresa: "bld", visao: "ano" } })).toBe("/dre?visao=ano&empresa=fiel");
+  });
+
+  it("'Todas' na tela pesada vai explícita; na leve, sem parâmetro", () => {
+    expect(hrefDaEmpresa("/pagar", "", { todas: "explicita" })).toBe(`/pagar?empresa=${TODAS_AS_EMPRESAS}`);
+    expect(hrefDaEmpresa("/comunicacao", "", { todas: "padrao" })).toBe("/comunicacao");
+  });
+
+  it("codifica o que vai na URL", () => {
+    expect(hrefDaEmpresa("/pagar", "a b&c")).toBe("/pagar?empresa=a+b%26c");
   });
 });
