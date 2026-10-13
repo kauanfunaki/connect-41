@@ -11,7 +11,7 @@ import { NewListButton } from "@/components/kanban/NewListButton";
 import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
 import { criarPasta, criarListaSimples, excluirPasta, excluirLista } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, canViewSector, podeExcluir } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 
 function toListRow(p: {
@@ -50,6 +50,8 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
   if (!space) notFound();
 
   const canCreate = canManageSector(ctx, space.sectorCode);
+  // Excluir pasta e lista: só o administrador (13/10/2026). O gestor cria.
+  const canDelete = podeExcluir(ctx);
   const pipelineSelect = {
     id: true, name: true, color: true, startDate: true, endDate: true,
     items: { where: { parentItemId: null }, select: { stage: { select: { isTerminal: true } } } },
@@ -114,7 +116,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
                     <p className="text-micro text-fg-muted">{f._count.pipelines} {f._count.pipelines === 1 ? "lista" : "listas"}</p>
                   </div>
                 </Card>
-                {canCreate && (
+                {canDelete && (
                   <div className="absolute top-1/2 -translate-y-1/2 right-2.5">
                     <DeleteEntityMenu kind="pasta" name={f.name} action={excluirPasta.bind(null, f.id)} />
                   </div>
@@ -135,7 +137,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
           <ListsTable
             lists={looseLists.map(toListRow)}
             basePath="/kanban"
-            deleteAction={canCreate ? excluirLista : undefined}
+            deleteAction={canDelete ? excluirLista : undefined}
           />
         )}
       </div>
