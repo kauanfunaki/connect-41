@@ -37,7 +37,7 @@ import { SecaoDaLigia } from "./SecaoDaLigia";
 //     equipe no navegador, ele vira "Abrir o Connect" e leva ao /home.
 //  2. Primeira dobra (PrimeiraDobra): o título sobre a aura do anel, UM botão,
 //     e a tela do Connect com a Lígia abrindo o chat subindo por baixo.
-//  3. As três portas — "Sou cliente", "Quero trabalhar aqui", "Sou da equipe".
+//  3. As três portas — "Sou cliente", "Procuro uma vaga", "Sou da equipe".
 //  4. A Lígia (SecaoDaLigia), o ponto alto: a IA em cada setor, com uma
 //     conversa de exemplo por setor; no Portal do Cliente, "Em breve".
 //  5. O Connect (MosaicoDoConnect): os recursos de verdade, num mosaico.
@@ -116,8 +116,8 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
     },
     {
       Icone: Briefcase,
-      titulo: "Quero trabalhar aqui",
-      texto: "Vagas abertas nos escritórios que usam o Connect, com a candidatura pelo site.",
+      titulo: "Procuro uma vaga",
+      texto: "O Connect Carreiras reúne vagas de empresas de vários segmentos, com a candidatura direto pelo site.",
       acao: "Ver vagas",
       href: links.vagas,
     },
