@@ -568,6 +568,19 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Contas",
   },
   {
+    // Fase 2 da integração com o Omie (decidida pelo Kauan em 13/10/2026): a
+    // NFS-e sai pelo Omie da empresa, pedida daqui. Desligado por padrão e
+    // ligado só no piloto, depois da prévia das respostas reais
+    // (scripts/omie-previa-emissao.ts) — emitir é nota de verdade na prefeitura.
+    code: "bpo_emitir_nfse",
+    label: "Emitir NFS-e",
+    sectorCode: "bpo",
+    description: "Emissão de NFS-e pelo Omie da empresa, com tomador e serviço do cadastro do próprio Omie, acompanhamento até a prefeitura responder e cancelamento",
+    defaultEnabled: false,
+    icon: "ReceiptText",
+    group: "Documentos",
+  },
+  {
     code: "dre_economica",
     label: "DRE econômica",
     sectorCode: "bpo",
@@ -680,6 +693,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_aprovacoes:          "/aprovacoes",
   bpo_comunicacao:         "/comunicacao",
   bpo_cobranca:            "/cobranca",
+  bpo_emitir_nfse:         "/emitir-nfse",
   dre_economica:           "/dre/economica",
   dre_analises:            "/dre/analises",
   dre_orcamento:           "/dre/orcamento",
