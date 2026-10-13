@@ -56,6 +56,35 @@ export async function dreDoMes(
   mes: MesDoDre,
   opcoes: OpcoesDoDre = OPCOES_PADRAO
 ): Promise<DreDaEmpresa> {
+  const { lancamentos, mapeamento, categorias, fonte } = await lancamentosDoMes(tenantId, companyId, mes);
+  return {
+    resultado: calcularDre(lancamentos, mapeamento, opcoes),
+    categorias,
+    lancamentos: lancamentos.length,
+    fonte,
+  };
+}
+
+/** O que entra no DRE de um mês, antes de virar relatório. */
+export type LancamentosDoMes = {
+  lancamentos: LancamentoDoDre[];
+  mapeamento: Mapeamento;
+  categorias: CategoriaResolvida[];
+  fonte: FonteDoDre;
+};
+
+/**
+ * Os lançamentos de um mês, já com a fonte escolhida (import ou financeiro).
+ *
+ * Separado de `dreDoMes` em 13/10/2026: a exportação no modelo do BPO precisa
+ * dos lançamentos, e não só dos totais por grupo, e tem de partir da **mesma**
+ * leitura da tela — mesmo recorte por `paidAt`, mesma precedência do import.
+ */
+export async function lancamentosDoMes(
+  tenantId: string,
+  companyId: string,
+  mes: MesDoDre
+): Promise<LancamentosDoMes> {
   const prisma = getPrisma();
   const de = inicioDoMes(mes.ano, mes.mes);
   const ate = inicioDoMes(mes.mes === 12 ? mes.ano + 1 : mes.ano, mes.mes === 12 ? 1 : mes.mes + 1);
@@ -113,9 +142,9 @@ export async function dreDoMes(
       }))
     );
     return {
-      resultado: calcularDre(lancamentosImportados, mapeamentoDe(resolvidas), opcoes),
+      lancamentos: lancamentosImportados,
+      mapeamento,
       categorias: resolvidas,
-      lancamentos: lancamentosImportados.length,
       fonte: {
         tipo: "import",
         arquivos: importados.map((i) => i.arquivo),
@@ -139,9 +168,9 @@ export async function dreDoMes(
   });
 
   return {
-    resultado: calcularDre(lancamentos, mapeamento, opcoes),
+    lancamentos,
+    mapeamento,
     categorias: resolvidas,
-    lancamentos: lancamentos.length,
     fonte: { tipo: "financeiro", arquivos: [], importadoEm: null },
   };
 }
@@ -257,6 +286,58 @@ export async function dreDoAnoDaEmpresa(
   /** Impostos do ano que não entram no resultado. Zero quando a opção muda. */
   impostoForaDoResultado: number;
 }> {
+  const { porMes, mapeamento, categorias } = await lancamentosDoAno(tenantId, companyId, ano);
+
+  const meses: MesDoAno[] = [];
+  // Somado no laço, e não num segundo passe: os mesmos doze cálculos já
+  // devolvem tudo que a tela precisa.
+  const soltosNoAno = new Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>();
+  let impostos = 0;
+
+  for (let mes = 1; mes <= 12; mes++) {
+    const lista = porMes.get(mes) ?? [];
+    const r = calcularDre(lista, mapeamento, opcoes);
+    meses.push({ mes, porGrupo: r.porGrupo, temMovimento: lista.length > 0 });
+    impostos += impostoForaDoResultado(r, opcoes);
+    for (const n of r.naoClassificado) {
+      const atual = soltosNoAno.get(n.categoria);
+      soltosNoAno.set(n.categoria, {
+        centavos: (atual?.centavos ?? 0) + n.centavos,
+        origem: n.origem,
+      });
+    }
+  }
+
+  return {
+    meses,
+    categorias,
+    naoClassificado: [...soltosNoAno.entries()]
+      .map(([categoria, v]) => ({ categoria, centavos: v.centavos, origem: v.origem }))
+      .sort((a, b) => Math.abs(b.centavos) - Math.abs(a.centavos)),
+    impostoForaDoResultado: impostos,
+  };
+}
+
+/** O que entra no DRE de um ano, mês a mês, antes de virar relatório. */
+export type LancamentosDoAno = {
+  /** Mês (1 a 12) para os lançamentos dele. Mês sem nada não tem chave. */
+  porMes: Map<number, LancamentoDoDre[]>;
+  mapeamento: Mapeamento;
+  categorias: CategoriaResolvida[];
+};
+
+/**
+ * Os lançamentos do ano, já separados por mês e com a fonte de cada mês
+ * escolhida.
+ *
+ * Separado de `dreDoAnoDaEmpresa` em 13/10/2026, pelo mesmo motivo de
+ * `lancamentosDoMes`: a exportação no modelo do BPO parte daqui.
+ */
+export async function lancamentosDoAno(
+  tenantId: string,
+  companyId: string,
+  ano: number
+): Promise<LancamentosDoAno> {
   const prisma = getPrisma();
   const de = inicioDoMes(ano, 1);
   const ate = inicioDoMes(ano + 1, 1);
@@ -317,32 +398,5 @@ export async function dreDoAnoDaEmpresa(
     porMes.set(mes, lista);
   }
 
-  const meses: MesDoAno[] = [];
-  // Somado no laço, e não num segundo passe: os mesmos doze cálculos já
-  // devolvem tudo que a tela precisa.
-  const soltosNoAno = new Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>();
-  let impostos = 0;
-
-  for (let mes = 1; mes <= 12; mes++) {
-    const lista = porMes.get(mes) ?? [];
-    const r = calcularDre(lista, mapeamento, opcoes);
-    meses.push({ mes, porGrupo: r.porGrupo, temMovimento: lista.length > 0 });
-    impostos += impostoForaDoResultado(r, opcoes);
-    for (const n of r.naoClassificado) {
-      const atual = soltosNoAno.get(n.categoria);
-      soltosNoAno.set(n.categoria, {
-        centavos: (atual?.centavos ?? 0) + n.centavos,
-        origem: n.origem,
-      });
-    }
-  }
-
-  return {
-    meses,
-    categorias: resolvidas,
-    naoClassificado: [...soltosNoAno.entries()]
-      .map(([categoria, v]) => ({ categoria, centavos: v.centavos, origem: v.origem }))
-      .sort((a, b) => Math.abs(b.centavos) - Math.abs(a.centavos)),
-    impostoForaDoResultado: impostos,
-  };
+  return { porMes, mapeamento, categorias: resolvidas };
 }
