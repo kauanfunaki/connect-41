@@ -237,6 +237,12 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
     acao: "apagar",
     executar: (tx, a) => n(tx.customValue.deleteMany({ where: { tenantId: a.tenantId, entityId: a.id } })),
   },
+  // "Última empresa aberta" de quem abriu esta empresa: a preferência some com ela.
+  {
+    modelo: "UserLastCompany",
+    acao: "apagar",
+    executar: (tx, a) => n(tx.userLastCompany.deleteMany({ where: { tenantId: a.tenantId, companyId: a.id } })),
+  },
   {
     modelo: "PipelineItem",
     acao: "anular",
