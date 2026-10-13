@@ -197,9 +197,13 @@ export const AGENT_CATALOG: AgenteDef[] = [
     tetoMensalChamadas: 3_000,
     padraoLigado: false,
   },
+  // Os agentes do chat do canto da tela são a Lígia, assistente do Connect
+  // (13/10/2026 — `src/lib/ia/ligia.ts`): no admin, "Lígia · {setor}" para
+  // identificar qual deles é qual; no chat, o setor por extenso embaixo do nome.
   {
     code: "assistente_do_societario",
-    label: "Assistente do Societário",
+    // Sem "(chat)": também atende o cartão de perguntas de `/processos`.
+    label: "Lígia · Societário",
     sectorCode: "societario",
     description:
       "Lê a fila de processos e o detalhe de cada um para responder o coordenador e sugerir o que dá para destravar",
@@ -214,7 +218,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
   },
   {
     code: "assistente_do_recrutamento",
-    label: "IA do Recrutamento (chat)",
+    label: "Lígia · Recrutamento (chat)",
     sectorCode: "recrutamento",
     description:
       "Responde no chat do canto da tela sobre as vagas e os candidatos do setor — o que está parado, quem chegou, onde está cada candidato — e sugere mover ou encerrar candidaturas",
@@ -238,7 +242,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
   },
   {
     code: "assistente_do_fiscal",
-    label: "IA do Fiscal (chat)",
+    label: "Lígia · Fiscal (chat)",
     sectorCode: "fiscal",
     description:
       "Responde no chat do canto da tela sobre o acervo de documentos fiscais — o que a empresa emitiu e recebeu no mês, o que está pendente no financeiro, notas com XML incompleto — com link para a tela filtrada",
@@ -260,7 +264,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
   },
   {
     code: "assistente_do_bpo",
-    label: "IA do BPO (chat)",
+    label: "Lígia · BPO (chat)",
     sectorCode: "bpo",
     description:
       "Responde no chat do canto da tela sobre o financeiro dos clientes — contas a pagar e a receber, DRE do mês, pendências com o cliente, conciliação e aprovações — cada tela só para quem a opera",
@@ -283,7 +287,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
   },
   {
     code: "assistente_do_dp",
-    label: "IA do DP (chat)",
+    label: "Lígia · DP (chat)",
     sectorCode: "dp",
     description:
       "Responde no chat do canto da tela sobre os colaboradores dos clientes — quem está ativo, de férias ou afastado, férias vencendo, rescisões e o prazo legal de pagamento, horas extras pendentes. Salário e dado médico só para quem tem a permissão",
@@ -307,7 +311,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
   },
   {
     code: "ajuda_do_connect",
-    label: "Ajuda do Connect (chat)",
+    label: "Lígia · Ajuda do Connect (chat)",
     sectorCode: null,
     description:
       "Responde no chat do canto da tela como usar o Connect — onde fica cada função e o que dizem os manuais do escritório. Atende quem está num setor ainda sem IA própria",

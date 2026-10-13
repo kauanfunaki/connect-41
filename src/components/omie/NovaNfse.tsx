@@ -40,6 +40,11 @@ function valorParaCampo(n: number): string {
  * porque a configuração fiscal mora no Omie e a OS aponta para códigos que
  * existem lá. A confirmação pede a caixa marcada — emitir é nota de verdade na
  * prefeitura, e o Enter do diálogo sozinho não emite.
+ *
+ * Pela prévia real (MULTI, 13/10/2026): a categoria é campo obrigatório e
+ * editável — a do cadastro do serviço, ou, sem ela, a da OS mais recente não
+ * cancelada da empresa —, e o serviço sem código municipal nem LC 116 no
+ * cadastro mostra o aviso e aceita os códigos para esta nota.
  */
 export function NovaNfse({
   companyId,
@@ -63,6 +68,9 @@ export function NovaNfse({
   const [servico, setServico] = useState("");
   const [valor, setValor] = useState("");
   const [descricao, setDescricao] = useState("");
+  const [categoria, setCategoria] = useState("");
+  const [codigoMunicipal, setCodigoMunicipal] = useState("");
+  const [codigoLC116, setCodigoLC116] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ tom: "perigo" | "atencao"; texto: string } | null>(null);
 
@@ -94,12 +102,39 @@ export function NovaNfse({
     setServico("");
     setValor("");
     setDescricao("");
+    setCategoria("");
+    setCodigoMunicipal("");
+    setCodigoLC116("");
     setErro(null);
   }
 
   const cliente = listas?.clientes.find((c) => c.codigo === tomador) ?? null;
   const doServico = listas?.servicos.find((s) => s.codigo === servico) ?? null;
   const centavos = centavosDeTexto(valor);
+  /** O serviço não tem código municipal nem LC 116 no cadastro: a prefeitura pode recusar. */
+  const semCodigoFiscal = Boolean(doServico && !doServico.codigoMunicipal && !doServico.codigoLC116);
+
+  function escolherServico(v: string) {
+    setServico(v);
+    const s = listas?.servicos.find((x) => x.codigo === v);
+    if (!valor && s?.precoUnitario) setValor(valorParaCampo(s.precoUnitario));
+    // A categoria acompanha o serviço: a do cadastro dele, senão a sugerida pelas OS.
+    setCategoria(s?.categoria ?? listas?.categoriaSugerida?.codigo ?? "");
+    setCodigoMunicipal("");
+    setCodigoLC116("");
+  }
+
+  function ajudaDaCategoria(): string {
+    if (!doServico) return "A ordem de serviço do Omie não sai sem categoria. Escolha o serviço para o Connect sugerir uma.";
+    if (doServico.categoria) {
+      return categoria.trim() === doServico.categoria ? "A do cadastro do serviço no Omie." : `O cadastro do serviço no Omie usa ${doServico.categoria}.`;
+    }
+    const sugerida = listas?.categoriaSugerida;
+    if (sugerida) {
+      return `O serviço não tem categoria no cadastro do Omie. A sugerida é a da OS ${sugerida.numeroOS}, a mais recente não cancelada da empresa — confira antes de emitir.`;
+    }
+    return "O serviço não tem categoria no cadastro do Omie, e as OS recentes da empresa também não. Informe o código da categoria de receita como aparece no Omie (ex.: 1.01.02): a ordem de serviço não sai sem ela.";
+  }
 
   function revisar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -107,6 +142,7 @@ export function NovaNfse({
     if (!cliente) return setErro("Escolha o tomador.");
     if (!doServico) return setErro("Escolha o serviço.");
     if (centavos === null || centavos <= 0) return setErro("Informe o valor da nota.");
+    if (!categoria.trim()) return setErro("Informe a categoria no Omie: a ordem de serviço não sai sem ela.");
     setEntendi(false);
     setErroDaConfirmacao(null);
     setConfirmando(true);
@@ -126,6 +162,9 @@ export function NovaNfse({
         valor,
         competencia: competenciaAtual,
         descricao,
+        categoria,
+        codigoServicoMunicipal: codigoMunicipal,
+        codigoLC116,
         confirmado: entendi,
       });
       if (!r.ok) {
@@ -170,6 +209,7 @@ export function NovaNfse({
     busca: s.codigoInterno ?? undefined,
   }));
   const conferencia = listas?.conferencia;
+  const daUltimaOS = doServico?.naUltimaOS ?? null;
 
   return (
     <Card className="p-4 w-full">
@@ -225,7 +265,16 @@ export function NovaNfse({
           {resultado && <Aviso tom={resultado.tom}>{resultado.texto}</Aviso>}
 
           <FieldGrid columns="sm:grid-cols-2">
-            <CampoForm label="Tomador" htmlFor={`${id}-tomador`} required helper="Clientes cadastrados no Omie da empresa.">
+            <CampoForm
+              label="Tomador"
+              htmlFor={`${id}-tomador`}
+              required
+              helper={`Clientes cadastrados no Omie da empresa.${
+                listas.clientesBloqueados > 0
+                  ? ` ${listas.clientesBloqueados === 1 ? "1 cliente com faturamento bloqueado no Omie ficou" : `${listas.clientesBloqueados} clientes com faturamento bloqueado no Omie ficaram`} de fora.`
+                  : ""
+              }`}
+            >
               <SearchableSelect
                 id={`${id}-tomador`}
                 name="tomador"
@@ -242,15 +291,58 @@ export function NovaNfse({
                 options={opcoesDeServico}
                 defaultValue={servico}
                 placeholder={opcoesDeServico.length ? "Buscar serviço…" : "Nenhum serviço ativo no Omie"}
-                onChange={(v) => {
-                  setServico(v);
-                  const s = listas.servicos.find((x) => x.codigo === v);
-                  if (!valor && s?.precoUnitario) setValor(valorParaCampo(s.precoUnitario));
-                }}
+                onChange={escolherServico}
               />
             </CampoForm>
+            {semCodigoFiscal && (
+              <>
+                <Aviso tom="atencao" className="sm:col-span-2">
+                  Este serviço está sem código de serviço municipal e sem código da LC 116 no cadastro do Omie — a prefeitura pode recusar: confira o código de serviço
+                  municipal deste serviço no Omie. Se precisar, informe os códigos abaixo para irem nesta nota.
+                </Aviso>
+                <CampoForm
+                  label="Código de serviço municipal"
+                  htmlFor={`${id}-municipal`}
+                  helper={
+                    daUltimaOS?.codigoMunicipal
+                      ? `Opcional. Na OS ${daUltimaOS.numeroOS}, a mais recente com este serviço, foi ${daUltimaOS.codigoMunicipal}.`
+                      : "Opcional. Em branco, vale o que o Omie tiver para o serviço."
+                  }
+                  acao={
+                    daUltimaOS?.codigoMunicipal && codigoMunicipal !== daUltimaOS.codigoMunicipal ? (
+                      <Button variant="link" onClick={() => setCodigoMunicipal(daUltimaOS.codigoMunicipal ?? "")}>
+                        Usar o da OS {daUltimaOS.numeroOS}
+                      </Button>
+                    ) : undefined
+                  }
+                >
+                  <Input id={`${id}-municipal`} maxLength={20} value={codigoMunicipal} onChange={(e) => setCodigoMunicipal(e.target.value)} />
+                </CampoForm>
+                <CampoForm
+                  label="Código da LC 116"
+                  htmlFor={`${id}-lc116`}
+                  helper={
+                    daUltimaOS?.codigoLC116
+                      ? `Opcional. Na OS ${daUltimaOS.numeroOS}, a mais recente com este serviço, foi ${daUltimaOS.codigoLC116}.`
+                      : "Opcional, no formato do Omie (ex.: 1.07)."
+                  }
+                  acao={
+                    daUltimaOS?.codigoLC116 && codigoLC116 !== daUltimaOS.codigoLC116 ? (
+                      <Button variant="link" onClick={() => setCodigoLC116(daUltimaOS.codigoLC116 ?? "")}>
+                        Usar o da OS {daUltimaOS.numeroOS}
+                      </Button>
+                    ) : undefined
+                  }
+                >
+                  <Input id={`${id}-lc116`} maxLength={20} value={codigoLC116} onChange={(e) => setCodigoLC116(e.target.value)} />
+                </CampoForm>
+              </>
+            )}
             <CampoForm label="Valor" htmlFor={`${id}-valor`} required>
               <Input id={`${id}-valor`} prefix="R$" inputMode="decimal" placeholder="1.234,56" value={valor} onChange={(e) => setValor(e.target.value)} required />
+            </CampoForm>
+            <CampoForm label="Categoria no Omie" htmlFor={`${id}-categoria`} required helper={ajudaDaCategoria()}>
+              <Input id={`${id}-categoria`} maxLength={20} placeholder="1.01.02" value={categoria} onChange={(e) => setCategoria(e.target.value)} required />
             </CampoForm>
             <CampoForm
               label="Competência"
@@ -298,6 +390,16 @@ export function NovaNfse({
           </dd>
           <dt className="text-fg-muted">Serviço</dt>
           <dd className="min-w-0 break-words">{doServico?.descricao}</dd>
+          <dt className="text-fg-muted">Categoria</dt>
+          <dd className="min-w-0 break-words">{categoria.trim()}</dd>
+          {(codigoMunicipal.trim() || codigoLC116.trim()) && (
+            <>
+              <dt className="text-fg-muted">Códigos</dt>
+              <dd className="min-w-0 break-words">
+                {[codigoMunicipal.trim() && `municipal ${codigoMunicipal.trim()}`, codigoLC116.trim() && `LC 116 ${codigoLC116.trim()}`].filter(Boolean).join(" · ")}
+              </dd>
+            </>
+          )}
           <dt className="text-fg-muted">Valor</dt>
           <dd className="tabular-nums">{centavos !== null ? formatarReaisDeCentavos(centavos) : "—"}</dd>
           <dt className="text-fg-muted">Competência</dt>

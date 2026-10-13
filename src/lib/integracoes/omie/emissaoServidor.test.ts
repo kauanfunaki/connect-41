@@ -91,15 +91,50 @@ let respostas: Record<string, (param: Record<string, unknown>) => { status?: num
 
 const CNPJ_DA_CONTA = "11222333000181";
 
+// Como na prévia real da MULTI (13/10/2026): o serviço sem categoria nem código
+// municipal no cadastro, e a OS anterior com os dois.
 function omiePadrao() {
   respostas = {
     ListarEmpresas: () => ({ corpo: { empresas_cadastro: [{ cnpj: "11.222.333/0001-81", razao_social: "ER DIAS COMERCIAL LTDA" }] } }),
-    ListarClientes: () => ({ corpo: { total_de_paginas: 1, clientes_cadastro: [{ codigo_cliente_omie: 2485994, razao_social: "TOMADOR UM LTDA", cnpj_cpf: "98.765.432/0001-10" }] } }),
-    ListarCadastroServico: () => ({ corpo: { nTotPaginas: 1, cadastros: [{ intListar: { nCodServ: 2342423 }, cabecalho: { cDescricao: "Manutenção", cCodCateg: "1.01.02" } }] } }),
+    ListarClientes: () => ({
+      corpo: {
+        total_de_paginas: 1,
+        clientes_cadastro: [
+          { codigo_cliente_omie: 2485994, razao_social: "TOMADOR UM LTDA", cnpj_cpf: "98.765.432/0001-10", inativo: "N", bloquear_faturamento: "N" },
+          { codigo_cliente_omie: 3000001, razao_social: "TOMADOR BLOQUEADO LTDA", cnpj_cpf: "55.444.333/0001-22", inativo: "N", bloquear_faturamento: "S" },
+        ],
+      },
+    }),
+    ListarCadastroServico: () => ({
+      corpo: { nTotPaginas: 1, cadastros: [{ intListar: { nCodServ: 2342423 }, cabecalho: { cDescricao: "Manutenção", cCodCateg: "", cCodServMun: "", cCodLC116: "" }, info: { inativo: "N" } }] },
+    }),
+    ListarOS: () => ({
+      corpo: {
+        pagina: 1,
+        osCadastro: [
+          {
+            Cabecalho: { nCodOS: 3100000002, cNumOS: "000122" },
+            InfoCadastro: { cFaturada: "S", cCancelada: "N" },
+            InformacoesAdicionais: { cCodCateg: "1.01.02" },
+            ServicosPrestados: [{ nCodServico: 2342423, cCodServMun: "010701", cCodServLC116: "1.07" }],
+          },
+        ],
+      },
+    }),
     IncluirOS: (p) => ({ corpo: { cCodIntOS: (p.Cabecalho as { cCodIntOS: string }).cCodIntOS, nCodOS: 3156789012, cNumOS: "000123", cCodStatus: "0", cDescStatus: "OS cadastrada." } }),
     FaturarOS: () => ({ corpo: { nCodOS: 3156789012, cCodStatus: "0", cDescStatus: "OS faturada." } }),
     StatusOS: () => ({
-      corpo: { nCodOS: 3156789012, cNumOS: "000123", cFaturada: "S", cCancelada: "N", cAmbiente: "P", dDtFat: "13/10/2026", cHrFat: "10:00:00", ListaRpsNfse: [{ cStatusRps: "004", nNfse: "456", cCodVerif: "AB12", cCNPJ: CNPJ_DA_CONTA, cUrlNfse: "https://prefeitura.exemplo/456" }] },
+      corpo: {
+        nCodOS: 3156789012,
+        cNumOS: "000123",
+        cEtapa: "60",
+        cFaturada: "S",
+        cCancelada: "N",
+        cAmbiente: "P",
+        dDtFat: "13/10/2026",
+        cHrFat: "10:00:00",
+        ListaRpsNfse: [{ cStatusLote: "004", cStatusRps: "004", nNfse: "456", cCodVerif: "AB12", cCNPJ: CNPJ_DA_CONTA, danfe: "https://app.omie.com.br/nfse/456.pdf", xml_distr: "" }],
+      },
     }),
     CancelarOS: () => ({ corpo: { nCodOS: 3156789012, cCodStatus: "0", cDescStatus: "OS cancelada." } }),
   };
@@ -113,10 +148,19 @@ const fetchFalso = vi.fn(async (_url: string, init: RequestInit) => {
   return new Response(JSON.stringify(r.corpo ?? {}), { status: r.status ?? 200 });
 });
 
-const { emitirNfse, acompanharEmissoes, cancelarEmissao, esquecerListas, outrasEmpresasDaMesmaConta } = await import("./emissaoServidor");
+const { emitirNfse, acompanharEmissoes, cancelarEmissao, esquecerListas, listasParaEmitir, outrasEmpresasDaMesmaConta } = await import("./emissaoServidor");
 const { esquecerFilasEPausas } = await import("./fila");
 
-const PEDIDO = { tomadorCodigo: "2485994", servicoCodigo: "2342423", valorCentavos: 1000, competencia: "2026-10", descricao: null };
+const PEDIDO = {
+  tomadorCodigo: "2485994",
+  servicoCodigo: "2342423",
+  valorCentavos: 1000,
+  competencia: "2026-10",
+  descricao: null,
+  categoria: "1.01.02",
+  codigoServicoMunicipal: null,
+  codigoLC116: null,
+};
 const AGORA = new Date("2026-10-13T15:00:00Z");
 
 function conta(companyId: string, appKey: string) {
@@ -144,19 +188,60 @@ afterEach(() => {
   esquecerFilasEPausas();
 });
 
+describe("as listas do formulário", () => {
+  it("sugerem a categoria e os códigos da última OS, e deixam o tomador bloqueado de fora", async () => {
+    const r = await listasParaEmitir("t1", "erdias");
+    if (!r.ok) throw new Error(r.erro);
+    expect(chamadas.find((c) => c.call === "ListarOS")!.param).toMatchObject({ pagina: 1, ordem_decrescente: "S" });
+    expect(r.listas.categoriaSugerida).toEqual({ codigo: "1.01.02", numeroOS: "000122" });
+    expect(r.listas.servicos[0]).toMatchObject({ categoria: null, codigoMunicipal: null, naUltimaOS: { codigoMunicipal: "010701", codigoLC116: "1.07", numeroOS: "000122" } });
+    expect(r.listas.clientes.map((c) => c.codigo)).toEqual(["2485994"]);
+    expect(r.listas.clientesBloqueados).toBe(1);
+  });
+
+  it("o ListarOS que falha só tira a sugestão — o formulário abre e pede a categoria", async () => {
+    respostas.ListarOS = () => ({ status: 500, corpo: { faultstring: "ERROR: Não existem registros para a página [1]!" } });
+    const r = await listasParaEmitir("t1", "erdias");
+    expect(r).toMatchObject({ ok: true, listas: { categoriaSugerida: null } });
+  });
+});
+
 describe("emitir", () => {
   it("cria a OS com o id da emissão, fatura em seguida e fica processando", async () => {
     const r = await emitirNfse({ tenantId: "t1", companyId: "erdias", userId: "u1", pedido: PEDIDO, agora: AGORA });
     expect(r).toMatchObject({ ok: true, estado: "PROCESSANDO", mensagem: "OS faturada." });
-    expect(chamadas.map((c) => c.call)).toEqual(["ListarEmpresas", "ListarClientes", "ListarCadastroServico", "IncluirOS", "FaturarOS"]);
+    expect(chamadas.map((c) => c.call)).toEqual(["ListarEmpresas", "ListarClientes", "ListarCadastroServico", "ListarOS", "IncluirOS", "FaturarOS"]);
     const incluir = chamadas.find((c) => c.call === "IncluirOS")!;
-    expect(incluir.param).toMatchObject({
-      Cabecalho: { cCodIntOS: banco.emissoes[0].id, nCodCli: 2485994, dDtPrevisao: "13/10/2026" },
+    expect(incluir.param).toEqual({
+      Cabecalho: { cCodIntOS: banco.emissoes[0].id, nCodCli: 2485994, dDtPrevisao: "13/10/2026", cEtapa: "10", nQtdeParc: 1 },
+      // A categoria do pedido — o serviço não tem no cadastro.
       InformacoesAdicionais: { cCodCateg: "1.01.02" },
       ServicosPrestados: [{ nCodServico: 2342423, nQtde: 1, nValUnit: 10 }],
     });
     expect(chamadas.find((c) => c.call === "FaturarOS")!.param).toEqual({ nCodOS: 3156789012 });
     expect(banco.emissoes[0]).toMatchObject({ estado: "PROCESSANDO", omieCodigoOS: "3156789012", omieNumeroOS: "000123", pedidoPorId: "u1", valor: "10.00" });
+  });
+
+  it("os códigos de serviço informados vão no item da OS", async () => {
+    await emitirNfse({ tenantId: "t1", companyId: "erdias", userId: "u1", pedido: { ...PEDIDO, codigoServicoMunicipal: "010701", codigoLC116: "1.07" }, agora: AGORA });
+    expect(chamadas.find((c) => c.call === "IncluirOS")!.param.ServicosPrestados).toEqual([
+      { nCodServico: 2342423, nQtde: 1, nValUnit: 10, cCodServMun: "010701", cCodServLC116: "1.07" },
+    ]);
+  });
+
+  it("sem categoria, nada sai — nem linha, nem chamada ao Omie", async () => {
+    const r = await emitirNfse({ tenantId: "t1", companyId: "erdias", userId: "u1", pedido: { ...PEDIDO, categoria: " " }, agora: AGORA });
+    expect(r).toEqual({ ok: false, erro: "Informe a categoria no Omie: a ordem de serviço não sai sem ela." });
+    expect(chamadas).toHaveLength(0);
+    expect(banco.emissoes).toHaveLength(0);
+  });
+
+  it("tomador com faturamento bloqueado no Omie é recusado com o motivo", async () => {
+    const r = await emitirNfse({ tenantId: "t1", companyId: "erdias", userId: "u1", pedido: { ...PEDIDO, tomadorCodigo: "3000001" }, agora: AGORA });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.erro).toContain("faturamento bloqueado");
+    expect(banco.emissoes).toHaveLength(0);
+    expect(chamadas.map((c) => c.call)).not.toContain("IncluirOS");
   });
 
   it("a outra empresa cadastrada com a mesma chave não emite — a nota sairia pelo CNPJ da conta", async () => {
@@ -171,6 +256,14 @@ describe("emitir", () => {
   it("as duas empresas leem as listas da mesma conta uma vez só", async () => {
     await emitirNfse({ tenantId: "t1", companyId: "elio", userId: "u1", pedido: PEDIDO, agora: AGORA });
     await emitirNfse({ tenantId: "t1", companyId: "erdias", userId: "u1", pedido: PEDIDO, agora: AGORA });
+    expect(chamadas.filter((c) => c.call === "ListarClientes")).toHaveLength(1);
+    expect(chamadas.filter((c) => c.call === "ListarOS")).toHaveLength(1);
+  });
+
+  it("atualizar as listas antes de 60 s não repete a consulta ao Omie", async () => {
+    await listasParaEmitir("t1", "erdias");
+    await listasParaEmitir("t1", "erdias", true);
+    expect(chamadas.filter((c) => c.call === "ListarOS")).toHaveLength(1);
     expect(chamadas.filter((c) => c.call === "ListarClientes")).toHaveLength(1);
   });
 
@@ -233,7 +326,8 @@ describe("acompanhar", () => {
       situation: "AUTORIZADA",
       renderizavel: false,
     });
-    expect(banco.emissoes[0]).toMatchObject({ estado: "AUTORIZADA", nfseNumero: "456", nfseUrl: "https://prefeitura.exemplo/456", fiscalDocumentId: banco.documentos[0].id });
+    // O link da nota é o `danfe` — a resposta real não tem `cUrlNfse`.
+    expect(banco.emissoes[0]).toMatchObject({ estado: "AUTORIZADA", nfseNumero: "456", nfseUrl: "https://app.omie.com.br/nfse/456.pdf", fiscalDocumentId: banco.documentos[0].id });
   });
 
   it("a nota que o SPED já trouxe é reconhecida, não duplicada — mesmo com série", async () => {
