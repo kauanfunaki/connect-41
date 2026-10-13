@@ -29,6 +29,11 @@ export type LinksDoSite = {
   vagas: string;
   /** Entrada da equipe. */
   entrar: string;
+  /**
+   * O Connect para quem já tem a sessão da equipe no navegador (o botão do
+   * topo vira "Abrir o Connect" — ver app/page.tsx).
+   */
+  abrir: string;
   /** Política de privacidade (a do portal, que é a que o Google confere). */
   privacidade: string;
 };
@@ -38,6 +43,7 @@ export function linksDoSite(appPublicUrl: string | null | undefined): LinksDoSit
     portal: enderecoDoApp("/portal/login", appPublicUrl),
     vagas: enderecoDoApp("/carreiras", appPublicUrl),
     entrar: enderecoDoApp("/login", appPublicUrl),
+    abrir: enderecoDoApp("/home", appPublicUrl),
     privacidade: enderecoDoApp("/portal/privacidade", appPublicUrl),
   };
 }
