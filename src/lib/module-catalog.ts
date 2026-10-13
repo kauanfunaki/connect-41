@@ -70,6 +70,8 @@ export type GrupoDeModulo =
   | "Cliente"
   | "Atendimento"
   | "Documentos"
+  | "Apuração"
+  | "Conferência"
   | "Licenças"
   | "Desenvolvimento"
   | "Resultado"
@@ -96,6 +98,8 @@ export const ORDEM_DOS_GRUPOS: readonly GrupoDeModulo[] = [
   "Cliente",
   "Atendimento",
   "Documentos",
+  "Apuração",
+  "Conferência",
   "Licenças",
   "Desenvolvimento",
   "Resultado",
@@ -116,6 +120,8 @@ export const ICONE_DO_GRUPO: Record<GrupoDeModulo, IconeDeModulo> = {
   Cliente: "Users",
   Atendimento: "MessageCircle",
   Documentos: "ReceiptText",
+  Apuração: "FileSpreadsheet",
+  Conferência: "CheckCheck",
   Licenças: "BadgeCheck",
   Desenvolvimento: "GraduationCap",
   Resultado: "ChartColumn",
@@ -391,7 +397,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "fiscal_documentos",
-    label: "Documentos fiscais",
+    label: "Documentos fiscais — integrado",
     sectorCode: "fiscal",
     description: "Acervo de NF-e, NFC-e, CT-e e NFS-e por empresa e competência, com entrada de XML e destino no financeiro",
     // Desligado por padrão, ao contrário dos outros: é o primeiro módulo do
@@ -402,6 +408,19 @@ export const MODULE_CATALOG: ModuleDef[] = [
     icon: "ReceiptText",
     group: "Documentos",
   },
+  ...([
+    ["fiscal_painel", "Painel fiscal", "Indicadores, progresso e pendências do cenário de teste", "ChartColumn", "Operação"],
+    ["fiscal_classificacao", "Classificação", "Destinação e crédito de produtos, contratos e recibos em teste", "ClipboardList", "Operação"],
+    ["fiscal_operacao", "Execuções", "Extração, geração, fila, logs e erros simulados", "Workflow", "Operação"],
+    ["fiscal_acervo", "Documentos e importações", "Acervo, serviços, contratos, importação e cobertura com dados fictícios", "ReceiptText", "Documentos"],
+    ["fiscal_icms_ipi", "ICMS e IPI", "Apuração, demonstrativo, ajustes e DCIP/DIME em teste", "FileSpreadsheet", "Apuração"],
+    ["fiscal_contribuicoes", "PIS e COFINS", "Parâmetros, ajustes, fechamento e SPED Contribuições em teste", "Receipt", "Apuração"],
+    ["fiscal_entregas", "Arquivos e entregas", "Versões de SPED, validação, Domínio e entregas simuladas", "CheckCheck", "Conferência"],
+    ["fiscal_conferencia", "Contábil e financeiro", "De-para, lançamentos e confronto de documentos em teste", "Landmark", "Conferência"],
+    ["fiscal_configuracoes", "Configurações fiscais", "Empresas fictícias, parâmetros, de-para CFOP e fontes das regras", "Building2", "Cadastros"],
+  ] satisfies [string, string, string, IconeDeModulo, GrupoDeModulo][]).map(([code, label, description, icon, group]) => ({
+    code, label, description, icon, group, sectorCode: "fiscal", defaultEnabled: true,
+  })),
   {
     // Preparação para o Serpro (09/10/2026): a Autorização de Acesso de cada
     // cliente na Receita Federal, que o Integra Contador confere em cada
@@ -676,6 +695,15 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_manual:              "/bpo-manual",
   fiscal_documentos:       "/documentos-fiscais",
   fiscal_autorizacoes:     "/autorizacoes",
+  fiscal_painel:           "/fiscal",
+  fiscal_classificacao:    "/fiscal/classificacao",
+  fiscal_operacao:         "/fiscal/operacao",
+  fiscal_acervo:           "/fiscal/documentos",
+  fiscal_icms_ipi:         "/fiscal/icms-ipi",
+  fiscal_contribuicoes:    "/fiscal/contribuicoes",
+  fiscal_entregas:         "/fiscal/entregas",
+  fiscal_conferencia:      "/fiscal/conferencia",
+  fiscal_configuracoes:    "/fiscal/configuracoes",
   societario_processos:    "/processos",
   societario_licencas:     "/licencas",
   // Fora de `/processos` de propósito: a sidebar marca ativo por prefixo, e
