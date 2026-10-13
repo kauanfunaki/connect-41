@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
-import { getPortalSession } from "@/lib/auth/portal";
+import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { lerAnexo, respostaDoAnexo } from "@/lib/financeiro/pendencias/armazenamento";
@@ -10,7 +10,7 @@ import { pedidosAoClienteNoConjunto } from "@/lib/financeiro/pendencias/setor";
 // exigiu o cookie do portal; aqui se valida a sessão e o **alcance**: o anexo
 // só sai se a pendência for de uma empresa do grupo do cliente.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const sessao = await getPortalSession();
+  const sessao = await sessaoAtivaDoPortal();
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const modulos = await getEnabledModuleCodes(sessao.tenantId);
   if (!pedidosAoClienteNoConjunto(modulos)) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });

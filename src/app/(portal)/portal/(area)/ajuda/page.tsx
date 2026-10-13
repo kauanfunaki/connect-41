@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { iconeDaTela } from "@/components/portal/iconeDaTela";
 import { CentralDeAjuda, type PassoDaAjuda, type TelaDaAjuda } from "@/components/ajuda/CentralDeAjuda";
-import { getPortalSession } from "@/lib/auth/portal";
+import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { passosDoPortal, type IconeDoPasso } from "@/lib/portal/ajuda";
 import { telasVisiveis } from "@/lib/portal/telas";
@@ -49,7 +49,7 @@ const ICONES: Record<IconeDoPasso, React.ReactNode> = {
  * `lib/ajuda/videos.ts`) e tocam só dentro do passo aberto (08/10/2026).
  */
 export default async function AjudaDoPortalPage() {
-  const sessao = await getPortalSession();
+  const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
 
   const [ligados, alcance] = await Promise.all([getEnabledModuleCodes(sessao.tenantId), alcanceDoCliente(sessao)]);

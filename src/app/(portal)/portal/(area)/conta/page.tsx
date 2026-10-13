@@ -8,7 +8,7 @@ import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
 import { SenhaDaConta } from "@/components/portal/SenhaDaConta";
 import { TemaDoPortal } from "@/components/portal/TemaDoPortal";
 import { getPrisma } from "@/lib/prisma";
-import { getPortalSession } from "@/lib/auth/portal";
+import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
 import { formatDocumento } from "@/lib/format";
@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
  * incluir ou tirar empresa é com o escritório.
  */
 export default async function MinhaContaDoPortalPage() {
-  const sessao = await getPortalSession();
+  const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
 
   const prisma = getPrisma();
