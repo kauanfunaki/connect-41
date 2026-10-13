@@ -64,7 +64,7 @@ export async function aplicarPropostaDoChat(mensagemId: string, indice: number):
   const p = propostas[indice];
   if (!p) return { error: "Proposta não encontrada." };
   if (p.aplicada) return { ok: true };
-  if (p.recusada) return { error: "Esta sugestão foi recusada. Peça de novo à IA, se mudou de ideia." };
+  if (p.recusada) return { error: "Esta sugestão foi recusada. Peça de novo à Lígia, se mudou de ideia." };
   if (p.ferramenta === SUGERIR_RESPOSTAS) return { error: "Resposta rápida não se aplica." };
 
   let r: { error: string } | null;
@@ -82,7 +82,7 @@ export async function aplicarPropostaDoChat(mensagemId: string, indice: number):
       ? await aplicarPropostaDaVaga(c.vagaId, { ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos })
       : { error: "Candidatura não encontrada." };
   } else {
-    r = { error: "Esta IA não aplica propostas." };
+    r = { error: "Neste setor, a Lígia não aplica propostas." };
   }
   if (r) return r;
 
