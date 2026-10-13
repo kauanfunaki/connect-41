@@ -40,8 +40,10 @@ import {
   lerRespostaDaOS,
   lerStatusDaOS,
   notaParaOAcervo,
+  osDaPagina,
   parametrosDoIncluirOS,
   servicosDaPagina,
+  sugestoesDasOS,
   type ClienteDoOmie,
   type ConferenciaDoEmissor,
   type EstadoDaEmissao,
@@ -49,6 +51,7 @@ import {
   type PedidoDeNfse,
   type ServicoDoOmie,
   type StatusDaOS,
+  type SugestoesDasOS,
 } from "./emissao";
 
 const MINUTO = 60_000;
@@ -123,7 +126,11 @@ export async function outrasEmpresasDaMesmaConta(tenantId: string, companyId: st
 
 export type ListasDoOmie = {
   clientes: ClienteDoOmie[];
+  /** Códigos dos clientes com faturamento bloqueado no Omie — fora da lista, e recusados ao emitir. */
+  clientesBloqueados: string[];
   servicos: ServicoDoOmie[];
+  /** A categoria da OS mais recente não cancelada — para o serviço sem categoria no cadastro. */
+  categoriaSugerida: SugestoesDasOS["categoria"];
   empresasDaConta: EmpresaDaConta[];
   /** A lista parou no teto de páginas — a busca não acha quem ficou de fora. */
   clientesCortados: boolean;
@@ -153,6 +160,7 @@ async function lerListas(cred: CredencialOmie): Promise<ListasDoOmie> {
   );
 
   const clientes: ClienteDoOmie[] = [];
+  const clientesBloqueados: string[] = [];
   let pagina = 1;
   let total = 1;
   do {
@@ -160,6 +168,7 @@ async function lerListas(cred: CredencialOmie): Promise<ListasDoOmie> {
       await chamarOmieNaFila(cred, "geral/clientes", "ListarClientes", { pagina, registros_por_pagina: 100, apenas_importado_api: "N" })
     );
     clientes.push(...r.clientes);
+    clientesBloqueados.push(...r.bloqueados);
     total = r.totalDePaginas;
     pagina++;
   } while (pagina <= total && pagina <= MAX_PAGINAS);
@@ -177,11 +186,28 @@ async function lerListas(cred: CredencialOmie): Promise<ListasDoOmie> {
   } while (pagina <= total && pagina <= MAX_PAGINAS);
   const servicosCortados = total > MAX_PAGINAS;
 
+  // As OS mais recentes: a categoria e os códigos fiscais que a empresa já usa,
+  // para o serviço que não os tem no cadastro (o caso da MULTI na prévia real).
+  // É sugestão: se a leitura falhar, o formulário abre do mesmo jeito e pede a
+  // categoria — o que não pode é a falta da sugestão impedir a emissão.
+  let sugestoes: SugestoesDasOS = { categoria: null, porServico: {} };
+  try {
+    sugestoes = sugestoesDasOS(
+      osDaPagina(
+        await chamarOmieNaFila(cred, "servicos/os", "ListarOS", { pagina: 1, registros_por_pagina: 50, apenas_importado_api: "N", ordem_decrescente: "S" })
+      )
+    );
+  } catch {
+    // Sem sugestão.
+  }
+
   const porNome = (a: { nome?: string; descricao?: string }, b: { nome?: string; descricao?: string }) =>
     (a.nome ?? a.descricao ?? "").localeCompare(b.nome ?? b.descricao ?? "", "pt-BR");
   return {
     clientes: clientes.sort(porNome),
-    servicos: servicos.sort(porNome),
+    clientesBloqueados,
+    servicos: servicos.map((s) => ({ ...s, naUltimaOS: sugestoes.porServico[s.codigo] ?? null })).sort(porNome),
+    categoriaSugerida: sugestoes.categoria,
     empresasDaConta,
     clientesCortados,
     servicosCortados,
@@ -211,7 +237,10 @@ async function preparar(tenantId: string, companyId: string, atualizar: boolean)
 
 export type ListasParaATela = {
   clientes: ClienteDoOmie[];
+  /** Quantos clientes ficaram fora da lista por faturamento bloqueado no Omie. */
+  clientesBloqueados: number;
   servicos: ServicoDoOmie[];
+  categoriaSugerida: SugestoesDasOS["categoria"];
   clientesCortados: boolean;
   servicosCortados: boolean;
   lidasEm: Date;
@@ -226,8 +255,20 @@ export async function listasParaEmitir(
 ): Promise<{ ok: true; listas: ListasParaATela } | { ok: false; erro: string }> {
   const p = await preparar(tenantId, companyId, atualizar);
   if (!p.ok) return p;
-  const { clientes, servicos, clientesCortados, servicosCortados, lidasEm } = p.listas;
-  return { ok: true, listas: { clientes, servicos, clientesCortados, servicosCortados, lidasEm, conferencia: p.conferencia } };
+  const { clientes, clientesBloqueados, servicos, categoriaSugerida, clientesCortados, servicosCortados, lidasEm } = p.listas;
+  return {
+    ok: true,
+    listas: {
+      clientes,
+      clientesBloqueados: clientesBloqueados.length,
+      servicos,
+      categoriaSugerida,
+      clientesCortados,
+      servicosCortados,
+      lidasEm,
+      conferencia: p.conferencia,
+    },
+  };
 }
 
 // ─── Emitir ─────────────────────────────────────────────────────────────────
@@ -249,10 +290,16 @@ export async function emitirNfse(p: {
   const prisma = getPrisma();
   const agora = p.agora ?? new Date();
 
+  // A OS nunca sai sem categoria. `validarPedido` já barra; aqui é a última porta.
+  if (!p.pedido.categoria.trim()) return { ok: false, erro: "Informe a categoria no Omie: a ordem de serviço não sai sem ela." };
+
   const preparo = await preparar(p.tenantId, p.companyId, false);
   if (!preparo.ok) return preparo;
   if (!preparo.conferencia.pode) return { ok: false, erro: preparo.conferencia.motivo };
   const { conta, listas } = preparo;
+  if (listas.clientesBloqueados.includes(p.pedido.tomadorCodigo)) {
+    return { ok: false, erro: "Este tomador está com o faturamento bloqueado no cadastro do Omie. Libere por lá e atualize as listas antes de emitir." };
+  }
   const tomador = listas.clientes.find((c) => c.codigo === p.pedido.tomadorCodigo);
   if (!tomador) return { ok: false, erro: "O tomador escolhido não está na lista do Omie desta conta. Atualize as listas e escolha de novo." };
   const servico = listas.servicos.find((s) => s.codigo === p.pedido.servicoCodigo);
@@ -311,7 +358,7 @@ export async function emitirNfse(p: {
         conta.cred,
         "servicos/os",
         "IncluirOS",
-        parametrosDoIncluirOS({ emissaoId: id, pedido: p.pedido, categoria: servico.categoria, hoje: dataDoOmie(agora) }),
+        parametrosDoIncluirOS({ emissaoId: id, pedido: p.pedido, hoje: dataDoOmie(agora) }),
         { escrita: true }
       )
     );
