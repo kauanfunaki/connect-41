@@ -28,8 +28,12 @@ export type Armazenamento = {
     arquivos: File[]
   ) => Promise<{ ok: true; anexos: AnexoGravado[] } | { ok: false; erro: string }>;
   apagarAnexosGravados: (anexos: AnexoGravado[]) => Promise<void>;
-  /** Apaga do disco de vez, pelo `fileUrl` gravado. Best-effort: arquivo que já não existe não é erro. */
-  apagarArquivos: (fileUrls: string[]) => Promise<void>;
+  /**
+   * Apaga do disco de vez, pelo `fileUrl` gravado. Best-effort: arquivo que já
+   * não existe não é erro; qualquer outra falha vai para o log do servidor e
+   * entra na conta devolvida (quantos ficaram no disco).
+   */
+  apagarArquivos: (fileUrls: string[]) => Promise<number>;
   lerAnexo: (fileUrl: string) => Promise<Buffer | null>;
 };
 
@@ -98,7 +102,19 @@ export function criarArmazenamento(pasta: string, opcoes: OpcoesDoArmazenamento 
     },
 
     async apagarArquivos(fileUrls) {
-      await Promise.all(fileUrls.map((u) => unlink(caminhoDoAnexo(u)).catch(() => undefined)));
+      const falhas = await Promise.all(
+        fileUrls.map(async (u): Promise<number> => {
+          try {
+            await unlink(caminhoDoAnexo(u));
+            return 0;
+          } catch (err) {
+            if ((err as NodeJS.ErrnoException)?.code === "ENOENT") return 0;
+            console.error(`[apagarArquivos] storage/${pasta}/${u}`, err);
+            return 1;
+          }
+        })
+      );
+      return falhas.reduce((a, b) => a + b, 0);
     },
 
     async lerAnexo(fileUrl) {
