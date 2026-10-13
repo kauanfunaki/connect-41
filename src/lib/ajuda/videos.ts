@@ -61,13 +61,13 @@ export const VIDEOS_DO_CONNECT: Readonly<Record<string, string>> = {
   // 18 — Meu dia
   "geral:meu-dia": "https://youtu.be/jbVIA86OQnU",
   // 22 — Empresas
-  "geral:empresas": "https://youtu.be/INRVrkZGFqs",
+  "geral:empresas": "https://youtu.be/mqE2aVDi83I",
   // 23 — Pessoas
   "geral:pessoas": "https://youtu.be/pQETZUdooyA",
   // 24 — Transferências
   "geral:transferencias": "https://youtu.be/rFH270LezMM",
   // 25 — Solicitações dos clientes
-  portal_solicitacoes: "https://youtu.be/x47rnxWK3Qk",
+  portal_solicitacoes: "https://youtu.be/jSLCzTU7Vb8",
   // 26 — Agenda
   "geral:agenda": "https://youtu.be/49vVH6XRqso",
   // 27 — Espaços
