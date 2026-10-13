@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Accordion } from "@/components/ui/Accordion";
-import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { MenuFiscal as MenuDeMaisAcoes } from "./MenuFiscal";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { COMPETENCIAS, chaveDoCenario, criarCenario, executarAcao, lerCenario, precisaRevisar, type AcaoFiscal, type Cenario, type ContextoFiscal } from "@/lib/fiscal/previa/cenario";

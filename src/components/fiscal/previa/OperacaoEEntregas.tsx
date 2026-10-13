@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Play, FileCheck, Layers, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { MenuFiscal as MenuDeMaisAcoes } from "./MenuFiscal";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { useFiscal, classeSelectFiscal } from "./ContextoFiscal";
 import { AcoesFiscais, AtalhoFiscal, BlocoFiscal, CampoFiscal, EstadoFiscal, MetricasFiscais, PreviaTexto, TabelaFiscal, dataFiscal } from "./Compartilhados";

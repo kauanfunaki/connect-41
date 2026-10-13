@@ -16,6 +16,8 @@ type Props = {
   /** `sm` (28px) na linha de tabela, ao lado de botão `xs`; `md` (32px) ao
    *  lado de botão `sm` ou numa barra. */
   size?: "sm" | "md";
+  /** Mantém ações secundárias recolhidas mesmo quando resta uma única opção. */
+  sempreMenu?: boolean;
 };
 
 // Fragmentos e agrupadores não contam como ações; condições falsas também não.
@@ -39,12 +41,13 @@ export function MenuDeMaisAcoes({
   width = 180,
   align = "right",
   size = "sm",
+  sempreMenu = false,
 }: Props) {
   const conteudo = typeof children === "function" ? children({ close: () => {} }) : children;
   const itens = itensVisiveis(conteudo);
   if (itens.length === 0) return null;
   const unico = itens[0];
-  if (itens.length === 1 && isValidElement<React.ComponentProps<typeof ItemDoMenu>>(unico) && unico.type === ItemDoMenu) {
+  if (!sempreMenu && itens.length === 1 && isValidElement<React.ComponentProps<typeof ItemDoMenu>>(unico) && unico.type === ItemDoMenu) {
     const { onClick, href, icone, descricao, danger, disabled, children: texto } = unico.props;
     const tamanho = size === "md" ? "sm" : "xs";
     // Uma ação direta precisa conservar o rótulo em uma linha: na célula de
