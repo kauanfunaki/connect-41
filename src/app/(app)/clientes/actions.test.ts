@@ -11,6 +11,7 @@ const m = vi.hoisted(() => {
     clientGroup: { findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
     portalUser: { deleteMany: vi.fn() },
     passwordResetToken: { deleteMany: vi.fn() },
+    tutorialVisto: { deleteMany: vi.fn() },
     company: { findMany: vi.fn(), findFirst: vi.fn(), updateMany: vi.fn() },
     $transaction: vi.fn(),
   };
@@ -98,6 +99,10 @@ describe("excluirCliente", () => {
       data: { clientGroupId: null },
     });
     expect(m.db.clientGroup.delete).toHaveBeenCalledWith({ where: { id: "g-irriga" } });
+    // A marca do tutorial do primeiro acesso dos acessos que saíram.
+    expect(m.db.tutorialVisto.deleteMany).toHaveBeenCalledWith({
+      where: { subject: "PORTAL_USER", tenantId: "escritorio-a", userId: { in: ["pu-1"] } },
+    });
 
     expect(m.logAudit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -122,6 +127,7 @@ describe("excluirCliente", () => {
     m.db.clientGroup.findFirst.mockResolvedValueOnce({ ...IRRIGA, companies: [], portalUsers: [], _count: { announcements: 0 } });
     expect(await excluirCliente("g-irriga", "IRRIGA FOUR", [])).toEqual({ ok: true });
     expect(m.db.portalUser.deleteMany).not.toHaveBeenCalled();
+    expect(m.db.tutorialVisto.deleteMany).not.toHaveBeenCalled();
     expect(m.db.clientGroup.delete).toHaveBeenCalledWith({ where: { id: "g-irriga" } });
   });
 

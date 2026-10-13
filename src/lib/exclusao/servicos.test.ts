@@ -29,8 +29,11 @@ const PESSOA = {
 const USUARIO = { id: "u2", name: "Bruno Teste", email: "bruno@exemplo.test", role: "SECTOR_USER", photoUrl: null };
 
 /** O banco de um escritório "t1" com a empresa, a pessoa e o usuário acima. */
-function escritorio(opcoes: { contagens?: Record<string, number>; usuario?: typeof USUARIO; pessoa?: typeof PESSOA; achar?: Regras["achar"]; contar?: Regras["contar"] } = {}) {
+function escritorio(
+  opcoes: { contagens?: Record<string, number>; usuario?: typeof USUARIO; pessoa?: typeof PESSOA; achar?: Regras["achar"]; contar?: Regras["contar"]; mexer?: Regras["mexer"] } = {}
+) {
   return criarBancoFalso({
+    mexer: opcoes.mexer,
     contar: (delegado, where) => opcoes.contar?.(delegado, where) ?? opcoes.contagens?.[delegado] ?? 0,
     achar: (delegado, metodo, args) => {
       const de = opcoes.achar?.(delegado, metodo, args);
@@ -343,6 +346,27 @@ describe("usuário", () => {
     expect(b.chamadas.find((c) => c.delegado === "auditLog" && c.metodo === "create")!.args).toMatchObject({
       data: { userId: "admin", actorName: "Admin Fulano", action: "user.delete", entityId: "u2", metadata: { nome: "Bruno Teste", email: "bruno@exemplo.test" } },
     });
+  });
+
+  it("a marca do tutorial do primeiro acesso sai com a conta — só a da equipe, antes da conta", async () => {
+    const b = escritorio();
+    const r = await excluirUsuarioDeVez(prisma(b.banco), { tenantId: "t1", ator: ADMIN, id: "u2", modo: "simples" });
+    expect(r.ok).toBe(true);
+    const tutorial = indice(b.chamadas, "tutorialVisto", "deleteMany");
+    expect(b.chamadas[tutorial].args).toEqual({ where: { subject: "USER", userId: "u2" } });
+    expect(tutorial).toBeLessThan(indice(b.chamadas, "user", "deleteMany"));
+  });
+
+  it("sem a tabela do tutorial (deploy antes da migration), a exclusão segue", async () => {
+    const b = escritorio({
+      mexer: (delegado) => {
+        if (delegado === "tutorialVisto") throw Object.assign(new Error("tabela não existe"), { code: "P2021" });
+        return undefined;
+      },
+    });
+    const r = await excluirUsuarioDeVez(prisma(b.banco), { tenantId: "t1", ator: ADMIN, id: "u2", modo: "simples" });
+    expect(r.ok).toBe(true);
+    expect(indice(b.chamadas, "user", "deleteMany")).toBeGreaterThan(-1);
   });
 
   it("a lista de senhas do cofre que ele viu vai para o registro antes das linhas saírem", async () => {

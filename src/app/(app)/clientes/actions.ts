@@ -11,6 +11,7 @@ import { cnpjRoot } from "@/lib/clientGroups";
 import { nomeExibicao } from "@/lib/companyName";
 import { logAudit } from "@/lib/audit";
 import { isPrismaForeignKeyError, isPrismaUniqueError } from "@/lib/prismaErrors";
+import { apagarTutoriaisDoPortal } from "@/lib/tutorial/vistos";
 import { confirmacaoConfere } from "@/lib/exclusaoConfirmada";
 
 export type ClienteState = { error: string } | null;
@@ -334,6 +335,9 @@ export async function excluirCliente(
     console.error("[excluirCliente]", err);
     return { erro: "Erro ao excluir o cliente. Nada foi apagado." };
   }
+  // A marca do tutorial do primeiro acesso dos acessos que saíram — fora da
+  // transação e sem lançar, como em `excluirAcessoDoPortal`.
+  await apagarTutoriaisDoPortal(ctx.tenantId, acessoIds);
 
   await logAudit({
     tenantId: ctx.tenantId,
