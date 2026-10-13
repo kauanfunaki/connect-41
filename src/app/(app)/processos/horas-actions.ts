@@ -6,9 +6,10 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
 import { setorDoModulo } from "@/lib/modules";
 import { lerDataDoCampo } from "@/lib/societario/datas";
+import { lerLancamentoDeHoras } from "@/lib/horas/edicao";
 import { minutosApontados, segundosDesde } from "@/lib/datetime";
 
 const SECTOR = "societario";
@@ -77,11 +78,31 @@ export async function lancarHorasNoProcesso(processId: string, _prev: HorasState
   return { ok: true };
 }
 
+/**
+ * Corrigir o próprio lançamento (13/10/2026): duração, dia e o que foi feito.
+ * Cada um corrige só o seu — a mesma regra que valia para apagar.
+ */
+export async function editarHorasDoProcesso(processId: string, entryId: string, _prev: HorasState, form: FormData): Promise<HorasState> {
+  const r = await processoNoAlcance(processId);
+  if (!r) return { error: "Processo não encontrado." };
+  const lido = lerLancamentoDeHoras(form);
+  if (!lido.ok) return { error: lido.error };
+  const u = await getPrisma().timeEntry.updateMany({
+    where: { id: entryId, processId, tenantId: r.ctx.tenantId, userId: r.ctx.userId },
+    data: { minutes: lido.minutos, note: lido.nota, ...(lido.dia ? { loggedOn: lido.dia } : {}) },
+  });
+  if (u.count === 0) return { error: "Lançamento não encontrado." };
+  revalidatePath(`/processos/${processId}`);
+  return { ok: true };
+}
+
 export async function apagarHorasDoProcesso(processId: string, entryId: string): Promise<HorasState> {
   const r = await processoNoAlcance(processId);
   if (!r) return { error: "Processo não encontrado." };
-  // Cada um apaga o próprio lançamento.
-  const d = await getPrisma().timeEntry.deleteMany({ where: { id: entryId, processId, tenantId: r.ctx.tenantId, userId: r.ctx.userId } });
+  // Apagar lançamento: só o administrador (13/10/2026), de qualquer pessoa.
+  // Antes cada um apagava o próprio; agora corrige pelo `editarHorasDoProcesso`.
+  if (!podeExcluir(r.ctx)) return { error: SO_ADMIN_EXCLUI };
+  const d = await getPrisma().timeEntry.deleteMany({ where: { id: entryId, processId, tenantId: r.ctx.tenantId } });
   if (d.count === 0) return { error: "Lançamento não encontrado." };
   revalidatePath(`/processos/${processId}`);
   return { ok: true };
