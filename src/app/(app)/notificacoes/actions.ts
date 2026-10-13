@@ -194,8 +194,11 @@ export async function salvarPushSubscription(sub: PushSubscriptionInput): Promis
 
 export async function removerPushSubscription(endpoint: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !endpoint) return;
+  if (!ctx.tenantId || !ctx.userId || !endpoint) return;
 
+  // Só o aparelho da própria pessoa (13/10/2026): o filtro era só o escritório,
+  // e quem soubesse o endpoint de um colega desligava o aviso no celular dele.
+  // Mesmo desenho do `removerPushDoPortal`.
   const prisma = getPrisma();
-  await prisma.pushSubscription.deleteMany({ where: { endpoint, tenantId: ctx.tenantId } });
+  await prisma.pushSubscription.deleteMany({ where: { endpoint, tenantId: ctx.tenantId, userId: ctx.userId } });
 }

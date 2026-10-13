@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Tag as TagIcon } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite, podeExcluir } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -78,11 +78,11 @@ export default async function TagsPage() {
                     {/* Editar é botão e Excluir vai no "⋯" (polimento de 30/09). */}
                     <AcoesDoItem
                       editar={`/admin/tags/${t.id}/editar`}
-                      excluir={{
+                      excluir={podeExcluir(ctx) ? {
                         action: excluirTag.bind(null, t.id),
                         titulo: `Excluir a tag "${t.name}"?`,
                         descricao: "Ela sai de todos os itens de kanban e cadastros em que estiver marcada.",
-                      }}
+                      } : undefined}
                     />
                   </div>
                 ))}
