@@ -90,7 +90,9 @@ function CenaDasNotas() {
 
 // ─── 2. Pendências: o celular, o aviso chegando e a resposta com anexo ────────
 
-function CenaDasPendencias() {
+// Exportada (13/10/2026): o site de apresentação mostra esta cena, parada, como
+// imagem da coluna "Para o cliente, no Portal do Cliente" (components/site).
+export function CenaDasPendencias() {
   const itens: { titulo: string; prazo: string; selo: React.ReactNode }[] = [
     { titulo: "Confirmar o pagamento do aluguel", prazo: "venceu 26/09", selo: <Selo cor="vermelho">Vencida</Selo> },
     { titulo: "Enviar o extrato bancário de setembro", prazo: "até 06/10", selo: <Selo cor="ambar">Aguardando você</Selo> },

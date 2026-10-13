@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth/activeSector";
 import { accessCookieOptions } from "@/lib/auth/cookies";
 import { identidadeNoEscritorio } from "@/lib/auth/trocaDeEscritorio";
+import { ehHostDoSite } from "@/lib/site/host";
 
 // jose usa Web Crypto API — funciona tanto no runtime Node quanto no Edge
 // (ao contrário de jsonwebtoken). Mantido mesmo após a migração pra Proxy
@@ -204,6 +205,15 @@ export async function proxy(req: NextRequest) {
   // `/sobre` também, pelo mesmo motivo: é a página inicial que o Google confere
   // na verificação do app, e ela não pode pedir login (06/10/2026).
   if (pathname === "/carreiras" || pathname === "/sobre" || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next({ request: { headers } });
+  }
+
+  // A `/` do endereço principal é o site de apresentação (13/10/2026), aberto a
+  // quem não tem sessão. Por igualdade e só no host do site: "/" em
+  // PUBLIC_PATHS, que é por prefixo, abriria o app inteiro; e em `app.`, nos
+  // setores ou sem APP_DOMAIN a `/` segue para o login/home como antes. A
+  // página confere o mesmo host antes de mostrar o site (app/page.tsx).
+  if (pathname === "/" && ehHostDoSite(req.headers.get("host"), baseDomain())) {
     return NextResponse.next({ request: { headers } });
   }
 
