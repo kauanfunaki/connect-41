@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { grupoDeTexto, resolverCategorias, contarSemGrupo } from "./mapeamento";
-import { GRUPOS, TRANSFERENCIA } from "./estrutura";
+import { DESCONSIDERAR, GRUPOS, TRANSFERENCIA } from "./estrutura";
 
 describe("grupoDeTexto", () => {
   it("aceita o código do grupo", () => {
@@ -19,6 +19,11 @@ describe("grupoDeTexto", () => {
   it("reconhece transferência pelos dois nomes", () => {
     expect(grupoDeTexto("transferencia")).toBe(TRANSFERENCIA);
     expect(grupoDeTexto("Transferência entre contas")).toBe(TRANSFERENCIA);
+  });
+
+  it("reconhece desconsiderar pelo código e pelo rótulo do seletor", () => {
+    expect(grupoDeTexto("desconsiderar")).toBe(DESCONSIDERAR);
+    expect(grupoDeTexto("Desconsiderar no DRE")).toBe(DESCONSIDERAR);
   });
 
   // Escolher o grupo mais parecido é como um valor sai no relatório como se

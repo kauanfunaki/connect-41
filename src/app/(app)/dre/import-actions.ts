@@ -3,10 +3,10 @@
 import ExcelJS from "exceljs";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { lerExportDoOmie, mesesDoExport, mesDaData, ExportIlegivel, type Celula } from "@/lib/dre/omie";
-import { setorDoModulo } from "@/lib/modules";
+import { podeAbrirADre } from "@/lib/dre/acesso";
 import { categoriasParaCriar } from "@/lib/dre/categoriasDoImport";
 import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 
@@ -27,9 +27,9 @@ export type ResultadoDaImportacao =
 /** 8 MB — o export de um mês grande fica bem abaixo disso. */
 const TAMANHO_MAXIMO = 8 * 1024 * 1024;
 
-// `SETOR` é o de origem, usado só como padrão — ver `setorDoModulo`.
-const SETOR = "bpo";
-const MODULE = "bpo_dre";
+// Quem importa e quem desfaz o import: a régua da tela da DRE (13/10/2026), e
+// não só o setor — com o módulo desligado a tela responde 404, e a ação
+// chamada direto passava.
 
 /**
  * Importa um export do Omie.
@@ -50,7 +50,7 @@ const MODULE = "bpo_dre";
 export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaImportacao> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) return { error: "Sem permissão no BPO." };
+  if (!(await podeAbrirADre(ctx))) return { error: "Sem permissão no DRE." };
   const tenantId = ctx.tenantId;
 
   const companyId = String(form.get("companyId") ?? "");
@@ -195,7 +195,7 @@ export async function removerImport(
 ): Promise<{ error: string } | null> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) return { error: "Sem permissão no BPO." };
+  if (!(await podeAbrirADre(ctx))) return { error: "Sem permissão no DRE." };
 
   const prisma = getPrisma();
   await prisma.dreImport.deleteMany({ where: { tenantId: ctx.tenantId, companyId, ano, mes } });

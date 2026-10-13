@@ -13,6 +13,12 @@ type Props = {
   /** Mostra "← Voltar" no lugar do título fixo — navegação dentro do mesmo painel (ex: lista -> detalhe). */
   onBack?: () => void;
   width?: string; // ex: "max-w-md" — default abaixo
+  /**
+   * `leve` escurece pouco o fundo: para o painel que mexe no que está atrás e
+   * quer que se veja a tela mudar — a classificação da DRE, com o relatório
+   * atualizando (13/10/2026). O clique fora fecha igual, e para no fundo.
+   */
+  fundo?: "escuro" | "leve";
   children: React.ReactNode;
 };
 
@@ -27,7 +33,7 @@ type Props = {
 // fica no lugar — `document` não existe lá.
 const semAssinatura = () => () => {};
 
-export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", children }: Props) {
+export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", fundo = "escuro", children }: Props) {
   const panelRef = useDialog(open, onClose);
   const titleId = useId();
   const noNavegador = useSyncExternalStore(semAssinatura, () => true, () => false);
@@ -36,7 +42,7 @@ export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", ch
 
   const painel = (
     <div
-      className="c41-esmaecer fixed inset-0 z-50 bg-black/60"
+      className={`c41-esmaecer fixed inset-0 z-50 ${fundo === "leve" ? "bg-black/20" : "bg-black/60"}`}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

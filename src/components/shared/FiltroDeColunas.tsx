@@ -283,6 +283,28 @@ function BotaoDoFunil({ ativo, open, onClick, rotulo }: { ativo: boolean; open: 
 
 
 /**
+ * Rótulo e funil do cabeçalho, nas duas versões do funil (13/10/2026).
+ *
+ * Fora da tabela padrão, o funil vai colado ao rótulo, como sempre foi. Na
+ * tabela padrão (`.c41-tabela`, que centraliza o cabeçalho) o funil centralizava
+ * junto com o rótulo e empurrava o texto para a esquerda da coluna — o rótulo
+ * ficava fora do eixo das células embaixo dele. Lá o CSS (`globals.css`, junto
+ * da `.c41-tabela`) tira o funil da conta: o funil vai para a borda direita da
+ * coluna e um par invisível dele, à esquerda, deixa o rótulo no centro exato —
+ * tudo em fluxo, então na coluna estreita o rótulo encosta à esquerda em vez de
+ * passar por baixo do botão. Nas colunas `c41-a-esquerda` o rótulo segue à
+ * esquerda, e o funil também vai para a direita.
+ */
+function CabecalhoComFunil({ rotulo, funil }: { rotulo: React.ReactNode; funil: React.ReactNode }) {
+  return (
+    <span className="c41-cabecalho-com-funil inline-flex items-center gap-1">
+      <span className="c41-cabecalho-rotulo">{rotulo}</span>
+      <span className="c41-cabecalho-funil inline-flex">{funil}</span>
+    </span>
+  );
+}
+
+/**
  * O cabeçalho com o funil. Uma coluna pode filtrar por mais de um campo — a de
  * fornecedor em /pagar mostra a empresa embaixo do nome, e filtra pelos dois.
  */
@@ -331,69 +353,71 @@ export function FiltroDaColuna({
   const nome = typeof rotulo === "string" ? rotulo.toLowerCase() : "";
 
   return (
-    <span className="inline-flex items-center gap-1">
-      {rotulo}
-      <Popover
-        align={align}
-        width={280}
-        aria-label={`Filtrar ${nome || "coluna"}`}
-        trigger={({ open, toggle }) => (
-          <BotaoDoFunil
-            ativo={ativo}
-            open={open}
-            rotulo={nome}
-            onClick={() => {
-              setVersao((v) => v + 1);
-              toggle();
-            }}
-          />
-        )}
-      >
-        {({ close }) => (
-          <div className="flex flex-col gap-2 normal-case tracking-normal font-normal">
-            {lista.length > 1 && (
-              <div className="flex rounded-md border border-border p-0.5 gap-0.5" role="tablist">
-                {lista.map((c) => (
-                  <button
-                    key={c.chave}
-                    type="button"
-                    role="tab"
-                    aria-selected={c.chave === campo.chave}
-                    onClick={() => {
-                      setCampoAtual(c.chave);
-                      setVersao((v) => v + 1);
-                    }}
-                    className={`flex-1 h-7 rounded-sm text-fs-2 font-medium transition-colors ${
-                      c.chave === campo.chave ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover"
-                    }`}
-                  >
-                    {c.rotulo}
-                    {ctx.filtros[c.chave] && " •"}
-                  </button>
-                ))}
-              </div>
-            )}
-            <ListaDeValores
-              key={`${campo.chave}-${versao}`}
-              valores={valores}
-              aceitos={aceitos ? new Set(aceitos) : null}
-              onMudar={(novos) => ctx.definir(campo.chave, novos ? [...novos] : null)}
-              rotuloDoCampo={campo.rotulo}
+    <CabecalhoComFunil
+      rotulo={rotulo}
+      funil={
+        <Popover
+          align={align}
+          width={280}
+          aria-label={`Filtrar ${nome || "coluna"}`}
+          trigger={({ open, toggle }) => (
+            <BotaoDoFunil
+              ativo={ativo}
+              open={open}
+              rotulo={nome}
+              onClick={() => {
+                setVersao((v) => v + 1);
+                toggle();
+              }}
             />
-            <div className="flex justify-between gap-2 border-t border-border pt-2">
-              {/* O `Button xs` (07/10/2026): eram cópias dele em peso médio e
-                  com 40% no desabilitado. */}
-              <Button size="xs" variant="ghost" disabled={!aceitos} onClick={() => ctx.definir(campo.chave, null)}>
-                Limpar esta coluna
-              </Button>
-              <Button size="xs" onClick={close}>
-                Pronto
-              </Button>
+          )}
+        >
+          {({ close }) => (
+            <div className="flex flex-col gap-2 normal-case tracking-normal font-normal">
+              {lista.length > 1 && (
+                <div className="flex rounded-md border border-border p-0.5 gap-0.5" role="tablist">
+                  {lista.map((c) => (
+                    <button
+                      key={c.chave}
+                      type="button"
+                      role="tab"
+                      aria-selected={c.chave === campo.chave}
+                      onClick={() => {
+                        setCampoAtual(c.chave);
+                        setVersao((v) => v + 1);
+                      }}
+                      className={`flex-1 h-7 rounded-sm text-fs-2 font-medium transition-colors ${
+                        c.chave === campo.chave ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover"
+                      }`}
+                    >
+                      {c.rotulo}
+                      {ctx.filtros[c.chave] && " •"}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <ListaDeValores
+                key={`${campo.chave}-${versao}`}
+                valores={valores}
+                aceitos={aceitos ? new Set(aceitos) : null}
+                onMudar={(novos) => ctx.definir(campo.chave, novos ? [...novos] : null)}
+                rotuloDoCampo={campo.rotulo}
+              />
+              <div className="flex justify-between gap-2 border-t border-border pt-2">
+                {/* O `Button xs` (07/10/2026): eram cópias dele em peso médio e
+                    com 40% no desabilitado. */}
+                <Button size="xs" variant="ghost" disabled={!aceitos} onClick={() => ctx.definir(campo.chave, null)}>
+                  Limpar esta coluna
+                </Button>
+                <Button size="xs" onClick={close}>
+                  Pronto
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
-      </Popover>
-    </span>
+          )}
+        </Popover>
+      }
+    />
   );
 }
 
@@ -436,55 +460,57 @@ export function FiltroDaColunaNaUrl({
   }
 
   return (
-    <span className="inline-flex items-center gap-1">
-      {rotulo}
-      <Popover
-        align={align}
-        width={300}
-        aria-label={`Filtrar ${rotulo.toLowerCase()}`}
-        trigger={({ open, toggle }) => (
-          <BotaoDoFunil
-            ativo={naUrl.length > 0}
-            open={open}
-            rotulo={rotulo.toLowerCase()}
-            onClick={() => {
-              // Abre sempre no que está aplicado, não no rascunho abandonado.
-              setRascunho(naUrl.length ? new Set(naUrl) : null);
-              toggle();
-            }}
-          />
-        )}
-      >
-        {({ close }) => (
-          <div className="flex flex-col gap-2 normal-case tracking-normal font-normal">
-            <ListaDeValores valores={opcoes} aceitos={rascunho} onMudar={setRascunho} rotuloDoCampo={rotulo} />
-            <div className="flex justify-between gap-2 border-t border-border pt-2">
-              <Button
-                size="xs"
-                variant="ghost"
-                disabled={naUrl.length === 0}
-                onClick={() => {
-                  close();
-                  ir(null);
-                }}
-              >
-                Limpar esta coluna
-              </Button>
-              <Button
-                size="xs"
-                disabled={rascunho !== null && rascunho.size === 0}
-                onClick={() => {
-                  close();
-                  ir(rascunho ? [...rascunho] : null);
-                }}
-              >
-                Aplicar
-              </Button>
+    <CabecalhoComFunil
+      rotulo={rotulo}
+      funil={
+        <Popover
+          align={align}
+          width={300}
+          aria-label={`Filtrar ${rotulo.toLowerCase()}`}
+          trigger={({ open, toggle }) => (
+            <BotaoDoFunil
+              ativo={naUrl.length > 0}
+              open={open}
+              rotulo={rotulo.toLowerCase()}
+              onClick={() => {
+                // Abre sempre no que está aplicado, não no rascunho abandonado.
+                setRascunho(naUrl.length ? new Set(naUrl) : null);
+                toggle();
+              }}
+            />
+          )}
+        >
+          {({ close }) => (
+            <div className="flex flex-col gap-2 normal-case tracking-normal font-normal">
+              <ListaDeValores valores={opcoes} aceitos={rascunho} onMudar={setRascunho} rotuloDoCampo={rotulo} />
+              <div className="flex justify-between gap-2 border-t border-border pt-2">
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  disabled={naUrl.length === 0}
+                  onClick={() => {
+                    close();
+                    ir(null);
+                  }}
+                >
+                  Limpar esta coluna
+                </Button>
+                <Button
+                  size="xs"
+                  disabled={rascunho !== null && rascunho.size === 0}
+                  onClick={() => {
+                    close();
+                    ir(rascunho ? [...rascunho] : null);
+                  }}
+                >
+                  Aplicar
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
-      </Popover>
-    </span>
+          )}
+        </Popover>
+      }
+    />
   );
 }
 

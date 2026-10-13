@@ -10,7 +10,8 @@ import { digitosDoDocumento } from "@/lib/financeiro/manual";
 import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { chaveDaCategoria } from "@/lib/dre/calculo";
 import { validarCentroDeCusto } from "@/lib/financeiro/centroDeCusto";
-import { categoriaDaEmpresa, escopoDa, ondeDoPadrao } from "@/lib/financeiro/planoDeContas";
+import { categoriaDaEmpresa, ondeDoPadrao } from "@/lib/financeiro/planoDeContas";
+import { criarCategoriaNoPlanoDaEmpresa, nomeDaCategoria } from "@/lib/financeiro/categoriaDaEmpresa";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
@@ -312,58 +313,32 @@ function lerLinhaDaDre(valor: string): { ok: true; grupo: string | null } | { ok
   return g ? { ok: true, grupo: g } : { ok: false };
 }
 
-function lerNome(valor: string): string | null {
-  const nome = valor.replace(/\s+/g, " ").trim();
-  return nome && nome.length <= 120 ? nome : null;
-}
-
 export async function criarCategoriaDaEmpresa(formData: FormData): Promise<ResultadoDoCadastro> {
   const texto = (k: string) => String(formData.get(k) ?? "").trim();
   const companyId = texto("companyId");
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
 
-  const nome = lerNome(texto("nome"));
+  const nome = nomeDaCategoria(texto("nome"));
   const kind = texto("kind");
   if (!nome) return { error: "Informe o nome da categoria (até 120 caracteres)." };
   if (kind !== "PAGAR" && kind !== "RECEBER") return { error: "Escolha se é despesa ou receita." };
   const linha = lerLinhaDaDre(texto("linhaDre"));
   if (!linha.ok) return { error: "Linha da DRE desconhecida." };
 
-  // O mesmo nome no padrão confundiria o seletor ("Salários" duas vezes) e o
-  // de-para da DRE, que é por nome. Quem quer outra linha para a do padrão muda
-  // a linha dela na lista, sem criar outra.
-  const noPadrao = await c.prisma.financeCategory.findFirst({
-    where: { ...ondeDoPadrao(c.tenantId), kind, name: nome },
-    select: { id: true },
+  // A regra de criar mora em `src/lib/financeiro/categoriaDaEmpresa.ts`
+  // (13/10/2026): a fila do DRE cria pela mesma porta.
+  const criada = await criarCategoriaNoPlanoDaEmpresa(c.prisma, {
+    tenantId: c.tenantId,
+    companyId,
+    userId: c.ctx.userId,
+    nome,
+    kind,
+    planGroup: texto("grupoDoPlano").slice(0, 120) || null,
+    dreGroup: linha.grupo,
+    origem: "plano",
   });
-  if (noPadrao) return { error: `"${nome}" já existe no plano padrão. Para esta empresa, mude a linha da DRE dela na lista.` };
-
-  try {
-    const criada = await c.prisma.financeCategory.create({
-      data: {
-        tenantId: c.tenantId,
-        companyId,
-        scope: escopoDa(companyId),
-        name: nome,
-        kind,
-        planGroup: texto("grupoDoPlano").slice(0, 120) || null,
-        dreGroup: linha.grupo,
-      },
-      select: { id: true },
-    });
-    await logAudit({
-      tenantId: c.tenantId,
-      userId: c.ctx.userId,
-      action: "financeiro.categoria_da_empresa.criada",
-      entityType: "FinanceCategory",
-      entityId: criada.id,
-      metadata: { companyId, nome, kind },
-    });
-  } catch (err) {
-    if (isPrismaUniqueError(err)) return { error: `Esta empresa já tem a categoria "${nome}".` };
-    throw err;
-  }
+  if ("error" in criada) return { error: criada.error };
   revalidarPlano();
   return { ok: true };
 }
@@ -380,7 +355,7 @@ export async function atualizarCategoriaDaEmpresa(formData: FormData): Promise<R
   const c = await contexto(atual.companyId);
   if (!c.ok) return { error: c.erro };
 
-  const nome = lerNome(texto("nome"));
+  const nome = nomeDaCategoria(texto("nome"));
   if (!nome) return { error: "Informe o nome da categoria (até 120 caracteres)." };
   const linha = lerLinhaDaDre(texto("linhaDre"));
   if (!linha.ok) return { error: "Linha da DRE desconhecida." };

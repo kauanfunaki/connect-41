@@ -21,10 +21,19 @@ import {
   LINHAS,
   NAO_CLASSIFICADO,
   TRANSFERENCIA,
+  DESCONSIDERAR,
   OPCOES_PADRAO,
   parcelasDaMargem,
   type OpcoesDoDre,
 } from "@/lib/dre/estrutura";
+
+/**
+ * O nome da categoria de quem chega sem categoria nenhuma — o lançamento do
+ * financeiro sem `categoryId`, a linha do arquivo do Omie com a coluna vazia.
+ * Constante desde 13/10/2026: a fila de classificação precisa reconhecê-lo
+ * para não oferecer "criar a categoria (sem categoria)".
+ */
+export const SEM_CATEGORIA = "(sem categoria)";
 
 /** Um lançamento pago ou recebido no período. */
 export type LancamentoDoDre = {
@@ -92,15 +101,36 @@ export type ValorDaLinha = {
   destaque: boolean;
 };
 
+/** O total de uma categoria num período. */
+export type ValorDaCategoria = { categoria: string; centavos: number; origem: "recebimento" | "pagamento" };
+
+/** As categorias de cada um dos doze grupos — o que uma linha do relatório abre. */
+export type DetalheDosGrupos = Record<string, ValorDaCategoria[]>;
+
 export type ResultadoDoDre = {
   linhas: ValorDaLinha[];
-  /** Total por grupo, inclusive os dois que não entram em conta nenhuma. */
+  /** Total por grupo, inclusive os três que não entram em conta nenhuma. */
   porGrupo: Record<string, number>;
   /**
    * O que não tem de-para, por categoria, do maior para o menor em valor
    * absoluto — é a fila de classificação da tela.
    */
-  naoClassificado: { categoria: string; centavos: number; origem: "recebimento" | "pagamento" }[];
+  naoClassificado: ValorDaCategoria[];
+  /**
+   * O que a empresa mandou desconsiderar (13/10/2026), por categoria, na mesma
+   * ordem. O total já está em `porGrupo[DESCONSIDERAR]`; a lista é para a tela
+   * dizer **quais** — "R$ 3 mil desconsiderados" sem nome não se confere.
+   */
+  desconsiderado: ValorDaCategoria[];
+  /**
+   * As categorias que compõem cada um dos doze grupos, do maior para o menor
+   * em valor absoluto (13/10/2026, teste da Amanda): a linha "CMV" do relatório
+   * abre e mostra de onde veio o número. Grafias da mesma chave somam numa
+   * linha só, com o nome com que a categoria chegou primeiro — como na
+   * exportação no modelo do BPO. Vazio quando o resultado não veio de
+   * lançamentos (o acumulado, montado de totais por grupo).
+   */
+  porCategoria: DetalheDosGrupos;
   /**
    * A prova de que nada sumiu: soma de tudo que entrou menos a soma de todos os
    * grupos. **Tem de ser zero, sempre.**
@@ -131,7 +161,8 @@ export function grupoDoLancamento(l: LancamentoDoDre, mapeamento: Mapeamento): s
   // dado errado — e somar um recebimento dentro de um grupo de despesa
   // produz número plausível. Cai no não classificado, para alguém olhar.
   const origemEsperada = grupo ? ORIGEM_DO_GRUPO.get(grupo) : undefined;
-  const serve = grupo === TRANSFERENCIA || origemEsperada === undefined || origemEsperada === l.origem;
+  const serve =
+    grupo === TRANSFERENCIA || grupo === DESCONSIDERAR || origemEsperada === undefined || origemEsperada === l.origem;
   return serve ? grupo : null;
 }
 
@@ -142,16 +173,21 @@ export function grupoDoLancamento(l: LancamentoDoDre, mapeamento: Mapeamento): s
  * descartado**: vai para `nao_classificado`, que aparece na tela e não entra em
  * conta nenhuma. É a diferença entre "o relatório não mostra" e "o dinheiro não
  * existe" — e em outubro/2025 essa diferença valia R$ 64.212,71 na planilha.
+ *
+ * O desconsiderado também não entra em linha nenhuma, mas por decisão de
+ * alguém: vai para o grupo dele, e não para a fila.
  */
 export function calcularDre(
   lancamentos: LancamentoDoDre[],
   mapeamento: Mapeamento,
   opcoes: OpcoesDoDre = OPCOES_PADRAO
 ): ResultadoDoDre {
-  const porGrupo: Record<string, number> = { [NAO_CLASSIFICADO]: 0, [TRANSFERENCIA]: 0 };
+  const porGrupo: Record<string, number> = { [NAO_CLASSIFICADO]: 0, [TRANSFERENCIA]: 0, [DESCONSIDERAR]: 0 };
   for (const g of GRUPOS) porGrupo[g.code] = 0;
 
   const soltos = new Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>();
+  const desconsiderados = new Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>();
+  const doGrupo = new Map<string, Map<string, ValorDaCategoria>>();
 
   let totalEntrado = 0;
 
@@ -160,18 +196,14 @@ export function calcularDre(
 
     const grupo = grupoDoLancamento(l, mapeamento);
 
-    if (grupo === null) {
-      porGrupo[NAO_CLASSIFICADO]! += l.valorCentavos;
-      const nome = l.categoria?.trim() || "(sem categoria)";
-      const atual = soltos.get(nome);
-      soltos.set(nome, {
-        centavos: (atual?.centavos ?? 0) + l.valorCentavos,
-        origem: l.origem,
-      });
+    if (grupo === null || grupo === DESCONSIDERAR) {
+      porGrupo[grupo ?? NAO_CLASSIFICADO]! += l.valorCentavos;
+      somarNaCategoria(grupo === null ? soltos : desconsiderados, l);
       continue;
     }
 
     porGrupo[grupo] = (porGrupo[grupo] ?? 0) + l.valorCentavos;
+    if (grupo !== TRANSFERENCIA) somarNoDetalhe(doGrupo, grupo, l);
   }
 
   const linhas = montarLinhas(porGrupo, opcoes);
@@ -181,11 +213,53 @@ export function calcularDre(
   return {
     linhas,
     porGrupo,
-    naoClassificado: [...soltos.entries()]
-      .map(([categoria, v]) => ({ categoria, centavos: v.centavos, origem: v.origem }))
-      .sort((a, b) => Math.abs(b.centavos) - Math.abs(a.centavos)),
+    naoClassificado: porCategoria(soltos),
+    desconsiderado: porCategoria(desconsiderados),
+    porCategoria: Object.fromEntries(
+      [...doGrupo.entries()].map(([grupo, mapa]) => [grupo, doMaiorParaOMenor([...mapa.values()])])
+    ),
     diferencaDeFechamento: totalEntrado - somaDosGrupos,
   };
+}
+
+/**
+ * O nome de um lançamento no detalhe da linha. O de grupo fixo da DRE
+ * econômica não tem categoria — é a diferença de um acordo ou a perda com
+ * clientes (ver `src/lib/financeiro/cobranca/dre.ts`), e sai com esse nome.
+ */
+function nomeNoDetalhe(l: LancamentoDoDre): string {
+  const nome = l.categoria?.trim();
+  if (nome) return nome;
+  if (l.grupo !== undefined) return l.perda ? "Perda com clientes" : "Diferença de acordo";
+  return SEM_CATEGORIA;
+}
+
+function somarNoDetalhe(doGrupo: Map<string, Map<string, ValorDaCategoria>>, grupo: string, l: LancamentoDoDre): void {
+  let mapa = doGrupo.get(grupo);
+  if (!mapa) doGrupo.set(grupo, (mapa = new Map()));
+  const nome = nomeNoDetalhe(l);
+  const chave = chaveDaCategoria(nome);
+  const atual = mapa.get(chave);
+  if (atual) atual.centavos += l.valorCentavos;
+  else mapa.set(chave, { categoria: nome, centavos: l.valorCentavos, origem: l.origem });
+}
+
+function doMaiorParaOMenor(lista: ValorDaCategoria[]): ValorDaCategoria[] {
+  return lista.sort((a, b) => Math.abs(b.centavos) - Math.abs(a.centavos));
+}
+
+function somarNaCategoria(
+  mapa: Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>,
+  l: LancamentoDoDre
+): void {
+  const nome = l.categoria?.trim() || SEM_CATEGORIA;
+  const atual = mapa.get(nome);
+  mapa.set(nome, { centavos: (atual?.centavos ?? 0) + l.valorCentavos, origem: l.origem });
+}
+
+/** Do maior para o menor em valor absoluto — a ordem da fila e do resumo. */
+function porCategoria(mapa: Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>): ValorDaCategoria[] {
+  return doMaiorParaOMenor([...mapa.entries()].map(([categoria, v]) => ({ categoria, centavos: v.centavos, origem: v.origem })));
 }
 
 /**
