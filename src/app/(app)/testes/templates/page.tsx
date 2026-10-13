@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { FileQuestion, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -81,7 +81,7 @@ export default async function TemplatesPage() {
                 <PeDoCartao>
                   {seloDoModelo(t.active)}
                   <span className="ml-auto">
-                    <AcoesDoModelo id={t.id} nome={t.name} ativo={t.active} podeExcluir={t._count.links === 0} />
+                    <AcoesDoModelo id={t.id} nome={t.name} ativo={t.active} podeExcluir={podeExcluir(ctx) && t._count.links === 0} />
                   </span>
                 </PeDoCartao>
               </Cartao>
@@ -134,7 +134,7 @@ export default async function TemplatesPage() {
                       </td>
                       <td className="px-4 py-3">{seloDoModelo(t.active)}</td>
                       <td className="px-4 py-3">
-                        <AcoesDoModelo id={t.id} nome={t.name} ativo={t.active} podeExcluir={t._count.links === 0} />
+                        <AcoesDoModelo id={t.id} nome={t.name} ativo={t.active} podeExcluir={podeExcluir(ctx) && t._count.links === 0} />
                       </td>
                     </LinhaFiltravel>
                   ))}

@@ -128,6 +128,8 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   { modelo: "Notification", coluna: "entityId", tratamento: "apagar" },
   { modelo: "PipelineItem", coluna: "entityId", tratamento: "desligar" },
   { modelo: "ValoraProposta", coluna: "companyId", tratamento: "desligar" },
+  // Preferência "última empresa aberta": sem a empresa, não vale nada.
+  { modelo: "UserLastCompany", coluna: "companyId", tratamento: "apagar" },
   { modelo: "AuditLog", coluna: "entityId", tratamento: "manter", motivo: "a trilha guarda o que foi excluído" },
   { modelo: "AgentRun", coluna: "entityId", tratamento: "manter", motivo: "trilha de execução da IA" },
   { modelo: "AgentProposal", coluna: "entityId", tratamento: "manter", motivo: "proposta da IA já decidida, guardada como trilha" },
@@ -278,6 +280,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   // Sessão e troca de senha: saem com a conta.
   { modelo: "RefreshToken", coluna: "userId", tratamento: "apagar" },
   { modelo: "PasswordResetToken", coluna: "userId", tratamento: "apagar" },
+  // Preferência "última empresa aberta": sai com a conta.
+  { modelo: "UserLastCompany", coluna: "userId", tratamento: "apagar" },
   // Autor guardado sem chave — passa para quem exclui, como os de cima.
   { modelo: "CandidaturaNota", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "VagaRequisitos", coluna: "createdById", tratamento: "reatribuir" },

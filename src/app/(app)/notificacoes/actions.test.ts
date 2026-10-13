@@ -8,13 +8,14 @@ const notificationHiddenType = {
   deleteMany: vi.fn((a: unknown) => ({ op: "apagar", a })),
   createMany: vi.fn((a: unknown) => ({ op: "criar", a })),
 };
+const pushSubscription = { deleteMany: vi.fn() };
 const $transaction = vi.fn(async (ops: unknown[]) => ops);
-vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ notification, notificationHiddenType, $transaction }) }));
+vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ notification, notificationHiddenType, pushSubscription, $transaction }) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const ctx = { tenantId: "t1", userId: "u1" };
 vi.mock("@/lib/auth/context", () => ({ getAuthContext: async () => ctx }));
 
-const { marcarLidas, marcarNaoLida, removerNotificacoes, marcarTodasLidas, contarNaoLidas, arquivarNotificacoes, arquivarLidas, salvarTiposOcultos } =
+const { marcarLidas, marcarNaoLida, removerNotificacoes, marcarTodasLidas, contarNaoLidas, arquivarNotificacoes, arquivarLidas, salvarTiposOcultos, removerPushSubscription } =
   await import("./actions");
 
 beforeEach(() => vi.clearAllMocks());
@@ -80,12 +81,19 @@ describe("ações das notificações", () => {
     expect(notificationHiddenType.createMany).not.toHaveBeenCalled();
   });
 
+  it("desligar o aviso no celular só alcança o aparelho da própria pessoa (13/10/2026)", async () => {
+    await removerPushSubscription("https://push.exemplo/abc");
+    expect(pushSubscription.deleteMany).toHaveBeenCalledWith({ where: { endpoint: "https://push.exemplo/abc", tenantId: "t1", userId: "u1" } });
+  });
+
   it("sem sessão, nada", async () => {
     ctx.userId = "";
     await marcarLidas(["n1"]);
     await arquivarNotificacoes(["n1"]);
     expect(await contarNaoLidas()).toBe(0);
     expect(await salvarTiposOcultos(["GESTAO_PARADO"])).toEqual({ error: "Não autenticado." });
+    await removerPushSubscription("https://push.exemplo/abc");
+    expect(pushSubscription.deleteMany).not.toHaveBeenCalled();
     expect(notification.updateMany).not.toHaveBeenCalled();
     expect(notificationHiddenType.deleteMany).not.toHaveBeenCalled();
     ctx.userId = "u1";

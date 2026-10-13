@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, canManageSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { logAudit } from "@/lib/audit";
@@ -197,9 +197,9 @@ export async function excluirDocumento(
 ): Promise<{ error: string } | { ok: true }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão." };
-  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
-    return { error: "Só a coordenação do fiscal exclui documento." };
-  }
+  // Excluir documento do acervo: só o administrador (13/10/2026). Era a
+  // coordenação do fiscal, que segue corrigindo pelo "Corrigir documento".
+  if (!podeExcluir(ctx)) return { error: SO_ADMIN_EXCLUI };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { error: "Módulo não habilitado." };
 
   const alcance = alcanceDaEquipe(ctx.tenantId);

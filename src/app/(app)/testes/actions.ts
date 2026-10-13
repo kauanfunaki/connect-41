@@ -3,7 +3,7 @@
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canWrite, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { scopedPersonWhere, scopedAssessmentLinkWhere } from "@/lib/auth/scope";
 import { sendTesteEmail } from "@/lib/email/sendMail";
 import { formatInstantDate } from "@/lib/format";
@@ -116,7 +116,8 @@ export async function gerarLinkTeste(
 export async function excluirLinkTeste(id: string): Promise<void> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return;
-  if (!canWrite(ctx.role)) return;
+  // Excluir teste enviado: só o administrador (13/10/2026). Era também o gestor de setor.
+  if (!podeExcluir(ctx)) return;
 
   const prisma = getPrisma();
   const link = await prisma.assessmentLink.findFirst({

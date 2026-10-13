@@ -4,7 +4,7 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddFeriasForm } from "@/components/pessoas/AddFeriasForm";
@@ -65,7 +65,7 @@ export default async function FeriasPage({
                   isVencida: !!v.concessivePeriodEnd && v.concessivePeriodEnd < new Date() && !["CONCLUIDA", "CANCELADA"].includes(v.status),
                 }}
                 updateAction={atualizarFerias.bind(null, id, v.id)}
-                removeAction={excluirFerias.bind(null, id, v.id)}
+                removeAction={podeExcluir(ctx) ? excluirFerias.bind(null, id, v.id) : undefined}
                 canManage={canEdit}
               />
             ))}

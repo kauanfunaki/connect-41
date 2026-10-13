@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { pick } from "@/lib/forms";
 import { logAudit } from "@/lib/audit";
@@ -125,7 +125,8 @@ export async function atualizarCredencial(
 
 export async function excluirCredencial(id: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !ctx.userId || !canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
+  // Excluir senha do cofre: só o administrador (13/10/2026). Era o gestor do BPO.
+  if (!ctx.tenantId || !ctx.userId || !podeExcluir(ctx) || !canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
 
   const prisma = getPrisma();
   const existing = await prisma.bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true, title: true } });

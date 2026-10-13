@@ -514,7 +514,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Cada vez que alguém revela uma senha, o acesso fica registrado.",
-      "Cadastrar, editar e excluir é só da coordenação do setor. A exclusão não pode ser desfeita.",
+      "Cadastrar e editar é da coordenação do setor. Excluir é só do Administrador ou do Super Admin, e não pode ser desfeito.",
     ],
   },
 
@@ -555,7 +555,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "Excluir documento ou página é só da coordenação do setor e não pode ser desfeito. Excluir um documento remove todas as páginas dele.",
+      "Excluir documento, página ou capa é só do Administrador ou do Super Admin e não pode ser desfeito. Excluir um documento remove todas as páginas dele.",
     ],
   },
 

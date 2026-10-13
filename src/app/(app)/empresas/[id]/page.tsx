@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { adicionarServico, atribuirResponsavelServico } from "../actions";
 import { podeExcluirCadastros } from "@/lib/exclusao/comum";
-import { getAuthContext, canWrite, isFullWrite, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canWrite, isFullWrite, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
 import { getSectorMaps, getAllSectors } from "@/lib/sectors";
@@ -169,6 +169,7 @@ export default async function EmpresaPage({
         phone={company.phone}
         logoUrl={company.logoUrl}
         canEdit={canEdit}
+        canRemoveLogo={podeExcluir(ctx)}
         canRequestHandoff={canRequestHandoff}
         podeExcluir={podeExcluirCadastros(ctx)}
       />

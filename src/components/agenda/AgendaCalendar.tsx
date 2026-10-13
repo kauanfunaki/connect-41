@@ -45,7 +45,7 @@ type Props = {
   meetings: MeetingRow[];
   createAction: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
   editAction: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
-  deleteAction: (meetingId: string) => Promise<void>;
+  deleteAction?: (meetingId: string) => Promise<void>;
   hasGoogle: boolean;
   hasMicrosoft: boolean;
   allUsers: UserOption[];

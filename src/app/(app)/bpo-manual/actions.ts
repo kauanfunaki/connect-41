@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { sanitizeDocumentHtml } from "@/lib/clientDocuments";
 import { setorDoModulo } from "@/lib/modules";
 
@@ -81,7 +81,8 @@ export async function atualizarIconeDocumento(documentId: string, iconRaw: strin
 export async function excluirDocumentoManual(documentId: string): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
-  if (!tenantId || !canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
+  // Excluir documento do manual: só o administrador (13/10/2026). Era o gestor do BPO.
+  if (!tenantId || !podeExcluir(ctx) || !canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
 
   const prisma = getPrisma();
   try {
@@ -146,7 +147,8 @@ export async function atualizarPaginaManual(pageId: string, _prev: ManualPageSta
 export async function excluirPaginaManual(pageId: string): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
-  if (!tenantId || !canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
+  // Excluir página do manual: só o administrador (13/10/2026). Era o gestor do BPO.
+  if (!tenantId || !podeExcluir(ctx) || !canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
 
   const prisma = getPrisma();
   try {

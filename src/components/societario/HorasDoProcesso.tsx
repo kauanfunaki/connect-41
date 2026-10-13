@@ -1,26 +1,19 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { CampoData } from "@/components/ui/CampoData";
-import { IconButton } from "@/components/ui/IconButton";
 import { formatarDecorrido, minutosApontados, segundosDesde } from "@/lib/datetime";
 import type { HorasState } from "@/app/(app)/processos/horas-actions";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
-
-export type LancamentoDeHoras = { id: string; quem: string; minutos: number; dia: string; nota: string | null; meu: boolean };
-
-const duracao = (min: number) => {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return h === 0 ? `${m}min` : m === 0 ? `${h}h` : `${h}h${m}min`;
-};
+import { ListaDeHoras, type LinhaDeHoras } from "@/components/shared/ListaDeHoras";
+import { duracaoDoLancamento as duracao } from "@/lib/horas/edicao";
 
 /**
  * As horas trabalhadas no processo: cronômetro (um por vez) e lançamento
@@ -34,7 +27,8 @@ export function HorasDoProcesso({
   acoes,
 }: {
   processId: string;
-  lancamentos: LancamentoDeHoras[];
+  /** `podeEditar`: o próprio lançamento, com o processo aberto. `podeExcluir`: só o administrador. */
+  lancamentos: LinhaDeHoras[];
   /** Quem está com o cronômetro, desde quando, e se é quem está vendo. */
   cronometro: { quem: string; desdeIso: string; meu: boolean } | null;
   podeAgir: boolean;
@@ -42,6 +36,7 @@ export function HorasDoProcesso({
     iniciar: (id: string) => Promise<HorasState>;
     parar: (id: string) => Promise<HorasState>;
     lancar: (id: string, prev: HorasState, form: FormData) => Promise<HorasState>;
+    editar: (id: string, entryId: string, prev: HorasState, form: FormData) => Promise<HorasState>;
     apagar: (id: string, entryId: string) => Promise<HorasState>;
   };
 }) {
@@ -147,21 +142,13 @@ export function HorasDoProcesso({
       )}
 
       {lancamentos.length > 0 && (
-        <ul className="flex flex-col divide-y divide-border text-fs-2">
-          {lancamentos.map((l) => (
-            <li key={l.id} className="flex items-center justify-between gap-2 py-1.5">
-              <span className="text-fg-secondary">
-                <span className="text-fg tabular-nums">{duracao(l.minutos)}</span> · {l.quem} · {l.dia}
-                {l.nota && ` · ${l.nota}`}
-              </span>
-              {l.meu && podeAgir && (
-                <IconButton aria-label="Apagar lançamento" onClick={() => rodar(() => acoes.apagar(processId, l.id))} disabled={pendente}>
-                  <Trash2 size={14} />
-                </IconButton>
-              )}
-            </li>
-          ))}
-        </ul>
+        // Lista com "Editar" na linha (13/10/2026): apagar ficou só com o
+        // administrador, e quem lançou corrige duração, dia e nota por aqui.
+        <ListaDeHoras
+          linhas={lancamentos.map((l) => ({ ...l, podeEditar: l.podeEditar && podeAgir, podeExcluir: l.podeExcluir && podeAgir }))}
+          editar={(entryId, prev, form) => acoes.editar(processId, entryId, prev, form)}
+          excluir={(entryId) => acoes.apagar(processId, entryId)}
+        />
       )}
     </Card>
   );

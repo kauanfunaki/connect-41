@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { Briefcase, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { AcoesDoCadastro } from "@/components/empresas/AcoesDoCadastro";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -88,7 +88,7 @@ export default async function CargosPage({
                 {c.area && <p className="text-fs-2 text-fg-muted">{c.area}</p>}
               </div>
               {canManage && (
-                <AcoesDoCadastro editarHref={`/empresas/${companyId}/cargos/${c.id}/editar`} excluir={excluirCargo.bind(null, c.id, companyId)} nome={c.name} />
+                <AcoesDoCadastro editarHref={`/empresas/${companyId}/cargos/${c.id}/editar`} excluir={podeExcluir(ctx) ? excluirCargo.bind(null, c.id, companyId) : undefined} nome={c.name} />
               )}
             </div>
           ))}

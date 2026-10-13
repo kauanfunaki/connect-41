@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Pencil, Users, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canWrite, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { formatCnpj, formatCpf, formatInstantDate } from "@/lib/format";
 import { algumSocioResideNoEndereco, somaDasParticipacoes } from "@/lib/societario/socios";
@@ -170,7 +170,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
                       companyId={companyId}
                       nome={s.name}
                       editarHref={`/empresas/${companyId}/socios/${s.id}/editar`}
-                      excluir={excluirSocio.bind(null, s.id, companyId)}
+                      excluir={podeExcluir(ctx) ? excluirSocio.bind(null, s.id, companyId) : undefined}
                       registrarSaida={registrarSaida}
                     />
                   </div>

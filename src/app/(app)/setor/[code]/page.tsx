@@ -8,7 +8,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { NewSpaceButton } from "@/components/kanban/NewSpaceButton";
 import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
 import { criarEspaco, excluirEspaco } from "@/app/(app)/kanban/spaces-actions";
-import { getAuthContext, canViewSector, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canViewSector, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getPrisma } from "@/lib/prisma";
 import { boardPath } from "@/lib/kanbanPaths";
@@ -131,7 +131,8 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
                     </ul>
                   )}
                 </div>
-                {podeCriar && (
+                {/* Excluir espaço: só o administrador (13/10/2026) — o gestor do setor cria. */}
+                {podeExcluir(ctx) && (
                   <div className="absolute top-3 right-2.5">
                     <DeleteEntityMenu kind="espaço" name={s.name} action={excluirEspaco.bind(null, s.id)} />
                   </div>

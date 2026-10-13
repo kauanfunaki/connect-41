@@ -4,7 +4,7 @@ import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 
 export type TagState = { error: string } | null;
@@ -77,7 +77,8 @@ export async function atualizarTag(_prev: TagState, form: FormData): Promise<Tag
 
 export async function excluirTag(id: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId) return;
+  // Excluir: só o administrador (13/10/2026). O gestor do setor cria e edita.
+  if (!ctx.tenantId || !podeExcluir(ctx)) return;
 
   const prisma = getPrisma();
   const existing = await prisma.tag.findFirst({ where: { id, tenantId: ctx.tenantId } });

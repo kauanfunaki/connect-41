@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Gift, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { BenefitType } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { AcoesDoCadastro } from "@/components/empresas/AcoesDoCadastro";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -104,7 +104,7 @@ export default async function BeneficiosPage({
                 <p className="text-fs-2 text-fg-muted">{TYPE_LABEL[b.type]}</p>
               </div>
               {canManage && (
-                <AcoesDoCadastro editarHref={`/empresas/${companyId}/beneficios/${b.id}/editar`} excluir={excluirBeneficio.bind(null, b.id, companyId)} nome={b.name} />
+                <AcoesDoCadastro editarHref={`/empresas/${companyId}/beneficios/${b.id}/editar`} excluir={podeExcluir(ctx) ? excluirBeneficio.bind(null, b.id, companyId) : undefined} nome={b.name} />
               )}
             </div>
           ))}

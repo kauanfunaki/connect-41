@@ -93,19 +93,5 @@ export async function agendarReuniao(
   return null;
 }
 
-// Remove só o registro local (não cancela o evento no Google/Microsoft) —
-// suficiente pro MVP; cancelamento remoto fica pra uma próxima rodada.
-export async function excluirReuniao(pipelineId: string, meetingId: string): Promise<void> {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canManageMeetings(ctx)) return;
-
-  const prisma = getPrisma();
-  const meeting = await prisma.meeting.findFirst({ where: { id: meetingId, tenantId: ctx.tenantId } });
-  if (!meeting) return;
-
-  await prisma.meeting.delete({ where: { id: meetingId } });
-
-  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "meeting.delete", entityType: "Meeting", entityId: meetingId });
-
-  if (meeting.pipelineItemId) revalidatePath(`/kanban/${pipelineId}/itens/${meeting.pipelineItemId}`);
-}
+// `excluirReuniao` saiu em 13/10/2026: nenhuma tela chamava, e excluir reunião
+// passou a ser só do administrador (ver `excluirReuniaoAvulsa` na Agenda).

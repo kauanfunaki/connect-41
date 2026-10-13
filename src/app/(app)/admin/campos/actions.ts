@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import type { CustomFieldType, EntityType } from "@/generated/prisma/enums";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 
 export type CampoState = { error: string } | null;
@@ -141,7 +141,8 @@ export async function atualizarCampo(
 
 export async function excluirCampo(id: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId) return;
+  // Excluir: só o administrador (13/10/2026). O gestor do setor cria e edita.
+  if (!ctx.tenantId || !podeExcluir(ctx)) return;
 
   const prisma = getPrisma();
   const existing = await prisma.customField.findFirst({ where: { id, tenantId: ctx.tenantId } });
