@@ -220,15 +220,20 @@ export async function listarContas(
   };
 }
 
-/** Competências que têm lançamento deste tipo, para o filtro. */
+/**
+ * Competências que têm lançamento deste tipo, para o filtro — da empresa
+ * escolhida, quando há uma (13/10/2026): o índice `[tenantId, companyId,
+ * competence]` responde sem varrer as contas dos outros clientes.
+ */
 export async function competenciasComContas(
   tenantId: string,
-  kind: TipoDeConta
+  kind: TipoDeConta,
+  empresaId?: string
 ): Promise<string[]> {
   const prisma = getPrisma();
   const linhas = await prisma.financeEntry.groupBy({
     by: ["competence"],
-    where: { tenantId, kind },
+    where: { tenantId, kind, ...(empresaId ? { companyId: empresaId } : {}) },
     orderBy: { competence: "desc" },
     take: 36,
   });
