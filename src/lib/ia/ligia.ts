@@ -5,7 +5,7 @@
 // mascote ele escolheu "A · O ponto do Connect" com o nome Lígia (de "ligar",
 // que é o que o Connect faz): um personagem só, igual em todos os setores (e,
 // no futuro, no portal do cliente), com o setor escrito embaixo do nome —
-// "Lígia · BPO Financeiro". O desenho é `src/components/ia/Ligia.tsx`.
+// "Lígia · BPO". O desenho é `src/components/ia/Ligia.tsx`.
 //
 // Tudo o que é nome e apresentação mora aqui, puro, para a tela, o servidor e
 // os testes usarem o mesmo texto. O que cada agente sabe, as ferramentas e as
@@ -16,13 +16,16 @@
 export const NOME_DA_ASSISTENTE = "Lígia";
 
 /**
- * O que a Lígia atende em cada agente do chat — o texto embaixo do nome. Por
- * extenso, como o Kauan escreveu ("BPO Financeiro", "Departamento Pessoal"),
- * mesmo onde o setor no Connect se chama só "BPO" ou "DP": é a especialidade
- * dela, não o rótulo do setor (que o admin pode renomear).
+ * O que a Lígia atende em cada agente do chat — o texto embaixo do nome. É a
+ * especialidade dela, não o rótulo do setor (que o admin pode renomear).
+ *
+ * Por extenso onde o Kauan escreveu assim ("Departamento Pessoal"). O BPO foi
+ * "BPO Financeiro" até 13/10/2026, quando ele pediu só "BPO" na Lígia —
+ * cabeçalho do chat, boas-vindas e site. O nome do setor no resto do Connect
+ * não muda por isso.
  */
 const ESPECIALIDADE_DO_AGENTE: Readonly<Record<string, string>> = {
-  assistente_do_bpo: "BPO Financeiro",
+  assistente_do_bpo: "BPO",
   assistente_do_dp: "Departamento Pessoal",
   assistente_do_fiscal: "Fiscal",
   assistente_do_recrutamento: "Recrutamento",
@@ -35,7 +38,7 @@ export function especialidadeDoAgente(agentCode: string): string | null {
   return ESPECIALIDADE_DO_AGENTE[agentCode] ?? null;
 }
 
-/** "Lígia · BPO Financeiro"; sem setor, só "Lígia". */
+/** "Lígia · BPO"; sem setor, só "Lígia". */
 export function nomeDaAssistente(especialidade?: string | null): string {
   const s = especialidade?.trim();
   return s ? `${NOME_DA_ASSISTENTE} · ${s}` : NOME_DA_ASSISTENTE;
