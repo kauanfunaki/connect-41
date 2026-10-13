@@ -111,6 +111,30 @@ export type ResultadoDoDre = {
   diferencaDeFechamento: number;
 };
 
+const ORIGEM_DO_GRUPO = new Map(GRUPOS.map((g) => [g.code, g.origem]));
+
+/**
+ * O grupo em que um lançamento entra, ou `null` quando ele cai no não
+ * classificado.
+ *
+ * Saiu de dentro de `calcularDre` em 13/10/2026 para a exportação no modelo do
+ * BPO (`modeloDoBpo.ts`), que precisa do valor por categoria e não só por
+ * grupo — e tem de classificar com **esta** regra, não com uma cópia dela, para
+ * o arquivo bater com a tela.
+ */
+export function grupoDoLancamento(l: LancamentoDoDre, mapeamento: Mapeamento): string | null {
+  const chave = l.categoria ? chaveDaCategoria(l.categoria) : "";
+  const grupo = l.grupo ?? (chave ? mapeamento.get(chave) : undefined);
+  if (grupo === undefined) return null;
+
+  // Grupo cuja origem não bate com a do lançamento é de-para errado, não
+  // dado errado — e somar um recebimento dentro de um grupo de despesa
+  // produz número plausível. Cai no não classificado, para alguém olhar.
+  const origemEsperada = grupo ? ORIGEM_DO_GRUPO.get(grupo) : undefined;
+  const serve = grupo === TRANSFERENCIA || origemEsperada === undefined || origemEsperada === l.origem;
+  return serve ? grupo : null;
+}
+
 /**
  * Monta o DRE de um período.
  *
@@ -127,7 +151,6 @@ export function calcularDre(
   const porGrupo: Record<string, number> = { [NAO_CLASSIFICADO]: 0, [TRANSFERENCIA]: 0 };
   for (const g of GRUPOS) porGrupo[g.code] = 0;
 
-  const origemDoGrupo = new Map(GRUPOS.map((g) => [g.code, g.origem]));
   const soltos = new Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>();
 
   let totalEntrado = 0;
@@ -135,18 +158,9 @@ export function calcularDre(
   for (const l of lancamentos) {
     totalEntrado += l.valorCentavos;
 
-    const chave = l.categoria ? chaveDaCategoria(l.categoria) : "";
-    const grupo = l.grupo ?? (chave ? mapeamento.get(chave) : undefined);
+    const grupo = grupoDoLancamento(l, mapeamento);
 
-    // Grupo cuja origem não bate com a do lançamento é de-para errado, não
-    // dado errado — e somar um recebimento dentro de um grupo de despesa
-    // produz número plausível. Cai no não classificado, para alguém olhar.
-    const origemEsperada = grupo ? origemDoGrupo.get(grupo) : undefined;
-    const serve =
-      grupo !== undefined &&
-      (grupo === TRANSFERENCIA || origemEsperada === undefined || origemEsperada === l.origem);
-
-    if (!serve) {
+    if (grupo === null) {
       porGrupo[NAO_CLASSIFICADO]! += l.valorCentavos;
       const nome = l.categoria?.trim() || "(sem categoria)";
       const atual = soltos.get(nome);
