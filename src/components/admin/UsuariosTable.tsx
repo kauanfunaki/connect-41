@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Pencil, Power, PowerOff, UserRoundCog } from "lucide-react";
+import { Pencil, Power, PowerOff, Trash2, UserRoundCog } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -13,6 +13,7 @@ import { ItemDoMenu } from "@/components/ui/Popover";
 import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
+import { ExcluirCadastro } from "@/components/exclusao/ExcluirCadastro";
 
 type SectorTag = { code: string; label: string; color: string };
 type Row = {
@@ -27,6 +28,8 @@ type Row = {
 type Props = {
   users: Row[];
   currentUserId: string;
+  /** Administrador com a assinatura em dia (13/10/2026) — o "⋯" ganha o Excluir. */
+  podeExcluir: boolean;
   sectorOptions: { value: string; label: string }[];
   alternarAtivoUsuario: (id: string, novoStatus: boolean) => Promise<void>;
   alternarAtivoEmMassa: (ids: string[], novoStatus: boolean) => Promise<void>;
@@ -36,6 +39,7 @@ type Props = {
 export function UsuariosTable({
   users,
   currentUserId,
+  podeExcluir,
   sectorOptions,
   alternarAtivoUsuario,
   alternarAtivoEmMassa,
@@ -50,6 +54,10 @@ export function UsuariosTable({
   const [bulkSector, setBulkSector] = useState(sectorOptions[0]?.value ?? "");
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
+  // A conta que está no diálogo de exclusão (13/10/2026). A lista é só de
+  // administrador, e o diálogo diz quando a conta não pode sair (a própria, o
+  // último administrador, Super Admin pelas mãos de um Admin).
+  const [excluindo, setExcluindo] = useState<Row | null>(null);
 
 
   const selecionaveis = users.filter((u) => u.id !== currentUserId && naTela.has(u.id));
@@ -96,16 +104,30 @@ export function UsuariosTable({
         {!isSelf && (
           <MenuDeMaisAcoes rotulo={`Mais ações de ${u.name}`}>
             {(fechar) => (
-              <ItemDoMenu
-                icone={u.active ? <PowerOff /> : <Power />}
-                danger={u.active}
-                onClick={() => {
-                  fechar();
-                  alternarAtivo(u);
-                }}
-              >
-                {u.active ? "Desativar" : "Reativar"}
-              </ItemDoMenu>
+              <>
+                <ItemDoMenu
+                  icone={u.active ? <PowerOff /> : <Power />}
+                  danger={u.active}
+                  onClick={() => {
+                    fechar();
+                    alternarAtivo(u);
+                  }}
+                >
+                  {u.active ? "Desativar" : "Reativar"}
+                </ItemDoMenu>
+                {podeExcluir && (
+                  <ItemDoMenu
+                    icone={<Trash2 />}
+                    danger
+                    onClick={() => {
+                      fechar();
+                      setExcluindo(u);
+                    }}
+                  >
+                    Excluir
+                  </ItemDoMenu>
+                )}
+              </>
             )}
           </MenuDeMaisAcoes>
         )}
@@ -319,6 +341,16 @@ export function UsuariosTable({
       </TabelaFiltravel>
 
       {dialog}
+      {excluindo && (
+        <ExcluirCadastro
+          tipo="usuario"
+          id={excluindo.id}
+          nome={excluindo.name}
+          aberto
+          onFechar={() => setExcluindo(null)}
+          depois="atualizar"
+        />
+      )}
 
       <BulkActionBar count={selecionadosNaTela.size} onClear={() => setSelected(new Set())}>
         <Button

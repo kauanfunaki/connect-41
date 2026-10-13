@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { excluirEmpresa, adicionarServico, atribuirResponsavelServico } from "../actions";
+import { adicionarServico, atribuirResponsavelServico } from "../actions";
+import { podeExcluirCadastros } from "@/lib/exclusao/comum";
 import { getAuthContext, canWrite, isFullWrite, canManageSector } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
@@ -88,8 +89,6 @@ export default async function EmpresaPage({
   const autorizacao = acessoAutorizacao ? await autorizacaoDaEmpresa(ctx.tenantId, company.id) : null;
   const serproPronto = !!acessoAutorizacao?.podeEditar && prontidaoDoSerpro(await configuracaoDoSerpro(ctx.tenantId)).pronta;
 
-  const deleteAction = excluirEmpresa.bind(null, id);
-
   const [companySectors, sectorMaps, documents, pipelineItems, activities] = await Promise.all([
     getCompanySectors(ctx.tenantId, id),
     getSectorMaps(ctx.tenantId),
@@ -163,7 +162,7 @@ export default async function EmpresaPage({
         logoUrl={company.logoUrl}
         canEdit={canEdit}
         canRequestHandoff={canRequestHandoff}
-        deleteAction={deleteAction}
+        podeExcluir={podeExcluirCadastros(ctx)}
       />
 
       <CompanyDetailTabs

@@ -17,7 +17,7 @@ import {
   KeyRound,
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
-import { excluirPessoa } from "../actions";
+import { podeExcluirCadastros } from "@/lib/exclusao/comum";
 import { Button } from "@/components/ui/Button";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -140,8 +140,6 @@ export default async function PessoaPage({
   ]);
 
   if (!person) notFound();
-
-  const deleteAction = excluirPessoa.bind(null, id);
 
   const linkedUser = person.isInternal && person.linkedUserId
     ? await prisma.user.findFirst({ where: { id: person.linkedUserId }, select: { name: true, email: true } })
@@ -432,7 +430,7 @@ export default async function PessoaPage({
         companyName={person.currentCompany?.name ?? null}
         canEdit={canEdit}
         canRequestHandoff={canRequestHandoff}
-        deleteAction={deleteAction}
+        podeExcluir={podeExcluirCadastros(ctx)}
       />
 
       <PersonDetailTabs

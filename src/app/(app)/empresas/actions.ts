@@ -9,13 +9,15 @@ import { canWriteEntity } from "@/lib/auth/policy";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields, saveCustomFieldValues } from "@/lib/customFields";
 import { pick, pickDate } from "@/lib/forms";
-import { isPrismaForeignKeyError } from "@/lib/prismaErrors";
 import { isValidCNPJ, isValidCPF, digitsOnly } from "@/lib/validation/common";
 import { logAudit } from "@/lib/audit";
 import { cnpjRoot, lerEscolhaDeCliente } from "@/lib/clientGroups";
 import { validarMatriz } from "@/lib/companyHierarchyDb";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
 import { camposDoRegime } from "@/lib/taxRegime";
+import { ASSINATURA_SOMENTE_LEITURA, SEM_PERMISSAO_PARA_EXCLUIR, podeExcluir } from "@/lib/exclusao/comum";
+import { excluirEmpresasEmMassa as excluirEmpresasEmMassaDeVez } from "@/lib/exclusao/empresa";
+import type { ResultadoEmMassa } from "@/lib/exclusao/tipos";
 
 export type EmpresaState = { error: string } | null;
 
@@ -281,43 +283,9 @@ export async function atualizarEmpresa(
   redirect(`/empresas/${id}`);
 }
 
-export async function excluirEmpresa(id: string): Promise<EmpresaState> {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWriteEntity(ctx)) return { error: "Sem permissão." };
-
-  const prisma = getPrisma();
-
-  const existing = await prisma.company.findFirst({
-    where: { id, ...(await scopedCompanyWhere(ctx)) },
-    select: { id: true, name: true },
-  });
-  if (!existing) return { error: "Empresa não encontrada ou fora do seu escopo." };
-
-  try {
-    await prisma.company.delete({ where: { id } });
-  } catch (err) {
-    if (isPrismaForeignKeyError(err)) {
-      return {
-        error:
-          "Esta empresa tem registros vinculados (colaboradores, serviços, vagas, etc.) e não pode ser excluída.",
-      };
-    }
-    console.error("[excluirEmpresa]", err);
-    return { error: "Erro ao excluir empresa." };
-  }
-
-  await logAudit({
-    tenantId: ctx.tenantId,
-    userId: ctx.userId,
-    action: "company.delete",
-    entityType: "Company",
-    entityId: id,
-    metadata: { name: existing.name },
-  });
-
-  revalidatePath("/empresas");
-  redirect("/empresas");
-}
+// A exclusão de uma empresa saiu daqui em 13/10/2026: é o diálogo
+// ExcluirCadastro (src/components/exclusao), com a prévia do que está ligado,
+// pelas ações de src/app/(app)/exclusao-actions.ts. Só administrador exclui.
 
 export async function atualizarStatusEmMassa(ids: string[], status: CompanyStatus): Promise<void> {
   const ctx = await getAuthContext();
@@ -332,17 +300,30 @@ export async function atualizarStatusEmMassa(ids: string[], status: CompanyStatu
   revalidatePath("/empresas");
 }
 
-// Exclusão em massa é mais restrita que a individual (canWrite) — só Super Admin.
-export async function excluirEmpresasEmMassa(ids: string[]): Promise<void> {
+/**
+ * Exclusão em massa — só o modo simples (13/10/2026): sai a empresa sem
+ * histórico; a com histórico fica, e o resultado diz qual e por quê. Era um
+ * `deleteMany` que a tela disparava sem esperar: uma empresa com histórico
+ * derrubava o lote inteiro em silêncio.
+ *
+ * Administrador (ADMIN ou SUPER_ADMIN), como toda exclusão; antes era só
+ * Super Admin.
+ */
+export async function excluirEmpresasEmMassa(ids: string[]): Promise<ResultadoEmMassa | { erro: string }> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || ctx.role !== "SUPER_ADMIN" || ids.length === 0) return;
+  if (!ctx.tenantId || !ctx.userId) return { erro: "Não autenticado." };
+  if (!podeExcluir(ctx.role)) return { erro: SEM_PERMISSAO_PARA_EXCLUIR };
+  if (ctx.subscriptionReadOnly) return { erro: ASSINATURA_SOMENTE_LEITURA };
+  if (!Array.isArray(ids)) return { erro: "Pedido inválido." };
 
-  const prisma = getPrisma();
-  await prisma.company.deleteMany({
-    where: { id: { in: ids }, ...(await scopedCompanyWhere(ctx)) },
+  const resultado = await excluirEmpresasEmMassaDeVez(getPrisma(), {
+    tenantId: ctx.tenantId,
+    ator: { id: ctx.userId, role: ctx.role },
+    ids,
   });
-
-  revalidatePath("/empresas");
+  // Aqui a tela é a própria lista: atualizar é o que se quer.
+  if ("excluidas" in resultado && resultado.excluidas.length > 0) revalidatePath("/empresas");
+  return resultado;
 }
 
 export type ServiceState = { error: string } | null;

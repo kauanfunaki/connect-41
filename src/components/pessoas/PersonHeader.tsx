@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Copy, Check, Building2, Mail, Phone, Pencil, ArrowRightLeft } from "lucide-react";
 import { StatusDot } from "@/components/shared/StatusDot";
-import { EntityOverflowMenu } from "@/components/ui/EntityOverflowMenu";
+import { BotaoExcluirCadastro } from "@/components/exclusao/ExcluirCadastro";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { maskCpf, formatPhone } from "@/lib/format";
@@ -53,7 +53,8 @@ type Props = {
   companyName: string | null;
   canEdit: boolean;
   canRequestHandoff: boolean;
-  deleteAction: () => Promise<{ error: string } | null | void>;
+  /** Só administrador exclui (13/10/2026) — o diálogo mostra o que está ligado antes. */
+  podeExcluir: boolean;
 };
 
 // Header de detalhe de pessoa — mesma "família visual" do CompanyHeader
@@ -71,7 +72,7 @@ export function PersonHeader({
   companyName,
   canEdit,
   canRequestHandoff,
-  deleteAction,
+  podeExcluir,
 }: Props) {
   const [copied, setCopied] = useState(false);
 
@@ -151,14 +152,12 @@ export function PersonHeader({
             </Button>
           )}
           {canEdit && (
-            <>
-              <Button href={`/pessoas/${id}/editar`} variant="secondary" size="sm">
-                <Pencil size={14} />
-                Editar
-              </Button>
-              <EntityOverflowMenu deleteAction={deleteAction} nome={name} />
-            </>
+            <Button href={`/pessoas/${id}/editar`} variant="secondary" size="sm">
+              <Pencil size={14} />
+              Editar
+            </Button>
           )}
+          {podeExcluir && <BotaoExcluirCadastro tipo="pessoa" id={id} nome={name} />}
         </div>
       </div>
     </div>

@@ -137,11 +137,22 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Para mudar várias de uma vez, marque as caixas à esquerda e use “Inativar”, ou escolha o novo status e clique em “Alterar status”.",
         ],
       },
+      {
+        titulo: "Como excluir uma empresa de vez",
+        passos: [
+          "Use para cadastro de teste ou feito por engano. Para tirar uma empresa de verdade da lista, inative.",
+          "Na ficha da empresa, clique em “Excluir”. A janela mostra o que está ligado a ela: o que sai junto, o que fica sem o vínculo.",
+          "Sem nada ligado, clique em “Excluir”. Com histórico (notas, lançamentos, vagas, documentos…), digite o nome da empresa e clique em “Excluir com tudo o que está ligado”.",
+          "Para levar os funcionários junto, marque “Excluir também os funcionários desta empresa” antes de confirmar.",
+          "Na lista, marque várias e clique em “Excluir”: saem só as sem histórico, e no fim aparece qual ficou e por quê.",
+        ],
+      },
     ],
     dicas: [
       "Por padrão a lista mostra só as empresas em operação. Inativas e canceladas ficam de fora, e um aviso com “Mostrar todas” diz quantas são.",
       "Inativar não apaga nada: a empresa só sai da lista padrão e pode ser reativada depois.",
-      "Cadastrar, editar e inativar empresas é para administradores e gestores de setor.",
+      "Cadastrar, editar e inativar empresas é para administradores e gestores de setor. Excluir de vez é só para administradores.",
+      "Empresa com mais de 2.000 notas fiscais não pode ser excluída por aqui: é histórico de verdade. Inative.",
     ],
   },
 
@@ -189,11 +200,20 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Para reativar, filtre por “Inativos” e escolha “Reativar” no mesmo menu da linha.",
         ],
       },
+      {
+        titulo: "Como excluir uma pessoa de vez",
+        passos: [
+          "Use para cadastro de teste, feito por engano, ou quando a pessoa pede a exclusão dos dados. Para afastar alguém de verdade, inative.",
+          "Na ficha da pessoa, clique em “Excluir”. A janela mostra o que está ligado a ela: férias, folha, exames, documentos, candidaturas.",
+          "Sem nada ligado, clique em “Excluir”. Com histórico, digite o nome da pessoa e clique em “Excluir com tudo o que está ligado”.",
+          "A conta de acesso ao Connect, se houver, continua: para tirar o acesso, exclua ou inative o usuário em Administração › Usuários.",
+        ],
+      },
     ],
     dicas: [
       "Esta lista é só da equipe do escritório. Os funcionários das empresas clientes ficam em “Colaboradores de clientes”.",
       "O vínculo da pessoa com a conta de acesso ao Connect é feito pelo administrador, nas configurações.",
-      "Cadastrar, editar e inativar pessoas é para administradores e gestores de setor.",
+      "Cadastrar, editar e inativar pessoas é para administradores e gestores de setor. Excluir de vez é só para administradores.",
     ],
   },
 
