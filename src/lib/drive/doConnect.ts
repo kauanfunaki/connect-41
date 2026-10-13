@@ -19,6 +19,7 @@ import { grupoSensivelDoDocumento, lerArquivoDoDocumentoDaFicha } from "@/lib/do
 import { podeVerSolicitacao } from "@/lib/solicitacoes/acesso";
 import { anexosDaSolicitacao } from "@/lib/solicitacoes/armazenamento";
 import { lerAnexo as lerAnexoDaPendencia } from "@/lib/financeiro/pendencias/armazenamento";
+import { podeAbrirPendencia, reguaDasPendencias, type ReguaDasPendencias } from "@/lib/financeiro/pendencias/acesso";
 import { arquivosDoProcesso } from "@/lib/societario/conversa";
 import { lerArquivoDoDocumento } from "@/lib/clientDocuments";
 import { anexosDaConversa } from "@/lib/financeiro/comunicacao/armazenamento";
@@ -60,12 +61,16 @@ async function setorDe(tenantId: string, modulo: string): Promise<string> {
   return (await setorDoModulo(tenantId, modulo)) ?? getModuleDef(modulo)?.sectorCode ?? modulo;
 }
 
-/** O que cada origem permite a quem pede — o mesmo que a rota de download dela confere. */
-async function origensAoAlcance(ctx: AuthContext): Promise<Set<OrigemDoConnect>> {
+/**
+ * O que cada origem permite a quem pede — o mesmo que a rota de download dela
+ * confere. Junto vai a régua das pendências, que (como as solicitações) são
+ * conferidas uma a uma: o setor é o de cada pendência, não o do módulo.
+ */
+async function origensAoAlcance(ctx: AuthContext): Promise<{ ok: Set<OrigemDoConnect>; pendencias: ReguaDasPendencias }> {
   const t = ctx.tenantId;
   const [solicitacoes, pendencias, processos, conversa] = await Promise.all([
     isModuleEnabled(t, "portal_solicitacoes"),
-    isModuleEnabled(t, "bpo_pendencias"),
+    reguaDasPendencias(t),
     isModuleEnabled(t, "societario_processos"),
     isModuleEnabled(t, "bpo_comunicacao"),
   ]);
@@ -73,10 +78,10 @@ async function origensAoAlcance(ctx: AuthContext): Promise<Set<OrigemDoConnect>>
   // As solicitações são conferidas uma a uma (setor ou responsável); os envios,
   // como na rota deles, só pelo escritório.
   if (solicitacoes) ok.add("solicitacoes").add("envios");
-  if (pendencias && canViewSector(ctx, await setorDe(t, "bpo_pendencias"))) ok.add("pendencias");
+  if (pendencias.ligados) ok.add("pendencias");
   if (processos && canActOnSector(ctx, await setorDe(t, "societario_processos"))) ok.add("processos");
   if (conversa && canViewSector(ctx, await setorDe(t, "bpo_comunicacao"))) ok.add("conversa");
-  return ok;
+  return { ok, pendencias };
 }
 
 const iso = (d: Date) => d.toISOString();
@@ -85,7 +90,7 @@ const iso = (d: Date) => d.toISOString();
 export async function anexosDoConnect(ctx: AuthContext, companyId: string): Promise<GrupoDoConnect[]> {
   const prisma = getPrisma();
   const t = ctx.tenantId;
-  const ok = await origensAoAlcance(ctx);
+  const { ok, pendencias: regua } = await origensAoAlcance(ctx);
   const LIMITE = 200;
 
   const [documentos, solicitacoes, pendencias, processos, envios, conversa] = await Promise.all([
@@ -115,7 +120,7 @@ export async function anexosDoConnect(ctx: AuthContext, companyId: string): Prom
           select: {
             id: true, fileName: true, sizeBytes: true, mimeType: true, createdAt: true, uploadedByPortalUserId: true,
             uploadedByUser: { select: { name: true } }, uploadedByPortal: { select: { name: true } },
-            request: { select: { id: true, title: true } },
+            request: { select: { id: true, title: true, tenantId: true, sectorCode: true } },
           },
         })
       : Promise.resolve([]),
@@ -192,19 +197,21 @@ export async function anexosDoConnect(ctx: AuthContext, companyId: string): Prom
     {
       origem: "pendencias",
       rotulo: ROTULO_DA_ORIGEM.pendencias,
-      itens: pendencias.map((a) => ({
-        origem: "pendencias",
-        id: a.id,
-        nome: a.fileName,
-        tamanho: a.sizeBytes,
-        enviadoEm: iso(a.createdAt),
-        enviadoPor: a.uploadedByPortal?.name ?? a.uploadedByUser?.name ?? null,
-        peloCliente: a.uploadedByPortalUserId !== null,
-        contexto: `Pendência · ${a.request.title}`,
-        baixar: `/api/pendencias/anexos/${a.id}`,
-        abrirNaOrigem: `/pendencias/${a.request.id}`,
-        previa: temPrevia(a.mimeType, a.fileName),
-      })),
+      itens: pendencias
+        .filter((a) => podeAbrirPendencia(ctx, regua, a.request))
+        .map((a) => ({
+          origem: "pendencias",
+          id: a.id,
+          nome: a.fileName,
+          tamanho: a.sizeBytes,
+          enviadoEm: iso(a.createdAt),
+          enviadoPor: a.uploadedByPortal?.name ?? a.uploadedByUser?.name ?? null,
+          peloCliente: a.uploadedByPortalUserId !== null,
+          contexto: `Pendência · ${a.request.title}`,
+          baixar: `/api/pendencias/anexos/${a.id}`,
+          abrirNaOrigem: `/pendencias/${a.request.id}`,
+          previa: temPrevia(a.mimeType, a.fileName),
+        })),
     },
     {
       origem: "processos",
@@ -272,7 +279,7 @@ export async function totaisDoConnect(ctx: AuthContext, companyIds: string[]): P
   if (companyIds.length === 0) return total;
   const prisma = getPrisma();
   const t = ctx.tenantId;
-  const ok = await origensAoAlcance(ctx);
+  const { ok, pendencias: regua } = await origensAoAlcance(ctx);
   const somar = (companyId: string | null | undefined, n = 1) => {
     if (companyId) total.set(companyId, (total.get(companyId) ?? 0) + n);
   };
@@ -286,7 +293,10 @@ export async function totaisDoConnect(ctx: AuthContext, companyIds: string[]): P
         })
       : Promise.resolve([]),
     ok.has("pendencias")
-      ? prisma.clientRequestAttachment.findMany({ where: { request: { tenantId: t, companyId: { in: companyIds } } }, select: { request: { select: { companyId: true } } } })
+      ? prisma.clientRequestAttachment.findMany({
+          where: { request: { tenantId: t, companyId: { in: companyIds } } },
+          select: { request: { select: { companyId: true, tenantId: true, sectorCode: true } } },
+        })
       : Promise.resolve([]),
     ok.has("processos")
       ? prisma.processDocument.findMany({ where: { tenantId: t, process: { companyId: { in: companyIds } } }, select: { process: { select: { companyId: true } } } })
@@ -300,7 +310,7 @@ export async function totaisDoConnect(ctx: AuthContext, companyIds: string[]): P
   ]);
   for (const d of documentos) somar(d.entityId, d._count._all);
   for (const a of solicitacoes) if (podeVerSolicitacao(ctx, a.request)) somar(a.request.companyId);
-  for (const a of pendencias) somar(a.request.companyId);
+  for (const a of pendencias) if (podeAbrirPendencia(ctx, regua, a.request)) somar(a.request.companyId);
   for (const a of processos) somar(a.process.companyId);
   for (const d of envios) somar(d.companyId, d._count._all);
   for (const a of conversa) somar(a.message.companyId);
@@ -324,7 +334,7 @@ export async function lerDoConnect(
 ): Promise<{ nome: string; mime: string; conteudo: Buffer; companyId: string } | null> {
   const prisma = getPrisma();
   const t = ctx.tenantId;
-  const ok = await origensAoAlcance(ctx);
+  const { ok, pendencias: regua } = await origensAoAlcance(ctx);
   if (!ok.has(origem)) return null;
 
   switch (origem) {
@@ -351,9 +361,9 @@ export async function lerDoConnect(
     case "pendencias": {
       const a = await prisma.clientRequestAttachment.findFirst({
         where: { id, request: { tenantId: t } },
-        select: { fileName: true, fileUrl: true, mimeType: true, request: { select: { companyId: true } } },
+        select: { fileName: true, fileUrl: true, mimeType: true, request: { select: { companyId: true, tenantId: true, sectorCode: true } } },
       });
-      if (!a) return null;
+      if (!a || !podeAbrirPendencia(ctx, regua, a.request)) return null;
       const conteudo = await lerAnexoDaPendencia(a.fileUrl);
       return conteudo ? { nome: a.fileName, mime: a.mimeType, conteudo, companyId: a.request.companyId } : null;
     }
