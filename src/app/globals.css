@@ -432,6 +432,16 @@ body {
 /* Títulos usam Space Grotesk (display); corpo/UI seguem em IBM Plex Sans */
 h1, h2, h3 { font-family: var(--font-display); }
 
+/* Sinal de clique consistente para controles nativos e componentes do app. */
+a[href], button, summary, select,
+[role="button"], [role="tab"], [role="menuitem"],
+input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"]) {
+  cursor: pointer;
+}
+:is(button, select, input):disabled, [aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Foco acessível padrão, sitewide */
 :focus-visible {
   outline: none;
