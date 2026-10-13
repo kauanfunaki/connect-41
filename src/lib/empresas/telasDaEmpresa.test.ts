@@ -34,3 +34,35 @@ describe("telas de uma empresa por vez", () => {
     });
   }
 });
+
+// As telas pesadas consultam com a empresa escolhida — o tenant inteiro só com
+// "Todas as empresas" pedido, e só onde a lista tem teto. A regra do escopo
+// está testada em `escopoDaEscolha.test.ts`; aqui, que as telas passam por ela.
+describe("telas pesadas", () => {
+  it("Contas a pagar e a receber: escolhem a empresa antes de consultar, com 'todas' explícito", () => {
+    const fonte = ler("src/components/financeiro/ContasPage.tsx");
+    expect(fonte).toContain("escolherEmpresaDaTela(");
+    expect(fonte).toContain('escolha.tipo === "escolher"');
+    // A empresa da consulta é a da escolha, não o parâmetro cru da URL.
+    expect(fonte).not.toContain("empresaId: params.empresa");
+    expect(fonte).toContain("empresaId: empresaId ?? undefined");
+  });
+
+  it("Fluxo de caixa: o realizado e a projeção só com uma empresa", () => {
+    const fonte = ler("src/app/(app)/fluxo-de-caixa/page.tsx");
+    expect(fonte).toContain("escopoFinanceiroDaEscolha(ctx.tenantId, escolha)");
+    expect(fonte).not.toMatch(/companyIds: empresaId \? \[empresaId\] : null/);
+  });
+
+  it("Cobrança: fila e acordos pelo escopo da escolha", () => {
+    const fonte = ler("src/app/(app)/cobranca/page.tsx");
+    expect(fonte).toContain("escopoFinanceiroDaEscolha(");
+    expect(fonte).toContain("listarAcordos(escopo,");
+  });
+
+  it("Documentos fiscais: o alcance é sempre a empresa escolhida, nunca o tenant", () => {
+    const fonte = ler("src/app/(app)/documentos-fiscais/page.tsx");
+    expect(fonte).toContain("alcanceFiscalDaEscolha(");
+    expect(fonte).not.toContain("alcanceDaEquipe(");
+  });
+});
