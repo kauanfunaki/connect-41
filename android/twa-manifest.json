@@ -1,6 +1,6 @@
 {
   "packageId": "br.com.useconnect.portal",
-  "host": "appteste.useconnect.com.br",
+  "host": "app.useconnect.com.br",
   "name": "Portal do Cliente · 41",
   "launcherName": "Portal 41",
   "display": "standalone",
@@ -13,17 +13,17 @@
   "backgroundColor": "#0B1F42",
   "enableNotifications": true,
   "startUrl": "/portal",
-  "iconUrl": "https://appteste.useconnect.com.br/icons/icon-512.png",
+  "iconUrl": "https://app.useconnect.com.br/icons/icon-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "./android.keystore",
     "alias": "portal41"
   },
-  "appVersionName": "1.0.0",
-  "appVersionCode": 2,
+  "appVersionName": "1.1.0",
+  "appVersionCode": 3,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://appteste.useconnect.com.br/portal/manifest.webmanifest",
+  "webManifestUrl": "https://app.useconnect.com.br/portal/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
   "alphaDependencies": {
@@ -32,12 +32,12 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://appteste.useconnect.com.br/portal",
+  "fullScopeUrl": "https://app.useconnect.com.br/portal",
   "minSdkVersion": 23,
   "orientation": "default",
   "fingerprints": [],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
   "displayOverride": [],
-  "appVersion": "1.0.0"
+  "appVersion": "1.1.0"
 }
