@@ -47,9 +47,9 @@ export const PAGINAS_FISCAIS = [
   { pagina: "operacao", modulo: "fiscal_operacao", caminho: "/fiscal/operacao", titulo: "Execuções", descricao: "Prepare extrações e gerações e acompanhe cada execução.", abas: [["executar", "Executar"], ["fila", "Fila"], ["historico", "Histórico"], ["erros", "Erros"]] },
   { pagina: "icms-ipi", modulo: "fiscal_icms_ipi", caminho: "/fiscal/icms-ipi", titulo: "ICMS e IPI", descricao: "Confira a apuração e os ajustes do estabelecimento.", abas: [["apuracao", "Apuração"], ["demonstrativo", "Demonstrativo"], ["ajustes", "Ajustes"], ["dcip-dime", "DCIP e DIME"]] },
   { pagina: "contribuicoes", modulo: "fiscal_contribuicoes", caminho: "/fiscal/contribuicoes", titulo: "PIS e COFINS", descricao: "Confira a apuração, os ajustes e o fechamento do EFD Contribuições.", abas: [["fechamento", "Fechamento"], ["ajustes", "Ajustes"], ["decisoes", "Decisões por registro"], ["demonstrativo", "Demonstrativo"], ["sped", "SPED Contribuições"]] },
-  { pagina: "entregas", modulo: "fiscal_entregas", caminho: "/fiscal/entregas", titulo: "Arquivos e entregas", descricao: "Confira versões, valide e registre a entrega de teste.", abas: [["arquivos", "SPED gerados"], ["validacao", "Validação"], ["dominio", "SPED da Domínio"], ["entregas", "Entregas"]] },
-  { pagina: "conferencia", modulo: "fiscal_conferencia", caminho: "/fiscal/conferencia", titulo: "Contábil e financeiro", descricao: "Compare documentos, contas e pagamentos antes de concluir.", abas: [["depara", "De-para contábil"], ["lancamentos", "Lançamentos"], ["previa", "Prévia financeira"], ["confronto", "Confronto de documentos"]] },
-  { pagina: "configuracoes", modulo: "fiscal_configuracoes", caminho: "/fiscal/configuracoes", titulo: "Configurações fiscais", descricao: "Organize empresas, parâmetros e as fontes das regras de teste.", abas: [["empresas", "Empresas e filiais"], ["parametros", "Parâmetros"], ["cfop", "De-para CFOP"], ["regras", "Fontes das regras"]] },
+  { pagina: "entregas", modulo: "fiscal_entregas", caminho: "/fiscal/entregas", titulo: "Arquivos e entregas", descricao: "Confira versões, valide e registre a entrega de teste.", abas: [["arquivos", "SPED gerados"], ["validacao", "Validação"], ["entregas", "Entregas"]] },
+  { pagina: "conferencia", modulo: "fiscal_conferencia", caminho: "/fiscal/conferencia", titulo: "Conferência fiscal", descricao: "Compare documentos e pagamentos antes de concluir.", abas: [["previa", "Prévia financeira"], ["confronto", "Confronto de documentos"]] },
+  { pagina: "configuracoes", modulo: "fiscal_configuracoes", caminho: "/fiscal/configuracoes", titulo: "Configurações fiscais", descricao: "Confira os parâmetros e consulte as regras fiscais de teste.", abas: [["parametros", "Parâmetros"], ["regras", "Regras fiscais"]] },
 ] as const;
 export type PaginaFiscal = typeof PAGINAS_FISCAIS[number]["pagina"];
 
@@ -123,7 +123,7 @@ export function criarCenario(): Cenario {
   contextos.forEach((contexto, i) => {
     const arquivo: ArquivoTeste = { id: `arquivo-inicial-${i}`, contexto, tipo: i === 2 ? "Contribuições" : "ICMS/IPI", versao: 1,
       nome: `EXEMPLO_${i === 2 ? "contribuicoes" : "sped"}_${contexto.competencia}_${contexto.estabelecimentoId}_v1.txt`,
-      revisao: assinaturaDaRevisao(estado, contexto), criadoEm: "2026-10-01T12:00:00.000Z", validacao: i === 0 ? "Não validado" : "Aprovado", erros: [], entregue: i === 1, protocolo: i === 1 ? "TESTE-202609-001" : "", dominio: i === 2 };
+      revisao: assinaturaDaRevisao(estado, contexto), criadoEm: "2026-10-01T12:00:00.000Z", validacao: i === 0 ? "Não validado" : "Aprovado", erros: [], entregue: i === 1, protocolo: i === 1 ? "TESTE-202609-001" : "", dominio: false };
     estado.arquivos.push(arquivo);
   });
   estado.execucoes.push({ id: "erro-inicial", contexto: estado.contexto, acao: "Extração de exemplo", estado: "Erro", criadoEm: "2026-10-01T12:00:00.000Z", log: ["Lote de exemplo recebido.", "Falha simulada: XML incompleto. Use Reprocessar para testar a recuperação."] });
@@ -141,7 +141,7 @@ export type AcaoFiscal =
   | { tipo: "parametros"; parametros: Cenario["parametros"][string] }
   | { tipo: "empresa"; nome: string; regime: string }
   | { tipo: "regra"; regra: Cenario["regras"][number] }
-  | { tipo: "gerar"; imposto: Imposto; dominio?: boolean }
+  | { tipo: "gerar"; imposto: Imposto }
   | { tipo: "validar" | "entregar"; id: string }
   | { tipo: "enfileirar"; imposto: Imposto; falhar: boolean }
   | { tipo: "processar" | "cancelar" | "reprocessar"; id: string }
@@ -151,9 +151,9 @@ export type AcaoFiscal =
 function alterarPeriodos(s: Cenario, contexto: ContextoFiscal) {
   s.periodos.filter((p) => mesmoEscopo(p, contexto)).forEach((p) => { p.revisao += 1; p.apurado = false; p.fechado = false; });
 }
-function adicionarArquivo(s: Cenario, contexto: ContextoFiscal, imposto: Imposto, id: string, agora: string, dominio = false) {
-  const versao = 1 + Math.max(0, ...s.arquivos.filter((a) => a.tipo === imposto && a.contexto.empresaId === contexto.empresaId && a.contexto.estabelecimentoId === contexto.estabelecimentoId && a.contexto.competencia === contexto.competencia && a.dominio === dominio).map((a) => a.versao));
-  s.arquivos.unshift({ id, contexto: { ...contexto }, tipo: imposto, versao, nome: `EXEMPLO_${dominio ? "dominio" : imposto === "ICMS/IPI" ? "sped" : "contribuicoes"}_${contexto.competencia}_${contexto.estabelecimentoId || contexto.empresaId}_v${versao}.txt`, revisao: assinaturaDaRevisao(s, contexto), criadoEm: agora, validacao: "Não validado", erros: [], entregue: false, protocolo: "", dominio });
+function adicionarArquivo(s: Cenario, contexto: ContextoFiscal, imposto: Imposto, id: string, agora: string) {
+  const versao = 1 + Math.max(0, ...s.arquivos.filter((a) => a.tipo === imposto && a.contexto.empresaId === contexto.empresaId && a.contexto.estabelecimentoId === contexto.estabelecimentoId && a.contexto.competencia === contexto.competencia && !a.dominio).map((a) => a.versao));
+  s.arquivos.unshift({ id, contexto: { ...contexto }, tipo: imposto, versao, nome: `EXEMPLO_${imposto === "ICMS/IPI" ? "sped" : "contribuicoes"}_${contexto.competencia}_${contexto.estabelecimentoId || contexto.empresaId}_v${versao}.txt`, revisao: assinaturaDaRevisao(s, contexto), criadoEm: agora, validacao: "Não validado", erros: [], entregue: false, protocolo: "", dominio: false });
 }
 
 /** Transições puras permitem verificar o fluxo sem servidor, arquivo ou cálculo fiscal real. */
@@ -226,9 +226,9 @@ export function executarAcao(cenario: Cenario, acao: AcaoFiscal, contexto = cena
     s.periodos.forEach((p) => { p.revisao += 1; p.apurado = false; p.fechado = false; });
     mensagem = "Regra compartilhada atualizada; cenários sinalizados para revisão.";
   } else if (acao.tipo === "gerar") {
-    adicionarArquivo(s, contexto, acao.imposto, id, agora, acao.dominio);
-    s.execucoes.unshift({ id: `${id}-execucao`, contexto: { ...contexto }, acao: acao.dominio ? "Importar Domínio de exemplo" : `Gerar ${acao.imposto}`, criadoEm: agora, estado: "Concluída", log: ["Simulação iniciada no navegador.", "Dados fictícios preparados.", "Prévia adicionada a Arquivos e entregas. Nenhum arquivo fiscal foi gerado."] });
-    mensagem = acao.dominio ? "Arquivo de exemplo da Domínio adicionado para comparação." : "Nova versão de teste criada. Continue em Validação.";
+    adicionarArquivo(s, contexto, acao.imposto, id, agora);
+    s.execucoes.unshift({ id: `${id}-execucao`, contexto: { ...contexto }, acao: `Gerar ${acao.imposto}`, criadoEm: agora, estado: "Concluída", log: ["Simulação iniciada no navegador.", "Dados fictícios preparados.", "Prévia adicionada a Arquivos e entregas. Nenhum arquivo fiscal foi gerado."] });
+    mensagem = "Nova versão de teste criada. Continue em Validação.";
   } else if (acao.tipo === "validar" || acao.tipo === "entregar") {
     const arquivo = s.arquivos.find((a) => a.id === acao.id && mesmoEscopo(a.contexto, contexto));
     if (!arquivo) return recusar("Arquivo indisponível neste filtro.");
@@ -242,7 +242,6 @@ export function executarAcao(cenario: Cenario, acao: AcaoFiscal, contexto = cena
       arquivo.validacao = arquivo.erros.length ? "Com pendências" : "Aprovado";
       mensagem = arquivo.erros.length ? `Validação de teste: ${arquivo.erros.length} pendência(s). Abra o relatório.` : "Validação de teste aprovada. A versão está pronta para entrega simulada.";
     } else {
-      if (arquivo.dominio) return recusar("Use uma versão gerada no cenário para registrar a entrega.");
       if (arquivo.validacao !== "Aprovado") return recusar("Aprove a validação de teste antes de registrar a entrega.");
       arquivo.entregue = true; arquivo.protocolo = `TESTE-${id.slice(0, 8).toUpperCase()}`;
       mensagem = `Entrega simulada registrada: ${arquivo.protocolo}.`;
