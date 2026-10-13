@@ -6,7 +6,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { FORA_DO_RESULTADO, GRUPOS } from "@/lib/dre/estrutura";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
@@ -102,7 +102,13 @@ export function FinanceCategoryForm({
                 {g.label}
               </option>
             ))}
-            <option value={TRANSFERENCIA}>Transferência entre contas (fora do DRE)</option>
+            {/* Transferência e "desconsiderar" (13/10/2026): as escolhas de fora
+                do resultado, as mesmas da fila da DRE e do plano da empresa. */}
+            {FORA_DO_RESULTADO.map((f) => (
+              <option key={f.code} value={f.code}>
+                {f.label}
+              </option>
+            ))}
           </Select>
         </CampoForm>
         {/* Só aparece quando havia texto livre que não casa com nenhum grupo:

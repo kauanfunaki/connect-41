@@ -16,7 +16,7 @@
 // alguém refazer a conta à mão e perder a confiança no resto.
 
 import { calcularDre, montarLinhas, type LancamentoDoDre, type Mapeamento, type ResultadoDoDre } from "./calculo";
-import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA, OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
+import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA, DESCONSIDERAR, OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
 import { LINHA_DE_RESULTADO, LINHA_OPERACIONAL, valorDaLinha } from "./economica";
 import { runwayEmDias } from "@/lib/financeiro/conciliacao/saldoConsolidado";
 
@@ -172,7 +172,7 @@ export function compararResultados(
 
 /** Soma resultados de vários meses num só — o acumulado. */
 export function somarPorGrupo(lista: Record<string, number>[]): Record<string, number> {
-  const total: Record<string, number> = { [NAO_CLASSIFICADO]: 0, [TRANSFERENCIA]: 0 };
+  const total: Record<string, number> = { [NAO_CLASSIFICADO]: 0, [TRANSFERENCIA]: 0, [DESCONSIDERAR]: 0 };
   for (const g of GRUPOS) total[g.code] = 0;
   for (const p of lista) for (const [k, v] of Object.entries(p)) total[k] = (total[k] ?? 0) + v;
   return total;
@@ -180,7 +180,7 @@ export function somarPorGrupo(lista: Record<string, number>[]): Record<string, n
 
 /** Um `ResultadoDoDre` a partir de totais por grupo já agregados. */
 export function resultadoDePorGrupo(porGrupo: Record<string, number>, opcoes: OpcoesDoDre = OPCOES_PADRAO): ResultadoDoDre {
-  return { linhas: montarLinhas(porGrupo, opcoes), porGrupo, naoClassificado: [], diferencaDeFechamento: 0 };
+  return { linhas: montarLinhas(porGrupo, opcoes), porGrupo, naoClassificado: [], desconsiderado: [], porCategoria: {}, diferencaDeFechamento: 0 };
 }
 
 // ─── Atraso médio de liquidação ─────────────────────────────────────────────

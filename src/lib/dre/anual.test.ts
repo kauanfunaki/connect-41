@@ -100,3 +100,41 @@ describe("dreDoAno", () => {
     expect(a.mesesComMovimento).toBe(2);
   });
 });
+
+// As linhas da DRE do ano abrem nas categorias (13/10/2026): a mesma categoria
+// nos doze meses, a média e o total, nas colunas do relatório.
+describe("o detalhe das linhas no ano", () => {
+  const comCategorias = (n: number, cmv: [string, number][]): MesDoAno => ({
+    mes: n,
+    porGrupo: { cmv: cmv.reduce((s, [, c]) => s + c, 0) },
+    temMovimento: true,
+    porCategoria: { cmv: cmv.map(([categoria, centavos]) => ({ categoria, centavos, origem: "pagamento" as const })) },
+  });
+
+  const a = dreDoAno([
+    comCategorias(1, [["Frete", -1_000], ["Matéria-prima", -9_000]]),
+    comCategorias(3, [["frete", -2_000]]),
+  ]);
+
+  it("uma linha por categoria, com os doze meses, a média e o ano", () => {
+    const frete = a.detalhe.cmv!.find((c) => c.categoria === "Frete")!;
+    expect(frete.valores).toHaveLength(14);
+    expect(frete.valores.slice(0, 3)).toEqual([-1_000, 0, -2_000]);
+    // Média sobre os meses com movimento (dois), como a da linha.
+    expect(frete.valores[12]).toBe(-1_500);
+    expect(frete.valores[13]).toBe(-3_000);
+  });
+
+  it("grafias da mesma chave em meses diferentes somam na mesma linha, com o primeiro nome", () => {
+    expect(a.detalhe.cmv!.map((c) => c.categoria)).toEqual(["Matéria-prima", "Frete"]);
+  });
+
+  it("o total das categorias é o total da linha", () => {
+    const anoDaLinha = linhaAoLongoDoAno(a, "cmv")[13]!.centavos;
+    expect(a.detalhe.cmv!.reduce((s, c) => s + c.valores[13]!, 0)).toBe(anoDaLinha);
+  });
+
+  it("sem o detalhe do mês, não há o que abrir", () => {
+    expect(dreDoAno([mes(1, 100_000, -40_000)]).detalhe).toEqual({});
+  });
+});

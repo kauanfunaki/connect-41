@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { calcularDre, centavosDaLinha, montarMapeamento, type LancamentoDoDre } from "./calculo";
 import { MAPEAMENTO_PADRAO } from "./mapeamento-padrao";
 import { OUTUBRO_2025 } from "./outubro-2025.fixture";
-import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA } from "./estrutura";
+import { DESCONSIDERAR, GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA } from "./estrutura";
 import {
   BLOCOS_DO_MODELO,
+  ROTULO_FORA_DESCONSIDERADA,
   ROTULO_FORA_SEM_GRUPO,
   ROTULO_FORA_TRANSFERENCIA,
   montarDreNoModeloDoBpo,
@@ -281,6 +282,57 @@ describe("categoria sem grupo", () => {
     const q = umMes([l("Frete", -10, "pagamento"), l("  FRETE ", -5, "pagamento")]);
     const fretes = q.linhas.filter((x) => x.tipo === "categoria");
     expect(fretes.map((x) => [x.rotulo, x.celulas[0]!.centavos])).toEqual([["Frete", 1500]]);
+  });
+});
+
+// "Desconsiderar no DRE" (13/10/2026): fora das linhas, como na tela, e na
+// conferência com o motivo — quem recebe o arquivo vê que o valor existiu.
+describe("categoria desconsiderada", () => {
+  const COM_DESCONSIDERADA = montarMapeamento([
+    ...MAPEAMENTO_PADRAO,
+    { categoria: "Compra de Moldes", grupo: DESCONSIDERAR },
+  ]);
+  const lancamentos = [
+    l("Clientes - Venda de Mercadoria Fabricadas", 1000, "recebimento"),
+    l("Frete", -100, "pagamento"),
+    l("Compra de Moldes", -300, "pagamento"),
+  ];
+  const p = umMes(lancamentos, COM_DESCONSIDERADA);
+  const semEla = umMes(lancamentos.slice(0, 2), COM_DESCONSIDERADA);
+
+  it("não vira linha nem mexe em total nenhum — a DRE é a mesma de sem ela", () => {
+    expect(p.linhas).toEqual(semEla.linhas);
+    expect(p.linhas.some((x) => x.rotulo === "Compra de Moldes")).toBe(false);
+  });
+
+  it("aparece na conferência como desconsiderada, com o valor no sinal do modelo", () => {
+    expect(p.conferencia.map((c) => [c.categoria, c.destino, c.centavos, c.fora])).toEqual([
+      ["Compra de Moldes", ROTULO_FORA_DESCONSIDERADA, 30000, true],
+      ["Clientes - Venda de Mercadoria Fabricadas", "RECEITA BRUTA", 100000, false],
+      ["Frete", "CUSTO OPERACIONAL TOTAL", 10000, false],
+    ]);
+  });
+
+  it("não liga o aviso de sem grupo — foi tirada de propósito", () => {
+    expect(p.temSemGrupo).toBe(false);
+  });
+
+  it("bate com a tela: o desconsiderado da conferência é o do cálculo", () => {
+    const r = calcularDre(lancamentos, COM_DESCONSIDERADA);
+    const naConferencia = p.conferencia.filter((c) => c.destino === ROTULO_FORA_DESCONSIDERADA);
+    expect(naConferencia.map((c) => -c.centavos)).toEqual(r.desconsiderado.map((d) => d.centavos));
+    expect(r.porGrupo[DESCONSIDERAR]).toBe(-30000);
+  });
+
+  it("fica entre a transferência e as linhas da DRE na conferência", () => {
+    const q = umMes(
+      [l("Categoria Inventada", -1, "pagamento"), l("Compra de Moldes", -2, "pagamento"), l("Saída de Transferência", -3, "pagamento")],
+      montarMapeamento([
+        { categoria: "Compra de Moldes", grupo: DESCONSIDERAR },
+        { categoria: "Saída de Transferência", grupo: TRANSFERENCIA },
+      ])
+    );
+    expect(q.conferencia.map((c) => c.destino)).toEqual([ROTULO_FORA_SEM_GRUPO, ROTULO_FORA_TRANSFERENCIA, ROTULO_FORA_DESCONSIDERADA]);
   });
 });
 
