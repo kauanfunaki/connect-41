@@ -28,8 +28,9 @@ export type EstadoDaLigia = "parada" | "pensando" | "deuCerto" | "naoConsegui";
  * com `prefers-reduced-motion`, ele fica parado e só o olhar para cima diz
  * que ela está pensando.
  *
- * Decorativa por padrão (o nome está escrito ao lado); com `rotulo`, vira
- * imagem com nome para leitor de tela.
+ * Decorativa por padrão (o nome está escrito ao lado, ou no `aria-label` do
+ * botão que a leva, como o do canto); com `rotulo`, vira imagem com nome para
+ * leitor de tela.
  */
 export function Ligia({
   estado = "parada",
