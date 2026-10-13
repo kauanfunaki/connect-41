@@ -105,12 +105,12 @@ export default async function AgentesDeIAPage() {
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
           <div>
             <h2 id="agentes-do-chat" className="text-section font-semibold text-fg">
-              Agentes — chat de IA
+              Agentes — chat da Lígia
             </h2>
             <p className="text-fs-3 text-fg-secondary max-w-[70ch]">
-              As IAs que conversam no chat do canto inferior direito, uma por setor, e a Ajuda do Connect. Ligar um
-              agente aqui é o que o faz aparecer no chat para quem opera aquele setor. O do Societário também atende o
-              cartão de perguntas da fila de processos.
+              A Lígia, assistente do Connect, no chat do canto inferior direito: um agente por setor e a Ajuda do
+              Connect, todos com o mesmo nome e o mesmo jeito de falar. Ligar um agente aqui é o que o faz aparecer no
+              chat para quem opera aquele setor. O do Societário também atende o cartão de perguntas da fila de processos.
             </p>
           </div>
           <p className="text-fs-3 tabular-nums text-fg-secondary">{moeda(gastoDe(doChat))} no mês</p>

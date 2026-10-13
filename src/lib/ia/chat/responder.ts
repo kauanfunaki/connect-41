@@ -22,6 +22,7 @@ import {
   contextoParaOAgente,
   escopoDoAgente,
   podeAbrirTransferencia,
+  primeiroNomeDaPessoa,
   rotularPropostas,
   setorDaTransferencia,
   sistemaDoChat,
@@ -39,6 +40,7 @@ import {
 } from "@/lib/ia/chat/conversas";
 import { filtrarCitacoes, idsNoTexto } from "@/lib/ia/chat/citacoes";
 import { linhaDosAnexos, type AnexoDaPergunta } from "@/lib/ia/chat/anexos";
+import { nomeDaAssistente } from "@/lib/ia/ligia";
 import {
   contextoDaTela,
   descricaoDaTransferencia,
@@ -93,7 +95,7 @@ export async function prepararPerguntaDoChat(
   // O agente pedido tem de estar entre os que esta pessoa pode abrir agora —
   // mesma lista que desenhou o botão, recalculada aqui.
   const agentes = await agentesDoChat(ctx);
-  if (agentes.length === 0) return { erro: "O chat de IA não está disponível para você.", status: 403 };
+  if (agentes.length === 0) return { erro: "A Lígia não está disponível para você.", status: 403 };
 
   const agora = new Date();
   const limite = opcoes.limiteDiario ?? LIMITE_DE_PERGUNTAS_POR_DIA;
@@ -111,7 +113,7 @@ export async function prepararPerguntaDoChat(
   // Conversa antiga continua com o agente dela — se ele saiu do alcance da
   // pessoa (setor trocado, agente desligado), a pergunta não passa.
   const agente = agentes.find((a) => a.code === conversa.agentCode);
-  if (!agente) return { erro: "A IA desta conversa não está mais disponível para você. Comece uma nova.", status: 403 };
+  if (!agente) return { erro: "A Lígia não atende mais este setor para você. Comece uma nova conversa.", status: 403 };
 
   const tela = contextoDaTela(typeof corpo.caminho === "string" ? corpo.caminho : "");
   const contexto = await contextoParaOAgente(ctx, agente.code, tela);
@@ -119,6 +121,8 @@ export async function prepararPerguntaDoChat(
 
   const { labels } = await getSectorMaps(ctx.tenantId);
   const escopo = await escopoDoAgente(ctx, agente.code, Object.keys(labels));
+  // Para a Lígia cumprimentar pelo nome na primeira resposta (13/10/2026).
+  const primeiroNome = await primeiroNomeDaPessoa(ctx.userId);
 
   return {
     executar: async (enviar) => {
@@ -141,7 +145,9 @@ export async function prepararPerguntaDoChat(
           tenantId: dono.tenantId,
           agentCode: alvo.code,
           system:
-            sistemaDoChat(alvo.code) +
+            // O "Oi, Camila!" só na primeira resposta da conversa — e não na
+            // passada por outro setor, que chega logo depois do primeiro "Oi".
+            sistemaDoChat(alvo.code, { primeiroNome, primeiraResposta: historico.length === 0 && aviso !== "encaminhada" }) +
             (ctxDoAlvo ? `\n\n${ctxDoAlvo.texto}` : "") +
             (aviso === "encaminhada" ? GUARDA_DO_ENCAMINHADO : aviso === "proprio_setor" ? GUARDA_DO_PROPRIO_SETOR : ""),
           pergunta,
@@ -229,7 +235,7 @@ export async function prepararPerguntaDoChat(
         }
 
         if (destino) {
-          enviar({ tipo: "passo", texto: `Passando para a ${destino.titulo}…` });
+          enviar({ tipo: "passo", texto: `Passando para a ${nomeDaAssistente(destino.especialidade)}…` });
           const r2 = await perguntarA(destino, false, "encaminhada");
           const resposta2 = await gravarMensagem({
             conversaId: conversa.id,
@@ -238,13 +244,13 @@ export async function prepararPerguntaDoChat(
             propostas: await rotularPropostas(dono.tenantId, propostasDe(r2)),
             runId: (r2 as { runId?: string }).runId ?? null,
             truncada: r2.truncado,
-            contexto: `Respondido pela ${destino.titulo}`,
+            contexto: `Resposta da ${nomeDaAssistente(destino.especialidade)}`,
           });
           enviar({ tipo: "mensagem", mensagem: await comCitados(dono.tenantId, resposta2) });
         }
       } catch (err) {
         console.error("[chat-ia]", agente.code, err);
-        const texto = err instanceof Error ? err.message : "Erro ao falar com a IA.";
+        const texto = err instanceof Error ? err.message : "Não consegui responder agora. Tente de novo.";
         const falha = await gravarMensagem({ conversaId: conversa.id, papel: "assistente", texto, falhou: true }).catch(() => null);
         if (falha) enviar({ tipo: "mensagem", mensagem: falha });
         else enviar({ tipo: "erro", texto });
