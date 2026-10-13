@@ -69,7 +69,8 @@ export function AcoesDoSocio({
   companyId: string;
   nome: string;
   editarHref: string;
-  excluir: () => Promise<void>;
+  /** Só para o administrador (13/10/2026); o gestor registra a saída. */
+  excluir?: () => Promise<void>;
   registrarSaida: AcaoDaSaida;
 }) {
   const [registrando, setRegistrando] = useState(false);
