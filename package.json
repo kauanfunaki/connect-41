@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/verificar-build.mjs && prisma generate && next build && node scripts/preparar-standalone.mjs",
+    "build": "prisma generate && next build && node scripts/preparar-standalone.mjs",
+    "build:local": "node scripts/verificar-build.mjs && npm run build",
     "start": "next start",
     "lint": "eslint",
     "seed": "npx tsx prisma/seed.ts",
