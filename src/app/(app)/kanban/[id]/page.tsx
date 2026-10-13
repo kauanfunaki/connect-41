@@ -10,7 +10,7 @@ import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineBu
 import { EditPipelineStagesModal } from "@/components/kanban/EditPipelineStagesModal";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { moverItem, reordenarItem, duplicarPipeline, renomearEstagio, atualizarEstagios, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa, excluirItem } from "../actions";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { accessiblePipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
 function daysSince(d: Date): number {
@@ -57,6 +57,8 @@ export default async function KanbanBoardPage({
   if (!pipeline) notFound();
 
   const canAddItem = canManageSector(ctx, pipeline.sectorCode);
+  // Excluir card e tirar coluna: só o administrador (13/10/2026).
+  const canDelete = podeExcluir(ctx);
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
   const duplicateEntities =
@@ -182,6 +184,7 @@ export default async function KanbanBoardPage({
             <EditPipelineStagesModal
               initialStages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color ?? "#586577", type: s.isTerminal ? "DONE" : s.type === "DONE" ? "NOT_STARTED" : s.type }))}
               action={atualizarEstagios.bind(null, id)}
+              podeExcluirColuna={canDelete}
             />
             {duplicateEntities.length > 0 && (
               <DuplicatePipelineButton
@@ -216,7 +219,7 @@ export default async function KanbanBoardPage({
           priorityAction={atualizarPrioridadeResponsavel.bind(null, id)}
           concluirAction={concluirTarefa}
           reabrirAction={reabrirTarefa}
-          deleteAction={canAddItem ? excluirItem.bind(null, id) : undefined}
+          deleteAction={canDelete ? excluirItem.bind(null, id) : undefined}
         />
       </div>
     </PageContainer>
