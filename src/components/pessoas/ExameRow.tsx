@@ -44,7 +44,8 @@ export type ExameItem = {
 type Props = {
   exame: ExameItem;
   updateAction: (prev: ExameState, form: FormData) => Promise<ExameState>;
-  removeAction: () => Promise<void>;
+  /** Só para o administrador (13/10/2026): sem ela, o "⋯" de remover não aparece. */
+  removeAction?: () => Promise<void>;
   canManage: boolean;
 };
 
@@ -67,7 +68,7 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={STATUS_STYLE[exame.status]}>{STATUS_LABEL[exame.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
-          {canManage && <MenuDoRegistro titulo="Remover este exame?" onRemover={removeAction} />}
+          {canManage && removeAction && <MenuDoRegistro titulo="Remover este exame?" onRemover={removeAction} />}
         </div>
       </div>
 

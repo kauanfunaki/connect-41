@@ -6,7 +6,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { setorDoModulo } from "@/lib/modules";
 import { getSectorUsers } from "@/lib/sectorUsers";
@@ -87,9 +87,10 @@ export async function salvarAcompanhamentoDoLead(id: string, form: FormData): Pr
 export async function excluirLead(id: string): Promise<Resultado> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Sessão expirada. Entre de novo." };
-  if (!(await podeNoModulo(ctx, MODULO_LEADS, "gerir"))) {
-    return { error: "Só quem coordena o setor ou administra o escritório exclui um lead." };
-  }
+  // Excluir lead: só o administrador (13/10/2026). Era também a coordenação do
+  // setor; para tirar da fila, a situação "Descartado" segue com ela.
+  if (!podeExcluir(ctx)) return { error: SO_ADMIN_EXCLUI };
+  if (!(await podeNoModulo(ctx, MODULO_LEADS, "gerir"))) return { error: "Sem permissão para este lead." };
 
   const prisma = getPrisma();
   const lead = await prisma.lead.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true, source: true } });

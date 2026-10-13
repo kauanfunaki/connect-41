@@ -4,7 +4,7 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddBeneficioForm } from "@/components/pessoas/AddBeneficioForm";
@@ -74,7 +74,7 @@ export default async function BeneficiosPessoaPage({
                   endDateLabel: b.endDate ? formatCalendarDate(b.endDate) : null,
                 }}
                 updateAction={atualizarBeneficioAssignment.bind(null, id, b.id)}
-                removeAction={removerBeneficioAssignment.bind(null, id, b.id)}
+                removeAction={podeExcluir(ctx) ? removerBeneficioAssignment.bind(null, id, b.id) : undefined}
                 canManage={canEdit}
               />
             ))}

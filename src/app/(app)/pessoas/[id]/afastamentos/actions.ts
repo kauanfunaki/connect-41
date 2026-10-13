@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { AbsenceType, AbsenceStatus } from "@/generated/prisma/enums";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -126,7 +126,8 @@ export async function atualizarAfastamento(
 
 export async function excluirAfastamento(personId: string, absenceId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_afastamentos", "gerir"))) return;
+  // Excluir: só o administrador (13/10/2026). Antes, quem gere o módulo no setor.
+  if (!ctx.tenantId || !podeExcluir(ctx) || !(await podeNoModulo(ctx, "dp_afastamentos", "gerir"))) return;
   if (!(await assertPersonInScope(personId, ctx))) return;
 
   const prisma = getPrisma();

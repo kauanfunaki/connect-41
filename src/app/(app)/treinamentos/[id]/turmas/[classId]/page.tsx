@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { adicionarParticipante, atualizarParticipante, removerParticipante } from "./actions";
 import { AddParticipanteForm } from "@/components/treinamentos/AddParticipanteForm";
@@ -67,7 +67,7 @@ export default async function TurmaPage({
                 key={p.id}
                 participante={{ id: p.id, personId: p.person.id, personName: p.person.name, status: p.status }}
                 updateAction={atualizarParticipante.bind(null, trainingId, classId, p.id)}
-                removeAction={removerParticipante.bind(null, trainingId, classId, p.id)}
+                removeAction={podeExcluir(ctx) ? removerParticipante.bind(null, trainingId, classId, p.id) : undefined}
                 canManage={canManage}
               />
             ))}

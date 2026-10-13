@@ -4,7 +4,7 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddExameForm } from "@/components/pessoas/AddExameForm";
@@ -64,7 +64,7 @@ export default async function ExamesPage({
                   notes: e.notes,
                 }}
                 updateAction={atualizarExame.bind(null, id, e.id)}
-                removeAction={excluirExame.bind(null, id, e.id)}
+                removeAction={podeExcluir(ctx) ? excluirExame.bind(null, id, e.id) : undefined}
                 canManage={canEdit}
               />
             ))}

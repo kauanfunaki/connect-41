@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { ArrowRight, Pencil } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { MenuDoRegistro } from "@/components/pessoas/MenuDoRegistro";
@@ -27,6 +27,8 @@ export default async function TreinamentoPage({
   const { id } = await params;
   const { ctx, setor } = await abrirTelaDoModulo("dp_treinamentos");
   const canManage = canManageSector(ctx, setor);
+  // Excluir treinamento e turma: só o administrador (13/10/2026).
+  const canDelete = canManage && podeExcluir(ctx);
 
   const prisma = getPrisma();
   const training = await prisma.training.findFirst({
@@ -59,7 +61,7 @@ export default async function TreinamentoPage({
                 <Pencil size={14} />
                 Editar
               </Button>
-              <DeleteButton action={deleteAction} nome={training.name} />
+              {canDelete && <DeleteButton action={deleteAction} nome={training.name} />}
             </div>
           )
         }
@@ -100,7 +102,7 @@ export default async function TreinamentoPage({
                         <InfoDoCartao>{[c.shift, c.instructor].filter(Boolean).join(" · ")}</InfoDoCartao>
                       )}
                     </div>
-                    {canManage && (
+                    {canDelete && (
                       <MenuDoRegistro
                         rotulo="Excluir"
                         titulo={`Excluir a turma de ${formatCalendarDate(c.date)}?`}
@@ -162,7 +164,7 @@ export default async function TreinamentoPage({
                             <Button href={`/treinamentos/${id}/turmas/${c.id}`} variant="secondary" size="xs">
                               Abrir <ArrowRight size={11} />
                             </Button>
-                            {canManage && (
+                            {canDelete && (
                               <MenuDoRegistro
                                 rotulo="Excluir"
                                 titulo={`Excluir a turma de ${formatCalendarDate(c.date)}?`}

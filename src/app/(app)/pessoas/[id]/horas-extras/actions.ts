@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { DayType, OvertimeStatus } from "@/generated/prisma/enums";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 
@@ -98,7 +98,8 @@ export async function atualizarHoraExtra(
 
 export async function excluirHoraExtra(personId: string, entryId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_horas_extras", "gerir"))) return;
+  // Excluir: só o administrador (13/10/2026). Antes, quem gere o módulo no setor.
+  if (!ctx.tenantId || !podeExcluir(ctx) || !(await podeNoModulo(ctx, "dp_horas_extras", "gerir"))) return;
   if (!(await assertPersonInScope(personId, ctx))) return;
 
   const prisma = getPrisma();

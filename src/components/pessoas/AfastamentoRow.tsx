@@ -24,7 +24,8 @@ export type AfastamentoItem = {
 type Props = {
   afastamento: AfastamentoItem;
   updateAction: (prev: AbsenceState, form: FormData) => Promise<AbsenceState>;
-  removeAction: () => Promise<void>;
+  /** Só para o administrador (13/10/2026): sem ela, o "⋯" de remover não aparece. */
+  removeAction?: () => Promise<void>;
   canManage: boolean;
   canViewMedical: boolean;
 };
@@ -49,7 +50,7 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={COR_DO_AFASTAMENTO[afastamento.status]}>{SITUACAO_DO_AFASTAMENTO[afastamento.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
-          {canManage && <MenuDoRegistro titulo="Remover este registro?" onRemover={removeAction} />}
+          {canManage && removeAction && <MenuDoRegistro titulo="Remover este registro?" onRemover={removeAction} />}
         </div>
       </div>
 

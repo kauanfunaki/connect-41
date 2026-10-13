@@ -4,7 +4,7 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -66,7 +66,7 @@ export default async function AfastamentosPage({
                   reason: a.reason,
                 }}
                 updateAction={atualizarAfastamento.bind(null, id, a.id)}
-                removeAction={excluirAfastamento.bind(null, id, a.id)}
+                removeAction={podeExcluir(ctx) ? excluirAfastamento.bind(null, id, a.id) : undefined}
                 canManage={canEdit}
                 canViewMedical={canViewMedical}
               />
