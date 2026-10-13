@@ -45,7 +45,8 @@ type Props = {
   setorRotulo: string;
   createAction: (prev: BpoCredencialState, form: FormData) => Promise<BpoCredencialState>;
   updateAction: (id: string, prev: BpoCredencialState, form: FormData) => Promise<BpoCredencialState>;
-  deleteAction: (id: string) => Promise<void>;
+  /** Só para o administrador (13/10/2026); sem ela, a lista não oferece Excluir. */
+  deleteAction?: (id: string) => Promise<void>;
   revealAction: (id: string) => Promise<{ error: string } | { password: string }>;
 };
 
@@ -166,13 +167,15 @@ function EditCredentialModal({
  * um par de ícones soltos (até 30/09), e a lixeira ficava a um clique
  * acidental do lápis. Mesmo desenho das linhas de Cadastros.
  */
-function AcoesDaCredencial({ onEditar, onExcluir }: { onEditar: () => void; onExcluir: () => void }) {
+function AcoesDaCredencial({ onEditar, onExcluir }: { onEditar: () => void; onExcluir?: () => void }) {
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
       <Button variant="secondary" size="xs" onClick={onEditar}>
         <Pencil size={12} /> Editar
       </Button>
-      {/* O gatilho do `MenuDeMaisAcoes` (08/10/2026): estava copiado à mão. */}
+      {/* O gatilho do `MenuDeMaisAcoes` (08/10/2026): estava copiado à mão.
+          Só com o Excluir, que é do administrador (13/10/2026). */}
+      {onExcluir && (
       <MenuDeMaisAcoes rotulo="Mais ações" aria-label="Mais ações da credencial" width={180}>
         {({ close }) => (
           <ItemDoMenu
@@ -187,6 +190,7 @@ function AcoesDaCredencial({ onEditar, onExcluir }: { onEditar: () => void; onEx
           </ItemDoMenu>
         )}
       </MenuDeMaisAcoes>
+      )}
     </span>
   );
 }
@@ -250,7 +254,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
     requestConfirm(
       { title: `Excluir a credencial "${row.title}"?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Excluir" },
       async () => {
-        await deleteAction(row.id);
+        await deleteAction?.(row.id);
         toast.success("Credencial excluída.");
       }
     );
@@ -313,7 +317,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
                 </span>
                 {canManage && (
                   <span className="ml-auto">
-                    <AcoesDaCredencial onEditar={() => setEditingId(row.id)} onExcluir={() => handleDelete(row)} />
+                    <AcoesDaCredencial onEditar={() => setEditingId(row.id)} onExcluir={deleteAction ? () => handleDelete(row) : undefined} />
                   </span>
                 )}
               </PeDoCartao>
@@ -369,7 +373,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
                     </td>
                     {canManage && (
                       <td className="px-4 py-3">
-                        <AcoesDaCredencial onEditar={() => setEditingId(row.id)} onExcluir={() => handleDelete(row)} />
+                        <AcoesDaCredencial onEditar={() => setEditingId(row.id)} onExcluir={deleteAction ? () => handleDelete(row) : undefined} />
                       </td>
                     )}
                   </LinhaFiltravel>

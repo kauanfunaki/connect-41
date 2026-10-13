@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
 import { setorDoModulo } from "@/lib/modules";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
@@ -59,6 +59,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
+  // Remover a capa: só o administrador (13/10/2026). Trocar segue com quem escreve.
+  if (!podeExcluir(ctx)) return NextResponse.json({ error: SO_ADMIN_EXCLUI }, { status: 403 });
 
   const { id } = await params;
   const prisma = getPrisma();

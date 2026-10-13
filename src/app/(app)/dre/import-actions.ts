@@ -186,29 +186,3 @@ export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaI
     categoriasSemGrupo: criadas.filter((c) => !c.dreGroup).length,
   };
 }
-
-/** Desfaz o import de um mês — o DRE volta a sair do financeiro do Connect. */
-export async function removerImport(
-  companyId: string,
-  ano: number,
-  mes: number
-): Promise<{ error: string } | null> {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!(await podeAbrirADre(ctx))) return { error: "Sem permissão no DRE." };
-
-  const prisma = getPrisma();
-  await prisma.dreImport.deleteMany({ where: { tenantId: ctx.tenantId, companyId, ano, mes } });
-
-  await logAudit({
-    tenantId: ctx.tenantId,
-    userId: ctx.userId,
-    action: "dre.import.remove",
-    entityType: "Company",
-    entityId: companyId,
-    metadata: { ano, mes },
-  });
-
-  revalidatePath("/dre");
-  return null;
-}

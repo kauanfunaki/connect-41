@@ -6,7 +6,7 @@ import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { InfoRow } from "@/components/empresas/InfoRow";
-import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { obterDocumento } from "@/lib/fiscal/data";
 import { alcanceDaEquipe } from "../alcance";
@@ -226,7 +226,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       <EditarDocumentoCard
         documentoId={doc.id}
         acao={editarDocumento}
-        excluir={excluirDocumento.bind(null, doc.id)}
+        excluir={podeExcluir(ctx) ? excluirDocumento.bind(null, doc.id) : undefined}
         empresas={empresas.map((e) => ({
           id: e.id,
           nome: nomeExibicao(e),
