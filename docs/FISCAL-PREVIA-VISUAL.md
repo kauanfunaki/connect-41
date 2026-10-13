@@ -12,10 +12,10 @@ As nove telas de teste ficam em `/fiscal`, no setor Fiscal. Todas usam dados fic
 | Classificação, decisões em lote e histórico | Classificação: Produtos, Contratos e recibos, Decisões registradas |
 | Apuração, demonstrativo ICMS, ajustes, DCIP/DIME | ICMS e IPI: Apuração, Demonstrativo, Ajustes, DCIP e DIME |
 | Contribuições, fechamento, demonstrativo, SPED Contribuições | PIS e COFINS: Fechamento, Ajustes, Decisões por registro, Demonstrativo, SPED Contribuições |
-| SPED gerados, validação, Domínio, entrega | Arquivos e entregas: SPED gerados, Validação, SPED da Domínio, Entregas |
+| SPED gerados, validação e entrega | Arquivos e entregas: SPED gerados, Validação, Entregas |
 | Executar, execuções, erros | Execuções: Executar, Fila, Histórico, Erros |
-| Contábil, Financeiro | Contábil e financeiro: De-para contábil, Lançamentos, Prévia financeira, Confronto de documentos |
-| Empresas, de-para CFOP, regras e fontes | Configurações fiscais: Empresas e filiais, Parâmetros, De-para CFOP, Fontes das regras |
+| Conferência de documentos e pagamentos | Conferência fiscal: Prévia financeira, Confronto de documentos |
+| Parâmetros, de-para CFOP, regras e fontes | Configurações fiscais: Parâmetros, Regras fiscais |
 
 ## Um roteiro para testar
 
@@ -26,7 +26,7 @@ As nove telas de teste ficam em `/fiscal`, no setor Fiscal. Todas usam dados fic
 5. Gere uma versão de teste. Em Arquivos e entregas → Validação, valide e registre a entrega.
 6. Altere uma decisão: a versão será sinalizada para revisão. Gere outra versão e confira o histórico.
 7. Em Execuções, enfileire uma geração com falha, processe na Fila e recupere em Erros. Confira o log.
-8. Em Contábil e financeiro, simule o confronto de documentos e concilie um pagamento.
+8. Em Conferência fiscal, simule o confronto de documentos e concilie um pagamento.
 
 Os filtros de empresa, estabelecimento e competência são compartilhados. As abas têm links diretos usando `?aba=...`, inclusive no histórico do navegador.
 
@@ -52,6 +52,24 @@ por usuário e escritório, independentemente do cenário. As prévias têm nave
 de volta ao modal anterior. Remover ajustes e salvar parâmetros exigem confirmação.
 Os parâmetros compartilhados dos quatro impostos ficam somente em Configurações
 fiscais; o antigo link de parâmetros em PIS e COFINS redireciona para lá.
+
+De-para contábil e lançamentos não pertencem ao Fiscal. As antigas abas
+`depara` e `lancamentos` de Conferência redirecionam para a prévia financeira.
+Configurações não oferece edição de nome/regime ou a aba Empresas e filiais;
+o antigo endereço `aba=empresas` redireciona para Parâmetros. O seletor de
+empresa/estabelecimento continua disponível para definir o contexto do trabalho.
+Os dados salvos no navegador são preservados. Todas as tabelas da prévia fiscal
+centralizam cabeçalhos, conteúdo e controles nos dois eixos; situações usam
+texto e cor, sem pontos decorativos. Esses estilos não alteram tabelas de outros módulos.
+
+De-para CFOP e Fontes das regras foram reunidos na aba Regras fiscais, com CFOP,
+tratamento e fonte/procedência na mesma tabela somente leitura. Regras e fontes
+pertencem ao código de processamento do SPED, não à edição pelo usuário.
+O antigo endereço `aba=cfop` redireciona para `aba=regras`; este último continua
+válido. A prévia mostra dados demonstrativos, sem consultar o motor real ou alterar suas regras.
+
+Não há fluxo de Domínio: o Connect gera, valida e registra a entrega dos próprios arquivos.
+O antigo endereço `aba=dominio` redireciona para Entregas para não quebrar favoritos antigos.
 
 ## Dados locais e acesso
 

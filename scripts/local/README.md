@@ -81,10 +81,30 @@ banco local vem de `prisma migrate diff --from-empty --to-schema` e não de
 Consequência: dado que só existe porque uma migration o inseriu (como o setor
 Controladoria) não vem junto. O `preparar-ambiente.ts` repõe o que os vídeos usam.
 
+## Atualizar o banco sem perder os dados
+
+Depois de um pull, pare o servidor com Ctrl+C e rode:
+
+```powershell
+node scripts/local/atualizar-banco.mjs --aplicar
+npm run build:local
+```
+
+O atualizador aceita apenas adições de schema e salva um backup em
+`storage/backups` antes de aplicar. Não apaga o banco, não executa seeds e não
+altera senhas. Sem `--aplicar`, mostra apenas a comparação. Use somente com o
+container `connect41-local` na porta 3307; não é um migrador de produção.
+
+O comando opcional `build:local` no Windows recusa iniciar enquanto houver um
+standalone rodando, evitando que o Next apague arquivos antes de encontrar a
+pasta bloqueada. O `build` compartilhado permanece igual em outras máquinas e CI;
+nenhuma atualização do banco é executada automaticamente por esses comandos.
+
 ## Subir o Connect
 
 ```
-node scripts/local/com-banco-local.mjs npx next start -p 3100
+$env:PORT='3100'
+node scripts/local/com-banco-local.mjs node .next/standalone/server.js
 ```
 
 - equipe: http://localhost:3100/login — `adm6@41bpo.com.br` e a `SEED_ADMIN_PASSWORD`;
