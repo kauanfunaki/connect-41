@@ -15,6 +15,7 @@ import { portalDaRequisicao } from "@/lib/carreiras/portalDaRequisicao";
 import { situacaoParaCandidato, type Tom } from "@/lib/carreiras/situacaoDoCandidato";
 import { AtualizarDados, Desistir, PedirAcesso, PedirExclusao } from "@/components/carreiras/ContaDoCandidato";
 import { sair } from "./actions";
+import { AcessoAConta41, Conta41 } from "@/components/carreiras/41/Conta41";
 
 export const dynamic = "force-dynamic";
 
@@ -46,9 +47,15 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
   const email = await emailDaSessao(tenant.id, (await cookies()).get(cookieDaSessao(slug).nome)?.value);
   const conta = email ? await dadosDaConta(tenant.id, email, agora) : null;
 
+  // Da 41, a conta com a cara do 41 Carreiras (15/10/2026): sem sessão, um
+  // campo só (o e-mail da inscrição); com ela, as candidaturas.
+  if (portal.da41) {
+    return conta ? <Conta41 slug={slug} rotas={rotas} conta={conta} /> : <AcessoAConta41 slug={slug} rotas={rotas} />;
+  }
+
   // Da 41, com o topo e o rodapé do 41 Carreiras (14/10/2026).
   return (
-    <MolduraDoPortal portal={portal} logo={tenant.logoUrl}>
+    <MolduraDoPortal>
       <div className="max-w-2xl mx-auto">
         {/* Botão sem caixa, com a seta (30/09): era texto cinza com "←". */}
         <Button href={rotas.lista} variant="ghost" size="sm" className="-ml-3">
