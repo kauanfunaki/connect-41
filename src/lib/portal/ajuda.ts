@@ -267,7 +267,11 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
         telas: ["/portal/fluxo-de-caixa"],
       },
       { texto: "Relatório mostra o mês consolidado por empresa.", modulos: ["bpo_fluxo_caixa"], telas: ["/portal/relatorios"] },
-      { texto: "A DRE mostra o resultado de cada empresa, mês a mês.", modulos: ["bpo_dre"], telas: ["/portal/dre"] },
+      {
+        texto: "A DRE mostra o resultado de cada empresa, mês a mês. Para ver os doze meses lado a lado, abra o campo do mês e escolha “Ano inteiro”.",
+        modulos: ["bpo_dre"],
+        telas: ["/portal/dre"],
+      },
       {
         texto: "Cobrança mostra quem está devendo às suas empresas, o andamento da cobrança e os acordos.",
         modulos: ["bpo_cobranca"],
