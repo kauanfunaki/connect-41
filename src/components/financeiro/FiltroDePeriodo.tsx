@@ -24,6 +24,14 @@ type Props = {
    * da DRE (pedido do Kauan, 14/10/2026). As outras telas seguem por extenso.
    */
   mesEmNumero?: boolean;
+  /**
+   * O seletor de mês oferece também o ano inteiro (14/10/2026, DRE do portal,
+   * como a aba "Ano inteiro" da DRE da equipe): escolhido, vai na URL como
+   * `ano=AAAA` no lugar de `mes`.
+   */
+  anoInteiro?: boolean;
+  /** "AAAA" — a tela está no ano inteiro. Só com `anoInteiro`; vale no lugar de `mes`. */
+  ano?: string;
   /** Parâmetros que o filtro precisa carregar (aba, modo…). */
   extras?: Record<string, string | undefined>;
   /** Campos a mais no mesmo formulário (ex.: centro de custo), antes do botão. */
@@ -50,8 +58,22 @@ type Props = {
  * navegações — e o GET deixa a URL copiável, que é como relatório é mandado
  * para outra pessoa.
  */
-export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes, mesEmNumero, extras, children, navegaSozinho, naFileira }: Props) {
-  if (navegaSozinho && empresas && mes === undefined && !children) {
+export function FiltroDePeriodo({
+  acao,
+  empresas,
+  empresaId,
+  permitirTodas,
+  mes,
+  mesEmNumero,
+  anoInteiro,
+  ano,
+  extras,
+  children,
+  navegaSozinho,
+  naFileira,
+}: Props) {
+  const periodo = anoInteiro && ano !== undefined ? ano : mes;
+  if (navegaSozinho && empresas && periodo === undefined && !children) {
     return (
       <SeletorDeEmpresaDoFiltro
         acao={acao}
@@ -84,8 +106,17 @@ export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes,
           placeholder="Buscar empresa…"
         />
       )}
-      {mes !== undefined && (
-        <CampoMes compact name="mes" defaultValue={mes} className="w-40" aria-label="Mês" mesEmNumero={mesEmNumero} />
+      {periodo !== undefined && (
+        <CampoMes
+          compact
+          name="mes"
+          nomeDoAno={anoInteiro ? "ano" : undefined}
+          defaultValue={periodo}
+          // "Ano de 2026" é mais comprido que "10/2026".
+          className={anoInteiro ? "w-44" : "w-40"}
+          aria-label={anoInteiro ? "Mês ou ano" : "Mês"}
+          mesEmNumero={mesEmNumero}
+        />
       )}
       {children}
       <Button type="submit" variant="secondary" size="sm">

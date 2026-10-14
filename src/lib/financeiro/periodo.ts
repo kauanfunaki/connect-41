@@ -21,6 +21,12 @@ export function competenciaValida(texto: string | null | undefined): string | nu
   return RE_COMPETENCIA.test(t) ? t : null;
 }
 
+/** "AAAA" válido, ou `null` — o `ano=` do ano inteiro na URL. */
+export function anoValido(texto: string | null | undefined): number | null {
+  const t = (texto ?? "").trim();
+  return /^[1-9]\d{3}$/.test(t) ? Number(t) : null;
+}
+
 /** "AAAA-MM-DD" que existe no calendário, ou `null`. 31/02 não passa. */
 export function dataValida(texto: string | null | undefined): string | null {
   const m = RE_DATA.exec((texto ?? "").trim());

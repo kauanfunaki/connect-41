@@ -3,12 +3,21 @@
 import { Fragment } from "react";
 import { LINHAS } from "@/lib/dre/estrutura";
 import { linhaAoLongoDoAno, type DreAnual } from "@/lib/dre/anual";
+import { rotuloEconomico } from "@/lib/dre/economica";
 import { formatarReaisDeCentavos as moeda } from "@/lib/format";
 import { RotuloDaCategoria, RotuloDaLinha, useLinhasAbertas } from "@/components/dre/LinhaQueAbre";
 
 const PCT = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 0 });
 
-type Props = { anual: DreAnual };
+type Props = {
+  anual: DreAnual;
+  /**
+   * Competência: as linhas de "caixa" com o nome de leitura de competência
+   * (`rotuloEconomico`), como a DRE do mês faz com `comRotulosEconomicos` —
+   * o ano inteiro da aba Competência do portal (14/10/2026).
+   */
+  regime?: "caixa" | "competencia";
+};
 
 /**
  * As quatorze colunas, com a primeira fixa.
@@ -21,7 +30,7 @@ type Props = { anual: DreAnual };
  * As linhas de grupo abrem nas categorias, com os valores nas mesmas quatorze
  * colunas (13/10/2026) — o mesmo abre e fecha da DRE do mês (`LinhaQueAbre`).
  */
-export function RelatorioAnual({ anual }: Props) {
+export function RelatorioAnual({ anual, regime = "caixa" }: Props) {
   const { aberta, alternar } = useLinhasAbertas();
   const temDetalhe = Object.keys(anual.detalhe).length > 0;
 
@@ -52,6 +61,7 @@ export function RelatorioAnual({ anual }: Props) {
             const destaque = linha.tipo === "subtotal" && linha.destaque;
             const categorias = linha.tipo === "grupo" ? (anual.detalhe[linha.grupo] ?? []) : [];
             const abrir = linha.tipo === "grupo" && aberta(linha.code);
+            const rotulo = regime === "competencia" ? rotuloEconomico(linha.code, linha.label) : linha.label;
 
             return (
               <Fragment key={linha.code}>
@@ -68,13 +78,13 @@ export function RelatorioAnual({ anual }: Props) {
                   >
                     {temDetalhe && linha.tipo === "grupo" ? (
                       <RotuloDaLinha
-                        rotulo={linha.label}
+                        rotulo={rotulo}
                         categorias={categorias.length}
                         aberta={abrir}
                         onAlternar={() => alternar(linha.code)}
                       />
                     ) : (
-                      linha.label
+                      rotulo
                     )}
                   </th>
                   {valores.map((v, i) => {
