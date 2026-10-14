@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { devolverTitulo, suspenderTitulo, textoDaDica, type ElementoDaDica } from "./dicaDoTitulo";
+import { AFASTAMENTO_A_DIREITA, devolverTitulo, posicaoDaDica, suspenderTitulo, textoDaDica, type ElementoDaDica } from "./dicaDoTitulo";
 
 /** Elemento falso: só atributos e texto, o que a dica lê e mexe. */
 function elemento(tag: string, atributos: Record<string, string>, texto = ""): ElementoDaDica & { atributos: Map<string, string> } {
@@ -97,5 +97,25 @@ describe("suspenderTitulo e devolverTitulo", () => {
 
   it("sem title, nada a suspender", () => {
     expect(suspenderTitulo(elemento("span", { "data-dica": "x" }))).toBeNull();
+  });
+});
+
+// O lado da dica (14/10/2026): a faixa de ícones do menu fica colada na borda
+// esquerda da janela — a dica centrada em cima do ícone saía cortada.
+describe("onde a dica abre", () => {
+  const icone = { top: 200, bottom: 240, left: 12, right: 52, width: 40, height: 40 };
+
+  it("por padrão, centrada acima do elemento", () => {
+    expect(posicaoDaDica(icone, null)).toEqual({ x: 32, y: 192, lado: "cima" });
+  });
+
+  it("colado no topo da janela, abaixo", () => {
+    expect(posicaoDaDica({ ...icone, top: 10, bottom: 50 }, null)).toEqual({ x: 32, y: 58, lado: "baixo" });
+  });
+
+  it('com data-dica-lado="direita", à direita e na meia altura — fora da faixa de 64px', () => {
+    const p = posicaoDaDica(icone, "direita");
+    expect(p).toEqual({ x: 52 + AFASTAMENTO_A_DIREITA, y: 220, lado: "direita" });
+    expect(p.x).toBeGreaterThan(64);
   });
 });

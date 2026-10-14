@@ -75,7 +75,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
     resumo: "Telas, empresas e pessoas pelo nome, de qualquer lugar.",
     icone: <Command />,
     passos: [
-      "Aperte Ctrl+K (ou clique na busca do topo).",
+      "Aperte Ctrl+K, ou clique na busca no alto da barra lateral — com o menu recolhido, ela é a lupa.",
       "Antes de digitar, aparecem as telas que você abriu por último.",
       "Digite parte do nome — sem acento funciona — e aperte Enter para abrir o primeiro resultado.",
     ],
@@ -89,7 +89,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
     passos: [
       "Clique no nome do escritório e do setor, na barra do topo, e escolha o setor na janela “Trocar de setor ou escritório”.",
       "Em \"Todos os setores\", clique no nome do setor em \"Meus setores\" para entrar nele.",
-      "Passe o mouse em Cadastros ou num grupo do setor (como Contas) para ver as telas dele ao lado, sem abrir.",
+      "Passe o mouse em Cadastros ou num grupo do setor (como Contas) para ver as telas dele ao lado, sem abrir. Com o menu recolhido em ícones, o mouse mostra só o nome, e o clique abre a tela.",
     ],
   },
   {
