@@ -197,7 +197,9 @@ describe("varredura: banco pelas migrations × schema", () => {
 
   it("antes de 20261014200000 a varredura acusava o link do teste — o que a migration acertou", () => {
     const antes = divergencias(esquema, estadoDoBanco(lerMigrations(MIGRATIONS, { antesDe: "20261014200000" })));
-    expect(antes.filter((d) => d.tipo === "acao").map(descrever)).toEqual([
+    // Só o link do teste: as chaves que migrations posteriores acertaram têm o
+    // seu próprio teste (a do portal, em 20261014210000, logo abaixo).
+    expect(antes.filter((d) => d.tipo === "acao" && d.tabela === "assessment_links").map(descrever)).toEqual([
       "assessment_links.candidaturaId → candidaturas: banco ON DELETE Restrict, schema SetNull (AssessmentLink.candidatura; assessment_links_candidaturaId_fkey, 20260724144426_add_assessment_link)",
       "assessment_links.templateId → assessment_templates: banco ON DELETE Restrict, schema SetNull (AssessmentLink.template; assessment_links_templateId_fkey, 20260724180844_add_assessment_template)",
     ]);
@@ -236,5 +238,81 @@ describe("migration 20261014200000_assessment_links_set_null", () => {
   it("SET NULL vale: as duas colunas aceitam NULL no banco", () => {
     expect(banco.colunas.get("assessment_links")!.get("candidaturaId")).toBe(true);
     expect(banco.colunas.get("assessment_links")!.get("templateId")).toBe(true);
+  });
+});
+
+describe("migration 20261014210000_portal_por_empresa", () => {
+  const PASTA = "20261014210000_portal_por_empresa";
+  const esquema = lerEsquema(readFileSync(path.join(raiz, "prisma", "schema.prisma"), "utf8"));
+  const sql = readFileSync(path.join(MIGRATIONS, PASTA, "migration.sql"), "utf8");
+  const banco = estadoDoBanco(lerMigrations(MIGRATIONS));
+  const comandos = sql
+    .split("\n")
+    .filter((l) => l.trim() && !l.trim().startsWith("--"))
+    .join("\n")
+    .split(";")
+    .map((c) => c.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  it("antes dela, o banco tinha a conta do portal presa ao cliente (NOT NULL, RESTRICT)", () => {
+    const antes = divergencias(esquema, estadoDoBanco(lerMigrations(MIGRATIONS, { antesDe: "20261014210000" })));
+    expect(antes.filter((d) => d.tabela === "portal_users").map(descrever)).toEqual([
+      "portal_users.clientGroupId → client_groups: banco ON DELETE Restrict, schema SetNull (PortalUser.clientGroup; portal_users_clientGroupId_fkey, 20260904010000_portal_do_cliente)",
+      "portal_users.clientGroupId: banco NOT NULL, schema opcional (PortalUser.clientGroup)",
+    ]);
+  });
+
+  it("depois dela: cliente opcional em SET NULL, e as ligações novas em CASCADE dos dois lados", () => {
+    expect(banco.colunas.get("portal_users")!.get("clientGroupId")).toBe(true);
+    expect(banco.chaves.get("portal_users_clientGroupId_fkey")).toMatchObject({ onDelete: "SetNull", migration: PASTA });
+    for (const nome of [
+      "portal_user_companies_portalUserId_fkey",
+      "portal_user_companies_companyId_fkey",
+      "client_announcement_companies_announcementId_fkey",
+      "client_announcement_companies_companyId_fkey",
+    ]) {
+      expect(banco.chaves.get(nome), nome).toMatchObject({ onDelete: "Cascade", migration: PASTA });
+    }
+    expect(Object.fromEntries(banco.colunas.get("portal_user_companies")!)).toEqual({
+      id: false,
+      tenantId: false,
+      portalUserId: false,
+      companyId: false,
+      incluiFiliais: false,
+      createdAt: false,
+    });
+    expect(Object.fromEntries(banco.colunas.get("sped_sync_roots")!)).toEqual({ tenantId: false, cnpjRaiz: false, createdAt: false });
+  });
+
+  it("a coluna do cliente muda só a nulidade: mesmo tipo e collation da migration que a criou", () => {
+    expect(sql).toContain("MODIFY `clientGroupId` VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL;");
+    const criacao = readFileSync(path.join(MIGRATIONS, "20260904010000_portal_do_cliente", "migration.sql"), "utf8");
+    expect(criacao).toContain("`clientGroupId` VARCHAR(191) NOT NULL,");
+    expect(criacao).toMatch(/CREATE TABLE `portal_users`[\s\S]*DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;/);
+  });
+
+  it("aditiva: nada é apagado nem atualizado; os três preenchimentos pulam o que já existe", () => {
+    expect(comandos.filter((c) => /^(DELETE|UPDATE|TRUNCATE|DROP TABLE)\b/i.test(c))).toEqual([]);
+    expect(comandos.filter((c) => /DROP FOREIGN KEY/.test(c))).toEqual([
+      "ALTER TABLE `portal_users` DROP FOREIGN KEY `portal_users_clientGroupId_fkey`",
+    ]);
+    const insercoes = comandos.filter((c) => /^INSERT INTO/.test(c));
+    expect(insercoes.map((c) => c.match(/^INSERT INTO `(\w+)`/)![1])).toEqual([
+      "portal_user_companies",
+      "client_announcement_companies",
+      "sped_sync_roots",
+    ]);
+    for (const c of insercoes) expect(c).toMatch(/WHERE NOT EXISTS|AND NOT EXISTS/);
+  });
+
+  it("o preenchimento das contas liga as empresas do cliente no mesmo escritório, com as filiais", () => {
+    const contas = comandos.find((c) => c.startsWith("INSERT INTO `portal_user_companies`"))!;
+    expect(contas).toContain("JOIN `companies` c ON c.`clientGroupId` = pu.`clientGroupId` AND c.`tenantId` = pu.`tenantId`");
+    expect(contas).toMatch(/par\.`companyId`, true FROM/);
+  });
+
+  it("as raízes do SPED: clientes ativos, com raiz de 8 caracteres — a regra antiga de `sincronizarTenant`", () => {
+    const raizes = comandos.find((c) => c.startsWith("INSERT INTO `sped_sync_roots`"))!;
+    expect(raizes).toContain("WHERE g.`active` = true AND g.`cnpjRoot` IS NOT NULL AND CHAR_LENGTH(g.`cnpjRoot`) = 8");
   });
 });

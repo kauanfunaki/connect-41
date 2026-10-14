@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserRole } from "@/generated/prisma/enums";
 
 // Cliente (13/10/2026): exclusão de verdade só para ADMIN/SUPER_ADMIN, com o
-// nome digitado; os acessos do portal saem junto, as empresas ficam sem
-// cliente. Vincular e desvincular empresas pelo cliente, sempre dentro do
-// escritório de quem pede.
+// nome digitado; as empresas ficam sem cliente. Desde 14/10/2026 os acessos do
+// portal continuam (são ligados às empresas), só sem o cliente. Vincular e
+// desvincular empresas pelo cliente, sempre dentro do escritório de quem pede.
 
 const m = vi.hoisted(() => {
   const db = {
     clientGroup: { findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
-    portalUser: { deleteMany: vi.fn() },
+    portalUser: { deleteMany: vi.fn(), updateMany: vi.fn() },
     passwordResetToken: { deleteMany: vi.fn() },
     tutorialVisto: { deleteMany: vi.fn() },
     company: { findMany: vi.fn(), findFirst: vi.fn(), updateMany: vi.fn() },
@@ -19,6 +19,7 @@ const m = vi.hoisted(() => {
     db,
     ctx: { tenantId: "escritorio-a", userId: "admin-1", role: "ADMIN" as UserRole, sectors: [] as string[], subscriptionReadOnly: false },
     logAudit: vi.fn(),
+    pronto: vi.fn(),
   };
 });
 
@@ -26,6 +27,7 @@ vi.mock("@/lib/prisma", () => ({ getPrisma: () => m.db }));
 vi.mock("@/lib/auth/context", async () => ({ ...(await import("@/lib/auth/papeis")), getAuthContext: async () => m.ctx }));
 vi.mock("@/lib/auth/scope", () => ({ scopedCompanyWhere: async (c: { tenantId: string }) => ({ tenantId: c.tenantId }) }));
 vi.mock("@/lib/audit", () => ({ logAudit: m.logAudit }));
+vi.mock("@/lib/portal/empresasDaContaDb", () => ({ portalPorEmpresaPronto: m.pronto }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({
   redirect: (destino: string) => {
@@ -56,42 +58,41 @@ beforeEach(() => {
   m.db.$transaction.mockImplementation(async (fn: (tx: typeof m.db) => unknown) => fn(m.db));
   m.db.clientGroup.findFirst.mockResolvedValue(IRRIGA);
   m.db.company.updateMany.mockResolvedValue({ count: 0 });
+  m.db.portalUser.updateMany.mockResolvedValue({ count: 1 });
+  m.pronto.mockResolvedValue(true);
 });
 
 describe("excluirCliente", () => {
   it.each(["SECTOR_ADMIN", "SECTOR_USER", "READONLY"] as UserRole[])("%s não exclui nem vê a contagem", async (papel) => {
     m.ctx.role = papel;
-    expect(await excluirCliente("g-irriga", "IRRIGA FOUR", ["pu-1"])).toEqual({ erro: "Só administradores excluem clientes." });
+    expect(await excluirCliente("g-irriga", "IRRIGA FOUR")).toEqual({ erro: "Só administradores excluem clientes." });
     expect(await resumoDoClienteParaExcluir("g-irriga")).toEqual({ erro: "Só administradores excluem clientes." });
     expect(m.db.clientGroup.findFirst).not.toHaveBeenCalled();
     expect(m.db.clientGroup.delete).not.toHaveBeenCalled();
   });
 
   it("nome digitado que não confere: não exclui", async () => {
-    expect(await excluirCliente("g-irriga", "IRRIGA", ["pu-1"])).toEqual({ erro: expect.stringContaining("não confere") });
+    expect(await excluirCliente("g-irriga", "IRRIGA")).toEqual({ erro: expect.stringContaining("não confere") });
     expect(m.db.$transaction).not.toHaveBeenCalled();
   });
 
   it("cliente de outro escritório: não é encontrado", async () => {
     m.db.clientGroup.findFirst.mockResolvedValueOnce(null);
-    expect(await excluirCliente("g-de-outro", "Qualquer", [])).toEqual({ erro: "Cliente não encontrado." });
+    expect(await excluirCliente("g-de-outro", "Qualquer")).toEqual({ erro: "Cliente não encontrado." });
     expect(m.db.clientGroup.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "g-de-outro", tenantId: "escritorio-a" } }));
     expect(m.db.clientGroup.delete).not.toHaveBeenCalled();
   });
 
-  it("lista de acessos diferente da que a janela mostrou: para, sem excluir", async () => {
-    expect(await excluirCliente("g-irriga", "IRRIGA FOUR", [])).toEqual({ erro: expect.stringContaining("mudaram") });
-    expect(await excluirCliente("g-irriga", "IRRIGA FOUR", ["pu-outro"])).toEqual({ erro: expect.stringContaining("mudaram") });
-    expect(m.db.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("com histórico: exclui os acessos, deixa as empresas sem cliente e grava o retrato", async () => {
-    expect(await excluirCliente("g-irriga", "irriga four", ["pu-1"])).toEqual({ ok: true });
+  it("os acessos do portal continuam: só perdem o cliente (portal por empresa, 14/10/2026); as empresas também", async () => {
+    expect(await excluirCliente("g-irriga", "irriga four")).toEqual({ ok: true });
 
     expect(m.db.$transaction).toHaveBeenCalledTimes(1);
-    expect(m.db.passwordResetToken.deleteMany).toHaveBeenCalledWith({ where: { userId: { in: ["pu-1"] }, subject: "PORTAL_USER" } });
-    expect(m.db.portalUser.deleteMany).toHaveBeenCalledWith({
-      where: { id: { in: ["pu-1"] }, tenantId: "escritorio-a", clientGroupId: "g-irriga" },
+    expect(m.db.portalUser.deleteMany).not.toHaveBeenCalled();
+    expect(m.db.passwordResetToken.deleteMany).not.toHaveBeenCalled();
+    expect(m.db.tutorialVisto.deleteMany).not.toHaveBeenCalled();
+    expect(m.db.portalUser.updateMany).toHaveBeenCalledWith({
+      where: { tenantId: "escritorio-a", clientGroupId: "g-irriga" },
+      data: { clientGroupId: null },
     });
     // As empresas não são excluídas: só perdem o cliente.
     expect(m.db.company.updateMany).toHaveBeenCalledWith({
@@ -99,11 +100,8 @@ describe("excluirCliente", () => {
       data: { clientGroupId: null },
     });
     expect(m.db.clientGroup.delete).toHaveBeenCalledWith({ where: { id: "g-irriga" } });
-    // A marca do tutorial do primeiro acesso dos acessos que saíram.
-    expect(m.db.tutorialVisto.deleteMany).toHaveBeenCalledWith({
-      where: { subject: "PORTAL_USER", tenantId: "escritorio-a", userId: { in: ["pu-1"] } },
-    });
 
+    expect(m.logAudit).toHaveBeenCalledTimes(1);
     expect(m.logAudit).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "clientGroup.delete",
@@ -115,25 +113,30 @@ describe("excluirCliente", () => {
             { id: "emp-1", nome: "IRRIGA FOUR LTDA" },
             { id: "emp-2", nome: "IRRIGA SP" },
           ],
-          acessosExcluidos: [{ id: "pu-1", nome: "Maria", email: "maria@exemplo.com", ativo: true }],
+          acessosQueContinuam: [{ id: "pu-1", nome: "Maria", email: "maria@exemplo.com", ativo: true }],
           comunicados: 2,
         }),
       })
     );
-    expect(m.logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "portal.user.deleted", entityId: "pu-1" }));
   });
 
-  it("sem histórico: só o cliente sai", async () => {
+  it("antes da migration, cliente com acesso não sai (a conta ainda não aceita ficar sem cliente)", async () => {
+    m.pronto.mockResolvedValueOnce(false);
+    expect(await excluirCliente("g-irriga", "IRRIGA FOUR")).toEqual({ erro: expect.stringContaining("atualização do banco") });
+    expect(m.db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("sem acessos: só o cliente sai, mesmo antes da migration", async () => {
+    m.pronto.mockResolvedValue(false);
     m.db.clientGroup.findFirst.mockResolvedValueOnce({ ...IRRIGA, companies: [], portalUsers: [], _count: { announcements: 0 } });
-    expect(await excluirCliente("g-irriga", "IRRIGA FOUR", [])).toEqual({ ok: true });
-    expect(m.db.portalUser.deleteMany).not.toHaveBeenCalled();
-    expect(m.db.tutorialVisto.deleteMany).not.toHaveBeenCalled();
+    expect(await excluirCliente("g-irriga", "IRRIGA FOUR")).toEqual({ ok: true });
     expect(m.db.clientGroup.delete).toHaveBeenCalledWith({ where: { id: "g-irriga" } });
   });
 
-  it("acesso criado no meio do caminho (FK RESTRICT): volta atrás e explica", async () => {
+  it("erro do banco no meio: nada sai e a auditoria não registra", async () => {
     m.db.clientGroup.delete.mockRejectedValueOnce(Object.assign(new Error("fk"), { code: "P2003" }));
-    expect(await excluirCliente("g-irriga", "IRRIGA FOUR", ["pu-1"])).toEqual({ erro: expect.stringContaining("acesso do portal novo") });
+    vi.spyOn(console, "error").mockImplementationOnce(() => {});
+    expect(await excluirCliente("g-irriga", "IRRIGA FOUR")).toEqual({ erro: "Erro ao excluir o cliente. Nada foi apagado." });
     expect(m.logAudit).not.toHaveBeenCalled();
   });
 

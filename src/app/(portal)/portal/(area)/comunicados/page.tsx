@@ -22,7 +22,7 @@ export default async function PortalComunicadosPage() {
   if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/comunicados")) return <TelaIndisponivel />;
 
   const [lista, { labels }] = await Promise.all([
-    comunicadosDoCliente(cliente.tenantId, cliente.sessao.clientGroupId, cliente.usuario.id),
+    comunicadosDoCliente(cliente.tenantId, cliente.companyIds, cliente.usuario.id),
     getSectorMaps(cliente.tenantId),
   ]);
 

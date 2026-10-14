@@ -44,7 +44,7 @@ async function contaDaSessao() {
   const sessao = await getPortalSession();
   if (!sessao) return null;
   return getPrisma().portalUser.findFirst({
-    where: { id: sessao.sub, tenantId: sessao.tenantId, clientGroupId: sessao.clientGroupId, active: true },
+    where: { id: sessao.sub, tenantId: sessao.tenantId, active: true },
     select: { id: true, tenantId: true, email: true, passwordHash: true },
   });
 }

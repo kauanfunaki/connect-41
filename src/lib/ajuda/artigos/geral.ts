@@ -115,6 +115,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Clique no nome da empresa na lista.",
           "Em “Visão geral”, veja os dados cadastrais e os “Serviços contratados”. Clique em “Gerar resumo” para um resumo dos últimos 90 dias.",
           "Use as abas “Filiais”, “Pessoas”, “Documentos”, “Conversas” e “Histórico” para o restante das informações.",
+          "Administradores veem também a aba “Acesso ao portal”: quem entra no portal do cliente e vê esta empresa.",
           "Na aba “RH & operação”, entre em “Sócios”, “Cargos”, “Departamentos”, “Benefícios”, “Turnos” e “Folha de pagamento”. “Envios ao cliente” abre a aba “Envios” de Solicitações, já filtrada nesta empresa.",
           "Para passar um assunto da empresa a outro setor, clique em “Solicitar transferência”.",
         ],
@@ -126,6 +127,16 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Escolha o “Tipo de cadastro”. Com CNPJ, os dados se preenchem sozinhos ao completar os dígitos.",
           "Confira e complete os campos de cada etapa, clicando em “Avançar →”.",
           "Na última etapa, revise o resumo e clique em “Confirmar e salvar”.",
+        ],
+      },
+      {
+        titulo: "Como dar acesso ao portal a uma empresa",
+        passos: [
+          "Na ficha da empresa, abra a aba “Acesso ao portal”.",
+          "Para uma pessoa nova, clique em “Novo acesso”, preencha nome e e-mail e clique em “Criar acesso”. Ela recebe por e-mail o link para definir a senha.",
+          "Se a pessoa já entra no portal por outra empresa, clique em “Ligar acesso existente”, busque pelo nome ou e-mail e clique em “Ligar”.",
+          "Quando a empresa tem filiais, “Incluir as filiais” vem marcado: a pessoa vê também as filiais, inclusive as cadastradas depois.",
+          "No “⋯” de cada linha: incluir ou tirar as filiais, desligar o acesso desta empresa (a conta continua), desativar ou excluir.",
         ],
       },
       {
@@ -153,6 +164,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Inativar não apaga nada: a empresa só sai da lista padrão e pode ser reativada depois.",
       "Cadastrar, editar e inativar empresas é para administradores e gestores de setor. Excluir de vez é só para administradores.",
       "Empresa com mais de 2.000 notas fiscais não pode ser excluída por aqui: é histórico de verdade. Inative.",
+      "O portal não depende do “Cliente” da empresa: quem vê cada empresa se define em “Acesso ao portal”, na ficha dela, ou em Configurações › Portal do cliente.",
     ],
   },
 

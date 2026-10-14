@@ -17,7 +17,7 @@ import { podeComunicarPeloSetor } from "@/lib/comunicados/acesso";
 
 export const dynamic = "force-dynamic";
 
-/** Os comunicados da 41 aos clientes (01/10), com quantos clientes já leram cada um. */
+/** Os comunicados da 41 aos clientes (01/10), com quantas empresas já leram cada um (por empresa desde 14/10/2026). */
 export default async function ComunicadosPage() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !(await isModuleEnabled(ctx.tenantId, "portal_solicitacoes"))) notFound();
@@ -71,7 +71,7 @@ export default async function ComunicadosPage() {
                 <span className="flex items-center gap-2">
                   {!c.avisosEnviados && <Selo tom="marca">Enviando e-mails…</Selo>}
                   <span className="text-ui text-fg-secondary tabular-nums">
-                    Lido por {c.leram} de {c.clientes} {c.clientes === 1 ? "cliente" : "clientes"}
+                    Lido em {c.leram} de {c.empresas} {c.empresas === 1 ? "empresa" : "empresas"}
                   </span>
                 </span>
               </Card>

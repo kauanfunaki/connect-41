@@ -1001,8 +1001,10 @@ enum PasswordResetSubject {
 model PortalUser {
   id            String @id @default(uuid())
   tenantId      String
-  /// Sempre presente: é o que define o que esta conta enxerga.
-  clientGroupId String
+  /// O cliente das contas criadas antes de 14/10/2026. Não decide mais nada: o
+  /// que a conta enxerga são as empresas ligadas a ela (`PortalUserCompany`).
+  /// Conta nova nasce sem; a coluna sai com o Cliente (etapa 3).
+  clientGroupId String?
 
   name         String    @db.VarChar(120)
   email        String    @db.VarChar(120)
@@ -1013,8 +1015,11 @@ model PortalUser {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant      Tenant      @relation(fields: [tenantId], references: [id])
-  clientGroup ClientGroup @relation(fields: [clientGroupId], references: [id])
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  // SetNull desde 14/10/2026 (era RESTRICT): excluir um cliente não leva mais
+  // os acessos junto — eles são das empresas.
+  clientGroup ClientGroup? @relation(fields: [clientGroupId], references: [id], onDelete: SetNull)
+  empresas    PortalUserCompany[]
 
   clientRequestMessages    ClientRequestMessage[]    @relation("ClientRequestMessageAuthorPortal")
   clientRequestAttachments ClientRequestAttachment[] @relation("ClientRequestAttachmentPortal")
@@ -1034,6 +1039,35 @@ model PortalUser {
   @@unique([tenantId, email])
   @@index([tenantId, clientGroupId])
   @@map("portal_users")
+}
+
+/// As empresas que um acesso do portal enxerga (14/10/2026, etapa 2 da saída
+/// do Cliente). Até aqui a conta via as empresas do cliente dela; agora vê as
+/// ligadas aqui — e, com `incluiFiliais`, as filiais delas (`parentCompanyId`),
+/// inclusive as cadastradas depois.
+///
+/// A regra mora em `src/lib/portal/empresasDaConta.ts`, e é a mesma nos dois
+/// sentidos: as empresas de uma conta (o alcance do portal) e as contas de uma
+/// empresa (quem recebe aviso).
+///
+/// `tenantId` sem relação com `Tenant`: vem da conta, e toda consulta filtra
+/// por ele. As duas chaves são CASCADE — excluir a conta ou a empresa desfaz a
+/// ligação, e só ela.
+model PortalUserCompany {
+  id            String   @id @default(uuid())
+  tenantId      String
+  portalUserId  String
+  companyId     String
+  /// Com as filiais da empresa. Marcado por padrão (decisão do Kauan, 13/10).
+  incluiFiliais Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  portalUser PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([portalUserId, companyId])
+  @@index([companyId])
+  @@map("portal_user_companies")
 }
 
 model PasswordResetToken {
@@ -1207,6 +1241,8 @@ model Company {
   hiddenFinanceCategories  FinanceCategoryHidden[]
   dreImports               DreImport[]
   processFees              ProcessFee[]
+  portalUserLinks          PortalUserCompany[]
+  announcementLinks        ClientAnnouncementCompany[]
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -3187,6 +3223,7 @@ model ClientAnnouncement {
   tenant      Tenant                         @relation(fields: [tenantId], references: [id])
   createdBy   User?                          @relation("ClientAnnouncementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   groups      ClientAnnouncementGroup[]
+  companies   ClientAnnouncementCompany[]
   reads       ClientAnnouncementRead[]
   attachments ClientAnnouncementAttachment[]
 
@@ -3194,8 +3231,9 @@ model ClientAnnouncement {
   @@map("client_announcements")
 }
 
-/// Os clientes que recebem, fixados no envio: cliente cadastrado depois não
-/// recebe comunicado antigo como se fosse novo.
+/// Os clientes que recebiam, até 14/10/2026. Comunicado novo vai para empresas
+/// (`ClientAnnouncementCompany`), e os antigos foram copiados para lá na
+/// migration `20261014210000_portal_por_empresa`. Fica intocada até a etapa 3.
 model ClientAnnouncementGroup {
   id             String @id @default(uuid())
   announcementId String
@@ -3207,6 +3245,22 @@ model ClientAnnouncementGroup {
   @@unique([announcementId, clientGroupId])
   @@index([clientGroupId])
   @@map("client_announcement_groups")
+}
+
+/// As empresas que recebem, fixadas no envio (14/10/2026): empresa cadastrada
+/// depois não recebe comunicado antigo como se fosse novo. O portal mostra o
+/// comunicado a quem enxerga alguma destas empresas.
+model ClientAnnouncementCompany {
+  id             String @id @default(uuid())
+  announcementId String
+  companyId      String
+
+  announcement ClientAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, companyId])
+  @@index([companyId])
+  @@map("client_announcement_companies")
 }
 
 /// Quem leu: a primeira vez que o usuário do portal abriu o comunicado.
@@ -3782,6 +3836,27 @@ model SpedSyncState {
 
   @@unique([tenantId, cnpjRaiz])
   @@map("sped_sync_states")
+}
+
+/// As raízes de CNPJ que o SPED sincroniza (14/10/2026).
+///
+/// Até aqui saíam dos clientes ativos com raiz (`ClientGroup.cnpjRoot`). Com o
+/// Cliente saindo, a decisão do Kauan (13/10) foi manter **exatamente** as
+/// raízes de hoje, sem ampliar, até o plano do SPED substituir: a migration
+/// `20261014210000_portal_por_empresa` copia para cá as raízes que a regra
+/// antiga dava, e a sincronização passa a ler daqui. Cliente novo não entra
+/// sozinho na busca.
+///
+/// Sem relação (FK), de propósito: sem a tabela (deploy antes da migration) a
+/// leitura cai na regra antiga.
+model SpedSyncRoot {
+  tenantId  String
+  /// 8 dígitos — a chave de contribuinte do lado do SPED.
+  cnpjRaiz  String   @db.VarChar(8)
+  createdAt DateTime @default(now())
+
+  @@id([tenantId, cnpjRaiz])
+  @@map("sped_sync_roots")
 }
 
 model ConversationEvaluation {

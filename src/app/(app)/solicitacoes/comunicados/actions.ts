@@ -4,10 +4,14 @@
 //
 // Não há rascunho nem edição: o comunicado sai na hora, com e-mail, e um texto
 // "corrigido" depois do e-mail não chegaria a quem já leu. Quem envia confirma
-// antes, vendo para quantos clientes vai.
+// antes, vendo para quantas empresas vai.
+//
+// Desde 14/10/2026 o comunicado vai para empresas, e não mais para Clientes:
+// no portal, quem tem acesso a alguma delas vê.
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import { getAuthContext } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { getActiveSectors } from "@/lib/sectors";
@@ -15,10 +19,14 @@ import { logAudit } from "@/lib/audit";
 import { arquivosDoFormulario } from "@/lib/financeiro/pendencias/armazenamento";
 import { validarComunicado } from "@/lib/comunicados/regras";
 import { podeComunicarPeloSetor } from "@/lib/comunicados/acesso";
-import { gruposDoPublico } from "@/lib/comunicados/consultas";
+import { empresasDoPublico } from "@/lib/comunicados/consultas";
 import { anexosDoComunicado, avisarClientesDoComunicado } from "@/lib/comunicados/avisos";
 
-export type ResultadoDoEnvio = { error: string } | { ok: true; id: string; clientes: number };
+export type ResultadoDoEnvio = { error: string } | { ok: true; id: string; empresas: number };
+
+/** Sem a tabela dos destinatários por empresa (código antes da migration de 14/10/2026). */
+const FALTA_O_BANCO_DO_COMUNICADO =
+  "Falta a atualização do banco desta versão do Connect. Até ela rodar, não dá para enviar comunicado.";
 
 export async function enviarComunicado(formData: FormData): Promise<ResultadoDoEnvio> {
   const ctx = await getAuthContext();
@@ -30,16 +38,16 @@ export async function enviarComunicado(formData: FormData): Promise<ResultadoDoE
     texto: String(formData.get("texto") ?? ""),
     publico: String(formData.get("publico") ?? ""),
     setor: String(formData.get("setor") ?? ""),
-    grupos: formData.getAll("grupos").map(String),
+    empresas: formData.getAll("empresas").map(String),
   });
   if (!v.ok) return { error: v.erro };
-  const { titulo, texto, publico, setor, grupos: escolhidos } = v.dados;
+  const { titulo, texto, publico, setor, empresas: escolhidas } = v.dados;
 
   if (!podeComunicarPeloSetor(ctx, setor)) return { error: "Só a coordenação do setor ou um administrador envia comunicado." };
   if (!(await getActiveSectors(ctx.tenantId)).some((s) => s.code === setor)) return { error: "Escolha um setor ativo." };
 
-  const grupos = await gruposDoPublico(ctx.tenantId, publico, setor, escolhidos);
-  if (grupos.length === 0) return { error: "Nenhum cliente ativo para este público." };
+  const empresas = await empresasDoPublico(ctx.tenantId, publico, setor, escolhidas);
+  if (empresas.length === 0) return { error: "Nenhuma empresa para este público." };
 
   const gravados = await anexosDoComunicado.gravarAnexos(ctx.tenantId, arquivosDoFormulario(formData, "anexos"));
   if (!gravados.ok) return { error: gravados.erro };
@@ -51,7 +59,7 @@ export async function enviarComunicado(formData: FormData): Promise<ResultadoDoE
         data: { tenantId: ctx.tenantId, sectorCode: setor, title: titulo, body: texto, createdById: ctx.userId || null },
         select: { id: true },
       });
-      await tx.clientAnnouncementGroup.createMany({ data: grupos.map((clientGroupId) => ({ announcementId: c.id, clientGroupId })) });
+      await tx.clientAnnouncementCompany.createMany({ data: empresas.map((companyId) => ({ announcementId: c.id, companyId })) });
       if (gravados.anexos.length > 0) {
         await tx.clientAnnouncementAttachment.createMany({ data: gravados.anexos.map((a) => ({ announcementId: c.id, ...a })) });
       }
@@ -59,6 +67,7 @@ export async function enviarComunicado(formData: FormData): Promise<ResultadoDoE
     });
   } catch (err) {
     await anexosDoComunicado.apagarAnexosGravados(gravados.anexos);
+    if (isPrismaMissingTableError(err)) return { error: FALTA_O_BANCO_DO_COMUNICADO };
     throw err;
   }
 
@@ -72,11 +81,11 @@ export async function enviarComunicado(formData: FormData): Promise<ResultadoDoE
     action: "comunicado.enviado",
     entityType: "ClientAnnouncement",
     entityId: id,
-    metadata: { setor, publico, clientes: grupos.length, anexos: gravados.anexos.length },
+    metadata: { setor, publico, empresas: empresas.length, anexos: gravados.anexos.length },
   });
 
   revalidatePath("/solicitacoes/comunicados");
   revalidatePath("/portal/comunicados");
   revalidatePath("/portal");
-  return { ok: true, id, clientes: grupos.length };
+  return { ok: true, id, empresas: empresas.length };
 }
