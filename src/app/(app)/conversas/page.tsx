@@ -78,7 +78,9 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
   const view = params.view === "avaliacao" ? "avaliacao" : "lista";
 
   return (
-    <PageContainer>
+    // Na lista, a caixa de conversas ocupa o resto da janela e a página não
+    // rola (14/10/2026); a Avaliação é uma página comprida, que rola normal.
+    <PageContainer className={view === "lista" ? "h-full flex flex-col" : ""}>
       {/* Cabeçalho padrão (30/09): o PageHeader estava aninhado com o subtítulo
           escrito à parte, e "Gerenciar atendentes" era um Link estilizado. */}
       <PageHeader
@@ -376,7 +378,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
           />
         }
       >
-        <div className="px-5 sm:px-6 py-4 border-t border-border-soft">
+        <div className="px-5 sm:px-6 py-4">
           <h3 className="text-card-title font-semibold text-fg mb-2">Atendimentos</h3>
           {contatoAberto.conversations.length === 0 ? (
             <p className="text-ui text-fg-muted">Nenhum atendimento ao seu alcance.</p>
@@ -393,7 +395,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
         titulo="Sem contato identificado"
         subtitulo="Atendimentos que chegaram do Chatwoot sem contato. Somente leitura."
       >
-        <div className="px-5 sm:px-6 py-4 border-t border-border-soft">
+        <div className="px-5 sm:px-6 py-4">
           <AtendimentosAccordion atendimentos={orfasAbertas.map(toResumo)} defaultOpenId={id} />
         </div>
       </PainelDeConversa>
@@ -430,11 +432,10 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
 
       <CaixaDeConversas
         aberta={!!(contatoAberto || (escolhido === SEM_CONTATO && orfasAbertas.length > 0))}
-        altura="lg:h-[calc(100dvh-20rem)]"
         lista={
           <ColunaDaLista
             topo={
-              <p className="text-micro text-fg-muted mb-2">
+              <p className="text-micro text-fg-muted">
                 {totalContacts} contato{totalContacts !== 1 ? "s" : ""} · {totalAtendimentos} atendimento{totalAtendimentos !== 1 ? "s" : ""} nesta página
               </p>
             }
