@@ -294,6 +294,11 @@ function BotaoDoFunil({ ativo, open, onClick, rotulo }: { ativo: boolean; open: 
  * tudo em fluxo, então na coluna estreita o rótulo encosta à esquerda em vez de
  * passar por baixo do botão. Nas colunas `c41-a-esquerda` o rótulo segue à
  * esquerda, e o funil também vai para a direita.
+ *
+ * Entre uma coluna e a outra o cabeçalho tem um fio (14/10/2026): sem ele, o
+ * funil na borda direita parecia ser do rótulo da coluna seguinte. Também é do
+ * CSS — `.c41-tabela`, ou `c41-cabecalho-dividido` no <thead> da tabela que
+ * fica fora dela (Empresas, lista de tarefas).
  */
 function CabecalhoComFunil({ rotulo, funil }: { rotulo: React.ReactNode; funil: React.ReactNode }) {
   return (

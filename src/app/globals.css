@@ -56,6 +56,10 @@
   --c41-input-bg:        #F8FAFF;
   --c41-table-header-bg: #E8EFFD;
   --c41-table-header-fg: #1F4FC2;
+  /* Divisória entre as colunas do cabeçalho (14/10/2026, ver `.c41-tabela`):
+     o azul do texto do cabeçalho a 30%, 1,6:1 sobre o fundo dele — aparece
+     sem pesar. No escuro, o azul do texto de lá a 24%: 1,65:1. */
+  --c41-table-header-divider: rgba(31,79,194,.30);
   --c41-border:          #DBE3F4;
   --c41-border-strong:   #C3D0EC;
   --c41-fg:              #0F1A33;
@@ -140,6 +144,7 @@
   --c41-input-bg:        #111A2B;
   --c41-table-header-bg: #182339;
   --c41-table-header-fg: #8FB0FF;
+  --c41-table-header-divider: rgba(143,176,255,.24);
   --c41-border:          rgba(140,170,255,.11);
   --c41-border-strong:   rgba(140,170,255,.22);
   --c41-fg:              #EEF3FF;
@@ -193,6 +198,7 @@
     --c41-input-bg:        #111A2B;
     --c41-table-header-bg: #182339;
     --c41-table-header-fg: #8FB0FF;
+    --c41-table-header-divider: rgba(143,176,255,.24);
     --c41-border:          rgba(140,170,255,.11);
     --c41-border-strong:   rgba(140,170,255,.22);
     --c41-fg:              #EEF3FF;
@@ -747,6 +753,28 @@ input[type="search"]::-webkit-search-decoration {
 }
 .c41-tabela > table > thead > tr > th.c41-a-esquerda > .c41-cabecalho-com-funil > .c41-cabecalho-rotulo {
   margin-left: 0;
+}
+/* Divisória entre as colunas do cabeçalho (pedido do Kauan, 14/10/2026). Com
+   o funil na borda direita da coluna (regras de cima) e nada separando um
+   cabeçalho do outro, o funil de uma coluna parecia ser do rótulo da coluna
+   seguinte. Agora um fio de 1px fecha cada coluna: na borda esquerda do
+   cabeçalho seguinte, com metade da altura e centralizado — não encosta em
+   cima nem embaixo. Nenhum antes da primeira coluna nem depois da última, e
+   nenhum depois de um cabeçalho vazio (a coluna da bolinha, a do expandir):
+   ali não há rótulo nem funil para separar. A coluna sem título no fim (a das
+   ações) ganha o fio à esquerda, que é o que fecha o funil da penúltima.
+   Desenhado como imagem de fundo, e não com `position` + ::before: o <th>
+   preso na rolagem lateral (`sticky`, a coluna de ações) continua preso, e o
+   fundo que a célula já tenha (`bg-table-header-bg`) fica por baixo. Só o
+   cabeçalho: as linhas seguem sem grade. Tabela fora da `.c41-tabela`
+   (Empresas, que rola num contêiner próprio; a lista de tarefas) recebe o
+   mesmo fio pela classe `c41-cabecalho-dividido` no <thead>. */
+.c41-tabela > table > thead > tr > th:not(:empty) + th,
+.c41-cabecalho-dividido > tr > th:not(:empty) + th {
+  background-image: linear-gradient(var(--c41-table-header-divider), var(--c41-table-header-divider));
+  background-repeat: no-repeat;
+  background-size: 1px 50%;
+  background-position: left center;
 }
 /* Sublinha com largura máxima (descrição cortada) centraliza como bloco. */
 .c41-tabela > table > tbody > tr > td > .block {
