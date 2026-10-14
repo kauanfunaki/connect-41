@@ -477,7 +477,10 @@ export function EmpresasTable({
               <col className="w-[148px]" />
               <col className="w-[220px]" />
             </colgroup>
-            <thead>
+            {/* `c41-cabecalho-dividido`: o fio entre as colunas do cabeçalho
+                (14/10/2026), que a `.c41-tabela` dá às tabelas filhas diretas
+                dela — esta rola num contêiner próprio (globals.css). */}
+            <thead className="c41-cabecalho-dividido">
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
                   <th className="px-4 py-3">
