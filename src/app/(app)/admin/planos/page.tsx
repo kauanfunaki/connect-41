@@ -1,39 +1,62 @@
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Package } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Globe, Package } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
+import { baseDomain } from "@/lib/auth/activeSector";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { StatusDot } from "@/components/shared/StatusDot";
-import { TogglePlanoButton } from "@/components/admin/TogglePlanoButton";
-import { PlanModulesEditor } from "@/components/admin/PlanModulesEditor";
-import { MANAGEMENT_MODE_LABEL, BILLING_TYPE_LABEL } from "@/lib/subscription-labels";
 import { NovoPlanoForm } from "@/components/admin/NovoPlanoForm";
+import { CartaoDoPlano } from "@/components/admin/planos/CartaoDoPlano";
+import { PrecosNoSite } from "@/components/admin/planos/PrecosNoSite";
+import { lerAjustesDoSite } from "@/lib/planos/site";
+import { CAMPOS_DO_SITE_PADRAO } from "@/lib/planos/site-regras";
+import { lerModulosDoPlano } from "@/lib/planos/modulosPorSetor";
+import { valorParaOCampo } from "@/lib/planos/edicao";
 import { alternarPlano, atualizarModulosPlano } from "./actions";
-import { formatarReais } from "@/lib/format";
 
+// O catálogo comercial em cartões (escolha A do Kauan, 14/10/2026): um cartão
+// por plano, como numa página de preços, com os módulos por setor — e o que vai
+// para a seção Planos do site (o interruptor dos preços no topo, os campos de
+// cada plano em "Editar"). Só o Super Admin.
 export default async function PlanosPage() {
   const ctx = await getAuthContext();
   if (ctx.role !== "SUPER_ADMIN") notFound();
 
   const prisma = getPrisma();
-  const plans = await prisma.subscriptionPlan.findMany({
-    orderBy: [{ active: "desc" }, { name: "asc" }],
-    include: { _count: { select: { subscriptions: true } } },
-  });
+  const [plans, ajustes] = await Promise.all([
+    prisma.subscriptionPlan.findMany({
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      include: { _count: { select: { subscriptions: true } } },
+    }),
+    lerAjustesDoSite(),
+  ]);
 
-  const fmt = (v: unknown) => formatarReais(Number(v));
+  const semTabela = ajustes.situacao !== "ok";
+  const noSite = plans.filter((p) => p.active && ajustes.porPlano.get(p.id)?.mostrarNoSite).length;
+  // O site mora no endereço principal (app/page.tsx); sem APP_DOMAIN não há site.
+  const dominio = baseDomain();
 
   return (
     <PageContainer>
       <PageHeader
         title="Planos"
-        subtitle="Catálogo comercial — frente 1 (gerenciado pela 41 Tech, valor fixo) e frente 2
-          (autoatendimento, por usuário). Implantação é cobrada nos dois cenários."
-        action={<NovoPlanoForm />}
+        subtitle="O que a 41 Tech vende: quem administra, como cobra e o que cada plano libera."
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            {dominio && (
+              <Button href={`https://${dominio}/#planos`} nativo target="_blank" rel="noopener" variant="secondary">
+                <Globe size={14} /> Como aparece no site
+              </Button>
+            )}
+            <NovoPlanoForm />
+          </div>
+        }
       />
+
+      <PrecosNoSite ligado={ajustes.mostrarPrecos} noSite={noSite} semTabela={semTabela} />
 
       {plans.length === 0 ? (
         <Card>
@@ -44,32 +67,32 @@ export default async function PlanosPage() {
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-          {plans.map((p) => (
-            <div key={p.id} className="flex items-start justify-between px-4 py-3 gap-4">
-              <div className="min-w-0 flex-1">
-                {/* Inativo pela bolinha, a do ativo/inativo de cadastro (escolha
-                    2A, 08/10/2026) — era "(inativo)" em cinza colado no nome. */}
-                <p className="flex flex-wrap items-center gap-x-2.5 text-fs-3 text-fg font-medium">
-                  {p.name}
-                  {!p.active && <StatusDot color="var(--c41-fg-muted)" label="Inativo" className="font-normal" />}
-                </p>
-                <p className="text-fs-1 text-fg-muted mt-0.5">
-                  {MANAGEMENT_MODE_LABEL[p.managementMode]} · {BILLING_TYPE_LABEL[p.billingType]} ·{" "}
-                  {p.billingType === "FLAT_MONTHLY" ? `${fmt(p.basePrice)}/mês` : `${fmt(p.pricePerUser)}/usuário/mês`}
-                  {" · "}implantação {fmt(p.setupFee)}
-                  {" · "}{p._count.subscriptions} assinatura{p._count.subscriptions !== 1 ? "s" : ""}
-                </p>
-                <PlanModulesEditor
-                  planId={p.id}
-                  nomeDoPlano={p.name}
-                  allowedModuleCodes={Array.isArray(p.allowedModuleCodes) ? (p.allowedModuleCodes as string[]) : null}
-                  action={atualizarModulosPlano}
-                />
-              </div>
-              <TogglePlanoButton action={alternarPlano.bind(null, p.id, !p.active)} active={p.active} nome={p.name} />
-            </div>
-          ))}
+        <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 2xl:grid-cols-3">
+          {plans.map((p) => {
+            const porUsuario = p.billingType === "PER_USER_MONTHLY";
+            const valor = porUsuario ? p.pricePerUser : p.basePrice;
+            return (
+              <CartaoDoPlano
+                key={p.id}
+                plano={{
+                  id: p.id,
+                  nome: p.name,
+                  modo: p.managementMode,
+                  cobranca: p.billingType,
+                  valor: valorParaOCampo(valor),
+                  implantacao: valorParaOCampo(p.setupFee),
+                  valorEmReais: Number(valor ?? 0),
+                  implantacaoEmReais: Number(p.setupFee),
+                  ativo: p.active,
+                  clientes: p._count.subscriptions,
+                  modulos: lerModulosDoPlano(p.allowedModuleCodes),
+                }}
+                site={semTabela ? null : (ajustes.porPlano.get(p.id) ?? CAMPOS_DO_SITE_PADRAO)}
+                alternar={alternarPlano.bind(null, p.id, !p.active)}
+                atualizarModulos={atualizarModulosPlano}
+              />
+            );
+          })}
         </div>
       )}
     </PageContainer>

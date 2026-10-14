@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Ceci } from "@/components/ia/Ceci";
+import type { PlanosDoSite } from "@/lib/planos/site-regras";
 import type { LinksDoSite } from "@/lib/site/links";
 import { CONTATO, EMPRESA, QUEM_OPERA } from "@/lib/site/textos";
 import { BOTAO_DO_TOPO, BOTAO_GRANDE, CARTAO, FAIXA, LINK, PRIMARIO, RESPIRO, TITULO_2 } from "./estilos";
@@ -18,6 +19,7 @@ import { AnelDoConnect, Logo, Rotulo } from "./Marca";
 import { MosaicoDoConnect } from "./MosaicoDoConnect";
 import { NavegacaoDoTopo, type SecaoDoTopo } from "./NavegacaoDoTopo";
 import { PerguntasFrequentes } from "./PerguntasFrequentes";
+import { SecaoDePlanos } from "./SecaoDePlanos";
 import { AuraDaPrimeiraDobra, PrimeiraDobra } from "./PrimeiraDobra";
 import { SecaoDaCeci } from "./SecaoDaCeci";
 
@@ -46,9 +48,12 @@ import { SecaoDaCeci } from "./SecaoDaCeci";
 //  5. O Connect (MosaicoDoConnect): os recursos de verdade, num mosaico.
 //  6. Seguro e organizado: permissões por setor, registro de quem fez o quê,
 //     cada escritório com os seus dados, o aviso de certificado vencendo.
-//  7. Sobre nós: o texto da versão 2, com a 41 TEC LTDA, de Curitiba.
-//  8. Perguntas frequentes (PerguntasFrequentes), em acordeão.
-//  9. O convite para falar com a gente (o e-mail de lib/site/textos) e o
+//  7. Planos (SecaoDePlanos, 14/10/2026): os planos marcados "Mostrar no site"
+//     em Administração › Planos, sem preço por enquanto. Sem plano marcado (ou
+//     sem o banco), a seção e o link "Planos" do topo somem.
+//  8. Sobre nós: o texto da versão 2, com a 41 TEC LTDA, de Curitiba.
+//  9. Perguntas frequentes (PerguntasFrequentes), em acordeão.
+// 10. O convite para falar com a gente (o e-mail de lib/site/textos) e o
 //     rodapé em colunas.
 //
 // Nenhum número, cliente, depoimento, porcentagem ou prazo inventado; nada de
@@ -60,14 +65,20 @@ import { SecaoDaCeci } from "./SecaoDaCeci";
 // das perguntas. O movimento é CSS (globals.css, bloco do site), sutil e
 // desligado com "reduzir movimento"; parada, a página está inteira.
 
-// As âncoras do topo: as seções desta página, na ordem dela.
+// As âncoras do topo: as seções desta página, na ordem dela. "Planos" só
+// entra quando a seção aparece (ver `secoesDaPagina`).
 const SECOES: SecaoDoTopo[] = [
   { id: "ceci", rotulo: "A Ceci" },
   { id: "o-connect", rotulo: "O Connect" },
   { id: "seguranca", rotulo: "Segurança" },
+  { id: "planos", rotulo: "Planos" },
   { id: "sobre-nos", rotulo: "Sobre nós" },
   { id: "perguntas", rotulo: "Perguntas" },
 ];
+
+function secoesDaPagina(comPlanos: boolean): SecaoDoTopo[] {
+  return comPlanos ? SECOES : SECOES.filter((s) => s.id !== "planos");
+}
 
 type Porta = { Icone: LucideIcon; titulo: string; texto: string; acao: string; href: string };
 
@@ -103,7 +114,17 @@ const SEGURANCA: { Icone: LucideIcon; titulo: string; texto: string }[] = [
   },
 ];
 
-export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite; temSessao?: boolean }) {
+export function SiteDoConnect({
+  links,
+  temSessao = false,
+  planos = null,
+}: {
+  links: LinksDoSite;
+  temSessao?: boolean;
+  /** A seção Planos (lib/planos/site); `null` esconde a seção e o link do topo. */
+  planos?: PlanosDoSite | null;
+}) {
+  const secoes = secoesDaPagina(Boolean(planos?.planos.length));
   // Com o cookie da sessão da equipe no navegador (só a presença, conferida
   // em app/page.tsx), o botão leva direto ao Connect.
   const entrada = temSessao ? { href: links.abrir, rotulo: "Abrir o Connect" } : { href: links.entrar, rotulo: "Entrar no Connect" };
@@ -137,7 +158,7 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
           <a href="#inicio" aria-label="Connect, início da página" className="flex-none rounded-md">
             <Logo className="h-[22px] sm:h-[26px]" />
           </a>
-          <NavegacaoDoTopo secoes={SECOES} />
+          <NavegacaoDoTopo secoes={secoes} />
           <a href={entrada.href} className={`${BOTAO_DO_TOPO} ${PRIMARIO} ml-auto lg:ml-0`}>
             {entrada.rotulo}
           </a>
@@ -226,6 +247,8 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
           </div>
         </section>
 
+        {planos && planos.planos.length > 0 && <SecaoDePlanos planos={planos} />}
+
         {/* Sobre nós: o texto da versão 2, que ainda pede a revisão do Kauan. */}
         <section id="sobre-nos" aria-labelledby="sobre-nos-titulo" className="scroll-mt-16">
           <div className={`${FAIXA} ${RESPIRO} grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] lg:items-end lg:gap-16`}>
@@ -299,7 +322,7 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
             <p className="mt-4 max-w-[30em] text-fs-4 leading-relaxed text-fg-muted">{QUEM_OPERA}</p>
           </div>
           <ColunaDoRodape titulo="Nesta página">
-            {SECOES.map((s) => (
+            {secoes.map((s) => (
               <li key={s.id}>
                 <a href={`#${s.id}`} className={LINK}>
                   {s.rotulo}

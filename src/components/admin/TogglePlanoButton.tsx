@@ -1,9 +1,8 @@
 "use client";
 
 import { Power, PowerOff } from "lucide-react";
-import { ItemDoMenu } from "@/components/ui/Popover";
+import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/useConfirm";
-import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
 
 type Props = {
   action: () => Promise<void>;
@@ -12,37 +11,30 @@ type Props = {
 };
 
 /**
- * Desativar/reativar um plano do catálogo, no "⋯" da linha.
+ * Desativar/reativar um plano do catálogo, no pé do cartão do plano.
  *
- * Era um botão vermelho "Desativar" fixo em cada plano. Desde o polimento de
- * 30/09, ação rara e que tira algo de circulação vai no menu — a mesma regra
- * das linhas de Cadastros. A confirmação continua a de antes.
+ * Esteve no "⋯" da linha desde o polimento de 30/09 (ação rara que tira algo
+ * de circulação). Com os cartões (escolha A do Kauan para Planos, 14/10/2026)
+ * volta a botão, como no desenho aprovado: "Desativar" discreto ao lado do
+ * "Editar" e, no plano inativo, "Ativar". A confirmação continua a de antes.
  */
 export function TogglePlanoButton({ action, active, nome }: Props) {
   const { dialog, requestConfirm } = useConfirm();
 
   function handleClick() {
     const title = active ? `Desativar o plano "${nome}"?` : `Reativar o plano "${nome}" pra novas assinaturas?`;
-    const description = active ? "Ele some das opções pra novas assinaturas, mas assinaturas existentes continuam." : undefined;
+    const description = active
+      ? "Ele some das opções pra novas assinaturas e do site, mas assinaturas existentes continuam."
+      : undefined;
     requestConfirm({ title, description, destructive: active, confirmLabel: active ? "Desativar" : "Reativar" }, action);
   }
 
   return (
     <>
-      <MenuDeMaisAcoes rotulo={`Mais ações do plano ${nome}`}>
-        {(fechar) => (
-          <ItemDoMenu
-            icone={active ? <PowerOff /> : <Power />}
-            danger={active}
-            onClick={() => {
-              fechar();
-              handleClick();
-            }}
-          >
-            {active ? "Desativar" : "Ativar"}
-          </ItemDoMenu>
-        )}
-      </MenuDeMaisAcoes>
+      <Button variant={active ? "ghost" : "secondary"} size="xs" onClick={handleClick}>
+        {active ? <PowerOff size={11} /> : <Power size={11} />}
+        {active ? "Desativar" : "Ativar"}
+      </Button>
       {dialog}
     </>
   );

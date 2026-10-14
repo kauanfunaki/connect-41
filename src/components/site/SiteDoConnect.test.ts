@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AGENT_CATALOG, agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { descreverProposta, rotulosDaDecisao } from "@/lib/ia/chat/regras";
 import { especialidadeDoAgente } from "@/lib/ia/ceci";
+import { CAMPOS_DO_SITE_PADRAO, montarPlanosDoSite, type PlanoDoBanco } from "@/lib/planos/site-regras";
 import { linksDoSite } from "@/lib/site/links";
 import { CONVERSAS_DA_CECI } from "./conversasDaCeci";
 import { SiteDoConnect } from "./SiteDoConnect";
@@ -17,7 +18,8 @@ beforeAll(() => vi.stubGlobal("React", React));
 afterAll(() => vi.unstubAllGlobals());
 
 const links = linksDoSite("https://app.useconnect.com.br");
-const pagina = (temSessao = false) => renderToStaticMarkup(React.createElement(SiteDoConnect, { links, temSessao }));
+const pagina = (temSessao = false, planos: Parameters<typeof SiteDoConnect>[0]["planos"] = null) =>
+  renderToStaticMarkup(React.createElement(SiteDoConnect, { links, temSessao, planos }));
 
 /** Do início da tag que contém `marca` até o fechamento `</tag>` seguinte. */
 function trecho(html: string, marca: string, tag: string): string {
@@ -132,6 +134,94 @@ describe("site do Connect", () => {
     for (const nome of ["Omie", "SPED", "WhatsApp", "Google Agenda"]) expect(html).toContain(`>${nome}<`);
     const imagens = [...html.matchAll(/<img[^>]*src="([^"]*)"/g)].map((m) => m[1]!);
     expect(imagens.every((src) => src.startsWith("/brand/"))).toBe(true);
+  });
+});
+
+// A seção Planos (14/10/2026, escolha A do Kauan): os planos marcados "Mostrar
+// no site", entre Segurança e Sobre nós, com o link "Planos" no topo. Sem
+// preço por enquanto (decisão do Kauan); pronta para mostrar quando ligarem.
+describe("a seção Planos do site", () => {
+  const plano = (id: string, name: string, extra: Partial<PlanoDoBanco> = {}): PlanoDoBanco => ({
+    id,
+    name,
+    managementMode: "MANAGED",
+    billingType: "FLAT_MONTHLY",
+    basePrice: "1500.00",
+    pricePerUser: null,
+    setupFee: "3000.00",
+    allowedModuleCodes: null,
+    active: true,
+    ...extra,
+  });
+  const PLANOS = [
+    plano("ger", "Gerenciado"),
+    plano("auto", "Autoatendimento", {
+      managementMode: "SELF_SERVICE",
+      billingType: "PER_USER_MONTHLY",
+      pricePerUser: "89.90",
+      allowedModuleCodes: ["bpo_dre", "recrutamento_vagas"],
+    }),
+  ];
+  const noSite = new Map([
+    ["ger", { ...CAMPOS_DO_SITE_PADRAO, mostrarNoSite: true, ordem: 1 }],
+    ["auto", { ...CAMPOS_DO_SITE_PADRAO, mostrarNoSite: true, ordem: 2, destaques: ["Suporte da 41 Tech"] }],
+  ]);
+  const comPlanos = (mostrarPrecos = false) => pagina(false, montarPlanosDoSite(PLANOS, noSite, mostrarPrecos));
+
+  it("sem planos (ou sem banco), nem seção nem link no topo", () => {
+    const html = pagina();
+    expect(html).not.toContain('id="planos"');
+    expect(hrefs(html)).not.toContain("#planos");
+  });
+
+  it("com planos, a seção fica entre Segurança e Sobre nós, e o link Planos entra no topo e no rodapé", () => {
+    const html = comPlanos();
+    const topo = trecho(html, "<header", "header");
+    expect(hrefs(topo)).toEqual(["#inicio", "#ceci", "#o-connect", "#seguranca", "#planos", "#sobre-nos", "#perguntas", links.entrar]);
+    expect(html.indexOf('id="seguranca"')).toBeLessThan(html.indexOf('id="planos"'));
+    expect(html.indexOf('id="planos"')).toBeLessThan(html.indexOf('id="sobre-nos"'));
+    expect(hrefs(trecho(html, "<footer", "footer"))).toContain("#planos");
+  });
+
+  it("sem preço por padrão: Valor sob consulta, e nenhum R$ na seção", () => {
+    const secao = trecho(comPlanos(), 'id="planos"', "section");
+    expect(secao).toContain(">Gerenciado<");
+    expect(secao).toContain(">Autoatendimento<");
+    expect(secao.match(/>Valor sob consulta</g)).toHaveLength(2);
+    expect(secao).not.toContain("R$");
+    expect(secao).not.toContain("implantação");
+  });
+
+  it("cada cartão: para quem é, os setores do plano, os destaques e o Fale com a gente pelo e-mail do site", () => {
+    const secao = trecho(comPlanos(), 'id="planos"', "section");
+    expect(secao).toContain("A 41 Tech administra o Connect pelo seu escritório");
+    expect(secao).toContain(">Suporte da 41 Tech<");
+    // O Gerenciado libera o catálogo inteiro: seis setores e o resto em "+N setores".
+    expect(secao).toMatch(/>\+\d setores</);
+    const contato = hrefs(secao).filter((h) => h.startsWith("mailto:"));
+    expect(contato).toEqual(["mailto:marcos@41contabil.com.br?subject=Plano%20Gerenciado", "mailto:marcos@41contabil.com.br?subject=Plano%20Autoatendimento"]);
+    expect(secao.match(/>Fale com a gente</g)).toHaveLength(2);
+    // O que vale para todos.
+    for (const t of ["Permissões por setor", "Registro de quem fez o quê", "Cada escritório com os seus dados"]) expect(secao).toContain(`>${t}<`);
+  });
+
+  it("com o interruptor ligado, o preço entra no lugar do Valor sob consulta", () => {
+    const secao = trecho(comPlanos(true), 'id="planos"', "section");
+    expect(secao).not.toContain("Valor sob consulta");
+    expect(secao).toContain(">R$ 1.500,00<");
+    expect(secao).toContain(">por mês, valor fixo<");
+    expect(secao).toContain(">R$ 89,90<");
+    expect(secao).toContain(">por usuário/mês<");
+    expect(secao).toContain(">+ implantação de R$ 3.000,00<");
+  });
+
+  it("os textos da seção também sem espaço duro nem espaço a mais", () => {
+    for (const html of [comPlanos(), comPlanos(true)]) {
+      expect(html).not.toContain(" ");
+      expect(html).not.toContain("&nbsp;");
+      const textos = [...html.matchAll(/>([^<]+)</g)].map((m) => m[1]!);
+      expect(textos.filter((t) => /\s{2,}/.test(t))).toEqual([]);
+    }
   });
 });
 
