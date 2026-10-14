@@ -1,4 +1,11 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { urlDoHub } from "@/lib/carreiras/enderecoDeCarreiras";
+
+// Dinâmica de propósito: o destino vem de variável de ambiente lida em
+// runtime. Estática, a página seria gerada no build — onde as variáveis do
+// EasyPanel não existem — e nunca redirecionaria.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Portal de vagas",
@@ -14,10 +21,16 @@ export const metadata: Metadata = {
  * do link via "Entrar" e achava que precisava de conta. Aqui ele lê o que falta.
  *
  * Não lista as empresas de propósito: a lista de clientes do Connect não é
- * pública. Quando a landing virar hub (ver o Quadro), é ela que decide o que
- * mostrar neste endereço.
+ * pública.
+ *
+ * Com o 41 Carreiras configurado (14/10/2026), quem chega aqui vai para o
+ * portal da 41 (o link "Vagas" do site levava para cá). Sem a configuração,
+ * fica a página de passagem de antes.
  */
 export default function CarreirasSemEmpresaPage() {
+  const hub = urlDoHub();
+  if (hub) redirect(hub);
+
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-[440px] text-center">

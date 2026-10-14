@@ -51,18 +51,33 @@ describe("site do Connect", () => {
     expect(vezes(html, links.entrar)).toBe(1);
   });
 
-  // Portal e vagas não vão para o topo: ficam nas portas (uma vez cada) e na
-  // lista de links do rodapé. A entrada da equipe está nos três.
-  it("portal e vagas aparecem só nas portas e no rodapé; a entrada da equipe, também no topo", () => {
+  // O portal não vai para o topo: fica na porta e na lista de links do
+  // rodapé. A entrada da equipe está nos três.
+  it("o portal aparece só na porta e no rodapé; a entrada da equipe, também no topo", () => {
     const html = pagina();
     const portas = hrefs(trecho(html, 'aria-label="Por onde entrar"', "section"));
-    expect(portas).toEqual([links.portal, links.vagas, links.entrar]);
+    expect(portas).toEqual([links.portal, links.entrar]);
     const rodape = hrefs(trecho(html, "<footer", "footer"));
-    for (const destino of [links.portal, links.vagas]) {
-      expect(vezes(html, destino)).toBe(2);
-      expect(rodape).toContain(destino);
-    }
+    expect(vezes(html, links.portal)).toBe(2);
+    expect(rodape).toContain(links.portal);
     expect(vezes(html, links.entrar)).toBe(3);
+  });
+
+  // Decisão do Kauan (13/10): o portal de vagas é da 41, com endereço próprio
+  // (o 41 Carreiras) — o site do Connect fica só com "Sou cliente" e "Sou da
+  // equipe", sem a porta nem o link das vagas. O assistente do WhatsApp do
+  // Recrutamento, que é do Connect, continua.
+  it("nenhuma porta nem link de vagas; o assistente do Recrutamento continua", () => {
+    const html = pagina();
+    const portas = trecho(html, 'aria-label="Por onde entrar"', "section");
+    expect(portas).toContain(">Sou cliente<");
+    expect(portas).toContain(">Sou da equipe<");
+    expect(portas).not.toContain("Quero trabalhar aqui");
+    expect(portas).toContain("md:grid-cols-2");
+    expect(hrefs(html).some((h) => h.includes("/carreiras"))).toBe(false);
+    expect(trecho(html, "<footer", "footer")).not.toContain(">Vagas<");
+    expect(html).not.toContain("Ver vagas");
+    expect(html).toContain("Um número próprio do Recrutamento");
   });
 
   it("a primeira dobra tem um botão só, que desce para a Lígia", () => {
