@@ -315,12 +315,28 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         ],
       },
       {
-        titulo: "Analisar o currículo e marcar habilidades",
+        titulo: "Ler o currículo e marcar habilidades",
         passos: [
-          "Na ficha do candidato, em “Tags / Habilidades”, marque as tags que descrevem a pessoa.",
-          "Em “Triagem de currículo (IA)”, clique em “Analisar currículo”. A IA lê o PDF, preenche os campos vazios da ficha e mostra um resumo profissional.",
+          "Na ficha do candidato, em “Tags”, clique em “+ tag” e escolha as que descrevem a pessoa.",
+          "No bloco “Currículo”, clique em “Ler com IA”. A IA lê o PDF, preenche os campos vazios da ficha e escreve um resumo profissional, que fica guardado no bloco.",
           "Em “Teste”, escolha o “Tipo de teste” e clique em “Enviar teste”.",
-          "Em “Candidaturas”, clique no nome da vaga para abrir o funil dela.",
+          "Em “Candidaturas”, cada vaga mostra a etapa em que a pessoa está. Clique em “Abrir candidatura” para ver os pareceres e as entrevistas.",
+        ],
+      },
+      {
+        titulo: "Corrigir os dados do candidato",
+        passos: [
+          "Em “Dados pessoais”, clique no lápis da parte que quer mudar: Identificação, Contato ou Endereço.",
+          "Corrija os campos e clique em “Salvar”. Só aquela parte muda.",
+          "Para ver o formulário com tudo de uma vez, clique em “⋯” no topo da ficha e em “Editar tudo”.",
+        ],
+      },
+      {
+        titulo: "Anexar documentos",
+        passos: [
+          "O bloco “Documentos” começa fechado e a linha já diz quantos arquivos há. Clique nele para ver a lista.",
+          "Para anexar, clique em “Anexar”, escolha o arquivo, a categoria e, se for o caso, o vencimento e “Documento sensível”.",
+          "Clique em “Anexar” na janela para enviar.",
         ],
       },
       {
@@ -333,7 +349,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "A análise do currículo precisa de um PDF: o enviado pela candidatura no portal ou um documento da categoria Currículo na ficha.",
+      "A leitura do currículo precisa de um PDF: o enviado pela candidatura no portal ou um documento da categoria Currículo na ficha. Vale o mais recente.",
       "Marcar tags deixa o candidato fácil de achar no banco de talentos, mesmo que ele não avance na vaga atual.",
     ],
   },

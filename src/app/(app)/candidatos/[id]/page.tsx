@@ -1,53 +1,52 @@
-import Link from "next/link";
-import { Pencil } from "lucide-react";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { BotaoExcluirCadastro } from "@/components/exclusao/ExcluirCadastro";
+import { StatusDot } from "@/components/shared/StatusDot";
 import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { listDocuments } from "@/lib/documents";
-import { DocumentsSection } from "@/components/documents/DocumentsSection";
-import { AiResumeExtract } from "@/components/candidatos/AiResumeExtract";
-import { extrairDadosCurriculo } from "./ai-actions";
-import { formatCalendarDate, formatInstantDate, maskCpf, formatPhone, formatCep } from "@/lib/format";
-import { TagToggleList } from "@/components/kanban/TagToggleList";
-import { alternarTagPessoa } from "../actions";
-import { TesteCard } from "@/components/teste/TesteCard";
-import type { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
+import { CATEGORY_LABEL } from "@/lib/document-categories";
+import { formatCalendarDate, formatInstantDate, formatPhone, maskCpf } from "@/lib/format";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
-import { Selo, type TomDoSelo } from "@/components/ui/Selo";
-import { StatusDot } from "@/components/shared/StatusDot";
-// O par rótulo/valor das fichas: a cópia local daqui tinha o valor em 13px, e
-// a ficha da vaga e a de pessoa em 15px (auditoria DRG-11, 07/10/2026).
-import { InfoRow } from "@/components/empresas/InfoRow";
+import type { Faixa } from "@/lib/recrutamento/triagem";
+import {
+  dataCurta,
+  enderecoEmUmaLinha,
+  etapasDaCandidatura,
+  idadeEm,
+  resumoDosDocumentos,
+  rotuloDaOrigem,
+} from "@/lib/recrutamento/fichaDoCandidato";
+import {
+  escolherCurriculo,
+  lerResumoDoCurriculo,
+  nomeDoCurriculoDoPortal,
+  resumoEhDoArquivo,
+} from "@/lib/recrutamento/curriculoDoCandidato";
+import { TesteCard } from "@/components/teste/TesteCard";
+import { AcoesDoCandidato } from "@/components/candidatos/AcoesDoCandidato";
+import { CandidaturasDoCandidato } from "@/components/candidatos/CandidaturasDoCandidato";
+import { BlocoDoCurriculo, type ArquivoDoCurriculo } from "@/components/candidatos/BlocoDoCurriculo";
+import { DocumentosDoCandidato } from "@/components/candidatos/DocumentosDoCandidato";
+import { DadosPessoaisDoCandidato } from "@/components/candidatos/DadosPessoaisDoCandidato";
+import { TagsDoCandidato } from "@/components/candidatos/TagsDoCandidato";
+import { alternarTagPessoa } from "../actions";
+import { extrairDadosCurriculo } from "./ai-actions";
+import { salvarSecaoDoCandidato } from "./ficha-actions";
 
-const CANDIDATURA_STATUS_LABEL: Record<ProcessoSeletivoStatus, string> = {
-  EM_ANDAMENTO: "Em andamento",
-  APROVADO:     "Aprovado",
-  REPROVADO:    "Reprovado",
-  DESISTENTE:   "Desistente",
-  CONTRATADO:   "Contratado",
-  ENCERRADO:    "Encerrado",
-};
+const vazioViraNulo = (v: string | null | undefined) => v?.trim() || null;
 
-// A situação da candidatura no tom do papel (escolha 2A do Kauan, 08/10/2026):
-// em curso em azul, aprovada e contratada em verde, e o que saiu de cena —
-// reprovada, desistente, encerrada — em cinza. Era o mesmo cinza para todas.
-const TOM_DA_CANDIDATURA: Record<ProcessoSeletivoStatus, TomDoSelo> = {
-  EM_ANDAMENTO: "marca",
-  APROVADO:     "sucesso",
-  REPROVADO:    "neutro",
-  DESISTENTE:   "neutro",
-  CONTRATADO:   "sucesso",
-  ENCERRADO:    "neutro",
-};
-
+/**
+ * Ficha do candidato (Recrutamento › Candidatos), redesenhada em 14/10/2026
+ * com as escolhas do Kauan na página de alternativas: o cabeçalho e, embaixo,
+ * duas colunas no computador — à esquerda o processo (candidaturas, teste,
+ * currículo, documentos), à direita a pessoa (dados pessoais e tags). No
+ * celular, uma coluna só, com o processo primeiro. Eram oito blocos empilhados
+ * na largura toda, com muito espaço vazio.
+ */
 export default async function CandidatoPage({
   params,
 }: {
@@ -80,8 +79,10 @@ export default async function CandidatoPage({
   });
 
   // Teste é traço da pessoa, reaproveitável entre candidaturas — mostra o link
-  // mais recente independente de qual candidatura o gerou.
-  const [testeLink, templates] = await Promise.all([
+  // mais recente independente de qual candidatura o gerou. A última nota da
+  // triagem de cada candidatura vai no cartão dela; o resumo do currículo, no
+  // bloco Currículo (sem a tabela nova, vem vazio).
+  const [testeLink, templates, ultimasNotas, resumoGuardado] = await Promise.all([
     prisma.assessmentLink.findFirst({
       where: { tenantId: ctx.tenantId, personId: id },
       orderBy: { createdAt: "desc" },
@@ -94,6 +95,15 @@ export default async function CandidatoPage({
           select: { id: true, name: true },
         })
       : Promise.resolve([]),
+    candidaturas.length > 0
+      ? prisma.candidaturaNota.findMany({
+          where: { tenantId: ctx.tenantId, candidaturaId: { in: candidaturas.map((c) => c.id) } },
+          orderBy: { createdAt: "desc" },
+          distinct: ["candidaturaId"],
+          select: { candidaturaId: true, score: true, faixa: true },
+        })
+      : Promise.resolve([]),
+    lerResumoDoCurriculo(prisma, ctx.tenantId, id),
   ]);
   const initialTesteLink =
     testeLink?.status === "PENDENTE"
@@ -122,28 +132,64 @@ export default async function CandidatoPage({
   // Excluir é só de administrador (13/10/2026) — gerir o Recrutamento dá
   // editar, não apagar.
   const excluivel = podeExcluir(ctx);
+  const agora = new Date();
+  const notaDa = new Map(ultimasNotas.map((n) => [n.candidaturaId, n]));
 
-  const fullAddress = [
-    person.addressStreet,
-    person.addressNumber,
-    person.addressComplement,
-    person.neighborhood,
-    person.city,
-    person.stateCode,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  // O currículo: o mesmo arquivo que o "Ler com IA" lê (ver ai-actions.ts).
+  const curriculo = escolherCurriculo(
+    candidaturas
+      .filter((c) => c.resumeUrl)
+      .map((c) => ({ candidaturaId: c.id, vagaTitulo: c.vaga.title, em: c.createdAt })),
+    documents
+      .filter((d) => d.category === "CURRICULO")
+      .map((d) => ({
+        documentId: d.id,
+        fileName: d.fileName,
+        fileUrl: d.fileUrl,
+        mimeType: d.mimeType,
+        enviadoPor: d.uploadedBy.name,
+        em: d.createdAt,
+      }))
+  );
+  const arquivoDoCurriculo: ArquivoDoCurriculo | null = !curriculo
+    ? null
+    : curriculo.tipo === "portal"
+      ? {
+          nome: nomeDoCurriculoDoPortal(person.name),
+          href: `/api/resumes/${curriculo.candidaturaId}`,
+          origem: `veio pelo portal em ${dataCurta(curriculo.em, agora)}`,
+          contexto: curriculo.vagaTitulo ? `Candidatura ${curriculo.vagaTitulo}` : null,
+          pdf: true,
+        }
+      : {
+          nome: curriculo.fileName,
+          href: `/api/documents/${curriculo.documentId}`,
+          origem: `anexado em ${dataCurta(curriculo.em, agora)}`,
+          contexto: curriculo.enviadoPor ? `Anexado por ${curriculo.enviadoPor}` : null,
+          pdf: curriculo.pdf,
+        };
+
+  const idade = person.birthDate ? idadeEm(person.birthDate, agora) : null;
+  const documentosDaFicha = documents.map((d) => ({
+    id: d.id,
+    fileName: d.fileName,
+    categoria: CATEGORY_LABEL[d.category],
+    category: d.category,
+    enviadoEm: dataCurta(d.createdAt, agora),
+    enviadoPor: d.uploadedBy.name,
+    sensitive: d.sensitive,
+    expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
+    expired: d.expiresAt != null && d.expiresAt < agora,
+  }));
 
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Candidatos", href: "/candidatos" }, { label: person.name, truncate: true }]} />
 
-      {/* Selo, CPF e ações dentro do próprio `PageHeader` (polimento de
-          30/09), como na ficha da vaga. "Editar" era um link desenhado à mão
-          como botão. */}
       {/* Ativo/inativo de cadastro é a bolinha, como na lista de candidatos
-          (escolha 2A, 08/10/2026), e mora no `meta`, embaixo do título — era
-          um selo colado ao nome. */}
+          (escolha 2A, 08/10/2026), e mora no `meta`, embaixo do título. Editar
+          agora é no próprio bloco; o formulário inteiro e o excluir ficam no
+          "⋯". */}
       <PageHeader
         title={person.name}
         meta={
@@ -153,131 +199,102 @@ export default async function CandidatoPage({
           />
         }
         subtitle={person.cpf ? <span className="tnum">CPF: {maskCpf(person.cpf)}</span> : undefined}
-        action={
-          (canEdit || excluivel) && (
-            <div className="flex flex-wrap items-center gap-2">
-              {canEdit && (
-                <Button href={`/candidatos/${id}/editar`} variant="secondary" size="sm">
-                  <Pencil size={14} /> Editar
-                </Button>
-              )}
-              {excluivel && <BotaoExcluirCadastro tipo="pessoa" id={id} nome={person.name} />}
-            </div>
-          )
-        }
+        action={<AcoesDoCandidato id={id} nome={person.name} podeEditar={canEdit} podeExcluir={excluivel} />}
       />
 
-      {/* Tags / Skills — banco de talentos.
-          Títulos de seção da ficha em 18px (`text-section`), como na ficha de
-          pessoa e nos documentos logo abaixo — padrão aceito pelo Kauan em
-          08/10/2026; estavam em 14px. */}
-      <Card className="p-5 mb-4">
-        <h2 className="text-section font-semibold text-fg mb-1">Tags / Habilidades</h2>
-        <p className="text-fs-2 text-fg-muted mb-3">
-          Torna o candidato pesquisável no banco de talentos, mesmo que não avance nesta vaga.
-        </p>
-        <TagToggleList
-          allTags={allTags}
-          selectedIds={person.tags.map((t) => t.tagId)}
-          toggleAction={alternarTagPessoa.bind(null, id)}
-        />
-      </Card>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        {/* O processo. */}
+        <div className="flex min-w-0 flex-col gap-4">
+          <CandidaturasDoCandidato
+            candidaturas={candidaturas.map((c) => {
+              const nota = notaDa.get(c.id);
+              return {
+                id: c.id,
+                vagaId: c.vaga.id,
+                vagaTitulo: c.vaga.title,
+                empresa: c.vaga.company.name,
+                inscritoEm: dataCurta(c.createdAt, agora),
+                origem: rotuloDaOrigem(c.origin),
+                etapa: etapasDaCandidatura(c.stage, c.status),
+                nota: nota ? { score: nota.score, faixa: nota.faixa as Faixa } : null,
+              };
+            })}
+          />
 
-      {/* Teste */}
-      <div className="mb-4">
-        <TesteCard personId={id} candidaturaId={null} initialLink={initialTesteLink} canManage={canEdit} templates={templates} urlPublica={(process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "")} />
-      </div>
+          <TesteCard
+            personId={id}
+            candidaturaId={null}
+            initialLink={initialTesteLink}
+            canManage={canEdit}
+            templates={templates}
+            urlPublica={(process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "")}
+          />
 
-      {/* Identificação */}
-      <Card className="p-5 mb-4">
-        <h2 className="text-section font-semibold text-fg mb-4">Identificação</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-          <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
-          <InfoRow
-            label="Data de nascimento"
-            value={
-              person.birthDate
-                ? formatCalendarDate(person.birthDate, { day: "2-digit", month: "long", year: "numeric" })
+          <BlocoDoCurriculo
+            personId={id}
+            arquivo={arquivoDoCurriculo}
+            resumo={
+              resumoGuardado
+                ? {
+                    texto: resumoGuardado.summary,
+                    lidoEm: formatInstantDate(resumoGuardado.readAt, { day: "2-digit", month: "2-digit" }),
+                    preencheu: resumoGuardado.filledFields,
+                    deOutroArquivo: !!curriculo && !resumoEhDoArquivo(resumoGuardado, curriculo),
+                  }
                 : null
             }
+            podeEditar={canEdit}
+            ler={extrairDadosCurriculo.bind(null, id)}
           />
-          <InfoRow label="RG" value={person.rg} mono />
-          <InfoRow label="Escolaridade" value={person.education} />
+
+          <DocumentosDoCandidato
+            personId={id}
+            documentos={documentosDaFicha}
+            resumo={resumoDosDocumentos(documentosDaFicha)}
+            podeAnexar={canEdit}
+          />
         </div>
-      </Card>
 
-      {/* Contato */}
-      <Card className="p-5 mb-4">
-        <h2 className="text-section font-semibold text-fg mb-4">Contato</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-          <InfoRow label="E-mail" value={person.email} />
-          <InfoRow label="Telefone" value={formatPhone(person.phone)} />
+        {/* A pessoa. */}
+        <div className="flex min-w-0 flex-col gap-4">
+          <DadosPessoaisDoCandidato
+            podeEditar={canEdit}
+            acoes={{
+              identificacao: salvarSecaoDoCandidato.bind(null, id, "identificacao"),
+              contato: salvarSecaoDoCandidato.bind(null, id, "contato"),
+              endereco: salvarSecaoDoCandidato.bind(null, id, "endereco"),
+            }}
+            dados={{
+              name: person.name,
+              cpf: vazioViraNulo(person.cpf),
+              birthDate: person.birthDate ? person.birthDate.toISOString().slice(0, 10) : null,
+              nascimento: person.birthDate
+                ? `${formatCalendarDate(person.birthDate)}${idade != null ? ` · ${idade} ${idade === 1 ? "ano" : "anos"}` : ""}`
+                : null,
+              rg: vazioViraNulo(person.rg),
+              education: vazioViraNulo(person.education),
+              email: vazioViraNulo(person.email),
+              phone: vazioViraNulo(person.phone),
+              telefone: vazioViraNulo(person.phone) ? formatPhone(person.phone) : null,
+              zipCode: vazioViraNulo(person.zipCode),
+              addressStreet: vazioViraNulo(person.addressStreet),
+              addressNumber: vazioViraNulo(person.addressNumber),
+              addressComplement: vazioViraNulo(person.addressComplement),
+              neighborhood: vazioViraNulo(person.neighborhood),
+              city: vazioViraNulo(person.city),
+              stateCode: vazioViraNulo(person.stateCode),
+              endereco: enderecoEmUmaLinha(person),
+            }}
+          />
+
+          <TagsDoCandidato
+            todas={allTags}
+            marcadas={person.tags.map((t) => t.tagId)}
+            alternar={alternarTagPessoa.bind(null, id)}
+            podeEditar={canEdit}
+          />
         </div>
-      </Card>
-
-      {/* Endereço */}
-      {fullAddress && (
-        <Card className="p-5 mb-4">
-          <h2 className="text-section font-semibold text-fg mb-4">Endereço</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-            <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
-            <InfoRow label="Complemento" value={person.addressComplement} />
-            <InfoRow label="Bairro" value={person.neighborhood} />
-            <InfoRow label="Cidade / UF" value={[person.city, person.stateCode].filter(Boolean).join(" — ")} />
-            <InfoRow label="CEP" value={formatCep(person.zipCode)} mono />
-          </div>
-        </Card>
-      )}
-
-      {/* Candidaturas */}
-      <Card className="p-5 mb-4">
-        <h2 className="text-section font-semibold text-fg mb-3">
-          Candidaturas {candidaturas.length > 0 && `(${candidaturas.length})`}
-        </h2>
-
-        {candidaturas.length === 0 ? (
-          <p className="text-ui text-fg-muted">Ainda não foi vinculado a nenhuma vaga.</p>
-        ) : (
-          <div className="divide-y divide-border">
-            {candidaturas.map((c) => (
-              <div key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2.5">
-                <Link href={`/vagas/${c.vaga.id}`} className="min-w-0 text-ui text-brand hover:underline">
-                  {c.vaga.title}
-                </Link>
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="min-w-0 truncate text-fs-2 text-fg-muted">{c.vaga.company.name}</span>
-                  <Selo tom={TOM_DA_CANDIDATURA[c.status]} className="flex-shrink-0">
-                    {CANDIDATURA_STATUS_LABEL[c.status]}
-                  </Selo>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {canEdit && (
-        <div className="mb-4">
-          <AiResumeExtract action={extrairDadosCurriculo.bind(null, id)} />
-        </div>
-      )}
-
-      {/* Documentos */}
-      <DocumentsSection
-        entityType="PERSON"
-        entityId={id}
-        canUpload={canEdit}
-        documents={documents.map((d) => ({
-          id: d.id,
-          fileName: d.fileName,
-          category: d.category,
-          sensitive: d.sensitive,
-          uploadedByName: d.uploadedBy.name,
-          createdAtLabel: formatInstantDate(d.createdAt),
-          expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
-          expired: d.expiresAt != null && d.expiresAt < new Date(),
-        }))}
-      />
+      </div>
     </PageContainer>
   );
 }
