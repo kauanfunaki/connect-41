@@ -19,9 +19,14 @@ type Props = {
   vagaId: string;
   /** Carimbo de tempo assinado pelo servidor ao montar a página — ver `src/lib/carreiras/antiRobo.ts`. */
   carimbo: string;
+  /**
+   * A conta do candidato. No endereço do 41 Carreiras é `/minha-conta`; no do
+   * Connect, `/carreiras/<escritorio>/minha-conta` (o padrão).
+   */
+  contaHref?: string;
 };
 
-export function ApplyForm({ slug, vagaId, carimbo }: Props) {
+export function ApplyForm({ slug, vagaId, carimbo, contaHref = `/carreiras/${slug}/minha-conta` }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,7 +64,7 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
         titulo="Candidatura enviada!"
         texto="Recebemos seus dados. Se o seu perfil avançar no processo, a equipe de recrutamento entra em contato pelo e-mail ou telefone informado."
       >
-        <Button href={`/carreiras/${slug}/minha-conta`} variant="secondary" size="sm" className="mt-3">
+        <Button href={contaHref} variant="secondary" size="sm" className="mt-3">
           Acompanhar minhas candidaturas
         </Button>
       </ConfirmacaoEnviada>

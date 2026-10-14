@@ -65,6 +65,8 @@ export function validarFaixa(
 export type FiltrosDoPortal = {
   busca: string;
   cidade: string;
+  /** A UF (14/10/2026, 41 Carreiras): vagas de empresas clientes em mais de um estado. */
+  uf: string;
   modalidade: VagaModalidade | "";
   contrato: VagaContrato | "";
   area: string;
@@ -78,9 +80,11 @@ export function lerFiltros(p: Record<string, string | string[] | undefined>): Fi
   const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v ?? "").trim().slice(0, 80);
   const modalidade = um(p.modalidade).toUpperCase();
   const contrato = um(p.contrato).toUpperCase();
+  const uf = um(p.uf).toUpperCase();
   return {
     busca: um(p.q),
     cidade: um(p.cidade),
+    uf: /^[A-Z]{2}$/.test(uf) ? uf : "",
     modalidade: (MODALIDADES as string[]).includes(modalidade) ? (modalidade as VagaModalidade) : "",
     contrato: (CONTRATOS as string[]).includes(contrato) ? (contrato as VagaContrato) : "",
     area: um(p.area),
@@ -88,7 +92,7 @@ export function lerFiltros(p: Record<string, string | string[] | undefined>): Fi
 }
 
 export function temFiltro(f: FiltrosDoPortal): boolean {
-  return !!(f.busca || f.cidade || f.modalidade || f.contrato || f.area);
+  return !!(f.busca || f.cidade || f.uf || f.modalidade || f.contrato || f.area);
 }
 
 /** Sem acento, sem caixa, espaço colapsado. */
@@ -106,6 +110,8 @@ export type VagaDoPortal = {
   publicDescription: string | null;
   empresa: string;
   cidade: string | null;
+  /** UF do local da vaga (ver `localDaVaga`). */
+  uf?: string | null;
   area: string | null;
   workMode: VagaModalidade | null;
   contractType: VagaContrato | null;
@@ -113,20 +119,23 @@ export type VagaDoPortal = {
 
 /**
  * As vagas que passam nos filtros. A busca procura cada palavra em título,
- * descrição, empresa e área — todas precisam aparecer, em qualquer ordem, que é
- * o que "analista fiscal" deve significar para quem digita.
+ * descrição, empresa, área, cidade e UF — todas precisam aparecer, em qualquer
+ * ordem, que é o que "analista fiscal" deve significar para quem digita. A
+ * cidade entrou em 14/10/2026 (41 Carreiras): "fiscal curitiba" acha a vaga.
  */
 export function filtrarVagas<T extends VagaDoPortal>(vagas: T[], f: FiltrosDoPortal): T[] {
   const palavras = normalizar(f.busca).split(" ").filter(Boolean);
   const cidade = normalizar(f.cidade);
+  const uf = normalizar(f.uf);
   const area = normalizar(f.area);
   return vagas.filter((v) => {
     if (cidade && normalizar(v.cidade) !== cidade) return false;
+    if (uf && normalizar(v.uf) !== uf) return false;
     if (area && normalizar(v.area) !== area) return false;
     if (f.modalidade && v.workMode !== f.modalidade) return false;
     if (f.contrato && v.contractType !== f.contrato) return false;
     if (palavras.length) {
-      const texto = normalizar([v.title, v.publicDescription, v.empresa, v.area].filter(Boolean).join(" "));
+      const texto = normalizar([v.title, v.publicDescription, v.empresa, v.area, v.cidade, v.uf].filter(Boolean).join(" "));
       if (!palavras.every((p) => texto.includes(p))) return false;
     }
     return true;
@@ -136,17 +145,19 @@ export function filtrarVagas<T extends VagaDoPortal>(vagas: T[], f: FiltrosDoPor
 /** Os valores que existem nas vagas abertas — o filtro só oferece o que tem resultado. */
 export function opcoesDosFiltros(vagas: VagaDoPortal[]): {
   cidades: string[];
+  ufs: string[];
   areas: string[];
   modalidades: VagaModalidade[];
   contratos: VagaContrato[];
 } {
-  const unicos = (xs: (string | null)[]) => {
+  const unicos = (xs: (string | null | undefined)[]) => {
     const porChave = new Map<string, string>();
     for (const x of xs) if (x && x.trim() && !porChave.has(normalizar(x))) porChave.set(normalizar(x), x.trim());
     return [...porChave.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
   };
   return {
     cidades: unicos(vagas.map((v) => v.cidade)),
+    ufs: unicos(vagas.map((v) => v.uf?.toUpperCase())),
     areas: unicos(vagas.map((v) => v.area)),
     modalidades: MODALIDADES.filter((m) => vagas.some((v) => v.workMode === m)),
     contratos: CONTRATOS.filter((c) => vagas.some((v) => v.contractType === c)),
@@ -170,6 +181,27 @@ export function hojeEmBrasilia(agora: Date): Date {
 /** O filtro do Prisma para "ainda aceita inscrição": sem prazo, ou prazo de hoje em diante. */
 export function whereDoPrazo(agora: Date) {
   return { OR: [{ applicationDeadline: null }, { applicationDeadline: { gte: hojeEmBrasilia(agora) } }] };
+}
+
+/**
+ * As vagas que o portal de um escritório mostra: só as dele, publicadas
+ * (`isPublic`), abertas e dentro do prazo. A mesma regra na lista, no 41
+ * Carreiras, na página da vaga e no sitemap.
+ */
+export function whereDasVagasDoPortal(tenantId: string, agora: Date) {
+  return { tenantId, isPublic: true, status: "ABERTA" as const, ...whereDoPrazo(agora) };
+}
+
+/**
+ * "Publicada hoje", "ontem", "há 5 dias" — em dias de calendário de Brasília,
+ * como o prazo. Passado de um mês, para de contar: o número só assustaria.
+ */
+export function publicadaHa(publicadaEm: Date, agora: Date): string {
+  const dias = Math.round((hojeEmBrasilia(agora).getTime() - hojeEmBrasilia(publicadaEm).getTime()) / 86_400_000);
+  if (dias <= 0) return "Publicada hoje";
+  if (dias === 1) return "Publicada ontem";
+  if (dias <= 30) return `Publicada há ${dias} dias`;
+  return "Publicada há mais de um mês";
 }
 
 /** O que o recrutador escreveu, um benefício por linha, sem marcador de lista. */
@@ -204,13 +236,22 @@ export function paginar<T>(lista: T[], pedida: string | string[] | undefined, po
 
 /** O link de uma página da lista, mantendo os filtros. */
 export function urlDaLista(slug: string, f: FiltrosDoPortal, pagina = 1): string {
+  return urlDaListaEm(`/carreiras/${slug}`, f, pagina);
+}
+
+/**
+ * O mesmo, a partir do caminho da lista — `/` no endereço do 41 Carreiras,
+ * `/carreiras/<escritorio>` no do Connect.
+ */
+export function urlDaListaEm(caminho: string, f: FiltrosDoPortal, pagina = 1): string {
   const q = new URLSearchParams();
   if (f.busca) q.set("q", f.busca);
   if (f.cidade) q.set("cidade", f.cidade);
+  if (f.uf) q.set("uf", f.uf);
   if (f.area) q.set("area", f.area);
   if (f.modalidade) q.set("modalidade", f.modalidade);
   if (f.contrato) q.set("contrato", f.contrato);
   if (pagina > 1) q.set("pagina", String(pagina));
   const s = q.toString();
-  return `/carreiras/${slug}${s ? `?${s}` : ""}`;
+  return `${caminho}${s ? `?${s}` : ""}`;
 }
