@@ -4,9 +4,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AGENT_CATALOG, agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { descreverProposta, rotulosDaDecisao } from "@/lib/ia/chat/regras";
 import { especialidadeDoAgente } from "@/lib/ia/ceci";
-import { CAMPOS_DO_SITE_PADRAO, montarPlanosDoSite, type PlanoDoBanco } from "@/lib/planos/site-regras";
+import { CAMPOS_DO_SITE_PADRAO, montarPlanosDoSite, setoresDoSobMedida, type PlanoDoBanco } from "@/lib/planos/site-regras";
 import { linksDoSite } from "@/lib/site/links";
 import { CONVERSAS_DA_CECI } from "./conversasDaCeci";
+import { gradeDosCartoes } from "./SecaoDePlanos";
 import { SiteDoConnect } from "./SiteDoConnect";
 
 // O site de apresentação, versão 3 (13/10/2026). Sem navegador, a estrutura que
@@ -138,8 +139,10 @@ describe("site do Connect", () => {
 });
 
 // A seção Planos (14/10/2026, escolha A do Kauan): os planos marcados "Mostrar
-// no site", entre Segurança e Sobre nós, com o link "Planos" no topo. Sem
-// preço por enquanto (decisão do Kauan); pronta para mostrar quando ligarem.
+// no site", entre O Connect e Segurança (subiu no mesmo dia, para ganhar
+// destaque), com o link "Planos" no topo. Sem preço por enquanto (decisão do
+// Kauan); pronta para mostrar quando ligarem. Depois dos planos, o cartão
+// "Connect sob medida", que nunca tem preço.
 describe("a seção Planos do site", () => {
   const plano = (id: string, name: string, extra: Partial<PlanoDoBanco> = {}): PlanoDoBanco => ({
     id,
@@ -166,21 +169,32 @@ describe("a seção Planos do site", () => {
     ["ger", { ...CAMPOS_DO_SITE_PADRAO, mostrarNoSite: true, ordem: 1 }],
     ["auto", { ...CAMPOS_DO_SITE_PADRAO, mostrarNoSite: true, ordem: 2, destaques: ["Suporte da 41 Tech"] }],
   ]);
-  const comPlanos = (mostrarPrecos = false) => pagina(false, montarPlanosDoSite(PLANOS, noSite, mostrarPrecos));
+  const comPlanos = (mostrarPrecos = false, cartaoSobMedida = true) =>
+    pagina(false, montarPlanosDoSite(PLANOS, noSite, mostrarPrecos, cartaoSobMedida));
+  /** O cartão sob medida: o último da lista, até a faixa "Em todos". */
+  const sobMedida = (html: string) => {
+    const inicio = html.indexOf('data-cartao="sob-medida"');
+    expect(inicio).toBeGreaterThanOrEqual(0);
+    return html.slice(inicio, html.indexOf(">Em todos<", inicio));
+  };
 
-  it("sem planos (ou sem banco), nem seção nem link no topo", () => {
+  it("sem planos (ou sem banco), nem seção nem link no topo — e nem o cartão sob medida, que não aparece sozinho", () => {
     const html = pagina();
     expect(html).not.toContain('id="planos"');
     expect(hrefs(html)).not.toContain("#planos");
+    expect(html).not.toContain("Connect sob medida");
   });
 
-  it("com planos, a seção fica entre Segurança e Sobre nós, e o link Planos entra no topo e no rodapé", () => {
+  // Pedido do Kauan (14/10): Planos antes de Segurança, para ganhar destaque.
+  it("com planos, a seção fica entre O Connect e Segurança, e o link Planos vem antes de Segurança no topo e no rodapé", () => {
     const html = comPlanos();
-    const topo = trecho(html, "<header", "header");
-    expect(hrefs(topo)).toEqual(["#inicio", "#ceci", "#o-connect", "#seguranca", "#planos", "#sobre-nos", "#perguntas", links.entrar]);
-    expect(html.indexOf('id="seguranca"')).toBeLessThan(html.indexOf('id="planos"'));
-    expect(html.indexOf('id="planos"')).toBeLessThan(html.indexOf('id="sobre-nos"'));
-    expect(hrefs(trecho(html, "<footer", "footer"))).toContain("#planos");
+    const ordem = ["#ceci", "#o-connect", "#planos", "#seguranca", "#sobre-nos", "#perguntas"];
+    expect(hrefs(trecho(html, "<header", "header"))).toEqual(["#inicio", ...ordem, links.entrar]);
+    expect(hrefs(trecho(html, 'aria-label="Nesta página"', "nav"))).toEqual(ordem);
+    const posicao = (id: string) => html.indexOf(`id="${id}"`);
+    expect(posicao("o-connect")).toBeLessThan(posicao("planos"));
+    expect(posicao("planos")).toBeLessThan(posicao("seguranca"));
+    expect(posicao("seguranca")).toBeLessThan(posicao("sobre-nos"));
   });
 
   it("sem preço por padrão: Valor sob consulta, e nenhum R$ na seção", () => {
@@ -199,7 +213,11 @@ describe("a seção Planos do site", () => {
     // O Gerenciado libera o catálogo inteiro: seis setores e o resto em "+N setores".
     expect(secao).toMatch(/>\+\d setores</);
     const contato = hrefs(secao).filter((h) => h.startsWith("mailto:"));
-    expect(contato).toEqual(["mailto:marcos@41contabil.com.br?subject=Plano%20Gerenciado", "mailto:marcos@41contabil.com.br?subject=Plano%20Autoatendimento"]);
+    expect(contato).toEqual([
+      "mailto:marcos@41contabil.com.br?subject=Plano%20Gerenciado",
+      "mailto:marcos@41contabil.com.br?subject=Plano%20Autoatendimento",
+      "mailto:marcos@41contabil.com.br?subject=Connect%20sob%20medida",
+    ]);
     expect(secao.match(/>Fale com a gente</g)).toHaveLength(2);
     // O que vale para todos.
     for (const t of ["Permissões por setor", "Registro de quem fez o quê", "Cada escritório com os seus dados"]) expect(secao).toContain(`>${t}<`);
@@ -215,13 +233,100 @@ describe("a seção Planos do site", () => {
     expect(secao).toContain(">+ implantação de R$ 3.000,00<");
   });
 
+  // Pedido do Kauan (14/10): contratar o Connect com um ou dois setores, os
+  // que quiser — um cartão que não é plano e não tem preço.
+  it("o cartão Connect sob medida vem depois dos planos, com os setores do catálogo para escolher e o Montar meu plano", () => {
+    const html = comPlanos();
+    const cartao = sobMedida(html);
+    expect(html.indexOf(">Autoatendimento<")).toBeLessThan(html.indexOf('data-cartao="sob-medida"'));
+    expect(cartao).toContain(">Connect sob medida<");
+    expect(cartao).toContain("Para quem quer começar por um ou dois setores");
+    for (const d of ["Comece com um setor e acrescente outros quando quiser", "Mesma segurança e suporte dos outros planos"]) {
+      expect(cartao).toContain(`>${d}<`);
+    }
+    expect(cartao).toContain(">Valor conforme os módulos<");
+    // Uma etiqueta por setor do catálogo que tem módulo; cada uma é um botão de
+    // ligar e desligar, e a página chega sem nada escolhido.
+    expect(cartao).toContain(">Escolha os setores que te interessam<");
+    const etiquetas = [...cartao.matchAll(/<button[^>]*aria-pressed="(true|false)"[^>]*>/g)];
+    const setores = setoresDoSobMedida();
+    expect(etiquetas).toHaveLength(setores.length);
+    expect(etiquetas.every((e) => e[1] === "false" && e[0].includes('type="button"'))).toBe(true);
+    for (const s of setores) expect(cartao).toContain(`${s.rotulo}</button>`);
+    // O botão: o e-mail do site, com o assunto e — sem escolha, como sem JavaScript — sem corpo.
+    expect(hrefs(cartao)).toEqual(["mailto:marcos@41contabil.com.br?subject=Connect%20sob%20medida"]);
+    expect(cartao).toContain(">Montar meu plano<");
+    // Distinto dos planos: borda tracejada, não o cartão cheio.
+    expect(cartao).toContain("border-dashed");
+  });
+
+  it("o cartão sob medida nunca tem preço, nem com o interruptor dos preços ligado", () => {
+    for (const html of [comPlanos(false), comPlanos(true)]) {
+      const cartao = sobMedida(html);
+      expect(cartao).not.toContain("R$");
+      expect(cartao).not.toMatch(/sob consulta|por mês|por usuário|implantação/);
+      expect(cartao).toContain(">Valor conforme os módulos<");
+    }
+  });
+
+  it("o Super Admin escondeu o cartão: a seção fica só com os planos", () => {
+    const html = comPlanos(false, false);
+    expect(html).toContain('id="planos"');
+    expect(html).not.toContain('data-cartao="sob-medida"');
+    expect(html).not.toContain("Connect sob medida");
+    expect(trecho(html, 'id="planos"', "section")).toContain(">Fale com a gente<");
+  });
+
+  // Retorno do Kauan (14/10): a faixa esticada na largura toda deixava
+  // buracos desiguais. Agora ela tem o tamanho do conteúdo, no meio.
+  it("a faixa Em todos: o rótulo e os três itens numa lista, no meio, sem a grade que esticava", () => {
+    const secao = trecho(comPlanos(), 'id="planos"', "section");
+    const faixa = secao.slice(secao.lastIndexOf('<div class="c41-site-surge', secao.indexOf(">Em todos<")));
+    expect(faixa).toContain("justify-center");
+    expect(faixa).not.toMatch(/grid-cols/);
+    const itens = [...faixa.matchAll(/<li[^>]*>.*?<\/li>/g)].map((m) => m[0]);
+    expect(itens).toHaveLength(3);
+    for (const [i, t] of ["Permissões por setor", "Registro de quem fez o quê", "Cada escritório com os seus dados"].entries()) {
+      expect(itens[i]).toContain(`>${t}<`);
+      // Item não parte no meio do texto quando os três estão lado a lado.
+      expect(itens[i]).toContain("sm:whitespace-nowrap");
+    }
+    // Numa linha só no computador grande, com o fio entre os itens.
+    expect(faixa).toContain("xl:flex-row");
+    expect(faixa).toContain("xl:divide-x");
+  });
+
   it("os textos da seção também sem espaço duro nem espaço a mais", () => {
-    for (const html of [comPlanos(), comPlanos(true)]) {
+    for (const html of [comPlanos(), comPlanos(true), comPlanos(false, false)]) {
       expect(html).not.toContain(" ");
       expect(html).not.toContain("&nbsp;");
       const textos = [...html.matchAll(/>([^<]+)</g)].map((m) => m[1]!);
       expect(textos.filter((t) => /\s{2,}/.test(t))).toEqual([]);
     }
+  });
+});
+
+describe("as colunas dos cartões de Planos", () => {
+  it("dois planos e o sob medida: três no computador; no tablet, dois em cima e o sob medida na linha de baixo inteira", () => {
+    expect(gradeDosCartoes(2, true)).toEqual({ lista: "md:grid-cols-2 lg:grid-cols-3", sobMedida: "md:col-span-2 lg:col-span-1" });
+  });
+
+  it("um plano e o sob medida: lado a lado", () => {
+    expect(gradeDosCartoes(1, true)).toEqual({ lista: "md:grid-cols-2", sobMedida: "" });
+  });
+
+  it("três planos e o sob medida: dois por linha", () => {
+    expect(gradeDosCartoes(3, true)).toEqual({ lista: "md:grid-cols-2", sobMedida: "" });
+  });
+
+  it("quatro planos e o sob medida: o sob medida completa a linha de baixo", () => {
+    expect(gradeDosCartoes(4, true)).toEqual({ lista: "md:grid-cols-2 lg:grid-cols-3", sobMedida: "md:col-span-2 lg:col-span-2" });
+  });
+
+  it("sem o cartão sob medida, as colunas de antes", () => {
+    expect(gradeDosCartoes(1, false).lista).toBe("md:max-w-[40rem]");
+    expect(gradeDosCartoes(2, false).lista).toBe("md:grid-cols-2");
+    expect(gradeDosCartoes(3, false).lista).toBe("md:grid-cols-2 lg:grid-cols-3");
   });
 });
 
