@@ -86,8 +86,76 @@ describe("o CSS da tabela padrão", () => {
     expect(css.indexOf(`${BASE} {`)).toBeGreaterThan(centraliza);
     // No nível de cima do arquivo (nenhuma chave aberta), e não dentro de um
     // `@layer`: aí as utilidades do Tailwind (`inline-flex`, `gap-1`) ganhariam.
-    const antes = css.slice(0, css.indexOf(`${BASE} {`)).replace(/\/\*[\s\S]*?\*\//g, "");
-    const profundidade = (antes.match(/\{/g) ?? []).length - (antes.match(/\}/g) ?? []).length;
-    expect(profundidade).toBe(0);
+    expect(profundidadeAntes(css, `${BASE} {`)).toBe(0);
   });
 });
+
+// A divisória entre as colunas do cabeçalho (pedido do Kauan, 14/10/2026): com
+// o funil na borda direita, ele parecia ser do rótulo da coluna seguinte. Sem
+// navegador, confere-se o CSS: o token nos dois temas e a regra do fio.
+describe("a divisória entre as colunas do cabeçalho", () => {
+  // Sem o \r do Windows, para casar a lista de seletores, que ocupa duas linhas.
+  const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8").replace(/\r\n/g, "\n");
+  const TOKEN = "--c41-table-header-divider";
+  const SELETOR = [
+    ".c41-tabela > table > thead > tr > th:not(:empty) + th,",
+    ".c41-cabecalho-dividido > tr > th:not(:empty) + th {",
+  ].join("\n");
+  const inicio = css.indexOf(SELETOR);
+  const corpo = inicio < 0 ? "" : css.slice(inicio + SELETOR.length, css.indexOf("}", inicio));
+
+  const valorNoBloco = (abertura: string) => {
+    const i = css.indexOf(`${abertura} {`);
+    if (i < 0) return null;
+    const linha = css
+      .slice(i, css.indexOf("}", i))
+      .split("\n")
+      .map((l) => l.trim())
+      .find((l) => l.startsWith(`${TOKEN}:`));
+    return linha ? linha.slice(TOKEN.length + 1).replace(/;$/, "").trim() : null;
+  };
+
+  it("o token tem valor no claro, no escuro escolhido e no escuro do sistema", () => {
+    const claro = valorNoBloco(":root");
+    const escuro = valorNoBloco(':root[data-theme="dark"]');
+    expect(claro).toBeTruthy();
+    expect(escuro).toBeTruthy();
+    expect(escuro).not.toBe(claro);
+    expect(valorNoBloco(':root:not([data-theme="light"]):not([data-theme="dark"])')).toBe(escuro);
+  });
+
+  it("vale na tabela padrão e na que pede pela classe, só depois de um cabeçalho com conteúdo", () => {
+    expect(inicio).toBeGreaterThan(-1);
+  });
+
+  it("1px, metade da altura, na borda esquerda e centralizado, na cor do token", () => {
+    expect(corpo).toContain(`background-image: linear-gradient(var(${TOKEN}), var(${TOKEN}))`);
+    expect(corpo).toContain("background-repeat: no-repeat");
+    expect(corpo).toContain("background-size: 1px 50%");
+    expect(corpo).toContain("background-position: left center");
+  });
+
+  it("não mexe na posição da célula: o cabeçalho preso na rolagem segue preso", () => {
+    expect(corpo).not.toMatch(/(^|[^-])position\s*:/);
+  });
+
+  it("fora de @layer, como o resto da tabela padrão", () => {
+    expect(profundidadeAntes(css, SELETOR)).toBe(0);
+  });
+
+  it("Empresas e a lista de tarefas, que ficam fora da `.c41-tabela`, pedem o fio pela classe", () => {
+    for (const arquivo of [
+      path.join("src", "components", "empresas", "EmpresasTable.tsx"),
+      path.join("src", "components", "kanban", "TaskListView.tsx"),
+    ]) {
+      const fonte = readFileSync(path.join(process.cwd(), arquivo), "utf8");
+      expect(fonte, arquivo).toMatch(/<thead className="[^"]*\bc41-cabecalho-dividido\b/);
+    }
+  });
+});
+
+/** Quantas chaves estão abertas no CSS antes do trecho, sem contar comentários. 0 = nível de cima do arquivo. */
+function profundidadeAntes(css: string, trecho: string): number {
+  const antes = css.slice(0, css.indexOf(trecho)).replace(/\/\*[\s\S]*?\*\//g, "");
+  return (antes.match(/\{/g) ?? []).length - (antes.match(/\}/g) ?? []).length;
+}
