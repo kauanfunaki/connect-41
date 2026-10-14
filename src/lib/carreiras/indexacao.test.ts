@@ -8,7 +8,7 @@ describe("robots e sitemap do 41 Carreiras", () => {
     );
   });
 
-  it("o sitemap tem o hub e cada vaga, no endereço principal", () => {
+  it("o sitemap tem a capa, a lista, o aviso e cada vaga, no endereço principal", () => {
     const xml = sitemapDoPortal("carreiras.41contabil.com.br", [
       { id: "v1", updatedAt: new Date("2026-10-13T18:00:00Z") },
       { id: "v2", updatedAt: new Date("2026-10-01T09:00:00Z") },
@@ -17,13 +17,15 @@ describe("robots e sitemap do 41 Carreiras", () => {
     const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
     expect(locs).toEqual([
       "https://carreiras.41contabil.com.br/",
+      "https://carreiras.41contabil.com.br/vagas",
+      "https://carreiras.41contabil.com.br/privacidade",
       "https://carreiras.41contabil.com.br/vagas/v1",
       "https://carreiras.41contabil.com.br/vagas/v2",
     ]);
     expect(xml).toContain("<lastmod>2026-10-13</lastmod>");
   });
 
-  it("sem vagas, só o hub", () => {
-    expect(sitemapDoPortal("carreiras.useconnect.com.br", []).match(/<url>/g)).toHaveLength(1);
+  it("sem vagas, só as páginas fixas: a capa, a lista e o aviso de privacidade", () => {
+    expect(sitemapDoPortal("carreiras.useconnect.com.br", []).match(/<url>/g)).toHaveLength(3);
   });
 });

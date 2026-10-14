@@ -38,6 +38,9 @@ describe("lerFiltros", () => {
       modalidade: "REMOTO",
       contrato: "",
       area: "",
+      local: "",
+      empresa: "",
+      ordem: "recentes",
     });
     expect(temFiltro(lerFiltros({}))).toBe(false);
   });
