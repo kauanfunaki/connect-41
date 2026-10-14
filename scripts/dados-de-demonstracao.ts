@@ -41,11 +41,20 @@
 // **Não põe e-mail em contraparte nenhuma.** Sacado com e-mail entra na régua
 // de cobrança, e a régua manda e-mail de verdade. Endereço inventado viraria
 // falha de envio registrada no banco todo dia.
+//
+// ─── A limpeza leva também o Recrutamento fictício (14/10/2026) ─────────────
+//
+// `scripts/demo-recrutamento-41.ts` cria empresas, vagas (no 41 Carreiras),
+// candidatos, testes e colaboradores fictícios no mesmo escritório. O
+// `--limpar` daqui tira tudo isso na mesma transação, antes das empresas — ver
+// src/lib/demonstracao/recrutamento/limpeza.ts. Candidatura de gente de
+// verdade numa vaga fictícia sai; a pessoa fica, e a simulação lista quem é.
 
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { randomBytes } from "node:crypto";
 import { camposDoRegime } from "../src/lib/taxRegime";
+import { alvoDaLimpeza, limparRecrutamentoDaDemo, previaDaLimpeza, type PreviaDaLimpeza } from "../src/lib/demonstracao/recrutamento/limpeza";
 
 const MARCA = "[demo]";
 const SLUG_DO_TENANT = "41tech";
@@ -98,8 +107,13 @@ async function pendenciasDeTeste(p: Pick<PrismaClient, "clientRequest">, tenantI
  * criou — os processos da bateria de teste do Societário —, e uma limpeza que
  * para no meio deixa metade apagada. Agora ou sai tudo, ou nada.
  */
-async function limparDemo(p: PrismaClient, tenantId: string, soEnsaio = false): Promise<string[]> {
+async function limparDemo(
+  p: PrismaClient,
+  tenantId: string,
+  soEnsaio = false
+): Promise<{ feito: string[]; recrutamento: PreviaDaLimpeza | null }> {
   const feito: string[] = [];
+  let recrutamento: PreviaDaLimpeza | null = null;
   const empresas = await p.company.findMany({ where: { tenantId, name: { startsWith: MARCA } }, select: { id: true } });
   const ids = empresas.map((e) => e.id);
   const testes = await pendenciasDeTeste(p, tenantId, ids);
@@ -112,6 +126,12 @@ async function limparDemo(p: PrismaClient, tenantId: string, soEnsaio = false): 
   if (testes.length > 0) {
     conta(await p.clientRequest.deleteMany({ where: { id: { in: testes.map((x) => x.id) } } }), "pendências de teste em cliente real");
   }
+
+  // Recrutamento fictício (14/10): antes de tudo que é da empresa — vaga com
+  // candidatura trava a exclusão da empresa.
+  const rec = await limparRecrutamentoDaDemo(p, tenantId);
+  recrutamento = rec.previa;
+  feito.push(...rec.feito.map((f) => `${f} (Recrutamento)`));
 
   if (ids.length > 0) {
     const daEmpresa = { companyId: { in: ids } };
@@ -144,8 +164,37 @@ async function limparDemo(p: PrismaClient, tenantId: string, soEnsaio = false): 
   // Ensaio: chegou até aqui sem nenhuma ligação travando a exclusão. Lança
   // para o banco desfazer tudo.
   if (soEnsaio) throw new Error(ENSAIO);
-  }, { timeout: 120_000 });
-  return feito;
+  }, { maxWait: 15_000, timeout: 300_000 });
+  return { feito, recrutamento };
+}
+
+/** O Recrutamento fictício na simulação e no fim da limpeza: números e quem de verdade se candidatou. */
+function imprimirRecrutamento(r: PreviaDaLimpeza, jaApagado: boolean) {
+  console.log(`\n  Recrutamento fictício${r.empresas.length > 0 ? ` — empresas: ${r.empresas.join(", ")}` : ""}`);
+  const comAlgo = r.contagens.filter((c) => c.quantidade > 0);
+  console.log(comAlgo.length > 0 ? `  ${comAlgo.map((c) => `${c.quantidade} ${c.rotulo}`).join(", ")}` : "  nada do Recrutamento fictício");
+  if (r.candidaturasDeFora.length > 0) {
+    console.log(
+      `\n  ${r.candidaturasDeFora.length} candidatura(s) de gente de verdade em vaga fictícia — ${jaApagado ? "saiu" : "sai"} a candidatura, a pessoa fica no banco de talentos. Avise:`
+    );
+    for (const c of r.candidaturasDeFora) {
+      const contato = [c.email, c.telefone].filter(Boolean).join(" · ") || "sem contato";
+      console.log(`    - ${c.pessoa} (${contato}) · "${c.vaga}" · ${c.empresa} · ${c.origem ?? "sem origem"} · ${c.criadaEm.toISOString().slice(0, 10)}`);
+    }
+  } else {
+    console.log("  nenhuma candidatura de gente de verdade nas vagas fictícias");
+  }
+  if (r.testesDeForaApagados > 0) {
+    console.log(`  ${r.testesDeForaApagados} teste(s) do questionário fictício mandado(s) a gente de verdade ${jaApagado ? "saíram" : "saem"} junto`);
+  }
+  if (r.testesDeForaDesligados > 0) {
+    console.log(`  ${r.testesDeForaDesligados} teste(s) de gente de verdade ${jaApagado ? "ficaram" : "ficam"} na ficha da pessoa, sem a candidatura`);
+  }
+  if (r.pessoasDeForaNasEmpresas.length > 0) {
+    console.log(
+      `  ${r.pessoasDeForaNasEmpresas.length} pessoa(s) não fictícia(s) cadastrada(s) nas empresas da demonstração ${jaApagado ? "ficaram" : "ficam"}, sem empresa: ${r.pessoasDeForaNasEmpresas.join(", ")}`
+    );
+  }
 }
 
 /** O que a limpeza apagaria, sem apagar nada. */
@@ -174,6 +223,7 @@ async function simularLimpeza(p: PrismaClient, tenantId: string): Promise<void> 
   console.log(`  ${usuarios} usuários do portal, ${grupos} grupos de cliente, ${categorias} categorias [demo]`);
   console.log(`  ${testes.length} pendências de teste em cliente real:`);
   for (const x of testes) console.log(`    - "${x.title}" · ${x.company.name} · ${x.status} · criada em ${x.createdAt.toISOString().slice(0, 10)}`);
+  imprimirRecrutamento(await previaDaLimpeza(p, await alvoDaLimpeza(p, tenantId)), false);
   console.log("\nPara apagar de verdade: --limpar --aplicar\n");
 }
 
@@ -586,8 +636,9 @@ async function main() {
   }
 
   if (limpar) {
-    const feito = await limparDemo(p, tenant.id);
+    const { feito, recrutamento } = await limparDemo(p, tenant.id);
     console.log(feito.length === 0 ? "nada de demonstração para apagar." : `apagado: ${feito.join(", ")}.`);
+    if (recrutamento) imprimirRecrutamento(recrutamento, true);
     await p.$disconnect();
     return;
   }
