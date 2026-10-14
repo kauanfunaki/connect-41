@@ -130,7 +130,7 @@ export default async function AdminPage() {
       { group: "catalogos", href: "/admin/rescisao", icon: <Scale size={20} />, title: "Cálculo de rescisão", description: "Padrão do escritório para a conferência do TRCT" },
       { group: "integracoes", href: "/admin/atendentes", icon: <Headset size={20} />, title: "Atendentes e vínculos", description: "Conta de acesso, atendente do Chatwoot e quem é da recepção/triagem" },
       { group: "integracoes", href: "/admin/ia", icon: <Sparkles size={20} />, title: "Inteligência artificial", description: "Agentes do chat e demais funções de IA: uso, custo e limites" },
-      { group: "workspace", href: "/admin/portal", icon: <Users2 size={20} />, title: "Acessos do portal", description: "Contas de clientes que entram no portal para ver os próprios documentos" },
+      { group: "workspace", href: "/admin/portal", icon: <Users2 size={20} />, title: "Portal do cliente", description: "Quem entra no portal e as telas já liberadas para os clientes" },
       { group: "catalogos", href: "/admin/assuntos", icon: <Inbox size={20} />, title: "Assuntos das solicitações", description: "O que o cliente escolhe ao pedir algo pelo portal: setor que atende e prazo de resposta" },
       { group: "catalogos", href: "/admin/arquivos", icon: <FolderTree size={20} />, title: "Modelo de pastas", description: "As pastas que toda empresa ganha nos Arquivos, com o setor de cada uma e o que nasce no portal" }
     );

@@ -7,6 +7,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { getSectorMaps } from "@/lib/sectors";
 import { comunicadosDoCliente } from "@/lib/comunicados/consultas";
 import { formatInstantDate } from "@/lib/format";
@@ -17,6 +19,7 @@ export const dynamic = "force-dynamic";
 export default async function PortalComunicadosPage() {
   const cliente = await clienteAtivoDoPortal();
   if (!cliente || !cliente.modulos.has("portal_solicitacoes")) notFound();
+  if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/comunicados")) return <TelaIndisponivel />;
 
   const [lista, { labels }] = await Promise.all([
     comunicadosDoCliente(cliente.tenantId, cliente.sessao.clientGroupId, cliente.usuario.id),

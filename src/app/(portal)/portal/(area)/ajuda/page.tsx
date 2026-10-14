@@ -11,6 +11,7 @@ import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { passosDoPortal, type IconeDoPasso } from "@/lib/portal/ajuda";
 import { telasVisiveis } from "@/lib/portal/telas";
+import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { montarTutorialDoPortal } from "@/lib/tutorial/servidor";
 import { BotaoVerTutorial } from "@/components/tutorial/TutorialDoPrimeiroAcesso";
@@ -56,25 +57,30 @@ export default async function AjudaDoPortalPage() {
   if (!sessao) redirect("/portal/login");
 
   // O tutorial do primeiro acesso, para rever (13/10/2026).
-  const [ligados, alcance, tutorial] = await Promise.all([
+  const [ligados, alcance, tutorial, bloqueadas] = await Promise.all([
     getEnabledModuleCodes(sessao.tenantId),
     alcanceDoCliente(sessao),
     montarTutorialDoPortal(sessao),
+    telasBloqueadasDoPortal(sessao.tenantId),
   ]);
   const modulos = new Set(ligados);
   const variasEmpresas = alcance.tipo === "EMPRESAS" && alcance.companyIds.length > 1;
 
-  const passos: PassoDaAjuda[] = passosDoPortal(modulos, { variasEmpresas }).map((p) => ({ ...p, icone: ICONES[p.icone] }));
-  const telas: TelaDaAjuda[] = telasVisiveis(modulos).map((t) => ({
+  // As telas que o escritório ainda não liberou (14/10/2026) saem da lista, e
+  // os passos que só falam delas também.
+  const passos: PassoDaAjuda[] = passosDoPortal(modulos, { variasEmpresas, bloqueadas }).map((p) => ({ ...p, icone: ICONES[p.icone] }));
+  const visiveis = telasVisiveis(modulos, bloqueadas);
+  const telas: TelaDaAjuda[] = visiveis.map((t) => ({
     chave: t.href,
     titulo: t.rotulo,
     caminho: t.href,
     descricao: t.descricao,
     icone: iconeDaTela(t),
   }));
-  // Com as solicitações ligadas, o caminho para falar com a 41 é uma solicitação nova.
-  const temSolicitacoes = modulos.has("portal_solicitacoes");
-  const temConversa = !temSolicitacoes && modulos.has("bpo_comunicacao");
+  // Com as solicitações ligadas, o caminho para falar com a 41 é uma solicitação
+  // nova; sem elas, a Conversa (a régua do menu: `ocultaCom`).
+  const temSolicitacoes = visiveis.some((t) => t.href === "/portal/solicitacoes");
+  const temConversa = visiveis.some((t) => t.href === "/portal/comunicacao");
 
   return (
     <PageContainer>

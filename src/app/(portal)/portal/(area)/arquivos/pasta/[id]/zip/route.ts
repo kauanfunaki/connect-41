@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { getPrisma } from "@/lib/prisma";
 import { clientIp } from "@/lib/rateLimit";
 import { MODULO_ARQUIVOS } from "@/lib/drive/regras";
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const cliente = await clienteAtivoDoPortal();
   if (!cliente) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!cliente.modulos.has(MODULO_ARQUIVOS)) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
+  if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/arquivos")) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
 
   const { id } = await params;
   const zip = await zipDaPastaParaOCliente(cliente.tenantId, cliente.companyIds, id);

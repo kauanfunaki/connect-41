@@ -269,6 +269,8 @@ export type OpcoesDoPortal = {
   escritorio: string | null;
   /** Os módulos ligados no escritório — a mesma régua do menu do portal. */
   modulos: ReadonlySet<string>;
+  /** As telas que o escritório ainda não liberou (14/10/2026) — saem do tutorial como saem do menu. */
+  bloqueadas?: ReadonlySet<string>;
   /** O servidor tem as chaves do aviso no celular. */
   avisosNoCelular: boolean;
 };
@@ -285,11 +287,18 @@ function emLista(nomes: string[]): string {
  * fala de "a equipe" e de "o escritório", nunca de um setor.
  */
 export function tutorialDoPortal(o: OpcoesDoPortal): Tutorial {
-  const telas = new Set(telasVisiveis(o.modulos).map((t) => t.href));
+  const visiveis = telasVisiveis(o.modulos, o.bloqueadas);
+  const telas = new Set(visiveis.map((t) => t.href));
   const tem = (href: string) => telas.has(href);
-  const financeiro = telasVisiveis(o.modulos)
-    .filter((t) => t.secao === "Financeiro")
-    .map((t) => t.rotulo);
+  const financeiro = visiveis.filter((t) => t.secao === "Financeiro").map((t) => t.rotulo);
+  // Os documentos que o cliente tem no menu: o passo sai se nenhum ficou.
+  const documentos = [
+    ...(tem("/portal/documentos") ? ["Documentos fiscais: as notas emitidas e recebidas pelas suas empresas."] : []),
+    ...(tem("/portal/envios") ? ["Documentos do escritório: o que o escritório mandou para você ler e, quando pedido, dar o aceite."] : []),
+    ...(tem("/portal/arquivos")
+      ? ["Arquivos: as pastas que o escritório compartilhou com você. Por ali você também manda os seus arquivos."]
+      : []),
+  ];
   const listaDoFinanceiro = `Em Financeiro, no menu, você acompanha: ${emLista(financeiro)}.`;
 
   const passos: (PassoDoTutorial | null)[] = [
@@ -338,19 +347,15 @@ export function tutorialDoPortal(o: OpcoesDoPortal): Tutorial {
           ],
         }
       : null,
-    {
-      chave: "documentos",
-      icone: "documentos",
-      titulo: "Os seus documentos",
-      texto: "Cada tipo de documento tem o seu lugar no menu.",
-      itens: [
-        "Documentos fiscais: as notas emitidas e recebidas pelas suas empresas.",
-        ...(tem("/portal/envios") ? ["Documentos do escritório: o que o escritório mandou para você ler e, quando pedido, dar o aceite."] : []),
-        ...(tem("/portal/arquivos")
-          ? ["Arquivos: as pastas que o escritório compartilhou com você. Por ali você também manda os seus arquivos."]
-          : []),
-      ],
-    },
+    documentos.length > 0
+      ? {
+          chave: "documentos",
+          icone: "documentos",
+          titulo: "Os seus documentos",
+          texto: "Cada tipo de documento tem o seu lugar no menu.",
+          itens: documentos,
+        }
+      : null,
     tem("/portal/aprovacoes")
       ? {
           chave: "aprovacoes",
@@ -375,7 +380,7 @@ export function tutorialDoPortal(o: OpcoesDoPortal): Tutorial {
           icone: "processo",
           titulo: "Os processos das suas empresas",
           texto: "Em Processos, acompanhe etapa por etapa a abertura, as alterações, a baixa e as licenças das suas empresas.",
-          itens: ["Em Exigências fica o que os órgãos pediram."],
+          itens: tem("/portal/exigencias") ? ["Em Exigências fica o que os órgãos pediram."] : [],
         }
       : null,
     {
