@@ -174,7 +174,7 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
       {
         chave: "portal-acessos",
         rotulo: "Acessos ao portal",
-        descricao: "Quem do cliente entra no portal e de qual cliente é.",
+        descricao: "Quem do cliente entra no portal e quais empresas cada acesso vê.",
         href: "/admin/portal",
         rota: "/admin/portal",
         acesso: "admin",

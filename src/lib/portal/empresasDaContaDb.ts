@@ -183,3 +183,63 @@ export async function nomesDasContasNoLogin(contas: readonly { id: string; tenan
   const nomes = await Promise.all(contas.map(async (c) => [c.id, (await nomeDoAcessoNoPortal(c.tenantId, c.id)) ?? "Sem empresa ligada"] as const));
   return new Map(nomes);
 }
+
+/**
+ * A tabela das ligações já existe? Antes da migration `20261014210000` não:
+ * as telas que criam e mudam acesso avisam que falta atualizar o banco, em vez
+ * de quebrar no meio.
+ */
+export async function portalPorEmpresaPronto(db?: BancoDoPortal): Promise<boolean> {
+  try {
+    await banco(db).portalUserCompany.findFirst({ select: { id: true } });
+    return true;
+  } catch (err) {
+    if (semTabelaDoPortalPorEmpresa(err)) return false;
+    throw err;
+  }
+}
+
+export const FALTA_ATUALIZAR_O_BANCO_DO_PORTAL =
+  "Falta a atualização do banco desta versão do Connect. Até ela rodar, os acessos do portal seguem pelo cliente, e não dá para criar acesso nem ligar empresa.";
+
+/** Uma empresa ligada direto a um acesso, para a lista e o "Editar". */
+export type EmpresaLigada = { id: string; nome: string; incluiFiliais: boolean; filiais: number };
+
+/**
+ * As empresas ligadas direto a cada conta (sem as que vêm pela matriz), com
+ * quantas filiais cada uma tem — o que Administração › Portal do cliente
+ * mostra e edita. Sem a tabela nova, as empresas do cliente de cada conta.
+ */
+export async function empresasLigadasDasContas(
+  tenantId: string,
+  contas: readonly { id: string; clientGroupId: string | null }[]
+): Promise<Map<string, EmpresaLigada[]>> {
+  const saida = new Map<string, EmpresaLigada[]>(contas.map((c) => [c.id, []]));
+  if (contas.length === 0) return saida;
+  const prisma = getPrisma();
+  const campos = { id: true, name: true, displayName: true, _count: { select: { filiais: true } } } as const;
+  try {
+    const ligacoes = await prisma.portalUserCompany.findMany({
+      where: { tenantId, portalUserId: { in: contas.map((c) => c.id) }, company: { tenantId } },
+      select: { portalUserId: true, incluiFiliais: true, company: { select: campos } },
+    });
+    for (const l of ligacoes) {
+      saida.get(l.portalUserId)?.push({ id: l.company.id, nome: nomeExibicao(l.company), incluiFiliais: l.incluiFiliais, filiais: l.company._count.filiais });
+    }
+  } catch (err) {
+    if (!semTabelaDoPortalPorEmpresa(err)) throw err;
+    const grupos = [...new Set(contas.map((c) => c.clientGroupId).filter((g): g is string => !!g))];
+    const empresas =
+      grupos.length > 0 ? await prisma.company.findMany({ where: { tenantId, clientGroupId: { in: grupos } }, select: { ...campos, clientGroupId: true } }) : [];
+    for (const c of contas) {
+      saida.set(
+        c.id,
+        empresas
+          .filter((e) => e.clientGroupId === c.clientGroupId)
+          .map((e) => ({ id: e.id, nome: nomeExibicao(e), incluiFiliais: false, filiais: e._count.filiais }))
+      );
+    }
+  }
+  for (const lista of saida.values()) lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  return saida;
+}
