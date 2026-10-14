@@ -92,6 +92,14 @@ describe("de → para, nas formas que o código grava", () => {
     ]);
   });
 
+  it("edição do plano: cada campo guardou a mudança em texto (\"de → para\")", () => {
+    expect(mudancasDoRegistro("subscription_plan.update", { name: "Básico → Essencial", basePrice: "100.00 → 120.00", setupFee: "0.00 → 0.00" })).toEqual([
+      { campo: "Nome", de: "Básico", para: "Essencial" },
+      { campo: "Valor", de: "R$\u00a0100,00", para: "R$\u00a0120,00" },
+    ]);
+    expect(nomeNosDetalhes({ name: "Básico → Essencial" })).toBe("Essencial");
+  });
+
   it("sem mudança guardada, nada — inclusive o 'de' sozinho da varredura da IA", () => {
     expect(mudancasDoRegistro("company.update", { name: "Padaria" })).toEqual([]);
     expect(mudancasDoRegistro("societario.ia.varredura_aplicada", { itens: 3, de: 5, processosSubiram: 1 })).toEqual([]);

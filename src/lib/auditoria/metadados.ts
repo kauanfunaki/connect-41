@@ -90,6 +90,9 @@ const NOME_DO_CAMPO: Readonly<Record<string, string>> = {
   centroPadrao: "Centro de custo padrão",
   responsavel: "Responsável",
   destino: "Destino",
+  basePrice: "Valor",
+  pricePerUser: "Valor por usuário",
+  setupFee: "Implantação",
 };
 
 /** "issuerDocument" → "Issuer document" — só para chave sem nome conhecido. */
@@ -138,6 +141,13 @@ function enumLegivel(v: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
+/** Chaves que guardam valor em reais (texto "1200.50" ou número). */
+const DINHEIRO = new Set(["amount", "valor", "basePrice", "pricePerUser", "setupFee"]);
+
+function ehDinheiro(chave: string | null): boolean {
+  return chave !== null && DINHEIRO.has(chave);
+}
+
 const REAIS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 /** Um valor dos detalhes como texto para a tela; `null` é "vazio". */
@@ -145,7 +155,7 @@ export function valorLegivel(v: unknown, chave: string | null = null, nomes: Nom
   if (v === null || v === undefined || v === "") return null;
   if (typeof v === "boolean") return v ? "Sim" : "Não";
   if (typeof v === "number") {
-    if (chave === "amount" || chave === "valor") return REAIS.format(v);
+    if (ehDinheiro(chave)) return REAIS.format(v);
     return new Intl.NumberFormat("pt-BR").format(v);
   }
   if (Array.isArray(v)) {
@@ -161,7 +171,7 @@ export function valorLegivel(v: unknown, chave: string | null = null, nomes: Nom
   const s = String(v);
   if (nomes.has(s)) return nomes.get(s)!;
   if (UUID.test(s)) return "(não existe mais)";
-  if ((chave === "amount" || chave === "valor") && /^-?\d+(\.\d+)?$/.test(s)) return REAIS.format(Number(s));
+  if ((ehDinheiro(chave)) && /^-?\d+(\.\d+)?$/.test(s)) return REAIS.format(Number(s));
   if ((chave === "role" || chave === "papel") && s in ROLE_LABELS) return ROLE_LABELS[s as keyof typeof ROLE_LABELS];
   const data = s.match(/^(\d{4})-(\d{2})-(\d{2})(T[\d:.]+Z?)?$/);
   if (data) return `${data[3]}/${data[2]}/${data[1]}`;
@@ -184,6 +194,9 @@ function compararObjetos(antes: Objeto, depois: Objeto, nomes: Nomes): Mudanca[]
 }
 
 const MAXIMO = 12;
+
+/** A seta das mudanças guardadas em texto ("Básico → Essencial"). */
+const SETA = " → ";
 
 /**
  * O "de → para" de uma linha da auditoria. Vazio quando a ação não guardou
@@ -218,7 +231,16 @@ export function mudancasDoRegistro(acao: string, metadata: unknown, nomes: Nomes
   }
 
   // `{ centroPadrao: { de, para } }` e afins: um campo que guardou a própria mudança.
+  // E `{ basePrice: "100.00 → 120.00" }`: a edição do plano (PR #192) guarda a
+  // mudança já em texto, uma chave por campo.
   for (const [k, v] of Object.entries(m)) {
+    if (typeof v === "string" && v.includes(SETA)) {
+      const [a, b] = v.split(SETA);
+      const de = valorLegivel(a.trim(), k, nomes);
+      const para = valorLegivel(b.trim(), k, nomes);
+      if (de !== para) out.push({ campo: nomeDoCampo(k), de, para });
+      continue;
+    }
     if (k === "de" || k === "para" || k === "antes" || k === "depois" || !ehObjeto(v)) continue;
     if ("de" in v && "para" in v && !ehObjeto(v.de) && !ehObjeto(v.para)) {
       const a = valorLegivel(v.de, k, nomes);
@@ -291,7 +313,8 @@ export function nomeNosDetalhes(metadata: unknown, chaveDoNome?: string): string
   const chaves = chaveDoNome ? [chaveDoNome] : ["nome", "name", "title", "label"];
   for (const k of chaves) {
     const v = metadata[k];
-    if (typeof v === "string" && v.trim()) return v.trim();
+    // "Básico → Essencial" (o nome que mudou): vale o novo.
+    if (typeof v === "string" && v.trim()) return (v.includes(SETA) ? v.split(SETA)[1] : v).trim() || null;
   }
   // Edição de pasta do modelo: o nome novo está no "para" (ou no "depois").
   for (const k of ["para", "depois"]) {

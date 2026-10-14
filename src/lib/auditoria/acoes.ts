@@ -388,6 +388,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   CompanyPartner: "sócio",
   CompanyRescisaoConfig: "cálculo de rescisão da empresa",
   CompanyService: "setor contratado",
+  ConfiguracaoDoConnect: "configuração do Connect",
   Competency: "competência",
   CostCenter: "centro de custo",
   CustomField: "campo customizado",
