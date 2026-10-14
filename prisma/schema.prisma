@@ -788,6 +788,44 @@ model SubscriptionPlan {
   @@map("subscription_plans")
 }
 
+/// Como um plano aparece na seção "Planos" do site do Connect (a `/` do
+/// endereço principal) — 14/10/2026, Administração › Planos › Editar.
+///
+/// Tabela à parte, e não colunas em `subscription_plans`: o Prisma lê todas as
+/// colunas do model, e coluna nova lida antes da migration derrubaria as telas
+/// de Planos e Assinaturas. Sem chave estrangeira, de propósito (como
+/// `PortalTelaBloqueada`): sem a tabela, o site só esconde a seção e Planos
+/// esconde os campos do site. Plano não se exclui (só desativa), e um plano
+/// inativo nunca vai para o site — ver `src/lib/planos/site.ts`.
+model PlanoNoSite {
+  planId        String   @id
+  mostrarNoSite Boolean  @default(false)
+  /// A posição do cartão no site: o menor primeiro; empate, pelo nome.
+  ordem         Int      @default(0)
+  /// Cartão com a borda da marca, para chamar mais atenção que os outros.
+  destacar      Boolean  @default(false)
+  /// "Para quem é" — o texto curto embaixo do nome. Vazio, o site usa o
+  /// texto padrão do modo de gestão.
+  paraQuem      String?  @db.VarChar(240)
+  /// Até três frases curtas (lista de textos).
+  destaques     Json?
+  updatedAt     DateTime @updatedAt
+
+  @@map("planos_no_site")
+}
+
+/// Ajustes do Connect que valem para todos, por chave (14/10/2026). A primeira
+/// é `site.mostrarPrecos` ("true"/"false"): o interruptor "Mostrar preços no
+/// site" de Administração › Planos. Sem linha (ou sem a tabela), vale o padrão
+/// de cada chave — para os preços, desligado.
+model ConfiguracaoDoConnect {
+  chave     String   @id @db.VarChar(60)
+  valor     String   @db.VarChar(255)
+  updatedAt DateTime @updatedAt
+
+  @@map("configuracoes_do_connect")
+}
+
 // Assinatura ativa de um tenant — 1:1. Controle manual (sem gateway de
 // pagamento integrado ainda): a 41 Tech marca status/pagamento da implantação
 // à mão em /admin/assinaturas.
