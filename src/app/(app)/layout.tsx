@@ -16,6 +16,8 @@ import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
 import { getModuleRoute, MODULOS_DO_MENU_GERAL } from "@/lib/module-catalog";
+import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
+import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 import { baseDomain, hostSuffix, setoresDoSeletor } from "@/lib/auth/activeSector";
 import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
 import { escritoriosDaTroca } from "@/lib/auth/trocaDeEscritorio";
@@ -64,15 +66,27 @@ export default async function AppLayout({
   //
   // Carregado sempre, e não só com setor ativo: o Ctrl+K busca tela de qualquer
   // setor que a pessoa enxerga, e as fixadas também atravessam setor.
-  const moduleStates = await getTenantModuleStates(tenantId);
-  const telasNavegaveis = moduleStates
-    .filter((m) => m.enabled && canViewSector(ctx, m.sectorCode))
-    .map((m) => ({
-      code: m.code,
-      label: m.label,
-      href: getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`,
-      setor: sectorLabels[m.sectorCode] ?? m.sectorCode,
-    }));
+  //
+  // O Geral por setor (14/10/2026): as telas do Geral escondidas para o setor
+  // escolhido — ou, em "Todos os setores", para todos os setores da pessoa —
+  // saem do menu, do Ctrl+K e das fixadas. Pelo setor que a lateral mostra (um
+  // código que não existe aqui cai em "Todos", como acima). Só visibilidade:
+  // o endereço da tela continua abrindo.
+  const [moduleStates, telasDoGeral] = await Promise.all([
+    getTenantModuleStates(tenantId),
+    telasDoGeralDaPessoa({ ...ctx, activeSector: activeSector?.code ?? null }),
+  ]);
+  const telasNavegaveis = semTelasDoGeralOcultas(
+    moduleStates
+      .filter((m) => m.enabled && canViewSector(ctx, m.sectorCode))
+      .map((m) => ({
+        code: m.code,
+        label: m.label,
+        href: getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`,
+        setor: sectorLabels[m.sectorCode] ?? m.sectorCode,
+      })),
+    telasDoGeral,
+  );
   // A fila das solicitações do portal mora no menu Geral (ver MODULOS_DO_MENU_GERAL).
   const solicitacoesLigadas = moduleStates.some((m) => m.code === "portal_solicitacoes" && m.enabled);
   const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
@@ -141,6 +155,7 @@ export default async function AppLayout({
         unreadCount={unreadCount}
         solicitacoesLigadas={solicitacoesLigadas}
         arquivosLigados={arquivosLigados}
+        telasDoGeral={telasDoGeral}
         profileName={me?.name ?? "Usuário"}
         profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
         profilePhotoUrl={me?.photoUrl ?? null}
