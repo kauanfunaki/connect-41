@@ -35,6 +35,10 @@ export type AlvoPessoas = { tenantId: string; ids: string[] };
 const daPessoa = (a: AlvoPessoas) => ({ tenantId: a.tenantId, personId: { in: a.ids } });
 const daEntidade = (a: AlvoPessoas) => ({ tenantId: a.tenantId, entityType: "PERSON" as const, entityId: { in: a.ids } });
 
+async function candidaturasDasPessoas(tx: Tx, a: AlvoPessoas): Promise<string[]> {
+  return (await tx.candidatura.findMany({ where: daPessoa(a), select: { id: true } })).map((c) => c.id);
+}
+
 /**
  * A ordem importa: o banco recusa apagar a linha apontada antes de quem aponta
  * (`plano.test.ts` confere contra o schema). A pessoa é o último passo.
@@ -46,7 +50,7 @@ export const PLANO_DA_PESSOA: readonly Passo<AlvoPessoas>[] = [
     acao: "anular",
     coluna: "candidaturaId",
     executar: async (tx, a) => {
-      const ids = (await tx.candidatura.findMany({ where: daPessoa(a), select: { id: true } })).map((c) => c.id);
+      const ids = await candidaturasDasPessoas(tx, a);
       if (ids.length === 0) return 0;
       return n(tx.whatsappThread.updateMany({ where: { tenantId: a.tenantId, candidaturaId: { in: ids } }, data: { candidaturaId: null } }));
     },
@@ -69,6 +73,20 @@ export const PLANO_DA_PESSOA: readonly Passo<AlvoPessoas>[] = [
           data: { linkPendingPersonId: null },
         })
       ),
+  },
+  // O teste enviado para a candidatura solta dela antes (o da própria pessoa
+  // sai com ela, em cascata, no último passo). Depois da migration
+  // 20261014200000 o banco faria isso sozinho (SET NULL); antes dela a chave é
+  // RESTRICT e travava a exclusão da candidatura.
+  {
+    modelo: "AssessmentLink",
+    acao: "anular",
+    coluna: "candidaturaId",
+    executar: async (tx, a) => {
+      const ids = await candidaturasDasPessoas(tx, a);
+      if (ids.length === 0) return 0;
+      return n(tx.assessmentLink.updateMany({ where: { tenantId: a.tenantId, candidaturaId: { in: ids } }, data: { candidaturaId: null } }));
+    },
   },
   // Notas, avaliações de entrevista e reuniões da candidatura vão junto (cascata).
   { modelo: "Candidatura", acao: "apagar", executar: (tx, a) => n(tx.candidatura.deleteMany({ where: daPessoa(a) })) },

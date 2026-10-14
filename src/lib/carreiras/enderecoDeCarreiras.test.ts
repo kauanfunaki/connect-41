@@ -13,6 +13,7 @@ import {
   normalizarHost,
   portalNoHost,
   rotaNoHostDeCarreiras,
+  rotuloDePublicarVaga,
   urlDaVagaNo41Carreiras,
   urlDoHub,
 } from "./enderecoDeCarreiras";
@@ -190,6 +191,25 @@ describe("enderecoPublicoDoPortal e os links da vaga", () => {
     expect(urlDoHub(antes)).toBeNull();
     // Sem URL absoluta possível, nada (como `publicUrl`).
     expect(enderecoPublicoDoPortal("41tech", { tipo: "lista" }, {})).toBeNull();
+  });
+});
+
+describe("rotuloDePublicarVaga — a caixa \"publicar\" do formulário da vaga", () => {
+  it("da 41, com o portal configurado: o 41 Carreiras e o endereço principal", () => {
+    expect(rotuloDePublicarVaga("41tech", PRODUCAO)).toBe(`Publicar no 41 Carreiras (${PRINCIPAL})`);
+    // Enquanto o DNS da 41 não existe, o principal é o provisório do Connect.
+    const provisorio = { ...PRODUCAO, CARREIRAS_HOSTS: PROVISORIO, CARREIRAS_HOST_PRINCIPAL: PROVISORIO };
+    expect(rotuloDePublicarVaga("41tech", provisorio)).toBe("Publicar no 41 Carreiras (carreiras.useconnect.com.br)");
+    // O slug da 41 vem da configuração.
+    expect(rotuloDePublicarVaga("quarenta-e-um", { ...PRODUCAO, CARREIRAS_TENANT_SLUG: "quarenta-e-um" })).toContain("41 Carreiras");
+  });
+
+  it("dos outros escritórios, sem o portal ou sem slug: o portal de vagas do escritório", () => {
+    const generico = "Publicar no portal de vagas do escritório";
+    expect(rotuloDePublicarVaga("outro", PRODUCAO)).toBe(generico);
+    expect(rotuloDePublicarVaga("41tech", { APP_PUBLIC_URL: "https://app.useconnect.com.br" })).toBe(generico);
+    expect(rotuloDePublicarVaga(null, PRODUCAO)).toBe(generico);
+    expect(rotuloDePublicarVaga(undefined, PRODUCAO)).toBe(generico);
   });
 });
 

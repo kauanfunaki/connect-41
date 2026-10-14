@@ -46,6 +46,13 @@ export type AlvoEmpresa = { tenantId: string; id: string };
 const daEmpresa = (a: AlvoEmpresa) => ({ tenantId: a.tenantId, companyId: a.id });
 const daEntidade = (a: AlvoEmpresa) => ({ tenantId: a.tenantId, entityType: "COMPANY" as const, entityId: a.id });
 
+/** As candidaturas às vagas da empresa — saem com ela; o candidato fica. */
+async function candidaturasDaEmpresa(tx: Tx, a: AlvoEmpresa): Promise<string[]> {
+  return (
+    await tx.candidatura.findMany({ where: { tenantId: a.tenantId, vaga: { companyId: a.id } }, select: { id: true } })
+  ).map((c) => c.id);
+}
+
 async function vagasDaEmpresa(tx: Tx, a: AlvoEmpresa): Promise<string[]> {
   return (await tx.vaga.findMany({ where: daEmpresa(a), select: { id: true } })).map((v) => v.id);
 }
@@ -73,11 +80,22 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
     acao: "anular",
     coluna: "candidaturaId",
     executar: async (tx, a) => {
-      const ids = (
-        await tx.candidatura.findMany({ where: { tenantId: a.tenantId, vaga: { companyId: a.id } }, select: { id: true } })
-      ).map((c) => c.id);
+      const ids = await candidaturasDaEmpresa(tx, a);
       if (ids.length === 0) return 0;
       return n(tx.whatsappThread.updateMany({ where: { tenantId: a.tenantId, candidaturaId: { in: ids } }, data: { candidaturaId: null } }));
+    },
+  },
+  // O teste enviado para a candidatura fica com o candidato, sem a candidatura.
+  // Depois da migration 20261014200000 o banco faria isso sozinho (SET NULL);
+  // antes dela a chave é RESTRICT e travava a exclusão da candidatura.
+  {
+    modelo: "AssessmentLink",
+    acao: "anular",
+    coluna: "candidaturaId",
+    executar: async (tx, a) => {
+      const ids = await candidaturasDaEmpresa(tx, a);
+      if (ids.length === 0) return 0;
+      return n(tx.assessmentLink.updateMany({ where: { tenantId: a.tenantId, candidaturaId: { in: ids } }, data: { candidaturaId: null } }));
     },
   },
   {
