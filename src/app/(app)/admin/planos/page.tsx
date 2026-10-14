@@ -56,7 +56,7 @@ export default async function PlanosPage() {
         }
       />
 
-      <PrecosNoSite ligado={ajustes.mostrarPrecos} noSite={noSite} semTabela={semTabela} />
+      <PrecosNoSite ligado={ajustes.mostrarPrecos} sobMedida={ajustes.cartaoSobMedida} noSite={noSite} semTabela={semTabela} />
 
       {plans.length === 0 ? (
         <Card>

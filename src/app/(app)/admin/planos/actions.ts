@@ -10,6 +10,7 @@ import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import { lerEdicaoDoPlano, mudancasDoPlano } from "@/lib/planos/edicao";
 import {
   CAMPOS_DO_SITE_PADRAO,
+  CHAVE_CARTAO_SOB_MEDIDA,
   CHAVE_PRECOS_NO_SITE,
   camposDaLinha,
   camposIguais,
@@ -171,6 +172,19 @@ export async function editarPlano(_prev: PlanoState, form: FormData): Promise<Pl
 
 export type ResultadoDosPrecos = { ok: true } | { erro: string };
 
+/** Grava um interruptor do site em `configuracoes_do_connect`; `null` deu certo, senão a frase do erro. */
+async function gravarInterruptorDoSite(chave: string, ligado: boolean): Promise<string | null> {
+  const valor = ligado ? "true" : "false";
+  try {
+    await getPrisma().configuracaoDoConnect.upsert({ where: { chave }, create: { chave, valor }, update: { valor } });
+    return null;
+  } catch (err) {
+    if (isPrismaMissingTableError(err)) return "Falta a atualização do banco desta versão do Connect.";
+    console.error(`[planos] ${chave}`, err);
+    return "Não foi possível salvar. Tente de novo.";
+  }
+}
+
 /**
  * O interruptor "Mostrar preços no site" — vale para todos os planos mostrados
  * lá. Decisão do Kauan (14/10/2026): começa desligado; ligar publica o valor e
@@ -181,18 +195,8 @@ export async function definirPrecosNoSite(mostrar: boolean): Promise<ResultadoDo
   if (ctx.role !== "SUPER_ADMIN") return { erro: "Sem permissão." };
   if (typeof mostrar !== "boolean") return { erro: "Pedido inválido." };
 
-  const valor = mostrar ? "true" : "false";
-  try {
-    await getPrisma().configuracaoDoConnect.upsert({
-      where: { chave: CHAVE_PRECOS_NO_SITE },
-      create: { chave: CHAVE_PRECOS_NO_SITE, valor },
-      update: { valor },
-    });
-  } catch (err) {
-    if (isPrismaMissingTableError(err)) return { erro: "Falta a atualização do banco desta versão do Connect." };
-    console.error("[planos] preços no site", err);
-    return { erro: "Não foi possível salvar. Tente de novo." };
-  }
+  const erro = await gravarInterruptorDoSite(CHAVE_PRECOS_NO_SITE, mostrar);
+  if (erro) return { erro };
 
   await logAudit({
     tenantId: ctx.tenantId,
@@ -200,6 +204,31 @@ export async function definirPrecosNoSite(mostrar: boolean): Promise<ResultadoDo
     action: mostrar ? "site.prices.show" : "site.prices.hide",
     entityType: "ConfiguracaoDoConnect",
     entityId: CHAVE_PRECOS_NO_SITE,
+  });
+
+  refazerTelasDosPlanos();
+  return { ok: true };
+}
+
+/**
+ * O interruptor do cartão "Connect sob medida" na seção Planos do site
+ * (14/10/2026). Começa ligado (sem a linha na tabela, o cartão aparece);
+ * desligar esconde só o cartão, os planos ficam. Só o Super Admin.
+ */
+export async function definirCartaoSobMedida(mostrar: boolean): Promise<ResultadoDosPrecos> {
+  const ctx = await getAuthContext();
+  if (ctx.role !== "SUPER_ADMIN") return { erro: "Sem permissão." };
+  if (typeof mostrar !== "boolean") return { erro: "Pedido inválido." };
+
+  const erro = await gravarInterruptorDoSite(CHAVE_CARTAO_SOB_MEDIDA, mostrar);
+  if (erro) return { erro };
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: mostrar ? "site.custom_card.show" : "site.custom_card.hide",
+    entityType: "ConfiguracaoDoConnect",
+    entityId: CHAVE_CARTAO_SOB_MEDIDA,
   });
 
   refazerTelasDosPlanos();
