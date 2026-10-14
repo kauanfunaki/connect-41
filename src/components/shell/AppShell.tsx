@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -26,6 +26,7 @@ import {
   CalendarCheck,
   ChevronDown,
   ClipboardCheck,
+  Layers,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -38,13 +39,30 @@ import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
 import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { GlobalSearch } from "@/components/shell/GlobalSearch";
-import { NavItem, SectorNavItem, CadastrosNavItem, GrupoNavItem } from "@/components/shell/NavLink";
+import {
+  NavItem,
+  SectorNavItem,
+  CadastrosNavItem,
+  GrupoNavItem,
+  ProvedorDaFaixa,
+  TituloDoBloco,
+  nomeNaFaixa,
+} from "@/components/shell/NavLink";
 import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { trocarSetor } from "@/components/shell/contexto";
-import { cookieDoMenuLateral, SO_NA_COLUNA, SO_NA_GAVETA, TELA_GRANDE } from "@/lib/menuLateral";
+import {
+  cookieDoMenuLateral,
+  DURACAO_DA_TRANSICAO_MS,
+  estadoDaLateral,
+  LARGURA_DA_COLUNA,
+  LARGURA_DA_FAIXA,
+  SO_NA_COLUNA,
+  SO_NA_GAVETA,
+  TELA_GRANDE,
+} from "@/lib/menuLateral";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
@@ -96,10 +114,12 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
   if (telas.length === 0) return null;
   return (
     <>
-      <p className="c41-rotulo flex items-center gap-1.5 px-2.5 pt-4 pb-1.5">
-        <Pin size={11} className="flex-shrink-0" />
-        Fixadas
-      </p>
+      <TituloDoBloco nome="Fixadas">
+        <p className="c41-rotulo flex items-center gap-1.5 px-2.5 pt-4 pb-1.5">
+          <Pin size={11} className="flex-shrink-0" />
+          Fixadas
+        </p>
+      </TituloDoBloco>
       {telas.map((t) => (
         <NavItem key={t.code} href={t.href} exact={t.href === "/fiscal"} icon={<ModuleIcon code={t.code} />} label={t.label} />
       ))}
@@ -107,6 +127,53 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
   );
 }
 
+/**
+ * O topo da faixa de ícones (14/10/2026): o setor ativo, com o ícone dele e a
+ * bolinha na cor do setor — no lugar da logo, que não cabe em 64px (o Início
+ * continua sendo o primeiro item). O clique abre a mesma troca de setor e
+ * escritório do nome no cabeçalho; o mouse ou o foco mostram o nome.
+ *
+ * Ícone, e não as iniciais: Contábil, Comercial, Corretora e Controladoria
+ * dariam todos "Co". Setor fora da lista de ícones mostra a primeira letra.
+ */
+function SetorNaFaixa({ setor, podeTrocar, onTrocar }: { setor: Sector | null; podeTrocar: boolean; onTrocar: () => void }) {
+  const nome = setor?.label ?? "Todos os setores";
+  const icone = setor ? (SECTOR_ICONS[setor.code] ?? <span className="text-ui font-semibold">{setor.label.charAt(0)}</span>) : <Layers size={16} />;
+  const classe = "relative flex items-center justify-center size-10 flex-shrink-0 rounded-lg border border-border bg-surface text-fg-secondary";
+  const miolo = (
+    <>
+      <span aria-hidden className="[&>svg]:w-[18px] [&>svg]:h-[18px]">
+        {icone}
+      </span>
+      {setor && (
+        <span
+          aria-hidden
+          data-marca="cor-do-setor"
+          className="absolute -top-1 -right-1 size-3 rounded-full border-2 border-sidebar-bg"
+          style={{ backgroundColor: setor.color }}
+        />
+      )}
+    </>
+  );
+  const rotulo = setor ? `Setor ${setor.label}` : "Todos os setores";
+  if (!podeTrocar) {
+    return (
+      <span role="img" {...nomeNaFaixa(rotulo, nome)} className={classe}>
+        {miolo}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onTrocar}
+      {...nomeNaFaixa(`${rotulo}. Trocar setor ou escritório`, `${nome}\nTrocar setor ou escritório`)}
+      className={`${classe} transition-colors hover:text-fg hover:bg-surface-hover hover:border-border-strong`}
+    >
+      {miolo}
+    </button>
+  );
+}
 
 // A partir de lg a lateral é coluna fixa; abaixo, gaveta. No servidor vale
 // "tela grande": a gaveta só fica inerte depois da hidratação, no celular.
@@ -158,7 +225,10 @@ type Props = {
   canSelfRegularizeSubscription?: boolean;
   /** Que artigo da ajuda explica cada tela — o "?" do topo abre o da tela aberta. */
   paresDeAjuda?: readonly ParDeCaminho[];
-  /** O menu lateral começa recolhido no computador — a escolha guardada no cookie. */
+  /**
+   * O menu lateral começa recolhido (na faixa de ícones) no computador — a
+   * escolha guardada no cookie.
+   */
   menuRecolhidoInicial?: boolean;
   children: React.ReactNode;
 };
@@ -192,14 +262,27 @@ export function AppShell({
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   // O menu lateral recolhido no computador (08/10/2026): o botão à esquerda da
-  // troca de setor tira a lateral da frente e devolve. A escolha fica num
-  // cookie que o layout lê, para a página já nascer do jeito que ficou.
+  // troca de setor recolhe a lateral e devolve. A escolha fica num cookie que
+  // o layout lê, para a página já nascer do jeito que ficou. Desde 14/10,
+  // recolhida ela vira a faixa de ícones, em vez de sair da tela.
   const [menuRecolhido, setMenuRecolhido] = useState(menuRecolhidoInicial);
-  const alternarMenu = () =>
-    setMenuRecolhido((atual) => {
-      document.cookie = cookieDoMenuLateral(!atual);
-      return !atual;
-    });
+  // Enquanto a largura anda (200ms), a lateral corta o que passa da borda: ao
+  // abrir, o menu inteiro já está desenhado nos 240px e vai aparecendo da
+  // esquerda para a direita, sem os nomes quebrarem de linha no caminho. Fora
+  // da transição não corta nada — o painel da busca passa da borda.
+  const [animando, setAnimando] = useState(false);
+  const timerDaTransicao = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timerDaTransicao.current), []);
+  const alternarMenu = () => {
+    const recolher = !menuRecolhido;
+    document.cookie = cookieDoMenuLateral(recolher);
+    setMenuRecolhido(recolher);
+    // Com "reduzir movimento" a troca é seca (`motion-reduce:transition-none`).
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    setAnimando(true);
+    clearTimeout(timerDaTransicao.current);
+    timerDaTransicao.current = setTimeout(() => setAnimando(false), DURACAO_DA_TRANSICAO_MS + 40);
+  };
   const [trocaAberta, setTrocaAberta] = useState(false);
   // Cabeçalho aberto (05/10): sem fundo nem borda, o brilho passa por trás dele.
   // A borda volta quando o conteúdo rola, para a tabela não sumir numa linha
@@ -217,11 +300,13 @@ export function AppShell({
   const podeTrocar = sectors.length > 1 || accessibleTenants.length > 1;
   // A gaveta fechada (abaixo de lg) só saía da tela com translate: os links
   // seguiam no Tab e no leitor de tela. `inert` tira os dois; Esc fecha
-  // (07/10/2026, junto com o PortalShell).
+  // (07/10/2026, junto com o PortalShell). A faixa de ícones fica no Tab: ela
+  // é o menu (ver `estadoDaLateral`).
   const telaGrande = useSyncExternalStore(assinarTela, lerTela, lerTelaNoServidor);
-  const gavetaFechada = !telaGrande && !mobileOpen;
-  // Recolhida no computador, a lateral também sai do Tab e do leitor de tela.
-  const lateralFora = gavetaFechada || (telaGrande && menuRecolhido);
+  const { naFaixa, foraDoTab } = estadoDaLateral({ telaGrande, recolhido: menuRecolhido, gavetaAberta: mobileOpen });
+  // Abrindo a partir da faixa: as linhas já com a largura final, cortadas pela
+  // lateral enquanto ela cresce.
+  const larguraFinal = animando && !naFaixa ? "min-w-[240px]" : "";
 
   // O Geral por setor (14/10/2026): o que o setor escondeu não entra. Início e
   // Meu dia ficam fora desta conta — aparecem sempre.
@@ -279,194 +364,224 @@ export function AppShell({
 
       {/* ── Sidebar ── */}
       {/* Abaixo de lg: fixa fora da tela (drawer), deslizando por cima do conteúdo.
-          Em lg+: volta a ser a coluna estática de sempre (translate-x-0, static). */}
-      <aside
-        id="menu-lateral"
-        inert={lateralFora}
-        className={`w-[240px] flex-shrink-0 flex flex-col border-r border-border bg-sidebar-bg fixed inset-y-0 left-0 z-50 transition-[translate,margin-left] duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        } ${menuRecolhido ? "lg:-ml-[240px]" : ""}`}
-      >
-        {/* Logo — a mesma altura do cabeçalho (60px), para as duas linhas de baixo
-            se encontrarem; eram 56px, e a logo ficava 4px acima do "41 Tech" (02/10/2026).
-            Desde 05/10 o logo também leva ao Início. Em 06/10 o item "Início"
-            voltou ao menu: clicar no logo para voltar ao começo é convenção de
-            site, e nem todo mundo da equipe conhece — os dois caminhos ficam.
-            O `aria-current` fica só no item do menu, para não marcar duas vezes. */}
-        <div className="flex items-center justify-center gap-2.5 h-[60px] px-5 border-b border-border flex-shrink-0 relative">
-          <Link
-            href="/home"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Ir para o Início"
-            data-dica="Início"
-            className="inline-flex items-center rounded-md px-2 py-1 transition-opacity hover:opacity-80"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/logo-horizontal-light.svg"
-              alt=""
-              className="block dark:hidden h-8 w-auto object-contain flex-shrink-0"
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/logo-horizontal-dark.svg"
-              alt=""
-              className="hidden dark:block h-8 w-auto object-contain flex-shrink-0"
-            />
-          </Link>
-          {/* Alvo de 40px (07/10/2026): o `Button linkMuted` tinha o tamanho do
-              ícone, 18px, abaixo do mínimo de toque. */}
-          <IconButton
-            size="xl"
-            className={`${SO_NA_GAVETA} absolute right-2 top-1/2 -translate-y-1/2`}
-            onClick={() => setMobileOpen(false)}
-            aria-label="Fechar menu"
-          >
-            <X size={18} />
-          </IconButton>
-        </div>
-
-        {/* A busca no lugar do cartão de setor e escritório (02/10): trocar de
-            setor ou de escritório foi para o menu do usuário. Abaixo de lg a
-            lateral é gaveta, e a busca fica no topo. */}
-        <div className="hidden lg:block px-3 pt-3 pb-1">
-          <GlobalSearch telas={telasNavegaveis} variante="lateral" atalho={telaGrande && !menuRecolhido} />
-        </div>
-
-        {/* Nav */}
-        {/* `scroll-gutter-stable`: quando a lista passa da altura da tela, a barra
-            de rolagem aparece, o content box encolhe 9px e tudo que é alinhado à
-            direita (a contagem de cada grupo) salta de lugar. O comentário do
-            globals.css evita o gutter em container estreito; aqui a troca vale:
-            9px de faixa parada custam menos que o menu inteiro se mexendo. */}
-        <nav
-          onClick={() => setMobileOpen(false)}
-          className="scroll-y scroll-gutter-stable flex-1 overflow-y-auto px-3 py-4 space-y-0.5"
+          Em lg+: volta a ser a coluna estática de sempre (translate-x-0, static),
+          com 240px aberta ou 64px na faixa de ícones (14/10/2026). */}
+      {/* Os itens do menu sabem por este contexto se estão na faixa de ícones. */}
+      <ProvedorDaFaixa value={naFaixa}>
+        <aside
+          id="menu-lateral"
+          inert={foraDoTab}
+          className={`${LARGURA_DA_COLUNA} ${naFaixa ? LARGURA_DA_FAIXA : ""} flex-shrink-0 flex flex-col border-r border-border bg-sidebar-bg fixed inset-y-0 left-0 z-50 transition-[translate,width] duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 ${
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          } ${animando ? "overflow-hidden" : ""}`}
         >
-          {activeSector ? (
-            <>
-              {/* A ordem é a do uso: Início, o que serve a todos os setores, e por
-                  último as telas deste setor. Geral no meio, e não no fim, porque
-                  tarefa e transferência são o dia a dia de qualquer setor — no fim
-                  da lista, num setor com quinze telas, ficavam abaixo da dobra.
-                  O logo, no topo da barra, também leva ao Início (05/10).
-
-                  A identidade do setor não é mais um rótulo solto no topo: ela
-                  está no seletor acima (com a cor) e volta como título das telas
-                  do setor, que é onde diz de quem são aqueles grupos. */}
-              <NavItem href="/home" icon={<Home size={16} />} label="Início" />
-              <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
-
-              {/* Transversais. NUNCA somem por causa do setor ativo: transferência
-                  é setor↔setor por natureza, e cadastro é do tenant. Isolar os
-                  dois mataria a razão de existir do Connect. Espaços entra aqui:
-                  é a mesma tela em todo setor, e solto no topo parecia um módulo.
-
-                  30/09: Conversas foi para o setor Controladoria e Gestão para o
-                  setor Gestão (pedido do Kauan: o Geral é só o que serve a
-                  todos). "Meu dia" subiu para logo abaixo do Início — é a
-                  primeira tela do expediente. */}
-              {/* 14/10/2026: o setor ativo continua não escondendo nada sozinho;
-                  quem esconde é o administrador, setor por setor
-                  (Configurações › Setores) — o Recrutamento sem Solicitações e
-                  Transferências, pedido do Kauan. É só o menu: o endereço da
-                  tela continua abrindo. Sem nenhuma tela, o título também sai. */}
-              {algumaNoGeral && (
-                <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
-                  Geral
-                </p>
-              )}
-              {noGeral("espacos") && (
-                <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Espaços" />
-              )}
-              {itensDoGeral}
-
-              {/* Até 8 módulos, a sidebar lista as telas direto, cada uma com seu
-                  ícone: o setor pequeno não ganha nada em esconder cinco itens
-                  atrás de três grupos. Acima disso (o BPO tem quinze), a linha é
-                  o **grupo**, e clicar nela abre a tela do setor filtrada por ele
-                  — pedido do Kauan em 17/09, no lugar de abrir e fechar seções. */}
-              <TelasFixadas telas={telasFixadas} />
-
-              {activeSectorModules.length > 0 && (
-                <p className="c41-rotulo flex items-center gap-2 px-2.5 pt-4 pb-1.5">
-                  <span
-                    aria-hidden
-                    className="inline-block size-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: activeSector.color }}
-                  />
-                  <span className="truncate">{activeSector.label}</span>
-                </p>
-              )}
-              {(() => {
-                const grupos = agruparModulos(activeSectorModules);
-                if (grupos.length <= 1 || activeSectorModules.length <= 8) {
-                  return activeSectorModules.map((m) =>
-                    // O painel da Gestão mostra as abas dele ao lado, como fazia
-                    // quando era item do menu geral.
-                    m.code === "gestao_painel" ? (
-                      <PainelDoItem key={m.code} titulo={m.label} telas={TELAS_DA_GESTAO} cor={activeSector.color}>
-                        <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
-                      </PainelDoItem>
-                    ) : (
-                      <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />
-                    )
-                  );
-                }
-                // A tela do grupo continua (é o clique); o painel ao lado mostra
-                // as telas dele sem precisar abri-la.
-                return grupos.map(({ grupo, itens }) => (
-                  <PainelDoItem
-                    key={grupo}
-                    titulo={grupo}
-                    cor={activeSector.color}
-                    telas={itens.map((i) => ({ label: i.label, href: i.href, icon: <ModuleIcon code={i.code} /> }))}
-                  >
-                    <GrupoNavItem
-                      label={grupo}
-                      href={`/setor/${activeSector.code}/grupo/${slugDoGrupo(grupo)}`}
-                      icon={<Icone nome={ICONE_DO_GRUPO[grupo]} />}
-                      itens={itens}
-                    />
-                  </PainelDoItem>
-                ));
-              })()}
-            </>
+          {/* Logo — a mesma altura do cabeçalho (60px), para as duas linhas de baixo
+              se encontrarem; eram 56px, e a logo ficava 4px acima do "41 Tech" (02/10/2026).
+              Desde 05/10 o logo também leva ao Início. Em 06/10 o item "Início"
+              voltou ao menu: clicar no logo para voltar ao começo é convenção de
+              site, e nem todo mundo da equipe conhece — os dois caminhos ficam.
+              O `aria-current` fica só no item do menu, para não marcar duas vezes. */}
+          {/* Na faixa, o topo é o setor ativo (à esquerda, como os ícones de baixo:
+              nada desliza enquanto a lateral encolhe). */}
+          {naFaixa ? (
+            <div className="flex items-center h-[60px] px-3 border-b border-border flex-shrink-0">
+              <SetorNaFaixa setor={activeSector} podeTrocar={podeTrocar} onTrocar={() => setTrocaAberta(true)} />
+            </div>
           ) : (
-            <>
-              <p className="c41-rotulo px-2.5 pb-1.5">
-                Geral
-              </p>
-              <NavItem href="/home" icon={<Home size={16} />} label="Início" />
-              <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
-              {itensDoGeral}
-
-              <TelasFixadas telas={telasFixadas} />
-
-              {sectors.length > 0 && (
-                <>
-                  <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
-                    Meus Setores
-                  </p>
-                  {/* Sem painel ao lado: o clique entra no ambiente do setor
-                      (decisão de 30/09 — as telas de todos os setores juntas
-                      poluíam a vista de quem tem acesso a todos). */}
-                  {sectors.map((s) => (
-                    <SectorNavItem
-                      key={s.code}
-                      label={s.label}
-                      color={s.color}
-                      icon={SECTOR_ICONS[s.code]}
-                      onEntrar={() => trocarSetor(s.code, appDomain, sectorHostSuffix)}
-                    />
-                  ))}
-                </>
-              )}
-            </>
+            <div className={`flex items-center justify-center gap-2.5 h-[60px] px-5 border-b border-border flex-shrink-0 relative ${larguraFinal}`}>
+              <Link
+                href="/home"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Ir para o Início"
+                data-dica="Início"
+                className="inline-flex items-center rounded-md px-2 py-1 transition-opacity hover:opacity-80"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/brand/logo-horizontal-light.svg"
+                  alt=""
+                  className="block dark:hidden h-8 w-auto object-contain flex-shrink-0"
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/brand/logo-horizontal-dark.svg"
+                  alt=""
+                  className="hidden dark:block h-8 w-auto object-contain flex-shrink-0"
+                />
+              </Link>
+              {/* Alvo de 40px (07/10/2026): o `Button linkMuted` tinha o tamanho do
+                  ícone, 18px, abaixo do mínimo de toque. */}
+              <IconButton
+                size="xl"
+                className={`${SO_NA_GAVETA} absolute right-2 top-1/2 -translate-y-1/2`}
+                onClick={() => setMobileOpen(false)}
+                aria-label="Fechar menu"
+              >
+                <X size={18} />
+              </IconButton>
+            </div>
           )}
-        </nav>
 
-      </aside>
+          {/* A busca no lugar do cartão de setor e escritório (02/10): trocar de
+              setor ou de escritório foi para o menu do usuário. Abaixo de lg a
+              lateral é gaveta, e a busca fica no topo. Na faixa, a busca é a
+              lupa, que abre o mesmo campo ao lado (14/10/2026) — e o Ctrl+K
+              continua sendo dela. */}
+          <div className={`hidden lg:block px-3 pt-3 pb-1 ${larguraFinal}`}>
+            {naFaixa ? (
+              <GlobalSearch key="icone" telas={telasNavegaveis} variante="icone" atalho={telaGrande} />
+            ) : (
+              <GlobalSearch key="lateral" telas={telasNavegaveis} variante="lateral" atalho={telaGrande} />
+            )}
+          </div>
+
+          {/* Nav */}
+          {/* `scroll-gutter-stable`: quando a lista passa da altura da tela, a barra
+              de rolagem aparece, o content box encolhe 9px e tudo que é alinhado à
+              direita (a contagem de cada grupo) salta de lugar. O comentário do
+              globals.css evita o gutter em container estreito; aqui a troca vale:
+              9px de faixa parada custam menos que o menu inteiro se mexendo. */}
+          {/* Na faixa, sem barra de rolagem à vista (a roda do mouse e o Tab
+              rolam): a barra comia a borda dos quadrados de 40px. */}
+          <nav
+            onClick={() => setMobileOpen(false)}
+            className={`${
+              naFaixa ? "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "scroll-y scroll-gutter-stable"
+            } flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-0.5 ${larguraFinal}`}
+          >
+            {activeSector ? (
+              <>
+                {/* A ordem é a do uso: Início, o que serve a todos os setores, e por
+                    último as telas deste setor. Geral no meio, e não no fim, porque
+                    tarefa e transferência são o dia a dia de qualquer setor — no fim
+                    da lista, num setor com quinze telas, ficavam abaixo da dobra.
+                    O logo, no topo da barra, também leva ao Início (05/10).
+
+                    A identidade do setor não é mais um rótulo solto no topo: ela
+                    está no seletor acima (com a cor) e volta como título das telas
+                    do setor, que é onde diz de quem são aqueles grupos. */}
+                <NavItem href="/home" icon={<Home size={16} />} label="Início" />
+                <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
+
+                {/* Transversais. NUNCA somem por causa do setor ativo: transferência
+                    é setor↔setor por natureza, e cadastro é do tenant. Isolar os
+                    dois mataria a razão de existir do Connect. Espaços entra aqui:
+                    é a mesma tela em todo setor, e solto no topo parecia um módulo.
+
+                    30/09: Conversas foi para o setor Controladoria e Gestão para o
+                    setor Gestão (pedido do Kauan: o Geral é só o que serve a
+                    todos). "Meu dia" subiu para logo abaixo do Início — é a
+                    primeira tela do expediente. */}
+                {/* 14/10/2026: o setor ativo continua não escondendo nada sozinho;
+                    quem esconde é o administrador, setor por setor
+                    (Configurações › Setores) — o Recrutamento sem Solicitações e
+                    Transferências, pedido do Kauan. É só o menu: o endereço da
+                    tela continua abrindo. Sem nenhuma tela, o título também sai. */}
+                {algumaNoGeral && (
+                  <TituloDoBloco nome="Geral">
+                    <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
+                      Geral
+                    </p>
+                  </TituloDoBloco>
+                )}
+                {noGeral("espacos") && (
+                  <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Espaços" />
+                )}
+                {itensDoGeral}
+
+                {/* Até 8 módulos, a sidebar lista as telas direto, cada uma com seu
+                    ícone: o setor pequeno não ganha nada em esconder cinco itens
+                    atrás de três grupos. Acima disso (o BPO tem quinze), a linha é
+                    o **grupo**, e clicar nela abre a tela do setor filtrada por ele
+                    — pedido do Kauan em 17/09, no lugar de abrir e fechar seções. */}
+                <TelasFixadas telas={telasFixadas} />
+
+                {activeSectorModules.length > 0 && (
+                  <TituloDoBloco nome={activeSector.label}>
+                    <p className="c41-rotulo flex items-center gap-2 px-2.5 pt-4 pb-1.5">
+                      <span
+                        aria-hidden
+                        className="inline-block size-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: activeSector.color }}
+                      />
+                      <span className="truncate">{activeSector.label}</span>
+                    </p>
+                  </TituloDoBloco>
+                )}
+                {(() => {
+                  const grupos = agruparModulos(activeSectorModules);
+                  if (grupos.length <= 1 || activeSectorModules.length <= 8) {
+                    return activeSectorModules.map((m) =>
+                      // O painel da Gestão mostra as abas dele ao lado, como fazia
+                      // quando era item do menu geral.
+                      m.code === "gestao_painel" ? (
+                        <PainelDoItem key={m.code} titulo={m.label} telas={TELAS_DA_GESTAO} cor={activeSector.color}>
+                          <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas={TELAS_DA_GESTAO.length > 0} />
+                        </PainelDoItem>
+                      ) : (
+                        <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />
+                      )
+                    );
+                  }
+                  // A tela do grupo continua (é o clique); o painel ao lado mostra
+                  // as telas dele sem precisar abri-la.
+                  return grupos.map(({ grupo, itens }) => (
+                    <PainelDoItem
+                      key={grupo}
+                      titulo={grupo}
+                      cor={activeSector.color}
+                      telas={itens.map((i) => ({ label: i.label, href: i.href, icon: <ModuleIcon code={i.code} /> }))}
+                    >
+                      <GrupoNavItem
+                        label={grupo}
+                        href={`/setor/${activeSector.code}/grupo/${slugDoGrupo(grupo)}`}
+                        icon={<Icone nome={ICONE_DO_GRUPO[grupo]} />}
+                        itens={itens}
+                      />
+                    </PainelDoItem>
+                  ));
+                })()}
+              </>
+            ) : (
+              <>
+                <TituloDoBloco nome="Geral" primeiro>
+                  <p className="c41-rotulo px-2.5 pb-1.5">
+                    Geral
+                  </p>
+                </TituloDoBloco>
+                <NavItem href="/home" icon={<Home size={16} />} label="Início" />
+                <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
+                {itensDoGeral}
+
+                <TelasFixadas telas={telasFixadas} />
+
+                {sectors.length > 0 && (
+                  <>
+                    <TituloDoBloco nome="Meus Setores">
+                      <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
+                        Meus Setores
+                      </p>
+                    </TituloDoBloco>
+                    {/* Sem painel ao lado: o clique entra no ambiente do setor
+                        (decisão de 30/09 — as telas de todos os setores juntas
+                        poluíam a vista de quem tem acesso a todos). */}
+                    {sectors.map((s) => (
+                      <SectorNavItem
+                        key={s.code}
+                        label={s.label}
+                        color={s.color}
+                        icon={SECTOR_ICONS[s.code]}
+                        onEntrar={() => trocarSetor(s.code, appDomain, sectorHostSuffix)}
+                      />
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+          </nav>
+
+        </aside>
+      </ProvedorDaFaixa>
 
       {/* ── Main area ── */}
       {/* O brilho mora aqui, e não no <main> (05/10, opção A da revisão de
@@ -495,12 +610,13 @@ export function AppShell({
               esquerda da troca de setor; no celular a lateral já é gaveta.
               Um botão de menu por vez (13/10/2026): este só com a coluna
               fixa, o hambúrguer só na gaveta — o porquê do `max-lg:hidden`, e
-              não `hidden lg:inline-flex`, está em menuLateral.ts. */}
+              não `hidden lg:inline-flex`, está em menuLateral.ts. Desde 14/10
+              recolher deixa a faixa de ícones, e o botão a abre de novo. */}
           <IconButton
             size="xl"
             onClick={alternarMenu}
-            aria-label={menuRecolhido ? "Mostrar o menu lateral" : "Recolher o menu lateral"}
-            data-dica={menuRecolhido ? "Mostrar o menu" : "Recolher o menu"}
+            aria-label={menuRecolhido ? "Expandir o menu lateral" : "Recolher o menu lateral"}
+            data-dica={menuRecolhido ? "Expandir o menu" : "Recolher o menu"}
             aria-expanded={!menuRecolhido}
             aria-controls="menu-lateral"
             className={`${SO_NA_COLUNA} -ml-2`}
@@ -537,10 +653,10 @@ export function AppShell({
               {podeTrocar && <ChevronDown size={13} aria-hidden className="flex-shrink-0 text-fg-muted" />}
             </button>
             {/* A busca do topo é a do celular; no computador ela mora na
-                lateral — e vem para cá quando a lateral está recolhida, com o
-                Ctrl+K junto. */}
-            <div className={`flex-1 min-w-0 ${menuRecolhido ? "" : "lg:hidden"}`}>
-              <GlobalSearch telas={telasNavegaveis} atalho={!telaGrande || menuRecolhido} />
+                lateral — no campo, com o menu aberto, ou na lupa da faixa de
+                ícones (14/10/2026; até ali, recolhido, ela vinha para cá). */}
+            <div className="flex-1 min-w-0 lg:hidden">
+              <GlobalSearch telas={telasNavegaveis} atalho={!telaGrande} />
             </div>
           </div>
 
