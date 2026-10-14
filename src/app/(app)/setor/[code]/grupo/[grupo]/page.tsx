@@ -18,7 +18,7 @@ import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 // só elas. A sidebar volta a ter uma linha por grupo, e não quinze itens.
 //
 // Rota própria, e não `?grupo=` na tela do setor, porque a sidebar marca o item
-// ativo pelo caminho: com query, "Espaços" (que aponta para `/setor/[code]`)
+// ativo pelo caminho: com query, "Quadros" (que aponta para `/setor/[code]`)
 // acenderia junto de qualquer grupo.
 export default async function GrupoDoSetorPage({
   params,

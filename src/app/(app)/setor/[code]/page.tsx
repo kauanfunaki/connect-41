@@ -24,6 +24,9 @@ const LISTAS_NO_CARTAO = 4;
  * espaço → pasta → lista → tarefa: as telas o menu já mostra (e agora vivem em
  * `/setor/[code]/telas`). Cada cartão mostra as listas do espaço, para achar a
  * lista sem abrir espaço por espaço.
+ *
+ * 14/10/2026: a tela passou a se chamar "Quadros" (no menu e no título), a
+ * pedido do Kauan. Os espaços, os cartões desta tela, continuam "espaço".
  */
 export default async function EspacosDoSetorPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -58,11 +61,11 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
   return (
     <PageContainer>
       <PageHeader
-        title="Espaços"
+        title="Quadros"
         subtitle={
           <span className="inline-flex items-center gap-1.5">
             <span className="size-2 rounded-full flex-shrink-0" style={{ background: corDoSetor }} aria-hidden />
-            {setor} · as listas e quadros de tarefas do setor, organizados em espaços e pastas
+            {setor} · as listas de tarefas do setor, organizadas em espaços e pastas
           </span>
         }
         action={podeCriar ? <NewSpaceButton action={criarEspaco.bind(null, code)} /> : undefined}
