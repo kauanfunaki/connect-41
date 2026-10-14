@@ -375,14 +375,24 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Encontrar um colaborador",
         passos: [
-          "Digite o nome no campo de busca.",
-          "Clique em “Filtros” para escolher a “Empresa” e a “Situação”.",
+          "No campo “Empresa”, escolha a empresa. A tela mostra uma empresa por vez e abre na última empresa que você abriu.",
+          "Para achar alguém sem saber a empresa, digite o nome ou o CPF em “Buscar em todas as empresas”. O resultado mostra a empresa de cada pessoa.",
+          "Clique em “Filtros” para ver também os cadastros inativos.",
           "Clique no nome para abrir a ficha, onde ficam as abas de férias, afastamentos, desligamento e os demais registros do DP.",
+        ],
+      },
+      {
+        titulo: "Ler o resumo da empresa",
+        passos: [
+          "Escolha a empresa no campo “Empresa”.",
+          "Em cima da tabela ficam os números dela: ativos, admissões e desligamentos do mês (com as admissões em andamento), em férias e afastados.",
+          "Os números saem da situação e das datas de admissão e de desligamento da ficha de cada pessoa. Com a ficha em dia, o resumo fica certo.",
         ],
       },
     ],
     dicas: [
-      "Por padrão, a lista esconde os inativos. Quando houver algum, o aviso acima da tabela mostra quantos ficaram de fora, com o link “Mostrar todos”.",
+      "Por padrão, a lista esconde os inativos. Quando houver algum, o aviso acima da tabela mostra quantos ficaram de fora, com o botão “Mostrar todos”.",
+      "A busca em todas as empresas mostra até 50 pessoas. Se não achar quem procura, digite mais do nome ou o CPF.",
       "Os funcionários do próprio escritório não ficam aqui, e sim em “Pessoas”.",
     ],
   },
@@ -470,7 +480,15 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Clique no cartão “Aguardando resposta” ou “Respondidos” para recortar a lista.",
           "Use o filtro da coluna “Teste” para ver um tipo de teste só.",
           "Na coluna “Resultado”, veja o perfil DISC ou o percentual de acertos.",
-          "Clique em “Abrir” para ver o resultado completo.",
+          "Clique em “Abrir” para ver o resultado completo: no DISC, as barras, o gráfico de teia e o perfil explicado em palavras simples; no questionário, cada pergunta com a resposta dada e a certa, e o filtro “Erradas”.",
+        ],
+      },
+      {
+        titulo: "Mandar o link de novo ou pelo WhatsApp",
+        passos: [
+          "Clique em “Abrir” na linha do teste que está aguardando resposta.",
+          "Use “Copiar” para colar o link onde quiser, ou “Mandar no WhatsApp”: a mensagem já vai com a vaga, o link e até quando ele vale.",
+          "Embaixo, o prazo mostra quantos dias faltam. Se o link vencer, clique em “Gerar novo link”: o anterior deixa de funcionar e o novo vale por mais 7 dias.",
         ],
       },
       {
@@ -487,6 +505,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
     dicas: [
       "Um modelo que já foi usado não pode ser excluído, só arquivado: botão “⋯” da linha e “Arquivar”.",
       "Você também pode enviar teste pela ficha do candidato ou pela candidatura dentro da vaga, no quadro “Teste”.",
+      "O DISC mostra o jeito de trabalhar de cada pessoa. Não serve para aprovar ou reprovar.",
     ],
   },
 
