@@ -86,7 +86,7 @@ describe("menu recolhido: a faixa de ícones", () => {
 
   it("cada item é só o ícone, com o nome no aria-label e na dica à direita", () => {
     const links = linksDoMenu(lateral(casco(true)));
-    expect(links.map((l) => /aria-label="([^"]*)"/.exec(l.tag)?.[1])).toEqual(["Início", "Meu dia", "Espaços", "Cadastros", "Transferências", "Agenda", "Apuração", "Folha", "Férias"]);
+    expect(links.map((l) => /aria-label="([^"]*)"/.exec(l.tag)?.[1])).toEqual(["Início", "Meu dia", "Quadros", "Cadastros", "Transferências", "Agenda", "Apuração", "Folha", "Férias"]);
     for (const l of links) {
       expect(l.texto).toBe("");
       const nome = /aria-label="([^"]*)"/.exec(l.tag)![1];

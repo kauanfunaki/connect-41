@@ -56,12 +56,19 @@ export type DefDaTelaDoGeral = {
   soDentroDoSetor?: boolean;
 };
 
-/** Na ordem do menu. */
+/**
+ * Na ordem do menu.
+ *
+ * "Quadros" se chamava "Espaços" até 14/10/2026 (pedido do Kauan). A chave
+ * continua `espacos`: é ela que fica gravada nas telas escondidas de cada setor
+ * (`sector_menu_views.hiddenScreens`), e não o rótulo. O espaço, o contêiner
+ * de pastas e listas dentro da tela, segue se chamando espaço.
+ */
 export const TELAS_DO_GERAL: readonly DefDaTelaDoGeral[] = [
   {
     chave: "espacos",
-    rotulo: "Espaços",
-    descricao: "As listas e os quadros de tarefas do setor, organizados em espaços e pastas.",
+    rotulo: "Quadros",
+    descricao: "As listas de tarefas do setor, em lista ou kanban, organizadas em espaços e pastas.",
     soDentroDoSetor: true,
   },
   {

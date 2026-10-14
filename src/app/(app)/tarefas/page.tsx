@@ -100,7 +100,7 @@ function Bloco({
         <p className="px-4 py-2.5 border-t border-border text-fs-2 text-fg-muted">
           + {resto} {resto === 1 ? "outro" : "outros"} — veja todos no{" "}
           <Link href="/kanban" className="font-medium text-fg-secondary hover:text-brand">
-            quadro de tarefas
+            Kanban
           </Link>
           {visaoTime && (
             <>
@@ -249,8 +249,10 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
                 resetAction={restaurarWidgetsSetor}
               />
             )}
+            {/* "Kanban", o nome da tela que abre (14/10/2026): era "Quadros",
+                que agora é o nome da tela do setor no menu. */}
             <Button href="/kanban" variant="secondary" size="sm">
-              <Columns3 size={14} /> Quadros
+              <Columns3 size={14} /> Kanban
             </Button>
           </div>
         }

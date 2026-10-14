@@ -28,8 +28,10 @@ const TELAS_GERAIS: Readonly<Record<string, string>> = {
   "/empresas": "Empresas",
   "/pessoas": "Pessoas",
   "/clientes": "Clientes",
-  "/setor": "Espaços",
-  "/kanban": "Espaços",
+  // Quadros (até 14/10/2026, "Espaços"): a tela do setor e as listas que abrem
+  // a partir dela, em /kanban/<id>.
+  "/setor": "Quadros",
+  "/kanban": "Quadros",
   "/notificacoes": "Notificações",
   "/ajuda": "Ajuda",
   "/configuracoes": "Configurações",
