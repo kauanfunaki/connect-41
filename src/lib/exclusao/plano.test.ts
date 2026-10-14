@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
+import { estadoDoBanco, lerMigrations, relacoesComOBanco } from "./chavesDoBanco";
 import { lerEsquema, trava, type RelacaoDoEsquema } from "./lerEsquema";
 import { COLUNAS_SOLTAS, LIGACOES, type Entidade } from "./registro";
 import type { Passo } from "./comum";
@@ -19,8 +20,28 @@ import { PLANO_DO_USUARIO } from "./usuario";
 //
 // É a prova possível sem banco de que a exclusão não vai esbarrar num P2003
 // no meio; a transação, de todo modo, desfaz tudo se esbarrar.
+//
+// A simulação roda três vezes: com o ON DELETE do schema, com o que as
+// migrations gravaram no banco e com o banco de antes da última correção de
+// chave (o estado de produção até o dono rodar o `migrate deploy`). O schema
+// sozinho não basta: em 24/07/2026 as migrations criaram o link do teste com
+// RESTRICT onde o schema diz SetNull, e a exclusão esbarrava (ver
+// chavesDoBanco.ts).
 
 const esquema = lerEsquema(readFileSync(path.join(process.cwd(), "prisma", "schema.prisma"), "utf8"));
+const MIGRATIONS = path.join(process.cwd(), "prisma", "migrations");
+
+/** A migration que pôs SET NULL no link do teste. O código tem de funcionar antes dela também. */
+const ACERTO_DO_LINK_DO_TESTE = "20261014200000";
+
+type Fonte = { nome: string; relacoes: RelacaoDoEsquema[] };
+const SCHEMA: Fonte = { nome: "schema", relacoes: esquema.relacoes };
+const BANCO: Fonte = { nome: "banco (migrations)", relacoes: relacoesComOBanco(esquema, estadoDoBanco(lerMigrations(MIGRATIONS))) };
+const BANCO_ANTES: Fonte = {
+  nome: `banco antes de ${ACERTO_DO_LINK_DO_TESTE}`,
+  relacoes: relacoesComOBanco(esquema, estadoDoBanco(lerMigrations(MIGRATIONS, { antesDe: ACERTO_DO_LINK_DO_TESTE }))),
+};
+const FONTES = [SCHEMA, BANCO, BANCO_ANTES];
 
 const PLANOS: { raiz: Entidade; plano: readonly Passo<never>[] }[] = [
   { raiz: "Company", plano: PLANO_DA_EMPRESA as readonly Passo<never>[] },
@@ -29,12 +50,12 @@ const PLANOS: { raiz: Entidade; plano: readonly Passo<never>[] }[] = [
 ];
 
 /** O model e tudo que o banco apaga junto com ele (cascata, recursiva). */
-function comCascata(modelo: string): Set<string> {
+function comCascata(relacoes: readonly RelacaoDoEsquema[], modelo: string): Set<string> {
   const vai = new Set([modelo]);
   const fila = [modelo];
   while (fila.length > 0) {
     const atual = fila.shift()!;
-    for (const r of esquema.relacoes) {
+    for (const r of relacoes) {
       if (r.alvo === atual && r.onDelete === "Cascade" && !vai.has(r.modelo)) {
         vai.add(r.modelo);
         fila.push(r.modelo);
@@ -50,7 +71,8 @@ function comCascata(modelo: string): Set<string> {
  * RESTRICT — quem aponta já foi apagado num passo anterior, vai no mesmo
  * comando (cascata), ou teve a coluna anulada/reatribuída antes.
  */
-function travasDoPlano(raiz: Entidade, plano: readonly Passo<never>[]): string[] {
+function travasDoPlano(raiz: Entidade, plano: readonly Passo<never>[], fonte: Fonte = SCHEMA): string[] {
+  const { relacoes } = fonte;
   const apagados = new Set<string>();
   const neutralizadas = new Set<string>(); // "Modelo.coluna"
   const travas: string[] = [];
@@ -61,9 +83,9 @@ function travasDoPlano(raiz: Entidade, plano: readonly Passo<never>[]): string[]
       neutralizadas.add(`${passo.modelo}.${passo.coluna}`);
       continue;
     }
-    const levados = comCascata(passo.modelo);
+    const levados = comCascata(relacoes, passo.modelo);
     for (const levado of levados) {
-      for (const r of esquema.relacoes) {
+      for (const r of relacoes) {
         if (r.alvo !== levado || !trava(r)) continue;
         if (apagados.has(r.modelo) || levados.has(r.modelo) || neutra(r)) continue;
         // Ligação para a raiz só importa quando a raiz é apagada (o último passo).
@@ -113,9 +135,11 @@ describe("planos de exclusão × schema", () => {
         expect(faltando).toEqual([]);
       });
 
-      it("a ordem passa por todas as chaves estrangeiras", () => {
-        expect(travasDoPlano(raiz, plano)).toEqual([]);
-      });
+      for (const fonte of FONTES) {
+        it(`a ordem passa por todas as chaves estrangeiras — ${fonte.nome}`, () => {
+          expect(travasDoPlano(raiz, plano, fonte)).toEqual([]);
+        });
+      }
     });
   }
 
@@ -129,5 +153,46 @@ describe("planos de exclusão × schema", () => {
     );
     const semBeneficio = PLANO_DA_EMPRESA.filter((p) => p.modelo !== "BenefitAssignment");
     expect(travasDoPlano("Company", semBeneficio as readonly Passo<never>[]).join("\n")).toContain("BenefitAssignment.benefit → BenefitCatalog");
+  });
+});
+
+describe("candidato com teste ligado à candidatura (link do teste × candidatura)", () => {
+  const acao = (fonte: Fonte, campo: string) => fonte.relacoes.find((r) => r.modelo === "AssessmentLink" && r.campo === campo)!.onDelete;
+  const semSoltarOTeste = (plano: readonly Passo<never>[]) =>
+    plano.filter((p) => !(p.modelo === "AssessmentLink" && p.coluna === "candidaturaId"));
+  const PESSOA = PLANO_DA_PESSOA as readonly Passo<never>[];
+  const EMPRESA = PLANO_DA_EMPRESA as readonly Passo<never>[];
+
+  it("antes da migration o banco tinha RESTRICT; depois dela, SET NULL como o schema", () => {
+    expect([acao(BANCO_ANTES, "candidatura"), acao(BANCO_ANTES, "template")]).toEqual(["Restrict", "Restrict"]);
+    expect([acao(BANCO, "candidatura"), acao(BANCO, "template")]).toEqual(["SetNull", "SetNull"]);
+    expect([acao(SCHEMA, "candidatura"), acao(SCHEMA, "template")]).toEqual(["SetNull", "SetNull"]);
+  });
+
+  it("pessoa e empresa soltam o teste da candidatura antes de apagá-la", () => {
+    for (const plano of [PESSOA, EMPRESA]) {
+      const solta = plano.findIndex((p) => p.modelo === "AssessmentLink" && p.acao === "anular" && p.coluna === "candidaturaId");
+      const apaga = plano.findIndex((p) => p.modelo === "Candidatura" && p.acao === "apagar");
+      expect(solta).toBeGreaterThanOrEqual(0);
+      expect(solta).toBeLessThan(apaga);
+    }
+  });
+
+  it("sem soltar o teste, o banco de antes da migration travaria — o plano de hoje passa nos dois estados", () => {
+    const esperado = "apagar Candidatura esbarra em AssessmentLink.candidatura → Candidatura (Restrict)";
+    expect(travasDoPlano("Person", semSoltarOTeste(PESSOA), BANCO_ANTES)).toContain(esperado);
+    expect(travasDoPlano("Company", semSoltarOTeste(EMPRESA), BANCO_ANTES)).toContain(esperado);
+    // Com a migration, o banco solta sozinho: nem o passo seria preciso.
+    expect(travasDoPlano("Person", semSoltarOTeste(PESSOA), BANCO)).toEqual([]);
+    expect(travasDoPlano("Company", semSoltarOTeste(EMPRESA), BANCO)).toEqual([]);
+  });
+
+  it("modelo de teste: com a migration, sai mesmo com teste enviado (o teste fica, sem o modelo)", () => {
+    const apagarModelo = [{ modelo: "AssessmentTemplate", acao: "apagar" }] as unknown as readonly Passo<never>[];
+    // A raiz aqui só nomeia a simulação; o que conta é quem aponta para o modelo.
+    expect(travasDoPlano("Company", apagarModelo, BANCO)).toEqual([]);
+    expect(travasDoPlano("Company", apagarModelo, BANCO_ANTES)).toEqual([
+      "apagar AssessmentTemplate esbarra em AssessmentLink.template → AssessmentTemplate (Restrict)",
+    ]);
   });
 });

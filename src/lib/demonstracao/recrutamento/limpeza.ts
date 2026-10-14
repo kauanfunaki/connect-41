@@ -108,7 +108,9 @@ async function vagasComMarca(tx: Tx, a: AlvoDaLimpeza): Promise<string[]> {
  *
  * Os testes saem primeiro: no banco, o link do teste aponta para a candidatura
  * e para o modelo com RESTRICT (a migration de 24/07/2026 gravou assim, embora
- * o schema não diga) — apagar a candidatura antes travaria tudo.
+ * o schema não diga) — apagar a candidatura antes travaria tudo. A migration
+ * 20261014200000 passa as duas chaves a SET NULL; a ordem continua valendo
+ * para a limpeza rodar antes ou depois dela.
  */
 export const PLANO_DA_LIMPEZA: readonly Passo<AlvoDaLimpeza>[] = [
   {
