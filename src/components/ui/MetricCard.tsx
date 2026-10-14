@@ -53,6 +53,13 @@ type Props = {
    * `FaixaDeTotais` (`indiceDoDestaque`). O tom não pinta o valor aqui.
    */
   destaque?: boolean;
+  /**
+   * O rótulo sempre inteiro: quebra em quantas linhas precisar, em qualquer
+   * largura, e nunca corta com "…" (14/10/2026, "Desligamentos em setembro"
+   * nos Colaboradores de clientes). Sem ele, do `sm` em diante o rótulo fica
+   * numa linha e corta com a dica.
+   */
+  rotuloInteiro?: boolean;
   /** Atraso do stagger de entrada, em ms. */
   delay?: number;
 };
@@ -107,6 +114,7 @@ export function MetricCard({
   ativo = false,
   destaque = false,
   navegacaoCompleta = false,
+  rotuloInteiro = false,
   delay = 0,
 }: Props) {
   const tomEfetivo: TomDaMetrica | undefined = tom ?? (highlight ? "atencao" : undefined);
@@ -125,7 +133,11 @@ export function MetricCard({
             {iconeFinal}
           </span>
         )}
-        <p className={`min-w-0 text-helper leading-snug ${corDoRotulo} truncate max-sm:whitespace-normal max-sm:line-clamp-2 c41-cortavel`}>
+        <p
+          className={`min-w-0 text-helper leading-snug ${corDoRotulo} ${
+            rotuloInteiro ? "whitespace-normal break-words" : "truncate max-sm:whitespace-normal max-sm:line-clamp-2 c41-cortavel"
+          }`}
+        >
           {label}
         </p>
       </div>
