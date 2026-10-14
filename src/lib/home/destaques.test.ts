@@ -118,7 +118,7 @@ describe("escolherDestaques — a ordem", () => {
     };
     const d = escolherDestaques(calmo, TODOS);
     expect(d.map((x) => x.metrica)).toEqual(["pagar_aberto", "tarefas_hoje", "processos_abertos"]);
-    expect(d[0]).toMatchObject({ titulo: "Em aberto", valor: 1_234_500, apoio: "30 contas a pagar", href: "/pagar", alerta: false });
+    expect(d[0]).toMatchObject({ titulo: "Em aberto", valor: 1_234_500, apoio: "30 contas a pagar", href: "/pagar?empresa=todas", alerta: false });
     expect(d[2].apoio).toBe("nenhum com prazo estourado");
   });
 
@@ -167,7 +167,7 @@ describe("escolherDestaques — o que cada painel oferece", () => {
       titulo: "A receber vencido",
       valor: 50_000,
       apoio: "1 conta vencida",
-      href: "/receber?recorte=vencidas",
+      href: "/receber?recorte=vencidas&empresa=todas",
     });
     const pagarEmDia = { ...TUDO_EM_ALERTA.contas, pagar: carteira({ hoje: { n: 1, centavos: 10 } }) };
     expect(escolherDestaques({ contas: pagarEmDia }, TODOS)[0].metrica).toBe("receber_vencido");

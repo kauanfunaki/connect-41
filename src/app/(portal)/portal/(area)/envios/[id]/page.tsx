@@ -10,6 +10,8 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Selo } from "@/components/ui/Selo";
 import { SignatureForm } from "@/components/documentosCliente/SignatureForm";
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal, telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { clientIp } from "@/lib/rateLimit";
 import { sanitizeDocumentHtml } from "@/lib/clientDocuments";
 import { abrirEnvioDoCliente } from "@/lib/envios/consultas";
@@ -29,16 +31,22 @@ export const dynamic = "force-dynamic";
 export default async function PortalEnvioPage({ params }: { params: Promise<{ id: string }> }) {
   const cliente = await clienteAtivoDoPortal();
   if (!cliente || !cliente.modulos.has("portal_solicitacoes")) notFound();
+  if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/envios")) return <TelaIndisponivel />;
 
   const { id } = await params;
   const h = await headers();
-  const envio = await abrirEnvioDoCliente(
-    { tenantId: cliente.tenantId, companyIds: cliente.companyIds },
-    cliente.usuario.email,
-    id,
-    { ipAddress: clientIp({ headers: h }), userAgent: h.get("user-agent") }
-  );
+  const [envio, bloqueadas] = await Promise.all([
+    abrirEnvioDoCliente(
+      { tenantId: cliente.tenantId, companyIds: cliente.companyIds },
+      cliente.usuario.email,
+      id,
+      { ipAddress: clientIp({ headers: h }), userAgent: h.get("user-agent") }
+    ),
+    telasBloqueadasDoPortal(cliente.tenantId),
+  ]);
   if (!envio) notFound();
+  // A "Nova solicitação" só com a tela liberada pelo escritório (14/10/2026).
+  const podePedir = !bloqueadas.has("/portal/solicitacoes");
 
   return (
     <PageContainer>
@@ -91,12 +99,14 @@ export default async function PortalEnvioPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <p className="text-fs-2 text-fg-muted">Dúvida sobre este documento?</p>
-        <Button href="/portal/solicitacoes/nova" variant="secondary" size="sm">
-          Nova solicitação
-        </Button>
-      </div>
+      {podePedir && (
+        <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <p className="text-fs-2 text-fg-muted">Dúvida sobre este documento?</p>
+          <Button href="/portal/solicitacoes/nova" variant="secondary" size="sm">
+            Nova solicitação
+          </Button>
+        </div>
+      )}
     </PageContainer>
   );
 }

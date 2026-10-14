@@ -399,6 +399,8 @@ function Atalho({ href, icone, titulo, descricao }: { href: string; icone: React
 /**
  * Pedir algo, os documentos fiscais e a ajuda. A contagem dos documentos chega
  * por `documentos`, já dentro de um <Suspense>: o atalho aparece na hora.
+ * `documentos` nulo: a tela está bloqueada pelo escritório (14/10/2026), e o
+ * atalho não aparece.
  */
 export function AtalhosDoInicio({
   pedir,
@@ -406,13 +408,14 @@ export function AtalhosDoInicio({
   empresaId,
 }: {
   pedir: BlocosDoInicio["pedir"];
-  documentos: React.ReactNode;
+  documentos: React.ReactNode | null;
   empresaId: string | null;
 }) {
+  const colunas = 1 + (pedir ? 1 : 0) + (documentos !== null ? 1 : 0);
   return (
     <section aria-labelledby="inicio-atalhos" className="mb-4">
       <TituloDeSecao id="inicio-atalhos">Atalhos</TituloDeSecao>
-      <ul className={`grid grid-cols-1 gap-3 ${pedir ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+      <ul className={`grid grid-cols-1 gap-3 ${colunas === 3 ? "md:grid-cols-3" : colunas === 2 ? "md:grid-cols-2" : ""}`}>
         {pedir && (
           <Atalho
             href={pedir.href}
@@ -421,7 +424,9 @@ export function AtalhosDoInicio({
             descricao="Documento, alteração ou dúvida: a equipe responde por aqui."
           />
         )}
-        <Atalho href={comEmpresa("/portal/documentos", empresaId)} icone={<FileText />} titulo="Ver documentos fiscais" descricao={documentos} />
+        {documentos !== null && (
+          <Atalho href={comEmpresa("/portal/documentos", empresaId)} icone={<FileText />} titulo="Ver documentos fiscais" descricao={documentos} />
+        )}
         <Atalho href="/portal/ajuda" icone={<CircleHelp />} titulo="Ajuda" descricao="Como fazer cada coisa no portal, passo a passo." />
       </ul>
     </section>

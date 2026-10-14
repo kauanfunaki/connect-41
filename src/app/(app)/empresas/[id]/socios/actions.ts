@@ -13,7 +13,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { lerDocumentoFiscal } from "@/lib/companyTaxId";
@@ -195,7 +195,8 @@ export async function atualizarSocio(_prev: SocioState, form: FormData): Promise
 
 export async function excluirSocio(id: string, companyId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  // Excluir: só o administrador (13/10/2026). Antes, também o gestor de setor (canWrite).
+  if (!ctx.tenantId || !podeExcluir(ctx) || !canWrite(ctx.role)) return;
   if (!(await empresaNoEscopo(companyId, ctx))) return;
 
   const prisma = getPrisma();

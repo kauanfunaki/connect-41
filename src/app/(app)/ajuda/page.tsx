@@ -8,6 +8,9 @@ import { getSectorMaps } from "@/lib/sectors";
 import { TELAS_GERAIS } from "@/lib/ia/ferramentas-ajuda";
 import { artigoDaChave, artigoDoCaminho } from "@/lib/ajuda/artigos";
 import { videoDoArtigo } from "@/lib/ajuda/videos";
+import { montarTutorialDaEquipe } from "@/lib/tutorial/servidor";
+import { BotaoVerTutorial } from "@/components/tutorial/TutorialDoPrimeiroAcesso";
+import { concluirTutorialDaEquipe } from "@/app/(app)/tutorial-actions";
 
 /**
  * O endereço do passo a passo da tela, se ela tem artigo, e o vídeo do artigo,
@@ -32,7 +35,12 @@ function ajudaDaTela(codigo: string | undefined, caminho: string): Pick<TelaDaAj
  */
 export default async function AjudaPage() {
   const ctx = await getAuthContext();
-  const [estados, { labels, colors }] = await Promise.all([getTenantModuleStates(ctx.tenantId), getSectorMaps(ctx.tenantId)]);
+  // O tutorial do primeiro acesso, para rever (13/10/2026): os mesmos passos que a pessoa viu.
+  const [estados, { labels, colors }, tutorial] = await Promise.all([
+    getTenantModuleStates(ctx.tenantId),
+    getSectorMaps(ctx.tenantId),
+    montarTutorialDaEquipe(ctx),
+  ]);
 
   const visiveis = estados.filter((m) => m.enabled && canViewSector(ctx, m.sectorCode));
   const porSetor = new Map<string, TelaDaAjuda[]>();
@@ -77,7 +85,11 @@ export default async function AjudaPage() {
 
   return (
     <PageContainer>
-      <PageHeader title="Ajuda" subtitle="Primeiros passos e o que cada tela do Connect faz." />
+      <PageHeader
+        title="Ajuda"
+        subtitle="Primeiros passos e o que cada tela do Connect faz."
+        action={<BotaoVerTutorial tutorial={tutorial} concluir={concluirTutorialDaEquipe} />}
+      />
       <CentralDeAjuda gerais={gerais} setores={setores} />
     </PageContainer>
   );

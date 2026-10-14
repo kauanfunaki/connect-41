@@ -28,7 +28,7 @@ import { linksDoSite } from "@/lib/site/links";
 export const metadata: Metadata = {
   title: "Connect · a plataforma do escritório de contabilidade",
   description:
-    "O Connect é a plataforma em que o escritório de contabilidade organiza o trabalho da equipe e atende os clientes pelo Portal do Cliente — com a Lígia, a inteligência artificial do Connect, em cada setor.",
+    "O Connect é a plataforma em que o escritório de contabilidade organiza o trabalho da equipe e atende os clientes pelo Portal do Cliente — com a Ceci, a inteligência artificial do Connect, em cada setor.",
 };
 
 export default async function RootPage() {

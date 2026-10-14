@@ -7,7 +7,7 @@ import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { pick, pickDate } from "@/lib/forms";
-import { isPrismaUniqueError, isPrismaForeignKeyError } from "@/lib/prismaErrors";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { validatePersonForm } from "@/lib/validation/person";
 import type { ActionState } from "@/lib/actionState";
 
@@ -103,34 +103,10 @@ export async function atualizarCandidato(
   redirect(`/candidatos/${id}`);
 }
 
-export async function excluirCandidato(id: string): Promise<CandidatoState> {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId || !(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir"))) return { error: "Sem permissão." };
-
-  const prisma = getPrisma();
-
-  const existing = await prisma.person.findFirst({
-    where: { id, tenantId: ctx.tenantId, type: PersonType.CANDIDATO },
-    select: { id: true },
-  });
-  if (!existing) return { error: "Candidato não encontrado." };
-
-  try {
-    await prisma.person.delete({ where: { id } });
-  } catch (err) {
-    if (isPrismaForeignKeyError(err)) {
-      return {
-        error:
-          "Este candidato tem candidaturas vinculadas e não pode ser excluído. Use “Inativar” para arquivá-lo.",
-      };
-    }
-    console.error("[excluirCandidato]", err);
-    return { error: "Erro ao excluir candidato." };
-  }
-
-  revalidatePath("/candidatos");
-  redirect("/candidatos");
-}
+// A exclusão do candidato saiu daqui em 13/10/2026: é o diálogo
+// ExcluirCadastro (src/components/exclusao), o mesmo da ficha de pessoa — com a
+// prévia das candidaturas e do resto que está ligado. Só administrador exclui;
+// antes, quem geria o Recrutamento também podia.
 
 // Banco de talentos: tag/skill do candidato, preservada mesmo se ele for
 // reprovado/desistir de uma vaga específica — é o que o torna pesquisável pra

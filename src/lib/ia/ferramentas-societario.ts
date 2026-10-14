@@ -25,6 +25,7 @@ import {
   totalDeVoltas,
   voltasPorOrgao,
 } from "@/lib/societario/processo";
+import { linkDaTela, situacaoLegivel } from "@/lib/ia/legivel";
 
 const SEM_PARAMETROS = { type: "object", properties: {}, additionalProperties: false } as const;
 
@@ -58,6 +59,14 @@ export function recorteDoProcesso(
   return { id: processoPedido(argumentos), tenantId: ctx.tenantId };
 }
 
+/** O prazo do processo em palavras ("dentro do prazo", "estourado") — o código vinha cru. */
+const SITUACAO_DO_PRAZO: Readonly<Record<string, string>> = {
+  sem_previsao: "sem previsão",
+  dentro: "dentro do prazo",
+  no_limite: "no limite do prazo",
+  estourado: "prazo estourado",
+};
+
 export const FERRAMENTAS_DE_SOCIETARIO: Record<string, FerramentaRegistrada> = {
   listar_fila: {
     def: {
@@ -78,9 +87,11 @@ export const FERRAMENTAS_DE_SOCIETARIO: Record<string, FerramentaRegistrada> = {
         processoId: l.id,
         tipo: l.tipoNome,
         empresa: l.empresaNome,
+        // A tela do processo, para a Ceci apontar pelo nome — nunca pelo id.
+        link: linkDaTela(`${l.tipoNome} — ${l.empresaNome}`, `/processos/${l.id}`),
         responsavel: l.responsavelNome,
-        situacao: l.situacao,
-        prazo: l.prazo,
+        situacao: situacaoLegivel(l.situacao),
+        prazo: { ...l.prazo, situacao: situacaoLegivel(l.prazo.situacao, SITUACAO_DO_PRAZO) },
         voltas: l.voltas,
         etapasLiberadasAgora: l.etapasAgora,
         iniciadoEm: l.iniciadoEm.toISOString().slice(0, 10),
@@ -170,8 +181,8 @@ export const FERRAMENTAS_DE_SOCIETARIO: Record<string, FerramentaRegistrada> = {
       return {
         empresa: p.company.tradeName || p.company.name,
         tipo: p.type.name,
-        status: p.status,
-        situacao: situacaoDoProcesso(protocolos, p.status === "CONCLUIDO", p.status),
+        status: situacaoLegivel(p.status),
+        situacao: situacaoLegivel(situacaoDoProcesso(protocolos, p.status === "CONCLUIDO", p.status)),
         iniciadoEm: p.startedAt.toISOString().slice(0, 10),
         totalDeVoltas: totalDeVoltas(protocolos),
         voltasPorOrgao: [...voltas.entries()].map(([organId, n]) => ({
@@ -182,8 +193,8 @@ export const FERRAMENTAS_DE_SOCIETARIO: Record<string, FerramentaRegistrada> = {
           stepId: s.id,
           etapa: s.templateStep.label,
           posicao: s.templateStep.position,
-          status: s.status,
-          quemFaz: s.actor,
+          status: situacaoLegivel(s.status),
+          quemFaz: situacaoLegivel(s.actor),
           orgao: s.templateStep.organ?.name ?? null,
           opcional: s.templateStep.optional,
           liberadaAgora: liberadas.has(s.templateStepId),
@@ -200,7 +211,7 @@ export const FERRAMENTAS_DE_SOCIETARIO: Record<string, FerramentaRegistrada> = {
           numero: x.number,
           tentativa: x.attempt,
           orgao: x.organ.acronym || x.organ.name,
-          desfecho: x.outcome,
+          desfecho: situacaoLegivel(x.outcome),
           exigencias: x.requirements.map((r) => ({
             descricao: r.description,
             resolvida: r.resolvedAt !== null,

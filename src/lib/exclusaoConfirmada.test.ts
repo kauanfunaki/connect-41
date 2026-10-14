@@ -1,22 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { CONTAGEM_DO_ACESSO, confirmacaoConfere, podeExcluirDeVerdade, resumirHistoricoDoAcesso, type ContagemDoAcesso } from "./exclusaoConfirmada";
+import { CONTAGEM_DO_ACESSO, confirmacaoConfere, resumirHistoricoDoAcesso, type ContagemDoAcesso } from "./exclusaoConfirmada";
 
 const zerada = Object.fromEntries(Object.keys(CONTAGEM_DO_ACESSO).map((k) => [k, 0])) as ContagemDoAcesso;
-
-describe("podeExcluirDeVerdade", () => {
-  // Decisão do Kauan, 13/10/2026: só administrador exclui, em qualquer modo.
-  it("só ADMIN e SUPER_ADMIN", () => {
-    expect(podeExcluirDeVerdade({ role: "SUPER_ADMIN" })).toBe(true);
-    expect(podeExcluirDeVerdade({ role: "ADMIN" })).toBe(true);
-    expect(podeExcluirDeVerdade({ role: "SECTOR_ADMIN" })).toBe(false);
-    expect(podeExcluirDeVerdade({ role: "SECTOR_USER" })).toBe(false);
-    expect(podeExcluirDeVerdade({ role: "READONLY" })).toBe(false);
-  });
-
-  it("assinatura em modo leitura barra até o administrador", () => {
-    expect(podeExcluirDeVerdade({ role: "ADMIN", subscriptionReadOnly: true })).toBe(false);
-  });
-});
 
 describe("confirmacaoConfere", () => {
   it("aceita o nome sem diferença de maiúscula nem espaço sobrando", () => {

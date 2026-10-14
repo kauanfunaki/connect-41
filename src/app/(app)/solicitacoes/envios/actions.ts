@@ -9,7 +9,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { logAudit } from "@/lib/audit";
 import { guardarTambemNosArquivos } from "@/lib/drive/guardarTambem";
@@ -165,9 +165,15 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
   redirect(rotaDoEnvio(id));
 }
 
+/**
+ * Descartar o rascunho de um envio. Fica fora da regra "excluir só o
+ * administrador" (13/10/2026): é rascunho que ninguém recebeu — envio com
+ * destinatário nunca se exclui. Mas deixou de ser de qualquer gestor: só quem
+ * escreveu o rascunho, ou o administrador.
+ */
 export async function excluirDocumento(id: string, companyId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || ctx.subscriptionReadOnly || !canWrite(ctx.role)) return;
   if (!(await assertCompanyInScope(companyId, ctx))) return;
 
   const prisma = getPrisma();
@@ -176,6 +182,7 @@ export async function excluirDocumento(id: string, companyId: string): Promise<v
     include: { recipients: { select: { id: true } } },
   });
   if (!existing || existing.recipients.length > 0) return; // nunca excluir documento já enviado
+  if (existing.createdById !== ctx.userId && !podeExcluir(ctx)) return;
 
   await prisma.clientDocument.delete({ where: { id } });
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.delete", entityType: "ClientDocument", entityId: id });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 
 const ALLOWED_TYPES: Record<string, string> = {
@@ -14,7 +14,9 @@ const MAX_SIZE = 2 * 1024 * 1024;
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
-  if (!canWrite(ctx.role)) {
+  // Assinatura em somente leitura barra a troca da foto, como barra as outras
+  // escritas (achado na revisão das exclusões, 13/10/2026).
+  if (!ctx.tenantId || ctx.subscriptionReadOnly || !canWrite(ctx.role)) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
 
@@ -54,9 +56,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
-  if (!canWrite(ctx.role)) {
-    return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
-  }
+  // Remover a foto: só o administrador (13/10/2026) — e `podeExcluir` já barra
+  // a assinatura em somente leitura. Trocar a foto segue com quem edita.
+  if (!ctx.tenantId) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
+  if (!podeExcluir(ctx)) return NextResponse.json({ error: SO_ADMIN_EXCLUI }, { status: 403 });
 
   const { id } = await params;
   const prisma = getPrisma();

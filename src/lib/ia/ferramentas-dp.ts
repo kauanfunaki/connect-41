@@ -21,6 +21,29 @@ import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferram
 import { statusPrazoPagamento } from "@/lib/rescisaoChecklist";
 import { nomeExibicao } from "@/lib/companyName";
 import { AFASTAMENTO_ENCERRADO } from "@/lib/situacoesDoDP";
+import {
+  SITUACAO_DAS_FERIAS,
+  SITUACAO_DO_AFASTAMENTO,
+  SITUACAO_DO_DESLIGAMENTO,
+  TIPO_DO_AFASTAMENTO,
+  TIPO_DO_DESLIGAMENTO,
+} from "@/components/pessoas/rotulosDoDP";
+import { chavesLegiveis, linkDaTela, situacaoLegivel } from "@/lib/ia/legivel";
+
+/** A situação do colaborador como a ficha escreve (`PersonHeader`). */
+const SITUACAO_DO_COLABORADOR: Readonly<Record<string, string>> = {
+  ADMISSAO_EM_ANDAMENTO: "admissão em andamento",
+  ATIVO: "ativo",
+  EM_FERIAS: "em férias",
+  AFASTADO: "afastado",
+  DESLIGADO: "desligado",
+};
+
+/** O prazo de pagamento da rescisão (art. 477 §6º) em palavras. */
+const PRAZO_DA_RESCISAO: Readonly<Record<string, string>> = { VENCIDO: "vencido", VENCE_HOJE: "vence hoje", NO_PRAZO: "no prazo" };
+
+/** A ficha do colaborador, para a Ceci apontar a pessoa pelo nome — e não pelo id. */
+const fichaDoColaborador = (pessoa: { id: string; name: string }) => linkDaTela(pessoa.name, `/pessoas/${pessoa.id}`);
 
 export const MODULOS_DO_DP = {
   dp_colaboradores: "/colaboradores",
@@ -103,20 +126,22 @@ export const FERRAMENTAS_DE_DP: Record<string, FerramentaRegistrada> = {
           where: { ...where, ...(args.incluirDesligados === true ? {} : { employmentStatus: { not: "DESLIGADO" } }) },
           orderBy: { name: "asc" },
           take: 200,
-          select: { name: true, employmentStatus: true, admissionDate: true, currentSalary: true, cargo: { select: { name: true } } },
+          select: { id: true, name: true, employmentStatus: true, admissionDate: true, currentSalary: true, cargo: { select: { name: true } } },
         }),
       ]);
       return {
         empresa: nomeExibicao(empresa),
-        porSituacao: Object.fromEntries(grupos.map((g) => [g.employmentStatus, g._count._all])),
+        porSituacao: chavesLegiveis(Object.fromEntries(grupos.map((g) => [g.employmentStatus, g._count._all])), SITUACAO_DO_COLABORADOR),
+        link: linkDaTela("Abrir os colaboradores", "/colaboradores"),
         mostrando: Math.min(pessoas.length, LINHAS),
         ...(salario ? {} : { aviso: "Salário omitido: seu perfil não tem acesso a esse dado." }),
         colaboradores: pessoas.slice(0, LINHAS).map((p) => ({
           nome: p.name,
           cargo: p.cargo?.name ?? null,
-          situacao: p.employmentStatus,
+          situacao: situacaoLegivel(p.employmentStatus, SITUACAO_DO_COLABORADOR),
           admissao: data(p.admissionDate),
           ...(salario ? { salario: p.currentSalary === null ? null : Number(p.currentSalary) } : {}),
+          link: fichaDoColaborador(p),
         })),
       };
     },
@@ -144,6 +169,7 @@ export const FERRAMENTAS_DE_DP: Record<string, FerramentaRegistrada> = {
         orderBy: { name: "asc" },
         take: 10,
         select: {
+          id: true,
           name: true,
           employmentStatus: true,
           admissionDate: true,
@@ -170,17 +196,27 @@ export const FERRAMENTAS_DE_DP: Record<string, FerramentaRegistrada> = {
         nome: p.name,
         empresa: p.currentCompany ? nomeExibicao(p.currentCompany) : null,
         cargo: p.cargo?.name ?? null,
-        situacao: p.employmentStatus,
+        situacao: situacaoLegivel(p.employmentStatus, SITUACAO_DO_COLABORADOR),
         admissao: data(p.admissionDate),
-        feriasEmAberto: p.vacations.map((v) => ({ status: v.status, inicio: data(v.startDate), retorno: data(v.returnDate), limiteParaTirar: data(v.concessivePeriodEnd) })),
+        link: fichaDoColaborador(p),
+        feriasEmAberto: p.vacations.map((v) => ({
+          status: situacaoLegivel(v.status, SITUACAO_DAS_FERIAS),
+          inicio: data(v.startDate),
+          retorno: data(v.returnDate),
+          limiteParaTirar: data(v.concessivePeriodEnd),
+        })),
         afastamentos: p.absences.map((a) => ({
-          tipo: a.type,
+          tipo: situacaoLegivel(a.type, TIPO_DO_AFASTAMENTO),
           inicio: data(a.startDate),
           retornoPrevisto: data(a.returnDate),
           ...(medico ? { motivo: a.reason } : {}),
         })),
         rescisaoEmAndamento: p.terminations[0]
-          ? { tipo: p.terminations[0].type, status: p.terminations[0].status, termino: data(p.terminations[0].terminationDate) }
+          ? {
+              tipo: situacaoLegivel(p.terminations[0].type, TIPO_DO_DESLIGAMENTO),
+              status: situacaoLegivel(p.terminations[0].status, SITUACAO_DO_DESLIGAMENTO),
+              termino: data(p.terminations[0].terminationDate),
+            }
           : null,
       }));
     },
@@ -224,20 +260,21 @@ export const FERRAMENTAS_DE_DP: Record<string, FerramentaRegistrada> = {
           startDate: true,
           returnDate: true,
           concessivePeriodEnd: true,
-          person: { select: { name: true, currentCompany: { select: { name: true, displayName: true } } } },
+          person: { select: { id: true, name: true, currentCompany: { select: { name: true, displayName: true } } } },
         },
       });
       return {
         empresa: empresa ? nomeExibicao(empresa) : "todas",
         quantidade: ferias.length,
-        link: "/ferias",
+        link: linkDaTela(args.recorte === "vencendo" ? "Abrir as férias perto de vencer" : "Abrir as férias", "/ferias"),
         ferias: ferias.slice(0, LINHAS).map((v) => {
           const limite = v.concessivePeriodEnd;
           const dias = limite ? Math.round((limite.getTime() - hoje.getTime()) / DIA) : null;
           return {
             colaborador: v.person.name,
             empresa: v.person.currentCompany ? nomeExibicao(v.person.currentCompany) : null,
-            status: v.status,
+            status: situacaoLegivel(v.status, SITUACAO_DAS_FERIAS),
+            link: fichaDoColaborador(v.person),
             dias: v.days,
             inicio: data(v.startDate),
             retorno: data(v.returnDate),
@@ -273,21 +310,24 @@ export const FERRAMENTAS_DE_DP: Record<string, FerramentaRegistrada> = {
           type: true,
           status: true,
           terminationDate: true,
-          person: { select: { name: true, currentCompany: { select: { name: true, displayName: true } } } },
+          person: { select: { id: true, name: true, currentCompany: { select: { name: true, displayName: true } } } },
         },
       });
       return {
         quantidade: linhas.length,
-        link: "/desligamentos",
+        link: linkDaTela("Abrir os desligamentos", "/desligamentos"),
         rescisoes: linhas.slice(0, LINHAS).map((t) => {
           const prazo = t.terminationDate ? statusPrazoPagamento(t.terminationDate, hoje) : null;
           return {
             colaborador: t.person.name,
             empresa: t.person.currentCompany ? nomeExibicao(t.person.currentCompany) : null,
-            tipo: t.type,
-            etapa: t.status,
+            tipo: situacaoLegivel(t.type, TIPO_DO_DESLIGAMENTO),
+            etapa: situacaoLegivel(t.status, SITUACAO_DO_DESLIGAMENTO),
             termino: data(t.terminationDate),
-            prazoDePagamento: prazo ? { ate: data(prazo.dueDate), situacao: prazo.status, diasRestantes: prazo.diasRestantes } : "sem data de término",
+            prazoDePagamento: prazo
+              ? { ate: data(prazo.dueDate), situacao: situacaoLegivel(prazo.status, PRAZO_DA_RESCISAO), diasRestantes: prazo.diasRestantes }
+              : "sem data de término",
+            link: fichaDoColaborador(t.person),
           };
         }),
       };
@@ -320,21 +360,22 @@ export const FERRAMENTAS_DE_DP: Record<string, FerramentaRegistrada> = {
           returnDate: true,
           lostDays: true,
           reason: true,
-          person: { select: { name: true, currentCompany: { select: { name: true, displayName: true } } } },
+          person: { select: { id: true, name: true, currentCompany: { select: { name: true, displayName: true } } } },
         },
       });
       return {
         quantidade: linhas.length,
-        link: "/afastamentos",
+        link: linkDaTela("Abrir os afastamentos", "/afastamentos"),
         ...(medico ? {} : { aviso: "Motivo omitido: seu perfil não tem acesso a dados médicos." }),
         afastamentos: linhas.slice(0, LINHAS).map((a) => ({
           colaborador: a.person.name,
           empresa: a.person.currentCompany ? nomeExibicao(a.person.currentCompany) : null,
-          tipo: a.type,
-          status: a.status,
+          tipo: situacaoLegivel(a.type, TIPO_DO_AFASTAMENTO),
+          status: situacaoLegivel(a.status, SITUACAO_DO_AFASTAMENTO),
           inicio: data(a.startDate),
           retornoPrevisto: data(a.returnDate),
           diasPerdidos: a.lostDays,
+          link: fichaDoColaborador(a.person),
           ...(medico ? { motivo: a.reason } : {}),
         })),
       };
@@ -361,16 +402,22 @@ export const FERRAMENTAS_DE_DP: Record<string, FerramentaRegistrada> = {
         take: 500,
         select: { overtimeHours: true, status: true, date: true, personId: true, person: { select: { name: true } } },
       });
-      const porPessoa = new Map<string, { colaborador: string; horas: number; lancamentos: number; maisAntigo: string | null }>();
+      const porPessoa = new Map<string, { colaborador: string; horas: number; lancamentos: number; maisAntigo: string | null; link: string }>();
       for (const l of linhas) {
-        const p = porPessoa.get(l.personId) ?? { colaborador: l.person.name, horas: 0, lancamentos: 0, maisAntigo: data(l.date) };
+        const p = porPessoa.get(l.personId) ?? {
+          colaborador: l.person.name,
+          horas: 0,
+          lancamentos: 0,
+          maisAntigo: data(l.date),
+          link: fichaDoColaborador({ id: l.personId, name: l.person.name }),
+        };
         p.horas += Number(l.overtimeHours ?? 0);
         p.lancamentos++;
         porPessoa.set(l.personId, p);
       }
       return {
         lancamentos: linhas.length,
-        link: "/horas-extras",
+        link: linkDaTela("Abrir as horas extras", "/horas-extras"),
         porColaborador: [...porPessoa.values()]
           .map((p) => ({ ...p, horas: Math.round(p.horas * 100) / 100 }))
           .sort((a, b) => b.horas - a.horas)

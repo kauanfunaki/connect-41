@@ -7,6 +7,8 @@ import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
 import { SelosDoEnvioNoPortal } from "@/components/documentosCliente/SeloDoEnvio";
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { enviosDoCliente } from "@/lib/envios/consultas";
 import { rotaDoEnvioNoPortal } from "@/lib/envios/regras";
 import { formatInstantDate } from "@/lib/format";
@@ -21,6 +23,7 @@ export const dynamic = "force-dynamic";
 export default async function PortalEnviosPage() {
   const cliente = await clienteAtivoDoPortal();
   if (!cliente || !cliente.modulos.has("portal_solicitacoes")) notFound();
+  if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/envios")) return <TelaIndisponivel />;
 
   const lista = await enviosDoCliente({ tenantId: cliente.tenantId, companyIds: cliente.companyIds }, cliente.usuario.email);
   // O nome da empresa só ajuda a quem tem mais de uma no acesso.

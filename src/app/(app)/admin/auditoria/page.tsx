@@ -28,6 +28,9 @@ const ACTION_LABEL: Record<string, string> = {
   "handoff.assign": "atribuiu responsável de transferência",
   "sector.create": "criou o setor",
   "sector.update": "editou o setor",
+  "sector.menu.show": "mostrou uma tela no menu Geral do setor",
+  "sector.menu.hide": "escondeu uma tela do menu Geral do setor",
+  "sector.menu.reset": "voltou o menu Geral do setor ao padrão",
   "tag.create": "criou a tag",
   "tag.update": "editou a tag",
   "tag.delete": "excluiu a tag",
@@ -44,10 +47,13 @@ const ACTION_LABEL: Record<string, string> = {
   "holiday.import": "importou feriados nacionais",
   "module.enable": "ativou o módulo",
   "module.disable": "desativou o módulo",
+  "portal.tela.bloqueada": "bloqueou uma tela do portal",
+  "portal.tela.liberada": "liberou uma tela do portal",
   "user.create": "criou o usuário",
   "user.update": "editou o usuário",
   "user.activate": "ativou o usuário",
   "user.deactivate": "desativou o usuário",
+  "user.delete": "excluiu o usuário",
   "tenant.update": "editou os dados do tenant",
   "tenant.ai.update": "configurou a integração de IA",
   "tenant.ai.remove": "removeu a configuração de IA",
@@ -68,7 +74,11 @@ const PER_PAGE = 50;
 
 function describeMetadata(metadata: unknown): string | null {
   if (!metadata || typeof metadata !== "object") return null;
-  const entries = Object.entries(metadata as Record<string, unknown>).filter(([, v]) => v !== null && v !== undefined && v !== "");
+  // Objeto e lista (as contagens por tabela da exclusão, 13/10/2026) ficam de
+  // fora da linha — o resumo legível vai em `removido`.
+  const entries = Object.entries(metadata as Record<string, unknown>).filter(
+    ([, v]) => v !== null && v !== undefined && v !== "" && typeof v !== "object"
+  );
   if (entries.length === 0) return null;
   return entries.map(([k, v]) => `${k}: ${v}`).join(" · ");
 }
@@ -144,8 +154,10 @@ export default async function AuditoriaPage({
   const porNome = (a: { rotulo: string }, b: { rotulo: string }) =>
     a.rotulo.localeCompare(b.rotulo, "pt-BR", { sensitivity: "base" });
   const nomeDoUsuario = new Map(users.map((u) => [u.id, u.name]));
+  // Ação de usuário já excluído (userId nulo desde 13/10/2026) aparece na
+  // trilha com o nome guardado, mas não entra no funil: não há por quem filtrar.
   const opcoesDeUsuario = porUsuario
-    .map((g) => ({ valor: g.userId, rotulo: nomeDoUsuario.get(g.userId) ?? g.userId, n: g._count._all }))
+    .flatMap((g) => (g.userId ? [{ valor: g.userId, rotulo: nomeDoUsuario.get(g.userId) ?? g.userId, n: g._count._all }] : []))
     .sort(porNome);
   const opcoesDeAcao = porAcao
     .map((g) => ({ valor: g.action, rotulo: ACTION_LABEL[g.action] ?? g.action, n: g._count._all }))
@@ -258,7 +270,10 @@ export default async function AuditoriaPage({
                           minute: "2-digit",
                         })}
                       </td>
-                      <td className="px-4 py-3 font-medium text-fg">{log.user.name}</td>
+                      <td className="px-4 py-3 font-medium text-fg">
+                        {log.user?.name ?? log.actorName ?? "—"}
+                        {!log.user && <span className="ml-1 text-fs-1 font-normal text-fg-muted">(excluído)</span>}
+                      </td>
                       <td className="px-4 py-3 text-fg-secondary">{ACTION_LABEL[log.action] ?? log.action}</td>
                       <td className="px-4 py-3">
                         {log.entityType ? <Badge variant="info">{log.entityType}</Badge> : <span className="text-fg-muted">—</span>}

@@ -208,7 +208,16 @@ export async function lancarDocumento(
   }
 }
 
-/** Desfaz o lançamento e devolve o documento para pendente. */
+/**
+ * Desfaz o lançamento e devolve o documento para pendente.
+ *
+ * Fica com a coordenação do fiscal, fora da regra "excluir só o administrador"
+ * (13/10/2026), como o desfazer da conciliação e o da baixa: apaga o título que
+ * o próprio lançamento criou, só enquanto ele não foi pago nem renegociado, o
+ * documento continua no acervo e o AuditLog guarda o estorno. E é o único
+ * conserto de um lançamento errado — o título não tem edição de categoria nem
+ * de vencimento.
+ */
 export async function estornarLancamento(documentoId: string): Promise<{ error: string } | { ok: true }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão." };

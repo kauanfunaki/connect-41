@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite, podeExcluir } from "@/lib/auth/context";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getSectorMaps } from "@/lib/sectors";
 import { UsuariosTable } from "@/components/admin/UsuariosTable";
@@ -69,6 +69,7 @@ export default async function UsuariosPage() {
           })),
         }))}
         currentUserId={ctx.userId}
+        podeExcluir={podeExcluir(ctx)}
         sectorOptions={sectorOptions}
         alternarAtivoUsuario={alternarAtivoUsuario}
         alternarAtivoEmMassa={alternarAtivoEmMassa}

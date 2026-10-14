@@ -1,7 +1,7 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { getMeetingIntegrationHealth } from "@/lib/integrations/health";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -125,6 +125,7 @@ export default async function AgendaPage({
     company: m.company ? { id: m.company.id, name: m.company.name, externalId: m.company.externalId } : null,
     clientName: m.clientName,
     createdByUserId: m.createdByUserId,
+    avulsa: m.pipelineItemId === null && m.candidaturaId === null,
   }));
 
   const calendarDays = days.map((key) => ({ dateKey: key, isToday: key === todayKey }));
@@ -176,7 +177,7 @@ export default async function AgendaPage({
         meetings={meetings}
         createAction={criarReuniaoAvulsa}
         editAction={editarReuniaoAvulsa}
-        deleteAction={excluirReuniaoAvulsa}
+        deleteAction={podeExcluir(ctx) ? excluirReuniaoAvulsa : undefined}
         hasGoogle={hasGoogle}
         hasMicrosoft={hasMicrosoft}
         allUsers={allUsers}

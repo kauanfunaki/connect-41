@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
@@ -84,7 +84,7 @@ export default async function CompetenciaPage({
       <PageHeader
         title={<>{MONTH_LABEL[competencia.month - 1]}/{competencia.year} — {company.name}</>}
         subtitle={<>{competencia.entries.length} lançamento{competencia.entries.length !== 1 ? "s" : ""}</>}
-        action={<>{canManage && <DeleteButton action={deleteAction} nome={`competência ${MONTH_LABEL[competencia.month - 1]}/${competencia.year}`} />}</>}
+        action={<>{canManage && podeExcluir(ctx) && <DeleteButton action={deleteAction} nome={`competência ${MONTH_LABEL[competencia.month - 1]}/${competencia.year}`} />}</>}
       />
       {canManage && (
         <div className="mb-4">
@@ -129,7 +129,7 @@ export default async function CompetenciaPage({
                   status: e.status,
                 }}
                 updateAction={atualizarStatusLancamento.bind(null, companyId, competencyId, e.id)}
-                removeAction={excluirLancamento.bind(null, companyId, competencyId, e.id)}
+                removeAction={podeExcluir(ctx) ? excluirLancamento.bind(null, companyId, competencyId, e.id) : undefined}
                 canManage={canManage}
               />
             ))}

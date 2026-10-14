@@ -27,6 +27,16 @@ describe("resolveSectorHint", () => {
     expect(resolveSectorHint("www.useconnect.com.br", null, DOMINIO, "")).toBeNull();
   });
 
+  // O endereço do 41 Carreiras (14/10/2026) tem cara de setor, e não é: nem
+  // sem as variáveis do portal ele vira a dica de um setor "carreiras" — o
+  // cookie do último setor usado continua valendo, como no app.
+  it("carreiras. não é setor, com ou sem sufixo, e não apaga o cookie", () => {
+    expect(resolveSectorHint("carreiras.useconnect.com.br", null, DOMINIO, "")).toBeNull();
+    expect(resolveSectorHint("CARREIRAS.useconnect.com.br:443", null, DOMINIO, "")).toBeNull();
+    expect(resolveSectorHint("carreirasteste.useconnect.com.br", null, DOMINIO, "teste")).toBeNull();
+    expect(resolveSectorHint("carreiras.useconnect.com.br", "bpo", DOMINIO, "")).toBe("bpo");
+  });
+
   // O domínio-base tem três rótulos e nenhum subdomínio — contar pontos não
   // funcionaria, e foi por isso que virou configuração.
   it("não inventa setor no próprio domínio-base", () => {
@@ -246,5 +256,6 @@ describe("ehHostReservado", () => {
     expect(ehHostReservado("app")).toBe(true);
     expect(ehHostReservado("Portal")).toBe(true);
     expect(ehHostReservado("bpo")).toBe(false);
+    expect(ehHostReservado(" Carreiras ")).toBe(true);
   });
 });

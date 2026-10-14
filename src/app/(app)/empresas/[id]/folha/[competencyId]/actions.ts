@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PayrollStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { digitsOnly } from "@/lib/validation/common";
@@ -247,7 +247,8 @@ export async function atualizarStatusLancamento(
 
 export async function excluirLancamento(companyId: string, competencyId: string, entryId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  // Excluir: só o administrador (13/10/2026). Antes, também o gestor de setor (canWrite).
+  if (!ctx.tenantId || !podeExcluir(ctx) || !canWrite(ctx.role)) return;
   if (!(await assertCompetencyInScope(companyId, competencyId, ctx))) return;
 
   const prisma = getPrisma();

@@ -6,7 +6,7 @@
 // com que texto.
 //
 // O critério do que aparece é o do menu (`telasVisiveis`): o Início só fala de
-// uma tela que o cliente tem.
+// uma tela que o cliente tem — e, desde 14/10/2026, que o escritório já liberou.
 
 import { addDaysToKey } from "@/lib/agenda";
 
@@ -202,6 +202,8 @@ export type BlocosDoInicio = {
   societario: boolean;
   /** O caminho para pedir algo à equipe — solicitação nova ou, sem ela, a conversa. */
   pedir: { href: string; rotulo: string } | null;
+  /** O atalho dos documentos fiscais — some quando o escritório bloqueia a tela (14/10/2026). */
+  documentos: boolean;
 };
 
 /** Os atalhos do financeiro, na ordem do menu. */
@@ -249,6 +251,7 @@ export function blocosDoInicio(telas: ReadonlySet<string>): BlocosDoInicio {
       : telas.has("/portal/comunicacao")
         ? { href: "/portal/comunicacao", rotulo: "Mandar mensagem à equipe" }
         : null,
+    documentos: telas.has("/portal/documentos"),
   };
 }
 

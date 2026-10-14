@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { ListChecks } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite, podeExcluir } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -95,11 +95,11 @@ export default async function CamposPage() {
                       {/* Editar é botão e Excluir vai no "⋯" (polimento de 30/09). */}
                       <AcoesDoItem
                         editar={`/admin/campos/${f.id}/editar`}
-                        excluir={{
+                        excluir={podeExcluir(ctx) ? {
                           action: excluirCampo.bind(null, f.id),
                           titulo: `Excluir o campo "${f.label}"?`,
                           descricao: "Todos os valores preenchidos nele serão perdidos.",
-                        }}
+                        } : undefined}
                       />
                     </div>
                   ))}

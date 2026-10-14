@@ -7,11 +7,17 @@ import { getPrisma } from "@/lib/prisma";
 import { formatCalendarDate } from "@/lib/format";
 import { ApplyForm } from "@/components/carreiras/ApplyForm";
 import { SimpleMarkdown } from "@/components/shared/SimpleMarkdown";
-import { buildJobPostingJsonLd, buildJobSummary, publicUrl } from "@/lib/jobPostingSchema";
+import { buildJobPostingJsonLd, buildJobSummary } from "@/lib/jobPostingSchema";
 import { emitirCarimbo } from "@/lib/carreiras/antiRobo";
 import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
+import { MolduraDoPortal } from "@/components/carreiras/MolduraDe41Carreiras";
 import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
-import { beneficiosDaVaga, localDaVaga, whereDoPrazo } from "@/lib/carreiras/portal";
+import { beneficiosDaVaga, localDaVaga, whereDasVagasDoPortal } from "@/lib/carreiras/portal";
+import { MARCA_41_CARREIRAS, enderecoPublicoDoPortal, imagemDeCompartilhamento, nomeDoEscritorio } from "@/lib/carreiras/enderecoDeCarreiras";
+import { portalDaRequisicao } from "@/lib/carreiras/portalDaRequisicao";
+import { metadadosDo41 } from "@/lib/carreiras/metadados41";
+import { vagaDoPortal } from "@/lib/carreiras/vagasDoPortal";
+import { PaginaDaVaga41 } from "@/components/carreiras/41/PaginaDaVaga41";
 
 // Dinâmica de propósito: o formulário leva um carimbo de tempo assinado na hora
 // em que a página é montada (`src/lib/carreiras/antiRobo.ts`). Página em cache
@@ -21,15 +27,19 @@ export const dynamic = "force-dynamic";
 // A vaga carregada é a mesma pro metadata e pro corpo — o Next dedupe as duas
 // chamadas dentro do mesmo request, então não vira query dobrada.
 async function loadVaga(slug: string, vagaId: string) {
+  // No endereço do 41 Carreiras só existe o escritório da 41.
+  const portal = await portalDaRequisicao(slug);
+  if (!portal) return null;
+
   const prisma = getPrisma();
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
-    select: { id: true, name: true, active: true },
+    select: { id: true, name: true, logoUrl: true, active: true },
   });
   if (!tenant || !tenant.active) return null;
 
   const vaga = await prisma.vaga.findFirst({
-    where: { id: vagaId, tenantId: tenant.id, isPublic: true, status: "ABERTA", ...whereDoPrazo(new Date()) },
+    where: { id: vagaId, ...whereDasVagasDoPortal(tenant.id, new Date()) },
     select: {
       id: true,
       title: true,
@@ -51,7 +61,7 @@ async function loadVaga(slug: string, vagaId: string) {
   });
   if (!vaga) return null;
 
-  return { tenant, vaga };
+  return { portal, tenant, vaga };
 }
 
 // Antes era `{ title: "Vaga" }` fixo: toda vaga compartilhada no WhatsApp/
@@ -66,13 +76,26 @@ export async function generateMetadata({
   const data = await loadVaga(slug, vagaId);
   if (!data) return { title: "Vaga não encontrada" };
 
-  const { tenant, vaga } = data;
+  const { portal, tenant, vaga } = data;
   const companyLabel = vaga.company.tradeName || vaga.company.name;
   const onde = localDaVaga(vaga);
   const local = [onde.cidade, onde.uf].filter(Boolean).join(" – ") || null;
   const title = `${vaga.title} — ${companyLabel}`;
   const description = buildJobSummary(vaga.title, companyLabel, local, vaga.publicDescription);
-  const url = publicUrl(`/carreiras/${slug}/${vaga.id}`);
+  // Da 41, no endereço principal do 41 Carreiras; dos outros, o de sempre.
+  const url = enderecoPublicoDoPortal(slug, { tipo: "vaga", id: vaga.id });
+
+  // Da 41, com a imagem de compartilhamento da vaga (título, empresa, cidade,
+  // modelo) — a prévia do link no LinkedIn, no WhatsApp e no Pandapé.
+  if (portal.da41) {
+    return metadadosDo41({
+      titulo: `${title} · ${MARCA_41_CARREIRAS.nome}`,
+      descricao: description,
+      url,
+      imagem: imagemDeCompartilhamento(slug, vaga.id),
+      imagemAlt: `${vaga.title} — ${companyLabel}${local ? `, ${local}` : ""}`,
+    });
+  }
 
   return {
     title,
@@ -98,7 +121,8 @@ export default async function VagaPublicaPage({
   const { slug, vagaId } = await params;
   const data = await loadVaga(slug, vagaId);
   if (!data) notFound();
-  const { tenant, vaga } = data;
+  const { portal, tenant, vaga } = data;
+  const { rotas } = portal;
 
   const companyLabel = vaga.company.tradeName || vaga.company.name;
   const onde = localDaVaga(vaga);
@@ -119,14 +143,33 @@ export default async function VagaPublicaPage({
     contractType: vaga.contractType,
     remoto: vaga.workMode === "REMOTO",
     salario: vaga.showSalary ? { min: salaryMin, max: salaryMax } : null,
+    url: enderecoPublicoDoPortal(slug, { tipo: "vaga", id: vaga.id }),
   });
 
+  // Da 41, a página do 41 Carreiras (15/10/2026): mesma vaga, mesmo JSON-LD,
+  // mesma candidatura (rota, campos e anti-robô), com a cara nova.
+  if (portal.da41) {
+    const detalhe = await vagaDoPortal(tenant.id, vaga.id);
+    if (!detalhe) notFound();
+    return (
+      <PaginaDaVaga41
+        vaga={detalhe}
+        slug={slug}
+        rotas={rotas}
+        agora={new Date()}
+        carimbo={emitirCarimbo(new Date())}
+        urlPublica={enderecoPublicoDoPortal(slug, { tipo: "vaga", id: vaga.id })}
+        jsonLd={jsonLd}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen py-10 px-4">
+    <MolduraDoPortal>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       <div className="max-w-2xl mx-auto">
         {/* Botão sem caixa, com a seta (30/09): era texto cinza com "←". */}
-        <Button href={`/carreiras/${slug}`} variant="ghost" size="sm" className="-ml-3">
+        <Button href={rotas.lista} variant="ghost" size="sm" className="-ml-3">
           <ArrowLeft size={14} /> Todas as vagas
         </Button>
 
@@ -185,13 +228,13 @@ export default async function VagaPublicaPage({
 
         <Card className="p-5">
           <h2 className="text-body font-semibold text-fg mb-4">Candidatar-se</h2>
-          <ApplyForm slug={slug} vagaId={vaga.id} carimbo={emitirCarimbo(new Date())} />
+          <ApplyForm slug={slug} vagaId={vaga.id} carimbo={emitirCarimbo(new Date())} contaHref={rotas.conta} />
         </Card>
 
         <p className="text-micro text-fg-muted mt-6 text-center">
-          Processo seletivo conduzido por {tenant.name}.
+          Processo seletivo conduzido por {nomeDoEscritorio(portal, tenant.name)}.
         </p>
       </div>
-    </div>
+    </MolduraDoPortal>
   );
 }

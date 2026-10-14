@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { clientIp } from "@/lib/rateLimit";
 import { lerArquivoDoDocumento, recordClientDocumentView, respostaDoArquivoDoDocumento } from "@/lib/clientDocuments";
 import { envioDoCliente, linhaDoClienteNoEnvio } from "@/lib/envios/consultas";
@@ -13,6 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const cliente = await clienteAtivoDoPortal();
   if (!cliente) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!cliente.modulos.has("portal_solicitacoes")) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
+  if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/envios")) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
 
   const { id } = await params;
   const envio = await envioDoCliente({ tenantId: cliente.tenantId, companyIds: cliente.companyIds }, id);

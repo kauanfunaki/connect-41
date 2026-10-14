@@ -13,6 +13,7 @@ const m = vi.hoisted(() => {
     company: { findMany: vi.fn() },
     portalApprovalLimit: { updateMany: vi.fn() },
     passwordResetToken: { deleteMany: vi.fn() },
+    tutorialVisto: { deleteMany: vi.fn() },
     tenantSmtpConfig: { findUnique: vi.fn() },
     $transaction: vi.fn(),
   };
@@ -246,6 +247,10 @@ describe("excluirAcessoDoPortal", () => {
     expect(m.db.$transaction).toHaveBeenCalledTimes(1);
     expect(m.db.passwordResetToken.deleteMany).toHaveBeenCalledWith({ where: { userId: "pu-1", subject: "PORTAL_USER" } });
     expect(m.db.portalUser.deleteMany).toHaveBeenCalledWith({ where: { id: "pu-1", tenantId: "escritorio-a" } });
+    // A marca do tutorial do primeiro acesso sai junto, só a do portal e do escritório.
+    expect(m.db.tutorialVisto.deleteMany).toHaveBeenCalledWith({
+      where: { subject: "PORTAL_USER", tenantId: "escritorio-a", userId: { in: ["pu-1"] } },
+    });
     expect(m.logAudit).toHaveBeenCalledWith({
       tenantId: "escritorio-a",
       userId: "admin-1",
@@ -260,6 +265,14 @@ describe("excluirAcessoDoPortal", () => {
         historico: conta._count,
       },
     });
+  });
+
+  it("a marca do tutorial sem a tabela (deploy antes da migration) não desfaz a exclusão", async () => {
+    m.db.portalUser.findFirst.mockResolvedValue(conta);
+    m.db.tutorialVisto.deleteMany.mockRejectedValueOnce(Object.assign(new Error("sem tabela"), { code: "P2021" }));
+    vi.spyOn(console, "error").mockImplementationOnce(() => {});
+    expect(await excluirAcessoDoPortal("pu-1", "Maria Teste")).toEqual({ ok: true });
+    expect(m.logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "portal.user.deleted" }));
   });
 
   it("o e-mail também confirma", async () => {

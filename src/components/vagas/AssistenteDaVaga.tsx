@@ -11,6 +11,7 @@ import {
 } from "@/app/(app)/vagas/[id]/ia-actions";
 import type { PropostaDeEscrita } from "@/lib/ia/ferramentas";
 import { Aviso } from "@/components/ui/Aviso";
+import { RespostaDaCeci } from "@/components/ia/RespostaDaCeci";
 
 const ETAPA_LABEL: Record<string, string> = {
   TRIAGEM: "Triagem",
@@ -96,7 +97,10 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
               O assistente parou antes de terminar — a resposta pode estar incompleta.
             </Aviso>
           )}
-          <p className="text-ui text-fg whitespace-pre-wrap">{resposta.texto}</p>
+          {/* O mesmo desenho das respostas do chat da Ceci: Markdown seguro, link só para dentro do Connect. */}
+          <div className="text-ui text-fg leading-relaxed break-words">
+            <RespostaDaCeci texto={resposta.texto} />
+          </div>
 
           {propostas.length > 0 && (
             <div className="border-t border-border-soft pt-3 flex flex-col gap-2">

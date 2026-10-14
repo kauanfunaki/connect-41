@@ -4,7 +4,7 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddHoraExtraForm } from "@/components/pessoas/AddHoraExtraForm";
@@ -63,7 +63,7 @@ export default async function HorasExtrasPage({
                   justification: o.justification,
                 }}
                 updateAction={atualizarHoraExtra.bind(null, id, o.id)}
-                removeAction={excluirHoraExtra.bind(null, id, o.id)}
+                removeAction={podeExcluir(ctx) ? excluirHoraExtra.bind(null, id, o.id) : undefined}
                 canManage={canEdit}
               />
             ))}

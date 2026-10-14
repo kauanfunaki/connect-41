@@ -20,7 +20,35 @@ export function isFullWrite(role: UserRole): boolean {
   return role === "SUPER_ADMIN" || role === "ADMIN";
 }
 
+/**
+ * Quem pode EXCLUIR — registro ou configuração — no Connect: só Administrador
+ * e Super Admin.
+ *
+ * Regra do Kauan, 13/10/2026: "Usuário, coordenador e gestor não pode excluir
+ * nada, só admin e super admin." Antes cada tela decidia sozinha, e quase todas
+ * deixavam o gestor do setor (SECTOR_ADMIN) excluir com `canManageSector` ou
+ * `canWrite`. O gestor continua criando e editando como antes; só a exclusão
+ * sobe para o administrador.
+ *
+ * Ficam de fora, de propósito, os gestos do dia a dia que apagam uma linha sem
+ * apagar dado de ninguém: desmarcar tag/responsável/participante/vínculo de um
+ * card, desfazer conciliação ou baixa, voltar uma configuração ao padrão,
+ * mandar arquivo para a lixeira (restaurável por 30 dias), rascunho de envio e
+ * as coisas pessoais (notificação, conversa com a IA, tela fixada, conexão com
+ * o Google). Esses seguem com a permissão que já tinham.
+ *
+ * Assinatura em somente leitura bloqueia, como bloqueia qualquer escrita.
+ */
+export function podeExcluir(ctx: Pick<Quem, "role" | "subscriptionReadOnly">): boolean {
+  if (ctx.subscriptionReadOnly) return false;
+  return isFullWrite(ctx.role);
+}
+
+/** A frase que a tela mostra quando alguém fora do administrador tenta excluir. */
+export const SO_ADMIN_EXCLUI = "Só o Administrador ou o Super Admin pode excluir.";
+
 // Pode criar/editar/excluir (fora do escopo estrito de setor de pipeline).
+// Excluir, desde 13/10/2026, passa também por `podeExcluir`.
 export function canWrite(role: UserRole): boolean {
   return role === "SUPER_ADMIN" || role === "ADMIN" || role === "SECTOR_ADMIN";
 }

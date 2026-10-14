@@ -44,7 +44,8 @@ export type PayrollEntryItem = {
 type Props = {
   entry: PayrollEntryItem;
   updateAction: (prev: PayrollEntryState, form: FormData) => Promise<PayrollEntryState>;
-  removeAction: () => Promise<void>;
+  /** Só para o administrador (13/10/2026): sem ela, o "⋯" de remover não aparece. */
+  removeAction?: () => Promise<void>;
   canManage: boolean;
 };
 
@@ -68,7 +69,7 @@ export function PayrollEntryRow({ entry, updateAction, removeAction, canManage }
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-fs-2 text-fg-muted tnum">{formatarReais(Number(entry.grossSalary))}</span>
           <SeloDoDP cor={STATUS_STYLE[entry.status]}>{STATUS_LABEL[entry.status]}</SeloDoDP>
-          {canManage && <MenuDoRegistro titulo="Remover este lançamento?" onRemover={removeAction} />}
+          {canManage && removeAction && <MenuDoRegistro titulo="Remover este lançamento?" onRemover={removeAction} />}
         </div>
       </div>
 

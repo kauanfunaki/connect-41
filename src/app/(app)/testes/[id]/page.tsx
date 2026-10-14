@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { scopedAssessmentLinkWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -70,7 +70,7 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
               Aguardando resposta do candidato. Link expira em {formatInstantDate(link.expiresAt)}.
             </p>
             {linkUrl && <p className="text-fs-2 text-fg-muted break-all mb-4">{linkUrl}</p>}
-            {canManage && (
+            {canManage && podeExcluir(ctx) && (
               <ExcluirComConfirmacao
                 action={excluirLinkTeste.bind(null, link.id)}
                 titulo="Excluir este teste?"

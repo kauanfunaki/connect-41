@@ -53,6 +53,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
+import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -144,6 +145,12 @@ type Props = {
   solicitacoesLigadas?: boolean;
   /** Os Arquivos estão ligados — mostra "Arquivos" no Geral. */
   arquivosLigados?: boolean;
+  /**
+   * As telas do Geral que o setor (ou os setores da pessoa, em "Todos os
+   * setores") não escondeu — ver `src/lib/menuGeral.ts`. Sem a prop, todas.
+   * Solicitações e Arquivos ainda dependem do módulo ligado, acima.
+   */
+  telasDoGeral?: readonly TelaDoGeral[];
   profileName: string;
   profileRoleLabel: string;
   profilePhotoUrl: string | null;
@@ -173,6 +180,7 @@ export function AppShell({
   unreadCount,
   solicitacoesLigadas = false,
   arquivosLigados = false,
+  telasDoGeral = TODAS_AS_TELAS_DO_GERAL,
   profileName,
   profileRoleLabel,
   profilePhotoUrl,
@@ -214,6 +222,32 @@ export function AppShell({
   const gavetaFechada = !telaGrande && !mobileOpen;
   // Recolhida no computador, a lateral também sai do Tab e do leitor de tela.
   const lateralFora = gavetaFechada || (telaGrande && menuRecolhido);
+
+  // O Geral por setor (14/10/2026): o que o setor escondeu não entra. Início e
+  // Meu dia ficam fora desta conta — aparecem sempre.
+  const noGeral = (tela: TelaDoGeral) => telasDoGeral.includes(tela);
+  const algumaNoGeral = [
+    noGeral("espacos"),
+    noGeral("cadastros"),
+    noGeral("transferencias"),
+    solicitacoesLigadas && noGeral("solicitacoes"),
+    arquivosLigados && noGeral("arquivos"),
+    noGeral("agenda"),
+  ].some(Boolean);
+  // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
+  const itensDoGeral = (
+    <>
+      {noGeral("cadastros") && (
+        <PainelDoItem titulo="Cadastros" telas={TELAS_DE_CADASTROS} cor={corDoSetor}>
+          <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
+        </PainelDoItem>
+      )}
+      {noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />}
+      {solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" />}
+      {arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" />}
+      {noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />}
+    </>
+  );
   useEffect(() => {
     if (!mobileOpen) return;
     function tecla(e: KeyboardEvent) {
@@ -332,17 +366,20 @@ export function AppShell({
                   setor Gestão (pedido do Kauan: o Geral é só o que serve a
                   todos). "Meu dia" subiu para logo abaixo do Início — é a
                   primeira tela do expediente. */}
-              <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
-                Geral
-              </p>
-              <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Espaços" />
-              <PainelDoItem titulo="Cadastros" telas={TELAS_DE_CADASTROS} cor={corDoSetor}>
-                <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
-              </PainelDoItem>
-              <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
-              {solicitacoesLigadas && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" />}
-              {arquivosLigados && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" />}
-              <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
+              {/* 14/10/2026: o setor ativo continua não escondendo nada sozinho;
+                  quem esconde é o administrador, setor por setor
+                  (Configurações › Setores) — o Recrutamento sem Solicitações e
+                  Transferências, pedido do Kauan. É só o menu: o endereço da
+                  tela continua abrindo. Sem nenhuma tela, o título também sai. */}
+              {algumaNoGeral && (
+                <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
+                  Geral
+                </p>
+              )}
+              {noGeral("espacos") && (
+                <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Espaços" />
+              )}
+              {itensDoGeral}
 
               {/* Até 8 módulos, a sidebar lista as telas direto, cada uma com seu
                   ícone: o setor pequeno não ganha nada em esconder cinco itens
@@ -402,13 +439,7 @@ export function AppShell({
               </p>
               <NavItem href="/home" icon={<Home size={16} />} label="Início" />
               <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
-              <PainelDoItem titulo="Cadastros" telas={TELAS_DE_CADASTROS} cor={corDoSetor}>
-                <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
-              </PainelDoItem>
-              <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
-              {solicitacoesLigadas && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" />}
-              {arquivosLigados && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" />}
-              <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
+              {itensDoGeral}
 
               <TelasFixadas telas={telasFixadas} />
 

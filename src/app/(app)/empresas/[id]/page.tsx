@@ -1,8 +1,9 @@
 import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { getPrisma } from "@/lib/prisma";
-import { excluirEmpresa, adicionarServico, atribuirResponsavelServico } from "../actions";
-import { getAuthContext, canWrite, isFullWrite, canManageSector } from "@/lib/auth/context";
+import { adicionarServico, atribuirResponsavelServico } from "../actions";
+import { getAuthContext, canWrite, isFullWrite, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
 import { getSectorMaps, getAllSectors } from "@/lib/sectors";
@@ -35,6 +36,7 @@ import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccord
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { safeFindConversations } from "@/lib/chatwoot/conversations";
 import { gerarResumoEmpresa } from "./ai-actions";
+import { gravarUltimaEmpresa } from "@/lib/empresas/ultimaEmpresa";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -77,6 +79,12 @@ export default async function EmpresaPage({
 
   if (!company) notFound();
 
+  // A ficha aberta vira a última empresa da pessoa (13/10/2026): as telas de
+  // uma empresa por vez (Lançamentos, Conciliação, DRE…) abrem nela. Depois da
+  // resposta, para não atrasar a ficha; erro ao gravar não chega à tela.
+  const empresaAberta = company.id;
+  after(() => gravarUltimaEmpresa(ctx, empresaAberta));
+
   // A aba Arquivos (09/10/2026): o primeiro nível das pastas da empresa. Abrir
   // uma pasta leva à tela dos Arquivos — a ficha não é refeita a cada clique.
   const arquivos =
@@ -87,8 +95,6 @@ export default async function EmpresaPage({
   const acessoAutorizacao = await acessoAsAutorizacoes(ctx);
   const autorizacao = acessoAutorizacao ? await autorizacaoDaEmpresa(ctx.tenantId, company.id) : null;
   const serproPronto = !!acessoAutorizacao?.podeEditar && prontidaoDoSerpro(await configuracaoDoSerpro(ctx.tenantId)).pronta;
-
-  const deleteAction = excluirEmpresa.bind(null, id);
 
   const [companySectors, sectorMaps, documents, pipelineItems, activities] = await Promise.all([
     getCompanySectors(ctx.tenantId, id),
@@ -162,8 +168,9 @@ export default async function EmpresaPage({
         phone={company.phone}
         logoUrl={company.logoUrl}
         canEdit={canEdit}
+        canRemoveLogo={podeExcluir(ctx)}
         canRequestHandoff={canRequestHandoff}
-        deleteAction={deleteAction}
+        podeExcluir={podeExcluir(ctx)}
       />
 
       <CompanyDetailTabs

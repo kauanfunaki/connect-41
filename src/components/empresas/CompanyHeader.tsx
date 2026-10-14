@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { Copy, Check, MapPin, Mail, Phone, Camera, X, ArrowRightLeft, Pencil } from "lucide-react";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 import { StatusDot } from "@/components/shared/StatusDot";
-import { EntityOverflowMenu } from "@/components/ui/EntityOverflowMenu";
+import { BotaoExcluirCadastro } from "@/components/exclusao/ExcluirCadastro";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { formatDocumento, formatPhone } from "@/lib/format";
@@ -41,8 +41,11 @@ type Props = {
   phone: string | null;
   logoUrl: string | null;
   canEdit: boolean;
+  /** Remover a foto é só do administrador (13/10/2026); trocar segue com quem edita. */
+  canRemoveLogo?: boolean;
   canRequestHandoff: boolean;
-  deleteAction: () => Promise<{ error: string } | null | void>;
+  /** Só administrador exclui (13/10/2026) — o diálogo mostra o que está ligado antes. */
+  podeExcluir: boolean;
 };
 
 export function CompanyHeader({
@@ -59,8 +62,9 @@ export function CompanyHeader({
   phone,
   logoUrl: initialLogoUrl,
   canEdit,
+  canRemoveLogo = false,
   canRequestHandoff,
-  deleteAction,
+  podeExcluir,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl);
@@ -143,7 +147,7 @@ export function CompanyHeader({
                 >
                   <Camera size={16} />
                 </button>
-                {logoUrl && (
+                {logoUrl && canRemoveLogo && (
                   <button
                     type="button"
                     onClick={handleLogoRemove}
@@ -226,14 +230,12 @@ export function CompanyHeader({
             </Button>
           )}
           {canEdit && (
-            <>
-              <Button href={`/empresas/${id}/editar`} variant="secondary" size="sm">
-                <Pencil size={14} />
-                Editar
-              </Button>
-              <EntityOverflowMenu deleteAction={deleteAction} nome={name} />
-            </>
+            <Button href={`/empresas/${id}/editar`} variant="secondary" size="sm">
+              <Pencil size={14} />
+              Editar
+            </Button>
           )}
+          {podeExcluir && <BotaoExcluirCadastro tipo="empresa" id={id} nome={name} />}
         </div>
       </div>
 

@@ -14,7 +14,10 @@ import { Badge } from "@/components/ui/Badge";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { Input } from "@/components/ui/Input";
-import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { NovaContraparte, EditarContraparte } from "@/components/financeiro/FormContraparte";
 import { NovoCentroDeCusto, EditarCentroDeCusto } from "@/components/financeiro/FormCentroDeCusto";
@@ -79,8 +82,12 @@ export default async function CadastrosFinanceirosPage({
   const params = await searchParams;
   const aba = ABAS.find((a) => a.chave === params.aba)?.chave ?? "fornecedores";
   const podeEditar = canActOnSector(ctx, setor);
+  // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
+  // (13/10/2026). Era a primeira em ordem alfabética, e o "Novo cadastro" caía
+  // nela sem ninguém ter escolhido.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
+  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  const companyId = empresa?.id ?? null;
 
   // A ação da tela vai no cabeçalho, como em pendências e no resto do app
   // (08/10/2026): o "Novo cadastro" ficava à direita da fileira do filtro.
@@ -92,14 +99,34 @@ export default async function CadastrosFinanceirosPage({
     />
   );
   const cabecalho = comAcao();
-  if (!companyId) {
+  // Trocar de empresa conserva a aba; a busca é da empresa anterior e fica para trás.
+  const filtroDaEmpresa = (
+    <FiltroDaEmpresa
+      acao="/cadastros-financeiros"
+      empresas={empresas}
+      valor={companyId}
+      manter={{ aba: aba === "fornecedores" ? undefined : aba }}
+    />
+  );
+  if (!empresa || !companyId) {
     return (
       <PageContainer>
         {cabecalho}
-        <EmptyState title="Nenhuma empresa ativa" icon={<Users />} />
+        {empresas.length === 0 ? (
+          <EmptyState title="Nenhuma empresa ativa" icon={<Users />} />
+        ) : (
+          <>
+            {filtroDaEmpresa}
+            <EscolhaAEmpresa escolha={escolha} porQue="Fornecedores, sacados, centros de custo e o plano de contas são de cada empresa." />
+          </>
+        )}
       </PageContainer>
     );
   }
+  // Todo formulário desta tela grava na empresa escolhida — o rodapé diz qual.
+  const comEmpresa = (tela: React.ReactNode) => (
+    <EmpresaDaTela empresa={{ nome: empresa.nome, cnpj: empresa.cnpj }}>{tela}</EmpresaDaTela>
+  );
 
   const prisma = getPrisma();
   const href = (a: string) => `/cadastros-financeiros?empresa=${companyId}${a === "fornecedores" ? "" : `&aba=${a}`}`;
@@ -112,7 +139,7 @@ export default async function CadastrosFinanceirosPage({
   if (aba === "plano") {
     // O topo vai para dentro da aba porque o "Nova categoria" do cabeçalho
     // precisa dos grupos do plano, que só a aba consulta.
-    return (
+    return comEmpresa(
       <PageContainer>
         <AbaDoPlano
           tenantId={ctx.tenantId}
@@ -121,7 +148,7 @@ export default async function CadastrosFinanceirosPage({
           topo={(acao) => (
             <>
               {comAcao(acao)}
-              <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
+              {filtroDaEmpresa}
               <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
             </>
           )}
@@ -131,12 +158,12 @@ export default async function CadastrosFinanceirosPage({
   }
 
   if (aba === "centros") {
-    return (
+    return comEmpresa(
       <PageContainer>
         {/* "Novo centro de custo" no cabeçalho, como o "Novo cadastro" das
             outras abas (escolha 5A, 08/10/2026): ficava à direita do filtro. */}
         {comAcao(podeEditar ? <NovoCentroDeCusto companyId={companyId} /> : undefined)}
-        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} navegaSozinho />
+        {filtroDaEmpresa}
         <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
         <AbaDeCentros tenantId={ctx.tenantId} companyId={companyId} centros={centros} podeEditar={podeEditar} />
       </PageContainer>
@@ -197,10 +224,10 @@ export default async function CadastrosFinanceirosPage({
   // Inativo não é oferecido como padrão novo — ver `centroPadraoValido`.
   const centrosAtivos = centros.filter((c) => c.active).map((c) => ({ id: c.id, nome: c.name }));
 
-  return (
+  return comEmpresa(
     <PageContainer>
       {comAcao(podeEditar ? <NovaContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} /> : undefined)}
-      <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba: aba === "fornecedores" ? undefined : aba }} navegaSozinho />
+      {filtroDaEmpresa}
       <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
 
       <p className="mb-4 text-helper text-fg-secondary">

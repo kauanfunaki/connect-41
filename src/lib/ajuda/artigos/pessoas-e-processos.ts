@@ -185,7 +185,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "Excluir uma turma, pelo botão “⋯” da linha, leva junto os participantes dela.",
+      "Excluir uma turma, pelo botão “⋯” da linha, leva junto os participantes dela. Excluir treinamento, turma ou participante é só do Administrador ou do Super Admin.",
       "Treinamento sem validade aparece como “Sem validade”; preencha a validade nos que precisam de reciclagem.",
       "Só o gestor do setor e os administradores cadastram treinamentos, turmas e participantes.",
     ],

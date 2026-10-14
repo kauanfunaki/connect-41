@@ -20,7 +20,10 @@ export type FeedReply = {
   createdAtLabel: string;
   content: string | null;
   edited: boolean;
-  canModify: boolean;
+  /** O autor corrige o próprio comentário. */
+  canEdit: boolean;
+  /** Excluir comentário é só do administrador (13/10/2026). */
+  canDelete: boolean;
 };
 
 export type FeedItem = {
@@ -34,7 +37,8 @@ export type FeedItem = {
   importante: boolean;
   isComment: boolean;
   edited: boolean;
-  canModify: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
   replies: FeedReply[];
 };
 
@@ -333,29 +337,36 @@ const ACAO_DO_COMENTARIO = "h-6! px-2! text-fs-1! font-medium!";
 
 function CommentActions({
   canAct,
-  canModify,
+  canEdit,
+  canDelete,
   onReply,
   onEdit,
   onDelete,
+  className = "mt-1 -ml-2",
 }: {
   canAct: boolean;
-  canModify: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
   onReply?: () => void;
   onEdit?: () => void;
   onDelete: () => void;
+  className?: string;
 }) {
   // Eram textos soltos (linkMuted) até 30/09: viraram botões fantasmas, que
   // ganham fundo no hover como qualquer botão. Baixos (h-6) para não empurrar
   // o comentário, e recuados à esquerda para o texto seguir alinhado ao corpo.
+  // Editar e Excluir separados em 13/10/2026: o autor edita, só o
+  // administrador exclui.
+  if (!(canAct && onReply) && !(canEdit && onEdit) && !canDelete) return null;
   return (
-    <div className="flex items-center gap-0.5 mt-1 -ml-2">
+    <div className={`flex items-center gap-0.5 ${className}`}>
       {canAct && onReply && (
         <Button variant="ghost" size="xs" type="button" onClick={onReply} className={ACAO_DO_COMENTARIO}>Responder</Button>
       )}
-      {canModify && onEdit && (
+      {canEdit && onEdit && (
         <Button variant="ghost" size="xs" type="button" onClick={onEdit} className={ACAO_DO_COMENTARIO}>Editar</Button>
       )}
-      {canModify && (
+      {canDelete && (
         <Button variant="ghost" size="xs" type="button" onClick={onDelete} className={`${ACAO_DO_COMENTARIO} hover:text-danger! hover:bg-danger/8!`}>Excluir</Button>
       )}
     </div>
@@ -383,6 +394,7 @@ function Comment({
 }) {
   const [replying, setReplying] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
   const { dialog, requestConfirm } = useConfirm();
 
   function confirmDelete(id: string) {
@@ -427,7 +439,8 @@ function Comment({
         {!editing && (
           <CommentActions
             canAct={canAct}
-            canModify={item.canModify}
+            canEdit={item.canEdit}
+            canDelete={item.canDelete}
             onReply={() => setReplying((v) => !v)}
             onEdit={() => setEditing(true)}
             onDelete={() => confirmDelete(item.id)}
@@ -446,11 +459,36 @@ function Comment({
                       {r.createdAtLabel}{r.edited && " · editado"}
                     </span>
                   </div>
-                  <p className="text-helper text-fg-secondary whitespace-pre-wrap">
-                    {r.content ? renderRichText(r.content, mentionUsers) : null}
-                  </p>
-                  {r.canModify && (
-                    <Button variant="ghost" size="xs" type="button" onClick={() => confirmDelete(r.id)} className={`${ACAO_DO_COMENTARIO} hover:text-danger! hover:bg-danger/8! mt-0.5 -ml-2`}>Excluir</Button>
+                  {editingReplyId === r.id ? (
+                    <div className="mt-1">
+                      <Composer
+                        mentionUsers={mentionUsers}
+                        taskCandidates={taskCandidates}
+                        pipelineItemId={pipelineItemId}
+                        placeholder="Editar resposta…"
+                        submitLabel="Salvar"
+                        defaultValue={r.content ?? ""}
+                        onSubmit={(form) => { editAction(r.id, form.get("content") as string); setEditingReplyId(null); }}
+                        onCancel={() => setEditingReplyId(null)}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-helper text-fg-secondary whitespace-pre-wrap">
+                        {r.content ? renderRichText(r.content, mentionUsers) : null}
+                      </p>
+                      {/* A resposta ganhou "Editar" em 13/10/2026: excluir
+                          passou a ser só do administrador, e o autor corrige o
+                          que escreveu por aqui. */}
+                      <CommentActions
+                        canAct={false}
+                        canEdit={r.canEdit}
+                        canDelete={r.canDelete}
+                        onEdit={() => setEditingReplyId(r.id)}
+                        onDelete={() => confirmDelete(r.id)}
+                        className="mt-0.5 -ml-2"
+                      />
+                    </>
                   )}
                 </div>
               </div>

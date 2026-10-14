@@ -13,6 +13,7 @@ import { getPrisma } from "@/lib/prisma";
 import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferramentas";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getModuleRoute } from "@/lib/module-catalog";
+import { linkDaTela } from "@/lib/ia/legivel";
 
 const SEM_PARAMETROS = { type: "object", properties: {}, additionalProperties: false } as const;
 
@@ -88,16 +89,16 @@ export const FERRAMENTAS_DE_AJUDA: Record<string, FerramentaRegistrada> = {
     executar: async (_args, ctx) => {
       const setores = setoresDoEscopo(ctx);
       const estados = await getTenantModuleStates(ctx.tenantId);
+      // Cada tela com o link pronto ("[Contas a pagar](/pagar)"): a Ceci cita
+      // a tela pelo nome e o chat desenha o link (13/10/2026).
       return {
-        gerais: TELAS_GERAIS,
+        gerais: TELAS_GERAIS.map((t) => (t.caminho.startsWith("/") && !t.caminho.includes("{") ? { ...t, link: linkDaTela(t.tela, t.caminho) } : t)),
         doSetor: estados
           .filter((m) => m.enabled && setores.has(m.sectorCode))
-          .map((m) => ({
-            tela: m.label,
-            setor: m.sectorCode,
-            caminho: getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`,
-            descricao: m.description,
-          })),
+          .map((m) => {
+            const caminho = getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`;
+            return { tela: m.label, setor: m.sectorCode, caminho, link: linkDaTela(m.label, caminho), descricao: m.description };
+          }),
       };
     },
   },

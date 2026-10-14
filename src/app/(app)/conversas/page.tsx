@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { MessageCircle, Building2, User, Gauge, Settings, ClipboardCheck, PenLine, Timer, Mail, Phone, Headset } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { getAuthContext, isFullAccess, canViewSector } from "@/lib/auth/context";
+import { getAuthContext, isFullAccess, canViewSector, podeExcluir } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { scopedChatwootConversationWhere } from "@/lib/auth/scope";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
@@ -221,7 +221,9 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
 
   const pageNum = Math.max(1, parseInt(page ?? "1"));
   const totalPages = Math.ceil(totalContacts / PER_PAGE);
-  const canManageLinks = isFullAccess(ctx.role);
+  // Vincular e desvincular contato: só o administrador. Era `isFullAccess`, que
+  // deixava o Somente leitura mexer no vínculo (13/10/2026).
+  const canManageLinks = podeExcluir(ctx);
 
   if (loadError) {
     return (

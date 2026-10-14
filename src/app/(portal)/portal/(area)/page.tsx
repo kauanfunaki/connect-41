@@ -8,6 +8,7 @@ import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate } from "@/lib/format";
 import { telasVisiveis } from "@/lib/portal/telas";
+import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
 import { blocosDoInicio, destinoDosDocumentos, primeiroNome, saudacaoDaHora } from "@/lib/portal/inicio";
 import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -54,9 +55,10 @@ export default async function InicioDoPortalPage({
   if (antigo) redirect(antigo);
 
   const prisma = getPrisma();
-  const [alcance, modulos, usuario, grupo] = await Promise.all([
+  const [alcance, modulos, bloqueadas, usuario, grupo] = await Promise.all([
     alcanceDoCliente(sessao),
     getEnabledModuleCodes(sessao.tenantId),
+    telasBloqueadasDoPortal(sessao.tenantId),
     prisma.portalUser.findFirst({
       where: { id: sessao.sub, tenantId: sessao.tenantId, clientGroupId: sessao.clientGroupId },
       select: { name: true },
@@ -75,7 +77,9 @@ export default async function InicioDoPortalPage({
     ? { tipo: "EMPRESAS", tenantId: sessao.tenantId, companyIds: [empresaId] }
     : alcance;
 
-  const blocos = blocosDoInicio(new Set(telasVisiveis(modulos).map((t) => t.href)));
+  // As telas bloqueadas pelo escritório (14/10/2026) não entram: nem bloco,
+  // nem número, nem atalho — e a consulta delas nem roda.
+  const blocos = blocosDoInicio(new Set(telasVisiveis(modulos, bloqueadas).map((t) => t.href)));
   const agora = new Date();
   const nome = primeiroNome(usuario?.name);
   const saudacao = saudacaoDaHora(saoPauloParts(agora).hour);
@@ -124,9 +128,11 @@ export default async function InicioDoPortalPage({
         pedir={blocos.pedir}
         empresaId={empresaId}
         documentos={
-          <Suspense fallback={DESCRICAO_DOS_DOCUMENTOS}>
-            <ContagemDosDocumentos alcance={alcanceDosDocumentos} />
-          </Suspense>
+          blocos.documentos ? (
+            <Suspense fallback={DESCRICAO_DOS_DOCUMENTOS}>
+              <ContagemDosDocumentos alcance={alcanceDosDocumentos} />
+            </Suspense>
+          ) : null
         }
       />
 

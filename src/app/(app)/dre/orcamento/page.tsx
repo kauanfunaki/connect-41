@@ -14,6 +14,9 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { NovaVersao } from "@/components/dre/orcamento/NovaVersao";
 import { GradeDoOrcamento } from "@/components/dre/orcamento/GradeDoOrcamento";
 import { AcoesDaVersao } from "@/components/dre/orcamento/AcoesDaVersao";
@@ -54,8 +57,11 @@ export default async function OrcamentoPage({
   const params = await searchParams;
   const hoje = saoPauloParts(new Date()).dateKey;
   const ano = lerAno(params.ano) ?? Number(hoje.slice(0, 4));
+  // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
+  // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
+  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  const companyId = empresa?.id ?? null;
   const podeEditar = canActOnSector(ctx, setor);
   const coordena = canManageSector(ctx, setor);
 
@@ -66,14 +72,26 @@ export default async function OrcamentoPage({
       action={action}
     />
   );
-  if (!companyId) {
+  if (!empresa || !companyId) {
     return (
       <PageContainer>
         {cabecalho()}
-        <EmptyState title="Nenhuma empresa ativa" icon={<Target />} />
+        {empresas.length === 0 ? (
+          <EmptyState title="Nenhuma empresa ativa" icon={<Target />} />
+        ) : (
+          <>
+            <FiltroDaEmpresa acao="/dre/orcamento" empresas={empresas} valor={null} manter={{ ano: params.ano }} />
+            <EscolhaAEmpresa escolha={escolha} porQue="O orçamento é de uma empresa por vez." />
+          </>
+        )}
       </PageContainer>
     );
   }
+
+  // Todo formulário desta tela grava na empresa escolhida — o rodapé diz qual.
+  const comEmpresa = (tela: React.ReactNode) => (
+    <EmpresaDaTela empresa={{ nome: empresa.nome, cnpj: empresa.cnpj }}>{tela}</EmpresaDaTela>
+  );
 
   const prisma = getPrisma();
   const todas = await prisma.budget.findMany({
@@ -103,7 +121,7 @@ export default async function OrcamentoPage({
   // O comparativo abre no mês mais recente do ano que já passou (ou dezembro).
   const mesDoComparativo = ano < Number(hoje.slice(0, 4)) ? 12 : Math.max(1, Number(hoje.slice(5, 7)));
 
-  return (
+  return comEmpresa(
     <PageContainer>
       {/* "Nova versão" no cabeçalho, numa janela (escolha 5A, 08/10/2026): ficava
           embaixo das abas e abria um cartão ali, empurrando a grade. */}
@@ -117,9 +135,13 @@ export default async function OrcamentoPage({
           />
         ) : undefined
       )}
-      <FiltroDePeriodo acao="/dre/orcamento" empresas={empresas} empresaId={companyId}>
-        <Input compact type="number" name="ano" defaultValue={ano} min={2000} max={2100} className="w-24" aria-label="Ano" />
-      </FiltroDePeriodo>
+      {/* A empresa navega sozinha (e vira a última aberta); o ano, com "Aplicar".
+          Trocar de empresa conserva o ano; a versão é da empresa anterior. */}
+      <FiltroDaEmpresa acao="/dre/orcamento" empresas={empresas} valor={companyId} manter={{ ano: String(ano) }}>
+        <FiltroDePeriodo acao="/dre/orcamento" extras={{ empresa: companyId }} naFileira>
+          <Input compact type="number" name="ano" defaultValue={ano} min={2000} max={2100} className="w-24" aria-label="Ano" />
+        </FiltroDePeriodo>
+      </FiltroDaEmpresa>
 
       {/* As versões do ano são abas, e não pílulas (conferência de 30/09):
           escolher uma troca a grade inteira, o cabeçalho e as ações — é outra

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { canManageMeetings, getValidAccessToken } from "@/lib/integrations/oauth";
 import { createGoogleMeetEvent, updateGoogleMeetEvent } from "@/lib/integrations/google";
 import { createTeamsMeetingEvent, updateTeamsMeetingEvent } from "@/lib/integrations/microsoft";
@@ -189,10 +189,16 @@ export async function editarReuniaoAvulsa(_prev: MeetingState, form: FormData): 
 
 export async function excluirReuniaoAvulsa(meetingId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canManageMeetings(ctx)) return;
+  // Excluir reunião: só o administrador (13/10/2026). Era também o gestor de setor.
+  if (!ctx.tenantId || !podeExcluir(ctx) || !canManageMeetings(ctx)) return;
 
   const prisma = getPrisma();
-  const meeting = await prisma.meeting.findFirst({ where: { id: meetingId, tenantId: ctx.tenantId } });
+  // Só a reunião avulsa, criada pela Agenda: a entrevista e a reunião de card
+  // têm a tela delas, e a Agenda mostra as três. Antes qualquer reunião do
+  // escritório saía por aqui.
+  const meeting = await prisma.meeting.findFirst({
+    where: { id: meetingId, tenantId: ctx.tenantId, pipelineItemId: null, candidaturaId: null },
+  });
   if (!meeting) return;
 
   await prisma.meeting.delete({ where: { id: meetingId } });

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { Network, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { AcoesDoCadastro } from "@/components/empresas/AcoesDoCadastro";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -85,7 +85,7 @@ export default async function DepartamentosPage({
             <div key={d.id} className="flex items-center justify-between gap-4 px-4 py-3">
               <p className="text-fs-3 text-fg font-medium">{d.name}</p>
               {canManage && (
-                <AcoesDoCadastro editarHref={`/empresas/${companyId}/departamentos/${d.id}/editar`} excluir={excluirDepartment.bind(null, d.id, companyId)} nome={d.name} />
+                <AcoesDoCadastro editarHref={`/empresas/${companyId}/departamentos/${d.id}/editar`} excluir={podeExcluir(ctx) ? excluirDepartment.bind(null, d.id, companyId) : undefined} nome={d.name} />
               )}
             </div>
           ))}

@@ -591,6 +591,7 @@ model Tenant {
   budgets                   Budget[]
   agentEvaluationSummaries  AgentEvaluationSummary[]
   sectorTaskViews           SectorTaskView[]
+  sectorMenuViews           SectorMenuView[]
   processOrgans             ProcessOrgan[]
   processTypes              ProcessType[]
   processTemplates          ProcessTemplate[]
@@ -659,6 +660,34 @@ model SectorTaskView {
   @@unique([tenantId, sectorCode])
   @@index([tenantId])
   @@map("sector_task_views")
+}
+
+// Quais telas do grupo "Geral" do menu lateral ficam ESCONDIDAS para cada
+// setor (14/10/2026) — o Recrutamento sem Solicitações e Transferências, por
+// exemplo. Irmã da SectorTaskView: configuração do escritório, por setor,
+// editada pelo administrador; quem está em mais de um setor vê a UNIÃO.
+//
+// Guarda as escondidas, e não as visíveis: tela nova no Geral aparece para
+// todos, inclusive nos setores que já esconderam outras. Ausência de linha =
+// nada escondido, que é o menu de antes desta tabela.
+//
+// Visibilidade, não permissão: quem tem o endereço continua abrindo a tela.
+// Regras em `src/lib/menuGeral.ts`.
+model SectorMenuView {
+  id            String   @id @default(uuid())
+  tenantId      String
+  sectorCode    String   @db.VarChar(40)
+  // JSON com as chaves escondidas, ex. ["solicitacoes","transferencias"].
+  // Chave desconhecida é descartada na leitura (o catálogo vive em código).
+  hiddenScreens String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sectorCode])
+  @@index([tenantId])
+  @@map("sector_menu_views")
 }
 
 // Acesso de um SUPER_ADMIN a um tenant além do seu próprio (User.tenantId) —
@@ -4455,10 +4484,17 @@ model HandoffView {
 // Trilha de auditoria — quem fez o quê, quando. Somente leitura pela UI
 // (/admin/auditoria, restrito a SUPER_ADMIN); nunca editável ou excluível
 // pelo app. Best-effort: falha ao gravar log nunca deve derrubar a ação real.
+//
+// Desde 13/10/2026 o usuário pode ser excluído de verdade (src/lib/exclusao):
+// a linha da trilha sobrevive a quem agiu. `userId` vira nulo (SetNull) e o
+// nome fica em `actorName`, gravado junto de cada linha nova.
 model AuditLog {
   id         String   @id @default(uuid())
   tenantId   String
-  userId     String
+  userId     String?
+  /// Nome de quem agiu, no momento em que agiu — é o que a trilha mostra
+  /// depois que o usuário é excluído.
+  actorName  String?  @db.VarChar(120)
   action     String   @db.VarChar(60) // ex: "company.create", "sector.update"
   entityType String?  @db.VarChar(40) // livre (Company, Person, Sector, Tag...) — não usa o enum EntityType, que só cobre Company/Person
   entityId   String?
@@ -4466,7 +4502,7 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
-  user   User   @relation(fields: [userId], references: [id])
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, createdAt])
   @@index([tenantId, entityType, entityId])
@@ -5016,6 +5052,98 @@ model UserPinnedModule {
   @@unique([userId, tenantId, moduleCode])
   @@index([userId, tenantId, position])
   @@map("user_pinned_modules")
+}
+
+/// A última empresa que a pessoa abriu neste workspace (13/10/2026): a ficha
+/// em `/empresas/[id]` ou a escolha no seletor de empresa das telas. É o padrão
+/// das telas que mostram uma empresa por vez (Lançamentos, Conciliação, DRE…)
+/// e das pesadas (Contas a pagar, Documentos fiscais…), quando a URL não diz
+/// qual — ver `src/lib/empresas/ultimaEmpresa.ts`.
+///
+/// Uma linha por pessoa e workspace, gravada por cima. Fica no banco, e não no
+/// navegador, para valer em qualquer computador.
+///
+/// **Sem relação (FK) com usuário, empresa ou tenant, de propósito.** É
+/// preferência, não dado: a leitura confere que a empresa ainda existe, é do
+/// tenant e aparece na tela — e, se não, a tela pede para escolher. Empresa
+/// excluída deixa a linha órfã, que não atrapalha nada; e a exclusão de
+/// empresa, pessoa e usuário não ganha mais uma tabela para limpar.
+///
+/// Tabela própria, e não coluna em `User` ou `UserPreference`, pela ordem do
+/// deploy (o mesmo motivo de `UserPinnedModule`): o Prisma lê todas as colunas
+/// do model, e uma coluna nova em `users` lida antes da migration derrubaria o
+/// login.
+model UserLastCompany {
+  userId    String
+  tenantId  String
+  companyId String
+  openedAt  DateTime @default(now())
+
+  @@id([userId, tenantId])
+  @@map("user_last_companies")
+}
+
+/// De quem é a linha de `TutorialVisto`: conta da equipe ou cliente do portal.
+/// O mesmo desenho de `PasswordResetSubject` — sem ele, o id de um cliente do
+/// portal e o de uma conta da equipe cairiam na mesma coluna sem dizer de quem.
+enum TutorialSubject {
+  USER
+  PORTAL_USER
+}
+
+/// Quem já passou pelo tutorial do primeiro acesso (13/10/2026) — o da equipe
+/// e o do portal do cliente, como o do 41 Tech Hub. Ver `src/lib/tutorial/`.
+///
+/// Uma linha por pessoa e tutorial, gravada quando ela termina ou pula: com a
+/// linha na versão atual, o tutorial não abre sozinho de novo. `version` é a do
+/// conteúdo que a pessoa viu — quando o tutorial muda de verdade, sobe a versão
+/// no código e ele volta a abrir uma vez para todo mundo.
+///
+/// `userId` é o id de `users` (subject USER) ou de `portal_users`
+/// (PORTAL_USER). **Sem relação (FK), de propósito**, como `UserLastCompany`:
+/// é marca de leitura, não dado. A exclusão de usuário apaga as linhas dele
+/// (`src/lib/exclusao/usuario.ts`) e a de acesso do portal, as do acesso.
+///
+/// Tabela própria, e não coluna em `User` ou `PortalUser`, pela ordem do
+/// deploy: o Prisma lê todas as colunas do model, e uma coluna nova lida antes
+/// da migration derrubaria o login. Sem a tabela, o tutorial só não abre.
+model TutorialVisto {
+  subject     TutorialSubject
+  userId      String
+  tutorial    String          @db.VarChar(40)
+  tenantId    String
+  version     Int
+  completedAt DateTime        @default(now())
+
+  @@id([subject, userId, tutorial])
+  @@index([tenantId])
+  @@map("tutoriais_vistos")
+}
+
+/// Tela do portal do cliente que o escritório ainda não liberou (14/10/2026) —
+/// Administração › Portal do cliente › Telas liberadas. Pedido do Kauan: os
+/// primeiros clientes testam o portal antes de toda tela estar validada, e as
+/// telas vão sendo liberadas conforme o escritório testa. Ver
+/// `src/lib/portal/telasBloqueadas.ts`.
+///
+/// Guarda as **bloqueadas**, e não as liberadas: sem linha, a tela está
+/// liberada — é o portal de antes desta tabela, e uma tela nova que entrar no
+/// catálogo (`TELAS_DO_PORTAL`) nasce liberada. Vale para todos os acessos do
+/// escritório; não depende do papel nem do cliente.
+///
+/// `href` é o endereço da tela no catálogo ("/portal/dre"). Início, Minha conta
+/// e Ajuda nunca se bloqueiam (`telaBloqueavel`).
+///
+/// **Sem relação (FK), de propósito**, como `TutorialVisto`: é configuração
+/// lida a cada tela do portal, e sem a tabela (deploy antes da migration) a
+/// leitura cai em "nada bloqueado" — o portal de hoje.
+model PortalTelaBloqueada {
+  tenantId  String
+  href      String   @db.VarChar(80)
+  createdAt DateTime @default(now())
+
+  @@id([tenantId, href])
+  @@map("portal_telas_bloqueadas")
 }
 
 // Auditoria de acesso — quem revelou/copiou a senha e quando. Não impede
