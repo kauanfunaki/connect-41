@@ -1,187 +1,111 @@
 import Link from "next/link";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { ArrowRight, Blocks, CalendarDays, CreditCard, EyeOff, Globe, Headset, Inbox, Landmark, Layers, Puzzle, Receipt, Repeat, Scale, ScrollText, Settings2, ShieldCheck, Sparkles, Tag, Target, Users2, Video, FolderTree } from "lucide-react";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { canManageMeetings } from "@/lib/integrations/oauth";
-import { getPrisma } from "@/lib/prisma";
+import { ChevronRight } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { IconeDaArea } from "@/components/configuracoes/IconeDaArea";
+import { getAuthContext } from "@/lib/auth/context";
+import { areasVisiveis, podeAbrirInicio, type AreaDeConfiguracao } from "@/lib/configuracoes/areas";
+import { quemConfigura } from "@/lib/configuracoes/quem";
 
-// A tela tinha até 17 cards numa grade plana — tudo com o mesmo peso visual,
-// então achar "Feriados" custava varrer a lista inteira. Cada card agora
-// declara a que seção pertence e a página as renderiza agrupadas, na ordem de
-// GROUP_ORDER. Preferi seções a criar sub-rotas (/admin/catalogos etc.): as 17
-// rotas seguem onde estão, nenhum link salvo quebra, e a densidade cai do
-// mesmo jeito.
-type CardGroup = "workspace" | "catalogos" | "integracoes" | "assinatura" | "plataforma";
-
-const GROUP_ORDER: CardGroup[] = ["workspace", "catalogos", "integracoes", "assinatura", "plataforma"];
-
-const GROUP_LABEL: Record<CardGroup, string> = {
-  workspace: "Workspace",
-  catalogos: "Catálogos compartilhados",
-  integracoes: "Integrações e acessos",
-  assinatura: "Assinatura",
-  plataforma: "Plataforma (41 Tech)",
-};
-
-const GROUP_HELPER: Record<CardGroup, string> = {
-  workspace: "Quem entra, como o tenant é organizado e o que cada um enxerga.",
-  catalogos: "Listas reaproveitadas pelos módulos — cadastre uma vez, use em todo lugar.",
-  integracoes: "Contas externas conectadas ao workspace.",
-  assinatura: "Plano contratado e uso.",
-  plataforma: "Visível só para a 41 Tech: administração entre clientes.",
-};
-
-type Card = {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  group: CardGroup;
-};
-
+// O início das configurações (escolha "Organização · A" do Kauan, 14/10/2026):
+// um cartão por área, com as telas dela. Eram até 22 cartões do mesmo tamanho
+// em cinco grupos — "Feriados", que se mexe uma vez por ano, pesava o mesmo
+// que "Usuários". As telas e os endereços continuam os mesmos; o catálogo das
+// áreas (e quem abre cada tela) mora em `lib/configuracoes/areas`.
 export default async function AdminPage() {
   const ctx = await getAuthContext();
-  const isAdmin = isFullWrite(ctx.role);
-  const canManageFields = isAdmin || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
-  if (!isAdmin && !canManageFields) notFound();
+  const quem = await quemConfigura(ctx);
+  if (!podeAbrirInicio(quem)) notFound();
 
-  const cards: Card[] = [];
-
-  if (isAdmin) {
-    cards.push(
-      { group: "workspace", href: "/admin/usuarios", icon: <ShieldCheck size={20} />, title: "Usuários", description: "Contas, papéis e acesso a setores" },
-      { group: "workspace", href: "/admin/setores", icon: <Layers size={20} />, title: "Setores", description: "Catálogo de setores/cargos do tenant" },
-      { group: "workspace", href: "/admin/modulos", icon: <Blocks size={20} />, title: "Módulos", description: "Ativação de módulos plugáveis por setor" },
-      { group: "workspace", href: "/admin/tenant", icon: <Settings2 size={20} />, title: "Empresa (tenant)", description: "Dados do workspace, horário da Agenda e e-mail (SMTP)" },
-      { group: "workspace", href: "/admin/permissoes-sensiveis", icon: <EyeOff size={20} />, title: "Campos sensíveis", description: "Quem vê salário, dados bancários, médicos e documentos" },
-      { group: "catalogos", href: "/admin/obrigacoes", icon: <Repeat size={20} />, title: "Obrigações recorrentes", description: "DAS, DCTF, folha — itens de kanban gerados todo mês" }
-    );
-  }
-
-  if (ctx.role === "SUPER_ADMIN") {
-    cards.push(
-      {
-        group: "plataforma",
-        href: "/admin/workspaces",
-        icon: <Globe size={20} />,
-        title: "Workspaces",
-        description: "Clientes (tenants) e acesso entre eles",
-      },
-      {
-        group: "plataforma",
-        href: "/admin/auditoria",
-        icon: <ScrollText size={20} />,
-        title: "Auditoria",
-        description: "Trilha de quem fez o quê no workspace",
-      },
-      {
-        group: "plataforma",
-        href: "/admin/assinaturas",
-        icon: <CreditCard size={20} />,
-        title: "Assinaturas",
-        description: "Plano, modo de gestão e cobrança de cada cliente",
-      },
-      {
-        group: "plataforma",
-        href: "/admin/planos",
-        icon: <Receipt size={20} />,
-        title: "Planos",
-        description: "Catálogo comercial — gerenciado vs. autoatendimento",
-      }
-    );
-  }
-
-  if (isAdmin && ctx.role !== "SUPER_ADMIN") {
-    const prisma = getPrisma();
-    const tenant = await prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { managementMode: true } });
-    if (tenant?.managementMode === "SELF_SERVICE") {
-      cards.push({
-        group: "assinatura",
-        href: "/assinatura",
-        icon: <CreditCard size={20} />,
-        title: "Minha assinatura",
-        description: "Plano contratado, usuários ativos e limite do plano",
-      });
-    }
-  }
-
-  cards.push(
-    { group: "catalogos", href: "/admin/campos", icon: <Puzzle size={20} />, title: "Campos customizados", description: "Campos extras por setor e entidade" },
-    { group: "catalogos", href: "/admin/tags", icon: <Tag size={20} />, title: "Tags", description: "Tags coloridas reaproveitáveis no Kanban" },
-    { group: "catalogos", href: "/admin/plano-de-contas", icon: <Landmark size={20} />, title: "Plano de contas", description: "Categorias que classificam o lançamento do documento fiscal" }
-  );
-
-  if (canManageMeetings(ctx)) {
-    cards.push({
-      group: "integracoes",
-      href: "/admin/integracoes",
-      icon: <Video size={20} />,
-      title: "Integrações",
-      description: "Conectar Google Meet / Microsoft Teams para reuniões",
-    });
-  }
-
-  if (isAdmin) {
-    cards.push(
-      { group: "catalogos", href: "/admin/feriados", icon: <CalendarDays size={20} />, title: "Feriados", description: "Catálogo de feriados usado na Escala de Trabalho" },
-      { group: "catalogos", href: "/admin/competencias", icon: <Target size={20} />, title: "Competências", description: "Catálogo usado nas avaliações de desempenho" },
-      { group: "catalogos", href: "/admin/rescisao", icon: <Scale size={20} />, title: "Cálculo de rescisão", description: "Padrão do escritório para a conferência do TRCT" },
-      { group: "integracoes", href: "/admin/atendentes", icon: <Headset size={20} />, title: "Atendentes e vínculos", description: "Conta de acesso, atendente do Chatwoot e quem é da recepção/triagem" },
-      { group: "integracoes", href: "/admin/ia", icon: <Sparkles size={20} />, title: "Inteligência artificial", description: "Agentes do chat e demais funções de IA: uso, custo e limites" },
-      { group: "workspace", href: "/admin/portal", icon: <Users2 size={20} />, title: "Portal do cliente", description: "Quem entra no portal e as telas já liberadas para os clientes" },
-      { group: "catalogos", href: "/admin/assuntos", icon: <Inbox size={20} />, title: "Assuntos das solicitações", description: "O que o cliente escolhe ao pedir algo pelo portal: setor que atende e prazo de resposta" },
-      { group: "catalogos", href: "/admin/arquivos", icon: <FolderTree size={20} />, title: "Modelo de pastas", description: "As pastas que toda empresa ganha nos Arquivos, com o setor de cada uma e o que nasce no portal" }
-    );
-  }
+  const areas = areasVisiveis(quem);
+  const comuns = areas.filter((a) => !a.soDaPlataforma);
+  const daPlataforma = areas.filter((a) => a.soDaPlataforma);
 
   return (
     <PageContainer>
       <PageHeader
-        title="Administração"
-        subtitle="Configurações do tenant e catálogos compartilhados."
+        title="Configurações"
+        subtitle="O que vale para todo o escritório, separado por assunto. O menu leva de uma tela a outra sem voltar aqui."
       />
 
-      {/* Seção vazia não aparece: o conjunto de cards varia com o papel, e
-          "Plataforma" só existe pra SUPER_ADMIN. */}
-      <div className="space-y-8">
-        {GROUP_ORDER.filter((g) => cards.some((c) => c.group === g)).map((groupKey) => (
-          <section key={groupKey}>
-            <div className="mb-3">
-              <h2 className="text-card-title font-semibold text-fg">{GROUP_LABEL[groupKey]}</h2>
-              <p className="text-fs-2 text-fg-muted mt-0.5">{GROUP_HELPER[groupKey]}</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {cards
-                .filter((c) => c.group === groupKey)
-                .map((c) => (
-                  // Sombra em repouso e o cartão que sobe no hover — o mesmo
-                  // atalho das telas de setor (polimento de 30/09).
-                  <Link
-                    key={c.href}
-                    href={c.href}
-                    className="group bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-brand/40 hover:-translate-y-0.5 hover:shadow-[var(--c41-shadow-md)] transition-[border-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-                  >
-                    <span className="inline-flex w-10 h-10 rounded-lg items-center justify-center mb-4 bg-brand-subtle text-brand">
-                      {c.icon}
-                    </span>
-
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-fs-4 font-semibold text-fg">{c.title}</p>
-                      <ArrowRight
-                        size={16}
-                        className="text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"
-                      />
-                    </div>
-                    <p className="text-fs-2 text-fg-muted mt-1 leading-relaxed">{c.description}</p>
-                  </Link>
-                ))}
-            </div>
-          </section>
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+        {comuns.map((area) => (
+          <CartaoDaArea key={area.chave} area={area} />
         ))}
       </div>
+
+      {/* Só a 41 Tech: num cartão tracejado, à parte das áreas do escritório. */}
+      {daPlataforma.map((area) => (
+        <section
+          key={area.chave}
+          id={`area-${area.chave}`}
+          aria-labelledby={`titulo-area-${area.chave}`}
+          className="scroll-mt-6 mt-6 rounded-lg border border-dashed border-border-strong bg-surface px-5 py-4 flex flex-wrap items-center gap-x-4 gap-y-3"
+        >
+          <span className="inline-flex w-9 h-9 rounded-lg items-center justify-center bg-brand-subtle text-brand flex-shrink-0">
+            <IconeDaArea icone={area.icone} size={18} />
+          </span>
+          <div className="min-w-0">
+            <h2 id={`titulo-area-${area.chave}`} className="text-fs-4 font-semibold text-fg">
+              {area.rotulo}
+            </h2>
+            <p className="text-fs-2 text-fg-muted">{area.resumo}</p>
+          </div>
+          <ul className="flex flex-wrap gap-2 sm:ml-auto">
+            {area.telas.map((t) => (
+              <li key={t.chave}>
+                <Link
+                  href={t.href}
+                  title={t.descricao}
+                  className="inline-flex items-center h-8 px-3 rounded-full border border-border-strong bg-surface text-fs-2 font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+                >
+                  {t.rotulo}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </PageContainer>
+  );
+}
+
+/** Uma área: o que ela junta e a lista das telas, cada uma com a frase do que faz. */
+function CartaoDaArea({ area }: { area: AreaDeConfiguracao }) {
+  return (
+    <section
+      id={`area-${area.chave}`}
+      aria-labelledby={`titulo-area-${area.chave}`}
+      className="scroll-mt-6 bg-surface border border-border rounded-lg shadow-xs p-5 flex flex-col gap-3"
+    >
+      <div className="flex items-center gap-3">
+        <span className="inline-flex w-10 h-10 rounded-lg items-center justify-center bg-brand-subtle text-brand flex-shrink-0">
+          <IconeDaArea icone={area.icone} size={20} />
+        </span>
+        <div className="min-w-0">
+          <h2 id={`titulo-area-${area.chave}`} className="text-fs-4 font-semibold text-fg">
+            {area.rotulo}
+          </h2>
+          <p className="text-fs-2 text-fg-muted">{area.resumo}</p>
+        </div>
+      </div>
+      <ul className="border-t border-border -mx-2">
+        {area.telas.map((t) => (
+          <li key={t.chave} className="border-b border-border last:border-b-0">
+            <Link
+              href={t.href}
+              className="group flex items-center gap-3 px-2 py-2.5 rounded-md hover:bg-surface-hover transition-colors"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-ui font-medium text-fg">{t.rotulo}</span>
+                <span className="block text-fs-2 text-fg-muted leading-snug mt-0.5">{t.descricao}</span>
+              </span>
+              <ChevronRight size={16} className="text-fg-muted flex-shrink-0 group-hover:text-fg transition-colors" aria-hidden />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
