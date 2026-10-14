@@ -6,6 +6,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { getSectorMaps } from "@/lib/sectors";
 import { VagaForm } from "@/components/vagas/VagaForm";
+import { rotuloDePublicarVaga } from "@/lib/carreiras/enderecoDeCarreiras";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarVaga } from "../actions";
@@ -22,7 +23,7 @@ export default async function NovaVagaPage() {
   const { options: sectorOptions } = await getSectorMaps(ctx.tenantId);
   const allowedSectors = isFullWrite(ctx.role) ? sectorOptions : sectorOptions.filter((s) => ctx.sectors.includes(s.value));
 
-  const [companies, cargos, users] = await Promise.all([
+  const [companies, cargos, users, tenant] = await Promise.all([
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
@@ -38,6 +39,8 @@ export default async function NovaVagaPage() {
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    // O slug decide o rótulo de "publicar": da 41, o 41 Carreiras com o endereço.
+    prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { slug: true } }),
   ]);
 
   return (
@@ -53,6 +56,7 @@ export default async function NovaVagaPage() {
           cargos={cargos}
           users={users}
           sectorOptions={allowedSectors}
+          rotuloDePublicar={rotuloDePublicarVaga(tenant?.slug)}
         />
       </Card>
     </PageContainer>
