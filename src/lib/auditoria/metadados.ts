@@ -93,6 +93,7 @@ const NOME_DO_CAMPO: Readonly<Record<string, string>> = {
   basePrice: "Valor",
   pricePerUser: "Valor por usuário",
   setupFee: "Implantação",
+  linhaDaDre: "Linha da DRE",
 };
 
 /** "issuerDocument" → "Issuer document" — só para chave sem nome conhecido. */
