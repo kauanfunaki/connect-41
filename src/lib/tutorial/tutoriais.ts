@@ -19,6 +19,7 @@
 import type { UserRole } from "@/generated/prisma/enums";
 import { ROLE_LABELS } from "@/lib/roles";
 import { telasVisiveis } from "@/lib/portal/telas";
+import type { TelaDoGeral } from "@/lib/menuGeral";
 
 export type ChaveDoTutorial = "equipe" | "portal";
 
@@ -119,6 +120,11 @@ export type OpcoesDaEquipe = {
   ceci: boolean;
   /** O servidor tem as chaves do aviso no celular — sem elas, o passo não promete o que não existe. */
   avisosNoCelular: boolean;
+  /**
+   * As telas do Geral que a pessoa vê no menu (`src/lib/menuGeral.ts`): o
+   * tutorial não manda para tela que o setor escondeu. Sem a lista, todas.
+   */
+  telasDoGeral?: readonly TelaDoGeral[];
 };
 
 /**
@@ -221,7 +227,10 @@ export function tutorialDaEquipe(o: OpcoesDaEquipe): Tutorial {
           titulo: "O que fica com o gestor",
           texto: "Algumas tarefas são só de quem coordena o setor:",
           itens: [
-            "Passar um trabalho para outro setor, em Transferências.",
+            // Com Transferências escondida no menu do setor (14/10/2026), o item sai.
+            ...(o.telasDoGeral && !o.telasDoGeral.includes("transferencias")
+              ? []
+              : ["Passar um trabalho para outro setor, em Transferências."]),
             "Criar campos extras e tags para o setor, na engrenagem, no alto da tela.",
             // Desde 13/10/2026 só o administrador exclui (`podeExcluir`). Para
             // o próprio administrador, que revê pela ajuda, a frase não vale.

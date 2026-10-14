@@ -591,6 +591,7 @@ model Tenant {
   budgets                   Budget[]
   agentEvaluationSummaries  AgentEvaluationSummary[]
   sectorTaskViews           SectorTaskView[]
+  sectorMenuViews           SectorMenuView[]
   processOrgans             ProcessOrgan[]
   processTypes              ProcessType[]
   processTemplates          ProcessTemplate[]
@@ -659,6 +660,34 @@ model SectorTaskView {
   @@unique([tenantId, sectorCode])
   @@index([tenantId])
   @@map("sector_task_views")
+}
+
+// Quais telas do grupo "Geral" do menu lateral ficam ESCONDIDAS para cada
+// setor (14/10/2026) — o Recrutamento sem Solicitações e Transferências, por
+// exemplo. Irmã da SectorTaskView: configuração do escritório, por setor,
+// editada pelo administrador; quem está em mais de um setor vê a UNIÃO.
+//
+// Guarda as escondidas, e não as visíveis: tela nova no Geral aparece para
+// todos, inclusive nos setores que já esconderam outras. Ausência de linha =
+// nada escondido, que é o menu de antes desta tabela.
+//
+// Visibilidade, não permissão: quem tem o endereço continua abrindo a tela.
+// Regras em `src/lib/menuGeral.ts`.
+model SectorMenuView {
+  id            String   @id @default(uuid())
+  tenantId      String
+  sectorCode    String   @db.VarChar(40)
+  // JSON com as chaves escondidas, ex. ["solicitacoes","transferencias"].
+  // Chave desconhecida é descartada na leitura (o catálogo vive em código).
+  hiddenScreens String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sectorCode])
+  @@index([tenantId])
+  @@map("sector_menu_views")
 }
 
 // Acesso de um SUPER_ADMIN a um tenant além do seu próprio (User.tenantId) —
