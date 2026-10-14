@@ -9,6 +9,8 @@ import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
+import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
+import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 
 /**
  * Todas as telas de um setor, em cartões por grupo — onde se fixa uma tela na
@@ -24,12 +26,18 @@ export default async function TelasDoSetorPage({ params }: { params: Promise<{ c
   const ctx = await getAuthContext();
   if (!canViewSector(ctx, code)) notFound();
 
-  const [allModules, { labels, colors }, fixadas] = await Promise.all([
+  const [allModules, { labels, colors }, fixadas, telasDoGeral] = await Promise.all([
     getTenantModuleStates(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
     codigosDeTelasFixadas(ctx.userId, ctx.tenantId),
+    telasDoGeralDaPessoa(ctx),
   ]);
-  const modulos = allModules.filter((m) => m.sectorCode === code && m.enabled);
+  // Solicitações e Arquivos são do Geral: escondidas no menu desta pessoa
+  // (Configurações › Setores, 14/10/2026), também não se oferecem para fixar.
+  const modulos = semTelasDoGeralOcultas(
+    allModules.filter((m) => m.sectorCode === code && m.enabled),
+    telasDoGeral,
+  );
 
   return (
     <PageContainer>

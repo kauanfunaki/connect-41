@@ -8,6 +8,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { BackButton } from "@/components/shared/BackButton";
 import { ModulosDoSetor } from "@/components/setor/ModulosDoSetor";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
+import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
+import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 
 // As telas de um grupo do setor — onde a sidebar cai ao clicar no grupo.
 //
@@ -30,21 +32,25 @@ export default async function GrupoDoSetorPage({
   const grupo = grupoDoSlug(slug);
   if (!grupo) notFound();
 
-  const [allModules, { labels, colors }, fixadas] = await Promise.all([
+  const [allModules, { labels, colors }, fixadas, telasDoGeral] = await Promise.all([
     getTenantModuleStates(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
     codigosDeTelasFixadas(ctx.userId, ctx.tenantId),
+    telasDoGeralDaPessoa(ctx),
   ]);
   const modules = allModules.filter((m) => m.sectorCode === code && m.enabled);
   // Grupo sem módulo ligado neste cliente não é tela vazia: é endereço que não
   // existe aqui — o módulo pode estar desligado ou pertencer a outro setor.
+  // Conferido antes de tirar as telas do Geral escondidas: esconder do menu
+  // não muda que endereço existe (14/10/2026).
   if (!modules.some((m) => m.group === grupo)) notFound();
+  const visiveis = semTelasDoGeralOcultas(modules, telasDoGeral);
 
   return (
     <PageContainer>
       <BackButton className="mb-3" />
       <PageHeader title={sectorLabel(labels, code)} subtitle={`${grupo} — telas deste grupo.`} />
-      <ModulosDoSetor code={code} modulos={modules} cor={colors[code] ?? "#586577"} grupoAtivo={grupo} fixadas={fixadas} />
+      <ModulosDoSetor code={code} modulos={visiveis} cor={colors[code] ?? "#586577"} grupoAtivo={grupo} fixadas={fixadas} />
     </PageContainer>
   );
 }
