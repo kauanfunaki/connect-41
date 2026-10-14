@@ -6,8 +6,11 @@
 // gravada no build, e o Dockerfile do projeto builda sem recebê-la.
 //
 // Sem `APP_PUBLIC_URL` (ou com um valor quebrado), o link fica relativo: o host
-// principal ainda serve o login, o portal e as vagas, então ele funciona do
-// mesmo jeito — só não troca de endereço.
+// principal ainda serve o login e o portal, então ele funciona do mesmo jeito —
+// só não troca de endereço.
+//
+// As vagas saíram do site em 14/10/2026: o portal de vagas é da 41 e tem
+// endereço próprio (o 41 Carreiras, lib/carreiras/enderecoDeCarreiras).
 
 /** O caminho do Connect, na origem de `APP_PUBLIC_URL` quando ela existe. */
 export function enderecoDoApp(caminho: string, appPublicUrl: string | null | undefined): string {
@@ -25,8 +28,6 @@ export function enderecoDoApp(caminho: string, appPublicUrl: string | null | und
 export type LinksDoSite = {
   /** Entrada do Portal do Cliente. */
   portal: string;
-  /** Lista pública de vagas. */
-  vagas: string;
   /** Entrada da equipe. */
   entrar: string;
   /**
@@ -41,7 +42,6 @@ export type LinksDoSite = {
 export function linksDoSite(appPublicUrl: string | null | undefined): LinksDoSite {
   return {
     portal: enderecoDoApp("/portal/login", appPublicUrl),
-    vagas: enderecoDoApp("/carreiras", appPublicUrl),
     entrar: enderecoDoApp("/login", appPublicUrl),
     abrir: enderecoDoApp("/home", appPublicUrl),
     privacidade: enderecoDoApp("/portal/privacidade", appPublicUrl),
