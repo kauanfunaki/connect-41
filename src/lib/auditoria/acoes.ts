@@ -121,6 +121,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "dre.import": c("importou de um arquivo a DRE da empresa"),
   "dre.map": e("ligou uma categoria a uma linha da DRE da empresa"),
   "dre.unmap": e("desligou uma categoria da DRE da empresa"),
+  // Correção feita por script, com o "de → para" em `linhaDaDre` (14/10/2026).
+  "dre.categoria.linha_corrigida": e("corrigiu a linha da DRE da categoria"),
   "dre.budget.created": c("criou o orçamento"),
   "dre.budget.saved": e("salvou o orçamento"),
   "dre.budget.approved": e("aprovou o orçamento"),
