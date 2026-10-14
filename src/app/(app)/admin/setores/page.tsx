@@ -6,12 +6,13 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllSectors } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { StatusDot } from "@/components/shared/StatusDot";
+import { lerOcultasDoGeral } from "@/lib/menuGeralDb";
 
 export default async function SetoresPage() {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
 
-  const sectors = await getAllSectors(ctx.tenantId);
+  const [sectors, ocultasDoGeral] = await Promise.all([getAllSectors(ctx.tenantId), lerOcultasDoGeral(ctx.tenantId)]);
 
   return (
     <PageContainer>
@@ -37,6 +38,15 @@ export default async function SetoresPage() {
                 <div className="min-w-0">
                   <p className="text-fs-3 font-medium text-fg truncate">{s.label}</p>
                   <p className="text-fs-1 text-fg-muted font-mono truncate">{s.code}</p>
+                  {/* O menu Geral do setor (14/10/2026) — configurado no Editar. */}
+                  {(() => {
+                    const n = ocultasDoGeral.porSetor[s.code]?.length ?? 0;
+                    return n > 0 ? (
+                      <p className="text-fs-1 text-fg-muted truncate">
+                        {n} {n === 1 ? "tela escondida" : "telas escondidas"} no menu Geral
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
                 {/* Inativo pela bolinha, a do ativo/inativo de cadastro (escolha 2A, 08/10/2026). */}
                 {!s.active && <StatusDot color="var(--c41-fg-muted)" label="Inativo" className="flex-shrink-0" />}
