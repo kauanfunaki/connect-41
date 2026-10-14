@@ -46,11 +46,13 @@ import { SecaoDaCeci } from "./SecaoDaCeci";
 //  4. A Ceci (SecaoDaCeci), o ponto alto: a IA em cada setor, com uma
 //     conversa de exemplo por setor; no Portal do Cliente, "Em breve".
 //  5. O Connect (MosaicoDoConnect): os recursos de verdade, num mosaico.
-//  6. Seguro e organizado: permissões por setor, registro de quem fez o quê,
+//  6. Planos (SecaoDePlanos, 14/10/2026): os planos marcados "Mostrar no site"
+//     em Administração › Planos, sem preço por enquanto, e o cartão "Connect
+//     sob medida". Sem plano marcado (ou sem o banco), a seção e o link
+//     "Planos" do topo somem. Veio para antes de Segurança no mesmo dia, a
+//     pedido do Kauan, para ganhar destaque.
+//  7. Seguro e organizado: permissões por setor, registro de quem fez o quê,
 //     cada escritório com os seus dados, o aviso de certificado vencendo.
-//  7. Planos (SecaoDePlanos, 14/10/2026): os planos marcados "Mostrar no site"
-//     em Administração › Planos, sem preço por enquanto. Sem plano marcado (ou
-//     sem o banco), a seção e o link "Planos" do topo somem.
 //  8. Sobre nós: o texto da versão 2, com a 41 TEC LTDA, de Curitiba.
 //  9. Perguntas frequentes (PerguntasFrequentes), em acordeão.
 // 10. O convite para falar com a gente (o e-mail de lib/site/textos) e o
@@ -70,8 +72,8 @@ import { SecaoDaCeci } from "./SecaoDaCeci";
 const SECOES: SecaoDoTopo[] = [
   { id: "ceci", rotulo: "A Ceci" },
   { id: "o-connect", rotulo: "O Connect" },
-  { id: "seguranca", rotulo: "Segurança" },
   { id: "planos", rotulo: "Planos" },
+  { id: "seguranca", rotulo: "Segurança" },
   { id: "sobre-nos", rotulo: "Sobre nós" },
   { id: "perguntas", rotulo: "Perguntas" },
 ];
@@ -207,6 +209,8 @@ export function SiteDoConnect({
 
         <MosaicoDoConnect />
 
+        {planos && planos.planos.length > 0 && <SecaoDePlanos planos={planos} />}
+
         <section id="seguranca" aria-labelledby="seguranca-titulo" className={`${FAIXA} scroll-mt-16`}>
           <div
             className="c41-site-escuro c41-site-surge relative overflow-hidden rounded-[28px] px-5 py-14 text-white sm:rounded-[36px] sm:px-10 sm:py-16 lg:px-14 lg:py-20"
@@ -246,8 +250,6 @@ export function SiteDoConnect({
             </div>
           </div>
         </section>
-
-        {planos && planos.planos.length > 0 && <SecaoDePlanos planos={planos} />}
 
         {/* Sobre nós: o texto da versão 2, que ainda pede a revisão do Kauan. */}
         <section id="sobre-nos" aria-labelledby="sobre-nos-titulo" className="scroll-mt-16">
