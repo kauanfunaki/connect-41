@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { lerAnexo, respostaDoAnexo } from "@/lib/financeiro/pendencias/armazenamento";
@@ -14,6 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const modulos = await getEnabledModuleCodes(sessao.tenantId);
   if (!pedidosAoClienteNoConjunto(modulos)) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
+  if (await telaBloqueadaNoPortal(sessao.tenantId, "/portal/pendencias")) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
 
   const alcance = await alcanceDoCliente(sessao);
   const companyIds = alcance.tipo === "EMPRESAS" ? alcance.companyIds : [];

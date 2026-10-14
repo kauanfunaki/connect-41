@@ -8,6 +8,8 @@ import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { carregarPendencia } from "@/lib/financeiro/pendencias/consultas";
 import { ROTULO_DO_TIPO, emAndamento } from "@/lib/financeiro/pendencias/regras";
 import { pedidosAoClienteNoConjunto, setorDaPendencia, setorPadraoDasPendencias } from "@/lib/financeiro/pendencias/setor";
@@ -26,6 +28,7 @@ export const dynamic = "force-dynamic";
 export default async function PortalPendenciaPage({ params }: { params: Promise<{ id: string }> }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!pedidosAoClienteNoConjunto(modulos)) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/pendencias")) return <TelaIndisponivel />;
 
   const { id } = await params;
   const [p, padrao, { labels }] = await Promise.all([

@@ -8,6 +8,8 @@ import { SeloDoProcesso } from "@/components/portal/SeloDoProcesso";
 import { Aviso } from "@/components/ui/Aviso";
 import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { processoDoPortal } from "@/lib/societario/portal-data";
 import { SITUACAO_PARA_CLIENTE, STATUS_DA_ETAPA_PARA_CLIENTE } from "@/lib/societario/portal";
@@ -36,6 +38,7 @@ const ICONE_DA_ETAPA = {
 export default async function PortalProcessoPage({ params }: { params: Promise<{ id: string }> }) {
   const { sessao, escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("societario_processos")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/processos")) return <TelaIndisponivel />;
 
   const { id } = await params;
   const feriados = await feriadosDoTenant(sessao.tenantId);

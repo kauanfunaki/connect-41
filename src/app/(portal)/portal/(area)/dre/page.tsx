@@ -8,6 +8,8 @@ import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePer
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { dreDoMes, mesesComMovimento } from "@/lib/dre/data";
 import { serieEconomica } from "@/lib/dre/dataEconomica";
@@ -38,6 +40,7 @@ export default async function PortalDrePage({
 }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_dre")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/dre")) return <TelaIndisponivel />;
 
   const params = await searchParams;
   const competenciaLiberada = modulos.has("dre_economica");

@@ -10,6 +10,8 @@ import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { SeloDaSolicitacao } from "@/components/solicitacoes/SelosDaSolicitacao";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { carregarSolicitacao } from "@/lib/solicitacoes/consultas";
 import { emAberto } from "@/lib/solicitacoes/regras";
 import { formatInstantDate } from "@/lib/format";
@@ -27,6 +29,7 @@ export default async function PortalSolicitacaoPage({
 }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("portal_solicitacoes")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/solicitacoes")) return <TelaIndisponivel />;
 
   const [{ id }, { nova }] = await Promise.all([params, searchParams]);
   const s = await carregarSolicitacao(

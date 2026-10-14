@@ -7,6 +7,8 @@ import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { AprovacoesDoPortal } from "@/components/aprovacoes/AprovacoesDoPortal";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { aprovacoesDoCliente } from "@/lib/financeiro/aprovacao/portal";
 import { moeda } from "@/lib/financeiro/formato";
 
@@ -16,6 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function PortalAprovacoesPage() {
   const { sessao, escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_aprovacoes")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/aprovacoes")) return <TelaIndisponivel />;
 
   const { contas, temAlcada } = await aprovacoesDoCliente(escopo, sessao.sub);
   const dentro = contas.filter((c) => c.dentroDoTeto);

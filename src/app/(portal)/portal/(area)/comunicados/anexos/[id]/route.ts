@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { respostaDoAnexo } from "@/lib/financeiro/pendencias/armazenamento";
 import { anexosDoComunicado } from "@/lib/comunicados/avisos";
@@ -10,6 +11,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const sessao = await sessaoAtivaDoPortal();
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!(await getEnabledModuleCodes(sessao.tenantId)).has("portal_solicitacoes")) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
+  if (await telaBloqueadaNoPortal(sessao.tenantId, "/portal/comunicados")) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
 
   const { id } = await params;
   const anexo = await getPrisma().clientAnnouncementAttachment.findFirst({
