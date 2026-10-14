@@ -27,7 +27,8 @@ const lerTelaNoServidor = () => true;
  * Pedido do Kauan em 18/09: dez abas em cima de cada tela poluíam — e empurravam
  * o conteúdo para baixo, mais ainda no celular, onde quebravam em três linhas.
  * Mesmo desenho da sidebar do Connect (240px, drawer abaixo de `lg`), com o
- * nome do grupo do cliente no topo e o sair no rodapé.
+ * nome do acesso no topo (a empresa, ou a primeira e quantas mais — era o
+ * nome do Cliente até 14/10/2026) e o sair no rodapé.
  */
 export function PortalShell({
   grupoNome,

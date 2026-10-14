@@ -57,7 +57,7 @@ export function useExclusaoDeCliente({ resumoAction, excluirAction }: AcoesDeExc
 
   function confirmar(digitado: string) {
     if (!estado?.resumo) return;
-    const { cliente, resumo } = estado;
+    const { cliente } = estado;
     startExcluir(async () => {
       const r = await excluirAction(cliente.id, digitado).catch(() => ({
         erro: "Não foi possível excluir. Tente de novo.",
