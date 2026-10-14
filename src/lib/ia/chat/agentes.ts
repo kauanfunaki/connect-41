@@ -20,7 +20,7 @@ import { publicoPermite, type ContextoDaTela, type PropostaGravada, type SetorDo
 import { MODULOS_DO_BPO } from "@/lib/ia/ferramentas-bpo";
 import { MODULOS_DO_DP } from "@/lib/ia/ferramentas-dp";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
-import { acessoDoRecrutador } from "@/lib/recrutamento/acessoVagas";
+import { acessoDoRecrutador, podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 import { recorteDaGestao } from "@/lib/gestao/regras";
 import { MODULO_GESTAO } from "@/lib/gestao/acesso";
 import { setoresDaEquipe } from "./citacoes";
@@ -436,9 +436,14 @@ export async function contextoParaOAgente(
     if (tela.tipo === "vaga") {
       const v = await getPrisma().vaga.findFirst({
         where: { id: tela.id, tenantId },
-        select: { id: true, title: true, sectorCode: true },
+        select: { id: true, title: true, sectorCode: true, restrictedToRecruiters: true },
       });
-      if (!v || !canActOnSector(ctx, v.sectorCode)) return null;
+      // A regra da própria vaga (14/10/2026): quem é do setor dela ou o
+      // recrutador que ela não restringe. Era só o setor da vaga — e o
+      // recrutador numa vaga do Contábil abria a Ceci sem a vaga como assunto,
+      // embora as ferramentas dela enxergassem a vaga. Com o "Perguntar à Ceci
+      // sobre esta vaga" no lugar do Assistente da vaga, faria falta.
+      if (!v || !(await podeAgirNaVaga(ctx, v))) return null;
       return {
         rotulo: `Vaga: ${v.title}`.slice(0, 200),
         texto: `A pessoa está com a vaga "${v.title}" aberta (vagaId ${v.id}). Quando ela disser "esta vaga", é essa.`,

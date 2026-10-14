@@ -1,44 +1,42 @@
 import Link from "next/link";
+import { createHash } from "crypto";
 import { Card } from "@/components/ui/Card";
 import { Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { VagaPrioridade } from "@/generated/prisma/enums";
 import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE } from "@/lib/vagaStatus";
 import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { isModuleEnabled } from "@/lib/modules";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
-import { AddCandidatoForm } from "@/components/vagas/AddCandidatoForm";
-import { AssistenteDaVaga } from "@/components/vagas/AssistenteDaVaga";
+import { AdicionarCandidato } from "@/components/vagas/AdicionarCandidato";
+import { PerguntarACeci } from "@/components/vagas/PerguntarACeci";
+import { FatosDaVaga } from "@/components/vagas/FatosDaVaga";
+import { FaixaDoPortal } from "@/components/vagas/FaixaDoPortal";
 import { TriagemDaVaga } from "@/components/vagas/TriagemDaVaga";
 import { isAiConfigured } from "@/lib/ai";
+import { agentesDoChat } from "@/lib/ia/chat/agentes";
+import { IA_DO_SETOR } from "@/lib/ia/chat/regras";
 import { requisitosAtuais } from "@/lib/recrutamento/triagemServidor";
 import { compararParaTriagem, type Faixa } from "@/lib/recrutamento/triagem";
 import { resumoDasRespostas } from "@/lib/recrutamento/respostas";
+import { enderecoCurto, fatosDaFicha, linkDoWhatsApp, situacaoNoPortal } from "@/lib/recrutamento/fichaDaVaga";
 import { RecruitmentFunnel, type FunnelCard } from "@/components/vagas/RecruitmentFunnel";
-import { computeFunnelConversion, type Stage } from "@/lib/recruitmentFunnel";
-import { formatInstantDate } from "@/lib/format";
+import type { Stage } from "@/lib/recruitmentFunnel";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { excluirVaga, encerrarVaga, reabrirVaga } from "../actions";
-import { adicionarCandidato, moverEtapaCandidatura, encerrarCandidatura } from "./actions";
+import { moverEtapaCandidatura, encerrarCandidatura } from "./actions";
 import { podeAgirNaVaga, ehCoordenadorDoRecrutamento, SETOR_RECRUTAMENTO } from "@/lib/recrutamento/acessoVagas";
 import { AcessoDosRecrutadores } from "@/components/vagas/AcessoDosRecrutadores";
 import { Selo } from "@/components/ui/Selo";
-import { InfoRow } from "@/components/empresas/InfoRow";
-import { Funil } from "@/components/shared/Graficos";
-import { urlDaVagaNo41Carreiras } from "@/lib/carreiras/enderecoDeCarreiras";
-
-const PRIORITY_LABEL: Record<VagaPrioridade, string> = {
-  BAIXA: "Baixa",
-  MEDIA: "Média",
-  ALTA:  "Alta",
-};
+import { caminhoNoPortal, enderecoPublicoDoPortal } from "@/lib/carreiras/enderecoDeCarreiras";
+import { localDaVaga } from "@/lib/carreiras/portal";
 
 export default async function VagaPage({
   params,
@@ -55,7 +53,7 @@ export default async function VagaPage({
   const vaga = await prisma.vaga.findFirst({
     where: { id, ...scopedVagaWhere(ctx) },
     include: {
-      company: { select: { id: true, name: true } },
+      company: { select: { id: true, name: true, tradeName: true, city: true, stateCode: true } },
       cargo: { select: { id: true, name: true } },
       candidaturas: {
         orderBy: { createdAt: "desc" },
@@ -72,13 +70,27 @@ export default async function VagaPage({
   const tenantSlug = (
     await prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { slug: true } })
   )?.slug;
-  const publicBaseUrl = process.env.APP_PUBLIC_URL ?? "";
   // O endereço que o recrutador divulga: da 41, o do 41 Carreiras (14/10/2026);
-  // dos outros escritórios, o de sempre.
+  // dos outros escritórios, o de sempre, em APP_PUBLIC_URL. Sem APP_PUBLIC_URL
+  // (ambiente local), só o caminho — abre igual, e o "Copiar link" completa
+  // com o endereço da janela; o WhatsApp não vai sem endereço inteiro.
+  const paginaDaVaga = { tipo: "vaga" as const, id: vaga.id };
   const linkPublico = tenantSlug
-    ? (urlDaVagaNo41Carreiras(tenantSlug, vaga.id) ?? `${publicBaseUrl}/carreiras/${tenantSlug}/${vaga.id}`)
+    ? (enderecoPublicoDoPortal(tenantSlug, paginaDaVaga) ?? caminhoNoPortal(tenantSlug, paginaDaVaga, false))
     : null;
+  const agora = new Date();
+  const noPortal = situacaoNoPortal(vaga, agora);
+  const linkAbsoluto = linkPublico && /^https?:\/\//i.test(linkPublico) ? linkPublico : null;
   const canAct = await podeAgirNaVaga(ctx, vaga);
+  // "Perguntar à Ceci" só para quem tem a Ceci do Recrutamento — sem ela, o
+  // chat do canto nem aparece e o botão não abriria nada. E só para quem age
+  // na vaga, como o Assistente da vaga que ele substitui: a Ceci sugere
+  // movimentos no funil.
+  const [agentes, podeCadastrar] = await Promise.all([
+    canAct ? agentesDoChat(ctx).catch(() => []) : Promise.resolve([]),
+    canAct ? podeNoModulo(ctx, "recrutamento_candidatos", "gerir") : Promise.resolve(false),
+  ]);
+  const temCeci = agentes.some((a) => a.code === IA_DO_SETOR.recrutamento);
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
   // Quem do Recrutamento vê a vaga — só a coordenação do Recrutamento enxerga
@@ -114,24 +126,35 @@ export default async function VagaPage({
   const emAndamento = vaga.candidaturas.filter((c) => c.status === "EM_ANDAMENTO");
   const pendentes = requisitos ? emAndamento.filter((c) => notaDa.get(c.id)?.requisitosId !== requisitos.id).length : 0;
 
-  const linkedPersonIds = new Set(vaga.candidaturas.map((c) => c.personId));
-  const candidatos = await prisma.person.findMany({
-    where: { tenantId: ctx.tenantId, type: "CANDIDATO", active: true, id: { notIn: [...linkedPersonIds] } },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
-
   const deleteAction = excluirVaga.bind(null, id);
   const encerrarAction = encerrarVaga.bind(null, id);
   const reabrirAction = reabrirVaga.bind(null, id);
-  const addCandidatoAction = adicionarCandidato.bind(null, id);
   const moverEtapaAction = moverEtapaCandidatura.bind(null, id);
   const encerrarCandidaturaAction = encerrarCandidatura.bind(null, id);
 
+  const local = localDaVaga({ workCity: vaga.workCity, workStateCode: vaga.workStateCode, company: vaga.company });
+  const fatos = fatosDaFicha(
+    {
+      cargo: vaga.cargo?.name ?? null,
+      quantidade: vaga.quantity,
+      contratadas: vaga.candidaturas.filter((c) => c.status === "CONTRATADO").length,
+      prioridade: vaga.priority,
+      abertaEm: vaga.openedAt,
+      encerradaEm: vaga.closedAt,
+      contrato: vaga.contractType,
+      modalidade: vaga.workMode,
+      cidade: local.cidade,
+      uf: local.uf,
+      salarioMin: vaga.salaryMin === null ? null : vaga.salaryMin.toNumber(),
+      salarioMax: vaga.salaryMax === null ? null : vaga.salaryMax.toNumber(),
+      mostrarSalario: vaga.showSalary,
+    },
+    agora
+  );
+
   // Funil: separa candidaturas ativas (colunas do board) das encerradas
-  // (reprovado/desistente, faixa embaixo). O cálculo de conversão usa TODAS
-  // (o stage preservado é o que mede quem alcançou cada etapa).
-  const funnelStats = computeFunnelConversion(vaga.candidaturas.map((c) => ({ stage: c.stage, status: c.status })));
+  // (reprovado/desistente, faixa embaixo). Os números do topo das colunas usam
+  // TODAS (o stage preservado é o que mede quem alcançou cada etapa).
   const activeCards: FunnelCard[] = vaga.candidaturas
     .filter((c) => c.status !== "REPROVADO" && c.status !== "DESISTENTE")
     .map((c) => ({
@@ -155,6 +178,14 @@ export default async function VagaPage({
     // Dentro de cada etapa, o mais aderente primeiro; sem nota vai para o fim.
     .sort(compararParaTriagem);
   const encerrados = vaga.candidaturas.filter((c) => c.status === "REPROVADO" || c.status === "DESISTENTE");
+  // O quadro guarda os cartões no estado dele (para mover na hora, antes do
+  // servidor responder) e só lê os do servidor ao montar. Esta chave o monta
+  // de novo quando os dados mudam — candidato vinculado pelo painel, nota nova
+  // da triagem —, senão o recém-chegado só aparecia recarregando a página.
+  const versaoDoQuadro = createHash("sha1")
+    .update(JSON.stringify([activeCards, encerrados.map((c) => [c.id, c.stage, c.status])]))
+    .digest("hex")
+    .slice(0, 16);
 
   return (
     <PageContainer>
@@ -207,46 +238,17 @@ export default async function VagaPage({
         }
       />
 
-      {/* Detalhes. Títulos de seção da ficha em 18px (`text-section`) — padrão
-          aceito pelo Kauan em 08/10/2026 para as fichas; estavam em 14px. O
-          Assistente, cartão dentro do cartão do funil, fica no título de cartão. */}
-      <Card className="p-5 mb-4">
-        <h2 className="text-section font-semibold text-fg mb-4">Detalhes</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-4">
-          <InfoRow label="Cargo" value={vaga.cargo?.name} />
-          <InfoRow label="Quantidade" value={String(vaga.quantity)} />
-          <InfoRow label="Prioridade" value={PRIORITY_LABEL[vaga.priority]} />
-          <InfoRow
-            label="Aberta em"
-            value={formatInstantDate(vaga.openedAt, { day: "2-digit", month: "long", year: "numeric" })}
-          />
-          {vaga.closedAt && (
-            <InfoRow
-              label="Encerrada em"
-              value={formatInstantDate(vaga.closedAt, { day: "2-digit", month: "long", year: "numeric" })}
-            />
-          )}
-        </div>
-        {vaga.notes && (
-          <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-helper text-fg-muted mb-0.5">Observações</p>
-            <p className="text-ui text-fg whitespace-pre-wrap">{vaga.notes}</p>
-          </div>
-        )}
-        {vaga.isPublic && linkPublico && (
-          <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-helper text-fg-muted mb-0.5">Portal público</p>
-            <a
-              href={linkPublico}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-ui text-brand hover:underline break-all"
-            >
-              {linkPublico}
-            </a>
-          </div>
-        )}
-      </Card>
+      {/* A vaga no portal (escolha "Vaga · 2 B" do Kauan, 14/10/2026) e a faixa
+          de fatos ("Vaga · 1 B"), no lugar do cartão "Detalhes" — ver
+          src/lib/recrutamento/fichaDaVaga.ts. */}
+      <FaixaDoPortal
+        situacao={noPortal}
+        url={linkPublico}
+        urlCurta={linkPublico ? enderecoCurto(linkPublico) : null}
+        whatsapp={linkAbsoluto ? linkDoWhatsApp(linkAbsoluto, vaga.title, vaga.company.tradeName || vaga.company.name) : null}
+        podeEditar={canManage}
+      />
+      <FatosDaVaga fatos={fatos} observacoes={vaga.notes} />
 
       {coordenaRecrutamento && (
         <AcessoDosRecrutadores
@@ -268,38 +270,37 @@ export default async function VagaPage({
         iaConfigurada={iaConfigurada}
       />
 
-      {/* Funil de recrutamento */}
+      {/* Funil de recrutamento. Os números de cada etapa ficam no topo da
+          coluna do quadro (escolha "Vaga · 4 A" do Kauan, 14/10/2026): o
+          gráfico de funil separado, em cima do quadro, saiu. No título, o
+          "Adicionar candidato" ("Vaga · 5 A"), que substitui o formulário
+          "Nova candidatura" do pé do cartão, e o "Perguntar à Ceci" ("Vaga · 6
+          C"), que substitui o bloco "Assistente da vaga". */}
       <Card className="p-5 mb-4">
-        {/* O "Novo candidato" saiu daqui para o bloco "Nova candidatura",
-            acima do formulário de vincular (5A, 08/10/2026). */}
-        <h2 className="mb-4 text-section font-semibold text-fg">
-          Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
-        </h2>
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h2 className="text-section font-semibold text-fg">Funil de recrutamento</h2>
+          {canAct && (
+            <div className="flex flex-wrap items-center gap-2">
+              {temCeci && <PerguntarACeci tituloDaVaga={vaga.title} />}
+              <AdicionarCandidato vagaId={id} podeCadastrar={podeCadastrar} />
+            </div>
+          )}
+        </div>
 
         {vaga.candidaturas.length === 0 ? (
-          <p className="text-fs-3 text-fg-muted">Nenhum candidato vinculado ainda.</p>
+          <p className="mt-2 text-fs-3 text-fg-muted">
+            Nenhum candidato vinculado ainda.
+            {canAct && " Em “Adicionar candidato”, busque no banco de talentos ou cadastre quem é novo."}
+          </p>
         ) : (
           <>
-            {/* Conversão por etapa: o mesmo Funil do painel da Home (07/10,
-                auditoria dos gráficos). Eram cinco cartões à mão com "% do
-                total", enquanto o painel mostra a passagem da etapa anterior
-                — o mesmo funil com dois desenhos e duas "conversões". Agora as
-                duas leituras estão no gráfico, e a nota diz qual é qual. */}
-            <div className="mb-5 max-w-2xl">
-              <Funil
-                titulo="Candidaturas que chegaram a cada etapa"
-                etapas={funnelStats.stages.map((s) => ({ chave: s.stage, rotulo: s.label, valor: s.reached }))}
-              />
-              <p className="mt-2 text-micro text-fg-muted">
-                A barra é a parte do total de candidaturas que chegou a cada etapa; o percentual ao lado é quantas passaram da etapa
-                anterior.
-              </p>
-            </div>
-
             {/* Board arrastável */}
             <RecruitmentFunnel
+              key={versaoDoQuadro}
               vagaId={id}
               cards={activeCards}
+              encerradas={encerrados.map((c) => ({ stage: c.stage, status: c.status }))}
+              quantidadeDeVagas={vaga.quantity}
               canManage={canManage}
               moveAction={moverEtapaAction}
               encerrarAction={encerrarCandidaturaAction}
@@ -332,21 +333,6 @@ export default async function VagaPage({
               </div>
             )}
           </>
-        )}
-
-        {canAct && (
-          <div className="mt-4">
-            <AddCandidatoForm action={addCandidatoAction} candidatos={candidatos} novoCandidatoHref="/candidatos/nova" />
-          </div>
-        )}
-
-        {/* Quem não pode agir na vaga também não pergunta ao assistente: as
-            sugestões dele são movimentos no funil, e sugerir o que a pessoa não
-            pode fazer só gera botão que falha. */}
-        {canAct && (
-          <div className="mt-6">
-            <AssistenteDaVaga vagaId={vaga.id} />
-          </div>
         )}
       </Card>
     </PageContainer>
