@@ -329,6 +329,8 @@ export type ConexaoNaTela = {
   ligada: boolean;
   /** A última mensagem que chegou por esta conexão, de qualquer candidato. */
   ultimaEntradaEm: Date | null;
+  /** Conversas com o assistente sem resposta há tempo demais (`contarEsperandoRobo`): o número ao lado do aviso. */
+  esperandoRobo: number;
   saude: SaudeDaConexao;
 };
 
@@ -410,6 +412,7 @@ export async function saudeDasConexoes(tenantId: string, agora: Date): Promise<C
         instancia: config.instance ?? null,
         ligada: c.enabled,
         ultimaEntradaEm,
+        esperandoRobo,
         saude: avaliarConexao(
           {
             ligada: c.enabled,
