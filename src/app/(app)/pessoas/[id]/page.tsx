@@ -17,7 +17,6 @@ import {
   KeyRound,
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
-import { podeExcluirCadastros } from "@/lib/exclusao/comum";
 import { Button } from "@/components/ui/Button";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -29,7 +28,7 @@ import { Badge } from "@/components/ui/Badge";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
-import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, isFullWrite, podeExcluir } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { getPersonSectors, getApplicableCustomFields } from "@/lib/customFields";
@@ -430,7 +429,7 @@ export default async function PessoaPage({
         companyName={person.currentCompany?.name ?? null}
         canEdit={canEdit}
         canRequestHandoff={canRequestHandoff}
-        podeExcluir={podeExcluirCadastros(ctx)}
+        podeExcluir={podeExcluir(ctx)}
       />
 
       <PersonDetailTabs

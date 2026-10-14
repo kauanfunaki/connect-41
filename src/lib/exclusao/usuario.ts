@@ -26,14 +26,14 @@ import {
   mensagemDeErro,
   n,
   nomeDoAtor,
-  SEM_PERMISSAO_PARA_EXCLUIR,
-  podeExcluir,
+  papelExclui,
   registrarExclusao,
   somaSemRotulo,
   validarModo,
   type Passo,
   type Tx,
 } from "./comum";
+import { SO_ADMIN_EXCLUI } from "@/lib/auth/papeis";
 import { apagarArquivos, curriculosSemUso, juntarArquivos, semArquivos, totalDeArquivos, type ArquivosDoCadastro } from "./arquivos";
 import { PLANO_DA_PESSOA, arquivosDasPessoas, itensDasPessoas } from "./pessoa";
 import { LIGACOES } from "./registro";
@@ -311,7 +311,7 @@ export type PedidoDoUsuario = {
 };
 
 export async function excluirUsuarioDeVez(prisma: PrismaClient, pedido: PedidoDoUsuario): Promise<ResultadoDaExclusao> {
-  if (!pedido.tenantId || !podeExcluir(pedido.ator.role)) return { ok: false, erro: SEM_PERMISSAO_PARA_EXCLUIR };
+  if (!pedido.tenantId || !papelExclui(pedido.ator.role)) return { ok: false, erro: SO_ADMIN_EXCLUI };
 
   let arquivos: ArquivosDoCadastro = semArquivos();
   let saida: { nome: string; resumo: string[] };

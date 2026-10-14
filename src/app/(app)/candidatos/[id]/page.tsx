@@ -8,8 +8,7 @@ import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { BotaoExcluirCadastro } from "@/components/exclusao/ExcluirCadastro";
-import { podeExcluirCadastros } from "@/lib/exclusao/comum";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { listDocuments } from "@/lib/documents";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
@@ -122,7 +121,7 @@ export default async function CandidatoPage({
 
   // Excluir é só de administrador (13/10/2026) — gerir o Recrutamento dá
   // editar, não apagar.
-  const excluivel = podeExcluirCadastros(ctx);
+  const excluivel = podeExcluir(ctx);
 
   const fullAddress = [
     person.addressStreet,

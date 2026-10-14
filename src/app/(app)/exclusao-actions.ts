@@ -14,7 +14,8 @@
 
 import { getAuthContext } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
-import { ASSINATURA_SOMENTE_LEITURA, SEM_PERMISSAO_PARA_EXCLUIR, podeExcluir } from "@/lib/exclusao/comum";
+import { ASSINATURA_SOMENTE_LEITURA, papelExclui } from "@/lib/exclusao/comum";
+import { SO_ADMIN_EXCLUI } from "@/lib/auth/papeis";
 import { excluirEmpresaDeVez, previaDaEmpresa } from "@/lib/exclusao/empresa";
 import { excluirPessoaDeVez, previaDaPessoa } from "@/lib/exclusao/pessoa";
 import { excluirUsuarioDeVez, previaDoUsuario } from "@/lib/exclusao/usuario";
@@ -25,7 +26,7 @@ const TIPOS: TipoDeCadastro[] = ["empresa", "pessoa", "usuario"];
 export async function previaDaExclusao(tipo: TipoDeCadastro, id: string): Promise<{ previa: Previa } | { erro: string }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { erro: "Não autenticado." };
-  if (!podeExcluir(ctx.role)) return { erro: SEM_PERMISSAO_PARA_EXCLUIR };
+  if (!papelExclui(ctx.role)) return { erro: SO_ADMIN_EXCLUI };
   if (ctx.subscriptionReadOnly) return { erro: ASSINATURA_SOMENTE_LEITURA };
   if (!TIPOS.includes(tipo) || typeof id !== "string" || !id) return { erro: "Pedido inválido." };
 
@@ -47,7 +48,7 @@ export async function previaDaExclusao(tipo: TipoDeCadastro, id: string): Promis
 export async function excluirCadastro(pedido: PedidoDeExclusao): Promise<ResultadoDaExclusao> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { ok: false, erro: "Não autenticado." };
-  if (!podeExcluir(ctx.role)) return { ok: false, erro: SEM_PERMISSAO_PARA_EXCLUIR };
+  if (!papelExclui(ctx.role)) return { ok: false, erro: SO_ADMIN_EXCLUI };
   if (ctx.subscriptionReadOnly) return { ok: false, erro: ASSINATURA_SOMENTE_LEITURA };
   if (
     !pedido ||

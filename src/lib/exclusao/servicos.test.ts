@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { criarBancoFalso, type Chamada, type Regras } from "./bancoFalso";
-import { podeExcluir } from "./comum";
+import { papelExclui } from "./comum";
 import { LIMITE_DE_NOTAS, excluirEmpresaDeVez, excluirEmpresasEmMassa, previaDaEmpresa } from "./empresa";
 import { excluirPessoaDeVez, previaDaPessoa } from "./pessoa";
 import { excluirUsuarioDeVez, previaDoUsuario } from "./usuario";
-import { nomeConfere } from "./tipos";
 
 // O que se testa: as regras dos serviços de exclusão, sem banco — quem pode,
 // o tenant em toda consulta, os dois modos, o nome digitado, o teto de notas
@@ -55,16 +54,16 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("quem pode excluir", () => {
   it("só ADMIN e SUPER_ADMIN", () => {
-    expect(podeExcluir("ADMIN")).toBe(true);
-    expect(podeExcluir("SUPER_ADMIN")).toBe(true);
-    for (const papel of ["SECTOR_ADMIN", "SECTOR_USER", "READONLY", "", undefined, null]) expect(podeExcluir(papel)).toBe(false);
+    expect(papelExclui("ADMIN")).toBe(true);
+    expect(papelExclui("SUPER_ADMIN")).toBe(true);
+    for (const papel of ["SECTOR_ADMIN", "SECTOR_USER", "READONLY", "", undefined, null]) expect(papelExclui(papel)).toBe(false);
   });
 
   for (const role of ["SECTOR_ADMIN", "SECTOR_USER", "READONLY"]) {
     it(`${role} é recusado nos três cadastros e na massa, sem tocar no banco`, async () => {
       const b = escritorio();
       const ator = { id: "x", role };
-      const esperado = { ok: false, erro: "Só administradores podem excluir cadastros." };
+      const esperado = { ok: false, erro: "Só o Administrador ou o Super Admin pode excluir." };
       expect(await excluirEmpresaDeVez(prisma(b.banco), { tenantId: "t1", ator, id: "e1", modo: "simples" })).toEqual(esperado);
       expect(await excluirPessoaDeVez(prisma(b.banco), { tenantId: "t1", ator, id: "p1", modo: "simples" })).toEqual(esperado);
       expect(await excluirUsuarioDeVez(prisma(b.banco), { tenantId: "t1", ator, id: "u2", modo: "simples" })).toEqual(esperado);
@@ -73,15 +72,6 @@ describe("quem pode excluir", () => {
       expect(b.transacoes()).toBe(0);
     });
   }
-});
-
-describe("o nome digitado", () => {
-  it("confere ignorando espaço e caixa, não acento", () => {
-    expect(nomeConfere("  transportes   modelo ltda ", "TRANSPORTES MODELO LTDA")).toBe(true);
-    expect(nomeConfere("Joao", "João")).toBe(false);
-    expect(nomeConfere("", "")).toBe(false);
-    expect(nomeConfere(undefined, "X")).toBe(false);
-  });
 });
 
 describe("empresa", () => {

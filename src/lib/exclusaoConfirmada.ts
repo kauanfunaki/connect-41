@@ -12,13 +12,8 @@
 //
 // Este arquivo é a parte pura dessas regras — testada sem Prisma.
 
-import { isFullWrite } from "@/lib/auth/papeis";
-import type { UserRole } from "@/generated/prisma/enums";
-
-/** Quem pode excluir de verdade: administrador, e com a assinatura em dia. */
-export function podeExcluirDeVerdade(ctx: { role: UserRole; subscriptionReadOnly?: boolean }): boolean {
-  return isFullWrite(ctx.role) && !ctx.subscriptionReadOnly;
-}
+// Quem pode excluir é `podeExcluir` (src/lib/auth/papeis.ts), a mesma régua do
+// Connect inteiro.
 
 /**
  * Como o texto digitado é comparado: sem espaço sobrando nas pontas ou

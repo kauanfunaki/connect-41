@@ -6,29 +6,20 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { UserRole } from "@/generated/prisma/enums";
 import { isPrismaForeignKeyError, isPrismaUniqueError } from "@/lib/prismaErrors";
 import { contagem, type Ligacao, type Rotulo, type Tratamento } from "./registro";
-import { nomeConfere, type Efeito, type ItemDaPrevia, type ModoDaExclusao, type Previa } from "./tipos";
+import { isFullWrite } from "@/lib/auth/papeis";
+import { confirmacaoConfere } from "@/lib/exclusaoConfirmada";
+import type { Efeito, ItemDaPrevia, ModoDaExclusao, Previa } from "./tipos";
 
 export type Tx = Prisma.TransactionClient;
 
 /**
- * Só administrador exclui — nos dois modos, em qualquer cadastro (decisão do
- * Kauan, 13/10/2026). Gestor de setor, coordenador, colaborador e somente
- * leitura não excluem nada, nem o cadastro vazio.
+ * O papel de quem pede, conferido de novo dentro do serviço (a tela e a action
+ * já passaram por `podeExcluir`, de src/lib/auth/papeis.ts, que olha também a
+ * assinatura): só ADMIN e SUPER_ADMIN, decisão do Kauan de 13/10/2026.
  */
-export function podeExcluir(role: UserRole | string | null | undefined): boolean {
-  return role === "ADMIN" || role === "SUPER_ADMIN";
+export function papelExclui(role: UserRole | string | null | undefined): boolean {
+  return !!role && isFullWrite(role as UserRole);
 }
-
-/**
- * Para a tela e a action: administrador, e com a assinatura em dia — em
- * somente leitura nada se exclui (mesma régua de `podeExcluirDeVerdade`, dos
- * acessos do portal). O serviço confere o papel de novo.
- */
-export function podeExcluirCadastros(ctx: { role: UserRole | string; subscriptionReadOnly?: boolean }): boolean {
-  return podeExcluir(ctx.role) && !ctx.subscriptionReadOnly;
-}
-
-export const SEM_PERMISSAO_PARA_EXCLUIR = "Só administradores podem excluir cadastros.";
 export const ASSINATURA_SOMENTE_LEITURA = "Com a assinatura em modo somente leitura, nada pode ser excluído.";
 
 /** Recusa de regra: a mensagem vai para a tela e a transação desfaz tudo. */
@@ -209,7 +200,7 @@ export function validarModo(previa: Previa, modo: ModoDaExclusao, confirmacao: s
   if (exigeNome && modo !== "completo") {
     throw new Recusa("Este cadastro tem histórico ligado. Para excluir, confira a lista e digite o nome para confirmar.");
   }
-  if (modo === "completo" && !nomeConfere(confirmacao, previa.nome)) {
+  if (modo === "completo" && !confirmacaoConfere(confirmacao ?? "", [previa.nome])) {
     throw new Recusa("O nome digitado não confere. Nada foi apagado.");
   }
 }
