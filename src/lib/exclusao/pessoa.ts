@@ -25,6 +25,7 @@ import {
   type Tx,
 } from "./comum";
 import { SO_ADMIN_EXCLUI } from "@/lib/auth/papeis";
+import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import { anotar, apagarArquivos, curriculosSemUso, semArquivos, totalDeArquivos, type ArquivosDoCadastro } from "./arquivos";
 import { LIGACOES } from "./registro";
 import type { ItemDaPrevia, ModoDaExclusao, Previa, ResultadoDaExclusao } from "./tipos";
@@ -93,6 +94,21 @@ export const PLANO_DA_PESSOA: readonly Passo<AlvoPessoas>[] = [
     modelo: "CustomValue",
     acao: "apagar",
     executar: (tx, a) => n(tx.customValue.deleteMany({ where: { tenantId: a.tenantId, entityId: { in: a.ids } } })),
+  },
+  // O resumo do currículo que a IA escreveu na ficha do candidato (14/10/2026).
+  // Sem a tabela (deploy antes da migration), não há o que apagar, e a exclusão
+  // segue.
+  {
+    modelo: "CandidateResumeSummary",
+    acao: "apagar",
+    executar: async (tx, a) => {
+      try {
+        return await n(tx.candidateResumeSummary.deleteMany({ where: { tenantId: a.tenantId, personId: { in: a.ids } } }));
+      } catch (err) {
+        if (isPrismaMissingTableError(err)) return 0;
+        throw err;
+      }
+    },
   },
   // A tarefa do Kanban fica, sem a pessoa.
   {
