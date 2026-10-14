@@ -16,7 +16,7 @@
 //   ativo ou não — arquivar quem saiu é o normal, e a saída aconteceu.
 
 import type { PersonEmploymentStatus } from "@/generated/prisma/enums";
-import { hojeIso, mesCurto } from "@/lib/datas/calendario";
+import { hojeIso, MESES } from "@/lib/datas/calendario";
 
 export type PessoaDoResumo = {
   employmentStatus: PersonEmploymentStatus;
@@ -106,11 +106,12 @@ const INTEIRO = new Intl.NumberFormat("pt-BR");
 /**
  * Os cinco números da faixa, na ordem do desenho aprovado: Ativos (o cartão
  * em destaque), Admissões no mês (com as em andamento embaixo), Desligamentos
- * no mês, Em férias e Afastados. O mês vai no rótulo ("Admissões em out"),
- * para ninguém ler o número como total.
+ * no mês, Em férias e Afastados. O mês vai no rótulo, por extenso e em
+ * minúscula, porque está no meio da frase ("Admissões em outubro" — pedido do
+ * Kauan, 14/10/2026; era "em out"), para ninguém ler o número como total.
  */
 export function numerosDoResumo(r: ResumoDaEmpresa): NumeroDoResumo[] {
-  const mes = mesCurto(Number(r.mes.slice(5, 7)));
+  const mes = MESES[Number(r.mes.slice(5, 7)) - 1];
   return [
     { rotulo: "Ativos", valor: INTEIRO.format(r.ativos) },
     {

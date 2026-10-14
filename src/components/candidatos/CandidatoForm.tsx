@@ -10,40 +10,22 @@ import { FormSection } from "@/components/ui/FormSection";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 
-export type CandidatoDefaultValues = {
-  id?: string;
-  name?: string;
-  cpf?: string;
-  email?: string;
-  phone?: string;
-  birthDate?: string; // ISO date string YYYY-MM-DD
-  rg?: string;
-  education?: string;
-
-  zipCode?: string;
-  addressStreet?: string;
-  addressNumber?: string;
-  addressComplement?: string;
-  neighborhood?: string;
-  city?: string;
-  stateCode?: string;
-};
-
 type Props = {
   action: (prev: CandidatoState, form: FormData) => Promise<CandidatoState>;
   cancelHref: string;
-  defaultValues?: CandidatoDefaultValues;
 };
 
+// O cadastro de um candidato novo (/candidatos/nova). Corrigir um candidato
+// que já existe é na própria ficha, bloco a bloco — o formulário de edição
+// saiu em 14/10/2026.
+//
 // Campos curtos (data, CPF, RG, CEP, número, UF) em colunas estreitas fixas —
 // eram grades de colunas iguais, e a UF de 2 letras ocupava um quarto da tela.
-export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
+export function CandidatoForm({ action, cancelHref }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
-      {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
-
       {state?.error && (
         <Aviso>
           {state.error}
@@ -59,7 +41,6 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
                 name="name"
                 type="text"
                 required
-                defaultValue={defaultValues?.name ?? ""}
                 placeholder="Nome completo"
               />
             </CampoForm>
@@ -67,8 +48,6 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
               <CampoData
                 id="birthDate"
                 name="birthDate"
-               
-                defaultValue={defaultValues?.birthDate ?? ""}
               />
             </CampoForm>
           </FieldGrid>
@@ -79,16 +58,15 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
                 id="cpf"
                 name="cpf"
                 type="text"
-                defaultValue={defaultValues?.cpf ?? ""}
                 placeholder="000.000.000-00"
                 maxLength={14}
               />
             </CampoForm>
             <CampoForm label="RG" htmlFor="rg">
-              <Input id="rg" name="rg" type="text" defaultValue={defaultValues?.rg ?? ""} />
+              <Input id="rg" name="rg" type="text" />
             </CampoForm>
             <CampoForm label="Escolaridade" htmlFor="education">
-              <Input id="education" name="education" type="text" defaultValue={defaultValues?.education ?? ""} />
+              <Input id="education" name="education" type="text" />
             </CampoForm>
           </FieldGrid>
         </FormSection>
@@ -100,7 +78,6 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
                 id="email"
                 name="email"
                 type="email"
-                defaultValue={defaultValues?.email ?? ""}
                 placeholder="nome@email.com"
               />
             </CampoForm>
@@ -109,7 +86,6 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
                 id="phone"
                 name="phone"
                 type="tel"
-                defaultValue={defaultValues?.phone ?? ""}
                 placeholder="(41) 99999-9999"
                 pattern="[\d\s()\-+]{8,20}"
                 maxLength={20}
@@ -122,27 +98,27 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
         <FormSection title="Endereço">
           <FieldGrid columns="sm:grid-cols-[140px_1fr_120px]">
             <CampoForm label="CEP" htmlFor="zipCode">
-              <Input id="zipCode" name="zipCode" type="text" defaultValue={defaultValues?.zipCode ?? ""} />
+              <Input id="zipCode" name="zipCode" type="text" />
             </CampoForm>
             <CampoForm label="Logradouro" htmlFor="addressStreet">
-              <Input id="addressStreet" name="addressStreet" type="text" defaultValue={defaultValues?.addressStreet ?? ""} />
+              <Input id="addressStreet" name="addressStreet" type="text" />
             </CampoForm>
             <CampoForm label="Número" htmlFor="addressNumber">
-              <Input id="addressNumber" name="addressNumber" type="text" defaultValue={defaultValues?.addressNumber ?? ""} />
+              <Input id="addressNumber" name="addressNumber" type="text" />
             </CampoForm>
           </FieldGrid>
           <FieldGrid columns="sm:grid-cols-[1fr_1fr_1fr_88px]">
             <CampoForm label="Complemento" htmlFor="addressComplement">
-              <Input id="addressComplement" name="addressComplement" type="text" defaultValue={defaultValues?.addressComplement ?? ""} />
+              <Input id="addressComplement" name="addressComplement" type="text" />
             </CampoForm>
             <CampoForm label="Bairro" htmlFor="neighborhood">
-              <Input id="neighborhood" name="neighborhood" type="text" defaultValue={defaultValues?.neighborhood ?? ""} />
+              <Input id="neighborhood" name="neighborhood" type="text" />
             </CampoForm>
             <CampoForm label="Cidade" htmlFor="city">
-              <Input id="city" name="city" type="text" defaultValue={defaultValues?.city ?? ""} />
+              <Input id="city" name="city" type="text" />
             </CampoForm>
             <CampoForm label="UF" htmlFor="stateCode">
-              <Input id="stateCode" name="stateCode" type="text" maxLength={2} defaultValue={defaultValues?.stateCode ?? ""} />
+              <Input id="stateCode" name="stateCode" type="text" maxLength={2} />
             </CampoForm>
           </FieldGrid>
         </FormSection>

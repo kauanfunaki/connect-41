@@ -14,8 +14,9 @@ export type SecaoState = { error: string } | { ok: true; salvoEm: number } | nul
 /**
  * Edição no próprio bloco da ficha do candidato (escolha 5A do Kauan,
  * 14/10/2026): Identificação, Contato ou Endereço, um de cada vez. Mesma
- * permissão e mesma validação do "Editar tudo" (`atualizarCandidato`), mas só
- * os campos do bloco vão para o banco — o resto do formulário é ignorado.
+ * permissão e mesma validação do antigo "Editar tudo" (o formulário inteiro,
+ * que saiu no mesmo dia), mas só os campos do bloco vão para o banco — o resto
+ * do formulário é ignorado.
  */
 export async function salvarSecaoDoCandidato(
   personId: string,

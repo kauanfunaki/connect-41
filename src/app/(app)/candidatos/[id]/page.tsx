@@ -188,8 +188,8 @@ export default async function CandidatoPage({
 
       {/* Ativo/inativo de cadastro é a bolinha, como na lista de candidatos
           (escolha 2A, 08/10/2026), e mora no `meta`, embaixo do título. Editar
-          agora é no próprio bloco; o formulário inteiro e o excluir ficam no
-          "⋯". */}
+          é no próprio bloco (o formulário inteiro saiu em 14/10/2026); o "⋯"
+          ficou só com o excluir. */}
       <PageHeader
         title={person.name}
         meta={
@@ -199,7 +199,7 @@ export default async function CandidatoPage({
           />
         }
         subtitle={person.cpf ? <span className="tnum">CPF: {maskCpf(person.cpf)}</span> : undefined}
-        action={<AcoesDoCandidato id={id} nome={person.name} podeEditar={canEdit} podeExcluir={excluivel} />}
+        action={<AcoesDoCandidato id={id} nome={person.name} podeExcluir={excluivel} />}
       />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
