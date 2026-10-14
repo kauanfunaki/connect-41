@@ -5,7 +5,7 @@
 // Duas perguntas separadas, de propósito. "Abre sozinho?" roda em todo
 // carregamento do app — para administrador nem consulta o banco, e para os
 // outros é uma leitura pela chave. "Quais passos?" custa mais (módulos, setores,
-// agentes da Lígia) e só roda quando o tutorial vai mesmo aparecer: no primeiro
+// agentes da Ceci) e só roda quando o tutorial vai mesmo aparecer: no primeiro
 // acesso ou no "Ver o tutorial de novo" da ajuda.
 
 import type { AuthContext } from "@/lib/auth/context";
@@ -49,18 +49,18 @@ export async function tutorialDaEquipeAbreSozinho(ctx: AuthContext): Promise<boo
 }
 
 /**
- * A Lígia entra no tutorial se atende o setor em que a pessoa está — ou, em
+ * A Ceci entra no tutorial se atende o setor em que a pessoa está — ou, em
  * "Todos os setores", algum setor dela. A Ajuda do Connect, que não é de setor,
  * não conta: o passo fala da IA do setor. `agentesDoChat` já aplica o público
  * do chat (só coordenadores, por padrão), o agente ligado e o acesso ao setor.
  * Falha aqui só tira o passo.
  */
-async function temLigia(ctx: AuthContext): Promise<boolean> {
+async function temCeci(ctx: AuthContext): Promise<boolean> {
   try {
     const agentes = await agentesDoChat(ctx);
     return agentes.some((a) => a.setor !== null && (ctx.activeSector === null || a.setor === ctx.activeSector));
   } catch (err) {
-    console.error("[tutorial] agentes da Lígia", err);
+    console.error("[tutorial] agentes da Ceci", err);
     return false;
   }
 }
@@ -83,12 +83,12 @@ async function setoresNoMenu(ctx: AuthContext): Promise<number> {
 
 /** Os passos do tutorial da equipe para esta pessoa. */
 export async function montarTutorialDaEquipe(ctx: AuthContext): Promise<Tutorial> {
-  const [escritorio, setores, ligia] = await Promise.all([nomeDoEscritorio(ctx.tenantId), setoresNoMenu(ctx), temLigia(ctx)]);
+  const [escritorio, setores, ceci] = await Promise.all([nomeDoEscritorio(ctx.tenantId), setoresNoMenu(ctx), temCeci(ctx)]);
   return tutorialDaEquipe({
     role: ctx.role,
     escritorio,
     setoresNoMenu: setores,
-    ligia,
+    ceci,
     avisosNoCelular: Boolean(getVapidPublicKey()),
   });
 }

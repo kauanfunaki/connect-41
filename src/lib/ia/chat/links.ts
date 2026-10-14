@@ -1,4 +1,4 @@
-// Os links da resposta da Lígia, conferidos no servidor antes de gravar
+// Os links da resposta da Ceci, conferidos no servidor antes de gravar
 // (13/10/2026). Puro, testado em `links.test.ts`.
 //
 // A mesma ideia das citações com foto (`citacoes.ts`): **só vale o que a

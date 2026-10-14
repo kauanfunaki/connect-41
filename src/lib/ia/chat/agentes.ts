@@ -26,26 +26,26 @@ import { MODULO_GESTAO } from "@/lib/gestao/acesso";
 import { setoresDaEquipe } from "./citacoes";
 import { nomeDaTela, rotuloDaTela } from "./telas";
 import {
-  apresentacaoDaLigia,
-  cumprimentoDaLigia,
+  apresentacaoDaCeci,
+  cumprimentoDaCeci,
   especialidadeDoAgente,
   NOME_DA_ASSISTENTE,
   primeiroNomeParaOPrompt,
-} from "@/lib/ia/ligia";
+} from "@/lib/ia/ceci";
 
 export type AgenteDoChat = {
   code: string;
   /**
-   * O que a Lígia atende neste agente, escrito embaixo do nome dela no chat
+   * O que a Ceci atende neste agente, escrito embaixo do nome dela no chat
    * ("BPO", "Departamento Pessoal"). Até 13/10/2026 era o `titulo` "IA do BPO" — cada
-   * setor com o seu nome; agora o nome é um só (`src/lib/ia/ligia.ts`).
+   * setor com o seu nome; agora o nome é um só (`src/lib/ia/ceci.ts`).
    */
   especialidade: string;
   sugestoes: string[];
   /** O setor que a pessoa precisa operar — `null` na Ajuda, que serve a todos. */
   setor: string | null;
   /**
-   * É a Lígia do setor que a pessoa está usando agora? Só ela dá as boas-vindas
+   * É a Ceci do setor que a pessoa está usando agora? Só ela dá as boas-vindas
    * depois do login (13/10/2026 — `boasVindas.ts`).
    */
   doSetorAtivo: boolean;
@@ -123,8 +123,8 @@ export const GUARDA_DO_ENCAMINHADO =
   "\n\nEsta pergunta já foi encaminhada a você por outra IA do Connect. Responda você mesma com as suas " +
   "ferramentas — mesmo que seja para dizer que não achou ou que o Connect não tem esse dado. Não encaminhe de novo.";
 
-// O começo de cada texto abaixo dizia "Você é a IA do {setor}". Desde a Lígia
-// (13/10/2026) quem ela é vem de `apresentacaoDaLigia`, antes deste texto; aqui
+// O começo de cada texto abaixo dizia "Você é a IA do {setor}". Desde a Ceci
+// (13/10/2026) quem ela é vem de `apresentacaoDaCeci`, antes deste texto; aqui
 // fica só o que o agente atende — conteúdo, ferramentas e regras sem mudança.
 const AJUDA =
   "Você atende a Ajuda do Connect, a plataforma interna do escritório de contabilidade. Você explica como usar o " +
@@ -134,7 +134,7 @@ const AJUDA =
   "invente tela, botão ou procedimento: se não achar, " +
   "diga que não achou e sugira a quem perguntar.\n" +
   "Você NÃO tem acesso aos dados do escritório (empresas, lançamentos, processos). Se a pergunta for sobre os dados " +
-  "de um setor, diga que isso é com a Lígia daquele setor (o setor se escolhe embaixo do campo do chat), quando ele " +
+  "de um setor, diga que isso é com a Ceci daquele setor (o setor se escolhe embaixo do campo do chat), quando ele " +
   "estiver disponível para a pessoa.\n" +
   "Pergunta de COMO FAZER algo no Connect é sempre sua — inclusive \"como faço uma transferência para outro setor\", " +
   "que é uma dúvida sobre a tela Transferências (/transferencias), e não um pedido de transferência: responda você.";
@@ -252,7 +252,7 @@ export function configDoChat(code: string): Config | undefined {
 
 /**
  * O texto de instrução de um agente do chat. Desde 13/10/2026 começa pela
- * Lígia — quem ela é e o jeito de falar —, depois vem o que o agente atende e
+ * Ceci — quem ela é e o jeito de falar —, depois vem o que o agente atende e
  * a guarda do chat, iguais ao que eram (a apresentação não mexe em
  * ferramenta, regra nem cerca), e no fim o cumprimento desta resposta.
  *
@@ -264,11 +264,11 @@ export function sistemaDoChat(
   { primeiroNome = null, primeiraResposta = false }: { primeiroNome?: string | null; primeiraResposta?: boolean } = {}
 ): string {
   const config = configDoChat(code);
-  const apresentacao = apresentacaoDaLigia(especialidadeDoAgente(config?.code ?? "ajuda_do_connect") ?? NOME_DA_ASSISTENTE);
-  return `${apresentacao}\n\n${config?.sistema ?? AJUDA}${GUARDA_DO_CHAT}\n\n${cumprimentoDaLigia({ primeiroNome, primeiraResposta })}`;
+  const apresentacao = apresentacaoDaCeci(especialidadeDoAgente(config?.code ?? "ajuda_do_connect") ?? NOME_DA_ASSISTENTE);
+  return `${apresentacao}\n\n${config?.sistema ?? AJUDA}${GUARDA_DO_CHAT}\n\n${cumprimentoDaCeci({ primeiroNome, primeiraResposta })}`;
 }
 
-/** O primeiro nome de quem pergunta, para a Lígia cumprimentar — `null` se não achar. */
+/** O primeiro nome de quem pergunta, para a Ceci cumprimentar — `null` se não achar. */
 export async function primeiroNomeDaPessoa(userId: string): Promise<string | null> {
   try {
     const pessoa = await getPrisma().user.findUnique({ where: { id: userId }, select: { name: true } });
@@ -467,7 +467,7 @@ export async function contextoParaOAgente(
   if (tela.tipo !== "tela") return null;
   // Embaixo da pergunta vai o nome da tela ("Em Solicitações"), nunca o
   // caminho (pedido do Kauan, 13/10/2026); tela sem nome conhecido não mostra
-  // nada. A Lígia recebe os dois.
+  // nada. A Ceci recebe os dois.
   const nome = nomeDaTela(tela.caminho);
   return nome
     ? { rotulo: rotuloDaTela(tela.caminho), texto: `A pessoa está na tela "${nome}" do Connect (${tela.caminho}).` }

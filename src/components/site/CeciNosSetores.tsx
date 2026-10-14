@@ -2,12 +2,12 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowUpRight, Check, Eye, Pause, Play, X } from "lucide-react";
-import { Ligia } from "@/components/ia/Ligia";
-import { CONVERSAS_DA_LIGIA, type ConversaDaLigia } from "./conversasDaLigia";
+import { Ceci } from "@/components/ia/Ceci";
+import { CONVERSAS_DA_CECI, type ConversaDaCeci } from "./conversasDaCeci";
 
-// A Lígia por setor (13/10/2026, versão 3 do site): à esquerda a lista dos
+// A Ceci por setor (13/10/2026, versão 3 do site): à esquerda a lista dos
 // setores, à direita uma conversa de exemplo naquele setor. Os textos ficam em
-// `conversasDaLigia` — só o que cada agente faz de verdade.
+// `conversasDaCeci` — só o que cada agente faz de verdade.
 //
 // É um conjunto de abas (tablist/tab/tabpanel, com as setas do teclado). Troca
 // sozinho, devagar, e para de vez quando a pessoa escolhe um setor, pelo
@@ -41,8 +41,8 @@ function useMenosMovimento(): boolean {
   );
 }
 
-export function LigiaNosSetores() {
-  const n = CONVERSAS_DA_LIGIA.length;
+export function CeciNosSetores() {
+  const n = CONVERSAS_DA_CECI.length;
   const [ativo, setAtivo] = useState(0);
   // A pessoa escolheu um setor ou apertou "Pausar": a troca para até ela
   // apertar "Retomar".
@@ -85,7 +85,7 @@ export function LigiaNosSetores() {
       <div className="flex flex-col">
         <div
           role="tablist"
-          aria-label="Setores em que a Lígia atende"
+          aria-label="Setores em que a Ceci atende"
           className="flex flex-wrap gap-2 lg:flex-col lg:flex-nowrap lg:gap-1.5"
           onMouseEnter={() => setMouseEmCima(true)}
           onMouseLeave={() => setMouseEmCima(false)}
@@ -94,7 +94,7 @@ export function LigiaNosSetores() {
             if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocoNasAbas(false);
           }}
         >
-          {CONVERSAS_DA_LIGIA.map((c, i) => {
+          {CONVERSAS_DA_CECI.map((c, i) => {
             const escolhido = i === ativo;
             return (
               <button
@@ -155,7 +155,7 @@ export function LigiaNosSetores() {
       </div>
 
       <div className="grid" onMouseEnter={() => setMouseEmCima(true)} onMouseLeave={() => setMouseEmCima(false)}>
-        {CONVERSAS_DA_LIGIA.map((c, i) => {
+        {CONVERSAS_DA_CECI.map((c, i) => {
           const escolhido = i === ativo;
           return (
             <div
@@ -186,14 +186,14 @@ export function LigiaNosSetores() {
 }
 
 /** O painel do chat, como o do canto da tela do Connect, com a conversa do setor. */
-function Painel({ conversa: c, children }: { conversa: ConversaDaLigia; children: React.ReactNode }) {
+function Painel({ conversa: c, children }: { conversa: ConversaDaCeci; children: React.ReactNode }) {
   return (
     <div className="relative flex h-full flex-col overflow-hidden rounded-[22px] bg-surface-elevated text-fg shadow-[0_40px_90px_-30px_rgba(0,0,0,.65)] ring-1 ring-white/10">
       {children}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
-        <Ligia tamanho={30} estado={c.emBreve ? "pensando" : "parada"} />
+        <Ceci tamanho={30} estado={c.emBreve ? "pensando" : "parada"} />
         <div className="min-w-0 flex-1 leading-tight">
-          <p className="text-fs-4 font-semibold text-fg">Lígia</p>
+          <p className="text-fs-4 font-semibold text-fg">Ceci</p>
           <p className="truncate text-fs-2 text-fg-muted">{c.setor}</p>
         </div>
         {!c.emBreve && (
@@ -205,7 +205,7 @@ function Painel({ conversa: c, children }: { conversa: ConversaDaLigia; children
 
       {c.emBreve ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 py-10 text-center sm:px-10">
-          <Ligia tamanho={76} estado="pensando" />
+          <Ceci tamanho={76} estado="pensando" />
           <p className="mt-2 font-display text-fs-8 font-medium leading-tight tracking-[-0.01em] text-fg">Em breve no Portal do Cliente</p>
           <p className="max-w-[30em] text-fs-4 leading-relaxed text-fg-secondary">{c.jeito}</p>
         </div>
@@ -219,7 +219,7 @@ function Painel({ conversa: c, children }: { conversa: ConversaDaLigia; children
             )}
             {c.resposta && (
               <div className="flex items-start gap-2.5">
-                <Ligia tamanho={24} className="mt-0.5" />
+                <Ceci tamanho={24} className="mt-0.5" />
                 <div className="flex min-w-0 flex-1 flex-col gap-2 text-fs-4 leading-relaxed text-fg">
                   <p>{c.resposta.texto}</p>
                   {c.resposta.itens && (

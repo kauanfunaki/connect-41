@@ -1,14 +1,14 @@
 import { ArrowLeftRight, Eye, ShieldCheck, type LucideIcon } from "lucide-react";
-import { Ligia } from "@/components/ia/Ligia";
+import { Ceci } from "@/components/ia/Ceci";
 import { ABERTURA, FAIXA, RESPIRO, TITULO_2 } from "./estilos";
-import { LigiaNosSetores } from "./LigiaNosSetores";
+import { CeciNosSetores } from "./CeciNosSetores";
 import { AnelDoConnect, Rotulo } from "./Marca";
 
-// A seção da Lígia, o ponto alto do site (13/10/2026, versão 3). Pedido do
+// A seção da Ceci, o ponto alto do site (13/10/2026, versão 3). Pedido do
 // Kauan: "a nossa inteligência artificial, separada por setores e para os
 // clientes" — a moeda de barganha do Connect. Num palco escuro (o azul-marinho
-// do ponto do meio do logo), a Lígia de verdade (components/ia/Ligia), a lista
-// dos setores com uma conversa de exemplo em cada um (LigiaNosSetores) e as
+// do ponto do meio do logo), a Ceci de verdade (components/ia/Ceci), a lista
+// dos setores com uma conversa de exemplo em cada um (CeciNosSetores) e as
 // três regras que valem em todos — tiradas da guarda do chat
 // (lib/ia/chat/agentes) e do catálogo (lib/ia/catalogo: `escreve: false`).
 //
@@ -29,15 +29,15 @@ const REGRAS: { Icone: LucideIcon; titulo: string; texto: string }[] = [
   {
     Icone: ArrowLeftRight,
     titulo: "Passa para o setor certo",
-    texto: "Pergunta de outro setor vai para a Lígia daquele setor, em vez de virar uma resposta pela metade.",
+    texto: "Pergunta de outro setor vai para a Ceci daquele setor, em vez de virar uma resposta pela metade.",
   },
 ];
 
-export function SecaoDaLigia() {
+export function SecaoDaCeci() {
   return (
     <section
-      id="ligia"
-      aria-labelledby="ligia-titulo"
+      id="ceci"
+      aria-labelledby="ceci-titulo"
       className="c41-site-escuro relative scroll-mt-16 overflow-hidden text-white"
       style={{ background: "var(--c41-site-palco)" }}
     >
@@ -49,24 +49,24 @@ export function SecaoDaLigia() {
 
       <div className={`${FAIXA} ${RESPIRO} relative`}>
         <div className="c41-site-surge flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-14">
-          <span className="c41-site-ligia-no-palco relative flex size-[104px] flex-none items-center justify-center sm:size-[128px]">
+          <span className="c41-site-ceci-no-palco relative flex size-[104px] flex-none items-center justify-center sm:size-[128px]">
             <span className="absolute -inset-6 rounded-full bg-[radial-gradient(closest-side,rgba(77,141,255,.42),transparent)]" />
-            <Ligia tamanho={128} rotulo="A Lígia, assistente do Connect" className="relative size-full" />
+            <Ceci tamanho={128} rotulo="A Ceci, assistente do Connect" className="relative size-full" />
           </span>
           <div className="min-w-0">
-            <Rotulo escuro>Conheça a Lígia</Rotulo>
-            <h2 id="ligia-titulo" className={`${TITULO_2} mt-4 max-w-[17em] text-white`}>
+            <Rotulo escuro>Conheça a Ceci</Rotulo>
+            <h2 id="ceci-titulo" className={`${TITULO_2} mt-4 max-w-[17em] text-white`}>
               A nossa inteligência artificial, em cada setor do escritório
             </h2>
             <p className={`${ABERTURA} mt-5 max-w-[40em] text-white/75`}>
-              A Lígia é a assistente do Connect. Em cada setor, ela consulta o que já está no sistema, responde em português comum e
+              A Ceci é a assistente do Connect. Em cada setor, ela consulta o que já está no sistema, responde em português comum e
               sugere o próximo passo — que só acontece depois que uma pessoa da equipe confirma.
             </p>
           </div>
         </div>
 
         <div className="mt-12 sm:mt-16">
-          <LigiaNosSetores />
+          <CeciNosSetores />
         </div>
 
         <ul className="mt-14 grid gap-8 border-t border-white/10 pt-10 sm:mt-16 sm:grid-cols-3 sm:gap-10">
@@ -82,7 +82,7 @@ export function SecaoDaLigia() {
         </ul>
 
         <p className="mt-12 max-w-[52em] text-fs-3 leading-relaxed text-white/60">
-          Conversas de exemplo, com dados fictícios. E em qualquer setor, a Lígia da Ajuda explica onde fica cada função do Connect e o
+          Conversas de exemplo, com dados fictícios. E em qualquer setor, a Ceci da Ajuda explica onde fica cada função do Connect e o
           que dizem os manuais do escritório.
         </p>
       </div>

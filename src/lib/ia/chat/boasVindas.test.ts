@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ENTRADA_COOKIE, entradaCookieOptions, novaEntrada } from "@/lib/auth/cookies";
-import { especialidadeDoAgente } from "@/lib/ia/ligia";
+import { especialidadeDoAgente } from "@/lib/ia/ceci";
 import { configDoChat } from "./agentes";
 import {
   boasVindasPendentes,
@@ -14,7 +14,7 @@ import {
   textoDasBoasVindas,
 } from "./boasVindas";
 
-// As boas-vindas da Lígia depois do login e o aviso de mensagem nova no botão
+// As boas-vindas da Ceci depois do login e o aviso de mensagem nova no botão
 // do canto (13/10/2026).
 
 describe("a marca da entrada", () => {
@@ -47,13 +47,13 @@ describe("boas-vindas: uma vez por entrada", () => {
     expect(boasVindasPendentes({ entrada: "e1", vista: "e1", temAgenteDoSetor: true })).toBe(false);
   });
 
-  it("sem a Lígia do setor ativo, não há boas-vindas", () => {
+  it("sem a Ceci do setor ativo, não há boas-vindas", () => {
     expect(boasVindasPendentes({ entrada: "e2", vista: "e1", temAgenteDoSetor: false })).toBe(false);
   });
 
   it("o texto diz o setor ('BPO', não 'BPO Financeiro') e cumprimenta pelo nome", () => {
     const t = textoDasBoasVindas({ primeiroNome: "Kauan", especialidade: especialidadeDoAgente("assistente_do_bpo")! });
-    expect(t).toMatch(/^Oi, Kauan! Eu sou a Lígia e estou aqui para ajudar no BPO\./);
+    expect(t).toMatch(/^Oi, Kauan! Eu sou a Ceci e estou aqui para ajudar no BPO\./);
     expect(t).not.toContain("BPO Financeiro");
     expect(t).toContain("não altero nada sozinha");
     expect(textoDasBoasVindas({ primeiroNome: "", especialidade: "Fiscal" })).toMatch(/^Oi! /);
@@ -80,8 +80,8 @@ describe("aviso de mensagem nova", () => {
   });
 
   it("o nome acessível do aviso", () => {
-    expect(rotuloDoAviso(1)).toBe("1 mensagem nova da Lígia");
-    expect(rotuloDoAviso(2)).toBe("2 mensagens novas da Lígia");
+    expect(rotuloDoAviso(1)).toBe("1 mensagem nova da Ceci");
+    expect(rotuloDoAviso(2)).toBe("2 mensagens novas da Ceci");
     expect(rotuloDoAviso(0)).toBeNull();
   });
 });

@@ -40,7 +40,7 @@ async function coordenacao() {
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { erro: "Módulo do Societário desligado.", ctx: null, setor: SECTOR } as const;
   const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
   if (!canManageSector(ctx, setor)) {
-    return { erro: "Só a coordenação do Societário usa esta tela e aprova as propostas da Lígia.", ctx: null, setor } as const;
+    return { erro: "Só a coordenação do Societário usa esta tela e aprova as propostas da Ceci.", ctx: null, setor } as const;
   }
   return { erro: null, ctx, setor } as const;
 }

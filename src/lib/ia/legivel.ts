@@ -1,4 +1,4 @@
-// O que as ferramentas da Lígia devolvem, em palavras de gente (13/10/2026).
+// O que as ferramentas da Ceci devolvem, em palavras de gente (13/10/2026).
 //
 // Pedido do Kauan: a resposta mostrava "Status: Aberta — Prazo: SEM_PRAZO" e
 // "Link: /pendencias?recorte=aguardando". O modelo repete o que a ferramenta
@@ -6,7 +6,7 @@
 // "aguardando o cliente") e o link já com rótulo, em Markdown
 // ("[Abrir as pendências aguardando o cliente](/pendencias?recorte=aguardando)"),
 // que o chat desenha como botão. Cada item que tem ficha leva o link dela, para
-// a Lígia apontar o item pelo nome — e não pelo id.
+// a Ceci apontar o item pelo nome — e não pelo id.
 //
 // A tela ainda tem a rede de segurança (`src/lib/ia/chat/markdown.ts`) para o
 // código que escapar; aqui é a fonte.
@@ -76,7 +76,7 @@ export function chavesLegiveis<T>(obj: Record<string, T>, rotulos?: Readonly<Rec
 }
 
 /**
- * Um link de tela em Markdown, pronto para a Lígia copiar: `[rótulo](/caminho)`.
+ * Um link de tela em Markdown, pronto para a Ceci copiar: `[rótulo](/caminho)`.
  * Colchete no rótulo quebraria o link ("[demo] Confirmar…") — vira parêntese;
  * quebra de linha vira espaço.
  */

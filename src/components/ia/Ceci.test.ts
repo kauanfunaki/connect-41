@@ -1,22 +1,22 @@
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { Ligia, type EstadoDaLigia } from "./Ligia";
+import { Ceci, type EstadoDaCeci } from "./Ceci";
 
-// A Lígia (13/10/2026). Sem navegador, o desenho fica conferido no HTML: os
+// A Ceci (13/10/2026). Sem navegador, o desenho fica conferido no HTML: os
 // quatro estados são desenhos diferentes, o tamanho vem da prop, o "pensando"
 // leva a classe que gira o anel (e que o prefers-reduced-motion desliga em
-// globals.css) e duas Lígias na mesma tela não dividem o id do degradê.
+// globals.css) e duas Cecis na mesma tela não dividem o id do degradê.
 
 beforeAll(() => vi.stubGlobal("React", React));
 afterAll(() => vi.unstubAllGlobals());
 
-const ESTADOS: EstadoDaLigia[] = ["parada", "pensando", "deuCerto", "naoConsegui"];
-const desenhar = (props: React.ComponentProps<typeof Ligia> = {}) => renderToStaticMarkup(React.createElement(Ligia, props));
+const ESTADOS: EstadoDaCeci[] = ["parada", "pensando", "deuCerto", "naoConsegui"];
+const desenhar = (props: React.ComponentProps<typeof Ceci> = {}) => renderToStaticMarkup(React.createElement(Ceci, props));
 /** Só o rosto: tira o id do degradê, que muda a cada render. */
-const rosto = (html: string) => html.replace(/ligia[^"#)]*-(anel|rosto)/g, "id-$1").replace(/data-estado="[^"]*"/, "");
+const rosto = (html: string) => html.replace(/ceci[^"#)]*-(anel|rosto)/g, "id-$1").replace(/data-estado="[^"]*"/, "");
 
-describe("Lígia", () => {
+describe("Ceci", () => {
   it("os quatro estados são desenhos diferentes", () => {
     const desenhos = ESTADOS.map((estado) => rosto(desenhar({ estado })));
     expect(new Set(desenhos).size).toBe(ESTADOS.length);
@@ -28,8 +28,8 @@ describe("Lígia", () => {
   });
 
   it("só o pensando gira o anel", () => {
-    expect(desenhar({ estado: "pensando" })).toContain("c41-ligia-pensando");
-    for (const estado of ESTADOS.filter((e) => e !== "pensando")) expect(desenhar({ estado })).not.toContain("c41-ligia-pensando");
+    expect(desenhar({ estado: "pensando" })).toContain("c41-ceci-pensando");
+    for (const estado of ESTADOS.filter((e) => e !== "pensando")) expect(desenhar({ estado })).not.toContain("c41-ceci-pensando");
   });
 
   it("o tamanho vem da prop, num quadrado", () => {
@@ -41,22 +41,22 @@ describe("Lígia", () => {
 
   it("é decorativa por padrão e ganha nome com `rotulo`", () => {
     expect(desenhar()).toContain('aria-hidden="true"');
-    const comNome = desenhar({ rotulo: "Lígia, assistente do Connect" });
+    const comNome = desenhar({ rotulo: "Ceci, assistente do Connect" });
     expect(comNome).toContain('role="img"');
-    expect(comNome).toContain('aria-label="Lígia, assistente do Connect"');
+    expect(comNome).toContain('aria-label="Ceci, assistente do Connect"');
     expect(comNome).not.toContain("aria-hidden");
   });
 
   it("as cores vêm das variáveis do tema, com o tom do logo de reserva", () => {
     const html = desenhar();
-    for (const v of ["--c41-ligia-anel-de", "--c41-ligia-anel-ate", "--c41-ligia-no", "--c41-ligia-rosto-de", "--c41-ligia-rosto-ate"]) {
+    for (const v of ["--c41-ceci-anel-de", "--c41-ceci-anel-ate", "--c41-ceci-no", "--c41-ceci-rosto-de", "--c41-ceci-rosto-ate"]) {
       expect(html).toContain(`var(${v}, #`);
     }
   });
 
-  it("duas Lígias na mesma tela não dividem o id do degradê", () => {
+  it("duas Cecis na mesma tela não dividem o id do degradê", () => {
     const html = renderToStaticMarkup(
-      React.createElement(React.Fragment, null, React.createElement(Ligia), React.createElement(Ligia, { estado: "pensando" }))
+      React.createElement(React.Fragment, null, React.createElement(Ceci), React.createElement(Ceci, { estado: "pensando" }))
     );
     const ids = [...html.matchAll(/<linearGradient id="([^"]+)"/g)].map((m) => m[1]);
     expect(ids).toHaveLength(4);

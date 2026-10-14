@@ -28,13 +28,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useDialog } from "@/components/ui/useDialog";
-import { Ligia } from "@/components/ia/Ligia";
+import { Ceci } from "@/components/ia/Ceci";
 import type { IconeDoTutorial, Tutorial } from "@/lib/tutorial/tutoriais";
 
 /** Como o tutorial terminou. Os dois contam como visto. */
 export type FimDoTutorial = "pulou" | "concluiu";
 
-const ICONES: Record<Exclude<IconeDoTutorial, "ligia">, LucideIcon> = {
+const ICONES: Record<Exclude<IconeDoTutorial, "ceci">, LucideIcon> = {
   "boas-vindas": Sparkles,
   menu: PanelLeft,
   "meu-dia": CalendarCheck,
@@ -235,9 +235,9 @@ function Painel({ tutorial, onFim }: { tutorial: Tutorial; onFim: (fim: FimDoTut
   );
 }
 
-/** O desenho grande do passo: a Lígia no passo dela, e um ícone numa bolha nos outros. */
+/** O desenho grande do passo: a Ceci no passo dela, e um ícone numa bolha nos outros. */
 function Desenho({ icone }: { icone: IconeDoTutorial }) {
-  if (icone === "ligia") return <Ligia tamanho={72} />;
+  if (icone === "ceci") return <Ceci tamanho={72} />;
   const Icone = ICONES[icone];
   return (
     <span aria-hidden className="inline-flex size-[72px] items-center justify-center rounded-2xl bg-brand-subtle text-brand">

@@ -7,7 +7,7 @@ import { MARCA_41_CARREIRAS, type PortalDoTenant } from "@/lib/carreiras/enderec
 
 // O topo e o rodapé das páginas do 41 Carreiras (14/10/2026): o hub, a vaga e
 // a conta do candidato, quando o escritório é o da 41. A marca é a da 41, não
-// a do Connect — sem o logo nem a Lígia. O miolo de cada página é o mesmo do
+// a do Connect — sem o logo nem a Ceci. O miolo de cada página é o mesmo do
 // portal de qualquer escritório.
 
 /**

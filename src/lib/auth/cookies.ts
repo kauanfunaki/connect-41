@@ -70,7 +70,7 @@ export function refreshCookieOptions(maxAge: number): CookieOptions {
 /**
  * A marca de cada entrada no Connect (13/10/2026): um valor novo a cada login,
  * que a tela consegue ler — por isso sem `httpOnly`; não é segredo e não dá
- * acesso a nada. A Lígia usa para dar as boas-vindas uma vez por entrada, e não
+ * acesso a nada. A Ceci usa para dar as boas-vindas uma vez por entrada, e não
  * a cada recarregar da página (`src/lib/ia/chat/boasVindas.ts`). Mesmo
  * `domain` da sessão, para valer nos endereços por setor.
  */

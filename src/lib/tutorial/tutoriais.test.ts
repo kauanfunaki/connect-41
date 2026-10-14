@@ -12,7 +12,7 @@ import {
 } from "./tutoriais";
 
 // O que se testa: quem vê o tutorial do primeiro acesso sozinho, e quais
-// passos cada pessoa vê — pelo papel, pela Lígia e pelos módulos do portal.
+// passos cada pessoa vê — pelo papel, pela Ceci e pelos módulos do portal.
 
 const PAPEIS: UserRole[] = ["SUPER_ADMIN", "ADMIN", "SECTOR_ADMIN", "SECTOR_USER", "READONLY"];
 
@@ -22,7 +22,7 @@ const textoDe = (t: Tutorial, chave: string) => {
   return p ? [p.titulo, p.texto, ...(p.itens ?? [])].join(" ") : "";
 };
 
-const EQUIPE: OpcoesDaEquipe = { role: "SECTOR_USER", escritorio: "41 Contábil", setoresNoMenu: 1, ligia: false, avisosNoCelular: false };
+const EQUIPE: OpcoesDaEquipe = { role: "SECTOR_USER", escritorio: "41 Contábil", setoresNoMenu: 1, ceci: false, avisosNoCelular: false };
 
 describe("quem vê sozinho", () => {
   it("administrador e Super Admin pulam; os outros papéis veem", () => {
@@ -83,12 +83,12 @@ describe("tutorial da equipe", () => {
     expect(chaves(tutorialDaEquipe({ ...EQUIPE, role: "READONLY" }))).not.toContain("meu-time");
   });
 
-  it("a Lígia só entra quando atende o setor da pessoa — e diz que só lê e que sugestão pede Aplicar", () => {
-    expect(chaves(tutorialDaEquipe(EQUIPE))).not.toContain("ligia");
-    const t = tutorialDaEquipe({ ...EQUIPE, ligia: true });
-    expect(chaves(t)).toEqual(["boas-vindas", "menu", "meu-dia", "busca", "avisos", "ligia", "ajuda", "pronto"]);
-    expect(textoDe(t, "ligia")).toContain("não muda nada sozinha");
-    expect(textoDe(t, "ligia")).toContain("Aplicar");
+  it("a Ceci só entra quando atende o setor da pessoa — e diz que só lê e que sugestão pede Aplicar", () => {
+    expect(chaves(tutorialDaEquipe(EQUIPE))).not.toContain("ceci");
+    const t = tutorialDaEquipe({ ...EQUIPE, ceci: true });
+    expect(chaves(t)).toEqual(["boas-vindas", "menu", "meu-dia", "busca", "avisos", "ceci", "ajuda", "pronto"]);
+    expect(textoDe(t, "ceci")).toContain("não muda nada sozinha");
+    expect(textoDe(t, "ceci")).toContain("Aplicar");
   });
 
   it("trocar de setor só aparece para quem tem mais de um setor no menu", () => {
@@ -195,7 +195,7 @@ describe("tutorial do portal", () => {
 describe("o texto", () => {
   const todos: Tutorial[] = [
     ...PAPEIS.flatMap((role) => [
-      tutorialDaEquipe({ ...EQUIPE, role, setoresNoMenu: 3, ligia: true, avisosNoCelular: true }),
+      tutorialDaEquipe({ ...EQUIPE, role, setoresNoMenu: 3, ceci: true, avisosNoCelular: true }),
       tutorialDaEquipe({ ...EQUIPE, role }),
     ]),
     tutorialDoPortal({

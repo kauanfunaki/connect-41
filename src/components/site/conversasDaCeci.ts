@@ -1,6 +1,6 @@
-// O que a seção da Lígia mostra em cada setor (13/10/2026, versão 3 do site).
+// O que a seção da Ceci mostra em cada setor (13/10/2026, versão 3 do site).
 //
-// Pedido do Kauan: a Lígia é o ponto alto do site — "a nossa inteligência
+// Pedido do Kauan: a Ceci é o ponto alto do site — "a nossa inteligência
 // artificial, separada por setores e para os clientes". Regra desta lista: só
 // o que existe. Cada setor foi escrito a partir do agente dele:
 //
@@ -13,19 +13,19 @@
 //   `descreverProposta`, em `src/lib/ia/chat/regras.ts`);
 // - a pergunta é uma das sugestões do próprio chat (`CONFIGS`, em agentes.ts),
 //   às vezes com a empresa junto; a resposta segue o jeito de falar de
-//   `src/lib/ia/ligia.ts` — cada exemplo é a primeira resposta de uma
+//   `src/lib/ia/ceci.ts` — cada exemplo é a primeira resposta de uma
 //   conversa, então ela cumprimenta pelo primeiro nome ("Oi, Camila!").
 //
 // Empresas, pessoas, valores e datas são inventados — as mesmas empresas das
 // telas de exemplo do login e do portal, para uma cena não desmentir a outra.
 //
-// No Portal do Cliente a Lígia ainda NÃO existe (ligia.ts: "no futuro, no
+// No Portal do Cliente a Ceci ainda NÃO existe (ceci.ts: "no futuro, no
 // portal do cliente"): o item entra marcado "Em breve", sem conversa. Mudou um
 // agente, muda aqui.
 
 export type ChaveDaConversa = "bpo" | "fiscal" | "dp" | "societario" | "recrutamento" | "portal";
 
-export type ConversaDaLigia = {
+export type ConversaDaCeci = {
   chave: ChaveDaConversa;
   /** O setor como embaixo do nome dela no chat (`especialidadeDoAgente`) — "BPO", "Departamento Pessoal". */
   setor: string;
@@ -47,7 +47,7 @@ export type ConversaDaLigia = {
   link?: string;
 };
 
-export const CONVERSAS_DA_LIGIA: ConversaDaLigia[] = [
+export const CONVERSAS_DA_CECI: ConversaDaCeci[] = [
   {
     chave: "bpo",
     setor: "BPO",
@@ -152,6 +152,6 @@ export const CONVERSAS_DA_LIGIA: ConversaDaLigia[] = [
     emBreve: true,
     consulta: [],
     jeito:
-      "A Lígia ainda não atende no Portal do Cliente. Hoje ela trabalha com a equipe do escritório, dentro do Connect. A ideia é que ela também atenda o cliente no portal — quando estiver pronta, ela aparece por lá.",
+      "A Ceci ainda não atende no Portal do Cliente. Hoje ela trabalha com a equipe do escritório, dentro do Connect. A ideia é que ela também atenda o cliente no portal — quando estiver pronta, ela aparece por lá.",
   },
 ];
