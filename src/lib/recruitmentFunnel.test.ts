@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeFunnelConversion, stageIndex } from "./recruitmentFunnel";
+import { computeFunnelConversion, linhaDaColuna, numerosDasColunas, resumoDoFunil, stageIndex } from "./recruitmentFunnel";
 
 describe("stageIndex", () => {
   it("ordena as etapas", () => {
@@ -54,5 +54,58 @@ describe("computeFunnelConversion", () => {
     const stats = computeFunnelConversion([]);
     expect(stats.total).toBe(0);
     expect(stats.stages.every((s) => s.conversionPct === 0)).toBe(true);
+  });
+});
+
+describe("numerosDasColunas (o topo de cada coluna do quadro)", () => {
+  // O exemplo da página de alternativas: 5 candidaturas, 1 reprovada na triagem.
+  const CANDIDATURAS = [
+    { stage: "TRIAGEM", status: "EM_ANDAMENTO" },
+    { stage: "TRIAGEM", status: "EM_ANDAMENTO" },
+    { stage: "TRIAGEM", status: "REPROVADO" },
+    { stage: "ENTREVISTA", status: "EM_ANDAMENTO" },
+    { stage: "CONTRATADO", status: "CONTRATADO" },
+  ];
+
+  it("quem está agora, quem chegou e a passagem da etapa anterior", () => {
+    const n = numerosDasColunas(CANDIDATURAS);
+    expect(n.map((c) => [c.stage, c.agora, c.chegaram])).toEqual([
+      ["TRIAGEM", 2, 5],
+      ["ENTREVISTA", 1, 2],
+      ["TESTE", 0, 1],
+      ["PROPOSTA", 0, 1],
+      ["CONTRATADO", 1, 1],
+    ]);
+    expect(n.map((c) => c.passaram)).toEqual([null, 0.4, 0.5, 1, 1]);
+    expect(n.map((c) => c.parteDoTotal)).toEqual([1, 0.4, 0.2, 0.2, 0.2]);
+  });
+
+  it("a mesma conta do gráfico de funil que saiu da ficha", () => {
+    // O `Funil` mostrava a barra como chegaram/maior e o % como chegaram/anterior.
+    const stats = computeFunnelConversion(CANDIDATURAS);
+    const n = numerosDasColunas(CANDIDATURAS);
+    stats.stages.forEach((s, i) => {
+      expect(n[i]!.chegaram).toBe(s.reached);
+      expect(n[i]!.agora).toBe(s.current);
+      expect(Math.round(n[i]!.parteDoTotal * 100)).toBe(s.conversionPct);
+    });
+  });
+
+  it("ninguém na etapa anterior: sem percentual", () => {
+    const n = numerosDasColunas([]);
+    expect(n.every((c) => c.passaram === null && c.parteDoTotal === 0 && c.agora === 0)).toBe(true);
+  });
+
+  it("a linha de cada coluna", () => {
+    expect(linhaDaColuna({ chegaram: 5, passaram: null })).toBe("5 chegaram");
+    expect(linhaDaColuna({ chegaram: 2, passaram: 0.4 })).toBe("2 chegaram · 40% passaram");
+    expect(linhaDaColuna({ chegaram: 1, passaram: 1 })).toBe("1 chegou · 100% passaram");
+    expect(linhaDaColuna({ chegaram: 2, passaram: 2 / 3 })).toBe("2 chegaram · 67% passaram");
+  });
+
+  it("a linha em cima do quadro", () => {
+    expect(resumoDoFunil(5, 1, 2)).toBe("5 candidaturas · 1 contratada de 2 vagas");
+    expect(resumoDoFunil(1, 0, 1)).toBe("1 candidatura · 0 contratadas de 1 vaga");
+    expect(resumoDoFunil(3, 2, 2)).toBe("3 candidaturas · 2 contratadas de 2 vagas");
   });
 });
