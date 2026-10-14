@@ -19,6 +19,11 @@ type JobPostingInput = {
   remoto?: boolean;
   /** Só quando a vaga mostra a faixa no portal — o JSON-LD não revela o que a página esconde. */
   salario?: { min: number | null; max: number | null } | null;
+  /**
+   * O endereço canônico da vaga (absoluto) — o mesmo do `<link rel=canonical>`.
+   * Da 41, o do 41 Carreiras (14/10/2026). Sem endereço absoluto, fica de fora.
+   */
+  url?: string | null;
 };
 
 // Vocabulário do Google for Jobs para employmentType.
@@ -44,6 +49,7 @@ export function buildJobPostingJsonLd(input: JobPostingInput): string {
       ...(input.companyUrl ? { sameAs: input.companyUrl } : {}),
     },
     directApply: true,
+    ...(input.url ? { url: input.url } : {}),
   };
 
   if (input.validThrough) {

@@ -3,19 +3,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { formatCalendarDate } from "@/lib/format";
-import { publicUrl } from "@/lib/jobPostingSchema";
 import {
   CONTRATO_LABEL,
   MODALIDADE_LABEL,
   filtrarVagas,
   lerFiltros,
-  localDaVaga,
   opcoesDosFiltros,
   paginar,
   temFiltro,
-  urlDaLista,
-  whereDoPrazo,
+  urlDaListaEm,
 } from "@/lib/carreiras/portal";
+import { MARCA_41_CARREIRAS, enderecoPublicoDoPortal } from "@/lib/carreiras/enderecoDeCarreiras";
+import { portalDaRequisicao } from "@/lib/carreiras/portalDaRequisicao";
+import { escritorioDoPortal, vagasAbertasDoPortal } from "@/lib/carreiras/vagasDoPortal";
+import { HubDe41Carreiras } from "@/components/carreiras/HubDe41Carreiras";
 import { Briefcase, SearchX, Search, UserRound, X } from "lucide-react";
 import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
@@ -33,6 +34,24 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  const portal = await portalDaRequisicao(slug);
+  if (!portal) return { title: "Página não encontrada", robots: { index: false, follow: false } };
+  const url = enderecoPublicoDoPortal(slug, { tipo: "lista" });
+
+  // A lista do escritório da 41 é o hub do 41 Carreiras (14/10/2026), com a
+  // marca dele — e o canônico no endereço principal do portal.
+  if (portal.da41) {
+    const title = `Vagas abertas — ${MARCA_41_CARREIRAS.nome}`;
+    const description = `Vagas em empresas clientes da ${MARCA_41_CARREIRAS.escritorio}. Veja as oportunidades abertas e candidate-se pelo site.`;
+    return {
+      title: { absolute: title },
+      description,
+      ...(url ? { alternates: { canonical: url } } : {}),
+      openGraph: { type: "website", title, description, ...(url ? { url } : {}), siteName: MARCA_41_CARREIRAS.nome, locale: "pt_BR" },
+      twitter: { card: "summary", title, description },
+    };
+  }
+
   const prisma = getPrisma();
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
@@ -42,7 +61,6 @@ export async function generateMetadata({
 
   const title = `Trabalhe conosco — ${tenant.name}`;
   const description = `Confira as vagas abertas na ${tenant.name} e candidate-se online.`;
-  const url = publicUrl(`/carreiras/${slug}`);
 
   return {
     title,
@@ -63,47 +81,36 @@ export default async function CarreirasPage({
   const { slug } = await params;
   const busca = await searchParams;
   const filtros = lerFiltros(busca);
-  const prisma = getPrisma();
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { slug },
-    select: { id: true, name: true, logoUrl: true, active: true },
-  });
-  if (!tenant || !tenant.active) notFound();
+  // No endereço do 41 Carreiras só existe o escritório da 41.
+  const portal = await portalDaRequisicao(slug);
+  if (!portal) notFound();
+  const { rotas } = portal;
 
-  const abertas = await prisma.vaga.findMany({
-    // Prazo vencido sai da lista sozinho — ver `whereDoPrazo`.
-    where: { tenantId: tenant.id, isPublic: true, status: "ABERTA", ...whereDoPrazo(new Date()) },
-    select: {
-      id: true,
-      title: true,
-      quantity: true,
-      openedAt: true,
-      publicDescription: true,
-      applicationDeadline: true,
-      workCity: true,
-      workStateCode: true,
-      salaryMin: true,
-      salaryMax: true,
-      showSalary: true,
-      workMode: true,
-      contractType: true,
-      company: { select: { tradeName: true, name: true, city: true, stateCode: true } },
-      cargo: { select: { name: true } },
-    },
-    orderBy: { openedAt: "desc" },
-  });
+  const tenant = await escritorioDoPortal(slug);
+  if (!tenant) notFound();
 
-  const todas = abertas.map((v) => ({
-    ...v,
-    empresa: v.company.tradeName || v.company.name,
-    ...localDaVaga(v),
-    area: v.cargo?.name ?? null,
-    salaryMin: v.salaryMin === null ? null : v.salaryMin.toNumber(),
-    salaryMax: v.salaryMax === null ? null : v.salaryMax.toNumber(),
-  }));
+  const agora = new Date();
+  const todas = await vagasAbertasDoPortal(tenant.id, agora);
   const filtradas = filtrarVagas(todas, filtros);
   const { itens: vagas, pagina, totalDePaginas } = paginar(filtradas, busca.pagina);
+
+  if (portal.da41) {
+    return (
+      <HubDe41Carreiras
+        logo={tenant.logoUrl}
+        rotas={rotas}
+        todas={todas}
+        vagas={vagas}
+        filtradas={filtradas.length}
+        filtros={filtros}
+        pagina={pagina}
+        totalDePaginas={totalDePaginas}
+        agora={agora}
+      />
+    );
+  }
+
   const opcoes = opcoesDosFiltros(todas);
   const filtrando = temFiltro(filtros);
 
@@ -119,7 +126,7 @@ export default async function CarreirasPage({
         >
           {/* Botão, e não link de texto (30/09): é a porta de entrada da conta
               do candidato. */}
-          <Button href={`/carreiras/${slug}/minha-conta`} variant="secondary" size="sm" className="mt-3">
+          <Button href={rotas.conta} variant="secondary" size="sm" className="mt-3">
             <UserRound size={13} /> Já se candidatou? Acompanhe suas candidaturas
           </Button>
         </CabecalhoPublico>
@@ -169,7 +176,7 @@ export default async function CarreirasPage({
                 {filtrando && ` de ${todas.length}`}
               </p>
               {filtrando && (
-                <Button href={`/carreiras/${slug}`} variant="ghost" size="xs">
+                <Button href={rotas.lista} variant="ghost" size="xs">
                   <X size={11} /> Limpar filtros
                 </Button>
               )}
@@ -193,7 +200,7 @@ export default async function CarreirasPage({
               icon={<SearchX />}
               title="Nenhuma vaga com esses filtros."
               action={
-                <Button href={`/carreiras/${slug}`} variant="secondary" size="sm">
+                <Button href={rotas.lista} variant="secondary" size="sm">
                   Ver todas as {todas.length} vagas abertas
                 </Button>
               }
@@ -207,7 +214,7 @@ export default async function CarreirasPage({
                 // O `Card` com o link por dentro — era o cartão escrito à mão
                 // no próprio link (auditoria DRG-08, 07/10/2026).
                 <Card key={v.id} className="hover:border-border-strong hover:bg-surface-hover transition-colors">
-                  <Link href={`/carreiras/${slug}/${v.id}`} className="block p-5 rounded-lg">
+                  <Link href={rotas.vaga(v.id)} className="block p-5 rounded-lg">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h2 className="text-body font-semibold text-fg">{v.title}</h2>
@@ -250,7 +257,7 @@ export default async function CarreirasPage({
             <Pagination
               page={pagina}
               totalPages={totalDePaginas}
-              buildHref={(p) => urlDaLista(slug, filtros, p)}
+              buildHref={(p) => urlDaListaEm(rotas.lista, filtros, p)}
               total={filtradas.length}
               rotulo="vagas"
             />

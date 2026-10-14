@@ -14,6 +14,14 @@ import {
 import { accessCookieOptions } from "@/lib/auth/cookies";
 import { identidadeNoEscritorio } from "@/lib/auth/trocaDeEscritorio";
 import { ehHostDoSite } from "@/lib/site/host";
+import {
+  PAGINA_NAO_ENCONTRADA,
+  configDeCarreiras,
+  ehHostDeCarreiras,
+  normalizarHost,
+  rotaNoHostDeCarreiras,
+  type ConfigDeCarreiras,
+} from "@/lib/carreiras/enderecoDeCarreiras";
 
 // jose usa Web Crypto API — funciona tanto no runtime Node quanto no Edge
 // (ao contrário de jsonwebtoken). Mantido mesmo após a migração pra Proxy
@@ -178,8 +186,63 @@ async function tryRefresh(req: NextRequest): Promise<{ accessToken: string; setC
   }
 }
 
+// ── 41 Carreiras ─────────────────────────────────────────────────────────────
+//
+// O endereço próprio do portal de vagas da 41 (13/10/2026, ver
+// lib/carreiras/enderecoDeCarreiras). Nele só existe o portal — as vagas, a
+// conta do candidato e a candidatura —, numa lista fechada: o resto é "não
+// encontrada", para a equipe e o Portal do Cliente nunca aparecerem ali. Não
+// há sessão a conferir: nenhuma rota do portal usa a identidade da equipe, e os
+// cabeçalhos de identidade saem como em qualquer outro caminho.
+function proxyDoPortalDeCarreiras(req: NextRequest, config: ConfigDeCarreiras): NextResponse {
+  const { pathname, search } = req.nextUrl;
+
+  // Endereço provisório → principal, mesmo caminho. Só GET/HEAD: um POST
+  // (candidatura, ação da conta) de uma aba aberta antes da troca é atendido
+  // onde chegou, em vez de virar um redirect que o navegador não repete.
+  const host = normalizarHost(req.headers.get("host"));
+  const soLeitura = req.method === "GET" || req.method === "HEAD";
+  if (host !== config.principal && soLeitura && !pathname.startsWith("/api/") && !pathname.startsWith("/_next/")) {
+    return NextResponse.redirect(`https://${config.principal}${pathname}${search}`, 308);
+  }
+
+  const headers = new Headers(req.headers);
+  stripIdentityHeaders(headers);
+
+  const rota = rotaNoHostDeCarreiras(pathname, config.tenantSlug);
+  switch (rota.tipo) {
+    case "seguir":
+      return NextResponse.next({ request: { headers } });
+    case "reescrever": {
+      const destino = req.nextUrl.clone();
+      destino.pathname = rota.para;
+      return NextResponse.rewrite(destino, { request: { headers } });
+    }
+    case "redirecionar": {
+      const destino = req.nextUrl.clone();
+      destino.pathname = rota.para;
+      return NextResponse.redirect(destino, 308);
+    }
+    case "nao-encontrada":
+      if (pathname.startsWith("/api/")) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+      return new NextResponse(PAGINA_NAO_ENCONTRADA, {
+        status: 404,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+  }
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // O 41 Carreiras vem ANTES de tudo — inclusive do redirect de endereço
+  // antigo e do setor pelo subdomínio: `carreiras.useconnect.com.br` tem cara
+  // de setor ("carreiras") e não pode cair em nenhuma das duas regras. Sem as
+  // variáveis CARREIRAS_*, ou em qualquer outro host, nada muda daqui para baixo.
+  const carreiras = configDeCarreiras();
+  if (carreiras && ehHostDeCarreiras(req.headers.get("host"), carreiras)) {
+    return proxyDoPortalDeCarreiras(req, carreiras);
+  }
 
   // Endereço antigo (com o sufixo de antes, ex. `bpoteste.`) vai para o novo,
   // com o mesmo caminho (05/10/2026, troca para app.useconnect.com.br). 308

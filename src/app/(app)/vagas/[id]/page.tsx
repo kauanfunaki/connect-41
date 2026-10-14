@@ -32,6 +32,7 @@ import { AcessoDosRecrutadores } from "@/components/vagas/AcessoDosRecrutadores"
 import { Selo } from "@/components/ui/Selo";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { Funil } from "@/components/shared/Graficos";
+import { urlDaVagaNo41Carreiras } from "@/lib/carreiras/enderecoDeCarreiras";
 
 const PRIORITY_LABEL: Record<VagaPrioridade, string> = {
   BAIXA: "Baixa",
@@ -72,6 +73,11 @@ export default async function VagaPage({
     await prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { slug: true } })
   )?.slug;
   const publicBaseUrl = process.env.APP_PUBLIC_URL ?? "";
+  // O endereço que o recrutador divulga: da 41, o do 41 Carreiras (14/10/2026);
+  // dos outros escritórios, o de sempre.
+  const linkPublico = tenantSlug
+    ? (urlDaVagaNo41Carreiras(tenantSlug, vaga.id) ?? `${publicBaseUrl}/carreiras/${tenantSlug}/${vaga.id}`)
+    : null;
   const canAct = await podeAgirNaVaga(ctx, vaga);
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
@@ -227,16 +233,16 @@ export default async function VagaPage({
             <p className="text-ui text-fg whitespace-pre-wrap">{vaga.notes}</p>
           </div>
         )}
-        {vaga.isPublic && tenantSlug && (
+        {vaga.isPublic && linkPublico && (
           <div className="mt-3 pt-3 border-t border-border">
             <p className="text-helper text-fg-muted mb-0.5">Portal público</p>
             <a
-              href={`${publicBaseUrl}/carreiras/${tenantSlug}/${vaga.id}`}
+              href={linkPublico}
               target="_blank"
               rel="noopener noreferrer"
               className="text-ui text-brand hover:underline break-all"
             >
-              {publicBaseUrl}/carreiras/{tenantSlug}/{vaga.id}
+              {linkPublico}
             </a>
           </div>
         )}
