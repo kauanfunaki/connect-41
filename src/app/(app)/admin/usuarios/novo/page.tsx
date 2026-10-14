@@ -5,7 +5,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { UsuarioForm } from "@/components/admin/UsuarioForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarUsuario } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { assignableRoles, ROLE_OPTIONS } from "@/lib/roles";
@@ -27,7 +26,6 @@ export default async function NovoUsuarioPage() {
   if (!seatCheck.allowed) {
     return (
       <PageContainer>
-        <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Novo usuário" }]} />
 
         <Aviso tom="atencao">
           <p className="text-fg">{seatCheck.reason}</p>
@@ -42,7 +40,6 @@ export default async function NovoUsuarioPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Novo usuário" }]} />
       <PageHeader title="Novo usuário" />
 
       <div className="max-w-[720px]">

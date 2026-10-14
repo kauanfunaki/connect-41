@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { FinanceCategoryForm } from "@/components/admin/FinanceCategoryForm";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -26,7 +25,6 @@ export default async function EditarCategoriaPage({
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Plano de contas", href: "/admin/plano-de-contas" }, { label: "Editar" }]} />
       <PageHeader title="Editar categoria" />
 
       <div className="max-w-[720px]">
