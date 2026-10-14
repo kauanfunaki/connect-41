@@ -33,6 +33,7 @@ import {
 } from "@/lib/recrutamento/respostas";
 import { avisarSobreAVaga } from "@/lib/recrutamento/avisos";
 import { urlDaVagaNo41Carreiras } from "@/lib/carreiras/enderecoDeCarreiras";
+import { whereDasVagasDoPortal } from "@/lib/carreiras/portal";
 
 /** A candidatura ligada à conversa — a única em que o registro pode gravar. */
 async function candidaturaDaConversa(ctx: ContextoDaFerramenta): Promise<string | null> {
@@ -199,13 +200,13 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
       natureza: "leitura",
     },
     executar: async (_args, ctx) => {
-      // Só o que já é público no portal de carreiras. `isPublic` é a mesma
-      // chave que decide o que aparece em `/carreiras` — se não está lá, não
-      // sai por aqui.
+      // Só o que o portal de carreiras mostra — mesma regra (publicada, aberta
+      // e dentro do prazo): vaga com prazo vencido daria um link para "vaga
+      // não encontrada".
       const prisma = getPrisma();
       const [vagas, tenant] = await Promise.all([
         prisma.vaga.findMany({
-          where: { tenantId: ctx.tenantId, status: "ABERTA", isPublic: true },
+          where: whereDasVagasDoPortal(ctx.tenantId, new Date()),
           orderBy: { openedAt: "desc" },
           take: 20,
           select: {
