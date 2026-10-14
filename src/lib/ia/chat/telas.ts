@@ -33,7 +33,7 @@ const TELAS_GERAIS: Readonly<Record<string, string>> = {
   "/notificacoes": "Notificações",
   "/ajuda": "Ajuda",
   "/configuracoes": "Configurações",
-  "/admin": "Administração",
+  "/admin": "Configurações",
   "/ferias": "Férias",
   "/desligamentos": "Desligamentos",
   "/admissoes": "Admissões",

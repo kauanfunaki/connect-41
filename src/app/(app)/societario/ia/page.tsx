@@ -74,7 +74,7 @@ export default async function IaDoSocietarioPage() {
           <p>
             {[!varreduraLigada && nome(AGENTE_VARREDURA), !ligado(AGENTE_CONTRATO) && nome(AGENTE_CONTRATO)].filter(Boolean).join(" e ")}{" "}
             {!varreduraLigada && !ligado(AGENTE_CONTRATO) ? "estão desligadas" : "está desligada"}. Um administrador liga em
-            Administração › Inteligência artificial. A leitura de contrato social fica na tela de sócios de cada empresa.
+            Configurações › Inteligência artificial. A leitura de contrato social fica na tela de sócios de cada empresa.
           </p>
           <Button href="/admin/ia" variant="secondary" size="xs">
             Abrir Inteligência artificial

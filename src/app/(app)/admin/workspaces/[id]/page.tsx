@@ -6,7 +6,6 @@ import { getAuthContext } from "@/lib/auth/context";
 import { ToggleAccessButton } from "@/components/admin/ToggleAccessButton";
 import { WorkspaceLogoUpload } from "@/components/admin/WorkspaceLogoUpload";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { concederAcesso, revogarAcesso } from "../actions";
 import { formatCnpj } from "@/lib/format";
 
@@ -37,7 +36,6 @@ export default async function WorkspaceDetailPage({
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Workspaces", href: "/admin/workspaces" }, { label: tenant.name, truncate: true }]} />
 
       {/* O CNPJ era um parágrafo solto embaixo do cabeçalho; é o subtítulo dele. */}
       <PageHeader

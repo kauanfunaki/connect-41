@@ -3,7 +3,6 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getActiveSectors, getAllSectors } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { ModeloDePastas } from "@/components/arquivos/ModeloDePastas";
 import { modeloDoEscritorio } from "@/lib/drive/servidor";
 
@@ -21,7 +20,6 @@ export default async function ModeloDePastasPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Administração", href: "/admin" }, { label: "Modelo de pastas" }]} />
       <PageHeader
         title="Modelo de pastas"
         subtitle="As pastas que toda empresa ganha nos Arquivos. Mudar nome ou setor vale na hora para todas; pasta nova chega a cada empresa na próxima vez que alguém abrir os Arquivos dela."

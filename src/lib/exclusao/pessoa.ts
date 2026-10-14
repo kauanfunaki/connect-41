@@ -198,7 +198,7 @@ async function previaDe(db: Tx, tenantId: string, p: PessoaDaPrevia): Promise<Pr
     const conta = await db.user.findFirst({ where: { id: p.linkedUserId, tenantId }, select: { name: true, email: true } });
     if (conta) {
       avisos.push(
-        `A conta de acesso de ${conta.name} (${conta.email}) continua: só deixa de estar ligada a esta ficha. Para tirar o acesso, exclua ou inative o usuário em Administração › Usuários.`
+        `A conta de acesso de ${conta.name} (${conta.email}) continua: só deixa de estar ligada a esta ficha. Para tirar o acesso, exclua ou inative o usuário em Configurações › Usuários.`
       );
     }
   }

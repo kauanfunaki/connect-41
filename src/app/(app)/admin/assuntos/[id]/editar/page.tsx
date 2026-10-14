@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { AssuntoForm } from "@/components/admin/AssuntoForm";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -21,7 +20,6 @@ export default async function EditarAssuntoPage({ params }: { params: Promise<{ 
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Assuntos das solicitações", href: "/admin/assuntos" }, { label: assunto.label }]} />
       <PageHeader title="Editar assunto" />
       <div className="max-w-[720px]">
         <Card className="p-6">
