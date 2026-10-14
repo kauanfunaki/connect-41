@@ -9,6 +9,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { createPasswordResetToken } from "@/lib/auth/passwordReset";
 import { sendPasswordResetEmail } from "@/lib/email/sendMail";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { apagarTutoriaisDoPortal } from "@/lib/tutorial/vistos";
 import {
   CONTAGEM_DO_ACESSO,
   confirmacaoConfere,
@@ -380,6 +381,9 @@ export async function excluirAcessoDoPortal(id: string, confirmacao: string): Pr
     return r.count;
   });
   if (excluidos !== 1) return { erro: "Acesso não encontrado." };
+  // A marca do tutorial do primeiro acesso (sem chave estrangeira): fora da
+  // transação e sem lançar — uma linha órfã não vale desfazer a exclusão.
+  await apagarTutoriaisDoPortal(ctx.tenantId, [conta.id]);
 
   await logAudit({
     tenantId: ctx.tenantId,

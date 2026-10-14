@@ -13,6 +13,9 @@ import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
 import { formatDocumento } from "@/lib/format";
 import { enviarLinkParaCriarSenha, trocarSenhaDoPortal } from "./actions";
+import { montarTutorialDoPortal } from "@/lib/tutorial/servidor";
+import { BotaoVerTutorial } from "@/components/tutorial/TutorialDoPrimeiroAcesso";
+import { concluirTutorialDoPortal } from "@/app/(portal)/portal/tutorial-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +34,7 @@ export default async function MinhaContaDoPortalPage() {
   if (!sessao) redirect("/portal/login");
 
   const prisma = getPrisma();
-  const [conta, empresas] = await Promise.all([
+  const [conta, empresas, tutorial] = await Promise.all([
     prisma.portalUser.findFirst({
       where: { id: sessao.sub, tenantId: sessao.tenantId, clientGroupId: sessao.clientGroupId, active: true },
       select: { email: true },
@@ -40,6 +43,7 @@ export default async function MinhaContaDoPortalPage() {
       where: { tenantId: sessao.tenantId, clientGroupId: sessao.clientGroupId },
       select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true },
     }),
+    montarTutorialDoPortal(sessao),
   ]);
   if (!conta) redirect("/portal/login");
 
@@ -100,13 +104,24 @@ export default async function MinhaContaDoPortalPage() {
         )}
       </section>
 
-      <section aria-labelledby="conta-tema" className="max-w-3xl">
+      <section aria-labelledby="conta-tema" className="mb-8 max-w-3xl">
         <TituloDeSecao id="conta-tema">Tema</TituloDeSecao>
         <Card className="p-5 flex flex-col gap-3">
           <p className="text-helper text-fg-muted">
             &ldquo;Do aparelho&rdquo; segue o claro ou o escuro do seu celular ou computador. A escolha vale para este navegador.
           </p>
           <TemaDoPortal />
+        </Card>
+      </section>
+
+      {/* O tutorial do primeiro acesso, para rever (13/10/2026) — também na Ajuda. */}
+      <section aria-labelledby="conta-tutorial" className="max-w-3xl">
+        <TituloDeSecao id="conta-tutorial">Tutorial</TituloDeSecao>
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <p className="min-w-0 flex-1 basis-64 text-helper text-fg-muted">
+            O passo a passo do primeiro acesso: o que tem em cada parte do portal e onde encontrar cada coisa.
+          </p>
+          <BotaoVerTutorial tutorial={tutorial} concluir={concluirTutorialDoPortal} />
         </Card>
       </section>
     </PageContainer>
