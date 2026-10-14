@@ -1062,7 +1062,7 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.apontar(main(r).getByRole("heading", { name: "Prazos da semana" }), "…e os prazos dos seus setores nos próximos 7 dias.");
         await r.apontar(main(r).getByRole("link", { name: "Abrir agenda" }), "Abrir agenda mostra a semana inteira na Agenda.");
         await r.topo();
-        await r.apontar(main(r).getByRole("link", { name: "Quadros" }), "E Quadros, no topo, mostra as tarefas em quadro.");
+        await r.apontar(main(r).getByRole("link", { name: "Kanban", exact: true }).first(), "E Kanban, no topo, mostra as listas de todos os seus setores.");
         await r.clicar(
           main(r).getByRole("group", { name: "Visão" }).getByRole("link", { name: "Meu time" }),
           "Quem coordena um setor troca para Meu time…"
@@ -1470,18 +1470,19 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
       },
     },
     {
+      // O arquivo e a chave seguem "espacos": a tela se chamava Espaços até 14/10/2026.
       arquivo: "27-espacos",
-      titulo: "Espaços",
-      resumo: "As listas e os quadros de tarefas de cada setor.",
+      titulo: "Quadros",
+      resumo: "As listas de tarefas de cada setor, em lista ou kanban.",
       chave: "geral:espacos",
       logado: true,
       async executar(r) {
         await r.ir("/home");
-        await r.cartaz(SELO, "Espaços", "As listas e os quadros de tarefas de cada setor");
+        await r.cartaz(SELO, "Quadros", "As listas de tarefas de cada setor, em lista ou kanban");
         await r.clicar(barraLateral(r).getByRole("button", { name: "DP", exact: true }), "Entre no setor…");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(700);
-        await r.clicar(barraLateral(r).getByRole("link", { name: "Espaços" }), "…e clique em Espaços.");
+        await r.clicar(barraLateral(r).getByRole("link", { name: "Quadros" }), "…e clique em Quadros.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(900);
         const lista = main(r).getByRole("link", { name: /Folha de pagamento/ }).first();
@@ -1495,17 +1496,17 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.pausa(1000);
         await r.apontar(
           main(r).getByRole("button", { name: /Adicionar tarefa/ }).first(),
-          "Na visão Lista, Adicionar tarefa cria uma tarefa no grupo do status: digite o nome e aperte Enter."
+          "Na visão Listas, Adicionar tarefa cria uma tarefa no grupo do status: digite o nome e aperte Enter."
         );
         await r.apontar(main(r).getByRole("link", { name: "Nova tarefa" }).first(), "Nova tarefa cria a tarefa de uma empresa ou pessoa, com prazo, prioridade e responsáveis.");
         await r.apontar(main(r).getByRole("button", { name: /^Filtros/ }).first(), "A busca e o botão Filtros filtram por responsável, criador, etiqueta, prioridade e prazo.");
         await r.clicar(
-          main(r).getByRole("group", { name: "Visão do pipeline" }).getByRole("button", { name: /Quadro/ }),
-          "Troque entre Lista e Quadro: em linhas, ou em colunas por status."
+          main(r).getByRole("group", { name: "Visão do pipeline" }).getByRole("button", { name: /Kanban/ }),
+          "Troque entre Listas e Kanban: em linhas, ou em colunas por status."
         );
         await r.pausa(1200);
         const card = main(r).getByText(/Folha de setembro/).filter({ visible: true }).first();
-        await r.clicar(card, "Clique no nome da tarefa para abrir o card. No Quadro, dá para arrastar o card de coluna.");
+        await r.clicar(card, "Clique no nome da tarefa para abrir o card. No Kanban, dá para arrastar o card de coluna.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1200);
         await r.legenda("No card: Status, Responsáveis, Participantes, Datas, Prioridade, Etiquetas, Subtarefas, Checklist e Anexos.");
