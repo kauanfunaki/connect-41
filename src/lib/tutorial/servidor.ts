@@ -15,6 +15,7 @@ import type { PortalAccessTokenPayload } from "@/lib/auth/types";
 import { getPrisma } from "@/lib/prisma";
 import { getEnabledModuleCodes, getSectorsWithEnabledModules } from "@/lib/modules";
 import { getSectorMaps } from "@/lib/sectors";
+import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 import { getVapidPublicKey } from "@/lib/vapid";
 import { agentesDoChat } from "@/lib/ia/chat/agentes";
 import {
@@ -90,6 +91,8 @@ export async function montarTutorialDaEquipe(ctx: AuthContext): Promise<Tutorial
     setoresNoMenu: setores,
     ceci,
     avisosNoCelular: Boolean(getVapidPublicKey()),
+    // O mesmo menu Geral do layout; a leitura nunca lança (sem a tabela, todas).
+    telasDoGeral: await telasDoGeralDaPessoa(ctx),
   });
 }
 
