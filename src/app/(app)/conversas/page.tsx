@@ -57,7 +57,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
           title="Chatwoot não configurado"
           description={
             isFullAccess(ctx.role)
-              ? "Configure a conexão em Administração › Integrações para ver o histórico de conversas aqui."
+              ? "Configure a conexão em Configurações › Integrações para ver o histórico de conversas aqui."
               : "Peça a um administrador para configurar a integração com o Chatwoot em Integrações."
           }
           action={

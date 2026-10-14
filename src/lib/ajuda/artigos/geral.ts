@@ -206,7 +206,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Use para cadastro de teste, feito por engano, ou quando a pessoa pede a exclusão dos dados. Para afastar alguém de verdade, inative.",
           "Na ficha da pessoa, clique em “Excluir”. A janela mostra o que está ligado a ela: férias, folha, exames, documentos, candidaturas.",
           "Sem nada ligado, clique em “Excluir”. Com histórico, digite o nome da pessoa e clique em “Excluir com tudo o que está ligado”.",
-          "A conta de acesso ao Connect, se houver, continua: para tirar o acesso, exclua ou inative o usuário em Administração › Usuários.",
+          "A conta de acesso ao Connect, se houver, continua: para tirar o acesso, exclua ou inative o usuário em Configurações › Usuários.",
         ],
       },
     ],
@@ -307,7 +307,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "O horário padrão do escritório é definido por um administrador, em Administração → Empresa (tenant).",
+      "O horário padrão do escritório é definido por um administrador, em Configurações › Horário da Agenda.",
       "Quando o horário passa da meia-noite, a madrugada aparece na coluna do dia anterior: uma reunião à 1:00 de terça fica na coluna de segunda. Os prazos continuam no dia do calendário.",
       "Reunião fora do horário exibido não some: a grade avisa quantas ficaram de fora, e elas aparecem na visão de mês.",
       "Para agendar, conecte antes a sua conta Google ou Microsoft: a janela de nova reunião traz o link “Configurações → Integrações”.",
