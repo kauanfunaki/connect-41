@@ -19,6 +19,11 @@ type Props = {
   permitirTodas?: boolean;
   /** "AAAA-MM". Sem valor, o seletor de mês não aparece. */
   mes?: string;
+  /**
+   * O mês escolhido aparece em número, "10/2026", e não "out 2026" — a família
+   * da DRE (pedido do Kauan, 14/10/2026). As outras telas seguem por extenso.
+   */
+  mesEmNumero?: boolean;
   /** Parâmetros que o filtro precisa carregar (aba, modo…). */
   extras?: Record<string, string | undefined>;
   /** Campos a mais no mesmo formulário (ex.: centro de custo), antes do botão. */
@@ -45,7 +50,7 @@ type Props = {
  * navegações — e o GET deixa a URL copiável, que é como relatório é mandado
  * para outra pessoa.
  */
-export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes, extras, children, navegaSozinho, naFileira }: Props) {
+export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes, mesEmNumero, extras, children, navegaSozinho, naFileira }: Props) {
   if (navegaSozinho && empresas && mes === undefined && !children) {
     return (
       <SeletorDeEmpresaDoFiltro
@@ -80,7 +85,7 @@ export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes,
         />
       )}
       {mes !== undefined && (
-        <CampoMes compact name="mes" defaultValue={mes} className="w-40" aria-label="Mês" />
+        <CampoMes compact name="mes" defaultValue={mes} className="w-40" aria-label="Mês" mesEmNumero={mesEmNumero} />
       )}
       {children}
       <Button type="submit" variant="secondary" size="sm">

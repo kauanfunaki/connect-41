@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserRole } from "@/generated/prisma/enums";
 
 // Edição no próprio bloco da ficha do candidato (14/10/2026): a mesma
-// permissão do "Editar tudo" (gerir o Recrutamento), o escritório em toda
+// permissão do antigo "Editar tudo" (gerir o Recrutamento), o escritório em toda
 // consulta, a validação do formulário inteiro e só os campos do bloco no banco.
 // A regra de papel roda de verdade (`podeNoModulo` → `canManageSector`); só o
 // banco e o módulo ligado são de mentira.
@@ -104,7 +104,7 @@ describe("salvar um bloco da ficha do candidato", () => {
     expect(chamadas).toEqual([]);
   });
 
-  it("CPF de outra pessoa: a mesma mensagem do Editar tudo", async () => {
+  it("CPF de outra pessoa: a mesma mensagem do cadastro", async () => {
     erroNoUpdate = Object.assign(new Error("unique"), { code: "P2002" });
     expect(await salvarSecaoDoCandidato("p1", "identificacao", null, formulario({ name: "Ana", cpf: "529.982.247-25" }))).toEqual({
       error: "Já existe uma pessoa cadastrada com este CPF.",

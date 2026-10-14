@@ -7,6 +7,7 @@ import { PainelFlutuante } from "@/components/ui/PainelFlutuante";
 import { CLASSE_DO_TEXTO, classesDaCaixa, larguraDoCampo, useCampoDigitado, useTelaDeToque } from "@/components/ui/useCampoDigitado";
 import { AvisoDoCampo } from "@/components/ui/AvisoDoCampo";
 import { hojeIso, lerMesDigitado, lerMesIso, mascararMes, mesBR, mesPorExtenso } from "@/lib/datas/calendario";
+import { formatarCompetenciaNumerica } from "@/lib/format";
 
 type Props = {
   name?: string;
@@ -24,12 +25,18 @@ type Props = {
   className?: string;
   placeholder?: string;
   "aria-label"?: string;
+  /**
+   * Fora de foco, "10/2026" em vez de "out 2026" — os filtros da família da
+   * DRE (14/10/2026). Ao digitar, é "mm/aaaa" de qualquer jeito.
+   */
+  mesEmNumero?: boolean;
 };
 
 /**
  * Campo de mês (competência, filtro de período) — 02/10/2026, no lugar do
  * `<input type="month">`. Digita "102026" ou "10/2026"; o calendário é a grade
- * de meses, com o ano em ‹ ›. Fora de foco aparece "out 2026".
+ * de meses, com o ano em ‹ ›. Fora de foco aparece "out 2026" — ou
+ * "10/2026", com `mesEmNumero`.
  */
 export function CampoMes({
   name,
@@ -45,6 +52,7 @@ export function CampoMes({
   className = "",
   placeholder = "Escolher mês",
   "aria-label": ariaLabel,
+  mesEmNumero = false,
 }: Props) {
   const [aberto, setAberto] = useState(false);
   const [visao, setVisao] = useState<"meses" | "anos">("meses");
@@ -59,7 +67,7 @@ export function CampoMes({
     ler: (t) => lerMesDigitado(t),
     mascarar: mascararMes,
     paraEdicao: mesBR,
-    porExtenso: mesPorExtenso,
+    porExtenso: mesEmNumero ? formatarCompetenciaNumerica : mesPorExtenso,
     validar: (v) => (min && v < min ? `O mês mínimo é ${mesBR(min)}.` : max && v > max ? `O mês máximo é ${mesBR(max)}.` : null),
     mensagemDeInvalido: "Mês inválido — use mm/aaaa.",
   });

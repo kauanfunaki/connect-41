@@ -16,7 +16,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
-import { formatarCompetencia, formatarReaisDeCentavos as moeda } from "@/lib/format";
+import { formatarCompetencia, formatarCompetenciaNumerica, formatarReaisDeCentavos as moeda } from "@/lib/format";
 import { AvisoDeSemGrupo, BotaoDeClassificar, PainelDeClassificacao } from "@/components/dre/PainelDeClassificacao";
 import { dreDoMes, dreDoAnoDaEmpresa, mesesComMovimento } from "@/lib/dre/data";
 import { dreDoAno } from "@/lib/dre/anual";
@@ -37,6 +37,15 @@ import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
  */
 function rotuloDoMes(m: { ano: number; mes: number }): string {
   return formatarCompetencia(competenciaDe(m.ano, m.mes));
+}
+
+/**
+ * O mês no filtro, em número: "10/2026" (pedido do Kauan, 14/10/2026), como
+ * nas outras telas da família da DRE. Só no filtro — o subtítulo, a
+ * comparação com o mês anterior e a nota do pé seguem com `rotuloDoMes`.
+ */
+function rotuloDoMesNoFiltro(m: { ano: number; mes: number }): string {
+  return formatarCompetenciaNumerica(competenciaDe(m.ano, m.mes));
 }
 
 type EmpresaNaAba = {
@@ -251,9 +260,9 @@ export default async function DrePage({
               {
                 chave: "mes",
                 rotulo: "Mês",
-                vazioLabel: meses[0] ? `Mais recente (${rotuloDoMes(meses[0])})` : "Mais recente",
+                vazioLabel: meses[0] ? `Mais recente (${rotuloDoMesNoFiltro(meses[0])})` : "Mais recente",
                 sempreVisivel: true,
-                opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: rotuloDoMes(m) })),
+                opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: rotuloDoMesNoFiltro(m) })),
               },
             ]}
           />

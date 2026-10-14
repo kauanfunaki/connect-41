@@ -97,15 +97,21 @@ export function indiceDoDestaque(itens: ItemDeTotal[]): number | null {
 /**
  * `className` troca o respiro de baixo (padrão `mb-5`): em coluna com `gap`, passe "".
  * `destaque={false}` tira o cartão azul da tela que não quiser (ver `indiceDoDestaque`).
+ * `rotulosInteiros` faz os rótulos quebrarem linha em vez de cortar com "…",
+ * cada um reservando duas linhas para os valores ficarem na mesma altura (ver
+ * `rotuloInteiro` no `MetricCard`) — para rótulo comprido que não pode perder
+ * o fim, como o mês em "Desligamentos em setembro".
  */
 export function FaixaDeTotais({
   itens,
   className = "mb-5",
   destaque = true,
+  rotulosInteiros = false,
 }: {
   itens: ItemDeTotal[];
   className?: string;
   destaque?: boolean;
+  rotulosInteiros?: boolean;
 }) {
   const principal = destaque ? indiceDoDestaque(itens) : null;
   return (
@@ -123,6 +129,7 @@ export function FaixaDeTotais({
           iconeDoTom={false}
           ativo={i.ativo}
           destaque={n === principal}
+          rotuloInteiro={rotulosInteiros}
           delay={n * 40}
         />
       ))}
