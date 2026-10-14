@@ -252,10 +252,21 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         ],
       },
       {
+        titulo: "Divulgar o link da vaga",
+        passos: [
+          "Abra a vaga. Publicada no portal, ela mostra embaixo do título a faixa azul “Publicada no portal de vagas”.",
+          "Clique em “Abrir página da vaga” para ver o que o candidato vê.",
+          "Clique em “Copiar link” para colar o endereço onde quiser, ou em “WhatsApp” para mandar a vaga com a mensagem pronta.",
+          "Se a vaga não está no portal, a linha “Não publicada no portal de vagas” diz o motivo e o que fazer.",
+        ],
+      },
+      {
         titulo: "Vincular candidatos e movê-los pelo funil",
         passos: [
           "Abra a vaga e vá até “Funil de recrutamento”.",
-          "Logo abaixo do funil, em “Nova candidatura”, escolha o “Candidato”, informe a “Origem” (por exemplo, LinkedIn) e clique em “Vincular candidato”. Se a pessoa ainda não está no banco, clique em “Novo candidato”, ao lado do nome do bloco.",
+          "Clique em “Adicionar candidato”. No painel, busque pelo nome, CPF ou e-mail, escolha a “Origem” (Indicação, Portal, WhatsApp, LinkedIn ou Outra…) e clique em “Vincular”.",
+          "Se a pessoa ainda não está no banco, clique em “Não achou? Cadastrar novo candidato”, preencha o nome, o e-mail e o telefone (o currículo em PDF é opcional) e clique em “Cadastrar e vincular”.",
+          "No topo de cada coluna aparecem quantos estão na etapa agora, quantos chegaram até ela e quantos passaram da etapa anterior.",
           "Arraste o cartão do candidato entre as etapas “Triagem”, “Entrevista”, “Teste”, “Proposta” e “Contratado”, ou escolha a etapa na lista do próprio cartão.",
           "Para tirar alguém do funil, clique no botão “⋯” do cartão e escolha “Reprovar” ou “Desistiu”.",
           "Informe o “Motivo”, se quiser, e confirme. O candidato vai para a faixa de encerrados.",
@@ -264,8 +275,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pontuar os currículos com a IA",
         passos: [
-          "Na seção “Triagem de currículos”, escreva cada requisito, escolha “Obrigatório” ou “Desejável” e marque o peso nos três pontos, de um a três.",
-          "Clique em “Adicionar requisito” para incluir outros e ajuste “Compatível a partir de” e “Parcial a partir de”, se quiser.",
+          "Na seção “Triagem de currículos”, escreva cada requisito no campo “Adicionar obrigatório” ou “Adicionar desejável” e tecle Enter. Obrigatório pesa o dobro.",
+          "Marque o peso nos três pontos ao lado de cada requisito: um é baixo, três é alto. O “×” tira o requisito.",
+          "Ajuste “Parcial a partir de” e “Compatível a partir de”, se quiser. A régua de 0 a 100 mostra onde começa cada faixa.",
           "Clique em “Salvar requisitos”.",
           "Clique em “Pontuar pendentes” para a IA dar nota aos currículos ainda sem nota, ou em “Reprocessar todas” para refazer todas.",
           "Acompanhe o andamento do lote. No funil, os candidatos de cada etapa ficam ordenados pela nota.",
@@ -285,7 +297,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
     dicas: [
       "Mover para “Contratado” transforma o candidato em colaborador com a admissão em andamento, que aparece para o DP em “Admissões”. Depois disso, o cartão não muda mais de etapa.",
       "A nota da triagem só ordena os candidatos — nunca reprova ninguém. Nome, idade, cidade e foto não chegam à IA.",
-      "O “Assistente da vaga” responde perguntas sobre os candidatos e sugere movimentos, mas não altera nada: cada sugestão só vale depois que você clica em “Aplicar”.",
+      "O botão “Perguntar à Ceci sobre esta vaga” abre a Ceci já com a vaga como assunto. Ela responde sobre os candidatos e sugere movimentos, mas não altera nada: cada sugestão só vale depois que você clica em “Aplicar”.",
     ],
   },
 
