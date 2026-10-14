@@ -32,6 +32,7 @@ import {
   type Respostas,
 } from "@/lib/recrutamento/respostas";
 import { avisarSobreAVaga } from "@/lib/recrutamento/avisos";
+import { urlDaVagaNo41Carreiras } from "@/lib/carreiras/enderecoDeCarreiras";
 
 /** A candidatura ligada à conversa — a única em que o registro pode gravar. */
 async function candidaturaDaConversa(ctx: ContextoDaFerramenta): Promise<string | null> {
@@ -66,6 +67,21 @@ export function primeiroNome(nomeCompleto: string): string {
 /** O endereço de inscrição de uma vaga no portal de carreiras. */
 export function linkDeInscricao(baseUrl: string, tenantSlug: string, vagaId: string): string {
   return `${baseUrl.replace(/\/$/, "")}/carreiras/${encodeURIComponent(tenantSlug)}/${encodeURIComponent(vagaId)}`;
+}
+
+/**
+ * O link que o assistente manda: da 41, o do 41 Carreiras (14/10/2026); dos
+ * outros escritórios, o de sempre — e nenhum sem a URL do app configurada,
+ * como antes. Null quando não há link a mandar.
+ */
+export function linkDaVagaParaOCandidato(
+  baseUrl: string,
+  tenantSlug: string | null | undefined,
+  vagaId: string,
+  env: Record<string, string | undefined> = process.env,
+): string | null {
+  if (!tenantSlug) return null;
+  return urlDaVagaNo41Carreiras(tenantSlug, vagaId, env) ?? (baseUrl ? linkDeInscricao(baseUrl, tenantSlug, vagaId) : null);
 }
 
 const ETAPA_EM_PORTUGUES: Record<string, string> = {
@@ -204,12 +220,15 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
       // O mesmo endereço que a tela da vaga mostra como "link público". Sem a
       // URL do app configurada, não há link — e o prompt proíbe inventar um.
       const base = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
-      return vagas.map((v) => ({
-        vaga: v.title,
-        empresa: v.company.tradeName || v.company.name,
-        descricao: v.publicDescription,
-        ...(base && tenant?.slug ? { linkDeInscricao: linkDeInscricao(base, tenant.slug, v.id) } : {}),
-      }));
+      return vagas.map((v) => {
+        const link = linkDaVagaParaOCandidato(base, tenant?.slug, v.id);
+        return {
+          vaga: v.title,
+          empresa: v.company.tradeName || v.company.name,
+          descricao: v.publicDescription,
+          ...(link ? { linkDeInscricao: link } : {}),
+        };
+      });
     },
   },
 
