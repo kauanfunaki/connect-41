@@ -728,31 +728,47 @@ input[type="search"]::-webkit-search-decoration {
    encolhe primeiro e o rótulo encosta à esquerda, com o funil logo depois —
    o rótulo nunca passa por baixo do botão. O anel de foco do funil cabe no
    respiro da célula. Vem depois das regras de cima porque tem a mesma
-   especificidade e precisa ganhar o `justify-content`. */
+   especificidade e precisa ganhar o `justify-content`.
+   Tabela fora da `.c41-tabela` (Empresas, que rola num contêiner próprio; a
+   lista de tarefas) pede o mesmo cabeçalho pela classe `c41-cabecalho-dividido`
+   no <thead> — a mesma do fio entre as colunas, logo abaixo (14/10/2026: lá o
+   funil ainda ia colado ao rótulo e centralizava junto com ele). O teste em
+   FiltroDeColunas.test.ts confere toda tabela do app que tem funil. */
+.c41-cabecalho-dividido > tr > th > .c41-cabecalho-com-funil,
 .c41-tabela > table > thead > tr > th > .c41-cabecalho-com-funil {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 0;
 }
+.c41-cabecalho-dividido > tr > th > .c41-cabecalho-com-funil::before,
 .c41-tabela > table > thead > tr > th > .c41-cabecalho-com-funil::before {
   content: "";
   flex: 0 1 1.5rem;
 }
+.c41-cabecalho-dividido > tr > th > .c41-cabecalho-com-funil > .c41-cabecalho-rotulo,
 .c41-tabela > table > thead > tr > th > .c41-cabecalho-com-funil > .c41-cabecalho-rotulo {
   margin-inline: auto;
 }
+.c41-cabecalho-dividido > tr > th > .c41-cabecalho-com-funil > .c41-cabecalho-funil,
 .c41-tabela > table > thead > tr > th > .c41-cabecalho-com-funil > .c41-cabecalho-funil {
   flex-shrink: 0;
   margin-left: 0.25rem;
 }
 /* Na coluna à esquerda o rótulo segue à esquerda, e o funil também vai para a
-   borda direita. */
-.c41-tabela > table > thead > tr > th.c41-a-esquerda > .c41-cabecalho-com-funil::before {
+   borda direita. Na coluna à direita (o Prazo da lista de tarefas, que tem a
+   data encostada na direita) o rótulo vai para a direita, logo antes do funil. */
+.c41-cabecalho-dividido > tr > th:is(.c41-a-esquerda, .c41-a-direita) > .c41-cabecalho-com-funil::before,
+.c41-tabela > table > thead > tr > th:is(.c41-a-esquerda, .c41-a-direita) > .c41-cabecalho-com-funil::before {
   content: none;
 }
+.c41-cabecalho-dividido > tr > th.c41-a-esquerda > .c41-cabecalho-com-funil > .c41-cabecalho-rotulo,
 .c41-tabela > table > thead > tr > th.c41-a-esquerda > .c41-cabecalho-com-funil > .c41-cabecalho-rotulo {
   margin-left: 0;
+}
+.c41-cabecalho-dividido > tr > th.c41-a-direita > .c41-cabecalho-com-funil > .c41-cabecalho-rotulo,
+.c41-tabela > table > thead > tr > th.c41-a-direita > .c41-cabecalho-com-funil > .c41-cabecalho-rotulo {
+  margin-right: 0;
 }
 /* Divisória entre as colunas do cabeçalho (pedido do Kauan, 14/10/2026). Com
    o funil na borda direita da coluna (regras de cima) e nada separando um

@@ -477,9 +477,12 @@ export function EmpresasTable({
               <col className="w-[148px]" />
               <col className="w-[220px]" />
             </colgroup>
-            {/* `c41-cabecalho-dividido`: o fio entre as colunas do cabeçalho
-                (14/10/2026), que a `.c41-tabela` dá às tabelas filhas diretas
-                dela — esta rola num contêiner próprio (globals.css). */}
+            {/* `c41-cabecalho-dividido`: o cabeçalho padrão que a `.c41-tabela`
+                dá às tabelas filhas diretas dela — esta rola num contêiner
+                próprio (globals.css). Dá o fio entre as colunas e, desde a
+                tarde de 14/10/2026, o funil de Regime e Localização na borda
+                direita da coluna, com o rótulo no centro: antes o funil ia
+                colado ao rótulo e centralizava junto com ele. */}
             <thead className="c41-cabecalho-dividido">
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
