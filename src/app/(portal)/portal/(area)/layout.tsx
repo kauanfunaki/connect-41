@@ -4,6 +4,7 @@ import { getEnabledModuleCodes } from "@/lib/modules";
 import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ToastProvider } from "@/components/ui/Toast";
+import { TutorialDoPortal } from "@/components/tutorial/TutorialDoPortal";
 
 // A moldura de quem já entrou no portal: sidebar com as telas, o grupo do
 // cliente e o sair.
@@ -35,6 +36,7 @@ export default async function AreaDoClienteLayout({ children }: { children: Reac
       <PortalShell grupoNome={grupo?.name ?? null} modulos={[...modulos]}>
         {children}
       </PortalShell>
+      <TutorialDoPortal />
     </ToastProvider>
   );
 }
