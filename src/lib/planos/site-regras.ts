@@ -10,10 +10,18 @@
 // banco (`./site`) e aos testes. A leitura que toca o banco mora em `./site`.
 
 import type { BillingType, ManagementMode } from "@/generated/prisma/enums";
+import type { ModuleDef } from "@/lib/module-catalog";
 import { setoresIncluidos, lerModulosDoPlano, type ModulosDoSetor } from "./modulosPorSetor";
 
 /** A chave do interruptor "Mostrar preços no site" em `configuracoes_do_connect`. */
 export const CHAVE_PRECOS_NO_SITE = "site.mostrarPrecos";
+
+/**
+ * A chave do interruptor do cartão "Connect sob medida" (14/10/2026), na mesma
+ * tabela. Ao contrário dos preços, começa LIGADO: sem a linha, o cartão
+ * aparece — só "false" esconde (ver `lerCartaoSobMedida`).
+ */
+export const CHAVE_CARTAO_SOB_MEDIDA = "site.cartaoSobMedida";
 
 export const MAX_DESTAQUES = 3;
 export const MAX_PARA_QUEM = 240;
@@ -121,6 +129,9 @@ export type PrecoDoSite = {
   implantacao: number;
 };
 
+/** Um setor como etiqueta no site: código, nome e cor. */
+export type SetorDoSite = Pick<ModulosDoSetor, "code" | "rotulo" | "cor">;
+
 export type PlanoDoSite = {
   id: string;
   nome: string;
@@ -129,12 +140,21 @@ export type PlanoDoSite = {
   destaques: string[];
   destacar: boolean;
   /** Os setores em que o plano libera algum módulo, na ordem do catálogo. */
-  setores: Pick<ModulosDoSetor, "code" | "rotulo" | "cor">[];
+  setores: SetorDoSite[];
   /** `null` com os preços escondidos — o valor nem sai do servidor. */
   preco: PrecoDoSite | null;
 };
 
-export type PlanosDoSite = { planos: PlanoDoSite[]; mostrarPrecos: boolean };
+export type PlanosDoSite = {
+  planos: PlanoDoSite[];
+  mostrarPrecos: boolean;
+  /**
+   * O cartão "Connect sob medida", depois dos planos: os setores para escolher
+   * (todo setor do catálogo que tem módulo). Nunca tem preço. `null` quando o
+   * Super Admin escondeu o cartão em Planos.
+   */
+  sobMedida: { setores: SetorDoSite[] } | null;
+};
 
 /** O plano como vem do banco (`subscription_plans`). */
 export type PlanoDoBanco = {
@@ -154,16 +174,28 @@ const reais = (v: unknown): number => {
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 
+const etiqueta = ({ code, rotulo, cor }: ModulosDoSetor): SetorDoSite => ({ code, rotulo, cor });
+
+/**
+ * Os setores do cartão "Connect sob medida": todo setor do catálogo que tem
+ * algum módulo, na ordem das etiquetas dos planos — acompanha o catálogo
+ * sozinho.
+ */
+export function setoresDoSobMedida(catalogo?: readonly ModuleDef[]): SetorDoSite[] {
+  return setoresIncluidos(null, catalogo).map(etiqueta);
+}
+
 /**
  * A seção do site: só os planos ativos marcados "Mostrar no site", na ordem do
  * site (empate, pelo nome), com o preço só quando o interruptor está ligado.
  * Sem plano para mostrar, `null` — a seção some, e o link "Planos" do topo
- * junto.
+ * junto (o cartão "Connect sob medida" vai com ela: ele não aparece sozinho).
  */
 export function montarPlanosDoSite(
   planos: readonly PlanoDoBanco[],
   noSite: ReadonlyMap<string, CamposDoSite>,
   mostrarPrecos: boolean,
+  cartaoSobMedida = true,
 ): PlanosDoSite | null {
   const visiveis = planos
     .filter((p) => p.active && noSite.get(p.id)?.mostrarNoSite)
@@ -173,6 +205,7 @@ export function montarPlanosDoSite(
 
   return {
     mostrarPrecos,
+    sobMedida: cartaoSobMedida ? { setores: setoresDoSobMedida() } : null,
     planos: visiveis.map(({ plano, campos }) => ({
       id: plano.id,
       nome: plano.name,
@@ -180,7 +213,7 @@ export function montarPlanosDoSite(
       paraQuem: campos.paraQuem ?? PARA_QUEM_PADRAO[plano.managementMode],
       destaques: campos.destaques,
       destacar: campos.destacar,
-      setores: setoresIncluidos(lerModulosDoPlano(plano.allowedModuleCodes)).map(({ code, rotulo, cor }) => ({ code, rotulo, cor })),
+      setores: setoresIncluidos(lerModulosDoPlano(plano.allowedModuleCodes)).map(etiqueta),
       preco: mostrarPrecos
         ? {
             cobranca: plano.billingType,
@@ -195,4 +228,9 @@ export function montarPlanosDoSite(
 /** O valor guardado do interruptor: só "true" liga. */
 export function lerMostrarPrecos(valor: string | null | undefined): boolean {
   return valor === "true";
+}
+
+/** O valor guardado do cartão "Connect sob medida": sem valor (o padrão), aparece — só "false" esconde. */
+export function lerCartaoSobMedida(valor: string | null | undefined): boolean {
+  return valor !== "false";
 }

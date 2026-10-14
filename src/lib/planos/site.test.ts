@@ -12,7 +12,7 @@ const m = vi.hoisted(() => ({
 vi.mock("@/lib/prisma", () => ({
   getPrisma: () => ({
     planoNoSite: { findMany: m.noSite },
-    configuracaoDoConnect: { findUnique: m.config },
+    configuracaoDoConnect: { findMany: m.config },
     subscriptionPlan: { findMany: m.planos },
   }),
 }));
@@ -50,7 +50,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
-  m.config.mockResolvedValue(null);
+  m.config.mockResolvedValue([]);
 });
 
 describe("lerPlanosDoSite", () => {
@@ -71,7 +71,7 @@ describe("lerPlanosDoSite", () => {
   });
 
   it("com o interruptor ligado, o preço do tipo de cobrança e a implantação", async () => {
-    m.config.mockResolvedValue({ chave: "site.mostrarPrecos", valor: "true" });
+    m.config.mockResolvedValue([{ chave: "site.mostrarPrecos", valor: "true" }]);
     m.noSite.mockResolvedValue([linha("auto")]);
     m.planos.mockResolvedValue([
       plano("auto", "Autoatendimento", { managementMode: "SELF_SERVICE", billingType: "PER_USER_MONTHLY", pricePerUser: "89.90", basePrice: "0" }),
@@ -115,16 +115,58 @@ describe("lerPlanosDoSite", () => {
 describe("lerAjustesDoSite", () => {
   it("lê cada plano e o interruptor; só 'true' liga", async () => {
     m.noSite.mockResolvedValue([linha("ger", { destaques: ["Um", 2, " ", "Dois", "Três", "Quatro"], paraQuem: "  " })]);
-    m.config.mockResolvedValue({ chave: "site.mostrarPrecos", valor: "sim" });
+    m.config.mockResolvedValue([{ chave: "site.mostrarPrecos", valor: "sim" }]);
     const r = await lerAjustesDoSite();
     expect(r.situacao).toBe("ok");
     expect(r.mostrarPrecos).toBe(false);
     expect(r.porPlano.get("ger")).toEqual({ mostrarNoSite: true, ordem: 1, destacar: false, paraQuem: null, destaques: ["Um", "Dois", "Três"] });
+    // As duas chaves numa leitura só.
+    expect(m.config).toHaveBeenCalledWith({ where: { chave: { in: ["site.mostrarPrecos", "site.cartaoSobMedida"] } } });
   });
 
   it("sem a tabela, avisa a tela de Planos", async () => {
     m.noSite.mockRejectedValue(semTabela());
-    expect(await lerAjustesDoSite()).toEqual({ porPlano: new Map(), mostrarPrecos: false, situacao: "sem-tabela" });
+    expect(await lerAjustesDoSite()).toEqual({ porPlano: new Map(), mostrarPrecos: false, cartaoSobMedida: true, situacao: "sem-tabela" });
+  });
+
+  // O cartão "Connect sob medida" (14/10/2026) começa ligado: sem a linha da
+  // chave, aparece; só "false" esconde — e o interruptor dos preços não mexe nele.
+  it("o cartão sob medida: ligado sem a chave, desligado só com 'false'", async () => {
+    m.noSite.mockResolvedValue([]);
+    expect((await lerAjustesDoSite()).cartaoSobMedida).toBe(true);
+    m.config.mockResolvedValue([{ chave: "site.cartaoSobMedida", valor: "qualquer" }]);
+    expect((await lerAjustesDoSite()).cartaoSobMedida).toBe(true);
+    m.config.mockResolvedValue([
+      { chave: "site.cartaoSobMedida", valor: "false" },
+      { chave: "site.mostrarPrecos", valor: "true" },
+    ]);
+    const r = await lerAjustesDoSite();
+    expect(r).toMatchObject({ cartaoSobMedida: false, mostrarPrecos: true });
+  });
+
+  it("banco recusando a leitura: o cartão fica no padrão (ligado), e a seção some do mesmo jeito", async () => {
+    m.noSite.mockRejectedValue(new Error("Connection refused"));
+    expect(await lerAjustesDoSite()).toEqual({ porPlano: new Map(), mostrarPrecos: false, cartaoSobMedida: true, situacao: "erro" });
+  });
+});
+
+describe("lerPlanosDoSite e o cartão sob medida", () => {
+  it("vai com a seção, com os setores do catálogo; escondido pelo Super Admin, a seção fica só com os planos", async () => {
+    m.noSite.mockResolvedValue([linha("ger")]);
+    m.planos.mockResolvedValue([plano("ger", "Gerenciado")]);
+    const ligado = await lerPlanosDoSite();
+    expect(ligado?.sobMedida?.setores.map((s) => s.code)).toContain("bpo");
+    expect(ligado?.sobMedida?.setores.every((s) => Object.keys(s).sort().join() === "code,cor,rotulo")).toBe(true);
+
+    m.config.mockResolvedValue([{ chave: "site.cartaoSobMedida", valor: "false" }]);
+    const desligado = await lerPlanosDoSite();
+    expect(desligado?.planos).toHaveLength(1);
+    expect(desligado?.sobMedida).toBeNull();
+  });
+
+  it("sem plano marcado, nem seção nem cartão — o cartão não aparece sozinho", async () => {
+    m.noSite.mockResolvedValue([linha("ger", { mostrarNoSite: false })]);
+    expect(await lerPlanosDoSite()).toBeNull();
   });
 });
 

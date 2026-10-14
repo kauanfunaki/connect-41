@@ -44,3 +44,11 @@ export const PRIMARIO =
   "bg-brand-solid text-on-brand hover:bg-brand-solid-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)]";
 
 export const LINK = "transition-colors hover:text-brand";
+
+/**
+ * A cor do ponto de um setor nas etiquetas da seção Planos: a do tema do site
+ * (`--c41-sector-*`); sem a variável, a cor do cadastro.
+ */
+export function corDoSetor(code: string, cor: string): string {
+  return `var(--c41-sector-${code === "dp" ? "dprh" : code}, ${cor})`;
+}

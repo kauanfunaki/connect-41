@@ -322,6 +322,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "subscription_plan.site.update": e("mudou como o site mostra o plano"),
   "site.prices.show": e("passou a mostrar os preços no site", { comNome: false }),
   "site.prices.hide": e("escondeu os preços do site", { comNome: false }),
+  // O cartão "Connect sob medida" da seção Planos do site (14/10/2026).
+  "site.custom_card.show": e("passou a mostrar o cartão “Connect sob medida” no site", { comNome: false }),
+  "site.custom_card.hide": e("escondeu do site o cartão “Connect sob medida”", { comNome: false }),
 };
 
 /** A descrição de um código; código fora do catálogo (de versão antiga) vira uma frase neutra. */
