@@ -102,7 +102,7 @@ export const FERRAMENTAS_DE_RECRUTAMENTO_DO_SETOR: Record<string, FerramentaRegi
         return {
           vagaId: v.id,
           titulo: v.title,
-          // A ficha da vaga, para a Lígia apontar pelo título — nunca pelo id.
+          // A ficha da vaga, para a Ceci apontar pelo título — nunca pelo id.
           link: linkDaTela(v.title, `/vagas/${v.id}`),
           empresa: v.company.tradeName || v.company.name,
           status: situacaoLegivel(v.status, VAGA_STATUS_LABEL),

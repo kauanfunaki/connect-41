@@ -4,7 +4,7 @@ import { chavesLegiveis, codigoEmPalavras, comMinuscula, linkDaTela, mesLegivel,
 import { rotuloDasPendencias } from "./ferramentas-bpo";
 import { linkSozinho } from "./chat/markdown";
 
-// O que as ferramentas da Lígia devolvem, em palavras (13/10/2026) — o
+// O que as ferramentas da Ceci devolvem, em palavras (13/10/2026) — o
 // "Status: Aberta — Prazo: SEM_PRAZO" do print do Kauan.
 
 describe("situação em palavras", () => {
@@ -33,7 +33,7 @@ describe("situação em palavras", () => {
   });
 });
 
-describe("link pronto para a Lígia copiar", () => {
+describe("link pronto para a Ceci copiar", () => {
   it("rótulo e caminho em Markdown, que a tela transforma em botão", () => {
     const l = linkDaTela(rotuloDasPendencias("aguardando", false), "/pendencias?recorte=aguardando");
     expect(l).toBe("[Abrir as pendências aguardando o cliente](/pendencias?recorte=aguardando)");

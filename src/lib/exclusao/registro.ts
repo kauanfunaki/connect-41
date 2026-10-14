@@ -258,7 +258,7 @@ const USUARIO: Ligacao[] = [
   { modelo: "WhatsappAtendimento", campo: "encerradoPor", fk: "encerradoPorId", tratamento: "desligar" },
 
   // Da própria conta — o banco apaga junto.
-  { modelo: "AgentConversation", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["conversa com a Lígia", "conversas com a Lígia"] },
+  { modelo: "AgentConversation", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["conversa com a Ceci", "conversas com a Ceci"] },
   { modelo: "Notification", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["notificação", "notificações"] },
   { modelo: "PipelineItemAssignee", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["atribuição de tarefa do Kanban (a tarefa fica, sem ele)", "atribuições de tarefa do Kanban (as tarefas ficam, sem ele)"] },
   { modelo: "VagaRecrutador", campo: "user", fk: "userId", tratamento: "cascata" },

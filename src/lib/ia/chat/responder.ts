@@ -41,7 +41,7 @@ import {
 import { filtrarCitacoes, idsNoTexto } from "@/lib/ia/chat/citacoes";
 import { filtrarLinks, linksDasFerramentas, trocarIdsPorLinks } from "@/lib/ia/chat/links";
 import { linhaDosAnexos, type AnexoDaPergunta } from "@/lib/ia/chat/anexos";
-import { nomeDaAssistente, semCumprimento } from "@/lib/ia/ligia";
+import { nomeDaAssistente, semCumprimento } from "@/lib/ia/ceci";
 import {
   contextoDaTela,
   descricaoDaTransferencia,
@@ -67,7 +67,7 @@ export type PedidoDoChat = {
   pergunta?: unknown;
   caminho?: unknown;
   /**
-   * A tela já mostrou as boas-vindas da Lígia com o "Oi, {nome}!" (13/10/2026):
+   * A tela já mostrou as boas-vindas da Ceci com o "Oi, {nome}!" (13/10/2026):
    * a primeira resposta não cumprimenta de novo.
    */
   jaCumprimentada?: unknown;
@@ -101,7 +101,7 @@ export async function prepararPerguntaDoChat(
   // O agente pedido tem de estar entre os que esta pessoa pode abrir agora —
   // mesma lista que desenhou o botão, recalculada aqui.
   const agentes = await agentesDoChat(ctx);
-  if (agentes.length === 0) return { erro: "A Lígia não está disponível para você.", status: 403 };
+  if (agentes.length === 0) return { erro: "A Ceci não está disponível para você.", status: 403 };
 
   const agora = new Date();
   const limite = opcoes.limiteDiario ?? LIMITE_DE_PERGUNTAS_POR_DIA;
@@ -119,7 +119,7 @@ export async function prepararPerguntaDoChat(
   // Conversa antiga continua com o agente dela — se ele saiu do alcance da
   // pessoa (setor trocado, agente desligado), a pergunta não passa.
   const agente = agentes.find((a) => a.code === conversa.agentCode);
-  if (!agente) return { erro: "A Lígia não atende mais este setor para você. Comece uma nova conversa.", status: 403 };
+  if (!agente) return { erro: "A Ceci não atende mais este setor para você. Comece uma nova conversa.", status: 403 };
 
   const tela = contextoDaTela(typeof corpo.caminho === "string" ? corpo.caminho : "");
   const contexto = await contextoParaOAgente(ctx, agente.code, tela);
@@ -127,7 +127,7 @@ export async function prepararPerguntaDoChat(
 
   const { labels } = await getSectorMaps(ctx.tenantId);
   const escopo = await escopoDoAgente(ctx, agente.code, Object.keys(labels));
-  // Para a Lígia cumprimentar pelo nome na primeira resposta (13/10/2026) —
+  // Para a Ceci cumprimentar pelo nome na primeira resposta (13/10/2026) —
   // e só nela: com histórico, ou depois das boas-vindas da tela, não.
   const primeiroNome = await primeiroNomeDaPessoa(ctx.userId);
   const jaCumprimentada = corpo.jaCumprimentada === true || corpo.jaCumprimentada === "1";

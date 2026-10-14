@@ -42,7 +42,7 @@ const SITUACAO_DO_COLABORADOR: Readonly<Record<string, string>> = {
 /** O prazo de pagamento da rescisão (art. 477 §6º) em palavras. */
 const PRAZO_DA_RESCISAO: Readonly<Record<string, string>> = { VENCIDO: "vencido", VENCE_HOJE: "vence hoje", NO_PRAZO: "no prazo" };
 
-/** A ficha do colaborador, para a Lígia apontar a pessoa pelo nome — e não pelo id. */
+/** A ficha do colaborador, para a Ceci apontar a pessoa pelo nome — e não pelo id. */
 const fichaDoColaborador = (pessoa: { id: string; name: string }) => linkDaTela(pessoa.name, `/pessoas/${pessoa.id}`);
 
 export const MODULOS_DO_DP = {

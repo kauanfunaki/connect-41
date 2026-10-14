@@ -9,7 +9,7 @@ import type { Citado } from "@/lib/ia/chat/citacoes";
 import { lerMarkdown, type Bloco, type Trecho } from "@/lib/ia/chat/markdown";
 
 /**
- * O texto de uma resposta da Lígia, com negrito, listas, títulos pequenos e
+ * O texto de uma resposta da Ceci, com negrito, listas, títulos pequenos e
  * tabela simples (13/10/2026 — pedido do Kauan: respostas longas sem destaque
  * nem estrutura eram difíceis de ler). Quem lê o Markdown é
  * `src/lib/ia/chat/markdown.ts`; aqui só se desenha, sempre com elementos do
@@ -20,7 +20,7 @@ import { lerMarkdown, type Bloco, type Trecho } from "@/lib/ia/chat/markdown";
  * texto azul. `aoNavegar` fecha o chat para a tela aparecer (no celular o
  * painel cobre tudo).
  */
-export function RespostaDaLigia({
+export function RespostaDaCeci({
   texto,
   citados = {},
   aoNavegar,

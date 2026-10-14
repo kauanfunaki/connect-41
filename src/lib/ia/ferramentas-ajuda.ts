@@ -89,7 +89,7 @@ export const FERRAMENTAS_DE_AJUDA: Record<string, FerramentaRegistrada> = {
     executar: async (_args, ctx) => {
       const setores = setoresDoEscopo(ctx);
       const estados = await getTenantModuleStates(ctx.tenantId);
-      // Cada tela com o link pronto ("[Contas a pagar](/pagar)"): a Lígia cita
+      // Cada tela com o link pronto ("[Contas a pagar](/pagar)"): a Ceci cita
       // a tela pelo nome e o chat desenha o link (13/10/2026).
       return {
         gerais: TELAS_GERAIS.map((t) => (t.caminho.startsWith("/") && !t.caminho.includes("{") ? { ...t, link: linkDaTela(t.tela, t.caminho) } : t)),

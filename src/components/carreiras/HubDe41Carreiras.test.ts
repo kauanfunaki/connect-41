@@ -84,12 +84,12 @@ const VAGAS = [
 ];
 
 describe("hub do 41 Carreiras", () => {
-  it("a marca é a da 41: o nome, o rodapé da 41 Contábil — e nada do Connect nem da Lígia", () => {
+  it("a marca é a da 41: o nome, o rodapé da 41 Contábil — e nada do Connect nem da Ceci", () => {
     const html = hub(PRINCIPAL, VAGAS);
     expect(html).toContain(">Carreiras<");
     expect(html).toContain('aria-label="41 Carreiras: vagas abertas"');
     expect(html).toContain("41 Contábil");
-    expect(html).not.toMatch(/connect|lígia|ligia/i);
+    expect(html).not.toMatch(/connect|\bceci\b/i);
     expect(html).not.toContain("/brand/");
   });
 

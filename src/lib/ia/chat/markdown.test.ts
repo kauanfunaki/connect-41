@@ -12,7 +12,7 @@ import {
   type Trecho,
 } from "./markdown";
 
-// O Markdown da resposta da Lígia (13/10/2026): o pedaço que o chat desenha,
+// O Markdown da resposta da Ceci (13/10/2026): o pedaço que o chat desenha,
 // com link só para dentro do Connect.
 
 const ID = "3f1c2a4b-1111-4222-8333-944455556666";

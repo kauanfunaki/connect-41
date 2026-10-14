@@ -246,7 +246,7 @@ export const FERRAMENTAS_DE_BPO: Record<string, FerramentaRegistrada> = {
           prazo: p.prazo ? p.prazo.toISOString().slice(0, 10) : null,
           situacaoDoPrazo: situacaoLegivel(p.situacaoDoPrazo, ROTULO_DO_PRAZO),
           mensagens: p.mensagens,
-          // A ficha da pendência: a Lígia aponta o item pelo título, com este link, e nunca pelo id.
+          // A ficha da pendência: a Ceci aponta o item pelo título, com este link, e nunca pelo id.
           link: linkDaTela(p.titulo, `/pendencias/${p.id}`),
         })),
       };
