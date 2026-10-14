@@ -225,6 +225,18 @@ export function urlDaVagaNo41Carreiras(tenantSlug: string, vagaId: string, env: 
   return ehDa41(tenantSlug, config) ? `https://${config.principal}${caminhoNoPortal(config.tenantSlug, { tipo: "vaga", id: vagaId }, true)}` : null;
 }
 
+/**
+ * O rótulo da caixa "publicar" no formulário da vaga. Da 41, com o portal
+ * configurado: o nome e o endereço principal do 41 Carreiras. Dos outros
+ * escritórios (ou sem o portal): o portal de vagas do escritório.
+ */
+export function rotuloDePublicarVaga(tenantSlug: string | null | undefined, env: Ambiente = process.env): string {
+  const config = configDeCarreiras(env);
+  return tenantSlug && ehDa41(tenantSlug, config)
+    ? `Publicar no ${MARCA_41_CARREIRAS.nome} (${config.principal})`
+    : "Publicar no portal de vagas do escritório";
+}
+
 /** A página inicial do 41 Carreiras, ou null com o portal desligado (ou fechado). */
 export function urlDoHub(env: Ambiente = process.env): string | null {
   const config = configDeCarreiras(env);

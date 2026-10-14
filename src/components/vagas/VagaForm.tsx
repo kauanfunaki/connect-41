@@ -59,9 +59,15 @@ type Props = {
   users: Option[];
   sectorOptions: SectorOption[];
   defaultValues?: VagaDefaultValues;
+  /**
+   * O rótulo da caixa "publicar", montado no servidor por
+   * `rotuloDePublicarVaga` (lib/carreiras/enderecoDeCarreiras): da 41, o 41
+   * Carreiras com o endereço; dos outros escritórios, o portal do escritório.
+   */
+  rotuloDePublicar: string;
 };
 
-export function VagaForm({ action, cancelHref, companies, cargos, users, sectorOptions, defaultValues }: Props) {
+export function VagaForm({ action, cancelHref, companies, cargos, users, sectorOptions, defaultValues, rotuloDePublicar }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [companyId, setCompanyId] = useState(defaultValues?.companyId ?? "");
   const cargosDaEmpresa = cargos.filter((c) => c.companyId === companyId);
@@ -147,11 +153,13 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
         </FormSection>
 
         <FormSection title="Portal de vagas">
+          {/* A ajuda repete a regra de `situacaoNoPortal` (lib/recrutamento/fichaDaVaga). */}
           <Checkbox
             name="isPublic"
             value="true"
             defaultChecked={defaultValues?.isPublic ?? false}
-            label="Publicar no portal de vagas (visível sem login em /carreiras)"
+            label={rotuloDePublicar}
+            helper="A vaga aparece no portal enquanto estiver Aberta e dentro do prazo de inscrição."
           />
           <CampoForm label="Descrição pública da vaga" htmlFor="publicDescription">
             <Textarea

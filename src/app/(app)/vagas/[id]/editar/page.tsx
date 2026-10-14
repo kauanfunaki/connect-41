@@ -6,6 +6,7 @@ import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { VagaForm } from "@/components/vagas/VagaForm";
+import { rotuloDePublicarVaga } from "@/lib/carreiras/enderecoDeCarreiras";
 import { atualizarVaga } from "../../actions";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
@@ -25,7 +26,7 @@ export default async function EditarVagaPage({
 
   const { options: sectorOptions } = await getSectorMaps(ctx.tenantId);
 
-  const [companies, cargos, users] = await Promise.all([
+  const [companies, cargos, users, tenant] = await Promise.all([
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
@@ -41,6 +42,8 @@ export default async function EditarVagaPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    // O slug decide o rótulo de "publicar": da 41, o 41 Carreiras com o endereço.
+    prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { slug: true } }),
   ]);
 
   return (
@@ -58,6 +61,7 @@ export default async function EditarVagaPage({
           cargos={cargos}
           users={users}
           sectorOptions={sectorOptions}
+          rotuloDePublicar={rotuloDePublicarVaga(tenant?.slug)}
           defaultValues={{
             id: vaga.id,
             title: vaga.title,
