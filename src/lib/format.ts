@@ -166,3 +166,15 @@ export function formatarCompetencia(competencia: string): string {
   if (!m) return competencia;
   return `${MESES_DA_COMPETENCIA[Number(m[2]) - 1]}/${m[1].slice(2)}`;
 }
+
+/**
+ * A competência em número: "2026-10" → "10/2026". É o mês nos filtros da
+ * família da DRE (caixa, econômica, análises e a DRE do portal), a pedido do
+ * Kauan em 14/10/2026 — o resto do app segue no `formatarCompetencia`. O que
+ * não for "AAAA-MM" volta como veio, como lá.
+ */
+export function formatarCompetenciaNumerica(competencia: string): string {
+  const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(competencia);
+  if (!m) return competencia;
+  return `${m[2]}/${m[1]}`;
+}

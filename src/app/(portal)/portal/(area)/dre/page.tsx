@@ -149,6 +149,8 @@ export default async function PortalDrePage({
         // Sem mês com movimento, não há o que escolher: o campo vazio ("-- de ----")
         // só confundia.
         mes={mes ?? undefined}
+        // O mês em número, "10/2026", como nos filtros da DRE da equipe (14/10/2026).
+        mesEmNumero
         extras={{ empresa: empresas.length > 1 ? undefined : companyId, regime: regime === "caixa" ? undefined : regime }}
       />
       {competenciaLiberada && (

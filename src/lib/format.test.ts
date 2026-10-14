@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatarCompetencia,
+  formatarCompetenciaNumerica,
   formatarHoras,
   formatarNumero,
   formatarReais,
@@ -69,5 +70,19 @@ describe("formatarCompetencia", () => {
   it("o que não é competência volta como veio", () => {
     expect(formatarCompetencia("2026-13")).toBe("2026-13");
     expect(formatarCompetencia("")).toBe("");
+  });
+});
+
+describe("formatarCompetenciaNumerica (filtros da DRE)", () => {
+  it("AAAA-MM vira MM/AAAA, com dois dígitos no mês e o ano inteiro", () => {
+    expect(formatarCompetenciaNumerica("2026-10")).toBe("10/2026");
+    expect(formatarCompetenciaNumerica("2027-01")).toBe("01/2027");
+    expect(formatarCompetenciaNumerica("1999-12")).toBe("12/1999");
+  });
+
+  it("o que não é competência volta como veio", () => {
+    expect(formatarCompetenciaNumerica("2026-13")).toBe("2026-13");
+    expect(formatarCompetenciaNumerica("2026-1")).toBe("2026-1");
+    expect(formatarCompetenciaNumerica("")).toBe("");
   });
 });

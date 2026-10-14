@@ -221,7 +221,7 @@ export default async function DreEconomicaPage({
         valor={companyId}
         manter={{ mes, visao: visao === "mes" ? undefined : visao }}
       >
-        <FiltroDePeriodo acao="/dre/economica" mes={mes} extras={{ empresa: companyId, visao: visao === "mes" ? undefined : visao }} naFileira>
+        <FiltroDePeriodo acao="/dre/economica" mes={mes} mesEmNumero extras={{ empresa: companyId, visao: visao === "mes" ? undefined : visao }} naFileira>
           {centros.length > 0 && (
             <Select compact name="centro" defaultValue={centroNaUrl} className="w-60 max-w-full" aria-label="Centro de custo">
               <option value="">Todos os centros de custo</option>
