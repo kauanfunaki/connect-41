@@ -5,6 +5,7 @@ import { ChevronRight, UserRound, ShieldCheck, KeyRound, Palette, Bell, Settings
 import { Button } from "@/components/ui/Button";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { menuDasConfiguracoes } from "@/lib/configuracoes/areas";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -40,11 +41,15 @@ export default async function ConfiguracoesPage() {
   const doEscritorio = expedientes.escritorio ?? EXPEDIENTE_PADRAO;
 
   const roleLabel = ROLE_LABELS[ctx.role as keyof typeof ROLE_LABELS] ?? ctx.role;
+  // Quem tem o menu das configurações (14/10/2026) chega aqui pelo item "Sua
+  // conta", e a trilha já diz "Configurações › Sua conta"; para os outros, esta
+  // é a tela de configurações inteira.
+  const temMenu = menuDasConfiguracoes({ role: ctx.role, setores: ctx.sectors.length, autoatendimento: false }) !== null;
 
   return (
     <PageContainer>
       <PageHeader
-        title="Configurações"
+        title={temMenu ? "Sua conta" : "Configurações"}
         subtitle="Sua conta e suas preferências neste workspace."
       />
 
@@ -121,7 +126,7 @@ export default async function ConfiguracoesPage() {
           icone={<Settings2 />}
         >
           <Button href="/admin" variant="secondary">
-            <Settings2 size={14} /> Abrir administração
+            <Settings2 size={14} /> Abrir as configurações do escritório
           </Button>
         </Secao>
       )}

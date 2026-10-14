@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
@@ -71,7 +70,6 @@ export default async function AdminPortalPage({ searchParams }: { searchParams: 
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       {/* A explicação era um parágrafo solto depois do cabeçalho; é o subtítulo dele. */}
       <PageHeader
         title="Portal do cliente"
@@ -134,7 +132,6 @@ async function AbaDasTelas({ tenantId, somenteLeitura }: { tenantId: string; som
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <PageHeader
         title="Portal do cliente"
         subtitle="As telas que os clientes do escritório já podem abrir. Libere cada uma depois de testar."

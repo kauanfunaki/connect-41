@@ -109,7 +109,7 @@ export function validarConfigDoSerpro(config: Record<string, string>): string | 
  * escritório, que espera a decisão de em nome de quem contratar.
  */
 export function prontidaoDoSerpro(cfg: ConfiguracaoDoSerpro | null, hoje = hojeIso()): { pronta: true } | { pronta: false; motivo: string } {
-  if (!cfg) return { pronta: false, motivo: "O Serpro ainda não foi conectado (Administração › Integrações)." };
+  if (!cfg) return { pronta: false, motivo: "O Serpro ainda não foi conectado (Configurações › Integrações)." };
   if (cfg.faltando.length) return { pronta: false, motivo: `Falta preencher na conexão do Serpro: ${cfg.faltando.join(", ")}.` };
   if (!cfg.ligada) return { pronta: false, motivo: "A conexão com o Serpro está desligada." };
   if (!cfg.certificado || !cfg.certificado.ok) return { pronta: false, motivo: cfg.certificado?.ok === false ? cfg.certificado.erro : "Falta o certificado do Serpro." };

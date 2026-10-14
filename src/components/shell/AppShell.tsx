@@ -211,7 +211,7 @@ export function AppShell({
   const naAjuda = pathname.startsWith("/ajuda");
   const artigoDaTela = naAjuda ? null : chaveDoCaminho(pathname, paresDeAjuda);
   const linkDaAjuda = artigoDaTela ? `/ajuda/${encodeURIComponent(artigoDaTela)}?de=${encodeURIComponent(pathname)}` : "/ajuda";
-  const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes");
+  const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes") || pathname.startsWith("/assinatura");
   const corDoSetor = activeSector?.color;
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
   const podeTrocar = sectors.length > 1 || accessibleTenants.length > 1;

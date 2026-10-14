@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { getAuthContext } from "@/lib/auth/context";
 import { WorkspaceForm } from "@/components/admin/WorkspaceForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarWorkspace } from "../actions";
 
 export default async function NovoWorkspacePage() {
@@ -13,7 +12,6 @@ export default async function NovoWorkspacePage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Workspaces", href: "/admin/workspaces" }, { label: "Novo workspace" }]} />
       <PageHeader title="Novo workspace" />
 
       <div className="max-w-[720px]">

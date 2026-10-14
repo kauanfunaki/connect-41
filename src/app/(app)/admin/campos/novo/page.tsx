@@ -3,7 +3,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { CampoForm } from "@/components/admin/CampoForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarCampo } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
@@ -20,7 +19,6 @@ export default async function NovoCampoPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Campos customizados", href: "/admin/campos" }, { label: "Novo campo" }]} />
       <PageHeader title="Novo campo" />
 
       <div className="max-w-[720px]">

@@ -5,7 +5,6 @@ import { getPrisma } from "@/lib/prisma";
 import { SetorForm } from "@/components/admin/SetorForm";
 import { TelasDoMenuGeral, type TelaDaConfiguracao } from "@/components/admin/TelasDoMenuGeral";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { atualizarSetor } from "../../actions";
 import { alternarTelaDoGeral, restaurarMenuGeral } from "../../menu-geral-actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -45,7 +44,6 @@ export default async function EditarSetorPage({
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Setores", href: "/admin/setores" }, { label: "Editar" }]} />
       <PageHeader title="Editar setor" />
 
       <div className="max-w-[720px] space-y-4">
