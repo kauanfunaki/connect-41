@@ -269,7 +269,7 @@ export function ConferirNoSerpro({
             </dd>
           </dl>
           {estimativa.passaDoTeto && (
-            <Aviso tom="atencao">Passa do teto do mês: a conferência para quando chegar nele. Para ir até o fim, aumente o teto em Administração › Integrações.</Aviso>
+            <Aviso tom="atencao">Passa do teto do mês: a conferência para quando chegar nele. Para ir até o fim, aumente o teto em Configurações › Integrações.</Aviso>
           )}
           <p className="text-ui text-fg-muted">Roda aos poucos, 40 clientes a cada 15 minutos. Você recebe um aviso no sino quando terminar.</p>
           {erro && (

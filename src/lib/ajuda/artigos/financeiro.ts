@@ -796,7 +796,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Conferir no Serpro",
         passos: [
-          "Com o Serpro ligado (Administração › Integrações), abra “Atualizar” num cliente e clique em “Conferir no Serpro”. A situação é atualizada com o que o Serpro disser.",
+          "Com o Serpro ligado (Configurações › Integrações), abra “Atualizar” num cliente e clique em “Conferir no Serpro”. A situação é atualizada com o que o Serpro disser.",
           "Para conferir todos, clique em “Conferir no Serpro” no topo da tela, confira o custo e o teto do mês e confirme.",
           "A conferência roda aos poucos, em lotes a cada 15 minutos. O andamento aparece no topo da tela e o aviso chega no sino quando terminar.",
           "Em “Consumo do Serpro” você vê as chamadas cobradas do mês, o custo estimado e o teto.",

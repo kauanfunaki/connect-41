@@ -544,7 +544,7 @@ async function AbaDoPlano({
         <Card>
           <EmptyState
             title="Plano de contas vazio"
-            description="Carregue o plano padrão em Administração › Plano de contas, ou crie aqui uma categoria só desta empresa."
+            description="Carregue o plano padrão em Configurações › Plano de contas, ou crie aqui uma categoria só desta empresa."
             icon={<Layers />}
           />
         </Card>
