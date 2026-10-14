@@ -2,29 +2,29 @@ import { describe, expect, it } from "vitest";
 import { agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { AGENTES_DO_CHAT } from "@/lib/ia/chat/regras";
 import {
-  apresentacaoDaLigia,
-  cumprimentoDaLigia,
+  apresentacaoDaCeci,
+  cumprimentoDaCeci,
   especialidadeDoAgente,
   NOME_DA_ASSISTENTE,
   nomeDaAssistente,
   primeiroNomeParaOPrompt,
   semCumprimento,
-} from "./ligia";
+} from "./ceci";
 import { sistemaDoChat } from "@/lib/ia/chat/agentes";
 
-// A Lígia (decisão do Kauan, 13/10/2026): um nome só para a IA do chat, com o
+// A Ceci (decisão do Kauan, 13/10/2026): um nome só para a IA do chat, com o
 // setor embaixo — no lugar de "IA do BPO", "IA do DP"…
 
 describe("nomeDaAssistente", () => {
   it("junta o nome e o setor com o ponto do meio", () => {
-    expect(nomeDaAssistente("BPO")).toBe("Lígia · BPO");
-    expect(nomeDaAssistente("Departamento Pessoal")).toBe("Lígia · Departamento Pessoal");
+    expect(nomeDaAssistente("BPO")).toBe("Ceci · BPO");
+    expect(nomeDaAssistente("Departamento Pessoal")).toBe("Ceci · Departamento Pessoal");
   });
 
   it("sem setor, é só o nome", () => {
-    expect(nomeDaAssistente()).toBe("Lígia");
-    expect(nomeDaAssistente(null)).toBe("Lígia");
-    expect(nomeDaAssistente("   ")).toBe("Lígia");
+    expect(nomeDaAssistente()).toBe("Ceci");
+    expect(nomeDaAssistente(null)).toBe("Ceci");
+    expect(nomeDaAssistente("   ")).toBe("Ceci");
   });
 });
 
@@ -35,7 +35,7 @@ describe("especialidade de cada agente do chat", () => {
       expect(especialidade, code).toBeTruthy();
       expect(especialidade, code).not.toMatch(/\bIA\b/);
     }
-    // Só "BPO" na Lígia (pedido do Kauan, 13/10/2026) — não "BPO Financeiro".
+    // Só "BPO" na Ceci (pedido do Kauan, 13/10/2026) — não "BPO Financeiro".
     expect(especialidadeDoAgente("assistente_do_bpo")).toBe("BPO");
     expect(especialidadeDoAgente("assistente_do_dp")).toBe("Departamento Pessoal");
   });
@@ -45,10 +45,10 @@ describe("especialidade de cada agente do chat", () => {
     expect(especialidadeDoAgente("atendente_de_candidato")).toBeNull();
   });
 
-  it("no admin, cada agente do chat aparece como 'Lígia · {setor}'", () => {
+  it("no admin, cada agente do chat aparece como 'Ceci · {setor}'", () => {
     for (const code of AGENTES_DO_CHAT) {
       const label = agenteDoCatalogo(code)?.label ?? "";
-      expect(label, code).toMatch(/^Lígia · /);
+      expect(label, code).toMatch(/^Ceci · /);
       expect(label, code).not.toMatch(/IA d[oa] /);
     }
   });
@@ -75,9 +75,9 @@ describe("primeiroNomeParaOPrompt", () => {
   });
 });
 
-describe("apresentacaoDaLigia", () => {
-  it("apresenta a Lígia com o setor e o guia do jeito de falar", () => {
-    const t = apresentacaoDaLigia("BPO");
+describe("apresentacaoDaCeci", () => {
+  it("apresenta a Ceci com o setor e o guia do jeito de falar", () => {
+    const t = apresentacaoDaCeci("BPO");
     expect(t).toContain(`Você é a ${NOME_DA_ASSISTENTE}, a assistente do Connect`);
     expect(t).toContain("Neste chat, você atende: BPO.");
     expect(t).toContain("Cumprimente a pessoa pelo primeiro nome só na primeira resposta");
@@ -89,25 +89,25 @@ describe("apresentacaoDaLigia", () => {
   });
 
   it("é a mesma para todo mundo — nada de nome de quem pergunta no começo do texto", () => {
-    expect(apresentacaoDaLigia("Fiscal")).toBe(apresentacaoDaLigia("Fiscal"));
-    expect(apresentacaoDaLigia("Fiscal")).not.toMatch(/Oi, /);
+    expect(apresentacaoDaCeci("Fiscal")).toBe(apresentacaoDaCeci("Fiscal"));
+    expect(apresentacaoDaCeci("Fiscal")).not.toMatch(/Oi, /);
   });
 
   it("não fala de ferramenta — isso é do texto de cada agente", () => {
-    expect(apresentacaoDaLigia("BPO")).not.toMatch(/buscar_|listar_|propor_|sugerir_respostas|encaminhar_pergunta/);
+    expect(apresentacaoDaCeci("BPO")).not.toMatch(/buscar_|listar_|propor_|sugerir_respostas|encaminhar_pergunta/);
   });
 });
 
-describe("cumprimentoDaLigia", () => {
+describe("cumprimentoDaCeci", () => {
   it("cumprimenta pelo nome só na primeira resposta", () => {
-    expect(cumprimentoDaLigia({ primeiroNome: "Camila", primeiraResposta: true })).toContain('"Oi, Camila!"');
-    const depois = cumprimentoDaLigia({ primeiroNome: "Camila", primeiraResposta: false });
+    expect(cumprimentoDaCeci({ primeiroNome: "Camila", primeiraResposta: true })).toContain('"Oi, Camila!"');
+    const depois = cumprimentoDaCeci({ primeiroNome: "Camila", primeiraResposta: false });
     expect(depois).not.toContain("Camila");
     expect(depois).toContain("não cumprimente de novo");
   });
 
   it("sem o nome, cumprimenta com um 'Oi!'", () => {
-    expect(cumprimentoDaLigia({ primeiroNome: null, primeiraResposta: true })).toContain('"Oi!"');
+    expect(cumprimentoDaCeci({ primeiroNome: null, primeiraResposta: true })).toContain('"Oi!"');
   });
 });
 

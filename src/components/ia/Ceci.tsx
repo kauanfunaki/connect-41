@@ -3,24 +3,24 @@
 import { useId } from "react";
 
 /**
- * Os quatro estados da Lígia: `parada` (neutra), `pensando` (enquanto a
+ * Os quatro estados da Ceci: `parada` (neutra), `pensando` (enquanto a
  * resposta chega), `deuCerto` (resposta ou proposta concluída) e
  * `naoConsegui` (erro).
  */
-export type EstadoDaLigia = "parada" | "pensando" | "deuCerto" | "naoConsegui";
+export type EstadoDaCeci = "parada" | "pensando" | "deuCerto" | "naoConsegui";
 
 /**
- * A Lígia, assistente do Connect (decisão do Kauan, 13/10/2026 — opção "A · O
+ * A Ceci, assistente do Connect (decisão do Kauan, 13/10/2026 — opção "A · O
  * ponto do Connect"). O personagem sai do próprio símbolo do Connect: o anel
  * aberto vira o fone, o ponto do meio vira o rosto azul e o "nó" da direita
- * continua lá. Nome e textos em `src/lib/ia/ligia.ts`.
+ * continua lá. Nome e textos em `src/lib/ia/ceci.ts`.
  *
  * Refino do esboço da página de opções: o anel e o nó seguem as proporções do
  * logo (abertura de 80°, nó com 1/5 do raio), o rosto cresceu para os olhos
  * aparecerem a 24–48 px, e sobra um vão entre rosto e anel para os dois não
  * virarem uma bola só no tamanho pequeno.
  *
- * Cores fixas de identidade, por variável (`--c41-ligia-*`, em globals.css)
+ * Cores fixas de identidade, por variável (`--c41-ceci-*`, em globals.css)
  * para o anel e o nó usarem o tom do logo de fundo escuro no tema escuro —
  * contraste conferido lá. Olhos e boca são brancos nos dois temas.
  *
@@ -32,25 +32,25 @@ export type EstadoDaLigia = "parada" | "pensando" | "deuCerto" | "naoConsegui";
  * botão que a leva, como o do canto); com `rotulo`, vira imagem com nome para
  * leitor de tela.
  */
-export function Ligia({
+export function Ceci({
   estado = "parada",
   tamanho = 32,
   className = "",
   rotulo,
 }: {
-  estado?: EstadoDaLigia;
+  estado?: EstadoDaCeci;
   /** Lado do quadrado, em px. */
   tamanho?: number;
   className?: string;
   /** Nome para leitor de tela, quando não há texto ao lado. */
   rotulo?: string;
 }) {
-  // Mais de uma Lígia na tela (botão, topo, mensagens): o id do degradê tem de
+  // Mais de uma Ceci na tela (botão, topo, mensagens): o id do degradê tem de
   // ser único, e sem os caracteres que o useId usa.
-  const id = `ligia${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const id = `ceci${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const branco = "#FFFFFF";
   const traco = { fill: "none", stroke: branco, strokeWidth: 4.2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  const bochecha = { fill: "var(--c41-ligia-bochecha, #9DBEFF)" };
+  const bochecha = { fill: "var(--c41-ceci-bochecha, #9DBEFF)" };
 
   return (
     <svg
@@ -63,17 +63,17 @@ export function Ligia({
     >
       <defs>
         <linearGradient id={`${id}-anel`} x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" style={{ stopColor: "var(--c41-ligia-anel-de, #1B4FD8)" }} />
-          <stop offset="1" style={{ stopColor: "var(--c41-ligia-anel-ate, #4D8DFF)" }} />
+          <stop offset="0" style={{ stopColor: "var(--c41-ceci-anel-de, #1B4FD8)" }} />
+          <stop offset="1" style={{ stopColor: "var(--c41-ceci-anel-ate, #4D8DFF)" }} />
         </linearGradient>
         <linearGradient id={`${id}-rosto`} x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" style={{ stopColor: "var(--c41-ligia-rosto-de, #1A56DE)" }} />
-          <stop offset="1" style={{ stopColor: "var(--c41-ligia-rosto-ate, #3F7FF8)" }} />
+          <stop offset="0" style={{ stopColor: "var(--c41-ceci-rosto-de, #1A56DE)" }} />
+          <stop offset="1" style={{ stopColor: "var(--c41-ceci-rosto-ate, #3F7FF8)" }} />
         </linearGradient>
       </defs>
 
       {/* O fone: o anel aberto do logo (centro 58,60, raio 45, abertura de 80°) e o nó. */}
-      <g className={estado === "pensando" ? "c41-ligia-pensando" : undefined}>
+      <g className={estado === "pensando" ? "c41-ceci-pensando" : undefined}>
         <path
           d="M 92.47 31.07 A 45 45 0 1 0 92.47 88.93"
           fill="none"
@@ -81,7 +81,7 @@ export function Ligia({
           strokeWidth={11}
           strokeLinecap="round"
         />
-        <circle cx={103} cy={60} r={9.5} style={{ fill: "var(--c41-ligia-no, #1F5EEA)" }} />
+        <circle cx={103} cy={60} r={9.5} style={{ fill: "var(--c41-ceci-no, #1F5EEA)" }} />
       </g>
 
       {/* O rosto: o ponto do meio do logo. */}

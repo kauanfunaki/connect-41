@@ -1,4 +1,4 @@
-// As boas-vindas da Lígia e o aviso de mensagem nova no botão do canto
+// As boas-vindas da Ceci e o aviso de mensagem nova no botão do canto
 // (13/10/2026 — pedido do Kauan). Puro, testado em `boasVindas.test.ts`; quem
 // usa é o `ChatDeIA`.
 //
@@ -16,14 +16,14 @@
 // dois não podem disputar a tela. Abrir o chat mostra a mensagem e marca como
 // vista. São texto local: nenhuma ida ao modelo.
 //
-// Só para quem tem a Lígia do setor ativo (o agente do setor que a pessoa está
+// Só para quem tem a Ceci do setor ativo (o agente do setor que a pessoa está
 // usando); a Ajuda, que atende todo mundo, não dá boas-vindas.
 
 import { ENTRADA_COOKIE } from "@/lib/auth/cookies";
-import { NOME_DA_ASSISTENTE } from "@/lib/ia/ligia";
+import { NOME_DA_ASSISTENTE } from "@/lib/ia/ceci";
 
 /** Onde a tela guarda a marca da entrada cujas boas-vindas a pessoa já viu. */
-export const CHAVE_DAS_BOAS_VINDAS = "c41:ligia:boas-vindas";
+export const CHAVE_DAS_BOAS_VINDAS = "c41:ceci:boas-vindas";
 
 /** A entrada de quem abriu a sessão antes do cookie existir. */
 export const ENTRADA_SEM_MARCA = "sem-marca";
@@ -70,7 +70,7 @@ export function mensagensNovas({ boasVindasEsperando, respostaNaoLida }: { boasV
   return (boasVindasEsperando ? 1 : 0) + (respostaNaoLida ? 1 : 0);
 }
 
-/** "1 mensagem nova da Lígia" — o nome acessível do aviso. `null` sem mensagem nova. */
+/** "1 mensagem nova da Ceci" — o nome acessível do aviso. `null` sem mensagem nova. */
 export function rotuloDoAviso(quantas: number): string | null {
   if (quantas <= 0) return null;
   return quantas === 1 ? `1 mensagem nova da ${NOME_DA_ASSISTENTE}` : `${quantas} mensagens novas da ${NOME_DA_ASSISTENTE}`;

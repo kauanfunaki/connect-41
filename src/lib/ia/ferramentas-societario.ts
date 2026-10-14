@@ -87,7 +87,7 @@ export const FERRAMENTAS_DE_SOCIETARIO: Record<string, FerramentaRegistrada> = {
         processoId: l.id,
         tipo: l.tipoNome,
         empresa: l.empresaNome,
-        // A tela do processo, para a Lígia apontar pelo nome — nunca pelo id.
+        // A tela do processo, para a Ceci apontar pelo nome — nunca pelo id.
         link: linkDaTela(`${l.tipoNome} — ${l.empresaNome}`, `/processos/${l.id}`),
         responsavel: l.responsavelNome,
         situacao: situacaoLegivel(l.situacao),

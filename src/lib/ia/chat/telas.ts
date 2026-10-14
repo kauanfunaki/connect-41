@@ -1,4 +1,4 @@
-// O nome de cada tela do Connect, a partir do endereço — para o chat da Lígia
+// O nome de cada tela do Connect, a partir do endereço — para o chat da Ceci
 // nunca mostrar caminho cru (13/10/2026).
 //
 // Pedido do Kauan: embaixo da pergunta aparecia "/solicitacoes", a página em que
@@ -9,7 +9,7 @@
 // A fonte é a mesma do menu: o nome dos módulos (`MODULE_CATALOG`, pela rota
 // de `MODULE_ROUTES`) e, para o que fica fora do catálogo, o nome do item no
 // menu Geral (`AppShell`) e na central de Ajuda (`TELAS_GERAIS`). Puro: roda
-// no navegador (o chat) e no servidor (o texto que vai à Lígia).
+// no navegador (o chat) e no servidor (o texto que vai à Ceci).
 
 import { MODULE_ROUTES, getModuleDef } from "@/lib/module-catalog";
 

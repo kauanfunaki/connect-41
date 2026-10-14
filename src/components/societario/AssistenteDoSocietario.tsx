@@ -12,7 +12,7 @@ import {
 } from "@/app/(app)/processos/ia-actions";
 import type { PropostaDeEscrita } from "@/lib/ia/ferramentas";
 import { Aviso } from "@/components/ui/Aviso";
-import { RespostaDaLigia } from "@/components/ia/RespostaDaLigia";
+import { RespostaDaCeci } from "@/components/ia/RespostaDaCeci";
 
 function descreverProposta(p: PropostaDeEscrita): string {
   const a = p.argumentos ?? {};
@@ -78,9 +78,9 @@ export function AssistenteDoSocietario() {
               O assistente parou antes de terminar — a resposta pode estar incompleta.
             </Aviso>
           )}
-          {/* O mesmo desenho das respostas do chat da Lígia: Markdown seguro, link só para dentro do Connect. */}
+          {/* O mesmo desenho das respostas do chat da Ceci: Markdown seguro, link só para dentro do Connect. */}
           <div className="text-ui text-fg leading-relaxed break-words">
-            <RespostaDaLigia texto={resposta.texto} />
+            <RespostaDaCeci texto={resposta.texto} />
           </div>
 
           {propostas.length > 0 && (

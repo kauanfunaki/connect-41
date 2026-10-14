@@ -95,7 +95,7 @@ export async function lerVaga(where: Prisma.VagaWhereInput) {
     cargo: vaga.cargo?.name ?? null,
     empresa: vaga.company.tradeName || vaga.company.name,
     vagas: vaga.quantity,
-    // Situação em palavras e a ficha com link (13/10/2026): a Lígia escreve
+    // Situação em palavras e a ficha com link (13/10/2026): a Ceci escreve
     // "em andamento" e aponta a vaga pelo título, nunca pelo código nem pelo id.
     status: situacaoLegivel(vaga.status, VAGA_STATUS_LABEL),
     prioridade: situacaoLegivel(vaga.priority),

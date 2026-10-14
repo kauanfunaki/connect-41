@@ -17,7 +17,7 @@ export function Logo({ className }: { className: string }) {
  * O símbolo do Connect desenhado em código, na cor do texto (`currentColor`):
  * o anel aberto (abertura de 80°, virada para a direita), o ponto do meio e o
  * nó na abertura — as proporções de public/brand/symbol-color.svg, as mesmas
- * da Lígia (components/ia/Ligia). Decorativo.
+ * da Ceci (components/ia/Ceci). Decorativo.
  */
 export function AnelDoConnect({ className = "", centro = true }: { className?: string; centro?: boolean }) {
   return (
@@ -32,7 +32,7 @@ export function AnelDoConnect({ className = "", centro = true }: { className?: s
 /**
  * O rótulo em cima do título de cada seção: o anel pequeno e o texto em caixa
  * alta, na letra mono do app. `escuro` é para as seções de fundo escuro: o
- * azul-claro passa nas duas (11,6:1 no palco da Lígia, 5,0:1 no azul do
+ * azul-claro passa nas duas (11,6:1 no palco da Ceci, 5,0:1 no azul do
  * painel de segurança, no tom mais claro dele).
  */
 export function Rotulo({ children, escuro = false }: { children: string; escuro?: boolean }) {
