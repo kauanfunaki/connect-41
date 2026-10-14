@@ -3,7 +3,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { SetorForm } from "@/components/admin/SetorForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarSetor } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 
@@ -13,7 +12,6 @@ export default async function NovoSetorPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Setores", href: "/admin/setores" }, { label: "Novo setor" }]} />
       <PageHeader title="Novo setor" />
 
       <div className="max-w-[720px]">

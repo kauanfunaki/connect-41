@@ -3,7 +3,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { TagForm } from "@/components/admin/TagForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarTag } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
@@ -20,7 +19,6 @@ export default async function NovaTagPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Tags", href: "/admin/tags" }, { label: "Nova tag" }]} />
       <PageHeader title="Nova tag" />
 
       <div className="max-w-[720px]">

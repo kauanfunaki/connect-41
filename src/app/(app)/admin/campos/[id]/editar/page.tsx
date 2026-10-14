@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { CampoForm } from "@/components/admin/CampoForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { atualizarCampo } from "../../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 
@@ -23,7 +22,6 @@ export default async function EditarCampoPage({
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Campos customizados", href: "/admin/campos" }, { label: "Editar" }]} />
       <PageHeader title="Editar campo" />
 
       <div className="max-w-[720px]">
