@@ -8,6 +8,7 @@ import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 import { MolduraDoPortal } from "@/components/carreiras/MolduraDe41Carreiras";
 import { MARCA_41_CARREIRAS, nomeDoEscritorio } from "@/lib/carreiras/enderecoDeCarreiras";
 import { portalDaRequisicao } from "@/lib/carreiras/portalDaRequisicao";
+import { AcessoAConta41 } from "@/components/carreiras/41/Conta41";
 
 export const dynamic = "force-dynamic";
 
@@ -38,8 +39,12 @@ export default async function EntrarPage({
   const tenant = await getPrisma().tenant.findUnique({ where: { slug }, select: { name: true, logoUrl: true, active: true } });
   if (!tenant || !tenant.active) notFound();
 
+  // Da 41 (15/10/2026): com o link do e-mail, o botão de entrar; sem ele, o
+  // campo do e-mail da inscrição para pedir um (era "Link incompleto").
+  if (portal.da41) return <AcessoAConta41 slug={slug} rotas={portal.rotas} token={t || undefined} />;
+
   return (
-    <MolduraDoPortal portal={portal} logo={tenant.logoUrl}>
+    <MolduraDoPortal>
       <div className="max-w-md mx-auto">
         <CabecalhoPublico centralizado titulo="Minhas candidaturas" subtitulo={nomeDoEscritorio(portal, tenant.name)} />
         <Card className="p-5">
