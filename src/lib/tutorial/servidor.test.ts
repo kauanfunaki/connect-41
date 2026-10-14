@@ -11,6 +11,7 @@ const m = vi.hoisted(() => ({
   db: {
     tutorialVisto: { findUnique: vi.fn() },
     tenant: { findUnique: vi.fn() },
+    portalTelaBloqueada: { findMany: vi.fn() },
   },
   agentesDoChat: vi.fn(),
   getEnabledModuleCodes: vi.fn(),
@@ -52,6 +53,7 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   m.db.tutorialVisto.findUnique.mockResolvedValue(null);
   m.db.tenant.findUnique.mockResolvedValue({ name: "41 Contábil" });
+  m.db.portalTelaBloqueada.findMany.mockResolvedValue([]);
   m.agentesDoChat.mockResolvedValue([]);
   m.getEnabledModuleCodes.mockResolvedValue(new Set<string>());
   m.getSectorsWithEnabledModules.mockResolvedValue(new Set(["bpo", "dp", "fiscal"]));
@@ -162,6 +164,22 @@ describe("o tutorial do portal", () => {
     expect(m.getEnabledModuleCodes).toHaveBeenCalledWith("t1");
     expect(t.passos.map((p) => p.chave)).toEqual(["boas-vindas", "solicitacoes", "pendencias", "documentos", "aprovacoes", "celular", "pronto"]);
     expect(t.passos[0]!.selo).toBe("41 Contábil");
+  });
+
+  it("as telas que o escritório bloqueou saem do tutorial, como saem do menu (14/10/2026)", async () => {
+    m.getEnabledModuleCodes.mockResolvedValue(new Set(["portal_solicitacoes", "bpo_aprovacoes"]));
+    m.db.portalTelaBloqueada.findMany.mockResolvedValue([{ href: "/portal/aprovacoes" }, { href: "/portal/solicitacoes" }]);
+    const t = await montarTutorialDoPortal(SESSAO);
+    expect(m.db.portalTelaBloqueada.findMany).toHaveBeenCalledWith({ where: { tenantId: "t1" }, select: { href: true } });
+    expect(t.passos.map((p) => p.chave)).toEqual(["boas-vindas", "pendencias", "documentos", "celular", "pronto"]);
+  });
+
+  it("sem a tabela das telas bloqueadas (deploy antes da migration): nada bloqueado", async () => {
+    m.getEnabledModuleCodes.mockResolvedValue(new Set(["portal_solicitacoes", "bpo_aprovacoes"]));
+    m.db.portalTelaBloqueada.findMany.mockRejectedValue(Object.assign(new Error("sem tabela"), { code: "P2021" }));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const t = await montarTutorialDoPortal(SESSAO);
+    expect(t.passos.map((p) => p.chave)).toEqual(["boas-vindas", "solicitacoes", "pendencias", "documentos", "aprovacoes", "celular", "pronto"]);
   });
 
   it("módulos que não carregam: o tutorial sai com o básico, sem lançar", async () => {

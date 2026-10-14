@@ -14,6 +14,7 @@ import { setoresDoSeletor } from "@/lib/auth/activeSector";
 import type { PortalAccessTokenPayload } from "@/lib/auth/types";
 import { getPrisma } from "@/lib/prisma";
 import { getEnabledModuleCodes, getSectorsWithEnabledModules } from "@/lib/modules";
+import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
 import { getSectorMaps } from "@/lib/sectors";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 import { getVapidPublicKey } from "@/lib/vapid";
@@ -105,14 +106,19 @@ export async function tutorialDoPortalAbreSozinho(sessao: PortalAccessTokenPaylo
   return abreSozinho(estado, VERSAO_DO_TUTORIAL.portal);
 }
 
-/** Os passos do tutorial do portal: os módulos ligados no escritório decidem, como no menu. */
+/**
+ * Os passos do tutorial do portal: os módulos ligados no escritório e as telas
+ * que ele já liberou (14/10/2026) decidem, como no menu. A leitura das
+ * bloqueadas nunca lança — sem ela, nada bloqueado.
+ */
 export async function montarTutorialDoPortal(sessao: PortalAccessTokenPayload): Promise<Tutorial> {
-  const [escritorio, modulos] = await Promise.all([
+  const [escritorio, modulos, bloqueadas] = await Promise.all([
     nomeDoEscritorio(sessao.tenantId),
     getEnabledModuleCodes(sessao.tenantId).catch((err) => {
       console.error("[tutorial] módulos do portal", err);
       return new Set<string>();
     }),
+    telasBloqueadasDoPortal(sessao.tenantId),
   ]);
-  return tutorialDoPortal({ escritorio, modulos, avisosNoCelular: Boolean(getVapidPublicKey()) });
+  return tutorialDoPortal({ escritorio, modulos, bloqueadas, avisosNoCelular: Boolean(getVapidPublicKey()) });
 }
