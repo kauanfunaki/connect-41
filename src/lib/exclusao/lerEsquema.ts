@@ -26,6 +26,8 @@ export type RelacaoDoEsquema = {
 
 export type ModeloDoEsquema = {
   nome: string;
+  /** A tabela no banco (`@@map`), ou o próprio nome. */
+  tabela: string;
   /** Campos escalares e enums: nome → opcional. */
   escalares: Map<string, { tipo: string; opcional: boolean }>;
 };
@@ -44,7 +46,8 @@ export function lerEsquema(texto: string): Esquema {
 
   for (const bloco of texto.matchAll(/^model (\w+) \{([\s\S]*?)^\}/gm)) {
     const nome = bloco[1];
-    const modelo: ModeloDoEsquema = { nome, escalares: new Map() };
+    const tabela = bloco[2].match(/^\s*@@map\("(\w+)"\)/m)?.[1] ?? nome;
+    const modelo: ModeloDoEsquema = { nome, tabela, escalares: new Map() };
     modelos.set(nome, modelo);
 
     for (const bruta of bloco[2].split("\n")) {

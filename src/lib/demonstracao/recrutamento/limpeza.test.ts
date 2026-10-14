@@ -1,9 +1,10 @@
-import { readdirSync, readFileSync, existsSync } from "fs";
+import { readFileSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import type { Prisma } from "@/generated/prisma/client";
 import { criarBancoFalso, type Chamada } from "@/lib/exclusao/bancoFalso";
-import { lerEsquema, trava, type OnDelete, type RelacaoDoEsquema } from "@/lib/exclusao/lerEsquema";
+import { estadoDoBanco, lerMigrations, relacoesComOBanco } from "@/lib/exclusao/chavesDoBanco";
+import { lerEsquema, trava, type RelacaoDoEsquema } from "@/lib/exclusao/lerEsquema";
 import type { Passo } from "@/lib/exclusao/comum";
 import { conferirAntesDeCriar, gravarDemonstracao } from "./gravar";
 import { ehEmpresaDaDemo, ehPessoaDaDemo, limparRecrutamentoDaDemo, ondeAsPessoasDaDemo, PLANO_DA_LIMPEZA } from "./limpeza";
@@ -20,39 +21,23 @@ const json = (c: Chamada) => JSON.stringify(c.args ?? {});
 //
 // O schema não basta: a migration de 24/07/2026 criou o link do teste → a
 // candidatura e → o modelo com ON DELETE RESTRICT, e o schema (sem `onDelete`)
-// diz SetNull. Aqui vale o que as migrations gravaram.
+// diz SetNull. A migration 20261014200000 acertou o banco (SET NULL), mas a
+// limpeza pode rodar antes do `migrate deploy` — a ordem tem de passar nos dois
+// estados. Aqui vale o que as migrations gravaram (ver chavesDoBanco.ts).
 
 const raiz = process.cwd();
-const textoDoSchema = readFileSync(path.join(raiz, "prisma", "schema.prisma"), "utf8");
-const esquemaDoPrisma = lerEsquema(textoDoSchema);
+const esquemaDoPrisma = lerEsquema(readFileSync(path.join(raiz, "prisma", "schema.prisma"), "utf8"));
+const MIGRATIONS = path.join(raiz, "prisma", "migrations");
+const ACERTO_DO_LINK_DO_TESTE = "20261014200000";
 
-const ACAO: Record<string, OnDelete> = { "SET NULL": "SetNull", RESTRICT: "Restrict", CASCADE: "Cascade", "NO ACTION": "NoAction" };
+type Banco = { nome: string; relacoes: RelacaoDoEsquema[] };
+const BANCO: Banco = { nome: "banco (migrations)", relacoes: relacoesComOBanco(esquemaDoPrisma, estadoDoBanco(lerMigrations(MIGRATIONS))) };
+const BANCO_ANTES: Banco = {
+  nome: `banco antes de ${ACERTO_DO_LINK_DO_TESTE}`,
+  relacoes: relacoesComOBanco(esquemaDoPrisma, estadoDoBanco(lerMigrations(MIGRATIONS, { antesDe: ACERTO_DO_LINK_DO_TESTE }))),
+};
 
-function acoesDasMigrations(): Map<string, OnDelete> {
-  const dir = path.join(raiz, "prisma", "migrations");
-  const acoes = new Map<string, OnDelete>();
-  for (const pasta of readdirSync(dir).sort()) {
-    const arquivo = path.join(dir, pasta, "migration.sql");
-    if (!existsSync(arquivo)) continue;
-    const sql = readFileSync(arquivo, "utf8");
-    for (const m of sql.matchAll(/DROP FOREIGN KEY `(\w+)`/g)) acoes.delete(m[1]!);
-    for (const m of sql.matchAll(/CONSTRAINT `(\w+)` FOREIGN KEY \([^)]*\) REFERENCES `\w+`\s*\(`id`\) ON DELETE (SET NULL|RESTRICT|CASCADE|NO ACTION)/g)) {
-      acoes.set(m[1]!, ACAO[m[2]!]!);
-    }
-  }
-  return acoes;
-}
-
-const tabelaDoModelo = new Map<string, string>();
-for (const b of textoDoSchema.matchAll(/^model (\w+) \{([\s\S]*?)^\}/gm)) tabelaDoModelo.set(b[1]!, b[2]!.match(/@@map\("(\w+)"\)/)?.[1] ?? b[1]!);
-
-const doBanco = acoesDasMigrations();
-const relacoes: RelacaoDoEsquema[] = esquemaDoPrisma.relacoes.map((r) => {
-  const nome = `${tabelaDoModelo.get(r.modelo)}_${r.fks.join("_")}_fkey`;
-  return { ...r, onDelete: doBanco.get(nome) ?? r.onDelete };
-});
-
-function comCascata(modelo: string): Set<string> {
+function comCascata(relacoes: readonly RelacaoDoEsquema[], modelo: string): Set<string> {
   const vai = new Set([modelo]);
   const fila = [modelo];
   while (fila.length > 0) {
@@ -68,7 +53,7 @@ function comCascata(modelo: string): Set<string> {
 }
 
 /** Mesmo método do `plano.test.ts` da exclusão: model a model, ninguém apontando com RESTRICT para o que sai. */
-function travas(plano: readonly Pick<Passo<never>, "modelo" | "acao" | "coluna">[]): string[] {
+function travas(plano: readonly Pick<Passo<never>, "modelo" | "acao" | "coluna">[], { relacoes }: Banco = BANCO_ANTES): string[] {
   const apagados = new Set<string>();
   const neutralizadas = new Set<string>();
   const saida: string[] = [];
@@ -77,7 +62,7 @@ function travas(plano: readonly Pick<Passo<never>, "modelo" | "acao" | "coluna">
       neutralizadas.add(`${passo.modelo}.${passo.coluna}`);
       continue;
     }
-    const levados = comCascata(passo.modelo);
+    const levados = comCascata(relacoes, passo.modelo);
     for (const levado of levados) {
       for (const r of relacoes) {
         if (r.alvo !== levado || !trava(r)) continue;
@@ -94,14 +79,18 @@ function travas(plano: readonly Pick<Passo<never>, "modelo" | "acao" | "coluna">
 const COM_A_EMPRESA = [...PLANO_DA_LIMPEZA, { modelo: "Company", acao: "apagar" as const }];
 
 describe("ordem da limpeza × chaves do banco", () => {
-  it("as migrations gravaram RESTRICT no link do teste (o schema diz SetNull) — o teste lê o banco, não o schema", () => {
-    const link = relacoes.filter((r) => r.modelo === "AssessmentLink" && (r.campo === "candidatura" || r.campo === "template"));
-    expect(link.map((r) => r.onDelete)).toEqual(["Restrict", "Restrict"]);
+  it("antes de 20261014200000 o banco tinha RESTRICT no link do teste (o schema diz SetNull); depois, SET NULL", () => {
+    const acoes = ({ relacoes }: Banco) =>
+      relacoes.filter((r) => r.modelo === "AssessmentLink" && (r.campo === "candidatura" || r.campo === "template")).map((r) => r.onDelete);
+    expect(acoes(BANCO_ANTES)).toEqual(["Restrict", "Restrict"]);
+    expect(acoes(BANCO)).toEqual(["SetNull", "SetNull"]);
   });
 
-  it("a ordem passa por todas as chaves, até a exclusão das empresas", () => {
-    expect(travas(COM_A_EMPRESA)).toEqual([]);
-  });
+  for (const banco of [BANCO_ANTES, BANCO]) {
+    it(`a ordem passa por todas as chaves, até a exclusão das empresas — ${banco.nome}`, () => {
+      expect(travas(COM_A_EMPRESA, banco)).toEqual([]);
+    });
+  }
 
   it("todo passo aponta para model e coluna que existem", () => {
     for (const p of PLANO_DA_LIMPEZA) {
@@ -111,9 +100,9 @@ describe("ordem da limpeza × chaves do banco", () => {
     }
   });
 
-  it("sem tirar os testes antes, a candidatura travaria (o próprio teste funciona)", () => {
+  it("sem tirar os testes antes, a candidatura travaria no banco de antes da migration (o próprio teste funciona)", () => {
     const semOsTestes = COM_A_EMPRESA.filter((p) => p.modelo !== "AssessmentLink");
-    expect(travas(semOsTestes).join("\n")).toContain("AssessmentLink.candidatura → Candidatura (Restrict)");
+    expect(travas(semOsTestes, BANCO_ANTES).join("\n")).toContain("AssessmentLink.candidatura → Candidatura (Restrict)");
   });
 });
 
@@ -208,9 +197,8 @@ describe("limparRecrutamentoDaDemo", () => {
     await limparRecrutamentoDaDemo(tx(b.banco), "t1");
     const w = b.escritas();
     const primeiro = (delegado: string, metodo = "deleteMany") => w.findIndex((c) => c.delegado === delegado && c.metodo === metodo);
-    const ultimo = (delegado: string, metodo = "deleteMany") => w.map((c) => `${c.delegado}.${c.metodo}`).lastIndexOf(`${delegado}.${metodo}`);
     expect(primeiro("assessmentLink")).toBeGreaterThanOrEqual(0);
-    expect(ultimo("assessmentLink", "updateMany")).toBeLessThan(primeiro("candidatura"));
+    expect(primeiro("assessmentLink", "updateMany")).toBeLessThan(primeiro("candidatura"));
     expect(primeiro("assessmentLink")).toBeLessThan(primeiro("candidatura"));
     expect(primeiro("candidatura")).toBeLessThan(primeiro("vaga"));
     expect(primeiro("vaga")).toBeLessThan(primeiro("assessmentTemplate"));
