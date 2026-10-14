@@ -114,7 +114,7 @@ describe("numerosDoResumo — os cartões", () => {
       admissoesNoMes: 2,
       desligamentosNoMes: 1,
     });
-    expect(itens.map((i) => i.rotulo)).toEqual(["Ativos", "Admissões em out", "Desligamentos em out", "Em férias", "Afastados"]);
+    expect(itens.map((i) => i.rotulo)).toEqual(["Ativos", "Admissões em outubro", "Desligamentos em outubro", "Em férias", "Afastados"]);
     expect(itens[0]).toEqual({ rotulo: "Ativos", valor: "1.234" });
     expect(itens[1]).toMatchObject({ valor: "2", detalhe: "1 em andamento", tom: "text-success-fg" });
   });
@@ -129,6 +129,12 @@ describe("numerosDoResumo — os cartões", () => {
       admissoesNoMes: 0,
       desligamentosNoMes: 0,
     });
-    expect(itens[1]).toEqual({ rotulo: "Admissões em jan", valor: "0", tom: undefined, detalhe: undefined });
+    expect(itens[1]).toEqual({ rotulo: "Admissões em janeiro", valor: "0", tom: undefined, detalhe: undefined });
+  });
+
+  it("o mês por extenso e em minúscula, com acento — no meio da frase", () => {
+    const zerado = { ativos: 0, emFerias: 0, afastados: 0, admissoesEmAndamento: 0, admissoesNoMes: 0, desligamentosNoMes: 0 };
+    expect(numerosDoResumo({ ...zerado, mes: "2026-03" })[1].rotulo).toBe("Admissões em março");
+    expect(numerosDoResumo({ ...zerado, mes: "2026-09" })[2].rotulo).toBe("Desligamentos em setembro");
   });
 });
