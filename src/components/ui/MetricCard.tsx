@@ -54,10 +54,13 @@ type Props = {
    */
   destaque?: boolean;
   /**
-   * O rótulo sempre inteiro: quebra em quantas linhas precisar, em qualquer
-   * largura, e nunca corta com "…" (14/10/2026, "Desligamentos em setembro"
-   * nos Colaboradores de clientes). Sem ele, do `sm` em diante o rótulo fica
-   * numa linha e corta com a dica.
+   * O rótulo sempre inteiro: quebra linha em qualquer largura e nunca corta
+   * com "…" (14/10/2026, "Desligamentos em setembro" nos Colaboradores de
+   * clientes). O rótulo reserva sempre a altura de duas linhas (`2lh`, do
+   * próprio leading), quebre ou não: assim o valor começa na mesma altura em
+   * todos os cartões da faixa — no computador e no celular, no cartão azul
+   * também. Sem ele, do `sm` em diante o rótulo fica numa linha e corta com a
+   * dica.
    */
   rotuloInteiro?: boolean;
   /** Atraso do stagger de entrada, em ms. */
@@ -135,7 +138,7 @@ export function MetricCard({
         )}
         <p
           className={`min-w-0 text-helper leading-snug ${corDoRotulo} ${
-            rotuloInteiro ? "whitespace-normal break-words" : "truncate max-sm:whitespace-normal max-sm:line-clamp-2 c41-cortavel"
+            rotuloInteiro ? "min-h-[2lh] whitespace-normal break-words" : "truncate max-sm:whitespace-normal max-sm:line-clamp-2 c41-cortavel"
           }`}
         >
           {label}
