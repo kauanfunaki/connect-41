@@ -465,8 +465,9 @@ export function AppShell({
 
                 {/* Transversais. NUNCA somem por causa do setor ativo: transferência
                     é setor↔setor por natureza, e cadastro é do tenant. Isolar os
-                    dois mataria a razão de existir do Connect. Espaços entra aqui:
+                    dois mataria a razão de existir do Connect. Quadros entra aqui:
                     é a mesma tela em todo setor, e solto no topo parecia um módulo.
+                    (Chamava-se "Espaços" até 14/10/2026; a chave segue `espacos`.)
 
                     30/09: Conversas foi para o setor Controladoria e Gestão para o
                     setor Gestão (pedido do Kauan: o Geral é só o que serve a
@@ -485,7 +486,7 @@ export function AppShell({
                   </TituloDoBloco>
                 )}
                 {noGeral("espacos") && (
-                  <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Espaços" />
+                  <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Quadros" />
                 )}
                 {itensDoGeral}
 

@@ -17,6 +17,9 @@ import { linkDaTela } from "@/lib/ia/legivel";
 
 const SEM_PARAMETROS = { type: "object", properties: {}, additionalProperties: false } as const;
 
+/** O caminho da tela Quadros, que é por setor — a central troca `{setor}` pelo setor da pessoa. */
+export const CAMINHO_DOS_QUADROS = "/setor/{setor}";
+
 /**
  * As telas que servem a todo setor — ficam fora do catálogo de módulos. É a
  * mesma lista da central /ajuda: o que o agente responde e o que a pessoa lê
@@ -35,7 +38,8 @@ export const TELAS_GERAIS = [
       "O que os clientes pedem pelo portal, por assunto: cada setor vê e responde as suas, com prazo de resposta. Nas abas, os pedidos ao cliente, os comunicados e os envios (documentos ao cliente com prova de leitura e aceite, em /solicitacoes/envios).",
   },
   { tela: "Agenda", caminho: "/agenda", descricao: "Os prazos dos seus setores no calendário e, para coordenadores, as reuniões." },
-  { tela: "Espaços", caminho: "/setor/{setor}", descricao: "As listas e quadros de tarefas do setor, organizados em espaços e pastas." },
+  // "Quadros" se chamava "Espaços" até 14/10/2026 (o mesmo nome do menu, em `menuGeral.ts`).
+  { tela: "Quadros", caminho: CAMINHO_DOS_QUADROS, descricao: "As listas de tarefas do setor, em lista ou kanban, organizadas em espaços e pastas." },
   { tela: "Busca", caminho: "Ctrl+K", descricao: "Acha qualquer tela, empresa ou pessoa pelo nome." },
   { tela: "Ajuda", caminho: "/ajuda", descricao: "Esta central: o que cada tela faz e os primeiros passos no Connect." },
 ] as const;

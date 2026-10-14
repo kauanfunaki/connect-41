@@ -127,8 +127,10 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           active={view}
           onChange={setView}
           items={[
-            { key: "list", label: "Lista", icon: <List size={14} /> },
-            { key: "board", label: "Quadro", icon: <Columns3 size={14} /> },
+            // "Listas" e "Kanban" desde 14/10/2026 (eram "Lista" e "Quadro"):
+            // com a tela do menu chamada Quadros, "Quadro" aqui ficava repetido.
+            { key: "list", label: "Listas", icon: <List size={14} /> },
+            { key: "board", label: "Kanban", icon: <Columns3 size={14} /> },
           ]}
         />
 
