@@ -25,6 +25,7 @@
 
 import { getPrisma } from "../src/lib/prisma";
 import { conferirAntesDeCriar, gravarDemonstracao } from "../src/lib/demonstracao/recrutamento/gravar";
+import { SITUACAO_DO_VINCULO } from "../src/lib/colaboradores/situacao";
 import { SLUG_DO_TENANT, contagemDaDemonstracao, montarDemonstracao, type PlanoDaDemonstracao } from "../src/lib/demonstracao/recrutamento/plano";
 
 const ENSAIO = "ensaio: tudo seria gravado sem erro; a transação foi desfeita";
@@ -47,7 +48,7 @@ function resumo(plano: PlanoDaDemonstracao, comSegundo: boolean): string[] {
   const status = (s: string) => plano.candidaturas.filter((x) => x.status === s).length;
   const entrevistas = comSegundo ? c.entrevistas : plano.entrevistas.filter((e) => e.avaliador === "principal").length;
   const testes = plano.testes;
-  const situacoes = new Map<string, number>();
+  const situacoes = new Map<keyof typeof SITUACAO_DO_VINCULO, number>();
   for (const p of plano.pessoas) if (p.type === "COLABORADOR") situacoes.set(p.employmentStatus, (situacoes.get(p.employmentStatus) ?? 0) + 1);
   return [
     `${c.empresas} empresas [demo], cada uma com o seu grupo de cliente: ${plano.empresas.map((e) => e.tradeName).join(", ")}`,
@@ -59,7 +60,7 @@ function resumo(plano: PlanoDaDemonstracao, comSegundo: boolean): string[] {
     `${entrevistas} avaliações de entrevista${comSegundo ? "" : " (as de um segundo avaliador ficam de fora: só há um administrador)"}`,
     `1 questionário [demo] com ${c.perguntas} perguntas`,
     `${testes.length} testes: ${testes.filter((t) => t.status === "RESPONDIDO" && t.type === "DISC").length} DISC respondidos, ${testes.filter((t) => t.status === "RESPONDIDO" && t.type !== "DISC").length} questionários respondidos, ${testes.filter((t) => t.status === "PENDENTE" && t.expiresAt.getTime() > Date.now()).length} links pendentes (valem 7 dias), ${testes.filter((t) => t.status === "PENDENTE" && t.expiresAt.getTime() <= Date.now()).length} vencido`,
-    `${c.colaboradores} colaboradores de clientes — ${[...situacoes].map(([s, q]) => `${q} ${s.toLowerCase().replace(/_/g, " ")}`).join(", ")}`,
+    `${c.colaboradores} colaboradores de clientes — ${[...situacoes].map(([s, q]) => `${q} ${SITUACAO_DO_VINCULO[s].rotulo.toLowerCase()}`).join(", ")}`,
     `${c.etiquetas} etiquetas [demo] do Recrutamento (uma delas marca toda pessoa fictícia)`,
     `e-mails só @exemplo.invalido, telefones (41) 90000-00xx, CPFs 000.410.0xx-xx e CNPJs 41.000.00x/0000-xx`,
     `sem currículo em arquivo (o bloco Currículo da ficha fica vazio), sem reunião, sem link de admissão, sem aviso a ninguém`,
