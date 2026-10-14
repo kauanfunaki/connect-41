@@ -213,7 +213,8 @@ export default async function ColaboradoresClientesPage({
   return tela(
     <>
       {/* O mês por extenso no rótulo ("Desligamentos em setembro") quebra em
-          duas linhas no cartão estreito, em vez de cortar com "…". */}
+          duas linhas no cartão estreito, em vez de cortar com "…"; todo rótulo
+          reserva as duas linhas, e os números ficam alinhados. */}
       <FaixaDeTotais itens={numerosDoResumo(resumo)} rotulosInteiros />
 
       {/* No casco das listas do Recrutamento (DRG-13, 07/10/2026): contagem na
