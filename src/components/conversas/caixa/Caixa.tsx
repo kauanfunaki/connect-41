@@ -100,9 +100,9 @@ const FAIXA = "scroll-y scroll-gutter-stable px-1";
 export function ColunaDaLista({ topo, children, rodape }: { topo?: ReactNode; children: ReactNode; rodape?: ReactNode }) {
   return (
     <div className="flex-1 min-h-0 flex flex-col -ml-1">
-      {topo && <div className={`shrink-0 overflow-hidden ${FAIXA} pt-1 pb-2 flex flex-col gap-2`}>{topo}</div>}
-      <div className={`flex-1 min-h-0 overflow-y-auto ${FAIXA} py-1 flex flex-col gap-2`}>{children}</div>
-      {rodape && <div className={`shrink-0 overflow-hidden ${FAIXA} pt-2 pb-1`}>{rodape}</div>}
+      {topo && <div className={`relative shrink-0 overflow-hidden ${FAIXA} pt-1 pb-2 flex flex-col gap-2`}>{topo}</div>}
+      <div className={`relative flex-1 min-h-0 overflow-y-auto ${FAIXA} py-1 flex flex-col gap-2`}>{children}</div>
+      {rodape && <div className={`relative shrink-0 overflow-hidden ${FAIXA} pt-2 pb-1`}>{rodape}</div>}
     </div>
   );
 }
@@ -292,7 +292,7 @@ export function PainelDeConversa({
   children?: ReactNode;
 }) {
   return (
-    <section className="flex-1 min-h-0 flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden" aria-label={titulo}>
+    <section className="relative flex-1 min-h-0 flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden" aria-label={titulo}>
       {barra}
       <CabecalhoDoPainel
         titulo={titulo}
@@ -303,7 +303,7 @@ export function PainelDeConversa({
         infos={infos}
         rotuloDasInfos={rotuloDasInfos}
       />
-      <div className={corpo === "fixo" ? "flex-1 min-h-0 flex flex-col" : "flex-1 min-h-0 overflow-y-auto scroll-y"}>{children}</div>
+      <div className={corpo === "fixo" ? "relative flex-1 min-h-0 flex flex-col" : "relative flex-1 min-h-0 overflow-y-auto scroll-y"}>{children}</div>
     </section>
   );
 }
