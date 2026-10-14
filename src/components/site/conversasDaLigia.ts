@@ -27,7 +27,7 @@ export type ChaveDaConversa = "bpo" | "fiscal" | "dp" | "societario" | "recrutam
 
 export type ConversaDaLigia = {
   chave: ChaveDaConversa;
-  /** O setor por extenso, como embaixo do nome dela no chat. */
+  /** O setor como embaixo do nome dela no chat (`especialidadeDoAgente`) — "BPO", "Departamento Pessoal". */
   setor: string;
   /** A cor do setor, a mesma do menu do Connect (`--c41-sector-*`). */
   cor: string;
@@ -50,7 +50,7 @@ export type ConversaDaLigia = {
 export const CONVERSAS_DA_LIGIA: ConversaDaLigia[] = [
   {
     chave: "bpo",
-    setor: "BPO Financeiro",
+    setor: "BPO",
     cor: "var(--c41-sector-bpo)",
     resumo: "Contas, DRE, pendências e aprovações dos clientes",
     consulta: [

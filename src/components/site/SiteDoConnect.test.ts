@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AGENT_CATALOG, agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { descreverProposta, rotulosDaDecisao } from "@/lib/ia/chat/regras";
+import { especialidadeDoAgente } from "@/lib/ia/ligia";
 import { linksDoSite } from "@/lib/site/links";
 import { CONVERSAS_DA_LIGIA } from "./conversasDaLigia";
 import { SiteDoConnect } from "./SiteDoConnect";
@@ -140,6 +141,8 @@ describe("as conversas da Lígia no site", () => {
       }
       expect(agenteDoCatalogo(agentes[c.chave]!)).not.toBeNull();
       expect(Boolean(c.pergunta && c.resposta && c.consulta.length > 0)).toBe(true);
+      // O setor embaixo do nome dela é o mesmo do chat ("BPO", e não "BPO Financeiro", desde 13/10/2026).
+      expect(c.setor, c.chave).toBe(especialidadeDoAgente(agentes[c.chave]!));
     }
   });
 

@@ -8,14 +8,16 @@ import {
   NOME_DA_ASSISTENTE,
   nomeDaAssistente,
   primeiroNomeParaOPrompt,
+  semCumprimento,
 } from "./ligia";
+import { sistemaDoChat } from "@/lib/ia/chat/agentes";
 
 // A Lígia (decisão do Kauan, 13/10/2026): um nome só para a IA do chat, com o
 // setor embaixo — no lugar de "IA do BPO", "IA do DP"…
 
 describe("nomeDaAssistente", () => {
   it("junta o nome e o setor com o ponto do meio", () => {
-    expect(nomeDaAssistente("BPO Financeiro")).toBe("Lígia · BPO Financeiro");
+    expect(nomeDaAssistente("BPO")).toBe("Lígia · BPO");
     expect(nomeDaAssistente("Departamento Pessoal")).toBe("Lígia · Departamento Pessoal");
   });
 
@@ -27,13 +29,14 @@ describe("nomeDaAssistente", () => {
 });
 
 describe("especialidade de cada agente do chat", () => {
-  it("todo agente do chat tem setor escrito, por extenso e sem 'IA'", () => {
+  it("todo agente do chat tem setor escrito, sem 'IA'", () => {
     for (const code of AGENTES_DO_CHAT) {
       const especialidade = especialidadeDoAgente(code);
       expect(especialidade, code).toBeTruthy();
       expect(especialidade, code).not.toMatch(/\bIA\b/);
     }
-    expect(especialidadeDoAgente("assistente_do_bpo")).toBe("BPO Financeiro");
+    // Só "BPO" na Lígia (pedido do Kauan, 13/10/2026) — não "BPO Financeiro".
+    expect(especialidadeDoAgente("assistente_do_bpo")).toBe("BPO");
     expect(especialidadeDoAgente("assistente_do_dp")).toBe("Departamento Pessoal");
   });
 
@@ -74,9 +77,9 @@ describe("primeiroNomeParaOPrompt", () => {
 
 describe("apresentacaoDaLigia", () => {
   it("apresenta a Lígia com o setor e o guia do jeito de falar", () => {
-    const t = apresentacaoDaLigia("BPO Financeiro");
+    const t = apresentacaoDaLigia("BPO");
     expect(t).toContain(`Você é a ${NOME_DA_ASSISTENTE}, a assistente do Connect`);
-    expect(t).toContain("Neste chat, você atende: BPO Financeiro.");
+    expect(t).toContain("Neste chat, você atende: BPO.");
     expect(t).toContain("Cumprimente a pessoa pelo primeiro nome só na primeira resposta");
     expect(t).toContain("Frases curtas");
     expect(t).toContain("Nunca prometa prazo nem resultado fiscal");
@@ -91,7 +94,7 @@ describe("apresentacaoDaLigia", () => {
   });
 
   it("não fala de ferramenta — isso é do texto de cada agente", () => {
-    expect(apresentacaoDaLigia("BPO Financeiro")).not.toMatch(/buscar_|listar_|propor_|sugerir_respostas|encaminhar_pergunta/);
+    expect(apresentacaoDaLigia("BPO")).not.toMatch(/buscar_|listar_|propor_|sugerir_respostas|encaminhar_pergunta/);
   });
 });
 
@@ -105,5 +108,34 @@ describe("cumprimentoDaLigia", () => {
 
   it("sem o nome, cumprimenta com um 'Oi!'", () => {
     expect(cumprimentoDaLigia({ primeiroNome: null, primeiraResposta: true })).toContain('"Oi!"');
+  });
+});
+
+describe("semCumprimento", () => {
+  it("tira o 'Oi, Kauan!' do começo de uma resposta que não devia cumprimentar", () => {
+    expect(semCumprimento("Oi, Kauan!\n**3 pendências** esperando o cliente.")).toBe("**3 pendências** esperando o cliente.");
+    expect(semCumprimento("Olá Camila! segue o resumo.")).toBe("Segue o resumo.");
+    expect(semCumprimento("Oi! Encontrei 2 férias.")).toBe("Encontrei 2 férias.");
+  });
+
+  it("não mexe no resto, nem em resposta sem cumprimento", () => {
+    expect(semCumprimento("**3 pendências** — oi, tudo certo.")).toBe("**3 pendências** — oi, tudo certo.");
+    expect(semCumprimento("Oito contas vencidas.")).toBe("Oito contas vencidas.");
+    expect(semCumprimento("Oi!")).toBe("Oi!");
+  });
+});
+
+describe("o jeito de escrever no chat (13/10/2026)", () => {
+  const t = sistemaDoChat("assistente_do_bpo");
+  it("pede resumo primeiro, itens em lista com o principal em negrito e o link da ferramenta como botão", () => {
+    expect(t).toContain("UMA linha de resumo");
+    expect(t).toContain("o nome do item em negrito");
+    expect(t).toContain("numa linha sozinha, copiado exatamente como veio");
+    expect(t).not.toContain("Não use tabelas nem títulos");
+  });
+
+  it("proíbe código interno e id na resposta", () => {
+    expect(t).toContain("Nunca mostre código interno (SEM_PRAZO");
+    expect(t).toContain("Nunca mostre id interno");
   });
 });

@@ -21,6 +21,9 @@ import { dreDoMes, mesesComMovimento } from "@/lib/dre/data";
 import { listarPendencias } from "@/lib/financeiro/pendencias/consultas";
 import { setorPadraoDasPendencias, soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
 import { nomeExibicao } from "@/lib/companyName";
+import { ROTULO_DO_PRAZO, ROTULO_DO_STATUS } from "@/lib/financeiro/pendencias/regras";
+import { ROTULO_DA_APROVACAO } from "@/lib/financeiro/aprovacao/regras";
+import { linkDaTela, mesLegivel, situacaoLegivel } from "@/lib/ia/legivel";
 
 /** Os módulos do BPO que o chat pode consultar, com a tela de cada um. */
 export const MODULOS_DO_BPO = {
@@ -70,6 +73,24 @@ export function reais(centavos: number): number {
   return Math.round(centavos) / 100;
 }
 
+/** A situação da conta como a tela de contas escreve. */
+const SITUACAO_DA_CONTA: Readonly<Record<string, string>> = {
+  VENCIDA: "vencida",
+  VENCE_HOJE: "vence hoje",
+  A_VENCER: "a vencer",
+  PAGA: "paga",
+  CANCELADA: "cancelada",
+};
+
+/** O rótulo do botão das pendências, pelo recorte pedido. */
+export function rotuloDasPendencias(recorte: "andamento" | "aguardando" | "respondidas", vencidas: boolean): string {
+  if (vencidas) return "Abrir as pendências vencidas";
+  if (recorte === "aguardando") return "Abrir as pendências aguardando o cliente";
+  if (recorte === "respondidas") return "Abrir as pendências respondidas pelo cliente";
+  return "Abrir as pendências em andamento";
+}
+
+/** O caminho da tela com os filtros — o link que a ferramenta devolve leva o rótulo junto (`linkDaTela`). */
 export function link(caminho: string, filtro: Record<string, string | undefined>): string {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(filtro)) if (v) q.set(k, v);
@@ -122,7 +143,10 @@ export const FERRAMENTAS_DE_BPO: Record<string, FerramentaRegistrada> = {
         contasNoRecorte: r.totalNoRecorte,
         mostrando: Math.min(r.linhas.length, LINHAS),
         // Sem empresa, a resposta é de todas — e o link diz isso, ou a tela abriria na última aberta.
-        link: link(tipo === "PAGAR" ? "/pagar" : "/receber", { empresa: empresa?.id ?? TODAS_AS_EMPRESAS, competencia, recorte }),
+        link: linkDaTela(
+          `Abrir as contas ${tipo === "PAGAR" ? "a pagar" : "a receber"}${recorte === "vencidas" ? " vencidas" : recorte === "abertas" ? " em aberto" : ""}`,
+          link(tipo === "PAGAR" ? "/pagar" : "/receber", { empresa: empresa?.id ?? TODAS_AS_EMPRESAS, competencia, recorte })
+        ),
         contas: r.linhas.slice(0, LINHAS).map((l) => ({
           empresa: l.empresaNome,
           contraparte: l.contraparteNome,
@@ -130,8 +154,8 @@ export const FERRAMENTAS_DE_BPO: Record<string, FerramentaRegistrada> = {
           categoria: l.categoriaNome,
           valor: reais(l.valorCentavos),
           vencimento: l.vencimentoKey,
-          situacao: l.situacao,
-          aprovacao: l.approvalStatus,
+          situacao: situacaoLegivel(l.situacao, SITUACAO_DA_CONTA),
+          aprovacao: situacaoLegivel(l.approvalStatus, ROTULO_DA_APROVACAO),
         })),
       };
     },
@@ -178,7 +202,7 @@ export const FERRAMENTAS_DE_BPO: Record<string, FerramentaRegistrada> = {
         ),
         semClassificacao: resultado.naoClassificado.slice(0, 5).map((n) => ({ categoria: n.categoria, valor: reais(n.centavos) })),
         fechamentoBate: resultado.diferencaDeFechamento === 0,
-        link: link("/dre", { empresa: empresa.id, mes: `${mes.ano}-${mes.mes}` }),
+        link: linkDaTela(`Abrir o DRE de ${mesLegivel(chave)}`, link("/dre", { empresa: empresa.id, mes: `${mes.ano}-${mes.mes}` })),
       };
     },
   },
@@ -214,14 +238,16 @@ export const FERRAMENTAS_DE_BPO: Record<string, FerramentaRegistrada> = {
         empresa: empresa ? nomeExibicao(empresa) : "todas",
         contadores: r.contadores,
         mostrando: Math.min(r.linhas.length, LINHAS),
-        link: link("/pendencias", { empresa: empresa?.id, recorte, vencidas: vencidas ? "1" : undefined }),
+        link: linkDaTela(rotuloDasPendencias(recorte, vencidas), link("/pendencias", { empresa: empresa?.id, recorte, vencidas: vencidas ? "1" : undefined })),
         pendencias: r.linhas.slice(0, LINHAS).map((p) => ({
           titulo: p.titulo,
           empresa: p.empresaNome,
-          status: p.status,
+          status: situacaoLegivel(p.status, ROTULO_DO_STATUS),
           prazo: p.prazo ? p.prazo.toISOString().slice(0, 10) : null,
-          situacaoDoPrazo: p.situacaoDoPrazo,
+          situacaoDoPrazo: situacaoLegivel(p.situacaoDoPrazo, ROTULO_DO_PRAZO),
           mensagens: p.mensagens,
+          // A ficha da pendência: a Lígia aponta o item pelo título, com este link, e nunca pelo id.
+          link: linkDaTela(p.titulo, `/pendencias/${p.id}`),
         })),
       };
     },
@@ -270,7 +296,10 @@ export const FERRAMENTAS_DE_BPO: Record<string, FerramentaRegistrada> = {
               pendentes: g._count._all,
               soma: Number(g._sum.amount ?? 0),
               maisAntiga: g._min.postedAt ? g._min.postedAt.toISOString().slice(0, 10) : null,
-              link: link("/conciliacao", { empresa: c?.company.id, conta: c?.id }),
+              link: linkDaTela(
+                `Abrir a conciliação${c?.nickname ? ` da conta ${c.nickname}` : ""}`,
+                link("/conciliacao", { empresa: c?.company.id, conta: c?.id })
+              ),
             };
           })
           .sort((a, b) => b.pendentes - a.pendentes),
@@ -314,7 +343,7 @@ export const FERRAMENTAS_DE_BPO: Record<string, FerramentaRegistrada> = {
       return {
         quantidade: linhas.length,
         soma: Math.round(linhas.reduce((n, l) => n + Number(l.amount), 0) * 100) / 100,
-        link: link("/aprovacoes", {}),
+        link: linkDaTela("Abrir as aprovações", link("/aprovacoes", {})),
         contas: linhas.slice(0, LINHAS).map((l) => ({
           empresa: nomeExibicao(l.company),
           fornecedor: l.counterparty.name,

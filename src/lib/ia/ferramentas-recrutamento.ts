@@ -22,6 +22,8 @@
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferramentas";
+import { VAGA_STATUS_LABEL } from "@/lib/vagaStatus";
+import { linkDaTela, situacaoLegivel } from "@/lib/ia/legivel";
 
 /** Lê o id da vaga do recorte, ou falha alto. */
 function vagaDoEscopo(ctx: ContextoDaFerramenta): string {
@@ -75,6 +77,7 @@ export async function lerVaga(where: Prisma.VagaWhereInput) {
   const vaga = await getPrisma().vaga.findFirst({
     where,
     select: {
+      id: true,
       title: true,
       quantity: true,
       status: true,
@@ -92,9 +95,12 @@ export async function lerVaga(where: Prisma.VagaWhereInput) {
     cargo: vaga.cargo?.name ?? null,
     empresa: vaga.company.tradeName || vaga.company.name,
     vagas: vaga.quantity,
-    status: vaga.status,
-    prioridade: vaga.priority,
+    // Situação em palavras e a ficha com link (13/10/2026): a Lígia escreve
+    // "em andamento" e aponta a vaga pelo título, nunca pelo código nem pelo id.
+    status: situacaoLegivel(vaga.status, VAGA_STATUS_LABEL),
+    prioridade: situacaoLegivel(vaga.priority),
     abertaEm: vaga.openedAt.toISOString().slice(0, 10),
+    link: linkDaTela(vaga.title, `/vagas/${vaga.id}`),
     descricaoPublica: vaga.publicDescription,
     anotacoesInternas: vaga.notes,
   };
@@ -112,7 +118,7 @@ export async function lerCandidatos(where: Prisma.CandidaturaWhereInput) {
       origin: true,
       resumeUrl: true,
       createdAt: true,
-      person: { select: { name: true, city: true, stateCode: true, education: true } },
+      person: { select: { id: true, name: true, city: true, stateCode: true, education: true } },
       _count: { select: { scorecards: true } },
       notas: { select: { score: true, faixa: true }, orderBy: { createdAt: "desc" }, take: 1 },
     },
@@ -121,13 +127,14 @@ export async function lerCandidatos(where: Prisma.CandidaturaWhereInput) {
     candidaturaId: c.id,
     vagaId: c.vagaId,
     nome: c.person.name,
-    etapa: c.stage,
-    situacao: c.status,
+    etapa: situacaoLegivel(c.stage),
+    situacao: situacaoLegivel(c.status),
     cidade: c.person.city,
     uf: c.person.stateCode,
     escolaridade: c.person.education,
-    origem: c.origin,
+    origem: situacaoLegivel(c.origin),
     temCurriculo: c.resumeUrl !== null,
+    link: linkDaTela(c.person.name, `/candidatos/${c.person.id}`),
     entrevistas: c._count.scorecards,
     notaDaTriagem: c.notas[0] ? { nota: c.notas[0].score, faixa: c.notas[0].faixa } : null,
     inscritoEm: c.createdAt.toISOString().slice(0, 10),
@@ -148,7 +155,7 @@ export async function lerCandidatura(where: Prisma.CandidaturaWhereInput) {
       vaga: { select: { id: true, title: true } },
       notas: { select: { score: true, faixa: true, resumo: true }, orderBy: { createdAt: "desc" }, take: 1 },
       person: {
-        select: { name: true, email: true, phone: true, city: true, stateCode: true, education: true },
+        select: { id: true, name: true, email: true, phone: true, city: true, stateCode: true, education: true },
       },
       scorecards: {
         select: {
@@ -172,21 +179,22 @@ export async function lerCandidatura(where: Prisma.CandidaturaWhereInput) {
     cidade: c.person.city,
     uf: c.person.stateCode,
     escolaridade: c.person.education,
-    etapa: c.stage,
-    situacao: c.status,
-    origem: c.origin,
+    etapa: situacaoLegivel(c.stage),
+    situacao: situacaoLegivel(c.status),
+    origem: situacaoLegivel(c.origin),
+    link: linkDaTela(c.person.name, `/candidatos/${c.person.id}`),
     motivoDeReprovacao: c.rejectionReason,
     motivoDeDesistencia: c.withdrawalReason,
     inscritoEm: c.createdAt.toISOString().slice(0, 10),
     notaDaTriagem: c.notas[0] ? { nota: c.notas[0].score, faixa: c.notas[0].faixa, resumo: c.notas[0].resumo } : null,
     entrevistas: c.scorecards.map((s) => ({
       avaliador: s.evaluator.name,
-      etapa: s.stage,
+      etapa: situacaoLegivel(s.stage),
       comunicacao: s.comunicacao,
       tecnico: s.tecnico,
       fitCultural: s.fitCultural,
       experiencia: s.experiencia,
-      recomendacao: s.recommendation,
+      recomendacao: situacaoLegivel(s.recommendation),
       observacoes: s.notes,
     })),
   };
