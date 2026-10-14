@@ -97,3 +97,26 @@ export function devolverTitulo(el: ElementoDaDica, guardado: TituloGuardado): vo
   if (guardado.descricaoPosta && el.getAttribute("aria-description") === guardado.titulo) el.removeAttribute("aria-description");
   if (!el.hasAttribute("title")) el.setAttribute("title", guardado.titulo);
 }
+
+// ─── Onde a dica abre ───────────────────────────────────────────────────────
+
+/** O retângulo do elemento, como o `getBoundingClientRect` devolve. */
+export type RetanguloDaDica = { top: number; bottom: number; left: number; right: number; width: number; height: number };
+
+/** O ponto em que a dica se apoia e de que lado do elemento ela fica. */
+export type PosicaoDaDica = { x: number; y: number; lado: "cima" | "baixo" | "direita" };
+
+/** Distância da dica à direita do elemento: o ícone da faixa do menu fica 12px para dentro dela. */
+export const AFASTAMENTO_A_DIREITA = 16;
+
+/**
+ * Onde a dica abre. Por padrão, centrada acima do elemento (abaixo, quando ele
+ * está colado no topo da janela). Com `data-dica-lado="direita"`, à direita,
+ * na meia altura — a faixa de ícones do menu (14/10/2026) fica colada na borda
+ * esquerda da janela, e a dica centrada em cima do ícone saía cortada.
+ */
+export function posicaoDaDica(r: RetanguloDaDica, ladoPedido: string | null): PosicaoDaDica {
+  if (ladoPedido === "direita") return { x: r.right + AFASTAMENTO_A_DIREITA, y: r.top + r.height / 2, lado: "direita" };
+  const embaixo = r.top < 56;
+  return { x: r.left + r.width / 2, y: embaixo ? r.bottom + 8 : r.top - 8, lado: embaixo ? "baixo" : "cima" };
+}
