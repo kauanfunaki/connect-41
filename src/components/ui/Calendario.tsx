@@ -218,27 +218,35 @@ export function Calendario({ valor, periodo, previa = false, onEscolher, min, ma
 /**
  * Grade de meses (e, clicando no ano, de anos). É o calendário inteiro do campo
  * de mês e a troca rápida do de data.
+ *
+ * Com `onEscolherAno`, embaixo dos meses vem "Ano inteiro de 2026" — o ano à
+ * vista, que acompanha o ‹ › (14/10/2026, DRE do portal).
  */
 export function SeletorDeMesEAno({
   visao,
   setVisao,
   ano: anoInicial,
   selecionado,
+  anoSelecionado,
   hoje,
   min,
   max,
   onEscolher,
+  onEscolherAno,
 }: {
   visao: "meses" | "anos";
   setVisao: (v: Visao) => void;
   ano: number;
   /** Mês marcado como escolhido. */
   selecionado?: Mes | null;
+  /** Ano inteiro marcado como escolhido. */
+  anoSelecionado?: number | null;
   hoje: string;
   /** "AAAA-MM". */
   min?: string;
   max?: string;
   onEscolher: (ano: number, mes: number) => void;
+  onEscolherAno?: (ano: number) => void;
 }) {
   const [ano, setAno] = useState(anoInicial);
   const [inicioDosAnos, setInicioDosAnos] = useState(anoInicial - 7);
@@ -309,6 +317,19 @@ export function SeletorDeMesEAno({
           );
         })}
       </div>
+      {onEscolherAno && (
+        <div className="grid mt-1">
+          <BotaoDaGrade
+            ativo={anoSelecionado === ano}
+            atual={false}
+            disabled={Boolean((min && `${ano}-12` < min) || (max && `${ano}-01` > max))}
+            onClick={() => onEscolherAno(ano)}
+          >
+            {/* O botão capitaliza os meses ("Out"); a frase fica como se escreve. */}
+            <span className="normal-case">Ano inteiro de {ano}</span>
+          </BotaoDaGrade>
+        </div>
+      )}
     </div>
   );
 }
