@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { formatCalendarDate } from "@/lib/format";
 import {
@@ -13,10 +13,11 @@ import {
   temFiltro,
   urlDaListaEm,
 } from "@/lib/carreiras/portal";
-import { MARCA_41_CARREIRAS, enderecoPublicoDoPortal } from "@/lib/carreiras/enderecoDeCarreiras";
+import { MARCA_41_CARREIRAS, enderecoPublicoDoPortal, imagemDeCompartilhamento } from "@/lib/carreiras/enderecoDeCarreiras";
 import { portalDaRequisicao } from "@/lib/carreiras/portalDaRequisicao";
+import { metadadosDo41 } from "@/lib/carreiras/metadados41";
 import { escritorioDoPortal, vagasAbertasDoPortal } from "@/lib/carreiras/vagasDoPortal";
-import { HubDe41Carreiras } from "@/components/carreiras/HubDe41Carreiras";
+import { Capa41 } from "@/components/carreiras/41/Capa41";
 import { Briefcase, SearchX, Search, UserRound, X } from "lucide-react";
 import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
@@ -38,18 +39,16 @@ export async function generateMetadata({
   if (!portal) return { title: "Página não encontrada", robots: { index: false, follow: false } };
   const url = enderecoPublicoDoPortal(slug, { tipo: "lista" });
 
-  // A lista do escritório da 41 é o hub do 41 Carreiras (14/10/2026), com a
-  // marca dele — e o canônico no endereço principal do portal.
+  // Da 41, a capa do 41 Carreiras (15/10/2026), com a imagem de
+  // compartilhamento e o canônico no endereço principal do portal.
   if (portal.da41) {
-    const title = `Vagas abertas — ${MARCA_41_CARREIRAS.nome}`;
-    const description = `Vagas em empresas clientes da ${MARCA_41_CARREIRAS.escritorio}. Veja as oportunidades abertas e candidate-se pelo site.`;
-    return {
-      title: { absolute: title },
-      description,
-      ...(url ? { alternates: { canonical: url } } : {}),
-      openGraph: { type: "website", title, description, ...(url ? { url } : {}), siteName: MARCA_41_CARREIRAS.nome, locale: "pt_BR" },
-      twitter: { card: "summary", title, description },
-    };
+    return metadadosDo41({
+      titulo: `${MARCA_41_CARREIRAS.nome} — vagas abertas`,
+      descricao: `Vagas em empresas cujos processos seletivos são conduzidos pela ${MARCA_41_CARREIRAS.recrutamento}. Encontre a sua e candidate-se pelo site, em poucos minutos.`,
+      url,
+      imagem: imagemDeCompartilhamento(slug, null),
+      imagemAlt: `${MARCA_41_CARREIRAS.nome}: vagas abertas`,
+    });
   }
 
   const prisma = getPrisma();
@@ -92,24 +91,16 @@ export default async function CarreirasPage({
 
   const agora = new Date();
   const todas = await vagasAbertasDoPortal(tenant.id, agora);
+
+  // Da 41: a capa do 41 Carreiras (15/10/2026). A lista com busca e filtros
+  // mudou para `/vagas`; um link antigo da capa com filtros vai para lá.
+  if (portal.da41) {
+    if (temFiltro(filtros) || busca.pagina) redirect(urlDaListaEm(rotas.vagas, filtros));
+    return <Capa41 slug={slug} rotas={rotas} vagas={todas} agora={agora} />;
+  }
+
   const filtradas = filtrarVagas(todas, filtros);
   const { itens: vagas, pagina, totalDePaginas } = paginar(filtradas, busca.pagina);
-
-  if (portal.da41) {
-    return (
-      <HubDe41Carreiras
-        logo={tenant.logoUrl}
-        rotas={rotas}
-        todas={todas}
-        vagas={vagas}
-        filtradas={filtradas.length}
-        filtros={filtros}
-        pagina={pagina}
-        totalDePaginas={totalDePaginas}
-        agora={agora}
-      />
-    );
-  }
 
   const opcoes = opcoesDosFiltros(todas);
   const filtrando = temFiltro(filtros);

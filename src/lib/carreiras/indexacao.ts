@@ -14,7 +14,10 @@ export function robotsDoPortal(principal: string): string {
 const ESCAPE: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" };
 const xml = (t: string) => t.replace(/[&<>"']/g, (c) => ESCAPE[c]!);
 
-/** O sitemap: o hub e cada vaga aberta, com a data da última alteração. */
+/**
+ * O sitemap: a capa, a lista de vagas, o aviso de privacidade (15/10/2026) e
+ * cada vaga aberta, com a data da última alteração.
+ */
 export function sitemapDoPortal(principal: string, vagas: { id: string; updatedAt: Date }[]): string {
   const url = (loc: string, lastmod?: Date) =>
     `  <url><loc>${xml(loc)}</loc>${lastmod ? `<lastmod>${lastmod.toISOString().slice(0, 10)}</lastmod>` : ""}</url>`;
@@ -22,6 +25,8 @@ export function sitemapDoPortal(principal: string, vagas: { id: string; updatedA
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     url(`https://${principal}/`),
+    url(`https://${principal}/vagas`),
+    url(`https://${principal}/privacidade`),
     ...vagas.map((v) => url(`https://${principal}/vagas/${encodeURIComponent(v.id)}`, v.updatedAt)),
     "</urlset>",
     "",
