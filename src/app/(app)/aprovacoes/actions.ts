@@ -14,6 +14,7 @@ import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { lerContasDasEmpresas } from "@/lib/portal/empresasDaContaDb";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { decimalDeCentavos } from "@/lib/financeiro/manual";
 import { moeda } from "@/lib/financeiro/formato";
@@ -192,8 +193,9 @@ export async function reprovarPelaEquipe(entryId: string, motivo: string): Promi
  * Cria ou atualiza a alçada de um usuário do portal numa empresa.
  *
  * Só a coordenação: a alçada decide quem libera dinheiro do cliente. O usuário
- * do portal precisa ser do grupo da empresa — alçada para quem não enxerga a
- * empresa no portal seria um aprovador que nunca vê o que aprova.
+ * do portal precisa enxergar a empresa (ligado a ela, ou à matriz com as
+ * filiais — desde 14/10/2026; antes, ser do cliente dela) — alçada para quem
+ * não enxerga a empresa no portal seria um aprovador que nunca vê o que aprova.
  */
 export async function salvarAlcada(formData: FormData): Promise<Resultado> {
   const c = await contexto();
@@ -207,15 +209,17 @@ export async function salvarAlcada(formData: FormData): Promise<Resultado> {
 
   const empresa = await c.prisma.company.findFirst({
     where: { id: companyId, tenantId: c.tenantId },
-    select: { id: true, clientGroupId: true },
+    select: { id: true },
   });
   if (!empresa) return { error: "Empresa não encontrada." };
-  if (!empresa.clientGroupId) return { error: "Esta empresa não está em nenhum grupo do portal." };
-  const usuario = await c.prisma.portalUser.findFirst({
-    where: { id: portalUserId, tenantId: c.tenantId, clientGroupId: empresa.clientGroupId },
-    select: { id: true, email: true },
-  });
-  if (!usuario) return { error: "Usuário do portal não encontrado no grupo desta empresa." };
+  const veAEmpresa = (await lerContasDasEmpresas(c.tenantId, [empresa.id])).get(empresa.id)?.has(portalUserId) ?? false;
+  const usuario = veAEmpresa
+    ? await c.prisma.portalUser.findFirst({
+        where: { id: portalUserId, tenantId: c.tenantId },
+        select: { id: true, email: true },
+      })
+    : null;
+  if (!usuario) return { error: "Este acesso do portal não enxerga esta empresa. Ligue a empresa ao acesso na ficha dela, em “Acesso ao portal”." };
 
   const maxAmount = decimalDeCentavos(teto.centavos);
   let id: string;

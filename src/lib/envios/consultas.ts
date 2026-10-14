@@ -6,6 +6,7 @@
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { nomeExibicao } from "@/lib/companyName";
+import { usuariosAtivosDasEmpresas } from "@/lib/portal/empresasDaContaDb";
 import { generateRecipientToken, recordClientDocumentSignature, recordClientDocumentView } from "@/lib/clientDocuments";
 import {
   emailDoDestinatario,
@@ -87,23 +88,21 @@ export async function listarEnviosDaEquipe(
 }
 
 /**
- * Quem, entre os destinatários de um envio, tem acesso ao portal do cliente da
- * empresa — para a ficha do envio dizer "pelo portal" em vez de "e-mail não
- * saiu" na linha que o portal criou (sem `sentAt`).
+ * Quem, entre os destinatários de um envio, tem acesso ao portal da empresa —
+ * para a ficha do envio dizer "pelo portal" em vez de "e-mail não saiu" na
+ * linha que o portal criou (sem `sentAt`). Desde 14/10/2026, o acesso é o
+ * ligado à empresa (ou à matriz dela, com as filiais), e não mais o Cliente.
  */
-export async function emailsComPortal(tenantId: string, clientGroupId: string | null, emails: string[]): Promise<Set<string>> {
-  if (!clientGroupId || emails.length === 0) return new Set();
-  const contas = await getPrisma().portalUser.findMany({
-    where: { tenantId, clientGroupId, active: true, email: { in: emails.map(emailDoDestinatario) } },
-    select: { email: true },
-  });
-  return new Set(contas.map((c) => emailDoDestinatario(c.email)));
+export async function emailsComPortal(tenantId: string, companyId: string, emails: string[]): Promise<Set<string>> {
+  if (emails.length === 0) return new Set();
+  const procurados = new Set(emails.map(emailDoDestinatario));
+  const contas = await usuariosAtivosDasEmpresas(tenantId, [companyId]);
+  return new Set(contas.map((c) => emailDoDestinatario(c.email)).filter((e) => procurados.has(e)));
 }
 
-/** Quantas pessoas do cliente da empresa veem o envio no portal, depois de publicado. */
-export async function pessoasNoPortal(tenantId: string, clientGroupId: string | null): Promise<number> {
-  if (!clientGroupId) return 0;
-  return getPrisma().portalUser.count({ where: { tenantId, clientGroupId, active: true } });
+/** Quantas pessoas com acesso à empresa veem o envio no portal, depois de publicado. */
+export async function pessoasNoPortal(tenantId: string, companyId: string): Promise<number> {
+  return (await usuariosAtivosDasEmpresas(tenantId, [companyId])).length;
 }
 
 // ─── Lado do cliente ─────────────────────────────────────────────────────────
