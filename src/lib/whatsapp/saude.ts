@@ -37,7 +37,10 @@ export type SaudeDaConexao = {
   motivos: string[];
 };
 
-const PESO: Record<NivelDeSaude, number> = { ok: 0, atencao: 1, problema: 2 };
+export const PESO_DO_NIVEL: Record<NivelDeSaude, number> = { ok: 0, atencao: 1, problema: 2 };
+
+/** O título do achado das conversas paradas com o assistente — a tela põe o número ao lado. */
+export const TITULO_SEM_RESPOSTA = "Candidatos sem resposta";
 
 export function avaliarConexao(s: SinaisDaConexao, agora: Date): SaudeDaConexao {
   const achados: { nivel: NivelDeSaude; titulo: string; motivo: string }[] = [];
@@ -83,7 +86,7 @@ export function avaliarConexao(s: SinaisDaConexao, agora: Date): SaudeDaConexao 
   if (s.esperandoRobo > 0) {
     achados.push({
       nivel: "atencao",
-      titulo: "Candidatos sem resposta",
+      titulo: TITULO_SEM_RESPOSTA,
       motivo:
         s.esperandoRobo === 1
           ? `1 conversa com o assistente está sem resposta há mais de ${MINUTOS_SEM_RESPOSTA_DO_ROBO} minutos.`
@@ -101,7 +104,7 @@ export function avaliarConexao(s: SinaisDaConexao, agora: Date): SaudeDaConexao 
 
   // O título é o do achado mais grave; os motivos vêm todos, do mais grave ao
   // mais leve — quem olha precisa saber de tudo, mas lê primeiro o que para.
-  const ordenados = [...achados].sort((a, b) => PESO[b.nivel] - PESO[a.nivel]);
+  const ordenados = [...achados].sort((a, b) => PESO_DO_NIVEL[b.nivel] - PESO_DO_NIVEL[a.nivel]);
   return {
     nivel: ordenados[0]!.nivel,
     titulo: ordenados[0]!.titulo,
