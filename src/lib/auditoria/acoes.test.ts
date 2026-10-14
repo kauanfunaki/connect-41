@@ -148,7 +148,15 @@ describe("área pela começo do código", () => {
   });
 
   it("assinaturas, planos e o site ficam em Clientes e planos — inclusive os códigos que chegam com o PR #192", () => {
-    for (const c of ["subscription.create", "subscription_plan.update", "subscription_plan.site.update", "site.prices.show", "site.prices.hide"]) {
+    for (const c of [
+      "subscription.create",
+      "subscription_plan.update",
+      "subscription_plan.site.update",
+      "site.prices.show",
+      "site.prices.hide",
+      "site.custom_card.show",
+      "site.custom_card.hide",
+    ]) {
       expect(ACOES[c], c).toBeDefined();
       expect(areaDaAcao(c), c).toBe("planos");
     }

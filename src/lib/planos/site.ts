@@ -9,8 +9,10 @@
 import { getPrisma } from "@/lib/prisma";
 import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import {
+  CHAVE_CARTAO_SOB_MEDIDA,
   CHAVE_PRECOS_NO_SITE,
   camposDaLinha,
+  lerCartaoSobMedida,
   lerMostrarPrecos,
   montarPlanosDoSite,
   type CamposDoSite,
@@ -24,6 +26,8 @@ export type AjustesDoSite = {
   /** Os campos do site de cada plano que já tem linha em `planos_no_site`. */
   porPlano: Map<string, CamposDoSite>;
   mostrarPrecos: boolean;
+  /** O cartão "Connect sob medida": ligado sem a linha na tabela (o padrão). */
+  cartaoSobMedida: boolean;
   situacao: SituacaoDoSite;
 };
 
@@ -31,17 +35,23 @@ export type AjustesDoSite = {
 // avisa uma vez por processo.
 let avisouSemTabela = false;
 
-/** Os ajustes do site de todos os planos e o interruptor dos preços. Nunca lança. */
+/**
+ * Os ajustes do site de todos os planos e os dois interruptores (preços e o
+ * cartão "Connect sob medida"), numa leitura só da tabela de configurações.
+ * Nunca lança.
+ */
 export async function lerAjustesDoSite(): Promise<AjustesDoSite> {
   try {
     const prisma = getPrisma();
-    const [linhas, precos] = await Promise.all([
+    const [linhas, chaves] = await Promise.all([
       prisma.planoNoSite.findMany(),
-      prisma.configuracaoDoConnect.findUnique({ where: { chave: CHAVE_PRECOS_NO_SITE } }),
+      prisma.configuracaoDoConnect.findMany({ where: { chave: { in: [CHAVE_PRECOS_NO_SITE, CHAVE_CARTAO_SOB_MEDIDA] } } }),
     ]);
+    const valor = (chave: string) => chaves.find((c) => c.chave === chave)?.valor;
     return {
       porPlano: new Map(linhas.map((l) => [l.planId, camposDaLinha(l)])),
-      mostrarPrecos: lerMostrarPrecos(precos?.valor),
+      mostrarPrecos: lerMostrarPrecos(valor(CHAVE_PRECOS_NO_SITE)),
+      cartaoSobMedida: lerCartaoSobMedida(valor(CHAVE_CARTAO_SOB_MEDIDA)),
       situacao: "ok",
     };
   } catch (err) {
@@ -50,10 +60,10 @@ export async function lerAjustesDoSite(): Promise<AjustesDoSite> {
         avisouSemTabela = true;
         console.warn("[planos no site] tabelas planos_no_site/configuracoes_do_connect ainda não existem: a seção Planos fica fora do site até rodar a migration.");
       }
-      return { porPlano: new Map(), mostrarPrecos: false, situacao: "sem-tabela" };
+      return { porPlano: new Map(), mostrarPrecos: false, cartaoSobMedida: true, situacao: "sem-tabela" };
     }
     console.error("[planos no site] ajustes", err);
-    return { porPlano: new Map(), mostrarPrecos: false, situacao: "erro" };
+    return { porPlano: new Map(), mostrarPrecos: false, cartaoSobMedida: true, situacao: "erro" };
   }
 }
 
@@ -79,7 +89,7 @@ async function consultarPlanosDoSite(): Promise<PlanosDoSite | null> {
       active: true,
     },
   });
-  return montarPlanosDoSite(planos, ajustes.porPlano, ajustes.mostrarPrecos);
+  return montarPlanosDoSite(planos, ajustes.porPlano, ajustes.mostrarPrecos, ajustes.cartaoSobMedida);
 }
 
 /**

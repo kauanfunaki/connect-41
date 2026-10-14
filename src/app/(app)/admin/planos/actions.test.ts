@@ -21,7 +21,7 @@ vi.mock("@/lib/auth/context", () => ({ getAuthContext: async () => m.ctx }));
 vi.mock("@/lib/audit", () => ({ logAudit: m.logAudit }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
-const { editarPlano, definirPrecosNoSite } = await import("./actions");
+const { editarPlano, definirPrecosNoSite, definirCartaoSobMedida } = await import("./actions");
 
 const semTabela = () => Object.assign(new Error("The table `planos_no_site` does not exist"), { code: "P2021" });
 
@@ -192,6 +192,50 @@ describe("definirPrecosNoSite", () => {
   it("sem a tabela: avisa, sem auditar", async () => {
     m.db.configuracaoDoConnect.upsert.mockRejectedValue(semTabela());
     expect(await definirPrecosNoSite(true)).toEqual({ erro: "Falta a atualização do banco desta versão do Connect." });
+    expect(m.logAudit).not.toHaveBeenCalled();
+  });
+
+  it("banco recusando: pede para tentar de novo, sem auditar", async () => {
+    m.db.configuracaoDoConnect.upsert.mockRejectedValue(new Error("Connection refused"));
+    expect(await definirPrecosNoSite(true)).toEqual({ erro: "Não foi possível salvar. Tente de novo." });
+    expect(m.logAudit).not.toHaveBeenCalled();
+  });
+});
+
+// O cartão "Connect sob medida" da seção Planos do site (14/10/2026): começa
+// ligado; o Super Admin esconde e mostra de novo.
+describe("definirCartaoSobMedida", () => {
+  it.each(["ADMIN", "SECTOR_ADMIN", "SECTOR_USER", "READONLY"] as UserRole[])("%s não mexe: nada grava", async (role) => {
+    m.ctx.role = role;
+    expect(await definirCartaoSobMedida(false)).toEqual({ erro: "Sem permissão." });
+    expect(m.db.configuracaoDoConnect.upsert).not.toHaveBeenCalled();
+    expect(m.logAudit).not.toHaveBeenCalled();
+  });
+
+  it("esconde e mostra, na chave do cartão, e audita cada troca", async () => {
+    expect(await definirCartaoSobMedida(false)).toEqual({ ok: true });
+    expect(m.db.configuracaoDoConnect.upsert).toHaveBeenCalledWith({
+      where: { chave: "site.cartaoSobMedida" },
+      create: { chave: "site.cartaoSobMedida", valor: "false" },
+      update: { valor: "false" },
+    });
+    expect(m.logAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "site.custom_card.hide", entityType: "ConfiguracaoDoConnect", entityId: "site.cartaoSobMedida" }),
+    );
+    expect(await definirCartaoSobMedida(true)).toEqual({ ok: true });
+    expect(m.db.configuracaoDoConnect.upsert).toHaveBeenLastCalledWith(expect.objectContaining({ update: { valor: "true" } }));
+    expect(m.logAudit).toHaveBeenLastCalledWith(expect.objectContaining({ action: "site.custom_card.show" }));
+    expect(m.revalidatePath).toHaveBeenCalledWith("/");
+  });
+
+  it("pedido que não é sim ou não", async () => {
+    expect(await definirCartaoSobMedida("false" as unknown as boolean)).toEqual({ erro: "Pedido inválido." });
+    expect(m.db.configuracaoDoConnect.upsert).not.toHaveBeenCalled();
+  });
+
+  it("sem a tabela: avisa, sem auditar", async () => {
+    m.db.configuracaoDoConnect.upsert.mockRejectedValue(semTabela());
+    expect(await definirCartaoSobMedida(false)).toEqual({ erro: "Falta a atualização do banco desta versão do Connect." });
     expect(m.logAudit).not.toHaveBeenCalled();
   });
 });
