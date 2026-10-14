@@ -224,8 +224,9 @@ function FormDaSecao({
  * três cartões na largura toda, com o Contato ocupando duas de quatro colunas.
  *
  * Cada parte tem o seu lápis (escolha 5A): clicar troca só aquela parte por
- * campos, com Salvar e Cancelar ali mesmo, sem sair da ficha. O formulário
- * inteiro continua em "⋯ › Editar tudo".
+ * campos, com Salvar e Cancelar ali mesmo, sem sair da ficha. É o único jeito
+ * de corrigir o candidato: o formulário inteiro ("⋯ › Editar tudo") saiu em
+ * 14/10/2026 — estes três blocos cobrem todos os campos que ele tinha.
  */
 /** Uma parte do bloco — o título pequeno, o lápis e a leitura ou os campos. */
 function Parte({
