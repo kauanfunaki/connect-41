@@ -225,8 +225,13 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "portal.user.updated": e("editou o acesso ao portal de"),
   "portal.user.enabled": e("reativou o acesso ao portal de"),
   "portal.user.disabled": e("desativou o acesso ao portal de"),
+  // Até 14/10/2026, quando o acesso era de um Cliente: fica para o histórico.
   "portal.user.reassigned": e("passou para outro cliente o acesso ao portal de"),
   "portal.user.deleted": x("excluiu o acesso ao portal de"),
+  // Portal por empresa (14/10/2026): uma linha por empresa ligada ou desligada.
+  "portal.user.company.linked": e("ligou uma empresa ao acesso ao portal de"),
+  "portal.user.company.unlinked": e("desligou uma empresa do acesso ao portal de"),
+  "portal.user.company.filiais": e("mudou o “incluir filiais” do acesso ao portal de"),
   "portal.tela.liberada": e("liberou no portal a tela", { chaveDoNome: "tela" }),
   "portal.tela.bloqueada": e("bloqueou no portal a tela", { chaveDoNome: "tela" }),
 

@@ -14,7 +14,7 @@ vi.mock("@/app/(portal)/usuario", () => ({ sessaoAtivaDoPortal: async () => m.se
 
 const { concluirTutorialDoPortal } = await import("./tutorial-actions");
 
-const SESSAO: PortalAccessTokenPayload = { kind: "portal", sub: "pu1", tenantId: "t1", clientGroupId: "g1" };
+const SESSAO: PortalAccessTokenPayload = { kind: "portal", sub: "pu1", tenantId: "t1" };
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -13,7 +13,7 @@ import type { ResumoDoClienteParaExcluir } from "@/app/(app)/clientes/actions";
 
 export type AcoesDeExclusaoDoCliente = {
   resumoAction: (id: string) => Promise<{ erro: string } | ResumoDoClienteParaExcluir>;
-  excluirAction: (id: string, confirmacao: string, acessosVistos: string[]) => Promise<{ erro: string } | { ok: true }>;
+  excluirAction: (id: string, confirmacao: string) => Promise<{ erro: string } | { ok: true }>;
 };
 
 type Estado = {
@@ -29,9 +29,9 @@ type Estado = {
  * janela; `dialogo` vai uma vez na árvore, como o `useConfirm`.
  *
  * - Sem empresa e sem acesso do portal: só o cliente sai.
- * - Com eles: a janela lista os acessos (excluídos junto) e as empresas
- *   (continuam cadastradas, sem cliente), e o botão diz o que vai acontecer —
- *   "Excluir o cliente e os 2 acessos do portal".
+ * - Com eles: a janela lista as empresas e os acessos — desde 14/10/2026 os
+ *   dois continuam: as empresas sem cliente, e os acessos ligados às empresas
+ *   deles, como já estavam (o cliente não decide mais o que o portal mostra).
  */
 export function useExclusaoDeCliente({ resumoAction, excluirAction }: AcoesDeExclusaoDoCliente, aoExcluir?: () => void) {
   const [estado, setEstado] = useState<Estado | null>(null);
@@ -57,9 +57,9 @@ export function useExclusaoDeCliente({ resumoAction, excluirAction }: AcoesDeExc
 
   function confirmar(digitado: string) {
     if (!estado?.resumo) return;
-    const { cliente, resumo } = estado;
+    const { cliente } = estado;
     startExcluir(async () => {
-      const r = await excluirAction(cliente.id, digitado, resumo.acessos.map((a) => a.id)).catch(() => ({
+      const r = await excluirAction(cliente.id, digitado).catch(() => ({
         erro: "Não foi possível excluir. Tente de novo.",
       }));
       if ("erro" in r) {
@@ -82,7 +82,7 @@ export function useExclusaoDeCliente({ resumoAction, excluirAction }: AcoesDeExc
       titulo={`Excluir o cliente ${estado.cliente.nome}?`}
       descricao="O cliente é apagado de vez. A raiz do CNPJ dele fica livre para outro cadastro."
       nome={estado.cliente.nome}
-      rotuloDoBotao={acessos > 0 ? `Excluir o cliente e ${acessos === 1 ? "o acesso" : `os ${acessos} acessos`} do portal` : "Excluir cliente"}
+      rotuloDoBotao="Excluir cliente"
       carregando={!resumo && !estado.erroDoResumo}
       indisponivel={!!estado.erroDoResumo}
       pending={excluindo}
@@ -97,39 +97,38 @@ export function useExclusaoDeCliente({ resumoAction, excluirAction }: AcoesDeExc
           <Aviso tom="neutro">Este cliente não tem empresas nem acessos do portal. Só ele é apagado.</Aviso>
         ) : (
           <>
-            {acessos > 0 && (
-              <div className="space-y-1.5">
-                <ListaDaExclusao
-                  titulo={`${acessos === 1 ? "O acesso do portal é excluído" : `Os ${acessos} acessos do portal são excluídos`} junto:`}
-                  itens={resumo.acessos.map((a) => `${a.nome} (${a.email})${a.ativo ? "" : " — desativado"}`)}
-                />
-                <p className="text-helper text-fg-muted">
-                  O que eles fizeram no portal — mensagens, arquivos, aprovações — continua guardado, sem o nome de quem fez.
-                </p>
-              </div>
-            )}
             {empresas > 0 && (
               <div className="space-y-1.5">
                 <ListaDaExclusao titulo={`${plural(empresas, "empresa", "empresas")} deste cliente:`} itens={resumo.empresas.map((e) => e.nome)} />
-                <Aviso tom="atencao">
-                  {empresas === 1
-                    ? "A empresa continua cadastrada, sem cliente — e deixa de aparecer no portal."
-                    : `As ${empresas} empresas continuam cadastradas, sem cliente — e deixam de aparecer no portal.`}
-                </Aviso>
+                <p className="text-helper text-fg-muted">
+                  {empresas === 1 ? "A empresa continua cadastrada, sem cliente." : `As ${empresas} empresas continuam cadastradas, sem cliente.`}
+                </p>
+              </div>
+            )}
+            {acessos > 0 && (
+              <div className="space-y-1.5">
+                <ListaDaExclusao
+                  titulo={`${acessos === 1 ? "O acesso do portal continua" : `Os ${acessos} acessos do portal continuam`}:`}
+                  itens={resumo.acessos.map((a) => `${a.nome} (${a.email})${a.ativo ? "" : " — desativado"}`)}
+                />
+                <p className="text-helper text-fg-muted">
+                  O acesso é ligado direto às empresas, na ficha de cada uma (“Acesso ao portal”): excluir o cliente não muda o
+                  que a pessoa vê no portal.
+                </p>
               </div>
             )}
           </>
         ))}
       {resumo?.raiz && (
         <p className="text-helper text-fg-muted">
-          Os documentos fiscais da raiz {formatCnpj(resumo.raiz)} deixam de ser buscados no SPED, a não ser que outro
-          cliente tenha essa raiz. O que já foi baixado continua nas empresas.
+          Os documentos fiscais da raiz {formatCnpj(resumo.raiz)} continuam sendo buscados no SPED: a lista de raízes do SPED
+          não depende mais do cliente.
         </p>
       )}
       {resumo && resumo.comunicados > 0 && (
         <p className="text-helper text-fg-muted">
           {resumo.comunicados === 1 ? "O comunicado enviado" : `Os ${resumo.comunicados} comunicados enviados`} a este
-          cliente {resumo.comunicados === 1 ? "continua" : "continuam"} na lista de comunicados, sem ele entre os destinatários.
+          cliente {resumo.comunicados === 1 ? "continua" : "continuam"} no portal de quem tem acesso às empresas dele.
         </p>
       )}
     </ExclusaoConfirmada>

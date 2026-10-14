@@ -12,6 +12,7 @@ import { getPrisma } from "@/lib/prisma";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { listarDocumentos, ErroDoSped, type CredenciaisSped } from "./client";
 import { credenciaisDoSped } from "./credenciais";
+import { raizesSincronizadas } from "./raizesSincronizadas";
 import { mapearDocumento, empresaDaLinha } from "./mapeamento";
 
 export type ResultadoDaRaiz = {
@@ -222,24 +223,19 @@ export type ResultadoDaSincronizacao = {
 };
 
 /**
- * Sincroniza todas as raízes de CNPJ que o tenant tem cadastradas.
+ * Sincroniza todas as raízes de CNPJ que o tenant tem na busca do SPED.
  *
- * As raízes saem de `ClientGroup.cnpjRoot` — que existe desde o agrupamento de
- * clientes de agosto e é exatamente o parâmetro que a API pede. Cliente sem raiz
- * (pessoa física, holding de raízes diferentes) simplesmente não tem o que
- * sincronizar, e isso não é erro.
+ * Até 14/10/2026 as raízes saíam de `ClientGroup.cnpjRoot` (os clientes
+ * ativos). Com o Cliente saindo, elas saem da fotografia que a migration
+ * `20261014210000` fez dessa mesma lista (`sped_sync_roots`) — exatamente as
+ * raízes de antes, sem ampliar, até o plano do SPED substituir. Ver
+ * `raizesSincronizadas.ts`.
  */
 export async function sincronizarTenant(tenantId: string): Promise<ResultadoDaSincronizacao> {
   const creds = await credenciaisDoSped(tenantId);
   if (!creds) return { raizes: [], semCredencial: true };
 
-  const prisma = getPrisma();
-  const grupos = await prisma.clientGroup.findMany({
-    where: { tenantId, active: true, cnpjRoot: { not: null } },
-    select: { cnpjRoot: true },
-  });
-
-  const raizes = [...new Set(grupos.map((g) => g.cnpjRoot!).filter((r) => r.length === 8))];
+  const raizes = await raizesSincronizadas(tenantId);
 
   const resultados: ResultadoDaRaiz[] = [];
   for (const raiz of raizes) {

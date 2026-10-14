@@ -604,13 +604,14 @@ async function a5(tenantId: string, c: Cadastros) {
     select: { id: true },
   });
   await prisma.company.update({ where: { id: c.empresa.id }, data: { clientGroupId: grupo.id } });
+  // O acesso vê a empresa pela ligação direta (portal por empresa, 14/10/2026).
   const cliente = await prisma.portalUser.create({
     data: {
       tenantId,
-      clientGroupId: grupo.id,
       name: `${MARCA} Aprovador`,
       email: `bancada+${Date.now()}@exemplo.invalido`,
       passwordHash: "x".repeat(60),
+      empresas: { create: [{ tenantId, companyId: c.empresa.id }] },
     },
     select: { id: true },
   });

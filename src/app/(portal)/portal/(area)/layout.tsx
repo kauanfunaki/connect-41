@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
-import { getPrisma } from "@/lib/prisma";
 import { getEnabledModuleCodes } from "@/lib/modules";
+import { nomeDoAcessoNoPortal } from "@/lib/portal/empresasDaContaDb";
 import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
 import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { TutorialDoPortal } from "@/components/tutorial/TutorialDoPortal";
 
-// A moldura de quem já entrou no portal: sidebar com as telas, o grupo do
-// cliente e o sair.
+// A moldura de quem já entrou no portal: sidebar com as telas, o nome do
+// acesso (a empresa, ou a primeira e quantas mais — era o nome do Cliente até
+// 14/10/2026) e o sair.
 //
 // Num grupo de rotas, `(area)`, para o login, o esqueci-senha e o
 // redefinir-senha ficarem de fora sem condicional nenhuma — e sem depender de o
@@ -29,16 +30,15 @@ export default async function AreaDoClienteLayout({ children }: { children: Reac
   // As telas que o escritório ainda não liberou (14/10/2026) saem do menu. O
   // layout não roda de novo a cada navegação: quem barra o endereço direto é
   // cada tela (`telaBloqueadaNoPortal`).
-  const prisma = getPrisma();
-  const [grupo, modulos, bloqueadas] = await Promise.all([
-    prisma.clientGroup.findUnique({ where: { id: sessao.clientGroupId }, select: { name: true } }),
+  const [nome, modulos, bloqueadas] = await Promise.all([
+    nomeDoAcessoNoPortal(sessao.tenantId, sessao.sub),
     getEnabledModuleCodes(sessao.tenantId),
     telasBloqueadasDoPortal(sessao.tenantId),
   ]);
 
   return (
     <ToastProvider>
-      <PortalShell grupoNome={grupo?.name ?? null} modulos={[...modulos]} bloqueadas={[...bloqueadas]}>
+      <PortalShell grupoNome={nome} modulos={[...modulos]} bloqueadas={[...bloqueadas]}>
         {children}
       </PortalShell>
       <TutorialDoPortal />

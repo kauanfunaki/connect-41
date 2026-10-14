@@ -21,8 +21,11 @@ type Props = {
   opcoes: EmpresaParaVincular[];
   /** Ids das opções cuja raiz de CNPJ é a do cliente. */
   sugeridas: string[];
-  /** Quantos acessos do portal este cliente tem. */
-  acessos: number;
+  /**
+   * Quantos acessos do portal ainda guardam este cliente. Desde 14/10/2026 não
+   * entra na tela: o portal não depende mais do cliente. Sai na etapa 3.
+   */
+  acessos?: number;
   vincularAction: (clienteId: string, companyIds: string[]) => Promise<ResultadoDoVinculo>;
   desvincularAction: (clienteId: string, companyId: string) => Promise<{ erro: string } | { ok: true }>;
 };
@@ -42,10 +45,10 @@ function textoDoResultado(r: { vinculadas: number; movidas: number }): string {
  *
  * Até aqui, a única porta para pôr uma empresa num cliente era o "Cliente e
  * matriz" do cadastro da empresa — e quem cuidava do cliente (o caso da IRRIGA
- * FOUR) não achava como. Sem cliente, a empresa não aparece no portal: o
- * alcance da conta é `clientGroupId = o do cliente`.
+ * FOUR) não achava como. Desde 14/10/2026 o cliente não decide mais o que o
+ * portal mostra: o acesso é ligado direto às empresas, na ficha de cada uma.
  */
-export function EmpresasDoCliente({ cliente, empresas, opcoes, sugeridas, acessos, vincularAction, desvincularAction }: Props) {
+export function EmpresasDoCliente({ cliente, empresas, opcoes, sugeridas, vincularAction, desvincularAction }: Props) {
   const toast = useToast();
   const { dialog, requestConfirm } = useConfirm();
   const [pendente, startTransition] = useTransition();
@@ -84,7 +87,7 @@ export function EmpresasDoCliente({ cliente, empresas, opcoes, sugeridas, acesso
     requestConfirm(
       {
         title: `Tirar ${e.nome} deste cliente?`,
-        description: `A empresa continua cadastrada, sem cliente, e deixa de aparecer no portal para os acessos de ${cliente.nome}.`,
+        description: "A empresa continua cadastrada, sem cliente. Quem tem acesso a ela no portal continua vendo.",
         confirmLabel: "Tirar do cliente",
         destructive: true,
       },
@@ -97,18 +100,16 @@ export function EmpresasDoCliente({ cliente, empresas, opcoes, sugeridas, acesso
   }
 
   const movidasNaSugestao = sugestoes.filter((s) => s.clienteAtual).length;
+  // Desde 14/10/2026 o cliente só agrupa as empresas no Connect: o portal se
+  // configura na ficha de cada empresa.
   const descricao =
-    acessos === 0
-      ? "No portal, quem for deste cliente enxerga só as empresas desta lista. Empresa sem cliente não aparece no portal."
-      : acessos === 1
-        ? "O acesso do portal deste cliente enxerga só as empresas desta lista. Empresa sem cliente não aparece no portal."
-        : `Os ${acessos} acessos do portal deste cliente enxergam só as empresas desta lista. Empresa sem cliente não aparece no portal.`;
+    "O cliente agrupa as empresas de um mesmo dono no Connect. Quem vê cada empresa no portal se define na ficha dela, em “Acesso ao portal”.";
 
   return (
     <FormSection title={`Empresas do cliente (${empresas.length})`} descricao={descricao}>
       {empresas.length === 0 ? (
         <p className="text-ui text-fg-muted">
-          Nenhuma empresa neste cliente ainda. Sem empresa, o portal deste cliente não mostra documento nenhum.
+          Nenhuma empresa neste cliente ainda.
         </p>
       ) : (
         <ul className="divide-y divide-border rounded-md border border-border">
@@ -180,8 +181,8 @@ export function EmpresasDoCliente({ cliente, empresas, opcoes, sugeridas, acesso
         </div>
         {alvo?.clienteAtual && (
           <Aviso tom="atencao">
-            {alvo.nome} hoje é do cliente {alvo.clienteAtual}. Ao adicionar aqui, ela sai de lá — e deixa de aparecer no
-            portal para os acessos de {alvo.clienteAtual}.
+            {alvo.nome} hoje é do cliente {alvo.clienteAtual}. Ao adicionar aqui, ela sai de lá. O portal não muda: quem
+            tem acesso a ela continua vendo.
           </Aviso>
         )}
       </div>

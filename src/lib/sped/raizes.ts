@@ -1,5 +1,6 @@
 import { getPrisma } from "@/lib/prisma";
 import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
+import { raizesSincronizadas } from "./raizesSincronizadas";
 
 /**
  * As raízes de CNPJ que um alcance autoriza consultar no SPED.
@@ -22,27 +23,22 @@ import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
  * vira "tudo" no primeiro `if` distraído.
  */
 export async function raizesDoAlcance(alcance: AlcanceFiscal): Promise<Set<string>> {
-  const prisma = getPrisma();
+  // As raízes são as que o SPED sincroniza, como no laço de sincronização —
+  // a mesma lista, para a consulta ao vivo não autorizar raiz que a
+  // sincronização não busca. Desde 14/10/2026 ela sai da fotografia de
+  // `sped_sync_roots`, e não mais dos clientes (ver raizesSincronizadas.ts).
+  const sincronizadas = await raizesSincronizadas(alcance.tenantId);
+  if (alcance.tipo === "TENANT") return new Set(sincronizadas);
 
-  // As raízes vivem em `ClientGroup.cnpjRoot`, como no laço de sincronização —
-  // é o mesmo campo, e duplicar a derivação a partir do CNPJ das empresas
-  // criaria duas verdades sobre o que é a raiz de um cliente.
-  const grupos = await prisma.clientGroup.findMany({
-    where:
-      alcance.tipo === "TENANT"
-        ? { tenantId: alcance.tenantId, active: true, cnpjRoot: { not: null } }
-        : {
-            tenantId: alcance.tenantId,
-            active: true,
-            cnpjRoot: { not: null },
-            // Cliente do portal: só os grupos que contêm alguma das empresas
-            // que o alcance lista.
-            companies: { some: { id: { in: alcance.companyIds } } },
-          },
-    select: { cnpjRoot: true },
+  // Alcance de empresas (o cliente no portal): das sincronizadas, só as raízes
+  // do CNPJ das empresas que ele alcança. Sem empresa, nada.
+  if (alcance.companyIds.length === 0) return new Set();
+  const empresas = await getPrisma().company.findMany({
+    where: { tenantId: alcance.tenantId, id: { in: alcance.companyIds }, cnpj: { not: null } },
+    select: { cnpj: true },
   });
-
-  return new Set(grupos.map((g) => g.cnpjRoot!).filter((r) => r.length === 8));
+  const dasEmpresas = new Set(empresas.map((e) => (e.cnpj ?? "").replace(/\D/g, "").slice(0, 8)));
+  return new Set(sincronizadas.filter((r) => dasEmpresas.has(r)));
 }
 
 /**

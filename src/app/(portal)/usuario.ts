@@ -13,18 +13,18 @@ export const MAX_CONTAS_POR_EMAIL = 10;
  * desde 16/09, agora também a do "Entrar com o Google" (05/10/2026): um acesso
  * entra direto, mais de um vira escolha.
  */
-export async function contasAtivasDoPortal(email: string): Promise<{ id: string; tenantId: string; clientGroupId: string }[]> {
+export async function contasAtivasDoPortal(email: string): Promise<{ id: string; tenantId: string }[]> {
   return getPrisma().portalUser.findMany({
     where: { email, active: true },
     orderBy: { createdAt: "asc" },
     take: MAX_CONTAS_POR_EMAIL,
-    select: { id: true, tenantId: true, clientGroupId: true },
+    select: { id: true, tenantId: true },
   });
 }
 
 /**
- * A sessão do portal, se o token vale **e** a conta continua existindo, ativa
- * e no mesmo cliente que o token diz.
+ * A sessão do portal, se o token vale **e** a conta continua existindo e
+ * ativa, no escritório que o token diz.
  *
  * Com o "lembrar de mim" (05/10/2026) o token vive 30 dias: confiar só nele
  * deixaria uma conta desativada lendo o portal por um mês. O layout da área do
@@ -36,8 +36,12 @@ export async function contasAtivasDoPortal(email: string): Promise<{ id: string;
  * tabela de sessões do portal para revogar —, e o layout não roda de novo a
  * cada navegação entre telas. Com o acesso podendo trocar de cliente ou ser
  * excluído, uma tela que confiasse só no token mostraria as empresas do
- * cliente antigo até ele vencer. Conferir o `clientGroupId` no banco é o que
- * derruba a sessão.
+ * cliente antigo até ele vencer.
+ *
+ * Desde 14/10/2026 (portal por empresa) o token não carrega mais o que a conta
+ * vê: as empresas saem do banco a cada tela (`alcanceDoCliente`), então ligar
+ * ou desligar uma empresa vale na hora, sem derrubar a sessão. O
+ * `clientGroupId` que os tokens antigos ainda trazem é ignorado.
  *
  * `cache` por requisição: layout e tela fazem a mesma pergunta na mesma
  * renderização. Fora de uma renderização (rota de download), só repassa.
@@ -46,7 +50,7 @@ export const sessaoAtivaDoPortal = cache(async (): Promise<PortalAccessTokenPayl
   const sessao = await getPortalSession();
   if (!sessao) return null;
   const ativa = await getPrisma().portalUser.findFirst({
-    where: { id: sessao.sub, tenantId: sessao.tenantId, clientGroupId: sessao.clientGroupId, active: true },
+    where: { id: sessao.sub, tenantId: sessao.tenantId, active: true },
     select: { id: true },
   });
   return ativa ? sessao : null;
@@ -69,7 +73,7 @@ export async function clienteAtivoDoPortal() {
   if (!sessao) return null;
   const prisma = getPrisma();
   const usuario = await prisma.portalUser.findFirst({
-    where: { id: sessao.sub, tenantId: sessao.tenantId, clientGroupId: sessao.clientGroupId, active: true },
+    where: { id: sessao.sub, tenantId: sessao.tenantId, active: true },
     // O e-mail é a ponte com os envios ao cliente (08/10/2026): é por ele que o
     // portal acha — ou cria — a linha de destinatário da pessoa.
     select: { id: true, name: true, email: true },

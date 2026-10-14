@@ -4,7 +4,7 @@
 
 import type { Prisma } from "@/generated/prisma/client";
 import type { UserRole } from "@/generated/prisma/enums";
-import { isPrismaForeignKeyError, isPrismaUniqueError } from "@/lib/prismaErrors";
+import { isPrismaForeignKeyError, isPrismaMissingTableError, isPrismaUniqueError } from "@/lib/prismaErrors";
 import { contagem, type Ligacao, type Rotulo, type Tratamento } from "./registro";
 import { isFullWrite } from "@/lib/auth/papeis";
 import { confirmacaoConfere } from "@/lib/exclusaoConfirmada";
@@ -67,6 +67,10 @@ export type Contagem = { ligacao: Ligacao; quantidade: number };
  * Conta cada ligação do registro pela coluna da chave. O filtro é o id já
  * conferido no tenant (ou a lista deles): a linha que aponta para ele é do
  * mesmo escritório por construção.
+ *
+ * Tabela que ainda não existe (P2021 — o código subiu antes da migration que a
+ * cria, como as do portal por empresa de 14/10/2026) conta zero: não há linha
+ * nenhuma para apontar, e a prévia não pode cair por isso.
  */
 export async function contarLigacoes(
   db: Tx,
@@ -78,7 +82,12 @@ export async function contarLigacoes(
     db,
     ligacoes.map((ligacao) => async () => ({
       ligacao,
-      quantidade: await delegado(db, ligacao.modelo).count({ where: { [ligacao.fk]: alvo } }),
+      quantidade: await delegado(db, ligacao.modelo)
+        .count({ where: { [ligacao.fk]: alvo } })
+        .catch((err: unknown) => {
+          if (isPrismaMissingTableError(err)) return 0;
+          throw err;
+        }),
     }))
   );
 }

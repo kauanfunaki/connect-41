@@ -26,7 +26,7 @@ export default async function PortalComunicadoPage({ params }: { params: Promise
 
   const { id } = await params;
   const [c, { labels }, bloqueadas] = await Promise.all([
-    abrirComunicadoDoCliente(cliente.tenantId, cliente.sessao.clientGroupId, cliente.usuario.id, id),
+    abrirComunicadoDoCliente(cliente.tenantId, cliente.companyIds, cliente.usuario.id, id),
     getSectorMaps(cliente.tenantId),
     telasBloqueadasDoPortal(cliente.tenantId),
   ]);

@@ -112,6 +112,11 @@ const EMPRESA: Ligacao[] = [
   // As pastas da casa nascem com a empresa; o que conta como histórico são os
   // arquivos dentro delas (contados à parte em `empresa.ts`).
   { modelo: "DriveFolder", campo: "company", fk: "companyId", tratamento: "cascata" },
+  // Portal por empresa (14/10/2026): sai a ligação da empresa com o acesso, e
+  // a conta continua (com as outras empresas dela, ou sem nenhuma). O
+  // comunicado já enviado fica, sem esta empresa entre os destinatários.
+  { modelo: "PortalUserCompany", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["acesso ao portal ligado a ela (a conta continua)", "acessos ao portal ligados a ela (as contas continuam)"] },
+  { modelo: "ClientAnnouncementCompany", campo: "company", fk: "companyId", tratamento: "cascata" },
 
   // Ficam, sem o vínculo.
   { modelo: "Company", campo: "parent", fk: "parentCompanyId", tratamento: "desligar", rotulo: ["filial (vira matriz solta)", "filiais (viram matrizes soltas)"] },
