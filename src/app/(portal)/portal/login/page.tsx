@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { verifyPortalEscolha } from "@/lib/auth/jwt";
 import { COOKIE_DA_ESCOLHA, configuracaoDoGoogleNoPortal, lerCookieDaEscolha, mensagemDoGoogle } from "@/lib/auth/googleDoPortal";
 import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
+import { nomesDasContasNoLogin } from "@/lib/portal/empresasDaContaDb";
 import { entrarNoPortal, type EstadoDoLogin } from "./actions";
 import { PortalLoginForm } from "@/components/portal/PortalLoginForm";
 import { MolduraDoPortal } from "@/components/portal/MolduraDoPortal";
@@ -24,13 +25,14 @@ async function escolhaPendenteDoGoogle(): Promise<EscolhaDoGoogle | null> {
   const contas = await getPrisma().portalUser.findMany({
     where: { id: { in: ids }, active: true },
     orderBy: { createdAt: "asc" },
-    select: { id: true, tenant: { select: { name: true } }, clientGroup: { select: { name: true } } },
+    select: { id: true, tenantId: true, tenant: { select: { name: true } } },
   });
   if (contas.length === 0) return null;
+  const nomes = await nomesDasContasNoLogin(contas);
   return {
     token: escolha.token,
     lembrar: escolha.lembrar,
-    opcoes: contas.map((c) => ({ id: c.id, escritorio: c.tenant.name, cliente: c.clientGroup.name })),
+    opcoes: contas.map((c) => ({ id: c.id, escritorio: c.tenant.name, cliente: nomes.get(c.id) ?? "" })),
   };
 }
 

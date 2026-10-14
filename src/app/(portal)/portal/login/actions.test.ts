@@ -30,16 +30,15 @@ vi.mock("@/lib/auth/sessaoDoPortal", () => ({
 }));
 vi.mock("@/lib/auth/googleDoPortal", () => ({ COOKIE_DA_ESCOLHA: "escolha", CAMINHO_DO_COOKIE_DA_ESCOLHA: "/portal" }));
 vi.mock("@/app/(portal)/usuario", () => ({ MAX_CONTAS_POR_EMAIL: 10 }));
+vi.mock("@/lib/portal/empresasDaContaDb", () => ({ nomesDasContasNoLogin: async () => new Map() }));
 
 const { entrarNoPortal } = await import("./actions");
 
 const CONTA = {
   id: "c1",
   tenantId: "t1",
-  clientGroupId: "g1",
   passwordHash: "hash",
   tenant: { name: "41 Tech" },
-  clientGroup: { name: "Grupo Modelo" },
 };
 const MUITAS = { erro: "Muitas tentativas. Tente de novo em alguns minutos." };
 const INVALIDO = { erro: "E-mail ou senha inválidos." };

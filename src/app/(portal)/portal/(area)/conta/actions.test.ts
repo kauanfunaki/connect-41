@@ -31,7 +31,7 @@ let contaId = "";
 beforeEach(() => {
   vi.clearAllMocks();
   contaId = `conta-${++contador}`;
-  getPortalSession.mockResolvedValue({ kind: "portal", sub: contaId, tenantId: "escritorio-a", clientGroupId: "grupo-a" });
+  getPortalSession.mockResolvedValue({ kind: "portal", sub: contaId, tenantId: "escritorio-a" });
   portalUser.findFirst.mockImplementation(async () => ({
     id: contaId,
     tenantId: "escritorio-a",
@@ -51,7 +51,7 @@ describe("trocarSenhaDoPortal", () => {
     expect(await trocar({ atual: SENHA_ATUAL, senha: SENHA_NOVA, confirmacao: SENHA_NOVA })).toEqual({ ok: true });
 
     expect(portalUser.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: contaId, tenantId: "escritorio-a", clientGroupId: "grupo-a", active: true } })
+      expect.objectContaining({ where: { id: contaId, tenantId: "escritorio-a", active: true } })
     );
     expect(hashPassword).toHaveBeenCalledWith(SENHA_NOVA);
     expect(portalUser.update).toHaveBeenCalledWith({ where: { id: contaId }, data: { passwordHash: `hash-de-${SENHA_NOVA}` } });

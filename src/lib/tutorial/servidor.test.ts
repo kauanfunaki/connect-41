@@ -46,7 +46,7 @@ function contexto(parcial: Partial<AuthContext> = {}): AuthContext {
 }
 
 const agente = (code: string, setor: string | null) => ({ code, especialidade: code, sugestoes: [], setor });
-const SESSAO = { kind: "portal" as const, sub: "pu1", tenantId: "t1", clientGroupId: "g1" };
+const SESSAO = { kind: "portal" as const, sub: "pu1", tenantId: "t1" };
 
 beforeEach(() => {
   vi.clearAllMocks();

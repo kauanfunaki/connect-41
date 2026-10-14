@@ -260,14 +260,15 @@ async function criar(p: PrismaClient, tenantId: string, autorId: string, outroAu
   });
 
   // Senha que ninguém conhece: entrar no portal como este cliente exige que
-  // alguém defina uma nova pela tela de administração.
+  // alguém defina uma nova pela tela de administração. Ligado direto à
+  // empresa, sem cliente (portal por empresa, 14/10/2026).
   const clienteDoPortal = await p.portalUser.create({
     data: {
       tenantId,
-      clientGroupId: grupo.id,
       name: `${MARCA} Cliente Modelo`,
       email: "cliente.demo@exemplo.invalido",
       passwordHash: randomBytes(32).toString("hex"),
+      empresas: { create: [{ tenantId, companyId: empresa.id, incluiFiliais: true }] },
     },
     select: { id: true, email: true },
   });

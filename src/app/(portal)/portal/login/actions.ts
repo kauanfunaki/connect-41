@@ -9,6 +9,7 @@ import { PORTAL_COOKIE } from "@/lib/auth/portal";
 import { cookieDaSessaoDoPortal, querLembrar } from "@/lib/auth/sessaoDoPortal";
 import { CAMINHO_DO_COOKIE_DA_ESCOLHA, COOKIE_DA_ESCOLHA } from "@/lib/auth/googleDoPortal";
 import { MAX_CONTAS_POR_EMAIL } from "@/app/(portal)/usuario";
+import { nomesDasContasNoLogin } from "@/lib/portal/empresasDaContaDb";
 import { clientIp, hit, reset } from "@/lib/rateLimit";
 
 export type OpcaoDeCliente = { id: string; escritorio: string; cliente: string };
@@ -73,7 +74,7 @@ export async function entrarNoPortal(_anterior: EstadoDoLogin, form: FormData): 
 
     const conta = await getPrisma().portalUser.findFirst({
       where: { id: escolhida, active: true },
-      select: { id: true, tenantId: true, clientGroupId: true },
+      select: { id: true, tenantId: true },
     });
     // Desativada entre os dois passos: não entra.
     if (!conta) return { erro: ERRO };
@@ -96,10 +97,8 @@ export async function entrarNoPortal(_anterior: EstadoDoLogin, form: FormData): 
     select: {
       id: true,
       tenantId: true,
-      clientGroupId: true,
       passwordHash: true,
       tenant: { select: { name: true } },
-      clientGroup: { select: { name: true } },
     },
   });
 
@@ -121,17 +120,19 @@ export async function entrarNoPortal(_anterior: EstadoDoLogin, form: FormData): 
   reset(`portal-login-email:${email}`);
   if (conferem.length === 1) return iniciarSessao(conferem[0]!, lembrar);
 
+  // O nome de cada acesso sai das empresas dele (era o do Cliente até 14/10/2026).
+  const nomes = await nomesDasContasNoLogin(conferem);
   return {
     escolher: {
       token: signPortalEscolha(conferem.map((c) => c.id)),
-      opcoes: conferem.map((c) => ({ id: c.id, escritorio: c.tenant.name, cliente: c.clientGroup.name })),
+      opcoes: conferem.map((c) => ({ id: c.id, escritorio: c.tenant.name, cliente: nomes.get(c.id) ?? "" })),
       lembrar,
     },
   };
 }
 
 async function iniciarSessao(
-  conta: { id: string; tenantId: string; clientGroupId: string },
+  conta: { id: string; tenantId: string },
   lembrar: boolean
 ): Promise<never> {
   const sessao = cookieDaSessaoDoPortal(conta, lembrar);
