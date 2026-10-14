@@ -70,7 +70,19 @@ export type FiltrosDoPortal = {
   modalidade: VagaModalidade | "";
   contrato: VagaContrato | "";
   area: string;
+  /**
+   * "Cidade ou estado" digitado na busca da capa do 41 Carreiras (15/10/2026):
+   * texto livre, cada palavra procurada na cidade, na UF e no nome do estado
+   * ("curitiba", "pr", "parana", "Joinville - SC").
+   */
+  local: string;
+  /** A empresa, pelo nome que o portal mostra (o "Empresas contratando" da capa). */
+  empresa: string;
+  /** A ordem da lista: as mais novas primeiro (padrão) ou as de prazo mais perto. */
+  ordem: OrdemDaLista;
 };
+
+export type OrdemDaLista = "recentes" | "prazo";
 
 const MODALIDADES = Object.keys(MODALIDADE_LABEL) as VagaModalidade[];
 const CONTRATOS = Object.keys(CONTRATO_LABEL) as VagaContrato[];
@@ -88,11 +100,15 @@ export function lerFiltros(p: Record<string, string | string[] | undefined>): Fi
     modalidade: (MODALIDADES as string[]).includes(modalidade) ? (modalidade as VagaModalidade) : "",
     contrato: (CONTRATOS as string[]).includes(contrato) ? (contrato as VagaContrato) : "",
     area: um(p.area),
+    local: um(p.local),
+    empresa: um(p.empresa),
+    ordem: um(p.ordem) === "prazo" ? "prazo" : "recentes",
   };
 }
 
+/** Algum filtro escolhido? A ordem não conta: ela não tira vaga da lista. */
 export function temFiltro(f: FiltrosDoPortal): boolean {
-  return !!(f.busca || f.cidade || f.uf || f.modalidade || f.contrato || f.area);
+  return !!(f.busca || f.cidade || f.uf || f.modalidade || f.contrato || f.area || f.local || f.empresa);
 }
 
 /** Sem acento, sem caixa, espaço colapsado. */
@@ -128,10 +144,18 @@ export function filtrarVagas<T extends VagaDoPortal>(vagas: T[], f: FiltrosDoPor
   const cidade = normalizar(f.cidade);
   const uf = normalizar(f.uf);
   const area = normalizar(f.area);
+  const empresa = normalizar(f.empresa);
+  // "Joinville - SC", "Curitiba, PR": a pontuação separa palavras, não conta.
+  const local = normalizar((f.local ?? "").replace(/[^\p{L}\p{N}]+/gu, " ")).split(" ").filter(Boolean);
   return vagas.filter((v) => {
     if (cidade && normalizar(v.cidade) !== cidade) return false;
     if (uf && normalizar(v.uf) !== uf) return false;
     if (area && normalizar(v.area) !== area) return false;
+    if (empresa && normalizar(v.empresa) !== empresa) return false;
+    if (local.length) {
+      const onde = normalizar([v.cidade, v.uf, nomeDoEstado(v.uf)].filter(Boolean).join(" ")).split(" ");
+      if (!local.every((p) => onde.some((w) => w.startsWith(p)))) return false;
+    }
     if (f.modalidade && v.workMode !== f.modalidade) return false;
     if (f.contrato && v.contractType !== f.contrato) return false;
     if (palavras.length) {
@@ -223,7 +247,52 @@ export function localDaVaga(v: {
   return { cidade: v.company.city, uf: v.company.stateCode };
 }
 
+/**
+ * A ordem da lista. "recentes": publicadas mais recentemente primeiro.
+ * "prazo": as que têm prazo, do mais perto ao mais longe, e depois as sem
+ * prazo (das mais novas às mais antigas) — quem tem pressa vê primeiro o que
+ * vai fechar.
+ */
+export function ordenarVagas<T extends { openedAt: Date; applicationDeadline: Date | null }>(vagas: T[], ordem: OrdemDaLista): T[] {
+  const recentes = (a: T, b: T) => b.openedAt.getTime() - a.openedAt.getTime();
+  if (ordem === "recentes") return [...vagas].sort(recentes);
+  return [...vagas].sort((a, b) => {
+    if (a.applicationDeadline && b.applicationDeadline) {
+      return a.applicationDeadline.getTime() - b.applicationDeadline.getTime() || recentes(a, b);
+    }
+    if (a.applicationDeadline) return -1;
+    if (b.applicationDeadline) return 1;
+    return recentes(a, b);
+  });
+}
+
+const ESTADOS: Record<string, string> = {
+  AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará", DF: "Distrito Federal",
+  ES: "Espírito Santo", GO: "Goiás", MA: "Maranhão", MT: "Mato Grosso", MS: "Mato Grosso do Sul",
+  MG: "Minas Gerais", PA: "Pará", PB: "Paraíba", PR: "Paraná", PE: "Pernambuco", PI: "Piauí",
+  RJ: "Rio de Janeiro", RN: "Rio Grande do Norte", RS: "Rio Grande do Sul", RO: "Rondônia", RR: "Roraima",
+  SC: "Santa Catarina", SP: "São Paulo", SE: "Sergipe", TO: "Tocantins",
+};
+
+/** "PR" → "Paraná"; null para o que não é UF. */
+export function nomeDoEstado(uf: string | null | undefined): string | null {
+  return ESTADOS[(uf ?? "").trim().toUpperCase()] ?? null;
+}
+
 export const VAGAS_POR_PAGINA = 20;
+
+/**
+ * "Mostrar mais vagas" da lista do 41 Carreiras: `?pagina=N` mostra as N
+ * primeiras levas inteiras (e não só a N-ésima), para a vaga aberta ao lado
+ * não sumir da lista ao pedir mais. Fora da faixa cai na mais próxima, como em
+ * `paginar`.
+ */
+export function ateAPagina<T>(lista: T[], pedida: string | string[] | undefined, porPagina = VAGAS_POR_PAGINA) {
+  const totalDePaginas = Math.max(1, Math.ceil(lista.length / porPagina));
+  const n = Number(Array.isArray(pedida) ? pedida[0] : pedida);
+  const pagina = Number.isInteger(n) ? Math.min(Math.max(n, 1), totalDePaginas) : 1;
+  return { itens: lista.slice(0, pagina * porPagina), pagina, temMais: pagina < totalDePaginas };
+}
 
 export function paginar<T>(lista: T[], pedida: string | string[] | undefined, porPagina = VAGAS_POR_PAGINA) {
   const totalDePaginas = Math.max(1, Math.ceil(lista.length / porPagina));
@@ -243,15 +312,33 @@ export function urlDaLista(slug: string, f: FiltrosDoPortal, pagina = 1): string
  * O mesmo, a partir do caminho da lista — `/` no endereço do 41 Carreiras,
  * `/carreiras/<escritorio>` no do Connect.
  */
-export function urlDaListaEm(caminho: string, f: FiltrosDoPortal, pagina = 1): string {
+export function urlDaListaEm(caminho: string, f: FiltrosDoPortal, pagina = 1, vaga?: string | null): string {
   const q = new URLSearchParams();
   if (f.busca) q.set("q", f.busca);
+  if (f.local) q.set("local", f.local);
   if (f.cidade) q.set("cidade", f.cidade);
   if (f.uf) q.set("uf", f.uf);
   if (f.area) q.set("area", f.area);
   if (f.modalidade) q.set("modalidade", f.modalidade);
   if (f.contrato) q.set("contrato", f.contrato);
+  if (f.empresa) q.set("empresa", f.empresa);
+  if (f.ordem === "prazo") q.set("ordem", "prazo");
   if (pagina > 1) q.set("pagina", String(pagina));
+  // A vaga aberta ao lado da lista (41 Carreiras, tela larga).
+  if (vaga) q.set("vaga", vaga);
   const s = q.toString();
   return `${caminho}${s ? `?${s}` : ""}`;
 }
+
+/** Filtros vazios — a base para montar o link de um filtro só ("Remoto", "Fiscal"). */
+export const SEM_FILTRO: FiltrosDoPortal = {
+  busca: "",
+  cidade: "",
+  uf: "",
+  modalidade: "",
+  contrato: "",
+  area: "",
+  local: "",
+  empresa: "",
+  ordem: "recentes",
+};
