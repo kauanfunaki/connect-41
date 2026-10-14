@@ -18,7 +18,7 @@ import { carregarLista } from "./caixa";
 export default async function WhatsappLayout({ children }: { children: ReactNode }) {
   const { ctx, agora, conversas, conexoes, pessoas } = await carregarLista();
   return (
-    <PageContainer className="h-full flex flex-col">
+    <PageContainer className="relative h-full flex flex-col overflow-hidden">
       <CaixaDoWhatsapp
         dados={{ conversas, agora, userId: ctx.userId, pessoas }}
         cabecalho={
