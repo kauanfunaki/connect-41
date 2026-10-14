@@ -5120,6 +5120,32 @@ model TutorialVisto {
   @@map("tutoriais_vistos")
 }
 
+/// Tela do portal do cliente que o escritório ainda não liberou (14/10/2026) —
+/// Administração › Portal do cliente › Telas liberadas. Pedido do Kauan: os
+/// primeiros clientes testam o portal antes de toda tela estar validada, e as
+/// telas vão sendo liberadas conforme o escritório testa. Ver
+/// `src/lib/portal/telasBloqueadas.ts`.
+///
+/// Guarda as **bloqueadas**, e não as liberadas: sem linha, a tela está
+/// liberada — é o portal de antes desta tabela, e uma tela nova que entrar no
+/// catálogo (`TELAS_DO_PORTAL`) nasce liberada. Vale para todos os acessos do
+/// escritório; não depende do papel nem do cliente.
+///
+/// `href` é o endereço da tela no catálogo ("/portal/dre"). Início, Minha conta
+/// e Ajuda nunca se bloqueiam (`telaBloqueavel`).
+///
+/// **Sem relação (FK), de propósito**, como `TutorialVisto`: é configuração
+/// lida a cada tela do portal, e sem a tabela (deploy antes da migration) a
+/// leitura cai em "nada bloqueado" — o portal de hoje.
+model PortalTelaBloqueada {
+  tenantId  String
+  href      String   @db.VarChar(80)
+  createdAt DateTime @default(now())
+
+  @@id([tenantId, href])
+  @@map("portal_telas_bloqueadas")
+}
+
 // Auditoria de acesso — quem revelou/copiou a senha e quando. Não impede
 // acesso de ninguém do setor, só dá rastreabilidade (informação sensível).
 model BpoCredentialView {

@@ -9,6 +9,8 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
 import { SeloDaSolicitacao } from "@/components/solicitacoes/SelosDaSolicitacao";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { listarDoCliente } from "@/lib/solicitacoes/consultas";
 import { emAberto } from "@/lib/solicitacoes/regras";
 import { formatInstantDate } from "@/lib/format";
@@ -26,6 +28,7 @@ export default async function PortalSolicitacoesPage({
 }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("portal_solicitacoes")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/solicitacoes")) return <TelaIndisponivel />;
 
   const { recorte: pedido } = await searchParams;
   // "Aguardando você" (05/10) é onde o Início leva quando a equipe espera o cliente.

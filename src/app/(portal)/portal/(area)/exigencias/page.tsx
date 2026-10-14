@@ -7,6 +7,8 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal, telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { exigenciasDoPortal } from "@/lib/societario/portal-data";
 import { formatInstantDate } from "@/lib/format";
 
@@ -29,10 +31,17 @@ export default async function PortalExigenciasPage({
 }) {
   const { sessao, escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("societario_processos")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/exigencias")) return <TelaIndisponivel />;
 
   const params = await searchParams;
   const recorte = RECORTES.find((r) => r.chave === params.recorte)?.chave ?? "abertas";
-  const linhas = await exigenciasDoPortal(sessao.tenantId, escopo.companyIds ?? [], recorte === "abertas");
+  const [linhas, bloqueadas] = await Promise.all([
+    exigenciasDoPortal(sessao.tenantId, escopo.companyIds ?? [], recorte === "abertas"),
+    telasBloqueadasDoPortal(escopo.tenantId),
+  ]);
+  // Com os Processos ainda não liberados pelo escritório (14/10/2026), o
+  // cartão mostra a exigência sem levar à tela do processo.
+  const abreProcesso = !bloqueadas.has("/portal/processos");
 
   return (
     <PageContainer>
@@ -60,7 +69,7 @@ export default async function PortalExigenciasPage({
           {linhas.map((e) => (
             <li key={e.id}>
               <CartaoDeLista
-                href={`/portal/processos/${e.processoId}`}
+                href={abreProcesso ? `/portal/processos/${e.processoId}` : undefined}
                 sobretitulo={<span className={e.resolvidaEm ? undefined : "text-warning-fg"}>{e.orgao}</span>}
                 titulo={e.processoNome}
                 corpo={e.descricao}

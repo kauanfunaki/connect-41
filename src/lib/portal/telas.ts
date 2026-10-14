@@ -1,6 +1,12 @@
 // As telas do portal do cliente: o menu (`PortalShell`) e a ajuda
 // (`/portal/ajuda`) leem a mesma lista, para a ajuda nunca falar de uma tela
 // que o menu não mostra.
+//
+// Desde 14/10/2026 o escritório também pode bloquear uma tela que ainda não
+// testou (Administração › Portal do cliente › Telas liberadas): ela some do
+// menu, do Início, da ajuda e do tutorial, e o endereço direto mostra "ainda
+// não está disponível". As bloqueadas vêm do banco (`telasBloqueadas.ts`) e
+// entram em `telasVisiveis` como segundo argumento.
 
 export type SecaoDoPortal = "Financeiro" | "Societário" | "Com a equipe";
 
@@ -135,10 +141,30 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
   },
 ];
 
-export function telasVisiveis(modulos: ReadonlySet<string>): TelaDoPortal[] {
-  return TELAS_DO_PORTAL.filter(
-    (t) =>
-      (t.modulo === null || modulos.has(t.modulo) || (!!t.ouCom && modulos.has(t.ouCom))) &&
-      !(t.ocultaCom && modulos.has(t.ocultaCom))
+/**
+ * As telas que nunca se bloqueiam: o Início é a porta de entrada (e o "Voltar
+ * ao início" da tela bloqueada), e Minha conta e Ajuda — no rodapé do menu,
+ * fora do catálogo — são de qualquer portal.
+ */
+export const TELAS_SEMPRE_LIBERADAS: ReadonlySet<string> = new Set(["/portal", "/portal/conta", "/portal/ajuda"]);
+
+/** A tela é do catálogo e pode ser bloqueada pelo escritório. */
+export function telaBloqueavel(href: string): boolean {
+  return !TELAS_SEMPRE_LIBERADAS.has(href) && TELAS_DO_PORTAL.some((t) => t.href === href);
+}
+
+/** A tela existe para este escritório pelos módulos — bloqueada ou não. */
+export function telaPelosModulos(t: TelaDoPortal, modulos: ReadonlySet<string>): boolean {
+  return (
+    (t.modulo === null || modulos.has(t.modulo) || (!!t.ouCom && modulos.has(t.ouCom))) &&
+    !(t.ocultaCom && modulos.has(t.ocultaCom))
   );
+}
+
+/**
+ * As telas que o cliente vê: as dos módulos ligados, menos as que o escritório
+ * bloqueou. Sem `bloqueadas`, nenhuma — o portal de antes de 14/10/2026.
+ */
+export function telasVisiveis(modulos: ReadonlySet<string>, bloqueadas: ReadonlySet<string> = new Set()): TelaDoPortal[] {
+  return TELAS_DO_PORTAL.filter((t) => telaPelosModulos(t, modulos) && !(bloqueadas.has(t.href) && telaBloqueavel(t.href)));
 }

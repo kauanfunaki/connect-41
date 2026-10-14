@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { MODULO_ARQUIVOS } from "@/lib/drive/regras";
 import { guardarArquivo, pastaDeEnviados } from "@/lib/drive/servidor";
 
@@ -12,6 +13,7 @@ export async function POST(req: NextRequest) {
   const cliente = await clienteAtivoDoPortal();
   if (!cliente) return NextResponse.json({ error: "Sua sessão expirou. Entre de novo." }, { status: 401 });
   if (!cliente.modulos.has(MODULO_ARQUIVOS)) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
+  if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/arquivos")) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
 
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "O envio chegou incompleto. O arquivo passa de 10 MB?" }, { status: 400 });

@@ -47,6 +47,8 @@ const ACTION_LABEL: Record<string, string> = {
   "holiday.import": "importou feriados nacionais",
   "module.enable": "ativou o módulo",
   "module.disable": "desativou o módulo",
+  "portal.tela.bloqueada": "bloqueou uma tela do portal",
+  "portal.tela.liberada": "liberou uma tela do portal",
   "user.create": "criou o usuário",
   "user.update": "editou o usuário",
   "user.activate": "ativou o usuário",
