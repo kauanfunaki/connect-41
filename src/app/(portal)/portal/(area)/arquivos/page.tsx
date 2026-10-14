@@ -11,6 +11,8 @@ import { IconeDoArquivo } from "@/components/arquivos/IconeDoArquivo";
 import { EnviarArquivosDoCliente } from "@/components/arquivos/EnviarArquivosDoCliente";
 import { BaixarPastaEmZip } from "@/components/arquivos/BaixarPastaEmZip";
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { formatarBytes } from "@/lib/fileSize";
 import { formatInstantDateTime } from "@/lib/format";
@@ -31,6 +33,7 @@ const QUANDO: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "sho
 export default async function PortalArquivosPage({ searchParams }: { searchParams: Promise<{ empresa?: string; pasta?: string }> }) {
   const cliente = await clienteAtivoDoPortal();
   if (!cliente || !cliente.modulos.has(MODULO_ARQUIVOS)) notFound();
+  if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/arquivos")) return <TelaIndisponivel />;
 
   const empresas = await empresasDoSeletor(cliente.tenantId, cliente.companyIds);
   const { empresa: pedida, pasta } = await searchParams;

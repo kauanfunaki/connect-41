@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "./PortalCabecalho";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
 import { contasDoEscopo, totaisDoEscopo } from "@/lib/financeiro/consultas";
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 import { saoPauloParts } from "@/lib/agenda";
@@ -52,13 +53,18 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
   if (!modulos.has(modulo)) notFound();
 
   const hojeKey = saoPauloParts(new Date()).dateKey;
-  const [contas, totais] = await Promise.all([contasDoEscopo(escopo, kind, hojeKey), totaisDoEscopo(escopo, kind, hojeKey)]);
+  const [contas, totais, bloqueadas] = await Promise.all([
+    contasDoEscopo(escopo, kind, hojeKey),
+    totaisDoEscopo(escopo, kind, hojeKey),
+    telasBloqueadasDoPortal(escopo.tenantId),
+  ]);
   // A empresa do cliente só aparece quando o acesso cobre mais de uma — ele
   // sabe quem é; repetir o próprio nome em toda linha só empurrava o resto.
   const variasEmpresas = new Set(contas.map((c) => c.empresaNome)).size > 1;
   const aPagar = kind === "PAGAR";
-  // A aprovação é de conta a pagar; o link só existe se a tela de aprovações existir para este cliente.
-  const linkDaAprovacao = aPagar && modulos.has("bpo_aprovacoes");
+  // A aprovação é de conta a pagar; o link só existe se a tela de aprovações
+  // existir para este cliente — e se o escritório já a liberou (14/10/2026).
+  const linkDaAprovacao = aPagar && modulos.has("bpo_aprovacoes") && !bloqueadas.has("/portal/aprovacoes");
   const rotuloDa = (s: SituacaoDaConta) => (s === "PAGA" && !aPagar ? "Recebida" : SITUACAO[s].rotulo);
   const quitadaEm = aPagar ? "pago em" : "recebido em";
 

@@ -20,7 +20,8 @@ export function CartaoDeLista({
   selos,
   destaque = false,
 }: {
-  href: string;
+  /** Sem `href`, o cartão só mostra — a exigência cujo processo está numa tela bloqueada (14/10/2026). */
+  href?: string;
   titulo: React.ReactNode;
   /** A linha em caixa alta acima do título: o número da solicitação, o órgão da exigência. */
   sobretitulo?: React.ReactNode;
