@@ -37,6 +37,18 @@ import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { safeFindConversations } from "@/lib/chatwoot/conversations";
 import { gerarResumoEmpresa } from "./ai-actions";
 import { gravarUltimaEmpresa } from "@/lib/empresas/ultimaEmpresa";
+import { acessoAoPortalDaEmpresa } from "@/lib/portal/acessoNaFicha";
+import { FALTA_ATUALIZAR_O_BANCO_DO_PORTAL } from "@/lib/portal/empresasDaContaDb";
+import { AcessoAoPortalDaEmpresa } from "@/components/portal/AcessoAoPortalDaEmpresa";
+import {
+  criarAcessoDoPortal,
+  enviarLinkDeSenha,
+  alternarAcessoDoPortal,
+  resumoDoAcessoParaExcluir,
+  excluirAcessoDoPortal,
+  ligarEmpresaAoAcesso,
+  desligarEmpresaDoAcesso,
+} from "@/app/(app)/admin/portal/actions";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -117,6 +129,11 @@ export default async function EmpresaPage({
 
   const customFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
 
+  // Acesso ao portal (14/10/2026): quem entra no portal e vê esta empresa. Só
+  // para quem administra o portal — a mesma régua de Administração › Portal
+  // do cliente; excluir, só administrador.
+  const portal = isFullWrite(ctx.role) ? await acessoAoPortalDaEmpresa(ctx.tenantId, company.id) : null;
+
   const conversations = await safeFindConversations(() =>
     prisma.chatwootConversation.findMany({
       where: {
@@ -178,6 +195,31 @@ export default async function EmpresaPage({
         filiaisCount={company.filiais.length}
         documentsCount={arquivos ? undefined : documents.length}
         conversationsCount={conversations.length}
+        portalCount={portal?.acessos.length}
+        portal={
+          portal ? (
+            <AcessoAoPortalDaEmpresa
+              empresa={{
+                id: company.id,
+                nome: nomeExibicao(company),
+                filiais: company.filiais.length,
+                matriz: company.parent ? { id: company.parent.id, nome: nomeExibicao(company.parent) } : null,
+              }}
+              acessos={portal.acessos}
+              outras={portal.outras}
+              pronto={portal.pronto}
+              avisoSemBanco={FALTA_ATUALIZAR_O_BANCO_DO_PORTAL}
+              podeExcluir={podeExcluir(ctx)}
+              criarAction={criarAcessoDoPortal}
+              ligarAction={ligarEmpresaAoAcesso}
+              desligarAction={desligarEmpresaDoAcesso}
+              enviarLinkAction={enviarLinkDeSenha}
+              alternarAction={alternarAcessoDoPortal}
+              resumoParaExcluirAction={resumoDoAcessoParaExcluir}
+              excluirAction={excluirAcessoDoPortal}
+            />
+          ) : undefined
+        }
         overview={
           <div className="space-y-4">
             <AiCompanySummary action={gerarResumoEmpresa.bind(null, company.id)} />
