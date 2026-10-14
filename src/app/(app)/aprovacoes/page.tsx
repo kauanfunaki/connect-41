@@ -24,6 +24,7 @@ import { moeda } from "@/lib/financeiro/formato";
 import { podeDecidir, podeEnviarParaAprovacao } from "@/lib/financeiro/aprovacao/regras";
 import { MODULO_DE_APROVACOES } from "@/lib/financeiro/aprovacao/servidor";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { usuariosAtivosDasEmpresas } from "@/lib/portal/empresasDaContaDb";
 
 export const dynamic = "force-dynamic";
 
@@ -463,14 +464,8 @@ function SituacaoDaAlcada({ ativa, usuarioAtivo }: { ativa: boolean; usuarioAtiv
   );
 }
 
+/** Os acessos ativos que enxergam a empresa no portal (ligados a ela ou à matriz dela, desde 14/10/2026). */
 async function usuariosDoGrupoDaEmpresa(tenantId: string, companyId: string) {
-  const prisma = getPrisma();
-  const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { clientGroupId: true } });
-  if (!empresa?.clientGroupId) return [];
-  const usuarios = await prisma.portalUser.findMany({
-    where: { tenantId, clientGroupId: empresa.clientGroupId, active: true },
-    select: { id: true, name: true, email: true },
-    orderBy: { name: "asc" },
-  });
+  const usuarios = await usuariosAtivosDasEmpresas(tenantId, [companyId]);
   return usuarios.map((u) => ({ id: u.id, nome: u.name, email: u.email }));
 }
