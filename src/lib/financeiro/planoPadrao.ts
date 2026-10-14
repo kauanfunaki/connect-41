@@ -7,6 +7,13 @@
 // aplicações, por categoria. "Outros custos Operacionais" foi para Comerciais,
 // que é a linha de despesa fixa mais próxima — conferir com o BPO. Cartão de
 // Crédito fica sem linha de propósito: a planilha pede para não usar.
+//
+// Ajuste à mão depois de gerado — quem regerar o arquivo tem de repetir:
+// - 14/10/2026: "Impostos Retidos Serviços Tomados (PIS/COFINS/CSLL/IRRF)" vai
+//   para o CMV (`cmv`), e não para os impostos sobre a receita (pedido do
+//   Kauan). O grupo do plano continua "Impostos": é imposto, só não é imposto
+//   sobre a receita. O que já estava no banco passa pelo script
+//   `scripts/dre-impostos-retidos-para-cmv.ts`.
 
 import type { FinanceEntryKind } from "@/generated/prisma/enums";
 
@@ -508,7 +515,7 @@ export const PLANO_PADRAO_41: CategoriaDoPlanoPadrao[] = [
     "kind": "PAGAR",
     "grupo": "Impostos",
     "nome": "Impostos Retidos Serviços Tomados (PIS/COFINS/CSLL/IRRF)",
-    "dre": "impostos"
+    "dre": "cmv"
   },
   {
     "kind": "PAGAR",
