@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  Briefcase,
   Building2,
   CalendarClock,
   DoorOpen,
@@ -37,7 +36,11 @@ import { SecaoDaLigia } from "./SecaoDaLigia";
 //     equipe no navegador, ele vira "Abrir o Connect" e leva ao /home.
 //  2. Primeira dobra (PrimeiraDobra): o título sobre a aura do anel, UM botão,
 //     e a tela do Connect com a Lígia abrindo o chat subindo por baixo.
-//  3. As três portas — "Sou cliente", "Quero trabalhar aqui", "Sou da equipe".
+//  3. As duas portas — "Sou cliente" e "Sou da equipe". A das vagas ("Quero
+//     trabalhar aqui") saiu em 14/10/2026, com o rodapé: o portal de vagas é
+//     da 41 e ganhou endereço próprio (o 41 Carreiras), fora do site do
+//     Connect. O assistente do WhatsApp do Recrutamento continua no mosaico —
+//     é recurso do Connect.
 //  4. A Lígia (SecaoDaLigia), o ponto alto: a IA em cada setor, com uma
 //     conversa de exemplo por setor; no Portal do Cliente, "Em breve".
 //  5. O Connect (MosaicoDoConnect): os recursos de verdade, num mosaico.
@@ -105,7 +108,7 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
   // em app/page.tsx), o botão leva direto ao Connect.
   const entrada = temSessao ? { href: links.abrir, rotulo: "Abrir o Connect" } : { href: links.entrar, rotulo: "Entrar no Connect" };
 
-  // As três portas: cada pessoa acha o seu caminho num clique.
+  // As duas portas: cada pessoa acha o seu caminho num clique.
   const portas: Porta[] = [
     {
       Icone: Building2,
@@ -113,13 +116,6 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
       texto: "Documentos, pendências, aprovações e o financeiro da sua empresa, no computador ou no celular.",
       acao: "Entrar no Portal do Cliente",
       href: links.portal,
-    },
-    {
-      Icone: Briefcase,
-      titulo: "Quero trabalhar aqui",
-      texto: "Vagas abertas nos escritórios que usam o Connect, com a candidatura pelo site.",
-      acao: "Ver vagas",
-      href: links.vagas,
     },
     {
       Icone: Users,
@@ -151,9 +147,10 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
       <main className="relative flex flex-col">
         <PrimeiraDobra />
 
-        {/* As três portas, logo depois da primeira dobra. */}
+        {/* As duas portas, logo depois da primeira dobra: lado a lado no
+            computador, uma embaixo da outra no celular. */}
         <section aria-label="Por onde entrar" className={`${FAIXA} pb-20 pt-16 sm:pb-24 sm:pt-20`}>
-          <ul className="grid gap-3.5 md:grid-cols-3 md:gap-5">
+          <ul className="grid gap-3.5 md:grid-cols-2 md:gap-5">
             {portas.map((p) => (
               <li key={p.titulo} className="c41-site-surge flex">
                 <a
@@ -172,7 +169,7 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
                     <span className="font-display text-fs-7 font-medium leading-tight tracking-[-0.01em] text-fg md:text-fs-8">{p.titulo}</span>
                     <span className="text-fs-5 leading-normal text-fg-secondary">{p.texto}</span>
                     {/* `mt-auto`: no computador a ação fica no pé do cartão, alinhada
-                        entre os três mesmo com textos de tamanhos diferentes. */}
+                        entre os dois mesmo com textos de tamanhos diferentes. */}
                     <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-fs-5 font-semibold text-brand">
                       {p.acao}
                       <ArrowRight size={17} aria-hidden className="flex-none transition-transform group-hover:translate-x-0.5" />
@@ -314,11 +311,6 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
             <li>
               <a href={links.portal} className={LINK}>
                 Portal do Cliente
-              </a>
-            </li>
-            <li>
-              <a href={links.vagas} className={LINK}>
-                Vagas
               </a>
             </li>
             <li>
