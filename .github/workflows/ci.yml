@@ -1,0 +1,49 @@
+name: CI Connect
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: connect-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Valores descartáveis: o CI não recebe segredos nem URLs de produção.
+      DATABASE_URL: mysql://ci:ci@127.0.0.1:3307/connect41
+      JWT_ACCESS_SECRET: connect-ci-access-secret-not-for-production
+      JWT_REFRESH_SECRET: connect-ci-refresh-secret-not-for-production
+      SECRETS_ENCRYPTION_KEY: connect-ci-encryption-key-not-for-production
+      CRON_SERVICE_TOKEN: connect-ci-cron-token-not-for-production
+      APP_PUBLIC_URL: http://localhost:3100
+      SPED_API_URL: ""
+      SPED_API_TOKEN: ""
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          package-manager-cache: false
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Tipos
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx eslint .
+      - name: Testes
+        run: npm test
+      - name: Build standalone
+        run: npm run build
