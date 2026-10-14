@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { canWriteEntity } from "@/lib/auth/policy";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { pick } from "@/lib/forms";
@@ -11,7 +11,7 @@ import { cnpjRoot } from "@/lib/clientGroups";
 import { nomeExibicao } from "@/lib/companyName";
 import { logAudit } from "@/lib/audit";
 import { isPrismaForeignKeyError, isPrismaUniqueError } from "@/lib/prismaErrors";
-import { confirmacaoConfere, podeExcluirDeVerdade } from "@/lib/exclusaoConfirmada";
+import { confirmacaoConfere } from "@/lib/exclusaoConfirmada";
 
 export type ClienteState = { error: string } | null;
 
@@ -263,7 +263,7 @@ async function clienteParaExcluir(tenantId: string, id: string) {
 /** Conta o que está ligado ao cliente, para a janela de exclusão. Só leitura. */
 export async function resumoDoClienteParaExcluir(id: string): Promise<{ erro: string } | ResumoDoClienteParaExcluir> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !podeExcluirDeVerdade(ctx)) return { erro: "Só administradores excluem clientes." };
+  if (!ctx.tenantId || !podeExcluir(ctx)) return { erro: "Só administradores excluem clientes." };
 
   const cliente = await clienteParaExcluir(ctx.tenantId, id);
   if (!cliente) return { erro: "Cliente não encontrado." };
@@ -299,7 +299,7 @@ export async function excluirCliente(
   acessosVistos: string[]
 ): Promise<{ erro: string } | { ok: true }> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !podeExcluirDeVerdade(ctx)) return { erro: "Só administradores excluem clientes." };
+  if (!ctx.tenantId || !podeExcluir(ctx)) return { erro: "Só administradores excluem clientes." };
 
   const cliente = await clienteParaExcluir(ctx.tenantId, id);
   if (!cliente) return { erro: "Cliente não encontrado." };
