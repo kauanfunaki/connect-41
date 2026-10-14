@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
       agentCode: form.get("agentCode") ?? undefined,
       pergunta: form.get("pergunta") ?? undefined,
       caminho: form.get("caminho") ?? undefined,
+      jaCumprimentada: form.get("jaCumprimentada") ?? undefined,
       anexos: lidos.anexos,
     };
   } else {
