@@ -101,7 +101,8 @@ const EXCECOES: Record<string, GrupoDre | null> = {
   "impostos federais - cssl": "IMPOSTOS_SOBRE_LUCRO",
   "impostos federais - irrf": "IMPOSTOS_SOBRE_LUCRO",
   "impostos parcelados": "DESPESAS_OPERACIONAIS_OUTRAS",
-  "impostos retidos servicos tomados (pis/cofins/csll/irrf)": "DESPESAS_OPERACIONAIS_OUTRAS",
+  // No CMV, como no Connect (pedido do Kauan, 14/10/2026).
+  "impostos retidos servicos tomados (pis/cofins/csll/irrf)": "CMV",
   // Outras Despesas
   "retirada de capital social": "APORTES_DIVIDENDOS",
   "distribuicao de lucros - socios": "APORTES_DIVIDENDOS",
