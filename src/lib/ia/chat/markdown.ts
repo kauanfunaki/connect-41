@@ -1,6 +1,6 @@
-// O texto da resposta da Lígia, de Markdown para blocos que a tela desenha
+// O texto da resposta da Ceci, de Markdown para blocos que a tela desenha
 // (13/10/2026). Puro e testado em `markdown.test.ts`; quem desenha é
-// `src/components/ia/RespostaDaLigia.tsx`.
+// `src/components/ia/RespostaDaCeci.tsx`.
 //
 // ─── Por que um leitor próprio, e não uma biblioteca ────────────────────────
 //
@@ -15,7 +15,7 @@
 // - link **só para dentro do Connect**: `[rótulo](/caminho)` de uma tela que o
 //   Connect tem (`telas.ts`). Endereço de fora, `//outro-site`, `javascript:`
 //   e imagem viram texto — nunca algo clicável. É a cerca contra um texto que a
-//   Lígia leu (nome de empresa, mensagem de cliente) plantar um link na tela;
+//   Ceci leu (nome de empresa, mensagem de cliente) plantar um link na tela;
 // - link sozinho na linha vira **botão**; o "Link: /pendencias" solto que as
 //   respostas antigas traziam também;
 // - HTML nunca é desenhado: a tela monta elementos do React, que escapam o
@@ -75,7 +75,7 @@ const ID = `(?:${UUID}|(?=[0-9a-f-]*[a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}(?:
 const PALAVRA_DE_ID = "(?:id|ids|código interno|codigo interno|identificador)";
 
 /**
- * Tira do texto todo id interno — a rede de segurança para quando a Lígia cita
+ * Tira do texto todo id interno — a rede de segurança para quando a Ceci cita
  * um item pelo id em vez do nome. Leva junto o "(id: …)" e o "id …" em volta.
  */
 export function ocultarIds(texto: string): string {

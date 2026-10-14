@@ -209,7 +209,7 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
     },
   },
 
-  // Setores, preferências, notificações, conversas com a Lígia, atribuições e
+  // Setores, preferências, notificações, conversas com a Ceci, atribuições e
   // acessos vão em cascata; a auditoria e os autores opcionais ficam, sem o
   // vínculo.
   { modelo: "User", acao: "apagar", executar: (tx, a) => n(tx.user.deleteMany({ where: { tenantId: a.tenantId, id: a.id } })) },

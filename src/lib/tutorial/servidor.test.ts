@@ -3,7 +3,7 @@ import type { UserRole } from "@/generated/prisma/enums";
 import type { AuthContext } from "@/lib/auth/context";
 
 // O que se testa: quem vê o tutorial sozinho, olhando o banco (administrador
-// nem consulta), e o que entra nos passos de cada pessoa — a Lígia pelo setor
+// nem consulta), e o que entra nos passos de cada pessoa — a Ceci pelo setor
 // ativo, os setores do seletor, os módulos do portal. Falha de banco nunca
 // lança: o tutorial só não abre, ou só perde o passo.
 
@@ -96,25 +96,25 @@ describe("o tutorial da equipe abre sozinho?", () => {
 describe("os passos da equipe", () => {
   const chaves = async (ctx: AuthContext) => (await montarTutorialDaEquipe(ctx)).passos.map((p) => p.chave);
 
-  it("a Lígia entra quando atende o setor ativo", async () => {
+  it("a Ceci entra quando atende o setor ativo", async () => {
     m.agentesDoChat.mockResolvedValue([agente("assistente_do_bpo", "bpo")]);
-    expect(await chaves(contexto())).toContain("ligia");
+    expect(await chaves(contexto())).toContain("ceci");
   });
 
-  it("agente de outro setor, ou só a Ajuda do Connect: sem a Lígia", async () => {
+  it("agente de outro setor, ou só a Ajuda do Connect: sem a Ceci", async () => {
     m.agentesDoChat.mockResolvedValue([agente("assistente_do_dp", "dp"), agente("ajuda_do_connect", null)]);
-    expect(await chaves(contexto())).not.toContain("ligia");
+    expect(await chaves(contexto())).not.toContain("ceci");
   });
 
-  it("em Todos os setores, vale qualquer setor da pessoa que a Lígia atenda", async () => {
+  it("em Todos os setores, vale qualquer setor da pessoa que a Ceci atenda", async () => {
     m.agentesDoChat.mockResolvedValue([agente("assistente_do_dp", "dp")]);
-    expect(await chaves(contexto({ sectors: ["bpo", "dp"], activeSector: null }))).toContain("ligia");
+    expect(await chaves(contexto({ sectors: ["bpo", "dp"], activeSector: null }))).toContain("ceci");
   });
 
-  it("os agentes falharem só tira o passo da Lígia", async () => {
+  it("os agentes falharem só tira o passo da Ceci", async () => {
     m.agentesDoChat.mockRejectedValue(new Error("banco"));
     const t = await montarTutorialDaEquipe(contexto());
-    expect(t.passos.map((p) => p.chave)).not.toContain("ligia");
+    expect(t.passos.map((p) => p.chave)).not.toContain("ceci");
     expect(t.passos.at(-1)!.chave).toBe("pronto");
   });
 

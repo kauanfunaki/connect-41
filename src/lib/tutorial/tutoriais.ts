@@ -41,7 +41,7 @@ export type IconeDoTutorial =
   | "meu-time"
   | "busca"
   | "sino"
-  | "ligia"
+  | "ceci"
   | "gestor"
   | "ajuda"
   | "pronto"
@@ -115,8 +115,8 @@ export type OpcoesDaEquipe = {
   escritorio: string | null;
   /** Quantos setores aparecem no seletor — com mais de um, o passo do menu ensina a trocar. */
   setoresNoMenu: number;
-  /** A Lígia atende o setor em que a pessoa está (ou algum dela, em "Todos os setores"). */
-  ligia: boolean;
+  /** A Ceci atende o setor em que a pessoa está (ou algum dela, em "Todos os setores"). */
+  ceci: boolean;
   /** O servidor tem as chaves do aviso no celular — sem elas, o passo não promete o que não existe. */
   avisosNoCelular: boolean;
 };
@@ -200,13 +200,13 @@ export function tutorialDaEquipe(o: OpcoesDaEquipe): Tutorial {
           : []),
       ],
     },
-    o.ligia
+    o.ceci
       ? {
-          chave: "ligia",
-          icone: "ligia",
-          titulo: "Conheça a Lígia",
+          chave: "ceci",
+          icone: "ceci",
+          titulo: "Conheça a Ceci",
           texto:
-            "A Lígia é a inteligência artificial do seu setor. Ela fica no canto de baixo da tela, à direita: é só clicar e perguntar, como faria a um colega.",
+            "A Ceci é a inteligência artificial do seu setor. Ela fica no canto de baixo da tela, à direita: é só clicar e perguntar, como faria a um colega.",
           itens: [
             "Ela consulta o Connect com o mesmo acesso que você tem.",
             "Ela só lê: não muda nada sozinha.",

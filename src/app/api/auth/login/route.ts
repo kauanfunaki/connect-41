@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     res.cookies.set(ACCESS_COOKIE, accessToken, accessCookieOptions(ACCESS_MAX_AGE));
 
     res.cookies.set(REFRESH_COOKIE, rawRefresh, refreshCookieOptions(REFRESH_MAX_AGE));
-    // Uma marca nova por entrada: as boas-vindas da Lígia saem uma vez por login (13/10/2026).
+    // Uma marca nova por entrada: as boas-vindas da Ceci saem uma vez por login (13/10/2026).
     res.cookies.set(ENTRADA_COOKIE, novaEntrada(), entradaCookieOptions(REFRESH_MAX_AGE));
 
     return res;

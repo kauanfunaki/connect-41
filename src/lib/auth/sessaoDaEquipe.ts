@@ -123,7 +123,7 @@ export async function abrirSessaoDaEquipe(
   // `refreshMaxAge` varia aqui por causa do "lembrar-me" (30 dias) — por isso
   // não usa a constante.
   res.cookies.set(REFRESH_COOKIE, rawRefresh, refreshCookieOptions(refreshMaxAge));
-  // Uma marca nova por entrada: as boas-vindas da Lígia saem uma vez por login (13/10/2026).
+  // Uma marca nova por entrada: as boas-vindas da Ceci saem uma vez por login (13/10/2026).
   res.cookies.set(ENTRADA_COOKIE, novaEntrada(), entradaCookieOptions(refreshMaxAge));
 
   return res;

@@ -4,10 +4,10 @@ import { FAIXA, LINK, RESPIRO, TITULO_2 } from "./estilos";
 import { Rotulo } from "./Marca";
 
 // Perguntas frequentes do site (13/10/2026, versão 3). Respostas curtas,
-// factuais e modestas, sobre o que o Connect e a Lígia fazem hoje — cada uma
+// factuais e modestas, sobre o que o Connect e a Ceci fazem hoje — cada uma
 // confere com o código:
 //
-// - quem a Lígia é e o que ela não faz: `apresentacaoDaLigia` (lib/ia/ligia —
+// - quem a Ceci é e o que ela não faz: `apresentacaoDaCeci` (lib/ia/ceci —
 //   "nunca se passe por uma pessoa da equipe") e `escreve: false` nos agentes
 //   do chat (lib/ia/catalogo);
 // - o que ela vê: `agentesDoChat` e `escopoDoAgente` (lib/ia/chat/agentes — a
@@ -27,34 +27,34 @@ const PERGUNTAS: { pergunta: string; resposta: string }[] = [
     resposta: `É o sistema em que o escritório de contabilidade organiza o trabalho dos setores — BPO Financeiro, Fiscal, Departamento Pessoal, Societário e Recrutamento — e atende os clientes pelo Portal do Cliente. Ele nasceu dentro de um escritório e é desenvolvido e operado pela ${EMPRESA.nome}, de Curitiba.`,
   },
   {
-    pergunta: "Quem é a Lígia?",
+    pergunta: "Quem é a Ceci?",
     resposta:
       "É a inteligência artificial do Connect: uma assistente que atende cada setor no chat do canto da tela. Ela consulta o que está no sistema, responde em português comum e sugere o próximo passo. Se perguntarem, ela diz que é uma inteligência artificial — nunca se passa por alguém da equipe.",
   },
   {
-    pergunta: "A Lígia faz alguma coisa sozinha?",
+    pergunta: "A Ceci faz alguma coisa sozinha?",
     resposta:
       "Não. Ela lê e sugere. Uma mudança, como concluir a etapa de um processo ou mover um candidato, só acontece quando uma pessoa da equipe confirma. Baixar uma conta, conciliar e aprovar continuam nas telas do Connect.",
   },
   {
-    pergunta: "O que a Lígia consegue ver?",
+    pergunta: "O que a Ceci consegue ver?",
     resposta:
       "O mesmo que a pessoa que pergunta: os setores e as telas a que ela tem acesso. Salário e dado médico só entram na resposta para quem tem essa permissão.",
   },
   {
-    pergunta: "A Lígia pode errar?",
+    pergunta: "A Ceci pode errar?",
     resposta:
       "Pode, como qualquer inteligência artificial. Por isso ela consulta o Connect antes de responder, diz quando não encontrou o dado e, quando dá, termina com o link da tela para a pessoa conferir. A decisão continua com a equipe.",
   },
   {
-    pergunta: "O cliente do escritório também fala com a Lígia?",
+    pergunta: "O cliente do escritório também fala com a Ceci?",
     resposta:
-      "Ainda não. Hoje a Lígia atende a equipe do escritório. A ideia é que ela também atenda o cliente no Portal do Cliente — quando estiver pronta, ela aparece por lá.",
+      "Ainda não. Hoje a Ceci atende a equipe do escritório. A ideia é que ela também atenda o cliente no Portal do Cliente — quando estiver pronta, ela aparece por lá.",
   },
   {
     pergunta: "Cada escritório escolhe o que usar?",
     resposta:
-      "Sim. Os setores e os módulos são ligados por escritório, e a Lígia também, setor por setor, com a conta de inteligência artificial do próprio escritório e um teto de gasto por mês.",
+      "Sim. Os setores e os módulos são ligados por escritório, e a Ceci também, setor por setor, com a conta de inteligência artificial do próprio escritório e um teto de gasto por mês.",
   },
   {
     pergunta: "Como o cliente entra no Portal do Cliente?",

@@ -1,19 +1,19 @@
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { RespostaDaLigia } from "./RespostaDaLigia";
+import { RespostaDaCeci } from "./RespostaDaCeci";
 
-// O desenho da resposta da Lígia (13/10/2026): Markdown seguro, link interno
+// O desenho da resposta da Ceci (13/10/2026): Markdown seguro, link interno
 // como botão, nada de HTML, imagem ou endereço de fora clicável.
 
 beforeAll(() => vi.stubGlobal("React", React));
 afterAll(() => vi.unstubAllGlobals());
 
-const html = (texto: string) => renderToStaticMarkup(React.createElement(RespostaDaLigia, { texto }));
+const html = (texto: string) => renderToStaticMarkup(React.createElement(RespostaDaCeci, { texto }));
 const hrefs = (h: string) => [...h.matchAll(/href="([^"]*)"/g)].map((m) => m[1]!);
 const ID = "3f1c2a4b-1111-4222-8333-944455556666";
 
-describe("resposta da Lígia na tela", () => {
+describe("resposta da Ceci na tela", () => {
   it("negrito, lista e título viram marcação de verdade", () => {
     const h = html("**3 pendências** esperando o cliente\n### Vencidas\n- **Confirmar o aluguel** — vencida\n1. primeiro");
     expect(h).toContain('<strong class="font-semibold text-fg">3 pendências</strong>');
