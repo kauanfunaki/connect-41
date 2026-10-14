@@ -70,7 +70,7 @@ export const VIDEOS_DO_CONNECT: Readonly<Record<string, string>> = {
   portal_solicitacoes: "https://youtu.be/jSLCzTU7Vb8",
   // 26 — Agenda
   "geral:agenda": "https://youtu.be/49vVH6XRqso",
-  // 27 — Espaços
+  // 27 — Quadros (gravado quando a tela ainda se chamava Espaços, antes de 14/10/2026)
   "geral:espacos": "https://youtu.be/TIPh0ImN27U",
   // 28 — Certificados digitais
   tech_certificados: "https://youtu.be/YNyRwDTNkKg",

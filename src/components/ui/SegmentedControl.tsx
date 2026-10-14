@@ -35,7 +35,7 @@ type Comum<K extends string> = {
   /**
    * Como o segmento ativo se pinta.
    *
-   * `neutral` (padrão) é o troca-visão: Lista/Quadro, Dia/Semana/Mês. A opção
+   * `neutral` (padrão) é o troca-visão: Listas/Kanban, Dia/Semana/Mês. A opção
    * escolhida é uma preferência de quem olha, some ao recarregar, e um destaque
    * colorido só competiria com o conteúdo.
    *
