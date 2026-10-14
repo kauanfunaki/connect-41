@@ -121,13 +121,13 @@ export function CabecalhoDoPainel({
         {acoes && <div className="flex flex-wrap items-center gap-1 -mx-2">{acoes}</div>}
       </div>
       {infos && (
-        <div id={idDosDados} hidden={!dadosAbertos} className="mt-2 max-h-[40dvh] overflow-y-auto scroll-y rounded-md border border-border-soft bg-surface px-3 py-1">
+        <div id={idDosDados} hidden={!dadosAbertos} className="relative mt-2 max-h-[40dvh] overflow-y-auto scroll-y rounded-md border border-border-soft bg-surface px-3 py-1">
           {infos}
         </div>
       )}
       {/* Os formulários de transferir e encerrar abrem aqui: com teto, para não
           tomarem o painel inteiro numa tela baixa. */}
-      {aviso && <div className="mt-3 max-h-[45dvh] overflow-y-auto scroll-y">{aviso}</div>}
+      {aviso && <div className="relative mt-3 max-h-[45dvh] overflow-y-auto scroll-y">{aviso}</div>}
     </div>
   );
 }
@@ -155,7 +155,7 @@ export function AbasDoPainel({ abas, inicial }: { abas: AbaDoPainel[]; inicial?:
       <div
         id={`aba-${atual.chave}`}
         role="tabpanel"
-        className={atual.cheia ? "flex-1 min-h-0 flex flex-col" : "flex-1 min-h-0 overflow-y-auto scroll-y px-5 sm:px-6 py-4"}
+        className={atual.cheia ? "relative flex-1 min-h-0 flex flex-col" : "relative flex-1 min-h-0 overflow-y-auto scroll-y px-5 sm:px-6 py-4"}
       >
         {atual.conteudo}
       </div>
@@ -175,7 +175,7 @@ export function RolarParaOFim({ children, quantas, className = "" }: { children:
     if (el) el.scrollTop = el.scrollHeight;
   }, [quantas]);
   return (
-    <div ref={ref} className={`overflow-y-auto scroll-y ${className}`.trim()}>
+    <div ref={ref} className={`relative overflow-y-auto scroll-y ${className}`.trim()}>
       {children}
     </div>
   );
