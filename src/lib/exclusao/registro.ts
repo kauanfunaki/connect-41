@@ -170,6 +170,9 @@ const PESSOA_SOLTAS: ColunaSolta[] = [
   { modelo: "WhatsappThread", coluna: "personId", tratamento: "desligar" },
   { modelo: "WhatsappThread", coluna: "linkPendingPersonId", tratamento: "desligar" },
   { modelo: "WhatsappThread", coluna: "candidaturaId", tratamento: "desligar" },
+  // O resumo do currículo lido pela IA na ficha do candidato (14/10/2026): sai
+  // com a pessoa. Tabela sem chave — o passo tolera a tabela ainda não existir.
+  { modelo: "CandidateResumeSummary", coluna: "personId", tratamento: "apagar" },
   { modelo: "AuditLog", coluna: "entityId", tratamento: "manter", motivo: "a trilha guarda o que foi excluído" },
   { modelo: "AgentRun", coluna: "entityId", tratamento: "manter", motivo: "trilha de execução da IA" },
   { modelo: "AgentProposal", coluna: "entityId", tratamento: "manter", motivo: "proposta da IA já decidida, guardada como trilha" },

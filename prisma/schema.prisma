@@ -1923,6 +1923,32 @@ model Candidatura {
   @@map("candidaturas")
 }
 
+/// O resumo que a IA escreveu ao ler o currículo na ficha do candidato
+/// ("Ler com IA", bloco Currículo — escolha 3B do Kauan, 14/10/2026). Antes o
+/// resumo sumia ao recarregar a página. Uma linha por pessoa: ler de novo
+/// substitui a anterior.
+///
+/// **Sem relação (FK), de propósito**, como `TutorialVisto`: sem a tabela
+/// (deploy antes da migration) a ficha mostra o bloco sem resumo guardado e a
+/// leitura segue funcionando como antes — só não guarda. A exclusão da pessoa
+/// apaga a linha (`PLANO_DA_PESSOA`, src/lib/exclusao/pessoa.ts).
+model CandidateResumeSummary {
+  personId            String   @id
+  tenantId            String
+  summary             String   @db.Text
+  /// Os rótulos dos campos que a leitura preencheu na ficha: ["E-mail", "Cidade"].
+  filledFields        Json
+  /// De onde veio o PDF lido: um documento da ficha (categoria Currículo) ou o
+  /// currículo de uma candidatura do portal. Só informativo, sem chave.
+  sourceDocumentId    String?
+  sourceCandidaturaId String?
+  sourceFileName      String?  @db.VarChar(180)
+  readAt              DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("candidate_resume_summaries")
+}
+
 model ExameAdmissional {
   id            String                 @id @default(uuid())
   tenantId      String
