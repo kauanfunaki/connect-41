@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  MARCA_41_CARREIRAS,
+  PAGINA_NAO_ENCONTRADA,
+  caminhoDoLogoDaVaga,
   caminhoNoPortal,
   configDeCarreiras,
   ehDa41,
   ehHostDeCarreiras,
   enderecoPublicoDoPortal,
+  imagemDeCompartilhamento,
   nomeDoEscritorio,
   normalizarHost,
   portalNoHost,
@@ -122,6 +126,46 @@ describe("os caminhos do portal", () => {
     expect(caminhoNoPortal("outro", { tipo: "conta" }, false)).toBe("/carreiras/outro/minha-conta");
     expect(caminhoNoPortal("outro", { tipo: "entrar" }, false)).toBe("/carreiras/outro/minha-conta/entrar");
   });
+
+  it("a lista com filtros e o aviso de privacidade (15/10/2026)", () => {
+    expect(caminhoNoPortal("41tech", { tipo: "vagas" }, true)).toBe("/vagas");
+    expect(caminhoNoPortal("41tech", { tipo: "privacidade" }, true)).toBe("/privacidade");
+    expect(caminhoNoPortal("41tech", { tipo: "vagas" }, false)).toBe("/carreiras/41tech/vagas");
+    expect(caminhoNoPortal("41tech", { tipo: "privacidade" }, false)).toBe("/carreiras/41tech/privacidade");
+  });
+
+  it("o logo da empresa da vaga sai pela rota pública do portal, relativa", () => {
+    expect(caminhoDoLogoDaVaga("41tech", "v1")).toBe("/api/carreiras/logo/41tech/v1");
+  });
+});
+
+describe("imagemDeCompartilhamento — a prévia do link (LinkedIn, WhatsApp, Pandapé)", () => {
+  it("da 41: no endereço principal do portal, a da capa e a de cada vaga", () => {
+    expect(imagemDeCompartilhamento("41tech", null, PRODUCAO)).toBe(`https://${PRINCIPAL}/api/carreiras/og/41tech`);
+    expect(imagemDeCompartilhamento("41tech", "v1", PRODUCAO)).toBe(`https://${PRINCIPAL}/api/carreiras/og/41tech/v1`);
+  });
+
+  it("dos outros escritórios, ou com o portal desligado: nenhuma", () => {
+    expect(imagemDeCompartilhamento("outro", "v1", PRODUCAO)).toBeNull();
+    expect(imagemDeCompartilhamento("41tech", "v1", { APP_PUBLIC_URL: "https://app.useconnect.com.br" })).toBeNull();
+  });
+});
+
+describe("a marca", () => {
+  it("o nome do portal num lugar só; quem conduz é a 41 Tallent, com o CNPJ dela e a política oficial", () => {
+    expect(MARCA_41_CARREIRAS.nome).toBe("41 Carreiras");
+    expect(MARCA_41_CARREIRAS.recrutamento).toBe("41 Tallent");
+    expect(MARCA_41_CARREIRAS.cnpj).toBe("57.848.164/0001-90");
+    expect(MARCA_41_CARREIRAS.politicaDePrivacidade).toBe("https://41contabil.com.br/41-tallent/politicas-e-termos/");
+  });
+
+  it("a página de não encontrada do proxy: a marca, a busca na lista e o caminho de volta", () => {
+    expect(PAGINA_NAO_ENCONTRADA).toContain("<title>Página não encontrada · 41 Carreiras</title>");
+    expect(PAGINA_NAO_ENCONTRADA).toContain('action="/vagas"');
+    expect(PAGINA_NAO_ENCONTRADA).toContain('href="/vagas"');
+    expect(PAGINA_NAO_ENCONTRADA).toContain('src="/41-tallent/marca.png"');
+    expect(PAGINA_NAO_ENCONTRADA).not.toMatch(/connect/i);
+  });
 });
 
 describe("enderecoPublicoDoPortal e os links da vaga", () => {
@@ -156,6 +200,8 @@ describe("portalNoHost — a página do portal vista do host", () => {
     const p = portalNoHost("41tech", PRINCIPAL, config, "https://app.useconnect.com.br")!;
     expect(p).toMatchObject({ da41: true, curto: true });
     expect(p.rotas.lista).toBe("/");
+    expect(p.rotas.vagas).toBe("/vagas");
+    expect(p.rotas.privacidade).toBe("/privacidade");
     expect(p.rotas.vaga("v1")).toBe("/vagas/v1");
     expect(p.rotas.conta).toBe("/minha-conta");
     expect(p.rotas.entrar).toBe("/minha-conta/entrar");
@@ -167,6 +213,8 @@ describe("portalNoHost — a página do portal vista do host", () => {
     const p = portalNoHost("41tech", "app.useconnect.com.br", config, "https://app.useconnect.com.br")!;
     expect(p).toMatchObject({ da41: true, curto: false });
     expect(p.rotas.vaga("v1")).toBe("/carreiras/41tech/v1");
+    expect(p.rotas.vagas).toBe("/carreiras/41tech/vagas");
+    expect(p.rotas.privacidade).toBe("/carreiras/41tech/privacidade");
     expect(p.rotas.caminhoDoCookie).toBe("/carreiras/41tech");
     expect(p.rotas.teste("tk")).toBe("/teste/tk");
   });
@@ -185,8 +233,8 @@ describe("portalNoHost — a página do portal vista do host", () => {
     expect(ehDa41("41tech", null)).toBe(false);
   });
 
-  it("o nome de quem conduz o processo: 41 Contábil para a 41", () => {
-    expect(nomeDoEscritorio({ da41: true }, "41 Tech")).toBe("41 Contábil");
+  it("o nome de quem conduz o processo: a 41 Tallent para a 41 (15/10/2026)", () => {
+    expect(nomeDoEscritorio({ da41: true }, "41 Tech")).toBe("41 Tallent");
     expect(nomeDoEscritorio({ da41: false }, "Outro Escritório")).toBe("Outro Escritório");
   });
 });
@@ -204,6 +252,24 @@ describe("rotaNoHostDeCarreiras — a lista fechada do endereço do portal", () 
     expect(rota("/sitemap.xml")).toEqual({ tipo: "reescrever", para: "/api/carreiras/sitemap" });
   });
 
+  it("a lista com busca e filtros e o aviso de privacidade (15/10/2026)", () => {
+    expect(rota("/vagas")).toEqual({ tipo: "reescrever", para: "/carreiras/41tech/vagas" });
+    expect(rota("/vagas/")).toEqual({ tipo: "reescrever", para: "/carreiras/41tech/vagas" });
+    expect(rota("/privacidade")).toEqual({ tipo: "reescrever", para: "/carreiras/41tech/privacidade" });
+  });
+
+  it("a marca da 41 Tallent, as imagens de compartilhamento e o logo das empresas passam", () => {
+    for (const c of [
+      "/41-tallent/logo.png",
+      "/41-tallent/marca.png",
+      "/api/carreiras/og/41tech",
+      "/api/carreiras/og/41tech/v1",
+      "/api/carreiras/logo/41tech/v1",
+    ]) {
+      expect(rota(c), c).toEqual({ tipo: "seguir" });
+    }
+  });
+
   it("a candidatura, o logo do escritório e os arquivos do Next passam", () => {
     for (const c of ["/api/carreiras/apply", "/api/workspace-logos/t1.png", "/_next/data/x.json", "/icon.png", "/apple-icon.png"]) {
       expect(rota(c)).toEqual({ tipo: "seguir" });
@@ -211,12 +277,13 @@ describe("rotaNoHostDeCarreiras — a lista fechada do endereço do portal", () 
   });
 
   it("os endereços antigos da 41 viram os curtos", () => {
-    expect(rota("/vagas")).toEqual({ tipo: "redirecionar", para: "/" });
     expect(rota("/carreiras")).toEqual({ tipo: "redirecionar", para: "/" });
     expect(rota("/carreiras/41tech")).toEqual({ tipo: "redirecionar", para: "/" });
     expect(rota("/carreiras/41tech/v1")).toEqual({ tipo: "redirecionar", para: "/vagas/v1" });
     expect(rota("/carreiras/41tech/minha-conta")).toEqual({ tipo: "redirecionar", para: "/minha-conta" });
     expect(rota("/carreiras/41tech/minha-conta/entrar")).toEqual({ tipo: "redirecionar", para: "/minha-conta/entrar" });
+    expect(rota("/carreiras/41tech/vagas")).toEqual({ tipo: "redirecionar", para: "/vagas" });
+    expect(rota("/carreiras/41tech/privacidade")).toEqual({ tipo: "redirecionar", para: "/privacidade" });
   });
 
   it("nada da equipe, do Portal do Cliente nem de outro escritório", () => {
@@ -242,6 +309,9 @@ describe("rotaNoHostDeCarreiras — a lista fechada do endereço do portal", () 
       "/carreiras/41tech/v1/x",
       "/minha-conta/x",
       "/vagas/a%2Fb",
+      "/privacidade/x",
+      "/41-tallent",
+      "/carreiras/41tech/vagas/v1",
       "/vagas/..",
       "/manifest.webmanifest",
       "/sw.js",

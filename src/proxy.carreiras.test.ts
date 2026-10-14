@@ -118,6 +118,16 @@ describe("com o portal ligado, os outros hosts não mudam", () => {
     expect(passou(candidatura)).toBe(true);
   });
 
+  it("app.: as páginas novas do portal da 41 seguem pelo caminho longo, e a marca da 41 Tallent não abre ali sem sessão (15/10/2026)", async () => {
+    for (const caminho of ["/carreiras/41tech/vagas?q=fiscal", "/carreiras/41tech/privacidade", "/api/carreiras/og/41tech/v1", "/api/carreiras/logo/41tech/v1"]) {
+      const res = await visitar("app.useconnect.com.br", caminho);
+      expect(passou(res), caminho).toBe(true);
+      expect(reescrito(res), caminho).toBeNull();
+    }
+    // O Connect não mudou: arquivo de public/ fora das rotas públicas pede login, como antes.
+    expect(caminhoDoLogin(await visitar("app.useconnect.com.br", "/41-tallent/logo.png"))).toBe("/login");
+  });
+
   it("o site (domínio principal e www.) segue na `/`", async () => {
     for (const host of ["useconnect.com.br", "www.useconnect.com.br"]) {
       const res = await visitar(host, "/");
@@ -156,6 +166,24 @@ describe("no endereço do 41 Carreiras", () => {
     expect(reescrito(await visitar(PRINCIPAL, "/minha-conta", { metodo: "POST" }))!.pathname).toBe("/carreiras/41tech/minha-conta");
   });
 
+  it("`/vagas` é a lista com busca e filtros, e `/privacidade` o aviso do candidato (15/10/2026)", async () => {
+    const lista = reescrito(await visitar(PRINCIPAL, "/vagas?q=fiscal&modalidade=REMOTO&vaga=v1"))!;
+    expect(lista.pathname).toBe("/carreiras/41tech/vagas");
+    expect(lista.searchParams.get("q")).toBe("fiscal");
+    expect(lista.searchParams.get("modalidade")).toBe("REMOTO");
+    expect(lista.searchParams.get("vaga")).toBe("v1");
+    expect(reescrito(await visitar(PRINCIPAL, "/privacidade"))!.pathname).toBe("/carreiras/41tech/privacidade");
+  });
+
+  it("a marca da 41 Tallent, as imagens de compartilhamento e o logo das empresas passam como estão", async () => {
+    for (const caminho of ["/41-tallent/logo.png", "/41-tallent/marca.png", "/api/carreiras/og/41tech", "/api/carreiras/og/41tech/v1", "/api/carreiras/logo/41tech/v1"]) {
+      const res = await visitar(PRINCIPAL, caminho);
+      expect(passou(res), caminho).toBe(true);
+      expect(reescrito(res), caminho).toBeNull();
+      expect(destino(res), caminho).toBeNull();
+    }
+  });
+
   it("CARREIRAS_TENANT_SLUG troca o escritório do hub", async () => {
     process.env.CARREIRAS_TENANT_SLUG = "41contabil";
     expect(reescrito(await visitar(PRINCIPAL, "/"))!.pathname).toBe("/carreiras/41contabil");
@@ -178,6 +206,8 @@ describe("no endereço do 41 Carreiras", () => {
     const entrar = await visitar(PRINCIPAL, "/carreiras/41tech/minha-conta/entrar?t=abc");
     expect(destino(entrar)).toBe(`https://${PRINCIPAL}/minha-conta/entrar?t=abc`);
     expect(destino(await visitar(PRINCIPAL, "/carreiras"))).toBe(`https://${PRINCIPAL}/`);
+    expect(destino(await visitar(PRINCIPAL, "/carreiras/41tech/vagas"))).toBe(`https://${PRINCIPAL}/vagas`);
+    expect(destino(await visitar(PRINCIPAL, "/carreiras/41tech/privacidade"))).toBe(`https://${PRINCIPAL}/privacidade`);
   });
 
   it("nunca serve a equipe, o Portal do Cliente nem outro escritório — nem com sessão", async () => {
@@ -195,6 +225,8 @@ describe("no endereço do 41 Carreiras", () => {
     const pagina = await (await visitar(PRINCIPAL, "/login")).text();
     expect(pagina).toContain("41 Carreiras");
     expect(pagina).not.toMatch(/connect/i);
+    // Com a busca e o caminho para as vagas abertas.
+    expect(pagina).toContain('action="/vagas"');
   });
 
   it("as APIs da equipe respondem 404, sem tentar sessão", async () => {
