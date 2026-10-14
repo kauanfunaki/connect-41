@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckSquare, MessageSquare, Search, X } from "lucide-react";
+import { CheckSquare, MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { CartaoDeConversa, ColunaDaLista } from "@/components/conversas/caixa/Caixa";
+import { CartaoDeConversa, ColunaDaLista, RecortesDaCaixa } from "@/components/conversas/caixa/Caixa";
+import { useCaixaDoWhatsapp } from "@/components/whatsapp/contextoDaCaixa";
 import { quandoCurto } from "@/lib/conversas/caixa";
 import {
   situacaoDaConversa,
@@ -20,62 +21,48 @@ import {
   type AcaoEmLote,
   type ResultadoDoLote,
 } from "@/lib/whatsapp/conversas";
+import { RECORTES, contarRecortes, hrefDaConversa, hrefDoRecorte } from "@/lib/whatsapp/caixa";
 import { DESFECHOS, DESFECHOS_DA_TELA } from "@/lib/whatsapp/atendimentos";
 import { agirEmLote } from "@/app/(app)/whatsapp/actions";
-import type { LinhaDeConversa } from "@/lib/whatsapp/data";
-import type { PessoaDoAtendimento } from "@/lib/whatsapp/equipe";
-
-type Props = {
-  conversas: LinhaDeConversa[];
-  /** Agora, do servidor — o relógio do navegador pode estar noutro fuso. */
-  agora: Date;
-  /** Quem está olhando: "com você" em vez do próprio nome. */
-  userId: string;
-  /** A lista é um recorte (minhas, sem responsável): vazio não é "nenhuma conversa". */
-  filtrada?: boolean;
-  /** Para quem dá para transferir — quem atende o WhatsApp do setor. */
-  pessoas: PessoaDoAtendimento[];
-  /** A conversa aberta no painel, para o cartão acender. */
-  abertaId?: string | null;
-  /** O recorte da URL (`?ver=`), que o cartão leva junto ao abrir. */
-  sufixo: string;
-};
 
 /** O valor do seletor de transferência que quer dizer "o assistente". */
 const ASSISTENTE = "__assistente__";
 
 /**
  * A lista do atendimento em cartões (09/10/2026, desenho da caixa de
- * conversas). A busca filtra na hora; "Selecionar" liga as caixas do lote —
- * transferir ou encerrar várias de uma vez, como antes.
+ * conversas): as abas do recorte, a busca, os cartões. A busca filtra na hora;
+ * "Selecionar" liga as caixas do lote — transferir ou encerrar várias de uma
+ * vez, como antes.
+ *
+ * Mora no layout de /whatsapp (14/10/2026) e lê tudo da `CaixaDoWhatsapp`:
+ * abrir outra conversa não a remonta, e a rolagem, a busca, a aba e a seleção
+ * ficam como estavam.
  */
-export function ConversasLista({ conversas, agora, userId, filtrada = false, pessoas, abertaId, sufixo }: Props) {
+export function ConversasLista() {
   const router = useRouter();
-  const [busca, setBusca] = useState("");
+  const { conversas: todas, doRecorte: conversas, visiveis, recorte, busca, setBusca, agora, userId, pessoas, abertaId } = useCaixaDoWhatsapp();
+  const filtrada = recorte !== "todas";
   const [selecionando, setSelecionando] = useState(false);
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set());
   const [para, setPara] = useState("");
   const [desfecho, setDesfecho] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [retorno, setRetorno] = useState<{ texto: string; puladas: ResultadoDoLote["puladas"]; erro: boolean } | null>(null);
+  const contagem = contarRecortes(todas, userId);
 
-  const visiveis = useMemo(() => {
-    const t = busca.trim().toLowerCase();
-    const digitos = t.replace(/\D/g, "");
-    if (!t) return conversas;
-    return conversas.filter(
-      (c) =>
-        (c.nome ?? "").toLowerCase().includes(t) ||
-        (c.vaga ?? "").toLowerCase().includes(t) ||
-        (digitos.length >= 3 && c.waPhone.includes(digitos))
-    );
-  }, [busca, conversas]);
+  // Passando de conversa pelo ↑↓, o cartão aberto pode sair da área à vista:
+  // a lista rola só o necessário para mostrá-lo.
+  const raiz = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!abertaId) return;
+    raiz.current?.querySelector(`[data-cartao="${CSS.escape(abertaId)}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [abertaId]);
 
   // A seleção vale só para o que está na tela: trocar de recorte ou buscar não
   // leva junto conversa escondida.
   const ids = new Set(visiveis.map((c) => c.id));
   const selecionadas = [...marcadas].filter((id) => ids.has(id));
-  const todas = visiveis.length > 0 && selecionadas.length === visiveis.length;
+  const todasMarcadas = visiveis.length > 0 && selecionadas.length === visiveis.length;
 
   function alternar(id: string) {
     setRetorno(null);
@@ -108,29 +95,43 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
     router.refresh();
   }
 
+  // As abas, a busca e os cartões com a mesma largura (pedido do Kauan,
+  // 14/10/2026): as abas dividem a linha, a busca estica e o "Selecionar"
+  // encosta à direita. O alinhamento com a barra de rolagem é da `ColunaDaLista`.
   const topo = (
-    <div className="flex items-center gap-2 mb-2">
-      <Input
-        compact
-        type="search"
-        icon={<Search size={14} />}
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        placeholder="Nome, telefone ou vaga"
-        aria-label="Buscar conversa"
-        className="flex-1"
+    <>
+      <RecortesDaCaixa
+        itens={RECORTES.map((r) => ({
+          rotulo: r.rotulo,
+          n: contagem[r.chave],
+          href: hrefDoRecorte(abertaId, r.chave),
+          ativo: r.chave === recorte,
+          tom: r.chave === "sem_responsavel" ? "atencao" : undefined,
+        }))}
+        // Só a URL muda: a lista inteira já está aqui, e o painel não recarrega.
+        aoEscolher={(href) => window.history.pushState(null, "", href)}
       />
-      {conversas.length > 0 &&
-        (selecionando ? (
-          <Button size="sm" variant="ghost" onClick={sairDaSelecao}>
-            <X size={14} /> Cancelar
-          </Button>
-        ) : (
-          <Button size="sm" variant="secondary" onClick={() => setSelecionando(true)} title="Transferir ou encerrar várias">
-            <CheckSquare size={14} /> Selecionar
-          </Button>
-        ))}
-    </div>
+      <div className="flex items-center gap-2">
+        <CampoDeBusca
+          compact
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Nome, telefone ou vaga"
+          aria-label="Buscar conversa"
+          className="flex-1 min-w-0"
+        />
+        {conversas.length > 0 &&
+          (selecionando ? (
+            <Button size="sm" variant="ghost" onClick={sairDaSelecao}>
+              <X size={14} /> Cancelar
+            </Button>
+          ) : (
+            <Button size="sm" variant="secondary" onClick={() => setSelecionando(true)} title="Transferir ou encerrar várias">
+              <CheckSquare size={14} /> Selecionar
+            </Button>
+          ))}
+      </div>
+    </>
   );
 
   const lote =
@@ -138,10 +139,10 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
       <div className="rounded-lg border border-brand/40 bg-surface shadow-[var(--c41-shadow-xs)] p-3 flex flex-col gap-2" role="toolbar" aria-label="Ações nas conversas selecionadas">
         <Checkbox
           id="marcar-todas"
-          checked={todas}
+          checked={todasMarcadas}
           onChange={() => {
             setRetorno(null);
-            setMarcadas(todas ? new Set() : new Set(visiveis.slice(0, MAX_NO_LOTE).map((c) => c.id)));
+            setMarcadas(todasMarcadas ? new Set() : new Set(visiveis.slice(0, MAX_NO_LOTE).map((c) => c.id)));
           }}
           label={selecionadas.length > 0 ? `${selecionadas.length} selecionada${selecionadas.length === 1 ? "" : "s"}` : "Selecionar todas"}
         />
@@ -206,62 +207,69 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
     </div>
   );
 
+  const cartoes =
+    visiveis.length === 0 ? (
+      <EmptyState
+        title={busca ? "Nada encontrado" : filtrada ? "Nada neste recorte" : "Nenhuma conversa ainda"}
+        description={
+          busca
+            ? "Busque pelo nome, pelo telefone ou pela vaga."
+            : filtrada
+              ? "Nenhuma conversa se encaixa aqui agora."
+              : "Quando um candidato escrever para o número do Recrutamento, a conversa aparece aqui."
+        }
+        icon={<MessageSquare />}
+      />
+    ) : (
+      visiveis.map((c) => {
+        const situacao = situacaoDaConversa(c, agora);
+        const nome = c.nome ?? telefoneLegivel(c.waPhone);
+        const comQuem = c.responsavel
+          ? c.responsavel.id === userId
+            ? "com você"
+            : `com ${c.responsavel.nome}`
+          : c.handoffAt && !c.optedOutAt
+            ? "ninguém assumiu"
+            : null;
+        return (
+          <CartaoDeConversa
+            key={c.id}
+            href={hrefDaConversa(c.id, recorte)}
+            nome={nome}
+            nomeDasIniciais={c.nome}
+            selo={{ tom: SITUACAO_TOM[situacao], texto: SITUACAO_LABEL[situacao] }}
+            quando={quandoCurto(c.ultimaMensagemEm, agora)}
+            contexto={
+              <>
+                {comQuem && <span className={comQuem === "ninguém assumiu" ? "text-danger font-medium" : undefined}>{comQuem}</span>}
+                {comQuem && (c.vaga || c.nome) && " · "}
+                {c.vaga ?? (c.nome ? telefoneLegivel(c.waPhone) : null)}
+              </>
+            }
+            previa={c.ultimaMensagem}
+            naoLidas={c.naoRespondidas}
+            rotuloDasNaoLidas={c.naoRespondidas === 1 ? "mensagem sem resposta" : "mensagens sem resposta"}
+            selecionada={c.id === abertaId}
+            ancora={c.id}
+            antes={
+              selecionando ? (
+                <label className="flex items-start pl-3 pt-3.5 cursor-pointer">
+                  <Checkbox checked={marcadas.has(c.id)} onChange={() => alternar(c.id)} aria-label={`Selecionar a conversa com ${nome}`} />
+                </label>
+              ) : undefined
+            }
+          />
+        );
+      })
+    );
+
   return (
-    <ColunaDaLista topo={topo} rodape={lote || undefined}>
-      {avisoDoLote}
-      {visiveis.length === 0 ? (
-        <EmptyState
-          title={busca ? "Nada encontrado" : filtrada ? "Nada neste recorte" : "Nenhuma conversa ainda"}
-          description={
-            busca
-              ? "Busque pelo nome, pelo telefone ou pela vaga."
-              : filtrada
-                ? "Nenhuma conversa se encaixa aqui agora."
-                : "Quando um candidato escrever para o número do Recrutamento, a conversa aparece aqui."
-          }
-          icon={<MessageSquare />}
-        />
-      ) : (
-        visiveis.map((c) => {
-          const situacao = situacaoDaConversa(c, agora);
-          const nome = c.nome ?? telefoneLegivel(c.waPhone);
-          const comQuem = c.responsavel
-            ? c.responsavel.id === userId
-              ? "com você"
-              : `com ${c.responsavel.nome}`
-            : c.handoffAt && !c.optedOutAt
-              ? "ninguém assumiu"
-              : null;
-          return (
-            <CartaoDeConversa
-              key={c.id}
-              href={`/whatsapp/${c.id}${sufixo}`}
-              nome={nome}
-              nomeDasIniciais={c.nome}
-              selo={{ tom: SITUACAO_TOM[situacao], texto: SITUACAO_LABEL[situacao] }}
-              quando={quandoCurto(c.ultimaMensagemEm, agora)}
-              contexto={
-                <>
-                  {comQuem && <span className={comQuem === "ninguém assumiu" ? "text-danger font-medium" : undefined}>{comQuem}</span>}
-                  {comQuem && (c.vaga || c.nome) && " · "}
-                  {c.vaga ?? (c.nome ? telefoneLegivel(c.waPhone) : null)}
-                </>
-              }
-              previa={c.ultimaMensagem}
-              naoLidas={c.naoRespondidas}
-              rotuloDasNaoLidas={c.naoRespondidas === 1 ? "mensagem sem resposta" : "mensagens sem resposta"}
-              selecionada={c.id === abertaId}
-              antes={
-                selecionando ? (
-                  <label className="flex items-start pl-3 pt-3.5 cursor-pointer">
-                    <Checkbox checked={marcadas.has(c.id)} onChange={() => alternar(c.id)} aria-label={`Selecionar a conversa com ${nome}`} />
-                  </label>
-                ) : undefined
-              }
-            />
-          );
-        })
-      )}
-    </ColunaDaLista>
+    // `contents`: a caixa não existe para o layout, só para achar o cartão aberto.
+    <div ref={raiz} className="contents">
+      <ColunaDaLista topo={topo} rodape={lote || undefined}>
+        {avisoDoLote}
+        {cartoes}
+      </ColunaDaLista>
+    </div>
   );
 }
