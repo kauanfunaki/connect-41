@@ -32,6 +32,7 @@ import { RespostaDaCeci } from "@/components/ia/RespostaDaCeci";
 import { respostaEmTextoSimples } from "@/lib/ia/chat/markdown";
 import { ACEITA_NO_CAMPO, conferirEscolha, separarAnexos } from "@/lib/ia/chat/anexos-regras";
 import { contextoParaMostrar } from "@/lib/ia/chat/telas";
+import { assinarPedidosParaAbrirCeci } from "@/lib/ia/chat/abrirCeci";
 import {
   boasVindasPendentes,
   CHAVE_DAS_BOAS_VINDAS,
@@ -305,6 +306,37 @@ export function ChatDeIA({
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, ALTURA_MAXIMA_DO_CAMPO)}px`;
   }, [pergunta, aberto]);
+
+  // Aberta por um botão da tela (14/10/2026 — "Perguntar à Ceci sobre esta
+  // vaga"; ver `src/lib/ia/chat/abrirCeci.ts`). O pedido traz o agente: a
+  // conversa aberta com outro agente dá lugar a uma nova, porque o assunto da
+  // tela só chega ao agente pedido. O assunto vai para o campo de pergunta,
+  // enquanto a pessoa estiver na mesma página.
+  const [assuntoDaTela, setAssuntoDaTela] = useState<{ texto: string; caminho: string } | null>(null);
+  useEffect(
+    () =>
+      assinarPedidosParaAbrirCeci((pedido) => {
+        const alvo = pedido.agente && agentes.some((a) => a.code === pedido.agente) ? pedido.agente : null;
+        if (alvo && alvo !== agentCode) {
+          if (conversaId || mensagens.length > 0) {
+            setConversaId(null);
+            setMensagens([]);
+            setErro(null);
+          }
+          setBoasVindasNaTela(false);
+          setEscolhido(alvo);
+        }
+        // As boas-vindas pendentes contam como vistas: quem abriu pelo botão já veio com o assunto.
+        if (boasVindasEsperando) marcarBoasVindasVistas(entradaDaFoto);
+        setAssuntoDaTela(pedido.assunto ? { texto: pedido.assunto, caminho: window.location.pathname } : null);
+        setVendoHistorico(false);
+        marcarJaAbriu();
+        setRespostaNaoLida(false);
+        setAberto(true);
+        requestAnimationFrame(() => campoRef.current?.focus());
+      }),
+    [agentes, agentCode, conversaId, mensagens.length, boasVindasEsperando, entradaDaFoto]
+  );
 
   if (agentes.length === 0) return null;
   const agente = agentes.find((a) => a.code === agentCode) ?? agentes[0]!;
@@ -930,7 +962,11 @@ export function ChatDeIA({
                     }}
                     rows={1}
                     maxLength={2000}
-                    placeholder={`Pergunte à ${NOME_DA_ASSISTENTE}…`}
+                    placeholder={
+                      assuntoDaTela && assuntoDaTela.caminho === pathname
+                        ? `Pergunte à ${NOME_DA_ASSISTENTE} sobre ${assuntoDaTela.texto}…`
+                        : `Pergunte à ${NOME_DA_ASSISTENTE}…`
+                    }
                     className="min-h-0! flex-1 border-0! bg-transparent! px-0! py-1! text-label! leading-5 shadow-none! focus:shadow-none! focus-visible:shadow-none! overflow-y-auto"
                     aria-label="Pergunta"
                     disabled={enviando}
