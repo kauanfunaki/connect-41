@@ -13,8 +13,11 @@ import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
 import { MolduraDoPortal } from "@/components/carreiras/MolduraDe41Carreiras";
 import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 import { beneficiosDaVaga, localDaVaga, whereDasVagasDoPortal } from "@/lib/carreiras/portal";
-import { MARCA_41_CARREIRAS, enderecoPublicoDoPortal, nomeDoEscritorio } from "@/lib/carreiras/enderecoDeCarreiras";
+import { MARCA_41_CARREIRAS, enderecoPublicoDoPortal, imagemDeCompartilhamento, nomeDoEscritorio } from "@/lib/carreiras/enderecoDeCarreiras";
 import { portalDaRequisicao } from "@/lib/carreiras/portalDaRequisicao";
+import { metadadosDo41 } from "@/lib/carreiras/metadados41";
+import { vagaDoPortal } from "@/lib/carreiras/vagasDoPortal";
+import { PaginaDaVaga41 } from "@/components/carreiras/41/PaginaDaVaga41";
 
 // Dinâmica de propósito: o formulário leva um carimbo de tempo assinado na hora
 // em que a página é montada (`src/lib/carreiras/antiRobo.ts`). Página em cache
@@ -82,8 +85,20 @@ export async function generateMetadata({
   // Da 41, no endereço principal do 41 Carreiras; dos outros, o de sempre.
   const url = enderecoPublicoDoPortal(slug, { tipo: "vaga", id: vaga.id });
 
+  // Da 41, com a imagem de compartilhamento da vaga (título, empresa, cidade,
+  // modelo) — a prévia do link no LinkedIn, no WhatsApp e no Pandapé.
+  if (portal.da41) {
+    return metadadosDo41({
+      titulo: `${title} · ${MARCA_41_CARREIRAS.nome}`,
+      descricao: description,
+      url,
+      imagem: imagemDeCompartilhamento(slug, vaga.id),
+      imagemAlt: `${vaga.title} — ${companyLabel}${local ? `, ${local}` : ""}`,
+    });
+  }
+
   return {
-    title: portal.da41 ? { absolute: `${title} · ${MARCA_41_CARREIRAS.nome}` } : title,
+    title,
     description,
     ...(url ? { alternates: { canonical: url } } : {}),
     openGraph: {
@@ -91,7 +106,7 @@ export async function generateMetadata({
       title,
       description,
       ...(url ? { url } : {}),
-      siteName: portal.da41 ? MARCA_41_CARREIRAS.nome : `Trabalhe conosco — ${tenant.name}`,
+      siteName: `Trabalhe conosco — ${tenant.name}`,
       locale: "pt_BR",
     },
     twitter: { card: "summary", title, description },
@@ -131,9 +146,26 @@ export default async function VagaPublicaPage({
     url: enderecoPublicoDoPortal(slug, { tipo: "vaga", id: vaga.id }),
   });
 
-  // Da 41, com o topo e o rodapé do 41 Carreiras (14/10/2026).
+  // Da 41, a página do 41 Carreiras (15/10/2026): mesma vaga, mesmo JSON-LD,
+  // mesma candidatura (rota, campos e anti-robô), com a cara nova.
+  if (portal.da41) {
+    const detalhe = await vagaDoPortal(tenant.id, vaga.id);
+    if (!detalhe) notFound();
+    return (
+      <PaginaDaVaga41
+        vaga={detalhe}
+        slug={slug}
+        rotas={rotas}
+        agora={new Date()}
+        carimbo={emitirCarimbo(new Date())}
+        urlPublica={enderecoPublicoDoPortal(slug, { tipo: "vaga", id: vaga.id })}
+        jsonLd={jsonLd}
+      />
+    );
+  }
+
   return (
-    <MolduraDoPortal portal={portal} logo={tenant.logoUrl}>
+    <MolduraDoPortal>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       <div className="max-w-2xl mx-auto">
         {/* Botão sem caixa, com a seta (30/09): era texto cinza com "←". */}
