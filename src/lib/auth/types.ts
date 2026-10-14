@@ -22,7 +22,12 @@ export interface PortalAccessTokenPayload {
   kind: "portal";
   sub: string;          // PortalUser.id
   tenantId: string;
-  clientGroupId: string;
+  /**
+   * Só nos tokens emitidos até 14/10/2026, quando a conta via as empresas do
+   * Cliente. Hoje é ignorado: as empresas saem da ligação da conta, no banco
+   * (`alcanceDoCliente`). Token novo não traz.
+   */
+  clientGroupId?: string;
 }
 
 export interface RefreshTokenPayload {

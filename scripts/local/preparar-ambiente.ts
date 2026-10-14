@@ -64,19 +64,26 @@ async function main() {
   // ── Cliente do portal: senha de teste ─────────────────────────────────────
   const cliente = await p.portalUser.findFirst({
     where: { tenantId, email: "cliente.demo@exemplo.invalido" },
-    select: { id: true, clientGroupId: true },
+    select: { id: true },
   });
   if (!cliente) throw new Error("Rode a demonstração antes (scripts/dados-de-demonstracao.ts --aplicar).");
   await p.portalUser.update({ where: { id: cliente.id }, data: { passwordHash: await hashPassword(senhaDoPortal), active: true } });
   console.log("senha de teste do cliente do portal definida (LOCAL_PORTAL_PASSWORD)");
 
-  // ── Segunda empresa do grupo ──────────────────────────────────────────────
+  // A empresa do acesso (portal por empresa, 14/10/2026): a ligada a ele, com CNPJ.
+  const matriz = await p.company.findFirst({
+    where: { tenantId, cnpj: { not: null }, portalUserLinks: { some: { portalUserId: cliente.id } } },
+    select: { id: true, name: true, cnpj: true },
+  });
+
+  // ── Filial da empresa do acesso ───────────────────────────────────────────
+  // Entra no portal pela matriz ("incluir filiais"), sem ligação própria.
   const filial = "TRANSPORTES MODELO LTDA — FILIAL SUL";
-  if (!(await p.company.findFirst({ where: { tenantId, name: filial } }))) {
+  if (matriz && !(await p.company.findFirst({ where: { tenantId, name: filial } }))) {
     await p.company.create({
-      data: { tenantId, name: filial, displayName: "Transportes Modelo — Filial Sul", status: "ACTIVE", clientGroupId: cliente.clientGroupId },
+      data: { tenantId, name: filial, displayName: "Transportes Modelo — Filial Sul", status: "ACTIVE", parentCompanyId: matriz.id },
     });
-    console.log("segunda empresa do grupo criada");
+    console.log("filial da empresa do acesso criada");
   }
 
   // ── Comunicado de exemplo ─────────────────────────────────────────────────
@@ -90,17 +97,13 @@ async function main() {
         body:
           "O escritório fica fechado de 24/12 a 02/01.\n\nPedidos feitos nesse período pelo portal entram na fila e são respondidos a partir de 05/01, na ordem em que chegaram. As guias com vencimento no recesso saem antes, até 20/12.",
         notifiedAt: new Date(),
-        groups: { create: [{ clientGroupId: cliente.clientGroupId }] },
+        companies: { create: matriz ? [{ companyId: matriz.id }] : [] },
       },
     });
     console.log("comunicado de exemplo criado");
   }
 
   // ── Notas fiscais ─────────────────────────────────────────────────────────
-  const matriz = await p.company.findFirst({
-    where: { tenantId, clientGroupId: cliente.clientGroupId, cnpj: { not: null } },
-    select: { id: true, name: true, cnpj: true },
-  });
   if (matriz?.cnpj && !(await p.fiscalDocument.findFirst({ where: { tenantId, dedupKey: { startsWith: "LOCAL:" } } }))) {
     const hoje = new Date();
     const diasAtras = (d: number) => new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - d, 10);

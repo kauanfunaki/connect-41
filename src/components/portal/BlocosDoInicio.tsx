@@ -92,12 +92,13 @@ const ICONE_DA_ATENCAO: Record<ItemDaAtencao["chave"], React.ReactNode> = {
 export async function PrecisaDeVoce({
   escopo,
   portalUserId,
-  clientGroupId,
+  empresasDaConta,
   atencao,
 }: {
   escopo: Escopo;
   portalUserId: string;
-  clientGroupId: string;
+  /** Todas as empresas do acesso — o comunicado não segue a escolha de empresa. */
+  empresasDaConta: string[];
   atencao: BlocosDoInicio["atencao"];
 }) {
   const agora = new Date();
@@ -108,8 +109,9 @@ export async function PrecisaDeVoce({
       atencao.solicitacoes ? solicitacoesAguardandoCliente(escopo) : null,
       atencao.solicitacoes ? solicitacoesComRespostaDaEquipe(escopo, agora) : null,
       atencao.processos ? processosAguardandoCliente(escopo.tenantId, escopo.companyIds) : null,
-      // Comunicado vai para o cliente (grupo), não para a empresa: a escolha de empresa não o afeta.
-      atencao.comunicados ? comunicadosNaoLidos(escopo.tenantId, clientGroupId, portalUserId) : null,
+      // O comunicado conta por todas as empresas do acesso, como na tela dos
+      // comunicados: a escolha de empresa do Início não o afeta.
+      atencao.comunicados ? comunicadosNaoLidos(escopo.tenantId, empresasDaConta, portalUserId) : null,
       // O envio é de uma empresa: este segue a escolha de empresa (08/10/2026).
       atencao.envios ? enviosAguardandoAceite(escopo) : null,
     ])

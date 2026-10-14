@@ -41,15 +41,10 @@ export type CookieDaSessaoDoPortal = {
  * O cookie da sessão, pronto para gravar — pela server action do login
  * (`cookies().set`) ou pela rota de retorno do Google (`res.cookies.set`).
  */
-export function cookieDaSessaoDoPortal(
-  conta: { id: string; tenantId: string; clientGroupId: string },
-  lembrar: boolean
-): CookieDaSessaoDoPortal {
+export function cookieDaSessaoDoPortal(conta: { id: string; tenantId: string }, lembrar: boolean): CookieDaSessaoDoPortal {
   const duracao = duracaoDaSessaoDoPortal(lembrar);
-  const token = signPortalAccess(
-    { kind: "portal", sub: conta.id, tenantId: conta.tenantId, clientGroupId: conta.clientGroupId },
-    duracao.ttlDoToken
-  );
+  // Sem o cliente desde 14/10/2026: o que a conta vê sai do banco a cada tela.
+  const token = signPortalAccess({ kind: "portal", sub: conta.id, tenantId: conta.tenantId }, duracao.ttlDoToken);
   return {
     name: PORTAL_COOKIE,
     value: token,

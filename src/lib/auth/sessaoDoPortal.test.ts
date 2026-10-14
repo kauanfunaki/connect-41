@@ -10,7 +10,7 @@ import {
   SESSAO_PADRAO_SEGUNDOS,
 } from "./sessaoDoPortal";
 
-const CONTA = { id: "pu1", tenantId: "t1", clientGroupId: "g1" };
+const CONTA = { id: "pu1", tenantId: "t1" };
 const ENTROU = new Date("2026-10-05T12:00:00Z");
 const HORA = 60 * 60 * 1000;
 const DIA = 24 * HORA;
@@ -65,9 +65,11 @@ describe("o cookie e o token da sessão", () => {
     expect(entrarEm(ENTROU, true).options.maxAge).toBe(SESSAO_LEMBRADA_SEGUNDOS);
   });
 
-  it("o token carrega a conta, o escritório e o cliente — e é de portal", () => {
+  it("o token carrega a conta e o escritório — e é de portal; o cliente não vai mais (14/10/2026)", () => {
     const { value } = entrarEm(ENTROU, true);
-    expect(verifyPortalAccess(value)).toMatchObject({ kind: "portal", sub: "pu1", tenantId: "t1", clientGroupId: "g1" });
+    const payload = verifyPortalAccess(value);
+    expect(payload).toMatchObject({ kind: "portal", sub: "pu1", tenantId: "t1" });
+    expect(payload.clientGroupId).toBeUndefined();
     // A sessão longa continua não valendo como sessão interna.
     expect(() => verifyAccess(value)).toThrow();
   });
