@@ -25,6 +25,10 @@ export function DebouncedSearchInput({ paramName = "search", placeholder, classN
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
+      // O valor já é o da URL (o campo acabou de aparecer, ou a pessoa apagou
+      // e redigitou o mesmo): nada a fazer. Sem isto, abrir uma lista direto na
+      // página 2 — ou o campo remontar ao trocar de empresa — voltava para a 1.
+      if (value.trim() === (searchParams.get(paramName) ?? "").trim()) return;
       const params = new URLSearchParams(searchParams.toString());
       if (value.trim()) params.set(paramName, value.trim());
       else params.delete(paramName);
