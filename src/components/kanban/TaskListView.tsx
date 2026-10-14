@@ -852,8 +852,9 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
                 aqui a primeira coluna é uma árvore — tarefa e subtarefas se leem
                 pelo recuo à esquerda — com cabeçalhos de grupo em colSpan. Fica o
                 resto do padrão: cabeçalho com fundo, borda e fio azul no hover
-                (`c41-linha`). */}
-            <thead className="sticky top-0 z-10">
+                (`c41-linha`), e o fio entre as colunas do cabeçalho
+                (`c41-cabecalho-dividido`, 14/10/2026). */}
+            <thead className="c41-cabecalho-dividido sticky top-0 z-10">
               <tr className="text-left">
                 <th className={`${DOT_COL} bg-table-header-bg pt-2.5 pb-2 border-b border-border`} />
                 <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 border-b border-border">
