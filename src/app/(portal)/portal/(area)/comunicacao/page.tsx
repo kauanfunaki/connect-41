@@ -8,6 +8,8 @@ import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQ
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { conversaDaEmpresa } from "@/lib/financeiro/comunicacao/consultas";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { enviarMensagemCliente } from "./actions";
@@ -23,6 +25,7 @@ export default async function PortalComunicacaoPage({
 }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_comunicacao")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/comunicacao")) return <TelaIndisponivel />;
   // As solicitações substituíram a conversa livre (01/10): o link antigo e o
   // aviso por e-mail de mensagem levam para o caminho novo.
   if (modulos.has("portal_solicitacoes")) redirect("/portal/solicitacoes");

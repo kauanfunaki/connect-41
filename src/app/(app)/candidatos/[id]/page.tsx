@@ -7,9 +7,8 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { excluirCandidato } from "../actions";
-import { DeleteButton } from "@/components/pessoas/DeleteButton";
-import { canManageSector } from "@/lib/auth/context";
+import { BotaoExcluirCadastro } from "@/components/exclusao/ExcluirCadastro";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { listDocuments } from "@/lib/documents";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
@@ -120,7 +119,9 @@ export default async function CandidatoPage({
             }
           : null;
 
-  const deleteAction = excluirCandidato.bind(null, id);
+  // Excluir é só de administrador (13/10/2026) — gerir o Recrutamento dá
+  // editar, não apagar.
+  const excluivel = podeExcluir(ctx);
 
   const fullAddress = [
     person.addressStreet,
@@ -153,12 +154,14 @@ export default async function CandidatoPage({
         }
         subtitle={person.cpf ? <span className="tnum">CPF: {maskCpf(person.cpf)}</span> : undefined}
         action={
-          canEdit && (
+          (canEdit || excluivel) && (
             <div className="flex flex-wrap items-center gap-2">
-              <Button href={`/candidatos/${id}/editar`} variant="secondary" size="sm">
-                <Pencil size={14} /> Editar
-              </Button>
-              <DeleteButton action={deleteAction} nome={person.name} />
+              {canEdit && (
+                <Button href={`/candidatos/${id}/editar`} variant="secondary" size="sm">
+                  <Pencil size={14} /> Editar
+                </Button>
+              )}
+              {excluivel && <BotaoExcluirCadastro tipo="pessoa" id={id} nome={person.name} />}
             </div>
           )
         }

@@ -20,6 +20,8 @@ import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
 import { FiltroDaColunaNaUrl } from "@/components/shared/FiltroDeColunas";
 import type { OpcaoDoFunil } from "@/lib/filtrosDaListaDeEmpresas";
+import type { ResultadoEmMassa } from "@/lib/exclusao/tipos";
+import { ResultadoDaExclusaoEmMassa } from "@/components/exclusao/ResultadoEmMassa";
 
 type Row = {
   id: string;
@@ -43,11 +45,12 @@ type Row = {
 type Props = {
   companies: Row[];
   canCreate: boolean;
-  isSuperAdmin: boolean;
+  /** Só administrador exclui (13/10/2026). Antes, a exclusão em massa era só do Super Admin. */
+  podeExcluir: boolean;
   statusLabel: Record<CompanyStatus, string>;
   statusColor: Record<CompanyStatus, string>;
   atualizarStatusEmMassa: (ids: string[], status: CompanyStatus) => Promise<void>;
-  excluirEmpresasEmMassa: (ids: string[]) => Promise<void>;
+  excluirEmpresasEmMassa: (ids: string[]) => Promise<ResultadoEmMassa | { erro: string }>;
   /** Opções do funil de Regime e Localização, contadas no servidor sobre a base filtrada. */
   filtrosDeColuna?: { regime: OpcaoDoFunil[]; local: OpcaoDoFunil[] };
 };
@@ -62,7 +65,7 @@ const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
 export function EmpresasTable({
   companies,
   canCreate,
-  isSuperAdmin,
+  podeExcluir,
   statusLabel,
   statusColor,
   atualizarStatusEmMassa,
@@ -95,6 +98,7 @@ export function EmpresasTable({
   const [bulkStatus, setBulkStatus] = useState<CompanyStatus>("ACTIVE");
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
+  const [resultadoEmMassa, setResultadoEmMassa] = useState<ResultadoEmMassa | null>(null);
 
   // A tabela e o cartão usam as mesmas duas ações — e /pessoas e /clientes
   // usam as mesmas duas de novo, então elas moram em `AcoesDeLinha`.
@@ -376,16 +380,26 @@ export function EmpresasTable({
     );
   }
 
+  // Espera o servidor e mostra o que saiu e o que ficou (13/10/2026). Era
+  // disparada sem esperar: uma empresa com histórico derrubava o lote inteiro
+  // e a tela não dizia nada. Só sai o que não tem histórico; o resto se exclui
+  // pela ficha, com a lista do que está ligado e o nome digitado.
   function applyDelete() {
+    const quantas = selected.size;
     requestConfirm(
-      { title: `Excluir ${selected.size} empresa(s) selecionada(s)?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Excluir" },
-      () => {
-        const ids = Array.from(selected);
-        setSelected(new Set());
-        startTransition(() => {
-          excluirEmpresasEmMassa(ids);
-        });
-        return Promise.resolve();
+      {
+        title: `Excluir ${quantas} empresa${quantas !== 1 ? "s" : ""}?`,
+        description:
+          "Só saem as que não têm histórico (notas, lançamentos, vagas, documentos…); as outras ficam, e no fim aparece qual e por quê. Funcionários das excluídas continuam, sem empresa. Não dá para desfazer.",
+        destructive: true,
+        confirmLabel: "Excluir",
+      },
+      async () => {
+        const r = await excluirEmpresasEmMassa(Array.from(selected));
+        if ("erro" in r) throw new Error(r.erro);
+        const saiu = new Set(r.excluidas.map((e) => e.id));
+        setSelected((prev) => new Set([...prev].filter((id) => !saiu.has(id))));
+        setResultadoEmMassa(r);
       }
     );
   }
@@ -557,7 +571,7 @@ export function EmpresasTable({
         >
           Alterar status
         </Button>
-        {isSuperAdmin && (
+        {podeExcluir && (
           <Button
             variant="danger"
             size="sm"
@@ -568,6 +582,7 @@ export function EmpresasTable({
         )}
       </BulkActionBar>
       {dialog}
+      <ResultadoDaExclusaoEmMassa resultado={resultadoEmMassa} onFechar={() => setResultadoEmMassa(null)} />
     </>
   );
 }

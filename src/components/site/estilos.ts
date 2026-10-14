@@ -13,7 +13,7 @@ export const RESPIRO = "py-20 sm:py-24 lg:py-32";
 // Títulos do site em escala própria: a do app para em 30 px (--fs-9), feita
 // para tela de trabalho, e um site pede mais. O de seção cresce com a tela,
 // de 30 a 52 px; o da primeira dobra mora nela. Sem cor: a seção escura (a
-// Lígia, a segurança) escreve em branco, as outras em `text-fg`.
+// Ceci, a segurança) escreve em branco, as outras em `text-fg`.
 export const TITULO_2 =
   "font-display text-[length:clamp(1.875rem,1.15rem_+_2.6vw,3.25rem)] font-medium leading-[1.04] tracking-[-0.03em] text-balance";
 

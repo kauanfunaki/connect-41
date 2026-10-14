@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal, telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { getSectorMaps } from "@/lib/sectors";
 import { abrirComunicadoDoCliente } from "@/lib/comunicados/consultas";
 import { formatInstantDateTime } from "@/lib/format";
@@ -20,13 +22,17 @@ export const dynamic = "force-dynamic";
 export default async function PortalComunicadoPage({ params }: { params: Promise<{ id: string }> }) {
   const cliente = await clienteAtivoDoPortal();
   if (!cliente || !cliente.modulos.has("portal_solicitacoes")) notFound();
+  if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/comunicados")) return <TelaIndisponivel />;
 
   const { id } = await params;
-  const [c, { labels }] = await Promise.all([
+  const [c, { labels }, bloqueadas] = await Promise.all([
     abrirComunicadoDoCliente(cliente.tenantId, cliente.sessao.clientGroupId, cliente.usuario.id, id),
     getSectorMaps(cliente.tenantId),
+    telasBloqueadasDoPortal(cliente.tenantId),
   ]);
   if (!c) notFound();
+  // A "Nova solicitação" só com a tela liberada pelo escritório (14/10/2026).
+  const podePedir = !bloqueadas.has("/portal/solicitacoes");
 
   return (
     <PageContainer>
@@ -57,12 +63,14 @@ export default async function PortalComunicadoPage({ params }: { params: Promise
       </Card>
       {/* Revisão de 05/10: botão não é link — "solicitação" era texto azul no meio da frase.
           "Nova solicitação" (07/10/2026), o nome do mesmo botão nas Solicitações e na Ajuda. */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <p className="text-fs-2 text-fg-muted">Dúvida sobre este comunicado?</p>
-        <Button href="/portal/solicitacoes/nova" variant="secondary" size="sm">
-          Nova solicitação
-        </Button>
-      </div>
+      {podePedir && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <p className="text-fs-2 text-fg-muted">Dúvida sobre este comunicado?</p>
+          <Button href="/portal/solicitacoes/nova" variant="secondary" size="sm">
+            Nova solicitação
+          </Button>
+        </div>
+      )}
     </PageContainer>
   );
 }

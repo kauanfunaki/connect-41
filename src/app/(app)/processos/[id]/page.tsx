@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
@@ -49,7 +49,7 @@ import { AvisosDaJunta } from "@/components/societario/AvisosDaJunta";
 import { avisosPendentes } from "@/lib/societario/avisos";
 import { HorasDoProcesso } from "@/components/societario/HorasDoProcesso";
 import { ObservacoesDoProcesso } from "@/components/societario/ObservacoesDoProcesso";
-import { apagarHorasDoProcesso, iniciarCronometroDoProcesso, lancarHorasNoProcesso, pararCronometroDoProcesso } from "../horas-actions";
+import { apagarHorasDoProcesso, editarHorasDoProcesso, iniciarCronometroDoProcesso, lancarHorasNoProcesso, pararCronometroDoProcesso } from "../horas-actions";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -426,8 +426,11 @@ export default async function ProcessoDetalhePage({
               quem: h.user.name,
               minutos: h.minutes,
               dia: formatInstantDate(h.loggedOn),
+              diaDoCampo: campoDaData(h.loggedOn),
               nota: h.note,
-              meu: h.userId === ctx.userId,
+              // Corrige o próprio lançamento; apagar é só do administrador (13/10/2026).
+              podeEditar: h.userId === ctx.userId,
+              podeExcluir: podeExcluir(ctx),
             }))}
             cronometro={
               processo.activeTimerUserId && processo.activeTimerStartedAt
@@ -443,6 +446,7 @@ export default async function ProcessoDetalhePage({
               iniciar: iniciarCronometroDoProcesso,
               parar: pararCronometroDoProcesso,
               lancar: lancarHorasNoProcesso,
+              editar: editarHorasDoProcesso,
               apagar: apagarHorasDoProcesso,
             }}
           />

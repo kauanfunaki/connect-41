@@ -16,6 +16,9 @@ import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { RelatorioOrcadoRealizado } from "@/components/dre/RelatorioOrcadoRealizado";
 import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import {
   competenciaValida,
@@ -79,20 +82,40 @@ export default async function DreEconomicaPage({
 
   const params = await searchParams;
   const visao = VISOES.find((v) => v.chave === params.visao)?.chave ?? "mes";
+  // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
+  // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
+  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  const companyId = empresa?.id ?? null;
 
   const cabecalho = (
     <PageHeader title="DRE econômica" subtitle="Demonstrativo de resultado por competência — o que pertence ao mês, pago ou não." />
   );
-  if (!companyId) {
+  if (!empresa || !companyId) {
     return (
       <PageContainer>
         {cabecalho}
-        <EmptyState title="Nenhuma empresa ativa" icon={<FileText />} />
+        {empresas.length === 0 ? (
+          <EmptyState title="Nenhuma empresa ativa" icon={<FileText />} />
+        ) : (
+          <>
+            <FiltroDaEmpresa
+              acao="/dre/economica"
+              empresas={empresas}
+              valor={null}
+              manter={{ mes: params.mes, visao: visao === "mes" ? undefined : visao }}
+            />
+            <EscolhaAEmpresa escolha={escolha} porQue="A DRE econômica é de uma empresa por vez." />
+          </>
+        )}
       </PageContainer>
     );
   }
+
+  // Todo formulário desta tela grava na empresa escolhida — o rodapé diz qual.
+  const comEmpresa = (tela: React.ReactNode) => (
+    <EmpresaDaTela empresa={{ nome: empresa.nome, cnpj: empresa.cnpj }}>{tela}</EmpresaDaTela>
+  );
 
   // Sem mês na URL, o mais recente com lançamento — abrir num mês vazio faria
   // a tela parecer quebrada para quem só quer ver o último fechamento.
@@ -186,23 +209,33 @@ export default async function DreEconomicaPage({
       ? rotuloDaCompetencia(mes)
       : `${rotuloDaCompetencia(competencias[0]!)} a ${rotuloDaCompetencia(competencias.at(-1)!)}`;
 
-  return (
+  return comEmpresa(
     <PageContainer>
       {cabecalho}
-      <FiltroDePeriodo acao="/dre/economica" empresas={empresas} empresaId={companyId} mes={mes} extras={{ visao: visao === "mes" ? undefined : visao }}>
-        {centros.length > 0 && (
-          <Select compact name="centro" defaultValue={centroNaUrl} className="w-60 max-w-full" aria-label="Centro de custo">
-            <option value="">Todos os centros de custo</option>
-            <option value={SEM_CENTRO}>Sem centro de custo</option>
-            {centros.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.active ? "" : " (inativo)"}
-              </option>
-            ))}
-          </Select>
-        )}
-      </FiltroDePeriodo>
+      {/* A empresa navega sozinha (e vira a última aberta); mês e centro de
+          custo seguem no formulário com "Aplicar". Trocar de empresa conserva
+          o mês e a visão — o centro é da empresa anterior e fica para trás. */}
+      <FiltroDaEmpresa
+        acao="/dre/economica"
+        empresas={empresas}
+        valor={companyId}
+        manter={{ mes, visao: visao === "mes" ? undefined : visao }}
+      >
+        <FiltroDePeriodo acao="/dre/economica" mes={mes} extras={{ empresa: companyId, visao: visao === "mes" ? undefined : visao }} naFileira>
+          {centros.length > 0 && (
+            <Select compact name="centro" defaultValue={centroNaUrl} className="w-60 max-w-full" aria-label="Centro de custo">
+              <option value="">Todos os centros de custo</option>
+              <option value={SEM_CENTRO}>Sem centro de custo</option>
+              {centros.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.active ? "" : " (inativo)"}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FiltroDePeriodo>
+      </FiltroDaEmpresa>
       <AbasDeLink abas={VISOES.map((v) => ({ ...v, href: hrefDaVisao(v.chave) }))} ativa={visao} />
 
       {/* Revisão de 05/10: botão não é link — os atalhos desta tela eram texto azul. */}

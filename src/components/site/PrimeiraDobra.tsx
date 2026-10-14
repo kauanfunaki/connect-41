@@ -14,9 +14,9 @@ import { TelaDoConnect } from "./TelaDoConnect";
 //   sobre o anel (o escritório inteiro ligado);
 // - o selo de cima, no lugar do "tantos mil usam", diz para quem é, com as
 //   cores dos setores empilhadas — nada de número inventado;
-// - a tela que sobe é o Connect com a Lígia abrindo o chat (TelaDoConnect).
+// - a tela que sobe é o Connect com a Ceci abrindo o chat (TelaDoConnect).
 //
-// Um botão só, "Conhecer o Connect", que desce para a Lígia — o começo do
+// Um botão só, "Conhecer o Connect", que desce para a Ceci — o começo do
 // passeio. Server Component; o movimento é CSS (globals.css, bloco do site):
 // a entrada ao carregar, o anel se desenhando e a tela endireitando ao rolar,
 // tudo parado com "reduzir movimento".
@@ -129,12 +129,12 @@ export function PrimeiraDobra() {
           className="c41-site-entra mt-6 max-w-[36em] text-fs-6 leading-relaxed text-fg-secondary sm:mt-7 sm:text-fs-7"
           style={{ "--atraso": "140ms" } as React.CSSProperties}
         >
-          Os setores do escritório de contabilidade e o Portal do Cliente no mesmo sistema — e a Lígia, a nossa inteligência
+          Os setores do escritório de contabilidade e o Portal do Cliente no mesmo sistema — e a Ceci, a nossa inteligência
           artificial, em cada setor.
         </p>
 
         <a
-          href="#ligia"
+          href="#ceci"
           className={`c41-site-entra ${BOTAO_GRANDE} ${PRIMARIO} mt-8 sm:mt-9`}
           style={{ "--atraso": "210ms" } as React.CSSProperties}
         >

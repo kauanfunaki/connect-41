@@ -19,6 +19,9 @@ import {
 import { fluxoRealizado, projecaoPorJanela, consolidarPorEmpresa } from "@/lib/financeiro/fluxo";
 import { competenciaValida, competenciaDoInstante, competenciasAte, rotuloDaCompetencia } from "@/lib/financeiro/periodo";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
+import { escopoFinanceiroDaEscolha } from "@/lib/empresas/escopoDaEscolha";
 
 export const dynamic = "force-dynamic";
 
@@ -50,11 +53,18 @@ export default async function FluxoDeCaixaPage({
   const hojeKey = saoPauloParts(agora).dateKey;
   const mes = competenciaValida(params.mes) ?? competenciaDoInstante(agora);
 
+  // "Realizado e projeção" é de uma empresa por vez (13/10/2026): a da URL, a
+  // última aberta pela pessoa, ou nenhuma — e a tela pede. Era "todas" por
+  // padrão, e o realizado de seis meses trazia, sem teto, cada pagamento de
+  // todos os clientes; somar o caixa de empresas diferentes também não diz o
+  // caixa de ninguém. A visão de todas é a aba "Por empresa", que soma no banco.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
-  const escopo: EscopoFinanceiro = { tenantId: ctx.tenantId, companyIds: empresaId ? [empresaId] : null };
+  const { escolha } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  const escopo = escopoFinanceiroDaEscolha(ctx.tenantId, escolha);
+  const empresaId = escopo?.companyIds?.[0] ?? null;
 
-  const qs = (a: string) => `/fluxo-de-caixa?mes=${mes}${empresaId && a === "fluxo" ? `&empresa=${empresaId}` : ""}${a === "fluxo" ? "" : `&aba=${a}`}`;
+  // A empresa segue nas duas abas, para quem vai a "Por empresa" e volta.
+  const qs = (a: string) => `/fluxo-de-caixa?mes=${mes}${empresaId ? `&empresa=${empresaId}` : ""}${a === "fluxo" ? "" : `&aba=${a}`}`;
 
   return (
     <PageContainer>
@@ -62,14 +72,14 @@ export default async function FluxoDeCaixaPage({
         title="Fluxo de caixa"
         subtitle="O que entrou e saiu, e o que os títulos em aberto dizem que vai entrar e sair."
       />
-      <FiltroDePeriodo
-        acao="/fluxo-de-caixa"
-        empresas={aba === "fluxo" ? empresas : undefined}
-        empresaId={empresaId}
-        permitirTodas
-        mes={mes}
-        extras={{ aba: aba === "fluxo" ? undefined : aba }}
-      />
+      {/* A empresa navega sozinha (e vira a última aberta); o mês, com "Aplicar". */}
+      {aba === "fluxo" ? (
+        <FiltroDaEmpresa acao="/fluxo-de-caixa" empresas={empresas} valor={empresaId} manter={{ mes }}>
+          <FiltroDePeriodo acao="/fluxo-de-caixa" mes={mes} extras={{ empresa: empresaId ?? undefined }} naFileira />
+        </FiltroDaEmpresa>
+      ) : (
+        <FiltroDePeriodo acao="/fluxo-de-caixa" mes={mes} extras={{ aba, empresa: empresaId ?? undefined }} />
+      )}
       <AbasDeLink
         abas={[
           { chave: "fluxo", rotulo: "Realizado e projeção", href: qs("fluxo") },
@@ -78,7 +88,17 @@ export default async function FluxoDeCaixaPage({
         ativa={aba}
       />
 
-      {aba === "fluxo" ? <Fluxo escopo={escopo} mes={mes} hojeKey={hojeKey} /> : <PorEmpresa tenantId={ctx.tenantId} mes={mes} hojeKey={hojeKey} />}
+      {aba === "empresas" ? (
+        <PorEmpresa tenantId={ctx.tenantId} mes={mes} hojeKey={hojeKey} />
+      ) : escopo ? (
+        <Fluxo escopo={escopo} mes={mes} hojeKey={hojeKey} />
+      ) : (
+        <EscolhaAEmpresa
+          escolha={escolha}
+          porQue="O realizado e a projeção são de uma empresa por vez; a soma de todas, mês a mês, está na aba “Por empresa”."
+          todasHref={qs("empresas")}
+        />
+      )}
     </PageContainer>
   );
 }

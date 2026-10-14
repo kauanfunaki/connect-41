@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { FileText } from "lucide-react";
 import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { listarDocumentos, competenciasDisponiveis } from "@/lib/fiscal/data";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
@@ -27,6 +29,7 @@ export default async function PortalDocumentosPage({
 }) {
   const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
+  if (await telaBloqueadaNoPortal(sessao.tenantId, "/portal/documentos")) return <TelaIndisponivel />;
 
   const params = await searchParams;
   const alcance = await alcanceDoCliente(sessao);

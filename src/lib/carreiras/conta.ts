@@ -15,7 +15,10 @@ import { getPrisma } from "@/lib/prisma";
 export const VALIDADE_DO_LINK_MS = 30 * 60_000;
 export const VALIDADE_DA_SESSAO_MS = 7 * 24 * 60 * 60_000;
 
-export const cookieDaSessao = (slug: string) => ({ nome: "candidato_sessao", caminho: `/carreiras/${slug}` });
+// O caminho é o do portal do escritório (`/carreiras/<escritorio>`) — ou, no
+// endereço do 41 Carreiras, `/minha-conta` (14/10/2026): lá o navegador vê os
+// caminhos curtos, e um cookie em `/carreiras/41tech` nunca seria mandado.
+export const cookieDaSessao = (slug: string, caminho: string = `/carreiras/${slug}`) => ({ nome: "candidato_sessao", caminho });
 
 function hash(raw: string): string {
   return crypto.createHash("sha256").update(raw).digest("hex");

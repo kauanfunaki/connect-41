@@ -4,7 +4,7 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddDesligamentoForm } from "@/components/pessoas/AddDesligamentoForm";
@@ -76,7 +76,7 @@ export default async function DesligamentoPage({
                   }}
                   conferenciaHref={`/pessoas/${id}/desligamento/${t.id}/conferencia`}
                   updateAction={atualizarDesligamento.bind(null, id, t.id)}
-                  removeAction={excluirDesligamento.bind(null, id, t.id)}
+                  removeAction={podeExcluir(ctx) ? excluirDesligamento.bind(null, id, t.id) : undefined}
                   canManage={canEdit}
                 />
               );

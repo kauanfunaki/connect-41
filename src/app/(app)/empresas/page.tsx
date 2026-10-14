@@ -10,7 +10,7 @@ import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { EmpresasFilterButton } from "@/components/empresas/EmpresasFilterButton";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { EmpresasTable } from "@/components/empresas/EmpresasTable";
 import { idsDaPagina } from "@/lib/companyHierarchy";
@@ -71,7 +71,6 @@ export default async function EmpresasPage({
   const locais = lerLista(local);
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
-  const isSuperAdmin = ctx.role === "SUPER_ADMIN";
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
@@ -272,7 +271,7 @@ export default async function EmpresasPage({
             parentCompanyId: c.parentCompanyId,
           }))}
           canCreate={canCreate}
-          isSuperAdmin={isSuperAdmin}
+          podeExcluir={podeExcluir(ctx)}
           statusLabel={STATUS_LABEL}
           statusColor={STATUS_COLOR}
           atualizarStatusEmMassa={atualizarStatusEmMassa}

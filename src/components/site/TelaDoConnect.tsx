@@ -1,9 +1,9 @@
 import { CalendarDays, ListChecks, Lock, MessageSquareText, SendHorizontal, SlidersHorizontal, X } from "lucide-react";
-import { Ligia } from "@/components/ia/Ligia";
+import { Ceci } from "@/components/ia/Ceci";
 
 // A tela do Connect que sobe por baixo do título, na primeira dobra (13/10/2026,
-// versão 3 do site): as contas a pagar do BPO com a Lígia abrindo o chat do
-// canto, como no Connect de verdade — o "Oi, Camila! Eu sou a Lígia." e o
+// versão 3 do site): as contas a pagar do BPO com a Ceci abrindo o chat do
+// canto, como no Connect de verdade — o "Oi, Camila! Eu sou a Ceci." e o
 // aviso de que ela não altera nada sozinha são os do chat
 // (components/shell/ChatDeIA), e as três perguntas são as sugestões do agente
 // do BPO (lib/ia/chat/agentes). Empresas, valores e nomes são inventados, os
@@ -12,9 +12,9 @@ import { Ligia } from "@/components/ia/Ligia";
 //
 // Desenhada em código, nos tokens do app, para acompanhar o tema. Inteira só
 // no computador; no tablet some o menu da lateral, e no celular fica só o
-// painel do chat — a tabela não cabe, e a Lígia é o assunto.
+// painel do chat — a tabela não cabe, e a Ceci é o assunto.
 //
-// Decorativa (aria-hidden): quem usa leitor de tela tem a seção da Lígia,
+// Decorativa (aria-hidden): quem usa leitor de tela tem a seção da Ceci,
 // logo abaixo, com o texto de verdade. A legenda embaixo diz que é exemplo.
 
 const SETORES: { nome: string; cor: string; ativo?: true }[] = [
@@ -182,12 +182,12 @@ export function TelaDoConnect() {
             </div>
           </div>
 
-          {/* O chat da Lígia, aberto no canto. */}
+          {/* O chat da Ceci, aberto no canto. */}
           <div className="flex min-w-0 flex-col border-border bg-surface-elevated md:border-l">
             <div className="flex items-center gap-2.5 border-b border-border px-4 py-3">
-              <Ligia tamanho={28} />
+              <Ceci tamanho={28} />
               <span className="min-w-0 flex-1 leading-tight">
-                <span className="block text-[13px] font-semibold text-fg">Lígia</span>
+                <span className="block text-[13px] font-semibold text-fg">Ceci</span>
                 <span className="block text-[11px] text-fg-muted">BPO Financeiro</span>
               </span>
               <X size={15} className="flex-none text-fg-muted" />
@@ -195,9 +195,9 @@ export function TelaDoConnect() {
             <div className="flex flex-1 flex-col items-center px-4 pb-4 pt-7 text-center sm:pt-8">
               <span className="relative flex">
                 <span className="c41-chamar pointer-events-none absolute -inset-3 rounded-full" />
-                <Ligia tamanho={64} className="relative" />
+                <Ceci tamanho={64} className="relative" />
               </span>
-              <p className="mt-4 font-display text-[17px] font-semibold leading-tight text-fg">Oi, Camila! Eu sou a Lígia.</p>
+              <p className="mt-4 font-display text-[17px] font-semibold leading-tight text-fg">Oi, Camila! Eu sou a Ceci.</p>
               <p className="mt-0.5 text-[13.5px] text-fg-secondary">Em que posso ajudar?</p>
               <p className="mt-3 max-w-[270px] text-[11.5px] leading-relaxed text-fg-muted">
                 Consulto o Connect com o mesmo acesso que você tem e <strong className="font-semibold text-fg-secondary">não altero nada sozinha</strong> — sugestão só vale depois do seu “Aplicar”.
@@ -216,7 +216,7 @@ export function TelaDoConnect() {
             </div>
             <div className="px-3 pb-3">
               <span className="flex items-center gap-2 rounded-lg border border-border-strong bg-surface py-2 pl-3.5 pr-2">
-                <span className="flex-1 text-[12.5px] text-fg-muted">Pergunte à Lígia</span>
+                <span className="flex-1 text-[12.5px] text-fg-muted">Pergunte à Ceci</span>
                 <span className="flex size-7 flex-none items-center justify-center rounded-full bg-brand-solid text-on-brand">
                   <SendHorizontal size={13} />
                 </span>

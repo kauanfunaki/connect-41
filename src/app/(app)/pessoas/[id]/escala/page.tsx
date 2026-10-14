@@ -4,7 +4,7 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddEscalaForm } from "@/components/pessoas/AddEscalaForm";
@@ -73,7 +73,7 @@ export default async function EscalaPage({
                   status: e.status,
                 }}
                 updateAction={atualizarEscala.bind(null, id, e.id)}
-                removeAction={excluirEscala.bind(null, id, e.id)}
+                removeAction={podeExcluir(ctx) ? excluirEscala.bind(null, id, e.id) : undefined}
                 canManage={canEdit}
               />
             ))}

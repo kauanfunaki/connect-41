@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NovaSolicitacaoForm } from "@/components/solicitacoes/NovaSolicitacaoForm";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { assuntosAtivos } from "@/lib/solicitacoes/assuntos";
 import { abrirSolicitacao } from "../actions";
@@ -16,6 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function NovaSolicitacaoPage() {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("portal_solicitacoes")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/solicitacoes")) return <TelaIndisponivel />;
 
   const [empresas, assuntos] = await Promise.all([
     // As empresas do alcance do cliente, e não as ativas do tenant: o portal é dele.

@@ -16,7 +16,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { hit, clientIp } from "@/lib/rateLimit";
 import { avisarORecrutamento, avisarSobreAVaga } from "@/lib/recrutamento/avisos";
 import { sendLinkDoCandidatoEmail } from "@/lib/email/sendMail";
-import { publicUrl } from "@/lib/jobPostingSchema";
+import { enderecoPublicoDoPortal, nomeDoEscritorio } from "@/lib/carreiras/enderecoDeCarreiras";
+import { portalDaRequisicao } from "@/lib/carreiras/portalDaRequisicao";
 import { MAX_BYTES_DO_CURRICULO, MAX_MB_DO_CURRICULO, ehPdf } from "@/lib/curriculo";
 import {
   VALIDADE_DA_SESSAO_MS,
@@ -34,8 +35,12 @@ export type RespostaDaConta = { erro: string } | { ok: true; mensagem?: string }
 const RESUMES_DIR = path.join(process.cwd(), "storage", "resumes");
 
 async function escritorio(slug: string) {
+  // No endereço do 41 Carreiras só existe o escritório da 41 — a mesma tranca
+  // das páginas. O portal diz também onde fica o cookie e para onde voltar.
+  const portal = await portalDaRequisicao(slug);
+  if (!portal) return null;
   const t = await getPrisma().tenant.findUnique({ where: { slug }, select: { id: true, name: true, active: true } });
-  return t && t.active ? t : null;
+  return t && t.active ? { ...t, portal } : null;
 }
 
 /** A sessão do candidato neste escritório, ou null. */
@@ -73,12 +78,18 @@ export async function pedirLink(slug: string, _prev: RespostaDaConta, form: Form
   if (!(await temInscricao(tenant.id, email))) return { ok: true, mensagem };
 
   const raw = await criarLink(tenant.id, email);
-  const url = publicUrl(`/carreiras/${slug}/minha-conta/entrar?t=${raw}`);
+  // Da 41, o link leva ao 41 Carreiras (é lá que o cookie da sessão vale).
+  const url = enderecoPublicoDoPortal(slug, { tipo: "entrar", token: raw });
   if (!url) {
     console.error("[pedirLink] APP_PUBLIC_URL ausente — link não enviado");
     return { ok: true, mensagem };
   }
-  const r = await sendLinkDoCandidatoEmail({ tenantId: tenant.id, to: email, nomeDoEscritorio: tenant.name, url });
+  const r = await sendLinkDoCandidatoEmail({
+    tenantId: tenant.id,
+    to: email,
+    nomeDoEscritorio: nomeDoEscritorio(tenant.portal, tenant.name),
+    url,
+  });
   if (!r.ok) console.error("[pedirLink] e-mail não saiu:", r.error);
   return { ok: true, mensagem };
 }
@@ -90,7 +101,7 @@ export async function entrarComLink(slug: string, token: string): Promise<Respos
   const raw = /^[0-9a-f]{64}$/.test(token) ? await trocarLinkPorSessao(tenant.id, token) : null;
   if (!raw) return { erro: "Este link expirou ou já foi usado. Peça um novo na página de acesso." };
 
-  const c = cookieDaSessao(slug);
+  const c = cookieDaSessao(slug, tenant.portal.rotas.caminhoDoCookie);
   (await cookies()).set(c.nome, raw, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -98,16 +109,16 @@ export async function entrarComLink(slug: string, token: string): Promise<Respos
     path: c.caminho,
     maxAge: Math.floor(VALIDADE_DA_SESSAO_MS / 1000),
   });
-  redirect(`/carreiras/${slug}/minha-conta`);
+  redirect(tenant.portal.rotas.conta);
 }
 
 export async function sair(slug: string): Promise<void> {
   const tenant = await escritorio(slug);
-  const c = cookieDaSessao(slug);
+  const c = cookieDaSessao(slug, tenant?.portal.rotas.caminhoDoCookie);
   const store = await cookies();
   if (tenant) await encerrarSessao(tenant.id, store.get(c.nome)?.value);
   store.set(c.nome, "", { path: c.caminho, maxAge: 0 });
-  redirect(`/carreiras/${slug}/minha-conta`);
+  redirect(tenant?.portal.rotas.conta ?? `/carreiras/${slug}/minha-conta`);
 }
 
 /** Avisa quem cuida da vaga: o responsável, senão o setor. */

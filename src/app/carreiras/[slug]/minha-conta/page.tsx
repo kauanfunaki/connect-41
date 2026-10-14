@@ -7,16 +7,24 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
 import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
+import { MolduraDoPortal } from "@/components/carreiras/MolduraDe41Carreiras";
 import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { cookieDaSessao, dadosDaConta, emailDaSessao } from "@/lib/carreiras/conta";
+import { MARCA_41_CARREIRAS, nomeDoEscritorio } from "@/lib/carreiras/enderecoDeCarreiras";
+import { portalDaRequisicao } from "@/lib/carreiras/portalDaRequisicao";
 import { situacaoParaCandidato, type Tom } from "@/lib/carreiras/situacaoDoCandidato";
 import { AtualizarDados, Desistir, PedirAcesso, PedirExclusao } from "@/components/carreiras/ContaDoCandidato";
 import { sair } from "./actions";
+import { AcessoAConta41, Conta41 } from "@/components/carreiras/41/Conta41";
 
 export const dynamic = "force-dynamic";
 
-// Página pessoal: fora do Google.
-export const metadata: Metadata = { title: "Minhas candidaturas", robots: { index: false, follow: false } };
+// Página pessoal: fora do Google. Da 41, com o nome do 41 Carreiras.
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const portal = await portalDaRequisicao((await params).slug);
+  const title = portal?.da41 ? { absolute: `Minhas candidaturas · ${MARCA_41_CARREIRAS.nome}` } : "Minhas candidaturas";
+  return { title, robots: { index: false, follow: false } };
+}
 
 const COR_DO_TOM: Record<Tom, string> = {
   andamento: "bg-brand/10 text-brand border-brand/25",
@@ -27,18 +35,30 @@ const COR_DO_TOM: Record<Tom, string> = {
 
 export default async function MinhaContaPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  // No endereço do 41 Carreiras só existe o escritório da 41.
+  const portal = await portalDaRequisicao(slug);
+  if (!portal) notFound();
+  const { rotas } = portal;
   const tenant = await getPrisma().tenant.findUnique({ where: { slug }, select: { id: true, name: true, logoUrl: true, active: true } });
   if (!tenant || !tenant.active) notFound();
+  const escritorio = nomeDoEscritorio(portal, tenant.name);
 
   const agora = new Date();
   const email = await emailDaSessao(tenant.id, (await cookies()).get(cookieDaSessao(slug).nome)?.value);
   const conta = email ? await dadosDaConta(tenant.id, email, agora) : null;
 
+  // Da 41, a conta com a cara do 41 Carreiras (15/10/2026): sem sessão, um
+  // campo só (o e-mail da inscrição); com ela, as candidaturas.
+  if (portal.da41) {
+    return conta ? <Conta41 slug={slug} rotas={rotas} conta={conta} /> : <AcessoAConta41 slug={slug} rotas={rotas} />;
+  }
+
+  // Da 41, com o topo e o rodapé do 41 Carreiras (14/10/2026).
   return (
-    <div className="min-h-screen py-10 px-4">
+    <MolduraDoPortal>
       <div className="max-w-2xl mx-auto">
         {/* Botão sem caixa, com a seta (30/09): era texto cinza com "←". */}
-        <Button href={`/carreiras/${slug}`} variant="ghost" size="sm" className="-ml-3">
+        <Button href={rotas.lista} variant="ghost" size="sm" className="-ml-3">
           <ArrowLeft size={14} /> Vagas abertas
         </Button>
 
@@ -49,7 +69,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
               titulo="Minhas candidaturas"
               subtitulo={
                 <>
-                  Acompanhe suas inscrições em {tenant.name}. Enviamos um link de acesso para o e-mail da inscrição — sem senha.
+                  Acompanhe suas inscrições em {escritorio}. Enviamos um link de acesso para o e-mail da inscrição — sem senha.
                 </>
               }
             />
@@ -62,7 +82,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
             <CabecalhoPublico
               className="mt-4 mb-6"
               titulo={<>Olá, {conta.nome.split(" ")[0]}</>}
-              subtitulo={<>Suas candidaturas em {tenant.name}.</>}
+              subtitulo={<>Suas candidaturas em {escritorio}.</>}
               acao={
                 <form action={sair.bind(null, slug)}>
                   <Button type="submit" variant="secondary" size="sm">
@@ -84,7 +104,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                         {t.template?.name ?? (t.type === "DISC" ? "Perfil comportamental (DISC)" : "Teste")}
                         <span className="text-fg-muted text-fs-2"> · até {formatInstantDate(t.expiresAt)}</span>
                       </span>
-                      <Button href={`/teste/${t.token}`} variant="primary" size="sm">
+                      <Button href={rotas.teste(t.token)} variant="primary" size="sm">
                         Responder <ArrowRight size={13} />
                       </Button>
                     </li>
@@ -163,6 +183,6 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
           </>
         )}
       </div>
-    </div>
+    </MolduraDoPortal>
   );
 }

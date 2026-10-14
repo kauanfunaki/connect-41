@@ -18,6 +18,10 @@ import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDa
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Aviso } from "@/components/ui/Aviso";
 import { formatarCompetencia, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
+import { empresaNaUrl, hrefDaEmpresa, idDaEscolha } from "@/lib/empresas/escolhaDaEmpresa";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 
 const RECORTES_A_PAGAR = [
   { chave: "avencer", rotulo: "A vencer" },
@@ -77,6 +81,60 @@ export async function ContasPage({
 
   const prisma = getPrisma();
   const agora = new Date();
+  const base = aPagar ? "/pagar" : "/receber";
+
+  // A empresa vem antes de tudo (13/10/2026): a da URL, a última aberta pela
+  // pessoa, ou nenhuma — e aí a tela pede, sem ler conta nenhuma. "Todas as
+  // empresas" continua, como escolha explícita (`?empresa=todas`): a lista para
+  // em mil contas e os totais são somados no banco, então a consulta tem teto.
+  const [empresasDoEscritorio, empresasComContas] = await Promise.all([
+    prisma.company.findMany({
+      where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
+    }),
+    // O seletor oferece só quem tem conta deste lado — são quase quatrocentas
+    // empresas no escritório, e a maioria não é cliente do BPO.
+    prisma.financeEntry.groupBy({ by: ["companyId"], where: { tenantId: ctx.tenantId, kind } }),
+  ]);
+  const empresas = empresasDoEscritorio.map((e) => ({
+    id: e.id,
+    nome: nomeExibicao(e),
+    logoUrl: e.logoUrl,
+    cnpj: e.cnpj,
+    matrizId: e.parentCompanyId,
+  })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const { escolha } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true });
+  const empresaId = idDaEscolha(escolha);
+  const comConta = new Set(empresasComContas.map((e) => e.companyId));
+  const noSeletor = empresas.filter((e) => comConta.has(e.id) || e.id === empresaId);
+  const titulo = aPagar ? "Contas a pagar" : "Contas a receber";
+  const subtitulo = aPagar
+    ? "O que as empresas têm a pagar, do documento fiscal à baixa — pelo valor líquido, já com as retenções."
+    : "O que as empresas têm a receber, do documento fiscal emitido ao recebimento.";
+  // Trocar de empresa conserva a aba, a competência e o recorte.
+  const filtroDaEmpresa = (
+    <FiltroDaEmpresa
+      acao={base}
+      empresas={noSeletor}
+      valor={empresaNaUrl(escolha) ?? null}
+      todas="explicita"
+      manter={{ aba: params.aba === "analise" ? "analise" : undefined, competencia: params.competencia, recorte: params.recorte }}
+    />
+  );
+
+  if (escolha.tipo === "escolher") {
+    return (
+      <PageContainer>
+        <PageHeader title={titulo} subtitle={subtitulo} />
+        {filtroDaEmpresa}
+        <EscolhaAEmpresa
+          escolha={escolha}
+          porQue="Para não carregar as contas de todos os clientes de uma vez, a tela abre numa empresa."
+          todasHref={hrefDaEmpresa(base, "", { todas: "explicita", manter: { recorte: params.recorte } })}
+        />
+      </PageContainer>
+    );
+  }
 
   // Os atalhos para os módulos vizinhos aparecem só para quem atua neles, com
   // eles ligados — link para uma tela que responde 404 é pior que nenhum.
@@ -91,25 +149,16 @@ export async function ContasPage({
   const podeAbrirPendencia = pendenciasLigado && canActOnSector(ctx, setorDePendencias ?? "bpo");
   const podeEnviarParaAprovacao = kind === "PAGAR" && aprovacoesLigado && canActOnSector(ctx, setorDeAprovacoes ?? "bpo");
 
-  const [resultado, competencias, empresas, empresasComContas] = await Promise.all([
+  const [resultado, competencias] = await Promise.all([
     listarContas(
       ctx.tenantId,
       kind,
-      { recorte, competencia: params.competencia, empresaId: params.empresa },
+      { recorte, competencia: params.competencia, empresaId: empresaId ?? undefined },
       agora
     ),
-    competenciasComContas(ctx.tenantId, kind),
-    prisma.company.findMany({
-      where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, displayName: true },
-    }),
-    // O filtro de empresa oferece só quem tem conta deste lado — são quase
-    // quatrocentas empresas no escritório, e a maioria não é cliente do BPO.
-    prisma.financeEntry.groupBy({ by: ["companyId"], where: { tenantId: ctx.tenantId, kind } }),
+    competenciasComContas(ctx.tenantId, kind, empresaId ?? undefined),
   ]);
 
-  const base = aPagar ? "/pagar" : "/receber";
   // Selo de cobrança só em a receber, e só na aba de contas — a análise não lista título.
   const cobranca =
     !aPagar && aba === "contas" && cobrancaLigada && canActOnSector(ctx, setorDaCobranca ?? "bpo")
@@ -132,7 +181,7 @@ export async function ContasPage({
     .filter((e) => empresasDaLista.includes(e.id))
     .map((e) => ({
       id: e.id,
-      nome: nomeExibicao(e),
+      nome: e.nome,
       centros: centros.filter((c) => c.companyId === e.id).map((c) => ({ id: c.id, nome: c.name })),
     }));
   // A tela já exige atuar no setor do módulo, que é o que a action confere.
@@ -141,7 +190,9 @@ export async function ContasPage({
   function comParam(chave: string, valor: string | undefined) {
     const q = new URLSearchParams();
     if (params.competencia) q.set("competencia", params.competencia);
-    if (params.empresa) q.set("empresa", params.empresa);
+    // A empresa vai explícita, inclusive "todas": sem ela, o link voltaria à última aberta.
+    const empresaDoLink = empresaNaUrl(escolha);
+    if (empresaDoLink) q.set("empresa", empresaDoLink);
     if (recorte !== "todas" && (!aPagar || recorte !== "abertas")) q.set("recorte", recorte);
     if (aba === "analise") q.set("aba", "analise");
     if (valor) q.set(chave, valor);
@@ -150,7 +201,7 @@ export async function ContasPage({
     return s ? `${base}?${s}` : base;
   }
 
-  const comConta = new Set(empresasComContas.map((e) => e.companyId));
+  // A empresa saiu do "Filtros" (13/10/2026): é o seletor da fileira de cima.
   const filtros: CampoDeFiltro[] = [
     // A análise lê sempre o em aberto (ver acima), então lá a situação não é filtro.
     ...(aba === "contas"
@@ -169,26 +220,14 @@ export async function ContasPage({
       vazioLabel: "Todas",
       opcoes: competencias.map((c) => ({ value: c, label: formatarCompetencia(c) })),
     },
-    {
-      chave: "empresa",
-      rotulo: "Empresa",
-      vazioLabel: "Todas",
-      opcoes: empresas.filter((e) => comConta.has(e.id) || e.id === params.empresa).map((e) => ({ value: e.id, label: nomeExibicao(e) })),
-    },
   ];
 
   return (
     <PageContainer>
       {/* Sem "Voltar": é página principal do setor, não uma ficha aberta de
           uma lista — o menu é o caminho de volta. */}
-      <PageHeader
-        title={aPagar ? "Contas a pagar" : "Contas a receber"}
-        subtitle={
-          aPagar
-            ? "O que as empresas têm a pagar, do documento fiscal à baixa — pelo valor líquido, já com as retenções."
-            : "O que as empresas têm a receber, do documento fiscal emitido ao recebimento."
-        }
-      />
+      <PageHeader title={titulo} subtitle={subtitulo} />
+      {filtroDaEmpresa}
 
       {/* Os quatro cartões permanecem na mesma grade em todos os recortes.
           Pago/Recebido mostra zero quando as contas liquidadas ficam fora do filtro. */}

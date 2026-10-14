@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { BenefitType } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
@@ -84,7 +84,8 @@ export async function atualizarBeneficio(_prev: BenefitCatalogState, form: FormD
 
 export async function excluirBeneficio(id: string, companyId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  // Excluir: só o administrador (13/10/2026). Antes, também o gestor de setor (canWrite).
+  if (!ctx.tenantId || !podeExcluir(ctx) || !canWrite(ctx.role)) return;
   if (!(await assertCompanyInScope(companyId, ctx))) return;
 
   const prisma = getPrisma();

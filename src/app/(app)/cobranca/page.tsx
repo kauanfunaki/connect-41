@@ -45,6 +45,10 @@ import {
 } from "@/lib/financeiro/cobranca/consultas";
 import { quebrarAcordo, desfazerAcordo } from "./actions";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
+import { empresaNaUrl, hrefDaEmpresa, type EscolhaDaEmpresa } from "@/lib/empresas/escolhaDaEmpresa";
+import { escopoFinanceiroDaEscolha, type EscopoDaEscolha } from "@/lib/empresas/escopoDaEscolha";
 
 export const dynamic = "force-dynamic";
 
@@ -76,8 +80,16 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
 
   const params = await searchParams;
   const aba = params.aba === "acordos" ? "acordos" : params.aba === "regua" ? "regua" : "fila";
+  // A empresa da URL, a última aberta pela pessoa, ou nenhuma — e a fila e os
+  // acordos pedem (13/10/2026). "Todas as empresas" fica como escolha
+  // explícita (`?empresa=todas`): a fila para em 2.000 títulos e os acordos em
+  // 500. A régua é do escritório e não depende da empresa.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
+  const { escolha } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true });
+  const escopo = escopoFinanceiroDaEscolha(ctx.tenantId, escolha, { permitirTodas: true });
+  const naUrl = empresaNaUrl(escolha);
+  // Trocar de aba conserva a empresa — até 13/10/2026 as abas a perdiam.
+  const daAba = (href: string) => (naUrl ? `${href}${href.includes("?") ? "&" : "?"}empresa=${encodeURIComponent(naUrl)}` : href);
 
   return (
     <PageContainer>
@@ -85,22 +97,36 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
         title="Cobrança"
         subtitle="Contas a receber vencidas: quem cobrar hoje, o que foi combinado, acordos e a régua de lembretes por e-mail."
       />
+      {aba !== "regua" && (
+        <FiltroDaEmpresa
+          acao="/cobranca"
+          empresas={empresas}
+          valor={naUrl ?? null}
+          todas="explicita"
+          manter={{ aba: aba === "fila" ? undefined : aba }}
+        />
+      )}
       <div className="mt-4">
         <AbasDeLink
           abas={[
-            { chave: "fila", rotulo: "Fila", href: "/cobranca", icone: <ListChecks /> },
-            { chave: "acordos", rotulo: "Acordos", href: "/cobranca?aba=acordos", icone: <Handshake /> },
-            { chave: "regua", rotulo: "Régua", href: "/cobranca?aba=regua", icone: <Settings2 /> },
+            { chave: "fila", rotulo: "Fila", href: daAba("/cobranca"), icone: <ListChecks /> },
+            { chave: "acordos", rotulo: "Acordos", href: daAba("/cobranca?aba=acordos"), icone: <Handshake /> },
+            { chave: "regua", rotulo: "Régua", href: daAba("/cobranca?aba=regua"), icone: <Settings2 /> },
           ]}
           ativa={aba}
         />
       </div>
-      {aba === "fila" && (
-        <Fila tenantId={ctx.tenantId} userId={ctx.userId} setor={setor} empresas={empresas} empresaId={empresaId} params={params} />
+      {aba !== "regua" && !escopo && (
+        <EscolhaAEmpresa
+          escolha={escolha}
+          porQue="Para não carregar os títulos de todos os clientes de uma vez, a cobrança abre numa empresa."
+          todasHref={hrefDaEmpresa("/cobranca", "", { todas: "explicita", manter: { aba: aba === "fila" ? undefined : aba } })}
+        />
       )}
-      {aba === "acordos" && (
-        <Acordos tenantId={ctx.tenantId} empresas={empresas} empresaId={empresaId} status={params.status} podeAgir={podeAgir} />
+      {aba === "fila" && escopo && (
+        <Fila tenantId={ctx.tenantId} userId={ctx.userId} setor={setor} escopo={escopo} escolha={escolha} params={params} />
       )}
+      {aba === "acordos" && escopo && <Acordos escopo={escopo} status={params.status} podeAgir={podeAgir} />}
       {aba === "regua" && <Regua tenantId={ctx.tenantId} empresas={empresas} gerencia={gerencia} />}
     </PageContainer>
   );
@@ -112,17 +138,20 @@ async function Fila({
   tenantId,
   userId,
   setor,
-  empresas,
-  empresaId,
+  escopo,
+  escolha,
   params,
 }: {
   tenantId: string;
   userId: string;
   setor: string;
-  empresas: { id: string; nome: string }[];
-  empresaId: string | null;
+  /** Uma empresa, ou todas — só quando pedido (`?empresa=todas`). */
+  escopo: EscopoDaEscolha;
+  escolha: EscolhaDaEmpresa;
   params: Record<string, string | undefined>;
 }) {
+  const empresaId = escopo.companyIds?.[0] ?? null;
+  const naUrl = empresaNaUrl(escolha);
   const faixa = FAIXAS.find((f) => f.chave === params.faixa)?.chave ?? null;
   const situacao = SITUACOES.find((s) => s === params.situacao) ?? null;
   const responsavelBruto = params.responsavel ?? "";
@@ -134,10 +163,10 @@ async function Fila({
   ]);
   const hojeKey = saoPauloParts(new Date()).dateKey;
 
-  // Trocar o cartão de situação conserva empresa, atraso e responsável.
+  // Trocar o cartão de situação conserva empresa (inclusive "todas"), atraso e responsável.
   function hrefDaSituacao(valor: string) {
     const q = new URLSearchParams();
-    if (empresaId) q.set("empresa", empresaId);
+    if (naUrl) q.set("empresa", naUrl);
     if (faixa) q.set("faixa", faixa);
     if (responsavelBruto) q.set("responsavel", responsavelBruto);
     if (params.situacao !== valor) q.set("situacao", valor);
@@ -214,7 +243,6 @@ async function Fila({
           <FiltrosDaTela
             naBarra
             campos={[
-              { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
               { chave: "faixa", rotulo: "Atraso", vazioLabel: "Qualquer atraso", opcoes: FAIXAS.map((f) => ({ value: f.chave, label: f.rotulo })) },
               {
                 chave: "situacao",
@@ -239,7 +267,7 @@ async function Fila({
         {fila.linhas.length === 0 ? (
           <EmptyState
             icon={<Handshake />}
-            title={situacao || faixa || responsavel || empresaId ? "Nada neste filtro" : "Nenhum título vencido"}
+            title={situacao || faixa || responsavel ? "Nada neste filtro" : empresaId ? "Nenhum título vencido nesta empresa" : "Nenhum título vencido"}
             description="Títulos a receber aparecem aqui no dia seguinte ao vencimento, até serem pagos, renegociados ou baixados por perda."
           />
         ) : (
@@ -408,24 +436,22 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
 // ─── Acordos ────────────────────────────────────────────────────────────────
 
 async function Acordos({
-  tenantId,
-  empresas,
-  empresaId,
+  escopo,
   status,
   podeAgir,
 }: {
-  tenantId: string;
-  empresas: { id: string; nome: string }[];
-  empresaId: string | null;
+  /** Uma empresa, ou todas — só quando pedido (`?empresa=todas`). */
+  escopo: EscopoDaEscolha;
   status: string | undefined;
   podeAgir: boolean;
 }) {
   const filtroStatus = STATUS_DE_ACORDO.find((s) => s === status) ?? null;
-  const { acordos, contagem } = await listarAcordos({ tenantId, companyIds: empresaId ? [empresaId] : null }, { status: filtroStatus });
+  const { acordos, contagem } = await listarAcordos(escopo, { status: filtroStatus });
 
   return (
     <>
-      {/* Situação (com a contagem de cada uma) e empresa no botão "Filtros". */}
+      {/* Situação (com a contagem de cada uma) no botão "Filtros"; a empresa é
+          o seletor da fileira de cima (13/10/2026). */}
       <FiltrosDaTela
         className="mb-4"
         campos={[
@@ -435,7 +461,6 @@ async function Acordos({
             vazioLabel: "Todos",
             opcoes: STATUS_DE_ACORDO.map((s) => ({ value: s, label: `${ROTULO_DO_ACORDO[s]} (${contagem[s] ?? 0})` })),
           },
-          { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
         ]}
       />
 

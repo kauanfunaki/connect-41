@@ -5,7 +5,15 @@ import { getPrisma } from "@/lib/prisma";
 import { signAccess, signRefresh } from "@/lib/auth/jwt";
 import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
 import { renderConnectLoadingScreenHTML } from "@/components/shared/ConnectLoadingScreen";
-import { ACCESS_COOKIE, REFRESH_COOKIE, accessCookieOptions, refreshCookieOptions } from "@/lib/auth/cookies";
+import {
+  ACCESS_COOKIE,
+  ENTRADA_COOKIE,
+  REFRESH_COOKIE,
+  accessCookieOptions,
+  entradaCookieOptions,
+  novaEntrada,
+  refreshCookieOptions,
+} from "@/lib/auth/cookies";
 
 // A abertura da sessão da equipe e as respostas da entrada, num lugar só.
 //
@@ -115,6 +123,8 @@ export async function abrirSessaoDaEquipe(
   // `refreshMaxAge` varia aqui por causa do "lembrar-me" (30 dias) — por isso
   // não usa a constante.
   res.cookies.set(REFRESH_COOKIE, rawRefresh, refreshCookieOptions(refreshMaxAge));
+  // Uma marca nova por entrada: as boas-vindas da Ceci saem uma vez por login (13/10/2026).
+  res.cookies.set(ENTRADA_COOKIE, novaEntrada(), entradaCookieOptions(refreshMaxAge));
 
   return res;
 }

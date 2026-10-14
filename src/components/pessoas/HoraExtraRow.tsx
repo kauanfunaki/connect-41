@@ -22,7 +22,8 @@ export type HoraExtraItem = {
 type Props = {
   entry: HoraExtraItem;
   updateAction: (prev: OvertimeState, form: FormData) => Promise<OvertimeState>;
-  removeAction: () => Promise<void>;
+  /** Só para o administrador (13/10/2026): sem ela, o "⋯" de remover não aparece. */
+  removeAction?: () => Promise<void>;
   canManage: boolean;
 };
 
@@ -43,7 +44,7 @@ export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: P
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={COR_DA_HORA_EXTRA[entry.status]}>{SITUACAO_DA_HORA_EXTRA[entry.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
-          {canManage && <MenuDoRegistro titulo="Remover este lançamento?" onRemover={removeAction} />}
+          {canManage && removeAction && <MenuDoRegistro titulo="Remover este lançamento?" onRemover={removeAction} />}
         </div>
       </div>
 

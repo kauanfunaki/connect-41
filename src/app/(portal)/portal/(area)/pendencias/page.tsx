@@ -8,6 +8,8 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { listarPendencias } from "@/lib/financeiro/pendencias/consultas";
 import { ROTULO_DO_STATUS, ROTULO_DO_TIPO, type StatusDaPendencia } from "@/lib/financeiro/pendencias/regras";
 import { pedidosAoClienteNoConjunto, setorDaPendencia, setorPadraoDasPendencias } from "@/lib/financeiro/pendencias/setor";
@@ -49,6 +51,7 @@ export default async function PortalPendenciasPage({
 }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!pedidosAoClienteNoConjunto(modulos)) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/pendencias")) return <TelaIndisponivel />;
 
   const params = await searchParams;
   const recorte = RECORTES.find((r) => r.chave === params.recorte)?.chave ?? "andamento";

@@ -8,9 +8,12 @@ import crypto from "crypto";
 import {
   ACCESS_COOKIE,
   ACCESS_MAX_AGE,
+  ENTRADA_COOKIE,
   REFRESH_COOKIE,
   REFRESH_MAX_AGE,
   accessCookieOptions,
+  entradaCookieOptions,
+  novaEntrada,
   refreshCookieOptions,
 } from "@/lib/auth/cookies";
 
@@ -109,6 +112,8 @@ export async function POST(req: NextRequest) {
     res.cookies.set(ACCESS_COOKIE, accessToken, accessCookieOptions(ACCESS_MAX_AGE));
 
     res.cookies.set(REFRESH_COOKIE, rawRefresh, refreshCookieOptions(REFRESH_MAX_AGE));
+    // Uma marca nova por entrada: as boas-vindas da Ceci saem uma vez por login (13/10/2026).
+    res.cookies.set(ENTRADA_COOKIE, novaEntrada(), entradaCookieOptions(REFRESH_MAX_AGE));
 
     return res;
   } catch (err) {

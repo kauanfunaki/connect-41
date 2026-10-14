@@ -4,10 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PipelineEntityType, ActivityType, RecurringFrequency, StageType } from "@/generated/prisma/enums";
-import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, canActOnSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
 import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
 import { minutosApontados, segundosDesde } from "@/lib/datetime";
+import { duracaoDoLancamento, lerLancamentoDeHoras, type EstadoDaEdicaoDeHoras } from "@/lib/horas/edicao";
 import { findMentionedUserIds } from "@/lib/handoffMentions";
 import { notifyUser } from "@/lib/notifications";
 import { sanitizeDocumentHtml } from "@/lib/clientDocuments";
@@ -53,6 +54,14 @@ async function interestedUserIds(pipelineItemId: string, excludeUserId: string):
 function revalidarItem(pipeline: { id: string }, itemId: string) {
   revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
   revalidatePath(boardPath(pipeline));
+}
+
+// Marcar responsável/participante só com gente do escritório: o id vinha da
+// tela e entrava sem conferência (achado na revisão das exclusões, 13/10/2026).
+async function usuarioDoEscritorio(tenantId: string, userId: string): Promise<boolean> {
+  if (!userId) return false;
+  const u = await getPrisma().user.findFirst({ where: { id: userId, tenantId }, select: { id: true } });
+  return u !== null;
 }
 
 export async function criarPipeline(
@@ -281,6 +290,11 @@ export async function atualizarEstagios(pipelineId: string, stages: StageInput[]
 
   const keptIds = new Set(cleaned.map((s) => s.id).filter((id): id is string => !!id));
   const removed = existing.filter((s) => !keptIds.has(s.id));
+  // Tirar coluna é excluir: só o administrador (13/10/2026). O gestor do setor
+  // segue renomeando, recolorindo, reordenando e criando colunas.
+  if (removed.length > 0 && !podeExcluir(ctx)) {
+    return { error: `${SO_ADMIN_EXCLUI} Peça a ele para tirar a coluna "${removed[0].name}".` };
+  }
   const removedWithItems = removed.filter((s) => s._count.items > 0);
   if (removedWithItems.length > 0) {
     return { error: `Mova as tarefas de "${removedWithItems[0].name}" antes de excluir esse estágio.` };
@@ -530,8 +544,9 @@ export async function excluirNota(pipelineId: string, itemId: string, activityId
     where: { id: activityId, pipelineItemId: itemId, tenantId, type: ActivityType.NOTE },
     select: { userId: true },
   });
-  // Autor apaga a própria nota; coordenador (canManage) apaga qualquer nota.
-  if (!note || (note.userId !== userId && !canManageSector(ctx, pipeline.sectorCode))) return;
+  // Excluir comentário é só do administrador (13/10/2026) — o autor corrige o
+  // que escreveu pelo "Editar". Antes o autor e o coordenador excluíam.
+  if (!note || !podeExcluir(ctx)) return;
 
   try {
     await prisma.activity.delete({ where: { id: activityId } });
@@ -555,6 +570,9 @@ export async function alternarObservadorItem(pipelineId: string, itemId: string,
   // Mesmo fix de alternarTagItem/alternarResponsavelItem.
   const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
   if (!item) return;
+  // Desmarcar participante segue livre para quem age no setor (exceção do dia
+  // a dia, 13/10/2026); marcar só aceita pessoa deste escritório.
+  if (marcado && !(await usuarioDoEscritorio(tenantId, userId))) return;
 
   try {
     if (marcado) {
@@ -732,6 +750,10 @@ export async function alternarTagItem(
   // chamador era checado acima) e ganhava/perdia tag de fora do escopo dele.
   const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
   if (!item) return;
+  // Desmarcar tag segue livre para quem age no setor (exceção do dia a dia,
+  // 13/10/2026). Marcar só aceita tag deste escritório: o tagId vinha da tela
+  // sem conferência.
+  if (marcado && !(await prisma.tag.findFirst({ where: { id: tagId, tenantId }, select: { id: true } }))) return;
 
   try {
     if (marcado) {
@@ -784,6 +806,9 @@ export async function alternarResponsavelItem(
   // Mesmo fix de alternarTagItem — valida que itemId é mesmo desse pipeline/tenant.
   const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
   if (!item) return;
+  // Desmarcar responsável segue livre (exceção do dia a dia); marcar só aceita
+  // pessoa deste escritório.
+  if (marcado && !(await usuarioDoEscritorio(tenantId, userId))) return;
 
   try {
     if (marcado) {
@@ -953,6 +978,11 @@ export async function removerLinkItem(pipelineId: string, itemId: string, linked
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  // Desvincular segue com quem age no setor (exceção do dia a dia, 13/10/2026),
+  // mas o card tem de ser desta lista: só o pipelineId era conferido, e quem
+  // agia num setor desfazia vínculo de card de outro.
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
+  if (!item) return;
 
   try {
     // O vínculo pode ter sido criado em qualquer direção (itemId como origem
@@ -977,7 +1007,8 @@ export async function removerLinkItem(pipelineId: string, itemId: string, linked
 export async function excluirItem(pipelineId: string, itemId: string): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
-  if (!tenantId) return;
+  // Excluir card: só o administrador (13/10/2026). Era o gestor do setor.
+  if (!tenantId || !podeExcluir(ctx)) return;
 
   const prisma = getPrisma();
 
@@ -985,7 +1016,8 @@ export async function excluirItem(pipelineId: string, itemId: string): Promise<v
   if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
 
   try {
-    await prisma.pipelineItem.delete({ where: { id: itemId, tenantId } });
+    // O card tem de ser desta lista — o pipelineId que libera a ação é o dela.
+    await prisma.pipelineItem.delete({ where: { id: itemId, tenantId, pipelineId } });
   } catch (err) {
     console.error("[excluirItem]", err);
     return;
@@ -1049,7 +1081,8 @@ export async function criarSubtarefa(parentItemId: string, title: string): Promi
 export async function excluirSubtarefa(parentItemId: string, subtaskId: string): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId, userId } = ctx;
-  if (!tenantId) return;
+  // Excluir subtarefa: só o administrador (13/10/2026). Era o gestor do setor.
+  if (!tenantId || !podeExcluir(ctx)) return;
 
   const prisma = getPrisma();
   const subtask = await prisma.pipelineItem.findFirst({ where: { id: subtaskId, tenantId, parentItemId } });
@@ -1171,7 +1204,9 @@ export async function editarChecklistItem(pipelineItemId: string, checklistItemI
 export async function excluirChecklistItem(pipelineItemId: string, checklistItemId: string): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
-  if (!tenantId) return;
+  // Excluir item do checklist: só o administrador (13/10/2026). Quem age no
+  // setor corrige o texto pelo "Editar" e marca/desmarca como sempre.
+  if (!tenantId || !podeExcluir(ctx)) return;
 
   const loaded = await loadItemPipeline(tenantId, pipelineItemId);
   if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
@@ -1361,27 +1396,88 @@ export async function criarLancamentoTempo(pipelineItemId: string, _prev: Pipeli
   return null;
 }
 
-export async function excluirLancamentoTempo(pipelineId: string, itemId: string, entryId: string): Promise<void> {
+/**
+ * Corrigir um apontamento de tempo do card (13/10/2026): duração, dia e nota.
+ *
+ * Quem apontou corrige o próprio; o gestor do setor corrige o de qualquer um —
+ * a mesma regra que valia para apagar, que agora é só do administrador.
+ */
+export async function editarLancamentoTempo(
+  pipelineId: string,
+  itemId: string,
+  entryId: string,
+  _prev: EstadoDaEdicaoDeHoras,
+  form: FormData,
+): Promise<EstadoDaEdicaoDeHoras> {
   const ctx = await getAuthContext();
   const { tenantId, userId } = ctx;
-  if (!tenantId) return;
+  if (!tenantId || !userId) return { error: "Não autenticado" };
+
+  const lido = lerLancamentoDeHoras(form);
+  if (!lido.ok) return { error: lido.error };
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline) return;
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return { error: "Sem permissão para editar este apontamento." };
 
-  const entry = await prisma.timeEntry.findFirst({ where: { id: entryId, pipelineItemId: itemId, tenantId }, select: { userId: true } });
-  // Autor apaga o próprio apontamento; coordenador (canManage) apaga qualquer um.
-  if (!entry || (entry.userId !== userId && !canManageSector(ctx, pipeline.sectorCode))) return;
+  const entry = await prisma.timeEntry.findFirst({
+    where: { id: entryId, tenantId, pipelineItemId: itemId, pipelineItem: { pipelineId } },
+    select: { userId: true, minutes: true },
+  });
+  if (!entry) return { error: "Apontamento não encontrado." };
+  if (entry.userId !== userId && !canManageSector(ctx, pipeline.sectorCode)) {
+    return { error: "Só quem apontou ou o gestor do setor corrige este apontamento." };
+  }
+
+  try {
+    await prisma.timeEntry.update({
+      where: { id: entryId },
+      data: { minutes: lido.minutos, note: lido.nota, ...(lido.dia ? { loggedOn: lido.dia } : {}) },
+    });
+    if (entry.minutes !== lido.minutos) {
+      await prisma.activity.create({
+        data: {
+          tenantId, pipelineItemId: itemId, userId, type: ActivityType.TIME_LOGGED,
+          content: `Apontamento corrigido: ${duracaoDoLancamento(entry.minutes)} → ${duracaoDoLancamento(lido.minutos)}`,
+        },
+      });
+    }
+  } catch (err) {
+    console.error("[editarLancamentoTempo]", err);
+    return { error: "Erro ao salvar o apontamento." };
+  }
+
+  revalidarItem(pipeline, itemId);
+  return { ok: true };
+}
+
+export async function excluirLancamentoTempo(pipelineId: string, itemId: string, entryId: string): Promise<EstadoDaEdicaoDeHoras> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return { error: "Não autenticado" };
+  // Apagar apontamento: só o administrador (13/10/2026). Antes, o autor e o
+  // coordenador apagavam; agora eles corrigem pelo `editarLancamentoTempo`.
+  if (!podeExcluir(ctx)) return { error: SO_ADMIN_EXCLUI };
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline) return { error: "Lista não encontrada." };
+
+  const entry = await prisma.timeEntry.findFirst({
+    where: { id: entryId, tenantId, pipelineItemId: itemId, pipelineItem: { pipelineId } },
+    select: { id: true },
+  });
+  if (!entry) return { error: "Apontamento não encontrado." };
 
   try {
     await prisma.timeEntry.delete({ where: { id: entryId } });
   } catch (err) {
     console.error("[excluirLancamentoTempo]", err);
-    return;
+    return { error: "Erro ao apagar o apontamento." };
   }
 
   revalidarItem(pipeline, itemId);
+  return { ok: true };
 }
 
 // ─── Duplicar Pipeline ──────────────────────────────────────────────────────

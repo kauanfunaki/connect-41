@@ -150,7 +150,7 @@ export default async function ProcessosPage({
         {coordena && (
           <Button href="/societario/ia" variant="secondary">
             <Sparkles size={14} />
-            Lígia · Societário{propostasDaIa > 0 ? ` · ${propostasDaIa}` : ""}
+            Ceci · Societário{propostasDaIa > 0 ? ` · ${propostasDaIa}` : ""}
           </Button>
         )}
         <Button href={filtrosDoKanban.size > 0 ? `/processos/kanban?${filtrosDoKanban}` : "/processos/kanban"} variant="secondary">

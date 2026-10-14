@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -25,11 +25,23 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
-import { Ligia, type EstadoDaLigia } from "@/components/ia/Ligia";
-import { especialidadeDoAgente, NOME_DA_ASSISTENTE } from "@/lib/ia/ligia";
-import { AvatarImage } from "@/components/shared/AvatarImage";
-import { partesComCitacoes, type Citado } from "@/lib/ia/chat/citacoes";
+import { Contador } from "@/components/ui/Contador";
+import { Ceci, type EstadoDaCeci } from "@/components/ia/Ceci";
+import { especialidadeDoAgente, NOME_DA_ASSISTENTE } from "@/lib/ia/ceci";
+import { RespostaDaCeci } from "@/components/ia/RespostaDaCeci";
+import { respostaEmTextoSimples } from "@/lib/ia/chat/markdown";
 import { ACEITA_NO_CAMPO, conferirEscolha, separarAnexos } from "@/lib/ia/chat/anexos-regras";
+import { contextoParaMostrar } from "@/lib/ia/chat/telas";
+import {
+  boasVindasPendentes,
+  CHAVE_DAS_BOAS_VINDAS,
+  entradaAtual,
+  mensagensNovas,
+  respostaNaoLidaDepois,
+  rotuloDoAviso,
+  sugestoesDasBoasVindas,
+  textoDasBoasVindas,
+} from "@/lib/ia/chat/boasVindas";
 import { formatInstantDateTime } from "@/lib/format";
 import type { AgenteDoChat } from "@/lib/ia/chat/agentes";
 import type { ConversaNaLista, MensagemNaTela } from "@/lib/ia/chat/conversas";
@@ -58,14 +70,6 @@ type Evento =
   | { tipo: "mensagem"; mensagem: MensagemNaTela }
   | { tipo: "erro"; texto: string };
 
-/** Negrito com **, para um pedaço de texto puro. */
-function comNegrito(texto: string, chave: string) {
-  return texto.split(/(\*\*[^*]+\*\*)/g).map((p, j) =>
-    p.startsWith("**") && p.endsWith("**") ? <strong key={`${chave}-${j}`}>{p.slice(2, -2)}</strong> : <Fragment key={`${chave}-${j}`}>{p.replace(/^#+\s*/, "")}</Fragment>
-  );
-}
-
-/** A pessoa ou empresa citada: foto (ou iniciais) e nome; com ficha, leva a ela. */
 /** A pergunta da pessoa; os arquivos anexados aparecem como etiquetas embaixo. */
 function BalaoDaPergunta({ texto }: { texto: string }) {
   const p = separarAnexos(texto);
@@ -86,61 +90,7 @@ function BalaoDaPergunta({ texto }: { texto: string }) {
   );
 }
 
-function CartaoDoCitado({ citado }: { citado: Citado }) {
-  const conteudo = (
-    <>
-      <AvatarImage src={citado.foto} name={citado.nome} size={18} shape={citado.tipo === "empresa" ? "lg" : "circle"} fontSize={8} bordered={false} />
-      <span className="truncate">{citado.nome}</span>
-    </>
-  );
-  const classe = "inline-flex max-w-full items-center gap-1 align-middle rounded-full border border-border bg-surface pl-0.5 pr-2 py-0.5 text-fs-2 font-medium text-fg";
-  return citado.href ? (
-    <a href={citado.href} className={`${classe} hover:border-brand hover:text-brand`}>
-      {conteudo}
-    </a>
-  ) : (
-    <span className={classe}>{conteudo}</span>
-  );
-}
-
-/**
- * Negrito com **, lista com "-" ou "1.", pessoas citadas com foto, e uma linha
- * por parágrafo. O resto vai como texto — nada de HTML vindo do modelo.
- */
-function TextoDaResposta({ texto, citados = {} }: { texto: string; citados?: Record<string, Citado> }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      {texto.split("\n").map((linha, i) => {
-        if (!linha.trim()) return null;
-        const item = /^\s*[-•]\s+/.test(linha);
-        const numero = /^\s*(\d+)[.)]\s+/.exec(linha)?.[1];
-        const conteudo = partesComCitacoes(linha.replace(/^\s*([-•]|\d+[.)])\s+/, "")).map((p, j) => {
-          if ("texto" in p) return <Fragment key={j}>{comNegrito(p.texto, `${i}-${j}`)}</Fragment>;
-          const citado = citados[`${p.tipo}:${p.id}`];
-          // Sem cadastro achado (outro escritório, apagado): só o nome.
-          return citado ? <CartaoDoCitado key={j} citado={citado} /> : <Fragment key={j}>{p.nome}</Fragment>;
-        });
-        if (numero) {
-          return (
-            <p key={i} className="pl-5 relative">
-              <span className="absolute left-0 text-fg-muted tabular-nums">{numero}.</span>
-              {conteudo}
-            </p>
-          );
-        }
-        return item ? (
-          <p key={i} className="pl-3.5 relative before:content-['•'] before:absolute before:left-0.5 before:text-fg-muted">
-            {conteudo}
-          </p>
-        ) : (
-          <p key={i}>{conteudo}</p>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── "Já abriu o chat?" — o brilho atrás da Lígia respira até a primeira vez ───
+// ─── "Já abriu o chat?" — o brilho atrás da Ceci respira até a primeira vez ───
 //
 // Em localStorage, por pessoa e navegador. Se não der para ler ou gravar
 // (janela anônima, bloqueio), conta como já aberto: não brilha à toa.
@@ -177,6 +127,38 @@ function marcarJaAbriu() {
   window.dispatchEvent(new Event(EVENTO_JA_ABRIU));
 }
 
+// ─── As boas-vindas desta entrada (13/10/2026) ──────────────────────────────
+//
+// A marca da entrada vem do cookie que o login grava; a última vista, do
+// localStorage. A foto é a string "entrada\nvista" (o `useSyncExternalStore`
+// compara por igualdade). Sem armazenamento, foto vazia: conta como vista e o
+// aviso não insiste. No servidor também vazia — as boas-vindas só aparecem
+// depois de a tela montar. Regras em `src/lib/ia/chat/boasVindas.ts`.
+const EVENTO_BOAS_VINDAS = "c41:ceci:boas-vindas";
+function fotoDasBoasVindas(): string {
+  try {
+    return `${entradaAtual(document.cookie)}\n${localStorage.getItem(CHAVE_DAS_BOAS_VINDAS) ?? ""}`;
+  } catch {
+    return "";
+  }
+}
+function assinarBoasVindas(aviso: () => void) {
+  window.addEventListener("storage", aviso);
+  window.addEventListener(EVENTO_BOAS_VINDAS, aviso);
+  return () => {
+    window.removeEventListener("storage", aviso);
+    window.removeEventListener(EVENTO_BOAS_VINDAS, aviso);
+  };
+}
+function marcarBoasVindasVistas(entrada: string) {
+  try {
+    localStorage.setItem(CHAVE_DAS_BOAS_VINDAS, entrada);
+  } catch {
+    /* sem armazenamento: só não lembra */
+  }
+  window.dispatchEvent(new Event(EVENTO_BOAS_VINDAS));
+}
+
 /** Copiar com o fallback para o navegador que recusa a área de transferência. */
 async function copiarTexto(texto: string): Promise<boolean> {
   try {
@@ -197,7 +179,7 @@ async function copiarTexto(texto: string): Promise<boolean> {
 
 const ALTURA_MAXIMA_DO_CAMPO = 6 * 20 + 8; // seis linhas
 
-/** Quanto tempo a Lígia fica com cara de "deu certo" depois de uma resposta ou proposta concluída. */
+/** Quanto tempo a Ceci fica com cara de "deu certo" depois de uma resposta ou proposta concluída. */
 const TEMPO_DE_COMEMORAR = 2800;
 
 /**
@@ -205,7 +187,7 @@ const TEMPO_DE_COMEMORAR = 2800;
  * (redesenho de 02/10/2026 — referências do Untitled UI, "referência, não
  * cópia"). Desenho em Projects/Connect-41/Chat-de-IA-Redesign-2026-10-01.
  *
- * Desde 13/10/2026 quem atende é a Lígia, assistente do Connect (decisão do
+ * Desde 13/10/2026 quem atende é a Ceci, assistente do Connect (decisão do
  * Kauan): o mesmo rosto e o mesmo nome em todos os setores, com o setor
  * embaixo do nome — no lugar de "IA do BPO", "IA do DP"… O rosto muda com a
  * conversa: pensando enquanto a resposta chega, "deu certo" por um instante
@@ -252,7 +234,22 @@ export function ChatDeIA({
   const [arquivos, setArquivos] = useState<File[]>([]);
   const seletorDeArquivoRef = useRef<HTMLInputElement>(null);
   const jaAbriu = useSyncExternalStore(assinarJaAbriu, lerJaAbriu, () => true);
-  // O "deu certo" da Lígia: liga numa resposta ou proposta concluída e se
+  // Boas-vindas e aviso de mensagem nova (13/10/2026). As boas-vindas esperam
+  // dentro do chat — nunca o abrem sozinhas —, e o botão do canto avisa.
+  const fotoBoasVindas = useSyncExternalStore(assinarBoasVindas, fotoDasBoasVindas, () => "");
+  const [entradaDaFoto = "", vistaDaFoto = ""] = fotoBoasVindas.split("\n");
+  const agenteDoSetor = agentes.find((a) => a.doSetorAtivo) ?? null;
+  const boasVindasEsperando =
+    fotoBoasVindas !== "" && boasVindasPendentes({ entrada: entradaDaFoto, vista: vistaDaFoto || null, temAgenteDoSetor: agenteDoSetor !== null });
+  /** As boas-vindas aparecem como a primeira mensagem desta conversa nova. */
+  const [boasVindasNaTela, setBoasVindasNaTela] = useState(false);
+  /** A Ceci terminou de responder com o chat fechado. */
+  const [respostaNaoLida, setRespostaNaoLida] = useState(false);
+  const abertoRef = useRef(false);
+  useEffect(() => {
+    abertoRef.current = aberto;
+  }, [aberto]);
+  // O "deu certo" da Ceci: liga numa resposta ou proposta concluída e se
   // desliga sozinho — não é um estado da conversa, é uma reação.
   const [comemorando, setComemorando] = useState(false);
   const comemoracaoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -315,7 +312,7 @@ export function ChatDeIA({
   const ultimaResposta = [...mensagens].reverse().find((x) => x.papel === "assistente");
   // Pensando ganha de tudo; depois o erro (o da tela ou a última resposta que
   // falhou); o "deu certo" só por um instante; senão, parada.
-  const estadoDaLigia: EstadoDaLigia = enviando
+  const estadoDaCeci: EstadoDaCeci = enviando
     ? "pensando"
     : erro || mensagens.at(-1)?.falhou
       ? "naoConsegui"
@@ -330,13 +327,26 @@ export function ChatDeIA({
     else if (comArquivo) semRefazer.add(x.id);
   }
 
+  const novas = mensagensNovas({ boasVindasEsperando, respostaNaoLida });
+  const aviso = rotuloDoAviso(novas);
+
   function abrirChat() {
     marcarJaAbriu();
+    setRespostaNaoLida(false);
+    if (boasVindasEsperando && agenteDoSetor) {
+      marcarBoasVindasVistas(entradaDaFoto);
+      // Só numa conversa nova: no meio de outra, a mensagem ficaria solta.
+      if (!conversaId && mensagens.length === 0) {
+        setBoasVindasNaTela(true);
+        setEscolhido(agenteDoSetor.code);
+      }
+    }
     setAberto(true);
     requestAnimationFrame(() => campoRef.current?.focus());
   }
 
   function novaConversa() {
+    setBoasVindasNaTela(false);
     setConversaId(null);
     setMensagens([]);
     setErro(null);
@@ -355,6 +365,7 @@ export function ChatDeIA({
       setErro(r.error);
       return;
     }
+    setBoasVindasNaTela(false);
     setConversaId(id);
     setEscolhido(r.agentCode);
     setMensagens(r.mensagens);
@@ -382,8 +393,10 @@ export function ChatDeIA({
       setPergunta(t);
       if (comArquivos.length) setArquivos(comArquivos);
     };
-    // A última resposta chegou inteira? É o que faz a Lígia comemorar no fim.
+    // A última resposta chegou inteira? É o que faz a Ceci comemorar no fim.
     let respondeu = false;
+    // Depois das boas-vindas com o "Oi, {nome}!", a primeira resposta não cumprimenta de novo.
+    const jaCumprimentada = boasVindasNaTela && mensagens.length === 0;
     try {
       let pedido: RequestInit;
       if (comArquivos.length) {
@@ -392,13 +405,14 @@ export function ChatDeIA({
         form.set("agentCode", agentCode);
         form.set("pergunta", t);
         form.set("caminho", pathname);
+        if (jaCumprimentada) form.set("jaCumprimentada", "1");
         for (const f of comArquivos) form.append("anexos", f);
         pedido = { method: "POST", body: form };
       } else {
         pedido = {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conversaId, agentCode, pergunta: t, caminho: pathname }),
+          body: JSON.stringify({ conversaId, agentCode, pergunta: t, caminho: pathname, jaCumprimentada }),
         };
       }
       const res = await fetch("/api/ia/chat", pedido);
@@ -420,7 +434,11 @@ export function ChatDeIA({
           else if (e.tipo === "mensagem") {
             setMensagens((ms) => [...ms, e.mensagem]);
             if (e.mensagem.papel === "usuario") setPasso("Pensando…");
-            else respondeu = !e.mensagem.falhou;
+            else {
+              respondeu = !e.mensagem.falhou;
+              // Respondeu com o chat fechado: o botão do canto avisa.
+              setRespostaNaoLida((ja) => respostaNaoLidaDepois({ chatAberto: abertoRef.current, jaHavia: ja }));
+            }
           } else if (e.tipo === "erro") {
             respondeu = false;
             setErro(e.texto);
@@ -430,7 +448,7 @@ export function ChatDeIA({
       }
       if (respondeu) comemorar();
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Não deu para falar com a Lígia agora. Tente de novo.");
+      setErro(err instanceof Error ? err.message : "Não deu para falar com a Ceci agora. Tente de novo.");
       devolver();
     } finally {
       setPasso(null);
@@ -561,7 +579,8 @@ export function ChatDeIA({
   }
 
   async function copiar(m: MensagemNaTela) {
-    if (await copiarTexto(m.texto)) {
+    // A resposta vai como se lê na tela: sem os ** do Markdown, sem id e sem caminho.
+    if (await copiarTexto(m.papel === "assistente" ? respostaEmTextoSimples(m.texto) || m.texto : m.texto)) {
       setCopiada(m.id);
       setTimeout(() => setCopiada((c) => (c === m.id ? null : c)), 1500);
     }
@@ -569,7 +588,7 @@ export function ChatDeIA({
 
   // ─── O botão do canto ─────────────────────────────────────────────────────
   //
-  // Só a Lígia, 56 px no computador e 48 px no celular (pedido do Kauan,
+  // Só a Ceci, 56 px no computador e 48 px no celular (pedido do Kauan,
   // 13/10/2026): o nome e o setor ocupavam espaço demais na pílula, e o
   // desenho sozinho, sem pílula, borda girando, fundo nem folga em volta, fica
   // mais visível. O anel do próprio desenho faz o papel de borda. A margem
@@ -579,8 +598,13 @@ export function ChatDeIA({
   // `DicaFlutuante`, por `data-dica`). O anel de foco é o de todo o Connect
   // (`:focus-visible` em globals.css): só no teclado, não no clique. A sombra
   // leve segue o contorno do desenho e existe para o anel não sumir sobre
-  // fundo azul (`.c41-ligia-flutuante`). Até a primeira abertura, um brilho
+  // fundo azul (`.c41-ceci-flutuante`). Até a primeira abertura, um brilho
   // suave respira atrás dela (`.c41-chamar`).
+  //
+  // Mensagem nova (13/10/2026) — as boas-vindas esperando, ou a resposta que
+  // chegou com o chat fechado: o contador vermelho no canto do desenho, a Ceci
+  // sorrindo e o aviso no nome acessível ("1 mensagem nova da Ceci"), que
+  // também é anunciado quando aparece. Abrir o chat limpa.
   if (!aberto) {
     return (
       <div className="fixed bottom-4 right-4 z-40">
@@ -589,12 +613,16 @@ export function ChatDeIA({
           ref={botaoRef}
           type="button"
           onClick={abrirChat}
-          aria-label={`Falar com a ${NOME_DA_ASSISTENTE}, assistente do Connect — ${agente.especialidade}`}
+          aria-label={`Falar com a ${NOME_DA_ASSISTENTE}, assistente do Connect — ${agente.especialidade}${aviso ? `. ${aviso}` : ""}`}
           data-dica={`${NOME_DA_ASSISTENTE} · ${agente.especialidade}`}
           className="relative flex size-12 sm:size-14 rounded-full outline-none transition-transform hover:-translate-y-0.5 motion-reduce:transition-none"
         >
-          <Ligia tamanho={56} estado={estadoDaLigia} className="c41-ligia-flutuante size-full" />
+          <Ceci tamanho={56} estado={novas > 0 && estadoDaCeci === "parada" ? "deuCerto" : estadoDaCeci} className="c41-ceci-flutuante size-full" />
+          {novas > 0 && <Contador valor={novas} tom="alerta" pequeno className="pointer-events-none absolute -top-0.5 -right-0.5 border-2 border-surface" />}
         </button>
+        <span role="status" className="sr-only">
+          {aviso ?? ""}
+        </span>
       </div>
     );
   }
@@ -622,7 +650,7 @@ export function ChatDeIA({
               <ArrowLeft size={16} />
             </button>
           ) : (
-            <Ligia tamanho={32} estado={estadoDaLigia} />
+            <Ceci tamanho={32} estado={estadoDaCeci} />
           )}
           {vendoHistorico ? (
             <p className="flex-1 min-w-0 text-label font-semibold text-fg truncate">Conversas</p>
@@ -697,9 +725,39 @@ export function ChatDeIA({
         ) : (
           <>
             <div className="flex-1 overflow-y-auto px-4 pt-2 pb-4 flex flex-col gap-5">
-              {mensagens.length === 0 && !enviando && (
+              {/* As boas-vindas desta entrada (13/10/2026): a primeira mensagem da
+                  conversa nova, com até três sugestões do setor. Texto local —
+                  não vai ao modelo nem fica gravado. */}
+              {boasVindasNaTela && agenteDoSetor && (
+                <div className="flex items-start gap-2.5">
+                  <Ceci tamanho={24} className="mt-0.5" estado="parada" />
+                  <div className="min-w-0 flex-1 flex flex-col gap-2.5">
+                    <p className="text-ui leading-relaxed text-fg">
+                      {textoDasBoasVindas({ primeiroNome, especialidade: agenteDoSetor.especialidade })}
+                    </p>
+                    {mensagens.length === 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {sugestoesDasBoasVindas(agenteDoSetor.sugestoes).map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            disabled={enviando}
+                            onClick={() => void enviar(s)}
+                            className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-brand/40 bg-brand-subtle/50 px-3 py-1 text-left text-fs-2 font-medium text-brand hover:bg-brand-subtle disabled:opacity-[var(--c41-disabled-op)] transition-colors"
+                          >
+                            <MessageSquareText size={13} className="flex-shrink-0" />
+                            <span className="min-w-0">{s}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {mensagens.length === 0 && !enviando && !boasVindasNaTela && (
                 <div className="flex flex-col items-center text-center pt-8 pb-2">
-                  <Ligia tamanho={64} estado={estadoDaLigia} />
+                  <Ceci tamanho={64} estado={estadoDaCeci} />
                   <p className="mt-4 text-section font-semibold text-fg">
                     {primeiroNome ? `Oi, ${primeiroNome}! Eu sou a ${NOME_DA_ASSISTENTE}.` : `Oi! Eu sou a ${NOME_DA_ASSISTENTE}.`}
                   </p>
@@ -729,7 +787,9 @@ export function ChatDeIA({
                   <div key={m.id} className="group self-end max-w-[85%] flex flex-col items-end gap-1">
                     <BalaoDaPergunta texto={m.texto} />
                     <span className="flex items-center gap-1.5">
-                      {m.contexto && <span className="text-micro text-fg-muted truncate max-w-[200px]">{m.contexto}</span>}
+                      {contextoParaMostrar(m.contexto) && (
+                        <span className="text-micro text-fg-muted truncate max-w-[200px]">{contextoParaMostrar(m.contexto)}</span>
+                      )}
                       <AcoesDaMensagem>
                         {!enviando && (
                           <BotaoDeAcao rotulo="Editar" onClick={() => comecarEdicao(m)}>
@@ -744,15 +804,15 @@ export function ChatDeIA({
                   </div>
                 ) : (
                   <div key={m.id} className="group flex items-start gap-2.5">
-                    <Ligia
+                    <Ceci
                       tamanho={24}
                       className="mt-0.5"
                       estado={m.falhou ? "naoConsegui" : m.id === ultimaResposta?.id && comemorando ? "deuCerto" : "parada"}
                     />
                     <div className="min-w-0 flex-1 flex flex-col gap-2">
-                      {m.contexto && <span className="c41-rotulo text-brand">{m.contexto}</span>}
+                      {contextoParaMostrar(m.contexto) && <span className="c41-rotulo text-brand">{contextoParaMostrar(m.contexto)}</span>}
                       <div className={`text-ui leading-relaxed break-words ${m.falhou ? "rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-danger" : "text-fg"}`}>
-                        <TextoDaResposta texto={m.texto} citados={m.citados} />
+                        <RespostaDaCeci texto={m.texto} citados={m.citados} aoNavegar={() => setAberto(false)} />
                       </div>
                       {m.truncada && (
                         <p className="flex items-start gap-1.5 text-micro text-warning-fg">
@@ -808,7 +868,7 @@ export function ChatDeIA({
   
               {passo && (
                 <p className="flex items-center gap-2.5 text-fs-2 text-fg-muted">
-                  <Ligia tamanho={24} estado="pensando" />
+                  <Ceci tamanho={24} estado="pensando" />
                   {passo}
                 </p>
               )}
@@ -892,7 +952,6 @@ export function ChatDeIA({
                     onEscolher={(code) => setEscolhido(code)}
                   />
                   <span className="flex items-center gap-2">
-                    <span className="hidden sm:inline text-micro text-fg-muted">Enter envia</span>
                     <input
                       ref={seletorDeArquivoRef}
                       type="file"
@@ -927,7 +986,7 @@ export function ChatDeIA({
 /**
  * Em qual setor conversar, embaixo do campo — minimalista, como o "UUI v12.8 ▾"
  * da referência. Só aparece com mais de um agente; com a conversa começada,
- * mostra o setor travado, porque a conversa pertence a um agente. Desde a Lígia
+ * mostra o setor travado, porque a conversa pertence a um agente. Desde a Ceci
  * (13/10/2026) a lista é de setores: quem atende é sempre ela.
  */
 function SeletorDoAgente({

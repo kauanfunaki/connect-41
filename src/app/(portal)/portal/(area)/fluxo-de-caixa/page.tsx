@@ -5,6 +5,8 @@ import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { TabelaDoRealizado, CartoesDaProjecao } from "@/components/financeiro/FluxoDeCaixa";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { empresasDoSeletor, movimentosRealizados, titulosEmAberto } from "@/lib/financeiro/consultas";
 import { fluxoRealizado, projecaoPorJanela } from "@/lib/financeiro/fluxo";
 import { competenciaDoInstante, competenciasAte } from "@/lib/financeiro/periodo";
@@ -24,6 +26,7 @@ export default async function PortalFluxoDeCaixaPage({
 }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_fluxo_caixa")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/fluxo-de-caixa")) return <TelaIndisponivel />;
 
   const params = await searchParams;
   const empresas = await empresasDoSeletor(escopo.tenantId, escopo.companyIds ?? []);

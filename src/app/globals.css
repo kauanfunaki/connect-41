@@ -843,10 +843,10 @@ input[type="search"]::-webkit-search-decoration {
 
 /* Chat de IA — o botão do canto (src/components/shell/ChatDeIA.tsx). De
    02/10 a 13/10/2026 era uma pílula com a borda girando em gradiente (azul 41
-   + a cor do setor do agente); desde 13/10 é só o desenho da Lígia, sem
+   + a cor do setor do agente); desde 13/10 é só o desenho da Ceci, sem
    borda nem fundo. */
 @keyframes c41-gira { to { transform: rotate(360deg); } }
-/* Até a primeira abertura: um brilho suave atrás da Lígia, que respira
+/* Até a primeira abertura: um brilho suave atrás da Ceci, que respira
    devagar. Era um disco cheio crescendo em volta da pílula; sem a pílula, o
    disco aparecia como um contorno. O degradê radial termina transparente, sem
    borda em nenhum tamanho. Com prefers-reduced-motion, fica parado, aceso
@@ -858,7 +858,7 @@ input[type="search"]::-webkit-search-decoration {
   animation: c41-chamar 2.8s ease-in-out infinite;
 }
 
-/* A Lígia, assistente do Connect (13/10/2026 — src/components/ia/Ligia.tsx).
+/* A Ceci, assistente do Connect (13/10/2026 — src/components/ia/Ceci.tsx).
    Cores de identidade do mascote, fixas, mas por tema: o anel e o nó usam os
    tons do símbolo do Connect para cada fundo (public/brand/symbol-color.svg e
    symbol-color-dark-bg.svg); o rosto é azul nos dois, um pouco mais claro no
@@ -871,42 +871,42 @@ input[type="search"]::-webkit-search-decoration {
    página: no fundo da página e nas superfícies o anel passa (claro 6,0–2,9:1
    no canvas, nó 4,9:1; escuro 4,8–9,0:1), mas sobre azul ele some — botão
    primário (brand-solid) 1,2–1,7:1 no claro e 1,4–2,7:1 no escuro, nó 1,0:1
-   e 2,2:1. Daí a sombra leve de --c41-ligia-sombra, em .c41-ligia-flutuante. */
+   e 2,2:1. Daí a sombra leve de --c41-ceci-sombra, em .c41-ceci-flutuante. */
 :root {
-  --c41-ligia-anel-de:  #1B4FD8;
-  --c41-ligia-anel-ate: #4D8DFF;
-  --c41-ligia-no:       #1F5EEA;
-  --c41-ligia-rosto-de: #1A56DE;
-  --c41-ligia-rosto-ate:#3F7FF8;
-  --c41-ligia-bochecha: #9DBEFF;
-  --c41-ligia-sombra:   drop-shadow(0 1px 1.5px rgba(15,26,51,.28)) drop-shadow(0 3px 8px rgba(15,26,51,.16));
+  --c41-ceci-anel-de:  #1B4FD8;
+  --c41-ceci-anel-ate: #4D8DFF;
+  --c41-ceci-no:       #1F5EEA;
+  --c41-ceci-rosto-de: #1A56DE;
+  --c41-ceci-rosto-ate:#3F7FF8;
+  --c41-ceci-bochecha: #9DBEFF;
+  --c41-ceci-sombra:   drop-shadow(0 1px 1.5px rgba(15,26,51,.28)) drop-shadow(0 3px 8px rgba(15,26,51,.16));
 }
 :root[data-theme="dark"] {
-  --c41-ligia-anel-de:  #3D7BFF;
-  --c41-ligia-anel-ate: #8FB5FF;
-  --c41-ligia-no:       #6FA3FF;
-  --c41-ligia-rosto-de: #3069F0;
-  --c41-ligia-rosto-ate:#4A86FA;
-  --c41-ligia-sombra:   drop-shadow(0 1px 1.5px rgba(0,0,0,.55)) drop-shadow(0 3px 8px rgba(0,0,0,.4));
+  --c41-ceci-anel-de:  #3D7BFF;
+  --c41-ceci-anel-ate: #8FB5FF;
+  --c41-ceci-no:       #6FA3FF;
+  --c41-ceci-rosto-de: #3069F0;
+  --c41-ceci-rosto-ate:#4A86FA;
+  --c41-ceci-sombra:   drop-shadow(0 1px 1.5px rgba(0,0,0,.55)) drop-shadow(0 3px 8px rgba(0,0,0,.4));
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
-    --c41-ligia-anel-de:  #3D7BFF;
-    --c41-ligia-anel-ate: #8FB5FF;
-    --c41-ligia-no:       #6FA3FF;
-    --c41-ligia-rosto-de: #3069F0;
-    --c41-ligia-rosto-ate:#4A86FA;
-    --c41-ligia-sombra:   drop-shadow(0 1px 1.5px rgba(0,0,0,.55)) drop-shadow(0 3px 8px rgba(0,0,0,.4));
+    --c41-ceci-anel-de:  #3D7BFF;
+    --c41-ceci-anel-ate: #8FB5FF;
+    --c41-ceci-no:       #6FA3FF;
+    --c41-ceci-rosto-de: #3069F0;
+    --c41-ceci-rosto-ate:#4A86FA;
+    --c41-ceci-sombra:   drop-shadow(0 1px 1.5px rgba(0,0,0,.55)) drop-shadow(0 3px 8px rgba(0,0,0,.4));
   }
 }
 /* A sombra do botão do canto: `drop-shadow`, que segue o contorno do desenho
    (o anel aberto e o nó), e não `box-shadow`, que desenharia um círculo em
    volta — o pedido é sem borda. */
-.c41-ligia-flutuante { filter: var(--c41-ligia-sombra); }
+.c41-ceci-flutuante { filter: var(--c41-ceci-sombra); }
 /* Pensando: o anel e o nó giram em volta do rosto — o carregando é o próprio
    logo. Devagar, para não chamar mais atenção que a resposta. A origem é o
    centro do anel, em unidades do viewBox (0 0 120 120). */
-.c41-ligia-pensando {
+.c41-ceci-pensando {
   transform-box: view-box;
   transform-origin: 58px 60px;
   animation: c41-gira 2.4s linear infinite;
@@ -914,7 +914,7 @@ input[type="search"]::-webkit-search-decoration {
 
 @media (prefers-reduced-motion: reduce) {
   .c41-pagina > *, .c41-surgir, .c41-esmaecer, .c41-folha { animation: none; }
-  .c41-chamar, .c41-ligia-pensando { animation: none; }
+  .c41-chamar, .c41-ceci-pensando { animation: none; }
 }
 
 /* Tabela padrão: o casco descola do fundo, a linha acende inteira no hover e
@@ -1001,7 +1001,7 @@ tr.c41-linha:hover > :first-child {
    parada. O que entra ao rolar usa a linha do tempo da própria rolagem (CSS
    `animation-timeline`), sem script — o navegador que não a conhece (o
    Firefox, hoje) mostra tudo parado e no lugar. Com "reduzir movimento" no
-   aparelho, nada anda: nem a entrada, nem a aura, nem a troca da Lígia. */
+   aparelho, nada anda: nem a entrada, nem a aura, nem a troca da Ceci. */
 
 /* O fundo da página do site: branco no claro, o fundo do app no escuro. O
    topo usa o mesmo tom, meio transparente. */
@@ -1011,24 +1011,24 @@ tr.c41-linha:hover > :first-child {
   :root:not([data-theme="light"]):not([data-theme="dark"]) { --c41-site-fundo: var(--c41-canvas); }
 }
 
-/* O palco da Lígia: o azul-marinho do ponto do meio do logo
+/* O palco da Ceci: o azul-marinho do ponto do meio do logo
    (public/brand/symbol-color.svg), igual nos dois temas — a seção é escura
    nos dois. Branco sobre ele: 16,3:1; branco a 70%: 8,5:1. */
 :root { --c41-site-palco: #0B1F42; }
 
-/* Nas seções escuras (o palco da Lígia, o painel de segurança), o anel de
+/* Nas seções escuras (o palco da Ceci, o painel de segurança), o anel de
    foco padrão — azul a 35% — some no fundo azul. Lá ele é azul-claro. */
 .c41-site-escuro :focus-visible { box-shadow: 0 0 0 3px rgba(201,218,255,.85); }
 
-/* A Lígia grande, solta no palco: o anel e o rosto nos tons do logo de fundo
+/* A Ceci grande, solta no palco: o anel e o rosto nos tons do logo de fundo
    escuro (os mesmos do tema escuro, logo acima), nos dois temas — os do
    claro somem no azul-marinho. */
-.c41-site-ligia-no-palco {
-  --c41-ligia-anel-de:  #3D7BFF;
-  --c41-ligia-anel-ate: #8FB5FF;
-  --c41-ligia-no:       #6FA3FF;
-  --c41-ligia-rosto-de: #3069F0;
-  --c41-ligia-rosto-ate:#4A86FA;
+.c41-site-ceci-no-palco {
+  --c41-ceci-anel-de:  #3D7BFF;
+  --c41-ceci-anel-ate: #8FB5FF;
+  --c41-ceci-no:       #6FA3FF;
+  --c41-ceci-rosto-de: #3069F0;
+  --c41-ceci-rosto-ate:#4A86FA;
 }
 
 /* A aura da primeira dobra e do convite do fim: azul da marca em cima e um
@@ -1142,7 +1142,7 @@ tr.c41-linha:hover > :first-child {
   }
 }
 
-/* A Lígia por setor (LigiaNosSetores): a linha no alto do painel é o relógio
+/* A Ceci por setor (CeciNosSetores): a linha no alto do painel é o relógio
    da troca — quando ela enche, o próximo setor entra. Parar o relógio
    (`animation-play-state`) é parar a troca. O painel que entra sobe 8 px. */
 @keyframes c41-site-progresso { from { transform: scaleX(0); } to { transform: scaleX(1); } }

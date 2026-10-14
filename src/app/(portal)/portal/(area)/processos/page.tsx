@@ -9,6 +9,8 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { processosDoPortal, type ProcessoNoPortal } from "@/lib/societario/portal-data";
 import { formatInstantDate } from "@/lib/format";
@@ -37,6 +39,7 @@ export default async function PortalProcessosPage({
 }) {
   const { sessao, escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("societario_processos")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/processos")) return <TelaIndisponivel />;
 
   const params = await searchParams;
   const recorte = RECORTES.find((r) => r.chave === params.recorte)?.chave ?? "abertos";

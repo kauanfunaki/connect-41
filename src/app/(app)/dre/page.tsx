@@ -5,7 +5,10 @@ import { getAuthContext, canActOnSector, type AuthContext } from "@/lib/auth/con
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
+import { SeletorDeEmpresaDaTela } from "@/components/empresas/SeletorDeEmpresaDaTela";
+import { EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { Card } from "@/components/ui/Card";
@@ -66,15 +69,32 @@ export default async function DrePage({
     select: { id: true, name: true, tradeName: true, logoUrl: true, cnpj: true, parentCompanyId: true },
   });
 
-  const companyId = empresa && empresas.some((e) => e.id === empresa) ? empresa : empresas[0]?.id;
-  if (!companyId) {
+  // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
+  // (13/10/2026). Era a primeira em ordem alfabética, e a classificação e o
+  // "Importar do Omie" gravavam nela sem ninguém ter escolhido.
+  const { escolha, empresa: daTela } = await escolherEmpresaDaTela(ctx, empresa, empresas);
+  const companyId = daTela?.id ?? null;
+  if (!daTela || !companyId) {
     return (
       <PageContainer>
         <PageHeader title="DRE" subtitle="Demonstrativo de resultado, por empresa e mês." />
-        <EmptyState title="Nenhuma empresa cadastrada" icon={<FileText />} />
+        {empresas.length === 0 ? (
+          <EmptyState title="Nenhuma empresa cadastrada" icon={<FileText />} />
+        ) : (
+          <>
+            <div className="mb-4">
+              <SeletorDeEmpresa empresas={empresas} companyId={null} visao={visao} />
+            </div>
+            <EscolhaAEmpresa escolha={escolha} porQue="A DRE é de uma empresa por vez." />
+          </>
+        )}
       </PageContainer>
     );
   }
+  // Todo formulário desta tela grava na empresa escolhida — o rodapé diz qual.
+  const comEmpresa = (tela: React.ReactNode) => (
+    <EmpresaDaTela empresa={{ nome: daTela.tradeName || daTela.name, cnpj: daTela.cnpj }}>{tela}</EmpresaDaTela>
+  );
 
   const meses = await mesesComMovimento(ctx.tenantId, companyId);
 
@@ -96,7 +116,7 @@ export default async function DrePage({
     // O ano mistura meses importados e meses do financeiro.
     const fila = itensDaFila(soltosDoAno, categoriasDoAno, { temImport: temMesImportado, doSemCategoria: fontesDoSemCategoria });
 
-    return (
+    return comEmpresa(
       <PageContainer>
         <PainelDeClassificacao
           companyId={companyId}
@@ -113,7 +133,7 @@ export default async function DrePage({
           {/* Empresa e período, depois as abas — a ordem da família da DRE
               (padrão aceito pelo Kauan em 08/10/2026). */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
+            <SeletorDeEmpresa empresas={empresas} companyId={companyId} visao={visao} />
             <FiltrosDaTela
               campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
             />
@@ -157,7 +177,7 @@ export default async function DrePage({
   const escolhido = (mes && meses.find((m) => `${m.ano}-${m.mes}` === mes)) ?? meses[0] ?? null;
 
   if (!escolhido) {
-    return (
+    return comEmpresa(
       <PageContainer>
         {/* "Importar do Omie" no cabeçalho, como nas telas com movimento: é
             aqui que quem ainda monta o DRE fora do Connect começa. */}
@@ -166,7 +186,7 @@ export default async function DrePage({
           subtitle="Demonstrativo de resultado, por empresa e mês."
           action={<ImportarDoOmie companyId={companyId} />}
         />
-        <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
+        <SeletorDeEmpresa empresas={empresas} companyId={companyId} visao={visao} />
         {/* Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo. */}
         <Card className="mt-4">
           <EmptyState
@@ -196,7 +216,7 @@ export default async function DrePage({
   const impostoDeFora = impostoForaDoResultado(resultado, OPCOES_PADRAO);
   const transferencias = resultado.porGrupo[TRANSFERENCIA] ?? 0;
 
-  return (
+  return comEmpresa(
     <PageContainer>
       <PainelDeClassificacao
         companyId={companyId}
@@ -225,7 +245,7 @@ export default async function DrePage({
             embaixo das abas. Numa lista com busca, e não 18 pílulas numa
             fileira — a regra da conferência de 30/09 para competência. */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
+          <SeletorDeEmpresa empresas={empresas} companyId={companyId} visao={visao} />
           <FiltrosDaTela
             campos={[
               {
@@ -366,18 +386,26 @@ async function linksDasContas(ctx: AuthContext, companyId: string, fila: ItemDaF
   };
 }
 
+/**
+ * O seletor das telas da equipe (13/10/2026), que grava a escolha como a
+ * última empresa aberta. Trocar de empresa conserva a visão (mês ou ano); o
+ * mês e o ano ficam para trás, porque os meses com movimento são de cada empresa.
+ */
 function SeletorDeEmpresa({
   empresas,
   companyId,
+  visao,
 }: {
   empresas: EmpresaNaAba[];
-  companyId: string;
+  companyId: string | null;
+  visao: string | undefined;
 }) {
   return (
-    <SeletorDeEmpresaQueNavega
+    <SeletorDeEmpresaDaTela
       empresas={empresas.map((e) => ({ ...e, nome: e.tradeName || e.name }))}
-      empresaId={companyId}
+      valor={companyId}
       acao="/dre"
+      manter={{ visao: visao === "ano" ? "ano" : undefined }}
     />
   );
 }

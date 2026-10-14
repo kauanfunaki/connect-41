@@ -4,6 +4,8 @@ import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { TabelaDoConsolidado } from "@/components/financeiro/FluxoDeCaixa";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { dadosDoConsolidado, nomesDasEmpresas } from "@/lib/financeiro/consultas";
 import { consolidarPorEmpresa } from "@/lib/financeiro/fluxo";
 import { competenciaValida, competenciaDoInstante } from "@/lib/financeiro/periodo";
@@ -19,6 +21,7 @@ export default async function PortalRelatoriosPage({
 }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_fluxo_caixa")) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/relatorios")) return <TelaIndisponivel />;
 
   const params = await searchParams;
   const agora = new Date();

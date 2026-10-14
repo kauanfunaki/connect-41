@@ -40,12 +40,17 @@ import {
   pararCronometro,
   criarLinkItem,
   removerLinkItem,
+  editarLancamentoTempo,
+  excluirLancamentoTempo,
 } from "@/app/(app)/kanban/actions";
+import { ListaDeHoras } from "@/components/shared/ListaDeHoras";
+import { campoDaData } from "@/lib/societario/datas";
 import { boardPath } from "@/lib/kanbanPaths";
-import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
+import { duracaoDoLancamento } from "@/lib/horas/edicao";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "Nota",
@@ -103,7 +108,11 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
   if (!pipeline || !item) notFound();
 
-  const canDelete = canManageSector(ctx, pipeline.sectorCode);
+  // Excluir card, subtarefa, comentário e item de checklist é só do
+  // administrador desde 13/10/2026 — era o gestor do setor (canManageSector).
+  // O gestor segue corrigindo o apontamento de tempo de qualquer pessoa.
+  const canDelete = podeExcluir(ctx);
+  const canManage = canManageSector(ctx, pipeline.sectorCode);
   const canAct = canActOnSector(ctx, pipeline.sectorCode);
 
   const [entity, activities, sectorTags, sectorUsers, documents, activeTimerUser, otherItems] = await Promise.all([
@@ -136,7 +145,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     }),
   ]);
 
-  const [parentItem, subtasks, checklistItems, mentionUsers, lastCompletion, links] = await Promise.all([
+  const [parentItem, subtasks, checklistItems, mentionUsers, lastCompletion, links, timeEntries] = await Promise.all([
     item.parentItemId
       ? prisma.pipelineItem.findFirst({ where: { id: item.parentItemId, tenantId }, select: { id: true, title: true, entityId: true, entityType: true } })
       : Promise.resolve(null),
@@ -165,6 +174,14 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         pipelineItem: { select: { id: true, title: true, entityId: true, entityType: true } },
         linkedItem: { select: { id: true, title: true, entityId: true, entityType: true } },
       },
+    }),
+    // Horas apontadas no card (13/10/2026): a lista com "Editar" — o cronômetro
+    // grava aqui, e apagar ficou só com o administrador.
+    prisma.timeEntry.findMany({
+      where: { tenantId, pipelineItemId: itemId },
+      orderBy: [{ loggedOn: "desc" }, { createdAt: "desc" }],
+      take: 50,
+      select: { id: true, minutes: true, note: true, loggedOn: true, userId: true, user: { select: { name: true } } },
     }),
   ]);
 
@@ -218,13 +235,16 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const stopTimerAction = pararCronometro.bind(null, id, itemId);
   const createLinkAction = criarLinkItem.bind(null, id, itemId);
   const deleteLinkAction = removerLinkItem.bind(null, id, itemId);
+  const editTimeEntryAction = editarLancamentoTempo.bind(null, id, itemId);
+  const deleteTimeEntryAction = excluirLancamentoTempo.bind(null, id, itemId);
 
   const taskCandidates: TaskMentionCandidate[] = otherItems.map((o) => ({ id: o.id, name: nameFor(o), href: `${basePath}/itens/${o.id}` }));
 
   // Monta o feed: comentários (NOTE) de topo + eventos, com respostas
-  // aninhadas sob cada comentário. canModify = autor da nota ou coordenador.
-  function canModifyNote(noteUserId: string): boolean {
-    return noteUserId === ctx.userId || canDelete;
+  // aninhadas sob cada comentário. Edita o autor (como o `editarNota` exige);
+  // exclui só o administrador (13/10/2026).
+  function canEditNote(noteUserId: string): boolean {
+    return canAct && noteUserId === ctx.userId;
   }
   const repliesByParent = new Map<string, typeof activities>();
   for (const a of activities) {
@@ -247,7 +267,8 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       importante: IMPORTANT_ACTIVITY_TYPES.has(a.type),
       isComment: a.type === "NOTE",
       edited: a.editedAt != null,
-      canModify: a.type === "NOTE" && canModifyNote(a.user.id),
+      canEdit: a.type === "NOTE" && canEditNote(a.user.id),
+      canDelete: a.type === "NOTE" && canDelete,
       replies: (repliesByParent.get(a.id) ?? [])
         .slice()
         .sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime())
@@ -258,7 +279,8 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           createdAtLabel: formatInstantDateTime(r.createdAt),
           content: r.content,
           edited: r.editedAt != null,
-          canModify: canModifyNote(r.user.id),
+          canEdit: canEditNote(r.user.id),
+          canDelete,
         })),
     }));
 
@@ -433,6 +455,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
               >
                 <ChecklistSection
                   canAct={canAct}
+                  canDelete={canDelete}
                   items={checklistItems.map((c) => ({ id: c.id, text: c.text, done: c.done }))}
                   createAction={createChecklistAction}
                   toggleAction={toggleChecklistAction}
@@ -459,6 +482,28 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
                     expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
                     expired: d.expiresAt != null && d.expiresAt < new Date(),
                   }))}
+                />
+              </DetailSection>
+            )}
+
+            {timeEntries.length > 0 && (
+              <DetailSection
+                title="Horas apontadas"
+                summary={duracaoDoLancamento(timeEntries.reduce((s, t) => s + t.minutes, 0))}
+              >
+                <ListaDeHoras
+                  linhas={timeEntries.map((t) => ({
+                    id: t.id,
+                    quem: t.user.name,
+                    minutos: t.minutes,
+                    dia: formatInstantDate(t.loggedOn),
+                    diaDoCampo: campoDaData(t.loggedOn),
+                    nota: t.note,
+                    podeEditar: canAct && (t.userId === ctx.userId || canManage),
+                    podeExcluir: canDelete,
+                  }))}
+                  editar={editTimeEntryAction}
+                  excluir={deleteTimeEntryAction}
                 />
               </DetailSection>
             )}

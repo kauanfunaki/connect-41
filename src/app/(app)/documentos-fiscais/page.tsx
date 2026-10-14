@@ -13,7 +13,11 @@ import { listarDocumentos, competenciasDisponiveis, resumoPorDestino } from "@/l
 import { AcervoTable, PaginacaoDoAcervo } from "@/components/fiscal/AcervoTable";
 import { BuscaDoAcervo, FiltrosDoAcervo } from "@/components/fiscal/AcervoFiltros";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
-import { alcanceDaEquipe } from "./alcance";
+import { nomeExibicao } from "@/lib/companyName";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
+import { alcanceFiscalDaEscolha } from "@/lib/empresas/escopoDaEscolha";
+import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import type { FiscalDocumentType, FiscalDocumentDestination } from "@/generated/prisma/enums";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
@@ -38,8 +42,71 @@ export default async function DocumentosFiscaisPage({
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
+  const prisma = getPrisma();
+
+  // Uma empresa por vez (13/10/2026): a da URL, a última aberta pela pessoa,
+  // ou nenhuma — e a tela pede, sem ler o acervo. Era "todas" por padrão, e o
+  // acervo tem 252 mil documentos num banco de cache pequeno: a busca por
+  // texto e os filtros raros varriam a tabela inteira (ver TETO_DA_CONTAGEM em
+  // `src/lib/fiscal/data.ts`). "Todas as empresas" não é oferecido aqui.
+  const empresas = (
+    await prisma.company.findMany({
+      where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
+    })
+  )
+    .map((e) => ({ id: e.id, nome: nomeExibicao(e), logoUrl: e.logoUrl, cnpj: e.cnpj, matrizId: e.parentCompanyId }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  const alcance = alcanceFiscalDaEscolha(ctx.tenantId, escolha);
+
+  const cabecalho = (
+    <PageHeader
+      title="Documentos fiscais"
+      subtitle={
+        <>
+          NF-e, NFC-e e NFS-e por empresa e competência. O acervo espelha o que já foi
+          emitido — nada é emitido aqui. <strong>CT-e não entra no acervo</strong>: são milhões
+          por mês e vêm sem valor apurado, então ficam na consulta ao vivo.
+        </>
+      }
+      action={
+        <div className="flex flex-wrap items-center gap-2">
+          <Button href="/documentos-fiscais/cte" variant="secondary">
+            <Truck size={14} /> Consultar CT-e
+          </Button>
+          <Button href="/documentos-fiscais/entrada">
+            <Upload size={14} /> Entrada de XML
+          </Button>
+        </div>
+      }
+    />
+  );
+  // Trocar de empresa conserva tipo e destino; competência, busca e página
+  // são da empresa anterior e ficam para trás.
+  const filtroDaEmpresa = (
+    <FiltroDaEmpresa
+      acao="/documentos-fiscais"
+      empresas={empresas}
+      valor={empresa?.id ?? null}
+      manter={{ tipo: params.tipo, destino: params.destino }}
+    />
+  );
+
+  if (!alcance || !empresa) {
+    return (
+      <PageContainer>
+        {cabecalho}
+        {filtroDaEmpresa}
+        <EscolhaAEmpresa
+          escolha={escolha}
+          porQue="O acervo tem centenas de milhares de documentos; a tela mostra os de uma empresa por vez."
+        />
+      </PageContainer>
+    );
+  }
+
   const filtro = {
-    companyId: params.empresa || undefined,
     competencia: params.competencia || undefined,
     tipo: (params.tipo as FiscalDocumentType) || undefined,
     destino: (params.destino as FiscalDocumentDestination) || undefined,
@@ -47,21 +114,14 @@ export default async function DocumentosFiscaisPage({
   };
   const pagina = Math.max(1, Number(params.pagina) || 1);
 
-  const alcance = alcanceDaEquipe(ctx.tenantId);
-  const prisma = getPrisma();
-
-  const [{ documentos, total, totalLimitado, temProxima, porPagina }, competencias, resumo, empresas] = await Promise.all([
+  // O alcance é a empresa escolhida: lista, contagens e competências só dela.
+  const [{ documentos, total, totalLimitado, temProxima, porPagina }, competencias, resumo] = await Promise.all([
     listarDocumentos(alcance, filtro, pagina),
     competenciasDisponiveis(alcance),
     resumoPorDestino(alcance, { ...filtro, destino: undefined }),
-    prisma.company.findMany({
-      where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, displayName: true },
-    }),
   ]);
 
-  const semNenhum = total === 0 && !params.q && !params.empresa && !params.competencia && !params.tipo && !params.destino;
+  const semNenhum = total === 0 && !params.q && !params.competencia && !params.tipo && !params.destino;
 
   // O cartão de destino é atalho para o recorte, mantendo os outros filtros; o
   // do recorte ativo volta para todos (o mesmo gesto de /processos).
@@ -70,6 +130,8 @@ export default async function DocumentosFiscaisPage({
     for (const [k, v] of Object.entries(params)) {
       if (k !== "pagina" && k !== "destino" && typeof v === "string" && v) q.set(k, v);
     }
+    // A empresa vai explícita: sem ela, o cartão voltaria à última aberta.
+    q.set("empresa", empresa.id);
     if (destino !== params.destino) q.set("destino", destino);
     const s = q.toString();
     return s ? `/documentos-fiscais?${s}` : "/documentos-fiscais";
@@ -79,32 +141,14 @@ export default async function DocumentosFiscaisPage({
     <PageContainer>
       {/* Os dois atalhos eram links pintados à mão para parecer botão; agora são
           o `Button` (conferência de 30/09: botão não é link). */}
-      <PageHeader
-        title="Documentos fiscais"
-        subtitle={
-          <>
-            NF-e, NFC-e e NFS-e por empresa e competência. O acervo espelha o que já foi
-            emitido — nada é emitido aqui. <strong>CT-e não entra no acervo</strong>: são milhões
-            por mês e vêm sem valor apurado, então ficam na consulta ao vivo.
-          </>
-        }
-        action={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button href="/documentos-fiscais/cte" variant="secondary">
-              <Truck size={14} /> Consultar CT-e
-            </Button>
-            <Button href="/documentos-fiscais/entrada">
-              <Upload size={14} /> Entrada de XML
-            </Button>
-          </div>
-        }
-      />
+      {cabecalho}
+      {filtroDaEmpresa}
 
       {semNenhum ? (
         <Card>
           <EmptyState
             icon={<FileText />}
-            title="Nenhum documento no acervo"
+            title="Nenhum documento desta empresa no acervo"
             description="Os documentos chegam pela sincronização com o SPED ou pela entrada de XML. Enquanto a ponte com o SPED não estiver ligada, use a entrada manual."
           />
         </Card>
@@ -130,7 +174,7 @@ export default async function DocumentosFiscaisPage({
           <CascoDaTabela
             contagem={contarItens(total, "documento", "documentos", totalLimitado)}
             busca={<BuscaDoAcervo />}
-            filtros={<FiltrosDoAcervo empresas={empresas} competencias={competencias} />}
+            filtros={<FiltrosDoAcervo competencias={competencias} />}
           >
             {documentos.length === 0 ? (
               <EmptyState

@@ -21,7 +21,8 @@ export type ParticipanteItem = {
 type Props = {
   participante: ParticipanteItem;
   updateAction: (prev: TrainingParticipantState, form: FormData) => Promise<TrainingParticipantState>;
-  removeAction: () => Promise<void>;
+  /** Só para o administrador (13/10/2026): sem ela, o "⋯" de remover não aparece. */
+  removeAction?: () => Promise<void>;
   canManage: boolean;
 };
 
@@ -43,7 +44,7 @@ export function ParticipanteRow({ participante, updateAction, removeAction, canM
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={COR_DO_PARTICIPANTE[participante.status]}>{SITUACAO_DO_PARTICIPANTE[participante.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
-          {canManage && <MenuDoRegistro titulo="Remover este participante da turma?" onRemover={removeAction} />}
+          {canManage && removeAction && <MenuDoRegistro titulo="Remover este participante da turma?" onRemover={removeAction} />}
         </div>
       </div>
 

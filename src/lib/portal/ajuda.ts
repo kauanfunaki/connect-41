@@ -6,6 +6,9 @@
 // Cada passo (e cada linha dele) pode depender de módulos: o cliente só lê
 // sobre o que existe no menu dele. O portal é de todos os setores, então o
 // texto fala de "a equipe da 41", nunca de um setor.
+//
+// E das telas (14/10/2026): o escritório pode bloquear uma tela que ainda não
+// liberou, e o passo que ensina a usar só ela some junto (`telas`).
 
 import { videoDoPassoDoPortal } from "@/lib/ajuda/videos";
 
@@ -28,7 +31,11 @@ export type IconeDoPasso =
   | "conta"
   | "senha";
 
-type Linha = string | { texto: string; modulos: readonly string[] };
+/**
+ * `telas`: as telas de que a linha (ou o passo) fala. Some quando **todas**
+ * estão bloqueadas pelo escritório — sem a lista, nunca some por bloqueio.
+ */
+type Linha = string | { texto: string; modulos?: readonly string[]; telas?: readonly string[] };
 
 type PassoDoCatalogo = {
   chave: string;
@@ -41,12 +48,22 @@ type PassoDoCatalogo = {
   semModulos?: readonly string[];
   /** Só para quem tem mais de uma empresa no acesso. */
   soComVariasEmpresas?: boolean;
+  /** As telas que o passo ensina a usar: com todas bloqueadas, ele some (14/10/2026). */
+  telas?: readonly string[];
   passos: readonly Linha[];
 };
 
 export type PassoDoPortal = { chave: string; titulo: string; resumo: string; icone: IconeDoPasso; passos: string[]; video?: string };
 
 const FINANCEIRO = ["bpo_contas_pagar", "bpo_contas_receber", "bpo_fluxo_caixa", "bpo_dre", "bpo_cobranca"] as const;
+const TELAS_DO_FINANCEIRO = [
+  "/portal/pagar",
+  "/portal/receber",
+  "/portal/fluxo-de-caixa",
+  "/portal/relatorios",
+  "/portal/dre",
+  "/portal/cobranca",
+] as const;
 
 const CATALOGO: readonly PassoDoCatalogo[] = [
   // Passo de 05/10/2026: o primeiro vídeo da série é o primeiro acesso, e a
@@ -78,9 +95,14 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
       {
         texto: "Em Financeiro, veja as contas a pagar vencidas, as que vencem nesta semana e o que está em atraso para receber.",
         modulos: ["bpo_contas_pagar", "bpo_contas_receber", "bpo_cobranca"],
+        telas: ["/portal/pagar", "/portal/receber", "/portal/cobranca"],
       },
-      { texto: "Em Processos em andamento, veja em que pé estão os processos mais recentes das suas empresas.", modulos: ["societario_processos"] },
-      "Nos Atalhos ficam os caminhos mais usados, como os documentos fiscais e esta ajuda.",
+      {
+        texto: "Em Processos em andamento, veja em que pé estão os processos mais recentes das suas empresas.",
+        modulos: ["societario_processos"],
+        telas: ["/portal/processos"],
+      },
+      { texto: "Nos Atalhos ficam os caminhos mais usados, como os documentos fiscais e esta ajuda.", telas: ["/portal/documentos"] },
     ],
   },
   {
@@ -112,6 +134,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Documento, alteração ou qualquer outra coisa, com número e prazo de resposta.",
     icone: "solicitacao",
     modulos: ["portal_solicitacoes"],
+    telas: ["/portal/solicitacoes"],
     passos: [
       "Abra Solicitações e clique em Nova solicitação.",
       "Escolha a empresa, se tiver mais de uma, e o assunto. Cada assunto mostra em quantos dias úteis a equipe responde.",
@@ -126,11 +149,12 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Recesso, mudança de prazo, orientação: os avisos que o escritório manda para todos.",
     icone: "comunicado",
     modulos: ["portal_solicitacoes"],
+    telas: ["/portal/comunicados"],
     passos: [
       "Quando o escritório manda um comunicado, você recebe um e-mail e o aviso aparece no Início, em \"O que precisa de você\".",
       "Abra Comunicados. Os que você ainda não leu aparecem destacados, com a etiqueta Novo.",
       "Clique para ler o texto inteiro e baixar os anexos.",
-      "Dúvida sobre um comunicado? Abra uma solicitação.",
+      { texto: "Dúvida sobre um comunicado? Abra uma solicitação.", telas: ["/portal/solicitacoes"] },
     ],
   },
   // Os envios ao cliente no portal (08/10/2026): até então só chegavam pelo
@@ -141,6 +165,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Guia, contrato, orientação: o documento que o escritório manda para as suas empresas, com o aceite quando pedido.",
     icone: "envio",
     modulos: ["portal_solicitacoes"],
+    telas: ["/portal/envios"],
     passos: [
       "Abra Documentos do escritório. Os que você ainda não abriu aparecem destacados, com a etiqueta Novo.",
       "Clique no documento para ler o texto. Se houver anexo, clique em Baixar anexo.",
@@ -155,6 +180,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "As pastas que o escritório compartilhou com você, e onde você manda os seus arquivos para a equipe.",
     icone: "arquivos",
     modulos: ["arquivos"],
+    telas: ["/portal/arquivos"],
     passos: [
       "Abra Arquivos. Se você tem mais de uma empresa, escolha a empresa no topo.",
       "Clique numa pasta para ver o que tem dentro. PDF e imagem abrem no navegador; os outros arquivos são baixados.",
@@ -169,6 +195,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     icone: "pendencia",
     // Com o canal do portal ligado, qualquer setor pede (01/10).
     modulos: ["bpo_pendencias", "portal_solicitacoes"],
+    telas: ["/portal/pendencias"],
     passos: [
       "Abra Pendências, ou clique em Responder no Início. Os pedidos que esperam você aparecem como \"Aguardando você\", com o prazo.",
       "Clique no pedido para ver o que a equipe precisa.",
@@ -183,6 +210,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "A conta que espera o seu \"pode pagar\" só é paga depois da sua aprovação.",
     icone: "aprovar",
     modulos: ["bpo_aprovacoes"],
+    telas: ["/portal/aprovacoes"],
     passos: [
       "Abra Aprovações para ver as contas que esperam você.",
       "Clique em Aprovar na conta, ou marque várias e clique em Aprovar selecionadas.",
@@ -198,6 +226,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     icone: "conversa",
     modulos: ["bpo_comunicacao"],
     semModulos: ["portal_solicitacoes"],
+    telas: ["/portal/comunicacao"],
     passos: [
       "Abra Conversa e escolha a empresa, se tiver mais de uma.",
       "Escreva em Mensagem e, se quiser, anexe arquivos em Anexos.",
@@ -210,12 +239,13 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Abertura, alteração, baixa e licenças, etapa por etapa.",
     icone: "processo",
     modulos: ["societario_processos"],
+    telas: ["/portal/processos"],
     passos: [
       "Abra Processos e clique no processo.",
       "Em Etapas, veja o que já foi feito, o que falta e a previsão.",
       "Em Documentos, descreva e anexe o que a equipe pediu e clique em Guardar documentos.",
       "Em Conversa com a equipe, escreva e clique em Enviar mensagem.",
-      "Em Exigências ficam os ajustes que os órgãos pediram nos processos das suas empresas.",
+      { texto: "Em Exigências ficam os ajustes que os órgãos pediram nos processos das suas empresas.", telas: ["/portal/exigencias"] },
     ],
   },
   {
@@ -224,12 +254,25 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Contas, fluxo de caixa e DRE, lançados pela equipe do escritório.",
     icone: "financeiro",
     modulos: FINANCEIRO,
+    telas: TELAS_DO_FINANCEIRO,
     passos: [
-      { texto: "Contas a pagar e Contas a receber mostram o que vence e a situação de cada conta.", modulos: ["bpo_contas_pagar", "bpo_contas_receber"] },
-      { texto: "Fluxo de caixa mostra o que entrou e saiu nos últimos seis meses e o que vence daqui para frente.", modulos: ["bpo_fluxo_caixa"] },
-      { texto: "Relatório mostra o mês consolidado por empresa.", modulos: ["bpo_fluxo_caixa"] },
-      { texto: "A DRE mostra o resultado de cada empresa, mês a mês.", modulos: ["bpo_dre"] },
-      { texto: "Cobrança mostra quem está devendo às suas empresas, o andamento da cobrança e os acordos.", modulos: ["bpo_cobranca"] },
+      {
+        texto: "Contas a pagar e Contas a receber mostram o que vence e a situação de cada conta.",
+        modulos: ["bpo_contas_pagar", "bpo_contas_receber"],
+        telas: ["/portal/pagar", "/portal/receber"],
+      },
+      {
+        texto: "Fluxo de caixa mostra o que entrou e saiu nos últimos seis meses e o que vence daqui para frente.",
+        modulos: ["bpo_fluxo_caixa"],
+        telas: ["/portal/fluxo-de-caixa"],
+      },
+      { texto: "Relatório mostra o mês consolidado por empresa.", modulos: ["bpo_fluxo_caixa"], telas: ["/portal/relatorios"] },
+      { texto: "A DRE mostra o resultado de cada empresa, mês a mês.", modulos: ["bpo_dre"], telas: ["/portal/dre"] },
+      {
+        texto: "Cobrança mostra quem está devendo às suas empresas, o andamento da cobrança e os acordos.",
+        modulos: ["bpo_cobranca"],
+        telas: ["/portal/cobranca"],
+      },
       "Essas telas são para consulta. Se algum número parecer errado, fale com a equipe.",
     ],
   },
@@ -238,6 +281,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     titulo: "Consultar os documentos fiscais",
     resumo: "As notas emitidas e recebidas pelas suas empresas.",
     icone: "documentos",
+    telas: ["/portal/documentos"],
     passos: [
       "Abra Documentos fiscais no menu, ou clique em \"Ver documentos fiscais\" nos Atalhos do Início.",
       "Em Filtros, escolha o mês em Competência para ver só as notas dele. Quem tem mais de uma empresa também escolhe a Empresa.",
@@ -290,19 +334,34 @@ function algumLigado(modulos: ReadonlySet<string>, exigidos: readonly string[] |
   return !exigidos || exigidos.some((m) => modulos.has(m));
 }
 
-/** Os passos que valem para este cliente: só o que está no menu dele. */
-export function passosDoPortal(modulos: ReadonlySet<string>, opcoes: { variasEmpresas: boolean }): PassoDoPortal[] {
+/** Alguma das telas segue liberada — sem lista, sim. */
+function algumaLiberada(bloqueadas: ReadonlySet<string>, telas: readonly string[] | undefined): boolean {
+  return !telas || telas.some((t) => !bloqueadas.has(t));
+}
+
+/**
+ * Os passos que valem para este cliente: só o que está no menu dele — os
+ * módulos ligados, menos as telas que o escritório bloqueou (14/10/2026).
+ */
+export function passosDoPortal(
+  modulos: ReadonlySet<string>,
+  opcoes: { variasEmpresas: boolean; bloqueadas?: ReadonlySet<string> }
+): PassoDoPortal[] {
+  const bloqueadas = opcoes.bloqueadas ?? new Set<string>();
   return CATALOGO.filter(
     (p) =>
       algumLigado(modulos, p.modulos) &&
       !(p.semModulos ?? []).some((m) => modulos.has(m)) &&
-      (!p.soComVariasEmpresas || opcoes.variasEmpresas)
+      (!p.soComVariasEmpresas || opcoes.variasEmpresas) &&
+      algumaLiberada(bloqueadas, p.telas)
   ).map((p) => ({
     chave: p.chave,
     titulo: p.titulo,
     resumo: p.resumo,
     icone: p.icone,
-    passos: p.passos.flatMap((l) => (typeof l === "string" ? [l] : algumLigado(modulos, l.modulos) ? [l.texto] : [])),
+    passos: p.passos.flatMap((l) =>
+      typeof l === "string" ? [l] : algumLigado(modulos, l.modulos) && algumaLiberada(bloqueadas, l.telas) ? [l.texto] : []
+    ),
     // O vídeo vem do arquivo dos links (05/10), e só quando já foi colado.
     video: videoDoPassoDoPortal(p.chave) ?? undefined,
   }));

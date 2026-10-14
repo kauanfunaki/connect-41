@@ -12,6 +12,8 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, 
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
+import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
+import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { formatInstantDate } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import { moeda } from "@/lib/financeiro/formato";
@@ -34,6 +36,7 @@ const rotuloDoAtraso = (faixa: ChaveDaFaixa) => FAIXAS_DE_ATRASO.find((f) => f.c
 export default async function PortalCobrancaPage() {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has(MODULO_DE_COBRANCA)) notFound();
+  if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/cobranca")) return <TelaIndisponivel />;
 
   const { titulos, acordos } = await cobrancaDoCliente(escopo, new Date());
   const vencido = titulos.reduce((n, t) => n + t.valorCentavos, 0);

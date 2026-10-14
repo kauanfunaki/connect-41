@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { canManageMeetings, getValidAccessToken } from "@/lib/integrations/oauth";
 import { createGoogleMeetEvent } from "@/lib/integrations/google";
@@ -145,10 +145,11 @@ export async function agendarEntrevista(
 }
 
 // Remove só o registro local (não cancela o evento no Google/Microsoft) —
-// mesmo comportamento de excluirReuniao no Kanban.
+// mesmo comportamento que a exclusão de reunião do Kanban tinha.
 export async function excluirEntrevista(vagaId: string, candidaturaId: string, meetingId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canManageMeetings(ctx)) return;
+  // Excluir entrevista: só o administrador (13/10/2026). Era também o gestor de setor.
+  if (!ctx.tenantId || !podeExcluir(ctx) || !canManageMeetings(ctx)) return;
 
   const prisma = getPrisma();
   const meeting = await prisma.meeting.findFirst({ where: { id: meetingId, tenantId: ctx.tenantId, candidaturaId } });

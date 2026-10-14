@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  Briefcase,
   Building2,
   CalendarClock,
   DoorOpen,
@@ -11,7 +10,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { Ligia } from "@/components/ia/Ligia";
+import { Ceci } from "@/components/ia/Ceci";
 import type { LinksDoSite } from "@/lib/site/links";
 import { CONTATO, EMPRESA, QUEM_OPERA } from "@/lib/site/textos";
 import { BOTAO_DO_TOPO, BOTAO_GRANDE, CARTAO, FAIXA, LINK, PRIMARIO, RESPIRO, TITULO_2 } from "./estilos";
@@ -20,7 +19,7 @@ import { MosaicoDoConnect } from "./MosaicoDoConnect";
 import { NavegacaoDoTopo, type SecaoDoTopo } from "./NavegacaoDoTopo";
 import { PerguntasFrequentes } from "./PerguntasFrequentes";
 import { AuraDaPrimeiraDobra, PrimeiraDobra } from "./PrimeiraDobra";
-import { SecaoDaLigia } from "./SecaoDaLigia";
+import { SecaoDaCeci } from "./SecaoDaCeci";
 
 // O site de apresentação do Connect, na `/` do endereço principal.
 //
@@ -28,7 +27,7 @@ import { SecaoDaLigia } from "./SecaoDaLigia";
 // parecida com a referência, deixando muito superficial". A referência nova é
 // um vídeo de um site de produto de IA, mais dinâmico — vale pelo ritmo, e a
 // página é do Connect: o anel e o nó do logo como motivo, a paleta azul, as
-// cores dos setores como acento, a Lígia como personagem e telas do próprio
+// cores dos setores como acento, a Ceci como personagem e telas do próprio
 // Connect. De cima a baixo:
 //
 //  1. Topo fixo: logo | âncoras | "Entrar no Connect". O botão voltou ao topo
@@ -36,9 +35,13 @@ import { SecaoDaLigia } from "./SecaoDaLigia";
 //     vista no celular também (as âncoras vão para um menu). Com a sessão da
 //     equipe no navegador, ele vira "Abrir o Connect" e leva ao /home.
 //  2. Primeira dobra (PrimeiraDobra): o título sobre a aura do anel, UM botão,
-//     e a tela do Connect com a Lígia abrindo o chat subindo por baixo.
-//  3. As três portas — "Sou cliente", "Quero trabalhar aqui", "Sou da equipe".
-//  4. A Lígia (SecaoDaLigia), o ponto alto: a IA em cada setor, com uma
+//     e a tela do Connect com a Ceci abrindo o chat subindo por baixo.
+//  3. As duas portas — "Sou cliente" e "Sou da equipe". A das vagas ("Quero
+//     trabalhar aqui") saiu em 14/10/2026, com o rodapé: o portal de vagas é
+//     da 41 e ganhou endereço próprio (o 41 Carreiras), fora do site do
+//     Connect. O assistente do WhatsApp do Recrutamento continua no mosaico —
+//     é recurso do Connect.
+//  4. A Ceci (SecaoDaCeci), o ponto alto: a IA em cada setor, com uma
 //     conversa de exemplo por setor; no Portal do Cliente, "Em breve".
 //  5. O Connect (MosaicoDoConnect): os recursos de verdade, num mosaico.
 //  6. Seguro e organizado: permissões por setor, registro de quem fez o quê,
@@ -53,13 +56,13 @@ import { SecaoDaLigia } from "./SecaoDaLigia";
 // das telas de exemplo são fictícios e a página diz isso.
 //
 // Server Component. Cliente só onde precisa: o menu do topo
-// (NavegacaoDoTopo), a troca de setor da Lígia (LigiaNosSetores) e o acordeão
+// (NavegacaoDoTopo), a troca de setor da Ceci (CeciNosSetores) e o acordeão
 // das perguntas. O movimento é CSS (globals.css, bloco do site), sutil e
 // desligado com "reduzir movimento"; parada, a página está inteira.
 
 // As âncoras do topo: as seções desta página, na ordem dela.
 const SECOES: SecaoDoTopo[] = [
-  { id: "ligia", rotulo: "A Lígia" },
+  { id: "ceci", rotulo: "A Ceci" },
   { id: "o-connect", rotulo: "O Connect" },
   { id: "seguranca", rotulo: "Segurança" },
   { id: "sobre-nos", rotulo: "Sobre nós" },
@@ -105,7 +108,7 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
   // em app/page.tsx), o botão leva direto ao Connect.
   const entrada = temSessao ? { href: links.abrir, rotulo: "Abrir o Connect" } : { href: links.entrar, rotulo: "Entrar no Connect" };
 
-  // As três portas: cada pessoa acha o seu caminho num clique.
+  // As duas portas: cada pessoa acha o seu caminho num clique.
   const portas: Porta[] = [
     {
       Icone: Building2,
@@ -115,16 +118,9 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
       href: links.portal,
     },
     {
-      Icone: Briefcase,
-      titulo: "Quero trabalhar aqui",
-      texto: "Vagas abertas nos escritórios que usam o Connect, com a candidatura pelo site.",
-      acao: "Ver vagas",
-      href: links.vagas,
-    },
-    {
       Icone: Users,
       titulo: "Sou da equipe",
-      texto: "Processos, financeiro, documentos fiscais, departamento pessoal e agenda — com a Lígia em cada setor.",
+      texto: "Processos, financeiro, documentos fiscais, departamento pessoal e agenda — com a Ceci em cada setor.",
       acao: entrada.rotulo,
       href: entrada.href,
     },
@@ -151,9 +147,10 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
       <main className="relative flex flex-col">
         <PrimeiraDobra />
 
-        {/* As três portas, logo depois da primeira dobra. */}
+        {/* As duas portas, logo depois da primeira dobra: lado a lado no
+            computador, uma embaixo da outra no celular. */}
         <section aria-label="Por onde entrar" className={`${FAIXA} pb-20 pt-16 sm:pb-24 sm:pt-20`}>
-          <ul className="grid gap-3.5 md:grid-cols-3 md:gap-5">
+          <ul className="grid gap-3.5 md:grid-cols-2 md:gap-5">
             {portas.map((p) => (
               <li key={p.titulo} className="c41-site-surge flex">
                 <a
@@ -172,7 +169,7 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
                     <span className="font-display text-fs-7 font-medium leading-tight tracking-[-0.01em] text-fg md:text-fs-8">{p.titulo}</span>
                     <span className="text-fs-5 leading-normal text-fg-secondary">{p.texto}</span>
                     {/* `mt-auto`: no computador a ação fica no pé do cartão, alinhada
-                        entre os três mesmo com textos de tamanhos diferentes. */}
+                        entre os dois mesmo com textos de tamanhos diferentes. */}
                     <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-fs-5 font-semibold text-brand">
                       {p.acao}
                       <ArrowRight size={17} aria-hidden className="flex-none transition-transform group-hover:translate-x-0.5" />
@@ -185,7 +182,7 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
           <p className="mt-3.5 pl-1 text-fs-3 text-fg-muted">No portal, dá para entrar com a conta Google.</p>
         </section>
 
-        <SecaoDaLigia />
+        <SecaoDaCeci />
 
         <MosaicoDoConnect />
 
@@ -216,10 +213,10 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
                     <p className="text-fs-4 leading-relaxed text-white/90">{s.texto}</p>
                   </li>
                 ))}
-                {/* A Lígia segue as mesmas regras — no azul-marinho do palco dela. */}
-                <li className="c41-site-ligia-no-palco flex flex-col gap-3 rounded-2xl bg-[var(--c41-site-palco)]/60 p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,.16)] sm:p-6">
-                  <Ligia tamanho={40} />
-                  <h3 className="font-display text-fs-7 font-medium leading-tight text-white">A Lígia, com as mesmas regras</h3>
+                {/* A Ceci segue as mesmas regras — no azul-marinho do palco dela. */}
+                <li className="c41-site-ceci-no-palco flex flex-col gap-3 rounded-2xl bg-[var(--c41-site-palco)]/60 p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,.16)] sm:p-6">
+                  <Ceci tamanho={40} />
+                  <h3 className="font-display text-fs-7 font-medium leading-tight text-white">A Ceci, com as mesmas regras</h3>
                   <p className="text-fs-4 leading-relaxed text-white/90">
                     Ela só enxerga o que a pessoa que pergunta já pode ver, e não altera nada sem uma pessoa confirmar.
                   </p>
@@ -278,7 +275,7 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
               className="pointer-events-none absolute left-1/2 top-1/2 size-[560px] -translate-x-1/2 -translate-y-1/2 text-brand opacity-[.07] sm:size-[720px]"
             />
             <div className="relative flex flex-col items-center">
-              <Ligia tamanho={72} estado="deuCerto" />
+              <Ceci tamanho={72} estado="deuCerto" />
               <h2 id="fale-com-a-gente-titulo" className={`${TITULO_2} mt-6 text-fg`}>
                 Quer conversar sobre o Connect?
               </h2>
@@ -314,11 +311,6 @@ export function SiteDoConnect({ links, temSessao = false }: { links: LinksDoSite
             <li>
               <a href={links.portal} className={LINK}>
                 Portal do Cliente
-              </a>
-            </li>
-            <li>
-              <a href={links.vagas} className={LINK}>
-                Vagas
               </a>
             </li>
             <li>

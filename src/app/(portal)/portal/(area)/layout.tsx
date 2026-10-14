@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getEnabledModuleCodes } from "@/lib/modules";
+import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
 import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ToastProvider } from "@/components/ui/Toast";
+import { TutorialDoPortal } from "@/components/tutorial/TutorialDoPortal";
 
 // A moldura de quem já entrou no portal: sidebar com as telas, o grupo do
 // cliente e o sair.
@@ -24,17 +26,22 @@ export default async function AreaDoClienteLayout({ children }: { children: Reac
   const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
 
+  // As telas que o escritório ainda não liberou (14/10/2026) saem do menu. O
+  // layout não roda de novo a cada navegação: quem barra o endereço direto é
+  // cada tela (`telaBloqueadaNoPortal`).
   const prisma = getPrisma();
-  const [grupo, modulos] = await Promise.all([
+  const [grupo, modulos, bloqueadas] = await Promise.all([
     prisma.clientGroup.findUnique({ where: { id: sessao.clientGroupId }, select: { name: true } }),
     getEnabledModuleCodes(sessao.tenantId),
+    telasBloqueadasDoPortal(sessao.tenantId),
   ]);
 
   return (
     <ToastProvider>
-      <PortalShell grupoNome={grupo?.name ?? null} modulos={[...modulos]}>
+      <PortalShell grupoNome={grupo?.name ?? null} modulos={[...modulos]} bloqueadas={[...bloqueadas]}>
         {children}
       </PortalShell>
+      <TutorialDoPortal />
     </ToastProvider>
   );
 }

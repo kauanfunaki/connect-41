@@ -22,8 +22,12 @@
 // `app` é o endereço neutro (seletor de setor); `www` é óbvio. `api`, `mail` e
 // `portal` entraram em 05/10/2026, na troca para app.useconnect.com.br: são
 // nomes que o domínio pode precisar para outra coisa, e criar um setor com eles
-// passou a ser recusado (`ehHostReservado`, em /admin/setores).
-const HOSTS_RESERVADOS = new Set(["app", "www", "api", "mail", "portal"]);
+// passou a ser recusado (`ehHostReservado`, em /admin/setores). `carreiras`
+// entrou em 14/10/2026: é o endereço do 41 Carreiras (carreiras.useconnect.com.br,
+// lib/carreiras/enderecoDeCarreiras) — o proxy o atende antes de olhar setor,
+// e isto garante que, mesmo sem as variáveis do portal, ele nunca vire a dica
+// de um setor "carreiras".
+const HOSTS_RESERVADOS = new Set(["app", "www", "api", "mail", "portal", "carreiras"]);
 
 /** Nome que não pode virar código de setor, porque é endereço do sistema. */
 export function ehHostReservado(codigo: string): boolean {

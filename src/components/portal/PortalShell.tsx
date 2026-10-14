@@ -32,15 +32,18 @@ const lerTelaNoServidor = () => true;
 export function PortalShell({
   grupoNome,
   modulos,
+  bloqueadas = [],
   children,
 }: {
   grupoNome: string | null;
   /** Códigos dos módulos ligados no tenant — decide quais telas aparecem. */
   modulos: string[];
+  /** As telas que o escritório ainda não liberou (14/10/2026) — saem do menu. */
+  bloqueadas?: string[];
   children: React.ReactNode;
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
-  const visiveis = telasVisiveis(new Set(modulos));
+  const visiveis = telasVisiveis(new Set(modulos), new Set(bloqueadas));
   // A gaveta fechada (abaixo de lg) só saía da tela com translate: os links
   // seguiam no Tab e no leitor de tela (TalkBack, VoiceOver). `inert` tira os
   // dois; Esc fecha. Junto com o AppShell (07/10/2026), para os dois não

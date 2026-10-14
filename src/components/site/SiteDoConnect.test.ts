@@ -3,13 +3,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AGENT_CATALOG, agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { descreverProposta, rotulosDaDecisao } from "@/lib/ia/chat/regras";
+import { especialidadeDoAgente } from "@/lib/ia/ceci";
 import { linksDoSite } from "@/lib/site/links";
-import { CONVERSAS_DA_LIGIA } from "./conversasDaLigia";
+import { CONVERSAS_DA_CECI } from "./conversasDaCeci";
 import { SiteDoConnect } from "./SiteDoConnect";
 
 // O site de apresentação, versão 3 (13/10/2026). Sem navegador, a estrutura que
 // o Kauan pediu fica conferida no HTML: o topo com logo, âncoras e o botão de
-// entrar; um botão só na primeira dobra; a Lígia em cada setor, com o Portal
+// entrar; um botão só na primeira dobra; a Ceci em cada setor, com o Portal
 // do Cliente "em breve"; e nenhum rótulo com espaço a mais.
 
 beforeAll(() => vi.stubGlobal("React", React));
@@ -34,7 +35,7 @@ describe("site do Connect", () => {
   it("o topo tem o logo, as âncoras das seções e o botão de entrar da equipe", () => {
     const html = pagina();
     const topo = trecho(html, "<header", "header");
-    expect(hrefs(topo)).toEqual(["#inicio", "#ligia", "#o-connect", "#seguranca", "#sobre-nos", "#perguntas", links.entrar]);
+    expect(hrefs(topo)).toEqual(["#inicio", "#ceci", "#o-connect", "#seguranca", "#sobre-nos", "#perguntas", links.entrar]);
     for (const ancora of hrefs(topo).filter((h) => h.startsWith("#"))) expect(html).toContain(`id="${ancora.slice(1)}"`);
     expect(topo).toContain(">Entrar no Connect<");
   });
@@ -50,37 +51,52 @@ describe("site do Connect", () => {
     expect(vezes(html, links.entrar)).toBe(1);
   });
 
-  // Portal e vagas não vão para o topo: ficam nas portas (uma vez cada) e na
-  // lista de links do rodapé. A entrada da equipe está nos três.
-  it("portal e vagas aparecem só nas portas e no rodapé; a entrada da equipe, também no topo", () => {
+  // O portal não vai para o topo: fica na porta e na lista de links do
+  // rodapé. A entrada da equipe está nos três.
+  it("o portal aparece só na porta e no rodapé; a entrada da equipe, também no topo", () => {
     const html = pagina();
     const portas = hrefs(trecho(html, 'aria-label="Por onde entrar"', "section"));
-    expect(portas).toEqual([links.portal, links.vagas, links.entrar]);
+    expect(portas).toEqual([links.portal, links.entrar]);
     const rodape = hrefs(trecho(html, "<footer", "footer"));
-    for (const destino of [links.portal, links.vagas]) {
-      expect(vezes(html, destino)).toBe(2);
-      expect(rodape).toContain(destino);
-    }
+    expect(vezes(html, links.portal)).toBe(2);
+    expect(rodape).toContain(links.portal);
     expect(vezes(html, links.entrar)).toBe(3);
   });
 
-  it("a primeira dobra tem um botão só, que desce para a Lígia", () => {
+  // Decisão do Kauan (13/10): o portal de vagas é da 41, com endereço próprio
+  // (o 41 Carreiras) — o site do Connect fica só com "Sou cliente" e "Sou da
+  // equipe", sem a porta nem o link das vagas. O assistente do WhatsApp do
+  // Recrutamento, que é do Connect, continua.
+  it("nenhuma porta nem link de vagas; o assistente do Recrutamento continua", () => {
+    const html = pagina();
+    const portas = trecho(html, 'aria-label="Por onde entrar"', "section");
+    expect(portas).toContain(">Sou cliente<");
+    expect(portas).toContain(">Sou da equipe<");
+    expect(portas).not.toContain("Quero trabalhar aqui");
+    expect(portas).toContain("md:grid-cols-2");
+    expect(hrefs(html).some((h) => h.includes("/carreiras"))).toBe(false);
+    expect(trecho(html, "<footer", "footer")).not.toContain(">Vagas<");
+    expect(html).not.toContain("Ver vagas");
+    expect(html).toContain("Um número próprio do Recrutamento");
+  });
+
+  it("a primeira dobra tem um botão só, que desce para a Ceci", () => {
     const dobra = trecho(pagina(), 'aria-labelledby="site-titulo"', "section");
-    expect(hrefs(dobra)).toEqual(["#ligia"]);
+    expect(hrefs(dobra)).toEqual(["#ceci"]);
     expect(dobra).toContain("Conhecer o Connect");
   });
 
-  it("a Lígia aparece em cada setor, em abas ligadas aos painéis, e o Portal do Cliente como em breve", () => {
-    const ligia = trecho(pagina(), 'id="ligia"', "section");
-    for (const c of CONVERSAS_DA_LIGIA) expect(ligia).toContain(`>${c.setor}<`);
-    expect(ligia).toContain(">Em breve<");
-    expect(ligia).toContain(">Em breve no Portal do Cliente<");
-    const abas = [...ligia.matchAll(/role="tab"[^>]*aria-controls="([^"]+)"/g)].map((m) => m[1]!);
-    expect(abas).toHaveLength(CONVERSAS_DA_LIGIA.length);
-    for (const painel of abas) expect(ligia).toContain(`id="${painel}"`);
+  it("a Ceci aparece em cada setor, em abas ligadas aos painéis, e o Portal do Cliente como em breve", () => {
+    const ceci = trecho(pagina(), 'id="ceci"', "section");
+    for (const c of CONVERSAS_DA_CECI) expect(ceci).toContain(`>${c.setor}<`);
+    expect(ceci).toContain(">Em breve<");
+    expect(ceci).toContain(">Em breve no Portal do Cliente<");
+    const abas = [...ceci.matchAll(/role="tab"[^>]*aria-controls="([^"]+)"/g)].map((m) => m[1]!);
+    expect(abas).toHaveLength(CONVERSAS_DA_CECI.length);
+    for (const painel of abas) expect(ceci).toContain(`id="${painel}"`);
     // Chega parada no primeiro setor: uma aba escolhida e nenhum relógio de troca.
-    expect(ligia.match(/aria-selected="true"/g)).toHaveLength(1);
-    expect(ligia).not.toContain("c41-site-progresso");
+    expect(ceci.match(/aria-selected="true"/g)).toHaveLength(1);
+    expect(ceci).not.toContain("c41-site-progresso");
   });
 
   it("nada de prometer que a IA substitui alguém", () => {
@@ -96,7 +112,7 @@ describe("site do Connect", () => {
       const alvo = /aria-controls="([^"]+)"/.exec(botao)?.[1];
       expect(Boolean(alvo && perguntas.includes(`id="${alvo}"`))).toBe(true);
     }
-    expect(perguntas).toContain("Ainda não. Hoje a Lígia atende a equipe do escritório.");
+    expect(perguntas).toContain("Ainda não. Hoje a Ceci atende a equipe do escritório.");
   });
 
   // O "Entrar   no Connect" da primeira versão: rótulo partido em dois itens de
@@ -119,10 +135,10 @@ describe("site do Connect", () => {
   });
 });
 
-// A seção da Lígia só promete o que existe. Se um agente mudar, estes testes
+// A seção da Ceci só promete o que existe. Se um agente mudar, estes testes
 // lembram de mudar o site junto.
-describe("as conversas da Lígia no site", () => {
-  const conversa = (chave: string) => CONVERSAS_DA_LIGIA.find((c) => c.chave === chave)!;
+describe("as conversas da Ceci no site", () => {
+  const conversa = (chave: string) => CONVERSAS_DA_CECI.find((c) => c.chave === chave)!;
 
   it("um setor para cada agente do chat, e o Portal do Cliente sem conversa", () => {
     const agentes: Record<string, string> = {
@@ -132,7 +148,7 @@ describe("as conversas da Lígia no site", () => {
       societario: "assistente_do_societario",
       recrutamento: "assistente_do_recrutamento",
     };
-    for (const c of CONVERSAS_DA_LIGIA) {
+    for (const c of CONVERSAS_DA_CECI) {
       if (c.chave === "portal") {
         expect(c.emBreve).toBe(true);
         expect(c.pergunta).toBeUndefined();
@@ -140,6 +156,8 @@ describe("as conversas da Lígia no site", () => {
       }
       expect(agenteDoCatalogo(agentes[c.chave]!)).not.toBeNull();
       expect(Boolean(c.pergunta && c.resposta && c.consulta.length > 0)).toBe(true);
+      // O setor embaixo do nome dela é o mesmo do chat ("BPO", e não "BPO Financeiro", desde 13/10/2026).
+      expect(c.setor, c.chave).toBe(especialidadeDoAgente(agentes[c.chave]!));
     }
   });
 
@@ -150,7 +168,7 @@ describe("as conversas da Lígia no site", () => {
     }
   });
 
-  // Quando a Lígia chegar ao portal, este teste cai — e o "Em breve" sai do site.
+  // Quando a Ceci chegar ao portal, este teste cai — e o "Em breve" sai do site.
   it("ainda não há agente no Portal do Cliente", () => {
     expect(AGENT_CATALOG.some((a) => /portal/.test(a.code) || a.sectorCode === "portal")).toBe(false);
   });
