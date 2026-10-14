@@ -340,7 +340,6 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         passos: [
           "Em “Dados pessoais”, clique no lápis da parte que quer mudar: Identificação, Contato ou Endereço.",
           "Corrija os campos e clique em “Salvar”. Só aquela parte muda.",
-          "Para ver o formulário com tudo de uma vez, clique em “⋯” no topo da ficha e em “Editar tudo”.",
         ],
       },
       {
