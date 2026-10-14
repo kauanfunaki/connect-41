@@ -13,6 +13,7 @@ Referência: `C:\Dev\MIGRACAO-CONNECT-VICTOR.md`, confirmada pelo usuário. Plan
 - Exclusão de estado privado, envs e certificados dos contextos Docker.
 - Inventário estático V0.3: 125 linhas em 48 arquivos com a raiz literal; 47 tabelas, das quais 34 não têm uma das colunas explícitas de escopo pesquisadas. Classificação preliminar; não corresponde automaticamente às 13 tabelas sem cliente do guia e precisa de revisão semântica.
 - Teste de registro de rotas DCIP/DIME adaptado para paths/métodos públicos do OpenAPI. As duas exigências originais foram preservadas; nenhum cálculo/regra fiscal mudou.
+- Commits locais da fundação: `ca00b331` no Connect e `c2f068e` no SPED. O usuário decidiu manter as alterações somente locais; nenhum push ou PR foi realizado nesta etapa.
 
 ## Verificação executada
 
@@ -27,6 +28,8 @@ Referência: `C:\Dev\MIGRACAO-CONNECT-VICTOR.md`, confirmada pelo usuário. Plan
 | SPED regressão original, Python 3.12/Linux | 952 verificações passaram em `sped_ci`; código montado somente para leitura |
 | SPED Dockerfile do painel | Build passou, incluindo import do app sem iniciar servidor/lifespan |
 | SPED Dockerfile.agente | Build passou; agente não foi executado |
+| Workflows | YAML, gatilho de PR, permissões somente de leitura e Actions com SHA fixado foram validados localmente |
+| Ferramentas de infraestrutura | Sintaxe verificada como Python 3.8; isso não substitui teste de runtime nessa versão |
 
 O primeiro teste Connect dentro do sandbox falhou por restrição de `realpath`; o mesmo comando passou fora dessa restrição com o ambiente local verificado. O build standalone na pasta de trabalho foi recusado pela guarda porque dois servidores estavam ativos. O build foi validado em Docker, sem encerrar ou substituir esses processos.
 
@@ -42,3 +45,7 @@ A suíte SPED não era inteiramente independente de banco/dados: consultas reais
 - A branch Connect partiu de `codex/local-banco-build` e contém três commits anteriores ainda diferentes de `origin/main`. Uma PR desta fundação deve separar esses commits; não apresentar as mudanças antigas como trabalho desta etapa.
 
 Não houve migration, geração fiscal, chamada Serpro, alteração de cálculo ou deployment em produção. O painel antigo e seus agentes não foram interrompidos.
+
+O banco descartável foi parado ao terminar a verificação. Para retomá-lo, usar `docker start sped-migracao-ci` e os comandos de `C:\Dev\sped_generator\docs\TESTES-ISOLADOS-MIGRACAO.md`. Os containers e servidores preexistentes permaneceram em execução.
+
+O primeiro push foi rejeitado pela revisão automática por exigir autorização explícita para enviar o código ao destino GitHub. Após a pergunta com conteúdo/destinos, o usuário escolheu manter tudo local. Não tentar publicar por outro meio sem nova instrução do usuário.
