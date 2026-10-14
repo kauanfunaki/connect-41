@@ -24,10 +24,36 @@
 // nos testes, e precisam concordar entre si.
 
 export const MARCA_41_CARREIRAS = {
-  /** O nome do portal. */
+  /**
+   * O nome do portal — o produto. Um lugar só (títulos, topo, rodapé, imagem
+   * de compartilhamento): trocar o nome é esta linha.
+   */
   nome: "41 Carreiras",
-  /** Quem conduz os processos seletivos (o escritório, não o tenant "41 Tech"). */
+  /**
+   * Quem conduz os processos seletivos: a 41 Tallent, a marca do Recrutamento
+   * da 41 (Kauan, 14/10/2026). É o nome que o candidato lê no selo "Processo
+   * conduzido por…", no rodapé, no e-mail de acesso e na conta.
+   */
+  recrutamento: "41 Tallent",
+  /** Como a própria 41 Tallent se apresenta na política dela (41contabil.com.br/41-tallent). */
+  grupo: "uma empresa do grupo 41 Contábil",
+  /** O escritório contábil da 41 — não o tenant "41 Tech". */
   escritorio: "41 Contábil",
+  /**
+   * O CNPJ da 41 Tallent, que o rodapé mostra — dos registros do Kauan
+   * (18/06/2026), a confirmar com ele: a página pública de Políticas e Termos
+   * não o trazia em 14/10/2026. Vazio, a linha do CNPJ some. (Não é o da 41
+   * Contábil, 31.052.957/0001-05.)
+   */
+  cnpj: "57.848.164/0001-90",
+  /**
+   * A política de privacidade OFICIAL da 41 Tallent (Políticas e Termos). O
+   * consentimento da candidatura e o rodapé apontam para ela; a página
+   * `/privacidade` do portal é só um resumo do que este site faz.
+   */
+  politicaDePrivacidade: "https://41contabil.com.br/41-tallent/politicas-e-termos/",
+  /** O canal da política oficial para os pedidos do titular (LGPD). */
+  emailDePrivacidade: "privacidade@41contabil.com.br",
 } as const;
 
 /**
@@ -133,10 +159,15 @@ export function ehDa41(slug: string, config: ConfigDeCarreiras | null): config i
 
 /** Uma página do portal de vagas de um escritório. */
 export type PaginaDoPortal =
+  /** A página inicial: no 41 Carreiras, a capa com a busca; nos outros escritórios, a lista. */
   | { tipo: "lista" }
+  /** Todas as vagas, com busca e filtros (15/10/2026: a capa do 41 Carreiras deixou de ser a lista). */
+  | { tipo: "vagas" }
   | { tipo: "vaga"; id: string }
   | { tipo: "conta" }
-  | { tipo: "entrar"; token?: string };
+  | { tipo: "entrar"; token?: string }
+  /** O aviso de privacidade do candidato. */
+  | { tipo: "privacidade" };
 
 /**
  * O caminho de uma página do portal. `curto` é o formato do 41 Carreiras
@@ -148,6 +179,10 @@ export function caminhoNoPortal(slug: string, pagina: PaginaDoPortal, curto: boo
   switch (pagina.tipo) {
     case "lista":
       return curto ? "/" : base;
+    case "vagas":
+      return `${base}/vagas`;
+    case "privacidade":
+      return `${base}/privacidade`;
     case "vaga":
       return curto ? `/vagas/${encodeURIComponent(pagina.id)}` : `${base}/${encodeURIComponent(pagina.id)}`;
     case "conta":
@@ -199,7 +234,12 @@ export function urlDoHub(env: Ambiente = process.env): string | null {
 // ─── O portal visto de uma página ───────────────────────────────────────────
 
 export type RotasDoPortal = {
+  /** A página inicial (no 41 Carreiras, a capa). */
   lista: string;
+  /** Todas as vagas, com busca e filtros. */
+  vagas: string;
+  /** O aviso de privacidade do candidato. */
+  privacidade: string;
   vaga: (id: string) => string;
   conta: string;
   entrar: string;
@@ -239,6 +279,8 @@ export function portalNoHost(
     curto,
     rotas: {
       lista: caminhoNoPortal(slug, { tipo: "lista" }, curto),
+      vagas: caminhoNoPortal(slug, { tipo: "vagas" }, curto),
+      privacidade: caminhoNoPortal(slug, { tipo: "privacidade" }, curto),
       vaga: (id) => caminhoNoPortal(slug, { tipo: "vaga", id }, curto),
       conta: caminhoNoPortal(slug, { tipo: "conta" }, curto),
       entrar: caminhoNoPortal(slug, { tipo: "entrar" }, curto),
@@ -251,7 +293,21 @@ export function portalNoHost(
 
 /** O nome de quem conduz o processo seletivo, como o candidato lê. */
 export function nomeDoEscritorio(portal: Pick<PortalDoTenant, "da41">, nomeDoTenant: string): string {
-  return portal.da41 ? MARCA_41_CARREIRAS.escritorio : nomeDoTenant;
+  return portal.da41 ? MARCA_41_CARREIRAS.recrutamento : nomeDoTenant;
+}
+
+/**
+ * A imagem de compartilhamento (LinkedIn, WhatsApp, Pandapé) de uma página do
+ * 41 Carreiras, no endereço principal: a da capa, ou a de uma vaga. Null fora
+ * da 41 ou com o portal desligado — os outros escritórios seguem sem imagem.
+ * A rota fica em `/api/carreiras/og/`, que o proxy já deixa passar no
+ * endereço do portal (e que é pública no do Connect).
+ */
+export function imagemDeCompartilhamento(slug: string, vagaId: string | null, env: Ambiente = process.env): string | null {
+  const config = configDeCarreiras(env);
+  if (!ehDa41(slug, config)) return null;
+  const base = `https://${config.principal}/api/carreiras/og/${encodeURIComponent(config.tenantSlug)}`;
+  return vagaId ? `${base}/${encodeURIComponent(vagaId)}` : base;
 }
 
 // ─── O proxy no endereço do 41 Carreiras ────────────────────────────────────
@@ -268,11 +324,13 @@ export type RotaNoHostDeCarreiras =
 // Id de vaga (uuid) — só um segmento, sem nada que vire outro caminho.
 const FORMATO_ID = /^[A-Za-z0-9-]{1,64}$/;
 
-// Rotas que passam como estão: a candidatura e o robots/sitemap do portal
-// (/api/carreiras/), o logo do escritório no topo (/api/workspace-logos/) e os
-// arquivos internos do Next. Mais nada: nem login, nem portal do cliente, nem
-// as telas da equipe, nem as outras APIs.
-const LIVRES = ["/api/carreiras/", "/api/workspace-logos/", "/_next/"];
+// Rotas que passam como estão: a candidatura, o robots/sitemap, as imagens de
+// compartilhamento e o logo das empresas das vagas (/api/carreiras/), o logo
+// do escritório (/api/workspace-logos/), a marca da 41 Tallent
+// (public/41-tallent: logo e ícone, arquivos estáticos) e os arquivos
+// internos do Next. Mais nada: nem login, nem portal do cliente, nem as telas
+// da equipe, nem as outras APIs.
+const LIVRES = ["/api/carreiras/", "/api/workspace-logos/", "/41-tallent/", "/_next/"];
 
 // Os ícones da aba do navegador (app/icon.png e app/apple-icon.png).
 const ICONES = new Set(["/icon.png", "/apple-icon.png"]);
@@ -301,9 +359,12 @@ export function rotaNoHostDeCarreiras(caminho: string, tenantSlug: string | null
 
   switch (primeiro) {
     case "vagas":
-      if (resto.length === 0) return atalho({ tipo: "lista" });
+      // A lista com busca e filtros (15/10/2026) — antes, `/vagas` voltava para a capa.
+      if (resto.length === 0) return interno({ tipo: "vagas" });
       if (resto.length === 1 && FORMATO_ID.test(resto[0]!)) return interno({ tipo: "vaga", id: resto[0]! });
       return { tipo: "nao-encontrada" };
+    case "privacidade":
+      return resto.length === 0 ? interno({ tipo: "privacidade" }) : { tipo: "nao-encontrada" };
     case "minha-conta":
       if (so()) return interno({ tipo: "conta" });
       if (so("entrar")) return interno({ tipo: "entrar" });
@@ -318,6 +379,9 @@ export function rotaNoHostDeCarreiras(caminho: string, tenantSlug: string | null
       const [slug, ...depois] = resto;
       if (slug !== tenantSlug) return { tipo: "nao-encontrada" };
       if (depois.length === 0) return atalho({ tipo: "lista" });
+      // Antes do id: "vagas" e "privacidade" também cabem no formato de um.
+      if (depois.length === 1 && depois[0] === "vagas") return atalho({ tipo: "vagas" });
+      if (depois.length === 1 && depois[0] === "privacidade") return atalho({ tipo: "privacidade" });
       if (depois.length === 1 && depois[0] === "minha-conta") return atalho({ tipo: "conta" });
       if (depois.length === 2 && depois[0] === "minha-conta" && depois[1] === "entrar") return atalho({ tipo: "entrar" });
       if (depois.length === 1 && FORMATO_ID.test(depois[0]!)) return atalho({ tipo: "vaga", id: depois[0]! });
@@ -331,7 +395,9 @@ export function rotaNoHostDeCarreiras(caminho: string, tenantSlug: string | null
 /**
  * A página de "não encontrada" do endereço do 41 Carreiras, servida pelo
  * próprio proxy: não depende de banco nem do layout do Connect, e não leva a
- * lugar nenhum da equipe — só de volta às vagas.
+ * lugar nenhum da equipe — só de volta às vagas. Desde 15/10/2026 com a cara
+ * do 41 Carreiras (as cores da 41 Tallent e a marca dela, de
+ * `public/41-tallent`) e uma busca, que vai para a lista de vagas.
  */
 export const PAGINA_NAO_ENCONTRADA = `<!doctype html>
 <html lang="pt-BR">
@@ -339,22 +405,54 @@ export const PAGINA_NAO_ENCONTRADA = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Página não encontrada · 41 Carreiras</title>
+<meta name="color-scheme" content="light">
+<title>Página não encontrada · ${MARCA_41_CARREIRAS.nome}</title>
+<link rel="icon" href="/41-tallent/marca.png" type="image/png">
 <style>
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#f7f7f8;color:#18181b}
-main{max-width:420px;text-align:center}
-h1{font-size:20px;margin:0 0 8px}
-p{margin:0 0 20px;color:#52525b;line-height:1.5}
-a{display:inline-block;padding:10px 18px;border-radius:8px;background:#18181b;color:#fff;font-weight:600;text-decoration:none}
-@media (prefers-color-scheme:dark){body{background:#111113;color:#f4f4f5}p{color:#a1a1aa}a{background:#f4f4f5;color:#18181b}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;font-family:"Hanken Grotesk",ui-sans-serif,"Segoe UI",sans-serif;background:#FAF6F0;color:#1E0B33}
+header{background:#3B0670;padding:14px 16px}
+header a{display:inline-flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:600;letter-spacing:.02em}
+header img{width:36px;height:36px;border-radius:8px;background:#D090FF}
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:48px 16px;position:relative;overflow:hidden}
+main:before{content:"";position:absolute;right:-120px;bottom:-60px;width:420px;height:364px;background:#EBD3FF;clip-path:polygon(50% 0,100% 100%,0 100%);opacity:.7}
+section{position:relative;max-width:520px;width:100%}
+.selo{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#3B0670;margin:0 0 12px}
+h1{font-size:32px;line-height:1.15;margin:0 0 12px;color:#3B0670}
+p{margin:0 0 24px;color:#5B5170;line-height:1.6;font-size:17px}
+form{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+input{flex:1 1 220px;min-width:0;height:48px;border:1px solid #8E84A0;border-radius:10px;padding:0 14px;font:inherit;font-size:16px;background:#fff;color:#1E0B33}
+input:focus{outline:3px solid #D090FF;outline-offset:1px;border-color:#3B0670}
+button,.botao{height:48px;padding:0 20px;border-radius:10px;border:0;font:inherit;font-weight:700;font-size:16px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+button{background:#3B0670;color:#fff}
+.botao{background:transparent;color:#3B0670;border:1.5px solid #3B0670}
+button:focus-visible,.botao:focus-visible{outline:3px solid #D090FF;outline-offset:2px}
 </style>
 </head>
 <body>
+<header><a href="/"><img src="/41-tallent/marca.png" alt="">${MARCA_41_CARREIRAS.nome}</a></header>
 <main>
-<h1>Página não encontrada</h1>
-<p>Este endereço não existe no 41 Carreiras. As vagas abertas estão na página inicial.</p>
-<a href="/">Ver as vagas abertas</a>
+<section>
+<p class="selo">Erro 404</p>
+<h1>Esta página não existe</h1>
+<p>O endereço pode estar incompleto, ou a vaga já foi encerrada. Busque outra vaga ou veja todas as que estão abertas.</p>
+<form method="get" action="/vagas" role="search">
+<input type="search" name="q" aria-label="Cargo ou palavra-chave" placeholder="Cargo ou palavra-chave">
+<button type="submit">Buscar</button>
+</form>
+<a class="botao" href="/vagas">Ver vagas abertas</a>
+</section>
 </main>
 </body>
 </html>
 `;
+
+/**
+ * O logo da empresa de uma vaga publicada, pela rota pública do portal
+ * (`/api/carreiras/logo/<escritorio>/<vaga>`) — relativo, porque a rota passa
+ * no endereço do 41 Carreiras e no do Connect. O logo da empresa em si fica
+ * numa rota com sessão; esta só serve o de uma vaga que está no portal.
+ */
+export function caminhoDoLogoDaVaga(slug: string, vagaId: string): string {
+  return `/api/carreiras/logo/${encodeURIComponent(slug)}/${encodeURIComponent(vagaId)}`;
+}
