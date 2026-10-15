@@ -13,6 +13,10 @@ type Props = {
 // Overlay estilo Trello sobre o quadro de Kanban — fecha com ESC, clique fora
 // ou botão "X", sempre via router.back() (mantém o histórico e o estado do
 // quadro por trás intactos, sem re-renderizar a rota /kanban/[id]).
+//
+// A moldura é a da `Modal`, com a mesma entrada (fundo que esmaece, painel que
+// surge — 15/10/2026), mas não o componente: o detalhe da tarefa é uma tela de
+// trabalho em altura cheia, com o fechar no canto e sem o título da janela.
 export function KanbanItemModal({ children }: Props) {
   const router = useRouter();
 
@@ -21,7 +25,7 @@ export function KanbanItemModal({ children }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto sm:overflow-hidden bg-black/60 sm:p-8"
+      className="c41-esmaecer fixed inset-0 z-50 flex items-start justify-center overflow-y-auto sm:overflow-hidden bg-black/60 sm:p-8"
       onClick={(e) => {
         if (e.target === e.currentTarget) router.back();
       }}
@@ -32,7 +36,7 @@ export function KanbanItemModal({ children }: Props) {
           sobrava zero embaixo, e o modal encostava na borda inferior da tela.
           Agora os 4rem descontados são exatamente o padding do container, o
           que deixa 32px em cima e 32px embaixo. */}
-      <div ref={panelRef} role="dialog" aria-modal="true" tabIndex={-1} aria-label="Detalhe do item" className="relative w-full min-h-full sm:min-h-0 sm:max-w-[94vw] xl:max-w-[1400px] bg-canvas sm:border sm:border-border sm:rounded-lg shadow-[var(--c41-shadow-lg)] sm:h-[calc(100vh-4rem)] overflow-y-auto lg:overflow-hidden">
+      <div ref={panelRef} role="dialog" aria-modal="true" tabIndex={-1} aria-label="Detalhe do item" className="c41-surgir relative w-full min-h-full sm:min-h-0 sm:max-w-[94vw] xl:max-w-[1400px] bg-canvas sm:border sm:border-border sm:rounded-lg shadow-[var(--c41-shadow-lg)] sm:h-[calc(100vh-4rem)] overflow-y-auto lg:overflow-hidden">
         {/* `IconButton`, como o do `Modal` (07/10/2026): era um `Button md`
             forçado a `w-9`, e o `px-4` dele espremia o ícone até virar um
             ponto. O cabeçalho do detalhe reserva o canto (`pr-12` em modal)

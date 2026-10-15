@@ -173,8 +173,11 @@ export default async function VagaPublicaPage({
           <ArrowLeft size={14} /> Todas as vagas
         </Button>
 
+        {/* Com o logo do escritório, como a lista de vagas (15/10/2026): a
+            página já carregava o `logoUrl` e não o mostrava. */}
         <CabecalhoPublico
           className="mt-4 mb-6"
+          logo={tenant.logoUrl ? { src: tenant.logoUrl, alt: tenant.name } : null}
           titulo={vaga.title}
           subtitulo={
             <>
@@ -210,7 +213,7 @@ export default async function VagaPublicaPage({
 
         {beneficios.length > 0 && (
           <Card className="p-5 mb-6">
-            <h2 className="text-body font-semibold text-fg mb-3">Benefícios</h2>
+            <h2 className="text-card-title font-semibold text-fg mb-3">Benefícios</h2>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
               {beneficios.map((b) => (
                 // O ponto mora numa caixa da altura da linha (h-5 = leading-5)
@@ -227,7 +230,7 @@ export default async function VagaPublicaPage({
         )}
 
         <Card className="p-5">
-          <h2 className="text-body font-semibold text-fg mb-4">Candidatar-se</h2>
+          <h2 className="text-card-title font-semibold text-fg mb-4">Candidatar-se</h2>
           <ApplyForm slug={slug} vagaId={vaga.id} carimbo={emitirCarimbo(new Date())} contaHref={rotas.conta} />
         </Card>
 

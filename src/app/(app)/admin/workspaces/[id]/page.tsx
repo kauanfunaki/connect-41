@@ -73,7 +73,7 @@ export default async function WorkspaceDetailPage({
                     <p className="text-fs-3 text-fg truncate">{u.name}</p>
                     <p className="text-fs-1 text-fg-muted truncate">{u.email}</p>
                   </div>
-                  <ToggleAccessButton action={toggleAction} hasAccess={hasAccess} />
+                  <ToggleAccessButton action={toggleAction} hasAccess={hasAccess} nome={u.name} />
                 </div>
               );
             })}

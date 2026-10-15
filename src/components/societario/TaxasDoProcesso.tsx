@@ -6,6 +6,7 @@ import type { CustoDoProcesso } from "@/lib/societario/licencas";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { EnviarTaxaAoCliente } from "./EnviarTaxaAoCliente";
 import { Aviso } from "@/components/ui/Aviso";
+import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 
 type Props = { taxas: TaxaNaTela[]; custo: CustoDoProcesso };
@@ -42,7 +43,36 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
           e rolavam de lado num cartão de 400. Órgão e vencimento descem para
           a linha de baixo da taxa — o que se procura na coluna é quanto e se
           está paga —, e com eles saem os dois funis, que numa lista de
-          poucas taxas por processo pouco recortavam. */}
+          poucas taxas por processo pouco recortavam. No celular, um cartão
+          por taxa (15/10/2026): a tabela de 320px rolava de lado no cartão. */}
+      <CartoesNoCelular>
+        {taxas.map((t) => (
+          <Cartao key={t.id}>
+            <TopoDoCartao nome={t.description} valor={formatarReaisDeCentavos(t.amountCents)} />
+            {(t.orgaoNome || t.dueDate) && (
+              <InfoDoCartao className="tabular-nums">
+                {[t.orgaoNome, t.dueDate && `vence ${formatInstantDate(t.dueDate)}`].filter(Boolean).join(" · ")}
+              </InfoDoCartao>
+            )}
+            {t.attempt !== null && t.attempt >= 2 && <InfoDoCartao className="text-warning-fg">{t.attempt}ª apresentação</InfoDoCartao>}
+            <PeDoCartao>
+              {t.paidAt ? (
+                <>
+                  <Selo tom="sucesso">Paga</Selo>
+                  <span className="text-ui text-fg-muted">em {formatInstantDate(t.paidAt)}</span>
+                </>
+              ) : (
+                <Selo tom="atencao">Em aberto</Selo>
+              )}
+            </PeDoCartao>
+            {t.envio && (
+              <div className="mt-2">
+                <EnviarTaxaAoCliente taxaId={t.id} descricao={t.description} envio={t.envio} />
+              </div>
+            )}
+          </Cartao>
+        ))}
+      </CartoesNoCelular>
       <TabelaFiltravel
         linhas={taxas.map((t) => ({
           id: t.id,
@@ -53,7 +83,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
           },
         }))}
       >
-      <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+      <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
         <table className="w-full min-w-[20rem] text-ui">
           <thead>
             <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">

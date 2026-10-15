@@ -169,10 +169,9 @@ function CartaoDoAviso({
               </CampoForm>
             </div>
           )}
+          {/* No `Aviso` de atenção (15/10/2026): era texto âmbar solto. */}
           {desfecho === "DEFERIDO" && aviso.sugestao !== "DEFERIDO" && (
-            <p className="text-fs-2 text-warning-fg">
-              O sistema não leu “deferido” neste e-mail. Confirme no texto antes de marcar.
-            </p>
+            <Aviso tom="atencao">O sistema não leu “deferido” neste e-mail. Confirme no texto antes de marcar.</Aviso>
           )}
         </div>
       ) : (

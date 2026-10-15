@@ -16,6 +16,8 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormSection } from "@/components/ui/FormSection";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 
 const PRIORITY_OPTIONS: { value: VagaPrioridade; label: string }[] = [
   { value: "BAIXA", label: "Baixa" },
@@ -54,7 +56,8 @@ type SectorOption = { value: string; label: string };
 type Props = {
   action: (prev: VagaState, form: FormData) => Promise<VagaState>;
   cancelHref: string;
-  companies: Option[];
+  /** As empresas do seletor: logo, CNPJ e a filial embaixo da matriz. */
+  companies: EmpresaParaEscolher[];
   cargos: CargoOption[];
   users: Option[];
   sectorOptions: SectorOption[];
@@ -102,19 +105,20 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
           </FieldGrid>
 
           <FieldGrid columns="sm:grid-cols-[1fr_1fr_120px]">
+            {/* O seletor de empresa com busca, logo, CNPJ e recentes (15/10/2026):
+                era uma lista simples com as ~400 empresas ativas. */}
             <CampoForm label="Empresa" htmlFor="companyId" required>
-              <Select
+              <SearchableSelect
                 id="companyId"
                 name="companyId"
-                required
-                value={companyId}
-                onChange={(e) => setCompanyId(e.target.value)}
-              >
-                <option value="">Selecione</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </Select>
+                options={opcoesDeEmpresa(companies)}
+                defaultValue={companyId}
+                onChange={setCompanyId}
+                avatar
+                lembrarRecentes="empresas"
+                placeholder="Buscar empresa…"
+                textoSemValor="Selecione"
+              />
             </CampoForm>
             <CampoForm label="Cargo" htmlFor="cargoId">
               <Select id="cargoId" name="cargoId" defaultValue={defaultValues?.cargoId ?? ""} disabled={!companyId}>

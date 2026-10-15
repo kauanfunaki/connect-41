@@ -39,6 +39,7 @@ import { orcamentosAprovados, orcamentoLigado } from "@/lib/dre/orcamento/dados"
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
 import { mesesDoAcumulado } from "@/lib/dre/orcamento/variacao";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { StatusDot } from "@/components/shared/StatusDot";
 
 export const dynamic = "force-dynamic";
 
@@ -357,23 +358,24 @@ export default async function DreEconomicaPage({
         <p className="text-helper text-fg-muted mt-3">Orçado × realizado nas visões Mês e Acumulado no ano.</p>
       )}
 
+      {/* O quadro na tabela padrão (15/10/2026): era uma lista com o cabeçalho
+          cinza escrito à mão e os valores encostados à direita. Centro inativo
+          leva a bolinha, e não "(inativo)" no texto. */}
       {quadro && (
-        <Card className="p-0 overflow-hidden mt-5">
-          <div className="px-4 pt-3 pb-2">
-            <h2 className="text-card-title font-semibold text-fg">Resultado por centro de custo — {periodo}</h2>
-            <p className="text-micro text-fg-muted mt-0.5">
-              Um centro por lançamento, sem rateio: as linhas somam a DRE da empresa sem filtro. Despesas somam todos os grupos de
-              pagamento; o resultado segue a estrutura da DRE (impostos sobre a receita ficam fora dele).
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-ui">
+        <section className="mt-5">
+          <h2 className="text-card-title font-semibold text-fg">Resultado por centro de custo — {periodo}</h2>
+          <p className="text-micro text-fg-muted mt-0.5 mb-2">
+            Um centro por lançamento, sem rateio: as linhas somam a DRE da empresa sem filtro. Despesas somam todos os grupos de
+            pagamento; o resultado segue a estrutura da DRE (impostos sobre a receita ficam fora dele).
+          </p>
+          <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
+            <table className="w-full min-w-[620px]">
               <thead>
-                <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-y border-border">
-                  <th className="py-2 pl-4 pr-3 font-medium">Centro de custo</th>
-                  <th className="py-2 pr-3 font-medium text-right">Receita bruta</th>
-                  <th className="py-2 pr-3 font-medium text-right">Despesas</th>
-                  <th className="py-2 pr-4 font-medium text-right">Resultado do período</th>
+                <tr>
+                  <th className="px-3">Centro de custo</th>
+                  <th className="px-3">Receita bruta</th>
+                  <th className="px-3">Despesas</th>
+                  <th className="px-3">Resultado do período</th>
                 </tr>
               </thead>
               <tbody>
@@ -382,7 +384,7 @@ export default async function DreEconomicaPage({
                   const ativo = centroNaUrl === valorDoCentro;
                   return (
                     <tr key={valorDoCentro} className={`border-b border-border-soft ${ativo ? "bg-brand/8" : ""}`}>
-                      <td className="py-2 pl-4 pr-3">
+                      <td className="px-3">
                         <Link
                           href={`${base}${visao === "mes" ? "" : `&visao=${visao}`}&centro=${valorDoCentro}`}
                           className={`hover:underline ${l.centroId === null ? "text-fg-secondary italic" : "text-fg"}`}
@@ -390,24 +392,24 @@ export default async function DreEconomicaPage({
                           {l.nome}
                         </Link>
                         {l.codigo && <span className="text-micro text-fg-muted"> · {l.codigo}</span>}
-                        {!l.ativo && <span className="text-micro text-fg-muted"> (inativo)</span>}
+                        {!l.ativo && <StatusDot color="var(--c41-fg-muted)" label="Inativo" className="ml-2 align-middle" />}
                       </td>
-                      <td className="py-2 pr-3 text-right tabular-nums">{moeda(l.receitaBruta)}</td>
-                      <td className={`py-2 pr-3 text-right tabular-nums ${l.despesas < 0 ? "text-danger" : ""}`}>{moeda(l.despesas)}</td>
-                      <td className={`py-2 pr-4 text-right tabular-nums font-medium ${tomDoValor(l.resultado)}`}>{moeda(l.resultado)}</td>
+                      <td className={`px-3 tabular-nums ${tomDoValor(l.receitaBruta)}`}>{moeda(l.receitaBruta)}</td>
+                      <td className={`px-3 tabular-nums ${tomDoValor(l.despesas)}`}>{moeda(l.despesas)}</td>
+                      <td className={`px-3 tabular-nums font-medium ${tomDoValor(l.resultado)}`}>{moeda(l.resultado)}</td>
                     </tr>
                   );
                 })}
-                <tr className="bg-surface-hover font-semibold">
-                  <td className="py-2 pl-4 pr-3">Total da empresa</td>
-                  <td className="py-2 pr-3 text-right tabular-nums">{moeda(quadro.total.receitaBruta)}</td>
-                  <td className={`py-2 pr-3 text-right tabular-nums ${quadro.total.despesas < 0 ? "text-danger" : ""}`}>{moeda(quadro.total.despesas)}</td>
-                  <td className={`py-2 pr-4 text-right tabular-nums ${tomDoValor(quadro.total.resultado)}`}>{moeda(quadro.total.resultado)}</td>
+                <tr className="bg-surface-2 font-semibold">
+                  <td className="px-3">Total da empresa</td>
+                  <td className={`px-3 tabular-nums ${tomDoValor(quadro.total.receitaBruta)}`}>{moeda(quadro.total.receitaBruta)}</td>
+                  <td className={`px-3 tabular-nums ${tomDoValor(quadro.total.despesas)}`}>{moeda(quadro.total.despesas)}</td>
+                  <td className={`px-3 tabular-nums ${tomDoValor(quadro.total.resultado)}`}>{moeda(quadro.total.resultado)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </Card>
+        </section>
       )}
 
       <NotaDeFonte>

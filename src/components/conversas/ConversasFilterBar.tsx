@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -62,9 +61,12 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
     return `/conversas?${q.toString()}`;
   }
 
-  function handleSearchSubmit(e: React.FormEvent) {
+  function handleSearchSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    router.push(buildUrl({ page: undefined }));
+    // O termo vem do formulário: no "limpar" da busca o envio acontece antes
+    // de o estado `search` ser atualizado.
+    const termo = String(new FormData(e.currentTarget).get("busca") ?? "").trim();
+    router.push(buildUrl({ page: undefined, search: termo || undefined }));
   }
 
   function applyDraft(close: () => void) {
@@ -93,12 +95,16 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
       <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[220px] max-w-xs">
-        <Input
+        {/* A caixa de busca do Connect, com o "limpar" próprio (15/10/2026);
+            limpar a busca que filtrou a lista volta a mostrar tudo. */}
+        <CampoDeBusca
           compact
-          icon={<Search size={14} />}
+          name="busca"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          enviarAoLimpar={Boolean(initialSearch)}
           placeholder="Contato, empresa ou mensagem…"
+          aria-label="Buscar atendimento"
         />
       </form>
 

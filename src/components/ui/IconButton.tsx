@@ -22,6 +22,9 @@ type ComoBotao = Comum & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, key
 type ComoLink = Comum &
   Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, keyof Comum | "href"> & {
     href: string;
+    /** Um `<a>` simples, sem o `<Link>`, como no `Button` (15/10/2026): rota de
+     *  arquivo (baixar, abrir o PDF), que o `<Link>` pré-carregaria. */
+    nativo?: boolean;
   };
 
 // 28px: ação miúda de uma linha de lista, sem controle ao lado · 32px: padrão,
@@ -74,7 +77,15 @@ export function IconButton(props: ComoBotao | ComoLink) {
 
   if (props.href !== undefined) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { active: _a, hasDot: _h, size: _s, variant: _v, className: _c, children: _ch, title: _t, href, ...rest } = props;
+    const { active: _a, hasDot: _h, size: _s, variant: _v, className: _c, children: _ch, title: _t, href, nativo, ...rest } = props;
+    if (nativo) {
+      return (
+        <a href={href} className={cls} {...rest} {...dica}>
+          {children}
+          {ponto}
+        </a>
+      );
+    }
     return (
       <Link href={href} className={cls} {...rest} {...dica}>
         {children}

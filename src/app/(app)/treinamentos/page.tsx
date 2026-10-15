@@ -52,11 +52,16 @@ export default async function TreinamentosPage() {
       />
       {treinamentos.length === 0 ? (
         <Card>
-          {/* Sem repetir o botão de criar: ele mora no cabeçalho (5A, 08/10/2026). */}
+          {/* Sem repetir o botão de criar: ele mora no cabeçalho (5A, 08/10/2026),
+              e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<GraduationCap />}
             title="Nenhum treinamento cadastrado"
-            description="Cadastre treinamentos e organize turmas para os colaboradores."
+            description={
+              canManage
+                ? "Use “+ Novo treinamento”, no alto da tela, para cadastrar o primeiro e organizar as turmas."
+                : "Os treinamentos e as turmas dos colaboradores aparecem aqui quando forem cadastrados."
+            }
           />
         </Card>
       ) : (

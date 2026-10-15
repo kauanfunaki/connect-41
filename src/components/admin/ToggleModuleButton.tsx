@@ -20,7 +20,7 @@ export function ToggleModuleButton({ action, enabled, nome }: Props) {
   const { dialog, requestConfirm } = useConfirm();
 
   function pedirTroca() {
-    const title = enabled ? `Desativar o módulo "${nome}" para este tenant?` : `Ativar o módulo "${nome}" para este tenant?`;
+    const title = enabled ? `Desativar o módulo "${nome}" para este workspace?` : `Ativar o módulo "${nome}" para este workspace?`;
     const description = enabled ? "Ele desaparece do menu e das rotas até ser reativado." : undefined;
     requestConfirm({ title, description, destructive: enabled, confirmLabel: enabled ? "Desativar" : "Ativar" }, action);
   }

@@ -99,7 +99,8 @@ export function DocumentosDoProcesso({
         </Button>
       )}
 
-      {aviso && <p className="text-fs-2 text-warning-fg">{aviso}</p>}
+      {/* No `Aviso` de atenção (15/10/2026): era texto âmbar solto. */}
+      {aviso && <Aviso tom="atencao">{aviso}</Aviso>}
 
       {documentos.length === 0 ? (
         <p className="text-ui text-fg-muted">Nenhum documento neste processo ainda.</p>

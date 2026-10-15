@@ -35,7 +35,7 @@ export function RelatorioAnual({ anual, regime = "caixa" }: Props) {
   const temDetalhe = Object.keys(anual.detalhe).length > 0;
 
   return (
-    <div className="overflow-x-auto border border-border rounded-lg bg-surface">
+    <div className="overflow-x-auto border border-border rounded-lg bg-surface shadow-xs">
       <table className="w-full text-fs-2 border-collapse">
         <thead>
           <tr>

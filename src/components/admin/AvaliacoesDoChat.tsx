@@ -33,7 +33,7 @@ export function AvaliacoesDoChat({ dados }: { dados: Dados }) {
         <p className="text-fs-3 text-fg-muted">Nenhuma resposta avaliada neste período.</p>
       ) : (
         <div className="flex flex-col gap-1">
-          <p className="text-fs-1 uppercase tracking-wide text-fg-muted">Por IA — a pior taxa primeiro</p>
+          <p className="c41-rotulo">Por IA — a pior taxa primeiro</p>
           <ul className="flex flex-col">
             {dados.avaliacoes.map((a) => {
               const motivos = Object.entries(a.motivos) as [MotivoDoNao, number][];
@@ -61,7 +61,7 @@ export function AvaliacoesDoChat({ dados }: { dados: Dados }) {
 
       {dados.ruins.length > 0 && (
         <div className="flex flex-col gap-1">
-          <p className="text-fs-1 uppercase tracking-wide text-fg-muted">
+          <p className="c41-rotulo">
             Respostas que não ajudaram{dados.ruins.length === RUINS_NO_PAINEL ? ` — as ${RUINS_NO_PAINEL} mais recentes` : ""}
           </p>
           <ul className="flex flex-col">

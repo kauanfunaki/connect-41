@@ -11,6 +11,7 @@ import {
   type Veredito,
 } from "@/lib/recrutamento/triagem";
 import { PontuarCandidatura } from "./PontuarCandidatura";
+import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 
 export type NotaParaTela = {
   id: string;
@@ -94,9 +95,26 @@ export function NotaDaTriagem({
             </span>
           </div>
           {ultima.resumo && <p className="text-ui text-fg-secondary mb-3">{ultima.resumo}</p>}
+          {/* No celular, um cartão por requisito (15/10/2026): a tabela rolava
+              de lado e a evidência ficava fora da tela. */}
+          <CartoesNoCelular>
+            {ultima.itens.map((r) => {
+              const a = ultima.avaliacoes.find((x) => x.requisitoId === r.id);
+              const v: Veredito = a?.veredito ?? "SEM_EVIDENCIA";
+              return (
+                <Cartao key={r.id}>
+                  <TopoDoCartao nome={r.texto} valor={<span className={COR_DO_VEREDITO[v]}>{ROTULO_DO_VEREDITO[v]}</span>} />
+                  <InfoDoCartao>
+                    {r.tipo === "OBRIGATORIO" ? "obrigatório" : "desejável"} · peso {r.peso}
+                  </InfoDoCartao>
+                  <p className="mt-1.5 text-ui text-fg-secondary break-words">Evidência no currículo: {a?.evidencia || "—"}</p>
+                </Cartao>
+              );
+            })}
+          </CartoesNoCelular>
           {/* Casco padrão dentro do cartão (`.c41-tabela`, polimento de
               30/09): cabeçalho com fundo, respiro nas pontas e centralizada. */}
-          <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+          <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
             <table className="w-full min-w-[620px]">
               <thead>
                 <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">

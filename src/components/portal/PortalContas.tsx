@@ -13,7 +13,8 @@ import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
 import { contasDoEscopo, totaisDoEscopo } from "@/lib/financeiro/consultas";
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 import { saoPauloParts } from "@/lib/agenda";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarCompetencia } from "@/lib/format";
+import { competenciaDoInstante } from "@/lib/financeiro/periodo";
 import { moeda } from "@/lib/financeiro/formato";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -87,7 +88,9 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
             rotulo: aPagar ? "Pago" : "Recebido",
             valor: moeda(totais.pago),
             tom: "text-fg-muted",
-            detalhe: totais.pagoDesde ? `desde ${formatInstantDate(totais.pagoDesde, { month: "2-digit", year: "numeric" })}` : undefined,
+            // O mês no formato do app ("Out/26"), e não "10/2026", que é só da
+            // família da DRE (15/10/2026).
+            detalhe: totais.pagoDesde ? `desde ${formatarCompetencia(competenciaDoInstante(totais.pagoDesde))}` : undefined,
           },
         ]}
       />

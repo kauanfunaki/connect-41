@@ -118,6 +118,8 @@ export function AcoesDaConta({
           {paga && (
             <ItemDoMenu
               icone={<Undo2 />}
+              // Desfazer fica no "⋯" mesmo quando é a única ação (D3, 15/10/2026).
+              danger
               disabled={pendente}
               onClick={() => {
                 close();
