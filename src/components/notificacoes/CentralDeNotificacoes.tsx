@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, Bell, EyeOff, Search, SlidersHorizontal } from "lucide-react";
-import { Input } from "@/components/ui/Input";
+import { Archive, Bell, EyeOff, SlidersHorizontal } from "lucide-react";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { Button } from "@/components/ui/Button";
 import { Contador } from "@/components/ui/Contador";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -170,13 +170,16 @@ export function CentralDeNotificacoes({
           role="search"
           onSubmit={(e) => {
             e.preventDefault();
-            irPara({ q: busca });
+            // Do formulário: no "limpar", o envio vem antes do estado mudar.
+            irPara({ q: String(new FormData(e.currentTarget).get("q") ?? "") });
           }}
         >
-          <Input
-            icon={<Search />}
+          {/* A caixa de busca do Connect, com o "limpar" próprio (15/10/2026). */}
+          <CampoDeBusca
+            name="q"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
+            enviarAoLimpar={Boolean(filtros.q)}
             placeholder="Buscar nas notificações…"
             aria-label="Buscar nas notificações"
           />

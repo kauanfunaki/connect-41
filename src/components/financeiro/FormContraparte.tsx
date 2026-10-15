@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Switch } from "@/components/ui/Switch";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
@@ -212,11 +213,12 @@ export function EditarContraparte({
               </CampoForm>
             )}
           </FieldGrid>
+          {/* Liga/desliga no interruptor do Connect (15/10/2026): era uma lista
+              de duas opções, Ativo/Inativo. Envia "1" ou "0", como a lista. */}
           <CampoForm label="Situação" htmlFor={`${id}-ativo`}>
-            <Select id={`${id}-ativo`} name="ativo" defaultValue={contraparte.ativo ? "1" : "0"} className="sm:max-w-[200px]">
-              <option value="1">Ativo</option>
-              <option value="0">Inativo</option>
-            </Select>
+            <div className="flex min-h-9 items-center">
+              <Switch id={`${id}-ativo`} name="ativo" value="1" valorDesligado="0" defaultChecked={contraparte.ativo} rotulo="Ativo" />
+            </div>
           </CampoForm>
           <Rodape erro={erro} pendente={pendente} rotulo="Salvar" onCancelar={() => setAberto(false)} />
         </form>

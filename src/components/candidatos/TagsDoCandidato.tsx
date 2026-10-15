@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { Popover } from "@/components/ui/Popover";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 
@@ -93,11 +93,11 @@ export function TagsDoCandidato({ todas, marcadas, alternar, podeEditar }: Props
               <p className="text-fs-2 text-fg-muted">Nenhuma tag cadastrada para o Recrutamento. Cadastre em Configurações › Setores e módulos › Tags.</p>
             ) : (
               <div className="space-y-2.5">
-                <Input
+                {/* Com o "limpar" do campo de busca do Connect (15/10/2026). */}
+                <CampoDeBusca
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar tag…"
-                  icon={<Search size={14} />}
                   compact
                   autoFocus
                   aria-label="Buscar tag"

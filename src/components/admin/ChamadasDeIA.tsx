@@ -13,6 +13,7 @@ import {
   moeda,
 } from "@/lib/ia/tela";
 import type { ChamadaNaLista } from "@/lib/ia/data";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 type Props = {
   chamadas: ChamadaNaLista[];
@@ -39,6 +40,49 @@ export function ChamadasDeIA({ chamadas, agora }: Props) {
   }
 
   return (
+    <>
+    {/* No celular, um cartão por chamada (15/10/2026): a tabela de 820px
+        rolava de lado. */}
+    <CartoesNoCelular>
+      {chamadas.map((c) => {
+        const desfecho = desfechoDaChamada(c, agora);
+        return (
+          <Cartao key={c.id}>
+            <TopoDoCartao
+              nome={c.agentLabel}
+              valor={
+                c.costCents === null ? (
+                  <span className="font-normal text-warning-fg" data-dica="Modelo fora da tabela de preço">
+                    não apurado
+                  </span>
+                ) : (
+                  moeda(c.costCents)
+                )
+              }
+            />
+            <InfoDoCartao>
+              {c.model} · {c.userName ?? TRIGGER_LABEL[c.trigger] ?? c.trigger}
+            </InfoDoCartao>
+            <InfoDoCartao className="tabular-nums">
+              {formatInstantDateTime(c.startedAt)}
+              {c.entityType && (
+                <>
+                  {" · "}
+                  <span className="font-mono">
+                    {c.entityType}
+                    {c.entityId ? `:${c.entityId.slice(0, 8)}` : ""}
+                  </span>
+                </>
+              )}
+            </InfoDoCartao>
+            <PeDoCartao>
+              <Selo tom={tomDaVariante(DESFECHO_VARIANTE[desfecho])}>{DESFECHO_LABEL[desfecho]}</Selo>
+            </PeDoCartao>
+            {c.error && <InfoDoCartao className="mt-1">{c.error}</InfoDoCartao>}
+          </Cartao>
+        );
+      })}
+    </CartoesNoCelular>
     <TabelaFiltravel
       linhas={chamadas.map((c) => ({
         id: c.id,
@@ -50,7 +94,7 @@ export function ChamadasDeIA({ chamadas, agora }: Props) {
         },
       }))}
     >
-      <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+      <TabelaNoDesktop padrao>
         <table className="w-full min-w-[820px]">
           <thead>
             <tr className="border-b border-border">
@@ -120,7 +164,8 @@ export function ChamadasDeIA({ chamadas, agora }: Props) {
             })}
           </tbody>
         </table>
-      </div>
+      </TabelaNoDesktop>
     </TabelaFiltravel>
+    </>
   );
 }

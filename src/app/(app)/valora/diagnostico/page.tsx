@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Aviso } from "@/components/ui/Aviso";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { CircleDashed, Clock, Handshake, TrendingDown } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { acessoAoValora, configDoValora } from "@/lib/valora/servidor";
@@ -54,6 +55,19 @@ export default async function DiagnosticoDaCarteiraPage() {
   const linhas = diagnosticarCarteira(propostas, horas, custos.custoDe, cfg.parametros, periodo.meses);
   const semHoras = propostas.length - linhas.length;
   const abaixoDoPiso = linhas.filter((l) => l.margemPct !== null && l.margemPct < cfg.parametros.margemPisoPct).length;
+
+  // A margem contra o piso e o alvo é a situação do cliente: o `Selo`, e não o
+  // `Badge` de categoria (2A, 08/10/2026). Na tabela e no cartão do celular.
+  const seloDaMargem = (margemPct: number | null) =>
+    margemPct === null ? (
+      "—"
+    ) : margemPct < cfg.parametros.margemPisoPct ? (
+      <Selo tom="perigo">{formatarNumero(margemPct, 1)}%</Selo>
+    ) : margemPct < cfg.parametros.margemAlvoPct ? (
+      <Selo tom="atencao">{formatarNumero(margemPct, 1)}%</Selo>
+    ) : (
+      <Selo tom="sucesso">{formatarNumero(margemPct, 1)}%</Selo>
+    );
 
   return (
     <PageContainer>
@@ -103,9 +117,34 @@ export default async function DiagnosticoDaCarteiraPage() {
         </Card>
       ) : (
         <>
+          {/* No celular, cartões (15/10/2026): a tabela rolava de lado, com a
+              margem fora da tela. */}
+          <CartoesNoCelular>
+            {linhas.map((l) => (
+              <Cartao key={l.companyId}>
+                <TopoDoCartao
+                  nome={
+                    <Link href={`/empresas/${l.companyId}`} className="text-fg hover:text-brand transition-colors">
+                      {l.cliente}
+                    </Link>
+                  }
+                  valor={formatarReais(l.honorario)}
+                />
+                <InfoDoCartao className="tabular-nums">
+                  {formatarNumero(l.horasMes, 1)} h/mês · custo real {formatarReais(l.custoMes)}/mês
+                </InfoDoCartao>
+                <InfoDoCartao className="tabular-nums">Alvo do Valora: {l.alvo === null ? "—" : formatarReais(l.alvo)}</InfoDoCartao>
+                {l.temHoraSemCusto && <InfoDoCartao>tem horas em setor sem custo no Valora</InfoDoCartao>}
+                <PeDoCartao>
+                  <span className="text-ui text-fg-muted">Margem real</span>
+                  {seloDaMargem(l.margemPct)}
+                </PeDoCartao>
+              </Cartao>
+            ))}
+          </CartoesNoCelular>
           {/* Casco padrão, centralizado (30/09). Sem funil: um cliente por
               linha, e o resto é valor — nada que se repita para filtrar. */}
-          <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+          <TabelaNoDesktop padrao>
             <table className="w-full min-w-[820px]">
               <thead>
                 <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
@@ -130,24 +169,14 @@ export default async function DiagnosticoDaCarteiraPage() {
                     <td className="px-3 tabular-nums">{formatarNumero(l.horasMes, 1)} h</td>
                     <td className="px-3 tabular-nums">{formatarReais(l.custoMes)}</td>
                     <td className="px-3 tabular-nums">
-                      {/* A margem contra o piso e o alvo é a situação do cliente: o
-                          `Selo`, e não o `Badge` de categoria (2A, 08/10/2026). */}
-                      {l.margemPct === null ? (
-                        "—"
-                      ) : l.margemPct < cfg.parametros.margemPisoPct ? (
-                        <Selo tom="perigo">{formatarNumero(l.margemPct, 1)}%</Selo>
-                      ) : l.margemPct < cfg.parametros.margemAlvoPct ? (
-                        <Selo tom="atencao">{formatarNumero(l.margemPct, 1)}%</Selo>
-                      ) : (
-                        <Selo tom="sucesso">{formatarNumero(l.margemPct, 1)}%</Selo>
-                      )}
+                      {seloDaMargem(l.margemPct)}
                     </td>
                     <td className="px-3 tabular-nums text-fg-secondary">{l.alvo === null ? "—" : formatarReais(l.alvo)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TabelaNoDesktop>
           <NotaDeFonte>
             Margem real = (honorário − impostos e variáveis de {cfg.parametros.variaveisPct}% − custo real) ÷ honorário. Vermelho: abaixo do piso de{" "}
             {cfg.parametros.margemPisoPct}%; amarelo: abaixo do alvo de {cfg.parametros.margemAlvoPct}%.

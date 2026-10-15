@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CampoComSugestoes } from "@/components/ui/CampoComSugestoes";
 import { Select } from "@/components/ui/Select";
+import { Switch } from "@/components/ui/Switch";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
-import { Switch } from "@/components/ui/Switch";
 import {
   criarCategoriaDaEmpresa,
   atualizarCategoriaDaEmpresa,
@@ -222,11 +222,11 @@ export function EditarCategoriaDaEmpresa({
             <CampoForm label="Grupo do plano" htmlFor={`${id}-grupo`}>
               <Input id={`${id}-grupo`} name="grupoDoPlano" defaultValue={categoria.grupo ?? ""} maxLength={120} />
             </CampoForm>
+            {/* Interruptor (15/10/2026), e não lista Ativa/Inativa; envia "sim" ou "nao". */}
             <CampoForm label="Situação" htmlFor={`${id}-ativa`} helper="Inativa some dos seletores e continua nos relatórios.">
-              <Select id={`${id}-ativa`} name="ativa" defaultValue={categoria.ativa ? "sim" : "nao"}>
-                <option value="sim">Ativa</option>
-                <option value="nao">Inativa</option>
-              </Select>
+              <div className="flex min-h-9 items-center">
+                <Switch id={`${id}-ativa`} name="ativa" value="sim" valorDesligado="nao" defaultChecked={categoria.ativa} rotulo="Ativa" />
+              </div>
             </CampoForm>
           </FieldGrid>
           <CampoForm label="Linha da DRE" htmlFor={`${id}-linha`}>

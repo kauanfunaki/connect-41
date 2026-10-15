@@ -3,6 +3,7 @@ import { Building2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusDot } from "@/components/shared/StatusDot";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { formatCnpj } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
@@ -67,13 +68,29 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
       {filiais.length > 0 && (
         <section>
           <h2 className="text-section font-semibold text-fg mb-3">Filiais ({filiais.length})</h2>
+          {/* No celular, um cartão por filial (15/10/2026): a tabela de 560px
+              rolava de lado. O cartão inteiro leva à ficha da filial. */}
+          <CartoesNoCelular>
+            {filiais.map((f) => (
+              <Link key={f.id} href={`/empresas/${f.id}`} className="block">
+                <Cartao className="hover:border-brand/40 transition-colors">
+                  <TopoDoCartao nome={nomeExibicao(f)} />
+                  <InfoDoCartao className="tnum">{formatCnpj(f.cnpj)}</InfoDoCartao>
+                  {localDe(f) && <InfoDoCartao>{localDe(f)}</InfoDoCartao>}
+                  <PeDoCartao>
+                    <StatusDot color={statusColor[f.status]} label={statusLabel[f.status]} />
+                  </PeDoCartao>
+                </Cartao>
+              </Link>
+            ))}
+          </CartoesNoCelular>
           <TabelaFiltravel
             linhas={filiais.map((f) => ({
               id: f.id,
               valores: { status: statusLabel[f.status], local: localDe(f) ?? "" },
             }))}
           >
-            <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
+            <TabelaNoDesktop padrao className="scroll-x">
               <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
@@ -104,7 +121,7 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TabelaNoDesktop>
           </TabelaFiltravel>
         </section>
       )}

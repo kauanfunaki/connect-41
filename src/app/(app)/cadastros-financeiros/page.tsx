@@ -13,9 +13,9 @@ import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Badge } from "@/components/ui/Badge";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
@@ -300,11 +300,12 @@ export default async function CadastrosFinanceirosPage({
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "cadastro", "cadastros")}
         busca={
-          <form method="get" action="/cadastros-financeiros">
+          <form method="get" action="/cadastros-financeiros" className="max-w-full">
             <input type="hidden" name="empresa" value={companyId} />
             {aba !== "fornecedores" && <input type="hidden" name="aba" value={aba} />}
             {situacao !== "ativos" && <input type="hidden" name="situacao" value={situacao} />}
-            <Input compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome ou documento…" aria-label="Buscar cadastro" className="w-72 max-w-full" />
+            {/* Com a lupa e o "limpar" das outras listas (15/10/2026). */}
+            <CampoDeBusca compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome ou documento…" aria-label="Buscar cadastro" className="w-72 max-w-full" />
           </form>
         }
         filtros={<FiltrosDaTela campos={FILTRO_DA_SITUACAO} naBarra />}
@@ -631,7 +632,53 @@ async function AbaDoPlano({
           return (
             <div key={kind} className="mb-6">
               <h3 className="text-section font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
-              <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+              {/* No celular, cartões como nas outras abas (15/10/2026): as duas
+                  tabelas rolavam de lado, com a linha da DRE fora da tela. */}
+              <CartoesNoCelular>
+                {doLado.map((c) => {
+                  const escondida = oculta.has(c.id);
+                  const propria = c.companyId !== null;
+                  return (
+                    <Cartao key={c.id} className={escondida || !c.active ? "opacity-60" : ""}>
+                      <TopoDoCartao nome={c.name} />
+                      <InfoDoCartao className="tabular-nums">
+                        {c.planGroup ?? "Sem grupo do plano"} · {lancamentos.get(c.id) ?? 0} lançamento(s)
+                      </InfoDoCartao>
+                      <div className="mt-2">
+                        {podeEditar && !escondida ? (
+                          <LinhaDaDre
+                            companyId={companyId}
+                            categoryId={c.id}
+                            valor={propria ? (grupoDeTexto(c.dreGroup) ?? "") : (excecao.get(c.id) ?? "")}
+                            linhas={linhas}
+                            rotuloDoPadrao={propria ? undefined : rotulo(c.dreGroup)}
+                          />
+                        ) : (
+                          <InfoDoCartao>Linha da DRE: {rotulo(excecao.get(c.id) ?? c.dreGroup)}</InfoDoCartao>
+                        )}
+                      </div>
+                      <PeDoCartao>
+                        {propria && <Badge variant="info">{c.omieCode ? "Do Omie" : "Desta empresa"}</Badge>}
+                        {escondida && <StatusDot color="var(--c41-fg-muted)" label="Não usada aqui" />}
+                        {!c.active && <StatusDot color="var(--c41-fg-muted)" label="Inativa" />}
+                        {podeEditar && (
+                          <span className="ml-auto">
+                            {propria ? (
+                              <EditarCategoriaDaEmpresa
+                                categoria={{ id: c.id, nome: c.name, grupo: c.planGroup, linha: grupoDeTexto(c.dreGroup) ?? "", ativa: c.active }}
+                                linhas={linhas}
+                              />
+                            ) : (
+                              <EsconderDoPadrao companyId={companyId} categoryId={c.id} oculta={escondida} />
+                            )}
+                          </span>
+                        )}
+                      </PeDoCartao>
+                    </Cartao>
+                  );
+                })}
+              </CartoesNoCelular>
+              <TabelaNoDesktop padrao>
                 {/* Largura fixa e as mesmas colunas nas duas tabelas
                     (08/10/2026): cada uma calculava a sua, e "Categoria" e
                     "Lançamentos" ficavam desalinhados entre Despesas e Receitas. */}
@@ -701,7 +748,7 @@ async function AbaDoPlano({
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TabelaNoDesktop>
             </div>
           );
         })

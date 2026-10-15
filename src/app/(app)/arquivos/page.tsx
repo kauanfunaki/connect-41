@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Building2, CircleAlert, FolderInput, FolderTree, Inbox, Search, Trash2 } from "lucide-react";
+import { Building2, CircleAlert, FolderInput, FolderTree, Inbox, Trash2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { Pagination } from "@/components/shared/Pagination";
 import { isFullWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Contador } from "@/components/ui/Contador";
 import { Selo } from "@/components/ui/Selo";
@@ -128,12 +128,11 @@ export default async function ArquivosPage({ searchParams }: { searchParams: Pro
               Empresas
             </h2>
             <form method="get" role="search" className="w-full sm:w-72">
-              <Input
+              {/* Com o "limpar" próprio do campo de busca (15/10/2026). */}
+              <CampoDeBusca
                 id="arquivos-empresa"
                 name="empresa"
-                type="search"
                 compact
-                icon={<Search size={14} />}
                 defaultValue={termo}
                 placeholder="Nome ou CNPJ"
                 aria-label="Buscar empresa por nome ou CNPJ"
