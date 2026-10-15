@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
-import { Video, Check, Sparkles, MessageCircle, Headset, AlertTriangle } from "lucide-react";
+import { Video, Sparkles, MessageCircle, Headset } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
@@ -24,6 +24,7 @@ import { ServicoDoSerpro } from "@/components/admin/ServicoDoSerpro";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { formatCnpj } from "@/lib/format";
 import { Aviso } from "@/components/ui/Aviso";
+import { Selo } from "@/components/ui/Selo";
 
 const ERROR_LABEL: Record<string, string> = {
   "sem-permissao": "Sem permissão para conectar integrações.",
@@ -157,22 +158,13 @@ export default async function IntegracoesPage({
             </span>
             <div className="min-w-0">
               <p className="text-fs-4 font-medium text-fg">Google Calendar / Meet</p>
-              {!isGoogleConfigured() ? (
-                <p className="text-fs-2 text-fg-muted">
-                  Indisponível — credenciais do Google não configuradas no servidor (GOOGLE_CLIENT_ID/SECRET)
-                  {google ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}
-                </p>
-              ) : google && googleHealth === "NEEDS_RECONNECT" ? (
-                <p className="text-fs-2 text-danger flex items-center gap-1">
-                  <AlertTriangle size={12} /> Conexão expirada{google.accountEmail ? ` (${google.accountEmail})` : ""} — reconecte para voltar a agendar
-                </p>
-              ) : google ? (
-                <p className="text-fs-2 text-success-fg flex items-center gap-1">
-                  <Check size={12} /> Conectado {google.accountEmail ? `como ${google.accountEmail}` : ""}
-                </p>
-              ) : (
-                <p className="text-fs-2 text-fg-muted">Não conectado</p>
-              )}
+              <SituacaoDaConta
+                configurado={isGoogleConfigured()}
+                indisponivel="o Google ainda não foi configurado no servidor do Connect; fale com o suporte"
+                conectada={Boolean(google)}
+                expirada={Boolean(google) && googleHealth === "NEEDS_RECONNECT"}
+                email={google?.accountEmail ?? null}
+              />
             </div>
           </div>
           {isGoogleConfigured() &&
@@ -195,22 +187,13 @@ export default async function IntegracoesPage({
             </span>
             <div className="min-w-0">
               <p className="text-fs-4 font-medium text-fg">Microsoft Teams / Outlook</p>
-              {!isMicrosoftConfigured() ? (
-                <p className="text-fs-2 text-fg-muted">
-                  Indisponível — credenciais da Microsoft não configuradas no servidor (MICROSOFT_CLIENT_ID/SECRET)
-                  {microsoft ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}
-                </p>
-              ) : microsoft && microsoftHealth === "NEEDS_RECONNECT" ? (
-                <p className="text-fs-2 text-danger flex items-center gap-1">
-                  <AlertTriangle size={12} /> Conexão expirada{microsoft.accountEmail ? ` (${microsoft.accountEmail})` : ""} — reconecte para voltar a agendar
-                </p>
-              ) : microsoft ? (
-                <p className="text-fs-2 text-success-fg flex items-center gap-1">
-                  <Check size={12} /> Conectado {microsoft.accountEmail ? `como ${microsoft.accountEmail}` : ""}
-                </p>
-              ) : (
-                <p className="text-fs-2 text-fg-muted">Não conectado</p>
-              )}
+              <SituacaoDaConta
+                configurado={isMicrosoftConfigured()}
+                indisponivel="a Microsoft ainda não foi configurada no servidor do Connect; fale com o suporte"
+                conectada={Boolean(microsoft)}
+                expirada={Boolean(microsoft) && microsoftHealth === "NEEDS_RECONNECT"}
+                email={microsoft?.accountEmail ?? null}
+              />
             </div>
           </div>
           {isMicrosoftConfigured() &&
@@ -271,5 +254,43 @@ export default async function IntegracoesPage({
         </div>
       )}
     </PageContainer>
+  );
+}
+
+/**
+ * A situação da conta de reunião no `Selo`, como a vitrine logo acima
+ * (15/10/2026): era texto colorido com ícone — "Conectado como…" em verde e
+ * "Conexão expirada" em vermelho. O e-mail e o que fazer vão ao lado, em cinza.
+ */
+function SituacaoDaConta({
+  configurado,
+  indisponivel,
+  conectada,
+  expirada,
+  email,
+}: {
+  configurado: boolean;
+  /** Por que não dá para conectar, sem o nome das variáveis do servidor
+   *  (15/10/2026): quem lê aqui não as configura. */
+  indisponivel: string;
+  conectada: boolean;
+  expirada: boolean;
+  email: string | null;
+}) {
+  const [selo, texto] = !configurado
+    ? [
+        <Selo key="s" tom="neutro">Indisponível</Selo>,
+        `${indisponivel}${conectada ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}`,
+      ]
+    : expirada
+      ? [<Selo key="s" tom="perigo">Conexão expirada</Selo>, `${email ? `${email} — ` : ""}reconecte para voltar a agendar`]
+      : conectada
+        ? [<Selo key="s" tom="sucesso">Conectado</Selo>, email ? `como ${email}` : null]
+        : [<Selo key="s" tom="neutro">Não conectado</Selo>, null];
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-fs-2 text-fg-muted">
+      {selo}
+      {texto && <span className="min-w-0 break-words">{texto}</span>}
+    </p>
   );
 }

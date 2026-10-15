@@ -38,7 +38,8 @@ export function ImportarFolhaCsvForm({ action }: Props) {
   return (
     <div className="border-t border-border pt-4">
       <div className="flex items-center justify-between gap-3 mb-2">
-        <h3 className="text-ui font-medium text-fg">Importar via CSV</h3>
+        {/* O rótulo padrão de bloco, como o "Novo evento" (P19, 15/10/2026). */}
+        <h3 className="c41-rotulo">Importar via CSV</h3>
         {/* Revisão de 05/10: botão não é link — baixar o modelo é ação, não navegação. */}
         <Button variant="secondary" size="xs" href={TEMPLATE_URL} download="modelo-folha.csv">
           <Download size={13} />

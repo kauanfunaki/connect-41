@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
+import { Aviso } from "@/components/ui/Aviso";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { formatInstantDate, formatarReais } from "@/lib/format";
@@ -54,10 +55,26 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
       )}
     </div>
   );
+  // No `Aviso` neutro (15/10/2026): era uma caixa cinza montada à mão. A
+  // rejeição já está no selo; aqui é só o porquê.
   const motivo = proposta.status === "REJEITADA" && proposta.notes && (
-    <p className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg">
-      <span className="font-medium">Motivo da rejeição:</span> {proposta.notes}
-    </p>
+    <Aviso tom="neutro" className="mb-4">
+      <p className="text-fg break-words">
+        <span className="font-medium">Motivo da rejeição:</span> {proposta.notes}
+      </p>
+    </Aviso>
+  );
+
+  // Trilha no lugar do "← Voltar" (P04, 15/10/2026), nas duas variações da
+  // tela: o pai é sempre a lista de propostas da Ceci.
+  const trilha = (
+    <Breadcrumb
+      items={[
+        { label: "Processos", href: "/processos" },
+        { label: "Ceci · Societário", href: "/societario/ia" },
+        { label: proposta.title, truncate: true },
+      ]}
+    />
   );
 
   if (proposta.agentCode === AGENTE_VARREDURA) {
@@ -66,7 +83,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
     const itens = pendente ? payload.avaliacao.itens : payload.avaliacao.itens.filter((i) => proposta.status === "REJEITADA" || aplicadas.has(i.chave));
     return (
       <PageContainer>
-        <BackButton className="mb-3" />
+        {trilha}
         <PageHeader
           title={proposta.title}
           subtitle={
@@ -127,7 +144,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
     const l = payload.leitura;
     return (
       <PageContainer>
-        <BackButton className="mb-3" />
+        {trilha}
         <PageHeader
           title={proposta.title}
           subtitle={

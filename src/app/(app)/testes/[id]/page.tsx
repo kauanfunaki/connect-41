@@ -6,7 +6,6 @@ import { getAuthContext, canWrite, canActOnSector, podeExcluir } from "@/lib/aut
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { scopedAssessmentLinkWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo } from "@/components/ui/Selo";
 import { LinkDoTeste } from "@/components/teste/LinkDoTeste";
@@ -91,9 +90,9 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
 
   return (
     <PageContainer>
-      {/* Trilha antes do "Voltar", como na candidatura e no resto do app. */}
+      {/* Só a trilha, sem o "← Voltar" (P04, 15/10/2026): a tela tem pai fixo, e
+          trilha e "Voltar" juntos diziam a mesma coisa duas vezes. */}
       <Breadcrumb items={[{ label: "Testes", href: "/testes" }, { label: link.person.name, truncate: true }]} />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title={

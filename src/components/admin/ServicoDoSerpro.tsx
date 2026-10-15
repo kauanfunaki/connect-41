@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -42,9 +41,10 @@ export function ServicoDoSerpro({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/autorizacoes/consumo" className="inline-flex items-center h-8 px-2 text-ui text-fg-muted hover:text-brand transition-colors">
+          {/* Botão, e não `<Link>` com altura de botão escrita à mão (15/10/2026). */}
+          <Button href="/autorizacoes/consumo" variant="secondary" size="sm">
             Consumo do mês
-          </Link>
+          </Button>
           <Button
             size="sm"
             variant="secondary"

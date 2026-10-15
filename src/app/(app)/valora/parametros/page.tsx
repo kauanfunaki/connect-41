@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { Accordion } from "@/components/ui/Accordion";
 import { FormParametros } from "@/components/valora/FormParametros";
@@ -23,9 +23,9 @@ export default async function ParametrosDoValoraPage() {
 
   return (
     <PageContainer>
-      {/* O voltar do app (o `BackButton` com destino), e não um botão no lugar
-          das ações — um desenho só para "voltar" (07/10/2026). */}
-      <BackButton href="/valora" rotulo="Propostas" className="mb-3" />
+      {/* A trilha "Valora › Parâmetros" no lugar do "← Propostas" (P04,
+          15/10/2026): a tela tem pai fixo, e trilha e "Voltar" não vão juntos. */}
+      <Breadcrumb items={[{ label: "Valora", href: "/valora" }, { label: "Parâmetros" }]} />
       <PageHeader
         title="Parâmetros do Valora"
         subtitle="Quanto custa cada setor e que margem o preço tem de entregar. Os tempos das atividades vêm dos questionários dos setores."

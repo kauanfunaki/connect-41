@@ -8,7 +8,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { listarCtePorRota, ErroDoSped } from "@/lib/sped/client";
@@ -18,6 +18,8 @@ import { alcanceDaEquipe } from "../alcance";
 import { formatCnpj } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -113,7 +115,8 @@ export default async function CtePage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): a tela sai de Documentos fiscais. */}
+      <Breadcrumb items={[{ label: "Documentos fiscais", href: "/documentos-fiscais" }, { label: "CT-e" }]} />
       <PageHeader
         title="CT-e"
         subtitle={
@@ -177,21 +180,41 @@ export default async function CtePage({
             <Aviso>
               <p className="text-fg">{erro}</p>
             </Aviso>
-          ) : documentos.length === 0 ? (
-            <Card>
-              <EmptyState
-                icon={<Truck />}
-                title="Nenhum CT-e nesta janela"
-                description="Ajuste o período de rota. Lembrando que a janela é de data de rota, e não de competência — elas não coincidem."
-              />
-            </Card>
           ) : (
             <>
-              {/* Casco padrão (30/09). Sem funil por coluna: a página é um
-                  pedaço de 100 da janela, por cursor, e o SPED só filtra por
-                  raiz e rota — funil nas linhas da tela mentiria sobre as
-                  outras páginas. */}
-              <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+              {/* No casco com a barra (15/10/2026): a contagem ficava num texto
+                  embaixo da tabela e o vazio era um cartão à parte. Sem funil
+                  por coluna: a página é um pedaço de 100 da janela, por cursor,
+                  e o SPED só filtra por raiz e rota — funil nas linhas da tela
+                  mentiria sobre as outras páginas. */}
+              <CascoDaTabela contagem={`${contarItens(documentos.length, "CT-e", "CT-e")} nesta página`}>
+                {documentos.length === 0 ? (
+                  <EmptyState
+                    icon={<Truck />}
+                    title="Nenhum CT-e nesta janela"
+                    description="Ajuste o período de rota. Lembrando que a janela é de data de rota, e não de competência — elas não coincidem."
+                  />
+                ) : (
+                  <>
+                    {/* No celular, cartões (15/10/2026): a tabela rolava de lado,
+                        com o PDF fora da tela. */}
+                    <CartoesNoCelular>
+                      {documentos.map((d) => (
+                        <Cartao key={d.identificador}>
+                          <TopoDoCartao nome={<span className="tabular-nums">CT-e {d.numero}{d.serie ? ` · série ${d.serie}` : ""}</span>} />
+                          <InfoDoCartao className="tabular-nums">
+                            Competência {d.competencia} · emitente {d.cnpj_emitente ? formatCnpj(d.cnpj_emitente) : "—"}
+                          </InfoDoCartao>
+                          <PeDoCartao>
+                            <Badge variant={d.sentido === "saida" ? "info" : "warning"}>{SENTIDO_LABEL[d.sentido] ?? d.sentido}</Badge>
+                            <span className="ml-auto">
+                              {d.renderizavel && d.chave ? <AbrirPdf chave={d.chave} raiz={raiz} /> : <span className="text-ui text-fg-muted">sem XML</span>}
+                            </span>
+                          </PeDoCartao>
+                        </Cartao>
+                      ))}
+                    </CartoesNoCelular>
+                    <TabelaNoDesktop padrao>
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
@@ -222,17 +245,7 @@ export default async function CtePage({
                         </td>
                         <td className="px-3 py-2">
                           {d.renderizavel && d.chave ? (
-                            // Botão, e não link de texto (30/09) — mas num
-                            // formulário GET, e não no `Button href`: o `href`
-                            // vira `<Link>`, que pré-carrega a rota ao aparecer
-                            // na tela, e aqui cada linha pediria o PDF ao SPED.
-                            <form action="/api/documentos-fiscais/cte/pdf" method="get" target="_blank" className="inline-flex">
-                              <input type="hidden" name="chave" value={d.chave} />
-                              <input type="hidden" name="raiz" value={raiz} />
-                              <Button type="submit" variant="secondary" size="xs">
-                                <FileText size={11} /> Abrir
-                              </Button>
-                            </form>
+                            <AbrirPdf chave={d.chave} raiz={raiz} />
                           ) : (
                             <span className="text-fg-muted">sem XML</span>
                           )}
@@ -241,25 +254,44 @@ export default async function CtePage({
                     ))}
                   </tbody>
                 </table>
-              </div>
+                    </TabelaNoDesktop>
+                  </>
+                )}
+                {documentos.length > 0 && (
+                  <p className="text-micro text-fg-muted mt-3">O valor não vem na listagem — só dentro do XML, por documento.</p>
+                )}
+              </CascoDaTabela>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                <p className="text-fs-2 text-fg-muted">
-                  {documentos.length} CT-e nesta página. O valor não vem na listagem — só dentro do
-                  XML, por documento.
-                </p>
-                {/* Só "próxima": a paginação é por cursor, sem total nem
-                    volta — por isso não é o `Pagination`. */}
-                {proximoCursor && (
+              {/* Só "próxima": a paginação é por cursor, sem total nem
+                  volta — por isso não é o `Pagination`. */}
+              {proximoCursor && (
+                <div className="flex justify-end mt-4">
                   <Button href={url({ cursor: proximoCursor })} variant="secondary" size="sm">
                     Próxima página <ChevronRight size={14} />
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
         </>
       )}
     </PageContainer>
+  );
+}
+
+/**
+ * Botão, e não link de texto (30/09) — mas num formulário GET, e não no
+ * `Button href`: o `href` vira `<Link>`, que pré-carrega a rota ao aparecer na
+ * tela, e aqui cada linha pediria o PDF ao SPED.
+ */
+function AbrirPdf({ chave, raiz }: { chave: string; raiz: string }) {
+  return (
+    <form action="/api/documentos-fiscais/cte/pdf" method="get" target="_blank" className="inline-flex">
+      <input type="hidden" name="chave" value={chave} />
+      <input type="hidden" name="raiz" value={raiz} />
+      <Button type="submit" variant="secondary" size="xs">
+        <FileText size={11} /> Abrir
+      </Button>
+    </form>
   );
 }

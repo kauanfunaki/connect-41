@@ -45,7 +45,8 @@ import {
 } from "@/app/(app)/kanban/actions";
 import { ListaDeHoras } from "@/components/shared/ListaDeHoras";
 import { campoDaData } from "@/lib/societario/datas";
-import { boardPath } from "@/lib/kanbanPaths";
+import { boardPath, trilhaDaLista } from "@/lib/kanbanPaths";
+import { getSectorMaps } from "@/lib/sectors";
 import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
@@ -94,7 +95,12 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const [pipeline, item] = await Promise.all([
     prisma.pipeline.findFirst({
       where: { id, ...accessiblePipelineWhere(ctx) },
-      include: { stages: { orderBy: { order: "asc" } } },
+      include: {
+        stages: { orderBy: { order: "asc" } },
+        // Para a trilha da página cheia (setor › espaço › pasta › lista).
+        space: { select: { id: true, name: true } },
+        folder: { select: { id: true, name: true } },
+      },
     }),
     prisma.pipelineItem.findFirst({
       where: { id: itemId, tenantId },
@@ -291,19 +297,16 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   // forma independente em vez de uma rolagem única do modal inteiro (que
   // obrigava rolar até o fim só pra alcançar a caixa de comentário).
   const isModal = !showBreadcrumb;
+  const nomeDoSetor = showBreadcrumb
+    ? ((await getSectorMaps(tenantId)).labels[pipeline.sectorCode] ?? pipeline.sectorCode)
+    : pipeline.sectorCode;
 
   return (
     <div className={isModal ? "flex flex-col h-full min-h-0" : undefined}>
-      {/* A trilha pelo `Breadcrumb` compartilhado (07/10/2026) — era escrita à mão. */}
+      {/* A trilha pelo `Breadcrumb` compartilhado (07/10/2026) — era escrita à
+          mão. No caminho que a lista mostra, e não a partir de "Kanban" (15/10/2026). */}
       {showBreadcrumb && (
-        <Breadcrumb
-          className="mb-4!"
-          items={[
-            { label: "Kanban", href: "/kanban" },
-            { label: pipeline.name, href: `/kanban/${id}`, truncate: true },
-            { label: title, truncate: true },
-          ]}
-        />
+        <Breadcrumb className="mb-4!" items={[...trilhaDaLista(pipeline, nomeDoSetor), { label: title, truncate: true }]} />
       )}
 
       <div className={isModal ? "mb-3 pr-12" : "mb-3"}>
@@ -362,7 +365,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           <TaskFieldsPanel
             canAct={canAct}
             itemId={itemId}
-            stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}
+            stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
             currentStageId={item.stageId}
             moveAction={moverItem}
             dueDate={item.dueDate ? item.dueDate.toISOString() : null}
@@ -393,10 +396,10 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
           <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
 
-          {/* Rodapé do detalhamento — quatro seções colapsáveis sem cartão nem
-              borda em volta, no formato do ClickUp. Cada uma só aparece se
-              tiver conteúdo ou se o usuário puder criar algo ali. */}
-          <div className="flex flex-col">
+          {/* Rodapé do detalhamento — as seções em blocos recolhíveis, que
+              começam fechados com o resumo na linha (15/10/2026). Cada uma só
+              aparece se tiver conteúdo ou se o usuário puder criar algo ali. */}
+          <div className="flex flex-col gap-2">
             {!item.parentItemId && (subtasks.length > 0 || canAct) && (
               <DetailSection
                 title="Subtarefas"

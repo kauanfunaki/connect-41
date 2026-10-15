@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { StatusDot } from "@/components/shared/StatusDot";
-import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
+import { AcoesDoAssunto } from "@/components/admin/AcoesDoAssunto";
 import { alternarAssunto } from "./actions";
 
 /**
@@ -55,23 +55,7 @@ export default async function AssuntosPage() {
                 {a._count.requests} {a._count.requests === 1 ? "solicitação" : "solicitações"}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button href={`/admin/assuntos/${a.id}/editar`} variant="secondary" size="sm">
-                Editar
-              </Button>
-              <ConfirmActionButton
-                action={alternarAssunto.bind(null, a.id)}
-                label={a.active ? "Desativar" : "Ativar"}
-                title={a.active ? `Desativar "${a.label}"?` : `Ativar "${a.label}"?`}
-                description={
-                  a.active
-                    ? "Some da lista do cliente. As solicitações já abertas com ele continuam como estão."
-                    : "Volta para a lista que o cliente vê ao abrir uma solicitação."
-                }
-                confirmLabel={a.active ? "Desativar" : "Ativar"}
-                destructive={a.active}
-              />
-            </div>
+            <AcoesDoAssunto id={a.id} nome={a.label} ativo={a.active} alternar={alternarAssunto.bind(null, a.id)} />
           </div>
         ))}
       </div>

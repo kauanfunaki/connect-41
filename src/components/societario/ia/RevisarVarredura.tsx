@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Aviso } from "@/components/ui/Aviso";
+import { useToast } from "@/components/ui/Toast";
 import { RejeitarProposta } from "./RejeitarProposta";
 import type { AcaoDaIa } from "@/app/(app)/societario/ia/actions";
 import type { Sinal, ItemAvaliado, Urgencia } from "@/lib/societario/varredura";
@@ -48,7 +50,9 @@ export function RevisarVarredura({
   const router = useRouter();
   const sinalDa = new Map(sinais.map((s) => [s.chave, s]));
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set(itens.map((i) => i.chave)));
-  const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  // Sucesso no toast, erro no `Aviso` (15/10/2026), como na revisão de contrato.
+  const toast = useToast();
+  const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
   return (
@@ -106,7 +110,7 @@ export function RevisarVarredura({
         })}
       </ul>
 
-      {msg && <p className={`text-ui ${msg.tipo === "erro" ? "text-danger" : "text-success-fg"}`}>{msg.texto}</p>}
+      {erro && <Aviso>{erro}</Aviso>}
 
       {/* Mesmo rodapé da revisão de contrato: rejeitar à esquerda, primário à direita. */}
       {podeAplicar && (
@@ -117,11 +121,11 @@ export function RevisarVarredura({
             disabled={pendente || marcadas.size === 0}
             onClick={() =>
               startTransition(async () => {
-                setMsg(null);
+                setErro(null);
                 const r = await acoes.aplicar(propostaId, [...marcadas]);
-                if ("error" in r) setMsg({ tipo: "erro", texto: r.error });
+                if ("error" in r) setErro(r.error);
                 else {
-                  setMsg({ tipo: "ok", texto: r.mensagem ?? "Aplicado." });
+                  toast.success(r.mensagem ?? "Aplicado.");
                   router.refresh();
                 }
               })

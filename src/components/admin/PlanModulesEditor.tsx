@@ -202,10 +202,11 @@ function JanelaDosModulos({
                 aberto={abertos.has(g.chave)}
                 onAbertoChange={(aberto) => alternarBloco(g.chave, aberto)}
                 espacoDaAcao="pr-36"
+                // Botão, e não texto azul de link (15/10/2026): marcar é ação.
                 acao={
                   <Button
-                    variant="link"
-                    className="text-ui leading-5"
+                    variant="secondary"
+                    size="xs"
                     onClick={() => marcar(doSetor, !todos)}
                     aria-label={`${todos ? "Desmarcar" : "Marcar"} todos os módulos de ${g.rotulo}`}
                   >

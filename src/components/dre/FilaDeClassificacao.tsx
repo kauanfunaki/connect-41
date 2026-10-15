@@ -299,7 +299,7 @@ function ForaDoPadrao({
 
         {desconsideradas.length > 0 && (
           <section className="flex flex-col gap-1">
-            <h3 className="text-micro font-semibold uppercase tracking-wide text-fg-muted">Desconsideradas no DRE</h3>
+            <h3 className="c41-rotulo">Desconsideradas no DRE</h3>
             <ul className="divide-y divide-border">
               {desconsideradas.map((d) => (
                 <li key={`${d.nome}|${d.categoryId ?? ""}`} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-1.5">
@@ -327,7 +327,7 @@ function ForaDoPadrao({
 
         {excecoes.length > 0 && (
           <section className="flex flex-col gap-1">
-            <h3 className="text-micro font-semibold uppercase tracking-wide text-fg-muted">Fora do padrão nesta empresa</h3>
+            <h3 className="c41-rotulo">Fora do padrão nesta empresa</h3>
             <ul className="divide-y divide-border">
               {excecoes.map((e) => (
                 <li key={e.categoryId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-1.5">

@@ -50,8 +50,11 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
 
   const configured = await isChatwootConfigured(ctx.tenantId);
   if (!configured) {
+    // Com o título da tela mesmo sem o Chatwoot (P04, 15/10/2026): abria só
+    // com o vazio, sem dizer em que tela a pessoa estava.
     return (
       <PageContainer>
+        <PageHeader title="Conversas" subtitle="Auditoria de atendimentos do Chatwoot. Somente leitura." />
         <EmptyState
           icon={<MessageCircle />}
           title="Chatwoot não configurado"

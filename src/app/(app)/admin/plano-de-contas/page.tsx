@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { Landmark } from "lucide-react";
+import { AlertTriangle, Landmark } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -68,30 +69,23 @@ export default async function PlanoDeContasPage() {
       </p>
 
       {ativasParaPagar === 0 && (
-        <Card className="mb-6 border-warning/30 bg-warning/8">
-          <div className="px-4 py-3 space-y-1">
-            <p className="text-fs-3 font-medium text-fg">
-              Nenhuma categoria ativa em contas a pagar
-            </p>
-            <p className="text-fs-2 text-fg-muted">
-              Enquanto isso, nenhum documento fiscal vira conta a pagar: o lançamento é recusado
-              por falta de categoria. Cadastre ao menos uma para destravar o fluxo.
-            </p>
-          </div>
-        </Card>
+        // No `Aviso` de atenção (15/10/2026): era um cartão âmbar montado à mão.
+        <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-6">
+          <p className="font-medium text-fg">Nenhuma categoria ativa em contas a pagar</p>
+          <p className="text-fs-2 text-fg-muted mt-0.5">
+            Enquanto isso, nenhum documento fiscal vira conta a pagar: o lançamento é recusado
+            por falta de categoria. Cadastre ao menos uma para destravar o fluxo.
+          </p>
+        </Aviso>
       )}
 
       {categorias.length === 0 ? (
         <Card>
+          {/* Sem repetir o "+ Nova categoria": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<Landmark />}
             title="Plano de contas vazio"
-            description="Cadastre as categorias que classificam despesas e receitas. Elas aparecem no dropdown quando um documento fiscal vira lançamento."
-            action={
-              <Button href="/admin/plano-de-contas/novo" variant="primary" className="font-medium">
-                + Nova categoria
-              </Button>
-            }
+            description="Use “Carregar o plano padrão” ou “+ Nova categoria”, no alto da tela, para cadastrar as categorias que classificam despesas e receitas. Elas aparecem na lista quando um documento fiscal vira lançamento."
           />
         </Card>
       ) : (
@@ -101,7 +95,7 @@ export default async function PlanoDeContasPage() {
             return (
               <div key={kind}>
                 <div className="flex items-baseline gap-2 mb-2">
-                  <h2 className="text-fs-5 font-medium text-fg">{titulo}</h2>
+                  <h2 className="text-section font-semibold text-fg">{titulo}</h2>
                   <span className="text-fs-2 text-fg-muted">{nota}</span>
                 </div>
                 {doLado.length === 0 ? (
@@ -152,7 +146,7 @@ export default async function PlanoDeContasPage() {
                       <TabelaNoDesktop padrao>
                         <table className="w-full min-w-[820px]">
                           <thead>
-                            <tr className="border-b border-border text-fs-1 uppercase tracking-wide text-fg-muted">
+                            <tr className="border-b border-border">
                               <th className="px-4 py-3">Categoria</th>
                               <th className="px-4 py-3">
                                 <FiltroDaColuna rotulo="Grupo" chave="grupo" />

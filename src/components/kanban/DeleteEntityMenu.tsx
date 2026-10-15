@@ -4,7 +4,8 @@ import { Trash2 } from "lucide-react";
 
 import { useConfirm } from "@/components/ui/useConfirm";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
-import { Button } from "@/components/ui/Button";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 
 type Props = {
   /** Como o item se chama no texto do diálogo: "espaço", "pasta", "lista". */
@@ -17,6 +18,10 @@ type Props = {
 // inteiro é um <Link>, então este menu é renderizado como IRMÃO dele, posicionado
 // por cima — nunca dentro. Um <button> dentro de um <a> é HTML inválido e, na
 // prática, o clique no menu também navegaria.
+//
+// Desde 15/10/2026 é o "⋯" de verdade (`MenuDeMaisAcoes`): desenhava um botão
+// vermelho "Excluir" à vista em cada cartão e linha, e excluir fica no menu
+// mesmo sendo a única ação (D3).
 //
 // A action devolve { error } em vez de lançar: erro lançado em server action é
 // mascarado pelo Next em produção ("An error occurred in the Server Components
@@ -43,9 +48,20 @@ export function DeleteEntityMenu({ kind, name, action }: Props) {
 
   return (
     <>
-      <Button variant="danger" size="xs" onClick={handleDelete} aria-label={`Excluir ${kind} ${name}`}>
-        <Trash2 size={12} /> Excluir
-      </Button>
+      <MenuDeMaisAcoes rotulo={`Mais ações de ${name}`} align="right" width={180}>
+        {({ close }) => (
+          <ItemDoMenu
+            icone={<Trash2 />}
+            danger
+            onClick={() => {
+              close();
+              handleDelete();
+            }}
+          >
+            Excluir {kind}
+          </ItemDoMenu>
+        )}
+      </MenuDeMaisAcoes>
       {dialog}
     </>
   );

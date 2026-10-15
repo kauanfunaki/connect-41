@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Briefcase } from "lucide-react";
+import { TelaDeAvisoPublica } from "@/components/publico/TelaDeAvisoPublica";
 import { urlDoHub } from "@/lib/carreiras/enderecoDeCarreiras";
 
 // Dinâmica de propósito: o destino vem de variável de ambiente lida em
@@ -31,15 +33,15 @@ export default function CarreirasSemEmpresaPage() {
   const hub = urlDoHub();
   if (hub) redirect(hub);
 
+  // No aviso único das telas públicas (15/10/2026), como o "Vaga não
+  // encontrada": eram um título e um texto soltos.
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-[440px] text-center">
-        <h1 className="text-title font-semibold text-fg">Portal de vagas</h1>
-        <p className="text-body text-fg-muted mt-2">
-          As vagas ficam na página de cada empresa. Use o link de carreiras que a empresa divulgou — ele termina com o
-          nome dela, depois de <span className="font-mono">/carreiras/</span>.
-        </p>
-      </div>
+    <main>
+      <TelaDeAvisoPublica
+        titulo="Portal de vagas"
+        texto="As vagas ficam na página de cada empresa. Use o link de carreiras que a empresa divulgou — ele termina com o nome dela, depois de “/carreiras/”."
+        icone={<Briefcase />}
+      />
     </main>
   );
 }

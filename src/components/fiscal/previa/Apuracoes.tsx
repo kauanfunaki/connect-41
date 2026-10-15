@@ -3,9 +3,12 @@
 import { Select } from "@/components/ui/Select";
 
 import { useState } from "react";
-import { Calculator, Plus, Trash2 } from "lucide-react";
+import { Calculator, Plus, Trash2, TrendingUp, PiggyBank, Landmark, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
+import { Aviso } from "@/components/ui/Aviso";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { IconButton } from "@/components/ui/IconButton";
 import { useConfirm } from "@/components/ui/useConfirm";
@@ -28,21 +31,26 @@ export function FormParametrosFiscal() {
   }}><div className="grid gap-4 sm:grid-cols-4">{(["icms", "ipi", "pis", "cofins"] as const).map((campo) => <CampoFiscal key={campo} nome={campo.toUpperCase()}><Input type="number" required min="0" max="100" step="0.01" suffix="%" aria-label={`Alíquota de ${campo.toUpperCase()}`} value={parametros[campo]} onChange={(e) => setParametros({ ...parametros, [campo]: Number(e.target.value) })} /></CampoFiscal>)}</div><Button className="mt-5" type="submit" disabled={!alterados.length}>Salvar parâmetros de teste</Button></form></BlocoFiscal>{dialog}</>;
 }
 
-function FormAjuste({ imposto, estadual }: { imposto: Imposto; estadual: boolean }) {
+/**
+ * "Novo ajuste" numa janela própria, com o rodapé de formulário — Cancelar e
+ * Registrar (15/10/2026). Abria na janela de prévia, com um botão só.
+ */
+function FormAjuste({ imposto, estadual, onFim }: { imposto: Imposto; estadual: boolean; onFim: () => void }) {
   const { simular } = useFiscal();
   const [codigo, setCodigo] = useState(estadual ? "SC-EXEMPLO" : imposto === "ICMS/IPI" ? "E111-EXEMPLO" : "M-EXEMPLO");
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("100");
   const [efeito, setEfeito] = useState<"Débito" | "Crédito">("Crédito");
   const [obrigacao, setObrigacao] = useState(estadual ? "DCIP / DIME / Quadro 12" : imposto === "ICMS/IPI" ? "E111" : "Bloco M");
-  return <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); simular({ tipo: "ajuste", imposto, codigo, descricao, valor: Number(valor), efeito, obrigacao }); }}>
-    <div className="grid gap-4 sm:grid-cols-2"><CampoFiscal nome="Código"><Input required value={codigo} onChange={(e) => setCodigo(e.target.value)} /></CampoFiscal><CampoFiscal nome="Valor de teste"><Input required type="number" min="0.01" step="0.01" prefix="R$" value={valor} onChange={(e) => setValor(e.target.value)} /></CampoFiscal><CampoFiscal nome="Descrição"><Input required value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Motivo do ajuste demonstrativo" /></CampoFiscal><CampoFiscal nome="Efeito no imposto"><Select value={efeito} className={classeSelectFiscal} onChange={(e) => setEfeito(e.target.value as typeof efeito)}><option>Crédito</option><option>Débito</option></Select></CampoFiscal><CampoFiscal nome="Registro / obrigação"><Input value={obrigacao} onChange={(e) => setObrigacao(e.target.value)} /></CampoFiscal></div><Button type="submit">Registrar ajuste de teste</Button>
+  return <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); simular({ tipo: "ajuste", imposto, codigo, descricao, valor: Number(valor), efeito, obrigacao }); onFim(); }}>
+    <div className="grid gap-4 sm:grid-cols-2"><CampoFiscal nome="Código"><Input required value={codigo} onChange={(e) => setCodigo(e.target.value)} /></CampoFiscal><CampoFiscal nome="Valor de teste"><Input required type="number" min="0.01" step="0.01" prefix="R$" value={valor} onChange={(e) => setValor(e.target.value)} /></CampoFiscal><CampoFiscal nome="Descrição"><Input required value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Motivo do ajuste demonstrativo" /></CampoFiscal><CampoFiscal nome="Efeito no imposto"><Select value={efeito} className={classeSelectFiscal} onChange={(e) => setEfeito(e.target.value as typeof efeito)}><option>Crédito</option><option>Débito</option></Select></CampoFiscal><CampoFiscal nome="Registro / obrigação"><Input value={obrigacao} onChange={(e) => setObrigacao(e.target.value)} /></CampoFiscal></div><FormFooter pending={false} submitLabel="Registrar ajuste de teste" onCancel={onFim} />
   </form>;
 }
 
 export function ApuracaoFiscal({ aba, imposto }: { aba: string; imposto: Imposto }) {
   const { cenario, simular, visualizar } = useFiscal();
   const { dialog, requestConfirm } = useConfirm();
+  const [novoAjuste, setNovoAjuste] = useState(false);
   const docs = documentosDoContexto(cenario);
   const totais = totaisDoContexto(cenario);
   const periodos = cenario.periodos.filter((p) => mesmoEscopo(p, cenario.contexto));
@@ -51,10 +59,12 @@ export function ApuracaoFiscal({ aba, imposto }: { aba: string; imposto: Imposto
   const estabelecimento = empresa.estabelecimentos.find((e) => e.id === cenario.contexto.estabelecimentoId);
   const ajustes = cenario.ajustes.filter((a) => mesmoEscopo(a.contexto, cenario.contexto) && a.imposto === imposto && (!estadual || a.obrigacao.includes("DIME") || a.obrigacao.includes("DCIP")));
   if (aba === "sped") return <ArquivosFiscal aba="arquivos" imposto="Contribuições" />;
-  if (aba === "ajustes" || estadual) return <div className="space-y-5"><BlocoFiscal titulo={estadual ? "DCIP e DIME · Santa Catarina" : `Ajustes · ${imposto}`} descricao={estadual ? "Lançamentos demonstrativos das obrigações estaduais e Quadro 12." : "Ajustes demonstrativos com efeito de débito ou crédito."} acao={<Button size="sm" disabled={estadual && estabelecimento?.uf !== "SC"} onClick={() => visualizar("Novo ajuste de teste", <FormAjuste imposto={imposto} estadual={estadual} />)}><Plus size={14} />Novo ajuste</Button>}>
-    {estadual && estabelecimento?.uf !== "SC" && <p className="mb-5 rounded-md bg-info-bg p-3 text-ui text-fg-secondary">Selecione uma filial de Santa Catarina para testar os lançamentos de DCIP e DIME.</p>}
+  if (aba === "ajustes" || estadual) return <div className="space-y-5"><BlocoFiscal titulo={estadual ? "DCIP e DIME · Santa Catarina" : `Ajustes · ${imposto}`} descricao={estadual ? "Lançamentos demonstrativos das obrigações estaduais e Quadro 12." : "Ajustes demonstrativos com efeito de débito ou crédito."} acao={<Button size="sm" disabled={estadual && estabelecimento?.uf !== "SC"} onClick={() => setNovoAjuste(true)}><Plus size={14} />Novo ajuste</Button>}>
+    {estadual && estabelecimento?.uf !== "SC" && <Aviso tom="info" className="mb-5">Selecione uma filial de Santa Catarina para testar os lançamentos de DCIP e DIME.</Aviso>}
     <TabelaFiscal colunas={["Código / descrição", "Efeito", "Valor", "Registro / obrigação", "Ações"]} linhas={ajustes.map((a) => ({ id: a.id, celulas: [<span key="codigo">{a.codigo}<span className="block text-helper text-fg-secondary">{a.descricao}</span></span>, a.efeito, reais(a.valor), a.obrigacao, <IconButton key="remover" size="sm" title={`Remover ajuste ${a.codigo}`} className="text-danger! hover:text-danger! hover:bg-danger-bg!" onClick={() => requestConfirm({ title: "Remover ajuste?", description: `${a.codigo} · ${a.descricao} · ${reais(a.valor)}. O ajuste será excluído do cenário, e a apuração precisará ser atualizada.`, confirmLabel: "Remover ajuste", destructive: true }, async () => { simular({ tipo: "remover-ajuste", id: a.id }); })}><Trash2 size={15} /></IconButton>] }))} />
-  </BlocoFiscal><AtalhoFiscal modulo={imposto === "ICMS/IPI" ? "fiscal_icms_ipi" : "fiscal_contribuicoes"} aba={imposto === "ICMS/IPI" ? "apuracao" : "fechamento"}>Revisar apuração</AtalhoFiscal>{dialog}</div>;
+  </BlocoFiscal><AtalhoFiscal modulo={imposto === "ICMS/IPI" ? "fiscal_icms_ipi" : "fiscal_contribuicoes"} aba={imposto === "ICMS/IPI" ? "apuracao" : "fechamento"}>Revisar apuração</AtalhoFiscal>{dialog}
+    <Modal open={novoAjuste} title="Novo ajuste de teste" onClose={() => setNovoAjuste(false)} maxWidth="max-w-2xl">{novoAjuste && <FormAjuste imposto={imposto} estadual={estadual} onFim={() => setNovoAjuste(false)} />}</Modal>
+  </div>;
   if (aba === "decisoes") return <BlocoFiscal titulo="Decisões por registro" descricao="CST, vínculo e base de crédito do cenário." acao={<AtalhoFiscal modulo="fiscal_classificacao" aba="decisoes">Revisar decisões</AtalhoFiscal>}><TabelaFiscal colunas={["Documento", "CST", "Destinação / vínculo", "Base de crédito", "Situação"]} linhas={docs.filter((d) => d.estado !== "Rejeitado").map((d) => ({ id: d.id, celulas: [`${d.tipo} ${d.numero}`, d.cst, d.destino, reais(d.credito ? d.valor : 0), <EstadoFiscal key="estado">{d.estado}</EstadoFiscal>] }))} /></BlocoFiscal>;
   const linhasDemonstrativo = [
     ["Receita da competência", totais.saidas], ["Entradas e documentos de apoio", totais.entradas], ["Base de crédito de teste", totais.creditavel],
@@ -65,12 +75,17 @@ export function ApuracaoFiscal({ aba, imposto }: { aba: string; imposto: Imposto
   const fechado = periodos.length > 0 && periodos.every((p) => p.fechado);
   const apurado = periodos.length > 0 && periodos.every((p) => p.apurado);
   const pendencias = totais.pendentes + totais.rejeitados;
-  return <div className="space-y-5"><MetricasFiscais itens={[["Receita", reais(totais.saidas)], ["Créditos · base de teste", reais(totais.creditavel)], [imposto === "ICMS/IPI" ? "ICMS de teste" : "PIS + COFINS de teste", reais(imposto === "ICMS/IPI" ? totais.icms : totais.pis + totais.cofins)], ["Pendências para concluir", totais.pendentes + totais.rejeitados]]} />
+  return <div className="space-y-5"><MetricasFiscais itens={[
+    { rotulo: "Receita", valor: reais(totais.saidas), icone: <TrendingUp /> },
+    { rotulo: "Créditos · base de teste", valor: reais(totais.creditavel), icone: <PiggyBank /> },
+    { rotulo: imposto === "ICMS/IPI" ? "ICMS de teste" : "PIS + COFINS de teste", valor: reais(imposto === "ICMS/IPI" ? totais.icms : totais.pis + totais.cofins), icone: <Landmark /> },
+    { rotulo: "Pendências para concluir", valor: pendencias, icone: <ListChecks />, tom: pendencias > 0 ? "text-warning-fg" : undefined },
+  ]} />
     <BlocoFiscal titulo={aba === "fechamento" ? "Fechamento da competência" : "Apuração da competência"} descricao={pendencias ? "Resolva as pendências indicadas abaixo para liberar a apuração." : fechado ? "Conferência concluída. Continue para gerar os arquivos." : apurado ? "Confira os valores e feche a competência." : "Os documentos estão prontos. Atualize a apuração para continuar."} acao={!fechado && <Button size="sm" disabled={pendencias > 0 || docs.length === 0} onClick={() => simular({ tipo: apurado ? "fechar" : "apurar" })}><Calculator size={14} />{apurado ? "Fechar competência" : "Simular apuração"}</Button>}>
       <div className="mb-5 flex flex-wrap gap-4"><EstadoFiscal>{apurado ? "Apuração atualizada" : "Apuração pendente"}</EstadoFiscal><EstadoFiscal>{fechado ? "Fechado" : "Fechamento pendente"}</EstadoFiscal></div>
       <div className="mb-5"><AtalhoFiscal discreto modulo="fiscal_configuracoes" aba="parametros">Consultar parâmetros da empresa</AtalhoFiscal></div>
       <TabelaFiscal colunas={["Conferência", "Resultado", "Continuar"]} linhas={[
-        { id: "documentos", celulas: ["Documentos recebidos", `${docs.length} documentos · ${totais.rejeitados} em quarentena`, totais.rejeitados > 0 ? <AtalhoFiscal key="docs" discreto modulo="fiscal_acervo" aba="quarentena">Revisar documentos</AtalhoFiscal> : "Conferido"] },
+        { id: "documentos", celulas: ["Documentos recebidos", `${docs.length} documentos · ${totais.rejeitados} em quarentena`, totais.rejeitados > 0 ? <AtalhoFiscal key="docs" discreto modulo="fiscal_acervo" aba="acervo" filtros={{ grupo: "quarentena" }}>Revisar documentos</AtalhoFiscal> : "Conferido"] },
         { id: "decisoes", celulas: ["Decisões de classificação", `${totais.pendentes} pendentes`, totais.pendentes > 0 ? <AtalhoFiscal key="classificar" discreto modulo="fiscal_classificacao">Classificar</AtalhoFiscal> : "Conferido"] },
         { id: "apoio", celulas: ["Contratos, recibos e pagamentos", `${docs.filter((d) => ["Contrato", "Recibo", "RPA", "Fatura"].includes(d.tipo)).length} documentos de apoio`, <AtalhoFiscal key="apoio" discreto modulo="fiscal_conferencia" aba="confronto">Conferir pagamentos</AtalhoFiscal>] },
         { id: "ajustes", celulas: ["Ajustes da competência", `${ajustes.length} ajuste(s)`, <AtalhoFiscal key="ajustes" discreto modulo={imposto === "ICMS/IPI" ? "fiscal_icms_ipi" : "fiscal_contribuicoes"} aba="ajustes">Consultar ajustes</AtalhoFiscal>] },

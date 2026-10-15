@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 
 export type SubtaskData = {
   id: string;
@@ -93,19 +94,21 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
             </Link>
             <span className="text-fs-1 text-fg-muted flex-shrink-0">{s.stageName}</span>
             {canDelete && (
-              <button
-                type="button"
+              // O `IconButton`, como os do checklist (15/10/2026): era um
+              // botão de ícone desenhado à mão.
+              <IconButton
+                size="sm"
                 onClick={() =>
                   requestConfirm(
                     { title: `Remover a subtarefa "${s.title}"?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Remover" },
                     () => deleteAction(s.id)
                   )
                 }
-                className="text-fg-muted hover:text-danger p-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                 aria-label="Remover subtarefa"
               >
                 <Trash2 size={13} />
-              </button>
+              </IconButton>
             )}
           </div>
         ))}

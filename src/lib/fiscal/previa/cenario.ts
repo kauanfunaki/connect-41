@@ -40,11 +40,14 @@ export type DocumentoTeste = z.infer<typeof documentoSchema>;
 export type ArquivoTeste = z.infer<typeof arquivoSchema>;
 export type Imposto = ArquivoTeste["tipo"];
 export const COMPETENCIAS = ["2026-09", "2026-10"];
+// NFS-e, Contratos e recibos e Quarentena (documentos) e Fila e Erros
+// (execuções) deixaram de ser abas em 15/10/2026: recortavam a mesma lista e
+// viraram filtro dela (`grupo`, `estado`). Os endereços antigos redirecionam.
 export const PAGINAS_FISCAIS = [
   { pagina: "painel", modulo: "fiscal_painel", caminho: "/fiscal", titulo: "Painel fiscal", descricao: "Do documento à entrega: acompanhe o trabalho da competência.", abas: [] },
-  { pagina: "documentos", modulo: "fiscal_acervo", caminho: "/fiscal/documentos", titulo: "Documentos e importações", descricao: "Reúna as fontes e confira o que falta antes de apurar.", abas: [["acervo", "Acervo"], ["nfse", "NFS-e"], ["apoio", "Contratos e recibos"], ["envio", "Enviar documentos"], ["importacoes", "Importações"], ["quarentena", "Quarentena"], ["cobertura", "Cobertura"]] },
+  { pagina: "documentos", modulo: "fiscal_acervo", caminho: "/fiscal/documentos", titulo: "Documentos e importações", descricao: "Reúna as fontes e confira o que falta antes de apurar.", abas: [["acervo", "Acervo"], ["envio", "Enviar documentos"], ["importacoes", "Importações"], ["cobertura", "Cobertura"]] },
   { pagina: "classificacao", modulo: "fiscal_classificacao", caminho: "/fiscal/classificacao", titulo: "Classificação", descricao: "Revise destinação e crédito, por item ou em lote.", abas: [["produtos", "Produtos"], ["apoio", "Contratos e recibos"], ["decisoes", "Decisões registradas"]] },
-  { pagina: "operacao", modulo: "fiscal_operacao", caminho: "/fiscal/operacao", titulo: "Execuções", descricao: "Prepare extrações e gerações e acompanhe cada execução.", abas: [["executar", "Executar"], ["fila", "Fila"], ["historico", "Histórico"], ["erros", "Erros"]] },
+  { pagina: "operacao", modulo: "fiscal_operacao", caminho: "/fiscal/operacao", titulo: "Execuções", descricao: "Prepare extrações e gerações e acompanhe cada execução.", abas: [["executar", "Executar"], ["historico", "Histórico"]] },
   { pagina: "icms-ipi", modulo: "fiscal_icms_ipi", caminho: "/fiscal/icms-ipi", titulo: "ICMS e IPI", descricao: "Confira a apuração e os ajustes do estabelecimento.", abas: [["apuracao", "Apuração"], ["demonstrativo", "Demonstrativo"], ["ajustes", "Ajustes"], ["dcip-dime", "DCIP e DIME"]] },
   { pagina: "contribuicoes", modulo: "fiscal_contribuicoes", caminho: "/fiscal/contribuicoes", titulo: "PIS e COFINS", descricao: "Confira a apuração, os ajustes e o fechamento do EFD Contribuições.", abas: [["fechamento", "Fechamento"], ["ajustes", "Ajustes"], ["decisoes", "Decisões por registro"], ["demonstrativo", "Demonstrativo"], ["sped", "SPED Contribuições"]] },
   { pagina: "entregas", modulo: "fiscal_entregas", caminho: "/fiscal/entregas", titulo: "Arquivos e entregas", descricao: "Confira versões, valide e registre a entrega de teste.", abas: [["arquivos", "SPED gerados"], ["validacao", "Validação"], ["entregas", "Entregas"]] },

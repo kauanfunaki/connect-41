@@ -53,21 +53,23 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
             "Partir de:" era texto solto no começo da fileira. São um
             `SegmentedControl` desde 08/10/2026: eram fileiras de `Button` que
             alternavam primário e secundário, a "pílula que parece filtro e aba"
-            que a conferência de 30/09 aboliu. */}
+            que a conferência de 30/09 aboliu. O rótulo é o do `CampoForm`
+            (15/10/2026): era um <p> à mão, com outra altura de linha. */}
         {bases.length > 1 && (
-          <div>
-            <p className="text-label font-medium text-fg mb-1.5">Partir de</p>
-            <SegmentedControl
-              label="Partir de"
-              active={baseEscolhida.chave}
-              items={bases.map((b) => ({ key: b.chave, label: b.rotulo }))}
-              onChange={setChaveDaBase}
-              className="max-w-full flex-wrap"
-            />
-          </div>
+          <CampoForm label="Partir de" htmlFor="simulador-base">
+            <div id="simulador-base">
+              <SegmentedControl
+                label="Partir de"
+                active={baseEscolhida.chave}
+                items={bases.map((b) => ({ key: b.chave, label: b.rotulo }))}
+                onChange={setChaveDaBase}
+                className="max-w-full flex-wrap"
+              />
+            </div>
+          </CampoForm>
         )}
-        <div>
-          <p className="text-label font-medium text-fg mb-1.5">Cenário</p>
+        <CampoForm label="Cenário" htmlFor="simulador-cenario">
+          <div id="simulador-cenario">
           <SegmentedControl
             label="Cenário"
             active={pronto}
@@ -79,7 +81,8 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
             }}
             className="max-w-full flex-wrap"
           />
-        </div>
+          </div>
+        </CampoForm>
         <FieldGrid>
           {CAMPOS.map((c) => (
             <CampoForm key={c.chave} label={c.rotulo} htmlFor={`premissa-${c.chave}`} helper={c.dica}>

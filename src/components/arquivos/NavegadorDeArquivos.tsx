@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Selo } from "@/components/ui/Selo";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
@@ -34,7 +34,7 @@ import { useConfirm } from "@/components/ui/useConfirm";
 import { formatarBytes } from "@/lib/fileSize";
 import { formatCalendarDate, formatInstantDateTime } from "@/lib/format";
 import { situacaoDoVencimento } from "@/lib/drive/regras";
-import { enderecoDaPasta, rotuloDeItens, type ArquivoNaTela, type NavegadorNaTela, type PastaNaTela, type ResultadoDaBusca } from "@/lib/drive/tela";
+import { enderecoDaPasta, rotuloDeItens, trilhaDaPasta, type ArquivoNaTela, type NavegadorNaTela, type PastaNaTela, type ResultadoDaBusca } from "@/lib/drive/tela";
 import {
   alterarSetorDaPasta,
   compartilharPasta,
@@ -59,6 +59,9 @@ type Props = {
   base: string;
   /** O primeiro item da trilha: "Pastas da empresa", "Pastas do escritório". */
   rotuloDaRaiz: string;
+  /** A tela já mostra a trilha acima do título (as telas de Arquivos): aqui fica
+   *  só o uso e a busca. Na ficha da empresa, a trilha das pastas segue aqui. */
+  trilhaNoCabecalho?: boolean;
   busca?: { termo: string; resultados: ResultadoDaBusca[] } | null;
 };
 
@@ -79,7 +82,7 @@ function enderecoDoArquivo(a: { id: string; previa: boolean }, baixar = false): 
   return `/api/arquivos/${a.id}${a.previa && !baixar ? "?ver=1" : ""}`;
 }
 
-export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, busca }: Props) {
+export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, trilhaNoCabecalho = false, busca }: Props) {
   const router = useRouter();
   const toast = useToast();
   const { dialog: confirmacao, requestConfirm } = useConfirm();
@@ -134,27 +137,22 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, busca }: Props)
     );
   }
 
-  const trilha = [
-    { label: rotuloDaRaiz, href: pasta ? enderecoDaPasta(base, null) : undefined },
-    ...dados.caminho.map((p, i) => ({
-      label: p.nome,
-      href: i < dados.caminho.length - 1 ? enderecoDaPasta(base, p.id) : undefined,
-      truncate: true,
-    })),
-  ];
+  const trilha = trilhaDaPasta(dados, base, rotuloDaRaiz);
   const paiDaAtual = dados.caminho.length > 1 ? dados.caminho[dados.caminho.length - 2].id : null;
 
   const vazio = dados.subpastas.length === 0 && dados.arquivos.length === 0;
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Trilha, uso e busca */}
+      {/* Trilha, uso e busca — a trilha, só quando a tela não a mostra no topo. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {/* O Breadcrumb traz margem de cabeçalho de página; aqui ele divide a linha com a busca. */}
-        <div className="min-w-0 flex-1 [&>nav]:mb-0">
-          <Breadcrumb items={trilha} />
-        </div>
-        <span className="text-micro text-fg-muted tabular-nums">
+        {!trilhaNoCabecalho && (
+          // O Breadcrumb traz margem de cabeçalho de página; aqui ele divide a linha com a busca.
+          <div className="min-w-0 flex-1 [&>nav]:mb-0">
+            <Breadcrumb items={trilha} />
+          </div>
+        )}
+        <span className={`text-micro text-fg-muted tabular-nums ${trilhaNoCabecalho ? "flex-1" : ""}`.trim()}>
           {dados.uso.arquivos === 1 ? "1 arquivo" : `${dados.uso.arquivos} arquivos`} · {formatarBytes(dados.uso.bytes)}
         </span>
         <form
@@ -162,18 +160,22 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, busca }: Props)
           className="w-full sm:w-64"
           onSubmit={(e) => {
             e.preventDefault();
-            const t = termo.trim();
+            // Do formulário, e não do estado: no "limpar" o envio vem antes
+            // de `termo` ser atualizado.
+            const t = String(new FormData(e.currentTarget).get("busca") ?? "").trim();
             router.push(t ? enderecoDaPasta(base, null, { busca: t }) : enderecoDaPasta(base, pasta?.id ?? null));
           }}
         >
-          <Input
+          {/* A caixa de busca do Connect (15/10/2026): o "limpar" próprio, que
+              com uma busca na tela volta às pastas. */}
+          <CampoDeBusca
             id="drive-busca"
-            type="search"
+            name="busca"
             compact
-            icon={<Search size={14} />}
             placeholder={naEmpresa ? "Buscar arquivo na empresa" : "Buscar arquivo"}
             value={termo}
             onChange={(e) => setTermo(e.target.value)}
+            enviarAoLimpar={Boolean(busca)}
             aria-label="Buscar arquivo pelo nome"
           />
         </form>
@@ -290,28 +292,16 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, busca }: Props)
           )}
 
           {vazio ? (
+            // Sem repetir os botões da barra logo acima: o texto diz onde estão (P19, 15/10/2026).
             <EmptyState
               icon={<FolderOpen />}
               title={pasta ? "Pasta vazia" : "Nenhuma pasta ainda"}
               description={
-                pasta
-                  ? podeMexer
-                    ? "Envie arquivos ou crie uma pasta dentro desta."
-                    : "Nada por aqui ainda."
-                  : "Crie a primeira pasta para organizar os arquivos do escritório."
-              }
-              action={
-                podeMexer ? (
-                  pasta ? (
-                    <Button type="button" size="sm" onClick={() => setEnviando(true)}>
-                      <Upload size={14} /> Enviar arquivos
-                    </Button>
-                  ) : (
-                    <Button type="button" size="sm" onClick={() => abrir({ tipo: "novaPasta" })}>
-                      <FolderPlus size={14} /> Nova pasta
-                    </Button>
-                  )
-                ) : undefined
+                !podeMexer
+                  ? "Nada por aqui ainda."
+                  : pasta
+                    ? "Use “Enviar arquivos” ou “Nova pasta”, logo acima, para encher esta pasta."
+                    : "Use “Nova pasta”, logo acima, para criar a primeira e organizar os arquivos."
               }
             />
           ) : (

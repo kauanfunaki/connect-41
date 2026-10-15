@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Contador } from "@/components/ui/Contador";
 
 // Genérico em `K` para que a união de chaves do call-site chegue inteira no
 // `onChange`: com `key: string`, o `setView` do quadro exigia um `as` de volta
@@ -14,6 +15,11 @@ export type SegmentItem<K extends string = string> = {
   title?: string;
   /** Só no modo botão. O segmento ativo já vem desabilitado sozinho. */
   disabled?: boolean;
+  /**
+   * Vira um `Contador` ao lado do rótulo — em vez de "Não lidas (3)" no texto
+   * (15/10/2026, como a `contagem` das `AbasDeLink`).
+   */
+  contagem?: number;
   /**
    * Cor deste segmento quando ele é o ativo, sobrepondo o `tone` do grupo.
    *
@@ -140,6 +146,9 @@ export function SegmentedControl<K extends string>({
           <>
             {item.icon}
             {item.label}
+            {item.contagem !== undefined && (
+              <Contador valor={item.contagem} tom={ativo ? "marca" : "neutro"} pequeno teto={Number.MAX_SAFE_INTEGER} />
+            )}
           </>
         );
 

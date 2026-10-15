@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { Button } from "@/components/ui/Button";
-import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound, Search } from "lucide-react";
+import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -13,6 +13,7 @@ import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Textarea } from "@/components/ui/Textarea";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -269,16 +270,15 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
         contagem={contarItens(filteredCredentials.length, "credencial", "credenciais")}
         busca={
           credentials.length > 0 ? (
-            <div className="w-72 max-w-full">
-              <Input
-                compact
-                icon={<Search />}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por título, empresa ou usuário…"
-                aria-label="Buscar credenciais"
-              />
-            </div>
+            // A caixa de busca do Connect, com o "limpar" próprio (15/10/2026).
+            <CampoDeBusca
+              compact
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por título, empresa ou usuário…"
+              aria-label="Buscar credenciais"
+              className="w-72 max-w-full"
+            />
           ) : undefined
         }
       >
@@ -286,7 +286,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
         <EmptyState
           icon={<KeyRound />}
           title="Nenhuma credencial cadastrada ainda"
-          description={canManage ? "Cadastre a primeira credencial do setor." : `Peça à coordenação do setor ${setorRotulo} para cadastrar a primeira credencial.`}
+          description={canManage ? "Use “+ Nova credencial”, no alto da tela, para cadastrar a primeira do setor." : `Peça à coordenação do setor ${setorRotulo} para cadastrar a primeira credencial.`}
         />
       ) : filteredCredentials.length === 0 ? (
         <EmptyState icon={<KeyRound />} title="Nenhuma credencial encontrada" description="Tente ajustar a busca." />

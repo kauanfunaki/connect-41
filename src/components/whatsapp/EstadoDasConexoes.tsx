@@ -2,6 +2,7 @@
 
 import { CheckCircle2, AlertTriangle, ChevronDown, Plug, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Contador } from "@/components/ui/Contador";
 import { Popover } from "@/components/ui/Popover";
 import { formatInstantDateTime } from "@/lib/format";
 import type { ConexaoNaTela } from "@/lib/whatsapp/data";
@@ -63,11 +64,7 @@ export function EstadoDasConexoes({ conexoes, podeConfigurar }: { conexoes: Cone
         >
           <Icone size={14} aria-hidden className={estilo.cor} />
           {pior.saude.titulo}
-          {paradas > 0 && (
-            <span className="min-w-5 h-5 px-1.5 rounded-full bg-warning/15 text-warning-fg text-micro font-semibold tabular-nums inline-flex items-center justify-center">
-              {paradas}
-            </span>
-          )}
+          {paradas > 0 && <Contador valor={paradas} tom="atencao" />}
           {conexoes.length > 1 && <span className="font-normal text-fg-muted">· {conexoes.length} números</span>}
           <ChevronDown size={13} aria-hidden className={`text-fg-muted transition-transform ${open ? "rotate-180" : ""}`} />
         </Button>

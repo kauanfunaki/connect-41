@@ -37,7 +37,9 @@ export function LancarEventoForm({ action, colaboradores }: Props) {
 
   return (
     <form action={formAction} className="border-t border-border pt-4 mb-6 space-y-5">
-      <h3 className="text-ui font-medium text-fg">Lançar evento</h3>
+      {/* Bloco do "novo" com o rótulo padrão (P19, 15/10/2026): o título era
+          texto comum de 13px. */}
+      <h3 className="c41-rotulo">Novo evento</h3>
 
       {/* Três blocos com título — Dias, Proventos e Descontos (escolha A da
           página "Telas pesadas", 08/10/2026). Eram os treze números numa grade

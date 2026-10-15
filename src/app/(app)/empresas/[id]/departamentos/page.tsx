@@ -63,19 +63,14 @@ export default async function DepartamentosPage({
 
       {departments.length === 0 ? (
         <Card>
+          {/* Sem repetir o "Novo departamento": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<Network />}
             title="Nenhum departamento cadastrado"
-            description="Organize os colaboradores desta empresa em departamentos para facilitar a gestão e os relatórios."
-            action={
-              canManage && (
-                <Button
-                  href={novoHref}
-                  variant="primary"
-                >
-                  <Plus size={14} /> Cadastrar departamento
-                </Button>
-              )
+            description={
+              canManage
+                ? "Use “+ Novo departamento”, no alto da tela, para organizar os colaboradores desta empresa em departamentos e facilitar a gestão e os relatórios."
+                : "Os departamentos desta empresa aparecem aqui quando forem cadastrados."
             }
           />
         </Card>
