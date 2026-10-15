@@ -95,7 +95,7 @@ rodar("criando as tabelas", "npx", ["prisma", "db", "execute", "--file", arquivo
 
 // 4. Dados
 rodar("seed (escritório e administrador)", "npx", ["tsx", "prisma/seed.ts"]);
-rodar("demonstração do BPO", "npx", ["tsx", "scripts/dados-de-demonstracao.ts", "--aplicar"]);
+rodar("demonstração do BPO (Transportes Modelo)", "npx", ["tsx", "scripts/local/demonstracao-transportes.ts"]);
 rodar("preparo dos vídeos", "npx", ["tsx", "scripts/local/preparar-ambiente.ts"]);
 rodar("modelos do Societário", "npx", ["tsx", "scripts/seed-societario.ts", "--aplicar"]);
 rodar("dados fictícios das outras telas", "npx", ["tsx", "scripts/local/dados-ficticios.ts"]);

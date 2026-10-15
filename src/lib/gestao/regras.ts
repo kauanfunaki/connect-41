@@ -40,6 +40,8 @@ export type ItemDeTrabalho = {
   prazo: Date | null;
   concluidoEm: Date | null;
   href: string;
+  /** A empresa do item, quando há (card de empresa, pendência, solicitação, processo) — os alertas deixam de fora as de demonstração. */
+  empresaId?: string | null;
 };
 
 export type Limites = { diasParado: number; diasAvisoPrazo: number };
