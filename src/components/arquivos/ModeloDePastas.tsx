@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Switch } from "@/components/ui/Switch";
 import { Selo } from "@/components/ui/Selo";
 import { useToast } from "@/components/ui/Toast";
 import type { SetorNaTela } from "@/lib/drive/tela";
@@ -150,15 +151,17 @@ export function ModeloDePastas({ pastas, setores }: { pastas: PastaDoModeloNaTel
                 >
                   <Pencil size={12} /> Editar
                 </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="xs"
+                {/* Liga/desliga é interruptor (15/10/2026): era o par de botões
+                    "Desligar/Ligar", que mostrava a ação e não o estado. */}
+                <Switch
+                  size="sm"
+                  checked={p.ativa}
                   disabled={pendente}
-                  onClick={() => rodar(() => alternarPastaDoModelo(p.id), p.ativa ? "Pasta desligada no modelo." : "Pasta ligada no modelo.")}
-                >
-                  {p.ativa ? "Desligar" : "Ligar"}
-                </Button>
+                  rotulo="No modelo"
+                  aria-label={`${p.nome} no modelo`}
+                  className="ml-1.5"
+                  onCheckedChange={() => rodar(() => alternarPastaDoModelo(p.id), p.ativa ? "Pasta desligada no modelo." : "Pasta ligada no modelo.")}
+                />
               </div>
             </li>
           );

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Download, Eye, Folder, FolderInput, FolderOpen } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { IconButton } from "@/components/ui/IconButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
@@ -136,27 +137,25 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
                           {formatarBytes(a.tamanho)} · {a.seu ? "enviado por você" : "do escritório"} · {formatInstantDateTime(new Date(a.enviadoEm), QUANDO)}
                         </p>
                       </div>
+                      {/* O `IconButton` (15/10/2026), num `<a>` simples (`nativo`):
+                          são rotas de arquivo, que o `<Link>` pré-carregaria.
+                          Tinham um hover azul próprio. */}
                       <div className="flex items-center gap-1 shrink-0">
                         {a.previa && (
-                          <a
+                          <IconButton
                             href={`/portal/arquivos/${a.id}?ver=1`}
+                            nativo
                             target="_blank"
                             rel="noreferrer"
-                            className="p-2 rounded-md text-fg-muted hover:text-brand hover:bg-surface-hover transition-colors"
                             aria-label={`Abrir ${a.nome}`}
                             title="Abrir"
                           >
                             <Eye size={16} />
-                          </a>
+                          </IconButton>
                         )}
-                        <a
-                          href={`/portal/arquivos/${a.id}`}
-                          className="p-2 rounded-md text-fg-muted hover:text-brand hover:bg-surface-hover transition-colors"
-                          aria-label={`Baixar ${a.nome}`}
-                          title="Baixar"
-                        >
+                        <IconButton href={`/portal/arquivos/${a.id}`} nativo aria-label={`Baixar ${a.nome}`} title="Baixar">
                           <Download size={16} />
-                        </a>
+                        </IconButton>
                       </div>
                     </li>
                   ))}

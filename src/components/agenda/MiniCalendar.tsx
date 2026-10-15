@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { saoPauloParts, addDaysToKey, mondayOfWeek, type AgendaView } from "@/lib/agenda";
-import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
+import { PainelFlutuante } from "@/components/ui/PainelFlutuante";
 
 type Props = {
   /** Visão ativa — o mini navega mantendo-a e destaca o período correspondente. */
@@ -32,7 +33,7 @@ function keyOf(year: number, month: number, day: number): string {
 export function MiniCalendar({ view, selectedKeys, referenceKey }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const ancoraRef = useRef<HTMLSpanElement>(null);
 
   const [initYear, initMonth] = referenceKey.split("-").map(Number);
   const [viewYear, setViewYear] = useState(initYear);
@@ -47,20 +48,17 @@ export function MiniCalendar({ view, selectedKeys, referenceKey }: Props) {
     setOpen(!open);
   }
 
+  // O clique fora é do `PainelFlutuante`; o Esc fica aqui, marcado como usado
+  // (como no Popover), para não fechar junto quem está embaixo.
   useEffect(() => {
     if (!open) return;
-    function onClickOutside(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      setOpen(false);
     }
-    document.addEventListener("mousedown", onClickOutside);
     document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClickOutside);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
   const todayKey = saoPauloParts(new Date()).dateKey;
@@ -92,79 +90,79 @@ export function MiniCalendar({ view, selectedKeys, referenceKey }: Props) {
     router.push(`/agenda?view=${view}&date=${dateKey}`);
   }
 
+  // O painel é o `PainelFlutuante` (15/10/2026), e não um `absolute` escrito à
+  // mão: vai por cima de tudo e, no celular, vira a folha embaixo. O gatilho e
+  // as setas do mês são o `IconButton`.
   return (
-    <div ref={rootRef} className="relative">
-      <button
-        type="button"
-        onClick={toggleOpen}
-        aria-label="Escolher data no calendário"
-        title="Escolher data"
-        className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${
-          open ? "text-fg bg-surface-hover" : "text-fg-muted hover:text-fg hover:bg-surface-hover"
-        }`}
+    <>
+      <span ref={ancoraRef} className="inline-flex">
+        <IconButton
+          size="sm"
+          onClick={toggleOpen}
+          aria-label="Escolher data no calendário"
+          aria-expanded={open}
+          title="Escolher data"
+          className={open ? "bg-surface-hover text-fg!" : undefined}
+        >
+          <CalendarDays size={15} />
+        </IconButton>
+      </span>
+
+      <PainelFlutuante
+        ancora={ancoraRef}
+        aberto={open}
+        onFechar={() => setOpen(false)}
+        largura={248}
+        folhaNoCelular
+        aria-label="Escolher data"
+        className="p-3"
       >
-        <CalendarDays size={15} />
-      </button>
-
-      {open && (
-        <div className="absolute z-40 top-full left-0 mt-1.5 w-[248px] bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-fs-2 font-semibold text-fg">
-              {MONTH_LABEL[viewMonth - 1]} de {viewYear}
-            </p>
-            <div className="flex items-center gap-0.5">
-              <Button
-                variant="linkMuted"
-                className="w-6 h-6 flex justify-center rounded-md hover:bg-surface-hover"
-                onClick={() => shiftMonth(-1)}
-                aria-label="Mês anterior"
-              >
-                <ChevronLeft size={13} />
-              </Button>
-              <Button
-                variant="linkMuted"
-                className="w-6 h-6 flex justify-center rounded-md hover:bg-surface-hover"
-                onClick={() => shiftMonth(1)}
-                aria-label="Próximo mês"
-              >
-                <ChevronRight size={13} />
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-y-0.5">
-            {WEEKDAY_INITIALS.map((w, i) => (
-              <span key={i} className="text-center text-micro font-medium text-fg-muted uppercase py-0.5">
-                {w}
-              </span>
-            ))}
-            {gridDays.map((dateKey) => {
-              const [, m, d] = dateKey.split("-").map(Number);
-              const inMonth = m === viewMonth;
-              const isToday = dateKey === todayKey;
-              const highlighted = highlightKeys.has(dateKey);
-              return (
-                <button
-                  key={dateKey}
-                  type="button"
-                  onClick={() => pick(dateKey)}
-                  className={`h-7 rounded-md text-micro tnum transition-colors ${
-                    isToday
-                      ? "bg-brand-solid text-on-brand font-semibold"
-                      : highlighted
-                        ? "bg-brand-subtle text-brand font-medium hover:bg-brand/15"
-                        : inMonth
-                          ? "text-fg hover:bg-surface-hover"
-                          : "text-fg-muted/60 hover:bg-surface-hover"
-                  }`}
-                >
-                  {d}
-                </button>
-              );
-            })}
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-fs-2 font-semibold text-fg">
+            {MONTH_LABEL[viewMonth - 1]} de {viewYear}
+          </p>
+          <div className="flex items-center gap-0.5">
+            <IconButton size="sm" onClick={() => shiftMonth(-1)} aria-label="Mês anterior">
+              <ChevronLeft size={13} />
+            </IconButton>
+            <IconButton size="sm" onClick={() => shiftMonth(1)} aria-label="Próximo mês">
+              <ChevronRight size={13} />
+            </IconButton>
           </div>
         </div>
-      )}
-    </div>
+
+        <div className="grid grid-cols-7 gap-y-0.5">
+          {WEEKDAY_INITIALS.map((w, i) => (
+            <span key={i} className="text-center text-micro font-medium text-fg-muted uppercase py-0.5">
+              {w}
+            </span>
+          ))}
+          {gridDays.map((dateKey) => {
+            const [, m, d] = dateKey.split("-").map(Number);
+            const inMonth = m === viewMonth;
+            const isToday = dateKey === todayKey;
+            const highlighted = highlightKeys.has(dateKey);
+            return (
+              <button
+                key={dateKey}
+                type="button"
+                onClick={() => pick(dateKey)}
+                className={`h-7 rounded-md text-micro tnum transition-colors ${
+                  isToday
+                    ? "bg-brand-solid text-on-brand font-semibold"
+                    : highlighted
+                      ? "bg-brand-subtle text-brand font-medium hover:bg-brand/15"
+                      : inMonth
+                        ? "text-fg hover:bg-surface-hover"
+                        : "text-fg-muted/60 hover:bg-surface-hover"
+                }`}
+              >
+                {d}
+              </button>
+            );
+          })}
+        </div>
+      </PainelFlutuante>
+    </>
   );
 }

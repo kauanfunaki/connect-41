@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShieldCheck, ShieldAlert, Send, Hourglass } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Selo } from "@/components/ui/Selo";
 import { Aviso } from "@/components/ui/Aviso";
@@ -126,10 +127,12 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                 }}
               />
             )}
+            {/* Botão, como os do lado (15/10/2026): era link de texto cinza com
+                altura de botão. */}
             {serpro && (
-              <Link href="/autorizacoes/consumo" className="inline-flex items-center h-8 px-2 text-ui text-fg-muted hover:text-brand transition-colors">
+              <Button href="/autorizacoes/consumo" variant="secondary" size="sm">
                 Consumo do Serpro
-              </Link>
+              </Button>
             )}
           </div>
         }

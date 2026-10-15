@@ -13,6 +13,7 @@ import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import { formatInstantDateTime } from "@/lib/format";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 
 type MeetingRow = {
   id: string;
@@ -142,19 +143,19 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                     Entrar <ExternalLink size={11} />
                   </Button>
                   {canSchedule && deleteAction && (
-                    <button
-                      type="button"
+                    // O `IconButton` (15/10/2026): era um botão de ícone à mão.
+                    <IconButton
+                      size="sm"
                       onClick={() =>
                         requestConfirm(
                           { title: "Remover esta reunião da lista?", description: "Não cancela no provedor.", destructive: true, confirmLabel: "Remover" },
                           () => deleteAction(m.id)
                         )
                       }
-                      className="text-fg-muted hover:text-danger transition-colors"
-                      title="Remover" aria-label="Remover"
+                      title="Remover da lista"
                     >
                       <Trash2 size={13} />
-                    </button>
+                    </IconButton>
                   )}
                 </div>
               </div>

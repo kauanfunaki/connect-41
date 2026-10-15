@@ -21,7 +21,7 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { AcaoComMotivo } from "@/components/cobranca/AcaoComMotivo";
+import { DecisoesNoMenu } from "@/components/cobranca/AcaoComMotivo";
 import { ConfigDaRegua, EmpresaNaRegua } from "@/components/cobranca/ConfigDaRegua";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { moeda } from "@/lib/financeiro/formato";
@@ -497,29 +497,44 @@ async function Acordos({
                     </p>
                     {a.notas && <p className="text-helper text-fg-secondary mt-1 max-w-[720px]">{a.notas}</p>}
                   </div>
+                  {/* Quebrar e desfazer encerram o acordo: vão no "⋯", em
+                      vermelho, com a janela do motivo (11A, 15/10/2026). */}
                   {podeAgir && (
                     <div className="flex flex-wrap items-center gap-1.5">
-                      {podeQuebrar(a.status).pode && (
-                        <AcaoComMotivo
-                          rotulo="Marcar como quebrado"
-                          titulo="Acordo quebrado"
-                          descricao="As parcelas não pagas continuam em aberto como a dívida e voltam para a cobrança comum (e para a régua)."
-                          confirmar="Marcar como quebrado"
-                          acao={quebrarAcordo.bind(null, a.id)}
-                        />
+                      {!desfazer.pode && (a.status === "ATIVO" || a.status === "QUEBRADO") && (
+                        <span className="text-micro text-fg-muted max-w-[220px]">{desfazer.motivo}</span>
                       )}
-                      {desfazer.pode ? (
-                        <AcaoComMotivo
-                          rotulo="Desfazer"
-                          variante="danger"
-                          titulo="Desfazer acordo"
-                          descricao="Cancela as parcelas e devolve os títulos originais ao em aberto, com o valor e o vencimento de antes. A diferença do acordo sai da DRE econômica."
-                          confirmar="Desfazer acordo"
-                          acao={desfazerAcordo.bind(null, a.id)}
-                        />
-                      ) : (
-                        (a.status === "ATIVO" || a.status === "QUEBRADO") && <span className="text-micro text-fg-muted max-w-[220px]">{desfazer.motivo}</span>
-                      )}
+                      <DecisoesNoMenu
+                        rotulo={`Mais ações do acordo de ${a.sacadoNome}`}
+                        decisoes={[
+                          ...(podeQuebrar(a.status).pode
+                            ? [
+                                {
+                                  rotulo: "Marcar como quebrado",
+                                  variante: "danger" as const,
+                                  titulo: "Acordo quebrado",
+                                  descricao:
+                                    "As parcelas não pagas continuam em aberto como a dívida e voltam para a cobrança comum (e para a régua).",
+                                  confirmar: "Marcar como quebrado",
+                                  acao: quebrarAcordo.bind(null, a.id),
+                                },
+                              ]
+                            : []),
+                          ...(desfazer.pode
+                            ? [
+                                {
+                                  rotulo: "Desfazer acordo",
+                                  variante: "danger" as const,
+                                  titulo: "Desfazer acordo",
+                                  descricao:
+                                    "Cancela as parcelas e devolve os títulos originais ao em aberto, com o valor e o vencimento de antes. A diferença do acordo sai da DRE econômica.",
+                                  confirmar: "Desfazer acordo",
+                                  acao: desfazerAcordo.bind(null, a.id),
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
                     </div>
                   )}
                 </div>

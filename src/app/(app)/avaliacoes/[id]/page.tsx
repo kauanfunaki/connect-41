@@ -2,11 +2,11 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
-import { DeleteButton } from "@/components/pessoas/DeleteButton";
+import { AcoesDoCiclo } from "@/components/avaliacoes/AcoesDoCiclo";
 import { excluirCiclo, encerrarCiclo } from "../actions";
 import { SelecionarColaboradorForm } from "@/components/avaliacoes/SelecionarColaboradorForm";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -73,19 +73,16 @@ export default async function CicloPage({
         meta={
           ciclo.active ? <Selo tom="sucesso">Aberto</Selo> : <Selo tom="neutro">Encerrado</Selo>
         }
+        // Encerrar e excluir no "⋯", com confirmação (15/10/2026): encerrar
+        // fechava o ciclo de vez num clique.
         action={
-          canManage && (ciclo.active || canDelete) && (
-            <div className="flex items-center gap-2">
-              {ciclo.active && (
-                <form action={encerrarAction}>
-                  <Button variant="secondary" size="sm" type="submit">
-                    <Lock size={14} />
-                    Encerrar ciclo
-                  </Button>
-                </form>
-              )}
-              {canDelete && <DeleteButton action={deleteAction} nome={ciclo.name} />}
-            </div>
+          canManage &&
+          (ciclo.active || canDelete) && (
+            <AcoesDoCiclo
+              nome={ciclo.name}
+              encerrar={ciclo.active ? encerrarAction : undefined}
+              excluir={canDelete ? deleteAction : undefined}
+            />
           )
         }
       />

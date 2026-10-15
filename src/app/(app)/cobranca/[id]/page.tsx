@@ -17,7 +17,7 @@ import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobran
 import { RegistrarContato } from "@/components/cobranca/RegistrarContato";
 import { AtribuirResponsavel } from "@/components/cobranca/AtribuirResponsavel";
 import { CriarAcordo } from "@/components/cobranca/CriarAcordo";
-import { AcaoComMotivo } from "@/components/cobranca/AcaoComMotivo";
+import { AcaoComMotivo, DecisoesNoMenu } from "@/components/cobranca/AcaoComMotivo";
 import { moeda } from "@/lib/financeiro/formato";
 import { FAIXAS_DE_ATRASO } from "@/lib/financeiro/analise";
 import {
@@ -163,17 +163,24 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
                 }))}
               />
             )}
+            {/* Baixar por perda encerra o título: vai no "⋯", em vermelho, com
+                a janela do motivo (11A, 15/10/2026). */}
             {gerencia && perda.pode && (
-              <AcaoComMotivo
-                rotulo="Baixar por perda"
-                variante="danger"
-                tamanho="sm"
-                titulo="Baixa por perda"
-                descricao={`${l.sacadoNome} · ${moeda(l.valorCentavos)}. O título sai do em aberto e do aging; a receita da competência ${formatarCompetencia(t.competencia)} não muda, e a perda entra como despesa neste mês.`}
-                confirmar="Baixar por perda"
-                motivoObrigatorio
-                ajuda="Fica registrado no histórico do título."
-                acao={baixarPorPerda.bind(null, l.id)}
+              <DecisoesNoMenu
+                rotulo="Mais ações do título"
+                size="md"
+                decisoes={[
+                  {
+                    rotulo: "Baixar por perda",
+                    variante: "danger",
+                    titulo: "Baixa por perda",
+                    descricao: `${l.sacadoNome} · ${moeda(l.valorCentavos)}. O título sai do em aberto e do aging; a receita da competência ${formatarCompetencia(t.competencia)} não muda, e a perda entra como despesa neste mês.`,
+                    confirmar: "Baixar por perda",
+                    motivoObrigatorio: true,
+                    ajuda: "Fica registrado no histórico do título.",
+                    acao: baixarPorPerda.bind(null, l.id),
+                  },
+                ]}
               />
             )}
             {gerencia && reverter.pode && (
