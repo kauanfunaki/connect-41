@@ -12,7 +12,6 @@ import {
   FileText,
   History,
   MessageSquareText,
-  MoreHorizontal,
   Paperclip,
   Pencil,
   Plus,
@@ -25,6 +24,8 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { IconButton } from "@/components/ui/IconButton";
 import { Contador } from "@/components/ui/Contador";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { Ceci, type EstadoDaCeci } from "@/components/ia/Ceci";
@@ -682,9 +683,11 @@ export function ChatDeIA({
       >
         <header className="flex items-center gap-2.5 px-4 py-3">
           {vendoHistorico ? (
-            <button type="button" onClick={() => setVendoHistorico(false)} className="p-1 -ml-1 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Voltar">
+            // Os botões só de ícone do chat são o `IconButton` (15/10/2026):
+            // eram montados à mão, cada um com o seu tamanho.
+            <IconButton size="sm" onClick={() => setVendoHistorico(false)} className="-ml-1" title="Voltar">
               <ArrowLeft size={16} />
-            </button>
+            </IconButton>
           ) : (
             <Ceci tamanho={32} estado={estadoDaCeci} />
           )}
@@ -697,16 +700,8 @@ export function ChatDeIA({
               <p className="text-micro text-fg-muted truncate">{agente.especialidade}</p>
             </div>
           )}
-          <Popover
-            align="right"
-            width={220}
-            aria-label="Mais opções do chat"
-            trigger={({ toggle }) => (
-              <button type="button" onClick={toggle} className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Mais opções" data-dica="Mais opções">
-                <MoreHorizontal size={16} />
-              </button>
-            )}
-          >
+          {/* O "⋯" padrão (`MenuDeMaisAcoes`, 15/10/2026), e não um gatilho à mão. */}
+          <MenuDeMaisAcoes align="right" width={220} rotulo="Mais opções" aria-label="Mais opções do chat">
             {({ close }) => (
               <>
                 <ItemDoMenu
@@ -729,10 +724,10 @@ export function ChatDeIA({
                 </ItemDoMenu>
               </>
             )}
-          </Popover>
-          <button type="button" onClick={fecharChat} className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Fechar o chat">
+          </MenuDeMaisAcoes>
+          <IconButton size="sm" onClick={fecharChat} title="Fechar o chat">
             <X size={16} />
-          </button>
+          </IconButton>
         </header>
   
         {vendoHistorico ? (
@@ -750,8 +745,8 @@ export function ChatDeIA({
                         {formatInstantDateTime(new Date(c.atualizadaEm), { dateStyle: "short", timeStyle: "short" })}
                       </span>
                     </button>
-                    <button
-                      type="button"
+                    <IconButton
+                      size="sm"
                       onClick={() =>
                         requestConfirm(
                           {
@@ -763,12 +758,12 @@ export function ChatDeIA({
                           () => apagar(c.id)
                         )
                       }
-                      className="p-2 text-fg-muted hover:text-danger"
+                      className="mr-1 hover:text-danger!"
+                      title="Apagar"
                       aria-label="Apagar conversa"
-                      data-dica="Apagar"
                     >
                       <Trash2 size={14} />
-                    </button>
+                    </IconButton>
                   </li>
                 ))}
               </ul>
@@ -1019,15 +1014,16 @@ export function ChatDeIA({
                         e.target.value = "";
                       }}
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="xs"
                       onClick={() => seletorDeArquivoRef.current?.click()}
                       disabled={enviando}
                       title="PDF, imagem ou planilha — até 3 arquivos e 10 MB"
-                      className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-fs-2 font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)]"
                     >
                       <Paperclip size={13} /> Anexar
-                    </button>
+                    </Button>
                   </span>
                 </div>
               </div>

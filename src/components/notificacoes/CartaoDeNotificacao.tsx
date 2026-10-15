@@ -28,6 +28,7 @@ import {
 import type { IconeDaNotificacao, Tom } from "@/lib/notificacoes/catalogo";
 import type { NotificacaoNaTela, TipoDoChip } from "@/lib/notificacoes/consultas";
 import { tempoRelativo } from "@/lib/notificacoes/tempo";
+import { IconButton } from "@/components/ui/IconButton";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 
@@ -162,33 +163,32 @@ export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onArquivar, on
       </button>
       {/* Ações no hover (e no foco, para o teclado). Sempre visíveis no toque. */}
       <span className="flex-shrink-0 flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
-        <button
-          type="button"
+        {/* O `IconButton` do app (15/10/2026): eram três botões de ícone
+            desenhados à mão. */}
+        <IconButton
+          size="sm"
           onClick={() => onAlternarLida(n)}
           title={n.lida ? "Marcar como não lida" : "Marcar como lida"}
-          aria-label={n.lida ? "Marcar como não lida" : "Marcar como lida"}
-          className="size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-2"
         >
           {n.lida ? <RotateCcw size={14} /> : <Check size={14} />}
-        </button>
-        <button
-          type="button"
+        </IconButton>
+        <IconButton
+          size="sm"
           onClick={() => onArquivar(n)}
           title={n.arquivada ? "Desarquivar" : "Arquivar"}
           aria-label={n.arquivada ? "Desarquivar notificação" : "Arquivar notificação"}
-          className="size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-2"
         >
           {n.arquivada ? <ArchiveRestore size={14} /> : <Archive size={14} />}
-        </button>
-        <button
-          type="button"
+        </IconButton>
+        <IconButton
+          size="sm"
           onClick={() => onRemover(n)}
           title="Remover"
           aria-label="Remover notificação"
-          className="size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-danger hover:bg-danger-bg"
+          className="hover:text-danger! hover:bg-danger-bg!"
         >
           <X size={14} />
-        </button>
+        </IconButton>
       </span>
     </div>
   );

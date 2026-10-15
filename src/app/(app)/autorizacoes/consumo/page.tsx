@@ -8,6 +8,8 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { CampoMes } from "@/components/ui/CampoMes";
+import { Button } from "@/components/ui/Button";
 import { getAuthContext } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
 import { acessoAsAutorizacoes } from "@/lib/autorizacoes/servidor";
@@ -21,10 +23,6 @@ export const dynamic = "force-dynamic";
 
 const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const nomeDoMes = (mes: string) => `${MESES[Number(mes.slice(5, 7)) - 1]} de ${mes.slice(0, 4)}`;
-const mesAnterior = (mes: string) => {
-  const [a, m] = mes.split("-").map(Number);
-  return m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, "0")}`;
-};
 
 /**
  * Quanto o Serpro já custou no mês: chamadas cobradas por tipo, a faixa
@@ -67,18 +65,16 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
         </Aviso>
       )}
 
-      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="text-section font-semibold text-fg first-letter:uppercase">{nomeDoMes(mes)}</h2>
-        <div className="flex gap-3 text-ui">
-          <a href={`/autorizacoes/consumo?mes=${mesAnterior(mes)}`} className="text-fg-muted hover:text-brand transition-colors">
-            ‹ Mês anterior
-          </a>
-          {mes !== atual && (
-            <a href="/autorizacoes/consumo" className="text-fg-muted hover:text-brand transition-colors">
-              Este mês ›
-            </a>
-          )}
-        </div>
+        {/* O seletor de mês do Connect, por GET como o `FiltroDePeriodo`
+            (15/10/2026): eram "‹ Mês anterior" e "Este mês ›" em links de texto. */}
+        <form method="get" action="/autorizacoes/consumo" className="flex items-center gap-2">
+          <CampoMes compact name="mes" defaultValue={mes} max={atual} className="w-40" aria-label="Mês" />
+          <Button type="submit" variant="secondary" size="sm">
+            Aplicar
+          </Button>
+        </form>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">

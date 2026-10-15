@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, SlidersHorizontal } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { IconButton } from "@/components/ui/IconButton";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { useToast } from "@/components/ui/Toast";
@@ -117,10 +118,11 @@ export function CustomizeHomeButton({ selected, disponiveis, saveAction, resetAc
 
   return (
     <>
+      {/* O contorno do Connect não tem fundo em repouso (15/10/2026): tinha um
+          cinza fixo por cima. Fica em `md`, a altura do "Criar" ao lado. */}
       <Button
         variant="secondary"
         size="md"
-        className="bg-surface-hover hover:border-brand"
         onClick={openModal}
         title="Personalizar Home"
         aria-label="Personalizar Home"
@@ -190,14 +192,21 @@ export function CustomizeHomeButton({ selected, disponiveis, saveAction, resetAc
           })}
         </div>
 
-        <div className="flex items-center gap-3 pt-5">
-          <Button onClick={save} loading={isPending}>
-            Salvar
-          </Button>
-          <Button variant="ghost" onClick={reset} disabled={isPending}>
+        {/* Rodapé padrão (15/10/2026): Cancelar e Salvar à direita, o primário
+            por último, com a divisória; "Restaurar padrão" à esquerda. Eram
+            [Salvar] [Restaurar padrão] alinhados à esquerda. */}
+        <form
+          className="flex flex-wrap items-center gap-3 pt-4 mt-5 border-t border-border"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          <Button type="button" variant="ghost" onClick={reset} disabled={isPending} className="mr-auto">
             Restaurar padrão
           </Button>
-        </div>
+          <FormFooter semDivisoria pending={isPending} onCancel={() => setOpen(false)} />
+        </form>
       </Modal>
     </>
   );

@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { CheckCircle2, Forward, Hand, RotateCcw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -19,7 +21,7 @@ import {
 } from "@/app/(app)/solicitacoes/actions";
 import { emAberto, type StatusDaSolicitacao } from "@/lib/solicitacoes/regras";
 
-/** Os botões que o status permite: assumir, encaminhar, concluir, cancelar — ou reabrir. */
+/** As ações que o status permite: assumir, encaminhar, concluir, cancelar (no "⋯") — ou reabrir. */
 export function AcoesDaSolicitacao({
   id,
   status,
@@ -95,23 +97,30 @@ export function AcoesDaSolicitacao({
             >
               <CheckCircle2 size={13} /> Concluir
             </Button>
-            <Button
-              size="sm"
-              variant="danger"
-              onClick={() =>
-                requestConfirm(
-                  {
-                    title: "Cancelar a solicitação?",
-                    description: "Use para pedido repetido ou aberto por engano. O cliente vê como cancelada — explique o motivo numa resposta antes.",
-                    confirmLabel: "Cancelar solicitação",
-                    destructive: true,
-                  },
-                  executar(cancelarSolicitacao)
-                )
-              }
-            >
-              <XCircle size={13} /> Cancelar
-            </Button>
+            {/* Cancelar encerra: vai no "⋯", em vermelho (11A, 15/10/2026) — era
+                um botão vermelho à vista ao lado de Assumir/Encaminhar/Concluir. */}
+            <MenuDeMaisAcoes rotulo="Mais ações da solicitação" size="md" align="right" width={210}>
+              {({ close }) => (
+                <ItemDoMenu
+                  icone={<XCircle />}
+                  danger
+                  onClick={() => {
+                    close();
+                    requestConfirm(
+                      {
+                        title: "Cancelar a solicitação?",
+                        description: "Use para pedido repetido ou aberto por engano. O cliente vê como cancelada — explique o motivo numa resposta antes.",
+                        confirmLabel: "Cancelar solicitação",
+                        destructive: true,
+                      },
+                      executar(cancelarSolicitacao)
+                    );
+                  }}
+                >
+                  Cancelar solicitação
+                </ItemDoMenu>
+              )}
+            </MenuDeMaisAcoes>
           </>
         ) : (
           <Button

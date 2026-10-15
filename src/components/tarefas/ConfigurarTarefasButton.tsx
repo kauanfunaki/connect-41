@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -95,10 +96,11 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
 
   return (
     <>
+      {/* Contorno sem fundo em repouso e em `sm`, a altura do "Kanban" ao lado
+          (15/10/2026): tinha fundo cinza fixo e 36px. */}
       <Button
         variant="secondary"
-        size="md"
-        className="bg-surface-hover hover:border-brand"
+        size="sm"
         onClick={openModal}
         title="Configurar o Meu dia"
         aria-label="Configurar o Meu dia"
@@ -166,14 +168,21 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
           </Aviso>
         )}
 
-        <div className="flex items-center gap-3 pt-5">
-          <Button onClick={save} loading={isPending}>
-            Salvar
-          </Button>
-          <Button variant="ghost" onClick={reset} disabled={isPending}>
+        {/* Rodapé padrão (15/10/2026): Cancelar e Salvar à direita, o primário
+            por último, com a divisória; "Restaurar padrão" à esquerda. Eram
+            [Salvar] [Restaurar padrão] alinhados à esquerda. */}
+        <form
+          className="flex flex-wrap items-center gap-3 pt-4 mt-5 border-t border-border"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          <Button type="button" variant="ghost" onClick={reset} disabled={isPending} className="mr-auto">
             Restaurar padrão
           </Button>
-        </div>
+          <FormFooter semDivisoria pending={isPending} onCancel={() => setOpen(false)} />
+        </form>
       </Modal>
     </>
   );

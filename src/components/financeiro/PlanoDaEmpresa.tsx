@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
+import { Switch } from "@/components/ui/Switch";
 import {
   criarCategoriaDaEmpresa,
   atualizarCategoriaDaEmpresa,
@@ -152,22 +153,24 @@ export function LinhaDaDre({
 export function EsconderDoPadrao({ companyId, categoryId, oculta }: { companyId: string; categoryId: string; oculta: boolean }) {
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
+  // Interruptor (15/10/2026), no lugar do botão cujo texto se invertia a cada
+  // clique: mostra o estado, como nos módulos e nas obrigações. Controlado — só
+  // muda quando a página volta do servidor.
   return (
-    <span className="inline-flex items-center gap-2">
-      <Button
-        variant="secondary"
-        size="xs"
+    <span className="inline-flex flex-col items-start gap-0.5">
+      <Switch
+        size="sm"
+        checked={!oculta}
         disabled={pendente}
-        onClick={() =>
+        rotulo="Usar nesta empresa"
+        onCheckedChange={(usar) =>
           startTransition(async () => {
             setErro(null);
-            const r = await esconderDoPadraoNaEmpresa(companyId, categoryId, !oculta);
+            const r = await esconderDoPadraoNaEmpresa(companyId, categoryId, !usar);
             if ("error" in r) setErro(r.error);
           })
         }
-      >
-        {oculta ? "Usar nesta empresa" : "Não usar nesta empresa"}
-      </Button>
+      />
       {erro && <span className="text-micro text-danger">{erro}</span>}
     </span>
   );

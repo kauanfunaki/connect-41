@@ -204,17 +204,20 @@ export function AgentCard({
                     Gerado em {summary.generatedAtLabel} · baseado em {summary.evaluationCount} atendimento{summary.evaluationCount !== 1 ? "s" : ""}
                   </p>
                   {summary.examples.length > 0 && (
+                    // O `Button` do app (15/10/2026): eram botões de 24px com a
+                    // classe copiada à mão.
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
                       {summary.examples.map((ex, i) => (
-                        <button
+                        <Button
                           key={ex.conversationId}
-                          type="button"
+                          variant="secondary"
+                          size="xs"
                           onClick={() => openExample(ex.conversationId)}
-                          title={ex.note} aria-label={ex.note}
-                          className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-border text-fs-1 text-fg-secondary hover:text-fg hover:border-border-strong hover:bg-surface transition-colors"
+                          title={ex.note}
+                          aria-label={ex.note}
                         >
                           Exemplo {i + 1}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   )}

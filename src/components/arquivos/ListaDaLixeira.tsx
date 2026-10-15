@@ -49,16 +49,17 @@ export function ListaDaLixeira({ itens }: { itens: ItemDaLixeira[] }) {
             </p>
             {item.motivo && <p className="text-micro text-warning-fg">{item.motivo}</p>}
           </div>
+          {/* Ação de linha em `xs` (28px), como nas outras listas (15/10/2026). */}
           {item.podeRestaurar && (
             <Button
               type="button"
               variant="secondary"
-              size="sm"
+              size="xs"
               onClick={() => restaurarItem(item)}
               loading={pendente && emAndamento === item.id}
               disabled={pendente && emAndamento !== item.id}
             >
-              <RotateCcw size={14} /> Restaurar
+              <RotateCcw size={12} /> Restaurar
             </Button>
           )}
         </li>

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   AlarmClock,
   CalendarClock,
@@ -98,22 +97,21 @@ function Bloco({
           ))}
         </ul>
       )}
+      {/* Os destinos são botões (15/10/2026), e não links no meio da frase. */}
       {resto > 0 && (
-        <p className="px-4 py-2.5 border-t border-border text-fs-2 text-fg-muted">
-          + {resto} {resto === 1 ? "outro" : "outros"} — veja todos no{" "}
-          <Link href="/kanban" className="font-medium text-fg-secondary hover:text-brand">
-            Kanban
-          </Link>
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 border-t border-border">
+          <p className="mr-auto text-fs-2 text-fg-muted">
+            + {resto} {resto === 1 ? "outro" : "outros"}
+          </p>
+          <Button href="/kanban" variant="secondary" size="xs">
+            Ver no Kanban
+          </Button>
           {visaoTime && (
-            <>
-              {" "}ou na{" "}
-              <Link href="/gestao" className="font-medium text-fg-secondary hover:text-brand">
-                Gestão
-              </Link>
-            </>
+            <Button href="/gestao" variant="secondary" size="xs">
+              Ver na Gestão
+            </Button>
           )}
-          .
-        </p>
+        </div>
       )}
     </section>
   );
@@ -374,9 +372,10 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
               <h2 className="flex items-center gap-2 text-card-title font-semibold text-fg">
                 <CalendarDays size={16} className="text-fg-muted" /> Prazos da semana
               </h2>
-              <Link href="/agenda?view=semana" className="text-fs-2 font-medium text-fg-secondary hover:text-brand">
+              {/* Botão, como o "Entrar" das reuniões (15/10/2026): era link de texto. */}
+              <Button href="/agenda?view=semana" variant="secondary" size="xs">
                 Abrir agenda
-              </Link>
+              </Button>
             </header>
             {diasComPrazo.length === 0 ? (
               <p className="px-4 py-5 text-body text-fg-muted">
