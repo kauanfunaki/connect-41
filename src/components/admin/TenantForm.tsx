@@ -88,7 +88,7 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
               id="active"
               name="active"
               defaultChecked={defaultValues.active}
-              label="Tenant ativo"
+              label="Workspace ativo"
             />
           </AlinhadoAoCampo>
         </FieldGrid>

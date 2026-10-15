@@ -74,7 +74,7 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
           <p className="text-fs-2 text-fg-muted">
             Depois de quantos dias sem movimentação um item conta como parado, e com quantos dias de antecedência o prazo avisa. Vazio usa o
             padrão ({LIMITES_PADRAO.diasParado} e {LIMITES_PADRAO.diasAvisoPrazo} dias). Processo esperando o órgão só conta como parado depois de 30
-            dias; card que ainda não começou só avisa pelo prazo.
+            dias; tarefa que ainda não começou só avisa pelo prazo.
           </p>
         </div>
         {/* No celular, um cartão por setor, com os campos rotulados, em vez da

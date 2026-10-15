@@ -60,7 +60,7 @@ export default async function CamposPage() {
           <EmptyState
             icon={<ListChecks />}
             title="Nenhum campo customizado cadastrado"
-            description="Crie campos extras para Empresas ou Pessoas, específicos de um setor ou de todo o tenant."
+            description="Crie campos extras para Empresas ou Pessoas, de um setor só ou de todos os setores."
             action={
               <Button
                 href="/admin/campos/novo"

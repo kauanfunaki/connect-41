@@ -160,7 +160,7 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
                   <td className="py-2 pr-3 tabular-nums text-fg-secondary">{c.contribuinte.length === 11 ? formatCpf(c.contribuinte) : formatCnpj(c.contribuinte)}</td>
                   <td className="py-2 pr-3">
                     <span className="tabular-nums">{c.httpStatus ?? "—"}</span>{" "}
-                    {c.cobrada ? <Selo tom="atencao">cobrada</Selo> : <Selo tom="neutro">grátis</Selo>}
+                    {c.cobrada ? <Selo tom="atencao">Cobrada</Selo> : <Selo tom="neutro">Grátis</Selo>}
                   </td>
                   <td className="py-2 text-fg-muted break-words">{c.mensagens ?? "—"}</td>
                 </tr>

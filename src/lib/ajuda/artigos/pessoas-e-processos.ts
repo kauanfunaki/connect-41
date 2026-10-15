@@ -213,7 +213,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         passos: [
           "Dentro do ciclo, em “Nova avaliação”, busque o colaborador no campo “Colaborador”.",
           "Clique em “Avaliar colaborador”.",
-          "Em “Notas por Competência (0-10)”, dê uma nota para cada competência.",
+          "Em “Notas por competência (0 a 10)”, dê uma nota para cada competência.",
           "Em “Desenvolvimento”, preencha “Observações”, “Plano de desenvolvimento” e “Prazo de melhoria”, se for o caso.",
           "Clique em “Salvar avaliação”. A média aparece na tabela do ciclo.",
         ],

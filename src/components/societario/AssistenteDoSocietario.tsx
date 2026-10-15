@@ -44,11 +44,12 @@ export function AssistenteDoSocietario() {
     <Card as="section" className="p-4 flex flex-col gap-3">
       <h2 className="inline-flex items-center gap-1.5 text-card-title font-semibold text-fg">
         <Sparkles size={16} className="text-brand" aria-hidden />
-        Assistente do Societário
+        {/* "Ceci", como o botão do topo e o chat (15/10/2026): era "Assistente do Societário". */}
+        Pergunte à Ceci
       </h2>
       <p className="text-ui text-fg-secondary max-w-[62ch]">
         Pergunte sobre a fila — o que está parado, o que está em exigência, o que dá para
-        destravar. Ele lê os mesmos processos que você vê e{" "}
+        destravar. A Ceci lê os mesmos processos que você vê e{" "}
         <strong>não altera nada</strong>; toda mudança passa pelo seu “Aplicar”.
       </p>
 
@@ -57,7 +58,7 @@ export function AssistenteDoSocietario() {
         onChange={(e) => setPergunta(e.target.value)}
         placeholder="Ex.: quais processos estão em exigência há mais de uma semana?"
         rows={2}
-        aria-label="Pergunta ao assistente do Societário"
+        aria-label="Pergunta à Ceci sobre a fila do Societário"
       />
       <div className="flex justify-end">
         <Button onClick={perguntar} disabled={pensando || !pergunta.trim()}>
@@ -75,7 +76,7 @@ export function AssistenteDoSocietario() {
         <div className="flex flex-col gap-3">
           {resposta.truncado && (
             <Aviso tom="atencao" icone={<AlertTriangle />}>
-              O assistente parou antes de terminar — a resposta pode estar incompleta.
+              A Ceci parou antes de terminar — a resposta pode estar incompleta.
             </Aviso>
           )}
           {/* O mesmo desenho das respostas do chat da Ceci: Markdown seguro, link só para dentro do Connect. */}
