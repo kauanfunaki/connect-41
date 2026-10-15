@@ -394,16 +394,16 @@ export default async function DreEconomicaPage({
                         {l.codigo && <span className="text-micro text-fg-muted"> · {l.codigo}</span>}
                         {!l.ativo && <StatusDot color="var(--c41-fg-muted)" label="Inativo" className="ml-2 align-middle" />}
                       </td>
-                      <td className="px-3 tabular-nums">{moeda(l.receitaBruta)}</td>
-                      <td className={`px-3 tabular-nums ${l.despesas < 0 ? "text-danger" : ""}`}>{moeda(l.despesas)}</td>
+                      <td className={`px-3 tabular-nums ${tomDoValor(l.receitaBruta)}`}>{moeda(l.receitaBruta)}</td>
+                      <td className={`px-3 tabular-nums ${tomDoValor(l.despesas)}`}>{moeda(l.despesas)}</td>
                       <td className={`px-3 tabular-nums font-medium ${tomDoValor(l.resultado)}`}>{moeda(l.resultado)}</td>
                     </tr>
                   );
                 })}
                 <tr className="bg-surface-2 font-semibold">
                   <td className="px-3">Total da empresa</td>
-                  <td className="px-3 tabular-nums">{moeda(quadro.total.receitaBruta)}</td>
-                  <td className={`px-3 tabular-nums ${quadro.total.despesas < 0 ? "text-danger" : ""}`}>{moeda(quadro.total.despesas)}</td>
+                  <td className={`px-3 tabular-nums ${tomDoValor(quadro.total.receitaBruta)}`}>{moeda(quadro.total.receitaBruta)}</td>
+                  <td className={`px-3 tabular-nums ${tomDoValor(quadro.total.despesas)}`}>{moeda(quadro.total.despesas)}</td>
                   <td className={`px-3 tabular-nums ${tomDoValor(quadro.total.resultado)}`}>{moeda(quadro.total.resultado)}</td>
                 </tr>
               </tbody>
