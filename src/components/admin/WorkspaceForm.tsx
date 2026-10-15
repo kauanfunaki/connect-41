@@ -7,13 +7,24 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
+import { JanelaDeCadastro } from "@/components/shared/JanelaDeCadastro";
 
 type Props = {
   action: (prev: WorkspaceState, form: FormData) => Promise<WorkspaceState>;
-  cancelHref: string;
+  /** Na janela do "+ Novo workspace" (15/10/2026), o Cancelar fecha a janela. */
+  onCancel: () => void;
 };
 
-export function WorkspaceForm({ action, cancelHref }: Props) {
+/** O cadastro do workspace, na janela do "+ Novo workspace". Criado, vai para a tela dele. */
+export function NovoWorkspace({ action, abertaDeInicio = false }: { action: Props["action"]; abertaDeInicio?: boolean }) {
+  return (
+    <JanelaDeCadastro rotulo="Novo workspace" abertaDeInicio={abertaDeInicio}>
+      {(fechar) => <WorkspaceForm action={action} onCancel={fechar} />}
+    </JanelaDeCadastro>
+  );
+}
+
+export function WorkspaceForm({ action, onCancel }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
@@ -38,7 +49,7 @@ export function WorkspaceForm({ action, cancelHref }: Props) {
         pending={isPending}
         pendingLabel="Criando…"
         submitLabel="Criar workspace"
-        cancelHref={cancelHref}
+        onCancel={onCancel}
       />
     </form>
   );

@@ -7,7 +7,7 @@ import { PayrollStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
-import { AbrirCompetenciaForm } from "@/components/folha/AbrirCompetenciaForm";
+import { NovaCompetenciaDaFolha } from "@/components/folha/AbrirCompetenciaForm";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
@@ -66,16 +66,15 @@ export default async function FolhaPage({
       <PageHeader
         title="Folha de pagamento"
         subtitle={`${competencias.length} competência${competencias.length !== 1 ? "s" : ""} — controle e conferência de lançamentos, não motor de cálculo`}
+        action={canManage ? <NovaCompetenciaDaFolha action={abrirCompetencia} companyId={companyId} /> : undefined}
       />
-
-      {canManage && <AbrirCompetenciaForm action={abrirCompetencia} companyId={companyId} />}
 
       {competencias.length === 0 ? (
         <Card>
           <EmptyState
             icon={<Wallet />}
             title="Nenhuma competência aberta"
-            description={canManage ? "Abra a primeira competência acima para começar a conferir os lançamentos de folha." : "Nenhuma competência de folha foi aberta ainda para esta empresa."}
+            description={canManage ? "Use “+ Nova competência”, no alto da tela, para abrir a primeira e começar a conferir os lançamentos de folha." : "Nenhuma competência de folha foi aberta ainda para esta empresa."}
           />
         </Card>
       ) : (

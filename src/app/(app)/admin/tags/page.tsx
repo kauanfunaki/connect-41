@@ -47,18 +47,11 @@ export default async function TagsPage() {
       />
       {Object.keys(grouped).length === 0 ? (
         <Card>
+          {/* Sem repetir o "+ Nova tag": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<TagIcon />}
             title="Nenhuma tag cadastrada"
-            description="Cadastre tags reutilizáveis para marcar itens de kanban do mesmo setor."
-            action={
-              <Button
-                href="/admin/tags/novo"
-                variant="primary" className="font-medium"
-              >
-                + Nova tag
-              </Button>
-            }
+            description="Use “+ Nova tag”, no alto da tela, para cadastrar tags reutilizáveis que marcam itens de kanban do mesmo setor."
           />
         </Card>
       ) : (

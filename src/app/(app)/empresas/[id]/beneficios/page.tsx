@@ -79,19 +79,14 @@ export default async function BeneficiosPage({
 
       {beneficios.length === 0 ? (
         <Card>
+          {/* Sem repetir o "Novo benefício": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<Gift />}
             title="Nenhum benefício cadastrado"
-            description="Cadastre os benefícios oferecidos aos colaboradores desta empresa, como vale-refeição, plano de saúde ou auxílio-transporte."
-            action={
-              canManage && (
-                <Button
-                  href={novoHref}
-                  variant="primary"
-                >
-                  <Plus size={14} /> Cadastrar benefício
-                </Button>
-              )
+            description={
+              canManage
+                ? "Use “+ Novo benefício”, no alto da tela, para cadastrar os benefícios oferecidos aos colaboradores desta empresa, como vale-refeição, plano de saúde ou auxílio-transporte."
+                : "Os benefícios desta empresa aparecem aqui quando forem cadastrados."
             }
           />
         </Card>

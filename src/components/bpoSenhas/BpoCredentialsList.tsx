@@ -286,7 +286,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
         <EmptyState
           icon={<KeyRound />}
           title="Nenhuma credencial cadastrada ainda"
-          description={canManage ? "Cadastre a primeira credencial do setor." : `Peça à coordenação do setor ${setorRotulo} para cadastrar a primeira credencial.`}
+          description={canManage ? "Use “+ Nova credencial”, no alto da tela, para cadastrar a primeira do setor." : `Peça à coordenação do setor ${setorRotulo} para cadastrar a primeira credencial.`}
         />
       ) : filteredCredentials.length === 0 ? (
         <EmptyState icon={<KeyRound />} title="Nenhuma credencial encontrada" description="Tente ajustar a busca." />

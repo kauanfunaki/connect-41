@@ -28,7 +28,6 @@ type Props = {
   /** O setor que opera o módulo neste escritório — nem sempre o BPO (05/10/2026). */
   setorRotulo: string;
   documents: ManualDocumentData[];
-  createDocumentAction: (title: string) => Promise<{ error: string } | { id: string }>;
   renameDocumentAction: (documentId: string, title: string) => Promise<void>;
   deleteDocumentAction: (documentId: string) => Promise<void>;
   updateDocumentIconAction: (documentId: string, icon: string | null) => Promise<void>;
@@ -385,20 +384,27 @@ function PageCanvas({
 // diferente do modelo anterior de uma lista única de páginas onde só dava
 // pra adicionar mais conteúdo, nunca começar um segundo documento.
 export function ManualWorkspace({
-  canAct, canDelete, setorRotulo, documents, createDocumentAction, renameDocumentAction, deleteDocumentAction, updateDocumentIconAction,
+  canAct, canDelete, setorRotulo, documents, renameDocumentAction, deleteDocumentAction, updateDocumentIconAction,
   createPageAction, updatePageAction, deletePageAction,
 }: Props) {
   const firstDoc = documents[0];
   const [activePageId, setActivePageId] = useState<string | null>(firstDoc?.pages[0]?.id ?? null);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(firstDoc ? [firstDoc.id] : []));
-  const [creatingDoc, setCreatingDoc] = useState(false);
-  const [newDocTitle, setNewDocTitle] = useState("");
   const [creatingPageFor, setCreatingPageFor] = useState<string | null>(null);
   const [newPageTitle, setNewPageTitle] = useState("");
   const [renamingDocId, setRenamingDocId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
+
+  // O documento criado pelo "+ Novo documento" do cabeçalho chega aberto na
+  // árvore, pronto para a primeira página (P19, 15/10/2026).
+  const [docsConhecidos, setDocsConhecidos] = useState(() => new Set(documents.map((d) => d.id)));
+  const docsNovos = documents.filter((d) => !docsConhecidos.has(d.id));
+  if (docsNovos.length > 0) {
+    setDocsConhecidos(new Set(documents.map((d) => d.id)));
+    setExpanded((prev) => new Set([...prev, ...docsNovos.map((d) => d.id)]));
+  }
 
   function submitDocumentIcon(docId: string, icon: string | null) {
     startTransition(() => updateDocumentIconAction(docId, icon));
@@ -424,21 +430,6 @@ export function ManualWorkspace({
   // perde o foco (ou no Esc), tendo texto ou não. Antes o submit saía cedo
   // quando o título estava vazio e nunca chegava a fechar — clicar fora
   // deixava o input aberto pra sempre, sem jeito óbvio de cancelar.
-  function closeCreateDocument() {
-    setNewDocTitle("");
-    setCreatingDoc(false);
-  }
-
-  function submitCreateDocument() {
-    const title = newDocTitle.trim();
-    closeCreateDocument();
-    if (!title) return;
-    startTransition(async () => {
-      const res = await createDocumentAction(title);
-      if ("id" in res) setExpanded((prev) => new Set(prev).add(res.id));
-    });
-  }
-
   function closeCreatePage() {
     setNewPageTitle("");
     setCreatingPageFor(null);
@@ -644,28 +635,6 @@ export function ManualWorkspace({
           })}
         </div>
 
-        {canAct && (
-          <div className="pt-2 mt-2 border-t border-border flex-shrink-0">
-            {creatingDoc ? (
-              <Input
-                autoFocus
-                value={newDocTitle}
-                onChange={(e) => setNewDocTitle(e.target.value)}
-                onBlur={submitCreateDocument}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submitCreateDocument();
-                  if (e.key === "Escape") closeCreateDocument();
-                }}
-                placeholder="Título do documento…"
-                className="w-full !h-8 px-2 text-ui"
-              />
-            ) : (
-              <Button variant="ghost" size="sm" className="w-full justify-start! px-2!" onClick={() => setCreatingDoc(true)}>
-                <Plus size={13} /> Novo documento
-              </Button>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="flex-1 min-w-0 min-h-0">
@@ -688,7 +657,7 @@ export function ManualWorkspace({
               description={
                 documents.length === 0
                   ? canAct
-                    ? "Crie um documento para começar."
+                    ? "Use “+ Novo documento”, no alto da tela, para começar."
                     : undefined
                   : "Selecione ou crie uma página para começar."
               }

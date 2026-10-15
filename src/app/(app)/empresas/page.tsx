@@ -239,15 +239,13 @@ export default async function EmpresasPage({
         <EmptyState
           icon={<Building2 />}
           title={search || statusFilter || temFiltroDeColuna ? "Nenhuma empresa encontrada" : "Nenhuma empresa cadastrada ainda"}
+          // Sem repetir o "Nova empresa": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026).
           description={
             search || statusFilter || temFiltroDeColuna
               ? "Tente ajustar a busca ou os filtros."
-              : "Comece cadastrando a primeira empresa."
-          }
-          action={
-            !search && !statusFilter && !temFiltroDeColuna && canCreate ? (
-              <Button href="/empresas/nova"><Plus size={14} /> Nova empresa</Button>
-            ) : undefined
+              : canCreate
+                ? "Use “+ Nova empresa”, no alto da tela, para cadastrar a primeira."
+                : "As empresas atendidas aparecem aqui quando forem cadastradas."
           }
         />
       ) : (

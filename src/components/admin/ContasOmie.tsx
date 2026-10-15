@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
@@ -81,9 +82,11 @@ function FormConta({ empresas, inicial, onFim }: { empresas: (EmpresaParaEscolhe
           há dois campos, e eles dividem a linha em duas colunas, sem um terço
           vazio no fim. */}
       {inicial && <input type="hidden" name="companyId" value={companyId} />}
-      <FieldGrid columns={inicial ? "sm:grid-cols-2" : "md:grid-cols-3"}>
+      {/* Conta nova na janela (15/10/2026): a empresa ocupa a linha, e as duas
+          chaves dividem a de baixo. */}
+      <FieldGrid columns="sm:grid-cols-2">
         {!inicial && (
-          <CampoForm label="Empresa" htmlFor={`${id}-empresa`}>
+          <CampoForm label="Empresa" htmlFor={`${id}-empresa`} className="sm:col-span-2">
             <SearchableSelect
               id={`${id}-empresa`}
               name="companyId"
@@ -113,7 +116,7 @@ function FormConta({ empresas, inicial, onFim }: { empresas: (EmpresaParaEscolhe
         pending={pendente}
         onCancel={onFim}
         erro={erro}
-        semDivisoria
+        semDivisoria={Boolean(inicial)}
       />
     </form>
   );
@@ -205,18 +208,16 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
             horas. Só leitura: nada é alterado no Omie.
           </p>
         </div>
-        {!novo && (
-          <Button size="sm" onClick={() => setNovo(true)}>
-            <Plus size={14} /> Adicionar empresa
-          </Button>
-        )}
+        <Button size="sm" onClick={() => setNovo(true)}>
+          <Plus size={14} /> Adicionar empresa
+        </Button>
       </div>
 
-      {novo && (
-        <div className="mb-4 rounded-md border border-border p-4">
-          <FormConta empresas={semConta} onFim={() => setNovo(false)} />
-        </div>
-      )}
+      {/* Conta nova numa janela, com o rodapé padrão (P19, 15/10/2026): o
+          formulário abria dentro do cartão, acima da lista, empurrando-a. */}
+      <Modal open={novo} onClose={() => setNovo(false)} title="Adicionar empresa" maxWidth="max-w-xl">
+        {novo && <FormConta empresas={semConta} onFim={() => setNovo(false)} />}
+      </Modal>
 
       {contas.length === 0 ? (
         <p className="text-fs-3 text-fg-muted">Nenhuma empresa com conta do Omie cadastrada ainda.</p>

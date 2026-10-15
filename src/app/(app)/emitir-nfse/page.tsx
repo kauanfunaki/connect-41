@@ -92,17 +92,19 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
   const { escolha, empresa: escolhida } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
   const companyId = escolhida?.id ?? null;
 
-  const cabecalho = (
+  // "Nova NFS-e" à direita do título, quando a empresa está escolhida (P19, 15/10/2026).
+  const cabecalho = (acao?: React.ReactNode) => (
     <PageHeader
       title="Emitir NFS-e"
       subtitle="A nota sai pelo Omie da empresa, pedida daqui. Serviço, tributação e certificado continuam no cadastro do Omie."
+      action={acao}
     />
   );
 
   if (empresas.length > 0 && !companyId) {
     return (
       <PageContainer>
-        {cabecalho}
+        {cabecalho()}
         <FiltroDaEmpresa acao="/emitir-nfse" empresas={empresas} valor={null} />
         <EscolhaAEmpresa escolha={escolha} porQue="A nota sai pelo Omie de uma empresa por vez." />
       </PageContainer>
@@ -112,7 +114,7 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
   if (!companyId || !escolhida) {
     return (
       <PageContainer>
-        {cabecalho}
+        {cabecalho()}
         <EmptyState
           title="Nenhuma empresa com conta do Omie ligada"
           description="A conta do Omie de cada empresa (App Key e App Secret) é cadastrada em Integrações, por quem administra o escritório."
@@ -138,7 +140,9 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
   // A nota sai pela empresa escolhida — o rodapé do "Nova NFS-e" diz qual.
   return comEmpresa(
     <PageContainer>
-      {cabecalho}
+      {cabecalho(
+        podeEmitir ? <NovaNfse companyId={companyId} empresaNome={empresa.nome} competenciaAtual={competenciaDoInstante(agora)} /> : undefined
+      )}
 
       <FiltroDaEmpresa acao="/emitir-nfse" empresas={empresas} valor={companyId} />
 
@@ -154,19 +158,15 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
         )}
       </div>
 
-      <div className="mb-4">
-        {podeEmitir ? (
-          <NovaNfse companyId={companyId} empresaNome={empresa.nome} competenciaAtual={competenciaDoInstante(agora)} />
-        ) : (
-          <p className="text-ui text-fg-muted">Só o administrador do setor emite e cancela NFS-e. Aqui você acompanha o que foi pedido.</p>
-        )}
-      </div>
+      {!podeEmitir && (
+        <p className="text-ui text-fg-muted mb-4">Só o administrador do setor emite e cancela NFS-e. Aqui você acompanha o que foi pedido.</p>
+      )}
 
       <CascoDaTabela contagem={contarItens(linhas.length, "emissão", "emissões", limitado)}>
         {linhas.length === 0 ? (
           <EmptyState
             title="Nenhuma NFS-e pedida por aqui nesta empresa"
-            description={podeEmitir ? "Use “Nova NFS-e” para pedir a primeira." : undefined}
+            description={podeEmitir ? "Use “Nova NFS-e”, no alto da tela, para pedir a primeira." : undefined}
             icon={<ReceiptText />}
           />
         ) : (
