@@ -12,6 +12,7 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, 
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { AtualizarEmLote, BotaoDaAutorizacao, ConferirNoSerpro, PedidoAoCliente } from "@/components/autorizacoes/DialogosDaAutorizacao";
 import { TOM_DA_SITUACAO } from "@/components/autorizacoes/AutorizacaoNaFicha";
 import { acessoAsAutorizacoes, carteiraDasAutorizacoes, quemRecebe, sugestaoDeQuemRecebe } from "@/lib/autorizacoes/servidor";
@@ -290,12 +291,12 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
             </TabelaFiltravel>
           </>
         )}
-        <p className="text-micro text-fg-muted mt-3">
+        <NotaDeFonte>
           Uma linha por raiz de CNPJ: a autorização dada pela matriz vale para as filiais. O escritório valida no Portal de Serviços da Receita, aba
           “Recebidas”, em até 30 dias do cadastro do cliente — depois disso ela cai. O setor é avisado faltando 10 e 3 dias e no último dia, e 60,
           30 e 7 dias antes do fim da validade.
           {semDocumento > 0 && ` ${plural(semDocumento, "empresa ativa sem CNPJ ou CPF válido ficou", "empresas ativas sem CNPJ ou CPF válido ficaram")} de fora.`}
-        </p>
+        </NotaDeFonte>
       </CascoDaTabela>
     </PageContainer>
   );

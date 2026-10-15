@@ -67,6 +67,7 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 import { IconButton } from "@/components/ui/IconButton";
 import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
@@ -707,19 +708,23 @@ export function AppShell({
           </div>
         </header>
 
+        {/* No `Aviso` de perigo (15/10/2026), na largura da página: era uma
+            faixa vermelha desenhada à mão, de ponta a ponta. */}
         {subscriptionReadOnly && (
-          <div className="flex-shrink-0 bg-danger/10 border-b border-danger/20 px-4 py-2 text-ui text-danger flex items-center justify-center gap-2 text-center">
-            Assinatura pendente — este workspace está em modo somente leitura.{" "}
-            {/* Em MANAGED a tela /assinatura dá 404 (é a 41 Tech quem administra),
-                então o link viraria um beco sem saída — vira instrução de contato.
-                Revisão de 05/10: botão não é link — era texto sublinhado na faixa. */}
-            {canSelfRegularizeSubscription ? (
-              <Button href="/assinatura" variant="secondary" size="xs">
-                Regularizar assinatura
-              </Button>
-            ) : (
-              <span className="font-medium">Entre em contato com a 41 Tech.</span>
-            )}
+          <div className="flex-shrink-0 w-full max-w-[1440px] mx-auto px-6 pt-4">
+            <Aviso tom="perigo" className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-center">
+              Assinatura pendente — este workspace está em modo somente leitura.{" "}
+              {/* Em MANAGED a tela /assinatura dá 404 (é a 41 Tech quem administra),
+                  então o link viraria um beco sem saída — vira instrução de contato.
+                  Revisão de 05/10: botão não é link — era texto sublinhado na faixa. */}
+              {canSelfRegularizeSubscription ? (
+                <Button href="/assinatura" variant="secondary" size="xs">
+                  Regularizar assinatura
+                </Button>
+              ) : (
+                <span className="font-medium">Entre em contato com a 41 Tech.</span>
+              )}
+            </Aviso>
           </div>
         )}
 

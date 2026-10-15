@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { Selo } from "@/components/ui/Selo";
@@ -125,10 +126,10 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
             </tbody>
           </table>
         </div>
-        <p className="text-micro text-fg-muted mt-3">
+        <NotaDeFonte>
           Cobradas são as respostas 200, 202 e 403 de consultas, emissões e declarações — inclusive o 403 de cliente sem autorização. A faixa
           atingida no mês vale para todas as chamadas daquele tipo (regra a confirmar no contrato).
-        </p>
+        </NotaDeFonte>
       </Card>
 
       <h2 className="text-section font-semibold text-fg mb-3">Últimas chamadas</h2>

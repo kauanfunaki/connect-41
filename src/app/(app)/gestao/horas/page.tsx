@@ -4,6 +4,7 @@ import { Clock, Download, ListChecks, Timer, Users, Wallet } from "lucide-react"
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Aviso } from "@/components/ui/Aviso";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
@@ -112,8 +113,9 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
 
       {podeVerCusto && (resumo.minutosSemCusto > 0 || !configurado) && (
         // Revisão de 05/10: botão não é link — o "Custos no Valora" era texto azul.
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-2 text-fg-secondary">
-          <p>
+        // No `Aviso` de atenção (15/10/2026): era uma caixa cinza montada à mão.
+        <Aviso tom="atencao" className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <p className="text-fg">
             {!configurado
               ? "O custo das equipes ainda não foi preenchido no Valora, então as horas aparecem sem custo."
               : `${h(resumo.minutosSemCusto)} estão em setores sem custo de equipe no Valora (só Fiscal, DP, Societário e Contábil têm) e ficaram fora do custo.`}
@@ -121,7 +123,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
           <Button href="/valora/parametros" variant="secondary" size="xs">
             Abrir custos no Valora
           </Button>
-        </div>
+        </Aviso>
       )}
 
       {linhas.length === 0 ? (

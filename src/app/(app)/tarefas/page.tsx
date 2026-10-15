@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
+import { Contador } from "@/components/ui/Contador";
 import { ConfigurarTarefasButton } from "@/components/tarefas/ConfigurarTarefasButton";
 import { LinhaDoDia } from "@/components/tarefas/LinhaDoDia";
 import { PrazoItem } from "@/components/agenda/PrazoItem";
@@ -79,7 +80,8 @@ function Bloco({
           {icone}
           {titulo}
         </h2>
-        <span className="text-fs-2 text-fg-muted tnum">{lista.length}</span>
+        {/* No `Contador` (15/10/2026): era o número solto. */}
+        <Contador valor={lista.length} teto={Number.MAX_SAFE_INTEGER} />
       </header>
       {lista.length === 0 ? (
         <p className="px-4 py-5 text-body text-fg-muted">{vazio}</p>

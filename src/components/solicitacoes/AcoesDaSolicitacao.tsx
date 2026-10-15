@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { Aviso } from "@/components/ui/Aviso";
 import { useConfirm } from "@/components/ui/useConfirm";
 import {
   assumirSolicitacao,
@@ -127,8 +128,10 @@ export function AcoesDaSolicitacao({
           </Button>
         )}
       </div>
-      {erro && <span className="text-fs-2 text-danger">{erro}</span>}
-      {aviso && <span className="text-fs-2 text-warning-fg">{aviso}</span>}
+      {/* No `Aviso` (15/10/2026), como o retorno do envio de documentos: eram
+          textos coloridos soltos embaixo dos botões. */}
+      {erro && <Aviso>{erro}</Aviso>}
+      {aviso && <Aviso tom="atencao">{aviso}</Aviso>}
       {dialog}
 
       <Modal open={encaminhando} onClose={() => !pendente && setEncaminhando(false)} title="Encaminhar para outro setor">

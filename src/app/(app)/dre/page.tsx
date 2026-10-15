@@ -303,12 +303,13 @@ export default async function DrePage({
         <AvisoDeSemGrupo />
 
         {/* De onde saiu o número. Relatório que muda de fonte sem avisar é
-            relatório em que ninguém confia duas vezes. */}
-        <p className="text-micro text-fg-muted mb-3">
+            relatório em que ninguém confia duas vezes. Na `NotaDeFonte` (15/10/2026),
+            como as outras notas da tela; o `mt-3` dela some na margem do bloco de cima. */}
+        <NotaDeFonte className="mb-3">
           {fonte.tipo === "import"
             ? `Montado do arquivo importado do Omie${fonte.arquivos.length > 0 ? ` (${[...new Set(fonte.arquivos)].join(", ")})` : ""}.`
             : "Montado dos lançamentos pagos e recebidos no Connect."}
-        </p>
+        </NotaDeFonte>
 
         <RelatorioDoDre resultado={resultado} />
 

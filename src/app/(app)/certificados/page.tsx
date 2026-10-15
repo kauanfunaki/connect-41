@@ -139,7 +139,16 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
 
         {visiveis.length === 0 ? (
           <EmptyState
-            title={certs.length === 0 ? "Nenhum certificado importado" : busca ? "Nada encontrado" : "Nada nesta aba"}
+            // O recorte é filtro de situação, não aba (15/10/2026): o vazio fala dele.
+            title={
+              certs.length === 0
+                ? "Nenhum certificado importado"
+                : busca
+                  ? "Nada encontrado"
+                  : aba === "renovar"
+                    ? "Nenhum certificado a renovar"
+                    : "Nenhum certificado nesta situação"
+            }
             // Texto para quem usa a tela (05/10/2026) — mostrava o caminho do script no repositório.
             description={
               certs.length === 0

@@ -432,35 +432,33 @@ function Protocolo({
         </span>
       )}
 
+      {/* A exigência no `Aviso` de atenção (15/10/2026): era uma caixa âmbar
+          montada à mão. A cumprida sai do âmbar — não pede mais nada. */}
       {protocolo.exigencias.map((ex) => (
-        <div
-          key={ex.id}
-          className="text-fs-2 rounded-md border border-warning/30 bg-warning/8 px-3 py-2 flex flex-col gap-1.5"
-        >
-          <span className="flex items-start gap-1.5">
-            <AlertTriangle size={14} className="text-warning-fg mt-px shrink-0" />
-            <span className={ex.resolvidaEm ? "line-through text-fg-muted" : ""}>{ex.descricao}</span>
-          </span>
-          <span className="text-micro text-fg-muted">
-            {ex.prazoAte ? `Prazo do órgão: ${formatInstantDate(ex.prazoAte)}` : "Sem prazo do órgão"}
-            {ex.resolvidaEm && ` · cumprida em ${formatInstantDate(ex.resolvidaEm)}`}
-          </span>
-          {/* Botão como os outros do cartão — era um link de 11px, fácil de
-              não ver numa ação que fecha a exigência. */}
-          {podeEditar && !ex.resolvidaEm && (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={pendente}
-              loading={carregando(`cumprir-${ex.id}`)}
-              loadingLabel="Marcando…"
-              onClick={() => executar(`cumprir-${ex.id}`, () => acoes.resolverExigencia(ex.id))}
-              className="self-start"
-            >
-              <Check size={14} /> Marcar como cumprida
-            </Button>
-          )}
-        </div>
+        <Aviso key={ex.id} tom={ex.resolvidaEm ? "neutro" : "atencao"} icone={<AlertTriangle />}>
+          <div className="flex flex-col gap-1.5">
+            <span className={ex.resolvidaEm ? "line-through text-fg-muted" : "text-fg"}>{ex.descricao}</span>
+            <span className="text-micro text-fg-muted">
+              {ex.prazoAte ? `Prazo do órgão: ${formatInstantDate(ex.prazoAte)}` : "Sem prazo do órgão"}
+              {ex.resolvidaEm && ` · cumprida em ${formatInstantDate(ex.resolvidaEm)}`}
+            </span>
+            {/* Botão como os outros do cartão — era um link de 11px, fácil de
+                não ver numa ação que fecha a exigência. */}
+            {podeEditar && !ex.resolvidaEm && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={pendente}
+                loading={carregando(`cumprir-${ex.id}`)}
+                loadingLabel="Marcando…"
+                onClick={() => executar(`cumprir-${ex.id}`, () => acoes.resolverExigencia(ex.id))}
+                className="self-start"
+              >
+                <Check size={14} /> Marcar como cumprida
+              </Button>
+            )}
+          </div>
+        </Aviso>
       ))}
 
       {podeEditar && protocolo.desfecho === "PENDENTE" && (
