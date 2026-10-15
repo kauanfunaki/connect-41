@@ -164,7 +164,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Inativar não apaga nada: a empresa só sai da lista padrão e pode ser reativada depois.",
       "Cadastrar, editar e inativar empresas é para administradores e gestores de setor. Excluir de vez é só para administradores.",
       "Empresa com mais de 2.000 notas fiscais não pode ser excluída por aqui: é histórico de verdade. Inative.",
-      "O portal não depende do “Cliente” da empresa: quem vê cada empresa se define em “Acesso ao portal”, na ficha dela, ou em Configurações › Portal do cliente.",
+      "Quem vê cada empresa no portal se define em “Acesso ao portal”, na ficha dela, ou em Configurações › Portal do cliente.",
     ],
   },
 

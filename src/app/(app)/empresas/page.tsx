@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Building2, Plus } from "lucide-react";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
@@ -60,13 +59,14 @@ export default async function EmpresasPage({
     search?: string;
     status?: string;
     page?: string;
-    cliente?: string;
     /** Funil das colunas — parâmetro repetido, um por valor escolhido. */
     regime?: string | string[];
     local?: string | string[];
   }>;
 }) {
-  const { search, status, page, cliente, regime, local } = await searchParams;
+  // `?cliente=` (o link "N empresas" da tela Clientes, que saiu em 15/10/2026)
+  // é ignorado: o endereço antigo abre a lista inteira, sem filtro escondido.
+  const { search, status, page, regime, local } = await searchParams;
   const regimes = lerLista(regime);
   const locais = lerLista(local);
   const ctx = await getAuthContext();
@@ -83,8 +83,6 @@ export default async function EmpresasPage({
     ...(await scopedCompanyWhere(ctx)),
     ...(search ? { OR: [{ name: { contains: search } }, { externalId: { contains: search } }] } : {}),
     ...companyStatusWhere(statusFiltro),
-    // Vem do link "N empresas" em /clientes.
-    ...(cliente ? { clientGroupId: cliente } : {}),
   };
 
   // Funil de Regime e Localização (polimento de 30/09). A lista é paginada,
@@ -119,19 +117,11 @@ export default async function EmpresasPage({
       })
     : 0;
 
-  // Nome do cliente filtrado: sem ele o chip diria só "filtro ativo", e o
-  // usuário não saberia por qual cliente está filtrando nem por que a busca
-  // não acha uma empresa que ele sabe que existe.
-  const clienteFiltrado = cliente
-    ? await prisma.clientGroup.findFirst({ where: { id: cliente, tenantId: ctx.tenantId }, select: { name: true } })
-    : null;
-
-  // Alfabética em dois níveis: o bloco pelo nome do cliente, e as empresas
-  // dentro dele pela razão social — que é o que a tela mostra, já que
-  // `displayName` só existe em filial e repete o nome com o sufixo. Ordenar
-  // pelo grupo primeiro é o que mantém as empresas de um mesmo cliente
-  // adjacentes; sem isso o agrupamento da tela viraria confete.
-  const ordem = [{ clientGroup: { name: "asc" as const } }, { name: "asc" as const }];
+  // Alfabética pela razão social — que é o que a tela mostra, já que
+  // `displayName` só existe em filial e repete o nome com o sufixo. Até
+  // 15/10/2026 o primeiro nível era o nome do cliente, para os blocos por
+  // cliente; o agrupamento saiu com o Cliente, e a filial fica sob a matriz.
+  const ordem = [{ name: "asc" as const }];
 
   // Duas consultas de propósito. A paginação conta MATRIZES, não linhas: com
   // `take: PER_PAGE` direto, uma matriz de 21 filiais era cortada no meio e as
@@ -147,14 +137,13 @@ export default async function EmpresasPage({
   const companies = await prisma.company.findMany({
     where: { id: { in: ids } },
     orderBy: ordem,
-    include: { clientGroup: { select: { id: true, name: true } } },
   });
 
   // Carrega o funil das colunas (parâmetro repetido) junto com o resto: sem
   // ele, virar a página ou "Mostrar todas" apagava o filtro de regime e local.
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, status, page, cliente, ...params };
+    const merged = { search, status, page, ...params };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -171,7 +160,7 @@ export default async function EmpresasPage({
       {/* Header */}
       <PageHeader
         title="Empresas"
-        subtitle="As empresas atendidas, agrupadas por cliente."
+        subtitle="As empresas atendidas pelo escritório."
         action={<>{canCreate && (
           <Button
             href="/empresas/nova"
@@ -181,27 +170,6 @@ export default async function EmpresasPage({
           </Button>
         )}</>}
       />
-
-      {/* Filtro por cliente vem de um link de /clientes. Sem uma saída visível,
-          o usuário buscava outra empresa, não achava, e concluía que ela não
-          existe — o filtro continuava ativo na URL, invisível. */}
-      {cliente && (
-        <div className="flex items-center gap-2 mb-4">
-          <span className="inline-flex items-center gap-2 h-7 pl-3 pr-2 rounded-full bg-brand/10 text-brand text-fs-2 font-medium">
-            Cliente: {clienteFiltrado?.name ?? "desconhecido"}
-            <Link
-              href={buildUrl({ cliente: undefined, page: "1" })}
-              aria-label="Remover filtro de cliente"
-              className="grid place-items-center w-4 h-4 rounded-full hover:bg-brand/20 transition-colors"
-            >
-              ×
-            </Link>
-          </span>
-          <span className="text-fs-2 text-fg-muted">
-            A busca e os filtros só enxergam as empresas deste cliente.
-          </span>
-        </div>
-      )}
 
       {/* Esconder sem avisar faria a base parecer menor do que é. */}
       {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
@@ -266,8 +234,6 @@ export default async function EmpresasPage({
             logoUrl: c.logoUrl,
             city: c.city,
             stateCode: c.stateCode,
-            clientGroupId: c.clientGroup?.id ?? null,
-            clientGroupName: c.clientGroup?.name ?? null,
             parentCompanyId: c.parentCompanyId,
           }))}
           canCreate={canCreate}

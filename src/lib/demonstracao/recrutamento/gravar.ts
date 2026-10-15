@@ -99,7 +99,6 @@ export async function gravarDemonstracao(
 ): Promise<ResultadoDaGravacao> {
   const idDe = <T extends { chave: string }>(lista: readonly T[]) => new Map(lista.map((x) => [x.chave, gerar.id()]));
   const empresa = idDe(plano.empresas);
-  const grupo = idDe(plano.empresas);
   const cargo = idDe(plano.cargos);
   const pessoa = idDe(plano.pessoas);
   const vaga = idDe(plano.vagas);
@@ -113,16 +112,12 @@ export async function gravarDemonstracao(
     return id;
   };
 
-  // Um grupo de cliente por empresa, com o mesmo nome — como o backfill faria
-  // (empresa sem cliente não existe no protótipo). Sai na limpeza pelo prefixo.
-  await tx.clientGroup.createMany({
-    data: plano.empresas.map((e) => ({ id: get(grupo, e.chave), tenantId, name: e.displayName })),
-  });
+  // Sem Cliente desde 15/10/2026 (etapa 3 da saída do Cliente): até aqui cada
+  // empresa ganhava um grupo de cliente com o mesmo nome.
   await tx.company.createMany({
     data: plano.empresas.map((e) => ({
       id: get(empresa, e.chave),
       tenantId,
-      clientGroupId: get(grupo, e.chave),
       name: e.name,
       displayName: e.displayName,
       tradeName: e.tradeName,

@@ -80,7 +80,6 @@ export default async function EmpresaPage({
     include: {
       services: { orderBy: { createdAt: "asc" } },
       people: { orderBy: { name: "asc" }, take: 10 },
-      clientGroup: { select: { id: true, name: true } },
       parent: { select: { id: true, name: true, displayName: true, cnpj: true } },
       filiais: {
         orderBy: { name: "asc" },
