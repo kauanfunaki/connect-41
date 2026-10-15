@@ -280,6 +280,8 @@ const ROTULO_DO_MODELO: Record<string, string> = {
   Budget: "orçamentos",
   BpoCredential: "senhas do cofre",
   OmieEmissao: "emissões de NFS-e",
+  Process: "processos do Societário",
+  UserLastCompany: "registros de última empresa aberta",
   User: "pessoas fictícias da equipe",
   CollectionReminderOptOut: "exclusões da régua de cobrança",
   PortalApprovalLimit: "alçadas de aprovação",

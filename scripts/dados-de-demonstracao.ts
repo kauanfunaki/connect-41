@@ -321,7 +321,9 @@ async function main() {
   console.log(`Solicitações nº ${r.numerosDasSolicitacoes.join(", ")}${r.assuntoCriado ? " (num assunto [demo] inativo: o escritório não tinha assunto do BPO)" : ""}.`);
   console.log("Nas telas do BPO, escolha a empresa \"[demo] Padaria Pão de Ouro\" no seletor. O quadro está em Quadros › BPO.");
   console.log("Meu time: com o setor BPO ativo, Meu dia › Meu time mostra a carga da equipe fictícia.");
-  console.log("Para entrar no portal como o cliente, defina uma senha para o acesso [demo] em Administração › Portal do cliente.");
+  // A tela só manda o link de senha por e-mail, e o e-mail do acesso é fictício: o caminho é trocar por um real só para receber o link.
+  console.log("Para entrar no portal como o cliente: em Administração › Portal do cliente, edite o acesso [demo], troque o e-mail por um seu,");
+  console.log("clique em Enviar link, defina a senha pelo e-mail e volte o e-mail para o fictício. A senha continua valendo.");
   console.log("\nNão edite as reuniões [demo] na Agenda: o evento no Google não existe, e a edição tentaria mexer nele.");
   console.log("\nPara tirar tudo depois da apresentação: --limpar (→ --ensaio → --aplicar).\n");
 }
