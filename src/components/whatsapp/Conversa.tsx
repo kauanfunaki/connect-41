@@ -155,6 +155,8 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
           {conversa.candidaturaId && (
             <ItemDoMenu
               icone={<Unlink />}
+              // Desfazer fica no "⋯" mesmo quando é a única ação (D3, 15/10/2026).
+              danger
               disabled={ocupado}
               onClick={() => {
                 close();

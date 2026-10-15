@@ -166,6 +166,7 @@ export default async function TreinamentoPage({
                             </Button>
                             {canDelete && (
                               <MenuDoRegistro
+                                size="sm"
                                 rotulo="Excluir"
                                 titulo={`Excluir a turma de ${formatCalendarDate(c.date)}?`}
                                 descricao="Os participantes da turma saem junto."
