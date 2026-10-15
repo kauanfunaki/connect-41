@@ -9,6 +9,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { excluirCadastro, previaDaExclusao } from "@/app/(app)/exclusao-actions";
 import { confirmacaoConfere } from "@/lib/exclusaoConfirmada";
 import {
@@ -248,11 +249,10 @@ export function ExcluirCadastro({ tipo, id, nome, aberto, onFechar, depois = "na
             </div>
           )}
 
+          {/* O rótulo do `CampoForm` (15/10/2026), e não um <label> à mão;
+              o nome vai entre aspas, já que o rótulo é texto. */}
           {!previa.bloqueio && exigeNome && (
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor={`${campoId}-nome`} className="text-label font-medium leading-5 text-fg">
-                Para confirmar, digite <span className="font-semibold">{previa.nome}</span>
-              </label>
+            <CampoForm label={`Para confirmar, digite “${previa.nome}”`} htmlFor={`${campoId}-nome`}>
               <Input
                 id={`${campoId}-nome`}
                 value={digitado}
@@ -262,7 +262,7 @@ export function ExcluirCadastro({ tipo, id, nome, aberto, onFechar, depois = "na
                 disabled={excluindo}
                 error={digitado.trim() !== "" && !nomeOk}
               />
-            </div>
+            </CampoForm>
           )}
 
           {erro && <Aviso>{erro}</Aviso>}

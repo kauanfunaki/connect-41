@@ -26,6 +26,7 @@ import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/priorida
 import { PrazoCelula, SITUACAO_LABEL, SITUACAO_VARIANTE } from "@/components/societario/ProcessosFila";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { saoPauloParts } from "@/lib/agenda";
+import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 const MODULE = "societario_processos";
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -179,6 +180,24 @@ export default async function VisaoSocietariaDoClientePage({
           {licencas.length === 0 ? (
             <p className="text-ui text-fg-muted">Nenhuma licença cadastrada.</p>
           ) : (
+            <>
+            {/* No celular, cartões nas três listas (15/10/2026): as tabelas,
+                de 560 a 640px, rolavam de lado dentro do cartão. */}
+            <CartoesNoCelular>
+              {licencas.map((l, i) => (
+                <Cartao key={l.id}>
+                  <TopoDoCartao nome={<>{l.kind}{l.number && <span className="font-normal text-fg-muted"> nº {l.number}</span>}</>} />
+                  <InfoDoCartao>{l.orgaoNome ?? "Sem órgão"}</InfoDoCartao>
+                  <InfoDoCartao className="tabular-nums">
+                    {l.expiresAt ? `validade ${formatInstantDate(l.expiresAt)}` : "sem validade"}
+                    {l.expiresAt && !l.revokedAt && (situacoes[i] === "vencida" || situacoes[i] === "a_renovar") && ` · ${textoDoPrazo(l.expiresAt, agora)}`}
+                  </InfoDoCartao>
+                  <PeDoCartao>
+                    <Selo tom={tomDaVariante(SITUACAO_DA_LICENCA_VARIANTE[situacoes[i]])}>{SITUACAO_DA_LICENCA_LABEL[situacoes[i]]}</Selo>
+                  </PeDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
             <TabelaFiltravel
               linhas={licencas.map((l, i) => ({
                 id: l.id,
@@ -190,7 +209,7 @@ export default async function VisaoSocietariaDoClientePage({
                 },
               }))}
             >
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
               <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
@@ -225,6 +244,7 @@ export default async function VisaoSocietariaDoClientePage({
               </table>
             </div>
             </TabelaFiltravel>
+            </>
           )}
         </Card>
 
@@ -233,6 +253,22 @@ export default async function VisaoSocietariaDoClientePage({
           {visao.exigencias.length === 0 ? (
             <p className="text-ui text-fg-muted">Nenhuma exigência nos processos desta empresa.</p>
           ) : (
+            <>
+            <CartoesNoCelular>
+              {visao.exigencias.map((e) => (
+                <Cartao key={e.id}>
+                  <p className={`text-ui break-words ${e.resolvedAt ? "text-fg-muted" : "text-fg"}`}>{e.descricao}</p>
+                  <InfoDoCartao className="mt-1">
+                    <Link href={`/processos/${e.processoId}`} className={LINK}>
+                      {e.tipoNome}
+                    </Link>{" "}
+                    · {e.orgaoNome} · {e.tentativa}ª apresentação
+                  </InfoDoCartao>
+                  <InfoDoCartao className="tabular-nums">{e.dueAt ? `prazo do órgão ${formatInstantDate(e.dueAt)}` : "sem prazo"}</InfoDoCartao>
+                  <PeDoCartao>{e.resolvedAt ? <Selo tom="sucesso">Cumprida</Selo> : <Selo tom="atencao">Aberta</Selo>}</PeDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
             <TabelaFiltravel
               linhas={visao.exigencias.map((e) => ({
                 id: e.id,
@@ -244,7 +280,7 @@ export default async function VisaoSocietariaDoClientePage({
                 },
               }))}
             >
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
               <table className="w-full min-w-[640px]">
                 <thead>
                   <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
@@ -288,6 +324,7 @@ export default async function VisaoSocietariaDoClientePage({
               </table>
             </div>
             </TabelaFiltravel>
+            </>
           )}
         </Card>
 
@@ -313,6 +350,26 @@ export default async function VisaoSocietariaDoClientePage({
           {visao.taxas.length === 0 ? (
             <p className="text-ui text-fg-muted">Nenhuma taxa registrada.</p>
           ) : (
+            <>
+            <CartoesNoCelular>
+              {visao.taxas.map((t) => (
+                <Cartao key={t.id}>
+                  <TopoDoCartao nome={t.descricao} valor={formatarReaisDeCentavos(t.amountCents)} />
+                  <InfoDoCartao>
+                    {t.processoId ? (
+                      <Link href={`/processos/${t.processoId}`} className={LINK}>
+                        {t.tipoNome}
+                      </Link>
+                    ) : (
+                      "avulsa"
+                    )}
+                    {t.dueDate && <span className="tabular-nums"> · vence {formatInstantDate(t.dueDate)}</span>}
+                  </InfoDoCartao>
+                  {t.attempt !== null && t.attempt >= 2 && <InfoDoCartao className="text-warning-fg">{t.attempt}ª apresentação</InfoDoCartao>}
+                  <PeDoCartao>{t.paidAt ? <Selo tom="sucesso">Paga</Selo> : <Selo tom="atencao">Em aberto</Selo>}</PeDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
             <TabelaFiltravel
               linhas={visao.taxas.map((t) => ({
                 id: t.id,
@@ -324,7 +381,7 @@ export default async function VisaoSocietariaDoClientePage({
                 },
               }))}
             >
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
               <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
@@ -366,6 +423,7 @@ export default async function VisaoSocietariaDoClientePage({
               </table>
             </div>
             </TabelaFiltravel>
+            </>
           )}
         </Card>
 

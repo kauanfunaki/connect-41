@@ -7,6 +7,7 @@ import type { VarianteDoBadge } from "@/components/ui/Badge";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { CampoMes } from "@/components/ui/CampoMes";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -367,17 +368,26 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
           <strong className="text-fg">{moeda(transacao.centavos)}</strong>. Marque um ou mais
           lançamentos {transacao.centavos < 0 ? "a pagar" : "a receber"} cuja soma feche o valor no centavo.
         </p>
+        {/* A caixa de busca do Connect (15/10/2026): Enter busca e o "limpar"
+            volta à lista inicial — era um campo comum com o botão "Buscar". O
+            termo sai do formulário, e não do estado, que no "limpar" ainda
+            não foi atualizado quando o envio acontece. */}
         <form
-          className="flex items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            carregar(busca);
+            carregar(String(new FormData(e.currentTarget).get("q") ?? ""));
           }}
         >
-          <Input compact value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por contraparte ou descrição" aria-label="Buscar" className="max-w-xs" />
-          <Button type="submit" variant="secondary" size="sm" disabled={carregando}>
-            Buscar
-          </Button>
+          <CampoDeBusca
+            compact
+            name="q"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            enviarAoLimpar
+            placeholder="Buscar por contraparte ou descrição"
+            aria-label="Buscar lançamento"
+            className="w-80 max-w-full"
+          />
         </form>
 
         <div className="max-h-[380px] overflow-y-auto border border-border rounded-md">

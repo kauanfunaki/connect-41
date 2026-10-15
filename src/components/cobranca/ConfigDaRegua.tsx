@@ -3,9 +3,9 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
+import { Switch } from "@/components/ui/Switch";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { salvarRegua, alternarEmpresaNaRegua } from "@/app/(app)/cobranca/actions";
@@ -53,11 +53,13 @@ export function ConfigDaRegua({ ligada, passos, podeEditar }: { ligada: boolean;
         salvar(dados);
       }}
     >
+      {/* Interruptor do Connect (15/10/2026), e não a lista Desligada/Ligada.
+          Continua valendo no "Salvar", junto dos passos, e com a confirmação
+          ao ligar; envia "1" ou "0", como a lista. */}
       <CampoForm label="Situação" htmlFor="regua-ligada">
-        <Select id="regua-ligada" name="ligada" defaultValue={ligada ? "1" : "0"} disabled={!podeEditar}>
-          <option value="0">Desligada</option>
-          <option value="1">Ligada</option>
-        </Select>
+        <div className="flex min-h-9 items-center">
+          <Switch id="regua-ligada" name="ligada" value="1" valorDesligado="0" defaultChecked={ligada} disabled={!podeEditar} rotulo="Ligada" />
+        </div>
       </CampoForm>
       <CampoForm label="Passos (dias de atraso)" htmlFor="regua-passos" helper="Separados por vírgula. Padrão: 1, 7, 15, 30.">
         <Input id="regua-passos" name="passos" defaultValue={passos} disabled={!podeEditar} />

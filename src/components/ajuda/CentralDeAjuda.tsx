@@ -11,7 +11,6 @@ import {
   LayoutGrid,
   Pin,
   Play,
-  Search,
   SearchX,
   Send,
   SunMoon,
@@ -21,7 +20,7 @@ import { Accordion } from "@/components/ui/Accordion";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
-import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { VideoDoYouTube } from "@/components/ajuda/VideoDoYouTube";
 import { normalizar } from "@/lib/buscaDeTelas";
@@ -234,8 +233,8 @@ export function CentralDeAjuda({
         <p className="font-display text-title font-semibold text-fg leading-tight">Como podemos ajudar?</p>
         <p className="mt-1.5 text-body text-fg-muted max-w-[60ch]">{introducao}</p>
         <div className="mt-5 max-w-xl">
-          <Input
-            icon={<Search />}
+          {/* A caixa de busca do Connect, com o "limpar" próprio (15/10/2026). */}
+          <CampoDeBusca
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder={exemploDeBusca}

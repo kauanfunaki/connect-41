@@ -19,6 +19,7 @@ import { formatCnpj } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -194,7 +195,26 @@ export default async function CtePage({
                     description="Ajuste o período de rota. Lembrando que a janela é de data de rota, e não de competência — elas não coincidem."
                   />
                 ) : (
-              <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+                  <>
+                    {/* No celular, cartões (15/10/2026): a tabela rolava de lado,
+                        com o PDF fora da tela. */}
+                    <CartoesNoCelular>
+                      {documentos.map((d) => (
+                        <Cartao key={d.identificador}>
+                          <TopoDoCartao nome={<span className="tabular-nums">CT-e {d.numero}{d.serie ? ` · série ${d.serie}` : ""}</span>} />
+                          <InfoDoCartao className="tabular-nums">
+                            Competência {d.competencia} · emitente {d.cnpj_emitente ? formatCnpj(d.cnpj_emitente) : "—"}
+                          </InfoDoCartao>
+                          <PeDoCartao>
+                            <Badge variant={d.sentido === "saida" ? "info" : "warning"}>{SENTIDO_LABEL[d.sentido] ?? d.sentido}</Badge>
+                            <span className="ml-auto">
+                              {d.renderizavel && d.chave ? <AbrirPdf chave={d.chave} raiz={raiz} /> : <span className="text-ui text-fg-muted">sem XML</span>}
+                            </span>
+                          </PeDoCartao>
+                        </Cartao>
+                      ))}
+                    </CartoesNoCelular>
+                    <TabelaNoDesktop padrao>
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
@@ -225,17 +245,7 @@ export default async function CtePage({
                         </td>
                         <td className="px-3 py-2">
                           {d.renderizavel && d.chave ? (
-                            // Botão, e não link de texto (30/09) — mas num
-                            // formulário GET, e não no `Button href`: o `href`
-                            // vira `<Link>`, que pré-carrega a rota ao aparecer
-                            // na tela, e aqui cada linha pediria o PDF ao SPED.
-                            <form action="/api/documentos-fiscais/cte/pdf" method="get" target="_blank" className="inline-flex">
-                              <input type="hidden" name="chave" value={d.chave} />
-                              <input type="hidden" name="raiz" value={raiz} />
-                              <Button type="submit" variant="secondary" size="xs">
-                                <FileText size={11} /> Abrir
-                              </Button>
-                            </form>
+                            <AbrirPdf chave={d.chave} raiz={raiz} />
                           ) : (
                             <span className="text-fg-muted">sem XML</span>
                           )}
@@ -244,7 +254,8 @@ export default async function CtePage({
                     ))}
                   </tbody>
                 </table>
-              </div>
+                    </TabelaNoDesktop>
+                  </>
                 )}
                 {documentos.length > 0 && (
                   <p className="text-micro text-fg-muted mt-3">O valor não vem na listagem — só dentro do XML, por documento.</p>
@@ -265,5 +276,22 @@ export default async function CtePage({
         </>
       )}
     </PageContainer>
+  );
+}
+
+/**
+ * Botão, e não link de texto (30/09) — mas num formulário GET, e não no
+ * `Button href`: o `href` vira `<Link>`, que pré-carrega a rota ao aparecer na
+ * tela, e aqui cada linha pediria o PDF ao SPED.
+ */
+function AbrirPdf({ chave, raiz }: { chave: string; raiz: string }) {
+  return (
+    <form action="/api/documentos-fiscais/cte/pdf" method="get" target="_blank" className="inline-flex">
+      <input type="hidden" name="chave" value={chave} />
+      <input type="hidden" name="raiz" value={raiz} />
+      <Button type="submit" variant="secondary" size="xs">
+        <FileText size={11} /> Abrir
+      </Button>
+    </form>
   );
 }

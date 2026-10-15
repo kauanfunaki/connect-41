@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Selo } from "@/components/ui/Selo";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
@@ -160,18 +160,22 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, trilhaNoCabecal
           className="w-full sm:w-64"
           onSubmit={(e) => {
             e.preventDefault();
-            const t = termo.trim();
+            // Do formulário, e não do estado: no "limpar" o envio vem antes
+            // de `termo` ser atualizado.
+            const t = String(new FormData(e.currentTarget).get("busca") ?? "").trim();
             router.push(t ? enderecoDaPasta(base, null, { busca: t }) : enderecoDaPasta(base, pasta?.id ?? null));
           }}
         >
-          <Input
+          {/* A caixa de busca do Connect (15/10/2026): o "limpar" próprio, que
+              com uma busca na tela volta às pastas. */}
+          <CampoDeBusca
             id="drive-busca"
-            type="search"
+            name="busca"
             compact
-            icon={<Search size={14} />}
             placeholder={naEmpresa ? "Buscar arquivo na empresa" : "Buscar arquivo"}
             value={termo}
             onChange={(e) => setTermo(e.target.value)}
+            enviarAoLimpar={Boolean(busca)}
             aria-label="Buscar arquivo pelo nome"
           />
         </form>

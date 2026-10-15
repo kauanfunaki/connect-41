@@ -19,6 +19,7 @@ import type { ContaOmieNaTela } from "@/lib/integracoes/omie/contas";
 import type { Saude } from "@/lib/integracoes/execucao";
 import type { PreviaDeChamada } from "@/lib/integracoes/omie/contas";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 type Previa = { nfe: PreviaDeChamada; nfse: PreviaDeChamada } | { erro: string };
 
@@ -193,6 +194,101 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
     }
   }
 
+  // A situação, as ações e a prévia de cada conta, usadas na linha da tabela e
+  // no cartão do celular (15/10/2026: a tabela de 720px rolava de lado).
+  const resultadoDe = (c: ContaOmieNaTela) =>
+    testando === c.companyId || lendo === c.companyId ? (
+      // A consulta que saiu do "⋯" não tem mais botão para
+      // dizer "Lendo…": o aviso fica aqui, onde o resultado vai aparecer.
+      <span className="block text-fs-1 mt-1 text-fg-muted">Consultando o Omie…</span>
+    ) : teste[c.companyId] ? (
+      <span className={`block text-fs-1 mt-1 ${teste[c.companyId].ok ? "text-success-fg" : "text-danger"}`}>{teste[c.companyId].texto}</span>
+    ) : (
+      c.lastError && <span className="block text-fs-1 mt-1 text-danger">{c.lastError}</span>
+    );
+
+  const acoesDe = (c: ContaOmieNaTela) => (
+    <span className="inline-flex items-center gap-1.5">
+      {/* Só `disabled`, e não `loading`: o `loading` do
+          Button escreve "Salvando…", e aqui nada está sendo
+          salvo — o andamento aparece na coluna Situação. */}
+      <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => testar(c.companyId)}>
+        <PlugZap size={11} /> Testar
+      </Button>
+      {c.saude === "ok" && contasVistas[c.companyId] && (
+        <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => lerContas(c.companyId, true)}>
+          <Download size={11} /> Importar contas
+        </Button>
+      )}
+      <MenuDeMaisAcoes rotulo={`Mais ações de ${c.empresa}`} largura={200}>
+        {(fechar) => (
+          <>
+            <ItemDoMenu
+              icone={<KeyRound />}
+              onClick={() => {
+                fechar();
+                setEditando(c.companyId);
+              }}
+            >
+              Trocar chave
+            </ItemDoMenu>
+            {c.saude === "ok" && (
+              <>
+                <ItemDoMenu
+                  icone={<RefreshCw />}
+                  disabled={testando !== null}
+                  onClick={() => {
+                    fechar();
+                    importar(c.companyId);
+                  }}
+                >
+                  Importar notas
+                </ItemDoMenu>
+                <ItemDoMenu
+                  icone={<FileSearch />}
+                  disabled={lendo !== null}
+                  onClick={() => {
+                    fechar();
+                    previa(c.companyId);
+                  }}
+                >
+                  Prévia das notas
+                </ItemDoMenu>
+                <ItemDoMenu
+                  icone={<Eye />}
+                  disabled={testando !== null}
+                  onClick={() => {
+                    fechar();
+                    lerContas(c.companyId, false);
+                  }}
+                >
+                  Prévia das contas
+                </ItemDoMenu>
+              </>
+            )}
+          </>
+        )}
+      </MenuDeMaisAcoes>
+    </span>
+  );
+
+  const previaDe = (c: ContaOmieNaTela, p: Previa) => (
+    <>
+      <p className="text-fs-2 mb-2">
+        <span className="font-medium">Prévia das notas — {c.empresa}.</span>{" "}
+        <span className="text-fg-muted">Só leitura: nada foi gravado no Connect nem alterado no Omie.</span>
+      </p>
+      {"erro" in p ? (
+        <p className="text-fs-2 text-danger">{p.erro}</p>
+      ) : (
+        <div className="grid gap-3 lg:grid-cols-2">
+          <BlocoDaPrevia titulo="NF-e (produtos/nfconsultar · ListarNF)" p={p.nfe} />
+          <BlocoDaPrevia titulo="NFS-e (servicos/nfse · ListarNFSEs)" p={p.nfse} />
+        </div>
+      )}
+    </>
+  );
+
   return (
     <Card className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
@@ -226,10 +322,34 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
         // 30/09). As ações eram cinco textos cinza e dois botões na mesma
         // célula: ficam à vista "Testar" e, depois da prévia, "Importar
         // contas"; o resto vai no "⋯".
+        <>
+        <CartoesNoCelular>
+          {contas.map((c) => (
+            <Cartao key={c.companyId}>
+              {editando === c.companyId ? (
+                <>
+                  <p className="text-fs-2 font-medium mb-2">{c.empresa}</p>
+                  <FormConta empresas={[]} inicial={{ companyId: c.companyId, appKey: c.appKey }} onFim={() => setEditando(null)} />
+                </>
+              ) : (
+                <>
+                  <TopoDoCartao nome={c.empresa} />
+                  <InfoDoCartao className="tnum">App Key {c.appKey || "—"}</InfoDoCartao>
+                  <div className="mt-2">
+                    <Selo tom={tomDaVariante(SAUDE[c.saude].variante)}>{SAUDE[c.saude].rotulo}</Selo>
+                    {resultadoDe(c)}
+                  </div>
+                  <PeDoCartao>{acoesDe(c)}</PeDoCartao>
+                  {previas[c.companyId] && <div className="mt-3 border-t border-border-soft pt-3">{previaDe(c, previas[c.companyId])}</div>}
+                </>
+              )}
+            </Cartao>
+          ))}
+        </CartoesNoCelular>
         <TabelaFiltravel
           linhas={contas.map((c) => ({ id: c.companyId, valores: { situacao: SAUDE[c.saude].rotulo } }))}
         >
-          <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+          <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
             <table className="w-full min-w-[720px]">
               <thead>
                 <tr className="border-b border-border">
@@ -258,79 +378,10 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                       <td className="py-2.5 pr-3 text-fg-secondary tnum">{c.appKey || "—"}</td>
                       <td className="py-2.5 pr-3">
                         <Selo tom={tomDaVariante(SAUDE[c.saude].variante)}>{SAUDE[c.saude].rotulo}</Selo>
-                        {testando === c.companyId || lendo === c.companyId ? (
-                          // A consulta que saiu do "⋯" não tem mais botão para
-                          // dizer "Lendo…": o aviso fica aqui, onde o resultado vai aparecer.
-                          <span className="block text-fs-1 mt-1 text-fg-muted">Consultando o Omie…</span>
-                        ) : teste[c.companyId] ? (
-                          <span className={`block text-fs-1 mt-1 ${teste[c.companyId].ok ? "text-success-fg" : "text-danger"}`}>{teste[c.companyId].texto}</span>
-                        ) : (
-                          c.lastError && <span className="block text-fs-1 mt-1 text-danger">{c.lastError}</span>
-                        )}
+                        {resultadoDe(c)}
                       </td>
                       <td className="py-2.5 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          {/* Só `disabled`, e não `loading`: o `loading` do
-                              Button escreve "Salvando…", e aqui nada está sendo
-                              salvo — o andamento aparece na coluna Situação. */}
-                          <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => testar(c.companyId)}>
-                            <PlugZap size={11} /> Testar
-                          </Button>
-                          {c.saude === "ok" && contasVistas[c.companyId] && (
-                            <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => lerContas(c.companyId, true)}>
-                              <Download size={11} /> Importar contas
-                            </Button>
-                          )}
-                          <MenuDeMaisAcoes rotulo={`Mais ações de ${c.empresa}`} largura={200}>
-                            {(fechar) => (
-                              <>
-                                <ItemDoMenu
-                                  icone={<KeyRound />}
-                                  onClick={() => {
-                                    fechar();
-                                    setEditando(c.companyId);
-                                  }}
-                                >
-                                  Trocar chave
-                                </ItemDoMenu>
-                                {c.saude === "ok" && (
-                                  <>
-                                    <ItemDoMenu
-                                      icone={<RefreshCw />}
-                                      disabled={testando !== null}
-                                      onClick={() => {
-                                        fechar();
-                                        importar(c.companyId);
-                                      }}
-                                    >
-                                      Importar notas
-                                    </ItemDoMenu>
-                                    <ItemDoMenu
-                                      icone={<FileSearch />}
-                                      disabled={lendo !== null}
-                                      onClick={() => {
-                                        fechar();
-                                        previa(c.companyId);
-                                      }}
-                                    >
-                                      Prévia das notas
-                                    </ItemDoMenu>
-                                    <ItemDoMenu
-                                      icone={<Eye />}
-                                      disabled={testando !== null}
-                                      onClick={() => {
-                                        fechar();
-                                        lerContas(c.companyId, false);
-                                      }}
-                                    >
-                                      Prévia das contas
-                                    </ItemDoMenu>
-                                  </>
-                                )}
-                              </>
-                            )}
-                          </MenuDeMaisAcoes>
-                        </span>
+                        {acoesDe(c)}
                       </td>
                     </LinhaFiltravel>
                   )
@@ -345,18 +396,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                             linha a linha: alinhado à esquerda, fora da regra de
                             centralizar do casco. */}
                         <td colSpan={4} className="py-3 text-left!">
-                          <p className="text-fs-2 mb-2">
-                            <span className="font-medium">Prévia das notas — {c.empresa}.</span>{" "}
-                            <span className="text-fg-muted">Só leitura: nada foi gravado no Connect nem alterado no Omie.</span>
-                          </p>
-                          {"erro" in p ? (
-                            <p className="text-fs-2 text-danger">{p.erro}</p>
-                          ) : (
-                            <div className="grid gap-3 lg:grid-cols-2">
-                              <BlocoDaPrevia titulo="NF-e (produtos/nfconsultar · ListarNF)" p={p.nfe} />
-                              <BlocoDaPrevia titulo="NFS-e (servicos/nfse · ListarNFSEs)" p={p.nfse} />
-                            </div>
-                          )}
+                          {previaDe(c, p)}
                         </td>
                       </tr>
                     );
@@ -365,6 +405,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
             </table>
           </div>
         </TabelaFiltravel>
+        </>
       )}
     </Card>
   );

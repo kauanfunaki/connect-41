@@ -13,6 +13,7 @@ import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { saoPauloParts } from "@/lib/agenda";
+import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { getAuthContext } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
 import { acessoAsAutorizacoes } from "@/lib/autorizacoes/servidor";
@@ -143,69 +144,88 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
         {chamadas.length === 0 ? (
           <EmptyState title="Nenhuma chamada ainda" description="As chamadas ao Serpro aparecem aqui, cobradas ou não." icon={<ShieldCheck />} />
         ) : (
-          <TabelaFiltravel
-            linhas={chamadas.map((c) => ({
-              id: c.id,
-              valores: {
-                quando: saoPauloParts(c.createdAt).dateKey,
-                servico: c.idServico,
-                origem: c.origem,
-                resposta: c.httpStatus === null ? "" : String(c.httpStatus),
-                cobranca: c.cobrada ? "Cobrada" : "Grátis",
-              },
-            }))}
-          >
-            <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
-              <table className="w-full min-w-[820px]">
-                <thead>
-                  <tr>
-                    <th className="px-3">
-                      <FiltroDaColuna rotulo="Quando" chave="quando" tipo="data" />
-                    </th>
-                    <th className="px-3">
-                      <FiltroDaColuna
-                        rotulo="Serviço"
-                        campos={[
-                          { chave: "servico", rotulo: "Serviço" },
-                          { chave: "origem", rotulo: "Origem" },
-                        ]}
-                      />
-                    </th>
-                    <th className="px-3">Contribuinte</th>
-                    <th className="px-3">
-                      <FiltroDaColuna
-                        rotulo="Resposta"
-                        campos={[
-                          { chave: "resposta", rotulo: "Resposta" },
-                          { chave: "cobranca", rotulo: "Cobrança" },
-                        ]}
-                      />
-                    </th>
-                    <th className="px-3">Mensagens</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {chamadas.map((c) => (
-                    <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top">
-                      <td className="px-3 tabular-nums whitespace-nowrap">{formatInstantDateTime(c.createdAt)}</td>
-                      <td className="px-3">
-                        {c.idServico}
-                        <span className="block text-micro text-fg-muted">
-                          {c.caminho} · {c.origem}
-                        </span>
-                      </td>
-                      <td className="px-3 tabular-nums text-fg-secondary">{c.contribuinte.length === 11 ? formatCpf(c.contribuinte) : formatCnpj(c.contribuinte)}</td>
-                      <td className="px-3">
-                        <span className="tabular-nums">{c.httpStatus ?? "—"}</span>{" "}
-                        {c.cobrada ? <Selo tom="atencao">Cobrada</Selo> : <Selo tom="neutro">Grátis</Selo>}
-                      </td>
-                      <td className="px-3 text-fg-muted break-words">{c.mensagens ?? "—"}</td>
-                    </LinhaFiltravel>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </TabelaFiltravel>
+          <>
+            {/* No celular, um cartão por chamada (15/10/2026): a tabela de 820px
+                rolava de lado. */}
+            <CartoesNoCelular>
+              {chamadas.map((c) => (
+                <Cartao key={c.id}>
+                  <TopoDoCartao nome={c.idServico} valor={<span className="font-normal text-fg-muted">{c.httpStatus ?? "—"}</span>} />
+                  <InfoDoCartao>
+                    {c.caminho} · {c.origem}
+                  </InfoDoCartao>
+                  <InfoDoCartao className="tabular-nums">
+                    {formatInstantDateTime(c.createdAt)} · {c.contribuinte.length === 11 ? formatCpf(c.contribuinte) : formatCnpj(c.contribuinte)}
+                  </InfoDoCartao>
+                  {c.mensagens && <InfoDoCartao className="mt-1">{c.mensagens}</InfoDoCartao>}
+                  <PeDoCartao>{c.cobrada ? <Selo tom="atencao">Cobrada</Selo> : <Selo tom="neutro">Grátis</Selo>}</PeDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
+            <TabelaFiltravel
+              linhas={chamadas.map((c) => ({
+                id: c.id,
+                valores: {
+                  quando: saoPauloParts(c.createdAt).dateKey,
+                  servico: c.idServico,
+                  origem: c.origem,
+                  resposta: c.httpStatus === null ? "" : String(c.httpStatus),
+                  cobranca: c.cobrada ? "Cobrada" : "Grátis",
+                },
+              }))}
+            >
+              <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg hidden md:block">
+                <table className="w-full min-w-[820px]">
+                  <thead>
+                    <tr>
+                      <th className="px-3">
+                        <FiltroDaColuna rotulo="Quando" chave="quando" tipo="data" />
+                      </th>
+                      <th className="px-3">
+                        <FiltroDaColuna
+                          rotulo="Serviço"
+                          campos={[
+                            { chave: "servico", rotulo: "Serviço" },
+                            { chave: "origem", rotulo: "Origem" },
+                          ]}
+                        />
+                      </th>
+                      <th className="px-3">Contribuinte</th>
+                      <th className="px-3">
+                        <FiltroDaColuna
+                          rotulo="Resposta"
+                          campos={[
+                            { chave: "resposta", rotulo: "Resposta" },
+                            { chave: "cobranca", rotulo: "Cobrança" },
+                          ]}
+                        />
+                      </th>
+                      <th className="px-3">Mensagens</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chamadas.map((c) => (
+                      <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top">
+                        <td className="px-3 tabular-nums whitespace-nowrap">{formatInstantDateTime(c.createdAt)}</td>
+                        <td className="px-3">
+                          {c.idServico}
+                          <span className="block text-micro text-fg-muted">
+                            {c.caminho} · {c.origem}
+                          </span>
+                        </td>
+                        <td className="px-3 tabular-nums text-fg-secondary">{c.contribuinte.length === 11 ? formatCpf(c.contribuinte) : formatCnpj(c.contribuinte)}</td>
+                        <td className="px-3">
+                          <span className="tabular-nums">{c.httpStatus ?? "—"}</span>{" "}
+                          {c.cobrada ? <Selo tom="atencao">Cobrada</Selo> : <Selo tom="neutro">Grátis</Selo>}
+                        </td>
+                        <td className="px-3 text-fg-muted break-words">{c.mensagens ?? "—"}</td>
+                      </LinhaFiltravel>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </TabelaFiltravel>
+          </>
         )}
       </CascoDaTabela>
     </PageContainer>

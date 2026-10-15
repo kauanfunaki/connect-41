@@ -7,6 +7,7 @@ import { FolderOpen, AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Card } from "@/components/ui/Card";
 import { Selo } from "@/components/ui/Selo";
+import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
@@ -188,7 +189,31 @@ export default async function RelatoriosDoSocietarioPage({
           {maisVoltas.length === 0 ? (
             <p className="text-fs-3 text-fg-muted">Nenhuma volta de exigência no período.</p>
           ) : (
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+            <>
+            {/* No celular, cartões nas duas listas de processos (15/10/2026):
+                a tabela rolava de lado. SLA e Produtividade ficam em tabela —
+                são grade de números, que só se leem lado a lado. */}
+            <CartoesNoCelular>
+              {maisVoltas.map((p) => (
+                <Cartao key={p.id}>
+                  <TopoDoCartao
+                    nome={
+                      <Link href={`/processos/${p.id}`} className="text-fg hover:text-brand transition-colors">
+                        {p.tipoNome} — {p.empresaNome}
+                      </Link>
+                    }
+                  />
+                  <InfoDoCartao className="tabular-nums">
+                    <span className="font-medium text-danger">
+                      {p.voltas} {p.voltas === 1 ? "volta" : "voltas"}
+                    </span>{" "}
+                    · {p.prazo.dias} dias úteis
+                  </InfoDoCartao>
+                  <PeDoCartao>{p.concluidoEm ? <Selo tom="sucesso">Concluído</Selo> : <Selo tom="marca">Aberto</Selo>}</PeDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
               <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
@@ -214,6 +239,7 @@ export default async function RelatoriosDoSocietarioPage({
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Card>
 
@@ -275,7 +301,30 @@ export default async function RelatoriosDoSocietarioPage({
           {custos.length === 0 ? (
             <p className="text-fs-3 text-fg-muted">Nenhuma taxa registrada nos processos do período.</p>
           ) : (
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+            <>
+            <CartoesNoCelular>
+              {custos.slice(0, LINHAS_DE_CUSTO).map((l) => (
+                <Cartao key={l.id}>
+                  <TopoDoCartao
+                    nome={
+                      <Link href={`/processos/${l.id}`} className="text-fg hover:text-brand transition-colors">
+                        {l.tipoNome} — {l.empresaNome}
+                      </Link>
+                    }
+                    valor={formatarReaisDeCentavos(l.totalCentavos)}
+                  />
+                  <InfoDoCartao className="tabular-nums">
+                    {formatarReaisDeCentavos(l.pagoCentavos)} pagos · {l.voltas} {l.voltas === 1 ? "volta" : "voltas"}
+                  </InfoDoCartao>
+                  {l.custoDasVoltasCentavos > 0 && (
+                    <InfoDoCartao className="tabular-nums text-warning-fg">
+                      {formatarReaisDeCentavos(l.custoDasVoltasCentavos)} das voltas
+                    </InfoDoCartao>
+                  )}
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
               <table className="w-full min-w-[680px]">
                 <thead>
                   <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
@@ -305,6 +354,7 @@ export default async function RelatoriosDoSocietarioPage({
                 </tbody>
               </table>
             </div>
+            </>
           )}
           {/* Fora da caixa da tabela: dentro, a nota ficava colada na borda,
               sem o recuo das células. */}
