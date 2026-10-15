@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Blocks, Download, ExternalLink, FolderInput } from "lucide-react";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
@@ -12,7 +11,7 @@ import { ItemDoMenu } from "@/components/ui/Popover";
 import { useToast } from "@/components/ui/Toast";
 import { formatarBytes } from "@/lib/fileSize";
 import { formatInstantDateTime } from "@/lib/format";
-import { enderecoDaPasta, type DestinoNaTela } from "@/lib/drive/tela";
+import type { DestinoNaTela } from "@/lib/drive/tela";
 import type { GrupoDoConnect, ItemDoConnect } from "@/lib/drive/doConnect";
 import { guardarDoConnect } from "@/app/(app)/arquivos/actions";
 import { IconeDoArquivo } from "./IconeDoArquivo";
@@ -25,15 +24,7 @@ const QUANDO: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "sho
  * empresa, por origem. Só leitura — cada um continua onde mora e é baixado pela
  * rota do módulo. "Guardar numa pasta" copia para uma pasta de verdade.
  */
-export function PastaDoConnect({
-  grupos,
-  destinos,
-  base,
-}: {
-  grupos: GrupoDoConnect[];
-  destinos: DestinoNaTela[];
-  base: string;
-}) {
+export function PastaDoConnect({ grupos, destinos }: { grupos: GrupoDoConnect[]; destinos: DestinoNaTela[] }) {
   const router = useRouter();
   const toast = useToast();
   const [guardando, setGuardando] = useState<ItemDoConnect | null>(null);
@@ -43,9 +34,6 @@ export function PastaDoConnect({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="[&>nav]:mb-0">
-        <Breadcrumb items={[{ label: "Pastas da empresa", href: enderecoDaPasta(base, null) }, { label: "Do Connect" }]} />
-      </div>
       <p className="text-fs-3 text-fg-secondary">
         Os anexos que já estão nos módulos — solicitações, pendências, processos, envios e os documentos da ficha. Eles continuam onde estão; para
         organizar, use “Guardar numa pasta”.

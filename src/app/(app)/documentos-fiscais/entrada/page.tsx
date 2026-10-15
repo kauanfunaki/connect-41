@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -30,7 +30,8 @@ export default async function EntradaDeXmlPage() {
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): a tela sai de Documentos fiscais. */}
+      <Breadcrumb items={[{ label: "Documentos fiscais", href: "/documentos-fiscais" }, { label: "Entrada de XML" }]} />
       <PageHeader
         title="Entrada de XML"
         subtitle="Cada arquivo é lido, casado com a empresa pelo CNPJ e deduplicado pela chave de acesso. Documento que já está no acervo não entra de novo."

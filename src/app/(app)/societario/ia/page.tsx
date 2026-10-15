@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
@@ -63,7 +63,9 @@ export default async function IaDoSocietarioPage() {
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): a tela sai de Processos
+          (o botão "Ceci · Societário" do cabeçalho de lá). */}
+      <Breadcrumb items={[{ label: "Processos", href: "/processos" }, { label: "Ceci · Societário" }]} />
       <PageHeader
         title="Ceci · Societário"
         subtitle="A Ceci propõe; a coordenação aprova, corrige ou rejeita. Nada é gravado sem aprovação."

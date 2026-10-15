@@ -337,7 +337,7 @@ function PageCanvas({
 
       <article className={CANVAS_CLASS}>
         {canAct ? (
-          // eslint-disable-next-line no-restricted-syntax -- título da página, não campo de formulário: precisa ter exatamente a mesma caixa do <h1> de leitura. O Input do DS tem altura, borda e fundo fixos.
+          // eslint-disable-next-line no-restricted-syntax -- título da página, não campo de formulário: precisa ter exatamente a mesma caixa do título de leitura. O Input do DS tem altura, borda e fundo fixos.
           <input
             defaultValue={page.title}
             placeholder="Título da página"
@@ -349,7 +349,9 @@ function PageCanvas({
             className="w-full bg-transparent border-0 outline-none text-title font-semibold text-fg tracking-[-0.02em] leading-tight placeholder:text-fg-muted"
           />
         ) : (
-          <h1 className="text-title font-semibold text-fg tracking-[-0.02em] leading-tight">{page.title}</h1>
+          // <h2>, não <h1>: o <h1> da tela é o "Repositório de manuais" do
+          // cabeçalho — um título por tela (P04, 15/10/2026). Mesmo desenho.
+          <h2 className="text-title font-semibold text-fg tracking-[-0.02em] leading-tight">{page.title}</h2>
         )}
 
         <p className="text-fs-2 text-fg-muted mt-2 mb-8">

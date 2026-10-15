@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Simulador } from "@/components/valora/Simulador";
 import { acessoAoValora, configDoValora } from "@/lib/valora/servidor";
 import { Aviso } from "@/components/ui/Aviso";
@@ -15,9 +15,9 @@ export default async function NovaSimulacaoPage() {
 
   return (
     <PageContainer>
-      {/* O voltar do app (o `BackButton` com destino), e não um botão no lugar
-          das ações — um desenho só para "voltar" (07/10/2026). */}
-      <BackButton href="/valora" rotulo="Propostas" className="mb-3" />
+      {/* A trilha "Valora › Nova simulação" no lugar do "← Propostas" (P04,
+          15/10/2026): a tela tem pai fixo, e trilha e "Voltar" não vão juntos. */}
+      <Breadcrumb items={[{ label: "Valora", href: "/valora" }, { label: "Nova simulação" }]} />
       <PageHeader
         title="Nova simulação"
         subtitle="Preencha com o cliente: cada resposta liga uma atividade dos setores, e o honorário sai do tempo que ela custa."

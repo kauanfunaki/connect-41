@@ -3,7 +3,7 @@ import { List } from "lucide-react";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -66,7 +66,8 @@ export default async function KanbanDeProcessosPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): o quadro sai de Processos. */}
+      <Breadcrumb items={[{ label: "Processos", href: "/processos" }, { label: "Kanban de processos" }]} />
       <PageHeader
         title="Kanban de processos"
         subtitle="A coluna é a situação que os protocolos dizem — muda quando o desfecho é registrado no processo, não arrastando o cartão."

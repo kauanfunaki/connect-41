@@ -6,7 +6,6 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { ExcluirComConfirmacao } from "@/components/vagas/ExcluirComConfirmacao";
 import { ScorecardForm } from "@/components/vagas/ScorecardForm";
@@ -121,6 +120,8 @@ export default async function CandidaturaScorecardPage({
 
   return (
     <PageContainer>
+      {/* Só a trilha, sem o "← Voltar" de julho: a tela tem pai fixo, e os dois
+          juntos diziam a mesma coisa duas vezes (P04, 15/10/2026). */}
       <Breadcrumb
         items={[
           { label: "Vagas", href: "/vagas" },
@@ -128,7 +129,6 @@ export default async function CandidaturaScorecardPage({
           { label: candidatura.person.name, truncate: true },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title={<><Link href={`/candidatos/${candidatura.person.id}`} className="hover:text-brand transition-colors">

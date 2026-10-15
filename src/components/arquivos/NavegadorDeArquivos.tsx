@@ -34,7 +34,7 @@ import { useConfirm } from "@/components/ui/useConfirm";
 import { formatarBytes } from "@/lib/fileSize";
 import { formatCalendarDate, formatInstantDateTime } from "@/lib/format";
 import { situacaoDoVencimento } from "@/lib/drive/regras";
-import { enderecoDaPasta, rotuloDeItens, type ArquivoNaTela, type NavegadorNaTela, type PastaNaTela, type ResultadoDaBusca } from "@/lib/drive/tela";
+import { enderecoDaPasta, rotuloDeItens, trilhaDaPasta, type ArquivoNaTela, type NavegadorNaTela, type PastaNaTela, type ResultadoDaBusca } from "@/lib/drive/tela";
 import {
   alterarSetorDaPasta,
   compartilharPasta,
@@ -59,6 +59,9 @@ type Props = {
   base: string;
   /** O primeiro item da trilha: "Pastas da empresa", "Pastas do escritório". */
   rotuloDaRaiz: string;
+  /** A tela já mostra a trilha acima do título (as telas de Arquivos): aqui fica
+   *  só o uso e a busca. Na ficha da empresa, a trilha das pastas segue aqui. */
+  trilhaNoCabecalho?: boolean;
   busca?: { termo: string; resultados: ResultadoDaBusca[] } | null;
 };
 
@@ -79,7 +82,7 @@ function enderecoDoArquivo(a: { id: string; previa: boolean }, baixar = false): 
   return `/api/arquivos/${a.id}${a.previa && !baixar ? "?ver=1" : ""}`;
 }
 
-export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, busca }: Props) {
+export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, trilhaNoCabecalho = false, busca }: Props) {
   const router = useRouter();
   const toast = useToast();
   const { dialog: confirmacao, requestConfirm } = useConfirm();
@@ -134,27 +137,22 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, busca }: Props)
     );
   }
 
-  const trilha = [
-    { label: rotuloDaRaiz, href: pasta ? enderecoDaPasta(base, null) : undefined },
-    ...dados.caminho.map((p, i) => ({
-      label: p.nome,
-      href: i < dados.caminho.length - 1 ? enderecoDaPasta(base, p.id) : undefined,
-      truncate: true,
-    })),
-  ];
+  const trilha = trilhaDaPasta(dados, base, rotuloDaRaiz);
   const paiDaAtual = dados.caminho.length > 1 ? dados.caminho[dados.caminho.length - 2].id : null;
 
   const vazio = dados.subpastas.length === 0 && dados.arquivos.length === 0;
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Trilha, uso e busca */}
+      {/* Trilha, uso e busca — a trilha, só quando a tela não a mostra no topo. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {/* O Breadcrumb traz margem de cabeçalho de página; aqui ele divide a linha com a busca. */}
-        <div className="min-w-0 flex-1 [&>nav]:mb-0">
-          <Breadcrumb items={trilha} />
-        </div>
-        <span className="text-micro text-fg-muted tabular-nums">
+        {!trilhaNoCabecalho && (
+          // O Breadcrumb traz margem de cabeçalho de página; aqui ele divide a linha com a busca.
+          <div className="min-w-0 flex-1 [&>nav]:mb-0">
+            <Breadcrumb items={trilha} />
+          </div>
+        )}
+        <span className={`text-micro text-fg-muted tabular-nums ${trilhaNoCabecalho ? "flex-1" : ""}`.trim()}>
           {dados.uso.arquivos === 1 ? "1 arquivo" : `${dados.uso.arquivos} arquivos`} · {formatarBytes(dados.uso.bytes)}
         </span>
         <form
