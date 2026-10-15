@@ -18,6 +18,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, MessageCircle, X } from "lucide-react";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
+import { Contador } from "@/components/ui/Contador";
 import { iniciais } from "@/lib/conversas/caixa";
 import { BotaoCopiar, CabecalhoDoPainel, NavegacaoPorTeclado } from "./Interativos";
 
@@ -73,13 +74,7 @@ export function RecortesDaCaixa({
         >
           <span className="truncate">{r.rotulo}</span>
           {r.n !== undefined && (
-            <span
-              className={`shrink-0 min-w-5 h-5 px-1.5 rounded-full text-micro font-semibold tabular-nums flex items-center justify-center ${
-                r.tom === "atencao" && r.n > 0 ? "bg-warning/15 text-warning-fg" : "bg-surface-hover text-fg-muted"
-              }`}
-            >
-              {r.n}
-            </span>
+            <Contador valor={r.n} tom={r.tom === "atencao" && r.n > 0 ? "atencao" : "neutro"} teto={Number.MAX_SAFE_INTEGER} className="shrink-0" />
           )}
         </Link>
       ))}
@@ -124,8 +119,10 @@ export function Iniciais({ nome, tamanho = 32 }: { nome: string | null; tamanho?
 export function BalaoDeMensagens({ n, rotulo }: { n: number; rotulo?: string }) {
   if (n > 0) {
     return (
+      // Azul cheio do botão principal (`brand-solid`, 15/10/2026): o `bg-brand`
+      // com branco fixo dava 3,28:1 no escuro.
       <span
-        className="min-w-6 h-6 px-1.5 rounded-full bg-brand text-white text-micro font-semibold tabular-nums flex items-center justify-center shrink-0"
+        className="min-w-6 h-6 px-1.5 rounded-full bg-brand-solid text-on-brand text-micro font-semibold tabular-nums flex items-center justify-center shrink-0"
         title={rotulo}
       >
         {n}

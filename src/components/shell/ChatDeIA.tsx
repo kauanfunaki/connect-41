@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 import { Contador } from "@/components/ui/Contador";
+import { useConfirm } from "@/components/ui/useConfirm";
 import { Ceci, type EstadoDaCeci } from "@/components/ia/Ceci";
 import { especialidadeDoAgente, NOME_DA_ASSISTENTE } from "@/lib/ia/ceci";
 import { RespostaDaCeci } from "@/components/ia/RespostaDaCeci";
@@ -250,6 +251,9 @@ export function ChatDeIA({
   useEffect(() => {
     abertoRef.current = aberto;
   }, [aberto]);
+  // Apagar uma conversa do histórico pergunta antes (15/10/2026): apagava no
+  // clique, sem volta.
+  const { dialog: confirmacao, requestConfirm } = useConfirm();
   // O "deu certo" da Ceci: liga numa resposta ou proposta concluída e se
   // desliga sozinho — não é um estado da conversa, é uma reação.
   const [comemorando, setComemorando] = useState(false);
@@ -746,7 +750,23 @@ export function ChatDeIA({
                         {formatInstantDateTime(new Date(c.atualizadaEm), { dateStyle: "short", timeStyle: "short" })}
                       </span>
                     </button>
-                    <button type="button" onClick={() => apagar(c.id)} className="p-2 text-fg-muted hover:text-danger" aria-label="Apagar conversa" data-dica="Apagar">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        requestConfirm(
+                          {
+                            title: "Apagar esta conversa?",
+                            description: "Ela sai das conversas anteriores e não dá para recuperar.",
+                            confirmLabel: "Apagar",
+                            destructive: true,
+                          },
+                          () => apagar(c.id)
+                        )
+                      }
+                      className="p-2 text-fg-muted hover:text-danger"
+                      aria-label="Apagar conversa"
+                      data-dica="Apagar"
+                    >
                       <Trash2 size={14} />
                     </button>
                   </li>
@@ -975,7 +995,7 @@ export function ChatDeIA({
                     type="submit"
                     disabled={enviando || !pergunta.trim()}
                     aria-label="Enviar"
-                    className="mb-0.5 size-8 flex-shrink-0 inline-flex items-center justify-center rounded-full bg-brand text-on-brand hover:bg-brand-hover disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed transition-colors"
+                    className="mb-0.5 size-8 flex-shrink-0 inline-flex items-center justify-center rounded-full bg-brand-solid text-on-brand hover:bg-brand-solid-hover disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed transition-colors"
                   >
                     <ArrowUp size={16} />
                   </button>
@@ -1015,6 +1035,7 @@ export function ChatDeIA({
           </>
         )}
       </section>
+      {confirmacao}
     </>
   );
 }
