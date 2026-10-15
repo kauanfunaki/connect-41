@@ -1,16 +1,25 @@
 import { describe, expect, it } from "vitest";
+import { IMPOSTOS_RETIDOS_NO_CMV, ehImpostosRetidosServicosTomados, pareceImpostoRetido } from "./impostosRetidosNoCmv";
 import {
   ACAO_DA_CORRECAO,
-  deParaDaLinha,
-  detalhesDaAuditoria,
-  ehImpostosRetidosServicosTomados,
-  impactoNaDre,
-  pareceImpostoRetido,
-  planejarCorrecao,
+  deParaDaLinha as deParaDaLinhaDe,
+  detalhesDaAuditoria as detalhesDaAuditoriaDe,
+  impactoNaDre as impactoNaDreDe,
+  planejarCorrecao as planejarCorrecaoDe,
+  type Achado,
   type CategoriaLida,
   type ExcecaoLida,
+  type PlanoDaCorrecao,
   type ValorPago,
-} from "./impostosRetidosNoCmv";
+} from "./correcaoDaLinha";
+
+// A regra comum (`correcaoDaLinha.ts`) com a correção destes impostos.
+const planejarCorrecao = (categorias: CategoriaLida[], excecoes: ExcecaoLida[]) =>
+  planejarCorrecaoDe(IMPOSTOS_RETIDOS_NO_CMV, categorias, excecoes);
+const deParaDaLinha = (a: Achado) => deParaDaLinhaDe(IMPOSTOS_RETIDOS_NO_CMV, a);
+const detalhesDaAuditoria = (a: Achado) => detalhesDaAuditoriaDe(IMPOSTOS_RETIDOS_NO_CMV, a);
+const impactoNaDre = (categorias: CategoriaLida[], excecoes: ExcecaoLida[], plano: PlanoDaCorrecao, valores: ValorPago[]) =>
+  impactoNaDreDe(IMPOSTOS_RETIDOS_NO_CMV, categorias, excecoes, plano, valores);
 import { MAPEAMENTO_PADRAO } from "./mapeamento-padrao";
 import { categoriasParaCriar } from "./categoriasDoImport";
 import { chaveDaCategoria } from "./calculo";
@@ -147,7 +156,7 @@ describe("planejarCorrecao", () => {
   it("o que já está no CMV, em outra linha ou sem linha fica — e é relatado", () => {
     const { categorias, excecoes } = cenario();
     const p = planejarCorrecao(categorias, excecoes);
-    expect(p.jaNoCmv.map((a) => a.id)).toEqual(["t2pad"]);
+    expect(p.jaNoDestino.map((a) => a.id)).toEqual(["t2pad"]);
     expect(p.outraLinha.map((a) => a.id)).toEqual(["out", "ex2"]);
     expect(p.semLinha.map((a) => a.id)).toEqual(["sem"]);
   });
@@ -170,7 +179,7 @@ describe("planejarCorrecao", () => {
       excecoes.map((e) => (trocadas.has(e.id) ? { ...e, grupo: "cmv" } : e))
     );
     expect(depois.mudar).toEqual([]);
-    expect(depois.jaNoCmv.map((a) => a.id).sort()).toEqual(["ex1", "irr", "pad", "t2pad"]);
+    expect(depois.jaNoDestino.map((a) => a.id).sort()).toEqual(["ex1", "irr", "pad", "t2pad"]);
     expect(depois.outraLinha.map((a) => a.id)).toEqual(["out", "ex2"]);
   });
 });
