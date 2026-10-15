@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Aviso } from "@/components/ui/Aviso";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
@@ -65,13 +65,25 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
     </Aviso>
   );
 
+  // Trilha no lugar do "← Voltar" (P04, 15/10/2026), nas duas variações da
+  // tela: o pai é sempre a lista de propostas da Ceci.
+  const trilha = (
+    <Breadcrumb
+      items={[
+        { label: "Processos", href: "/processos" },
+        { label: "Ceci · Societário", href: "/societario/ia" },
+        { label: proposta.title, truncate: true },
+      ]}
+    />
+  );
+
   if (proposta.agentCode === AGENTE_VARREDURA) {
     const payload = proposta.payload as unknown as PayloadDaVarredura;
     const aplicadas = new Set(((proposta.appliedPayload as { chaves?: string[] } | null)?.chaves ?? []) as string[]);
     const itens = pendente ? payload.avaliacao.itens : payload.avaliacao.itens.filter((i) => proposta.status === "REJEITADA" || aplicadas.has(i.chave));
     return (
       <PageContainer>
-        <BackButton className="mb-3" />
+        {trilha}
         <PageHeader
           title={proposta.title}
           subtitle={
@@ -132,7 +144,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
     const l = payload.leitura;
     return (
       <PageContainer>
-        <BackButton className="mb-3" />
+        {trilha}
         <PageHeader
           title={proposta.title}
           subtitle={

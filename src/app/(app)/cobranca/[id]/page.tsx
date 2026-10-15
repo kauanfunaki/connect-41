@@ -7,7 +7,7 @@ import { formatInstantDate, formatInstantDateTime, formatarCompetencia } from "@
 import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
@@ -77,7 +77,8 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): o pai é sempre a Cobrança. */}
+      <Breadcrumb items={[{ label: "Cobrança", href: "/cobranca" }, { label: l.sacadoNome, truncate: true }]} />
       <PageHeader
         title={l.sacadoNome}
         subtitle={

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
@@ -24,7 +24,8 @@ export default async function AvisosDaJuntaPage() {
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): a tela sai de Processos. */}
+      <Breadcrumb items={[{ label: "Processos", href: "/processos" }, { label: "Avisos da Junta" }]} />
       {/* A explicação no `subtitle` do cabeçalho: num <p> depois dele, ela
           ficava 28px abaixo do título (a margem do cabeçalho). */}
       <PageHeader

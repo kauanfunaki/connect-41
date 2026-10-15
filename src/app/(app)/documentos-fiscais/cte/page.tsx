@@ -8,7 +8,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { listarCtePorRota, ErroDoSped } from "@/lib/sped/client";
@@ -113,7 +113,8 @@ export default async function CtePage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): a tela sai de Documentos fiscais. */}
+      <Breadcrumb items={[{ label: "Documentos fiscais", href: "/documentos-fiscais" }, { label: "CT-e" }]} />
       <PageHeader
         title="CT-e"
         subtitle={

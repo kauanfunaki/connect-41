@@ -4,7 +4,7 @@ import { AlertTriangle, Building2, ClipboardList, MessageSquareText, Receipt } f
 import { getPrisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { Badge } from "@/components/ui/Badge";
@@ -92,7 +92,8 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): o pai é sempre o Valora. */}
+      <Breadcrumb items={[{ label: "Valora", href: "/valora" }, { label: p.cliente, truncate: true }]} />
       <PageHeader
         title={p.cliente}
         subtitle={`Simulada em ${formatInstantDate(p.createdAt)} por ${p.createdBy.name} · ${ROTULO_REGIME[perfil.regime] ?? perfil.regime}`}

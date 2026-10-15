@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
@@ -57,7 +57,8 @@ export default async function DiagnosticoDaCarteiraPage() {
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): a tela sai do Valora. */}
+      <Breadcrumb items={[{ label: "Valora", href: "/valora" }, { label: "Diagnóstico da carteira" }]} />
       <PageHeader
         title="Diagnóstico da carteira"
         subtitle={`O que cada cliente paga contra o que custou de verdade, pelas horas apontadas nos ${periodo.rotulo.toLowerCase()}.`}

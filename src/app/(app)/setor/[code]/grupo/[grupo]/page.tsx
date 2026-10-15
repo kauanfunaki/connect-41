@@ -5,7 +5,7 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { grupoDoSlug } from "@/lib/module-catalog";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { ModulosDoSetor } from "@/components/setor/ModulosDoSetor";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
@@ -48,7 +48,9 @@ export default async function GrupoDoSetorPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): o pai é sempre a tela
+          com todas as telas do setor (a aba "Tudo" dos grupos). */}
+      <Breadcrumb items={[{ label: `Telas · ${sectorLabel(labels, code)}`, href: `/setor/${code}/telas` }, { label: grupo }]} />
       <PageHeader title={sectorLabel(labels, code)} subtitle={`${grupo} — telas deste grupo.`} />
       <ModulosDoSetor code={code} modulos={visiveis} cor={colors[code] ?? "#586577"} grupoAtivo={grupo} fixadas={fixadas} />
     </PageContainer>
