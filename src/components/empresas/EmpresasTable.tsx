@@ -12,7 +12,6 @@ import { Select } from "@/components/ui/Select";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 import { formatDocumento } from "@/lib/format";
-import { agruparPorCliente } from "@/lib/clientGroups";
 import { montarArvore } from "@/lib/companyHierarchy";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import { resumirRegime } from "@/lib/taxRegime";
@@ -37,8 +36,6 @@ type Row = {
   logoUrl: string | null;
   city: string | null;
   stateCode: string | null;
-  clientGroupId: string | null;
-  clientGroupName: string | null;
   parentCompanyId: string | null;
 };
 
@@ -72,15 +69,12 @@ export function EmpresasTable({
   excluirEmpresasEmMassa,
   filtrosDeColuna,
 }: Props) {
-  // A consulta já vem ordenada por (cliente, empresa) — aqui é só quebrar em
-  // blocos para desenhar o cabeçalho de cada cliente.
-  const blocos = agruparPorCliente(companies);
   // A árvore é montada aqui, e não dentro de cada renderizador: a tabela e a
   // lista de cartões desenham exatamente os mesmos nós, e as duas ficam no DOM
   // (quem esconde uma delas é o CSS). Sem isto, `montarArvore` rodaria duas
-  // vezes a cada render.
-  const blocosComArvore = blocos.map((b) => ({ ...b, nos: montarArvore(b.empresas) }));
-  const colunas = canCreate ? 8 : 7;
+  // vezes a cada render. Até 15/10/2026 a página se quebrava em blocos por
+  // cliente, com uma faixa com o nome de cada um; saiu com o Cliente (etapa 3).
+  const nos = montarArvore(companies);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // Filiais começam recolhidas: a listagem existe para varrer clientes, e abrir
@@ -100,8 +94,8 @@ export function EmpresasTable({
   const { dialog, requestConfirm } = useConfirm();
   const [resultadoEmMassa, setResultadoEmMassa] = useState<ResultadoEmMassa | null>(null);
 
-  // A tabela e o cartão usam as mesmas duas ações — e /pessoas e /clientes
-  // usam as mesmas duas de novo, então elas moram em `AcoesDeLinha`.
+  // A tabela e o cartão usam as mesmas duas ações — e /pessoas usa as mesmas
+  // duas de novo, então elas moram em `AcoesDeLinha`.
   function acoesEmpresa(c: Row) {
     return (
       <AcoesDeLinha
@@ -425,25 +419,11 @@ export function EmpresasTable({
                 </span>
               </div>
             )}
-            {blocosComArvore.map((bloco, i) => (
-              <Fragment key={`cartoes-${bloco.clientGroupId ?? "sem-cliente"}-${i}`}>
-                {bloco.mostrarCabecalho && (
-                  <div className="px-3 py-2 border-b border-border bg-surface-2">
-                    <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">
-                      {bloco.label}
-                    </span>
-                    <span className="ml-2 text-micro text-fg-muted tnum">
-                      {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                )}
-                {bloco.nos.map((no) => (
-                  <Fragment key={no.matriz.id}>
-                    {cartaoEmpresa(no.matriz, no.filiais.length, false)}
-                    {expandidas.has(no.matriz.id) &&
-                      no.filiais.map((f) => cartaoEmpresa(f, 0, true))}
-                  </Fragment>
-                ))}
+            {nos.map((no) => (
+              <Fragment key={no.matriz.id}>
+                {cartaoEmpresa(no.matriz, no.filiais.length, false)}
+                {expandidas.has(no.matriz.id) &&
+                  no.filiais.map((f) => cartaoEmpresa(f, 0, true))}
               </Fragment>
             ))}
           </div>
@@ -513,31 +493,11 @@ export function EmpresasTable({
               </tr>
             </thead>
             <tbody>
-              {blocosComArvore.map((bloco, i) => (
-                <Fragment key={`${bloco.clientGroupId ?? "sem-cliente"}-${i}`}>
-                  {bloco.mostrarCabecalho && (
-                    <tr className="border-b border-border bg-surface-2">
-                      <td colSpan={colunas - 1} className="px-4 py-2">
-                        <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">
-                          {bloco.label}
-                        </span>
-                        <span className="ml-2 text-micro text-fg-muted tnum">
-                          {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
-                        </span>
-                      </td>
-                      {/* Célula vazia no lugar da coluna de ações, que é sticky:
-                          sem ela, o retângulo preso à direita passaria por cima
-                          da faixa do cliente ao rolar na horizontal. */}
-                      <td className="sticky right-0 bg-surface-2" />
-                    </tr>
-                  )}
-                  {bloco.nos.map((no) => (
-                    <Fragment key={no.matriz.id}>
-                      {linhaEmpresa(no.matriz, no.filiais.length, false)}
-                      {expandidas.has(no.matriz.id) &&
-                        no.filiais.map((f) => linhaEmpresa(f, 0, true))}
-                    </Fragment>
-                  ))}
+              {nos.map((no) => (
+                <Fragment key={no.matriz.id}>
+                  {linhaEmpresa(no.matriz, no.filiais.length, false)}
+                  {expandidas.has(no.matriz.id) &&
+                    no.filiais.map((f) => linhaEmpresa(f, 0, true))}
                 </Fragment>
               ))}
             </tbody>
