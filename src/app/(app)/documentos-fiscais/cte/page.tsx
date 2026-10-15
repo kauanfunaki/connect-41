@@ -18,6 +18,7 @@ import { alcanceDaEquipe } from "../alcance";
 import { formatCnpj } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -178,20 +179,21 @@ export default async function CtePage({
             <Aviso>
               <p className="text-fg">{erro}</p>
             </Aviso>
-          ) : documentos.length === 0 ? (
-            <Card>
-              <EmptyState
-                icon={<Truck />}
-                title="Nenhum CT-e nesta janela"
-                description="Ajuste o período de rota. Lembrando que a janela é de data de rota, e não de competência — elas não coincidem."
-              />
-            </Card>
           ) : (
             <>
-              {/* Casco padrão (30/09). Sem funil por coluna: a página é um
-                  pedaço de 100 da janela, por cursor, e o SPED só filtra por
-                  raiz e rota — funil nas linhas da tela mentiria sobre as
-                  outras páginas. */}
+              {/* No casco com a barra (15/10/2026): a contagem ficava num texto
+                  embaixo da tabela e o vazio era um cartão à parte. Sem funil
+                  por coluna: a página é um pedaço de 100 da janela, por cursor,
+                  e o SPED só filtra por raiz e rota — funil nas linhas da tela
+                  mentiria sobre as outras páginas. */}
+              <CascoDaTabela contagem={`${contarItens(documentos.length, "CT-e", "CT-e")} nesta página`}>
+                {documentos.length === 0 ? (
+                  <EmptyState
+                    icon={<Truck />}
+                    title="Nenhum CT-e nesta janela"
+                    description="Ajuste o período de rota. Lembrando que a janela é de data de rota, e não de competência — elas não coincidem."
+                  />
+                ) : (
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
                 <table className="w-full border-collapse">
                   <thead>
@@ -243,20 +245,21 @@ export default async function CtePage({
                   </tbody>
                 </table>
               </div>
+                )}
+                {documentos.length > 0 && (
+                  <p className="text-micro text-fg-muted mt-3">O valor não vem na listagem — só dentro do XML, por documento.</p>
+                )}
+              </CascoDaTabela>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                <p className="text-fs-2 text-fg-muted">
-                  {documentos.length} CT-e nesta página. O valor não vem na listagem — só dentro do
-                  XML, por documento.
-                </p>
-                {/* Só "próxima": a paginação é por cursor, sem total nem
-                    volta — por isso não é o `Pagination`. */}
-                {proximoCursor && (
+              {/* Só "próxima": a paginação é por cursor, sem total nem
+                  volta — por isso não é o `Pagination`. */}
+              {proximoCursor && (
+                <div className="flex justify-end mt-4">
                   <Button href={url({ cursor: proximoCursor })} variant="secondary" size="sm">
                     Próxima página <ChevronRight size={14} />
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
         </>

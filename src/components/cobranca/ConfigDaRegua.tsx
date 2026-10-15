@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { salvarRegua, alternarEmpresaNaRegua } from "@/app/(app)/cobranca/actions";
@@ -86,11 +88,13 @@ export function EmpresaNaRegua({
   companyId,
   fora,
 }: {
-  empresas?: { id: string; nome: string }[];
+  empresas?: EmpresaParaEscolher[];
   companyId?: string;
   fora: boolean;
 }) {
   const [escolhida, setEscolhida] = useState(companyId ?? "");
+  // Remonta o seletor depois de tirar a empresa: ele não é controlado.
+  const [versao, setVersao] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
@@ -99,21 +103,31 @@ export function EmpresaNaRegua({
     startTransition(async () => {
       const r = await alternarEmpresaNaRegua(id, fora);
       if ("error" in r) setErro(r.error);
-      else if (empresas) setEscolhida("");
+      else if (empresas) {
+        setEscolhida("");
+        setVersao((v) => v + 1);
+      }
     });
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {empresas && (
-        <Select compact value={escolhida} onChange={(e) => setEscolhida(e.target.value)} className="w-72 max-w-full" aria-label="Empresa">
-          <option value="">Escolha a empresa…</option>
-          {empresas.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nome}
-            </option>
-          ))}
-        </Select>
+        // A lista de empresas com busca, logo, CNPJ e recentes (15/10/2026):
+        // era um <select> com todas as empresas ativas.
+        <SearchableSelect
+          key={versao}
+          name="companyId"
+          options={opcoesDeEmpresa(empresas)}
+          compact
+          avatar
+          lembrarRecentes="empresas"
+          placeholder="Buscar empresa…"
+          textoSemValor="Escolha a empresa…"
+          onChange={setEscolhida}
+          className="w-72 max-w-full"
+          aria-label="Empresa"
+        />
       )}
       {/* Ao lado do seletor compacto (32px), o botão é `sm`; sozinho na linha
           da lista, `xs`, como as outras ações de linha. */}

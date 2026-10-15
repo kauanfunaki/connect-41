@@ -16,6 +16,7 @@ import { requisitosAtuais } from "@/lib/recrutamento/triagemServidor";
 import type { AvaliacaoDeRequisito, Faixa, Requisito } from "@/lib/recrutamento/triagem";
 import { MeetingsSection } from "@/components/kanban/MeetingsSection";
 import { TesteCard } from "@/components/teste/TesteCard";
+import { linkPendenteNaFicha } from "@/lib/testes/linkDoTeste";
 import { STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel";
 import { CRITERIA, RECOMMENDATION_LABEL, consolidateScorecards, scorecardAverage } from "@/lib/scorecard";
 import { formatInstantDate, formatarNumero } from "@/lib/format";
@@ -41,7 +42,7 @@ export default async function CandidaturaScorecardPage({
   const candidatura = await prisma.candidatura.findFirst({
     where: { id: candidaturaId, vagaId, tenantId: ctx.tenantId, vaga: { ...scopedVagaWhere(ctx) } },
     include: {
-      person: { select: { id: true, name: true, dataDeletionRequestedAt: true } },
+      person: { select: { id: true, name: true, phone: true, dataDeletionRequestedAt: true } },
       vaga: { select: { id: true, title: true, sectorCode: true, restrictedToRecruiters: true } },
       scorecards: {
         orderBy: { createdAt: "asc" },
@@ -68,7 +69,7 @@ export default async function CandidaturaScorecardPage({
   const testeLink = candidatura.assessmentLinks[0];
   const initialTesteLink =
     testeLink?.status === "PENDENTE"
-      ? { status: "PENDENTE" as const, token: testeLink.token, expiresAtLabel: formatInstantDate(testeLink.expiresAt) }
+      ? linkPendenteNaFicha(testeLink, new Date())
       : testeLink?.status === "RESPONDIDO" && testeLink.type === "DISC"
         ? {
             status: "RESPONDIDO" as const,
@@ -208,6 +209,9 @@ export default async function CandidaturaScorecardPage({
           canManage={canAct}
           templates={templates}
           urlPublica={(process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "")}
+          nome={candidatura.person.name}
+          telefone={candidatura.person.phone}
+          vaga={candidatura.vaga.title}
         />
       </div>
 

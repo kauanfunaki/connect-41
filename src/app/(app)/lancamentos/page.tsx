@@ -12,7 +12,7 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
-import type { VarianteDoBadge } from "@/components/ui/Badge";
+import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { TOM_DA_SITUACAO, tomDoFechamento } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -323,9 +323,8 @@ async function ListaDeManuais({
                       {l.costCenter?.name ? ` · ${l.costCenter.name}` : ""}
                     </InfoDoCartao>
                     <PeDoCartao>
-                      <span className={`text-fs-2 font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success-fg"}`}>
-                        {l.kind === "PAGAR" ? "A pagar" : "A receber"}
-                      </span>
+                      {/* Tipo é categoria: Badge neutro, sem vermelho/verde (D1, 15/10/2026). */}
+                      <Badge variant="neutral">{l.kind === "PAGAR" ? "A pagar" : "A receber"}</Badge>
                       <Selo tom={tomDaVariante(status.variante)}>{status.rotulo}</Selo>
                       {podeCancelar && podeCancelarManual(l).pode && (
                         <span className="ml-auto">
@@ -370,8 +369,9 @@ async function ListaDeManuais({
                       const status = statusDe(l);
                       return (
                         <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
-                          <td className={`py-2.5 pr-3 font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success-fg"}`}>
-                            {l.kind === "PAGAR" ? "A pagar" : "A receber"}
+                          {/* Tipo é categoria: Badge neutro, sem cor de alerta em toda linha (D1, 15/10/2026). */}
+                          <td className="py-2.5 pr-3">
+                            <Badge variant="neutral">{l.kind === "PAGAR" ? "A pagar" : "A receber"}</Badge>
                           </td>
                           <td className="py-2.5 pr-3">
                             <span className="font-medium">{l.counterparty.name}</span>

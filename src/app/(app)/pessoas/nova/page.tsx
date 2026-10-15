@@ -10,6 +10,7 @@ import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { criarPessoa } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 
 // O tipo (interno x cliente) é escolhido ANTES do formulário: os dois pedem
 // campos bem diferentes (colaborador tem CTPS, jornada e folha; contato de
@@ -60,7 +61,7 @@ export default async function NovaPessoaPage({
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
     }),
     prisma.cargo.findMany({
       where: { tenantId: ctx.tenantId, active: true },

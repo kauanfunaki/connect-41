@@ -365,7 +365,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           <TaskFieldsPanel
             canAct={canAct}
             itemId={itemId}
-            stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}
+            stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
             currentStageId={item.stageId}
             moveAction={moverItem}
             dueDate={item.dueDate ? item.dueDate.toISOString() : null}
@@ -396,10 +396,10 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
           <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
 
-          {/* Rodapé do detalhamento — quatro seções colapsáveis sem cartão nem
-              borda em volta, no formato do ClickUp. Cada uma só aparece se
-              tiver conteúdo ou se o usuário puder criar algo ali. */}
-          <div className="flex flex-col">
+          {/* Rodapé do detalhamento — as seções em blocos recolhíveis, que
+              começam fechados com o resumo na linha (15/10/2026). Cada uma só
+              aparece se tiver conteúdo ou se o usuário puder criar algo ali. */}
+          <div className="flex flex-col gap-2">
             {!item.parentItemId && (subtasks.length > 0 || canAct) && (
               <DetailSection
                 title="Subtarefas"

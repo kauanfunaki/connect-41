@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
+import { MetricCard } from "@/components/ui/MetricCard";
 import { salvarProposta } from "@/app/(app)/valora/actions";
 import {
   calcular,
@@ -256,11 +257,14 @@ export function Simulador({
       </div>
 
       <Card className="p-4 lg:sticky lg:top-4 space-y-4">
-        <div>
-          <p className="c41-rotulo">Honorário mensal</p>
-          <p className="text-metric font-semibold tabular-nums leading-tight">{brl(r.mensal.alvo)}</p>
-          <p className="text-fs-2 text-fg-muted">alvo, com {parametros.margemAlvoPct}% de margem</p>
-        </div>
+        {/* O número principal no cartão de número, em azul cheio (15/10/2026):
+            era um valor de 30px escrito à mão. */}
+        <MetricCard
+          label="Honorário mensal"
+          value={brl(r.mensal.alvo)}
+          detalhe={`alvo, com ${parametros.margemAlvoPct}% de margem`}
+          destaque
+        />
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-fs-2">
           <div>
             <dt className="text-fg-muted">Piso</dt>

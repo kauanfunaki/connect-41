@@ -35,9 +35,8 @@ const SITUACOES: { value: string; label: string }[] = [
   { value: SITUACAO_TODOS, label: "Todos" },
 ];
 
-// Componente cliente próprio pelo mesmo motivo do EmpresasFilterButton: o
-// painel usa a callback close() do Dropdown, que não pode ser passada como
-// children de um Server Component.
+// Componente cliente próprio: o painel usa a callback close() do Dropdown,
+// que não pode ser passada como children de um Server Component.
 export function PessoasFilterButton({
   search,
   companyId,

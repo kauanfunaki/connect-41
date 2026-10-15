@@ -20,6 +20,8 @@ import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { saoPauloParts } from "@/lib/agenda";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
@@ -195,15 +197,28 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
               ))}
             </CartoesNoCelular>
 
+            {/* Funil nas colunas que repetem valor (15/10/2026): a Situação
+                (Autorizada, Rejeitada, Cancelada…), o tomador, o serviço e o dia. */}
+            <TabelaFiltravel
+              linhas={linhas.map((e) => ({
+                id: e.id,
+                valores: {
+                  pedidaEm: saoPauloParts(e.pedidoEm).dateKey,
+                  tomador: e.tomadorNome,
+                  servico: e.servicoDescricao,
+                  situacao: ROTULO_DO_ESTADO[e.estado],
+                },
+              }))}
+            >
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[980px]">
                 <thead>
                   <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border text-left">
-                    <th className="py-2 pr-3 font-medium">Pedida em</th>
-                    <th className="py-2 pr-3 font-medium">Tomador</th>
-                    <th className="py-2 pr-3 font-medium">Serviço</th>
+                    <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Pedida em" chave="pedidaEm" tipo="data" /></th>
+                    <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Tomador" chave="tomador" /></th>
+                    <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Serviço" chave="servico" /></th>
                     <th className="py-2 pr-3 font-medium text-right">Valor</th>
-                    <th className="py-2 pr-3 font-medium">Situação</th>
+                    <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" /></th>
                     <th className="py-2 pr-3 font-medium">Nota</th>
                     <th className="py-2 pr-3 font-medium">Mensagem do Omie</th>
                     <th className="py-2 font-medium" aria-label="Ações" />
@@ -211,7 +226,7 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
                 </thead>
                 <tbody>
                   {linhas.map((e) => (
-                    <tr key={e.id} className="border-b border-border-soft align-top text-ui">
+                    <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border-soft align-top text-ui">
                       <td className="py-2 pr-3 whitespace-nowrap">
                         <div className="tabular-nums">{formatInstantDateTime(e.pedidoEm)}</div>
                         <div className="text-helper text-fg-muted">{e.pedidoPor}</div>
@@ -247,11 +262,12 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
                           />
                         )}
                       </td>
-                    </tr>
+                    </LinhaFiltravel>
                   ))}
                 </tbody>
               </table>
             </TabelaNoDesktop>
+            </TabelaFiltravel>
           </>
         )}
       </CascoDaTabela>

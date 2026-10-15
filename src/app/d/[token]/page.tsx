@@ -73,10 +73,14 @@ export default async function ClientDocumentViewPage({
           subtitulo={doc.company.name}
         />
 
-        <div
-          className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 sm:p-6 text-fs-4 text-fg leading-relaxed [&_a]:text-brand [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-fs-7 [&_h1]:font-semibold [&_h2]:text-fs-6 [&_h2]:font-semibold [&_h3]:text-fs-4 [&_h3]:font-semibold"
-          dangerouslySetInnerHTML={{ __html: bodyHtml }}
-        />
+        {/* Texto de leitura como no portal (/portal/envios/[id], 15/10/2026):
+            15px e no máximo 72 caracteres por linha — eram 14px e ~90. */}
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 sm:p-6">
+          <div
+            className="max-w-[72ch] text-body text-fg leading-relaxed break-words [&_a]:text-brand [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-fs-7 [&_h1]:font-semibold [&_h2]:text-fs-6 [&_h2]:font-semibold [&_h3]:text-fs-4 [&_h3]:font-semibold"
+            dangerouslySetInnerHTML={{ __html: bodyHtml }}
+          />
+        </div>
 
         {/* `nativo` (um `<a>` simples), e não o Button com href puro: este
             vira <Link>, e o prefetch dele chamaria a rota do arquivo (que

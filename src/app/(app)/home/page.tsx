@@ -509,7 +509,9 @@ export default async function HomePage() {
           label="Transferências"
           value={pendingHandoffsCount}
           delay={80}
-          highlight={pendingHandoffsCount > 0}
+          // O tom pela situação, e não o `highlight` antigo (15/10/2026):
+          // transferência em aberto espera alguém — âmbar.
+          tom={pendingHandoffsCount > 0 ? "atencao" : undefined}
           sub={pendingHandoffsCount > 0 ? "em aberto" : undefined}
         />
         {/* No lugar de "Pessoas cadastradas" (08/10, escolha 7A): um número

@@ -11,7 +11,8 @@ import { Colunas } from "@/components/shared/Graficos";
 import { Aviso } from "@/components/ui/Aviso";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
-import { formatInstantDate, formatarReaisDeCentavos } from "@/lib/format";
+import { formatInstantDate, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { estadoDosAgentes } from "@/lib/ia/data";
 import { agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { propostasDoSetor, qualidadeDoSetor } from "@/lib/ia/propostas";
@@ -136,20 +137,18 @@ export default async function IaDoSocietarioPage() {
               return (
                 <Card key={q.agentCode} className="p-4 flex flex-col gap-3">
                   <p className="text-fs-4 font-semibold text-fg">{nome(q.agentCode)}</p>
-                  <dl className="grid grid-cols-3 gap-2 text-fs-2">
-                    <div>
-                      <dt className="text-fg-muted">Propostas</dt>
-                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{q.total}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-fg-muted">Com ajuste</dt>
-                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{pct(q.taxaDeEdicao)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-fg-muted">Rejeitadas</dt>
-                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{pct(q.taxaDeRejeicao)}</dd>
-                    </div>
-                  </dl>
+                  {/* Os três números no cartão de número (15/10/2026): eram
+                      números de 18px montados à mão. Sem o azul cheio: são
+                      vários agentes na tela, e nenhum é o total dela. */}
+                  <FaixaDeTotais
+                    className=""
+                    destaque={false}
+                    itens={[
+                      { rotulo: "Propostas", valor: formatarNumero(q.total, 0) },
+                      { rotulo: "Com ajuste", valor: pct(q.taxaDeEdicao) },
+                      { rotulo: "Rejeitadas", valor: pct(q.taxaDeRejeicao) },
+                    ]}
+                  />
                   <p className="text-fs-2 text-fg-secondary tabular-nums">
                     {q.aprovadas} aprovadas como vieram · {q.editadas} com ajuste · {q.rejeitadas} rejeitadas · {q.pendentes} esperando
                   </p>

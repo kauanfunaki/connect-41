@@ -484,6 +484,8 @@ export function EmpresasTable({
                 direita da coluna, com o rótulo no centro: antes o funil ia
                 colado ao rótulo e centralizava junto com ele. */}
             <thead className="c41-cabecalho-dividido">
+              {/* Letra azul do cabeçalho, como nas outras tabelas (15/10/2026):
+                  esta copiava o estilo à mão com o cinza antigo. */}
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
                   <th className="px-4 py-3">
@@ -495,21 +497,21 @@ export function EmpresasTable({
                     data de cadastro não decide nada numa lista operacional). O
                     ID do Acessórias, que tinha descido para a segunda linha do
                     nome, voltou a ter coluna estreita em 05/10. */}
-                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted">ID</th>
-                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
-                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted">Status</th>
-                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-table-header-fg">Nome</th>
+                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-table-header-fg">ID</th>
+                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-table-header-fg">CNPJ</th>
+                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-table-header-fg">Status</th>
+                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-table-header-fg">
                   {filtrosDeColuna ? <FiltroDaColunaNaUrl rotulo="Regime" chave="regime" opcoes={filtrosDeColuna.regime} /> : "Regime"}
                 </th>
-                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="text-center px-4 py-3 text-micro font-semibold uppercase tracking-wide text-table-header-fg">
                   {filtrosDeColuna ? (
                     <FiltroDaColunaNaUrl rotulo="Localização" chave="local" opcoes={filtrosDeColuna.local} align="right" />
                   ) : (
                     "Localização"
                   )}
                 </th>
-                <th className="px-4 py-3 sticky right-0 z-10 bg-table-header-bg text-micro font-semibold uppercase text-fg-muted">Ações</th>
+                <th className="px-4 py-3 sticky right-0 z-10 bg-table-header-bg text-micro font-semibold uppercase text-table-header-fg">Ações</th>
               </tr>
             </thead>
             <tbody>

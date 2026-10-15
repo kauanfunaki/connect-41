@@ -12,6 +12,9 @@ import { accessiblePipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { getSectorMaps } from "@/lib/sectors";
 import { trilhaDaLista } from "@/lib/kanbanPaths";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
+import { nomeExibicao } from "@/lib/companyName";
+import type { Opcao } from "@/components/shared/SearchableSelect";
 
 export async function NovoItemContent({ id, estagio, emModal = false }: { id: string; estagio?: string; emModal?: boolean }) {
   const ctx = await getAuthContext();
@@ -29,18 +32,26 @@ export async function NovoItemContent({ id, estagio, emModal = false }: { id: st
   if (!pipeline) notFound();
   if (!canManageSector(ctx, pipeline.sectorCode)) notFound();
 
-  const entities =
+  // As opções já no desenho do seletor com busca (15/10/2026): empresa com
+  // logo, CNPJ, a filial embaixo da matriz e recentes; pessoa com a foto.
+  const entities: Opcao[] =
     pipeline.entityType === "COMPANY"
-      ? await prisma.company.findMany({
-          where: await scopedCompanyWhere(ctx),
-          orderBy: { name: "asc" },
-          select: { id: true, name: true },
-        })
-      : await prisma.person.findMany({
-          where: await scopedPersonWhere(ctx),
-          orderBy: { name: "asc" },
-          select: { id: true, name: true },
-        });
+      ? opcoesDeEmpresa(
+          (
+            await prisma.company.findMany({
+              where: await scopedCompanyWhere(ctx),
+              orderBy: { name: "asc" },
+              select: CAMPOS_DA_EMPRESA_NO_SELETOR,
+            })
+          ).map((c) => ({ ...c, nome: nomeExibicao(c) }))
+        )
+      : (
+          await prisma.person.findMany({
+            where: await scopedPersonWhere(ctx),
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, photoUrl: true },
+          })
+        ).map((p) => ({ value: p.id, label: p.name, imagem: p.photoUrl }));
 
   const [tags, sectorUsers] = await Promise.all([
     prisma.tag.findMany({
