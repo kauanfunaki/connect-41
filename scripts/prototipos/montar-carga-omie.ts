@@ -103,6 +103,8 @@ const EXCECOES: Record<string, GrupoDre | null> = {
   "impostos parcelados": "DESPESAS_OPERACIONAIS_OUTRAS",
   // No CMV, como no Connect (pedido do Kauan, 14/10/2026).
   "impostos retidos servicos tomados (pis/cofins/csll/irrf)": "CMV",
+  // Despesa administrativa, como no Connect (pedido de 15/10/2026).
+  pedagio: "DESPESAS_ADMINISTRATIVAS",
   // Outras Despesas
   "retirada de capital social": "APORTES_DIVIDENDOS",
   "distribuicao de lucros - socios": "APORTES_DIVIDENDOS",
