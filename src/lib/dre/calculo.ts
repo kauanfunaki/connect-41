@@ -123,9 +123,10 @@ export type ResultadoDoDre = {
    */
   desconsiderado: ValorDaCategoria[];
   /**
-   * As categorias que compõem cada um dos doze grupos, do maior para o menor
-   * em valor absoluto (13/10/2026, teste da Amanda): a linha "CMV" do relatório
-   * abre e mostra de onde veio o número. Grafias da mesma chave somam numa
+   * As categorias que compõem cada um dos doze grupos, em ordem alfabética
+   * (13/10/2026, teste da Amanda; alfabética desde 15/10/2026 — era do maior
+   * para o menor): a linha "CMV" do relatório abre e mostra de onde veio o
+   * número. Grafias da mesma chave somam numa
    * linha só, com o nome com que a categoria chegou primeiro — como na
    * exportação no modelo do BPO. Vazio quando o resultado não veio de
    * lançamentos (o acumulado, montado de totais por grupo).
@@ -216,7 +217,7 @@ export function calcularDre(
     naoClassificado: porCategoria(soltos),
     desconsiderado: porCategoria(desconsiderados),
     porCategoria: Object.fromEntries(
-      [...doGrupo.entries()].map(([grupo, mapa]) => [grupo, doMaiorParaOMenor([...mapa.values()])])
+      [...doGrupo.entries()].map(([grupo, mapa]) => [grupo, [...mapa.values()].sort((a, b) => compararCategorias(a.categoria, b.categoria))])
     ),
     diferencaDeFechamento: totalEntrado - somaDosGrupos,
   };
@@ -242,6 +243,19 @@ function somarNoDetalhe(doGrupo: Map<string, Map<string, ValorDaCategoria>>, gru
   const atual = mapa.get(chave);
   if (atual) atual.centavos += l.valorCentavos;
   else mapa.set(chave, { categoria: nome, centavos: l.valorCentavos, origem: l.origem });
+}
+
+const ORDEM_ALFABETICA = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
+
+/**
+ * A ordem das categorias quando a linha da DRE abre, no mês e no ano, no
+ * Connect e no portal (pedido de 15/10/2026): alfabética, sem diferença de
+ * caixa nem de acento — "Água" fica entre as do A. A fila de classificação e o
+ * resumo do desconsiderado seguem do maior para o menor: lá a pergunta é "o que
+ * pesa mais", não "onde está".
+ */
+export function compararCategorias(a: string, b: string): number {
+  return ORDEM_ALFABETICA.compare(a, b);
 }
 
 function doMaiorParaOMenor(lista: ValorDaCategoria[]): ValorDaCategoria[] {
