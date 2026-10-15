@@ -74,7 +74,7 @@ export const TELAS_DO_GERAL: readonly DefDaTelaDoGeral[] = [
   {
     chave: "cadastros",
     rotulo: "Cadastros",
-    descricao: "Empresas, clientes e pessoas do escritório.",
+    descricao: "Empresas e pessoas do escritório.",
   },
   {
     chave: "transferencias",

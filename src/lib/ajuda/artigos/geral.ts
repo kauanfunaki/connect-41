@@ -102,7 +102,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como encontrar uma empresa",
         passos: [
-          "Abra “Cadastros” na barra lateral. A tela tem as abas “Empresas”, “Clientes” e “Pessoas”; fique em “Empresas”.",
+          "Abra “Cadastros” na barra lateral. A tela tem as abas “Empresas” e “Pessoas”; fique em “Empresas”.",
           "Digite parte do nome ou do ID no campo “Buscar por nome ou ID…”.",
           "Para trocar o status mostrado, clique em “Filtros” e escolha “Ativo”, “Prospecto”, “Inativo”, “Cancelado” ou “Todos, incluindo inativos”.",
           "Para filtrar por regime ou cidade, clique no funil ao lado do título das colunas “Regime” e “Localização” e marque os valores.",

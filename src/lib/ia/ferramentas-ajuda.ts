@@ -29,7 +29,7 @@ export const CAMINHO_DOS_QUADROS = "/setor/{setor}";
 export const TELAS_GERAIS = [
   { tela: "Início", caminho: "/home", descricao: "Resumo do dia com os painéis dos seus setores; o botão Personalizar escolhe o que aparece." },
   { tela: "Meu dia", caminho: "/tarefas", descricao: "O que é seu para hoje: o que venceu, o que vence, o que parou e o que está andando, de todos os setores. Coordenador vê também o time." },
-  { tela: "Cadastros", caminho: "/empresas", descricao: "Empresas, pessoas e clientes do escritório." },
+  { tela: "Cadastros", caminho: "/empresas", descricao: "Empresas e pessoas do escritório." },
   { tela: "Transferências", caminho: "/transferencias", descricao: "Passar um assunto para outro setor, com prazo e prioridade." },
   {
     tela: "Solicitações",
