@@ -101,13 +101,6 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
         select: { id: true, title: true, companyId: true, type: { select: { name: true } } },
       })
     ).map((r) => ({ id: r.id, nome: r.title || r.type.name, href: `/processos/${r.id}`, empresaId: r.companyId })),
-  ClientGroup: async (tenantId, ids) =>
-    (await getPrisma().clientGroup.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true } })).map((r) => ({
-      id: r.id,
-      nome: r.name,
-      href: `/clientes/${r.id}/editar`,
-      empresaId: null,
-    })),
   Lead: async (tenantId, ids) =>
     (await getPrisma().lead.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true } })).map((r) => ({
       id: r.id,

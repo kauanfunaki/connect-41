@@ -97,7 +97,6 @@ const SECTOR_ICONS: Record<string, React.ReactNode> = {
 // (pedido de 30/09, referência do HubStrom).
 const TELAS_DE_CADASTROS: TelaDoPainel[] = [
   { label: "Empresas", href: "/empresas", icon: <Building2 /> },
-  { label: "Clientes", href: "/clientes", icon: <BriefcaseBusiness /> },
   { label: "Pessoas", href: "/pessoas", icon: <Users /> },
 ];
 const TELAS_DA_GESTAO: TelaDoPainel[] = ABAS_DA_GESTAO.map((a) => ({ label: a.rotulo, href: a.href, icon: a.icone }));
