@@ -22,6 +22,7 @@ import { orcamentosAprovados, MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/da
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
 import { itensDaGestao } from "@/lib/gestao/itens";
 import { pedidosAoClienteLigados } from "@/lib/financeiro/pendencias/setor";
+import { MARCA_DA_DEMONSTRACAO, SO_EMPRESA_DE_VERDADE } from "@/lib/demonstracao/marca";
 import {
   DIAS_DE_AVISO_DO_VENCIMENTO,
   MODULO_ARQUIVOS,
@@ -351,6 +352,8 @@ async function checkContasAPagar(tenantId: string, today: Date): Promise<number>
       status: { in: ["PROVISORIO", "CONFERIDO"] },
       paidAt: null,
       dueDate: { gte: new Date(`${ontemKey}T00:00:00-03:00`), lte: new Date(`${hojeKey}T23:59:59.999-03:00`) },
+      // A conta fictícia da demonstração não avisa o setor (15/10/2026).
+      company: SO_EMPRESA_DE_VERDADE,
     },
     select: { amount: true, dueDate: true },
   });
@@ -392,6 +395,7 @@ async function checkPendenciasVencidas(tenantId: string, today: Date): Promise<n
       status: "ABERTA",
       dueDate: { lt: new Date(`${hojeKey}T00:00:00-03:00`) },
       createdById: { not: null },
+      company: SO_EMPRESA_DE_VERDADE,
     },
     _count: { _all: true },
   });
@@ -424,6 +428,7 @@ async function checkSolicitacoesNoPrazo(tenantId: string, today: Date): Promise<
       status: { in: ["ABERTA", "EM_ANDAMENTO", "AGUARDANDO_CLIENTE"] },
       firstResponseAt: null,
       responseDue: { lte: fimDeHoje },
+      company: SO_EMPRESA_DE_VERDADE,
     },
     select: {
       id: true,
@@ -468,7 +473,7 @@ async function checkOrcamentoEstourado(tenantId: string, today: Date): Promise<n
 
   const prisma = getPrisma();
   const versoes = await prisma.budget.findMany({
-    where: { tenantId, year: ano, status: "APROVADO" },
+    where: { tenantId, year: ano, status: "APROVADO", company: SO_EMPRESA_DE_VERDADE },
     select: { companyId: true, company: { select: { name: true, displayName: true } } },
     distinct: ["companyId"],
   });
@@ -788,10 +793,22 @@ async function checkItensDaGestao(tenantId: string, today: Date): Promise<number
   if (!(await isModuleEnabled(tenantId, MODULO_GESTAO))) return 0;
   const itens = await itensDaGestao(tenantId, "todos", today);
   const coordenadores = new Map<string, string[]>();
+  // Card, pendência e solicitação das empresas da demonstração não avisam
+  // ninguém (15/10/2026): o card fictício vencido apareceria para o
+  // responsável todos os dias até a limpeza.
+  const daDemonstracao = new Set(
+    (
+      await getPrisma().company.findMany({
+        where: { tenantId, name: { startsWith: MARCA_DA_DEMONSTRACAO } },
+        select: { id: true },
+      })
+    ).map((e) => e.id)
+  );
   let sent = 0;
 
   for (const { item, c } of itens) {
     if (item.origem === "TRANSFERENCIA") continue;
+    if (item.empresaId && daDemonstracao.has(item.empresaId)) continue;
     // Um tipo para cada (05/10/2026): a pessoa pode desligar o "parado" e
     // manter o prazo. Até aqui os dois saíam como GESTAO_ALERTA.
     const avisos: { chave: string; mensagem: string; tipo: "GESTAO_PARADO" | "GESTAO_PRAZO" }[] = [];
