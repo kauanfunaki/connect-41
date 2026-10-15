@@ -18,7 +18,7 @@
 // meses fechados divide por nove, não por doze — e é o certo: dividir por doze
 // em setembro diz que a empresa faturou 25% menos do que faturou.
 
-import { chaveDaCategoria, montarLinhas, type DetalheDosGrupos, type ValorDaLinha } from "@/lib/dre/calculo";
+import { chaveDaCategoria, compararCategorias, montarLinhas, type DetalheDosGrupos, type ValorDaLinha } from "@/lib/dre/calculo";
 import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA, DESCONSIDERAR, OPCOES_PADRAO, type OpcoesDoDre } from "@/lib/dre/estrutura";
 
 export type MesDoAno = {
@@ -47,7 +47,7 @@ export type DreAnual = {
   mesesComMovimento: number;
   /**
    * As categorias de cada grupo nas quatorze colunas (13/10/2026) — o que a
-   * linha do relatório abre. Do maior total do ano para o menor. A média de
+   * linha do relatório abre. Em ordem alfabética, como no mês (15/10/2026). A média de
    * cada categoria divide pelos mesmos meses da média do grupo; arredondada
    * por categoria, pode não somar ao centavo a média da linha.
    */
@@ -127,7 +127,7 @@ function detalheDoAno(meses: MesDoAno[]): Record<string, CategoriaNoAno[]> {
         const media = meses.length === 0 ? 0 : Math.round(ano / meses.length);
         return { categoria: c.categoria, valores: [...c.meses, media, ano] };
       })
-      .sort((a, b) => Math.abs(b.valores[13]!) - Math.abs(a.valores[13]!));
+      .sort((a, b) => compararCategorias(a.categoria, b.categoria));
   }
   return detalhe;
 }

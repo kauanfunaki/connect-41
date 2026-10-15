@@ -197,15 +197,21 @@ describe("o detalhe de cada linha", () => {
       l("Frete", -100, "pagamento"),
       l("  FRETE ", -50, "pagamento"),
       l("Compra de Matéria Prima - Bobina", -400, "pagamento"),
+      l("compra de consumiveis", -10, "pagamento"),
+      l("Aluguel de Equipamentos", -20, "pagamento"),
       l("Coisa Nova", -70, "pagamento"),
       { categoria: null, grupo: "outras_despesas", valorCentavos: -30_00, origem: "pagamento", perda: true },
     ],
     PADRAO
   );
 
-  it("o grupo abre nas categorias, do maior para o menor, e a soma é a da linha", () => {
+  // Alfabética desde 15/10/2026 (era do maior para o menor), sem olhar caixa:
+  // "compra", minúsculo, fica entre as do C, e não depois do "Frete".
+  it("o grupo abre nas categorias, em ordem alfabética, e a soma é a da linha", () => {
     const cmv = r.porCategoria.cmv!;
     expect(cmv.map((c) => [c.categoria, c.centavos])).toEqual([
+      ["Aluguel de Equipamentos", -2_000],
+      ["compra de consumiveis", -1_000],
       ["Compra de Matéria Prima - Bobina", -40_000],
       ["Frete", -15_000],
     ]);

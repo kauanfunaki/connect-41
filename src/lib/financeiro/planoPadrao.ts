@@ -14,6 +14,10 @@
 //   Kauan). O grupo do plano continua "Impostos": é imposto, só não é imposto
 //   sobre a receita. O que já estava no banco passa pelo script
 //   `scripts/dre-impostos-retidos-para-cmv.ts`.
+// - 15/10/2026: "Pedágio" vai para as Despesas Fixas (Administrativas)
+//   (`administrativas`), e não para o CMV. O grupo do plano continua
+//   "CMV / CSV", como na planilha. O que já estava no banco passa pelo script
+//   `scripts/dre-pedagio-para-administrativas.ts`.
 
 import type { FinanceEntryKind } from "@/generated/prisma/enums";
 
@@ -178,7 +182,7 @@ export const PLANO_PADRAO_41: CategoriaDoPlanoPadrao[] = [
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Pedágio",
-    "dre": "cmv"
+    "dre": "administrativas"
   },
   {
     "kind": "PAGAR",
