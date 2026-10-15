@@ -21,11 +21,12 @@ import {
   Gift,
   BarChart3,
 } from "lucide-react";
-import { abrirTelaDoModulo } from "@/lib/auth/modulo";
+import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
+import type { AuthContext } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { MetricCard } from "@/components/ui/MetricCard";
 import { Card } from "@/components/ui/Card";
-import { getIndicadoresRH } from "@/lib/indicadoresRH";
+import { FaixaDeTotais, type ItemDeTotal } from "@/components/ui/FaixaDeTotais";
+import { getIndicadoresRH, type IndicadorCard } from "@/lib/indicadoresRH";
 import { AVISO_DAS_FERIAS_DIAS } from "@/lib/home/paineis";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -88,13 +89,95 @@ const ICONE_DO_INDICADOR: Record<string, React.ReactNode> = {
   "Custo de benefícios (ativos)": <Gift size={15} />,
 };
 
+/**
+ * Aonde cada indicador leva (15/10/2026, decisão D6 do Kauan: os Indicadores
+ * no modelo do Início — todo número é atalho). `modulo` é o que a tela de
+ * destino pede: sem acesso a ele, o cartão fica sem link, em vez de levar a um
+ * 404. Os relatórios desta área (`/indicadores-rh/...`) não pedem nada além
+ * desta tela. As telas do DP mostram o que está em andamento, e não os
+ * últimos 30 dias: o atalho é para o assunto do número, não para um recorte
+ * que elas não têm.
+ */
+type Destino = { href: string; modulo?: string };
+
+const DESTINO_DO_INDICADOR: Record<string, Destino> = {
+  Headcount: { href: "/colaboradores-clientes", modulo: "recrutamento_colaboradores_clientes" },
+  "Admissões (30 dias)": { href: "/admissoes", modulo: "dp_colaboradores" },
+  "Demissões (30 dias)": { href: "/desligamentos", modulo: "dp_colaboradores" },
+  "Turnover (30 dias)": { href: "/desligamentos", modulo: "dp_colaboradores" },
+  "Absenteísmo (30 dias)": { href: "/afastamentos", modulo: "dp_afastamentos" },
+  "Horas extras (30 dias)": { href: "/horas-extras", modulo: "dp_horas_extras" },
+  "Férias vencidas": { href: "/indicadores-rh/ferias" },
+  [`Férias a vencer (${AVISO_DAS_FERIAS_DIAS} dias)`]: { href: "/indicadores-rh/ferias" },
+  "Vagas abertas": { href: "/vagas?status=ABERTA", modulo: "recrutamento_vagas" },
+  "Candidatos por vaga": { href: "/candidatos", modulo: "recrutamento_candidatos" },
+  "Taxa de aprovação": { href: "/vagas", modulo: "recrutamento_vagas" },
+  "Taxa de reprovação": { href: "/vagas", modulo: "recrutamento_vagas" },
+  "Tempo médio de contratação": { href: "/vagas", modulo: "recrutamento_vagas" },
+  "Treinamentos realizados (90 dias)": { href: "/indicadores-rh/treinamentos" },
+  "Desempenho médio": { href: "/avaliacoes", modulo: "dp_avaliacoes" },
+  // A folha e os benefícios moram na ficha de cada empresa; nenhuma tela soma
+  // os de todas. O mais perto é Cargos e salários, para a folha; os
+  // benefícios ficam sem atalho.
+  "Custo de folha (mês atual)": { href: "/cargos-salarios", modulo: "gestao_cargos_salarios" },
+};
+
+/**
+ * Os números em grupos, como os painéis do Início: o quadro de pessoal no
+ * topo — o Headcount é o número principal, em azul cheio — e o resto por
+ * assunto. Rótulo novo que `getIndicadoresRH` passar a devolver sem grupo
+ * aqui cai em "Outros" em vez de sumir.
+ */
+const GRUPOS: { titulo: string | null; rotulos: string[] }[] = [
+  { titulo: null, rotulos: ["Headcount", "Admissões (30 dias)", "Demissões (30 dias)", "Turnover (30 dias)"] },
+  {
+    titulo: "Férias e jornada",
+    rotulos: ["Férias vencidas", `Férias a vencer (${AVISO_DAS_FERIAS_DIAS} dias)`, "Absenteísmo (30 dias)", "Horas extras (30 dias)"],
+  },
+  {
+    titulo: "Recrutamento",
+    rotulos: ["Vagas abertas", "Candidatos por vaga", "Taxa de aprovação", "Taxa de reprovação", "Tempo médio de contratação"],
+  },
+  { titulo: "Desenvolvimento", rotulos: ["Treinamentos realizados (90 dias)", "Desempenho médio"] },
+  { titulo: "Custos", rotulos: ["Custo de folha (mês atual)", "Custo de benefícios (ativos)"] },
+];
+
+/** O módulo de cada destino que a pessoa alcança — uma consulta por módulo. */
+async function modulosAlcancados(ctx: AuthContext): Promise<Set<string>> {
+  const modulos = [...new Set(Object.values(DESTINO_DO_INDICADOR).flatMap((d) => (d.modulo ? [d.modulo] : [])))];
+  const pode = await Promise.all(modulos.map((m) => podeNoModulo(ctx, m, "ver")));
+  return new Set(modulos.filter((_, i) => pode[i]));
+}
+
+function itemDoIndicador(c: IndicadorCard, alcancados: Set<string>): ItemDeTotal {
+  const destino = DESTINO_DO_INDICADOR[c.label];
+  const comLink = destino && (!destino.modulo || alcancados.has(destino.modulo));
+  return {
+    rotulo: c.label,
+    valor: c.value,
+    detalhe: c.hint,
+    icone: ICONE_DO_INDICADOR[c.label] ?? <BarChart3 size={15} />,
+    href: comLink ? destino.href : undefined,
+    // Férias vencida é passivo consumado — o único número que pede
+    // atenção. Vermelho, como na Home e em /ferias (era âmbar).
+    tom: c.label === "Férias vencidas" && c.value !== "0" ? "text-danger" : undefined,
+  };
+}
+
 export default async function IndicadoresRhPage() {
   const { ctx } = await abrirTelaDoModulo("gestao_indicadores_rh");
-  const [cards, canViewSalary] = await Promise.all([
+  const [cards, canViewSalary, alcancados] = await Promise.all([
     getIndicadoresRH(ctx),
     canViewSensitiveField(ctx, "SALARIO"),
+    modulosAlcancados(ctx),
   ]);
   const relatorios = RELATORIOS.filter((r) => !r.sensitive || canViewSalary);
+  const porRotulo = new Map(cards.map((c) => [c.label, c]));
+  const agrupados = new Set(GRUPOS.flatMap((g) => g.rotulos));
+  const grupos = [
+    ...GRUPOS.map((g) => ({ titulo: g.titulo, cards: g.rotulos.flatMap((r) => porRotulo.get(r) ?? []) })),
+    { titulo: "Outros", cards: cards.filter((c) => !agrupados.has(c.label)) },
+  ].filter((g) => g.cards.length > 0);
 
   return (
     <PageContainer>
@@ -105,21 +188,22 @@ export default async function IndicadoresRhPage() {
         action={<ExportIndicadoresButtons />}
       />
 
-      {/* Quatro por linha só em telas largas: com a sidebar, o custo de folha em
-          reais não cabe num cartão de um quarto a 1024px (o MetricCard não corta). */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-        {cards.map((c, i) => (
-          <MetricCard
-            key={c.label}
-            label={c.label}
-            value={c.value}
-            sub={c.hint}
-            icon={ICONE_DO_INDICADOR[c.label] ?? <BarChart3 size={15} />}
-            // Férias vencida é passivo consumado — o único número que pede
-            // atenção. Vermelho, como na Home e em /ferias (era âmbar).
-            tom={c.label === "Férias vencidas" && c.value !== "0" ? "critico" : undefined}
-            delay={i * 20}
-          />
+      {/* No modelo do Início (15/10/2026, decisão D6): eram 17 cartões soltos
+          numa grade, sem link e sem número principal. Agora cada número leva
+          à tela do assunto, o quadro de pessoal abre a tela com o Headcount
+          em azul cheio, e o resto vem em faixas por assunto — só a primeira
+          faixa tem o cartão azul, um por tela. */}
+      <div className="flex flex-col gap-6">
+        {grupos.map((g, i) => (
+          <section key={g.titulo ?? "principal"} aria-label={g.titulo ?? "Quadro de pessoal"}>
+            {g.titulo && <h2 className="text-card-title font-semibold text-fg mb-3">{g.titulo}</h2>}
+            <FaixaDeTotais
+              className=""
+              destaque={i === 0}
+              rotulosInteiros
+              itens={g.cards.map((c) => itemDoIndicador(c, alcancados))}
+            />
+          </section>
         ))}
       </div>
 

@@ -127,10 +127,8 @@ export default async function ProcessosPage({
     const s = q.toString();
     return s ? `/processos?${s}` : "/processos";
   };
-  // O kanban não tem caixa de busca: levar o `q` para lá filtraria o quadro
-  // sem mostrar o porquê. Vão só os filtros que ele também tem.
+  // O kanban tem a mesma busca na barra desde 15/10/2026: o `q` vai junto.
   const filtrosDoKanban = new URLSearchParams(filtrosNaUrl);
-  filtrosDoKanban.delete("q");
 
   return (
     <PageContainer>

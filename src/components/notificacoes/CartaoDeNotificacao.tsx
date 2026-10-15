@@ -30,6 +30,7 @@ import type { NotificacaoNaTela, TipoDoChip } from "@/lib/notificacoes/consultas
 import { tempoRelativo } from "@/lib/notificacoes/tempo";
 import { IconButton } from "@/components/ui/IconButton";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Badge } from "@/components/ui/Badge";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 
 // O cartão de uma notificação — o mesmo no sino e na central (02/10/2026):
@@ -152,11 +153,13 @@ export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onArquivar, on
         <span className="block text-fs-3 text-fg-secondary leading-snug mt-0.5 line-clamp-2">{n.mensagem}</span>
         <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
           {n.autor && <span className="text-fs-1 font-medium text-fg-secondary">{n.autor.nome}</span>}
+          {/* A origem é categoria: o `Badge` neutro, com o ícone (15/10/2026) —
+              era uma pílula montada aqui. */}
           {n.chip && Chip && (
-            <span className="inline-flex max-w-full items-center gap-1 h-5 px-1.5 rounded-md border border-border bg-surface text-fs-1 font-medium text-fg-secondary">
-              <Chip size={11} className="flex-shrink-0 text-fg-muted" />
+            <Badge variant="neutral" className="max-w-full min-w-0 gap-1">
+              <Chip size={11} className="flex-shrink-0" />
               <span className="truncate">{n.chip.rotulo}</span>
-            </span>
+            </Badge>
           )}
           {!semTempo && <span className="text-fs-1 text-fg-muted tabular-nums">{tempoRelativo(new Date(n.criadaEm))}</span>}
         </span>

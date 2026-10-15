@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Building2, Plus } from "lucide-react";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
@@ -7,7 +6,7 @@ import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
-import { EmpresasFilterButton } from "@/components/empresas/EmpresasFilterButton";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
@@ -182,27 +181,6 @@ export default async function EmpresasPage({
         )}</>}
       />
 
-      {/* Filtro por cliente vem de um link de /clientes. Sem uma saída visível,
-          o usuário buscava outra empresa, não achava, e concluía que ela não
-          existe — o filtro continuava ativo na URL, invisível. */}
-      {cliente && (
-        <div className="flex items-center gap-2 mb-4">
-          <span className="inline-flex items-center gap-2 h-7 pl-3 pr-2 rounded-full bg-brand/10 text-brand text-fs-2 font-medium">
-            Cliente: {clienteFiltrado?.name ?? "desconhecido"}
-            <Link
-              href={buildUrl({ cliente: undefined, page: "1" })}
-              aria-label="Remover filtro de cliente"
-              className="grid place-items-center w-4 h-4 rounded-full hover:bg-brand/20 transition-colors"
-            >
-              ×
-            </Link>
-          </span>
-          <span className="text-fs-2 text-fg-muted">
-            A busca e os filtros só enxergam as empresas deste cliente.
-          </span>
-        </div>
-      )}
-
       {/* Esconder sem avisar faria a base parecer menor do que é. */}
       {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
       {ocultas > 0 && (
@@ -224,7 +202,28 @@ export default async function EmpresasPage({
       <CascoDaTabela
         contagem={contarItens(total, "empresa", "empresas")}
         busca={<DebouncedSearchInput placeholder="Buscar por nome ou ID…" className="w-72 max-w-full" />}
-        filtros={<EmpresasFilterButton search={search} page={page} statusFilter={statusFilter} tabs={FILTER_TABS} />}
+        filtros={
+          // O painel do "Filtros" das outras telas, com a etiqueta "×" do que
+          // está filtrado ao lado do botão (15/10/2026): era uma lista de links
+          // sem rótulo de campo. O cliente vem de um link de /clientes — sem
+          // uma saída visível, quem buscava outra empresa e não achava concluía
+          // que ela não existe; a etiqueta "Cliente: X ×" fica na barra, ao
+          // lado da busca (era uma pílula montada à mão, acima do casco).
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "status",
+                rotulo: "Situação",
+                vazioLabel: "Em operação",
+                opcoes: [...FILTER_TABS, { value: STATUS_TODOS, label: "Todos, incluindo inativos" }],
+              },
+              ...(cliente
+                ? [{ chave: "cliente", rotulo: "Cliente", vazioLabel: "Todos", opcoes: [{ value: cliente, label: clienteFiltrado?.name ?? "desconhecido" }] }]
+                : []),
+            ]}
+          />
+        }
       >
       {/* Fica acima da tabela e do estado vazio: é por aqui que se desfaz o
           funil quando ele esvazia a lista. */}

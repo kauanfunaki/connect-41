@@ -59,8 +59,11 @@ export default async function MinhaAreaPage() {
       {/* Os totais no cartão das filas irmãs (Processos, Licenças) — era o
           MetricCard sem ícone, um dos três desenhos de total do módulo
           (07/10/2026). */}
+      {/* Sem o cartão azul (15/10/2026): o primeiro número é de situação
+          (vencidos), não o total — com zero, ele virava o número principal. */}
       <FaixaDeTotais
         className="mb-6"
+        destaque={false}
         itens={[
           {
             rotulo: "Vencidos",

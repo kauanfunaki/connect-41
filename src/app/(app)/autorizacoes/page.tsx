@@ -8,7 +8,7 @@ import { Selo } from "@/components/ui/Selo";
 import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -106,6 +106,8 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
   const ativas = conta((s) => s === "ativa" || s === "a_renovar");
   const consideradas = linhas.length - conta((s) => s === "nao_se_aplica");
   const href = (s: Recorte) => `/autorizacoes${s === "pendentes" ? "" : `?situacao=${s}`}`;
+  /** O cartão do recorte: acende quando é o da lista, e clicar de novo volta ao padrão. */
+  const noCartao = (r: Recorte) => ({ href: href(recorte === r ? "pendentes" : r), ativo: recorte === r });
 
   return (
     <PageContainer>
@@ -152,25 +154,31 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
         </Aviso>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <MetricCard
-          label="Validar no Portal"
-          value={conta((s) => s === "validar")}
-          sub={validarLogo ? `${validarLogo} cai em até 5 dias` : "o cliente já cadastrou"}
-          tom={validarLogo ? "critico" : undefined}
-          icon={<Hourglass size={15} />}
-          href={href("validar")}
-        />
-        <MetricCard label="Falta pedir" value={conta(precisaDePedido)} sub="inclui caídas, canceladas e vencidas" icon={<ShieldAlert size={15} />} href={href("pedir")} />
-        <MetricCard label="Com o cliente" value={conta((s) => s === "pedida")} sub="pedida, ainda não cadastrou" icon={<Send size={15} />} href={href("pedida")} />
-        <MetricCard
-          label="Ativas"
-          value={ativas}
-          sub={`de ${plural(consideradas, "cliente", "clientes")}${conta((s) => s === "a_renovar") ? ` · ${conta((s) => s === "a_renovar")} a renovar` : ""}`}
-          icon={<ShieldCheck size={15} />}
-          href={href("ativa")}
-        />
-      </div>
+      {/* A faixa de totais (15/10/2026): eram MetricCard soltos numa grade
+          própria, que levavam ao recorte sem marcar qual estava aberto. Agora
+          o recorte da lista acende, e clicar nele de novo volta ao padrão. */}
+      <FaixaDeTotais
+        className="mb-6"
+        itens={[
+          {
+            rotulo: "Validar no Portal",
+            valor: String(conta((s) => s === "validar")),
+            detalhe: validarLogo ? `${validarLogo} cai em até 5 dias` : "o cliente já cadastrou",
+            tom: validarLogo ? "text-danger" : undefined,
+            icone: <Hourglass />,
+            ...noCartao("validar"),
+          },
+          { rotulo: "Falta pedir", valor: String(conta(precisaDePedido)), detalhe: "inclui caídas, canceladas e vencidas", icone: <ShieldAlert />, ...noCartao("pedir") },
+          { rotulo: "Com o cliente", valor: String(conta((s) => s === "pedida")), detalhe: "pedida, ainda não cadastrou", icone: <Send />, ...noCartao("pedida") },
+          {
+            rotulo: "Ativas",
+            valor: String(ativas),
+            detalhe: `de ${plural(consideradas, "cliente", "clientes")}${conta((s) => s === "a_renovar") ? ` · ${conta((s) => s === "a_renovar")} a renovar` : ""}`,
+            icone: <ShieldCheck />,
+            ...noCartao("ativa"),
+          },
+        ]}
+      />
 
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "cliente", "clientes")}

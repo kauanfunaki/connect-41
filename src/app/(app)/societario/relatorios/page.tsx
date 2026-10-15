@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FolderOpen, AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Card } from "@/components/ui/Card";
@@ -101,23 +101,28 @@ export default async function RelatoriosDoSocietarioPage({
         ]}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Abertos agora" value={abertos.length} icon={<FolderOpen size={16} />} />
-        {/* Estourado é vermelho, como no painel de Processos da Home (era âmbar). */}
-        <MetricCard
-          label="Abertos com prazo estourado"
-          value={estouradosAbertos}
-          tom={estouradosAbertos > 0 ? "critico" : undefined}
-          icon={<AlertTriangle size={16} />}
-        />
-        <MetricCard label={`Concluídos em ${periodo.rotulo}`} value={processos.length - abertos.length} icon={<CheckCircle2 size={16} />} />
-        <MetricCard
-          label="Processos com volta"
-          icon={<RotateCcw size={16} />}
-          value={voltas.percentualComVolta === null ? "—" : `${voltas.percentualComVolta}%`}
-          sub={`${voltas.totalDeVoltas} ${voltas.totalDeVoltas === 1 ? "volta" : "voltas"}`}
-        />
-      </div>
+      {/* A faixa de totais, com "Abertos agora" no cartão azul de número
+          principal (15/10/2026): eram MetricCard soltos numa grade própria. */}
+      <FaixaDeTotais
+        className="mb-6"
+        itens={[
+          { rotulo: "Abertos agora", valor: formatarNumero(abertos.length, 0), icone: <FolderOpen /> },
+          // Estourado é vermelho, como no painel de Processos da Home (era âmbar).
+          {
+            rotulo: "Abertos com prazo estourado",
+            valor: formatarNumero(estouradosAbertos, 0),
+            tom: estouradosAbertos > 0 ? "text-danger" : undefined,
+            icone: <AlertTriangle />,
+          },
+          { rotulo: `Concluídos em ${periodo.rotulo}`, valor: formatarNumero(processos.length - abertos.length, 0), icone: <CheckCircle2 /> },
+          {
+            rotulo: "Processos com volta",
+            valor: voltas.percentualComVolta === null ? "—" : `${voltas.percentualComVolta}%`,
+            icone: <RotateCcw />,
+            detalhe: `${voltas.totalDeVoltas} ${voltas.totalDeVoltas === 1 ? "volta" : "voltas"}`,
+          },
+        ]}
+      />
 
       <div className="flex flex-col gap-5">
         <Card as="section" className={SECAO}>

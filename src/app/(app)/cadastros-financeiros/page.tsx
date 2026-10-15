@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/Badge";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
@@ -56,6 +58,48 @@ function documento(d: string | null): string {
 }
 
 /**
+ * Cadastro esconde os inativos (15/10/2026), como Empresas e Pessoas: sem
+ * `?situacao=`, só os ativos, com o aviso de quantos ficaram de fora e o
+ * filtro para trazê-los. Inativo continua nas contas antigas — só sai da lista.
+ */
+type Situacao = "ativos" | "inativos" | "todos";
+
+function lerSituacao(v: string | undefined): Situacao {
+  return v === "inativos" || v === "todos" ? v : "ativos";
+}
+
+function naSituacao(ativo: boolean, s: Situacao): boolean {
+  return s === "todos" || (s === "ativos" ? ativo : !ativo);
+}
+
+const FILTRO_DA_SITUACAO: CampoDeFiltro[] = [
+  {
+    chave: "situacao",
+    rotulo: "Situação",
+    vazioLabel: "Ativos",
+    opcoes: [
+      { value: "inativos", label: "Inativos" },
+      { value: "todos", label: "Todos" },
+    ],
+  },
+];
+
+/** "3 cadastros inativos fora desta lista. [Mostrar todos]" — o aviso de Pessoas. */
+function InativosDeFora({ n, um, varios, href }: { n: number; um: string; varios: string; href: string }) {
+  if (n === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mb-4">
+      <p>
+        {n} {n === 1 ? um : varios} fora desta lista.
+      </p>
+      <Button href={href} variant="ghost" size="xs">
+        Mostrar todos
+      </Button>
+    </div>
+  );
+}
+
+/**
  * Fornecedores e sacados da empresa cliente, e os centros de custo dela.
  *
  * **Uma ficha só para os dois papéis** — é como o schema modela
@@ -81,6 +125,7 @@ export default async function CadastrosFinanceirosPage({
 
   const params = await searchParams;
   const aba = ABAS.find((a) => a.chave === params.aba)?.chave ?? "fornecedores";
+  const situacao = lerSituacao(params.situacao);
   const podeEditar = canActOnSector(ctx, setor);
   // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
   // (13/10/2026). Era a primeira em ordem alfabética, e o "Novo cadastro" caía
@@ -165,7 +210,14 @@ export default async function CadastrosFinanceirosPage({
         {comAcao(podeEditar ? <NovoCentroDeCusto companyId={companyId} /> : undefined)}
         {filtroDaEmpresa}
         <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
-        <AbaDeCentros tenantId={ctx.tenantId} companyId={companyId} centros={centros} podeEditar={podeEditar} />
+        <AbaDeCentros
+          tenantId={ctx.tenantId}
+          companyId={companyId}
+          centros={centros}
+          podeEditar={podeEditar}
+          situacao={situacao}
+          hrefDeTodos={`${href("centros")}&situacao=todos`}
+        />
       </PageContainer>
     );
   }
@@ -213,12 +265,15 @@ export default async function CadastrosFinanceirosPage({
   }
 
   const busca = (params.q ?? "").trim().toLowerCase();
-  const visiveis = contrapartes.filter((c) => {
+  const daAbaEBusca = contrapartes.filter((c) => {
     const n = contas.get(c.id) ?? { pagar: 0, receber: 0 };
     const naAba = aba === "todos" || (aba === "fornecedores" ? n.pagar > 0 : n.receber > 0);
     const naBusca = !busca || c.name.toLowerCase().includes(busca) || (c.document ?? "").includes(busca.replace(/\D/g, "") || "\u0000");
     return naAba && naBusca;
   });
+  const visiveis = daAbaEBusca.filter((c) => naSituacao(c.active, situacao));
+  const inativosDeFora = situacao === "ativos" ? daAbaEBusca.length - visiveis.length : 0;
+  const hrefDeTodos = `${href(aba)}${params.q ? `&q=${encodeURIComponent(params.q)}` : ""}&situacao=todos`;
 
   const listaDeCategorias = categorias.map((c) => ({ id: c.id, nome: c.name }));
   // Inativo não é oferecido como padrão novo — ver `centroPadraoValido`.
@@ -238,6 +293,7 @@ export default async function CadastrosFinanceirosPage({
             : "Todos os cadastros desta empresa, incluindo os que ainda não têm movimentação."}
         {" "}Uma mesma ficha pode aparecer nas duas abas quando tem contas a pagar e a receber. Cadastros sem movimentação ficam em Todos.
       </p>
+      <InativosDeFora n={inativosDeFora} um="cadastro inativo" varios="cadastros inativos" href={hrefDeTodos} />
 
       {/* No casco das listas irmãs, com a contagem e a busca na barra
           (08/10/2026): a busca ficava solta acima da tabela, sem contagem. */}
@@ -247,13 +303,15 @@ export default async function CadastrosFinanceirosPage({
           <form method="get" action="/cadastros-financeiros">
             <input type="hidden" name="empresa" value={companyId} />
             {aba !== "fornecedores" && <input type="hidden" name="aba" value={aba} />}
+            {situacao !== "ativos" && <input type="hidden" name="situacao" value={situacao} />}
             <Input compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome ou documento…" aria-label="Buscar cadastro" className="w-72 max-w-full" />
           </form>
         }
+        filtros={<FiltrosDaTela campos={FILTRO_DA_SITUACAO} naBarra />}
       >
       {visiveis.length === 0 ? (
         <EmptyState
-          title={busca ? "Nada encontrado" : "Nenhum cadastro nesta aba"}
+          title={busca ? "Nada encontrado" : situacao === "inativos" ? "Nenhum cadastro inativo nesta aba" : "Nenhum cadastro nesta aba"}
           description="Cadastros nascem do lançamento de uma nota, de um lançamento manual, da importação por CSV, ou daqui."
           icon={<Users />}
         />
@@ -390,24 +448,41 @@ export default async function CadastrosFinanceirosPage({
 async function AbaDeCentros({
   tenantId,
   companyId,
-  centros,
+  centros: todosOsCentros,
   podeEditar,
+  situacao,
+  hrefDeTodos,
 }: {
   tenantId: string;
   companyId: string;
   centros: { id: string; name: string; code: string | null; active: boolean }[];
   podeEditar: boolean;
+  situacao: Situacao;
+  hrefDeTodos: string;
 }) {
+  // Inativo fora da lista por padrão, como nos cadastros (15/10/2026).
+  const centros = todosOsCentros.filter((c) => naSituacao(c.active, situacao));
+  const inativosDeFora = situacao === "ativos" ? todosOsCentros.length - centros.length : 0;
+  const filtros = <FiltrosDaTela campos={FILTRO_DA_SITUACAO} naBarra />;
   // No casco, com a contagem na barra e o vazio dentro (08/10/2026).
   if (centros.length === 0) {
     return (
-      <CascoDaTabela contagem={contarItens(0, "centro de custo", "centros de custo")}>
-        <EmptyState
-          title="Nenhum centro de custo nesta empresa"
-          description="Centro de custo é opcional: cadastre unidades, obras ou projetos para ver a DRE econômica por centro."
-          icon={<Layers />}
-        />
-      </CascoDaTabela>
+      <>
+        <InativosDeFora n={inativosDeFora} um="centro de custo inativo" varios="centros de custo inativos" href={hrefDeTodos} />
+        <CascoDaTabela contagem={contarItens(0, "centro de custo", "centros de custo")} filtros={filtros}>
+          <EmptyState
+            title={
+              situacao === "inativos"
+                ? "Nenhum centro de custo inativo"
+                : inativosDeFora > 0
+                  ? "Nenhum centro de custo ativo"
+                  : "Nenhum centro de custo nesta empresa"
+            }
+            description="Centro de custo é opcional: cadastre unidades, obras ou projetos para ver a DRE econômica por centro."
+            icon={<Layers />}
+          />
+        </CascoDaTabela>
+      </>
     );
   }
 
@@ -431,7 +506,8 @@ async function AbaDeCentros({
 
   return (
     <>
-      <CascoDaTabela contagem={contarItens(centros.length, "centro de custo", "centros de custo")}>
+      <InativosDeFora n={inativosDeFora} um="centro de custo inativo" varios="centros de custo inativos" href={hrefDeTodos} />
+      <CascoDaTabela contagem={contarItens(centros.length, "centro de custo", "centros de custo")} filtros={filtros}>
       <CartoesNoCelular>
         {centros.map((c) => (
           <Cartao key={c.id}>

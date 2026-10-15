@@ -21,7 +21,8 @@ export type GerarLinkTesteResult =
   | { error: string }
   // `id`: a página do teste (/testes/[id]) troca para o link novo — gerar
   // apaga o pendente anterior, e a página dele deixa de existir.
-  | { ok: true; id: string; token: string; expiresAtLabel: string; emailSent: boolean };
+  // `expiraEm` (ISO): o quadro da ficha conta o prazo do link novo (15/10/2026).
+  | { ok: true; id: string; token: string; expiresAtLabel: string; expiraEm: string; emailSent: boolean };
 
 async function assertPersonEmEscopo(personId: string, ctx: Awaited<ReturnType<typeof getAuthContext>>) {
   const prisma = getPrisma();
@@ -113,7 +114,7 @@ export async function gerarLinkTeste(
   revalidatePath(`/pessoas/${personId}`);
   revalidatePath("/testes");
 
-  return { ok: true, id: criado.id, token, expiresAtLabel: formatInstantDate(expiresAt), emailSent };
+  return { ok: true, id: criado.id, token, expiresAtLabel: formatInstantDate(expiresAt), expiraEm: expiresAt.toISOString(), emailSent };
 }
 
 export async function excluirLinkTeste(id: string): Promise<void> {

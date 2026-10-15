@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { abrirCompetencia } from "./actions";
 
 const STATUS_LABEL: Record<PayrollStatus, string> = {
@@ -21,6 +22,16 @@ const STATUS_LABEL: Record<PayrollStatus, string> = {
   ENVIADO:        "Enviado",
   PROCESSADO:     "Processado",
   CANCELADO:      "Cancelado",
+};
+
+// O tom de cada situação, o mesmo do selo do lançamento (`PayrollEntryRow`).
+const STATUS_TOM: Record<PayrollStatus, TomDoSelo> = {
+  PENDENTE: "neutro",
+  EM_CONFERENCIA: "atencao",
+  CONFERIDO: "marca",
+  ENVIADO: "marca",
+  PROCESSADO: "sucesso",
+  CANCELADO: "neutro",
 };
 
 const MONTH_LABEL = [
@@ -86,8 +97,10 @@ export default async function FolhaPage({
               className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors"
             >
               <p className="text-fs-3 text-fg">{MONTH_LABEL[c.month - 1]}/{c.year}</p>
-              <span className="text-fs-2 text-fg-muted">
-                {STATUS_LABEL[c.status]} · {c._count.entries} lançamento{c._count.entries !== 1 ? "s" : ""}
+              {/* A situação da competência no `Selo` (15/10/2026): era texto cinza. */}
+              <span className="flex items-center gap-2 text-fs-2 text-fg-muted">
+                <Selo tom={STATUS_TOM[c.status]}>{STATUS_LABEL[c.status]}</Selo>
+                {c._count.entries} lançamento{c._count.entries !== 1 ? "s" : ""}
               </span>
             </Link>
           ))}

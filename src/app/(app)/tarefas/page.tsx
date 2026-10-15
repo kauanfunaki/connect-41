@@ -258,7 +258,10 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
         }
       />
 
+      {/* Sem o cartão azul (15/10/2026): o primeiro número é de situação
+          (atrasados), não o total — com zero, ele virava o número principal. */}
       <FaixaDeTotais
+        destaque={false}
         itens={[
           {
             rotulo: "Atrasados",

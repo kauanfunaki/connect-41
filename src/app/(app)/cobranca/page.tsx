@@ -23,7 +23,7 @@ import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobran
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { DecisoesNoMenu } from "@/components/cobranca/AcaoComMotivo";
 import { ConfigDaRegua, EmpresaNaRegua } from "@/components/cobranca/ConfigDaRegua";
-import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { empresasDoSeletor, type EmpresaDoSeletor } from "@/lib/financeiro/consultas";
 import { moeda } from "@/lib/financeiro/formato";
 import { FAIXAS_DE_ATRASO, type ChaveDaFaixa } from "@/lib/financeiro/analise";
 import {
@@ -561,9 +561,14 @@ async function Acordos({
                               ) : p.status === "CANCELADO" ? (
                                 <Selo tom={tomDaVariante(TOM_DA_SITUACAO.CANCELADA)}>Cancelada</Selo>
                               ) : (
-                                <Button href={`/cobranca/${p.id}`} variant="secondary" size="xs">
-                                  Em aberto <ArrowRight size={12} />
-                                </Button>
+                                // Em aberto também é selo, como as outras (15/10/2026): era um
+                                // botão "Em aberto →". O caminho para a parcela fica no "Abrir".
+                                <span className="inline-flex flex-wrap items-center gap-1.5">
+                                  <Selo tom={tomDaVariante(TOM_DA_SITUACAO.EM_ABERTO)}>Em aberto</Selo>
+                                  <Button href={`/cobranca/${p.id}`} variant="secondary" size="xs">
+                                    Abrir <ArrowRight size={12} />
+                                  </Button>
+                                </span>
                               )}
                             </td>
                           </tr>
@@ -602,7 +607,7 @@ async function Acordos({
 
 // ─── Régua ──────────────────────────────────────────────────────────────────
 
-async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empresas: { id: string; nome: string }[]; gerencia: boolean }) {
+async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empresas: EmpresaDoSeletor[]; gerencia: boolean }) {
   const d = await dadosDaAbaRegua(tenantId);
   const fora = new Set(d.foraDaRegua.map((f) => f.companyId));
 

@@ -5,6 +5,7 @@ import { Plus, Search, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Popover } from "@/components/ui/Popover";
+import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 
 type Tag = { id: string; name: string; color: string };
 
@@ -15,26 +16,12 @@ type Props = {
   podeEditar: boolean;
 };
 
-/** A etiqueta colorida, no desenho das tags do Kanban (`TagToggleList`). */
-function Etiqueta({ tag, children }: { tag: Tag; children?: React.ReactNode }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full border py-1 pl-2.5 pr-2.5 text-fs-2 font-medium has-[button]:pr-1"
-      style={{ background: `${tag.color}1A`, color: tag.color, borderColor: `${tag.color}40` }}
-    >
-      <span aria-hidden className="size-1.5 flex-shrink-0 rounded-full" style={{ background: tag.color }} />
-      {tag.name}
-      {children}
-    </span>
-  );
-}
-
 /**
  * As tags do candidato no banco de talentos, na coluna da direita da ficha
  * (escolha 1A do Kauan, 14/10/2026): as marcadas à vista e um "+ tag" que abre
  * a busca. Antes a lista inteira de tags disponíveis ficava aberta no topo da
- * ficha. Mesmo catálogo e mesma ação de antes (Administração › Tags, setor
- * Recrutamento).
+ * ficha. Mesmo catálogo e mesma ação de antes (Configurações › Setores e
+ * módulos › Tags, setor Recrutamento).
  */
 export function TagsDoCandidato({ todas, marcadas, alternar, podeEditar }: Props) {
   const [selecionadas, setSelecionadas] = useState(() => new Set(marcadas));
@@ -64,19 +51,23 @@ export function TagsDoCandidato({ todas, marcadas, alternar, podeEditar }: Props
       <p className="mb-3 text-helper text-fg-muted">Deixam o candidato fácil de achar no banco de talentos.</p>
 
       <div className="flex flex-wrap items-center gap-1.5">
+        {/* A `EtiquetaColorida`, como na lista de candidatos (15/10/2026, D4):
+            era uma pílula desenhada aqui, com a cor crua na letra — um
+            amarelo-claro sumia no fundo. */}
         {daPessoa.map((t) => (
-          <Etiqueta key={t.id} tag={t}>
+          <EtiquetaColorida key={t.id} cor={t.color} className={podeEditar ? "pr-1" : ""}>
+            {t.name}
             {podeEditar && (
               <button
                 type="button"
                 onClick={() => trocar(t.id, false)}
                 aria-label={`Tirar a tag ${t.name}`}
-                className="inline-flex size-4 items-center justify-center rounded-full opacity-70 transition-opacity hover:opacity-100"
+                className="ml-1 inline-flex size-4 items-center justify-center rounded-full align-middle opacity-70 transition-opacity hover:opacity-100"
               >
                 <X size={11} />
               </button>
             )}
-          </Etiqueta>
+          </EtiquetaColorida>
         ))}
 
         {daPessoa.length === 0 && !podeEditar && <p className="text-ui text-fg-muted">Nenhuma tag.</p>}
@@ -99,7 +90,7 @@ export function TagsDoCandidato({ todas, marcadas, alternar, podeEditar }: Props
             )}
           >
             {todas.length === 0 ? (
-              <p className="text-fs-2 text-fg-muted">Nenhuma tag cadastrada para o Recrutamento. Cadastre em Administração › Tags.</p>
+              <p className="text-fs-2 text-fg-muted">Nenhuma tag cadastrada para o Recrutamento. Cadastre em Configurações › Setores e módulos › Tags.</p>
             ) : (
               <div className="space-y-2.5">
                 <Input

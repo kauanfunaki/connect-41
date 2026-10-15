@@ -20,6 +20,7 @@ import {
 import { Accordion } from "@/components/ui/Accordion";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { VideoDoYouTube } from "@/components/ajuda/VideoDoYouTube";
@@ -353,11 +354,13 @@ function ListaDeTelas({ telas, cor }: { telas: TelaDaAjuda[]; cor?: string }) {
               <span className="flex items-center gap-1.5 text-card-title font-semibold text-fg">
                 {t.titulo}
                 {!navegavel && <kbd className="rounded border border-border px-1 text-micro font-medium text-fg-muted">{t.caminho}</kbd>}
-                {t.artigo && <span className="rounded-full bg-brand/10 px-1.5 py-px text-micro font-semibold text-brand">Passo a passo</span>}
+                {/* "Passo a passo" e "Vídeo" são categoria: o `Badge` (15/10/2026),
+                    e não pílulas de 10,5px montadas aqui. */}
+                {t.artigo && <Badge variant="info">Passo a passo</Badge>}
                 {t.video && (
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-brand/10 px-1.5 py-px text-micro font-semibold text-brand">
+                  <Badge variant="info" className="gap-1">
                     <Play size={9} fill="currentColor" aria-hidden /> Vídeo
-                  </span>
+                  </Badge>
                 )}
               </span>
               <span className="block text-fs-2 text-fg-muted mt-0.5 leading-snug">{t.descricao}</span>
