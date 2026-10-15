@@ -6,6 +6,7 @@ import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { TODAS_AS_EMPRESAS, hrefDaEmpresa, type ModoDeTodas } from "@/lib/empresas/escolhaDaEmpresa";
 import { registrarEmpresaAberta } from "@/app/(app)/empresa-aberta-actions";
+import { ConferirFoco } from "./FaixaDoFoco";
 
 export type PropsDoSeletorDeEmpresa = {
   empresas: (EmpresaParaEscolher & { nome: string })[];
@@ -17,6 +18,12 @@ export type PropsDoSeletorDeEmpresa = {
   manter?: Record<string, string | undefined>;
   /** Oferece "Todas as empresas" — e como ela vai para a URL (ver `ModoDeTodas`). */
   todas?: ModoDeTodas;
+  /**
+   * Nas telas que seguem o foco (15/10/2026): a empresa em foco que a tela
+   * leu (`null` sem foco), para conferir com a faixa do topo (`ConferirFoco`).
+   * Fora delas, não vem.
+   */
+  focoDaTela?: string | null;
 };
 
 /**
@@ -34,7 +41,7 @@ export type PropsDoSeletorDeEmpresa = {
  * usando) com o `SeletorDeEmpresaDoFiltro`: os dois navegavam sozinhos, e
  * nenhum lembrava a escolha.
  */
-export function SeletorDeEmpresaDaTela({ empresas, valor, acao, manter, todas }: PropsDoSeletorDeEmpresa) {
+export function SeletorDeEmpresaDaTela({ empresas, valor, acao, manter, todas, focoDaTela }: PropsDoSeletorDeEmpresa) {
   const router = useRouter();
   const [pendente, iniciar] = useTransition();
   const escolhida = valor && valor !== TODAS_AS_EMPRESAS ? valor : "";
@@ -69,6 +76,7 @@ export function SeletorDeEmpresaDaTela({ empresas, valor, acao, manter, todas }:
         placeholder="Buscar empresa por nome ou CNPJ…"
         onChange={escolher}
       />
+      {focoDaTela !== undefined && <ConferirFoco companyId={focoDaTela} />}
     </div>
   );
 }
