@@ -288,28 +288,16 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, trilhaNoCabecal
           )}
 
           {vazio ? (
+            // Sem repetir os botões da barra logo acima: o texto diz onde estão (P19, 15/10/2026).
             <EmptyState
               icon={<FolderOpen />}
               title={pasta ? "Pasta vazia" : "Nenhuma pasta ainda"}
               description={
-                pasta
-                  ? podeMexer
-                    ? "Envie arquivos ou crie uma pasta dentro desta."
-                    : "Nada por aqui ainda."
-                  : "Crie a primeira pasta para organizar os arquivos do escritório."
-              }
-              action={
-                podeMexer ? (
-                  pasta ? (
-                    <Button type="button" size="sm" onClick={() => setEnviando(true)}>
-                      <Upload size={14} /> Enviar arquivos
-                    </Button>
-                  ) : (
-                    <Button type="button" size="sm" onClick={() => abrir({ tipo: "novaPasta" })}>
-                      <FolderPlus size={14} /> Nova pasta
-                    </Button>
-                  )
-                ) : undefined
+                !podeMexer
+                  ? "Nada por aqui ainda."
+                  : pasta
+                    ? "Use “Enviar arquivos” ou “Nova pasta”, logo acima, para encher esta pasta."
+                    : "Use “Nova pasta”, logo acima, para criar a primeira e organizar os arquivos."
               }
             />
           ) : (

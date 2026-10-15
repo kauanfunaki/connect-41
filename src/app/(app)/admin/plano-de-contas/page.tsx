@@ -81,15 +81,11 @@ export default async function PlanoDeContasPage() {
 
       {categorias.length === 0 ? (
         <Card>
+          {/* Sem repetir o "+ Nova categoria": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<Landmark />}
             title="Plano de contas vazio"
-            description="Cadastre as categorias que classificam despesas e receitas. Elas aparecem no dropdown quando um documento fiscal vira lançamento."
-            action={
-              <Button href="/admin/plano-de-contas/novo" variant="primary" className="font-medium">
-                + Nova categoria
-              </Button>
-            }
+            description="Use “Carregar o plano padrão” ou “+ Nova categoria”, no alto da tela, para cadastrar as categorias que classificam despesas e receitas. Elas aparecem na lista quando um documento fiscal vira lançamento."
           />
         </Card>
       ) : (

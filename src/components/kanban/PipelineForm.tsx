@@ -19,9 +19,11 @@ type Stage = { name: string; color: string };
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
   sectorOptions: { value: string; label: string }[];
+  /** Na janela do "+ Novo kanban": o Cancelar fecha, em vez de voltar à lista. */
+  onCancel?: () => void;
 };
 
-export function PipelineForm({ action, sectorOptions }: Props) {
+export function PipelineForm({ action, sectorOptions, onCancel }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [stages, setStages] = useState<Stage[]>([
     { name: "", color: DEFAULT_COLORS[0] },
@@ -134,7 +136,8 @@ export function PipelineForm({ action, sectorOptions }: Props) {
         pending={isPending}
         pendingLabel="Criando…"
         submitLabel="Criar kanban"
-        cancelHref="/kanban"
+        cancelHref={onCancel ? undefined : "/kanban"}
+        onCancel={onCancel}
       />
     </form>
   );

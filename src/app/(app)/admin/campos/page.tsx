@@ -57,18 +57,11 @@ export default async function CamposPage() {
       />
       {Object.keys(grouped).length === 0 ? (
         <Card>
+          {/* Sem repetir o "+ Novo campo": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<ListChecks />}
             title="Nenhum campo customizado cadastrado"
-            description="Crie campos extras para Empresas ou Pessoas, de um setor só ou de todos os setores."
-            action={
-              <Button
-                href="/admin/campos/novo"
-                variant="primary" className="font-medium"
-              >
-                + Novo campo
-              </Button>
-            }
+            description="Use “+ Novo campo”, no alto da tela, para criar campos extras para Empresas ou Pessoas, de um setor só ou de todos os setores."
           />
         </Card>
       ) : (

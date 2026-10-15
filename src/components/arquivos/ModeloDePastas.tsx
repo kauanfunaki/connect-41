@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Selo } from "@/components/ui/Selo";
 import { useToast } from "@/components/ui/Toast";
 import type { SetorNaTela } from "@/lib/drive/tela";
@@ -29,10 +30,58 @@ type PastaDoModeloNaTela = {
   ativa: boolean;
 };
 
+/**
+ * "+ Nova pasta no modelo", à direita do título da tela, abrindo a janela (P19,
+ * 15/10/2026): ficava numa fileira própria acima da lista.
+ */
+export function NovaPastaNoModelo({ setores }: { setores: SetorNaTela[] }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [aberta, setAberta] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
+
+  return (
+    <>
+      <Button
+        type="button"
+        onClick={() => {
+          setErro(null);
+          setAberta(true);
+        }}
+      >
+        <Plus size={14} /> Nova pasta no modelo
+      </Button>
+      {aberta && (
+        <FormularioDoModelo
+          inicial={null}
+          setores={setores}
+          erro={erro}
+          pendente={pendente}
+          onClose={() => setAberta(false)}
+          onSalvar={(dados) => {
+            setErro(null);
+            startTransition(async () => {
+              const r = await criarPastaDoModelo(dados);
+              if ("error" in r) {
+                setErro(r.error);
+                return;
+              }
+              setAberta(false);
+              toast.success("Pasta incluída no modelo.");
+              router.refresh();
+            });
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 export function ModeloDePastas({ pastas, setores }: { pastas: PastaDoModeloNaTela[]; setores: SetorNaTela[] }) {
   const router = useRouter();
   const toast = useToast();
-  const [editando, setEditando] = useState<PastaDoModeloNaTela | "nova" | null>(null);
+  const [editando, setEditando] = useState<PastaDoModeloNaTela | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
@@ -53,19 +102,6 @@ export function ModeloDePastas({ pastas, setores }: { pastas: PastaDoModeloNaTel
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => {
-            setErro(null);
-            setEditando("nova");
-          }}
-        >
-          <Plus size={14} /> Nova pasta no modelo
-        </Button>
-      </div>
-
       <ul className="bg-surface border border-border rounded-lg shadow-xs divide-y divide-border">
         {pastas.map((p, i) => {
           const Icone = p.setor ? FolderLock : Folder;
@@ -134,19 +170,13 @@ export function ModeloDePastas({ pastas, setores }: { pastas: PastaDoModeloNaTel
 
       {editando && (
         <FormularioDoModelo
-          key={editando === "nova" ? "nova" : editando.id}
-          inicial={editando === "nova" ? null : editando}
+          key={editando.id}
+          inicial={editando}
           setores={setores}
           erro={erro}
           pendente={pendente}
           onClose={() => setEditando(null)}
-          onSalvar={(dados) =>
-            rodar(
-              () => (editando === "nova" ? criarPastaDoModelo(dados) : editarPastaDoModelo(editando.id, dados)),
-              editando === "nova" ? "Pasta incluída no modelo." : "Pasta do modelo atualizada.",
-              true
-            )
-          }
+          onSalvar={(dados) => rodar(() => editarPastaDoModelo(editando.id, dados), "Pasta do modelo atualizada.", true)}
         />
       )}
     </div>
@@ -200,15 +230,14 @@ function FormularioDoModelo({
           label="Nasce compartilhada com o cliente"
           helper="Vale para as empresas que ganharem a pasta daqui em diante. Em cada empresa a equipe pode mudar."
         />
-        {erro && <p className="text-fs-3 text-danger" role="alert">{erro}</p>}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={pendente}>
-            Cancelar
-          </Button>
-          <Button type="submit" size="sm" loading={pendente} disabled={!nome.trim()}>
-            Salvar
-          </Button>
-        </div>
+        {/* O rodapé padrão das janelas, com o erro ao lado dos botões (P19, 15/10/2026). */}
+        <FormFooter
+          pending={pendente}
+          submitLabel={inicial ? "Salvar" : "Incluir no modelo"}
+          onCancel={onClose}
+          erro={erro}
+          submitDisabled={!nome.trim()}
+        />
       </form>
     </Modal>
   );
