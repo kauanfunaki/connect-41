@@ -24,6 +24,7 @@ import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { sendPendenciaAoClienteEmail, temSmtpConfigurado } from "@/lib/email/sendMail";
 import { avisarClientePorPush } from "@/lib/portal/avisos";
 import { usuariosDoPortalDaEmpresa } from "./avisos";
+import { SO_EMPRESA_DE_VERDADE } from "@/lib/demonstracao/marca";
 import {
   avaliarLembrete,
   PASSOS_DO_LEMBRETE,
@@ -202,7 +203,8 @@ async function buscarPagina(
   cursor: string | null
 ) {
   return getPrisma().clientRequest.findMany({
-    where: { tenantId, ...noIntervalo, ...(cursor ? { id: { gt: cursor } } : {}) },
+    // A pendência fictícia da demonstração não manda e-mail ao acesso [demo] do portal (15/10/2026).
+    where: { tenantId, ...noIntervalo, company: SO_EMPRESA_DE_VERDADE, ...(cursor ? { id: { gt: cursor } } : {}) },
     select: {
       id: true,
       title: true,
