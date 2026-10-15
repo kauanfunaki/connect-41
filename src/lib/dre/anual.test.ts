@@ -126,7 +126,12 @@ describe("o detalhe das linhas no ano", () => {
   });
 
   it("grafias da mesma chave em meses diferentes somam na mesma linha, com o primeiro nome", () => {
-    expect(a.detalhe.cmv!.map((c) => c.categoria)).toEqual(["Matéria-prima", "Frete"]);
+    expect(a.detalhe.cmv!.filter((c) => c.categoria.toLowerCase() === "frete").map((c) => c.categoria)).toEqual(["Frete"]);
+  });
+
+  // Pedido de 15/10/2026: a ordem é a alfabética, e não a do maior total.
+  it("as categorias vêm em ordem alfabética, sem olhar o valor", () => {
+    expect(a.detalhe.cmv!.map((c) => c.categoria)).toEqual(["Frete", "Matéria-prima"]);
   });
 
   it("o total das categorias é o total da linha", () => {
