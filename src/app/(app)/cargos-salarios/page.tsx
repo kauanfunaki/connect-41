@@ -130,7 +130,7 @@ export default async function CargosSalariosPage() {
             return (
               <section key={g.family}>
                 <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-                  <h2 className="text-card-title font-semibold text-fg">{g.label}</h2>
+                  <h2 className="text-section font-semibold text-fg">{g.label}</h2>
                   <span className="text-fs-2 text-fg-muted">
                     {g.cargos.length} cargo{g.cargos.length !== 1 ? "s" : ""} · {g.totalPessoas} colaborador
                     {g.totalPessoas !== 1 ? "es" : ""}

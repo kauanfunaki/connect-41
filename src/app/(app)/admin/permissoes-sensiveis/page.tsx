@@ -44,7 +44,7 @@ export default async function PermissoesSensiveisPage() {
       <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
         <table className="w-full min-w-[560px]">
           <thead>
-            <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
+            <tr className="border-b border-border">
               <th className="px-4 py-3">Papel</th>
               {FIELD_GROUPS.map((f) => (
                 <th key={f.code} className="px-4 py-3">

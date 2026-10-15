@@ -116,7 +116,7 @@ export default async function ArtigoDeAjudaPage({
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
           {artigo.dicas && artigo.dicas.length > 0 && (
             <Card className="p-4 flex flex-col gap-2.5">
-              <p className="flex items-center gap-2 text-fs-2 font-semibold uppercase tracking-wide text-fg-muted">
+              <p className="flex items-center gap-2 c41-rotulo">
                 <Lightbulb size={14} className="text-warning-fg" /> Bom saber
               </p>
               <ul className="flex flex-col gap-2">
@@ -129,7 +129,7 @@ export default async function ArtigoDeAjudaPage({
             </Card>
           )}
           <Card className="p-4 flex flex-col gap-2">
-            <p className="text-fs-2 font-semibold uppercase tracking-wide text-fg-muted">Nesta página</p>
+            <p className="c41-rotulo">Nesta página</p>
             <ul className="flex flex-col gap-1.5">
               {artigo.secoes.map((s, i) => (
                 <li key={s.titulo}>

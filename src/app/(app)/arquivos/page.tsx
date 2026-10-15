@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Selo } from "@/components/ui/Selo";
 import { IconeDoArquivo } from "@/components/arquivos/IconeDoArquivo";
@@ -73,11 +74,11 @@ export default async function ArquivosPage({ searchParams }: { searchParams: Pro
             Chegou do cliente
           </h2>
           {recentes.length === 0 ? (
-            <p className="text-fs-3 text-fg-muted bg-surface border border-border rounded-lg p-4">
+            <p className="text-fs-3 text-fg-muted bg-surface border border-border rounded-lg shadow-xs p-4">
               Nada nos últimos 30 dias. O que o cliente enviar pelo portal aparece aqui e em “Enviados pelo cliente” da empresa, e quem cuida dela é avisado.
             </p>
           ) : (
-            <ul className="bg-surface border border-border rounded-lg divide-y divide-border">
+            <ul className="bg-surface border border-border rounded-lg shadow-xs divide-y divide-border">
               {recentes.map((r) => (
                 <li key={r.id} className="flex items-start gap-3 px-3 py-2.5">
                   <IconeDoArquivo nome={r.nome} />
@@ -102,10 +103,8 @@ export default async function ArquivosPage({ searchParams }: { searchParams: Pro
             </ul>
           )}
 
-          <Link
-            href="/arquivos/internas"
-            className="flex items-center gap-3 bg-surface border border-border rounded-lg px-4 py-3 hover:border-border-strong transition-colors"
-          >
+          {/* O cartão-atalho do app (`Card href`): borda azul, sobe 2px. */}
+          <Card href="/arquivos/internas" className="flex items-center gap-3 px-4 py-3">
             <FolderInput size={20} className="text-brand shrink-0" aria-hidden />
             <span className="min-w-0 flex-1">
               <span className="block text-fs-3 font-medium text-fg">Pastas do escritório</span>
@@ -113,7 +112,7 @@ export default async function ArquivosPage({ searchParams }: { searchParams: Pro
                 {internas === 0 ? "Modelos, manuais e o que não é de nenhuma empresa." : internas === 1 ? "1 pasta" : `${internas} pastas`}
               </span>
             </span>
-          </Link>
+          </Card>
         </section>
 
         <section className="flex flex-col gap-3 min-w-0" aria-labelledby="t-empresas">
@@ -143,7 +142,7 @@ export default async function ArquivosPage({ searchParams }: { searchParams: Pro
           {lista.itens.length === 0 ? (
             <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" description="Busque pelo nome, pelo apelido ou pelo CNPJ." />
           ) : (
-            <ul className="bg-surface border border-border rounded-lg divide-y divide-border">
+            <ul className="bg-surface border border-border rounded-lg shadow-xs divide-y divide-border">
               {lista.itens.map((e) => {
                 const rotulo =
                   e.novos > 0

@@ -158,7 +158,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
             {canCreate && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
-                <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">Selecionar todos</span>
+                <span className="c41-rotulo">Selecionar todos</span>
               </div>
             )}
             {candidatos.map((c) => cartaoCandidato(c))}

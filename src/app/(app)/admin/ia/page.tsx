@@ -138,7 +138,7 @@ export default async function AgentesDeIAPage() {
         </div>
         {[...porSetor.entries()].map(([setor, ls]) => (
           <div key={setor} className="flex flex-col gap-3">
-            <p className="text-fs-1 uppercase tracking-wide text-fg-muted pt-1">{setor}</p>
+            <p className="c41-rotulo pt-1">{setor}</p>
             {ls.map((linha) => (
               <AgenteCard key={linha.def.code} linha={linha} podeEditar />
             ))}

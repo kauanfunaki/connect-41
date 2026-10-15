@@ -72,7 +72,7 @@ export function PessoasFilterButton({
       {({ close }) => (
         <div className="space-y-3">
           <div className="space-y-1">
-            <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">{rotuloDaSituacao}</p>
+            <p className="c41-rotulo px-1">{rotuloDaSituacao}</p>
             <div className="space-y-0.5">
               {SITUACOES.map((s) => (
                 <Link
@@ -93,7 +93,7 @@ export function PessoasFilterButton({
 
           {mostrarEmpresa && (
             <div className="space-y-2">
-              <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">Empresa</p>
+              <p className="c41-rotulo px-1">Empresa</p>
               <CompanyFilterSelect companies={companies} value={companyId ?? ""} className="w-full" />
               {companyId && (
                 <Link

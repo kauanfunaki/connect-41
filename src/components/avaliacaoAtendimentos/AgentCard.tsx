@@ -103,10 +103,12 @@ export function AgentCard({
 
   return (
     <>
+      {/* Abre o painel, então é botão; o desenho é o do cartão-atalho
+          (`Card href`): borda azul, sobe 2px, sombra média. */}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group h-full w-full min-w-0 text-left bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
+        className="group h-full w-full min-w-0 text-left bg-surface border border-border rounded-lg shadow-xs p-5 transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:-translate-y-0.5 hover:shadow-md"
       >
         <AvatarImage src={avatarUrl} name={label} size={44} bordered={false} className="mb-3" />
         <p className="text-fs-4 font-semibold text-fg truncate">{label}</p>
@@ -134,7 +136,7 @@ export function AgentCard({
               </div>
             </div>
             <div>
-              <h3 className="text-fs-2 font-semibold text-fg-muted uppercase tracking-wide mb-1.5">Justificativa da IA</h3>
+              <h3 className="c41-rotulo mb-1.5">Justificativa da IA</h3>
               <p className="text-fs-3 text-fg leading-relaxed whitespace-pre-wrap">{selected.reasoning}</p>
             </div>
             {/* Eram dois links sublinhados (30/09): as duas são ações, e tirar
@@ -186,7 +188,7 @@ export function AgentCard({
 
             <div className="bg-surface-hover rounded-lg p-3.5">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <h3 className="text-fs-2 font-semibold text-fg-muted uppercase tracking-wide inline-flex items-center gap-1.5">
+                <h3 className="c41-rotulo inline-flex items-center gap-1.5">
                   <Sparkles size={14} className="text-brand" /> Resumo geral
                 </h3>
                 {canGenerateSummary && (
@@ -227,7 +229,7 @@ export function AgentCard({
             </div>
 
             <div>
-              <h3 className="text-fs-2 font-semibold text-fg-muted uppercase tracking-wide mb-2">Atendimentos avaliados</h3>
+              <h3 className="c41-rotulo mb-2">Atendimentos avaliados</h3>
               <div className="divide-y divide-border">
                 {evaluations.map((ev) => (
                   <button

@@ -37,10 +37,11 @@ export const dynamic = "force-dynamic";
 const dia = (d: Date | null) => (d ? saoPauloParts(d).dateKey : "");
 
 const TH = "py-2 pr-3 font-medium";
-// Cartão de seção: título de 14px, como no detalhe do processo, e o respiro
-// entre título e conteúdo pelo `gap` — era `mb-1`, com a tabela colada no título.
+// Cartão de seção: título de seção da ficha em 18px, como no detalhe do
+// processo (era 14px até 15/10/2026), e o respiro entre título e conteúdo pelo
+// `gap` — era `mb-1`, com a tabela colada no título.
 const SECAO = "p-4 flex flex-col gap-3";
-const TITULO = "text-card-title font-semibold text-fg";
+const TITULO = "text-section font-semibold text-fg";
 // O link da célula no desenho da fila de processos (07/10/2026): negrito, cor
 // do texto e azul só no hover — aqui era azul sublinhado, um dos quatro
 // desenhos do módulo.

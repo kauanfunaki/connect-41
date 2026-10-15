@@ -152,7 +152,7 @@ export function RoteiroDoProcesso({
     return (
       <li key={posicao} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
         {paralelo && (
-          <p className="text-micro text-fg-muted uppercase tracking-wide">
+          <p className="c41-rotulo">
             {grupo[0].grupoParalelo ?? "Em paralelo"} · correm ao mesmo tempo
           </p>
         )}

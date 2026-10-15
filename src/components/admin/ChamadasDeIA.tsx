@@ -53,7 +53,7 @@ export function ChamadasDeIA({ chamadas, agora }: Props) {
       <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
         <table className="w-full min-w-[820px]">
           <thead>
-            <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="border-b border-border">
               <th className="py-2 pr-3">
                 <FiltroDaColuna rotulo="Quando" chave="quando" tipo="data" />
               </th>

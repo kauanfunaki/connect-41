@@ -488,7 +488,7 @@ async function Acordos({
                     <p className="text-fs-2 mt-1 tabular-nums">
                       Originais {moeda(a.originalCentavos)} → acordado <strong>{moeda(a.acordadoCentavos)}</strong>
                       {a.diferencaCentavos !== 0 && (
-                        <span className={a.diferencaCentavos > 0 ? "text-success-fg" : "text-danger"}>
+                        <span>
                           {" "}
                           ({a.diferencaCentavos > 0 ? "acréscimo" : "desconto"} de {moeda(Math.abs(a.diferencaCentavos))})
                         </span>
@@ -525,7 +525,7 @@ async function Acordos({
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="overflow-x-auto">
-                    <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Parcelas</p>
+                    <p className="c41-rotulo mb-1">Parcelas</p>
                     <table className="w-full text-ui">
                       <tbody>
                         {a.parcelas.map((p, i) => (
@@ -557,7 +557,7 @@ async function Acordos({
                     </table>
                   </div>
                   <div className="overflow-x-auto">
-                    <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Títulos originais</p>
+                    <p className="c41-rotulo mb-1">Títulos originais</p>
                     <table className="w-full text-ui">
                       <tbody>
                         {a.originais.map((o) => (

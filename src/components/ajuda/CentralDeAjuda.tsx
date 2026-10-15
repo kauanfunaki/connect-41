@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Accordion } from "@/components/ui/Accordion";
 import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { VideoDoYouTube } from "@/components/ajuda/VideoDoYouTube";
 import { normalizar } from "@/lib/buscaDeTelas";
@@ -224,16 +225,12 @@ export function CentralDeAjuda({
 
   return (
     <div className="space-y-10">
-      {/* Busca: a primeira coisa da tela, larga, como a de uma central de ajuda. */}
-      <div className="relative overflow-hidden rounded-xl border border-border bg-surface px-5 py-7 sm:px-8 sm:py-9 shadow-[var(--c41-shadow-xs)]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full opacity-60 blur-3xl"
-          style={{ background: "radial-gradient(circle, var(--c41-brand-subtle), transparent 70%)" }}
-        />
-        <p className="relative font-display text-fs-8 sm:text-[26px] font-semibold text-fg leading-tight">Como podemos ajudar?</p>
-        <p className="relative mt-1.5 text-body text-fg-muted max-w-[60ch]">{introducao}</p>
-        <div className="relative mt-5 max-w-xl">
+      {/* Busca: a primeira coisa da tela, larga, como a de uma central de ajuda.
+          Sem brilho próprio (15/10/2026): o brilho mora só no fundo do casco. */}
+      <div className="rounded-lg border border-border bg-surface px-5 py-7 sm:px-8 sm:py-9 shadow-xs">
+        <p className="font-display text-title font-semibold text-fg leading-tight">Como podemos ajudar?</p>
+        <p className="mt-1.5 text-body text-fg-muted max-w-[60ch]">{introducao}</p>
+        <div className="mt-5 max-w-xl">
           <Input
             icon={<Search />}
             value={busca}
@@ -316,7 +313,7 @@ export function CentralDeAjuda({
             </h2>
             <Link
               href={`/setor/${s.code}/telas`}
-              className="inline-flex items-center gap-1 text-[12.5px] font-medium text-fg-secondary hover:text-brand transition-colors"
+              className="inline-flex items-center gap-1 text-fs-2 font-medium text-fg-secondary hover:text-brand transition-colors"
             >
               Todas as telas <ArrowRight size={13} />
             </Link>
@@ -346,30 +343,32 @@ function ListaDeTelas({ telas, cor }: { telas: TelaDaAjuda[]; cor?: string }) {
               {t.icone ?? (t.codigo ? <ModuleIcon code={t.codigo} /> : <LayoutGrid />)}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-fg">
+              <span className="flex items-center gap-1.5 text-card-title font-semibold text-fg">
                 {t.titulo}
-                {!navegavel && <kbd className="rounded border border-border px-1 text-[10.5px] font-medium text-fg-muted">{t.caminho}</kbd>}
-                {t.artigo && <span className="rounded-full bg-brand/10 px-1.5 py-px text-[10.5px] font-semibold text-brand">Passo a passo</span>}
+                {!navegavel && <kbd className="rounded border border-border px-1 text-micro font-medium text-fg-muted">{t.caminho}</kbd>}
+                {t.artigo && <span className="rounded-full bg-brand/10 px-1.5 py-px text-micro font-semibold text-brand">Passo a passo</span>}
                 {t.video && (
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-brand/10 px-1.5 py-px text-[10.5px] font-semibold text-brand">
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-brand/10 px-1.5 py-px text-micro font-semibold text-brand">
                     <Play size={9} fill="currentColor" aria-hidden /> Vídeo
                   </span>
                 )}
               </span>
-              <span className="block text-[12.5px] text-fg-muted mt-0.5 leading-snug">{t.descricao}</span>
+              <span className="block text-fs-2 text-fg-muted mt-0.5 leading-snug">{t.descricao}</span>
             </span>
             {navegavel && <ArrowUpRight size={15} className="mt-0.5 flex-shrink-0 text-fg-muted group-hover:text-brand transition-colors" />}
           </>
         );
-        const cls = "group h-full flex items-start gap-3 rounded-lg border border-border bg-surface p-3.5 shadow-[var(--c41-shadow-xs)]";
+        // O cartão do app; o que leva a uma tela é o cartão-atalho (`Card
+        // href`: borda azul, sobe 2px) — era um hover só na borda (15/10/2026).
+        const cls = "group h-full flex items-start gap-3 p-3.5";
         return (
           <li key={t.chave}>
             {navegavel ? (
-              <Link href={destino} className={`${cls} hover:border-border-strong transition-colors`}>
+              <Card href={destino} className={cls}>
                 {conteudo}
-              </Link>
+              </Card>
             ) : (
-              <div className={cls}>{conteudo}</div>
+              <Card className={cls}>{conteudo}</Card>
             )}
           </li>
         );

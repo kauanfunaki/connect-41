@@ -100,7 +100,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
     <Card className="p-5">
       <div className="flex items-center gap-2 mb-1">
         <ClipboardList size={16} className="text-brand" />
-        <h2 className="text-card-title font-semibold text-fg">Teste</h2>
+        <h2 className="text-section font-semibold text-fg">Teste</h2>
       </div>
 
       {!link && (
