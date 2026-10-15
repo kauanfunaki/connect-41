@@ -1525,7 +1525,7 @@ export function montarDemonstracaoDoBpo(agora: Date): PlanoDoBpo {
   ];
 
   const conversa: ConversaDoPlano[] = [
-    { empresa: "matriz", quem: "portal", body: "Bom dia! O fechamento de setembro já saiu?", quando: noDia(d(6), "08:15") },
+    { empresa: "matriz", quem: "portal", body: `Bom dia! O fechamento de ${nomeDoMes(mesPassado)} já saiu?`, quando: noDia(d(6), "08:15") },
     { empresa: "matriz", quem: "apresentador", body: "Bom dia, seu Joaquim! Sai até sexta, só falta o extrato do cartão.", quando: noDia(d(6), "09:02") },
     { empresa: "matriz", quem: "portal", body: "Vou pedir para a minha filha baixar hoje.", quando: noDia(d(6), "09:10") },
     { empresa: "matriz", quem: "apresentador", body: "Perfeito. E a conta do conserto da masseira está esperando a sua aprovação no portal.", quando: noDia(d(1), "11:30") },
@@ -1592,7 +1592,7 @@ export function montarDemonstracaoDoBpo(agora: Date): PlanoDoBpo {
 
   const senhas: SenhaDoPlano[] = [
     { empresa: "matriz", title: "Internet banking da matriz", username: "padaria.paodeouro", url: "https://exemplo.invalido/banco", notes: `${MARCA} Acesso fictício, só para a apresentação.` },
-    { empresa: "matriz", title: "Prefeitura — emissão de NFS-e", username: "41000010000180", url: "https://exemplo.invalido/nfse", notes: `${MARCA} Acesso fictício, só para a apresentação.` },
+    { empresa: "matriz", title: "Prefeitura — emissão de NFS-e", username: cnpjDaPadaria(1), url: "https://exemplo.invalido/nfse", notes: `${MARCA} Acesso fictício, só para a apresentação.` },
     { empresa: "centro", title: "Maquininha — portal do lojista (Centro)", username: "loja.centro", url: "https://exemplo.invalido/lojista", notes: `${MARCA} Acesso fictício, só para a apresentação.` },
   ];
 
@@ -1640,14 +1640,14 @@ export function montarDemonstracaoDoBpo(agora: Date): PlanoDoBpo {
       chave: "solicitacao:resultado",
       empresa: "matriz",
       status: "EM_ANDAMENTO",
-      description: "Quero entender por que o resultado de setembro caiu em relação a agosto.",
+      description: `Quero entender por que o resultado de ${nomeDoMes(mesPassado)} caiu em relação a ${nomeDoMes(meses[meses.length - 3]!)}.`,
       prazoDeResposta: new Date(`${d(1)}T18:00:00-03:00`).toISOString(),
       primeiraRespostaEm: noDia(d(1), "10:20"),
       concluidaEm: null,
       criadoEm: noDia(d(2), "17:45"),
       responsavel: "apresentador",
       mensagens: [
-        { quem: "portal", body: "Quero entender por que o resultado de setembro caiu em relação a agosto.", interna: false, quando: noDia(d(2), "17:45") },
+        { quem: "portal", body: `Quero entender por que o resultado de ${nomeDoMes(mesPassado)} caiu em relação a ${nomeDoMes(meses[meses.length - 3]!)}.`, interna: false, quando: noDia(d(2), "17:45") },
         { quem: "apresentador", body: "Seu Joaquim, já estamos olhando: a energia subiu e entraram as taxas do aplicativo de delivery. Mando o detalhe amanhã.", interna: false, quando: noDia(d(1), "10:20") },
         { quem: "outro", body: "Lembrar de mostrar o comparativo das Análises (mês anterior).", interna: true, quando: noDia(d(1), "10:35") },
       ],
