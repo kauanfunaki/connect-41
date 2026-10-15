@@ -28,9 +28,10 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <h2 className="text-section font-semibold text-fg mb-4">Pipelines</h2>
+        {/* "Tarefas", o termo do kanban na tela (15/10/2026): era "Pipelines". */}
+        <h2 className="text-section font-semibold text-fg mb-4">Tarefas</h2>
         {pipelineItems.length === 0 ? (
-          <EmptyState icon={<Columns3 />} title="Nenhum pipeline vinculado" description={`Esta ${entityLabel} ainda não está em nenhum Kanban.`} />
+          <EmptyState icon={<Columns3 />} title="Nenhuma tarefa ligada" description={`Esta ${entityLabel} ainda não está em nenhuma tarefa do kanban.`} />
         ) : (
           <div className="flex flex-wrap gap-2">
             {pipelineItems.map((p) => (

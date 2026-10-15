@@ -8,6 +8,7 @@ import { Download, Link2Off } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import { TelaDeAvisoPublica } from "@/components/publico/TelaDeAvisoPublica";
+import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 
 export const metadata = { title: "Documento" };
 
@@ -36,7 +37,7 @@ export default async function ClientDocumentViewPage({
   const recipient = await prisma.clientDocumentRecipient.findUnique({
     where: { token },
     include: {
-      clientDocument: { include: { company: { select: { name: true } } } },
+      clientDocument: { include: { company: { select: { name: true } }, tenant: { select: { name: true, logoUrl: true } } } },
     },
   });
 
@@ -63,8 +64,14 @@ export default async function ClientDocumentViewPage({
   return (
     <div className="min-h-screen py-10 px-4">
       <div className="max-w-2xl mx-auto">
-        <p className="text-fs-2 text-fg-muted mb-1">{doc.company.name}</p>
-        <h1 className="text-title font-semibold text-fg tracking-[-0.01em] mb-6">{doc.title}</h1>
+        {/* O topo das telas públicas, com o logo do escritório, como os links de
+            admissão e de teste (15/10/2026): era um título montado à mão, com a
+            empresa em cima. */}
+        <CabecalhoPublico
+          logo={doc.tenant.logoUrl ? { src: doc.tenant.logoUrl, alt: doc.tenant.name } : null}
+          titulo={doc.title}
+          subtitulo={doc.company.name}
+        />
 
         <div
           className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 sm:p-6 text-fs-4 text-fg leading-relaxed [&_a]:text-brand [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-fs-7 [&_h1]:font-semibold [&_h2]:text-fs-6 [&_h2]:font-semibold [&_h3]:text-fs-4 [&_h3]:font-semibold"

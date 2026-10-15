@@ -173,8 +173,11 @@ export default async function VagaPublicaPage({
           <ArrowLeft size={14} /> Todas as vagas
         </Button>
 
+        {/* Com o logo do escritório, como a lista de vagas (15/10/2026): a
+            página já carregava o `logoUrl` e não o mostrava. */}
         <CabecalhoPublico
           className="mt-4 mb-6"
+          logo={tenant.logoUrl ? { src: tenant.logoUrl, alt: tenant.name } : null}
           titulo={vaga.title}
           subtitulo={
             <>

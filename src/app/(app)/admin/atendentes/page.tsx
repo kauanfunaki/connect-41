@@ -79,7 +79,7 @@ export default async function AdminAtendentesPage() {
     <PageContainer>
       <PageHeader
         title="Atendentes e vínculos"
-        subtitle={<>Para cada colaborador interno: qual conta de acesso (User) é dele e, se aplicável, qual agente do Chatwoot é
+        subtitle={<>Para cada colaborador interno: qual conta de acesso é dele e, se aplicável, qual agente do Chatwoot é
           essa mesma pessoa — usado para mostrar nome/foto reais em{" "}
           <span className="font-medium text-fg">Conversas › Avaliação</span>. Configuração de uma vez só.</>}
       />

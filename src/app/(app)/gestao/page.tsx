@@ -100,7 +100,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
         </div>
         {atencao.length === 0 ? (
           <Card>
-            <EmptyState title="Nada parado nem atrasado" description="Nenhum processo, card, pendência ou transferência passou do limite do setor." />
+            <EmptyState title="Nada parado nem atrasado" description="Nenhum processo, tarefa, pendência ou transferência passou do limite do setor." />
           </Card>
         ) : (
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface shadow-xs">

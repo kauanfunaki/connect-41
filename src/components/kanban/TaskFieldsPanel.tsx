@@ -14,6 +14,7 @@ import { TagToggleList } from "@/components/kanban/TagToggleList";
 import { AssigneeToggleList } from "@/components/kanban/AssigneeToggleList";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
+import { formatCalendarDate } from "@/lib/format";
 
 type StageOption = { id: string; name: string };
 type TagOption = { id: string; name: string; color: string };
@@ -27,9 +28,11 @@ const PRIORITY_COLOR: Record<number, string> = {
 };
 const FREQUENCY_LABEL: Record<string, string> = { DAILY: "Diária", WEEKLY: "Semanal", BIWEEKLY: "Quinzenal", MONTHLY: "Mensal" };
 
+// Pelo `formatCalendarDate` (15/10/2026), como o resto do app: a data vem do
+// campo ("AAAA-MM-DD"), é dia de calendário. Era o `toLocaleDateString` cru,
+// com a trava do lint desligada.
 function formatDateBR(value: string): string {
-  // eslint-disable-next-line no-restricted-syntax
-  return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return formatCalendarDate(new Date(value), { day: "2-digit", month: "short" });
 }
 
 function FieldRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {

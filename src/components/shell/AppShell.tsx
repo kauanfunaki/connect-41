@@ -559,9 +559,9 @@ export function AppShell({
 
                 {sectors.length > 0 && (
                   <>
-                    <TituloDoBloco nome="Meus Setores">
+                    <TituloDoBloco nome="Meus setores">
                       <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
-                        Meus Setores
+                        Meus setores
                       </p>
                     </TituloDoBloco>
                     {/* Sem painel ao lado: o clique entra no ambiente do setor

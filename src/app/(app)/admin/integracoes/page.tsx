@@ -159,7 +159,8 @@ export default async function IntegracoesPage({
               <p className="text-fs-4 font-medium text-fg">Google Calendar / Meet</p>
               {!isGoogleConfigured() ? (
                 <p className="text-fs-2 text-fg-muted">
-                  Indisponível — credenciais do Google não configuradas no servidor (GOOGLE_CLIENT_ID/SECRET)
+                  {/* Sem o nome das variáveis do servidor (15/10/2026): quem lê aqui não as configura. */}
+                  Indisponível — o Google ainda não foi configurado no servidor do Connect; fale com o suporte
                   {google ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}
                 </p>
               ) : google && googleHealth === "NEEDS_RECONNECT" ? (
@@ -197,7 +198,7 @@ export default async function IntegracoesPage({
               <p className="text-fs-4 font-medium text-fg">Microsoft Teams / Outlook</p>
               {!isMicrosoftConfigured() ? (
                 <p className="text-fs-2 text-fg-muted">
-                  Indisponível — credenciais da Microsoft não configuradas no servidor (MICROSOFT_CLIENT_ID/SECRET)
+                  Indisponível — a Microsoft ainda não foi configurada no servidor do Connect; fale com o suporte
                   {microsoft ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}
                 </p>
               ) : microsoft && microsoftHealth === "NEEDS_RECONNECT" ? (

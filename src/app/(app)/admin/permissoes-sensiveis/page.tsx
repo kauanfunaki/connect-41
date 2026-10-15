@@ -76,7 +76,7 @@ export default async function PermissoesSensiveisPage() {
       </div>
 
       <p className="text-fs-2 text-fg-muted mt-3">
-        Suporte (SUPER_ADMIN) sempre tem acesso — não aparece na matriz.
+        O Super Admin (o suporte do Connect) sempre tem acesso — não aparece na matriz.
       </p>
     </PageContainer>
   );

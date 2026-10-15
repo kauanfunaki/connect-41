@@ -242,7 +242,7 @@ export default async function EmpresasPage({
           description={
             search || statusFilter || temFiltroDeColuna
               ? "Tente ajustar a busca ou os filtros."
-              : "Comece cadastrando a primeira empresa do tenant."
+              : "Comece cadastrando a primeira empresa."
           }
           action={
             !search && !statusFilter && !temFiltroDeColuna && canCreate ? (
