@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -92,23 +94,25 @@ export default async function CompetenciaPage({
         </div>
       )}
 
+      {/* No `Aviso` de atenção (15/10/2026), como os pontos de atenção de Cargos e
+          salários: era uma caixa de borda âmbar feita à mão. */}
       {anomalies.length > 0 && (
-        <div className="bg-surface border border-warning/30 rounded-lg p-5 mb-4">
-          <h2 className="text-card-title font-semibold text-fg mb-1">Conferência assistida</h2>
-          <p className="text-fs-2 text-fg-muted mb-3">
+        <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
+          <h2 className="font-semibold">Conferência assistida</h2>
+          <p className="text-fs-2 text-fg-muted mb-1.5">
             Pontos fora do padrão histórico — apontamento para revisão, não é cálculo trabalhista.
           </p>
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-warning/20">
             {anomalies.map((a, idx) => (
-              <div key={`${a.personId}-${a.kind}-${idx}`} className="py-2">
-                <p className="text-fs-3 text-fg">
+              <div key={`${a.personId}-${a.kind}-${idx}`} className="py-1.5">
+                <p className="text-fg">
                   <Link href={`/pessoas/${a.personId}`} className="text-brand hover:underline">{a.personName}</Link>
                   {" — "}{a.detail}
                 </p>
               </div>
             ))}
           </div>
-        </div>
+        </Aviso>
       )}
 
       <Card className="p-5">

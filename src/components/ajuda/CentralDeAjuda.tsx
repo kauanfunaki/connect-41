@@ -12,13 +12,15 @@ import {
   Pin,
   Play,
   Search,
+  SearchX,
   Send,
   SunMoon,
   Bell,
 } from "lucide-react";
 import { Accordion } from "@/components/ui/Accordion";
-import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Input } from "@/components/ui/Input";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { VideoDoYouTube } from "@/components/ajuda/VideoDoYouTube";
 import { normalizar } from "@/lib/buscaDeTelas";
@@ -242,10 +244,15 @@ export function CentralDeAjuda({
         </div>
       </div>
 
+      {/* No `EmptyState` (15/10/2026): era um parágrafo solto. */}
       {nada && (
-        <p className="text-body text-fg-muted">
-          Nada encontrado para <span className="font-medium text-fg">&ldquo;{busca}&rdquo;</span>. Tente outra palavra, ou o nome da tela.
-        </p>
+        <Card>
+          <EmptyState
+            icon={<SearchX />}
+            title="Nada encontrado"
+            description={busca.trim() ? `Nenhum assunto com “${busca.trim()}”. Tente outra palavra, ou o nome da tela.` : undefined}
+          />
+        </Card>
       )}
 
       {/* O vídeo de cada assunto toca só dentro dele: no passo aberto aqui e no

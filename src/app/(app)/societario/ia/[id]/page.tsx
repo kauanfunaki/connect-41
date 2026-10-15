@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
+import { Aviso } from "@/components/ui/Aviso";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { formatInstantDate, formatarReais } from "@/lib/format";
@@ -54,10 +55,14 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
       )}
     </div>
   );
+  // No `Aviso` neutro (15/10/2026): era uma caixa cinza montada à mão. A
+  // rejeição já está no selo; aqui é só o porquê.
   const motivo = proposta.status === "REJEITADA" && proposta.notes && (
-    <p className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg">
-      <span className="font-medium">Motivo da rejeição:</span> {proposta.notes}
-    </p>
+    <Aviso tom="neutro" className="mb-4">
+      <p className="text-fg break-words">
+        <span className="font-medium">Motivo da rejeição:</span> {proposta.notes}
+      </p>
+    </Aviso>
   );
 
   if (proposta.agentCode === AGENTE_VARREDURA) {

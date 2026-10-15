@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Aviso } from "@/components/ui/Aviso";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CircleDashed, Clock, Handshake, TrendingDown } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -81,12 +83,14 @@ export default async function DiagnosticoDaCarteiraPage() {
 
       {!custos.configurado && (
         // Revisão de 05/10: botão não é link — o destino era texto azul no fim da frase.
-        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg-secondary">
-          <p>O custo das equipes ainda não foi preenchido nos parâmetros, então o custo real sai zerado.</p>
+        // No `Aviso` de atenção (15/10/2026), como o da chave de IA: era uma caixa
+        // cinza montada à mão.
+        <Aviso tom="atencao" className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <p className="text-fg">O custo das equipes ainda não foi preenchido nos parâmetros, então o custo real sai zerado.</p>
           <Button href="/valora/parametros" variant="secondary" size="xs">
             Preencher parâmetros
           </Button>
-        </div>
+        </Aviso>
       )}
 
       {linhas.length === 0 ? (
@@ -143,10 +147,10 @@ export default async function DiagnosticoDaCarteiraPage() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-fs-2 text-fg-muted">
+          <NotaDeFonte>
             Margem real = (honorário − impostos e variáveis de {cfg.parametros.variaveisPct}% − custo real) ÷ honorário. Vermelho: abaixo do piso de{" "}
             {cfg.parametros.margemPisoPct}%; amarelo: abaixo do alvo de {cfg.parametros.margemAlvoPct}%.
-          </p>
+          </NotaDeFonte>
         </>
       )}
     </PageContainer>

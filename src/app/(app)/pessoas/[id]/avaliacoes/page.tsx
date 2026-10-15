@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { Star } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
@@ -43,9 +45,15 @@ export default async function AvaliacoesPessoaPage({
       />
       <PageHeader title="Avaliações de desempenho" />
 
+      {/* O vazio no `EmptyState` (15/10/2026), como o da lista de ciclos: era
+          texto solto num cartão. */}
       {evaluations.length === 0 ? (
-        <Card className="p-5">
-          <p className="text-fs-3 text-fg-muted">Nenhuma avaliação registrada ainda.</p>
+        <Card>
+          <EmptyState
+            icon={<Star />}
+            title="Nenhuma avaliação registrada ainda"
+            description="As avaliações aparecem aqui quando a pessoa é avaliada num ciclo de avaliação de desempenho."
+          />
         </Card>
       ) : (
         <>

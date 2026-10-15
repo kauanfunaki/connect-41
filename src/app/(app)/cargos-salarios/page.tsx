@@ -7,6 +7,7 @@ import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Aviso } from "@/components/ui/Aviso";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { Selo } from "@/components/ui/Selo";
@@ -76,14 +77,14 @@ export default async function CargosSalariosPage() {
         }
       />
 
-      {/* Achados estruturais primeiro: é o que a implantação precisa corrigir. */}
+      {/* Achados estruturais primeiro: é o que a implantação precisa corrigir.
+          No `Aviso` de atenção (15/10/2026): era um cartão de borda âmbar
+          montado à mão. O texto dos itens fica em `fg-secondary`, como estava —
+          o âmbar como cor de texto longo fica abaixo do contraste AA. */}
       {(totalDegraus > 0 || divergencias.length > 0 || semClassificacao > 0) && (
-        <Card className="p-5 mb-4 border-warning/30">
-          <h2 className="flex items-center gap-1.5 text-card-title font-semibold text-fg mb-3">
-            <AlertTriangle size={16} className="text-warning-fg" />
-            Pontos de atenção da estrutura
-          </h2>
-          <ul className="space-y-2">
+        <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
+          <h2 className="font-semibold mb-1.5">Pontos de atenção da estrutura</h2>
+          <ul className="space-y-1.5">
             {totalDegraus > 0 && canViewSalary && (
               <li className="text-ui text-fg-secondary">
                 <strong className="text-fg">{totalDegraus} degrau(s) invertido(s)</strong> — nível mais alto com faixa
@@ -108,7 +109,7 @@ export default async function CargosSalariosPage() {
               </li>
             )}
           </ul>
-        </Card>
+        </Aviso>
       )}
 
       {rows.length === 0 ? (

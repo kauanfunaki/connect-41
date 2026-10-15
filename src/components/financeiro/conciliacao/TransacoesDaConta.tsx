@@ -202,23 +202,27 @@ export function TransacoesDaConta({
                 <td className="py-2.5">
                   {l.status === "PENDENTE" && (
                     <div className="flex flex-col gap-2 items-start">
+                      {/* A sugestão e a conta travada no `Aviso` do app (15/10/2026):
+                          eram caixas com borda e fundo próprios. */}
                       {l.sugestao?.bloqueio ? (
-                        <div className="flex flex-col gap-0.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-1.5 max-w-[420px]">
-                          <span className="inline-flex items-center gap-1 text-micro font-medium text-warning-fg">
-                            <Lock size={12} /> Casa com uma conta travada na aprovação · {l.sugestao.motivo}
+                        <Aviso tom="atencao" icone={<Lock />} className="max-w-[420px]">
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-micro font-medium">
+                              Casa com uma conta travada na aprovação · {l.sugestao.motivo}
+                            </span>
+                            <ResumoDoLancamento l={l.sugestao} />
+                            <span className="text-micro text-fg-secondary">
+                              {l.sugestao.bloqueio} Não crie outro lançamento para esta transação: concilie depois da aprovação.
+                            </span>
                           </span>
-                          <ResumoDoLancamento l={l.sugestao} />
-                          <span className="text-micro text-fg-secondary">
-                            {l.sugestao.bloqueio} Não crie outro lançamento para esta transação: concilie depois da aprovação.
-                          </span>
-                        </div>
+                        </Aviso>
                       ) : l.sugestao ? (
-                        <div className="flex flex-col gap-0.5 rounded-md border border-brand/30 bg-brand/5 px-2.5 py-1.5">
-                          <span className="inline-flex items-center gap-1 text-micro font-medium text-brand">
-                            <Sparkles size={12} /> Sugestão · {l.sugestao.motivo}
+                        <Aviso tom="marca" icone={<Sparkles />}>
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-micro font-medium">Sugestão · {l.sugestao.motivo}</span>
+                            <ResumoDoLancamento l={l.sugestao} />
                           </span>
-                          <ResumoDoLancamento l={l.sugestao} />
-                        </div>
+                        </Aviso>
                       ) : (
                         l.candidatosDeMesmoValor > 0 && (
                           <span className="text-micro text-fg-muted">

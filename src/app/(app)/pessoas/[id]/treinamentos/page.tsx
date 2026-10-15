@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { GraduationCap } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
@@ -44,9 +46,15 @@ export default async function TreinamentosPessoaPage({
       />
       <PageHeader title="Treinamentos" />
 
+      {/* O vazio no `EmptyState` (15/10/2026), como o da lista de treinamentos:
+          era texto solto num cartão. */}
       {trainingParticipations.length === 0 ? (
-        <Card className="p-5">
-          <p className="text-fs-3 text-fg-muted">Nenhum treinamento registrado ainda.</p>
+        <Card>
+          <EmptyState
+            icon={<GraduationCap />}
+            title="Nenhum treinamento registrado ainda"
+            description="Os treinamentos aparecem aqui quando a pessoa entra numa turma."
+          />
         </Card>
       ) : (
         <>

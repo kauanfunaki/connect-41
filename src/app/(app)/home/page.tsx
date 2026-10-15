@@ -9,11 +9,13 @@ import {
   ChevronRight,
   Video,
   ExternalLink,
+  EyeOff,
 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
 import { AvatarImage } from "@/components/shared/AvatarImage";
@@ -802,9 +804,14 @@ export default async function HomePage() {
         abaixoDosPaineis.length === 0 &&
         mainWidgets.length === 0 &&
         sideWidgets.length === 0 && (
-        <p className="text-body text-fg-muted">
-          Todos os blocos estão ocultos. Use <span className="text-fg font-medium">Personalizar</span> para trazer algum de volta.
-        </p>
+        // No `EmptyState` (15/10/2026): era texto solto.
+        <Card>
+          <EmptyState
+            icon={<EyeOff />}
+            title="Todos os blocos estão ocultos"
+            description="Use “Personalizar”, no topo, para trazer algum de volta."
+          />
+        </Card>
       )}
     </PageContainer>
   );

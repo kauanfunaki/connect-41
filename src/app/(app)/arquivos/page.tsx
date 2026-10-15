@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, CircleAlert, FolderInput, FolderTree, Search, Trash2 } from "lucide-react";
+import { Building2, CircleAlert, FolderInput, FolderTree, Inbox, Search, Trash2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { Pagination } from "@/components/shared/Pagination";
 import { isFullWrite } from "@/lib/auth/context";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Contador } from "@/components/ui/Contador";
 import { Selo } from "@/components/ui/Selo";
 import { IconeDoArquivo } from "@/components/arquivos/IconeDoArquivo";
 import { formatCnpj, formatInstantDateTime } from "@/lib/format";
@@ -73,10 +74,16 @@ export default async function ArquivosPage({ searchParams }: { searchParams: Pro
           <h2 id="t-chegou" className="text-section font-semibold text-fg">
             Chegou do cliente
           </h2>
+          {/* O vazio no `EmptyState` (15/10/2026): era um parágrafo numa caixa
+              montada à mão. */}
           {recentes.length === 0 ? (
-            <p className="text-fs-3 text-fg-muted bg-surface border border-border rounded-lg shadow-xs p-4">
-              Nada nos últimos 30 dias. O que o cliente enviar pelo portal aparece aqui e em “Enviados pelo cliente” da empresa, e quem cuida dela é avisado.
-            </p>
+            <Card>
+              <EmptyState
+                icon={<Inbox />}
+                title="Nada chegou nos últimos 30 dias"
+                description="O que o cliente enviar pelo portal aparece aqui e em “Enviados pelo cliente” da empresa, e quem cuida dela é avisado."
+              />
+            </Card>
           ) : (
             <ul className="bg-surface border border-border rounded-lg shadow-xs divide-y divide-border">
               {recentes.map((r) => (
@@ -166,10 +173,14 @@ export default async function ArquivosPage({ searchParams }: { searchParams: Pro
                           <span className="sr-only">{rotulo}</span>
                         </Selo>
                       ) : (
-                        <Selo tom="neutro" className="shrink-0 tabular-nums">
-                          <span aria-hidden>{e.documentos}</span>
+                        // A contagem no `Contador` (15/10/2026): o `Selo` é de
+                        // situação. O envio novo continua no selo de atenção.
+                        <span className="shrink-0 inline-flex">
+                          <span aria-hidden className="inline-flex">
+                            <Contador valor={e.documentos} teto={Number.MAX_SAFE_INTEGER} />
+                          </span>
                           <span className="sr-only">{rotulo}</span>
-                        </Selo>
+                        </span>
                       )}
                     </Link>
                   </li>

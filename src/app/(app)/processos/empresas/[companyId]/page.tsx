@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -301,10 +302,13 @@ export default async function VisaoSocietariaDoClientePage({
               </p>
             )}
           </div>
+          {/* O `Aviso` de atenção, com a mesma frase do processo (15/10/2026):
+              era texto âmbar solto. */}
           {visao.custo.custoDasVoltasCentavos > 0 && (
-            <p className="text-fs-2 text-warning-fg">
-              {formatarReaisDeCentavos(visao.custo.custoDasVoltasCentavos)} vieram de reapresentação.
-            </p>
+            <Aviso tom="atencao">
+              <strong>{formatarReaisDeCentavos(visao.custo.custoDasVoltasCentavos)}</strong> vieram de reapresentação — guia
+              paga de novo porque o processo voltou.
+            </Aviso>
           )}
           {visao.taxas.length === 0 ? (
             <p className="text-ui text-fg-muted">Nenhuma taxa registrada.</p>

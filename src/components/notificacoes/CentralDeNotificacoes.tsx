@@ -254,7 +254,8 @@ export function CentralDeNotificacoes({
               label="Mostrar"
               active={filtros.status}
               items={[
-                { key: "nao_lidas", label: `Não lidas${contagens[filtros.aba] ? ` (${contagens[filtros.aba]})` : ""}`, href: urlDe({ ...filtros, status: "nao_lidas" }) },
+                // O número no `Contador` (15/10/2026): ia escrito no rótulo, "Não lidas (3)".
+                { key: "nao_lidas", label: "Não lidas", contagem: contagens[filtros.aba] || undefined, href: urlDe({ ...filtros, status: "nao_lidas" }) },
                 { key: "todas", label: "Todas", href: urlDe({ ...filtros, status: "todas" }) },
               ]}
             />

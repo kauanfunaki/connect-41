@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Colunas } from "@/components/shared/Graficos";
+import { Aviso } from "@/components/ui/Aviso";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { formatInstantDate, formatarReaisDeCentavos } from "@/lib/format";
@@ -71,8 +72,10 @@ export default async function IaDoSocietarioPage() {
 
       {(!varreduraLigada || !ligado(AGENTE_CONTRATO)) && (
         // Revisão de 05/10: botão não é link — o caminho era texto azul no meio da frase.
-        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg-secondary">
-          <p>
+        // No `Aviso` de atenção (15/10/2026), como o da chave de IA: era uma caixa
+        // cinza montada à mão.
+        <Aviso tom="atencao" className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <p className="text-fg">
             {[!varreduraLigada && nome(AGENTE_VARREDURA), !ligado(AGENTE_CONTRATO) && nome(AGENTE_CONTRATO)].filter(Boolean).join(" e ")}{" "}
             {!varreduraLigada && !ligado(AGENTE_CONTRATO) ? "estão desligadas" : "está desligada"}. Um administrador liga em
             Configurações › Inteligência artificial. A leitura de contrato social fica na tela de sócios de cada empresa.
@@ -80,7 +83,7 @@ export default async function IaDoSocietarioPage() {
           <Button href="/admin/ia" variant="secondary" size="xs">
             Abrir Inteligência artificial
           </Button>
-        </div>
+        </Aviso>
       )}
 
       <section aria-labelledby="fila" className="mb-6 flex flex-col gap-2">

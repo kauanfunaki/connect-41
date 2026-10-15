@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { Landmark } from "lucide-react";
+import { AlertTriangle, Landmark } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -68,17 +69,14 @@ export default async function PlanoDeContasPage() {
       </p>
 
       {ativasParaPagar === 0 && (
-        <Card className="mb-6 border-warning/30 bg-warning/8">
-          <div className="px-4 py-3 space-y-1">
-            <p className="text-fs-3 font-medium text-fg">
-              Nenhuma categoria ativa em contas a pagar
-            </p>
-            <p className="text-fs-2 text-fg-muted">
-              Enquanto isso, nenhum documento fiscal vira conta a pagar: o lançamento é recusado
-              por falta de categoria. Cadastre ao menos uma para destravar o fluxo.
-            </p>
-          </div>
-        </Card>
+        // No `Aviso` de atenção (15/10/2026): era um cartão âmbar montado à mão.
+        <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-6">
+          <p className="font-medium text-fg">Nenhuma categoria ativa em contas a pagar</p>
+          <p className="text-fs-2 text-fg-muted mt-0.5">
+            Enquanto isso, nenhum documento fiscal vira conta a pagar: o lançamento é recusado
+            por falta de categoria. Cadastre ao menos uma para destravar o fluxo.
+          </p>
+        </Aviso>
       )}
 
       {categorias.length === 0 ? (

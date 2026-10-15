@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { Aviso } from "@/components/ui/Aviso";
 import { useToast } from "@/components/ui/Toast";
 import {
   TASK_WIDGETS,
@@ -154,12 +155,15 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
           })}
         </div>
 
+        {/* No `Aviso` de atenção (15/10/2026): era uma caixa cinza montada à mão. */}
         {selected.length === 0 && (
-          <p className="text-fs-2 text-fg-secondary bg-surface-hover border border-border rounded-md px-3 py-2 mt-4">
-            Sem nenhum bloco marcado, quem é só de {sectorLabel} vai abrir o Meu dia numa
-            tela vazia. É uma escolha válida enquanto o setor não tiver módulos próprios —
-            só não é acidente.
-          </p>
+          <Aviso tom="atencao" className="mt-4">
+            <p className="text-fg">
+              Sem nenhum bloco marcado, quem é só de {sectorLabel} vai abrir o Meu dia numa
+              tela vazia. É uma escolha válida enquanto o setor não tiver módulos próprios —
+              só não é acidente.
+            </p>
+          </Aviso>
         )}
 
         <div className="flex items-center gap-3 pt-5">

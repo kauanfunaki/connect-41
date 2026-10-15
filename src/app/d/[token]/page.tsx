@@ -7,24 +7,19 @@ import { formatInstantDateTimeComSegundos } from "@/lib/format";
 import { Download, Link2Off } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
+import { TelaDeAvisoPublica } from "@/components/publico/TelaDeAvisoPublica";
 
 export const metadata = { title: "Documento" };
 
-// Mesma moldura da tela de erro desta rota (error.tsx) e do 404: ícone, título
-// e texto empilhados no centro.
+// O aviso único das telas públicas (15/10/2026), o mesmo da tela de erro desta
+// rota (error.tsx) e do 404 — era uma cópia à mão da moldura.
 function InvalidLink() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="max-w-md text-center flex flex-col items-center gap-3">
-        <span className="w-10 h-10 rounded-lg bg-surface-hover text-fg-muted flex items-center justify-center">
-          <Link2Off size={18} />
-        </span>
-        <h1 className="text-fs-7 font-semibold text-fg">Link inválido ou expirado</h1>
-        <p className="text-fs-3 text-fg-muted">
-          Este link de documento não existe mais ou foi digitado incorretamente. Entre em contato com quem enviou o documento para receber um novo link.
-        </p>
-      </div>
-    </div>
+    <TelaDeAvisoPublica
+      icone={<Link2Off />}
+      titulo="Link inválido ou expirado"
+      texto="Este link de documento não existe mais ou foi digitado incorretamente. Entre em contato com quem enviou o documento para receber um novo link."
+    />
   );
 }
 

@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
-import { Button } from "@/components/ui/Button";
-import { AlertTriangle } from "lucide-react";
+import { ErroPublico } from "@/components/publico/ErroPublico";
 
 // Rota pública (link de documento enviado ao cliente) — sem sidebar/shell.
-// Mesmo layout centralizado que esta rota já usa pro estado de link
-// inválido/expirado.
+// O desenho é o mesmo do aviso de link inválido/expirado desta rota
+// (`TelaDeAvisoPublica`, 15/10/2026 — era uma cópia à mão).
 export default function DocumentoError({
   error,
   reset,
@@ -14,24 +12,12 @@ export default function DocumentoError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error("[documento]", error);
-  }, [error]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="max-w-md text-center flex flex-col items-center gap-3">
-        <span className="w-10 h-10 rounded-lg bg-danger/10 text-danger flex items-center justify-center">
-          <AlertTriangle size={18} />
-        </span>
-        <h1 className="text-fs-7 font-semibold text-fg">Algo deu errado</h1>
-        <p className="text-fs-3 text-fg-muted">
-          Não foi possível carregar este documento. Tente novamente ou entre em contato com quem enviou o link.
-        </p>
-        <Button type="button" onClick={reset} className="mt-1">
-          Tentar novamente
-        </Button>
-      </div>
-    </div>
+    <ErroPublico
+      error={error}
+      reset={reset}
+      rotulo="documento"
+      texto="Não foi possível carregar este documento. Tente novamente ou entre em contato com quem enviou o link."
+    />
   );
 }
