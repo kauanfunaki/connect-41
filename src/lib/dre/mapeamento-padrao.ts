@@ -94,6 +94,9 @@ export const MAPEAMENTO_PADRAO: { categoria: string; grupo: string }[] = [
   { categoria: "Equipamentos de Informática", grupo: "administrativas" },
   { categoria: "Softwares - Licença e aluguel", grupo: "administrativas" },
   { categoria: "Compra de combustível", grupo: "administrativas" },
+  // Do plano padrão da 41, não da Irriga (15/10/2026): despesa fixa
+  // administrativa, não CMV. Está aqui para o Omie classificar igual.
+  { categoria: "Pedágio", grupo: "administrativas" },
   { categoria: "Internet", grupo: "administrativas" },
   { categoria: "Sindicatos", grupo: "administrativas" },
   { categoria: "Telefonia", grupo: "administrativas" },
