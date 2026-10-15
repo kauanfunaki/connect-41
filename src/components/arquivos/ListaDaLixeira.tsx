@@ -47,7 +47,7 @@ export function ListaDaLixeira({ itens }: { itens: ItemDaLixeira[] }) {
               {item.onde} · excluído em {formatInstantDateTime(new Date(item.excluidoEm), QUANDO)} · some em{" "}
               {formatInstantDate(new Date(item.someEm), { dateStyle: "short" })}
             </p>
-            {item.motivo && <p className="text-micro text-warning">{item.motivo}</p>}
+            {item.motivo && <p className="text-micro text-warning-fg">{item.motivo}</p>}
           </div>
           {item.podeRestaurar && (
             <Button

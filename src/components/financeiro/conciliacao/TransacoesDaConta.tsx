@@ -25,7 +25,7 @@ import {
   lancamentosParaEscolha,
   type LancamentoParaEscolha,
 } from "@/app/(app)/conciliacao/actions";
-import { moeda, tomDoValor } from "@/lib/financeiro/formato";
+import { moeda } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
 import { formatarCompetencia } from "@/lib/format";
 import { FormFooter } from "@/components/ui/FormFooter";
@@ -191,7 +191,9 @@ export function TransacoesDaConta({
                 <td className="py-2.5 pr-3 max-w-[300px]">
                   <span className="block break-words">{descricaoDaTransacao(l)}</span>
                 </td>
-                <td className={`py-2.5 pr-3 text-right tabular-nums font-medium whitespace-nowrap ${tomDoValor(l.centavos)}`}>
+                {/* Valor neutro (D1, 15/10/2026): entrada e saída são categoria,
+                    não situação — o "−" já diz o sinal, como no Fluxo de caixa. */}
+                <td className="py-2.5 pr-3 text-right tabular-nums font-medium whitespace-nowrap">
                   {moeda(l.centavos)}
                 </td>
                 <td className="py-2.5 pr-3">
@@ -358,7 +360,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
       <div className="flex flex-col gap-4">
         <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
-          <strong className={tomDoValor(transacao.centavos)}>{moeda(transacao.centavos)}</strong>. Marque um ou mais
+          <strong className="text-fg">{moeda(transacao.centavos)}</strong>. Marque um ou mais
           lançamentos {transacao.centavos < 0 ? "a pagar" : "a receber"} cuja soma feche o valor no centavo.
         </p>
         <form
@@ -505,7 +507,7 @@ function CriarLancamento({
         <input type="hidden" name="transactionId" value={transacao.id} />
         <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
-          <strong className={tomDoValor(transacao.centavos)}>{moeda(transacao.centavos)}</strong>. O lançamento nasce pago
+          <strong className="text-fg">{moeda(transacao.centavos)}</strong>. O lançamento nasce pago
           nesta data, com este valor, e já conciliado.
         </p>
         {transacao.sugestao?.bloqueio && (

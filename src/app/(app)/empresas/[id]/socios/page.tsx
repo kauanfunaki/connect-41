@@ -181,7 +181,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
 
           {exSocios.length > 0 && (
             <section className="mb-4" aria-labelledby="ex-socios">
-              <h2 id="ex-socios" className="text-card-title font-semibold text-fg mb-2">
+              <h2 id="ex-socios" className="text-section font-semibold text-fg mb-2">
                 Ex-sócios
               </h2>
               <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">

@@ -101,7 +101,7 @@ export default async function PlanoDeContasPage() {
             return (
               <div key={kind}>
                 <div className="flex items-baseline gap-2 mb-2">
-                  <h2 className="text-fs-5 font-medium text-fg">{titulo}</h2>
+                  <h2 className="text-section font-semibold text-fg">{titulo}</h2>
                   <span className="text-fs-2 text-fg-muted">{nota}</span>
                 </div>
                 {doLado.length === 0 ? (
@@ -152,7 +152,7 @@ export default async function PlanoDeContasPage() {
                       <TabelaNoDesktop padrao>
                         <table className="w-full min-w-[820px]">
                           <thead>
-                            <tr className="border-b border-border text-fs-1 uppercase tracking-wide text-fg-muted">
+                            <tr className="border-b border-border">
                               <th className="px-4 py-3">Categoria</th>
                               <th className="px-4 py-3">
                                 <FiltroDaColuna rotulo="Grupo" chave="grupo" />

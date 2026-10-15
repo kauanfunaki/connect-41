@@ -60,7 +60,7 @@ export default async function KanbanListPage() {
                   className="w-2 h-2 rounded-full flex-shrink-0"
                   style={{ background: sectorColors[sectorCode] ?? "var(--c41-sector-gestao)" }}
                 />
-                <h2 className="text-card-title font-semibold text-fg">
+                <h2 className="text-section font-semibold text-fg">
                   {sectorLabel(sectorLabels, sectorCode)}
                 </h2>
               </div>

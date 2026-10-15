@@ -112,7 +112,7 @@ export default async function AdminAtendentesPage() {
           <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
             <table className="w-full min-w-[640px]">
               <thead>
-                <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
+                <tr className="border-b border-border">
                   <th className="px-4 py-3">Pessoa</th>
                   <th className="px-4 py-3">
                     <FiltroDaColuna rotulo="Conta de acesso" chave="conta" align={hasChatwoot ? "left" : "right"} />
@@ -172,7 +172,7 @@ export default async function AdminAtendentesPage() {
             <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
               <table className="w-full min-w-[560px]">
                 <thead>
-                  <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
+                  <tr className="border-b border-border">
                     <th className="px-4 py-3">Atendente do Chatwoot</th>
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Recepção" chave="recepcao" />

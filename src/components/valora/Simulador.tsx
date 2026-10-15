@@ -257,7 +257,7 @@ export function Simulador({
 
       <Card className="p-4 lg:sticky lg:top-4 space-y-4">
         <div>
-          <p className="text-micro uppercase tracking-wide text-fg-muted">Honorário mensal</p>
+          <p className="c41-rotulo">Honorário mensal</p>
           <p className="text-metric font-semibold tabular-nums leading-tight">{brl(r.mensal.alvo)}</p>
           <p className="text-fs-2 text-fg-muted">alvo, com {parametros.margemAlvoPct}% de margem</p>
         </div>
@@ -290,7 +290,7 @@ export function Simulador({
 
         {r.avulsos.length > 0 && (
           <div className="border-t border-border-soft pt-3">
-            <p className="text-micro uppercase tracking-wide text-fg-muted mb-1.5">Avulsos (por processo, fora da mensalidade)</p>
+            <p className="c41-rotulo mb-1.5">Avulsos (por processo, fora da mensalidade)</p>
             <div className="space-y-1 text-fs-2">
               {r.avulsos.map((a) => (
                 <div key={a.id} className="flex justify-between gap-2">

@@ -288,7 +288,7 @@ export function HandoffForm({
       {selectedInOrder.length > 0 && (
         <div className="space-y-4 border-t border-border pt-5">
           {/* Título no estilo dos títulos de seção de formulário (FormSection). */}
-          <h3 className="text-fs-2 font-semibold text-fg-muted uppercase tracking-wider">Instrução por setor</h3>
+          <h3 className="c41-rotulo">Instrução por setor</h3>
           {selectedInOrder.map((s) => (
             <CampoForm key={s.value} label={`Instrução para ${s.label}`} htmlFor={`instruction_${s.value}`}>
               <Textarea

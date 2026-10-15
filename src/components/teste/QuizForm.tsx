@@ -119,7 +119,7 @@ export function QuizForm({ token, questions }: Props) {
         <p className="text-fs-2 text-fg-muted mt-2">Suas respostas ficam salvas neste aparelho enquanto você responde.</p>
       </Card>
 
-      <div className="sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-canvas/95 backdrop-blur border-b border-border">
+      <div className="sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-canvas border-b border-border">
         <div className="flex items-center justify-between gap-3 mb-1.5">
           <span className="text-fs-2 font-medium text-fg">
             {answeredCount} de {questions.length} respondidas

@@ -231,7 +231,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[720px]">
               <thead>
-                <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="border-b border-border">
                   <th className="py-2 pr-3">Empresa</th>
                   <th className="py-2 pr-3">App Key</th>
                   <th className="py-2 pr-3">

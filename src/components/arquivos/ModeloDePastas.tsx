@@ -66,7 +66,7 @@ export function ModeloDePastas({ pastas, setores }: { pastas: PastaDoModeloNaTel
         </Button>
       </div>
 
-      <ul className="bg-surface border border-border rounded-lg divide-y divide-border">
+      <ul className="bg-surface border border-border rounded-lg shadow-xs divide-y divide-border">
         {pastas.map((p, i) => {
           const Icone = p.setor ? FolderLock : Folder;
           return (

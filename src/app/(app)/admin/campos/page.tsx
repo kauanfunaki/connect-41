@@ -77,7 +77,7 @@ export default async function CamposPage() {
             const [sectorCode, entityType] = key.split("::");
             return (
               <div key={key}>
-                <h2 className="text-fs-5 font-medium text-fg mb-2">
+                <h2 className="text-section font-semibold text-fg mb-2">
                   {sectorLabel(sectorLabels, sectorCode)} ·{" "}
                   {entityType === "COMPANY" ? "Empresas" : "Pessoas"}
                 </h2>

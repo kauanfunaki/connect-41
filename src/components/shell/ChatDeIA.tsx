@@ -673,7 +673,7 @@ export function ChatDeIA({
           no celular o painel ocupa a tela toda e a cobre. */}
       <div aria-hidden className="fixed inset-0 z-40" onClick={fecharChat} />
       <section
-        className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] overflow-hidden"
+        className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-lg overflow-hidden"
         aria-label={`Chat com a ${NOME_DA_ASSISTENTE}`}
       >
         <header className="flex items-center gap-2.5 px-4 py-3">

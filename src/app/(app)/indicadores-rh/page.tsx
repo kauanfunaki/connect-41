@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   ArrowRight,
   Palmtree,
@@ -25,6 +24,7 @@ import {
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { Card } from "@/components/ui/Card";
 import { getIndicadoresRH } from "@/lib/indicadoresRH";
 import { AVISO_DAS_FERIAS_DIAS } from "@/lib/home/paineis";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -124,14 +124,11 @@ export default async function IndicadoresRhPage() {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-card-title font-semibold text-fg mb-3">Relatórios</h2>
+        <h2 className="text-section font-semibold text-fg mb-3">Relatórios</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {relatorios.map((r) => (
-            <Link
-              key={r.href}
-              href={r.href}
-              className="group bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 hover:border-border-strong hover:bg-surface-hover transition-colors"
-            >
+            // O cartão-atalho do app (`Card href`): borda azul, sobe 2px.
+            <Card key={r.href} href={r.href} className="group p-4">
               <span className="inline-flex w-9 h-9 rounded-lg items-center justify-center bg-brand/10 text-brand mb-3">
                 {r.icon}
               </span>
@@ -143,7 +140,7 @@ export default async function IndicadoresRhPage() {
                 />
               </div>
               <p className="text-fs-2 text-fg-muted mt-1 leading-relaxed">{r.description}</p>
-            </Link>
+            </Card>
           ))}
         </div>
       </div>

@@ -9,6 +9,7 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { SectorChip } from "@/components/ui/SectorChip";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/ui/useConfirm";
@@ -142,19 +143,14 @@ export function UsuariosTable({
     if (u.sectors.length === 0) return <span className="text-fg-muted">—</span>;
     return (
       <div className="flex flex-wrap items-center gap-1">
+        {/* O `SectorChip` do app (15/10/2026): era uma cópia dele a 11px. */}
         {u.sectors.slice(0, 3).map((s) => (
-          <span
-            key={s.code}
-            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-fs-1 font-medium bg-surface-hover text-fg-secondary border border-border"
-          >
-            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
-            {s.label}
-          </span>
+          <SectorChip key={s.code} label={s.label} color={s.color} />
         ))}
         {u.sectors.length > 3 && (
           <span
             title={u.sectors.slice(3).map((s) => s.label).join(", ")}
-            className="inline-flex items-center px-2 py-1 rounded-full text-fs-1 font-medium bg-surface-hover text-fg-muted border border-border cursor-default"
+            className="inline-flex items-center px-2.5 py-1 rounded-full text-fs-2 font-medium bg-surface-hover text-fg-muted border border-border cursor-default"
           >
             +{u.sectors.length - 3}
           </span>
@@ -251,7 +247,7 @@ export function UsuariosTable({
       <div className="md:hidden bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
         <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
           <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
-          <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">
+          <span className="c41-rotulo">
             Selecionar todos
           </span>
         </div>
@@ -278,7 +274,7 @@ export function UsuariosTable({
         <div className="c41-tabela scroll-x overflow-x-auto hidden md:block bg-surface border border-border rounded-lg">
           <table className="w-full min-w-[900px]">
             <thead>
-              <tr className="border-b border-border bg-table-header-bg text-micro font-semibold uppercase tracking-wide text-fg-muted">
+              <tr className="border-b border-border bg-table-header-bg">
                 <th className="w-10 px-4 py-3">
                   <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
                 </th>

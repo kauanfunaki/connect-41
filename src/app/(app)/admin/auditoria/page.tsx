@@ -291,7 +291,9 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
 
   return (
     <PageContainer>
-      <div className="max-w-[1000px]">
+      {/* Na largura única do app (D5, 15/10/2026): a tela ficava presa em
+          1000px, encostada à esquerda. */}
+      <>
         <PageHeader title="Auditoria" subtitle="Quem fez o quê neste escritório, dia a dia." />
 
         <FaixaDeTotais
@@ -312,7 +314,7 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
         <BarraDaAuditoria tipos={botoesDeTipo} listas={listas} periodo={periodo} hrefLimpar={filtrado ? "/admin/auditoria" : null} />
 
         {dias.length === 0 ? (
-          <div className="bg-surface border border-border rounded-lg">
+          <div className="bg-surface border border-border rounded-lg shadow-xs">
             <EmptyState
               icon={<ScrollText />}
               title={filtrado ? "Nenhuma ação com esses filtros." : "Nenhuma ação nos últimos 7 dias."}
@@ -343,7 +345,7 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
             )}
           </>
         )}
-      </div>
+      </>
     </PageContainer>
   );
 }

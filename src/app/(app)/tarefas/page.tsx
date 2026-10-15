@@ -385,7 +385,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
               <ul className="divide-y divide-border">
                 {diasComPrazo.map((dia) => (
                   <li key={dia} className="px-4 py-2.5">
-                    <p className="mb-1.5 text-micro font-semibold uppercase tracking-wide text-fg-muted">
+                    <p className="mb-1.5 c41-rotulo">
                       {dia === hojeKey
                         ? "Hoje"
                         : dia === addDaysToKey(hojeKey, 1)

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Colunas } from "@/components/shared/Graficos";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { formatInstantDate, formatarReaisDeCentavos } from "@/lib/format";
@@ -83,7 +84,7 @@ export default async function IaDoSocietarioPage() {
       )}
 
       <section aria-labelledby="fila" className="mb-6 flex flex-col gap-2">
-        <h2 id="fila" className="text-card-title font-semibold text-fg">
+        <h2 id="fila" className="text-section font-semibold text-fg">
           Esperando revisão ({pendentes.length})
         </h2>
         {pendentes.length === 0 ? (
@@ -115,7 +116,7 @@ export default async function IaDoSocietarioPage() {
 
       <section aria-labelledby="qualidade" className="mb-6 flex flex-col gap-2">
         <div>
-          <h2 id="qualidade" className="text-card-title font-semibold text-fg">
+          <h2 id="qualidade" className="text-section font-semibold text-fg">
             Qualidade da IA, últimos 6 meses
           </h2>
           <p className="text-fs-2 text-fg-muted">
@@ -127,7 +128,6 @@ export default async function IaDoSocietarioPage() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {qualidade.map((q) => {
-              const maior = Math.max(1, ...q.porMes.map((m) => m.total));
               return (
                 <Card key={q.agentCode} className="p-4 flex flex-col gap-3">
                   <p className="text-fs-4 font-semibold text-fg">{nome(q.agentCode)}</p>
@@ -151,14 +151,17 @@ export default async function IaDoSocietarioPage() {
                   <p className="text-fs-2 text-fg-secondary tabular-nums">
                     Confiança que a IA declarou: {q.confianca.ALTA} alta · {q.confianca.MEDIA} média · {q.confianca.BAIXA} baixa
                   </p>
-                  <div aria-label="Propostas por mês" className="flex items-end gap-2 h-16">
-                    {q.porMes.map((m) => (
-                      <div key={m.mes} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full rounded-sm bg-brand/70" style={{ height: `${(m.total / maior) * 40}px`, minHeight: m.total ? 3 : 0 }} title={`${m.total}`} />
-                        <span className="text-micro text-fg-muted">{MES.format(new Date(`${m.mes}-15T12:00:00Z`))}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {/* As colunas da família `Graficos` (15/10/2026): eram barras
+                      desenhadas à mão, com o número só no `title`. */}
+                  <Colunas
+                    titulo="Propostas por mês"
+                    vazio="Nenhuma proposta nos últimos 6 meses."
+                    colunas={q.porMes.map((m) => ({
+                      chave: m.mes,
+                      rotulo: MES.format(new Date(`${m.mes}-15T12:00:00Z`)),
+                      valor: m.total,
+                    }))}
+                  />
                   <p className="text-fs-2 text-fg-muted">Custo no período: {formatarReaisDeCentavos(q.custoCentavos)}</p>
                 </Card>
               );
@@ -169,7 +172,7 @@ export default async function IaDoSocietarioPage() {
 
       {revisadas.length > 0 && (
         <section aria-labelledby="revisadas" className="flex flex-col gap-2">
-          <h2 id="revisadas" className="text-card-title font-semibold text-fg">
+          <h2 id="revisadas" className="text-section font-semibold text-fg">
             Revisadas recentemente
           </h2>
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">

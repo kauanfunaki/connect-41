@@ -137,7 +137,7 @@ function Painel({ tutorial, onFim }: { tutorial: Tutorial; onFim: (fim: FimDoTut
         aria-describedby={textoId}
         tabIndex={-1}
         onKeyDown={tecla}
-        className="c41-surgir relative flex w-full max-w-[440px] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-xl border border-border-strong bg-surface-elevated shadow-lg outline-none"
+        className="c41-surgir relative flex w-full max-w-[440px] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-lg border border-border-strong bg-surface-elevated shadow-lg outline-none"
       >
         {/* A faixa de cor do topo, como no Hub. */}
         <div
@@ -240,7 +240,7 @@ function Desenho({ icone }: { icone: IconeDoTutorial }) {
   if (icone === "ceci") return <Ceci tamanho={72} />;
   const Icone = ICONES[icone];
   return (
-    <span aria-hidden className="inline-flex size-[72px] items-center justify-center rounded-2xl bg-brand-subtle text-brand">
+    <span aria-hidden className="inline-flex size-[72px] items-center justify-center rounded-lg bg-brand-subtle text-brand">
       <Icone size={34} strokeWidth={1.75} />
     </span>
   );

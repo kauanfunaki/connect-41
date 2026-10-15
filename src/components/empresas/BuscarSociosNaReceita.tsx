@@ -15,7 +15,7 @@ const data = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") :
 function Lista({ titulo, linhas, vazio }: { titulo: string; linhas: Linha[]; vazio: string }) {
   return (
     <section className="flex flex-col gap-1.5">
-      <h3 className="text-fs-2 font-semibold uppercase tracking-wide text-fg-muted">{titulo}</h3>
+      <h3 className="c41-rotulo">{titulo}</h3>
       {linhas.length === 0 ? (
         <p className="text-fs-2 text-fg-muted">{vazio}</p>
       ) : (

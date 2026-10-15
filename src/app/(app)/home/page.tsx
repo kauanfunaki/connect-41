@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
@@ -618,7 +619,7 @@ export default async function HomePage() {
         <h2 className="text-section font-semibold text-fg mb-3.5">Visão do workspace</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <p className="text-fs-1 font-medium text-fg-muted uppercase tracking-wide mb-2.5">
+            <p className="c41-rotulo mb-2.5">
               Top {STAGE_CHART_LIMIT} · tarefas por estágio
             </p>
             <HorizontalBarChart data={stageChartData} emptyLabel="Nenhuma tarefa em aberto nos seus kanbans." />
@@ -630,7 +631,7 @@ export default async function HomePage() {
             )}
           </div>
           <div>
-            <p className="text-fs-1 font-medium text-fg-muted uppercase tracking-wide mb-2.5">Movimentações (14 dias)</p>
+            <p className="c41-rotulo mb-2.5">Movimentações (14 dias)</p>
             <TrendChart data={trendData} />
           </div>
         </div>
@@ -701,10 +702,11 @@ export default async function HomePage() {
         </h2>
         <div className="flex flex-col gap-2">
           {sectorWidgets.map((s) => (
-            <Link
+            // O cartão-atalho do app (`Card href`): borda azul, sobe 2px.
+            <Card
               key={s.code}
               href={`/setor/${s.code}`}
-              className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
+              className="group flex items-center justify-between gap-2 px-3.5 py-2.5"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
@@ -717,7 +719,7 @@ export default async function HomePage() {
                 </div>
               </div>
               <ChevronRight size={15} className="text-fg-muted flex-shrink-0 group-hover:text-fg transition-colors" />
-            </Link>
+            </Card>
           ))}
         </div>
       </div>

@@ -554,7 +554,7 @@ async function AbaDoPlano({
           if (doLado.length === 0) return null;
           return (
             <div key={kind} className="mb-6">
-              <h3 className="text-card-title font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
+              <h3 className="text-section font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
                 {/* Largura fixa e as mesmas colunas nas duas tabelas
                     (08/10/2026): cada uma calculava a sua, e "Categoria" e

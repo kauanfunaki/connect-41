@@ -131,7 +131,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
 
             return (
               <div key={slot}>
-                <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wider mb-2">
+                <p className="c41-rotulo mb-2">
                   {SLOT_LABEL[slot]}
                 </p>
                 <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">

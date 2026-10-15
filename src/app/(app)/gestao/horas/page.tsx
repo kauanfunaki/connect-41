@@ -186,7 +186,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
           </div>
 
           <section aria-labelledby="apontamentos" className="flex flex-col gap-2">
-            <h2 id="apontamentos" className="text-card-title font-semibold text-fg">
+            <h2 id="apontamentos" className="text-section font-semibold text-fg">
               Apontamentos
             </h2>
             {/* No celular, cartões em vez da rolagem lateral de 640px (auditoria

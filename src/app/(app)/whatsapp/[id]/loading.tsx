@@ -24,10 +24,10 @@ export default function LoadingConversa() {
         <div className="c41-skeleton w-28 h-3.5" />
       </div>
       <div className="flex-1 min-h-0 flex flex-col justify-end gap-2 px-4 sm:px-5 py-3 overflow-hidden">
-        <div className="c41-skeleton self-start w-[55%] h-12 rounded-2xl" />
-        <div className="c41-skeleton self-end w-[45%] h-10 rounded-2xl" />
-        <div className="c41-skeleton self-start w-[60%] h-16 rounded-2xl" />
-        <div className="c41-skeleton self-end w-[35%] h-10 rounded-2xl" />
+        <div className="c41-skeleton self-start w-[55%] h-12 rounded-lg" />
+        <div className="c41-skeleton self-end w-[45%] h-10 rounded-lg" />
+        <div className="c41-skeleton self-start w-[60%] h-16 rounded-lg" />
+        <div className="c41-skeleton self-end w-[35%] h-10 rounded-lg" />
       </div>
       <div className="shrink-0 border-t border-border-soft px-3 sm:px-4 pt-2.5 pb-3">
         <div className="c41-skeleton h-[6.5rem] rounded-lg" />

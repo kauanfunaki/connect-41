@@ -107,7 +107,7 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
                   />
                 </Card>
               ) : (
-                <ul className="bg-surface border border-border rounded-lg divide-y divide-border">
+                <ul className="bg-surface border border-border rounded-lg shadow-xs divide-y divide-border">
                   {dados.subpastas.map((p) => {
                     const Icone = p.enviados ? FolderInput : Folder;
                     return (

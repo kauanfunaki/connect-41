@@ -85,7 +85,7 @@ export function AssistenteDoSocietario() {
 
           {propostas.length > 0 && (
             <div className="border-t border-border-soft pt-3 flex flex-col gap-2">
-              <p className="text-micro uppercase tracking-wide text-fg-muted">
+              <p className="c41-rotulo">
                 Sugestões — nada foi feito ainda
               </p>
               {propostas.map((p, i) => {

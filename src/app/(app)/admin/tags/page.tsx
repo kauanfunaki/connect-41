@@ -65,7 +65,7 @@ export default async function TagsPage() {
         <div className="space-y-6">
           {Object.entries(grouped).map(([sectorCode, list]) => (
             <div key={sectorCode}>
-              <h2 className="text-fs-5 font-medium text-fg mb-2">
+              <h2 className="text-section font-semibold text-fg mb-2">
                 {sectorLabel(sectorLabels, sectorCode)}
               </h2>
               <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
