@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { InfoRow } from "@/components/empresas/InfoRow";
@@ -94,21 +94,29 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       : [];
   const centros = veredito.pode && !doc.financeEntry ? await centrosAtivosDaEmpresa(ctx.tenantId, doc.companyId) : [];
 
+  const titulo = `${TIPO_LABEL[doc.type]} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`;
+
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): o pai é sempre a lista
+          de Documentos fiscais, aberta na empresa do documento. */}
+      <Breadcrumb
+        items={[
+          { label: "Documentos fiscais", href: `/documentos-fiscais?empresa=${doc.companyId}` },
+          { label: titulo, truncate: true },
+        ]}
+      />
 
       {/* Empresa e competência no subtítulo do próprio cabeçalho, e os selos no
-          lugar das ações: eram um parágrafo solto embaixo, com o respiro do
-          cabeçalho entre o título e ele. */}
+          `meta`, embaixo do título (15/10/2026): estavam no lugar das ações. */}
       <PageHeader
-        title={`${TIPO_LABEL[doc.type]} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`}
+        title={titulo}
         subtitle={`${nomeExibicao(doc.company)} · ${formatarCompetencia(doc.competence)}`}
-        action={
-          <div className="flex items-center gap-1.5">
+        meta={
+          <>
             <Selo tom={tomDaVariante(SITUACAO_VARIANTE[doc.situation])}>{SITUACAO_LABEL[doc.situation]}</Selo>
             <Selo tom={tomDaVariante(DESTINO_VARIANTE[doc.destination])}>{DESTINO_LABEL[doc.destination]}</Selo>
-          </div>
+          </>
         }
       />
 

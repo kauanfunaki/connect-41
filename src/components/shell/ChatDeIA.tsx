@@ -12,7 +12,6 @@ import {
   FileText,
   History,
   MessageSquareText,
-  MoreHorizontal,
   Paperclip,
   Pencil,
   Plus,
@@ -25,13 +24,17 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { IconButton } from "@/components/ui/IconButton";
 import { Contador } from "@/components/ui/Contador";
+import { useConfirm } from "@/components/ui/useConfirm";
 import { Ceci, type EstadoDaCeci } from "@/components/ia/Ceci";
 import { especialidadeDoAgente, NOME_DA_ASSISTENTE } from "@/lib/ia/ceci";
 import { RespostaDaCeci } from "@/components/ia/RespostaDaCeci";
 import { respostaEmTextoSimples } from "@/lib/ia/chat/markdown";
 import { ACEITA_NO_CAMPO, conferirEscolha, separarAnexos } from "@/lib/ia/chat/anexos-regras";
 import { contextoParaMostrar } from "@/lib/ia/chat/telas";
+import { assinarPedidosParaAbrirCeci } from "@/lib/ia/chat/abrirCeci";
 import {
   boasVindasPendentes,
   CHAVE_DAS_BOAS_VINDAS,
@@ -249,6 +252,9 @@ export function ChatDeIA({
   useEffect(() => {
     abertoRef.current = aberto;
   }, [aberto]);
+  // Apagar uma conversa do histórico pergunta antes (15/10/2026): apagava no
+  // clique, sem volta.
+  const { dialog: confirmacao, requestConfirm } = useConfirm();
   // O "deu certo" da Ceci: liga numa resposta ou proposta concluída e se
   // desliga sozinho — não é um estado da conversa, é uma reação.
   const [comemorando, setComemorando] = useState(false);
@@ -305,6 +311,37 @@ export function ChatDeIA({
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, ALTURA_MAXIMA_DO_CAMPO)}px`;
   }, [pergunta, aberto]);
+
+  // Aberta por um botão da tela (14/10/2026 — "Perguntar à Ceci sobre esta
+  // vaga"; ver `src/lib/ia/chat/abrirCeci.ts`). O pedido traz o agente: a
+  // conversa aberta com outro agente dá lugar a uma nova, porque o assunto da
+  // tela só chega ao agente pedido. O assunto vai para o campo de pergunta,
+  // enquanto a pessoa estiver na mesma página.
+  const [assuntoDaTela, setAssuntoDaTela] = useState<{ texto: string; caminho: string } | null>(null);
+  useEffect(
+    () =>
+      assinarPedidosParaAbrirCeci((pedido) => {
+        const alvo = pedido.agente && agentes.some((a) => a.code === pedido.agente) ? pedido.agente : null;
+        if (alvo && alvo !== agentCode) {
+          if (conversaId || mensagens.length > 0) {
+            setConversaId(null);
+            setMensagens([]);
+            setErro(null);
+          }
+          setBoasVindasNaTela(false);
+          setEscolhido(alvo);
+        }
+        // As boas-vindas pendentes contam como vistas: quem abriu pelo botão já veio com o assunto.
+        if (boasVindasEsperando) marcarBoasVindasVistas(entradaDaFoto);
+        setAssuntoDaTela(pedido.assunto ? { texto: pedido.assunto, caminho: window.location.pathname } : null);
+        setVendoHistorico(false);
+        marcarJaAbriu();
+        setRespostaNaoLida(false);
+        setAberto(true);
+        requestAnimationFrame(() => campoRef.current?.focus());
+      }),
+    [agentes, agentCode, conversaId, mensagens.length, boasVindasEsperando, entradaDaFoto]
+  );
 
   if (agentes.length === 0) return null;
   const agente = agentes.find((a) => a.code === agentCode) ?? agentes[0]!;
@@ -641,14 +678,16 @@ export function ChatDeIA({
           no celular o painel ocupa a tela toda e a cobre. */}
       <div aria-hidden className="fixed inset-0 z-40" onClick={fecharChat} />
       <section
-        className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] overflow-hidden"
+        className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-lg overflow-hidden"
         aria-label={`Chat com a ${NOME_DA_ASSISTENTE}`}
       >
         <header className="flex items-center gap-2.5 px-4 py-3">
           {vendoHistorico ? (
-            <button type="button" onClick={() => setVendoHistorico(false)} className="p-1 -ml-1 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Voltar">
+            // Os botões só de ícone do chat são o `IconButton` (15/10/2026):
+            // eram montados à mão, cada um com o seu tamanho.
+            <IconButton size="sm" onClick={() => setVendoHistorico(false)} className="-ml-1" title="Voltar">
               <ArrowLeft size={16} />
-            </button>
+            </IconButton>
           ) : (
             <Ceci tamanho={32} estado={estadoDaCeci} />
           )}
@@ -661,16 +700,8 @@ export function ChatDeIA({
               <p className="text-micro text-fg-muted truncate">{agente.especialidade}</p>
             </div>
           )}
-          <Popover
-            align="right"
-            width={220}
-            aria-label="Mais opções do chat"
-            trigger={({ toggle }) => (
-              <button type="button" onClick={toggle} className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Mais opções" data-dica="Mais opções">
-                <MoreHorizontal size={16} />
-              </button>
-            )}
-          >
+          {/* O "⋯" padrão (`MenuDeMaisAcoes`, 15/10/2026), e não um gatilho à mão. */}
+          <MenuDeMaisAcoes align="right" width={220} rotulo="Mais opções" aria-label="Mais opções do chat">
             {({ close }) => (
               <>
                 <ItemDoMenu
@@ -693,10 +724,10 @@ export function ChatDeIA({
                 </ItemDoMenu>
               </>
             )}
-          </Popover>
-          <button type="button" onClick={fecharChat} className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover" aria-label="Fechar o chat">
+          </MenuDeMaisAcoes>
+          <IconButton size="sm" onClick={fecharChat} title="Fechar o chat">
             <X size={16} />
-          </button>
+          </IconButton>
         </header>
   
         {vendoHistorico ? (
@@ -714,9 +745,25 @@ export function ChatDeIA({
                         {formatInstantDateTime(new Date(c.atualizadaEm), { dateStyle: "short", timeStyle: "short" })}
                       </span>
                     </button>
-                    <button type="button" onClick={() => apagar(c.id)} className="p-2 text-fg-muted hover:text-danger" aria-label="Apagar conversa" data-dica="Apagar">
+                    <IconButton
+                      size="sm"
+                      onClick={() =>
+                        requestConfirm(
+                          {
+                            title: "Apagar esta conversa?",
+                            description: "Ela sai das conversas anteriores e não dá para recuperar.",
+                            confirmLabel: "Apagar",
+                            destructive: true,
+                          },
+                          () => apagar(c.id)
+                        )
+                      }
+                      className="mr-1 hover:text-danger!"
+                      title="Apagar"
+                      aria-label="Apagar conversa"
+                    >
                       <Trash2 size={14} />
-                    </button>
+                    </IconButton>
                   </li>
                 ))}
               </ul>
@@ -930,7 +977,11 @@ export function ChatDeIA({
                     }}
                     rows={1}
                     maxLength={2000}
-                    placeholder={`Pergunte à ${NOME_DA_ASSISTENTE}…`}
+                    placeholder={
+                      assuntoDaTela && assuntoDaTela.caminho === pathname
+                        ? `Pergunte à ${NOME_DA_ASSISTENTE} sobre ${assuntoDaTela.texto}…`
+                        : `Pergunte à ${NOME_DA_ASSISTENTE}…`
+                    }
                     className="min-h-0! flex-1 border-0! bg-transparent! px-0! py-1! text-label! leading-5 shadow-none! focus:shadow-none! focus-visible:shadow-none! overflow-y-auto"
                     aria-label="Pergunta"
                     disabled={enviando}
@@ -939,7 +990,7 @@ export function ChatDeIA({
                     type="submit"
                     disabled={enviando || !pergunta.trim()}
                     aria-label="Enviar"
-                    className="mb-0.5 size-8 flex-shrink-0 inline-flex items-center justify-center rounded-full bg-brand text-on-brand hover:bg-brand-hover disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed transition-colors"
+                    className="mb-0.5 size-8 flex-shrink-0 inline-flex items-center justify-center rounded-full bg-brand-solid text-on-brand hover:bg-brand-solid-hover disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed transition-colors"
                   >
                     <ArrowUp size={16} />
                   </button>
@@ -963,15 +1014,16 @@ export function ChatDeIA({
                         e.target.value = "";
                       }}
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="xs"
                       onClick={() => seletorDeArquivoRef.current?.click()}
                       disabled={enviando}
                       title="PDF, imagem ou planilha — até 3 arquivos e 10 MB"
-                      className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-fs-2 font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)]"
                     >
                       <Paperclip size={13} /> Anexar
-                    </button>
+                    </Button>
                   </span>
                 </div>
               </div>
@@ -979,6 +1031,7 @@ export function ChatDeIA({
           </>
         )}
       </section>
+      {confirmacao}
     </>
   );
 }

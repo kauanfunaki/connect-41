@@ -2,6 +2,7 @@
 // Servem a tela interna e o portal, que só muda o escopo.
 
 import Link from "next/link";
+import { Building2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -237,8 +238,14 @@ export function TabelaDoConsolidado({
   /** Na tela interna, a vencida leva à lista. No portal, não há para onde levar. */
   linkParaContas?: boolean;
 }) {
+  // No cartão e com ícone, como os vazios das outras telas do portal (15/10/2026):
+  // solto, o vazio flutuava no fundo da página.
   if (linhas.length === 0) {
-    return <EmptyState title="Nenhuma empresa com movimento ou conta vencida neste mês" />;
+    return (
+      <Card>
+        <EmptyState icon={<Building2 />} title="Nenhuma empresa com movimento ou conta vencida neste mês" />
+      </Card>
+    );
   }
   const vencidas = (companyId: string, n: number, base: string) =>
     n === 0 ? (

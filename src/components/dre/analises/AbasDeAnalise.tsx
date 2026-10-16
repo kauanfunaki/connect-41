@@ -81,7 +81,7 @@ function NotaDeFonte({ children }: { children: React.ReactNode }) {
 
 function TabelaComparada({ linhas, rotuloA, rotuloB, destacarAcima }: { linhas: LinhaComparada[]; rotuloA: string; rotuloB: string; destacarAcima?: number }) {
   return (
-    <div className="overflow-x-auto border border-border rounded-lg bg-surface">
+    <div className="overflow-x-auto border border-border rounded-lg bg-surface shadow-xs">
       <table className="w-full min-w-[640px] text-ui">
         <thead>
           <tr className={CABECALHO}>
@@ -434,7 +434,7 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
           },
         ]}
       />
-      <div className="overflow-x-auto border border-border rounded-lg bg-surface">
+      <div className="overflow-x-auto border border-border rounded-lg bg-surface shadow-xs">
         <table className="w-full min-w-[680px] text-ui">
           <thead>
             <tr className={CABECALHO}>
@@ -577,7 +577,7 @@ export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
     <>
       {CATEGORIAS.map((cat) => (
         <section key={cat} className="mb-5">
-          <h3 className="text-card-title font-semibold text-fg mb-2">{cat}</h3>
+          <h3 className="text-section font-semibold text-fg mb-2">{cat}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {indicadores
               .filter((i) => i.categoria === cat)
@@ -702,7 +702,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
               <Secao titulo="Diagnóstico" texto={resposta.diagnostico} />
               {resposta.evidencias.length > 0 && (
                 <div>
-                  <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Evidências</p>
+                  <p className="c41-rotulo mb-1">Evidências</p>
                   <ul className="flex flex-col gap-0.5 text-ui text-fg-secondary">
                     {resposta.evidencias.map((e) => (
                       <li key={e}>· {e}</li>
@@ -717,7 +717,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
               </div>
               {resposta.planoDeAcao.length > 0 && (
                 <div>
-                  <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Plano de ação</p>
+                  <p className="c41-rotulo mb-1">Plano de ação</p>
                   <ol className="list-decimal pl-5 text-ui flex flex-col gap-0.5">
                     {resposta.planoDeAcao.map((p) => (
                       <li key={p}>{p}</li>
@@ -751,7 +751,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
 function Secao({ titulo, texto }: { titulo: string; texto: string }) {
   return (
     <div>
-      <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">{titulo}</p>
+      <p className="c41-rotulo mb-1">{titulo}</p>
       <p className="text-ui text-fg">{texto}</p>
     </div>
   );

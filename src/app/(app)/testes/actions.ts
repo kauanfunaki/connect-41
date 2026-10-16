@@ -19,7 +19,10 @@ const MODULE = "recrutamento_testes";
 
 export type GerarLinkTesteResult =
   | { error: string }
-  | { ok: true; token: string; expiresAtLabel: string; emailSent: boolean };
+  // `id`: a página do teste (/testes/[id]) troca para o link novo — gerar
+  // apaga o pendente anterior, e a página dele deixa de existir.
+  // `expiraEm` (ISO): o quadro da ficha conta o prazo do link novo (15/10/2026).
+  | { ok: true; id: string; token: string; expiresAtLabel: string; expiraEm: string; emailSent: boolean };
 
 async function assertPersonEmEscopo(personId: string, ctx: Awaited<ReturnType<typeof getAuthContext>>) {
   const prisma = getPrisma();
@@ -70,7 +73,8 @@ export async function gerarLinkTeste(
 
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + LINK_TTL_DAYS * 24 * 60 * 60 * 1000);
-  await prisma.assessmentLink.create({
+  const criado = await prisma.assessmentLink.create({
+    select: { id: true },
     data: {
       tenantId: ctx.tenantId,
       personId,
@@ -110,7 +114,7 @@ export async function gerarLinkTeste(
   revalidatePath(`/pessoas/${personId}`);
   revalidatePath("/testes");
 
-  return { ok: true, token, expiresAtLabel: formatInstantDate(expiresAt), emailSent };
+  return { ok: true, id: criado.id, token, expiresAtLabel: formatInstantDate(expiresAt), expiraEm: expiresAt.toISOString(), emailSent };
 }
 
 export async function excluirLinkTeste(id: string): Promise<void> {

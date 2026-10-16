@@ -76,6 +76,9 @@ export function useDialog(open: boolean, onClose: () => void) {
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
+        // Marca o Esc como usado, como o Popover: o chat de IA, que escuta na
+        // janela, não fecha junto com a confirmação aberta nele (15/10/2026).
+        e.preventDefault();
         onCloseRef.current();
         return;
       }

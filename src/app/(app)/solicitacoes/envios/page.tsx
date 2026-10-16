@@ -165,20 +165,14 @@ export default async function EnviosPage({
         }
       >
         {linhas.length === 0 ? (
+          // Sem repetir o "Novo envio": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026).
           <EmptyState
             icon={<FileCheck />}
             title={situacao || empresaId ? "Nenhum envio neste recorte" : "Nenhum envio ainda"}
             description={
               podeCriar
-                ? "Crie um envio para mandar ao cliente um documento — guia, contrato, orientação — com prova de que ele viu e, se precisar, o aceite. Ele lê no portal ou pelo link do e-mail."
+                ? "Use “+ Novo envio”, no alto da tela, para mandar ao cliente um documento — guia, contrato, orientação — com prova de que ele viu e, se precisar, o aceite. Ele lê no portal ou pelo link do e-mail."
                 : undefined
-            }
-            action={
-              podeCriar && !situacao ? (
-                <Button href={rotaDoNovoEnvio(empresaId)} variant="secondary">
-                  <Plus size={14} /> Novo envio
-                </Button>
-              ) : undefined
             }
           />
         ) : (

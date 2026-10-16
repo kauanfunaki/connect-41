@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CampoComSugestoes } from "@/components/ui/CampoComSugestoes";
 import { Select } from "@/components/ui/Select";
+import { Switch } from "@/components/ui/Switch";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
@@ -152,22 +153,24 @@ export function LinhaDaDre({
 export function EsconderDoPadrao({ companyId, categoryId, oculta }: { companyId: string; categoryId: string; oculta: boolean }) {
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
+  // Interruptor (15/10/2026), no lugar do botão cujo texto se invertia a cada
+  // clique: mostra o estado, como nos módulos e nas obrigações. Controlado — só
+  // muda quando a página volta do servidor.
   return (
-    <span className="inline-flex items-center gap-2">
-      <Button
-        variant="secondary"
-        size="xs"
+    <span className="inline-flex flex-col items-start gap-0.5">
+      <Switch
+        size="sm"
+        checked={!oculta}
         disabled={pendente}
-        onClick={() =>
+        rotulo="Usar nesta empresa"
+        onCheckedChange={(usar) =>
           startTransition(async () => {
             setErro(null);
-            const r = await esconderDoPadraoNaEmpresa(companyId, categoryId, !oculta);
+            const r = await esconderDoPadraoNaEmpresa(companyId, categoryId, !usar);
             if ("error" in r) setErro(r.error);
           })
         }
-      >
-        {oculta ? "Usar nesta empresa" : "Não usar nesta empresa"}
-      </Button>
+      />
       {erro && <span className="text-micro text-danger">{erro}</span>}
     </span>
   );
@@ -219,11 +222,11 @@ export function EditarCategoriaDaEmpresa({
             <CampoForm label="Grupo do plano" htmlFor={`${id}-grupo`}>
               <Input id={`${id}-grupo`} name="grupoDoPlano" defaultValue={categoria.grupo ?? ""} maxLength={120} />
             </CampoForm>
+            {/* Interruptor (15/10/2026), e não lista Ativa/Inativa; envia "sim" ou "nao". */}
             <CampoForm label="Situação" htmlFor={`${id}-ativa`} helper="Inativa some dos seletores e continua nos relatórios.">
-              <Select id={`${id}-ativa`} name="ativa" defaultValue={categoria.ativa ? "sim" : "nao"}>
-                <option value="sim">Ativa</option>
-                <option value="nao">Inativa</option>
-              </Select>
+              <div className="flex min-h-9 items-center">
+                <Switch id={`${id}-ativa`} name="ativa" value="sim" valorDesligado="nao" defaultChecked={categoria.ativa} rotulo="Ativa" />
+              </div>
             </CampoForm>
           </FieldGrid>
           <CampoForm label="Linha da DRE" htmlFor={`${id}-linha`}>

@@ -1,19 +1,16 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
-import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
-import { Plus, Users2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite, podeExcluir } from "@/lib/auth/context";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { formatInstantDate } from "@/lib/format";
 import { lerTelasBloqueadas } from "@/lib/portal/telasBloqueadas";
 import { FALTA_ATUALIZAR_O_BANCO, resumoDasLiberadas, telasParaLiberar } from "@/lib/portal/telasLiberadas";
+import { FALTA_ATUALIZAR_O_BANCO_DO_PORTAL, empresasLigadasDasContas, portalPorEmpresaPronto } from "@/lib/portal/empresasDaContaDb";
+import { opcoesDeEmpresaDoPortal } from "@/lib/portal/opcoesDeEmpresa";
 import { NovoAcessoDoPortal, PortalAcessosList } from "@/components/portal/PortalAcessosList";
 import { TelasLiberadasDoPortal } from "@/components/portal/TelasLiberadasDoPortal";
 import {
@@ -38,6 +35,10 @@ const ABAS = [
 // Duas abas desde 14/10/2026: os acessos (quem entra) e as telas liberadas
 // (o que os clientes já podem abrir — ver `TelasLiberadasDoPortal`). Era
 // "Acessos do portal", só com a lista.
+//
+// Também desde 14/10/2026 o acesso é ligado direto às empresas (era a um
+// Cliente): a coluna "Cliente" virou "Empresas", e o mesmo acesso se cria e se
+// liga na ficha de cada empresa, em "Acesso ao portal".
 export default async function AdminPortalPage({ searchParams }: { searchParams: Promise<{ aba?: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !isFullWrite(ctx.role)) notFound();
@@ -46,78 +47,51 @@ export default async function AdminPortalPage({ searchParams }: { searchParams: 
   if (aba === "telas") return <AbaDasTelas tenantId={ctx.tenantId} somenteLeitura={ctx.subscriptionReadOnly} />;
 
   const prisma = getPrisma();
-  const [acessos, grupos] = await Promise.all([
+  const [acessos, empresas, pronto] = await Promise.all([
     prisma.portalUser.findMany({
       where: { tenantId: ctx.tenantId },
       orderBy: [{ active: "desc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        active: true,
-        lastLoginAt: true,
-        clientGroupId: true,
-        clientGroup: { select: { name: true } },
-      },
+      select: { id: true, name: true, email: true, active: true, lastLoginAt: true, clientGroupId: true },
     }),
-    prisma.clientGroup.findMany({
-      where: { tenantId: ctx.tenantId, active: true },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, _count: { select: { companies: true } } },
-    }),
+    opcoesDeEmpresaDoPortal(ctx.tenantId),
+    portalPorEmpresaPronto(),
   ]);
-
-  const clientes = grupos.map((g) => ({ id: g.id, nome: g.name, empresas: g._count.companies }));
+  const ligadas = await empresasLigadasDasContas(ctx.tenantId, acessos);
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       {/* A explicação era um parágrafo solto depois do cabeçalho; é o subtítulo dele. */}
       <PageHeader
         title="Portal do cliente"
-        subtitle="Contas de clientes que entram no portal para ver os próprios documentos fiscais. Cada conta
-          enxerga as empresas de um cliente — e só elas."
-        action={grupos.length > 0 && <NovoAcessoDoPortal clientes={clientes} criarAction={criarAcessoDoPortal} />}
+        subtitle="Contas de clientes que entram no portal. Cada conta enxerga as empresas ligadas a ela — e, com “incluir
+          filiais”, as filiais delas. Também dá para criar e ligar acessos na ficha de cada empresa."
+        action={pronto && <NovoAcessoDoPortal empresas={empresas} criarAction={criarAcessoDoPortal} />}
       />
       <AbasDeLink abas={ABAS} ativa="acessos" />
 
-      {/* Sem cliente ativo e sem acesso: o vazio aponta onde se cria cliente.
-          Dizia "Crie um cliente em Empresas" — cliente se cria em Cadastros →
-          Clientes (13/10/2026). Com acessos de clientes inativos, a lista
-          continua aparecendo: é nela que se edita ou exclui. */}
-      {grupos.length === 0 && acessos.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={<Users2 />}
-            title="Nenhum cliente cadastrado"
-            description="O acesso do portal é dado a um cliente, que agrupa as empresas. Crie um cliente em Cadastros → Clientes e vincule as empresas dele antes."
-            action={
-              <Button href="/clientes/novo">
-                <Plus size={14} /> Novo cliente
-              </Button>
-            }
-          />
-        </Card>
-      ) : (
-        <PortalAcessosList
-          acessos={acessos.map((a) => ({
-            id: a.id,
-            nome: a.name,
-            email: a.email,
-            ativo: a.active,
-            clienteId: a.clientGroupId,
-            cliente: a.clientGroup.name,
-            ultimoAcesso: a.lastLoginAt ? formatInstantDate(a.lastLoginAt) : null,
-          }))}
-          clientes={clientes}
-          enviarLinkAction={enviarLinkDeSenha}
-          alternarAction={alternarAcessoDoPortal}
-          editarAction={editarAcessoDoPortal}
-          resumoParaExcluirAction={resumoDoAcessoParaExcluir}
-          excluirAction={excluirAcessoDoPortal}
-          podeExcluir={podeExcluir(ctx)}
-        />
+      {!pronto && (
+        <Aviso tom="atencao" className="mb-4 max-w-3xl">
+          {FALTA_ATUALIZAR_O_BANCO_DO_PORTAL}
+        </Aviso>
       )}
+
+      <PortalAcessosList
+        acessos={acessos.map((a) => ({
+          id: a.id,
+          nome: a.name,
+          email: a.email,
+          ativo: a.active,
+          empresas: (ligadas.get(a.id) ?? []).map((e) => ({ id: e.id, nome: e.nome, incluiFiliais: e.incluiFiliais, filiais: e.filiais })),
+          ultimoAcesso: a.lastLoginAt ? formatInstantDate(a.lastLoginAt) : null,
+        }))}
+        empresas={empresas}
+        enviarLinkAction={enviarLinkDeSenha}
+        alternarAction={alternarAcessoDoPortal}
+        editarAction={editarAcessoDoPortal}
+        resumoParaExcluirAction={resumoDoAcessoParaExcluir}
+        excluirAction={excluirAcessoDoPortal}
+        podeExcluir={podeExcluir(ctx)}
+      />
     </PageContainer>
   );
 }
@@ -134,7 +108,6 @@ async function AbaDasTelas({ tenantId, somenteLeitura }: { tenantId: string; som
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <PageHeader
         title="Portal do cliente"
         subtitle="As telas que os clientes do escritório já podem abrir. Libere cada uma depois de testar."

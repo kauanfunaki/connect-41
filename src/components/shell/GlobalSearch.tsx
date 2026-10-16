@@ -108,6 +108,11 @@ function Atalho({ className = "" }: { className?: string }) {
 // (abaixo de 1024px). O AppShell mostra uma ou outra pelo tamanho da tela, e
 // o Ctrl+K vai para a que está visível.
 //
+// A terceira, "icone" (14/10/2026): na faixa de ícones do menu recolhido, a
+// busca é uma lupa. Clicar nela (ou o Ctrl+K) abre o mesmo campo, com os
+// mesmos resultados, flutuando à direita da faixa; Esc fecha e devolve o foco
+// à lupa.
+//
 // Setas ↑↓ e Enter (07/10/2026): o campo é um combobox, como o
 // `SearchableSelect` — as setas andam pelos resultados de todos os grupos, o
 // Enter abre o marcado (ou, sem marcado, o primeiro) e o leitor de tela ouve
@@ -119,11 +124,11 @@ export function GlobalSearch({
   atalho,
 }: {
   telas?: TelaNavegavel[];
-  variante?: "topo" | "lateral";
+  variante?: "topo" | "lateral" | "icone";
   /**
    * Esta é a busca que o Ctrl+K abre. Sem a prop, vale a regra do tamanho da
-   * tela (lateral no computador, topo no celular); com o menu lateral
-   * recolhido (08/10/2026), o casco passa o atalho para a busca do topo.
+   * tela (a da lateral no computador, a do topo no celular). O casco passa a
+   * prop: no computador, o atalho é da lateral — aberta ou na faixa de ícones.
    */
   atalho?: boolean;
 }) {
@@ -138,6 +143,7 @@ export function GlobalSearch({
   const [ativo, setAtivo] = useState(-1);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lupaRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const idBase = useId();
   const idDaLista = `${idBase}-lista`;
@@ -170,7 +176,7 @@ export function GlobalSearch({
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         const telaGrande = window.matchMedia("(min-width: 1024px)").matches;
-        const minha = atalho ?? (variante === "lateral") === telaGrande;
+        const minha = atalho ?? (variante !== "topo") === telaGrande;
         if (!minha) return;
         e.preventDefault();
         setMobileExpanded(true);
@@ -253,6 +259,11 @@ export function GlobalSearch({
    * Esc fecha o painel.
    */
   function aoTeclar(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape" && variante === "icone") {
+      closeMobile();
+      lupaRef.current?.focus();
+      return;
+    }
     if (e.key === "Escape") {
       setOpen(false);
       setAtivo(-1);
@@ -309,7 +320,9 @@ export function GlobalSearch({
   const classeDoPainel =
     variante === "lateral"
       ? "scroll-y absolute left-0 top-[calc(100%+8px)] w-[480px] max-w-[calc(100vw-2rem)] bg-surface-elevated border border-border-strong rounded-lg shadow-lg py-2 z-50 max-h-[420px] overflow-y-auto"
-      : "scroll-y absolute left-0 top-[calc(100%+10px)] w-full bg-surface-elevated border border-border-strong rounded-lg shadow-lg py-2 z-20 max-h-[360px] overflow-y-auto";
+      : variante === "icone"
+        ? "scroll-y absolute left-0 top-[calc(100%+8px)] w-full bg-surface-elevated border border-border-strong rounded-lg shadow-lg py-2 z-50 max-h-[420px] overflow-y-auto"
+        : "scroll-y absolute left-0 top-[calc(100%+10px)] w-full bg-surface-elevated border border-border-strong rounded-lg shadow-lg py-2 z-20 max-h-[360px] overflow-y-auto";
 
   let indice = 0;
   const painel = painelAberto && (
@@ -360,6 +373,64 @@ export function GlobalSearch({
     setOpen(true);
     setAtivo(-1);
   };
+
+  if (variante === "icone") {
+    return (
+      <div
+        ref={rootRef}
+        className="relative"
+        // Tab para fora do campo fecha (o foco foi para outro lugar do menu);
+        // o clique fora já fecha pelo `mousedown` acima.
+        onBlur={(e) => {
+          const para = e.relatedTarget;
+          if (mobileExpanded && para instanceof Node && !rootRef.current?.contains(para)) closeMobile();
+        }}
+      >
+        {/* A lupa tem o desenho do campo da coluna aberta (borda e fundo de
+            campo), encolhido no quadrado de 40px dos itens da faixa. */}
+        <button
+          ref={lupaRef}
+          type="button"
+          onClick={() => {
+            if (mobileExpanded) {
+              closeMobile();
+              return;
+            }
+            setMobileExpanded(true);
+            setOpen(true);
+          }}
+          aria-label="Buscar empresas, pessoas, telas…"
+          aria-expanded={mobileExpanded}
+          // Com o campo aberto ao lado, a dica cobriria o campo.
+          data-dica={mobileExpanded ? undefined : "Buscar (Ctrl K)"}
+          data-dica-lado="direita"
+          className="flex items-center justify-center size-10 rounded-md border border-border bg-input-bg text-fg-muted transition-colors hover:text-fg hover:border-border-strong"
+        >
+          <Search size={18} aria-hidden />
+        </button>
+        {mobileExpanded && (
+          <div className="c41-surgir absolute left-[calc(100%+20px)] top-0 z-50 w-[480px] max-w-[calc(100vw-6rem)]">
+            <div className="flex items-center gap-2.5 h-10 px-3 rounded-lg border border-border-strong bg-surface-elevated shadow-lg focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
+              <Search size={16} className="text-fg-muted flex-shrink-0" aria-hidden />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={aoDigitar}
+                onFocus={() => setOpen(true)}
+                onKeyDown={aoTeclar}
+                placeholder="Buscar empresas, pessoas, telas…"
+                aria-label="Buscar empresas, pessoas, telas…"
+                {...propsDoCombobox}
+                className="w-full min-w-0 h-full bg-transparent text-search text-fg placeholder:text-fg-muted outline-none border-none focus-visible:shadow-none!"
+              />
+            </div>
+            {painel}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (variante === "lateral") {
     return (

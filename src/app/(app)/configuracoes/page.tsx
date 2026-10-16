@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { ChevronRight, UserRound, ShieldCheck, KeyRound, Palette, Bell, Settings2, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { menuDasConfiguracoes } from "@/lib/configuracoes/areas";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -40,11 +41,15 @@ export default async function ConfiguracoesPage() {
   const doEscritorio = expedientes.escritorio ?? EXPEDIENTE_PADRAO;
 
   const roleLabel = ROLE_LABELS[ctx.role as keyof typeof ROLE_LABELS] ?? ctx.role;
+  // Quem tem o menu das configurações (14/10/2026) chega aqui pelo item "Sua
+  // conta", e a trilha já diz "Configurações › Sua conta"; para os outros, esta
+  // é a tela de configurações inteira.
+  const temMenu = menuDasConfiguracoes({ role: ctx.role, setores: ctx.sectors.length, autoatendimento: false }) !== null;
 
   return (
     <PageContainer>
       <PageHeader
-        title="Configurações"
+        title={temMenu ? "Sua conta" : "Configurações"}
         subtitle="Sua conta e suas preferências neste workspace."
       />
 
@@ -97,21 +102,22 @@ export default async function ConfiguracoesPage() {
           publicKey={getVapidPublicKey()}
           acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
         />
-        <Link
+        {/* O cartão-atalho do app (`Card href`): borda azul, sobe 2px. */}
+        <Card
           href="/notificacoes"
-          className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
+          className="group flex items-center justify-between gap-2 px-3.5 py-2.5"
         >
           <span className="text-fs-3 text-fg">Ver todas as notificações</span>
           <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
-        </Link>
+        </Card>
         {/* 05/10/2026: os tipos que aparecem em cada aba do sino e da central. */}
-        <Link
+        <Card
           href="/notificacoes?preferencias=abrir"
-          className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
+          className="group flex items-center justify-between gap-2 px-3.5 py-2.5"
         >
           <span className="text-fs-3 text-fg">Escolher o que cada aba mostra</span>
           <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
-        </Link>
+        </Card>
       </Secao>
 
       {isFullWrite(ctx.role) && (
@@ -121,7 +127,7 @@ export default async function ConfiguracoesPage() {
           icone={<Settings2 />}
         >
           <Button href="/admin" variant="secondary">
-            <Settings2 size={14} /> Abrir administração
+            <Settings2 size={14} /> Abrir as configurações do escritório
           </Button>
         </Secao>
       )}

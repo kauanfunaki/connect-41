@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 import { CADASTROS_LAST_TAB_KEY, type CadastrosTab } from "@/lib/cadastrosNav";
 import { caminhoDoMenuAtivo as isActivePath } from "@/lib/caminhoDoMenu";
 
@@ -20,6 +20,77 @@ function getLastTabServerSnapshot(): CadastrosTab {
   return "empresas";
 }
 
+// ─── A faixa de ícones (14/10/2026) ─────────────────────────────────────────
+//
+// O menu recolhido no computador deixou de sumir: vira uma faixa de 64px só
+// com os ícones (desenho aprovado pelo Kauan em 14/10). Os itens são os
+// mesmos componentes — quem diz como desenhar é este contexto, que o AppShell
+// liga só de lg para cima (abaixo, a gaveta é sempre o menu inteiro).
+
+const FaixaDoMenu = createContext(false);
+
+/** Liga a faixa de ícones para os itens de dentro. */
+export const ProvedorDaFaixa = FaixaDoMenu.Provider;
+
+/** O item está na faixa de ícones (menu recolhido no computador)? */
+export function useNaFaixa(): boolean {
+  return useContext(FaixaDoMenu);
+}
+
+/**
+ * O desenho de um item na faixa: só o ícone, num quadrado de 40px. O ativo é
+ * o mesmo da coluna aberta — azul cheio, ícone branco — e a barra na cor do
+ * setor fica na borda da faixa, onde fica na coluna (`-left-3`: o item começa
+ * 12px para dentro).
+ */
+export function classeDoItemNaFaixa(active: boolean): string {
+  return `relative flex items-center justify-center size-10 flex-shrink-0 rounded-lg transition-colors ${
+    active ? "text-on-brand bg-brand-solid" : "text-fg-secondary hover:text-fg hover:bg-surface-hover"
+  }`;
+}
+
+/**
+ * Os atributos do nome na faixa: o `aria-label` é o nome que o leitor de tela
+ * lê (o texto não está mais à vista), e a dica do Connect mostra o mesmo nome à
+ * direita do ícone — no mouse e no foco do teclado (ver DicaFlutuante).
+ */
+export function nomeNaFaixa(nome: string, dica = nome) {
+  return { "aria-label": nome, "data-dica": dica, "data-dica-lado": "direita" } as const;
+}
+
+/**
+ * O miolo do item na faixa. `comTelas`: o item tem telas dentro (Cadastros, os
+ * grupos de um setor, o painel da Gestão) — um pontinho no canto avisa. A
+ * lista dessas telas não aparece na faixa; o clique leva à tela principal.
+ */
+function IconeNaFaixa({ icon, active, comTelas = false }: { icon: React.ReactNode; active: boolean; comTelas?: boolean }) {
+  return (
+    <>
+      {active && <span aria-hidden className="absolute -left-3 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />}
+      <span aria-hidden className="flex-shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px]">
+        {icon}
+      </span>
+      {comTelas && <span aria-hidden data-marca="telas" className="absolute top-[7px] right-[7px] size-1.5 rounded-full bg-current opacity-70" />}
+    </>
+  );
+}
+
+/**
+ * O título de um bloco do menu (Geral, Fixadas, o setor, Meus Setores). Na
+ * faixa vira um fio fino entre os blocos; o nome continua lá, só para o leitor
+ * de tela. `primeiro`: o bloco que abre a lista não ganha fio em cima.
+ */
+export function TituloDoBloco({ nome, primeiro = false, children }: { nome: string; primeiro?: boolean; children: React.ReactNode }) {
+  const naFaixa = useNaFaixa();
+  if (!naFaixa) return <>{children}</>;
+  return (
+    <div data-separador className={primeiro ? undefined : "py-2"}>
+      <p className="sr-only">{nome}</p>
+      {!primeiro && <span aria-hidden className="block ml-2 w-6 h-px bg-border" />}
+    </div>
+  );
+}
+
 type NavItemProps = {
   href: string;
   icon: React.ReactNode;
@@ -29,6 +100,8 @@ type NavItemProps = {
    * outros — a home do portal, `/portal`, acenderia em qualquer tela dele.
    */
   exact?: boolean;
+  /** Tem telas dentro (o painel ao lado) — na faixa, o pontinho no canto. */
+  comTelas?: boolean;
 };
 
 /**
@@ -50,9 +123,18 @@ function BarraAtiva() {
   return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
 }
 
-export function NavItem({ href, icon, label, exact = false }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false, comTelas = false }: NavItemProps) {
   const pathname = usePathname();
+  const naFaixa = useNaFaixa();
   const active = exact ? pathname === href : isActivePath(pathname, href);
+
+  if (naFaixa) {
+    return (
+      <Link href={href} aria-current={active ? "page" : undefined} {...nomeNaFaixa(label)} className={classeDoItemNaFaixa(active)}>
+        <IconeNaFaixa icon={icon} active={active} comTelas={comTelas} />
+      </Link>
+    );
+  }
 
   return (
     <Link
@@ -92,7 +174,23 @@ export function GrupoNavItem({
   itens: ItemDeModulo[];
 }) {
   const pathname = usePathname();
+  const naFaixa = useNaFaixa();
   const active = isActivePath(pathname, href) || itens.some((i) => isActivePath(pathname, i.href));
+
+  // Na faixa, a contagem vai para o nome: "Contas, 4 telas".
+  if (naFaixa) {
+    const telas = `${itens.length} ${itens.length === 1 ? "tela" : "telas"}`;
+    return (
+      <Link
+        href={href}
+        aria-current={active ? "page" : undefined}
+        {...nomeNaFaixa(`${label}, ${telas}`, `${label} · ${telas}`)}
+        className={classeDoItemNaFaixa(active)}
+      >
+        <IconeNaFaixa icon={icon} active={active} comTelas />
+      </Link>
+    );
+  }
 
   return (
     <Link
@@ -122,10 +220,19 @@ type CadastrosNavItemProps = {
 // como padrão na ausência dessa informação.
 export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
   const pathname = usePathname();
+  const naFaixa = useNaFaixa();
   const lastTab = useSyncExternalStore(subscribeToStorage, getLastTabSnapshot, getLastTabServerSnapshot);
 
   const active = isActivePath(pathname, "/empresas") || isActivePath(pathname, "/pessoas");
   const href = `/${lastTab}`;
+
+  if (naFaixa) {
+    return (
+      <Link href={href} aria-current={active ? "page" : undefined} {...nomeNaFaixa(label)} className={classeDoItemNaFaixa(active)}>
+        <IconeNaFaixa icon={icon} active={active} comTelas />
+      </Link>
+    );
+  }
 
   return (
     <Link
@@ -158,6 +265,18 @@ type SectorNavItemProps = {
 // com ícone de 15px logo abaixo de "Início… Agenda" em 14px médio com 16px, e os
 // setores pareciam menores e mais apagados sem motivo escrito.
 export function SectorNavItem({ label, color, icon, onEntrar }: SectorNavItemProps) {
+  const naFaixa = useNaFaixa();
+
+  // Na faixa: o ícone do setor com a bolinha da cor dele no canto.
+  if (naFaixa) {
+    return (
+      <button type="button" onClick={onEntrar} {...nomeNaFaixa(label)} className={classeDoItemNaFaixa(false)}>
+        <IconeNaFaixa icon={icon ?? <span className="text-ui font-semibold">{label.charAt(0)}</span>} active={false} />
+        <span aria-hidden data-marca="cor" className="absolute top-[7px] right-[7px] size-[7px] rounded-full" style={{ background: color }} />
+      </button>
+    );
+  }
+
   return (
     <button type="button" onClick={onEntrar} className={classeDoItem(false, "w-[calc(100%+0.75rem)] text-label font-medium")}>
       <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: color }} />

@@ -1,308 +1,351 @@
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { ScrollText } from "lucide-react";
-import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { CalendarClock, ScrollText, Trash2, Users } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
-import { FiltroDaColunaNaUrl, FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
-import { lerLista } from "@/lib/filtroNaUrl";
-import { Pagination } from "@/components/shared/Pagination";
-import { Badge } from "@/components/ui/Badge";
-import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
-import { formatInstantDateTime } from "@/lib/format";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { BarraDaAuditoria, type BotaoDeTipo, type ChipDeLista, type ChipDoPeriodo } from "@/components/auditoria/BarraDaAuditoria";
+import { LinhaDoTempo, type DiaNaTela, type EventoNaTela } from "@/components/auditoria/LinhaDoTempo";
+import { getAuthContext } from "@/lib/auth/context";
+import { getPrisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
+import { getSectorMaps } from "@/lib/sectors";
+import { formatInstantTime } from "@/lib/format";
+import { hojeIso } from "@/lib/datas/calendario";
+import {
+  ACOES,
+  AREAS_DA_AUDITORIA,
+  ROTULO_DO_TIPO,
+  areaDaAcao,
+  codigosDaArea,
+  codigosDoTipo,
+  codigosQueBatemComABusca,
+  descricaoDaAcao,
+  tiposQueBatemComABusca,
+} from "@/lib/auditoria/acoes";
+import { cabecalhoDoDia, contarPorDia, fimDoDia, inicioDoDia, nomeCurtoDoDia, OPCOES_DE_PERIODO, periodoCurto } from "@/lib/auditoria/dias";
+import { DIAS_POR_VEZ, MAIS_POR_VEZ, POR_DIA, hrefDaAuditoria, hrefDoPeriodo, lerFiltros, temFiltro } from "@/lib/auditoria/filtros";
+import { fraseDoEvento } from "@/lib/auditoria/frase";
+import { empresaNosDetalhes, fatosDoRegistro, mudancasDoRegistro, nomeNosDetalhes, registroCompleto } from "@/lib/auditoria/metadados";
+import { contagemPorTipo, metricasDaAuditoria, opcoesDeArea, pessoasQueAgiram } from "@/lib/auditoria/metricas";
+import { chaveDoAlvo, resolverReferencias } from "@/lib/auditoria/alvos";
 
-const ACTION_LABEL: Record<string, string> = {
-  "company.create": "criou a empresa",
-  "company.update": "editou a empresa",
-  "company.delete": "excluiu a empresa",
-  "person.create": "criou a pessoa",
-  "person.update": "editou a pessoa",
-  "person.delete": "excluiu a pessoa",
-  "handoff.create": "solicitou transferência",
-  "handoff.accept": "aceitou transferência",
-  "handoff.reject": "rejeitou transferência",
-  "handoff.assign": "atribuiu responsável de transferência",
-  "sector.create": "criou o setor",
-  "sector.update": "editou o setor",
-  "sector.menu.show": "mostrou uma tela no menu Geral do setor",
-  "sector.menu.hide": "escondeu uma tela do menu Geral do setor",
-  "sector.menu.reset": "voltou o menu Geral do setor ao padrão",
-  "tag.create": "criou a tag",
-  "tag.update": "editou a tag",
-  "tag.delete": "excluiu a tag",
-  "customfield.create": "criou o campo customizado",
-  "customfield.update": "editou o campo customizado",
-  "customfield.delete": "excluiu o campo customizado",
-  "branch.create": "criou a filial",
-  "branch.update": "editou a filial",
-  "competency.create": "criou a competência",
-  "competency.update": "editou a competência",
-  "competency.delete": "excluiu a competência",
-  "holiday.create": "cadastrou o feriado",
-  "holiday.delete": "excluiu o feriado",
-  "holiday.import": "importou feriados nacionais",
-  "module.enable": "ativou o módulo",
-  "module.disable": "desativou o módulo",
-  "portal.tela.bloqueada": "bloqueou uma tela do portal",
-  "portal.tela.liberada": "liberou uma tela do portal",
-  "user.create": "criou o usuário",
-  "user.update": "editou o usuário",
-  "user.activate": "ativou o usuário",
-  "user.deactivate": "desativou o usuário",
-  "user.delete": "excluiu o usuário",
-  "tenant.update": "editou os dados do tenant",
-  "tenant.ai.update": "configurou a integração de IA",
-  "tenant.ai.remove": "removeu a configuração de IA",
-  "companyservice.create": "adicionou um setor contratado",
-  "companyservice.assign": "atribuiu responsável de setor",
-  "meeting.create": "agendou uma reunião",
-  "meeting.update": "editou uma reunião",
-  "meeting.delete": "removeu uma reunião",
-  "integration.connect": "conectou uma integração",
-  "integration.disconnect": "desconectou uma integração",
-  "lead.situacao": "mudou a situação do lead",
-  "lead.responsavel": "trocou o responsável do lead",
-  "lead.observacoes": "editou as observações do lead",
-  "lead.excluido": "excluiu um lead",
-};
+type Onde = Prisma.AuditLogWhereInput;
 
-const PER_PAGE = 50;
+/** Teto da contagem por dia: a lista de instantes do período, que só traz a data. */
+const TETO_DE_INSTANTES = 50_000;
 
-function describeMetadata(metadata: unknown): string | null {
-  if (!metadata || typeof metadata !== "object") return null;
-  // Objeto e lista (as contagens por tabela da exclusão, 13/10/2026) ficam de
-  // fora da linha — o resumo legível vai em `removido`.
-  const entries = Object.entries(metadata as Record<string, unknown>).filter(
-    ([, v]) => v !== null && v !== undefined && v !== "" && typeof v !== "object"
-  );
-  if (entries.length === 0) return null;
-  return entries.map(([k, v]) => `${k}: ${v}`).join(" · ");
+const NUMERO = new Intl.NumberFormat("pt-BR");
+
+/**
+ * A busca: nome de quem agiu, a frase e a área da ação, o tipo do cadastro, a
+ * empresa (o cadastro da empresa e o que guardou o id dela) e o texto que a
+ * linha guardou nos detalhes (o nome de uma pessoa excluída, de uma pasta).
+ * O texto dos detalhes é procurado direto no MySQL, só no período escolhido;
+ * se falhar, a busca segue sem ele.
+ */
+async function ondeDaBusca(tenantId: string, busca: string, de: Date, ate: Date): Promise<Onde> {
+  const prisma = getPrisma();
+  const empresas = await prisma.company
+    .findMany({
+      where: { tenantId, OR: [{ name: { contains: busca } }, { displayName: { contains: busca } }, { tradeName: { contains: busca } }] },
+      select: { id: true },
+      take: 50,
+    })
+    .catch(() => [] as { id: string }[]);
+  const empresaIds = empresas.map((e) => e.id);
+
+  let idsNosDetalhes: string[] = [];
+  try {
+    const porEmpresa = empresaIds.length
+      ? Prisma.sql`OR JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.companyId')) IN (${Prisma.join(empresaIds)})`
+      : Prisma.empty;
+    const linhas = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM audit_logs
+      WHERE tenantId = ${tenantId} AND createdAt >= ${de} AND createdAt < ${ate}
+        AND (CAST(metadata AS CHAR) LIKE ${`%${busca}%`} ${porEmpresa})
+      LIMIT 5000`;
+    idsNosDetalhes = linhas.map((l) => l.id);
+  } catch (err) {
+    console.error("[auditoria] busca nos detalhes", err);
+  }
+
+  const codigos = codigosQueBatemComABusca(busca, Object.keys(ACOES));
+  const tipos = tiposQueBatemComABusca(busca);
+  const ou: Onde[] = [{ actorName: { contains: busca } }, { user: { is: { name: { contains: busca } } } }, { action: { contains: busca } }];
+  if (codigos.length) ou.push({ action: { in: codigos } });
+  if (tipos.length) ou.push({ entityType: { in: tipos } });
+  if (empresaIds.length) ou.push({ entityType: "Company", entityId: { in: empresaIds } });
+  if (idsNosDetalhes.length) ou.push({ id: { in: idsNosDetalhes } });
+  return { OR: ou };
 }
 
-// Só SUPER_ADMIN acessa — trilha de auditoria é informação sensível cross-setor.
-export default async function AuditoriaPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    /** Funil das colunas Usuário e Ação — parâmetro repetido, um por valor escolhido. */
-    userId?: string | string[];
-    action?: string | string[];
-    entityType?: string;
-    from?: string;
-    to?: string;
-    page?: string;
-  }>;
-}) {
-  const { userId, action, entityType, from, to, page } = await searchParams;
-  const usuarios = lerLista(userId);
-  const acoes = lerLista(action);
+function ondeDaPessoa(pessoa: string | null): Onde {
+  if (!pessoa) return {};
+  if (pessoa.startsWith("nome:")) return { userId: null, actorName: pessoa.slice(5) };
+  return { userId: pessoa };
+}
+
+// Só SUPER_ADMIN acessa — a trilha é informação sensível de todos os setores.
+//
+// Linha do tempo por dia (escolha "Auditoria · B" do Kauan, 14/10/2026), com os
+// números do topo da alternativa A. Era uma tabela com os códigos das ações
+// ("financeiro.entry.reversed") e o tipo do cadastro em inglês.
+export default async function AuditoriaPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await getAuthContext();
   if (ctx.role !== "SUPER_ADMIN") notFound();
 
+  const agora = new Date();
+  const hoje = hojeIso(agora);
+  const f = lerFiltros(await searchParams, hoje);
   const prisma = getPrisma();
-  const pageNum = Math.max(1, parseInt(page ?? "1"));
+  const tenantId = ctx.tenantId;
 
-  const base = {
-    tenantId: ctx.tenantId,
-    ...(entityType ? { entityType } : {}),
-    ...(from || to
-      ? {
-          createdAt: {
-            ...(from ? { gte: new Date(`${from}T00:00:00.000Z`) } : {}),
-            ...(to ? { lte: new Date(`${to}T23:59:59.999Z`) } : {}),
-          },
-        }
-      : {}),
-  };
-  // Funil de Usuário e Ação (02/10). A trilha é paginada, então filtra aqui,
-  // na base inteira — ver `FiltroDaColunaNaUrl`. Cada funil conta sem o
-  // próprio filtro, em cascata com o outro.
-  const ondeUsuario = usuarios.length > 0 ? { userId: { in: usuarios } } : {};
-  const ondeAcao = acoes.length > 0 ? { action: { in: acoes } } : {};
-  const where = { AND: [base, ondeUsuario, ondeAcao] };
+  const de = inicioDoDia(f.periodo.de);
+  const ate = fimDoDia(f.periodo.ate);
+  const doPeriodo: Onde = { tenantId, createdAt: { gte: de, lt: ate } };
+  const daPessoa = ondeDaPessoa(f.pessoa);
+  const daBusca: Onde = f.busca ? await ondeDaBusca(tenantId, f.busca, de, ate) : {};
 
-  const [logs, total, users, porUsuario, porAcao, entityTypeRows] = await Promise.all([
-    prisma.auditLog.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (pageNum - 1) * PER_PAGE,
-      take: PER_PAGE,
-      include: { user: { select: { name: true } } },
-    }),
-    prisma.auditLog.count({ where }),
-    prisma.user.findMany({
-      where: { tenantId: ctx.tenantId },
-      select: { id: true, name: true },
-    }),
-    prisma.auditLog.groupBy({ by: ["userId"], where: { AND: [base, ondeAcao] }, _count: { _all: true } }),
-    prisma.auditLog.groupBy({ by: ["action"], where: { AND: [base, ondeUsuario] }, _count: { _all: true } }),
-    prisma.auditLog.findMany({
-      where: { tenantId: ctx.tenantId, entityType: { not: null } },
-      distinct: ["entityType"],
-      select: { entityType: true },
-      orderBy: { entityType: "asc" },
-    }),
+  // As ações do recorte (sem área e sem tipo): delas saem as áreas, os tipos e os números.
+  const porAcaoBruto = await prisma.auditLog.groupBy({
+    by: ["action"],
+    where: { AND: [doPeriodo, daPessoa, daBusca] },
+    _count: { _all: true },
+  });
+  const porAcaoTodas = porAcaoBruto.map((g) => ({ acao: g.action, total: g._count._all }));
+  const daAreaCodigos = f.area ? codigosDaArea(porAcaoTodas.map((p) => p.acao), f.area) : null;
+  const porAcao = daAreaCodigos ? porAcaoTodas.filter((p) => daAreaCodigos.includes(p.acao)) : porAcaoTodas;
+  const daArea: Onde = daAreaCodigos ? { action: { in: daAreaCodigos } } : {};
+  const doTipo: Onde = f.tipo ? { action: { in: codigosDoTipo(porAcao.map((p) => p.acao), f.tipo) } } : {};
+  const exclusoes = codigosDoTipo(porAcao.map((p) => p.acao), "excluiu");
+  const completo: Onde = { AND: [doPeriodo, daPessoa, daArea, doTipo, daBusca] };
+
+  const [atoresBruto, ultimaExclusao, deHoje, instantes, setores] = await Promise.all([
+    prisma.auditLog.groupBy({ by: ["userId", "actorName"], where: { AND: [doPeriodo, daArea, daBusca] }, _count: { _all: true } }),
+    exclusoes.length
+      ? prisma.auditLog.findFirst({
+          where: { AND: [doPeriodo, daPessoa, daArea, daBusca, { action: { in: exclusoes } }] },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        })
+      : Promise.resolve(null),
+    prisma.auditLog.count({ where: { AND: [{ tenantId, createdAt: { gte: inicioDoDia(hoje) } }, daPessoa, daArea, daBusca] } }),
+    prisma.auditLog.findMany({ where: completo, select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: TETO_DE_INSTANTES }),
+    getSectorMaps(tenantId),
   ]);
 
-  const totalPages = Math.ceil(total / PER_PAGE);
-  const hasFilters = !!(usuarios.length > 0 || acoes.length > 0 || entityType || from || to);
+  // Quem agiu: o nome atual de quem ainda tem conta; o guardado, de quem foi excluído.
+  const idsDosAtores = [...new Set(atoresBruto.flatMap((a) => (a.userId ? [a.userId] : [])))];
+  const usuarios = idsDosAtores.length ? await prisma.user.findMany({ where: { id: { in: idsDosAtores } }, select: { id: true, name: true } }) : [];
+  const pessoas = pessoasQueAgiram(
+    atoresBruto.map((a) => ({ userId: a.userId, nome: a.actorName, total: a._count._all })),
+    new Map(usuarios.map((u) => [u.id, u.name]))
+  );
 
-  const porNome = (a: { rotulo: string }, b: { rotulo: string }) =>
-    a.rotulo.localeCompare(b.rotulo, "pt-BR", { sensitivity: "base" });
-  const nomeDoUsuario = new Map(users.map((u) => [u.id, u.name]));
-  // Ação de usuário já excluído (userId nulo desde 13/10/2026) aparece na
-  // trilha com o nome guardado, mas não entra no funil: não há por quem filtrar.
-  const opcoesDeUsuario = porUsuario
-    .flatMap((g) => (g.userId ? [{ valor: g.userId, rotulo: nomeDoUsuario.get(g.userId) ?? g.userId, n: g._count._all }] : []))
-    .sort(porNome);
-  const opcoesDeAcao = porAcao
-    .map((g) => ({ valor: g.action, rotulo: ACTION_LABEL[g.action] ?? g.action, n: g._count._all }))
-    .sort(porNome);
+  const metricas = metricasDaAuditoria({
+    porAcao,
+    pessoas: f.pessoa ? pessoas.filter((p) => p.valor === f.pessoa).length : pessoas.length,
+    ultimaExclusao: ultimaExclusao?.createdAt ?? null,
+    hoje: deHoje,
+    agora,
+  });
 
-  // Carrega o funil (parâmetro repetido) junto: sem ele, virar a página ou
-  // limpar o período apagava o filtro de usuário e de ação.
-  function buildUrl(params: Record<string, string | undefined>) {
-    const q = new URLSearchParams();
-    const merged = { entityType, from, to, page, ...params };
-    for (const [k, v] of Object.entries(merged)) {
-      if (v) q.set(k, v);
-    }
-    for (const u of usuarios) q.append("userId", u);
-    for (const a of acoes) q.append("action", a);
-    return `/admin/auditoria?${q.toString()}`;
-  }
+  // ── A linha do tempo: os dias com ação, e as ações de cada dia à vista ──
+  const diasComAcao = contarPorDia(instantes.map((i) => i.createdAt));
+  const diasAVista = diasComAcao.slice(0, f.dias);
+  const porDia = await Promise.all(
+    diasAVista.map(async ({ dia, total }) => ({
+      dia,
+      total,
+      linhas: await prisma.auditLog.findMany({
+        where: { AND: [completo, { createdAt: { gte: inicioDoDia(dia), lt: fimDoDia(dia) } }] },
+        orderBy: { createdAt: "desc" },
+        take: f.dia === dia ? f.ver : POR_DIA,
+        include: { user: { select: { name: true, photoUrl: true } } },
+      }),
+    }))
+  );
+
+  const resolvidos = await resolverReferencias(
+    tenantId,
+    porDia.flatMap((d) => d.linhas).map((l) => ({ entityType: l.entityType, entityId: l.entityId, metadata: l.metadata })),
+    setores.labels
+  );
+
+  const dias: DiaNaTela[] = porDia.map(({ dia, total, linhas }) => {
+    const { titulo, apoio } = cabecalhoDoDia(dia, total, hoje);
+    const restantes = total - linhas.length;
+    const proximos = Math.min(restantes, MAIS_POR_VEZ);
+    const doDia = nomeCurtoDoDia(dia, hoje);
+    return {
+      dia,
+      titulo,
+      apoio,
+      eventos: linhas.map((l): EventoNaTela => {
+        const alvo = l.entityType && l.entityId ? (resolvidos.alvos.get(chaveDoAlvo(l.entityType, l.entityId)) ?? null) : null;
+        const empresaId = alvo?.empresaId ?? empresaNosDetalhes(l.metadata);
+        const empresa = empresaId ? (resolvidos.empresas.get(empresaId) ?? null) : null;
+        const nomeDoAtor = l.user?.name ?? l.actorName ?? null;
+        const descricao = descricaoDaAcao(l.action);
+        const nomeNaFrase = descricao.comNome === false ? null : (alvo?.nome ?? nomeNosDetalhes(l.metadata, descricao.chaveDoNome));
+        return {
+          id: l.id,
+          hora: formatInstantTime(l.createdAt, { hour: "2-digit", minute: "2-digit" }),
+          pedacos: fraseDoEvento({
+            acao: l.action,
+            entityType: l.entityType,
+            metadata: l.metadata,
+            ator: nomeDoAtor,
+            // Sem o vínculo com o usuário (excluído desde 13/10/2026), a linha
+            // mostra o nome guardado em `actorName`.
+            atorExcluido: !l.user,
+            alvo: alvo ? { nome: alvo.nome, href: alvo.href } : null,
+            empresa,
+          }),
+          area: AREAS_DA_AUDITORIA[areaDaAcao(l.action)],
+          tipo: descricao.tipo,
+          mudancas: mudancasDoRegistro(l.action, l.metadata, resolvidos.nomes),
+          fatos: fatosDoRegistro(l.metadata, resolvidos.nomes, descricao.chaveDoNome ?? null),
+          abrir: alvo?.href && !nomeNaFrase ? alvo.href : null,
+          ator: { nome: nomeDoAtor ?? "?", foto: l.user?.photoUrl ?? null },
+          registro: registroCompleto(l.metadata),
+        };
+      }),
+      mais:
+        restantes > 0
+          ? {
+              href: hrefDaAuditoria(f, { dia, ver: linhas.length + MAIS_POR_VEZ }),
+              rotulo:
+                restantes <= MAIS_POR_VEZ
+                  ? `Mostrar mais ${proximos} ${proximos === 1 ? "ação" : "ações"} ${doDia}`
+                  : `Mostrar mais ${proximos} ações ${doDia} · faltam ${NUMERO.format(restantes)}`,
+            }
+          : null,
+    };
+  });
+  const diasQueFaltam = diasComAcao.length - diasAVista.length;
+
+  // ── A barra de filtros ──
+  const tipos = contagemPorTipo(porAcao);
+  const botoesDeTipo: BotaoDeTipo[] = [
+    { chave: "tudo", rotulo: "Tudo", total: null, href: hrefDaAuditoria(f, { tipo: null }), ativo: !f.tipo },
+    ...(["criou", "editou", "excluiu"] as const).map((t) => ({
+      chave: t,
+      rotulo: ROTULO_DO_TIPO[t],
+      total: tipos[t],
+      href: hrefDaAuditoria(f, { tipo: f.tipo === t ? null : t }),
+      ativo: f.tipo === t,
+    })),
+  ];
+
+  const pessoaAtual = pessoas.find((p) => p.valor === f.pessoa);
+  const listas: ChipDeLista[] = [
+    {
+      chave: "pessoa",
+      titulo: "Pessoa",
+      rotulo: f.pessoa ? `Pessoa: ${pessoaAtual?.rotulo ?? "escolhida"}` : "Pessoas: todas",
+      ativo: Boolean(f.pessoa),
+      opcoes: [
+        { valor: "", rotulo: "Todas as pessoas", href: hrefDaAuditoria(f, { pessoa: null }), escolhida: !f.pessoa },
+        ...pessoas.map((p) => ({
+          valor: p.valor,
+          rotulo: p.rotulo,
+          nota: p.excluido ? "(excluído)" : undefined,
+          total: p.total,
+          href: hrefDaAuditoria(f, { pessoa: p.valor }),
+          escolhida: p.valor === f.pessoa,
+        })),
+      ],
+    },
+    {
+      chave: "area",
+      titulo: "Área",
+      rotulo: f.area ? `Área: ${AREAS_DA_AUDITORIA[f.area].rotulo}` : "Área: todas",
+      ativo: Boolean(f.area),
+      opcoes: [
+        { valor: "", rotulo: "Todas as áreas", href: hrefDaAuditoria(f, { area: null }), escolhida: !f.area },
+        ...opcoesDeArea(porAcaoTodas).map((a) => ({
+          valor: a.chave,
+          rotulo: a.rotulo,
+          cor: a.cor,
+          total: a.total,
+          href: hrefDaAuditoria(f, { area: a.chave }),
+          escolhida: a.chave === f.area,
+        })),
+      ],
+    },
+  ];
+
+  const periodo: ChipDoPeriodo = {
+    rotulo: f.periodo.rotulo,
+    ativo: f.periodo.chave !== "7d",
+    opcoes: OPCOES_DE_PERIODO.map((o) => ({ valor: o.chave, rotulo: o.rotulo, href: hrefDoPeriodo(f, o.chave), escolhida: f.periodo.chave === o.chave })),
+    de: f.periodo.chave === "datas" ? f.periodo.de : "",
+    ate: f.periodo.chave === "datas" ? f.periodo.ate : "",
+    baseSemPeriodo: hrefDoPeriodo(f, "7d"),
+  };
+
+  const filtrado = temFiltro(f);
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Auditoria"
-        subtitle={<>{total} {total === 1 ? "ação registrada" : "ações registradas"} neste workspace — criação, edição e
-          exclusão em Empresas, Pessoas, Transferências e Configurações.</>}
-      />
+      {/* Na largura única do app (D5, 15/10/2026): a tela ficava presa em
+          1000px, encostada à esquerda. */}
+      <>
+        <PageHeader title="Auditoria" subtitle="Quem fez o quê neste escritório, dia a dia." />
 
-      {/* Entidade no botão "Filtros"; usuário e ação viraram o funil das
-          colunas (02/10). O período fica ao lado, porque data se digita, não
-          se escolhe numa lista (conferência de 30/09). */}
-      <CascoDaTabela
-        contagem={contarItens(total, "ação", "ações")}
-        filtros={
-          <FiltrosDaTela
-            naBarra
-            campos={[
-              {
-                chave: "entityType",
-                rotulo: "Entidade",
-                vazioLabel: "Todas as entidades",
-                opcoes: entityTypeRows.map((r) => ({ value: r.entityType as string, label: r.entityType as string })),
-              },
-            ]}
-          />
-        }
-        acoes={
-          <form method="GET" action="/admin/auditoria" className="flex flex-wrap items-center gap-2">
-            {usuarios.map((u) => (
-              <input key={`u-${u}`} type="hidden" name="userId" value={u} />
-            ))}
-            {acoes.map((a) => (
-              <input key={`a-${a}`} type="hidden" name="action" value={a} />
-            ))}
-            {entityType && <input type="hidden" name="entityType" value={entityType} />}
-            <CampoPeriodo compact nomeDe="from" nomeAte="to" defaultDe={from ?? ""} defaultAte={to ?? ""} className="w-72 max-w-full" />
-            <Button type="submit" variant="secondary" size="sm">
-              Filtrar período
-            </Button>
-            {(from || to) && (
-              <Button href={buildUrl({ from: undefined, to: undefined, page: undefined })} variant="ghost" size="sm">
-                Limpar período
-              </Button>
-            )}
-          </form>
-        }
-      >
-
-        {/* Acima da tabela e do estado vazio: é por aqui que se desfaz o funil
-            quando ele esvazia a lista. */}
-        <FiltrosDasColunasNaUrl
-          colunas={[
-            { chave: "userId", rotulo: "Usuário" },
-            { chave: "action", rotulo: "Ação" },
+        <FaixaDeTotais
+          itens={[
+            { rotulo: "Ações no período", valor: NUMERO.format(metricas.acoes), icone: <ScrollText />, detalhe: periodoCurto(f.periodo) },
+            { rotulo: "Pessoas que agiram", valor: NUMERO.format(metricas.pessoas), icone: <Users />, detalhe: "no período" },
+            {
+              rotulo: "Exclusões",
+              valor: NUMERO.format(metricas.exclusoes),
+              icone: <Trash2 />,
+              tom: metricas.exclusoes > 0 ? "text-danger" : undefined,
+              detalhe: metricas.ultimaExclusao ?? "nenhuma no período",
+            },
+            { rotulo: "Hoje", valor: NUMERO.format(metricas.hoje), icone: <CalendarClock />, detalhe: "ações até agora" },
           ]}
         />
 
-        {logs.length === 0 ? (
-          <EmptyState
-            icon={<ScrollText />}
-            title={hasFilters ? "Nenhuma ação encontrada com esses filtros." : "Nenhuma ação registrada ainda."}
-          />
-        ) : (
-          // Tabela no casco padrão (era uma lista de linhas soltas). A trilha é
-          // paginada, então o funil de usuário e de ação filtra no servidor
-          // (`FiltroDaColunaNaUrl`), com as contagens da base inteira.
-          <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-            <table className="w-full min-w-[760px]">
-              <thead>
-                <tr className="border-b border-border text-fs-1 uppercase tracking-wide text-fg-muted">
-                  <th className="px-4 py-3">Quando</th>
-                  <th className="px-4 py-3">
-                    <FiltroDaColunaNaUrl rotulo="Usuário" chave="userId" opcoes={opcoesDeUsuario} />
-                  </th>
-                  <th className="px-4 py-3">
-                    <FiltroDaColunaNaUrl rotulo="Ação" chave="action" opcoes={opcoesDeAcao} />
-                  </th>
-                  <th className="px-4 py-3">Entidade</th>
-                  <th className="px-4 py-3">Detalhe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((log) => {
-                  const detail = describeMetadata(log.metadata);
-                  return (
-                    <tr key={log.id} className="border-b border-border">
-                      <td className="px-4 py-3 text-fg-muted whitespace-nowrap">
-                        {formatInstantDateTime(log.createdAt, {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </td>
-                      <td className="px-4 py-3 font-medium text-fg">
-                        {log.user?.name ?? log.actorName ?? "—"}
-                        {!log.user && <span className="ml-1 text-fs-1 font-normal text-fg-muted">(excluído)</span>}
-                      </td>
-                      <td className="px-4 py-3 text-fg-secondary">{ACTION_LABEL[log.action] ?? log.action}</td>
-                      <td className="px-4 py-3">
-                        {log.entityType ? <Badge variant="info">{log.entityType}</Badge> : <span className="text-fg-muted">—</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        {detail ? (
-                          <span className="block max-w-[320px] text-fs-1 text-fg-muted font-mono truncate" title={detail}>
-                            {detail}
-                          </span>
-                        ) : (
-                          <span className="text-fg-muted">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CascoDaTabela>
+        <BarraDaAuditoria tipos={botoesDeTipo} listas={listas} periodo={periodo} hrefLimpar={filtrado ? "/admin/auditoria" : null} />
 
-      <Pagination
-        page={pageNum}
-        totalPages={totalPages}
-        buildHref={(p) => buildUrl({ page: String(p) })}
-        total={total}
-        rotulo={total === 1 ? "ação" : "ações"}
-      />
+        {dias.length === 0 ? (
+          <div className="bg-surface border border-border rounded-lg shadow-xs">
+            <EmptyState
+              icon={<ScrollText />}
+              title={filtrado ? "Nenhuma ação com esses filtros." : "Nenhuma ação nos últimos 7 dias."}
+              description={filtrado ? "Tire um filtro ou aumente o período." : "Escolha um período maior no botão “Últimos 7 dias”."}
+              action={
+                filtrado ? (
+                  <Button href="/admin/auditoria" variant="secondary" size="sm">
+                    Limpar filtros
+                  </Button>
+                ) : undefined
+              }
+            />
+          </div>
+        ) : (
+          <>
+            <LinhaDoTempo dias={dias} />
+            {diasQueFaltam > 0 && (
+              <div className="mt-6 flex justify-center">
+                <Button href={hrefDaAuditoria(f, { dias: f.dias + DIAS_POR_VEZ })} variant="secondary" size="sm">
+                  Ver dias anteriores · {NUMERO.format(diasQueFaltam)} {diasQueFaltam === 1 ? "dia" : "dias"} com ações
+                </Button>
+              </div>
+            )}
+            {instantes.length >= TETO_DE_INSTANTES && (
+              <p className="mt-4 text-center text-fs-2 text-fg-muted">
+                O período tem mais de {NUMERO.format(TETO_DE_INSTANTES)} ações; os dias mais antigos podem não aparecer. Escolha um período menor.
+              </p>
+            )}
+          </>
+        )}
+      </>
     </PageContainer>
   );
 }

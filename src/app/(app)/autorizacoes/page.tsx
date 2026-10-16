@@ -2,16 +2,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShieldCheck, ShieldAlert, Send, Hourglass } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Selo } from "@/components/ui/Selo";
 import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { AtualizarEmLote, BotaoDaAutorizacao, ConferirNoSerpro, PedidoAoCliente } from "@/components/autorizacoes/DialogosDaAutorizacao";
 import { TOM_DA_SITUACAO } from "@/components/autorizacoes/AutorizacaoNaFicha";
 import { acessoAsAutorizacoes, carteiraDasAutorizacoes, quemRecebe, sugestaoDeQuemRecebe } from "@/lib/autorizacoes/servidor";
@@ -104,6 +106,8 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
   const ativas = conta((s) => s === "ativa" || s === "a_renovar");
   const consideradas = linhas.length - conta((s) => s === "nao_se_aplica");
   const href = (s: Recorte) => `/autorizacoes${s === "pendentes" ? "" : `?situacao=${s}`}`;
+  /** O cartão do recorte: acende quando é o da lista, e clicar de novo volta ao padrão. */
+  const noCartao = (r: Recorte) => ({ href: href(recorte === r ? "pendentes" : r), ativo: recorte === r });
 
   return (
     <PageContainer>
@@ -125,10 +129,12 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                 }}
               />
             )}
+            {/* Botão, como os do lado (15/10/2026): era link de texto cinza com
+                altura de botão. */}
             {serpro && (
-              <Link href="/autorizacoes/consumo" className="inline-flex items-center h-8 px-2 text-ui text-fg-muted hover:text-brand transition-colors">
+              <Button href="/autorizacoes/consumo" variant="secondary" size="sm">
                 Consumo do Serpro
-              </Link>
+              </Button>
             )}
           </div>
         }
@@ -148,25 +154,31 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
         </Aviso>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <MetricCard
-          label="Validar no Portal"
-          value={conta((s) => s === "validar")}
-          sub={validarLogo ? `${validarLogo} cai em até 5 dias` : "o cliente já cadastrou"}
-          tom={validarLogo ? "critico" : undefined}
-          icon={<Hourglass size={15} />}
-          href={href("validar")}
-        />
-        <MetricCard label="Falta pedir" value={conta(precisaDePedido)} sub="inclui caídas, canceladas e vencidas" icon={<ShieldAlert size={15} />} href={href("pedir")} />
-        <MetricCard label="Com o cliente" value={conta((s) => s === "pedida")} sub="pedida, ainda não cadastrou" icon={<Send size={15} />} href={href("pedida")} />
-        <MetricCard
-          label="Ativas"
-          value={ativas}
-          sub={`de ${plural(consideradas, "cliente", "clientes")}${conta((s) => s === "a_renovar") ? ` · ${conta((s) => s === "a_renovar")} a renovar` : ""}`}
-          icon={<ShieldCheck size={15} />}
-          href={href("ativa")}
-        />
-      </div>
+      {/* A faixa de totais (15/10/2026): eram MetricCard soltos numa grade
+          própria, que levavam ao recorte sem marcar qual estava aberto. Agora
+          o recorte da lista acende, e clicar nele de novo volta ao padrão. */}
+      <FaixaDeTotais
+        className="mb-6"
+        itens={[
+          {
+            rotulo: "Validar no Portal",
+            valor: String(conta((s) => s === "validar")),
+            detalhe: validarLogo ? `${validarLogo} cai em até 5 dias` : "o cliente já cadastrou",
+            tom: validarLogo ? "text-danger" : undefined,
+            icone: <Hourglass />,
+            ...noCartao("validar"),
+          },
+          { rotulo: "Falta pedir", valor: String(conta(precisaDePedido)), detalhe: "inclui caídas, canceladas e vencidas", icone: <ShieldAlert />, ...noCartao("pedir") },
+          { rotulo: "Com o cliente", valor: String(conta((s) => s === "pedida")), detalhe: "pedida, ainda não cadastrou", icone: <Send />, ...noCartao("pedida") },
+          {
+            rotulo: "Ativas",
+            valor: String(ativas),
+            detalhe: `de ${plural(consideradas, "cliente", "clientes")}${conta((s) => s === "a_renovar") ? ` · ${conta((s) => s === "a_renovar")} a renovar` : ""}`,
+            icone: <ShieldCheck />,
+            ...noCartao("ativa"),
+          },
+        ]}
+      />
 
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "cliente", "clientes")}
@@ -290,12 +302,12 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
             </TabelaFiltravel>
           </>
         )}
-        <p className="text-micro text-fg-muted mt-3">
+        <NotaDeFonte>
           Uma linha por raiz de CNPJ: a autorização dada pela matriz vale para as filiais. O escritório valida no Portal de Serviços da Receita, aba
           “Recebidas”, em até 30 dias do cadastro do cliente — depois disso ela cai. O setor é avisado faltando 10 e 3 dias e no último dia, e 60,
           30 e 7 dias antes do fim da validade.
           {semDocumento > 0 && ` ${plural(semDocumento, "empresa ativa sem CNPJ ou CPF válido ficou", "empresas ativas sem CNPJ ou CPF válido ficaram")} de fora.`}
-        </p>
+        </NotaDeFonte>
       </CascoDaTabela>
     </PageContainer>
   );

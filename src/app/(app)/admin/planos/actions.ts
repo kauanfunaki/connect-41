@@ -6,6 +6,17 @@ import { getAuthContext } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import type { ManagementMode, BillingType } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
+import { isPrismaMissingTableError } from "@/lib/prismaErrors";
+import { lerEdicaoDoPlano, mudancasDoPlano } from "@/lib/planos/edicao";
+import {
+  CAMPOS_DO_SITE_PADRAO,
+  CHAVE_CARTAO_SOB_MEDIDA,
+  CHAVE_PRECOS_NO_SITE,
+  camposDaLinha,
+  camposIguais,
+  lerCamposDoSite,
+  type CamposDoSite,
+} from "@/lib/planos/site-regras";
 
 export type PlanoState = { error: string } | null;
 
@@ -38,7 +49,7 @@ export async function criarPlano(_prev: PlanoState, form: FormData): Promise<Pla
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "subscription_plan.create", entityType: "SubscriptionPlan", entityId: plan.id, metadata: { name } });
 
-  revalidatePath("/admin/planos");
+  refazerTelasDosPlanos();
   return null;
 }
 
@@ -63,7 +74,7 @@ export async function atualizarModulosPlano(planId: string, moduleCodes: string[
     metadata: { moduleCodes },
   });
 
-  revalidatePath("/admin/planos");
+  refazerTelasDosPlanos();
 }
 
 export async function alternarPlano(id: string, active: boolean): Promise<void> {
@@ -75,5 +86,151 @@ export async function alternarPlano(id: string, active: boolean): Promise<void> 
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: active ? "subscription_plan.activate" : "subscription_plan.deactivate", entityType: "SubscriptionPlan", entityId: id });
 
+  refazerTelasDosPlanos();
+}
+
+/**
+ * A seção Planos do site e a tela de Planos leem o mesmo: depois de mexer num
+ * plano, as duas (e a de Assinaturas, que mostra o nome do plano) se refazem.
+ */
+function refazerTelasDosPlanos() {
   revalidatePath("/admin/planos");
+  revalidatePath("/admin/assinaturas");
+  revalidatePath("/");
+}
+
+const SITE_SEM_TABELA =
+  "O plano foi salvo, mas o que vai para o site não: falta a atualização do banco desta versão do Connect.";
+
+/**
+ * "Editar plano" (14/10/2026): nome, valor e implantação nas colunas do plano,
+ * e — quando a janela mostrou os campos do site (`comSite`) — como ele aparece
+ * na seção Planos do site, na tabela `planos_no_site`. O modo de gestão e o
+ * tipo de cobrança não mudam (ver lib/planos/edicao). Só o Super Admin. Cada
+ * parte vai para a Auditoria só quando muda.
+ */
+export async function editarPlano(_prev: PlanoState, form: FormData): Promise<PlanoState> {
+  const ctx = await getAuthContext();
+  if (ctx.role !== "SUPER_ADMIN") return { error: "Sem permissão." };
+
+  const planId = String(form.get("planId") ?? "");
+  if (!planId) return { error: "Plano inválido." };
+
+  const prisma = getPrisma();
+  const atual = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+  if (!atual) return { error: "Plano não encontrado." };
+
+  const lido = lerEdicaoDoPlano(form, atual.billingType);
+  if ("erro" in lido) return { error: lido.erro };
+
+  let site: CamposDoSite | null = null;
+  if (form.get("comSite") === "1") {
+    const campos = lerCamposDoSite(form);
+    if ("erro" in campos) return { error: campos.erro };
+    site = campos.campos;
+  }
+
+  const mudancas = mudancasDoPlano(atual, lido.dados);
+  if (Object.keys(mudancas).length > 0) {
+    await prisma.subscriptionPlan.update({ where: { id: planId }, data: lido.dados });
+    await logAudit({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      action: "subscription_plan.update",
+      entityType: "SubscriptionPlan",
+      entityId: planId,
+      metadata: Object.fromEntries(Object.entries(mudancas).map(([campo, m]) => [campo, `${m.de} → ${m.para}`])),
+    });
+  }
+
+  if (site) {
+    try {
+      const guardada = await prisma.planoNoSite.findUnique({ where: { planId } });
+      const antes = guardada ? camposDaLinha(guardada) : CAMPOS_DO_SITE_PADRAO;
+      if (!camposIguais(antes, site)) {
+        await prisma.planoNoSite.upsert({ where: { planId }, create: { planId, ...site }, update: site });
+        await logAudit({
+          tenantId: ctx.tenantId,
+          userId: ctx.userId,
+          action: "subscription_plan.site.update",
+          entityType: "SubscriptionPlan",
+          entityId: planId,
+          metadata: { mostrarNoSite: site.mostrarNoSite, ordem: site.ordem, destacar: site.destacar },
+        });
+      }
+    } catch (err) {
+      refazerTelasDosPlanos();
+      if (isPrismaMissingTableError(err)) return { error: SITE_SEM_TABELA };
+      console.error("[planos] site", err);
+      return { error: "O plano foi salvo, mas o que vai para o site não. Tente de novo." };
+    }
+  }
+
+  refazerTelasDosPlanos();
+  return null;
+}
+
+export type ResultadoDosPrecos = { ok: true } | { erro: string };
+
+/** Grava um interruptor do site em `configuracoes_do_connect`; `null` deu certo, senão a frase do erro. */
+async function gravarInterruptorDoSite(chave: string, ligado: boolean): Promise<string | null> {
+  const valor = ligado ? "true" : "false";
+  try {
+    await getPrisma().configuracaoDoConnect.upsert({ where: { chave }, create: { chave, valor }, update: { valor } });
+    return null;
+  } catch (err) {
+    if (isPrismaMissingTableError(err)) return "Falta a atualização do banco desta versão do Connect.";
+    console.error(`[planos] ${chave}`, err);
+    return "Não foi possível salvar. Tente de novo.";
+  }
+}
+
+/**
+ * O interruptor "Mostrar preços no site" — vale para todos os planos mostrados
+ * lá. Decisão do Kauan (14/10/2026): começa desligado; ligar publica o valor e
+ * a implantação de cada plano para quem abrir o site. Só o Super Admin.
+ */
+export async function definirPrecosNoSite(mostrar: boolean): Promise<ResultadoDosPrecos> {
+  const ctx = await getAuthContext();
+  if (ctx.role !== "SUPER_ADMIN") return { erro: "Sem permissão." };
+  if (typeof mostrar !== "boolean") return { erro: "Pedido inválido." };
+
+  const erro = await gravarInterruptorDoSite(CHAVE_PRECOS_NO_SITE, mostrar);
+  if (erro) return { erro };
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: mostrar ? "site.prices.show" : "site.prices.hide",
+    entityType: "ConfiguracaoDoConnect",
+    entityId: CHAVE_PRECOS_NO_SITE,
+  });
+
+  refazerTelasDosPlanos();
+  return { ok: true };
+}
+
+/**
+ * O interruptor do cartão "Connect sob medida" na seção Planos do site
+ * (14/10/2026). Começa ligado (sem a linha na tabela, o cartão aparece);
+ * desligar esconde só o cartão, os planos ficam. Só o Super Admin.
+ */
+export async function definirCartaoSobMedida(mostrar: boolean): Promise<ResultadoDosPrecos> {
+  const ctx = await getAuthContext();
+  if (ctx.role !== "SUPER_ADMIN") return { erro: "Sem permissão." };
+  if (typeof mostrar !== "boolean") return { erro: "Pedido inválido." };
+
+  const erro = await gravarInterruptorDoSite(CHAVE_CARTAO_SOB_MEDIDA, mostrar);
+  if (erro) return { erro };
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: mostrar ? "site.custom_card.show" : "site.custom_card.hide",
+    entityType: "ConfiguracaoDoConnect",
+    entityId: CHAVE_CARTAO_SOB_MEDIDA,
+  });
+
+  refazerTelasDosPlanos();
+  return { ok: true };
 }

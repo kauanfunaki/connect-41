@@ -112,7 +112,7 @@ export default async function ComunicacaoPage({
           />
         }
       >
-        <div className="px-5 sm:px-6 py-4 border-t border-border-soft flex flex-col gap-4">
+        <div className="px-5 sm:px-6 py-4 flex flex-col gap-4">
           {conversa.mensagens.length === 0 ? (
             <EmptyState
               icon={<MessagesSquare />}
@@ -151,7 +151,8 @@ export default async function ComunicacaoPage({
     );
 
   return (
-    <PageContainer>
+    // A caixa de conversas ocupa o resto da janela, e a página não rola (14/10/2026).
+    <PageContainer className="h-full flex flex-col">
       <PageHeader title="Conversa com o cliente" subtitle="Recado livre por empresa, com anexos. Pedido com prazo é pendência." />
 
       {substituida && (
@@ -170,7 +171,6 @@ export default async function ComunicacaoPage({
 
       <CaixaDeConversas
         aberta={!!(selecionada && conversa)}
-        altura={substituida ? "lg:h-[calc(100dvh-21rem)]" : "lg:h-[calc(100dvh-17rem)]"}
         lista={
           <ColunaDaLista>
             {conversas.length === 0 ? (

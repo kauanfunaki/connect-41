@@ -1,22 +1,75 @@
-// Leitura dos comunicados: a lista da equipe (com quantos clientes leram), o
-// detalhe com a leitura por cliente, e o lado do cliente (os do grupo dele).
+// Leitura dos comunicados: a lista da equipe (com quantas empresas leram), o
+// detalhe com a leitura por empresa, e o lado do cliente (os das empresas do
+// acesso dele).
+//
+// Desde 14/10/2026 o comunicado vai para empresas (`ClientAnnouncementCompany`),
+// e não mais para Clientes; os antigos foram copiados para as empresas dos
+// clientes que os receberam (migration 20261014210000). Sem a tabela nova
+// (código antes da migration), a leitura cai nos Clientes — a regra de antes.
 
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
+import { isPrismaMissingTableError } from "@/lib/prismaErrors";
+import { nomeExibicao } from "@/lib/companyName";
+import { STATUS_OCULTOS_POR_PADRAO } from "@/lib/companyStatusFilter";
+import { lerContasDasEmpresas } from "@/lib/portal/empresasDaContaDb";
 import type { AnexoDaConversa } from "@/lib/financeiro/pendencias/consultas";
-import { resumoDaLeitura, type LeituraDoGrupo, type Publico } from "./regras";
+import { empresasQueLeram, resumoDaLeitura, type LeituraDaEmpresa, type Publico } from "./regras";
 
-/** Os clientes (grupos) que o público alcança, no momento do envio. */
-export async function gruposDoPublico(tenantId: string, publico: Publico, setor: string, escolhidos: string[]): Promise<string[]> {
+/** As empresas em operação — o "todas" e o "do setor" não mandam para empresa inativa ou cancelada. */
+const EM_OPERACAO = { status: { notIn: STATUS_OCULTOS_POR_PADRAO } } as const;
+
+/** O `where` das empresas que o público alcança. */
+export function whereDoPublico(tenantId: string, publico: Publico, setor: string, escolhidas: string[]): Prisma.CompanyWhereInput {
+  if (publico === "TODOS") return { tenantId, ...EM_OPERACAO };
+  // Escolhida a dedo vale qualquer que seja o status — foi uma decisão de quem mandou.
+  if (publico === "ESCOLHIDOS") return { tenantId, id: { in: escolhidas } };
+  return { tenantId, ...EM_OPERACAO, services: { some: { sectorCode: setor, status: "ACTIVE" } } };
+}
+
+/** As empresas que o público alcança, no momento do envio. Só do escritório: id de outro não volta. */
+export async function empresasDoPublico(tenantId: string, publico: Publico, setor: string, escolhidas: string[]): Promise<string[]> {
+  const empresas = await getPrisma().company.findMany({ where: whereDoPublico(tenantId, publico, setor, escolhidas), select: { id: true } });
+  return empresas.map((e) => e.id);
+}
+
+/** Quem recebeu: a empresa (ou, antes da migration, o cliente) e as contas que a enxergam. */
+type Destinatario = { id: string; nome: string; contas: Set<string> };
+
+/**
+ * Os destinatários de cada comunicado, com as contas do portal que enxergam
+ * cada um hoje. Sem a tabela nova, os clientes e as contas deles.
+ */
+async function destinatariosDosComunicados(tenantId: string, ids: string[]): Promise<Map<string, Destinatario[]>> {
+  const saida = new Map<string, Destinatario[]>(ids.map((id) => [id, []]));
+  if (ids.length === 0) return saida;
   const prisma = getPrisma();
-  const ativos: Prisma.ClientGroupWhereInput = { tenantId, active: true };
-  const where: Prisma.ClientGroupWhereInput =
-    publico === "TODOS"
-      ? ativos
-      : publico === "ESCOLHIDOS"
-        ? { ...ativos, id: { in: escolhidos } }
-        : { ...ativos, companies: { some: { services: { some: { sectorCode: setor, status: "ACTIVE" } } } } };
-  return (await prisma.clientGroup.findMany({ where, select: { id: true } })).map((g) => g.id);
+  try {
+    const linhas = await prisma.clientAnnouncementCompany.findMany({
+      where: { announcementId: { in: ids } },
+      select: { announcementId: true, company: { select: { id: true, name: true, displayName: true, tenantId: true } } },
+    });
+    const doEscritorio = linhas.filter((l) => l.company.tenantId === tenantId);
+    const contas = await lerContasDasEmpresas(tenantId, [...new Set(doEscritorio.map((l) => l.company.id))]);
+    for (const l of doEscritorio) {
+      saida.get(l.announcementId)?.push({
+        id: l.company.id,
+        nome: nomeExibicao(l.company),
+        contas: new Set(contas.get(l.company.id)?.keys() ?? []),
+      });
+    }
+    return saida;
+  } catch (err) {
+    if (!isPrismaMissingTableError(err)) throw err;
+    const linhas = await prisma.clientAnnouncementGroup.findMany({
+      where: { announcementId: { in: ids } },
+      select: { announcementId: true, clientGroup: { select: { id: true, name: true, portalUsers: { select: { id: true } } } } },
+    });
+    for (const l of linhas) {
+      saida.get(l.announcementId)?.push({ id: l.clientGroup.id, nome: l.clientGroup.name, contas: new Set(l.clientGroup.portalUsers.map((u) => u.id)) });
+    }
+    return saida;
+  }
 }
 
 export type LinhaDoComunicado = {
@@ -25,7 +78,7 @@ export type LinhaDoComunicado = {
   setor: string;
   enviadoEm: Date;
   enviadoPor: string | null;
-  clientes: number;
+  empresas: number;
   leram: number;
   avisosEnviados: boolean;
 };
@@ -44,20 +97,27 @@ export async function listarComunicados(tenantId: string, setores: string[] | nu
       createdAt: true,
       notifiedAt: true,
       createdBy: { select: { name: true } },
-      groups: { select: { clientGroupId: true } },
-      reads: { select: { portalUser: { select: { clientGroupId: true } } } },
+      reads: { select: { portalUserId: true } },
     },
   });
+  const destinatarios = await destinatariosDosComunicados(
+    tenantId,
+    lista.map((c) => c.id)
+  );
   return lista.map((c) => {
-    const comLeitura = new Set(c.reads.map((r) => r.portalUser.clientGroupId));
+    const destinos = destinatarios.get(c.id) ?? [];
     return {
       id: c.id,
       titulo: c.title,
       setor: c.sectorCode,
       enviadoEm: c.createdAt,
       enviadoPor: c.createdBy?.name ?? null,
-      clientes: c.groups.length,
-      leram: c.groups.filter((g) => comLeitura.has(g.clientGroupId)).length,
+      empresas: destinos.length,
+      leram: empresasQueLeram(
+        destinos.map((d) => d.id),
+        new Map(destinos.map((d) => [d.id, d.contas])),
+        new Set(c.reads.map((r) => r.portalUserId))
+      ),
       avisosEnviados: c.notifiedAt !== null,
     };
   });
@@ -72,11 +132,11 @@ export type ComunicadoDaEquipe = {
   enviadoPor: string | null;
   avisosEnviadosEm: Date | null;
   anexos: AnexoDaConversa[];
-  grupos: LeituraDoGrupo[];
-  resumo: { clientes: number; leram: number };
+  empresas: LeituraDaEmpresa[];
+  resumo: { empresas: number; leram: number };
 };
 
-/** O comunicado com a leitura cliente a cliente — quem leu primeiro e quando. */
+/** O comunicado com a leitura empresa a empresa — quem leu primeiro e quando. */
 export async function carregarComunicado(tenantId: string, id: string): Promise<ComunicadoDaEquipe | null> {
   const c = await getPrisma().clientAnnouncement.findFirst({
     where: { id, tenantId },
@@ -89,18 +149,16 @@ export async function carregarComunicado(tenantId: string, id: string): Promise<
       notifiedAt: true,
       createdBy: { select: { name: true } },
       attachments: { select: { id: true, fileName: true, sizeBytes: true }, orderBy: { createdAt: "asc" } },
-      groups: { select: { clientGroup: { select: { id: true, name: true } } } },
-      reads: { select: { readAt: true, portalUser: { select: { name: true, clientGroupId: true } } }, orderBy: { readAt: "asc" } },
+      reads: { select: { readAt: true, portalUserId: true, portalUser: { select: { name: true } } }, orderBy: { readAt: "asc" } },
     },
   });
   if (!c) return null;
-  const grupos: LeituraDoGrupo[] = c.groups
-    .map((g) => ({
-      grupoId: g.clientGroup.id,
-      nome: g.clientGroup.name,
-      leitores: c.reads
-        .filter((r) => r.portalUser.clientGroupId === g.clientGroup.id)
-        .map((r) => ({ nome: r.portalUser.name, em: r.readAt })),
+  const destinos = (await destinatariosDosComunicados(tenantId, [c.id])).get(c.id) ?? [];
+  const empresas: LeituraDaEmpresa[] = destinos
+    .map((d) => ({
+      empresaId: d.id,
+      nome: d.nome,
+      leitores: c.reads.filter((r) => d.contas.has(r.portalUserId)).map((r) => ({ nome: r.portalUser.name, em: r.readAt })),
     }))
     // Quem não leu primeiro: é a lista que alguém vai cobrar.
     .sort((a, b) => Number(a.leitores.length > 0) - Number(b.leitores.length > 0) || a.nome.localeCompare(b.nome, "pt-BR"));
@@ -113,12 +171,35 @@ export async function carregarComunicado(tenantId: string, id: string): Promise<
     enviadoPor: c.createdBy?.name ?? null,
     avisosEnviadosEm: c.notifiedAt,
     anexos: c.attachments,
-    grupos,
-    resumo: resumoDaLeitura(grupos),
+    empresas,
+    resumo: resumoDaLeitura(empresas),
   };
 }
 
 // ─── Lado do cliente ─────────────────────────────────────────────────────────
+//
+// O cliente vê o comunicado que foi para alguma das empresas do acesso dele
+// (`alcanceDoCliente`). Sem empresa, não vê nenhum — nunca todos.
+
+/** Os comunicados que foram para alguma das empresas. */
+export function paraAsEmpresas(companyIds: string[]): Prisma.ClientAnnouncementWhereInput {
+  return { companies: { some: { companyId: { in: companyIds } } } };
+}
+
+/** O mesmo, pela regra de antes (sem a tabela nova): o comunicado foi para o cliente de alguma das empresas. */
+export function paraOsClientesDasEmpresas(companyIds: string[]): Prisma.ClientAnnouncementWhereInput {
+  return { groups: { some: { clientGroup: { companies: { some: { id: { in: companyIds } } } } } } };
+}
+
+/** Roda a consulta com o filtro novo; sem a tabela nova, com o de antes. */
+async function comFolga<T>(companyIds: string[], consulta: (filtro: Prisma.ClientAnnouncementWhereInput) => Promise<T>): Promise<T> {
+  try {
+    return await consulta(paraAsEmpresas(companyIds));
+  } catch (err) {
+    if (!isPrismaMissingTableError(err)) throw err;
+    return consulta(paraOsClientesDasEmpresas(companyIds));
+  }
+}
 
 export type ComunicadoDoCliente = {
   id: string;
@@ -128,38 +209,45 @@ export type ComunicadoDoCliente = {
   lido: boolean;
 };
 
-/** Os comunicados do grupo do cliente, o mais novo primeiro, com o "lido" deste usuário. */
-export async function comunicadosDoCliente(tenantId: string, clientGroupId: string, portalUserId: string): Promise<ComunicadoDoCliente[]> {
-  const lista = await getPrisma().clientAnnouncement.findMany({
-    where: { tenantId, groups: { some: { clientGroupId } } },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    select: { id: true, title: true, sectorCode: true, createdAt: true, reads: { where: { portalUserId }, select: { id: true } } },
-  });
+/** Os comunicados das empresas do cliente, o mais novo primeiro, com o "lido" deste usuário. */
+export async function comunicadosDoCliente(tenantId: string, companyIds: string[], portalUserId: string): Promise<ComunicadoDoCliente[]> {
+  if (companyIds.length === 0) return [];
+  const lista = await comFolga(companyIds, (filtro) =>
+    getPrisma().clientAnnouncement.findMany({
+      where: { tenantId, ...filtro },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      select: { id: true, title: true, sectorCode: true, createdAt: true, reads: { where: { portalUserId }, select: { id: true } } },
+    })
+  );
   return lista.map((c) => ({ id: c.id, titulo: c.title, setor: c.sectorCode, enviadoEm: c.createdAt, lido: c.reads.length > 0 }));
 }
 
 /** Quantos o usuário ainda não abriu — o aviso da home do portal. */
-export async function comunicadosNaoLidos(tenantId: string, clientGroupId: string, portalUserId: string): Promise<number> {
-  return getPrisma().clientAnnouncement.count({
-    where: { tenantId, groups: { some: { clientGroupId } }, reads: { none: { portalUserId } } },
-  });
+export async function comunicadosNaoLidos(tenantId: string, companyIds: string[], portalUserId: string): Promise<number> {
+  if (companyIds.length === 0) return 0;
+  return comFolga(companyIds, (filtro) =>
+    getPrisma().clientAnnouncement.count({ where: { tenantId, ...filtro, reads: { none: { portalUserId } } } })
+  );
 }
 
-/** Um comunicado do grupo do cliente — e registra a leitura, na primeira vez. */
-export async function abrirComunicadoDoCliente(tenantId: string, clientGroupId: string, portalUserId: string, id: string) {
+/** Um comunicado das empresas do cliente — e registra a leitura, na primeira vez. */
+export async function abrirComunicadoDoCliente(tenantId: string, companyIds: string[], portalUserId: string, id: string) {
+  if (companyIds.length === 0) return null;
   const prisma = getPrisma();
-  const c = await prisma.clientAnnouncement.findFirst({
-    where: { id, tenantId, groups: { some: { clientGroupId } } },
-    select: {
-      id: true,
-      title: true,
-      body: true,
-      sectorCode: true,
-      createdAt: true,
-      attachments: { select: { id: true, fileName: true, sizeBytes: true }, orderBy: { createdAt: "asc" } },
-    },
-  });
+  const c = await comFolga(companyIds, (filtro) =>
+    prisma.clientAnnouncement.findFirst({
+      where: { id, tenantId, ...filtro },
+      select: {
+        id: true,
+        title: true,
+        body: true,
+        sectorCode: true,
+        createdAt: true,
+        attachments: { select: { id: true, fileName: true, sizeBytes: true }, orderBy: { createdAt: "asc" } },
+      },
+    })
+  );
   if (!c) return null;
   // `upsert` com update vazio: a primeira leitura é a que vale, e abrir de novo
   // não muda o "leu em".
@@ -169,4 +257,15 @@ export async function abrirComunicadoDoCliente(tenantId: string, clientGroupId: 
     update: {},
   });
   return { id: c.id, titulo: c.title, texto: c.body, setor: c.sectorCode, enviadoEm: c.createdAt, anexos: c.attachments };
+}
+
+/** O anexo de um comunicado das empresas do cliente — e só se for. */
+export async function anexoDoComunicadoDoCliente(tenantId: string, companyIds: string[], anexoId: string) {
+  if (companyIds.length === 0) return null;
+  return comFolga(companyIds, (filtro) =>
+    getPrisma().clientAnnouncementAttachment.findFirst({
+      where: { id: anexoId, announcement: { tenantId, ...filtro } },
+      select: { fileName: true, fileUrl: true, mimeType: true },
+    })
+  );
 }

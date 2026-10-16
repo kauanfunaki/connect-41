@@ -59,8 +59,11 @@ export default async function MinhaAreaPage() {
       {/* Os totais no cartão das filas irmãs (Processos, Licenças) — era o
           MetricCard sem ícone, um dos três desenhos de total do módulo
           (07/10/2026). */}
+      {/* Sem o cartão azul (15/10/2026): o primeiro número é de situação
+          (vencidos), não o total — com zero, ele virava o número principal. */}
       <FaixaDeTotais
         className="mb-6"
+        destaque={false}
         itens={[
           {
             rotulo: "Vencidos",
@@ -96,7 +99,7 @@ export default async function MinhaAreaPage() {
             grupos[faixa].length === 0 ? null : (
               <section key={faixa}>
                 <h2
-                  className={`text-card-title font-semibold mb-1 ${faixa === "vencido" ? "text-danger" : "text-fg-secondary"}`}
+                  className={`text-section font-semibold mb-1 ${faixa === "vencido" ? "text-danger" : "text-fg-secondary"}`}
                 >
                   {FAIXA_LABEL[faixa]} <span className="tabular-nums text-fg-muted font-normal">{grupos[faixa].length}</span>
                 </h2>
@@ -106,7 +109,7 @@ export default async function MinhaAreaPage() {
           )}
           {semData.length > 0 && (
             <section>
-              <h2 className="text-card-title font-semibold mb-1 text-fg-secondary">
+              <h2 className="text-section font-semibold mb-1 text-fg-secondary">
                 Sem data <span className="tabular-nums text-fg-muted font-normal">{semData.length}</span>
               </h2>
               <ListaDePrazos itens={semData} hoje={agora} />

@@ -2,17 +2,24 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { CampoMes } from "@/components/ui/CampoMes";
+import { Button } from "@/components/ui/Button";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { saoPauloParts } from "@/lib/agenda";
+import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { getAuthContext } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
 import { acessoAsAutorizacoes } from "@/lib/autorizacoes/servidor";
 import { configuracaoDoSerpro, consumoDoMes, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { reais, ROTULO_DO_TIPO, TIPOS_DE_COBRANCA } from "@/lib/serpro/regras";
-import { formatCnpj, formatCpf, formatInstantDateTime } from "@/lib/format";
+import { formatCnpj, formatCpf, formatInstantDateTime, formatarNumero } from "@/lib/format";
 import { hojeIso } from "@/lib/datas/calendario";
 import { Gauge, Receipt, ShieldCheck } from "lucide-react";
 
@@ -20,10 +27,6 @@ export const dynamic = "force-dynamic";
 
 const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const nomeDoMes = (mes: string) => `${MESES[Number(mes.slice(5, 7)) - 1]} de ${mes.slice(0, 4)}`;
-const mesAnterior = (mes: string) => {
-  const [a, m] = mes.split("-").map(Number);
-  return m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, "0")}`;
-};
 
 /**
  * Quanto o Serpro já custou no mês: chamadas cobradas por tipo, a faixa
@@ -66,35 +69,38 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
         </Aviso>
       )}
 
-      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="text-section font-semibold text-fg first-letter:uppercase">{nomeDoMes(mes)}</h2>
-        <div className="flex gap-3 text-ui">
-          <a href={`/autorizacoes/consumo?mes=${mesAnterior(mes)}`} className="text-fg-muted hover:text-brand transition-colors">
-            ‹ Mês anterior
-          </a>
-          {mes !== atual && (
-            <a href="/autorizacoes/consumo" className="text-fg-muted hover:text-brand transition-colors">
-              Este mês ›
-            </a>
-          )}
-        </div>
+        {/* O seletor de mês do Connect, por GET como o `FiltroDePeriodo`
+            (15/10/2026): eram "‹ Mês anterior" e "Este mês ›" em links de texto. */}
+        <form method="get" action="/autorizacoes/consumo" className="flex items-center gap-2">
+          <CampoMes compact name="mes" defaultValue={mes} max={atual} className="w-40" aria-label="Mês" />
+          <Button type="submit" variant="secondary" size="sm">
+            Aplicar
+          </Button>
+        </form>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-        <MetricCard label="Custo estimado" value={reais(consumo.custo.totalCentavos)} icon={<Receipt size={15} />} />
-        <MetricCard
-          label="Teto do mês"
-          value={teto ? reais(teto) : "—"}
-          sub={usado !== null ? `${usado}% usado` : undefined}
-          tom={usado !== null && usado >= 100 ? "critico" : usado !== null && usado >= 80 ? "atencao" : undefined}
-          icon={<Gauge size={15} />}
-        />
-        <MetricCard
-          label="Chamadas cobradas"
-          value={TIPOS_DE_COBRANCA.reduce((n, t) => n + consumo.contagem[t], 0)}
-          icon={<ShieldCheck size={15} />}
-        />
-      </div>
+      {/* A faixa de totais, com o custo estimado no cartão azul de número
+          principal (15/10/2026): eram MetricCard soltos numa grade própria. */}
+      <FaixaDeTotais
+        className="mb-6"
+        itens={[
+          { rotulo: "Custo estimado", valor: reais(consumo.custo.totalCentavos), icone: <Receipt /> },
+          {
+            rotulo: "Teto do mês",
+            valor: teto ? reais(teto) : "—",
+            detalhe: usado !== null ? `${usado}% usado` : undefined,
+            tom: usado !== null && usado >= 100 ? "text-danger" : usado !== null && usado >= 80 ? "text-warning-fg" : undefined,
+            icone: <Gauge />,
+          },
+          {
+            rotulo: "Chamadas cobradas",
+            valor: formatarNumero(TIPOS_DE_COBRANCA.reduce((n, t) => n + consumo.contagem[t], 0), 0),
+            icone: <ShieldCheck />,
+          },
+        ]}
+      />
 
       <Card className="p-5 mb-6">
         <h2 className="text-section font-semibold text-fg mb-3">Por tipo</h2>
@@ -125,49 +131,103 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
             </tbody>
           </table>
         </div>
-        <p className="text-micro text-fg-muted mt-3">
+        <NotaDeFonte>
           Cobradas são as respostas 200, 202 e 403 de consultas, emissões e declarações — inclusive o 403 de cliente sem autorização. A faixa
           atingida no mês vale para todas as chamadas daquele tipo (regra a confirmar no contrato).
-        </p>
+        </NotaDeFonte>
       </Card>
 
       <h2 className="text-section font-semibold text-fg mb-3">Últimas chamadas</h2>
-      {chamadas.length === 0 ? (
-        <EmptyState title="Nenhuma chamada ainda" description="As chamadas ao Serpro aparecem aqui, cobradas ou não." icon={<ShieldCheck />} />
-      ) : (
-        <div className="overflow-x-auto bg-surface border border-border rounded-lg px-4">
-          <table className="w-full min-w-[820px] text-ui">
-            <thead>
-              <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border text-left">
-                <th className="py-2 pr-3 font-medium">Quando</th>
-                <th className="py-2 pr-3 font-medium">Serviço</th>
-                <th className="py-2 pr-3 font-medium">Contribuinte</th>
-                <th className="py-2 pr-3 font-medium">Resposta</th>
-                <th className="py-2 font-medium">Mensagens</th>
-              </tr>
-            </thead>
-            <tbody>
+      {/* No casco, na tabela padrão e com funil no Serviço e na Resposta, que
+          repetem valor (15/10/2026): era uma tabela à mão, de cabeçalho cinza. */}
+      <CascoDaTabela contagem={contarItens(chamadas.length, "chamada", "chamadas")}>
+        {chamadas.length === 0 ? (
+          <EmptyState title="Nenhuma chamada ainda" description="As chamadas ao Serpro aparecem aqui, cobradas ou não." icon={<ShieldCheck />} />
+        ) : (
+          <>
+            {/* No celular, um cartão por chamada (15/10/2026): a tabela de 820px
+                rolava de lado. */}
+            <CartoesNoCelular>
               {chamadas.map((c) => (
-                <tr key={c.id} className="border-b border-border-soft align-top">
-                  <td className="py-2 pr-3 tabular-nums whitespace-nowrap">{formatInstantDateTime(c.createdAt)}</td>
-                  <td className="py-2 pr-3">
-                    {c.idServico}
-                    <span className="block text-micro text-fg-muted">
-                      {c.caminho} · {c.origem}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-3 tabular-nums text-fg-secondary">{c.contribuinte.length === 11 ? formatCpf(c.contribuinte) : formatCnpj(c.contribuinte)}</td>
-                  <td className="py-2 pr-3">
-                    <span className="tabular-nums">{c.httpStatus ?? "—"}</span>{" "}
-                    {c.cobrada ? <Selo tom="atencao">cobrada</Selo> : <Selo tom="neutro">grátis</Selo>}
-                  </td>
-                  <td className="py-2 text-fg-muted break-words">{c.mensagens ?? "—"}</td>
-                </tr>
+                <Cartao key={c.id}>
+                  <TopoDoCartao nome={c.idServico} valor={<span className="font-normal text-fg-muted">{c.httpStatus ?? "—"}</span>} />
+                  <InfoDoCartao>
+                    {c.caminho} · {c.origem}
+                  </InfoDoCartao>
+                  <InfoDoCartao className="tabular-nums">
+                    {formatInstantDateTime(c.createdAt)} · {c.contribuinte.length === 11 ? formatCpf(c.contribuinte) : formatCnpj(c.contribuinte)}
+                  </InfoDoCartao>
+                  {c.mensagens && <InfoDoCartao className="mt-1">{c.mensagens}</InfoDoCartao>}
+                  <PeDoCartao>{c.cobrada ? <Selo tom="atencao">Cobrada</Selo> : <Selo tom="neutro">Grátis</Selo>}</PeDoCartao>
+                </Cartao>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </CartoesNoCelular>
+            <TabelaFiltravel
+              linhas={chamadas.map((c) => ({
+                id: c.id,
+                valores: {
+                  quando: saoPauloParts(c.createdAt).dateKey,
+                  servico: c.idServico,
+                  origem: c.origem,
+                  resposta: c.httpStatus === null ? "" : String(c.httpStatus),
+                  cobranca: c.cobrada ? "Cobrada" : "Grátis",
+                },
+              }))}
+            >
+              <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg hidden md:block">
+                <table className="w-full min-w-[820px]">
+                  <thead>
+                    <tr>
+                      <th className="px-3">
+                        <FiltroDaColuna rotulo="Quando" chave="quando" tipo="data" />
+                      </th>
+                      <th className="px-3">
+                        <FiltroDaColuna
+                          rotulo="Serviço"
+                          campos={[
+                            { chave: "servico", rotulo: "Serviço" },
+                            { chave: "origem", rotulo: "Origem" },
+                          ]}
+                        />
+                      </th>
+                      <th className="px-3">Contribuinte</th>
+                      <th className="px-3">
+                        <FiltroDaColuna
+                          rotulo="Resposta"
+                          campos={[
+                            { chave: "resposta", rotulo: "Resposta" },
+                            { chave: "cobranca", rotulo: "Cobrança" },
+                          ]}
+                        />
+                      </th>
+                      <th className="px-3">Mensagens</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chamadas.map((c) => (
+                      <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top">
+                        <td className="px-3 tabular-nums whitespace-nowrap">{formatInstantDateTime(c.createdAt)}</td>
+                        <td className="px-3">
+                          {c.idServico}
+                          <span className="block text-micro text-fg-muted">
+                            {c.caminho} · {c.origem}
+                          </span>
+                        </td>
+                        <td className="px-3 tabular-nums text-fg-secondary">{c.contribuinte.length === 11 ? formatCpf(c.contribuinte) : formatCnpj(c.contribuinte)}</td>
+                        <td className="px-3">
+                          <span className="tabular-nums">{c.httpStatus ?? "—"}</span>{" "}
+                          {c.cobrada ? <Selo tom="atencao">Cobrada</Selo> : <Selo tom="neutro">Grátis</Selo>}
+                        </td>
+                        <td className="px-3 text-fg-muted break-words">{c.mensagens ?? "—"}</td>
+                      </LinhaFiltravel>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </TabelaFiltravel>
+          </>
+        )}
+      </CascoDaTabela>
     </PageContainer>
   );
 }

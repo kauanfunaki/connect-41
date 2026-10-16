@@ -238,6 +238,24 @@ export function mesCurto(mes: number): string {
   return MESES_CURTOS[mes - 1];
 }
 
+// ── Ano inteiro ("AAAA") ───────────────────────────────────────────────────
+//
+// O campo de mês que oferece o ano inteiro (14/10/2026, DRE do portal) guarda
+// o ano sozinho, "2026" — o mesmo texto que vai na URL como `ano=2026`.
+
+export function lerAnoIso(texto: string | null | undefined): number | null {
+  const m = /^(\d{4})$/.exec(texto ?? "");
+  if (!m) return null;
+  const ano = Number(m[1]);
+  return ano >= 1000 ? ano : null;
+}
+
+/** "Ano de 2026". */
+export function anoPorExtenso(iso: string | null | undefined): string {
+  const ano = lerAnoIso(iso);
+  return ano === null ? "" : `Ano de ${ano}`;
+}
+
 // ── Hora ("HH:mm") ─────────────────────────────────────────────────────────
 
 /** 09:30, 9:30, 0930, 930, 9 → "09:30" / "09:00". */

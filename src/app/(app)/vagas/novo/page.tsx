@@ -6,6 +6,9 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { getSectorMaps } from "@/lib/sectors";
 import { VagaForm } from "@/components/vagas/VagaForm";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
+import { nomeExibicao } from "@/lib/companyName";
+import { rotuloDePublicarVaga } from "@/lib/carreiras/enderecoDeCarreiras";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarVaga } from "../actions";
@@ -22,11 +25,11 @@ export default async function NovaVagaPage() {
   const { options: sectorOptions } = await getSectorMaps(ctx.tenantId);
   const allowedSectors = isFullWrite(ctx.role) ? sectorOptions : sectorOptions.filter((s) => ctx.sectors.includes(s.value));
 
-  const [companies, cargos, users] = await Promise.all([
+  const [companies, cargos, users, tenant] = await Promise.all([
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
     }),
     prisma.cargo.findMany({
       where: { tenantId: ctx.tenantId, active: true },
@@ -38,6 +41,8 @@ export default async function NovaVagaPage() {
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    // O slug decide o rótulo de "publicar": da 41, o 41 Carreiras com o endereço.
+    prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { slug: true } }),
   ]);
 
   return (
@@ -49,10 +54,11 @@ export default async function NovaVagaPage() {
         <VagaForm
           action={criarVaga}
           cancelHref="/vagas"
-          companies={companies}
+          companies={companies.map((c) => ({ ...c, nome: nomeExibicao(c) }))}
           cargos={cargos}
           users={users}
           sectorOptions={allowedSectors}
+          rotuloDePublicar={rotuloDePublicarVaga(tenant?.slug)}
         />
       </Card>
     </PageContainer>

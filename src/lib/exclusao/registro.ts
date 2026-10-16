@@ -112,6 +112,11 @@ const EMPRESA: Ligacao[] = [
   // As pastas da casa nascem com a empresa; o que conta como histórico são os
   // arquivos dentro delas (contados à parte em `empresa.ts`).
   { modelo: "DriveFolder", campo: "company", fk: "companyId", tratamento: "cascata" },
+  // Portal por empresa (14/10/2026): sai a ligação da empresa com o acesso, e
+  // a conta continua (com as outras empresas dela, ou sem nenhuma). O
+  // comunicado já enviado fica, sem esta empresa entre os destinatários.
+  { modelo: "PortalUserCompany", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["acesso ao portal ligado a ela (a conta continua)", "acessos ao portal ligados a ela (as contas continuam)"] },
+  { modelo: "ClientAnnouncementCompany", campo: "company", fk: "companyId", tratamento: "cascata" },
 
   // Ficam, sem o vínculo.
   { modelo: "Company", campo: "parent", fk: "parentCompanyId", tratamento: "desligar", rotulo: ["filial (vira matriz solta)", "filiais (viram matrizes soltas)"] },
@@ -170,6 +175,9 @@ const PESSOA_SOLTAS: ColunaSolta[] = [
   { modelo: "WhatsappThread", coluna: "personId", tratamento: "desligar" },
   { modelo: "WhatsappThread", coluna: "linkPendingPersonId", tratamento: "desligar" },
   { modelo: "WhatsappThread", coluna: "candidaturaId", tratamento: "desligar" },
+  // O resumo do currículo lido pela IA na ficha do candidato (14/10/2026): sai
+  // com a pessoa. Tabela sem chave — o passo tolera a tabela ainda não existir.
+  { modelo: "CandidateResumeSummary", coluna: "personId", tratamento: "apagar" },
   { modelo: "AuditLog", coluna: "entityId", tratamento: "manter", motivo: "a trilha guarda o que foi excluído" },
   { modelo: "AgentRun", coluna: "entityId", tratamento: "manter", motivo: "trilha de execução da IA" },
   { modelo: "AgentProposal", coluna: "entityId", tratamento: "manter", motivo: "proposta da IA já decidida, guardada como trilha" },

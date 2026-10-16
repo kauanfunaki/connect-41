@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Columns3, List, Search, X } from "lucide-react";
+import { Columns3, List, X } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { TaskListView, type TaskRow, type StageOption } from "@/components/kanban/TaskListView";
 import { Select } from "@/components/ui/Select";
-import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -127,8 +127,10 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           active={view}
           onChange={setView}
           items={[
-            { key: "list", label: "Lista", icon: <List size={14} /> },
-            { key: "board", label: "Quadro", icon: <Columns3 size={14} /> },
+            // "Listas" e "Kanban" desde 14/10/2026 (eram "Lista" e "Quadro"):
+            // com a tela do menu chamada Quadros, "Quadro" aqui ficava repetido.
+            { key: "list", label: "Listas", icon: <List size={14} /> },
+            { key: "board", label: "Kanban", icon: <Columns3 size={14} /> },
           ]}
         />
 
@@ -141,15 +143,15 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
         </p>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <div className="w-56">
-            <Input
-              compact
-              icon={<Search size={14} />}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar título, descrição…"
-            />
-          </div>
+          {/* A caixa de busca do Connect, com o "limpar" próprio (15/10/2026). */}
+          <CampoDeBusca
+            compact
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar título, descrição…"
+            aria-label="Buscar tarefa"
+            className="w-56 max-w-full"
+          />
 
           {/* Painel ancorado compartilhado (o mesmo de /empresas e /conversas).
               Antes era um botão próprio abrindo um Modal com as categorias em

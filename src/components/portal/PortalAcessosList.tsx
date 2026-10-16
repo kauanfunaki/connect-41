@@ -16,66 +16,101 @@ import { FormFooter } from "@/components/ui/FormFooter";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { ExclusaoConfirmada, ListaDaExclusao } from "@/components/ui/ExclusaoConfirmada";
-import { mensagemDoEmailRepetido, saidaParaOEmailRepetido } from "@/lib/portal/acessoExistente";
+import { listaDeNomes, mensagemDoEmailRepetido, saidaParaOEmailRepetido } from "@/lib/portal/acessoExistente";
+import { EscolhaDeEmpresas, type EmpresaParaEscolher, type EscolhaDeEmpresa } from "@/components/portal/EscolhaDeEmpresas";
 import type { EstadoDoAcesso, ResumoDoAcessoParaExcluir } from "@/app/(app)/admin/portal/actions";
 
-type Acesso = {
-  id: string;
-  nome: string;
-  email: string;
-  ativo: boolean;
-  clienteId: string;
-  cliente: string;
+/** Uma empresa ligada direto ao acesso (as que vêm pela matriz seguem a matriz). */
+export type EmpresaDoAcesso = { id: string; nome: string; incluiFiliais: boolean; filiais: number };
+
+/** O mínimo de um acesso para as ações de linha (link, ligar/desligar, excluir). */
+export type AcessoDaLinha = { id: string; nome: string; email: string; ativo: boolean };
+
+type Acesso = AcessoDaLinha & {
+  empresas: EmpresaDoAcesso[];
   ultimoAcesso: string | null;
 };
 
-type Cliente = { id: string; nome: string; empresas: number };
-
 type AcaoDoFormulario = (anterior: EstadoDoAcesso, form: FormData) => Promise<EstadoDoAcesso>;
 
-type Props = {
-  acessos: Acesso[];
-  /** Os clientes ativos — as opções do "Editar". */
-  clientes: Cliente[];
+/** As ações de linha que a lista da Administração e a ficha da empresa dividem. */
+export type AcoesDaLinha = {
   enviarLinkAction: (id: string) => Promise<{ error: string } | { ok: true }>;
   alternarAction: (id: string, ativo: boolean) => Promise<void>;
-  editarAction: AcaoDoFormulario;
   resumoParaExcluirAction: (id: string) => Promise<{ erro: string } | ResumoDoAcessoParaExcluir>;
   excluirAction: (id: string, confirmacao: string) => Promise<{ erro: string } | { ok: true }>;
+};
+
+type Props = AcoesDaLinha & {
+  acessos: Acesso[];
+  /** As empresas do escritório — as opções do "Editar". */
+  empresas: EmpresaParaEscolher[];
+  editarAction: AcaoDoFormulario;
   /** Só ADMIN e SUPER_ADMIN veem o "Excluir" (a action confere de novo). */
   podeExcluir: boolean;
 };
 
-function rotuloDoCliente(c: Cliente): string {
-  return `${c.nome} (${c.empresas} ${c.empresas === 1 ? "empresa" : "empresas"})`;
+/** "BLD MATRIZ + filiais, IRRIGA" — a coluna Empresas da lista. */
+export function textoDasEmpresas(empresas: EmpresaDoAcesso[]): string {
+  if (empresas.length === 0) return "Nenhuma empresa";
+  return empresas.map((e) => (e.incluiFiliais && e.filiais > 0 ? `${e.nome} + filiais` : e.nome)).join(", ");
 }
 
 /**
  * O "+ Novo acesso" do cabeçalho de /admin/portal, que abre o formulário numa
- * janela (escolha 5A, 08/10/2026). Morava num cartão aberto acima da lista,
- * com a lista embaixo sob um segundo título ("Acessos").
+ * janela (escolha 5A, 08/10/2026). Desde 14/10/2026 o acesso nasce ligado às
+ * empresas escolhidas, e não mais a um Cliente.
  */
-export function NovoAcessoDoPortal({ clientes, criarAction }: { clientes: Cliente[]; criarAction: AcaoDoFormulario }) {
+export function NovoAcessoDoPortal({ empresas, criarAction }: { empresas: EmpresaParaEscolher[]; criarAction: AcaoDoFormulario }) {
   return (
     <JanelaDeCadastro rotulo="Novo acesso" maxWidth="max-w-xl">
-      {(fechar) => <FormularioDoAcesso clientes={clientes} criarAction={criarAction} fechar={fechar} />}
+      {(fechar) => <FormularioDoAcesso escolha={{ tipo: "varias", empresas }} criarAction={criarAction} fechar={fechar} />}
     </JanelaDeCadastro>
   );
 }
 
-function FormularioDoAcesso({ clientes, criarAction, fechar }: { clientes: Cliente[]; criarAction: AcaoDoFormulario; fechar: () => void }) {
+/**
+ * De onde vêm as empresas do formulário: várias, escolhidas na lista
+ * (Administração), ou uma só, fixa — a da ficha, onde só se decide o
+ * "incluir filiais".
+ */
+export type EscolhaDoFormulario =
+  | { tipo: "varias"; empresas: EmpresaParaEscolher[] }
+  | { tipo: "fixa"; empresa: { id: string; nome: string; filiais: number } };
+
+/**
+ * O formulário de criar acesso — o da Administração e o da ficha da empresa.
+ *
+ * Campos controlados: depois do aviso de e-mail repetido, o "Reativar" ou
+ * "Ligar" reenvia o formulário com o que está na tela — o React 19 limpa os
+ * campos não controlados ao fim de cada envio.
+ */
+export function FormularioDoAcesso({
+  escolha,
+  criarAction,
+  fechar,
+}: {
+  escolha: EscolhaDoFormulario;
+  criarAction: AcaoDoFormulario;
+  fechar: () => void;
+}) {
   const toast = useToast();
-  // Campos controlados: depois do aviso de e-mail repetido, o "Reativar e
-  // passar" reenvia o formulário com o que está na tela — o React 19 limpa os
-  // campos não controlados ao fim de cada envio.
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [clienteId, setClienteId] = useState("");
+  const [varias, setVarias] = useState<EscolhaDeEmpresa[]>([]);
+  const [comFiliais, setComFiliais] = useState(true);
+
+  const valor: EscolhaDeEmpresa[] =
+    escolha.tipo === "fixa" ? [{ companyId: escolha.empresa.id, incluiFiliais: escolha.empresa.filiais > 0 ? comFiliais : true }] : varias;
+  const nomes = new Map(
+    escolha.tipo === "fixa" ? [[escolha.empresa.id, escolha.empresa.nome]] : escolha.empresas.map((e) => [e.id, e.nome] as const)
+  );
+  const escolhidas = valor.map((v) => ({ id: v.companyId, nome: nomes.get(v.companyId) ?? "Empresa" }));
 
   // Deu certo: a janela fecha e o retorno vai para o aviso que some sozinho
   // — quando o e-mail não sai, o aviso diz isso e o que fazer.
@@ -95,16 +130,15 @@ function FormularioDoAcesso({ clientes, criarAction, fechar }: { clientes: Clien
     estado && "erro" in estado && estado.existente && estado.existente.email === email.trim().toLowerCase()
       ? estado.existente
       : undefined;
-  const escolhido = clientes.find((c) => c.id === clienteId) ?? null;
-  const saida = existente ? saidaParaOEmailRepetido(existente, escolhido) : null;
+  const saida = existente ? saidaParaOEmailRepetido(existente, escolhidas) : null;
   const erroComum = estado && "erro" in estado && !estado.existente ? estado.erro : undefined;
 
   return (
     <form action={formAction} className="space-y-4">
       {/* Com o aviso de e-mail repetido na tela, o Enter num campo enviaria
-          pelo primeiro botão de envio do formulário — o "Reativar e passar".
-          Um botão desligado antes dele faz o Enter não fazer nada: reaproveitar
-          um acesso é sempre um clique de propósito. */}
+          pelo primeiro botão de envio do formulário — o "Reativar" ou o
+          "Ligar". Um botão desligado antes dele faz o Enter não fazer nada:
+          reaproveitar um acesso é sempre um clique de propósito. */}
       {existente && <button type="submit" disabled hidden aria-hidden tabIndex={-1} />}
       <p className="text-helper text-fg-muted">
         A conta nasce <span className="font-medium text-fg">sem senha</span> — nem quem cria sabe
@@ -117,29 +151,38 @@ function FormularioDoAcesso({ clientes, criarAction, fechar }: { clientes: Clien
         <CampoForm label="E-mail" htmlFor="email" required>
           <Input id="email" name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </CampoForm>
-        <CampoForm
-          label="Cliente"
-          htmlFor="clientGroupId"
-          helper="Define quais empresas esta conta enxerga. Cliente sem empresa não mostra documento nenhum."
-          required
-          className="sm:col-span-2"
-        >
-          <Select id="clientGroupId" name="clientGroupId" required value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-            <option value="" disabled>
-              Escolha…
-            </option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {rotuloDoCliente(c)}
-              </option>
-            ))}
-          </Select>
-        </CampoForm>
+        {escolha.tipo === "varias" ? (
+          <CampoForm
+            label="Empresas"
+            htmlFor="novo-acesso-empresas"
+            helper="O que esta conta enxerga no portal. Com “incluir filiais”, a filial cadastrada depois aparece sozinha."
+            required
+            className="sm:col-span-2"
+          >
+            <EscolhaDeEmpresas id="novo-acesso-empresas" empresas={escolha.empresas} valor={varias} onChange={setVarias} />
+          </CampoForm>
+        ) : (
+          <div className="sm:col-span-2 space-y-2">
+            <input type="hidden" name="empresas" value={JSON.stringify(valor)} />
+            <p className="text-ui text-fg-secondary">
+              A conta vê <span className="font-medium text-fg">{escolha.empresa.nome}</span> no portal.
+            </p>
+            {escolha.empresa.filiais > 0 && (
+              <Checkbox
+                id="novo-acesso-filiais"
+                checked={comFiliais}
+                onChange={(e) => setComFiliais(e.target.checked)}
+                label={`Incluir ${escolha.empresa.filiais === 1 ? "a filial" : `as ${escolha.empresa.filiais} filiais`}`}
+                helper="A filial cadastrada depois também aparece sozinha."
+              />
+            )}
+          </div>
+        )}
       </FieldGrid>
 
       {existente && (
         <Aviso tom="atencao">
-          <p>{mensagemDoEmailRepetido(existente, clienteId)}</p>
+          <p>{mensagemDoEmailRepetido(existente, escolhidas)}</p>
           {saida && (
             <>
               <p className="mt-1.5 text-fg-secondary">{saida.explicacao}</p>
@@ -161,31 +204,32 @@ function FormularioDoAcesso({ clientes, criarAction, fechar }: { clientes: Clien
         submitLabel="Criar acesso"
         onCancel={fechar}
         erro={erroComum}
-        submitDisabled={!!existente}
+        submitDisabled={!!existente || valor.length === 0}
       />
     </form>
   );
 }
 
 /**
- * Editar nome, e-mail e cliente de um acesso (13/10/2026). Trocar o cliente
- * tira a pessoa do portal na hora — a janela avisa antes de salvar.
+ * Editar nome, e-mail e empresas de um acesso. Tirar empresa avisa antes de
+ * salvar: a pessoa deixa de vê-la no portal na próxima tela, e o limite de
+ * aprovação que tinha nela é desligado.
  */
 function EditarAcesso({
   acesso,
-  clientes,
+  empresas,
   editarAction,
   fechar,
 }: {
   acesso: Acesso;
-  clientes: Cliente[];
+  empresas: EmpresaParaEscolher[];
   editarAction: AcaoDoFormulario;
   fechar: () => void;
 }) {
   const toast = useToast();
   const [nome, setNome] = useState(acesso.nome);
   const [email, setEmail] = useState(acesso.email);
-  const [clienteId, setClienteId] = useState(acesso.clienteId);
+  const [valor, setValor] = useState<EscolhaDeEmpresa[]>(acesso.empresas.map((e) => ({ companyId: e.id, incluiFiliais: e.incluiFiliais })));
 
   const [estado, formAction, salvando] = useActionState<EstadoDoAcesso, FormData>(async (anterior, form) => {
     const r = await editarAction(anterior, form);
@@ -196,11 +240,16 @@ function EditarAcesso({
     return r;
   }, null);
 
-  // O cliente atual pode estar inativo (fora da lista de ativos): entra como
-  // opção, marcado, para o formulário não trocá-lo sem a pessoa pedir.
-  const atualNaLista = clientes.some((c) => c.id === acesso.clienteId);
-  const novo = clientes.find((c) => c.id === clienteId);
-  const trocaDeCliente = clienteId !== acesso.clienteId;
+  // A empresa ligada hoje pode ter saído da lista de opções (excluída no
+  // meio do caminho): entra como opção para o formulário não tirá-la calado.
+  const opcoes = [
+    ...empresas,
+    ...acesso.empresas
+      .filter((e) => !empresas.some((x) => x.id === e.id))
+      .map((e) => ({ id: e.id, nome: e.nome, cnpj: null, filiais: e.filiais, matrizNome: null, foraDeOperacao: false })),
+  ];
+  const ficam = new Set(valor.map((v) => v.companyId));
+  const saem = acesso.empresas.filter((e) => !ficam.has(e.id));
 
   return (
     <form action={formAction} className="space-y-4">
@@ -213,28 +262,20 @@ function EditarAcesso({
           <Input id="editar-email" name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </CampoForm>
         <CampoForm
-          label="Cliente"
-          htmlFor="editar-cliente"
-          helper="Define quais empresas esta conta enxerga."
+          label="Empresas"
+          htmlFor="editar-empresas"
+          helper="O que esta conta enxerga no portal. Com “incluir filiais”, a filial cadastrada depois aparece sozinha."
           required
           className="sm:col-span-2"
         >
-          <Select id="editar-cliente" name="clientGroupId" required value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-            {!atualNaLista && <option value={acesso.clienteId}>{acesso.cliente} (inativo)</option>}
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {rotuloDoCliente(c)}
-              </option>
-            ))}
-          </Select>
+          <EscolhaDeEmpresas id="editar-empresas" empresas={opcoes} valor={valor} onChange={setValor} />
         </CampoForm>
       </FieldGrid>
 
-      {trocaDeCliente && novo && (
+      {saem.length > 0 && (
         <Aviso tom="atencao">
-          Ao salvar, {acesso.nome} sai do portal e precisa entrar de novo. Passa a ver só as empresas de {novo.nome}, e
-          deixa de ver as de {acesso.cliente}. Os limites de aprovação de pagamento que tinha nas empresas de{" "}
-          {acesso.cliente} são desligados.
+          Ao salvar, {acesso.nome} deixa de ver {listaDeNomes(saem.map((e) => e.nome))} no portal. Os limites de aprovação de
+          pagamento que tinha {saem.length === 1 ? "nela são desligados" : "nelas são desligados"}.
         </Aviso>
       )}
 
@@ -242,13 +283,14 @@ function EditarAcesso({
         pending={salvando}
         onCancel={fechar}
         erro={estado && "erro" in estado ? estado.erro : undefined}
+        submitDisabled={valor.length === 0}
       />
     </form>
   );
 }
 
 type Exclusao = {
-  acesso: Acesso;
+  acesso: AcessoDaLinha;
   resumo: ResumoDoAcessoParaExcluir | null;
   /** A contagem não veio. */
   erroDoResumo: string | null;
@@ -257,34 +299,18 @@ type Exclusao = {
 };
 
 /**
- * Os acessos do portal, na tela da equipe (/admin/portal).
- *
- * Revisão de 07/10/2026: a lista no `CascoDaTabela`, com a contagem na barra
- * (era "Acessos (N)" no título) e o vazio no `EmptyState`; o "Link enviado."
- * no aviso que some sozinho — aparecia embaixo da tabela, longe do botão
- * clicado —; e o "Desativar" pede confirmação, porque corta na hora o acesso
- * do cliente. Reativar não pede: não tira nada de ninguém.
- *
- * 13/10/2026: "Editar" (nome, e-mail, cliente) e "Excluir" de verdade no "⋯".
+ * Enviar link, desativar/reativar e excluir um acesso — o mesmo na lista da
+ * Administração e na aba "Acesso ao portal" da ficha da empresa (14/10/2026).
+ * Devolve as funções e os diálogos, que quem usa põe na tela.
  */
-export function PortalAcessosList({
-  acessos,
-  clientes,
-  enviarLinkAction,
-  alternarAction,
-  editarAction,
-  resumoParaExcluirAction,
-  excluirAction,
-  podeExcluir,
-}: Props) {
+export function useAcoesDoAcesso({ enviarLinkAction, alternarAction, resumoParaExcluirAction, excluirAction }: AcoesDaLinha) {
   const [pendente, startTransition] = useTransition();
   const [excluindo, startExcluir] = useTransition();
   const toast = useToast();
   const { dialog, requestConfirm } = useConfirm();
-  const [editando, setEditando] = useState<Acesso | null>(null);
   const [exclusao, setExclusao] = useState<Exclusao | null>(null);
 
-  function enviarLink(a: Acesso) {
+  function enviarLink(a: AcessoDaLinha) {
     startTransition(async () => {
       const r = await enviarLinkAction(a.id);
       if ("error" in r) toast.error(r.error);
@@ -292,7 +318,7 @@ export function PortalAcessosList({
     });
   }
 
-  function alternar(a: Acesso) {
+  function alternar(a: AcessoDaLinha) {
     if (!a.ativo) {
       startTransition(() => void alternarAction(a.id, true));
       return;
@@ -311,7 +337,7 @@ export function PortalAcessosList({
   // A contagem do que está ligado vem quando a janela abre — no clique, não
   // num efeito: a action chega por prop e muda de identidade a cada
   // revalidação.
-  function abrirExclusao(a: Acesso) {
+  function abrirExclusao(a: AcessoDaLinha) {
     setExclusao({ acesso: a, resumo: null, erroDoResumo: null, erro: null });
     resumoParaExcluirAction(a.id)
       .catch(() => ({ erro: "Não foi possível conferir o que está ligado a este acesso. Tente de novo." }))
@@ -339,6 +365,70 @@ export function PortalAcessosList({
       setExclusao(null);
     });
   }
+
+  const resumo = exclusao?.resumo;
+  const semHistorico = resumo && resumo.historico.ficam.length === 0 && resumo.historico.apagados.length === 0;
+
+  const dialogos = (
+    <>
+      {dialog}
+      {exclusao && (
+        <ExclusaoConfirmada
+          key={exclusao.acesso.id}
+          titulo={`Excluir o acesso de ${exclusao.acesso.nome}?`}
+          descricao="O acesso é apagado de vez, e o e-mail fica livre para um acesso novo. As empresas continuam como estão."
+          nome={exclusao.acesso.nome}
+          alternativas={[exclusao.acesso.email]}
+          rotuloDoBotao="Excluir acesso"
+          carregando={!resumo && !exclusao.erroDoResumo}
+          indisponivel={!!exclusao.erroDoResumo}
+          pending={excluindo}
+          erro={exclusao.erroDoResumo ?? exclusao.erro}
+          onConfirm={excluir}
+          onCancel={() => {
+            if (!excluindo) setExclusao(null);
+          }}
+        >
+          {resumo && (
+            <>
+              <p className="text-ui text-fg-secondary">
+                {resumo.email} · {resumo.empresas}
+              </p>
+              {semHistorico ? (
+                <Aviso tom="neutro">Este acesso não tem nada registrado no portal. Só ele é apagado.</Aviso>
+              ) : (
+                <>
+                  <ListaDaExclusao titulo="Continuam guardados, sem o nome de quem fez:" itens={resumo.historico.ficam} />
+                  <ListaDaExclusao titulo="São apagados junto:" itens={resumo.historico.apagados} />
+                </>
+              )}
+              <p className="text-helper text-fg-muted">Se a pessoa estiver com o portal aberto, ela sai na próxima tela.</p>
+            </>
+          )}
+        </ExclusaoConfirmada>
+      )}
+    </>
+  );
+
+  return { pendente, enviarLink, alternar, abrirExclusao, dialogos };
+}
+
+/**
+ * Os acessos do portal, na tela da equipe (/admin/portal).
+ *
+ * Revisão de 07/10/2026: a lista no `CascoDaTabela`, com a contagem na barra
+ * (era "Acessos (N)" no título) e o vazio no `EmptyState`; o "Link enviado."
+ * no aviso que some sozinho — aparecia embaixo da tabela, longe do botão
+ * clicado —; e o "Desativar" pede confirmação, porque corta na hora o acesso
+ * do cliente. Reativar não pede: não tira nada de ninguém.
+ *
+ * 13/10/2026: "Editar" e "Excluir" de verdade no "⋯".
+ * 14/10/2026: a coluna "Cliente" virou "Empresas" — o acesso é ligado direto a
+ * elas, com "+ filiais" quando inclui as filiais.
+ */
+export function PortalAcessosList({ acessos, empresas, editarAction, podeExcluir, ...acoesDaLinha }: Props) {
+  const [editando, setEditando] = useState<Acesso | null>(null);
+  const { pendente, enviarLink, alternar, abrirExclusao, dialogos } = useAcoesDoAcesso(acoesDaLinha);
 
   // "Enviar link" é botão; editar, desativar/reativar e excluir vão no "⋯" —
   // era texto cinza colado no "Enviar link", a um clique de tirar o acesso de
@@ -393,9 +483,6 @@ export function PortalAcessosList({
     );
   }
 
-  const resumo = exclusao?.resumo;
-  const semHistorico = resumo && resumo.historico.ficam.length === 0 && resumo.historico.apagados.length === 0;
-
   return (
     <>
       <div>
@@ -404,7 +491,7 @@ export function PortalAcessosList({
           <EmptyState
             icon={<UsersRound />}
             title="Nenhum acesso criado ainda"
-            description="Crie o primeiro em “Novo acesso”: a pessoa recebe por e-mail o link para definir a senha."
+            description="Crie o primeiro em “Novo acesso”, ou na ficha da empresa, em “Acesso ao portal”: a pessoa recebe por e-mail o link para definir a senha."
           />
         ) : (
           <>
@@ -412,9 +499,8 @@ export function PortalAcessosList({
               {acessos.map((a) => (
                 <Cartao key={a.id}>
                   <TopoDoCartao nome={a.nome} />
-                  <InfoDoCartao>
-                    {a.email} · {a.cliente}
-                  </InfoDoCartao>
+                  <InfoDoCartao>{a.email}</InfoDoCartao>
+                  <InfoDoCartao>{textoDasEmpresas(a.empresas)}</InfoDoCartao>
                   <InfoDoCartao>{a.ultimoAcesso ? `entrou em ${a.ultimoAcesso}` : "nunca entrou"}</InfoDoCartao>
                   <PeDoCartao>
                     <StatusDot color={a.ativo ? "var(--c41-success)" : "var(--c41-fg-muted)"} label={a.ativo ? "Ativo" : "Inativo"} />
@@ -426,11 +512,11 @@ export function PortalAcessosList({
 
             {/* Era uma lista com cliente e último acesso numa linha cinza, e as
                 ações em texto azul e cinza. Virou tabela no casco padrão, com
-                funil em cliente e situação (polimento de 30/09). */}
+                funil na situação (polimento de 30/09). */}
             <TabelaFiltravel
               linhas={acessos.map((a) => ({
                 id: a.id,
-                valores: { cliente: a.cliente, situacao: a.ativo ? "Ativo" : "Inativo" },
+                valores: { situacao: a.ativo ? "Ativo" : "Inativo" },
               }))}
             >
               <TabelaNoDesktop padrao>
@@ -438,9 +524,7 @@ export function PortalAcessosList({
                   <thead>
                     <tr>
                       <th className="px-4 py-3">Nome</th>
-                      <th className="px-4 py-3">
-                        <FiltroDaColuna rotulo="Cliente" chave="cliente" />
-                      </th>
+                      <th className="px-4 py-3">Empresas</th>
                       <th className="px-4 py-3">Último acesso</th>
                       <th className="px-4 py-3">
                         <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
@@ -451,28 +535,34 @@ export function PortalAcessosList({
                     </tr>
                   </thead>
                   <tbody>
-                    {acessos.map((a) => (
-                      <LinhaFiltravel key={a.id} id={a.id} className="border-b border-border">
-                        <td className="px-4 py-3">
-                          <span className="block max-w-[280px] text-fg truncate" title={a.nome}>
-                            {a.nome}
-                          </span>
-                          <span className="block max-w-[280px] text-micro text-fg-muted truncate" title={a.email}>
-                            {a.email}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="block max-w-[240px] text-fg-secondary truncate" title={a.cliente}>
-                            {a.cliente}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{a.ultimoAcesso ?? "nunca entrou"}</td>
-                        <td className="px-4 py-3">
-                          <StatusDot color={a.ativo ? "var(--c41-success)" : "var(--c41-fg-muted)"} label={a.ativo ? "Ativo" : "Inativo"} />
-                        </td>
-                        <td className="px-4 py-3">{acoes(a)}</td>
-                      </LinhaFiltravel>
-                    ))}
+                    {acessos.map((a) => {
+                      const empresasDoAcesso = textoDasEmpresas(a.empresas);
+                      return (
+                        <LinhaFiltravel key={a.id} id={a.id} className="border-b border-border">
+                          <td className="px-4 py-3">
+                            <span className="block max-w-[280px] text-fg truncate" title={a.nome}>
+                              {a.nome}
+                            </span>
+                            <span className="block max-w-[280px] text-micro text-fg-muted truncate" title={a.email}>
+                              {a.email}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`block max-w-[320px] truncate ${a.empresas.length === 0 ? "text-fg-muted" : "text-fg-secondary"}`}
+                              title={empresasDoAcesso}
+                            >
+                              {empresasDoAcesso}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{a.ultimoAcesso ?? "nunca entrou"}</td>
+                          <td className="px-4 py-3">
+                            <StatusDot color={a.ativo ? "var(--c41-success)" : "var(--c41-fg-muted)"} label={a.ativo ? "Ativo" : "Inativo"} />
+                          </td>
+                          <td className="px-4 py-3">{acoes(a)}</td>
+                        </LinhaFiltravel>
+                      );
+                    })}
                   </tbody>
                 </table>
               </TabelaNoDesktop>
@@ -481,55 +571,19 @@ export function PortalAcessosList({
         )}
         </CascoDaTabela>
       </div>
-      {dialog}
+      {dialogos}
 
       <Modal open={editando !== null} onClose={() => setEditando(null)} title="Editar acesso" maxWidth="max-w-xl">
         {editando && (
           <EditarAcesso
             key={editando.id}
             acesso={editando}
-            clientes={clientes}
+            empresas={empresas}
             editarAction={editarAction}
             fechar={() => setEditando(null)}
           />
         )}
       </Modal>
-
-      {exclusao && (
-        <ExclusaoConfirmada
-          key={exclusao.acesso.id}
-          titulo={`Excluir o acesso de ${exclusao.acesso.nome}?`}
-          descricao="O acesso é apagado de vez, e o e-mail fica livre para um acesso novo."
-          nome={exclusao.acesso.nome}
-          alternativas={[exclusao.acesso.email]}
-          rotuloDoBotao="Excluir acesso"
-          carregando={!resumo && !exclusao.erroDoResumo}
-          indisponivel={!!exclusao.erroDoResumo}
-          pending={excluindo}
-          erro={exclusao.erroDoResumo ?? exclusao.erro}
-          onConfirm={excluir}
-          onCancel={() => {
-            if (!excluindo) setExclusao(null);
-          }}
-        >
-          {resumo && (
-            <>
-              <p className="text-ui text-fg-secondary">
-                {resumo.email} · cliente {resumo.cliente}
-              </p>
-              {semHistorico ? (
-                <Aviso tom="neutro">Este acesso não tem nada registrado no portal. Só ele é apagado.</Aviso>
-              ) : (
-                <>
-                  <ListaDaExclusao titulo="Continuam guardados, sem o nome de quem fez:" itens={resumo.historico.ficam} />
-                  <ListaDaExclusao titulo="São apagados junto:" itens={resumo.historico.apagados} />
-                </>
-              )}
-              <p className="text-helper text-fg-muted">Se a pessoa estiver com o portal aberto, ela sai na próxima tela.</p>
-            </>
-          )}
-        </ExclusaoConfirmada>
-      )}
     </>
   );
 }

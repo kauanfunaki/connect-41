@@ -7,6 +7,7 @@ import type { VarianteDoBadge } from "@/components/ui/Badge";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { CampoMes } from "@/components/ui/CampoMes";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -25,7 +26,7 @@ import {
   lancamentosParaEscolha,
   type LancamentoParaEscolha,
 } from "@/app/(app)/conciliacao/actions";
-import { moeda, tomDoValor } from "@/lib/financeiro/formato";
+import { moeda } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
 import { formatarCompetencia } from "@/lib/format";
 import { FormFooter } from "@/components/ui/FormFooter";
@@ -191,7 +192,9 @@ export function TransacoesDaConta({
                 <td className="py-2.5 pr-3 max-w-[300px]">
                   <span className="block break-words">{descricaoDaTransacao(l)}</span>
                 </td>
-                <td className={`py-2.5 pr-3 text-right tabular-nums font-medium whitespace-nowrap ${tomDoValor(l.centavos)}`}>
+                {/* Valor neutro (D1, 15/10/2026): entrada e saída são categoria,
+                    não situação — o "−" já diz o sinal, como no Fluxo de caixa. */}
+                <td className="py-2.5 pr-3 text-right tabular-nums font-medium whitespace-nowrap">
                   {moeda(l.centavos)}
                 </td>
                 <td className="py-2.5 pr-3">
@@ -200,23 +203,27 @@ export function TransacoesDaConta({
                 <td className="py-2.5">
                   {l.status === "PENDENTE" && (
                     <div className="flex flex-col gap-2 items-start">
+                      {/* A sugestão e a conta travada no `Aviso` do app (15/10/2026):
+                          eram caixas com borda e fundo próprios. */}
                       {l.sugestao?.bloqueio ? (
-                        <div className="flex flex-col gap-0.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-1.5 max-w-[420px]">
-                          <span className="inline-flex items-center gap-1 text-micro font-medium text-warning-fg">
-                            <Lock size={12} /> Casa com uma conta travada na aprovação · {l.sugestao.motivo}
+                        <Aviso tom="atencao" icone={<Lock />} className="max-w-[420px]">
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-micro font-medium">
+                              Casa com uma conta travada na aprovação · {l.sugestao.motivo}
+                            </span>
+                            <ResumoDoLancamento l={l.sugestao} />
+                            <span className="text-micro text-fg-secondary">
+                              {l.sugestao.bloqueio} Não crie outro lançamento para esta transação: concilie depois da aprovação.
+                            </span>
                           </span>
-                          <ResumoDoLancamento l={l.sugestao} />
-                          <span className="text-micro text-fg-secondary">
-                            {l.sugestao.bloqueio} Não crie outro lançamento para esta transação: concilie depois da aprovação.
-                          </span>
-                        </div>
+                        </Aviso>
                       ) : l.sugestao ? (
-                        <div className="flex flex-col gap-0.5 rounded-md border border-brand/30 bg-brand/5 px-2.5 py-1.5">
-                          <span className="inline-flex items-center gap-1 text-micro font-medium text-brand">
-                            <Sparkles size={12} /> Sugestão · {l.sugestao.motivo}
+                        <Aviso tom="marca" icone={<Sparkles />}>
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-micro font-medium">Sugestão · {l.sugestao.motivo}</span>
+                            <ResumoDoLancamento l={l.sugestao} />
                           </span>
-                          <ResumoDoLancamento l={l.sugestao} />
-                        </div>
+                        </Aviso>
                       ) : (
                         l.candidatosDeMesmoValor > 0 && (
                           <span className="text-micro text-fg-muted">
@@ -358,20 +365,29 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
       <div className="flex flex-col gap-4">
         <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
-          <strong className={tomDoValor(transacao.centavos)}>{moeda(transacao.centavos)}</strong>. Marque um ou mais
+          <strong className="text-fg">{moeda(transacao.centavos)}</strong>. Marque um ou mais
           lançamentos {transacao.centavos < 0 ? "a pagar" : "a receber"} cuja soma feche o valor no centavo.
         </p>
+        {/* A caixa de busca do Connect (15/10/2026): Enter busca e o "limpar"
+            volta à lista inicial — era um campo comum com o botão "Buscar". O
+            termo sai do formulário, e não do estado, que no "limpar" ainda
+            não foi atualizado quando o envio acontece. */}
         <form
-          className="flex items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            carregar(busca);
+            carregar(String(new FormData(e.currentTarget).get("q") ?? ""));
           }}
         >
-          <Input compact value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por contraparte ou descrição" aria-label="Buscar" className="max-w-xs" />
-          <Button type="submit" variant="secondary" size="sm" disabled={carregando}>
-            Buscar
-          </Button>
+          <CampoDeBusca
+            compact
+            name="q"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            enviarAoLimpar
+            placeholder="Buscar por contraparte ou descrição"
+            aria-label="Buscar lançamento"
+            className="w-80 max-w-full"
+          />
         </form>
 
         <div className="max-h-[380px] overflow-y-auto border border-border rounded-md">
@@ -505,7 +521,7 @@ function CriarLancamento({
         <input type="hidden" name="transactionId" value={transacao.id} />
         <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
-          <strong className={tomDoValor(transacao.centavos)}>{moeda(transacao.centavos)}</strong>. O lançamento nasce pago
+          <strong className="text-fg">{moeda(transacao.centavos)}</strong>. O lançamento nasce pago
           nesta data, com este valor, e já conciliado.
         </p>
         {transacao.sugestao?.bloqueio && (

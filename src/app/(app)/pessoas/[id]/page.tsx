@@ -257,7 +257,7 @@ export default async function PessoaPage({
             {canEdit && (
               <Button href="/admin/atendentes" variant="secondary" size="sm" className="mt-4">
                 <KeyRound size={14} />
-                Gerenciar vínculo em Admin → Vínculos de acesso
+                Gerenciar em Configurações › Atendentes e vínculos
               </Button>
             )}
           </Card>

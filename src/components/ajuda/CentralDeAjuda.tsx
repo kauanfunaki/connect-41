@@ -11,13 +11,16 @@ import {
   LayoutGrid,
   Pin,
   Play,
-  Search,
+  SearchX,
   Send,
   SunMoon,
   Bell,
 } from "lucide-react";
 import { Accordion } from "@/components/ui/Accordion";
-import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Badge } from "@/components/ui/Badge";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { VideoDoYouTube } from "@/components/ajuda/VideoDoYouTube";
 import { normalizar } from "@/lib/buscaDeTelas";
@@ -75,7 +78,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
     resumo: "Telas, empresas e pessoas pelo nome, de qualquer lugar.",
     icone: <Command />,
     passos: [
-      "Aperte Ctrl+K (ou clique na busca do topo).",
+      "Aperte Ctrl+K, ou clique na busca no alto da barra lateral — com o menu recolhido, ela é a lupa.",
       "Antes de digitar, aparecem as telas que você abriu por último.",
       "Digite parte do nome — sem acento funciona — e aperte Enter para abrir o primeiro resultado.",
     ],
@@ -89,7 +92,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
     passos: [
       "Clique no nome do escritório e do setor, na barra do topo, e escolha o setor na janela “Trocar de setor ou escritório”.",
       "Em \"Todos os setores\", clique no nome do setor em \"Meus setores\" para entrar nele.",
-      "Passe o mouse em Cadastros ou num grupo do setor (como Contas) para ver as telas dele ao lado, sem abrir.",
+      "Passe o mouse em Cadastros ou num grupo do setor (como Contas) para ver as telas dele ao lado, sem abrir. Com o menu recolhido em ícones, o mouse mostra só o nome, e o clique abre a tela.",
     ],
   },
   {
@@ -224,18 +227,14 @@ export function CentralDeAjuda({
 
   return (
     <div className="space-y-10">
-      {/* Busca: a primeira coisa da tela, larga, como a de uma central de ajuda. */}
-      <div className="relative overflow-hidden rounded-xl border border-border bg-surface px-5 py-7 sm:px-8 sm:py-9 shadow-[var(--c41-shadow-xs)]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full opacity-60 blur-3xl"
-          style={{ background: "radial-gradient(circle, var(--c41-brand-subtle), transparent 70%)" }}
-        />
-        <p className="relative font-display text-fs-8 sm:text-[26px] font-semibold text-fg leading-tight">Como podemos ajudar?</p>
-        <p className="relative mt-1.5 text-body text-fg-muted max-w-[60ch]">{introducao}</p>
-        <div className="relative mt-5 max-w-xl">
-          <Input
-            icon={<Search />}
+      {/* Busca: a primeira coisa da tela, larga, como a de uma central de ajuda.
+          Sem brilho próprio (15/10/2026): o brilho mora só no fundo do casco. */}
+      <div className="rounded-lg border border-border bg-surface px-5 py-7 sm:px-8 sm:py-9 shadow-xs">
+        <p className="font-display text-title font-semibold text-fg leading-tight">Como podemos ajudar?</p>
+        <p className="mt-1.5 text-body text-fg-muted max-w-[60ch]">{introducao}</p>
+        <div className="mt-5 max-w-xl">
+          {/* A caixa de busca do Connect, com o "limpar" próprio (15/10/2026). */}
+          <CampoDeBusca
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder={exemploDeBusca}
@@ -245,10 +244,15 @@ export function CentralDeAjuda({
         </div>
       </div>
 
+      {/* No `EmptyState` (15/10/2026): era um parágrafo solto. */}
       {nada && (
-        <p className="text-body text-fg-muted">
-          Nada encontrado para <span className="font-medium text-fg">&ldquo;{busca}&rdquo;</span>. Tente outra palavra, ou o nome da tela.
-        </p>
+        <Card>
+          <EmptyState
+            icon={<SearchX />}
+            title="Nada encontrado"
+            description={busca.trim() ? `Nenhum assunto com “${busca.trim()}”. Tente outra palavra, ou o nome da tela.` : undefined}
+          />
+        </Card>
       )}
 
       {/* O vídeo de cada assunto toca só dentro dele: no passo aberto aqui e no
@@ -316,7 +320,7 @@ export function CentralDeAjuda({
             </h2>
             <Link
               href={`/setor/${s.code}/telas`}
-              className="inline-flex items-center gap-1 text-[12.5px] font-medium text-fg-secondary hover:text-brand transition-colors"
+              className="inline-flex items-center gap-1 text-fs-2 font-medium text-fg-secondary hover:text-brand transition-colors"
             >
               Todas as telas <ArrowRight size={13} />
             </Link>
@@ -346,30 +350,34 @@ function ListaDeTelas({ telas, cor }: { telas: TelaDaAjuda[]; cor?: string }) {
               {t.icone ?? (t.codigo ? <ModuleIcon code={t.codigo} /> : <LayoutGrid />)}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-fg">
+              <span className="flex items-center gap-1.5 text-card-title font-semibold text-fg">
                 {t.titulo}
-                {!navegavel && <kbd className="rounded border border-border px-1 text-[10.5px] font-medium text-fg-muted">{t.caminho}</kbd>}
-                {t.artigo && <span className="rounded-full bg-brand/10 px-1.5 py-px text-[10.5px] font-semibold text-brand">Passo a passo</span>}
+                {!navegavel && <kbd className="rounded border border-border px-1 text-micro font-medium text-fg-muted">{t.caminho}</kbd>}
+                {/* "Passo a passo" e "Vídeo" são categoria: o `Badge` (15/10/2026),
+                    e não pílulas de 10,5px montadas aqui. */}
+                {t.artigo && <Badge variant="info">Passo a passo</Badge>}
                 {t.video && (
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-brand/10 px-1.5 py-px text-[10.5px] font-semibold text-brand">
+                  <Badge variant="info" className="gap-1">
                     <Play size={9} fill="currentColor" aria-hidden /> Vídeo
-                  </span>
+                  </Badge>
                 )}
               </span>
-              <span className="block text-[12.5px] text-fg-muted mt-0.5 leading-snug">{t.descricao}</span>
+              <span className="block text-fs-2 text-fg-muted mt-0.5 leading-snug">{t.descricao}</span>
             </span>
             {navegavel && <ArrowUpRight size={15} className="mt-0.5 flex-shrink-0 text-fg-muted group-hover:text-brand transition-colors" />}
           </>
         );
-        const cls = "group h-full flex items-start gap-3 rounded-lg border border-border bg-surface p-3.5 shadow-[var(--c41-shadow-xs)]";
+        // O cartão do app; o que leva a uma tela é o cartão-atalho (`Card
+        // href`: borda azul, sobe 2px) — era um hover só na borda (15/10/2026).
+        const cls = "group h-full flex items-start gap-3 p-3.5";
         return (
           <li key={t.chave}>
             {navegavel ? (
-              <Link href={destino} className={`${cls} hover:border-border-strong transition-colors`}>
+              <Card href={destino} className={cls}>
                 {conteudo}
-              </Link>
+              </Card>
             ) : (
-              <div className={cls}>{conteudo}</div>
+              <Card className={cls}>{conteudo}</Card>
             )}
           </li>
         );

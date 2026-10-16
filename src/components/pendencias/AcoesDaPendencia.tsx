@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { CheckCircle2, RotateCcw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { resolverPendencia, reabrirPendencia, cancelarPendencia } from "@/app/(app)/pendencias/actions";
 import { emAndamento, type StatusDaPendencia } from "@/lib/financeiro/pendencias/regras";
 
-/** Resolver, cancelar ou reabrir — os botões que o status atual permite. */
+/** Resolver, cancelar ou reabrir — as ações que o status atual permite. */
 export function AcoesDaPendencia({ id, status }: { id: string; status: StatusDaPendencia }) {
   const { dialog, requestConfirm } = useConfirm();
   const [erro, setErro] = useState<string | null>(null);
@@ -40,18 +42,25 @@ export function AcoesDaPendencia({ id, status }: { id: string; status: StatusDaP
           >
             <CheckCircle2 size={13} /> Resolver
           </Button>
-          <Button
-            size="sm"
-            variant="danger"
-            onClick={() =>
-              requestConfirm(
-                { title: "Cancelar a pendência?", description: "Use quando o pedido não vale mais. Dá para reabrir depois.", confirmLabel: "Cancelar pendência", destructive: true },
-                executar(cancelarPendencia)
-              )
-            }
-          >
-            <XCircle size={13} /> Cancelar
-          </Button>
+          {/* Cancelar encerra: vai no "⋯", em vermelho (11A, 15/10/2026) — era
+              um botão vermelho à vista ao lado do "Resolver". */}
+          <MenuDeMaisAcoes rotulo="Mais ações da pendência" size="md" align="right" width={200}>
+            {({ close }) => (
+              <ItemDoMenu
+                icone={<XCircle />}
+                danger
+                onClick={() => {
+                  close();
+                  requestConfirm(
+                    { title: "Cancelar a pendência?", description: "Use quando o pedido não vale mais. Dá para reabrir depois.", confirmLabel: "Cancelar pendência", destructive: true },
+                    executar(cancelarPendencia)
+                  );
+                }}
+              >
+                Cancelar pendência
+              </ItemDoMenu>
+            )}
+          </MenuDeMaisAcoes>
         </>
       ) : (
         <Button

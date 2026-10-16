@@ -3,25 +3,26 @@
 import { useId, useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Pencil, Plus, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { IconButton } from "@/components/ui/IconButton";
+import { Aviso } from "@/components/ui/Aviso";
 import { CampoForm } from "@/components/ui/CampoForm";
-import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
-import { SegmentedControl, type SegmentItem } from "@/components/ui/SegmentedControl";
 import { pontuarPassoDoLote, salvarRequisitosDaVaga } from "@/app/(app)/vagas/[id]/triagem-actions";
-import { CORTES_PADRAO, ROTULO_DA_FAIXA, type Faixa, type Requisito } from "@/lib/recrutamento/triagem";
+import { CORTES_PADRAO, MAX_REQUISITOS, ROTULO_DA_FAIXA, type Faixa, type Requisito } from "@/lib/recrutamento/triagem";
+import {
+  adicionarRequisito,
+  faixasDaRegua,
+  mudarRequisito,
+  removerRequisito,
+  ROTULO_DO_PESO,
+  separarEmListas,
+  type ItemDaLista,
+  type LinhaDeRequisito,
+} from "@/lib/recrutamento/editorDeRequisitos";
 
-type Linha = { tipo: Requisito["tipo"]; texto: string; peso: 1 | 2 | 3 };
-
-// O tipo pinta como o `Badge` da lista logo abaixo (Obrigatório em âmbar,
-// Desejável neutro): a mesma informação lê igual na edição e na leitura — é o
-// caso do `tone` por item do SegmentedControl.
-const TIPOS: SegmentItem<Linha["tipo"]>[] = [
-  { key: "OBRIGATORIO", label: "Obrigatório", tone: "warning" },
-  { key: "DESEJAVEL", label: "Desejável", tone: "neutral" },
-];
+type Linha = LinhaDeRequisito;
 
 const PESOS = [1, 2, 3] as const;
 
@@ -35,8 +36,28 @@ type Props = {
   iaConfigurada: boolean;
 };
 
+const doGravado = (r: Props["requisitos"]): Linha[] => (r ? r.itens.map(({ tipo, texto, peso }) => ({ tipo, texto, peso })) : []);
+const cortesDoGravado = (r: Props["requisitos"]) => ({
+  corteParcial: String(r?.corteParcial ?? CORTES_PADRAO.corteParcial),
+  corteCompativel: String(r?.corteCompativel ?? CORTES_PADRAO.corteCompativel),
+});
+
+/** O desenho de cada lista: a cor do tipo no filete de cima e no rótulo, e a frase do que ela vale. */
+const LISTAS = {
+  OBRIGATORIO: { titulo: "Obrigatórios", nota: "pesam o dobro", adicionar: "Adicionar obrigatório", filete: "border-t-warning", rotulo: "text-warning-fg" },
+  DESEJAVEL: { titulo: "Desejáveis", nota: "contam a favor", adicionar: "Adicionar desejável", filete: "border-t-[color:var(--c41-grafico-neutro)]", rotulo: "" },
+} as const;
+
 /**
  * Requisitos da triagem e o lote de pontuação.
+ *
+ * Os requisitos em duas listas, Obrigatórios e Desejáveis — escolha "Vaga · 3
+ * B" do Kauan (14/10/2026). Era uma linha por requisito com quatro controles
+ * sem rótulo (tipo, texto, pontos, lixeira) e os cortes como dois números
+ * soltos. Agora o tipo é a lista onde o requisito está, cada lista tem o
+ * próprio campo de adicionar, o peso ganha nome (baixo, médio, alto) e os
+ * cortes desenham uma régua de 0 a 100. O formato gravado e o versionamento
+ * não mudam (ver `src/lib/recrutamento/editorDeRequisitos.ts`).
  *
  * O lote roda em passos curtos chamados daqui, um atrás do outro, com o
  * andamento na tela — 200 currículos numa requisição só estourariam o tempo
@@ -45,25 +66,42 @@ type Props = {
 export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, podeEditar, podePontuar, iaConfigurada }: Props) {
   const router = useRouter();
   const [editando, setEditando] = useState(!requisitos && podeEditar);
-  const [linhas, setLinhas] = useState<Linha[]>(() =>
-    requisitos ? requisitos.itens.map(({ tipo, texto, peso }) => ({ tipo, texto, peso })) : [{ tipo: "OBRIGATORIO", texto: "", peso: 2 }],
-  );
-  const [cortes, setCortes] = useState({
-    corteCompativel: String(requisitos?.corteCompativel ?? CORTES_PADRAO.corteCompativel),
-    corteParcial: String(requisitos?.corteParcial ?? CORTES_PADRAO.corteParcial),
-  });
+  const [linhas, setLinhas] = useState<Linha[]>(() => doGravado(requisitos));
+  // O texto ainda não adicionado de cada lista: entra junto ao salvar, para
+  // não se perder quem digitou e foi direto ao "Salvar requisitos".
+  const [novos, setNovos] = useState<Record<Linha["tipo"], string>>({ OBRIGATORIO: "", DESEJAVEL: "" });
+  const [cortes, setCortes] = useState(() => cortesDoGravado(requisitos));
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, startSalvar] = useTransition();
   const [lote, setLote] = useState<{ rodando: boolean; feitas: number; total: number; log: string[] } | null>(null);
 
-  const muda = (i: number, p: Partial<Linha>) => setLinhas((ls) => ls.map((l, j) => (j === i ? { ...l, ...p } : l)));
+  const listas = separarEmListas(linhas);
+  const regua = faixasDaRegua(cortes.corteParcial, cortes.corteCompativel);
+  const cheio = linhas.length >= MAX_REQUISITOS;
+
+  function adicionar(tipo: Linha["tipo"]) {
+    if (cheio) return;
+    setLinhas((ls) => adicionarRequisito(ls, tipo, novos[tipo]));
+    setNovos((n) => ({ ...n, [tipo]: "" }));
+  }
+
+  function cancelar() {
+    setLinhas(doGravado(requisitos));
+    setCortes(cortesDoGravado(requisitos));
+    setNovos({ OBRIGATORIO: "", DESEJAVEL: "" });
+    setErro(null);
+    setEditando(false);
+  }
 
   function salvar() {
     setErro(null);
+    const itens = adicionarRequisito(adicionarRequisito(linhas, "OBRIGATORIO", novos.OBRIGATORIO), "DESEJAVEL", novos.DESEJAVEL);
     startSalvar(async () => {
-      const r = await salvarRequisitosDaVaga(vagaId, { itens: linhas, ...cortes });
+      const r = await salvarRequisitosDaVaga(vagaId, { itens, ...cortes });
       if ("error" in r) setErro(r.error);
       else {
+        setLinhas(itens);
+        setNovos({ OBRIGATORIO: "", DESEJAVEL: "" });
         setEditando(false);
         router.refresh();
       }
@@ -100,7 +138,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
 
   return (
     <Card className="p-5 mb-4">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h2 className="text-section font-semibold text-fg">Triagem de currículos</h2>
           <p className="text-fs-2 text-fg-muted mt-0.5 max-w-[640px]">
@@ -116,79 +154,61 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
         )}
       </div>
 
-      {/* Edição no tamanho de formulário (h-9), com cada requisito numa grade
-          de colunas fixas. O tipo é um seletor de duas posições e o peso, três
-          pontos (escolha A da página "Telas pesadas", 08/10/2026): eram dois
-          seletores por linha, que pediam abrir a lista para ver ou trocar, e o
-          peso só se lia de perto. No celular o texto do requisito desce para a
-          linha de baixo, inteiro. */}
       {editando ? (
         <div className="space-y-5">
-          <fieldset className="space-y-2">
-            <legend className="text-label font-medium text-fg mb-1.5">Requisitos</legend>
-            {linhas.map((l, i) => (
-              <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)_auto] sm:grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2">
-                <SegmentedControl
-                  items={TIPOS}
-                  active={l.tipo}
-                  onChange={(tipo) => muda(i, { tipo })}
-                  label={`Tipo do requisito ${i + 1}`}
-                />
-                <Input
-                  value={l.texto}
-                  maxLength={300}
-                  onChange={(e) => muda(i, { texto: e.target.value })}
-                  placeholder="Ex.: Experiência com contas a pagar · Excel intermediário · CNH B"
-                  aria-label={`Requisito ${i + 1}`}
-                  className="col-span-3 order-last sm:col-span-1 sm:order-none"
-                />
-                <PesoEmPontos
-                  valor={l.peso}
-                  onChange={(peso) => muda(i, { peso })}
-                  rotulo={`Peso do requisito ${i + 1}`}
-                  className="justify-self-end sm:justify-self-auto"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setLinhas((ls) => ls.filter((_, j) => j !== i))}
-                  aria-label={`Remover o requisito ${i + 1}`}
-                >
-                  <Trash2 size={15} />
-                </Button>
-              </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {(["OBRIGATORIO", "DESEJAVEL"] as const).map((tipo) => (
+              <ListaDeRequisitos
+                key={tipo}
+                tipo={tipo}
+                itens={tipo === "OBRIGATORIO" ? listas.obrigatorios : listas.desejaveis}
+                onMudar={(indice, mudanca) => setLinhas((ls) => mudarRequisito(ls, indice, mudanca))}
+                onRemover={(indice) => setLinhas((ls) => removerRequisito(ls, indice))}
+                novo={novos[tipo]}
+                onNovo={(texto) => setNovos((n) => ({ ...n, [tipo]: texto }))}
+                onAdicionar={() => adicionar(tipo)}
+                cheio={cheio}
+              />
             ))}
-            {/* Botão, e não texto cinza (30/09): é ação do formulário. */}
-            <Button variant="secondary" size="sm" onClick={() => setLinhas((ls) => [...ls, { tipo: "DESEJAVEL", texto: "", peso: 2 }])}>
-              <Plus size={14} /> Adicionar requisito
-            </Button>
-          </fieldset>
+          </div>
+          <p className="text-helper text-fg-muted">
+            Os pontos são o peso: um é baixo, três é alto. Clique para trocar.
+            {cheio && ` Chegou ao limite de ${MAX_REQUISITOS} requisitos por vaga.`}
+          </p>
 
-          <div className="space-y-2">
-            <FieldGrid columns="sm:grid-cols-[200px_200px]">
-              <CampoForm label="Compatível a partir de" htmlFor="corteCompativel">
-                <Input
-                  id="corteCompativel"
-                  inputMode="numeric"
-                  value={cortes.corteCompativel}
-                  onChange={(e) => setCortes({ ...cortes, corteCompativel: e.target.value })}
-                />
-              </CampoForm>
-              <CampoForm label="Parcial a partir de" htmlFor="corteParcial">
+          <div className="space-y-3">
+            <p className="c41-rotulo">Como a nota vira faixa</p>
+            <div className="flex flex-wrap gap-3">
+              <CampoForm label="Parcial a partir de" htmlFor="corteParcial" className="w-[11rem]">
                 <Input
                   id="corteParcial"
                   inputMode="numeric"
+                  maxLength={3}
                   value={cortes.corteParcial}
                   onChange={(e) => setCortes({ ...cortes, corteParcial: e.target.value })}
                 />
               </CampoForm>
-            </FieldGrid>
+              <CampoForm label="Compatível a partir de" htmlFor="corteCompativel" className="w-[11rem]">
+                <Input
+                  id="corteCompativel"
+                  inputMode="numeric"
+                  maxLength={3}
+                  value={cortes.corteCompativel}
+                  onChange={(e) => setCortes({ ...cortes, corteCompativel: e.target.value })}
+                />
+              </CampoForm>
+            </div>
+            {regua ? (
+              <Regua faixas={regua} />
+            ) : (
+              <Aviso tom="atencao">O corte de Parcial tem de ficar abaixo do de Compatível, os dois entre 1 e 100.</Aviso>
+            )}
             <p className="text-helper text-fg-muted">
               O peso vai de um a três pontos, e obrigatório pesa o dobro. Localidade não entra aqui: cidade não é avaliada pela IA, o recrutador confere.
             </p>
           </div>
 
-          {erro && <p className="text-ui text-danger">{erro}</p>}
+          {erro && <Aviso>{erro}</Aviso>}
 
           <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
             {requisitos && (
@@ -197,7 +217,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
               </p>
             )}
             {requisitos && (
-              <Button variant="secondary" onClick={() => setEditando(false)}>
+              <Button variant="secondary" onClick={cancelar}>
                 Cancelar
               </Button>
             )}
@@ -208,26 +228,17 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
         </div>
       ) : requisitos ? (
         <>
-          {/* Coluna fixa para o tipo: com `flex`, "Obrigatório" e "Desejável"
-              têm larguras diferentes e o texto de cada requisito começava num
-              ponto. */}
-          <ul className="space-y-1.5 text-ui mb-3">
-            {requisitos.itens.map((r) => (
-              <li key={r.id} className="grid grid-cols-[104px_minmax(0,1fr)_auto] items-baseline gap-x-2">
-                {/* O tipo do requisito é categoria, então é o `Badge` (escolha 2A do
-                    Kauan, 08/10/2026): o `Selo` ficou para situação. A coluna
-                    cresceu de 84 para 104px para caber "Obrigatório" no Badge. */}
-                <Badge variant={r.tipo === "OBRIGATORIO" ? "warning" : "neutral"} className="justify-self-start">
-                  {r.tipo === "OBRIGATORIO" ? "Obrigatório" : "Desejável"}
-                </Badge>
-                <span className="text-fg">{r.texto}</span>
-                <span className="text-fg-muted text-micro tnum">peso {r.peso}</span>
-              </li>
+          <div className="grid gap-3 md:grid-cols-2 mb-4">
+            {(["OBRIGATORIO", "DESEJAVEL"] as const).map((tipo) => (
+              <ListaDeRequisitos key={tipo} tipo={tipo} itens={tipo === "OBRIGATORIO" ? listas.obrigatorios : listas.desejaveis} />
             ))}
-          </ul>
-          <p className="text-micro text-fg-muted mb-3">
-            Versão {requisitos.versao} · Compatível ≥ {requisitos.corteCompativel} · Parcial ≥ {requisitos.corteParcial}
-          </p>
+          </div>
+          {regua && (
+            <div className="mb-4 max-w-2xl">
+              <Regua faixas={regua} />
+            </div>
+          )}
+          <p className="text-micro text-fg-muted mb-3">Versão {requisitos.versao} dos requisitos</p>
           {podePontuar &&
             (iaConfigurada ? (
               <div className="flex flex-wrap items-center gap-2">
@@ -268,6 +279,151 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
 }
 
 /**
+ * Uma das duas listas. Com `onMudar`, é a edição: texto, peso nos três pontos
+ * e o "×" em cada requisito, e o campo de adicionar no pé (Enter adiciona).
+ * Sem, é a leitura: o texto e o peso desenhado.
+ */
+function ListaDeRequisitos({
+  tipo,
+  itens,
+  onMudar,
+  onRemover,
+  novo = "",
+  onNovo,
+  onAdicionar,
+  cheio = false,
+}: {
+  tipo: Linha["tipo"];
+  itens: ItemDaLista[];
+  onMudar?: (indice: number, mudanca: Partial<Linha>) => void;
+  onRemover?: (indice: number) => void;
+  novo?: string;
+  onNovo?: (texto: string) => void;
+  onAdicionar?: () => void;
+  cheio?: boolean;
+}) {
+  const desenho = LISTAS[tipo];
+  const idDoTitulo = useId();
+  const editavel = !!onMudar;
+  return (
+    <section aria-labelledby={idDoTitulo} className={`min-w-0 rounded-lg border border-border border-t-[3px] ${desenho.filete} bg-surface p-3`}>
+      <div className="flex items-baseline justify-between gap-2 px-1 pb-1.5">
+        <h3 id={idDoTitulo} className={`c41-rotulo ${desenho.rotulo}`}>
+          {desenho.titulo}
+        </h3>
+        <span className="text-micro text-fg-muted">{desenho.nota}</span>
+      </div>
+
+      {itens.length === 0 && !editavel && <p className="px-1 py-1.5 text-ui text-fg-muted">Nenhum.</p>}
+      <ul className="divide-y divide-border">
+        {itens.map(({ indice, linha }) => (
+          <li key={indice} className="flex items-center gap-2 py-1.5 px-1">
+            {editavel ? (
+              <Input
+                compact
+                value={linha.texto}
+                maxLength={300}
+                onChange={(e) => onMudar(indice, { texto: e.target.value })}
+                aria-label={`${tipo === "OBRIGATORIO" ? "Requisito obrigatório" : "Requisito desejável"}: texto`}
+                className="min-w-0 flex-1"
+              />
+            ) : (
+              <span className="min-w-0 flex-1 text-ui text-fg break-words">{linha.texto}</span>
+            )}
+            <span className="flex flex-shrink-0 items-center gap-1">
+              {editavel ? (
+                <PesoEmPontos valor={linha.peso} onChange={(peso) => onMudar(indice, { peso })} rotulo={`Peso de “${linha.texto || "requisito"}”`} />
+              ) : (
+                <PontosDoPeso valor={linha.peso} />
+              )}
+              <span className="w-10 text-micro text-fg-muted">{ROTULO_DO_PESO[linha.peso]}</span>
+            </span>
+            {onRemover && (
+              <IconButton size="sm" variant="ghost" onClick={() => onRemover(indice)} aria-label={`Remover “${linha.texto || "requisito"}”`}>
+                <X size={14} />
+              </IconButton>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {editavel && onNovo && onAdicionar && (
+        <div className="mt-2 flex items-center gap-1.5">
+          <Input
+            compact
+            value={novo}
+            maxLength={300}
+            disabled={cheio}
+            onChange={(e) => onNovo(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onAdicionar();
+              }
+            }}
+            placeholder={`${desenho.adicionar} — tecle Enter`}
+            aria-label={desenho.adicionar}
+            className="min-w-0 flex-1"
+          />
+          <Button variant="secondary" size="sm" onClick={onAdicionar} disabled={cheio || !novo.trim()} aria-label={desenho.adicionar}>
+            <Plus size={14} /> <span className="max-sm:sr-only">Adicionar</span>
+          </Button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** O peso desenhado, na leitura: os mesmos três pontos, sem clique. */
+function PontosDoPeso({ valor }: { valor: Linha["peso"] }) {
+  return (
+    <span className="flex items-center gap-1 px-1" role="img" aria-label={`Peso ${valor} de ${PESOS.length}`}>
+      {PESOS.map((p) => (
+        <span key={p} aria-hidden className={`size-2.5 rounded-full border-[1.5px] border-brand ${p <= valor ? "bg-brand" : ""}`} />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * A régua de 0 a 100 com os dois cortes: Incompatível em cinza, Parcial em
+ * âmbar, Compatível em verde, e o número de cada corte em cima da marca. A
+ * legenda embaixo diz o mesmo em texto — a régua é só desenho.
+ */
+function Regua({ faixas }: { faixas: NonNullable<ReturnType<typeof faixasDaRegua>> }) {
+  const [incompativel, parcial, compativel] = faixas;
+  const cor = { INCOMPATIVEL: "bg-[var(--c41-grafico-neutro)]/45", PARCIAL: "bg-warning", COMPATIVEL: "bg-success" } as const;
+  return (
+    <div>
+      <div aria-hidden className="relative mx-2 mt-7 mb-3">
+        <div className="flex h-2.5 overflow-hidden rounded-full">
+          <span className={cor.INCOMPATIVEL} style={{ width: `${parcial!.de}%` }} />
+          <span className={cor.PARCIAL} style={{ width: `${compativel!.de - parcial!.de}%` }} />
+          <span className={cor.COMPATIVEL} style={{ width: `${100 - compativel!.de}%` }} />
+        </div>
+        {[parcial!.de, compativel!.de].map((n) => (
+          <span
+            key={n}
+            className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-fg-secondary bg-surface shadow-xs"
+            style={{ left: `${n}%` }}
+          >
+            <span className="absolute bottom-[calc(100%+3px)] left-1/2 -translate-x-1/2 text-fs-2 font-bold text-fg tnum">{n}</span>
+          </span>
+        ))}
+      </div>
+      <ul className="flex flex-wrap gap-x-5 gap-y-1 text-fs-2 text-fg-secondary tnum">
+        {[incompativel!, parcial!, compativel!].map((f) => (
+          <li key={f.faixa} className="inline-flex items-center gap-1.5">
+            <span aria-hidden className={`size-2.5 rounded-full ${cor[f.faixa]}`} />
+            {f.legenda}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
  * O peso do requisito em três pontos (●●○): pintados até o peso escolhido.
  *
  * Cada ponto é um rádio de verdade, transparente por cima do desenho — as
@@ -290,7 +446,7 @@ function PesoEmPontos({
   return (
     <div role="radiogroup" aria-label={rotulo} className={`flex items-center ${className}`.trim()}>
       {PESOS.map((p) => {
-        const dica = `Peso ${p} de ${PESOS.length}`;
+        const dica = `Peso ${p} de ${PESOS.length} (${ROTULO_DO_PESO[p]})`;
         return (
           <label
             key={p}

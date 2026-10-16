@@ -5,7 +5,7 @@ import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getModuleRoute } from "@/lib/module-catalog";
 import { getSectorMaps } from "@/lib/sectors";
-import { TELAS_GERAIS } from "@/lib/ia/ferramentas-ajuda";
+import { CAMINHO_DOS_QUADROS, TELAS_GERAIS } from "@/lib/ia/ferramentas-ajuda";
 import { artigoDaChave, artigoDoCaminho } from "@/lib/ajuda/artigos";
 import { videoDoArtigo } from "@/lib/ajuda/videos";
 import { montarTutorialDaEquipe } from "@/lib/tutorial/servidor";
@@ -69,16 +69,17 @@ export default async function AjudaPage() {
     telas: porSetor.get(code)!,
   }));
 
-  // "Espaços" é por setor: aponta para o do setor ativo (ou o primeiro que a
-  // pessoa enxerga); sem nenhum, sai da lista.
-  const setorDosEspacos = ctx.activeSector ?? codigos[0] ?? null;
+  // "Quadros" (até 14/10/2026, "Espaços") é por setor: aponta para o do setor
+  // ativo (ou o primeiro que a pessoa enxerga); sem nenhum, sai da lista. Achada
+  // pelo caminho, e não pelo nome, para o nome poder mudar sem quebrar isto.
+  const setorDosQuadros = ctx.activeSector ?? codigos[0] ?? null;
   const gerais: TelaDaAjuda[] = TELAS_GERAIS.flatMap((t): TelaDaAjuda[] => {
     if (t.tela === "Ajuda") return [];
     // A fila das solicitações do portal só existe com o módulo ligado.
     if (t.tela === "Solicitações" && !estados.some((m) => m.code === "portal_solicitacoes" && m.enabled)) return [];
-    if (t.tela === "Espaços") {
-      const caminho = `/setor/${setorDosEspacos}`;
-      return setorDosEspacos ? [{ chave: t.tela, titulo: t.tela, caminho, descricao: t.descricao, ...ajudaDaTela(undefined, caminho) }] : [];
+    if (t.caminho === CAMINHO_DOS_QUADROS) {
+      const caminho = `/setor/${setorDosQuadros}`;
+      return setorDosQuadros ? [{ chave: t.tela, titulo: t.tela, caminho, descricao: t.descricao, ...ajudaDaTela(undefined, caminho) }] : [];
     }
     return [{ chave: t.tela, titulo: t.tela, caminho: t.caminho, descricao: t.descricao, ...ajudaDaTela(undefined, t.caminho) }];
   });

@@ -95,7 +95,7 @@ export function GradeDoOrcamento({
       <input type="hidden" name="budgetId" value={budgetId} />
       <input type="hidden" name="lidoEm" value={lidoEm} />
 
-      <div className="overflow-x-auto border border-border rounded-lg bg-surface">
+      <div className="overflow-x-auto border border-border rounded-lg bg-surface shadow-xs">
         <table className="w-full min-w-[1480px] text-fs-2">
           <thead>
             <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">

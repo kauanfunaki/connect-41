@@ -8,10 +8,14 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { formatCnpj } from "@/lib/format";
 import { StatusDot } from "@/components/shared/StatusDot";
+import { NovoWorkspace } from "@/components/admin/WorkspaceForm";
+import { criarWorkspace } from "./actions";
 
-export default async function WorkspacesPage() {
+export default async function WorkspacesPage({ searchParams }: { searchParams: Promise<{ novo?: string }> }) {
   const ctx = await getAuthContext();
   if (ctx.role !== "SUPER_ADMIN") notFound();
+  // `?novo=1` é o endereço antigo /admin/workspaces/novo: a lista abre com a janela aberta.
+  const { novo } = await searchParams;
 
   const prisma = getPrisma();
   const tenants = await prisma.tenant.findMany({ orderBy: { name: "asc" } });
@@ -21,12 +25,8 @@ export default async function WorkspacesPage() {
       <PageHeader
         title="Workspaces"
         subtitle={<>{tenants.length} workspace{tenants.length !== 1 ? "s" : ""} cadastrado{tenants.length !== 1 ? "s" : ""}</>}
-        action={<><Button
-          href="/admin/workspaces/novo"
-          variant="primary" className="font-medium"
-        >
-          + Novo workspace
-        </Button></>}
+        // "+ Novo workspace" numa janela (P19, 15/10/2026): eram dois campos numa página inteira.
+        action={<NovoWorkspace key={novo === "1" ? "novo" : "lista"} action={criarWorkspace} abertaDeInicio={novo === "1"} />}
       />
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
         <div className="divide-y divide-border">

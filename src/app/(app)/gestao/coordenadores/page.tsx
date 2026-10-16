@@ -114,7 +114,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                   <th className="px-3">Pessoa</th>
                   <th className="px-3">Em aberto</th>
                   <th className="px-3">Processos</th>
-                  <th className="px-3">Cards</th>
+                  <th className="px-3">Tarefas</th>
                   <th className="px-3">Pendências</th>
                   <th className="px-3">Transferências</th>
                   <th className="px-3">Solicitações</th>
@@ -164,13 +164,13 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
 
       {semDono.length > 0 && (
         <section aria-labelledby="sem-dono" className="flex flex-col gap-2">
-          <h2 id="sem-dono" className="text-card-title font-semibold text-fg">
+          <h2 id="sem-dono" className="text-section font-semibold text-fg">
             Sem responsável ({semDono.length})
           </h2>
           <p className="text-fs-2 text-fg-muted">
             Em aberto e sem ninguém designado. Os alertas destes vão para a coordenação do setor. Troque o responsável no painel ou nos alertas.
           </p>
-          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface shadow-xs">
             {semDono.slice(0, 50).map((x) => (
               <li key={`${x.item.origem}:${x.item.id}`} className="px-4 py-2 flex flex-col">
                 <Link href={x.item.href} className="text-fs-3 text-fg hover:underline">

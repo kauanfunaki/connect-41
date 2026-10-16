@@ -213,7 +213,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         passos: [
           "Dentro do ciclo, em “Nova avaliação”, busque o colaborador no campo “Colaborador”.",
           "Clique em “Avaliar colaborador”.",
-          "Em “Notas por Competência (0-10)”, dê uma nota para cada competência.",
+          "Em “Notas por competência (0 a 10)”, dê uma nota para cada competência.",
           "Em “Desenvolvimento”, preencha “Observações”, “Plano de desenvolvimento” e “Prazo de melhoria”, se for o caso.",
           "Clique em “Salvar avaliação”. A média aparece na tabela do ciclo.",
         ],
@@ -252,10 +252,21 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         ],
       },
       {
+        titulo: "Divulgar o link da vaga",
+        passos: [
+          "Abra a vaga. Publicada no portal, ela mostra embaixo do título a faixa azul “Publicada no portal de vagas”.",
+          "Clique em “Abrir página da vaga” para ver o que o candidato vê.",
+          "Clique em “Copiar link” para colar o endereço onde quiser, ou em “WhatsApp” para mandar a vaga com a mensagem pronta.",
+          "Se a vaga não está no portal, a linha “Não publicada no portal de vagas” diz o motivo e o que fazer.",
+        ],
+      },
+      {
         titulo: "Vincular candidatos e movê-los pelo funil",
         passos: [
           "Abra a vaga e vá até “Funil de recrutamento”.",
-          "Logo abaixo do funil, em “Nova candidatura”, escolha o “Candidato”, informe a “Origem” (por exemplo, LinkedIn) e clique em “Vincular candidato”. Se a pessoa ainda não está no banco, clique em “Novo candidato”, ao lado do nome do bloco.",
+          "Clique em “Adicionar candidato”. No painel, busque pelo nome, CPF ou e-mail, escolha a “Origem” (Indicação, Portal, WhatsApp, LinkedIn ou Outra…) e clique em “Vincular”.",
+          "Se a pessoa ainda não está no banco, clique em “Não achou? Cadastrar novo candidato”, preencha o nome, o e-mail e o telefone (o currículo em PDF é opcional) e clique em “Cadastrar e vincular”.",
+          "No topo de cada coluna aparecem quantos estão na etapa agora, quantos chegaram até ela e quantos passaram da etapa anterior.",
           "Arraste o cartão do candidato entre as etapas “Triagem”, “Entrevista”, “Teste”, “Proposta” e “Contratado”, ou escolha a etapa na lista do próprio cartão.",
           "Para tirar alguém do funil, clique no botão “⋯” do cartão e escolha “Reprovar” ou “Desistiu”.",
           "Informe o “Motivo”, se quiser, e confirme. O candidato vai para a faixa de encerrados.",
@@ -264,8 +275,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pontuar os currículos com a IA",
         passos: [
-          "Na seção “Triagem de currículos”, escreva cada requisito, escolha “Obrigatório” ou “Desejável” e marque o peso nos três pontos, de um a três.",
-          "Clique em “Adicionar requisito” para incluir outros e ajuste “Compatível a partir de” e “Parcial a partir de”, se quiser.",
+          "Na seção “Triagem de currículos”, escreva cada requisito no campo “Adicionar obrigatório” ou “Adicionar desejável” e tecle Enter. Obrigatório pesa o dobro.",
+          "Marque o peso nos três pontos ao lado de cada requisito: um é baixo, três é alto. O “×” tira o requisito.",
+          "Ajuste “Parcial a partir de” e “Compatível a partir de”, se quiser. A régua de 0 a 100 mostra onde começa cada faixa.",
           "Clique em “Salvar requisitos”.",
           "Clique em “Pontuar pendentes” para a IA dar nota aos currículos ainda sem nota, ou em “Reprocessar todas” para refazer todas.",
           "Acompanhe o andamento do lote. No funil, os candidatos de cada etapa ficam ordenados pela nota.",
@@ -285,7 +297,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
     dicas: [
       "Mover para “Contratado” transforma o candidato em colaborador com a admissão em andamento, que aparece para o DP em “Admissões”. Depois disso, o cartão não muda mais de etapa.",
       "A nota da triagem só ordena os candidatos — nunca reprova ninguém. Nome, idade, cidade e foto não chegam à IA.",
-      "O “Assistente da vaga” responde perguntas sobre os candidatos e sugere movimentos, mas não altera nada: cada sugestão só vale depois que você clica em “Aplicar”.",
+      "O botão “Perguntar à Ceci sobre esta vaga” abre a Ceci já com a vaga como assunto. Ela responde sobre os candidatos e sugere movimentos, mas não altera nada: cada sugestão só vale depois que você clica em “Aplicar”.",
     ],
   },
 
@@ -315,12 +327,27 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         ],
       },
       {
-        titulo: "Analisar o currículo e marcar habilidades",
+        titulo: "Ler o currículo e marcar habilidades",
         passos: [
-          "Na ficha do candidato, em “Tags / Habilidades”, marque as tags que descrevem a pessoa.",
-          "Em “Triagem de currículo (IA)”, clique em “Analisar currículo”. A IA lê o PDF, preenche os campos vazios da ficha e mostra um resumo profissional.",
+          "Na ficha do candidato, em “Tags”, clique em “+ tag” e escolha as que descrevem a pessoa.",
+          "No bloco “Currículo”, clique em “Ler com IA”. A IA lê o PDF, preenche os campos vazios da ficha e escreve um resumo profissional, que fica guardado no bloco.",
           "Em “Teste”, escolha o “Tipo de teste” e clique em “Enviar teste”.",
-          "Em “Candidaturas”, clique no nome da vaga para abrir o funil dela.",
+          "Em “Candidaturas”, cada vaga mostra a etapa em que a pessoa está. Clique em “Abrir candidatura” para ver os pareceres e as entrevistas.",
+        ],
+      },
+      {
+        titulo: "Corrigir os dados do candidato",
+        passos: [
+          "Em “Dados pessoais”, clique no lápis da parte que quer mudar: Identificação, Contato ou Endereço.",
+          "Corrija os campos e clique em “Salvar”. Só aquela parte muda.",
+        ],
+      },
+      {
+        titulo: "Anexar documentos",
+        passos: [
+          "O bloco “Documentos” começa fechado e a linha já diz quantos arquivos há. Clique nele para ver a lista.",
+          "Para anexar, clique em “Anexar”, escolha o arquivo, a categoria e, se for o caso, o vencimento e “Documento sensível”.",
+          "Clique em “Anexar” na janela para enviar.",
         ],
       },
       {
@@ -333,7 +360,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "A análise do currículo precisa de um PDF: o enviado pela candidatura no portal ou um documento da categoria Currículo na ficha.",
+      "A leitura do currículo precisa de um PDF: o enviado pela candidatura no portal ou um documento da categoria Currículo na ficha. Vale o mais recente.",
       "Marcar tags deixa o candidato fácil de achar no banco de talentos, mesmo que ele não avance na vaga atual.",
     ],
   },
@@ -359,14 +386,24 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Encontrar um colaborador",
         passos: [
-          "Digite o nome no campo de busca.",
-          "Clique em “Filtros” para escolher a “Empresa” e a “Situação”.",
+          "No campo “Empresa”, escolha a empresa. A tela mostra uma empresa por vez e abre na última empresa que você abriu.",
+          "Para achar alguém sem saber a empresa, digite o nome ou o CPF em “Buscar em todas as empresas”. O resultado mostra a empresa de cada pessoa.",
+          "Clique em “Filtros” para ver também os cadastros inativos.",
           "Clique no nome para abrir a ficha, onde ficam as abas de férias, afastamentos, desligamento e os demais registros do DP.",
+        ],
+      },
+      {
+        titulo: "Ler o resumo da empresa",
+        passos: [
+          "Escolha a empresa no campo “Empresa”.",
+          "Em cima da tabela ficam os números dela: ativos, admissões e desligamentos do mês (com as admissões em andamento), em férias e afastados.",
+          "Os números saem da situação e das datas de admissão e de desligamento da ficha de cada pessoa. Com a ficha em dia, o resumo fica certo.",
         ],
       },
     ],
     dicas: [
-      "Por padrão, a lista esconde os inativos. Quando houver algum, o aviso acima da tabela mostra quantos ficaram de fora, com o link “Mostrar todos”.",
+      "Por padrão, a lista esconde os inativos. Quando houver algum, o aviso acima da tabela mostra quantos ficaram de fora, com o botão “Mostrar todos”.",
+      "A busca em todas as empresas mostra até 50 pessoas. Se não achar quem procura, digite mais do nome ou o CPF.",
       "Os funcionários do próprio escritório não ficam aqui, e sim em “Pessoas”.",
     ],
   },
@@ -454,7 +491,15 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Clique no cartão “Aguardando resposta” ou “Respondidos” para recortar a lista.",
           "Use o filtro da coluna “Teste” para ver um tipo de teste só.",
           "Na coluna “Resultado”, veja o perfil DISC ou o percentual de acertos.",
-          "Clique em “Abrir” para ver o resultado completo.",
+          "Clique em “Abrir” para ver o resultado completo: no DISC, as barras, o gráfico de teia e o perfil explicado em palavras simples; no questionário, cada pergunta com a resposta dada e a certa, e o filtro “Erradas”.",
+        ],
+      },
+      {
+        titulo: "Mandar o link de novo ou pelo WhatsApp",
+        passos: [
+          "Clique em “Abrir” na linha do teste que está aguardando resposta.",
+          "Use “Copiar” para colar o link onde quiser, ou “Mandar no WhatsApp”: a mensagem já vai com a vaga, o link e até quando ele vale.",
+          "Embaixo, o prazo mostra quantos dias faltam. Se o link vencer, clique em “Gerar novo link”: o anterior deixa de funcionar e o novo vale por mais 7 dias.",
         ],
       },
       {
@@ -471,6 +516,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
     dicas: [
       "Um modelo que já foi usado não pode ser excluído, só arquivado: botão “⋯” da linha e “Arquivar”.",
       "Você também pode enviar teste pela ficha do candidato ou pela candidatura dentro da vaga, no quadro “Teste”.",
+      "O DISC mostra o jeito de trabalhar de cada pessoa. Não serve para aprovar ou reprovar.",
     ],
   },
 

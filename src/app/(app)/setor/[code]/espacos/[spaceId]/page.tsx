@@ -98,7 +98,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
       </div>
 
       <div className="mb-6">
-        <h2 className="text-card-title font-semibold text-fg mb-2.5">Pastas</h2>
+        <h2 className="text-section font-semibold text-fg mb-2.5">Pastas</h2>
         {/* Os dois vazios da tela no mesmo desenho (07/10/2026): "Pastas" era
             uma frase solta e "Listas", um EmptyState num cartão à mão. */}
         {folders.length === 0 ? (
@@ -109,7 +109,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {folders.map((f) => (
               <div key={f.id} className="relative">
-                <Card href={`/setor/${code}/pastas/${f.id}`} className="flex items-center gap-2.5 px-4 py-3 pr-28">
+                <Card href={`/setor/${code}/pastas/${f.id}`} className="flex items-center gap-2.5 px-4 py-3 pr-12">
                   <FolderIcon size={16} className="text-fg-muted flex-shrink-0" />
                   <div className="min-w-0">
                     <p className="text-card-title font-semibold text-fg truncate">{f.name}</p>
@@ -128,7 +128,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
       </div>
 
       <div>
-        <h2 className="text-card-title font-semibold text-fg mb-2.5">Listas</h2>
+        <h2 className="text-section font-semibold text-fg mb-2.5">Listas</h2>
         {looseLists.length === 0 ? (
           <Card>
             <EmptyState title="Nenhuma lista solta neste espaço" description="Listas fora de pasta aparecem aqui." />

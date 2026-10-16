@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  anoPorExtenso,
   atalhosDePeriodo,
   dataBR,
   dataParaLeitura,
@@ -10,6 +11,7 @@ import {
   hojeIso,
   lerDataDigitada,
   lerHoraDigitada,
+  lerAnoIso,
   lerIso,
   lerMesDigitado,
   mascararData,
@@ -92,6 +94,16 @@ describe("mês e hora", () => {
   it("máscara de mês", () => {
     expect(mascararMes("102026")).toBe("10/2026");
     expect(mascararMes("1/")).toBe("01/");
+  });
+
+  it("ano inteiro: só o ano, sem mês", () => {
+    expect(lerAnoIso("2026")).toBe(2026);
+    expect(lerAnoIso("2026-10")).toBeNull();
+    expect(lerAnoIso("26")).toBeNull();
+    expect(lerAnoIso("")).toBeNull();
+    expect(lerAnoIso(undefined)).toBeNull();
+    expect(anoPorExtenso("2026")).toBe("Ano de 2026");
+    expect(anoPorExtenso("2026-10")).toBe("");
   });
 
   it.each([

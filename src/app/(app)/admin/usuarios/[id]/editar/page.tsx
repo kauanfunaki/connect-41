@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { UsuarioForm } from "@/components/admin/UsuarioForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { atualizarUsuario } from "../../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { assignableRoles, ROLE_OPTIONS } from "@/lib/roles";
@@ -35,7 +34,6 @@ export default async function EditarUsuarioPage({
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Editar" }]} />
       <PageHeader title="Editar usuário" />
 
       <div className="max-w-[720px]">

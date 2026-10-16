@@ -39,6 +39,8 @@ export function AcoesDoModelo({ id, nome, ativo, podeExcluir }: Props) {
           <>
             <ItemDoMenu
               icone={ativo ? <Archive /> : <ArchiveRestore />}
+              // Arquivar tira o modelo da lista: fica no "⋯" mesmo sozinho (D3).
+              danger={ativo}
               disabled={pendente}
               onClick={() => {
                 close();

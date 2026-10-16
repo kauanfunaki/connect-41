@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { formatCalendarDate } from "@/lib/format";
@@ -202,44 +201,43 @@ export default async function CarreirasPage({
             {vagas.map((v) => {
               const local = [v.cidade, v.uf].filter(Boolean).join(" – ");
               return (
-                // O `Card` com o link por dentro — era o cartão escrito à mão
-                // no próprio link (auditoria DRG-08, 07/10/2026).
-                <Card key={v.id} className="hover:border-border-strong hover:bg-surface-hover transition-colors">
-                  <Link href={rotas.vaga(v.id)} className="block p-5 rounded-lg">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h2 className="text-body font-semibold text-fg">{v.title}</h2>
-                        <p className="text-fs-2 text-fg-muted mt-0.5">
-                          {v.empresa}
-                          {local && ` · ${local}`}
-                          {v.area && ` · ${v.area}`}
-                        </p>
-                      </div>
-                      {/* Categoria da vaga, no `Badge` como as etiquetas de baixo
-                          (escolha 2A, 08/10/2026) — era uma pílula à mão de 10px. */}
-                      {v.quantity > 1 && (
-                        <Badge variant="info" className="flex-shrink-0">
-                          {v.quantity} vagas
-                        </Badge>
-                      )}
+                // O cartão-atalho do app (`Card href`, 15/10/2026): borda azul,
+                // sobe 2px — era o `Card` com o link por dentro e um hover
+                // cinza próprio (antes, auditoria DRG-08, o cartão à mão).
+                <Card key={v.id} href={rotas.vaga(v.id)} className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-card-title font-semibold text-fg">{v.title}</h2>
+                      <p className="text-fs-2 text-fg-muted mt-0.5">
+                        {v.empresa}
+                        {local && ` · ${local}`}
+                        {v.area && ` · ${v.area}`}
+                      </p>
                     </div>
-                    <div className="mt-2.5">
-                      <EtiquetasDaVaga
-                        workMode={v.workMode}
-                        contractType={v.contractType}
-                        salaryMin={v.salaryMin}
-                        salaryMax={v.salaryMax}
-                        showSalary={v.showSalary}
-                      />
-                    </div>
-                    {v.publicDescription && (
-                      <p className="text-fs-2 text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
+                    {/* Categoria da vaga, no `Badge` como as etiquetas de baixo
+                        (escolha 2A, 08/10/2026) — era uma pílula à mão de 10px. */}
+                    {v.quantity > 1 && (
+                      <Badge variant="info" className="flex-shrink-0">
+                        {v.quantity} vagas
+                      </Badge>
                     )}
-                    <p className="text-micro text-fg-muted mt-2">
-                      Publicada em {formatCalendarDate(v.openedAt)}
-                      {v.applicationDeadline && ` · inscrições até ${formatCalendarDate(v.applicationDeadline)}`}
-                    </p>
-                  </Link>
+                  </div>
+                  <div className="mt-2.5">
+                    <EtiquetasDaVaga
+                      workMode={v.workMode}
+                      contractType={v.contractType}
+                      salaryMin={v.salaryMin}
+                      salaryMax={v.salaryMax}
+                      showSalary={v.showSalary}
+                    />
+                  </div>
+                  {v.publicDescription && (
+                    <p className="text-fs-2 text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
+                  )}
+                  <p className="text-micro text-fg-muted mt-2">
+                    Publicada em {formatCalendarDate(v.openedAt)}
+                    {v.applicationDeadline && ` · inscrições até ${formatCalendarDate(v.applicationDeadline)}`}
+                  </p>
                 </Card>
               );
             })}

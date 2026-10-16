@@ -127,7 +127,8 @@ export function ClienteForm({ action, cancelHref, defaultValues, buscarEmpresasD
                 : `Já existem ${empresas.length} empresas cadastradas com esta raiz. Vincular ao cliente?`}
             </p>
             <p className="text-helper text-fg-muted">
-              Sem cliente, a empresa não aparece no portal. Desmarque a que não for deste cliente.
+              Desmarque a que não for deste cliente. O portal não depende do cliente: o acesso se dá na ficha de cada empresa,
+              em “Acesso ao portal”.
             </p>
             <div className="space-y-1.5">
               {empresas.map((e) => (

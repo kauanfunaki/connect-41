@@ -285,15 +285,22 @@ function BotaoDoFunil({ ativo, open, onClick, rotulo }: { ativo: boolean; open: 
 /**
  * Rótulo e funil do cabeçalho, nas duas versões do funil (13/10/2026).
  *
- * Fora da tabela padrão, o funil vai colado ao rótulo, como sempre foi. Na
- * tabela padrão (`.c41-tabela`, que centraliza o cabeçalho) o funil centralizava
- * junto com o rótulo e empurrava o texto para a esquerda da coluna — o rótulo
- * ficava fora do eixo das células embaixo dele. Lá o CSS (`globals.css`, junto
- * da `.c41-tabela`) tira o funil da conta: o funil vai para a borda direita da
- * coluna e um par invisível dele, à esquerda, deixa o rótulo no centro exato —
- * tudo em fluxo, então na coluna estreita o rótulo encosta à esquerda em vez de
- * passar por baixo do botão. Nas colunas `c41-a-esquerda` o rótulo segue à
- * esquerda, e o funil também vai para a direita.
+ * O funil centralizava junto com o rótulo e empurrava o texto para a esquerda
+ * da coluna — o rótulo ficava fora do eixo das células embaixo dele. O CSS
+ * (`globals.css`, junto da `.c41-tabela`) tira o funil da conta: o funil vai
+ * para a borda direita da coluna e um par invisível dele, à esquerda, deixa o
+ * rótulo no centro exato — tudo em fluxo, então na coluna estreita o rótulo
+ * encosta à esquerda em vez de passar por baixo do botão. Nas colunas
+ * `c41-a-esquerda` o rótulo segue à esquerda, nas `c41-a-direita` à direita, e
+ * o funil sempre na borda direita.
+ *
+ * Entre uma coluna e a outra o cabeçalho tem um fio (14/10/2026): sem ele, o
+ * funil na borda direita parecia ser do rótulo da coluna seguinte.
+ *
+ * As duas coisas valem na tabela padrão (`.c41-tabela`) e na que fica fora
+ * dela e põe `c41-cabecalho-dividido` no <thead> (Empresas, lista de tarefas).
+ * Numa tabela sem nenhuma das duas o funil voltaria a ir colado ao rótulo — o
+ * teste em FiltroDeColunas.test.ts varre o app e barra isso.
  */
 function CabecalhoComFunil({ rotulo, funil }: { rotulo: React.ReactNode; funil: React.ReactNode }) {
   return (

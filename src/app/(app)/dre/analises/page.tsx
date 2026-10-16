@@ -107,7 +107,7 @@ export default async function AnalisesPage({
       />
       {/* A empresa navega sozinha (e vira a última aberta); o mês, com "Aplicar". */}
       <FiltroDaEmpresa acao="/dre/analises" empresas={empresas} valor={companyId} manter={{ aba, mes }}>
-        <FiltroDePeriodo acao="/dre/analises" mes={mes} extras={{ empresa: companyId, aba }} naFileira />
+        <FiltroDePeriodo acao="/dre/analises" mes={mes} mesEmNumero extras={{ empresa: companyId, aba }} naFileira />
       </FiltroDaEmpresa>
       <AbasDeLink
         abas={ABAS.map((a) => ({ ...a, href: `/dre/analises?aba=${a.chave}&empresa=${companyId}&mes=${mes}` }))}

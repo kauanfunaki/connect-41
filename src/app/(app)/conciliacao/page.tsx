@@ -160,7 +160,7 @@ export default async function ConciliacaoPage({
       />
       {filtroDaEmpresa}
 
-      <h2 className="text-card-title font-semibold text-fg mb-3">Contas bancárias</h2>
+      <h2 className="text-section font-semibold text-fg mb-3">Contas bancárias</h2>
 
       {contas.length === 0 ? (
         <Card className="mb-6">
@@ -463,7 +463,7 @@ async function ExtratoDaConta({
 
   return (
     <>
-      <h2 className="text-card-title font-semibold text-fg mb-3">Extrato — {conta.nickname}</h2>
+      <h2 className="text-section font-semibold text-fg mb-3">Extrato — {conta.nickname}</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-5">
         {podeAgir && conta.active ? (

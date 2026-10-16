@@ -8,20 +8,19 @@
 // aceitou receber, então o e-mail continua sendo o aviso que alcança todo mundo.
 // Por isso o resultado devolvido à tela continua contando só o e-mail.
 
-import { getPrisma } from "@/lib/prisma";
 import { notifyUser } from "@/lib/notifications";
+import { usuariosAtivosDasEmpresas } from "@/lib/portal/empresasDaContaDb";
 import { sendPendenciaAoClienteEmail, type ResultadoDoAviso } from "@/lib/email/sendMail";
 import { avisarClientePorPush } from "@/lib/portal/avisos";
 
-/** Usuários ativos do portal que enxergam a empresa — os do grupo dela. */
+/**
+ * Usuários ativos do portal que enxergam a empresa: os ligados a ela, e os
+ * ligados à matriz dela com "incluir filiais" (desde 14/10/2026 — antes, os do
+ * cliente da empresa). É a mesma regra do que o portal mostra
+ * (`src/lib/portal/empresasDaConta.ts`): quem recebe o aviso vê a tela.
+ */
 export async function usuariosDoPortalDaEmpresa(tenantId: string, companyId: string) {
-  const prisma = getPrisma();
-  const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { clientGroupId: true } });
-  if (!empresa?.clientGroupId) return [];
-  return prisma.portalUser.findMany({
-    where: { tenantId, clientGroupId: empresa.clientGroupId, active: true },
-    select: { id: true, name: true, email: true },
-  });
+  return usuariosAtivosDasEmpresas(tenantId, [companyId]);
 }
 
 export async function avisarClienteDaPendencia(input: {

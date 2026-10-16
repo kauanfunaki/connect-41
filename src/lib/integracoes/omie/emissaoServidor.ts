@@ -83,7 +83,7 @@ async function contaDaEmpresa(tenantId: string, companyId: string): Promise<{ ok
     prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { id: true, name: true, displayName: true, cnpj: true, cpf: true } }),
   ]);
   if (!empresa) return { ok: false, erro: "Empresa não encontrada." };
-  if (!conexao) return { ok: false, erro: "Esta empresa não tem conta do Omie cadastrada (Administração › Integrações)." };
+  if (!conexao) return { ok: false, erro: "Esta empresa não tem conta do Omie cadastrada (Configurações › Integrações)." };
   if (!conexao.enabled) return { ok: false, erro: "A conta do Omie desta empresa está desligada." };
   const config = lerConfig(conexao.configEnc);
   if (!config.appKey || !config.appSecret) return { ok: false, erro: "Falta App Key ou App Secret na conta do Omie desta empresa." };

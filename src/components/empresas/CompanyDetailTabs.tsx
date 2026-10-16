@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { LayoutGrid, Users, Briefcase, FileText, FolderOpen, History, MessageCircle, Network } from "lucide-react";
+import { LayoutGrid, Users, Briefcase, FileText, FolderOpen, History, KeyRound, MessageCircle, Network } from "lucide-react";
 import { Tabs } from "@/components/ui/Tabs";
 
 type Props = {
@@ -20,6 +20,12 @@ type Props = {
   conversationsCount: number;
   /** As pastas da empresa nos Arquivos. Ausente com o módulo desligado — e aí a aba some. */
   files?: React.ReactNode;
+  /**
+   * Quem acessa a empresa no portal do cliente (14/10/2026). Ausente para quem
+   * não administra o portal — e aí a aba some.
+   */
+  portal?: React.ReactNode;
+  portalCount?: number;
 };
 
 export function CompanyDetailTabs({
@@ -35,6 +41,8 @@ export function CompanyDetailTabs({
   conversations,
   conversationsCount,
   files,
+  portal,
+  portalCount,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -42,6 +50,7 @@ export function CompanyDetailTabs({
   const validTabs = [
     "overview", "filiais", "people", "operations",
     ...(documents ? ["documents"] : []), ...(files ? ["files"] : []),
+    ...(portal ? ["portal"] : []),
     "conversations", "history",
   ];
   // Link antigo para a aba que não existe mais cai na outra: "documents" vira
@@ -59,6 +68,7 @@ export function CompanyDetailTabs({
     { key: "operations", label: "RH & operação", icon: <Briefcase /> },
     ...(documents ? [{ key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> }] : []),
     ...(files ? [{ key: "files", label: "Arquivos", icon: <FolderOpen /> }] : []),
+    ...(portal ? [{ key: "portal", label: `Acesso ao portal${portalCount ? ` (${portalCount})` : ""}`, icon: <KeyRound /> }] : []),
     { key: "conversations", label: `Conversas${conversationsCount ? ` (${conversationsCount})` : ""}`, icon: <MessageCircle /> },
     { key: "history", label: "Histórico", icon: <History /> },
   ];
@@ -83,6 +93,7 @@ export function CompanyDetailTabs({
         {active === "operations" && operations}
         {active === "documents" && documents}
         {active === "files" && files}
+        {active === "portal" && portal}
         {active === "conversations" && conversations}
         {active === "history" && history}
       </div>

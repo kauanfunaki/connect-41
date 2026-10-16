@@ -5,6 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { Button } from "@/components/ui/Button";
 import { AgenteCard } from "@/components/admin/AgenteCard";
 import { ChamadasDeIA } from "@/components/admin/ChamadasDeIA";
@@ -82,8 +83,10 @@ export default async function AgentesDeIAPage() {
       {/* Os números do mês em cartão, como nas outras telas (polimento de
           30/09) — era um bloco com o total e as chamadas numa linha só. "Sem
           custo apurado" continua ao lado do total, e não num rodapé: o total só
-          significa alguma coisa quando esse cartão está em zero. */}
+          significa alguma coisa quando esse cartão está em zero. Sem o respiro
+          da faixa: quem espaça é a nota de baixo. */}
       <FaixaDeTotais
+        className=""
         itens={[
           { rotulo: "Gasto no mês", valor: moeda(totalCentavos), icone: <Wallet /> },
           { rotulo: "Chamadas", valor: formatarNumero(totalChamadas, 0), icone: <Activity /> },
@@ -95,11 +98,12 @@ export default async function AgentesDeIAPage() {
           },
         ]}
       />
-      <p className="text-fs-2 text-fg-muted -mt-2 mb-5">
+      {/* Na `NotaDeFonte` (15/10/2026): era um parágrafo escrito à mão. */}
+      <NotaDeFonte className="mb-5">
         O mês começa à meia-noite de São Paulo. Os valores usam a tabela de preço escrita em{" "}
         {formatInstantDate(new Date(PRECOS_ESCRITOS_EM))} — enquanto ela não for conferida contra a
         página de preços do provedor, quem protege de verdade é o teto de chamadas.
-      </p>
+      </NotaDeFonte>
 
       <section className="flex flex-col gap-3 mb-8" aria-labelledby="agentes-do-chat">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
@@ -138,7 +142,7 @@ export default async function AgentesDeIAPage() {
         </div>
         {[...porSetor.entries()].map(([setor, ls]) => (
           <div key={setor} className="flex flex-col gap-3">
-            <p className="text-fs-1 uppercase tracking-wide text-fg-muted pt-1">{setor}</p>
+            <p className="c41-rotulo pt-1">{setor}</p>
             {ls.map((linha) => (
               <AgenteCard key={linha.def.code} linha={linha} podeEditar />
             ))}

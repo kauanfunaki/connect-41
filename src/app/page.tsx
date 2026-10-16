@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { SiteDoConnect } from "@/components/site/SiteDoConnect";
 import { baseDomain } from "@/lib/auth/activeSector";
 import { ACCESS_COOKIE } from "@/lib/auth/cookies";
+import { lerPlanosDoSite } from "@/lib/planos/site";
 import { ehHostDoSite } from "@/lib/site/host";
 import { linksDoSite } from "@/lib/site/links";
 
@@ -24,6 +25,10 @@ import { linksDoSite } from "@/lib/site/links";
 // do outro lado do link (o proxy renova ou manda para o login). O cookie vale
 // para o domínio inteiro (`.useconnect.com.br`, lib/auth/cookies), então chega
 // aqui; ele dura 15 minutos sem uso, e depois disso o botão volta a "Entrar".
+//
+// A seção Planos (14/10/2026) lê do banco os planos marcados "Mostrar no site"
+// em Administração › Planos. A leitura nunca lança e desiste em 3 s: sem as
+// tabelas, sem banco ou com o banco lento, a página abre sem a seção.
 
 export const metadata: Metadata = {
   title: "Connect · a plataforma do escritório de contabilidade",
@@ -34,6 +39,7 @@ export const metadata: Metadata = {
 export default async function RootPage() {
   const host = (await headers()).get("host");
   if (!ehHostDoSite(host, baseDomain())) redirect("/home");
-  const temSessao = Boolean((await cookies()).get(ACCESS_COOKIE)?.value);
-  return <SiteDoConnect links={linksDoSite(process.env.APP_PUBLIC_URL)} temSessao={temSessao} />;
+  const [cookiesDaVisita, planos] = await Promise.all([cookies(), lerPlanosDoSite()]);
+  const temSessao = Boolean(cookiesDaVisita.get(ACCESS_COOKIE)?.value);
+  return <SiteDoConnect links={linksDoSite(process.env.APP_PUBLIC_URL)} temSessao={temSessao} planos={planos} />;
 }

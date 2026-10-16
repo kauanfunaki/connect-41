@@ -67,6 +67,7 @@ async function processos(tenantId: string, agora: Date, filtro: FiltroDeItens): 
       updatedAt: true,
       concludedAt: true,
       ownerUserId: true,
+      companyId: true,
       type: { select: { name: true } },
       company: { select: { name: true, displayName: true } },
       steps: { select: { status: true, updatedAt: true } },
@@ -100,6 +101,7 @@ async function processos(tenantId: string, agora: Date, filtro: FiltroDeItens): 
       prazo: p.dueAt,
       concluidoEm: p.concludedAt,
       href: `/processos/${p.id}`,
+      empresaId: p.companyId,
     };
   });
 }
@@ -159,6 +161,7 @@ async function cards(tenantId: string, agora: Date, filtro: FiltroDeItens): Prom
       prazo: c.dueDate,
       concluidoEm: estado === "CONCLUIDO" ? c.updatedAt : null,
       href: `/kanban/${c.pipelineId}/itens/${c.id}`,
+      empresaId: c.entityType === "COMPANY" ? c.entityId : null,
     };
   });
 }
@@ -184,6 +187,7 @@ async function pendencias(tenantId: string, agora: Date, filtro: FiltroDeItens):
       updatedAt: true,
       resolvedAt: true,
       createdById: true,
+      companyId: true,
       sectorCode: true,
       company: { select: { name: true, displayName: true } },
     },
@@ -204,6 +208,7 @@ async function pendencias(tenantId: string, agora: Date, filtro: FiltroDeItens):
       prazo: r.dueDate,
       concluidoEm: r.resolvedAt,
       href: `/pendencias/${r.id}`,
+      empresaId: r.companyId,
     }));
 }
 
@@ -234,6 +239,7 @@ async function solicitacoes(tenantId: string, agora: Date, filtro: FiltroDeItens
       status: true,
       sectorCode: true,
       assigneeId: true,
+      companyId: true,
       responseDue: true,
       firstResponseAt: true,
       updatedAt: true,
@@ -261,6 +267,7 @@ async function solicitacoes(tenantId: string, agora: Date, filtro: FiltroDeItens
     prazo: s.firstResponseAt ? null : s.responseDue,
     concluidoEm: s.closedAt,
     href: `/solicitacoes/${s.id}`,
+    empresaId: s.companyId,
   }));
 }
 

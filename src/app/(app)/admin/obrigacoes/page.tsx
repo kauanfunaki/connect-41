@@ -148,7 +148,7 @@ export default async function ObrigacoesPage() {
             <TabelaNoDesktop padrao>
               <table className="w-full min-w-[1000px]">
                 <thead>
-                  <tr className="border-b border-border text-fs-1 uppercase tracking-wide text-fg-muted">
+                  <tr className="border-b border-border">
                     <th className="px-4 py-3">Obrigação</th>
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Empresa" chave="empresa" />

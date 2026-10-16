@@ -20,6 +20,9 @@ import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatPhone, formatCep } from "@/lib/format";
 import { Aviso } from "@/components/ui/Aviso";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
+import { nomeExibicao } from "@/lib/companyName";
 
 const STATUS_OPTIONS: { value: PersonEmploymentStatus; label: string }[] = [
   { value: "ADMISSAO_EM_ANDAMENTO", label: "Admissão em andamento" },
@@ -88,7 +91,15 @@ export type PessoaDefaultValues = {
   currentSalary?: string;
 };
 
-type CompanyOption = { id: string; name: string };
+/** Os campos do seletor de empresa: logo, CNPJ e a filial embaixo da matriz. */
+type CompanyOption = {
+  id: string;
+  name: string;
+  displayName?: string | null;
+  logoUrl?: string | null;
+  cnpj?: string | null;
+  parentCompanyId?: string | null;
+};
 type CargoOption = { id: string; name: string; companyId: string };
 type DepartmentOption = { id: string; name: string; companyId: string };
 
@@ -364,6 +375,7 @@ export function PessoaForm({
   }, [values.zipCode]);
 
   const companyLabel = companies.find((c) => c.id === companyId)?.name;
+  const opcoesDaEmpresa = useMemo(() => opcoesDeEmpresa(companies.map((c) => ({ ...c, nome: nomeExibicao(c) }))), [companies]);
   const cargoLabel = cargos.find((c) => c.id === values.cargoId)?.name;
   const departmentLabel = departments.find((d) => d.id === values.departmentId)?.name;
 
@@ -484,13 +496,22 @@ export function PessoaForm({
             )}
             {!showEmployment && (
               <FieldGrid columns={GRADE}>
+                {/* O seletor de empresa com busca, logo, CNPJ e recentes
+                    (15/10/2026): era a lista inteira num select comum. O valor
+                    vai num campo escondido, que não avisa o `onChange` do
+                    formulário — por isso o `onChange` próprio. */}
                 <CampoForm label="Empresa" htmlFor="currentCompanyId" className="sm:col-span-2">
-                  <Select id="currentCompanyId" name="currentCompanyId" value={values.currentCompanyId}>
-                    <option value="">Nenhuma</option>
-                    {companies.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </Select>
+                  <SearchableSelect
+                    id="currentCompanyId"
+                    name="currentCompanyId"
+                    options={opcoesDaEmpresa}
+                    defaultValue={values.currentCompanyId}
+                    onChange={(v) => setValues((prev) => ({ ...prev, currentCompanyId: v }))}
+                    avatar
+                    lembrarRecentes="empresas"
+                    vazioLabel="Nenhuma"
+                    placeholder="Buscar empresa…"
+                  />
                 </CampoForm>
                 <CampoForm label="Cargo" htmlFor="cargoId">
                   <Select id="cargoId" name="cargoId" value={values.cargoId} disabled={!companyId}>

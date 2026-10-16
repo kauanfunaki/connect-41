@@ -21,9 +21,10 @@ export type AlcanceFiscal =
   /**
    * Cliente no portal: só as empresas listadas.
    *
-   * A lista vem resolvida de fora (do `ClientGroup` do usuário do portal) em vez
-   * de ser derivada aqui, para esta camada não precisar saber o que é um grupo
-   * de cliente — e para o dia em que houver um segundo jeito de escopar.
+   * A lista vem resolvida de fora (das empresas ligadas ao acesso do portal —
+   * era o `ClientGroup` até 14/10/2026) em vez de ser derivada aqui, para esta
+   * camada não precisar saber de onde ela vem. Foi o que deixou trocar a origem
+   * sem mexer em tela nenhuma.
    */
   | { tipo: "EMPRESAS"; tenantId: string; companyIds: string[] };
 

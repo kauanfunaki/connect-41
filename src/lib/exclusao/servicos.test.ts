@@ -210,6 +210,22 @@ describe("empresa", () => {
     expect(pessoas).toBeLessThan(b.chamadas.findIndex((c) => c.delegado === "company" && c.metodo === "deleteMany"));
   });
 
+  it("candidatura com teste enviado: o teste fica com o candidato, solto da candidatura antes de ela sair", async () => {
+    const b = escritorio({
+      contagens: { candidatura: 1 },
+      achar: (delegado, metodo, args) =>
+        delegado === "candidatura" && metodo === "findMany" && JSON.stringify(args.where).includes('"vaga":{"companyId":"e1"}') ? [{ id: "c1" }] : undefined,
+    });
+    const r = await excluirEmpresaDeVez(prisma(b.banco), { tenantId: "t1", ator: ADMIN, id: "e1", modo: "completo", confirmacao: EMPRESA.name });
+    expect(r.ok).toBe(true);
+
+    const solta = indice(b.chamadas, "assessmentLink", "updateMany");
+    expect(b.chamadas[solta].args).toEqual({ where: { tenantId: "t1", candidaturaId: { in: ["c1"] } }, data: { candidaturaId: null } });
+    expect(solta).toBeLessThan(indice(b.chamadas, "candidatura", "deleteMany"));
+    // O teste é do candidato, que fica no banco de talentos: nada de apagar link.
+    expect(indice(b.chamadas, "assessmentLink", "deleteMany")).toBe(-1);
+  });
+
   it("em massa: sai a sem histórico, fica a com histórico, com o motivo", async () => {
     const b = escritorio({
       achar: (delegado, metodo, args) => {
@@ -253,6 +269,24 @@ describe("pessoa", () => {
     expect(await excluirPessoaDeVez(prisma(b.banco), { tenantId: "t1", ator: ADMIN, id: "p1", modo: "simples" })).toMatchObject({ ok: false });
     const r = await excluirPessoaDeVez(prisma(b.banco), { tenantId: "t1", ator: ADMIN, id: "p1", modo: "completo", confirmacao: "ana souza" });
     expect(r).toMatchObject({ ok: true, destino: "/candidatos", resumo: ["2 candidaturas"] });
+  });
+
+  // Até a migration 20261014200000 o banco tinha RESTRICT do link do teste para
+  // a candidatura: sem soltar o teste antes, "Excluir com tudo" esbarrava.
+  it("candidato com teste ligado à candidatura: o teste solta da candidatura antes de ela sair", async () => {
+    const b = escritorio({
+      contagens: { candidatura: 1, assessmentLink: 1 },
+      pessoa: { ...PESSOA, type: "CANDIDATO" },
+      achar: (delegado, metodo, args) =>
+        delegado === "candidatura" && metodo === "findMany" && JSON.stringify(args.where).includes('"personId":{"in":["p1"]}') ? [{ id: "c1" }] : undefined,
+    });
+    const r = await excluirPessoaDeVez(prisma(b.banco), { tenantId: "t1", ator: ADMIN, id: "p1", modo: "completo", confirmacao: "Ana Souza" });
+    expect(r).toMatchObject({ ok: true, resumo: ["1 candidatura", "1 teste enviado"] });
+
+    const solta = indice(b.chamadas, "assessmentLink", "updateMany");
+    expect(b.chamadas[solta].args).toEqual({ where: { tenantId: "t1", candidaturaId: { in: ["c1"] } }, data: { candidaturaId: null } });
+    expect(solta).toBeLessThan(indice(b.chamadas, "candidatura", "deleteMany"));
+    expect(indice(b.chamadas, "candidatura", "deleteMany")).toBeLessThan(indice(b.chamadas, "person", "deleteMany"));
   });
 
   it("da equipe, com conta de acesso: avisa que a conta continua", async () => {

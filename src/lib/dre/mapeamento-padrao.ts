@@ -41,6 +41,10 @@ export const MAPEAMENTO_PADRAO: { categoria: string; grupo: string }[] = [
   { categoria: "Devolução de Venda", grupo: "cmv" },
   { categoria: "Frete", grupo: "cmv" },
   { categoria: "Impostos Retidos Serviços Tomados", grupo: "cmv" },
+  // O mesmo imposto com o nome do plano padrão da 41 (14/10/2026): cliente que
+  // usa o plano da 41 no Omie traz este nome, e ele também é CMV — não imposto
+  // sobre a receita. Não é da Irriga; está aqui para o Omie classificar igual.
+  { categoria: "Impostos Retidos Serviços Tomados (PIS/COFINS/CSLL/IRRF)", grupo: "cmv" },
   { categoria: "Convenio Depen", grupo: "mao_de_obra" },
   { categoria: "Serviço de terceiro - Corte a laser", grupo: "mao_de_obra" },
   { categoria: "Serviço de terceiro - Frete Interno", grupo: "mao_de_obra" },
@@ -90,6 +94,9 @@ export const MAPEAMENTO_PADRAO: { categoria: string; grupo: string }[] = [
   { categoria: "Equipamentos de Informática", grupo: "administrativas" },
   { categoria: "Softwares - Licença e aluguel", grupo: "administrativas" },
   { categoria: "Compra de combustível", grupo: "administrativas" },
+  // Do plano padrão da 41, não da Irriga (15/10/2026): despesa fixa
+  // administrativa, não CMV. Está aqui para o Omie classificar igual.
+  { categoria: "Pedágio", grupo: "administrativas" },
   { categoria: "Internet", grupo: "administrativas" },
   { categoria: "Sindicatos", grupo: "administrativas" },
   { categoria: "Telefonia", grupo: "administrativas" },

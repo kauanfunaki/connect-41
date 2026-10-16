@@ -24,6 +24,9 @@ const LISTAS_NO_CARTAO = 4;
  * espaço → pasta → lista → tarefa: as telas o menu já mostra (e agora vivem em
  * `/setor/[code]/telas`). Cada cartão mostra as listas do espaço, para achar a
  * lista sem abrir espaço por espaço.
+ *
+ * 14/10/2026: a tela passou a se chamar "Quadros" (no menu e no título), a
+ * pedido do Kauan. Os espaços, os cartões desta tela, continuam "espaço".
  */
 export default async function EspacosDoSetorPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -58,11 +61,11 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
   return (
     <PageContainer>
       <PageHeader
-        title="Espaços"
+        title="Quadros"
         subtitle={
           <span className="inline-flex items-center gap-1.5">
             <span className="size-2 rounded-full flex-shrink-0" style={{ background: corDoSetor }} aria-hidden />
-            {setor} · as listas e quadros de tarefas do setor, organizados em espaços e pastas
+            {setor} · as listas de tarefas do setor, organizadas em espaços e pastas
           </span>
         }
         action={podeCriar ? <NewSpaceButton action={criarEspaco.bind(null, code)} /> : undefined}
@@ -93,7 +96,7 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
                 <div className="h-full flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5 overflow-hidden">
                   <span className="h-[3px] flex-shrink-0" style={{ background: s.color }} aria-hidden />
                   <Link href={`/setor/${code}/espacos/${s.id}`} className="group block px-4 pt-3.5 pb-3">
-                    <p className="text-card-title font-semibold text-fg group-hover:text-brand transition-colors pr-24 truncate">
+                    <p className="text-card-title font-semibold text-fg group-hover:text-brand transition-colors pr-8 truncate">
                       {s.name}
                     </p>
                     <p className="mt-1 flex items-center gap-3 text-fs-2 text-fg-muted">

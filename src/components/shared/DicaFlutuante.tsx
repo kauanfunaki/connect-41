@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { SELETOR_DOS_ALVOS, devolverTitulo, suspenderTitulo, textoDaDica, type TituloGuardado } from "./dicaDoTitulo";
+import { SELETOR_DOS_ALVOS, devolverTitulo, posicaoDaDica, suspenderTitulo, textoDaDica, type PosicaoDaDica, type TituloGuardado } from "./dicaDoTitulo";
 
-type Dica = { texto: string; x: number; y: number; embaixo: boolean };
+type Dica = PosicaoDaDica & { texto: string };
 
 const ATRASO_MS = 300;
 /** Gráfico (`data-dica-rapida`): quem passa o mouse numa barra está lendo, não passando. */
@@ -55,6 +55,8 @@ function registrar(id: symbol) {
  *   meio-tempo (ver `suspenderTitulo`).
  * - `data-dica="…"` em qualquer lugar: opt-in explícito, sem `title` nenhum —
  *   o caminho dos componentes de base (`IconButton`, `MenuDeMaisAcoes`…).
+ *   Com `data-dica-lado="direita"`, abre à direita do elemento (a faixa de
+ *   ícones do menu, 14/10/2026); sem ele, acima.
  *
  * Também no teclado e no toque (07/10/2026): a dica abre no foco por teclado
  * (`:focus-visible`) e ao tocar no celular — o valor em reais de cada faixa
@@ -96,9 +98,7 @@ export function DicaFlutuante() {
       guardado = suspenderTitulo(el);
       if (!texto) return;
       timer = setTimeout(() => {
-        const r = el.getBoundingClientRect();
-        const embaixo = r.top < 56;
-        setDica({ texto, x: r.left + r.width / 2, y: embaixo ? r.bottom + 8 : r.top - 8, embaixo });
+        setDica({ texto, ...posicaoDaDica(el.getBoundingClientRect(), el.getAttribute("data-dica-lado")) });
       }, atraso);
     }
 
@@ -182,13 +182,14 @@ export function DicaFlutuante() {
   }, [ativa]);
 
   if (!ativa || !dica) return null;
+  const aDireita = dica.lado === "direita";
   return createPortal(
     <div
       role="tooltip"
       style={{
-        left: Math.min(Math.max(dica.x, 16), window.innerWidth - 16),
+        left: aDireita ? dica.x : Math.min(Math.max(dica.x, 16), window.innerWidth - 16),
         top: dica.y,
-        transform: `translate(-50%, ${dica.embaixo ? "0" : "-100%"})`,
+        transform: aDireita ? "translate(0, -50%)" : `translate(-50%, ${dica.lado === "baixo" ? "0" : "-100%"})`,
       }}
       className="pointer-events-none fixed z-[60] max-w-[min(360px,calc(100vw-2rem))] rounded-md bg-fg px-2.5 py-1.5 text-fs-2 leading-snug font-medium text-surface shadow-lg whitespace-pre-line break-words c41-dica-in"
     >

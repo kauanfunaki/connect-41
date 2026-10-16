@@ -94,7 +94,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
 
             {conta.testes.length > 0 && (
               <Card className="p-5 mb-4">
-                <h2 className="text-body font-semibold text-fg mb-3 inline-flex items-center gap-1.5">
+                <h2 className="text-card-title font-semibold text-fg mb-3 inline-flex items-center gap-1.5">
                   <ClipboardList size={16} className="text-brand" /> Testes para responder
                 </h2>
                 <ul className="space-y-2">
@@ -121,7 +121,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                   <Card key={c.id} className="p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h2 className="text-body font-semibold text-fg">{c.vaga.title}</h2>
+                        <h2 className="text-card-title font-semibold text-fg">{c.vaga.title}</h2>
                         <p className="text-fs-2 text-fg-muted mt-0.5">
                           {empresa} · inscrição em {formatCalendarDate(c.createdAt)}
                         </p>
@@ -173,7 +173,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
             </div>
 
             <Card className="p-5 mt-6">
-              <h2 className="text-body font-semibold text-fg mb-3">Meus dados</h2>
+              <h2 className="text-card-title font-semibold text-fg mb-3">Meus dados</h2>
               <AtualizarDados slug={slug} telefone={conta.telefone} />
             </Card>
 
