@@ -229,6 +229,16 @@ export async function ContasPage({
       <PageHeader title={titulo} subtitle={subtitulo} />
       {filtroDaEmpresa}
 
+      {/* Na ordem empresa → abas → totais → lista (15/10/2026): as abas
+          vinham depois dos cartões. */}
+      <AbasDeLink
+        abas={[
+          { chave: "contas", rotulo: "Contas", href: comParam("aba", undefined), icone: <List /> },
+          { chave: "analise", rotulo: "Análise — atraso e ranking", href: comParam("aba", "analise"), icone: <BarChart3 /> },
+        ]}
+        ativa={aba}
+      />
+
       {/* Os quatro cartões permanecem na mesma grade em todos os recortes.
           Pago/Recebido mostra zero quando as contas liquidadas ficam fora do filtro. */}
       <FaixaDeTotais
@@ -263,14 +273,6 @@ export async function ContasPage({
             icone: <CheckCircle2 />,
           },
         ]}
-      />
-
-      <AbasDeLink
-        abas={[
-          { chave: "contas", rotulo: "Contas", href: comParam("aba", undefined), icone: <List /> },
-          { chave: "analise", rotulo: "Análise — atraso e ranking", href: comParam("aba", "analise"), icone: <BarChart3 /> },
-        ]}
-        ativa={aba}
       />
 
       {/* A Análise é relatório da tela inteira: o Filtros fica fora de casco.

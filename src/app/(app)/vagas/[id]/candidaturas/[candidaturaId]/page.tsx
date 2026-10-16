@@ -6,7 +6,6 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { ExcluirComConfirmacao } from "@/components/vagas/ExcluirComConfirmacao";
 import { ScorecardForm } from "@/components/vagas/ScorecardForm";
@@ -17,6 +16,7 @@ import { requisitosAtuais } from "@/lib/recrutamento/triagemServidor";
 import type { AvaliacaoDeRequisito, Faixa, Requisito } from "@/lib/recrutamento/triagem";
 import { MeetingsSection } from "@/components/kanban/MeetingsSection";
 import { TesteCard } from "@/components/teste/TesteCard";
+import { linkPendenteNaFicha } from "@/lib/testes/linkDoTeste";
 import { STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel";
 import { CRITERIA, RECOMMENDATION_LABEL, consolidateScorecards, scorecardAverage } from "@/lib/scorecard";
 import { formatInstantDate, formatarNumero } from "@/lib/format";
@@ -42,7 +42,7 @@ export default async function CandidaturaScorecardPage({
   const candidatura = await prisma.candidatura.findFirst({
     where: { id: candidaturaId, vagaId, tenantId: ctx.tenantId, vaga: { ...scopedVagaWhere(ctx) } },
     include: {
-      person: { select: { id: true, name: true, dataDeletionRequestedAt: true } },
+      person: { select: { id: true, name: true, phone: true, dataDeletionRequestedAt: true } },
       vaga: { select: { id: true, title: true, sectorCode: true, restrictedToRecruiters: true } },
       scorecards: {
         orderBy: { createdAt: "asc" },
@@ -69,7 +69,7 @@ export default async function CandidaturaScorecardPage({
   const testeLink = candidatura.assessmentLinks[0];
   const initialTesteLink =
     testeLink?.status === "PENDENTE"
-      ? { status: "PENDENTE" as const, token: testeLink.token, expiresAtLabel: formatInstantDate(testeLink.expiresAt) }
+      ? linkPendenteNaFicha(testeLink, new Date())
       : testeLink?.status === "RESPONDIDO" && testeLink.type === "DISC"
         ? {
             status: "RESPONDIDO" as const,
@@ -121,6 +121,8 @@ export default async function CandidaturaScorecardPage({
 
   return (
     <PageContainer>
+      {/* Só a trilha, sem o "← Voltar" de julho: a tela tem pai fixo, e os dois
+          juntos diziam a mesma coisa duas vezes (P04, 15/10/2026). */}
       <Breadcrumb
         items={[
           { label: "Vagas", href: "/vagas" },
@@ -128,7 +130,6 @@ export default async function CandidaturaScorecardPage({
           { label: candidatura.person.name, truncate: true },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title={<><Link href={`/candidatos/${candidatura.person.id}`} className="hover:text-brand transition-colors">
@@ -208,6 +209,9 @@ export default async function CandidaturaScorecardPage({
           canManage={canAct}
           templates={templates}
           urlPublica={(process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "")}
+          nome={candidatura.person.name}
+          telefone={candidatura.person.phone}
+          vaga={candidatura.vaga.title}
         />
       </div>
 

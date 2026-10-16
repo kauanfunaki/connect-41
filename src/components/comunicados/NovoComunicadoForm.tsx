@@ -13,25 +13,46 @@ import { RadioGroup } from "@/components/ui/RadioGroup";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { CampoDeAnexos } from "@/components/pendencias/CampoDeAnexos";
 import { normalizar } from "@/lib/buscaDeTelas";
-import { PUBLICOS, LIMITE_DO_TITULO, type Publico } from "@/lib/comunicados/regras";
+import { PUBLICOS, LIMITE_DO_TITULO, marcarComFiliais, type Publico } from "@/lib/comunicados/regras";
 import type { ResultadoDoEnvio } from "@/app/(app)/solicitacoes/comunicados/actions";
 
 const MOSTRAR_ATE = 200;
 
+type Empresa = { id: string; nome: string; matrizId: string | null };
+
 /**
- * O comunicado novo. A confirmação diz para quantos clientes vai antes de
- * sair: é e-mail para todos eles, e não há como editar depois.
+ * A lista na ordem da tela: cada matriz seguida das filiais dela (recuadas).
+ * Filial cuja matriz não está na lista fica no lugar dela, como matriz.
+ */
+function emArvore(empresas: Empresa[]): (Empresa & { filial: boolean })[] {
+  const presentes = new Set(empresas.map((e) => e.id));
+  const filiais = new Map<string, Empresa[]>();
+  for (const e of empresas) {
+    if (e.matrizId && presentes.has(e.matrizId)) filiais.set(e.matrizId, [...(filiais.get(e.matrizId) ?? []), e]);
+  }
+  return empresas
+    .filter((e) => !e.matrizId || !presentes.has(e.matrizId))
+    .flatMap((m) => [{ ...m, filial: false }, ...(filiais.get(m.id) ?? []).map((f) => ({ ...f, filial: true }))]);
+}
+
+/**
+ * O comunicado novo. A confirmação diz para quantas empresas vai antes de
+ * sair: é e-mail para quem tem acesso a elas, e não há como editar depois.
+ *
+ * Desde 14/10/2026 vai para empresas (era Cliente). Em "Empresas escolhidas",
+ * marcar uma matriz marca as filiais dela junto — a regra do portal, em que
+ * filial entra por padrão —, e cada filial continua desmarcável.
  */
 export function NovoComunicadoForm({
   setores,
-  totalDeClientes,
-  clientes,
+  totalDeEmpresas,
+  empresas,
   acao,
 }: {
-  /** Os setores em nome dos quais a pessoa comunica, com quantos clientes cada um atende. */
-  setores: { code: string; label: string; clientes: number }[];
-  totalDeClientes: number;
-  clientes: { id: string; nome: string }[];
+  /** Os setores em nome dos quais a pessoa comunica, com quantas empresas cada um atende. */
+  setores: { code: string; label: string; empresas: number }[];
+  totalDeEmpresas: number;
+  empresas: Empresa[];
   acao: (formData: FormData) => Promise<ResultadoDoEnvio>;
 }) {
   const router = useRouter();
@@ -43,21 +64,17 @@ export function NovoComunicadoForm({
   const [busca, setBusca] = useState("");
   const [erro, setErro] = useState<string | null>(null);
 
+  const arvore = useMemo(() => emArvore(empresas), [empresas]);
   const filtrados = useMemo(() => {
     const termo = normalizar(busca);
-    return termo ? clientes.filter((c) => normalizar(c.nome).includes(termo)) : clientes;
-  }, [busca, clientes]);
+    return termo ? arvore.filter((c) => normalizar(c.nome).includes(termo)) : arvore;
+  }, [busca, arvore]);
 
   const quantos =
-    publico === "TODOS" ? totalDeClientes : publico === "ESCOLHIDOS" ? escolhidos.size : (setores.find((s) => s.code === setor)?.clientes ?? 0);
+    publico === "TODOS" ? totalDeEmpresas : publico === "ESCOLHIDOS" ? escolhidos.size : (setores.find((s) => s.code === setor)?.empresas ?? 0);
 
   function alternar(id: string) {
-    setEscolhidos((atual) => {
-      const novo = new Set(atual);
-      if (novo.has(id)) novo.delete(id);
-      else novo.add(id);
-      return novo;
-    });
+    setEscolhidos((atual) => marcarComFiliais(atual, id, empresas));
   }
 
   return (
@@ -69,13 +86,14 @@ export function NovoComunicadoForm({
         setErro(null);
         if (!e.currentTarget.reportValidity()) return;
         if (quantos === 0) {
-          setErro("Nenhum cliente recebe com essa escolha.");
+          setErro("Nenhuma empresa recebe com essa escolha.");
           return;
         }
         requestConfirm(
           {
-            title: `Enviar para ${quantos} ${quantos === 1 ? "cliente" : "clientes"}?`,
-            description: "O comunicado aparece no portal na hora e cada usuário do portal recebe um e-mail. Não dá para editar depois.",
+            title: `Enviar para ${quantos} ${quantos === 1 ? "empresa" : "empresas"}?`,
+            description:
+              "O comunicado aparece na hora no portal de quem tem acesso a essas empresas, e cada pessoa recebe um e-mail. Não dá para editar depois.",
             confirmLabel: "Enviar comunicado",
           },
           async () => {
@@ -118,7 +136,7 @@ export function NovoComunicadoForm({
           opcoes={PUBLICOS.map((p) => ({ valor: p.valor, rotulo: p.rotulo, descricao: p.dica }))}
         />
         <p className="text-fs-2 text-fg-secondary tabular-nums">
-          {quantos} {quantos === 1 ? "cliente recebe" : "clientes recebem"}
+          {quantos} {quantos === 1 ? "empresa recebe" : "empresas recebem"}
           {publico === "SETOR" && !setor && " — escolha o setor"}
         </p>
       </div>
@@ -130,22 +148,22 @@ export function NovoComunicadoForm({
               icon={<Search />}
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar cliente…"
-              aria-label="Buscar cliente"
+              placeholder="Buscar empresa…"
+              aria-label="Buscar empresa"
               compact
             />
           </div>
           <ul className="scroll-y max-h-72 overflow-y-auto p-1.5">
             {filtrados.slice(0, MOSTRAR_ATE).map((c) => (
               <li key={c.id}>
-                <div className="rounded-md px-2.5 py-1.5 hover:bg-surface-hover">
+                <div className={`rounded-md py-1.5 pr-2.5 hover:bg-surface-hover ${c.filial && !busca ? "pl-8" : "pl-2.5"}`}>
                   <Checkbox
-                    id={`comunicado-cliente-${c.id}`}
-                    name="grupos"
+                    id={`comunicado-empresa-${c.id}`}
+                    name="empresas"
                     value={c.id}
                     checked={escolhidos.has(c.id)}
                     onChange={() => alternar(c.id)}
-                    label={c.nome}
+                    label={c.filial ? `${c.nome} (filial)` : c.nome}
                   />
                 </div>
               </li>
@@ -153,14 +171,17 @@ export function NovoComunicadoForm({
             {filtrados.length > MOSTRAR_ATE && (
               <li className="px-2.5 py-1.5 text-fs-2 text-fg-muted">Mostrando {MOSTRAR_ATE}. Busque pelo nome para achar o resto.</li>
             )}
-            {filtrados.length === 0 && <li className="px-2.5 py-1.5 text-fs-2 text-fg-muted">Nenhum cliente com esse nome.</li>}
+            {filtrados.length === 0 && <li className="px-2.5 py-1.5 text-fs-2 text-fg-muted">Nenhuma empresa com esse nome.</li>}
           </ul>
           {/* Os marcados que a busca escondeu continuam indo: o checkbox some da tela, não do envio. */}
           {Array.from(escolhidos)
             .filter((id) => !filtrados.slice(0, MOSTRAR_ATE).some((c) => c.id === id))
             .map((id) => (
-              <input key={id} type="hidden" name="grupos" value={id} />
+              <input key={id} type="hidden" name="empresas" value={id} />
             ))}
+          <p className="border-t border-border px-3 py-2 text-helper text-fg-muted">
+            Marcar uma matriz marca as filiais dela junto; desmarque a filial que não deve receber.
+          </p>
         </div>
       )}
 

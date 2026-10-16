@@ -103,15 +103,16 @@ export function QuizForm({ token, questions }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* No `Aviso` de marca (15/10/2026): era uma caixa azul montada à mão. */}
       {hadDraft && (
-        <div className="bg-brand/8 border border-brand/25 rounded-lg px-4 py-3 flex items-start justify-between gap-3">
-          <p className="text-ui text-fg">
+        <Aviso tom="marca" className="flex items-start justify-between gap-3">
+          <p className="text-fg">
             Recuperamos as respostas que você já tinha marcado neste link. Continue de onde parou.
           </p>
           <Button variant="secondary" size="xs" className="flex-shrink-0" onClick={dismissRestoredNotice}>
             Ok
           </Button>
-        </div>
+        </Aviso>
       )}
 
       <Card as="section" className="p-5">
@@ -119,7 +120,7 @@ export function QuizForm({ token, questions }: Props) {
         <p className="text-fs-2 text-fg-muted mt-2">Suas respostas ficam salvas neste aparelho enquanto você responde.</p>
       </Card>
 
-      <div className="sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-canvas/95 backdrop-blur border-b border-border">
+      <div className="sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-canvas border-b border-border">
         <div className="flex items-center justify-between gap-3 mb-1.5">
           <span className="text-fs-2 font-medium text-fg">
             {answeredCount} de {questions.length} respondidas

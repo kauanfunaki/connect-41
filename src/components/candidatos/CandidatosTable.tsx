@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Pencil, UserSearch } from "lucide-react";
+import { UserSearch } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { FiltroDaColunaNaUrl } from "@/components/shared/FiltroDeColunas";
 import { Button } from "@/components/ui/Button";
@@ -93,9 +93,10 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
   }
 
   /**
-   * O mesmo candidato, em cartão, para telas estreitas — a tabela tem 9
-   * colunas em `min-w-[760px]`, e no celular e-mail, candidaturas e o "Editar"
-   * nascem fora da tela.
+   * O mesmo candidato, em cartão, para telas estreitas — a tabela tem 8
+   * colunas em `min-w-[860px]`, e no celular e-mail e candidaturas nasceriam
+   * fora da tela. O nome abre a ficha, como na tabela (o botão "Editar", que
+   * levava ao formulário inteiro, saiu em 14/10/2026: corrigir é na ficha).
    *
    * O e-mail sobe para logo abaixo do nome pelo mesmo motivo de /pessoas: o
    * CPF chega mascarado e não identifica ninguém sozinho.
@@ -125,11 +126,6 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
             </Link>
             {c.email && <p className="text-micro text-fg-muted break-all">{c.email}</p>}
           </div>
-          {canCreate && (
-            <Button variant="secondary" size="xs" href={`/candidatos/${c.id}/editar`} className="shrink-0">
-              <Pencil size={11} /> Editar
-            </Button>
-          )}
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-fs-2 text-fg-muted">
@@ -162,7 +158,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
             {canCreate && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
-                <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">Selecionar todos</span>
+                <span className="c41-rotulo">Selecionar todos</span>
               </div>
             )}
             {candidatos.map((c) => cartaoCandidato(c))}
@@ -190,9 +186,6 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
                 <th className={TH}>E-mail</th>
                 <th className={TH}>Candidaturas</th>
                 <th className={TH}>Cadastrado em</th>
-                <th className="px-4 py-3">
-                  <span className="sr-only">Ações</span>
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -219,13 +212,6 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
                   <td className="px-4 py-3 text-fg-muted">{c.email ?? "—"}</td>
                   <td className="px-4 py-3 text-fg-muted">{c.candidaturasCount}</td>
                   <td className="px-4 py-3 text-fg-muted tnum whitespace-nowrap">{c.createdAtLabel}</td>
-                  <td className="px-4 py-3">
-                    {canCreate && (
-                      <Button variant="secondary" size="xs" href={`/candidatos/${c.id}/editar`}>
-                        <Pencil size={11} /> Editar
-                      </Button>
-                    )}
-                  </td>
                 </tr>
               ))}
             </tbody>

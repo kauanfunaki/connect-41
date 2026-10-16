@@ -14,8 +14,23 @@ import { TagToggleList } from "@/components/kanban/TagToggleList";
 import { AssigneeToggleList } from "@/components/kanban/AssigneeToggleList";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
+import { formatCalendarDate } from "@/lib/format";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
+import type { StageDotType } from "@/components/kanban/StageDot";
 
-type StageOption = { id: string; name: string };
+type StageOption = { id: string; name: string; type?: StageDotType };
+
+/**
+ * A situação da tarefa no `Selo`, pelo tipo da etapa (15/10/2026): era um
+ * botão vermelho em caixa alta em qualquer etapa, até em "Concluído" — e
+ * vermelho é só para o que está em perigo.
+ */
+const TOM_DA_ETAPA: Record<StageDotType, TomDoSelo> = {
+  NOT_STARTED: "neutro",
+  IN_PROGRESS: "marca",
+  PENDING: "atencao",
+  DONE: "sucesso",
+};
 type TagOption = { id: string; name: string; color: string };
 type UserOption = { id: string; name: string };
 
@@ -27,9 +42,11 @@ const PRIORITY_COLOR: Record<number, string> = {
 };
 const FREQUENCY_LABEL: Record<string, string> = { DAILY: "Diária", WEEKLY: "Semanal", BIWEEKLY: "Quinzenal", MONTHLY: "Mensal" };
 
+// Pelo `formatCalendarDate` (15/10/2026), como o resto do app: a data vem do
+// campo ("AAAA-MM-DD"), é dia de calendário. Era o `toLocaleDateString` cru,
+// com a trava do lint desligada.
 function formatDateBR(value: string): string {
-  // eslint-disable-next-line no-restricted-syntax
-  return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return formatCalendarDate(new Date(value), { day: "2-digit", month: "short" });
 }
 
 function FieldRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
@@ -92,7 +109,9 @@ export function TaskFieldsPanel({
   const [collapseEmpty, setCollapseEmpty] = useState(false);
   const [, startTransition] = useTransition();
 
-  const currentStageName = stages.find((s) => s.id === currentStageId)?.name ?? "—";
+  const currentStage = stages.find((s) => s.id === currentStageId);
+  const currentStageName = currentStage?.name ?? "—";
+  const tomDaSituacao = TOM_DA_ETAPA[currentStage?.type ?? "NOT_STARTED"];
   const selectedUsers = allUsers.filter((u) => selectedUserIds.includes(u.id));
   const selectedWatchers = allUsers.filter((u) => selectedWatcherIds.includes(u.id));
   const selectedTags = allTags.filter((t) => selectedTagIds.includes(t.id));
@@ -110,15 +129,16 @@ export function TaskFieldsPanel({
         {canAct ? (
           <Dropdown
             trigger={({ open, toggle }) => (
-              <Button
-                variant="danger"
-                size="xs"
-                className="bg-danger/15"
+              <button
+                type="button"
                 onClick={toggle}
                 aria-expanded={open}
+                aria-label={`Situação: ${currentStageName}. Trocar`}
+                className="inline-flex items-center gap-1 rounded-full text-fg-muted hover:text-fg transition-colors"
               >
-                {currentStageName.toUpperCase()} <ChevronDown size={12} />
-              </Button>
+                <Selo tom={tomDaSituacao}>{currentStageName}</Selo>
+                <ChevronDown size={12} />
+              </button>
             )}
           >
             {stages.map((s) => (
@@ -131,7 +151,7 @@ export function TaskFieldsPanel({
             ))}
           </Dropdown>
         ) : (
-          <span className="text-fs-3 text-fg">{currentStageName}</span>
+          <Selo tom={tomDaSituacao}>{currentStageName}</Selo>
         )}
       </FieldRow>
 

@@ -12,7 +12,7 @@ import { TELAS_DO_PORTAL, telaBloqueavel } from "@/lib/portal/telas";
 // O banco aqui é um espião: qualquer tabela lida além da das telas bloqueadas
 // fica anotada. Tela bloqueada não pode ler nada dela.
 
-const SESSAO = { kind: "portal" as const, sub: "pu1", tenantId: "t1", clientGroupId: "g1" };
+const SESSAO = { kind: "portal" as const, sub: "pu1", tenantId: "t1" };
 const TODOS = new Set([
   "bpo_dre",
   "bpo_fluxo_caixa",

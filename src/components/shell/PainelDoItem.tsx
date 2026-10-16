@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { caminhoDoMenuAtivo as ativa } from "@/lib/caminhoDoMenu";
+import { useNaFaixa } from "@/components/shell/NavLink";
 
 export type TelaDoPainel = { label: string; href: string; icon?: React.ReactNode };
 
@@ -27,6 +28,10 @@ const FECHA_MS = 180;
  * Fora da árvore da sidebar (portal): ela rola, e um painel `absolute` seria
  * cortado pela borda dela. Só em tela com mouse e a partir de `lg` — no
  * celular a sidebar é gaveta, e passar o dedo não é passar o mouse.
+ *
+ * Nem na faixa de ícones (menu recolhido, 14/10/2026): lá o mouse parado no
+ * ícone mostra o nome da tela, e as telas de dentro não aparecem — o clique
+ * leva à tela principal do item (desenho aprovado pelo Kauan).
  */
 export function PainelDoItem({
   titulo,
@@ -42,6 +47,7 @@ export function PainelDoItem({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const naFaixa = useNaFaixa();
   const id = useId();
   const [aberto, setAberto] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -110,7 +116,7 @@ export function PainelDoItem({
     setAberto(false);
   }
 
-  if (telas.length === 0) return <>{children}</>;
+  if (telas.length === 0 || naFaixa) return <>{children}</>;
 
   return (
     <div

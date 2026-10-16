@@ -852,20 +852,24 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
                 aqui a primeira coluna é uma árvore — tarefa e subtarefas se leem
                 pelo recuo à esquerda — com cabeçalhos de grupo em colSpan. Fica o
                 resto do padrão: cabeçalho com fundo, borda e fio azul no hover
-                (`c41-linha`). */}
-            <thead className="sticky top-0 z-10">
+                (`c41-linha`), e o cabeçalho padrão pela `c41-cabecalho-dividido`
+                (14/10/2026): o fio entre as colunas e o funil na borda direita
+                da coluna, fora do rótulo. O rótulo segue o lado das células —
+                à esquerda (`c41-a-esquerda`) e, no Prazo, à direita
+                (`c41-a-direita`). */}
+            <thead className="c41-cabecalho-dividido sticky top-0 z-10">
               <tr className="text-left">
                 <th className={`${DOT_COL} bg-table-header-bg pt-2.5 pb-2 border-b border-border`} />
-                <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 border-b border-border">
+                <th className="c41-a-esquerda text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 border-b border-border">
                   <FiltroDaColuna rotulo="Tarefa" chave="tarefa" />
                 </th>
-                <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-44 border-b border-border">
+                <th className="c41-a-esquerda text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-44 border-b border-border">
                   <FiltroDaColuna rotulo="Tags" chave="tags" />
                 </th>
-                <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-24 border-b border-border">
+                <th className="c41-a-esquerda text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-24 border-b border-border">
                   <FiltroDaColuna rotulo="Responsáveis" chave="responsaveis" align="right" />
                 </th>
-                <th className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[300px] text-right border-b border-border">
+                <th className="c41-a-direita text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[300px] text-right border-b border-border">
                   <FiltroDaColuna rotulo="Prazo" chave="prazo" tipo="data" align="right" />
                 </th>
               </tr>

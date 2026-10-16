@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Columns3 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityTimeline, type ActivityEntry } from "@/components/shared/ActivityTimeline";
 import { boardPath } from "@/lib/kanbanPaths";
@@ -28,20 +28,18 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <h2 className="text-section font-semibold text-fg mb-4">Pipelines</h2>
+        {/* "Tarefas", o termo do kanban na tela (15/10/2026): era "Pipelines". */}
+        <h2 className="text-section font-semibold text-fg mb-4">Tarefas</h2>
         {pipelineItems.length === 0 ? (
-          <EmptyState icon={<Columns3 />} title="Nenhum pipeline vinculado" description={`Esta ${entityLabel} ainda não está em nenhum Kanban.`} />
+          <EmptyState icon={<Columns3 />} title="Nenhuma tarefa ligada" description={`Esta ${entityLabel} ainda não está em nenhuma tarefa do kanban.`} />
         ) : (
+          // O `Button` com `href` (15/10/2026), e não pílulas-link montadas à mão.
           <div className="flex flex-wrap gap-2">
             {pipelineItems.map((p) => (
-              <Link
-                key={p.id}
-                href={`${boardPath({ id: p.pipelineId })}/itens/${p.id}`}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-helper font-medium bg-surface-hover border border-border text-fg-secondary hover:text-fg hover:border-border-strong transition-colors"
-              >
+              <Button key={p.id} href={`${boardPath({ id: p.pipelineId })}/itens/${p.id}`} variant="secondary" size="sm">
                 {p.pipelineName}
-                <span className="text-fg-muted">· {p.stageName}</span>
-              </Link>
+                <span className="font-normal text-fg-muted">· {p.stageName}</span>
+              </Button>
             ))}
           </div>
         )}

@@ -118,24 +118,17 @@ export function AgenteCard({ linha, podeEditar }: Props) {
                 label="Agente ligado"
               />
 
-              {/* "(centavos)" saiu do rótulo para o sufixo do campo: na coluna
-                  de um terço, o rótulo quebrava em duas linhas e descia o campo
-                  dele abaixo dos vizinhos. */}
               <FieldGrid columns="sm:grid-cols-3">
                 <CampoForm
                   label="Teto de gasto"
                   htmlFor={`cap-cents-${linha.def.code}`}
                   helper={`Em branco usa o padrão: ${moeda(linha.def.tetoMensalCentavos)}. Zero bloqueia.`}
                 >
-                  <Input
+                  <CampoTetoEmReais
                     id={`cap-cents-${linha.def.code}`}
                     name="monthlyCapCents"
-                    type="number"
-                    min={0}
-                    step={1}
-                    defaultValue={linha.override?.monthlyCapCents ?? ""}
-                    placeholder={String(linha.def.tetoMensalCentavos)}
-                    suffix="centavos"
+                    centavos={linha.override?.monthlyCapCents ?? null}
+                    padrao={linha.def.tetoMensalCentavos}
                   />
                 </CampoForm>
 
@@ -196,5 +189,45 @@ export function AgenteCard({ linha, podeEditar }: Props) {
         </>
       )}
     </Card>
+  );
+}
+
+/** "1.234,56" — o valor do campo de reais, sem o "R$" (que é o prefixo). */
+function reaisDoCampo(centavos: number): string {
+  return Number(centavos / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Centavos do que se digitou em reais: "12", "12,5", "1.234,56" ou "12.50".
+ * Vazio volta vazio (o padrão do catálogo); o que não é valor volta como veio,
+ * e a action recusa com a mensagem dela.
+ */
+function centavosDoCampo(texto: string): string {
+  const limpo = texto.replace(/R\$/i, "").replace(/\s/g, "");
+  if (limpo === "") return "";
+  const decimal = limpo.includes(",") ? limpo.replace(/\./g, "").replace(",", ".") : limpo;
+  if (!/^\d+(\.\d{0,2})?$/.test(decimal)) return limpo;
+  return String(Math.round(Number(decimal) * 100));
+}
+
+/**
+ * O teto de gasto em reais, com "R$" (15/10/2026): era um número de
+ * centavos, com o sufixo "centavos". A action continua recebendo centavos —
+ * a conta vai num campo escondido com o mesmo nome de antes.
+ */
+function CampoTetoEmReais({ id, name, centavos, padrao }: { id: string; name: string; centavos: number | null; padrao: number }) {
+  const [texto, setTexto] = useState(centavos === null ? "" : reaisDoCampo(centavos));
+  return (
+    <>
+      <Input
+        id={id}
+        inputMode="decimal"
+        prefix="R$"
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        placeholder={reaisDoCampo(padrao)}
+      />
+      <input type="hidden" name={name} value={centavosDoCampo(texto)} />
+    </>
   );
 }

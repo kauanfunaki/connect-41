@@ -19,11 +19,13 @@ const optionalDate = z
   .refine((v) => v === "" || !Number.isNaN(Date.parse(v)), { message: "Data inválida." })
   .optional();
 
+const requiredName = z.string().trim().min(1, "Nome é obrigatório.").max(180, "Nome muito longo.");
+
 // Schema comum a Candidato e Colaborador (campos de pessoa física básicos).
 // Valida só o que importa para integridade; o resto dos campos é livre.
 const personCoreSchema = z
   .object({
-    name: z.string().trim().min(1, "Nome é obrigatório.").max(180, "Nome muito longo."),
+    name: requiredName,
     cpf: optionalCpf,
     email: optionalEmail,
     birthDate: optionalDate,
@@ -54,4 +56,20 @@ export function validatePersonForm(form: FormData): string | null {
   });
   if (parsed.success) return null;
   return parsed.error.issues[0]?.message ?? "Dados inválidos.";
+}
+
+const PERSON_FIELDS = { name: requiredName, cpf: optionalCpf, email: optionalEmail, birthDate: optionalDate } as const;
+export type PersonField = keyof typeof PERSON_FIELDS;
+
+// Só os campos de um bloco da ficha — a edição no próprio bloco (ficha do
+// candidato, 14/10/2026) manda o Contato sem o Nome, e o formulário inteiro
+// barraria por "Nome é obrigatório.". Mesmas regras e mesma ordem do
+// `validatePersonForm`; devolve a primeira mensagem, ou null.
+export function validatePersonFields(form: FormData, fields: readonly PersonField[]): string | null {
+  for (const field of Object.keys(PERSON_FIELDS) as PersonField[]) {
+    if (!fields.includes(field)) continue;
+    const parsed = PERSON_FIELDS[field].safeParse((form.get(field) as string) ?? "");
+    if (!parsed.success) return parsed.error.issues[0]?.message ?? "Dados inválidos.";
+  }
+  return null;
 }

@@ -164,7 +164,12 @@ export default async function OrcamentoPage({
         <Card>
           <EmptyState
             title={`Nenhuma versão de orçamento em ${ano}`}
-            description="Crie uma versão vazia, copie outra versão com reajuste, ou parta do realizado de um ano anterior."
+            // O vazio aponta o botão do cabeçalho, e não o repete (P19, 15/10/2026).
+            description={
+              podeEditar
+                ? "Use “+ Nova versão”, no alto da tela, para criar uma vazia, copiar outra versão com reajuste ou partir do realizado de um ano anterior."
+                : "Ninguém criou uma versão para este ano ainda."
+            }
             icon={<Target />}
           />
         </Card>

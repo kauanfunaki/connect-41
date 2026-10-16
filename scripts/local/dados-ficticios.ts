@@ -136,9 +136,10 @@ async function contasLancadasPorOutraPessoa(p: ReturnType<typeof getPrisma>, ten
 async function processoDoClienteDoPortal(p: ReturnType<typeof getPrisma>, tenantId: string) {
   const titulo = "Mudança de endereço da matriz";
   if (await p.process.findFirst({ where: { tenantId, title: titulo }, select: { id: true } })) return;
-  const cliente = await p.portalUser.findFirst({ where: { tenantId, email: "cliente.demo@exemplo.invalido" }, select: { clientGroupId: true } });
+  const cliente = await p.portalUser.findFirst({ where: { tenantId, email: "cliente.demo@exemplo.invalido" }, select: { id: true } });
+  // A empresa ligada ao acesso (portal por empresa, 14/10/2026).
   const empresa = cliente
-    ? await p.company.findFirst({ where: { tenantId, clientGroupId: cliente.clientGroupId, cnpj: { not: null } }, select: { id: true } })
+    ? await p.company.findFirst({ where: { tenantId, cnpj: { not: null }, portalUserLinks: { some: { portalUserId: cliente.id } } }, select: { id: true } })
     : null;
   const tipo = await p.processType.findFirst({ where: { tenantId, code: "alteracao_contratual" }, select: { id: true } });
   const modelo = tipo

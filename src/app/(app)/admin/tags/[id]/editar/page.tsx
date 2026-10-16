@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { TagForm } from "@/components/admin/TagForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { atualizarTag } from "../../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 
@@ -23,7 +22,6 @@ export default async function EditarTagPage({
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Tags", href: "/admin/tags" }, { label: "Editar" }]} />
       <PageHeader title="Editar tag" />
 
       <div className="max-w-[720px]">

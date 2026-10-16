@@ -43,7 +43,7 @@ export default async function EnvioPage({
   const document = await prisma.clientDocument.findFirst({
     where: { id: docId, tenantId: ctx.tenantId, company: await scopedCompanyWhere(ctx) },
     include: {
-      company: { select: { id: true, name: true, displayName: true, email: true, clientGroupId: true } },
+      company: { select: { id: true, name: true, displayName: true, email: true } },
       createdBy: { select: { name: true } },
       recipients: {
         orderBy: { createdAt: "asc" },
@@ -58,8 +58,8 @@ export default async function EnvioPage({
   const empresaNome = nomeExibicao(company);
   const [canalLigado, noPortal, comPortal] = await Promise.all([
     isModuleEnabled(ctx.tenantId, "portal_solicitacoes"),
-    pessoasNoPortal(ctx.tenantId, company.clientGroupId),
-    emailsComPortal(ctx.tenantId, company.clientGroupId, document.recipients.map((r) => r.email)),
+    pessoasNoPortal(ctx.tenantId, company.id),
+    emailsComPortal(ctx.tenantId, company.id, document.recipients.map((r) => r.email)),
   ]);
   const publicado = document.status === "PUBLISHED";
 

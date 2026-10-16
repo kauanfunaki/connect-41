@@ -2,14 +2,17 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Colunas } from "@/components/shared/Graficos";
+import { Aviso } from "@/components/ui/Aviso";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
-import { formatInstantDate, formatarReaisDeCentavos } from "@/lib/format";
+import { formatInstantDate, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { estadoDosAgentes } from "@/lib/ia/data";
 import { agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { propostasDoSetor, qualidadeDoSetor } from "@/lib/ia/propostas";
@@ -61,7 +64,9 @@ export default async function IaDoSocietarioPage() {
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): a tela sai de Processos
+          (o botão "Ceci · Societário" do cabeçalho de lá). */}
+      <Breadcrumb items={[{ label: "Processos", href: "/processos" }, { label: "Ceci · Societário" }]} />
       <PageHeader
         title="Ceci · Societário"
         subtitle="A Ceci propõe; a coordenação aprova, corrige ou rejeita. Nada é gravado sem aprovação."
@@ -70,20 +75,22 @@ export default async function IaDoSocietarioPage() {
 
       {(!varreduraLigada || !ligado(AGENTE_CONTRATO)) && (
         // Revisão de 05/10: botão não é link — o caminho era texto azul no meio da frase.
-        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-fs-3 text-fg-secondary">
-          <p>
+        // No `Aviso` de atenção (15/10/2026), como o da chave de IA: era uma caixa
+        // cinza montada à mão.
+        <Aviso tom="atencao" className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <p className="text-fg">
             {[!varreduraLigada && nome(AGENTE_VARREDURA), !ligado(AGENTE_CONTRATO) && nome(AGENTE_CONTRATO)].filter(Boolean).join(" e ")}{" "}
             {!varreduraLigada && !ligado(AGENTE_CONTRATO) ? "estão desligadas" : "está desligada"}. Um administrador liga em
-            Administração › Inteligência artificial. A leitura de contrato social fica na tela de sócios de cada empresa.
+            Configurações › Inteligência artificial. A leitura de contrato social fica na tela de sócios de cada empresa.
           </p>
           <Button href="/admin/ia" variant="secondary" size="xs">
             Abrir Inteligência artificial
           </Button>
-        </div>
+        </Aviso>
       )}
 
       <section aria-labelledby="fila" className="mb-6 flex flex-col gap-2">
-        <h2 id="fila" className="text-card-title font-semibold text-fg">
+        <h2 id="fila" className="text-section font-semibold text-fg">
           Esperando revisão ({pendentes.length})
         </h2>
         {pendentes.length === 0 ? (
@@ -115,7 +122,7 @@ export default async function IaDoSocietarioPage() {
 
       <section aria-labelledby="qualidade" className="mb-6 flex flex-col gap-2">
         <div>
-          <h2 id="qualidade" className="text-card-title font-semibold text-fg">
+          <h2 id="qualidade" className="text-section font-semibold text-fg">
             Qualidade da IA, últimos 6 meses
           </h2>
           <p className="text-fs-2 text-fg-muted">
@@ -127,38 +134,38 @@ export default async function IaDoSocietarioPage() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {qualidade.map((q) => {
-              const maior = Math.max(1, ...q.porMes.map((m) => m.total));
               return (
                 <Card key={q.agentCode} className="p-4 flex flex-col gap-3">
                   <p className="text-fs-4 font-semibold text-fg">{nome(q.agentCode)}</p>
-                  <dl className="grid grid-cols-3 gap-2 text-fs-2">
-                    <div>
-                      <dt className="text-fg-muted">Propostas</dt>
-                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{q.total}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-fg-muted">Com ajuste</dt>
-                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{pct(q.taxaDeEdicao)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-fg-muted">Rejeitadas</dt>
-                      <dd className="text-fs-7 font-semibold text-fg tabular-nums">{pct(q.taxaDeRejeicao)}</dd>
-                    </div>
-                  </dl>
+                  {/* Os três números no cartão de número (15/10/2026): eram
+                      números de 18px montados à mão. Sem o azul cheio: são
+                      vários agentes na tela, e nenhum é o total dela. */}
+                  <FaixaDeTotais
+                    className=""
+                    destaque={false}
+                    itens={[
+                      { rotulo: "Propostas", valor: formatarNumero(q.total, 0) },
+                      { rotulo: "Com ajuste", valor: pct(q.taxaDeEdicao) },
+                      { rotulo: "Rejeitadas", valor: pct(q.taxaDeRejeicao) },
+                    ]}
+                  />
                   <p className="text-fs-2 text-fg-secondary tabular-nums">
                     {q.aprovadas} aprovadas como vieram · {q.editadas} com ajuste · {q.rejeitadas} rejeitadas · {q.pendentes} esperando
                   </p>
                   <p className="text-fs-2 text-fg-secondary tabular-nums">
                     Confiança que a IA declarou: {q.confianca.ALTA} alta · {q.confianca.MEDIA} média · {q.confianca.BAIXA} baixa
                   </p>
-                  <div aria-label="Propostas por mês" className="flex items-end gap-2 h-16">
-                    {q.porMes.map((m) => (
-                      <div key={m.mes} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full rounded-sm bg-brand/70" style={{ height: `${(m.total / maior) * 40}px`, minHeight: m.total ? 3 : 0 }} title={`${m.total}`} />
-                        <span className="text-micro text-fg-muted">{MES.format(new Date(`${m.mes}-15T12:00:00Z`))}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {/* As colunas da família `Graficos` (15/10/2026): eram barras
+                      desenhadas à mão, com o número só no `title`. */}
+                  <Colunas
+                    titulo="Propostas por mês"
+                    vazio="Nenhuma proposta nos últimos 6 meses."
+                    colunas={q.porMes.map((m) => ({
+                      chave: m.mes,
+                      rotulo: MES.format(new Date(`${m.mes}-15T12:00:00Z`)),
+                      valor: m.total,
+                    }))}
+                  />
                   <p className="text-fs-2 text-fg-muted">Custo no período: {formatarReaisDeCentavos(q.custoCentavos)}</p>
                 </Card>
               );
@@ -169,7 +176,7 @@ export default async function IaDoSocietarioPage() {
 
       {revisadas.length > 0 && (
         <section aria-labelledby="revisadas" className="flex flex-col gap-2">
-          <h2 id="revisadas" className="text-card-title font-semibold text-fg">
+          <h2 id="revisadas" className="text-section font-semibold text-fg">
             Revisadas recentemente
           </h2>
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">

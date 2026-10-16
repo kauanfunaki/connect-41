@@ -9,6 +9,7 @@ import { SenhaDaConta } from "@/components/portal/SenhaDaConta";
 import { TemaDoPortal } from "@/components/portal/TemaDoPortal";
 import { getPrisma } from "@/lib/prisma";
 import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
+import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
 import { formatDocumento } from "@/lib/format";
@@ -25,27 +26,33 @@ export const dynamic = "force-dynamic";
  * a senha estando logado (só pelo "Esqueci"), ver as empresas do acesso nem
  * escolher o tema.
  *
- * As empresas são as do grupo do acesso, a mesma régua de `alcanceDoCliente`:
- * o que aparece aqui é exatamente o que as outras telas mostram. Só leitura —
- * incluir ou tirar empresa é com o escritório.
+ * As empresas são as do acesso, a mesma régua de `alcanceDoCliente` (desde
+ * 14/10/2026, as ligadas à conta e as filiais delas): o que aparece aqui é
+ * exatamente o que as outras telas mostram. Só leitura — incluir ou tirar
+ * empresa é com o escritório.
  */
 export default async function MinhaContaDoPortalPage() {
   const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
 
   const prisma = getPrisma();
-  const [conta, empresas, tutorial] = await Promise.all([
+  const [conta, alcance, tutorial] = await Promise.all([
     prisma.portalUser.findFirst({
-      where: { id: sessao.sub, tenantId: sessao.tenantId, clientGroupId: sessao.clientGroupId, active: true },
+      where: { id: sessao.sub, tenantId: sessao.tenantId, active: true },
       select: { email: true },
     }),
-    prisma.company.findMany({
-      where: { tenantId: sessao.tenantId, clientGroupId: sessao.clientGroupId },
-      select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true },
-    }),
+    alcanceDoCliente(sessao),
     montarTutorialDoPortal(sessao),
   ]);
   if (!conta) redirect("/portal/login");
+  const ids = alcance.tipo === "EMPRESAS" ? alcance.companyIds : [];
+  const empresas =
+    ids.length > 0
+      ? await prisma.company.findMany({
+          where: { tenantId: sessao.tenantId, id: { in: ids } },
+          select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true },
+        })
+      : [];
 
   const lista = empresas
     .map((e) => ({

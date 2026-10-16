@@ -14,6 +14,7 @@ import { vincularAgenteChatwoot, definirPapelDoRemetente } from "./actions";
 import { ToggleAgenteButton } from "@/components/adminVinculos/ToggleAgenteButton";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { normalizarNomeAtendente } from "@/lib/chatwoot/evaluation";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 
 // Tela única de vínculos de acesso: Pessoa (colaborador interno) <-> User
 // (login) <-> ChatwootAgentLink (atendente). Antes eram duas telas separadas
@@ -79,7 +80,7 @@ export default async function AdminAtendentesPage() {
     <PageContainer>
       <PageHeader
         title="Atendentes e vínculos"
-        subtitle={<>Para cada colaborador interno: qual conta de acesso (User) é dele e, se aplicável, qual agente do Chatwoot é
+        subtitle={<>Para cada colaborador interno: qual conta de acesso é dele e, se aplicável, qual agente do Chatwoot é
           essa mesma pessoa — usado para mostrar nome/foto reais em{" "}
           <span className="font-medium text-fg">Conversas › Avaliação</span>. Configuração de uma vez só.</>}
       />
@@ -96,6 +97,24 @@ export default async function AdminAtendentesPage() {
         // Tabela de verdade no casco padrão — era uma lista de fileiras flex com
         // um cabeçalho de texto solto. O funil nas duas colunas de vínculo acha
         // quem ainda está "Não vinculado" sem ler a lista (polimento de 30/09).
+        // No celular, um cartão por pessoa (15/10/2026).
+        <>
+        <CartoesNoCelular>
+          {people.map((p) => (
+            <PersonAccessLinkRow
+              key={p.id}
+              comoCartao
+              personId={p.id}
+              personName={p.name}
+              linkedUserId={p.linkedUserId}
+              users={users}
+              agentLinks={hasChatwoot ? agentLinks : null}
+              canEdit={canEdit}
+              vincularUsuarioAction={vincularUsuarioPessoa}
+              vincularAgenteAction={vincularAgenteChatwoot}
+            />
+          ))}
+        </CartoesNoCelular>
         <TabelaFiltravel
           linhas={people.map((p) => {
             const conta = p.linkedUserId ? users.find((u) => u.id === p.linkedUserId) : undefined;
@@ -109,10 +128,10 @@ export default async function AdminAtendentesPage() {
             };
           })}
         >
-          <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+          <TabelaNoDesktop padrao>
             <table className="w-full min-w-[640px]">
               <thead>
-                <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
+                <tr className="border-b border-border">
                   <th className="px-4 py-3">Pessoa</th>
                   <th className="px-4 py-3">
                     <FiltroDaColuna rotulo="Conta de acesso" chave="conta" align={hasChatwoot ? "left" : "right"} />
@@ -140,8 +159,9 @@ export default async function AdminAtendentesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TabelaNoDesktop>
         </TabelaFiltravel>
+        </>
       )}
 
       {hasChatwoot && (
@@ -156,6 +176,45 @@ export default async function AdminAtendentesPage() {
             ela vira &quot;quem atendeu&quot;, porque a mensagem de encerramento é sempre a última.
             Vale para as próximas avaliações — o histórico só muda quando a repontuação roda.
           </p>
+          {/* No celular, um cartão por atendente, com os dois interruptores
+              (15/10/2026): a tabela de 560px rolava de lado. */}
+          <CartoesNoCelular>
+            {linhasDeRemetente.map((r) => {
+              const papel = papelPorNome.get(r.chave);
+              return (
+                <Cartao key={r.chave}>
+                  <TopoDoCartao nome={r.nome} />
+                  <InfoDoCartao className="tnum">{r.mensagens > 0 ? `${r.mensagens} mensagens` : "sem mensagens ainda"}</InfoDoCartao>
+                  <div className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 text-ui">
+                    <span className="text-fg-muted">Recepção</span>
+                    <ToggleAgenteButton
+                      nome={r.nome}
+                      ligado={papel?.isReception ?? false}
+                      rotuloLigado="Recepção"
+                      rotuloDesligado="Setor"
+                      canEdit={canEdit}
+                      action={async (ligado: boolean) => {
+                        "use server";
+                        await definirPapelDoRemetente(r.nome, { isReception: ligado });
+                      }}
+                    />
+                    <span className="text-fg-muted">Automação</span>
+                    <ToggleAgenteButton
+                      nome={r.nome}
+                      ligado={papel?.isAutomation ?? false}
+                      rotuloLigado="Automação"
+                      rotuloDesligado="Pessoa"
+                      canEdit={canEdit}
+                      action={async (ligado: boolean) => {
+                        "use server";
+                        await definirPapelDoRemetente(r.nome, { isAutomation: ligado });
+                      }}
+                    />
+                  </div>
+                </Cartao>
+              );
+            })}
+          </CartoesNoCelular>
           {/* Tabela no casco padrão, com funil nos dois papéis (polimento de 30/09). */}
           <TabelaFiltravel
             linhas={linhasDeRemetente.map((r) => {
@@ -169,10 +228,10 @@ export default async function AdminAtendentesPage() {
               };
             })}
           >
-            <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+            <TabelaNoDesktop padrao>
               <table className="w-full min-w-[560px]">
                 <thead>
-                  <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
+                  <tr className="border-b border-border">
                     <th className="px-4 py-3">Atendente do Chatwoot</th>
                     <th className="px-4 py-3">
                       <FiltroDaColuna rotulo="Recepção" chave="recepcao" />
@@ -224,7 +283,7 @@ export default async function AdminAtendentesPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </TabelaNoDesktop>
           </TabelaFiltravel>
         </section>
       )}

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   AlarmClock,
   CalendarClock,
@@ -17,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
+import { Contador } from "@/components/ui/Contador";
 import { ConfigurarTarefasButton } from "@/components/tarefas/ConfigurarTarefasButton";
 import { LinhaDoDia } from "@/components/tarefas/LinhaDoDia";
 import { PrazoItem } from "@/components/agenda/PrazoItem";
@@ -79,7 +79,8 @@ function Bloco({
           {icone}
           {titulo}
         </h2>
-        <span className="text-fs-2 text-fg-muted tnum">{lista.length}</span>
+        {/* No `Contador` (15/10/2026): era o número solto. */}
+        <Contador valor={lista.length} teto={Number.MAX_SAFE_INTEGER} />
       </header>
       {lista.length === 0 ? (
         <p className="px-4 py-5 text-body text-fg-muted">{vazio}</p>
@@ -96,22 +97,21 @@ function Bloco({
           ))}
         </ul>
       )}
+      {/* Os destinos são botões (15/10/2026), e não links no meio da frase. */}
       {resto > 0 && (
-        <p className="px-4 py-2.5 border-t border-border text-fs-2 text-fg-muted">
-          + {resto} {resto === 1 ? "outro" : "outros"} — veja todos no{" "}
-          <Link href="/kanban" className="font-medium text-fg-secondary hover:text-brand">
-            quadro de tarefas
-          </Link>
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 border-t border-border">
+          <p className="mr-auto text-fs-2 text-fg-muted">
+            + {resto} {resto === 1 ? "outro" : "outros"}
+          </p>
+          <Button href="/kanban" variant="secondary" size="xs">
+            Ver no Kanban
+          </Button>
           {visaoTime && (
-            <>
-              {" "}ou na{" "}
-              <Link href="/gestao" className="font-medium text-fg-secondary hover:text-brand">
-                Gestão
-              </Link>
-            </>
+            <Button href="/gestao" variant="secondary" size="xs">
+              Ver na Gestão
+            </Button>
           )}
-          .
-        </p>
+        </div>
       )}
     </section>
   );
@@ -249,14 +249,19 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
                 resetAction={restaurarWidgetsSetor}
               />
             )}
+            {/* "Kanban", o nome da tela que abre (14/10/2026): era "Quadros",
+                que agora é o nome da tela do setor no menu. */}
             <Button href="/kanban" variant="secondary" size="sm">
-              <Columns3 size={14} /> Quadros
+              <Columns3 size={14} /> Kanban
             </Button>
           </div>
         }
       />
 
+      {/* Sem o cartão azul (15/10/2026): o primeiro número é de situação
+          (atrasados), não o total — com zero, ele virava o número principal. */}
       <FaixaDeTotais
+        destaque={false}
         itens={[
           {
             rotulo: "Atrasados",
@@ -370,9 +375,10 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
               <h2 className="flex items-center gap-2 text-card-title font-semibold text-fg">
                 <CalendarDays size={16} className="text-fg-muted" /> Prazos da semana
               </h2>
-              <Link href="/agenda?view=semana" className="text-fs-2 font-medium text-fg-secondary hover:text-brand">
+              {/* Botão, como o "Entrar" das reuniões (15/10/2026): era link de texto. */}
+              <Button href="/agenda?view=semana" variant="secondary" size="xs">
                 Abrir agenda
-              </Link>
+              </Button>
             </header>
             {diasComPrazo.length === 0 ? (
               <p className="px-4 py-5 text-body text-fg-muted">
@@ -383,7 +389,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
               <ul className="divide-y divide-border">
                 {diasComPrazo.map((dia) => (
                   <li key={dia} className="px-4 py-2.5">
-                    <p className="mb-1.5 text-micro font-semibold uppercase tracking-wide text-fg-muted">
+                    <p className="mb-1.5 c41-rotulo">
                       {dia === hojeKey
                         ? "Hoje"
                         : dia === addDaysToKey(hojeKey, 1)

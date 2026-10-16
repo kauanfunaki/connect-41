@@ -10,8 +10,8 @@ import { pick } from "@/lib/forms";
 import { cnpjRoot } from "@/lib/clientGroups";
 import { nomeExibicao } from "@/lib/companyName";
 import { logAudit } from "@/lib/audit";
-import { isPrismaForeignKeyError, isPrismaUniqueError } from "@/lib/prismaErrors";
-import { apagarTutoriaisDoPortal } from "@/lib/tutorial/vistos";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { portalPorEmpresaPronto } from "@/lib/portal/empresasDaContaDb";
 import { confirmacaoConfere } from "@/lib/exclusaoConfirmada";
 
 export type ClienteState = { error: string } | null;
@@ -232,17 +232,19 @@ export async function inativarClientesEmMassa(ids: string[]): Promise<void> {
 export type ResumoDoClienteParaExcluir = {
   nome: string;
   /**
-   * A raiz do CNPJ: é por ela que o SPED busca os documentos fiscais
-   * (`sincronizarTenant` lê as raízes dos clientes ativos). Sem o cliente, a
-   * busca dessa raiz para; o que já foi baixado fica nas empresas. Nulo para
-   * cliente inativo, que já estava fora da busca.
+   * A raiz do CNPJ. Desde 14/10/2026 o SPED busca as raízes da fotografia
+   * gravada pela migration (`sped_sync_roots`), e não mais dos clientes:
+   * excluir o cliente não tira a raiz da busca. Fica para a janela mostrar.
    */
   raiz: string | null;
   /** As empresas — continuam cadastradas, sem cliente. */
   empresas: { id: string; nome: string }[];
-  /** Os acessos do portal — excluídos junto (a FK é RESTRICT: com eles, o cliente não sai). */
+  /**
+   * Os acessos do portal que ainda guardam este cliente. Desde 14/10/2026
+   * continuam: o que cada um vê são as empresas ligadas a ele, não o cliente.
+   */
   acessos: { id: string; nome: string; email: string; ativo: boolean }[];
-  /** Comunicados já enviados a este cliente: ele sai da lista de destinatários. */
+  /** Comunicados enviados a este cliente: continuam, com as empresas que os receberam. */
   comunicados: number;
 };
 
@@ -279,26 +281,24 @@ export async function resumoDoClienteParaExcluir(id: string): Promise<{ erro: st
 }
 
 /**
- * Exclui o cliente de verdade, com os acessos do portal dele.
+ * Exclui o cliente de verdade.
  *
- * - **Acessos do portal**: excluídos junto. `PortalUser.clientGroupId` é
- *   obrigatório e a FK é RESTRICT — não existe cliente excluído com acesso
- *   vivo. O histórico deles (mensagens, arquivos, aprovações) fica, sem o nome
- *   de quem fez; mesma regra de `excluirAcessoDoPortal`.
+ * - **Acessos do portal**: continuam (14/10/2026 — até aqui eram excluídos
+ *   junto). O acesso é ligado direto às empresas, e o cliente não decide mais
+ *   nada do que ele vê; só se apaga a lembrança do cliente na conta. A FK já
+ *   faria isso (`SET NULL`, migration 20261014210000); o `updateMany` deixa
+ *   escrito aqui. Antes da migration a coluna não aceita vazio: cliente com
+ *   acesso não sai até ela rodar.
  * - **Empresas**: continuam cadastradas, sem cliente. A FK já faria isso
  *   (`SET NULL`); o `updateMany` explícito é para ficar escrito aqui, e não só
  *   no schema, que elas sobrevivem.
- * - **Comunicados**: o cliente sai da lista de destinatários (`CASCADE`); o
- *   comunicado continua.
+ * - **Comunicados**: o cliente sai da lista antiga de destinatários
+ *   (`CASCADE`); o comunicado continua, com as empresas que o receberam.
  *
- * `acessosVistos` são os ids que a janela mostrou: se a lista mudou desde
- * então, a exclusão para — sairia junto um acesso que a pessoa não viu.
+ * Até 14/10/2026 a janela mandava os acessos que mostrou, e a exclusão parava
+ * se a lista tivesse mudado — eles saíam junto. Como continuam, não precisa.
  */
-export async function excluirCliente(
-  id: string,
-  confirmacao: string,
-  acessosVistos: string[]
-): Promise<{ erro: string } | { ok: true }> {
+export async function excluirCliente(id: string, confirmacao: string): Promise<{ erro: string } | { ok: true }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !podeExcluir(ctx)) return { erro: "Só administradores excluem clientes." };
 
@@ -308,36 +308,21 @@ export async function excluirCliente(
     return { erro: `O nome digitado não confere. Digite ${cliente.name} para confirmar.` };
   }
 
-  const vistos = new Set(Array.isArray(acessosVistos) ? acessosVistos : []);
-  const acessoIds = cliente.portalUsers.map((a) => a.id);
-  if (acessoIds.length !== vistos.size || acessoIds.some((a) => !vistos.has(a))) {
-    return { erro: "Os acessos do portal deste cliente mudaram enquanto a janela estava aberta. Feche e abra de novo para conferir." };
+  if (cliente.portalUsers.length > 0 && !(await portalPorEmpresaPronto())) {
+    return { erro: "Falta a atualização do banco desta versão do Connect. Até ela rodar, cliente com acesso do portal não pode ser excluído." };
   }
 
   const prisma = getPrisma();
   try {
     await prisma.$transaction(async (tx) => {
-      if (acessoIds.length) {
-        // `PasswordResetToken.userId` não tem FK: o link de senha que já saiu
-        // ficaria apontando para uma conta que não existe mais.
-        await tx.passwordResetToken.deleteMany({ where: { userId: { in: acessoIds }, subject: "PORTAL_USER" } });
-        await tx.portalUser.deleteMany({ where: { id: { in: acessoIds }, tenantId: ctx.tenantId, clientGroupId: cliente.id } });
-      }
+      await tx.portalUser.updateMany({ where: { tenantId: ctx.tenantId, clientGroupId: cliente.id }, data: { clientGroupId: null } });
       await tx.company.updateMany({ where: { tenantId: ctx.tenantId, clientGroupId: cliente.id }, data: { clientGroupId: null } });
       await tx.clientGroup.delete({ where: { id: cliente.id } });
     });
   } catch (err) {
-    // Um acesso criado entre a conferência e a transação: a FK RESTRICT barra
-    // o cliente, e a transação inteira volta atrás.
-    if (isPrismaForeignKeyError(err)) {
-      return { erro: "Apareceu um acesso do portal novo neste cliente. Feche e abra de novo para conferir." };
-    }
     console.error("[excluirCliente]", err);
     return { erro: "Erro ao excluir o cliente. Nada foi apagado." };
   }
-  // A marca do tutorial do primeiro acesso dos acessos que saíram — fora da
-  // transação e sem lançar, como em `excluirAcessoDoPortal`.
-  await apagarTutoriaisDoPortal(ctx.tenantId, acessoIds);
 
   await logAudit({
     tenantId: ctx.tenantId,
@@ -350,22 +335,10 @@ export async function excluirCliente(
       raiz: cliente.cnpjRoot,
       ativo: cliente.active,
       empresasSemCliente: cliente.companies.map((e) => ({ id: e.id, nome: nomeExibicao(e) })),
-      acessosExcluidos: cliente.portalUsers.map((a) => ({ id: a.id, nome: a.name, email: a.email, ativo: a.active })),
+      acessosQueContinuam: cliente.portalUsers.map((a) => ({ id: a.id, nome: a.name, email: a.email, ativo: a.active })),
       comunicados: cliente._count.announcements,
     },
   });
-  // Uma entrada por acesso também: quem procurar o acesso na auditoria acha a
-  // exclusão dele, e não só a do cliente.
-  for (const a of cliente.portalUsers) {
-    await logAudit({
-      tenantId: ctx.tenantId,
-      userId: ctx.userId,
-      action: "portal.user.deleted",
-      entityType: "PortalUser",
-      entityId: a.id,
-      metadata: { nome: a.name, email: a.email, ativo: a.active, cliente: { id: cliente.id, nome: cliente.name }, junto: "cliente" },
-    });
-  }
 
   revalidatePath("/clientes");
   revalidatePath("/admin/portal");
@@ -375,9 +348,9 @@ export async function excluirCliente(
 // ─── Empresas do cliente (13/10/2026) ────────────────────────────────────────
 //
 // Até aqui, a única porta para pôr uma empresa num cliente era o "Cliente e
-// matriz" do cadastro da empresa, uma por uma. E sem cliente a empresa não
-// aparece no portal: o alcance do cliente é `clientGroupId = o da conta`
-// (`alcanceDoCliente`).
+// matriz" do cadastro da empresa, uma por uma. Desde 14/10/2026 o cliente não
+// decide mais o que o portal mostra — o acesso é ligado direto às empresas, na
+// ficha de cada uma ("Acesso ao portal"). O agrupamento fica até a etapa 3.
 
 /** Uma empresa no seletor do cliente, com o cliente em que ela está hoje. */
 export type EmpresaParaVincular = {

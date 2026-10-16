@@ -8,34 +8,81 @@ import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { extractResumeData, isAiConfigured } from "@/lib/ai";
 import { logAudit } from "@/lib/audit";
+import { lerArquivoDoDocumentoDaFicha } from "@/lib/documents";
+import {
+  escolherCurriculo,
+  guardarResumoDoCurriculo,
+  nomeDoCurriculoDoPortal,
+  type CurriculoEscolhido,
+} from "@/lib/recrutamento/curriculoDoCandidato";
 
-export type AiExtractState = { error: string } | { filled: string[]; summary: string } | null;
+export type AiExtractState =
+  | { error: string }
+  | {
+      filled: string[];
+      summary: string;
+      /** Quando foi lido (ISO) — o bloco mostra "lido em dd/mm". */
+      readAt: string;
+      /** Se o resumo ficou guardado (sem a tabela nova, não fica). */
+      guardado: boolean;
+    }
+  | null;
 
 const RESUMES_DIR = path.join(process.cwd(), "storage", "resumes");
-const DOCUMENTS_DIR = path.join(process.cwd(), "storage", "documents");
 
-// Acha o currículo mais recente do candidato: candidatura do portal
-// (Candidatura.resumeUrl) ou upload interno (Document categoria CURRICULO, PDF).
-async function findResumePath(tenantId: string, personId: string): Promise<string | null> {
+/** O currículo da pessoa — o mesmo que o bloco "Currículo" da ficha mostra. */
+async function acharCurriculo(tenantId: string, personId: string): Promise<CurriculoEscolhido | null> {
   const prisma = getPrisma();
-
-  const candidatura = await prisma.candidatura.findFirst({
-    where: { tenantId, personId, resumeUrl: { not: null } },
-    orderBy: { createdAt: "desc" },
-    select: { resumeUrl: true },
-  });
-  if (candidatura?.resumeUrl) return path.join(RESUMES_DIR, candidatura.resumeUrl);
-
-  const doc = await prisma.document.findFirst({
-    where: { tenantId, entityType: "PERSON", entityId: personId, category: "CURRICULO", mimeType: "application/pdf" },
-    orderBy: { createdAt: "desc" },
-    select: { fileUrl: true },
-  });
-  if (doc) return path.join(DOCUMENTS_DIR, doc.fileUrl);
-
-  return null;
+  const [candidaturas, documentos] = await Promise.all([
+    prisma.candidatura.findMany({
+      where: { tenantId, personId, resumeUrl: { not: null } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, createdAt: true, vaga: { select: { title: true } } },
+    }),
+    prisma.document.findMany({
+      where: { tenantId, entityType: "PERSON", entityId: personId, category: "CURRICULO" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, fileName: true, fileUrl: true, mimeType: true, createdAt: true, uploadedBy: { select: { name: true } } },
+    }),
+  ]);
+  return escolherCurriculo(
+    candidaturas.map((c) => ({ candidaturaId: c.id, vagaTitulo: c.vaga.title, em: c.createdAt })),
+    documentos.map((d) => ({
+      documentId: d.id,
+      fileName: d.fileName,
+      fileUrl: d.fileUrl,
+      mimeType: d.mimeType,
+      enviadoPor: d.uploadedBy.name,
+      em: d.createdAt,
+    }))
+  );
 }
 
+/** O conteúdo do PDF escolhido, ou null se o arquivo sumiu do armazenamento. */
+async function lerPdf(tenantId: string, curriculo: CurriculoEscolhido): Promise<Buffer | null> {
+  if (curriculo.tipo === "documento") return lerArquivoDoDocumentoDaFicha(curriculo.fileUrl);
+  const prisma = getPrisma();
+  const c = await prisma.candidatura.findFirst({
+    where: { id: curriculo.candidaturaId, tenantId },
+    select: { resumeUrl: true },
+  });
+  if (!c?.resumeUrl) return null;
+  // resumeUrl é sempre "<tenantId>/<uuid>.pdf", gravado pela rota de candidatura
+  // do portal; a conferência de prefixo segura um valor adulterado no banco.
+  const alvo = path.resolve(RESUMES_DIR, c.resumeUrl);
+  if (!alvo.startsWith(path.resolve(RESUMES_DIR) + path.sep)) return null;
+  try {
+    return await readFile(alvo);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * "Ler com IA" (antes "Analisar currículo"): lê o PDF do currículo, preenche os
+ * campos vazios da ficha e escreve um resumo profissional — que, desde
+ * 14/10/2026, fica guardado e aparece no bloco Currículo depois de recarregar.
+ */
 export async function extrairDadosCurriculo(personId: string): Promise<AiExtractState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
@@ -50,17 +97,17 @@ export async function extrairDadosCurriculo(personId: string): Promise<AiExtract
   });
   if (!person) return { error: "Candidato não encontrado." };
 
-  const resumePath = await findResumePath(ctx.tenantId, personId);
-  if (!resumePath) {
-    return { error: "Nenhum currículo em PDF encontrado (candidatura do portal ou documento categoria Currículo)." };
+  const curriculo = await acharCurriculo(ctx.tenantId, personId);
+  if (!curriculo) {
+    return { error: "Nenhum currículo encontrado. Anexe o currículo em PDF na ficha, ou ele vem com a candidatura do portal." };
+  }
+  if (!curriculo.pdf) {
+    return { error: "A IA só lê currículo em PDF. Anexe o currículo em PDF na ficha." };
   }
 
-  let pdfBase64: string;
-  try {
-    pdfBase64 = (await readFile(resumePath)).toString("base64");
-  } catch {
-    return { error: "Arquivo do currículo não encontrado no armazenamento." };
-  }
+  const arquivo = await lerPdf(ctx.tenantId, curriculo);
+  if (!arquivo) return { error: "Arquivo do currículo não encontrado no armazenamento." };
+  const pdfBase64 = arquivo.toString("base64");
 
   let extraction;
   try {
@@ -113,6 +160,15 @@ export async function extrairDadosCurriculo(personId: string): Promise<AiExtract
     return { error: "IA extraiu os dados, mas houve um erro ao salvar na ficha. Tente novamente." };
   }
 
+  const guardado = await guardarResumoDoCurriculo(prisma, {
+    tenantId: ctx.tenantId,
+    personId,
+    summary: extraction.summary,
+    filledFields: filled,
+    fonte: curriculo,
+    nomeDoArquivo: curriculo.tipo === "documento" ? curriculo.fileName : nomeDoCurriculoDoPortal(person.name),
+  });
+
   revalidatePath(`/candidatos/${personId}`);
-  return { filled, summary: extraction.summary };
+  return { filled, summary: extraction.summary, readAt: new Date().toISOString(), guardado };
 }

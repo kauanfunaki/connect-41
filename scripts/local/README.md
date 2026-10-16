@@ -47,7 +47,7 @@ banco, cria as tabelas pelo schema e carrega:
 
 - o seed (escritório "41 Tech", setores e o administrador `adm6@41bpo.com.br`, que
   no banco local se chama **Camila Duarte**, pessoa fictícia);
-- a demonstração do BPO (`scripts/dados-de-demonstracao.ts`): o Grupo Modelo, a
+- a demonstração antiga do BPO (`scripts/local/demonstracao-transportes.ts` — a da produção, desde 15/10/2026, é a Padaria Pão de Ouro de `scripts/dados-de-demonstracao.ts`): o Grupo Modelo, a
   Transportes Modelo, contas, extrato, pendências, aprovações;
 - o preparo dos vídeos (`preparar-ambiente.ts`): setor Controladoria, senha do
   cliente do portal (que se chama **Rafael Nogueira**, fictício), a filial, um
@@ -143,6 +143,22 @@ node scripts/local/com-banco-local.mjs npx tsx scripts/local/perfis-de-teste.ts
 Cria `bpo.teste@`, `dp.teste@` e `dpcoord.teste@exemplo.invalido` (coordenador do
 BPO, usuário do DP e coordenador do DP), com a `LOCAL_PORTAL_PASSWORD`, e uma
 colaboradora fictícia para a ficha da pessoa. Rode depois de recriar o banco.
+
+## Conferir a demonstração do BPO da produção (15/10/2026)
+
+A demonstração da apresentação ao BPO (Padaria Pão de Ouro, `scripts/dados-de-demonstracao.ts`)
+não entra no banco local de sempre (ele segue com a Transportes Modelo dos vídeos). Para
+conferir a de produção num banco local, grave-a e rode a conferência — DRE, saldo e
+sugestões da conciliação, Meu dia, Meu time e o motor de avisos, pelas mesmas funções das telas:
+
+```
+node scripts/local/com-banco-local.mjs npx tsx scripts/dados-de-demonstracao.ts --usuario <e-mail> --aplicar
+node scripts/local/com-banco-local.mjs npx tsx scripts/local/verificar-demonstracao-bpo.ts --usuario <e-mail>
+node scripts/local/com-banco-local.mjs npx tsx scripts/dados-de-demonstracao.ts --limpar --aplicar
+```
+
+A limpeza tira **todas** as empresas "[demo]" do banco — a Transportes Modelo também. Depois,
+`node scripts/local/recriar-banco.mjs` para voltar ao banco dos vídeos.
 
 ## Vídeos
 

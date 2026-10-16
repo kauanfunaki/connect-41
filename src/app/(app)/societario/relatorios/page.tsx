@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FolderOpen, AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Card } from "@/components/ui/Card";
 import { Selo } from "@/components/ui/Selo";
+import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
@@ -101,23 +102,28 @@ export default async function RelatoriosDoSocietarioPage({
         ]}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Abertos agora" value={abertos.length} icon={<FolderOpen size={16} />} />
-        {/* Estourado é vermelho, como no painel de Processos da Home (era âmbar). */}
-        <MetricCard
-          label="Abertos com prazo estourado"
-          value={estouradosAbertos}
-          tom={estouradosAbertos > 0 ? "critico" : undefined}
-          icon={<AlertTriangle size={16} />}
-        />
-        <MetricCard label={`Concluídos em ${periodo.rotulo}`} value={processos.length - abertos.length} icon={<CheckCircle2 size={16} />} />
-        <MetricCard
-          label="Processos com volta"
-          icon={<RotateCcw size={16} />}
-          value={voltas.percentualComVolta === null ? "—" : `${voltas.percentualComVolta}%`}
-          sub={`${voltas.totalDeVoltas} ${voltas.totalDeVoltas === 1 ? "volta" : "voltas"}`}
-        />
-      </div>
+      {/* A faixa de totais, com "Abertos agora" no cartão azul de número
+          principal (15/10/2026): eram MetricCard soltos numa grade própria. */}
+      <FaixaDeTotais
+        className="mb-6"
+        itens={[
+          { rotulo: "Abertos agora", valor: formatarNumero(abertos.length, 0), icone: <FolderOpen /> },
+          // Estourado é vermelho, como no painel de Processos da Home (era âmbar).
+          {
+            rotulo: "Abertos com prazo estourado",
+            valor: formatarNumero(estouradosAbertos, 0),
+            tom: estouradosAbertos > 0 ? "text-danger" : undefined,
+            icone: <AlertTriangle />,
+          },
+          { rotulo: `Concluídos em ${periodo.rotulo}`, valor: formatarNumero(processos.length - abertos.length, 0), icone: <CheckCircle2 /> },
+          {
+            rotulo: "Processos com volta",
+            valor: voltas.percentualComVolta === null ? "—" : `${voltas.percentualComVolta}%`,
+            icone: <RotateCcw />,
+            detalhe: `${voltas.totalDeVoltas} ${voltas.totalDeVoltas === 1 ? "volta" : "voltas"}`,
+          },
+        ]}
+      />
 
       <div className="flex flex-col gap-5">
         <Card as="section" className={SECAO}>
@@ -183,7 +189,31 @@ export default async function RelatoriosDoSocietarioPage({
           {maisVoltas.length === 0 ? (
             <p className="text-fs-3 text-fg-muted">Nenhuma volta de exigência no período.</p>
           ) : (
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+            <>
+            {/* No celular, cartões nas duas listas de processos (15/10/2026):
+                a tabela rolava de lado. SLA e Produtividade ficam em tabela —
+                são grade de números, que só se leem lado a lado. */}
+            <CartoesNoCelular>
+              {maisVoltas.map((p) => (
+                <Cartao key={p.id}>
+                  <TopoDoCartao
+                    nome={
+                      <Link href={`/processos/${p.id}`} className="text-fg hover:text-brand transition-colors">
+                        {p.tipoNome} — {p.empresaNome}
+                      </Link>
+                    }
+                  />
+                  <InfoDoCartao className="tabular-nums">
+                    <span className="font-medium text-danger">
+                      {p.voltas} {p.voltas === 1 ? "volta" : "voltas"}
+                    </span>{" "}
+                    · {p.prazo.dias} dias úteis
+                  </InfoDoCartao>
+                  <PeDoCartao>{p.concluidoEm ? <Selo tom="sucesso">Concluído</Selo> : <Selo tom="marca">Aberto</Selo>}</PeDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
               <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
@@ -209,6 +239,7 @@ export default async function RelatoriosDoSocietarioPage({
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Card>
 
@@ -270,7 +301,30 @@ export default async function RelatoriosDoSocietarioPage({
           {custos.length === 0 ? (
             <p className="text-fs-3 text-fg-muted">Nenhuma taxa registrada nos processos do período.</p>
           ) : (
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+            <>
+            <CartoesNoCelular>
+              {custos.slice(0, LINHAS_DE_CUSTO).map((l) => (
+                <Cartao key={l.id}>
+                  <TopoDoCartao
+                    nome={
+                      <Link href={`/processos/${l.id}`} className="text-fg hover:text-brand transition-colors">
+                        {l.tipoNome} — {l.empresaNome}
+                      </Link>
+                    }
+                    valor={formatarReaisDeCentavos(l.totalCentavos)}
+                  />
+                  <InfoDoCartao className="tabular-nums">
+                    {formatarReaisDeCentavos(l.pagoCentavos)} pagos · {l.voltas} {l.voltas === 1 ? "volta" : "voltas"}
+                  </InfoDoCartao>
+                  {l.custoDasVoltasCentavos > 0 && (
+                    <InfoDoCartao className="tabular-nums text-warning-fg">
+                      {formatarReaisDeCentavos(l.custoDasVoltasCentavos)} das voltas
+                    </InfoDoCartao>
+                  )}
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
               <table className="w-full min-w-[680px]">
                 <thead>
                   <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
@@ -300,6 +354,7 @@ export default async function RelatoriosDoSocietarioPage({
                 </tbody>
               </table>
             </div>
+            </>
           )}
           {/* Fora da caixa da tabela: dentro, a nota ficava colada na borda,
               sem o recuo das células. */}

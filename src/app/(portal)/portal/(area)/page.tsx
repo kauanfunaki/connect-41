@@ -9,6 +9,7 @@ import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate } from "@/lib/format";
 import { telasVisiveis } from "@/lib/portal/telas";
 import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
+import { nomeDoAcesso } from "@/lib/portal/empresasDaConta";
 import { blocosDoInicio, destinoDosDocumentos, primeiroNome, saudacaoDaHora } from "@/lib/portal/inicio";
 import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -39,7 +40,7 @@ export const dynamic = "force-dynamic";
  * ainda chega aqui — e segue para lá com tudo o que trazia.
  *
  * Só aparece o que o cliente tem: o critério é o do menu (`telasVisiveis`), e
- * os números saem das empresas do grupo dele (`alcanceDoCliente`) — ou só da
+ * os números saem das empresas do acesso dele (`alcanceDoCliente`) — ou só da
  * escolhida, quando ele tem mais de uma e escolhe.
  */
 export default async function InicioDoPortalPage({
@@ -55,20 +56,19 @@ export default async function InicioDoPortalPage({
   if (antigo) redirect(antigo);
 
   const prisma = getPrisma();
-  const [alcance, modulos, bloqueadas, usuario, grupo] = await Promise.all([
+  const [alcance, modulos, bloqueadas, usuario] = await Promise.all([
     alcanceDoCliente(sessao),
     getEnabledModuleCodes(sessao.tenantId),
     telasBloqueadasDoPortal(sessao.tenantId),
     prisma.portalUser.findFirst({
-      where: { id: sessao.sub, tenantId: sessao.tenantId, clientGroupId: sessao.clientGroupId },
+      where: { id: sessao.sub, tenantId: sessao.tenantId },
       select: { name: true },
     }),
-    prisma.clientGroup.findUnique({ where: { id: sessao.clientGroupId }, select: { name: true } }),
   ]);
   const companyIds = alcance.tipo === "EMPRESAS" ? alcance.companyIds : [];
   const empresas = companyIds.length > 0 ? await empresasDoSeletor(sessao.tenantId, companyIds) : [];
 
-  // A empresa da URL só vale se for do grupo — senão o Início olha todas as
+  // A empresa da URL só vale se for do acesso — senão o Início olha todas as
   // dele, nunca a de outro cliente (a mesma regra do fluxo de caixa).
   const pedida = typeof params.empresa === "string" ? params.empresa : null;
   const empresaId = pedida && companyIds.includes(pedida) ? pedida : null;
@@ -84,7 +84,8 @@ export default async function InicioDoPortalPage({
   const nome = primeiroNome(usuario?.name);
   const saudacao = saudacaoDaHora(saoPauloParts(agora).hour);
   const data = formatInstantDate(agora, { weekday: "long", day: "numeric", month: "long" });
-  const cliente = grupo?.name ?? empresas[0]?.nome ?? null;
+  // O nome do acesso: a empresa, ou a primeira e quantas mais (era o Cliente até 14/10/2026).
+  const cliente = nomeDoAcesso(empresas.map((e) => e.nome));
   const variasEmpresas = empresas.length > 1 && !empresaId;
 
   return (
@@ -104,7 +105,7 @@ export default async function InicioDoPortalPage({
       {empresas.length > 1 && <FiltroDePeriodo acao="/portal" empresas={empresas} empresaId={empresaId} permitirTodas />}
 
       <Suspense fallback={<BlocoCarregando baixo className="mb-4" />}>
-        <PrecisaDeVoce escopo={escopo} portalUserId={sessao.sub} clientGroupId={sessao.clientGroupId} atencao={blocos.atencao} />
+        <PrecisaDeVoce escopo={escopo} portalUserId={sessao.sub} empresasDaConta={companyIds} atencao={blocos.atencao} />
       </Suspense>
 
       {/* Lado a lado só a partir de `lg` e só com os dois: no celular tudo

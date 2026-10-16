@@ -27,7 +27,7 @@ export function EnviarArquivosDoCliente({ companyId, empresaNome }: { companyId:
   }
 
   return (
-    <div className="w-full bg-surface border border-border rounded-lg p-4">
+    <div className="w-full bg-surface border border-border rounded-lg shadow-xs p-4">
       <EnvioDeArquivos
         url="/portal/arquivos/enviar"
         campos={{ companyId }}

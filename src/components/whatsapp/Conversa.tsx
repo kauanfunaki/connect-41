@@ -56,7 +56,8 @@ import {
   type AcaoNaConversa,
 } from "@/app/(app)/whatsapp/actions";
 import type { ConversaDetalhada } from "@/lib/whatsapp/data";
-import type { PessoaDoAtendimento } from "@/lib/whatsapp/equipe";
+import { navegacaoDoPainel } from "@/lib/whatsapp/caixa";
+import { useCaixaDoWhatsapp } from "@/components/whatsapp/contextoDaCaixa";
 import { DESFECHOS, DESFECHOS_DA_TELA, rotuloDoDesfecho } from "@/lib/whatsapp/atendimentos";
 import { ROTULO_DA_FAIXA } from "@/lib/recrutamento/triagem";
 import { FichaNaConversa } from "./FichaNaConversa";
@@ -66,20 +67,20 @@ type Props = {
   agora: Date;
   /** Candidaturas em andamento, para ligar a conversa a uma pessoa. */
   candidaturas: { id: string; rotulo: string }[];
-  /** Quem está olhando — decide entre "Assumir" e "Soltar". */
-  userId: string;
-  /** Para quem dá para transferir — quem atende o WhatsApp do setor. */
-  pessoas: PessoaDoAtendimento[];
-  /** Fechar (volta à lista) e a anterior/próxima da lista, para o ↑↓. */
-  navegacao: { fechar: string; anterior: string | null; proxima: string | null };
 };
 
 /**
  * Uma conversa do WhatsApp do Recrutamento no painel da caixa de conversas
  * (09/10/2026): as ações de sempre — assumir, transferir, encerrar, devolver
  * ao assistente, ligar à candidatura, responder — com o desenho novo.
+ *
+ * Desde 14/10/2026 o painel tem altura fixa: o cabeçalho e a caixa de escrever
+ * ficam parados, e só as mensagens rolam. Quem está olhando, para quem dá para
+ * transferir e o ↑↓ vêm da lista ao lado (`useCaixaDoWhatsapp`).
  */
-export function Conversa({ conversa, agora, candidaturas, userId, pessoas, navegacao }: Props) {
+export function Conversa({ conversa, agora, candidaturas }: Props) {
+  const { userId, pessoas, visiveis, recorte } = useCaixaDoWhatsapp();
+  const navegacao = navegacaoDoPainel(visiveis, conversa.id, recorte);
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -154,6 +155,8 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas, naveg
           {conversa.candidaturaId && (
             <ItemDoMenu
               icone={<Unlink />}
+              // Desfazer fica no "⋯" mesmo quando é a única ação (D3, 15/10/2026).
+              danger
               disabled={ocupado}
               onClick={() => {
                 close();
@@ -328,9 +331,17 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas, naveg
     />
   );
 
+  // A conversa ocupa o resto do painel: as mensagens rolam (abrem no fim, na
+  // mais nova) e a caixa de escrever fica parada embaixo. Era uma caixa de no
+  // máximo 28rem dentro de um painel que rolava inteiro — o Kauan rolava a
+  // cada três mensagens lidas (14/10/2026).
   const abaConversa = (
-    <div className="flex flex-col gap-3">
-      <RolarParaOFim quantas={conversa.mensagens.length} className="max-h-[min(28rem,55dvh)] flex flex-col gap-2 pr-1">
+    <>
+      <RolarParaOFim quantas={conversa.mensagens.length} className="flex-1 min-h-0 flex flex-col gap-2 px-4 sm:px-5 py-3">
+        {/* Conversa curta encosta embaixo, perto da caixa de escrever, como num
+            app de mensagem. Margem automática, e não `justify-end`: com este,
+            o começo de uma conversa longa ficaria fora do alcance da rolagem. */}
+        <div aria-hidden className="mt-auto" />
         {conversa.mensagens.length === 0 ? (
           <p className="text-ui text-fg-muted py-6 text-center">Nenhuma mensagem ainda.</p>
         ) : (
@@ -339,7 +350,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas, naveg
             return (
               <div key={m.id} className={minha ? "self-end max-w-[80%]" : "self-start max-w-[80%]"}>
                 <div
-                  className={`rounded-2xl px-3.5 py-2 text-ui whitespace-pre-wrap ${
+                  className={`rounded-lg px-3.5 py-2 text-ui whitespace-pre-wrap ${
                     minha
                       ? m.status === "BLOQUEADA"
                         ? "bg-warning-bg border border-warning/30 text-fg rounded-br-md"
@@ -376,48 +387,55 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas, naveg
             );
           })
         )}
+        {/* O fim do atendimento fica onde a conversa parou, e não na caixa de
+            escrever: a parte parada embaixo é só a resposta. */}
+        {situacao === "encerrada" && ultimoEncerramento && (
+          <p className="text-fs-2 text-fg-secondary text-center pt-1">
+            Atendimento encerrado{ultimoEncerramento.por ? ` por ${ultimoEncerramento.por}` : ""} em {formatInstantDateTime(ultimoEncerramento.em)} ·{" "}
+            {rotuloDoDesfecho(ultimoEncerramento.desfecho)}. A próxima mensagem do candidato abre um novo atendimento com o assistente.
+          </p>
+        )}
       </RolarParaOFim>
 
-      {situacao === "encerrada" && ultimoEncerramento && (
-        <p className="text-fs-2 text-fg-secondary">
-          Atendimento encerrado{ultimoEncerramento.por ? ` por ${ultimoEncerramento.por}` : ""} em {formatInstantDateTime(ultimoEncerramento.em)} ·{" "}
-          {rotuloDoDesfecho(ultimoEncerramento.desfecho)}. A próxima mensagem do candidato abre um novo atendimento com o assistente.
-        </p>
-      )}
-
-      {resposta.pode ? (
-        <div className="rounded-lg border border-border bg-surface focus-within:border-brand/50 transition-colors">
-          <Textarea
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={(e) => {
-              // Ctrl+Enter envia; Enter sozinho quebra a linha, como antes.
-              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && texto.trim() && !ocupado) {
-                e.preventDefault();
-                void correr(() => responderConversa(conversa.id, texto), true);
-              }
-            }}
-            placeholder="Escreva para o candidato…"
-            rows={3}
-            aria-label="Resposta ao candidato"
-            className="border-0 shadow-none focus:ring-0 resize-none"
-          />
-          <div className="flex flex-wrap items-center justify-end gap-3 px-3 pb-2.5">
-            <p className="mr-auto min-w-0 text-micro text-fg-muted">
-              {situacao === "encerrada"
-                ? "Responder abre um novo atendimento e assume a conversa."
-                : "Responder assume a conversa — o assistente para de responder aqui."}{" "}
-              Ctrl+Enter envia.
-            </p>
-            <Button size="sm" disabled={ocupado || !texto.trim()} onClick={() => correr(() => responderConversa(conversa.id, texto), true)}>
-              <Send size={14} /> {ocupado ? "Enviando…" : "Enviar"}
-            </Button>
+      <div className="shrink-0 border-t border-border-soft px-3 sm:px-4 pt-2.5 pb-3">
+        {resposta.pode ? (
+          <div className="rounded-lg border border-border bg-surface focus-within:border-brand/50 transition-colors">
+            <Textarea
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              onKeyDown={(e) => {
+                // Ctrl+Enter envia; Enter sozinho quebra a linha, como antes.
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && texto.trim() && !ocupado) {
+                  e.preventDefault();
+                  void correr(() => responderConversa(conversa.id, texto), true);
+                }
+              }}
+              placeholder="Escreva para o candidato…"
+              rows={2}
+              aria-label="Resposta ao candidato"
+              className="border-0 shadow-none focus:ring-0 resize-none"
+            />
+            {/* `pr-12` até 1800px: a Ceci (o botão do chat de IA, no canto de
+                baixo da tela) ficava por cima do "Enviar" agora que a caixa de
+                escrever não rola mais. Em tela larga a página centraliza, e a
+                Ceci cai fora do painel. */}
+            <div className="flex items-center justify-end gap-3 pl-3 pr-12 min-[1800px]:pr-3 pb-2">
+              <p className="mr-auto min-w-0 text-micro text-fg-muted">
+                {situacao === "encerrada"
+                  ? "Responder abre um novo atendimento e assume a conversa."
+                  : "Responder assume a conversa — o assistente para de responder aqui."}{" "}
+                Ctrl+Enter envia.
+              </p>
+              <Button size="sm" disabled={ocupado || !texto.trim()} onClick={() => correr(() => responderConversa(conversa.id, texto), true)}>
+                <Send size={14} /> {ocupado ? "Enviando…" : "Enviar"}
+              </Button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <p className="text-ui text-fg-secondary rounded-lg bg-surface-2 px-3 py-2">{resposta.motivo}</p>
-      )}
-    </div>
+        ) : (
+          <p className="text-ui text-fg-secondary rounded-lg bg-surface-2 px-3 py-2">{resposta.motivo}</p>
+        )}
+      </div>
+    </>
   );
 
   // O vínculo é o que faz o assistente saber de quem está falando. Telefone
@@ -504,10 +522,11 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas, naveg
       acoes={acoes}
       aviso={temAviso ? paineisDeAcao : undefined}
       infos={infos}
+      corpo="fixo"
     >
       <AbasDoPainel
         abas={[
-          { chave: "conversa", rotulo: `Conversa (${conversa.mensagens.length})`, conteudo: abaConversa },
+          { chave: "conversa", rotulo: `Conversa (${conversa.mensagens.length})`, conteudo: abaConversa, cheia: true },
           { chave: "candidatura", rotulo: conversa.candidaturaId ? "Candidatura" : "Ligar à candidatura", conteudo: abaCandidatura },
           { chave: "historico", rotulo: `Atendimentos encerrados (${conversa.encerramentos.length})`, conteudo: abaHistorico },
         ]}

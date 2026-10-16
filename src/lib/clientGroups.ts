@@ -45,10 +45,9 @@ export type GrupoPlanejado = {
  *    estabelecimentos sob a raiz 17122471).
  * 2. Todo o resto vira um grupo 1:1 com o nome da própria empresa.
  *
- * A passada 2 parece burocracia e é o que faz a coisa valer: com 100% das
- * empresas vinculadas, a consulta do portal é `where clientGroupId = X` e
- * pronto, sem `OR company.id in (...)` espalhado por toda tela. É também como
- * o protótipo opera — lá empresa sem cliente não existe.
+ * A passada 2 existia para a consulta do portal ser `where clientGroupId = X`.
+ * Desde 14/10/2026 o portal é ligado direto às empresas e não usa mais o
+ * cliente; o agrupamento sai na etapa 3.
  *
  * Determinístico: a ordem de entrada não muda o resultado, e o nome do grupo
  * de uma raiz compartilhada é o da empresa de nome mais curto (tende a ser a

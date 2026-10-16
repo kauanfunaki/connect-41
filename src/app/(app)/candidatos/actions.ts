@@ -67,41 +67,9 @@ export async function criarCandidato(
   redirect(`/candidatos/${id}`);
 }
 
-export async function atualizarCandidato(
-  _prev: CandidatoState,
-  form: FormData
-): Promise<CandidatoState> {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir"))) return { error: "Sem permissão para editar candidatos." };
-
-  const validationError = validatePersonForm(form);
-  if (validationError) return { error: validationError };
-
-  const id = form.get("id") as string;
-  const data = candidatoData(form);
-
-  const prisma = getPrisma();
-
-  const existing = await prisma.person.findFirst({
-    where: { id, tenantId: ctx.tenantId, type: PersonType.CANDIDATO },
-    select: { id: true },
-  });
-  if (!existing) return { error: "Candidato não encontrado." };
-
-  try {
-    await prisma.person.update({ where: { id }, data });
-  } catch (err) {
-    if (isPrismaUniqueError(err)) {
-      return { error: "Já existe uma pessoa cadastrada com este CPF." };
-    }
-    console.error("[atualizarCandidato]", err);
-    return { error: "Erro ao atualizar candidato." };
-  }
-
-  revalidatePath(`/candidatos/${id}`);
-  redirect(`/candidatos/${id}`);
-}
+// A edição do candidato inteiro (`atualizarCandidato`, o formulário de
+// /candidatos/[id]/editar) saiu em 14/10/2026: a ficha edita cada bloco no
+// próprio lugar — ver `salvarSecaoDoCandidato` em [id]/ficha-actions.ts.
 
 // A exclusão do candidato saiu daqui em 13/10/2026: é o diálogo
 // ExcluirCadastro (src/components/exclusao), o mesmo da ficha de pessoa — com a

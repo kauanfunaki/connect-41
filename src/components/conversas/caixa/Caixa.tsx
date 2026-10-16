@@ -3,35 +3,32 @@
 // os chats do Connect (atendimento do Recrutamento, Conversas da Controladoria,
 // conversa com o cliente do BPO) com um desenho só, mais fácil de percorrer.
 //
-// - No computador, lista e painel lado a lado, com a altura da tela: cada um
-//   rola por dentro, a página não.
-// - No celular, uma coisa de cada vez: a lista, ou o painel aberto (com o X
-//   para voltar à lista).
+// - Lista e painel ocupam a altura que sobra na janela, abaixo do título da
+//   página (14/10/2026): a página não rola; rolam só os cartões da lista e o
+//   conteúdo do painel. Quem usa põe a caixa num `PageContainer` com
+//   `h-full flex flex-col` — a altura vem do casco do app, sem conta de
+//   `100dvh` menos o que estiver em cima.
+// - No computador, lista e painel lado a lado. No celular, uma coisa de cada
+//   vez: a lista, ou o painel aberto (com o X para voltar à lista).
 //
 // As peças daqui servem a servidor e cliente; o que precisa de estado (teclado,
-// copiar, abas) está em ./Interativos.
+// copiar, abas, o cabeçalho do painel) está em ./Interativos.
 
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, MessageCircle, X } from "lucide-react";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
+import { Contador } from "@/components/ui/Contador";
 import { iniciais } from "@/lib/conversas/caixa";
-import { BotaoCopiar, NavegacaoPorTeclado } from "./Interativos";
+import { BotaoCopiar, CabecalhoDoPainel, NavegacaoPorTeclado } from "./Interativos";
 
-export function CaixaDeConversas({
-  lista,
-  painel,
-  aberta,
-  altura = "lg:h-[calc(100dvh-14.5rem)]",
-}: {
-  lista: ReactNode;
-  painel: ReactNode;
-  aberta: boolean;
-  /** A altura no computador: a tela menos o que a página põe acima da caixa. */
-  altura?: string;
-}) {
+/**
+ * A caixa: preenche o resto da coluna do `PageContainer` (`flex-1`). Abaixo de
+ * 24rem de altura a página volta a rolar, em vez de espremer a conversa.
+ */
+export function CaixaDeConversas({ lista, painel, aberta }: { lista: ReactNode; painel: ReactNode; aberta: boolean }) {
   return (
-    <div className={`grid gap-4 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)] ${altura} lg:min-h-[32rem]`}>
+    <div className="flex-1 min-h-[24rem] grid grid-rows-[minmax(0,1fr)] gap-4 lg:gap-x-3 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
       <div className={`${aberta ? "hidden lg:flex" : "flex"} flex-col min-h-0 min-w-0`}>{lista}</div>
       <div className={`${aberta ? "flex" : "hidden lg:flex"} flex-col min-h-0 min-w-0`}>{painel}</div>
     </div>
@@ -40,53 +37,68 @@ export function CaixaDeConversas({
 
 /**
  * Os recortes da lista, com a contagem — "Todas 16 · Sem responsável 3".
- * Mesma lista recortada, então é barra de pílulas, não aba de tela.
+ * Mesma lista recortada, então é barra de pílulas, não aba de tela. Ocupa a
+ * largura da coluna, como os cartões embaixo (14/10/2026).
+ *
+ * Com `aoEscolher` (só de componente cliente), o clique não navega: quem usa
+ * troca o recorte no navegador — a caixa do WhatsApp recorta a lista sem ir ao
+ * servidor e só atualiza a URL. Ctrl+clique e "abrir em nova aba" seguem o link.
  */
 export function RecortesDaCaixa({
   itens,
-  direita,
+  aoEscolher,
 }: {
   itens: { rotulo: string; n?: number; href: string; ativo: boolean; tom?: "atencao" }[];
-  direita?: ReactNode;
+  aoEscolher?: (href: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-      <nav aria-label="Recortes da lista" className="flex flex-wrap items-center gap-1 rounded-lg bg-surface-2 border border-border p-1">
-        {itens.map((r) => (
-          <Link
-            key={r.href}
-            href={r.href}
-            aria-current={r.ativo ? "page" : undefined}
-            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-ui font-medium transition-colors ${
-              r.ativo ? "bg-surface text-fg shadow-[var(--c41-shadow-xs)]" : "text-fg-secondary hover:text-fg"
-            }`}
-          >
-            {r.rotulo}
-            {r.n !== undefined && (
-              <span
-                className={`min-w-5 h-5 px-1.5 rounded-full text-micro font-semibold tabular-nums flex items-center justify-center ${
-                  r.tom === "atencao" && r.n > 0 ? "bg-warning/15 text-warning-fg" : "bg-surface-hover text-fg-muted"
-                }`}
-              >
-                {r.n}
-              </span>
-            )}
-          </Link>
-        ))}
-      </nav>
-      {direita && <div className="flex flex-wrap items-center gap-2">{direita}</div>}
-    </div>
+    <nav aria-label="Recortes da lista" className="flex items-center gap-1 rounded-lg bg-surface-2 border border-border p-1">
+      {itens.map((r) => (
+        <Link
+          key={r.href}
+          href={r.href}
+          scroll={false}
+          prefetch={aoEscolher ? false : undefined}
+          onNavigate={
+            aoEscolher
+              ? (e) => {
+                  e.preventDefault();
+                  aoEscolher(r.href);
+                }
+              : undefined
+          }
+          aria-current={r.ativo ? "page" : undefined}
+          className={`flex-auto min-w-0 inline-flex items-center justify-center gap-1.5 h-8 px-2 rounded-md text-ui font-medium transition-colors ${
+            r.ativo ? "bg-surface text-fg shadow-[var(--c41-shadow-xs)]" : "text-fg-secondary hover:text-fg"
+          }`}
+        >
+          <span className="truncate">{r.rotulo}</span>
+          {r.n !== undefined && (
+            <Contador valor={r.n} tom={r.tom === "atencao" && r.n > 0 ? "atencao" : "neutro"} teto={Number.MAX_SAFE_INTEGER} className="shrink-0" />
+          )}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
-/** A coluna da lista: rola por dentro; o rodapé (paginação, lote) fica embaixo. */
+// A faixa da barra de rolagem, reservada nos três blocos da coluna (14/10/2026,
+// pedido do Kauan: abas, busca e cartões com o mesmo comprimento). Só os
+// cartões rolam, e a barra deles roubava largura só deles; com
+// `scrollbar-gutter: stable` em todos — e a mesma barra fina do `.scroll-y`,
+// para a faixa ter a mesma largura —, as bordas da direita se alinham, com ou
+// sem barra à vista. O `px-1` dá espaço ao anel de foco (3px), que o
+// `overflow` cortaria; o `-ml-1` da coluna devolve o alinhamento com o título.
+const FAIXA = "scroll-y scroll-gutter-stable px-1";
+
+/** A coluna da lista: o topo (abas, busca) parado, os cartões rolando, o rodapé (paginação, lote) embaixo. */
 export function ColunaDaLista({ topo, children, rodape }: { topo?: ReactNode; children: ReactNode; rodape?: ReactNode }) {
   return (
-    <>
-      {topo}
-      <div className="flex-1 min-h-0 overflow-y-auto scroll-y flex flex-col gap-2 pr-1 -mr-1 pb-1">{children}</div>
-      {rodape && <div className="pt-3">{rodape}</div>}
-    </>
+    <div className="flex-1 min-h-0 flex flex-col -ml-1">
+      {topo && <div className={`relative shrink-0 overflow-hidden ${FAIXA} pt-1 pb-2 flex flex-col gap-2`}>{topo}</div>}
+      <div className={`relative flex-1 min-h-0 overflow-y-auto ${FAIXA} py-1 flex flex-col gap-2`}>{children}</div>
+      {rodape && <div className={`relative shrink-0 overflow-hidden ${FAIXA} pt-2 pb-1`}>{rodape}</div>}
+    </div>
   );
 }
 
@@ -107,8 +119,10 @@ export function Iniciais({ nome, tamanho = 32 }: { nome: string | null; tamanho?
 export function BalaoDeMensagens({ n, rotulo }: { n: number; rotulo?: string }) {
   if (n > 0) {
     return (
+      // Azul cheio do botão principal (`brand-solid`, 15/10/2026): o `bg-brand`
+      // com branco fixo dava 3,28:1 no escuro.
       <span
-        className="min-w-6 h-6 px-1.5 rounded-full bg-brand text-white text-micro font-semibold tabular-nums flex items-center justify-center shrink-0"
+        className="min-w-6 h-6 px-1.5 rounded-full bg-brand-solid text-on-brand text-micro font-semibold tabular-nums flex items-center justify-center shrink-0"
         title={rotulo}
       >
         {n}
@@ -135,11 +149,14 @@ export type CartaoDeConversaProps = {
   selecionada?: boolean;
   /** Antes do cartão, fora do link: a caixa de seleção do lote. */
   antes?: ReactNode;
+  /** Marca o cartão (`data-cartao`), para a lista achá-lo e trazê-lo à vista. */
+  ancora?: string;
 };
 
 export function CartaoDeConversa(p: CartaoDeConversaProps) {
   return (
     <div
+      data-cartao={p.ancora}
       className={`flex items-stretch rounded-lg border bg-surface transition-colors ${
         p.selecionada ? "border-brand ring-1 ring-brand/30" : "border-border hover:border-brand/40"
       }`}
@@ -147,6 +164,7 @@ export function CartaoDeConversa(p: CartaoDeConversaProps) {
       {p.antes}
       <Link
         href={p.href}
+        scroll={false}
         aria-current={p.selecionada ? "page" : undefined}
         className={`block flex-1 min-w-0 px-3 py-2.5 rounded-lg ${p.antes ? "pl-1.5" : ""}`}
       >
@@ -203,13 +221,13 @@ export function BarraDoPainel({
 }) {
   const seta = "inline-flex items-center justify-center w-8 h-8 rounded-md border border-border text-fg-secondary";
   return (
-    <div className="flex items-center gap-2 px-3 h-12 border-b border-border shrink-0">
-      <Link href={fecharHref} aria-label="Fechar e voltar à lista" title="Fechar (Esc)" className="inline-flex items-center justify-center w-8 h-8 rounded-md text-fg-secondary hover:bg-surface-hover hover:text-fg">
+    <div className="flex items-center gap-2 px-3 h-11 border-b border-border shrink-0">
+      <Link href={fecharHref} scroll={false} aria-label="Fechar e voltar à lista" title="Fechar (Esc)" className="inline-flex items-center justify-center w-8 h-8 rounded-md text-fg-secondary hover:bg-surface-hover hover:text-fg">
         <X size={16} />
       </Link>
       <span className="h-5 w-px bg-border mx-1" aria-hidden />
       {anteriorHref ? (
-        <Link href={anteriorHref} aria-label="Conversa anterior" title="Anterior (↑)" className={`${seta} hover:bg-surface-hover hover:text-fg`}>
+        <Link href={anteriorHref} scroll={false} aria-label="Conversa anterior" title="Anterior (↑)" className={`${seta} hover:bg-surface-hover hover:text-fg`}>
           <ChevronUp size={16} />
         </Link>
       ) : (
@@ -218,7 +236,7 @@ export function BarraDoPainel({
         </span>
       )}
       {proximaHref ? (
-        <Link href={proximaHref} aria-label="Próxima conversa" title="Próxima (↓)" className={`${seta} hover:bg-surface-hover hover:text-fg`}>
+        <Link href={proximaHref} scroll={false} aria-label="Próxima conversa" title="Próxima (↓)" className={`${seta} hover:bg-surface-hover hover:text-fg`}>
           <ChevronDown size={16} />
         </Link>
       ) : (
@@ -235,8 +253,15 @@ export function BarraDoPainel({
 }
 
 /**
- * O painel do contato: etiquetas, o nome grande, as ações rápidas, os dados e,
- * embaixo, o conteúdo (abas, conversa). Rola por dentro; a barra fica parada.
+ * O painel do contato. Parados no topo (14/10/2026, pedido do Kauan: "a header
+ * do atendimento tem que ficar fixa"): a barra, o nome com as etiquetas numa
+ * linha, as ações rápidas, o aviso e os dados (recolhidos — ver
+ * `CabecalhoDoPainel`). Embaixo, o conteúdo, que é o que rola:
+ *
+ * - `corpo="rola"` (padrão): o conteúdo inteiro rola por baixo do cabeçalho.
+ * - `corpo="fixo"`: o conteúdo ocupa o resto do painel e cuida da própria
+ *   rolagem — a conversa do WhatsApp, com as mensagens rolando e a caixa de
+ *   escrever parada embaixo.
  */
 export function PainelDeConversa({
   barra,
@@ -246,6 +271,8 @@ export function PainelDeConversa({
   acoes,
   aviso,
   infos,
+  rotuloDasInfos,
+  corpo = "rola",
   children,
 }: {
   barra: ReactNode;
@@ -254,33 +281,26 @@ export function PainelDeConversa({
   subtitulo?: ReactNode;
   acoes?: ReactNode;
   aviso?: ReactNode;
+  /** Os dados do contato (`LinhasDeInfo`): começam recolhidos, e abrem por um botão na linha das etiquetas. */
   infos?: ReactNode;
+  /** O texto desse botão. Padrão: "Dados". */
+  rotuloDasInfos?: string;
+  corpo?: "rola" | "fixo";
   children?: ReactNode;
 }) {
-  const visiveis = (etiquetas ?? []).filter(Boolean);
   return (
-    <section className="flex-1 min-h-0 flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden" aria-label={titulo}>
+    <section className="relative flex-1 min-h-0 flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden" aria-label={titulo}>
       {barra}
-      <div className="flex-1 min-h-0 overflow-y-auto scroll-y">
-        <div className="px-5 sm:px-6 pt-5 pb-4 bg-gradient-to-b from-brand/[0.05] to-transparent">
-          {visiveis.length > 0 && (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-ui text-fg-secondary mb-2">
-              {visiveis.map((e, i) => (
-                <span key={i} className="flex items-center gap-2">
-                  {i > 0 && <span className="text-fg-muted" aria-hidden>·</span>}
-                  {e}
-                </span>
-              ))}
-            </div>
-          )}
-          <h2 className="text-title font-semibold text-fg break-words">{titulo}</h2>
-          {subtitulo && <div className="text-ui text-fg-muted mt-0.5">{subtitulo}</div>}
-          {acoes && <div className="flex flex-wrap items-center gap-1 mt-3 -ml-2">{acoes}</div>}
-        </div>
-        {aviso && <div className="px-5 sm:px-6 pb-3">{aviso}</div>}
-        {infos && <div className="px-5 sm:px-6 py-3 border-t border-border-soft">{infos}</div>}
-        {children}
-      </div>
+      <CabecalhoDoPainel
+        titulo={titulo}
+        subtitulo={subtitulo}
+        etiquetas={etiquetas}
+        acoes={acoes}
+        aviso={aviso}
+        infos={infos}
+        rotuloDasInfos={rotuloDasInfos}
+      />
+      <div className={corpo === "fixo" ? "relative flex-1 min-h-0 flex flex-col" : "relative flex-1 min-h-0 overflow-y-auto scroll-y"}>{children}</div>
     </section>
   );
 }

@@ -72,7 +72,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Na coluna da direita, veja “Próximas reuniões” e clique em “Entrar” para abrir a chamada.",
           "Em “Prazos da semana”, confira os vencimentos dos seus setores nos próximos 7 dias, dia a dia.",
           "Clique em “Abrir agenda” para ver a semana inteira na Agenda.",
-          "Para ver as tarefas em quadro, clique em “Quadros”, no topo da tela.",
+          "Para ver as listas de tarefas de todos os seus setores, clique em “Kanban”, no topo da tela.",
         ],
       },
       {
@@ -115,6 +115,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Clique no nome da empresa na lista.",
           "Em “Visão geral”, veja os dados cadastrais e os “Serviços contratados”. Clique em “Gerar resumo” para um resumo dos últimos 90 dias.",
           "Use as abas “Filiais”, “Pessoas”, “Documentos”, “Conversas” e “Histórico” para o restante das informações.",
+          "Administradores veem também a aba “Acesso ao portal”: quem entra no portal do cliente e vê esta empresa.",
           "Na aba “RH & operação”, entre em “Sócios”, “Cargos”, “Departamentos”, “Benefícios”, “Turnos” e “Folha de pagamento”. “Envios ao cliente” abre a aba “Envios” de Solicitações, já filtrada nesta empresa.",
           "Para passar um assunto da empresa a outro setor, clique em “Solicitar transferência”.",
         ],
@@ -126,6 +127,16 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Escolha o “Tipo de cadastro”. Com CNPJ, os dados se preenchem sozinhos ao completar os dígitos.",
           "Confira e complete os campos de cada etapa, clicando em “Avançar →”.",
           "Na última etapa, revise o resumo e clique em “Confirmar e salvar”.",
+        ],
+      },
+      {
+        titulo: "Como dar acesso ao portal a uma empresa",
+        passos: [
+          "Na ficha da empresa, abra a aba “Acesso ao portal”.",
+          "Para uma pessoa nova, clique em “Novo acesso”, preencha nome e e-mail e clique em “Criar acesso”. Ela recebe por e-mail o link para definir a senha.",
+          "Se a pessoa já entra no portal por outra empresa, clique em “Ligar acesso existente”, busque pelo nome ou e-mail e clique em “Ligar”.",
+          "Quando a empresa tem filiais, “Incluir as filiais” vem marcado: a pessoa vê também as filiais, inclusive as cadastradas depois.",
+          "No “⋯” de cada linha: incluir ou tirar as filiais, desligar o acesso desta empresa (a conta continua), desativar ou excluir.",
         ],
       },
       {
@@ -153,6 +164,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Inativar não apaga nada: a empresa só sai da lista padrão e pode ser reativada depois.",
       "Cadastrar, editar e inativar empresas é para administradores e gestores de setor. Excluir de vez é só para administradores.",
       "Empresa com mais de 2.000 notas fiscais não pode ser excluída por aqui: é histórico de verdade. Inative.",
+      "O portal não depende do “Cliente” da empresa: quem vê cada empresa se define em “Acesso ao portal”, na ficha dela, ou em Configurações › Portal do cliente.",
     ],
   },
 
@@ -179,7 +191,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Em “Visão geral”, veja identificação, contato, endereço e a “Conta de acesso” ao Connect.",
           "Em “Vínculo”, veja a empresa, o cargo e o departamento.",
           "Em “Dados trabalhistas”, veja admissão, jornada, carga horária e dependentes.",
-          "Use “Documentos”, “Conversas” e “Histórico” para os arquivos, os atendimentos e as movimentações nos quadros.",
+          "Use “Documentos”, “Conversas” e “Histórico” para os arquivos, os atendimentos e as movimentações no Kanban.",
           "Para passar um assunto da pessoa a outro setor, clique em “Solicitar transferência”.",
         ],
       },
@@ -206,7 +218,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Use para cadastro de teste, feito por engano, ou quando a pessoa pede a exclusão dos dados. Para afastar alguém de verdade, inative.",
           "Na ficha da pessoa, clique em “Excluir”. A janela mostra o que está ligado a ela: férias, folha, exames, documentos, candidaturas.",
           "Sem nada ligado, clique em “Excluir”. Com histórico, digite o nome da pessoa e clique em “Excluir com tudo o que está ligado”.",
-          "A conta de acesso ao Connect, se houver, continua: para tirar o acesso, exclua ou inative o usuário em Administração › Usuários.",
+          "A conta de acesso ao Connect, se houver, continua: para tirar o acesso, exclua ou inative o usuário em Configurações › Usuários.",
         ],
       },
     ],
@@ -307,7 +319,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "O horário padrão do escritório é definido por um administrador, em Administração → Empresa (tenant).",
+      "O horário padrão do escritório é definido por um administrador, em Configurações › Horário da Agenda.",
       "Quando o horário passa da meia-noite, a madrugada aparece na coluna do dia anterior: uma reunião à 1:00 de terça fica na coluna de segunda. Os prazos continuam no dia do calendário.",
       "Reunião fora do horário exibido não some: a grade avisa quantas ficaram de fora, e elas aparecem na visão de mês.",
       "Para agendar, conecte antes a sua conta Google ou Microsoft: a janela de nova reunião traz o link “Configurações → Integrações”.",
@@ -316,38 +328,40 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
   },
 
-  // ─── Espaços ───────────────────────────────────────────────────────────────
+  // ─── Quadros ───────────────────────────────────────────────────────────────
+  // Chamava-se "Espaços" até 14/10/2026. A chave fica `geral:espacos`: é o
+  // endereço do artigo (`/ajuda/geral:espacos`) e a chave do vídeo 27.
   {
     chave: "geral:espacos",
-    titulo: "Espaços",
+    titulo: "Quadros",
     caminhos: ["/kanban", "/setor"],
     resumo:
-      "As listas e quadros de tarefas de cada setor, organizados em espaços e pastas. Cada tarefa tem situação, responsáveis, prazo e comentários.",
+      "As listas de tarefas de cada setor, organizadas em espaços e pastas, para ver em lista ou em kanban. Cada tarefa tem situação, responsáveis, prazo e comentários.",
     secoes: [
       {
         titulo: "Como encontrar uma lista de tarefas",
         passos: [
-          "Entre no setor e clique em “Espaços”, na barra lateral.",
+          "Entre no setor e clique em “Quadros”, na barra lateral.",
           "Cada cartão é um espaço, com as listas logo abaixo do nome. Clique em uma lista para abri-la.",
           "Clique no nome do espaço para ver as “Pastas” e as “Listas” que estão nele.",
-          "Dentro da lista, troque entre “Lista” e “Quadro” para ver as tarefas em linhas ou em colunas por status.",
+          "Dentro da lista, troque entre “Listas” e “Kanban” para ver as tarefas em linhas ou em colunas por status.",
           "Use a busca e o botão “Filtros” para filtrar por “Responsável”, “Criador”, “Etiqueta”, “Prioridade” e “Prazo”.",
         ],
       },
       {
         titulo: "Como criar espaços, pastas, listas e tarefas",
         passos: [
-          "Na tela de Espaços, clique em “Novo espaço”, dê um “Nome” e clique em “Criar”.",
+          "Na tela Quadros, clique em “Novo espaço”, dê um “Nome” e clique em “Criar”.",
           "Dentro do espaço, clique em “Nova pasta” ou “Nova lista”, dê um nome e clique em “Criar”.",
           "Na lista, clique em “Editar lista” para ajustar os estágios das colunas.",
-          "Para criar uma tarefa, na visão “Lista”, clique em “Adicionar tarefa” no grupo do status, digite o nome e aperte Enter.",
+          "Para criar uma tarefa, na visão “Listas”, clique em “Adicionar tarefa” no grupo do status, digite o nome e aperte Enter.",
           "Para criar a tarefa de uma empresa ou pessoa, clique em “Nova tarefa”, escolha quem é e clique em “Criar tarefa”.",
         ],
       },
       {
         titulo: "Como trabalhar em uma tarefa",
         passos: [
-          "Clique no nome da tarefa para abri-la. No “Quadro”, você também pode arrastar a tarefa para outra coluna.",
+          "Clique no nome da tarefa para abri-la. No “Kanban”, você também pode arrastar a tarefa para outra coluna.",
           "Em “Situação”, escolha a etapa em que a tarefa está.",
           "Em “Responsáveis”, marque quem faz a tarefa; em “Participantes”, quem acompanha.",
           "Preencha “Datas”, “Prioridade” e “Etiquetas”, e use “Subtarefas”, “Checklist” e “Anexos” quando precisar.",
@@ -360,7 +374,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Criar espaços, pastas, listas e tarefas é para o gestor do setor e os administradores. Quem é do setor comenta e atualiza as tarefas.",
       "Excluir tarefa, subtarefa, comentário, item do checklist, coluna, espaço, pasta ou lista é só do Administrador ou do Super Admin, e não pode ser desfeito. Quem escreveu um comentário corrige pelo “Editar”.",
       "Hora apontada errada se corrige no card, em “Horas apontadas”: clique no lápis do lançamento.",
-      "A tela “Kanban” reúne num lugar só os quadros de todos os seus setores.",
+      "A tela “Kanban” reúne num lugar só as listas de todos os seus setores. Para chegar nela, clique em “Kanban”, no topo do Meu dia.",
     ],
   },
 

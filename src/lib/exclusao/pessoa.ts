@@ -25,6 +25,7 @@ import {
   type Tx,
 } from "./comum";
 import { SO_ADMIN_EXCLUI } from "@/lib/auth/papeis";
+import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import { anotar, apagarArquivos, curriculosSemUso, semArquivos, totalDeArquivos, type ArquivosDoCadastro } from "./arquivos";
 import { LIGACOES } from "./registro";
 import type { ItemDaPrevia, ModoDaExclusao, Previa, ResultadoDaExclusao } from "./tipos";
@@ -33,6 +34,10 @@ export type AlvoPessoas = { tenantId: string; ids: string[] };
 
 const daPessoa = (a: AlvoPessoas) => ({ tenantId: a.tenantId, personId: { in: a.ids } });
 const daEntidade = (a: AlvoPessoas) => ({ tenantId: a.tenantId, entityType: "PERSON" as const, entityId: { in: a.ids } });
+
+async function candidaturasDasPessoas(tx: Tx, a: AlvoPessoas): Promise<string[]> {
+  return (await tx.candidatura.findMany({ where: daPessoa(a), select: { id: true } })).map((c) => c.id);
+}
 
 /**
  * A ordem importa: o banco recusa apagar a linha apontada antes de quem aponta
@@ -45,7 +50,7 @@ export const PLANO_DA_PESSOA: readonly Passo<AlvoPessoas>[] = [
     acao: "anular",
     coluna: "candidaturaId",
     executar: async (tx, a) => {
-      const ids = (await tx.candidatura.findMany({ where: daPessoa(a), select: { id: true } })).map((c) => c.id);
+      const ids = await candidaturasDasPessoas(tx, a);
       if (ids.length === 0) return 0;
       return n(tx.whatsappThread.updateMany({ where: { tenantId: a.tenantId, candidaturaId: { in: ids } }, data: { candidaturaId: null } }));
     },
@@ -68,6 +73,20 @@ export const PLANO_DA_PESSOA: readonly Passo<AlvoPessoas>[] = [
           data: { linkPendingPersonId: null },
         })
       ),
+  },
+  // O teste enviado para a candidatura solta dela antes (o da própria pessoa
+  // sai com ela, em cascata, no último passo). Depois da migration
+  // 20261014200000 o banco faria isso sozinho (SET NULL); antes dela a chave é
+  // RESTRICT e travava a exclusão da candidatura.
+  {
+    modelo: "AssessmentLink",
+    acao: "anular",
+    coluna: "candidaturaId",
+    executar: async (tx, a) => {
+      const ids = await candidaturasDasPessoas(tx, a);
+      if (ids.length === 0) return 0;
+      return n(tx.assessmentLink.updateMany({ where: { tenantId: a.tenantId, candidaturaId: { in: ids } }, data: { candidaturaId: null } }));
+    },
   },
   // Notas, avaliações de entrevista e reuniões da candidatura vão junto (cascata).
   { modelo: "Candidatura", acao: "apagar", executar: (tx, a) => n(tx.candidatura.deleteMany({ where: daPessoa(a) })) },
@@ -93,6 +112,21 @@ export const PLANO_DA_PESSOA: readonly Passo<AlvoPessoas>[] = [
     modelo: "CustomValue",
     acao: "apagar",
     executar: (tx, a) => n(tx.customValue.deleteMany({ where: { tenantId: a.tenantId, entityId: { in: a.ids } } })),
+  },
+  // O resumo do currículo que a IA escreveu na ficha do candidato (14/10/2026).
+  // Sem a tabela (deploy antes da migration), não há o que apagar, e a exclusão
+  // segue.
+  {
+    modelo: "CandidateResumeSummary",
+    acao: "apagar",
+    executar: async (tx, a) => {
+      try {
+        return await n(tx.candidateResumeSummary.deleteMany({ where: { tenantId: a.tenantId, personId: { in: a.ids } } }));
+      } catch (err) {
+        if (isPrismaMissingTableError(err)) return 0;
+        throw err;
+      }
+    },
   },
   // A tarefa do Kanban fica, sem a pessoa.
   {
@@ -182,7 +216,7 @@ async function previaDe(db: Tx, tenantId: string, p: PessoaDaPrevia): Promise<Pr
     const conta = await db.user.findFirst({ where: { id: p.linkedUserId, tenantId }, select: { name: true, email: true } });
     if (conta) {
       avisos.push(
-        `A conta de acesso de ${conta.name} (${conta.email}) continua: só deixa de estar ligada a esta ficha. Para tirar o acesso, exclua ou inative o usuário em Administração › Usuários.`
+        `A conta de acesso de ${conta.name} (${conta.email}) continua: só deixa de estar ligada a esta ficha. Para tirar o acesso, exclua ou inative o usuário em Configurações › Usuários.`
       );
     }
   }

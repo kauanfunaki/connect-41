@@ -6,7 +6,8 @@ import { AtalhoDoCalendario, SeletorDeMesEAno } from "@/components/ui/Calendario
 import { PainelFlutuante } from "@/components/ui/PainelFlutuante";
 import { CLASSE_DO_TEXTO, classesDaCaixa, larguraDoCampo, useCampoDigitado, useTelaDeToque } from "@/components/ui/useCampoDigitado";
 import { AvisoDoCampo } from "@/components/ui/AvisoDoCampo";
-import { hojeIso, lerMesDigitado, lerMesIso, mascararMes, mesBR, mesPorExtenso } from "@/lib/datas/calendario";
+import { anoPorExtenso, hojeIso, lerAnoIso, lerMesDigitado, lerMesIso, mascararMes, mesBR, mesPorExtenso } from "@/lib/datas/calendario";
+import { formatarCompetenciaNumerica } from "@/lib/format";
 
 type Props = {
   name?: string;
@@ -24,12 +25,25 @@ type Props = {
   className?: string;
   placeholder?: string;
   "aria-label"?: string;
+  /**
+   * Fora de foco, "10/2026" em vez de "out 2026" — os filtros da família da
+   * DRE (14/10/2026). Ao digitar, é "mm/aaaa" de qualquer jeito.
+   */
+  mesEmNumero?: boolean;
+  /**
+   * Oferece também o ano inteiro (14/10/2026, DRE do portal): a grade ganha
+   * "Ano inteiro de 2026", o valor passa a ser só o ano ("2026") e vai no
+   * formulário com este nome — `ano=2026` no lugar de `mes=…`.
+   */
+  nomeDoAno?: string;
 };
 
 /**
  * Campo de mês (competência, filtro de período) — 02/10/2026, no lugar do
  * `<input type="month">`. Digita "102026" ou "10/2026"; o calendário é a grade
- * de meses, com o ano em ‹ ›. Fora de foco aparece "out 2026".
+ * de meses, com o ano em ‹ ›. Fora de foco aparece "out 2026" — ou
+ * "10/2026", com `mesEmNumero`. Com `nomeDoAno`, o ano inteiro se escolhe na
+ * grade e aparece como "Ano de 2026"; digitar continua sendo de mês.
  */
 export function CampoMes({
   name,
@@ -45,6 +59,8 @@ export function CampoMes({
   className = "",
   placeholder = "Escolher mês",
   "aria-label": ariaLabel,
+  mesEmNumero = false,
+  nomeDoAno,
 }: Props) {
   const [aberto, setAberto] = useState(false);
   const [visao, setVisao] = useState<"meses" | "anos">("meses");
@@ -52,19 +68,24 @@ export function CampoMes({
   const idDoPainel = useId();
   const idDoErro = useId();
   const toque = useTelaDeToque();
+  // O ano inteiro só existe com `nomeDoAno`; sem ele, "2026" não é valor.
+  const ehAno = (v: string) => Boolean(nomeDoAno) && lerAnoIso(v) !== null;
   const campo = useCampoDigitado({
     value,
     defaultValue,
     onChange,
     ler: (t) => lerMesDigitado(t),
     mascarar: mascararMes,
-    paraEdicao: mesBR,
-    porExtenso: mesPorExtenso,
+    paraEdicao: (v) => (ehAno(v) ? v : mesBR(v)),
+    porExtenso: (v) => (ehAno(v) ? anoPorExtenso(v) : mesEmNumero ? formatarCompetenciaNumerica(v) : mesPorExtenso(v)),
     validar: (v) => (min && v < min ? `O mês mínimo é ${mesBR(min)}.` : max && v > max ? `O mês máximo é ${mesBR(max)}.` : null),
     mensagemDeInvalido: "Mês inválido — use mm/aaaa.",
   });
   const hoje = hojeIso();
   const escolhido = lerMesIso(campo.valor);
+  const anoEscolhido = ehAno(campo.valor) ? lerAnoIso(campo.valor) : null;
+  // O ano inteiro vai com o nome dele: a tela lê `ano` ou `mes`, nunca os dois.
+  const nomeDoValor = anoEscolhido !== null ? nomeDoAno : name;
 
   function abrir() {
     if (disabled) return;
@@ -79,7 +100,7 @@ export function CampoMes({
 
   return (
     <div className={`relative ${larguraDoCampo(className)} ${className}`.trim()}>
-      {name && <input type="hidden" name={name} value={campo.valor} />}
+      {nomeDoValor && <input type="hidden" name={nomeDoValor} value={campo.valor} />}
       <div ref={caixaRef} className={classesDaCaixa({ compact, erro: Boolean(campo.erro), disabled })}>
         <button
           type="button"
@@ -148,12 +169,14 @@ export function CampoMes({
             key={aberto ? "aberto" : "fechado"}
             visao={visao}
             setVisao={(v) => setVisao(v === "anos" ? "anos" : "meses")}
-            ano={escolhido?.ano ?? Number(hoje.slice(0, 4))}
+            ano={escolhido?.ano ?? anoEscolhido ?? Number(hoje.slice(0, 4))}
             selecionado={escolhido}
+            anoSelecionado={anoEscolhido}
             hoje={hoje}
             min={min}
             max={max}
             onEscolher={(ano, mes) => escolher(`${ano}-${String(mes).padStart(2, "0")}`)}
+            onEscolherAno={nomeDoAno ? (ano) => escolher(String(ano)) : undefined}
           />
           <div className="mt-2 pt-2 border-t border-border flex items-center gap-1.5">
             <AtalhoDoCalendario

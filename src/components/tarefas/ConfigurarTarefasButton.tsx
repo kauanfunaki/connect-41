@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { Aviso } from "@/components/ui/Aviso";
 import { useToast } from "@/components/ui/Toast";
 import {
   TASK_WIDGETS,
@@ -94,10 +96,11 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
 
   return (
     <>
+      {/* Contorno sem fundo em repouso e em `sm`, a altura do "Kanban" ao lado
+          (15/10/2026): tinha fundo cinza fixo e 36px. */}
       <Button
         variant="secondary"
-        size="md"
-        className="bg-surface-hover hover:border-brand"
+        size="sm"
         onClick={openModal}
         title="Configurar o Meu dia"
         aria-label="Configurar o Meu dia"
@@ -131,7 +134,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
 
             return (
               <div key={slot}>
-                <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wider mb-2">
+                <p className="c41-rotulo mb-2">
                   {SLOT_LABEL[slot]}
                 </p>
                 <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
@@ -154,22 +157,32 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
           })}
         </div>
 
+        {/* No `Aviso` de atenção (15/10/2026): era uma caixa cinza montada à mão. */}
         {selected.length === 0 && (
-          <p className="text-fs-2 text-fg-secondary bg-surface-hover border border-border rounded-md px-3 py-2 mt-4">
-            Sem nenhum bloco marcado, quem é só de {sectorLabel} vai abrir o Meu dia numa
-            tela vazia. É uma escolha válida enquanto o setor não tiver módulos próprios —
-            só não é acidente.
-          </p>
+          <Aviso tom="atencao" className="mt-4">
+            <p className="text-fg">
+              Sem nenhum bloco marcado, quem é só de {sectorLabel} vai abrir o Meu dia numa
+              tela vazia. É uma escolha válida enquanto o setor não tiver módulos próprios —
+              só não é acidente.
+            </p>
+          </Aviso>
         )}
 
-        <div className="flex items-center gap-3 pt-5">
-          <Button onClick={save} loading={isPending}>
-            Salvar
-          </Button>
-          <Button variant="ghost" onClick={reset} disabled={isPending}>
+        {/* Rodapé padrão (15/10/2026): Cancelar e Salvar à direita, o primário
+            por último, com a divisória; "Restaurar padrão" à esquerda. Eram
+            [Salvar] [Restaurar padrão] alinhados à esquerda. */}
+        <form
+          className="flex flex-wrap items-center gap-3 pt-4 mt-5 border-t border-border"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          <Button type="button" variant="ghost" onClick={reset} disabled={isPending} className="mr-auto">
             Restaurar padrão
           </Button>
-        </div>
+          <FormFooter semDivisoria pending={isPending} onCancel={() => setOpen(false)} />
+        </form>
       </Modal>
     </>
   );

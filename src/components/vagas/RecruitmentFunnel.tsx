@@ -2,15 +2,16 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ClipboardCheck, FileText, LogOut, MoreHorizontal, UserX } from "lucide-react";
-import { ACTIVE_STAGES, STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel";
+import { ClipboardCheck, FileText, LogOut, UserX } from "lucide-react";
+import { ACTIVE_STAGES, STAGE_LABEL, linhaDaColuna, numerosDasColunas, resumoDoFunil, type Stage } from "@/lib/recruitmentFunnel";
+import { rotuloDaOrigem } from "@/lib/recrutamento/origem";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
-import { Popover, ItemDoMenu } from "@/components/ui/Popover";
-import { IconButton } from "@/components/ui/IconButton";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { Selo } from "@/components/ui/Selo";
 import { ROTULO_DA_FAIXA, type Faixa } from "@/lib/recrutamento/triagem";
 import { Aviso } from "@/components/ui/Aviso";
@@ -40,6 +41,14 @@ type ActionResult = { error: string } | null;
 type Props = {
   vagaId: string;
   cards: FunnelCard[];
+  /**
+   * As candidaturas encerradas (reprovado/desistente), só etapa e situação:
+   * entram nos números do topo das colunas — a etapa que alcançaram conta em
+   * "chegaram" —, mas não no quadro.
+   */
+  encerradas: { stage: string; status: string }[];
+  /** A quantidade de vagas, para "1 contratada de 2 vagas". */
+  quantidadeDeVagas: number;
   canManage: boolean;
   moveAction: (candidaturaId: string, stage: Stage) => Promise<ActionResult>;
   encerrarAction: (
@@ -56,7 +65,7 @@ function initials(name: string): string {
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1]![0] : "")).toUpperCase();
 }
 
-export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, moveAction, encerrarAction }: Props) {
+export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, quantidadeDeVagas, canManage, moveAction, encerrarAction }: Props) {
   const [cards, setCards] = useState(initialCards);
   const [dragOver, setDragOver] = useState<Stage | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -107,19 +116,37 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
     });
   }
 
+  // Os números de cada coluna (escolha "Vaga · 4 A" do Kauan, 14/10/2026),
+  // no lugar do gráfico de funil separado em cima do quadro. Saem do estado do
+  // quadro, e não do servidor: arrastar alguém muda os números na hora. Quem
+  // está no quadro em "Contratado" foi contratado (soltar lá contrata).
+  const candidaturas = [
+    ...cards.map((c) => ({ stage: c.stage, status: c.stage === "CONTRATADO" ? "CONTRATADO" : "EM_ANDAMENTO" })),
+    ...encerradas,
+  ];
+  const numeros = new Map(numerosDasColunas(candidaturas).map((n) => [n.stage, n]));
+  const contratadas = cards.filter((c) => c.stage === "CONTRATADO").length;
+
   return (
     <>
+      <p className="mb-3 text-fs-2 text-fg-secondary tnum">{resumoDoFunil(candidaturas.length, contratadas, quantidadeDeVagas)}</p>
+
       {error && (
         <Aviso className="mb-3">
           {error}
         </Aviso>
       )}
 
+      {/* Cada coluna no tamanho dos seus textos (pedido do Kauan sobre o
+          desenho, 14/10/2026: no rascunho as colunas ficaram apertadas): no
+          mínimo 15,5rem, crescendo para ocupar a largura quando sobra; quando
+          não cabem as cinco, o quadro rola de lado, como antes. */}
       <div className="scroll-x overflow-x-auto flex gap-3 pb-1">
         {ACTIVE_STAGES.map((stage) => {
           const stageCards = cards.filter((c) => c.stage === stage);
           const isContratado = stage === "CONTRATADO";
           const isDragOver = dragOver === stage;
+          const n = numeros.get(stage);
 
           return (
             <section
@@ -137,15 +164,39 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                 setDraggingId(null);
                 if (id) moveCard(id, stage);
               }}
-              className={`flex-shrink-0 w-64 rounded-lg border p-2.5 transition-colors ${
+              className={`flex-1 flex-shrink-0 min-w-[15.5rem] rounded-lg border p-2.5 transition-colors ${
                 isDragOver ? "border-brand bg-brand/5" : "border-border bg-surface-2"
               }`}
             >
-              <div className="flex items-center justify-between mb-2 px-1">
-                <span className={`text-fs-2 font-semibold ${isContratado ? "text-success-fg" : "text-fg"}`}>
-                  {STAGE_LABEL[stage]}
-                </span>
-                <span className="text-micro text-fg-muted tnum">{stageCards.length}</span>
+              {/* O topo da coluna: a etapa e quantos estão nela agora, em
+                  número grande; a barrinha de quantos chegaram até aqui, sobre
+                  o total; e a linha "N chegaram · X% passaram" — a passagem da
+                  etapa anterior. A mesma conta do gráfico que saiu. */}
+              <div className="mb-2.5 px-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className={`min-w-0 text-fs-3 font-semibold ${isContratado ? "text-success-fg" : "text-fg"}`}>
+                    {STAGE_LABEL[stage]}
+                  </span>
+                  <span className="font-display text-fs-8 font-semibold leading-none text-fg tnum" aria-hidden>
+                    {stageCards.length}
+                  </span>
+                </div>
+                {n && (
+                  <>
+                    <div aria-hidden className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface">
+                      {n.chegaram > 0 && (
+                        <span
+                          className="block h-full min-w-1.5 rounded-full"
+                          style={{
+                            width: `${n.parteDoTotal * 100}%`,
+                            background: "linear-gradient(to right, var(--c41-grafico-coluna-base), var(--c41-grafico-coluna-topo))",
+                          }}
+                        />
+                      )}
+                    </div>
+                    <p className="mt-1 text-micro text-fg-muted tnum">{linhaDaColuna(n)}</p>
+                  </>
+                )}
               </div>
 
               <div className="space-y-2 min-h-[40px]">
@@ -192,7 +243,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                       </p>
                     )}
                     {c.respostas && <p className="text-micro text-fg-secondary mt-1.5 pl-8 tnum">{c.respostas}</p>}
-                    {c.origin && <p className="text-micro text-fg-muted mt-1.5 pl-8">via {c.origin}</p>}
+                    {c.origin && <p className="text-micro text-fg-muted mt-1.5 pl-8">via {rotuloDaOrigem(c.origin)}</p>}
 
                     {/* Alternativa acessível ao arraste: o board era só
                         drag-and-drop de mouse, então quem usa teclado ou leitor
@@ -238,26 +289,15 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                         </Button>
                       )}
                       {canManage && !isContratado && (
-                        <Popover
+                        // O "⋯" do app (15/10/2026), que era montado à mão aqui
+                        // com Popover + IconButton. Com 36px no celular — 28px
+                        // é pequeno para o dedo (auditoria DRG-37, 07/10/2026).
+                        <MenuDeMaisAcoes
                           align="right"
                           width={180}
+                          rotulo={`Mais ações para ${c.personName}`}
                           aria-label={`Encerrar a candidatura de ${c.personName}`}
-                          trigger={({ open, toggle }) => (
-                            // O `IconButton` do app, com 36px no celular — o
-                            // botão à mão tinha 28px, pequeno para o dedo
-                            // (auditoria DRG-37, 07/10/2026).
-                            <IconButton
-                              size="sm"
-                              variant="framed"
-                              active={open}
-                              onClick={toggle}
-                              aria-label={`Mais ações para ${c.personName}`}
-                              aria-expanded={open}
-                              className="max-md:w-9 max-md:h-9"
-                            >
-                              <MoreHorizontal size={14} />
-                            </IconButton>
-                          )}
+                          classeDoGatilho="max-md:w-9 max-md:h-9"
                         >
                           {({ close }) => (
                             <>
@@ -282,7 +322,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                               </ItemDoMenu>
                             </>
                           )}
-                        </Popover>
+                        </MenuDeMaisAcoes>
                       )}
                     </div>
                   </article>

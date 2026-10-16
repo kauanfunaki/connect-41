@@ -21,7 +21,7 @@ export function CompanyPeopleSection({ companyId, people }: Props) {
       <div className="flex items-center justify-between gap-3 mb-4">
         <h2 className="text-section font-semibold text-fg">Pessoas vinculadas</h2>
         {/* Era link de texto (30/09): ação de cabeçalho de seção é botão. */}
-        <Button href={`/colaboradores-clientes?companyId=${companyId}`} variant="secondary" size="xs">
+        <Button href={`/colaboradores-clientes?empresa=${companyId}`} variant="secondary" size="xs">
           Ver todas <ArrowRight size={14} />
         </Button>
       </div>

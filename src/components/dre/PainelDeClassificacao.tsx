@@ -80,13 +80,17 @@ export function AvisoDeSemGrupo({ className = "mb-4" }: { className?: string }) 
   const ctx = useContext(Ctx);
   if (!ctx || ctx.faltam === 0) return null;
   return (
+    // "Classificar" é botão, não link no meio da frase (15/10/2026): abre o
+    // painel, é ação.
     <Aviso tom="atencao" icone={<AlertTriangle />} className={className}>
-      <span className="text-fg">
-        <strong>{moeda(ctx.total)}</strong> sem grupo no DRE, fora das linhas abaixo —{" "}
-        <Button variant="link" onClick={ctx.abrir} className="font-semibold" aria-haspopup="dialog">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="text-fg">
+          <strong>{moeda(ctx.total)}</strong> sem grupo no DRE, fora das linhas abaixo.
+        </p>
+        <Button variant="secondary" size="xs" onClick={ctx.abrir} aria-haspopup="dialog">
           Classificar
         </Button>
-      </span>
+      </div>
     </Aviso>
   );
 }

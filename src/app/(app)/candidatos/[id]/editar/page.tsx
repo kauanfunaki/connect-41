@@ -1,65 +1,14 @@
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { notFound } from "next/navigation";
-import { getPrisma } from "@/lib/prisma";
-import { CandidatoForm } from "@/components/candidatos/CandidatoForm";
-import { atualizarCandidato } from "../../actions";
-import { canManageSector } from "@/lib/auth/context";
+import { redirect } from "next/navigation";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 
-function toDateInput(d: Date | null): string | undefined {
-  return d ? d.toISOString().slice(0, 10) : undefined;
-}
-
-export default async function EditarCandidatoPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+// Rota antiga — o formulário "Editar candidato" saiu em 14/10/2026: a ficha
+// edita cada bloco no próprio lugar (o lápis de Identificação, Contato e
+// Endereço). Mantida como redirect para a ficha, para links antigos e
+// favoritos continuarem funcionando. Passa pelo gate do módulo antes, como
+// toda tela do Recrutamento (modulo.contrato.test.ts): quem não abre a ficha
+// não descobre por aqui que a rota existe.
+export default async function EditarCandidatoRedirect({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { ctx, setor } = await abrirTelaDoModulo("recrutamento_candidatos");
-  if (!canManageSector(ctx, setor)) notFound();
-
-  const prisma = getPrisma();
-  const person = await prisma.person.findFirst({
-    where: { id, tenantId: ctx.tenantId, type: "CANDIDATO" },
-  });
-
-  if (!person) notFound();
-
-  return (
-    <PageContainer>
-      <Breadcrumb
-        items={[{ label: "Candidatos", href: "/candidatos" }, { label: person.name, href: `/candidatos/${id}`, truncate: true }, { label: "Editar" }]}
-      />
-      <PageHeader title="Editar candidato" />
-
-      <Card className="p-6">
-        <CandidatoForm
-          action={atualizarCandidato}
-          cancelHref={`/candidatos/${id}`}
-          defaultValues={{
-            id,
-            name:      person.name,
-            cpf:       person.cpf ?? undefined,
-            email:     person.email ?? undefined,
-            phone:     person.phone ?? undefined,
-            birthDate: toDateInput(person.birthDate),
-            rg:        person.rg ?? undefined,
-            education: person.education ?? undefined,
-
-            zipCode:           person.zipCode ?? undefined,
-            addressStreet:     person.addressStreet ?? undefined,
-            addressNumber:     person.addressNumber ?? undefined,
-            addressComplement: person.addressComplement ?? undefined,
-            neighborhood:      person.neighborhood ?? undefined,
-            city:              person.city ?? undefined,
-            stateCode:         person.stateCode ?? undefined,
-          }}
-        />
-      </Card>
-    </PageContainer>
-  );
+  await abrirTelaDoModulo("recrutamento_candidatos");
+  redirect(`/candidatos/${encodeURIComponent(id)}`);
 }

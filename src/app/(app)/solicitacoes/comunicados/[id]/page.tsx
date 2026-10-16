@@ -14,7 +14,7 @@ import { carregarComunicado } from "@/lib/comunicados/consultas";
 
 export const dynamic = "force-dynamic";
 
-/** O comunicado e a leitura cliente a cliente — quem ainda não leu vem primeiro. */
+/** O comunicado e a leitura empresa a empresa — quem ainda não leu vem primeiro. */
 export default async function ComunicadoPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !(await isModuleEnabled(ctx.tenantId, "portal_solicitacoes"))) notFound();
@@ -36,13 +36,15 @@ export default async function ComunicadoPage({ params }: { params: Promise<{ id:
         }
         action={
           <span className="text-fs-3 text-fg-secondary tabular-nums">
-            Lido por {c.resumo.leram} de {c.resumo.clientes} {c.resumo.clientes === 1 ? "cliente" : "clientes"}
+            Lido em {c.resumo.leram} de {c.resumo.empresas} {c.resumo.empresas === 1 ? "empresa" : "empresas"}
           </span>
         }
       />
 
       <Card className="mb-5 p-5">
-        <p className="text-fs-4 text-fg whitespace-pre-wrap break-words leading-relaxed">{c.texto}</p>
+        {/* Texto de leitura em até 72 caracteres por linha, como o comunicado
+            no portal (15/10/2026): ia de uma borda à outra do cartão. */}
+        <p className="max-w-[72ch] text-body text-fg whitespace-pre-wrap break-words leading-relaxed">{c.texto}</p>
         {c.anexos.length > 0 && (
           <ul className="mt-4 flex flex-col gap-1">
             {c.anexos.map((a) => (
@@ -64,8 +66,8 @@ export default async function ComunicadoPage({ params }: { params: Promise<{ id:
 
       <h2 className="font-display text-section font-semibold text-fg mb-3">Quem leu</h2>
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-        {c.grupos.map((g) => (
-          <div key={g.grupoId} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+        {c.empresas.map((g) => (
+          <div key={g.empresaId} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
             <span className="text-fs-3 font-medium text-fg">{g.nome}</span>
             {g.leitores.length === 0 ? (
               <Selo tom="atencao">Ainda não leu</Selo>

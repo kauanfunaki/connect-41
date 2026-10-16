@@ -89,7 +89,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
 
       <section aria-labelledby="atencao" className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="atencao" className="text-card-title font-semibold text-fg">
+          <h2 id="atencao" className="text-section font-semibold text-fg">
             Precisam de atenção ({atencao.length})
           </h2>
           {atencao.length > 12 && (
@@ -100,10 +100,10 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
         </div>
         {atencao.length === 0 ? (
           <Card>
-            <EmptyState title="Nada parado nem atrasado" description="Nenhum processo, card, pendência ou transferência passou do limite do setor." />
+            <EmptyState title="Nada parado nem atrasado" description="Nenhum processo, tarefa, pendência ou transferência passou do limite do setor." />
           </Card>
         ) : (
-          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface shadow-xs">
             {atencao.slice(0, 12).map((x) => (
               <ItemDaGestao
                 key={`${x.item.origem}:${x.item.id}`}
@@ -120,7 +120,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
       </section>
 
       <section aria-labelledby="ciclo" className="flex flex-col gap-2">
-        <h2 id="ciclo" className="text-card-title font-semibold text-fg">
+        <h2 id="ciclo" className="text-section font-semibold text-fg">
           O ciclo do trabalho
         </h2>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -128,7 +128,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
             const lista = porColuna.get(col.key)!.sort(ordenarColuna);
             return (
               <Card key={col.key} className="p-4 flex flex-col gap-2 min-w-0">
-                <p className="text-fs-3 font-semibold text-fg">
+                <p className="text-card-title font-semibold text-fg">
                   {col.titulo} <span className="text-fg-muted font-normal tabular-nums">({lista.length})</span>
                 </p>
                 {lista.length === 0 ? (
@@ -160,7 +160,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
 
       {verTaxas && lancadas && pagas && (
         <section aria-labelledby="custos" className="flex flex-col gap-2">
-          <h2 id="custos" className="text-card-title font-semibold text-fg">
+          <h2 id="custos" className="text-section font-semibold text-fg">
             Custos do mês
           </h2>
           <Card className="p-4 text-fs-3 text-fg-secondary flex flex-wrap gap-x-6 gap-y-1">

@@ -47,25 +47,18 @@ export default async function TagsPage() {
       />
       {Object.keys(grouped).length === 0 ? (
         <Card>
+          {/* Sem repetir o "+ Nova tag": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<TagIcon />}
             title="Nenhuma tag cadastrada"
-            description="Cadastre tags reutilizáveis para marcar itens de kanban do mesmo setor."
-            action={
-              <Button
-                href="/admin/tags/novo"
-                variant="primary" className="font-medium"
-              >
-                + Nova tag
-              </Button>
-            }
+            description="Use “+ Nova tag”, no alto da tela, para cadastrar tags reutilizáveis que marcam itens de kanban do mesmo setor."
           />
         </Card>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([sectorCode, list]) => (
             <div key={sectorCode}>
-              <h2 className="text-fs-5 font-medium text-fg mb-2">
+              <h2 className="text-section font-semibold text-fg mb-2">
                 {sectorLabel(sectorLabels, sectorCode)}
               </h2>
               <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">

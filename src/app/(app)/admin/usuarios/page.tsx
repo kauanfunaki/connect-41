@@ -40,13 +40,11 @@ export default async function UsuariosPage() {
             + Novo usuário
           </Button>
         ) : (
-          <span
-            title={seatCheck.reason}
-            aria-disabled="true"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-surface-2 text-fg-muted text-fs-3 font-medium cursor-not-allowed select-none"
-          >
+          // O `Button` desabilitado (15/10/2026), e não um `<span>` com cara de
+          // botão; o motivo está no aviso logo abaixo.
+          <Button variant="primary" disabled>
             + Novo usuário
-          </span>
+          </Button>
         )}</>}
       />
       {!seatCheck.allowed && (

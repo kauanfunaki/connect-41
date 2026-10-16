@@ -1,9 +1,11 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FileSpreadsheet } from "lucide-react";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { Selo } from "@/components/ui/Selo";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao } from "@/components/shared/ListaResponsiva";
 
 export type BadgeTone = "danger" | "warning" | "success" | "neutral" | "brand";
 
@@ -83,15 +85,47 @@ export function RelatorioTable<T>({
 
   const comFiltro = columns.filter((c) => c.filtro);
   const ultimaComFiltro = comFiltro[comFiltro.length - 1];
+  const [primeira, ...resto] = columns;
 
   return (
+    <>
+    {/* No celular, um cartão por linha (15/10/2026): a tabela rolava de lado,
+        e a situação de cada pessoa ficava fora da tela. A primeira coluna (o
+        nome) é o topo do cartão; as outras descem com o rótulo do cabeçalho.
+        Com link, o cartão inteiro leva à ficha, como nas listas do DP. */}
+    <CartoesNoCelular>
+      {rows.map((row) => {
+        const cartao = (
+          <Cartao className={rowHref ? "hover:border-brand/40 transition-colors" : ""}>
+            {primeira && <TopoDoCartao nome={primeira.render(row)} />}
+            {resto.length > 0 && (
+              <dl className="mt-1.5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-ui">
+                {resto.map((c) => (
+                  <Fragment key={c.header}>
+                    <dt className="text-fg-muted">{c.header}</dt>
+                    <dd className={`min-w-0 break-words text-fg-secondary ${c.numeric ? "tnum" : ""}`}>{c.render(row)}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            )}
+          </Cartao>
+        );
+        return rowHref ? (
+          <Link key={rowKey(row)} href={rowHref(row)} className="block">
+            {cartao}
+          </Link>
+        ) : (
+          <Fragment key={rowKey(row)}>{cartao}</Fragment>
+        );
+      })}
+    </CartoesNoCelular>
     <TabelaFiltravel
       linhas={rows.map((row) => ({
         id: rowKey(row),
         valores: Object.fromEntries(comFiltro.map((c) => [c.filtro!.chave, c.filtro!.valor(row)])),
       }))}
     >
-      <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
+      <TabelaNoDesktop padrao className="scroll-x">
         <table className="w-full" style={{ minWidth }}>
           <thead>
             <tr className="border-b border-border">
@@ -142,7 +176,8 @@ export function RelatorioTable<T>({
             ))}
           </tbody>
         </table>
-      </div>
+      </TabelaNoDesktop>
     </TabelaFiltravel>
+    </>
   );
 }

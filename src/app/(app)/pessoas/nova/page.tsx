@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
 import { Briefcase, Building2, ChevronRight } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -10,6 +10,7 @@ import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { criarPessoa } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 
 // O tipo (interno x cliente) é escolhido ANTES do formulário: os dois pedem
 // campos bem diferentes (colaborador tem CTPS, jornada e folha; contato de
@@ -60,7 +61,7 @@ export default async function NovaPessoaPage({
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
     }),
     prisma.cargo.findMany({
       where: { tenantId: ctx.tenantId, active: true },
@@ -115,19 +116,18 @@ function TipoCard({
   title: string;
   description: string;
 }) {
+  // O cartão-atalho do app (`Card href`): borda azul, sobe 2px; título de
+  // cartão em 14px (era 16px).
   return (
-    <Link
-      href={href}
-      className="group flex flex-col gap-2 h-full bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-brand transition-colors"
-    >
+    <Card href={href} className="group flex flex-col gap-2 h-full p-5">
       <span className="inline-flex w-10 h-10 rounded-lg bg-brand-subtle text-brand items-center justify-center">
         {icon}
       </span>
-      <span className="flex items-center gap-1 text-fs-6 font-semibold text-fg">
+      <span className="flex items-center gap-1 text-card-title font-semibold text-fg">
         {title}
         <ChevronRight size={16} className="text-fg-muted group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
       </span>
       <span className="text-helper text-fg-muted leading-relaxed">{description}</span>
-    </Link>
+    </Card>
   );
 }
