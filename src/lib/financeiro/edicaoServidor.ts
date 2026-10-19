@@ -7,8 +7,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { setorDoModulo } from "@/lib/modules";
+import { getAuthContext } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
@@ -20,10 +19,8 @@ import { centavosDeDecimal } from "./contas";
 import { competenciaValida, dataValida, instanteDaData } from "./periodo";
 import { projetoInformado } from "./projetoServidor";
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "./aprovacao/servidor";
-
-const SECTOR = "bpo";
-/** A janela abre de Contas a pagar, Contas a receber e Lançamentos. */
-const MODULO_DO_TIPO = { PAGAR: "bpo_contas_pagar", RECEBER: "bpo_contas_receber" } as const;
+import { podeEditarOTipo } from "./acessoDaConta";
+import { anexosDaConta, type AnexoDaConta } from "./anexos";
 
 /** Teto do `Decimal(12,2)`, o mesmo do lançamento manual. */
 const MAIOR_VALOR_EM_CENTAVOS = 9_999_999_999_99;
@@ -57,21 +54,10 @@ export type DadosDaEdicao =
       };
       travas: Travas;
       opcoes: { contrapartes: (Opcao & { documento: string | null })[]; categorias: Opcao[]; centros: Opcao[]; projetos: Opcao[] };
+      /** Os anexos da conta (lote H2). Não têm trava: guardar o boleto não mexe no dinheiro. */
+      anexos: AnexoDaConta[];
     }
   | { ok: false; erro: string };
-
-/** Quem pode editar: quem atua no setor do módulo do tipo da conta, ou no de Lançamentos. */
-async function podeEditarOTipo(kind: "PAGAR" | "RECEBER") {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId) return { ctx: null, erro: "Não autenticado." };
-  const setores = await Promise.all(
-    [MODULO_DO_TIPO[kind], "bpo_lancamentos"].map(async (m) => (await setorDoModulo(ctx.tenantId!, m)) ?? SECTOR)
-  );
-  if (!setores.some((s) => canActOnSector(ctx, s))) {
-    return { ctx: null, erro: kind === "PAGAR" ? "Sem permissão em contas a pagar." : "Sem permissão em contas a receber." };
-  }
-  return { ctx, erro: null };
-}
 
 const CAMPOS_DA_CONTA = {
   id: true,
@@ -140,7 +126,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
   const { tenantId, companyId } = conta;
   // O valor atual entra na lista mesmo inativo: abrir a janela para mudar a
   // descrição não pode obrigar a trocar um centro que foi inativado depois.
-  const [contrapartes, categorias, centros, projetos] = await Promise.all([
+  const [contrapartes, categorias, centros, projetos, anexos] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId, companyId, OR: [{ active: true }, { id: conta.counterpartyId }] },
       select: { id: true, name: true, document: true, active: true },
@@ -163,6 +149,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
       select: { id: true, name: true, active: true },
       orderBy: { name: "asc" },
     }),
+    anexosDaConta(tenantId, conta.id),
   ]);
   const comInativo = (o: { id: string; name: string; active: boolean }) => ({ id: o.id, nome: o.active ? o.name : `${o.name} (inativo)` });
 
@@ -194,6 +181,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
       centros: centros.map(comInativo),
       projetos: projetos.map(comInativo),
     },
+    anexos,
   };
 }
 
