@@ -255,6 +255,7 @@ const USUARIO: Ligacao[] = [
   { modelo: "FinanceEntry", campo: "createdBy", fk: "createdById", tratamento: "desligar" },
   { modelo: "FinanceEntry", campo: "lossBy", fk: "lossById", tratamento: "desligar" },
   { modelo: "FinanceEntry", campo: "reviewedBy", fk: "reviewedById", tratamento: "desligar" },
+  { modelo: "FinanceEntryAttachment", campo: "uploadedByUser", fk: "uploadedByUserId", tratamento: "desligar" },
   { modelo: "FiscalDocument", campo: "uploadedBy", fk: "uploadedById", tratamento: "desligar" },
   { modelo: "ProcessDocument", campo: "uploadedByUser", fk: "uploadedByUserId", tratamento: "desligar" },
   { modelo: "ProcessMessage", campo: "authorUser", fk: "authorUserId", tratamento: "desligar" },

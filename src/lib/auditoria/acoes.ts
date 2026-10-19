@@ -73,6 +73,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "finance.review": e("conferiu o lançamento"),
   "finance.cost_center_set": e("trocou o centro de custo do lançamento"),
   "finance.edit": e("editou o lançamento"),
+  "finance.attachment_added": e("anexou um arquivo ao lançamento"),
+  "finance.attachment_removed": e("tirou um anexo do lançamento"),
   "financeiro.approval.sent": o("mandou para a aprovação do cliente o lançamento"),
   "financeiro.approval.resent": o("reenviou para a aprovação do cliente o lançamento"),
   "financeiro.approval.approved": e("aprovou o lançamento"),

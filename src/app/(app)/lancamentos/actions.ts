@@ -30,6 +30,9 @@ import { categoriaDaEmpresa, ondeDaEmpresa } from "@/lib/financeiro/planoDeConta
 import { projetoInformado } from "@/lib/financeiro/projetoServidor";
 import { fichaOpcional, leitorDaFicha } from "@/lib/financeiro/fichaDaContraparte";
 import { lerEmail } from "@/lib/financeiro/cobranca/regua";
+import { arquivosDoFormulario, type AnexoGravado } from "@/lib/financeiro/pendencias/armazenamento";
+import { armazenamentoDosAnexos } from "@/lib/financeiro/anexos";
+import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
 
 const MODULE = "bpo_lancamentos";
 
@@ -134,56 +137,85 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   // aguardando. A que já veio com a data da baixa nasce PAGO e não entra.
   const approvalStatus = (await contextoDeEntrada(c.tenantId, [companyId])).statusInicial(companyId, d.kind, status);
 
-  const entry = await c.prisma.$transaction(async (tx) => {
-    const contraparte =
-      existente ??
-      (await tx.financeCounterparty.create({
+  // A leitura do boleto pela IA que preencheu esta tela, quando houve (lote H2).
+  // Vai só para a auditoria — é o que permite medir, depois, quanto a pessoa
+  // corrigiu do que a IA leu. Id que não é deste escritório nem do leitor é ignorado.
+  const leituraRunId = texto("leituraRunId").slice(0, 64);
+  const leitura = leituraRunId
+    ? await c.prisma.agentRun.findFirst({ where: { id: leituraRunId, tenantId: c.tenantId, agentCode: AGENTE_DO_BOLETO }, select: { id: true } })
+    : null;
+
+  // Os anexos (lote H2) vão para o disco antes da transação, já conferidos; se
+  // a gravação no banco falhar, saem do disco — nada fica órfão.
+  const arquivos = arquivosDoFormulario(formData, "anexos");
+  let anexos: AnexoGravado[] = [];
+  if (arquivos.length > 0) {
+    const gravacao = await armazenamentoDosAnexos.gravarAnexos(c.tenantId, arquivos);
+    if (!gravacao.ok) return { error: gravacao.erro };
+    anexos = gravacao.anexos;
+  }
+
+  let entry: { id: string; amount: { toString(): string } };
+  try {
+    entry = await c.prisma.$transaction(async (tx) => {
+      const contraparte =
+        existente ??
+        (await tx.financeCounterparty.create({
+          data: {
+            tenantId: c.tenantId,
+            companyId,
+            name: novoNome.slice(0, 180),
+            document: novoDocumento,
+            // A ficha que a Receita devolveu na busca pelo CNPJ (campos ocultos).
+            email: lerEmail(texto("ficha_email")) || null,
+            ...fichaOpcional(leitorDaFicha(formData, "ficha_")),
+          },
+          select: { id: true, defaultCategoryId: true },
+        }));
+  
+      const criado = await tx.financeEntry.create({
         data: {
           tenantId: c.tenantId,
           companyId,
-          name: novoNome.slice(0, 180),
-          document: novoDocumento,
-          // A ficha que a Receita devolveu na busca pelo CNPJ (campos ocultos).
-          email: lerEmail(texto("ficha_email")) || null,
-          ...fichaOpcional(leitorDaFicha(formData, "ficha_")),
+          kind: d.kind,
+          status,
+          approvalStatus,
+          counterpartyId: contraparte.id,
+          categoryId: d.categoryId,
+          costCenterId: centro.centroId,
+          projectId: projeto.projetoId,
+          issueDate: d.emissaoKey ? instanteDaData(d.emissaoKey) : null,
+          documentNumber: d.numeroDocumento,
+          competence: d.competencia,
+          dueDate: instanteDaData(d.vencimentoKey),
+          paidAt: d.pagoEmKey ? instanteDaData(d.pagoEmKey) : null,
+          amount: decimalDeCentavos(d.centavos),
+          description: d.descricao,
+          createdById: c.ctx.userId || null,
+          // Quem digitou conferiu — ver `statusInicialDoManual`.
+          reviewedById: c.ctx.userId || null,
+          reviewedAt: new Date(),
         },
-        select: { id: true, defaultCategoryId: true },
-      }));
-
-    const criado = await tx.financeEntry.create({
-      data: {
-        tenantId: c.tenantId,
-        companyId,
-        kind: d.kind,
-        status,
-        approvalStatus,
-        counterpartyId: contraparte.id,
-        categoryId: d.categoryId,
-        costCenterId: centro.centroId,
-        projectId: projeto.projetoId,
-        issueDate: d.emissaoKey ? instanteDaData(d.emissaoKey) : null,
-        documentNumber: d.numeroDocumento,
-        competence: d.competencia,
-        dueDate: instanteDaData(d.vencimentoKey),
-        paidAt: d.pagoEmKey ? instanteDaData(d.pagoEmKey) : null,
-        amount: decimalDeCentavos(d.centavos),
-        description: d.descricao,
-        createdById: c.ctx.userId || null,
-        // Quem digitou conferiu — ver `statusInicialDoManual`.
-        reviewedById: c.ctx.userId || null,
-        reviewedAt: new Date(),
-      },
-      select: { id: true, amount: true },
+        select: { id: true, amount: true },
+      });
+      if (approvalStatus === "AGUARDANDO") await registrarEnvios(tx, [criado.id], c.ctx.userId || null);
+  
+      // A mesma herança do lançamento por nota: a primeira conta classifica o
+      // fornecedor, as próximas já nascem classificadas.
+      if (d.kind === "PAGAR" && d.categoryId && !contraparte.defaultCategoryId) {
+        await tx.financeCounterparty.update({ where: { id: contraparte.id }, data: { defaultCategoryId: d.categoryId } });
+      }
+      if (anexos.length > 0) {
+        await tx.financeEntryAttachment.createMany({
+          data: anexos.map((a) => ({ ...a, tenantId: c.tenantId, entryId: criado.id, uploadedByUserId: c.ctx.userId || null })),
+        });
+      }
+      return criado;
     });
-    if (approvalStatus === "AGUARDANDO") await registrarEnvios(tx, [criado.id], c.ctx.userId || null);
-
-    // A mesma herança do lançamento por nota: a primeira conta classifica o
-    // fornecedor, as próximas já nascem classificadas.
-    if (d.kind === "PAGAR" && d.categoryId && !contraparte.defaultCategoryId) {
-      await tx.financeCounterparty.update({ where: { id: contraparte.id }, data: { defaultCategoryId: d.categoryId } });
-    }
-    return criado;
-  });
+  } catch (err) {
+    await armazenamentoDosAnexos.apagarAnexosGravados(anexos);
+    throw err;
+  }
 
   const aviso = approvalStatus === "AGUARDANDO" ? await avisarAprovadores(c.tenantId, [{ companyId, amount: entry.amount }]) : null;
 
@@ -201,6 +233,8 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
       approvalStatus,
       centroDeCusto: centro.centroId,
       projeto: projeto.projetoId,
+      ...(anexos.length > 0 ? { anexos: anexos.map((a) => a.fileName) } : {}),
+      ...(leitura ? { lidoPorIa: leitura.id } : {}),
       ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
     },
   });
