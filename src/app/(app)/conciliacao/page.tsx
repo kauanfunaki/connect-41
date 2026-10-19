@@ -32,6 +32,8 @@ import { saldosDasContas } from "@/lib/financeiro/conciliacao/saldoDasContas";
 import {
   rankearCandidatos,
   sugestaoDaTransacao,
+  nivelDoCasamento,
+  type CandidatoPontuado,
   tipoCompativel,
   type LancamentoCandidato,
   type Motivo,
@@ -231,6 +233,8 @@ export default async function ConciliacaoPage({
           tenantId={tenantId}
           companyId={companyId}
           conta={conta}
+          // As outras contas ativas da empresa — o destino (ou a origem) de uma transferência.
+          outrasContas={contas.filter((c) => c.active && c.id !== conta.id).map((c) => ({ id: c.id, nome: `${c.nickname} ${c.accountNumber}` }))}
           podeAgir={podeAgir}
           params={params}
         />
@@ -307,12 +311,14 @@ async function ExtratoDaConta({
   tenantId,
   companyId,
   conta,
+  outrasContas,
   podeAgir,
   params,
 }: {
   tenantId: string;
   companyId: string;
   conta: { id: string; nickname: string; active: boolean };
+  outrasContas: { id: string; nome: string }[];
   podeAgir: boolean;
   params: Record<string, string | undefined>;
 }) {
@@ -372,6 +378,7 @@ async function ExtratoDaConta({
                 dueDate: true,
                 paidAt: true,
                 description: true,
+                transferId: true,
                 counterparty: { select: { name: true } },
               },
             },
@@ -392,10 +399,25 @@ async function ExtratoDaConta({
   const candidatos = pendentes.length && podeAgir ? await candidatosDaEmpresa(tenantId, companyId, pendentes) : [];
   const descricoes = new Map(candidatos.map((c) => [c.id, c.descricao]));
 
+  // O candidato como a linha o mostra — o da sugestão forte e o "mais
+  // provável" das torres (19/10) têm a mesma forma.
+  const resumoDoCandidato = (c: CandidatoPontuado) => ({
+    id: c.lancamento.id,
+    contraparteNome: c.lancamento.contraparteNome,
+    descricao: descricoes.get(c.lancamento.id) ?? null,
+    centavos: c.lancamento.centavos,
+    vencimentoKey: c.lancamento.vencimentoKey,
+    pagoEmKey: c.lancamento.pagoEmKey,
+    motivo: c.motivos.map((m) => MOTIVOS[m]).join(" · "),
+    bloqueio: c.lancamento.bloqueioDeBaixa ?? null,
+  });
+
   const linhas: LinhaDaTransacao[] = visiveis.map((t) => {
     const centavos = centavosDeDecimal(t.amount);
     const dataKey = saoPauloParts(t.postedAt).dateKey;
     let sugestao: LinhaDaTransacao["sugestao"] = null;
+    let provavel: LinhaDaTransacao["provavel"] = null;
+    let nivel: LinhaDaTransacao["nivel"] = null;
     let candidatosDeMesmoValor = 0;
     let travadosDeMesmoValor = 0;
     if (t.status === "PENDENTE") {
@@ -403,19 +425,10 @@ async function ExtratoDaConta({
       candidatosDeMesmoValor = ranking.length;
       travadosDeMesmoValor = ranking.filter((c) => c.lancamento.bloqueioDeBaixa).length;
       const forte = sugestaoDaTransacao(ranking);
-      if (forte) {
-        const l = forte.candidato.lancamento;
-        sugestao = {
-          id: l.id,
-          contraparteNome: l.contraparteNome,
-          descricao: descricoes.get(l.id) ?? null,
-          centavos: l.centavos,
-          vencimentoKey: l.vencimentoKey,
-          pagoEmKey: l.pagoEmKey,
-          motivo: forte.candidato.motivos.map((m) => MOTIVOS[m]).join(" · "),
-          bloqueio: forte.bloqueio,
-        };
-      }
+      if (forte) sugestao = { ...resumoDoCandidato(forte.candidato), bloqueio: forte.bloqueio };
+      const casamento = nivelDoCasamento(ranking);
+      nivel = casamento.nivel;
+      if (!forte && casamento.destaque) provavel = resumoDoCandidato(casamento.destaque);
     }
     return {
       id: t.id,
@@ -427,8 +440,11 @@ async function ExtratoDaConta({
       viaOmie: t.reconciledViaOmie,
       ignoredReason: t.ignoredReason,
       sugestao,
+      provavel,
+      nivel,
       candidatosDeMesmoValor,
       travadosDeMesmoValor,
+      transferencia: t.matches.some((m) => m.financeEntry.transferId !== null),
       vinculados: t.matches.map((m) => ({
         id: m.financeEntry.id,
         contraparteNome: m.financeEntry.counterparty.name,
@@ -573,6 +589,7 @@ async function ExtratoDaConta({
               centros={centros.map((c) => ({ id: c.id, nome: c.name }))}
               projetos={projetos.map((p) => ({ id: p.id, nome: p.name }))}
               companyId={companyId}
+              outrasContas={outrasContas}
             />
             {limitado && (
               <p className="text-micro text-fg-muted mt-2">
