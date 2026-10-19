@@ -28,6 +28,9 @@ import { sincronizarAcordos } from "@/lib/financeiro/cobranca/sincronizar";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
 import { categoriaDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { conciliarContaPeloOmie } from "@/lib/financeiro/conciliacao/omieServidor";
+import { projetoInformado } from "@/lib/financeiro/projetoServidor";
+import { fichaOpcional, leitorDaFicha } from "@/lib/financeiro/fichaDaContraparte";
+import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 
 const MODULE = "bpo_conciliacao";
 
@@ -616,6 +619,8 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
     padraoDaContraparteId: existente?.defaultCostCenterId ?? null,
   });
   if (!centro.ok) return { error: centro.erro };
+  const projeto = await projetoInformado({ tenantId: c.tenantId, companyId, informadoId: texto(formData, "projectId") || null });
+  if (!projeto.ok) return { error: projeto.erro };
 
   let entryId: string;
   try {
@@ -623,7 +628,15 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
       const contraparte =
         existente ??
         (await tx.financeCounterparty.create({
-          data: { tenantId: c.tenantId, companyId, name: novoNome.slice(0, 180), document: novoDocumento },
+          data: {
+            tenantId: c.tenantId,
+            companyId,
+            name: novoNome.slice(0, 180),
+            document: novoDocumento,
+            // A ficha que a Receita devolveu na busca pelo CNPJ (campos ocultos).
+            email: lerEmail(texto(formData, "ficha_email")) || null,
+            ...fichaOpcional(leitorDaFicha(formData, "ficha_")),
+          },
           select: { id: true, defaultCategoryId: true },
         }));
 
@@ -639,6 +652,7 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
           counterpartyId: contraparte.id,
           categoryId: d.categoryId,
           costCenterId: centro.centroId,
+          projectId: projeto.projetoId,
           competence: d.competencia,
           dueDate: pagoEm,
           paidAt: pagoEm,
@@ -690,6 +704,7 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
       valor: decimalDeCentavos(d.centavos),
       competencia: d.competencia,
       centroDeCusto: centro.centroId,
+      projeto: projeto.projetoId,
     },
   });
 

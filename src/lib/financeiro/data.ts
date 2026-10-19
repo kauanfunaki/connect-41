@@ -44,6 +44,10 @@ export type LinhaDaConta = {
   parcelaDeAcordo: boolean;
   centroDeCustoId: string | null;
   centroDeCustoNome: string | null;
+  projetoNome: string | null;
+  /** Número do documento e emissão (19/10) — como o setor acha a conta. */
+  numeroDocumento: string | null;
+  emissao: Date | null;
 };
 
 export type FiltroDeContas = {
@@ -112,6 +116,9 @@ const CAMPOS = {
   category: { select: { name: true } },
   costCenterId: true,
   costCenter: { select: { name: true } },
+  project: { select: { name: true } },
+  documentNumber: true,
+  issueDate: true,
 } satisfies Prisma.FinanceEntrySelect;
 
 /**
@@ -208,6 +215,9 @@ export async function listarContas(
       parcelaDeAcordo: e.agreementId !== null,
       centroDeCustoId: e.costCenterId,
       centroDeCustoNome: e.costCenter?.name ?? null,
+      projetoNome: e.project?.name ?? null,
+      numeroDocumento: e.documentNumber,
+      emissao: e.issueDate,
     };
   });
 

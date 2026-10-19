@@ -192,6 +192,7 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
   // As linhas do orçamento vão em cascata.
   { modelo: "Budget", acao: "apagar", executar: (tx, a) => n(tx.budget.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "CostCenter", acao: "apagar", executar: (tx, a) => n(tx.costCenter.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "FinanceProject", acao: "apagar", executar: (tx, a) => n(tx.financeProject.deleteMany({ where: daEmpresa(a) })) },
   // Plano de contas próprio: o que a empresa escondeu, o que ela classificou
   // na DRE, e o que outra empresa tenha feito com uma categoria desta.
   {

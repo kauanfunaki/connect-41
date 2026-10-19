@@ -137,6 +137,8 @@ export function ContasTable({
       bloqueioDeBaixa={motivoDoBloqueioDeBaixa(l)}
       podeEnviar={moduloDeAprovacao && podeEnviarParaAprovacao({ ...l, kind, paidAt: l.pagoEm }).pode}
       notaHref={l.documentoId ? `/documentos-fiscais/${l.documentoId}` : null}
+      // Quem vê a tela atua no setor (ver ContasPage); a janela confere o resto.
+      podeEditar
       pendenciaHref={podeAbrirPendencia ? `/pendencias?nova=1&lancamento=${l.id}` : null}
       acoes={{
         conferir: conferirConta,
@@ -146,6 +148,14 @@ export function ContasTable({
       }}
     />
   );
+
+  // A linha do documento embaixo da contraparte: número, emissão e descrição
+  // (19/10) — é por eles que o setor procura a conta no papel.
+  const linhaDoDocumento = (l: LinhaDaConta) =>
+    [l.numeroDocumento && `nº ${l.numeroDocumento}`, l.emissao && `emitida em ${formatInstantDate(l.emissao)}`, l.descricao]
+      .filter(Boolean)
+      .join(" · ");
+  const algumProjeto = linhas.some((l) => l.projetoNome);
 
   // O que cada coluna oferece no funil — calculado aqui, no servidor, porque é
   // o mesmo dado que a célula mostra.
@@ -157,6 +167,7 @@ export function ContasTable({
       empresa: l.empresaNome,
       categoria: l.categoriaNome ?? "",
       centro: l.centroDeCustoNome ?? "",
+      projeto: l.projetoNome ?? "",
       competencia: formatarCompetencia(l.competencia),
       situacao: rotuloDaSituacao(l),
     },
@@ -183,7 +194,7 @@ export function ContasTable({
               )}
               <div className="min-w-0 flex-1">
                 <TopoDoCartao nome={l.contraparteNome} valor={formatarReaisDeCentavos(l.valorCentavos)} />
-                {l.descricao && <InfoDoCartao className="break-words">{l.descricao}</InfoDoCartao>}
+                {linhaDoDocumento(l) && <InfoDoCartao className="break-words">{linhaDoDocumento(l)}</InfoDoCartao>}
                 <InfoDoCartao className="mt-1 tabular-nums">
                   vence {formatInstantDate(l.vencimento)}
                   {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {formatarCompetencia(l.competencia)}
@@ -192,6 +203,7 @@ export function ContasTable({
                   {l.empresaNome}
                   {l.categoriaNome ? ` · ${l.categoriaNome}` : ""}
                   {mostrarCentro && l.centroDeCustoNome ? ` · ${l.centroDeCustoNome}` : ""}
+                  {l.projetoNome ? ` · projeto ${l.projetoNome}` : ""}
                 </InfoDoCartao>
                 {!l.categoriaNome && (
                   <span className="inline-flex items-center gap-1 text-warning-fg text-micro mt-0.5">
@@ -252,6 +264,7 @@ export function ContasTable({
                   campos={[
                     { chave: "categoria", rotulo: "Categoria" },
                     ...(mostrarCentro ? [{ chave: "centro", rotulo: "Centro de custo" }] : []),
+                    ...(algumProjeto ? [{ chave: "projeto", rotulo: "Projeto" }] : []),
                   ]}
                 />
               </th>
@@ -285,9 +298,9 @@ export function ContasTable({
                   <span className="block font-medium truncate" title={l.contraparteNome}>
                     {l.contraparteNome}
                   </span>
-                  {l.descricao && (
-                    <span className="block text-micro text-fg-muted truncate" title={l.descricao}>
-                      {l.descricao}
+                  {linhaDoDocumento(l) && (
+                    <span className="block text-micro text-fg-muted truncate" title={linhaDoDocumento(l)}>
+                      {linhaDoDocumento(l)}
                     </span>
                   )}
                   <span className="block text-micro text-fg-muted truncate" title={l.empresaNome}>
@@ -309,6 +322,11 @@ export function ContasTable({
                   {mostrarCentro && (
                     <span className="block text-micro text-fg-muted truncate">
                       {l.centroDeCustoNome ?? "sem centro de custo"}
+                    </span>
+                  )}
+                  {l.projetoNome && (
+                    <span className="block text-micro text-fg-muted truncate" title={l.projetoNome}>
+                      projeto {l.projetoNome}
                     </span>
                   )}
                 </td>

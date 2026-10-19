@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { criarLancamentoManual } from "@/app/(app)/lancamentos/actions";
+import { CamposDaContraparteNova } from "./ContraparteNova";
 
 type Contraparte = {
   id: string;
@@ -20,6 +21,7 @@ type Contraparte = {
   defaultCostCenterId?: string | null;
 };
 type Centro = { id: string; nome: string; codigo: string | null };
+type Projeto = { id: string; nome: string };
 type Categoria = { id: string; nome: string; kind: "PAGAR" | "RECEBER" };
 
 const NOVA = "__nova__";
@@ -31,12 +33,15 @@ export function FormLancamentoManual({
   hojeISO,
   competenciaPadrao,
   centros = [],
+  projetos = [],
 }: {
   companyId: string;
   contrapartes: Contraparte[];
   categorias: Categoria[];
   /** Centros de custo ativos da empresa. Sem nenhum, o campo não aparece. */
   centros?: Centro[];
+  /** Projetos ativos da empresa. Sem nenhum, o campo não aparece. */
+  projetos?: Projeto[];
   /** Hoje em São Paulo, do servidor. */
   hojeISO: string;
   competenciaPadrao: string;
@@ -88,6 +93,7 @@ export function FormLancamentoManual({
   // linha para a outra. Antes eram quatro grades (3, 3, 3 e 4 colunas), e o
   // centro de custo ficava sozinho numa linha de três.
   const semCentro = centros.length === 0;
+  const semProjeto = projetos.length === 0;
   return (
     <Card className="p-4">
       <form ref={formRef} onSubmit={enviar} className="flex flex-col gap-4">
@@ -163,20 +169,14 @@ export function FormLancamentoManual({
             </CampoForm>
           )}
 
+          {/* CNPJ primeiro (19/10): com ele, a Receita preenche o nome. */}
           {contraparte === NOVA && (
-            <>
-              <CampoForm label="Nome da nova contraparte" htmlFor="lancamento-nova-nome" required className="sm:col-span-2">
-                <Input id="lancamento-nova-nome" name="contraparteNome" maxLength={180} required />
-              </CampoForm>
-              <CampoForm
-                label="CPF ou CNPJ"
-                htmlFor="lancamento-nova-documento"
-                helper="Opcional. Com documento, a ficha é reaproveitada se já existir."
-                className="lg:col-span-2"
-              >
-                <Input id="lancamento-nova-documento" name="contraparteDocumento" inputMode="numeric" />
-              </CampoForm>
-            </>
+            <CamposDaContraparteNova
+              idBase="lancamento-nova"
+              companyId={companyId}
+              classeDoNome="lg:col-span-3"
+              classeDoAviso="sm:col-span-2 lg:col-span-4"
+            />
           )}
 
           <CampoForm
@@ -197,7 +197,27 @@ export function FormLancamentoManual({
             <CampoData id="lancamento-pago-em" name="pagoEm" max={hojeISO} />
           </CampoForm>
 
-          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className="sm:col-span-2 lg:col-span-4">
+          {/* Emissão, número e projeto (19/10, pedidos do BPO): opcionais, como no Omie. */}
+          <CampoForm label="Emissão" htmlFor="lancamento-emissao" helper="Data do documento. Opcional.">
+            <CampoData id="lancamento-emissao" name="emissao" max={hojeISO} />
+          </CampoForm>
+          <CampoForm label="Nº do documento" htmlFor="lancamento-numero">
+            <Input id="lancamento-numero" name="numeroDocumento" maxLength={60} placeholder="Boleto, contrato, título" />
+          </CampoForm>
+          {!semProjeto && (
+            <CampoForm label="Projeto" htmlFor="lancamento-projeto" helper="Opcional. Um projeto por lançamento." className="lg:col-span-2">
+              <Select id="lancamento-projeto" name="projectId" defaultValue="">
+                <option value="">Sem projeto</option>
+                {projetos.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
+          )}
+
+          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className={semProjeto ? "sm:col-span-2" : "sm:col-span-2 lg:col-span-4"}>
             <Input id="lancamento-descricao" name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" />
           </CampoForm>
         </FieldGrid>
