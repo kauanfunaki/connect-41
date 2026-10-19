@@ -22,6 +22,7 @@ import {
   planoDoEspelho,
   saldoEmAberto,
   type BaixaNoEspelho,
+  type TituloNoEspelho,
   type OrigemDaBaixa,
   type ParteDaBaixa,
   type TipoDoLancamento,
@@ -256,6 +257,7 @@ export const BAIXA_NO_ESPELHO = {
   origin: true,
   principal: true,
   paidAt: true,
+  omieBaixaId: true,
   bankMatch: { select: { id: true, transactionId: true, transaction: { select: { reconciledViaOmie: true, _count: { select: { matches: true } } } } } },
 } as const satisfies Prisma.FinanceEntryPaymentSelect;
 
@@ -268,6 +270,7 @@ export function paraOEspelho(b: LinhaNoEspelho): BaixaNoEspelho {
     origem: b.origin,
     principalCentavos: centavosDeDecimal(b.principal),
     paidAtMs: b.paidAt.getTime(),
+    chave: b.omieBaixaId,
     vinculo: b.bankMatch ? { peloOmie: b.bankMatch.transaction.reconciledViaOmie && b.bankMatch.transaction._count.matches === 1 } : null,
   };
 }
@@ -279,21 +282,14 @@ export function paraOEspelho(b: LinhaNoEspelho): BaixaNoEspelho {
  * conciliação pelo Omie a casa de novo, se ainda casar. Quem chama refaz a
  * conta depois (`recalcularConta`).
  *
- * O Omie ainda não manda as baixas parciais (`TituloDoOmie.parcial` fica em
- * aberto), então a conta tem no máximo uma baixa do Omie.
+ * A parcial do Omie chega uma baixa por pagamento de lá, com o código
+ * (`omieBaixaId`); o título pago chega numa baixa só, no dia do último
+ * pagamento, como sempre foi.
  */
-export async function espelharBaixaDoOmie(
-  tx: Tx,
-  conta: { id: string; tenantId: string; companyId: string },
-  omie: { pago: boolean; paidAt: Date | null; valor: string }
-): Promise<void> {
+export async function espelharBaixaDoOmie(tx: Tx, conta: { id: string; tenantId: string; companyId: string }, omie: TituloNoEspelho): Promise<void> {
   await travarConta(tx, conta.id);
   const baixas = await tx.financeEntryPayment.findMany({ where: { entryId: conta.id }, select: BAIXA_NO_ESPELHO });
-  const plano = planoDoEspelho(baixas.map(paraOEspelho), {
-    pago: omie.pago,
-    paidAtMs: omie.paidAt?.getTime() ?? null,
-    valorCentavos: centavosDeDecimal(omie.valor),
-  });
+  const plano = planoDoEspelho(baixas.map(paraOEspelho), omie);
   const porId = new Map(baixas.map((b) => [b.id, b]));
 
   async function desvincular(id: string) {
@@ -306,19 +302,29 @@ export async function espelharBaixaDoOmie(
     });
   }
 
-  if (plano.criar && omie.paidAt) {
-    const valor = decimalDeCentavos(plano.criar.principalCentavos);
-    await tx.financeEntryPayment.create({
-      data: { tenantId: conta.tenantId, companyId: conta.companyId, entryId: conta.id, paidAt: omie.paidAt, principal: valor, cash: valor, origin: "OMIE" },
-    });
-  }
-  if (plano.atualizar && omie.paidAt) {
-    if (plano.atualizar.desvincular) await desvincular(plano.atualizar.id);
-    const valor = decimalDeCentavos(plano.atualizar.principalCentavos);
-    await tx.financeEntryPayment.update({ where: { id: plano.atualizar.id }, data: { principal: valor, cash: valor, paidAt: omie.paidAt } });
-  }
+  // Apagar antes de criar: a baixa que sai não conta no saldo de quem entra.
   for (const b of plano.apagar) {
     if (b.desvincular) await desvincular(b.id);
     await tx.financeEntryPayment.delete({ where: { id: b.id } });
+  }
+  for (const a of plano.atualizar) {
+    if (a.desvincular) await desvincular(a.id);
+    const valor = decimalDeCentavos(a.principalCentavos);
+    await tx.financeEntryPayment.update({ where: { id: a.id }, data: { principal: valor, cash: valor, paidAt: new Date(a.paidAtMs), omieBaixaId: a.chave } });
+  }
+  for (const c of plano.criar) {
+    const valor = decimalDeCentavos(c.principalCentavos);
+    await tx.financeEntryPayment.create({
+      data: {
+        tenantId: conta.tenantId,
+        companyId: conta.companyId,
+        entryId: conta.id,
+        paidAt: new Date(c.paidAtMs),
+        principal: valor,
+        cash: valor,
+        origin: "OMIE",
+        omieBaixaId: c.chave,
+      },
+    });
   }
 }

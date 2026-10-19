@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lerCategorias, mapearMovimento, mensagemDoFinanceiro, paginaDeCategorias, paginaDeMovimentos } from "./financeiro";
+import { lerCategorias, mapearBaixasDoTitulo, mapearMovimento, mensagemDoFinanceiro, paginaDeCategorias, paginaDeMovimentos } from "./financeiro";
 
 function mov(detalhes: Record<string, unknown> = {}, resto: Record<string, unknown> = {}) {
   return {
@@ -56,9 +56,22 @@ describe("mapearMovimento", () => {
     expect(mapearMovimento(mov({ cStatus: "PAGO" }))).toEqual({ fora: "pago_sem_data" });
   });
 
-  it("pagamento parcial fica em aberto e marcado", () => {
-    const r = mapearMovimento(mov({ cStatus: "PAGTO_PARCIAL" }, { resumo: { cLiquidado: "N", nValPago: 500 } }));
-    expect("fora" in r ? r : [r.situacao, r.parcial]).toEqual(["ABERTO", true]);
+  it("pagamento parcial fica em aberto e marcado, com o principal pago e o dia do último pagamento", () => {
+    const r = mapearMovimento(mov({ cStatus: "PAGTO_PARCIAL", dDtPagamento: "20/09/2026" }, { resumo: { cLiquidado: "N", nValPago: 500, nJuros: 3 } }));
+    expect("fora" in r ? r : [r.situacao, r.parcial, r.pagoCentavos, r.pagamento, r.ultimoPagamento?.toISOString()]).toEqual([
+      "ABERTO",
+      true,
+      50_000,
+      null,
+      "2026-09-20T15:00:00.000Z",
+    ]);
+  });
+
+  it("o pago tem o valor inteiro pago; o aberto, nada", () => {
+    const pago = mapearMovimento(mov({ cStatus: "PAGO", dDtPagamento: "16/09/2026" }, { resumo: { cLiquidado: "S" } }));
+    expect("fora" in pago ? pago : [pago.pagoCentavos, pago.ultimoPagamento?.toISOString()]).toEqual([150_050, "2026-09-16T15:00:00.000Z"]);
+    const aberto = mapearMovimento(mov());
+    expect("fora" in aberto ? aberto : [aberto.pagoCentavos, aberto.ultimoPagamento]).toEqual([0, null]);
   });
 
   it("cancelado", () => {
@@ -115,8 +128,34 @@ describe("mensagemDoFinanceiro", () => {
   it("diz o que entraria na prévia e o que entrou na gravação", () => {
     const c = { lidos: 10, paginas: 1, novos: 7, atualizados: 1, parciais: 1, fora_sem_titulo: 2 };
     expect(mensagemDoFinanceiro(c, false)).toBe(
-      "10 movimentos lidos em 1 página(s): 7 contas entrariam, 1 seriam atualizadas, 1 com pagamento parcial (ficam em aberto), 2 sem título (lançamentos de conta corrente)."
+      "10 movimentos lidos em 1 página(s): 7 contas entrariam, 1 seriam atualizadas, 1 com pagamento parcial (em aberto, com o que já foi pago), 2 sem título (lançamentos de conta corrente)."
     );
     expect(mensagemDoFinanceiro(c, true)).toContain("7 contas novas, 1 atualizadas");
+  });
+});
+
+describe("mapearBaixasDoTitulo", () => {
+  const bx = (nCodBaixa: unknown, dia: string, valor: number, titulo: unknown = 555001) => ({
+    detalhes: { nCodTitulo: titulo, nCodBaixa, dDtPagamento: dia, nValorMovCC: -valor },
+    resumo: { nValPago: 999 },
+  });
+
+  it("uma baixa por pagamento, em ordem de dia, pelo valor do movimento", () => {
+    expect(mapearBaixasDoTitulo({ movimentos: [bx(902, "20/10/2026", 400), bx(901, "05/10/2026", 300)] }, "555001")).toEqual([
+      { chave: "901", principalCentavos: 30_000, paidAt: new Date("2026-10-05T15:00:00.000Z") },
+      { chave: "902", principalCentavos: 40_000, paidAt: new Date("2026-10-20T15:00:00.000Z") },
+    ]);
+  });
+
+  it("linha de outro título fica de fora; a mesma baixa repetida conta uma vez", () => {
+    expect(mapearBaixasDoTitulo({ movimentos: [bx(901, "05/10/2026", 300), bx(901, "05/10/2026", 300), bx(777, "06/10/2026", 50, 1)] }, "555001")).toEqual([
+      { chave: "901", principalCentavos: 30_000, paidAt: new Date("2026-10-05T15:00:00.000Z") },
+    ]);
+  });
+
+  it("sem código, dia ou valor numa linha: null — o pago vai numa baixa só", () => {
+    expect(mapearBaixasDoTitulo({ movimentos: [bx(0, "05/10/2026", 300)] }, "555001")).toBeNull();
+    expect(mapearBaixasDoTitulo({ movimentos: [bx(901, "", 300)] }, "555001")).toBeNull();
+    expect(mapearBaixasDoTitulo({ movimentos: [bx(901, "05/10/2026", 0)] }, "555001")).toBeNull();
   });
 });
