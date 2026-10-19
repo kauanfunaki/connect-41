@@ -51,6 +51,12 @@ describe("travasDaEdicao", () => {
     expect(t.contraparte).toBeUndefined();
   });
 
+  it("baixa parcial: o valor trava, o vencimento do resto continua livre", () => {
+    const t = travas({ temBaixa: true });
+    expect(Object.keys(t)).toEqual(["valor"]);
+    expect(t.valor).toMatch(/baixa parcial/);
+  });
+
   it("parcela de acordo: valor, vencimento e contraparte são do acordo", () => {
     const t = travas({ agreementId: "ac-1" });
     expect(Object.keys(t).sort()).toEqual(["contraparte", "valor", "vencimento"]);

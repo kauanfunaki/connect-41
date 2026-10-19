@@ -11,7 +11,11 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
-import { podeMarcarPago, podeConferir } from "./contas";
+import { podeConferir, centavosDeDecimal } from "./contas";
+import { validarBaixa, saldoEmAberto } from "./baixa/regras";
+import { registrarBaixa, apagarBaixa, RecusaDaBaixa, type OrigemDaBaixa } from "./baixa/servidor";
+import { decimalDeCentavos } from "./manual";
+import { instanteDaData } from "./periodo";
 import { setorDoModulo } from "@/lib/modules";
 import { motivoDoBloqueioDeBaixa } from "./aprovacao/regras";
 import { sincronizarAcordos } from "./cobranca/sincronizar";
@@ -87,120 +91,253 @@ export async function conferirConta(entryId: string): Promise<AcaoDeContaState> 
   return null;
 }
 
+// ─── Baixa (lote C, 19/10) ─────────────────────────────────────────────────
+//
+// A baixa deixou de ser só uma data: é um registro com conta bancária, juros,
+// multa e desconto, e pode ser parcial — ver `src/lib/financeiro/baixa/`. A
+// janela pede os dados (`dadosDaBaixa`), grava (`registrarPagamento`) e
+// lista as baixas da conta para desfazer uma a uma (`desfazerBaixa`).
+
+export type BaixaDaConta = {
+  id: string;
+  dataKey: string;
+  principalCentavos: number;
+  jurosCentavos: number;
+  multaCentavos: number;
+  descontoCentavos: number;
+  caixaCentavos: number;
+  contaNome: string | null;
+  observacao: string | null;
+  origem: OrigemDaBaixa;
+  /** Ligada a uma linha do extrato — desfazer é na conciliação. */
+  conciliada: boolean;
+};
+
+export type DadosDaBaixa =
+  | {
+      ok: true;
+      kind: "PAGAR" | "RECEBER";
+      contraparteNome: string;
+      valorCentavos: number;
+      saldoCentavos: number;
+      /** Motivo de a aprovação por alçada travar a baixa. */
+      bloqueio: string | null;
+      contas: { id: string; nome: string }[];
+      baixas: BaixaDaConta[];
+    }
+  | { ok: false; erro: string };
+
+/** Contas bancárias ativas da empresa, para o "de qual conta saiu". */
+async function contasDaEmpresa(tenantId: string, companyId: string) {
+  const contas = await getPrisma().bankAccount.findMany({
+    where: { tenantId, companyId, active: true },
+    select: { id: true, nickname: true, accountNumber: true },
+    orderBy: { nickname: "asc" },
+  });
+  return contas.map((c) => ({ id: c.id, nome: `${c.nickname} ${c.accountNumber}` }));
+}
+
+/** A conta, o saldo, as contas bancárias e as baixas que já tem — o que a janela da baixa precisa. */
+export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { ok: false, erro: erro ?? "Não autenticado" };
+  const conta = await getPrisma().financeEntry.findFirst({
+    where: { id: entryId, tenantId: ctx.tenantId },
+    select: {
+      kind: true,
+      status: true,
+      amount: true,
+      paidPrincipal: true,
+      approvalStatus: true,
+      companyId: true,
+      counterparty: { select: { name: true } },
+      payments: {
+        select: {
+          id: true,
+          paidAt: true,
+          principal: true,
+          interest: true,
+          fine: true,
+          discount: true,
+          cash: true,
+          note: true,
+          origin: true,
+          bankAccount: { select: { nickname: true, accountNumber: true } },
+          bankMatch: { select: { id: true } },
+        },
+        orderBy: { paidAt: "asc" },
+      },
+    },
+  });
+  if (!conta) return { ok: false, erro: "Lançamento não encontrado." };
+  if (conta.status === "CANCELADO") return { ok: false, erro: "Lançamento cancelado não recebe baixa." };
+  const valor = centavosDeDecimal(conta.amount);
+  return {
+    ok: true,
+    kind: conta.kind,
+    contraparteNome: conta.counterparty.name,
+    valorCentavos: valor,
+    saldoCentavos: saldoEmAberto(valor, centavosDeDecimal(conta.paidPrincipal)),
+    bloqueio: motivoDoBloqueioDeBaixa(conta),
+    contas: await contasDaEmpresa(ctx.tenantId, conta.companyId),
+    baixas: conta.payments.map((p) => ({
+      id: p.id,
+      dataKey: saoPauloParts(p.paidAt).dateKey,
+      principalCentavos: centavosDeDecimal(p.principal),
+      jurosCentavos: centavosDeDecimal(p.interest),
+      multaCentavos: centavosDeDecimal(p.fine),
+      descontoCentavos: centavosDeDecimal(p.discount),
+      caixaCentavos: centavosDeDecimal(p.cash),
+      contaNome: p.bankAccount ? `${p.bankAccount.nickname} ${p.bankAccount.accountNumber}` : null,
+      observacao: p.note,
+      origem: p.origin,
+      conciliada: p.bankMatch !== null,
+    })),
+  };
+}
+
 /**
- * Baixa: registra que o dinheiro saiu (ou entrou) naquele dia.
+ * Registra uma baixa: o dinheiro saiu (ou entrou) naquele dia, daquela conta,
+ * com aquele valor. Parcial quando o valor fica abaixo do saldo — a conta
+ * continua em aberto com o resto.
  *
  * A data vem de fora porque **baixa atrasada é comum** — alguém lança na
- * segunda o que pagou na sexta, e forçar "hoje" jogaria o pagamento na
- * competência errada do fluxo de caixa.
- *
- * Pagar direto do `PROVISORIO` é permitido: pagar implica ter conferido, e
- * exigir dois cliques para o mesmo ato só faria a pessoa clicar dois.
+ * segunda o que pagou na sexta. Pagar direto do `PROVISORIO` é permitido:
+ * pagar implica ter conferido.
  */
-export async function marcarComoPago(
-  entryId: string,
-  dataISO: string
-): Promise<AcaoDeContaState> {
+export async function registrarPagamento(formData: FormData): Promise<{ error: string } | { ok: true; quitada: boolean }> {
   const { erro, ctx } = await contexto();
   if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const texto = (k: string) => String(formData.get(k) ?? "").trim();
+  const entryId = texto("entryId");
+  const tenantId = ctx.tenantId;
+  const prisma = getPrisma();
 
-  const conta = await contaDoTenant(entryId, ctx.tenantId);
+  const conta = await prisma.financeEntry.findFirst({
+    where: { id: entryId, tenantId },
+    select: {
+      id: true,
+      kind: true,
+      status: true,
+      amount: true,
+      paidPrincipal: true,
+      approvalStatus: true,
+      companyId: true,
+      counterparty: { select: { name: true } },
+    },
+  });
   if (!conta) return { error: "Lançamento não encontrado." };
-
-  const bruto = (dataISO || "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(bruto)) return { error: "Informe a data do pagamento." };
-
-  const hojeKey = saoPauloParts(new Date()).dateKey;
-  const veredito = podeMarcarPago(conta, bruto, hojeKey);
-  if (!veredito.pode) return { error: veredito.motivo };
-  // Aprovação por alçada: aguardando ou reprovada não sai do caixa.
+  if (conta.status === "CANCELADO") return { error: "Lançamento cancelado não volta a ser conta." };
+  // Aprovação por alçada: aguardando ou reprovada não sai do caixa — nem em parte.
   const bloqueio = motivoDoBloqueioDeBaixa(conta);
   if (bloqueio) return { error: bloqueio };
 
-  // Meio-dia para a data não escorregar de dia ao atravessar o fuso — o mesmo
-  // cuidado da contagem de dias úteis do societário.
-  const pagoEm = new Date(`${bruto}T12:00:00-03:00`);
+  const saldo = saldoEmAberto(centavosDeDecimal(conta.amount), centavosDeDecimal(conta.paidPrincipal));
+  const v = validarBaixa(
+    { data: texto("data"), principal: texto("valor"), juros: texto("juros"), multa: texto("multa"), desconto: texto("desconto") },
+    saldo,
+    saoPauloParts(new Date()).dateKey
+  );
+  if (!v.ok) return { error: v.erro };
+  const d = v.dados;
 
-  // Condicionado ao estado lido: se a conta foi reenviada para aprovação (ou
-  // paga por outra pessoa, ou cancelada) entre a leitura e aqui, a baixa não
-  // passa por cima.
-  //
-  // Na mesma transação, o acordo de que a conta é parcela: a última parcela
-  // paga torna o acordo cumprido junto com a baixa.
-  const prisma = getPrisma();
-  const tenantId = ctx.tenantId;
-  const baixada = await prisma.$transaction(async (tx) => {
-    const r = await tx.financeEntry.updateMany({
-      where: {
-        id: entryId,
+  const contaBancariaId = texto("contaBancariaId") || null;
+  if (contaBancariaId) {
+    const banco = await prisma.bankAccount.findFirst({ where: { id: contaBancariaId, tenantId, companyId: conta.companyId }, select: { id: true } });
+    if (!banco) return { error: "Conta bancária não encontrada nesta empresa." };
+  }
+  const observacao = texto("observacao").slice(0, 255) || null;
+
+  let gravada: { paymentId: string; quitada: boolean };
+  try {
+    gravada = await prisma.$transaction(async (tx) => {
+      const b = await registrarBaixa(tx, {
         tenantId,
-        status: { in: ["PROVISORIO", "CONFERIDO"] },
-        paidAt: null,
-        approvalStatus: { in: ["NAO_REQUER", "APROVADO"] },
-      },
-      data: { status: "PAGO", paidAt: pagoEm },
+        entryId,
+        paidAt: instanteDaData(d.dataKey),
+        principalCentavos: d.principalCentavos,
+        jurosCentavos: d.jurosCentavos,
+        multaCentavos: d.multaCentavos,
+        descontoCentavos: d.descontoCentavos,
+        bankAccountId: contaBancariaId,
+        note: observacao,
+        origin: "MANUAL",
+        userId: ctx.userId ?? null,
+      });
+      // A baixa que quita a última parcela de um acordo cumpre o acordo.
+      await sincronizarAcordos(tx, tenantId, [entryId]);
+      return b;
     });
-    if (r.count === 1) await sincronizarAcordos(tx, tenantId, [entryId]);
-    return r;
-  });
-  if (baixada.count !== 1) return { error: "A conta acabou de mudar (aprovação, baixa ou cancelamento) — atualize a tela." };
+  } catch (err) {
+    if (err instanceof RecusaDaBaixa) return { error: err.message };
+    throw err;
+  }
 
   await logAudit({
-    tenantId: ctx.tenantId,
+    tenantId,
     userId: ctx.userId,
     action: "finance.pay",
     entityType: "FinanceEntry",
     entityId: entryId,
     metadata: {
       kind: conta.kind,
-      valor: conta.amount.toString(),
-      pagoEm: bruto,
       contraparte: conta.counterparty.name,
+      pagoEm: d.dataKey,
+      valor: decimalDeCentavos(d.principalCentavos),
+      ...(d.jurosCentavos ? { juros: decimalDeCentavos(d.jurosCentavos) } : {}),
+      ...(d.multaCentavos ? { multa: decimalDeCentavos(d.multaCentavos) } : {}),
+      ...(d.descontoCentavos ? { desconto: decimalDeCentavos(d.descontoCentavos) } : {}),
+      total: decimalDeCentavos(d.caixaCentavos),
+      parcial: !gravada.quitada,
+      contaBancaria: contaBancariaId,
+      baixa: gravada.paymentId,
     },
   });
 
   revalidar();
-  return null;
+  return { ok: true, quitada: gravada.quitada };
 }
 
 /**
- * Desfaz a baixa.
- *
- * Existe porque a alternativa seria deixar corrigir a data por cima, e
- * sobrescrever em silêncio a data real do pagamento — que é justamente o dado
- * que a conciliação vai usar para casar com o extrato. Desfazer e refazer deixa
- * rastro no AuditLog; editar por cima, não.
- *
- * Volta para `CONFERIDO`, não para `PROVISORIO`: alguém já olhou esta conta.
+ * Desfaz uma baixa. Existe porque a alternativa seria corrigir a data por cima
+ * e sobrescrever em silêncio o pagamento real — desfazer e refazer deixa
+ * rastro no AuditLog. Baixa conciliada se desfaz na conciliação, que devolve a
+ * linha do extrato junto.
  */
-export async function desfazerPagamento(entryId: string): Promise<AcaoDeContaState> {
+export async function desfazerBaixa(paymentId: string): Promise<AcaoDeContaState> {
   const { erro, ctx } = await contexto();
   if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const tenantId = ctx.tenantId;
+  const prisma = getPrisma();
+  const baixa = await prisma.financeEntryPayment.findFirst({
+    where: { id: paymentId, tenantId },
+    select: { entryId: true, principal: true, cash: true, paidAt: true, entry: { select: { counterparty: { select: { name: true } } } } },
+  });
+  if (!baixa) return { error: "Baixa não encontrada — atualize a tela." };
 
-  const conta = await contaDoTenant(entryId, ctx.tenantId);
-  if (!conta) return { error: "Lançamento não encontrado." };
-  if (conta.status !== "PAGO" && conta.paidAt === null) {
-    return { error: "Esta conta não está paga." };
+  try {
+    await prisma.$transaction(async (tx) => {
+      await apagarBaixa(tx, paymentId, tenantId);
+      // Parcela de acordo cumprido que deixa de estar paga devolve o acordo a ativo.
+      await sincronizarAcordos(tx, tenantId, [baixa.entryId]);
+    });
+  } catch (err) {
+    if (err instanceof RecusaDaBaixa) return { error: err.message };
+    throw err;
   }
 
-  // Parcela de acordo cumprido que deixa de estar paga devolve o acordo a ativo.
-  const prisma = getPrisma();
-  const tenantId = ctx.tenantId;
-  await prisma.$transaction(async (tx) => {
-    await tx.financeEntry.update({
-      where: { id: entryId },
-      data: { status: "CONFERIDO", paidAt: null },
-    });
-    await sincronizarAcordos(tx, tenantId, [entryId]);
-  });
-
   await logAudit({
-    tenantId: ctx.tenantId,
+    tenantId,
     userId: ctx.userId,
     action: "finance.unpay",
     entityType: "FinanceEntry",
-    entityId: entryId,
-    metadata: { contraparte: conta.counterparty.name },
+    entityId: baixa.entryId,
+    metadata: {
+      contraparte: baixa.entry.counterparty.name,
+      valor: baixa.principal.toString(),
+      total: baixa.cash.toString(),
+      pagoEm: saoPauloParts(baixa.paidAt).dateKey,
+    },
   });
 
   revalidar();

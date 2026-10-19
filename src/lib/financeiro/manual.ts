@@ -203,6 +203,8 @@ export function podeCancelarManual(conta: {
   paidAt: Date | null;
   fiscalDocumentId: string | null;
   agreementId?: string | null;
+  /** O que as baixas já quitaram (lote C). Em aberto com baixa é parcial. */
+  paidPrincipal?: { toString(): string } | null;
 }): { pode: true } | { pode: false; motivo: string } {
   if (conta.agreementId) {
     return { pode: false, motivo: "Parcela de acordo de cobrança — desfaça o acordo na tela de cobrança." };
@@ -213,6 +215,10 @@ export function podeCancelarManual(conta: {
   if (conta.status === "CANCELADO") return { pode: false, motivo: "Já está cancelado." };
   if (conta.status === "PAGO" || conta.paidAt !== null) {
     return { pode: false, motivo: "Está pago. Desfaça a baixa antes de cancelar." };
+  }
+  // Baixa parcial é dinheiro que andou: cancelar a conta o esconderia do caixa.
+  if (conta.paidPrincipal && Number(conta.paidPrincipal.toString()) > 0) {
+    return { pode: false, motivo: "Tem baixa parcial. Desfaça as baixas antes de cancelar." };
   }
   return { pode: true };
 }
