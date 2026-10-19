@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Layers, Users, Truck, HandCoins, ListTree } from "lucide-react";
+import { Layers, Users, Truck, HandCoins, ListTree, FolderKanban } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -21,8 +21,9 @@ import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDa
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
-import { NovaContraparte, EditarContraparte } from "@/components/financeiro/FormContraparte";
+import { NovaContraparte, EditarContraparte, type ContraparteDaFicha } from "@/components/financeiro/FormContraparte";
 import { NovoCentroDeCusto, EditarCentroDeCusto } from "@/components/financeiro/FormCentroDeCusto";
+import { NovoProjeto, EditarProjeto } from "@/components/financeiro/FormProjeto";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { ESCOLHAS_DE_GRUPO } from "@/lib/dre/estrutura";
@@ -40,6 +41,7 @@ const ABAS = [
   { chave: "sacados", rotulo: "Sacados", icone: <HandCoins /> },
   { chave: "todos", rotulo: "Todos", icone: <Users /> },
   { chave: "centros", rotulo: "Centros de custo", icone: <Layers /> },
+  { chave: "projetos", rotulo: "Projetos", icone: <FolderKanban /> },
   { chave: "plano", rotulo: "Plano de contas", icone: <ListTree /> },
 ] as const;
 
@@ -139,7 +141,7 @@ export default async function CadastrosFinanceirosPage({
   const comAcao = (action?: React.ReactNode) => (
     <PageHeader
       title="Fornecedores e sacados"
-      subtitle="As contrapartes, os centros de custo e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
+      subtitle="As contrapartes, os centros de custo, os projetos e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
       action={action}
     />
   );
@@ -162,7 +164,7 @@ export default async function CadastrosFinanceirosPage({
         ) : (
           <>
             {filtroDaEmpresa}
-            <EscolhaAEmpresa escolha={escolha} porQue="Fornecedores, sacados, centros de custo e o plano de contas são de cada empresa." />
+            <EscolhaAEmpresa escolha={escolha} porQue="Fornecedores, sacados, centros de custo, projetos e o plano de contas são de cada empresa." />
           </>
         )}
       </PageContainer>
@@ -222,6 +224,23 @@ export default async function CadastrosFinanceirosPage({
     );
   }
 
+  if (aba === "projetos") {
+    return comEmpresa(
+      <PageContainer>
+        {comAcao(podeEditar ? <NovoProjeto companyId={companyId} /> : undefined)}
+        {filtroDaEmpresa}
+        <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
+        <AbaDeProjetos
+          tenantId={ctx.tenantId}
+          companyId={companyId}
+          podeEditar={podeEditar}
+          situacao={situacao}
+          hrefDeTodos={`${href("projetos")}&situacao=todos`}
+        />
+      </PageContainer>
+    );
+  }
+
   const [contrapartes, movimento, categorias] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId: ctx.tenantId, companyId },
@@ -235,6 +254,19 @@ export default async function CadastrosFinanceirosPage({
         defaultCategory: { select: { name: true } },
         defaultCostCenterId: true,
         defaultCostCenter: { select: { name: true, active: true } },
+        tradeName: true,
+        phone: true,
+        zipCode: true,
+        addressStreet: true,
+        addressNumber: true,
+        addressComplement: true,
+        neighborhood: true,
+        city: true,
+        stateCode: true,
+        bankCode: true,
+        bankAgency: true,
+        bankAccount: true,
+        pixKey: true,
       },
       orderBy: { name: "asc" },
     }),
@@ -278,6 +310,30 @@ export default async function CadastrosFinanceirosPage({
   const listaDeCategorias = categorias.map((c) => ({ id: c.id, nome: c.name }));
   // Inativo não é oferecido como padrão novo — ver `centroPadraoValido`.
   const centrosAtivos = centros.filter((c) => c.active).map((c) => ({ id: c.id, nome: c.name }));
+  // A ficha inteira vai para o modal de edição — o cartão e a tabela usam a mesma.
+  const fichaDe = (c: (typeof contrapartes)[number]): ContraparteDaFicha => ({
+    id: c.id,
+    nome: c.name,
+    documento: c.document,
+    email: c.email,
+    defaultCategoryId: c.defaultCategoryId,
+    ativo: c.active,
+    defaultCostCenterId: c.defaultCostCenterId,
+    centroPadraoNome: c.defaultCostCenter?.name ?? null,
+    tradeName: c.tradeName,
+    phone: c.phone,
+    zipCode: c.zipCode,
+    addressStreet: c.addressStreet,
+    addressNumber: c.addressNumber,
+    addressComplement: c.addressComplement,
+    neighborhood: c.neighborhood,
+    city: c.city,
+    stateCode: c.stateCode,
+    bankCode: c.bankCode,
+    bankAgency: c.bankAgency,
+    bankAccount: c.bankAccount,
+    pixKey: c.pixKey,
+  });
 
   return comEmpresa(
     <PageContainer>
@@ -339,20 +395,7 @@ export default async function CadastrosFinanceirosPage({
                     <Ativo ativo={c.active} />
                     {podeEditar && (
                       <span className="ml-auto">
-                        <EditarContraparte
-                          categorias={listaDeCategorias}
-                          centros={centrosAtivos}
-                          contraparte={{
-                            id: c.id,
-                            nome: c.name,
-                            documento: c.document,
-                            email: c.email,
-                            defaultCategoryId: c.defaultCategoryId,
-                            ativo: c.active,
-                            defaultCostCenterId: c.defaultCostCenterId,
-                            centroPadraoNome: c.defaultCostCenter?.name ?? null,
-                          }}
-                        />
+                        <EditarContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} contraparte={fichaDe(c)} />
                       </span>
                     )}
                   </PeDoCartao>
@@ -410,20 +453,7 @@ export default async function CadastrosFinanceirosPage({
                     </td>
                     <td className="py-2.5">
                       {podeEditar && (
-                        <EditarContraparte
-                          categorias={listaDeCategorias}
-                          centros={centrosAtivos}
-                          contraparte={{
-                            id: c.id,
-                            nome: c.name,
-                            documento: c.document,
-                            email: c.email,
-                            defaultCategoryId: c.defaultCategoryId,
-                            ativo: c.active,
-                            defaultCostCenterId: c.defaultCostCenterId,
-                            centroPadraoNome: c.defaultCostCenter?.name ?? null,
-                          }}
-                        />
+                        <EditarContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} contraparte={fichaDe(c)} />
                       )}
                     </td>
                   </LinhaFiltravel>
@@ -563,6 +593,108 @@ async function AbaDeCentros({
         Um centro por lançamento, sem rateio. Inativo some dos seletores e da herança, e continua na DRE por centro com o que
         já foi lançado nele. Centro de custo não é apagado. Na importação por CSV, a coluna <code>centro_de_custo</code> casa
         pelo nome ou pelo código.
+      </NotaDeFonte>
+    </>
+  );
+}
+
+/**
+ * Projetos da empresa (19/10) — o "Projeto" do Omie. A mesma lista dos centros
+ * de custo: nome, quantos lançamentos tem, situação; inativo fora por padrão.
+ */
+async function AbaDeProjetos({
+  tenantId,
+  companyId,
+  podeEditar,
+  situacao,
+  hrefDeTodos,
+}: {
+  tenantId: string;
+  companyId: string;
+  podeEditar: boolean;
+  situacao: Situacao;
+  hrefDeTodos: string;
+}) {
+  const prisma = getPrisma();
+  const [todos, uso] = await Promise.all([
+    prisma.financeProject.findMany({
+      where: { tenantId, companyId },
+      select: { id: true, name: true, active: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.financeEntry.groupBy({
+      by: ["projectId"],
+      where: { tenantId, companyId, projectId: { not: null } },
+      _count: { _all: true },
+    }),
+  ]);
+  const projetos = todos.filter((p) => naSituacao(p.active, situacao));
+  const inativosDeFora = situacao === "ativos" ? todos.length - projetos.length : 0;
+  const lancamentos = new Map(uso.map((u) => [u.projectId, u._count._all]));
+  const filtros = <FiltrosDaTela campos={FILTRO_DA_SITUACAO} naBarra />;
+
+  return (
+    <>
+      <InativosDeFora n={inativosDeFora} um="projeto inativo" varios="projetos inativos" href={hrefDeTodos} />
+      <CascoDaTabela contagem={contarItens(projetos.length, "projeto", "projetos")} filtros={filtros}>
+        {projetos.length === 0 ? (
+          <EmptyState
+            title={
+              situacao === "inativos" ? "Nenhum projeto inativo" : inativosDeFora > 0 ? "Nenhum projeto ativo" : "Nenhum projeto nesta empresa"
+            }
+            description="Projeto é opcional: cadastre obras, eventos ou contratos para acompanhar receita e despesa de cada um."
+            icon={<FolderKanban />}
+          />
+        ) : (
+          <>
+            <CartoesNoCelular>
+              {projetos.map((p) => (
+                <Cartao key={p.id}>
+                  <TopoDoCartao nome={p.name} />
+                  <InfoDoCartao className="tabular-nums mt-1">{lancamentos.get(p.id) ?? 0} lançamento(s)</InfoDoCartao>
+                  <PeDoCartao>
+                    <Ativo ativo={p.active} />
+                    {podeEditar && (
+                      <span className="ml-auto">
+                        <EditarProjeto projeto={{ id: p.id, nome: p.name, ativo: p.active }} />
+                      </span>
+                    )}
+                  </PeDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
+
+            <TabelaNoDesktop padrao>
+              <table className="w-full min-w-[560px]">
+                <thead>
+                  <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
+                    <th className="py-2 pr-3 font-medium">Nome</th>
+                    <th className="py-2 pr-3 font-medium text-right">Lançamentos</th>
+                    <th className="py-2 pr-3 font-medium">Situação</th>
+                    <th className="py-2 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projetos.map((p) => (
+                    <tr key={p.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
+                      <td className="py-2.5 pr-3 font-medium">{p.name}</td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums">{lancamentos.get(p.id) ?? 0}</td>
+                      <td className="py-2.5 pr-3">
+                        <Ativo ativo={p.active} />
+                      </td>
+                      <td className="py-2.5">{podeEditar && <EditarProjeto projeto={{ id: p.id, nome: p.name, ativo: p.active }} />}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TabelaNoDesktop>
+          </>
+        )}
+      </CascoDaTabela>
+      <NotaDeFonte>
+        Um projeto por lançamento, escolhido no lançamento, na conciliação ou na edição da conta. Inativo some dos seletores e
+        continua nas contas que já têm o projeto. Projeto não é apagado. Na importação por CSV, a coluna <code>projeto</code> casa
+        pelo nome.
       </NotaDeFonte>
     </>
   );

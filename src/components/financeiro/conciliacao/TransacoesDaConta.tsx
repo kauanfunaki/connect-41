@@ -31,6 +31,7 @@ import { dataCurta } from "./data";
 import { formatarCompetencia } from "@/lib/format";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
+import { CamposDaContraparteNova } from "@/components/financeiro/ContraparteNova";
 
 export type LancamentoResumido = {
   id: string;
@@ -65,6 +66,7 @@ export type LinhaDaTransacao = {
 
 type Contraparte = { id: string; nome: string; documento: string | null; defaultCategoryId: string | null; defaultCostCenterId?: string | null };
 type Centro = { id: string; nome: string };
+type Projeto = { id: string; nome: string };
 type Categoria = { id: string; nome: string; kind: "PAGAR" | "RECEBER" };
 
 // Situação da transação no `Selo` miúdo (escolha 2A, 08/10/2026). Ignorada é
@@ -98,6 +100,8 @@ export function TransacoesDaConta({
   contrapartes,
   categorias,
   centros = [],
+  projetos = [],
+  companyId,
 }: {
   linhas: LinhaDaTransacao[];
   podeAgir: boolean;
@@ -105,6 +109,10 @@ export function TransacoesDaConta({
   categorias: Categoria[];
   /** Centros de custo ativos da empresa; sem nenhum, o campo não aparece. */
   centros?: Centro[];
+  /** Projetos ativos da empresa; sem nenhum, o campo não aparece. */
+  projetos?: Projeto[];
+  /** A empresa da conta — a busca pelo CNPJ diz se a ficha já existe nela. */
+  companyId: string;
 }) {
   const { dialog, requestConfirm } = useConfirm();
   const [escolhendo, setEscolhendo] = useState<LinhaDaTransacao | null>(null);
@@ -287,7 +295,15 @@ export function TransacoesDaConta({
       {dialog}
       {escolhendo && <EscolherLancamentos transacao={escolhendo} onClose={() => setEscolhendo(null)} />}
       {criando && (
-        <CriarLancamento transacao={criando} contrapartes={contrapartes} categorias={categorias} centros={centros} onClose={() => setCriando(null)} />
+        <CriarLancamento
+          transacao={criando}
+          companyId={companyId}
+          contrapartes={contrapartes}
+          categorias={categorias}
+          centros={centros}
+          projetos={projetos}
+          onClose={() => setCriando(null)}
+        />
       )}
       {ignorando && <IgnorarTransacao transacao={ignorando} onClose={() => setIgnorando(null)} />}
     </>
@@ -475,15 +491,19 @@ const NOVA = "__nova__";
 
 function CriarLancamento({
   transacao,
+  companyId,
   contrapartes,
   categorias,
   centros,
+  projetos,
   onClose,
 }: {
   transacao: LinhaDaTransacao;
+  companyId: string;
   contrapartes: Contraparte[];
   categorias: Categoria[];
   centros: Centro[];
+  projetos: Projeto[];
   onClose: () => void;
 }) {
   const kind = transacao.centavos < 0 ? "PAGAR" : "RECEBER";
@@ -549,14 +569,11 @@ function CriarLancamento({
           </Select>
         </CampoForm>
 
+        {/* CNPJ primeiro (19/10, pedido 2 do BPO): a Receita preenche o nome
+            no lugar do favorecido do extrato, e o resto da ficha vai junto. */}
         {contraparte === NOVA && (
-          <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_200px]">
-            <CampoForm label="Nome da nova contraparte" htmlFor="criar-nome" required>
-              <Input id="criar-nome" name="contraparteNome" maxLength={180} defaultValue={transacao.nome ?? ""} required />
-            </CampoForm>
-            <CampoForm label="CPF ou CNPJ" htmlFor="criar-doc" helper="Opcional. Com documento, a ficha existente é reaproveitada.">
-              <Input id="criar-doc" name="contraparteDocumento" inputMode="numeric" />
-            </CampoForm>
+          <FieldGrid columns="sm:grid-cols-[200px_minmax(0,1fr)]">
+            <CamposDaContraparteNova idBase="criar" companyId={companyId} nomePadrao={transacao.nome ?? ""} classeDoAviso="sm:col-span-2" />
           </FieldGrid>
         )}
 
@@ -581,21 +598,37 @@ function CriarLancamento({
           </CampoForm>
         </FieldGrid>
 
-        {centros.length > 0 && (
-          <CampoForm
-            label="Centro de custo"
-            htmlFor="criar-centro"
-            helper={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional."}
-          >
-            <Select id="criar-centro" name="costCenterId" defaultValue="">
-              <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
-              {centros.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </Select>
-          </CampoForm>
+        {(centros.length > 0 || projetos.length > 0) && (
+          <FieldGrid columns={centros.length > 0 && projetos.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}>
+            {centros.length > 0 && (
+              <CampoForm
+                label="Centro de custo"
+                htmlFor="criar-centro"
+                helper={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional."}
+              >
+                <Select id="criar-centro" name="costCenterId" defaultValue="">
+                  <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
+                  {centros.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+            )}
+            {projetos.length > 0 && (
+              <CampoForm label="Projeto" htmlFor="criar-projeto" helper="Opcional.">
+                <Select id="criar-projeto" name="projectId" defaultValue="">
+                  <option value="">Sem projeto</option>
+                  {projetos.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+            )}
+          </FieldGrid>
         )}
 
         <CampoForm label="Descrição" htmlFor="criar-descricao">

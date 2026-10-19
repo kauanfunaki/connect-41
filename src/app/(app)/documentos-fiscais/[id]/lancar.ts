@@ -154,6 +154,9 @@ export async function lancarDocumento(
           // e é a conta que muda, não a nota.
           amount: doc.netAmount ?? doc.amount!,
           description: `${doc.type} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`,
+          // Emissão e número são os da nota (19/10) — e por isso travados na edição.
+          issueDate: doc.issuedAt,
+          documentNumber: `${doc.number}${doc.series ? `/${doc.series}` : ""}`.slice(0, 60),
           fiscalDocumentId: doc.id,
           createdById: ctx.userId,
         },

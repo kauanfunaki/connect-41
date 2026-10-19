@@ -440,7 +440,7 @@ async function ExtratoDaConta({
     };
   });
 
-  const [contrapartes, categorias, centros] =
+  const [contrapartes, categorias, centros, projetos] =
     podeAgir && pendentes.length > 0
       ? await Promise.all([
           prisma.financeCounterparty.findMany({
@@ -458,8 +458,13 @@ async function ExtratoDaConta({
             select: { id: true, name: true },
             orderBy: { name: "asc" },
           }),
+          prisma.financeProject.findMany({
+            where: { tenantId, companyId, active: true },
+            select: { id: true, name: true },
+            orderBy: { name: "asc" },
+          }),
         ])
-      : [[], [], []];
+      : [[], [], [], []];
 
   return (
     <>
@@ -566,6 +571,8 @@ async function ExtratoDaConta({
               }))}
               categorias={categorias.map((c) => ({ id: c.id, nome: c.name, kind: c.kind }))}
               centros={centros.map((c) => ({ id: c.id, nome: c.name }))}
+              projetos={projetos.map((p) => ({ id: p.id, nome: p.name }))}
+              companyId={companyId}
             />
             {limitado && (
               <p className="text-micro text-fg-muted mt-2">
