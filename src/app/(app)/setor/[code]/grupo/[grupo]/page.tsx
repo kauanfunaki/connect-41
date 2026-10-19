@@ -19,7 +19,9 @@ import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 //
 // Rota própria, e não `?grupo=` na tela do setor, porque a sidebar marca o item
 // ativo pelo caminho: com query, "Quadros" (que aponta para `/setor/[code]`)
-// acenderia junto de qualquer grupo.
+// acenderia junto de qualquer grupo. A rota própria sozinha não bastava — o
+// prefixo `/setor/[code]/` também casa — e desde os Ajustes de 15/10 o item
+// Quadros tem regra própria (`quadrosAtivo`).
 export default async function GrupoDoSetorPage({
   params,
 }: {
