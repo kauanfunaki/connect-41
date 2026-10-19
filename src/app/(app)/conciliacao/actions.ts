@@ -43,7 +43,7 @@ import { fichaOpcional, leitorDaFicha } from "@/lib/financeiro/fichaDaContrapart
 import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { lerBuscaDaEscolha, type CriterioDaBusca } from "@/lib/financeiro/conciliacao/busca";
 import { inicioDeHoje } from "@/lib/financeiro/consultas";
-import { quitarConta, apagarBaixa, recalcularConta, RecusaDaBaixa } from "@/lib/financeiro/baixa/servidor";
+import { quitarConta, apagarBaixa, mudarDiaDaBaixa, RecusaDaBaixa } from "@/lib/financeiro/baixa/servidor";
 import { saldoEmAberto } from "@/lib/financeiro/baixa/regras";
 
 const MODULE = "bpo_conciliacao";
@@ -474,8 +474,7 @@ export async function confirmarConciliacao(transactionId: string, ids: string[])
           },
         });
         if (b.paidAt.getTime() !== pagoEm.getTime() || !b.bankAccountId) {
-          await tx.financeEntryPayment.update({ where: { id: b.id }, data: { paidAt: pagoEm, bankAccountId: b.bankAccountId ?? t.bankAccountId } });
-          await recalcularConta(tx, b.entryId);
+          await mudarDiaDaBaixa(tx, b, { paidAt: pagoEm, bankAccountId: b.bankAccountId ?? t.bankAccountId });
         }
       }
       // Parcela de acordo conciliada é baixa como outra qualquer: pode cumprir o acordo.
@@ -563,15 +562,13 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
       await tx.bankTransactionMatch.deleteMany({ where: { transactionId: t.id } });
       for (const m of t.matches.filter((m) => !m.financeEntry.transferId)) {
         if (m.payment) {
-          // MIGRACAO com "antes" em aberto é a baixa que a conciliação de antes
-          // do lote C fez — e por isso sai, como sairia a de agora.
-          const criadaAqui = m.payment.origin === "CONCILIACAO" || (m.payment.origin === "MIGRACAO" && m.entryStatusBefore !== "PAGO");
-          if (criadaAqui) {
+          // A que a conciliação criou — inclusive a de antes do lote C, que a
+          // migration marcou CONCILIACAO pelo "antes" em aberto do vínculo.
+          if (m.payment.origin === "CONCILIACAO") {
             await apagarBaixa(tx, m.payment.id, c.tenantId);
             baixasApagadas.push(m.payment.id);
           } else if (m.entryPaidAtBefore && m.payment.paidAt.getTime() === pagoEm) {
-            await tx.financeEntryPayment.update({ where: { id: m.payment.id }, data: { paidAt: m.entryPaidAtBefore } });
-            await recalcularConta(tx, m.financeEntryId);
+            await mudarDiaDaBaixa(tx, { id: m.payment.id, entryId: m.financeEntryId }, { paidAt: m.entryPaidAtBefore });
           }
           restaurados.push(m.financeEntryId);
           continue;

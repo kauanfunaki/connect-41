@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validarBaixa, saldoEmAberto, estadoDaConta, categoriaDaParte, ehCategoriaDaParte, movimentosDaBaixa } from "./regras";
+import { validarBaixa, saldoEmAberto, estadoDaConta, categoriaDaParte, ehCategoriaDaParte, movimentosDaBaixa, planoDoEspelho, type BaixaNoEspelho } from "./regras";
 
 const HOJE = "2026-10-19";
 
@@ -115,5 +115,56 @@ describe("movimentosDaBaixa", () => {
   it("conta a receber: desconto concedido sai", () => {
     const m = movimentosDaBaixa({ ...base, kind: "RECEBER", principalCentavos: 1_000, jurosCentavos: 0, multaCentavos: 0, descontoCentavos: 100 });
     expect(m[1]).toEqual({ kind: "PAGAR", centavos: 100, categoryId: "desc", parte: "desconto" });
+  });
+});
+
+// O que se testa (19/10, revisão do lote C): o Omie só mexe nas baixas dele, e
+// nunca na que alguém conciliou aqui com o extrato.
+describe("planoDoEspelho", () => {
+  const DIA = Date.parse("2026-10-07T18:30:00Z");
+  const baixa = (o: Partial<BaixaNoEspelho>): BaixaNoEspelho => ({ id: "b1", origem: "OMIE", principalCentavos: 100_000, paidAtMs: DIA, vinculo: null, ...o });
+  const pago = { pago: true, paidAtMs: DIA, valorCentavos: 100_000 };
+  const aberto = { pago: false, paidAtMs: null, valorCentavos: 100_000 };
+
+  it("paga no Omie e sem baixa aqui: nasce a cheia", () => {
+    expect(planoDoEspelho([], pago)).toMatchObject({ criar: { principalCentavos: 100_000 }, atualizar: null, apagar: [], conflito: false, baixadoCentavos: 100_000 });
+  });
+
+  it("igual ao Omie: nada a fazer", () => {
+    const p = planoDoEspelho([baixa({})], pago);
+    expect(p).toMatchObject({ criar: null, atualizar: null, apagar: [], conflito: false });
+  });
+
+  it("parcial feita aqui e o Omie dá por paga: a do Omie é só o resto", () => {
+    const p = planoDoEspelho([baixa({ id: "m", origem: "MANUAL", principalCentavos: 40_000 })], pago);
+    expect(p).toMatchObject({ criar: { principalCentavos: 60_000 }, baixadoCentavos: 100_000 });
+  });
+
+  it("paga aqui pelo botão e em aberto no Omie: a daqui fica, sem conflito", () => {
+    const p = planoDoEspelho([baixa({ id: "m", origem: "MANUAL" })], aberto);
+    expect(p).toMatchObject({ criar: null, atualizar: null, apagar: [], conflito: false, baixadoCentavos: 100_000 });
+  });
+
+  it("estorno no Omie: a baixa dele sai, e a ligada pela conciliação do Omie sai do extrato junto", () => {
+    expect(planoDoEspelho([baixa({ vinculo: { peloOmie: true } })], aberto)).toMatchObject({ apagar: [{ id: "b1", desvincular: true }], conflito: false, baixadoCentavos: 0 });
+    expect(planoDoEspelho([baixa({ origem: "MIGRACAO" })], aberto)).toMatchObject({ apagar: [{ id: "b1", desvincular: false }] });
+  });
+
+  it("estorno no Omie de baixa conciliada aqui com o extrato: não mexe, é conflito", () => {
+    const p = planoDoEspelho([baixa({ origem: "MIGRACAO", vinculo: { peloOmie: false } })], aberto);
+    expect(p).toMatchObject({ criar: null, atualizar: null, apagar: [], conflito: true, baixadoCentavos: 100_000 });
+  });
+
+  it("o Omie muda valor ou dia: a baixa dele acompanha — a conciliada aqui, não", () => {
+    const outroDia = { ...pago, paidAtMs: DIA + 86_400_000, valorCentavos: 120_000 };
+    expect(planoDoEspelho([baixa({ vinculo: { peloOmie: true } })], outroDia)).toMatchObject({ atualizar: { id: "b1", principalCentavos: 120_000, desvincular: true } });
+    const presa = planoDoEspelho([baixa({ vinculo: { peloOmie: false } })], outroDia);
+    expect(presa).toMatchObject({ criar: { principalCentavos: 20_000 }, atualizar: null, conflito: false });
+  });
+
+  it("baixas daqui acima do valor do Omie: conflito só com a do Omie presa", () => {
+    const menor = { ...pago, valorCentavos: 80_000 };
+    expect(planoDoEspelho([baixa({ vinculo: { peloOmie: false } })], menor)).toMatchObject({ apagar: [], conflito: true });
+    expect(planoDoEspelho([baixa({ origem: "MANUAL" })], menor)).toMatchObject({ apagar: [], conflito: false });
   });
 });

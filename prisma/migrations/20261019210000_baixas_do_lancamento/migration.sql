@@ -58,7 +58,10 @@ ALTER TABLE `finance_entry_payments` ADD CONSTRAINT `finance_entry_payments_crea
 ALTER TABLE `bank_transaction_matches` ADD CONSTRAINT `bank_transaction_matches_paymentId_fkey` FOREIGN KEY (`paymentId`) REFERENCES `finance_entry_payments`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- As baixas de hoje: uma cheia por conta paga. A conta bancária é a da linha
--- do extrato conciliada, ou a do Omie ligada a uma conta do Connect.
+-- do extrato conciliada, ou a do Omie ligada a uma conta do Connect. A origem
+-- é CONCILIACAO quando foi a conciliação daqui que pagou a conta (o vínculo
+-- guarda a conta em aberto antes dele) — essa baixa é do Connect, e a leitura
+-- do Omie não a apaga; as outras ficam MIGRACAO.
 INSERT INTO `finance_entry_payments`
     (`id`, `tenantId`, `companyId`, `entryId`, `paidAt`, `principal`, `interest`, `fine`, `discount`, `cash`, `bankAccountId`, `origin`, `createdAt`)
 SELECT
@@ -70,7 +73,10 @@ SELECT
         (SELECT ba.`id` FROM `bank_accounts` ba
           WHERE ba.`companyId` = fe.`companyId` AND fe.`omieAccountId` IS NOT NULL AND ba.`omieAccountId` = fe.`omieAccountId` LIMIT 1)
     ),
-    'MIGRACAO', CURRENT_TIMESTAMP(3)
+    CASE WHEN EXISTS (SELECT 1 FROM `bank_transaction_matches` m
+                       WHERE m.`financeEntryId` = fe.`id` AND m.`entryStatusBefore` <> 'PAGO')
+         THEN 'CONCILIACAO' ELSE 'MIGRACAO' END,
+    CURRENT_TIMESTAMP(3)
 FROM `finance_entries` fe
 WHERE fe.`paidAt` IS NOT NULL AND fe.`status` <> 'CANCELADO';
 
