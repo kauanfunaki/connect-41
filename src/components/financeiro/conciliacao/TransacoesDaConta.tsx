@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Check, ListChecks, Plus, EyeOff, Undo2, RotateCcw, Sparkles, Lock } from "lucide-react";
+import { Check, ListChecks, Plus, EyeOff, Undo2, RotateCcw, Sparkles, Lock, ArrowLeftRight } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import type { VarianteDoBadge } from "@/components/ui/Badge";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
@@ -24,6 +25,7 @@ import {
   ignorarTransacao,
   reabrirTransacao,
   lancamentosParaEscolha,
+  transferirEntreContas,
   type LancamentoParaEscolha,
 } from "@/app/(app)/conciliacao/actions";
 import { moeda } from "@/lib/financeiro/formato";
@@ -32,6 +34,7 @@ import { formatarCompetencia } from "@/lib/format";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 import { CamposDaContraparteNova } from "@/components/financeiro/ContraparteNova";
+import { BARRAS_DO_NIVEL, ROTULO_DO_NIVEL, EXPLICACAO_DO_NIVEL, type NivelDoCasamento } from "@/lib/financeiro/conciliacao/casamento";
 
 export type LancamentoResumido = {
   id: string;
@@ -57,11 +60,20 @@ export type LinhaDaTransacao = {
    * `bloqueio`, é uma conta travada na aprovação: mostra o motivo, não confirma.
    */
   sugestao: (LancamentoResumido & { motivo: string; bloqueio: string | null }) | null;
+  /**
+   * Sem sugestão forte, o candidato que se destaca dos outros (19/10, as
+   * "torres" do Omie): mostrado para a pessoa conferir e conciliar com um clique.
+   */
+  provavel: (LancamentoResumido & { motivo: string; bloqueio: string | null }) | null;
+  /** O grau de casamento da pendente — as barras. Nulo fora da pendente. */
+  nivel: NivelDoCasamento | null;
   /** Lançamentos de valor exato — com ou sem sugestão forte. */
   candidatosDeMesmoValor: number;
   /** Quantos desses estão travados na aprovação por alçada. */
   travadosDeMesmoValor: number;
   vinculados: LancamentoResumido[];
+  /** Conciliada como transferência entre contas (19/10): desfazer desfaz as duas pontas. */
+  transferencia: boolean;
 };
 
 type Contraparte = { id: string; nome: string; documento: string | null; defaultCategoryId: string | null; defaultCostCenterId?: string | null };
@@ -79,6 +91,26 @@ const STATUS: Record<LinhaDaTransacao["status"], { rotulo: string; variante: Var
 
 function descricaoDaTransacao(l: Pick<LinhaDaTransacao, "memo" | "nome">): string {
   return [l.nome, l.memo].filter(Boolean).join(" · ") || "Sem descrição no extrato";
+}
+
+/**
+ * As "torres" do Omie (19/10): quatro barras, cheias até o grau de casamento.
+ * O nome do nível vai do lado, em texto miúdo — barra sozinha não diz nada a
+ * quem nunca usou o Omie, e a cor não pode ser a única pista.
+ */
+function SinalDoCasamento({ nivel }: { nivel: NivelDoCasamento }) {
+  const cheias = BARRAS_DO_NIVEL[nivel];
+  const cor = nivel === "encontrado" ? "bg-success" : nivel === "nenhum" ? "bg-fg-muted" : "bg-brand";
+  return (
+    <span className="inline-flex items-center gap-1.5" title={EXPLICACAO_DO_NIVEL[nivel]}>
+      <span aria-hidden className="inline-flex h-3.5 items-end gap-[2px]">
+        {[1, 2, 3, 4].map((b) => (
+          <span key={b} className={`w-[3px] rounded-sm ${b <= cheias ? cor : "bg-border"}`} style={{ height: `${b * 25}%` }} />
+        ))}
+      </span>
+      <span className="text-micro text-fg-muted whitespace-nowrap">{ROTULO_DO_NIVEL[nivel]}</span>
+    </span>
+  );
 }
 
 function avisoDeTravados(candidatos: number, travados: number): string | null {
@@ -102,6 +134,7 @@ export function TransacoesDaConta({
   centros = [],
   projetos = [],
   companyId,
+  outrasContas = [],
 }: {
   linhas: LinhaDaTransacao[];
   podeAgir: boolean;
@@ -113,11 +146,14 @@ export function TransacoesDaConta({
   projetos?: Projeto[];
   /** A empresa da conta — a busca pelo CNPJ diz se a ficha já existe nela. */
   companyId: string;
+  /** As outras contas ativas da empresa. Sem nenhuma, não há "Transferência". */
+  outrasContas?: { id: string; nome: string }[];
 }) {
   const { dialog, requestConfirm } = useConfirm();
   const [escolhendo, setEscolhendo] = useState<LinhaDaTransacao | null>(null);
   const [criando, setCriando] = useState<LinhaDaTransacao | null>(null);
   const [ignorando, setIgnorando] = useState<LinhaDaTransacao | null>(null);
+  const [transferindo, setTransferindo] = useState<LinhaDaTransacao | null>(null);
 
   function confirmarSugestao(l: LinhaDaTransacao) {
     const s = l.sugestao!;
@@ -134,12 +170,28 @@ export function TransacoesDaConta({
     );
   }
 
+  function conciliarComProvavel(l: LinhaDaTransacao) {
+    const p = l.provavel!;
+    requestConfirm(
+      {
+        title: "Conciliar com este lançamento?",
+        description: `${moeda(Math.abs(l.centavos))} de ${dataCurta(l.dataKey)} liquida "${p.contraparteNome}" (${p.motivo}). Não há certeza de que é este — confira. O lançamento fica pago em ${dataCurta(l.dataKey)}.`,
+        confirmLabel: "Conciliar",
+      },
+      async () => {
+        const r = await confirmarConciliacao(l.id, [p.id]);
+        if ("error" in r) throw new Error(r.error);
+      }
+    );
+  }
+
   function desfazer(l: LinhaDaTransacao) {
     requestConfirm(
       {
-        title: "Desfazer a conciliação?",
-        description:
-          "A transação volta a pendente e cada lançamento volta ao que era antes — em aberto, ou pago na data original.",
+        title: l.transferencia ? "Desfazer a transferência?" : "Desfazer a conciliação?",
+        description: l.transferencia
+          ? "Os dois lançamentos da transferência são cancelados, e esta linha — e a da outra conta, se estava conciliada — voltam a pendente."
+          : "A transação volta a pendente e cada lançamento volta ao que era antes — em aberto, ou pago na data original.",
         confirmLabel: "Desfazer",
         destructive: true,
       },
@@ -171,6 +223,7 @@ export function TransacoesDaConta({
             extrato: l.nome ?? "",
             tipo: l.centavos < 0 ? "Saída" : "Entrada",
             situacao: rotuloDoStatus(l),
+            casamento: l.nivel ? ROTULO_DO_NIVEL[l.nivel] : "",
           },
         }))}
       >
@@ -188,7 +241,13 @@ export function TransacoesDaConta({
                 <FiltroDaColuna rotulo="Valor" campos={[{ chave: "tipo", rotulo: "Entrada ou saída" }]} />
               </th>
               <th className="py-2 pr-3 font-medium">
-                <FiltroDaColuna rotulo="Situação" chave="situacao" />
+                <FiltroDaColuna
+                  rotulo="Situação"
+                  campos={[
+                    { chave: "situacao", rotulo: "Situação" },
+                    { chave: "casamento", rotulo: "Casamento" },
+                  ]}
+                />
               </th>
               <th className="py-2 font-medium">Lançamento</th>
             </tr>
@@ -206,7 +265,10 @@ export function TransacoesDaConta({
                   {moeda(l.centavos)}
                 </td>
                 <td className="py-2.5 pr-3">
-                  <Selo tom={tomDaVariante(STATUS[l.status].variante)}>{rotuloDoStatus(l)}</Selo>
+                  <div className="flex flex-col items-start gap-1">
+                    <Selo tom={tomDaVariante(STATUS[l.status].variante)}>{rotuloDoStatus(l)}</Selo>
+                    {l.nivel && <SinalDoCasamento nivel={l.nivel} />}
+                  </div>
                 </td>
                 <td className="py-2.5">
                   {l.status === "PENDENTE" && (
@@ -232,6 +294,19 @@ export function TransacoesDaConta({
                             <ResumoDoLancamento l={l.sugestao} />
                           </span>
                         </Aviso>
+                      ) : l.provavel ? (
+                        // O mais provável, sem a certeza da sugestão: tom neutro
+                        // e "conciliar com este", não "confirmar".
+                        <Aviso tom="neutro" icone={l.provavel.bloqueio ? <Lock /> : <ListChecks />} className="max-w-[420px]">
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-micro font-medium">
+                              Mais provável · {l.provavel.motivo}
+                              {l.candidatosDeMesmoValor > 1 && ` · ${l.candidatosDeMesmoValor} de mesmo valor`}
+                            </span>
+                            <ResumoDoLancamento l={l.provavel} />
+                            {l.provavel.bloqueio && <span className="text-micro text-fg-secondary">{l.provavel.bloqueio}</span>}
+                          </span>
+                        </Aviso>
                       ) : (
                         l.candidatosDeMesmoValor > 0 && (
                           <span className="text-micro text-fg-muted">
@@ -247,12 +322,22 @@ export function TransacoesDaConta({
                               <Check size={12} /> Confirmar
                             </Button>
                           )}
+                          {l.provavel && !l.provavel.bloqueio && (
+                            <Button size="xs" variant="secondary" onClick={() => conciliarComProvavel(l)}>
+                              <Check size={12} /> Conciliar com este
+                            </Button>
+                          )}
                           <Button size="xs" variant="secondary" onClick={() => setEscolhendo(l)}>
                             <ListChecks size={12} /> Escolher lançamentos
                           </Button>
                           <Button size="xs" variant="secondary" onClick={() => setCriando(l)}>
                             <Plus size={12} /> Criar lançamento
                           </Button>
+                          {outrasContas.length > 0 && (
+                            <Button size="xs" variant="secondary" onClick={() => setTransferindo(l)}>
+                              <ArrowLeftRight size={12} /> Transferência
+                            </Button>
+                          )}
                           <Button size="xs" variant="ghost" onClick={() => setIgnorando(l)}>
                             <EyeOff size={12} /> Ignorar
                           </Button>
@@ -294,6 +379,7 @@ export function TransacoesDaConta({
 
       {dialog}
       {escolhendo && <EscolherLancamentos transacao={escolhendo} onClose={() => setEscolhendo(null)} />}
+      {transferindo && <TransferirEntreContas transacao={transferindo} contas={outrasContas} onClose={() => setTransferindo(null)} />}
       {criando && (
         <CriarLancamento
           transacao={criando}
@@ -400,9 +486,9 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             enviarAoLimpar
-            placeholder="Buscar por contraparte ou descrição"
+            placeholder="Nome, descrição, valor ou data (ex.: 150,00 ou 15/10)"
             aria-label="Buscar lançamento"
-            className="w-80 max-w-full"
+            className="w-96 max-w-full"
           />
         </form>
 
@@ -412,7 +498,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
           ) : lista.length === 0 ? (
             <p className="p-3 text-fs-2 text-fg-muted">
               Nenhum lançamento em aberto ou sem conciliação {busca ? "com esta busca" : "perto desta data"}. Busque pelo
-              nome ou crie o lançamento.
+              nome, pelo valor ou pela data, ou crie o lançamento.
             </p>
           ) : (
             <table className="w-full text-ui">
@@ -642,6 +728,68 @@ function CriarLancamento({
           onCancel={onClose}
           erro={erro}
         />
+      </form>
+    </Modal>
+  );
+}
+
+// ─── Transferência entre contas (19/10) ─────────────────────────────────────
+
+function TransferirEntreContas({
+  transacao,
+  contas,
+  onClose,
+}: {
+  transacao: LinhaDaTransacao;
+  contas: { id: string; nome: string }[];
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
+  const sai = transacao.centavos < 0;
+
+  return (
+    <Modal open onClose={() => !pendente && onClose()} title="Transferência entre contas" maxWidth="max-w-lg">
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const dados = new FormData(e.currentTarget);
+          setErro(null);
+          startTransition(async () => {
+            const r = await transferirEntreContas(dados);
+            if ("error" in r) {
+              setErro(r.error);
+              return;
+            }
+            toast.success(r.aviso);
+            onClose();
+          });
+        }}
+      >
+        <input type="hidden" name="transactionId" value={transacao.id} />
+        <p className="text-helper text-fg-secondary">
+          {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} · <strong className="text-fg">{moeda(transacao.centavos)}</strong>.{" "}
+          {sai ? "Sai desta conta e entra na conta escolhida." : "Entra nesta conta, vindo da conta escolhida."}
+        </p>
+        <CampoForm label={sai ? "Para a conta" : "Da conta"} htmlFor="transferencia-conta" required>
+          <Select id="transferencia-conta" name="outraContaId" defaultValue={contas.length === 1 ? contas[0]!.id : ""} required>
+            <option value="" disabled>
+              Escolha…
+            </option>
+            {contas.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
+          </Select>
+        </CampoForm>
+        <p className="text-helper text-fg-muted">
+          Os dois lançamentos — a saída de uma conta e a entrada na outra — nascem pagos neste dia, na categoria de
+          transferência, que fica fora da DRE. Se o extrato da outra conta já tem a linha deste valor, ela é conciliada junto.
+        </p>
+        <FormFooter pending={pendente} pendingLabel="Registrando…" submitLabel="Registrar transferência" onCancel={onClose} erro={erro} />
       </form>
     </Modal>
   );

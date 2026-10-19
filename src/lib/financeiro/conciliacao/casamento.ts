@@ -237,6 +237,48 @@ export function sugestaoDaTransacao(ranking: CandidatoPontuado[]): SugestaoDaTra
   return { candidato: forte, bloqueio: forte.lancamento.bloqueioDeBaixa ?? null };
 }
 
+// ─── As "torres" (19/10) ─────────────────────────────────────────────────────
+//
+// No extrato do Omie cada linha mostra barras com o quanto ela casa com um
+// lançamento, e o lançamento vai junto — o BPO pediu o mesmo. Quatro níveis,
+// do mais forte ao nenhum. A sugestão forte continua sendo a única que a
+// tela confirma sem mais; o "provável" e o "só o valor" mostram o candidato
+// que se destaca, e conciliar com ele é um clique consciente da pessoa.
+
+export type NivelDoCasamento = "encontrado" | "provavel" | "so_valor" | "nenhum";
+
+/** Barras de cada nível, de 4 a 1 — como as torres do Omie. */
+export const BARRAS_DO_NIVEL: Record<NivelDoCasamento, 1 | 2 | 3 | 4> = { encontrado: 4, provavel: 3, so_valor: 2, nenhum: 1 };
+
+export const ROTULO_DO_NIVEL: Record<NivelDoCasamento, string> = {
+  encontrado: "Encontrado",
+  provavel: "Provável",
+  so_valor: "Só o valor bate",
+  nenhum: "Não encontrado",
+};
+
+/** O que cada nível quer dizer — o texto do `title` das barras. */
+export const EXPLICACAO_DO_NIVEL: Record<NivelDoCasamento, string> = {
+  encontrado: "Um lançamento casa no valor e na data, sem outro parecido.",
+  provavel: "Há lançamento de mesmo valor perto desta data, mas sem certeza — confira antes de conciliar.",
+  so_valor: "Há lançamento de mesmo valor, mas com data longe do extrato.",
+  nenhum: "Nenhum lançamento em aberto com este valor. Escolha vários que somem o valor, ou crie o lançamento.",
+};
+
+/**
+ * O nível da linha e o candidato que se destaca. O destaque só existe quando
+ * um candidato está à frente dos outros — dois aluguéis iguais no mesmo dia
+ * empatam, e aí é a pessoa que escolhe na lista.
+ */
+export function nivelDoCasamento(ranking: CandidatoPontuado[]): { nivel: NivelDoCasamento; destaque: CandidatoPontuado | null } {
+  const [primeiro, segundo] = ranking;
+  if (!primeiro) return { nivel: "nenhum", destaque: null };
+  const forte = sugestaoForte(ranking);
+  if (forte) return { nivel: "encontrado", destaque: forte };
+  const destaque = !segundo || primeiro.pontos > segundo.pontos ? primeiro : null;
+  return { nivel: primeiro.naJanela ? "provavel" : "so_valor", destaque };
+}
+
 export type SelecaoValidada = { ok: true; totalCentavos: number } | { ok: false; erro: string };
 
 /**
