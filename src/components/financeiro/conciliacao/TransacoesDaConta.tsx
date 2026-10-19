@@ -34,6 +34,7 @@ import { formatarCompetencia } from "@/lib/format";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 import { CamposDaContraparteNova } from "@/components/financeiro/ContraparteNova";
+import { CampoDeProjeto } from "@/components/financeiro/CampoDeProjeto";
 import { BARRAS_DO_NIVEL, ROTULO_DO_NIVEL, EXPLICACAO_DO_NIVEL, type NivelDoCasamento } from "@/lib/financeiro/conciliacao/casamento";
 
 export type LancamentoResumido = {
@@ -142,7 +143,7 @@ export function TransacoesDaConta({
   categorias: Categoria[];
   /** Centros de custo ativos da empresa; sem nenhum, o campo não aparece. */
   centros?: Centro[];
-  /** Projetos ativos da empresa; sem nenhum, o campo não aparece. */
+  /** Projetos ativos da empresa; sem nenhum, o campo aparece desabilitado e diz onde cadastrar. */
   projetos?: Projeto[];
   /** A empresa da conta — a busca pelo CNPJ diz se a ficha já existe nela. */
   companyId: string;
@@ -684,8 +685,8 @@ function CriarLancamento({
           </CampoForm>
         </FieldGrid>
 
-        {(centros.length > 0 || projetos.length > 0) && (
-          <FieldGrid columns={centros.length > 0 && projetos.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}>
+        {/* Projeto sempre (19/10): ver `CampoDeProjeto`. */}
+        <FieldGrid columns={centros.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}>
             {centros.length > 0 && (
               <CampoForm
                 label="Centro de custo"
@@ -702,20 +703,8 @@ function CriarLancamento({
                 </Select>
               </CampoForm>
             )}
-            {projetos.length > 0 && (
-              <CampoForm label="Projeto" htmlFor="criar-projeto" helper="Opcional.">
-                <Select id="criar-projeto" name="projectId" defaultValue="">
-                  <option value="">Sem projeto</option>
-                  {projetos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </Select>
-              </CampoForm>
-            )}
-          </FieldGrid>
-        )}
+            <CampoDeProjeto id="criar-projeto" companyId={companyId} projetos={projetos} />
+        </FieldGrid>
 
         <CampoForm label="Descrição" htmlFor="criar-descricao">
           <Input id="criar-descricao" name="descricao" maxLength={255} defaultValue={(transacao.memo ?? transacao.nome ?? "").slice(0, 255)} />
