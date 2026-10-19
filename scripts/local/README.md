@@ -1,5 +1,11 @@
 # Connect local, com dados fictícios
 
+O menu lateral reúne as funções do SPED em uma única entrada. Seu painel e a
+navegação interna oferecem Classificação, Apuração, De-Para CFOP, Regras e DCIP e
+DIME, conforme os módulos habilitados em Configurações. Desligar um módulo remove
+os respectivos acessos. O De-Para CFOP informa indisponibilidade enquanto o motor
+não fornecer correspondências; nenhuma conversão fiscal é presumida.
+
 Um Connect inteiro rodando na máquina, com banco próprio no Docker e só dado
 inventado. Existe para gravar os vídeos da ajuda (`scripts/videos/`), que vão para
 o YouTube e não podem mostrar cliente de verdade — e serve para qualquer teste que

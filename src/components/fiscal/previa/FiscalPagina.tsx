@@ -3,6 +3,8 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs } from "@/components/ui/Tabs";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { menuSped } from "@/lib/fiscal/menu-sped";
 import { Card } from "@/components/ui/Card";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { useFiscal, AvisosFiscais, FiltroDoContextoFiscal, MenuDoCenarioFiscal, SelosDoTesteFiscal } from "./ContextoFiscal";
@@ -26,6 +28,8 @@ export function FiscalPagina({ pagina }: { pagina: PaginaFiscal }) {
   const abas: readonly (readonly [string, string])[] = definicao.abas;
   const pedida = searchParams.get("aba");
   const aba = abas.find(([chave]) => chave === pedida)?.[0] ?? abas[0]?.[0] ?? "";
+  const acessos = menuSped(PAGINAS_FISCAIS.filter((p) => modulos.includes(p.modulo)).map((p) => ({ code: p.modulo, href: p.caminho }))).telas;
+  const acessoAtivo = acessos.find((t) => t.href === `${pathname}?aba=${aba}`) ?? acessos.find((t) => t.href === pathname);
   // Trocar de aba deixa para trás os filtros e a página da aba anterior.
   const trocarAba = (nova: string) => { const query = new URLSearchParams(); query.set("aba", nova); window.history.pushState(null, "", `${pathname}?${query.toString()}`); };
   const key = `${pagina}-${aba}-${cenario.contexto.empresaId}-${cenario.contexto.estabelecimentoId}-${cenario.contexto.competencia}`;
@@ -34,6 +38,7 @@ export function FiscalPagina({ pagina }: { pagina: PaginaFiscal }) {
   return <>
     {pagina !== "painel" && modulos.includes("fiscal_painel") && <Breadcrumb items={[{ label: "Painel fiscal", href: "/fiscal" }, { label: definicao.titulo }]} />}
     <PageHeader title={definicao.titulo} subtitle={definicao.descricao} meta={<SelosDoTesteFiscal />} action={<MenuDoCenarioFiscal />} />
+    {acessos.length > 0 && <AbasDeLink ativa={acessoAtivo?.label ?? ""} abas={acessos.map((t) => ({ chave: t.label, rotulo: t.label, href: t.href }))} />}
     <FiltroDoContextoFiscal />
     <AvisosFiscais />
     {abas.length > 0 && <Tabs className="mb-5" active={aba} tabs={abas.map(([key, label]) => ({ key, label, panelId: "painel-fiscal" }))} onChange={trocarAba} />}
