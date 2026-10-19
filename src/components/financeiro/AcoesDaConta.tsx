@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { Check, Undo2, CircleDollarSign, Send, FileText, MessageSquareWarning } from "lucide-react";
+import { Check, Undo2, CircleDollarSign, Send, FileText, MessageSquareWarning, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CampoData } from "@/components/ui/CampoData";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -10,6 +10,7 @@ import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import type { AcaoDeContaState } from "@/lib/financeiro/acoes";
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { useEdicaoDeLancamento } from "./EditarLancamento";
 
 type Acoes = {
   conferir: (entryId: string) => Promise<AcaoDeContaState>;
@@ -41,6 +42,7 @@ export function AcoesDaConta({
   pendenciaHref = null,
   emColunas = false,
   comConferir = true,
+  podeEditar = false,
 }: {
   entryId: string;
   situacao: SituacaoDaConta;
@@ -61,6 +63,8 @@ export function AcoesDaConta({
   emColunas?: boolean;
   /** Alguma linha da tabela tem "Conferir": só então a posição dele fica guardada nas outras. */
   comConferir?: boolean;
+  /** "Editar" no "⋯" (19/10). O que cada campo permite, a janela pergunta ao servidor. */
+  podeEditar?: boolean;
 }) {
   const [erro, setErro] = useState<string | null>(null);
   const [erroDaBaixa, setErroDaBaixa] = useState<string | null>(null);
@@ -68,6 +72,8 @@ export function AcoesDaConta({
   const [data, setData] = useState(hojeISO);
   const [pendente, startTransition] = useTransition();
   const idDaData = useId();
+  // Conta que voltou para a aprovação ao mudar de valor diz isso na linha.
+  const edicao = useEdicaoDeLancamento((avisoDaEdicao) => setAviso(avisoDaEdicao));
 
   function executar(fn: () => Promise<AcaoDeContaState>, aoTerminar?: () => void) {
     setErro(null);
@@ -93,13 +99,26 @@ export function AcoesDaConta({
   const paga = situacao === "PAGA";
   const cancelada = situacao === "CANCELADA";
   const podeEnviarAgora = !paga && !cancelada && podeEnviar && !!acoes.enviarParaAprovacao;
-  const temMenu = !!notaHref || (!!pendenciaHref && !cancelada) || podeEnviarAgora || paga;
+  const editavel = podeEditar && !cancelada;
+  const temMenu = editavel || !!notaHref || (!!pendenciaHref && !cancelada) || podeEnviarAgora || paga;
 
   // O gatilho é o do `MenuDeMaisAcoes` (08/10/2026): estava copiado à mão aqui.
   const menu = temMenu && (
     <MenuDeMaisAcoes rotulo="Mais ações" aria-label="Mais ações da conta" width={220}>
       {({ close }) => (
         <div className="flex flex-col gap-0.5">
+          {/* Primeiro do menu: é o que o BPO procurou aqui (retorno de 19/10). */}
+          {editavel && (
+            <ItemDoMenu
+              icone={<Pencil />}
+              onClick={() => {
+                close();
+                edicao.abrir(entryId);
+              }}
+            >
+              Editar
+            </ItemDoMenu>
+          )}
           {notaHref && (
             <ItemDoMenu href={notaHref} icone={<FileText />} onClick={close}>
               Ver nota fiscal
@@ -183,6 +202,7 @@ export function AcoesDaConta({
       <div className={`flex min-w-0 max-w-full flex-col gap-1 items-start ${emColunas ? "w-full" : ""}`}>
         {disporAcoes(comConferir && vaga(rotuloConferir), vaga(rotuloDaBaixa))}
         {erro && <span className="text-micro text-danger max-w-[220px]">{erro}</span>}
+        {edicao.janela}
       </div>
     );
   }
@@ -257,6 +277,7 @@ export function AcoesDaConta({
       {bloqueioDeBaixa && <span className="text-micro text-fg-muted max-w-[220px]">{bloqueioDeBaixa}</span>}
       {erro && <span className="text-micro text-danger max-w-[220px]">{erro}</span>}
       {aviso && <span className="text-micro text-warning-fg max-w-[220px]">{aviso}</span>}
+      {edicao.janela}
     </div>
   );
 }

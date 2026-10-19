@@ -37,6 +37,7 @@ describe("mapearMovimento", () => {
       categoriaCodigo: "2.01.03",
       contraparteDocumento: "12345678000190",
       descricao: "Título 123/1 · NF 6014",
+      numeroDocumento: "123/1",
     });
     expect("fora" in r ? null : r.vencimento.toISOString()).toBe("2026-09-15T15:00:00.000Z");
   });

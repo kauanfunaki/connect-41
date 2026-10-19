@@ -372,7 +372,7 @@ export async function sincronizarFinanceiroDaEmpresa(
         select: {
           id: true, omieTitleId: true, status: true, paidAt: true, amount: true, dueDate: true,
           categoryId: true, competence: true, closeReason: true, agreementId: true,
-          omieBaixaId: true, omieReconciledAt: true,
+          omieBaixaId: true, omieReconciledAt: true, issueDate: true, documentNumber: true,
         },
       });
       const atualPorTitulo = new Map(jaNoConnect.map((e) => [e.omieTitleId!, e]));
@@ -398,6 +398,9 @@ export async function sincronizarFinanceiroDaEmpresa(
           dueDate: t.vencimento,
           competence: t.competencia,
           categoryId: categoryId && !categoryId.startsWith("previa:") ? categoryId : null,
+          // Emissão e número do título (19/10): o Omie manda neles como no resto.
+          issueDate: t.emissao,
+          documentNumber: t.numeroDocumento,
         } as const;
 
         if (!atual) {
@@ -431,7 +434,11 @@ export async function sincronizarFinanceiroDaEmpresa(
           atual.amount.toFixed(2) !== dados.amount ||
           atual.dueDate.getTime() !== dados.dueDate.getTime() ||
           atual.competence !== dados.competence ||
-          (dados.categoryId !== null && atual.categoryId !== dados.categoryId);
+          (dados.categoryId !== null && atual.categoryId !== dados.categoryId) ||
+          // A primeira leitura depois de 19/10 preenche a emissão e o número das
+          // contas que já estavam no Connect.
+          (atual.issueDate?.getTime() ?? null) !== (dados.issueDate?.getTime() ?? null) ||
+          atual.documentNumber !== dados.documentNumber;
         if (!mudou) {
           somar("iguais");
           continue;

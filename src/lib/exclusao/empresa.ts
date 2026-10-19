@@ -192,6 +192,7 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
   // As linhas do orçamento vão em cascata.
   { modelo: "Budget", acao: "apagar", executar: (tx, a) => n(tx.budget.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "CostCenter", acao: "apagar", executar: (tx, a) => n(tx.costCenter.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "FinanceProject", acao: "apagar", executar: (tx, a) => n(tx.financeProject.deleteMany({ where: daEmpresa(a) })) },
   // Plano de contas próprio: o que a empresa escondeu, o que ela classificou
   // na DRE, e o que outra empresa tenha feito com uma categoria desta.
   {
@@ -285,7 +286,7 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
 export async function arquivosDaEmpresa(tx: Tx, a: AlvoEmpresa, logoUrl: string | null): Promise<ArquivosDoCadastro> {
   const arquivos = semArquivos();
   const vagas = await vagasDaEmpresa(tx, a);
-  const [documentos, enviados, pendencias, mensagens, solicitacoes, processos, guias, drive, candidaturas] = await juntos(tx, [
+  const [documentos, enviados, pendencias, mensagens, solicitacoes, processos, guias, drive, candidaturas, anexosDasContas] = await juntos(tx, [
     () => tx.document.findMany({ where: documentosDaEmpresa(a, vagas), select: { fileUrl: true } }),
     () => tx.clientDocument.findMany({ where: daEmpresa(a), select: { fileUrl: true } }),
     () => tx.clientRequestAttachment.findMany({ where: { request: daEmpresa(a) }, select: { fileUrl: true } }),
@@ -298,6 +299,8 @@ export async function arquivosDaEmpresa(tx: Tx, a: AlvoEmpresa, logoUrl: string 
     }),
     () => tx.driveFile.findMany({ where: { tenantId: a.tenantId, folder: { companyId: a.id } }, select: { storageKey: true } }),
     () => tx.candidatura.findMany({ where: { tenantId: a.tenantId, vaga: { companyId: a.id }, resumeUrl: { not: null } }, select: { resumeUrl: true } }),
+    // Os anexos das contas (lote H2): a linha sai em cascata com o lançamento; o arquivo, por aqui.
+    () => tx.financeEntryAttachment.findMany({ where: { tenantId: a.tenantId, entry: { companyId: a.id } }, select: { fileUrl: true } }),
   ]);
   anotar(arquivos, "documents", documentos.map((d) => d.fileUrl));
   anotar(arquivos, "client-documents", enviados.map((d) => d.fileUrl));
@@ -306,6 +309,7 @@ export async function arquivosDaEmpresa(tx: Tx, a: AlvoEmpresa, logoUrl: string 
   anotar(arquivos, "service-requests", solicitacoes.map((d) => d.fileUrl));
   anotar(arquivos, "societario-processos", processos.map((d) => d.fileUrl));
   anotar(arquivos, "drive", drive.map((d) => d.storageKey));
+  anotar(arquivos, "finance-entries", anexosDasContas.map((d) => d.fileUrl));
   for (const g of guias) if (g.documentUrl) arquivos.guias.push({ tenantId: a.tenantId, documentUrl: g.documentUrl });
   arquivos.curriculos.push(...candidaturas.map((c) => c.resumeUrl).filter((u): u is string => !!u));
   if (logoUrl) arquivos.publicos.push({ pasta: "companies", url: logoUrl });
