@@ -269,7 +269,7 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
   // cancelado de antes da coluna. Condicionado ao estado lido — uma baixa ou um
   // acordo que chegou antes não é cancelado por cima.
   const cancelado = await prisma.financeEntry.updateMany({
-    where: { id: entryId, tenantId: c.tenantId, status: conta.status, paidAt: null, agreementId: null, payments: { none: {} } },
+    where: { id: entryId, tenantId: c.tenantId, status: conta.status, paidAt: null, paidPrincipal: 0, agreementId: null, payments: { none: {} } },
     data: { status: "CANCELADO", closeReason: "CANCELADO" },
   });
   if (cancelado.count !== 1) return { error: "O lançamento acabou de mudar — atualize a tela." };

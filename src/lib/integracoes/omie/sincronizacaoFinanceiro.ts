@@ -59,7 +59,9 @@ import {
   mesmoNumero,
 } from "./conciliacao";
 import { conciliarEmpresaPeloOmie } from "@/lib/financeiro/conciliacao/omieServidor";
-import { espelharBaixaDoOmie, recalcularConta } from "@/lib/financeiro/baixa/servidor";
+import { BAIXA_NO_ESPELHO, espelharBaixaDoOmie, paraOEspelho, recalcularConta } from "@/lib/financeiro/baixa/servidor";
+import { planoDoEspelho, planoMexe } from "@/lib/financeiro/baixa/regras";
+import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const PREFIXO_DO_FINANCEIRO = "financeiro:";
@@ -387,6 +389,7 @@ export async function sincronizarFinanceiroDaEmpresa(
           id: true, omieTitleId: true, status: true, paidAt: true, amount: true, dueDate: true,
           categoryId: true, competence: true, closeReason: true, agreementId: true,
           omieBaixaId: true, omieReconciledAt: true, issueDate: true, documentNumber: true,
+          payments: { select: BAIXA_NO_ESPELHO },
         },
       });
       const atualPorTitulo = new Map(jaNoConnect.map((e) => [e.omieTitleId!, e]));
@@ -438,10 +441,17 @@ export async function sincronizarFinanceiroDaEmpresa(
         // baixa que a fase de conta tinha gravado — senão a tela de
         // conciliação o daria como conciliado sem pagamento.
         const estornado = status !== "PAGO" && (atual.omieBaixaId !== null || atual.omieReconciledAt !== null);
+        // Paga ou não, e desde quando, sai das baixas (lote C): compara o que o
+        // espelho faria, e não o status do Omie com o da conta — a conta paga no
+        // Connect e em aberto no Omie seria regravada em toda leitura.
+        const valorCentavos = centavosDeDecimal(dados.amount);
+        const plano = planoDoEspelho(atual.payments.map(paraOEspelho), { pago: status === "PAGO", paidAtMs: dados.paidAt?.getTime() ?? null, valorCentavos });
+        if (plano.conflito) somar("baixas_em_conflito");
         const mudou =
           estornado ||
-          atual.status !== dados.status ||
-          (atual.paidAt?.getTime() ?? null) !== (dados.paidAt?.getTime() ?? null) ||
+          (atual.status === "CANCELADO") !== (status === "CANCELADO") ||
+          planoMexe(plano) ||
+          (status !== "CANCELADO" && (atual.status === "PAGO") !== (plano.baixadoCentavos >= valorCentavos)) ||
           atual.amount.toFixed(2) !== dados.amount ||
           atual.dueDate.getTime() !== dados.dueDate.getTime() ||
           atual.competence !== dados.competence ||

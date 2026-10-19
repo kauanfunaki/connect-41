@@ -291,6 +291,9 @@ export async function criarAcordo(formData: FormData): Promise<ResultadoDoAcordo
               status: o.status,
               closeReason: null,
               paidAt: null,
+              // Relido pelo próprio UPDATE: uma baixa parcial que entrou depois da
+              // leitura acima (lote C) não deixa o título virar acordo.
+              paidPrincipal: 0,
               agreementId: o.agreementId,
             },
             data: { status: "CANCELADO", closeReason: "RENEGOCIADO", statusBeforeClose: o.status, renegotiatedAgreementId: acordo.id },
@@ -450,7 +453,7 @@ export async function desfazerAcordo(acordoId: string, motivoBruto: string): Pro
 
       const vivas = a.parcelas.filter((p) => p.status !== "CANCELADO");
       const canceladas = await tx.financeEntry.updateMany({
-        where: { agreementId: a.id, tenantId: c.tenantId, status: { in: ["PROVISORIO", "CONFERIDO"] }, paidAt: null, closeReason: null, bankMatches: { none: {} }, payments: { none: {} } },
+        where: { agreementId: a.id, tenantId: c.tenantId, status: { in: ["PROVISORIO", "CONFERIDO"] }, paidAt: null, paidPrincipal: 0, closeReason: null, bankMatches: { none: {} }, payments: { none: {} } },
         data: { status: "CANCELADO", closeReason: "CANCELADO" },
       });
       // Parcela com baixa parcial também barra (lote C): cancelar esconderia o dinheiro que entrou.
@@ -523,6 +526,7 @@ export async function baixarPorPerda(entryId: string, motivoBruto: string): Prom
           closeReason: null,
           paidAt: null,
           // Com baixa parcial (lote C), a perda esconderia o que já entrou.
+          paidPrincipal: 0,
           payments: { none: {} },
           OR: [{ agreementId: null }, { agreement: { status: { not: "ATIVO" } } }],
         },

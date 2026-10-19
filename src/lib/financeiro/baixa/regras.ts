@@ -121,6 +121,84 @@ export function estadoDaConta(
   return { baixadoCentavos: baixado, quitada, ultimaDataKey: quitada ? ultima : null, status };
 }
 
+// ─── O espelho do Omie ──────────────────────────────────────────────────────
+
+export type OrigemDaBaixa = "MANUAL" | "LANCAMENTO" | "CONCILIACAO" | "TRANSFERENCIA" | "OMIE" | "MIGRACAO";
+
+/** A baixa como o espelho do Omie a enxerga. */
+export type BaixaNoEspelho = {
+  id: string;
+  origem: OrigemDaBaixa;
+  principalCentavos: number;
+  paidAtMs: number;
+  /**
+   * A linha do extrato ligada a ela: `peloOmie` quando foi a conciliação pelo
+   * Omie que ligou, e só a ela — o Omie pode desfazer o que ele mesmo fez.
+   */
+  vinculo: { peloOmie: boolean } | null;
+};
+
+export type PlanoDoEspelho = {
+  criar: { principalCentavos: number } | null;
+  atualizar: { id: string; principalCentavos: number; desvincular: boolean } | null;
+  apagar: { id: string; desvincular: boolean }[];
+  /** O Omie e uma baixa conciliada aqui discordam: fica como está, para gente olhar. */
+  conflito: boolean;
+  /** Quanto do título fica baixado depois do plano. */
+  baixadoCentavos: number;
+};
+
+/**
+ * O que fazer nas baixas de uma conta que veio do Omie para ela dizer o que o
+ * Omie diz. As baixas **do Omie** (origem OMIE, e as MIGRACAO, que eram a
+ * situação do Omie em 19/10) cobrem o que as baixas daqui não cobrem:
+ *
+ * - paga lá: a baixa do Omie é o resto do título, no dia de lá — o título
+ *   inteiro sem baixa daqui; só o que falta depois de uma parcial feita aqui;
+ *   nada, se as daqui já quitam;
+ * - em aberto lá (baixa estornada): a baixa do Omie sai.
+ *
+ * Duas baixas o Omie não toca: a feita no Connect (botão Pagar, conciliação) —
+ * quem a fez sabia de um pagamento que o Omie ainda não registrou —, e a baixa
+ * do Omie que alguém conciliou **aqui** com o extrato: o extrato mostra o
+ * dinheiro, e desfazer aquela conciliação é decisão de gente (`conflito`). A
+ * que a conciliação pelo Omie ligou sai do extrato junto (`desvincular`).
+ */
+export function planoDoEspelho(
+  baixas: BaixaNoEspelho[],
+  omie: { pago: boolean; paidAtMs: number | null; valorCentavos: number }
+): PlanoDoEspelho {
+  const doOmie = (b: BaixaNoEspelho) => b.origem === "OMIE" || b.origem === "MIGRACAO";
+  const presa = (b: BaixaNoEspelho) => b.vinculo !== null && !b.vinculo.peloOmie;
+  const soma = (l: BaixaNoEspelho[]) => l.reduce((s, b) => s + b.principalCentavos, 0);
+  const fixas = baixas.filter((b) => !doOmie(b) || presa(b));
+  const livres = baixas.filter((b) => doOmie(b) && !presa(b));
+  const pagoLa = omie.pago && omie.paidAtMs !== null;
+  const devido = pagoLa ? Math.max(0, omie.valorCentavos - soma(fixas)) : 0;
+
+  let criar: PlanoDoEspelho["criar"] = null;
+  let atualizar: PlanoDoEspelho["atualizar"] = null;
+  let restantes = livres;
+  if (devido > 0) {
+    const [primeira, ...outras] = livres;
+    if (!primeira) criar = { principalCentavos: devido };
+    else if (primeira.principalCentavos !== devido || primeira.paidAtMs !== omie.paidAtMs) {
+      atualizar = { id: primeira.id, principalCentavos: devido, desvincular: primeira.vinculo !== null };
+    }
+    restantes = outras;
+  }
+  const apagar = restantes.map((b) => ({ id: b.id, desvincular: b.vinculo !== null }));
+
+  const presas = baixas.filter((b) => doOmie(b) && presa(b));
+  const conflito = presas.length > 0 && (!pagoLa || soma(fixas) > omie.valorCentavos);
+  return { criar, atualizar, apagar, conflito, baixadoCentavos: soma(fixas) + devido };
+}
+
+/** O plano muda alguma baixa? */
+export function planoMexe(p: PlanoDoEspelho): boolean {
+  return p.criar !== null || p.atualizar !== null || p.apagar.length > 0;
+}
+
 // ─── As categorias da baixa ─────────────────────────────────────────────────
 
 export type ParteDaBaixa = "encargos" | "desconto";
