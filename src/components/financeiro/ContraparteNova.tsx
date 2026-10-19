@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { useBuscaDoCnpj, ajudaDaBusca, AvisoDaSituacao } from "./BuscaDoCnpj";
@@ -21,19 +21,25 @@ export function CamposDaContraparteNova({
   idBase,
   companyId,
   nomePadrao = "",
+  documentoPadrao = "",
   classeDoDocumento,
   classeDoNome,
   classeDoAviso,
+  ajudaDoDocumento,
 }: {
   idBase: string;
   companyId: string;
   /** O nome que a tela já sugere — o favorecido da linha do extrato. A Receita o substitui. */
   nomePadrao?: string;
+  /** O CPF/CNPJ que a tela já sugere — o beneficiário lido do boleto (lote H2). Com CNPJ, a busca na Receita roda sozinha. */
+  documentoPadrao?: string;
   classeDoDocumento?: string;
   classeDoNome?: string;
   classeDoAviso?: string;
+  /** Texto de apoio do documento enquanto a busca está parada — "confira no boleto", na leitura pela IA. */
+  ajudaDoDocumento?: string;
 }) {
-  const [documento, setDocumento] = useState("");
+  const [documento, setDocumento] = useState(documentoPadrao);
   const [nome, setNome] = useState(nomePadrao);
   const [ficha, setFicha] = useState<FichaDaReceita | null>(null);
   // Nomes que não foram digitados: o sugerido pela tela e os que a Receita
@@ -50,6 +56,14 @@ export function CamposDaContraparteNova({
     setFicha(f);
   });
 
+  // O CNPJ que veio pronto busca a ficha uma vez, como se tivesse sido digitado.
+  const buscouOPadrao = useRef(false);
+  useEffect(() => {
+    if (buscouOPadrao.current || !documentoPadrao) return;
+    buscouOPadrao.current = true;
+    busca.buscarAgora(documentoPadrao);
+  }, [documentoPadrao, busca]);
+
   const ocultos = ficha ? { ...fichaDaReceitaNosCampos(ficha), ...(ficha.email ? { email: ficha.email } : {}) } : {};
 
   return (
@@ -58,7 +72,7 @@ export function CamposDaContraparteNova({
         label="CPF ou CNPJ"
         htmlFor={`${idBase}-doc`}
         className={classeDoDocumento}
-        {...ajudaDaBusca(busca.estado, { padrao: "Opcional. Com CNPJ, a Receita preenche o nome e a ficha.", escolheExistente: true })}
+        {...ajudaDaBusca(busca.estado, { padrao: ajudaDoDocumento ?? "Opcional. Com CNPJ, a Receita preenche o nome e a ficha.", escolheExistente: true })}
       >
         <Input
           id={`${idBase}-doc`}
