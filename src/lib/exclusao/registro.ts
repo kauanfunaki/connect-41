@@ -79,6 +79,7 @@ const EMPRESA: Ligacao[] = [
   { modelo: "BankAccount", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["conta bancária", "contas bancárias"], historico: true },
   { modelo: "CollectionAgreement", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["acordo de cobrança", "acordos de cobrança"], historico: true },
   { modelo: "CostCenter", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["centro de custo", "centros de custo"], historico: true },
+  { modelo: "FinanceProject", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["projeto", "projetos"], historico: true },
   { modelo: "Budget", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["orçamento", "orçamentos"], historico: true },
   { modelo: "DreImport", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["importação da DRE", "importações da DRE"], historico: true },
   { modelo: "DreCategoryMapping", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["classificação da DRE", "classificações da DRE"], historico: true },

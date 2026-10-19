@@ -14,6 +14,8 @@ import { categoriaDaEmpresa, ondeDoPadrao } from "@/lib/financeiro/planoDeContas
 import { criarCategoriaNoPlanoDaEmpresa, nomeDaCategoria } from "@/lib/financeiro/categoriaDaEmpresa";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { validarFicha, leitorDaFicha, CAMPOS_DA_FICHA } from "@/lib/financeiro/fichaDaContraparte";
+import { validarProjeto, nomeEmUso } from "@/lib/financeiro/projeto";
 
 const MODULE = "bpo_cadastros";
 
@@ -72,6 +74,8 @@ export async function criarContraparte(formData: FormData): Promise<ResultadoDoC
   if (!nome) return { error: "Informe o nome." };
   if (nome.length > 180) return { error: "Nome com mais de 180 caracteres." };
   if (!documentoValido(documento)) return { error: "Documento não é CPF (11 dígitos) nem CNPJ (14)." };
+  const ficha = validarFicha(leitorDaFicha(formData));
+  if (!ficha.ok) return { error: ficha.erro };
   if (!(await categoriaDePagar(c.prisma, c.tenantId, companyId, categoriaId))) return { error: "Categoria não encontrada." };
   if (!(await centroPadraoValido(c.prisma, c.tenantId, companyId, centroId))) {
     return { error: "Centro de custo não encontrado ou inativo nesta empresa." };
@@ -96,6 +100,7 @@ export async function criarContraparte(formData: FormData): Promise<ResultadoDoC
       email,
       defaultCategoryId: categoriaId,
       defaultCostCenterId: centroId,
+      ...ficha.dados,
     },
     select: { id: true },
   });
@@ -127,7 +132,25 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
   const prisma = getPrisma();
   const atual = await prisma.financeCounterparty.findFirst({
     where: { id, tenantId: ctx.tenantId },
-    select: { id: true, companyId: true, document: true, defaultCostCenterId: true },
+    select: {
+      id: true,
+      companyId: true,
+      document: true,
+      defaultCostCenterId: true,
+      tradeName: true,
+      phone: true,
+      zipCode: true,
+      addressStreet: true,
+      addressNumber: true,
+      addressComplement: true,
+      neighborhood: true,
+      city: true,
+      stateCode: true,
+      bankCode: true,
+      bankAgency: true,
+      bankAccount: true,
+      pixKey: true,
+    },
   });
   if (!atual) return { error: "Cadastro não encontrado." };
 
@@ -145,6 +168,8 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
   const novoDocumento = atual.document ? null : digitosDoDocumento(texto("documento"));
   if (!nome || nome.length > 180) return { error: "Nome obrigatório, até 180 caracteres." };
   if (!documentoValido(novoDocumento)) return { error: "Documento não é CPF (11 dígitos) nem CNPJ (14)." };
+  const ficha = validarFicha(leitorDaFicha(formData));
+  if (!ficha.ok) return { error: ficha.erro };
   if (!(await categoriaDePagar(prisma, c.tenantId, atual.companyId, categoriaId))) return { error: "Categoria não encontrada." };
   if (!(await centroPadraoValido(prisma, c.tenantId, atual.companyId, centroId, atual.defaultCostCenterId))) {
     return { error: "Centro de custo não encontrado ou inativo nesta empresa." };
@@ -165,9 +190,13 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
       defaultCategoryId: categoriaId,
       defaultCostCenterId: centroId,
       active: ativo,
+      ...ficha.dados,
       ...(novoDocumento ? { document: novoDocumento } : {}),
     },
   });
+  // Quais campos da ficha mudaram — os nomes, não os valores: dado bancário e
+  // chave PIX não vão para o log.
+  const fichaAlterada = CAMPOS_DA_FICHA.filter((campo) => atual[campo] !== ficha.dados[campo]);
   await logAudit({
     tenantId: c.tenantId,
     userId: c.ctx.userId,
@@ -178,6 +207,7 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
       ativo,
       documentoPreenchido: !!novoDocumento,
       comEmail: email !== null,
+      ...(fichaAlterada.length ? { fichaAlterada } : {}),
       ...(centroId !== atual.defaultCostCenterId ? { centroPadrao: { de: atual.defaultCostCenterId, para: centroId } } : {}),
     },
   });
@@ -292,6 +322,84 @@ export async function atualizarCentroDeCusto(formData: FormData): Promise<Result
     },
   });
   revalidarCentros();
+  return { ok: true };
+}
+
+// ─── Projetos (19/10) ───────────────────────────────────────────────────────
+
+// O projeto aparece nos seletores do lançamento, da conciliação e da edição de conta.
+function revalidarProjetos() {
+  for (const p of ["/cadastros-financeiros", "/lancamentos", "/pagar", "/receber", "/conciliacao"]) {
+    revalidatePath(p);
+  }
+}
+
+export async function criarProjeto(formData: FormData): Promise<ResultadoDoCadastro> {
+  const texto = (k: string) => String(formData.get(k) ?? "").trim();
+  const companyId = texto("companyId");
+  const c = await contexto(companyId);
+  if (!c.ok) return { error: c.erro };
+
+  const v = validarProjeto(texto("nome"));
+  if (!v.ok) return { error: v.erro };
+  // Conferido antes do unique para a mensagem dizer qual projeto já usa o nome —
+  // e sem acento nem caixa, que o unique do banco não pega.
+  const outros = await c.prisma.financeProject.findMany({ where: { tenantId: c.tenantId, companyId }, select: { name: true } });
+  const emUso = nomeEmUso(v.nome, outros);
+  if (emUso) return { error: `Já existe o projeto "${emUso}" nesta empresa.` };
+
+  const criado = await c.prisma.financeProject.create({
+    data: { tenantId: c.tenantId, companyId, name: v.nome },
+    select: { id: true },
+  });
+  await logAudit({
+    tenantId: c.tenantId,
+    userId: c.ctx.userId,
+    action: "financeiro.project.created",
+    entityType: "FinanceProject",
+    entityId: criado.id,
+    metadata: { companyId, nome: v.nome },
+  });
+  revalidarProjetos();
+  return { ok: true };
+}
+
+/** Edita nome e situação. **Nunca apaga**: inativo sai dos seletores e continua nas contas antigas. */
+export async function atualizarProjeto(formData: FormData): Promise<ResultadoDoCadastro> {
+  const texto = (k: string) => String(formData.get(k) ?? "").trim();
+  const id = texto("id");
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado." };
+  const prisma = getPrisma();
+  const atual = await prisma.financeProject.findFirst({
+    where: { id, tenantId: ctx.tenantId },
+    select: { id: true, companyId: true, name: true, active: true },
+  });
+  if (!atual) return { error: "Projeto não encontrado." };
+
+  const c = await contexto(atual.companyId);
+  if (!c.ok) return { error: c.erro };
+
+  const v = validarProjeto(texto("nome"));
+  if (!v.ok) return { error: v.erro };
+  const ativo = texto("ativo") === "1";
+  const outros = await prisma.financeProject.findMany({
+    where: { tenantId: c.tenantId, companyId: atual.companyId, NOT: { id } },
+    select: { name: true },
+  });
+  const emUso = nomeEmUso(v.nome, outros);
+  if (emUso) return { error: `Já existe o projeto "${emUso}" nesta empresa.` };
+
+  await prisma.financeProject.update({ where: { id }, data: { name: v.nome, active: ativo } });
+  await logAudit({
+    tenantId: c.tenantId,
+    userId: c.ctx.userId,
+    action: "financeiro.project.updated",
+    entityType: "FinanceProject",
+    entityId: id,
+    metadata: { antes: { nome: atual.name, ativo: atual.active }, depois: { nome: v.nome, ativo } },
+  });
+  revalidarProjetos();
   return { ok: true };
 }
 

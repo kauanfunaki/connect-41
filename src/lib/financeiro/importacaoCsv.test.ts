@@ -138,3 +138,34 @@ describe("conversões de texto", () => {
     expect(competenciaDeTexto("9/2026")).toBe("2026-09");
   });
 });
+
+describe("prepararImportacao — emissão, número do documento e projeto (19/10)", () => {
+  const PROJETOS = [{ id: "p-obra", nome: "Obra Batel" }];
+  const comColunas = (...linhas: string[]) => [`${CABECALHO};Emissão;Nº do documento;Projeto`, ...linhas].join("\n");
+
+  it("lê as três colunas, com o projeto casado pelo nome", () => {
+    const r = prepararImportacao(comColunas("pagar;A;;Aluguel;;2026-09-10;10;;;05/09/2026;BOL-77;obra batel"), HOJE, CATEGORIAS, new Set(), [], PROJETOS);
+    expect(r.ok && r.linhas[0]).toMatchObject({
+      situacao: "valida",
+      dados: { emissaoKey: "2026-09-05", numeroDocumento: "BOL-77", projetoId: "p-obra" },
+    });
+  });
+
+  it("projeto escrito e não encontrado é erro; vazio fica sem projeto", () => {
+    const r = prepararImportacao(
+      comColunas("pagar;A;;Aluguel;;2026-09-10;10;;;;;Feira", "pagar;B;;Aluguel;;2026-09-10;11;;;;;"),
+      HOJE,
+      CATEGORIAS,
+      new Set(),
+      [],
+      PROJETOS
+    );
+    expect(r.ok && r.linhas[0]).toMatchObject({ situacao: "erro", erro: expect.stringMatching(/Feira/) });
+    expect(r.ok && r.linhas[1]).toMatchObject({ situacao: "valida", dados: { projetoId: null, emissaoKey: null, numeroDocumento: null } });
+  });
+
+  it("a coluna CNPJ continua sendo o documento da contraparte, não o número", () => {
+    const r = prepararImportacao(comColunas("pagar;A;12345678000190;Aluguel;;2026-09-10;10;;;;NF 9;"), HOJE, CATEGORIAS, new Set(), [], PROJETOS);
+    expect(r.ok && r.linhas[0]).toMatchObject({ dados: { contraparteDocumento: "12345678000190", numeroDocumento: "NF 9" } });
+  });
+});

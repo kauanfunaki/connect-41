@@ -117,6 +117,8 @@ export type TituloDoOmie = {
   contraparteDocumento: string | null;
   contraparteCodigo: string | null;
   descricao: string | null;
+  /** `cNumTitulo` — o "Número do documento" do título no Omie (19/10). */
+  numeroDocumento: string | null;
 };
 
 export type MotivoDoTituloFora =
@@ -195,6 +197,7 @@ export function mapearMovimento(item: unknown): TituloDoOmie | { fora: MotivoDoT
     contraparteDocumento: documento.length === 11 || documento.length === 14 ? documento : null,
     contraparteCodigo: texto(d.nCodCliente) || null,
     descricao: [numeroTitulo && `Título ${numeroTitulo}`, notaFiscal && `NF ${notaFiscal}`].filter(Boolean).join(" · ").slice(0, 255) || null,
+    numeroDocumento: numeroTitulo.slice(0, 60) || null,
   };
 }
 
