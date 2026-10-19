@@ -95,12 +95,31 @@ O atualizador aceita apenas adições de schema e salva um backup em
 altera senhas. Sem `--aplicar`, mostra apenas a comparação. Use somente com o
 container `connect41-local` na porta 3307; não é um migrador de produção.
 
+A única exceção revisada é a atualização de `audit_logs`: acrescenta o nome do
+ator e permite `userId` nulo, recriando a chave com `ON DELETE SET NULL`.
+Ela preserva todos os registros; outras remoções ou alterações continuam bloqueadas.
+
 O comando opcional `build:local` no Windows recusa iniciar enquanto houver um
 standalone rodando, evitando que o Next apague arquivos antes de encontrar a
 pasta bloqueada. O `build` compartilhado permanece igual em outras máquinas e CI;
 nenhuma atualização do banco é executada automaticamente por esses comandos.
 
 ## Subir o Connect
+
+### Dados fiscais de teste no banco
+
+Após atualizar o schema local, execute pelo lançador protegido:
+
+```
+node scripts/local/com-banco-local.mjs npx tsx scripts/local/preparar-fiscal.ts
+```
+
+Prepara os documentos fictícios em `local_fiscal_scenarios`, separados por usuário
+e escritório, sem versões ou protocolos iniciais. Repetir o comando preserva as
+alterações existentes. As ações fiscais passam pelo servidor com permissões e
+controle de revisão; o navegador não grava mais o cenário no localStorage.
+Essa simulação aceita somente `connect41` em localhost:3307. Continua sem gerar
+arquivos fiscais reais; o motor Python será integrado separadamente.
 
 ```
 $env:PORT='3100'

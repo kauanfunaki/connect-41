@@ -74,13 +74,23 @@ export function PainelDoItem({
     timer.current = setTimeout(() => setAberto(abrir), abrir ? ABRE_MS : FECHA_MS);
   }
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  function fechar() {
+    clearTimeout(timer.current);
+    setAberto(false);
+  }
+
+  // Uma abertura agendada antes de navegar não deve reabrir o painel na
+  // próxima tela. O clique também cancela o temporizador imediatamente.
+  useEffect(() => () => clearTimeout(timer.current), [pathname]);
 
   // Foco de teclado num item e o mouse noutro abriam dois painéis ao mesmo
   // tempo (visto em 30/09): abrir um fecha os outros.
   useEffect(() => {
     function outroAbriu(e: Event) {
-      if ((e as CustomEvent<string>).detail !== id) setAberto(false);
+      if ((e as CustomEvent<string>).detail !== id) {
+        clearTimeout(timer.current);
+        setAberto(false);
+      }
     }
     window.addEventListener(EVENTO_ABRIU, outroAbriu);
     return () => window.removeEventListener(EVENTO_ABRIU, outroAbriu);
@@ -96,7 +106,10 @@ export function PainelDoItem({
     posicionar();
     const id = requestAnimationFrame(posicionar);
     function tecla(e: KeyboardEvent) {
-      if (e.key === "Escape") setAberto(false);
+      if (e.key === "Escape") {
+        clearTimeout(timer.current);
+        setAberto(false);
+      }
     }
     window.addEventListener("scroll", posicionar, true);
     window.addEventListener("resize", posicionar);
@@ -121,6 +134,7 @@ export function PainelDoItem({
   return (
     <div
       ref={itemRef}
+      onClick={fechar}
       onMouseEnter={() => podeAbrir() && agendar(true)}
       onMouseLeave={() => agendar(false)}
       onFocus={() => podeAbrir() && agendar(true)}
@@ -164,7 +178,7 @@ export function PainelDoItem({
                       href={t.href}
                       role="menuitem"
                       aria-current={atual ? "page" : undefined}
-                      onClick={() => setAberto(false)}
+                      onClick={fechar}
                       className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-dropdown font-medium transition-colors ${
                         atual ? "bg-selected-bg text-brand" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
                       }`}

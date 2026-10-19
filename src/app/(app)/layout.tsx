@@ -27,8 +27,10 @@ import { PARES_DE_CAMINHO } from "@/lib/ajuda/artigos";
 
 export default async function AppLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  modal: React.ReactNode;
 }) {
   const ctx = await getAuthContext();
   const { role, sectors, tenantId } = ctx;
@@ -170,6 +172,7 @@ export default async function AppLayout({
         <AvisoDeVersaoNova />
         <DicaFlutuante />
         {children}
+        {modal}
         <ChatDeIA agentes={agentesDoChatDeIA} nome={me?.name ?? ""} />
       </AppShell>
     </ToastProvider>

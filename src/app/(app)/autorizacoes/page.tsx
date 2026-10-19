@@ -67,7 +67,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
   const acesso = await acessoAsAutorizacoes(await getAuthContext());
   if (!acesso) notFound();
   const params = await searchParams;
-  const recorte: Recorte = RECORTES.find((r) => r.chave === params.situacao)?.chave ?? "pendentes";
+  const recorte: Recorte = RECORTES.find((r) => r.chave === params.situacao)?.chave ?? "todas";
   const regime = REGIMES.find(([k]) => k === params.regime)?.[0] ?? null;
   const busca = (params.q ?? "").trim().toLowerCase();
   const digitos = busca.replace(/\D/g, "");
@@ -105,9 +105,15 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
   ).length;
   const ativas = conta((s) => s === "ativa" || s === "a_renovar");
   const consideradas = linhas.length - conta((s) => s === "nao_se_aplica");
-  const href = (s: Recorte) => `/autorizacoes${s === "pendentes" ? "" : `?situacao=${s}`}`;
-  /** O cartão do recorte: acende quando é o da lista, e clicar de novo volta ao padrão. */
-  const noCartao = (r: Recorte) => ({ href: href(recorte === r ? "pendentes" : r), ativo: recorte === r });
+  const href = (s: Recorte) => {
+    const query = new URLSearchParams();
+    if (regime) query.set("regime", regime);
+    if (params.q) query.set("q", params.q);
+    if (s !== recorte && s !== "todas") query.set("situacao", s);
+    return `/autorizacoes${query.size ? `?${query}` : ""}`;
+  };
+
+  const noCartao = (r: Recorte) => ({ href: href(r), ativo: recorte === r });
 
   return (
     <PageContainer>
@@ -184,7 +190,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
         contagem={contarItens(visiveis.length, "cliente", "clientes")}
         busca={
           <form method="get" action="/autorizacoes" className="max-w-full">
-            {recorte !== "pendentes" && <input type="hidden" name="situacao" value={recorte} />}
+            {recorte !== "todas" && <input type="hidden" name="situacao" value={recorte} />}
             {regime && <input type="hidden" name="regime" value={regime} />}
             <CampoDeBusca
               compact
@@ -203,8 +209,8 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
               {
                 chave: "situacao",
                 rotulo: "Situação",
-                vazioLabel: "Pendentes",
-                opcoes: RECORTES.filter((r) => r.chave !== "pendentes").map((r) => ({ value: r.chave, label: r.rotulo })),
+                vazioLabel: "Todas",
+                opcoes: RECORTES.filter((r) => r.chave !== "todas").map((r) => ({ value: r.chave, label: r.rotulo })),
               },
               { chave: "regime", rotulo: "Regime", vazioLabel: "Todos", opcoes: REGIMES.map(([value, label]) => ({ value, label })) },
             ]}
@@ -266,7 +272,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                   </thead>
                   <tbody>
                     {visiveis.map((l) => (
-                      <LinhaFiltravel key={l.chave} id={l.chave} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
+                      <LinhaFiltravel key={l.chave} id={l.chave} className="border-b border-border-soft align-middle hover:bg-surface-hover transition-colors">
                         <td className="py-2.5 pr-3">
                           <Link href={`/empresas/${l.empresa.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
                             {l.empresa.nome}

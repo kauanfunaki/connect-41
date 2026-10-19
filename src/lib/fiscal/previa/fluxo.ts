@@ -1,4 +1,4 @@
-import { documentosDoContexto, mesmoEscopo, precisaRevisar, totaisDoContexto, type ArquivoTeste, type Cenario } from "./cenario";
+import { documentosDoContexto, mesmoEscopo, precisaRevisar, totaisDoContexto, type ArquivoTeste, type Cenario, type ContextoFiscal } from "./cenario";
 
 export type EtapaFiscal = {
   titulo: string;
@@ -12,15 +12,24 @@ export type EtapaFiscal = {
 
 // O histórico permanece acessível, mas só a última versão de cada obrigação
 // e estabelecimento deve definir a próxima ação da competência.
+export function arquivoNoContexto(arquivo: ArquivoTeste, contexto: ContextoFiscal) {
+  return arquivo.contexto.empresaId === contexto.empresaId && arquivo.contexto.competencia === contexto.competencia
+    && (!contexto.estabelecimentoId || !arquivo.contexto.estabelecimentoId || arquivo.contexto.estabelecimentoId === contexto.estabelecimentoId);
+}
 export function ultimasVersoesDoContexto(cenario: Cenario): ArquivoTeste[] {
-  const versoes = new Map<string, ArquivoTeste>();
-  for (const arquivo of cenario.arquivos) {
-    if (arquivo.dominio || !mesmoEscopo(arquivo.contexto, cenario.contexto)) continue;
-    const chave = `${arquivo.tipo}:${arquivo.contexto.estabelecimentoId}`;
-    const anterior = versoes.get(chave);
-    if (!anterior || arquivo.versao > anterior.versao) versoes.set(chave, arquivo);
+  const versoes: ArquivoTeste[] = [];
+  const cobertos = new Set<string>();
+  const empresa = cenario.empresas.find((e) => e.id === cenario.contexto.empresaId);
+  const ordenados = [...cenario.arquivos].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm) || b.versao - a.versao);
+  for (const arquivo of ordenados) {
+    if (arquivo.dominio || !arquivoNoContexto(arquivo, cenario.contexto)) continue;
+    const estabelecimentos = arquivo.contexto.estabelecimentoId ? [arquivo.contexto.estabelecimentoId] : empresa?.estabelecimentos.map((e) => e.id) ?? [];
+    const chaves = estabelecimentos.map((id) => `${arquivo.tipo}:${id}`);
+    if (chaves.every((chave) => cobertos.has(chave))) continue;
+    versoes.push(arquivo);
+    chaves.forEach((chave) => cobertos.add(chave));
   }
-  return [...versoes.values()];
+  return versoes;
 }
 
 export function fluxoDaCompetencia(cenario: Cenario, modulos: readonly string[]): EtapaFiscal[] {

@@ -163,6 +163,8 @@ export type ModuleDef = {
   icon: IconeDeModulo;
   /** Grupo dentro do setor; a ordem de exibição é a de `ORDEM_DOS_GRUPOS`. */
   group: GrupoDeModulo;
+  /** Exibe a tela diretamente na lateral, mesmo em setores agrupados. */
+  menuDireto?: boolean;
 };
 
 export const MODULE_CATALOG: ModuleDef[] = [
@@ -431,7 +433,8 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Quais clientes já autorizaram o escritório na Receita Federal (a antiga procuração do e-CAC), quem falta pedir e o que vence",
     defaultEnabled: true,
     icon: "ShieldCheck",
-    group: "Documentos",
+    group: "Apoio",
+    menuDireto: true,
   },
   {
     code: "societario_licencas",

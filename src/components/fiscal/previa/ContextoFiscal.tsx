@@ -1,9 +1,8 @@
 "use client";
 
-import { Select } from "@/components/ui/Select";
-
-import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { FlaskConical, RotateCcw, ArrowLeft } from "lucide-react";
+import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
@@ -15,74 +14,78 @@ import { ItemDoMenu } from "@/components/ui/Popover";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
-import { COMPETENCIAS, chaveDoCenario, criarCenario, executarAcao, lerCenario, precisaRevisar, type AcaoFiscal, type Cenario, type ContextoFiscal } from "@/lib/fiscal/previa/cenario";
+import { COMPETENCIAS, chaveDoCenario, precisaRevisar, type AcaoFiscal, type ContextoFiscal } from "@/lib/fiscal/previa/cenario";
 import { ultimasVersoesDoContexto } from "@/lib/fiscal/previa/fluxo";
+import { agirNoFiscalLocal } from "@/app/(app)/fiscal/local-actions";
+import type { EstadoFiscalLocal } from "@/lib/fiscal/local/servidor";
 
-type Estado = { cenario: Cenario; pronto: boolean; armazenamento: boolean; resultado: { mensagem: string; erro?: boolean } | null };
-type Evento = { tipo: "carregar"; cenario: Cenario; armazenamento: boolean; recuperado: boolean } | { tipo: "acao"; acao: AcaoFiscal; contexto: ContextoFiscal; id: string; agora: string } | { tipo: "armazenamento" } | { tipo: "restaurar" };
-function reduzir(estado: Estado, evento: Evento): Estado {
-  if (evento.tipo === "carregar") return { cenario: evento.cenario, pronto: true, armazenamento: evento.armazenamento, resultado: evento.recuperado ? { mensagem: "Os dados locais estavam incompatíveis. O cenário inicial foi restaurado." } : null };
-  if (evento.tipo === "armazenamento") return { ...estado, armazenamento: false };
-  if (evento.tipo === "restaurar") return { ...estado, cenario: criarCenario(), resultado: { mensagem: "Dados de teste restaurados para este usuário e escritório." } };
-  const resultado = executarAcao(estado.cenario, evento.acao, evento.contexto, evento.agora, evento.id);
-  return { ...estado, cenario: resultado.cenario, resultado: { mensagem: resultado.mensagem, erro: resultado.erro } };
-}
-
-type Contexto = Estado & { simular: (acao: AcaoFiscal) => void; visualizar: (titulo: string, conteudo: ReactNode) => void; pedirRestauracao: () => void; modulos: string[]; integrado: boolean };
+type Contexto = EstadoFiscalLocal & {
+  pronto: boolean;
+  resultado: { mensagem: string; erro?: boolean } | null;
+  simular: (acao: AcaoFiscal) => void;
+  visualizar: (titulo: string, conteudo: ReactNode) => void;
+  pedirRestauracao: () => void;
+  modulos: string[];
+  integrado: boolean;
+};
 const FiscalContext = createContext<Contexto | null>(null);
 export function useFiscal() {
   const contexto = useContext(FiscalContext);
-  if (!contexto) throw new Error("A prévia fiscal precisa do seu contexto local.");
+  if (!contexto) throw new Error("O Fiscal precisa do seu contexto no banco local.");
   return contexto;
 }
 export const classeSelectFiscal = "w-full";
 
-/**
- * O estado da prévia (cenário no navegador, ações simuladas e as janelas de
- * prévia). Cabeçalho, empresa e período ficam com a página (`FiscalPagina`),
- * na ordem das outras telas (15/10/2026): antes, um bloco recolhível com a
- * empresa e o período vinha antes do título.
- */
-export function ContextoFiscalProvider({ children, tenantId, userId, modulos, integrado }: { children: ReactNode; tenantId: string; userId: string; modulos: string[]; integrado: boolean }) {
-  const [estado, dispatch] = useReducer(reduzir, undefined, () => ({ cenario: criarCenario(), pronto: false, armazenamento: true, resultado: null }));
+/** Dados no banco local; cabeçalho, filtros e avisos acompanham FiscalPagina. */
+export function ContextoFiscalProvider({ children, tenantId, userId, inicial, modulos, integrado }: { children: ReactNode; tenantId: string; userId: string; inicial: EstadoFiscalLocal; modulos: string[]; integrado: boolean }) {
+  const [estado, setEstado] = useState(inicial);
+  const atual = useRef(inicial);
+  const fila = useRef(Promise.resolve());
+  const [pendentes, setPendentes] = useState(0);
+  const [resultado, setResultado] = useState<{ mensagem: string; erro?: boolean } | null>(null);
   const [previas, setPrevias] = useState<{ titulo: string; conteudo: ReactNode }[]>([]);
   const previa = previas.at(-1);
   const { dialog, requestConfirm } = useConfirm();
-  const chave = chaveDoCenario(tenantId, userId);
+
   useEffect(() => {
+    // Remove os antigos dados deste usuário; a fonte passa a ser o banco.
     try {
-      const bruto = localStorage.getItem(chave);
-      const salvo = lerCenario(bruto);
-      dispatch({ tipo: "carregar", cenario: salvo ?? criarCenario(), armazenamento: true, recuperado: bruto !== null && salvo === null });
-    } catch { dispatch({ tipo: "carregar", cenario: criarCenario(), armazenamento: false, recuperado: false }); }
-  }, [chave]);
-  useEffect(() => {
-    // Não gravar antes da leitura evita apagar o cenário salvo durante a hidratação.
-    if (!estado.pronto || !estado.armazenamento) return;
-    try { localStorage.setItem(chave, JSON.stringify(estado.cenario)); }
-    catch { dispatch({ tipo: "armazenamento" }); }
-  }, [chave, estado.cenario, estado.pronto, estado.armazenamento]);
-  const simular = (acao: AcaoFiscal) => {
-    if (estado.pronto) dispatch({ tipo: "acao", acao, contexto: estado.cenario.contexto, id: crypto.randomUUID(), agora: new Date().toISOString() });
+      localStorage.removeItem(chaveDoCenario(tenantId, userId));
+      localStorage.removeItem(`connect41:fiscal:empresas-favoritas:v1:${encodeURIComponent(tenantId)}:${encodeURIComponent(userId)}`);
+    } catch { /* O banco independe do armazenamento do navegador. */ }
+  }, [tenantId, userId]);
+
+  const enviar = (acao: AcaoFiscal | { tipo: "restaurar" }) => {
+    setPendentes((n) => n + 1);
+    fila.current = fila.current.then(async () => {
+      try {
+        const resposta = await agirNoFiscalLocal(acao, atual.current.revisao);
+        if (resposta.estado) { atual.current = resposta.estado; setEstado(resposta.estado); }
+        setResultado(acao.tipo !== "contexto" || resposta.erro
+          ? { mensagem: resposta.mensagem, erro: resposta.erro }
+          : null);
+      } catch {
+        setResultado({ mensagem: "Não foi possível confirmar a gravação no banco. Recarregue a página antes de repetir a ação.", erro: true });
+      } finally { setPendentes((n) => n - 1); }
+    });
   };
-  // A confirmação temática do Connect (15/10/2026), com "Cancelar": era uma
-  // janela própria com um botão só.
   const pedirRestauracao = () => requestConfirm({
     title: "Restaurar dados de teste?",
-    description: "As alterações fictícias deste usuário e escritório serão substituídas pelo cenário inicial.",
+    description: "As alterações fictícias deste usuário e escritório serão substituídas pelo cenário inicial no banco local.",
     confirmLabel: "Restaurar cenário inicial",
     destructive: true,
-  }, async () => { dispatch({ tipo: "restaurar" }); });
+  }, async () => { enviar({ tipo: "restaurar" }); });
+
   return (
-    <FiscalContext.Provider value={{ ...estado, simular, visualizar: (titulo, conteudo) => setPrevias((atuais) => [...atuais, { titulo, conteudo }]), pedirRestauracao, modulos, integrado }}>
+    <FiscalContext.Provider value={{ ...estado, pronto: pendentes === 0, resultado, simular: enviar, visualizar: (titulo, conteudo) => setPrevias((atuais) => [...atuais, { titulo, conteudo }]), pedirRestauracao, modulos, integrado }}>
       <PageContainer>
         {children}
-        <p className="mt-7 text-helper text-fg-muted">Prévia visual do Fiscal · cálculos, arquivos e protocolos demonstrativos.</p>
+        <p className="mt-7 text-helper text-fg-muted">Dados fictícios no banco local · geração e validação simuladas, sem validade fiscal.</p>
       </PageContainer>
       <Modal open={!!previa} title={previa?.titulo} onClose={() => setPrevias([])} maxWidth="max-w-3xl">
-        <p className="mb-4 mt-1 text-helper text-fg-secondary">Modo de teste · esta prévia usa apenas informações fictícias.</p>
+        <p className="mb-4 mt-1 text-helper text-fg-secondary">Ambiente local · esta prévia usa informações fictícias do banco de testes.</p>
         {previa?.conteudo}
-        {estado.resultado && <div role={estado.resultado.erro ? "alert" : "status"} className="mt-4"><Aviso tom={estado.resultado.erro ? "atencao" : "sucesso"}>{estado.resultado.mensagem}</Aviso></div>}
+        {resultado && <div role={resultado.erro ? "alert" : "status"} className="mt-4"><Aviso tom={resultado.erro ? "atencao" : "sucesso"}>{resultado.mensagem}</Aviso></div>}
         <div className="mt-5 flex flex-wrap items-center gap-3">
           {previas.length > 1 && <Button variant="secondary" onClick={() => setPrevias((atuais) => atuais.slice(0, -1))}><ArrowLeft size={14} />Voltar para {previas.at(-2)?.titulo}</Button>}
           <Button variant="secondary" onClick={() => setPrevias([])}>Fechar prévia</Button>
@@ -95,10 +98,10 @@ export function ContextoFiscalProvider({ children, tenantId, userId, modulos, in
 
 /** A linha de selos do cabeçalho: o modo de teste e onde o cenário fica guardado. */
 export function SelosDoTesteFiscal() {
-  const { armazenamento } = useFiscal();
+  const { pronto } = useFiscal();
   return <>
-    <Badge variant="info"><FlaskConical size={13} className="mr-1.5" />Modo de teste · dados fictícios</Badge>
-    <span>{armazenamento ? "Salvo neste navegador" : "Somente nesta sessão · armazenamento indisponível"}</span>
+    <Badge variant="info"><FlaskConical size={13} className="mr-1.5" />Ambiente local · dados fictícios</Badge>
+    <span>{pronto ? "Salvo no banco local" : "Salvando no banco local…"}</span>
   </>;
 }
 

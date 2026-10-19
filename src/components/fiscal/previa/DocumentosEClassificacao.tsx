@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Upload, ShieldAlert, FileText, Wallet, FileX, ListChecks, CheckCircle2, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { AlinhadoAoCampo } from "@/components/ui/CampoForm";
@@ -42,13 +43,10 @@ export function DocumentosFiscal({ aba }: { aba: string }) {
   const { cenario, simular, integrado, modulos } = useFiscal();
   const grupo = useSearchParams().get("grupo") ?? "";
   const [lote, setLote] = useState("Lote XML de exemplo");
+  const [abrirEntrada, setAbrirEntrada] = useState(aba === "envio");
   const docs = documentosDoContexto(cenario);
   const totais = totaisDoContexto(cenario);
   const importacoes = cenario.importacoes.filter((i) => mesmoEscopo(i.contexto, cenario.contexto));
-  if (aba === "envio") return <BlocoFiscal titulo="Enviar documentos de teste" descricao="Use os lotes prontos para experimentar a recepção e o relatório de importação.">
-    <div className="rounded-lg border-2 border-dashed border-border-strong p-8 text-center"><Upload className="mx-auto mb-3 text-brand" size={32} /><h3 className="text-card-title font-semibold text-fg">Escolha um lote de exemplo</h3><p className="mx-auto mt-2 max-w-lg text-ui text-fg-secondary">O lote contém notas, documentos de serviço e um item incompleto para revisar na quarentena. As informações ficam neste navegador.</p><div className="mx-auto mt-5 flex max-w-lg flex-wrap justify-center gap-3 text-left"><CampoFiscal nome="Tipo de lote" className="w-64 max-w-full"><Select value={lote} className={classeSelectFiscal} onChange={(e) => setLote(e.target.value)}><option>Lote XML de exemplo</option><option>Lote de contratos e recibos</option></Select></CampoFiscal><AlinhadoAoCampo><Button onClick={() => simular({ tipo: "importar", origem: lote })}>Carregar lote</Button></AlinhadoAoCampo></div></div>
-    <div className="mt-5"><AtalhoFiscal modulo="fiscal_acervo" aba="importacoes">Acompanhar importações</AtalhoFiscal></div>
-  </BlocoFiscal>;
   if (aba === "importacoes") return <BlocoFiscal titulo="Histórico de importações" descricao="Cada lote mostra recebidos, rejeitados e a origem da entrada." acao={<AtalhoFiscal modulo="fiscal_acervo" aba="envio">Enviar outro lote</AtalhoFiscal>}>
     <TabelaFiscal colunas={["Origem", "Recebidos", "Quarentena", "Importado em"]} linhas={importacoes.map((i) => ({ id: i.id, celulas: [i.origem, i.aceitos, i.rejeitados, dataFiscal(i.criadoEm)] }))} />
     {totais.rejeitados > 0 && <div className="mt-5"><AtalhoFiscal modulo="fiscal_acervo" aba="acervo" filtros={{ grupo: "quarentena" }}>Revisar quarentena</AtalhoFiscal></div>}
@@ -73,9 +71,13 @@ export function DocumentosFiscal({ aba }: { aba: string }) {
     {quarentena && <p className="flex items-center gap-2 text-ui text-fg-secondary"><ShieldAlert size={16} />Recuperar corrige o exemplo e o encaminha à classificação.</p>}
     <div>
       <ListaDocumentos key={`${grupo}-${cenario.contexto.empresaId}-${cenario.contexto.estabelecimentoId}-${cenario.contexto.competencia}`} documentos={itens} filtrosExtras={[GRUPO]} acao={(d) => d.estado === "Rejeitado" ? <Button variant="secondary" size="xs" onClick={() => simular({ tipo: "recuperar", id: d.id })}>Recuperar</Button> : undefined}
-        acoes={<AcoesFiscais><AtalhoFiscal modulo="fiscal_acervo" aba="envio">Enviar documentos</AtalhoFiscal>{integrado && <MenuDeMaisAcoes rotulo="Outras opções do acervo" width={250} size="md">{({ close }) => <ItemDoMenu href="/documentos-fiscais" onClick={close}>Documentos fiscais — integrado</ItemDoMenu>}</MenuDeMaisAcoes>}</AcoesFiscais>} />
+        acoes={<AcoesFiscais><Button size="sm" onClick={() => setAbrirEntrada(true)}><Upload size={14} />Enviar documentos</Button>{integrado && <MenuDeMaisAcoes rotulo="Outras opções do acervo" width={250} size="md">{({ close }) => <ItemDoMenu href="/documentos-fiscais" onClick={close}>Documentos fiscais — integrado</ItemDoMenu>}</MenuDeMaisAcoes>}</AcoesFiscais>} />
     </div>
     {quarentena && totais.rejeitados === 0 && modulos.includes("fiscal_classificacao") && <div><AtalhoFiscal modulo="fiscal_classificacao">Continuar para classificação</AtalhoFiscal></div>}
+    <Modal open={abrirEntrada} onClose={() => setAbrirEntrada(false)} title="Enviar documentos de teste" maxWidth="max-w-lg">
+      <p className="mb-4 text-ui text-fg-secondary">Escolha um lote fictício para simular a recepção e acompanhar a importação sem sair desta tela.</p>
+      <div className="flex flex-col gap-4"><CampoFiscal nome="Tipo de lote"><Select value={lote} className={classeSelectFiscal} onChange={(e) => setLote(e.target.value)}><option>Lote XML de exemplo</option><option>Lote de contratos e recibos</option></Select></CampoFiscal><div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setAbrirEntrada(false)}>Cancelar</Button><Button onClick={() => { simular({ tipo: "importar", origem: lote }); setAbrirEntrada(false); }}><Upload size={14} />Carregar lote</Button></div></div>
+    </Modal>
   </div>;
 }
 

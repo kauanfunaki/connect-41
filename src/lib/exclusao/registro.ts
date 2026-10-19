@@ -280,6 +280,7 @@ const USUARIO: Ligacao[] = [
   { modelo: "UserAgendaConfig", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPinnedModule", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPreference", campo: "user", fk: "userId", tratamento: "cascata" },
+  { modelo: "LocalFiscalScenario", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserSector", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserTenantAccess", campo: "user", fk: "userId", tratamento: "cascata" },
 ];

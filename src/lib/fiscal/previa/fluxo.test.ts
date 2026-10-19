@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { criarCenario, documentosDoContexto, executarAcao, type AcaoFiscal, type Cenario } from "./cenario";
+import { criarCenario, documentosDoContexto, executarAcao, precisaRevisar, type AcaoFiscal, type Cenario } from "./cenario";
 import { fluxoDaCompetencia, ultimasVersoesDoContexto } from "./fluxo";
 
 const modulos = ["fiscal_acervo", "fiscal_classificacao", "fiscal_contribuicoes", "fiscal_entregas"];
@@ -16,6 +16,18 @@ function preparar() {
 }
 
 describe("próxima ação do fluxo fiscal", () => {
+  it("uma versão nova de todos os estabelecimentos substitui as versões individuais antigas", () => {
+    let cenario = preparar();
+    cenario = agir(cenario, { tipo: "gerar", imposto: "ICMS/IPI" });
+    cenario = agir(cenario, { tipo: "classificar", ids: [documentosDoContexto(cenario)[0].id], destino: "Uso e consumo", credito: false, cst: "90" });
+    cenario.contexto.estabelecimentoId = "";
+    cenario = executarAcao(cenario, { tipo: "gerar", imposto: "ICMS/IPI" }, cenario.contexto, "2026-10-14T12:00:00Z", "todos-novo").cenario;
+    const atuais = ultimasVersoesDoContexto(cenario).filter((a) => a.tipo === "ICMS/IPI");
+    expect(atuais.map((a) => a.id)).toEqual(["todos-novo"]);
+    expect(atuais.some((a) => precisaRevisar(cenario, a))).toBe(false);
+    cenario.contexto.estabelecimentoId = "aurora-pr";
+    expect(ultimasVersoesDoContexto(cenario).filter((a) => a.tipo === "ICMS/IPI").map((a) => a.id)).toEqual(["todos-novo"]);
+  });
   it("orienta cada etapa, da quarentena à entrega", () => {
     let cenario = criarCenario();
     expect(proxima(cenario)?.aba).toBe("quarentena");
