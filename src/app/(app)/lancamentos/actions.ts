@@ -34,6 +34,8 @@ import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { arquivosDoFormulario, type AnexoGravado } from "@/lib/financeiro/pendencias/armazenamento";
 import { armazenamentoDosAnexos } from "@/lib/financeiro/anexos";
 import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
+import { ocorrenciasDaRepeticao, validarRepeticao } from "@/lib/financeiro/repeticao";
+import { randomUUID } from "crypto";
 
 const MODULE = "bpo_lancamentos";
 
@@ -55,7 +57,7 @@ function revalidar() {
   }
 }
 
-export type ResultadoDoManual = { error: string } | { ok: true; aguardandoAprovacao?: boolean };
+export type ResultadoDoManual = { error: string } | { ok: true; aguardandoAprovacao?: boolean; /** Quantas próximas da série nasceram junto. */ repetidas?: number };
 
 /**
  * Cria o lançamento manual.
@@ -89,6 +91,8 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   );
   if (!v.ok) return { error: v.erro };
   const d = v.dados;
+  const rep = validarRepeticao({ frequencia: texto("repetirFrequencia"), vezes: texto("repetirVezes"), ajuste: texto("repetirAjuste") });
+  if (!rep.ok) return { error: rep.erro };
 
   if (d.categoryId) {
     const categoria = await c.prisma.financeCategory.findFirst({
@@ -136,7 +140,22 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const status = statusInicialDoManual(d.pagoEmKey);
   // Aprovação por alçada: conta a pagar em aberto numa empresa com alçada nasce
   // aguardando. A que já veio com a data da baixa nasce PAGO e não entra.
-  const approvalStatus = (await contextoDeEntrada(c.tenantId, [companyId])).statusInicial(companyId, d.kind, status);
+  const entrada = await contextoDeEntrada(c.tenantId, [companyId]);
+  const approvalStatus = entrada.statusInicial(companyId, d.kind, status);
+
+  // A repetição (lote D, 19/10): as próximas nascem agora, em aberto, cada uma
+  // com a aprovação dela. Os feriados são os do escritório (Administração ›
+  // Feriados), em dia de calendário.
+  const proximas = rep.repeticao
+    ? ocorrenciasDaRepeticao(
+        { vencimentoKey: d.vencimentoKey, competencia: d.competencia },
+        rep.repeticao,
+        new Set((await c.prisma.holiday.findMany({ where: { tenantId: c.tenantId }, select: { date: true } })).map((h) => h.date.toISOString().slice(0, 10)))
+      ).slice(1)
+    : [];
+  const serie = rep.repeticao ? { recurrenceId: randomUUID(), recurrenceTotal: rep.repeticao.vezes } : null;
+  const statusDasProximas = statusInicialDoManual(null);
+  const aprovacaoDasProximas = entrada.statusInicial(companyId, d.kind, statusDasProximas);
 
   // A leitura do boleto pela IA que preencheu esta tela, quando houve (lote H2).
   // Vai só para a auditoria — é o que permite medir, depois, quanto a pessoa
@@ -197,9 +216,39 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           // Quem digitou conferiu — ver `statusInicialDoManual`.
           reviewedById: c.ctx.userId || null,
           reviewedAt: new Date(),
+          ...(serie ? { ...serie, recurrenceIndex: 1 } : {}),
         },
         select: { id: true, amount: true },
       });
+      // As próximas da série: a mesma conta em outro vencimento — sem emissão,
+      // número, baixa nem anexo, que são desta.
+      const idsDasProximas = proximas.map(() => randomUUID());
+      if (serie && proximas.length > 0) {
+        await tx.financeEntry.createMany({
+          data: proximas.map((o, i) => ({
+            id: idsDasProximas[i]!,
+            tenantId: c.tenantId,
+            companyId,
+            kind: d.kind,
+            status: statusDasProximas,
+            approvalStatus: aprovacaoDasProximas,
+            counterpartyId: contraparte.id,
+            categoryId: d.categoryId,
+            costCenterId: centro.centroId,
+            projectId: projeto.projetoId,
+            competence: o.competencia,
+            dueDate: instanteDaData(o.vencimentoKey),
+            amount: decimalDeCentavos(d.centavos),
+            description: d.descricao,
+            createdById: c.ctx.userId || null,
+            reviewedById: c.ctx.userId || null,
+            reviewedAt: new Date(),
+            ...serie,
+            recurrenceIndex: o.indice,
+          })),
+        });
+        if (aprovacaoDasProximas === "AGUARDANDO") await registrarEnvios(tx, idsDasProximas, c.ctx.userId || null);
+      }
       if (d.pagoEmKey) {
         await quitarConta(tx, { tenantId: c.tenantId, entryId: criado.id, paidAt: instanteDaData(d.pagoEmKey), origin: "LANCAMENTO", userId: c.ctx.userId || null });
       }
@@ -222,7 +271,8 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
     throw err;
   }
 
-  const aviso = approvalStatus === "AGUARDANDO" ? await avisarAprovadores(c.tenantId, [{ companyId, amount: entry.amount }]) : null;
+  const aguardando = (approvalStatus === "AGUARDANDO" ? 1 : 0) + (aprovacaoDasProximas === "AGUARDANDO" ? proximas.length : 0);
+  const aviso = aguardando > 0 ? await avisarAprovadores(c.tenantId, Array.from({ length: aguardando }, () => ({ companyId, amount: entry.amount }))) : null;
 
   await logAudit({
     tenantId: c.tenantId,
@@ -241,11 +291,14 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
       ...(anexos.length > 0 ? { anexos: anexos.map((a) => a.fileName) } : {}),
       ...(leitura ? { lidoPorIa: leitura.id } : {}),
       ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
+      ...(rep.repeticao && serie
+        ? { repeticao: `${rep.repeticao.frequencia} × ${rep.repeticao.vezes}`, ajusteDoDia: rep.repeticao.ajuste, serie: serie.recurrenceId }
+        : {}),
     },
   });
 
   revalidar();
-  return { ok: true, aguardandoAprovacao: approvalStatus === "AGUARDANDO" };
+  return { ok: true, aguardandoAprovacao: approvalStatus === "AGUARDANDO", repetidas: proximas.length };
 }
 
 /** Cancela um lançamento manual em aberto. Nunca apaga. */
