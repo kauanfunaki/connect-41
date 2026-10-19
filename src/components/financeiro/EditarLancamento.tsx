@@ -14,6 +14,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { dadosParaEditar, editarLancamento, type DadosDaEdicao } from "@/lib/financeiro/edicaoServidor";
 import type { CampoEditavel } from "@/lib/financeiro/edicao";
+import { CampoDeProjeto } from "./CampoDeProjeto";
 import { AnexosDaConta, CAMPO_DO_ANEXO_DA_CONTA } from "./AnexosDaConta";
 
 // A janela "Editar lançamento" (19/10, pedido 1 do BPO). Abre do "⋯" de
@@ -195,18 +196,7 @@ function Formulario({
             </Select>
           </CampoForm>
         )}
-        {(opcoes.projetos.length > 0 || conta.projetoId) && (
-          <CampoForm label="Projeto" htmlFor={`${id}-projeto`}>
-            <Select id={`${id}-projeto`} name="projectId" defaultValue={conta.projetoId ?? ""}>
-              <option value="">Sem projeto</option>
-              {opcoes.projetos.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </Select>
-          </CampoForm>
-        )}
+        <CampoDeProjeto id={`${id}-projeto`} companyId={conta.empresaId} projetos={opcoes.projetos} defaultValue={conta.projetoId ?? ""} />
       </FieldGrid>
 
       <FieldGrid columns="sm:grid-cols-3">

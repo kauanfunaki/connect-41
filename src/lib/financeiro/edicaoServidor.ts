@@ -33,6 +33,7 @@ export type DadosDaEdicao =
       conta: {
         id: string;
         kind: "PAGAR" | "RECEBER";
+        empresaId: string;
         empresaNome: string;
         contraparteId: string;
         categoriaId: string | null;
@@ -158,6 +159,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
     conta: {
       id: conta.id,
       kind: conta.kind,
+      empresaId: conta.companyId,
       empresaNome: nomeExibicao(conta.company),
       contraparteId: conta.counterpartyId,
       categoriaId: conta.categoryId,
