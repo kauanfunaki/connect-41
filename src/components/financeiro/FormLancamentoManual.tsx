@@ -18,6 +18,7 @@ import { criarLancamentoManual } from "@/app/(app)/lancamentos/actions";
 import { lerBoletoParaLancar } from "@/lib/financeiro/leituraDoBoletoServidor";
 import type { LeituraDoBoleto } from "@/lib/financeiro/leituraDoBoleto";
 import { CamposDaContraparteNova } from "./ContraparteNova";
+import { CampoDeProjeto } from "./CampoDeProjeto";
 
 type Contraparte = {
   id: string;
@@ -53,7 +54,7 @@ export function FormLancamentoManual({
   categorias: Categoria[];
   /** Centros de custo ativos da empresa. Sem nenhum, o campo não aparece. */
   centros?: Centro[];
-  /** Projetos ativos da empresa. Sem nenhum, o campo não aparece. */
+  /** Projetos ativos da empresa. Sem nenhum, o campo aparece desabilitado e diz onde cadastrar. */
   projetos?: Projeto[];
   /** Hoje em São Paulo, do servidor. */
   hojeISO: string;
@@ -143,7 +144,6 @@ export function FormLancamentoManual({
   // linha para a outra. Antes eram quatro grades (3, 3, 3 e 4 colunas), e o
   // centro de custo ficava sozinho numa linha de três.
   const semCentro = centros.length === 0;
-  const semProjeto = projetos.length === 0;
   return (
     <Card className="flex flex-col gap-4 p-4">
       {leitorDeBoleto ? (
@@ -274,20 +274,9 @@ export function FormLancamentoManual({
           <CampoForm label="Nº do documento" htmlFor="lancamento-numero">
             <Input id="lancamento-numero" name="numeroDocumento" maxLength={60} placeholder="Boleto, contrato, título" defaultValue={leitura?.numeroDocumento ?? undefined} />
           </CampoForm>
-          {!semProjeto && (
-            <CampoForm label="Projeto" htmlFor="lancamento-projeto" helper="Opcional. Um projeto por lançamento." className="lg:col-span-2">
-              <Select id="lancamento-projeto" name="projectId" defaultValue="">
-                <option value="">Sem projeto</option>
-                {projetos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </Select>
-            </CampoForm>
-          )}
+          <CampoDeProjeto id="lancamento-projeto" companyId={companyId} projetos={projetos} className="lg:col-span-2" />
 
-          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className={semProjeto ? "sm:col-span-2" : "sm:col-span-2 lg:col-span-4"}>
+          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className="sm:col-span-2 lg:col-span-4">
             <Input id="lancamento-descricao" name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" defaultValue={leitura?.descricao ?? undefined} />
           </CampoForm>
 
