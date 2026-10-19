@@ -11,6 +11,8 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { ondeDaEmpresa, padraoAntesDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { movimentosDeCaixa, baixasNoPeriodo } from "@/lib/financeiro/baixa/consultas";
+import { decimalDeCentavos } from "@/lib/financeiro/manual";
 import {
   calcularDre,
   impostoForaDoResultado,
@@ -92,16 +94,12 @@ export async function lancamentosDoMes(
   const ate = inicioDoMes(mes.mes === 12 ? mes.ano + 1 : mes.ano, mes.mes === 12 ? 1 : mes.mes + 1);
 
   const [entries, categorias, excecoes, importados] = await Promise.all([
-    prisma.financeEntry.findMany({
-      where: {
-        tenantId,
-        companyId,
-        // Pago dentro do mês. Lançamento em aberto não entra num DRE de caixa —
-        // ele ainda não moveu dinheiro.
-        paidAt: { gte: de, lt: ate },
-      },
-      select: { kind: true, amount: true, categoryId: true },
-    }),
+    // Pago dentro do mês, das baixas (lote C, 19/10): a parcial entra no mês
+    // dela, e juros, multa e desconto nas categorias deles. Lançamento sem
+    // baixa não entra num DRE de caixa — ainda não moveu dinheiro.
+    movimentosDeCaixa(baixasNoPeriodo({ tenantId, companyId }, de, ate)).then((ms) =>
+      ms.map((m) => ({ kind: m.kind, amount: decimalDeCentavos(m.centavos), categoryId: m.categoryId }))
+    ),
     prisma.financeCategory.findMany({
       where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
       select: { id: true, name: true, dreGroup: true, companyId: true },
@@ -221,8 +219,8 @@ export function centavosDeDecimal(valor: { toString(): string }): number {
 export async function mesesComMovimento(tenantId: string, companyId: string): Promise<MesDoDre[]> {
   const prisma = getPrisma();
   const [pagos, imports] = await Promise.all([
-    prisma.financeEntry.findMany({
-      where: { tenantId, companyId, paidAt: { not: null } },
+    prisma.financeEntryPayment.findMany({
+      where: { tenantId, companyId, entry: { status: { not: "CANCELADO" } } },
       select: { paidAt: true },
       orderBy: { paidAt: "desc" },
       take: 5_000,
@@ -375,10 +373,9 @@ export async function lancamentosDoAno(
   const ate = inicioDoMes(ano + 1, 1);
 
   const [entries, categorias, excecoes, imports] = await Promise.all([
-    prisma.financeEntry.findMany({
-      where: { tenantId, companyId, paidAt: { gte: de, lt: ate } },
-      select: { kind: true, amount: true, categoryId: true, paidAt: true },
-    }),
+    movimentosDeCaixa(baixasNoPeriodo({ tenantId, companyId }, de, ate)).then((ms) =>
+      ms.map((m) => ({ kind: m.kind, amount: decimalDeCentavos(m.centavos), categoryId: m.categoryId, paidAt: m.paidAt }))
+    ),
     prisma.financeCategory.findMany({
       where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
       select: { id: true, name: true, dreGroup: true, companyId: true },

@@ -74,6 +74,7 @@ const EMPRESA: Ligacao[] = [
   // Histórico — só sai com "Excluir com tudo o que está ligado".
   { modelo: "FiscalDocument", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["nota fiscal", "notas fiscais"], historico: true },
   { modelo: "FinanceEntry", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["lançamento financeiro", "lançamentos financeiros"], historico: true },
+  { modelo: "FinanceEntryPayment", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["baixa", "baixas"], historico: true },
   { modelo: "FinanceCounterparty", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["fornecedor ou cliente do financeiro", "fornecedores e clientes do financeiro"], historico: true },
   { modelo: "FinanceCategory", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["categoria própria do plano de contas", "categorias próprias do plano de contas"], historico: true },
   { modelo: "BankAccount", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["conta bancária", "contas bancárias"], historico: true },
@@ -236,6 +237,7 @@ const USUARIO: Ligacao[] = [
   { modelo: "BankStatementImport", campo: "importedBy", fk: "importedById", tratamento: "desligar" },
   { modelo: "BankTransaction", campo: "reconciledBy", fk: "reconciledById", tratamento: "desligar" },
   { modelo: "BankTransactionMatch", campo: "createdBy", fk: "createdById", tratamento: "desligar" },
+  { modelo: "FinanceEntryPayment", campo: "createdBy", fk: "createdById", tratamento: "desligar" },
   { modelo: "Budget", campo: "approvedBy", fk: "approvedById", tratamento: "desligar" },
   { modelo: "ChatwootAgentLink", campo: "linkedUser", fk: "linkedUserId", tratamento: "desligar" },
   { modelo: "ClientAnnouncement", campo: "createdBy", fk: "createdById", tratamento: "desligar" },

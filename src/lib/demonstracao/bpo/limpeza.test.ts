@@ -174,6 +174,7 @@ describe("gravarDemonstracaoDoBpo", () => {
         "financeCategory",
         "financeCounterparty",
         "financeEntry",
+        "financeEntryPayment",
         "folder",
         "manualDocument",
         "manualPage",

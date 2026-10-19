@@ -59,8 +59,22 @@ import {
   mesmoNumero,
 } from "./conciliacao";
 import { conciliarEmpresaPeloOmie } from "@/lib/financeiro/conciliacao/omieServidor";
+import { espelharBaixaDoOmie, recalcularConta } from "@/lib/financeiro/baixa/servidor";
+import type { Prisma } from "@/generated/prisma/client";
 
 export const PREFIXO_DO_FINANCEIRO = "financeiro:";
+
+/**
+ * A baixa da conta acompanha o Omie, e a conta é refeita a partir das baixas
+ * (lote C, 19/10). A gravação acima escreveu status e data do Omie; aqui eles
+ * passam a valer por causa da baixa — e a baixa feita no Connect, se houver,
+ * continua valendo (`espelharBaixaDoOmie`).
+ */
+async function espelharEFechar(tx: Prisma.TransactionClient, entryId: string, pago: boolean, paidAt: Date | null, valor: string) {
+  const conta = await tx.financeEntry.findUniqueOrThrow({ where: { id: entryId }, select: { tenantId: true, companyId: true } });
+  await espelharBaixaDoOmie(tx, { id: entryId, tenantId: conta.tenantId, companyId: conta.companyId }, { pago, paidAt, valor });
+  await recalcularConta(tx, entryId);
+}
 export const instanciaDoFinanceiro = (companyId: string) => `${PREFIXO_DO_FINANCEIRO}${companyId}`;
 
 const POR_PAGINA = 500;
@@ -406,16 +420,13 @@ export async function sincronizarFinanceiroDaEmpresa(
         if (!atual) {
           somar("novos");
           if (opcoes.gravar) {
-            await prisma.financeEntry.create({
-              data: {
-                tenantId,
-                companyId,
-                kind: t.kind,
-                counterpartyId: await contraparteDo(t),
-                description: t.descricao,
-                omieTitleId: t.omieTitleId,
-                ...dados,
-              },
+            const counterpartyId = await contraparteDo(t);
+            await prisma.$transaction(async (tx) => {
+              const criado = await tx.financeEntry.create({
+                data: { tenantId, companyId, kind: t.kind, counterpartyId, description: t.descricao, omieTitleId: t.omieTitleId, ...dados },
+                select: { id: true },
+              });
+              await espelharEFechar(tx, criado.id, dados.status === "PAGO", dados.paidAt, dados.amount);
             });
           } else {
             await contraparteDo(t);
@@ -445,15 +456,18 @@ export async function sincronizarFinanceiroDaEmpresa(
         }
         somar("atualizados");
         if (opcoes.gravar) {
-          await prisma.financeEntry.update({
-            where: { id: atual.id },
-            // Categoria só troca quando o Omie tem uma: a classificada no
-            // Connect não some porque o Omie não a informou.
-            data: {
-              ...dados,
-              categoryId: dados.categoryId ?? atual.categoryId,
-              ...(estornado ? { omieBaixaId: null, omiePaidAmount: null, omieReconciledAt: null } : {}),
-            },
+          await prisma.$transaction(async (tx) => {
+            await tx.financeEntry.update({
+              where: { id: atual.id },
+              // Categoria só troca quando o Omie tem uma: a classificada no
+              // Connect não some porque o Omie não a informou.
+              data: {
+                ...dados,
+                categoryId: dados.categoryId ?? atual.categoryId,
+                ...(estornado ? { omieBaixaId: null, omiePaidAmount: null, omieReconciledAt: null } : {}),
+              },
+            });
+            await espelharEFechar(tx, atual.id, dados.status === "PAGO", dados.paidAt, dados.amount);
           });
         }
       }
@@ -554,20 +568,26 @@ export async function sincronizarFinanceiroDaEmpresa(
         if (!atual) {
           somar(t.transferencia ? "transferencias_novas" : "lancamentos_de_conta_novos");
           if (opcoes.gravar) {
-            await prisma.financeEntry.create({
-              data: {
-                tenantId,
-                companyId,
-                kind: t.kind,
-                counterpartyId: t.transferencia
-                  ? await contraparteChamada(NOME_DA_TRANSFERENCIA)
-                  : t.contraparteCodigo || t.contraparteDocumento
-                    ? await contraparteDo(t)
-                    : await contraparteChamada(NOME_DO_LANCAMENTO_DE_CONTA),
-                description: `${t.transferencia ? NOME_DA_TRANSFERENCIA : NOME_DO_LANCAMENTO_DE_CONTA} (Omie)`,
-                omieMovementId: t.movimentoId,
-                ...dados,
-              },
+            const counterpartyId = t.transferencia
+              ? await contraparteChamada(NOME_DA_TRANSFERENCIA)
+              : t.contraparteCodigo || t.contraparteDocumento
+                ? await contraparteDo(t)
+                : await contraparteChamada(NOME_DO_LANCAMENTO_DE_CONTA);
+            await prisma.$transaction(async (tx) => {
+              const criado = await tx.financeEntry.create({
+                data: {
+                  tenantId,
+                  companyId,
+                  kind: t.kind,
+                  counterpartyId,
+                  description: `${t.transferencia ? NOME_DA_TRANSFERENCIA : NOME_DO_LANCAMENTO_DE_CONTA} (Omie)`,
+                  omieMovementId: t.movimentoId,
+                  ...dados,
+                },
+                select: { id: true },
+              });
+              // Movimento de conta é sempre dinheiro que andou: nasce com a baixa.
+              await espelharEFechar(tx, criado.id, true, dados.paidAt, dados.amount);
             });
           }
           continue;
@@ -582,9 +602,12 @@ export async function sincronizarFinanceiroDaEmpresa(
         if (!mudou) continue;
         somar("lancamentos_de_conta_atualizados");
         if (opcoes.gravar) {
-          await prisma.financeEntry.update({
-            where: { id: atual.id },
-            data: { ...dados, categoryId: dados.categoryId ?? atual.categoryId },
+          await prisma.$transaction(async (tx) => {
+            await tx.financeEntry.update({
+              where: { id: atual.id },
+              data: { ...dados, categoryId: dados.categoryId ?? atual.categoryId },
+            });
+            await espelharEFechar(tx, atual.id, true, dados.paidAt, dados.amount);
           });
         }
       }

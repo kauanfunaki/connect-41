@@ -136,7 +136,8 @@ export async function executarReguaDeCobranca(opcoes: { limite?: number; agora?:
           para,
           empresaNome: nomeExibicao(t.company),
           sacadoNome: t.counterparty.name,
-          valorCentavos: centavosDeDecimal(t.amount),
+          // O lembrete cobra o que falta: com baixa parcial, o saldo.
+          valorCentavos: centavosDeDecimal(t.amount) - centavosDeDecimal(t.paidPrincipal),
           vencimento: t.dueDate,
           diasDeAtraso: diasEntre(vencimentoKey, hojeKey),
           descricao: t.description,
@@ -178,6 +179,7 @@ async function buscarPagina(
       closeReason: true,
       paidAt: true,
       amount: true,
+      paidPrincipal: true,
       dueDate: true,
       description: true,
       company: { select: { name: true, displayName: true } },

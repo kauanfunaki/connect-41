@@ -43,6 +43,8 @@ import { fichaOpcional, leitorDaFicha } from "@/lib/financeiro/fichaDaContrapart
 import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { lerBuscaDaEscolha, type CriterioDaBusca } from "@/lib/financeiro/conciliacao/busca";
 import { inicioDeHoje } from "@/lib/financeiro/consultas";
+import { quitarConta, apagarBaixa, recalcularConta, RecusaDaBaixa } from "@/lib/financeiro/baixa/servidor";
+import { saldoEmAberto } from "@/lib/financeiro/baixa/regras";
 
 const MODULE = "bpo_conciliacao";
 
@@ -356,93 +358,139 @@ async function transacaoDoTenant(prisma: Prisma.TransactionClient, transactionId
   });
 }
 
+/** A escolha de uma baixa já feita, na lista e na sugestão: `baixa:<id>`. Sem o prefixo, é a conta. */
+const PREFIXO_DA_BAIXA = "baixa:";
+
 /**
- * Confirma que a transação liquida estes lançamentos.
+ * Confirma que a transação liquida estas escolhas.
  *
- * Cada lançamento vira `PAGO` com a data do extrato (meio-dia de São Paulo, a
- * convenção da baixa), e o estado anterior fica no vínculo para o desfazer
- * devolver exatamente o que havia. Se um lançamento já estava pago à mão com
- * outra data, a do extrato prevalece — é a data em que o dinheiro de fato saiu.
+ * Desde o lote C (19/10) cada escolha é de dois tipos:
+ * - **a conta em aberto** — ganha a baixa do saldo inteiro, no dia do extrato e
+ *   na conta bancária dele (origem CONCILIACAO);
+ * - **uma baixa já feita** (`baixa:<id>`) e ainda sem extrato — a parcial, ou a
+ *   registrada antes de o extrato chegar. A data do extrato prevalece (é quando
+ *   o dinheiro de fato andou), e a de antes fica no vínculo para o desfazer.
+ *
+ * A soma — saldos das contas e totais das baixas — fecha no centavo com a linha.
  */
-export async function confirmarConciliacao(transactionId: string, entryIds: string[]): Promise<Resultado> {
+export async function confirmarConciliacao(transactionId: string, ids: string[]): Promise<Resultado> {
   const c = await contexto();
   if (!c.ok) return { error: c.erro };
-  if (!Array.isArray(entryIds) || entryIds.length === 0) return { error: "Escolha ao menos um lançamento." };
-  if (entryIds.length > 200) return { error: "Lançamentos demais numa só transação." };
+  if (!Array.isArray(ids) || ids.length === 0) return { error: "Escolha ao menos um lançamento." };
+  if (ids.length > 200) return { error: "Lançamentos demais numa só transação." };
+  const idsDeBaixa = ids.filter((i) => i.startsWith(PREFIXO_DA_BAIXA)).map((i) => i.slice(PREFIXO_DA_BAIXA.length));
+  const idsDeConta = ids.filter((i) => !i.startsWith(PREFIXO_DA_BAIXA));
 
   try {
     const resumo = await c.prisma.$transaction(async (tx) => {
       const t = await transacaoDoTenant(tx, transactionId, c.tenantId);
       if (!t) throw new Recusa("Transação não encontrada.");
       if (t.status !== "PENDENTE") throw new Recusa("Esta transação não está mais pendente — atualize a tela.");
+      const companyId = t.bankAccount.companyId;
 
-      const lancamentos = await tx.financeEntry.findMany({
-        where: { id: { in: entryIds }, tenantId: c.tenantId, companyId: t.bankAccount.companyId },
-        select: {
-          id: true,
-          kind: true,
-          status: true,
-          amount: true,
-          paidAt: true,
-          approvalStatus: true,
-          counterparty: { select: { name: true } },
-          bankMatch: { select: { id: true } },
-        },
-      });
-      if (lancamentos.length !== new Set(entryIds).size) {
-        throw new Recusa("Algum lançamento escolhido não existe nesta empresa.");
+      const [contas, baixas] = await Promise.all([
+        tx.financeEntry.findMany({
+          where: { id: { in: idsDeConta }, tenantId: c.tenantId, companyId },
+          select: { id: true, kind: true, status: true, amount: true, paidPrincipal: true, approvalStatus: true, counterparty: { select: { name: true } } },
+        }),
+        tx.financeEntryPayment.findMany({
+          where: { id: { in: idsDeBaixa }, tenantId: c.tenantId, companyId },
+          select: {
+            id: true,
+            cash: true,
+            paidAt: true,
+            bankAccountId: true,
+            entryId: true,
+            bankMatch: { select: { id: true } },
+            entry: { select: { kind: true, status: true, counterparty: { select: { name: true } } } },
+          },
+        }),
+      ]);
+      if (contas.length !== new Set(idsDeConta).size) throw new Recusa("Algum lançamento escolhido não existe nesta empresa.");
+      if (baixas.length !== new Set(idsDeBaixa).size) throw new Recusa("Alguma baixa escolhida não existe nesta empresa.");
+
+      const saldoDe = (l: (typeof contas)[number]) => saldoEmAberto(centavosDeDecimal(l.amount), centavosDeDecimal(l.paidPrincipal));
+      for (const l of contas) {
+        if (l.status !== "CANCELADO" && saldoDe(l) === 0) throw new Recusa(`${l.counterparty.name}: já está paga — concilie com a baixa dela.`);
       }
 
       const centavosDaTransacao = centavosDeDecimal(t.amount);
-      const v = validarSelecao(
-        { centavos: centavosDaTransacao },
-        lancamentos.map((l) => ({
+      const v = validarSelecao({ centavos: centavosDaTransacao }, [
+        ...contas.map((l) => ({
           id: l.id,
           kind: l.kind,
           status: l.status,
-          centavos: centavosDeDecimal(l.amount),
-          conciliado: l.bankMatch !== null,
+          centavos: saldoDe(l),
+          conciliado: false,
           contraparteNome: l.counterparty.name,
           // Conta aguardando ou reprovada na aprovação por alçada não é baixada
           // nem pelo extrato — senão a conciliação viraria o atalho da aprovação.
           bloqueioDeBaixa: motivoDoBloqueioDeBaixa(l),
-        }))
-      );
+        })),
+        ...baixas.map((b) => ({
+          id: PREFIXO_DA_BAIXA + b.id,
+          kind: b.entry.kind,
+          status: b.entry.status,
+          centavos: centavosDeDecimal(b.cash),
+          conciliado: b.bankMatch !== null,
+          contraparteNome: b.entry.counterparty.name,
+        })),
+      ]);
       if (!v.ok) throw new Recusa(v.erro);
 
-      const agora = new Date();
       const pagoEm = instanteDaData(saoPauloParts(t.postedAt).dateKey);
-      for (const l of lancamentos) {
+      for (const l of contas) {
+        const baixa = await quitarConta(tx, {
+          tenantId: c.tenantId,
+          entryId: l.id,
+          paidAt: pagoEm,
+          bankAccountId: t.bankAccountId,
+          origin: "CONCILIACAO",
+          userId: c.userId,
+        });
         await tx.bankTransactionMatch.create({
           data: {
             transactionId: t.id,
             financeEntryId: l.id,
-            amount: l.amount,
+            paymentId: baixa.paymentId,
+            amount: decimalDeCentavos(baixa.caixaCentavos),
             entryStatusBefore: l.status,
-            entryPaidAtBefore: l.paidAt,
+            entryPaidAtBefore: null,
             createdById: c.userId,
           },
         });
-        // Condicional na aprovação lida: reenvio para aprovação no meio do
-        // caminho derruba a transação inteira em vez de baixar por cima.
-        const baixado = await tx.financeEntry.updateMany({
-          where: { id: l.id, approvalStatus: { in: ["NAO_REQUER", "APROVADO"] }, status: { not: "CANCELADO" } },
-          data: { status: "PAGO", paidAt: pagoEm },
+      }
+      for (const b of baixas) {
+        await tx.bankTransactionMatch.create({
+          data: {
+            transactionId: t.id,
+            financeEntryId: b.entryId,
+            paymentId: b.id,
+            amount: b.cash,
+            entryStatusBefore: b.entry.status,
+            // Aqui é a data da baixa antes do extrato — o que o desfazer devolve.
+            entryPaidAtBefore: b.paidAt,
+            createdById: c.userId,
+          },
         });
-        if (baixado.count !== 1) throw new Recusa(`${l.counterparty.name}: o lançamento acabou de mudar — atualize a tela.`);
+        if (b.paidAt.getTime() !== pagoEm.getTime() || !b.bankAccountId) {
+          await tx.financeEntryPayment.update({ where: { id: b.id }, data: { paidAt: pagoEm, bankAccountId: b.bankAccountId ?? t.bankAccountId } });
+          await recalcularConta(tx, b.entryId);
+        }
       }
       // Parcela de acordo conciliada é baixa como outra qualquer: pode cumprir o acordo.
-      await sincronizarAcordos(tx, c.tenantId, lancamentos.map((l) => l.id));
+      const lancamentos = [...contas.map((l) => l.id), ...baixas.map((b) => b.entryId)];
+      await sincronizarAcordos(tx, c.tenantId, lancamentos);
 
       // Condicional no status: se outra conciliação ganhou a corrida, nada muda
       // aqui e a transação inteira volta.
       const marcada = await tx.bankTransaction.updateMany({
         where: { id: t.id, status: "PENDENTE" },
-        data: { status: "CONCILIADA", reconciledAt: agora, reconciledById: c.userId },
+        data: { status: "CONCILIADA", reconciledAt: new Date(), reconciledById: c.userId },
       });
       if (marcada.count !== 1) throw new Recusa("Esta transação acabou de ser alterada por outra pessoa — atualize a tela.");
 
-      return { companyId: t.bankAccount.companyId, valor: decimalDeCentavos(centavosDaTransacao), lancamentos: lancamentos.map((l) => l.id) };
+      return { companyId, valor: decimalDeCentavos(centavosDaTransacao), lancamentos, baixasJaFeitas: baixas.map((b) => b.id) };
     });
 
     await logAudit({
@@ -454,8 +502,8 @@ export async function confirmarConciliacao(transactionId: string, entryIds: stri
       metadata: resumo,
     });
   } catch (err) {
-    if (err instanceof Recusa) return { error: err.message };
-    if (isPrismaUniqueError(err)) return { error: "Um dos lançamentos acabou de ser conciliado com outra transação — atualize a tela." };
+    if (err instanceof Recusa || err instanceof RecusaDaBaixa) return { error: err.message };
+    if (isPrismaUniqueError(err)) return { error: "Uma das baixas acabou de ser conciliada com outra transação — atualize a tela." };
     throw err;
   }
 
@@ -466,11 +514,14 @@ export async function confirmarConciliacao(transactionId: string, entryIds: stri
 /**
  * Desfaz a conciliação.
  *
- * Devolve cada lançamento ao status e à data de baixa que tinha antes — **se**
- * ele continua como a conciliação o deixou (pago na data do extrato). Se alguém
- * mexeu depois (desfez a baixa em `/pagar`, cancelou), o estado atual é mais
- * novo que o guardado e fica como está: restaurar por cima apagaria a decisão
- * de outra pessoa. O vínculo sai nos dois casos.
+ * Os vínculos saem primeiro; depois, cada baixa volta ao que era antes:
+ * - **a que a conciliação criou** (quitou o saldo) é apagada, e a conta volta a
+ *   ter o saldo em aberto;
+ * - **a que já existia** (baixa feita à mão e ligada aqui) fica, com a data de
+ *   antes do extrato — se ninguém mexeu nela depois;
+ * - **vínculo de antes do lote C sem baixa** segue a regra antiga: a conta volta
+ *   ao status e à data guardados, se continua como a conciliação a deixou.
+ * Ponta de transferência desfaz o par inteiro (`desfazerTransferencias`).
  */
 export async function desfazerConciliacao(transactionId: string): Promise<Resultado> {
   const c = await contexto();
@@ -491,6 +542,7 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
               financeEntryId: true,
               entryStatusBefore: true,
               entryPaidAtBefore: true,
+              payment: { select: { id: true, origin: true, paidAt: true } },
               financeEntry: { select: { status: true, paidAt: true, transferId: true } },
             },
           },
@@ -502,10 +554,28 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
       const pagoEm = instanteDaData(saoPauloParts(t.postedAt).dateKey).getTime();
       const restaurados: string[] = [];
       const mantidos: string[] = [];
+      const baixasApagadas: string[] = [];
       // Ponta de transferência não volta a "em aberto": foi criada pela
       // transferência e sai com ela, junto da outra ponta (abaixo).
       const transferIds = [...new Set(t.matches.flatMap((m) => (m.financeEntry.transferId ? [m.financeEntry.transferId] : [])))];
+
+      // A baixa não se apaga com vínculo (Restrict): os vínculos saem antes.
+      await tx.bankTransactionMatch.deleteMany({ where: { transactionId: t.id } });
       for (const m of t.matches.filter((m) => !m.financeEntry.transferId)) {
+        if (m.payment) {
+          // MIGRACAO com "antes" em aberto é a baixa que a conciliação de antes
+          // do lote C fez — e por isso sai, como sairia a de agora.
+          const criadaAqui = m.payment.origin === "CONCILIACAO" || (m.payment.origin === "MIGRACAO" && m.entryStatusBefore !== "PAGO");
+          if (criadaAqui) {
+            await apagarBaixa(tx, m.payment.id, c.tenantId);
+            baixasApagadas.push(m.payment.id);
+          } else if (m.entryPaidAtBefore && m.payment.paidAt.getTime() === pagoEm) {
+            await tx.financeEntryPayment.update({ where: { id: m.payment.id }, data: { paidAt: m.entryPaidAtBefore } });
+            await recalcularConta(tx, m.financeEntryId);
+          }
+          restaurados.push(m.financeEntryId);
+          continue;
+        }
         const intacto = m.financeEntry.status === "PAGO" && m.financeEntry.paidAt?.getTime() === pagoEm;
         if (intacto) {
           await tx.financeEntry.update({
@@ -517,7 +587,6 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
           mantidos.push(m.financeEntryId);
         }
       }
-      await tx.bankTransactionMatch.deleteMany({ where: { transactionId: t.id } });
       await sincronizarAcordos(tx, c.tenantId, restaurados);
       const transferencia = transferIds.length ? await desfazerTransferencias(tx, c.tenantId, transferIds, t.id) : null;
       const voltou = await tx.bankTransaction.updateMany({
@@ -533,7 +602,7 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
         },
       });
       if (voltou.count !== 1) throw new Recusa("Esta transação acabou de ser alterada por outra pessoa — atualize a tela.");
-      return { restaurados, mantidos, ...(transferencia ? { transferencia } : {}) };
+      return { restaurados, mantidos, baixasApagadas, ...(transferencia ? { transferencia } : {}) };
     });
 
     await logAudit({
@@ -545,7 +614,7 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
       metadata: resumo,
     });
   } catch (err) {
-    if (err instanceof Recusa) return { error: err.message };
+    if (err instanceof Recusa || err instanceof RecusaDaBaixa) return { error: err.message };
     throw err;
   }
 
@@ -657,21 +726,20 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
         }));
 
       const pagoEm = instanteDaData(dataKey);
-      // Nasce PAGO: é o registro de um dinheiro que já saiu. Não entra em
-      // aprovação por alçada (fica no padrão NAO_REQUER).
+      // Nasce pago, pela baixa logo abaixo: é o registro de um dinheiro que já
+      // saiu. Não entra em aprovação por alçada (fica no padrão NAO_REQUER).
       const criado = await tx.financeEntry.create({
         data: {
           tenantId: c.tenantId,
           companyId,
           kind: d.kind,
-          status: "PAGO",
+          status: "CONFERIDO",
           counterpartyId: contraparte.id,
           categoryId: d.categoryId,
           costCenterId: centro.centroId,
           projectId: projeto.projetoId,
           competence: d.competencia,
           dueDate: pagoEm,
-          paidAt: pagoEm,
           amount: decimalDeCentavos(d.centavos),
           description: d.descricao,
           createdById: c.userId,
@@ -679,6 +747,14 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
           reviewedAt: new Date(),
         },
         select: { id: true, amount: true },
+      });
+      const baixa = await quitarConta(tx, {
+        tenantId: c.tenantId,
+        entryId: criado.id,
+        paidAt: pagoEm,
+        bankAccountId: t.bankAccountId,
+        origin: "CONCILIACAO",
+        userId: c.userId,
       });
 
       if (d.kind === "PAGAR" && d.categoryId && !contraparte.defaultCategoryId) {
@@ -689,6 +765,7 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
         data: {
           transactionId: t.id,
           financeEntryId: criado.id,
+          paymentId: baixa.paymentId,
           amount: criado.amount,
           entryStatusBefore: "CONFERIDO",
           entryPaidAtBefore: null,
@@ -783,12 +860,13 @@ const apelidoDaConta = (c: { nickname: string; accountNumber: string }) => `${c.
 async function desfazerTransferencias(tx: Prisma.TransactionClient, tenantId: string, transferIds: string[], estaTransacaoId: string) {
   const pontas = await tx.financeEntry.findMany({
     where: { tenantId, transferId: { in: transferIds } },
-    select: { id: true, bankMatch: { select: { transactionId: true } } },
+    select: { id: true, bankMatches: { select: { transactionId: true } } },
   });
-  const outrasLinhas = [...new Set(pontas.flatMap((p) => (p.bankMatch && p.bankMatch.transactionId !== estaTransacaoId ? [p.bankMatch.transactionId] : [])))];
+  const linhasDa = (p: (typeof pontas)[number]) => p.bankMatches.map((m) => m.transactionId);
+  const outrasLinhas = [...new Set(pontas.flatMap((p) => linhasDa(p).filter((id) => id !== estaTransacaoId)))];
   for (const linha of outrasLinhas) {
     const vinculos = await tx.bankTransactionMatch.count({ where: { transactionId: linha } });
-    const daTransferencia = pontas.filter((p) => p.bankMatch?.transactionId === linha).length;
+    const daTransferencia = pontas.filter((p) => linhasDa(p).includes(linha)).length;
     if (vinculos > daTransferencia) {
       throw new Recusa("A outra ponta da transferência foi conciliada junto com outros lançamentos na outra conta — desfaça aquela conciliação primeiro.");
     }
@@ -800,9 +878,11 @@ async function desfazerTransferencias(tx: Prisma.TransactionClient, tenantId: st
       data: { status: "PENDENTE", reconciledAt: null, reconciledById: null },
     });
   }
+  // As baixas das pontas saem com elas: transferência desfeita não moveu dinheiro.
+  await tx.financeEntryPayment.deleteMany({ where: { entryId: { in: pontas.map((p) => p.id) } } });
   await tx.financeEntry.updateMany({
     where: { id: { in: pontas.map((p) => p.id) }, tenantId },
-    data: { status: "CANCELADO", closeReason: "CANCELADO" },
+    data: { status: "CANCELADO", closeReason: "CANCELADO", paidAt: null, paidPrincipal: "0" },
   });
   return { transferIds, pontasCanceladas: pontas.map((p) => p.id), outrasLinhasReabertas: outrasLinhas };
 }
@@ -855,20 +935,20 @@ export async function transferirEntreContas(formData: FormData): Promise<Resulta
       const contraparte = await contraparteDeTransferencia(tx, c.tenantId, companyId);
       const agora = new Date();
 
-      // As duas pontas nascem pagas no dia do extrato, e não passam por alçada:
-      // é dinheiro da empresa mudando de conta, não pagamento a ninguém.
-      const criarPonta = async (k: "PAGAR" | "RECEBER", descricao: string) =>
-        tx.financeEntry.create({
+      // As duas pontas nascem pagas no dia do extrato, cada uma com a baixa na
+      // sua conta (lote C), e não passam por alçada: é dinheiro da empresa
+      // mudando de conta, não pagamento a ninguém.
+      const criarPonta = async (k: "PAGAR" | "RECEBER", descricao: string, contaBancariaId: string) => {
+        const ponta = await tx.financeEntry.create({
           data: {
             tenantId: c.tenantId,
             companyId,
             kind: k,
-            status: "PAGO",
+            status: "CONFERIDO",
             counterpartyId: contraparte,
             categoryId: await categoriaDeTransferencia(tx, c.tenantId, companyId, k),
             competence: competenciaDoInstante(t.postedAt),
             dueDate: pagoEm,
-            paidAt: pagoEm,
             amount: valor,
             description: descricao,
             transferId,
@@ -876,13 +956,24 @@ export async function transferirEntreContas(formData: FormData): Promise<Resulta
             reviewedById: c.userId,
             reviewedAt: agora,
           },
-          select: { id: true, amount: true },
+          select: { id: true },
         });
-      const conciliar = async (linhaId: string, ponta: { id: string; amount: Prisma.Decimal }) => {
+        const baixa = await quitarConta(tx, {
+          tenantId: c.tenantId,
+          entryId: ponta.id,
+          paidAt: pagoEm,
+          bankAccountId: contaBancariaId,
+          origin: "TRANSFERENCIA",
+          userId: c.userId,
+        });
+        return { id: ponta.id, paymentId: baixa.paymentId, amount: baixa.principal };
+      };
+      const conciliar = async (linhaId: string, ponta: { id: string; paymentId: string; amount: Prisma.Decimal }) => {
         await tx.bankTransactionMatch.create({
           data: {
             transactionId: linhaId,
             financeEntryId: ponta.id,
+            paymentId: ponta.paymentId,
             amount: ponta.amount,
             entryStatusBefore: "CONFERIDO",
             entryPaidAtBefore: null,
@@ -896,8 +987,8 @@ export async function transferirEntreContas(formData: FormData): Promise<Resulta
         if (marcada.count !== 1) throw new Recusa("Uma linha do extrato acabou de ser alterada por outra pessoa — atualize a tela.");
       };
 
-      const desta = await criarPonta(kind, descricaoDaTransferencia(kind, apelidoDaConta(outra)));
-      const daOutra = await criarPonta(kindDaOutra, descricaoDaTransferencia(kindDaOutra, apelidoDaConta(t.bankAccount)));
+      const desta = await criarPonta(kind, descricaoDaTransferencia(kind, apelidoDaConta(outra)), t.bankAccount.id);
+      const daOutra = await criarPonta(kindDaOutra, descricaoDaTransferencia(kindDaOutra, apelidoDaConta(t.bankAccount)), outra.id);
       await conciliar(t.id, desta);
 
       // A linha espelho no extrato da outra conta, se já foi importada.
@@ -1031,6 +1122,21 @@ function condicaoDaBusca(c: CriterioDaBusca): Prisma.FinanceEntryWhereInput {
   return { OR: porTexto(c.texto) };
 }
 
+/**
+ * O mesmo critério para uma baixa já feita (lote C): valor é o total que andou
+ * (`cash`), data é o dia da baixa ou o vencimento e a emissão da conta, e o
+ * texto procura na conta dela.
+ */
+function condicaoDaBuscaNaBaixa(c: CriterioDaBusca): Prisma.FinanceEntryPaymentWhereInput {
+  if (c.tipo === "data") {
+    const noDia = { gte: inicioDeHoje(c.dataKey), lt: inicioDeHoje(addDaysToKey(c.dataKey, 1)) };
+    return { OR: [{ paidAt: noDia }, { entry: { dueDate: noDia } }, { entry: { issueDate: noDia } }] };
+  }
+  if (c.tipo === "valor") return { cash: decimalDeCentavos(c.centavos) };
+  if (c.tipo === "inteiro") return { OR: [{ cash: decimalDeCentavos(c.centavos) }, { entry: condicaoDaBusca({ tipo: "texto", texto: c.texto }) }] };
+  return { entry: condicaoDaBusca(c) };
+}
+
 const LIMITE_DA_ESCOLHA = 200;
 
 /**
@@ -1056,47 +1162,84 @@ export async function lancamentosParaEscolha(transactionId: string, busca: strin
   const anoDoExtrato = Number(saoPauloParts(t.postedAt).dateKey.slice(0, 4));
   const criterios = lerBuscaDaEscolha((busca ?? "").slice(0, 200), anoDoExtrato);
   const dia = 86_400_000;
-  const linhas = await c.prisma.financeEntry.findMany({
-    where: {
-      tenantId: c.tenantId,
-      companyId: t.bankAccount.companyId,
-      kind,
-      status: { not: "CANCELADO" },
-      bankMatch: { is: null },
-      ...(criterios.length
-        ? { AND: criterios.map(condicaoDaBusca) }
-        : { dueDate: { gte: new Date(t.postedAt.getTime() - 120 * dia), lte: new Date(t.postedAt.getTime() + 60 * dia) } }),
-    },
-    select: {
-      id: true,
-      status: true,
-      amount: true,
-      dueDate: true,
-      paidAt: true,
-      competence: true,
-      description: true,
-      approvalStatus: true,
-      counterparty: { select: { name: true } },
-    },
-    orderBy: { dueDate: "desc" },
-    take: LIMITE_DA_ESCOLHA + 1,
-  });
+  const janela = { gte: new Date(t.postedAt.getTime() - 120 * dia), lte: new Date(t.postedAt.getTime() + 60 * dia) };
+  const companyId = t.bankAccount.companyId;
+  // Duas fontes (lote C): a conta em aberto, pelo saldo — conciliar quita —, e
+  // a baixa já feita sem extrato, pelo total — conciliar a liga à linha.
+  const [contas, baixas] = await Promise.all([
+    c.prisma.financeEntry.findMany({
+      where: {
+        tenantId: c.tenantId,
+        companyId,
+        kind,
+        paidAt: null,
+        status: { notIn: ["CANCELADO", "PAGO"] },
+        ...(criterios.length ? { AND: criterios.map(condicaoDaBusca) } : { dueDate: janela }),
+      },
+      select: {
+        id: true,
+        status: true,
+        amount: true,
+        paidPrincipal: true,
+        dueDate: true,
+        competence: true,
+        description: true,
+        approvalStatus: true,
+        counterparty: { select: { name: true } },
+      },
+      orderBy: { dueDate: "desc" },
+      take: LIMITE_DA_ESCOLHA + 1,
+    }),
+    c.prisma.financeEntryPayment.findMany({
+      where: {
+        tenantId: c.tenantId,
+        companyId,
+        bankMatch: { is: null },
+        entry: { kind, status: { not: "CANCELADO" } },
+        ...(criterios.length ? { AND: criterios.map(condicaoDaBuscaNaBaixa) } : { paidAt: janela }),
+      },
+      select: {
+        id: true,
+        cash: true,
+        paidAt: true,
+        entry: { select: { status: true, dueDate: true, competence: true, description: true, counterparty: { select: { name: true } } } },
+      },
+      orderBy: { paidAt: "desc" },
+      take: LIMITE_DA_ESCOLHA + 1,
+    }),
+  ]);
 
   const alvo = saoPauloParts(t.postedAt).dateKey;
-  const lancamentos = linhas.slice(0, LIMITE_DA_ESCOLHA).map((l) => ({
-    id: l.id,
-    contraparteNome: l.counterparty.name,
-    descricao: l.description,
-    centavos: centavosDeDecimal(l.amount),
-    vencimentoKey: saoPauloParts(l.dueDate).dateKey,
-    pagoEmKey: l.paidAt ? saoPauloParts(l.paidAt).dateKey : null,
-    status: l.status,
-    competencia: l.competence,
-    bloqueio: motivoDoBloqueioDeBaixa(l),
-  }));
+  const lancamentos: LancamentoParaEscolha[] = [
+    ...contas.slice(0, LIMITE_DA_ESCOLHA).map((l) => {
+      const baixado = centavosDeDecimal(l.paidPrincipal);
+      return {
+        id: l.id,
+        contraparteNome: l.counterparty.name,
+        descricao: baixado > 0 ? [l.description, "saldo de baixa parcial"].filter(Boolean).join(" · ") : l.description,
+        centavos: saldoEmAberto(centavosDeDecimal(l.amount), baixado),
+        vencimentoKey: saoPauloParts(l.dueDate).dateKey,
+        pagoEmKey: null,
+        status: l.status,
+        competencia: l.competence,
+        bloqueio: motivoDoBloqueioDeBaixa(l),
+      };
+    }),
+    ...baixas.slice(0, LIMITE_DA_ESCOLHA).map((b) => ({
+      id: PREFIXO_DA_BAIXA + b.id,
+      contraparteNome: b.entry.counterparty.name,
+      descricao: [b.entry.description, "baixa já registrada, sem extrato"].filter(Boolean).join(" · "),
+      centavos: centavosDeDecimal(b.cash),
+      vencimentoKey: saoPauloParts(b.entry.dueDate).dateKey,
+      pagoEmKey: saoPauloParts(b.paidAt).dateKey,
+      status: b.entry.status,
+      competencia: b.entry.competence,
+      bloqueio: null,
+    })),
+  ];
   // Mais perto da data do extrato primeiro — é onde o que se procura costuma estar.
   const distancia = (k: string) => Math.abs(Date.parse(k) - Date.parse(alvo));
   lancamentos.sort((a, b) => distancia(a.pagoEmKey ?? a.vencimentoKey) - distancia(b.pagoEmKey ?? b.vencimentoKey));
 
-  return { ok: true, lancamentos, limitado: linhas.length > LIMITE_DA_ESCOLHA };
+  return { ok: true, lancamentos, limitado: contas.length > LIMITE_DA_ESCOLHA || baixas.length > LIMITE_DA_ESCOLHA };
 }

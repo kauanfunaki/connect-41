@@ -28,6 +28,7 @@ import { centroDoLancamento, type CentroConhecido } from "@/lib/financeiro/centr
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
 import { categoriaDaEmpresa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { projetoInformado } from "@/lib/financeiro/projetoServidor";
+import { quitarConta } from "@/lib/financeiro/baixa/servidor";
 import { fichaOpcional, leitorDaFicha } from "@/lib/financeiro/fichaDaContraparte";
 import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { arquivosDoFormulario, type AnexoGravado } from "@/lib/financeiro/pendencias/armazenamento";
@@ -173,12 +174,14 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           select: { id: true, defaultCategoryId: true },
         }));
   
+      // Nasce conferido; o "já pago em" vira a baixa logo abaixo (lote C), que
+      // é quem deixa a conta paga.
       const criado = await tx.financeEntry.create({
         data: {
           tenantId: c.tenantId,
           companyId,
           kind: d.kind,
-          status,
+          status: status === "PAGO" ? "CONFERIDO" : status,
           approvalStatus,
           counterpartyId: contraparte.id,
           categoryId: d.categoryId,
@@ -188,7 +191,6 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           documentNumber: d.numeroDocumento,
           competence: d.competencia,
           dueDate: instanteDaData(d.vencimentoKey),
-          paidAt: d.pagoEmKey ? instanteDaData(d.pagoEmKey) : null,
           amount: decimalDeCentavos(d.centavos),
           description: d.descricao,
           createdById: c.ctx.userId || null,
@@ -198,6 +200,9 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         },
         select: { id: true, amount: true },
       });
+      if (d.pagoEmKey) {
+        await quitarConta(tx, { tenantId: c.tenantId, entryId: criado.id, paidAt: instanteDaData(d.pagoEmKey), origin: "LANCAMENTO", userId: c.ctx.userId || null });
+      }
       if (approvalStatus === "AGUARDANDO") await registrarEnvios(tx, [criado.id], c.ctx.userId || null);
   
       // A mesma herança do lançamento por nota: a primeira conta classifica o
@@ -250,7 +255,7 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
   if (!ctx.tenantId) return { error: "Não autenticado." };
   const conta = await prisma.financeEntry.findFirst({
     where: { id: entryId, tenantId: ctx.tenantId },
-    select: { id: true, companyId: true, status: true, paidAt: true, fiscalDocumentId: true, agreementId: true },
+    select: { id: true, companyId: true, status: true, paidAt: true, fiscalDocumentId: true, agreementId: true, paidPrincipal: true },
   });
   if (!conta) return { error: "Lançamento não encontrado." };
 
@@ -264,7 +269,7 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
   // cancelado de antes da coluna. Condicionado ao estado lido — uma baixa ou um
   // acordo que chegou antes não é cancelado por cima.
   const cancelado = await prisma.financeEntry.updateMany({
-    where: { id: entryId, tenantId: c.tenantId, status: conta.status, paidAt: null, agreementId: null },
+    where: { id: entryId, tenantId: c.tenantId, status: conta.status, paidAt: null, agreementId: null, payments: { none: {} } },
     data: { status: "CANCELADO", closeReason: "CANCELADO" },
   });
   if (cancelado.count !== 1) return { error: "O lançamento acabou de mudar — atualize a tela." };
@@ -431,7 +436,7 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
             tenantId: c.tenantId,
             companyId,
             kind: d.kind,
-            status,
+            status: status === "PAGO" ? "CONFERIDO" : status,
             approvalStatus,
             counterpartyId: contraparte.id,
             categoryId: d.categoryId,
@@ -441,7 +446,6 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
             documentNumber: d.numeroDocumento,
             competence: d.competencia,
             dueDate: instanteDaData(d.vencimentoKey),
-            paidAt: d.pagoEmKey ? instanteDaData(d.pagoEmKey) : null,
             amount: decimalDeCentavos(d.centavos),
             description: d.descricao,
             createdById: c.ctx.userId || null,
@@ -450,6 +454,10 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
           },
           select: { id: true, amount: true },
         });
+        // A coluna "pago em" vira a baixa cheia (lote C).
+        if (d.pagoEmKey) {
+          await quitarConta(tx, { tenantId: c.tenantId, entryId: criado.id, paidAt: instanteDaData(d.pagoEmKey), origin: "LANCAMENTO", userId: c.ctx.userId || null });
+        }
         if (approvalStatus === "AGUARDANDO") aguardando.push({ id: criado.id, companyId, amount: criado.amount });
 
         if (d.kind === "PAGAR" && d.categoryId && !contraparte.defaultCategoryId) {

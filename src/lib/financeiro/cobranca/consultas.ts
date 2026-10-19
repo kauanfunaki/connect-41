@@ -77,6 +77,7 @@ const SELECAO_DA_LINHA = {
   closeReason: true,
   paidAt: true,
   amount: true,
+  paidPrincipal: true,
   dueDate: true,
   description: true,
   companyId: true,
@@ -153,7 +154,8 @@ function montarLinha(
     sacadoNome: b.counterparty.name,
     sacadoEmail: b.counterparty.email,
     descricao: b.description,
-    valorCentavos: centavosDeDecimal(b.amount),
+    // O que falta receber: com baixa parcial (lote C), o saldo, não o título.
+    valorCentavos: centavosDeDecimal(b.amount) - centavosDeDecimal(b.paidPrincipal),
     vencimento: b.dueDate,
     vencimentoKey,
     diasDeAtraso: Math.max(0, diasEntre(vencimentoKey, hojeKey)),

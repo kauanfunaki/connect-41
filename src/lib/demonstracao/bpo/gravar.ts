@@ -213,6 +213,7 @@ export async function gravarDemonstracaoDoBpo(
     })),
   });
 
+  const pagas = new Set(plano.lancamentos.filter((l) => l.pagoEm && l.status !== "CANCELADO").map((l) => l.chave));
   await tx.financeEntry.createMany({
     data: plano.lancamentos.map((l) => {
       const criador = quem(l.criadoPor);
@@ -228,6 +229,9 @@ export async function gravarDemonstracaoDoBpo(
         competence: l.competence,
         dueDate: dia(l.vencimento),
         paidAt: l.pagoEm ? dia(l.pagoEm) : null,
+        // A conta paga da demonstração tem a baixa dela (lote C): é das baixas
+        // que o fluxo e a DRE de caixa leem.
+        paidPrincipal: pagas.has(l.chave) ? valor(l.centavos) : "0",
         amount: valor(l.centavos),
         description: l.descricao,
         createdById: criador,
@@ -242,6 +246,22 @@ export async function gravarDemonstracaoDoBpo(
         createdAt: ate(l.criadoEm, "10:00"),
       };
     }),
+  });
+  await tx.financeEntryPayment.createMany({
+    data: plano.lancamentos
+      .filter((l) => pagas.has(l.chave))
+      .map((l) => ({
+        id: novo(`baixa:${l.chave}`),
+        tenantId,
+        companyId: empresa(l.empresa),
+        entryId: id(`lancamento:${l.chave}`),
+        paidAt: dia(l.pagoEm!),
+        principal: valor(l.centavos),
+        cash: valor(l.centavos),
+        origin: "MANUAL" as const,
+        createdById: quem(l.criadoPor),
+        createdAt: ate(l.pagoEm!, "11:00"),
+      })),
   });
   await tx.financeApprovalEvent.createMany({
     data: plano.aprovacoes.map((a) => ({
@@ -315,6 +335,7 @@ export async function gravarDemonstracaoDoBpo(
         id: gerar.id(),
         transactionId: id(`transacao:${t.chave}`),
         financeEntryId: id(`lancamento:${l}`),
+        paymentId: pagas.has(l) ? id(`baixa:${l}`) : null,
         amount: valor(centavosDe.get(l)!),
         entryStatusBefore: "CONFERIDO" as const,
         entryPaidAtBefore: null,

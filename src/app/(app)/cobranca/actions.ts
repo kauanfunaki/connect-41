@@ -235,6 +235,7 @@ export async function criarAcordo(formData: FormData): Promise<ResultadoDoAcordo
             costCenterId: true,
             dueDate: true,
             amount: true,
+            paidPrincipal: true,
             agreementId: true,
             collectionOwnerId: true,
             counterparty: { select: { name: true } },
@@ -242,6 +243,10 @@ export async function criarAcordo(formData: FormData): Promise<ResultadoDoAcordo
           },
         });
         if (originais.length !== ids.length) throw new Recusa("Algum título escolhido não existe.");
+        // Acordo é do título inteiro: com baixa parcial (lote C), o valor do
+        // acordo e o que já entrou não fechariam.
+        const comParcial = originais.find((o) => centavosDeDecimal(o.paidPrincipal) > 0);
+        if (comParcial) throw new Recusa(`${comParcial.counterparty.name}: tem baixa parcial — registre o resto como baixa ou desfaça a parcial antes do acordo.`);
 
         const titulos = originais.map((o) => ({
           id: o.id,
@@ -445,10 +450,11 @@ export async function desfazerAcordo(acordoId: string, motivoBruto: string): Pro
 
       const vivas = a.parcelas.filter((p) => p.status !== "CANCELADO");
       const canceladas = await tx.financeEntry.updateMany({
-        where: { agreementId: a.id, tenantId: c.tenantId, status: { in: ["PROVISORIO", "CONFERIDO"] }, paidAt: null, closeReason: null, bankMatch: { is: null } },
+        where: { agreementId: a.id, tenantId: c.tenantId, status: { in: ["PROVISORIO", "CONFERIDO"] }, paidAt: null, closeReason: null, bankMatches: { none: {} }, payments: { none: {} } },
         data: { status: "CANCELADO", closeReason: "CANCELADO" },
       });
-      if (canceladas.count !== vivas.length) throw new Recusa("Uma parcela acabou de ser baixada ou conciliada — atualize a tela.");
+      // Parcela com baixa parcial também barra (lote C): cancelar esconderia o dinheiro que entrou.
+      if (canceladas.count !== vivas.length) throw new Recusa("Uma parcela já tem baixa ou foi conciliada — desfaça a baixa dela antes de desfazer o acordo.");
 
       // Só os que continuam encerrados por **este** acordo voltam.
       for (const o of a.originais.filter((x) => x.status === "CANCELADO" && x.closeReason === "RENEGOCIADO")) {
@@ -516,6 +522,8 @@ export async function baixarPorPerda(entryId: string, motivoBruto: string): Prom
           status: titulo.status,
           closeReason: null,
           paidAt: null,
+          // Com baixa parcial (lote C), a perda esconderia o que já entrou.
+          payments: { none: {} },
           OR: [{ agreementId: null }, { agreement: { status: { not: "ATIVO" } } }],
         },
         data: {
@@ -527,7 +535,7 @@ export async function baixarPorPerda(entryId: string, motivoBruto: string): Prom
           lossById: c.userId,
         },
       });
-      if (mudou.count !== 1) throw new Recusa("O título acabou de mudar — atualize a tela.");
+      if (mudou.count !== 1) throw new Recusa("O título acabou de mudar ou tem baixa parcial — atualize a tela; com parcial, desfaça as baixas antes da perda.");
       await tx.collectionEvent.create({
         data: { tenantId: c.tenantId, entryId: titulo.id, kind: "PERDA", reason: motivo.motivo, userId: c.userId },
       });

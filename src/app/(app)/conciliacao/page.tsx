@@ -39,6 +39,7 @@ import {
   type Motivo,
 } from "@/lib/financeiro/conciliacao/casamento";
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
+import { saldoEmAberto } from "@/lib/financeiro/baixa/regras";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
@@ -624,42 +625,80 @@ async function candidatosDaEmpresa(
   if (absolutos.length === 0) return [];
 
   const prisma = getPrisma();
-  const linhas = await prisma.financeEntry.findMany({
-    where: {
-      tenantId,
-      companyId,
-      kind: { in: tipos },
-      status: { not: "CANCELADO" },
-      bankMatch: { is: null },
-      amount: { in: absolutos.map(decimalDeCentavos) },
-    },
-    select: {
-      id: true,
-      kind: true,
-      status: true,
-      amount: true,
-      dueDate: true,
-      paidAt: true,
-      description: true,
-      approvalStatus: true,
-      counterparty: { select: { name: true, document: true } },
-    },
-    take: 2_000,
-  });
-  return linhas.map((l) => {
-    return {
+  const valoresExatos = absolutos.map(decimalDeCentavos);
+  // Duas fontes (lote C, 19/10): a conta em aberto, pelo saldo — conciliar
+  // quita —, e a baixa já feita sem extrato, pelo total que andou. A conta com
+  // baixa parcial entra pelo saldo, que pode não ser o valor dela: por isso o
+  // `paidPrincipal > 0`, e o saldo é conferido aqui embaixo.
+  const [contas, baixas] = await Promise.all([
+    prisma.financeEntry.findMany({
+      where: {
+        tenantId,
+        companyId,
+        kind: { in: tipos },
+        paidAt: null,
+        status: { notIn: ["CANCELADO", "PAGO"] },
+        OR: [{ amount: { in: valoresExatos } }, { paidPrincipal: { gt: 0 } }],
+      },
+      select: {
+        id: true,
+        kind: true,
+        status: true,
+        amount: true,
+        paidPrincipal: true,
+        dueDate: true,
+        description: true,
+        approvalStatus: true,
+        counterparty: { select: { name: true, document: true } },
+      },
+      take: 2_000,
+    }),
+    prisma.financeEntryPayment.findMany({
+      where: {
+        tenantId,
+        companyId,
+        bankMatch: { is: null },
+        cash: { in: valoresExatos },
+        entry: { kind: { in: tipos }, status: { not: "CANCELADO" } },
+      },
+      select: {
+        id: true,
+        cash: true,
+        paidAt: true,
+        entry: { select: { kind: true, status: true, dueDate: true, description: true, counterparty: { select: { name: true, document: true } } } },
+      },
+      take: 2_000,
+    }),
+  ]);
+  return [
+    ...contas.map((l) => ({
       id: l.id,
       descricao: l.description,
       kind: l.kind,
       status: l.status,
-      centavos: centavosDeDecimal(l.amount),
+      centavos: saldoEmAberto(centavosDeDecimal(l.amount), centavosDeDecimal(l.paidPrincipal)),
       vencimentoKey: saoPauloParts(l.dueDate).dateKey,
-      pagoEmKey: l.paidAt ? saoPauloParts(l.paidAt).dateKey : null,
+      pagoEmKey: null,
       contraparteNome: l.counterparty.name,
       contraparteDocumento: l.counterparty.document,
       conciliado: false,
       // A mesma frase que a action devolve ao confirmar — só que antes do clique.
       bloqueioDeBaixa: motivoDoBloqueioDeBaixa(l),
-    };
-  });
+    })),
+    ...baixas.map((b) => ({
+      // O prefixo diz à action que é uma baixa, e não a conta (`PREFIXO_DA_BAIXA`).
+      id: `baixa:${b.id}`,
+      descricao: b.entry.description,
+      kind: b.entry.kind,
+      status: b.entry.status,
+      centavos: centavosDeDecimal(b.cash),
+      vencimentoKey: saoPauloParts(b.entry.dueDate).dateKey,
+      // Baixa já registrada: a data dela é o sinal mais forte para o extrato.
+      pagoEmKey: saoPauloParts(b.paidAt).dateKey,
+      contraparteNome: b.entry.counterparty.name,
+      contraparteDocumento: b.entry.counterparty.document,
+      conciliado: false,
+      bloqueioDeBaixa: null,
+    })),
+  ];
 }
