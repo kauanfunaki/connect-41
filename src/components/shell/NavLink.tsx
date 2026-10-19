@@ -100,6 +100,8 @@ type NavItemProps = {
    * outros — a home do portal, `/portal`, acenderia em qualquer tela dele.
    */
   exact?: boolean;
+  /** A regra de ativo própria, quando nem o prefixo nem o exato servem (Quadros). */
+  ativo?: (pathname: string) => boolean;
   /** Tem telas dentro (o painel ao lado) — na faixa, o pontinho no canto. */
   comTelas?: boolean;
 };
@@ -123,10 +125,10 @@ function BarraAtiva() {
   return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
 }
 
-export function NavItem({ href, icon, label, exact = false, comTelas = false }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false }: NavItemProps) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
-  const active = exact ? pathname === href : isActivePath(pathname, href);
+  const active = ativo ? ativo(pathname) : exact ? pathname === href : isActivePath(pathname, href);
 
   if (naFaixa) {
     return (
