@@ -500,6 +500,7 @@ model Tenant {
   customValues              CustomValue[]
   sectors                   Sector[]
   tenantModules             TenantModule[]
+  localFiscalScenarios      LocalFiscalScenario[]
   tags                      Tag[]
   accessGrants              UserTenantAccess[]
   departments               Department[]
@@ -883,6 +884,7 @@ model User {
   responsibleFor              CompanyService[]           @relation("CompanyServiceResponsible")
   oauthAccounts               OAuthAccount[]
   fiscalDocumentsUploaded     FiscalDocument[]
+  localFiscalScenarios         LocalFiscalScenario[]
   financeEntriesCreated       FinanceEntry[]             @relation("FinanceEntryCreatedBy")
   financeEntriesReviewed      FinanceEntry[]             @relation("FinanceEntryReviewedBy")
   bankStatementImports        BankStatementImport[]      @relation("BankStatementImportedBy")
@@ -7170,4 +7172,21 @@ model DriveTemplateFolder {
   @@unique([tenantId, name])
   @@index([tenantId, position])
   @@map("drive_template_folders")
+}
+
+/// Simulação fiscal exclusiva do banco local; nunca usada como acervo fiscal real.
+model LocalFiscalScenario {
+  tenantId String
+  userId   String
+  data     Json
+  favorites Json
+  revision Int @default(1)
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, userId])
+  @@index([userId])
+  @@map("local_fiscal_scenarios")
 }

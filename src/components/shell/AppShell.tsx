@@ -50,7 +50,7 @@ import {
 } from "@/components/shell/NavLink";
 import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
-import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
+import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO, getModuleDef } from "@/lib/module-catalog";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { trocarSetor } from "@/components/shell/contexto";
 import {
@@ -73,6 +73,7 @@ import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
+import { menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -511,9 +512,17 @@ export function AppShell({
                   </TituloDoBloco>
                 )}
                 {(() => {
-                  const grupos = agruparModulos(activeSectorModules);
-                  if (grupos.length <= 1 || activeSectorModules.length <= 8) {
-                    return activeSectorModules.map((m) =>
+                  const sped = menuSped(activeSectorModules);
+                  const modulos = activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code));
+                  const itemSped = sped.href && (
+                    <PainelDoItem titulo="SPED" telas={sped.telas} cor={activeSector.color}>
+                      <NavItem href={sped.href} icon={<ReceiptText size={16} />} label="SPED" comTelas={sped.telas.length > 0} />
+                    </PainelDoItem>
+                  );
+                  const diretos = modulos.filter((m) => getModuleDef(m.code)?.menuDireto);
+                  const grupos = agruparModulos(modulos.filter((m) => !getModuleDef(m.code)?.menuDireto));
+                  if (grupos.length <= 1 || modulos.length <= 8) {
+                    return <>{itemSped}{modulos.map((m) =>
                       // O painel da Gestão mostra as abas dele ao lado, como fazia
                       // quando era item do menu geral.
                       m.code === "gestao_painel" ? (
@@ -523,11 +532,11 @@ export function AppShell({
                       ) : (
                         <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />
                       )
-                    );
+                    )}</>;
                   }
                   // A tela do grupo continua (é o clique); o painel ao lado mostra
                   // as telas dele sem precisar abri-la.
-                  return grupos.map(({ grupo, itens }) => (
+                  return <>{itemSped}{diretos.map((m) => <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />)}{grupos.map(({ grupo, itens }) => (
                     <PainelDoItem
                       key={grupo}
                       titulo={grupo}
@@ -541,7 +550,7 @@ export function AppShell({
                         itens={itens}
                       />
                     </PainelDoItem>
-                  ));
+                  ))}</>;
                 })()}
               </>
             ) : (

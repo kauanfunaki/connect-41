@@ -52,7 +52,7 @@ export const PAGINAS_FISCAIS = [
   { pagina: "contribuicoes", modulo: "fiscal_contribuicoes", caminho: "/fiscal/contribuicoes", titulo: "PIS e COFINS", descricao: "Confira a apuração, os ajustes e o fechamento do EFD Contribuições.", abas: [["fechamento", "Fechamento"], ["ajustes", "Ajustes"], ["decisoes", "Decisões por registro"], ["demonstrativo", "Demonstrativo"], ["sped", "SPED Contribuições"]] },
   { pagina: "entregas", modulo: "fiscal_entregas", caminho: "/fiscal/entregas", titulo: "Arquivos e entregas", descricao: "Confira versões, valide e registre a entrega de teste.", abas: [["arquivos", "SPED gerados"], ["validacao", "Validação"], ["entregas", "Entregas"]] },
   { pagina: "conferencia", modulo: "fiscal_conferencia", caminho: "/fiscal/conferencia", titulo: "Conferência fiscal", descricao: "Compare documentos e pagamentos antes de concluir.", abas: [["previa", "Prévia financeira"], ["confronto", "Confronto de documentos"]] },
-  { pagina: "configuracoes", modulo: "fiscal_configuracoes", caminho: "/fiscal/configuracoes", titulo: "Configurações fiscais", descricao: "Confira os parâmetros e consulte as regras fiscais de teste.", abas: [["parametros", "Parâmetros"], ["regras", "Regras fiscais"]] },
+  { pagina: "configuracoes", modulo: "fiscal_configuracoes", caminho: "/fiscal/configuracoes", titulo: "Configurações fiscais", descricao: "Confira os parâmetros e consulte as regras fiscais de teste.", abas: [["parametros", "Parâmetros"], ["depara", "De-Para CFOP"], ["regras", "Regras fiscais"]] },
 ] as const;
 export type PaginaFiscal = typeof PAGINAS_FISCAIS[number]["pagina"];
 
@@ -220,7 +220,7 @@ export function executarAcao(cenario: Cenario, acao: AcaoFiscal, contexto = cena
     if (!acao.nome.trim()) return recusar("Informe um nome para a empresa de teste.");
     const empresa = s.empresas.find((e) => e.id === contexto.empresaId)!;
     empresa.nome = acao.nome.trim(); empresa.regime = acao.regime;
-    mensagem = "Cadastro fictício atualizado neste navegador.";
+    mensagem = "Cadastro fictício atualizado no banco local.";
   } else if (acao.tipo === "regra") {
     if (!regraSchema.safeParse(acao.regra).success || !acao.regra.fonte.trim()) return recusar("Informe a fonte da regra de teste.");
     const index = s.regras.findIndex((r) => r.id === acao.regra.id);
@@ -230,10 +230,10 @@ export function executarAcao(cenario: Cenario, acao: AcaoFiscal, contexto = cena
     mensagem = "Regra compartilhada atualizada; cenários sinalizados para revisão.";
   } else if (acao.tipo === "gerar") {
     adicionarArquivo(s, contexto, acao.imposto, id, agora);
-    s.execucoes.unshift({ id: `${id}-execucao`, contexto: { ...contexto }, acao: `Gerar ${acao.imposto}`, criadoEm: agora, estado: "Concluída", log: ["Simulação iniciada no navegador.", "Dados fictícios preparados.", "Prévia adicionada a Arquivos e entregas. Nenhum arquivo fiscal foi gerado."] });
+    s.execucoes.unshift({ id: `${id}-execucao`, contexto: { ...contexto }, acao: `Gerar ${acao.imposto}`, criadoEm: agora, estado: "Concluída", log: ["Simulação executada no servidor local.", "Dados fictícios preparados.", "Prévia adicionada a Arquivos e entregas. Nenhum arquivo fiscal foi gerado."] });
     mensagem = "Nova versão de teste criada. Continue em Validação.";
   } else if (acao.tipo === "validar" || acao.tipo === "entregar") {
-    const arquivo = s.arquivos.find((a) => a.id === acao.id && mesmoEscopo(a.contexto, contexto));
+    const arquivo = s.arquivos.find((a) => a.id === acao.id && a.contexto.empresaId === contexto.empresaId && a.contexto.competencia === contexto.competencia && (!contexto.estabelecimentoId || !a.contexto.estabelecimentoId || a.contexto.estabelecimentoId === contexto.estabelecimentoId));
     if (!arquivo) return recusar("Arquivo indisponível neste filtro.");
     if (precisaRevisar(s, arquivo)) return recusar("Os dados mudaram após a geração. Gere uma nova versão de teste.");
     if (acao.tipo === "validar") {
@@ -255,9 +255,9 @@ export function executarAcao(cenario: Cenario, acao: AcaoFiscal, contexto = cena
   } else if (acao.tipo === "processar" || acao.tipo === "cancelar" || acao.tipo === "reprocessar") {
     const execucao = s.execucoes.find((e) => e.id === acao.id && mesmoEscopo(e.contexto, contexto));
     if (!execucao || (acao.tipo === "reprocessar" ? execucao.estado !== "Erro" : execucao.estado !== "Na fila")) return recusar("Esta execução não está disponível para a ação escolhida.");
-    if (acao.tipo === "cancelar") { execucao.estado = "Cancelada"; execucao.log.push("Cancelada no navegador."); mensagem = "Execução de teste cancelada."; }
+    if (acao.tipo === "cancelar") { execucao.estado = "Cancelada"; execucao.log.push("Cancelada no servidor local."); mensagem = "Execução de teste cancelada."; }
     else if (acao.tipo === "processar" && execucao.log.includes("Cenário: falha de extração.")) { execucao.estado = "Erro"; execucao.log.push("Falha simulada de extração. Reprocesse na aba Erros."); mensagem = "Falha de teste registrada. Abra Erros para reprocessar."; }
-    else { execucao.estado = "Concluída"; execucao.log.push("Recuperação e processamento concluídos no navegador."); adicionarArquivo(s, execucao.contexto, execucao.acao.includes("Contribuições") ? "Contribuições" : "ICMS/IPI", `${id}-arquivo`, agora); mensagem = "Execução concluída; prévia disponível em Arquivos e entregas."; }
+    else { execucao.estado = "Concluída"; execucao.log.push("Recuperação e processamento concluídos no servidor local."); adicionarArquivo(s, execucao.contexto, execucao.acao.includes("Contribuições") ? "Contribuições" : "ICMS/IPI", `${id}-arquivo`, agora); mensagem = "Execução concluída; prévia disponível em Arquivos e entregas."; }
   } else if (acao.tipo === "confrontar") {
     s.confrontos = s.confrontos.filter((c) => !mesmoEscopo(c.contexto, contexto));
     docs.filter((d) => ["Contrato", "Recibo", "RPA", "Fatura"].includes(d.tipo)).forEach((d, i) => s.confrontos.push({ id: `${id}-${i}`, contexto: { empresaId: d.empresaId, estabelecimentoId: d.estabelecimentoId, competencia: d.competencia }, documentoId: d.id, estado: "Sem nota", valor: d.valor }));

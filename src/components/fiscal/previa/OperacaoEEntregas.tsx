@@ -16,20 +16,23 @@ import { ItemDoMenu } from "@/components/ui/Popover";
 import { useFiscal, classeSelectFiscal } from "./ContextoFiscal";
 import { AcoesFiscais, AtalhoFiscal, BlocoFiscal, CampoFiscal, EstadoFiscal, MetricasFiscais, PreviaTexto, TabelaFiscal, dataFiscal } from "./Compartilhados";
 import { mesmoEscopo, precisaRevisar, type Imposto, type ArquivoTeste } from "@/lib/fiscal/previa/cenario";
+import { arquivoNoContexto, ultimasVersoesDoContexto } from "@/lib/fiscal/previa/fluxo";
 
 export function ArquivosFiscal({ aba, imposto }: { aba: string; imposto?: Imposto }) {
   const { cenario, simular, visualizar } = useFiscal();
   const [tipo, setTipo] = useState<Imposto>(imposto ?? "ICMS/IPI");
-  const todos = cenario.arquivos.filter((a) => mesmoEscopo(a.contexto, cenario.contexto) && (!imposto || a.tipo === imposto));
+  const todos = cenario.arquivos.filter((a) => arquivoNoContexto(a, cenario.contexto) && (!imposto || a.tipo === imposto));
   const arquivos = todos.filter((a) => !a.dominio);
-  const situacao = (a: ArquivoTeste) => precisaRevisar(cenario, a) ? "Revisão necessária" : a.entregue ? "Entregue · teste" : a.validacao;
+  const atuais = ultimasVersoesDoContexto(cenario).filter((a) => !imposto || a.tipo === imposto);
+  const idsAtuais = new Set(atuais.map((a) => a.id));
+  const situacao = (a: ArquivoTeste) => !idsAtuais.has(a.id) ? "Substituída por nova versão" : precisaRevisar(cenario, a) ? "Revisão necessária" : a.entregue ? "Entregue · teste" : a.validacao;
   const abrir = (a: ArquivoTeste) => visualizar(a.nome, <div className="space-y-4"><EstadoFiscal>{situacao(a)}</EstadoFiscal><TabelaFiscal colunas={["Informação", "Conteúdo"]} linhas={[
     { id: "versao", celulas: ["Versão / obrigação", `v${a.versao} · ${a.tipo}`] }, { id: "periodo", celulas: ["Competência / estabelecimento", `${a.contexto.competencia} · ${a.contexto.estabelecimentoId || "Todos"}`] }, { id: "validacao", celulas: ["Última validação de teste", a.validacao] }, { id: "protocolo", celulas: ["Protocolo demonstrativo", a.protocolo || "Ainda não entregue"] },
   ]} />{a.erros.length > 0 && <div><h3 className="mb-2 text-ui font-semibold text-fg">Relatório de pendências</h3><ul className="list-disc space-y-1 pl-5 text-ui text-warning-fg">{a.erros.map((erro, i) => <li key={i}>{erro}</li>)}</ul></div>}<PreviaTexto texto={`PRÉVIA DE TESTE · SEM VALIDADE FISCAL\n\nArquivo: ${a.nome}\nObrigação: ${a.tipo}\nCompetência: ${a.contexto.competencia}\nVersão: ${a.versao}\n\n|EXEMPLO|DADOS FICTÍCIOS|\n\nA geração, o download e a impressão são representados por esta prévia visual.`} /></div>);
-  const revisar = todos.filter((a) => precisaRevisar(cenario, a)).length;
+  const revisar = atuais.filter((a) => precisaRevisar(cenario, a)).length;
   return <div className="space-y-5"><MetricasFiscais itens={[
     { rotulo: "Versões de teste", valor: todos.filter((a) => !a.dominio).length, icone: <Layers /> },
-    { rotulo: "Validação aprovada", valor: todos.filter((a) => !a.dominio && a.validacao === "Aprovado" && !precisaRevisar(cenario, a)).length, icone: <BadgeCheck /> },
+    { rotulo: "Validação aprovada", valor: atuais.filter((a) => !a.dominio && a.validacao === "Aprovado" && !precisaRevisar(cenario, a)).length, icone: <BadgeCheck /> },
     { rotulo: "Precisam de revisão", valor: revisar, icone: <RefreshCw />, tom: revisar > 0 ? "text-warning-fg" : undefined },
     { rotulo: "Entregas simuladas", valor: todos.filter((a) => a.entregue).length, icone: <Send />, href: imposto ? undefined : "/fiscal/entregas?aba=entregas" },
   ]} />
@@ -37,13 +40,13 @@ export function ArquivosFiscal({ aba, imposto }: { aba: string; imposto?: Impost
       <TabelaFiscal colunas={["Arquivo / obrigação", "Competência", "Versão", "Situação", "Criado em", "Ações"]} linhas={arquivos.map((a) => ({ id: a.id, celulas: [
         <span key="nome" className="block max-w-64 break-words text-helper">{a.nome}<span className="mt-1 block text-ui font-medium">{a.tipo} · {a.contexto.estabelecimentoId || "Todos os estabelecimentos"}</span></span>, a.contexto.competencia, `v${a.versao}`, <EstadoFiscal key="estado">{situacao(a)}</EstadoFiscal>, <span key="data" className="whitespace-nowrap text-helper">{dataFiscal(a.criadoEm)}</span>,
         <AcoesFiscais key="acoes">
-          {!a.dominio && !a.entregue && !precisaRevisar(cenario, a) && (a.validacao !== "Aprovado"
+          {idsAtuais.has(a.id) && !a.dominio && !a.entregue && !precisaRevisar(cenario, a) && (a.validacao !== "Aprovado"
             ? <Button size="xs" variant="secondary" onClick={() => simular({ tipo: "validar", id: a.id })}><FileCheck size={13} />Validar</Button>
             : aba === "entregas" ? <Button size="xs" variant="secondary" onClick={() => simular({ tipo: "entregar", id: a.id })}>Registrar entrega</Button>
               : <AtalhoFiscal discreto modulo="fiscal_entregas" aba="entregas">Ir para entrega</AtalhoFiscal>)}
           <MenuDeMaisAcoes rotulo={`Opções de ${a.nome}`} width={220}>{({ close }) => <>
             <ItemDoMenu onClick={() => { close(); abrir(a); }}>{aba === "validacao" ? "Ver relatório de validação" : "Ver / baixar prévia"}</ItemDoMenu>
-            {precisaRevisar(cenario, a) && <ItemDoMenu href="/fiscal/entregas?aba=arquivos" onClick={close}>Gerar nova versão</ItemDoMenu>}
+            {idsAtuais.has(a.id) && precisaRevisar(cenario, a) && <ItemDoMenu href="/fiscal/entregas?aba=arquivos" onClick={close}>Gerar nova versão</ItemDoMenu>}
           </>}</MenuDeMaisAcoes>
         </AcoesFiscais>,
       ] }))} />
