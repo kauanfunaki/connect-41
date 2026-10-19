@@ -6,6 +6,7 @@ import {
   validarSelecao,
   tipoCompativel,
   normalizarTexto,
+  nivelDoCasamento,
   type LancamentoCandidato,
   type TransacaoParaCasar,
 } from "./casamento";
@@ -211,5 +212,35 @@ describe("auxiliares", () => {
 
   it("normaliza texto", () => {
     expect(normalizarTexto("  São  João/Açaí-ltda. ")).toBe("SAO JOAO ACAI LTDA");
+  });
+});
+
+describe("nivelDoCasamento — as torres (19/10)", () => {
+  it("sem candidato de mesmo valor: nenhum, sem destaque", () => {
+    expect(nivelDoCasamento(rankearCandidatos(debito, [lanc({ id: "a", centavos: 99_00 })]))).toEqual({ nivel: "nenhum", destaque: null });
+  });
+
+  it("sugestão forte é encontrado, com ela de destaque", () => {
+    const r = nivelDoCasamento(rankearCandidatos(debito, [lanc({ id: "a" })]));
+    expect(r.nivel).toBe("encontrado");
+    expect(r.destaque?.lancamento.id).toBe("a");
+  });
+
+  it("na janela mas sem certeza é provável; o que está à frente vira destaque", () => {
+    // Vencimento 8 dias antes: na janela, pontos abaixo do limiar da sugestão forte.
+    const r = nivelDoCasamento(rankearCandidatos(debito, [lanc({ id: "a", vencimentoKey: "2026-09-02" }), lanc({ id: "b", vencimentoKey: "2026-08-01" })]));
+    expect(r.nivel).toBe("provavel");
+    expect(r.destaque?.lancamento.id).toBe("a");
+  });
+
+  it("dois iguais empatados: provável, mas sem destaque — a pessoa escolhe", () => {
+    const r = nivelDoCasamento(rankearCandidatos(debito, [lanc({ id: "a" }), lanc({ id: "b" })]));
+    expect(r).toEqual({ nivel: "provavel", destaque: null });
+  });
+
+  it("mesmo valor só fora da janela: só o valor bate", () => {
+    const r = nivelDoCasamento(rankearCandidatos(debito, [lanc({ id: "a", vencimentoKey: "2026-06-10" })]));
+    expect(r.nivel).toBe("so_valor");
+    expect(r.destaque?.lancamento.id).toBe("a");
   });
 });

@@ -89,6 +89,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "financeiro.bank_statement.imported": c("importou um extrato bancário"),
   "financeiro.bank_transaction.reconciled": e("conciliou um movimento do extrato"),
   "financeiro.bank_transaction.unreconciled": e("desfez a conciliação de um movimento do extrato"),
+  "financeiro.transfer.created": c("registrou como transferência entre contas um movimento do extrato"),
   "financeiro.bank_transaction.ignored": e("ignorou um movimento do extrato"),
   "financeiro.bank_transaction.reopened": e("reabriu um movimento do extrato"),
   "financeiro.categoria.linha_da_dre": e("ligou a uma linha da DRE a categoria"),
