@@ -27,6 +27,9 @@ import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "@/lib/fin
 import { centroDoLancamento, type CentroConhecido } from "@/lib/financeiro/centroDeCusto";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
 import { categoriaDaEmpresa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { projetoInformado } from "@/lib/financeiro/projetoServidor";
+import { fichaOpcional, leitorDaFicha } from "@/lib/financeiro/fichaDaContraparte";
+import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 
 const MODULE = "bpo_lancamentos";
 
@@ -74,6 +77,8 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
       valor: texto("valor"),
       descricao: texto("descricao"),
       pagoEm: texto("pagoEm"),
+      emissao: texto("emissao"),
+      numeroDocumento: texto("numeroDocumento"),
       categoryId,
     },
     hojeKey
@@ -121,6 +126,8 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
     padraoDaContraparteId: existente?.defaultCostCenterId ?? null,
   });
   if (!centro.ok) return { error: centro.erro };
+  const projeto = await projetoInformado({ tenantId: c.tenantId, companyId, informadoId: texto("projectId") || null });
+  if (!projeto.ok) return { error: projeto.erro };
 
   const status = statusInicialDoManual(d.pagoEmKey);
   // Aprovação por alçada: conta a pagar em aberto numa empresa com alçada nasce
@@ -131,7 +138,15 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
     const contraparte =
       existente ??
       (await tx.financeCounterparty.create({
-        data: { tenantId: c.tenantId, companyId, name: novoNome.slice(0, 180), document: novoDocumento },
+        data: {
+          tenantId: c.tenantId,
+          companyId,
+          name: novoNome.slice(0, 180),
+          document: novoDocumento,
+          // A ficha que a Receita devolveu na busca pelo CNPJ (campos ocultos).
+          email: lerEmail(texto("ficha_email")) || null,
+          ...fichaOpcional(leitorDaFicha(formData, "ficha_")),
+        },
         select: { id: true, defaultCategoryId: true },
       }));
 
@@ -145,6 +160,9 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         counterpartyId: contraparte.id,
         categoryId: d.categoryId,
         costCenterId: centro.centroId,
+        projectId: projeto.projetoId,
+        issueDate: d.emissaoKey ? instanteDaData(d.emissaoKey) : null,
+        documentNumber: d.numeroDocumento,
         competence: d.competencia,
         dueDate: instanteDaData(d.vencimentoKey),
         paidAt: d.pagoEmKey ? instanteDaData(d.pagoEmKey) : null,
@@ -182,6 +200,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
       competencia: d.competencia,
       approvalStatus,
       centroDeCusto: centro.centroId,
+      projeto: projeto.projetoId,
       ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
     },
   });
@@ -243,10 +262,13 @@ async function prepararParaEmpresa(tenantId: string, companyId: string, texto: s
   const centros = (
     await prisma.costCenter.findMany({ where: { tenantId, companyId, active: true }, select: { id: true, name: true, code: true } })
   ).map((c) => ({ id: c.id, nome: c.name, codigo: c.code }));
+  const projetos = (
+    await prisma.financeProject.findMany({ where: { tenantId, companyId, active: true }, select: { id: true, name: true } })
+  ).map((p) => ({ id: p.id, nome: p.name }));
 
   // Primeira passada só para saber quais competências o arquivo toca — a
   // consulta de duplicidade não precisa do histórico inteiro da empresa.
-  const rascunho = prepararImportacao(texto, hojeKey, casaveis, new Set(), centros);
+  const rascunho = prepararImportacao(texto, hojeKey, casaveis, new Set(), centros, projetos);
   if (!rascunho.ok) return rascunho;
   const competencias = [
     ...new Set(rascunho.linhas.flatMap((l) => (l.situacao === "erro" ? [] : [l.dados.competencia]))),
@@ -284,7 +306,7 @@ async function prepararParaEmpresa(tenantId: string, companyId: string, texto: s
       })
     )
   );
-  return prepararImportacao(texto, hojeKey, casaveis, chaves, centros);
+  return prepararImportacao(texto, hojeKey, casaveis, chaves, centros, projetos);
 }
 
 export async function previsualizarImportacao(companyId: string, texto: string): Promise<PreviaDaImportacao> {
@@ -316,12 +338,13 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
   const validas = previa.linhas.flatMap((l) => (l.situacao === "valida" ? [l.dados] : []));
   if (validas.length === 0) return { error: "Nenhuma linha válida para importar." };
 
-  const [contrapartes, centrosDaEmpresa] = await Promise.all([
+  const [contrapartes, centrosDaEmpresa, projetosAtivos] = await Promise.all([
     c.prisma.financeCounterparty.findMany({
       where: { tenantId: c.tenantId, companyId },
       select: { id: true, name: true, document: true, defaultCategoryId: true, defaultCostCenterId: true },
     }),
     c.prisma.costCenter.findMany({ where: { tenantId: c.tenantId, companyId }, select: { id: true, companyId: true, active: true } }),
+    c.prisma.financeProject.findMany({ where: { tenantId: c.tenantId, companyId, active: true }, select: { id: true } }),
   ]);
   const centros = new Map<string, CentroConhecido>(centrosDaEmpresa.map((x) => [x.id, x]));
   // Um centro inativado entre a leitura do arquivo e aqui recusa a importação
@@ -330,6 +353,10 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
     if (d.centroDeCustoId && !centros.get(d.centroDeCustoId)?.active) {
       return { error: "Um centro de custo do arquivo acabou de ser inativado — leia o arquivo de novo." };
     }
+  }
+  const ativos = new Set(projetosAtivos.map((p) => p.id));
+  if (validas.some((d) => d.projetoId && !ativos.has(d.projetoId))) {
+    return { error: "Um projeto do arquivo acabou de ser inativado — leia o arquivo de novo." };
   }
   const porDocumento = new Map(contrapartes.filter((p) => p.document).map((p) => [p.document!, p]));
   // Sem documento, casa pelo nome normalizado — a mesma chave da duplicidade.
@@ -375,6 +402,9 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
             counterpartyId: contraparte.id,
             categoryId: d.categoryId,
             costCenterId: centro.ok ? centro.centroId : null,
+            projectId: d.projetoId,
+            issueDate: d.emissaoKey ? instanteDaData(d.emissaoKey) : null,
+            documentNumber: d.numeroDocumento,
             competence: d.competencia,
             dueDate: instanteDaData(d.vencimentoKey),
             paidAt: d.pagoEmKey ? instanteDaData(d.pagoEmKey) : null,

@@ -235,6 +235,13 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
       href: null,
       empresaId: r.companyId,
     })),
+  FinanceProject: async (tenantId, ids) =>
+    (await getPrisma().financeProject.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true, companyId: true } })).map((r) => ({
+      id: r.id,
+      nome: r.name,
+      href: null,
+      empresaId: r.companyId,
+    })),
   FinanceCounterparty: async (tenantId, ids) =>
     (await getPrisma().financeCounterparty.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true, companyId: true } })).map((r) => ({
       id: r.id,
@@ -312,18 +319,23 @@ export async function resolverReferencias(
     }
   }
 
-  // Os ids que o "de → para" cita: pasta, centro de custo, responsável, empresa.
+  // Os ids que o "de → para" cita: pasta, centro de custo, responsável,
+  // empresa — e, desde a edição de lançamento (19/10), projeto, categoria e
+  // contraparte.
   const ids = [...citados].slice(0, 300);
   for (const id of ids) empresaIds.add(id);
-  const [empresas, pastas, centros, usuarios] = await Promise.all([
+  const [empresas, pastas, centros, usuarios, projetos, categorias, contrapartes] = await Promise.all([
     semFalhar("empresas", BUSCADORES.Company(tenantId, [...empresaIds]), []),
     ids.length ? semFalhar("pastas citadas", BUSCADORES.DriveFolder(tenantId, ids), []) : Promise.resolve([]),
     ids.length ? semFalhar("centros citados", BUSCADORES.CostCenter(tenantId, ids), []) : Promise.resolve([]),
     ids.length ? semFalhar("usuários citados", BUSCADORES.User(tenantId, ids), []) : Promise.resolve([]),
+    ids.length ? semFalhar("projetos citados", BUSCADORES.FinanceProject(tenantId, ids), []) : Promise.resolve([]),
+    ids.length ? semFalhar("categorias citadas", BUSCADORES.FinanceCategory(tenantId, ids), []) : Promise.resolve([]),
+    ids.length ? semFalhar("contrapartes citadas", BUSCADORES.FinanceCounterparty(tenantId, ids), []) : Promise.resolve([]),
   ]);
 
   const nomes = new Map<string, string>(Object.entries(setores));
-  for (const l of [...pastas, ...centros, ...usuarios, ...empresas]) if (l.nome) nomes.set(l.id, l.nome);
+  for (const l of [...pastas, ...centros, ...usuarios, ...projetos, ...categorias, ...contrapartes, ...empresas]) if (l.nome) nomes.set(l.id, l.nome);
   for (const [chave, a] of alvos) {
     const id = chave.slice(chave.indexOf(":") + 1);
     if (a.nome && !nomes.has(id)) nomes.set(id, a.nome);
