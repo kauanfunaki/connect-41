@@ -8,6 +8,7 @@
 // conciliou o mesmo lançamento há um minuto), e a action é alcançável por POST
 // direto, sem tela nenhuma.
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
@@ -15,7 +16,7 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
-import { saoPauloParts } from "@/lib/agenda";
+import { saoPauloParts, addDaysToKey } from "@/lib/agenda";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { decimalDeCentavos, digitosDoDocumento, validarCamposDoLancamento } from "@/lib/financeiro/manual";
@@ -26,8 +27,22 @@ import { tipoCompativel, validarSelecao } from "@/lib/financeiro/conciliacao/cas
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 import { sincronizarAcordos } from "@/lib/financeiro/cobranca/sincronizar";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
-import { categoriaDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { categoriaDaEmpresa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { TRANSFERENCIA } from "@/lib/dre/estrutura";
+import {
+  NOME_DA_CATEGORIA_DE_TRANSFERENCIA,
+  NOME_DA_CONTRAPARTE_DE_TRANSFERENCIA,
+  escolherCategoriaDeTransferencia,
+  validarOutraConta,
+  descricaoDaTransferencia,
+  linhaDaOutraPonta,
+} from "@/lib/financeiro/conciliacao/transferencia";
 import { conciliarContaPeloOmie } from "@/lib/financeiro/conciliacao/omieServidor";
+import { projetoInformado } from "@/lib/financeiro/projetoServidor";
+import { fichaOpcional, leitorDaFicha } from "@/lib/financeiro/fichaDaContraparte";
+import { lerEmail } from "@/lib/financeiro/cobranca/regua";
+import { lerBuscaDaEscolha, type CriterioDaBusca } from "@/lib/financeiro/conciliacao/busca";
+import { inicioDeHoje } from "@/lib/financeiro/consultas";
 
 const MODULE = "bpo_conciliacao";
 
@@ -476,7 +491,7 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
               financeEntryId: true,
               entryStatusBefore: true,
               entryPaidAtBefore: true,
-              financeEntry: { select: { status: true, paidAt: true } },
+              financeEntry: { select: { status: true, paidAt: true, transferId: true } },
             },
           },
         },
@@ -487,7 +502,10 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
       const pagoEm = instanteDaData(saoPauloParts(t.postedAt).dateKey).getTime();
       const restaurados: string[] = [];
       const mantidos: string[] = [];
-      for (const m of t.matches) {
+      // Ponta de transferência não volta a "em aberto": foi criada pela
+      // transferência e sai com ela, junto da outra ponta (abaixo).
+      const transferIds = [...new Set(t.matches.flatMap((m) => (m.financeEntry.transferId ? [m.financeEntry.transferId] : [])))];
+      for (const m of t.matches.filter((m) => !m.financeEntry.transferId)) {
         const intacto = m.financeEntry.status === "PAGO" && m.financeEntry.paidAt?.getTime() === pagoEm;
         if (intacto) {
           await tx.financeEntry.update({
@@ -501,6 +519,7 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
       }
       await tx.bankTransactionMatch.deleteMany({ where: { transactionId: t.id } });
       await sincronizarAcordos(tx, c.tenantId, restaurados);
+      const transferencia = transferIds.length ? await desfazerTransferencias(tx, c.tenantId, transferIds, t.id) : null;
       const voltou = await tx.bankTransaction.updateMany({
         where: { id: t.id, status: "CONCILIADA" },
         // Desfazer o que veio do Omie é dizer que ali o Omie errou: a próxima
@@ -514,7 +533,7 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
         },
       });
       if (voltou.count !== 1) throw new Recusa("Esta transação acabou de ser alterada por outra pessoa — atualize a tela.");
-      return { restaurados, mantidos };
+      return { restaurados, mantidos, ...(transferencia ? { transferencia } : {}) };
     });
 
     await logAudit({
@@ -616,6 +635,8 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
     padraoDaContraparteId: existente?.defaultCostCenterId ?? null,
   });
   if (!centro.ok) return { error: centro.erro };
+  const projeto = await projetoInformado({ tenantId: c.tenantId, companyId, informadoId: texto(formData, "projectId") || null });
+  if (!projeto.ok) return { error: projeto.erro };
 
   let entryId: string;
   try {
@@ -623,7 +644,15 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
       const contraparte =
         existente ??
         (await tx.financeCounterparty.create({
-          data: { tenantId: c.tenantId, companyId, name: novoNome.slice(0, 180), document: novoDocumento },
+          data: {
+            tenantId: c.tenantId,
+            companyId,
+            name: novoNome.slice(0, 180),
+            document: novoDocumento,
+            // A ficha que a Receita devolveu na busca pelo CNPJ (campos ocultos).
+            email: lerEmail(texto(formData, "ficha_email")) || null,
+            ...fichaOpcional(leitorDaFicha(formData, "ficha_")),
+          },
           select: { id: true, defaultCategoryId: true },
         }));
 
@@ -639,6 +668,7 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
           counterpartyId: contraparte.id,
           categoryId: d.categoryId,
           costCenterId: centro.centroId,
+          projectId: projeto.projetoId,
           competence: d.competencia,
           dueDate: pagoEm,
           paidAt: pagoEm,
@@ -690,11 +720,228 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
       valor: decimalDeCentavos(d.centavos),
       competencia: d.competencia,
       centroDeCusto: centro.centroId,
+      projeto: projeto.projetoId,
     },
   });
 
   revalidar();
   return { ok: true };
+}
+
+// ─── Transferência entre contas (19/10) ─────────────────────────────────────
+//
+// A regra e o porquê estão em `src/lib/financeiro/conciliacao/transferencia.ts`.
+
+/**
+ * A categoria de transferência do tipo, na empresa. O plano padrão da 41 só tem
+ * a de saída; a de entrada nasce no padrão do escritório, com o mesmo nome e
+ * fora da DRE, na primeira transferência que precisar dela.
+ */
+async function categoriaDeTransferencia(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  companyId: string,
+  kind: "PAGAR" | "RECEBER"
+): Promise<string> {
+  const candidatas = await tx.financeCategory.findMany({
+    where: ondeDaEmpresa(tenantId, companyId, { kind, apenasAtivas: false, incluirOcultas: true }),
+    select: { id: true, name: true, companyId: true, active: true },
+  });
+  const achada = escolherCategoriaDeTransferencia(candidatas);
+  if (achada) return achada.id;
+  const criada = await tx.financeCategory.create({
+    data: { tenantId, scope: "", name: NOME_DA_CATEGORIA_DE_TRANSFERENCIA, kind, dreGroup: TRANSFERENCIA },
+    select: { id: true },
+  });
+  return criada.id;
+}
+
+/** A ficha "Transferência entre contas" da empresa — a mesma das transferências do Omie. */
+async function contraparteDeTransferencia(tx: Prisma.TransactionClient, tenantId: string, companyId: string): Promise<string> {
+  const ja = await tx.financeCounterparty.findFirst({
+    where: { tenantId, companyId, name: NOME_DA_CONTRAPARTE_DE_TRANSFERENCIA },
+    select: { id: true },
+  });
+  if (ja) return ja.id;
+  const criada = await tx.financeCounterparty.create({
+    data: { tenantId, companyId, name: NOME_DA_CONTRAPARTE_DE_TRANSFERENCIA },
+    select: { id: true },
+  });
+  return criada.id;
+}
+
+const apelidoDaConta = (c: { nickname: string; accountNumber: string }) => `${c.nickname} ${c.accountNumber}`;
+
+/**
+ * Desfaz as transferências destas pontas, dentro da transação do desfazer: as
+ * duas pontas são canceladas (foram criadas pela transferência — não há "antes"
+ * para voltar), e a linha do extrato da outra conta volta a pendente.
+ *
+ * Linha da outra conta conciliada junto com **outros** lançamentos é recusa:
+ * desfazer só a ponta deixaria a soma daquela conciliação sem fechar.
+ */
+async function desfazerTransferencias(tx: Prisma.TransactionClient, tenantId: string, transferIds: string[], estaTransacaoId: string) {
+  const pontas = await tx.financeEntry.findMany({
+    where: { tenantId, transferId: { in: transferIds } },
+    select: { id: true, bankMatch: { select: { transactionId: true } } },
+  });
+  const outrasLinhas = [...new Set(pontas.flatMap((p) => (p.bankMatch && p.bankMatch.transactionId !== estaTransacaoId ? [p.bankMatch.transactionId] : [])))];
+  for (const linha of outrasLinhas) {
+    const vinculos = await tx.bankTransactionMatch.count({ where: { transactionId: linha } });
+    const daTransferencia = pontas.filter((p) => p.bankMatch?.transactionId === linha).length;
+    if (vinculos > daTransferencia) {
+      throw new Recusa("A outra ponta da transferência foi conciliada junto com outros lançamentos na outra conta — desfaça aquela conciliação primeiro.");
+    }
+  }
+  await tx.bankTransactionMatch.deleteMany({ where: { financeEntryId: { in: pontas.map((p) => p.id) } } });
+  if (outrasLinhas.length) {
+    await tx.bankTransaction.updateMany({
+      where: { id: { in: outrasLinhas }, tenantId, status: "CONCILIADA" },
+      data: { status: "PENDENTE", reconciledAt: null, reconciledById: null },
+    });
+  }
+  await tx.financeEntry.updateMany({
+    where: { id: { in: pontas.map((p) => p.id) }, tenantId },
+    data: { status: "CANCELADO", closeReason: "CANCELADO" },
+  });
+  return { transferIds, pontasCanceladas: pontas.map((p) => p.id), outrasLinhasReabertas: outrasLinhas };
+}
+
+export type ResultadoDaTransferencia = { error: string } | { ok: true; aviso: string };
+
+/**
+ * Registra a linha do extrato como transferência para (ou de) outra conta da
+ * mesma empresa: o par de lançamentos, esta ponta conciliada e — se o extrato
+ * da outra conta já tem a linha espelho, e uma só — a outra também.
+ */
+export async function transferirEntreContas(formData: FormData): Promise<ResultadoDaTransferencia> {
+  const c = await contexto();
+  if (!c.ok) return { error: c.erro };
+  const transactionId = texto(formData, "transactionId");
+  const outraContaId = texto(formData, "outraContaId");
+
+  let r: { companyId: string; transferId: string; outra: string; kind: "PAGAR" | "RECEBER"; valor: string; outraPontaConciliada: boolean };
+  try {
+    r = await c.prisma.$transaction(async (tx) => {
+      const t = await tx.bankTransaction.findFirst({
+        where: { id: transactionId, tenantId: c.tenantId },
+        select: {
+          id: true,
+          status: true,
+          amount: true,
+          postedAt: true,
+          bankAccount: { select: { id: true, companyId: true, nickname: true, accountNumber: true } },
+        },
+      });
+      if (!t) throw new Recusa("Transação não encontrada.");
+      if (t.status !== "PENDENTE") throw new Recusa("Esta transação não está mais pendente — atualize a tela.");
+      const centavos = centavosDeDecimal(t.amount);
+      const kind = tipoCompativel(centavos);
+      if (!kind) throw new Recusa("Transação de valor zero não é transferência.");
+
+      const outra = await tx.bankAccount.findFirst({
+        where: { id: outraContaId, tenantId: c.tenantId },
+        select: { id: true, companyId: true, active: true, nickname: true, accountNumber: true },
+      });
+      const v = validarOutraConta({ id: t.bankAccount.id, companyId: t.bankAccount.companyId }, outra);
+      if (!v.ok || !outra) throw new Recusa(v.ok ? "Escolha a outra conta." : v.erro);
+
+      const companyId = t.bankAccount.companyId;
+      const dataKey = saoPauloParts(t.postedAt).dateKey;
+      const pagoEm = instanteDaData(dataKey);
+      const valor = decimalDeCentavos(Math.abs(centavos));
+      const kindDaOutra = kind === "PAGAR" ? "RECEBER" : "PAGAR";
+      const transferId = randomUUID();
+      const contraparte = await contraparteDeTransferencia(tx, c.tenantId, companyId);
+      const agora = new Date();
+
+      // As duas pontas nascem pagas no dia do extrato, e não passam por alçada:
+      // é dinheiro da empresa mudando de conta, não pagamento a ninguém.
+      const criarPonta = async (k: "PAGAR" | "RECEBER", descricao: string) =>
+        tx.financeEntry.create({
+          data: {
+            tenantId: c.tenantId,
+            companyId,
+            kind: k,
+            status: "PAGO",
+            counterpartyId: contraparte,
+            categoryId: await categoriaDeTransferencia(tx, c.tenantId, companyId, k),
+            competence: competenciaDoInstante(t.postedAt),
+            dueDate: pagoEm,
+            paidAt: pagoEm,
+            amount: valor,
+            description: descricao,
+            transferId,
+            createdById: c.userId,
+            reviewedById: c.userId,
+            reviewedAt: agora,
+          },
+          select: { id: true, amount: true },
+        });
+      const conciliar = async (linhaId: string, ponta: { id: string; amount: Prisma.Decimal }) => {
+        await tx.bankTransactionMatch.create({
+          data: {
+            transactionId: linhaId,
+            financeEntryId: ponta.id,
+            amount: ponta.amount,
+            entryStatusBefore: "CONFERIDO",
+            entryPaidAtBefore: null,
+            createdById: c.userId,
+          },
+        });
+        const marcada = await tx.bankTransaction.updateMany({
+          where: { id: linhaId, status: "PENDENTE" },
+          data: { status: "CONCILIADA", reconciledAt: agora, reconciledById: c.userId },
+        });
+        if (marcada.count !== 1) throw new Recusa("Uma linha do extrato acabou de ser alterada por outra pessoa — atualize a tela.");
+      };
+
+      const desta = await criarPonta(kind, descricaoDaTransferencia(kind, apelidoDaConta(outra)));
+      const daOutra = await criarPonta(kindDaOutra, descricaoDaTransferencia(kindDaOutra, apelidoDaConta(t.bankAccount)));
+      await conciliar(t.id, desta);
+
+      // A linha espelho no extrato da outra conta, se já foi importada.
+      const dia = 86_400_000;
+      const candidatas = await tx.bankTransaction.findMany({
+        where: {
+          tenantId: c.tenantId,
+          bankAccountId: outra.id,
+          status: "PENDENTE",
+          postedAt: { gte: new Date(t.postedAt.getTime() - 4 * dia), lte: new Date(t.postedAt.getTime() + 4 * dia) },
+        },
+        select: { id: true, amount: true, postedAt: true },
+      });
+      const espelho = linhaDaOutraPonta(
+        candidatas.map((x) => ({ id: x.id, centavos: centavosDeDecimal(x.amount), dataKey: saoPauloParts(x.postedAt).dateKey })),
+        { centavos, dataKey }
+      );
+      if (espelho) await conciliar(espelho.id, daOutra);
+
+      return { companyId, transferId, outra: apelidoDaConta(outra), kind, valor, outraPontaConciliada: espelho !== null };
+    });
+  } catch (err) {
+    if (err instanceof Recusa) return { error: err.message };
+    if (isPrismaUniqueError(err)) return { error: "Outra pessoa acabou de mexer nesta transação — atualize a tela e tente de novo." };
+    throw err;
+  }
+
+  await logAudit({
+    tenantId: c.tenantId,
+    userId: c.ctx.userId,
+    action: "financeiro.transfer.created",
+    entityType: "BankTransaction",
+    entityId: transactionId,
+    metadata: r,
+  });
+  revalidar();
+
+  const ponta = r.kind === "PAGAR" ? "A entrada" : "A saída";
+  return {
+    ok: true,
+    aviso: r.outraPontaConciliada
+      ? `${ponta} em ${r.outra} foi conciliada junto, com a linha do extrato de lá.`
+      : `${ponta} em ${r.outra} ficou paga, esperando o extrato de lá — vai aparecer como "Encontrado".`,
+  };
 }
 
 // ─── Ignorar e reabrir ──────────────────────────────────────────────────────
@@ -766,6 +1013,24 @@ export type LancamentoParaEscolha = {
 
 export type ResultadoDaEscolha = { error: string } | { ok: true; lancamentos: LancamentoParaEscolha[]; limitado: boolean };
 
+/** Um critério da busca da escolha como filtro do banco. */
+function condicaoDaBusca(c: CriterioDaBusca): Prisma.FinanceEntryWhereInput {
+  const porTexto = (texto: string): Prisma.FinanceEntryWhereInput[] => [
+    { counterparty: { name: { contains: texto } } },
+    { description: { contains: texto } },
+    { documentNumber: { contains: texto } },
+  ];
+  if (c.tipo === "data") {
+    // O dia em São Paulo, de meia-noite a meia-noite: a data gravada pode ser
+    // meio-dia (manual), a hora da nota ou a do Omie.
+    const noDia = { gte: inicioDeHoje(c.dataKey), lt: inicioDeHoje(addDaysToKey(c.dataKey, 1)) };
+    return { OR: [{ dueDate: noDia }, { paidAt: noDia }, { issueDate: noDia }] };
+  }
+  if (c.tipo === "valor") return { amount: decimalDeCentavos(c.centavos) };
+  if (c.tipo === "inteiro") return { OR: [{ amount: decimalDeCentavos(c.centavos) }, ...porTexto(c.texto)] };
+  return { OR: porTexto(c.texto) };
+}
+
 const LIMITE_DA_ESCOLHA = 200;
 
 /**
@@ -777,7 +1042,8 @@ const LIMITE_DA_ESCOLHA = 200;
  * Carregada sob demanda (e não junto da tela) porque a empresa pode ter
  * milhares de lançamentos em aberto e a maioria das transações nunca abre esta
  * lista. Sem busca, restringe a vencimentos de 120 dias antes a 60 depois do
- * extrato; com busca, procura pelo nome em qualquer data.
+ * extrato; com busca, procura em qualquer data — por nome, descrição, número
+ * do documento, **valor e data** (19/10, ver `lerBuscaDaEscolha`).
  */
 export async function lancamentosParaEscolha(transactionId: string, busca: string): Promise<ResultadoDaEscolha> {
   const c = await contexto();
@@ -787,7 +1053,8 @@ export async function lancamentosParaEscolha(transactionId: string, busca: strin
   const kind = tipoCompativel(centavosDeDecimal(t.amount));
   if (!kind) return { ok: true, lancamentos: [], limitado: false };
 
-  const termo = (busca ?? "").trim().slice(0, 80);
+  const anoDoExtrato = Number(saoPauloParts(t.postedAt).dateKey.slice(0, 4));
+  const criterios = lerBuscaDaEscolha((busca ?? "").slice(0, 200), anoDoExtrato);
   const dia = 86_400_000;
   const linhas = await c.prisma.financeEntry.findMany({
     where: {
@@ -796,13 +1063,8 @@ export async function lancamentosParaEscolha(transactionId: string, busca: strin
       kind,
       status: { not: "CANCELADO" },
       bankMatch: { is: null },
-      ...(termo
-        ? {
-            OR: [
-              { counterparty: { name: { contains: termo } } },
-              { description: { contains: termo } },
-            ],
-          }
+      ...(criterios.length
+        ? { AND: criterios.map(condicaoDaBusca) }
         : { dueDate: { gte: new Date(t.postedAt.getTime() - 120 * dia), lte: new Date(t.postedAt.getTime() + 60 * dia) } }),
     },
     select: {

@@ -17,6 +17,7 @@ import {
 } from "./manual";
 import { competenciaDe } from "./periodo";
 import { casarCentroDeCusto, type CentroParaCasar } from "./centroDeCusto";
+import { casarProjeto, type ProjetoParaCasar } from "./projeto";
 
 /** Linhas por arquivo. Mais que isso é migração, e migração pede conferência por lote. */
 export const MAXIMO_DE_LINHAS = 2000;
@@ -31,7 +32,10 @@ type Coluna =
   | "valor"
   | "descricao"
   | "pagoEm"
-  | "centroDeCusto";
+  | "centroDeCusto"
+  | "emissao"
+  | "numeroDocumento"
+  | "projeto";
 
 // Os apelidos saem do que as planilhas do BPO e os exports de ERP costumam
 // chamar cada coisa. Comparados já normalizados — sem acento, caixa ou espaço.
@@ -47,6 +51,11 @@ const APELIDOS: Record<Coluna, string[]> = {
   pagoEm: ["pagoem", "datadepagamento", "datapagamento", "recebidoem", "baixa", "databaixa"],
   // Opcional. Casa pelo nome ou pelo código do centro — ver `casarCentroDeCusto`.
   centroDeCusto: ["centrodecusto", "centrocusto", "centro", "codigodocentro"],
+  // Opcionais desde 19/10, com os nomes do Omie. "documento" sozinho já é o
+  // CNPJ/CPF da contraparte — por isso o número pede "número".
+  emissao: ["emissao", "datadeemissao", "dataemissao"],
+  numeroDocumento: ["numerododocumento", "numerodocumento", "ndodocumento", "ndocumento", "nodocumento"],
+  projeto: ["projeto"],
 };
 
 const OBRIGATORIAS: Coluna[] = ["tipo", "contraparte", "vencimento", "valor"];
@@ -61,6 +70,8 @@ export type DadosDaLinha = LancamentoValidado & {
    * coluna está vazia ou ausente — aí a gravação herda o padrão da contraparte.
    */
   centroDeCustoId: string | null;
+  /** Projeto escrito na coluna e casado com um projeto ativo; `null` sem coluna ou vazia. */
+  projetoId: string | null;
 };
 
 export type LinhaDaImportacao =
@@ -127,14 +138,16 @@ export function competenciaDeTexto(texto: string): string {
  *   próprio arquivo**. Ela aparece na prévia, mas não é gravada. O centro de
  *   custo não entra na chave: a mesma conta com outro centro é a mesma conta;
  * - centro de custo (coluna opcional) casa com os centros **ativos** recebidos,
- *   por nome ou código; escrito e não encontrado é erro da linha.
+ *   por nome ou código; escrito e não encontrado é erro da linha. Projeto,
+ *   igual, só pelo nome.
  */
 export function prepararImportacao(
   texto: string,
   hojeKey: string,
   categorias: CategoriaParaCasar[],
   chavesExistentes: Set<string>,
-  centros: CentroParaCasar[] = []
+  centros: CentroParaCasar[] = [],
+  projetos: ProjetoParaCasar[] = []
 ): PreviaDaImportacao {
   const { headers, rows } = parseCsv(texto);
   if (headers.length === 0) return { ok: false, erro: "O arquivo está vazio." };
@@ -193,6 +206,8 @@ export function prepararImportacao(
 
     const centro = casarCentroDeCusto(campo("centroDeCusto"), centros);
     if (!centro.ok) return { numero, situacao: "erro", erro: centro.erro };
+    const projeto = casarProjeto(campo("projeto"), projetos);
+    if (!projeto.ok) return { numero, situacao: "erro", erro: projeto.erro };
 
     const vencimento = dataDeTexto(campo("vencimento"));
     const competencia = competenciaDeTexto(campo("competencia")) || vencimento.slice(0, 7);
@@ -205,13 +220,21 @@ export function prepararImportacao(
         valor: campo("valor"),
         descricao: campo("descricao"),
         pagoEm: dataDeTexto(campo("pagoEm")),
+        emissao: dataDeTexto(campo("emissao")),
+        numeroDocumento: campo("numeroDocumento"),
         categoryId,
       },
       hojeKey
     );
     if (!v.ok) return { numero, situacao: "erro", erro: v.erro };
 
-    const dados: DadosDaLinha = { ...v.dados, contraparteNome, contraparteDocumento, centroDeCustoId: centro.centroId };
+    const dados: DadosDaLinha = {
+      ...v.dados,
+      contraparteNome,
+      contraparteDocumento,
+      centroDeCustoId: centro.centroId,
+      projetoId: projeto.projetoId,
+    };
     const chave = chaveDeDuplicidade(dados);
     if (vistas.has(chave)) {
       return { numero, situacao: "duplicada", dados, erro: "Já existe lançamento igual (tipo, contraparte, competência, vencimento e valor)." };

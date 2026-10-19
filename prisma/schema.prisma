@@ -589,6 +589,7 @@ model Tenant {
   collectionReminderConfig  CollectionReminderConfig?
   collectionReminderOptOuts CollectionReminderOptOut[]
   costCenters               CostCenter[]
+  financeProjects           FinanceProject[]
   budgets                   Budget[]
   agentEvaluationSummaries  AgentEvaluationSummary[]
   sectorTaskViews           SectorTaskView[]
@@ -894,6 +895,7 @@ model User {
   clientRequestsResolved      ClientRequest[]            @relation("ClientRequestResolvedBy")
   clientRequestMessages       ClientRequestMessage[]     @relation("ClientRequestMessageAuthorUser")
   clientRequestAttachments    ClientRequestAttachment[]  @relation("ClientRequestAttachmentUser")
+  financeEntryAttachments     FinanceEntryAttachment[]   @relation("FinanceEntryAttachmentUser")
   companyMessages             CompanyMessage[]           @relation("CompanyMessageAuthorUser")
   serviceRequestsAssigned     ServiceRequest[]           @relation("ServiceRequestAssignee")
   serviceRequestsClosed       ServiceRequest[]           @relation("ServiceRequestClosedBy")
@@ -1234,6 +1236,7 @@ model Company {
   collectionAgreements     CollectionAgreement[]
   collectionReminderOptOut CollectionReminderOptOut?
   costCenters              CostCenter[]
+  financeProjects          FinanceProject[]
   budgets                  Budget[]
   societarioProcesses      Process[]
   licenses                 License[]
@@ -2742,6 +2745,24 @@ model FinanceCounterparty {
   /// fica fora da régua, e a fila diz isso em vez de pular em silêncio.
   email     String? @db.VarChar(180)
 
+  /// A ficha como o Omie tem (19/10): fantasia, contato, endereço e para onde
+  /// pagar. Tudo opcional — a busca pelo CNPJ preenche o que a Receita tem, e
+  /// dados bancários e PIX só quem lança sabe. Os nomes seguem os da `Company`.
+  tradeName         String? @db.VarChar(180)
+  phone             String? @db.VarChar(30)
+  zipCode           String? @db.VarChar(10)
+  addressStreet     String? @db.VarChar(180)
+  addressNumber     String? @db.VarChar(20)
+  addressComplement String? @db.VarChar(80)
+  neighborhood      String? @db.VarChar(80)
+  city              String? @db.VarChar(80)
+  stateCode         String? @db.VarChar(2)
+  /// Código COMPE do banco ("001", "341"), como o da conta bancária.
+  bankCode          String? @db.VarChar(3)
+  bankAgency        String? @db.VarChar(10)
+  bankAccount       String? @db.VarChar(30)
+  pixKey            String? @db.VarChar(140)
+
   /// Categoria que a próxima nota deste fornecedor herda.
   ///
   /// É a regra "categoria herdada do fornecedor da 2ª nota em diante": a
@@ -2797,6 +2818,19 @@ model FinanceEntry {
   /// criação vive em src/lib/financeiro/centroDeCusto.ts.
   costCenterId String?
 
+  /// Projeto — no Omie, o campo Projeto do título: uma ação do negócio medida
+  /// por receita × despesa (uma obra, um evento, um contrato). Outra dimensão
+  /// que o centro de custo, que é a unidade que gasta (o "departamento" do
+  /// Omie). Opcional, um por lançamento, como o centro.
+  projectId String?
+
+  /// Data de emissão do documento que gerou a conta. Herda `issuedAt` da nota
+  /// e `dDtEmissao` do Omie; no manual, é o que a pessoa digita. Opcional: não
+  /// entra em fluxo nem em DRE — é como o setor acha e confere a conta.
+  issueDate      DateTime?
+  /// Número do documento (boleto, contrato, título, nota). Texto livre.
+  documentNumber String?   @db.VarChar(60)
+
   /// Competência "AAAA-MM", herdada do documento quando vem de um.
   competence  String    @db.VarChar(7)
   dueDate     DateTime
@@ -2828,6 +2862,13 @@ model FinanceEntry {
   omieBaixaId      String?   @db.VarChar(20)
   omiePaidAmount   Decimal?  @db.Decimal(14, 2)
   omieReconciledAt DateTime?
+
+  /// Transferência entre contas da mesma empresa feita na conciliação (19/10):
+  /// a saída numa conta e a entrada na outra são dois lançamentos com o mesmo
+  /// `transferId`. É o que faz desfazer uma ponta desfazer as duas. Nulo em
+  /// tudo o que não é transferência — inclusive as que vêm do Omie, que têm
+  /// `omieMovementId`.
+  transferId String? @db.VarChar(36)
 
   createdById  String?
   /// Quem conferiu o provisório. Nulo enquanto ninguém olhou.
@@ -2869,6 +2910,7 @@ model FinanceEntry {
   counterparty          FinanceCounterparty     @relation(fields: [counterpartyId], references: [id])
   category              FinanceCategory?        @relation(fields: [categoryId], references: [id])
   costCenter            CostCenter?             @relation(fields: [costCenterId], references: [id])
+  project               FinanceProject?         @relation(fields: [projectId], references: [id])
   fiscalDocument        FiscalDocument?         @relation(fields: [fiscalDocumentId], references: [id])
   createdBy             User?                   @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
   reviewedBy            User?                   @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
@@ -2883,6 +2925,7 @@ model FinanceEntry {
   collectionContacts    CollectionContact[]
   collectionEvents      CollectionEvent[]
   reminderLogs          CollectionReminderLog[]
+  attachments           FinanceEntryAttachment[]
 
   @@unique([companyId, omieTitleId])
   @@unique([companyId, omieMovementId])
@@ -2896,7 +2939,61 @@ model FinanceEntry {
   @@index([tenantId, companyId, closeReason, lossAt])
   @@index([tenantId, collectionOwnerId])
   @@index([tenantId, companyId, costCenterId])
+  @@index([tenantId, companyId, projectId])
+  @@index([tenantId, transferId])
   @@map("finance_entries")
+}
+
+/// Anexo de um lançamento (19/10, lote H2 do BPO) — o boleto, a nota ou o
+/// comprovante da conta, como o anexo do título no Omie e no Nibo. Antes, o
+/// único caminho era abrir uma pendência ligada à conta só para guardar o PDF.
+///
+/// O arquivo fica em `storage/finance-entries`, fora de `public/`, e só sai pela
+/// rota autenticada `/api/financeiro/anexos/[id]`. Apagar o lançamento (a
+/// exclusão da empresa) leva os anexos junto; o arquivo em disco sai pela lista
+/// de `src/lib/exclusao/empresa.ts`.
+model FinanceEntryAttachment {
+  id               String   @id @default(uuid())
+  tenantId         String
+  entryId          String
+  uploadedByUserId String?
+  fileName         String   @db.VarChar(255)
+  /// "<tenantId>/<uuid>.<ext>" sob storage/finance-entries — nunca vem do usuário.
+  fileUrl          String   @db.VarChar(255)
+  mimeType         String   @db.VarChar(100)
+  sizeBytes        Int
+  createdAt        DateTime @default(now())
+
+  entry          FinanceEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  uploadedByUser User?        @relation("FinanceEntryAttachmentUser", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([entryId])
+  @@index([uploadedByUserId])
+  @@map("finance_entry_attachments")
+}
+
+/// Projeto de uma empresa cliente (19/10) — o "Projeto" do Omie.
+///
+/// Por empresa, como o centro de custo, e pelo mesmo motivo: o projeto de uma
+/// não significa nada na outra. Só nome: o Omie também não tem mais que isso.
+/// Nunca é apagado — inativo some dos seletores e continua nas contas antigas.
+model FinanceProject {
+  id        String  @id @default(uuid())
+  tenantId  String
+  companyId String
+  name      String  @db.VarChar(120)
+  active    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant         @relation(fields: [tenantId], references: [id])
+  company Company        @relation(fields: [companyId], references: [id])
+  entries FinanceEntry[]
+
+  @@unique([companyId, name])
+  @@index([tenantId, companyId, active])
+  @@map("finance_projects")
 }
 
 /// Centro de custo de uma empresa cliente — unidade, obra, projeto, loja.

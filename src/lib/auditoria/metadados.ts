@@ -94,6 +94,16 @@ const NOME_DO_CAMPO: Readonly<Record<string, string>> = {
   pricePerUser: "Valor por usuário",
   setupFee: "Implantação",
   linhaDaDre: "Linha da DRE",
+  // A edição de lançamento (19/10) grava o antes e o depois pelas colunas.
+  counterpartyId: "Contraparte",
+  categoryId: "Categoria",
+  costCenterId: "Centro de custo",
+  projectId: "Projeto",
+  issueDate: "Emissão",
+  documentNumber: "Nº do documento",
+  dueDate: "Vencimento",
+  description: "Descrição",
+  fichaAlterada: "Campos da ficha alterados",
 };
 
 /** "issuerDocument" → "Issuer document" — só para chave sem nome conhecido. */

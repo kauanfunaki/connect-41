@@ -24,14 +24,18 @@ import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { FormLancamentoManual } from "@/components/financeiro/FormLancamentoManual";
 import { ImportarLancamentosCsv } from "@/components/financeiro/ImportarLancamentosCsv";
 import { CancelarLancamento } from "@/components/financeiro/CancelarLancamento";
+import { BotaoEditarLancamento } from "@/components/financeiro/EditarLancamento";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { competenciaValida, competenciaDoInstante } from "@/lib/financeiro/periodo";
 import { podeCancelarManual } from "@/lib/financeiro/manual";
 import { moeda } from "@/lib/financeiro/formato";
 import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
+import { projetosAtivosDaEmpresa } from "@/lib/financeiro/projetoServidor";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { estadoDosAgentes } from "@/lib/ia/data";
+import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
 
 export const dynamic = "force-dynamic";
 
@@ -208,7 +212,7 @@ async function FormularioDaEmpresa({
   mes: string;
 }) {
   const prisma = getPrisma();
-  const [contrapartes, categorias, centros] = await Promise.all([
+  const [contrapartes, categorias, centros, projetos, agentes] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId, companyId, active: true },
       select: { id: true, name: true, document: true, defaultCategoryId: true, defaultCostCenterId: true },
@@ -220,12 +224,17 @@ async function FormularioDaEmpresa({
       orderBy: { name: "asc" },
     }),
     centrosAtivosDaEmpresa(tenantId, companyId),
+    projetosAtivosDaEmpresa(tenantId, companyId),
+    estadoDosAgentes(tenantId, [AGENTE_DO_BOLETO]),
   ]);
+  // A leitura de boleto (lote H2) nasce desligada: aparece só ligada e com chave de IA.
+  const leitor = agentes.get(AGENTE_DO_BOLETO);
   return (
     <FormLancamentoManual
       companyId={companyId}
       hojeISO={hojeKey}
       competenciaPadrao={mes}
+      leitorDeBoleto={!!leitor && leitor.ligado && leitor.temChave}
       contrapartes={contrapartes.map((c) => ({
         id: c.id,
         nome: c.name,
@@ -234,6 +243,7 @@ async function FormularioDaEmpresa({
         defaultCostCenterId: c.defaultCostCenterId,
       }))}
       centros={centros}
+      projetos={projetos}
       categorias={categorias.map((c) => ({ id: c.id, nome: c.name, kind: c.kind }))}
     />
   );
@@ -268,6 +278,8 @@ async function ListaDeManuais({
       counterparty: { select: { name: true } },
       category: { select: { name: true } },
       costCenter: { select: { name: true } },
+      project: { select: { name: true } },
+      documentNumber: true,
     },
     orderBy: [{ dueDate: "asc" }, { id: "asc" }],
     // Um a mais que o teto, para saber se parou nele.
@@ -321,14 +333,16 @@ async function ListaDeManuais({
                     <InfoDoCartao>
                       {l.category?.name ?? "sem categoria"}
                       {l.costCenter?.name ? ` · ${l.costCenter.name}` : ""}
+                      {l.project?.name ? ` · projeto ${l.project.name}` : ""}
                     </InfoDoCartao>
                     <PeDoCartao>
                       {/* Tipo é categoria: Badge neutro, sem vermelho/verde (D1, 15/10/2026). */}
                       <Badge variant="neutral">{l.kind === "PAGAR" ? "A pagar" : "A receber"}</Badge>
                       <Selo tom={tomDaVariante(status.variante)}>{status.rotulo}</Selo>
-                      {podeCancelar && podeCancelarManual(l).pode && (
-                        <span className="ml-auto">
-                          <CancelarLancamento entryId={l.id} />
+                      {podeCancelar && (
+                        <span className="ml-auto flex gap-1.5">
+                          {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
+                          {podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
                         </span>
                       )}
                     </PeDoCartao>
@@ -375,10 +389,17 @@ async function ListaDeManuais({
                           </td>
                           <td className="py-2.5 pr-3">
                             <span className="font-medium">{l.counterparty.name}</span>
-                            {l.description && <span className="block text-micro text-fg-muted truncate max-w-[260px]">{l.description}</span>}
+                            {(l.documentNumber || l.description) && (
+                              <span className="block text-micro text-fg-muted truncate max-w-[260px]">
+                                {[l.documentNumber && `nº ${l.documentNumber}`, l.description].filter(Boolean).join(" · ")}
+                              </span>
+                            )}
                           </td>
                           <td className="py-2.5 pr-3 text-fg-secondary">{l.category?.name ?? "—"}</td>
-                          <td className="py-2.5 pr-3 text-fg-secondary">{l.costCenter?.name ?? "—"}</td>
+                          <td className="py-2.5 pr-3 text-fg-secondary">
+                            {l.costCenter?.name ?? "—"}
+                            {l.project?.name && <span className="block text-micro text-fg-muted">projeto {l.project.name}</span>}
+                          </td>
                           <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">
                             {formatInstantDate(l.dueDate)}
                             {l.paidAt && <span className="block text-micro text-fg-muted">pago em {formatInstantDate(l.paidAt)}</span>}
@@ -388,7 +409,12 @@ async function ListaDeManuais({
                             <Selo tom={tomDaVariante(status.variante)}>{status.rotulo}</Selo>
                           </td>
                           <td className="py-2.5">
-                            {podeCancelar && podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
+                            {podeCancelar && (
+                              <div className="flex flex-wrap justify-end gap-1.5">
+                                {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
+                                {podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
+                              </div>
+                            )}
                           </td>
                         </LinhaFiltravel>
                       );
@@ -407,8 +433,9 @@ async function ListaDeManuais({
         )}
       </CascoDaTabela>
       <NotaDeFonte>
-        Lançamento não é apagado: cancelar tira dos totais e fica no histórico de auditoria. A baixa de um lançamento
-        em aberto é feita em Contas a pagar ou a receber, como a de qualquer conta.
+        Lançamento não é apagado: cancelar tira dos totais e fica no histórico de auditoria. Editar muda a classificação a
+        qualquer momento; valor e vencimento, só com a conta em aberto. A baixa de um lançamento em aberto é feita em
+        Contas a pagar ou a receber, como a de qualquer conta.
       </NotaDeFonte>
     </>
   );
