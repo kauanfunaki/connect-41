@@ -14,6 +14,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { dadosParaEditar, editarLancamento, type DadosDaEdicao } from "@/lib/financeiro/edicaoServidor";
 import type { CampoEditavel } from "@/lib/financeiro/edicao";
+import { AnexosDaConta, CAMPO_DO_ANEXO_DA_CONTA } from "./AnexosDaConta";
 
 // A janela "Editar lançamento" (19/10, pedido 1 do BPO). Abre do "⋯" de
 // Contas a pagar e a receber e da lista de Lançamentos. O que não pode mudar
@@ -141,6 +142,8 @@ function Formulario({
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
+        // O anexo sobe sozinho ao ser escolhido; não vai de novo no "Salvar".
+        form.delete(CAMPO_DO_ANEXO_DA_CONTA);
         setErro(null);
         aoMudarPendente(true);
         startTransition(async () => {
@@ -230,6 +233,8 @@ function Formulario({
       <CampoForm label="Descrição" htmlFor={`${id}-descricao`}>
         <Input id={`${id}-descricao`} name="descricao" defaultValue={conta.descricao ?? ""} maxLength={255} />
       </CampoForm>
+
+      <AnexosDaConta entryId={conta.id} iniciais={dados.anexos} />
 
       {conta.aprovada && aPagar && !travas.contraparte && (
         <Aviso tom="info" icone={<Info />}>

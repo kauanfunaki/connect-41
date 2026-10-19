@@ -34,6 +34,8 @@ import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { projetosAtivosDaEmpresa } from "@/lib/financeiro/projetoServidor";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { estadoDosAgentes } from "@/lib/ia/data";
+import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
 
 export const dynamic = "force-dynamic";
 
@@ -210,7 +212,7 @@ async function FormularioDaEmpresa({
   mes: string;
 }) {
   const prisma = getPrisma();
-  const [contrapartes, categorias, centros, projetos] = await Promise.all([
+  const [contrapartes, categorias, centros, projetos, agentes] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId, companyId, active: true },
       select: { id: true, name: true, document: true, defaultCategoryId: true, defaultCostCenterId: true },
@@ -223,12 +225,16 @@ async function FormularioDaEmpresa({
     }),
     centrosAtivosDaEmpresa(tenantId, companyId),
     projetosAtivosDaEmpresa(tenantId, companyId),
+    estadoDosAgentes(tenantId, [AGENTE_DO_BOLETO]),
   ]);
+  // A leitura de boleto (lote H2) nasce desligada: aparece só ligada e com chave de IA.
+  const leitor = agentes.get(AGENTE_DO_BOLETO);
   return (
     <FormLancamentoManual
       companyId={companyId}
       hojeISO={hojeKey}
       competenciaPadrao={mes}
+      leitorDeBoleto={!!leitor && leitor.ligado && leitor.temChave}
       contrapartes={contrapartes.map((c) => ({
         id: c.id,
         nome: c.name,

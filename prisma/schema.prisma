@@ -893,6 +893,7 @@ model User {
   clientRequestsResolved      ClientRequest[]            @relation("ClientRequestResolvedBy")
   clientRequestMessages       ClientRequestMessage[]     @relation("ClientRequestMessageAuthorUser")
   clientRequestAttachments    ClientRequestAttachment[]  @relation("ClientRequestAttachmentUser")
+  financeEntryAttachments     FinanceEntryAttachment[]   @relation("FinanceEntryAttachmentUser")
   companyMessages             CompanyMessage[]           @relation("CompanyMessageAuthorUser")
   serviceRequestsAssigned     ServiceRequest[]           @relation("ServiceRequestAssignee")
   serviceRequestsClosed       ServiceRequest[]           @relation("ServiceRequestClosedBy")
@@ -2915,6 +2916,7 @@ model FinanceEntry {
   collectionContacts    CollectionContact[]
   collectionEvents      CollectionEvent[]
   reminderLogs          CollectionReminderLog[]
+  attachments           FinanceEntryAttachment[]
 
   @@unique([companyId, omieTitleId])
   @@unique([companyId, omieMovementId])
@@ -2930,6 +2932,34 @@ model FinanceEntry {
   @@index([tenantId, companyId, costCenterId])
   @@index([tenantId, companyId, projectId])
   @@map("finance_entries")
+}
+
+/// Anexo de um lançamento (19/10, lote H2 do BPO) — o boleto, a nota ou o
+/// comprovante da conta, como o anexo do título no Omie e no Nibo. Antes, o
+/// único caminho era abrir uma pendência ligada à conta só para guardar o PDF.
+///
+/// O arquivo fica em `storage/finance-entries`, fora de `public/`, e só sai pela
+/// rota autenticada `/api/financeiro/anexos/[id]`. Apagar o lançamento (a
+/// exclusão da empresa) leva os anexos junto; o arquivo em disco sai pela lista
+/// de `src/lib/exclusao/empresa.ts`.
+model FinanceEntryAttachment {
+  id               String   @id @default(uuid())
+  tenantId         String
+  entryId          String
+  uploadedByUserId String?
+  fileName         String   @db.VarChar(255)
+  /// "<tenantId>/<uuid>.<ext>" sob storage/finance-entries — nunca vem do usuário.
+  fileUrl          String   @db.VarChar(255)
+  mimeType         String   @db.VarChar(100)
+  sizeBytes        Int
+  createdAt        DateTime @default(now())
+
+  entry          FinanceEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  uploadedByUser User?        @relation("FinanceEntryAttachmentUser", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([entryId])
+  @@index([uploadedByUserId])
+  @@map("finance_entry_attachments")
 }
 
 /// Projeto de uma empresa cliente (19/10) — o "Projeto" do Omie.
