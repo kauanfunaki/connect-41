@@ -122,27 +122,27 @@ describe("movimentosDaBaixa", () => {
 // nunca na que alguém conciliou aqui com o extrato.
 describe("planoDoEspelho", () => {
   const DIA = Date.parse("2026-10-07T18:30:00Z");
-  const baixa = (o: Partial<BaixaNoEspelho>): BaixaNoEspelho => ({ id: "b1", origem: "OMIE", principalCentavos: 100_000, paidAtMs: DIA, vinculo: null, ...o });
-  const pago = { pago: true, paidAtMs: DIA, valorCentavos: 100_000 };
-  const aberto = { pago: false, paidAtMs: null, valorCentavos: 100_000 };
+  const OUTRO = Date.parse("2026-10-20T15:00:00Z");
+  const baixa = (o: Partial<BaixaNoEspelho>): BaixaNoEspelho => ({ id: "b1", origem: "OMIE", principalCentavos: 100_000, paidAtMs: DIA, chave: null, vinculo: null, ...o });
+  const pago = { pagoCentavos: 100_000, paidAtMs: DIA };
+  const aberto = { pagoCentavos: 0, paidAtMs: null };
 
   it("paga no Omie e sem baixa aqui: nasce a cheia", () => {
-    expect(planoDoEspelho([], pago)).toMatchObject({ criar: { principalCentavos: 100_000 }, atualizar: null, apagar: [], conflito: false, baixadoCentavos: 100_000 });
+    expect(planoDoEspelho([], pago)).toMatchObject({ criar: [{ chave: null, principalCentavos: 100_000, paidAtMs: DIA }], atualizar: [], apagar: [], conflito: false, baixadoCentavos: 100_000 });
   });
 
   it("igual ao Omie: nada a fazer", () => {
-    const p = planoDoEspelho([baixa({})], pago);
-    expect(p).toMatchObject({ criar: null, atualizar: null, apagar: [], conflito: false });
+    expect(planoDoEspelho([baixa({})], pago)).toMatchObject({ criar: [], atualizar: [], apagar: [], conflito: false });
   });
 
   it("parcial feita aqui e o Omie dá por paga: a do Omie é só o resto", () => {
     const p = planoDoEspelho([baixa({ id: "m", origem: "MANUAL", principalCentavos: 40_000 })], pago);
-    expect(p).toMatchObject({ criar: { principalCentavos: 60_000 }, baixadoCentavos: 100_000 });
+    expect(p).toMatchObject({ criar: [{ principalCentavos: 60_000 }], baixadoCentavos: 100_000 });
   });
 
   it("paga aqui pelo botão e em aberto no Omie: a daqui fica, sem conflito", () => {
     const p = planoDoEspelho([baixa({ id: "m", origem: "MANUAL" })], aberto);
-    expect(p).toMatchObject({ criar: null, atualizar: null, apagar: [], conflito: false, baixadoCentavos: 100_000 });
+    expect(p).toMatchObject({ criar: [], atualizar: [], apagar: [], conflito: false, baixadoCentavos: 100_000 });
   });
 
   it("estorno no Omie: a baixa dele sai, e a ligada pela conciliação do Omie sai do extrato junto", () => {
@@ -152,19 +152,69 @@ describe("planoDoEspelho", () => {
 
   it("estorno no Omie de baixa conciliada aqui com o extrato: não mexe, é conflito", () => {
     const p = planoDoEspelho([baixa({ origem: "MIGRACAO", vinculo: { peloOmie: false } })], aberto);
-    expect(p).toMatchObject({ criar: null, atualizar: null, apagar: [], conflito: true, baixadoCentavos: 100_000 });
+    expect(p).toMatchObject({ criar: [], atualizar: [], apagar: [], conflito: true, baixadoCentavos: 100_000 });
   });
 
   it("o Omie muda valor ou dia: a baixa dele acompanha — a conciliada aqui, não", () => {
-    const outroDia = { ...pago, paidAtMs: DIA + 86_400_000, valorCentavos: 120_000 };
-    expect(planoDoEspelho([baixa({ vinculo: { peloOmie: true } })], outroDia)).toMatchObject({ atualizar: { id: "b1", principalCentavos: 120_000, desvincular: true } });
+    const outroDia = { pagoCentavos: 120_000, paidAtMs: OUTRO };
+    expect(planoDoEspelho([baixa({ vinculo: { peloOmie: true } })], outroDia)).toMatchObject({
+      atualizar: [{ id: "b1", principalCentavos: 120_000, paidAtMs: OUTRO, desvincular: true }],
+    });
     const presa = planoDoEspelho([baixa({ vinculo: { peloOmie: false } })], outroDia);
-    expect(presa).toMatchObject({ criar: { principalCentavos: 20_000 }, atualizar: null, conflito: false });
+    expect(presa).toMatchObject({ criar: [{ principalCentavos: 20_000 }], atualizar: [], conflito: false });
   });
 
   it("baixas daqui acima do valor do Omie: conflito só com a do Omie presa", () => {
-    const menor = { ...pago, valorCentavos: 80_000 };
+    const menor = { pagoCentavos: 80_000, paidAtMs: DIA };
     expect(planoDoEspelho([baixa({ vinculo: { peloOmie: false } })], menor)).toMatchObject({ apagar: [], conflito: true });
     expect(planoDoEspelho([baixa({ origem: "MANUAL" })], menor)).toMatchObject({ apagar: [], conflito: false });
+  });
+
+  // As parciais do Omie (fila do BPO, 19/10).
+  const parcial = (baixas?: { chave: string; principalCentavos: number; paidAtMs: number }[]) => ({ pagoCentavos: 70_000, paidAtMs: OUTRO, baixas });
+
+  it("parcial no Omie, sem baixa aqui: uma baixa por pagamento de lá, cada uma no seu dia", () => {
+    const p = planoDoEspelho([], parcial([{ chave: "11", principalCentavos: 30_000, paidAtMs: DIA }, { chave: "12", principalCentavos: 40_000, paidAtMs: OUTRO }]));
+    expect(p.criar).toEqual([
+      { chave: "11", principalCentavos: 30_000, paidAtMs: DIA },
+      { chave: "12", principalCentavos: 40_000, paidAtMs: OUTRO },
+    ]);
+    expect(p.baixadoCentavos).toBe(70_000);
+  });
+
+  it("parcial sem as baixas uma a uma: o pago vira uma baixa só, no dia do último pagamento", () => {
+    expect(planoDoEspelho([], parcial()).criar).toEqual([{ chave: null, principalCentavos: 70_000, paidAtMs: OUTRO }]);
+  });
+
+  it("leitura seguinte: casa pelo código, não duplica, e a que o Omie estornou sai", () => {
+    const ja = [baixa({ id: "x", chave: "11", principalCentavos: 30_000, paidAtMs: DIA }), baixa({ id: "y", chave: "12", principalCentavos: 40_000, paidAtMs: OUTRO })];
+    expect(planoDoEspelho(ja, parcial([{ chave: "11", principalCentavos: 30_000, paidAtMs: DIA }, { chave: "12", principalCentavos: 40_000, paidAtMs: OUTRO }]))).toMatchObject({
+      criar: [],
+      atualizar: [],
+      apagar: [],
+    });
+    const semA12 = planoDoEspelho(ja, { pagoCentavos: 30_000, paidAtMs: DIA, baixas: [{ chave: "11", principalCentavos: 30_000, paidAtMs: DIA }] });
+    expect(semA12).toMatchObject({ criar: [], atualizar: [], apagar: [{ id: "y", desvincular: false }], baixadoCentavos: 30_000 });
+  });
+
+  it("a baixa cheia de antes vira a primeira das parciais, com o código", () => {
+    const p = planoDoEspelho([baixa({ id: "cheia", chave: null, principalCentavos: 70_000, paidAtMs: OUTRO })], parcial([{ chave: "11", principalCentavos: 30_000, paidAtMs: DIA }, { chave: "12", principalCentavos: 40_000, paidAtMs: OUTRO }]));
+    expect(p.atualizar).toEqual([{ chave: "11", principalCentavos: 30_000, paidAtMs: DIA, id: "cheia", desvincular: false }]);
+    expect(p.criar).toEqual([{ chave: "12", principalCentavos: 40_000, paidAtMs: OUTRO }]);
+  });
+
+  it("o título fecha no Omie depois das parciais: as parciais ficam no dia delas, o resto entra no último", () => {
+    const ja = [baixa({ id: "x", chave: "11", principalCentavos: 30_000, paidAtMs: DIA })];
+    const p = planoDoEspelho(ja, { pagoCentavos: 100_000, paidAtMs: OUTRO });
+    expect(p).toMatchObject({ atualizar: [], apagar: [], baixadoCentavos: 100_000 });
+    expect(p.criar).toEqual([{ chave: null, principalCentavos: 70_000, paidAtMs: OUTRO }]);
+    // Parciais com código acima do que o Omie diz pago (estorno de uma): sem as
+    // baixas de lá, volta a uma baixa só.
+    expect(planoDoEspelho(ja, { pagoCentavos: 20_000, paidAtMs: OUTRO })).toMatchObject({ atualizar: [{ id: "x", chave: null, principalCentavos: 20_000 }] });
+  });
+
+  it("parcial no Omie com parcial feita aqui: não separa, só completa o que falta", () => {
+    const p = planoDoEspelho([baixa({ id: "m", origem: "MANUAL", principalCentavos: 30_000 })], parcial([{ chave: "11", principalCentavos: 30_000, paidAtMs: DIA }, { chave: "12", principalCentavos: 40_000, paidAtMs: OUTRO }]));
+    expect(p.criar).toEqual([{ chave: null, principalCentavos: 40_000, paidAtMs: OUTRO }]);
   });
 });
