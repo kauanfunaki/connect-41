@@ -2860,6 +2860,13 @@ model FinanceEntry {
   omiePaidAmount   Decimal?  @db.Decimal(14, 2)
   omieReconciledAt DateTime?
 
+  /// Transferência entre contas da mesma empresa feita na conciliação (19/10):
+  /// a saída numa conta e a entrada na outra são dois lançamentos com o mesmo
+  /// `transferId`. É o que faz desfazer uma ponta desfazer as duas. Nulo em
+  /// tudo o que não é transferência — inclusive as que vêm do Omie, que têm
+  /// `omieMovementId`.
+  transferId String? @db.VarChar(36)
+
   createdById  String?
   /// Quem conferiu o provisório. Nulo enquanto ninguém olhou.
   reviewedById String?
@@ -2929,6 +2936,7 @@ model FinanceEntry {
   @@index([tenantId, collectionOwnerId])
   @@index([tenantId, companyId, costCenterId])
   @@index([tenantId, companyId, projectId])
+  @@index([tenantId, transferId])
   @@map("finance_entries")
 }
 
