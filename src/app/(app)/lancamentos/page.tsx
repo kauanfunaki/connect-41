@@ -275,6 +275,7 @@ async function ListaDeManuais({
       fiscalDocumentId: true,
       closeReason: true,
       agreementId: true,
+      paidPrincipal: true,
       counterparty: { select: { name: true } },
       category: { select: { name: true } },
       costCenter: { select: { name: true } },

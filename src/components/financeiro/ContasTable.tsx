@@ -11,7 +11,7 @@ import { formatInstantDate, formatarCompetencia, formatarReaisDeCentavos } from 
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 import type { LinhaDaConta, TipoDeConta } from "@/lib/financeiro/data";
 import { AcoesDaConta } from "./AcoesDaConta";
-import { conferirConta, marcarComoPago, desfazerPagamento } from "@/lib/financeiro/acoes";
+import { conferirConta } from "@/lib/financeiro/acoes";
 import { enviarParaAprovacao } from "@/app/(app)/aprovacoes/actions";
 import { SeloDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
 import { motivoDoBloqueioDeBaixa, podeEnviarParaAprovacao, seloDeAprovacaoVisivel } from "@/lib/financeiro/aprovacao/regras";
@@ -113,11 +113,15 @@ export function ContasTable({
         </Link>
       )}
       {l.parcelaDeAcordo && !cobranca?.get(l.id) && <span className="text-micro text-fg-muted whitespace-nowrap">parcela de acordo</span>}
+      {parcial(l) && <Selo tom={tomDaVariante("info")}>Parcial</Selo>}
       {/* Selo só enquanto pesa sobre a conta, ou aprovada ainda em aberto:
           depois de paga ou cancelada, a aprovação é histórico. */}
       {seloDeAprovacaoVisivel(l) && <SeloDaAprovacao status={l.approvalStatus} />}
     </>
   );
+
+  /** Baixa parcial: em aberto, com parte já paga. */
+  const parcial = (l: LinhaDaConta) => l.baixadoCentavos > 0 && l.baixadoCentavos < l.valorCentavos && l.situacao !== "PAGA" && l.situacao !== "CANCELADA";
 
   // Na tabela, a posição do "Conferir" só fica guardada quando alguma linha o
   // tem — sem nenhuma a conferir, ela seria um vão à esquerda de todo "Pagar".
@@ -140,10 +144,9 @@ export function ContasTable({
       // Quem vê a tela atua no setor (ver ContasPage); a janela confere o resto.
       podeEditar
       pendenciaHref={podeAbrirPendencia ? `/pendencias?nova=1&lancamento=${l.id}` : null}
+      temBaixas={l.baixadoCentavos > 0}
       acoes={{
         conferir: conferirConta,
-        pagar: marcarComoPago,
-        desfazer: desfazerPagamento,
         enviarParaAprovacao: moduloDeAprovacao ? enviarParaAprovacao : undefined,
       }}
     />
@@ -194,6 +197,9 @@ export function ContasTable({
               )}
               <div className="min-w-0 flex-1">
                 <TopoDoCartao nome={l.contraparteNome} valor={formatarReaisDeCentavos(l.valorCentavos)} />
+                {parcial(l) && (
+                  <InfoDoCartao className="tabular-nums">saldo {formatarReaisDeCentavos(l.valorCentavos - l.baixadoCentavos)}</InfoDoCartao>
+                )}
                 {linhaDoDocumento(l) && <InfoDoCartao className="break-words">{linhaDoDocumento(l)}</InfoDoCartao>}
                 <InfoDoCartao className="mt-1 tabular-nums">
                   vence {formatInstantDate(l.vencimento)}
@@ -331,7 +337,13 @@ export function ContasTable({
                   )}
                 </td>
                 <td className="px-4 py-3 text-fg-muted tabular-nums">{formatarCompetencia(l.competencia)}</td>
-                <td className="px-4 py-3 tabular-nums font-medium whitespace-nowrap">{formatarReaisDeCentavos(l.valorCentavos)}</td>
+                <td className="px-4 py-3 tabular-nums font-medium whitespace-nowrap">
+                  {formatarReaisDeCentavos(l.valorCentavos)}
+                  {/* Baixa parcial (lote C): o que falta, embaixo do valor. */}
+                  {parcial(l) && (
+                    <span className="block text-micro font-normal text-fg-muted">saldo {formatarReaisDeCentavos(l.valorCentavos - l.baixadoCentavos)}</span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-1.5">{selos(l)}</div>
                 </td>

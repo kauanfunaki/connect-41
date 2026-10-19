@@ -84,7 +84,8 @@ const CAMPOS_DA_CONTA = {
   amount: true,
   description: true,
   updatedAt: true,
-  bankMatch: { select: { id: true } },
+  paidPrincipal: true,
+  bankMatches: { select: { id: true }, take: 1 },
   company: { select: { name: true, displayName: true } },
 } as const;
 
@@ -100,7 +101,8 @@ function travasDa(conta: NonNullable<Awaited<ReturnType<typeof lerConta>>>) {
     fiscalDocumentId: conta.fiscalDocumentId,
     agreementId: conta.agreementId,
     doOmie: conta.omieTitleId !== null || conta.omieMovementId !== null,
-    conciliada: conta.bankMatch !== null || conta.omieReconciledAt !== null,
+    conciliada: conta.bankMatches.length > 0 || conta.omieReconciledAt !== null,
+    temBaixa: Number(conta.paidPrincipal.toString()) > 0,
   });
 }
 

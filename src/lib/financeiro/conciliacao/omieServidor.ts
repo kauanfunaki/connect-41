@@ -39,9 +39,18 @@ export async function conciliarContaPeloOmie(tenantId: string, bankAccountId: st
       omieReconciledAt: { not: null },
       status: "PAGO",
       paidAt: { not: null },
-      bankMatch: { is: null },
+      // A baixa da conta (lote C): a do Omie tem uma só, e ela ainda sem extrato.
+      payments: { some: { bankMatch: { is: null } } },
     },
-    select: { id: true, kind: true, status: true, amount: true, paidAt: true, omiePaidAmount: true },
+    select: {
+      id: true,
+      kind: true,
+      status: true,
+      amount: true,
+      paidAt: true,
+      omiePaidAmount: true,
+      payments: { where: { bankMatch: { is: null } }, select: { id: true }, take: 1 },
+    },
   });
 
   const pares = parearPeloOmie(
@@ -64,6 +73,7 @@ export async function conciliarContaPeloOmie(tenantId: string, bankAccountId: st
           data: {
             transactionId: p.transacaoId,
             financeEntryId: l.id,
+            paymentId: l.payments[0]!.id,
             amount: l.amount,
             entryStatusBefore: l.status,
             entryPaidAtBefore: l.paidAt,
@@ -78,8 +88,8 @@ export async function conciliarContaPeloOmie(tenantId: string, bankAccountId: st
       });
       feitas++;
     } catch {
-      // Unique do vínculo (o lançamento acabou de ser conciliado por outra
-      // linha) ou corrida no status: fica para gente, sem erro.
+      // Unique do vínculo (a baixa acabou de ser conciliada por outra linha)
+      // ou corrida no status: fica para gente, sem erro.
     }
   }
 

@@ -45,6 +45,8 @@ export type LinhaDaConta = {
   centroDeCustoId: string | null;
   centroDeCustoNome: string | null;
   projetoNome: string | null;
+  /** O que as baixas já quitaram (lote C). Abaixo do valor numa conta em aberto é baixa parcial. */
+  baixadoCentavos: number;
   /** Número do documento e emissão (19/10) — como o setor acha a conta. */
   numeroDocumento: string | null;
   emissao: Date | null;
@@ -119,6 +121,7 @@ const CAMPOS = {
   project: { select: { name: true } },
   documentNumber: true,
   issueDate: true,
+  paidPrincipal: true,
 } satisfies Prisma.FinanceEntrySelect;
 
 /**
@@ -216,6 +219,7 @@ export async function listarContas(
       centroDeCustoId: e.costCenterId,
       centroDeCustoNome: e.costCenter?.name ?? null,
       projetoNome: e.project?.name ?? null,
+      baixadoCentavos: centavosDeDecimal(e.paidPrincipal),
       numeroDocumento: e.documentNumber,
       emissao: e.issueDate,
     };

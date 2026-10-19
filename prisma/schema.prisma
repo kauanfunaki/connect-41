@@ -589,6 +589,7 @@ model Tenant {
   collectionReminderOptOuts CollectionReminderOptOut[]
   costCenters               CostCenter[]
   financeProjects           FinanceProject[]
+  financeEntryPayments      FinanceEntryPayment[]
   budgets                   Budget[]
   agentEvaluationSummaries  AgentEvaluationSummary[]
   sectorTaskViews           SectorTaskView[]
@@ -889,6 +890,7 @@ model User {
   bankStatementImports        BankStatementImport[]      @relation("BankStatementImportedBy")
   bankTransactionsReconciled  BankTransaction[]          @relation("BankTransactionReconciledBy")
   bankTransactionMatches      BankTransactionMatch[]     @relation("BankTransactionMatchCreatedBy")
+  financeEntryPaymentsCreated FinanceEntryPayment[]      @relation("FinanceEntryPaymentCreatedBy")
   clientRequestsCreated       ClientRequest[]            @relation("ClientRequestCreatedBy")
   clientRequestsResolved      ClientRequest[]            @relation("ClientRequestResolvedBy")
   clientRequestMessages       ClientRequestMessage[]     @relation("ClientRequestMessageAuthorUser")
@@ -1235,6 +1237,7 @@ model Company {
   collectionReminderOptOut CollectionReminderOptOut?
   costCenters              CostCenter[]
   financeProjects          FinanceProject[]
+  financeEntryPayments     FinanceEntryPayment[]
   budgets                  Budget[]
   societarioProcesses      Process[]
   licenses                 License[]
@@ -2699,6 +2702,9 @@ model FinanceCategory {
   padraoDe    FinanceCounterparty[]
   dreMappings DreCategoryMapping[]
   ocultaEm    FinanceCategoryHidden[]
+  /// Baixas que puseram juros e multa, ou o desconto, nesta categoria.
+  baixasComJuros    FinanceEntryPayment[] @relation("PaymentInterestCategory")
+  baixasComDesconto FinanceEntryPayment[] @relation("PaymentDiscountCategory")
 
   @@unique([tenantId, scope, name, kind])
   @@index([tenantId, kind])
@@ -2868,6 +2874,14 @@ model FinanceEntry {
   /// `omieMovementId`.
   transferId String? @db.VarChar(36)
 
+  /// Quanto do título as baixas já quitaram (soma de `FinanceEntryPayment.principal`,
+  /// lote C, 19/10). O saldo em aberto é `amount - paidPrincipal`. Guardado, e
+  /// não somado a cada leitura, porque os totais de "em aberto" são somas no
+  /// banco (`totaisDoEscopo`) e precisam dele numa coluna. Quem mantém é
+  /// `src/lib/financeiro/baixa/servidor.ts`, junto com `status` e `paidAt`:
+  /// a conta só fica PAGO, com `paidAt`, quando o saldo zera.
+  paidPrincipal Decimal @default(0) @db.Decimal(12, 2)
+
   createdById  String?
   /// Quem conferiu o provisório. Nulo enquanto ninguém olhou.
   reviewedById String?
@@ -2912,8 +2926,11 @@ model FinanceEntry {
   fiscalDocument        FiscalDocument?         @relation(fields: [fiscalDocumentId], references: [id])
   createdBy             User?                   @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
   reviewedBy            User?                   @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
-  /// O vínculo com a transação do extrato que liquidou este lançamento.
-  bankMatch             BankTransactionMatch?
+  /// Os vínculos com as linhas do extrato — um por baixa conciliada (lote C:
+  /// a conta paga em duas vezes concilia com duas linhas).
+  bankMatches           BankTransactionMatch[]
+  /// As baixas — pagamentos ou recebimentos, totais ou parciais.
+  payments              FinanceEntryPayment[]
   approvalEvents        FinanceApprovalEvent[]
   clientRequests        ClientRequest[]
   agreement             CollectionAgreement?    @relation("AgreementInstallments", fields: [agreementId], references: [id], onDelete: Restrict)
@@ -3792,6 +3809,7 @@ model BankAccount {
   company      Company               @relation(fields: [companyId], references: [id])
   imports      BankStatementImport[]
   transactions BankTransaction[]
+  payments     FinanceEntryPayment[]
 
   @@unique([tenantId, companyId, bankCode, accountDigits])
   @@unique([companyId, omieAccountId])
@@ -3867,14 +3885,80 @@ model BankTransaction {
   @@map("bank_transactions")
 }
 
-/// Uma transação liquidando um lançamento. Uma transação pode liquidar vários
-/// (o boleto único que pagou três contas); um lançamento só é liquidado por uma
-/// — o unique em `financeEntryId` é quem impede conciliar a mesma conta duas
-/// vezes. Pagamento parcial (um lançamento em várias transações) fica fora.
+/// De onde veio uma baixa.
+enum FinancePaymentOrigin {
+  /// O botão Pagar/Receber de Contas a pagar e a receber.
+  MANUAL
+  /// A conta nasceu paga: "Já pago em" no lançamento manual ou na importação.
+  LANCAMENTO
+  /// Criada ao conciliar a conta com uma linha do extrato.
+  CONCILIACAO
+  /// Uma ponta da transferência entre contas.
+  TRANSFERENCIA
+  /// A situação do título no Omie (o Omie manda na conta que veio dele).
+  OMIE
+  /// As contas que já estavam pagas em 19/10 — uma baixa cheia cada.
+  MIGRACAO
+}
+
+/// Uma baixa (19/10, lote C, pedidos 4 e 6 do BPO): um pagamento ou recebimento
+/// de um lançamento — total ou parcial, com a conta bancária, juros, multa e
+/// desconto. Uma conta pode ter várias.
+///
+/// `principal` é quanto do título esta baixa quita; `cash` é o que andou na
+/// conta: principal + juros + multa − desconto. Os relatórios de caixa (fluxo
+/// realizado, DRE de caixa) somam as baixas, não as contas: cada parcela no mês
+/// em que foi paga, e juros, multa e desconto nas categorias da baixa
+/// (`interestCategoryId`, `discountCategoryId`), resolvidas na hora de gravar.
+model FinanceEntryPayment {
+  id        String   @id @default(uuid())
+  tenantId  String
+  companyId String
+  entryId   String
+  /// O dia (meio-dia em São Paulo, como a baixa sempre foi gravada).
+  paidAt    DateTime
+  principal Decimal  @db.Decimal(12, 2)
+  interest  Decimal  @default(0) @db.Decimal(12, 2)
+  fine      Decimal  @default(0) @db.Decimal(12, 2)
+  discount  Decimal  @default(0) @db.Decimal(12, 2)
+  cash      Decimal  @db.Decimal(12, 2)
+
+  /// Onde caem juros e multa — e o desconto. Nulos quando o valor é zero.
+  interestCategoryId String?
+  discountCategoryId String?
+  bankAccountId      String?
+  note               String?              @db.VarChar(255)
+  origin             FinancePaymentOrigin
+  createdById        String?
+  createdAt          DateTime             @default(now())
+
+  tenant           Tenant                @relation(fields: [tenantId], references: [id])
+  company          Company               @relation(fields: [companyId], references: [id])
+  entry            FinanceEntry          @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  interestCategory FinanceCategory?      @relation("PaymentInterestCategory", fields: [interestCategoryId], references: [id], onDelete: SetNull)
+  discountCategory FinanceCategory?      @relation("PaymentDiscountCategory", fields: [discountCategoryId], references: [id], onDelete: SetNull)
+  bankAccount      BankAccount?          @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  createdBy        User?                 @relation("FinanceEntryPaymentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  bankMatch        BankTransactionMatch?
+
+  @@index([tenantId, companyId, paidAt])
+  @@index([entryId])
+  @@index([bankAccountId])
+  @@map("finance_entry_payments")
+}
+
+/// Uma transação liquidando uma baixa. Uma transação pode liquidar várias (o
+/// boleto único que pagou três contas); uma baixa só é liquidada por uma — o
+/// unique em `paymentId` é quem impede conciliar o mesmo pagamento duas vezes.
+/// Desde o lote C (19/10) uma conta pode ter vários vínculos, um por baixa: a
+/// paga em duas vezes concilia com as duas linhas do extrato.
 model BankTransactionMatch {
   id             String  @id @default(uuid())
   transactionId  String
-  financeEntryId String  @unique
+  financeEntryId String
+  /// A baixa que esta linha do extrato liquida. Nulo só em vínculo antigo de
+  /// conta que já não estava paga em 19/10 (inconsistência de antes do lote C).
+  paymentId      String? @unique
   amount         Decimal @db.Decimal(14, 2)
 
   /// Como o lançamento estava antes da conciliação, para desfazer devolvendo
@@ -3885,11 +3969,13 @@ model BankTransactionMatch {
   createdById String?
   createdAt   DateTime @default(now())
 
-  transaction  BankTransaction @relation(fields: [transactionId], references: [id])
-  financeEntry FinanceEntry    @relation(fields: [financeEntryId], references: [id])
-  createdBy    User?           @relation("BankTransactionMatchCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  transaction  BankTransaction      @relation(fields: [transactionId], references: [id])
+  financeEntry FinanceEntry         @relation(fields: [financeEntryId], references: [id])
+  payment      FinanceEntryPayment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdBy    User?                @relation("BankTransactionMatchCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([transactionId])
+  @@index([financeEntryId])
   @@map("bank_transaction_matches")
 }
 
