@@ -17,6 +17,7 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 function toListRow(p: {
   id: string; name: string; color: string | null; startDate: Date | null; endDate: Date | null;
   items: { stage: { isTerminal: boolean } }[];
+  folder: { id: string; name: string } | null;
 }): ListRow {
   return {
     id: p.id,
@@ -26,10 +27,13 @@ function toListRow(p: {
     endDate: p.endDate,
     total: p.items.length,
     done: p.items.filter((i) => i.stage.isTerminal).length,
+    pasta: p.folder ? { id: p.folder.id, nome: p.folder.name } : null,
   };
 }
 
-// Espaço de um setor: Pastas + Listas soltas. Listas abrem no /kanban/{id}.
+// Espaço de um setor: as pastas e **todas** as listas — as soltas e as das
+// pastas, com a coluna "Pasta" (Ajustes 15/10, G3: antes só as soltas, e para
+// ver as outras era preciso abrir pasta por pasta). Listas abrem no /kanban/{id}.
 // Foi o "equivalente genérico" do Espaço do BPO até 2026-08-05, quando a rota
 // dedicada /bpo-financeiro saiu e esta passou a atender todos os setores.
 export default async function SectorSpacePage({ params }: { params: Promise<{ code: string; spaceId: string }> }) {
@@ -55,16 +59,17 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
   const pipelineSelect = {
     id: true, name: true, color: true, startDate: true, endDate: true,
     items: { where: { parentItemId: null }, select: { stage: { select: { isTerminal: true } } } },
+    folder: { select: { id: true, name: true } },
   } as const;
 
-  const [folders, looseLists] = await Promise.all([
+  const [folders, lists] = await Promise.all([
     prisma.folder.findMany({
       where: { spaceId },
       orderBy: { order: "asc" },
       include: { _count: { select: { pipelines: true } } },
     }),
     prisma.pipeline.findMany({
-      where: { spaceId, folderId: null },
+      where: { spaceId },
       orderBy: { name: "asc" },
       select: pipelineSelect,
     }),
@@ -129,14 +134,15 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
 
       <div>
         <h2 className="text-section font-semibold text-fg mb-2.5">Listas</h2>
-        {looseLists.length === 0 ? (
+        {lists.length === 0 ? (
           <Card>
-            <EmptyState title="Nenhuma lista solta neste espaço" description="Listas fora de pasta aparecem aqui." />
+            <EmptyState title="Nenhuma lista neste espaço" description="As listas do espaço, soltas ou dentro das pastas, aparecem aqui." />
           </Card>
         ) : (
           <ListsTable
-            lists={looseLists.map(toListRow)}
+            lists={lists.map(toListRow)}
             basePath="/kanban"
+            pastaBasePath={`/setor/${code}/pastas`}
             deleteAction={canDelete ? excluirLista : undefined}
           />
         )}

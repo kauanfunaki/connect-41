@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ChevronRight,
   Home,
   ContactRound,
   Columns3,
@@ -498,16 +499,31 @@ export function AppShell({
                     — pedido do Kauan em 17/09, no lugar de abrir e fechar seções. */}
                 <TelasFixadas telas={telasFixadas} />
 
+                {/* O nome do setor leva a todas as telas dele (Ajustes 15/10, G10):
+                    era só um rótulo com a bolinha, e a tela "Telas" do setor só
+                    se achava pela trilha de um grupo. A bolinha na cor do setor,
+                    com anel, e a seta dizendo que é caminho; aceso quando a tela é
+                    a dele. O nome fica na cor do texto: a do setor, em letra
+                    miúda, some no tema escuro. */}
                 {activeSectorModules.length > 0 && (
                   <TituloDoBloco nome={activeSector.label}>
-                    <p className="c41-rotulo flex items-center gap-2 px-2.5 pt-4 pb-1.5">
+                    <Link
+                      href={`/setor/${activeSector.code}/telas`}
+                      onClick={() => setMobileOpen(false)}
+                      aria-current={pathname === `/setor/${activeSector.code}/telas` ? "page" : undefined}
+                      data-dica={`Todas as telas de ${activeSector.label}`}
+                      className="group c41-rotulo flex items-center gap-2 mt-3 mb-0.5 -mx-1 px-3.5 py-1.5 rounded-md hover:bg-surface-hover aria-[current=page]:bg-surface-hover transition-colors"
+                    >
                       <span
                         aria-hidden
-                        className="inline-block size-2 rounded-full flex-shrink-0"
+                        className="inline-block size-2.5 rounded-full flex-shrink-0 ring-2 ring-[color-mix(in_srgb,var(--c41-setor)_25%,transparent)]"
                         style={{ backgroundColor: activeSector.color }}
                       />
-                      <span className="truncate">{activeSector.label}</span>
-                    </p>
+                      <span className="truncate text-fg-secondary group-hover:text-fg">
+                        {activeSector.label}
+                      </span>
+                      <ChevronRight size={12} aria-hidden className="ml-auto flex-shrink-0 text-fg-muted group-hover:text-fg" />
+                    </Link>
                   </TituloDoBloco>
                 )}
                 {(() => {
