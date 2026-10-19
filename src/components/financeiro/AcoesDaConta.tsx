@@ -1,21 +1,17 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
-import { Check, Undo2, CircleDollarSign, Send, FileText, MessageSquareWarning, Pencil } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Check, CircleDollarSign, Send, FileText, MessageSquareWarning, Pencil, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { CampoData } from "@/components/ui/CampoData";
-import { CampoForm } from "@/components/ui/CampoForm";
-import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { ItemDoMenu } from "@/components/ui/Popover";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import type { AcaoDeContaState } from "@/lib/financeiro/acoes";
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
-import { FormFooter } from "@/components/ui/FormFooter";
 import { useEdicaoDeLancamento } from "./EditarLancamento";
+import { useJanelaDaBaixa } from "./JanelaDaBaixa";
 
 type Acoes = {
   conferir: (entryId: string) => Promise<AcaoDeContaState>;
-  pagar: (entryId: string, dataISO: string) => Promise<AcaoDeContaState>;
-  desfazer: (entryId: string) => Promise<AcaoDeContaState>;
   /** Enviar para aprovação por alçada. Ausente quando o módulo está desligado ou a pessoa não atua nele. */
   enviarParaAprovacao?: (entryId: string) => Promise<{ error: string } | { ok: true; aviso?: string | null }>;
 };
@@ -43,6 +39,7 @@ export function AcoesDaConta({
   emColunas = false,
   comConferir = true,
   podeEditar = false,
+  temBaixas = false,
 }: {
   entryId: string;
   situacao: SituacaoDaConta;
@@ -65,13 +62,15 @@ export function AcoesDaConta({
   comConferir?: boolean;
   /** "Editar" no "⋯" (19/10). O que cada campo permite, a janela pergunta ao servidor. */
   podeEditar?: boolean;
+  /** A conta tem baixa — total ou parcial: "⋯ › Baixas" lista e desfaz (lote C, 19/10). */
+  temBaixas?: boolean;
 }) {
   const [erro, setErro] = useState<string | null>(null);
-  const [erroDaBaixa, setErroDaBaixa] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [data, setData] = useState(hojeISO);
   const [pendente, startTransition] = useTransition();
-  const idDaData = useId();
+  // A baixa abre numa janela (lote C): data, conta bancária, valor, juros,
+  // multa e desconto — era um balão só com a data. Baixa parcial avisa na linha.
+  const baixa = useJanelaDaBaixa(hojeISO, (avisoDaBaixa) => setAviso(avisoDaBaixa));
   // Conta que voltou para a aprovação ao mudar de valor diz isso na linha.
   const edicao = useEdicaoDeLancamento((avisoDaEdicao) => setAviso(avisoDaEdicao));
 
@@ -100,7 +99,7 @@ export function AcoesDaConta({
   const cancelada = situacao === "CANCELADA";
   const podeEnviarAgora = !paga && !cancelada && podeEnviar && !!acoes.enviarParaAprovacao;
   const editavel = podeEditar && !cancelada;
-  const temMenu = editavel || !!notaHref || (!!pendenciaHref && !cancelada) || podeEnviarAgora || paga;
+  const temMenu = editavel || !!notaHref || (!!pendenciaHref && !cancelada) || podeEnviarAgora || temBaixas;
 
   // O gatilho é o do `MenuDeMaisAcoes` (08/10/2026): estava copiado à mão aqui.
   const menu = temMenu && (
@@ -134,18 +133,17 @@ export function AcoesDaConta({
               Enviar para aprovação
             </ItemDoMenu>
           )}
-          {paga && (
+          {temBaixas && (
+            // As baixas da conta, com "Desfazer" em cada uma — era o "Desfazer
+            // pagamento" (D3, 15/10/2026), que com baixa parcial não diz qual.
             <ItemDoMenu
-              icone={<Undo2 />}
-              // Desfazer fica no "⋯" mesmo quando é a única ação (D3, 15/10/2026).
-              danger
-              disabled={pendente}
+              icone={<ReceiptText />}
               onClick={() => {
                 close();
-                executar(() => acoes.desfazer(entryId));
+                baixa.abrir(entryId);
               }}
             >
-              Desfazer {aPagar ? "pagamento" : "recebimento"}
+              {aPagar ? "Pagamentos" : "Recebimentos"}
             </ItemDoMenu>
           )}
         </div>
@@ -203,6 +201,7 @@ export function AcoesDaConta({
         {disporAcoes(comConferir && vaga(rotuloConferir), vaga(rotuloDaBaixa))}
         {erro && <span className="text-micro text-danger max-w-[220px]">{erro}</span>}
         {edicao.janela}
+        {baixa.janela}
       </div>
     );
   }
@@ -226,58 +225,24 @@ export function AcoesDaConta({
             {rotuloDaBaixa}
           </Button>
         ) : (
-          <Popover
-            align="right"
-            width={260}
-            aria-label={aPagar ? "Registrar pagamento" : "Registrar recebimento"}
-            trigger={({ toggle }) => (
-              <Button
-                variant="secondary"
-                size="xs"
-                className="whitespace-nowrap"
-                onClick={() => {
-                  setErroDaBaixa(null);
-                  setData(hojeISO);
-                  toggle();
-                }}
-              >
-                {rotuloDaBaixa}
-              </Button>
-            )}
+          <Button
+            variant="secondary"
+            size="xs"
+            className="whitespace-nowrap"
+            onClick={() => {
+              setAviso(null);
+              baixa.abrir(entryId);
+            }}
           >
-            {({ close }) => (
-              <form
-                className="flex flex-col gap-2.5"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setErroDaBaixa(null);
-                  startTransition(async () => {
-                    const r = await acoes.pagar(entryId, data);
-                    if (r?.error) setErroDaBaixa(r.error);
-                    else close();
-                  });
-                }}
-              >
-                <CampoForm label={aPagar ? "Data do pagamento" : "Data do recebimento"} htmlFor={idDaData} error={erroDaBaixa ?? undefined}>
-                  <CampoData id={idDaData} compact value={data} max={hojeISO} onChange={(v) => setData(v)} autoFocus />
-                </CampoForm>
-                <FormFooter
-                  pending={pendente}
-                  submitLabel="Confirmar"
-                  onCancel={close}
-                  submitDisabled={!data}
-                  size="sm"
-                  semDivisoria
-                />
-              </form>
-            )}
-          </Popover>
+            {rotuloDaBaixa}
+          </Button>
         )
       )}
       {bloqueioDeBaixa && <span className="text-micro text-fg-muted max-w-[220px]">{bloqueioDeBaixa}</span>}
       {erro && <span className="text-micro text-danger max-w-[220px]">{erro}</span>}
       {aviso && <span className="text-micro text-warning-fg max-w-[220px]">{aviso}</span>}
       {edicao.janela}
+      {baixa.janela}
     </div>
   );
 }

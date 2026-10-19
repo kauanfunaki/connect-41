@@ -355,13 +355,14 @@ async function checkContasAPagar(tenantId: string, today: Date): Promise<number>
       // A conta fictícia da demonstração não avisa o setor (15/10/2026).
       company: SO_EMPRESA_DE_VERDADE,
     },
-    select: { amount: true, dueDate: true },
+    select: { amount: true, paidPrincipal: true, dueDate: true },
   });
 
   const resumo = { venceHoje: 0, totalHoje: 0, venceramOntem: 0, totalOntem: 0 };
   for (const c of contas) {
     const dia = saoPauloParts(c.dueDate).dateKey;
-    const centavos = centavosDeDecimal(c.amount);
+    // O que falta pagar: com baixa parcial (lote C), o saldo.
+    const centavos = centavosDeDecimal(c.amount) - centavosDeDecimal(c.paidPrincipal);
     if (dia === hojeKey) {
       resumo.venceHoje += 1;
       resumo.totalHoje += centavos;

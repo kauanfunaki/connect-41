@@ -49,6 +49,8 @@ export type ContaParaEditar = {
   doOmie: boolean;
   /** Ligada a uma linha do extrato — no Connect ou pelo Omie. */
   conciliada: boolean;
+  /** Já tem baixa — total ou parcial (lote C). O valor do título fica preso ao que foi baixado. */
+  temBaixa?: boolean;
 };
 
 const DINHEIRO: CampoEditavel[] = ["valor", "vencimento"];
@@ -89,6 +91,9 @@ export function travasDaEdicao(conta: ContaParaEditar): { pode: false; motivo: s
   if (conta.status === "PAGO" || conta.paidAt !== null) {
     travar(DINHEIRO, "Paga — desfaça o pagamento para mudar valor ou vencimento.");
   }
+  // Baixa parcial: o vencimento do resto ainda muda; o valor, não — o saldo é
+  // o valor menos o que foi baixado, e mudar um por baixo do outro o desfaria.
+  if (conta.temBaixa) travar(["valor"], "Tem baixa parcial — desfaça as baixas (⋯ › Pagamentos) para mudar o valor.");
   return { pode: true, travas };
 }
 

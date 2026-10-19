@@ -72,7 +72,7 @@ async function main() {
   const contaDaMatriz = contas.find((c) => c.companyId === matriz.id)!;
   const pendentes = await p.bankTransaction.findMany({ where: { tenantId: t, bankAccountId: contaDaMatriz.id, status: "PENDENTE" }, select: { amount: true, postedAt: true, memo: true, payeeName: true } });
   const lancamentos = await p.financeEntry.findMany({
-    where: { tenantId: t, companyId: matriz.id, status: { not: "CANCELADO" }, bankMatch: { is: null } },
+    where: { tenantId: t, companyId: matriz.id, status: { not: "CANCELADO" }, bankMatches: { none: {} } },
     select: { id: true, kind: true, status: true, amount: true, dueDate: true, paidAt: true, description: true, counterparty: { select: { name: true, document: true } } },
   });
   const candidatos = lancamentos.map((l) => ({

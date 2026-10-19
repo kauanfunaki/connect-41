@@ -181,6 +181,9 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
     },
   },
   { modelo: "CollectionAgreement", acao: "apagar", executar: (tx, a) => n(tx.collectionAgreement.deleteMany({ where: daEmpresa(a) })) },
+  // As baixas antes das contas: os vínculos com o extrato já saíram acima, e a
+  // baixa só se apaga sem vínculo (Restrict).
+  { modelo: "FinanceEntryPayment", acao: "apagar", executar: (tx, a) => n(tx.financeEntryPayment.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "FinanceEntry", acao: "apagar", executar: (tx, a) => n(tx.financeEntry.deleteMany({ where: daEmpresa(a) })) },
   {
     modelo: "CollectionReminderOptOut",

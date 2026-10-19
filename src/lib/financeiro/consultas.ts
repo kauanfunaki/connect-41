@@ -16,6 +16,12 @@ import { centavosDeDecimal, situacaoDaConta, type SituacaoDaConta, type Totais }
 import { seloDeAprovacaoVisivel, type StatusDeAprovacao } from "./aprovacao/regras";
 import { competenciaDoInstante, inicioDaCompetencia, somarMeses } from "./periodo";
 import type { MovimentoRealizado, TituloEmAberto, SomaPorEmpresa, ContagemPorEmpresa } from "./fluxo";
+import { movimentosDeCaixa, baixasNoPeriodo } from "./baixa/consultas";
+
+/** O escopo como filtro das baixas — o mesmo de `whereDoEscopo`, na tabela delas. */
+function baixasDoEscopo(e: EscopoFinanceiro, de: Date, ate: Date) {
+  return baixasNoPeriodo({ tenantId: e.tenantId, companyIds: e.companyIds }, de, ate);
+}
 
 export type EscopoFinanceiro = {
   tenantId: string;
@@ -33,24 +39,20 @@ export function inicioDeHoje(hojeKey: string): Date {
   return new Date(`${hojeKey}T00:00:00-03:00`);
 }
 
-/** Tudo que foi pago ou recebido nas competências de caixa pedidas (contíguas). */
+/**
+ * Tudo que foi pago ou recebido nas competências de caixa pedidas (contíguas).
+ * Das baixas (lote C, 19/10): a parcial entra no mês dela, e juros, multa e
+ * desconto mexem no total como mexeram no banco.
+ */
 export async function movimentosRealizados(e: EscopoFinanceiro, competencias: string[]): Promise<MovimentoRealizado[]> {
   if (competencias.length === 0) return [];
-  const prisma = getPrisma();
-  const linhas = await prisma.financeEntry.findMany({
-    where: {
-      ...whereDoEscopo(e),
-      paidAt: {
-        gte: inicioDaCompetencia(competencias[0]!),
-        lt: inicioDaCompetencia(somarMeses(competencias[competencias.length - 1]!, 1)),
-      },
-    },
-    select: { kind: true, amount: true, paidAt: true },
-  });
-  return linhas.map((l) => ({
-    competenciaDeCaixa: competenciaDoInstante(l.paidAt!),
-    kind: l.kind,
-    centavos: centavosDeDecimal(l.amount),
+  const movimentos = await movimentosDeCaixa(
+    baixasDoEscopo(e, inicioDaCompetencia(competencias[0]!), inicioDaCompetencia(somarMeses(competencias[competencias.length - 1]!, 1)))
+  );
+  return movimentos.map((m) => ({
+    competenciaDeCaixa: competenciaDoInstante(m.paidAt),
+    kind: m.kind,
+    centavos: m.centavos,
   }));
 }
 
@@ -66,13 +68,14 @@ export async function titulosEmAberto(e: EscopoFinanceiro): Promise<TituloComCon
   const prisma = getPrisma();
   const linhas = await prisma.financeEntry.findMany({
     where: { ...whereDoEscopo(e), paidAt: null, status: { not: "CANCELADO" } },
-    select: { kind: true, amount: true, dueDate: true, companyId: true, counterparty: { select: { name: true } } },
+    select: { kind: true, amount: true, paidPrincipal: true, dueDate: true, companyId: true, counterparty: { select: { name: true } } },
     orderBy: { dueDate: "asc" },
     take: 5_000,
   });
   return linhas.map((l) => ({
     kind: l.kind,
-    centavos: centavosDeDecimal(l.amount),
+    // O que falta: a baixa parcial já saiu do caixa e não volta a ser projetada.
+    centavos: centavosDeDecimal(l.amount) - centavosDeDecimal(l.paidPrincipal),
     vencimentoKey: saoPauloParts(l.dueDate).dateKey,
     contraparteNome: l.counterparty.name,
     companyId: l.companyId,
@@ -99,18 +102,21 @@ export async function contasPorJanela(e: EscopoFinanceiro, hojeKey: string, depo
       by: ["kind"],
       where: { ...emAberto, dueDate: { lt: inicioDeHoje(hojeKey) } },
       _count: { _all: true },
-      _sum: { amount: true },
+      _sum: { amount: true, paidPrincipal: true },
     }),
     prisma.financeEntry.groupBy({
       by: ["kind"],
       where: { ...emAberto, dueDate: { gte: inicioDeHoje(hojeKey), lt: inicioDeHoje(depoisKey) } },
       _count: { _all: true },
-      _sum: { amount: true },
+      _sum: { amount: true, paidPrincipal: true },
     }),
   ]);
+  // Em aberto é o saldo: valor menos o que a baixa parcial já quitou.
   const soma = (linhas: typeof vencidas, kind: "PAGAR" | "RECEBER"): SomaDeContas => {
     const l = linhas.find((x) => x.kind === kind);
-    return { n: l?._count._all ?? 0, centavos: l?._sum.amount ? centavosDeDecimal(l._sum.amount) : 0 };
+    const valor = l?._sum.amount ? centavosDeDecimal(l._sum.amount) : 0;
+    const baixado = l?._sum.paidPrincipal ? centavosDeDecimal(l._sum.paidPrincipal) : 0;
+    return { n: l?._count._all ?? 0, centavos: valor - baixado };
   };
   return {
     PAGAR: { vencidas: soma(vencidas, "PAGAR"), proximas: soma(proximas, "PAGAR") },
@@ -125,15 +131,9 @@ export async function dadosDoConsolidado(
   hojeKey: string
 ): Promise<{ somas: SomaPorEmpresa[]; vencidas: ContagemPorEmpresa[] }> {
   const prisma = getPrisma();
-  const [somas, vencidas] = await Promise.all([
-    prisma.financeEntry.groupBy({
-      by: ["companyId", "kind"],
-      where: {
-        ...whereDoEscopo(e),
-        paidAt: { gte: inicioDaCompetencia(competencia), lt: inicioDaCompetencia(somarMeses(competencia, 1)) },
-      },
-      _sum: { amount: true },
-    }),
+  const [movimentos, vencidas] = await Promise.all([
+    // Pago e recebido no mês, das baixas — com a parcial e os encargos.
+    movimentosDeCaixa(baixasDoEscopo(e, inicioDaCompetencia(competencia), inicioDaCompetencia(somarMeses(competencia, 1)))),
     prisma.financeEntry.groupBy({
       by: ["companyId", "kind"],
       where: {
@@ -145,12 +145,15 @@ export async function dadosDoConsolidado(
       _count: { _all: true },
     }),
   ]);
+  const somas = new Map<string, SomaPorEmpresa>();
+  for (const m of movimentos) {
+    const chave = `${m.companyId}|${m.kind}`;
+    const atual = somas.get(chave) ?? { companyId: m.companyId, kind: m.kind, centavos: 0 };
+    atual.centavos += m.centavos;
+    somas.set(chave, atual);
+  }
   return {
-    somas: somas.map((s) => ({
-      companyId: s.companyId,
-      kind: s.kind,
-      centavos: s._sum.amount ? centavosDeDecimal(s._sum.amount) : 0,
-    })),
+    somas: [...somas.values()],
     vencidas: vencidas.map((v) => ({ companyId: v.companyId, kind: v.kind, quantidade: v._count._all })),
   };
 }
@@ -290,27 +293,27 @@ export async function totaisDoEscopo(
   const emAberto: Prisma.FinanceEntryWhereInput = { ...doTipo, paidAt: null, status: { notIn: ["CANCELADO", "PAGO"] } };
   const hoje = inicioDeHoje(hojeKey);
   const amanha = inicioDeHoje(addDaysToKey(hojeKey, 1));
-  const [pagas, vencidas, deHoje, aVencer] = await Promise.all([
-    prisma.financeEntry.aggregate({
-      where: { ...doTipo, status: { not: "CANCELADO" }, OR: [{ status: "PAGO" }, { paidAt: { not: null } }] },
-      _sum: { amount: true },
-      _min: { paidAt: true },
-    }),
-    prisma.financeEntry.aggregate({ where: { ...emAberto, dueDate: { lt: hoje } }, _sum: { amount: true } }),
-    prisma.financeEntry.aggregate({ where: { ...emAberto, dueDate: { gte: hoje, lt: amanha } }, _sum: { amount: true } }),
-    prisma.financeEntry.aggregate({ where: { ...emAberto, dueDate: { gte: amanha } }, _sum: { amount: true } }),
+  // Pago é o que as baixas quitaram — a parcial inclusive; em aberto é o saldo
+  // (valor − quitado). As somas continuam no banco, sem teto (lote C, 19/10).
+  const [pagas, desde, vencidas, deHoje, aVencer] = await Promise.all([
+    prisma.financeEntry.aggregate({ where: { ...doTipo, status: { not: "CANCELADO" } }, _sum: { paidPrincipal: true } }),
+    prisma.financeEntryPayment.aggregate({ where: { entry: { ...doTipo, status: { not: "CANCELADO" } } }, _min: { paidAt: true } }),
+    prisma.financeEntry.aggregate({ where: { ...emAberto, dueDate: { lt: hoje } }, _sum: { amount: true, paidPrincipal: true } }),
+    prisma.financeEntry.aggregate({ where: { ...emAberto, dueDate: { gte: hoje, lt: amanha } }, _sum: { amount: true, paidPrincipal: true } }),
+    prisma.financeEntry.aggregate({ where: { ...emAberto, dueDate: { gte: amanha } }, _sum: { amount: true, paidPrincipal: true } }),
   ]);
-  const centavos = (soma: { _sum: { amount: { toString(): string } | null } }) =>
-    soma._sum.amount ? centavosDeDecimal(soma._sum.amount) : 0;
-  const vencido = centavos(vencidas);
-  const venceHoje = centavos(deHoje);
-  const aVencerCentavos = centavos(aVencer);
+  const d = (v: { toString(): string } | null) => (v ? centavosDeDecimal(v) : 0);
+  const saldo = (s: { _sum: { amount: { toString(): string } | null; paidPrincipal: { toString(): string } | null } }) =>
+    d(s._sum.amount) - d(s._sum.paidPrincipal);
+  const vencido = saldo(vencidas);
+  const venceHoje = saldo(deHoje);
+  const aVencerCentavos = saldo(aVencer);
   return {
     vencido,
     venceHoje,
     aVencer: aVencerCentavos,
-    pago: centavos(pagas),
+    pago: d(pagas._sum.paidPrincipal),
     emAberto: vencido + venceHoje + aVencerCentavos,
-    pagoDesde: pagas._min.paidAt,
+    pagoDesde: desde._min.paidAt,
   };
 }
