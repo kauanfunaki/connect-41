@@ -37,6 +37,15 @@
 //
 // Limite conhecido: título com mais de uma baixa cujas linhas caiam em páginas
 // diferentes fica com a da última página. É pagamento parcial, e raro.
+//
+// ─── Parciais (fila do BPO, 19/10) ───────────────────────────────────────────
+//
+// O título pago em parte lá entra aqui em aberto **com o que já foi pago**: as
+// baixas dele são lidas uma a uma (`mapearBaixasDoTitulo`) e cada uma vira uma
+// baixa do Connect no seu dia, com o código de lá. Se a soma não fecha com o
+// `nValPago` do título (baixa com juros, leitura que falhou), o pago vai numa
+// baixa só, no dia do último pagamento. Na prévia, só a baixa única — a
+// leitura das baixas é uma chamada a mais por parcial.
 
 import { getPrisma } from "@/lib/prisma";
 import { saoPauloParts } from "@/lib/agenda";
@@ -47,7 +56,7 @@ import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { chamarOmie } from "./cliente";
 import { instanciaDaEmpresa } from "./contas";
-import { lerCategorias, mapearMovimento, paginaDeCategorias, paginaDeMovimentos, type TituloDoOmie } from "./financeiro";
+import { lerCategorias, mapearBaixasDoTitulo, mapearMovimento, paginaDeCategorias, paginaDeMovimentos, type TituloDoOmie } from "./financeiro";
 import {
   juntarBaixas,
   lerContasCorrentes,
@@ -60,7 +69,7 @@ import {
 } from "./conciliacao";
 import { conciliarEmpresaPeloOmie } from "@/lib/financeiro/conciliacao/omieServidor";
 import { BAIXA_NO_ESPELHO, espelharBaixaDoOmie, paraOEspelho, recalcularConta } from "@/lib/financeiro/baixa/servidor";
-import { planoDoEspelho, planoMexe } from "@/lib/financeiro/baixa/regras";
+import { planoDoEspelho, planoMexe, type TituloNoEspelho } from "@/lib/financeiro/baixa/regras";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -72,9 +81,9 @@ export const PREFIXO_DO_FINANCEIRO = "financeiro:";
  * passam a valer por causa da baixa — e a baixa feita no Connect, se houver,
  * continua valendo (`espelharBaixaDoOmie`).
  */
-async function espelharEFechar(tx: Prisma.TransactionClient, entryId: string, pago: boolean, paidAt: Date | null, valor: string) {
+async function espelharEFechar(tx: Prisma.TransactionClient, entryId: string, titulo: TituloNoEspelho) {
   const conta = await tx.financeEntry.findUniqueOrThrow({ where: { id: entryId }, select: { tenantId: true, companyId: true } });
-  await espelharBaixaDoOmie(tx, { id: entryId, tenantId: conta.tenantId, companyId: conta.companyId }, { pago, paidAt, valor });
+  await espelharBaixaDoOmie(tx, { id: entryId, tenantId: conta.tenantId, companyId: conta.companyId }, titulo);
   await recalcularConta(tx, entryId);
 }
 export const instanciaDoFinanceiro = (companyId: string) => `${PREFIXO_DO_FINANCEIRO}${companyId}`;
@@ -419,6 +428,7 @@ export async function sincronizarFinanceiroDaEmpresa(
           issueDate: t.emissao,
           documentNumber: t.numeroDocumento,
         } as const;
+        const titulo = await tituloNoEspelho(t);
 
         if (!atual) {
           somar("novos");
@@ -429,7 +439,7 @@ export async function sincronizarFinanceiroDaEmpresa(
                 data: { tenantId, companyId, kind: t.kind, counterpartyId, description: t.descricao, omieTitleId: t.omieTitleId, ...dados },
                 select: { id: true },
               });
-              await espelharEFechar(tx, criado.id, dados.status === "PAGO", dados.paidAt, dados.amount);
+              await espelharEFechar(tx, criado.id, titulo);
             });
           } else {
             await contraparteDo(t);
@@ -445,7 +455,7 @@ export async function sincronizarFinanceiroDaEmpresa(
         // espelho faria, e não o status do Omie com o da conta — a conta paga no
         // Connect e em aberto no Omie seria regravada em toda leitura.
         const valorCentavos = centavosDeDecimal(dados.amount);
-        const plano = planoDoEspelho(atual.payments.map(paraOEspelho), { pago: status === "PAGO", paidAtMs: dados.paidAt?.getTime() ?? null, valorCentavos });
+        const plano = planoDoEspelho(atual.payments.map(paraOEspelho), titulo);
         if (plano.conflito) somar("baixas_em_conflito");
         const mudou =
           estornado ||
@@ -477,7 +487,7 @@ export async function sincronizarFinanceiroDaEmpresa(
                 ...(estornado ? { omieBaixaId: null, omiePaidAmount: null, omieReconciledAt: null } : {}),
               },
             });
-            await espelharEFechar(tx, atual.id, dados.status === "PAGO", dados.paidAt, dados.amount);
+            await espelharEFechar(tx, atual.id, titulo);
           });
         }
       }
@@ -495,6 +505,40 @@ export async function sincronizarFinanceiroDaEmpresa(
       somar("extrato_conciliado_pelo_omie", await conciliarEmpresaPeloOmie(tenantId, companyId));
     }
     return { cont, proxima };
+
+    /**
+     * O título como o espelho das baixas o lê. Na parcial, as baixas de lá uma a
+     * uma — só quando gravando, e só se a soma fechar com o pago do título.
+     */
+    async function tituloNoEspelho(t: TituloDoOmie): Promise<TituloNoEspelho> {
+      const base = { pagoCentavos: t.pagoCentavos, paidAtMs: t.ultimoPagamento?.getTime() ?? null };
+      if (!t.parcial || t.pagoCentavos === 0) return base;
+      if (!t.ultimoPagamento) {
+        somar("parciais_sem_data");
+        return { pagoCentavos: 0, paidAtMs: null };
+      }
+      if (!opcoes.gravar) return base;
+      let baixas: ReturnType<typeof mapearBaixasDoTitulo> = null;
+      try {
+        const corpo = await chamarOmie(cred, "financas/mf", "ListarMovimentos", {
+          nPagina: 1,
+          nRegPorPagina: 50,
+          cTpLancamento: "BX",
+          nCodTitulo: Number(t.omieTitleId),
+        });
+        baixas = mapearBaixasDoTitulo(corpo, t.omieTitleId);
+      } catch {
+        // Leitura das baixas que falhou não derruba o título: o pago vai numa
+        // baixa só, e a próxima leitura tenta de novo.
+        baixas = null;
+      }
+      const fecha = baixas !== null && baixas.length > 0 && baixas.reduce((s, b) => s + b.principalCentavos, 0) === t.pagoCentavos;
+      if (!fecha) {
+        somar("parciais_numa_baixa");
+        return base;
+      }
+      return { ...base, baixas: baixas!.map((b) => ({ chave: b.chave, principalCentavos: b.principalCentavos, paidAtMs: b.paidAt.getTime() })) };
+    }
 
     /** Uma página das linhas de conta corrente. Devolve `true` na última. */
     async function lerPaginaDeConta(n: number): Promise<boolean> {
@@ -597,7 +641,7 @@ export async function sincronizarFinanceiroDaEmpresa(
                 select: { id: true },
               });
               // Movimento de conta é sempre dinheiro que andou: nasce com a baixa.
-              await espelharEFechar(tx, criado.id, true, dados.paidAt, dados.amount);
+              await espelharEFechar(tx, criado.id, { pagoCentavos: centavosDeDecimal(dados.amount), paidAtMs: dados.paidAt.getTime() });
             });
           }
           continue;
@@ -617,7 +661,7 @@ export async function sincronizarFinanceiroDaEmpresa(
               where: { id: atual.id },
               data: { ...dados, categoryId: dados.categoryId ?? atual.categoryId },
             });
-            await espelharEFechar(tx, atual.id, true, dados.paidAt, dados.amount);
+            await espelharEFechar(tx, atual.id, { pagoCentavos: centavosDeDecimal(dados.amount), paidAtMs: dados.paidAt.getTime() });
           });
         }
       }

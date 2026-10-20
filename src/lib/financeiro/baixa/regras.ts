@@ -131,6 +131,8 @@ export type BaixaNoEspelho = {
   origem: OrigemDaBaixa;
   principalCentavos: number;
   paidAtMs: number;
+  /** O código da baixa no Omie (`nCodBaixa`), na que veio de lá uma a uma. */
+  chave: string | null;
   /**
    * A linha do extrato ligada a ela: `peloOmie` quando foi a conciliação pelo
    * Omie que ligou, e só a ela — o Omie pode desfazer o que ele mesmo fez.
@@ -138,9 +140,26 @@ export type BaixaNoEspelho = {
   vinculo: { peloOmie: boolean } | null;
 };
 
+/** Uma baixa que o Omie diz que o título tem. */
+export type BaixaDoOmieNoEspelho = { chave: string | null; principalCentavos: number; paidAtMs: number };
+
+/** A situação do título no Omie, do jeito que o espelho precisa. */
+export type TituloNoEspelho = {
+  /** O principal pago lá: o valor do título pago, o `nValPago` da parcial, zero em aberto. */
+  pagoCentavos: number;
+  /** O dia do último pagamento lá. */
+  paidAtMs: number | null;
+  /**
+   * As baixas de lá uma a uma, quando lidas e conferidas contra `pagoCentavos`
+   * (fila do BPO, 19/10 — só a parcial é lida assim). Sem elas, o que o Omie
+   * pagou vira uma baixa só, no dia do último pagamento.
+   */
+  baixas?: { chave: string; principalCentavos: number; paidAtMs: number }[] | null;
+};
+
 export type PlanoDoEspelho = {
-  criar: { principalCentavos: number } | null;
-  atualizar: { id: string; principalCentavos: number; desvincular: boolean } | null;
+  criar: BaixaDoOmieNoEspelho[];
+  atualizar: (BaixaDoOmieNoEspelho & { id: string; desvincular: boolean })[];
   apagar: { id: string; desvincular: boolean }[];
   /** O Omie e uma baixa conciliada aqui discordam: fica como está, para gente olhar. */
   conflito: boolean;
@@ -156,6 +175,9 @@ export type PlanoDoEspelho = {
  * - paga lá: a baixa do Omie é o resto do título, no dia de lá — o título
  *   inteiro sem baixa daqui; só o que falta depois de uma parcial feita aqui;
  *   nada, se as daqui já quitam;
+ * - paga em parte lá: o mesmo com o que foi pago — e, sem baixa daqui, uma
+ *   baixa por pagamento de lá, cada uma no seu dia (`baixas`), casadas pelo
+ *   código para a leitura seguinte não duplicar;
  * - em aberto lá (baixa estornada): a baixa do Omie sai.
  *
  * Duas baixas o Omie não toca: a feita no Connect (botão Pagar, conciliação) —
@@ -164,39 +186,60 @@ export type PlanoDoEspelho = {
  * dinheiro, e desfazer aquela conciliação é decisão de gente (`conflito`). A
  * que a conciliação pelo Omie ligou sai do extrato junto (`desvincular`).
  */
-export function planoDoEspelho(
-  baixas: BaixaNoEspelho[],
-  omie: { pago: boolean; paidAtMs: number | null; valorCentavos: number }
-): PlanoDoEspelho {
+export function planoDoEspelho(baixas: BaixaNoEspelho[], omie: TituloNoEspelho): PlanoDoEspelho {
   const doOmie = (b: BaixaNoEspelho) => b.origem === "OMIE" || b.origem === "MIGRACAO";
   const presa = (b: BaixaNoEspelho) => b.vinculo !== null && !b.vinculo.peloOmie;
-  const soma = (l: BaixaNoEspelho[]) => l.reduce((s, b) => s + b.principalCentavos, 0);
+  const soma = (l: { principalCentavos: number }[]) => l.reduce((s, b) => s + b.principalCentavos, 0);
   const fixas = baixas.filter((b) => !doOmie(b) || presa(b));
   const livres = baixas.filter((b) => doOmie(b) && !presa(b));
-  const pagoLa = omie.pago && omie.paidAtMs !== null;
-  const devido = pagoLa ? Math.max(0, omie.valorCentavos - soma(fixas)) : 0;
+  const pagoLa = omie.pagoCentavos > 0 && omie.paidAtMs !== null;
 
-  let criar: PlanoDoEspelho["criar"] = null;
-  let atualizar: PlanoDoEspelho["atualizar"] = null;
-  let restantes = livres;
-  if (devido > 0) {
-    const [primeira, ...outras] = livres;
-    if (!primeira) criar = { principalCentavos: devido };
-    else if (primeira.principalCentavos !== devido || primeira.paidAtMs !== omie.paidAtMs) {
-      atualizar = { id: primeira.id, principalCentavos: devido, desvincular: primeira.vinculo !== null };
-    }
-    restantes = outras;
+  // As baixas que o Omie deve ter aqui. Uma a uma só sem baixa daqui: com uma
+  // parcial feita no Connect não dá para saber qual pagamento de lá é o mesmo.
+  let alvos: BaixaDoOmieNoEspelho[] = [];
+  if (pagoLa && omie.baixas && omie.baixas.length > 0 && fixas.length === 0) {
+    alvos = omie.baixas.map((b) => ({ chave: b.chave, principalCentavos: b.principalCentavos, paidAtMs: b.paidAtMs }));
+  } else if (pagoLa) {
+    // Sem as baixas de lá uma a uma, as que já vieram com código ficam — são
+    // pagamentos de lá, cada um no seu dia —, e o resto vai numa baixa só, no
+    // dia do último pagamento: o título que fechou depois de parciais não
+    // perde o dia das primeiras.
+    const comCodigo = fixas.length === 0 ? livres.filter((b) => b.chave !== null) : [];
+    const ficam = soma(comCodigo) <= omie.pagoCentavos ? comCodigo : [];
+    const devido = Math.max(0, omie.pagoCentavos - soma(fixas) - soma(ficam));
+    alvos = ficam.map((b) => ({ chave: b.chave, principalCentavos: b.principalCentavos, paidAtMs: b.paidAtMs }));
+    if (devido > 0) alvos.push({ chave: null, principalCentavos: devido, paidAtMs: omie.paidAtMs! });
   }
-  const apagar = restantes.map((b) => ({ id: b.id, desvincular: b.vinculo !== null }));
+
+  // Cada alvo fica com uma baixa livre: a do mesmo código, senão uma sem
+  // código, senão qualquer uma — e a que sobra sai.
+  const sobra = [...livres];
+  const tirar = (achar: (b: BaixaNoEspelho) => boolean) => {
+    const i = sobra.findIndex(achar);
+    return i < 0 ? null : sobra.splice(i, 1)[0]!;
+  };
+  const pares: { alvo: BaixaDoOmieNoEspelho; baixa: BaixaNoEspelho | null }[] = alvos.map((alvo) => ({
+    alvo,
+    baixa: alvo.chave ? tirar((b) => b.chave === alvo.chave) : null,
+  }));
+  for (const p of pares) if (!p.baixa) p.baixa = tirar((b) => b.chave === null) ?? tirar(() => true);
+
+  const criar = pares.filter((p) => !p.baixa).map((p) => p.alvo);
+  const atualizar = pares.flatMap(({ alvo, baixa }) =>
+    baixa && (baixa.principalCentavos !== alvo.principalCentavos || baixa.paidAtMs !== alvo.paidAtMs || baixa.chave !== alvo.chave)
+      ? [{ ...alvo, id: baixa.id, desvincular: baixa.vinculo !== null }]
+      : []
+  );
+  const apagar = sobra.map((b) => ({ id: b.id, desvincular: b.vinculo !== null }));
 
   const presas = baixas.filter((b) => doOmie(b) && presa(b));
-  const conflito = presas.length > 0 && (!pagoLa || soma(fixas) > omie.valorCentavos);
-  return { criar, atualizar, apagar, conflito, baixadoCentavos: soma(fixas) + devido };
+  const conflito = presas.length > 0 && (!pagoLa || soma(fixas) > omie.pagoCentavos);
+  return { criar, atualizar, apagar, conflito, baixadoCentavos: soma(fixas) + soma(alvos) };
 }
 
 /** O plano muda alguma baixa? */
 export function planoMexe(p: PlanoDoEspelho): boolean {
-  return p.criar !== null || p.atualizar !== null || p.apagar.length > 0;
+  return p.criar.length > 0 || p.atualizar.length > 0 || p.apagar.length > 0;
 }
 
 // ─── As categorias da baixa ─────────────────────────────────────────────────
