@@ -84,6 +84,8 @@ export async function saldoBancarioDoEscopo(escopo: EscopoFinanceiro): Promise<S
     where: {
       tenantId: escopo.tenantId,
       active: true,
+      // A conta de adiantamento (lote D, 20/10) não é dinheiro em banco.
+      type: { notIn: ["ADIANTAMENTO_FORNECEDOR", "ADIANTAMENTO_CLIENTE"] },
       ...(escopo.companyIds === null ? {} : { companyId: { in: escopo.companyIds } }),
     },
     select: {

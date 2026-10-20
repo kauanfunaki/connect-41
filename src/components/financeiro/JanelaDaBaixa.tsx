@@ -162,6 +162,9 @@ function FormularioDaBaixa({
   const aPagar = dados.kind === "PAGAR";
   // A prevista no título (lote D, 20/10), se ainda ativa; senão a única conta da empresa.
   const contaSugerida = contaSugeridaNaBaixa(dados.contas, dados.contaPrevistaId);
+  const [contaEscolhida, setContaEscolhida] = useState(contaSugerida);
+  // O adiantamento de quem é a conta (lote D, 20/10): a baixa sai dele, e o banco não se mexe.
+  const peloAdiantamento = dados.adiantamento !== null && contaEscolhida === dados.adiantamento.contaId;
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
   const [valor, setValor] = useState(noCampo(dados.saldoCentavos));
@@ -202,20 +205,33 @@ function FormularioDaBaixa({
           label={aPagar ? "Saiu da conta" : "Entrou na conta"}
           htmlFor={`${id}-conta`}
           helper={
-            dados.contas.length === 0
-              ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)."
-              : contaSugerida && contaSugerida === dados.contaPrevistaId
-                ? "A prevista no título. É a conta que a conciliação procura."
-                : "Opcional. É a conta que a conciliação procura."
+            peloAdiantamento
+              ? `Usa o adiantamento: o banco não se mexe agora — o dinheiro saiu quando se adiantou. Disponível: ${reais(dados.adiantamento!.disponivelCentavos)}.`
+              : dados.contas.length === 0 && !dados.adiantamento
+                ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)."
+                : contaSugerida && contaSugerida === dados.contaPrevistaId && contaEscolhida === contaSugerida
+                  ? "A prevista no título. É a conta que a conciliação procura."
+                  : "Opcional. É a conta que a conciliação procura."
           }
         >
-          <Select id={`${id}-conta`} name="contaBancariaId" defaultValue={contaSugerida} disabled={dados.contas.length === 0}>
+          <Select
+            id={`${id}-conta`}
+            name="contaBancariaId"
+            value={contaEscolhida}
+            onChange={(e) => setContaEscolhida(e.target.value)}
+            disabled={dados.contas.length === 0 && !dados.adiantamento}
+          >
             <option value="">Não informada</option>
             {dados.contas.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nome}
               </option>
             ))}
+            {dados.adiantamento && (
+              <option value={dados.adiantamento.contaId}>
+                {dados.adiantamento.nome} — disponível {reais(dados.adiantamento.disponivelCentavos)}
+              </option>
+            )}
           </Select>
         </CampoForm>
       </FieldGrid>

@@ -18,6 +18,8 @@ import { registrarBaixa, quitarConta, apagarBaixa, RecusaDaBaixa, type OrigemDaB
 import { MAXIMO_DO_LOTE, separarLote, validarDiaDoLote, type ForaDoLote } from "./baixa/lote";
 import { nomeExibicao } from "@/lib/companyName";
 import { contaPrevistaEmComum } from "./contaPrevista";
+import { ehContaDeAdiantamento, tipoDoAdiantamento, TIPOS_DE_ADIANTAMENTO, validarUsoDoAdiantamento } from "./adiantamento";
+import { disponivelDoAdiantamento } from "./adiantamentoServidor";
 import { decimalDeCentavos } from "./manual";
 import { instanteDaData } from "./periodo";
 import { setorDoModulo } from "@/lib/modules";
@@ -178,6 +180,11 @@ export type DadosDaBaixa =
       contas: { id: string; nome: string }[];
       /** A conta corrente prevista no título (lote D, 20/10): a janela já a traz marcada. */
       contaPrevistaId: string | null;
+      /**
+       * O adiantamento de quem é a conta (lote D, 20/10), quando há disponível:
+       * a baixa pode sair dele em vez do banco.
+       */
+      adiantamento: { contaId: string; nome: string; disponivelCentavos: number } | null;
       baixas: BaixaDaConta[];
     }
   | { ok: false; erro: string };
@@ -185,11 +192,21 @@ export type DadosDaBaixa =
 /** Contas bancárias ativas da empresa, para o "de qual conta saiu". */
 async function contasDaEmpresa(tenantId: string, companyId: string) {
   const contas = await getPrisma().bankAccount.findMany({
-    where: { tenantId, companyId, active: true },
+    // Só banco: a conta de adiantamento entra à parte, com o disponível de quem é a conta.
+    where: { tenantId, companyId, active: true, type: { notIn: [...TIPOS_DE_ADIANTAMENTO] } },
     select: { id: true, nickname: true, accountNumber: true },
     orderBy: { nickname: "asc" },
   });
   return contas.map((c) => ({ id: c.id, nome: `${c.nickname} ${c.accountNumber}` }));
+}
+
+/** O adiantamento disponível do fornecedor (ou cliente) da conta, na conta de adiantamento da empresa. */
+async function adiantamentoDaConta(tenantId: string, companyId: string, kind: "PAGAR" | "RECEBER", counterpartyId: string) {
+  const tipo = tipoDoAdiantamento(kind);
+  const conta = await getPrisma().bankAccount.findFirst({ where: { tenantId, companyId, type: tipo, active: true }, select: { id: true, nickname: true } });
+  if (!conta) return null;
+  const disponivelCentavos = await disponivelDoAdiantamento(getPrisma(), tenantId, companyId, tipo, counterpartyId);
+  return disponivelCentavos > 0 ? { contaId: conta.id, nome: conta.nickname, disponivelCentavos } : null;
 }
 
 /** A conta, o saldo, as contas bancárias e as baixas que já tem — o que a janela da baixa precisa. */
@@ -206,6 +223,7 @@ export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
       approvalStatus: true,
       companyId: true,
       bankAccountId: true,
+      counterpartyId: true,
       counterparty: { select: { name: true } },
       payments: {
         select: {
@@ -237,6 +255,7 @@ export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
     bloqueio: motivoDoBloqueioDeBaixa(conta),
     contas: await contasDaEmpresa(ctx.tenantId, conta.companyId),
     contaPrevistaId: conta.bankAccountId,
+    adiantamento: await adiantamentoDaConta(ctx.tenantId, conta.companyId, conta.kind, conta.counterpartyId),
     baixas: conta.payments.map((p) => ({
       id: p.id,
       dataKey: saoPauloParts(p.paidAt).dateKey,
@@ -280,6 +299,7 @@ export async function registrarPagamento(formData: FormData): Promise<{ error: s
       paidPrincipal: true,
       approvalStatus: true,
       companyId: true,
+      counterpartyId: true,
       counterparty: { select: { name: true } },
     },
   });
@@ -299,15 +319,27 @@ export async function registrarPagamento(formData: FormData): Promise<{ error: s
   const d = v.dados;
 
   const contaBancariaId = texto("contaBancariaId") || null;
+  let peloAdiantamento: ReturnType<typeof tipoDoAdiantamento> | null = null;
   if (contaBancariaId) {
-    const banco = await prisma.bankAccount.findFirst({ where: { id: contaBancariaId, tenantId, companyId: conta.companyId }, select: { id: true } });
+    const banco = await prisma.bankAccount.findFirst({ where: { id: contaBancariaId, tenantId, companyId: conta.companyId }, select: { id: true, type: true } });
     if (!banco) return { error: "Conta bancária não encontrada nesta empresa." };
+    // Pela conta de adiantamento (lote D, 20/10): a do tipo da conta, até o disponível de quem é a conta.
+    if (ehContaDeAdiantamento(banco.type)) {
+      if (banco.type !== tipoDoAdiantamento(conta.kind)) return { error: "Esse adiantamento é do outro lado — escolha o de fornecedores numa conta a pagar, e o de clientes numa a receber." };
+      peloAdiantamento = banco.type;
+    }
   }
   const observacao = texto("observacao").slice(0, 255) || null;
 
   let gravada: { paymentId: string; quitada: boolean };
   try {
     gravada = await prisma.$transaction(async (tx) => {
+      if (peloAdiantamento) {
+        // O disponível lido na transação: dois usos ao mesmo tempo não passam do que há.
+        const disponivel = await disponivelDoAdiantamento(tx, tenantId, conta.companyId, peloAdiantamento, conta.counterpartyId);
+        const uso = validarUsoDoAdiantamento({ usoCentavos: d.caixaCentavos, disponivelCentavos: disponivel, contraparteNome: conta.counterparty.name });
+        if (!uso.ok) throw new RecusaDaBaixa(uso.erro);
+      }
       const b = await registrarBaixa(tx, {
         tenantId,
         entryId,
@@ -497,7 +529,11 @@ export async function registrarPagamentosEmLote(formData: FormData): Promise<Res
   for (const empresaId of new Set(lote.entram.map((c) => c.empresaId))) {
     const escolhida = String(formData.get(`conta:${empresaId}`) ?? "").trim() || null;
     if (escolhida) {
-      const banco = await getPrisma().bankAccount.findFirst({ where: { id: escolhida, tenantId, companyId: empresaId, active: true }, select: { id: true } });
+      // Em lote, só banco: o adiantamento de cada fornecedor se usa na baixa de uma conta.
+      const banco = await getPrisma().bankAccount.findFirst({
+        where: { id: escolhida, tenantId, companyId: empresaId, active: true, type: { notIn: [...TIPOS_DE_ADIANTAMENTO] } },
+        select: { id: true },
+      });
       if (!banco) return { error: "Conta bancária não encontrada na empresa — atualize a tela." };
     }
     bancoDa.set(empresaId, escolhida);
