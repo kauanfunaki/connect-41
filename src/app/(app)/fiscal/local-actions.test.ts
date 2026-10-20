@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { criarCenario } from "@/lib/fiscal/previa/cenario";
+import { parametrosIniciais } from "@/lib/fiscal/previa/execucao";
 
 const m = vi.hoisted(() => ({ ctx: { tenantId: "t1", userId: "u1", role: "ADMIN" }, ler: vi.fn(), pode: vi.fn(), gravar: vi.fn() }));
 vi.mock("@/lib/auth/context", () => ({ getAuthContext: async () => m.ctx, podeExcluir: (ctx: { role: string }) => ctx.role === "ADMIN" }));
@@ -15,6 +16,14 @@ beforeEach(() => {
   m.gravar.mockResolvedValue({ count: 1 });
 });
 describe("ações fiscais com persistência local", () => {
+  it("exige permissão de execução e de produção na área afetada", async () => {
+    m.pode.mockImplementation(async (_ctx, modulo) => modulo !== "fiscal_acervo");
+    const resultado = await agirNoFiscalLocal({ tipo: "solicitar-execucao", parametros: parametrosIniciais("2026-10") }, 3);
+    expect(resultado.erro).toBe(true);
+    expect(m.gravar).not.toHaveBeenCalled();
+    expect(m.pode).toHaveBeenCalledWith(m.ctx, "fiscal_operacao", "agir");
+    expect(m.pode).toHaveBeenCalledWith(m.ctx, "fiscal_acervo", "agir");
+  });
   it("valida a entrada no servidor antes de buscar o cenário", async () => {
     expect((await agirNoFiscalLocal({ tipo: "gerar", imposto: "inexistente" }, 3)).erro).toBe(true);
     expect(m.ler).not.toHaveBeenCalled();

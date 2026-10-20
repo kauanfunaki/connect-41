@@ -1,10 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { FlaskConical, RotateCcw, ArrowLeft } from "lucide-react";
+import { RotateCcw, ArrowLeft } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Aviso } from "@/components/ui/Aviso";
 import { CampoMes } from "@/components/ui/CampoMes";
@@ -94,15 +93,6 @@ export function ContextoFiscalProvider({ children, tenantId, userId, inicial, mo
       {dialog}
     </FiscalContext.Provider>
   );
-}
-
-/** A linha de selos do cabeçalho: o modo de teste e onde o cenário fica guardado. */
-export function SelosDoTesteFiscal() {
-  const { pronto } = useFiscal();
-  return <>
-    <Badge variant="info"><FlaskConical size={13} className="mr-1.5" />Ambiente local · dados fictícios</Badge>
-    <span>{pronto ? "Salvo no banco local" : "Salvando no banco local…"}</span>
-  </>;
 }
 
 /** O "⋯" do cabeçalho. Restaurar desfaz o que se fez no teste: fica no menu mesmo sozinho. */

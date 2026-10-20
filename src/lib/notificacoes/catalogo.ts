@@ -56,6 +56,10 @@ const c = (icone: IconeDaNotificacao, tom: Tom, titulo: string): TipoNoCatalogo 
 const a = (icone: IconeDaNotificacao, tom: Tom, titulo: string): TipoNoCatalogo => ({ aba: "alertas", icone, tom, titulo });
 
 export const CATALOGO: Record<string, TipoNoCatalogo> = {
+  OPS_AUTOMACAO_ERRO: a("alerta", "danger", "Erro em automação"),
+  CHAMADO_ATUALIZADO: p("solicitacao", "info", "Atualização no chamado"),
+  CHAMADO_INTERNO: p("comentario", "info", "Atualização interna no chamado"),
+  CHAMADO_SLA: a("prazo", "warning", "Prazo de chamado vencido"),
   // ── Para mim ──
   HANDOFF_RECEIVED: p("transferencia", "brand", "Transferência recebida"),
   HANDOFF_ASSIGNED: p("transferencia", "brand", "Transferência para você"),

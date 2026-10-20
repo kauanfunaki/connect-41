@@ -12,8 +12,6 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import type { CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
-import { MenuFiscal as MenuDeMaisAcoes } from "./MenuFiscal";
-import { ItemDoMenu } from "@/components/ui/Popover";
 import { useFiscal, classeSelectFiscal } from "./ContextoFiscal";
 import { AcoesFiscais, AtalhoFiscal, BlocoFiscal, CampoFiscal, ListaDocumentos, MetricasFiscais, TabelaFiscal, dataFiscal, reais } from "./Compartilhados";
 import { documentosDoContexto, mesmoEscopo, totaisDoContexto, type DocumentoTeste } from "@/lib/fiscal/previa/cenario";
@@ -40,7 +38,7 @@ const GRUPO: CampoDeFiltro = {
 const doGrupo = (grupo: string) => (d: DocumentoTeste) => grupo === "nfse" ? d.tipo === "NFS-e" : grupo === "apoio" ? apoio(d) : grupo === "quarentena" ? d.estado === "Rejeitado" : grupo === "todos" ? true : !apoio(d);
 
 export function DocumentosFiscal({ aba }: { aba: string }) {
-  const { cenario, simular, integrado, modulos } = useFiscal();
+  const { cenario, simular, modulos } = useFiscal();
   const grupo = useSearchParams().get("grupo") ?? "";
   const [lote, setLote] = useState("Lote XML de exemplo");
   const [abrirEntrada, setAbrirEntrada] = useState(aba === "envio");
@@ -71,7 +69,7 @@ export function DocumentosFiscal({ aba }: { aba: string }) {
     {quarentena && <p className="flex items-center gap-2 text-ui text-fg-secondary"><ShieldAlert size={16} />Recuperar corrige o exemplo e o encaminha à classificação.</p>}
     <div>
       <ListaDocumentos key={`${grupo}-${cenario.contexto.empresaId}-${cenario.contexto.estabelecimentoId}-${cenario.contexto.competencia}`} documentos={itens} filtrosExtras={[GRUPO]} acao={(d) => d.estado === "Rejeitado" ? <Button variant="secondary" size="xs" onClick={() => simular({ tipo: "recuperar", id: d.id })}>Recuperar</Button> : undefined}
-        acoes={<AcoesFiscais><Button size="sm" onClick={() => setAbrirEntrada(true)}><Upload size={14} />Enviar documentos</Button>{integrado && <MenuDeMaisAcoes rotulo="Outras opções do acervo" width={250} size="md">{({ close }) => <ItemDoMenu href="/documentos-fiscais" onClick={close}>Documentos fiscais — integrado</ItemDoMenu>}</MenuDeMaisAcoes>}</AcoesFiscais>} />
+        acoes={<AcoesFiscais><Button size="sm" onClick={() => setAbrirEntrada(true)}><Upload size={14} />Enviar documentos</Button></AcoesFiscais>} />
     </div>
     {quarentena && totais.rejeitados === 0 && modulos.includes("fiscal_classificacao") && <div><AtalhoFiscal modulo="fiscal_classificacao">Continuar para classificação</AtalhoFiscal></div>}
     <Modal open={abrirEntrada} onClose={() => setAbrirEntrada(false)} title="Enviar documentos de teste" maxWidth="max-w-lg">
@@ -83,20 +81,23 @@ export function DocumentosFiscal({ aba }: { aba: string }) {
 
 export function ClassificacaoFiscal({ aba }: { aba: string }) {
   const { cenario, simular, visualizar, modulos } = useFiscal();
+  const params = useSearchParams();
+  const grupo = params.get("grupo") ?? (aba === "apoio" ? "apoio" : "");
   const [selecionados, setSelecionados] = useState<string[]>([]);
   const [destino, setDestino] = useState("Revenda");
   const [credito, setCredito] = useState(true);
   const [cst, setCst] = useState("00");
-  const docs = documentosDoContexto(cenario).filter((d) => aba === "apoio" ? apoio(d) : aba === "decisoes" ? d.estado === "Classificado" : !apoio(d));
+  const docs = documentosDoContexto(cenario).filter((d) => grupo === "apoio" ? apoio(d) : grupo === "produtos" ? !apoio(d) : true);
+  const filtros: CampoDeFiltro[] = [{ chave: "grupo", rotulo: "Grupo", vazioLabel: "Todos", sempreVisivel: true, opcoes: [{ value: "produtos", label: "Produtos" }, { value: "apoio", label: "Contratos e recibos" }] }];
   const aplicar = (ids: string[]) => { simular({ tipo: "classificar", ids, destino, credito, cst }); setSelecionados([]); };
   const prontoParaApurar = documentosDoContexto(cenario).length > 0 && documentosDoContexto(cenario).every((d) => d.estado === "Classificado");
   const apuracao = modulos.includes("fiscal_contribuicoes") ? "fiscal_contribuicoes" : "fiscal_icms_ipi";
   return <div className="space-y-5">
-    {aba !== "decisoes" && <BlocoFiscal titulo="Decisão de classificação" descricao="Defina o tratamento e aplique a um item ou aos documentos selecionados.">
+    <BlocoFiscal titulo="Decisão de classificação" descricao="Defina o tratamento e aplique a um item ou aos documentos selecionados.">
       <div className="grid gap-4 sm:grid-cols-4"><CampoFiscal nome="Destinação"><Select className={classeSelectFiscal} value={destino} onChange={(e) => setDestino(e.target.value)}>{["Revenda", "Insumo", "Uso e consumo", "Ativo imobilizado", "Sem crédito"].map((d) => <option key={d}>{d}</option>)}</Select></CampoFiscal><CampoFiscal nome="CST de teste"><Input value={cst} maxLength={3} onChange={(e) => setCst(e.target.value)} /></CampoFiscal><AlinhadoAoCampo><Checkbox id="fiscal-credito" label="Aproveitar crédito" checked={credito} onChange={(e) => setCredito(e.target.checked)} /></AlinhadoAoCampo><AlinhadoAoCampo><Button disabled={!selecionados.length || !cst.trim()} onClick={() => aplicar(selecionados)}>Aplicar a {selecionados.length} selecionado(s)</Button></AlinhadoAoCampo></div>
-    </BlocoFiscal>}
+    </BlocoFiscal>
     {/* A lista no casco das listas, com as opções na barra (15/10/2026). */}
-    <div><ListaDocumentos documentos={docs} selecionavel={aba !== "decisoes"} selecionados={selecionados} onSelecionar={setSelecionados} acoes={<MenuDeMaisAcoes rotulo="Opções da classificação" width={240} size="md">{({ close }) => <><ItemDoMenu onClick={() => { close(); visualizar("Relatório de decisões", <TabelaFiscal colunas={["Documento", "Destinação", "Crédito"]} linhas={docs.filter((d) => d.estado === "Classificado").map((d) => ({ id: d.id, celulas: [`${d.tipo} ${d.numero}`, d.destino, d.credito ? "Sim" : "Não"] }))} />); }}>Prévia do relatório</ItemDoMenu>{aba === "decisoes" && <ItemDoMenu href="/fiscal/classificacao?aba=produtos" onClick={close}>Revisar decisões de produtos</ItemDoMenu>}{aba === "decisoes" && <ItemDoMenu href="/fiscal/classificacao?aba=apoio" onClick={close}>Revisar contratos e recibos</ItemDoMenu>}</>}</MenuDeMaisAcoes>} /></div>
-    <Card className="flex flex-wrap items-center justify-between gap-3 p-4"><p className="text-ui text-fg-secondary">{prontoParaApurar ? "Todos os documentos estão classificados. Continue para a apuração." : "Selecione um ou mais documentos e aplique a decisão acima. Confira as abas Produtos e Contratos e recibos antes de continuar."}</p>{prontoParaApurar && <AtalhoFiscal modulo={apuracao} aba={apuracao === "fiscal_contribuicoes" ? "fechamento" : "apuracao"}>Continuar para apuração</AtalhoFiscal>}</Card>
+    <div><ListaDocumentos documentos={docs} selecionavel filtrosExtras={filtros} selecionados={selecionados} onSelecionar={setSelecionados} acoes={<Button variant="secondary" size="sm" onClick={() => visualizar("Relatório de decisões", <TabelaFiscal colunas={["Documento", "Destinação", "Crédito"]} linhas={docs.filter((d) => d.estado === "Classificado").map((d) => ({ id: d.id, celulas: [`${d.tipo} ${d.numero}`, d.destino, d.credito ? "Sim" : "Não"] }))} />)}>Relatório de decisões</Button>} /></div>
+    <Card className="flex flex-wrap items-center justify-between gap-3 p-4"><p className="text-ui text-fg-secondary">{prontoParaApurar ? "Todos os documentos estão classificados. Continue para a apuração." : "Selecione documentos e aplique a decisão acima. Use os filtros para conferir produtos, contratos, recibos e decisões registradas."}</p>{prontoParaApurar && <AtalhoFiscal modulo={apuracao} aba={apuracao === "fiscal_contribuicoes" ? "fechamento" : "apuracao"}>Continuar para apuração</AtalhoFiscal>}</Card>
   </div>;
 }

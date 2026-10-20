@@ -16,6 +16,17 @@ function preparar() {
 }
 
 describe("próxima ação do fluxo fiscal", () => {
+  it("retira a versão antiga de todos quando uma filial já tem uma versão nova", () => {
+    let s = preparar();
+    s.contexto.estabelecimentoId = "";
+    s = executarAcao(s, { tipo: "gerar", imposto: "ICMS/IPI" }, s.contexto, "2026-10-14T12:00:00Z", "todos-antigo").cenario;
+    s.contexto.estabelecimentoId = "aurora-pr";
+    s = executarAcao(s, { tipo: "gerar", imposto: "ICMS/IPI" }, s.contexto, "2026-10-15T12:00:00Z", "filial-novo").cenario;
+    expect(ultimasVersoesDoContexto(s).filter((a) => a.tipo === "ICMS/IPI").map((a) => a.id)).toEqual(["filial-novo"]);
+    expect(executarAcao(s, { tipo: "validar", id: "todos-antigo" }).erro).toBe(true);
+    s.contexto.estabelecimentoId = "";
+    expect(ultimasVersoesDoContexto(s).filter((a) => a.tipo === "ICMS/IPI").map((a) => a.id)).toEqual(["filial-novo", "todos-antigo"]);
+  });
   it("uma versão nova de todos os estabelecimentos substitui as versões individuais antigas", () => {
     let cenario = preparar();
     cenario = agir(cenario, { tipo: "gerar", imposto: "ICMS/IPI" });

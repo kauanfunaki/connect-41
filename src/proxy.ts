@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ehIngestaoOps } from "@/lib/ops/regras";
 import { ehCaminhoDoPortal, ehRotaPublicaDoPortal, PORTAL_COOKIE } from "@/lib/auth/portal";
 import { jwtVerify } from "jose";
 import type { AccessTokenPayload } from "@/lib/auth/types";
@@ -261,6 +262,10 @@ export async function proxy(req: NextRequest) {
   // Sempre parte de headers sem identidade forjável.
   const headers = new Headers(req.headers);
   stripIdentityHeaders(headers);
+
+  // Somente os POSTs de ingestão usam o token do watcher no próprio handler.
+  // Leituras e administração continuam exigindo a sessão da equipe.
+  if (ehIngestaoOps(req.method, pathname)) return NextResponse.next({ request: { headers } });
 
   // `/carreiras` sem empresa é público por **igualdade**, não por prefixo: pôr
   // "/carreiras" em PUBLIC_PATHS liberaria qualquer caminho que comece assim.

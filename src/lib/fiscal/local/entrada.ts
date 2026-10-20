@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { cenarioSchema } from "@/lib/fiscal/previa/cenario";
+import { parametrosExecucaoSchema } from "@/lib/fiscal/previa/execucao";
 
 const id = z.string().min(1).max(200);
 const texto = z.string().max(2000);
 const imposto = z.enum(["ICMS/IPI", "Contribuições"]);
-const porId = ["recuperar", "remover-ajuste", "validar", "entregar", "processar", "cancelar", "reprocessar", "conciliar"] as const;
+const porId = ["recuperar", "remover-ajuste", "validar", "entregar", "processar", "cancelar", "reprocessar", "iniciar-execucao", "concluir-execucao", "falhar-execucao", "conciliar"] as const;
 export const acaoFiscalLocalSchema = z.discriminatedUnion("tipo", [
   z.object({ tipo: z.literal("restaurar") }),
   z.object({ tipo: z.literal("contexto"), contexto: cenarioSchema.shape.contexto }),
@@ -18,6 +19,7 @@ export const acaoFiscalLocalSchema = z.discriminatedUnion("tipo", [
   z.object({ tipo: z.literal("regra"), regra: cenarioSchema.shape.regras.element }),
   z.object({ tipo: z.literal("gerar"), imposto }),
   z.object({ tipo: z.literal("enfileirar"), imposto, falhar: z.boolean() }),
+  z.object({ tipo: z.literal("solicitar-execucao"), parametros: parametrosExecucaoSchema }),
   z.object({ tipo: z.literal("confrontar") }),
   z.object({ tipo: z.literal("favoritar"), empresaId: id }),
 ]);

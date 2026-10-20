@@ -7,6 +7,7 @@ import { getAllSectors } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { lerOcultasDoGeral } from "@/lib/menuGeralDb";
+import { telasOcultasDoGeralDoSetor } from "@/lib/menuGeral";
 
 export default async function SetoresPage() {
   const ctx = await getAuthContext();
@@ -40,7 +41,7 @@ export default async function SetoresPage() {
                   <p className="text-fs-1 text-fg-muted font-mono truncate">{s.code}</p>
                   {/* O menu Geral do setor (14/10/2026) — configurado no Editar. */}
                   {(() => {
-                    const n = ocultasDoGeral.porSetor[s.code]?.length ?? 0;
+                    const n = telasOcultasDoGeralDoSetor(s.code, ocultasDoGeral.porSetor, ocultasDoGeral.visiveisPorSetor).length;
                     return n > 0 ? (
                       <p className="text-fs-1 text-fg-muted truncate">
                         {n} {n === 1 ? "tela escondida" : "telas escondidas"} no menu Geral
