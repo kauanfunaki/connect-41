@@ -68,7 +68,7 @@ export const TELAS_DO_GERAL: readonly DefDaTelaDoGeral[] = [
   {
     chave: "espacos",
     rotulo: "Quadros",
-    descricao: "As listas de tarefas do setor, em lista ou kanban, organizadas em espaços e pastas.",
+    descricao: "As tarefas do setor, com as atividades em lista ou em kanban, organizadas em espaços e pastas.",
     soDentroDoSetor: true,
   },
   {

@@ -104,7 +104,7 @@ function Bloco({
             + {resto} {resto === 1 ? "outro" : "outros"}
           </p>
           <Button href="/kanban" variant="secondary" size="xs">
-            Ver no Kanban
+            Ver todas as tarefas
           </Button>
           {visaoTime && (
             <Button href="/gestao" variant="secondary" size="xs">
@@ -215,8 +215,8 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
   const quantosPedem = agoraLista.length;
   const dataDeHoje = formatInstantDate(agora, { weekday: "long", day: "numeric", month: "long" });
   const subtitulo = visaoTime
-    ? `${dataDeHoje} · ${quantosPedem ? `${quantosPedem} ${quantosPedem === 1 ? "tarefa pede" : "tarefas pedem"} o time agora` : "nada pede o time agora"}`
-    : `${dataDeHoje} · ${quantosPedem ? `${quantosPedem} ${quantosPedem === 1 ? "tarefa pede" : "tarefas pedem"} você agora` : "nada atrasado nem parado"}`;
+    ? `${dataDeHoje} · ${quantosPedem ? `${quantosPedem} ${quantosPedem === 1 ? "atividade pede" : "atividades pedem"} o time agora` : "nada pede o time agora"}`
+    : `${dataDeHoje} · ${quantosPedem ? `${quantosPedem} ${quantosPedem === 1 ? "atividade pede" : "atividades pedem"} você agora` : "nada atrasado nem parado"}`;
 
   const prazosPorDia = new Map<string, typeof prazos>();
   for (const p of prazos) prazosPorDia.set(p.dia, [...(prazosPorDia.get(p.dia) ?? []), p]);
@@ -249,10 +249,10 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
                 resetAction={restaurarWidgetsSetor}
               />
             )}
-            {/* "Kanban", o nome da tela que abre (14/10/2026): era "Quadros",
-                que agora é o nome da tela do setor no menu. */}
+            {/* "Todas as tarefas", o nome da tela que abre (20/10/2026, Quadro ›
+                Pasta › Tarefa): era "Kanban", e antes "Quadros". */}
             <Button href="/kanban" variant="secondary" size="sm">
-              <Columns3 size={14} /> Kanban
+              <Columns3 size={14} /> Todas as tarefas
             </Button>
           </div>
         }
@@ -326,11 +326,11 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
                 )}
               </header>
               {carga.length === 0 ? (
-                <p className="px-4 py-5 text-body text-fg-muted">Ninguém com tarefa em aberto.</p>
+                <p className="px-4 py-5 text-body text-fg-muted">Ninguém com atividade em aberto.</p>
               ) : (
                 <div className="px-4 py-3.5">
                   <LinhasDeSituacao
-                    titulo="Tarefas em aberto por pessoa e situação"
+                    titulo="Atividades em aberto por pessoa e situação"
                     linhas={carga.slice(0, 10).map((p) => linhaDaCarga(p, nomeDe.get(p.userId) ?? "—"))}
                   />
                 </div>

@@ -46,7 +46,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
         </Aviso>
       )}
 
-      <Field label="Título da tarefa" htmlFor="title" helper="Informe um título ou selecione uma empresa/pessoa.">
+      <Field label="Título da atividade" htmlFor="title" helper="Informe um título ou selecione uma empresa/pessoa.">
         <Input id="title" name="title" autoFocus placeholder="Ex.: Conferir documentos" />
       </Field>
       <Field label="Estágio" htmlFor="stageId" required>
@@ -87,7 +87,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
           id="description"
           name="description"
           rows={3}
-          placeholder="Adicione uma descrição para esta tarefa…"
+          placeholder="Adicione uma descrição para esta atividade…"
         />
       </Field>
 
@@ -132,7 +132,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
       <FormFooter
         pending={isPending}
         pendingLabel="Criando…"
-        submitLabel="Criar tarefa"
+        submitLabel="Criar atividade"
         cancelHref={emModal ? undefined : cancelHref}
         onCancel={emModal ? () => router.back() : undefined}
       />

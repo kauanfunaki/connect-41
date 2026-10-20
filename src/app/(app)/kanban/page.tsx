@@ -36,8 +36,8 @@ export default async function KanbanListPage({ searchParams }: { searchParams: P
   return (
     <PageContainer>
       <PageHeader
-        title="Kanban"
-        subtitle={<>{pipelines.length} kanban{pipelines.length !== 1 ? "s" : ""} configurado{pipelines.length !== 1 ? "s" : ""}</>}
+        title="Todas as tarefas"
+        subtitle={<>{pipelines.length} tarefa{pipelines.length !== 1 ? "s" : ""} de todos os seus setores</>}
         action={canCreate ? <NovoKanban key={novo === "1" ? "novo" : "lista"} sectorOptions={sectorOptions} abertaDeInicio={novo === "1"} /> : undefined}
       />
       {pipelines.length === 0 ? (
@@ -46,11 +46,11 @@ export default async function KanbanListPage({ searchParams }: { searchParams: P
               (P19, 15/10/2026). */}
           <EmptyState
             icon={<Columns3 />}
-            title="Nenhum kanban cadastrado ainda"
+            title="Nenhuma tarefa cadastrada ainda"
             description={
               canCreate
-                ? "Use “+ Novo kanban”, no alto da tela, para criar o primeiro do setor e começar a organizar o funil."
-                : "Os kanbans dos setores aparecem aqui quando forem criados."
+                ? "Use “+ Nova tarefa”, no alto da tela, para criar a primeira do setor e começar a organizar o trabalho."
+                : "As tarefas dos setores aparecem aqui quando forem criadas."
             }
           />
         </Card>

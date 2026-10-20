@@ -366,7 +366,7 @@ async function previaDe(db: Tx, tenantId: string, e: EmpresaDaPrevia): Promise<P
       item("DriveFile.folder", arquivos, ["arquivo em Arquivos", "arquivos em Arquivos"], "apagar", true),
       item("BenefitAssignment.benefit", beneficios, ["benefício atribuído a funcionário", "benefícios atribuídos a funcionários"], "apagar", true),
       item("Handoff.entityId", transferencias, ["transferência entre setores", "transferências entre setores"], "apagar", true),
-      item("PipelineItem.entityId", tarefas, ["tarefa do Kanban (fica, sem a empresa)", "tarefas do Kanban (ficam, sem a empresa)"], "desligar"),
+      item("PipelineItem.entityId", tarefas, ["atividade dos Quadros (fica, sem a empresa)", "atividades dos Quadros (ficam, sem a empresa)"], "desligar"),
       item("ValoraProposta.companyId", propostas, ["proposta do Valora (fica, sem a empresa)", "propostas do Valora (ficam, sem a empresa)"], "desligar"),
     ]),
   ];
