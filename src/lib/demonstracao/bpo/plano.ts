@@ -1536,7 +1536,7 @@ export function montarDemonstracaoDoBpo(agora: Date): PlanoDoBpo {
   const ano = Number(mesAtual.slice(0, 4));
   // Histórico que começa no ano anterior: o orçamento deste ano vem de janeiro.
   const primeiroMes = meses[0]!.startsWith(String(ano)) ? Number(meses[0]!.slice(5, 7)) : 1;
-  // Na estrutura da CARGO (20/10/2026): insumos, produção, divulgação e a taxa
+  // Na estrutura do modelo novo (20/10/2026): insumos, produção, divulgação e a taxa
   // do cartão no custo operacional; balcão, pró-labore, a loja e a tarifa do
   // banco no administrativo; o forno nas outras despesas.
   const porGrupo: Record<string, number> = {

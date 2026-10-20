@@ -18,13 +18,13 @@
 //   (`administrativas`), e não para o CMV. O grupo do plano continua
 //   "CMV / CSV", como na planilha. O que já estava no banco passa pelo script
 //   `scripts/dre-pedagio-para-administrativas.ts`.
-// - 20/10/2026: o DRE padrão passou a ser a estrutura da CARGO (sete grupos —
+// - 20/10/2026: o DRE padrão passou a ser a estrutura do modelo novo (sete grupos —
 //   ver o cabeçalho de src/lib/dre/estrutura.ts). Os `dre` antigos viraram os
 //   novos pelo de-para `GRUPO_DO_ANTIGO`: CMV, mão de obra e comerciais →
 //   `custo_operacional`; pessoal, diretoria e administrativas →
 //   `custo_administrativo` (as financeiras também); investimentos →
 //   `outras_despesas`. O banco migra pela migration `20261020230000_dre_padrao_cargo`.
-//   E sete categorias seguem o bloco de financiamentos da CARGO (`financiamentos`):
+//   E sete categorias seguem o bloco de financiamentos do modelo novo (`financiamentos`):
 //   Empréstimos bancários à pagar, Impostos Parcelados, Juros sobre empréstimos,
 //   Juros e Encargos limite de crédito / cartão, Juros sobre desconto de títulos e
 //   os dois Consórcios — conferir com a Amanda.

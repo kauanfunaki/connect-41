@@ -64,7 +64,7 @@ describe("outubro de 2025 da Irriga", () => {
   it("sem os impostos, o resultado é o fluxo de caixa livre da planilha da Irriga", () => {
     const resultado = centavosDaLinha(semImpostos, "resultado_liquido")!;
     expect(Math.abs(resultado - ESPERADO_OUTUBRO_2025.fluxo_de_caixa_livre!)).toBeLessThanOrEqual(1);
-    // E o EBITDA é o gerador de caixa dela, menos o que a CARGO leva para
+    // E o EBITDA é o gerador de caixa dela, menos o que o modelo novo leva para
     // financiamentos (sai das outras despesas) e o IOF (vai para elas).
     const gerador = ESPERADO_OUTUBRO_2025.gerador_de_caixa!;
     const ebitda = centavosDaLinha(semImpostos, "ebitda")!;
@@ -341,7 +341,7 @@ describe("o relatório", () => {
     expect(parcelasDoEbitda(OPCOES_SEM_IMPOSTOS)).not.toContain("impostos");
   });
 
-  it("os sete grupos da estrutura da CARGO, na ordem dela", () => {
+  it("os sete grupos da estrutura do modelo novo, na ordem dele", () => {
     expect(GRUPOS.map((g) => g.code)).toEqual([
       "receita_bruta",
       "impostos",

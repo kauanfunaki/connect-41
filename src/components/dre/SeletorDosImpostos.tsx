@@ -3,7 +3,7 @@ import type { OpcoesDoDre } from "@/lib/dre/estrutura";
 
 /**
  * As duas visões dos impostos sobre a receita (20/10/2026, pedido do Kauan):
- * no EBITDA, como a DRE da CARGO fecha — o padrão —, ou fora do resultado,
+ * no EBITDA, como o modelo novo fecha — o padrão —, ou fora do resultado,
  * como a da Irriga. A escolha mora no endereço (`impostos=fora`), então vai
  * junto para a exportação e para quem recebe o link.
  */
