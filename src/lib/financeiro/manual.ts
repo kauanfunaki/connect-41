@@ -9,6 +9,7 @@
 // é a parte que precisa de teste sem banco.
 
 import { categoriaObrigatoria } from "./lancamento";
+import { MOTIVO_DO_OMIE } from "@/lib/integracoes/omie/virada";
 import { competenciaValida, dataValida } from "./periodo";
 
 export type TipoDoLancamento = "PAGAR" | "RECEBER";
@@ -205,6 +206,8 @@ export function podeCancelarManual(conta: {
   agreementId?: string | null;
   /** O que as baixas já quitaram (lote C). Em aberto com baixa é parcial. */
   paidPrincipal?: { toString(): string } | null;
+  /** Veio do Omie numa empresa que ainda não virou para o Connect (lote E). */
+  presoAoOmie?: boolean;
 }): { pode: true } | { pode: false; motivo: string } {
   if (conta.agreementId) {
     return { pode: false, motivo: "Parcela de acordo de cobrança — desfaça o acordo na tela de cobrança." };
@@ -212,6 +215,7 @@ export function podeCancelarManual(conta: {
   if (conta.fiscalDocumentId) {
     return { pode: false, motivo: "Este lançamento veio de um documento fiscal — estorne na ficha da nota." };
   }
+  if (conta.presoAoOmie) return { pode: false, motivo: MOTIVO_DO_OMIE.cancelar };
   if (conta.status === "CANCELADO") return { pode: false, motivo: "Já está cancelado." };
   if (conta.status === "PAGO" || conta.paidAt !== null) {
     return { pode: false, motivo: "Está pago. Desfaça a baixa antes de cancelar." };
