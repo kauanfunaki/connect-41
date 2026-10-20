@@ -4,6 +4,7 @@ import { Pencil, Power, PowerOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { abreNoPainel } from "@/lib/painelDeCadastro";
 
 type Props = {
   foraDeOperacao: boolean;
@@ -25,7 +26,7 @@ type Props = {
 export function AcoesDeLinha({ foraDeOperacao, onToggle, editarHref, itensExtras, className = "" }: Props) {
   return (
     <span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`.trim()}>
-      <Button variant="secondary" size="xs" href={editarHref}>
+      <Button variant="secondary" size="xs" href={editarHref} scroll={!abreNoPainel(editarHref)}>
         <Pencil size={11} /> Editar
       </Button>
       <MenuDeMaisAcoes align="right" width={180}>

@@ -42,7 +42,7 @@ export function AcoesDoAssunto({ id, nome, ativo, alternar }: Props) {
 
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      <Button href={`/admin/assuntos?editar=${id}`} variant="secondary" size="xs">
+      <Button href={`/admin/assuntos?editar=${id}`} scroll={false} variant="secondary" size="xs">
         <Pencil size={11} /> Editar
       </Button>
       <MenuDeMaisAcoes rotulo={`Mais ações de ${nome}`} align="right" width={180}>
