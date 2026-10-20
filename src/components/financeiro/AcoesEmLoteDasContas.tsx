@@ -3,13 +3,13 @@
 import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
-import { Check } from "lucide-react";
-import { conferirContasEmLote, definirCentroDeCusto } from "@/lib/financeiro/acoes";
+import { Check, Pencil } from "lucide-react";
+import { conferirContasEmLote } from "@/lib/financeiro/acoes";
 import { FORM_DAS_CONTAS } from "@/lib/financeiro/contas";
 import { JanelaDaBaixaEmLote } from "./JanelaDaBaixaEmLote";
+import { JanelaDaAlteracaoEmLote } from "./JanelaDaAlteracaoEmLote";
 
 type Empresa = { id: string; nome: string; centros: { id: string; nome: string }[] };
 
@@ -54,19 +54,20 @@ export function MarcarTodasAsContas() {
 /**
  * O que se faz com as contas marcadas na tabela: pagar (ou receber) todas de
  * uma vez — a baixa em lote da fila do BPO, 19/10 —, conferir as provisórias
- * (escolha 12A, 20/10: o "Conferir" saiu da linha) e, quando a empresa usa
- * centro de custo, definir o centro delas.
+ * (escolha 12A, 20/10: o "Conferir" saiu da linha) e alterar vencimento,
+ * competência, categoria, centro, projeto e conta corrente prevista (lote D,
+ * 20/10 — a janela que substituiu o seletor de centro que ficava na barra).
  *
  * As caixas ficam nas linhas da tabela (componente de servidor) e se associam a
  * este formulário pelo atributo `form` — assim a tabela não vira componente de
  * cliente inteira, com as trezentas linhas e as ações de cada uma, só para ter
  * seleção. Os centros vêm agrupados por empresa: a lista mistura empresas, e o
- * servidor recusa centro de uma empresa em conta de outra.
+ * centro de uma empresa não vale na outra.
  *
  * Desde o redesign de 30/09 é a barra de seleção em massa do Connect: só
- * aparece com conta marcada. A janela do lote fica fora do formulário: aberta
- * dentro dele, o envio da janela subiria (pelo React, mesmo no portal) até o
- * envio do centro.
+ * aparece com conta marcada. As janelas ficam fora do formulário: aberta
+ * dentro dele, o envio de uma janela subiria (pelo React, mesmo no portal) até
+ * o formulário das caixas.
  */
 export function AcoesEmLoteDasContas({
   empresas,
@@ -75,14 +76,13 @@ export function AcoesEmLoteDasContas({
   hojeISO,
 }: {
   empresas: Empresa[];
-  /** Mostra o "definir centro de custo" — só quando a lista tem empresa com centro. */
+  /** Mostra o centro de custo na janela de alterar — só quando a lista tem empresa com centro. */
   comCentro: boolean;
   aPagar: boolean;
   hojeISO: string;
 }) {
-  const [centroId, setCentroId] = useState("");
-  const [pendente, startTransition] = useTransition();
   const [lote, setLote] = useState<string[] | null>(null);
+  const [alterar, setAlterar] = useState<string[] | null>(null);
   const [conferindo, startConferir] = useTransition();
   const { marcadas } = useContasMarcadas();
   const toast = useToast();
@@ -102,68 +102,22 @@ export function AcoesEmLoteDasContas({
       toast.success(feitas + fora);
     });
   }
-  const comCentros = empresas.filter((e) => e.centros.length > 0);
+  const marcadasAgora = () => caixas().filter((c) => c.checked).map((c) => c.value);
 
   return (
     <>
-      <form
-        id={FORM_DAS_CONTAS}
-        onSubmit={(e) => {
-          e.preventDefault();
-          const dados = new FormData(e.currentTarget);
-          const quantas = dados.getAll("entryIds").length;
-          if (quantas === 0) return;
-          startTransition(async () => {
-            const r = await definirCentroDeCusto(dados);
-            if (r && "error" in r) {
-              toast.error(r.error);
-              return;
-            }
-            marcarTodas(false);
-            toast.success(`Centro ${centroId ? "definido" : "retirado"} em ${quantas} ${quantas === 1 ? "conta" : "contas"}.`);
-          });
-        }}
-      >
+      {/* Só associa as caixas das linhas: nada se envia por ele. */}
+      <form id={FORM_DAS_CONTAS} onSubmit={(e) => e.preventDefault()}>
         <BulkActionBar count={marcadas} onClear={() => marcarTodas(false)}>
-          <Button type="button" size="sm" onClick={() => setLote(caixas().filter((c) => c.checked).map((c) => c.value))}>
+          <Button type="button" size="sm" onClick={() => setLote(marcadasAgora())}>
             {aPagar ? "Pagar marcadas" : "Receber marcadas"}
           </Button>
           <Button type="button" size="sm" variant="secondary" loading={conferindo} loadingLabel="Conferindo…" onClick={conferirMarcadas}>
             <Check size={14} /> Conferir marcadas
           </Button>
-          {comCentro && (
-            <>
-              <div className="hidden sm:block w-px h-5 bg-border flex-shrink-0" />
-              <Select
-                compact
-                name="costCenterId"
-                value={centroId}
-                onChange={(e) => setCentroId(e.target.value)}
-                className="w-64 max-w-full"
-                aria-label="Centro de custo"
-              >
-                <option value="">Sem centro de custo</option>
-                {comCentros.length === 1
-                  ? comCentros[0]!.centros.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nome}
-                      </option>
-                    ))
-                  : comCentros.map((e) => (
-                      <optgroup key={e.id} label={e.nome}>
-                        {e.centros.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.nome}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-              </Select>
-              <Button type="submit" size="sm" variant="secondary" loading={pendente} loadingLabel="Aplicando…">
-                Definir centro de custo
-              </Button>
-            </>
-          )}
+          <Button type="button" size="sm" variant="secondary" onClick={() => setAlterar(marcadasAgora())}>
+            <Pencil size={14} /> Alterar marcadas
+          </Button>
         </BulkActionBar>
       </form>
       {lote && (
@@ -174,6 +128,18 @@ export function AcoesEmLoteDasContas({
           onFechar={() => setLote(null)}
           onBaixadas={(resumo) => {
             setLote(null);
+            marcarTodas(false);
+            toast.success(resumo);
+          }}
+        />
+      )}
+      {alterar && (
+        <JanelaDaAlteracaoEmLote
+          ids={alterar}
+          centros={comCentro ? empresas : null}
+          onFechar={() => setAlterar(null)}
+          onAlteradas={(resumo) => {
+            setAlterar(null);
             marcarTodas(false);
             toast.success(resumo);
           }}

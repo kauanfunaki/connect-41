@@ -19,6 +19,7 @@ import { centavosDeTexto, decimalDeCentavos, TAMANHO_MAXIMO_DO_NUMERO_DO_DOCUMEN
 import { centavosDeDecimal } from "./contas";
 import { competenciaValida, dataValida, instanteDaData } from "./periodo";
 import { projetoInformado } from "./projetoServidor";
+import { contaPrevistaInformada, contasBancariasDaEmpresa } from "./contaPrevistaServidor";
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "./aprovacao/servidor";
 import { podeEditarOTipo } from "./acessoDaConta";
 import { anexosDaConta, type AnexoDaConta } from "./anexos";
@@ -40,10 +41,14 @@ export type DadosDaEdicao =
         categoriaId: string | null;
         centroId: string | null;
         projetoId: string | null;
+        /** A conta corrente prevista (lote D, 20/10). */
+        contaId: string | null;
         competencia: string;
         emissaoKey: string | null;
         numeroDocumento: string | null;
         vencimentoKey: string;
+        /** A data de previsão (lote D, 20/10). Nula é o próprio vencimento. */
+        previsaoKey: string | null;
         /** "1.234,56" — como o campo de valor recebe. */
         valor: string;
         descricao: string | null;
@@ -55,7 +60,7 @@ export type DadosDaEdicao =
         versao: string;
       };
       travas: Travas;
-      opcoes: { contrapartes: (Opcao & { documento: string | null })[]; categorias: Opcao[]; centros: Opcao[]; projetos: Opcao[] };
+      opcoes: { contrapartes: (Opcao & { documento: string | null })[]; categorias: Opcao[]; centros: Opcao[]; projetos: Opcao[]; contas: Opcao[] };
       /** Os anexos da conta (lote H2). Não têm trava: guardar o boleto não mexe no dinheiro. */
       anexos: AnexoDaConta[];
     }
@@ -79,10 +84,12 @@ const CAMPOS_DA_CONTA = {
   categoryId: true,
   costCenterId: true,
   projectId: true,
+  bankAccountId: true,
   competence: true,
   issueDate: true,
   documentNumber: true,
   dueDate: true,
+  forecastDate: true,
   amount: true,
   description: true,
   updatedAt: true,
@@ -131,7 +138,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
   const { tenantId, companyId } = conta;
   // O valor atual entra na lista mesmo inativo: abrir a janela para mudar a
   // descrição não pode obrigar a trocar um centro que foi inativado depois.
-  const [contrapartes, categorias, centros, projetos, anexos] = await Promise.all([
+  const [contrapartes, categorias, centros, projetos, anexos, contas] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId, companyId, OR: [{ active: true }, { id: conta.counterpartyId }] },
       select: { id: true, name: true, document: true, active: true },
@@ -155,6 +162,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
       orderBy: { name: "asc" },
     }),
     anexosDaConta(tenantId, conta.id),
+    contasBancariasDaEmpresa(tenantId, companyId, conta.bankAccountId),
   ]);
   const comInativo = (o: { id: string; name: string; active: boolean }) => ({ id: o.id, nome: o.active ? o.name : `${o.name} (inativo)` });
 
@@ -169,10 +177,12 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
       categoriaId: conta.categoryId,
       centroId: conta.costCenterId,
       projetoId: conta.projectId,
+      contaId: conta.bankAccountId,
       competencia: conta.competence,
       emissaoKey: chaveDoDia(conta.issueDate),
       numeroDocumento: conta.documentNumber,
       vencimentoKey: saoPauloParts(conta.dueDate).dateKey,
+      previsaoKey: chaveDoDia(conta.forecastDate),
       valor: valorNoCampo(conta.amount),
       descricao: conta.description,
       pagoEmKey: chaveDoDia(conta.paidAt),
@@ -186,6 +196,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
       categorias: categorias.map(comInativo),
       centros: centros.map(comInativo),
       projetos: projetos.map(comInativo),
+      contas,
     },
     anexos,
   };
@@ -274,6 +285,12 @@ export async function editarLancamento(formData: FormData): Promise<ResultadoDaE
     mudar("projectId", conta.projectId, p.projetoId);
   }
 
+  if (livre("conta", "bankAccountId")) {
+    const cc = await contaPrevistaInformada({ tenantId, companyId, informadoId: texto("bankAccountId") || null, atualId: conta.bankAccountId });
+    if (!cc.ok) return { error: cc.erro };
+    mudar("bankAccountId", conta.bankAccountId, cc.contaId);
+  }
+
   if (livre("competencia", "competencia")) {
     const c = competenciaValida(texto("competencia"));
     if (!c) return { error: "Competência inválida — use o formato AAAA-MM." };
@@ -311,6 +328,17 @@ export async function editarLancamento(formData: FormData): Promise<ResultadoDaE
     const key = dataValida(texto("vencimento"));
     if (!key) return { error: "Informe um vencimento válido." };
     if (key !== saoPauloParts(conta.dueDate).dateKey) mudar("dueDate", conta.dueDate, instanteDaData(key));
+  }
+
+  if (livre("previsao", "previsao")) {
+    const bruto = texto("previsao");
+    let previsao: Date | null = null;
+    if (bruto) {
+      const key = dataValida(bruto);
+      if (!key) return { error: "Data de previsão inválida." };
+      previsao = instanteDaData(key);
+    }
+    if (chaveDoDia(previsao) !== chaveDoDia(conta.forecastDate)) mudar("forecastDate", conta.forecastDate, previsao);
   }
 
   if (livre("valor", "valor")) {

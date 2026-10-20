@@ -15,6 +15,7 @@ import { useConfirm } from "@/components/ui/useConfirm";
 import { formatarReaisDeCentavos } from "@/lib/format";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
 import { dadosDaBaixa, registrarPagamento, desfazerBaixa, type DadosDaBaixa, type BaixaDaConta } from "@/lib/financeiro/acoes";
+import { contaSugeridaNaBaixa } from "@/lib/financeiro/contaPrevista";
 
 // A janela da baixa (19/10, lote C — pedidos 4 e 6 do BPO). Abre do botão
 // Pagar/Receber e do "⋯ › Baixas" de Contas a pagar e a receber. Era um balão
@@ -159,6 +160,8 @@ function FormularioDaBaixa({
 }) {
   const id = useId();
   const aPagar = dados.kind === "PAGAR";
+  // A prevista no título (lote D, 20/10), se ainda ativa; senão a única conta da empresa.
+  const contaSugerida = contaSugeridaNaBaixa(dados.contas, dados.contaPrevistaId);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
   const [valor, setValor] = useState(noCampo(dados.saldoCentavos));
@@ -198,9 +201,15 @@ function FormularioDaBaixa({
         <CampoForm
           label={aPagar ? "Saiu da conta" : "Entrou na conta"}
           htmlFor={`${id}-conta`}
-          helper={dados.contas.length === 0 ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)." : "Opcional. É a conta que a conciliação procura."}
+          helper={
+            dados.contas.length === 0
+              ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)."
+              : contaSugerida && contaSugerida === dados.contaPrevistaId
+                ? "A prevista no título. É a conta que a conciliação procura."
+                : "Opcional. É a conta que a conciliação procura."
+          }
         >
-          <Select id={`${id}-conta`} name="contaBancariaId" defaultValue={dados.contas.length === 1 ? dados.contas[0]!.id : ""} disabled={dados.contas.length === 0}>
+          <Select id={`${id}-conta`} name="contaBancariaId" defaultValue={contaSugerida} disabled={dados.contas.length === 0}>
             <option value="">Não informada</option>
             {dados.contas.map((c) => (
               <option key={c.id} value={c.id}>

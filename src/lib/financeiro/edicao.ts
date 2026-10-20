@@ -26,10 +26,12 @@ export const CAMPOS_EDITAVEIS = [
   "categoria",
   "centro",
   "projeto",
+  "conta",
   "competencia",
   "emissao",
   "numeroDocumento",
   "vencimento",
+  "previsao",
   "valor",
   "descricao",
 ] as const;
@@ -90,6 +92,8 @@ export function travasDaEdicao(conta: ContaParaEditar): { pode: false; motivo: s
   }
   if (conta.status === "PAGO" || conta.paidAt !== null) {
     travar(DINHEIRO, "Paga — desfaça o pagamento para mudar valor ou vencimento.");
+    // A previsão diz quando o dinheiro vai andar; depois que andou, não diz nada.
+    travar(["previsao"], "Paga — a previsão é só de conta em aberto.");
   }
   // Baixa parcial: o vencimento do resto ainda muda; o valor, não — o saldo é
   // o valor menos o que foi baixado, e mudar um por baixo do outro o desfaria.

@@ -99,9 +99,11 @@ const NOME_DO_CAMPO: Readonly<Record<string, string>> = {
   categoryId: "Categoria",
   costCenterId: "Centro de custo",
   projectId: "Projeto",
+  bankAccountId: "Conta corrente",
   issueDate: "Emissão",
   documentNumber: "Nº do documento",
   dueDate: "Vencimento",
+  forecastDate: "Previsão",
   description: "Descrição",
   fichaAlterada: "Campos da ficha alterados",
 };
