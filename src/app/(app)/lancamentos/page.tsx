@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { presaAoOmie } from "@/lib/integracoes/omie/virada";
+import { rotuloDaSerie } from "@/lib/financeiro/repeticao";
 import { NotebookPen, Plus, Upload } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
@@ -266,6 +268,9 @@ async function ListaDeManuais({
     where: { tenantId, companyId, competence: mes, fiscalDocumentId: null },
     select: {
       id: true,
+      omieTitleId: true,
+      omieMovementId: true,
+      company: { select: { omieCutoverAt: true } },
       kind: true,
       status: true,
       amount: true,
@@ -281,6 +286,9 @@ async function ListaDeManuais({
       costCenter: { select: { name: true } },
       project: { select: { name: true } },
       documentNumber: true,
+      recurrenceId: true,
+      recurrenceIndex: true,
+      recurrenceTotal: true,
     },
     orderBy: [{ dueDate: "asc" }, { id: "asc" }],
     // Um a mais que o teto, para saber se parou nele.
@@ -326,7 +334,9 @@ async function ListaDeManuais({
                 return (
                   <Cartao key={l.id}>
                     <TopoDoCartao nome={l.counterparty.name} valor={moeda(centavosDeDecimal(l.amount))} />
-                    {l.description && <InfoDoCartao>{l.description}</InfoDoCartao>}
+                    {(rotuloDaSerie(l) || l.description) && (
+                      <InfoDoCartao>{[rotuloDaSerie(l), l.description].filter(Boolean).join(" · ")}</InfoDoCartao>
+                    )}
                     <InfoDoCartao className="mt-1 tabular-nums">
                       vence {formatInstantDate(l.dueDate)}
                       {l.paidAt && ` · pago em ${formatInstantDate(l.paidAt)}`}
@@ -343,7 +353,9 @@ async function ListaDeManuais({
                       {podeCancelar && (
                         <span className="ml-auto flex gap-1.5">
                           {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
-                          {podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
+                          {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
+                            <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
+                          )}
                         </span>
                       )}
                     </PeDoCartao>
@@ -390,9 +402,9 @@ async function ListaDeManuais({
                           </td>
                           <td className="py-2.5 pr-3">
                             <span className="font-medium">{l.counterparty.name}</span>
-                            {(l.documentNumber || l.description) && (
+                            {(rotuloDaSerie(l) || l.documentNumber || l.description) && (
                               <span className="block text-micro text-fg-muted truncate max-w-[260px]">
-                                {[l.documentNumber && `nº ${l.documentNumber}`, l.description].filter(Boolean).join(" · ")}
+                                {[rotuloDaSerie(l), l.documentNumber && `nº ${l.documentNumber}`, l.description].filter(Boolean).join(" · ")}
                               </span>
                             )}
                           </td>
@@ -413,7 +425,9 @@ async function ListaDeManuais({
                             {podeCancelar && (
                               <div className="flex flex-wrap justify-end gap-1.5">
                                 {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
-                                {podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
+                                {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
+                                  <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
+                                )}
                               </div>
                             )}
                           </td>

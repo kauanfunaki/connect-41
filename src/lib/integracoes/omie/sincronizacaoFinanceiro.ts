@@ -55,7 +55,7 @@ import { MAPEAMENTO_PADRAO } from "@/lib/dre/mapeamento-padrao";
 import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { chamarOmie } from "./cliente";
-import { instanciaDaEmpresa } from "./contas";
+import { instanciaDaEmpresa, PREFIXO_DO_FINANCEIRO, instanciaDoFinanceiro } from "./contas";
 import { lerCategorias, mapearBaixasDoTitulo, mapearMovimento, paginaDeCategorias, paginaDeMovimentos, type TituloDoOmie } from "./financeiro";
 import {
   juntarBaixas,
@@ -73,7 +73,6 @@ import { planoDoEspelho, planoMexe, type TituloNoEspelho } from "@/lib/financeir
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import type { Prisma } from "@/generated/prisma/client";
 
-export const PREFIXO_DO_FINANCEIRO = "financeiro:";
 
 /**
  * A baixa da conta acompanha o Omie, e a conta é refeita a partir das baixas
@@ -86,7 +85,7 @@ async function espelharEFechar(tx: Prisma.TransactionClient, entryId: string, ti
   await espelharBaixaDoOmie(tx, { id: entryId, tenantId: conta.tenantId, companyId: conta.companyId }, titulo);
   await recalcularConta(tx, entryId);
 }
-export const instanciaDoFinanceiro = (companyId: string) => `${PREFIXO_DO_FINANCEIRO}${companyId}`;
+export { PREFIXO_DO_FINANCEIRO, instanciaDoFinanceiro };
 
 const POR_PAGINA = 500;
 const MAX_PAGINAS = 20;
@@ -180,6 +179,12 @@ export async function sincronizarFinanceiroDaEmpresa(
   if (emAndamento.has(chave)) return { companyId, ok: false, erro: "Já existe uma leitura das contas desta empresa em andamento." };
 
   const prisma = getPrisma();
+  // Virada para o Connect (lote E): daí em diante o Connect é a fonte, e uma
+  // leitura desfaria o que o BPO mudou nas contas que vieram do Omie.
+  const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { omieCutoverAt: true } });
+  if (empresa?.omieCutoverAt) {
+    return { companyId, ok: false, erro: "Esta empresa já virou para o Connect — as contas não são mais lidas do Omie." };
+  }
   const conta = await prisma.tenantIntegration.findUnique({
     where: { tenantId_integrationCode_instanceKey: { tenantId, integrationCode: "omie", instanceKey: instanciaDaEmpresa(companyId) } },
   });
