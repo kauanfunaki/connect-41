@@ -38,7 +38,7 @@ function tomDoNumero(centavos: number): string | undefined {
 
 /**
  * Os quatro números. Na de caixa, as duas últimas linhas levam os nomes do
- * regime de caixa ("Gerador de caixa operacional", "Fluxo de caixa livre"),
+ * regime de caixa ("Gerador de caixa (EBITDA)", "Resultado líquido operacional"),
  * como a tabela logo abaixo.
  *
  * A margem leva o percentual no detalhe, e não colado no valor: "R$ 37.645,50
@@ -60,8 +60,8 @@ export function itensDosNumerosDaDre(
   return [
     item("Receita bruta", "receita_bruta", comparar("receita_bruta")),
     item("Margem de contribuição", "margem_contribuicao", margem === null ? undefined : `${percentual(margem)} da receita`),
-    item(regime === "caixa" ? "Gerador de caixa operacional" : "Resultado operacional", LINHA_OPERACIONAL, comparar(LINHA_OPERACIONAL)),
-    item(regime === "caixa" ? "Fluxo de caixa livre" : "Resultado do período", LINHA_DE_RESULTADO, comparar(LINHA_DE_RESULTADO)),
+    item(regime === "caixa" ? "Gerador de caixa (EBITDA)" : "Resultado operacional (EBITDA)", LINHA_OPERACIONAL, comparar(LINHA_OPERACIONAL)),
+    item(regime === "caixa" ? "Resultado líquido operacional" : "Resultado do período", LINHA_DE_RESULTADO, comparar(LINHA_DE_RESULTADO)),
   ];
 }
 

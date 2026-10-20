@@ -1,25 +1,42 @@
 // A estrutura do DRE, como a 41 o monta.
 //
-// Traduzida da planilha `10-DRE Irriga_2025_010.xlsx`, lida em 11/09/2026 —
-// das abas `Formato` (o modelo teórico) e `DRE FINANCEIRO 2025` (o cálculo de
-// verdade, célula por célula).
+// ─── O padrão desde 20/10/2026: a estrutura da CARGO, o cálculo da Irriga ───
+//
+// Até aqui o padrão era o da Irriga (`10-DRE Irriga_2025_010.xlsx`, lida em
+// 11/09/2026), com as despesas abertas por área — comerciais, pessoal,
+// diretoria, administrativas, financeiras — porque a Irriga pediu assim. Em
+// 20/10/2026 a Amanda mandou o DRE da CARGO (`DRE CARGO_2026_junho.xlsx`, aba
+// `DRE FINANCEIRO`), e o Kauan decidiu: **a estrutura é a da CARGO, o cálculo
+// é o da Irriga, e todas as empresas — a Irriga inclusive — usam este padrão.**
+//
+// - **Estrutura da CARGO:** sete grupos — receita bruta, impostos, custo
+//   operacional, custo administrativo, financiamentos, outras despesas (com os
+//   investimentos) e outras receitas — e as linhas receita líquida, margem de
+//   contribuição, gerador de caixa (EBITDA) e resultado líquido operacional.
+// - **Cálculo da Irriga:** a base é a receita bruta (a soma dos recebimentos).
+//   A planilha da CARGO usa um "Faturamento fiscal" digitado à mão como base
+//   de quase tudo — é a parte customizada para ela, e fica de fora. Os
+//   percentuais são sobre a receita bruta: despesa em valor absoluto
+//   ("24%", não "−24%"), resultado com o sinal.
+// - **Os impostos, nas duas visões** (pedido do Kauan): no EBITDA, como as
+//   duas abas da CARGO fecham, ou fora do resultado, como a Irriga — ver
+//   `OpcoesDoDre`. A tela alterna.
+//
+// O que era da Irriga e já estava classificado migra pelo de-para
+// `GRUPO_DO_ANTIGO` (migration `20261020230000_dre_padrao_cargo`).
 //
 // ─── O que é fixo e o que é por cliente ─────────────────────────────────────
 //
-// **Fixo, e por isso mora em código:** os 12 grupos, as linhas do relatório, e
-// as contas entre elas. É o modelo gerencial da 41, e a aba `Formato` prova
-// isso — ela descreve o formato sem citar uma única categoria.
+// **Fixo, e por isso mora em código:** os grupos, as linhas do relatório e as
+// contas entre elas — o modelo gerencial da 41.
 //
 // **Por cliente, e por isso mora em tabela:** o de-para de categoria para
-// grupo. As categorias da planilha são da Irriga ("Tubo Helicoidal",
-// "Salários - Tracz"); outra empresa terá as dela.
+// grupo. Cada empresa tem as categorias dela.
 //
 // ─── Regime de caixa ────────────────────────────────────────────────────────
 //
-// O DRE inteiro sai de duas exportações do Omie por mês — pagamentos e
-// recebimentos — somadas pela coluna "Valor Pago"/"Recebido", na data do
-// extrato. **Não é competência.** No Connect a fonte equivalente é o
-// lançamento com `paidAt` preenchido.
+// O DRE de caixa soma o que foi pago e recebido no mês (as baixas). A DRE
+// econômica (`economica.ts`) usa a mesma estrutura pela competência.
 
 /** De onde o valor de um grupo vem. */
 export type OrigemDoGrupo = "recebimento" | "pagamento";
@@ -31,30 +48,60 @@ export type GrupoDoDre = {
 };
 
 /**
- * Os 12 grupos que recebem categorias.
+ * Os sete grupos que recebem categorias, na ordem do relatório.
  *
- * A ordem é a do relatório. `origem` existe porque o mesmo nome de categoria
- * pode aparecer dos dois lados no Omie — e somar um recebimento dentro de um
- * grupo de despesa é o erro que produz um número plausível e errado.
+ * `origem` existe porque o mesmo nome de categoria pode aparecer dos dois
+ * lados — e somar um recebimento dentro de um grupo de despesa é o erro que
+ * produz um número plausível e errado.
  */
 export const GRUPOS: GrupoDoDre[] = [
   { code: "receita_bruta", label: "Receita Bruta", origem: "recebimento" },
   { code: "impostos", label: "Impostos sobre Receita Bruta", origem: "pagamento" },
-  { code: "cmv", label: "CMV sobre Receita Bruta", origem: "pagamento" },
-  { code: "mao_de_obra", label: "Mão de Obra sobre Receita Bruta", origem: "pagamento" },
-  { code: "comerciais", label: "Despesas Fixas (Comerciais)", origem: "pagamento" },
-  { code: "pessoal", label: "Despesas Fixas (Pessoal)", origem: "pagamento" },
-  { code: "diretoria", label: "Despesas Fixas (Diretoria)", origem: "pagamento" },
-  { code: "administrativas", label: "Despesas Fixas (Administrativas)", origem: "pagamento" },
-  { code: "financeiras", label: "Despesas Fixas (Financeiras)", origem: "pagamento" },
-  { code: "investimentos", label: "Investimentos Totais", origem: "pagamento" },
-  { code: "outras_receitas", label: "Outras Receitas Totais", origem: "recebimento" },
-  {
-    code: "outras_despesas",
-    label: "Outras Despesas Totais (Receitas e Despesas Não Operacionais)",
-    origem: "pagamento",
-  },
+  { code: "custo_operacional", label: "Custo Operacional", origem: "pagamento" },
+  { code: "custo_administrativo", label: "Custo Administrativo", origem: "pagamento" },
+  { code: "financiamentos", label: "Financiamentos, Empréstimos e Parcelamentos", origem: "pagamento" },
+  { code: "outras_despesas", label: "Outras Despesas (com Investimentos)", origem: "pagamento" },
+  { code: "outras_receitas", label: "Outras Receitas", origem: "recebimento" },
 ];
+
+/**
+ * Os grupos do padrão antigo (o da Irriga, até 20/10/2026) e o grupo novo de
+ * cada um. É o de-para da migration e o de quem ainda lê um código antigo —
+ * um orçamento exportado, uma planilha guardada: `grupoAtual` traduz.
+ *
+ * As "financeiras" vão para o custo administrativo, não para financiamentos:
+ * eram tarifa do banco e IOF, uma das despesas fixas — e a CARGO põe a tarifa
+ * no administrativo. Financiamentos é empréstimo e parcelamento.
+ */
+export const GRUPO_DO_ANTIGO: Readonly<Record<string, string>> = {
+  cmv: "custo_operacional",
+  mao_de_obra: "custo_operacional",
+  comerciais: "custo_operacional",
+  pessoal: "custo_administrativo",
+  diretoria: "custo_administrativo",
+  administrativas: "custo_administrativo",
+  financeiras: "custo_administrativo",
+  investimentos: "outras_despesas",
+};
+
+/** Os rótulos do padrão antigo, pelo grupo novo — o `dreGroup` é texto livre, e há quem tenha digitado o rótulo. */
+export const ROTULOS_DO_PADRAO_ANTIGO: Readonly<Record<string, string>> = {
+  "CMV sobre Receita Bruta": "custo_operacional",
+  "Mão de Obra sobre Receita Bruta": "custo_operacional",
+  "Despesas Fixas (Comerciais)": "custo_operacional",
+  "Despesas Fixas (Pessoal)": "custo_administrativo",
+  "Despesas Fixas (Diretoria)": "custo_administrativo",
+  "Despesas Fixas (Administrativas)": "custo_administrativo",
+  "Despesas Fixas (Financeiras)": "custo_administrativo",
+  "Investimentos Totais": "outras_despesas",
+  "Outras Receitas Totais": "outras_receitas",
+  "Outras Despesas Totais (Receitas e Despesas Não Operacionais)": "outras_despesas",
+};
+
+/** O código de grupo no padrão de hoje: o antigo vira o novo; o resto fica como está. */
+export function grupoAtual(code: string): string {
+  return GRUPO_DO_ANTIGO[code] ?? code;
+}
 
 export function grupoPorCodigo(code: string): GrupoDoDre | null {
   return GRUPOS.find((g) => g.code === code) ?? null;
@@ -63,9 +110,8 @@ export function grupoPorCodigo(code: string): GrupoDoDre | null {
 /**
  * O grupo que recebe o que não foi classificado.
  *
- * **Não é um dos doze.** Ele existe para que dinheiro sem de-para apareça no
- * relatório em vez de sumir — que é o que a planilha faz hoje: em outubro/2025,
- * R$ 64.212,71 entraram na conta e não estão em linha nenhuma, porque o `SUMIF`
+ * **Não é um dos sete.** Ele existe para que dinheiro sem de-para apareça no
+ * relatório em vez de sumir — que é o que a planilha faz: o `SUMIF`
  * simplesmente não encontra categoria que não está na lista.
  *
  * Ele não entra em nenhuma conta de resultado. Serve para ser visto e zerado.
@@ -75,16 +121,11 @@ export const NAO_CLASSIFICADO = "nao_classificado";
 /**
  * Transferência entre contas da própria empresa.
  *
- * ─── CHUTE, 11/09 — reversível ──────────────────────────────────────────────
- *
  * "Entrada de Transferência" e "Saída de Transferência" aparecem no extrato e
- * **não são resultado**: é dinheiro andando entre contas do mesmo dono. A
- * planilha as deixa de fora sem dizer, e elas caem no silêncio junto com o
- * resto do não classificado.
- *
- * Aqui elas ganham um grupo próprio, que também não entra em conta nenhuma —
- * mas aparece nomeado. A diferença é que "excluído de propósito" e "ninguém
- * classificou" param de ser a mesma coisa na tela.
+ * **não são resultado**: é dinheiro andando entre contas do mesmo dono. Aqui
+ * elas ganham um grupo próprio, que não entra em conta nenhuma — mas aparece
+ * nomeado. "Excluído de propósito" e "ninguém classificou" não são a mesma
+ * coisa na tela.
  */
 export const TRANSFERENCIA = "transferencia";
 
@@ -93,33 +134,32 @@ export const TRANSFERENCIA = "transferencia";
  * 13/10/2026).
  *
  * Fica fora de todas as linhas e fora do não classificado — sai da fila de
- * classificação, que é o que a escolha quer dizer. Não é transferência: marcar
- * como transferência o que não é transferência só para tirar da fila faria a
- * tela afirmar uma coisa falsa. Aqui o motivo tem nome próprio, o valor
- * continua somado em `porGrupo[DESCONSIDERAR]` (a conferência de fechamento
- * segue zerando) e a tela mostra quanto ficou de fora.
+ * classificação, que é o que a escolha quer dizer. O valor continua somado em
+ * `porGrupo[DESCONSIDERAR]` (a conferência de fechamento segue zerando) e a
+ * tela mostra quanto ficou de fora.
  */
 export const DESCONSIDERAR = "desconsiderar";
 
 /**
  * As escolhas que tiram a categoria do resultado, com o rótulo do seletor.
- * Vêm depois dos doze grupos em todo seletor de grupo do DRE — a fila, o plano
- * do escritório e o plano da empresa —, para os três dizerem a mesma coisa.
+ * Vêm depois dos grupos em todo seletor de grupo do DRE — a fila, o plano do
+ * escritório e o plano da empresa —, para os três dizerem a mesma coisa.
  */
 export const FORA_DO_RESULTADO: { code: string; label: string }[] = [
   { code: TRANSFERENCIA, label: "Transferência entre contas (fora do DRE)" },
   { code: DESCONSIDERAR, label: "Desconsiderar no DRE" },
 ];
 
-/** Os doze grupos e as duas escolhas de fora, na ordem dos seletores. */
+/** Os grupos e as duas escolhas de fora, na ordem dos seletores. */
 export const ESCOLHAS_DE_GRUPO: { code: string; label: string }[] = [
   ...GRUPOS.map((g) => ({ code: g.code, label: g.label })),
   ...FORA_DO_RESULTADO,
 ];
 
-/** O rótulo de um código de grupo, ou o próprio texto quando não é um. */
+/** O rótulo de um código de grupo — o antigo pelo novo —, ou o próprio texto quando não é um. */
 export function rotuloDoGrupo(code: string): string {
-  return ESCOLHAS_DE_GRUPO.find((g) => g.code === code)?.label ?? code;
+  const atual = grupoAtual(code);
+  return ESCOLHAS_DE_GRUPO.find((g) => g.code === atual)?.label ?? code;
 }
 
 /**
@@ -145,108 +185,79 @@ export type LinhaDoDre =
    * `absoluto` reproduz a planilha, que escreve `((x/y)^2)^(1/2)` — que é
    * `ABS` — nas linhas de despesa, e divisão simples nas de resultado. O efeito
    * é que despesa aparece como "24%" e não "−24%", e resultado negativo
-   * aparece com o sinal. Mantido por fidelidade.
+   * aparece com o sinal.
    */
   | { code: string; label: string; tipo: "percentual"; numerador: string; denominador: string; absoluto: boolean };
 
-const PCT = (code: string, label: string, numerador: string, denominador: string, absoluto: boolean): LinhaDoDre => ({
+const PCT = (code: string, label: string, numerador: string, absoluto: boolean): LinhaDoDre => ({
   code,
   label,
   tipo: "percentual",
   numerador,
-  denominador,
+  // O cálculo da Irriga: todo percentual é sobre a receita bruta.
+  denominador: "receita_bruta",
   absoluto,
 });
 
 /**
- * O relatório, na ordem em que é lido.
+ * O relatório, na ordem da aba `DRE FINANCEIRO` da CARGO.
  *
- * Conferido linha a linha contra `DRE FINANCEIRO 2025`, incluindo quais
- * parcelas entram em cada subtotal. Duas coisas que a conferência revelou, e
- * que estão reproduzidas aqui de propósito:
- *
- * 1. **`RECEITA LÍQUIDA` é calculada e não é usada em nenhum resultado.** A
- *    margem de contribuição parte da Receita **Bruta**. Ver `OPCOES_PADRAO`.
- * 2. **O % de mão de obra divide pela Receita Líquida**, enquanto os outros
- *    quatorze dividem pela Bruta — apesar de o rótulo dizer "sobre receita
- *    bruta". Está como na planilha, e marcado aqui para não parecer descuido.
+ * As parcelas do EBITDA dependem da opção dos impostos — as daqui são as com
+ * os impostos dentro; `parcelasDoEbitda` tira quando a visão é a da Irriga.
  */
 export const LINHAS: LinhaDoDre[] = [
-  { code: "receita_bruta", label: "RECEITA BRUTA", tipo: "grupo", grupo: "receita_bruta", },
+  { code: "receita_bruta", label: "RECEITA BRUTA", tipo: "grupo", grupo: "receita_bruta" },
   { code: "impostos", label: "IMPOSTOS SOBRE RECEITA BRUTA", tipo: "grupo", grupo: "impostos" },
-  PCT("impostos_pct", "Impostos sobre Receita Bruta %", "impostos", "receita_bruta", true),
+  PCT("impostos_pct", "Impostos sobre Receita Bruta %", "impostos", true),
   { code: "receita_liquida", label: "RECEITA LÍQUIDA", tipo: "subtotal", parcelas: ["receita_bruta", "impostos"] },
 
-  { code: "cmv", label: "CMV SOBRE RECEITA BRUTA", tipo: "grupo", grupo: "cmv" },
-  PCT("cmv_pct", "CMV sobre Receita Bruta %", "cmv", "receita_bruta", true),
-
-  { code: "mao_de_obra", label: "MÃO DE OBRA SOBRE RECEITA BRUTA", tipo: "grupo", grupo: "mao_de_obra" },
-  // O denominador é a LÍQUIDA. Está assim na planilha; o rótulo diz bruta.
-  PCT("mao_de_obra_pct", "Mão de Obra sobre Receita Bruta %", "mao_de_obra", "receita_liquida", true),
-
-  { code: "comerciais", label: "DESPESAS FIXAS (COMERCIAIS)", tipo: "grupo", grupo: "comerciais" },
-  PCT("comerciais_pct", "Despesas Fixas (Comerciais) sobre Receita Bruta %", "comerciais", "receita_bruta", false),
-
+  { code: "custo_operacional", label: "CUSTO OPERACIONAL TOTAL", tipo: "grupo", grupo: "custo_operacional" },
+  PCT("custo_operacional_pct", "Custo Operacional sobre Receita Bruta %", "custo_operacional", true),
   {
     code: "margem_contribuicao",
     label: "MARGEM DE CONTRIBUIÇÃO",
     tipo: "subtotal",
-    parcelas: ["receita_bruta", "cmv", "mao_de_obra", "comerciais"],
+    // Como nas duas planilhas: a margem parte da receita bruta.
+    parcelas: ["receita_bruta", "custo_operacional"],
     destaque: true,
   },
-  PCT("margem_contribuicao_pct", "Margem de Contribuição sobre Receita Bruta %", "margem_contribuicao", "receita_bruta", false),
+  PCT("margem_contribuicao_pct", "Margem de Contribuição sobre Receita Bruta %", "margem_contribuicao", false),
 
-  { code: "pessoal", label: "DESPESAS FIXAS (PESSOAL)", tipo: "grupo", grupo: "pessoal" },
-  PCT("pessoal_pct", "Despesas Fixas (Pessoal) sobre Receita Bruta %", "pessoal", "receita_bruta", false),
-  { code: "diretoria", label: "DESPESAS FIXAS (DIRETORIA)", tipo: "grupo", grupo: "diretoria" },
-  PCT("diretoria_pct", "Despesas Fixas (Diretoria) sobre Receita Bruta %", "diretoria", "receita_bruta", true),
-  { code: "administrativas", label: "DESPESAS FIXAS (ADMINISTRATIVAS)", tipo: "grupo", grupo: "administrativas" },
-  PCT("administrativas_pct", "Despesas Fixas (Administrativas) sobre Receita Bruta %", "administrativas", "receita_bruta", true),
-  { code: "financeiras", label: "DESPESAS FIXAS (FINANCEIRAS)", tipo: "grupo", grupo: "financeiras" },
-  PCT("financeiras_pct", "Despesas Fixas (Financeiras) sobre Receita Bruta %", "financeiras", "receita_bruta", false),
-
+  { code: "custo_administrativo", label: "CUSTO ADMINISTRATIVO TOTAL", tipo: "grupo", grupo: "custo_administrativo" },
+  PCT("custo_administrativo_pct", "Custo Administrativo sobre Receita Bruta %", "custo_administrativo", true),
   {
-    code: "total_despesas_fixas",
-    label: "TOTAL DE DESPESAS FIXAS",
-    tipo: "subtotal",
-    parcelas: ["pessoal", "diretoria", "administrativas", "financeiras"],
+    code: "financiamentos",
+    label: "DESPESAS TOTAIS COM FINANCIAMENTOS, EMPRÉSTIMOS E PARCELAMENTOS",
+    tipo: "grupo",
+    grupo: "financiamentos",
   },
-  PCT("total_despesas_fixas_pct", "Total de Despesas Fixas sobre Receita Bruta %", "total_despesas_fixas", "receita_bruta", true),
-
+  PCT("financiamentos_pct", "Financiamentos, Empréstimos e Parcelamentos sobre Receita Bruta %", "financiamentos", true),
   {
-    code: "gerador_de_caixa",
-    label: "GERADOR DE CAIXA OPERACIONAL",
+    code: "ebitda",
+    label: "GERADOR DE CAIXA (EBITDA)",
     tipo: "subtotal",
-    parcelas: ["margem_contribuicao", "total_despesas_fixas"],
+    parcelas: ["margem_contribuicao", "impostos", "custo_administrativo", "financiamentos"],
     destaque: true,
   },
-  PCT("gerador_de_caixa_pct", "Gerador de Caixa Operacional sobre Receita Bruta %", "gerador_de_caixa", "receita_bruta", false),
+  PCT("ebitda_pct", "Gerador de Caixa (EBITDA) sobre Receita Bruta %", "ebitda", false),
 
-  { code: "investimentos", label: "INVESTIMENTOS TOTAIS", tipo: "grupo", grupo: "investimentos" },
-  PCT("investimentos_pct", "Investimentos sobre Receita Bruta %", "investimentos", "receita_bruta", false),
-
-  {
-    code: "fluxo_apos_investimentos",
-    label: "FLUXO DE CAIXA APÓS INVESTIMENTOS",
-    tipo: "subtotal",
-    parcelas: ["gerador_de_caixa", "investimentos"],
-  },
-  PCT("fluxo_apos_investimentos_pct", "Fluxo de Caixa após Investimentos sobre Receita Bruta %", "fluxo_apos_investimentos", "receita_bruta", false),
-
+  { code: "outras_despesas", label: "OUTRAS DESPESAS TOTAIS (COM INVESTIMENTOS)", tipo: "grupo", grupo: "outras_despesas" },
+  PCT("outras_despesas_pct", "Outras Despesas sobre Receita Bruta %", "outras_despesas", true),
   { code: "outras_receitas", label: "OUTRAS RECEITAS TOTAIS", tipo: "grupo", grupo: "outras_receitas" },
-  PCT("outras_receitas_pct", "Outras Receitas sobre Receita Bruta %", "outras_receitas", "receita_bruta", false),
-  { code: "outras_despesas", label: "OUTRAS DESPESAS TOTAIS (RECEITAS E DESPESAS NÃO OPERACIONAIS)", tipo: "grupo", grupo: "outras_despesas" },
-  PCT("outras_despesas_pct", "Outras Despesas sobre Receita Bruta %", "outras_despesas", "receita_bruta", true),
+  PCT("outras_receitas_pct", "Outras Receitas sobre Receita Bruta %", "outras_receitas", false),
 
   {
-    code: "fluxo_de_caixa_livre",
-    label: "FLUXO DE CAIXA LIVRE",
+    code: "resultado_liquido",
+    label: "RESULTADO LÍQUIDO OPERACIONAL",
     tipo: "subtotal",
-    parcelas: ["fluxo_apos_investimentos", "outras_receitas", "outras_despesas"],
+    parcelas: ["ebitda", "outras_despesas", "outras_receitas"],
     destaque: true,
   },
-  PCT("fluxo_de_caixa_livre_pct", "Fluxo de Caixa Livre sobre Receita Bruta %", "fluxo_de_caixa_livre", "receita_bruta", false),
+  PCT("resultado_liquido_pct", "Resultado Líquido Operacional sobre Receita Bruta %", "resultado_liquido", false),
 ];
+
+/** A linha que fecha o relatório — o resultado do período. */
+export const LINHA_DO_RESULTADO = "resultado_liquido";
 
 export function linhaPorCodigo(code: string): LinhaDoDre | null {
   return LINHAS.find((l) => l.code === code) ?? null;
@@ -254,31 +265,32 @@ export function linhaPorCodigo(code: string): LinhaDoDre | null {
 
 export type OpcoesDoDre = {
   /**
-   * A margem de contribuição parte da Receita **Líquida** em vez da Bruta?
+   * Os impostos sobre a receita entram no EBITDA (e daí no resultado)?
    *
-   * ─── CHUTE, 11/09 — reversível num campo ────────────────────────────────
+   * - `true` — **o padrão**: como as duas abas da CARGO fecham. A margem parte
+   *   da receita bruta, e o EBITDA desconta os impostos.
+   * - `false` — a visão da Irriga: os impostos aparecem na receita líquida e
+   *   ficam fora da margem, do EBITDA e do resultado. A tela diz quanto ficou
+   *   de fora (`impostoForaDoResultado`).
    *
-   * `false` reproduz a planilha, e é o padrão: o número que o Connect mostra
-   * fica igual ao que o BPO entrega hoje, o que é o único jeito de conferir a
-   * migração contra um mês real.
-   *
-   * Mas o efeito de `false` é que **os impostos sobre receita não entram no
-   * resultado**. Em outubro/2025 foram R$ 46.148,78 que saíram do caixa e não
-   * aparecem no Fluxo de Caixa Livre; no acumulado do ano até outubro, R$
-   * 191.536,87. Confere em todos os dez meses: a diferença entre somar todos os
-   * grupos e o fluxo livre é exatamente o imposto, e nos meses sem imposto pago
-   * os dois números batem.
-   *
-   * Pode ser intencional — há modelo gerencial que isola a carga tributária.
-   * Enquanto o BPO não confirma, a tela avisa em vez de escolher em silêncio.
+   * O Kauan pediu as duas, com a escolha na tela (20/10/2026).
    */
-  margemPartirDaLiquida: boolean;
+  impostosNoEbitda: boolean;
 };
 
-export const OPCOES_PADRAO: OpcoesDoDre = { margemPartirDaLiquida: false };
+export const OPCOES_PADRAO: OpcoesDoDre = { impostosNoEbitda: true };
 
-/** As parcelas da margem, conforme a opção. */
-export function parcelasDaMargem(opcoes: OpcoesDoDre): string[] {
-  const base = opcoes.margemPartirDaLiquida ? "receita_liquida" : "receita_bruta";
-  return [base, "cmv", "mao_de_obra", "comerciais"];
+/** A visão da Irriga: os impostos fora do resultado. */
+export const OPCOES_SEM_IMPOSTOS: OpcoesDoDre = { impostosNoEbitda: false };
+
+/** As opções a partir do endereço da tela: `impostos=fora` é a visão da Irriga. */
+export function opcoesDaUrl(valor: string | null | undefined): OpcoesDoDre {
+  return valor === "fora" ? OPCOES_SEM_IMPOSTOS : OPCOES_PADRAO;
+}
+
+/** As parcelas do EBITDA, conforme a opção dos impostos. */
+export function parcelasDoEbitda(opcoes: OpcoesDoDre): string[] {
+  const linha = linhaPorCodigo("ebitda");
+  const parcelas = linha?.tipo === "subtotal" ? linha.parcelas : [];
+  return opcoes.impostosNoEbitda ? parcelas : parcelas.filter((p) => p !== "impostos");
 }

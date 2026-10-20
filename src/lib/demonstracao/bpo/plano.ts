@@ -405,22 +405,22 @@ export const EMPRESAS: readonly EmpresaDoPlano[] = [
 
 /** A categoria de cada empresa: nome próprio, para não colidir com o plano padrão do escritório. */
 const CATEGORIAS: readonly { apelido: string; name: string; kind: Tipo; dreGroup: string | null; so?: ChaveDaEmpresa }[] = [
-  { apelido: "insumos", name: "Insumos de produção (farinha, fermento, gás)", kind: "PAGAR", dreGroup: "cmv" },
-  { apelido: "revenda", name: "Laticínios e frios para revenda", kind: "PAGAR", dreGroup: "cmv" },
-  { apelido: "embalagens", name: "Embalagens e sacolas", kind: "PAGAR", dreGroup: "cmv" },
-  { apelido: "folha-producao", name: "Folha da produção (padeiros e confeiteiros)", kind: "PAGAR", dreGroup: "mao_de_obra" },
-  { apelido: "folha-balcao", name: "Folha do balcão e caixa", kind: "PAGAR", dreGroup: "pessoal" },
-  { apelido: "prolabore", name: "Pró-labore dos sócios", kind: "PAGAR", dreGroup: "diretoria" },
-  { apelido: "aluguel", name: "Aluguel da loja", kind: "PAGAR", dreGroup: "administrativas" },
-  { apelido: "energia", name: "Energia elétrica da loja", kind: "PAGAR", dreGroup: "administrativas" },
-  { apelido: "agua", name: "Água e esgoto da loja", kind: "PAGAR", dreGroup: "administrativas" },
-  { apelido: "contabilidade", name: "Honorários de contabilidade e BPO", kind: "PAGAR", dreGroup: "administrativas" },
-  { apelido: "manutencao", name: "Manutenção de fornos e equipamentos", kind: "PAGAR", dreGroup: "administrativas" },
-  { apelido: "maquininha", name: "Taxas da maquininha de cartão", kind: "PAGAR", dreGroup: "financeiras" },
-  { apelido: "tarifas", name: "Tarifas do banco", kind: "PAGAR", dreGroup: "financeiras" },
+  { apelido: "insumos", name: "Insumos de produção (farinha, fermento, gás)", kind: "PAGAR", dreGroup: "custo_operacional" },
+  { apelido: "revenda", name: "Laticínios e frios para revenda", kind: "PAGAR", dreGroup: "custo_operacional" },
+  { apelido: "embalagens", name: "Embalagens e sacolas", kind: "PAGAR", dreGroup: "custo_operacional" },
+  { apelido: "folha-producao", name: "Folha da produção (padeiros e confeiteiros)", kind: "PAGAR", dreGroup: "custo_operacional" },
+  { apelido: "folha-balcao", name: "Folha do balcão e caixa", kind: "PAGAR", dreGroup: "custo_administrativo" },
+  { apelido: "prolabore", name: "Pró-labore dos sócios", kind: "PAGAR", dreGroup: "custo_administrativo" },
+  { apelido: "aluguel", name: "Aluguel da loja", kind: "PAGAR", dreGroup: "custo_administrativo" },
+  { apelido: "energia", name: "Energia elétrica da loja", kind: "PAGAR", dreGroup: "custo_administrativo" },
+  { apelido: "agua", name: "Água e esgoto da loja", kind: "PAGAR", dreGroup: "custo_administrativo" },
+  { apelido: "contabilidade", name: "Honorários de contabilidade e BPO", kind: "PAGAR", dreGroup: "custo_administrativo" },
+  { apelido: "manutencao", name: "Manutenção de fornos e equipamentos", kind: "PAGAR", dreGroup: "custo_administrativo" },
+  { apelido: "maquininha", name: "Taxas da maquininha de cartão", kind: "PAGAR", dreGroup: "custo_operacional" },
+  { apelido: "tarifas", name: "Tarifas do banco", kind: "PAGAR", dreGroup: "custo_administrativo" },
   { apelido: "das", name: "DAS — Simples Nacional", kind: "PAGAR", dreGroup: "impostos" },
-  { apelido: "divulgacao", name: "Divulgação e redes sociais", kind: "PAGAR", dreGroup: "comerciais" },
-  { apelido: "forno", name: "Forno turbo novo (parcelas)", kind: "PAGAR", dreGroup: "investimentos" },
+  { apelido: "divulgacao", name: "Divulgação e redes sociais", kind: "PAGAR", dreGroup: "custo_operacional" },
+  { apelido: "forno", name: "Forno turbo novo (parcelas)", kind: "PAGAR", dreGroup: "outras_despesas" },
   // A categoria sem classificação de propósito — só na matriz, só num mês (ver SITUACOES).
   { apelido: "delivery", name: "Taxas dos aplicativos de delivery", kind: "PAGAR", dreGroup: null, so: "matriz" },
   { apelido: "balcao", name: "Vendas no balcão", kind: "RECEBER", dreGroup: "receita_bruta" },
@@ -1536,17 +1536,15 @@ export function montarDemonstracaoDoBpo(agora: Date): PlanoDoBpo {
   const ano = Number(mesAtual.slice(0, 4));
   // Histórico que começa no ano anterior: o orçamento deste ano vem de janeiro.
   const primeiroMes = meses[0]!.startsWith(String(ano)) ? Number(meses[0]!.slice(5, 7)) : 1;
+  // Na estrutura da CARGO (20/10/2026): insumos, produção, divulgação e a taxa
+  // do cartão no custo operacional; balcão, pró-labore, a loja e a tarifa do
+  // banco no administrativo; o forno nas outras despesas.
   const porGrupo: Record<string, number> = {
     receita_bruta: 8_200_000,
     impostos: 470_000,
-    cmv: 2_350_000,
-    mao_de_obra: 1_600_000,
-    pessoal: 950_000,
-    diretoria: 600_000,
-    administrativas: 1_300_000,
-    financeiras: 160_000,
-    comerciais: 90_000,
-    investimentos: 250_000,
+    custo_operacional: 4_190_000,
+    custo_administrativo: 2_860_000,
+    outras_despesas: 250_000,
   };
   const orcamentos: OrcamentoDoPlano[] = [
     {

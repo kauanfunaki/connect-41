@@ -16,6 +16,6 @@ describe("categoriasParaCriar", () => {
 
   it("não repete o mesmo nome escrito de outro jeito", () => {
     const r = categoriasParaCriar(["Compra de Serviços", "compra de  servicos"], [], "pagamento");
-    expect(r).toEqual([{ name: "Compra de Serviços", kind: "PAGAR", dreGroup: "cmv" }]);
+    expect(r).toEqual([{ name: "Compra de Serviços", kind: "PAGAR", dreGroup: "custo_operacional" }]);
   });
 });

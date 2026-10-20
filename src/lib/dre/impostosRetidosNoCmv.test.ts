@@ -34,7 +34,7 @@ const NOME_DA_IRRIGA = "Impostos Retidos Serviços Tomados";
 describe("o padrão novo", () => {
   it("o plano padrão da 41 põe a categoria no CMV, e o grupo do plano continua Impostos", () => {
     const c = PLANO_PADRAO_41.find((p) => p.nome === NOME_DO_PADRAO);
-    expect(c).toMatchObject({ kind: "PAGAR", grupo: "Impostos", dre: "cmv" });
+    expect(c).toMatchObject({ kind: "PAGAR", grupo: "Impostos", dre: "custo_operacional" });
   });
 
   it("nenhuma outra categoria do plano padrão saiu dos impostos", () => {
@@ -46,19 +46,19 @@ describe("o padrão novo", () => {
 
   it("o de-para do Omie classifica os dois nomes no CMV", () => {
     const grupo = new Map(MAPEAMENTO_PADRAO.map((p) => [chaveDaCategoria(p.categoria), p.grupo]));
-    expect(grupo.get(chaveDaCategoria(NOME_DA_IRRIGA))).toBe("cmv");
-    expect(grupo.get(chaveDaCategoria(NOME_DO_PADRAO))).toBe("cmv");
+    expect(grupo.get(chaveDaCategoria(NOME_DA_IRRIGA))).toBe("custo_operacional");
+    expect(grupo.get(chaveDaCategoria(NOME_DO_PADRAO))).toBe("custo_operacional");
   });
 
   it("o arquivo do Omie que traz o nome do padrão cria a categoria já no CMV", () => {
     expect(categoriasParaCriar([NOME_DO_PADRAO], [], "pagamento")).toEqual([
-      { name: NOME_DO_PADRAO, kind: "PAGAR", dreGroup: "cmv" },
+      { name: NOME_DO_PADRAO, kind: "PAGAR", dreGroup: "custo_operacional" },
     ]);
   });
 
   it("carregar o plano padrão de novo não desfaz a correção", () => {
     const carga = planejarCarga(
-      [{ id: "x", name: NOME_DO_PADRAO, kind: "PAGAR", planGroup: "Impostos", dreGroup: "cmv" }],
+      [{ id: "x", name: NOME_DO_PADRAO, kind: "PAGAR", planGroup: "Impostos", dreGroup: "custo_operacional" }],
       PLANO_PADRAO_41
     );
     expect(carga.completar.find((m) => m.id === "x")).toBeUndefined();
@@ -75,7 +75,7 @@ describe("o padrão novo", () => {
 
   it("escritório sem a categoria recebe ela já no CMV", () => {
     const carga = planejarCarga([], PLANO_PADRAO_41);
-    expect(carga.criar.find((c) => c.nome === NOME_DO_PADRAO)?.dre).toBe("cmv");
+    expect(carga.criar.find((c) => c.nome === NOME_DO_PADRAO)?.dre).toBe("custo_operacional");
   });
 });
 
@@ -126,7 +126,7 @@ function cenario(): { categorias: CategoriaLida[]; excecoes: ExcecaoLida[] } {
       { id: "out", tenantId: "t1", companyId: "outra", name: "impostos retidos servicos tomados", kind: "PAGAR", dreGroup: "outras_despesas" },
       // Criada pelo Omie sem linha: fica na fila.
       { id: "sem", tenantId: "t1", companyId: "semlinha", name: NOME_DO_PADRAO, kind: "PAGAR", dreGroup: null },
-      { id: "t2pad", tenantId: "t2", companyId: null, name: NOME_DO_PADRAO, kind: "PAGAR", dreGroup: "cmv" },
+      { id: "t2pad", tenantId: "t2", companyId: null, name: NOME_DO_PADRAO, kind: "PAGAR", dreGroup: "custo_operacional" },
       // Outra categoria qualquer, que não entra.
       { id: "pis", tenantId: "t1", companyId: null, name: "Impostos Federais - PIS", kind: "PAGAR", dreGroup: "impostos" },
     ],
@@ -134,9 +134,9 @@ function cenario(): { categorias: CategoriaLida[]; excecoes: ExcecaoLida[] } {
       // Exceção apontando para impostos: muda.
       { id: "ex1", tenantId: "t1", companyId: "comexcecao", categoryId: "pad", grupo: "impostos" },
       // Exceção deliberada para outra linha: fica.
-      { id: "ex2", tenantId: "t1", companyId: "deliberada", categoryId: "pad", grupo: "administrativas" },
+      { id: "ex2", tenantId: "t1", companyId: "deliberada", categoryId: "pad", grupo: "custo_administrativo" },
       // Exceção de outra categoria: não é desta correção.
-      { id: "ex3", tenantId: "t1", companyId: "comexcecao", categoryId: "pis", grupo: "cmv" },
+      { id: "ex3", tenantId: "t1", companyId: "comexcecao", categoryId: "pis", grupo: "custo_operacional" },
     ],
   };
 }
@@ -175,8 +175,8 @@ describe("planejarCorrecao", () => {
     const p = planejarCorrecao(categorias, excecoes);
     const trocadas = new Set(p.mudar.map((a) => a.id));
     const depois = planejarCorrecao(
-      categorias.map((c) => (trocadas.has(c.id) ? { ...c, dreGroup: "cmv" } : c)),
-      excecoes.map((e) => (trocadas.has(e.id) ? { ...e, grupo: "cmv" } : e))
+      categorias.map((c) => (trocadas.has(c.id) ? { ...c, dreGroup: "custo_operacional" } : c)),
+      excecoes.map((e) => (trocadas.has(e.id) ? { ...e, grupo: "custo_operacional" } : e))
     );
     expect(depois.mudar).toEqual([]);
     expect(depois.jaNoDestino.map((a) => a.id).sort()).toEqual(["ex1", "irr", "pad", "t2pad"]);
@@ -199,12 +199,12 @@ describe("a auditoria da troca", () => {
       nome: NOME_DA_IRRIGA,
       companyId: "irriga",
       onde: "plano da empresa",
-      linhaDaDre: "Impostos sobre Receita Bruta → CMV sobre Receita Bruta",
+      linhaDaDre: "Impostos sobre Receita Bruta → Custo Operacional",
       gravadoAntes: "Impostos sobre Receita Bruta",
     });
     expect(detalhes.motivo.length).toBeLessThanOrEqual(140);
     expect(mudancasDoRegistro(ACAO_DA_CORRECAO, detalhes)).toEqual([
-      { campo: "Linha da DRE", de: "Impostos sobre Receita Bruta", para: "CMV sobre Receita Bruta" },
+      { campo: "Linha da DRE", de: "Impostos sobre Receita Bruta", para: "Custo Operacional" },
     ]);
   });
 
@@ -212,7 +212,7 @@ describe("a auditoria da troca", () => {
     const { categorias, excecoes } = cenario();
     const padrao = planejarCorrecao(categorias, excecoes).mudar.find((a) => a.id === "pad")!;
     expect(detalhesDaAuditoria(padrao)).not.toHaveProperty("companyId");
-    expect(deParaDaLinha(padrao)).toBe("Impostos sobre Receita Bruta → CMV sobre Receita Bruta");
+    expect(deParaDaLinha(padrao)).toBe("Impostos sobre Receita Bruta → Custo Operacional");
   });
 });
 
@@ -276,8 +276,8 @@ describe("impactoNaDre", () => {
     const { categorias, excecoes } = cenario();
     const plano = planejarCorrecao(categorias, excecoes);
     const trocadas = new Set(plano.mudar.map((a) => a.id));
-    const cats = categorias.map((c) => (trocadas.has(c.id) ? { ...c, dreGroup: "cmv" } : c));
-    const exc = excecoes.map((e) => (trocadas.has(e.id) ? { ...e, grupo: "cmv" } : e));
+    const cats = categorias.map((c) => (trocadas.has(c.id) ? { ...c, dreGroup: "custo_operacional" } : c));
+    const exc = excecoes.map((e) => (trocadas.has(e.id) ? { ...e, grupo: "custo_operacional" } : e));
     const r = impactoNaDre(cats, exc, planejarCorrecao(cats, exc), [pago("comum", 8, -10000, { categoryId: "pad" })]);
     expect(r).toEqual([]);
   });

@@ -103,7 +103,7 @@ export function reconciliarLucroCaixa(
     { code: "resultado_caixa", label: "Resultado de caixa (lançamentos do Connect)", centavos: caixa, tipo: "total" },
     {
       code: "fora_do_resultado",
-      label: "(±) Caixa fora do resultado — transferências, não classificado e impostos fora da margem",
+      label: "(±) Caixa fora do resultado — transferências, não classificado e o que mais ficou de fora",
       centavos: variacao - caixa,
       tipo: "ajuste",
     },
@@ -127,20 +127,15 @@ export type LinhaComparada = {
 export const LINHAS_DO_COMPARATIVO = [
   "receita_bruta",
   "impostos",
-  "cmv",
-  "mao_de_obra",
-  "comerciais",
+  "receita_liquida",
+  "custo_operacional",
   "margem_contribuicao",
-  "pessoal",
-  "diretoria",
-  "administrativas",
-  "financeiras",
-  "total_despesas_fixas",
-  "gerador_de_caixa",
-  "investimentos",
-  "outras_receitas",
+  "custo_administrativo",
+  "financiamentos",
+  "ebitda",
   "outras_despesas",
-  "fluxo_de_caixa_livre",
+  "outras_receitas",
+  "resultado_liquido",
 ];
 
 /**
@@ -284,36 +279,34 @@ export function projetarSerie(
 // ─── Cenários ───────────────────────────────────────────────────────────────
 
 export type PremissasDoCenario = {
-  /** Variação da receita bruta, em %. Impostos, CMV, mão de obra e comerciais acompanham. */
+  /** Variação da receita bruta, em %. Impostos e custo operacional acompanham. */
   receita: number;
-  /** Variação do CMV **além** do que já acompanha a receita, em %. */
-  cmv: number;
-  /** Variação das despesas fixas de pessoal, diretoria e administrativas, em %. */
-  despesasFixas: number;
-  /** Variação das despesas financeiras, em %. */
-  financeiras: number;
+  /** Variação do custo operacional **além** do que já acompanha a receita, em %. */
+  custoOperacional: number;
+  /** Variação do custo administrativo, em %. */
+  custoAdministrativo: number;
+  /** Variação das despesas com financiamentos, empréstimos e parcelamentos, em %. */
+  financiamentos: number;
 };
 
-export const PREMISSAS_ZERADAS: PremissasDoCenario = { receita: 0, cmv: 0, despesasFixas: 0, financeiras: 0 };
+export const PREMISSAS_ZERADAS: PremissasDoCenario = { receita: 0, custoOperacional: 0, custoAdministrativo: 0, financiamentos: 0 };
 
 export const CENARIOS_PRONTOS: { chave: string; rotulo: string; premissas: PremissasDoCenario }[] = [
-  { chave: "pessimista", rotulo: "Pessimista", premissas: { receita: -10, cmv: 5, despesasFixas: 3, financeiras: 10 } },
+  { chave: "pessimista", rotulo: "Pessimista", premissas: { receita: -10, custoOperacional: 5, custoAdministrativo: 3, financiamentos: 10 } },
   { chave: "base", rotulo: "Base", premissas: PREMISSAS_ZERADAS },
-  { chave: "otimista", rotulo: "Otimista", premissas: { receita: 10, cmv: -3, despesasFixas: 0, financeiras: -5 } },
+  { chave: "otimista", rotulo: "Otimista", premissas: { receita: 10, custoOperacional: -3, custoAdministrativo: 0, financiamentos: -5 } },
 ];
 
 /** Grupos que andam junto com a receita — o variável da estrutura da 41. */
-const VARIAVEIS = ["impostos", "cmv", "mao_de_obra", "comerciais"];
-const FIXAS = ["pessoal", "diretoria", "administrativas"];
+const VARIAVEIS = ["impostos", "custo_operacional"];
 
 /**
  * Aplica as premissas aos totais por grupo de um mês real.
  *
- * O variável é o que está **dentro da margem de contribuição** na estrutura da
- * 41 — impostos, CMV, mão de obra e comerciais — e escala com a receita. As
- * despesas fixas só mudam pela premissa delas. Investimentos, outras receitas e
- * outras despesas ficam constantes: não há premissa honesta para eles a partir
- * de um mês só.
+ * O variável — os impostos e o custo operacional — escala com a receita. O
+ * custo administrativo e os financiamentos só mudam pela premissa deles.
+ * Outras receitas e outras despesas (com os investimentos) ficam constantes:
+ * não há premissa honesta para eles a partir de um mês só.
  */
 export function simularCenario(porGrupo: Record<string, number>, p: PremissasDoCenario): Record<string, number> {
   const fator = (pct: number) => 1 + pct / 100;
@@ -325,9 +318,9 @@ export function simularCenario(porGrupo: Record<string, number>, p: PremissasDoC
     if (g in porGrupo) saida[g] = Math.round(porGrupo[g]! * multiplicador);
   };
   aplicar("receita_bruta", r);
-  for (const g of VARIAVEIS) aplicar(g, r * (g === "cmv" ? fator(p.cmv) : 1));
-  for (const g of FIXAS) aplicar(g, fator(p.despesasFixas));
-  aplicar("financeiras", fator(p.financeiras));
+  for (const g of VARIAVEIS) aplicar(g, r * (g === "custo_operacional" ? fator(p.custoOperacional) : 1));
+  aplicar("custo_administrativo", fator(p.custoAdministrativo));
+  aplicar("financiamentos", fator(p.financiamentos));
   return saida;
 }
 
@@ -443,7 +436,7 @@ export function calcularIndicadores(d: DadosDosIndicadores): Indicador[] {
         categoria: "Rentabilidade",
         rotulo: "Margem operacional",
         formula: "Resultado operacional / Receita bruta",
-        leitura: "O resultado da operação antes de investimentos e não operacionais.",
+        leitura: "O gerador de caixa (EBITDA): o resultado da operação antes das outras despesas e receitas.",
         formato: "percentual",
         valor: fracao(valorDaLinha(d.economico, LINHA_OPERACIONAL), receita),
       },
@@ -466,10 +459,10 @@ export function calcularIndicadores(d: DadosDosIndicadores): Indicador[] {
         codigo: "peso_despesas_fixas",
         categoria: "Rentabilidade",
         rotulo: "Peso das despesas fixas",
-        formula: "|Total de despesas fixas| / Receita bruta",
+        formula: "|Custo administrativo + Financiamentos| / Receita bruta",
         leitura: "Quanto da receita o custo de estrutura consome.",
         formato: "percentual",
-        valor: fracao(Math.abs(valorDaLinha(d.economico, "total_despesas_fixas")), receita),
+        valor: fracao(Math.abs(valorDaLinha(d.economico, "custo_administrativo") + valorDaLinha(d.economico, "financiamentos")), receita),
       },
       semReceita
     ),

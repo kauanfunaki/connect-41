@@ -1,3 +1,4 @@
+import { opcoesDaUrl } from "@/lib/dre/estrutura";
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthContext } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
@@ -30,6 +31,8 @@ export async function GET(req: NextRequest) {
 
   const sp = req.nextUrl.searchParams;
   const empresaId = sp.get("empresa");
+  // A visão dos impostos da tela (20/10/2026): o EBITDA do arquivo é o da tela.
+  const opcoes = opcoesDaUrl(sp.get("impostos"));
   // Só cliente ativo, como o seletor da tela — e só do escritório de quem pede.
   const empresa = empresaId
     ? await getPrisma().company.findFirst({
@@ -55,6 +58,7 @@ export async function GET(req: NextRequest) {
       })),
       mapeamento,
       colunaDeTotal: `Total ${ano}`,
+      opcoes,
     };
     periodo = String(ano);
   } else {
@@ -63,7 +67,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Nenhum pagamento ou recebimento nesta empresa" }, { status: 404 });
     }
     const { lancamentos, mapeamento } = await lancamentosDoMes(ctx.tenantId, empresa.id, mes);
-    entrada = { colunas: [{ rotulo: rotuloDoMes(mes), lancamentos }], mapeamento, colunaDeTotal: null };
+    entrada = { colunas: [{ rotulo: rotuloDoMes(mes), lancamentos }], mapeamento, colunaDeTotal: null, opcoes };
     periodo = `${String(mes.mes).padStart(2, "0")}-${mes.ano}`;
   }
 

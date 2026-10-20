@@ -14,7 +14,7 @@ import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { salvarGrade } from "@/app/(app)/dre/orcamento/actions";
 
 /** Os subtotais que a grade mostra embaixo — os mesmos da DRE, pelo mesmo motor. */
-const SUBTOTAIS = ["receita_liquida", "margem_contribuicao", "total_despesas_fixas", "gerador_de_caixa", "fluxo_apos_investimentos", "fluxo_de_caixa_livre"];
+const SUBTOTAIS = ["receita_liquida", "margem_contribuicao", "ebitda", "resultado_liquido"];
 
 const TH = "py-2 px-2 font-medium text-right whitespace-nowrap";
 
