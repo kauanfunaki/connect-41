@@ -34,8 +34,8 @@ function resumo(r: Gravado) {
 
 /**
  * "Alterar marcadas" (lote D da fila do BPO, 20/10 — o "Alterar em lote" do
- * Omie): vencimento, competência, categoria, centro de custo, projeto e conta
- * corrente prevista das contas marcadas, de uma vez. Só muda o que a pessoa marca; o resto fica
+ * Omie): vencimento, previsão, competência, categoria, centro de custo, projeto
+ * e conta corrente prevista das contas marcadas, de uma vez. Só muda o que a pessoa marca; o resto fica
  * como está em cada conta.
  *
  * Abre com "Carregando…" e pergunta ao servidor as travas de cada conta e as
@@ -254,6 +254,15 @@ function Formulario({
           ajuda="Não muda em conta paga, conciliada, do Omie ou parcela de acordo."
         >
           <CampoData id={`${id}-vencimento`} name="vencimento" disabled={!marcada("vencimento")} required={marcada("vencimento")} />
+        </Linha>
+        <Linha
+          id={`${id}-m-previsao`}
+          rotulo="Previsão"
+          marcada={marcada("previsao")}
+          onAlternar={() => alternar("previsao")}
+          ajuda="Quando deve ser paga de fato. Em branco, tira a previsão e vale o vencimento. Não muda em conta paga."
+        >
+          <CampoData id={`${id}-previsao`} name="previsao" disabled={!marcada("previsao")} />
         </Linha>
         <Linha
           id={`${id}-m-competencia`}

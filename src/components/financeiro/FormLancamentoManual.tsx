@@ -258,6 +258,10 @@ export function FormLancamentoManual({
           <CampoForm label="Vencimento" htmlFor="lancamento-vencimento" required helper={leitura && conferir("vencimento") ? CONFIRA : undefined}>
             <CampoData id="lancamento-vencimento" name="vencimento" defaultValue={leitura?.vencimentoKey ?? undefined} required />
           </CampoForm>
+          {/* A data de previsão (lote D, 20/10): o fluxo de caixa projeta por ela. */}
+          <CampoForm label="Previsão" htmlFor="lancamento-previsao" helper="Quando deve ser paga de fato. Em branco, o vencimento.">
+            <CampoData id="lancamento-previsao" name="previsao" />
+          </CampoForm>
           <CampoForm label="Valor" htmlFor="lancamento-valor" required helper={leitura && conferir("valor") ? CONFIRA : undefined}>
             <Input
               id="lancamento-valor"
@@ -301,7 +305,7 @@ export function FormLancamentoManual({
             </Select>
           </CampoForm>
 
-          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className="sm:col-span-2 lg:col-span-4">
+          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className="lg:col-span-3">
             <Input id="lancamento-descricao" name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" defaultValue={leitura?.descricao ?? undefined} />
           </CampoForm>
 

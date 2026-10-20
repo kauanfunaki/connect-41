@@ -47,6 +47,7 @@ const CAMPOS_DA_CONTA = {
   bankAccountId: true,
   competence: true,
   dueDate: true,
+  forecastDate: true,
   updatedAt: true,
   bankMatches: { select: { id: true }, take: 1 },
   counterparty: { select: { name: true } },
@@ -203,6 +204,18 @@ export async function alterarContasEmLote(formData: FormData): Promise<Resultado
     vencimento = instanteDaData(key);
   }
 
+  // Previsão em branco é "tirar": a conta volta a ser prevista no vencimento.
+  let previsao: Date | null | undefined;
+  if (campos.includes("previsao")) {
+    const bruto = texto("previsao");
+    previsao = null;
+    if (bruto) {
+      const key = dataValida(bruto);
+      if (!key) return { error: "Data de previsão inválida." };
+      previsao = instanteDaData(key);
+    }
+  }
+
   let competencia: string | undefined;
   if (campos.includes("competencia")) {
     const c = competenciaValida(texto("competencia"));
@@ -265,7 +278,7 @@ export async function alterarContasEmLote(formData: FormData): Promise<Resultado
     const antes: Record<string, string | null> = {};
     const depois: Record<string, string | null> = {};
     const mudar = (
-      coluna: "dueDate" | "competence" | "categoryId" | "costCenterId" | "projectId" | "bankAccountId",
+      coluna: "dueDate" | "forecastDate" | "competence" | "categoryId" | "costCenterId" | "projectId" | "bankAccountId",
       de: string | null,
       para: string | null,
       valor: unknown
@@ -276,6 +289,9 @@ export async function alterarContasEmLote(formData: FormData): Promise<Resultado
       depois[coluna] = para;
     };
     if (vencimento) mudar("dueDate", chaveDoDia(conta.dueDate), chaveDoDia(vencimento), vencimento);
+    if (previsao !== undefined) {
+      mudar("forecastDate", conta.forecastDate && chaveDoDia(conta.forecastDate), previsao && chaveDoDia(previsao), previsao);
+    }
     if (competencia) mudar("competence", conta.competence, competencia, competencia);
     if (campos.includes("categoria")) mudar("categoryId", conta.categoryId, escolha.categoriaId ?? null, escolha.categoriaId ?? null);
     if (campos.includes("centro")) {

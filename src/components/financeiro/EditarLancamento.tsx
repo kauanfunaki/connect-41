@@ -135,6 +135,7 @@ function Formulario({
   const tEmi = trava("emissao");
   const tNum = trava("numeroDocumento");
   const tVenc = trava("vencimento");
+  const tPrev = trava("previsao", "Quando deve ser paga de fato. Em branco, o vencimento.");
   const tValor = trava("valor", conta.aprovada && aPagar ? "Conta aprovada: mudar o valor manda de volta para a aprovação." : undefined);
 
   return (
@@ -211,9 +212,12 @@ function Formulario({
         </CampoForm>
       </FieldGrid>
 
-      <FieldGrid columns="sm:grid-cols-3">
+      <FieldGrid>
         <CampoForm label="Vencimento" htmlFor={`${id}-vencimento`} required helper={tVenc.helper}>
           <CampoData id={`${id}-vencimento`} name="vencimento" defaultValue={conta.vencimentoKey} disabled={tVenc.disabled} required />
+        </CampoForm>
+        <CampoForm label="Previsão" htmlFor={`${id}-previsao`} helper={tPrev.helper}>
+          <CampoData id={`${id}-previsao`} name="previsao" defaultValue={conta.previsaoKey ?? ""} disabled={tPrev.disabled} />
         </CampoForm>
         <CampoForm label="Valor" htmlFor={`${id}-valor`} required helper={tValor.helper}>
           <Input id={`${id}-valor`} name="valor" prefix="R$" inputMode="decimal" defaultValue={conta.valor} disabled={tValor.disabled} required />

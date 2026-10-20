@@ -24,7 +24,7 @@ describe("travasDaEdicao", () => {
 
   it("paga: classificação livre, valor e vencimento travados com o caminho", () => {
     const t = travas({ status: "PAGO", paidAt: new Date() });
-    expect(Object.keys(t).sort()).toEqual(["valor", "vencimento"]);
+    expect(Object.keys(t).sort()).toEqual(["previsao", "valor", "vencimento"]);
     expect(t.valor).toMatch(/desfaça o pagamento/);
     expect(t.categoria).toBeUndefined();
     expect(t.competencia).toBeUndefined();

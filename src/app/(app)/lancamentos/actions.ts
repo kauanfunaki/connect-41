@@ -22,7 +22,7 @@ import {
 } from "@/lib/financeiro/manual";
 import { prepararImportacao, chaveDeDuplicidade, type PreviaDaImportacao } from "@/lib/financeiro/importacaoCsv";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
-import { instanteDaData } from "@/lib/financeiro/periodo";
+import { dataValida, instanteDaData } from "@/lib/financeiro/periodo";
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "@/lib/financeiro/aprovacao/servidor";
 import { centroDoLancamento, type CentroConhecido } from "@/lib/financeiro/centroDeCusto";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
@@ -140,6 +140,10 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   // A conta corrente prevista (lote D, 20/10): com "já pago em", é dela que a baixa sai.
   const contaPrevista = await contaPrevistaInformada({ tenantId: c.tenantId, companyId, informadoId: texto("bankAccountId") || null });
   if (!contaPrevista.ok) return { error: contaPrevista.erro };
+  // A data de previsão (lote D, 20/10): só de conta em aberto — a que nasce paga já andou.
+  const previsaoBruta = texto("previsao");
+  const previsaoKey = previsaoBruta ? dataValida(previsaoBruta) : null;
+  if (previsaoBruta && !previsaoKey) return { error: "Data de previsão inválida." };
 
   const status = statusInicialDoManual(d.pagoEmKey);
   // Aprovação por alçada: conta a pagar em aberto numa empresa com alçada nasce
@@ -215,6 +219,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           documentNumber: d.numeroDocumento,
           competence: d.competencia,
           dueDate: instanteDaData(d.vencimentoKey),
+          forecastDate: previsaoKey && !d.pagoEmKey ? instanteDaData(previsaoKey) : null,
           amount: decimalDeCentavos(d.centavos),
           description: d.descricao,
           createdById: c.ctx.userId || null,
@@ -226,7 +231,8 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         select: { id: true, amount: true },
       });
       // As próximas da série: a mesma conta em outro vencimento — sem emissão,
-      // número, baixa nem anexo, que são desta.
+      // número, previsão, baixa nem anexo, que são desta. A conta corrente
+      // prevista vale para a série inteira.
       const idsDasProximas = proximas.map(() => randomUUID());
       if (serie && proximas.length > 0) {
         await tx.financeEntry.createMany({
@@ -241,6 +247,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
             categoryId: d.categoryId,
             costCenterId: centro.centroId,
             projectId: projeto.projetoId,
+            bankAccountId: contaPrevista.contaId,
             competence: o.competencia,
             dueDate: instanteDaData(o.vencimentoKey),
             amount: decimalDeCentavos(d.centavos),

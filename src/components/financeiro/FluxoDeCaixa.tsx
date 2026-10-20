@@ -171,7 +171,7 @@ export function CartoesDaProjecao({ projecao, saldoInicial = null }: { projecao:
       {(projecao.vencidos.entradas > 0 || projecao.vencidos.saidas > 0) && (
         <p className="text-helper text-warning-fg mt-3">
           Fora das janelas: {moeda(projecao.vencidos.entradas)} a receber e {moeda(projecao.vencidos.saidas)} a pagar já
-          vencidos e não baixados.
+          vencidos (ou com a previsão já passada) e não baixados.
         </p>
       )}
     </>

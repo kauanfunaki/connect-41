@@ -212,6 +212,7 @@ export function ContasTable({
                 {linhaDoDocumento(l) && <InfoDoCartao className="break-words">{linhaDoDocumento(l)}</InfoDoCartao>}
                 <InfoDoCartao className="mt-1 tabular-nums">
                   vence {formatInstantDate(l.vencimento)}
+                  {!l.pagoEm && l.previsao && ` · prev. ${formatInstantDate(l.previsao)}`}
                   {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {formatarCompetencia(l.competencia)}
                 </InfoDoCartao>
                 <InfoDoCartao className="break-words">
@@ -311,6 +312,11 @@ export function ContasTable({
                 )}
                 <td className="px-4 py-3 whitespace-nowrap tabular-nums">
                   {formatInstantDate(l.vencimento)}
+                  {!l.pagoEm && l.previsao && (
+                    <span className="block text-micro text-fg-muted" title="Data de previsão: quando deve ser paga de fato">
+                      prev. {formatInstantDate(l.previsao)}
+                    </span>
+                  )}
                   {l.pagoEm && (
                     <span className="block text-micro text-fg-muted">pago em {formatInstantDate(l.pagoEm)}</span>
                   )}

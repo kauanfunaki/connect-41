@@ -46,6 +46,8 @@ export type DadosDaEdicao =
         emissaoKey: string | null;
         numeroDocumento: string | null;
         vencimentoKey: string;
+        /** A data de previsão (lote D, 20/10). Nula é o próprio vencimento. */
+        previsaoKey: string | null;
         /** "1.234,56" — como o campo de valor recebe. */
         valor: string;
         descricao: string | null;
@@ -86,6 +88,7 @@ const CAMPOS_DA_CONTA = {
   issueDate: true,
   documentNumber: true,
   dueDate: true,
+  forecastDate: true,
   amount: true,
   description: true,
   updatedAt: true,
@@ -177,6 +180,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
       emissaoKey: chaveDoDia(conta.issueDate),
       numeroDocumento: conta.documentNumber,
       vencimentoKey: saoPauloParts(conta.dueDate).dateKey,
+      previsaoKey: chaveDoDia(conta.forecastDate),
       valor: valorNoCampo(conta.amount),
       descricao: conta.description,
       pagoEmKey: chaveDoDia(conta.paidAt),
@@ -322,6 +326,17 @@ export async function editarLancamento(formData: FormData): Promise<ResultadoDaE
     const key = dataValida(texto("vencimento"));
     if (!key) return { error: "Informe um vencimento válido." };
     if (key !== saoPauloParts(conta.dueDate).dateKey) mudar("dueDate", conta.dueDate, instanteDaData(key));
+  }
+
+  if (livre("previsao", "previsao")) {
+    const bruto = texto("previsao");
+    let previsao: Date | null = null;
+    if (bruto) {
+      const key = dataValida(bruto);
+      if (!key) return { error: "Data de previsão inválida." };
+      previsao = instanteDaData(key);
+    }
+    if (chaveDoDia(previsao) !== chaveDoDia(conta.forecastDate)) mudar("forecastDate", conta.forecastDate, previsao);
   }
 
   if (livre("valor", "valor")) {
