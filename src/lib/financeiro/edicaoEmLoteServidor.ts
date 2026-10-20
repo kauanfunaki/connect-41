@@ -40,6 +40,7 @@ const CAMPOS_DA_CONTA = {
   agreementId: true,
   omieTitleId: true,
   omieMovementId: true,
+  omieDepartmentId: true,
   omieReconciledAt: true,
   paidPrincipal: true,
   categoryId: true,
@@ -72,6 +73,7 @@ function comoAlteracao(c: ContaLida): ContaDaAlteracao {
     agreementId: c.agreementId,
     // Até a virada da empresa (lote E): depois, o Connect é a fonte.
     doOmie: presaAoOmie(c, c.company),
+    centroDoOmie: c.omieDepartmentId !== null,
     conciliada: c.bankMatches.length > 0 || c.omieReconciledAt !== null,
     temBaixa: Number(c.paidPrincipal.toString()) > 0,
   });

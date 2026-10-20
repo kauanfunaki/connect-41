@@ -61,6 +61,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "“Abrir pendência” e “Enviar para aprovação” só aparecem quando o escritório usa esses módulos.",
       "Para levar a lista para o Excel, clique em “Exportar” › “Excel”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram). O arquivo vem numa Tabela do Excel, com data como data e valor como número — no Excel, “Inserir” › “Tabela dinâmica” já pega a tabela. Conta rateada sai numa linha por parte do rateio. “Exportar” › “CSV” continua para outros sistemas.",
       "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
+      "A conta rateada no Omie chega rateada: uma linha por categoria e departamento, com o departamento no centro de custo de mesmo nome ou código. A conta com um departamento só chega no centro dele. Departamento sem centro correspondente fica “Sem centro”. Até a virada, o rateio e o centro que vieram do departamento também se alteram no Omie.",
     ],
   },
 
@@ -116,6 +117,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Conta “Renegociada” ou “Perda” saiu do em aberto pela tela “Cobrança” (acordo ou baixa por perda).",
       "Para levar a lista para o Excel, clique em “Exportar” › “Excel”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram). O arquivo vem numa Tabela do Excel, com data como data e valor como número — no Excel, “Inserir” › “Tabela dinâmica” já pega a tabela. Conta rateada sai numa linha por parte do rateio. “Exportar” › “CSV” continua para outros sistemas.",
       "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
+      "A conta rateada no Omie chega rateada: uma linha por categoria e departamento, com o departamento no centro de custo de mesmo nome ou código. A conta com um departamento só chega no centro dele. Departamento sem centro correspondente fica “Sem centro”. Até a virada, o rateio e o centro que vieram do departamento também se alteram no Omie.",
     ],
   },
 

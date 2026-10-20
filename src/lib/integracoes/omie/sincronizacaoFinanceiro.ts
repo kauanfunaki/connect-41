@@ -1,7 +1,8 @@
 // Contas do Omie → `FinanceEntry` da empresa (25/09). Tradução em `financeiro.ts`.
 //
 // **Só leitura do lado do Omie.** Três listagens: categorias, clientes/
-// fornecedores (para o nome da contraparte) e movimentos financeiros.
+// fornecedores (para o nome da contraparte) e movimentos financeiros — e os
+// departamentos, quando algum título rateia entre eles (20/10).
 //
 // ─── As regras que decidem ───────────────────────────────────────────────────
 //
@@ -19,6 +20,19 @@
 //   entra no plano **dela** (é particularidade do cliente), com a linha da DRE
 //   do de-para padrão quando o nome é conhecido. Nome igual ao do plano padrão
 //   usa a do padrão, para não duplicar.
+// - **Rateio (20/10):** o título rateado no Omie (duas ou mais categorias, ou
+//   dois ou mais departamentos) entra com as linhas do rateio
+//   (`finance_entry_allocations`), e a conta guarda o resumo delas. Cada
+//   categoria pelo código, como a do título; cada departamento no centro de
+//   custo da empresa de mesmo código ou nome (`centrosDosDepartamentos`) — sem
+//   par, a linha fica sem centro, e o centro não é criado aqui. O projeto, e o
+//   centro de título sem departamento, ficam como estão no Connect. Rateio
+//   desfeito no Omie tira as linhas daqui. Até a virada, o rateio trava na
+//   edição junto com a categoria.
+// - **Departamento único (20/10):** o título sem rateio com um departamento
+//   só põe na conta o centro de mesmo código ou nome (sem par, nenhum) e
+//   guarda o código (`omieDepartmentId`) — é o que trava o centro na edição
+//   até a virada. Sem departamento, o centro do Connect fica como está e livre.
 // - **Janela:** títulos com vencimento desde 1º de janeiro do ano passado, em
 //   páginas de 500, até 20 páginas por execução; conta grande continua de onde
 //   parou na próxima (`cursor` da linha `financeiro:{empresa}`).
@@ -57,7 +71,17 @@ import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { chamarOmie } from "./cliente";
 import { instanciaDaEmpresa, PREFIXO_DO_FINANCEIRO, instanciaDoFinanceiro } from "./contas";
-import { lerCategorias, mapearBaixasDoTitulo, mapearMovimento, paginaDeCategorias, paginaDeMovimentos, type TituloDoOmie } from "./financeiro";
+import {
+  centrosDosDepartamentos,
+  lerCategorias,
+  lerDepartamentos,
+  mapearBaixasDoTitulo,
+  mapearMovimento,
+  paginaDeCategorias,
+  paginaDeDepartamentos,
+  paginaDeMovimentos,
+  type TituloDoOmie,
+} from "./financeiro";
 import {
   juntarBaixas,
   lerContasCorrentes,
@@ -72,6 +96,8 @@ import { conciliarEmpresaPeloOmie } from "@/lib/financeiro/conciliacao/omieServi
 import { BAIXA_NO_ESPELHO, espelharBaixaDoOmie, paraOEspelho, recalcularConta } from "@/lib/financeiro/baixa/servidor";
 import { planoDoEspelho, planoMexe, type TituloNoEspelho } from "@/lib/financeiro/baixa/regras";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
+import { resumoDoRateio, type LinhaDoRateio } from "@/lib/financeiro/rateio";
+import { gravarRateio } from "@/lib/financeiro/rateioServidor";
 import type { Prisma } from "@/generated/prisma/client";
 
 
@@ -87,6 +113,20 @@ async function espelharEFechar(tx: Prisma.TransactionClient, entryId: string, ti
   await recalcularConta(tx, entryId);
 }
 export { PREFIXO_DO_FINANCEIRO, instanciaDoFinanceiro };
+
+/** As linhas do rateio da conta são as que a leitura montou? Na ordem, com o valor. */
+function mesmasLinhas(
+  atuais: { categoryId: string | null; costCenterId: string | null; projectId: string | null; amount: { toString(): string } }[],
+  novas: LinhaDoRateio[]
+): boolean {
+  return (
+    atuais.length === novas.length &&
+    atuais.every((a, i) => {
+      const n = novas[i]!;
+      return a.categoryId === n.categoriaId && a.costCenterId === n.centroId && a.projectId === n.projetoId && centavosDeDecimal(a.amount) === n.centavos;
+    })
+  );
+}
 
 const POR_PAGINA = 500;
 const MAX_PAGINAS = 20;
@@ -261,6 +301,47 @@ export async function sincronizarFinanceiroDaEmpresa(
       return criada.id;
     }
 
+    // ─── departamentos → centros de custo (20/10) ──────────────────────────
+    // A lista do Omie e os centros ativos da empresa, uma vez por leitura, e
+    // só quando algum título tem departamento.
+    let centroPorDepartamento: Promise<Map<string, string>> | null = null;
+    async function centroDoDepartamento(codigo: string): Promise<string | null> {
+      centroPorDepartamento ??= (async () => {
+        const departamentos = lerDepartamentos(await todasAsPaginas(cred, "geral/departamentos", "ListarDepartamentos", paginaDeDepartamentos));
+        const centros = await prisma.costCenter.findMany({ where: { tenantId, companyId, active: true }, select: { id: true, name: true, code: true } });
+        return centrosDosDepartamentos(departamentos, centros);
+      })();
+      return (await centroPorDepartamento).get(codigo) ?? null;
+    }
+
+    /**
+     * O rateio do título com as categorias e os centros do Connect. O que o
+     * Omie não diz fica como está aqui: o projeto, e o centro quando o título
+     * não tem departamento. Na prévia, categoria ainda a criar vai nula.
+     */
+    async function rateioDoTitulo(t: TituloDoOmie, atual: { costCenterId: string | null; projectId: string | null } | undefined): Promise<LinhaDoRateio[]> {
+      if (t.rateioIlegivel) somar("rateio_ilegivel");
+      if (t.rateio.length === 0) return [];
+      somar("rateados");
+      const linhas: LinhaDoRateio[] = [];
+      for (const l of t.rateio) {
+        const categoria = await categoriaDo({ kind: t.kind, categoriaCodigo: l.categoriaCodigo });
+        if (!categoria) somar("rateio_linhas_sem_categoria");
+        let centroId = atual?.costCenterId ?? null;
+        if (l.departamentoCodigo) {
+          centroId = await centroDoDepartamento(l.departamentoCodigo);
+          if (!centroId) somar("rateio_departamento_sem_centro");
+        }
+        linhas.push({
+          categoriaId: categoria && !categoria.startsWith("previa:") ? categoria : null,
+          centroId,
+          projetoId: atual?.projectId ?? null,
+          centavos: l.centavos,
+        });
+      }
+      return linhas;
+    }
+
     // ─── contrapartes ──────────────────────────────────────────────────────
     const doOmieContrapartes = await contrapartesDoOmie(cred);
     const existentes = await prisma.financeCounterparty.findMany({
@@ -410,6 +491,8 @@ export async function sincronizarFinanceiroDaEmpresa(
         nPagina: pagina,
         nRegPorPagina: POR_PAGINA,
         dDtVencDe: janelaDesde(agora),
+        // Sem ele, o movimento vem sem as listas do rateio (20/10).
+        cExibirDepartamentos: "S",
       });
       const { itens, totalDePaginas } = paginaDeMovimentos(corpo);
       cont.paginas++;
@@ -427,8 +510,9 @@ export async function sincronizarFinanceiroDaEmpresa(
           id: true, omieTitleId: true, status: true, paidAt: true, amount: true, dueDate: true,
           categoryId: true, competence: true, closeReason: true, agreementId: true,
           omieBaixaId: true, omieReconciledAt: true, issueDate: true, documentNumber: true,
-          forecastDate: true, bankAccountId: true,
+          forecastDate: true, bankAccountId: true, costCenterId: true, projectId: true, omieDepartmentId: true,
           payments: { select: BAIXA_NO_ESPELHO },
+          allocations: { select: { categoryId: true, costCenterId: true, projectId: true, amount: true }, orderBy: { position: "asc" } },
         },
       });
       const atualPorTitulo = new Map(jaNoConnect.map((e) => [e.omieTitleId!, e]));
@@ -448,13 +532,25 @@ export async function sincronizarFinanceiroDaEmpresa(
         const categoryId = await categoriaDo(t);
         if (!categoryId) somar("sem_categoria");
         if (t.contaCorrenteId && !contaDoConnect.has(t.contaCorrenteId)) somar("conta_prevista_sem_par");
+        // O rateio (20/10): as linhas vêm do Omie, e a conta guarda o resumo
+        // delas — a categoria da linha maior, e o centro e o projeto comuns.
+        const rateio = await rateioDoTitulo(t, atual);
+        const resumo = rateio.length > 0 ? resumoDoRateio(rateio) : null;
+        // Sem rateio e com um departamento só, o centro vem dele (20/10).
+        const centroDoTitulo = !resumo && t.departamentoCodigo ? await centroDoDepartamento(t.departamentoCodigo) : undefined;
+        if (centroDoTitulo === null) somar("departamento_sem_centro");
+        const doCentro: { costCenterId?: string | null; projectId?: string | null } = resumo
+          ? { costCenterId: resumo.centroId, projectId: resumo.projetoId }
+          : centroDoTitulo !== undefined
+            ? { costCenterId: centroDoTitulo }
+            : {};
         const dados = {
           status,
           paidAt: t.pagamento,
           amount: t.valor.toFixed(2),
           dueDate: t.vencimento,
           competence: t.competencia,
-          categoryId: categoryId && !categoryId.startsWith("previa:") ? categoryId : null,
+          categoryId: resumo ? resumo.categoriaId : categoryId && !categoryId.startsWith("previa:") ? categoryId : null,
           // Emissão e número do título (19/10): o Omie manda neles como no resto.
           issueDate: t.emissao,
           documentNumber: t.numeroDocumento,
@@ -462,6 +558,8 @@ export async function sincronizarFinanceiroDaEmpresa(
           // Omie, ficam sem aqui também.
           forecastDate: t.previsao,
           bankAccountId: contaPrevista(t.contaCorrenteId),
+          // O departamento único (20/10): com ele, o centro trava na edição.
+          omieDepartmentId: t.departamentoCodigo,
         } as const;
         const titulo = await tituloNoEspelho(t);
 
@@ -471,9 +569,10 @@ export async function sincronizarFinanceiroDaEmpresa(
             const counterpartyId = await contraparteDo(t);
             await prisma.$transaction(async (tx) => {
               const criado = await tx.financeEntry.create({
-                data: { tenantId, companyId, kind: t.kind, counterpartyId, description: t.descricao, omieTitleId: t.omieTitleId, ...dados },
+                data: { tenantId, companyId, kind: t.kind, counterpartyId, description: t.descricao, omieTitleId: t.omieTitleId, ...dados, ...doCentro },
                 select: { id: true },
               });
+              if (rateio.length > 0) await gravarRateio(tx, { tenantId, entryId: criado.id, linhas: rateio });
               await espelharEFechar(tx, criado.id, titulo);
             });
           } else {
@@ -492,7 +591,13 @@ export async function sincronizarFinanceiroDaEmpresa(
         const valorCentavos = centavosDeDecimal(dados.amount);
         const plano = planoDoEspelho(atual.payments.map(paraOEspelho), titulo);
         if (plano.conflito) somar("baixas_em_conflito");
+        // Rateio que o Omie desfez sai daqui também (as linhas vazias).
+        const rateioMudou = !mesmasLinhas(atual.allocations, rateio);
         const mudou =
+          rateioMudou ||
+          (doCentro.costCenterId !== undefined && atual.costCenterId !== doCentro.costCenterId) ||
+          (doCentro.projectId !== undefined && atual.projectId !== doCentro.projectId) ||
+          atual.omieDepartmentId !== dados.omieDepartmentId ||
           estornado ||
           (atual.status === "CANCELADO") !== (status === "CANCELADO") ||
           planoMexe(plano) ||
@@ -522,9 +627,11 @@ export async function sincronizarFinanceiroDaEmpresa(
               data: {
                 ...dados,
                 categoryId: dados.categoryId ?? atual.categoryId,
+                ...doCentro,
                 ...(estornado ? { omieBaixaId: null, omiePaidAmount: null, omieReconciledAt: null } : {}),
               },
             });
+            if (rateioMudou) await gravarRateio(tx, { tenantId, entryId: atual.id, linhas: rateio });
             await espelharEFechar(tx, atual.id, titulo);
           });
         }

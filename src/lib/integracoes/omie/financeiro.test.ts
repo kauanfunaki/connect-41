@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { lerCategorias, mapearBaixasDoTitulo, mapearMovimento, mensagemDoFinanceiro, paginaDeCategorias, paginaDeMovimentos } from "./financeiro";
+import {
+  centrosDosDepartamentos,
+  lerCategorias,
+  lerDepartamentos,
+  mapearBaixasDoTitulo,
+  mapearMovimento,
+  mensagemDoFinanceiro,
+  paginaDeCategorias,
+  paginaDeDepartamentos,
+  paginaDeMovimentos,
+  rateioDoMovimento,
+  type TituloDoOmie,
+} from "./financeiro";
 
 function mov(detalhes: Record<string, unknown> = {}, resto: Record<string, unknown> = {}) {
   return {
@@ -79,11 +91,9 @@ describe("mapearMovimento", () => {
     expect("fora" in r ? r : r.situacao).toBe("CANCELADO");
   });
 
-  it("sem categoria no título, usa a de maior valor do rateio", () => {
-    const r = mapearMovimento(
-      mov({ cCodCateg: "" }, { categorias: [{ cCodCateg: "2.01.01", nValor: 100 }, { cCodCateg: "2.05.02", nValor: 1400.5 }] })
-    );
-    expect("fora" in r ? r : r.categoriaCodigo).toBe("2.05.02");
+  it("título sem rateio: categoria do título e nenhuma linha", () => {
+    const r = mapearMovimento(mov()) as TituloDoOmie;
+    expect([r.categoriaCodigo, r.rateio, r.rateioIlegivel, r.departamentoCodigo]).toEqual(["2.01.03", [], false, null]);
   });
 
   it("deixa de fora o que não é conta", () => {
@@ -132,6 +142,145 @@ describe("mapearMovimento", () => {
   });
 });
 
+// O formato visto numa resposta real em 20/10 (uma empresa cliente, com `cExibirDepartamentos: "S"`).
+const cat = (cCodCateg: string, nDistrValor: number, nDistrPercentual = 0) => ({ cCodCateg, nDistrPercentual, nDistrValor, nValorFixo: "N" });
+const dep = (cCodDepartamento: string, nDistrPercentual: number, nDistrValor: number) => ({ cCodDepartamento, nDistrPercentual, nDistrValor, nValorFixo: "N" });
+const soma = (linhas: { centavos: number }[]) => linhas.reduce((s, l) => s + l.centavos, 0);
+
+describe("rateio do título (20/10)", () => {
+  it("duas categorias: uma linha cada, somando o título, e a categoria da linha maior no resumo", () => {
+    // No título rateado, o cCodCateg vem com um código que não é nenhuma das linhas.
+    const r = mapearMovimento(mov({ cCodCateg: "1.01.99" }, { categorias: [cat("2.01.01", 500.25, 33.34), cat("2.05.02", 1000.25, 66.66)] })) as TituloDoOmie;
+    expect(r.rateio).toEqual([
+      { categoriaCodigo: "2.01.01", departamentoCodigo: null, centavos: 50025 },
+      { categoriaCodigo: "2.05.02", departamentoCodigo: null, centavos: 100025 },
+    ]);
+    expect(r.categoriaCodigo).toBe("2.05.02");
+  });
+
+  it("valores que não fecham o título: o centavo fecha pelo maior resto", () => {
+    const r = rateioDoMovimento({ categorias: [cat("A", 333.33), cat("B", 333.33), cat("C", 333.33)] }, 100000, "X");
+    expect(r.linhas.map((l) => l.centavos)).toEqual([33334, 33333, 33333]);
+    expect(soma(r.linhas)).toBe(100000);
+  });
+
+  it("sem valor nas linhas, reparte pelo percentual", () => {
+    const r = rateioDoMovimento({ categorias: [{ cCodCateg: "A", nDistrPercentual: 25 }, { cCodCateg: "B", nDistrPercentual: 75 }] }, 10001, null);
+    expect(r.linhas.map((l) => [l.categoriaCodigo, l.centavos])).toEqual([
+      ["A", 2500],
+      ["B", 7501],
+    ]);
+  });
+
+  it("uma categoria e um departamento não é rateio: o departamento vai na conta", () => {
+    const r = mapearMovimento(mov({}, { departamentos: [dep("4459988001", 100, 1500.5)] })) as TituloDoOmie;
+    expect([r.categoriaCodigo, r.rateio, r.departamentoCodigo]).toEqual(["2.01.03", [], "4459988001"]);
+  });
+
+  it("um departamento num rateio de categorias vai em todas as linhas", () => {
+    const r = rateioDoMovimento({ categorias: [cat("A", 60), cat("B", 40)], departamentos: [dep("D1", 100, 100)] }, 10000, null);
+    expect(r.linhas).toEqual([
+      { categoriaCodigo: "A", departamentoCodigo: "D1", centavos: 6000 },
+      { categoriaCodigo: "B", departamentoCodigo: "D1", centavos: 4000 },
+    ]);
+    // Rateado, o departamento mora nas linhas, e não na conta.
+    expect(r.departamentoCodigo).toBeNull();
+  });
+
+  it("uma categoria e dois departamentos: uma linha por departamento, na categoria do título", () => {
+    const r = rateioDoMovimento({ departamentos: [dep("D1", 70, 70), dep("D2", 30, 30)] }, 10000, "2.01.03");
+    expect(r.linhas).toEqual([
+      { categoriaCodigo: "2.01.03", departamentoCodigo: "D1", centavos: 7000 },
+      { categoriaCodigo: "2.01.03", departamentoCodigo: "D2", centavos: 3000 },
+    ]);
+    expect(r.categoriaCodigo).toBe("2.01.03");
+  });
+
+  it("duas categorias e dois departamentos: o cruzamento, com a soma de cada categoria exata", () => {
+    const r = rateioDoMovimento({ categorias: [cat("A", 600.01), cat("B", 399.99)], departamentos: [dep("D1", 50, 500), dep("D2", 50, 500)] }, 100000, null);
+    expect(r.linhas.map((l) => `${l.categoriaCodigo}/${l.departamentoCodigo}=${l.centavos}`)).toEqual(["A/D1=30001", "A/D2=30000", "B/D1=20000", "B/D2=19999"]);
+    expect(soma(r.linhas.filter((l) => l.categoriaCodigo === "A"))).toBe(60001);
+    expect(soma(r.linhas)).toBe(100000);
+    expect(r.categoriaCodigo).toBe("A");
+  });
+
+  it("código repetido soma numa linha; linha sem código ou sem valor sai", () => {
+    const r = rateioDoMovimento({ categorias: [cat("A", 30), cat("B", 50), cat("A", 20), cat("", 5), cat("C", 0)] }, 10000, null);
+    expect(r.linhas.map((l) => [l.categoriaCodigo, l.centavos])).toEqual([
+      ["A", 5000],
+      ["B", 5000],
+    ]);
+  });
+
+  it("lista sem valor nem percentual: ilegível, e o título fica na categoria dele", () => {
+    const r = mapearMovimento(mov({}, { categorias: [{ cCodCateg: "A" }, { cCodCateg: "B" }] })) as TituloDoOmie;
+    expect([r.rateio, r.categoriaCodigo, r.rateioIlegivel]).toEqual([[], "2.01.03", true]);
+  });
+
+  it("uma categoria só na lista vale mais que a do título", () => {
+    expect(rateioDoMovimento({ categorias: [cat("2.05.02", 100)] }, 10000, "1.01.99")).toEqual({
+      linhas: [],
+      categoriaCodigo: "2.05.02",
+      departamentoCodigo: null,
+      ilegivel: false,
+    });
+  });
+
+  it("lê também os nomes da documentação antiga (nValor) e os do ListarContasPagar", () => {
+    const antigo = rateioDoMovimento({ categorias: [{ cCodCateg: "A", nValor: 10 }, { cCodCateg: "B", nValor: 30 }] }, 4000, null);
+    const contas = rateioDoMovimento(
+      { categorias: [{ codigo_categoria: "A", valor: 10 }, { codigo_categoria: "B", valor: 30 }], departamentos: [{ cCodDep: "D1", nValDep: 40 }] },
+      4000,
+      null
+    );
+    expect(antigo.linhas.map((l) => l.centavos)).toEqual([1000, 3000]);
+    expect(contas.linhas.map((l) => l.departamentoCodigo)).toEqual(["D1", "D1"]);
+  });
+
+  it("linha que arredonda para zero sai, e sobrando uma não é rateio — com o departamento dela na conta", () => {
+    expect(rateioDoMovimento({ categorias: [cat("A", 1000), cat("B", 0.001)], departamentos: [dep("D1", 100, 1000)] }, 100000, "X")).toEqual({
+      linhas: [],
+      categoriaCodigo: "A",
+      departamentoCodigo: "D1",
+      ilegivel: false,
+    });
+  });
+});
+
+describe("departamentos", () => {
+  const departamentos = lerDepartamentos(
+    paginaDeDepartamentos({
+      pagina: 1,
+      total_de_paginas: 1,
+      departamentos: [
+        { codigo: "4459988001", descricao: "Loja Centro", estrutura: "001", inativo: "N" },
+        { codigo: "4459988002", descricao: "Administração", estrutura: "002", inativo: "N" },
+        { codigo: "4459988003", descricao: "Obra 12", estrutura: "003", inativo: "S" },
+        { codigo: "4459988004", descricao: "Sem par", estrutura: "004", inativo: "N" },
+        { codigo: "", descricao: "Sem código", estrutura: "", inativo: "N" },
+      ],
+    }).itens
+  );
+
+  it("lê a lista do ListarDepartamentos", () => {
+    expect(departamentos.map((d) => [d.codigo, d.nome, d.estrutura, d.inativo])).toEqual([
+      ["4459988001", "Loja Centro", "001", false],
+      ["4459988002", "Administração", "002", false],
+      ["4459988003", "Obra 12", "003", true],
+      ["4459988004", "Sem par", "004", false],
+    ]);
+  });
+
+  it("casa com o centro pelo código, pela estrutura ou pelo nome sem acento nem caixa", () => {
+    const mapa = centrosDosDepartamentos(departamentos, [
+      { id: "c-loja", name: "Loja do centro", code: "4459988001" },
+      { id: "c-adm", name: "ADMINISTRACAO", code: null },
+      { id: "c-obra", name: "Outra", code: "003" },
+    ]);
+    expect(Object.fromEntries(mapa)).toEqual({ "4459988001": "c-loja", "4459988002": "c-adm", "4459988003": "c-obra" });
+  });
+});
+
 describe("categorias", () => {
   it("pega o nome do grupo pela totalizadora de cima, e deixa a totalizadora de fora", () => {
     const itens = [
@@ -159,6 +308,20 @@ describe("mensagemDoFinanceiro", () => {
       "10 movimentos lidos em 1 página(s): 7 contas entrariam, 1 seriam atualizadas, 1 com pagamento parcial (em aberto, com o que já foi pago), 2 sem título (lançamentos de conta corrente)."
     );
     expect(mensagemDoFinanceiro(c, true)).toContain("7 contas novas, 1 atualizadas");
+  });
+
+  it("conta os rateados e as linhas sem centro ou sem categoria", () => {
+    const m = mensagemDoFinanceiro(
+      { lidos: 4, paginas: 1, novos: 4, rateados: 2, rateio_departamento_sem_centro: 3, rateio_linhas_sem_categoria: 1, rateio_ilegivel: 1 },
+      true
+    );
+    expect(m).toContain("2 rateadas no Omie (as linhas do rateio vêm junto)");
+    expect(m).toContain("3 linhas de rateio com departamento do Omie sem centro de custo de mesmo nome ou código no Connect (ficam sem centro)");
+    expect(m).toContain("1 linhas de rateio sem categoria");
+    expect(m).toContain("1 com rateio sem valor nem percentual no Omie (ficam numa categoria só)");
+    expect(mensagemDoFinanceiro({ lidos: 2, paginas: 1, novos: 2, departamento_sem_centro: 2 }, true)).toContain(
+      "2 com departamento do Omie sem centro de custo de mesmo nome ou código no Connect (ficam sem centro)"
+    );
   });
 
   it("avisa dos títulos com conta corrente do Omie que não tem par no Connect", () => {

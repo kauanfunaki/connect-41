@@ -90,6 +90,7 @@ const CAMPOS_DA_CONTA = {
   agreementId: true,
   omieTitleId: true,
   omieMovementId: true,
+  omieDepartmentId: true,
   omieReconciledAt: true,
   approvalStatus: true,
   counterpartyId: true,
@@ -125,6 +126,7 @@ function travasDa(conta: NonNullable<Awaited<ReturnType<typeof lerConta>>>) {
     agreementId: conta.agreementId,
     // Até a virada da empresa (lote E): depois, o Connect é a fonte.
     doOmie: presaAoOmie(conta, conta.company),
+    centroDoOmie: conta.omieDepartmentId !== null,
     conciliada: conta.bankMatches.length > 0 || conta.omieReconciledAt !== null,
     temBaixa: Number(conta.paidPrincipal.toString()) > 0,
     deRetencao: conta.retentionOrigin !== null,
