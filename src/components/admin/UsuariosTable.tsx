@@ -99,7 +99,7 @@ export function UsuariosTable({
     const isSelf = u.id === currentUserId;
     return (
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-        <Button variant="secondary" size="xs" href={`/admin/usuarios/${u.id}/editar`}>
+        <Button variant="secondary" size="xs" href={`/admin/usuarios?editar=${u.id}`} scroll={false}>
           <Pencil size={11} /> Editar
         </Button>
         {!isSelf && (
@@ -190,7 +190,8 @@ export function UsuariosTable({
           )}
           <div className="min-w-0 flex-1">
             <Link
-              href={`/admin/usuarios/${u.id}/editar`}
+              href={`/admin/usuarios?editar=${u.id}`}
+              scroll={false}
               className="font-medium text-fg break-words"
             >
               {u.name}
@@ -313,7 +314,7 @@ export function UsuariosTable({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/admin/usuarios/${u.id}/editar`} className="font-medium text-fg hover:text-brand transition-colors">
+                      <Link href={`/admin/usuarios?editar=${u.id}`} scroll={false} className="font-medium text-fg hover:text-brand transition-colors">
                         {u.name}
                       </Link>
                       {isSelf && <span className="text-fs-2 text-fg-muted ml-1.5">(você)</span>}

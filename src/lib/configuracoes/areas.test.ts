@@ -58,10 +58,11 @@ describe("menu das configurações por papel", () => {
     // Os 19 cartões do administrador em autoatendimento (levantamento de 14/10),
     // mais o Portal em duas telas (Acessos e Telas liberadas) e o atalho do
     // Horário da Agenda, que é um trecho da tela Empresa — menos Competências,
-    // que foi para Avaliações de desempenho, e Módulos, que virou parte de
-    // Setores e módulos (8A e 4A, 20/10).
+    // que foi para Avaliações de desempenho; Módulos, que virou parte de
+    // Setores e módulos; e Atendentes e vínculos, que foi para o painel do
+    // usuário e para o Chatwoot em Integrações (8A, 4A e 3A, 20/10).
     const total = Object.values(telasDoMenu(ADMIN_AUTO)).flat().length;
-    expect(total).toBe(19 + 1 + 1 - 2);
+    expect(total).toBe(19 + 1 + 1 - 3);
     expect(telasDoMenu(ADMIN)["Setores e módulos"]).toEqual(["Setores e módulos", "Campos customizados", "Tags"]);
   });
 

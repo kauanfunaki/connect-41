@@ -6,6 +6,11 @@ import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { normalizarNomeAtendente } from "@/lib/chatwoot/evaluation";
 
+// O atendimento das contas (escolha 3A dos Ajustes de 15/10, 20/10/2026): o
+// vínculo do atendente do Chatwoot com a conta, no painel do usuário, e o papel
+// de cada remetente, na seção do Chatwoot em Integrações. Moravam na tela
+// Atendentes e vínculos, que saiu.
+//
 // Vínculo manual agente do Chatwoot <-> User — mesmo critério de permissão
 // usado pra vincular contato em /conversas (isFullAccess).
 export async function vincularAgenteChatwoot(agentLinkId: string, userId: string | null): Promise<void> {
@@ -32,7 +37,8 @@ export async function vincularAgenteChatwoot(agentLinkId: string, userId: string
     metadata: { userId },
   });
 
-  revalidatePath("/admin/atendentes");
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/integracoes");
   revalidatePath("/conversas");
 }
 
@@ -82,6 +88,7 @@ export async function definirPapelDoRemetente(
     metadata: papel,
   });
 
-  revalidatePath("/admin/atendentes");
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/integracoes");
   revalidatePath("/conversas");
 }

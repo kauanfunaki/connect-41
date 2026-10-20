@@ -245,8 +245,8 @@ export default async function PessoaPage({
         )}
 
         {/* Conta de acesso — só funcionários internos. Somente leitura aqui: o
-            vínculo (e o de atendente Chatwoot, se houver) é editado numa tela só
-            em Admin → Vínculos de Acesso. */}
+            vínculo (e o de atendente Chatwoot, se houver) se edita no painel do
+            usuário, em Configurações › Usuários (3A, 20/10/2026). */}
         {person.isInternal && (
           <Card className="p-5 h-full">
             <h2 className={TITULO}>Conta de acesso</h2>
@@ -255,9 +255,14 @@ export default async function PessoaPage({
             </p>
             {/* Era um link de texto (até 30/09): é uma ação, virou botão. */}
             {canEdit && (
-              <Button href="/admin/atendentes" variant="secondary" size="sm" className="mt-4">
+              <Button
+                href={person.linkedUserId ? `/admin/usuarios?editar=${person.linkedUserId}` : "/admin/usuarios"}
+                variant="secondary"
+                size="sm"
+                className="mt-4"
+              >
                 <KeyRound size={14} />
-                Gerenciar em Configurações › Atendentes e vínculos
+                {person.linkedUserId ? "Abrir a conta em Configurações › Usuários" : "Ligar a uma conta em Configurações › Usuários"}
               </Button>
             )}
           </Card>
