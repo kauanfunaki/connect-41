@@ -4,20 +4,27 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Tag as TagIcon } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullWrite, podeExcluir } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite, podeExcluir, canManageSector } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { excluirTag } from "./actions";
+import { PainelDeCadastro } from "@/components/admin/PainelDeCadastro";
+import { TagForm } from "@/components/admin/TagForm";
+import { atualizarTag, criarTag, excluirTag } from "./actions";
 
-export default async function TagsPage() {
+export default async function TagsPage({ searchParams }: { searchParams: Promise<{ novo?: string; editar?: string }> }) {
   const ctx = await getAuthContext();
   const canManageAny = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
   if (!canManageAny) notFound();
+  // Criar e editar no painel ao lado (escolha 2B, 20/10/2026) — ver `PainelDeCadastro`.
+  const { novo, editar } = await searchParams;
 
   const prisma = getPrisma();
-  const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
+  const { labels: sectorLabels, options: allSectorOptions } = await getSectorMaps(ctx.tenantId);
+  const sectorOptions = isFullWrite(ctx.role)
+    ? allSectorOptions
+    : allSectorOptions.filter((s) => ctx.sectors.includes(s.value));
 
   const where = isFullWrite(ctx.role)
     ? { tenantId: ctx.tenantId }
@@ -27,6 +34,8 @@ export default async function TagsPage() {
     where,
     orderBy: [{ sectorCode: "asc" }, { name: "asc" }],
   });
+
+  const emEdicao = editar ? tags.find((t) => t.id === editar && canManageSector(ctx, t.sectorCode)) : undefined;
 
   const grouped = tags.reduce<Record<string, typeof tags>>((acc, t) => {
     (acc[t.sectorCode] ??= []).push(t);
@@ -39,7 +48,7 @@ export default async function TagsPage() {
         title="Tags"
         subtitle={<>{tags.length} tag{tags.length !== 1 ? "s" : ""} cadastrada{tags.length !== 1 ? "s" : ""} — reutilizáveis em todos os kanbans do mesmo setor</>}
         action={<><Button
-          href="/admin/tags/novo"
+          href="/admin/tags?novo=1"
           variant="primary" className="font-medium"
         >
           + Nova tag
@@ -63,14 +72,14 @@ export default async function TagsPage() {
               </h2>
               <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
                 {list.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <div key={t.id} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${t.id === emEdicao?.id ? "bg-surface-hover" : ""}`}>
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: t.color }} />
                       <p className="text-fs-3 text-fg">{t.name}</p>
                     </div>
                     {/* Editar é botão e Excluir vai no "⋯" (polimento de 30/09). */}
                     <AcoesDoItem
-                      editar={`/admin/tags/${t.id}/editar`}
+                      editar={`/admin/tags?editar=${t.id}`}
                       excluir={podeExcluir(ctx) ? {
                         action: excluirTag.bind(null, t.id),
                         titulo: `Excluir a tag "${t.name}"?`,
@@ -83,6 +92,23 @@ export default async function TagsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {novo === "1" && (
+        <PainelDeCadastro titulo="Nova tag" voltarPara="/admin/tags">
+          <TagForm action={criarTag} cancelHref="/admin/tags" sectorOptions={sectorOptions} />
+        </PainelDeCadastro>
+      )}
+      {emEdicao && (
+        <PainelDeCadastro titulo="Editar tag" voltarPara="/admin/tags">
+          <TagForm
+            key={emEdicao.id}
+            action={atualizarTag}
+            cancelHref="/admin/tags"
+            sectorOptions={[]}
+            defaultValues={{ id: emEdicao.id, sectorCode: emEdicao.sectorCode, name: emEdicao.name, color: emEdicao.color }}
+          />
+        </PainelDeCadastro>
       )}
     </PageContainer>
   );

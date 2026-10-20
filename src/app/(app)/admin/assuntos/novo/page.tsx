@@ -1,25 +1,7 @@
-import { notFound } from "next/navigation";
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { AssuntoForm } from "@/components/admin/AssuntoForm";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { getActiveSectors } from "@/lib/sectors";
-import { criarAssunto } from "../actions";
+import { redirect } from "next/navigation";
 
-export default async function NovoAssuntoPage() {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId || !isFullWrite(ctx.role)) notFound();
-  const setores = (await getActiveSectors(ctx.tenantId)).map((s) => ({ value: s.code, label: s.label }));
-
-  return (
-    <PageContainer>
-      <PageHeader title="Novo assunto" />
-      <div className="max-w-[720px]">
-        <Card className="p-6">
-          <AssuntoForm action={criarAssunto} cancelHref="/admin/assuntos" setores={setores} />
-        </Card>
-      </div>
-    </PageContainer>
-  );
+// O formulário abre no painel ao lado da lista desde 20/10/2026 (escolha 2B
+// dos Ajustes de 15/10). Este endereço fica para os links antigos.
+export default function NovoAssuntoPage() {
+  redirect("/admin/assuntos?novo=1");
 }
