@@ -72,8 +72,8 @@ export function TelasDoMenuGeral({ setor, telas, personalizado, disponivel, pode
         toast.error(r.error);
         return;
       }
-      setVisiveis(Object.fromEntries(telas.map((t) => [t.chave, true])));
-      toast.success(`O menu de ${setor} voltou a mostrar todas as telas.`);
+      setVisiveis(Object.fromEntries(telas.map((t) => [t.chave, t.visivel])));
+      toast.success(`O menu de ${setor} voltou aos padrões.`);
     });
   }
 
@@ -90,14 +90,14 @@ export function TelasDoMenuGeral({ setor, telas, personalizado, disponivel, pode
         <p className="text-fs-2 text-fg-muted">
           Esconder tira a tela do menu, da busca (Ctrl+K) e das telas fixadas — não bloqueia: quem tiver o endereço
           ainda consegue abrir. Quem está em mais de um setor vê, em “Todos os setores”, as telas de todos os seus
-          setores juntas. Administradores, em “Todos os setores”, veem todas as telas.
+          setores juntas. Administradores, em “Todos os setores”, veem o padrão do menu.
         </p>
       </div>
 
       {!disponivel ? (
         <Aviso tom="atencao">
-          Esta escolha ainda não pode ser salva: falta a atualização do banco desta versão. Até lá, todos os setores
-          veem todas as telas, como antes.
+          Esta escolha ainda não pode ser salva: falta a atualização do banco desta versão. Até lá, valem os padrões
+          do menu Geral e a ativação de cada módulo.
         </Aviso>
       ) : (
         !podeEditar && (
@@ -131,7 +131,7 @@ export function TelasDoMenuGeral({ setor, telas, personalizado, disponivel, pode
 
       {editavel && (personalizado || algumaEscondida) && (
         <Button variant="ghost" size="sm" onClick={voltarAoPadrao} disabled={isPending}>
-          Voltar ao padrão (todas aparecem)
+          Voltar aos padrões
         </Button>
       )}
     </section>

@@ -660,6 +660,8 @@ export async function conversarComAgente(params: {
 // requisito, se atende e onde está a evidência. A nota sai do código
 // (`calcularNota` em src/lib/recrutamento/triagem.ts), não da IA.
 
+export type AnexoEstruturado = { nome: string; mime: string; base64: string; imagem?: boolean };
+
 /** Chamada de uma volta com saída estruturada, nos dois provedores. PDF opcional. */
 async function chamarComFormato(
   c: PreparoDaChamada,
@@ -672,8 +674,13 @@ async function chamarComFormato(
     nome: string;
     schema: Record<string, unknown>;
     maxTokens: number;
+    anexos?: AnexoEstruturado[];
+    somenteOpenAi?: boolean;
+    timeoutMs?: number;
+    store?: boolean;
   }
 ): Promise<ComUso<unknown>> {
+  if (p.somenteOpenAi && c.provider !== "OPENAI") throw new Error("A triagem de chamados requer a configuração OpenAI deste escritório.");
   if (c.provider === "ANTHROPIC") {
     const client = new Anthropic({ apiKey: c.apiKey });
     const response = await client.messages.create({
@@ -702,14 +709,20 @@ async function chamarComFormato(
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${c.apiKey}`, "Content-Type": "application/json" },
+    ...(p.timeoutMs ? { signal: AbortSignal.timeout(p.timeoutMs) } : {}),
     body: JSON.stringify({
       model: c.model,
       instructions: p.sistema,
+      ...(p.store !== undefined ? { store: p.store } : {}),
+      ...(p.somenteOpenAi ? { max_output_tokens: p.maxTokens } : {}),
       input: [
         {
           role: "user",
           content: [
             ...(p.pdfBase64 ? [{ type: "input_file", filename: p.nomeDoArquivo ?? "curriculo.pdf", file_data: `data:application/pdf;base64,${p.pdfBase64}` }] : []),
+            ...(p.anexos ?? []).map(a => a.imagem
+              ? { type: "input_image", image_url: `data:${a.mime};base64,${a.base64}`, detail: "auto" }
+              : { type: "input_file", filename: a.nome, file_data: `data:${a.mime};base64,${a.base64}` }),
             { type: "input_text", text: p.texto },
           ],
         },
@@ -717,8 +730,9 @@ async function chamarComFormato(
       text: { format: { type: "json_schema", name: p.nome, schema: p.schema, strict: true } },
     }),
   });
-  if (!res.ok) throw new Error(`Falha na chamada à OpenAI: ${await res.text()}`);
+  if (!res.ok) throw new Error(p.somenteOpenAi ? `OpenAI indisponível (HTTP ${res.status}).` : `Falha na chamada à OpenAI: ${await res.text()}`);
   const data = await res.json();
+  if (p.somenteOpenAi && (data.status !== "completed" || data.output?.some((o: { content?: { type: string }[] }) => o.content?.some(b => b.type === "refusal")))) throw new Error("A OpenAI não concluiu a análise.");
   const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
   if (!text) throw new Error("Resposta da IA sem conteúdo.");
   return { valor: JSON.parse(text), uso: usoOpenAi(data.usage) };
@@ -743,6 +757,10 @@ export async function gerarEstruturado(params: {
   schema: Record<string, unknown>;
   maxTokens: number;
   contexto?: ContextoDaChamada;
+  anexos?: AnexoEstruturado[];
+  somenteOpenAi?: boolean;
+  timeoutMs?: number;
+  store?: boolean;
 }): Promise<{ valor: unknown; runId: string | null }> {
   let runId: string | null = null;
   const valor = await executarAgente({
@@ -761,6 +779,10 @@ export async function gerarEstruturado(params: {
         nome: params.nome,
         schema: params.schema,
         maxTokens: params.maxTokens,
+        anexos: params.anexos,
+        somenteOpenAi: params.somenteOpenAi,
+        timeoutMs: params.timeoutMs,
+        store: params.store,
       }),
   });
   return { valor, runId };

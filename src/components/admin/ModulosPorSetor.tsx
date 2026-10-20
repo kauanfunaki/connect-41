@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { SetorDoModuloSelect } from "@/components/admin/SetorDoModuloSelect";
@@ -105,6 +106,7 @@ function LinhaDoModulo({ m }: { m: ModuloDaLista }) {
       <div className="min-w-0">
         <p className="text-fs-3 text-fg">{m.nome}</p>
         <p className="text-fs-1 text-fg-muted">{m.descricao}</p>
+        {m.code === "helpdesk" && <Link href="/admin/modulos/helpdesk" className="text-helper text-brand hover:underline">Configurar setores solicitantes</Link>}
         {m.origem && <p className="text-fs-1 text-fg-muted mt-0.5">Transferido — origem: {m.origem}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0">

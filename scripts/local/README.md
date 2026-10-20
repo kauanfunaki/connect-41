@@ -1,10 +1,10 @@
 # Connect local, com dados fictícios
 
-O menu lateral reúne as funções do SPED em uma única entrada. Seu painel e a
-navegação interna oferecem Classificação, Apuração, De-Para CFOP, Regras e DCIP e
-DIME, conforme os módulos habilitados em Configurações. Desligar um módulo remove
-os respectivos acessos. O De-Para CFOP informa indisponibilidade enquanto o motor
-não fornecer correspondências; nenhuma conversão fiscal é presumida.
+O menu lateral oferece uma entrada **SPED**, que abre **Classificação e apuração**,
+**SPED gerados** e **Executar** ao passar o mouse ou clicar, inclusive na faixa
+recolhida e no celular. Classificação e apuração abre em Classificação; Executar
+tem as abas Executar e Histórico. As operações são simuladas e
+salvas no banco local. Guia e roteiro: [Fluxo SPED local](../../docs/FISCAL-PREVIA-VISUAL.md).
 
 Um Connect inteiro rodando na máquina, com banco próprio no Docker e só dado
 inventado. Existe para gravar os vídeos da ajuda (`scripts/videos/`), que vão para

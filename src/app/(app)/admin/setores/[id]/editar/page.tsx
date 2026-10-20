@@ -8,7 +8,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { atualizarSetor } from "../../actions";
 import { alternarTelaDoGeral, restaurarMenuGeral } from "../../menu-geral-actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { TELAS_DO_GERAL, podeConfigurarMenuGeral } from "@/lib/menuGeral";
+import { TELAS_DO_GERAL, podeConfigurarMenuGeral, telasOcultasDoGeralDoSetor } from "@/lib/menuGeral";
 import { lerOcultasDoGeral } from "@/lib/menuGeralDb";
 import { getEnabledModuleCodes } from "@/lib/modules";
 
@@ -28,7 +28,7 @@ export default async function EditarSetorPage({
   // O menu Geral do setor (14/10/2026): o que está escondido e, nas telas que
   // dependem de módulo, se o módulo está ligado no escritório.
   const [ocultasDoGeral, ligados] = await Promise.all([lerOcultasDoGeral(ctx.tenantId), getEnabledModuleCodes(ctx.tenantId)]);
-  const ocultas = new Set(ocultasDoGeral.porSetor[sector.code] ?? []);
+  const ocultas = new Set(telasOcultasDoGeralDoSetor(sector.code, ocultasDoGeral.porSetor, ocultasDoGeral.visiveisPorSetor));
   const telasDoGeral: TelaDaConfiguracao[] = TELAS_DO_GERAL.map((t) => ({
     chave: t.chave,
     rotulo: t.rotulo,
@@ -66,7 +66,7 @@ export default async function EditarSetorPage({
           <TelasDoMenuGeral
             setor={sector.label}
             telas={telasDoGeral}
-            personalizado={ocultas.size > 0}
+            personalizado={Object.hasOwn(ocultasDoGeral.porSetor, sector.code)}
             disponivel={ocultasDoGeral.disponivel}
             podeEditar={podeConfigurarMenuGeral(ctx)}
             alternar={alternarTelaDoGeral.bind(null, sector.id)}

@@ -73,7 +73,7 @@ import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
-import { menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
+import { areaSpedAtiva, menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -214,6 +214,7 @@ type Props = {
   solicitacoesLigadas?: boolean;
   /** Os Arquivos estão ligados — mostra "Arquivos" no Geral. */
   arquivosLigados?: boolean;
+  chamadosLigados?: boolean;
   /**
    * As telas do Geral que o setor (ou os setores da pessoa, em "Todos os
    * setores") não escondeu — ver `src/lib/menuGeral.ts`. Sem a prop, todas.
@@ -252,6 +253,7 @@ export function AppShell({
   unreadCount,
   solicitacoesLigadas = false,
   arquivosLigados = false,
+  chamadosLigados = false,
   telasDoGeral = TODAS_AS_TELAS_DO_GERAL,
   profileName,
   profileRoleLabel,
@@ -319,6 +321,7 @@ export function AppShell({
     noGeral("transferencias"),
     solicitacoesLigadas && noGeral("solicitacoes"),
     arquivosLigados && noGeral("arquivos"),
+    chamadosLigados && noGeral("chamados"),
     noGeral("agenda"),
   ].some(Boolean);
   // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
@@ -331,6 +334,7 @@ export function AppShell({
       )}
       {noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />}
       {solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" />}
+      {chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<Inbox size={16} />} label="Chamados" />}
       {arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" />}
       {noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />}
     </>
@@ -446,7 +450,7 @@ export function AppShell({
           {/* Na faixa, sem barra de rolagem à vista (a roda do mouse e o Tab
               rolam): a barra comia a borda dos quadrados de 40px. */}
           <nav
-            onClick={() => setMobileOpen(false)}
+            onClick={(e) => { if ((e.target as Element).closest("a")) setMobileOpen(false); }}
             className={`${
               naFaixa ? "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "scroll-y scroll-gutter-stable"
             } flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-0.5 ${larguraFinal}`}
@@ -514,11 +518,12 @@ export function AppShell({
                 {(() => {
                   const sped = menuSped(activeSectorModules);
                   const modulos = activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code));
-                  const itemSped = sped.href && (
-                    <PainelDoItem titulo="SPED" telas={sped.telas} cor={activeSector.color}>
-                      <NavItem href={sped.href} icon={<ReceiptText size={16} />} label="SPED" comTelas={sped.telas.length > 0} />
-                    </PainelDoItem>
-                  );
+                  const itemSped = sped.laterais.length > 0 && <PainelDoItem titulo="SPED" cor={activeSector.color} abrirPorClique telas={sped.laterais.map((item) => ({
+                    label: item.label, href: item.href, icon: <ModuleIcon code={item.modulo} />,
+                    ativa: areaSpedAtiva(pathname) === (item.modulo === "fiscal_classificacao" ? "SPED" : item.label),
+                  }))}>
+                    {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} />}
+                  </PainelDoItem>;
                   const diretos = modulos.filter((m) => getModuleDef(m.code)?.menuDireto);
                   const grupos = agruparModulos(modulos.filter((m) => !getModuleDef(m.code)?.menuDireto));
                   if (grupos.length <= 1 || modulos.length <= 8) {

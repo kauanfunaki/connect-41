@@ -156,7 +156,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
       {!recebe && (
         <Aviso tom="atencao" className="mb-4">
           Falta definir quem recebe as autorizações: o CNPJ do escritório contábil que o cliente informa no Portal.{" "}
-          {acesso.podeConfigurar ? "Clique em “Como pedir ao cliente” para definir." : "Peça à coordenação do setor para definir."}
+          {acesso.podeConfigurar ? "Clique em “Como pedir ao cliente” para definir." : "Peça ao administrador do setor para definir."}
         </Aviso>
       )}
 

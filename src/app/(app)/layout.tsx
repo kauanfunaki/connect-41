@@ -15,7 +15,7 @@ import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
-import { getModuleRoute, MODULOS_DO_MENU_GERAL } from "@/lib/module-catalog";
+import { getModuleRoute, MODULOS_DO_MENU_GERAL, MODULOS_SEM_MENU } from "@/lib/module-catalog";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 import { baseDomain, hostSuffix, setoresDoSeletor } from "@/lib/auth/activeSector";
@@ -24,6 +24,8 @@ import { escritoriosDaTroca } from "@/lib/auth/trocaDeEscritorio";
 import { ChatDeIA } from "@/components/shell/ChatDeIA";
 import { agentesDoChat } from "@/lib/ia/chat/agentes";
 import { PARES_DE_CAMINHO } from "@/lib/ajuda/artigos";
+import { configDoHelpdesk } from "@/lib/chamados/contexto";
+import { temAcessoAoModulo } from "@/lib/chamados/consultas";
 
 export default async function AppLayout({
   children,
@@ -78,9 +80,11 @@ export default async function AppLayout({
     getTenantModuleStates(tenantId),
     telasDoGeralDaPessoa({ ...ctx, activeSector: activeSector?.code ?? null }),
   ]);
+  const helpdeskConfig = await configDoHelpdesk(tenantId);
+  const chamadosLigados = await temAcessoAoModulo({ ctx, config: helpdeskConfig });
   const telasNavegaveis = semTelasDoGeralOcultas(
     moduleStates
-      .filter((m) => m.enabled && canViewSector(ctx, m.sectorCode))
+      .filter((m) => m.enabled && !MODULOS_SEM_MENU.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : canViewSector(ctx, m.sectorCode)))
       .map((m) => ({
         code: m.code,
         label: m.label,
@@ -94,7 +98,7 @@ export default async function AppLayout({
   const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
   const activeSectorModules = activeSector
     ? moduleStates
-        .filter((m) => m.enabled && m.sectorCode === activeSector.code && !MODULOS_DO_MENU_GERAL.has(m.code))
+        .filter((m) => m.enabled && m.sectorCode === activeSector.code && !MODULOS_DO_MENU_GERAL.has(m.code) && !MODULOS_SEM_MENU.has(m.code))
         .map((m) => ({ code: m.code, label: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "Solicitações dos clientes" : m.label, href: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "/solicitacoes" : getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
@@ -157,6 +161,7 @@ export default async function AppLayout({
         unreadCount={unreadCount}
         solicitacoesLigadas={solicitacoesLigadas}
         arquivosLigados={arquivosLigados}
+        chamadosLigados={chamadosLigados}
         telasDoGeral={telasDoGeral}
         profileName={me?.name ?? "Usuário"}
         profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}

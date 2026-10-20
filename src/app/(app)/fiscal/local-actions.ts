@@ -7,6 +7,7 @@ import { executarAcao } from "@/lib/fiscal/previa/cenario";
 import { lerEstadoFiscalLocal, type EstadoFiscalLocal } from "@/lib/fiscal/local/servidor";
 import { acaoFiscalLocalSchema } from "@/lib/fiscal/local/entrada";
 import { criarCenarioFiscalLocal } from "@/lib/fiscal/local/cenario";
+import { geracao } from "@/lib/fiscal/previa/execucao";
 
 type Resultado = { estado?: EstadoFiscalLocal; mensagem: string; erro?: boolean };
 export async function agirNoFiscalLocal(entrada: unknown, revisao: number): Promise<Resultado> {
@@ -21,7 +22,7 @@ export async function agirNoFiscalLocal(entrada: unknown, revisao: number): Prom
     : ["importar", "recuperar"].includes(tipo) ? "fiscal_acervo"
     : tipo === "classificar" ? "fiscal_classificacao"
     : ["gerar", "validar", "entregar"].includes(tipo) ? "fiscal_entregas"
-    : ["enfileirar", "processar", "cancelar", "reprocessar"].includes(tipo) ? "fiscal_operacao"
+    : ["enfileirar", "solicitar-execucao", "iniciar-execucao", "concluir-execucao", "falhar-execucao", "processar", "cancelar", "reprocessar"].includes(tipo) ? "fiscal_operacao"
     : ["confrontar", "conciliar"].includes(tipo) ? "fiscal_conferencia"
     : "fiscal_contribuicoes";
   if (tipo !== "contexto" && tipo !== "favoritar" && tipo !== "restaurar") {
@@ -30,6 +31,13 @@ export async function agirNoFiscalLocal(entrada: unknown, revisao: number): Prom
       ? await podeNoModulo(ctx, "fiscal_icms_ipi", "agir") || await podeNoModulo(ctx, "fiscal_contribuicoes", "agir")
       : await podeNoModulo(ctx, modulo, ["parametros", "empresa", "regra"].includes(tipo) ? "gerir" : "agir");
     if (!permitido || (tipo === "remover-ajuste" && !podeExcluir(ctx))) return { erro: true, mensagem: "Seu perfil não permite esta ação." };
+    if (modulo === "fiscal_operacao" && tipo !== "cancelar" && tipo !== "falhar-execucao") {
+      const dados = acao.data;
+      const execucao = "id" in dados ? estado.cenario.execucoes.find((e) => e.id === dados.id) : undefined;
+      const parametros = dados.tipo === "solicitar-execucao" ? dados.parametros : execucao?.parametros;
+      const destino = !parametros || geracao(parametros.modo) ? "fiscal_entregas" : "fiscal_acervo";
+      if (!await podeNoModulo(ctx, destino, "agir")) return { erro: true, mensagem: "Seu perfil não permite produzir resultados nesta área fiscal." };
+    }
   }
   let seguinte = estado;
   let mensagem: string;

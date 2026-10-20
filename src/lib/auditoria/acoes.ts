@@ -31,6 +31,11 @@ const x = (frase: string, extra: Partial<DescricaoDaAcao> = {}): DescricaoDaAcao
 const o = (frase: string, extra: Partial<DescricaoDaAcao> = {}): DescricaoDaAcao => ({ tipo: "outro", frase, ...extra });
 
 export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
+  "helpdesk.created": c("abriu o chamado"),
+  "helpdesk.updated": e("atualizou o chamado"),
+  "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
+  "helpdesk.category": e("configurou a categoria de chamados"),
+  "helpdesk.sla": e("configurou a política de SLA dos chamados"),
   // ── Cadastros ──────────────────────────────────────────────────────────────
   "company.create": c("criou a empresa"),
   "company.update": e("editou a empresa"),
@@ -378,6 +383,9 @@ export function codigosDoTipo(codigos: Iterable<string>, tipo: TipoDaAcao): stri
  * tela ("FinanceEntry", "DriveFolder").
  */
 export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
+  HelpdeskTicket: "chamado",
+  HelpdeskCategory: "categoria de chamados",
+  HelpdeskSlaPolicy: "política de SLA dos chamados",
   AccessAuthorization: "autorização de acesso",
   AccessAuthorizationGrantee: "quem recebe as autorizações",
   AgentConversation: "conversa com a Ceci",
@@ -459,6 +467,7 @@ export function nomeDoTipo(entityType: string | null | undefined): string | null
 // ─── Áreas ───────────────────────────────────────────────────────────────────
 
 export type ChaveDaAreaDaAuditoria =
+  | "chamados"
   | "cadastros"
   | "fiscal"
   | "bpo"
@@ -477,6 +486,7 @@ export type ChaveDaAreaDaAuditoria =
 
 /** Rótulo e cor do ponto de cada área (a cor dos setores padrão, onde há setor). */
 export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotulo: string; cor: string }>> = {
+  chamados: { rotulo: "Chamados", cor: "#2E6FB8" },
   cadastros: { rotulo: "Cadastros", cor: "#0891B2" },
   fiscal: { rotulo: "Fiscal", cor: "#C5374B" },
   bpo: { rotulo: "BPO", cor: "#B7791F" },
@@ -500,6 +510,7 @@ export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotul
  * configurações ("drive.template_" é o Modelo de pastas).
  */
 const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]> = [
+  ["helpdesk.", "chamados"],
   ["company.", "cadastros"],
   ["person.", "cadastros"],
   ["companyservice.", "cadastros"],

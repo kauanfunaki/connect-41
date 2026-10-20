@@ -851,6 +851,7 @@ async function checkItensDaGestao(tenantId: string, today: Date): Promise<number
 
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
   const checks: Array<[string, () => Promise<number>]> = [
+    ["chamados", async () => (await import("@/lib/chamados/alertas")).verificarSla(tenantId, today)],
     ["vacations", () => checkVacationsExpiring(tenantId, today)],
     ["probation", () => checkProbationDeadlines(tenantId, today)],
     ["exames", () => checkExamesVencendo(tenantId, today)],

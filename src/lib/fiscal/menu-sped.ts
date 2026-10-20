@@ -16,6 +16,18 @@ export function menuSped(modulos: readonly { code: string; href: string }[]) {
     { modulo: "fiscal_configuracoes", label: "Regras", href: "/fiscal/configuracoes?aba=regras" },
     { modulo: "fiscal_icms_ipi", label: "DCIP e DIME", href: "/fiscal/icms-ipi?aba=dcip-dime" },
   ].filter((t) => ativos.has(t.modulo));
-  const primeiro = modulos.find((m) => MODULOS_SPED.has(m.code));
-  return { telas, href: ativos.has("fiscal_painel") ? getModuleRoute("fiscal_painel")! : primeiro?.href };
+  const auxiliar = ["fiscal_painel", "fiscal_acervo", "fiscal_conferencia"].find((code) => ativos.has(code));
+  const href = telas[0]?.href ?? (auxiliar ? getModuleRoute(auxiliar) : undefined);
+  const laterais = [
+    ...(href ? [{ label: "Classificação e apuração", href, modulo: "fiscal_classificacao" }] : []),
+    ...(ativos.has("fiscal_entregas") ? [{ label: "SPED gerados", href: "/fiscal/entregas", modulo: "fiscal_entregas" }] : []),
+    ...(ativos.has("fiscal_operacao") ? [{ label: "Executar", href: "/fiscal/operacao", modulo: "fiscal_operacao" }] : []),
+  ];
+  return { telas, href, laterais };
+}
+
+export function areaSpedAtiva(pathname: string): "SPED" | "SPED gerados" | "Executar" | undefined {
+  if (pathname === "/fiscal/entregas") return "SPED gerados";
+  if (pathname === "/fiscal/operacao") return "Executar";
+  if (pathname === "/fiscal" || pathname.startsWith("/fiscal/")) return "SPED";
 }
