@@ -93,6 +93,56 @@ export async function conferirConta(entryId: string): Promise<AcaoDeContaState> 
   return null;
 }
 
+export type ResultadoDaConferencia = { error: string } | { ok: true; conferidas: number; puladas: number };
+
+/**
+ * Confere as contas marcadas (escolha 12A, 20/10/2026): o "Conferir" saiu da
+ * linha para o "⋯" e para a barra das marcadas. A mesma regra da conta a
+ * conta (`podeConferir`): só a provisória é conferida; a já conferida, paga
+ * ou cancelada fica como está e conta nas puladas.
+ */
+export async function conferirContasEmLote(valores: string[]): Promise<ResultadoDaConferencia> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const tenantId = ctx.tenantId;
+  const ids = idsDoLote(Array.isArray(valores) ? valores : []);
+  if ("erro" in ids) return { error: ids.erro };
+
+  const prisma = getPrisma();
+  const provisorias = await prisma.financeEntry.findMany({
+    where: { id: { in: ids }, tenantId, status: "PROVISORIO" },
+    select: { id: true },
+  });
+  if (provisorias.length === 0) return { error: "Nenhuma das contas marcadas está a conferir." };
+
+  // O status de novo no `where`: a que alguém conferiu ou pagou no meio-tempo
+  // fica como está. O instante marca as que esta chamada conferiu, para a
+  // auditoria registrar só elas.
+  const agora = new Date();
+  await prisma.financeEntry.updateMany({
+    where: { id: { in: provisorias.map((c) => c.id) }, tenantId, status: "PROVISORIO" },
+    data: { status: "CONFERIDO", reviewedById: ctx.userId ?? null, reviewedAt: agora },
+  });
+  const conferidas = await prisma.financeEntry.findMany({
+    where: { id: { in: provisorias.map((c) => c.id) }, tenantId, status: "CONFERIDO", reviewedAt: agora },
+    select: { id: true, counterparty: { select: { name: true } } },
+  });
+
+  for (const c of conferidas) {
+    await logAudit({
+      tenantId,
+      userId: ctx.userId,
+      action: "finance.review",
+      entityType: "FinanceEntry",
+      entityId: c.id,
+      metadata: { contraparte: c.counterparty.name, emLote: true },
+    });
+  }
+
+  revalidar();
+  return { ok: true, conferidas: conferidas.length, puladas: ids.length - conferidas.length };
+}
+
 // ─── Baixa (lote C, 19/10) ─────────────────────────────────────────────────
 //
 // A baixa deixou de ser só uma data: é um registro com conta bancária, juros,
