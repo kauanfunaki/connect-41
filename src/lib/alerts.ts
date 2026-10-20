@@ -36,6 +36,8 @@ import {
 import { SELECT_PASTA } from "@/lib/drive/servidor";
 import { representantesDasChaves, setorDasAutorizacoes } from "@/lib/autorizacoes/servidor";
 import { processarConferencias } from "@/lib/autorizacoes/serpro";
+import { acompanharNoSerpro } from "@/lib/serpro/acompanhamento";
+import { processarPedidosDoSitfis } from "@/lib/serpro/situacaoFiscal";
 import {
   diasEntre as diasAteODia,
   faixaDeAviso as faixaDaAutorizacao,
@@ -870,6 +872,11 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     // Não é alerta: é o lote da conferência das autorizações no Serpro, que
     // anda aqui porque precisa de um relógio e o agendador já roda por tenant.
     ["serpro", () => processarConferencias(tenantId)],
+    // Também não são alertas (Fase 1 do Integra Contador, 20/10/2026): os
+    // Eventos de Atualização do dia e a Caixa Postal, e o relatório de situação
+    // fiscal pedido na ficha, que o Serpro entrega depois do tempo de espera.
+    ["serpro eventos", () => acompanharNoSerpro(tenantId)],
+    ["serpro sitfis", () => processarPedidosDoSitfis(tenantId)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],
   ];
 

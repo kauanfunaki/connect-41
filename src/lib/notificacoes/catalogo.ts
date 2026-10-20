@@ -96,6 +96,9 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   AUTORIZACAO_VALIDAR: a("prazo", "warning", "Autorização de acesso a validar"),
   AUTORIZACAO_VENCENDO: a("documento", "warning", "Autorização de acesso a vencer"),
   SERPRO_CONFERENCIA: a("documento", "info", "Conferência no Serpro"),
+  // Fase 1 do Integra Contador (20/10/2026).
+  SERPRO_CAIXA_POSTAL: a("mensagem", "warning", "Caixa Postal da Receita"),
+  SERPRO_SITFIS: a("documento", "info", "Situação fiscal"),
   ADMISSAO_STALE: a("alerta", "warning", "Admissão parada"),
   HANDOFF_STALE: a("alerta", "warning", "Transferência parada"),
   FINANCE_CONTAS_DIA: a("dinheiro", "info", "Contas do dia"),
