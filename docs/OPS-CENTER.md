@@ -36,6 +36,19 @@ Resultados: `SUCCESS`, `ERROR`, `WARNING`. `processedAt` é opcional e aceita IS
 
 O produtor deve persistir `eventId` por tentativa. Retransmitir exatamente o mesmo evento devolve o ID existente e `duplicate: true`, sem duplicar evento ou aviso. O mesmo identificador com outro conteúdo devolve 409. Uma nova tentativa de processamento usa outro identificador. Após timeout, o produtor repete o mesmo payload com espera progressiva e limite de tentativas; deve manter sua fila local até confirmação. Bots antigos precisam acrescentar `eventId` e trocar o destino e a chave explicitamente.
 
+## Monitor local de heartbeat
+
+O repositório inclui `scripts/ops-heartbeat.mjs`, independente do processamento do bot. Ele não lê `ENTRADA`, `SAIDA`, `DOCS` ou qualquer pasta de rede e não envia eventos. A cada 30 segundos faz somente `POST` sem corpo para o heartbeat da automação, com timeout e até três tentativas progressivas.
+
+1. Na tela Integração, copie o slug cadastrado e gere a chave.
+2. Crie a configuração local sem versioná-la: `npm run ops:heartbeat -- --config=.local/ops-heartbeat.json`.
+3. Preencha `baseUrl`, `slug` e `token` nesse arquivo local. O token não deve ir para código, frontend ou log.
+4. Teste uma vez com `npm run ops:heartbeat -- --once --config=.local/ops-heartbeat.json`.
+5. Consulte o estado com `--status` e acompanhe com `--watch` ou `--start`.
+6. Solicite parada com `--stop`; o processo encerra no próximo intervalo, removendo o lock local.
+
+O estado e o lock ficam em `.local/ops-heartbeat-state.json` e não substituem a confirmação do servidor: sucesso só é registrado após HTTP 200. A configuração e o estado devem permanecer fora de commits e sem tokens em mensagens de erro.
+
 ## Responsáveis, erros e chamados
 
 Cada evento `ERROR` gera um aviso para o dono atual no sino/central do Connect, com link para os erros da automação. Evento e aviso são salvos na mesma transação. Sucessos, avisos e retransmissões não geram alertas de erro. Push segue a configuração e as preferências do Connect e é uma entrega complementar, de melhor esforço; uma falha no push não perde o aviso do sino. Não há envio de e-mail nesta implementação.
