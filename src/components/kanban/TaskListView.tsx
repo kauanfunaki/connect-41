@@ -69,7 +69,7 @@ const DEPTH_STEP = 20; // cada nível de subtarefa
 // borda, que eram padding do casco até o polimento de 30/09 e agora são da
 // própria célula (o cabeçalho com fundo precisa encostar na borda).
 const DOT_COL = "w-[104px]";
-// Alinha "Adicionar tarefa" e o alvo de soltar com o texto dos itens.
+// Alinha "Adicionar atividade" e o alvo de soltar com o texto dos itens.
 const CONTENT_OFFSET = 104;
 
 const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
@@ -187,7 +187,7 @@ function Row({
                 size="sm"
                 onClick={() => setExpanded((v) => !v)}
                 className="flex-shrink-0"
-                aria-label={expanded ? "Recolher subtarefas" : "Expandir subtarefas"}
+                aria-label={expanded ? "Recolher subatividades" : "Expandir subatividades"}
               >
                 <ChevronRight size={14} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
               </IconButton>
@@ -208,7 +208,7 @@ function Row({
                   isTerminal ? reabrirAction(pipelineId, item.id) : concluirAction(pipelineId, item.id)
                 );
               }}
-              aria-label={isTerminal ? "Reabrir tarefa" : "Concluir tarefa"}
+              aria-label={isTerminal ? "Reabrir atividade" : "Concluir atividade"}
               title={stage?.name ?? ""}
               className="group/dot flex-shrink-0 transition-transform hover:scale-125 disabled:cursor-default disabled:hover:scale-100"
             >
@@ -267,7 +267,7 @@ function Row({
 
         {/* Prazo e menu dividem a última célula de propósito: as tabelas desta
             tela declaram colSpan={5} em vários pontos (cabeçalho de status,
-            alvo de soltar, "Adicionar tarefa"), e uma 6ª coluna obrigaria a
+            alvo de soltar, "Adicionar atividade"), e uma 6ª coluna obrigaria a
             revisar todos eles para ganhar 24px. */}
         <td className="py-2 pr-4 w-[300px] text-right">
           <div className="flex items-center justify-end gap-1">
@@ -352,7 +352,7 @@ function TaskCard({
                 isTerminal ? reabrirAction(pipelineId, item.id) : concluirAction(pipelineId, item.id)
               )
             }
-            aria-label={isTerminal ? "Reabrir tarefa" : "Concluir tarefa"}
+            aria-label={isTerminal ? "Reabrir atividade" : "Concluir atividade"}
             title={stage?.name ?? ""}
             className="group/dot flex-shrink-0 mt-0.5 disabled:cursor-default"
           >
@@ -372,7 +372,7 @@ function TaskCard({
               size="xs"
               className="flex-shrink-0 px-1.5"
               onClick={() => setExpanded((v) => !v)}
-              aria-label={expanded ? "Recolher subtarefas" : "Expandir subtarefas"}
+              aria-label={expanded ? "Recolher subatividades" : "Expandir subatividades"}
             >
               <span className="text-fs-1 tnum">
                 {(item as TaskRow).subtasks!.filter((s) => s.isTerminal).length}/{(item as TaskRow).subtasks!.length}
@@ -488,7 +488,7 @@ function StageGroupHeader({
 
   return (
     <div className="flex items-center gap-2">
-      <IconButton type="button" size="sm" onClick={onToggleCollapsed} aria-label={collapsed ? "Expandir lista" : "Recolher lista"} aria-expanded={!collapsed} className="flex-shrink-0">
+      <IconButton type="button" size="sm" onClick={onToggleCollapsed} aria-label={collapsed ? "Expandir o estágio" : "Recolher o estágio"} aria-expanded={!collapsed} className="flex-shrink-0">
         <ChevronDown size={13} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
       </IconButton>
       {editingName && canAct ? (
@@ -521,7 +521,7 @@ function StageGroupHeader({
 
 // O mesmo formulário em modal para todos os pontos de criação, com o estágio escolhido.
 function AddTaskInline({ stageId, basePath }: { stageId: string; basePath: string }) {
-  return <Button variant="ghost" size="xs" href={`${basePath}/novo-item?estagio=${encodeURIComponent(stageId)}`} className="-ml-2.5"><Plus size={11} /> Adicionar tarefa</Button>;
+  return <Button variant="ghost" size="xs" href={`${basePath}/novo-item?estagio=${encodeURIComponent(stageId)}`} className="-ml-2.5"><Plus size={11} /> Adicionar atividade</Button>;
 }
 
 function StageGroup({
@@ -861,7 +861,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
               <tr className="text-left">
                 <th className={`${DOT_COL} bg-table-header-bg pt-2.5 pb-2 border-b border-border`} />
                 <th className="c41-a-esquerda text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 border-b border-border">
-                  <FiltroDaColuna rotulo="Tarefa" chave="tarefa" />
+                  <FiltroDaColuna rotulo="Atividade" chave="tarefa" />
                 </th>
                 <th className="c41-a-esquerda text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-44 border-b border-border">
                   <FiltroDaColuna rotulo="Tags" chave="tags" />

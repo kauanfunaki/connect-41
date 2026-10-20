@@ -40,7 +40,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
   return (
     <div>
       {links.length === 0 && (
-        <p className="text-fs-2 text-fg-muted italic mb-2">Nenhuma tarefa vinculada.</p>
+        <p className="text-fs-2 text-fg-muted italic mb-2">Nenhuma atividade vinculada.</p>
       )}
 
       {links.length > 0 && (
@@ -55,7 +55,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
                   type="button"
                   size="sm"
                   onClick={() => startTransition(() => deleteAction(l.id))}
-                  aria-label="Desvincular tarefa"
+                  aria-label="Desvincular atividade"
                   className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Trash2 size={13} />
@@ -70,7 +70,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
         picking ? (
           <div className="relative">
             <div className="flex items-center gap-2">
-              <Input compact value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar tarefa…" autoFocus />
+              <Input compact value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar atividade…" autoFocus />
               <IconButton type="button" size="md" onClick={() => { setPicking(false); setQuery(""); }} aria-label="Cancelar busca" className="flex-shrink-0">
                 <X size={14} />
               </IconButton>

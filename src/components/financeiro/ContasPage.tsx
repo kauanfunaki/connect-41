@@ -13,7 +13,7 @@ import { ContasTable } from "./ContasTable";
 import { AnaliseDeContas } from "./AnaliseDeContas";
 import { AbasDeLink, FaixaDeTotais } from "./FiltroDePeriodo";
 import { situacoesDeCobranca, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
-import { DefinirCentroDasContas } from "./DefinirCentroDasContas";
+import { AcoesEmLoteDasContas } from "./AcoesEmLoteDasContas";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Aviso } from "@/components/ui/Aviso";
@@ -290,7 +290,9 @@ export async function ContasPage({
         </>
       ) : (
         <>
-          {podeDefinirCentro && resultado.linhas.length > 0 && <DefinirCentroDasContas empresas={empresasComCentros} />}
+          {resultado.linhas.length > 0 && (
+            <AcoesEmLoteDasContas empresas={empresasComCentros} comCentro={podeDefinirCentro} aPagar={aPagar} hojeISO={saoPauloParts(agora).dateKey} />
+          )}
           <CascoDaTabela
             contagem={contarItens(resultado.linhas.length, "conta", "contas", resultado.limitada)}
             filtros={<FiltrosDaTela campos={filtros} naBarra />}
@@ -303,8 +305,9 @@ export async function ContasPage({
               podeAbrirPendencia={podeAbrirPendencia}
               podeEnviarParaAprovacao={podeEnviarParaAprovacao}
               cobranca={cobranca}
-              selecionarCentro={podeDefinirCentro}
+              selecionar
               mostrarCentro={podeDefinirCentro}
+              mostrarEmpresa={!empresaId}
             />
             {/* Os totais do topo são do recorte inteiro (somados no banco); só
                 a lista para no teto — e diz que parou (08/10/2026). */}

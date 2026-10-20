@@ -158,7 +158,7 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
       {
         chave: "tags",
         rotulo: "Tags",
-        descricao: "As etiquetas coloridas do Kanban.",
+        descricao: "As etiquetas coloridas das atividades.",
         href: "/admin/tags",
         rota: "/admin/tags",
         acesso: "gestorDeCampos",
@@ -215,7 +215,7 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
       {
         chave: "obrigacoes",
         rotulo: "Obrigações recorrentes",
-        descricao: "DAS, DCTF, folha e afins: itens do Kanban criados todo mês para cada empresa.",
+        descricao: "DAS, DCTF, folha e afins: atividades criadas todo mês para cada empresa.",
         href: "/admin/obrigacoes",
         rota: "/admin/obrigacoes",
         acesso: "admin",
@@ -242,14 +242,6 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
         descricao: "O padrão do escritório para conferir o TRCT. Cada empresa pode ter o seu.",
         href: "/admin/rescisao",
         rota: "/admin/rescisao",
-        acesso: "admin",
-      },
-      {
-        chave: "competencias",
-        rotulo: "Competências",
-        descricao: "A lista usada nas avaliações de desempenho.",
-        href: "/admin/competencias",
-        rota: "/admin/competencias",
         acesso: "admin",
       },
     ],

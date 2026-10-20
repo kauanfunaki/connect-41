@@ -31,8 +31,8 @@ export const TASK_WIDGETS: TaskWidgetDef[] = [
   },
   {
     key: "cards-kanban",
-    label: "Minhas tarefas dos kanbans",
-    description: "Tarefas de listas/kanbans atribuídas ao usuário.",
+    label: "Minhas atividades dos Quadros",
+    description: "Atividades dos Quadros atribuídas a você.",
     slot: "main",
   },
   {

@@ -82,9 +82,9 @@ export async function NovoItemContent({ id, estagio, emModal = false }: { id: st
     <PageContainer>
       {/* No caminho que a lista mostra, e não a partir de "Kanban" (P04, 15/10/2026). */}
       <Breadcrumb
-        items={[...trilhaDaLista(pipeline, sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode), { label: "Nova tarefa" }]}
+        items={[...trilhaDaLista(pipeline, sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode), { label: "Nova atividade" }]}
       />
-      <PageHeader title="Nova tarefa" />
+      <PageHeader title="Nova atividade" />
 
       {/* No cartão de 720px dos formulários curtos (30/09): na largura da
           tela, o select da empresa ia de uma borda à outra. */}

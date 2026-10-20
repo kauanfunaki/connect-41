@@ -55,7 +55,7 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
           <CampoForm
             label="Código"
             htmlFor="code"
-            helper="Gerado a partir do nome na criação — não pode ser alterado (já é usado em kanban, usuários e transferências)."
+            helper="Gerado a partir do nome na criação — não pode ser alterado (já é usado nos Quadros, nos usuários e nas transferências)."
           >
             <Input id="code" type="text" value={defaultValues.code} disabled className="font-mono" />
           </CampoForm>

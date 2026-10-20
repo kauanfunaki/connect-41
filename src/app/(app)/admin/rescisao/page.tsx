@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { Info } from "lucide-react";
-import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
@@ -42,9 +41,7 @@ export default async function AdminRescisaoPage() {
         </p>
       </Aviso>
 
-      <Card className="p-6">
-        <RescisaoConfigForm action={salvarConfigTenant} valores={valores} nivelEmpresa={false} canEdit />
-      </Card>
+      <RescisaoConfigForm action={salvarConfigTenant} valores={valores} nivelEmpresa={false} canEdit />
     </PageContainer>
   );
 }

@@ -98,7 +98,7 @@ describe("tutorial da equipe", () => {
 
   it("o aviso no celular só é prometido com as chaves configuradas", () => {
     expect(textoDe(tutorialDaEquipe(EQUIPE), "avisos")).not.toContain("celular");
-    expect(textoDe(tutorialDaEquipe({ ...EQUIPE, avisosNoCelular: true }), "avisos")).toContain("Configurações do perfil");
+    expect(textoDe(tutorialDaEquipe({ ...EQUIPE, avisosNoCelular: true }), "avisos")).toContain("Sua conta");
   });
 
   it("a boas-vindas leva o nome do escritório; sem nome, sem selo", () => {

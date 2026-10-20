@@ -24,7 +24,7 @@ export function CompletionBanner({ canAct, isCompleted, completedByLabel, conclu
       <Aviso tom="sucesso" className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2 font-medium">
           <CheckCircle2 size={16} />
-          {completedByLabel ?? "Tarefa concluída"}
+          {completedByLabel ?? "Atividade concluída"}
         </div>
         {canAct && (
           <Button

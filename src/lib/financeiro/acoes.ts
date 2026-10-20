@@ -13,7 +13,9 @@ import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
 import { podeConferir, centavosDeDecimal } from "./contas";
 import { validarBaixa, saldoEmAberto } from "./baixa/regras";
-import { registrarBaixa, apagarBaixa, RecusaDaBaixa, type OrigemDaBaixa } from "./baixa/servidor";
+import { registrarBaixa, quitarConta, apagarBaixa, RecusaDaBaixa, type OrigemDaBaixa } from "./baixa/servidor";
+import { MAXIMO_DO_LOTE, separarLote, validarDiaDoLote, type ForaDoLote } from "./baixa/lote";
+import { nomeExibicao } from "@/lib/companyName";
 import { decimalDeCentavos } from "./manual";
 import { instanteDaData } from "./periodo";
 import { setorDoModulo } from "@/lib/modules";
@@ -89,6 +91,56 @@ export async function conferirConta(entryId: string): Promise<AcaoDeContaState> 
 
   revalidar();
   return null;
+}
+
+export type ResultadoDaConferencia = { error: string } | { ok: true; conferidas: number; puladas: number };
+
+/**
+ * Confere as contas marcadas (escolha 12A, 20/10/2026): o "Conferir" saiu da
+ * linha para o "⋯" e para a barra das marcadas. A mesma regra da conta a
+ * conta (`podeConferir`): só a provisória é conferida; a já conferida, paga
+ * ou cancelada fica como está e conta nas puladas.
+ */
+export async function conferirContasEmLote(valores: string[]): Promise<ResultadoDaConferencia> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const tenantId = ctx.tenantId;
+  const ids = idsDoLote(Array.isArray(valores) ? valores : []);
+  if ("erro" in ids) return { error: ids.erro };
+
+  const prisma = getPrisma();
+  const provisorias = await prisma.financeEntry.findMany({
+    where: { id: { in: ids }, tenantId, status: "PROVISORIO" },
+    select: { id: true },
+  });
+  if (provisorias.length === 0) return { error: "Nenhuma das contas marcadas está a conferir." };
+
+  // O status de novo no `where`: a que alguém conferiu ou pagou no meio-tempo
+  // fica como está. O instante marca as que esta chamada conferiu, para a
+  // auditoria registrar só elas.
+  const agora = new Date();
+  await prisma.financeEntry.updateMany({
+    where: { id: { in: provisorias.map((c) => c.id) }, tenantId, status: "PROVISORIO" },
+    data: { status: "CONFERIDO", reviewedById: ctx.userId ?? null, reviewedAt: agora },
+  });
+  const conferidas = await prisma.financeEntry.findMany({
+    where: { id: { in: provisorias.map((c) => c.id) }, tenantId, status: "CONFERIDO", reviewedAt: agora },
+    select: { id: true, counterparty: { select: { name: true } } },
+  });
+
+  for (const c of conferidas) {
+    await logAudit({
+      tenantId,
+      userId: ctx.userId,
+      action: "finance.review",
+      entityType: "FinanceEntry",
+      entityId: c.id,
+      metadata: { contraparte: c.counterparty.name, emLote: true },
+    });
+  }
+
+  revalidar();
+  return { ok: true, conferidas: conferidas.length, puladas: ids.length - conferidas.length };
 }
 
 // ─── Baixa (lote C, 19/10) ─────────────────────────────────────────────────
@@ -296,6 +348,186 @@ export async function registrarPagamento(formData: FormData): Promise<{ error: s
 
   revalidar();
   return { ok: true, quitada: gravada.quitada };
+}
+
+// ─── Baixa em lote (fila do BPO, 19/10) ──────────────────────────────────────
+//
+// As contas marcadas na tela, cada uma pelo saldo, num dia só — ver
+// `baixa/lote.ts`. A janela pede o que vai entrar (`dadosDaBaixaEmLote`) e
+// grava (`registrarPagamentosEmLote`).
+
+export type ContaDoLote = {
+  id: string;
+  contraparteNome: string;
+  empresaId: string;
+  empresaNome: string;
+  vencimentoKey: string;
+  saldoCentavos: number;
+};
+
+export type DadosDoLote =
+  | {
+      ok: true;
+      kind: "PAGAR" | "RECEBER";
+      entram: ContaDoLote[];
+      ficam: ForaDoLote[];
+      /** As empresas das contas que entram, com as contas bancárias de cada uma. */
+      empresas: { id: string; nome: string; contas: { id: string; nome: string }[] }[];
+    }
+  | { ok: false; erro: string };
+
+function idsDoLote(valores: unknown[]): string[] | { erro: string } {
+  const ids = [...new Set(valores.map((v) => String(v ?? "")).filter(Boolean))];
+  if (ids.length === 0) return { erro: "Marque ao menos uma conta." };
+  if (ids.length > MAXIMO_DO_LOTE) return { erro: `No máximo ${MAXIMO_DO_LOTE} contas por lote.` };
+  return ids;
+}
+
+/** As contas do lote, separadas no que entra e no que fica — a janela e a gravação leem igual. */
+async function lerLote(tenantId: string, ids: string[]) {
+  const linhas = await getPrisma().financeEntry.findMany({
+    where: { id: { in: ids }, tenantId },
+    select: {
+      id: true,
+      kind: true,
+      status: true,
+      amount: true,
+      paidPrincipal: true,
+      approvalStatus: true,
+      dueDate: true,
+      companyId: true,
+      company: { select: { name: true, displayName: true } },
+      counterparty: { select: { name: true } },
+    },
+    orderBy: { dueDate: "asc" },
+  });
+  const tipos = new Set(linhas.map((l) => l.kind));
+  const separadas = separarLote(
+    linhas.map((l) => ({
+      id: l.id,
+      contraparteNome: l.counterparty.name,
+      empresaId: l.companyId,
+      empresaNome: nomeExibicao(l.company),
+      vencimentoKey: saoPauloParts(l.dueDate).dateKey,
+      status: l.status,
+      saldoCentavos: saldoEmAberto(centavosDeDecimal(l.amount), centavosDeDecimal(l.paidPrincipal)),
+      bloqueio: motivoDoBloqueioDeBaixa(l),
+    }))
+  );
+  return { linhas, tipos, ...separadas };
+}
+
+/** O que a janela da baixa em lote mostra: as que entram, as que ficam e as contas bancárias. */
+export async function dadosDaBaixaEmLote(valores: string[]): Promise<DadosDoLote> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { ok: false, erro: erro ?? "Não autenticado" };
+  const ids = idsDoLote(Array.isArray(valores) ? valores : []);
+  if ("erro" in ids) return { ok: false, erro: ids.erro };
+  const lote = await lerLote(ctx.tenantId, ids);
+  if (lote.linhas.length !== ids.length) return { ok: false, erro: "Alguma conta marcada não existe mais — atualize a tela." };
+  if (lote.tipos.size > 1) return { ok: false, erro: "Marque só contas a pagar ou só contas a receber." };
+  const empresas = [...new Map(lote.entram.map((c) => [c.empresaId, c.empresaNome])).entries()];
+  return {
+    ok: true,
+    kind: lote.linhas[0]!.kind,
+    entram: lote.entram.map(({ id, contraparteNome, empresaId, empresaNome, vencimentoKey, saldoCentavos }) => ({
+      id,
+      contraparteNome,
+      empresaId,
+      empresaNome,
+      vencimentoKey,
+      saldoCentavos,
+    })),
+    ficam: lote.ficam,
+    empresas: await Promise.all(empresas.map(async ([id, nome]) => ({ id, nome, contas: await contasDaEmpresa(ctx.tenantId, id) }))),
+  };
+}
+
+export type ResultadoDoLote =
+  | { error: string }
+  | { ok: true; baixadas: number; totalCentavos: number; recusadas: ForaDoLote[] };
+
+/**
+ * Baixa as contas marcadas pelo saldo de cada uma, no dia informado, com a
+ * conta bancária da empresa de cada uma (`conta:<empresaId>`, opcional).
+ *
+ * Uma transação por conta: a que foi recusada — paga por outra pessoa no
+ * meio-tempo, aprovação pendente — vai para `recusadas`, e as outras seguem.
+ * O registro (`quitarConta`) relê o saldo com a conta travada, então a conta
+ * que alguém pagou em parte enquanto a janela estava aberta é quitada pelo que
+ * falta, e não pelo saldo que a janela mostrou.
+ */
+export async function registrarPagamentosEmLote(formData: FormData): Promise<ResultadoDoLote> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const tenantId = ctx.tenantId;
+  const ids = idsDoLote(formData.getAll("entryIds"));
+  if ("erro" in ids) return { error: ids.erro };
+  const dia = validarDiaDoLote(String(formData.get("data") ?? ""), saoPauloParts(new Date()).dateKey);
+  if (!dia.ok) return { error: dia.erro };
+
+  const lote = await lerLote(tenantId, ids);
+  if (lote.linhas.length !== ids.length) return { error: "Alguma conta marcada não existe mais — atualize a tela." };
+  if (lote.tipos.size > 1) return { error: "Marque só contas a pagar ou só contas a receber." };
+  if (lote.entram.length === 0) return { error: "Nenhuma das contas marcadas pode ser baixada." };
+
+  // A conta bancária de cada empresa, conferida: só conta ativa da própria empresa.
+  const bancoDa = new Map<string, string | null>();
+  for (const empresaId of new Set(lote.entram.map((c) => c.empresaId))) {
+    const escolhida = String(formData.get(`conta:${empresaId}`) ?? "").trim() || null;
+    if (escolhida) {
+      const banco = await getPrisma().bankAccount.findFirst({ where: { id: escolhida, tenantId, companyId: empresaId, active: true }, select: { id: true } });
+      if (!banco) return { error: "Conta bancária não encontrada na empresa — atualize a tela." };
+    }
+    bancoDa.set(empresaId, escolhida);
+  }
+  const observacao = String(formData.get("observacao") ?? "").trim().slice(0, 255) || null;
+  const paidAt = instanteDaData(dia.dataKey);
+
+  const recusadas: ForaDoLote[] = [...lote.ficam];
+  let baixadas = 0;
+  let totalCentavos = 0;
+  for (const c of lote.entram) {
+    try {
+      const b = await getPrisma().$transaction(async (tx) => {
+        const gravada = await quitarConta(tx, {
+          tenantId,
+          entryId: c.id,
+          paidAt,
+          bankAccountId: bancoDa.get(c.empresaId) ?? null,
+          note: observacao,
+          origin: "MANUAL",
+          userId: ctx.userId || null,
+        });
+        await sincronizarAcordos(tx, tenantId, [c.id]);
+        return gravada;
+      });
+      baixadas++;
+      totalCentavos += b.caixaCentavos;
+      await logAudit({
+        tenantId,
+        userId: ctx.userId,
+        action: "finance.pay",
+        entityType: "FinanceEntry",
+        entityId: c.id,
+        metadata: {
+          kind: lote.linhas[0]!.kind,
+          contraparte: c.contraparteNome,
+          pagoEm: dia.dataKey,
+          valor: decimalDeCentavos(b.caixaCentavos),
+          contaBancaria: bancoDa.get(c.empresaId) ?? null,
+          baixa: b.paymentId,
+          emLote: true,
+        },
+      });
+    } catch (err) {
+      if (!(err instanceof RecusaDaBaixa)) throw err;
+      recusadas.push({ id: c.id, contraparteNome: c.contraparteNome, motivo: err.message });
+    }
+  }
+
+  revalidar();
+  return { ok: true, baixadas, totalCentavos, recusadas };
 }
 
 /**
