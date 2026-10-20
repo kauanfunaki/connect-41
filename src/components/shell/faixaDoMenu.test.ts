@@ -123,18 +123,18 @@ describe("menu recolhido: a faixa de ícones", () => {
     expect(inicio.slice(0, inicio.indexOf("</a>"))).not.toContain('data-marca="telas"');
   });
 
-  it("no topo, o setor ativo com a bolinha da cor dele; o clique abre a troca de setor", () => {
+  // Ajustes de 15/10 (G1): no topo, a marca do Connect levando ao Início, como
+  // a logo da coluna aberta. Era o setor ativo abrindo a troca de setor, que
+  // continua no botão do cabeçalho.
+  it("no topo, a marca do Connect, que leva ao Início — sem a troca de setor", () => {
     const aside = lateral(casco(true));
     expect(aside).not.toContain("logo-horizontal");
-    const setor = tagCom(aside, "Setor DP. Trocar setor ou escritório");
-    expect(setor).toMatch(/^<button/);
-    expect(setor).toContain('data-dica="DP\nTrocar setor ou escritório"');
-    expect(aside).toMatch(/data-marca="cor-do-setor"[^>]*style="background-color:#7C5CBF"/);
-  });
-
-  it("sem nada para trocar, o setor só aparece (não é botão)", () => {
-    const aside = lateral(casco(true, { sectors: [DP] }));
-    expect(tagCom(aside, "Setor DP")).toMatch(/^<span role="img"/);
+    const marca = tagCom(aside, "Ir para o Início");
+    expect(marca).toMatch(/^<a /);
+    expect(marca).toContain('href="/home"');
+    expect(marca).toContain('data-dica="Início"');
+    expect(aside).toContain("/brand/symbol-color.svg");
+    expect(aside).not.toContain("Trocar setor ou escritório");
   });
 
   it("a busca vira a lupa, com o atalho na dica", () => {
@@ -147,7 +147,6 @@ describe("menu recolhido: a faixa de ícones", () => {
 
   it("em Todos os setores, cada setor é o ícone com a bolinha da cor", () => {
     const aside = lateral(casco(true, { activeSector: null, activeSectorModules: [] }));
-    expect(tagCom(aside, "Todos os setores. Trocar setor ou escritório")).toMatch(/^<button/);
     const fiscal = aside.slice(aside.indexOf('aria-label="Fiscal"'));
     expect(fiscal.slice(0, fiscal.indexOf("</button>"))).toContain('style="background:#C5374B"');
     // "Geral" abre a lista: sem fio em cima; "Fixadas" e "Meus Setores" com.

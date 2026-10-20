@@ -51,9 +51,35 @@ function temaDoAparelho(): Theme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+const EVENTO_DO_TEMA = "c41-tema";
+
 export function applyPreferencia(next: PreferenciaDeTema): void {
   document.cookie = `theme=${next}; path=/; max-age=${ONE_YEAR}; samesite=lax`;
   document.documentElement.setAttribute("data-theme", next === "system" ? temaDoAparelho() : next);
+  // A escolha que não muda o `data-theme` (escuro → "do aparelho", com o
+  // aparelho no escuro) também avisa quem mostra a preferência.
+  window.dispatchEvent(new Event(EVENTO_DO_TEMA));
+}
+
+/**
+ * O tema como store do `useSyncExternalStore` (Ajustes 15/10, G5). Avisa
+ * quando o `data-theme` do <html> muda — o botão, as configurações, o script
+ * do <head> seguindo o aparelho — ou quando a preferência é gravada.
+ *
+ * É o store, e não um `useState(readTheme)`, que conserta o botão no tema
+ * errado: o servidor não tem DOM e desenhava o "claro"; o cliente começava já
+ * no "escuro" e, no React 19, a hidratação não corrige atributo divergente —
+ * o botão ficava no claro até o primeiro clique. Com o store, a hidratação usa
+ * o valor do servidor e o React troca para o do navegador logo em seguida.
+ */
+export function assinarTema(aviso: () => void): () => void {
+  const observador = new MutationObserver(aviso);
+  observador.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  window.addEventListener(EVENTO_DO_TEMA, aviso);
+  return () => {
+    observador.disconnect();
+    window.removeEventListener(EVENTO_DO_TEMA, aviso);
+  };
 }
 
 /** Escolha explícita de claro/escuro (o botão da topbar). */

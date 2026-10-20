@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { formatarCompetencia } from "@/lib/format";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListFilter, Search, X } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
@@ -15,8 +16,12 @@ export type LinhaDoFiltro = { id: string; valores: ValoresDaLinha };
 export type CampoDaColuna = {
   chave: string;
   rotulo: string;
-  /** `data`: o valor vem em ISO, aparece em dd/mm/aaaa e ordena do mais recente para o mais antigo. */
-  tipo?: "texto" | "data";
+  /**
+   * `data`: o valor vem em ISO, aparece em dd/mm/aaaa e ordena do mais recente
+   * para o mais antigo. `competencia`: vem "AAAA-MM", aparece "Out/26" e ordena
+   * igual — o "Out/26" como texto saía em ordem alfabética de mês (Ajustes 15/10).
+   */
+  tipo?: "texto" | "data" | "competencia";
 };
 
 type Filtros = Record<string, string[]>;
@@ -47,6 +52,7 @@ function passa(l: LinhaDoFiltro, filtros: Filtros, exceto?: string): boolean {
 function rotuloDoValor(v: string, tipo: CampoDaColuna["tipo"]): string {
   if (v === VAZIO) return "(vazio)";
   if (tipo === "data" && /^\d{4}-\d{2}-\d{2}/.test(v)) return `${v.slice(8, 10)}/${v.slice(5, 7)}/${v.slice(0, 4)}`;
+  if (tipo === "competencia" && /^\d{4}-\d{2}$/.test(v)) return formatarCompetencia(v);
   return v;
 }
 
@@ -349,7 +355,7 @@ export function FiltroDaColuna({
       contagem.set(v, (contagem.get(v) ?? 0) + 1);
     }
     const todos = [...contagem.entries()].map(([valor, n]) => ({ valor, n, rotulo: rotuloDoValor(valor, campo.tipo) }));
-    if (campo.tipo === "data") todos.sort((a, b) => b.valor.localeCompare(a.valor));
+    if (campo.tipo === "data" || campo.tipo === "competencia") todos.sort((a, b) => b.valor.localeCompare(a.valor));
     else todos.sort((a, b) => a.valor.localeCompare(b.valor, "pt-BR", { numeric: true, sensitivity: "base" }));
     return todos;
   }, [ctx, campo]);
