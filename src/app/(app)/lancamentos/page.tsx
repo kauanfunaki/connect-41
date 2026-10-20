@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { presaAoOmie } from "@/lib/integracoes/omie/virada";
 import { NotebookPen, Plus, Upload } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
@@ -266,6 +267,9 @@ async function ListaDeManuais({
     where: { tenantId, companyId, competence: mes, fiscalDocumentId: null },
     select: {
       id: true,
+      omieTitleId: true,
+      omieMovementId: true,
+      company: { select: { omieCutoverAt: true } },
       kind: true,
       status: true,
       amount: true,
@@ -343,7 +347,7 @@ async function ListaDeManuais({
                       {podeCancelar && (
                         <span className="ml-auto flex gap-1.5">
                           {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
-                          {podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
+                          {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && <CancelarLancamento entryId={l.id} />}
                         </span>
                       )}
                     </PeDoCartao>
@@ -413,7 +417,7 @@ async function ListaDeManuais({
                             {podeCancelar && (
                               <div className="flex flex-wrap justify-end gap-1.5">
                                 {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
-                                {podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
+                                {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && <CancelarLancamento entryId={l.id} />}
                               </div>
                             )}
                           </td>

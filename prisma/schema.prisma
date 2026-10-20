@@ -1201,6 +1201,11 @@ model Company {
   // de DDL. SetNull, nunca Cascade: apagar um grupo não pode apagar as
   // empresas do cliente.
   clientGroupId         String?
+  /// A virada do Omie para o Connect (lote E, 20/10/2026): desde quando o
+  /// Connect é a fonte do financeiro desta empresa. Nula enquanto as contas
+  /// vêm do Omie — até a virada, a conta que veio de lá é do Omie: o Connect
+  /// não a edita, não a baixa nem a cancela, porque a leitura seguinte desfaria.
+  omieCutoverAt         DateTime?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
