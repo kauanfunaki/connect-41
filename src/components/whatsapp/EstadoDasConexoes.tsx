@@ -33,7 +33,7 @@ export function EstadoDasConexoes({ conexoes, podeConfigurar }: { conexoes: Cone
         </span>
         {/* Botão, e não link de texto (30/09): é a ação de conectar. */}
         {podeConfigurar && (
-          <Button href="/admin/integracoes" variant="secondary" size="sm">
+          <Button href="/admin/integracoes?integracao=whatsapp_recrutamento" variant="secondary" size="sm">
             Conectar em Integrações
           </Button>
         )}
