@@ -51,8 +51,9 @@ type Props = {
 // Card recolhido (grid) que abre um painel lateral com o anel de nota +
 // sub-notas + resumo geral + lista de atendimentos — o anel só existe dentro
 // do painel (por pedido do usuário: "só deve aparecer quando eu clicar no
-// card"). Vínculo com usuário saiu daqui — vive em /admin/atendentes agora,
-// pra não aparecer toda vez que alguém só quer ver a nota (ver Sessions).
+// card"). Vínculo com usuário saiu daqui — vive no painel do usuário, em
+// /admin/usuarios (era /admin/atendentes até 20/10/2026), pra não aparecer
+// toda vez que alguém só quer ver a nota (ver Sessions).
 export function AgentCard({
   groupKey, label, linkedUserLabel, avatarUrl, avgScore, avgWriting, avgSla, count, evaluations,
   summary, canGenerateSummary, generateSummaryAction, excludeConversationAction,
