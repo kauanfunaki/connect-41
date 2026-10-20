@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { RECORTES_A_PAGAR, RECORTES_A_RECEBER } from "@/lib/financeiro/exportacao";
+import { instanciaDoFinanceiro } from "@/lib/integracoes/omie/contas";
 import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3, Download } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -141,6 +142,24 @@ export async function ContasPage({
   const podeAbrirPendencia = pendenciasLigado && canActOnSector(ctx, setorDePendencias ?? "bpo");
   const podeEnviarParaAprovacao = kind === "PAGAR" && aprovacoesLigado && canActOnSector(ctx, setorDeAprovacoes ?? "bpo");
 
+  // A empresa escolhida ainda é lida do Omie (lote E): as contas que vieram de
+  // lá se pagam e cancelam no Omie até a virada — a tela diz isso no topo, em
+  // vez de só recusar no clique.
+  const lidaDoOmie = empresaId
+    ? await prisma.company
+        .findFirst({ where: { id: empresaId, tenantId: ctx.tenantId }, select: { omieCutoverAt: true } })
+        .then(async (e) =>
+          e && !e.omieCutoverAt
+            ? Boolean(
+                await prisma.tenantIntegration.findFirst({
+                  where: { tenantId: ctx.tenantId, integrationCode: "omie", instanceKey: instanciaDoFinanceiro(empresaId), enabled: true },
+                  select: { id: true },
+                })
+              )
+            : false
+        )
+    : false;
+
   const [resultado, competencias] = await Promise.all([
     listarContas(
       ctx.tenantId,
@@ -220,6 +239,13 @@ export async function ContasPage({
           uma lista — o menu é o caminho de volta. */}
       <PageHeader title={titulo} subtitle={subtitulo} />
       {filtroDaEmpresa}
+      {lidaDoOmie && (
+        <Aviso tom="marca" className="mb-4">
+          As contas desta empresa ainda são lidas do Omie: as que vieram de lá se pagam, cancelam e alteram no Omie, e a
+          leitura traz para cá a cada 6 horas. Quando o BPO passar a trabalhar só no Connect, faça a virada em
+          Configurações › Integrações › Omie por empresa.
+        </Aviso>
+      )}
 
       {/* Na ordem empresa → abas → totais → lista (15/10/2026): as abas
           vinham depois dos cartões. */}
