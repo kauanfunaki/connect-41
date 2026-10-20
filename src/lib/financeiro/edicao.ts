@@ -47,7 +47,7 @@ export type ContaParaEditar = {
   closeReason: "CANCELADO" | "RENEGOCIADO" | "PERDA" | null;
   fiscalDocumentId: string | null;
   agreementId: string | null;
-  /** Título ou movimento que veio do Omie (`omieTitleId` ou `omieMovementId`). */
+  /** Título ou movimento que veio do Omie, numa empresa que ainda não virou para o Connect (lote E). */
   doOmie: boolean;
   /** Ligada a uma linha do extrato — no Connect ou pelo Omie. */
   conciliada: boolean;

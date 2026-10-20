@@ -7,6 +7,7 @@
 // numa delas faria a outra importar de um vizinho por acidente.
 
 import { revalidatePath } from "next/cache";
+import { MOTIVO_DO_OMIE, presaAoOmie } from "@/lib/integracoes/omie/virada";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
@@ -403,7 +404,9 @@ async function lerLote(tenantId: string, ids: string[]) {
       approvalStatus: true,
       dueDate: true,
       companyId: true,
-      company: { select: { name: true, displayName: true } },
+      omieTitleId: true,
+      omieMovementId: true,
+      company: { select: { name: true, displayName: true, omieCutoverAt: true } },
       counterparty: { select: { name: true } },
     },
     orderBy: { dueDate: "asc" },
@@ -418,7 +421,7 @@ async function lerLote(tenantId: string, ids: string[]) {
       vencimentoKey: saoPauloParts(l.dueDate).dateKey,
       status: l.status,
       saldoCentavos: saldoEmAberto(centavosDeDecimal(l.amount), centavosDeDecimal(l.paidPrincipal)),
-      bloqueio: motivoDoBloqueioDeBaixa(l),
+      bloqueio: presaAoOmie(l, l.company) ? MOTIVO_DO_OMIE.baixa : motivoDoBloqueioDeBaixa(l),
     }))
   );
   return { linhas, tipos, ...separadas };

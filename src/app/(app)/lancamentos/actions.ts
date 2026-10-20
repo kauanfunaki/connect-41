@@ -6,6 +6,7 @@
 // para as telas acompanharem o módulo se ele for movido de setor num cliente.
 
 import { revalidatePath } from "next/cache";
+import { presaAoOmie } from "@/lib/integracoes/omie/virada";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -327,14 +328,25 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
   if (!ctx.tenantId) return { error: "Não autenticado." };
   const conta = await prisma.financeEntry.findFirst({
     where: { id: entryId, tenantId: ctx.tenantId },
-    select: { id: true, companyId: true, status: true, paidAt: true, fiscalDocumentId: true, agreementId: true, paidPrincipal: true },
+    select: {
+      id: true,
+      companyId: true,
+      status: true,
+      paidAt: true,
+      fiscalDocumentId: true,
+      agreementId: true,
+      paidPrincipal: true,
+      omieTitleId: true,
+      omieMovementId: true,
+      company: { select: { omieCutoverAt: true } },
+    },
   });
   if (!conta) return { error: "Lançamento não encontrado." };
 
   const c = await contexto(conta.companyId);
   if (!c.ok) return { error: c.erro };
 
-  const veredito = podeCancelarManual(conta);
+  const veredito = podeCancelarManual({ ...conta, presoAoOmie: presaAoOmie(conta, conta.company) });
   if (!veredito.pode) return { error: veredito.motivo };
 
   // Motivo explícito desde a cobrança: `CANCELADO` com motivo nulo é só o
