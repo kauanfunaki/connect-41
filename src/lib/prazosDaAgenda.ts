@@ -45,7 +45,7 @@ export type PrazoDaAgenda = {
 };
 
 export const ROTULO_DO_PRAZO: Record<TipoDePrazo, { um: string; varios: string }> = {
-  tarefa: { um: "tarefa", varios: "tarefas" },
+  tarefa: { um: "atividade", varios: "atividades" },
   "conta-pagar": { um: "conta a pagar", varios: "contas a pagar" },
   "conta-receber": { um: "conta a receber", varios: "contas a receber" },
   pendencia: { um: "pendência com o cliente", varios: "pendências com o cliente" },
@@ -210,7 +210,7 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string)
       chave: `tarefa-${c.id}`,
       dia: dia(c.dueDate!),
       tipo: "tarefa",
-      titulo: c.title ?? "Card sem título",
+      titulo: c.title ?? "Atividade sem título",
       detalhe: c.pipeline.name,
       setor: c.pipeline.sectorCode,
       href: `/kanban/${c.pipelineId}/itens/${c.id}`,

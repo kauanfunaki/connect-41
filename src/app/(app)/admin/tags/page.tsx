@@ -51,7 +51,7 @@ export default async function TagsPage() {
           <EmptyState
             icon={<TagIcon />}
             title="Nenhuma tag cadastrada"
-            description="Use “+ Nova tag”, no alto da tela, para cadastrar tags reutilizáveis que marcam itens de kanban do mesmo setor."
+            description="Use “+ Nova tag”, no alto da tela, para cadastrar tags reutilizáveis que marcam as atividades do mesmo setor."
           />
         </Card>
       ) : (
@@ -74,7 +74,7 @@ export default async function TagsPage() {
                       excluir={podeExcluir(ctx) ? {
                         action: excluirTag.bind(null, t.id),
                         titulo: `Excluir a tag "${t.name}"?`,
-                        descricao: "Ela sai de todos os itens de kanban e cadastros em que estiver marcada.",
+                        descricao: "Ela sai de todas as atividades e cadastros em que estiver marcada.",
                       } : undefined}
                     />
                   </div>

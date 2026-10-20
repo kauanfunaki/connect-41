@@ -48,8 +48,8 @@ export default async function TenantPage() {
         </Card>
 
         {/* Horário da Agenda (05/10/2026): o padrão de quem não definiu um
-            próprio em /configuracoes. O `id` é o destino do item "Horário da
-            Agenda" do menu das configurações (14/10/2026). */}
+            próprio em /configuracoes. O `id` é o destino do link "Horário da
+            Agenda" no cartão da área, no início das configurações (14/10/2026). */}
         <div id="horario-da-agenda" className="mt-10 mb-4 scroll-mt-6">
           <h2 className="text-section font-semibold text-fg">Horário da Agenda</h2>
           <p className="text-helper text-fg-muted mt-0.5">

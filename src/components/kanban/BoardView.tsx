@@ -127,9 +127,10 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           active={view}
           onChange={setView}
           items={[
-            // "Listas" e "Kanban" desde 14/10/2026 (eram "Lista" e "Quadro"):
-            // com a tela do menu chamada Quadros, "Quadro" aqui ficava repetido.
-            { key: "list", label: "Listas", icon: <List size={14} /> },
+            // "Lista" e "Kanban": as duas visões da tarefa (Ajustes 15/10, G4 —
+            // Quadro › Pasta › Tarefa). Foram "Lista"/"Quadro" até 14/10 e "Listas"
+            // até 20/10, quando a lista virou Tarefa e o nome deixou de repetir.
+            { key: "list", label: "Lista", icon: <List size={14} /> },
             { key: "board", label: "Kanban", icon: <Columns3 size={14} /> },
           ]}
         />
@@ -138,7 +139,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
             (padrão aceito em 08/10/2026) — era "3 de 3" solto na ponta direita.
             Busca e Filtros vão para a direita. */}
         <p className="text-ui min-w-0">
-          <span className="font-semibold text-fg">{contarItens(filtered.length, "tarefa", "tarefas")}</span>
+          <span className="font-semibold text-fg">{contarItens(filtered.length, "atividade", "atividades")}</span>
           {filtered.length !== items.length && <span className="text-fg-muted tabular-nums"> de {formatarNumero(items.length, 0)}</span>}
         </p>
 
@@ -149,7 +150,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar título, descrição…"
-            aria-label="Buscar tarefa"
+            aria-label="Buscar atividade"
             className="w-56 max-w-full"
           />
 

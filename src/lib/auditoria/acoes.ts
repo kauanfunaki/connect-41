@@ -426,7 +426,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   OAuthAccount: "conta das reuniões",
   OmieEmissao: "emissão de NFS-e",
   Person: "pessoa",
-  PipelineItem: "item do Kanban",
+  PipelineItem: "atividade",
   PortalApprovalLimit: "alçada de aprovação",
   PortalTelaBloqueada: "tela do portal",
   PortalUser: "acesso ao portal",
