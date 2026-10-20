@@ -16,6 +16,10 @@ import { dadosParaEditar, editarLancamento, type DadosDaEdicao } from "@/lib/fin
 import type { CampoEditavel } from "@/lib/financeiro/edicao";
 import { CampoDeProjeto } from "./CampoDeProjeto";
 import { CamposDoRateio } from "./CamposDoRateio";
+import { CamposDasRetencoes, totalRetido, type ValoresDasRetencoes } from "./CamposDasRetencoes";
+import { formatarReaisDeCentavos } from "@/lib/format";
+import { centavosDeTexto } from "@/lib/financeiro/manual";
+import { TRIBUTO } from "@/lib/financeiro/retencoes";
 import { AnexosDaConta, CAMPO_DO_ANEXO_DA_CONTA } from "./AnexosDaConta";
 
 // A janela "Editar lançamento" (19/10, pedido 1 do BPO). Abre do "⋯" de
@@ -27,6 +31,8 @@ type Carregado = Extract<DadosDaEdicao, { ok: true }>;
 
 /** "2026-10-15" → "15/10/2026". */
 const dataBr = (key: string) => key.split("-").reverse().join("/");
+/** "1.234,56" — como o campo de valor recebe. */
+const valorNoCampo = (centavos: number) => Number(centavos / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const ORIGEM: Record<Carregado["conta"]["origem"], string> = {
   manual: "lançamento manual",
@@ -128,6 +134,24 @@ function Formulario({
   const podeRatear = !travas.categoria;
   const [rateando, setRateando] = useState(conta.rateio.length > 0);
   const [valorTexto, setValorTexto] = useState(conta.valor);
+  // As retenções na fonte (lote D, 20/10), só na conta a pagar.
+  const podeReter = conta.kind === "PAGAR" && !travas.retencoes;
+  const [retencoes, setRetencoes] = useState<ValoresDasRetencoes>(() =>
+    Object.fromEntries(conta.retencoes.map((r) => [r.tributo, valorNoCampo(r.centavos)]))
+  );
+  const retido = totalRetido(retencoes);
+  const situacaoDasRetencoes = Object.fromEntries(
+    conta.retencoes.map((r) => [
+      r.tributo,
+      !r.conta
+        ? { texto: "Sem a conta do imposto." }
+        : r.conta.cancelada
+          ? { texto: "A conta do imposto foi cancelada." }
+          : r.conta.temBaixa
+            ? { texto: "Conta do imposto paga — desfaça a baixa dela para mudar.", travado: true }
+            : { texto: `Conta do imposto em aberto${r.vencimentoKey ? `, vence ${dataBr(r.vencimentoKey)}` : ""}.` },
+    ])
+  );
   const [pendente, startTransition] = useTransition();
   const aPagar = conta.kind === "PAGAR";
 
@@ -276,6 +300,33 @@ function Formulario({
           </Select>
         </CampoForm>
       </FieldGrid>
+
+      {podeReter && (
+        <>
+          <input type="hidden" name="comRetencoes" value="1" />
+          <CamposDasRetencoes valores={retencoes} onChange={(t, v) => setRetencoes((a) => ({ ...a, [t]: v }))} situacao={situacaoDasRetencoes}>
+            {(retido > 0 || conta.retidoNaNota !== null) && (
+              <p className="text-helper text-fg-secondary">
+                {retido > 0 && (
+                  <>
+                    O valor da conta é o líquido, o que vai para o fornecedor. Bruto:{" "}
+                    <strong className="text-fg">{formatarReaisDeCentavos((centavosDeTexto(valorTexto) ?? 0) + retido)}</strong>.
+                  </>
+                )}
+                {conta.retidoNaNota !== null &&
+                  ` A nota diz ${formatarReaisDeCentavos(conta.retidoNaNota)} retidos${conta.retidoNaNota !== retido ? " (com os descontos, se houver) — confira" : ""}.`}
+              </p>
+            )}
+          </CamposDasRetencoes>
+        </>
+      )}
+      {conta.deImposto && (
+        <Aviso tom="info" icone={<Info />}>
+          <span className="text-fg-secondary">
+            Conta do {TRIBUTO[conta.deImposto].nome} de outra conta: o valor e o credor mudam na retenção, na edição da conta de origem.
+          </span>
+        </Aviso>
+      )}
 
       <CampoForm label="Descrição" htmlFor={`${id}-descricao`}>
         <Input id={`${id}-descricao`} name="descricao" defaultValue={conta.descricao ?? ""} maxLength={255} />

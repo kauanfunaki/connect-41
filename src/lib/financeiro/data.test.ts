@@ -40,6 +40,7 @@ function entrada(over: { dueDate: string; status?: string; paidAt?: Date | null;
     counterparty: { name: "Fornecedor" },
     category: { name: "Aluguel" },
     _count: { allocations: 0 },
+    retentions: [],
     costCenterId: null,
     costCenter: null,
     project: null,

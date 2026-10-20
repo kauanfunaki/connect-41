@@ -56,6 +56,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado, e o motivo aparece ao passar o mouse sobre ele.",
+      "Conta com “R$ X retidos” embaixo do valor tem imposto retido na fonte: o valor é o líquido, e cada imposto tem a conta dele. Para mudar uma retenção, clique em “Editar” na conta do fornecedor e abra “Retenções na fonte”; a conta do imposto acompanha enquanto não tiver baixa. Cancelar a conta do fornecedor cancela as dos impostos em aberto.",
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "“Abrir pendência” e “Enviar para aprovação” só aparecem quando o escritório usa esses módulos.",
       "Para levar a lista para o Excel, clique em “Exportar” › “Excel”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram). O arquivo vem numa Tabela do Excel, com data como data e valor como número — no Excel, “Inserir” › “Tabela dinâmica” já pega a tabela. Conta rateada sai numa linha por parte do rateio. “Exportar” › “CSV” continua para outros sistemas.",
@@ -135,6 +136,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Escolha a “Categoria” (obrigatória em conta a pagar) e preencha “Competência” (o mês a que a conta pertence), “Vencimento” e “Valor”.",
           "Se a conta deve ser paga em outro dia que não o vencimento, informe a “Previsão”: o fluxo de caixa projeta por ela.",
           "Para dividir a conta entre categorias, centros de custo ou projetos, clique em “Ratear”, ao lado de “Categoria”. Monte as linhas por valor ou por percentual; embaixo aparece o que falta para fechar o valor da conta. A DRE soma cada linha na categoria dela.",
+          "Se a nota de um serviço tomado tem imposto retido (IRRF, PIS, COFINS, CSLL, INSS ou ISS), abra “Retenções na fonte” e informe cada um. O “Valor” passa a ser o bruto da nota, a conta do fornecedor fica no líquido, e cada imposto ganha a conta dele, a pagar à Receita (ou à prefeitura, no ISS), vencendo no dia 20 do mês seguinte (o ISS, no dia 10).",
           "Se quiser, escolha a “Conta corrente” por onde a conta deve ser paga ou recebida: a baixa já vem com ela.",
           "Se a conta já foi paga ou recebida, informe a data em “Já pago em” ou “Já recebido em”. Se não, deixe em branco.",
           "Clique em “Lançar”. A conta já aparece em Contas a pagar ou a receber e na DRE.",

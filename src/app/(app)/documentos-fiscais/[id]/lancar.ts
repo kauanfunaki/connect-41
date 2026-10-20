@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { cancelarContasDosImpostos, RecusaDaRetencao } from "@/lib/financeiro/retencoesServidor";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
@@ -246,10 +247,18 @@ export async function estornarLancamento(documentoId: string): Promise<{ error: 
   }
 
   const entryId = doc.financeEntry.id;
-  await prisma.$transaction(async (tx) => {
-    await tx.financeEntry.delete({ where: { id: entryId } });
-    await tx.fiscalDocument.update({ where: { id: doc.id }, data: { destination: "PENDENTE" } });
-  });
+  try {
+    await prisma.$transaction(async (tx) => {
+      // As contas dos impostos retidos (lote D, 20/10) ficam canceladas, como
+      // histórico; a que já tem baixa barra o estorno.
+      await cancelarContasDosImpostos(tx, ctx.tenantId, [entryId]);
+      await tx.financeEntry.delete({ where: { id: entryId } });
+      await tx.fiscalDocument.update({ where: { id: doc.id }, data: { destination: "PENDENTE" } });
+    });
+  } catch (e) {
+    if (e instanceof RecusaDaRetencao) return { error: e.message };
+    throw e;
+  }
 
   await logAudit({
     tenantId: ctx.tenantId,

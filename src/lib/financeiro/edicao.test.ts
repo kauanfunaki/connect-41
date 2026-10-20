@@ -44,7 +44,7 @@ describe("travasDaEdicao", () => {
 
   it("veio do Omie: o que a leitura reescreve fica travado, e o motivo é o Omie mesmo depois de paga", () => {
     const t = travas({ doOmie: true, status: "PAGO", paidAt: new Date(), conciliada: true });
-    expect(Object.keys(t).sort()).toEqual(["categoria", "competencia", "conta", "emissao", "numeroDocumento", "previsao", "valor", "vencimento"]);
+    expect(Object.keys(t).sort()).toEqual(["categoria", "competencia", "conta", "emissao", "numeroDocumento", "previsao", "retencoes", "valor", "vencimento"]);
     expect(t.valor).toMatch(/Omie/);
     expect(t.previsao).toMatch(/Omie/);
     expect(t.centro).toBeUndefined();
@@ -59,6 +59,12 @@ describe("travasDaEdicao", () => {
     // Depois da virada (`presaAoOmie` falso), as duas voltam a ser livres.
     expect(travas({}).previsao).toBeUndefined();
     expect(travas({}).conta).toBeUndefined();
+  });
+
+  it("conta de imposto retido: valor, credor e retenções mudam na conta de origem", () => {
+    const t = travas({ deRetencao: true });
+    expect(Object.keys(t).sort()).toEqual(["contraparte", "retencoes", "valor"]);
+    expect(t.valor).toMatch(/Conta de imposto retido/);
   });
 
   it("baixa parcial: o valor trava, o vencimento do resto continua livre", () => {

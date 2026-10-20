@@ -2975,6 +2975,11 @@ model FinanceEntry {
   /// projetos. Vazio é a conta inteira na categoria, no centro e no projeto
   /// dela — o caso de quase todas.
   allocations           FinanceEntryAllocation[]
+  /// As retenções na fonte desta conta a pagar (lote D, 20/10): o imposto que
+  /// o tomador segura do fornecedor e recolhe ele mesmo.
+  retentions            FinanceEntryRetention[] @relation("RetentionsOfEntry")
+  /// Quando esta conta é a de um imposto retido: a retenção que a gerou.
+  retentionOrigin       FinanceEntryRetention?  @relation("RetentionTaxEntry")
 
   @@unique([companyId, omieTitleId])
   @@unique([companyId, omieMovementId])
@@ -3054,6 +3059,44 @@ model FinanceEntryAllocation {
   @@index([costCenterId])
   @@index([projectId])
   @@map("finance_entry_allocations")
+}
+
+/// Os tributos que o tomador do serviço retém na fonte e recolhe — os seis
+/// do Omie. PIS, COFINS e CSLL são a CSRF; os federais e o INSS saem em DARF,
+/// e o ISS na guia do município.
+enum FinanceRetentionTax {
+  IRRF
+  PIS
+  COFINS
+  CSLL
+  INSS
+  ISS
+}
+
+/// Uma retenção na fonte de uma conta a pagar (lote D, 20/10): quanto de um
+/// tributo o tomador segurou do fornecedor. A conta paga ao fornecedor é o
+/// líquido (`FinanceEntry.amount`); o bruto é o líquido mais as retenções.
+///
+/// Cada retenção gera a conta do imposto (`taxEntry`) — a pagar à Receita ou à
+/// prefeitura, na categoria e no vencimento do imposto —, e a acompanha: muda
+/// junto enquanto ela está em aberto, e trava quando já tem baixa. As regras
+/// moram em src/lib/financeiro/retencoes.ts.
+model FinanceEntryRetention {
+  id         String              @id @default(uuid())
+  tenantId   String
+  entryId    String
+  tax        FinanceRetentionTax
+  amount     Decimal             @db.Decimal(12, 2)
+  /// A conta do imposto gerada pela retenção. Nula se ela foi apagada por fora.
+  taxEntryId String?             @unique
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  entry    FinanceEntry  @relation("RetentionsOfEntry", fields: [entryId], references: [id], onDelete: Cascade)
+  taxEntry FinanceEntry? @relation("RetentionTaxEntry", fields: [taxEntryId], references: [id], onDelete: SetNull)
+
+  @@unique([entryId, tax])
+  @@map("finance_entry_retentions")
 }
 
 /// Projeto de uma empresa cliente (19/10) — o "Projeto" do Omie.
