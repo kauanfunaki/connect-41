@@ -60,6 +60,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "autorizacoes.salvar": e("atualizou a autorização de acesso"),
   "autorizacoes.serpro": o("conferiu no Serpro a autorização de acesso"),
   "autorizacoes.serpro_lote": o("conferiu no Serpro as autorizações de acesso, em lote"),
+  "autorizacoes.serpro_sitfis": o("pediu no Serpro a situação fiscal da empresa"),
+  "autorizacoes.serpro_caixa_postal": o("abriu uma mensagem da Caixa Postal da Receita, dando ciência"),
 
   // ── BPO ────────────────────────────────────────────────────────────────────
   "financeiro.entry.created_manual": c("criou o lançamento"),
@@ -383,6 +385,7 @@ export function codigosDoTipo(codigos: Iterable<string>, tipo: TipoDaAcao): stri
 export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   AccessAuthorization: "autorização de acesso",
   AccessAuthorizationGrantee: "quem recebe as autorizações",
+  SerproMensagem: "mensagem da Caixa Postal",
   AgentConversation: "conversa com a Ceci",
   AgentProposal: "proposta da IA",
   AssessmentTemplate: "modelo de teste",

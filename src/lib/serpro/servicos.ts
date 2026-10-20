@@ -139,8 +139,8 @@ export function servicoDoCatalogo(idSistema: string, idServico: string): Servico
   return PELO_ID.get(`${idSistema}/${idServico}`) ?? null;
 }
 
-/** O pedido de um serviço do catálogo, com o caminho e a versão dele. */
-export function pedidoDoServico(s: ServicoDoSerpro, contribuinte: string, dados: Record<string, unknown>): PedidoAoSerpro {
+/** O pedido de um serviço do catálogo, com o caminho e a versão dele. `dados` null = vai vazio. */
+export function pedidoDoServico(s: ServicoDoSerpro, contribuinte: string, dados: Record<string, unknown> | null): PedidoAoSerpro {
   return { caminho: s.caminho, idSistema: s.idSistema, idServico: s.idServico, versaoSistema: s.versaoSistema, contribuinte, dados };
 }
 
