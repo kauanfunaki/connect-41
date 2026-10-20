@@ -39,6 +39,8 @@ import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
 import { ocorrenciasDaRepeticao, validarRepeticao } from "@/lib/financeiro/repeticao";
 import { lerRateio, resumoDoRateio } from "@/lib/financeiro/rateio";
 import { conferirRateio, gravarRateio } from "@/lib/financeiro/rateioServidor";
+import { lerRetencoes, liquidoDaConta, resumoDasRetencoes } from "@/lib/financeiro/retencoes";
+import { aplicarRetencoes, cancelarContasDosImpostos, RecusaDaRetencao } from "@/lib/financeiro/retencoesServidor";
 import { randomUUID } from "crypto";
 
 const MODULE = "bpo_lancamentos";
@@ -61,7 +63,16 @@ function revalidar() {
   }
 }
 
-export type ResultadoDoManual = { error: string } | { ok: true; aguardandoAprovacao?: boolean; /** Quantas próximas da série nasceram junto. */ repetidas?: number };
+export type ResultadoDoManual =
+  | { error: string }
+  | {
+      ok: true;
+      aguardandoAprovacao?: boolean;
+      /** Quantas próximas da série nasceram junto. */
+      repetidas?: number;
+      /** Quantas contas de imposto retido nasceram junto (lote D, 20/10). */
+      impostos?: number;
+    };
 
 /**
  * Cria o lançamento manual.
@@ -103,6 +114,21 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const d = v.dados;
   const rep = validarRepeticao({ frequencia: texto("repetirFrequencia"), vezes: texto("repetirVezes"), ajuste: texto("repetirAjuste") });
   if (!rep.ok) return { error: rep.erro };
+
+  // As retenções na fonte (lote D, 20/10), só na conta a pagar: o valor
+  // digitado é o bruto da nota, a conta do fornecedor fica no líquido, e cada
+  // imposto ganha a conta dele.
+  const lidas = d.kind === "PAGAR" ? lerRetencoes(texto) : { ok: true as const, retencoes: [] };
+  if (!lidas.ok) return { error: lidas.erro };
+  const retencoes = lidas.retencoes;
+  let valorDaConta = d.centavos;
+  if (retencoes.length > 0) {
+    if (rep.repeticao) return { error: "Retenção ainda não vai junto com a repetição — lance a série sem retenção e informe a de cada conta na edição." };
+    if (comRateio) return { error: "Rateio e retenção juntos ainda não — lance com a retenção e faça o rateio do líquido na edição da conta." };
+    const l = liquidoDaConta(d.centavos, retencoes);
+    if (!l.ok) return { error: l.erro };
+    valorDaConta = l.liquidoCentavos;
+  }
 
   const rateio = comRateio
     ? await conferirRateio({ tenantId: c.tenantId, companyId, kind: d.kind, linhas: linhasDoRateio, totalCentavos: d.centavos })
@@ -241,7 +267,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           competence: d.competencia,
           dueDate: instanteDaData(d.vencimentoKey),
           forecastDate: previsaoKey && !d.pagoEmKey ? instanteDaData(previsaoKey) : null,
-          amount: decimalDeCentavos(d.centavos),
+          amount: decimalDeCentavos(valorDaConta),
           description: d.descricao,
           createdById: c.ctx.userId || null,
           // Quem digitou conferiu — ver `statusInicialDoManual`.
@@ -252,6 +278,23 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         select: { id: true, amount: true },
       });
       if (resumo) await gravarRateio(tx, { tenantId: c.tenantId, entryId: criado.id, linhas: linhasDoRateio });
+      if (retencoes.length > 0) {
+        await aplicarRetencoes(tx, {
+          tenantId: c.tenantId,
+          userId: c.ctx.userId || null,
+          conta: {
+            id: criado.id,
+            companyId,
+            counterpartyId: contraparte.id,
+            competence: d.competencia,
+            categoryId: d.categoryId,
+            costCenterId: centro.centroId,
+            projectId: projeto.projetoId,
+            documentNumber: d.numeroDocumento,
+          },
+          passos: retencoes.map((r) => ({ tipo: "criar" as const, tributo: r.tributo, centavos: r.centavos })),
+        });
+      }
       // As próximas da série: a mesma conta em outro vencimento — sem emissão,
       // número, previsão, baixa nem anexo, que são desta. A conta corrente
       // prevista vale para a série inteira.
@@ -326,7 +369,8 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
     metadata: {
       companyId,
       kind: d.kind,
-      valor: decimalDeCentavos(d.centavos),
+      valor: decimalDeCentavos(valorDaConta),
+      ...(retencoes.length > 0 ? { bruto: decimalDeCentavos(d.centavos), retencoes: resumoDasRetencoes(retencoes) } : {}),
       competencia: d.competencia,
       approvalStatus,
       centroDeCusto: centro.centroId,
@@ -342,7 +386,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   });
 
   revalidar();
-  return { ok: true, aguardandoAprovacao: approvalStatus === "AGUARDANDO", repetidas: proximas.length };
+  return { ok: true, aguardandoAprovacao: approvalStatus === "AGUARDANDO", repetidas: proximas.length, impostos: retencoes.length };
 }
 
 /** Cancela um lançamento manual em aberto. Nunca apaga. */
@@ -363,12 +407,16 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
       omieTitleId: true,
       omieMovementId: true,
       company: { select: { omieCutoverAt: true } },
+      retentionOrigin: { select: { tax: true } },
     },
   });
   if (!conta) return { error: "Lançamento não encontrado." };
 
   const c = await contexto(conta.companyId);
   if (!c.ok) return { error: c.erro };
+  // A conta de um imposto retido sai pela retenção, na conta de origem — senão
+  // a retenção ficaria dizendo de um imposto que ninguém vai recolher.
+  if (conta.retentionOrigin) return { error: "Conta de imposto retido — tire a retenção na edição da conta de origem." };
 
   const veredito = podeCancelarManual({ ...conta, presoAoOmie: presaAoOmie(conta, conta.company) });
   if (!veredito.pode) return { error: veredito.motivo };
@@ -376,17 +424,31 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
   // Motivo explícito desde a cobrança: `CANCELADO` com motivo nulo é só o
   // cancelado de antes da coluna. Condicionado ao estado lido — uma baixa ou um
   // acordo que chegou antes não é cancelado por cima.
-  const cancelado = await prisma.financeEntry.updateMany({
-    where: { id: entryId, tenantId: c.tenantId, status: conta.status, paidAt: null, paidPrincipal: 0, agreementId: null, payments: { none: {} } },
-    data: { status: "CANCELADO", closeReason: "CANCELADO" },
-  });
-  if (cancelado.count !== 1) return { error: "O lançamento acabou de mudar — atualize a tela." };
+  // As contas dos impostos retidos saem junto (lote D, 20/10); a que já tem
+  // baixa barra o cancelamento inteiro.
+  let impostos = 0;
+  try {
+    const cancelou = await prisma.$transaction(async (tx) => {
+      const cancelado = await tx.financeEntry.updateMany({
+        where: { id: entryId, tenantId: c.tenantId, status: conta.status, paidAt: null, paidPrincipal: 0, agreementId: null, payments: { none: {} } },
+        data: { status: "CANCELADO", closeReason: "CANCELADO" },
+      });
+      if (cancelado.count !== 1) return false;
+      impostos = await cancelarContasDosImpostos(tx, c.tenantId, [entryId]);
+      return true;
+    });
+    if (!cancelou) return { error: "O lançamento acabou de mudar — atualize a tela." };
+  } catch (e) {
+    if (e instanceof RecusaDaRetencao) return { error: e.message };
+    throw e;
+  }
   await logAudit({
     tenantId: c.tenantId,
     userId: c.ctx.userId,
     action: "financeiro.entry.cancelled_manual",
     entityType: "FinanceEntry",
     entityId: entryId,
+    ...(impostos > 0 ? { metadata: { contasDeImpostoCanceladas: impostos } } : {}),
   });
   revalidar();
   return { ok: true };
@@ -424,11 +486,22 @@ export async function cancelarProximasDaSerie(entryId: string): Promise<Resultad
   for (const e of cancelaveis) {
     // A mesma trava do cancelamento de uma: a baixa ou o acordo que chegou
     // antes não é cancelado por cima.
-    const r = await prisma.financeEntry.updateMany({
-      where: { id: e.id, tenantId: c.tenantId, status: e.status, paidAt: null, paidPrincipal: 0, agreementId: null, payments: { none: {} } },
-      data: { status: "CANCELADO", closeReason: "CANCELADO" },
-    });
-    canceladas += r.count;
+    // As contas dos impostos retidos vão junto; a que já tem baixa deixa a
+    // conta dela como está, e ela conta nas que ficaram.
+    const r = await prisma
+      .$transaction(async (tx) => {
+        const u = await tx.financeEntry.updateMany({
+          where: { id: e.id, tenantId: c.tenantId, status: e.status, paidAt: null, paidPrincipal: 0, agreementId: null, payments: { none: {} } },
+          data: { status: "CANCELADO", closeReason: "CANCELADO" },
+        });
+        if (u.count === 1) await cancelarContasDosImpostos(tx, c.tenantId, [e.id]);
+        return u.count;
+      })
+      .catch((err) => {
+        if (err instanceof RecusaDaRetencao) return 0;
+        throw err;
+      });
+    canceladas += r;
   }
   if (canceladas === 0) return { error: "Nenhuma conta desta posição em diante pode ser cancelada." };
 

@@ -211,6 +211,7 @@ export function ContasTable({
                 {parcial(l) && (
                   <InfoDoCartao className="tabular-nums">saldo {formatarReaisDeCentavos(l.valorCentavos - l.baixadoCentavos)}</InfoDoCartao>
                 )}
+                {l.retidoCentavos ? <InfoDoCartao className="tabular-nums">líquido · {formatarReaisDeCentavos(l.retidoCentavos)} retidos</InfoDoCartao> : null}
                 {linhaDoDocumento(l) && <InfoDoCartao className="break-words">{linhaDoDocumento(l)}</InfoDoCartao>}
                 <InfoDoCartao className="mt-1 tabular-nums">
                   vence {formatInstantDate(l.vencimento)}
@@ -373,6 +374,12 @@ export function ContasTable({
                   {parcial(l) && (
                     <span className="block text-micro font-normal text-fg-muted">saldo {formatarReaisDeCentavos(l.valorCentavos - l.baixadoCentavos)}</span>
                   )}
+                  {/* Retenção na fonte (lote D, 20/10): o valor é o líquido; o imposto tem a conta dele. */}
+                  {l.retidoCentavos ? (
+                    <span className="block text-micro font-normal text-fg-muted" title="O valor da conta é o líquido. Cada imposto retido tem a conta dele, a pagar à Receita ou à prefeitura.">
+                      {formatarReaisDeCentavos(l.retidoCentavos)} retidos
+                    </span>
+                  ) : null}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-1.5">{selos(l)}</div>
