@@ -67,8 +67,8 @@ function TaskMentionPicker({ candidates, onPick }: { candidates: TaskMentionCand
         size="sm"
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen((v) => !v)}
-        title="Mencionar tarefa"
-        aria-label="Mencionar tarefa"
+        title="Mencionar atividade"
+        aria-label="Mencionar atividade"
       >
         <LinkIcon size={15} />
       </IconButton>
@@ -77,8 +77,8 @@ function TaskMentionPicker({ candidates, onPick }: { candidates: TaskMentionCand
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar tarefa…"
-            aria-label="Buscar tarefa"
+            placeholder="Buscar atividade…"
+            aria-label="Buscar atividade"
             autoFocus
             compact
             className="mb-1"
@@ -95,7 +95,7 @@ function TaskMentionPicker({ candidates, onPick }: { candidates: TaskMentionCand
                 {c.name}
               </button>
             ))}
-            {matches.length === 0 && <p className="text-fs-1 text-fg-muted px-2 py-1.5">Nenhuma tarefa encontrada</p>}
+            {matches.length === 0 && <p className="text-fs-1 text-fg-muted px-2 py-1.5">Nenhuma atividade encontrada</p>}
           </div>
         </div>
       )}
@@ -581,7 +581,7 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
         <Input
           value={search.trim()}
           onChange={(e) => setSearch(e.target.value || " ")}
-          placeholder="Pesquisar no chat desta tarefa…"
+          placeholder="Pesquisar no chat desta atividade…"
           autoFocus
           compact
           className="mb-3 flex-shrink-0"

@@ -20,8 +20,8 @@ import type { SituacaoDeCobranca } from "@/lib/financeiro/cobranca/regras";
 import { Checkbox } from "@/components/ui/Checkbox";
 // Constante de módulo comum, e não do componente de cliente: importada de um
 // arquivo "use client", chegaria aqui como referência de cliente, não string.
-import { FORM_DO_CENTRO } from "@/lib/financeiro/centroDeCusto";
-import { MarcarTodasAsContas } from "./DefinirCentroDasContas";
+import { FORM_DAS_CONTAS } from "@/lib/financeiro/contas";
+import { MarcarTodasAsContas } from "./AcoesEmLoteDasContas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 export const SITUACAO_LABEL: Record<SituacaoDaConta, string> = {
@@ -62,8 +62,8 @@ type Props = {
   cobranca?: Map<string, SituacaoDeCobranca | null> | null;
   /** Mostra a coluna do centro de custo — só quando a empresa usa centro. */
   mostrarCentro?: boolean;
-  /** Caixa de seleção por linha, ligada à barra `DefinirCentroDasContas`. */
-  selecionarCentro?: boolean;
+  /** Caixa de seleção por linha, ligada à barra `AcoesEmLoteDasContas`. */
+  selecionar?: boolean;
 };
 
 export function ContasTable({
@@ -75,7 +75,7 @@ export function ContasTable({
   podeAbrirPendencia = false,
   cobranca = null,
   mostrarCentro = false,
-  selecionarCentro = false,
+  selecionar = false,
 }: Props) {
   if (linhas.length === 0) {
     return filtrado ? (
@@ -171,7 +171,7 @@ export function ContasTable({
       categoria: l.categoriaNome ?? "",
       centro: l.centroDeCustoNome ?? "",
       projeto: l.projetoNome ?? "",
-      competencia: formatarCompetencia(l.competencia),
+      competencia: l.competencia,
       situacao: rotuloDaSituacao(l),
     },
   }));
@@ -186,11 +186,11 @@ export function ContasTable({
         {linhas.map((l) => (
           <Cartao key={l.id}>
             <div className="flex items-start gap-2.5">
-              {selecionarCentro && (
+              {selecionar && (
                 <Checkbox
                   name="entryIds"
                   value={l.id}
-                  form={FORM_DO_CENTRO}
+                  form={FORM_DAS_CONTAS}
                   aria-label={`Selecionar ${l.contraparteNome}`}
                   className="mt-1"
                 />
@@ -234,11 +234,12 @@ export function ContasTable({
       <TabelaNoDesktop padrao>
         <table className="w-full table-fixed min-w-[1100px]">
           <colgroup>
-            {selecionarCentro && <col className="w-11" />}
+            {selecionar && <col className="w-11" />}
             <col className="w-[116px]" />
             <col />
             <col className="w-[172px]" />
-            <col className="w-[116px]" />
+            {/* 140px (Ajustes 15/10): em 116, "COMPETÊNCIA" e o funil não cabiam, e o funil saía cortado. */}
+            <col className="w-[140px]" />
             <col className="w-[120px]" />
             <col className="w-[160px]" />
             {/* 256px (08/10/2026): "Conferir" + "Receber" + "⋯" pediam ~246px
@@ -247,7 +248,7 @@ export function ContasTable({
           </colgroup>
           <thead>
             <tr className="border-b border-border bg-table-header-bg text-micro font-semibold uppercase tracking-wide text-fg-muted">
-              {selecionarCentro && (
+              {selecionar && (
                 <th className="pl-4 pr-1 py-3">
                   <MarcarTodasAsContas />
                 </th>
@@ -275,7 +276,7 @@ export function ContasTable({
                 />
               </th>
               <th className="px-4 py-3">
-                <FiltroDaColuna rotulo="Competência" chave="competencia" />
+                <FiltroDaColuna rotulo="Competência" chave="competencia" tipo="competencia" />
               </th>
               <th className="px-4 py-3">Valor</th>
               <th className="px-4 py-3">
@@ -289,9 +290,9 @@ export function ContasTable({
           <tbody>
             {linhas.map((l) => (
               <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border last:border-b-0 align-top hover:bg-surface-hover transition-colors">
-                {selecionarCentro && (
+                {selecionar && (
                   <td className="pl-4 pr-1 py-3">
-                    <Checkbox name="entryIds" value={l.id} form={FORM_DO_CENTRO} aria-label={`Selecionar ${l.contraparteNome}`} />
+                    <Checkbox name="entryIds" value={l.id} form={FORM_DAS_CONTAS} aria-label={`Selecionar ${l.contraparteNome}`} />
                   </td>
                 )}
                 <td className="px-4 py-3 whitespace-nowrap tabular-nums">

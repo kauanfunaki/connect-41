@@ -14,7 +14,7 @@ type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
 };
 
-// "Nova lista" — só nome é obrigatório; descrição fica escondida atrás de
+// "Nova tarefa" — só nome é obrigatório; descrição fica escondida atrás de
 // "+ descrição" (revelada sob demanda, igual ao pedido). Ação redireciona pro
 // board da lista nova em caso de sucesso — não precisa fechar o modal na mão.
 export function NewListButton({ action }: Props) {
@@ -31,7 +31,7 @@ export function NewListButton({ action }: Props) {
       >
         <Plus size={14} /> Nova lista
      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Nova lista">
+      <Modal open={open} onClose={() => setOpen(false)} title="Nova tarefa">
         <form action={formAction} className="space-y-4">
           <CampoForm label="Nome" htmlFor="list-name" required>
             <Input id="list-name" name="name" required autoFocus placeholder="ex: Empresa X" />

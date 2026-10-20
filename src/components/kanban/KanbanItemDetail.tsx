@@ -59,16 +59,16 @@ const ACTIVITY_LABEL: Record<string, string> = {
   DOCUMENT: "Documento",
   HANDOFF: "Transferência",
   MENTION: "Menção",
-  CREATED: "Tarefa criada",
+  CREATED: "Atividade criada",
   PRIORITY_CHANGE: "Prioridade alterada",
   DUE_DATE_CHANGE: "Prazo alterado",
   DESCRIPTION_CHANGE: "Descrição alterada",
   ASSIGNEE_CHANGE: "Responsável alterado",
   TAG_CHANGE: "Etiqueta alterada",
   CHECKLIST_CHANGE: "Checklist alterado",
-  SUBTASK_CHANGE: "Subtarefa alterada",
-  COMPLETED: "Tarefa concluída",
-  REOPENED: "Tarefa reaberta",
+  SUBTASK_CHANGE: "Subatividade alterada",
+  COMPLETED: "Atividade concluída",
+  REOPENED: "Atividade reaberta",
   TIME_LOGGED: "Tempo apontado",
 };
 
@@ -142,7 +142,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     item.activeTimerUserId
       ? prisma.user.findFirst({ where: { id: item.activeTimerUserId }, select: { id: true, name: true } })
       : Promise.resolve(null),
-    // Candidatas pra "vincular tarefa" / "mencionar tarefa no comentário" —
+    // Candidatas pra "vincular atividade" / "mencionar atividade no comentário" —
     // qualquer item do mesmo pipeline, exceto o próprio.
     prisma.pipelineItem.findMany({
       where: { pipelineId: id, tenantId, id: { not: itemId } },
@@ -172,7 +172,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       include: { user: { select: { name: true } } },
     }),
     // Recíproco: item pode ser a origem (pipelineItemId) OU o alvo (linkedItemId)
-    // do vínculo — precisa das duas direções pra "Tarefas relacionadas" aparecer
+    // do vínculo — precisa das duas direções pra "Atividades relacionadas" aparecer
     // dos dois lados quando A vincula B.
     prisma.pipelineItemLink.findMany({
       where: { tenantId, OR: [{ pipelineItemId: itemId }, { linkedItemId: itemId }] },
@@ -347,7 +347,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           isCompleted && lastCompletion
             ? `Concluída em ${formatInstantDate(lastCompletion.createdAt)} por ${lastCompletion.user.name}`
             : isCompleted
-              ? "Tarefa concluída"
+              ? "Atividade concluída"
               : null
         }
         concluirAction={concluirAction}
@@ -402,7 +402,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           <div className="flex flex-col gap-2">
             {!item.parentItemId && (subtasks.length > 0 || canAct) && (
               <DetailSection
-                title="Subtarefas"
+                title="Subatividades"
                 summary={
                   subtasks.length > 0
                     ? `${subtasks.filter((s) => s.stage.isTerminal).length}/${subtasks.length}`
@@ -433,7 +433,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
             {(relatedItems.length > 0 || canAct) && (
               <DetailSection
-                title="Tarefas relacionadas"
+                title="Atividades relacionadas"
                 summary={relatedItems.length > 0 ? relatedItems.length : undefined}
               >
                 <LinkedItemsSection

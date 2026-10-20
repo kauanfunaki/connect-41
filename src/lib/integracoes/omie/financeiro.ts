@@ -106,8 +106,18 @@ export type TituloDoOmie = {
   omieTitleId: string;
   kind: "PAGAR" | "RECEBER";
   situacao: "ABERTO" | "PAGO" | "CANCELADO";
-  /** Pagamento parcial: fica em aberto no Connect, que ainda não tem baixa parcial. */
+  /**
+   * Pagamento parcial: em aberto, com o que já foi pago como baixa (fila do
+   * BPO, 19/10 — antes ficava em aberto sem a parte paga).
+   */
   parcial: boolean;
+  /**
+   * O principal pago lá, em centavos: o valor do título pago; na parcial, o
+   * `nValPago` (sem juros, multa nem desconto — o `nValLiquido` é que os soma).
+   */
+  pagoCentavos: number;
+  /** O dia do último pagamento: o do pago, e o da parcial. */
+  ultimoPagamento: Date | null;
   emissao: Date | null;
   vencimento: Date;
   pagamento: Date | null;
@@ -166,6 +176,10 @@ export function mapearMovimento(item: unknown): TituloDoOmie | { fora: MotivoDoT
   const situacao = status === "CANCELADO" ? "CANCELADO" : PAGO.has(status) || liquidado ? "PAGO" : "ABERTO";
   const pagamento = situacao === "PAGO" ? instanteDoOmie(d.dDtPagamento, null) : null;
   if (situacao === "PAGO" && !pagamento) return { fora: "pago_sem_data" };
+  const parcial = status === "PAGTOPARCIAL" || (situacao === "ABERTO" && (numero(r.nValPago) ?? 0) > 0);
+  const valorCentavos = Math.round(valor * 100);
+  const pagoCentavos =
+    situacao === "PAGO" ? valorCentavos : parcial ? Math.min(valorCentavos, Math.max(0, Math.round((numero(r.nValPago) ?? 0) * 100))) : 0;
 
   const emissao = instanteDoOmie(d.dDtEmissao, null);
   // Competência = mês da emissão, como o Omie escreve (horário de Brasília);
@@ -187,7 +201,9 @@ export function mapearMovimento(item: unknown): TituloDoOmie | { fora: MotivoDoT
     omieTitleId: id.slice(0, 20),
     kind,
     situacao,
-    parcial: status === "PAGTOPARCIAL" || (situacao === "ABERTO" && (numero(r.nValPago) ?? 0) > 0),
+    parcial,
+    pagoCentavos,
+    ultimoPagamento: situacao === "PAGO" ? pagamento : parcial ? instanteDoOmie(d.dDtPagamento, null) : null,
     emissao,
     vencimento,
     pagamento,
@@ -201,6 +217,33 @@ export function mapearMovimento(item: unknown): TituloDoOmie | { fora: MotivoDoT
   };
 }
 
+/**
+ * As baixas de um título, uma a uma (`ListarMovimentos` com
+ * `cTpLancamento: "BX"` e `nCodTitulo`) — para a parcial entrar no caixa no
+ * dia de cada pagamento (fila do BPO, 19/10). O valor de cada uma é o do
+ * movimento na conta (`nValorMovCC`); quem chama confere a soma contra o
+ * `nValPago` do título, e baixa com juros (o movimento passa do principal)
+ * não fecha — aí o pago vai numa baixa só.
+ *
+ * `null` quando alguma linha não diz código, dia ou valor.
+ */
+export function mapearBaixasDoTitulo(corpo: unknown, omieTitleId: string): { chave: string; principalCentavos: number; paidAt: Date }[] | null {
+  const porChave = new Map<string, { chave: string; principalCentavos: number; paidAt: Date }>();
+  for (const item of paginaDeMovimentos(corpo).itens) {
+    const d = obj(obj(item).detalhes);
+    const r = obj(obj(item).resumo);
+    const titulo = texto(d.nCodTitulo);
+    if (titulo && titulo !== "0" && titulo.slice(0, 20) !== omieTitleId) continue;
+    const chave = texto(d.nCodBaixa).slice(0, 20);
+    if (!chave || chave === "0") return null;
+    const paidAt = instanteDoOmie(d.dDtPagamento, null) ?? instanteDoOmie(d.dDtCredito, null);
+    const valor = numero(d.nValorMovCC) ?? numero(r.nValPago);
+    if (!paidAt || valor === null || valor === 0) return null;
+    porChave.set(chave, { chave, principalCentavos: Math.round(Math.abs(valor) * 100), paidAt });
+  }
+  return [...porChave.values()].sort((a, b) => a.paidAt.getTime() - b.paidAt.getTime());
+}
+
 /** O resumo de uma leitura, para gente — como o das notas. */
 export function mensagemDoFinanceiro(c: Record<string, number>, gravou: boolean): string {
   const n = (k: string) => c[k] ?? 0;
@@ -208,7 +251,9 @@ export function mensagemDoFinanceiro(c: Record<string, number>, gravou: boolean)
     gravou ? `${n("novos")} contas novas` : `${n("novos")} contas entrariam`,
     n("atualizados") ? `${n("atualizados")} ${gravou ? "atualizadas" : "seriam atualizadas"}` : null,
     n("iguais") ? `${n("iguais")} sem mudança` : null,
-    n("parciais") ? `${n("parciais")} com pagamento parcial (ficam em aberto)` : null,
+    n("parciais") ? `${n("parciais")} com pagamento parcial (em aberto, com o que já foi pago)` : null,
+    n("parciais_sem_data") ? `${n("parciais_sem_data")} parciais sem data de pagamento no Omie (ficam em aberto sem a parte paga)` : null,
+    n("parciais_numa_baixa") ? `${n("parciais_numa_baixa")} parciais com o pago numa baixa só (as baixas de lá não fecharam com o total)` : null,
     n("sem_categoria") ? `${n("sem_categoria")} sem categoria` : null,
     n("categorias_novas") ? `${n("categorias_novas")} categorias do Omie ${gravou ? "criadas" : "a criar"} no plano da empresa` : null,
     n("preservados") ? `${n("preservados")} não mexidas (em acordo ou baixadas por perda no Connect)` : null,

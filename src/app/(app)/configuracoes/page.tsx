@@ -42,9 +42,9 @@ export default async function ConfiguracoesPage() {
   const doEscritorio = expedientes.escritorio ?? EXPEDIENTE_PADRAO;
 
   const roleLabel = ROLE_LABELS[ctx.role as keyof typeof ROLE_LABELS] ?? ctx.role;
-  // Quem tem o menu das configurações (14/10/2026) chega aqui pelo item "Sua
-  // conta", e a trilha já diz "Configurações › Sua conta"; para os outros, esta
-  // é a tela de configurações inteira.
+  // Quem configura o escritório (o `menuDasConfiguracoes` de 14/10/2026) vê
+  // aqui "Sua conta", e a trilha diz "Configurações › Sua conta"; para os
+  // outros, esta é a tela de configurações inteira.
   const temMenu = menuDasConfiguracoes({ role: ctx.role, setores: ctx.sectors.length, autoatendimento: false }) !== null;
 
   return (
