@@ -167,6 +167,7 @@ function Formulario({
   const tVenc = trava("vencimento");
   const tPrev = trava("previsao", "Quando deve ser paga de fato. Em branco, o vencimento.");
   const tValor = trava("valor", conta.aprovada && aPagar ? "Conta aprovada: mudar o valor manda de volta para a aprovação." : undefined);
+  const tCentro = trava("centro");
   const tConta = trava("conta", opcoes.contas.length === 0 ? "Nenhuma conta bancária nesta empresa." : "A prevista — a baixa já vem com ela.");
 
   return (
@@ -244,8 +245,8 @@ function Formulario({
           </CampoForm>
         )}
         {!rateando && (opcoes.centros.length > 0 || conta.centroId) && (
-          <CampoForm label="Centro de custo" htmlFor={`${id}-centro`}>
-            <Select id={`${id}-centro`} name="costCenterId" defaultValue={conta.centroId ?? ""}>
+          <CampoForm label="Centro de custo" htmlFor={`${id}-centro`} helper={tCentro.helper}>
+            <Select id={`${id}-centro`} name="costCenterId" defaultValue={conta.centroId ?? ""} disabled={tCentro.disabled}>
               <option value="">Sem centro de custo</option>
               {opcoes.centros.map((c) => (
                 <option key={c.id} value={c.id}>

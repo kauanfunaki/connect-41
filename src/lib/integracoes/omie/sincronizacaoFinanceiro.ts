@@ -29,6 +29,10 @@
 //   centro de título sem departamento, ficam como estão no Connect. Rateio
 //   desfeito no Omie tira as linhas daqui. Até a virada, o rateio trava na
 //   edição junto com a categoria.
+// - **Departamento único (20/10):** o título sem rateio com um departamento
+//   só põe na conta o centro de mesmo código ou nome (sem par, nenhum) e
+//   guarda o código (`omieDepartmentId`) — é o que trava o centro na edição
+//   até a virada. Sem departamento, o centro do Connect fica como está e livre.
 // - **Janela:** títulos com vencimento desde 1º de janeiro do ano passado, em
 //   páginas de 500, até 20 páginas por execução; conta grande continua de onde
 //   parou na próxima (`cursor` da linha `financeiro:{empresa}`).
@@ -506,7 +510,7 @@ export async function sincronizarFinanceiroDaEmpresa(
           id: true, omieTitleId: true, status: true, paidAt: true, amount: true, dueDate: true,
           categoryId: true, competence: true, closeReason: true, agreementId: true,
           omieBaixaId: true, omieReconciledAt: true, issueDate: true, documentNumber: true,
-          forecastDate: true, bankAccountId: true, costCenterId: true, projectId: true,
+          forecastDate: true, bankAccountId: true, costCenterId: true, projectId: true, omieDepartmentId: true,
           payments: { select: BAIXA_NO_ESPELHO },
           allocations: { select: { categoryId: true, costCenterId: true, projectId: true, amount: true }, orderBy: { position: "asc" } },
         },
@@ -532,7 +536,14 @@ export async function sincronizarFinanceiroDaEmpresa(
         // delas — a categoria da linha maior, e o centro e o projeto comuns.
         const rateio = await rateioDoTitulo(t, atual);
         const resumo = rateio.length > 0 ? resumoDoRateio(rateio) : null;
-        const doResumo = resumo ? { costCenterId: resumo.centroId, projectId: resumo.projetoId } : {};
+        // Sem rateio e com um departamento só, o centro vem dele (20/10).
+        const centroDoTitulo = !resumo && t.departamentoCodigo ? await centroDoDepartamento(t.departamentoCodigo) : undefined;
+        if (centroDoTitulo === null) somar("departamento_sem_centro");
+        const doCentro: { costCenterId?: string | null; projectId?: string | null } = resumo
+          ? { costCenterId: resumo.centroId, projectId: resumo.projetoId }
+          : centroDoTitulo !== undefined
+            ? { costCenterId: centroDoTitulo }
+            : {};
         const dados = {
           status,
           paidAt: t.pagamento,
@@ -547,6 +558,8 @@ export async function sincronizarFinanceiroDaEmpresa(
           // Omie, ficam sem aqui também.
           forecastDate: t.previsao,
           bankAccountId: contaPrevista(t.contaCorrenteId),
+          // O departamento único (20/10): com ele, o centro trava na edição.
+          omieDepartmentId: t.departamentoCodigo,
         } as const;
         const titulo = await tituloNoEspelho(t);
 
@@ -556,7 +569,7 @@ export async function sincronizarFinanceiroDaEmpresa(
             const counterpartyId = await contraparteDo(t);
             await prisma.$transaction(async (tx) => {
               const criado = await tx.financeEntry.create({
-                data: { tenantId, companyId, kind: t.kind, counterpartyId, description: t.descricao, omieTitleId: t.omieTitleId, ...dados, ...doResumo },
+                data: { tenantId, companyId, kind: t.kind, counterpartyId, description: t.descricao, omieTitleId: t.omieTitleId, ...dados, ...doCentro },
                 select: { id: true },
               });
               if (rateio.length > 0) await gravarRateio(tx, { tenantId, entryId: criado.id, linhas: rateio });
@@ -582,7 +595,9 @@ export async function sincronizarFinanceiroDaEmpresa(
         const rateioMudou = !mesmasLinhas(atual.allocations, rateio);
         const mudou =
           rateioMudou ||
-          (resumo !== null && (atual.costCenterId !== resumo.centroId || atual.projectId !== resumo.projetoId)) ||
+          (doCentro.costCenterId !== undefined && atual.costCenterId !== doCentro.costCenterId) ||
+          (doCentro.projectId !== undefined && atual.projectId !== doCentro.projectId) ||
+          atual.omieDepartmentId !== dados.omieDepartmentId ||
           estornado ||
           (atual.status === "CANCELADO") !== (status === "CANCELADO") ||
           planoMexe(plano) ||
@@ -612,7 +627,7 @@ export async function sincronizarFinanceiroDaEmpresa(
               data: {
                 ...dados,
                 categoryId: dados.categoryId ?? atual.categoryId,
-                ...doResumo,
+                ...doCentro,
                 ...(estornado ? { omieBaixaId: null, omiePaidAmount: null, omieReconciledAt: null } : {}),
               },
             });

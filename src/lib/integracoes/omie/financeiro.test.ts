@@ -93,7 +93,7 @@ describe("mapearMovimento", () => {
 
   it("título sem rateio: categoria do título e nenhuma linha", () => {
     const r = mapearMovimento(mov()) as TituloDoOmie;
-    expect([r.categoriaCodigo, r.rateio, r.rateioIlegivel]).toEqual(["2.01.03", [], false]);
+    expect([r.categoriaCodigo, r.rateio, r.rateioIlegivel, r.departamentoCodigo]).toEqual(["2.01.03", [], false, null]);
   });
 
   it("deixa de fora o que não é conta", () => {
@@ -172,9 +172,9 @@ describe("rateio do título (20/10)", () => {
     ]);
   });
 
-  it("uma categoria e um departamento não é rateio", () => {
+  it("uma categoria e um departamento não é rateio: o departamento vai na conta", () => {
     const r = mapearMovimento(mov({}, { departamentos: [dep("4459988001", 100, 1500.5)] })) as TituloDoOmie;
-    expect([r.categoriaCodigo, r.rateio]).toEqual(["2.01.03", []]);
+    expect([r.categoriaCodigo, r.rateio, r.departamentoCodigo]).toEqual(["2.01.03", [], "4459988001"]);
   });
 
   it("um departamento num rateio de categorias vai em todas as linhas", () => {
@@ -183,6 +183,8 @@ describe("rateio do título (20/10)", () => {
       { categoriaCodigo: "A", departamentoCodigo: "D1", centavos: 6000 },
       { categoriaCodigo: "B", departamentoCodigo: "D1", centavos: 4000 },
     ]);
+    // Rateado, o departamento mora nas linhas, e não na conta.
+    expect(r.departamentoCodigo).toBeNull();
   });
 
   it("uma categoria e dois departamentos: uma linha por departamento, na categoria do título", () => {
@@ -216,7 +218,12 @@ describe("rateio do título (20/10)", () => {
   });
 
   it("uma categoria só na lista vale mais que a do título", () => {
-    expect(rateioDoMovimento({ categorias: [cat("2.05.02", 100)] }, 10000, "1.01.99")).toEqual({ linhas: [], categoriaCodigo: "2.05.02", ilegivel: false });
+    expect(rateioDoMovimento({ categorias: [cat("2.05.02", 100)] }, 10000, "1.01.99")).toEqual({
+      linhas: [],
+      categoriaCodigo: "2.05.02",
+      departamentoCodigo: null,
+      ilegivel: false,
+    });
   });
 
   it("lê também os nomes da documentação antiga (nValor) e os do ListarContasPagar", () => {
@@ -230,8 +237,13 @@ describe("rateio do título (20/10)", () => {
     expect(contas.linhas.map((l) => l.departamentoCodigo)).toEqual(["D1", "D1"]);
   });
 
-  it("linha que arredonda para zero sai, e sobrando uma não é rateio", () => {
-    expect(rateioDoMovimento({ categorias: [cat("A", 1000), cat("B", 0.001)] }, 100000, "X")).toEqual({ linhas: [], categoriaCodigo: "A", ilegivel: false });
+  it("linha que arredonda para zero sai, e sobrando uma não é rateio — com o departamento dela na conta", () => {
+    expect(rateioDoMovimento({ categorias: [cat("A", 1000), cat("B", 0.001)], departamentos: [dep("D1", 100, 1000)] }, 100000, "X")).toEqual({
+      linhas: [],
+      categoriaCodigo: "A",
+      departamentoCodigo: "D1",
+      ilegivel: false,
+    });
   });
 });
 
@@ -307,6 +319,9 @@ describe("mensagemDoFinanceiro", () => {
     expect(m).toContain("3 linhas de rateio com departamento do Omie sem centro de custo de mesmo nome ou código no Connect (ficam sem centro)");
     expect(m).toContain("1 linhas de rateio sem categoria");
     expect(m).toContain("1 com rateio sem valor nem percentual no Omie (ficam numa categoria só)");
+    expect(mensagemDoFinanceiro({ lidos: 2, paginas: 1, novos: 2, departamento_sem_centro: 2 }, true)).toContain(
+      "2 com departamento do Omie sem centro de custo de mesmo nome ou código no Connect (ficam sem centro)"
+    );
   });
 
   it("avisa dos títulos com conta corrente do Omie que não tem par no Connect", () => {

@@ -61,6 +61,13 @@ describe("travasDaEdicao", () => {
     expect(travas({}).conta).toBeUndefined();
   });
 
+  it("veio do Omie com um departamento só: o centro trava com o caminho; sem departamento, fica livre (20/10)", () => {
+    expect(travas({ doOmie: true, centroDoOmie: true }).centro).toMatch(/departamento do título no Omie/);
+    expect(travas({ doOmie: true, centroDoOmie: false }).centro).toBeUndefined();
+    // Depois da virada (`presaAoOmie` falso), livre mesmo com o departamento guardado.
+    expect(travas({ doOmie: false, centroDoOmie: true }).centro).toBeUndefined();
+  });
+
   it("conta de imposto retido: valor, credor e retenções mudam na conta de origem", () => {
     const t = travas({ deRetencao: true });
     expect(Object.keys(t).sort()).toEqual(["contraparte", "retencoes", "valor"]);
