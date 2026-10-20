@@ -220,7 +220,7 @@ export function ContasTable({
                 <InfoDoCartao className="break-words">
                   {[
                     mostrarEmpresa && l.empresaNome,
-                    l.categoriaNome,
+                    l.categoriaNome && (l.rateio ? `${l.categoriaNome} (rateada em ${l.rateio})` : l.categoriaNome),
                     mostrarCentro && l.centroDeCustoNome,
                     l.projetoNome && `projeto ${l.projetoNome}`,
                   ]
@@ -350,9 +350,14 @@ export function ContasTable({
                       <AlertCircle size={12} /> sem categoria
                     </span>
                   )}
+                  {l.rateio ? (
+                    <span className="block text-micro text-fg-muted" title="A conta é dividida em linhas de categoria, centro e projeto; a categoria mostrada é a da linha maior.">
+                      rateada em {l.rateio}
+                    </span>
+                  ) : null}
                   {mostrarCentro && (
                     <span className="block text-micro text-fg-muted truncate">
-                      {l.centroDeCustoNome ?? "sem centro de custo"}
+                      {l.centroDeCustoNome ?? (l.rateio ? "centros no rateio" : "sem centro de custo")}
                     </span>
                   )}
                   {l.projetoNome && (

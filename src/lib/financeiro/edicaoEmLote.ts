@@ -40,6 +40,8 @@ export type ContaDaAlteracao = {
   /** Cancelada, renegociada ou baixada por perda: o porquê de nada mudar. */
   encerrada: string | null;
   travas: Travas;
+  /** Tem rateio (lote D, 20/10): categoria, centro e projeto moram nas linhas. */
+  rateada?: boolean;
 };
 
 /**
@@ -69,6 +71,11 @@ export function porQueFica(conta: ContaDaAlteracao, escolha: EscolhaDaAlteracao)
   // lote que esta janela substituiu.
   const soCentro = campos.length > 0 && campos.every((c) => c === "centro");
   if (conta.encerrada && !soCentro) return conta.encerrada;
+  // Na conta rateada, a categoria, o centro e o projeto são das linhas: trocar
+  // um só na conta desmancharia o rateio sem ninguém ver.
+  if (conta.rateada && campos.some((c) => c === "categoria" || c === "centro" || c === "projeto")) {
+    return "Tem rateio — mude categoria, centro e projeto nas linhas, na edição da conta.";
+  }
   for (const c of campos) {
     const trava = conta.travas[c];
     if (trava) return trava;
