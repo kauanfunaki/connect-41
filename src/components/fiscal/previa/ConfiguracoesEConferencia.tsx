@@ -6,10 +6,12 @@ import { useFiscal } from "./ContextoFiscal";
 import { AcoesFiscais, AtalhoFiscal, BlocoFiscal, EstadoFiscal, MetricasFiscais, TabelaFiscal, reais } from "./Compartilhados";
 import { documentosDoContexto, mesmoEscopo, totaisDoContexto } from "@/lib/fiscal/previa/cenario";
 import { FormParametrosFiscal } from "./Apuracoes";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export function ConfiguracoesFiscal({ aba }: { aba: string }) {
   const { cenario } = useFiscal();
   if (aba === "parametros") return <FormParametrosFiscal />;
+  if (aba === "depara") return <EmptyState title="De-Para CFOP indisponível" description="O motor SPED ainda não disponibilizou correspondências de CFOP para consulta. As regras fiscais não substituem o de-para." />;
   return <BlocoFiscal titulo="Regras fiscais" descricao="Consulte o tratamento por CFOP e sua fonte. As regras são definidas no código de processamento do SPED e não podem ser editadas aqui. Os dados abaixo são demonstrativos e não representam orientação tributária."><TabelaFiscal colunas={["CFOP", "Tratamento", "Fonte / procedência"]} linhas={cenario.regras.map((r) => ({ id: r.id, celulas: [r.cfop, r.destino, r.fonte] }))} /></BlocoFiscal>;
 }
 

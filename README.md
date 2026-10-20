@@ -1,5 +1,15 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Chamados internos
+
+O módulo `helpdesk` oferece atendimento interno por setor, formulários por categoria, fila, SLA, aprovações, anexos e triagem conversacional opcional com OpenAI. Nasce desligado e usa os controles de módulo, assinatura e IA por escritório já existentes no Connect.
+
+Configuração, migração, operação, limites e testes isolados: [guia do helpdesk](docs/HELPDESK.md). Verificações específicas: `npm run test:helpdesk`, `npm run test:helpdesk:db` e `npm run test:helpdesk:ui`; os dois últimos exigem um banco descartável local explícito.
+
+## Ops Center
+
+O módulo Ops Center do Tech acompanha automações, donos, atividade e resultados. Inclui o filtro Minhas automações e avisa o dono no Connect ao receber um erro. Nasce desligado por escritório. Ativação, contrato dos bots e validação: [guia do Ops Center](docs/OPS-CENTER.md).
+
 ## Getting Started
 
 First, run the development server:
