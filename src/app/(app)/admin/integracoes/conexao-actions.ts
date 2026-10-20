@@ -41,6 +41,8 @@ export async function salvarConexao(_prev: ConexaoState, form: FormData): Promis
       }
       continue;
     }
+    // Escolha fora da lista não entra: vale a gravada, ou a primeira opção.
+    if (c.type === "escolha" && !c.opcoes?.some((o) => o.valor === v)) continue;
     if (typeof v === "string") campos[c.name] = v;
   }
 

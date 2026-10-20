@@ -154,8 +154,10 @@ export async function salvarIntegracao(params: {
   /**
    * Conferência própria da integração, sobre a configuração já mesclada (o
    * certificado novo com a senha guardada, por exemplo). Devolve o erro, ou null.
+   * Pode devolver também a configuração ajustada, que é a que se grava: o
+   * e-CNPJ em formato antigo, convertido para o moderno (20/10/2026).
    */
-  validar?: (config: Record<string, string>) => string | null;
+  validar?: (config: Record<string, string>) => string | null | { config: Record<string, string> };
 }): Promise<ResultadoDeSalvar> {
   const def = integracaoDoCatalogo(params.code);
   if (!def) return { ok: false, erro: "Integração desconhecida." };
@@ -175,9 +177,10 @@ export async function salvarIntegracao(params: {
   });
 
   const atual = existente ? lerConfig(existente.configEnc) : {};
-  const config = mesclarConfig(def, atual, params.campos);
-  const invalido = params.validar?.(config);
-  if (invalido) return { ok: false, erro: invalido };
+  let config = mesclarConfig(def, atual, params.campos);
+  const conferido = params.validar?.(config);
+  if (typeof conferido === "string") return { ok: false, erro: conferido };
+  if (conferido) config = conferido.config;
 
   const faltando = camposFaltando(def, config);
   // Ligar com credencial faltando produziria um 401 que parece problema do

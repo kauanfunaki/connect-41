@@ -15,6 +15,18 @@ import { formatarReaisDeCentavos } from "@/lib/format";
 
 export const CODIGO_DA_INTEGRACAO = "serpro_integra_contador";
 
+/**
+ * Produção (o contrato, com chave e certificado) ou demonstração (o trial do
+ * Serpro: dados fictícios, token público, sem custo — 20/10/2026). Em
+ * `serpro_calls.ambiente`, em maiúsculas.
+ */
+export const AMBIENTES = ["producao", "demonstracao"] as const;
+export type Ambiente = (typeof AMBIENTES)[number];
+
+export function lerAmbiente(valor: string | null | undefined): Ambiente {
+  return valor === "demonstracao" ? "demonstracao" : "producao";
+}
+
 export const CAMINHOS = ["Apoiar", "Consultar", "Declarar", "Emitir", "Monitorar"] as const;
 export type Caminho = (typeof CAMINHOS)[number];
 
@@ -137,6 +149,12 @@ export type PedidoAoSerpro = {
   /** CNPJ ou CPF do contribuinte. */
   contribuinte: string;
   dados: Record<string, unknown>;
+  /**
+   * Só na demonstração, e ignorado na produção: o trial só responde ao corpo
+   * do cenário da documentação, inclusive contratante e autor fictícios
+   * (conferido em 20/10/2026 — com o CNPJ do escritório no lugar, volta "ERRO").
+   */
+  partesDaDemonstracao?: { contratante: string; autor: string };
 };
 
 export function corpoDoPedido(p: PedidoAoSerpro, contratante: string, autor: string) {
@@ -182,6 +200,17 @@ export function lerResposta(status: number, corpo: string): RespostaLida {
   return { status, mensagens, dados };
 }
 
+const ehMensagemDeErro = (m: Mensagem) => m.codigo.trim().toUpperCase() === "ERRO";
+
+/**
+ * O 200 que é erro: a demonstração do Serpro responde 200 com `mensagens:
+ * [{codigo: "ERRO"}]` a qualquer corpo fora do cenário (20/10/2026). Quem olha
+ * só o status toma isso por sucesso.
+ */
+export function temMensagemDeErro(mensagens: Mensagem[]): boolean {
+  return mensagens.some(ehMensagemDeErro);
+}
+
 /** Os códigos das mensagens, para o registro da chamada. */
 export function codigosDasMensagens(mensagens: Mensagem[]): string | null {
   const t = mensagens.map((m) => m.codigo).filter(Boolean).join(", ");
@@ -192,6 +221,8 @@ export function codigosDasMensagens(mensagens: Mensagem[]): string | null {
 export function explicarErro(status: number | null, mensagens: Mensagem[]): string {
   const codigos = mensagens.map((m) => m.codigo).join(" ");
   if (status === null) return "O Serpro não respondeu. Tente de novo em alguns minutos.";
+  const recusa = mensagens.find(ehMensagemDeErro);
+  if (recusa) return recusa.texto ? `O Serpro recusou o pedido: ${recusa.texto}` : "O Serpro recusou o pedido.";
   if (/ICGERENCIADOR-022/.test(codigos)) return "O escritório não tem autorização de acesso deste cliente na Receita (cobrada pelo Serpro).";
   if (/ICGERENCIADOR-016/.test(codigos)) return "O CNPJ do certificado é diferente do CNPJ que contratou o Serpro.";
   if (status === 401) return "O Serpro recusou as credenciais: confira a Consumer Key, o Consumer Secret e o certificado.";
@@ -201,6 +232,39 @@ export function explicarErro(status: number | null, mensagens: Mensagem[]): stri
   if (status === 504) return "O Serpro demorou demais e cortou a chamada (não cobrada).";
   if (status >= 500) return "O Serpro está fora do ar. Tente de novo mais tarde.";
   return mensagens[0]?.texto || `O Serpro respondeu ${status}.`;
+}
+
+// ─── Cabeçalhos ──────────────────────────────────────────────────────────────
+
+/**
+ * O X-Request-Tag no formato que a documentação sugere (página de 10/04/2026):
+ * tipo e número do autor, tipo e número do contribuinte (14 posições, com
+ * zeros à esquerda) e o sequencial do serviço no Catálogo, em 2 posições. São
+ * 32 caracteres, o limite do campo. É o que aparece na coluna TAG do relatório
+ * de consumo da Área do Cliente: o elo entre a linha do Connect e a fatura.
+ */
+export function tagDaRequisicao(autor: string, contribuinte: string, sequencial: number): string {
+  const parte = (doc: string) => {
+    const p = pessoa(doc);
+    return `${p.tipo}${p.numero.padStart(14, "0").slice(-14)}`;
+  };
+  return `${parte(autor)}${parte(contribuinte)}${String(sequencial % 100).padStart(2, "0")}`;
+}
+
+/**
+ * Um valor do ETag no formato "chave:valor" — `"tempoEspera:4000"` no 204 do
+ * Sitfis, `"protocoloRelatorio:…"` no 304. Tira o W/ e as aspas. null = outra chave.
+ */
+export function valorDoEtag(etag: string | null | undefined, chave: string): string | null {
+  const limpo = (etag ?? "").trim().replace(/^W\//, "").replace(/^"|"$/g, "");
+  const i = limpo.indexOf(":");
+  return i > 0 && limpo.slice(0, i).trim() === chave ? limpo.slice(i + 1).trim() : null;
+}
+
+/** O novo tempo de espera, em ms, que o 204 manda no ETag. null = não veio. */
+export function tempoDeEsperaDoEtag(etag: string | null | undefined): number | null {
+  const v = Number(valorDoEtag(etag, "tempoEspera"));
+  return Number.isFinite(v) && v > 0 ? v : null;
 }
 
 // ─── Certificado ─────────────────────────────────────────────────────────────
@@ -253,6 +317,8 @@ export type ResultadoDaConferencia =
  * aviso 40400.
  */
 export function resultadoDaConferencia(r: RespostaLida, hoje: string): ResultadoDaConferencia {
+  // O 200 com "ERRO" não é "sem procuração": lido como lista vazia, cancelaria a autorização ativa.
+  if (temMensagemDeErro(r.mensagens)) return { tipo: "erro", texto: explicarErro(r.status, r.mensagens) };
   const codigos = r.mensagens.map((m) => m.codigo).join(" ");
   if (/PROCURACOES-40400/.test(codigos) || (r.status === 404 && !Array.isArray(r.dados))) return { tipo: "sem_procuracao" };
   if (r.status !== 200) return { tipo: "erro", texto: explicarErro(r.status, r.mensagens) };
