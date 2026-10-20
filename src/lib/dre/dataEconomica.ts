@@ -80,6 +80,7 @@ const SELECAO = {
   paidAt: true,
   dueDate: true,
   costCenterId: true,
+  allocations: { select: { categoryId: true, costCenterId: true, amount: true }, orderBy: { position: "asc" } },
 } as const;
 
 type Linha = {
@@ -94,6 +95,8 @@ type Linha = {
   paidAt: Date | null;
   dueDate: Date;
   costCenterId: string | null;
+  /** As linhas do rateio (lote D, 20/10). Vazio, ou ausente no movimento de caixa já dividido: a conta inteira. */
+  allocations?: { categoryId: string | null; costCenterId: string | null; amount: { toString(): string } }[];
 };
 
 function paraFinanceiro(l: Linha, nomePorId: Map<string, string>): LancamentoFinanceiro {
@@ -106,6 +109,16 @@ function paraFinanceiro(l: Linha, nomePorId: Map<string, string>): LancamentoFin
     categoria: l.categoryId ? nomePorId.get(l.categoryId) ?? null : null,
     centroDeCustoId: l.costCenterId,
   };
+}
+
+/**
+ * A conta como a DRE de competência a soma: uma linha por linha do rateio,
+ * cada uma com o valor, a categoria e o centro dela; sem rateio, a conta
+ * inteira. As linhas somam o valor da conta.
+ */
+function paraFinanceiros(l: Linha, nomePorId: Map<string, string>): LancamentoFinanceiro[] {
+  if (!l.allocations || l.allocations.length < 2) return [paraFinanceiro(l, nomePorId)];
+  return l.allocations.map((a) => paraFinanceiro({ ...l, amount: a.amount, categoryId: a.categoryId, costCenterId: a.costCenterId }, nomePorId));
 }
 
 /**
@@ -128,10 +141,15 @@ function linhaDoMovimento(m: MovimentoDeCaixa): Linha {
   };
 }
 
-/** O recorte do filtro de centro no banco. "Todos" não acrescenta nada. */
+/**
+ * O recorte do filtro de centro no banco. "Todos" não acrescenta nada. A conta
+ * rateada entra se alguma linha é do centro; a separação das linhas é em
+ * memória (`passaNoFiltroDeCentro`), depois de abrir o rateio.
+ */
 function whereDoCentro(filtro: FiltroDeCentro): Prisma.FinanceEntryWhereInput {
   if (filtro.tipo === "todos") return {};
-  return { costCenterId: filtro.tipo === "sem" ? null : filtro.id };
+  const costCenterId = filtro.tipo === "sem" ? null : filtro.id;
+  return { AND: [{ OR: [{ costCenterId }, { allocations: { some: { costCenterId } } }] }] };
 }
 
 /**
@@ -167,7 +185,12 @@ export async function ajustesDoPeriodo(
     }),
     prisma.financeEntry.findMany({
       where: { tenantId, companyId, closeReason: "PERDA", lossAt: { gte: de, lt: ate } },
-      select: { lossAt: true, amount: true, costCenterId: true },
+      select: {
+        lossAt: true,
+        amount: true,
+        costCenterId: true,
+        allocations: { select: { costCenterId: true, amount: true }, orderBy: { position: "asc" } },
+      },
     }),
   ]);
   const acordosNaDre = acordos.map((a) => ({
@@ -177,11 +200,14 @@ export async function ajustesDoPeriodo(
     acordadoCentavos: centavosDeDecimal(a.agreedAmount),
     centroDeCustoId: centroComum(a.originais.map((o) => o.costCenterId)),
   }));
-  const perdasNaDre = perdas.map((p) => ({
-    competencia: competenciaDoInstante(p.lossAt!),
-    centavos: centavosDeDecimal(p.amount),
-    centroDeCustoId: p.costCenterId,
-  }));
+  // A perda de uma conta rateada sai de cada centro na parte dele (lote D).
+  const perdasNaDre = perdas.flatMap((p) =>
+    (p.allocations.length > 1 ? p.allocations : [p]).map((parte) => ({
+      competencia: competenciaDoInstante(p.lossAt!),
+      centavos: centavosDeDecimal(parte.amount),
+      centroDeCustoId: parte.costCenterId,
+    }))
+  );
   for (const c of competencias) saida.set(c, ajustesDaCobranca(acordosNaDre, perdasNaDre, c));
   return saida;
 }
@@ -208,7 +234,9 @@ export async function serieEconomica(
     ajustesDoPeriodo(tenantId, companyId, competencias),
   ]);
   const porMes = new Map<string, LancamentoFinanceiro[]>(competencias.map((c) => [c, []]));
-  for (const l of linhas) porMes.get(l.competence)?.push(paraFinanceiro(l, ctx.nomePorId));
+  for (const l of linhas) {
+    porMes.get(l.competence)?.push(...paraFinanceiros(l, ctx.nomePorId).filter((f) => passaNoFiltroDeCentro(f.centroDeCustoId ?? null, centro)));
+  }
   return new Map(
     competencias.map((c) => [
       c,
@@ -247,7 +275,7 @@ export async function quadroPorCentroDoPeriodo(
     }),
   ]);
   return quadroPorCentro(
-    linhas.map((l) => paraFinanceiro(l, ctx.nomePorId)),
+    linhas.flatMap((l) => paraFinanceiros(l, ctx.nomePorId)),
     [...ajustes.values()].flat(),
     ctx.mapeamento,
     centros.map((c) => ({ id: c.id, nome: c.name, codigo: c.code, active: c.active }))
@@ -310,18 +338,23 @@ export async function dadosDaReconciliacao(
   for (const l of economicas) {
     const financeiro = paraFinanceiro(l, ctx.nomePorId);
     if (!contaNaDreEconomica(financeiro)) continue;
-    const lanc = paraLancamentoDoDre(financeiro);
+    // A conta rateada entra pelas linhas (lote D), dos dois lados.
+    const lancs = paraFinanceiros(l, ctx.nomePorId).map(paraLancamentoDoDre);
     // "Nos dois" é a conta do mês paga no mês por inteiro, numa baixa só e sem
     // encargo nem desconto — o caso de quase todas, e o de antes do lote C. O
     // resto (parcial, com juros, paga noutro mês) fica de cada lado com o seu
-    // valor, e a ponte continua fechando no centavo.
+    // valor, e a ponte continua fechando no centavo. A rateada tem um
+    // principal por linha, todos da mesma baixa.
     const doCaixa = caixaPorConta.get(l.id) ?? [];
-    const inteira = doCaixa.length === 1 && doCaixa[0]!.parte === "principal" && doCaixa[0]!.centavos === financeiro.centavos;
+    const inteira =
+      doCaixa.length > 0 &&
+      doCaixa.every((m) => m.parte === "principal" && m.paymentId === doCaixa[0]!.paymentId) &&
+      doCaixa.reduce((s, m) => s + m.centavos, 0) === financeiro.centavos;
     if (inteira) {
-      conjuntos.ambos.push(lanc);
+      conjuntos.ambos.push(...lancs);
       caixaPorConta.delete(l.id);
     } else {
-      conjuntos.soCompetencia.push(lanc);
+      conjuntos.soCompetencia.push(...lancs);
     }
   }
   for (const doCaixa of caixaPorConta.values()) {
