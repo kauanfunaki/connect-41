@@ -434,11 +434,11 @@ const nacionalRetido = (p: { vLiq?: string; tpRetPisCofins?: string; tpRetISSQN?
 <NFSe xmlns="http://www.sped.fazenda.gov.br/nfse"><infNFSe>
   <nNFSe>2020</nNFSe>
   <dhProc>2026-10-06T08:00:00-03:00</dhProc>
-  <emit><CNPJ>17122471000175</CNPJ><xNome>BLD LOGISTICA LTDA</xNome></emit>
+  <emit><CNPJ>11222333000181</CNPJ><xNome>PRESTADORA EXEMPLO LTDA</xNome></emit>
   <valores><vISSQN>50.00</vISSQN>${p.vLiq ? `<vLiq>${p.vLiq}</vLiq>` : ""}</valores>
   <DPS><infDPS>
     <serie>5</serie><nDPS>90</nDPS><dCompet>2026-10-01</dCompet>
-    <toma><CNPJ>39952818000140</CNPJ><xNome>ZAHRA PERFUMES LTDA</xNome></toma>
+    <toma><CNPJ>11444777000161</CNPJ><xNome>TOMADORA EXEMPLO LTDA</xNome></toma>
     <serv><valores><vServPrest><vServ>1000.00</vServ></vServPrest></valores></serv>
     <valores><trib>
       <tribMun><tribISSQN>1</tribISSQN><tpRetISSQN>${p.tpRetISSQN ?? "2"}</tpRetISSQN></tribMun>
