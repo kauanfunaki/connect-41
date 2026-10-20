@@ -3875,6 +3875,12 @@ model CollectionReminderOptOut {
 enum BankAccountType {
   CORRENTE
   POUPANCA
+  /// Adiantamento a fornecedores (lote D, 20/10 — a conta do tipo adiantamento
+  /// do Omie): não é banco. Recebe o que se paga ao fornecedor antes da conta,
+  /// e a conta dele, quando chega, é paga por ela. Sem extrato, fora do caixa.
+  ADIANTAMENTO_FORNECEDOR
+  /// Adiantamento de clientes: o que o cliente pagou antes da conta a receber.
+  ADIANTAMENTO_CLIENTE
 }
 
 /// Estado de uma linha do extrato.

@@ -56,6 +56,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado, e o motivo aparece ao passar o mouse sobre ele.",
+      "Pagou o fornecedor antes da conta chegar? Escolha a empresa e, em “Adiantamentos a fornecedores”, clique em “Novo adiantamento”: o dinheiro sai do banco e fica guardado para ele, fora da DRE. Quando a conta chegar, clique em “Pagar” e escolha o adiantamento em “Saiu da conta” — a despesa entra na DRE ali, e o banco não se mexe de novo.",
       "Conta com “R$ X retidos” embaixo do valor tem imposto retido na fonte: o valor é o líquido, e cada imposto tem a conta dele. Para mudar uma retenção, clique em “Editar” na conta do fornecedor e abra “Retenções na fonte”; a conta do imposto acompanha enquanto não tiver baixa. Cancelar a conta do fornecedor cancela as dos impostos em aberto.",
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "“Abrir pendência” e “Enviar para aprovação” só aparecem quando o escritório usa esses módulos.",
@@ -114,6 +115,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     dicas: [
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "Conta “Renegociada” ou “Perda” saiu do em aberto pela tela “Cobrança” (acordo ou baixa por perda).",
+      "O cliente pagou antes da conta a receber? Escolha a empresa e, em “Adiantamentos de clientes”, clique em “Novo adiantamento”. Depois, ao receber a conta, escolha o adiantamento em “Entrou na conta”.",
       "Para levar a lista para o Excel, clique em “Exportar” › “Excel”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram). O arquivo vem numa Tabela do Excel, com data como data e valor como número — no Excel, “Inserir” › “Tabela dinâmica” já pega a tabela. Conta rateada sai numa linha por parte do rateio. “Exportar” › “CSV” continua para outros sistemas.",
       "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
     ],
