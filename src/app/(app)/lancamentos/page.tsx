@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { presaAoOmie } from "@/lib/integracoes/omie/virada";
 import { rotuloDaSerie } from "@/lib/financeiro/repeticao";
 import { NotebookPen, Plus, Upload } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -267,6 +268,9 @@ async function ListaDeManuais({
     where: { tenantId, companyId, competence: mes, fiscalDocumentId: null },
     select: {
       id: true,
+      omieTitleId: true,
+      omieMovementId: true,
+      company: { select: { omieCutoverAt: true } },
       kind: true,
       status: true,
       amount: true,
@@ -349,7 +353,7 @@ async function ListaDeManuais({
                       {podeCancelar && (
                         <span className="ml-auto flex gap-1.5">
                           {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
-                          {podeCancelarManual(l).pode && (
+                          {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
                             <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
                           )}
                         </span>
@@ -421,9 +425,9 @@ async function ListaDeManuais({
                             {podeCancelar && (
                               <div className="flex flex-wrap justify-end gap-1.5">
                                 {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
-                                {podeCancelarManual(l).pode && (
-                            <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
-                          )}
+                                {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
+                                  <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
+                                )}
                               </div>
                             )}
                           </td>

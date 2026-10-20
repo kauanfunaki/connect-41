@@ -57,6 +57,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado, e o motivo aparece ao passar o mouse sobre ele.",
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "“Abrir pendência” e “Enviar para aprovação” só aparecem quando o escritório usa esses módulos.",
+      "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
     ],
   },
 
@@ -109,6 +110,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     dicas: [
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "Conta “Renegociada” ou “Perda” saiu do em aberto pela tela “Cobrança” (acordo ou baixa por perda).",
+      "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
     ],
   },
 

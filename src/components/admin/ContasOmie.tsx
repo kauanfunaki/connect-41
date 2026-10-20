@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { Download, Eye, FileSearch, KeyRound, Plus, PlugZap, RefreshCw } from "lucide-react";
+import { ArrowRightLeft, Download, Eye, FileSearch, KeyRound, Plus, PlugZap, RefreshCw, Undo2 } from "lucide-react";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -14,7 +14,17 @@ import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
-import { contasDoOmieAction, importarNotasOmieAction, previaDasNotasOmieAction, salvarContaOmieAction, testarContaOmieAction } from "@/app/(app)/admin/integracoes/omie-actions";
+import {
+  contasDoOmieAction,
+  desfazerViradaAction,
+  importarNotasOmieAction,
+  previaDasNotasOmieAction,
+  salvarContaOmieAction,
+  testarContaOmieAction,
+  virarParaOConnectAction,
+} from "@/app/(app)/admin/integracoes/omie-actions";
+import { useConfirm } from "@/components/ui/useConfirm";
+import { formatInstantDate } from "@/lib/format";
 import type { ContaOmieNaTela } from "@/lib/integracoes/omie/contas";
 import type { Saude } from "@/lib/integracoes/execucao";
 import type { PreviaDeChamada } from "@/lib/integracoes/omie/contas";
@@ -128,7 +138,17 @@ function FormConta({ empresas, inicial, onFim }: { empresas: (EmpresaParaEscolhe
  * cada empresa tem App Key e App Secret próprios (no Omie, em Configurações ›
  * Aplicativos). Login e senha do Omie não servem para a API.
  */
-export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; empresas: (EmpresaParaEscolher & { nome: string })[] }) {
+export function ContasOmie({
+  contas,
+  empresas,
+  podeDesfazerVirada = false,
+}: {
+  contas: ContaOmieNaTela[];
+  empresas: (EmpresaParaEscolher & { nome: string })[];
+  /** Super Admin: o "Voltar a ler do Omie", para a virada feita por engano. */
+  podeDesfazerVirada?: boolean;
+}) {
+  const { dialog, requestConfirm } = useConfirm();
   const [novo, setNovo] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
   const [teste, setTeste] = useState<Record<string, { ok: boolean; texto: string }>>({});
@@ -182,6 +202,48 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
     }
   }
 
+  // A virada para o Connect (lote E): a última leitura, e a leitura do
+  // financeiro desliga. A confirmação diz o que muda, porque desfazer é só
+  // com o Super Admin.
+  function virar(c: ContaOmieNaTela) {
+    requestConfirm(
+      {
+        title: `Virar ${c.empresa} para o Connect?`,
+        description:
+          "O Connect lê as contas do Omie uma última vez e desliga a leitura. Daí em diante as contas desta empresa — inclusive as que vieram do Omie — se editam, pagam e cancelam só no Connect, e o que mudar no Omie não chega mais aqui. Faça quando o BPO parar de lançar no Omie desta empresa. As notas emitidas no Omie continuam entrando.",
+        confirmLabel: "Virar para o Connect",
+      },
+      async () => {
+        setTestando(c.companyId);
+        try {
+          const r = await virarParaOConnectAction(c.companyId);
+          setTeste((t) => ({ ...t, [c.companyId]: "error" in r ? { ok: false, texto: r.error } : { ok: true, texto: r.mensagem ?? "Virada feita." } }));
+        } catch {
+          setTeste((t) => ({ ...t, [c.companyId]: { ok: false, texto: FALHA_DE_REDE } }));
+        } finally {
+          setTestando(null);
+        }
+      }
+    );
+  }
+
+  function desfazerVirada(c: ContaOmieNaTela) {
+    requestConfirm(
+      {
+        title: `Voltar a ler ${c.empresa} do Omie?`,
+        description:
+          "A leitura das contas do Omie volta a ligar. A próxima reescreve, nas contas que vieram do Omie, o que foi mudado no Connect desde a virada — valor, vencimento, competência e categoria voltam aos do Omie. Use só para desfazer uma virada feita por engano.",
+        confirmLabel: "Voltar a ler do Omie",
+        destructive: true,
+      },
+      async () => {
+        const r = await desfazerViradaAction(c.companyId);
+        if ("error" in r) throw new Error(r.error);
+        setTeste((t) => ({ ...t, [c.companyId]: { ok: true, texto: r.mensagem ?? "Virada desfeita." } }));
+      }
+    );
+  }
+
   async function testar(companyId: string) {
     setTestando(companyId);
     try {
@@ -207,6 +269,17 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
       c.lastError && <span className="block text-fs-1 mt-1 text-danger">{c.lastError}</span>
     );
 
+  // A virada aparece ao lado da saúde da conta: depois dela, as contas são do
+  // Connect, e a conta do Omie só serve às notas.
+  const viradaDe = (c: ContaOmieNaTela) =>
+    c.viradaEm ? (
+      <span className="block text-fs-1 mt-1 text-fg-secondary">
+        <Selo tom="sucesso">Virou para o Connect</Selo> <span className="text-fg-muted">em {formatInstantDate(c.viradaEm)}</span>
+      </span>
+    ) : c.importouAsContas ? (
+      <span className="block text-fs-1 mt-1 text-fg-muted">Contas lidas do Omie a cada 6 horas</span>
+    ) : null;
+
   const acoesDe = (c: ContaOmieNaTela) => (
     <span className="inline-flex items-center gap-1.5">
       {/* Só `disabled`, e não `loading`: o `loading` do
@@ -215,7 +288,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
       <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => testar(c.companyId)}>
         <PlugZap size={11} /> Testar
       </Button>
-      {c.saude === "ok" && contasVistas[c.companyId] && (
+      {c.saude === "ok" && contasVistas[c.companyId] && !c.viradaEm && (
         <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => lerContas(c.companyId, true)}>
           <Download size={11} /> Importar contas
         </Button>
@@ -254,17 +327,44 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                 >
                   Prévia das notas
                 </ItemDoMenu>
-                <ItemDoMenu
-                  icone={<Eye />}
-                  disabled={testando !== null}
-                  onClick={() => {
-                    fechar();
-                    lerContas(c.companyId, false);
-                  }}
-                >
-                  Prévia das contas
-                </ItemDoMenu>
+                {!c.viradaEm && (
+                  <ItemDoMenu
+                    icone={<Eye />}
+                    disabled={testando !== null}
+                    onClick={() => {
+                      fechar();
+                      lerContas(c.companyId, false);
+                    }}
+                  >
+                    Prévia das contas
+                  </ItemDoMenu>
+                )}
               </>
+            )}
+            {!c.viradaEm && (
+              <ItemDoMenu
+                icone={<ArrowRightLeft />}
+                descricao="A última leitura, e daí em diante as contas são do Connect."
+                disabled={testando !== null}
+                onClick={() => {
+                  fechar();
+                  virar(c);
+                }}
+              >
+                Virar para o Connect
+              </ItemDoMenu>
+            )}
+            {c.viradaEm && podeDesfazerVirada && (
+              <ItemDoMenu
+                icone={<Undo2 />}
+                danger
+                onClick={() => {
+                  fechar();
+                  desfazerVirada(c);
+                }}
+              >
+                Voltar a ler do Omie
+              </ItemDoMenu>
             )}
           </>
         )}
@@ -337,6 +437,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                   <InfoDoCartao className="tnum">App Key {c.appKey || "—"}</InfoDoCartao>
                   <div className="mt-2">
                     <Selo tom={tomDaVariante(SAUDE[c.saude].variante)}>{SAUDE[c.saude].rotulo}</Selo>
+                    {viradaDe(c)}
                     {resultadoDe(c)}
                   </div>
                   <PeDoCartao>{acoesDe(c)}</PeDoCartao>
@@ -378,6 +479,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                       <td className="py-2.5 pr-3 text-fg-secondary tnum">{c.appKey || "—"}</td>
                       <td className="py-2.5 pr-3">
                         <Selo tom={tomDaVariante(SAUDE[c.saude].variante)}>{SAUDE[c.saude].rotulo}</Selo>
+                        {viradaDe(c)}
                         {resultadoDe(c)}
                       </td>
                       <td className="py-2.5 whitespace-nowrap">
@@ -407,6 +509,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
         </TabelaFiltravel>
         </>
       )}
+      {dialog}
     </Card>
   );
 }
