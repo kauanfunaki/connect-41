@@ -36,7 +36,7 @@ function excluirDaObrigacao(o: { id: string; title: string }) {
   return {
     action: excluirObrigacao.bind(null, o.id),
     titulo: `Excluir a obrigação "${o.title}"?`,
-    descricao: "Nenhum item novo será gerado. Os itens de kanban já criados ficam.",
+    descricao: "Nenhuma atividade nova será gerada. As já criadas ficam.",
   };
 }
 
@@ -105,7 +105,7 @@ export default async function ObrigacoesPage() {
           <EmptyState
             icon={<CalendarClock />}
             title="Nenhuma obrigação recorrente cadastrada"
-            description="Cadastre em “Nova obrigação” as obrigações como DAS, DCTF e folha — o Connect gera o item de kanban todo mês automaticamente."
+            description="Cadastre em “Nova obrigação” as obrigações como DAS, DCTF e folha — o Connect gera a atividade todo mês automaticamente."
           />
         </Card>
       ) : (
@@ -158,7 +158,7 @@ export default async function ObrigacoesPage() {
                         rotulo="Setor"
                         campos={[
                           { chave: "setor", rotulo: "Setor" },
-                          { chave: "kanban", rotulo: "Kanban" },
+                          { chave: "kanban", rotulo: "Tarefa" },
                         ]}
                       />
                     </th>

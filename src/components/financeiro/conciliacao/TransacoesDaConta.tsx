@@ -30,7 +30,10 @@ import {
 } from "@/app/(app)/conciliacao/actions";
 import { moeda } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
-import { formatarCompetencia } from "@/lib/format";
+import { formatarCompetencia, formatarNumero } from "@/lib/format";
+import { centavosDeTexto } from "@/lib/financeiro/manual";
+import type { AjusteDaConciliacao } from "@/lib/financeiro/conciliacao/ajuste";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 import { CamposDaContraparteNova } from "@/components/financeiro/ContraparteNova";
@@ -414,10 +417,16 @@ function ResumoDoLancamento({ l }: { l: LancamentoResumido }) {
 
 function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransacao; onClose: () => void }) {
   const alvo = Math.abs(transacao.centavos);
+  const aPagar = transacao.centavos < 0;
   const [busca, setBusca] = useState("");
   const [lista, setLista] = useState<LancamentoParaEscolha[] | null>(null);
   const [limitado, setLimitado] = useState(false);
-  const [marcados, setMarcados] = useState<Map<string, number>>(new Map());
+  const [marcados, setMarcados] = useState<Map<string, LancamentoParaEscolha>>(new Map());
+  // A diferença com uma conta só (fila do BPO, 19/10): juros e multa quando a
+  // linha passa da conta; desconto ou baixa parcial quando fica abaixo.
+  const [jurosTexto, setJurosTexto] = useState<string | null>(null);
+  const [multaTexto, setMultaTexto] = useState("");
+  const [abaixo, setAbaixo] = useState<"desconto" | "parcial" | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, startCarga] = useTransition();
   const [salvando, startSalvar] = useTransition();
@@ -451,16 +460,46 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
     };
   }, [transacao.id]);
 
-  const soma = [...marcados.values()].reduce((a, b) => a + b, 0);
+  const soma = [...marcados.values()].reduce((a, l) => a + l.centavos, 0);
   const falta = alvo - soma;
+  const unica = marcados.size === 1 && ![...marcados.values()][0]!.ehBaixa;
+
+  // Juros, sem nada digitado, é o que a multa deixa da diferença.
+  const lido = (t: string) => (t.trim() === "" ? 0 : centavosDeTexto(t));
+  const multa = lido(multaTexto);
+  const juros = jurosTexto === null ? (multa === null ? null : Math.max(0, falta - multa)) : lido(jurosTexto);
+  const encargosFecham = juros !== null && multa !== null && juros + multa === falta;
+
+  const ajuste: AjusteDaConciliacao | null =
+    !unica || falta === 0
+      ? null
+      : falta > 0
+        ? encargosFecham
+          ? { tipo: "encargos", jurosCentavos: juros!, multaCentavos: multa! }
+          : null
+        : abaixo
+          ? { tipo: abaixo }
+          : null;
+  const podeConciliar = marcados.size > 0 && (falta === 0 || ajuste !== null);
 
   function alternar(l: LancamentoParaEscolha) {
     setMarcados((atual) => {
       const novo = new Map(atual);
       if (novo.has(l.id)) novo.delete(l.id);
-      else novo.set(l.id, l.centavos);
+      else novo.set(l.id, l);
       return novo;
     });
+    setJurosTexto(null);
+    setMultaTexto("");
+    setAbaixo(null);
+  }
+
+  function notaDaSoma() {
+    if (marcados.size === 0 || falta === 0) return null;
+    if (ajuste?.tipo === "encargos") return <span> · conta {moeda(soma)} + juros e multa {moeda(falta)}</span>;
+    if (ajuste?.tipo === "desconto") return <span> · conta {moeda(soma)} − desconto {moeda(-falta)}</span>;
+    if (ajuste?.tipo === "parcial") return <span> · baixa parcial: ficam {moeda(-falta)} em aberto</span>;
+    return <span className="text-danger"> · {falta > 0 ? `faltam ${moeda(falta)}` : `passou ${moeda(-falta)}`}</span>;
   }
 
   return (
@@ -469,7 +508,8 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
         <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
           <strong className="text-fg">{moeda(transacao.centavos)}</strong>. Marque um ou mais
-          lançamentos {transacao.centavos < 0 ? "a pagar" : "a receber"} cuja soma feche o valor no centavo.
+          lançamentos {aPagar ? "a pagar" : "a receber"} cuja soma feche o valor no centavo — ou uma conta só, e
+          lance a diferença como juros, desconto ou baixa parcial.
         </p>
         {/* A caixa de busca do Connect (15/10/2026): Enter busca e o "limpar"
             volta à lista inicial — era um campo comum com o botão "Buscar". O
@@ -537,6 +577,55 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
         </div>
         {limitado && <p className="text-micro text-fg-muted">Mostrando os 200 primeiros. Refine pela busca.</p>}
 
+        {unica && falta > 0 && (
+          <div className="flex flex-col gap-3 rounded-md border border-border p-3">
+            <p className="text-fs-2 text-fg">
+              A linha passa da conta em <strong className="tabular-nums">{moeda(falta)}</strong>. Lance a diferença como juros e
+              multa — a conta fica {aPagar ? "paga" : "recebida"}, e o total da baixa é o da linha.
+            </p>
+            <FieldGrid columns="sm:grid-cols-2">
+              <CampoForm label="Juros" htmlFor="ajuste-juros">
+                <Input
+                  id="ajuste-juros"
+                  prefix="R$"
+                  inputMode="decimal"
+                  value={jurosTexto ?? (juros === null ? "" : formatarNumero(juros / 100, 2))}
+                  onChange={(e) => setJurosTexto(e.target.value)}
+                />
+              </CampoForm>
+              <CampoForm label="Multa" htmlFor="ajuste-multa">
+                <Input id="ajuste-multa" prefix="R$" inputMode="decimal" value={multaTexto} onChange={(e) => setMultaTexto(e.target.value)} placeholder="0,00" />
+              </CampoForm>
+            </FieldGrid>
+            {!encargosFecham && (
+              <p className="text-micro text-danger">
+                {juros === null || multa === null
+                  ? "Juros ou multa ilegível. Use, por exemplo, 12,50."
+                  : `Juros e multa somam ${moeda(juros + multa)}; a diferença é ${moeda(falta)}.`}
+              </p>
+            )}
+          </div>
+        )}
+        {unica && falta < 0 && (
+          <RadioGroup
+            legenda={`A linha fica ${moeda(-falta)} abaixo da conta`}
+            colunas="sm:grid-cols-2"
+            valor={abaixo}
+            onChange={setAbaixo}
+            opcoes={[
+              {
+                valor: "desconto",
+                rotulo: `${aPagar ? "Desconto obtido" : "Desconto concedido"} de ${moeda(-falta)}`,
+                descricao: aPagar ? "O fornecedor abateu o resto: a conta fica paga." : "O cliente pagou com desconto: a conta fica recebida.",
+              },
+              { valor: "parcial", rotulo: "Baixa parcial", descricao: `A conta continua em aberto com ${moeda(-falta)}.` },
+            ]}
+          />
+        )}
+        {marcados.size > 1 && falta !== 0 && (
+          <p className="text-micro text-fg-muted">Para lançar juros, desconto ou baixa parcial, marque uma conta só.</p>
+        )}
+
         {erro && <Aviso>{erro}</Aviso>}
         {/* O rodapé padrão (08/10/2026), num formulário só dele: a soma do que
             está marcado vai na nota, e o erro, acima, não a esconde. */}
@@ -545,7 +634,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
             e.preventDefault();
             setErro(null);
             startSalvar(async () => {
-              const r = await confirmarConciliacao(transacao.id, [...marcados.keys()]);
+              const r = await confirmarConciliacao(transacao.id, [...marcados.keys()], falta === 0 ? undefined : ajuste);
               if ("error" in r) setErro(r.error);
               else onClose();
             });
@@ -556,13 +645,11 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
             submitLabel="Conciliar"
             pendingLabel="Conciliando…"
             onCancel={onClose}
-            submitDisabled={marcados.size === 0 || falta !== 0}
+            submitDisabled={!podeConciliar}
             nota={
               <span className="tabular-nums text-fg">
                 Selecionado: <strong>{moeda(soma)}</strong> de {moeda(alvo)}
-                {marcados.size > 0 && falta !== 0 && (
-                  <span className="text-danger"> · {falta > 0 ? `faltam ${moeda(falta)}` : `passou ${moeda(-falta)}`}</span>
-                )}
+                {notaDaSoma()}
               </span>
             }
           />

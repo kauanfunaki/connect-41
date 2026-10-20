@@ -76,10 +76,10 @@ export async function criarPipeline(
   const sectorCode = (form.get("sectorCode") as string)?.trim();
   const entityType = form.get("entityType") as PipelineEntityType;
 
-  if (!name) return { error: "Nome do kanban é obrigatório" };
+  if (!name) return { error: "Nome da tarefa é obrigatório" };
   if (!sectorCode) return { error: "Setor é obrigatório" };
   if (!canManageSector(ctx, sectorCode)) {
-    return { error: "Sem permissão para criar kanban neste setor." };
+    return { error: "Sem permissão para criar tarefa neste setor." };
   }
 
   const stageNames = form.getAll("stageName") as string[];
@@ -125,7 +125,7 @@ export async function criarPipeline(
     id = pipeline.id;
   } catch (err) {
     console.error("[criarPipeline]", err);
-    return { error: "Erro ao criar kanban. Tente novamente." };
+    return { error: "Erro ao criar a tarefa. Tente novamente." };
   }
 
   redirect(boardPath({ id }));
@@ -157,9 +157,9 @@ export async function criarItem(
   const prisma = getPrisma();
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...accessiblePipelineWhere(ctx) } });
-  if (!pipeline) return { error: "Kanban não encontrado ou fora do seu escopo." };
+  if (!pipeline) return { error: "Tarefa não encontrada ou fora do seu escopo." };
   if (!canManageSector(ctx, pipeline.sectorCode)) {
-    return { error: "Sem permissão para adicionar tarefas neste setor." };
+    return { error: "Sem permissão para adicionar atividades neste setor." };
   }
 
   try {
@@ -168,7 +168,7 @@ export async function criarItem(
       where: { pipelineId, ...(selectedStageId ? { id: selectedStageId } : {}) },
       orderBy: { order: "asc" },
     });
-    if (!firstStage) return { error: "Estágio inválido ou kanban sem estágios configurados" };
+    if (!firstStage) return { error: "Estágio inválido ou tarefa sem estágios configurados" };
 
     const item = await prisma.pipelineItem.create({
       data: {
@@ -278,9 +278,9 @@ export async function atualizarEstagios(pipelineId: string, stages: StageInput[]
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline) return { error: "Kanban não encontrado." };
+  if (!pipeline) return { error: "Tarefa não encontrada." };
   if (!canManageSector(ctx, pipeline.sectorCode)) {
-    return { error: "Sem permissão para editar esta lista." };
+    return { error: "Sem permissão para editar esta tarefa." };
   }
 
   const existing = await prisma.pipelineStage.findMany({
@@ -297,7 +297,7 @@ export async function atualizarEstagios(pipelineId: string, stages: StageInput[]
   }
   const removedWithItems = removed.filter((s) => s._count.items > 0);
   if (removedWithItems.length > 0) {
-    return { error: `Mova as tarefas de "${removedWithItems[0].name}" antes de excluir esse estágio.` };
+    return { error: `Mova as atividades de "${removedWithItems[0].name}" antes de excluir esse estágio.` };
   }
 
   try {
@@ -328,7 +328,7 @@ export async function atualizarEstagios(pipelineId: string, stages: StageInput[]
     });
   } catch (err) {
     console.error("[atualizarEstagios]", err);
-    return { error: "Erro ao salvar a lista. Tente novamente." };
+    return { error: "Erro ao salvar a tarefa. Tente novamente." };
   }
 
   revalidatePath(boardPath(pipeline));
@@ -481,7 +481,7 @@ export async function adicionarNota(
     // comentário está no card, e card solto não levava a lugar nenhum. Leva
     // também quem comentou, para a foto no sino (05/10/2026).
     const notifyEntity = { entityId: itemId, actorUserId: userId };
-    const taskLabel = item.title ?? "tarefa";
+    const taskLabel = item.title ?? "atividade";
     const mentioned = await findMentionedUserIds(tenantId, [content]);
     const mentionedSet = new Set(mentioned);
     mentionedSet.delete(userId);
@@ -636,7 +636,7 @@ export async function atualizarPrazoPrioridade(
       where: { id: itemId, tenantId, pipelineId },
       select: { dueDate: true, priority: true },
     });
-    if (!before) return { error: "Tarefa não encontrada." };
+    if (!before) return { error: "Atividade não encontrada." };
 
     await prisma.pipelineItem.update({
       where: { id: itemId },
@@ -707,7 +707,7 @@ export async function atualizarDescricao(
     // findFirst com tenantId+pipelineId — mesmo fix de atualizarPrazoPrioridade
     // (findUnique só por id deixava sobrescrever descrição de item de outro tenant).
     const before = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { description: true } });
-    if (!before) return { error: "Tarefa não encontrada." };
+    if (!before) return { error: "Atividade não encontrada." };
 
     await prisma.pipelineItem.update({
       where: { id: itemId },
@@ -1067,7 +1067,7 @@ export async function criarSubtarefa(parentItemId: string, title: string): Promi
 
     if (userId) {
       await prisma.activity.create({
-        data: { tenantId, pipelineItemId: parent.id, userId, type: ActivityType.SUBTASK_CHANGE, content: `Subtarefa "${title.trim()}" criada` },
+        data: { tenantId, pipelineItemId: parent.id, userId, type: ActivityType.SUBTASK_CHANGE, content: `Subatividade "${title.trim()}" criada` },
       });
     }
   } catch (err) {
@@ -1096,7 +1096,7 @@ export async function excluirSubtarefa(parentItemId: string, subtaskId: string):
     await prisma.pipelineItem.delete({ where: { id: subtaskId } });
     if (userId) {
       await prisma.activity.create({
-        data: { tenantId, pipelineItemId: parentItemId, userId, type: ActivityType.SUBTASK_CHANGE, content: `Subtarefa "${title}" removida` },
+        data: { tenantId, pipelineItemId: parentItemId, userId, type: ActivityType.SUBTASK_CHANGE, content: `Subatividade "${title}" removida` },
       });
     }
   } catch (err) {
@@ -1278,7 +1278,7 @@ export async function concluirTarefa(pipelineId: string, itemId: string): Promis
 
     await prisma.pipelineItem.update({ where: { id: itemId }, data: { stageId: terminalStage.id } });
     await prisma.activity.create({
-      data: { tenantId, pipelineItemId: itemId, userId, type: ActivityType.COMPLETED, content: "Tarefa concluída" },
+      data: { tenantId, pipelineItemId: itemId, userId, type: ActivityType.COMPLETED, content: "Atividade concluída" },
     });
   } catch (err) {
     console.error("[concluirTarefa]", err);
@@ -1312,7 +1312,7 @@ export async function reabrirTarefa(pipelineId: string, itemId: string): Promise
 
     await prisma.pipelineItem.update({ where: { id: itemId }, data: { stageId: targetStage.id } });
     await prisma.activity.create({
-      data: { tenantId, pipelineItemId: itemId, userId, type: ActivityType.REOPENED, content: "Tarefa reaberta" },
+      data: { tenantId, pipelineItemId: itemId, userId, type: ActivityType.REOPENED, content: "Atividade reaberta" },
     });
   } catch (err) {
     console.error("[reabrirTarefa]", err);
@@ -1461,7 +1461,7 @@ export async function excluirLancamentoTempo(pipelineId: string, itemId: string,
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline) return { error: "Lista não encontrada." };
+  if (!pipeline) return { error: "Tarefa não encontrada." };
 
   const entry = await prisma.timeEntry.findFirst({
     where: { id: entryId, tenantId, pipelineItemId: itemId, pipelineItem: { pipelineId } },
@@ -1499,7 +1499,7 @@ export async function duplicarPipeline(
 
   const name = (form.get("name") as string)?.trim();
   const entityId = (form.get("entityId") as string)?.trim();
-  if (!name) return { error: "Nome do novo kanban é obrigatório" };
+  if (!name) return { error: "Nome da nova tarefa é obrigatório" };
   if (!entityId) return { error: "Selecione a empresa ou pessoa de destino" };
 
   const prisma = getPrisma();
@@ -1522,9 +1522,9 @@ export async function duplicarPipeline(
       },
     },
   });
-  if (!source) return { error: "Kanban de origem não encontrado." };
+  if (!source) return { error: "Tarefa de origem não encontrada." };
   if (!canManageSector(ctx, source.sectorCode)) {
-    return { error: "Sem permissão para duplicar kanban neste setor." };
+    return { error: "Sem permissão para duplicar tarefa neste setor." };
   }
 
   const entity =
@@ -1604,7 +1604,7 @@ export async function duplicarPipeline(
     }
   } catch (err) {
     console.error("[duplicarPipeline]", err);
-    return { error: "Erro ao duplicar kanban. Tente novamente." };
+    return { error: "Erro ao duplicar a tarefa. Tente novamente." };
   }
 
   redirect(boardPath({ id: newPipelineId }));

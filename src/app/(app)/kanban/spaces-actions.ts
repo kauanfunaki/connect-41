@@ -77,7 +77,7 @@ export async function criarListaSimples(
   const prisma = getPrisma();
   const space = await prisma.space.findFirst({ where: { id: spaceId, tenantId } });
   if (!space) return { error: "Espaço não encontrado." };
-  if (!canManageSector(ctx, space.sectorCode)) return { error: "Sem permissão para criar lista neste espaço." };
+  if (!canManageSector(ctx, space.sectorCode)) return { error: "Sem permissão para criar tarefa neste espaço." };
 
   if (folderId) {
     const folder = await prisma.folder.findFirst({ where: { id: folderId, spaceId } });
@@ -85,7 +85,7 @@ export async function criarListaSimples(
   }
 
   const name = (form.get("name") as string)?.trim();
-  if (!name) return { error: "Nome da lista é obrigatório" };
+  if (!name) return { error: "Nome da tarefa é obrigatório" };
   const description = (form.get("description") as string)?.trim() || null;
 
   let destination: string;
@@ -105,7 +105,7 @@ export async function criarListaSimples(
     destination = boardPath(pipeline);
   } catch (err) {
     console.error("[criarListaSimples]", err);
-    return { error: "Erro ao criar lista." };
+    return { error: "Erro ao criar a tarefa." };
   }
 
   redirect(destination);
@@ -138,7 +138,7 @@ export async function excluirEspaco(spaceId: string): Promise<PipelineState> {
   if (space._count.pipelines > 0 || space._count.folders > 0) {
     const partes: string[] = [];
     if (space._count.folders > 0) partes.push(`${space._count.folders} ${space._count.folders === 1 ? "pasta" : "pastas"}`);
-    if (space._count.pipelines > 0) partes.push(`${space._count.pipelines} ${space._count.pipelines === 1 ? "lista" : "listas"}`);
+    if (space._count.pipelines > 0) partes.push(`${space._count.pipelines} ${space._count.pipelines === 1 ? "tarefa" : "tarefas"}`);
     return { error: `Esvazie o espaço antes de excluir — ele ainda tem ${partes.join(" e ")}.` };
   }
 
@@ -169,7 +169,7 @@ export async function excluirPasta(folderId: string): Promise<PipelineState> {
 
   if (folder._count.pipelines > 0) {
     return {
-      error: `Mova ou exclua as ${folder._count.pipelines === 1 ? "lista" : `${folder._count.pipelines} listas`} desta pasta antes de excluí-la.`,
+      error: `Mova ou exclua as ${folder._count.pipelines === 1 ? "tarefa" : `${folder._count.pipelines} tarefas`} desta pasta antes de excluí-la.`,
     };
   }
 
@@ -195,19 +195,19 @@ export async function excluirLista(pipelineId: string): Promise<PipelineState> {
     where: { id: pipelineId, tenantId },
     include: { space: true, _count: { select: { items: true, recurringObligations: true } } },
   });
-  if (!pipeline) return { error: "Lista não encontrada." };
-  if (!canManageSector(ctx, pipeline.sectorCode)) return { error: "Sem permissão para excluir esta lista." };
+  if (!pipeline) return { error: "Tarefa não encontrada." };
+  if (!canManageSector(ctx, pipeline.sectorCode)) return { error: "Sem permissão para excluir esta tarefa." };
 
   if (pipeline._count.items > 0) {
     return {
-      error: `Exclua as ${pipeline._count.items === 1 ? "tarefa" : `${pipeline._count.items} tarefas`} desta lista antes de excluí-la.`,
+      error: `Exclua as ${pipeline._count.items === 1 ? "atividade" : `${pipeline._count.items} atividades`} desta tarefa antes de excluí-la.`,
     };
   }
   // Obrigação recorrente aponta pra Lista e continuaria gerando tarefa num
   // destino que não existe mais — some da checagem de "vazio" porque não é
   // conteúdo visível no board, mas trava a exclusão do mesmo jeito.
   if (pipeline._count.recurringObligations > 0) {
-    return { error: "Esta lista é destino de obrigações recorrentes. Aponte-as para outra lista antes de excluí-la." };
+    return { error: "Esta tarefa é destino de obrigações recorrentes. Aponte-as para outra tarefa antes de excluí-la." };
   }
 
   try {
@@ -216,7 +216,7 @@ export async function excluirLista(pipelineId: string): Promise<PipelineState> {
     await prisma.pipeline.delete({ where: { id: pipelineId } });
   } catch (err) {
     console.error("[excluirLista]", err);
-    return { error: "Erro ao excluir a lista." };
+    return { error: "Erro ao excluir a tarefa." };
   }
 
   revalidatePath(`/setor/${pipeline.sectorCode}/espacos/${pipeline.spaceId}`);

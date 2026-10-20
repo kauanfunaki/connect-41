@@ -426,7 +426,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   OAuthAccount: "conta das reuniões",
   OmieEmissao: "emissão de NFS-e",
   Person: "pessoa",
-  PipelineItem: "item do Kanban",
+  PipelineItem: "atividade",
   PortalApprovalLimit: "alçada de aprovação",
   PortalTelaBloqueada: "tela do portal",
   PortalUser: "acesso ao portal",
@@ -516,6 +516,9 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["integration.omie.financeiro", "bpo"],
   ["integration.omie.nfse_", "bpo"],
   ["termination.", "dp"],
+  // As competências das avaliações de desempenho, desde 20/10/2026 dentro do
+  // módulo do DP (eram das Configurações).
+  ["competency.", "dp"],
   ["vaga.", "recrutamento"],
   ["candidatura.", "recrutamento"],
   ["assessmentTemplate.", "recrutamento"],
@@ -548,7 +551,6 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["module.", "configuracoes"],
   ["tag.", "configuracoes"],
   ["customfield.", "configuracoes"],
-  ["competency.", "configuracoes"],
   ["holiday.", "configuracoes"],
   ["fieldPermission.", "configuracoes"],
   ["recurringObligation.", "configuracoes"],

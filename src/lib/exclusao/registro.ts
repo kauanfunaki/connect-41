@@ -193,7 +193,7 @@ const PESSOA_SOLTAS: ColunaSolta[] = [
 
 const USUARIO: Ligacao[] = [
   // Autor obrigatório no banco — passa para quem exclui.
-  { modelo: "Activity", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["comentário ou movimentação no Kanban", "comentários e movimentações no Kanban"], historico: true },
+  { modelo: "Activity", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["comentário ou movimentação nos Quadros", "comentários e movimentações nos Quadros"], historico: true },
   { modelo: "TimeEntry", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["apontamento de horas", "apontamentos de horas"], historico: true },
   { modelo: "Document", campo: "uploadedBy", fk: "uploadedById", tratamento: "reatribuir", rotulo: ["documento anexado", "documentos anexados"], historico: true },
   { modelo: "ClientDocument", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["documento enviado ao cliente", "documentos enviados ao cliente"], historico: true },
@@ -272,7 +272,7 @@ const USUARIO: Ligacao[] = [
   // Da própria conta — o banco apaga junto.
   { modelo: "AgentConversation", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["conversa com a Ceci", "conversas com a Ceci"] },
   { modelo: "Notification", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["notificação", "notificações"] },
-  { modelo: "PipelineItemAssignee", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["atribuição de tarefa do Kanban (a tarefa fica, sem ele)", "atribuições de tarefa do Kanban (as tarefas ficam, sem ele)"] },
+  { modelo: "PipelineItemAssignee", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["atribuição de atividade dos Quadros (a atividade fica, sem ele)", "atribuições de atividade dos Quadros (as atividades ficam, sem ele)"] },
   { modelo: "VagaRecrutador", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "PipelineItemWatcher", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "HandoffSectorAssignee", campo: "user", fk: "userId", tratamento: "cascata" },

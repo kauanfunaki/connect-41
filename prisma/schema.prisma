@@ -3929,6 +3929,9 @@ model FinanceEntryPayment {
   bankAccountId      String?
   note               String?              @db.VarChar(255)
   origin             FinancePaymentOrigin
+  /// O código da baixa no Omie (`nCodBaixa`), na baixa que veio de lá uma a
+  /// uma (parcial lida do Omie, 19/10) — a leitura seguinte acha a mesma.
+  omieBaixaId        String?              @db.VarChar(20)
   createdById        String?
   createdAt          DateTime             @default(now())
 

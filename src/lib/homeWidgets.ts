@@ -72,8 +72,8 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
   },
   {
     key: "painel-tarefas",
-    label: "Tarefas por prazo",
-    description: "Rosca com os prazos das tarefas abertas nos seus kanbans.",
+    label: "Atividades por prazo",
+    description: "Rosca com os prazos das atividades abertas nos seus Quadros.",
     slot: "paineis",
   },
   {
@@ -128,13 +128,13 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
   {
     key: "indicadores",
     label: "Indicadores",
-    description: "Empresas ativas, tarefas atrasadas, transferências e solicitações atrasadas.",
+    description: "Empresas ativas, atividades atrasadas, transferências e solicitações atrasadas.",
     slot: "abaixo-dos-paineis",
   },
   {
     key: "meu-dia",
     label: "Meu dia",
-    description: "Tarefas atribuídas a você ou com prazo.",
+    description: "Atividades atribuídas a você ou com prazo.",
     slot: "main",
   },
   {
@@ -159,7 +159,7 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
   {
     key: "atividade",
     label: "Atividade",
-    description: "O que o time mexeu recentemente nos seus kanbans.",
+    description: "O que o time mexeu recentemente nos seus Quadros.",
     slot: "side",
   },
   {

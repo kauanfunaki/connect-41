@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SecaoDeConfiguracao } from "@/components/configuracoes/SecaoDeConfiguracao";
 import { notFound } from "next/navigation";
 import { ChevronRight, UserRound, ShieldCheck, KeyRound, Palette, Bell, Settings2, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -41,9 +42,9 @@ export default async function ConfiguracoesPage() {
   const doEscritorio = expedientes.escritorio ?? EXPEDIENTE_PADRAO;
 
   const roleLabel = ROLE_LABELS[ctx.role as keyof typeof ROLE_LABELS] ?? ctx.role;
-  // Quem tem o menu das configurações (14/10/2026) chega aqui pelo item "Sua
-  // conta", e a trilha já diz "Configurações › Sua conta"; para os outros, esta
-  // é a tela de configurações inteira.
+  // Quem configura o escritório (o `menuDasConfiguracoes` de 14/10/2026) vê
+  // aqui "Sua conta", e a trilha diz "Configurações › Sua conta"; para os
+  // outros, esta é a tela de configurações inteira.
   const temMenu = menuDasConfiguracoes({ role: ctx.role, setores: ctx.sectors.length, autoatendimento: false }) !== null;
 
   return (
@@ -53,16 +54,16 @@ export default async function ConfiguracoesPage() {
         subtitle="Sua conta e suas preferências neste workspace."
       />
 
-      <Secao titulo="Perfil" descricao="Seu nome e sua foto, como aparecem para a equipe." icone={<UserRound />}>
+      <SecaoDeConfiguracao titulo="Perfil" descricao="Seu nome e sua foto, como aparecem para a equipe." icone={<UserRound />}>
         <PerfilForm
           action={atualizarMeuPerfil}
           defaultName={me.name}
           email={me.email}
           photoUrl={me.photoUrl}
         />
-      </Secao>
+      </SecaoDeConfiguracao>
 
-      <Secao titulo="Acesso" descricao="Seu papel e os setores em que você atua. Quem define é um administrador do workspace." icone={<ShieldCheck />}>
+      <SecaoDeConfiguracao titulo="Acesso" descricao="Seu papel e os setores em que você atua. Quem define é um administrador do workspace." icone={<ShieldCheck />}>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <dt className="text-helper text-fg-muted">Papel</dt>
@@ -77,27 +78,27 @@ export default async function ConfiguracoesPage() {
             </dd>
           </div>
         </dl>
-      </Secao>
+      </SecaoDeConfiguracao>
 
-      <Secao titulo="Segurança" descricao="Troque a sua senha de acesso ao Connect." icone={<KeyRound />}>
+      <SecaoDeConfiguracao titulo="Segurança" descricao="Troque a sua senha de acesso ao Connect." icone={<KeyRound />}>
         <AlterarSenhaForm action={alterarMinhaSenha} />
-      </Secao>
+      </SecaoDeConfiguracao>
 
-      <Secao titulo="Aparência" descricao="Escolha o tema claro, o escuro, ou siga o tema do seu aparelho." icone={<Palette />}>
+      <SecaoDeConfiguracao titulo="Aparência" descricao="Escolha o tema claro, o escuro, ou siga o tema do seu aparelho." icone={<Palette />}>
         <TemaSelector />
-      </Secao>
+      </SecaoDeConfiguracao>
 
       {/* 05/10/2026: quem trabalha à noite ou de madrugada não via as
           próprias reuniões na grade fixa das 7h às 21h. */}
-      <Secao titulo="Agenda" descricao="As horas que a grade de dia e de semana da Agenda mostra para você." icone={<CalendarClock />}>
+      <SecaoDeConfiguracao titulo="Agenda" descricao="As horas que a grade de dia e de semana da Agenda mostra para você." icone={<CalendarClock />}>
         <ExpedienteForm
           action={salvarMeuExpediente}
           valor={expedientes.pessoa ?? doEscritorio}
           doEscritorio={{ expediente: doEscritorio, seguindo: expedientes.pessoa === null }}
         />
-      </Secao>
+      </SecaoDeConfiguracao>
 
-      <Secao titulo="Notificações" descricao="Avisos no celular e no navegador, e o histórico do que chegou." icone={<Bell />}>
+      <SecaoDeConfiguracao titulo="Notificações" descricao="Avisos no celular e no navegador, e o histórico do que chegou." icone={<Bell />}>
         <PushNotificationToggle
           publicKey={getVapidPublicKey()}
           acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
@@ -118,10 +119,10 @@ export default async function ConfiguracoesPage() {
           <span className="text-fs-3 text-fg">Escolher o que cada aba mostra</span>
           <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
         </Card>
-      </Secao>
+      </SecaoDeConfiguracao>
 
       {isFullWrite(ctx.role) && (
-        <Secao
+        <SecaoDeConfiguracao
           titulo="Workspace"
           descricao="Usuários, setores, módulos, integrações e o resto do que vale para todo mundo."
           icone={<Settings2 />}
@@ -129,41 +130,8 @@ export default async function ConfiguracoesPage() {
           <Button href="/admin" variant="secondary">
             <Settings2 size={14} /> Abrir as configurações do escritório
           </Button>
-        </Secao>
+        </SecaoDeConfiguracao>
       )}
     </PageContainer>
-  );
-}
-
-/**
- * Uma seção de configuração: o que é (ícone, título, descrição) à esquerda e
- * o controle à direita, com uma divisória entre as seções — o enquadramento
- * das configurações do HubStrom que o Kauan trouxe como referência em 30/09.
- * Era um título solto e um cartão por seção, empilhados.
- */
-function Secao({
-  titulo,
-  descricao,
-  icone,
-  children,
-}: {
-  titulo: string;
-  descricao?: string;
-  icone: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] gap-x-10 gap-y-4 py-8 border-t border-border first-of-type:border-t-0 first-of-type:pt-2">
-      <div className="flex items-start gap-3.5">
-        <span className="inline-flex size-10 flex-shrink-0 items-center justify-center rounded-lg border border-border bg-surface-hover text-fg-secondary [&>svg]:w-[18px] [&>svg]:h-[18px]">
-          {icone}
-        </span>
-        <div className="min-w-0">
-          <h2 className="font-display text-section font-semibold text-fg leading-tight">{titulo}</h2>
-          {descricao && <p className="text-helper text-fg-muted mt-1 leading-relaxed max-w-[42ch]">{descricao}</p>}
-        </div>
-      </div>
-      <div className="min-w-0 space-y-3">{children}</div>
-    </section>
   );
 }

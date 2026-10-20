@@ -42,9 +42,9 @@ export function DuplicatePipelineButton({ action, entities, entityLabel, default
     >
       <form action={formAction} className="space-y-3">
         <p className="text-helper text-fg-muted">
-          Cria um kanban novo com os mesmos estágios, tarefas, subtarefas e checklist — prazos e responsáveis ficam em branco.
+          Cria uma tarefa nova com os mesmos estágios, atividades, subatividades e checklist — prazos e responsáveis ficam em branco.
         </p>
-        <CampoForm label="Nome do novo kanban" htmlFor="dup-name" required>
+        <CampoForm label="Nome da nova tarefa" htmlFor="dup-name" required>
           <Input id="dup-name" name="name" required defaultValue={defaultName} />
         </CampoForm>
         <CampoForm label={entityLabel} htmlFor="dup-entity" required>

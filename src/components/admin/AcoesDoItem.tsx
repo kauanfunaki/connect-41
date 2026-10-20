@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Trash2 } from "lucide-react";
+import { abreNoPainel } from "@/lib/painelDeCadastro";
 import { Button } from "@/components/ui/Button";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { MenuDeMaisAcoes as MenuDaUi } from "@/components/ui/MenuDeMaisAcoes";
@@ -53,7 +54,7 @@ export function AcoesDoItem({ editar, excluir, className = "" }: Props) {
   return (
     <span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`.trim()}>
       {typeof editar === "string" ? (
-        <Button variant="secondary" size="xs" href={editar}>
+        <Button variant="secondary" size="xs" href={editar} scroll={!abreNoPainel(editar)}>
           <Pencil size={11} /> Editar
         </Button>
       ) : editar ? (

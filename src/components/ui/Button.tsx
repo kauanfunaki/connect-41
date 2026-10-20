@@ -40,6 +40,8 @@ type LinkProps = CommonProps &
     loadingLabel?: undefined;
     /** `false` para não pré-carregar o destino ao aparecer na tela. */
     prefetch?: boolean;
+    /** `false` mantém a rolagem: o link que abre um painel sobre a lista (2B, 20/10/2026). */
+    scroll?: boolean;
     /** Rota que devolve arquivo (CSV, PDF, exportação): vira um <a download>
      *  simples. O <Link> pré-carregaria a rota — gerando o arquivo só de a tela
      *  abrir — e tentaria navegar dentro do app ao clicar. */
@@ -146,7 +148,7 @@ export function Button(props: Props) {
     : `${BASE} ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`.trim();
 
   if (props.href !== undefined) {
-    const { href, download, nativo, prefetch, ...rest } = omitCommon(props);
+    const { href, download, nativo, prefetch, scroll, ...rest } = omitCommon(props);
     if (download) {
       return (
         <a href={href} download={download === true ? "" : download} className={cls} {...rest}>
@@ -162,7 +164,7 @@ export function Button(props: Props) {
       );
     }
     return (
-      <Link href={href} prefetch={prefetch} className={cls} {...rest}>
+      <Link href={href} prefetch={prefetch} scroll={scroll} className={cls} {...rest}>
         {children}
       </Link>
     );

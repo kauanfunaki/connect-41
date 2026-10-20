@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ChevronRight,
   Home,
   ContactRound,
   Columns3,
@@ -26,7 +27,6 @@ import {
   CalendarCheck,
   ChevronDown,
   ClipboardCheck,
-  Layers,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -51,6 +51,7 @@ import {
 import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
+import { quadrosAtivo } from "@/lib/caminhoDoMenu";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { trocarSetor } from "@/components/shell/contexto";
 import {
@@ -125,54 +126,6 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
         <NavItem key={t.code} href={t.href} exact={t.href === "/fiscal"} icon={<ModuleIcon code={t.code} />} label={t.label} />
       ))}
     </>
-  );
-}
-
-/**
- * O topo da faixa de ícones (14/10/2026): o setor ativo, com o ícone dele e a
- * bolinha na cor do setor — no lugar da logo, que não cabe em 64px (o Início
- * continua sendo o primeiro item). O clique abre a mesma troca de setor e
- * escritório do nome no cabeçalho; o mouse ou o foco mostram o nome.
- *
- * Ícone, e não as iniciais: Contábil, Comercial, Corretora e Controladoria
- * dariam todos "Co". Setor fora da lista de ícones mostra a primeira letra.
- */
-function SetorNaFaixa({ setor, podeTrocar, onTrocar }: { setor: Sector | null; podeTrocar: boolean; onTrocar: () => void }) {
-  const nome = setor?.label ?? "Todos os setores";
-  const icone = setor ? (SECTOR_ICONS[setor.code] ?? <span className="text-ui font-semibold">{setor.label.charAt(0)}</span>) : <Layers size={16} />;
-  const classe = "relative flex items-center justify-center size-10 flex-shrink-0 rounded-lg border border-border bg-surface text-fg-secondary";
-  const miolo = (
-    <>
-      <span aria-hidden className="[&>svg]:w-[18px] [&>svg]:h-[18px]">
-        {icone}
-      </span>
-      {setor && (
-        <span
-          aria-hidden
-          data-marca="cor-do-setor"
-          className="absolute -top-1 -right-1 size-3 rounded-full border-2 border-sidebar-bg"
-          style={{ backgroundColor: setor.color }}
-        />
-      )}
-    </>
-  );
-  const rotulo = setor ? `Setor ${setor.label}` : "Todos os setores";
-  if (!podeTrocar) {
-    return (
-      <span role="img" {...nomeNaFaixa(rotulo, nome)} className={classe}>
-        {miolo}
-      </span>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={onTrocar}
-      {...nomeNaFaixa(`${rotulo}. Trocar setor ou escritório`, `${nome}\nTrocar setor ou escritório`)}
-      className={`${classe} transition-colors hover:text-fg hover:bg-surface-hover hover:border-border-strong`}
-    >
-      {miolo}
-    </button>
   );
 }
 
@@ -382,11 +335,23 @@ export function AppShell({
               voltou ao menu: clicar no logo para voltar ao começo é convenção de
               site, e nem todo mundo da equipe conhece — os dois caminhos ficam.
               O `aria-current` fica só no item do menu, para não marcar duas vezes. */}
-          {/* Na faixa, o topo é o setor ativo (à esquerda, como os ícones de baixo:
-              nada desliza enquanto a lateral encolhe). */}
+          {/* Na faixa, o topo é a marca do Connect, que leva ao Início — o mesmo
+              do logo da lateral aberta (Ajustes 15/10, G1). Era o setor ativo
+              abrindo a troca de setor, que já tem o botão no cabeçalho, ao lado
+              do recolher. À esquerda, como os ícones de baixo: nada desliza
+              enquanto a lateral encolhe. */}
           {naFaixa ? (
             <div className="flex items-center h-[60px] px-3 border-b border-border flex-shrink-0">
-              <SetorNaFaixa setor={activeSector} podeTrocar={podeTrocar} onTrocar={() => setTrocaAberta(true)} />
+              <Link
+                href="/home"
+                {...nomeNaFaixa("Ir para o Início", "Início")}
+                className="flex items-center justify-center size-10 flex-shrink-0 rounded-lg transition-opacity hover:opacity-80"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/symbol-color.svg" alt="" className="block dark:hidden size-8 object-contain" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/symbol-color-dark-bg.svg" alt="" className="hidden dark:block size-8 object-contain" />
+              </Link>
             </div>
           ) : (
             <div className={`flex items-center justify-center gap-2.5 h-[60px] px-5 border-b border-border flex-shrink-0 relative ${larguraFinal}`}>
@@ -487,7 +452,12 @@ export function AppShell({
                   </TituloDoBloco>
                 )}
                 {noGeral("espacos") && (
-                  <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Quadros" />
+                  <NavItem
+                    href={`/setor/${activeSector.code}`}
+                    ativo={(p) => quadrosAtivo(p, activeSector.code)}
+                    icon={<FolderKanban size={16} />}
+                    label="Quadros"
+                  />
                 )}
                 {itensDoGeral}
 
@@ -498,16 +468,31 @@ export function AppShell({
                     — pedido do Kauan em 17/09, no lugar de abrir e fechar seções. */}
                 <TelasFixadas telas={telasFixadas} />
 
+                {/* O nome do setor leva a todas as telas dele (Ajustes 15/10, G10):
+                    era só um rótulo com a bolinha, e a tela "Telas" do setor só
+                    se achava pela trilha de um grupo. A bolinha na cor do setor,
+                    com anel, e a seta dizendo que é caminho; aceso quando a tela é
+                    a dele. O nome fica na cor do texto: a do setor, em letra
+                    miúda, some no tema escuro. */}
                 {activeSectorModules.length > 0 && (
                   <TituloDoBloco nome={activeSector.label}>
-                    <p className="c41-rotulo flex items-center gap-2 px-2.5 pt-4 pb-1.5">
+                    <Link
+                      href={`/setor/${activeSector.code}/telas`}
+                      onClick={() => setMobileOpen(false)}
+                      aria-current={pathname === `/setor/${activeSector.code}/telas` ? "page" : undefined}
+                      data-dica={`Todas as telas de ${activeSector.label}`}
+                      className="group c41-rotulo flex items-center gap-2 mt-3 mb-0.5 -mx-1 px-3.5 py-1.5 rounded-md hover:bg-surface-hover aria-[current=page]:bg-surface-hover transition-colors"
+                    >
                       <span
                         aria-hidden
-                        className="inline-block size-2 rounded-full flex-shrink-0"
+                        className="inline-block size-2.5 rounded-full flex-shrink-0 ring-2 ring-[color-mix(in_srgb,var(--c41-setor)_25%,transparent)]"
                         style={{ backgroundColor: activeSector.color }}
                       />
-                      <span className="truncate">{activeSector.label}</span>
-                    </p>
+                      <span className="truncate text-fg-secondary group-hover:text-fg">
+                        {activeSector.label}
+                      </span>
+                      <ChevronRight size={12} aria-hidden className="ml-auto flex-shrink-0 text-fg-muted group-hover:text-fg" />
+                    </Link>
                   </TituloDoBloco>
                 )}
                 {(() => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import type { CompetencyState } from "@/app/(app)/admin/competencias/actions";
+import type { CompetencyState } from "@/app/(app)/avaliacoes/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { FormFooter } from "@/components/ui/FormFooter";
@@ -14,7 +14,7 @@ type Props = {
   onCancelar: () => void;
 };
 
-/** O "+ Nova competência" do cabeçalho de /admin/competencias. */
+/** O "+ Nova competência" do cabeçalho, na aba Competências de /avaliacoes. */
 export function NovaCompetencia({ action }: { action: Props["action"] }) {
   return (
     <JanelaDeCadastro rotulo="Nova competência">
