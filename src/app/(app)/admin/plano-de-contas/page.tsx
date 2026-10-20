@@ -15,7 +15,9 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { CarregarPlanoPadrao } from "@/components/admin/CarregarPlanoPadrao";
 import { rotuloDoGrupo } from "@/lib/dre/estrutura";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
-import { alternarCategoria } from "./actions";
+import { PainelDeCadastro } from "@/components/admin/PainelDeCadastro";
+import { FinanceCategoryForm } from "@/components/admin/FinanceCategoryForm";
+import { alternarCategoria, atualizarCategoria, criarCategoria } from "./actions";
 
 /** A linha da DRE pelo nome que a tela mostra; texto que não é grupo conhecido aparece como está. */
 function linhaDaDre(dreGroup: string): string {
@@ -30,9 +32,11 @@ const LADOS = [
   { kind: "RECEBER" as const, titulo: "Contas a receber", nota: "Categoria é opcional no lançamento" },
 ];
 
-export default async function PlanoDeContasPage() {
+export default async function PlanoDeContasPage({ searchParams }: { searchParams: Promise<{ novo?: string; editar?: string }> }) {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
+  // Criar e editar no painel ao lado (escolha 2B, 20/10/2026) — ver `PainelDeCadastro`.
+  const { novo, editar } = await searchParams;
 
   const prisma = getPrisma();
   // Só o padrão do escritório. As categorias de cada empresa (criadas no plano
@@ -43,6 +47,7 @@ export default async function PlanoDeContasPage() {
   });
 
   const ativasParaPagar = categorias.filter((c) => c.kind === "PAGAR" && c.active).length;
+  const emEdicao = editar ? categorias.find((c) => c.id === editar) : undefined;
 
   return (
     <PageContainer>
@@ -57,7 +62,7 @@ export default async function PlanoDeContasPage() {
         action={
           <div className="flex flex-wrap items-center gap-2">
             <CarregarPlanoPadrao />
-            <Button href="/admin/plano-de-contas/novo" variant="primary" className="font-medium">
+            <Button href="/admin/plano-de-contas?novo=1" variant="primary" className="font-medium">
               + Nova categoria
             </Button>
           </div>
@@ -119,7 +124,7 @@ export default async function PlanoDeContasPage() {
                               className="ml-auto"
                               foraDeOperacao={!c.active}
                               onToggle={alternarCategoria.bind(null, c.id, !c.active)}
-                              editarHref={`/admin/plano-de-contas/${c.id}/editar`}
+                              editarHref={`/admin/plano-de-contas?editar=${c.id}`}
                             />
                           </PeDoCartao>
                         </Cartao>
@@ -195,7 +200,7 @@ export default async function PlanoDeContasPage() {
                                   <AcoesDeLinha
                                     foraDeOperacao={!c.active}
                                     onToggle={alternarCategoria.bind(null, c.id, !c.active)}
-                                    editarHref={`/admin/plano-de-contas/${c.id}/editar`}
+                                    editarHref={`/admin/plano-de-contas?editar=${c.id}`}
                                   />
                                 </td>
                               </LinhaFiltravel>
@@ -210,6 +215,22 @@ export default async function PlanoDeContasPage() {
             );
           })}
         </div>
+      )}
+
+      {novo === "1" && (
+        <PainelDeCadastro titulo="Nova categoria" voltarPara="/admin/plano-de-contas">
+          <FinanceCategoryForm action={criarCategoria} cancelHref="/admin/plano-de-contas" />
+        </PainelDeCadastro>
+      )}
+      {emEdicao && (
+        <PainelDeCadastro titulo="Editar categoria" voltarPara="/admin/plano-de-contas">
+          <FinanceCategoryForm
+            key={emEdicao.id}
+            action={atualizarCategoria}
+            cancelHref="/admin/plano-de-contas"
+            defaultValues={{ id: emEdicao.id, name: emEdicao.name, kind: emEdicao.kind, dreGroup: emEdicao.dreGroup }}
+          />
+        </PainelDeCadastro>
       )}
     </PageContainer>
   );
