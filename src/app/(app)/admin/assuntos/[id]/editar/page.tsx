@@ -1,42 +1,8 @@
-import { notFound } from "next/navigation";
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { AssuntoForm } from "@/components/admin/AssuntoForm";
-import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { getActiveSectors } from "@/lib/sectors";
-import { atualizarAssunto } from "../../actions";
+import { redirect } from "next/navigation";
 
+// O formulário abre no painel ao lado da lista desde 20/10/2026 (escolha 2B
+// dos Ajustes de 15/10). Este endereço fica para os links antigos.
 export default async function EditarAssuntoPage({ params }: { params: Promise<{ id: string }> }) {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId || !isFullWrite(ctx.role)) notFound();
   const { id } = await params;
-  const [assunto, ativos] = await Promise.all([
-    getPrisma().serviceRequestSubject.findFirst({ where: { id, tenantId: ctx.tenantId } }),
-    getActiveSectors(ctx.tenantId),
-  ]);
-  if (!assunto) notFound();
-
-  return (
-    <PageContainer>
-      <PageHeader title="Editar assunto" />
-      <div className="max-w-[720px]">
-        <Card className="p-6">
-          <AssuntoForm
-            action={atualizarAssunto}
-            cancelHref="/admin/assuntos"
-            setores={ativos.map((s) => ({ value: s.code, label: s.label }))}
-            valores={{
-              id: assunto.id,
-              label: assunto.label,
-              description: assunto.description,
-              sectorCode: assunto.sectorCode,
-              responseDays: assunto.responseDays,
-            }}
-          />
-        </Card>
-      </div>
-    </PageContainer>
-  );
+  redirect(`/admin/assuntos?editar=${encodeURIComponent(id)}`);
 }
