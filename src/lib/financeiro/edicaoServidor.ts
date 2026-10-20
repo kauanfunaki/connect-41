@@ -5,6 +5,7 @@
 // em `edicao.ts`; aqui, a leitura, a conferência e a gravação.
 
 import { revalidatePath } from "next/cache";
+import { presaAoOmie } from "@/lib/integracoes/omie/virada";
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { getAuthContext } from "@/lib/auth/context";
@@ -87,7 +88,7 @@ const CAMPOS_DA_CONTA = {
   updatedAt: true,
   paidPrincipal: true,
   bankMatches: { select: { id: true }, take: 1 },
-  company: { select: { name: true, displayName: true } },
+  company: { select: { name: true, displayName: true, omieCutoverAt: true } },
 } as const;
 
 async function lerConta(entryId: string, tenantId: string) {
@@ -101,7 +102,8 @@ function travasDa(conta: NonNullable<Awaited<ReturnType<typeof lerConta>>>) {
     closeReason: conta.closeReason,
     fiscalDocumentId: conta.fiscalDocumentId,
     agreementId: conta.agreementId,
-    doOmie: conta.omieTitleId !== null || conta.omieMovementId !== null,
+    // Até a virada da empresa (lote E): depois, o Connect é a fonte.
+    doOmie: presaAoOmie(conta, conta.company),
     conciliada: conta.bankMatches.length > 0 || conta.omieReconciledAt !== null,
     temBaixa: Number(conta.paidPrincipal.toString()) > 0,
   });

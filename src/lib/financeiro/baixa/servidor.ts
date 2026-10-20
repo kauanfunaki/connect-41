@@ -12,6 +12,7 @@
 // aqui desfaz junto o que o chamador gravou.
 
 import type { Prisma } from "@/generated/prisma/client";
+import { MOTIVO_DO_OMIE, presaAoOmie, veioDoOmie } from "@/lib/integracoes/omie/virada";
 import { ondeDaEmpresa } from "../planoDeContas";
 import { centavosDeDecimal } from "../contas";
 import { decimalDeCentavos } from "../manual";
@@ -48,6 +49,8 @@ type ContaTravada = {
   approvalStatus: StatusDeAprovacao;
   valorCentavos: number;
   baixadoCentavos: number;
+  omieTitleId: string | null;
+  omieMovementId: string | null;
 };
 
 /**
@@ -63,8 +66,19 @@ type ContaTravada = {
  */
 async function travarConta(tx: Tx, entryId: string): Promise<ContaTravada | null> {
   const [l] = await tx.$queryRaw<
-    { tenantId: string; companyId: string; kind: TipoDoLancamento; status: StatusDaConta; approvalStatus: StatusDeAprovacao; amount: string; paidPrincipal: string }[]
-  >`SELECT tenantId, companyId, kind, status, approvalStatus, CAST(amount AS CHAR) AS amount, CAST(paidPrincipal AS CHAR) AS paidPrincipal
+    {
+      tenantId: string;
+      companyId: string;
+      kind: TipoDoLancamento;
+      status: StatusDaConta;
+      approvalStatus: StatusDeAprovacao;
+      amount: string;
+      paidPrincipal: string;
+      omieTitleId: string | null;
+      omieMovementId: string | null;
+    }[]
+  >`SELECT tenantId, companyId, kind, status, approvalStatus, CAST(amount AS CHAR) AS amount, CAST(paidPrincipal AS CHAR) AS paidPrincipal,
+            omieTitleId, omieMovementId
       FROM finance_entries WHERE id = ${entryId} FOR UPDATE`;
   if (!l) return null;
   return {
@@ -75,7 +89,20 @@ async function travarConta(tx: Tx, entryId: string): Promise<ContaTravada | null
     approvalStatus: l.approvalStatus,
     valorCentavos: centavosDeDecimal(l.amount),
     baixadoCentavos: centavosDeDecimal(l.paidPrincipal),
+    omieTitleId: l.omieTitleId,
+    omieMovementId: l.omieMovementId,
   };
+}
+
+/**
+ * A conta que veio do Omie é dele até a empresa virar para o Connect (lote E):
+ * a baixa no Connect não chegaria ao Omie, e a leitura seguinte a contaria
+ * como conflito. A virada é coisa rara; lê sem trava.
+ */
+async function presaNaTrava(tx: Tx, conta: ContaTravada): Promise<boolean> {
+  if (!veioDoOmie(conta)) return false;
+  const empresa = await tx.company.findUnique({ where: { id: conta.companyId }, select: { omieCutoverAt: true } });
+  return presaAoOmie(conta, empresa);
 }
 
 /**
@@ -166,6 +193,9 @@ export async function registrarBaixa(tx: Tx, b: NovaBaixa): Promise<BaixaGravada
   const conta = await travarConta(tx, b.entryId);
   if (!conta || conta.tenantId !== b.tenantId) throw new RecusaDaBaixa("Lançamento não encontrado.");
   if (conta.status === "CANCELADO") throw new RecusaDaBaixa("Conta cancelada não recebe baixa.");
+  // O espelho do Omie e a migração gravam as baixas que vêm de lá; as outras
+  // portas (botão, lote, conciliação, transferência) esperam a virada.
+  if (b.origin !== "OMIE" && b.origin !== "MIGRACAO" && (await presaNaTrava(tx, conta))) throw new RecusaDaBaixa(MOTIVO_DO_OMIE.baixa);
   // Aprovação por alçada, relida com a conta travada: aguardando ou reprovada
   // não sai do caixa por caminho nenhum — botão, conciliação, parcial.
   const bloqueio = motivoDoBloqueioDeBaixa(conta);
@@ -223,11 +253,13 @@ export async function quitarConta(tx: Tx, b: Omit<NovaBaixa, "principalCentavos"
 export async function apagarBaixa(tx: Tx, paymentId: string, tenantId: string): Promise<{ entryId: string }> {
   const b = await tx.financeEntryPayment.findFirst({
     where: { id: paymentId, tenantId },
-    select: { entryId: true, bankMatch: { select: { id: true } } },
+    select: { entryId: true, origin: true, bankMatch: { select: { id: true } } },
   });
   if (!b) throw new RecusaDaBaixa("Baixa não encontrada — atualize a tela.");
   if (b.bankMatch) throw new RecusaDaBaixa("Esta baixa está conciliada com o extrato — desfaça a conciliação primeiro.");
-  await travarConta(tx, b.entryId);
+  const conta = await travarConta(tx, b.entryId);
+  // A baixa que veio do Omie volta na leitura seguinte — até a virada (lote E).
+  if (b.origin === "OMIE" && conta && (await presaNaTrava(tx, conta))) throw new RecusaDaBaixa(MOTIVO_DO_OMIE.desfazerBaixa);
   // Condicional: a leitura acima pode ser a foto de antes de alguém apagar ou
   // conciliar esta baixa.
   const apagada = await tx.financeEntryPayment.deleteMany({ where: { id: paymentId, bankMatch: { is: null } } });

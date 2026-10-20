@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MOTIVO_DO_OMIE } from "@/lib/integracoes/omie/virada";
 import { FileText, AlertCircle } from "lucide-react";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import type { VarianteDoBadge } from "@/components/ui/Badge";
@@ -146,7 +147,8 @@ export function ContasTable({
       status={l.status}
       hojeISO={hojeISO}
       aPagar={kind === "PAGAR"}
-      bloqueioDeBaixa={motivoDoBloqueioDeBaixa(l)}
+      // A do Omie, até a virada da empresa, paga-se no Omie (lote E).
+      bloqueioDeBaixa={l.presaAoOmie ? MOTIVO_DO_OMIE.baixa : motivoDoBloqueioDeBaixa(l)}
       podeEnviar={moduloDeAprovacao && podeEnviarParaAprovacao({ ...l, kind, paidAt: l.pagoEm }).pode}
       notaHref={l.documentoId ? `/documentos-fiscais/${l.documentoId}` : null}
       // Quem vê a tela atua no setor (ver ContasPage); a janela confere o resto.
