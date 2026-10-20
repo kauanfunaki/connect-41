@@ -50,5 +50,5 @@ export async function alternarModulo(code: string, enabled: boolean): Promise<vo
     entityType: "TenantModule",
     entityId: code,
   });
-  revalidatePath("/admin/modulos");
+  revalidatePath("/admin/setores");
 }
