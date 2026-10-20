@@ -287,6 +287,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "tag.delete": x("excluiu a tag"),
   "customfield.create": c("criou o campo customizado"),
   "customfield.update": e("editou o campo customizado"),
+  "customfield.reorder": e("reordenou os campos customizados"),
   "customfield.delete": x("excluiu o campo customizado"),
   "competency.create": c("criou a competência"),
   "competency.update": e("editou a competência"),

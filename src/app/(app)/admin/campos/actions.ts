@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/prisma";
 import type { CustomFieldType, EntityType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
+import { ordemValida } from "@/lib/camposCustomizados/ordem";
 
 export type CampoState = { error: string } | null;
 
@@ -86,7 +87,7 @@ export async function criarCampo(
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "customfield.create", entityType: "CustomField", metadata: { sectorCode, entityType, key, label } });
 
   revalidatePath("/admin/campos");
-  redirect("/admin/campos");
+  redirect(`/admin/campos?ficha=${entityType}&setor=${encodeURIComponent(sectorCode)}`);
 }
 
 export async function atualizarCampo(
@@ -136,7 +137,46 @@ export async function atualizarCampo(
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "customfield.update", entityType: "CustomField", entityId: id, metadata: { label } });
 
   revalidatePath("/admin/campos");
-  redirect("/admin/campos");
+  // Volta à ficha e ao setor do campo, no construtor (5A, 20/10/2026).
+  redirect(`/admin/campos?ficha=${existing.entityType}&setor=${encodeURIComponent(existing.sectorCode)}`);
+}
+
+/**
+ * A ordem dos campos de uma ficha num setor, por arrastar no construtor (5A,
+ * 20/10/2026): a posição na lista vira a ordem. Só vale a lista inteira do
+ * grupo (`ordemValida`) — a tela velha, com um campo a mais ou a menos,
+ * embaralharia o resto.
+ */
+export async function reordenarCampos(sectorCode: string, entityType: EntityType, ids: string[]): Promise<CampoState> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (entityType !== "COMPANY" && entityType !== "PERSON") return { error: "Ficha inválida." };
+  if (!canManageSector(ctx, sectorCode)) return { error: "Sem permissão para mudar os campos deste setor." };
+
+  const prisma = getPrisma();
+  const doGrupo = await prisma.customField.findMany({ where: { tenantId: ctx.tenantId, sectorCode, entityType }, select: { id: true } });
+  const pedida = Array.isArray(ids) ? ids.map(String) : [];
+  if (!ordemValida(pedida, doGrupo.map((c) => c.id))) {
+    return { error: "A lista de campos mudou noutra tela. Atualize a página e tente de novo." };
+  }
+
+  try {
+    await prisma.$transaction(pedida.map((id, i) => prisma.customField.update({ where: { id }, data: { order: i } })));
+  } catch (err) {
+    console.error("[reordenarCampos]", err);
+    return { error: "Erro ao salvar a ordem dos campos." };
+  }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "customfield.reorder",
+    entityType: "CustomField",
+    metadata: { setor: sectorCode, ficha: entityType, campos: pedida.length },
+  });
+
+  revalidatePath("/admin/campos");
+  return null;
 }
 
 export async function excluirCampo(id: string): Promise<void> {
