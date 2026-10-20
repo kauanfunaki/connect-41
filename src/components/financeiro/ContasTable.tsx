@@ -162,8 +162,9 @@ export function ContasTable({
 
   // A linha do documento embaixo da contraparte: número, emissão e descrição
   // (19/10) — é por eles que o setor procura a conta no papel.
+  // A série da repetição na frente (lote D): "3/12 · nº 4512 · aluguel".
   const linhaDoDocumento = (l: LinhaDaConta) =>
-    [l.numeroDocumento && `nº ${l.numeroDocumento}`, l.emissao && `emitida em ${formatInstantDate(l.emissao)}`, l.descricao]
+    [l.serie, l.numeroDocumento && `nº ${l.numeroDocumento}`, l.emissao && `emitida em ${formatInstantDate(l.emissao)}`, l.descricao]
       .filter(Boolean)
       .join(" · ");
   const algumProjeto = linhas.some((l) => l.projetoNome);

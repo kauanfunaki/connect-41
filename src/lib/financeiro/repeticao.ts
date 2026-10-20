@@ -103,6 +103,12 @@ const mesesEntre = (de: string, ate: string) => {
 
 export type Ocorrencia = { indice: number; vencimentoKey: string; competencia: string };
 
+/** "3/12" — a posição da conta na série; sem série, nada. */
+export function rotuloDaSerie(conta: { recurrenceIndex: number | null; recurrenceTotal: number | null }): string | null {
+  if (!conta.recurrenceIndex || !conta.recurrenceTotal) return null;
+  return `${conta.recurrenceIndex}/${conta.recurrenceTotal}`;
+}
+
 /**
  * As ocorrências da série, a primeira inclusa — ela fica como a pessoa
  * digitou; as seguintes andam na frequência e, caindo em fim de semana ou

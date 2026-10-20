@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ajustarDia, ocorrenciasDaRepeticao, validarRepeticao } from "./repeticao";
+import { ajustarDia, ocorrenciasDaRepeticao, rotuloDaSerie, validarRepeticao } from "./repeticao";
 
 // O que se testa (19/10, lote D): a série nasce com as datas e as
 // competências certas — fim de mês, fim de semana, feriado e virada de ano.
@@ -71,5 +71,12 @@ describe("ocorrenciasDaRepeticao", () => {
   it("feriado do escritório também ajusta", () => {
     const o = ocorrenciasDaRepeticao({ vencimentoKey: "2026-10-12", competencia: "2026-10" }, { frequencia: "MENSAL", vezes: 2, ajuste: "ANTECIPAR" }, new Set(["2026-11-12"]));
     expect(o[1]!.vencimentoKey).toBe("2026-11-11");
+  });
+});
+
+describe("rotuloDaSerie", () => {
+  it("a posição na série, e nada fora dela", () => {
+    expect(rotuloDaSerie({ recurrenceIndex: 3, recurrenceTotal: 12 })).toBe("3/12");
+    expect(rotuloDaSerie({ recurrenceIndex: null, recurrenceTotal: null })).toBeNull();
   });
 });
