@@ -3909,6 +3909,20 @@ enum BankAccountType {
   /// é uma baixa nele e entra na fatura do ciclo; a fatura é uma conta a
   /// pagar ao cartão, paga pelo banco. Sem extrato, fora do caixa.
   CARTAO_CREDITO
+  /// Os outros tipos do Omie (lote D, 20/10). O que cada um faz — se tem
+  /// extrato, se é dinheiro da empresa — mora em `lib/financeiro/tiposDeConta.ts`.
+  /// Com extrato, como a conta corrente:
+  CONTA_PAGAMENTO
+  CONTA_GARANTIDA
+  APLICACAO
+  /// Dinheiro sem extrato — o saldo sai das baixas:
+  CAIXINHA
+  CARTEIRA_VIRTUAL
+  /// Fora do caixa, sem extrato:
+  EMPRESTIMO
+  MUTUO
+  CREDIARIO
+  ADMINISTRADORA_CARTOES
 }
 
 /// Estado de uma linha do extrato.

@@ -41,7 +41,9 @@ import {
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 import { saldoEmAberto } from "@/lib/financeiro/baixa/regras";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
-import { TIPOS_FORA_DO_CAIXA } from "@/lib/financeiro/tiposDeConta";
+import { TIPOS_COM_EXTRATO, TIPOS_COM_PORTA_PROPRIA, ajudaDoTipo, ehContaForaDoCaixa, rotuloDoTipo, temExtrato, type TipoDeConta } from "@/lib/financeiro/tiposDeConta";
+import { BANCO_SEM_EXTRATO } from "@/lib/financeiro/conciliacao/conta";
+import { nomeDaContaBancaria } from "@/lib/financeiro/contaPrevista";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
@@ -132,8 +134,8 @@ export default async function ConciliacaoPage({
 
   const prisma = getPrisma();
   const contas = await prisma.bankAccount.findMany({
-    // O adiantamento e o cartão de crédito (lote D, 20/10) não têm extrato: moram em Contas a pagar e a receber.
-    where: { tenantId, companyId, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
+    // O adiantamento e o cartão de crédito (lote D, 20/10) moram em Contas a pagar e a receber.
+    where: { tenantId, companyId, type: { notIn: [...TIPOS_COM_PORTA_PROPRIA] } },
     select: {
       id: true,
       nickname: true,
@@ -152,7 +154,10 @@ export default async function ConciliacaoPage({
 
   const saldos = await saldosDasContas(tenantId, contas);
 
-  const conta = contas.find((c) => c.id === params.conta) ?? contas.find((c) => c.active) ?? contas[0] ?? null;
+  // Abre na primeira conta com extrato: a caixinha e as fora do caixa (lote D,
+  // 20/10) não têm o que conciliar.
+  const comExtrato = contas.filter((c) => temExtrato(c.type));
+  const conta = contas.find((c) => c.id === params.conta) ?? comExtrato.find((c) => c.active) ?? comExtrato[0] ?? null;
 
   return comEmpresa(
     <PageContainer>
@@ -190,9 +195,7 @@ export default async function ConciliacaoPage({
                     >
                       {c.nickname}
                     </Link>
-                    <span className="block text-micro text-fg-muted">
-                      Banco {c.bankCode} · {c.agency ? `ag. ${c.agency} · ` : ""}c/{c.type === "POUPANCA" ? "p" : "c"} {c.accountNumber}
-                    </span>
+                    <span className="block text-micro text-fg-muted">{descricaoDaConta(c)}</span>
                     {c.omieAccountLabel && (
                       <span className="block text-micro text-fg-muted" title="O que o BPO conciliar nesta conta no Omie sai da fila daqui">
                         Ligada ao Omie: {c.omieAccountLabel}
@@ -202,7 +205,7 @@ export default async function ConciliacaoPage({
                   {/* Ativo/inativo de cadastro é a bolinha (escolha 2A, 08/10/2026). */}
                   {!c.active && <StatusDot color="var(--c41-fg-muted)" label="Inativa" className="flex-shrink-0" />}
                 </div>
-                <BlocoDoSaldo situacao={saldos.get(c.id)!} />
+                {temExtrato(c.type) ? <BlocoDoSaldo situacao={saldos.get(c.id)!} /> : <SaldoSemExtrato tipo={c.type} situacao={saldos.get(c.id)!} />}
                 {/* mt-auto: os botões ficam no pé do cartão, na mesma altura
                     em todos da linha, tenha o saldo uma linha ou quatro. */}
                 {podeAgir && (
@@ -215,8 +218,8 @@ export default async function ConciliacaoPage({
                         bankCode: c.bankCode,
                         agency: c.agency,
                         accountNumber: c.accountNumber,
-                        // A consulta deixa a conta de adiantamento de fora: aqui só há banco.
-                        type: c.type === "POUPANCA" ? "POUPANCA" : "CORRENTE",
+                        // A consulta deixa o adiantamento e o cartão de fora: aqui só há tipo do cadastro.
+                        type: c.type,
                         saldoInicial: c.openingBalance === null ? "" : textoDeCentavos(centavosDeDecimal(c.openingBalance)),
                         saldoInicialKey: c.openingBalanceDate ? saoPauloParts(c.openingBalanceDate).dateKey : "",
                         active: c.active,
@@ -232,18 +235,54 @@ export default async function ConciliacaoPage({
         </div>
       )}
 
-      {conta && (
+      {conta && temExtrato(conta.type) && (
         <ExtratoDaConta
           tenantId={tenantId}
           companyId={companyId}
           conta={conta}
-          // As outras contas ativas da empresa — o destino (ou a origem) de uma transferência.
-          outrasContas={contas.filter((c) => c.active && c.id !== conta.id).map((c) => ({ id: c.id, nome: `${c.nickname} ${c.accountNumber}` }))}
+          // As outras contas ativas da empresa — o destino (ou a origem) de uma
+          // transferência: banco, caixinha, empréstimo, administradora (lote D, 20/10).
+          outrasContas={contas.filter((c) => c.active && c.id !== conta.id).map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) }))}
           podeAgir={podeAgir}
           params={params}
         />
       )}
+      {conta && !temExtrato(conta.type) && (
+        <Card className="p-4">
+          <p className="text-ui font-semibold text-fg">{conta.nickname}</p>
+          <p className="mt-1 text-helper text-fg-secondary">
+            {rotuloDoTipo(conta.type)} não tem extrato a conciliar: o saldo é o inicial mais as baixas feitas por ela. Ela entra numa conta a pagar ou a
+            receber em “Saiu da conta” / “Entrou na conta”, e o dinheiro anda entre ela e o banco pela transferência, na linha do extrato do banco.
+          </p>
+          {ajudaDoTipo(conta.type) && <p className="mt-1 text-helper text-fg-muted">{ajudaDoTipo(conta.type)}</p>}
+        </Card>
+      )}
     </PageContainer>
+  );
+}
+
+/** "Conta corrente · Banco 341 · ag. 1234 · 12345-6" — sem o banco e o número que a conta sem extrato não tem. */
+function descricaoDaConta(c: { type: TipoDeConta; bankCode: string; agency: string | null; accountNumber: string }): string {
+  const partes: string[] = [rotuloDoTipo(c.type)];
+  if (c.bankCode !== BANCO_SEM_EXTRATO) partes.push(`Banco ${c.bankCode}`);
+  if (c.agency) partes.push(`ag. ${c.agency}`);
+  if (c.accountNumber) partes.push(c.accountNumber);
+  return partes.join(" · ");
+}
+
+/** O saldo da conta sem extrato, pelas baixas. A fora do caixa diz que não entra no saldo bancário. */
+function SaldoSemExtrato({ tipo, situacao }: { tipo: TipoDeConta; situacao: SituacaoDoSaldo }) {
+  const centavos = situacao.tipo === "sem_saldo_do_banco" ? situacao.calculadoCentavos : 0;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-baseline justify-between gap-2 text-fs-2">
+        <span className="text-fg-muted">Saldo pelas baixas</span>
+        <span className={`tabular-nums font-medium ${tomDoValor(centavos)}`}>{moeda(centavos)}</span>
+      </div>
+      <p className="text-micro text-fg-muted">
+        {ehContaForaDoCaixa(tipo) ? "Sem extrato e fora do caixa: não entra no saldo bancário nem no fluxo de caixa." : "Sem extrato: o saldo inicial mais as baixas feitas por ela."}
+      </p>
+    </div>
   );
 }
 
@@ -663,8 +702,8 @@ async function candidatosDaEmpresa(
         bankMatch: { is: null },
         cash: { in: valoresExatos },
         entry: { kind: { in: tipos }, status: { not: "CANCELADO" } },
-        // A baixa pelo adiantamento ou pelo cartão não passou pelo banco: não casa com o extrato.
-        OR: [{ bankAccountId: null }, { bankAccount: { type: { notIn: [...TIPOS_FORA_DO_CAIXA] } } }],
+        // A baixa por conta sem extrato (caixinha, adiantamento, cartão, empréstimo…) não passou pelo banco: não casa com o extrato.
+        OR: [{ bankAccountId: null }, { bankAccount: { type: { in: [...TIPOS_COM_EXTRATO] } } }],
       },
       select: {
         id: true,

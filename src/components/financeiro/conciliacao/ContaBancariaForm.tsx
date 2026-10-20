@@ -14,6 +14,15 @@ import { ItemDoMenu } from "@/components/ui/Popover";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { salvarContaBancaria, alterarContaAtiva } from "@/app/(app)/conciliacao/actions";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { ajudaDoTipo, grupoDoTipo, TIPOS_DE_CONTA, TIPOS_DO_CADASTRO, type GrupoDaConta, type TipoDeConta } from "@/lib/financeiro/tiposDeConta";
+import { BANCO_SEM_EXTRATO } from "@/lib/financeiro/conciliacao/conta";
+
+/** O seletor de tipo em grupos (lote D, 20/10 — os tipos do Omie): o grupo diz o que a conta faz. */
+const GRUPOS: { grupo: GrupoDaConta; rotulo: string }[] = [
+  { grupo: "banco", rotulo: "Com extrato" },
+  { grupo: "caixa", rotulo: "Dinheiro sem extrato" },
+  { grupo: "fora", rotulo: "Fora do caixa" },
+];
 
 export type ContaParaEditar = {
   id: string;
@@ -21,7 +30,7 @@ export type ContaParaEditar = {
   bankCode: string;
   agency: string | null;
   accountNumber: string;
-  type: "CORRENTE" | "POUPANCA";
+  type: TipoDeConta;
   /** Já no formato de digitação ("-1234,56"), ou vazio. */
   saldoInicial: string;
   saldoInicialKey: string;
@@ -43,6 +52,9 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
   const [pendente, startTransition] = useTransition();
   const travado = Boolean(conta?.temTransacoes);
   const prefixo = conta ? `conta-${conta.id}` : "conta-nova";
+  const [tipo, setTipo] = useState<TipoDeConta>(conta?.type ?? "CORRENTE");
+  // Sem extrato, banco e número não conferem arquivo nenhum: ficam opcionais.
+  const comExtrato = grupoDoTipo(tipo) === "banco";
 
   return (
     <>
@@ -78,30 +90,56 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
               <Input id={`${prefixo}-nickname`} name="nickname" maxLength={80} defaultValue={conta?.nickname} required />
             </CampoForm>
             <CampoForm label="Tipo" htmlFor={`${prefixo}-type`} required>
-              <Select id={`${prefixo}-type`} name="type" defaultValue={conta?.type ?? "CORRENTE"}>
-                <option value="CORRENTE">Conta corrente</option>
-                <option value="POUPANCA">Poupança</option>
+              <Select id={`${prefixo}-type`} name="type" value={tipo} onChange={(e) => setTipo(e.target.value as TipoDeConta)} disabled={travado}>
+                {GRUPOS.map((g) => (
+                  <optgroup key={g.grupo} label={g.rotulo}>
+                    {TIPOS_DO_CADASTRO.filter((t) => TIPOS_DE_CONTA[t].grupo === g.grupo).map((t) => (
+                      <option key={t} value={t}>
+                        {TIPOS_DE_CONTA[t].rotulo}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </Select>
+              {/* O select desabilitado não vai no formulário. */}
+              {travado && <input type="hidden" name="type" value={tipo} />}
             </CampoForm>
           </FieldGrid>
+          {ajudaDoTipo(tipo) && <p className="-mt-2 text-helper text-fg-muted">{ajudaDoTipo(tipo)}</p>}
 
           {/* Banco e agência são números curtos: coluna estreita, e a conta
               fica com o resto. A nota do travamento vale para a linha toda. */}
           <div className="flex flex-col gap-2">
             <FieldGrid columns="sm:grid-cols-[120px_140px_minmax(0,1fr)]">
-              <CampoForm label="Banco (COMPE)" htmlFor={`${prefixo}-bank`} required helper="001, 237, 341…">
-                <Input id={`${prefixo}-bank`} name="bankCode" inputMode="numeric" maxLength={4} defaultValue={conta?.bankCode} readOnly={travado} required />
+              <CampoForm label="Banco (COMPE)" htmlFor={`${prefixo}-bank`} required={comExtrato} helper={comExtrato ? "001, 237, 341…" : "Opcional."}>
+                <Input
+                  id={`${prefixo}-bank`}
+                  name="bankCode"
+                  inputMode="numeric"
+                  maxLength={4}
+                  defaultValue={conta && conta.bankCode !== BANCO_SEM_EXTRATO ? conta.bankCode : ""}
+                  readOnly={travado}
+                  required={comExtrato}
+                />
               </CampoForm>
               <CampoForm label="Agência" htmlFor={`${prefixo}-agency`}>
                 <Input id={`${prefixo}-agency`} name="agency" inputMode="numeric" maxLength={10} defaultValue={conta?.agency ?? ""} />
               </CampoForm>
-              <CampoForm label="Conta com dígito" htmlFor={`${prefixo}-number`} required>
-                <Input id={`${prefixo}-number`} name="accountNumber" maxLength={30} placeholder="12345-6" defaultValue={conta?.accountNumber} readOnly={travado} required />
+              <CampoForm label={comExtrato ? "Conta com dígito" : "Número"} htmlFor={`${prefixo}-number`} required={comExtrato} helper={comExtrato ? undefined : "Opcional."}>
+                <Input
+                  id={`${prefixo}-number`}
+                  name="accountNumber"
+                  maxLength={30}
+                  placeholder={comExtrato ? "12345-6" : ""}
+                  defaultValue={conta?.accountNumber}
+                  readOnly={travado}
+                  required={comExtrato}
+                />
               </CampoForm>
             </FieldGrid>
             {travado && (
               <p className="text-helper text-fg-muted">
-                Banco e número não mudam depois do primeiro extrato importado: são eles que conferem o arquivo.
+                Tipo, banco e número não mudam depois do primeiro extrato importado: são eles que conferem o arquivo.
               </p>
             )}
           </div>

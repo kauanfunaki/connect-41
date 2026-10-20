@@ -54,5 +54,9 @@ describe("a sugestão da baixa", () => {
 
   it("o nome da conta nos seletores", () => {
     expect(nomeDaContaBancaria({ nickname: "Itaú", accountNumber: "12345-6" })).toBe("Itaú 12345-6");
+    expect(nomeDaContaBancaria({ nickname: "Itaú", accountNumber: "12345-6", type: "POUPANCA" })).toBe("Itaú 12345-6");
+    // A que não é banco diz o tipo (lote D, 20/10); a sem número não fica com espaço sobrando.
+    expect(nomeDaContaBancaria({ nickname: "Caixa da loja", accountNumber: "", type: "CAIXINHA" })).toBe("Caixa da loja (caixinha)");
+    expect(nomeDaContaBancaria({ nickname: "BNDES", accountNumber: "9988-7", type: "EMPRESTIMO" })).toBe("BNDES 9988-7 (empréstimo)");
   });
 });

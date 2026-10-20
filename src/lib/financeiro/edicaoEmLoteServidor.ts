@@ -148,7 +148,7 @@ export async function dadosDaAlteracaoEmLote(valores: string[]): Promise<DadosDa
     }),
     getPrisma().bankAccount.findMany({
       where: { tenantId, companyId: { in: ids }, active: true, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
-      select: { id: true, nickname: true, accountNumber: true, companyId: true },
+      select: { id: true, nickname: true, accountNumber: true, type: true, companyId: true },
       orderBy: { nickname: "asc" },
     }),
   ]);
