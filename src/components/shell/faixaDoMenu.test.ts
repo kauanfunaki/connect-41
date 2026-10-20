@@ -75,6 +75,21 @@ function linksDoMenu(html: string): { tag: string; texto: string }[] {
 }
 
 describe("menu recolhido: a faixa de ícones", () => {
+  it("reúne as áreas fiscais em um único botão SPED também na faixa", () => {
+    rota.atual = "/fiscal/entregas";
+    for (const recolhido of [false, true]) {
+      const aside = lateral(casco(recolhido, { telasFixadas: [], activeSector: FISCAL, activeSectorModules: [
+        { code: "fiscal_classificacao", label: "Classificação", href: "/fiscal/classificacao" },
+        { code: "fiscal_entregas", label: "SPED gerados", href: "/fiscal/entregas" },
+        { code: "fiscal_operacao", label: "Executar", href: "/fiscal/operacao" },
+      ] }));
+      expect(aside).toContain('aria-haspopup="menu"');
+      expect(aside).toContain('aria-expanded="false"');
+      expect(aside).toContain('aria-current="true"');
+      expect(aside).not.toContain('href="/fiscal/operacao"');
+      expect(aside).not.toContain('href="/fiscal/entregas"');
+    }
+  });
   it("a lateral fica na tela e no Tab — sem `inert`, sem esconder do leitor de tela", () => {
     const aside = lateral(casco(true));
     const abertura = /<aside[^>]*>/.exec(aside)![0];

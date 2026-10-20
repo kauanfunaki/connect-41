@@ -375,7 +375,7 @@ export function AtualizarEmLote({ hoje }: { hoje: string }) {
   );
 }
 
-/** Quem recebe as autorizações — o CNPJ que vai no texto. Só a coordenação do setor muda. */
+/** Quem recebe as autorizações — o CNPJ que vai no texto. Só o administrador do setor altera. */
 function QuemRecebe({
   atual,
   sugestao,
@@ -500,7 +500,7 @@ export function PedidoAoCliente({
           ) : (
             <Aviso tom="atencao">
               O texto sai com o CNPJ de quem recebe.{" "}
-              {podeConfigurar ? "Defina acima antes de pedir aos clientes." : "Peça à coordenação do setor para definir."}
+              {podeConfigurar ? "Defina acima antes de pedir aos clientes." : "Peça ao administrador do setor para definir."}
             </Aviso>
           )}
           <div className="flex justify-end gap-2">

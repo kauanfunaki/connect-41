@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { geracao, MODOS_EXECUCAO, parametrosExecucaoSchema, type ParametrosExecucao } from "./execucao";
+import { ultimasVersoesDoContexto } from "./vigencia";
 
 // O cenário tem seu próprio contrato: nunca recebe entidades do acervo real.
 const contextoSchema = z.object({ empresaId: z.string(), estabelecimentoId: z.string(), competencia: z.string() });
@@ -17,10 +19,14 @@ const arquivoSchema = z.object({
   id: z.string(), contexto: contextoSchema, tipo: z.enum(["ICMS/IPI", "Contribuições"]), versao: z.number(), nome: z.string(),
   revisao: z.string(), criadoEm: z.string(), validacao: z.enum(["Não validado", "Aprovado", "Com pendências"]),
   erros: z.array(z.string()), entregue: z.boolean(), protocolo: z.string(), dominio: z.boolean(),
+  tipoSped: z.enum(["0", "1"]).optional(), execucaoId: z.string().optional(), saidaSolicitada: z.string().optional(),
+  resumo: z.object({ entradas: z.number(), saidas: z.number(), creditavel: z.number(), icms: z.number(), ipi: z.number(), pis: z.number(), cofins: z.number(), pendentes: z.number(), rejeitados: z.number() }).optional(),
 });
 const execucaoSchema = z.object({
-  id: z.string(), contexto: contextoSchema, acao: z.string(), estado: z.enum(["Na fila", "Concluída", "Erro", "Cancelada"]),
+  id: z.string(), contexto: contextoSchema, acao: z.string(), estado: z.enum(["Na fila", "Executando", "Concluída", "Erro", "Cancelada"]),
   criadoEm: z.string(), log: z.array(z.string()),
+  parametros: parametrosExecucaoSchema.optional(), iniciadoEm: z.string().optional(), concluidoEm: z.string().optional(),
+  tentativaDe: z.string().optional(), arquivoIds: z.array(z.string()).optional(), documentos: z.number().int().optional(),
 });
 const regraSchema = z.object({ id: z.string(), cfop: z.string(), destino: z.string(), fonte: z.string(), debito: z.string(), credito: z.string(), historico: z.string() });
 const ajusteSchema = z.object({ id: z.string(), contexto: contextoSchema, imposto: z.enum(["ICMS/IPI", "Contribuições"]), codigo: z.string(), descricao: z.string(), valor: z.number(), efeito: z.enum(["Débito", "Crédito"]), obrigacao: z.string() });
@@ -38,6 +44,7 @@ export type Cenario = z.infer<typeof cenarioSchema>;
 export type ContextoFiscal = z.infer<typeof contextoSchema>;
 export type DocumentoTeste = z.infer<typeof documentoSchema>;
 export type ArquivoTeste = z.infer<typeof arquivoSchema>;
+export type ExecucaoTeste = z.infer<typeof execucaoSchema>;
 export type Imposto = ArquivoTeste["tipo"];
 export const COMPETENCIAS = ["2026-09", "2026-10"];
 // NFS-e, Contratos e recibos e Quarentena (documentos) e Fila e Erros
@@ -47,12 +54,12 @@ export const PAGINAS_FISCAIS = [
   { pagina: "painel", modulo: "fiscal_painel", caminho: "/fiscal", titulo: "Painel fiscal", descricao: "Do documento à entrega: acompanhe o trabalho da competência.", abas: [] },
   { pagina: "documentos", modulo: "fiscal_acervo", caminho: "/fiscal/documentos", titulo: "Documentos e importações", descricao: "Reúna as fontes e confira o que falta antes de apurar.", abas: [["acervo", "Acervo"], ["envio", "Enviar documentos"], ["importacoes", "Importações"], ["cobertura", "Cobertura"]] },
   { pagina: "classificacao", modulo: "fiscal_classificacao", caminho: "/fiscal/classificacao", titulo: "Classificação", descricao: "Revise destinação e crédito, por item ou em lote.", abas: [["produtos", "Produtos"], ["apoio", "Contratos e recibos"], ["decisoes", "Decisões registradas"]] },
-  { pagina: "operacao", modulo: "fiscal_operacao", caminho: "/fiscal/operacao", titulo: "Execuções", descricao: "Prepare extrações e gerações e acompanhe cada execução.", abas: [["executar", "Executar"], ["historico", "Histórico"]] },
+  { pagina: "operacao", modulo: "fiscal_operacao", caminho: "/fiscal/operacao", titulo: "Executar", descricao: "Prepare extrações e gerações e acompanhe cada execução de teste.", abas: [["executar", "Executar"], ["historico", "Histórico"]] },
   { pagina: "icms-ipi", modulo: "fiscal_icms_ipi", caminho: "/fiscal/icms-ipi", titulo: "ICMS e IPI", descricao: "Confira a apuração e os ajustes do estabelecimento.", abas: [["apuracao", "Apuração"], ["demonstrativo", "Demonstrativo"], ["ajustes", "Ajustes"], ["dcip-dime", "DCIP e DIME"]] },
   { pagina: "contribuicoes", modulo: "fiscal_contribuicoes", caminho: "/fiscal/contribuicoes", titulo: "PIS e COFINS", descricao: "Confira a apuração, os ajustes e o fechamento do EFD Contribuições.", abas: [["fechamento", "Fechamento"], ["ajustes", "Ajustes"], ["decisoes", "Decisões por registro"], ["demonstrativo", "Demonstrativo"], ["sped", "SPED Contribuições"]] },
-  { pagina: "entregas", modulo: "fiscal_entregas", caminho: "/fiscal/entregas", titulo: "Arquivos e entregas", descricao: "Confira versões, valide e registre a entrega de teste.", abas: [["arquivos", "SPED gerados"], ["validacao", "Validação"], ["entregas", "Entregas"]] },
+  { pagina: "entregas", modulo: "fiscal_entregas", caminho: "/fiscal/entregas", titulo: "SPED gerados", descricao: "Consulte as versões, a validação e as entregas dos arquivos de teste.", abas: [["arquivos", "SPED gerados"], ["validacao", "Validação"], ["entregas", "Entregas"]] },
   { pagina: "conferencia", modulo: "fiscal_conferencia", caminho: "/fiscal/conferencia", titulo: "Conferência fiscal", descricao: "Compare documentos e pagamentos antes de concluir.", abas: [["previa", "Prévia financeira"], ["confronto", "Confronto de documentos"]] },
-  { pagina: "configuracoes", modulo: "fiscal_configuracoes", caminho: "/fiscal/configuracoes", titulo: "Configurações fiscais", descricao: "Confira os parâmetros e consulte as regras fiscais de teste.", abas: [["parametros", "Parâmetros"], ["regras", "Regras fiscais"]] },
+  { pagina: "configuracoes", modulo: "fiscal_configuracoes", caminho: "/fiscal/configuracoes", titulo: "Configurações fiscais", descricao: "Confira os parâmetros e consulte as regras fiscais de teste.", abas: [["parametros", "Parâmetros"], ["depara", "De-Para CFOP"], ["regras", "Regras fiscais"]] },
 ] as const;
 export type PaginaFiscal = typeof PAGINAS_FISCAIS[number]["pagina"];
 
@@ -147,16 +154,28 @@ export type AcaoFiscal =
   | { tipo: "gerar"; imposto: Imposto }
   | { tipo: "validar" | "entregar"; id: string }
   | { tipo: "enfileirar"; imposto: Imposto; falhar: boolean }
-  | { tipo: "processar" | "cancelar" | "reprocessar"; id: string }
+  | { tipo: "solicitar-execucao"; parametros: ParametrosExecucao }
+  | { tipo: "processar" | "cancelar" | "reprocessar" | "iniciar-execucao" | "concluir-execucao" | "falhar-execucao"; id: string }
   | { tipo: "confrontar" }
   | { tipo: "conciliar"; id: string };
 
 function alterarPeriodos(s: Cenario, contexto: ContextoFiscal) {
   s.periodos.filter((p) => mesmoEscopo(p, contexto)).forEach((p) => { p.revisao += 1; p.apurado = false; p.fechado = false; });
 }
-function adicionarArquivo(s: Cenario, contexto: ContextoFiscal, imposto: Imposto, id: string, agora: string) {
+function adicionarArquivo(s: Cenario, contexto: ContextoFiscal, imposto: Imposto, id: string, agora: string, execucao?: ExecucaoTeste) {
   const versao = 1 + Math.max(0, ...s.arquivos.filter((a) => a.tipo === imposto && a.contexto.empresaId === contexto.empresaId && a.contexto.estabelecimentoId === contexto.estabelecimentoId && a.contexto.competencia === contexto.competencia && !a.dominio).map((a) => a.versao));
-  s.arquivos.unshift({ id, contexto: { ...contexto }, tipo: imposto, versao, nome: `EXEMPLO_${imposto === "ICMS/IPI" ? "sped" : "contribuicoes"}_${contexto.competencia}_${contexto.estabelecimentoId || contexto.empresaId}_v${versao}.txt`, revisao: assinaturaDaRevisao(s, contexto), criadoEm: agora, validacao: "Não validado", erros: [], entregue: false, protocolo: "", dominio: false });
+  s.arquivos.unshift({ id, contexto: { ...contexto }, tipo: imposto, versao, nome: `EXEMPLO_${imposto === "ICMS/IPI" ? "sped" : "contribuicoes"}_${contexto.competencia}_${contexto.estabelecimentoId || contexto.empresaId}_v${versao}.txt`, revisao: assinaturaDaRevisao(s, contexto), criadoEm: agora, validacao: "Não validado", erros: [], entregue: false, protocolo: "", dominio: false,
+    resumo: totaisDoContexto(s, contexto), ...(execucao && { execucaoId: execucao.id, tipoSped: execucao.parametros?.tipoSped, saidaSolicitada: execucao.parametros?.saida }) });
+}
+
+export function execucaoNoContexto(e: ExecucaoTeste, contexto: ContextoFiscal) {
+  return e.contexto.empresaId === contexto.empresaId
+    && (!contexto.estabelecimentoId || !e.contexto.estabelecimentoId || contexto.estabelecimentoId === e.contexto.estabelecimentoId)
+    && (e.parametros ? e.parametros.dataIni.slice(0, 7) <= contexto.competencia && e.parametros.dataFim.slice(0, 7) >= contexto.competencia : e.contexto.competencia === contexto.competencia);
+}
+
+export function textoDoArquivoTeste(a: ArquivoTeste) {
+  return `AMOSTRA DE TESTE - SEM VALIDADE FISCAL\nDados fictícios. Não importar no PVA.\n\nArquivo: ${a.nome}\nObrigação: ${a.tipo}\nCompetência: ${a.contexto.competencia}\nVersão: ${a.versao}\nTipo: ${a.tipoSped === "0" ? "Original" : a.tipoSped === "1" ? "Substituto" : "Não registrado"}\n\n${a.resumo ? JSON.stringify(a.resumo, null, 2) : "Resumo histórico indisponível."}\n`;
 }
 
 /** Transições puras permitem verificar o fluxo sem servidor, arquivo ou cálculo fiscal real. */
@@ -220,7 +239,7 @@ export function executarAcao(cenario: Cenario, acao: AcaoFiscal, contexto = cena
     if (!acao.nome.trim()) return recusar("Informe um nome para a empresa de teste.");
     const empresa = s.empresas.find((e) => e.id === contexto.empresaId)!;
     empresa.nome = acao.nome.trim(); empresa.regime = acao.regime;
-    mensagem = "Cadastro fictício atualizado neste navegador.";
+    mensagem = "Cadastro fictício atualizado no banco local.";
   } else if (acao.tipo === "regra") {
     if (!regraSchema.safeParse(acao.regra).success || !acao.regra.fonte.trim()) return recusar("Informe a fonte da regra de teste.");
     const index = s.regras.findIndex((r) => r.id === acao.regra.id);
@@ -228,14 +247,82 @@ export function executarAcao(cenario: Cenario, acao: AcaoFiscal, contexto = cena
     s.regras[index] = acao.regra;
     s.periodos.forEach((p) => { p.revisao += 1; p.apurado = false; p.fechado = false; });
     mensagem = "Regra compartilhada atualizada; cenários sinalizados para revisão.";
+  } else if (acao.tipo === "solicitar-execucao") {
+    const validado = parametrosExecucaoSchema.safeParse(acao.parametros);
+    if (!validado.success) return recusar(validado.error.issues[0].message);
+    const p = validado.data;
+    if (!COMPETENCIAS.includes(p.dataIni.slice(0, 7)) || !COMPETENCIAS.includes(p.dataFim.slice(0, 7))) return recusar("Use as competências disponíveis no cenário de teste: setembro e outubro de 2026.");
+    const base = { ...contexto, competencia: p.dataIni.slice(0, 7), ...(p.modo === "sped_contribuicoes" && { estabelecimentoId: "" }) };
+    if (s.execucoes.some((e) => ["Na fila", "Executando"].includes(e.estado) && e.contexto.empresaId === base.empresaId && e.contexto.estabelecimentoId === base.estabelecimentoId && e.parametros && JSON.stringify(e.parametros) === JSON.stringify(p))) return recusar("Já existe um pedido igual na fila ou em execução. Consulte a fila antes de repetir.");
+    s.execucoes.unshift({ id, contexto: base, acao: MODOS_EXECUCAO[p.modo], parametros: p, estado: "Na fila", criadoEm: agora, log: [`${agora} · Pedido de teste recebido.`, "Use os controles de simulação para iniciar e concluir. Nenhum agente real será acionado."] });
+    mensagem = "Pedido adicionado à fila de simulação.";
+  } else if (["iniciar-execucao", "concluir-execucao", "falhar-execucao"].includes(acao.tipo) && "id" in acao) {
+    const e = s.execucoes.find((item) => item.id === acao.id && execucaoNoContexto(item, contexto));
+    if (!e) return recusar("Execução indisponível neste contexto.");
+    if (acao.tipo === "iniciar-execucao") {
+      if (e.estado !== "Na fila") return recusar("Somente um pedido na fila pode ser iniciado.");
+      e.estado = "Executando"; e.iniciadoEm = agora; e.log.push(`${agora} · Simulação iniciada.`);
+      mensagem = "Execução de teste iniciada.";
+    } else {
+      if (e.estado !== "Executando") return recusar("Inicie a simulação antes de concluir ou provocar uma falha.");
+      if (acao.tipo === "falhar-execucao") {
+        e.estado = "Erro"; e.concluidoEm = agora; e.log.push(`${agora} · Falha provocada pelo controle de simulação. Nenhum resultado publicado.`);
+        mensagem = "Falha de teste registrada. Uma nova tentativa pode ser solicitada no Histórico.";
+      } else if (!e.parametros || geracao(e.parametros.modo)) {
+        const imposto = e.parametros?.modo === "sped_contribuicoes" || (!e.parametros && e.acao.includes("Contribuições")) ? "Contribuições" : "ICMS/IPI";
+        const base = { ...e.contexto, ...(imposto === "Contribuições" && { estabelecimentoId: "" }) };
+        const docsDaGeracao = documentosDoContexto(s, base);
+        const erro = docsDaGeracao.some((d) => d.estado === "Rejeitado") && !e.parametros?.forcarErros
+          ? "Existem documentos em quarentena no período. Revise-os antes de gerar."
+          : !docsDaGeracao.length && !e.parametros?.forcarCobertura ? "Não há documentos no período selecionado." : "";
+        if (erro) {
+          e.estado = "Erro"; e.concluidoEm = agora; e.log.push(`${agora} · Geração de teste bloqueada: ${erro}`);
+          mensagem = erro;
+        } else {
+          const estabelecimentos = base.estabelecimentoId || imposto === "Contribuições" ? [base.estabelecimentoId] : s.empresas.find((empresa) => empresa.id === base.empresaId)!.estabelecimentos.map((f) => f.id);
+          e.arquivoIds = estabelecimentos.map((estabelecimentoId, i) => {
+            const arquivoId = `${id}-arquivo-${i}`;
+            adicionarArquivo(s, { ...base, estabelecimentoId }, imposto, arquivoId, agora, e);
+            return arquivoId;
+          });
+          e.estado = "Concluída"; e.concluidoEm = agora; e.documentos = docsDaGeracao.length;
+          e.log.push(`${agora} · ${e.arquivoIds.length} prévia(s) criada(s) em SPED gerados. Sem validade fiscal.`);
+          mensagem = "Simulação concluída. Consulte as versões em SPED gerados.";
+        }
+      } else {
+        let quantidade = 0;
+        const meses = COMPETENCIAS.filter((mes) => mes >= e.parametros!.dataIni.slice(0, 7) && mes <= e.parametros!.dataFim.slice(0, 7));
+        const filiais = s.empresas.find((empresa) => empresa.id === e.contexto.empresaId)!.estabelecimentos.filter((f) => !e.contexto.estabelecimentoId || f.id === e.contexto.estabelecimentoId);
+        for (const competencia of meses) for (const filial of filiais) {
+          const base = { ...e.contexto, competencia, estabelecimentoId: filial.id };
+          if (e.parametros.modo === "erros") {
+            const rejeitados = documentosDoContexto(s, base).filter((d) => d.estado === "Rejeitado");
+            rejeitados.forEach((d) => { d.estado = "Pendente"; d.motivo = ""; d.xml = true; });
+            quantidade += rejeitados.length;
+            if (rejeitados.length) alterarPeriodos(s, base);
+          } else {
+            const modelos = criarCenario().documentos.filter((d) => mesmoEscopo(d, base) && ["NF-e", "CT-e"].includes(d.tipo) && (!e.parametros!.semEntradas || d.sentido !== "Entrada")).slice(0, 4);
+            modelos.forEach((d, i) => s.documentos.unshift({ ...d, id: `${id}-${filial.id}-${competencia}-${i}`, numero: `T${s.documentos.length + 1}`, estado: "Pendente", motivo: "", xml: true }));
+            quantidade += modelos.length;
+            s.importacoes.unshift({ id: `${id}-${filial.id}-${competencia}`, contexto: base, criadoEm: agora, aceitos: modelos.length, rejeitados: 0, origem: `${e.acao} · simulação` });
+            if (modelos.length) alterarPeriodos(s, base);
+          }
+        }
+        e.estado = "Concluída"; e.concluidoEm = agora; e.documentos = quantidade;
+        e.log.push(`${agora} · ${quantidade} documento(s) fictício(s) ${e.parametros.modo === "erros" ? "recuperado(s)" : "recebido(s)"}. Continue em Classificação.`);
+        mensagem = `Simulação concluída: ${quantidade} documento(s) disponíveis para classificação.`;
+      }
+    }
   } else if (acao.tipo === "gerar") {
     adicionarArquivo(s, contexto, acao.imposto, id, agora);
-    s.execucoes.unshift({ id: `${id}-execucao`, contexto: { ...contexto }, acao: `Gerar ${acao.imposto}`, criadoEm: agora, estado: "Concluída", log: ["Simulação iniciada no navegador.", "Dados fictícios preparados.", "Prévia adicionada a Arquivos e entregas. Nenhum arquivo fiscal foi gerado."] });
+    s.execucoes.unshift({ id: `${id}-execucao`, contexto: { ...contexto }, acao: `Gerar ${acao.imposto}`, criadoEm: agora, estado: "Concluída", log: ["Simulação executada no servidor local.", "Dados fictícios preparados.", "Prévia adicionada a Arquivos e entregas. Nenhum arquivo fiscal foi gerado."] });
     mensagem = "Nova versão de teste criada. Continue em Validação.";
   } else if (acao.tipo === "validar" || acao.tipo === "entregar") {
-    const arquivo = s.arquivos.find((a) => a.id === acao.id && mesmoEscopo(a.contexto, contexto));
+    const arquivo = s.arquivos.find((a) => a.id === acao.id && a.contexto.empresaId === contexto.empresaId && a.contexto.competencia === contexto.competencia && (!contexto.estabelecimentoId || !a.contexto.estabelecimentoId || a.contexto.estabelecimentoId === contexto.estabelecimentoId));
     if (!arquivo) return recusar("Arquivo indisponível neste filtro.");
     if (precisaRevisar(s, arquivo)) return recusar("Os dados mudaram após a geração. Gere uma nova versão de teste.");
+    if (arquivo.entregue) return recusar("Esta versão já possui uma entrega registrada.");
+    if (!ultimasVersoesDoContexto(s).some((a) => a.id === arquivo.id)) return recusar("Esta versão foi superada. Use a versão mais recente.");
     if (acao.tipo === "validar") {
       const pendentes = documentosDoContexto(s, arquivo.contexto).filter((d) => d.estado !== "Classificado");
       arquivo.erros = pendentes.map((d) => `${d.tipo} ${d.numero}: ${d.estado === "Rejeitado" ? d.motivo : "classificação pendente"}`);
@@ -251,13 +338,20 @@ export function executarAcao(cenario: Cenario, acao: AcaoFiscal, contexto = cena
     }
   } else if (acao.tipo === "enfileirar") {
     s.execucoes.unshift({ id, contexto: { ...contexto }, acao: `Gerar ${acao.imposto}`, estado: "Na fila", criadoEm: agora, log: ["Solicitação de teste na fila local.", acao.falhar ? "Cenário: falha de extração." : "Cenário: execução normal."] });
-    mensagem = "Execução adicionada à fila local. Abra a aba Fila para processar ou cancelar.";
+    mensagem = "Execução adicionada à fila local. Abra o Histórico para processar ou cancelar.";
   } else if (acao.tipo === "processar" || acao.tipo === "cancelar" || acao.tipo === "reprocessar") {
-    const execucao = s.execucoes.find((e) => e.id === acao.id && mesmoEscopo(e.contexto, contexto));
+    const execucao = s.execucoes.find((e) => e.id === acao.id && execucaoNoContexto(e, contexto));
     if (!execucao || (acao.tipo === "reprocessar" ? execucao.estado !== "Erro" : execucao.estado !== "Na fila")) return recusar("Esta execução não está disponível para a ação escolhida.");
-    if (acao.tipo === "cancelar") { execucao.estado = "Cancelada"; execucao.log.push("Cancelada no navegador."); mensagem = "Execução de teste cancelada."; }
-    else if (acao.tipo === "processar" && execucao.log.includes("Cenário: falha de extração.")) { execucao.estado = "Erro"; execucao.log.push("Falha simulada de extração. Reprocesse na aba Erros."); mensagem = "Falha de teste registrada. Abra Erros para reprocessar."; }
-    else { execucao.estado = "Concluída"; execucao.log.push("Recuperação e processamento concluídos no navegador."); adicionarArquivo(s, execucao.contexto, execucao.acao.includes("Contribuições") ? "Contribuições" : "ICMS/IPI", `${id}-arquivo`, agora); mensagem = "Execução concluída; prévia disponível em Arquivos e entregas."; }
+    if (acao.tipo === "reprocessar") {
+      if (!execucao.parametros && !execucao.acao.startsWith("Gerar ")) return recusar("Parâmetros históricos indisponíveis. Prepare um novo pedido em Executar.");
+      if (s.execucoes.some((e) => e.tentativaDe === execucao.id && ["Na fila", "Executando"].includes(e.estado))) return recusar("Esta execução já possui uma nova tentativa pendente.");
+      s.execucoes.unshift({ id, contexto: { ...execucao.contexto }, acao: execucao.acao, ...(execucao.parametros && { parametros: execucao.parametros }), tentativaDe: execucao.id, estado: "Na fila", criadoEm: agora, log: [`${agora} · Nova tentativa de ${execucao.id}. O erro original foi preservado.`] });
+      mensagem = "Nova tentativa adicionada à fila. A execução anterior foi preservada.";
+    }
+    else if (acao.tipo === "cancelar") { execucao.estado = "Cancelada"; execucao.concluidoEm = agora; execucao.log.push("Cancelada no servidor local."); mensagem = "Execução de teste cancelada."; }
+    else if (acao.tipo === "processar" && execucao.parametros) return recusar("Use os controles de início e conclusão para este pedido.");
+    else if (acao.tipo === "processar" && execucao.log.includes("Cenário: falha de extração.")) { execucao.estado = "Erro"; execucao.log.push("Falha simulada de extração. Solicite uma nova tentativa no Histórico."); mensagem = "Falha de teste registrada. Abra o Histórico para solicitar uma nova tentativa."; }
+    else { execucao.estado = "Concluída"; execucao.log.push("Recuperação e processamento concluídos no servidor local."); adicionarArquivo(s, execucao.contexto, execucao.acao.includes("Contribuições") ? "Contribuições" : "ICMS/IPI", `${id}-arquivo`, agora); mensagem = "Execução concluída; prévia disponível em Arquivos e entregas."; }
   } else if (acao.tipo === "confrontar") {
     s.confrontos = s.confrontos.filter((c) => !mesmoEscopo(c.contexto, contexto));
     docs.filter((d) => ["Contrato", "Recibo", "RPA", "Fatura"].includes(d.tipo)).forEach((d, i) => s.confrontos.push({ id: `${id}-${i}`, contexto: { empresaId: d.empresaId, estabelecimentoId: d.estabelecimentoId, competencia: d.competencia }, documentoId: d.id, estado: "Sem nota", valor: d.valor }));

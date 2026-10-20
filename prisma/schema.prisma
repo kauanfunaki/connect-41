@@ -7,6 +7,335 @@ datasource db {
   provider = "mysql"
 }
 
+model OpsWatcher {
+  tenantId String
+  ownerId String?
+  slug String @db.VarChar(60)
+  name String @db.VarChar(120)
+  description String? @db.VarChar(1000)
+  client String? @db.VarChar(120)
+  folderInput String? @db.VarChar(1000)
+  folderOutput String? @db.VarChar(1000)
+  isActive Boolean @default(true)
+  version Int @default(0)
+  tokenHash String? @unique @db.Char(64)
+  lastHeartbeatAt DateTime?
+  instabilityReportedAt DateTime?
+  instabilityReportedBy String? @db.VarChar(191)
+  instabilityNote String? @db.Text
+  instabilityTicketId String? @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  owner User? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  events OpsEvent[]
+  @@id([tenantId, slug])
+  @@index([tenantId, ownerId])
+  @@map("ops_watchers")
+}
+
+model OpsEvent {
+  id String @id @default(uuid())
+  tenantId String
+  watcherSlug String @db.VarChar(60)
+  eventId String @db.VarChar(100)
+  payloadHash String @db.Char(64)
+  filename String @db.VarChar(1000)
+  filenameRenamed String? @db.VarChar(1000)
+  status String @db.VarChar(10)
+  errorMessage String? @db.Text
+  client String? @db.VarChar(120)
+  n8nExecutionId String? @db.VarChar(120)
+  processedAt DateTime
+  receivedAt DateTime @default(now())
+  watcher OpsWatcher @relation(fields: [tenantId, watcherSlug], references: [tenantId, slug])
+  @@unique([tenantId, watcherSlug, eventId])
+  @@index([tenantId, processedAt])
+  @@index([tenantId, status, processedAt])
+  @@index([tenantId, watcherSlug, processedAt])
+  @@map("ops_events")
+}
+
+enum HelpdeskStatus {
+  ABERTO
+  NA_FILA
+  EM_ANDAMENTO
+  AGUARDANDO_USUARIO
+  AGUARDANDO_APROVACAO
+  AGUARDANDO_REQUERENTE
+  STANDBY
+  RESOLVIDO
+  CANCELADO
+}
+
+enum HelpdeskPriority {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+model HelpdeskRequesterSector {
+  tenantId String
+  sectorCode String @db.VarChar(40)
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  @@id([tenantId, sectorCode])
+  @@map("helpdesk_requester_sectors")
+}
+
+model HelpdeskCategory {
+  id String @id @default(uuid())
+  tenantId String
+  name String @db.VarChar(120)
+  parentId String?
+  active Boolean @default(true)
+  version Int @default(0)
+  descriptionTemplate String @db.Text
+  templateApplyMode String @default("replace_if_empty") @db.VarChar(30)
+  formSchema Json
+  requiredAttachments Json
+  checklistTemplate Json
+  requiresApproval Boolean @default(false)
+  approvalMode String @default("REQUESTER_COORDINATOR") @db.VarChar(30)
+  approvalUserIds Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  parent HelpdeskCategory? @relation("HelpdeskCategoryTree", fields: [tenantId, parentId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  children HelpdeskCategory[] @relation("HelpdeskCategoryTree")
+  tickets HelpdeskTicket[]
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@index([tenantId, active])
+  @@map("helpdesk_categories")
+}
+
+model HelpdeskSlaPolicy {
+  tenantId String
+  priority HelpdeskPriority
+  firstResponseMinutes Int
+  resolutionMinutes Int
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  @@id([tenantId, priority])
+  @@map("helpdesk_sla_policies")
+}
+
+model HelpdeskDraft {
+  id String @id @default(uuid())
+  tenantId String
+  createdById String
+  version Int @default(0)
+  payload Json
+  review Json?
+  reviewVersion Int?
+  analysisToken String?
+  analysisStartedAt DateTime?
+  submittedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  ticket HelpdeskTicket?
+  messages HelpdeskTriageMessage[]
+  attachments HelpdeskAttachment[]
+  @@unique([tenantId, id])
+  @@index([tenantId, createdById, submittedAt])
+  @@map("helpdesk_drafts")
+}
+
+model HelpdeskTriageMessage {
+  id String @id @default(uuid())
+  tenantId String
+  draftId String
+  role String @db.VarChar(20)
+  body String @db.Text
+  createdAt DateTime @default(now())
+  draft HelpdeskDraft @relation(fields: [tenantId, draftId], references: [tenantId, id], onDelete: Cascade)
+  @@index([tenantId, draftId, createdAt])
+  @@map("helpdesk_triage_messages")
+}
+
+model HelpdeskTicket {
+  id String @id @default(uuid())
+  tenantId String
+  draftId String @unique
+  title String @db.VarChar(255)
+  description String @db.Text
+  categoryId String
+  requesterSectorCode String @db.VarChar(40)
+  createdById String
+  status HelpdeskStatus @default(ABERTO)
+  priority HelpdeskPriority @default(MEDIA)
+  requestData Json
+  tags Json
+  approverIds Json
+  approvalRequired Boolean @default(false)
+  approvalStatus String @default("NOT_REQUIRED") @db.VarChar(20)
+  queueOrder Int?
+  version Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  closedAt DateTime?
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  draft HelpdeskDraft @relation(fields: [tenantId, draftId], references: [tenantId, id])
+  category HelpdeskCategory @relation(fields: [tenantId, categoryId], references: [tenantId, id])
+  assignees HelpdeskAssignee[]
+  participants HelpdeskParticipant[]
+  comments HelpdeskComment[]
+  attachments HelpdeskAttachment[]
+  checklist HelpdeskChecklistItem[]
+  cycles HelpdeskSlaCycle[]
+  events HelpdeskEvent[]
+  approvals HelpdeskApproval[]
+  reopenRequests HelpdeskReopenRequest[]
+  @@unique([tenantId, id])
+  @@unique([tenantId, draftId])
+  @@index([tenantId, status, queueOrder])
+  @@index([tenantId, createdById, createdAt])
+  @@index([tenantId, requesterSectorCode, status])
+  @@map("helpdesk_tickets")
+}
+
+model HelpdeskAssignee {
+  tenantId String
+  ticketId String
+  userId String
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  @@id([tenantId, ticketId, userId])
+  @@map("helpdesk_assignees")
+}
+
+model HelpdeskParticipant {
+  tenantId String
+  ticketId String
+  userId String
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  @@id([tenantId, ticketId, userId])
+  @@map("helpdesk_participants")
+}
+
+model HelpdeskComment {
+  id String @id @default(uuid())
+  tenantId String
+  ticketId String
+  authorId String
+  requestId String
+  body String @db.Text
+  internal Boolean @default(false)
+  createdAt DateTime @default(now())
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  attachments HelpdeskAttachment[]
+  @@unique([tenantId, id])
+  @@unique([tenantId, ticketId, requestId])
+  @@index([tenantId, ticketId, createdAt])
+  @@map("helpdesk_comments")
+}
+
+model HelpdeskAttachment {
+  id String @id @default(uuid())
+  tenantId String
+  draftId String
+  ticketId String?
+  commentId String?
+  uploadedById String
+  sha256 String @db.VarChar(64)
+  attachmentKey String? @db.VarChar(80)
+  fileName String @db.VarChar(255)
+  fileUrl String @db.VarChar(255)
+  mimeType String @db.VarChar(120)
+  sizeBytes Int
+  internal Boolean @default(false)
+  createdAt DateTime @default(now())
+  draft HelpdeskDraft @relation(fields: [tenantId, draftId], references: [tenantId, id], onDelete: Cascade)
+  ticket HelpdeskTicket? @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  comment HelpdeskComment? @relation(fields: [tenantId, commentId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  @@unique([tenantId, id])
+  @@index([tenantId, draftId])
+  @@index([tenantId, ticketId])
+  @@map("helpdesk_attachments")
+}
+
+model HelpdeskChecklistItem {
+  id String @id @default(uuid())
+  tenantId String
+  ticketId String
+  key String @db.VarChar(80)
+  label String @db.VarChar(255)
+  done Boolean @default(false)
+  doneById String?
+  doneAt DateTime?
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  @@unique([tenantId, ticketId, key])
+  @@map("helpdesk_checklist_items")
+}
+
+model HelpdeskSlaCycle {
+  id String @id @default(uuid())
+  tenantId String
+  ticketId String
+  cycleNumber Int
+  openedAt DateTime
+  firstResponseDueAt DateTime
+  resolutionDueAt DateTime
+  firstResponseAt DateTime?
+  resolvedAt DateTime?
+  pausedAt DateTime?
+  pausedMinutes Int @default(0)
+  manualDeadline Boolean @default(false)
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  @@unique([tenantId, ticketId, cycleNumber])
+  @@index([tenantId, resolvedAt, resolutionDueAt])
+  @@map("helpdesk_sla_cycles")
+}
+
+model HelpdeskEvent {
+  id String @id @default(uuid())
+  tenantId String
+  ticketId String
+  actorId String?
+  type String @db.VarChar(60)
+  data Json
+  internal Boolean @default(false)
+  dedupKey String? @db.VarChar(191)
+  dispatchedAt DateTime?
+  createdAt DateTime @default(now())
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  @@unique([tenantId, dedupKey])
+  @@index([tenantId, ticketId, createdAt])
+  @@index([tenantId, dispatchedAt, createdAt])
+  @@map("helpdesk_events")
+}
+
+model HelpdeskApproval {
+  id String @id @default(uuid())
+  tenantId String
+  ticketId String
+  cycleNumber Int
+  status String @default("PENDING") @db.VarChar(20)
+  decidedById String?
+  note String? @db.Text
+  createdAt DateTime @default(now())
+  decidedAt DateTime?
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  @@unique([tenantId, ticketId, cycleNumber])
+  @@map("helpdesk_approvals")
+}
+
+model HelpdeskReopenRequest {
+  id String @id @default(uuid())
+  tenantId String
+  ticketId String
+  requestedById String
+  reason String @db.Text
+  status String @default("PENDING") @db.VarChar(20)
+  decidedById String?
+  note String? @db.Text
+  createdAt DateTime @default(now())
+  decidedAt DateTime?
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  @@index([tenantId, ticketId, status])
+  @@map("helpdesk_reopen_requests")
+}
+
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum UserRole {
@@ -467,6 +796,12 @@ enum TrainingParticipantStatus {
 // ─── Tenancy + Auth ──────────────────────────────────────────────────────────
 
 model Tenant {
+  opsWatchers             OpsWatcher[]
+  helpdeskRequesterSectors HelpdeskRequesterSector[]
+  helpdeskCategories       HelpdeskCategory[]
+  helpdeskSlaPolicies      HelpdeskSlaPolicy[]
+  helpdeskDrafts           HelpdeskDraft[]
+  helpdeskTickets          HelpdeskTicket[]
   id             String         @id @default(uuid())
   name           String         @db.VarChar(120)
   cnpj           String?        @unique @db.VarChar(18)
@@ -500,6 +835,7 @@ model Tenant {
   customValues              CustomValue[]
   sectors                   Sector[]
   tenantModules             TenantModule[]
+  localFiscalScenarios      LocalFiscalScenario[]
   tags                      Tag[]
   accessGrants              UserTenantAccess[]
   departments               Department[]
@@ -856,6 +1192,7 @@ model Subscription {
 }
 
 model User {
+  opsWatchers                 OpsWatcher[]
   id           String   @id @default(uuid())
   tenantId     String
   name         String   @db.VarChar(120)
@@ -888,6 +1225,7 @@ model User {
   responsibleFor              CompanyService[]           @relation("CompanyServiceResponsible")
   oauthAccounts               OAuthAccount[]
   fiscalDocumentsUploaded     FiscalDocument[]
+  localFiscalScenarios         LocalFiscalScenario[]
   financeEntriesCreated       FinanceEntry[]             @relation("FinanceEntryCreatedBy")
   financeEntriesReviewed      FinanceEntry[]             @relation("FinanceEntryReviewedBy")
   bankStatementImports        BankStatementImport[]      @relation("BankStatementImportedBy")
@@ -7626,4 +7964,21 @@ model DriveTemplateFolder {
   @@unique([tenantId, name])
   @@index([tenantId, position])
   @@map("drive_template_folders")
+}
+
+/// Simulação fiscal exclusiva do banco local; nunca usada como acervo fiscal real.
+model LocalFiscalScenario {
+  tenantId String
+  userId   String
+  data     Json
+  favorites Json
+  revision Int @default(1)
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, userId])
+  @@index([userId])
+  @@map("local_fiscal_scenarios")
 }

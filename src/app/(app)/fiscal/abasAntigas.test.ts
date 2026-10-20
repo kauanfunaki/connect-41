@@ -7,9 +7,19 @@ import Conferencia from "./conferencia/page";
 import Configuracoes from "./configuracoes/page";
 import Documentos from "./documentos/page";
 import Operacao from "./operacao/page";
+import Classificacao from "./classificacao/page";
+import Contribuicoes from "./contribuicoes/page";
 
 beforeEach(() => { vi.clearAllMocks(); });
 describe("compatibilidade com links fiscais antigos", () => {
+  it.each([["produtos", "grupo=produtos"], ["apoio", "grupo=apoio"], ["decisoes", "situacao=Classificado"]])("converte a aba de classificação %s em filtro, preservando a busca", async (aba, filtro) => {
+    await expect(Classificacao({ searchParams: Promise.resolve({ aba, q: "exemplo" }) })).rejects.toThrow(`redirect:/fiscal/classificacao?q=exemplo&${filtro}`);
+    expect(mocks.abrir).toHaveBeenCalledWith("fiscal_classificacao");
+  });
+  it("leva o antigo SPED Contribuições para arquivos da obrigação", async () => {
+    await expect(Contribuicoes({ searchParams: Promise.resolve({ aba: "sped" }) })).rejects.toThrow("redirect:/fiscal/entregas?obrigacao=contribuicoes");
+    expect(mocks.abrir).toHaveBeenCalledWith("fiscal_contribuicoes");
+  });
   it.each(["depara", "lancamentos"])("redireciona %s somente após conferir acesso", async aba => {
     await expect(Conferencia({ searchParams: Promise.resolve({ aba }) })).rejects.toThrow("redirect:/fiscal/conferencia?aba=previa");
     expect(mocks.abrir).toHaveBeenCalledWith("fiscal_conferencia");

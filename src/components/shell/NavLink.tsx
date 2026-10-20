@@ -101,9 +101,10 @@ type NavItemProps = {
    */
   exact?: boolean;
   /** A regra de ativo própria, quando nem o prefixo nem o exato servem (Quadros). */
-  ativo?: (pathname: string) => boolean;
+  ativo?: boolean | ((pathname: string) => boolean);
   /** Tem telas dentro (o painel ao lado) — na faixa, o pontinho no canto. */
   comTelas?: boolean;
+  menu?: { aberto: boolean; onClick: () => void; painelId: string };
 };
 
 /**
@@ -125,10 +126,29 @@ function BarraAtiva() {
   return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
 }
 
-export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, menu }: NavItemProps) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
-  const active = ativo ? ativo(pathname) : exact ? pathname === href : isActivePath(pathname, href);
+  const active = typeof ativo === "function" ? ativo(pathname) : ativo ?? (exact ? pathname === href : isActivePath(pathname, href));
+
+  if (menu) {
+    const focarMenu = () => requestAnimationFrame(() => document.getElementById(menu.painelId)?.querySelector<HTMLElement>("[role='menuitem']")?.focus());
+    return (
+      <button
+        type="button"
+        aria-label={naFaixa ? label : undefined}
+        aria-haspopup="menu"
+        aria-expanded={menu.aberto}
+        aria-controls={menu.painelId}
+        aria-current={active ? "true" : undefined}
+        onClick={(e) => { menu.onClick(); if (!menu.aberto && e.detail === 0) focarMenu(); }}
+        onKeyDown={(e) => { if (e.key === "ArrowDown") { e.preventDefault(); if (!menu.aberto) menu.onClick(); focarMenu(); } }}
+        className={naFaixa ? classeDoItemNaFaixa(active) : classeDoItem(active, "w-[calc(100%+0.75rem)] text-label font-medium")}
+      >
+        {naFaixa ? <IconeNaFaixa icon={icon} active={active} comTelas /> : <>{active && <BarraAtiva />}<span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span><span>{label}</span><span aria-hidden className="ml-auto">›</span></>}
+      </button>
+    );
+  }
 
   if (naFaixa) {
     return (
