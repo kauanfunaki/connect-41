@@ -17,7 +17,7 @@ export function NovoKanban({
   abertaDeInicio?: boolean;
 }) {
   return (
-    <JanelaDeCadastro rotulo="Novo kanban" maxWidth="max-w-2xl" abertaDeInicio={abertaDeInicio}>
+    <JanelaDeCadastro rotulo="Nova tarefa" maxWidth="max-w-2xl" abertaDeInicio={abertaDeInicio}>
       {(fechar) => <PipelineForm action={criarPipeline} sectorOptions={sectorOptions} onCancel={fechar} />}
     </JanelaDeCadastro>
   );

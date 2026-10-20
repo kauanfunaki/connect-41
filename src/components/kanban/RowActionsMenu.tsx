@@ -13,7 +13,7 @@ type Props = {
 
 // Menu "…" da linha de tarefa na visão de lista. Até aqui excluir uma tarefa
 // exigia abrir o detalhe dela — o que, numa lista de dezenas de itens criados
-// pelo "Adicionar tarefa", significava um round-trip por exclusão.
+// pelo "Adicionar atividade", significava um round-trip por exclusão.
 //
 // Desde 15/10/2026 é o "⋯" de verdade (`MenuDeMaisAcoes`): era um botão
 // vermelho "Excluir" à vista em toda linha, e excluir fica no menu mesmo sendo
@@ -42,7 +42,7 @@ export function RowActionsMenu({ name, onDelete }: Props) {
               requestConfirm(
                 {
                   title: `Excluir "${name}"?`,
-                  description: "Subtarefas, comentários e anexos vão junto. Esta ação não pode ser desfeita.",
+                  description: "Subatividades, comentários e anexos vão junto. Esta ação não pode ser desfeita.",
                   destructive: true,
                   confirmLabel: "Excluir",
                 },

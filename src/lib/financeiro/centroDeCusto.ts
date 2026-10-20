@@ -113,9 +113,6 @@ export function casarCentroDeCusto(
   return { ok: true, centroId: [...encontrados][0]! };
 }
 
-/** Id do formulário de `/pagar` e `/receber` a que as caixas de cada linha se associam. */
-export const FORM_DO_CENTRO = "definir-centro-das-contas";
-
 /** Teto de contas por vez na ação de definir centro — é tela de trabalho, não migração. */
 export const MAXIMO_DE_CONTAS_POR_DEFINICAO = 200;
 

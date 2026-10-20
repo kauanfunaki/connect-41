@@ -22,7 +22,7 @@ export async function criarObrigacao(_prev: ObligationState, form: FormData): Pr
   const responsibleId = (form.get("responsibleId") as string)?.trim();
 
   if (!companyId) return { error: "Empresa é obrigatória" };
-  if (!pipelineId) return { error: "Kanban de destino é obrigatório" };
+  if (!pipelineId) return { error: "Tarefa de destino é obrigatória" };
   if (!title) return { error: "Título é obrigatório" };
 
   const frequency = ["DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"].includes(frequencyRaw)
@@ -50,7 +50,7 @@ export async function criarObrigacao(_prev: ObligationState, form: FormData): Pr
   const pipeline = await prisma.pipeline.findFirst({
     where: { id: pipelineId, tenantId: ctx.tenantId, active: true },
   });
-  if (!pipeline) return { error: "Kanban não encontrado." };
+  if (!pipeline) return { error: "Tarefa não encontrada." };
 
   const company = await prisma.company.findFirst({ where: { id: companyId, tenantId: ctx.tenantId } });
   if (!company) return { error: "Empresa não encontrada." };

@@ -57,7 +57,7 @@ export default async function TenantPage() {
 
       {/* Horário da Agenda (05/10/2026): o padrão de quem não definiu um
           próprio em /configuracoes. O `id` é o destino do item "Horário da
-          Agenda" da área do escritório, no início das configurações. */}
+          Agenda" da área do escritório, no início das configurações (14/10/2026). */}
       <SecaoDeConfiguracao
         id="horario-da-agenda"
         titulo="Horário da Agenda"

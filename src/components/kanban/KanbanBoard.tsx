@@ -75,7 +75,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
             titulo={stage.name}
             cor={color}
             contagem={stageItems.length}
-            vazio={isDragOver ? "Soltar aqui" : "Nenhuma tarefa"}
+            vazio={isDragOver ? "Soltar aqui" : "Nenhuma atividade"}
             destacada={isDragOver}
             onDragOver={(e) => {
               e.preventDefault();
