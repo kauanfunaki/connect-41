@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { INTEGRATION_CATALOG, integracaoDoCatalogo } from "./catalogo";
+import { camposFaltando, INTEGRATION_CATALOG, integracaoDoCatalogo, valorDaEscolha } from "./catalogo";
 
 describe("INTEGRATION_CATALOG", () => {
   it("não tem código repetido", () => {
@@ -92,5 +92,24 @@ describe("Chatwoot e SPED, depois da convergência de 11/09", () => {
   it("o cofre do BPO não virou integração", () => {
     expect(integracaoDoCatalogo("bpo_senhas")).toBeNull();
     expect(integracaoDoCatalogo("bpo_credenciais")).toBeNull();
+  });
+});
+
+// O ambiente do Serpro (20/10/2026): na demonstração não há chave, certificado
+// nem teto, e o formulário não pode pedir o que não se usa.
+describe("Serpro: ambiente e campos dispensados", () => {
+  const serpro = integracaoDoCatalogo("serpro_integra_contador")!;
+  const ambiente = serpro.campos.find((c) => c.name === "ambiente")!;
+
+  it("o ambiente é uma escolha, e sem valor vale produção", () => {
+    expect(ambiente.type).toBe("escolha");
+    expect(valorDaEscolha(ambiente, {})).toBe("producao");
+    expect(valorDaEscolha(ambiente, { ambiente: "demonstracao" })).toBe("demonstracao");
+    expect(valorDaEscolha(ambiente, { ambiente: "inventado" })).toBe("producao");
+  });
+
+  it("na produção falta tudo; na demonstração, nada", () => {
+    expect(camposFaltando(serpro, {})).toEqual(["Consumer Key", "Consumer Secret", "Certificado e-CNPJ A1 (.pfx)", "Senha do certificado", "Teto mensal (R$)"]);
+    expect(camposFaltando(serpro, { ambiente: "demonstracao" })).toEqual([]);
   });
 });

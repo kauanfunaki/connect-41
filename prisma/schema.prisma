@@ -7044,6 +7044,12 @@ model SerproCall {
   userId          String?
   /// De onde veio: "autorizacoes", "teste"…
   origem          String   @db.VarChar(40)
+  /// PRODUCAO ou DEMONSTRACAO (o trial do Serpro, sem contrato; 20/10/2026).
+  /// A demonstração fica fora do teto e do custo do mês.
+  ambiente        String   @default("PRODUCAO") @db.VarChar(12)
+  /// O X-Request-Tag enviado: liga a linha ao relatório de consumo da Área do
+  /// Cliente do Serpro, que traz a coluna TAG. Nulo antes de 20/10/2026.
+  requestTag      String?  @db.VarChar(32)
   createdAt       DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])

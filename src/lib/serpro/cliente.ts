@@ -3,6 +3,14 @@
 // Toda chamada passa por `chamarSerpro`, que é o único caminho: confere se a
 // ligação está pronta, se cabe no teto do mês, chama, e grava a linha em
 // `serpro_calls` — inclusive quando deu erro, porque o 403 também é cobrado.
+//
+// Desde 20/10/2026 (Fase 0 do Integra Contador, estudo em
+// connect-41/estudos/2026-10-20/integra-contador.md, fora do git):
+// - o modo demonstração, que fala com o trial do Serpro sem contrato;
+// - o serviço tem de estar no catálogo (servicos.ts), e a chamada paga passa
+//   antes pelo portão da Autorização de Acesso (portao.ts);
+// - o 304 é sucesso, o 204 traz o novo tempo de espera no ETag, e cada
+//   chamada leva e grava o X-Request-Tag.
 
 import { getPrisma } from "@/lib/prisma";
 import { executar, lerConfig } from "@/lib/integracoes/data";
@@ -10,7 +18,9 @@ import { camposFaltando, integracaoDoCatalogo } from "@/lib/integracoes/catalogo
 import { hojeIso } from "@/lib/datas/calendario";
 import { formatCnpj } from "@/lib/format";
 import { lerCertificado, TAMANHO_MAXIMO_DO_CERTIFICADO, type CertificadoLido } from "./certificado";
-import { transporteHttps, type Transporte } from "./transporte";
+import { transporteHttps, type CabecalhosDaResposta, type RespostaHttps, type Transporte } from "./transporte";
+import { podeChamar } from "./portao";
+import { EXEMPLO_DA_DEMONSTRACAO, servicoDoCatalogo } from "./servicos";
 import {
   cabeNoTeto,
   CODIGO_DA_INTEGRACAO,
@@ -20,11 +30,16 @@ import {
   custoDoMes,
   explicarErro,
   foiCobrada,
+  lerAmbiente,
   lerResposta,
   lerTeto,
   reais,
+  tagDaRequisicao,
+  temMensagemDeErro,
+  tempoDeEsperaDoEtag,
   tipoDeCobranca,
   TIPOS_DE_COBRANCA,
+  type Ambiente,
   type ContagemDoMes,
   type CustoDoMes,
   type PedidoAoSerpro,
@@ -32,16 +47,31 @@ import {
 } from "./regras";
 
 const URL_DE_AUTENTICACAO = "https://autenticacao.sapi.serpro.gov.br/authenticate";
-const URL_DO_GATEWAY = "https://gateway.apiserpro.serpro.gov.br/integra-contador/v1";
+const URL_DO_GATEWAY: Record<Ambiente, string> = {
+  producao: "https://gateway.apiserpro.serpro.gov.br/integra-contador/v1",
+  // A demonstração (trial): o mesmo envelope da produção, com dados fictícios.
+  demonstracao: "https://gateway.apiserpro.serpro.gov.br/integra-contador-trial/v1",
+};
 /** O gateway corta em 30 s; aqui, um pouco depois, para receber o 504 dele. */
 const TEMPO_DA_CHAMADA_MS = 35_000;
 const TEMPO_DO_TOKEN_MS = 20_000;
+
+/**
+ * O token da demonstração é público: está impresso no swagger oficial do trial
+ * (apicenter.estaleiro.serpro.gov.br/documentacao/api-integra-contador/pt/
+ * chamadas/demonstracao/api-integra-contador-trial-sp.yaml). Vem de variável
+ * de ambiente porque, escrito no código, o GitGuardian barra o PR.
+ */
+export function tokenDaDemonstracao(): string | null {
+  return process.env.SERPRO_TRIAL_TOKEN?.trim() || null;
+}
 
 // ─── Configuração ────────────────────────────────────────────────────────────
 
 export type ConfiguracaoDoSerpro = {
   integrationId: string;
   ligada: boolean;
+  ambiente: Ambiente;
   atualizadaEm: Date;
   faltando: string[];
   consumerKey: string;
@@ -67,17 +97,20 @@ export async function configuracaoDoSerpro(tenantId: string): Promise<Configurac
   if (!conexao) return null;
   const config = lerConfig(conexao.configEnc);
   const pfx = config.certificado ? Buffer.from(config.certificado, "base64") : null;
+  const certificado = pfx && config.senhaDoCertificado ? lerCertificado(pfx, config.senhaDoCertificado) : null;
   return {
     integrationId: conexao.id,
     ligada: conexao.enabled,
+    ambiente: lerAmbiente(config.ambiente),
     atualizadaEm: conexao.updatedAt,
     faltando: camposFaltando(integracaoDoCatalogo(CODIGO_DA_INTEGRACAO)!, config),
     consumerKey: config.consumerKey ?? "",
     consumerSecret: config.consumerSecret ?? "",
-    pfx,
+    // O A1 antigo guardado antes de 20/10/2026 vai convertido na conexão.
+    pfx: certificado?.ok && certificado.convertido ? certificado.convertido : pfx,
     senha: config.senhaDoCertificado ?? "",
     tetoCentavos: lerTeto(config.tetoMensal),
-    certificado: pfx && config.senhaDoCertificado ? lerCertificado(pfx, config.senhaDoCertificado) : null,
+    certificado,
     escritorio: recebe ? { nome: recebe.name, cnpj: recebe.cnpj } : null,
   };
 }
@@ -85,8 +118,10 @@ export async function configuracaoDoSerpro(tenantId: string): Promise<Configurac
 /**
  * Conferência ao salvar a conexão: o certificado abre com a senha e não venceu,
  * e o teto é um valor em reais. Erro aqui é melhor que um 401 na primeira chamada.
+ * O A1 em formato antigo (RC2) é guardado já convertido para o moderno (20/10/2026).
  */
-export function validarConfigDoSerpro(config: Record<string, string>): string | null {
+export function validarConfigDoSerpro(config: Record<string, string>): string | null | { config: Record<string, string> } {
+  let ajustada: Record<string, string> | null = null;
   if (config.certificado) {
     const pfx = Buffer.from(config.certificado, "base64");
     if (pfx.length > TAMANHO_MAXIMO_DO_CERTIFICADO) return "Arquivo grande demais para um certificado A1.";
@@ -94,10 +129,11 @@ export function validarConfigDoSerpro(config: Record<string, string>): string | 
       const c = lerCertificado(pfx, config.senhaDoCertificado);
       if (!c.ok) return c.erro;
       if (c.validoAte && c.validoAte < hojeIso()) return `O certificado venceu em ${c.validoAte.split("-").reverse().join("/")}.`;
+      if (c.convertido) ajustada = { ...config, certificado: c.convertido.toString("base64") };
     }
   }
   if (config.tetoMensal && lerTeto(config.tetoMensal) === null) return "Teto mensal inválido: use um valor em reais, como 400 ou 1.250,00.";
-  return null;
+  return ajustada ? { config: ajustada } : null;
 }
 
 /**
@@ -112,6 +148,16 @@ export function prontidaoDoSerpro(cfg: ConfiguracaoDoSerpro | null, hoje = hojeI
   if (!cfg) return { pronta: false, motivo: "O Serpro ainda não foi conectado (Configurações › Integrações)." };
   if (cfg.faltando.length) return { pronta: false, motivo: `Falta preencher na conexão do Serpro: ${cfg.faltando.join(", ")}.` };
   if (!cfg.ligada) return { pronta: false, motivo: "A conexão com o Serpro está desligada." };
+  // Na demonstração não há chave, certificado, teto nem cliente de verdade
+  // (20/10/2026): basta o token público.
+  if (cfg.ambiente === "demonstracao") {
+    return tokenDaDemonstracao()
+      ? { pronta: true }
+      : {
+          pronta: false,
+          motivo: "A demonstração do Serpro precisa do token público na variável SERPRO_TRIAL_TOKEN do servidor (está no swagger do trial, na documentação do Serpro).",
+        };
+  }
   if (!cfg.certificado || !cfg.certificado.ok) return { pronta: false, motivo: cfg.certificado?.ok === false ? cfg.certificado.erro : "Falta o certificado do Serpro." };
   if (cfg.certificado.validoAte && cfg.certificado.validoAte < hoje) {
     return { pronta: false, motivo: `O certificado do Serpro venceu em ${cfg.certificado.validoAte.split("-").reverse().join("/")}.` };
@@ -131,6 +177,15 @@ export function prontidaoDoSerpro(cfg: ConfiguracaoDoSerpro | null, hoje = hojeI
 function contratante(cfg: ConfiguracaoDoSerpro): string {
   return (cfg.certificado?.ok && cfg.certificado.cnpj) || cfg.escritorio!.cnpj;
 }
+
+/** Contratante e autor do corpo. Na demonstração, os do cenário: o trial confere os dois. */
+function partesDoPedido(cfg: ConfiguracaoDoSerpro, pedido: PedidoAoSerpro): { contratante: string; autor: string } {
+  if (cfg.ambiente === "demonstracao" && pedido.partesDaDemonstracao) return pedido.partesDaDemonstracao;
+  return { contratante: contratante(cfg), autor: cfg.escritorio!.cnpj };
+}
+
+export const SO_EXEMPLOS_NA_DEMONSTRACAO =
+  "A conexão do Serpro está em demonstração, que só responde aos exemplos fictícios da documentação: o pedido com dados de um cliente não é enviado.";
 
 // ─── Token ───────────────────────────────────────────────────────────────────
 
@@ -196,17 +251,30 @@ async function autenticar(cfg: ConfiguracaoDoSerpro, transporte: Transporte, ren
   return token;
 }
 
-/** Testa a ligação: só autentica, que é de graça. Fica registrado na saúde da integração. */
-export async function testarConexao(tenantId: string, transporte: Transporte = transporteHttps): Promise<{ ok: true } | { ok: false; erro: string }> {
+/**
+ * Testa a ligação, de graça. Na produção, só autentica; na demonstração, que
+ * não autentica, faz a consulta de exemplo da documentação. Fica registrado
+ * na saúde da integração.
+ */
+export async function testarConexao(tenantId: string, transporte: Transporte = transporteHttps): Promise<{ ok: true; texto: string } | { ok: false; erro: string }> {
   const cfg = await configuracaoDoSerpro(tenantId);
   const pronta = prontidaoDoSerpro(cfg);
   if (!pronta.pronta) return { ok: false, erro: pronta.motivo };
+  const demonstracao = cfg!.ambiente === "demonstracao";
   try {
     await executar({ tenantId, integrationId: cfg!.integrationId, trigger: "MANUAL" }, async () => {
-      await autenticar(cfg!, transporte, true);
-      return { resultado: null, counters: { autenticacoes: 1 } };
+      if (!demonstracao) {
+        await autenticar(cfg!, transporte, true);
+      } else {
+        const r = await chamarSerpro(tenantId, EXEMPLO_DA_DEMONSTRACAO, { origem: "teste", transporte });
+        if (!r.ok) throw new Error(r.erro);
+      }
+      return { resultado: null, counters: { [demonstracao ? "chamadas" : "autenticacoes"]: 1 } };
     });
-    return { ok: true };
+    return {
+      ok: true,
+      texto: demonstracao ? "A demonstração do Serpro respondeu à consulta de exemplo." : "O Serpro aceitou a chave, o segredo e o certificado.",
+    };
   } catch (e) {
     return { ok: false, erro: e instanceof Error ? e.message : "Falha ao testar a conexão." };
   }
@@ -224,7 +292,8 @@ export async function contagemDoMes(tenantId: string, mes = hojeIso().slice(0, 7
   const proximo = `${m === 12 ? ano + 1 : ano}-${String(m === 12 ? 1 : m + 1).padStart(2, "0")}`;
   const grupos = await getPrisma().serproCall.groupBy({
     by: ["tipoDeCobranca"],
-    where: { tenantId, cobrada: true, createdAt: { gte: inicioDoMes(mes), lt: inicioDoMes(proximo) } },
+    // A demonstração já grava `cobrada: false`; o filtro do ambiente é a segunda trava.
+    where: { tenantId, cobrada: true, ambiente: "PRODUCAO", createdAt: { gte: inicioDoMes(mes), lt: inicioDoMes(proximo) } },
     _count: { _all: true },
   });
   const contagem = { ...CONTAGEM_VAZIA };
@@ -242,8 +311,26 @@ export async function consumoDoMes(tenantId: string, mes = hojeIso().slice(0, 7)
 // ─── A chamada ───────────────────────────────────────────────────────────────
 
 export type ResultadoDaChamada =
-  | { ok: true; resposta: RespostaLida }
-  | { ok: false; motivo: "nao_pronta" | "teto" | "falha"; erro: string; resposta?: RespostaLida };
+  | {
+      ok: true;
+      resposta: RespostaLida;
+      cabecalhos: CabecalhosDaResposta;
+      /** No 204 (ainda processando): o novo tempo de espera, em ms, lido do ETag. */
+      tempoEsperaMs: number | null;
+    }
+  | {
+      ok: false;
+      /**
+       * nao_pronta, fora_do_catalogo, sem_autorizacao e teto: nada foi chamado.
+       * autenticacao: o /authenticate recusou ou não respondeu. rede: a chamada
+       * ficou sem resposta. falha: o Serpro respondeu, com erro.
+       */
+      motivo: "nao_pronta" | "fora_do_catalogo" | "sem_autorizacao" | "teto" | "autenticacao" | "rede" | "falha";
+      erro: string;
+      /** O status da resposta do serviço; null quando não houve. */
+      status: number | null;
+      resposta?: RespostaLida;
+    };
 
 export async function chamarSerpro(
   tenantId: string,
@@ -253,44 +340,80 @@ export async function chamarSerpro(
   const transporte = opcoes.transporte ?? transporteHttps;
   const cfg = await configuracaoDoSerpro(tenantId);
   const pronta = prontidaoDoSerpro(cfg);
-  if (!pronta.pronta) return { ok: false, motivo: "nao_pronta", erro: pronta.motivo };
+  if (!pronta.pronta) return { ok: false, motivo: "nao_pronta", erro: pronta.motivo, status: null };
 
+  // Só o que está no catálogo: o portão e o teto dependem do que ele diz do serviço.
+  const servico = servicoDoCatalogo(pedido.idSistema, pedido.idServico);
+  if (!servico || servico.caminho !== pedido.caminho) {
+    return {
+      ok: false,
+      motivo: "fora_do_catalogo",
+      erro: `O serviço ${pedido.idSistema} ${pedido.idServico} (${pedido.caminho}) não está no catálogo do Connect.`,
+      status: null,
+    };
+  }
+
+  // A demonstração fica fora do portão, do teto e do custo: é dado fictício,
+  // sem cobrança. E só vai o pedido de exemplo — o trial responde "ERRO" a
+  // qualquer outro, e o documento de um cliente não tem por que sair daqui.
+  const demonstracao = cfg!.ambiente === "demonstracao";
+  if (demonstracao && !pedido.partesDaDemonstracao) return { ok: false, motivo: "nao_pronta", erro: SO_EXEMPLOS_NA_DEMONSTRACAO, status: null };
   const tipo = tipoDeCobranca(pedido.caminho);
-  if (tipo) {
+  if (tipo && !demonstracao) {
+    const portao = await podeChamar(tenantId, pedido.contribuinte, servico);
+    if (!portao.pode) return { ok: false, motivo: "sem_autorizacao", erro: portao.motivo, status: null };
     const teto = cabeNoTeto(await contagemDoMes(tenantId), tipo, cfg!.tetoCentavos!);
     if (!teto.cabe) {
-      return { ok: false, motivo: "teto", erro: `Teto mensal do Serpro atingido (${reais(cfg!.tetoCentavos!)}). As chamadas cobradas voltam no mês que vem, ou com um teto maior.` };
+      return {
+        ok: false,
+        motivo: "teto",
+        erro: `Teto mensal do Serpro atingido (${reais(cfg!.tetoCentavos!)}). As chamadas cobradas voltam no mês que vem, ou com um teto maior.`,
+        status: null,
+      };
     }
   }
 
-  const corpo = JSON.stringify(corpoDoPedido(pedido, contratante(cfg!), cfg!.escritorio!.cnpj));
+  const partes = partesDoPedido(cfg!, pedido);
+  const corpo = JSON.stringify(corpoDoPedido(pedido, partes.contratante, partes.autor));
+  const requestTag = tagDaRequisicao(partes.autor, pedido.contribuinte, servico.sequencial);
+  const url = `${URL_DO_GATEWAY[cfg!.ambiente]}/${pedido.caminho}`;
   const inicio = Date.now();
-  let status: number | null = null;
-  let resposta: RespostaLida | null = null;
-  let erroDeRede: string | null = null;
+  let r: RespostaHttps | null = null;
+  let erroDeAutenticacao: string | null = null;
   try {
-    let token = await autenticar(cfg!, transporte);
-    const enviar = (t: Token) =>
-      transporte({
-        url: `${URL_DO_GATEWAY}/${pedido.caminho}`,
-        cabecalhos: { Authorization: `Bearer ${t.access}`, jwt_token: t.jwt, "Content-Type": "application/json" },
+    if (demonstracao) {
+      // Sem /authenticate, sem jwt_token e sem mTLS: só o Bearer público.
+      r = await transporte({
+        url,
+        cabecalhos: { Authorization: `Bearer ${tokenDaDemonstracao()}`, "Content-Type": "application/json", "X-Request-Tag": requestTag },
         corpo,
-        pfx: cfg!.pfx!,
-        senha: cfg!.senha,
+        pfx: null,
+        senha: "",
         timeoutMs: TEMPO_DA_CHAMADA_MS,
       });
-    let r = await enviar(token);
-    if (r.status === 401) {
-      // Token vencido antes da hora: renova uma vez. O 401 não é cobrado.
-      token = await autenticar(cfg!, transporte, true);
+    } else {
+      let token = await autenticar(cfg!, transporte);
+      const enviar = (t: Token) =>
+        transporte({
+          url,
+          cabecalhos: { Authorization: `Bearer ${t.access}`, jwt_token: t.jwt, "Content-Type": "application/json", "X-Request-Tag": requestTag },
+          corpo,
+          pfx: cfg!.pfx!,
+          senha: cfg!.senha,
+          timeoutMs: TEMPO_DA_CHAMADA_MS,
+        });
       r = await enviar(token);
+      if (r.status === 401) {
+        // Token vencido antes da hora: renova uma vez. O 401 não é cobrado.
+        token = await autenticar(cfg!, transporte, true);
+        r = await enviar(token);
+      }
     }
-    status = r.status;
-    resposta = lerResposta(r.status, r.corpo);
   } catch (e) {
-    erroDeRede = e instanceof FalhaDeAutenticacao ? e.message : null;
-    if (e instanceof FalhaDeAutenticacao) status = e.status;
+    // A renovação depois do 401 pode falhar também: a resposta que valia era a do 401.
+    if (e instanceof FalhaDeAutenticacao) erroDeAutenticacao = e.message;
   }
+  const resposta = r ? lerResposta(r.status, r.corpo) : null;
 
   await getPrisma().serproCall.create({
     data: {
@@ -300,19 +423,31 @@ export async function chamarSerpro(
       idServico: pedido.idServico,
       contribuinte: pedido.contribuinte,
       // Falha na autenticação não chegou ao serviço: fica sem status de chamada.
-      httpStatus: resposta ? status : null,
-      cobrada: resposta ? foiCobrada(pedido.caminho, status) : false,
+      httpStatus: r ? r.status : null,
+      cobrada: r && !demonstracao ? foiCobrada(pedido.caminho, r.status) : false,
       tipoDeCobranca: tipo,
-      mensagens: resposta ? codigosDasMensagens(resposta.mensagens) : erroDeRede ? "autenticacao" : "sem resposta",
+      mensagens: resposta ? codigosDasMensagens(resposta.mensagens) : erroDeAutenticacao ? "autenticacao" : "sem resposta",
       duracaoMs: Date.now() - inicio,
       userId: opcoes.userId ?? null,
       origem: opcoes.origem.slice(0, 40),
+      ambiente: demonstracao ? "DEMONSTRACAO" : "PRODUCAO",
+      requestTag,
     },
   });
 
-  if (!resposta) return { ok: false, motivo: "falha", erro: erroDeRede ?? explicarErro(null, []) };
-  if (status !== null && status >= 200 && status < 300) return { ok: true, resposta };
-  return { ok: false, motivo: "falha", erro: explicarErro(status, resposta.mensagens), resposta };
+  if (!r || !resposta) {
+    return erroDeAutenticacao
+      ? { ok: false, motivo: "autenticacao", erro: erroDeAutenticacao, status: null }
+      : { ok: false, motivo: "rede", erro: explicarErro(null, []), status: null };
+  }
+  // 304 é sucesso: o resultado anterior segue valendo, e o que importa vem no
+  // ETag (o protocolo do Sitfis em cache, o token do termo de autorização). O
+  // 200 com "ERRO" nas mensagens é falha, por mais que o status diga outra coisa.
+  const sucesso = ((r.status >= 200 && r.status < 300) || r.status === 304) && !temMensagemDeErro(resposta.mensagens);
+  if (sucesso) {
+    return { ok: true, resposta, cabecalhos: r.cabecalhos, tempoEsperaMs: r.status === 204 ? tempoDeEsperaDoEtag(r.cabecalhos.etag) : null };
+  }
+  return { ok: false, motivo: "falha", erro: explicarErro(r.status, resposta.mensagens), status: r.status, resposta };
 }
 
 /** Só para os testes: esquece os tokens guardados. */

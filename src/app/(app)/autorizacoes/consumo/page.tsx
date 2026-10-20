@@ -48,12 +48,15 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
       where: { tenantId: acesso.tenantId },
       orderBy: { createdAt: "desc" },
       take: 50,
-      select: { id: true, createdAt: true, caminho: true, idServico: true, contribuinte: true, httpStatus: true, cobrada: true, mensagens: true, origem: true },
+      select: { id: true, createdAt: true, caminho: true, idServico: true, contribuinte: true, httpStatus: true, cobrada: true, mensagens: true, origem: true, ambiente: true },
     }),
   ]);
   const teto = cfg.tetoCentavos;
   const usado = teto ? Math.round((consumo.custo.totalCentavos / teto) * 100) : null;
   const pronta = prontidaoDoSerpro(cfg);
+  // A demonstração (20/10/2026) não entra no custo nem no teto: as chamadas dela aparecem na lista, marcadas.
+  const cobranca = (c: { cobrada: boolean; ambiente: string }) =>
+    c.ambiente === "DEMONSTRACAO" ? <Selo tom="marca">Demonstração</Selo> : c.cobrada ? <Selo tom="atencao">Cobrada</Selo> : <Selo tom="neutro">Grátis</Selo>;
 
   return (
     <PageContainer>
@@ -61,6 +64,14 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
       <PageHeader
         title="Consumo do Serpro"
         subtitle="As chamadas cobradas do mês e o custo estimado pela tabela da Loja do Serpro. A fatura que vale é a do Serpro."
+        meta={
+          cfg.ambiente === "demonstracao" ? (
+            <>
+              <Selo tom="atencao">Demonstração</Selo>
+              <span>A conexão está no ambiente de testes do Serpro: as chamadas dele não entram no custo nem no teto.</span>
+            </>
+          ) : undefined
+        }
       />
 
       {!pronta.pronta && (
@@ -158,7 +169,7 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
                     {formatInstantDateTime(c.createdAt)} · {c.contribuinte.length === 11 ? formatCpf(c.contribuinte) : formatCnpj(c.contribuinte)}
                   </InfoDoCartao>
                   {c.mensagens && <InfoDoCartao className="mt-1">{c.mensagens}</InfoDoCartao>}
-                  <PeDoCartao>{c.cobrada ? <Selo tom="atencao">Cobrada</Selo> : <Selo tom="neutro">Grátis</Selo>}</PeDoCartao>
+                  <PeDoCartao>{cobranca(c)}</PeDoCartao>
                 </Cartao>
               ))}
             </CartoesNoCelular>
@@ -170,7 +181,7 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
                   servico: c.idServico,
                   origem: c.origem,
                   resposta: c.httpStatus === null ? "" : String(c.httpStatus),
-                  cobranca: c.cobrada ? "Cobrada" : "Grátis",
+                  cobranca: c.ambiente === "DEMONSTRACAO" ? "Demonstração" : c.cobrada ? "Cobrada" : "Grátis",
                 },
               }))}
             >
@@ -216,7 +227,7 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
                         <td className="px-3 tabular-nums text-fg-secondary">{c.contribuinte.length === 11 ? formatCpf(c.contribuinte) : formatCnpj(c.contribuinte)}</td>
                         <td className="px-3">
                           <span className="tabular-nums">{c.httpStatus ?? "—"}</span>{" "}
-                          {c.cobrada ? <Selo tom="atencao">Cobrada</Selo> : <Selo tom="neutro">Grátis</Selo>}
+                          {cobranca(c)}
                         </td>
                         <td className="px-3 text-fg-muted break-words">{c.mensagens ?? "—"}</td>
                       </LinhaFiltravel>

@@ -106,7 +106,9 @@ export default async function EmpresaPage({
   // quem vê o setor do módulo (o Fiscal).
   const acessoAutorizacao = await acessoAsAutorizacoes(ctx);
   const autorizacao = acessoAutorizacao ? await autorizacaoDaEmpresa(ctx.tenantId, company.id) : null;
-  const serproPronto = !!acessoAutorizacao?.podeEditar && prontidaoDoSerpro(await configuracaoDoSerpro(ctx.tenantId)).pronta;
+  // Na demonstração (20/10/2026) a conferência não roda: o trial só responde aos exemplos.
+  const serpro = acessoAutorizacao?.podeEditar ? await configuracaoDoSerpro(ctx.tenantId) : null;
+  const serproPronto = !!serpro && prontidaoDoSerpro(serpro).pronta && serpro.ambiente === "producao";
 
   const [companySectors, sectorMaps, documents, pipelineItems, activities] = await Promise.all([
     getCompanySectors(ctx.tenantId, id),

@@ -9,7 +9,9 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { salvarConexao, type ConexaoState } from "@/app/(app)/admin/integracoes/conexao-actions";
+import { campoDispensado, valorDaEscolha } from "@/lib/integracoes/catalogo";
 import type { IntegracaoNaTela } from "@/lib/integracoes/data";
 import type { Saude } from "@/lib/integracoes/execucao";
 import { Aviso } from "@/components/ui/Aviso";
@@ -66,6 +68,12 @@ export function VitrineDeIntegracoes({
 function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: IntegracaoNaTela; urlPublica: string | null }) {
   const [aberto, setAberto] = useState(false);
   const [state, formAction, isPending] = useActionState<ConexaoState, FormData>(salvarConexao, null);
+  // Os campos de escolha, como estão no formulário: outro campo pode sair por
+  // causa deles (na demonstração do Serpro não há chave nem certificado —
+  // 20/10/2026).
+  const [escolhas, setEscolhas] = useState<Record<string, string>>(() =>
+    Object.fromEntries(i.campos.filter((c) => c.type === "escolha").map((c) => [c.name, valorDaEscolha(c, i.valores)]))
+  );
   const Icone = ICONE[i.natureza];
 
   return (
@@ -153,6 +161,9 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
           <FieldGrid>
             {i.campos.map((c) => {
               const guardado = i.segredosGuardados.includes(c.name);
+              // Campo dispensado sai do formulário: o que estava guardado
+              // continua guardado (campo que não vem fica como estava).
+              if (campoDispensado(i.campos, c, escolhas)) return null;
               return (
                 <CampoForm
                   key={c.name}
@@ -168,6 +179,19 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
                 >
                   {c.type === "certificado" ? (
                     <CampoDeCertificado id={`${i.code}-${c.name}`} name={c.name} guardado={guardado} />
+                  ) : c.type === "escolha" ? (
+                    <Select
+                      id={`${i.code}-${c.name}`}
+                      name={c.name}
+                      value={escolhas[c.name] ?? ""}
+                      onChange={(e) => setEscolhas((atual) => ({ ...atual, [c.name]: e.target.value }))}
+                    >
+                      {c.opcoes?.map((o) => (
+                        <option key={o.valor} value={o.valor}>
+                          {o.rotulo}
+                        </option>
+                      ))}
+                    </Select>
                   ) : (
                     <Input
                       id={`${i.code}-${c.name}`}
