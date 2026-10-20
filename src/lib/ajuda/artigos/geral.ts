@@ -34,10 +34,10 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como personalizar o Início",
         passos: [
-          "Clique em “Personalizar”, ao lado da data.",
-          "Marque os blocos que você quer ver e desmarque os que não usa.",
-          "Use as setas para cima e para baixo para mudar a ordem dentro de cada faixa: “Topo”, “Painéis”, “Coluna principal” e “Coluna lateral”.",
-          "Clique em “Salvar”. Para voltar ao modelo original, clique em “Restaurar padrão”.",
+          "Clique em “Personalizar”, ao lado da data. O Início entra em edição, com uma faixa no topo.",
+          "Arraste cada bloco pela alça para mudar a ordem dentro da faixa dele (ou selecione a alça e use as setas do teclado).",
+          "Clique no olho de um bloco para escondê-lo. Os escondidos ficam listados embaixo: clique no nome para trazer de volta.",
+          "Clique em “Concluir”. Para voltar ao modelo original, clique em “Restaurar padrão”; para desistir, em “Cancelar”.",
         ],
       },
     ],
