@@ -2,8 +2,8 @@
 // "Alterar em lote" do Omie). Funções puras; a leitura e a gravação moram em
 // `edicaoEmLoteServidor.ts`.
 //
-// Muda o que é data ou classificação — vencimento, competência, categoria,
-// centro de custo, projeto e a conta corrente prevista — com as travas da
+// Muda o que é data ou classificação — vencimento, previsão, competência,
+// categoria, centro de custo, projeto e a conta corrente prevista — com as travas da
 // janela "Editar" de uma conta
 // (`travasDaEdicao`): o que ela não deixa mudar numa conta, o lote também não.
 // A conta com trava em algum campo escolhido fica de fora inteira, com o
@@ -16,7 +16,7 @@
 import type { CampoEditavel, Travas } from "./edicao";
 import { MAXIMO_DO_LOTE, type ForaDoLote } from "./baixa/lote";
 
-export const CAMPOS_DO_LOTE = ["vencimento", "competencia", "categoria", "centro", "projeto", "conta"] as const satisfies readonly CampoEditavel[];
+export const CAMPOS_DO_LOTE = ["vencimento", "previsao", "competencia", "categoria", "centro", "projeto", "conta"] as const satisfies readonly CampoEditavel[];
 
 export type CampoDoLote = (typeof CAMPOS_DO_LOTE)[number];
 

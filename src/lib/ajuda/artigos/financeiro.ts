@@ -48,7 +48,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Marque a caixa à esquerda das contas, ou a do cabeçalho para marcar todas.",
           "Na barra que aparece, clique em “Alterar marcadas”.",
-          "Na janela, marque o que muda — “Vencimento”, “Competência”, “Categoria”, “Centro de custo”, “Projeto” ou “Conta corrente” — e escolha o novo valor. O que não for marcado fica como está em cada conta.",
+          "Na janela, marque o que muda — “Vencimento”, “Previsão”, “Competência”, “Categoria”, “Centro de custo”, “Projeto” ou “Conta corrente” — e escolha o novo valor. O que não for marcado fica como está em cada conta.",
           "Confira quantas contas vão mudar e as que ficam de fora, com o motivo: conta paga ou conciliada não muda o vencimento, e conta que vem do Omie se altera no Omie.",
           "Clique em “Alterar”. Para tirar o centro, o projeto ou a conta, marque o campo e escolha “Sem centro de custo”, “Sem projeto” ou “Não prevista”.",
         ],
@@ -102,7 +102,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Marque a caixa à esquerda das contas, ou a do cabeçalho para marcar todas.",
           "Na barra que aparece, clique em “Alterar marcadas”.",
-          "Na janela, marque o que muda — “Vencimento”, “Competência”, “Categoria”, “Centro de custo”, “Projeto” ou “Conta corrente” — e escolha o novo valor. O que não for marcado fica como está em cada conta.",
+          "Na janela, marque o que muda — “Vencimento”, “Previsão”, “Competência”, “Categoria”, “Centro de custo”, “Projeto” ou “Conta corrente” — e escolha o novo valor. O que não for marcado fica como está em cada conta.",
           "Confira quantas contas vão mudar e as que ficam de fora, com o motivo: conta paga ou conciliada não muda o vencimento, e conta que vem do Omie se altera no Omie.",
           "Clique em “Alterar”. Para tirar o centro, o projeto ou a conta, marque o campo e escolha “Sem centro de custo”, “Sem projeto” ou “Não prevista”.",
         ],
@@ -129,6 +129,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Clique em “Novo lançamento”, no topo da tela.",
           "Em “Tipo”, escolha “Conta a pagar” ou “Conta a receber” e selecione o “Fornecedor” ou o “Cliente (sacado)”. Se ele ainda não existe, escolha “+ Cadastrar nova contraparte”.",
           "Escolha a “Categoria” (obrigatória em conta a pagar) e preencha “Competência” (o mês a que a conta pertence), “Vencimento” e “Valor”.",
+          "Se a conta deve ser paga em outro dia que não o vencimento, informe a “Previsão”: o fluxo de caixa projeta por ela.",
           "Se quiser, escolha a “Conta corrente” por onde a conta deve ser paga ou recebida: a baixa já vem com ela.",
           "Se a conta já foi paga ou recebida, informe a data em “Já pago em” ou “Já recebido em”. Se não, deixe em branco.",
           "Clique em “Lançar”. A conta já aparece em Contas a pagar ou a receber e na DRE.",
@@ -186,7 +187,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Escolha o mês e clique em “Aplicar”.",
           "Na aba “Realizado e projeção”, o quadro “Saldo das contas” mostra o saldo bancário que vem da conciliação.",
           "A tabela do realizado traz entradas, saídas e saldo dos seis meses até o mês escolhido, pela data em que as contas foram pagas ou recebidas.",
-          "Os cartões da projeção somam o que vence de hoje até 7, 15, 30, 60, 90 e 180 dias: o que há a receber menos o que há a pagar.",
+          "Os cartões da projeção somam o que vence de hoje até 7, 15, 30, 60, 90 e 180 dias: o que há a receber menos o que há a pagar. Conta com “Previsão” entra na data prevista, não no vencimento.",
         ],
       },
       {
