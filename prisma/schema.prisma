@@ -2908,6 +2908,13 @@ model FinanceEntry {
   /// `omieMovementId`.
   transferId String? @db.VarChar(36)
 
+  /// A fatura do cartão de crédito (lote D, 20/10): esta conta a pagar é a
+  /// fatura do cartão `cardAccountId` no ciclo `cardCycle` ("2026-11", o mês
+  /// em que vence). O valor é a soma das compras ligadas a ela
+  /// (`FinanceEntryPayment.cardInvoiceId`). Nulos em toda conta que não é fatura.
+  cardAccountId String?
+  cardCycle     String? @db.VarChar(7)
+
   /// Quanto do título as baixas já quitaram (soma de `FinanceEntryPayment.principal`,
   /// lote C, 19/10). O saldo em aberto é `amount - paidPrincipal`. Guardado, e
   /// não somado a cada leitura, porque os totais de "em aberto" são somas no
@@ -2964,7 +2971,9 @@ model FinanceEntry {
   category              FinanceCategory?        @relation(fields: [categoryId], references: [id])
   costCenter            CostCenter?             @relation(fields: [costCenterId], references: [id])
   project               FinanceProject?         @relation(fields: [projectId], references: [id])
-  bankAccount           BankAccount?            @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  bankAccount           BankAccount?            @relation("ContaPrevista", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  /// O cartão de que esta conta é a fatura.
+  cardAccount           BankAccount?            @relation("FaturasDoCartao", fields: [cardAccountId], references: [id], onDelete: SetNull)
   fiscalDocument        FiscalDocument?         @relation(fields: [fiscalDocumentId], references: [id])
   createdBy             User?                   @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
   reviewedBy            User?                   @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
@@ -2972,7 +2981,9 @@ model FinanceEntry {
   /// a conta paga em duas vezes concilia com duas linhas).
   bankMatches           BankTransactionMatch[]
   /// As baixas — pagamentos ou recebimentos, totais ou parciais.
-  payments              FinanceEntryPayment[]
+  payments              FinanceEntryPayment[]   @relation("BaixasDaConta")
+  /// Na fatura do cartão: as compras dela — as baixas pagas no cartão.
+  cardPurchases         FinanceEntryPayment[]   @relation("ComprasDaFatura")
   approvalEvents        FinanceApprovalEvent[]
   clientRequests        ClientRequest[]
   agreement             CollectionAgreement?    @relation("AgreementInstallments", fields: [agreementId], references: [id], onDelete: Restrict)
@@ -2995,6 +3006,7 @@ model FinanceEntry {
 
   @@unique([companyId, omieTitleId])
   @@unique([companyId, omieMovementId])
+  @@unique([cardAccountId, cardCycle])
   @@index([companyId, omieAccountId, omieReconciledAt])
   @@index([tenantId, companyId, competence])
   @@index([tenantId, companyId, kind, status])
@@ -3893,6 +3905,10 @@ enum BankAccountType {
   ADIANTAMENTO_FORNECEDOR
   /// Adiantamento de clientes: o que o cliente pagou antes da conta a receber.
   ADIANTAMENTO_CLIENTE
+  /// Cartão de crédito (lote D, 20/10): não é banco. A conta paga no cartão
+  /// é uma baixa nele e entra na fatura do ciclo; a fatura é uma conta a
+  /// pagar ao cartão, paga pelo banco. Sem extrato, fora do caixa.
+  CARTAO_CREDITO
 }
 
 /// Estado de uma linha do extrato.
@@ -3935,6 +3951,12 @@ model BankAccount {
   omieAccountId    String? @db.VarChar(20)
   omieAccountLabel String? @db.VarChar(120)
 
+  /// Cartão de crédito (lote D, 20/10): o dia em que a fatura fecha — a compra
+  /// desse dia em diante entra na fatura seguinte — e o dia em que ela vence.
+  /// Nulos nas outras contas.
+  cardClosingDay Int? @db.TinyInt
+  cardDueDay     Int? @db.TinyInt
+
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3945,7 +3967,9 @@ model BankAccount {
   transactions BankTransaction[]
   payments     FinanceEntryPayment[]
   /// Os títulos que têm esta conta como a prevista.
-  entries      FinanceEntry[]
+  entries      FinanceEntry[]        @relation("ContaPrevista")
+  /// No cartão de crédito: as faturas dele, uma por ciclo.
+  cardInvoices FinanceEntry[]        @relation("FaturasDoCartao")
 
   @@unique([tenantId, companyId, bankCode, accountDigits])
   @@unique([companyId, omieAccountId])
@@ -4068,12 +4092,17 @@ model FinanceEntryPayment {
   /// O código da baixa no Omie (`nCodBaixa`), na baixa que veio de lá uma a
   /// uma (parcial lida do Omie, 19/10) — a leitura seguinte acha a mesma.
   omieBaixaId        String?              @db.VarChar(20)
+  /// A compra no cartão de crédito (lote D, 20/10): a fatura em que entrou.
+  /// Gravada na baixa e fixa — mudar o dia de fechamento do cartão depois não
+  /// tira da fatura as compras que já estão nela.
+  cardInvoiceId      String?
   createdById        String?
   createdAt          DateTime             @default(now())
 
   tenant           Tenant                @relation(fields: [tenantId], references: [id])
   company          Company               @relation(fields: [companyId], references: [id])
-  entry            FinanceEntry          @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entry            FinanceEntry          @relation("BaixasDaConta", fields: [entryId], references: [id], onDelete: Cascade)
+  cardInvoice      FinanceEntry?         @relation("ComprasDaFatura", fields: [cardInvoiceId], references: [id], onDelete: SetNull)
   interestCategory FinanceCategory?      @relation("PaymentInterestCategory", fields: [interestCategoryId], references: [id], onDelete: SetNull)
   discountCategory FinanceCategory?      @relation("PaymentDiscountCategory", fields: [discountCategoryId], references: [id], onDelete: SetNull)
   bankAccount      BankAccount?          @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
@@ -4083,6 +4112,7 @@ model FinanceEntryPayment {
   @@index([tenantId, companyId, paidAt])
   @@index([entryId])
   @@index([bankAccountId])
+  @@index([cardInvoiceId])
   @@map("finance_entry_payments")
 }
 

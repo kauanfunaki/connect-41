@@ -16,6 +16,7 @@ import { formatarReaisDeCentavos } from "@/lib/format";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
 import { dadosDaBaixa, registrarPagamento, desfazerBaixa, type DadosDaBaixa, type BaixaDaConta } from "@/lib/financeiro/acoes";
 import { contaSugeridaNaBaixa } from "@/lib/financeiro/contaPrevista";
+import { cicloDaCompra, mesDoCiclo } from "@/lib/financeiro/cartao";
 
 // A janela da baixa (19/10, lote C — pedidos 4 e 6 do BPO). Abre do botão
 // Pagar/Receber e do "⋯ › Baixas" de Contas a pagar e a receber. Era um balão
@@ -160,11 +161,18 @@ function FormularioDaBaixa({
 }) {
   const id = useId();
   const aPagar = dados.kind === "PAGAR";
-  // A prevista no título (lote D, 20/10), se ainda ativa; senão a única conta da empresa.
-  const contaSugerida = contaSugeridaNaBaixa(dados.contas, dados.contaPrevistaId);
+  // A prevista no título (lote D, 20/10), se ainda ativa — banco ou cartão —; senão a única conta da empresa.
+  const contaSugerida = dados.cartoes.some((c) => c.id === dados.contaPrevistaId)
+    ? dados.contaPrevistaId!
+    : contaSugeridaNaBaixa(dados.contas, dados.contaPrevistaId);
   const [contaEscolhida, setContaEscolhida] = useState(contaSugerida);
+  const [dataKey, setDataKey] = useState(hojeISO);
   // O adiantamento de quem é a conta (lote D, 20/10): a baixa sai dele, e o banco não se mexe.
   const peloAdiantamento = dados.adiantamento !== null && contaEscolhida === dados.adiantamento.contaId;
+  // O cartão de crédito (lote D, 20/10): a compra entra na fatura do ciclo do dia.
+  const cartao = dados.cartoes.find((c) => c.id === contaEscolhida) ?? null;
+  const fatura = cartao && dataKey ? cicloDaCompra(dataKey, cartao) : null;
+  const semConta = dados.contas.length === 0 && !dados.adiantamento && dados.cartoes.length === 0;
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
   const [valor, setValor] = useState(noCampo(dados.saldoCentavos));
@@ -199,7 +207,7 @@ function FormularioDaBaixa({
       <input type="hidden" name="entryId" value={entryId} />
       <FieldGrid>
         <CampoForm label={aPagar ? "Data do pagamento" : "Data do recebimento"} htmlFor={`${id}-data`} required>
-          <CampoData id={`${id}-data`} name="data" defaultValue={hojeISO} max={hojeISO} required />
+          <CampoData id={`${id}-data`} name="data" defaultValue={hojeISO} max={hojeISO} onChange={setDataKey} required />
         </CampoForm>
         <CampoForm
           label={aPagar ? "Saiu da conta" : "Entrou na conta"}
@@ -207,11 +215,15 @@ function FormularioDaBaixa({
           helper={
             peloAdiantamento
               ? `Usa o adiantamento: o banco não se mexe agora — o dinheiro saiu quando se adiantou. Disponível: ${reais(dados.adiantamento!.disponivelCentavos)}.`
-              : dados.contas.length === 0 && !dados.adiantamento
-                ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)."
-                : contaSugerida && contaSugerida === dados.contaPrevistaId && contaEscolhida === contaSugerida
-                  ? "A prevista no título. É a conta que a conciliação procura."
-                  : "Opcional. É a conta que a conciliação procura."
+              : cartao
+                ? fatura
+                  ? `Entra na fatura de ${mesDoCiclo(fatura.ciclo)}, que fecha em ${dataBr(fatura.fechamentoKey)} e vence em ${dataBr(fatura.vencimentoKey)}. O banco não se mexe agora: o dinheiro sai quando a fatura for paga.`
+                  : "Entra na fatura do ciclo da data do pagamento."
+                : semConta
+                  ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)."
+                  : contaSugerida && contaSugerida === dados.contaPrevistaId && contaEscolhida === contaSugerida
+                    ? "A prevista no título. É a conta que a conciliação procura."
+                    : "Opcional. É a conta que a conciliação procura."
           }
         >
           <Select
@@ -219,7 +231,7 @@ function FormularioDaBaixa({
             name="contaBancariaId"
             value={contaEscolhida}
             onChange={(e) => setContaEscolhida(e.target.value)}
-            disabled={dados.contas.length === 0 && !dados.adiantamento}
+            disabled={semConta}
           >
             <option value="">Não informada</option>
             {dados.contas.map((c) => (
@@ -231,6 +243,15 @@ function FormularioDaBaixa({
               <option value={dados.adiantamento.contaId}>
                 {dados.adiantamento.nome} — disponível {reais(dados.adiantamento.disponivelCentavos)}
               </option>
+            )}
+            {dados.cartoes.length > 0 && (
+              <optgroup label="Cartão de crédito">
+                {dados.cartoes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </optgroup>
             )}
           </Select>
         </CampoForm>
