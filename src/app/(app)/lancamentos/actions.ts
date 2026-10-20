@@ -37,6 +37,8 @@ import { arquivosDoFormulario, type AnexoGravado } from "@/lib/financeiro/penden
 import { armazenamentoDosAnexos } from "@/lib/financeiro/anexos";
 import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
 import { ocorrenciasDaRepeticao, validarRepeticao } from "@/lib/financeiro/repeticao";
+import { lerRateio, resumoDoRateio } from "@/lib/financeiro/rateio";
+import { conferirRateio, gravarRateio } from "@/lib/financeiro/rateioServidor";
 import { randomUUID } from "crypto";
 
 const MODULE = "bpo_lancamentos";
@@ -76,7 +78,13 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   if (!c.ok) return { error: c.erro };
 
   const hojeKey = saoPauloParts(new Date()).dateKey;
-  const categoryId = texto("categoryId") || null;
+  // O rateio (lote D, 20/10): com ele, a categoria, o centro e o projeto da
+  // conta são o resumo das linhas — os campos de uma categoria só nem vêm.
+  const comRateio = texto("comRateio") === "1";
+  const lidoRateio = comRateio ? lerRateio(texto("rateio")) : { ok: true as const, linhas: [] };
+  if (!lidoRateio.ok) return { error: lidoRateio.erro };
+  const linhasDoRateio = lidoRateio.linhas;
+  const categoryId = comRateio ? resumoDoRateio(linhasDoRateio).categoriaId : texto("categoryId") || null;
   const v = validarCamposDoLancamento(
     {
       kind: texto("kind"),
@@ -95,6 +103,12 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const d = v.dados;
   const rep = validarRepeticao({ frequencia: texto("repetirFrequencia"), vezes: texto("repetirVezes"), ajuste: texto("repetirAjuste") });
   if (!rep.ok) return { error: rep.erro };
+
+  const rateio = comRateio
+    ? await conferirRateio({ tenantId: c.tenantId, companyId, kind: d.kind, linhas: linhasDoRateio, totalCentavos: d.centavos })
+    : null;
+  if (rateio && !rateio.ok) return { error: rateio.erro };
+  const resumo = rateio?.ok ? rateio.resumo : null;
 
   if (d.categoryId) {
     const categoria = await c.prisma.financeCategory.findFirst({
@@ -129,14 +143,20 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
 
   // Centro informado vence; sem ele, o padrão da contraparte (mesma empresa e
   // ativo). Contraparte nova não tem padrão.
-  const centro = await centroNaCriacao({
-    tenantId: c.tenantId,
-    companyId,
-    informadoId: texto("costCenterId") || null,
-    padraoDaContraparteId: existente?.defaultCostCenterId ?? null,
-  });
+  // Rateada, o centro e o projeto são os comuns às linhas — sem herdar o
+  // padrão da contraparte, que diria um centro que as linhas não têm.
+  const centro = resumo
+    ? { ok: true as const, centroId: resumo.centroId }
+    : await centroNaCriacao({
+        tenantId: c.tenantId,
+        companyId,
+        informadoId: texto("costCenterId") || null,
+        padraoDaContraparteId: existente?.defaultCostCenterId ?? null,
+      });
   if (!centro.ok) return { error: centro.erro };
-  const projeto = await projetoInformado({ tenantId: c.tenantId, companyId, informadoId: texto("projectId") || null });
+  const projeto = resumo
+    ? { ok: true as const, projetoId: resumo.projetoId }
+    : await projetoInformado({ tenantId: c.tenantId, companyId, informadoId: texto("projectId") || null });
   if (!projeto.ok) return { error: projeto.erro };
   // A conta corrente prevista (lote D, 20/10): com "já pago em", é dela que a baixa sai.
   const contaPrevista = await contaPrevistaInformada({ tenantId: c.tenantId, companyId, informadoId: texto("bankAccountId") || null });
@@ -231,6 +251,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         },
         select: { id: true, amount: true },
       });
+      if (resumo) await gravarRateio(tx, { tenantId: c.tenantId, entryId: criado.id, linhas: linhasDoRateio });
       // As próximas da série: a mesma conta em outro vencimento — sem emissão,
       // número, previsão, baixa nem anexo, que são desta. A conta corrente
       // prevista vale para a série inteira.
@@ -261,6 +282,8 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           })),
         });
         if (aprovacaoDasProximas === "AGUARDANDO") await registrarEnvios(tx, idsDasProximas, c.ctx.userId || null);
+        // O rateio vale para a série inteira, como a categoria.
+        if (resumo) for (const entryId of idsDasProximas) await gravarRateio(tx, { tenantId: c.tenantId, entryId, linhas: linhasDoRateio });
       }
       if (d.pagoEmKey) {
         await quitarConta(tx, {
@@ -308,6 +331,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
       approvalStatus,
       centroDeCusto: centro.centroId,
       projeto: projeto.projetoId,
+      ...(resumo ? { rateio: `${linhasDoRateio.length} linhas` } : {}),
       ...(anexos.length > 0 ? { anexos: anexos.map((a) => a.fileName) } : {}),
       ...(leitura ? { lidoPorIa: leitura.id } : {}),
       ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),

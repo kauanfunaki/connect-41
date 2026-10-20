@@ -51,6 +51,7 @@ const CAMPOS_DA_CONTA = {
   forecastDate: true,
   updatedAt: true,
   bankMatches: { select: { id: true }, take: 1 },
+  _count: { select: { allocations: true } },
   counterparty: { select: { name: true } },
   company: { select: { name: true, displayName: true, omieCutoverAt: true } },
 } as const;
@@ -81,6 +82,7 @@ function comoAlteracao(c: ContaLida): ContaDaAlteracao {
     contraparteNome: c.counterparty.name,
     encerrada: v.pode ? null : v.motivo,
     travas: v.pode ? v.travas : {},
+    rateada: c._count.allocations > 0,
   };
 }
 

@@ -37,6 +37,8 @@ export type LinhaDaConta = {
   empresaNome: string;
   contraparteNome: string;
   categoriaNome: string | null;
+  /** Quantas linhas de rateio a conta tem (lote D, 20/10). A categoria é a da linha maior. */
+  rateio?: number;
   status: "PROVISORIO" | "CONFERIDO" | "PAGO" | "CANCELADO";
   /** Aprovação por alçada — AGUARDANDO e REPROVADO travam a baixa. */
   approvalStatus: "NAO_REQUER" | "AGUARDANDO" | "APROVADO" | "REPROVADO";
@@ -127,6 +129,7 @@ const CAMPOS = {
   omieMovementId: true,
   counterparty: { select: { name: true } },
   category: { select: { name: true } },
+  _count: { select: { allocations: true } },
   costCenterId: true,
   costCenter: { select: { name: true } },
   project: { select: { name: true } },
@@ -227,6 +230,7 @@ export async function listarContas(
       empresaNome: nomeExibicao(e.company),
       contraparteNome: e.counterparty.name,
       categoriaNome: e.category?.name ?? null,
+      rateio: e._count.allocations,
       status: e.status,
       approvalStatus: e.approvalStatus,
       documentoId: e.fiscalDocumentId,

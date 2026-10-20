@@ -75,6 +75,14 @@ describe("porQueFica", () => {
     expect(porQueFica(daE2, { campos: ["centro", "projeto", "conta"], centroDaEmpresa: null, projetoDaEmpresa: null, contaDaEmpresa: null })).toBeNull();
   });
 
+  it("conta rateada: categoria, centro e projeto ficam nas linhas; o resto muda", () => {
+    const rateada = conta("1", {}, { rateada: true });
+    for (const campo of ["categoria", "centro", "projeto"] as const) {
+      expect(porQueFica(rateada, { campos: [campo], categoriaId: "c", centroDaEmpresa: "e1", projetoDaEmpresa: "e1" })).toMatch(/Tem rateio/);
+    }
+    expect(porQueFica(rateada, { campos: ["vencimento", "competencia", "conta"], contaDaEmpresa: "e1" })).toBeNull();
+  });
+
   it("previsão: só de conta em aberto", () => {
     const paga = conta("1", { status: "PAGO", paidAt: new Date() });
     expect(porQueFica(paga, { campos: ["previsao"] })).toBe("Paga — a previsão é só de conta em aberto.");

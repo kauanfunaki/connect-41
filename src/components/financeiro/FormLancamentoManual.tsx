@@ -19,6 +19,7 @@ import { lerBoletoParaLancar } from "@/lib/financeiro/leituraDoBoletoServidor";
 import type { LeituraDoBoleto } from "@/lib/financeiro/leituraDoBoleto";
 import { CamposDaContraparteNova } from "./ContraparteNova";
 import { CampoDeProjeto } from "./CampoDeProjeto";
+import { CamposDoRateio } from "./CamposDoRateio";
 import { CamposDaRepeticao } from "./CamposDaRepeticao";
 
 type Contraparte = {
@@ -70,6 +71,9 @@ export function FormLancamentoManual({
   const [kind, setKind] = useState<"PAGAR" | "RECEBER">("PAGAR");
   const [contraparte, setContraparte] = useState("");
   const [categoria, setCategoria] = useState("");
+  // O rateio (lote D, 20/10) e o valor que ele precisa fechar.
+  const [rateando, setRateando] = useState(false);
+  const [valorTexto, setValorTexto] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
   const [aguardando, setAguardando] = useState(false);
@@ -106,6 +110,7 @@ export function FormLancamentoManual({
     setContraparte(ficha ? ficha.id : temQuem ? NOVA : "");
     const padrao = ficha?.defaultCategoryId;
     setCategoria(padrao && categorias.some((c) => c.id === padrao && c.kind === "PAGAR") ? padrao : "");
+    setValorTexto(novo.leitura.valorCentavos ? valorNoCampo(novo.leitura.valorCentavos) : "");
     setVersao((v) => v + 1);
     setErro(null);
     setSalvo(false);
@@ -115,6 +120,7 @@ export function FormLancamentoManual({
     setLido(null);
     setContraparte("");
     setCategoria("");
+    setValorTexto("");
     setVersao((v) => v + 1);
   }
 
@@ -141,6 +147,8 @@ export function FormLancamentoManual({
       formRef.current?.reset();
       setContraparte("");
       setCategoria("");
+      setRateando(false);
+      setValorTexto("");
       setLido(null);
       setVersao((v) => v + 1);
     });
@@ -183,7 +191,7 @@ export function FormLancamentoManual({
             label={kind === "PAGAR" ? "Fornecedor" : "Cliente (sacado)"}
             htmlFor="lancamento-contraparte"
             required
-            className={semCentro ? "lg:col-span-2" : ""}
+            className={rateando ? "lg:col-span-3" : semCentro ? "lg:col-span-2" : ""}
             helper={leitura && conferir("fornecedor") && contraparte !== NOVA ? "A leitura não achou o CNPJ do beneficiário — escolha o fornecedor." : undefined}
           >
             <Select id="lancamento-contraparte" name="counterpartyId" value={contraparte} onChange={(e) => escolherContraparte(e.target.value)} required>
@@ -200,23 +208,44 @@ export function FormLancamentoManual({
             </Select>
           </CampoForm>
 
-          <CampoForm
-            label="Categoria"
-            htmlFor="lancamento-categoria"
-            required={kind === "PAGAR"}
-            helper={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
-          >
-            <Select id="lancamento-categoria" name="categoryId" value={categoria} onChange={(e) => setCategoria(e.target.value)} required={kind === "PAGAR"}>
-              <option value="">{kind === "PAGAR" ? "Escolha…" : "Sem categoria"}</option>
-              {doTipo.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </Select>
-          </CampoForm>
+          <input type="hidden" name="comRateio" value={rateando ? "1" : "0"} />
+          {rateando ? (
+            // A conta dividida em categorias, centros e projetos (lote D, 20/10).
+            // `key`: trocar o tipo troca o plano de contas, e as linhas recomeçam.
+            <CamposDoRateio
+              key={kind}
+              className="sm:col-span-2 lg:col-span-4"
+              categorias={doTipo}
+              centros={centros.map((c) => ({ id: c.id, nome: c.codigo ? `${c.nome} · ${c.codigo}` : c.nome }))}
+              projetos={projetos}
+              valorTexto={valorTexto}
+              categoriaInicial={categoria}
+              onDesfazer={() => setRateando(false)}
+            />
+          ) : (
+            <CampoForm
+              label="Categoria"
+              htmlFor="lancamento-categoria"
+              required={kind === "PAGAR"}
+              helper={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
+              acao={
+                <Button type="button" variant="link" className="text-helper" onClick={() => setRateando(true)}>
+                  Ratear
+                </Button>
+              }
+            >
+              <Select id="lancamento-categoria" name="categoryId" value={categoria} onChange={(e) => setCategoria(e.target.value)} required={kind === "PAGAR"}>
+                <option value="">{kind === "PAGAR" ? "Escolha…" : "Sem categoria"}</option>
+                {doTipo.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
+          )}
 
-          {!semCentro && (
+          {!semCentro && !rateando && (
             <CampoForm
               label="Centro de custo"
               htmlFor="lancamento-centro"
@@ -270,6 +299,7 @@ export function FormLancamentoManual({
               inputMode="decimal"
               placeholder="1.234,56"
               defaultValue={leitura?.valorCentavos ? valorNoCampo(leitura.valorCentavos) : undefined}
+              onChange={(e) => setValorTexto(e.target.value)}
               required
             />
           </CampoForm>
@@ -284,7 +314,7 @@ export function FormLancamentoManual({
           <CampoForm label="Nº do documento" htmlFor="lancamento-numero">
             <Input id="lancamento-numero" name="numeroDocumento" maxLength={60} placeholder="Boleto, contrato, título" defaultValue={leitura?.numeroDocumento ?? undefined} />
           </CampoForm>
-          <CampoDeProjeto id="lancamento-projeto" companyId={companyId} projetos={projetos} />
+          {!rateando && <CampoDeProjeto id="lancamento-projeto" companyId={companyId} projetos={projetos} />}
           {/* A conta corrente prevista (lote D, 20/10): a baixa já vem com ela. */}
           <CampoForm
             label="Conta corrente"
@@ -305,7 +335,7 @@ export function FormLancamentoManual({
             </Select>
           </CampoForm>
 
-          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className="lg:col-span-3">
+          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className={rateando ? "sm:col-span-2 lg:col-span-4" : "lg:col-span-3"}>
             <Input id="lancamento-descricao" name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" defaultValue={leitura?.descricao ?? undefined} />
           </CampoForm>
 
