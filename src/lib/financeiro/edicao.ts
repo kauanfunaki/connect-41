@@ -51,6 +51,8 @@ export type ContaParaEditar = {
   agreementId: string | null;
   /** Título ou movimento que veio do Omie, numa empresa que ainda não virou para o Connect (lote E). */
   doOmie: boolean;
+  /** O título do Omie tem um departamento só, e o centro vem dele (20/10). Só vale com `doOmie`. */
+  centroDoOmie?: boolean;
   /** Ligada a uma linha do extrato — no Connect ou pelo Omie. */
   conciliada: boolean;
   /** Já tem baixa — total ou parcial (lote C). O valor do título fica preso ao que foi baixado. */
@@ -84,6 +86,11 @@ export function travasDaEdicao(conta: ContaParaEditar): { pode: false; motivo: s
 
   if (conta.doOmie) {
     travar(DO_OMIE, "Vem do Omie — altere lá. A próxima leitura traria de volta o que está no Omie.");
+    // O centro só trava quando veio do departamento do título; sem
+    // departamento no Omie, ele é classificação do Connect.
+    if (conta.centroDoOmie) {
+      travar(["centro"], "Vem do departamento do título no Omie — altere lá. O centro é o de mesmo nome ou código do departamento.");
+    }
   }
   if (conta.fiscalDocumentId) {
     travar(DA_NOTA, "Vem da nota fiscal. Para corrigir o valor, estorne na ficha da nota.");

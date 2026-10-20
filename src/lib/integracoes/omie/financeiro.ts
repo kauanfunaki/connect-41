@@ -160,6 +160,12 @@ export type TituloDoOmie = {
   rateio: LinhaDoRateioDoOmie[];
   /** A lista de rateio veio sem valor e sem percentual: o título fica numa categoria só. */
   rateioIlegivel: boolean;
+  /**
+   * O departamento do título sem rateio, quando ele tem um só (20/10): o
+   * centro de custo da conta sai dele. Nulo sem departamento e no rateado —
+   * aí o departamento vai nas linhas.
+   */
+  departamentoCodigo: string | null;
 };
 
 // ─── Rateio (20/10) ──────────────────────────────────────────────────────────
@@ -209,14 +215,15 @@ function partesDoRateio(lista: unknown, campos: { codigo: string[]; valor: strin
  * O rateio de um movimento em linhas que somam `valorCentavos`. Rateio é ter
  * duas ou mais categorias ou dois ou mais departamentos; com uma categoria e
  * um departamento só, não há o que ratear (`linhas` vazio), e `categoriaCodigo`
- * diz a categoria. `ilegivel` quando uma das listas veio sem valor e sem
- * percentual — aí o título fica numa categoria só, como antes.
+ * e `departamentoCodigo` dizem a categoria e o departamento. `ilegivel` quando
+ * uma das listas veio sem valor e sem percentual — aí o título fica numa
+ * categoria só, como antes.
  */
 export function rateioDoMovimento(
   movimento: unknown,
   valorCentavos: number,
   categoriaDoTitulo: string | null
-): { linhas: LinhaDoRateioDoOmie[]; categoriaCodigo: string | null; ilegivel: boolean } {
+): { linhas: LinhaDoRateioDoOmie[]; categoriaCodigo: string | null; departamentoCodigo: string | null; ilegivel: boolean } {
   const m = obj(movimento);
   const categorias = partesDoRateio(m.categorias, {
     codigo: ["cCodCateg", "codigo_categoria"],
@@ -228,11 +235,13 @@ export function rateioDoMovimento(
     valor: ["nDistrValor", "nValDep"],
     percentual: ["nDistrPercentual", "nPerDep"],
   });
-  if (categorias === null || departamentos === null) return { linhas: [], categoriaCodigo: categoriaDoTitulo, ilegivel: true };
+  if (categorias === null || departamentos === null) return { linhas: [], categoriaCodigo: categoriaDoTitulo, departamentoCodigo: null, ilegivel: true };
   // Uma categoria só na lista vale mais que a do título: no título rateado, o
   // `cCodCateg` vem com um código que não é nenhuma das linhas.
   const categoriaUnica = categorias.length === 1 ? categorias[0]!.codigo : categoriaDoTitulo;
-  if (categorias.length < 2 && departamentos.length < 2) return { linhas: [], categoriaCodigo: categoriaUnica, ilegivel: false };
+  if (categorias.length < 2 && departamentos.length < 2) {
+    return { linhas: [], categoriaCodigo: categoriaUnica, departamentoCodigo: departamentos[0]?.codigo ?? null, ilegivel: false };
+  }
 
   const porCategoria: { codigo: string | null; centavos: number }[] =
     categorias.length >= 2
@@ -249,9 +258,16 @@ export function rateioDoMovimento(
     );
   }
   const comValor = linhas.filter((l) => l.centavos > 0);
-  if (comValor.length < 2) return { linhas: [], categoriaCodigo: comValor[0]?.categoriaCodigo ?? categoriaUnica, ilegivel: false };
+  if (comValor.length < 2) {
+    return {
+      linhas: [],
+      categoriaCodigo: comValor[0]?.categoriaCodigo ?? categoriaUnica,
+      departamentoCodigo: comValor[0]?.departamentoCodigo ?? null,
+      ilegivel: false,
+    };
+  }
   const maior = comValor.reduce((a, l) => (l.centavos > a.centavos ? l : a), comValor[0]!);
-  return { linhas: comValor, categoriaCodigo: maior.categoriaCodigo, ilegivel: false };
+  return { linhas: comValor, categoriaCodigo: maior.categoriaCodigo, departamentoCodigo: null, ilegivel: false };
 }
 
 export type DepartamentoDoOmie = { codigo: string; nome: string; estrutura: string | null; inativo: boolean };
@@ -376,6 +392,7 @@ export function mapearMovimento(item: unknown): TituloDoOmie | { fora: MotivoDoT
     previsao: previsao && previsao.getTime() !== vencimento.getTime() ? previsao : null,
     rateio: rateio.linhas,
     rateioIlegivel: rateio.ilegivel,
+    departamentoCodigo: rateio.departamentoCodigo,
   };
 }
 
@@ -423,6 +440,9 @@ export function mensagemDoFinanceiro(c: Record<string, number>, gravou: boolean)
       ? `${n("rateio_departamento_sem_centro")} linhas de rateio com departamento do Omie sem centro de custo de mesmo nome ou código no Connect (ficam sem centro)`
       : null,
     n("rateio_ilegivel") ? `${n("rateio_ilegivel")} com rateio sem valor nem percentual no Omie (ficam numa categoria só)` : null,
+    n("departamento_sem_centro")
+      ? `${n("departamento_sem_centro")} com departamento do Omie sem centro de custo de mesmo nome ou código no Connect (ficam sem centro)`
+      : null,
     n("conta_prevista_sem_par")
       ? `${n("conta_prevista_sem_par")} com conta corrente do Omie sem conta bancária ligada no Connect (ficam sem conta prevista)`
       : null,
