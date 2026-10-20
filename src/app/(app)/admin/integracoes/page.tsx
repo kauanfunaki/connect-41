@@ -144,7 +144,7 @@ export default async function IntegracoesPage({
               demonstracao={serpro.ambiente === "demonstracao"}
             />
           )}
-          <ContasOmie contas={contasOmie} empresas={empresasParaOmie} />
+          <ContasOmie contas={contasOmie} empresas={empresasParaOmie} podeDesfazerVirada={ctx.role === "SUPER_ADMIN"} />
         </section>
       )}
 
