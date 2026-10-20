@@ -175,7 +175,7 @@ export function responderAoCfo(pergunta: ChaveDaPergunta, d: DadosDoCfo): Respos
       const movimentos = [
         { label: "Receita bruta", delta: receita - valorDaLinha(d.anterior, "receita_bruta") },
         ...variacoesDeDespesa(d.atual, d.anterior)
-          .filter((v) => !["investimentos", "outras_despesas"].includes(v.code))
+          .filter((v) => !["outras_despesas", "outras_receitas"].includes(v.code))
           .map((v) => ({ label: v.label, delta: v.delta })),
       ].sort((a, b) => a.delta - b.delta);
       return {

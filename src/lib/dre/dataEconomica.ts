@@ -20,7 +20,7 @@ import { saoPauloParts } from "@/lib/agenda";
 import { chaveDaCategoria, calcularDre, type LancamentoDoDre, type Mapeamento, type ResultadoDoDre } from "./calculo";
 import { resolverCategorias } from "./mapeamento";
 import { centavosDeDecimal } from "./data";
-import { OPCOES_PADRAO } from "./estrutura";
+import { OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
 import { calcularDreEconomica, paraLancamentoDoDre, type DreEconomica, type LancamentoFinanceiro } from "./economica";
 import { resultadoDePorGrupo, somarPorGrupo, type ConjuntosDaReconciliacao } from "./analises";
 import { quadroPorCentro, type QuadroPorCentro } from "./centroDeCusto";
@@ -222,7 +222,8 @@ export async function serieEconomica(
   tenantId: string,
   companyId: string,
   competencias: string[],
-  centro: FiltroDeCentro = { tipo: "todos" }
+  centro: FiltroDeCentro = { tipo: "todos" },
+  opcoes: OpcoesDoDre = OPCOES_PADRAO
 ): Promise<Map<string, DreEconomica>> {
   const prisma = getPrisma();
   const [ctx, linhas, ajustes] = await Promise.all([
@@ -243,7 +244,7 @@ export async function serieEconomica(
       calcularDreEconomica(
         porMes.get(c)!,
         ctx.mapeamento,
-        OPCOES_PADRAO,
+        opcoes,
         (ajustes.get(c) ?? []).filter((a) => passaNoFiltroDeCentro(a.centroDeCustoId, centro))
       ),
     ])
@@ -259,7 +260,8 @@ export async function serieEconomica(
 export async function quadroPorCentroDoPeriodo(
   tenantId: string,
   companyId: string,
-  competencias: string[]
+  competencias: string[],
+  opcoes: OpcoesDoDre = OPCOES_PADRAO
 ): Promise<QuadroPorCentro> {
   const prisma = getPrisma();
   const [ctx, linhas, ajustes, centros] = await Promise.all([
@@ -278,7 +280,8 @@ export async function quadroPorCentroDoPeriodo(
     linhas.flatMap((l) => paraFinanceiros(l, ctx.nomePorId)),
     [...ajustes.values()].flat(),
     ctx.mapeamento,
-    centros.map((c) => ({ id: c.id, nome: c.name, codigo: c.code, active: c.active }))
+    centros.map((c) => ({ id: c.id, nome: c.name, codigo: c.code, active: c.active })),
+    opcoes
   );
 }
 
@@ -291,7 +294,8 @@ export async function quadroPorCentroDoPeriodo(
 export async function serieDeCaixa(
   tenantId: string,
   companyId: string,
-  competencias: string[]
+  competencias: string[],
+  opcoes: OpcoesDoDre = OPCOES_PADRAO
 ): Promise<Map<string, ResultadoDoDre>> {
   const inicio = [...competencias].sort()[0]!;
   const fim = [...competencias].sort().at(-1)!;
@@ -304,7 +308,7 @@ export async function serieDeCaixa(
   for (const m of movimentos) {
     porMes.get(competenciaDoInstante(m.paidAt))?.push(paraLancamentoDoDre(paraFinanceiro(linhaDoMovimento(m), ctx.nomePorId)));
   }
-  return new Map(competencias.map((c) => [c, calcularDre(porMes.get(c)!, ctx.mapeamento, OPCOES_PADRAO)]));
+  return new Map(competencias.map((c) => [c, calcularDre(porMes.get(c)!, ctx.mapeamento, opcoes)]));
 }
 
 /**
@@ -396,13 +400,14 @@ export async function resultadoDoPeriodo(
   tenantId: string,
   companyId: string,
   competencias: string[],
-  regime: "competencia" | "caixa"
+  regime: "competencia" | "caixa",
+  opcoes: OpcoesDoDre = OPCOES_PADRAO
 ): Promise<ResultadoDoDre> {
   const porGrupo =
     regime === "competencia"
-      ? [...(await serieEconomica(tenantId, companyId, competencias)).values()].map((m) => m.resultado.porGrupo)
-      : [...(await serieDeCaixa(tenantId, companyId, competencias)).values()].map((r) => r.porGrupo);
-  return resultadoDePorGrupo(somarPorGrupo(porGrupo));
+      ? [...(await serieEconomica(tenantId, companyId, competencias, { tipo: "todos" }, opcoes)).values()].map((m) => m.resultado.porGrupo)
+      : [...(await serieDeCaixa(tenantId, companyId, competencias, opcoes)).values()].map((r) => r.porGrupo);
+  return resultadoDePorGrupo(somarPorGrupo(porGrupo), opcoes);
 }
 
 /** Competências com lançamento nesta empresa, mais recente primeiro. */

@@ -646,6 +646,15 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         ],
       },
       {
+        titulo: "Escolher onde entram os impostos",
+        passos: [
+          "Ao lado dos filtros, clique em “Impostos no EBITDA” (o padrão) ou em “Impostos fora do resultado”.",
+          "Em “Impostos no EBITDA”, os impostos sobre a receita descontam do “Gerador de caixa (EBITDA)” e do resultado líquido.",
+          "Em “Impostos fora do resultado”, eles aparecem só na receita líquida; o aviso em amarelo mostra quanto ficou de fora.",
+          "A escolha vai junto ao trocar de mês, de aba e de empresa, e também para o arquivo de “Exportar”.",
+        ],
+      },
+      {
         titulo: "Classificar categorias sem grupo",
         passos: [
           "Quando aparecer o aviso de categorias sem grupo no DRE, veja a lista logo abaixo dele.",
@@ -684,7 +693,8 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Escolha a empresa em “Empresa” (a tela troca sozinha); depois o mês, e clique em “Aplicar”.",
           "Escolha a visão nas abas: “Mês”, “Acumulado no ano” ou “Últimos 12 meses”.",
-          "Leia os cartões do topo: “Receita bruta”, “Margem de contribuição”, “Resultado operacional” e “Resultado do período”.",
+          "Leia os cartões do topo: “Receita bruta”, “Margem de contribuição”, “Resultado operacional (EBITDA)” e “Resultado do período”.",
+          "Para tirar os impostos sobre a receita do resultado, clique em “Impostos fora do resultado”, ao lado dos filtros. “Impostos no EBITDA” é o padrão.",
           "Confira os avisos em amarelo, como lançamentos ainda a conferir que entram no resultado.",
         ],
       },
@@ -752,7 +762,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Clique na aba “Cenários”.",
           "Em “Cenário”, escolha “Pessimista”, “Base”, “Otimista” ou “Personalizado”.",
-          "Ajuste os percentuais de “Receita”, “CMV além da receita” (custo da mercadoria vendida), “Despesas fixas” e “Despesas financeiras”.",
+          "Ajuste os percentuais de “Receita”, “Custo operacional além da receita”, “Custo administrativo” e “Financiamentos e empréstimos”.",
           "Compare a coluna “Simulado” com a DRE do mês.",
         ],
       },

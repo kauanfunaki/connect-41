@@ -33,13 +33,13 @@ describe("itensDosNumerosDaDre", () => {
     expect(itensDosNumerosDaDre(atual, "caixa").map((i) => i.rotulo)).toEqual([
       "Receita bruta",
       "Margem de contribuição",
-      "Gerador de caixa operacional",
-      "Fluxo de caixa livre",
+      "Gerador de caixa (EBITDA)",
+      "Resultado líquido operacional",
     ]);
     expect(itensDosNumerosDaDre(atual, "competencia").map((i) => i.rotulo)).toEqual([
       "Receita bruta",
       "Margem de contribuição",
-      "Resultado operacional",
+      "Resultado operacional (EBITDA)",
       "Resultado do período",
     ]);
   });
