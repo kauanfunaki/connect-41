@@ -171,7 +171,7 @@ export function ContasTable({
       categoria: l.categoriaNome ?? "",
       centro: l.centroDeCustoNome ?? "",
       projeto: l.projetoNome ?? "",
-      competencia: formatarCompetencia(l.competencia),
+      competencia: l.competencia,
       situacao: rotuloDaSituacao(l),
     },
   }));
@@ -238,7 +238,8 @@ export function ContasTable({
             <col className="w-[116px]" />
             <col />
             <col className="w-[172px]" />
-            <col className="w-[116px]" />
+            {/* 140px (Ajustes 15/10): em 116, "COMPETÊNCIA" e o funil não cabiam, e o funil saía cortado. */}
+            <col className="w-[140px]" />
             <col className="w-[120px]" />
             <col className="w-[160px]" />
             {/* 256px (08/10/2026): "Conferir" + "Receber" + "⋯" pediam ~246px
@@ -275,7 +276,7 @@ export function ContasTable({
                 />
               </th>
               <th className="px-4 py-3">
-                <FiltroDaColuna rotulo="Competência" chave="competencia" />
+                <FiltroDaColuna rotulo="Competência" chave="competencia" tipo="competencia" />
               </th>
               <th className="px-4 py-3">Valor</th>
               <th className="px-4 py-3">
