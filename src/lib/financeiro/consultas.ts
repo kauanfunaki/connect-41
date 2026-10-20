@@ -51,7 +51,7 @@ export async function movimentosRealizados(e: EscopoFinanceiro, competencias: st
   );
   // A baixa pela conta de adiantamento (lote D, 20/10) não moveu dinheiro: o
   // caixa saiu quando se adiantou, na ponta do banco da transferência.
-  return movimentos.filter((m) => !m.doAdiantamento).map((m) => ({
+  return movimentos.filter((m) => !m.foraDoCaixa).map((m) => ({
     competenciaDeCaixa: competenciaDoInstante(m.paidAt),
     kind: m.kind,
     centavos: m.centavos,
@@ -158,7 +158,7 @@ export async function dadosDoConsolidado(
   ]);
   const somas = new Map<string, SomaPorEmpresa>();
   // A baixa pela conta de adiantamento (lote D, 20/10) não moveu dinheiro no mês.
-  for (const m of movimentos.filter((x) => !x.doAdiantamento)) {
+  for (const m of movimentos.filter((x) => !x.foraDoCaixa)) {
     const chave = `${m.companyId}|${m.kind}`;
     const atual = somas.get(chave) ?? { companyId: m.companyId, kind: m.kind, centavos: 0 };
     atual.centavos += m.centavos;

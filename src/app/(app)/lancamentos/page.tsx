@@ -229,7 +229,8 @@ async function FormularioDaEmpresa({
     centrosAtivosDaEmpresa(tenantId, companyId),
     projetosAtivosDaEmpresa(tenantId, companyId),
     estadoDosAgentes(tenantId, [AGENTE_DO_BOLETO]),
-    contasBancariasDaEmpresa(tenantId, companyId),
+    // Com os cartões de crédito: o formulário só os mostra na conta a pagar.
+    contasBancariasDaEmpresa(tenantId, companyId, null, { comCartoes: true }),
   ]);
   // A leitura de boleto (lote H2) nasce desligada: aparece só ligada e com chave de IA.
   const leitor = agentes.get(AGENTE_DO_BOLETO);

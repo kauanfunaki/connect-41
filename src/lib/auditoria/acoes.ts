@@ -77,6 +77,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "finance.edit": e("editou o lançamento"),
   "finance.advance": c("registrou o adiantamento"),
   "finance.advance_undone": e("desfez o adiantamento"),
+  "finance.card_created": c("cadastrou o cartão de crédito"),
+  "finance.card_updated": e("editou o cartão de crédito"),
   "finance.attachment_added": e("anexou um arquivo ao lançamento"),
   "finance.attachment_removed": e("tirou um anexo do lançamento"),
   "financeiro.approval.sent": o("mandou para a aprovação do cliente o lançamento"),
