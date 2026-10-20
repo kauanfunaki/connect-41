@@ -22,6 +22,8 @@ import { projetoInformado } from "./projetoServidor";
 import { contaPrevistaInformada, contasBancariasDaEmpresa } from "./contaPrevistaServidor";
 import { lerRateio, type LinhaDoRateio } from "./rateio";
 import { conferirRateio, gravarRateio, rateioDaConta } from "./rateioServidor";
+import { lerRetencoes, planoDasRetencoes, resumoDasRetencoes, type PassoDaRetencao, type TributoRetido } from "./retencoes";
+import { aplicarRetencoes, RecusaDaRetencao, retencoesDaConta, type RetencaoDaConta } from "./retencoesServidor";
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "./aprovacao/servidor";
 import { podeEditarOTipo } from "./acessoDaConta";
 import { anexosDaConta, type AnexoDaConta } from "./anexos";
@@ -47,6 +49,12 @@ export type DadosDaEdicao =
         contaId: string | null;
         /** As linhas do rateio (lote D, 20/10). Vazio: a conta numa categoria só. */
         rateio: LinhaDoRateio[];
+        /** As retenções na fonte (lote D, 20/10), com a conta de cada imposto. */
+        retencoes: RetencaoDaConta[];
+        /** O total retido que a nota declara (NFS-e), para a janela conferir. */
+        retidoNaNota: number | null;
+        /** Quando esta conta é a de um imposto retido: de qual tributo. */
+        deImposto: TributoRetido | null;
         competencia: string;
         emissaoKey: string | null;
         numeroDocumento: string | null;
@@ -100,6 +108,8 @@ const CAMPOS_DA_CONTA = {
   paidPrincipal: true,
   bankMatches: { select: { id: true }, take: 1 },
   company: { select: { name: true, displayName: true, omieCutoverAt: true } },
+  retentionOrigin: { select: { tax: true } },
+  fiscalDocument: { select: { retentionsTotal: true } },
 } as const;
 
 async function lerConta(entryId: string, tenantId: string) {
@@ -117,6 +127,7 @@ function travasDa(conta: NonNullable<Awaited<ReturnType<typeof lerConta>>>) {
     doOmie: presaAoOmie(conta, conta.company),
     conciliada: conta.bankMatches.length > 0 || conta.omieReconciledAt !== null,
     temBaixa: Number(conta.paidPrincipal.toString()) > 0,
+    deRetencao: conta.retentionOrigin !== null,
   });
 }
 
@@ -142,7 +153,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
   const { tenantId, companyId } = conta;
   // O valor atual entra na lista mesmo inativo: abrir a janela para mudar a
   // descrição não pode obrigar a trocar um centro que foi inativado depois.
-  const [contrapartes, categorias, centros, projetos, anexos, contas, rateio] = await Promise.all([
+  const [contrapartes, categorias, centros, projetos, anexos, contas, rateio, retencoes] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId, companyId, OR: [{ active: true }, { id: conta.counterpartyId }] },
       select: { id: true, name: true, document: true, active: true },
@@ -168,6 +179,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
     anexosDaConta(tenantId, conta.id),
     contasBancariasDaEmpresa(tenantId, companyId, conta.bankAccountId),
     rateioDaConta(tenantId, conta.id),
+    retencoesDaConta(prisma, tenantId, conta.id),
   ]);
   const comInativo = (o: { id: string; name: string; active: boolean }) => ({ id: o.id, nome: o.active ? o.name : `${o.name} (inativo)` });
 
@@ -184,6 +196,9 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
       projetoId: conta.projectId,
       contaId: conta.bankAccountId,
       rateio,
+      retencoes,
+      retidoNaNota: conta.fiscalDocument?.retentionsTotal ? centavosDeDecimal(conta.fiscalDocument.retentionsTotal) : null,
+      deImposto: conta.retentionOrigin?.tax ?? null,
       competencia: conta.competence,
       emissaoKey: chaveDoDia(conta.issueDate),
       numeroDocumento: conta.documentNumber,
@@ -384,7 +399,24 @@ export async function editarLancamento(formData: FormData): Promise<ResultadoDaE
     depois.rateio = rateioNovo.length > 0 ? `${rateioNovo.length} linhas` : null;
   }
 
-  if (Object.keys(data).length === 0 && rateioNovo === null) return { ok: true, aviso: null };
+  // As retenções na fonte (lote D, 20/10), só na conta a pagar: a janela manda
+  // `comRetencoes` quando o bloco está nela. O plano diz, tributo a tributo, o
+  // que cria, muda ou cancela na conta de cada imposto.
+  let passosDasRetencoes: PassoDaRetencao[] = [];
+  if (kind === "PAGAR" && veio("comRetencoes") && !veredito.travas.retencoes) {
+    const lidas = lerRetencoes(texto);
+    if (!lidas.ok) return { error: lidas.erro };
+    const atuais = await retencoesDaConta(prisma, tenantId, conta.id);
+    const plano = planoDasRetencoes(atuais, lidas.retencoes);
+    if (!plano.ok) return { error: plano.erro };
+    passosDasRetencoes = plano.passos;
+    if (passosDasRetencoes.length > 0) {
+      antes.retencoes = resumoDasRetencoes(atuais);
+      depois.retencoes = resumoDasRetencoes(lidas.retencoes);
+    }
+  }
+
+  if (Object.keys(data).length === 0 && rateioNovo === null && passosDasRetencoes.length === 0) return { ok: true, aviso: null };
   // Só o rateio mudou: a versão da conta anda junto, para quem estava com a janela aberta.
   if (Object.keys(data).length === 0) data.updatedAt = new Date();
 
@@ -401,13 +433,38 @@ export async function editarLancamento(formData: FormData): Promise<ResultadoDaE
     data.approvedAt = null;
   }
 
-  const gravou = await prisma.$transaction(async (tx) => {
-    const r = await tx.financeEntry.updateMany({ where: { id: conta.id, tenantId, updatedAt: conta.updatedAt }, data });
-    if (r.count !== 1) return false;
-    if (rateioNovo !== null) await gravarRateio(tx, { tenantId, entryId: conta.id, linhas: rateioNovo });
-    if (reenviar) await registrarEnvios(tx, [conta.id], ctx.userId || null);
-    return true;
-  });
+  // A conta do imposto herda da conta como ela fica depois desta edição.
+  const final = <T,>(coluna: string, atual: T): T => (coluna in data ? ((data as Record<string, unknown>)[coluna] as T) : atual);
+  let gravou: boolean;
+  try {
+    gravou = await prisma.$transaction(async (tx) => {
+      const r = await tx.financeEntry.updateMany({ where: { id: conta.id, tenantId, updatedAt: conta.updatedAt }, data });
+      if (r.count !== 1) return false;
+      if (rateioNovo !== null) await gravarRateio(tx, { tenantId, entryId: conta.id, linhas: rateioNovo });
+      if (passosDasRetencoes.length > 0) {
+        await aplicarRetencoes(tx, {
+          tenantId,
+          userId: ctx.userId || null,
+          conta: {
+            id: conta.id,
+            companyId,
+            counterpartyId: final("counterpartyId", conta.counterpartyId),
+            competence: final("competence", conta.competence),
+            categoryId: final("categoryId", conta.categoryId),
+            costCenterId: final("costCenterId", conta.costCenterId),
+            projectId: final("projectId", conta.projectId),
+            documentNumber: final("documentNumber", conta.documentNumber),
+          },
+          passos: passosDasRetencoes,
+        });
+      }
+      if (reenviar) await registrarEnvios(tx, [conta.id], ctx.userId || null);
+      return true;
+    });
+  } catch (e) {
+    if (e instanceof RecusaDaRetencao) return { error: e.message };
+    throw e;
+  }
   if (!gravou) return { error: "A conta acabou de mudar (baixa, conciliação ou outra edição) — feche e abra de novo." };
 
   const valorFinal = typeof data.amount === "string" ? data.amount : conta.amount.toString();

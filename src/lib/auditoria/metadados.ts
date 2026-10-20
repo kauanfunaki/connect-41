@@ -105,6 +105,9 @@ const NOME_DO_CAMPO: Readonly<Record<string, string>> = {
   dueDate: "Vencimento",
   forecastDate: "Previsão",
   rateio: "Rateio",
+  retencoes: "Retenções na fonte",
+  bruto: "Valor bruto",
+  contasDeImpostoCanceladas: "Contas de imposto retido canceladas",
   description: "Descrição",
   fichaAlterada: "Campos da ficha alterados",
 };

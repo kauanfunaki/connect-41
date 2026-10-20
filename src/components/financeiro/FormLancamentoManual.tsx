@@ -21,6 +21,9 @@ import { CamposDaContraparteNova } from "./ContraparteNova";
 import { CampoDeProjeto } from "./CampoDeProjeto";
 import { CamposDoRateio } from "./CamposDoRateio";
 import { CamposDaRepeticao } from "./CamposDaRepeticao";
+import { CamposDasRetencoes, totalRetido, type ValoresDasRetencoes } from "./CamposDasRetencoes";
+import { formatarReaisDeCentavos } from "@/lib/format";
+import { centavosDeTexto } from "@/lib/financeiro/manual";
 
 type Contraparte = {
   id: string;
@@ -78,6 +81,9 @@ export function FormLancamentoManual({
   const [salvo, setSalvo] = useState(false);
   const [aguardando, setAguardando] = useState(false);
   const [repetidas, setRepetidas] = useState(0);
+  // As retenções na fonte (lote D, 20/10): com elas, o valor é o bruto da nota.
+  const [retencoes, setRetencoes] = useState<ValoresDasRetencoes>({});
+  const [impostos, setImpostos] = useState(0);
   const [pendente, startTransition] = useTransition();
 
   // A leitura do boleto. `versao` remonta os campos sem estado próprio para eles
@@ -86,6 +92,7 @@ export function FormLancamentoManual({
   const [versao, setVersao] = useState(0);
 
   const doTipo = categorias.filter((c) => c.kind === kind);
+  const retido = kind === "PAGAR" ? totalRetido(retencoes) : 0;
   // O padrão não é pré-selecionado: em branco o servidor já herda, e pré-
   // selecionar faria "limpar o campo" parecer "sem centro" quando não é.
   const padraoId = contrapartes.find((c) => c.id === contraparte)?.defaultCostCenterId ?? null;
@@ -144,6 +151,8 @@ export function FormLancamentoManual({
       setSalvo(true);
       setAguardando(Boolean(r.aguardandoAprovacao));
       setRepetidas(r.repetidas ?? 0);
+      setImpostos(r.impostos ?? 0);
+      setRetencoes({});
       formRef.current?.reset();
       setContraparte("");
       setCategoria("");
@@ -291,7 +300,18 @@ export function FormLancamentoManual({
           <CampoForm label="Previsão" htmlFor="lancamento-previsao" helper="Quando deve ser paga de fato. Em branco, o vencimento.">
             <CampoData id="lancamento-previsao" name="previsao" />
           </CampoForm>
-          <CampoForm label="Valor" htmlFor="lancamento-valor" required helper={leitura && conferir("valor") ? CONFIRA : undefined}>
+          <CampoForm
+            label={retido > 0 ? "Valor bruto (da nota)" : "Valor"}
+            htmlFor="lancamento-valor"
+            required
+            helper={
+              leitura && conferir("valor")
+                ? CONFIRA
+                : retido > 0
+                  ? `Líquido a pagar ao fornecedor: ${formatarReaisDeCentavos((centavosDeTexto(valorTexto) ?? 0) - retido)}.`
+                  : undefined
+            }
+          >
             <Input
               id="lancamento-valor"
               name="valor"
@@ -339,6 +359,23 @@ export function FormLancamentoManual({
             <Input id="lancamento-descricao" name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" defaultValue={leitura?.descricao ?? undefined} />
           </CampoForm>
 
+          {/* Retenções na fonte (lote D, 20/10): só na conta a pagar. */}
+          {kind === "PAGAR" && (
+            <CamposDasRetencoes
+              className="sm:col-span-2 lg:col-span-4"
+              valores={retencoes}
+              onChange={(t, v) => setRetencoes((a) => ({ ...a, [t]: v }))}
+            >
+              {retido > 0 && (
+                <p className="text-helper text-fg-secondary">
+                  Bruto {formatarReaisDeCentavos(centavosDeTexto(valorTexto) ?? 0)} − retido {formatarReaisDeCentavos(retido)} ={" "}
+                  <strong className="text-fg">{formatarReaisDeCentavos((centavosDeTexto(valorTexto) ?? 0) - retido)}</strong> a pagar ao
+                  fornecedor. As contas dos impostos nascem junto.
+                </p>
+              )}
+            </CamposDasRetencoes>
+          )}
+
           {/* Repetir (lote D): as próximas nascem junto — ver `CamposDaRepeticao`. */}
           <CamposDaRepeticao className="sm:col-span-2 lg:col-span-4" />
 
@@ -367,7 +404,8 @@ export function FormLancamentoManual({
           nota={
             salvo && (
               <span className="inline-flex items-center gap-1.5 text-success-fg">
-                <Check size={14} className="flex-shrink-0" /> Lançado{repetidas > 0 ? `, com mais ${repetidas} na série` : ""}. Ele já aparece nas contas e na DRE.
+                <Check size={14} className="flex-shrink-0" /> Lançado{repetidas > 0 ? `, com mais ${repetidas} na série` : ""}
+                {impostos > 0 ? `, com ${impostos} ${impostos === 1 ? "conta de imposto retido" : "contas de imposto retido"}` : ""}. Ele já aparece nas contas e na DRE.
                 {/* Empresa com alçada: a conta nasce aguardando, e a baixa fica travada até alguém aprovar. */}
                 {aguardando && " Aguardando aprovação antes da baixa."}
               </span>

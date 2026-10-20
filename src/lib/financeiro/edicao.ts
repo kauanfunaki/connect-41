@@ -35,6 +35,7 @@ export const CAMPOS_EDITAVEIS = [
   "previsao",
   "valor",
   "descricao",
+  "retencoes",
 ] as const;
 
 export type CampoEditavel = (typeof CAMPOS_EDITAVEIS)[number];
@@ -54,10 +55,12 @@ export type ContaParaEditar = {
   conciliada: boolean;
   /** Já tem baixa — total ou parcial (lote C). O valor do título fica preso ao que foi baixado. */
   temBaixa?: boolean;
+  /** É a conta de um imposto retido de outra conta (lote D, 20/10). */
+  deRetencao?: boolean;
 };
 
 const DINHEIRO: CampoEditavel[] = ["valor", "vencimento"];
-const DO_OMIE: CampoEditavel[] = ["valor", "vencimento", "competencia", "categoria", "emissao", "numeroDocumento", "previsao", "conta"];
+const DO_OMIE: CampoEditavel[] = ["valor", "vencimento", "competencia", "categoria", "emissao", "numeroDocumento", "previsao", "conta", "retencoes"];
 const DA_NOTA: CampoEditavel[] = ["valor", "emissao", "numeroDocumento", "contraparte"];
 const DO_ACORDO: CampoEditavel[] = ["valor", "vencimento", "contraparte"];
 
@@ -87,6 +90,11 @@ export function travasDaEdicao(conta: ContaParaEditar): { pode: false; motivo: s
   }
   if (conta.agreementId) {
     travar(DO_ACORDO, "Parcela de acordo — mude no acordo, na tela de cobrança.");
+  }
+  // A conta do imposto acompanha a retenção que a gerou: o valor e quem recebe
+  // mudam lá, e imposto não retém imposto.
+  if (conta.deRetencao) {
+    travar(["valor", "contraparte", "retencoes"], "Conta de imposto retido — valor e credor mudam na retenção, na edição da conta de origem.");
   }
   if (conta.conciliada) {
     travar(DINHEIRO, "Conciliada com o extrato — desfaça a conciliação e o pagamento para mudar valor ou vencimento.");
