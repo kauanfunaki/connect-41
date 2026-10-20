@@ -34,6 +34,7 @@ import { hojeIso } from "@/lib/datas/calendario";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { conferenciaEmAndamento, estimativaDaConferencia } from "@/lib/autorizacoes/serpro";
 import { reais } from "@/lib/serpro/regras";
+import { chavesSemAcessoNoSerpro } from "@/lib/serpro/acompanhamento";
 import { getAuthContext } from "@/lib/auth/context";
 import type { TaxRegimeKind } from "@/generated/prisma/enums";
 
@@ -84,6 +85,9 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
   const serpro = await configuracaoDoSerpro(acesso.tenantId);
   // Na demonstração (20/10/2026) a conferência dos clientes não roda: o trial só responde aos exemplos.
   const serproPronto = acesso.podeEditar && prontidaoDoSerpro(serpro).pronta && serpro?.ambiente === "producao";
+  // O "x" dos Eventos de Atualização (Fase 1, 20/10/2026): o Serpro negou o acesso
+  // em D-1, de graça — o sinal de quem precisa de autorização antes de uma chamada paga.
+  const semAcessoNoSerpro = serpro?.ambiente === "producao" ? await chavesSemAcessoNoSerpro(acesso.tenantId) : new Set<string>();
   const [emAndamento, estimativa] = serproPronto
     ? await Promise.all([conferenciaEmAndamento(acesso.tenantId), estimativaDaConferencia(acesso.tenantId)])
     : [null, null];
@@ -132,6 +136,11 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
             )}
             {/* Botão, como os do lado (15/10/2026): era link de texto cinza com
                 altura de botão. */}
+            {serpro?.ambiente === "producao" && (
+              <Button href="/autorizacoes/caixa-postal" variant="secondary" size="sm">
+                Caixa Postal
+              </Button>
+            )}
             {serpro && (
               <Button href="/autorizacoes/consumo" variant="secondary" size="sm">
                 Consumo do Serpro
@@ -231,6 +240,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                   <InfoDoCartao>{andamentoDaAutorizacao(l.situacao, l.registro, hoje)}</InfoDoCartao>
                   <PeDoCartao>
                     <Selo tom={TOM_DA_SITUACAO[l.situacao]}>{ROTULO_DA_SITUACAO[l.situacao]}</Selo>
+                    {semAcessoNoSerpro.has(l.chave) && <Selo tom="perigo">Serpro sem acesso</Selo>}
                     {acesso.podeEditar && <BotaoDaAutorizacao chave={l.chave} nome={l.empresa.nome} documento={l.documento} registro={l.registro} hoje={hoje} serpro={serproPronto} />}
                   </PeDoCartao>
                 </Cartao>
@@ -285,6 +295,11 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                         </td>
                         <td className="py-2.5 pr-3">
                           <Selo tom={TOM_DA_SITUACAO[l.situacao]}>{ROTULO_DA_SITUACAO[l.situacao]}</Selo>
+                          {semAcessoNoSerpro.has(l.chave) && (
+                            <span className="block mt-1" title="O Serpro negou o acesso no último acompanhamento: falta a Autorização de Acesso, ou ela não cobre o serviço.">
+                              <Selo tom="perigo">Serpro sem acesso</Selo>
+                            </span>
+                          )}
                         </td>
                         <td className="py-2.5 pr-3 text-fg-secondary">
                           {andamentoDaAutorizacao(l.situacao, l.registro, hoje)}

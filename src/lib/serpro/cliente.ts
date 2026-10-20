@@ -321,11 +321,12 @@ export type ResultadoDaChamada =
   | {
       ok: false;
       /**
-       * nao_pronta, fora_do_catalogo, sem_autorizacao e teto: nada foi chamado.
-       * autenticacao: o /authenticate recusou ou não respondeu. rede: a chamada
-       * ficou sem resposta. falha: o Serpro respondeu, com erro.
+       * nao_pronta, fora_do_catalogo, precisa_de_pessoa, sem_autorizacao e
+       * teto: nada foi chamado. autenticacao: o /authenticate recusou ou não
+       * respondeu. rede: a chamada ficou sem resposta. falha: o Serpro
+       * respondeu, com erro.
        */
-      motivo: "nao_pronta" | "fora_do_catalogo" | "sem_autorizacao" | "teto" | "autenticacao" | "rede" | "falha";
+      motivo: "nao_pronta" | "fora_do_catalogo" | "precisa_de_pessoa" | "sem_autorizacao" | "teto" | "autenticacao" | "rede" | "falha";
       erro: string;
       /** O status da resposta do serviço; null quando não houve. */
       status: number | null;
@@ -335,7 +336,16 @@ export type ResultadoDaChamada =
 export async function chamarSerpro(
   tenantId: string,
   pedido: PedidoAoSerpro,
-  opcoes: { userId?: string | null; origem: string; transporte?: Transporte }
+  opcoes: {
+    userId?: string | null;
+    origem: string;
+    transporte?: Transporte;
+    /**
+     * A pessoa confirmou que abrir dá ciência da intimação (20/10/2026). Sem
+     * isso, o serviço que dá ciência não é chamado — o agendador nunca passa.
+     */
+    cienciaConfirmada?: boolean;
+  }
 ): Promise<ResultadoDaChamada> {
   const transporte = opcoes.transporte ?? transporteHttps;
   const cfg = await configuracaoDoSerpro(tenantId);
@@ -349,6 +359,14 @@ export async function chamarSerpro(
       ok: false,
       motivo: "fora_do_catalogo",
       erro: `O serviço ${pedido.idSistema} ${pedido.idServico} (${pedido.caminho}) não está no catálogo do Connect.`,
+      status: null,
+    };
+  }
+  if (servico.daCiencia && opcoes.cienciaConfirmada !== true) {
+    return {
+      ok: false,
+      motivo: "precisa_de_pessoa",
+      erro: "Abrir esta mensagem dá ciência da intimação: só uma pessoa abre, depois de confirmar.",
       status: null,
     };
   }
@@ -375,7 +393,7 @@ export async function chamarSerpro(
 
   const partes = partesDoPedido(cfg!, pedido);
   const corpo = JSON.stringify(corpoDoPedido(pedido, partes.contratante, partes.autor));
-  const requestTag = tagDaRequisicao(partes.autor, pedido.contribuinte, servico.sequencial);
+  const requestTag = tagDaRequisicao(partes.autor, pedido.lote ? { tipo: pedido.lote.tipo, numero: "" } : pedido.contribuinte, servico.sequencial);
   const url = `${URL_DO_GATEWAY[cfg!.ambiente]}/${pedido.caminho}`;
   const inicio = Date.now();
   let r: RespostaHttps | null = null;

@@ -146,6 +146,13 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
     coluna: "responsibleUserId",
     executar: (tx, a) => n(tx.company.updateMany({ where: { tenantId: a.tenantId, responsibleUserId: a.id }, data: { responsibleUserId: null } })),
   },
+  // Quem pediu a situação fiscal (Serpro, 20/10/2026): o pedido fica, sem a pessoa para avisar.
+  {
+    modelo: "SerproPedido",
+    acao: "anular",
+    coluna: "pedidoPorId",
+    executar: (tx, a) => n(tx.serproPedido.updateMany({ where: { tenantId: a.tenantId, pedidoPorId: a.id }, data: { pedidoPorId: null } })),
+  },
   {
     modelo: "Vaga",
     acao: "anular",
