@@ -10,6 +10,7 @@ const value = (name, fallback = null) => {
 const configPath = resolve(value("--config", process.env.OPS_HEARTBEAT_CONFIG || ".local/ops-heartbeat.json"));
 const statePath = resolve(value("--state", process.env.OPS_HEARTBEAT_STATE || ".local/ops-heartbeat-state.json"));
 const lockPath = `${statePath}.lock`;
+const stopPath = `${statePath}.stop`;
 const intervalMs = 30_000;
 const maxAttempts = 3;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -49,13 +50,13 @@ async function send(config) {
 async function once() { const config = await loadConfig(); return (await send(config)) ? 0 : 1; }
 async function watch() {
   const lock = await acquireLock();
-  const stop = async () => { await lock.close(); await unlink(lockPath).catch(() => {}); console.log("[ops-heartbeat] parado"); process.exit(0); };
+  const stop = async () => { await lock.close(); await unlink(lockPath).catch(() => {}); await unlink(stopPath).catch(() => {}); console.log("[ops-heartbeat] parado"); process.exit(0); };
   process.once("SIGINT", stop); process.once("SIGTERM", stop);
   const config = await loadConfig();
   await send(config);
-  while (true) { await sleep(intervalMs); await send(config); }
+  while (true) { await sleep(intervalMs); try { await access(stopPath); return stop(); } catch {} await send(config); }
 }
-async function status() { console.log(JSON.stringify({ configPath, statePath, ...(await readState()), tokenConfigured: Boolean(process.env.OPS_HEARTBEAT_TOKEN) }, null, 2)); }
+async function status() { let running = false; try { await access(lockPath); running = true; } catch {} console.log(JSON.stringify({ configPath, statePath, ...(await readState()), running }, null, 2)); }
 async function createConfig() {
   await mkdir(dirname(configPath), { recursive: true });
   try { await access(configPath); throw new Error(`Arquivo já existe: ${configPath}`); } catch (e) { if (e.message.startsWith("Arquivo já existe")) throw e; }
@@ -67,6 +68,6 @@ try {
   else if (args.has("--once")) process.exitCode = await once();
   else if (args.has("--watch") || args.has("--start")) await watch();
   else if (args.has("--status")) await status();
-  else if (args.has("--stop")) { await unlink(lockPath).catch(() => {}); console.log("Solicitação de parada registrada; o processo deve receber SIGTERM/SIGINT para encerrar com segurança."); }
+  else if (args.has("--stop")) { await mkdir(dirname(stopPath), { recursive: true }); await writeFile(stopPath, `${new Date().toISOString()}\n`, { mode: 0o600 }); console.log("Parada solicitada; o monitor encerrará no próximo intervalo."); }
   else console.log("Uso: --start | --stop | --status | --once | --watch | --config[=arquivo]");
 } catch (error) { console.error(`[ops-heartbeat] ${error.message}`); process.exitCode = 1; }
