@@ -10,14 +10,19 @@
 // O cartão de crédito (lote D, 20/10) também pode ser a prevista da conta a
 // pagar: com "já pago em", a conta nasce paga no cartão e entra na fatura.
 
-import { ehCartaoDeCredito, ehContaForaDoCaixa } from "./tiposDeConta";
+import { ehContaDeAdiantamento } from "./adiantamento";
+import { ehCartaoDeCredito, grupoDoTipo, rotuloDoTipo } from "./tiposDeConta";
 
 /** `cartao`: é cartão de crédito — só a conta a pagar o oferece. */
 export type ContaBancaria = { id: string; nome: string; cartao?: boolean };
 
-/** Como a conta bancária aparece nos seletores: "Itaú 12345-6". */
-export function nomeDaContaBancaria(c: { nickname: string; accountNumber: string }): string {
-  return `${c.nickname} ${c.accountNumber}`;
+/**
+ * Como a conta aparece nos seletores: "Itaú 12345-6". A que não é banco diz o
+ * tipo (lote D, 20/10): "Caixa da loja (caixinha)".
+ */
+export function nomeDaContaBancaria(c: { nickname: string; accountNumber: string; type?: string }): string {
+  const nome = `${c.nickname} ${c.accountNumber}`.trim();
+  return c.type && grupoDoTipo(c.type) !== "banco" ? `${nome} (${rotuloDoTipo(c.type).toLowerCase()})` : nome;
 }
 
 /** A conta informada vale para o lançamento? Da empresa dele e ativa — a atual pode seguir inativa. */
@@ -34,7 +39,7 @@ export function contaPrevistaDoLancamento(p: {
   }
   // O adiantamento se escolhe na baixa, com o disponível de quem é a conta; o
   // cartão, só na conta a pagar.
-  if (ehContaForaDoCaixa(p.conta.type) && !ehCartaoDeCredito(p.conta.type)) {
+  if (ehContaDeAdiantamento(p.conta.type)) {
     return { ok: false, erro: "O adiantamento não é conta prevista — escolha-o na baixa da conta." };
   }
   if (ehCartaoDeCredito(p.conta.type) && p.kind === "RECEBER") return { ok: false, erro: "Cartão de crédito só paga conta a pagar." };

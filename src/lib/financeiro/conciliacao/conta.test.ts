@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contaConfere, codigoDoBanco, digitosDaConta, validarConta, centavosComSinal } from "./conta";
+import { contaConfere, codigoDoBanco, digitosDaConta, validarConta, centavosComSinal, chaveSemNumero } from "./conta";
 
 describe("contaConfere", () => {
   const conta = { accountNumber: "12345-6", agency: "1234" };
@@ -85,5 +85,28 @@ describe("validarConta", () => {
     expect(validarConta({ ...base, accountNumber: "000" }).ok).toBe(false);
     expect(validarConta({ ...base, type: "CARTAO" }).ok).toBe(false);
     expect(validarConta({ ...base, openingBalance: "1", openingBalanceDate: "2026-02-30" }).ok).toBe(false);
+  });
+
+  it("os tipos do Omie (lote D, 20/10): com extrato, banco e número continuam obrigatórios", () => {
+    expect(validarConta({ ...base, type: "CONTA_PAGAMENTO" })).toEqual({ ok: true, dados: expect.objectContaining({ type: "CONTA_PAGAMENTO", accountDigits: "123456" }) });
+    expect(validarConta({ ...base, type: "APLICACAO", accountNumber: "" }).ok).toBe(false);
+    expect(validarConta({ ...base, type: "CONTA_GARANTIDA", bankCode: "" }).ok).toBe(false);
+  });
+
+  it("sem extrato, banco e número são opcionais, e o nome vira a chave", () => {
+    const caixa = validarConta({ ...base, nickname: "Caixa da Loja Três", type: "CAIXINHA", bankCode: "", agency: "", accountNumber: "" });
+    expect(caixa).toEqual({
+      ok: true,
+      dados: expect.objectContaining({ type: "CAIXINHA", bankCode: "000", agency: null, accountNumber: "", accountDigits: "sem-caixadalojatres" }),
+    });
+    expect(chaveSemNumero("Mútuo do sócio")).toBe("sem-mutuodosocio");
+    // Com número, ele vale — o contrato do empréstimo, por exemplo.
+    const emprestimo = validarConta({ ...base, type: "EMPRESTIMO", accountNumber: "9988-7", openingBalance: "-50.000,00", openingBalanceDate: "2026-09-01" });
+    expect(emprestimo).toEqual({ ok: true, dados: expect.objectContaining({ bankCode: "341", accountDigits: "99887", saldoInicialCentavos: -5_000_000 }) });
+  });
+
+  it("o adiantamento e o cartão não se cadastram aqui", () => {
+    expect(validarConta({ ...base, type: "ADIANTAMENTO_FORNECEDOR" })).toEqual({ ok: false, erro: "Escolha o tipo da conta." });
+    expect(validarConta({ ...base, type: "CARTAO_CREDITO" }).ok).toBe(false);
   });
 });

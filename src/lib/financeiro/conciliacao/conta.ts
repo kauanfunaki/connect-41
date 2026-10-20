@@ -3,6 +3,7 @@
 
 import { centavosDeTexto } from "../manual";
 import { dataValida } from "../periodo";
+import { temExtrato, temPortaPropria, tipoDeConta, type TipoDeConta } from "../tiposDeConta";
 
 /** Só dígitos, sem zero à esquerda. `""` quando não sobra nada. */
 export function digitosDaConta(texto: string | null | undefined): string {
@@ -72,7 +73,8 @@ export type ContaValidada = {
   agency: string | null;
   accountNumber: string;
   accountDigits: string;
-  type: "CORRENTE" | "POUPANCA";
+  /** Qualquer tipo do cadastro de Banco e caixa (lote D, 20/10) — o adiantamento e o cartão têm a porta deles. */
+  type: TipoDeConta;
   /** Centavos com sinal — conta pode começar no cheque especial. */
   saldoInicialCentavos: number | null;
   saldoInicialKey: string | null;
@@ -91,6 +93,23 @@ export function centavosComSinal(texto: string | null | undefined): number | nul
 /** Teto do `Decimal(14,2)`: doze dígitos inteiros. */
 const MAIOR_SALDO_EM_CENTAVOS = 999_999_999_999_99;
 
+/** Banco das contas sem extrato quando a pessoa não informa um. */
+export const BANCO_SEM_EXTRATO = "000";
+
+/**
+ * A chave do unique de banco e número na conta sem extrato e sem número: o
+ * nome, sem acento e só com letras e números. Duas caixinhas com o mesmo nome
+ * na empresa seriam a mesma para quem lê — o unique recusa a segunda.
+ */
+export function chaveSemNumero(nickname: string): string {
+  const base = nickname
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+  return `sem-${base}`.slice(0, 30);
+}
+
 export function validarConta(
   campos: CamposDaConta
 ): { ok: true; dados: ContaValidada } | { ok: false; erro: string } {
@@ -98,19 +117,28 @@ export function validarConta(
   if (nickname === "") return { ok: false, erro: "Dê um nome para a conta (ex.: Itaú movimento)." };
   if (nickname.length > 80) return { ok: false, erro: "Nome com mais de 80 caracteres." };
 
-  const bankCode = codigoDoBanco(campos.bankCode);
+  const type = tipoDeConta(campos.type) && !temPortaPropria(campos.type) ? campos.type : null;
+  if (!type) return { ok: false, erro: "Escolha o tipo da conta." };
+  // Com extrato, banco e número conferem o OFX e são obrigatórios. Sem extrato
+  // (caixinha, empréstimo…), são só para a equipe achar a conta.
+  const comExtrato = temExtrato(type);
+
+  const bancoTexto = (campos.bankCode ?? "").trim();
+  const bankCode = !comExtrato && bancoTexto === "" ? BANCO_SEM_EXTRATO : codigoDoBanco(bancoTexto);
   if (!bankCode) return { ok: false, erro: "Código do banco inválido — use o número COMPE (ex.: 001, 341)." };
 
   const agency = (campos.agency ?? "").trim();
   if (agency !== "" && !/^[\d-]{1,10}$/.test(agency)) return { ok: false, erro: "Agência só com números (e hífen do dígito)." };
 
   const accountNumber = (campos.accountNumber ?? "").trim();
-  if (!/^[\d.\-\s]{1,30}$/.test(accountNumber)) return { ok: false, erro: "Número da conta só com números e o hífen do dígito." };
-  const accountDigits = digitosDaConta(accountNumber);
-  if (accountDigits === "") return { ok: false, erro: "Informe o número da conta." };
-
-  const type = campos.type === "POUPANCA" ? "POUPANCA" : campos.type === "CORRENTE" ? "CORRENTE" : null;
-  if (!type) return { ok: false, erro: "Escolha o tipo da conta." };
+  let accountDigits: string;
+  if (!comExtrato && accountNumber === "") {
+    accountDigits = chaveSemNumero(nickname);
+  } else {
+    if (!/^[\d.\-\s]{1,30}$/.test(accountNumber)) return { ok: false, erro: "Número da conta só com números e o hífen do dígito." };
+    accountDigits = digitosDaConta(accountNumber);
+    if (accountDigits === "") return { ok: false, erro: "Informe o número da conta." };
+  }
 
   const saldoTexto = (campos.openingBalance ?? "").trim();
   const dataTexto = (campos.openingBalanceDate ?? "").trim();
