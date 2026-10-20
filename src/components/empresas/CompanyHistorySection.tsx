@@ -28,10 +28,11 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        {/* "Tarefas", o termo do kanban na tela (15/10/2026): era "Pipelines". */}
-        <h2 className="text-section font-semibold text-fg mb-4">Tarefas</h2>
+        {/* "Atividades", o nome dos itens dos Quadros desde 20/10/2026 (Quadro ›
+            Pasta › Tarefa › Atividade): foi "Pipelines" e, depois, "Tarefas". */}
+        <h2 className="text-section font-semibold text-fg mb-4">Atividades</h2>
         {pipelineItems.length === 0 ? (
-          <EmptyState icon={<Columns3 />} title="Nenhuma tarefa ligada" description={`Esta ${entityLabel} ainda não está em nenhuma tarefa do kanban.`} />
+          <EmptyState icon={<Columns3 />} title="Nenhuma atividade ligada" description={`Esta ${entityLabel} ainda não está em nenhuma atividade dos Quadros.`} />
         ) : (
           // O `Button` com `href` (15/10/2026), e não pílulas-link montadas à mão.
           <div className="flex flex-wrap gap-2">

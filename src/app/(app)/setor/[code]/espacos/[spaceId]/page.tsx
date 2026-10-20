@@ -108,7 +108,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
             uma frase solta e "Listas", um EmptyState num cartão à mão. */}
         {folders.length === 0 ? (
           <Card>
-            <EmptyState title="Nenhuma pasta neste espaço ainda" description="Pastas agrupam as listas do espaço." />
+            <EmptyState title="Nenhuma pasta neste espaço ainda" description="Pastas agrupam as tarefas do espaço." />
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -118,7 +118,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
                   <FolderIcon size={16} className="text-fg-muted flex-shrink-0" />
                   <div className="min-w-0">
                     <p className="text-card-title font-semibold text-fg truncate">{f.name}</p>
-                    <p className="text-micro text-fg-muted">{f._count.pipelines} {f._count.pipelines === 1 ? "lista" : "listas"}</p>
+                    <p className="text-micro text-fg-muted">{f._count.pipelines} {f._count.pipelines === 1 ? "tarefa" : "tarefas"}</p>
                   </div>
                 </Card>
                 {canDelete && (
@@ -133,10 +133,10 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
       </div>
 
       <div>
-        <h2 className="text-section font-semibold text-fg mb-2.5">Listas</h2>
+        <h2 className="text-section font-semibold text-fg mb-2.5">Tarefas</h2>
         {lists.length === 0 ? (
           <Card>
-            <EmptyState title="Nenhuma lista neste espaço" description="As listas do espaço, soltas ou dentro das pastas, aparecem aqui." />
+            <EmptyState title="Nenhuma tarefa neste espaço" description="As tarefas do espaço, soltas ou dentro das pastas, aparecem aqui." />
           </Card>
         ) : (
           <ListsTable

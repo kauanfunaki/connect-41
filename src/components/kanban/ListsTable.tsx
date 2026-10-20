@@ -74,7 +74,7 @@ export function ListsTable({ lists, basePath, deleteAction, pastaBasePath }: Pro
           <thead>
             <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
               <th className="px-4 py-3">
-                <FiltroDaColuna rotulo="Lista" chave="lista" />
+                <FiltroDaColuna rotulo="Tarefa" chave="lista" />
               </th>
               {comPasta && (
                 <th className="px-4 py-3 w-48 hidden sm:table-cell">
@@ -150,7 +150,7 @@ export function ListsTable({ lists, basePath, deleteAction, pastaBasePath }: Pro
                   </td>
                   {deleteAction && (
                     <td className="px-4 py-2.5">
-                      <DeleteEntityMenu kind="lista" name={l.name} action={deleteAction.bind(null, l.id)} />
+                      <DeleteEntityMenu kind="tarefa" name={l.name} action={deleteAction.bind(null, l.id)} />
                     </td>
                   )}
                 </LinhaFiltravel>

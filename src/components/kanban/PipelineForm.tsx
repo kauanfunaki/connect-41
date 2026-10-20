@@ -56,7 +56,7 @@ export function PipelineForm({ action, sectorOptions, onCancel }: Props) {
       {/* Os três dados numa linha (30/09): o tipo de entidade ficava sozinho
           numa linha de largura inteira embaixo do par nome/setor. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Field label="Nome do kanban" htmlFor="name" required>
+        <Field label="Nome da tarefa" htmlFor="name" required>
           <Input
             id="name"
             name="name"
@@ -135,7 +135,7 @@ export function PipelineForm({ action, sectorOptions, onCancel }: Props) {
       <FormFooter
         pending={isPending}
         pendingLabel="Criando…"
-        submitLabel="Criar kanban"
+        submitLabel="Criar tarefa"
         cancelHref={onCancel ? undefined : "/kanban"}
         onCancel={onCancel}
       />
