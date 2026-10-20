@@ -14,6 +14,9 @@ import { contagemDoBloco, marcarGrupo, quantosNoConjunto } from "@/lib/listaEmBl
 import type { RescisaoConfig, OrigemCampo } from "@/lib/rescisao/config";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
+import { Card } from "@/components/ui/Card";
+import { SecaoDeConfiguracao } from "@/components/configuracoes/SecaoDeConfiguracao";
+import { CalendarRange, Handshake, HardHat, ListX, Scale } from "lucide-react";
 
 export type RescisaoConfigState = { error: string } | null;
 
@@ -62,138 +65,153 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
     nivelEmpresa && origem ? `Origem: ${ORIGEM_LABEL[origem[campo]]}` : undefined;
 
   return (
-    <form action={formAction} className="space-y-6">
+    // Seções em duas colunas (escolha 1B dos Ajustes de 15/10, 20/10/2026): o
+    // título e o que a seção faz à esquerda, o cartão com os campos à direita.
+    // Era um cartão só, na largura toda, com os campos nas pontas. Um salvar
+    // só, no fim, como antes.
+    <form action={formAction}>
       {state?.error && (
-        <Aviso>{state.error}</Aviso>
+        <Aviso className="mb-4">{state.error}</Aviso>
       )}
 
-      <section>
-        <h2 className="text-card-title font-semibold text-fg mb-1">Adicionais</h2>
-        <p className="text-fs-2 text-fg-muted mb-3">
-          Os percentuais são fixos em lei — o que varia por empresa é o grau apurado no laudo e a incidência.
-        </p>
-        <FieldGrid>
-          <CampoForm label="Grau de insalubridade" htmlFor="insalubridadeGrau" helper={heranca("insalubridadeGrau")}>
-            <Select id="insalubridadeGrau" name="insalubridadeGrau" defaultValue={valores.insalubridadeGrau} disabled={!canEdit}>
-              {GRAU_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </Select>
-          </CampoForm>
+      <SecaoDeConfiguracao
+        titulo="Adicionais"
+        descricao="Os percentuais são fixos em lei — o que varia por empresa é o grau apurado no laudo e a incidência."
+        icone={<HardHat />}
+      >
+        <Card className="p-5">
+          <FieldGrid>
+            <CampoForm label="Grau de insalubridade" htmlFor="insalubridadeGrau" helper={heranca("insalubridadeGrau")}>
+              <Select id="insalubridadeGrau" name="insalubridadeGrau" defaultValue={valores.insalubridadeGrau} disabled={!canEdit}>
+                {GRAU_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            </CampoForm>
 
-          <CampoForm
-            label="Base da insalubridade"
-            htmlFor="insalubridadeBase"
-            helper={heranca("insalubridadeBase") ?? "A Súmula Vinculante 4 do STF deixou o tema em aberto."}
-          >
-            <Select id="insalubridadeBase" name="insalubridadeBase" defaultValue={valores.insalubridadeBase} disabled={!canEdit}>
-              {BASE_INSALUBRIDADE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </Select>
-          </CampoForm>
-        </FieldGrid>
-
-        <div className="mt-4 space-y-2">
-          <Checkbox
-            name="periculosidadeAplica"
-            value="true"
-            defaultChecked={valores.periculosidadeAplica}
-            disabled={!canEdit}
-            label="Aplica periculosidade (30% sobre o salário base)"
-          />
-          <Checkbox
-            name="periculosidadeIntegral"
-            value="true"
-            defaultChecked={valores.periculosidadeIntegral}
-            disabled={!canEdit}
-            label="Periculosidade sobre a remuneração integral — somente eletricitários (Súmula 191 TST)"
-          />
-        </div>
-      </section>
-
-      <section className="pt-4 border-t border-border">
-        <h2 className="text-card-title font-semibold text-fg mb-3">Médias de variáveis</h2>
-        <FieldGrid columns="sm:grid-cols-3">
-          <CampoForm label="Janela" htmlFor="mediaMeses" helper={heranca("mediaMeses") ?? "Entre 3 e 12."}>
-            <CampoNumero
-              id="mediaMeses"
-              name="mediaMeses"
-              min={3}
-              max={12}
-              suffix="meses"
-              defaultValue={valores.mediaMeses}
-              disabled={!canEdit}
-            />
-          </CampoForm>
-
-          <CampoForm label="Base das férias" htmlFor="mediaBaseFerias" helper={heranca("mediaBaseFerias")}>
-            <Select id="mediaBaseFerias" name="mediaBaseFerias" defaultValue={valores.mediaBaseFerias} disabled={!canEdit}>
-              {MEDIA_BASE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </Select>
-          </CampoForm>
-
-          <CampoForm label="Base do 13º" htmlFor="mediaBaseDecimoTerceiro" helper={heranca("mediaBaseDecimoTerceiro")}>
-            <Select
-              id="mediaBaseDecimoTerceiro"
-              name="mediaBaseDecimoTerceiro"
-              defaultValue={valores.mediaBaseDecimoTerceiro}
-              disabled={!canEdit}
+            <CampoForm
+              label="Base da insalubridade"
+              htmlFor="insalubridadeBase"
+              helper={heranca("insalubridadeBase") ?? "A Súmula Vinculante 4 do STF deixou o tema em aberto."}
             >
-              {MEDIA_BASE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </Select>
-          </CampoForm>
-        </FieldGrid>
-      </section>
+              <Select id="insalubridadeBase" name="insalubridadeBase" defaultValue={valores.insalubridadeBase} disabled={!canEdit}>
+                {BASE_INSALUBRIDADE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            </CampoForm>
+          </FieldGrid>
 
-      <section className="pt-4 border-t border-border">
-        <h2 className="text-card-title font-semibold text-fg mb-3">Conferência</h2>
-        {/* Um campo só, de percentual: na coluna de um terço, a mesma das
-            médias acima — era meia tela para um número de até 5. */}
-        <FieldGrid columns="sm:grid-cols-3">
-          <CampoForm
-            label="Tolerância de divergência"
-            htmlFor="toleranciaPct"
-            helper={heranca("toleranciaPct") ?? "Máximo 5% — acima disso divergências reais deixariam de acender."}
-          >
-            <Input
-              id="toleranciaPct"
-              name="toleranciaPct"
-              type="number"
-              step="0.1"
-              min={0}
-              max={5}
-              suffix="%"
-              defaultValue={valores.toleranciaPct}
+          <div className="mt-4 space-y-2">
+            <Checkbox
+              name="periculosidadeAplica"
+              value="true"
+              defaultChecked={valores.periculosidadeAplica}
               disabled={!canEdit}
+              label="Aplica periculosidade (30% sobre o salário base)"
             />
-          </CampoForm>
-        </FieldGrid>
+            <Checkbox
+              name="periculosidadeIntegral"
+              value="true"
+              defaultChecked={valores.periculosidadeIntegral}
+              disabled={!canEdit}
+              label="Periculosidade sobre a remuneração integral — somente eletricitários (Súmula 191 TST)"
+            />
+          </div>
+        </Card>
+      </SecaoDeConfiguracao>
 
-        <div className="mt-4">
-          <Checkbox
-            name="tercoApresentadoSeparado"
-            value="true"
-            defaultChecked={valores.tercoApresentadoSeparado}
-            disabled={!canEdit}
-            label="A contabilidade apresenta o 1/3 constitucional como item separado"
-          />
-          <p className="text-helper text-fg-muted mt-1 ml-6">
-            Desmarque se ela envia o 1/3 embutido nas férias — o item deixa de acusar divergência.
-          </p>
-        </div>
-      </section>
+      <SecaoDeConfiguracao
+        titulo="Médias de variáveis"
+        descricao="A janela e o período de onde sai a média das verbas variáveis nas férias e no 13º."
+        icone={<CalendarRange />}
+      >
+        <Card className="p-5">
+          <FieldGrid columns="sm:grid-cols-3">
+            <CampoForm label="Janela" htmlFor="mediaMeses" helper={heranca("mediaMeses") ?? "Entre 3 e 12."}>
+              <CampoNumero
+                id="mediaMeses"
+                name="mediaMeses"
+                min={3}
+                max={12}
+                suffix="meses"
+                defaultValue={valores.mediaMeses}
+                disabled={!canEdit}
+              />
+            </CampoForm>
 
-      <section className="pt-4 border-t border-border">
-        <h2 className="text-card-title font-semibold text-fg mb-1">Verbas não praticadas</h2>
-        <p className="text-fs-2 text-fg-muted mb-3">
-          Marcadas aqui deixam de entrar no total — mas continuam aparecendo na conferência com o valor que teriam,
-          pra ninguém esconder verba devida sem querer.
-        </p>
+            <CampoForm label="Base das férias" htmlFor="mediaBaseFerias" helper={heranca("mediaBaseFerias")}>
+              <Select id="mediaBaseFerias" name="mediaBaseFerias" defaultValue={valores.mediaBaseFerias} disabled={!canEdit}>
+                {MEDIA_BASE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            </CampoForm>
+
+            <CampoForm label="Base do 13º" htmlFor="mediaBaseDecimoTerceiro" helper={heranca("mediaBaseDecimoTerceiro")}>
+              <Select
+                id="mediaBaseDecimoTerceiro"
+                name="mediaBaseDecimoTerceiro"
+                defaultValue={valores.mediaBaseDecimoTerceiro}
+                disabled={!canEdit}
+              >
+                {MEDIA_BASE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            </CampoForm>
+          </FieldGrid>
+        </Card>
+      </SecaoDeConfiguracao>
+
+      <SecaoDeConfiguracao
+        titulo="Conferência"
+        descricao="Quanto de diferença o cálculo aceita antes de acusar divergência no TRCT, e como o 1/3 vem."
+        icone={<Scale />}
+      >
+        <Card className="p-5">
+          {/* Um campo só, de percentual: na coluna de um terço, a mesma das
+              médias acima — era meia tela para um número de até 5. */}
+          <FieldGrid columns="sm:grid-cols-3">
+            <CampoForm
+              label="Tolerância de divergência"
+              htmlFor="toleranciaPct"
+              helper={heranca("toleranciaPct") ?? "Máximo 5% — acima disso divergências reais deixariam de acender."}
+            >
+              <Input
+                id="toleranciaPct"
+                name="toleranciaPct"
+                type="number"
+                step="0.1"
+                min={0}
+                max={5}
+                suffix="%"
+                defaultValue={valores.toleranciaPct}
+                disabled={!canEdit}
+              />
+            </CampoForm>
+          </FieldGrid>
+
+          <div className="mt-4">
+            <Checkbox
+              name="tercoApresentadoSeparado"
+              value="true"
+              defaultChecked={valores.tercoApresentadoSeparado}
+              disabled={!canEdit}
+              label="A contabilidade apresenta o 1/3 constitucional como item separado"
+            />
+            <p className="text-helper text-fg-muted mt-1 ml-6">
+              Desmarque se ela envia o 1/3 embutido nas férias — o item deixa de acusar divergência.
+            </p>
+          </div>
+        </Card>
+      </SecaoDeConfiguracao>
+
+      <SecaoDeConfiguracao
+        titulo="Verbas não praticadas"
+        descricao="Marcadas aqui deixam de entrar no total — mas continuam aparecendo na conferência com o valor que teriam, pra ninguém esconder verba devida sem querer."
+        icone={<ListX />}
+      >
         {/* A chave remonta o bloco quando o que está gravado muda (depois de
             salvar), para a marcação partir do valor novo. */}
         <VerbasNaoPraticadas
@@ -201,15 +219,19 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
           iniciais={valores.verbasDesabilitadas}
           canEdit={canEdit}
         />
-      </section>
+      </SecaoDeConfiguracao>
 
-      <section className="pt-4 border-t border-border">
-        <h2 className="text-card-title font-semibold text-fg mb-1">Convenção coletiva</h2>
-        <p className="text-fs-2 text-fg-muted mb-3">
-          Texto de orientação exibido ao conferente — <strong>não é regra executável</strong>. O motor não interpreta
-          cláusula de CCT.
-        </p>
-        <div className="space-y-4">
+      <SecaoDeConfiguracao
+        titulo="Convenção coletiva"
+        descricao={
+          <>
+            Texto de orientação exibido ao conferente — <strong>não é regra executável</strong>. O motor não interpreta
+            cláusula de CCT.
+          </>
+        }
+        icone={<Handshake />}
+      >
+        <Card className="p-5 space-y-4">
           <CampoForm label="Sindicato / CCT" htmlFor="cctNome" helper={heranca("cctNome")}>
             <Input id="cctNome" name="cctNome" type="text" defaultValue={valores.cctNome ?? ""} maxLength={180} disabled={!canEdit} />
           </CampoForm>
@@ -223,11 +245,11 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
               placeholder="Ex: piso da categoria, adicionais previstos, prazos específicos…"
             />
           </CampoForm>
-        </div>
-      </section>
+        </Card>
+      </SecaoDeConfiguracao>
 
       {canEdit && (
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+        <div className="flex items-center justify-end gap-3 pt-5 border-t border-border">
           <Button
             variant="primary"
             size="md"

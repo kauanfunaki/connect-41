@@ -312,7 +312,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como mudar o horário da grade",
         passos: [
-          "Clique na sua foto, no alto da tela, e em “Configurações do perfil”.",
+          "Clique na sua foto, no alto da tela, e em “Sua conta”.",
           "Em “Agenda”, escolha “Usar o do escritório” ou “Definir o meu”.",
           "Para definir o seu, escolha o “Início” e o “Fim” e clique em “Salvar”. Um fim antes do início termina no dia seguinte — 22:00 às 6:00, por exemplo.",
         ],
