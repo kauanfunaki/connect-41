@@ -139,6 +139,7 @@ export default async function IntegracoesPage({
                   : null
               }
               motivo={prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null}
+              demonstracao={serpro.ambiente === "demonstracao"}
             />
           )}
           <ContasOmie contas={contasOmie} empresas={empresasParaOmie} />

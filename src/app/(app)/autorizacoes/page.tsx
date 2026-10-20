@@ -82,7 +82,8 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
   // A ligação com o Serpro (09/10/2026): conferir um cliente ou a carteira.
   // Sem ligação pronta, nada do Serpro aparece; com conexão salva, o consumo.
   const serpro = await configuracaoDoSerpro(acesso.tenantId);
-  const serproPronto = acesso.podeEditar && prontidaoDoSerpro(serpro).pronta;
+  // Na demonstração (20/10/2026) a conferência dos clientes não roda: o trial só responde aos exemplos.
+  const serproPronto = acesso.podeEditar && prontidaoDoSerpro(serpro).pronta && serpro?.ambiente === "producao";
   const [emAndamento, estimativa] = serproPronto
     ? await Promise.all([conferenciaEmAndamento(acesso.tenantId), estimativaDaConferencia(acesso.tenantId)])
     : [null, null];

@@ -8,9 +8,14 @@ import {
   foiCobrada,
   lerResposta,
   lerSujeitoDoCertificado,
+  lerAmbiente,
   lerTeto,
   pedidoDeProcuracao,
   resultadoDaConferencia,
+  tagDaRequisicao,
+  temMensagemDeErro,
+  tempoDeEsperaDoEtag,
+  valorDoEtag,
 } from "./regras";
 
 describe("o que o Serpro cobra", () => {
@@ -123,5 +128,36 @@ describe("a conferência das procurações", () => {
   it("erro: diz o porquê", () => {
     const r = resultadoDaConferencia(lerResposta(403, JSON.stringify({ mensagens: [{ codigo: "[AcessoNegado-PROCURACOES-40300]", texto: "Procurador diferente do Autor do pedido." }] })), HOJE);
     expect(r).toEqual({ tipo: "erro", texto: "Acesso negado pelo Serpro (cobrado): Procurador diferente do Autor do pedido." });
+  });
+});
+
+describe("Integra Contador, Fase 0 (20/10/2026)", () => {
+  it("o X-Request-Tag no formato da documentação: 32 posições", () => {
+    // O exemplo da página: Integra-SN, TRANSDECLARACAO11, sequencial 01.
+    expect(tagDaRequisicao("33683111000107", "33683111000875", 1)).toBe("23368311100010723368311100087501");
+    // CPF vai com zeros à esquerda; o sequencial de três dígitos fica nos dois últimos.
+    expect(tagDaRequisicao("98765432000198", "529.982.247-25", 104)).toBe("298765432000198100052998224725" + "04");
+    expect(tagDaRequisicao("98765432000198", "52998224725", 45)).toHaveLength(32);
+  });
+
+  it("lê o ETag do 204 e do 304", () => {
+    expect(tempoDeEsperaDoEtag('"tempoEspera:4000"')).toBe(4000);
+    expect(tempoDeEsperaDoEtag('W/"tempoEspera:2500"')).toBe(2500);
+    expect(tempoDeEsperaDoEtag('W/"331-4DwST0KULwsSAlYvaboLo8ctN0g"')).toBeNull();
+    expect(tempoDeEsperaDoEtag(undefined)).toBeNull();
+    expect(valorDoEtag('"protocoloRelatorio:+S7N6c04/Ab=="', "protocoloRelatorio")).toBe("+S7N6c04/Ab==");
+  });
+
+  it("o 200 com ERRO é erro, e diz por quê", () => {
+    const mensagens = [{ codigo: "ERRO", texto: "Dados inválidos. Utilize o json no menu Cenário da documentação." }];
+    expect(temMensagemDeErro(mensagens)).toBe(true);
+    expect(temMensagemDeErro([{ codigo: "[Sucesso-PGDASD]", texto: "" }])).toBe(false);
+    expect(explicarErro(200, mensagens)).toBe("O Serpro recusou o pedido: Dados inválidos. Utilize o json no menu Cenário da documentação.");
+  });
+
+  it("o ambiente: sem valor, produção", () => {
+    expect(lerAmbiente("demonstracao")).toBe("demonstracao");
+    expect(lerAmbiente(undefined)).toBe("producao");
+    expect(lerAmbiente("qualquer")).toBe("producao");
   });
 });
