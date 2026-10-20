@@ -307,6 +307,7 @@ export async function ContasPage({
               cobranca={cobranca}
               selecionar
               mostrarCentro={podeDefinirCentro}
+              mostrarEmpresa={!empresaId}
             />
             {/* Os totais do topo são do recorte inteiro (somados no banco); só
                 a lista para no teto — e diz que parou (08/10/2026). */}

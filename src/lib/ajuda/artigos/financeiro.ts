@@ -27,11 +27,11 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Conferir e registrar o pagamento",
         passos: [
-          "Na linha da conta, clique em “Conferir” para marcar que ela foi revisada. O botão só aparece enquanto a conta está a conferir.",
-          "Clique em “Pagar”.",
-          "Em “Data do pagamento”, informe o dia em que o dinheiro saiu. Não é possível usar data futura.",
-          "Clique em “Confirmar”. Registrar o pagamento é o que se chama de baixa.",
-          "Se errou, clique no botão “⋯” da conta paga e escolha “Desfazer pagamento”.",
+          "Conta com o selo “A conferir” ainda não foi revisada: clique no botão “⋯” da linha e escolha “Conferir”. Para várias de uma vez, marque as caixas à esquerda e clique em “Conferir marcadas”.",
+          "Clique em “Pagar”, o botão azul da linha.",
+          "Na janela, informe a data, a conta bancária e o valor. Não é possível usar data futura; valor menor que o da conta é um pagamento parcial, e o resto continua em aberto.",
+          "Clique em “Registrar pagamento”. Registrar o pagamento é o que se chama de baixa.",
+          "Se errou, clique em “Ver baixa” na linha da conta paga e em “Desfazer” no pagamento errado.",
         ],
       },
       {
@@ -54,7 +54,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado e mostra o motivo logo abaixo.",
+      "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado, e o motivo aparece ao passar o mouse sobre ele.",
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "“Abrir pendência” e “Enviar para aprovação” só aparecem quando o escritório usa esses módulos.",
     ],
@@ -80,11 +80,11 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Conferir e registrar o recebimento",
         passos: [
-          "Na linha da conta, clique em “Conferir” para marcar que ela foi revisada. O botão só aparece enquanto a conta está a conferir.",
-          "Clique em “Receber”.",
-          "Em “Data do recebimento”, informe o dia em que o dinheiro entrou. Não é possível usar data futura.",
-          "Clique em “Confirmar”. Registrar o recebimento é o que se chama de baixa.",
-          "Se errou, clique no botão “⋯” da conta recebida e escolha “Desfazer recebimento”.",
+          "Conta com o selo “A conferir” ainda não foi revisada: clique no botão “⋯” da linha e escolha “Conferir”. Para várias de uma vez, marque as caixas à esquerda e clique em “Conferir marcadas”.",
+          "Clique em “Receber”, o botão azul da linha.",
+          "Na janela, informe a data, a conta bancária e o valor. Não é possível usar data futura; valor menor que o da conta é um recebimento parcial, e o resto continua em aberto.",
+          "Clique em “Registrar recebimento”. Registrar o recebimento é o que se chama de baixa.",
+          "Se errou, clique em “Ver baixa” na linha da conta recebida e em “Desfazer” no recebimento errado.",
         ],
       },
       {

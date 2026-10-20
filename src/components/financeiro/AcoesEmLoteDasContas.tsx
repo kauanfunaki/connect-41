@@ -6,7 +6,8 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
-import { definirCentroDeCusto } from "@/lib/financeiro/acoes";
+import { Check } from "lucide-react";
+import { conferirContasEmLote, definirCentroDeCusto } from "@/lib/financeiro/acoes";
 import { FORM_DAS_CONTAS } from "@/lib/financeiro/contas";
 import { JanelaDaBaixaEmLote } from "./JanelaDaBaixaEmLote";
 
@@ -52,7 +53,8 @@ export function MarcarTodasAsContas() {
 
 /**
  * O que se faz com as contas marcadas na tabela: pagar (ou receber) todas de
- * uma vez — a baixa em lote da fila do BPO, 19/10 — e, quando a empresa usa
+ * uma vez — a baixa em lote da fila do BPO, 19/10 —, conferir as provisórias
+ * (escolha 12A, 20/10: o "Conferir" saiu da linha) e, quando a empresa usa
  * centro de custo, definir o centro delas.
  *
  * As caixas ficam nas linhas da tabela (componente de servidor) e se associam a
@@ -81,8 +83,25 @@ export function AcoesEmLoteDasContas({
   const [centroId, setCentroId] = useState("");
   const [pendente, startTransition] = useTransition();
   const [lote, setLote] = useState<string[] | null>(null);
+  const [conferindo, startConferir] = useTransition();
   const { marcadas } = useContasMarcadas();
   const toast = useToast();
+
+  function conferirMarcadas() {
+    const ids = caixas().filter((c) => c.checked).map((c) => c.value);
+    if (ids.length === 0) return;
+    startConferir(async () => {
+      const r = await conferirContasEmLote(ids);
+      if ("error" in r) {
+        toast.error(r.error);
+        return;
+      }
+      marcarTodas(false);
+      const feitas = `${r.conferidas} ${r.conferidas === 1 ? "conta conferida" : "contas conferidas"}`;
+      const fora = r.puladas > 0 ? ` — ${r.puladas} não ${r.puladas === 1 ? "estava" : "estavam"} a conferir.` : ".";
+      toast.success(feitas + fora);
+    });
+  }
   const comCentros = empresas.filter((e) => e.centros.length > 0);
 
   return (
@@ -108,6 +127,9 @@ export function AcoesEmLoteDasContas({
         <BulkActionBar count={marcadas} onClear={() => marcarTodas(false)}>
           <Button type="button" size="sm" onClick={() => setLote(caixas().filter((c) => c.checked).map((c) => c.value))}>
             {aPagar ? "Pagar marcadas" : "Receber marcadas"}
+          </Button>
+          <Button type="button" size="sm" variant="secondary" loading={conferindo} loadingLabel="Conferindo…" onClick={conferirMarcadas}>
+            <Check size={14} /> Conferir marcadas
           </Button>
           {comCentro && (
             <>
