@@ -6,6 +6,7 @@ import {
   lerRetencoes,
   liquidoDaConta,
   planoDasRetencoes,
+  retencoesDaNota,
   resumoDasRetencoes,
   vencimentoDoImposto,
   type RetencaoAtual,
@@ -110,5 +111,27 @@ describe("planoDasRetencoes", () => {
     const semConta: RetencaoAtual[] = [{ tributo: "CSLL", centavos: 1_000, conta: { id: "c", temBaixa: false, cancelada: true } }];
     expect(planoDasRetencoes(semConta, [{ tributo: "CSLL", centavos: 1_200 }])).toEqual({ ok: true, passos: [{ tipo: "criar", tributo: "CSLL", centavos: 1_200 }] });
     expect(planoDasRetencoes(semConta, [])).toEqual({ ok: true, passos: [{ tipo: "tirar", tributo: "CSLL", contaId: null }] });
+  });
+});
+
+describe("retencoesDaNota", () => {
+  const nota = { brutoCentavos: 100_000, liquidoCentavos: 88_850 };
+
+  it("o que a NFS-e declarou, na ordem dos tributos", () => {
+    expect(retencoesDaNota({ ISS: "50.00", IRRF: "15.00", PIS: "6.5" }, nota)).toEqual([
+      { tributo: "IRRF", centavos: 1_500 },
+      { tributo: "PIS", centavos: 650 },
+      { tributo: "ISS", centavos: 5_000 },
+    ]);
+  });
+
+  it("na dúvida, nada: sem líquido, chave estranha, valor que não é decimal, ou passando do retido", () => {
+    expect(retencoesDaNota({ IRRF: "15.00" }, { brutoCentavos: 100_000, liquidoCentavos: null })).toEqual([]);
+    expect(retencoesDaNota({ IRRF: "15.00", ICMS: "1.00" }, nota)).toEqual([]);
+    expect(retencoesDaNota({ IRRF: "15,00" }, nota)).toEqual([]);
+    expect(retencoesDaNota({ IRRF: 15 }, nota)).toEqual([]);
+    expect(retencoesDaNota({ INSS: "200.00" }, nota)).toEqual([]);
+    expect(retencoesDaNota(null, nota)).toEqual([]);
+    expect(retencoesDaNota(["IRRF"], nota)).toEqual([]);
   });
 });
