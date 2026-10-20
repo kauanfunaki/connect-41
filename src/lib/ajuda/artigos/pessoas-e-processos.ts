@@ -200,6 +200,15 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       "Organiza as avaliações de desempenho em ciclos. Cada ciclo reúne as notas por competência dos colaboradores avaliados e o plano de desenvolvimento de cada um.",
     secoes: [
       {
+        titulo: "Cadastrar as competências",
+        passos: [
+          "Clique na aba “Competências”.",
+          "Clique em “Nova competência”, preencha o “Nome da competência” e, se quiser, a “Descrição”.",
+          "Clique em “Cadastrar”. A coluna “Uso” mostra em quantas avaliações cada uma já recebeu nota.",
+          "Para mudar o nome ou a descrição, clique em “Editar” na linha.",
+        ],
+      },
+      {
         titulo: "Abrir um ciclo de avaliação",
         passos: [
           "Clique em “Novo ciclo”.",
@@ -228,7 +237,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "As competências avaliadas vêm do cadastro em “Admin → Competências”. Sem nenhuma cadastrada, não dá para avaliar.",
+      "As competências avaliadas ficam na aba “Competências”, nesta mesma tela. Quem gere as avaliações cadastra em “Nova competência”; sem nenhuma, não dá para avaliar.",
       "Depois de encerrado, o ciclo não aceita novas avaliações, e não há como reabri-lo pela tela.",
       "Para corrigir uma avaliação, clique em “Abrir” na linha do colaborador, dentro do ciclo.",
     ],

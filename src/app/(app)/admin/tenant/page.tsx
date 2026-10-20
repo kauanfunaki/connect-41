@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Building2, CalendarClock, Mail } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
@@ -6,6 +7,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { TenantForm } from "@/components/admin/TenantForm";
 import { SmtpConfigForm } from "@/components/admin/SmtpConfigForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { SecaoDeConfiguracao } from "@/components/configuracoes/SecaoDeConfiguracao";
 import { ExpedienteForm } from "@/components/agenda/ExpedienteForm";
 import { EXPEDIENTE_PADRAO } from "@/lib/agendaExpediente";
 import { carregarExpedienteDoEscritorio } from "@/lib/agendaExpedienteDb";
@@ -30,9 +32,14 @@ export default async function TenantPage() {
         subtitle="Os dados deste workspace no Connect."
       />
 
-      {/* Coluna de formulário (720px), como nas outras telas de cadastro: na
-          largura da página, o nome e o host SMTP viravam campos de 1.000px. */}
-      <div className="max-w-[720px]">
+      {/* Seções em duas colunas (escolha 1B dos Ajustes de 15/10): o título e o
+          que a seção faz à esquerda, o cartão com os campos à direita. Era uma
+          coluna de 720px presa à esquerda, com o resto da tela vazio. */}
+      <SecaoDeConfiguracao
+        titulo="Dados do escritório"
+        descricao="Nome e CNPJ como aparecem nos documentos e no portal."
+        icone={<Building2 />}
+      >
         <Card className="p-6">
           <TenantForm
             action={atualizarTenant}
@@ -46,28 +53,27 @@ export default async function TenantPage() {
             }}
           />
         </Card>
+      </SecaoDeConfiguracao>
 
-        {/* Horário da Agenda (05/10/2026): o padrão de quem não definiu um
-            próprio em /configuracoes. O `id` é o destino do link "Horário da
-            Agenda" no cartão da área, no início das configurações (14/10/2026). */}
-        <div id="horario-da-agenda" className="mt-10 mb-4 scroll-mt-6">
-          <h2 className="text-section font-semibold text-fg">Horário da Agenda</h2>
-          <p className="text-helper text-fg-muted mt-0.5">
-            As horas que a grade de dia e de semana mostra. Vale para todo o escritório; cada pessoa pode trocar pelo seu em Configurações › Sua conta.
-          </p>
-        </div>
-
+      {/* Horário da Agenda (05/10/2026): o padrão de quem não definiu um
+          próprio em /configuracoes. O `id` é o destino do item "Horário da
+          Agenda" da área do escritório, no início das configurações (14/10/2026). */}
+      <SecaoDeConfiguracao
+        id="horario-da-agenda"
+        titulo="Horário da Agenda"
+        descricao="As horas que a grade de dia e de semana mostra. Vale para todo o escritório; cada pessoa pode trocar pelo seu em Sua conta."
+        icone={<CalendarClock />}
+      >
         <Card className="p-6">
           <ExpedienteForm action={salvarExpedienteDoEscritorio} valor={expediente ?? EXPEDIENTE_PADRAO} />
         </Card>
+      </SecaoDeConfiguracao>
 
-        <div className="mt-10 mb-4">
-          <h2 className="text-section font-semibold text-fg">E-mail (SMTP)</h2>
-          <p className="text-helper text-fg-muted mt-0.5">
-            Usado para enviar documentos a clientes com prova de recebimento. Cada workspace usa sua própria conta de e-mail.
-          </p>
-        </div>
-
+      <SecaoDeConfiguracao
+        titulo="E-mail de envio (SMTP)"
+        descricao="A conta que manda documentos aos clientes, com prova de recebimento. Cada workspace usa a sua."
+        icone={<Mail />}
+      >
         <Card className="p-6">
           <SmtpConfigForm
             hasConfig={!!smtpConfig}
@@ -85,7 +91,7 @@ export default async function TenantPage() {
             }
           />
         </Card>
-      </div>
+      </SecaoDeConfiguracao>
     </PageContainer>
   );
 }
