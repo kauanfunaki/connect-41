@@ -4,10 +4,12 @@ Módulo `tech_ops_center`, rota `/ops`, grupo Operação do Tech. Reproduz o pai
 
 ## Ativação
 
-1. Aplicar a migration `20261020120000_ops_center` no ambiente escolhido pelo responsável pelo deploy. Esta implementação não aplica migrations no banco de uso do Connect.
+1. Aplicar as migrations `20261020120000_ops_center` e `20261020230000_ops_shared_credential` no ambiente escolhido pelo responsável pelo deploy. A segunda cria uma tabela nova; não altera nem remove dados existentes. Esta implementação não aplica migrations no banco de uso do Connect.
 2. Em Administração → Setores → Tech, habilitar Ops Center para o escritório. O plano também precisa permitir o módulo caso tenha uma lista restrita.
 3. Abrir Ops Center, cadastrar cada automação e escolher seu dono. Gestores do setor e administradores podem configurar; usuários do setor e perfis de leitura podem consultar. O setor efetivo do módulo é respeitado se houver transferência.
-4. Na ação Integração, gerar a chave e armazená-la na configuração protegida do bot. Ela aparece uma vez; o banco guarda apenas seu hash. Gerar outra revoga a anterior. Desativar o recebimento também revoga a chave e preserva o histórico.
+4. Em Administração → Integrações → Ops Center — bots, gerar a chave única do escritório e copiá-la para a configuração protegida das automações autorizadas. Ela aparece uma vez; o banco guarda apenas seu hash. Todos os bots usam a mesma chave e informam o próprio slug. Trocar a chave revoga a anterior para todos os bots; desativar uma automação preserva seu histórico e impede novos sinais e eventos.
+
+As chaves individuais emitidas antes desta mudança continuam válidas durante a transição para não interromper bots já configurados. Depois de trocar cada bot para a chave compartilhada, desative e reative a automação correspondente para revogar sua chave antiga.
 
 O dono é um usuário ativo do mesmo escritório com acesso ao setor do módulo. Sem dono, a automação permanece visível em Todas, mas erros não têm destinatário. O filtro Minhas automações usa a identidade da sessão e filtra cartões, totais do dia e histórico. A atribuição atual determina esse recorte, inclusive para eventos anteriores à troca de dono.
 
@@ -40,7 +42,7 @@ O produtor deve persistir `eventId` por tentativa. Retransmitir exatamente o mes
 
 O repositório inclui `scripts/ops-heartbeat.mjs`, independente do processamento do bot. Ele não lê `ENTRADA`, `SAIDA`, `DOCS` ou qualquer pasta de rede e não envia eventos. A cada 30 segundos faz somente `POST` sem corpo para o heartbeat da automação, com timeout e até três tentativas progressivas.
 
-1. Na tela Integração, copie o slug cadastrado e gere a chave.
+1. Copie o slug da automação no Ops Center e a chave compartilhada em Administração → Integrações → Ops Center — bots.
 2. Crie a configuração local sem versioná-la: `npm run ops:heartbeat -- --config=.local/ops-heartbeat.json`.
 3. Preencha `baseUrl`, `slug` e `token` nesse arquivo local. O token não deve ir para código, frontend ou log.
 4. Teste uma vez com `npm run ops:heartbeat -- --once --config=.local/ops-heartbeat.json`.

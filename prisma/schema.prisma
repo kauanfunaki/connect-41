@@ -34,6 +34,18 @@ model OpsWatcher {
   @@map("ops_watchers")
 }
 
+/// Credencial única do escritório para todos os bots do Ops Center.
+/// O token em texto aparece somente na geração; o banco guarda seu hash.
+model OpsApiCredential {
+  tenantId String @id
+  tokenHash String? @unique @db.Char(64)
+  version Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  @@map("ops_api_credentials")
+}
+
 model OpsEvent {
   id String @id @default(uuid())
   tenantId String
@@ -797,6 +809,7 @@ enum TrainingParticipantStatus {
 
 model Tenant {
   opsWatchers             OpsWatcher[]
+  opsApiCredential        OpsApiCredential?
   helpdeskRequesterSectors HelpdeskRequesterSector[]
   helpdeskCategories       HelpdeskCategory[]
   helpdeskSlaPolicies      HelpdeskSlaPolicy[]

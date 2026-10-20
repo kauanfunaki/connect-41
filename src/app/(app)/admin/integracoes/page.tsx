@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
-import { Building2, FileStack, FlaskConical, Leaf, MessageCircle, MessageSquareText, ShieldCheck, Sparkles, Video } from "lucide-react";
+import { Activity, Building2, FileStack, FlaskConical, Leaf, MessageCircle, MessageSquareText, ShieldCheck, Sparkles, Video } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
@@ -30,6 +30,9 @@ import { ServicoDoSerpro } from "@/components/admin/ServicoDoSerpro";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { Aviso } from "@/components/ui/Aviso";
 import { Selo, tomDaVariante, type TomDoSelo } from "@/components/ui/Selo";
+import { OpsCredentialForm } from "@/components/admin/OpsCredentialForm";
+import { podeNoModulo } from "@/lib/auth/modulo";
+import { MODULO_OPS } from "@/lib/ops/regras";
 
 const ERROR_LABEL: Record<string, string> = {
   "sem-permissao": "Sem permissão para conectar integrações.",
@@ -104,7 +107,8 @@ export default async function IntegracoesPage({
   // Credencial de sistema de terceiro, a chave da IA e o Chatwoot são
   // configuração do escritório inteiro — só quem o administra vê e mexe.
   const podeConfigurar = isFullWrite(ctx.role);
-  const [integracoes, contasOmie, empresasParaOmie, serpro, aiConfig, chatwootConnection, { labels: nomesDosSetores }] = podeConfigurar
+  const podeGerirOps = podeConfigurar && await podeNoModulo(ctx, MODULO_OPS, "gerir");
+  const [integracoes, contasOmie, empresasParaOmie, serpro, aiConfig, chatwootConnection, { labels: nomesDosSetores }, credencialOps] = podeConfigurar
     ? await Promise.all([
         listarIntegracoes(ctx.tenantId!, agora),
         listarContasOmie(ctx.tenantId!, agora),
@@ -113,8 +117,9 @@ export default async function IntegracoesPage({
         prisma.tenantAiConfig.findUnique({ where: { tenantId: ctx.tenantId } }),
         prisma.chatwootConnection.findFirst({ where: { tenantId: ctx.tenantId }, orderBy: { createdAt: "asc" } }),
         getSectorMaps(ctx.tenantId),
+        podeGerirOps ? prisma.opsApiCredential.findUnique({ where: { tenantId: ctx.tenantId }, select: { tokenHash: true, version: true } }) : Promise.resolve(null),
       ])
-    : [[], [], [], null, null, null, { labels: {} as Record<string, string> }];
+    : [[], [], [], null, null, null, { labels: {} as Record<string, string> }, null];
   const prontidaoSerpro = serpro ? prontidaoDoSerpro(serpro) : null;
   const chatwootWebhookUrl =
     chatwootConnection && process.env.APP_PUBLIC_URL
@@ -174,6 +179,16 @@ export default async function IntegracoesPage({
       selo: aiConfig ? { tom: "sucesso", rotulo: aiConfig.provider === "OPENAI" ? "OpenAI" : "Anthropic" } : { tom: "neutro", rotulo: "Sem chave" },
       estado: aiConfig ? "ligada" : "desligada",
       detalhe: aiConfig ? `Modelo ${aiConfig.model}` : "Sem chave, a IA fica desligada.",
+    });
+
+    if (podeGerirOps) blocos.push({
+      chave: "ops_center",
+      nome: "Ops Center — bots",
+      icone: <Activity />,
+      descricao: "Uma chave compartilhada pelo escritório para todas as automações do Ops Center.",
+      selo: credencialOps?.tokenHash ? { tom: "sucesso", rotulo: "Chave configurada" } : { tom: "neutro", rotulo: "Sem chave" },
+      estado: credencialOps?.tokenHash ? "ligada" : "desligada",
+      detalhe: "Os bots continuam identificados pelo próprio slug.",
     });
   }
 
@@ -260,6 +275,8 @@ export default async function IntegracoesPage({
             </div>
           ) : bloco.chave === "omie" ? (
             <ContasOmie contas={contasOmie} empresas={empresasParaOmie} podeDesfazerVirada={ctx.role === "SUPER_ADMIN"} />
+          ) : bloco.chave === "ops_center" ? (
+            <OpsCredentialForm hasToken={Boolean(credencialOps?.tokenHash)} version={credencialOps?.version ?? 0} />
           ) : bloco.chave === "chatwoot" ? (
             <div className="flex flex-col gap-5">
               <p className="text-fs-3 text-fg-secondary">
