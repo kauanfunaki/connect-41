@@ -15,6 +15,7 @@
 // cliente, e isso é outra decisão contábil.
 
 import { formatarReaisDeCentavos } from "@/lib/format";
+import { centavosDeDecimal } from "./contas";
 import { centavosDeTexto } from "./manual";
 
 export const TRIBUTOS_RETIDOS = ["IRRF", "PIS", "COFINS", "CSLL", "INSS", "ISS"] as const;
@@ -119,6 +120,29 @@ export function descricaoDaContaDoImposto(tributo: TributoRetido, p: { documento
 export function resumoDasRetencoes(r: RetencaoInformada[]): string | null {
   if (r.length === 0) return null;
   return r.map((x) => `${TRIBUTO[x.tributo].rotulo} ${reais(x.centavos)}`).join(" · ");
+}
+
+// ─── A nota fiscal ──────────────────────────────────────────────────────────
+
+/**
+ * As retenções que a NFS-e declara (`FiscalDocument.retentionsByTax`, lidas do
+ * XML na entrada), prontas para gerar as contas dos impostos no lançamento.
+ * Só com o líquido na nota — a conta já nasce nele — e cabendo no que foi
+ * retido (o bruto menos o líquido; o resto são descontos). Chave que não é
+ * tributo, ou valor que não é decimal, invalida o conjunto: na dúvida, nada, e
+ * as retenções se informam na edição da conta.
+ */
+export function retencoesDaNota(guardado: unknown, p: { brutoCentavos: number | null; liquidoCentavos: number | null }): RetencaoInformada[] {
+  if (!guardado || typeof guardado !== "object" || Array.isArray(guardado)) return [];
+  if (p.brutoCentavos === null || p.liquidoCentavos === null || p.liquidoCentavos <= 0) return [];
+  const retencoes: RetencaoInformada[] = [];
+  for (const [chave, valor] of Object.entries(guardado as Record<string, unknown>)) {
+    if (!tributoRetido(chave) || typeof valor !== "string" || !/^\d+(\.\d{1,2})?$/.test(valor)) return [];
+    const centavos = centavosDeDecimal(valor);
+    if (centavos > 0) retencoes.push({ tributo: chave, centavos });
+  }
+  if (somaDasRetencoes(retencoes) > p.brutoCentavos - p.liquidoCentavos) return [];
+  return retencoes.sort((a, b) => TRIBUTOS_RETIDOS.indexOf(a.tributo) - TRIBUTOS_RETIDOS.indexOf(b.tributo));
 }
 
 // ─── A edição, tributo a tributo ────────────────────────────────────────────

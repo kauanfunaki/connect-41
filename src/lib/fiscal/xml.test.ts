@@ -424,3 +424,72 @@ describe("NFS-e — bruto × líquido", () => {
     }
   });
 });
+
+// ── Retenções por tributo (lote D, 20/10) ───────────────────────────────────
+//
+// O que a conta a pagar usa para gerar a conta de cada imposto. Só vem quando
+// o líquido é confiável e os tributos cabem no que foi retido; na dúvida,
+// `null`, e as retenções se informam na edição da conta.
+const nacionalRetido = (p: { vLiq?: string; tpRetPisCofins?: string; tpRetISSQN?: string } = {}) => `<?xml version="1.0"?>
+<NFSe xmlns="http://www.sped.fazenda.gov.br/nfse"><infNFSe>
+  <nNFSe>2020</nNFSe>
+  <dhProc>2026-10-06T08:00:00-03:00</dhProc>
+  <emit><CNPJ>11222333000181</CNPJ><xNome>PRESTADORA EXEMPLO LTDA</xNome></emit>
+  <valores><vISSQN>50.00</vISSQN>${p.vLiq ? `<vLiq>${p.vLiq}</vLiq>` : ""}</valores>
+  <DPS><infDPS>
+    <serie>5</serie><nDPS>90</nDPS><dCompet>2026-10-01</dCompet>
+    <toma><CNPJ>11444777000161</CNPJ><xNome>TOMADORA EXEMPLO LTDA</xNome></toma>
+    <serv><valores><vServPrest><vServ>1000.00</vServ></vServPrest></valores></serv>
+    <valores><trib>
+      <tribMun><tribISSQN>1</tribISSQN><tpRetISSQN>${p.tpRetISSQN ?? "2"}</tpRetISSQN></tribMun>
+      <tribFed>
+        <piscofins><CST>01</CST><vPis>6.50</vPis><vCofins>30.00</vCofins><tpRetPisCofins>${p.tpRetPisCofins ?? "1"}</tpRetPisCofins></piscofins>
+        <vRetIRRF>15.00</vRetIRRF><vRetCSLL>10.00</vRetCSLL>
+      </tribFed>
+    </trib></valores>
+  </infDPS></DPS>
+</infNFSe></NFSe>`;
+
+describe("NFS-e — retenções por tributo", () => {
+  const TODOS = { PIS: "6.50", COFINS: "30.00", IRRF: "15.00", CSLL: "10.00", ISS: "50.00" };
+
+  it("ABRASF: cada tributo dos `<Valores>`, sem os descontos", () => {
+    expect(extraido(retidoNoServico).retencoesPorTributo).toEqual(TODOS);
+  });
+
+  it("ABRASF: ISS devido pelo prestador e líquido sem tributo dito não inventam retenção", () => {
+    expect(extraido(issNaoRetido).retencoesPorTributo).toBeNull();
+    // 2.500 com 2.375 declarados, mas sem `IssRetido`: a diferença não diz de qual tributo é.
+    expect(extraido(abrasf2).retencoesPorTributo).toBeNull();
+  });
+
+  it("nacional: os retidos da DPS e o ISS da nota, com o líquido declarado", () => {
+    const d = extraido(nacionalRetido({ vLiq: "888.50" }));
+    expect(d.valorLiquido).toBe("888.50");
+    expect(d.retencoesTotal).toBe("111.50");
+    expect(d.retencoesPorTributo).toEqual(TODOS);
+  });
+
+  it("nacional sem líquido declarado: o líquido sai da soma dos retidos", () => {
+    const d = extraido(nacionalRetido());
+    expect(d.valorLiquido).toBe("888.50");
+    expect(d.retencoesPorTributo).toEqual(TODOS);
+  });
+
+  it("nacional: PIS/COFINS e ISS não retidos ficam de fora", () => {
+    const d = extraido(nacionalRetido({ tpRetPisCofins: "2", tpRetISSQN: "1" }));
+    expect(d.retencoesPorTributo).toEqual({ IRRF: "15.00", CSLL: "10.00" });
+    expect(d.valorLiquido).toBe("975.00");
+  });
+
+  it("tributos que passam do retido: o XML se contradiz, e nada vira conta de imposto", () => {
+    // Declara 990 de líquido (10 retidos), mas os tributos somam 111,50.
+    const d = extraido(nacionalRetido({ vLiq: "990.00" }));
+    expect(d.valorLiquido).toBe("990.00");
+    expect(d.retencoesPorTributo).toBeNull();
+  });
+
+  it("NF-e, CT-e e nota sem retenção: nulo", () => {
+    for (const xml of [nfce, cte, abrasf1, nacional]) expect(extraido(xml).retencoesPorTributo).toBeNull();
+  });
+});

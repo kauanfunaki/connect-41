@@ -2554,6 +2554,12 @@ model FiscalDocument {
   /// Quanto foi retido, somado. Existe para a ficha poder **explicar** a
   /// diferença entre os dois valores em vez de só exibir dois números.
   retentionsTotal Decimal? @db.Decimal(12, 2)
+  /// As retenções por tributo que a NFS-e declara (lote D, 20/10), lidas do XML
+  /// na entrada: { "IRRF": "15.00", "PIS": "6.50", … }. É o que o lançamento usa
+  /// para gerar a conta de cada imposto. Nulo quando a nota não retém, quando
+  /// os números do XML não fecham, e na nota que chegou sem XML (o SPED só manda
+  /// o índice) ou antes desta coluna — aí as retenções se informam na edição.
+  retentionsByTax Json?
   issuedAt        DateTime
 
   /// Competência "AAAA-MM" — string e não data, porque é agrupador de mês e não
