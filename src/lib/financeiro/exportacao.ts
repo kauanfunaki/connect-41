@@ -41,12 +41,17 @@ const SITUACAO: Record<SituacaoDaConta, string> = {
   CANCELADA: "Cancelada",
 };
 
-const APROVACAO: Record<LinhaDaConta["approvalStatus"], string> = {
+export const APROVACAO_NA_EXPORTACAO: Record<LinhaDaConta["approvalStatus"], string> = {
   NAO_REQUER: "",
   AGUARDANDO: "Aguardando aprovação",
   APROVADO: "Aprovada",
   REPROVADO: "Reprovada",
 };
+
+/** A situação como a tela diz: a cancelada por renegociação ou perda diz o nome. */
+export function situacaoNaExportacao(l: Pick<LinhaDaConta, "closeReason" | "situacao">): string {
+  return l.closeReason === "RENEGOCIADO" ? "Renegociada" : l.closeReason === "PERDA" ? "Perda" : SITUACAO[l.situacao];
+}
 
 /**
  * Uma célula de texto, entre aspas. Texto que começa com `=`, `+`, `-` ou `@`
@@ -108,8 +113,7 @@ export function csvDasContas(linhas: readonly LinhaDaConta[], kind: TipoDeConta,
     "Aprovação",
   ];
   const corpo = linhas.map((l) => {
-    const situacao =
-      l.closeReason === "RENEGOCIADO" ? "Renegociada" : l.closeReason === "PERDA" ? "Perda" : SITUACAO[l.situacao];
+    const situacao = situacaoNaExportacao(l);
     const saldo = l.situacao === "CANCELADA" ? 0 : Math.max(l.valorCentavos - l.baixadoCentavos, 0);
     return [
       data(l.vencimentoKey),
@@ -127,7 +131,7 @@ export function csvDasContas(linhas: readonly LinhaDaConta[], kind: TipoDeConta,
       reais(l.baixadoCentavos),
       reais(saldo),
       l.pagoEm ? data(o.diaDe(l.pagoEm)) : "",
-      celula(APROVACAO[l.approvalStatus]),
+      celula(APROVACAO_NA_EXPORTACAO[l.approvalStatus]),
     ].join(";");
   });
   const aviso = o.limitada
