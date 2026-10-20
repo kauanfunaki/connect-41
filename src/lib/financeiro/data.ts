@@ -160,7 +160,9 @@ export async function listarContas(
   tenantId: string,
   kind: TipoDeConta,
   filtro: FiltroDeContas,
-  agora: Date
+  agora: Date,
+  /** O teto da lista: a tela para em `LIMITE_DE_CONTAS`; a exportação, em `LIMITE_DA_EXPORTACAO`. */
+  limite: number = LIMITE_DE_CONTAS
 ): Promise<ResultadoDeContas> {
   const prisma = getPrisma();
   const hojeKey = saoPauloParts(agora).dateKey;
@@ -183,7 +185,7 @@ export async function listarContas(
       where: daFila,
       select: CAMPOS,
       orderBy: [{ dueDate: "asc" }, { id: "asc" }],
-      take: LIMITE_DE_CONTAS,
+      take: limite,
     }),
     prisma.financeEntry.count({ where: doFiltro }),
     prisma.financeEntry.count({ where: { ...doFiltro, ...whereDoRecorte(recorte, hojeKey) } }),
@@ -195,7 +197,7 @@ export async function listarContas(
     ),
   ]);
 
-  const vagas = LIMITE_DE_CONTAS - naFila.length;
+  const vagas = limite - naFila.length;
   const historico =
     recorte === "todas" && vagas > 0
       ? await prisma.financeEntry.findMany({
