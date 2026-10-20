@@ -131,7 +131,8 @@ export default async function ConciliacaoPage({
 
   const prisma = getPrisma();
   const contas = await prisma.bankAccount.findMany({
-    where: { tenantId, companyId },
+    // A conta de adiantamento (lote D, 20/10) não tem extrato: mora em Contas a pagar e a receber.
+    where: { tenantId, companyId, type: { notIn: ["ADIANTAMENTO_FORNECEDOR", "ADIANTAMENTO_CLIENTE"] } },
     select: {
       id: true,
       nickname: true,
@@ -213,7 +214,8 @@ export default async function ConciliacaoPage({
                         bankCode: c.bankCode,
                         agency: c.agency,
                         accountNumber: c.accountNumber,
-                        type: c.type,
+                        // A consulta deixa a conta de adiantamento de fora: aqui só há banco.
+                        type: c.type === "POUPANCA" ? "POUPANCA" : "CORRENTE",
                         saldoInicial: c.openingBalance === null ? "" : textoDeCentavos(centavosDeDecimal(c.openingBalance)),
                         saldoInicialKey: c.openingBalanceDate ? saoPauloParts(c.openingBalanceDate).dateKey : "",
                         active: c.active,
@@ -660,6 +662,8 @@ async function candidatosDaEmpresa(
         bankMatch: { is: null },
         cash: { in: valoresExatos },
         entry: { kind: { in: tipos }, status: { not: "CANCELADO" } },
+        // A baixa pela conta de adiantamento não passou pelo banco: não casa com o extrato.
+        OR: [{ bankAccountId: null }, { bankAccount: { type: { notIn: ["ADIANTAMENTO_FORNECEDOR", "ADIANTAMENTO_CLIENTE"] } } }],
       },
       select: {
         id: true,

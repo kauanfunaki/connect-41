@@ -17,6 +17,9 @@ import { AnaliseDeContas } from "./AnaliseDeContas";
 import { AbasDeLink, FaixaDeTotais } from "./FiltroDePeriodo";
 import { situacoesDeCobranca, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
 import { AcoesEmLoteDasContas } from "./AcoesEmLoteDasContas";
+import { AdiantamentosDaEmpresa } from "./AdiantamentosDaEmpresa";
+import { tipoDoAdiantamento } from "@/lib/financeiro/adiantamento";
+import { adiantamentosLancados, saldosDeAdiantamento } from "@/lib/financeiro/adiantamentoServidor";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Aviso } from "@/components/ui/Aviso";
@@ -178,6 +181,16 @@ export async function ContasPage({
 
   // Centros ativos das empresas que aparecem na lista, para a barra de definir
   // centro. Sem nenhum centro cadastrado, nem a coluna de seleção aparece.
+  // Os adiantamentos da empresa (lote D, 20/10): por empresa, como a conta de adiantamento.
+  const tipoDoAdiantamentoDaTela = tipoDoAdiantamento(kind);
+  const [saldosDoAdiantamento, adiantamentosDaTela] =
+    empresaId && aba === "contas"
+      ? await Promise.all([
+          saldosDeAdiantamento(prisma, ctx.tenantId, empresaId, tipoDoAdiantamentoDaTela),
+          adiantamentosLancados(prisma, ctx.tenantId, empresaId, tipoDoAdiantamentoDaTela),
+        ])
+      : [[], []];
+
   const empresasDaLista = [...new Set(resultado.linhas.map((l) => l.empresaId))];
   const centros =
     aba === "contas" && empresasDaLista.length > 0
@@ -308,6 +321,9 @@ export async function ContasPage({
         </>
       ) : (
         <>
+          {empresaId && (
+            <AdiantamentosDaEmpresa companyId={empresaId} aPagar={aPagar} saldos={saldosDoAdiantamento} lancados={adiantamentosDaTela} />
+          )}
           {resultado.linhas.length > 0 && (
             <AcoesEmLoteDasContas empresas={empresasComCentros} comCentro={podeDefinirCentro} aPagar={aPagar} hojeISO={saoPauloParts(agora).dateKey} />
           )}

@@ -11,7 +11,12 @@ import { contaPrevistaDoLancamento, nomeDaContaBancaria, type ContaBancaria } fr
  */
 export async function contasBancariasDaEmpresa(tenantId: string, companyId: string, atualId?: string | null): Promise<ContaBancaria[]> {
   const contas = await getPrisma().bankAccount.findMany({
-    where: { tenantId, companyId, OR: [{ active: true }, ...(atualId ? [{ id: atualId }] : [])] },
+    where: {
+      tenantId,
+      companyId,
+      type: { notIn: ["ADIANTAMENTO_FORNECEDOR", "ADIANTAMENTO_CLIENTE"] },
+      OR: [{ active: true }, ...(atualId ? [{ id: atualId }] : [])],
+    },
     select: { id: true, nickname: true, accountNumber: true, active: true },
     orderBy: { nickname: "asc" },
   });

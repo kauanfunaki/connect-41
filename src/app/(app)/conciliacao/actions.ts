@@ -27,12 +27,11 @@ import { tipoCompativel, validarSelecao } from "@/lib/financeiro/conciliacao/cas
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 import { sincronizarAcordos } from "@/lib/financeiro/cobranca/sincronizar";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
-import { categoriaDaEmpresa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
-import { TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { categoriaDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { categoriaDeTransferencia } from "@/lib/financeiro/conciliacao/transferenciaServidor";
+import { ehContaDeAdiantamento } from "@/lib/financeiro/adiantamento";
 import {
-  NOME_DA_CATEGORIA_DE_TRANSFERENCIA,
   NOME_DA_CONTRAPARTE_DE_TRANSFERENCIA,
-  escolherCategoriaDeTransferencia,
   validarOutraConta,
   descricaoDaTransferencia,
   linhaDaOutraPonta,
@@ -217,10 +216,12 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
 
   const conta = await c.prisma.bankAccount.findFirst({
     where: { id: bankAccountId, tenantId: c.tenantId },
-    select: { id: true, companyId: true, active: true, bankCode: true, agency: true, accountNumber: true },
+    select: { id: true, companyId: true, active: true, bankCode: true, agency: true, accountNumber: true, type: true },
   });
   if (!conta) return { error: "Conta bancária não encontrada." };
   if (!conta.active) return { error: "Conta inativa. Reative antes de importar." };
+  // A conta de adiantamento (lote D, 20/10) não é banco: não tem extrato.
+  if (ehContaDeAdiantamento(conta.type)) return { error: "A conta de adiantamento não tem extrato." };
 
   const leitura = lerOfx(new Uint8Array(await arquivo.arrayBuffer()));
   if (!leitura.ok) return { error: leitura.erro };
@@ -838,30 +839,6 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
 // ─── Transferência entre contas (19/10) ─────────────────────────────────────
 //
 // A regra e o porquê estão em `src/lib/financeiro/conciliacao/transferencia.ts`.
-
-/**
- * A categoria de transferência do tipo, na empresa. O plano padrão da 41 só tem
- * a de saída; a de entrada nasce no padrão do escritório, com o mesmo nome e
- * fora da DRE, na primeira transferência que precisar dela.
- */
-async function categoriaDeTransferencia(
-  tx: Prisma.TransactionClient,
-  tenantId: string,
-  companyId: string,
-  kind: "PAGAR" | "RECEBER"
-): Promise<string> {
-  const candidatas = await tx.financeCategory.findMany({
-    where: ondeDaEmpresa(tenantId, companyId, { kind, apenasAtivas: false, incluirOcultas: true }),
-    select: { id: true, name: true, companyId: true, active: true },
-  });
-  const achada = escolherCategoriaDeTransferencia(candidatas);
-  if (achada) return achada.id;
-  const criada = await tx.financeCategory.create({
-    data: { tenantId, scope: "", name: NOME_DA_CATEGORIA_DE_TRANSFERENCIA, kind, dreGroup: TRANSFERENCIA },
-    select: { id: true },
-  });
-  return criada.id;
-}
 
 /** A ficha "Transferência entre contas" da empresa — a mesma das transferências do Omie. */
 async function contraparteDeTransferencia(tx: Prisma.TransactionClient, tenantId: string, companyId: string): Promise<string> {
