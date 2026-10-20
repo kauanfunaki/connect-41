@@ -337,6 +337,58 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
   return { ok: true };
 }
 
+export type ResultadoDaSerie = { error: string } | { ok: true; canceladas: number; ficaram: number };
+
+/**
+ * Cancela esta conta e as próximas da série da repetição (lote D): a mesma
+ * série, desta posição em diante. Cada uma passa pela regra do cancelamento
+ * manual (`podeCancelarManual`) e pela mesma trava de estado; a paga, a com
+ * baixa parcial ou a parcela de acordo fica como está e conta nas que
+ * ficaram. As anteriores não são tocadas.
+ */
+export async function cancelarProximasDaSerie(entryId: string): Promise<ResultadoDaSerie> {
+  const prisma = getPrisma();
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado." };
+  const conta = await prisma.financeEntry.findFirst({
+    where: { id: entryId, tenantId: ctx.tenantId },
+    select: { id: true, companyId: true, recurrenceId: true, recurrenceIndex: true },
+  });
+  if (!conta) return { error: "Lançamento não encontrado." };
+  if (!conta.recurrenceId || !conta.recurrenceIndex) return { error: "Este lançamento não faz parte de uma repetição." };
+
+  const c = await contexto(conta.companyId);
+  if (!c.ok) return { error: c.erro };
+
+  const daSerie = await prisma.financeEntry.findMany({
+    where: { tenantId: c.tenantId, companyId: conta.companyId, recurrenceId: conta.recurrenceId, recurrenceIndex: { gte: conta.recurrenceIndex } },
+    select: { id: true, status: true, paidAt: true, fiscalDocumentId: true, agreementId: true, paidPrincipal: true },
+  });
+  const cancelaveis = daSerie.filter((e) => podeCancelarManual(e).pode);
+  let canceladas = 0;
+  for (const e of cancelaveis) {
+    // A mesma trava do cancelamento de uma: a baixa ou o acordo que chegou
+    // antes não é cancelado por cima.
+    const r = await prisma.financeEntry.updateMany({
+      where: { id: e.id, tenantId: c.tenantId, status: e.status, paidAt: null, paidPrincipal: 0, agreementId: null, payments: { none: {} } },
+      data: { status: "CANCELADO", closeReason: "CANCELADO" },
+    });
+    canceladas += r.count;
+  }
+  if (canceladas === 0) return { error: "Nenhuma conta desta posição em diante pode ser cancelada." };
+
+  await logAudit({
+    tenantId: c.tenantId,
+    userId: c.ctx.userId,
+    action: "financeiro.entry.cancelled_manual",
+    entityType: "FinanceEntry",
+    entityId: entryId,
+    metadata: { serie: conta.recurrenceId, aPartirDe: conta.recurrenceIndex, canceladas },
+  });
+  revalidar();
+  return { ok: true, canceladas, ficaram: daSerie.length - canceladas };
+}
+
 // ─── Importação por CSV ─────────────────────────────────────────────────────
 
 /** Teto do texto recebido. O limite do corpo da action é 10 MB; o CSV de 2.000 linhas cabe em muito menos. */
