@@ -8,7 +8,8 @@
 // - **Prévia antes de gravar.** Os campos vêm da documentação e ainda não foram
 //   vistos numa resposta real; `gravar: false` faz a leitura inteira e só conta.
 // - **O Omie manda na conta que veio dele.** Lido de novo, o título atualiza a
-//   situação, o pagamento, o valor, o vencimento e a categoria. Exceção: conta
+//   situação, o pagamento, o valor, o vencimento e a categoria — e, desde
+//   20/10, a previsão e a conta corrente prevista. Exceção: conta
 //   que no Connect entrou em acordo ou foi baixada por perda — essa decisão é
 //   do Connect, e a leitura não a desfaz (`preservados`).
 // - **Entra como conferida**, não provisória: quem lançou no Omie foi o BPO.
@@ -325,10 +326,12 @@ export async function sincronizarFinanceiroDaEmpresa(
     // Conta ativa que só existe no Omie entra no Connect já ligada: o Omie é a
     // fonte, e sem a conta aqui não há onde importar o extrato. Conta do
     // Connect com o mesmo número que não ligou (dúvida) não ganha gêmea.
+    const aCriar: string[] = [];
     for (const o of contasDoOmie) {
       if (o.inativa || jaUsadas.has(o.id)) continue;
       if (contasDoConnect.some((c) => c.bankCode === o.banco && mesmoNumero(c.accountDigits, o.conta))) continue;
       somar("contas_criadas");
+      aCriar.push(o.id);
       if (!opcoes.gravar) continue;
       try {
         await prisma.bankAccount.create({
@@ -348,6 +351,27 @@ export async function sincronizarFinanceiroDaEmpresa(
       } catch (err) {
         if (!isPrismaUniqueError(err)) throw err;
       }
+    }
+
+    // A conta do Omie (`nCodCC`) → a conta do Connect ligada a ela, já com as
+    // ligações e as contas criadas acima: é a conta corrente prevista do título
+    // (20/10). Na prévia nada foi ligado nem criado; vale o que seria, para o resumo.
+    const contaDoConnect = new Map<string, string>();
+    if (opcoes.gravar) {
+      const ligadasAgora = await prisma.bankAccount.findMany({
+        where: { tenantId, companyId, omieAccountId: { not: null } },
+        select: { id: true, omieAccountId: true },
+      });
+      for (const c of ligadasAgora) contaDoConnect.set(c.omieAccountId!, c.id);
+    } else {
+      for (const c of contasDoConnect) if (c.omieAccountId) contaDoConnect.set(c.omieAccountId, c.id);
+      for (const [id, omie] of ligadas) if (!contaDoConnect.has(omie.id)) contaDoConnect.set(omie.id, id);
+      for (const id of aCriar) contaDoConnect.set(id, `previa:${id}`);
+    }
+    /** A conta corrente prevista: a do Connect ligada à do Omie; sem par, nenhuma. */
+    function contaPrevista(contaDoOmie: string | null): string | null {
+      const id = contaDoOmie ? contaDoConnect.get(contaDoOmie) : undefined;
+      return id && !id.startsWith("previa:") ? id : null;
     }
 
     // Contraparte dos lançamentos de conta que não têm cliente/fornecedor no Omie.
@@ -403,6 +427,7 @@ export async function sincronizarFinanceiroDaEmpresa(
           id: true, omieTitleId: true, status: true, paidAt: true, amount: true, dueDate: true,
           categoryId: true, competence: true, closeReason: true, agreementId: true,
           omieBaixaId: true, omieReconciledAt: true, issueDate: true, documentNumber: true,
+          forecastDate: true, bankAccountId: true,
           payments: { select: BAIXA_NO_ESPELHO },
         },
       });
@@ -422,6 +447,7 @@ export async function sincronizarFinanceiroDaEmpresa(
         }
         const categoryId = await categoriaDo(t);
         if (!categoryId) somar("sem_categoria");
+        if (t.contaCorrenteId && !contaDoConnect.has(t.contaCorrenteId)) somar("conta_prevista_sem_par");
         const dados = {
           status,
           paidAt: t.pagamento,
@@ -432,6 +458,10 @@ export async function sincronizarFinanceiroDaEmpresa(
           // Emissão e número do título (19/10): o Omie manda neles como no resto.
           issueDate: t.emissao,
           documentNumber: t.numeroDocumento,
+          // Previsão e conta corrente prevista (20/10), idem — sem elas no
+          // Omie, ficam sem aqui também.
+          forecastDate: t.previsao,
+          bankAccountId: contaPrevista(t.contaCorrenteId),
         } as const;
         const titulo = await tituloNoEspelho(t);
 
@@ -474,7 +504,10 @@ export async function sincronizarFinanceiroDaEmpresa(
           // A primeira leitura depois de 19/10 preenche a emissão e o número das
           // contas que já estavam no Connect.
           (atual.issueDate?.getTime() ?? null) !== (dados.issueDate?.getTime() ?? null) ||
-          atual.documentNumber !== dados.documentNumber;
+          atual.documentNumber !== dados.documentNumber ||
+          // Idem para a previsão e a conta prevista, na primeira depois de 20/10.
+          (atual.forecastDate?.getTime() ?? null) !== (dados.forecastDate?.getTime() ?? null) ||
+          atual.bankAccountId !== dados.bankAccountId;
         if (!mudou) {
           somar("iguais");
           continue;
@@ -606,7 +639,7 @@ export async function sincronizarFinanceiroDaEmpresa(
         where: { tenantId, companyId, omieMovementId: { in: avulsos.map((t) => t.movimentoId) } },
         select: {
           id: true, omieMovementId: true, paidAt: true, amount: true, competence: true,
-          categoryId: true, omieAccountId: true, omieReconciledAt: true,
+          categoryId: true, omieAccountId: true, omieReconciledAt: true, bankAccountId: true,
         },
       });
       const porMovimento = new Map(jaLancados.map((e) => [e.omieMovementId!, e]));
@@ -622,6 +655,9 @@ export async function sincronizarFinanceiroDaEmpresa(
           omieAccountId: t.contaId,
           omiePaidAmount: t.valor.toFixed(2),
           omieReconciledAt: t.conciliadoEm,
+          // A conta prevista é a conta em que o movimento passou: a edição a
+          // trava como a do título (20/10), e a leitura a mantém.
+          bankAccountId: contaPrevista(t.contaId),
         } as const;
         const atual = porMovimento.get(t.movimentoId);
         if (!atual) {
@@ -656,6 +692,7 @@ export async function sincronizarFinanceiroDaEmpresa(
           atual.amount.toFixed(2) !== dados.amount ||
           atual.competence !== dados.competence ||
           atual.omieAccountId !== dados.omieAccountId ||
+          atual.bankAccountId !== dados.bankAccountId ||
           (atual.omieReconciledAt?.getTime() ?? null) !== (t.conciliadoEm?.getTime() ?? null) ||
           (dados.categoryId !== null && atual.categoryId !== dados.categoryId);
         if (!mudou) continue;

@@ -102,6 +102,34 @@ describe("mapearMovimento", () => {
     const r = mapearMovimento(mov({ cCPFCNPJCliente: "" }));
     expect("fora" in r ? r : [r.contraparteDocumento, r.contraparteCodigo]).toEqual([null, "9001"]);
   });
+
+  it("conta corrente e previsão do título (20/10)", () => {
+    const r = mapearMovimento(mov({ nCodCC: 4455667, dDtPrevisao: "20/09/2026" }));
+    expect("fora" in r ? r : [r.contaCorrenteId, r.previsao?.toISOString()]).toEqual(["4455667", "2026-09-20T15:00:00.000Z"]);
+  });
+
+  it("sem conta corrente nem previsão no Omie: nulas, e o título entra igual", () => {
+    const r = mapearMovimento(mov());
+    expect("fora" in r ? r : [r.omieTitleId, r.contaCorrenteId, r.previsao]).toEqual(["555001", null, null]);
+    for (const nCodCC of [0, "0", "", null]) {
+      const s = mapearMovimento(mov({ nCodCC }));
+      expect("fora" in s ? s : s.contaCorrenteId).toBeNull();
+    }
+  });
+
+  it("previsão nula quando é o vencimento, fora do formato ou a conta não está em aberto", () => {
+    const previsao = (detalhes: Record<string, unknown>, resto?: Record<string, unknown>) => {
+      const r = mapearMovimento(mov({ dDtPrevisao: "20/09/2026", ...detalhes }, resto));
+      return "fora" in r ? r : r.previsao;
+    };
+    expect(previsao({ dDtPrevisao: "15/09/2026" })).toBeNull();
+    expect(previsao({ dDtPrevisao: "2026-09-20" })).toBeNull();
+    expect(previsao({ cStatus: "PAGO", dDtPagamento: "16/09/2026" })).toBeNull();
+    expect(previsao({ cStatus: "CANCELADO" })).toBeNull();
+    // A parcial continua em aberto: o resto ainda tem quando andar.
+    const parcial = previsao({ cStatus: "PAGTO_PARCIAL", dDtPagamento: "10/09/2026" }, { resumo: { cLiquidado: "N", nValPago: 500 } });
+    expect(parcial instanceof Date ? parcial.toISOString() : parcial).toBe("2026-09-20T15:00:00.000Z");
+  });
 });
 
 describe("categorias", () => {
@@ -131,6 +159,12 @@ describe("mensagemDoFinanceiro", () => {
       "10 movimentos lidos em 1 página(s): 7 contas entrariam, 1 seriam atualizadas, 1 com pagamento parcial (em aberto, com o que já foi pago), 2 sem título (lançamentos de conta corrente)."
     );
     expect(mensagemDoFinanceiro(c, true)).toContain("7 contas novas, 1 atualizadas");
+  });
+
+  it("avisa dos títulos com conta corrente do Omie que não tem par no Connect", () => {
+    expect(mensagemDoFinanceiro({ lidos: 4, paginas: 1, novos: 4, conta_prevista_sem_par: 3 }, true)).toContain(
+      "3 com conta corrente do Omie sem conta bancária ligada no Connect (ficam sem conta prevista)"
+    );
   });
 });
 
