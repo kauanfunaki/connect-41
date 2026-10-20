@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { RECORTES_A_PAGAR, RECORTES_A_RECEBER } from "@/lib/financeiro/exportacao";
 import { instanciaDoFinanceiro } from "@/lib/integracoes/omie/contas";
-import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3, Download } from "lucide-react";
+import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3 } from "lucide-react";
+import { BotaoDeExportar } from "@/components/shared/BotaoDeExportar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
@@ -19,7 +20,6 @@ import { AcoesEmLoteDasContas } from "./AcoesEmLoteDasContas";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Aviso } from "@/components/ui/Aviso";
-import { Button } from "@/components/ui/Button";
 import { formatarCompetencia, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
 import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
@@ -314,22 +314,18 @@ export async function ContasPage({
           <CascoDaTabela
             contagem={contarItens(resultado.linhas.length, "conta", "contas", resultado.limitada)}
             filtros={<FiltrosDaTela campos={filtros} naBarra />}
-            // A lista em CSV, com a empresa, a competência e o recorte da tela
-            // (lote D, 20/10). `download`: a rota devolve o arquivo.
+            // A lista em Excel (numa Tabela do Excel, pronta para a tabela
+            // dinâmica) ou em CSV, com a empresa, a competência e o recorte da
+            // tela (lote D, 20/10).
             acoes={
-              <Button
+              <BotaoDeExportar
                 href={`${base}/exportar?${new URLSearchParams({
                   empresa: empresaNaUrl(escolha) ?? "",
                   recorte,
                   ...(params.competencia ? { competencia: params.competencia } : {}),
                 })}`}
-                download
-                variant="secondary"
-                size="sm"
-                title="Exporta a lista com a empresa, a competência e o recorte escolhidos. Os funis das colunas não entram."
-              >
-                <Download size={14} /> Exportar CSV
-              </Button>
+                dica="Vai a lista com a empresa, a competência e o recorte escolhidos. Os funis das colunas não entram."
+              />
             }
           >
             <ContasTable

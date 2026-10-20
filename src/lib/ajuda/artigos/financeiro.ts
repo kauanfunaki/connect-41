@@ -58,7 +58,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado, e o motivo aparece ao passar o mouse sobre ele.",
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "“Abrir pendência” e “Enviar para aprovação” só aparecem quando o escritório usa esses módulos.",
-      "Para levar a lista para o Excel, clique em “Exportar CSV”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram), com a empresa, o centro, o projeto, o saldo e a aprovação de cada conta.",
+      "Para levar a lista para o Excel, clique em “Exportar” › “Excel”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram). O arquivo vem numa Tabela do Excel, com data como data e valor como número — no Excel, “Inserir” › “Tabela dinâmica” já pega a tabela. Conta rateada sai numa linha por parte do rateio. “Exportar” › “CSV” continua para outros sistemas.",
       "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
     ],
   },
@@ -113,7 +113,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     dicas: [
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "Conta “Renegociada” ou “Perda” saiu do em aberto pela tela “Cobrança” (acordo ou baixa por perda).",
-      "Para levar a lista para o Excel, clique em “Exportar CSV”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram), com a empresa, o centro, o projeto, o saldo e a aprovação de cada conta.",
+      "Para levar a lista para o Excel, clique em “Exportar” › “Excel”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram). O arquivo vem numa Tabela do Excel, com data como data e valor como número — no Excel, “Inserir” › “Tabela dinâmica” já pega a tabela. Conta rateada sai numa linha por parte do rateio. “Exportar” › “CSV” continua para outros sistemas.",
       "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
     ],
   },
