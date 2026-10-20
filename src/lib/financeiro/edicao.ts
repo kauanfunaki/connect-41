@@ -15,8 +15,9 @@
 // - **origem** trava o que pertence a ela: a nota (valor, emissão, número e
 //   contraparte), o acordo de cobrança (valor, vencimento e contraparte da
 //   parcela) e o Omie, enquanto a empresa é lida de lá — o que a leitura
-//   reescreve (valor, vencimento, competência, categoria, emissão e número)
-//   voltaria ao do Omie na leitura seguinte.
+//   reescreve (valor, vencimento, competência, categoria, emissão, número e,
+//   desde 20/10, previsão e conta corrente prevista) voltaria ao do Omie na
+//   leitura seguinte.
 //
 // Cada trava diz o porquê e o caminho. Ninguém edita conta cancelada,
 // renegociada ou baixada por perda: o caminho é desfazer o que a encerrou.
@@ -56,7 +57,7 @@ export type ContaParaEditar = {
 };
 
 const DINHEIRO: CampoEditavel[] = ["valor", "vencimento"];
-const DO_OMIE: CampoEditavel[] = ["valor", "vencimento", "competencia", "categoria", "emissao", "numeroDocumento"];
+const DO_OMIE: CampoEditavel[] = ["valor", "vencimento", "competencia", "categoria", "emissao", "numeroDocumento", "previsao", "conta"];
 const DA_NOTA: CampoEditavel[] = ["valor", "emissao", "numeroDocumento", "contraparte"];
 const DO_ACORDO: CampoEditavel[] = ["valor", "vencimento", "contraparte"];
 
