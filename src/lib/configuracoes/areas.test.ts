@@ -52,13 +52,15 @@ describe("menu das configurações por papel", () => {
       "Feriados",
       "Plano de contas",
       "Cálculo de rescisão",
-      "Competências",
     ]);
+    // Competências saiu daqui em 20/10/2026: é uma aba de Avaliações de
+    // desempenho, de quem gere o módulo (escolha 8A).
     // Os 19 cartões do administrador em autoatendimento (levantamento de 14/10),
     // mais o Portal em duas telas (Acessos e Telas liberadas) e o atalho do
-    // Horário da Agenda, que é um trecho da tela Empresa.
+    // Horário da Agenda, que é um trecho da tela Empresa — menos Competências,
+    // que foi para Avaliações de desempenho (20/10).
     const total = Object.values(telasDoMenu(ADMIN_AUTO)).flat().length;
-    expect(total).toBe(19 + 1 + 1);
+    expect(total).toBe(19 + 1 + 1 - 1);
   });
 
   it("gestor de setor vê só o que abre hoje: campos, tags e integrações — sem Plano de contas (dava 404)", () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeftRight, ChevronDown } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, LogOut, UserRound } from "lucide-react";
 import { Dropdown, DropdownItem, DropdownSeparator } from "@/components/ui/Dropdown";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 
@@ -23,7 +23,8 @@ type Props = {
 };
 
 // O menu do usuário (redesenho de 02/10/2026, pedido de 01/10):
-// • botão e menu da mesma largura (220px); no celular o botão é só a foto;
+// • menu de 220px; no celular o botão é só a foto (desde 20/10 o botão tem o
+//   tamanho do nome — ver abaixo);
 // • a troca de setor e de escritório veio para cá — era o cartão embaixo da
 //   logo, cujo lugar ficou com a busca (e na tarde de 02/10 virou janela
 //   própria — ver abaixo);
@@ -32,6 +33,15 @@ type Props = {
 // Desde 02/10/2026 (pedido do Kauan: o menu ficava poluído com as duas listas),
 // setor e escritório saem do menu: um item só, com o lugar atual embaixo, abre
 // a janela de troca no centro da tela.
+//
+// Ajustes de 15/10 (escolha 10D, "a menor mudança", 20/10/2026):
+// • o botão fica do tamanho do nome — com 220px fixos sobrava um vão à direita
+//   em nome curto;
+// • a troca de setor sai do menu no computador, onde ela já tem o botão no
+//   cabeçalho, ao lado do recolher; no celular o cabeçalho não tem esse botão,
+//   e ela continua aqui;
+// • "Configurações do perfil" vira "Sua conta" (o nome da tela que abre), com
+//   ícone, como o Sair — a engrenagem do topo é que leva às do escritório.
 export function ProfileMenu({ name, roleLabel, photoUrl, tenants, currentTenantId, sectors, activeSector, onTrocar }: Props) {
   const router = useRouter();
   const podeTrocarSetor = sectors.length > 1;
@@ -53,7 +63,7 @@ export function ProfileMenu({ name, roleLabel, photoUrl, tenants, currentTenantI
           onClick={toggle}
           aria-expanded={open}
           aria-label="Menu do usuário"
-          className={`flex items-center gap-2.5 h-[38px] pl-1 pr-1 sm:pr-2.5 sm:w-[220px] rounded-md bg-surface-hover border transition-colors ${
+          className={`flex items-center gap-2.5 h-[38px] pl-1 pr-1 sm:pr-2.5 sm:max-w-[260px] rounded-md bg-surface-hover border transition-colors ${
             open ? "border-border-strong" : "border-border hover:border-border-strong"
           }`}
         >
@@ -74,35 +84,45 @@ export function ProfileMenu({ name, roleLabel, photoUrl, tenants, currentTenantI
           </div>
 
           {(podeTrocarSetor || podeTrocarTenant) && (
-            <DropdownItem
-              onClick={() => {
-                // Fecha o menu antes: a janela abre por cima, sem o menu atrás.
-                close();
-                onTrocar();
-              }}
-            >
-              <span className="flex items-center gap-2.5 min-w-0">
-                <ArrowLeftRight size={15} className="flex-shrink-0 text-fg-muted" />
-                <span className="min-w-0">
-                  <span className="block">{podeTrocarTenant ? "Trocar setor ou escritório" : "Trocar de setor"}</span>
-                  <span className="flex items-center gap-1.5 text-micro font-normal text-fg-muted truncate">
-                    {podeTrocarTenant && <span className="truncate">{tenants.find((t) => t.id === currentTenantId)?.name}</span>}
-                    {podeTrocarTenant && <span aria-hidden>·</span>}
-                    {setorAtual && (
-                      <span aria-hidden className="inline-block size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: setorAtual.color }} />
-                    )}
-                    <span className="truncate">{setorAtual?.label ?? "Todos os setores"}</span>
+            <div className="lg:hidden">
+              <DropdownItem
+                onClick={() => {
+                  // Fecha o menu antes: a janela abre por cima, sem o menu atrás.
+                  close();
+                  onTrocar();
+                }}
+              >
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <ArrowLeftRight size={15} className="flex-shrink-0 text-fg-muted" />
+                  <span className="min-w-0">
+                    <span className="block">{podeTrocarTenant ? "Trocar setor ou escritório" : "Trocar de setor"}</span>
+                    <span className="flex items-center gap-1.5 text-micro font-normal text-fg-muted truncate">
+                      {podeTrocarTenant && <span className="truncate">{tenants.find((t) => t.id === currentTenantId)?.name}</span>}
+                      {podeTrocarTenant && <span aria-hidden>·</span>}
+                      {setorAtual && (
+                        <span aria-hidden className="inline-block size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: setorAtual.color }} />
+                      )}
+                      <span className="truncate">{setorAtual?.label ?? "Todos os setores"}</span>
+                    </span>
                   </span>
                 </span>
-              </span>
-            </DropdownItem>
+              </DropdownItem>
+              <DropdownSeparator />
+            </div>
           )}
 
-          {(podeTrocarSetor || podeTrocarTenant) && <DropdownSeparator />}
-          <DropdownItem onClick={() => router.push("/configuracoes")}>Configurações do perfil</DropdownItem>
+          <DropdownItem onClick={() => router.push("/configuracoes")}>
+            <span className="flex items-center gap-2.5">
+              <UserRound size={15} className="flex-shrink-0 text-fg-muted" />
+              Sua conta
+            </span>
+          </DropdownItem>
           <DropdownSeparator />
           <DropdownItem danger onClick={handleLogout}>
-            Sair
+            <span className="flex items-center gap-2.5">
+              <LogOut size={15} className="flex-shrink-0" />
+              Sair
+            </span>
           </DropdownItem>
         </>
       )}

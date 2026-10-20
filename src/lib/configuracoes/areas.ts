@@ -244,14 +244,6 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
         rota: "/admin/rescisao",
         acesso: "admin",
       },
-      {
-        chave: "competencias",
-        rotulo: "Competências",
-        descricao: "A lista usada nas avaliações de desempenho.",
-        href: "/admin/competencias",
-        rota: "/admin/competencias",
-        acesso: "admin",
-      },
     ],
   },
   {

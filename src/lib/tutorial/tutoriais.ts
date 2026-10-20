@@ -202,7 +202,7 @@ export function tutorialDaEquipe(o: OpcoesDaEquipe): Tutorial {
       itens: [
         "O número no sino é o que você ainda não leu.",
         ...(o.avisosNoCelular
-          ? ["Para receber os avisos também no celular, clique no seu nome ou na sua foto, no canto de cima, e em Configurações do perfil."]
+          ? ["Para receber os avisos também no celular, clique no seu nome ou na sua foto, no canto de cima, e em Sua conta."]
           : []),
       ],
     },
