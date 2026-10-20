@@ -630,6 +630,9 @@ model Tenant {
   accessAuthorizations      AccessAuthorization[]
   accessAuthorizationGrantee AccessAuthorizationGrantee?
   serproCalls               SerproCall[]
+  serproEventos             SerproEvento[]
+  serproPedidos             SerproPedido[]
+  serproMensagens           SerproMensagem[]
   omieEmissoes              OmieEmissao[]
   @@map("tenants")
 }
@@ -7057,6 +7060,104 @@ model SerproCall {
   @@index([tenantId, createdAt])
   @@index([tenantId, idServico, contribuinte])
   @@map("serpro_calls")
+}
+
+/// Eventos de Atualização do Serpro (Fase 1 do Integra Contador, 20/10/2026):
+/// o último evento de cada tipo por contribuinte. Uma vez por dia o agendador
+/// pede a matriz em lote (até 1.000 por pedido), que é de graça (Monitorar).
+/// E0301 = a DCTFWeb recebeu apuração ou declaração; E0601 = mensagem nova na
+/// Caixa Postal; E0701 = pagamento novo, alterado ou cancelado.
+model SerproEvento {
+  id        String    @id @default(uuid())
+  tenantId  String
+  /// A chave da autorização: raiz do CNPJ (8) ou CPF (11). A matriz vale para as filiais.
+  chave     String    @db.VarChar(14)
+  /// O documento que foi ao Serpro: o CNPJ da matriz ou o CPF.
+  documento String    @db.VarChar(14)
+  evento    String    @db.VarChar(5)
+  /// Dia do último evento, nos 60 dias que o Serpro guarda. Nulo = nenhum.
+  ultimoEm  DateTime?
+  /// "x" na matriz: o Serpro negou o acesso em D-1 — falta a autorização.
+  semAcesso Boolean   @default(false)
+  /// Evento novo que o Connect ainda não tratou (a Caixa Postal ainda não buscou a lista).
+  pendente  Boolean   @default(false)
+  lidoEm    DateTime
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, chave, evento])
+  @@index([tenantId, evento, pendente])
+  @@map("serpro_eventos")
+}
+
+/// Os pedidos que o Serpro responde depois (20/10/2026): o relatório de
+/// situação fiscal (Sitfis) e o lote dos Eventos. Guarda o protocolo e a
+/// próxima tentativa, que nunca vem antes do tempo de espera — o Sitfis
+/// cobra o 202 de quem pergunta cedo demais.
+model SerproPedido {
+  id               String   @id @default(uuid())
+  tenantId         String
+  /// SITFIS, ou EVENTOS:<evento>:<PF|PJ>.
+  tipo             String   @db.VarChar(30)
+  /// O contribuinte (Sitfis) ou "lote:N" (Eventos).
+  contribuinte     String   @db.VarChar(14)
+  /// A empresa da ficha que pediu (Sitfis).
+  companyId        String?
+  protocolo        String?  @db.Text
+  /// PROTOCOLO (falta pedir), RESULTADO (falta buscar o resultado), PRONTO, FALHOU ou EXPIRADO.
+  situacao         String   @db.VarChar(12)
+  proximaTentativa DateTime
+  tentativas       Int      @default(0)
+  /// O dia (São Paulo) em que o protocolo vale: o do Sitfis morre no fim do dia.
+  dia              String   @db.VarChar(10)
+  erro             String?  @db.VarChar(500)
+  /// O PDF guardado nos Arquivos (Sitfis).
+  driveFileId      String?
+  pedidoPorId      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, situacao, proximaTentativa])
+  @@index([tenantId, companyId, tipo])
+  @@map("serpro_pedidos")
+}
+
+/// As mensagens da Caixa Postal da Receita (20/10/2026), como a lista do
+/// Serpro trouxe: a tela mostra assunto, data e relevância sem pagar de novo.
+/// O corpo só existe depois de aberta pelo Connect — abrir dá ciência da
+/// intimação (Decreto 70.235/1972, art. 23, § 2º, III), e quem abre fica gravado.
+model SerproMensagem {
+  id             String    @id @default(uuid())
+  tenantId       String
+  chave          String    @db.VarChar(14)
+  documento      String    @db.VarChar(14)
+  /// O identificador da mensagem no Serpro.
+  isn            String    @db.VarChar(20)
+  assunto        String    @db.VarChar(400)
+  enviadaEm      DateTime
+  relevante      Boolean
+  origem         String?   @db.VarChar(120)
+  numeroControle String?   @db.VarChar(30)
+  validaAte      DateTime?
+  /// A ciência que o Serpro informa, venha de onde vier (inclusive do e-CAC).
+  cienciaEm      DateTime?
+  lidaNoSerpro   Boolean   @default(false)
+  /// Aberta pelo Connect: quando e por quem.
+  abertaEm       DateTime?
+  abertaPorId    String?
+  corpo          String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, chave, isn])
+  @@index([tenantId, abertaEm])
+  @@map("serpro_mensagens")
 }
 
 // ── Triagem de currículos (R1) ─────────────────────────────────────────────

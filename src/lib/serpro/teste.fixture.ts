@@ -70,6 +70,99 @@ export function configDeProducao(): Record<string, string> {
   };
 }
 
+// ─── Uma tabela genérica (Fase 1, 20/10/2026) ────────────────────────────────
+// O bastante do Prisma para os eventos, os pedidos e as mensagens: igualdade,
+// `in`, `not`, `startsWith`, `lte`/`lt`/`gte`, chave composta, `orderBy`, `take`.
+
+type Linha = Record<string, unknown> & { id: string };
+
+const igual = (a: unknown, b: unknown) => (a instanceof Date && b instanceof Date ? a.getTime() === b.getTime() : a === b);
+const valorDe = (v: unknown) => (v instanceof Date ? v.getTime() : (v as number | string));
+
+function casa(l: Record<string, unknown>, onde: Record<string, unknown> = {}): boolean {
+  return Object.entries(onde).every(([k, cond]) => {
+    const v = l[k];
+    if (cond && typeof cond === "object" && !(cond instanceof Date) && !Array.isArray(cond)) {
+      const c = cond as Record<string, unknown>;
+      if ("in" in c) return (c.in as unknown[]).some((x) => igual(x, v));
+      if ("not" in c) return !igual(c.not, v);
+      if ("startsWith" in c) return typeof v === "string" && v.startsWith(c.startsWith as string);
+      if ("lte" in c) return v != null && valorDe(v) <= valorDe(c.lte);
+      if ("lt" in c) return v != null && valorDe(v) < valorDe(c.lt);
+      if ("gte" in c) return v != null && valorDe(v) >= valorDe(c.gte);
+      return casa(l, c); // a chave composta: { tenantId_chave_evento: { … } }
+    }
+    return igual(cond, v);
+  });
+}
+
+export function tabela(padroes: Record<string, unknown> = {}) {
+  const linhas: Linha[] = [];
+  let n = 0;
+  const nova = (data: Record<string, unknown>): Linha => {
+    const agora = new Date();
+    const l = { createdAt: agora, updatedAt: agora, ...padroes, ...data, id: (data.id as string) ?? `id-${++n}` } as Linha;
+    linhas.push(l);
+    return l;
+  };
+  const ordenar = (lista: Linha[], orderBy?: Record<string, "asc" | "desc"> | Record<string, "asc" | "desc">[]) => {
+    const criterios = orderBy ? [orderBy].flat() : [];
+    return [...lista].sort((a, b) => {
+      for (const c of criterios) {
+        const [campo, sentido] = Object.entries(c)[0];
+        const x = valorDe(a[campo]) ?? "";
+        const y = valorDe(b[campo]) ?? "";
+        if (x < y) return sentido === "asc" ? -1 : 1;
+        if (x > y) return sentido === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+  type Busca = { where?: Record<string, unknown>; orderBy?: Record<string, "asc" | "desc">; take?: number; distinct?: string[] };
+  const buscar = (b: Busca = {}) => {
+    let r = ordenar(linhas.filter((l) => casa(l, b.where)), b.orderBy);
+    if (b.distinct) {
+      const vistos = new Set<string>();
+      r = r.filter((l) => {
+        const chave = b.distinct!.map((d) => String(l[d])).join("|");
+        return vistos.has(chave) ? false : (vistos.add(chave), true);
+      });
+    }
+    return (b.take ? r.slice(0, b.take) : r).map((l) => ({ ...l }));
+  };
+  return {
+    linhas,
+    findMany: async (b: Busca = {}) => buscar(b),
+    findFirst: async (b: Busca = {}) => buscar(b)[0] ?? null,
+    findUnique: async (b: { where: Record<string, unknown> }) => buscar(b)[0] ?? null,
+    count: async (b: Busca = {}) => buscar(b).length,
+    create: async ({ data }: { data: Record<string, unknown> }) => ({ ...nova(data) }),
+    createMany: async ({ data }: { data: Record<string, unknown>[] }) => {
+      data.forEach(nova);
+      return { count: data.length };
+    },
+    update: async ({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
+      const l = linhas.find((x) => casa(x, where));
+      if (!l) throw new Error("registro não encontrado");
+      Object.assign(l, data, { updatedAt: new Date() });
+      return { ...l };
+    },
+    updateMany: async ({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
+      const alvo = linhas.filter((x) => casa(x, where));
+      alvo.forEach((l) => Object.assign(l, data, { updatedAt: new Date() }));
+      return { count: alvo.length };
+    },
+    upsert: async ({ where, create, update }: { where: Record<string, unknown>; create: Record<string, unknown>; update: Record<string, unknown> }) => {
+      const l = linhas.find((x) => casa(x, where));
+      if (l) return { ...Object.assign(l, update, { updatedAt: new Date() }) };
+      return { ...nova(create) };
+    },
+    zerar: () => {
+      linhas.length = 0;
+    },
+  };
+}
+
 export function bancoFalso() {
   const estado = {
     conexao: null as { id: string; enabled: boolean; configEnc: string; updatedAt: Date; cursor: string | null } | null,
@@ -77,8 +170,18 @@ export function bancoFalso() {
     autorizacoes: new Map<string, Autorizacao>(),
     chamadas: [] as LinhaDaChamada[],
   };
+  // Fase 1: os modelos novos e o que o Sitfis e a Caixa Postal leem.
+  const tabelas = {
+    serproEvento: tabela({ semAcesso: false, pendente: false, ultimoEm: null }),
+    serproPedido: tabela({ tentativas: 0, protocolo: null, companyId: null, erro: null, driveFileId: null, pedidoPorId: null }),
+    serproMensagem: tabela({ lidaNoSerpro: false, abertaEm: null, abertaPorId: null, corpo: null, cienciaEm: null, validaAte: null, origem: null, numeroControle: null }),
+    company: tabela({ displayName: null, cpf: null, cnpj: null }),
+    driveFolder: tabela({ parentId: null, deletedAt: null, systemKey: null }),
+    user: tabela(),
+  };
 
   const prisma = {
+    ...tabelas,
     tenantIntegration: {
       findUnique: async () => (estado.conexao ? { ...estado.conexao } : null),
       update: async ({ data }: { data: { cursor: string | null } }) => {
@@ -143,9 +246,10 @@ export function bancoFalso() {
     estado.quemRecebe = null;
     estado.autorizacoes.clear();
     estado.chamadas.length = 0;
+    Object.values(tabelas).forEach((t) => t.zerar());
   };
 
-  return { estado, prisma, conectar, zerar };
+  return { estado, prisma, tabelas, conectar, zerar };
 }
 
 export type RespostaRoteirizada = { status: number; corpo?: string; cabecalhos?: CabecalhosDaResposta } | Error;
@@ -180,4 +284,20 @@ export function transporteFalso(responder: (r: RequisicaoHttps, n: number) => Re
     autenticacoes: () => pedidos.filter((p) => p.url.endsWith("/authenticate")),
     chamadas: () => pedidos.filter((p) => !p.url.endsWith("/authenticate")),
   };
+}
+
+/** O transporte com um roteiro por serviço (Fase 1): cada um conta as próprias chamadas. */
+export function transportePorServico(roteiro: Record<string, (n: number, corpo: { pedidoDados: { idServico: string; dados: string } }) => RespostaRoteirizada>) {
+  const vezes = new Map<string, number>();
+  const t = transporteFalso((r) => {
+    const corpo = JSON.parse(r.corpo) as { pedidoDados: { idServico: string; dados: string } };
+    const id = corpo.pedidoDados.idServico;
+    const responder = roteiro[id];
+    if (!responder) throw new Error(`o teste não esperava ${id}`);
+    const n = vezes.get(id) ?? 0;
+    vezes.set(id, n + 1);
+    return responder(n, corpo);
+  });
+  const doServico = (id: string) => t.chamadas().filter((c) => (JSON.parse(c.corpo) as { pedidoDados: { idServico: string } }).pedidoDados.idServico === id);
+  return { ...t, doServico };
 }

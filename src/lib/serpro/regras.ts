@@ -146,9 +146,15 @@ export type PedidoAoSerpro = {
   idSistema: string;
   idServico: string;
   versaoSistema: string;
-  /** CNPJ ou CPF do contribuinte. */
+  /** CNPJ ou CPF do contribuinte; "lote:N" no lote dos Eventos. */
   contribuinte: string;
-  dados: Record<string, unknown>;
+  /** null = vai vazio (""), como pedem o Apoiar do Sitfis e o indicador da Caixa Postal. */
+  dados: Record<string, unknown> | null;
+  /**
+   * Eventos de Atualização (20/10/2026): o contribuinte é uma lista de até
+   * 1.000, tipo 3 (CPF) ou 4 (CNPJ), separada por vírgula. No "obter", vazia.
+   */
+  lote?: { tipo: 3 | 4; documentos: string[] };
   /**
    * Só na demonstração, e ignorado na produção: o trial só responde ao corpo
    * do cenário da documentação, inclusive contratante e autor fictícios
@@ -161,13 +167,13 @@ export function corpoDoPedido(p: PedidoAoSerpro, contratante: string, autor: str
   return {
     contratante: pessoa(contratante),
     autorPedidoDados: pessoa(autor),
-    contribuinte: pessoa(p.contribuinte),
+    contribuinte: p.lote ? { numero: p.lote.documentos.map((d) => pessoa(d).numero).join(","), tipo: p.lote.tipo } : pessoa(p.contribuinte),
     pedidoDados: {
       idSistema: p.idSistema,
       idServico: p.idServico,
       versaoSistema: p.versaoSistema,
       // `dados` vai como TEXTO com o JSON dentro — é assim no Integra Contador.
-      dados: JSON.stringify(p.dados),
+      dados: p.dados === null ? "" : JSON.stringify(p.dados),
     },
   };
 }
@@ -243,9 +249,10 @@ export function explicarErro(status: number | null, mensagens: Mensagem[]): stri
  * 32 caracteres, o limite do campo. É o que aparece na coluna TAG do relatório
  * de consumo da Área do Cliente: o elo entre a linha do Connect e a fatura.
  */
-export function tagDaRequisicao(autor: string, contribuinte: string, sequencial: number): string {
-  const parte = (doc: string) => {
-    const p = pessoa(doc);
+export function tagDaRequisicao(autor: string, contribuinte: string | { tipo: number; numero: string }, sequencial: number): string {
+  // O lote dos Eventos não tem um contribuinte só: vai o tipo da lista (3 ou 4) com zeros.
+  const parte = (doc: string | { tipo: number; numero: string }) => {
+    const p = typeof doc === "string" ? pessoa(doc) : doc;
     return `${p.tipo}${p.numero.padStart(14, "0").slice(-14)}`;
   };
   return `${parte(autor)}${parte(contribuinte)}${String(sequencial % 100).padStart(2, "0")}`;

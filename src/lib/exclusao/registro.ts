@@ -135,6 +135,8 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   { modelo: "Notification", coluna: "entityId", tratamento: "apagar" },
   { modelo: "PipelineItem", coluna: "entityId", tratamento: "desligar" },
   { modelo: "ValoraProposta", coluna: "companyId", tratamento: "desligar" },
+  // O pedido de situação fiscal da ficha (Serpro, 20/10/2026): sem a empresa, não serve a ninguém.
+  { modelo: "SerproPedido", coluna: "companyId", tratamento: "apagar" },
   // Preferência "última empresa aberta": sem a empresa, não vale nada.
   { modelo: "UserLastCompany", coluna: "companyId", tratamento: "apagar" },
   { modelo: "AuditLog", coluna: "entityId", tratamento: "manter", motivo: "a trilha guarda o que foi excluído" },
@@ -314,6 +316,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Notification", coluna: "actorUserId", tratamento: "manter", motivo: "a notificação já foi entregue; o texto leva o nome" },
   { modelo: "AgentRun", coluna: "userId", tratamento: "manter", motivo: "trilha de execução da IA" },
   { modelo: "SerproCall", coluna: "userId", tratamento: "manter", motivo: "trilha de consultas ao Serpro (cobradas por chamada)" },
+  { modelo: "SerproMensagem", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a mensagem deu ciência da intimação" },
+  { modelo: "SerproPedido", coluna: "pedidoPorId", tratamento: "desligar" },
   { modelo: "AccessAuthorization", coluna: "updatedByUserId", tratamento: "manter", motivo: "trilha de quem mexeu na autorização" },
   { modelo: "AccessAuthorizationGrantee", coluna: "updatedByUserId", tratamento: "manter", motivo: "trilha de quem mexeu na autorização" },
   { modelo: "DriveFolderSeen", coluna: "seenByUserId", tratamento: "manter", motivo: "marca de leitura da pasta de enviados" },
