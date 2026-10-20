@@ -17,12 +17,18 @@ import type { Prisma } from "@/generated/prisma/client";
 import { centavosDeDecimal } from "../contas";
 import { movimentosDaBaixa, type MovimentoDaBaixa } from "./regras";
 import { partesDoRateio } from "../rateio";
+import { ehContaDeAdiantamento } from "../adiantamento";
 
 export type MovimentoDeCaixa = MovimentoDaBaixa & {
   /** O instante da baixa — o mês de caixa sai dele. */
   paidAt: Date;
   /** A baixa de onde saiu — a conta rateada dá um principal por linha, todos da mesma baixa. */
   paymentId: string;
+  /**
+   * Passou pela conta de adiantamento (lote D, 20/10): a DRE conta, o fluxo de
+   * caixa não — o dinheiro andou quando se adiantou, não quando se usou.
+   */
+  doAdiantamento: boolean;
   entryId: string;
   companyId: string;
   /** A contraparte da conta — a tabela dinâmica abre o caixa por fornecedor e cliente. */
@@ -46,6 +52,7 @@ export async function movimentosDeCaixa(where: Prisma.FinanceEntryPaymentWhereIn
     select: {
       id: true,
       paidAt: true,
+      bankAccount: { select: { type: true } },
       principal: true,
       interest: true,
       fine: true,
@@ -73,6 +80,7 @@ export async function movimentosDeCaixa(where: Prisma.FinanceEntryPaymentWhereIn
     const base = {
       paidAt: b.paidAt,
       paymentId: b.id,
+      doAdiantamento: ehContaDeAdiantamento(b.bankAccount?.type),
       entryId: b.entry.id,
       companyId: b.entry.companyId,
       counterpartyId: b.entry.counterpartyId,
