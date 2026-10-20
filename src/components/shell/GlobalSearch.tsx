@@ -72,8 +72,8 @@ function montarGrupos(telas: TelaNavegavel[], r: SearchResults): Grupo[] {
     },
     { rotulo: "Pessoas", opcoes: r.people.map((p) => ({ chave: `pessoa-${p.id}`, href: `/pessoas/${p.id}`, rotulo: p.name, icone: ic(User) })) },
     { rotulo: "Candidatos", opcoes: r.candidatos.map((c) => ({ chave: `candidato-${c.id}`, href: `/candidatos/${c.id}`, rotulo: c.name, icone: ic(UserSearch) })) },
-    { rotulo: "Kanban", opcoes: r.pipelines.map((p) => ({ chave: `kanban-${p.id}`, href: boardPath(p), rotulo: p.name, icone: ic(SquareKanban) })) },
-    { rotulo: "Tarefas", opcoes: r.tarefas.map((t) => ({ chave: `tarefa-${t.id}`, href: t.href, rotulo: t.name, icone: ic(SquareCheck) })) },
+    { rotulo: "Tarefas", opcoes: r.pipelines.map((p) => ({ chave: `kanban-${p.id}`, href: boardPath(p), rotulo: p.name, icone: ic(SquareKanban) })) },
+    { rotulo: "Atividades", opcoes: r.tarefas.map((t) => ({ chave: `tarefa-${t.id}`, href: t.href, rotulo: t.name, icone: ic(SquareCheck) })) },
     { rotulo: "Vagas", opcoes: r.vagas.map((v) => ({ chave: `vaga-${v.id}`, href: `/vagas/${v.id}`, rotulo: v.name, icone: ic(Briefcase) })) },
     {
       rotulo: "Documentos",
@@ -488,7 +488,7 @@ export function GlobalSearch({
               onChange={aoDigitar}
               onFocus={() => setOpen(true)}
               onKeyDown={aoTeclar}
-              placeholder="Buscar empresas, pessoas, kanban…"
+              placeholder="Buscar empresas, pessoas, tarefas…"
               aria-label="Buscar empresas, pessoas, telas…"
               {...propsDoCombobox}
               className="w-full h-full bg-transparent text-input text-fg placeholder:text-fg-muted outline-none border-none focus-visible:shadow-none!"

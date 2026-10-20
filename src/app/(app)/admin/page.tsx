@@ -26,7 +26,7 @@ export default async function AdminPage() {
     <PageContainer>
       <PageHeader
         title="Configurações"
-        subtitle="O que vale para todo o escritório, separado por assunto. O menu leva de uma tela a outra sem voltar aqui."
+        subtitle="O que vale para todo o escritório, separado por assunto. A trilha no topo de cada tela volta para cá."
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">

@@ -128,7 +128,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
 
       {linhas.length === 0 ? (
         <Card>
-          <EmptyState icon={<Timer />} title="Nenhuma hora apontada no período" description="As horas entram pelo cronômetro ou pelo lançamento manual, na tarefa e no processo." />
+          <EmptyState icon={<Timer />} title="Nenhuma hora apontada no período" description="As horas entram pelo cronômetro ou pelo lançamento manual, na atividade e no processo." />
         </Card>
       ) : (
         <>

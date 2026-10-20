@@ -100,7 +100,7 @@ export async function PainelDeTarefas({
   return (
     <Painel
       setor={escopo}
-      titulo="Tarefas por prazo"
+      titulo="Atividades por prazo"
       href="/tarefas"
       rodape={itens.length > 0 ? <>{plural(atribuidas, "atribuída a você", "atribuídas a você")}</> : undefined}
       destaque={
@@ -115,9 +115,9 @@ export async function PainelDeTarefas({
       }
     >
       <Rosca
-        titulo="Tarefas abertas por prazo"
+        titulo="Atividades abertas por prazo"
         legendaDoTotal={itens.length === 1 ? "aberta" : "abertas"}
-        vazio="Nenhuma tarefa aberta nos seus kanbans."
+        vazio="Nenhuma atividade aberta nos seus Quadros."
         segmentos={[
           { chave: "atrasada", rotulo: "Atrasadas", valor: c.atrasada, tom: "critico" },
           { chave: "hoje", rotulo: "Para hoje", valor: c.hoje, tom: "atencao" },
@@ -363,7 +363,7 @@ export async function PainelDeProcessos({ ctx, setor }: Base) {
 // ─── DP ────────────────────────────────────────────────────────────────────
 
 export async function PainelDoDP({ ctx, setor }: Base) {
-  // O que o painel mostra, como os outros ("Tarefas por prazo"): o setor já
+  // O que o painel mostra, como os outros ("Atividades por prazo"): o setor já
   // vem no rótulo de cima, e "DP · Departamento Pessoal" só o repetia (07/10).
   const titulo = "Férias e movimentações";
   const dados = await dadosDoDP(ctx.tenantId);

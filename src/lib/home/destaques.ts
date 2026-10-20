@@ -110,8 +110,8 @@ function candidatoDoPainel(painel: HomeWidgetKey, n: NumerosDaHome): Candidato |
       const t = n.tarefas;
       if (!t) return null;
       const apoio = `${plural(t.abertas, "aberta", "abertas")} nos seus kanbans`;
-      if (t.atrasadas > 0) return { metrica: "tarefas_atrasadas", alerta: true, titulo: "Tarefas atrasadas", valor: t.atrasadas, apoio, href: "/tarefas" };
-      if (t.hoje > 0) return { metrica: "tarefas_hoje", alerta: false, titulo: "Tarefas para hoje", valor: t.hoje, apoio, href: "/tarefas" };
+      if (t.atrasadas > 0) return { metrica: "tarefas_atrasadas", alerta: true, titulo: "Atividades atrasadas", valor: t.atrasadas, apoio, href: "/tarefas" };
+      if (t.hoje > 0) return { metrica: "tarefas_hoje", alerta: false, titulo: "Atividades para hoje", valor: t.hoje, apoio, href: "/tarefas" };
       return null;
     }
 

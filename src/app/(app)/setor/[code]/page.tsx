@@ -78,8 +78,8 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
             title="Nenhum espaço criado ainda"
             description={
               podeCriar
-                ? "Um espaço agrupa pastas e listas de tarefas do setor. Crie o primeiro no botão acima."
-                : "Um espaço agrupa pastas e listas de tarefas do setor. Quem coordena o setor é quem cria."
+                ? "Um espaço agrupa as pastas e as tarefas do setor. Crie o primeiro no botão acima."
+                : "Um espaço agrupa as pastas e as tarefas do setor. Quem coordena o setor é quem cria."
             }
           />
         </Card>
@@ -104,7 +104,7 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
                         <FolderClosed size={13} /> {s._count.folders} {s._count.folders === 1 ? "pasta" : "pastas"}
                       </span>
                       <span className="inline-flex items-center gap-1">
-                        <ListTodo size={13} /> {s._count.pipelines} {s._count.pipelines === 1 ? "lista" : "listas"}
+                        <ListTodo size={13} /> {s._count.pipelines} {s._count.pipelines === 1 ? "tarefa" : "tarefas"}
                       </span>
                     </p>
                   </Link>
@@ -127,7 +127,7 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
                             href={`/setor/${code}/espacos/${s.id}`}
                             className="block rounded-md px-2 py-1.5 text-fs-2 text-fg-muted hover:text-brand transition-colors"
                           >
-                            + {restantes} {restantes === 1 ? "outra lista" : "outras listas"}
+                            + {restantes} {restantes === 1 ? "outra tarefa" : "outras tarefas"}
                           </Link>
                         </li>
                       )}

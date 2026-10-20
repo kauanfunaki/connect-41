@@ -114,7 +114,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                   <th className="px-3">Pessoa</th>
                   <th className="px-3">Em aberto</th>
                   <th className="px-3">Processos</th>
-                  <th className="px-3">Tarefas</th>
+                  <th className="px-3">Atividades</th>
                   <th className="px-3">Pendências</th>
                   <th className="px-3">Transferências</th>
                   <th className="px-3">Solicitações</th>

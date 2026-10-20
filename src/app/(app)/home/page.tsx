@@ -557,7 +557,7 @@ export default async function HomePage() {
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-section font-semibold text-fg mb-3.5">Meu dia</h2>
         {meuDiaItems.length === 0 ? (
-          <p className="text-body text-fg-muted">Nenhuma tarefa com prazo ou atribuída a você.</p>
+          <p className="text-body text-fg-muted">Nenhuma atividade com prazo ou atribuída a você.</p>
         ) : (
           <div className="space-y-1">
             {meuDiaItems.map((item) => {
@@ -626,7 +626,7 @@ export default async function HomePage() {
             <p className="c41-rotulo mb-2.5">
               Top {STAGE_CHART_LIMIT} · tarefas por estágio
             </p>
-            <HorizontalBarChart data={stageChartData} emptyLabel="Nenhuma tarefa em aberto nos seus kanbans." />
+            <HorizontalBarChart data={stageChartData} emptyLabel="Nenhuma atividade em aberto nos seus Quadros." />
             {stageChartHiddenCount > 0 && (
               <p className="text-fs-1 text-fg-muted mt-2.5">
                 + {stageChartHiddenCount} outro{stageChartHiddenCount !== 1 ? "s" : ""} estágio
@@ -688,7 +688,7 @@ export default async function HomePage() {
                     ) : (
                       `${g.label} `
                     )}
-                    <span className="font-medium">{(g.entityId ? entityNames[g.entityId] : null) ?? "(tarefa)"}</span>
+                    <span className="font-medium">{(g.entityId ? entityNames[g.entityId] : null) ?? "(atividade)"}</span>
                   </p>
                   <p className="text-helper text-fg-muted">{formatRelativeTime(g.createdAt)}</p>
                 </div>
