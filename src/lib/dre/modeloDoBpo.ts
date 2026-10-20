@@ -4,7 +4,7 @@
 //
 // A aba `DRE FINANCEIRO` da planilha que o setor usa hoje (a DRE de um grupo,
 // três anos lado a lado), confirmada pelo Kauan em 13/10/2026 como o modelo da
-// exportação. Desde 20/10/2026 é também a estrutura do Connect (a da CARGO —
+// exportação. Desde 20/10/2026 é também a estrutura do Connect (a do modelo novo —
 // ver o cabeçalho de `estrutura.ts`): um bloco por grupo, na mesma ordem.
 //
 //   faturamento (uma linha por categoria)  → RECEITA BRUTA
@@ -54,7 +54,7 @@ type BlocoDoModelo = {
 
 /**
  * Onde cada grupo do Connect cai no modelo: desde 20/10/2026, um bloco por
- * grupo — a estrutura do Connect passou a ser a deste modelo (a da CARGO).
+ * grupo — a estrutura do Connect passou a ser a deste modelo (o modelo novo).
  *
  * A categoria vai **pelo grupo dela**, nunca pelo nome: o de-para do Connect já
  * é a decisão de onde cada categoria entra, e reabri-la aqui faria o arquivo

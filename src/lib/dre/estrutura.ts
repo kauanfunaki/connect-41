@@ -1,25 +1,27 @@
 // A estrutura do DRE, como a 41 o monta.
 //
-// ─── O padrão desde 20/10/2026: a estrutura da CARGO, o cálculo da Irriga ───
+// ─── O padrão desde 20/10/2026: a estrutura do modelo novo, o cálculo da Irriga ───
 //
 // Até aqui o padrão era o da Irriga (`10-DRE Irriga_2025_010.xlsx`, lida em
 // 11/09/2026), com as despesas abertas por área — comerciais, pessoal,
 // diretoria, administrativas, financeiras — porque a Irriga pediu assim. Em
-// 20/10/2026 a Amanda mandou o DRE da CARGO (`DRE CARGO_2026_junho.xlsx`, aba
-// `DRE FINANCEIRO`), e o Kauan decidiu: **a estrutura é a da CARGO, o cálculo
-// é o da Irriga, e todas as empresas — a Irriga inclusive — usam este padrão.**
+// 20/10/2026 a Amanda mandou o modelo novo de DRE, o de uma empresa cliente
+// (aba `DRE FINANCEIRO`), e o Kauan decidiu: **a estrutura é a do modelo novo,
+// o cálculo é o da Irriga, e todas as empresas — a Irriga inclusive — usam este
+// padrão.**
 //
-// - **Estrutura da CARGO:** sete grupos — receita bruta, impostos, custo
+// - **Estrutura do modelo novo:** sete grupos — receita bruta, impostos, custo
 //   operacional, custo administrativo, financiamentos, outras despesas (com os
 //   investimentos) e outras receitas — e as linhas receita líquida, margem de
 //   contribuição, gerador de caixa (EBITDA) e resultado líquido operacional.
 // - **Cálculo da Irriga:** a base é a receita bruta (a soma dos recebimentos).
-//   A planilha da CARGO usa um "Faturamento fiscal" digitado à mão como base
-//   de quase tudo — é a parte customizada para ela, e fica de fora. Os
+//   A planilha do modelo novo usa um "Faturamento fiscal" digitado à mão como
+//   base de quase tudo — é a parte customizada para aquela empresa, e fica de
+//   fora. Os
 //   percentuais são sobre a receita bruta: despesa em valor absoluto
 //   ("24%", não "−24%"), resultado com o sinal.
 // - **Os impostos, nas duas visões** (pedido do Kauan): no EBITDA, como as
-//   duas abas da CARGO fecham, ou fora do resultado, como a Irriga — ver
+//   duas abas do modelo novo fecham, ou fora do resultado, como a Irriga — ver
 //   `OpcoesDoDre`. A tela alterna.
 //
 // O que era da Irriga e já estava classificado migra pelo de-para
@@ -70,8 +72,8 @@ export const GRUPOS: GrupoDoDre[] = [
  * um orçamento exportado, uma planilha guardada: `grupoAtual` traduz.
  *
  * As "financeiras" vão para o custo administrativo, não para financiamentos:
- * eram tarifa do banco e IOF, uma das despesas fixas — e a CARGO põe a tarifa
- * no administrativo. Financiamentos é empréstimo e parcelamento.
+ * eram tarifa do banco e IOF, uma das despesas fixas — e o modelo novo põe a
+ * tarifa no administrativo. Financiamentos é empréstimo e parcelamento.
  */
 export const GRUPO_DO_ANTIGO: Readonly<Record<string, string>> = {
   cmv: "custo_operacional",
@@ -200,7 +202,7 @@ const PCT = (code: string, label: string, numerador: string, absoluto: boolean):
 });
 
 /**
- * O relatório, na ordem da aba `DRE FINANCEIRO` da CARGO.
+ * O relatório, na ordem da aba `DRE FINANCEIRO` do modelo novo.
  *
  * As parcelas do EBITDA dependem da opção dos impostos — as daqui são as com
  * os impostos dentro; `parcelasDoEbitda` tira quando a visão é a da Irriga.
@@ -267,7 +269,7 @@ export type OpcoesDoDre = {
   /**
    * Os impostos sobre a receita entram no EBITDA (e daí no resultado)?
    *
-   * - `true` — **o padrão**: como as duas abas da CARGO fecham. A margem parte
+   * - `true` — **o padrão**: como as duas abas do modelo novo fecham. A margem parte
    *   da receita bruta, e o EBITDA desconta os impostos.
    * - `false` — a visão da Irriga: os impostos aparecem na receita líquida e
    *   ficam fora da margem, do EBITDA e do resultado. A tela diz quanto ficou
