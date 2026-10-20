@@ -39,6 +39,7 @@ function entrada(over: { dueDate: string; status?: string; paidAt?: Date | null;
     company: { id: "c1", name: "Empresa", displayName: null },
     counterparty: { name: "Fornecedor" },
     category: { name: "Aluguel" },
+    _count: { allocations: 0 },
     costCenterId: null,
     costCenter: null,
     project: null,

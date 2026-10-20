@@ -104,6 +104,7 @@ const NOME_DO_CAMPO: Readonly<Record<string, string>> = {
   documentNumber: "Nº do documento",
   dueDate: "Vencimento",
   forecastDate: "Previsão",
+  rateio: "Rateio",
   description: "Descrição",
   fichaAlterada: "Campos da ficha alterados",
 };

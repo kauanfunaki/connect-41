@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { dadosParaEditar, editarLancamento, type DadosDaEdicao } from "@/lib/financeiro/edicaoServidor";
 import type { CampoEditavel } from "@/lib/financeiro/edicao";
 import { CampoDeProjeto } from "./CampoDeProjeto";
+import { CamposDoRateio } from "./CamposDoRateio";
 import { AnexosDaConta, CAMPO_DO_ANEXO_DA_CONTA } from "./AnexosDaConta";
 
 // A janela "Editar lançamento" (19/10, pedido 1 do BPO). Abre do "⋯" de
@@ -123,6 +124,10 @@ function Formulario({
   const id = useId();
   const { conta, travas, opcoes } = dados;
   const [erro, setErro] = useState<string | null>(null);
+  // O rateio (lote D, 20/10): muda com a categoria — o que trava uma trava o outro.
+  const podeRatear = !travas.categoria;
+  const [rateando, setRateando] = useState(conta.rateio.length > 0);
+  const [valorTexto, setValorTexto] = useState(conta.valor);
   const [pendente, startTransition] = useTransition();
   const aPagar = conta.kind === "PAGAR";
 
@@ -175,17 +180,43 @@ function Formulario({
             ))}
           </Select>
         </CampoForm>
-        <CampoForm label="Categoria" htmlFor={`${id}-categoria`} required={aPagar} helper={tCat.helper}>
-          <Select id={`${id}-categoria`} name="categoryId" defaultValue={conta.categoriaId ?? ""} disabled={tCat.disabled} required={aPagar}>
-            <option value="">{aPagar ? "Escolha…" : "Sem categoria"}</option>
-            {opcoes.categorias.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome}
-              </option>
-            ))}
-          </Select>
-        </CampoForm>
-        {(opcoes.centros.length > 0 || conta.centroId) && (
+        {podeRatear && <input type="hidden" name="comRateio" value={rateando ? "1" : "0"} />}
+        {rateando ? (
+          <CamposDoRateio
+            className="sm:col-span-2"
+            categorias={opcoes.categorias}
+            centros={opcoes.centros}
+            projetos={opcoes.projetos}
+            valorTexto={valorTexto}
+            iniciais={conta.rateio}
+            categoriaInicial={conta.categoriaId ?? undefined}
+            onDesfazer={() => setRateando(false)}
+          />
+        ) : (
+          <CampoForm
+            label="Categoria"
+            htmlFor={`${id}-categoria`}
+            required={aPagar}
+            helper={tCat.helper}
+            acao={
+              podeRatear ? (
+                <Button type="button" variant="link" className="text-helper" onClick={() => setRateando(true)}>
+                  Ratear
+                </Button>
+              ) : undefined
+            }
+          >
+            <Select id={`${id}-categoria`} name="categoryId" defaultValue={conta.categoriaId ?? ""} disabled={tCat.disabled} required={aPagar}>
+              <option value="">{aPagar ? "Escolha…" : "Sem categoria"}</option>
+              {opcoes.categorias.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </Select>
+          </CampoForm>
+        )}
+        {!rateando && (opcoes.centros.length > 0 || conta.centroId) && (
           <CampoForm label="Centro de custo" htmlFor={`${id}-centro`}>
             <Select id={`${id}-centro`} name="costCenterId" defaultValue={conta.centroId ?? ""}>
               <option value="">Sem centro de custo</option>
@@ -197,7 +228,9 @@ function Formulario({
             </Select>
           </CampoForm>
         )}
-        <CampoDeProjeto id={`${id}-projeto`} companyId={conta.empresaId} projetos={opcoes.projetos} defaultValue={conta.projetoId ?? ""} />
+        {!rateando && (
+          <CampoDeProjeto id={`${id}-projeto`} companyId={conta.empresaId} projetos={opcoes.projetos} defaultValue={conta.projetoId ?? ""} />
+        )}
       </FieldGrid>
 
       <FieldGrid columns="sm:grid-cols-3">
@@ -220,7 +253,16 @@ function Formulario({
           <CampoData id={`${id}-previsao`} name="previsao" defaultValue={conta.previsaoKey ?? ""} disabled={tPrev.disabled} />
         </CampoForm>
         <CampoForm label="Valor" htmlFor={`${id}-valor`} required helper={tValor.helper}>
-          <Input id={`${id}-valor`} name="valor" prefix="R$" inputMode="decimal" defaultValue={conta.valor} disabled={tValor.disabled} required />
+          <Input
+            id={`${id}-valor`}
+            name="valor"
+            prefix="R$"
+            inputMode="decimal"
+            defaultValue={conta.valor}
+            onChange={(e) => setValorTexto(e.target.value)}
+            disabled={tValor.disabled}
+            required
+          />
         </CampoForm>
         <CampoForm
           label="Conta corrente"

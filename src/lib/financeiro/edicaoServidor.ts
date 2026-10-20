@@ -20,6 +20,8 @@ import { centavosDeDecimal } from "./contas";
 import { competenciaValida, dataValida, instanteDaData } from "./periodo";
 import { projetoInformado } from "./projetoServidor";
 import { contaPrevistaInformada, contasBancariasDaEmpresa } from "./contaPrevistaServidor";
+import { lerRateio, type LinhaDoRateio } from "./rateio";
+import { conferirRateio, gravarRateio, rateioDaConta } from "./rateioServidor";
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "./aprovacao/servidor";
 import { podeEditarOTipo } from "./acessoDaConta";
 import { anexosDaConta, type AnexoDaConta } from "./anexos";
@@ -43,6 +45,8 @@ export type DadosDaEdicao =
         projetoId: string | null;
         /** A conta corrente prevista (lote D, 20/10). */
         contaId: string | null;
+        /** As linhas do rateio (lote D, 20/10). Vazio: a conta numa categoria só. */
+        rateio: LinhaDoRateio[];
         competencia: string;
         emissaoKey: string | null;
         numeroDocumento: string | null;
@@ -138,7 +142,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
   const { tenantId, companyId } = conta;
   // O valor atual entra na lista mesmo inativo: abrir a janela para mudar a
   // descrição não pode obrigar a trocar um centro que foi inativado depois.
-  const [contrapartes, categorias, centros, projetos, anexos, contas] = await Promise.all([
+  const [contrapartes, categorias, centros, projetos, anexos, contas, rateio] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId, companyId, OR: [{ active: true }, { id: conta.counterpartyId }] },
       select: { id: true, name: true, document: true, active: true },
@@ -163,6 +167,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
     }),
     anexosDaConta(tenantId, conta.id),
     contasBancariasDaEmpresa(tenantId, companyId, conta.bankAccountId),
+    rateioDaConta(tenantId, conta.id),
   ]);
   const comInativo = (o: { id: string; name: string; active: boolean }) => ({ id: o.id, nome: o.active ? o.name : `${o.name} (inativo)` });
 
@@ -178,6 +183,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
       centroId: conta.costCenterId,
       projetoId: conta.projectId,
       contaId: conta.bankAccountId,
+      rateio,
       competencia: conta.competence,
       emissaoKey: chaveDoDia(conta.issueDate),
       numeroDocumento: conta.documentNumber,
@@ -232,7 +238,13 @@ export async function editarLancamento(formData: FormData): Promise<ResultadoDaE
 
   const veredito = travasDa(conta);
   if (!veredito.pode) return { error: veredito.motivo };
-  const livre = (c: CampoEditavel, campoDoForm: string) => !veredito.travas[c] && veio(campoDoForm);
+  // O rateio (lote D, 20/10): a janela manda `comRateio` quando o editor está
+  // nela — a categoria livre. Rateada, os campos de uma categoria só não vêm, e
+  // categoria, centro e projeto são o resumo das linhas.
+  const editaRateio = veio("comRateio") && !veredito.travas.categoria;
+  const comRateio = editaRateio && texto("comRateio") === "1";
+  const livre = (c: CampoEditavel, campoDoForm: string) =>
+    !veredito.travas[c] && veio(campoDoForm) && !(comRateio && (c === "categoria" || c === "centro" || c === "projeto"));
 
   const { tenantId, companyId, kind } = conta;
   const prisma = getPrisma();
@@ -349,7 +361,32 @@ export async function editarLancamento(formData: FormData): Promise<ResultadoDaE
     if (centavos !== centavosDeDecimal(conta.amount)) mudar("amount", conta.amount.toString(), decimalDeCentavos(centavos));
   }
 
-  if (Object.keys(data).length === 0) return { ok: true, aviso: null };
+  const rateioAntes = await rateioDaConta(tenantId, conta.id);
+  let rateioNovo: LinhaDoRateio[] | null = null;
+  if (comRateio) {
+    const lido = lerRateio(texto("rateio"));
+    if (!lido.ok) return { error: lido.erro };
+    const totalFinal = typeof data.amount === "string" ? centavosDeDecimal(data.amount) : centavosDeDecimal(conta.amount);
+    const r = await conferirRateio({ tenantId, companyId, kind, linhas: lido.linhas, totalCentavos: totalFinal, atuais: rateioAntes });
+    if (!r.ok) return { error: r.erro };
+    mudar("categoryId", conta.categoryId, r.resumo.categoriaId);
+    mudar("costCenterId", conta.costCenterId, r.resumo.centroId);
+    mudar("projectId", conta.projectId, r.resumo.projetoId);
+    if (JSON.stringify(lido.linhas) !== JSON.stringify(rateioAntes)) rateioNovo = lido.linhas;
+  } else if (editaRateio && rateioAntes.length > 0) {
+    // "Desfazer rateio": a conta volta à categoria, ao centro e ao projeto dos campos.
+    rateioNovo = [];
+  } else if (rateioAntes.length > 0 && "amount" in data) {
+    return { error: "A conta tem rateio — o valor muda junto com as linhas do rateio." };
+  }
+  if (rateioNovo !== null) {
+    antes.rateio = rateioAntes.length > 0 ? `${rateioAntes.length} linhas` : null;
+    depois.rateio = rateioNovo.length > 0 ? `${rateioNovo.length} linhas` : null;
+  }
+
+  if (Object.keys(data).length === 0 && rateioNovo === null) return { ok: true, aviso: null };
+  // Só o rateio mudou: a versão da conta anda junto, para quem estava com a janela aberta.
+  if (Object.keys(data).length === 0) data.updatedAt = new Date();
 
   const mudouValor = "amount" in data;
   const mudouContraparte = "counterpartyId" in data;
@@ -367,6 +404,7 @@ export async function editarLancamento(formData: FormData): Promise<ResultadoDaE
   const gravou = await prisma.$transaction(async (tx) => {
     const r = await tx.financeEntry.updateMany({ where: { id: conta.id, tenantId, updatedAt: conta.updatedAt }, data });
     if (r.count !== 1) return false;
+    if (rateioNovo !== null) await gravarRateio(tx, { tenantId, entryId: conta.id, linhas: rateioNovo });
     if (reenviar) await registrarEnvios(tx, [conta.id], ctx.userId || null);
     return true;
   });

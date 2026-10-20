@@ -2710,6 +2710,8 @@ model FinanceCategory {
   /// Baixas que puseram juros e multa, ou o desconto, nesta categoria.
   baixasComJuros    FinanceEntryPayment[] @relation("PaymentInterestCategory")
   baixasComDesconto FinanceEntryPayment[] @relation("PaymentDiscountCategory")
+  /// Linhas de rateio nesta categoria.
+  allocations       FinanceEntryAllocation[]
 
   @@unique([tenantId, scope, name, kind])
   @@index([tenantId, kind])
@@ -2966,6 +2968,10 @@ model FinanceEntry {
   collectionEvents      CollectionEvent[]
   reminderLogs          CollectionReminderLog[]
   attachments           FinanceEntryAttachment[]
+  /// O rateio (lote D, 20/10): a conta dividida em categorias, centros e
+  /// projetos. Vazio é a conta inteira na categoria, no centro e no projeto
+  /// dela — o caso de quase todas.
+  allocations           FinanceEntryAllocation[]
 
   @@unique([companyId, omieTitleId])
   @@unique([companyId, omieMovementId])
@@ -3014,6 +3020,39 @@ model FinanceEntryAttachment {
   @@map("finance_entry_attachments")
 }
 
+/// Uma linha do rateio de uma conta (lote D, 20/10 — o "rateio" de categorias
+/// e de departamentos do Omie, em linhas): parte do valor numa categoria, num
+/// centro de custo e num projeto. As linhas somam o valor da conta, e a conta
+/// guarda o resumo — a categoria da linha maior, o centro e o projeto quando
+/// todas as linhas têm o mesmo — para as listas e para quem lê uma categoria só.
+///
+/// A DRE lê as linhas: na competência, cada uma com o valor dela; no caixa, o
+/// principal de cada baixa dividido na proporção delas (`baixa/consultas.ts`).
+/// As regras moram em src/lib/financeiro/rateio.ts.
+model FinanceEntryAllocation {
+  id           String   @id @default(uuid())
+  tenantId     String
+  entryId      String
+  /// A ordem das linhas, como a pessoa montou.
+  position     Int
+  categoryId   String?
+  costCenterId String?
+  projectId    String?
+  amount       Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+
+  entry      FinanceEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  category   FinanceCategory? @relation(fields: [categoryId], references: [id])
+  costCenter CostCenter?      @relation(fields: [costCenterId], references: [id])
+  project    FinanceProject?  @relation(fields: [projectId], references: [id])
+
+  @@index([entryId])
+  @@index([categoryId])
+  @@index([costCenterId])
+  @@index([projectId])
+  @@map("finance_entry_allocations")
+}
+
 /// Projeto de uma empresa cliente (19/10) — o "Projeto" do Omie.
 ///
 /// Por empresa, como o centro de custo, e pelo mesmo motivo: o projeto de uma
@@ -3032,6 +3071,8 @@ model FinanceProject {
   tenant  Tenant         @relation(fields: [tenantId], references: [id])
   company Company        @relation(fields: [companyId], references: [id])
   entries FinanceEntry[]
+  /// Linhas de rateio neste projeto.
+  allocations FinanceEntryAllocation[]
 
   @@unique([companyId, name])
   @@index([tenantId, companyId, active])
@@ -3061,6 +3102,8 @@ model CostCenter {
   company  Company               @relation(fields: [companyId], references: [id])
   entries  FinanceEntry[]
   padraoDe FinanceCounterparty[]
+  /// Linhas de rateio neste centro.
+  allocations FinanceEntryAllocation[]
 
   @@unique([companyId, name])
   @@unique([companyId, code])
