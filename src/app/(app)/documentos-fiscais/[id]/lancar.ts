@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { cancelarContasDosImpostos, RecusaDaRetencao } from "@/lib/financeiro/retencoesServidor";
+import { aplicarRetencoes, cancelarContasDosImpostos, RecusaDaRetencao } from "@/lib/financeiro/retencoesServidor";
+import { retencoesDaNota, resumoDasRetencoes } from "@/lib/financeiro/retencoes";
+import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
@@ -107,6 +109,16 @@ export async function lancarDocumento(
 
   // Nasce PROVISORIO, portanto em aberto: conta a pagar de empresa com alçada
   // já entra aguardando aprovação.
+  // As retenções por tributo que a NFS-e declara (lote D, 20/10): na conta a
+  // pagar, cada uma vira a conta do imposto, junto com a da nota.
+  const retencoes =
+    veredito.kind === "PAGAR"
+      ? retencoesDaNota(doc.retentionsByTax, {
+          brutoCentavos: doc.amount === null ? null : centavosDeDecimal(doc.amount),
+          liquidoCentavos: doc.netAmount === null ? null : centavosDeDecimal(doc.netAmount),
+        })
+      : [];
+
   const approvalStatus = (await contextoDeEntrada(ctx.tenantId, [doc.companyId])).statusInicial(
     doc.companyId,
     veredito.kind,
@@ -164,6 +176,23 @@ export async function lancarDocumento(
         select: { id: true, amount: true },
       });
       if (approvalStatus === "AGUARDANDO") await registrarEnvios(tx, [criado.id], ctx.userId || null);
+      if (retencoes.length > 0) {
+        await aplicarRetencoes(tx, {
+          tenantId: ctx.tenantId!,
+          userId: ctx.userId || null,
+          conta: {
+            id: criado.id,
+            companyId: doc.companyId,
+            counterpartyId: contraparte.id,
+            competence: doc.competence,
+            categoryId: categoriaId,
+            costCenterId: centro.centroId,
+            projectId: null,
+            documentNumber: `${doc.number}${doc.series ? `/${doc.series}` : ""}`.slice(0, 60),
+          },
+          passos: retencoes.map((r) => ({ tipo: "criar" as const, tributo: r.tributo, centavos: r.centavos })),
+        });
+      }
 
       // A primeira nota de um fornecedor classifica; da segunda em diante ela é
       // herdada. Gravar aqui é o que fecha esse ciclo.
@@ -197,6 +226,7 @@ export async function lancarDocumento(
         categoriaId,
         centroDeCusto: centro.centroId,
         approvalStatus,
+        ...(retencoes.length > 0 ? { retencoes: resumoDasRetencoes(retencoes) } : {}),
         ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
       },
     });
@@ -204,7 +234,8 @@ export async function lancarDocumento(
     revalidatePath("/documentos-fiscais");
     revalidatePath(`/documentos-fiscais/${doc.id}`);
     return { ok: true, entryId: entry.id };
-  } catch {
+  } catch (e) {
+    if (e instanceof RecusaDaRetencao) return { error: e.message };
     // O unique de `fiscalDocumentId` é a garantia real contra duplicar valor:
     // dois cliques simultâneos passam pela checagem em aplicação e só um
     // sobrevive aqui.

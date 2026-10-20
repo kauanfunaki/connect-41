@@ -33,6 +33,8 @@ import {
   DIRECAO_LABEL,
 } from "@/lib/fiscal/rotulos";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { resumoDasRetencoes, retencoesDaNota } from "@/lib/financeiro/retencoes";
+import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { Aviso } from "@/components/ui/Aviso";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
@@ -56,6 +58,13 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
   // `notFound` cobre "não existe" e "fora do alcance" com a mesma resposta: a
   // diferença entre as duas já é informação sobre o que existe no tenant.
   if (!doc) notFound();
+  // O retido de cada tributo (lote D, 20/10), quando a nota declarou: "IRRF R$ 15,00 · PIS R$ 6,50".
+  const retidoPorTributo = resumoDasRetencoes(
+    retencoesDaNota(doc.retentionsByTax, {
+      brutoCentavos: doc.amount === null ? null : centavosDeDecimal(doc.amount),
+      liquidoCentavos: doc.netAmount === null ? null : centavosDeDecimal(doc.netAmount),
+    })
+  );
 
   const empresaDoc = documentoDaEmpresa(doc.company);
   const direcao = direcaoDoLancamento(empresaDoc?.digitos ?? null, {
@@ -157,7 +166,9 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           {doc.netAmount !== null && (
             <InfoRow
               label="Líquido a pagar"
-              value={`${formatarReais(Number(doc.netAmount))} — retido ${formatarReais(Number(doc.retentionsTotal ?? 0))}`}
+              value={`${formatarReais(Number(doc.netAmount))} — retido ${formatarReais(Number(doc.retentionsTotal ?? 0))}${
+                retidoPorTributo ? ` (${retidoPorTributo})` : ""
+              }`}
             />
           )}
           <InfoRow label="Competência" value={formatarCompetencia(doc.competence)} />

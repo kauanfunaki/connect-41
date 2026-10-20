@@ -23,6 +23,12 @@ export type ParteDoDocumento = {
   documento: string | null;
 };
 
+/** Os tributos que o tomador retém na fonte — os mesmos de `lib/financeiro/retencoes.ts`. */
+export type TributoDaNota = "IRRF" | "PIS" | "COFINS" | "CSLL" | "INSS" | "ISS";
+
+/** Tributo retido → valor em decimal ("15.00"). Só os que a nota retém. */
+export type RetencoesPorTributo = Partial<Record<TributoDaNota, string>>;
+
 export type DocumentoFiscalExtraido = {
   tipo: TipoDocumentoFiscal;
   /**
@@ -69,6 +75,13 @@ export type DocumentoFiscalExtraido = {
    * não tem resposta na ficha do documento.
    */
   retencoesTotal: string | null;
+  /**
+   * As retenções por tributo (lote D, 20/10), em decimal como o XML — o que a
+   * conta a pagar usa para gerar a conta de cada imposto. Só NFS-e, e só quando
+   * o líquido é confiável e os tributos cabem no que foi retido; senão `null`,
+   * e as retenções se informam à mão na edição da conta.
+   */
+  retencoesPorTributo: RetencoesPorTributo | null;
   /**
    * Competência declarada no XML, "AAAA-MM", quando existe.
    *
@@ -322,6 +335,57 @@ function retencoesDaNfse(valores: unknown): number {
   return soma;
 }
 
+type TributosEmCentavos = Partial<Record<TributoDaNota, number>>;
+
+function lerTributo(saida: TributosEmCentavos, no: unknown, campo: string, tributo: TributoDaNota) {
+  const c = centavos(texto(filho(no, campo)));
+  if (c !== null && c > 0) saida[tributo] = (saida[tributo] ?? 0) + c;
+}
+
+/**
+ * Os tributos retidos de uma NFS-e ABRASF, um a um (lote D, 20/10) — os
+ * mesmos campos de `retencoesDaNfse`, menos os descontos, que não são tributo.
+ */
+function tributosDaNfseAbrasf(valores: unknown): TributosEmCentavos {
+  const saida: TributosEmCentavos = {};
+  lerTributo(saida, valores, "ValorIr", "IRRF");
+  lerTributo(saida, valores, "ValorPis", "PIS");
+  lerTributo(saida, valores, "ValorCofins", "COFINS");
+  lerTributo(saida, valores, "ValorCsll", "CSLL");
+  lerTributo(saida, valores, "ValorInss", "INSS");
+  if (texto(filho(valores, "IssRetido"))?.trim() === "1") lerTributo(saida, valores, "ValorIss", "ISS");
+  return saida;
+}
+
+/**
+ * Os tributos retidos de uma NFS-e do padrão nacional, pelo leiaute da DPS:
+ * em `trib > tribFed`, o `vRetIRRF`, o `vRetCSLL` e o `vRetCP` (o INSS), e o
+ * PIS/COFINS quando `tpRetPisCofins` é 1 (retido); o ISS quando `tpRetISSQN`
+ * é 2 ou 3 (retido pelo tomador ou pelo intermediário), pelo `vISSQN` da nota.
+ * Código que não se conhece é "não retido" — subtrair por engano tira dinheiro
+ * de quem recebe, e a retenção que faltar se informa na edição da conta.
+ *
+ * **Conferido contra o leiaute**, ainda não contra uma nota nacional real com
+ * retenção.
+ */
+function tributosDaNfseNacional(inf: unknown, dps: unknown): TributosEmCentavos {
+  const saida: TributosEmCentavos = {};
+  const federais = caminho(dps, "valores", "trib", "tribFed");
+  lerTributo(saida, federais, "vRetIRRF", "IRRF");
+  lerTributo(saida, federais, "vRetCSLL", "CSLL");
+  lerTributo(saida, federais, "vRetCP", "INSS");
+  const pisCofins = filho(federais, "piscofins");
+  if (texto(filho(pisCofins, "tpRetPisCofins"))?.trim() === "1") {
+    lerTributo(saida, pisCofins, "vPis", "PIS");
+    lerTributo(saida, pisCofins, "vCofins", "COFINS");
+  }
+  const retencaoDoIss = texto(caminho(dps, "valores", "trib", "tribMun", "tpRetISSQN"))?.trim();
+  if (retencaoDoIss === "2" || retencaoDoIss === "3") lerTributo(saida, filho(inf, "valores"), "vISSQN", "ISS");
+  return saida;
+}
+
+const somaDosTributos = (t: TributosEmCentavos) => Object.values(t).reduce((s, c) => s + (c ?? 0), 0);
+
 function lerNfse(comp: unknown, raiz: unknown): ResultadoLeitura {
   // ABRASF: CompNfse > Nfse > InfNfse. Padrão nacional: NFSe > infNFSe.
   const inf =
@@ -384,9 +448,14 @@ function lerNfse(comp: unknown, raiz: unknown): ResultadoLeitura {
   const liquidoDeclarado = centavos(
     texto(filho(valores, "ValorLiquidoNfse")) ??
       texto(caminho(inf, "ValoresNfse", "ValorLiquidoNfse")) ??
-      texto(caminho(dps, "serv", "valores", "vLiq"))
+      texto(caminho(dps, "serv", "valores", "vLiq")) ??
+      // O padrão nacional declara o líquido nos valores da própria nota.
+      texto(caminho(inf, "valores", "vLiq"))
   );
-  const retidoCents = retencoesDaNfse(valores);
+  // Os tributos um a um (lote D, 20/10): o ABRASF nos `<Valores>` do serviço;
+  // o nacional, na DPS. Sem `<Valores>` ABRASF, é nota nacional.
+  const tributos = valores ? tributosDaNfseAbrasf(valores) : tributosDaNfseNacional(inf, dps);
+  const retidoCents = valores ? retencoesDaNfse(valores) : somaDosTributos(tributos);
   const liquidoCents =
     liquidoDeclarado ?? (brutoCents !== null && retidoCents > 0 ? brutoCents - retidoCents : null);
 
@@ -404,6 +473,14 @@ function lerNfse(comp: unknown, raiz: unknown): ResultadoLeitura {
   const retencoesTotal = confiavel
     ? deCentavos((brutoCents as number) - (liquidoCents as number))
     : null;
+  // Os tributos só valem com o líquido confiável e cabendo no que foi retido
+  // (o resto da diferença são descontos). Passando disso, o XML se contradiz,
+  // e gerar conta de imposto em cima dele seria pagar o que ninguém reteve.
+  const somaRetida = somaDosTributos(tributos);
+  const retencoesPorTributo: RetencoesPorTributo | null =
+    confiavel && somaRetida > 0 && somaRetida <= (brutoCents as number) - (liquidoCents as number)
+      ? Object.fromEntries(Object.entries(tributos).map(([t, c]) => [t, deCentavos(c as number)]))
+      : null;
 
   const prestador =
     filho(inf, "PrestadorServico") ?? filho(decl, "Prestador") ?? filho(inf, "emit") ?? filho(dps, "prest");
@@ -438,6 +515,7 @@ function lerNfse(comp: unknown, raiz: unknown): ResultadoLeitura {
       valorTotal,
       valorLiquido,
       retencoesTotal,
+      retencoesPorTributo,
       competenciaDeclarada:
         competenciaDeclarada(texto(filho(inf, "Competencia"))) ??
         competenciaDeclarada(texto(filho(decl, "Competencia"))) ??
@@ -533,6 +611,7 @@ function lerNfe(nfe: unknown): ResultadoLeitura {
       // o valor da conta em vez de deixá-lo no bruto conhecido.
       valorLiquido: null,
       retencoesTotal: null,
+      retencoesPorTributo: null,
       // NF-e não declara competência: ela é o mês da emissão, e o chamador
       // deriva. E cancelamento de NF-e vem em evento separado, não no XML da
       // nota — por isso é sempre falso aqui, nunca "não sei".
@@ -583,6 +662,7 @@ function lerCte(cte: unknown): ResultadoLeitura {
       // o valor da conta em vez de deixá-lo no bruto conhecido.
       valorLiquido: null,
       retencoesTotal: null,
+      retencoesPorTributo: null,
       competenciaDeclarada: null,
       cancelada: false,
     },
