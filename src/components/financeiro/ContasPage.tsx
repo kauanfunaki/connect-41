@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3 } from "lucide-react";
+import { RECORTES_A_PAGAR, RECORTES_A_RECEBER } from "@/lib/financeiro/exportacao";
+import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3, Download } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
@@ -17,24 +18,15 @@ import { AcoesEmLoteDasContas } from "./AcoesEmLoteDasContas";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Aviso } from "@/components/ui/Aviso";
+import { Button } from "@/components/ui/Button";
 import { formatarCompetencia, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
 import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { empresaNaUrl, hrefDaEmpresa, idDaEscolha } from "@/lib/empresas/escolhaDaEmpresa";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 
-const RECORTES_A_PAGAR = [
-  { chave: "avencer", rotulo: "A vencer" },
-  { chave: "vencidas", rotulo: "Vencido" },
-  { chave: "hoje", rotulo: "Vence hoje" },
-  { chave: "todas", rotulo: "Todas" },
-] as const;
-
-const RECORTES = [
-  { chave: "abertas", rotulo: "Em aberto" },
-  { chave: "vencidas", rotulo: "Vencidas" },
-  { chave: "todas", rotulo: "Todas" },
-] as const;
+// Os recortes moram com a exportação (`lib/financeiro/exportacao`), que lê o mesmo.
+const RECORTES = RECORTES_A_RECEBER;
 
 /**
  * A tela de contas, que serve a pagar e a receber.
@@ -296,6 +288,23 @@ export async function ContasPage({
           <CascoDaTabela
             contagem={contarItens(resultado.linhas.length, "conta", "contas", resultado.limitada)}
             filtros={<FiltrosDaTela campos={filtros} naBarra />}
+            // A lista em CSV, com a empresa, a competência e o recorte da tela
+            // (lote D, 20/10). `download`: a rota devolve o arquivo.
+            acoes={
+              <Button
+                href={`${base}/exportar?${new URLSearchParams({
+                  empresa: empresaNaUrl(escolha) ?? "",
+                  recorte,
+                  ...(params.competencia ? { competencia: params.competencia } : {}),
+                })}`}
+                download
+                variant="secondary"
+                size="sm"
+                title="Exporta a lista com a empresa, a competência e o recorte escolhidos. Os funis das colunas não entram."
+              >
+                <Download size={14} /> Exportar CSV
+              </Button>
+            }
           >
             <ContasTable
               linhas={resultado.linhas}
