@@ -46,12 +46,21 @@ describe("porQueFica", () => {
     expect(porQueFica(paga, { campos: ["categoria", "vencimento"], categoriaId: "c" })).toMatch(/desfaça o pagamento/);
   });
 
-  it("do Omie: categoria, competência e vencimento travados; centro e projeto livres", () => {
+  it("do Omie: categoria, competência, vencimento, previsão e conta corrente travados; centro e projeto livres", () => {
     const omie = conta("1", { doOmie: true });
-    for (const campo of ["categoria", "competencia", "vencimento"] as const) {
-      expect(porQueFica(omie, { campos: [campo], categoriaId: "c" })).toMatch(/Omie/);
+    for (const campo of ["categoria", "competencia", "vencimento", "previsao", "conta"] as const) {
+      expect(porQueFica(omie, { campos: [campo], categoriaId: "c", contaDaEmpresa: "e1" })).toMatch(/Omie/);
     }
     expect(porQueFica(omie, { campos: ["centro", "projeto"] })).toBeNull();
+  });
+
+  it("do Omie: a conta prevista e a previsão de um lote misto mudam só nas que não vêm de lá (20/10)", () => {
+    const contas = [conta("1"), conta("2", { doOmie: true }), conta("3", { doOmie: true, status: "PAGO", paidAt: new Date() })];
+    for (const campos of [["conta"], ["previsao"]] as const) {
+      const { entram, ficam } = separarAlteracao(contas, { campos: [...campos], contaDaEmpresa: "e1" });
+      expect(entram.map((c) => c.id)).toEqual(["1"]);
+      expect(ficam.map((f) => f.motivo)).toEqual([expect.stringMatching(/Vem do Omie/), expect.stringMatching(/Vem do Omie/)]);
+    }
   });
 
   it("encerrada fica de fora, menos quando só muda o centro", () => {
@@ -78,11 +87,11 @@ describe("porQueFica", () => {
   it("previsão: só de conta em aberto", () => {
     const paga = conta("1", { status: "PAGO", paidAt: new Date() });
     expect(porQueFica(paga, { campos: ["previsao"] })).toBe("Paga — a previsão é só de conta em aberto.");
-    expect(porQueFica(conta("2", { doOmie: true, conciliada: true }), { campos: ["previsao"] })).toBeNull();
+    expect(porQueFica(conta("2", { conciliada: true }), { campos: ["previsao"] })).toBeNull();
   });
 
-  it("a conta corrente prevista muda até em conta paga e do Omie — é sugestão para a baixa", () => {
-    expect(porQueFica(conta("1", { status: "PAGO", paidAt: new Date(), doOmie: true }), { campos: ["conta"], contaDaEmpresa: "e1" })).toBeNull();
+  it("a conta corrente prevista muda até em conta paga — é sugestão para a baixa", () => {
+    expect(porQueFica(conta("1", { status: "PAGO", paidAt: new Date() }), { campos: ["conta"], contaDaEmpresa: "e1" })).toBeNull();
     expect(porQueFica(conta("1", { status: "CANCELADO", closeReason: "PERDA" }), { campos: ["conta"], contaDaEmpresa: "e1" })).toMatch(/perda/);
   });
 });

@@ -137,6 +137,7 @@ function Formulario({
   const tVenc = trava("vencimento");
   const tPrev = trava("previsao", "Quando deve ser paga de fato. Em branco, o vencimento.");
   const tValor = trava("valor", conta.aprovada && aPagar ? "Conta aprovada: mudar o valor manda de volta para a aprovação." : undefined);
+  const tConta = trava("conta", opcoes.contas.length === 0 ? "Nenhuma conta bancária nesta empresa." : "A prevista — a baixa já vem com ela.");
 
   return (
     <form
@@ -222,12 +223,8 @@ function Formulario({
         <CampoForm label="Valor" htmlFor={`${id}-valor`} required helper={tValor.helper}>
           <Input id={`${id}-valor`} name="valor" prefix="R$" inputMode="decimal" defaultValue={conta.valor} disabled={tValor.disabled} required />
         </CampoForm>
-        <CampoForm
-          label="Conta corrente"
-          htmlFor={`${id}-conta`}
-          helper={opcoes.contas.length === 0 ? "Nenhuma conta bancária nesta empresa." : "A prevista — a baixa já vem com ela."}
-        >
-          <Select id={`${id}-conta`} name="bankAccountId" defaultValue={conta.contaId ?? ""} disabled={opcoes.contas.length === 0}>
+        <CampoForm label="Conta corrente" htmlFor={`${id}-conta`} helper={tConta.helper}>
+          <Select id={`${id}-conta`} name="bankAccountId" defaultValue={conta.contaId ?? ""} disabled={tConta.disabled || opcoes.contas.length === 0}>
             <option value="">Não prevista</option>
             {opcoes.contas.map((c) => (
               <option key={c.id} value={c.id}>
