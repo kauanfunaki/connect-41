@@ -43,7 +43,8 @@ import { fichaOpcional, leitorDaFicha } from "@/lib/financeiro/fichaDaContrapart
 import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { lerBuscaDaEscolha, type CriterioDaBusca } from "@/lib/financeiro/conciliacao/busca";
 import { inicioDeHoje } from "@/lib/financeiro/consultas";
-import { quitarConta, apagarBaixa, mudarDiaDaBaixa, RecusaDaBaixa } from "@/lib/financeiro/baixa/servidor";
+import { quitarConta, registrarBaixa, apagarBaixa, mudarDiaDaBaixa, RecusaDaBaixa } from "@/lib/financeiro/baixa/servidor";
+import { baixaDoAjuste, lerAjuste, type BaixaDoAjuste } from "@/lib/financeiro/conciliacao/ajuste";
 import { saldoEmAberto } from "@/lib/financeiro/baixa/regras";
 
 const MODULE = "bpo_conciliacao";
@@ -372,14 +373,21 @@ const PREFIXO_DA_BAIXA = "baixa:";
  *   o dinheiro de fato andou), e a de antes fica no vínculo para o desfazer.
  *
  * A soma — saldos das contas e totais das baixas — fecha no centavo com a linha.
+ * Com uma conta só, a diferença pode virar juros e multa, desconto ou baixa
+ * parcial (`ajuste`, fila do BPO de 19/10): a baixa leva o valor da linha.
  */
-export async function confirmarConciliacao(transactionId: string, ids: string[]): Promise<Resultado> {
+export async function confirmarConciliacao(transactionId: string, ids: string[], ajusteDaTela?: unknown): Promise<Resultado> {
   const c = await contexto();
   if (!c.ok) return { error: c.erro };
   if (!Array.isArray(ids) || ids.length === 0) return { error: "Escolha ao menos um lançamento." };
   if (ids.length > 200) return { error: "Lançamentos demais numa só transação." };
   const idsDeBaixa = ids.filter((i) => i.startsWith(PREFIXO_DA_BAIXA)).map((i) => i.slice(PREFIXO_DA_BAIXA.length));
   const idsDeConta = ids.filter((i) => !i.startsWith(PREFIXO_DA_BAIXA));
+  const ajuste = ajusteDaTela == null ? null : lerAjuste(ajusteDaTela);
+  if (ajusteDaTela != null && !ajuste) return { error: "Ajuste da diferença inválido — atualize a tela." };
+  if (ajuste && (idsDeConta.length !== 1 || idsDeBaixa.length > 0)) {
+    return { error: "Juros, desconto ou baixa parcial: marque uma conta só." };
+  }
 
   try {
     const resumo = await c.prisma.$transaction(async (tx) => {
@@ -415,12 +423,19 @@ export async function confirmarConciliacao(transactionId: string, ids: string[])
       }
 
       const centavosDaTransacao = centavosDeDecimal(t.amount);
+      // A diferença resolvida: a conta entra na soma pelo total da baixa (a linha).
+      let doAjuste: BaixaDoAjuste | null = null;
+      if (ajuste) {
+        const r = baixaDoAjuste(saldoDe(contas[0]!), centavosDaTransacao, ajuste);
+        if (!r.ok) throw new Recusa(r.erro);
+        doAjuste = r.baixa;
+      }
       const v = validarSelecao({ centavos: centavosDaTransacao }, [
         ...contas.map((l) => ({
           id: l.id,
           kind: l.kind,
           status: l.status,
-          centavos: saldoDe(l),
+          centavos: doAjuste ? doAjuste.caixaCentavos : saldoDe(l),
           conciliado: false,
           contraparteNome: l.counterparty.name,
           // Conta aguardando ou reprovada na aprovação por alçada não é baixada
@@ -440,14 +455,18 @@ export async function confirmarConciliacao(transactionId: string, ids: string[])
 
       const pagoEm = instanteDaData(saoPauloParts(t.postedAt).dateKey);
       for (const l of contas) {
-        const baixa = await quitarConta(tx, {
-          tenantId: c.tenantId,
-          entryId: l.id,
-          paidAt: pagoEm,
-          bankAccountId: t.bankAccountId,
-          origin: "CONCILIACAO",
-          userId: c.userId,
-        });
+        const daLinha = { tenantId: c.tenantId, entryId: l.id, paidAt: pagoEm, bankAccountId: t.bankAccountId, origin: "CONCILIACAO" as const, userId: c.userId };
+        // Com ajuste, o principal é o que a regra disse — e o registro o confere
+        // de novo contra o saldo lido com a conta travada.
+        const baixa = doAjuste
+          ? await registrarBaixa(tx, {
+              ...daLinha,
+              principalCentavos: doAjuste.principalCentavos,
+              jurosCentavos: doAjuste.jurosCentavos,
+              multaCentavos: doAjuste.multaCentavos,
+              descontoCentavos: doAjuste.descontoCentavos,
+            })
+          : await quitarConta(tx, daLinha);
         await tx.bankTransactionMatch.create({
           data: {
             transactionId: t.id,
@@ -489,7 +508,21 @@ export async function confirmarConciliacao(transactionId: string, ids: string[])
       });
       if (marcada.count !== 1) throw new Recusa("Esta transação acabou de ser alterada por outra pessoa — atualize a tela.");
 
-      return { companyId, valor: decimalDeCentavos(centavosDaTransacao), lancamentos, baixasJaFeitas: baixas.map((b) => b.id) };
+      return {
+        companyId,
+        valor: decimalDeCentavos(centavosDaTransacao),
+        lancamentos,
+        baixasJaFeitas: baixas.map((b) => b.id),
+        ...(ajuste && doAjuste
+          ? {
+              ajuste: ajuste.tipo,
+              principal: decimalDeCentavos(doAjuste.principalCentavos),
+              juros: decimalDeCentavos(doAjuste.jurosCentavos),
+              multa: decimalDeCentavos(doAjuste.multaCentavos),
+              desconto: decimalDeCentavos(doAjuste.descontoCentavos),
+            }
+          : {}),
+      };
     });
 
     await logAudit({
@@ -1084,6 +1117,8 @@ export async function reabrirTransacao(transactionId: string): Promise<Resultado
 
 export type LancamentoParaEscolha = {
   id: string;
+  /** Baixa já registrada (`baixa:<id>`), não conta em aberto: entra pelo total, sem ajuste de diferença. */
+  ehBaixa: boolean;
   contraparteNome: string;
   descricao: string | null;
   centavos: number;
@@ -1212,6 +1247,7 @@ export async function lancamentosParaEscolha(transactionId: string, busca: strin
       const baixado = centavosDeDecimal(l.paidPrincipal);
       return {
         id: l.id,
+        ehBaixa: false,
         contraparteNome: l.counterparty.name,
         descricao: baixado > 0 ? [l.description, "saldo de baixa parcial"].filter(Boolean).join(" · ") : l.description,
         centavos: saldoEmAberto(centavosDeDecimal(l.amount), baixado),
@@ -1224,6 +1260,7 @@ export async function lancamentosParaEscolha(transactionId: string, busca: strin
     }),
     ...baixas.slice(0, LIMITE_DA_ESCOLHA).map((b) => ({
       id: PREFIXO_DA_BAIXA + b.id,
+      ehBaixa: true,
       contraparteNome: b.entry.counterparty.name,
       descricao: [b.entry.description, "baixa já registrada, sem extrato"].filter(Boolean).join(" · "),
       centavos: centavosDeDecimal(b.cash),
