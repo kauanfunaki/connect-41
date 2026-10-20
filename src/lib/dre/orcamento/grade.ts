@@ -16,7 +16,7 @@
 // BigInt porque centavos × fator em pontos-base passa de 2^53 bem antes do teto
 // do `Decimal(14,2)`.
 
-import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA, grupoAtual } from "@/lib/dre/estrutura";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
 
 export const MESES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
@@ -40,15 +40,18 @@ export function gradeVazia(): Grade {
 }
 
 /**
- * A grade a partir das linhas gravadas. Grupo que não existe mais na estrutura
- * é ignorado — a estrutura é da 41 e mora em código; linha órfã não tem onde
+ * A grade a partir das linhas gravadas. Grupo do padrão antigo (antes de
+ * 20/10/2026) entra no grupo novo que o absorveu, somado — é o que a migration
+ * `20261020230000_dre_padrao_cargo` faz no banco, e a tela não espera por ela.
+ * Grupo que não existe em nenhum dos dois é ignorado: linha órfã não tem onde
  * aparecer, e somá-la em outro grupo seria inventar.
  */
 export function gradeDeLinhas(linhas: LinhaDaGrade[]): Grade {
   const g = gradeVazia();
   for (const l of linhas) {
-    if (!CODIGOS.has(l.groupCode) || l.month < 1 || l.month > 12) continue;
-    g[l.groupCode]![l.month - 1] = l.centavos;
+    const grupo = grupoAtual(l.groupCode);
+    if (!CODIGOS.has(grupo) || l.month < 1 || l.month > 12) continue;
+    g[grupo]![l.month - 1]! += l.centavos;
   }
   return g;
 }

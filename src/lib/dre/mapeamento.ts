@@ -17,7 +17,7 @@
 // rótulo além do código faz esse trabalho aproveitar, em vez de exigir que
 // alguém reescreva doze linhas para o relatório sair.
 
-import { DESCONSIDERAR, GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { DESCONSIDERAR, GRUPOS, GRUPO_DO_ANTIGO, ROTULOS_DO_PADRAO_ANTIGO, TRANSFERENCIA } from "@/lib/dre/estrutura";
 
 /** Normaliza para comparar: sem acento, sem caixa, espaço colapsado. */
 function chave(texto: string): string {
@@ -40,6 +40,12 @@ POR_CHAVE.set(chave("Transferência entre contas"), TRANSFERENCIA);
 // quem digitar o rótulo no plano tem de cair no mesmo lugar de quem escolheu.
 POR_CHAVE.set(chave(DESCONSIDERAR), DESCONSIDERAR);
 POR_CHAVE.set(chave("Desconsiderar no DRE"), DESCONSIDERAR);
+// Os códigos e os rótulos do padrão antigo (o da Irriga, até 20/10/2026) caem
+// no grupo novo — um `dreGroup` que a migration não pegou, uma planilha antiga
+// importada, alguém que digita "Despesas Fixas (Pessoal)": nenhum vira não
+// classificado por causa da troca.
+for (const [antigo, novo] of Object.entries(GRUPO_DO_ANTIGO)) POR_CHAVE.set(chave(antigo), novo);
+for (const [rotulo, novo] of Object.entries(ROTULOS_DO_PADRAO_ANTIGO)) if (!POR_CHAVE.has(chave(rotulo))) POR_CHAVE.set(chave(rotulo), novo);
 
 /**
  * O código de grupo que este texto significa, ou `null`.

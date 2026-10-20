@@ -27,8 +27,8 @@ export function pareceComPedagio(nome: string): boolean {
 }
 
 export const PEDAGIO_NAS_ADMINISTRATIVAS: CorrecaoDaLinha = {
-  de: "cmv",
-  para: "administrativas",
+  de: "custo_operacional",
+  para: "custo_administrativo",
   ehDaCategoria: ehPedagio,
   pareceComACategoria: pareceComPedagio,
   motivo: "pedágio é despesa fixa administrativa, não CMV (pedido de 15/10/2026)",

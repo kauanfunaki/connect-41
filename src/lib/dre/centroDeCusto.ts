@@ -10,7 +10,7 @@
 // mesmo argumento de linearidade da reconciliação lucro → caixa.
 
 import type { LancamentoDoDre, Mapeamento } from "./calculo";
-import { GRUPOS, OPCOES_PADRAO } from "./estrutura";
+import { GRUPOS, OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
 import { calcularDreEconomica, valorDaLinha, LINHA_DE_RESULTADO, type LancamentoFinanceiro } from "./economica";
 
 export type CentroDoQuadro = { id: string; nome: string; codigo: string | null; active: boolean };
@@ -49,7 +49,8 @@ export function quadroPorCentro(
   lancamentos: LancamentoFinanceiro[],
   ajustes: LancamentoDoDre[],
   mapeamento: Mapeamento,
-  centros: CentroDoQuadro[]
+  centros: CentroDoQuadro[],
+  opcoes: OpcoesDoDre = OPCOES_PADRAO
 ): QuadroPorCentro {
   const chave = (id: string | null | undefined) => id ?? "";
   const lancPorCentro = new Map<string, LancamentoFinanceiro[]>();
@@ -65,7 +66,7 @@ export function quadroPorCentro(
 
   const linhaDe = (centroId: string | null, nome: string, codigo: string | null, ativo: boolean): LinhaDoQuadroPorCentro => {
     const k = chave(centroId);
-    const dre = calcularDreEconomica(lancPorCentro.get(k) ?? [], mapeamento, OPCOES_PADRAO, ajustesPorCentro.get(k) ?? []);
+    const dre = calcularDreEconomica(lancPorCentro.get(k) ?? [], mapeamento, opcoes, ajustesPorCentro.get(k) ?? []);
     return {
       centroId,
       nome,

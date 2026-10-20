@@ -33,6 +33,8 @@ import { serieEconomica, competenciasDaEmpresa, quadroPorCentroDoPeriodo } from 
 import { comRotulosEconomicos } from "@/lib/dre/economica";
 import { resultadoDePorGrupo, somarPorGrupo } from "@/lib/dre/analises";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
+import { opcoesDaUrl } from "@/lib/dre/estrutura";
+import { SeletorDosImpostos, sufixoDosImpostos } from "@/components/dre/SeletorDosImpostos";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { lerFiltroDeCentro, valorDoFiltroDeCentro, SEM_CENTRO } from "@/lib/financeiro/centroDeCusto";
 import { orcamentosAprovados, orcamentoLigado } from "@/lib/dre/orcamento/dados";
@@ -83,6 +85,8 @@ export default async function DreEconomicaPage({
 
   const params = await searchParams;
   const visao = VISOES.find((v) => v.chave === params.visao)?.chave ?? "mes";
+  // As duas visões dos impostos (20/10/2026): no EBITDA, o padrão; fora, a da Irriga.
+  const opcoes = opcoesDaUrl(params.impostos);
   // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
   // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
@@ -152,8 +156,8 @@ export default async function DreEconomicaPage({
     visao === "mes" ? [...new Set([...(orcamento ? acumuladoDoAno(mes) : competencias), mesAnterior])] : competencias;
 
   const [serie, quadro] = await Promise.all([
-    serieEconomica(ctx.tenantId, companyId, competenciasDaSerie, filtro),
-    centros.length > 0 ? quadroPorCentroDoPeriodo(ctx.tenantId, companyId, competencias) : Promise.resolve(null),
+    serieEconomica(ctx.tenantId, companyId, competenciasDaSerie, filtro, opcoes),
+    centros.length > 0 ? quadroPorCentroDoPeriodo(ctx.tenantId, companyId, competencias, opcoes) : Promise.resolve(null),
   ]);
   const meses = competencias.map((c) => serie.get(c)!);
   const lancamentos = meses.reduce((n, m) => n + m.lancamentos, 0);
@@ -171,9 +175,9 @@ export default async function DreEconomicaPage({
   );
   const temCobranca = cobranca.acrescimos !== 0 || cobranca.descontos !== 0 || cobranca.perdas !== 0;
   const resultado = comRotulosEconomicos(
-    visao === "mes" ? serie.get(mes)!.resultado : resultadoDePorGrupo(somarPorGrupo(meses.map((m) => m.resultado.porGrupo)))
+    visao === "mes" ? serie.get(mes)!.resultado : resultadoDePorGrupo(somarPorGrupo(meses.map((m) => m.resultado.porGrupo)), opcoes)
   );
-  const imposto = impostoForaDoResultado(resultado);
+  const imposto = impostoForaDoResultado(resultado, opcoes);
   // Sem lançamento nem ajuste da cobrança no mês anterior, sem comparação.
   const doAnterior = visao === "mes" ? serie.get(mesAnterior) : undefined;
   const anterior =
@@ -204,7 +208,7 @@ export default async function DreEconomicaPage({
 
   const comCentro = centroNaUrl ? `&centro=${centroNaUrl}` : "";
   const base = `/dre/economica?empresa=${companyId}&mes=${mes}`;
-  const hrefDaVisao = (chave: string) => `${base}${chave === "mes" ? "" : `&visao=${chave}`}${comCentro}`;
+  const hrefDaVisao = (chave: string) => `${base}${chave === "mes" ? "" : `&visao=${chave}`}${comCentro}${sufixoDosImpostos(opcoes)}`;
   const periodo =
     visao === "mes"
       ? rotuloDaCompetencia(mes)
@@ -220,9 +224,15 @@ export default async function DreEconomicaPage({
         acao="/dre/economica"
         empresas={empresas}
         valor={companyId}
-        manter={{ mes, visao: visao === "mes" ? undefined : visao }}
+        manter={{ mes, visao: visao === "mes" ? undefined : visao, impostos: opcoes.impostosNoEbitda ? undefined : "fora" }}
       >
-        <FiltroDePeriodo acao="/dre/economica" mes={mes} mesEmNumero extras={{ empresa: companyId, visao: visao === "mes" ? undefined : visao }} naFileira>
+        <FiltroDePeriodo
+          acao="/dre/economica"
+          mes={mes}
+          mesEmNumero
+          extras={{ empresa: companyId, visao: visao === "mes" ? undefined : visao, impostos: opcoes.impostosNoEbitda ? undefined : "fora" }}
+          naFileira
+        >
           {centros.length > 0 && (
             <Select compact name="centro" defaultValue={centroNaUrl} className="w-60 max-w-full" aria-label="Centro de custo">
               <option value="">Todos os centros de custo</option>
@@ -236,6 +246,11 @@ export default async function DreEconomicaPage({
             </Select>
           )}
         </FiltroDePeriodo>
+        <SeletorDosImpostos
+          opcoes={opcoes}
+          base="/dre/economica"
+          params={{ empresa: companyId, mes, visao: visao === "mes" ? undefined : visao, centro: centroNaUrl || undefined }}
+        />
       </FiltroDaEmpresa>
       <AbasDeLink abas={VISOES.map((v) => ({ ...v, href: hrefDaVisao(v.chave) }))} ativa={visao} />
 
@@ -303,8 +318,8 @@ export default async function DreEconomicaPage({
                   <li className="flex items-start gap-2">
                     <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning-fg" />
                     <span>
-                      <strong>{moeda(Math.abs(imposto))}</strong> de impostos sobre a receita não entram no resultado — a margem parte da
-                      Receita Bruta, a mesma regra da DRE de caixa.
+                      <strong>{moeda(Math.abs(imposto))}</strong> de impostos sobre a receita não entram no resultado — é a visão
+                      “Impostos fora do resultado”.
                     </span>
                   </li>
                 )}
@@ -365,8 +380,8 @@ export default async function DreEconomicaPage({
         <section className="mt-5">
           <h2 className="text-card-title font-semibold text-fg">Resultado por centro de custo — {periodo}</h2>
           <p className="text-micro text-fg-muted mt-0.5 mb-2">
-            Um centro por lançamento, sem rateio: as linhas somam a DRE da empresa sem filtro. Despesas somam todos os grupos de
-            pagamento; o resultado segue a estrutura da DRE (impostos sobre a receita ficam fora dele).
+            A conta rateada entra em cada centro pela parte dela: as linhas somam a DRE da empresa sem filtro. Despesas somam
+            todos os grupos de pagamento; o resultado segue a estrutura da DRE, na visão de impostos escolhida.
           </p>
           <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
             <table className="w-full min-w-[620px]">

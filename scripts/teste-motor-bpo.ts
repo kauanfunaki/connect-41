@@ -1188,29 +1188,29 @@ async function a9(tenantId: string, c: Cadastros) {
 
   // A grade do orçamento: doze meses por grupo de despesa.
   const grade = gradeVazia();
-  grade["administrativas"] = MESES.map(() => 100000); // R$ 1.000,00/mês
-  grade["pessoal"] = MESES.map(() => 500000); // R$ 5.000,00/mês
-  igual(totalDoGrupo(grade, "administrativas"), 1200000, "o total anual do grupo é a soma dos doze meses");
+  grade["custo_administrativo"] = MESES.map(() => 100000); // R$ 1.000,00/mês
+  grade["custo_operacional"] = MESES.map(() => 500000); // R$ 5.000,00/mês
+  igual(totalDoGrupo(grade, "custo_administrativo"), 1200000, "o total anual do grupo é a soma dos doze meses");
 
   const mesAtual = Number(COMPETENCIA.slice(5, 7));
   const orcado = porGrupoOrcado(grade, [mesAtual]);
-  igual(orcado["administrativas"], -100000, "o orçado chega na convenção de sinal da DRE: despesa negativa");
+  igual(orcado["custo_administrativo"], -100000, "o orçado chega na convenção de sinal da DRE: despesa negativa");
   igual(orcado["receita_bruta"], 0, "grupo sem orçado fica zerado, e não ausente");
 
   // O estouro: quem passou mais do orçado no mês.
-  const realizado = { administrativas: -150000, pessoal: -400000, receita_bruta: 900000 };
+  const realizado = { custo_administrativo: -150000, custo_operacional: -400000, receita_bruta: 900000 };
   const estouro = maiorEstouro(realizado, orcado);
   ok(!!estouro, "achou o grupo que estourou");
-  igual(estouro?.grupo, "administrativas", "o grupo que passou é o administrativo, não o de pessoal, que ficou abaixo");
+  igual(estouro?.grupo, "custo_administrativo", "o grupo que passou é o administrativo, não o operacional, que ficou abaixo");
   igual(estouro?.excedente, 50000, "o excedente é a diferença em magnitude de gasto");
 
   // Grupo sem orçado não estoura: orçado zero costuma ser linha que a empresa
   // não preencheu, e avisar sobre ela viraria ruído no primeiro mês de uso.
-  const semOrcado = maiorEstouro({ comerciais: -900000 }, { comerciais: 0 });
+  const semOrcado = maiorEstouro({ custo_operacional: -900000 }, { custo_operacional: 0 });
   igual(semOrcado, null, "grupo sem orçado não estoura");
 
   // O mínimo protege do estouro de centavos.
-  const centavos = maiorEstouro({ administrativas: -100050 }, orcado, 10000);
+  const centavos = maiorEstouro({ custo_administrativo: -100050 }, orcado, 10000);
   igual(centavos, null, "estouro menor que o mínimo não vira alerta");
 
   const aviso = avisoDeOrcamento("ACME", COMPETENCIA, estouro!);
@@ -1221,7 +1221,7 @@ async function a9(tenantId: string, c: Cadastros) {
   ok(lido.ok, "percentual com vírgula é lido");
   igual(reajustar(100000, 5.5), 105500, "reajuste de 5,5% sobre R$ 1.000,00 dá R$ 1.055,00");
   const reajustada = copiarComReajuste(grade, 10);
-  igual(totalDoGrupo(reajustada, "administrativas"), 1320000, "a grade inteira reajusta em 10%");
+  igual(totalDoGrupo(reajustada, "custo_administrativo"), 1320000, "a grade inteira reajusta em 10%");
 
   // O centro de custo no banco: é um por lançamento, sem rateio.
   const comCentro = await prisma.financeEntry.count({ where: { tenantId, costCenterId: c.centro.id } });
@@ -1241,8 +1241,8 @@ async function a10() {
   const mapeamento = montarMapeamento([
     { categoria: "Honorários", grupo: "receita_bruta" },
     { categoria: "Simples Nacional", grupo: "impostos" },
-    { categoria: "Aluguel", grupo: "administrativas" },
-    { categoria: "Salários", grupo: "pessoal" },
+    { categoria: "Aluguel", grupo: "custo_administrativo" },
+    { categoria: "Salários", grupo: "custo_operacional" },
   ]);
 
   const lancamentos: LancamentoDoDre[] = [
@@ -1257,18 +1257,18 @@ async function a10() {
   const dre = calcularDre(lancamentos, mapeamento);
   igual(dre.diferencaDeFechamento, 0, "a DRE fecha: a soma dos grupos é exatamente o que entrou");
   igual(dre.porGrupo["receita_bruta"], 1000000, "a receita foi para o grupo certo");
-  igual(dre.porGrupo["administrativas"], -150000, "e a despesa também, com o sinal da convenção");
+  igual(dre.porGrupo["custo_administrativo"], -150000, "e a despesa também, com o sinal da convenção");
   igual(dre.naoClassificado.length, 1, "o lançamento sem de-para não sumiu: está na fila de classificação");
   igual(dre.naoClassificado[0]?.categoria, "Categoria Nova", "e a fila diz qual categoria é");
   igual(dre.porGrupo["nao_classificado"], -25000, "ele soma no não classificado, e não em conta nenhuma do resultado");
 
   // A grafia é o que mais quebra planilha: dois espaços e caixa diferente.
-  const comGrafia = montarMapeamento([{ categoria: "Outras  Taxas", grupo: "administrativas" }]);
+  const comGrafia = montarMapeamento([{ categoria: "Outras  Taxas", grupo: "custo_administrativo" }]);
   const dreGrafia = calcularDre(
     [{ categoria: "outras taxas", valorCentavos: -1000, origem: "pagamento" }],
     comGrafia
   );
-  igual(dreGrafia.porGrupo["administrativas"], -1000, "espaço duplo e caixa diferente casam no de-para");
+  igual(dreGrafia.porGrupo["custo_administrativo"], -1000, "espaço duplo e caixa diferente casam no de-para");
   igual(dreGrafia.diferencaDeFechamento, 0, "e continua fechando");
 
   // A ponte do resultado econômico até a variação de caixa do mês.
@@ -1314,7 +1314,7 @@ async function a10() {
   );
   igual(economica.resultado.diferencaDeFechamento, 0, "a DRE econômica também fecha");
   igual(economica.resultado.porGrupo["receita_bruta"], 1000000, "com a receita no grupo certo");
-  igual(economica.resultado.porGrupo["administrativas"], -150000, "e a cancelada ficou de fora da despesa");
+  igual(economica.resultado.porGrupo["custo_administrativo"], -150000, "e a cancelada ficou de fora da despesa");
   igual(economica.lancamentos, 2, "a cancelada não conta nem como lançamento considerado");
 }
 

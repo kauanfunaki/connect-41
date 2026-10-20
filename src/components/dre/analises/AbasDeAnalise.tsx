@@ -118,13 +118,13 @@ function TabelaComparada({ linhas, rotuloA, rotuloB, destacarAcima }: { linhas: 
 
 const LINHAS_PRINCIPAIS = [
   "receita_bruta",
-  "cmv",
-  "mao_de_obra",
-  "comerciais",
+  "impostos",
+  "custo_operacional",
   "margem_contribuicao",
-  "total_despesas_fixas",
+  "custo_administrativo",
+  "financiamentos",
   LINHA_OPERACIONAL,
-  "investimentos",
+  "outras_despesas",
   LINHA_DE_RESULTADO,
 ];
 
@@ -139,9 +139,9 @@ export async function AbaEconomicoFinanceiro({ tenantId, companyId, mes }: Base)
   // A linha final muda de nome conforme o regime; lado a lado, os dois nomes.
   const rotulo = (code: string, original: string) =>
     code === LINHA_OPERACIONAL
-      ? "Resultado operacional × Gerador de caixa"
+      ? "Resultado operacional × Gerador de caixa (EBITDA)"
       : code === LINHA_DE_RESULTADO
-        ? "Resultado do período × Fluxo de caixa livre"
+        ? "Resultado do período × Resultado líquido operacional"
         : rotuloEconomico(code, original);
   const linhas = compararResultados(econ.get(mes)!.resultado, caixa.get(mes)!, LINHAS_PRINCIPAIS, rotulo);
   const atrasoReceber = atrasoMedioEmDias(pares.RECEBER);
@@ -522,7 +522,7 @@ export async function AbaCenarios({ tenantId, companyId, mes }: Base) {
       <NotaDeFonte>
         Simulação sobre a DRE econômica de {rotuloDaCompetencia(mes)}
         {orcamento ? " ou sobre o orçado do mês na versão aprovada" : ""}, calculada no navegador e não gravada. O variável
-        da margem de contribuição acompanha a receita; investimentos e não operacionais ficam constantes.
+        — impostos e custo operacional — acompanha a receita; outras despesas (com os investimentos) e outras receitas ficam constantes.
         {comOrcamento && !orcamento && ` Com uma versão de orçamento aprovada para ${ano}, dá para partir do orçado.`}
       </NotaDeFonte>
     </>

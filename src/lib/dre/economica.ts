@@ -10,8 +10,8 @@
 // contribuição" significar coisas diferentes nas duas telas, e a comparação
 // econômico × financeiro deixaria de comparar a mesma coisa.
 //
-// O que muda é o nome das três últimas linhas: numa leitura de competência,
-// "gerador de caixa" e "fluxo de caixa livre" seriam nomes errados para o
+// O que muda é o nome das duas linhas de resultado: numa leitura de competência,
+// "gerador de caixa" e "resultado líquido operacional" seriam nomes errados para o
 // mesmo número. `comRotulosEconomicos` troca só o rótulo; a conta é idêntica.
 //
 // ─── O que não entra ─────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ import {
   type ResultadoDoDre,
   type ValorDaLinha,
 } from "./calculo";
-import { OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
+import { LINHA_DO_RESULTADO, OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
 import {
   contaNaDreEconomica,
   resumoDaCobrancaNaDre,
@@ -104,12 +104,10 @@ export function calcularDreEconomica(
 }
 
 const ROTULOS_ECONOMICOS: Record<string, string> = {
-  gerador_de_caixa: "RESULTADO OPERACIONAL",
-  gerador_de_caixa_pct: "Resultado Operacional sobre Receita Bruta %",
-  fluxo_apos_investimentos: "RESULTADO APÓS INVESTIMENTOS",
-  fluxo_apos_investimentos_pct: "Resultado após Investimentos sobre Receita Bruta %",
-  fluxo_de_caixa_livre: "RESULTADO DO PERÍODO",
-  fluxo_de_caixa_livre_pct: "Resultado do Período sobre Receita Bruta %",
+  ebitda: "RESULTADO OPERACIONAL (EBITDA)",
+  ebitda_pct: "Resultado Operacional (EBITDA) sobre Receita Bruta %",
+  resultado_liquido: "RESULTADO DO PERÍODO",
+  resultado_liquido_pct: "Resultado do Período sobre Receita Bruta %",
 };
 
 /** Rótulo da linha lido como competência. */
@@ -135,7 +133,7 @@ export function fracaoDaLinha(r: ResultadoDoDre, code: string): number | null {
   return r.linhas.find((l) => l.code === code)?.fracao ?? null;
 }
 
-/** A linha de resultado final da estrutura da 41. */
-export const LINHA_DE_RESULTADO = "fluxo_de_caixa_livre";
-/** A linha operacional — o mais perto de um EBITDA que a estrutura da 41 tem. */
-export const LINHA_OPERACIONAL = "gerador_de_caixa";
+/** A linha de resultado final da estrutura da 41 — o resultado líquido operacional. */
+export const LINHA_DE_RESULTADO = LINHA_DO_RESULTADO;
+/** A linha operacional — o gerador de caixa (EBITDA). */
+export const LINHA_OPERACIONAL = "ebitda";

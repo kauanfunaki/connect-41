@@ -4,14 +4,14 @@
 //
 // A aba `DRE FINANCEIRO` da planilha que o setor usa hoje (a DRE de um grupo,
 // três anos lado a lado), confirmada pelo Kauan em 13/10/2026 como o modelo da
-// exportação. Ela tem a mesma ideia da `estrutura.ts` — categorias somadas em
-// blocos, subtotais e percentuais sobre a receita bruta — mas **outro corte**:
-// seis blocos e quatro resultados, em vez dos doze grupos do Connect.
+// exportação. Desde 20/10/2026 é também a estrutura do Connect (a da CARGO —
+// ver o cabeçalho de `estrutura.ts`): um bloco por grupo, na mesma ordem.
 //
 //   faturamento (uma linha por categoria)  → RECEITA BRUTA
 //   impostos                               → IMPOSTOS SOBRE RECEITA BRUTA, %, RECEITA LÍQUIDA
 //   custos operacionais                    → CUSTO OPERACIONAL TOTAL, %, MARGEM DE CONTRIBUIÇÃO, %
-//   custos administrativos                 → CUSTO ADMINISTRATIVO TOTAL, %, GERADOR DE CAIXA (EBITDA), %
+//   custos administrativos                 → CUSTO ADMINISTRATIVO TOTAL, %
+//   financiamentos e empréstimos           → DESPESAS TOTAIS FINANCIAMENTOS…, %, GERADOR DE CAIXA (EBITDA), %
 //   outras despesas                        → OUTRAS DESPESAS TOTAIS, %
 //   outras receitas                        → OUTRAS RECEITAS TOTAIS, %
 //                                            RESULTADO LÍQUIDO OPERACIONAL, %
@@ -31,13 +31,14 @@
 // pré-visualização do e-mail, do Drive, do celular), e é o que os testes leem.
 
 import { grupoDoLancamento, chaveDaCategoria, SEM_CATEGORIA, type LancamentoDoDre, type Mapeamento } from "@/lib/dre/calculo";
-import { DESCONSIDERAR, GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { DESCONSIDERAR, GRUPOS, OPCOES_PADRAO, TRANSFERENCIA, type OpcoesDoDre } from "@/lib/dre/estrutura";
 
 export type CodigoDoBloco =
   | "receita"
   | "impostos"
   | "custo_operacional"
   | "custo_administrativo"
+  | "financiamentos"
   | "outras_despesas"
   | "outras_receitas";
 
@@ -52,43 +53,25 @@ type BlocoDoModelo = {
 };
 
 /**
- * Onde cada grupo do Connect cai no modelo — decisão de 13/10/2026.
+ * Onde cada grupo do Connect cai no modelo: desde 20/10/2026, um bloco por
+ * grupo — a estrutura do Connect passou a ser a deste modelo (a da CARGO).
  *
  * A categoria vai **pelo grupo dela**, nunca pelo nome: o de-para do Connect já
  * é a decisão de onde cada categoria entra, e reabri-la aqui faria o arquivo
  * discordar da tela.
- *
- * - **Custo operacional = CMV + mão de obra + comerciais**: são as parcelas da
- *   margem de contribuição do Connect, e o modelo também faz a margem como
- *   receita bruta menos o custo operacional. A margem do arquivo é a da tela.
- * - **Custo administrativo = pessoal + diretoria + administrativas +
- *   financeiras**: o "total de despesas fixas" do Connect. O pró-labore
- *   (diretoria) fica aqui, e não em outras despesas como no modelo, porque o
- *   grupo dele no Connect é despesa fixa.
- * - **Outras despesas = investimentos + outras despesas**: no modelo, compra de
- *   ativo e investimento já moram em outras despesas, abaixo do EBITDA.
  */
 export const BLOCOS_DO_MODELO: BlocoDoModelo[] = [
   { code: "receita", grupos: ["receita_bruta"], natureza: "receita", total: "RECEITA BRUTA" },
   { code: "impostos", grupos: ["impostos"], natureza: "despesa", total: "IMPOSTOS SOBRE RECEITA BRUTA" },
+  { code: "custo_operacional", grupos: ["custo_operacional"], natureza: "despesa", total: "CUSTO OPERACIONAL TOTAL" },
+  { code: "custo_administrativo", grupos: ["custo_administrativo"], natureza: "despesa", total: "CUSTO ADMINISTRATIVO TOTAL" },
   {
-    code: "custo_operacional",
-    grupos: ["cmv", "mao_de_obra", "comerciais"],
+    code: "financiamentos",
+    grupos: ["financiamentos"],
     natureza: "despesa",
-    total: "CUSTO OPERACIONAL TOTAL",
+    total: "DESPESAS TOTAIS FINANCIAMENTOS, EMPRÉSTIMOS e PARCELAMENTOS",
   },
-  {
-    code: "custo_administrativo",
-    grupos: ["pessoal", "diretoria", "administrativas", "financeiras"],
-    natureza: "despesa",
-    total: "CUSTO ADMINISTRATIVO TOTAL",
-  },
-  {
-    code: "outras_despesas",
-    grupos: ["investimentos", "outras_despesas"],
-    natureza: "despesa",
-    total: "OUTRAS DESPESAS TOTAIS",
-  },
+  { code: "outras_despesas", grupos: ["outras_despesas"], natureza: "despesa", total: "OUTRAS DESPESAS TOTAIS" },
   { code: "outras_receitas", grupos: ["outras_receitas"], natureza: "receita", total: "OUTRAS RECEITAS TOTAIS" },
 ];
 
@@ -105,6 +88,7 @@ const ROTULO = {
   margem_contribuicao: "MARGEM DE CONTRIBUIÇÃO",
   margem_contribuicao_pct: "MARGEM DE CONTRIBUIÇÃO SOBRE RECEITA BRUTA %",
   custo_administrativo_pct: "CUSTO ADMINISTRATIVO SOBRE RECEITA BRUTA %",
+  financiamentos_pct: "DESPESAS TOTAIS FINANCIAMENTOS, EMPRÉSTIMOS e PARCELAMENTOS %",
   gerador_de_caixa: "GERADOR DE CAIXA (EBITDA)",
   // "Líquida" no rótulo e divisão pela BRUTA na fórmula: está assim no modelo,
   // e fica assim para o arquivo ler igual ao que o cliente já recebe.
@@ -157,6 +141,8 @@ export type EntradaDoModelo = {
    * a exportação de um mês só. No modelo cada coluna **é** um ano inteiro.
    */
   colunaDeTotal: string | null;
+  /** A opção dos impostos da tela — o EBITDA do arquivo é o da tela. */
+  opcoes?: OpcoesDoDre;
 };
 
 export type CelulaDoModelo = {
@@ -233,7 +219,7 @@ function nomeDe(l: LancamentoDoDre): string {
 }
 
 export function montarDreNoModeloDoBpo(entrada: EntradaDoModelo): PlanilhaDoModelo {
-  const { colunas, mapeamento, colunaDeTotal } = entrada;
+  const { colunas, mapeamento, colunaDeTotal, opcoes = OPCOES_PADRAO } = entrada;
   if (colunas.length === 0) throw new Error("A DRE no modelo do BPO precisa de pelo menos uma coluna.");
 
   const nMeses = colunas.length;
@@ -409,7 +395,8 @@ export function montarDreNoModeloDoBpo(entrada: EntradaDoModelo): PlanilhaDoMode
     });
   };
 
-  const [receita, impostos, operacional, administrativo, outrasDespesas, outrasReceitas] = BLOCOS_DO_MODELO as [
+  const [receita, impostos, operacional, administrativo, financiamentos, outrasDespesas, outrasReceitas] = BLOCOS_DO_MODELO as [
+    BlocoDoModelo,
     BlocoDoModelo,
     BlocoDoModelo,
     BlocoDoModelo,
@@ -436,24 +423,23 @@ export function montarDreNoModeloDoBpo(entrada: EntradaDoModelo): PlanilhaDoMode
 
   bloco(operacional, "custo_operacional");
   percentual("custo_operacional_pct", ROTULO.custo_operacional_pct, "custo_operacional", true, 2, "percentual", "despesa", "custo_operacional");
-  // A margem parte da receita BRUTA, como na tela (`OPCOES_PADRAO`) e no modelo.
+  // A margem parte da receita BRUTA, como na tela e no modelo.
   resultado("margem_contribuicao", ROTULO.margem_contribuicao, [[1, "receita_bruta"], [-1, "custo_operacional"]]);
   percentual("margem_contribuicao_pct", ROTULO.margem_contribuicao_pct, "margem_contribuicao", false, 0, "percentual_resultado", "resultado", null);
 
   bloco(administrativo, "custo_administrativo");
   percentual("custo_administrativo_pct", ROTULO.custo_administrativo_pct, "custo_administrativo", true, 0, "percentual", "despesa", "custo_administrativo");
-  // ─── O imposto entra aqui, e não entra na tela ────────────────────────────
-  //
-  // O modelo desconta os impostos no EBITDA (`B6-B8-B32-B60`); o "gerador de
-  // caixa" da tela não desconta — é o chute de 11/09 em `OPCOES_PADRAO`,
-  // tirado da planilha da Irriga, e a tela avisa. O arquivo segue o modelo: o
-  // EBITDA e o resultado daqui ficam abaixo dos da tela exatamente pelo valor
-  // dos impostos. É mais um dado para a pergunta que está com o BPO.
+
+  bloco(financiamentos, "financiamentos");
+  percentual("financiamentos_pct", ROTULO.financiamentos_pct, "financiamentos", true, 0, "percentual", "despesa", "financiamentos");
+  // O EBITDA desconta os impostos como o modelo (`B7+B16+B53+B93+B107`) — ou
+  // não, na visão da Irriga (`impostosNoEbitda: false`): o arquivo segue a tela.
   resultado("gerador_de_caixa", ROTULO.gerador_de_caixa, [
     [1, "receita_bruta"],
-    [-1, "impostos"],
+    ...(opcoes.impostosNoEbitda ? ([[-1, "impostos"]] as [1 | -1, string][]) : []),
     [-1, "custo_operacional"],
     [-1, "custo_administrativo"],
+    [-1, "financiamentos"],
   ]);
   percentual("gerador_de_caixa_pct", ROTULO.gerador_de_caixa_pct, "gerador_de_caixa", false, 0, "percentual_resultado", "resultado", null);
 
