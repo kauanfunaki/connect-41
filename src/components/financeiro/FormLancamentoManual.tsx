@@ -19,6 +19,7 @@ import { lerBoletoParaLancar } from "@/lib/financeiro/leituraDoBoletoServidor";
 import type { LeituraDoBoleto } from "@/lib/financeiro/leituraDoBoleto";
 import { CamposDaContraparteNova } from "./ContraparteNova";
 import { CampoDeProjeto } from "./CampoDeProjeto";
+import { CamposDaRepeticao } from "./CamposDaRepeticao";
 
 type Contraparte = {
   id: string;
@@ -72,6 +73,7 @@ export function FormLancamentoManual({
   const [erro, setErro] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
   const [aguardando, setAguardando] = useState(false);
+  const [repetidas, setRepetidas] = useState(0);
   const [pendente, startTransition] = useTransition();
 
   // A leitura do boleto. `versao` remonta os campos sem estado próprio para eles
@@ -135,6 +137,7 @@ export function FormLancamentoManual({
       }
       setSalvo(true);
       setAguardando(Boolean(r.aguardandoAprovacao));
+      setRepetidas(r.repetidas ?? 0);
       formRef.current?.reset();
       setContraparte("");
       setCategoria("");
@@ -302,6 +305,9 @@ export function FormLancamentoManual({
             <Input id="lancamento-descricao" name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" defaultValue={leitura?.descricao ?? undefined} />
           </CampoForm>
 
+          {/* Repetir (lote D): as próximas nascem junto — ver `CamposDaRepeticao`. */}
+          <CamposDaRepeticao className="sm:col-span-2 lg:col-span-4" />
+
           {/* Anexos (lote H2): o boleto, a nota, o comprovante — ficam na conta. */}
           <CampoForm
             label="Anexos"
@@ -327,7 +333,7 @@ export function FormLancamentoManual({
           nota={
             salvo && (
               <span className="inline-flex items-center gap-1.5 text-success-fg">
-                <Check size={14} className="flex-shrink-0" /> Lançado. Ele já aparece nas contas e na DRE.
+                <Check size={14} className="flex-shrink-0" /> Lançado{repetidas > 0 ? `, com mais ${repetidas} na série` : ""}. Ele já aparece nas contas e na DRE.
                 {/* Empresa com alçada: a conta nasce aguardando, e a baixa fica travada até alguém aprovar. */}
                 {aguardando && " Aguardando aprovação antes da baixa."}
               </span>
