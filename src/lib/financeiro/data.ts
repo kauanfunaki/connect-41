@@ -5,6 +5,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { presaAoOmie } from "@/lib/integracoes/omie/virada";
+import { rotuloDaSerie } from "./repeticao";
 import type { Prisma } from "@/generated/prisma/client";
 import { saoPauloParts, addDaysToKey } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
@@ -53,6 +54,8 @@ export type LinhaDaConta = {
   emissao: Date | null;
   /** Veio do Omie e a empresa ainda não virou para o Connect (lote E): baixa e cancelamento, só no Omie. */
   presaAoOmie: boolean;
+  /** A posição na série da repetição ("3/12"), quando nasceu de uma (lote D). */
+  serie: string | null;
 };
 
 export type FiltroDeContas = {
@@ -125,6 +128,8 @@ const CAMPOS = {
   costCenter: { select: { name: true } },
   project: { select: { name: true } },
   documentNumber: true,
+  recurrenceIndex: true,
+  recurrenceTotal: true,
   issueDate: true,
   paidPrincipal: true,
 } satisfies Prisma.FinanceEntrySelect;
@@ -228,6 +233,7 @@ export async function listarContas(
       numeroDocumento: e.documentNumber,
       emissao: e.issueDate,
       presaAoOmie: presaAoOmie(e, e.company),
+      serie: rotuloDaSerie(e),
     };
   });
 
