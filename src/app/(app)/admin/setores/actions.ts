@@ -66,7 +66,8 @@ export async function criarSetor(
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "sector.create", entityType: "Sector", metadata: { code, label } });
 
   revalidatePath("/admin/setores");
-  redirect("/admin/setores");
+  // Abre o setor novo na tela de setores e módulos (4A, 20/10/2026).
+  redirect(`/admin/setores?setor=${encodeURIComponent(code)}`);
 }
 
 export async function atualizarSetor(
@@ -108,5 +109,5 @@ export async function atualizarSetor(
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "sector.update", entityType: "Sector", entityId: id, metadata: { label } });
 
   revalidatePath("/admin/setores");
-  redirect("/admin/setores");
+  redirect(`/admin/setores?setor=${encodeURIComponent(existing.code)}`);
 }

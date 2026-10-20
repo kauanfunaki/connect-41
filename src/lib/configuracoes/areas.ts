@@ -125,18 +125,10 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
     telas: [
       {
         chave: "setores",
-        rotulo: "Setores e menu Geral",
-        descricao: "Os setores, a cor de cada um e as telas do menu Geral de cada setor.",
+        rotulo: "Setores e módulos",
+        descricao: "Cada setor com os módulos que opera, as telas do menu Geral e as pessoas.",
         href: "/admin/setores",
         rota: "/admin/setores",
-        acesso: "admin",
-      },
-      {
-        chave: "modulos",
-        rotulo: "Módulos",
-        descricao: "Liga e desliga os módulos de cada setor.",
-        href: "/admin/modulos",
-        rota: "/admin/modulos",
         acesso: "admin",
       },
       {

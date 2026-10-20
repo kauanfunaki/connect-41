@@ -56,7 +56,7 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
       {!isEdit && (
         <FieldGrid>
           <Field label="Setor" htmlFor="sectorCode" required>
-            <Select id="sectorCode" name="sectorCode" required>
+            <Select id="sectorCode" name="sectorCode" required defaultValue={defaultValues?.sectorCode ?? ""}>
               <option value="">Selecionar…</option>
               {sectorOptions.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
@@ -64,7 +64,7 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
             </Select>
           </Field>
           <Field label="Aplica-se a" htmlFor="entityType" required>
-            <Select id="entityType" name="entityType" required defaultValue="COMPANY">
+            <Select id="entityType" name="entityType" required defaultValue={defaultValues?.entityType ?? "COMPANY"}>
               <option value="COMPANY">Empresas</option>
               <option value="PERSON">Pessoas</option>
             </Select>
@@ -89,9 +89,9 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
         />
       </Field>
 
-      {/* A caixa de "obrigatório" dispensa o rótulo em cima; a ordem (só na
-          edição) é um número curto e ganha coluna estreita na mesma linha. */}
-      <FieldGrid columns={isEdit ? "sm:grid-cols-[minmax(0,1fr)_8rem_minmax(0,1fr)]" : "sm:grid-cols-2"}>
+      {/* A caixa de "obrigatório" dispensa o rótulo em cima. A ordem saiu
+          daqui: é por arrastar, no construtor (5A, 20/10/2026). */}
+      <FieldGrid columns="sm:grid-cols-2">
         <Field label="Tipo do campo" htmlFor="fieldType" required>
           <Select
             id="fieldType"
@@ -105,16 +105,6 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
             ))}
           </Select>
         </Field>
-        {isEdit && (
-          <Field label="Ordem" htmlFor="order">
-            <Input
-              id="order"
-              name="order"
-              type="number"
-              defaultValue={defaultValues?.order ?? 0}
-            />
-          </Field>
-        )}
         <AlinhadoAoCampo>
           <Checkbox
             id="required"
