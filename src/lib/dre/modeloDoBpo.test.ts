@@ -154,7 +154,7 @@ describe("subtotais e percentuais", () => {
     expect(f("margem_contribuicao")).toBe("B4-B13");
     expect(f("custo_administrativo")).toBe("SUM(B17:B20)");
     expect(f("financiamentos")).toBe("SUM(B23:B23)");
-    // Como o modelo da CARGO (`B7+B16+B53+B93+B107`): o EBITDA desconta os impostos.
+    // Como o modelo novo (`B7+B16+B53+B93+B107`): o EBITDA desconta os impostos.
     expect(f("gerador_de_caixa")).toBe("B4-B6-B13-B21-B24");
     expect(f("outras_despesas")).toBe("SUM(B28:B29)");
     expect(f("outras_receitas")).toBe("SUM(B32:B32)");

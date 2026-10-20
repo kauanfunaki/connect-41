@@ -110,7 +110,7 @@ export const ESPERADO_OUTUBRO_2025: Record<string, number> = {
 };
 
 /**
- * O mesmo mês no padrão de 20/10/2026 (estrutura da CARGO, cálculo da Irriga),
+ * O mesmo mês no padrão de 20/10/2026 (estrutura do modelo novo, cálculo da Irriga),
  * com os impostos no EBITDA — a visão padrão. Montado à mão a partir da
  * planilha acima, e não do código, para o teste ter um lado que não depende
  * dele:

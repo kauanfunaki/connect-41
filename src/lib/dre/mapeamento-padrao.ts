@@ -12,9 +12,9 @@
 // quebraria o casamento com o dado real — `chaveDaCategoria` normaliza espaço,
 // acento e caixa, e só isso.
 //
-// 20/10/2026: os grupos são os da estrutura da CARGO (src/lib/dre/estrutura.ts).
+// 20/10/2026: os grupos são os da estrutura do modelo novo (src/lib/dre/estrutura.ts).
 // Quase tudo passou pelo de-para `GRUPO_DO_ANTIGO`; quatro categorias seguem
-// onde a CARGO as põe — Tarifas Bancárias no custo administrativo, IOF nas
+// onde o modelo novo as põe — Tarifas Bancárias no custo administrativo, IOF nas
 // outras despesas, Impostos Parcelados e Pagamento de Empréstimos em
 // financiamentos.
 
