@@ -228,6 +228,7 @@ const USUARIO: Ligacao[] = [
   { modelo: "Process", campo: "owner", fk: "ownerUserId", tratamento: "desligar", rotulo: ["processo do Societário sob responsabilidade dele", "processos do Societário sob responsabilidade dele"] },
   { modelo: "ServiceRequest", campo: "assignee", fk: "assigneeId", tratamento: "desligar", rotulo: ["solicitação do portal atribuída a ele", "solicitações do portal atribuídas a ele"] },
   { modelo: "Lead", campo: "assignee", fk: "assigneeId", tratamento: "desligar", rotulo: ["lead sob responsabilidade dele", "leads sob responsabilidade dele"] },
+  { modelo: "OpsWatcher", campo: "owner", fk: "ownerId", tratamento: "desligar", rotulo: ["automação sob responsabilidade dele", "automações sob responsabilidade dele"] },
   { modelo: "WhatsappThread", campo: "assignedTo", fk: "assignedToId", tratamento: "desligar", rotulo: ["conversa do WhatsApp atribuída a ele", "conversas do WhatsApp atribuídas a ele"] },
   { modelo: "FinanceEntry", campo: "collectionOwner", fk: "collectionOwnerId", tratamento: "desligar", rotulo: ["cobrança sob responsabilidade dele", "cobranças sob responsabilidade dele"] },
 
@@ -286,11 +287,23 @@ const USUARIO: Ligacao[] = [
   { modelo: "UserAgendaConfig", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPinnedModule", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPreference", campo: "user", fk: "userId", tratamento: "cascata" },
+  { modelo: "LocalFiscalScenario", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserSector", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserTenantAccess", campo: "user", fk: "userId", tratamento: "cascata" },
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [
+  { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
+  { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
+  { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },
+  { modelo: "HelpdeskParticipant", coluna: "userId", tratamento: "apagar" },
+  { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
+  { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
+  { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
+  { modelo: "HelpdeskChecklistItem", coluna: "doneById", tratamento: "manter", motivo: "trilha de quem conferiu o item; a tela não expõe o id" },
+  { modelo: "HelpdeskApproval", coluna: "decidedById", tratamento: "manter", motivo: "histórico da decisão de aprovação" },
+  { modelo: "HelpdeskReopenRequest", coluna: "requestedById", tratamento: "manter", motivo: "histórico do pedido de reabertura" },
+  { modelo: "HelpdeskReopenRequest", coluna: "decidedById", tratamento: "manter", motivo: "histórico da decisão de reabertura" },
   // Sessão e troca de senha: saem com a conta.
   { modelo: "RefreshToken", coluna: "userId", tratamento: "apagar" },
   { modelo: "PasswordResetToken", coluna: "userId", tratamento: "apagar" },

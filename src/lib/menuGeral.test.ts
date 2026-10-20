@@ -13,6 +13,7 @@ import {
   type TelaDoGeral,
 } from "./menuGeral";
 import { tutorialDaEquipe, type OpcoesDaEquipe } from "./tutorial/tutoriais";
+import { getModuleDef } from "./module-catalog";
 
 // O que se testa: o menu Geral por setor (14/10/2026). Setor sem configuração
 // vê tudo; quem está em mais de um setor vê a união; com setor escolhido, vale
@@ -21,6 +22,7 @@ import { tutorialDaEquipe, type OpcoesDaEquipe } from "./tutorial/tutoriais";
 
 const TUDO = [...TODAS_AS_TELAS_DO_GERAL];
 const sem = (...fora: TelaDoGeral[]) => TUDO.filter((t) => !fora.includes(t));
+const PADRAO = TUDO;
 
 describe("lerTelasOcultas", () => {
   it("sem configuração, nada escondido", () => {
@@ -81,14 +83,14 @@ describe("setoresQueDecidemOGeral", () => {
 describe("telasDoGeralVisiveis", () => {
   const recrutamentoSemSolicitacoes = { recrutamento: ["solicitacoes", "transferencias"] as TelaDoGeral[] };
 
-  it("sem recorte (null) ou sem setor: todas", () => {
-    expect(telasDoGeralVisiveis(null, recrutamentoSemSolicitacoes)).toEqual(TUDO);
-    expect(telasDoGeralVisiveis([], recrutamentoSemSolicitacoes)).toEqual(TUDO);
+  it("sem recorte ou setor: nenhuma tela fica escondida por padrão", () => {
+    expect(telasDoGeralVisiveis(null, recrutamentoSemSolicitacoes)).toEqual(PADRAO);
+    expect(telasDoGeralVisiveis([], recrutamentoSemSolicitacoes)).toEqual(PADRAO);
   });
 
-  it("setor sem configuração: todas (o menu de antes)", () => {
-    expect(telasDoGeralVisiveis(["dp"], {})).toEqual(TUDO);
-    expect(telasDoGeralVisiveis(["dp"], recrutamentoSemSolicitacoes)).toEqual(TUDO);
+  it("setor sem configuração: aplica o padrão", () => {
+    expect(telasDoGeralVisiveis(["dp"], {})).toEqual(PADRAO);
+    expect(telasDoGeralVisiveis(["dp"], recrutamentoSemSolicitacoes)).toEqual(PADRAO);
   });
 
   it("um setor: o que ele escondeu sai", () => {
@@ -121,7 +123,7 @@ describe("telasDoGeralVisiveis", () => {
       "transferencias",
     );
     // O administrador em Todos vê tudo; dentro do Recrutamento, confere o que o setor vê.
-    expect(telasDoGeralVisiveis(setoresQueDecidemOGeral(null, [], true), config)).toEqual(TUDO);
+    expect(telasDoGeralVisiveis(setoresQueDecidemOGeral(null, [], true), config)).toEqual(PADRAO);
     expect(telasDoGeralVisiveis(setoresQueDecidemOGeral("recrutamento", [], true), config)).toEqual(sem("solicitacoes", "transferencias"));
   });
 });
@@ -136,9 +138,20 @@ describe("semTelasDoGeralOcultas", () => {
   });
 
   it("o de-para de módulo para tela do Geral", () => {
+    expect(telaDoGeralDoModulo("helpdesk")).toBe("chamados");
     expect(telaDoGeralDoModulo("portal_solicitacoes")).toBe("solicitacoes");
     expect(telaDoGeralDoModulo("arquivos")).toBe("arquivos");
     expect(telaDoGeralDoModulo("recrutamento_vagas")).toBeNull();
+  });
+
+  it("Chamados nasce com o módulo desativado, mas seu atalho não é ocultado ao ativar", () => {
+    expect(getModuleDef("helpdesk")?.defaultEnabled).toBe(false);
+    for (const setores of [null, [], ["tech"], ["fiscal"], ["tech", "fiscal"]]) {
+      const visiveis = telasDoGeralVisiveis(setores, {});
+      expect(semTelasDoGeralOcultas([{ code: "helpdesk" }], visiveis)).toEqual([{ code: "helpdesk" }]);
+    }
+    // Uma personalização explícita do administrador continua sendo respeitada.
+    expect(semTelasDoGeralOcultas([{ code: "helpdesk" }], telasDoGeralVisiveis(["tech"], { tech: ["chamados"] }))).toEqual([]);
   });
 });
 

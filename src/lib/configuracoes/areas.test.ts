@@ -52,6 +52,7 @@ describe("menu das configurações por papel", () => {
       "Feriados",
       "Plano de contas",
       "Cálculo de rescisão",
+      "Chamados internos",
     ]);
     // Competências saiu daqui em 20/10/2026: é uma aba de Avaliações de
     // desempenho, de quem gere o módulo (escolha 8A).
@@ -60,9 +61,10 @@ describe("menu das configurações por papel", () => {
     // Horário da Agenda, que é um trecho da tela Empresa — menos Competências,
     // que foi para Avaliações de desempenho; Módulos, que virou parte de
     // Setores e módulos; e Atendentes e vínculos, que foi para o painel do
-    // usuário e para o Chatwoot em Integrações (8A, 4A e 3A, 20/10).
+    // usuário e para o Chatwoot em Integrações (8A, 4A e 3A, 20/10). Inclui
+    // também o catálogo de Chamados internos.
     const total = Object.values(telasDoMenu(ADMIN_AUTO)).flat().length;
-    expect(total).toBe(19 + 1 + 1 - 3);
+    expect(total).toBe(19 + 1 + 1 - 3 + 1);
     expect(telasDoMenu(ADMIN)["Setores e módulos"]).toEqual(["Setores e módulos", "Campos customizados", "Tags"]);
   });
 

@@ -34,7 +34,7 @@ export function tomDoEstadoFiscal(estado: string): TomDoSelo {
   if (/^Erro/i.test(estado)) return "perigo";
   if (/Rejeitado|pendências|revisão/i.test(estado)) return "atencao";
   if (/Aprovado|Classificado|Entregue|Concluída|Conciliado|Fechado/i.test(estado)) return "sucesso";
-  if (/Na fila/i.test(estado)) return "marca";
+  if (/Na fila|Executando/i.test(estado)) return "marca";
   return "neutro";
 }
 export function EstadoFiscal({ children }: { children: string }) {
