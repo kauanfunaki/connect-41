@@ -259,7 +259,7 @@ export default async function IntegracoesPage({
               />
             </div>
           ) : bloco.chave === "omie" ? (
-            <ContasOmie contas={contasOmie} empresas={empresasParaOmie} />
+            <ContasOmie contas={contasOmie} empresas={empresasParaOmie} podeDesfazerVirada={ctx.role === "SUPER_ADMIN"} />
           ) : bloco.chave === "chatwoot" ? (
             <div className="flex flex-col gap-5">
               <p className="text-fs-3 text-fg-secondary">
