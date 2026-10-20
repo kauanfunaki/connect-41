@@ -13,6 +13,11 @@
 // Esta prévia chama a mesma listagem que a leitura chama e conta, na primeira
 // página, quantos títulos trazem cada campo e quantos a leitura preencheria.
 //
+// A primeira rodada (20/10/2026, ER Dias) confirmou os dois: `nCodCC` (número)
+// e `dDtPrevisao` (dd/mm/aaaa) em 100 de 100 títulos; todo `nCodCC` é uma
+// conta do `ListarContasCorrentes` (98 do tipo conta corrente, 2 de outro
+// tipo, que o Connect não liga); a previsão diferente do vencimento em 14.
+//
 // ── O que ela NÃO faz ───────────────────────────────────────────────────────
 //
 // Só `ListarMovimentos` e `ListarContasCorrentes`; o script se recusa a chamar

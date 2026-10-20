@@ -13,7 +13,9 @@
 //   detalhes: nCodTitulo, cNumTitulo, dDtEmissao, dDtVenc, dDtPagamento,
 //             nCodCliente, cCPFCNPJCliente, cNatureza (P|R), cStatus,
 //             nValorTitulo, cCodCateg, cNumDocFiscal,
-//             nCodCC e dDtPrevisao (20/10: conta corrente e previsão do título)
+//             nCodCC e dDtPrevisao (20/10: conta corrente e previsão do título —
+//             vistos numa resposta real da ER Dias, em todos os 100 títulos da
+//             página; a previsão vem sempre, igual ao vencimento em 86 deles)
 //   resumo:   cLiquidado (S|N), nValPago, nValAberto
 //   categorias: rateio [{ cCodCateg, nValor, nPerc }]
 // E `geral/categorias` `ListarCategorias` para o nome e o grupo de cada código:
