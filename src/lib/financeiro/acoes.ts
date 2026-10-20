@@ -18,7 +18,9 @@ import { registrarBaixa, quitarConta, apagarBaixa, RecusaDaBaixa, type OrigemDaB
 import { MAXIMO_DO_LOTE, separarLote, validarDiaDoLote, type ForaDoLote } from "./baixa/lote";
 import { nomeExibicao } from "@/lib/companyName";
 import { contaPrevistaEmComum } from "./contaPrevista";
-import { ehContaDeAdiantamento, tipoDoAdiantamento, TIPOS_DE_ADIANTAMENTO, validarUsoDoAdiantamento } from "./adiantamento";
+import { ehContaDeAdiantamento, tipoDoAdiantamento, validarUsoDoAdiantamento } from "./adiantamento";
+import { TIPOS_FORA_DO_CAIXA } from "./tiposDeConta";
+import { cartoesParaABaixa, type CartaoParaABaixa } from "./cartaoServidor";
 import { disponivelDoAdiantamento } from "./adiantamentoServidor";
 import { decimalDeCentavos } from "./manual";
 import { instanteDaData } from "./periodo";
@@ -185,6 +187,12 @@ export type DadosDaBaixa =
        * a baixa pode sair dele em vez do banco.
        */
       adiantamento: { contaId: string; nome: string; disponivelCentavos: number } | null;
+      /**
+       * Os cartões de crédito da empresa (lote D, 20/10), na conta a pagar que
+       * não é fatura nem transferência: a baixa pelo cartão entra na fatura do
+       * ciclo, e os dias dizem em qual.
+       */
+      cartoes: CartaoParaABaixa[];
       baixas: BaixaDaConta[];
     }
   | { ok: false; erro: string };
@@ -192,8 +200,8 @@ export type DadosDaBaixa =
 /** Contas bancárias ativas da empresa, para o "de qual conta saiu". */
 async function contasDaEmpresa(tenantId: string, companyId: string) {
   const contas = await getPrisma().bankAccount.findMany({
-    // Só banco: a conta de adiantamento entra à parte, com o disponível de quem é a conta.
-    where: { tenantId, companyId, active: true, type: { notIn: [...TIPOS_DE_ADIANTAMENTO] } },
+    // Só banco: o adiantamento entra à parte, com o disponível de quem é a conta, e o cartão também, com os dias da fatura.
+    where: { tenantId, companyId, active: true, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
     select: { id: true, nickname: true, accountNumber: true },
     orderBy: { nickname: "asc" },
   });
@@ -224,6 +232,8 @@ export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
       companyId: true,
       bankAccountId: true,
       counterpartyId: true,
+      cardAccountId: true,
+      transferId: true,
       counterparty: { select: { name: true } },
       payments: {
         select: {
@@ -256,6 +266,8 @@ export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
     contas: await contasDaEmpresa(ctx.tenantId, conta.companyId),
     contaPrevistaId: conta.bankAccountId,
     adiantamento: await adiantamentoDaConta(ctx.tenantId, conta.companyId, conta.kind, conta.counterpartyId),
+    cartoes:
+      conta.kind === "PAGAR" && !conta.cardAccountId && !conta.transferId ? await cartoesParaABaixa(getPrisma(), ctx.tenantId, conta.companyId) : [],
     baixas: conta.payments.map((p) => ({
       id: p.id,
       dataKey: saoPauloParts(p.paidAt).dateKey,
@@ -529,9 +541,9 @@ export async function registrarPagamentosEmLote(formData: FormData): Promise<Res
   for (const empresaId of new Set(lote.entram.map((c) => c.empresaId))) {
     const escolhida = String(formData.get(`conta:${empresaId}`) ?? "").trim() || null;
     if (escolhida) {
-      // Em lote, só banco: o adiantamento de cada fornecedor se usa na baixa de uma conta.
+      // Em lote, só banco: o adiantamento e o cartão se usam na baixa de uma conta.
       const banco = await getPrisma().bankAccount.findFirst({
-        where: { id: escolhida, tenantId, companyId: empresaId, active: true, type: { notIn: [...TIPOS_DE_ADIANTAMENTO] } },
+        where: { id: escolhida, tenantId, companyId: empresaId, active: true, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
         select: { id: true },
       });
       if (!banco) return { error: "Conta bancária não encontrada na empresa — atualize a tela." };

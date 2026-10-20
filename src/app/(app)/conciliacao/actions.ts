@@ -29,7 +29,7 @@ import { sincronizarAcordos } from "@/lib/financeiro/cobranca/sincronizar";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
 import { categoriaDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { categoriaDeTransferencia } from "@/lib/financeiro/conciliacao/transferenciaServidor";
-import { ehContaDeAdiantamento } from "@/lib/financeiro/adiantamento";
+import { ehContaForaDoCaixa } from "@/lib/financeiro/tiposDeConta";
 import {
   NOME_DA_CONTRAPARTE_DE_TRANSFERENCIA,
   validarOutraConta,
@@ -119,9 +119,11 @@ export async function salvarContaBancaria(formData: FormData): Promise<Resultado
     if (id) {
       const atual = await c.prisma.bankAccount.findFirst({
         where: { id, tenantId: c.tenantId },
-        select: { id: true, companyId: true, bankCode: true, accountDigits: true, _count: { select: { transactions: true } } },
+        select: { id: true, companyId: true, bankCode: true, accountDigits: true, type: true, _count: { select: { transactions: true } } },
       });
       if (!atual) return { error: "Conta bancária não encontrada." };
+      // O adiantamento e o cartão de crédito (lote D, 20/10) têm o cadastro deles, em Contas a pagar.
+      if (ehContaForaDoCaixa(atual.type)) return { error: "Esta conta não é de banco — o cartão se edita em Contas a pagar." };
       const trocouIdentidade = atual.bankCode !== d.bankCode || atual.accountDigits !== d.accountDigits;
       if (trocouIdentidade && atual._count.transactions > 0) {
         return { error: "Esta conta já tem extrato importado — banco e número não podem mudar. Cadastre outra conta." };
@@ -220,8 +222,8 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
   });
   if (!conta) return { error: "Conta bancária não encontrada." };
   if (!conta.active) return { error: "Conta inativa. Reative antes de importar." };
-  // A conta de adiantamento (lote D, 20/10) não é banco: não tem extrato.
-  if (ehContaDeAdiantamento(conta.type)) return { error: "A conta de adiantamento não tem extrato." };
+  // O adiantamento e o cartão de crédito (lote D, 20/10) não são banco: não têm extrato.
+  if (ehContaForaDoCaixa(conta.type)) return { error: "Esta conta não tem extrato — é de adiantamento ou cartão de crédito." };
 
   const leitura = lerOfx(new Uint8Array(await arquivo.arrayBuffer()));
   if (!leitura.ok) return { error: leitura.erro };
@@ -928,8 +930,10 @@ export async function transferirEntreContas(formData: FormData): Promise<Resulta
 
       const outra = await tx.bankAccount.findFirst({
         where: { id: outraContaId, tenantId: c.tenantId },
-        select: { id: true, companyId: true, active: true, nickname: true, accountNumber: true },
+        select: { id: true, companyId: true, active: true, nickname: true, accountNumber: true, type: true },
       });
+      // Transferência é entre bancos: o adiantamento e o cartão têm a porta deles.
+      if (outra && ehContaForaDoCaixa(outra.type)) throw new Recusa("Escolha uma conta de banco.");
       const v = validarOutraConta({ id: t.bankAccount.id, companyId: t.bankAccount.companyId }, outra);
       if (!v.ok || !outra) throw new Recusa(v.ok ? "Escolha a outra conta." : v.erro);
 

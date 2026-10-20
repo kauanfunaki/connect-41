@@ -22,6 +22,14 @@ describe("contaPrevistaDoLancamento", () => {
     });
     expect(contaPrevistaDoLancamento({ companyId: "e1", informadoId: "cc1", conta: inativa, atualId: "cc1" })).toEqual({ ok: true, contaId: "cc1" });
   });
+
+  it("o cartão de crédito só na conta a pagar; o adiantamento, nunca (lote D, 20/10)", () => {
+    const cartao = { ...conta, type: "CARTAO_CREDITO" };
+    expect(contaPrevistaDoLancamento({ companyId: "e1", informadoId: "cc1", conta: cartao, kind: "PAGAR" })).toEqual({ ok: true, contaId: "cc1" });
+    expect(contaPrevistaDoLancamento({ companyId: "e1", informadoId: "cc1", conta: cartao, kind: "RECEBER" })).toEqual({ ok: false, erro: "Cartão de crédito só paga conta a pagar." });
+    const adiantamento = { ...conta, type: "ADIANTAMENTO_FORNECEDOR" };
+    expect(contaPrevistaDoLancamento({ companyId: "e1", informadoId: "cc1", conta: adiantamento, kind: "PAGAR" }).ok).toBe(false);
+  });
 });
 
 describe("a sugestão da baixa", () => {

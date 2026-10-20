@@ -74,6 +74,12 @@ describe("travasDaEdicao", () => {
     expect(t.valor).toMatch(/Conta de imposto retido/);
   });
 
+  it("fatura do cartão: valor, credor, categoria e retenções vêm das compras; vencimento e conta, não (lote D, 20/10)", () => {
+    const t = travas({ daFatura: true });
+    expect(Object.keys(t).sort()).toEqual(["categoria", "contraparte", "retencoes", "valor"]);
+    expect(t.valor).toMatch(/Fatura do cartão/);
+  });
+
   it("baixa parcial: o valor trava, o vencimento do resto continua livre", () => {
     const t = travas({ temBaixa: true });
     expect(Object.keys(t)).toEqual(["valor"]);

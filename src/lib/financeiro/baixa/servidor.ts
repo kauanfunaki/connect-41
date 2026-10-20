@@ -10,6 +10,10 @@
 //
 // Funções de dentro de transação (`tx`): quem chama abre a transação, e um erro
 // aqui desfaz junto o que o chamador gravou.
+//
+// A fatura do cartão de crédito (lote D, 20/10) também é refeita aqui: a compra
+// no cartão é uma baixa, então toda porta que paga ou desfaz passa pela fatura
+// sem precisar lembrar dela.
 
 import type { Prisma } from "@/generated/prisma/client";
 import { MOTIVO_DO_OMIE, presaAoOmie, veioDoOmie } from "@/lib/integracoes/omie/virada";
@@ -30,6 +34,10 @@ import {
 } from "./regras";
 import { saoPauloParts } from "@/lib/agenda";
 import { motivoDoBloqueioDeBaixa, type StatusDeAprovacao } from "../aprovacao/regras";
+import { instanteDaData } from "../periodo";
+import { cicloDaCompra, descricaoDaFatura, mesDoCiclo } from "../cartao";
+import { categoriaDaFatura, credorDaFatura } from "../cartaoServidor";
+import { ehCartaoDeCredito } from "../tiposDeConta";
 
 type Tx = Prisma.TransactionClient;
 
@@ -212,6 +220,10 @@ export async function registrarBaixa(tx: Tx, b: NovaBaixa): Promise<BaixaGravada
   const caixa = b.principalCentavos + juros + multa - desconto;
   if (juros < 0 || multa < 0 || desconto < 0 || caixa < 0) throw new RecusaDaBaixa("Juros, multa ou desconto inválido.");
 
+  // Pelo cartão de crédito: a compra entra na fatura do ciclo.
+  const cartao = b.bankAccountId ? await travarCartao(tx, b.bankAccountId) : null;
+  const faturaId = cartao ? await faturaDaCompra(tx, cartao, { entryId: b.entryId, kind: conta.kind, paidAt: b.paidAt, userId: b.userId ?? null }) : null;
+
   const interestCategoryId = juros + multa > 0 ? await categoriaDaBaixa(tx, b.tenantId, conta.companyId, conta.kind, "encargos") : null;
   const discountCategoryId = desconto > 0 ? await categoriaDaBaixa(tx, b.tenantId, conta.companyId, conta.kind, "desconto") : null;
 
@@ -229,6 +241,7 @@ export async function registrarBaixa(tx: Tx, b: NovaBaixa): Promise<BaixaGravada
       interestCategoryId,
       discountCategoryId,
       bankAccountId: b.bankAccountId ?? null,
+      cardInvoiceId: faturaId,
       note: b.note ?? null,
       origin: b.origin,
       createdById: b.userId ?? null,
@@ -236,6 +249,7 @@ export async function registrarBaixa(tx: Tx, b: NovaBaixa): Promise<BaixaGravada
     select: { id: true, principal: true },
   });
   const { quitada } = await recalcularConta(tx, b.entryId);
+  if (faturaId) await refazerFatura(tx, faturaId);
   return { paymentId: criada.id, quitada, caixaCentavos: caixa, principal: criada.principal };
 }
 
@@ -253,18 +267,21 @@ export async function quitarConta(tx: Tx, b: Omit<NovaBaixa, "principalCentavos"
 export async function apagarBaixa(tx: Tx, paymentId: string, tenantId: string): Promise<{ entryId: string }> {
   const b = await tx.financeEntryPayment.findFirst({
     where: { id: paymentId, tenantId },
-    select: { entryId: true, origin: true, bankMatch: { select: { id: true } } },
+    select: { entryId: true, origin: true, cardInvoiceId: true, bankMatch: { select: { id: true } } },
   });
   if (!b) throw new RecusaDaBaixa("Baixa não encontrada — atualize a tela.");
   if (b.bankMatch) throw new RecusaDaBaixa("Esta baixa está conciliada com o extrato — desfaça a conciliação primeiro.");
   const conta = await travarConta(tx, b.entryId);
   // A baixa que veio do Omie volta na leitura seguinte — até a virada (lote E).
   if (b.origin === "OMIE" && conta && (await presaNaTrava(tx, conta))) throw new RecusaDaBaixa(MOTIVO_DO_OMIE.desfazerBaixa);
+  // A compra no cartão sai da fatura — a não ser que a fatura já tenha pagamento.
+  if (b.cardInvoiceId) await travarFaturaSemPagamento(tx, b.cardInvoiceId, "tirar uma compra dela");
   // Condicional: a leitura acima pode ser a foto de antes de alguém apagar ou
   // conciliar esta baixa.
   const apagada = await tx.financeEntryPayment.deleteMany({ where: { id: paymentId, bankMatch: { is: null } } });
   if (apagada.count !== 1) throw new RecusaDaBaixa("Esta baixa acabou de mudar — atualize a tela.");
   await recalcularConta(tx, b.entryId);
+  if (b.cardInvoiceId) await refazerFatura(tx, b.cardInvoiceId);
   return { entryId: b.entryId };
 }
 
@@ -281,6 +298,115 @@ export async function mudarDiaDaBaixa(tx: Tx, b: { id: string; entryId: string }
     data: { paidAt: dados.paidAt, ...(dados.bankAccountId !== undefined ? { bankAccountId: dados.bankAccountId } : {}) },
   });
   await recalcularConta(tx, b.entryId);
+}
+
+// ─── Cartão de crédito (lote D, 20/10) ───────────────────────────────────────
+//
+// A compra no cartão é a baixa saindo por ele; a fatura do ciclo é a conta a
+// pagar que soma as compras — ver `../cartao.ts`. A ordem das travas é a da
+// baixa (a conta, depois o cartão, depois a fatura), e quem só mexe na fatura
+// trava só ela: nenhuma porta espera a outra para sempre.
+
+type CartaoTravado = { id: string; tenantId: string; companyId: string; nickname: string; fechamento: number; vencimento: number };
+
+/**
+ * O cartão da baixa, travado: duas compras ao mesmo tempo no mesmo cartão
+ * criariam a mesma fatura duas vezes. `null` quando a conta não é cartão.
+ */
+async function travarCartao(tx: Tx, bankAccountId: string): Promise<CartaoTravado | null> {
+  const tipo = await tx.bankAccount.findUnique({ where: { id: bankAccountId }, select: { type: true } });
+  if (!ehCartaoDeCredito(tipo?.type)) return null;
+  const [c] = await tx.$queryRaw<
+    { id: string; tenantId: string; companyId: string; nickname: string; cardClosingDay: number | null; cardDueDay: number | null }[]
+  >`SELECT id, tenantId, companyId, nickname, cardClosingDay, cardDueDay FROM bank_accounts WHERE id = ${bankAccountId} FOR UPDATE`;
+  if (!c) return null;
+  if (!c.cardClosingDay || !c.cardDueDay) {
+    throw new RecusaDaBaixa(`O cartão ${c.nickname} está sem os dias de fechamento e vencimento — complete o cadastro em Contas a pagar › Cartões de crédito.`);
+  }
+  return { id: c.id, tenantId: c.tenantId, companyId: c.companyId, nickname: c.nickname, fechamento: Number(c.cardClosingDay), vencimento: Number(c.cardDueDay) };
+}
+
+/**
+ * A fatura em que a compra entra — a do ciclo do dia da baixa —, criada se
+ * ainda não existe. A fatura que já tem pagamento não recebe compra: o valor
+ * dela é o que foi pago.
+ */
+async function faturaDaCompra(
+  tx: Tx,
+  cartao: CartaoTravado,
+  compra: { entryId: string; kind: TipoDoLancamento; paidAt: Date; userId: string | null }
+): Promise<string> {
+  if (compra.kind !== "PAGAR") throw new RecusaDaBaixa("Cartão de crédito só paga conta a pagar.");
+  const conta = await tx.financeEntry.findUnique({ where: { id: compra.entryId }, select: { cardAccountId: true, transferId: true } });
+  if (conta?.cardAccountId) throw new RecusaDaBaixa("A fatura do cartão se paga pelo banco.");
+  if (conta?.transferId) throw new RecusaDaBaixa("Transferência não sai pelo cartão.");
+
+  const c = cicloDaCompra(saoPauloParts(compra.paidAt).dateKey, { fechamento: cartao.fechamento, vencimento: cartao.vencimento });
+  // Pela trava: a fatura que outra transação acabou de pagar tem de aparecer paga.
+  const [ja] = await tx.$queryRaw<{ id: string; paidPrincipal: string }[]>`
+    SELECT id, CAST(paidPrincipal AS CHAR) AS paidPrincipal FROM finance_entries
+      WHERE cardAccountId = ${cartao.id} AND cardCycle = ${c.ciclo} FOR UPDATE`;
+  if (ja) {
+    if (centavosDeDecimal(ja.paidPrincipal) > 0) {
+      throw new RecusaDaBaixa(`A fatura de ${mesDoCiclo(c.ciclo)} do cartão ${cartao.nickname} já tem pagamento — desfaça o pagamento dela antes de pôr outra compra.`);
+    }
+    return ja.id;
+  }
+  const criada = await tx.financeEntry.create({
+    data: {
+      tenantId: cartao.tenantId,
+      companyId: cartao.companyId,
+      kind: "PAGAR",
+      status: "CONFERIDO",
+      // As compras já passaram pela alçada, cada uma na sua conta.
+      approvalStatus: "NAO_REQUER",
+      counterpartyId: await credorDaFatura(tx, cartao.tenantId, cartao.companyId, cartao.nickname),
+      categoryId: await categoriaDaFatura(tx, cartao.tenantId, cartao.companyId),
+      competence: c.ciclo,
+      dueDate: instanteDaData(c.vencimentoKey),
+      amount: "0",
+      description: descricaoDaFatura(cartao.nickname, c.ciclo),
+      cardAccountId: cartao.id,
+      cardCycle: c.ciclo,
+      createdById: compra.userId,
+      reviewedById: compra.userId,
+      reviewedAt: new Date(),
+    },
+    select: { id: true },
+  });
+  return criada.id;
+}
+
+/** Trava a fatura e recusa a que já tem pagamento — tirar compra dela mudaria o que foi pago. */
+async function travarFaturaSemPagamento(tx: Tx, faturaId: string, paraQue: string): Promise<void> {
+  const [f] = await tx.$queryRaw<{ cardAccountId: string | null; cardCycle: string | null; paidPrincipal: string }[]>`
+    SELECT cardAccountId, cardCycle, CAST(paidPrincipal AS CHAR) AS paidPrincipal FROM finance_entries WHERE id = ${faturaId} FOR UPDATE`;
+  if (!f || centavosDeDecimal(f.paidPrincipal) === 0) return;
+  const cartao = f.cardAccountId ? await tx.bankAccount.findUnique({ where: { id: f.cardAccountId }, select: { nickname: true } }) : null;
+  throw new RecusaDaBaixa(
+    `A fatura de ${f.cardCycle ? mesDoCiclo(f.cardCycle) : ""} do cartão ${cartao?.nickname ?? ""} já tem pagamento — desfaça o pagamento da fatura antes de ${paraQue}.`
+  );
+}
+
+/**
+ * A fatura é a soma das compras dela, lida pela trava (a compra que outra
+ * transação acabou de tirar não pode entrar na conta). Sem compra nenhuma, a
+ * fatura sai — cancelada — e volta se outra compra cair no ciclo.
+ */
+async function refazerFatura(tx: Tx, faturaId: string): Promise<void> {
+  const [soma] = await tx.$queryRaw<{ total: string | null }[]>`
+    SELECT CAST(SUM(cash) AS CHAR) AS total FROM finance_entry_payments WHERE cardInvoiceId = ${faturaId} FOR UPDATE`;
+  const centavos = centavosDeDecimal(soma?.total ?? "0");
+  if (centavos <= 0) {
+    await tx.financeEntry.update({ where: { id: faturaId }, data: { amount: "0", status: "CANCELADO", closeReason: "CANCELADO", paidAt: null } });
+    return;
+  }
+  const [f] = await tx.$queryRaw<{ status: StatusDaConta }[]>`SELECT status FROM finance_entries WHERE id = ${faturaId} FOR UPDATE`;
+  await tx.financeEntry.update({
+    where: { id: faturaId },
+    data: { amount: decimalDeCentavos(centavos), ...(f?.status === "CANCELADO" ? { status: "CONFERIDO", closeReason: null } : {}) },
+  });
+  await recalcularConta(tx, faturaId);
 }
 
 /** O que o espelho do Omie precisa de cada baixa da conta. */
