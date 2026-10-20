@@ -83,6 +83,9 @@ describe("cenário fiscal exclusivamente local", () => {
     s = agir(s, { tipo: "processar", id: "fila" }).cenario;
     expect(s.execucoes[0].estado).toBe("Erro");
     s = agir(s, { tipo: "reprocessar", id: "fila" }).cenario;
+    expect(s.execucoes[0].estado).toBe("Na fila");
+    expect(s.execucoes.find((e) => e.id === "fila")?.estado).toBe("Erro");
+    s = agir(s, { tipo: "processar", id: s.execucoes[0].id }).cenario;
     expect(s.execucoes[0].estado).toBe("Concluída");
     expect(s.arquivos[0].tipo).toBe("Contribuições");
     s = agir(s, { tipo: "enfileirar", imposto: "ICMS/IPI", falhar: false }, "cancelar").cenario;

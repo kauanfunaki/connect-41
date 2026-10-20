@@ -4,7 +4,7 @@ import { TODAS_AS_TELAS_DO_GERAL } from "./menuGeral";
 
 // O que se testa: a leitura do menu Geral por setor. Erro de banco — a tabela
 // ainda não existir, inclusive (deploy antes da migration) — nunca lança e
-// devolve o menu de hoje, com tudo; quem não é recortado por setor nem
+// devolve o padrão seguro; quem não é recortado por setor nem
 // consulta o banco.
 
 const db = vi.hoisted(() => ({ sectorMenuView: { findMany: vi.fn() } }));
@@ -32,6 +32,7 @@ describe("lerOcultasDoGeral", () => {
     ]);
     expect(await lerOcultasDoGeral("t1")).toEqual({
       porSetor: { recrutamento: ["transferencias", "solicitacoes"], dp: [] },
+      visiveisPorSetor: { recrutamento: [], dp: [] },
       disponivel: true,
     });
     expect(db.sectorMenuView.findMany).toHaveBeenCalledWith({
@@ -42,13 +43,13 @@ describe("lerOcultasDoGeral", () => {
 
   it("tabela que ainda não existe, ou qualquer erro: nada escondido e indisponível, sem lançar", async () => {
     db.sectorMenuView.findMany.mockRejectedValueOnce(semTabela());
-    expect(await lerOcultasDoGeral("t1")).toEqual({ porSetor: {}, disponivel: false });
+    expect(await lerOcultasDoGeral("t1")).toEqual({ porSetor: {}, visiveisPorSetor: {}, disponivel: false });
     db.sectorMenuView.findMany.mockRejectedValueOnce(new Error("conexão caiu"));
-    expect(await lerOcultasDoGeral("t1")).toEqual({ porSetor: {}, disponivel: false });
+    expect(await lerOcultasDoGeral("t1")).toEqual({ porSetor: {}, visiveisPorSetor: {}, disponivel: false });
   });
 
   it("sem escritório: não consulta", async () => {
-    expect(await lerOcultasDoGeral("")).toEqual({ porSetor: {}, disponivel: false });
+    expect(await lerOcultasDoGeral("")).toEqual({ porSetor: {}, visiveisPorSetor: {}, disponivel: false });
     expect(db.sectorMenuView.findMany).not.toHaveBeenCalled();
   });
 });
@@ -56,7 +57,7 @@ describe("lerOcultasDoGeral", () => {
 describe("telasDoGeralDaPessoa", () => {
   it("o setor escolhido esconde o que configurou", async () => {
     db.sectorMenuView.findMany.mockResolvedValue([{ sectorCode: "recrutamento", hiddenScreens: '["solicitacoes","transferencias"]' }]);
-    expect(await telasDoGeralDaPessoa(pessoa())).toEqual(TUDO.filter((t) => t !== "solicitacoes" && t !== "transferencias"));
+    expect(await telasDoGeralDaPessoa(pessoa())).toEqual(TUDO.filter((t) => !["solicitacoes", "transferencias"].includes(t)));
   });
 
   it("em Todos os setores, a soma dos setores da pessoa", async () => {
@@ -64,17 +65,17 @@ describe("telasDoGeralDaPessoa", () => {
     expect(await telasDoGeralDaPessoa(pessoa({ sectors: ["recrutamento", "dp"], activeSector: null }))).toEqual(TUDO);
   });
 
-  it("sem linha para o setor: tudo", async () => {
+  it("sem linha para o setor: não esconde Chamados por padrão", async () => {
     db.sectorMenuView.findMany.mockResolvedValue([]);
     expect(await telasDoGeralDaPessoa(pessoa())).toEqual(TUDO);
   });
 
-  it("sem a tabela: tudo, como hoje", async () => {
+  it("sem a tabela: aplica o padrão seguro", async () => {
     db.sectorMenuView.findMany.mockRejectedValue(semTabela());
     expect(await telasDoGeralDaPessoa(pessoa())).toEqual(TUDO);
   });
 
-  it("administrador em Todos os setores, ou pessoa sem setor: tudo, sem consultar o banco", async () => {
+  it("administrador em Todos os setores, ou pessoa sem setor: aplica o padrão sem consultar o banco", async () => {
     expect(await telasDoGeralDaPessoa(pessoa({ role: "ADMIN", sectors: ["recrutamento"], activeSector: null }))).toEqual(TUDO);
     expect(await telasDoGeralDaPessoa(pessoa({ role: "SUPER_ADMIN", sectors: [], activeSector: null }))).toEqual(TUDO);
     expect(await telasDoGeralDaPessoa(pessoa({ sectors: [], activeSector: null }))).toEqual(TUDO);
@@ -84,5 +85,10 @@ describe("telasDoGeralDaPessoa", () => {
   it("administrador dentro de um setor vê o que o setor vê", async () => {
     db.sectorMenuView.findMany.mockResolvedValue([{ sectorCode: "recrutamento", hiddenScreens: '["agenda"]' }]);
     expect(await telasDoGeralDaPessoa(pessoa({ role: "ADMIN", sectors: [], activeSector: "recrutamento" }))).not.toContain("agenda");
+  });
+
+  it("continua aceitando escolhas explícitas de visibilidade salvas anteriormente", async () => {
+    db.sectorMenuView.findMany.mockResolvedValue([{ sectorCode: "recrutamento", hiddenScreens: '{"ocultas":[],"visiveis":["chamados"]}' }]);
+    expect(await telasDoGeralDaPessoa(pessoa())).toContain("chamados");
   });
 });

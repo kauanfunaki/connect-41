@@ -13,8 +13,8 @@ describe("limites das telas fiscais", () => {
   });
   it("abre configurações nos parâmetros, sem duplicar cadastro de empresas", () => {
     expect(PAGINAS_FISCAIS.find(p => p.pagina === "configuracoes")!.abas.map(([key]) => key))
-      .toEqual(["parametros", "regras"]);
-    expect(PAGINAS_FISCAIS.find(p => p.pagina === "configuracoes")!.abas[1])
+      .toEqual(["parametros", "depara", "regras"]);
+    expect(PAGINAS_FISCAIS.find(p => p.pagina === "configuracoes")!.abas[2])
       .toEqual(["regras", "Regras fiscais"]);
   });
 });

@@ -11,6 +11,7 @@ type NotificacaoParaLink = {
 };
 
 export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
+  if (n.type === "OPS_AUTOMACAO_ERRO" && n.entityId) return `/ops?watcher=${encodeURIComponent(n.entityId)}&status=ERROR`;
   // Aviso de órgão sem processo ligado: vai para a lista, onde a pessoa escolhe.
   if (n.type === "AVISO_ORGAO_SEM_PROCESSO") return "/processos/avisos";
   // Alertas da Gestão (processo ou card parado, prazo): a lista mostra o item e o link dele.
@@ -22,6 +23,7 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   // só, sem conversa própria, e abre a lista das que estão com a pessoa.
   if (n.type === "WHATSAPP_HANDOFF" && !n.entityId) return "/whatsapp?ver=minhas";
   if (!n.entityId) return null;
+  if (n.type.startsWith("CHAMADO_")) return `/chamados/${n.entityId}`;
   if (n.type.startsWith("WHATSAPP_")) return `/whatsapp/${n.entityId}`;
   if (n.type.startsWith("PROCESS_")) return `/processos/${n.entityId}`;
   if (n.type.startsWith("SOLICITACAO_")) return `/solicitacoes/${n.entityId}`;

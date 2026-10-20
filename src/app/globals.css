@@ -696,6 +696,7 @@ input[type="search"]::-webkit-search-decoration {
    botões) centraliza junto; texto cortado segue cortado, com a dica. */
 .c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td) {
   text-align: center;
+  vertical-align: middle;
 }
 .c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td) > :is(.flex, .inline-flex) {
   justify-content: center;
