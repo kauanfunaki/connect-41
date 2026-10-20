@@ -75,6 +75,12 @@ describe("porQueFica", () => {
     expect(porQueFica(daE2, { campos: ["centro", "projeto", "conta"], centroDaEmpresa: null, projetoDaEmpresa: null, contaDaEmpresa: null })).toBeNull();
   });
 
+  it("previsão: só de conta em aberto", () => {
+    const paga = conta("1", { status: "PAGO", paidAt: new Date() });
+    expect(porQueFica(paga, { campos: ["previsao"] })).toBe("Paga — a previsão é só de conta em aberto.");
+    expect(porQueFica(conta("2", { doOmie: true, conciliada: true }), { campos: ["previsao"] })).toBeNull();
+  });
+
   it("a conta corrente prevista muda até em conta paga e do Omie — é sugestão para a baixa", () => {
     expect(porQueFica(conta("1", { status: "PAGO", paidAt: new Date(), doOmie: true }), { campos: ["conta"], contaDaEmpresa: "e1" })).toBeNull();
     expect(porQueFica(conta("1", { status: "CANCELADO", closeReason: "PERDA" }), { campos: ["conta"], contaDaEmpresa: "e1" })).toMatch(/perda/);

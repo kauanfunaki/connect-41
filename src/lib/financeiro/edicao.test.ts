@@ -44,7 +44,7 @@ describe("travasDaEdicao", () => {
 
   it("veio do Omie: o que a leitura reescreve fica travado, e o motivo é o Omie mesmo depois de paga", () => {
     const t = travas({ doOmie: true, status: "PAGO", paidAt: new Date(), conciliada: true });
-    expect(Object.keys(t).sort()).toEqual(["categoria", "competencia", "emissao", "numeroDocumento", "valor", "vencimento"]);
+    expect(Object.keys(t).sort()).toEqual(["categoria", "competencia", "emissao", "numeroDocumento", "previsao", "valor", "vencimento"]);
     expect(t.valor).toMatch(/Omie/);
     expect(t.centro).toBeUndefined();
     expect(t.projeto).toBeUndefined();

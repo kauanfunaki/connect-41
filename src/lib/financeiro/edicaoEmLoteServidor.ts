@@ -6,6 +6,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { presaAoOmie } from "@/lib/integracoes/omie/virada";
 import type { Prisma } from "@/generated/prisma/client";
 import { getAuthContext } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
@@ -51,7 +52,7 @@ const CAMPOS_DA_CONTA = {
   updatedAt: true,
   bankMatches: { select: { id: true }, take: 1 },
   counterparty: { select: { name: true } },
-  company: { select: { name: true, displayName: true } },
+  company: { select: { name: true, displayName: true, omieCutoverAt: true } },
 } as const;
 
 async function lerContas(tenantId: string, ids: string[]) {
@@ -68,7 +69,8 @@ function comoAlteracao(c: ContaLida): ContaDaAlteracao {
     closeReason: c.closeReason,
     fiscalDocumentId: c.fiscalDocumentId,
     agreementId: c.agreementId,
-    doOmie: c.omieTitleId !== null || c.omieMovementId !== null,
+    // Até a virada da empresa (lote E): depois, o Connect é a fonte.
+    doOmie: presaAoOmie(c, c.company),
     conciliada: c.bankMatches.length > 0 || c.omieReconciledAt !== null,
     temBaixa: Number(c.paidPrincipal.toString()) > 0,
   });
