@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
-import { Video, Sparkles, MessageCircle, Headset } from "lucide-react";
+import { Video, Sparkles, MessageCircle } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
@@ -14,6 +14,8 @@ import { Card } from "@/components/ui/Card";
 import { DisconnectButton } from "@/components/admin/DisconnectButton";
 import { AiConfigForm } from "@/components/admin/AiConfigForm";
 import { ChatwootConfigForm } from "@/components/admin/ChatwootConfigForm";
+import { PapeisDosAtendentes } from "@/components/admin/PapeisDosAtendentes";
+import { canWriteEntity } from "@/lib/auth/policy";
 import { VitrineDeIntegracoes } from "@/components/admin/VitrineDeIntegracoes";
 import { listarIntegracoes } from "@/lib/integracoes/data";
 import { ContasOmie } from "@/components/admin/ContasOmie";
@@ -247,10 +249,9 @@ export default async function IntegracoesPage({
               lastSyncAtLabel={chatwootConnection?.lastSyncAt ? formatInstantDate(chatwootConnection.lastSyncAt) : null}
             />
           </Card>
-          {/* Botão, e não texto azul (polimento de 30/09): leva a outra tela. */}
-          <Button href="/admin/atendentes" variant="secondary" size="sm" className="mt-3">
-            <Headset size={14} /> Gerenciar vínculos de acesso (contas e atendentes)
-          </Button>
+          {/* Os papéis dos atendentes moram aqui desde 20/10/2026 (escolha 3A):
+              eram da tela Atendentes e vínculos, que saiu. */}
+          {chatwootConnection && <PapeisDosAtendentes tenantId={ctx.tenantId} canEdit={canWriteEntity(ctx)} />}
         </div>
       )}
     </PageContainer>
