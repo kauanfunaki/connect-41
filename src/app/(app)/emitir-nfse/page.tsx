@@ -121,7 +121,7 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
           title="Nenhuma empresa com conta do Omie ligada"
           description="A conta do Omie de cada empresa (App Key e App Secret) é cadastrada em Integrações, por quem administra o escritório."
           icon={<ReceiptText />}
-          action={isFullWrite(ctx.role) ? <Button href="/admin/integracoes" variant="secondary">Abrir Integrações</Button> : undefined}
+          action={isFullWrite(ctx.role) ? <Button href="/admin/integracoes?integracao=omie" variant="secondary">Abrir Integrações</Button> : undefined}
         />
       </PageContainer>
     );
