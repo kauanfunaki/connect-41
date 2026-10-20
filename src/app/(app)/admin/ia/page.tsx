@@ -98,7 +98,7 @@ export default async function AgentesDeIAPage({ searchParams }: { searchParams: 
         // Revisão de 05/10: botão não é link — o "Cadastrar em Integrações" era texto azul.
         <Aviso tom="atencao" className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2">
           <p className="text-fg">Nenhuma chave de IA cadastrada para esta empresa — nenhum agente roda sem ela.</p>
-          <Button href="/admin/integracoes" variant="secondary" size="sm">
+          <Button href="/admin/integracoes?integracao=ia" variant="secondary" size="sm">
             Cadastrar em Integrações
           </Button>
         </Aviso>
