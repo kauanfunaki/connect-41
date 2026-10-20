@@ -18,13 +18,13 @@ import {
   PREMISSAS_ZERADAS,
   calcularIndicadores,
 } from "./analises";
-import { OPCOES_PADRAO } from "./estrutura";
+import { OPCOES_SEM_IMPOSTOS } from "./estrutura";
 
 const MAPA = montarMapeamento([
   { categoria: "Vendas", grupo: "receita_bruta" },
   { categoria: "Simples Nacional", grupo: "impostos" },
-  { categoria: "Fornecedores", grupo: "cmv" },
-  { categoria: "Aluguel", grupo: "administrativas" },
+  { categoria: "Fornecedores", grupo: "custo_operacional" },
+  { categoria: "Aluguel", grupo: "custo_administrativo" },
   { categoria: "Transferência", grupo: "transferencia" },
 ]);
 
@@ -68,27 +68,29 @@ describe("reconciliarLucroCaixa", () => {
     expect(v("resultado_economico")).toBe(50_000 - 8_000 + 30_000 - 12_000);
     const ajustes = v("receitas_nao_recebidas") + v("despesas_nao_pagas") + v("recebimentos_de_outros_meses") + v("pagamentos_de_outros_meses");
     expect(v("resultado_economico") + ajustes).toBe(v("resultado_caixa"));
-    // O imposto fica fora da margem pela opção padrão — cai em "fora do resultado".
-    expect(v("resultado_caixa")).toBe(50_000 - 8_000 + 20_000 - 5_000);
+    // No padrão, o imposto desconta do EBITDA — entra no resultado de caixa.
+    expect(v("resultado_caixa")).toBe(50_000 - 8_000 + 20_000 - 5_000 - 3_000);
   });
 
   it("a variação de caixa é tudo que andou, e fecha pelo passo de fora do resultado", () => {
     expect(v("variacao_de_caixa")).toBe(50_000 - 8_000 + 20_000 - 5_000 - 3_000 + 1_000 - 700);
     expect(v("resultado_caixa") + v("fora_do_resultado")).toBe(v("variacao_de_caixa"));
-    expect(v("fora_do_resultado")).toBe(-3_000 + 1_000 - 700);
+    expect(v("fora_do_resultado")).toBe(1_000 - 700);
   });
 
-  it("com a margem partindo da líquida, o imposto entra no resultado", () => {
-    const p = reconciliarLucroCaixa(conjuntos, MAPA, { ...OPCOES_PADRAO, margemPartirDaLiquida: true });
-    expect(p.find((x) => x.code === "fora_do_resultado")!.centavos).toBe(1_000 - 700);
+  it("na visão de impostos fora do resultado, o imposto cai no passo de fora", () => {
+    const p = reconciliarLucroCaixa(conjuntos, MAPA, OPCOES_SEM_IMPOSTOS);
+    const w = (code: string) => p.find((x) => x.code === code)!.centavos;
+    expect(w("fora_do_resultado")).toBe(-3_000 + 1_000 - 700);
+    expect(w("resultado_caixa") + w("fora_do_resultado")).toBe(w("variacao_de_caixa"));
   });
 });
 
 describe("comparativos", () => {
   it("variação divide pelo valor absoluto do comparado", () => {
-    const atual = resultadoDePorGrupo({ receita_bruta: 120_000, administrativas: -15_000 });
-    const antes = resultadoDePorGrupo({ receita_bruta: 100_000, administrativas: -10_000 });
-    const linhas = compararResultados(atual, antes, ["receita_bruta", "administrativas", "cmv"]);
+    const atual = resultadoDePorGrupo({ receita_bruta: 120_000, custo_administrativo: -15_000 });
+    const antes = resultadoDePorGrupo({ receita_bruta: 100_000, custo_administrativo: -10_000 });
+    const linhas = compararResultados(atual, antes, ["receita_bruta", "custo_administrativo", "custo_operacional"]);
     expect(linhas[0]).toMatchObject({ diferenca: 20_000, variacao: 0.2 });
     // Despesa de −100 para −150: cresceu 50%, com sinal de piora na diferença.
     expect(linhas[1]).toMatchObject({ diferenca: -5_000, variacao: -0.5 });
@@ -96,10 +98,10 @@ describe("comparativos", () => {
   });
 
   it("soma por grupo para o acumulado", () => {
-    const s = somarPorGrupo([{ receita_bruta: 1 }, { receita_bruta: 2, cmv: -1 }]);
+    const s = somarPorGrupo([{ receita_bruta: 1 }, { receita_bruta: 2, custo_operacional: -1 }]);
     expect(s.receita_bruta).toBe(3);
-    expect(s.cmv).toBe(-1);
-    expect(s.pessoal).toBe(0);
+    expect(s.custo_operacional).toBe(-1);
+    expect(s.custo_administrativo).toBe(0);
   });
 });
 
@@ -144,32 +146,42 @@ describe("projetarSerie", () => {
 });
 
 describe("simularCenario", () => {
-  const base = { receita_bruta: 100_000, impostos: -6_000, cmv: -30_000, mao_de_obra: -10_000, comerciais: -4_000, pessoal: -20_000, administrativas: -5_000, financeiras: -1_000, investimentos: -2_000 };
+  const base = {
+    receita_bruta: 100_000,
+    impostos: -6_000,
+    custo_operacional: -40_000,
+    custo_administrativo: -25_000,
+    financiamentos: -1_000,
+    outras_despesas: -2_000,
+    outras_receitas: 500,
+  };
 
   it("premissas zeradas não mudam nada", () => {
     expect(simularCenario(base, PREMISSAS_ZERADAS)).toEqual(base);
   });
 
-  it("receita arrasta o variável; fixo e investimento ficam", () => {
-    const s = simularCenario(base, { receita: 10, cmv: 0, despesasFixas: 0, financeiras: 0 });
+  it("receita arrasta impostos e custo operacional; o resto fica", () => {
+    const s = simularCenario(base, { receita: 10, custoOperacional: 0, custoAdministrativo: 0, financiamentos: 0 });
     expect(s.receita_bruta).toBe(110_000);
-    expect(s.cmv).toBe(-33_000);
+    expect(s.custo_operacional).toBe(-44_000);
     expect(s.impostos).toBe(-6_600);
-    expect(s.pessoal).toBe(-20_000);
-    expect(s.investimentos).toBe(-2_000);
+    expect(s.custo_administrativo).toBe(-25_000);
+    expect(s.financiamentos).toBe(-1_000);
+    expect(s.outras_despesas).toBe(-2_000);
+    expect(s.outras_receitas).toBe(500);
   });
 
-  it("CMV soma a própria premissa à da receita, em centavos inteiros", () => {
-    const s = simularCenario(base, { receita: 10, cmv: 5, despesasFixas: 3, financeiras: -50 });
-    expect(s.cmv).toBe(-34_650);
-    expect(s.administrativas).toBe(-5_150);
-    expect(s.financeiras).toBe(-500);
+  it("custo operacional soma a própria premissa à da receita, em centavos inteiros", () => {
+    const s = simularCenario(base, { receita: 10, custoOperacional: 5, custoAdministrativo: 3, financiamentos: -50 });
+    expect(s.custo_operacional).toBe(-46_200);
+    expect(s.custo_administrativo).toBe(-25_750);
+    expect(s.financiamentos).toBe(-500);
     expect(Object.values(s).every(Number.isInteger)).toBe(true);
   });
 });
 
 describe("calcularIndicadores", () => {
-  const economico = resultadoDePorGrupo({ receita_bruta: 100_000, cmv: -40_000, pessoal: -20_000 });
+  const economico = resultadoDePorGrupo({ receita_bruta: 100_000, custo_operacional: -40_000, custo_administrativo: -15_000, financiamentos: -5_000 });
   const dados = {
     economico,
     diasNoMes: 30,
@@ -184,6 +196,8 @@ describe("calcularIndicadores", () => {
 
   it("rentabilidade e capital de giro", () => {
     expect(valor("margem_contribuicao")).toBeCloseTo(0.6);
+    // A estrutura é o administrativo mais os financiamentos.
+    expect(valor("peso_despesas_fixas")).toBeCloseTo(0.2);
     expect(valor("pmr")).toBe(15);
     expect(valor("pmp")).toBe(15);
     expect(valor("ncg")).toBe(20_000);

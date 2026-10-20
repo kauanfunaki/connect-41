@@ -11,13 +11,13 @@ import { simularCenario, CENARIOS_PRONTOS, PREMISSAS_ZERADAS, type PremissasDoCe
 import { rotuloEconomico, LINHA_DE_RESULTADO, LINHA_OPERACIONAL } from "@/lib/dre/economica";
 import { moeda, percentual, tomDoValor } from "@/lib/financeiro/formato";
 
-const LINHAS_DO_SIMULADOR = ["receita_bruta", "margem_contribuicao", "total_despesas_fixas", LINHA_OPERACIONAL, LINHA_DE_RESULTADO];
+const LINHAS_DO_SIMULADOR = ["receita_bruta", "margem_contribuicao", "custo_administrativo", LINHA_OPERACIONAL, LINHA_DE_RESULTADO];
 
 const CAMPOS: { chave: keyof PremissasDoCenario; rotulo: string; dica: string }[] = [
   { chave: "receita", rotulo: "Receita", dica: "Impostos, CMV, mão de obra e comerciais acompanham." },
-  { chave: "cmv", rotulo: "CMV além da receita", dica: "Custo que sobe mais (ou menos) que a venda." },
-  { chave: "despesasFixas", rotulo: "Despesas fixas", dica: "Pessoal, diretoria e administrativas." },
-  { chave: "financeiras", rotulo: "Despesas financeiras", dica: "Juros e tarifas." },
+  { chave: "custoOperacional", rotulo: "Custo operacional além da receita", dica: "Custo que sobe mais (ou menos) que a venda." },
+  { chave: "custoAdministrativo", rotulo: "Custo administrativo", dica: "A estrutura: pessoal do administrativo, pró-labore, aluguel, sistemas." },
+  { chave: "financiamentos", rotulo: "Financiamentos e empréstimos", dica: "Parcelas, juros e parcelamentos." },
 ];
 
 export type BaseDoCenario = { chave: string; rotulo: string; porGrupo: Record<string, number> };

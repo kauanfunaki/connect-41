@@ -5,7 +5,7 @@ import { LINHAS } from "./estrutura";
 function mes(n: number, receita: number, cmv: number, impostos = 0): MesDoAno {
   return {
     mes: n,
-    porGrupo: { receita_bruta: receita, cmv, impostos },
+    porGrupo: { receita_bruta: receita, custo_operacional: cmv, impostos },
     temMovimento: true,
   };
 }
@@ -30,7 +30,7 @@ describe("dreDoAno", () => {
     const a = dreDoAno([mes(1, 100_000, -40_000), mes(2, 300_000, -60_000)]);
     const receita = linhaAoLongoDoAno(a, "receita_bruta");
     expect(receita[13]!.centavos).toBe(400_000);
-    expect(linhaAoLongoDoAno(a, "cmv")[13]!.centavos).toBe(-100_000);
+    expect(linhaAoLongoDoAno(a, "custo_operacional")[13]!.centavos).toBe(-100_000);
   });
 
   // `AVERAGE` no Excel pula célula vazia. Dividir por doze em setembro diz que
@@ -54,7 +54,7 @@ describe("dreDoAno", () => {
     const a = dreDoAno([]);
     expect(a.mesesComMovimento).toBe(0);
     expect(linhaAoLongoDoAno(a, "receita_bruta")[12]!.centavos).toBe(0);
-    expect(linhaAoLongoDoAno(a, "fluxo_de_caixa_livre")[13]!.centavos).toBe(0);
+    expect(linhaAoLongoDoAno(a, "resultado_liquido")[13]!.centavos).toBe(0);
   });
 
   // O ponto do módulo: média de razões não é razão de médias. A planilha
@@ -75,7 +75,7 @@ describe("dreDoAno", () => {
     const v = (code: string, col: number) => linhaAoLongoDoAno(a, code)[col]!.centavos!;
     for (const col of [0, 1, 12, 13]) {
       expect(v("margem_contribuicao", col)).toBe(
-        v("receita_bruta", col) + v("cmv", col) + v("mao_de_obra", col) + v("comerciais", col)
+        v("receita_bruta", col) + v("custo_operacional", col)
       );
       expect(v("receita_liquida", col)).toBe(v("receita_bruta", col) + v("impostos", col));
     }
@@ -106,9 +106,9 @@ describe("dreDoAno", () => {
 describe("o detalhe das linhas no ano", () => {
   const comCategorias = (n: number, cmv: [string, number][]): MesDoAno => ({
     mes: n,
-    porGrupo: { cmv: cmv.reduce((s, [, c]) => s + c, 0) },
+    porGrupo: { custo_operacional: cmv.reduce((s, [, c]) => s + c, 0) },
     temMovimento: true,
-    porCategoria: { cmv: cmv.map(([categoria, centavos]) => ({ categoria, centavos, origem: "pagamento" as const })) },
+    porCategoria: { custo_operacional: cmv.map(([categoria, centavos]) => ({ categoria, centavos, origem: "pagamento" as const })) },
   });
 
   const a = dreDoAno([
@@ -117,7 +117,7 @@ describe("o detalhe das linhas no ano", () => {
   ]);
 
   it("uma linha por categoria, com os doze meses, a média e o ano", () => {
-    const frete = a.detalhe.cmv!.find((c) => c.categoria === "Frete")!;
+    const frete = a.detalhe.custo_operacional!.find((c) => c.categoria === "Frete")!;
     expect(frete.valores).toHaveLength(14);
     expect(frete.valores.slice(0, 3)).toEqual([-1_000, 0, -2_000]);
     // Média sobre os meses com movimento (dois), como a da linha.
@@ -126,17 +126,17 @@ describe("o detalhe das linhas no ano", () => {
   });
 
   it("grafias da mesma chave em meses diferentes somam na mesma linha, com o primeiro nome", () => {
-    expect(a.detalhe.cmv!.filter((c) => c.categoria.toLowerCase() === "frete").map((c) => c.categoria)).toEqual(["Frete"]);
+    expect(a.detalhe.custo_operacional!.filter((c) => c.categoria.toLowerCase() === "frete").map((c) => c.categoria)).toEqual(["Frete"]);
   });
 
   // Pedido de 15/10/2026: a ordem é a alfabética, e não a do maior total.
   it("as categorias vêm em ordem alfabética, sem olhar o valor", () => {
-    expect(a.detalhe.cmv!.map((c) => c.categoria)).toEqual(["Frete", "Matéria-prima"]);
+    expect(a.detalhe.custo_operacional!.map((c) => c.categoria)).toEqual(["Frete", "Matéria-prima"]);
   });
 
   it("o total das categorias é o total da linha", () => {
-    const anoDaLinha = linhaAoLongoDoAno(a, "cmv")[13]!.centavos;
-    expect(a.detalhe.cmv!.reduce((s, c) => s + c.valores[13]!, 0)).toBe(anoDaLinha);
+    const anoDaLinha = linhaAoLongoDoAno(a, "custo_operacional")[13]!.centavos;
+    expect(a.detalhe.custo_operacional!.reduce((s, c) => s + c.valores[13]!, 0)).toBe(anoDaLinha);
   });
 
   it("sem o detalhe do mês, não há o que abrir", () => {

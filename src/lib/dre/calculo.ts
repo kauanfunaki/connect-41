@@ -23,7 +23,7 @@ import {
   TRANSFERENCIA,
   DESCONSIDERAR,
   OPCOES_PADRAO,
-  parcelasDaMargem,
+  parcelasDoEbitda,
   type OpcoesDoDre,
 } from "@/lib/dre/estrutura";
 
@@ -301,10 +301,9 @@ export function montarLinhas(
     }
 
     if (linha.tipo === "subtotal") {
-      // A margem é a única linha cuja composição depende de opção — ver
-      // `OpcoesDoDre.margemPartirDaLiquida`.
-      const parcelas =
-        linha.code === "margem_contribuicao" ? parcelasDaMargem(opcoes) : linha.parcelas;
+      // O EBITDA é a única linha cuja composição depende de opção — ver
+      // `OpcoesDoDre.impostosNoEbitda`.
+      const parcelas = linha.code === "ebitda" ? parcelasDoEbitda(opcoes) : linha.parcelas;
       const c = parcelas.reduce((n, p) => n + (valor.get(p) ?? 0), 0);
       valor.set(linha.code, c);
       linhas.push({
@@ -345,11 +344,11 @@ export function centavosDaLinha(r: ResultadoDoDre, code: string): number | null 
 /**
  * Quanto de imposto ficou fora do resultado.
  *
- * Existe para a tela poder dizer isso em voz alta enquanto
- * `margemPartirDaLiquida` for `false`. Zero quando a opção está ligada, porque
- * aí o imposto já está dentro.
+ * Existe para a tela poder dizer isso em voz alta na visão da Irriga
+ * (`impostosNoEbitda: false`). Zero na visão padrão, porque aí o imposto já
+ * está dentro do EBITDA.
  */
 export function impostoForaDoResultado(r: ResultadoDoDre, opcoes: OpcoesDoDre = OPCOES_PADRAO): number {
-  if (opcoes.margemPartirDaLiquida) return 0;
+  if (opcoes.impostosNoEbitda) return 0;
   return centavosDaLinha(r, "impostos") ?? 0;
 }

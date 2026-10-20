@@ -86,11 +86,11 @@ async function criar(p: PrismaClient, tenantId: string, autorId: string, outroAu
 
   const [aluguel, combustivel, fretes] = await Promise.all([
     p.financeCategory.create({
-      data: { tenantId, name: `${MARCA} Aluguel e condomínio`, kind: "PAGAR", dreGroup: "administrativas" },
+      data: { tenantId, name: `${MARCA} Aluguel e condomínio`, kind: "PAGAR", dreGroup: "custo_administrativo" },
       select: { id: true },
     }),
     p.financeCategory.create({
-      data: { tenantId, name: `${MARCA} Combustível`, kind: "PAGAR", dreGroup: "cmv" },
+      data: { tenantId, name: `${MARCA} Combustível`, kind: "PAGAR", dreGroup: "custo_operacional" },
       select: { id: true },
     }),
     p.financeCategory.create({
@@ -410,7 +410,7 @@ async function criar(p: PrismaClient, tenantId: string, autorId: string, outroAu
     },
     select: { id: true },
   });
-  const porGrupo: Record<string, number> = { receita_bruta: 300000, cmv: 60000, administrativas: 9000, pessoal: 80000 };
+  const porGrupo: Record<string, number> = { receita_bruta: 300000, custo_operacional: 60000, custo_administrativo: 89000 };
   for (const [groupCode, valor] of Object.entries(porGrupo)) {
     for (let mes = 1; mes <= 12; mes++) {
       await p.budgetLine.create({ data: { budgetId: orcamento.id, groupCode, month: mes, amount: reais(valor) } });
