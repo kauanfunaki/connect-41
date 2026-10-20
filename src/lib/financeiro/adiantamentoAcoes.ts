@@ -15,7 +15,8 @@ import { centavosDeTexto, decimalDeCentavos } from "./manual";
 import { competenciaDoInstante, instanteDaData } from "./periodo";
 import { quitarConta } from "./baixa/servidor";
 import { categoriaDeTransferencia } from "./conciliacao/transferenciaServidor";
-import { descricaoDoAdiantamento, ehContaDeAdiantamento, TIPOS_DE_ADIANTAMENTO, tipoDoAdiantamento, validarNovoAdiantamento } from "./adiantamento";
+import { descricaoDoAdiantamento, ehContaDeAdiantamento, tipoDoAdiantamento, validarNovoAdiantamento } from "./adiantamento";
+import { ehContaForaDoCaixa, TIPOS_FORA_DO_CAIXA } from "./tiposDeConta";
 import { contaDeAdiantamento, disponivelDoAdiantamento } from "./adiantamentoServidor";
 
 type Opcao = { id: string; nome: string };
@@ -35,7 +36,7 @@ export async function dadosParaAdiantar(companyId: string, kind: "PAGAR" | "RECE
   const [contrapartes, contas] = await Promise.all([
     prisma.financeCounterparty.findMany({ where: { tenantId, companyId, active: true }, select: { id: true, name: true, document: true }, orderBy: { name: "asc" } }),
     prisma.bankAccount.findMany({
-      where: { tenantId, companyId, active: true, type: { notIn: [...TIPOS_DE_ADIANTAMENTO] } },
+      where: { tenantId, companyId, active: true, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
       select: { id: true, nickname: true, accountNumber: true },
       orderBy: { nickname: "asc" },
     }),
@@ -73,7 +74,7 @@ export async function registrarAdiantamento(formData: FormData): Promise<{ error
     prisma.bankAccount.findFirst({ where: { id: texto("contaBancariaId"), tenantId, companyId, active: true }, select: { id: true, type: true } }),
   ]);
   if (!contraparte) return { error: kind === "PAGAR" ? "Escolha o fornecedor." : "Escolha o cliente." };
-  if (!banco || ehContaDeAdiantamento(banco.type)) return { error: kind === "PAGAR" ? "Escolha a conta de onde saiu o dinheiro." : "Escolha a conta onde o dinheiro entrou." };
+  if (!banco || ehContaForaDoCaixa(banco.type)) return { error: kind === "PAGAR" ? "Escolha a conta de onde saiu o dinheiro." : "Escolha a conta onde o dinheiro entrou." };
 
   const v = validarNovoAdiantamento({ valorCentavos: centavosDeTexto(texto("valor")), data: texto("data"), hojeKey: saoPauloParts(new Date()).dateKey });
   if (!v.ok) return { error: v.erro };

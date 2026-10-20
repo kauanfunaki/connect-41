@@ -41,6 +41,7 @@ import {
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 import { saldoEmAberto } from "@/lib/financeiro/baixa/regras";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { TIPOS_FORA_DO_CAIXA } from "@/lib/financeiro/tiposDeConta";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
@@ -131,8 +132,8 @@ export default async function ConciliacaoPage({
 
   const prisma = getPrisma();
   const contas = await prisma.bankAccount.findMany({
-    // A conta de adiantamento (lote D, 20/10) não tem extrato: mora em Contas a pagar e a receber.
-    where: { tenantId, companyId, type: { notIn: ["ADIANTAMENTO_FORNECEDOR", "ADIANTAMENTO_CLIENTE"] } },
+    // O adiantamento e o cartão de crédito (lote D, 20/10) não têm extrato: moram em Contas a pagar e a receber.
+    where: { tenantId, companyId, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
     select: {
       id: true,
       nickname: true,
@@ -662,8 +663,8 @@ async function candidatosDaEmpresa(
         bankMatch: { is: null },
         cash: { in: valoresExatos },
         entry: { kind: { in: tipos }, status: { not: "CANCELADO" } },
-        // A baixa pela conta de adiantamento não passou pelo banco: não casa com o extrato.
-        OR: [{ bankAccountId: null }, { bankAccount: { type: { notIn: ["ADIANTAMENTO_FORNECEDOR", "ADIANTAMENTO_CLIENTE"] } } }],
+        // A baixa pelo adiantamento ou pelo cartão não passou pelo banco: não casa com o extrato.
+        OR: [{ bankAccountId: null }, { bankAccount: { type: { notIn: [...TIPOS_FORA_DO_CAIXA] } } }],
       },
       select: {
         id: true,

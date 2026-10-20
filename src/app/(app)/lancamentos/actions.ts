@@ -185,7 +185,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
     : await projetoInformado({ tenantId: c.tenantId, companyId, informadoId: texto("projectId") || null });
   if (!projeto.ok) return { error: projeto.erro };
   // A conta corrente prevista (lote D, 20/10): com "já pago em", é dela que a baixa sai.
-  const contaPrevista = await contaPrevistaInformada({ tenantId: c.tenantId, companyId, informadoId: texto("bankAccountId") || null });
+  const contaPrevista = await contaPrevistaInformada({ tenantId: c.tenantId, companyId, informadoId: texto("bankAccountId") || null, kind: d.kind });
   if (!contaPrevista.ok) return { error: contaPrevista.erro };
   // A data de previsão (lote D, 20/10): só de conta em aberto — a que nasce paga já andou.
   const previsaoBruta = texto("previsao");
@@ -408,6 +408,7 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
       omieMovementId: true,
       company: { select: { omieCutoverAt: true } },
       retentionOrigin: { select: { tax: true } },
+      cardAccountId: true,
     },
   });
   if (!conta) return { error: "Lançamento não encontrado." };
@@ -417,6 +418,8 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
   // A conta de um imposto retido sai pela retenção, na conta de origem — senão
   // a retenção ficaria dizendo de um imposto que ninguém vai recolher.
   if (conta.retentionOrigin) return { error: "Conta de imposto retido — tire a retenção na edição da conta de origem." };
+  // A fatura do cartão (lote D, 20/10) é a soma das compras: sai sozinha quando a última compra sai.
+  if (conta.cardAccountId) return { error: "Fatura do cartão — ela sai quando as compras saem: desfaça a baixa de cada conta paga no cartão." };
 
   const veredito = podeCancelarManual({ ...conta, presoAoOmie: presaAoOmie(conta, conta.company) });
   if (!veredito.pode) return { error: veredito.motivo };

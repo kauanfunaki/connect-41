@@ -7,6 +7,7 @@ import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import type { EscopoFinanceiro } from "@/lib/financeiro/consultas";
+import { TIPOS_FORA_DO_CAIXA } from "@/lib/financeiro/tiposDeConta";
 import { situacaoDoSaldo, saldoDeReferencia, type SituacaoDoSaldo } from "./saldo";
 import { saldoAtualDaConta, consolidarSaldos, type SaldoConsolidado } from "./saldoConsolidado";
 
@@ -84,8 +85,8 @@ export async function saldoBancarioDoEscopo(escopo: EscopoFinanceiro): Promise<S
     where: {
       tenantId: escopo.tenantId,
       active: true,
-      // A conta de adiantamento (lote D, 20/10) não é dinheiro em banco.
-      type: { notIn: ["ADIANTAMENTO_FORNECEDOR", "ADIANTAMENTO_CLIENTE"] },
+      // O adiantamento e o cartão de crédito (lote D, 20/10) não são dinheiro em banco.
+      type: { notIn: [...TIPOS_FORA_DO_CAIXA] },
       ...(escopo.companyIds === null ? {} : { companyId: { in: escopo.companyIds } }),
     },
     select: {

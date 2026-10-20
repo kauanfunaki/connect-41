@@ -63,7 +63,7 @@ export function FormLancamentoManual({
   /** Projetos ativos da empresa. Sem nenhum, o campo aparece desabilitado e diz onde cadastrar. */
   projetos?: Projeto[];
   /** Contas bancárias ativas da empresa, para a conta corrente prevista (lote D, 20/10). */
-  contasBancarias?: { id: string; nome: string }[];
+  contasBancarias?: { id: string; nome: string; cartao?: boolean }[];
   /** Hoje em São Paulo, do servidor. */
   hojeISO: string;
   competenciaPadrao: string;
@@ -92,6 +92,7 @@ export function FormLancamentoManual({
   const [versao, setVersao] = useState(0);
 
   const doTipo = categorias.filter((c) => c.kind === kind);
+  const contasDoTipo = contasBancarias.filter((c) => kind === "PAGAR" || !c.cartao);
   const retido = kind === "PAGAR" ? totalRetido(retencoes) : 0;
   // O padrão não é pré-selecionado: em branco o servidor já herda, e pré-
   // selecionar faria "limpar o campo" parecer "sem centro" quando não é.
@@ -335,19 +336,21 @@ export function FormLancamentoManual({
             <Input id="lancamento-numero" name="numeroDocumento" maxLength={60} placeholder="Boleto, contrato, título" defaultValue={leitura?.numeroDocumento ?? undefined} />
           </CampoForm>
           {!rateando && <CampoDeProjeto id="lancamento-projeto" companyId={companyId} projetos={projetos} />}
-          {/* A conta corrente prevista (lote D, 20/10): a baixa já vem com ela. */}
+          {/* A conta corrente prevista (lote D, 20/10): a baixa já vem com ela. O
+              cartão de crédito só na conta a pagar — com "Já pago em", ela
+              nasce paga no cartão e entra na fatura. */}
           <CampoForm
             label="Conta corrente"
             htmlFor="lancamento-conta"
             helper={
-              contasBancarias.length === 0
+              contasDoTipo.length === 0
                 ? "Nenhuma conta bancária nesta empresa (Banco e caixa)."
                 : `Opcional. Por onde deve ser ${kind === "PAGAR" ? "paga" : "recebida"} — a baixa já vem com ela.`
             }
           >
-            <Select id="lancamento-conta" name="bankAccountId" defaultValue="" disabled={contasBancarias.length === 0}>
-              <option value="">{contasBancarias.length === 0 ? "Nenhuma conta cadastrada" : "Não prevista"}</option>
-              {contasBancarias.map((c) => (
+            <Select id="lancamento-conta" name="bankAccountId" defaultValue="" disabled={contasDoTipo.length === 0}>
+              <option value="">{contasDoTipo.length === 0 ? "Nenhuma conta cadastrada" : "Não prevista"}</option>
+              {contasDoTipo.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nome}
                 </option>

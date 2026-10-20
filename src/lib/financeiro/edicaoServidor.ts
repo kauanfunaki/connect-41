@@ -109,6 +109,7 @@ const CAMPOS_DA_CONTA = {
   bankMatches: { select: { id: true }, take: 1 },
   company: { select: { name: true, displayName: true, omieCutoverAt: true } },
   retentionOrigin: { select: { tax: true } },
+  cardAccountId: true,
   fiscalDocument: { select: { retentionsTotal: true } },
 } as const;
 
@@ -128,6 +129,7 @@ function travasDa(conta: NonNullable<Awaited<ReturnType<typeof lerConta>>>) {
     conciliada: conta.bankMatches.length > 0 || conta.omieReconciledAt !== null,
     temBaixa: Number(conta.paidPrincipal.toString()) > 0,
     deRetencao: conta.retentionOrigin !== null,
+    daFatura: conta.cardAccountId !== null,
   });
 }
 
@@ -177,7 +179,7 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
       orderBy: { name: "asc" },
     }),
     anexosDaConta(tenantId, conta.id),
-    contasBancariasDaEmpresa(tenantId, companyId, conta.bankAccountId),
+    contasBancariasDaEmpresa(tenantId, companyId, conta.bankAccountId, { comCartoes: conta.kind === "PAGAR" }),
     rateioDaConta(tenantId, conta.id),
     retencoesDaConta(prisma, tenantId, conta.id),
   ]);
@@ -313,7 +315,7 @@ export async function editarLancamento(formData: FormData): Promise<ResultadoDaE
   }
 
   if (livre("conta", "bankAccountId")) {
-    const cc = await contaPrevistaInformada({ tenantId, companyId, informadoId: texto("bankAccountId") || null, atualId: conta.bankAccountId });
+    const cc = await contaPrevistaInformada({ tenantId, companyId, informadoId: texto("bankAccountId") || null, atualId: conta.bankAccountId, kind: conta.kind });
     if (!cc.ok) return { error: cc.erro };
     mudar("bankAccountId", conta.bankAccountId, cc.contaId);
   }

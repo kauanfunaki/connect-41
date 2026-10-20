@@ -17,6 +17,7 @@ import { podeEditarOTipo } from "./acessoDaConta";
 import { competenciaValida, dataValida, instanteDaData } from "./periodo";
 import type { ForaDoLote } from "./baixa/lote";
 import { nomeDaContaBancaria } from "./contaPrevista";
+import { ehContaForaDoCaixa, TIPOS_FORA_DO_CAIXA } from "./tiposDeConta";
 import {
   campoDoLote,
   categoriasEmComum,
@@ -144,7 +145,7 @@ export async function dadosDaAlteracaoEmLote(valores: string[]): Promise<DadosDa
       orderBy: { name: "asc" },
     }),
     getPrisma().bankAccount.findMany({
-      where: { tenantId, companyId: { in: ids }, active: true, type: { notIn: ["ADIANTAMENTO_FORNECEDOR", "ADIANTAMENTO_CLIENTE"] } },
+      where: { tenantId, companyId: { in: ids }, active: true, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
       select: { id: true, nickname: true, accountNumber: true, companyId: true },
       orderBy: { nickname: "asc" },
     }),
@@ -263,8 +264,9 @@ export async function alterarContasEmLote(formData: FormData): Promise<Resultado
     const id = texto("bankAccountId") || null;
     escolha.contaDaEmpresa = null;
     if (id) {
-      const conta = await prisma.bankAccount.findFirst({ where: { id, tenantId }, select: { companyId: true, active: true } });
+      const conta = await prisma.bankAccount.findFirst({ where: { id, tenantId }, select: { companyId: true, active: true, type: true } });
       if (!conta) return { error: "Conta corrente não encontrada." };
+      if (ehContaForaDoCaixa(conta.type)) return { error: "Em lote, a conta corrente prevista é de banco — escolha uma." };
       if (!conta.active) return { error: "Conta corrente inativa — escolha outra ou reative em Banco e caixa." };
       escolha.contaDaEmpresa = conta.companyId;
     }

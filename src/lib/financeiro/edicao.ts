@@ -57,6 +57,8 @@ export type ContaParaEditar = {
   temBaixa?: boolean;
   /** É a conta de um imposto retido de outra conta (lote D, 20/10). */
   deRetencao?: boolean;
+  /** É a fatura de um cartão de crédito (lote D, 20/10). */
+  daFatura?: boolean;
 };
 
 const DINHEIRO: CampoEditavel[] = ["valor", "vencimento"];
@@ -95,6 +97,11 @@ export function travasDaEdicao(conta: ContaParaEditar): { pode: false; motivo: s
   // mudam lá, e imposto não retém imposto.
   if (conta.deRetencao) {
     travar(["valor", "contraparte", "retencoes"], "Conta de imposto retido — valor e credor mudam na retenção, na edição da conta de origem.");
+  }
+  // A fatura do cartão é a soma das compras, a quem emitiu o cartão, fora da
+  // DRE: o vencimento e a conta de onde sai mudam; o resto vem das compras.
+  if (conta.daFatura) {
+    travar(["valor", "contraparte", "categoria", "retencoes"], "Fatura do cartão — o valor é a soma das compras; uma compra entra ou sai pela baixa da conta dela.");
   }
   if (conta.conciliada) {
     travar(DINHEIRO, "Conciliada com o extrato — desfaça a conciliação e o pagamento para mudar valor ou vencimento.");
