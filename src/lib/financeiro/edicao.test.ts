@@ -24,7 +24,7 @@ describe("travasDaEdicao", () => {
 
   it("paga: classificação livre, valor e vencimento travados com o caminho", () => {
     const t = travas({ status: "PAGO", paidAt: new Date() });
-    expect(Object.keys(t).sort()).toEqual(["valor", "vencimento"]);
+    expect(Object.keys(t).sort()).toEqual(["previsao", "valor", "vencimento"]);
     expect(t.valor).toMatch(/desfaça o pagamento/);
     expect(t.categoria).toBeUndefined();
     expect(t.competencia).toBeUndefined();
@@ -44,11 +44,21 @@ describe("travasDaEdicao", () => {
 
   it("veio do Omie: o que a leitura reescreve fica travado, e o motivo é o Omie mesmo depois de paga", () => {
     const t = travas({ doOmie: true, status: "PAGO", paidAt: new Date(), conciliada: true });
-    expect(Object.keys(t).sort()).toEqual(["categoria", "competencia", "emissao", "numeroDocumento", "valor", "vencimento"]);
+    expect(Object.keys(t).sort()).toEqual(["categoria", "competencia", "conta", "emissao", "numeroDocumento", "previsao", "valor", "vencimento"]);
     expect(t.valor).toMatch(/Omie/);
+    expect(t.previsao).toMatch(/Omie/);
     expect(t.centro).toBeUndefined();
     expect(t.projeto).toBeUndefined();
     expect(t.contraparte).toBeUndefined();
+  });
+
+  it("veio do Omie, em aberto: previsão e conta corrente prevista travadas — a leitura as reescreve (20/10)", () => {
+    const t = travas({ doOmie: true });
+    expect(t.previsao).toMatch(/Vem do Omie/);
+    expect(t.conta).toMatch(/Vem do Omie/);
+    // Depois da virada (`presaAoOmie` falso), as duas voltam a ser livres.
+    expect(travas({}).previsao).toBeUndefined();
+    expect(travas({}).conta).toBeUndefined();
   });
 
   it("baixa parcial: o valor trava, o vencimento do resto continua livre", () => {

@@ -139,6 +139,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "bpoCredential.update": e("editou no repositório a senha"),
   "bpoCredential.delete": x("excluiu do repositório a senha"),
   "integration.omie.financeiro": o("trouxe do Omie o financeiro da empresa"),
+  "integration.omie.virada": o("virou do Omie para o Connect o financeiro da empresa"),
+  "integration.omie.virada_desfeita": o("desfez a virada do Omie da empresa"),
   "integration.omie.nfse_emitir": c("emitiu pelo Omie uma NFS-e"),
   "integration.omie.nfse_cancelar": o("cancelou no Omie uma NFS-e"),
 
@@ -289,6 +291,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "tag.delete": x("excluiu a tag"),
   "customfield.create": c("criou o campo customizado"),
   "customfield.update": e("editou o campo customizado"),
+  "customfield.reorder": e("reordenou os campos customizados"),
   "customfield.delete": x("excluiu o campo customizado"),
   "competency.create": c("criou a competência"),
   "competency.update": e("editou a competência"),
@@ -517,6 +520,7 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["dre.", "bpo"],
   ["bpoCredential.", "bpo"],
   ["integration.omie.financeiro", "bpo"],
+  ["integration.omie.virada", "bpo"],
   ["integration.omie.nfse_", "bpo"],
   ["termination.", "dp"],
   // As competências das avaliações de desempenho, desde 20/10/2026 dentro do

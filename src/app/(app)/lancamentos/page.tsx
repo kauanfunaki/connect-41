@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { presaAoOmie } from "@/lib/integracoes/omie/virada";
+import { rotuloDaSerie } from "@/lib/financeiro/repeticao";
 import { NotebookPen, Plus, Upload } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
@@ -32,6 +34,7 @@ import { podeCancelarManual } from "@/lib/financeiro/manual";
 import { moeda } from "@/lib/financeiro/formato";
 import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { projetosAtivosDaEmpresa } from "@/lib/financeiro/projetoServidor";
+import { contasBancariasDaEmpresa } from "@/lib/financeiro/contaPrevistaServidor";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { estadoDosAgentes } from "@/lib/ia/data";
@@ -212,7 +215,7 @@ async function FormularioDaEmpresa({
   mes: string;
 }) {
   const prisma = getPrisma();
-  const [contrapartes, categorias, centros, projetos, agentes] = await Promise.all([
+  const [contrapartes, categorias, centros, projetos, agentes, contasBancarias] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId, companyId, active: true },
       select: { id: true, name: true, document: true, defaultCategoryId: true, defaultCostCenterId: true },
@@ -226,6 +229,7 @@ async function FormularioDaEmpresa({
     centrosAtivosDaEmpresa(tenantId, companyId),
     projetosAtivosDaEmpresa(tenantId, companyId),
     estadoDosAgentes(tenantId, [AGENTE_DO_BOLETO]),
+    contasBancariasDaEmpresa(tenantId, companyId),
   ]);
   // A leitura de boleto (lote H2) nasce desligada: aparece só ligada e com chave de IA.
   const leitor = agentes.get(AGENTE_DO_BOLETO);
@@ -244,6 +248,7 @@ async function FormularioDaEmpresa({
       }))}
       centros={centros}
       projetos={projetos}
+      contasBancarias={contasBancarias}
       categorias={categorias.map((c) => ({ id: c.id, nome: c.name, kind: c.kind }))}
     />
   );
@@ -266,6 +271,9 @@ async function ListaDeManuais({
     where: { tenantId, companyId, competence: mes, fiscalDocumentId: null },
     select: {
       id: true,
+      omieTitleId: true,
+      omieMovementId: true,
+      company: { select: { omieCutoverAt: true } },
       kind: true,
       status: true,
       amount: true,
@@ -281,6 +289,9 @@ async function ListaDeManuais({
       costCenter: { select: { name: true } },
       project: { select: { name: true } },
       documentNumber: true,
+      recurrenceId: true,
+      recurrenceIndex: true,
+      recurrenceTotal: true,
     },
     orderBy: [{ dueDate: "asc" }, { id: "asc" }],
     // Um a mais que o teto, para saber se parou nele.
@@ -326,7 +337,9 @@ async function ListaDeManuais({
                 return (
                   <Cartao key={l.id}>
                     <TopoDoCartao nome={l.counterparty.name} valor={moeda(centavosDeDecimal(l.amount))} />
-                    {l.description && <InfoDoCartao>{l.description}</InfoDoCartao>}
+                    {(rotuloDaSerie(l) || l.description) && (
+                      <InfoDoCartao>{[rotuloDaSerie(l), l.description].filter(Boolean).join(" · ")}</InfoDoCartao>
+                    )}
                     <InfoDoCartao className="mt-1 tabular-nums">
                       vence {formatInstantDate(l.dueDate)}
                       {l.paidAt && ` · pago em ${formatInstantDate(l.paidAt)}`}
@@ -343,7 +356,9 @@ async function ListaDeManuais({
                       {podeCancelar && (
                         <span className="ml-auto flex gap-1.5">
                           {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
-                          {podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
+                          {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
+                            <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
+                          )}
                         </span>
                       )}
                     </PeDoCartao>
@@ -390,9 +405,9 @@ async function ListaDeManuais({
                           </td>
                           <td className="py-2.5 pr-3">
                             <span className="font-medium">{l.counterparty.name}</span>
-                            {(l.documentNumber || l.description) && (
+                            {(rotuloDaSerie(l) || l.documentNumber || l.description) && (
                               <span className="block text-micro text-fg-muted truncate max-w-[260px]">
-                                {[l.documentNumber && `nº ${l.documentNumber}`, l.description].filter(Boolean).join(" · ")}
+                                {[rotuloDaSerie(l), l.documentNumber && `nº ${l.documentNumber}`, l.description].filter(Boolean).join(" · ")}
                               </span>
                             )}
                           </td>
@@ -413,7 +428,9 @@ async function ListaDeManuais({
                             {podeCancelar && (
                               <div className="flex flex-wrap justify-end gap-1.5">
                                 {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
-                                {podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
+                                {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
+                                  <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
+                                )}
                               </div>
                             )}
                           </td>

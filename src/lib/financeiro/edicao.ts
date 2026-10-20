@@ -15,8 +15,9 @@
 // - **origem** trava o que pertence a ela: a nota (valor, emissão, número e
 //   contraparte), o acordo de cobrança (valor, vencimento e contraparte da
 //   parcela) e o Omie, enquanto a empresa é lida de lá — o que a leitura
-//   reescreve (valor, vencimento, competência, categoria, emissão e número)
-//   voltaria ao do Omie na leitura seguinte.
+//   reescreve (valor, vencimento, competência, categoria, emissão, número e,
+//   desde 20/10, previsão e conta corrente prevista) voltaria ao do Omie na
+//   leitura seguinte.
 //
 // Cada trava diz o porquê e o caminho. Ninguém edita conta cancelada,
 // renegociada ou baixada por perda: o caminho é desfazer o que a encerrou.
@@ -26,10 +27,12 @@ export const CAMPOS_EDITAVEIS = [
   "categoria",
   "centro",
   "projeto",
+  "conta",
   "competencia",
   "emissao",
   "numeroDocumento",
   "vencimento",
+  "previsao",
   "valor",
   "descricao",
 ] as const;
@@ -45,7 +48,7 @@ export type ContaParaEditar = {
   closeReason: "CANCELADO" | "RENEGOCIADO" | "PERDA" | null;
   fiscalDocumentId: string | null;
   agreementId: string | null;
-  /** Título ou movimento que veio do Omie (`omieTitleId` ou `omieMovementId`). */
+  /** Título ou movimento que veio do Omie, numa empresa que ainda não virou para o Connect (lote E). */
   doOmie: boolean;
   /** Ligada a uma linha do extrato — no Connect ou pelo Omie. */
   conciliada: boolean;
@@ -54,7 +57,7 @@ export type ContaParaEditar = {
 };
 
 const DINHEIRO: CampoEditavel[] = ["valor", "vencimento"];
-const DO_OMIE: CampoEditavel[] = ["valor", "vencimento", "competencia", "categoria", "emissao", "numeroDocumento"];
+const DO_OMIE: CampoEditavel[] = ["valor", "vencimento", "competencia", "categoria", "emissao", "numeroDocumento", "previsao", "conta"];
 const DA_NOTA: CampoEditavel[] = ["valor", "emissao", "numeroDocumento", "contraparte"];
 const DO_ACORDO: CampoEditavel[] = ["valor", "vencimento", "contraparte"];
 
@@ -90,6 +93,8 @@ export function travasDaEdicao(conta: ContaParaEditar): { pode: false; motivo: s
   }
   if (conta.status === "PAGO" || conta.paidAt !== null) {
     travar(DINHEIRO, "Paga — desfaça o pagamento para mudar valor ou vencimento.");
+    // A previsão diz quando o dinheiro vai andar; depois que andou, não diz nada.
+    travar(["previsao"], "Paga — a previsão é só de conta em aberto.");
   }
   // Baixa parcial: o vencimento do resto ainda muda; o valor, não — o saldo é
   // o valor menos o que foi baixado, e mudar um por baixo do outro o desfaria.

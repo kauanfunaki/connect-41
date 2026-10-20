@@ -6,15 +6,23 @@
 //
 // As contas pagas antes de 19/10 ganharam uma baixa cheia na migration, no dia
 // e no valor de antes: para elas, nada muda nos números.
+//
+// Conta com rateio (lote D, 20/10): o principal de cada baixa vai para as
+// linhas, na proporção delas — a baixa cheia dá exatamente o valor de cada
+// linha. Juros, multa e desconto seguem nas categorias deles, com o centro e o
+// projeto da conta.
 
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { centavosDeDecimal } from "../contas";
 import { movimentosDaBaixa, type MovimentoDaBaixa } from "./regras";
+import { partesDoRateio } from "../rateio";
 
 export type MovimentoDeCaixa = MovimentoDaBaixa & {
   /** O instante da baixa — o mês de caixa sai dele. */
   paidAt: Date;
+  /** A baixa de onde saiu — a conta rateada dá um principal por linha, todos da mesma baixa. */
+  paymentId: string;
   entryId: string;
   companyId: string;
   costCenterId: string | null;
@@ -34,6 +42,7 @@ export async function movimentosDeCaixa(where: Prisma.FinanceEntryPaymentWhereIn
   const baixas = await getPrisma().financeEntryPayment.findMany({
     where: { ...where, entry: { status: { not: "CANCELADO" } } },
     select: {
+      id: true,
       paidAt: true,
       principal: true,
       interest: true,
@@ -42,12 +51,33 @@ export async function movimentosDeCaixa(where: Prisma.FinanceEntryPaymentWhereIn
       interestCategoryId: true,
       discountCategoryId: true,
       entry: {
-        select: { id: true, kind: true, categoryId: true, companyId: true, costCenterId: true, projectId: true, competence: true, agreementId: true, dueDate: true },
+        select: {
+          id: true,
+          kind: true,
+          categoryId: true,
+          companyId: true,
+          costCenterId: true,
+          projectId: true,
+          competence: true,
+          agreementId: true,
+          dueDate: true,
+          allocations: { select: { categoryId: true, costCenterId: true, projectId: true, amount: true }, orderBy: { position: "asc" } },
+        },
       },
     },
   });
-  return baixas.flatMap((b) =>
-    movimentosDaBaixa({
+  return baixas.flatMap((b) => {
+    const base = {
+      paidAt: b.paidAt,
+      paymentId: b.id,
+      entryId: b.entry.id,
+      companyId: b.entry.companyId,
+      competence: b.entry.competence,
+      agreementId: b.entry.agreementId,
+      dueDate: b.entry.dueDate,
+    };
+    const rateio = b.entry.allocations.map((a) => ({ ...a, centavos: centavosDeDecimal(a.amount) }));
+    return movimentosDaBaixa({
       kind: b.entry.kind,
       categoryId: b.entry.categoryId,
       principalCentavos: centavosDeDecimal(b.principal),
@@ -56,19 +86,22 @@ export async function movimentosDeCaixa(where: Prisma.FinanceEntryPaymentWhereIn
       descontoCentavos: centavosDeDecimal(b.discount),
       interestCategoryId: b.interestCategoryId,
       discountCategoryId: b.discountCategoryId,
-    }).map((m) => ({
-      ...m,
-      paidAt: b.paidAt,
-      entryId: b.entry.id,
-      companyId: b.entry.companyId,
+    }).flatMap((m): MovimentoDeCaixa[] => {
+      if (m.parte === "principal" && rateio.length > 1) {
+        const partes = partesDoRateio(m.centavos, rateio).filter((p) => p.centavos !== 0);
+        return partes.map(({ linha, centavos }) => ({
+          ...m,
+          ...base,
+          centavos,
+          categoryId: linha.categoryId,
+          costCenterId: linha.costCenterId,
+          projectId: linha.projectId,
+        }));
+      }
       // Juros e desconto não têm centro nem projeto próprios: são da conta.
-      costCenterId: b.entry.costCenterId,
-      projectId: b.entry.projectId,
-      competence: b.entry.competence,
-      agreementId: b.entry.agreementId,
-      dueDate: b.entry.dueDate,
-    }))
-  );
+      return [{ ...m, ...base, costCenterId: b.entry.costCenterId, projectId: b.entry.projectId }];
+    });
+  });
 }
 
 /** O filtro de baixas de um período `[de, ate)` numa empresa ou num escopo. */

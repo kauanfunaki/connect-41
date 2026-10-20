@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MOTIVO_DO_OMIE } from "@/lib/integracoes/omie/virada";
 import { FileText, AlertCircle } from "lucide-react";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import type { VarianteDoBadge } from "@/components/ui/Badge";
@@ -146,7 +147,8 @@ export function ContasTable({
       status={l.status}
       hojeISO={hojeISO}
       aPagar={kind === "PAGAR"}
-      bloqueioDeBaixa={motivoDoBloqueioDeBaixa(l)}
+      // A do Omie, até a virada da empresa, paga-se no Omie (lote E).
+      bloqueioDeBaixa={l.presaAoOmie ? MOTIVO_DO_OMIE.baixa : motivoDoBloqueioDeBaixa(l)}
       podeEnviar={moduloDeAprovacao && podeEnviarParaAprovacao({ ...l, kind, paidAt: l.pagoEm }).pode}
       notaHref={l.documentoId ? `/documentos-fiscais/${l.documentoId}` : null}
       // Quem vê a tela atua no setor (ver ContasPage); a janela confere o resto.
@@ -162,8 +164,9 @@ export function ContasTable({
 
   // A linha do documento embaixo da contraparte: número, emissão e descrição
   // (19/10) — é por eles que o setor procura a conta no papel.
+  // A série da repetição na frente (lote D): "3/12 · nº 4512 · aluguel".
   const linhaDoDocumento = (l: LinhaDaConta) =>
-    [l.numeroDocumento && `nº ${l.numeroDocumento}`, l.emissao && `emitida em ${formatInstantDate(l.emissao)}`, l.descricao]
+    [l.serie, l.numeroDocumento && `nº ${l.numeroDocumento}`, l.emissao && `emitida em ${formatInstantDate(l.emissao)}`, l.descricao]
       .filter(Boolean)
       .join(" · ");
   const algumProjeto = linhas.some((l) => l.projetoNome);
@@ -211,12 +214,13 @@ export function ContasTable({
                 {linhaDoDocumento(l) && <InfoDoCartao className="break-words">{linhaDoDocumento(l)}</InfoDoCartao>}
                 <InfoDoCartao className="mt-1 tabular-nums">
                   vence {formatInstantDate(l.vencimento)}
+                  {!l.pagoEm && l.previsao && ` · prev. ${formatInstantDate(l.previsao)}`}
                   {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {formatarCompetencia(l.competencia)}
                 </InfoDoCartao>
                 <InfoDoCartao className="break-words">
                   {[
                     mostrarEmpresa && l.empresaNome,
-                    l.categoriaNome,
+                    l.categoriaNome && (l.rateio ? `${l.categoriaNome} (rateada em ${l.rateio})` : l.categoriaNome),
                     mostrarCentro && l.centroDeCustoNome,
                     l.projetoNome && `projeto ${l.projetoNome}`,
                   ]
@@ -310,6 +314,11 @@ export function ContasTable({
                 )}
                 <td className="px-4 py-3 whitespace-nowrap tabular-nums">
                   {formatInstantDate(l.vencimento)}
+                  {!l.pagoEm && l.previsao && (
+                    <span className="block text-micro text-fg-muted" title="Data de previsão: quando deve ser paga de fato">
+                      prev. {formatInstantDate(l.previsao)}
+                    </span>
+                  )}
                   {l.pagoEm && (
                     <span className="block text-micro text-fg-muted">pago em {formatInstantDate(l.pagoEm)}</span>
                   )}
@@ -341,9 +350,14 @@ export function ContasTable({
                       <AlertCircle size={12} /> sem categoria
                     </span>
                   )}
+                  {l.rateio ? (
+                    <span className="block text-micro text-fg-muted" title="A conta é dividida em linhas de categoria, centro e projeto; a categoria mostrada é a da linha maior.">
+                      rateada em {l.rateio}
+                    </span>
+                  ) : null}
                   {mostrarCentro && (
                     <span className="block text-micro text-fg-muted truncate">
-                      {l.centroDeCustoNome ?? "sem centro de custo"}
+                      {l.centroDeCustoNome ?? (l.rateio ? "centros no rateio" : "sem centro de custo")}
                     </span>
                   )}
                   {l.projetoNome && (

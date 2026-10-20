@@ -1,5 +1,4 @@
-import { Fragment, Suspense } from "react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   Building2,
@@ -9,17 +8,15 @@ import {
   ChevronRight,
   Video,
   ExternalLink,
-  EyeOff,
 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
 import { AvatarImage } from "@/components/shared/AvatarImage";
-import { CustomizeHomeButton } from "@/components/home/CustomizeHomeButton";
+import { InicioEditavel, type LayoutDoInicio } from "@/components/home/InicioEditavel";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
 import { numero } from "@/components/shared/Graficos";
 import { getPrisma } from "@/lib/prisma";
@@ -29,7 +26,7 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { boardPath } from "@/lib/kanbanPaths";
 import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
-import { parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
+import { HOME_WIDGETS, parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
 import { acessoDosPaineis, type AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
 import { contarTarefas } from "@/lib/home/paineis";
 import { precarregarHistoricoDaHome } from "@/lib/home/historico";
@@ -383,10 +380,6 @@ export default async function HomePage() {
   const abaixoDosPaineis = visibleWidgets("abaixo-dos-paineis", selectedWidgets, restrictedOpts);
   const mainWidgets = visibleWidgets("main", selectedWidgets, restrictedOpts);
   const sideWidgets = visibleWidgets("side", selectedWidgets, restrictedOpts);
-  // Com uma das colunas vazia o grid de duas colunas jogaria a sobrevivente na
-  // faixa larga (ou estreita) errada — nesse caso a Home vira coluna única.
-  const twoColumns = mainWidgets.length > 0 && sideWidgets.length > 0;
-
   // Faixa de destaques (06/10): os números saem só dos painéis que estão na
   // Home desta pessoa — com acesso e não ocultos em "Personalizar". Painel
   // oculto não é consultado, nem pela faixa.
@@ -730,91 +723,45 @@ export default async function HomePage() {
     ),
   };
 
+  // Os visíveis de cada faixa vão prontos para o Início, que liga a edição
+  // na própria tela (escolha 11A dos Ajustes de 15/10, 20/10/2026). Só os
+  // visíveis são montados: o escondido nem consulta o banco.
+  const layout: LayoutDoInicio = {
+    top: topWidgets,
+    paineis: painelWidgets,
+    "abaixo-dos-paineis": abaixoDosPaineis,
+    main: mainWidgets,
+    side: sideWidgets,
+  };
+  const nos = Object.fromEntries(
+    Object.values(layout)
+      .flat()
+      .map((key) => [key, widgetNodes[key] || null])
+  ) as Partial<Record<HomeWidgetKey, React.ReactNode>>;
+
   return (
     <PageContainer>
-      {/* Header */}
-      <PageHeader
-        title={firstName ? `Olá, ${firstName}` : "Início"}
-        subtitle={<>{pendingForMe > 0
+      <InicioEditavel
+        key={JSON.stringify(layout)}
+        titulo={firstName ? `Olá, ${firstName}` : "Início"}
+        subtitulo={<>{pendingForMe > 0
               ? `${pendingForMe} pendência${pendingForMe !== 1 ? "s" : ""} precisa${pendingForMe !== 1 ? "m" : ""} de você`
               : <>Aqui está um resumo do workspace {tenant?.name ? <span className="text-fg font-medium">{tenant.name}</span> : ""}</>}</>}
-        action={
-          <div className="flex items-center gap-3">
-            <p className="hidden sm:block text-helper text-fg-muted tnum">{today}</p>
-            <CustomizeHomeButton
-              selected={selectedWidgets}
-              disponiveis={disponiveis}
-              saveAction={salvarWidgetsHome}
-              resetAction={restaurarWidgetsHome}
-            />
-            <QuickCreateMenu
-              canCreateCompany={canCreateCompany}
-              canCreatePerson={canCreatePerson}
-              canCreateTransfer={canCreateTransfer}
-            />
-          </div>
-        }
-      />
-
-      {topWidgets.map((key) => (
-        <Fragment key={key}>{widgetNodes[key]}</Fragment>
-      ))}
-
-      {/* Painéis: a grade de gráficos (30/09). Duas colunas até telas bem
-          largas — com a sidebar, três painéis a 1440px apertam as barras.
-          Com a faixa de destaques em cima (06/10), os gráficos ficam mais
-          baixos: o número que manda já está na faixa. */}
-      {painelWidgets.length > 0 && (
-        <div
-          data-compacto={comDestaques ? "true" : undefined}
-          className="group/grade grid grid-cols-1 lg:grid-cols-2 min-[1760px]:grid-cols-3 gap-4 mb-4 items-stretch"
-        >
-          {painelWidgets.map((key) => (
-            <Fragment key={key}>{widgetNodes[key]}</Fragment>
-          ))}
-        </div>
-      )}
-
-      {/* Entre os painéis e as colunas: os Indicadores (08/10, escolha 7A). */}
-      {abaixoDosPaineis.map((key) => (
-        <Fragment key={key}>{widgetNodes[key]}</Fragment>
-      ))}
-
-      {/* Corpo: coluna principal (meu trabalho) + coluna lateral */}
-      {(mainWidgets.length > 0 || sideWidgets.length > 0) && (
-        <div className={`grid gap-4 ${twoColumns ? "grid-cols-1 lg:grid-cols-[1.7fr_1fr]" : "grid-cols-1"}`}>
-          {mainWidgets.length > 0 && (
-            <div className="flex flex-col gap-4 min-w-0">
-              {mainWidgets.map((key) => (
-                <Fragment key={key}>{widgetNodes[key]}</Fragment>
-              ))}
-            </div>
-          )}
-
-          {sideWidgets.length > 0 && (
-            <div className="flex flex-col gap-4 min-w-0">
-              {sideWidgets.map((key) => (
-                <Fragment key={key}>{widgetNodes[key]}</Fragment>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {topWidgets.length === 0 &&
-        painelWidgets.length === 0 &&
-        abaixoDosPaineis.length === 0 &&
-        mainWidgets.length === 0 &&
-        sideWidgets.length === 0 && (
-        // No `EmptyState` (15/10/2026): era texto solto.
-        <Card>
-          <EmptyState
-            icon={<EyeOff />}
-            title="Todos os blocos estão ocultos"
-            description="Use “Personalizar”, no topo, para trazer algum de volta."
+        data={today}
+        criar={
+          <QuickCreateMenu
+            canCreateCompany={canCreateCompany}
+            canCreatePerson={canCreatePerson}
+            canCreateTransfer={canCreateTransfer}
           />
-        </Card>
-      )}
+        }
+        layout={layout}
+        nos={nos}
+        disponiveis={HOME_WIDGETS.filter((w) => disponiveis.includes(w.key)).map((w) => ({ key: w.key, rotulo: w.label, faixa: w.slot }))}
+        comDestaques={comDestaques}
+        salvar={salvarWidgetsHome}
+        restaurar={restaurarWidgetsHome}
+      />
     </PageContainer>
   );
 }

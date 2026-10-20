@@ -102,17 +102,9 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
       {
         chave: "usuarios",
         rotulo: "Usuários",
-        descricao: "Contas, papéis e setores de cada pessoa da equipe.",
+        descricao: "Contas, papéis e setores de cada pessoa da equipe, e quem ela é no Chatwoot.",
         href: "/admin/usuarios",
         rota: "/admin/usuarios",
-        acesso: "admin",
-      },
-      {
-        chave: "atendentes",
-        rotulo: "Atendentes e vínculos",
-        descricao: "Liga cada colaborador à conta dele e ao atendente do Chatwoot, e marca quem é da recepção.",
-        href: "/admin/atendentes",
-        rota: "/admin/atendentes",
         acesso: "admin",
       },
       {
@@ -133,18 +125,10 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
     telas: [
       {
         chave: "setores",
-        rotulo: "Setores e menu Geral",
-        descricao: "Os setores, a cor de cada um e as telas do menu Geral de cada setor.",
+        rotulo: "Setores e módulos",
+        descricao: "Cada setor com os módulos que opera, as telas do menu Geral e as pessoas.",
         href: "/admin/setores",
         rota: "/admin/setores",
-        acesso: "admin",
-      },
-      {
-        chave: "modulos",
-        rotulo: "Módulos",
-        descricao: "Liga e desliga os módulos de cada setor.",
-        href: "/admin/modulos",
-        rota: "/admin/modulos",
         acesso: "admin",
       },
       {

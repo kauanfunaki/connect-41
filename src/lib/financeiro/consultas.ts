@@ -68,7 +68,15 @@ export async function titulosEmAberto(e: EscopoFinanceiro): Promise<TituloComCon
   const prisma = getPrisma();
   const linhas = await prisma.financeEntry.findMany({
     where: { ...whereDoEscopo(e), paidAt: null, status: { not: "CANCELADO" } },
-    select: { kind: true, amount: true, paidPrincipal: true, dueDate: true, companyId: true, counterparty: { select: { name: true } } },
+    select: {
+      kind: true,
+      amount: true,
+      paidPrincipal: true,
+      dueDate: true,
+      forecastDate: true,
+      companyId: true,
+      counterparty: { select: { name: true } },
+    },
     orderBy: { dueDate: "asc" },
     take: 5_000,
   });
@@ -77,6 +85,7 @@ export async function titulosEmAberto(e: EscopoFinanceiro): Promise<TituloComCon
     // O que falta: a baixa parcial já saiu do caixa e não volta a ser projetada.
     centavos: centavosDeDecimal(l.amount) - centavosDeDecimal(l.paidPrincipal),
     vencimentoKey: saoPauloParts(l.dueDate).dateKey,
+    previsaoKey: l.forecastDate ? saoPauloParts(l.forecastDate).dateKey : null,
     contraparteNome: l.counterparty.name,
     companyId: l.companyId,
   }));

@@ -12,7 +12,10 @@
 // Campos pela documentação do Omie, conferida em 25/09:
 //   detalhes: nCodTitulo, cNumTitulo, dDtEmissao, dDtVenc, dDtPagamento,
 //             nCodCliente, cCPFCNPJCliente, cNatureza (P|R), cStatus,
-//             nValorTitulo, cCodCateg, cNumDocFiscal
+//             nValorTitulo, cCodCateg, cNumDocFiscal,
+//             nCodCC e dDtPrevisao (20/10: conta corrente e previsão do título —
+//             vistos numa resposta real da ER Dias, em todos os 100 títulos da
+//             página; a previsão vem sempre, igual ao vencimento em 86 deles)
 //   resumo:   cLiquidado (S|N), nValPago, nValAberto
 //   categorias: rateio [{ cCodCateg, nValor, nPerc }]
 // E `geral/categorias` `ListarCategorias` para o nome e o grupo de cada código:
@@ -129,6 +132,17 @@ export type TituloDoOmie = {
   descricao: string | null;
   /** `cNumTitulo` — o "Número do documento" do título no Omie (19/10). */
   numeroDocumento: string | null;
+  /**
+   * `nCodCC` — a "Conta Corrente" do título no Omie (20/10): vira a conta
+   * corrente prevista no Connect, pela conta bancária ligada a ela.
+   */
+  contaCorrenteId: string | null;
+  /**
+   * `dDtPrevisao` — a "Data de Previsão" do Omie (20/10). Nula quando é o
+   * próprio vencimento (é o que a nula diz no Connect) e na conta que não está
+   * em aberto: a previsão é só de conta em aberto, como no lançamento manual.
+   */
+  previsao: Date | null;
 };
 
 export type MotivoDoTituloFora =
@@ -197,6 +211,9 @@ export function mapearMovimento(item: unknown): TituloDoOmie | { fora: MotivoDoT
   const documento = digitos(d.cCPFCNPJCliente);
   const numeroTitulo = texto(d.cNumTitulo);
   const notaFiscal = texto(d.cNumDocFiscal);
+  const contaCorrente = texto(d.nCodCC);
+  // Previsão fora do formato vira nula, como o resto: o título entra igual.
+  const previsao = situacao === "ABERTO" ? instanteDoOmie(d.dDtPrevisao, null) : null;
   return {
     omieTitleId: id.slice(0, 20),
     kind,
@@ -214,6 +231,8 @@ export function mapearMovimento(item: unknown): TituloDoOmie | { fora: MotivoDoT
     contraparteCodigo: texto(d.nCodCliente) || null,
     descricao: [numeroTitulo && `Título ${numeroTitulo}`, notaFiscal && `NF ${notaFiscal}`].filter(Boolean).join(" · ").slice(0, 255) || null,
     numeroDocumento: numeroTitulo.slice(0, 60) || null,
+    contaCorrenteId: contaCorrente && contaCorrente !== "0" ? contaCorrente.slice(0, 20) : null,
+    previsao: previsao && previsao.getTime() !== vencimento.getTime() ? previsao : null,
   };
 }
 
@@ -255,6 +274,9 @@ export function mensagemDoFinanceiro(c: Record<string, number>, gravou: boolean)
     n("parciais_sem_data") ? `${n("parciais_sem_data")} parciais sem data de pagamento no Omie (ficam em aberto sem a parte paga)` : null,
     n("parciais_numa_baixa") ? `${n("parciais_numa_baixa")} parciais com o pago numa baixa só (as baixas de lá não fecharam com o total)` : null,
     n("sem_categoria") ? `${n("sem_categoria")} sem categoria` : null,
+    n("conta_prevista_sem_par")
+      ? `${n("conta_prevista_sem_par")} com conta corrente do Omie sem conta bancária ligada no Connect (ficam sem conta prevista)`
+      : null,
     n("categorias_novas") ? `${n("categorias_novas")} categorias do Omie ${gravou ? "criadas" : "a criar"} no plano da empresa` : null,
     n("preservados") ? `${n("preservados")} não mexidas (em acordo ou baixadas por perda no Connect)` : null,
     ...(Object.keys(MOTIVO_DO_TITULO) as MotivoDoTituloFora[])
