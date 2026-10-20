@@ -57,7 +57,8 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
         subtitle={<>{company.name} — sobrescreve o padrão do escritório apenas nos campos que você alterar.</>}
       />
 
-      {/* Aviso e ação na mesma linha, e os dois cartões com o mesmo padding. */}
+      {/* Aviso e ação na mesma linha. Embaixo, as seções em duas colunas do
+          formulário (1B, 20/10/2026), cada uma com o seu cartão. */}
       <Card className="p-5 mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="min-w-0 text-body text-fg-secondary">
           Cada campo mostra de onde vem o valor atual. Alterar aqui afeta só esta empresa.
@@ -68,15 +69,13 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
         </Button>
       </Card>
 
-      <Card className="p-5">
-        <RescisaoConfigForm
-          action={salvarConfigEmpresa.bind(null, companyId)}
-          valores={valores}
-          origem={origem}
-          nivelEmpresa
-          canEdit={canEdit}
-        />
-      </Card>
+      <RescisaoConfigForm
+        action={salvarConfigEmpresa.bind(null, companyId)}
+        valores={valores}
+        origem={origem}
+        nivelEmpresa
+        canEdit={canEdit}
+      />
     </PageContainer>
   );
 }
