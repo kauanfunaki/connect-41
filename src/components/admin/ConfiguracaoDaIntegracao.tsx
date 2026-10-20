@@ -1,10 +1,9 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { ChevronDown, FileKey, Plug, Bot, RefreshCw, Zap } from "lucide-react";
+import { FileKey, Bot, RefreshCw, Zap } from "lucide-react";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -16,7 +15,7 @@ import type { IntegracaoNaTela } from "@/lib/integracoes/data";
 import type { Saude } from "@/lib/integracoes/execucao";
 import { Aviso } from "@/components/ui/Aviso";
 
-const SAUDE_LABEL: Record<Saude, string> = {
+export const SAUDE_LABEL: Record<Saude, string> = {
   nunca_rodou: "Nunca rodou",
   ok: "Em dia",
   com_erro: "Com erro",
@@ -27,7 +26,7 @@ const SAUDE_LABEL: Record<Saude, string> = {
 // `parada` é warning e não info: é o silêncio — ligada, sem erro, e sem rodar
 // há tempo demais. Foi assim que o SPED passou três dias parecendo saudável.
 // `desligada` é neutra (07/10/2026): saiu de cena, não é aviso.
-const SAUDE_VARIANTE: Record<Saude, "success" | "warning" | "danger" | "info" | "neutral"> = {
+export const SAUDE_VARIANTE: Record<Saude, "success" | "warning" | "danger" | "info" | "neutral"> = {
   nunca_rodou: "info",
   ok: "success",
   com_erro: "danger",
@@ -35,7 +34,8 @@ const SAUDE_VARIANTE: Record<Saude, "success" | "warning" | "danger" | "info" | 
   parada: "warning",
 };
 
-const ICONE = {
+/** O ícone da natureza: varre e traz, opera um site, chamada pontual. */
+export const ICONE = {
   SYNC: RefreshCw,
   ROBO: Bot,
   API: Zap,
@@ -47,26 +47,29 @@ const NATUREZA_LABEL = {
   API: "chamada pontual",
 } as const;
 
-export function VitrineDeIntegracoes({
-  integracoes,
+/**
+ * A configuração de uma integração do catálogo, no painel do "Configurar"
+ * (escolha 6A dos Ajustes de 15/10, 20/10/2026): o que ela é, a situação, o que
+ * falta, o webhook e o formulário das credenciais. Era um cartão da vitrine,
+ * empilhado com os outros, com o formulário abrindo dentro dele.
+ *
+ * `soLigar`: só o "Conexão ligada" — para quem tem formulário próprio das
+ * credenciais (o Chatwoot), e aqui só liga e desliga. Os campos não vão no
+ * envio, e o que está guardado fica como estava (`mesclarConfig`).
+ */
+export function ConfiguracaoDaIntegracao({
+  integracao: i,
   urlPublica,
+  setor,
+  soLigar = false,
 }: {
-  integracoes: IntegracaoNaTela[];
+  integracao: IntegracaoNaTela;
   /** `APP_PUBLIC_URL`, vinda do servidor por prop — `NEXT_PUBLIC_` não chega ao build do container. */
   urlPublica: string | null;
+  /** O nome do setor da integração ("Recrutamento"), e não o código. */
+  setor?: string | null;
+  soLigar?: boolean;
 }) {
-  if (integracoes.length === 0) return null;
-  return (
-    <div className="flex flex-col gap-3">
-      {integracoes.map((i) => (
-        <CartaoDaIntegracao key={`${i.code}:${i.instanceKey}`} integracao={i} urlPublica={urlPublica} />
-      ))}
-    </div>
-  );
-}
-
-function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: IntegracaoNaTela; urlPublica: string | null }) {
-  const [aberto, setAberto] = useState(false);
   const [state, formAction, isPending] = useActionState<ConexaoState, FormData>(salvarConexao, null);
   // Os campos de escolha, como estão no formulário: outro campo pode sair por
   // causa deles (na demonstração do Serpro não há chave nem certificado —
@@ -77,31 +80,28 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
   const Icone = ICONE[i.natureza];
 
   return (
-    <Card as="section" className="p-4 flex flex-col gap-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <Icone size={16} className="text-fg-muted shrink-0" />
-            <h3 className="text-card-title font-semibold text-fg">{i.label}</h3>
-            {i.conectada ? (
-              <Selo tom={tomDaVariante(SAUDE_VARIANTE[i.saude])}>{SAUDE_LABEL[i.saude]}</Selo>
-            ) : (
-              <Selo tom="neutro">não conectada</Selo>
-            )}
-          </div>
-          <p className="text-fs-3 text-fg-secondary mt-1 max-w-[62ch]">{i.description}</p>
-          <p className="text-fs-1 text-fg-muted mt-1">
-            {i.vendor} · {NATUREZA_LABEL[i.natureza]}
-            {i.sectorCode && ` · setor ${i.sectorCode}`}
-            {i.nomeDoCliente && ` · ${i.nomeDoCliente}`}
-          </p>
+    <section className="flex flex-col gap-3">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <Icone size={16} className="text-fg-muted shrink-0" />
+          {i.conectada ? (
+            <Selo tom={tomDaVariante(SAUDE_VARIANTE[i.saude])}>{SAUDE_LABEL[i.saude]}</Selo>
+          ) : (
+            <Selo tom="neutro">não conectada</Selo>
+          )}
         </div>
+        {!soLigar && <p className="text-fs-3 text-fg-secondary mt-2">{i.description}</p>}
+        <p className="text-fs-1 text-fg-muted mt-1">
+          {i.vendor} · {NATUREZA_LABEL[i.natureza]}
+          {setor && ` · setor ${setor}`}
+          {i.nomeDoCliente && ` · ${i.nomeDoCliente}`}
+        </p>
       </div>
 
       {/* A configuração incompleta é o estado mais comum e o menos explicado:
           "não funciona" sem dizer qual campo falta faz a pessoa tentar de novo
           igual. */}
-      {i.conectada && i.faltando.length > 0 && (
+      {!soLigar && i.conectada && i.faltando.length > 0 && (
         <Aviso tom="atencao">
           Falta preencher: {i.faltando.join(", ")}.
         </Aviso>
@@ -109,7 +109,7 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
 
       {/* A URL que se cadastra do outro lado (Meta, Evolution). Sem ela, quem
           configura precisaria descobrir o id da conexão no banco. */}
-      {i.caminhoDoWebhook && (
+      {!soLigar && i.caminhoDoWebhook && (
         <p className="text-fs-2 text-fg-secondary break-all">
           <span className="text-fg-muted">URL do webhook: </span>
           <code className="text-fg">
@@ -127,37 +127,22 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
         </Aviso>
       )}
 
-      {/* Botão, e não texto azul (polimento de 30/09): abre o formulário. */}
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => setAberto((v) => !v)}
-        className="self-start"
-        aria-expanded={aberto}
-      >
-        <ChevronDown
-          size={14}
-          className={aberto ? "rotate-180 transition-transform" : "transition-transform"}
-        />
-        {aberto ? "Fechar" : i.conectada ? "Configurar" : "Conectar"}
-      </Button>
+      <form action={formAction} className="border-t border-border-soft pt-3 flex flex-col gap-3">
+        <input type="hidden" name="code" value={i.code} />
+        <input type="hidden" name="instanceKey" value={i.instanceKey} />
 
-      {aberto && (
-        <form action={formAction} className="border-t border-border-soft pt-3 flex flex-col gap-3">
-          <input type="hidden" name="code" value={i.code} />
-          <input type="hidden" name="instanceKey" value={i.instanceKey} />
+        {state && "error" in state && (
+          <Aviso>
+            {state.error}
+          </Aviso>
+        )}
+        {state && "success" in state && (
+          <Aviso tom="sucesso">
+            Conexão salva.
+          </Aviso>
+        )}
 
-          {state && "error" in state && (
-            <Aviso>
-              {state.error}
-            </Aviso>
-          )}
-          {state && "success" in state && (
-            <Aviso tom="sucesso">
-              Conexão salva.
-            </Aviso>
-          )}
-
+        {!soLigar && (
           <FieldGrid>
             {i.campos.map((c) => {
               const guardado = i.segredosGuardados.includes(c.name);
@@ -201,30 +186,30 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
                       defaultValue={i.valores[c.name] ?? ""}
                       placeholder={guardado ? "•••• (preenchido)" : ""}
                     />
-                  )}
-                </CampoForm>
-              );
-            })}
-          </FieldGrid>
+                )}
+              </CampoForm>
+            );
+          })}
+        </FieldGrid>
+        )}
 
-          <Checkbox id={`${i.code}-enabled`} name="enabled" defaultChecked={i.enabled} label="Conexão ligada"
-            helper={
-              <>
-                {/* Integração nunca nasce ligada: ligar significa começar a falar
-                com sistema de terceiro usando credencial de alguém. */}
-                Desligada, nada é enviado nem buscado. Ligar é ato deliberado.
-              </>
-            }
-          />
+        <Checkbox id={`${i.code}-enabled`} name="enabled" defaultChecked={i.enabled} label="Conexão ligada"
+          helper={
+            <>
+              {/* Integração nunca nasce ligada: ligar significa começar a falar
+              com sistema de terceiro usando credencial de alguém. */}
+              Desligada, nada é enviado nem buscado. Ligar é ato deliberado.
+            </>
+          }
+        />
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-soft">
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Salvando…" : i.conectada ? "Salvar" : "Conectar"}
-            </Button>
-          </div>
-        </form>
-      )}
-    </Card>
+        <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-soft">
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Salvando…" : i.conectada ? "Salvar" : "Conectar"}
+          </Button>
+        </div>
+      </form>
+    </section>
   );
 }
 
@@ -251,16 +236,5 @@ function CampoDeCertificado({ id, name, guardado }: { id: string; name: string; 
       </Button>
       <span className="text-ui text-fg-muted truncate min-w-0">{arquivo ?? (guardado ? "Certificado guardado" : "Nenhum arquivo")}</span>
     </div>
-  );
-}
-
-export function VitrineVazia() {
-  return (
-    <Card className="p-6 text-center">
-      <Plug size={22} className="mx-auto text-fg-muted mb-2" />
-      <p className="text-fs-3 text-fg-secondary">
-        Nenhuma integração no catálogo ainda.
-      </p>
-    </Card>
   );
 }

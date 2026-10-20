@@ -1,30 +1,35 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
-import { Video, Sparkles, MessageCircle, Headset } from "lucide-react";
+import { Building2, FileStack, FlaskConical, Leaf, MessageCircle, MessageSquareText, ShieldCheck, Sparkles, Video } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { getMeetingIntegrationHealth } from "@/lib/integrations/health";
 import { isGoogleConfigured } from "@/lib/integrations/google";
 import { isMicrosoftConfigured } from "@/lib/integrations/microsoft";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatCnpj } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { DisconnectButton } from "@/components/admin/DisconnectButton";
 import { AiConfigForm } from "@/components/admin/AiConfigForm";
 import { ChatwootConfigForm } from "@/components/admin/ChatwootConfigForm";
-import { VitrineDeIntegracoes } from "@/components/admin/VitrineDeIntegracoes";
-import { listarIntegracoes } from "@/lib/integracoes/data";
+import { PapeisDosAtendentes } from "@/components/admin/PapeisDosAtendentes";
+import { PainelDeCadastro } from "@/components/admin/PainelDeCadastro";
+import { CatalogoDeIntegracoes, type BlocoDeIntegracao, type EstadoDaIntegracao } from "@/components/admin/CatalogoDeIntegracoes";
+import { ConfiguracaoDaIntegracao, SAUDE_LABEL, SAUDE_VARIANTE } from "@/components/admin/ConfiguracaoDaIntegracao";
+import { canWriteEntity } from "@/lib/auth/policy";
+import { listarIntegracoes, type IntegracaoNaTela } from "@/lib/integracoes/data";
 import { ContasOmie } from "@/components/admin/ContasOmie";
 import { listarContasOmie } from "@/lib/integracoes/omie/contas";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { getSectorMaps } from "@/lib/sectors";
 import { desconectarIntegracao } from "./actions";
 import { ServicoDoSerpro } from "@/components/admin/ServicoDoSerpro";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
-import { formatCnpj } from "@/lib/format";
 import { Aviso } from "@/components/ui/Aviso";
-import { Selo } from "@/components/ui/Selo";
+import { Selo, tomDaVariante, type TomDoSelo } from "@/components/ui/Selo";
 
 const ERROR_LABEL: Record<string, string> = {
   "sem-permissao": "Sem permissão para conectar integrações.",
@@ -38,14 +43,50 @@ const ERROR_LABEL: Record<string, string> = {
   "microsoft-falha-conexao": "Falha ao conectar com a Microsoft. Tente novamente.",
 };
 
+type Filtro = "todas" | "ligadas" | "problema";
+
+/** O ícone de cada integração no catálogo. */
+const ICONE_DO_CODIGO: Record<string, React.ReactNode> = {
+  chatwoot: <MessageCircle />,
+  sped: <FileStack />,
+  whatsapp_recrutamento: <MessageSquareText />,
+  whatsapp_recrutamento_evolution: <FlaskConical />,
+  sima_curitiba: <Leaf />,
+  serpro_integra_contador: <ShieldCheck />,
+};
+
+/** A situação de uma integração do catálogo, no selo e no filtro. */
+function situacaoDoCatalogo(i: IntegracaoNaTela): { selo: { tom: TomDoSelo; rotulo: string }; estado: EstadoDaIntegracao } {
+  if (!i.conectada) return { selo: { tom: "neutro", rotulo: "Não conectada" }, estado: "desligada" };
+  if (i.faltando.length > 0) return { selo: { tom: "atencao", rotulo: "Falta configurar" }, estado: "problema" };
+  const estado: EstadoDaIntegracao =
+    i.saude === "com_erro" || i.saude === "parada" ? "problema" : i.saude === "desligada" ? "desligada" : "ligada";
+  return { selo: { tom: tomDaVariante(SAUDE_VARIANTE[i.saude]), rotulo: SAUDE_LABEL[i.saude] }, estado };
+}
+
+/**
+ * Integrações como catálogo (escolha 6A dos Ajustes de 15/10, 20/10/2026).
+ *
+ * Todas em blocos iguais, cada uma **uma vez**: o Chatwoot (a conexão com as
+ * credenciais, o ligar e os papéis dos atendentes) e o Serpro (o formulário e
+ * o teste) eram duas seções cada; o Omie por empresa, as reuniões e a chave de
+ * IA viram blocos como os outros. O filtro do topo separa as ligadas e as com
+ * problema; "Configurar" abre o painel ao lado (2B), no endereço
+ * (`?integracao=<chave>`). O setor aparece pelo nome. O e-mail de envio continua
+ * na tela Empresa.
+ *
+ * Quem não administra o escritório (o coordenador) vê só as reuniões, que são
+ * da conta pessoal de cada um.
+ */
 export default async function IntegracoesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; connected?: string }>;
+  searchParams: Promise<{ error?: string; connected?: string; integracao?: string; ver?: string }>;
 }) {
-  const { error, connected } = await searchParams;
+  const { error, connected, integracao: aberta, ver } = await searchParams;
   const ctx = await getAuthContext();
   if (!canManageMeetings(ctx)) notFound();
+  const agora = new Date();
 
   const prisma = getPrisma();
   const accounts = await prisma.oAuthAccount.findMany({ where: { tenantId: ctx.tenantId, userId: ctx.userId } });
@@ -60,208 +101,276 @@ export default async function IntegracoesPage({
     getMeetingIntegrationHealth(ctx.tenantId, ctx.userId, "MICROSOFT"),
   ]);
 
-  // Config de IA é segredo tenant-wide (não pessoal, como as contas de
-  // reunião acima) — só quem administra o tenant todo (ADMIN/SUPER_ADMIN) vê e mexe.
-  // Credencial de sistema de terceiro é configuração do cliente inteiro.
+  // Credencial de sistema de terceiro, a chave da IA e o Chatwoot são
+  // configuração do escritório inteiro — só quem o administra vê e mexe.
   const podeConfigurar = isFullWrite(ctx.role);
-  // O Omie sai da vitrine genérica: a conta é por empresa cliente, com seção própria.
-  const integracoesDoCatalogo = podeConfigurar
-    ? (await listarIntegracoes(ctx.tenantId!, new Date())).filter((i) => i.code !== "omie")
-    : [];
-  const [contasOmie, empresasParaOmie] = podeConfigurar
-    ? await Promise.all([listarContasOmie(ctx.tenantId!, new Date()), empresasDoSeletor(ctx.tenantId!)])
-    : [[], []];
-
-  // Serpro (09/10/2026): com a conexão salva, o certificado lido e o teste.
-  const serpro = podeConfigurar ? await configuracaoDoSerpro(ctx.tenantId!) : null;
+  const [integracoes, contasOmie, empresasParaOmie, serpro, aiConfig, chatwootConnection, { labels: nomesDosSetores }] = podeConfigurar
+    ? await Promise.all([
+        listarIntegracoes(ctx.tenantId!, agora),
+        listarContasOmie(ctx.tenantId!, agora),
+        empresasDoSeletor(ctx.tenantId!),
+        configuracaoDoSerpro(ctx.tenantId!),
+        prisma.tenantAiConfig.findUnique({ where: { tenantId: ctx.tenantId } }),
+        prisma.chatwootConnection.findFirst({ where: { tenantId: ctx.tenantId }, orderBy: { createdAt: "asc" } }),
+        getSectorMaps(ctx.tenantId),
+      ])
+    : [[], [], [], null, null, null, { labels: {} as Record<string, string> }];
   const prontidaoSerpro = serpro ? prontidaoDoSerpro(serpro) : null;
-
-  const canManageAi = isFullWrite(ctx.role);
-  const aiConfig = canManageAi ? await prisma.tenantAiConfig.findUnique({ where: { tenantId: ctx.tenantId } }) : null;
-
-  // Chatwoot é config tenant-wide, mesmo critério de acesso da IA/SMTP.
-  const canManageChatwoot = isFullWrite(ctx.role);
-  const chatwootConnection = canManageChatwoot
-    ? await prisma.chatwootConnection.findFirst({ where: { tenantId: ctx.tenantId }, orderBy: { createdAt: "asc" } })
-    : null;
   const chatwootWebhookUrl =
     chatwootConnection && process.env.APP_PUBLIC_URL
       ? `${process.env.APP_PUBLIC_URL}/api/integrations/chatwoot/webhook/${chatwootConnection.id}`
       : null;
+  const doCodigo = new Map(integracoes.map((i) => [i.code, i]));
+  const setorDe = (i: IntegracaoNaTela) => (i.sectorCode ? (nomesDosSetores[i.sectorCode] ?? i.sectorCode) : null);
+
+  // ─── Os blocos ───────────────────────────────────────────────────────────
+  const blocos: BlocoDeIntegracao[] = [];
+  if (podeConfigurar) {
+    // As do catálogo, uma por código. O Omie tem bloco próprio (a conta é por
+    // empresa); o Serpro ganha a prontidão na situação.
+    for (const i of integracoes) {
+      if (i.code === "omie") continue;
+      let { selo, estado } = situacaoDoCatalogo(i);
+      let detalhe: string | null = i.lastError ? `Último erro: ${i.lastError}` : setorDe(i) ? `Setor ${setorDe(i)}` : null;
+      if (i.code === "serpro_integra_contador" && i.conectada && prontidaoSerpro && !prontidaoSerpro.pronta && estado !== "problema") {
+        selo = { tom: "atencao", rotulo: "Com pendência" };
+        estado = "problema";
+        detalhe = prontidaoSerpro.motivo;
+      }
+      if (i.code === "chatwoot" && chatwootConnection?.lastSyncAt && estado === "ligada") {
+        detalhe = `Última sincronização ${formatInstantDate(chatwootConnection.lastSyncAt)}`;
+      }
+      blocos.push({
+        chave: i.code,
+        nome: i.label,
+        icone: ICONE_DO_CODIGO[i.code] ?? <ShieldCheck />,
+        descricao: i.description,
+        selo,
+        estado,
+        detalhe,
+      });
+    }
+
+    const comErro = contasOmie.filter((c) => c.saude === "com_erro").length;
+    blocos.push({
+      chave: "omie",
+      nome: "Omie por empresa",
+      icone: <Building2 />,
+      descricao: "Contas e notas das empresas do BPO que usam o Omie — uma conta para cada empresa.",
+      selo:
+        contasOmie.length === 0
+          ? { tom: "neutro", rotulo: "Nenhuma empresa" }
+          : comErro > 0
+            ? { tom: "perigo", rotulo: comErro === 1 ? "1 com erro" : `${comErro} com erro` }
+            : { tom: "marca", rotulo: contasOmie.length === 1 ? "1 empresa" : `${contasOmie.length} empresas` },
+      estado: contasOmie.length === 0 ? "desligada" : comErro > 0 ? "problema" : "ligada",
+    });
+
+    blocos.push({
+      chave: "ia",
+      nome: "Chave de IA",
+      icone: <Sparkles />,
+      descricao: "O provedor e a chave usados por todos os agentes de IA do Connect.",
+      selo: aiConfig ? { tom: "sucesso", rotulo: aiConfig.provider === "OPENAI" ? "OpenAI" : "Anthropic" } : { tom: "neutro", rotulo: "Sem chave" },
+      estado: aiConfig ? "ligada" : "desligada",
+      detalhe: aiConfig ? `Modelo ${aiConfig.model}` : "Sem chave, a IA fica desligada.",
+    });
+  }
+
+  // As reuniões são da conta de cada um: o bloco vale para quem olha.
+  const expirada = (Boolean(google) && googleHealth === "NEEDS_RECONNECT") || (Boolean(microsoft) && microsoftHealth === "NEEDS_RECONNECT");
+  const contasConectadas = [google && "Google", microsoft && "Microsoft"].filter(Boolean) as string[];
+  blocos.push({
+    chave: "reunioes",
+    nome: "Reuniões (Google e Microsoft)",
+    icone: <Video />,
+    descricao: "Sua conta pessoal, para agendar reuniões direto das atividades dos Quadros.",
+    selo: expirada
+      ? { tom: "perigo", rotulo: "Conexão expirada" }
+      : contasConectadas.length > 0
+        ? { tom: "sucesso", rotulo: "Conectada" }
+        : { tom: "neutro", rotulo: "Não conectada" },
+    estado: expirada ? "problema" : contasConectadas.length > 0 ? "ligada" : "desligada",
+    detalhe: contasConectadas.length > 0 ? contasConectadas.join(" e ") : null,
+  });
+
+  const filtro: Filtro = ver === "ligadas" || ver === "problema" ? ver : "todas";
+  const visiveis = blocos.filter((b) => filtro === "todas" || (filtro === "ligadas" ? b.estado === "ligada" : b.estado === "problema"));
+  const comFiltro = (base: string) => (filtro === "todas" ? base : `${base}${base.includes("?") ? "&" : "?"}ver=${filtro}`);
+  const aqui = comFiltro("/admin/integracoes");
+  const bloco = blocos.find((b) => b.chave === aberta);
+  const urlPublica = process.env.APP_PUBLIC_URL ?? null;
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Integrações"
-        subtitle="Conecte sua conta pessoal para agendar reuniões (Google Meet / Microsoft Teams) direto
-          dos itens do Kanban. Só coordenadores e administradores veem esta tela."
-      />
+      <PageHeader title="Integrações" subtitle="Os sistemas que o Connect opera e as contas ligadas a ele." />
 
       {/* O retorno do Google/Microsoft cai aqui: o aviso vem logo abaixo do
-          título, e não depois da vitrine, onde ficava fora da tela. */}
-      {error && (
-        <Aviso className="mb-4">
-          {ERROR_LABEL[error] ?? "Erro ao conectar integração."}
-        </Aviso>
-      )}
+          título, e não no meio da tela, onde ficava fora da vista. */}
+      {error && <Aviso className="mb-4">{ERROR_LABEL[error] ?? "Erro ao conectar integração."}</Aviso>}
       {connected && (
         <Aviso tom="sucesso" className="mb-4">
           Conta {connected === "google" ? "Google" : "Microsoft"} conectada com sucesso.
         </Aviso>
       )}
 
-      {/* ─── A vitrine ──────────────────────────────────────────────────────
-          O catálogo inteiro, conectado ou não. É onde um plugin novo aparece
-          sem ninguém escrever tela: declarar em `INTEGRATION_CATALOG` já o põe
-          aqui, com os campos que ele pede. */}
-      {podeConfigurar && integracoesDoCatalogo.length > 0 && (
-        <section className="mb-8 flex flex-col gap-3">
-          <div>
-            <h2 className="text-section font-semibold text-fg">Plugins e conexões</h2>
-            <p className="text-helper text-fg-muted mt-0.5 max-w-[62ch]">
-              Os sistemas que o Connect sabe operar. Cada um guarda a própria credencial, cifrada,
-              e registra as execuções.
-            </p>
-          </div>
-          <VitrineDeIntegracoes
-            integracoes={integracoesDoCatalogo}
-            urlPublica={process.env.APP_PUBLIC_URL ?? null}
-          />
-          {serpro && (
-            <ServicoDoSerpro
-              certificado={
-                serpro.certificado?.ok
-                  ? {
-                      titular: serpro.certificado.titular,
-                      cnpj: serpro.certificado.cnpj ? formatCnpj(serpro.certificado.cnpj) : null,
-                      validoAte: serpro.certificado.validoAte,
-                    }
-                  : null
-              }
-              motivo={prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null}
-              demonstracao={serpro.ambiente === "demonstracao"}
-            />
-          )}
-          <ContasOmie contas={contasOmie} empresas={empresasParaOmie} />
-        </section>
+      {blocos.length > 1 && (
+        <SegmentedControl
+          label="Quais integrações"
+          active={filtro}
+          className="mb-4"
+          items={[
+            { key: "todas", label: "Todas", href: "/admin/integracoes", contagem: blocos.length },
+            { key: "ligadas", label: "Ligadas", href: "/admin/integracoes?ver=ligadas", contagem: blocos.filter((b) => b.estado === "ligada").length },
+            { key: "problema", label: "Com problema", href: "/admin/integracoes?ver=problema", contagem: blocos.filter((b) => b.estado === "problema").length },
+          ]}
+        />
       )}
 
-      {/* As contas de reunião não tinham título, e pareciam parte da vitrine
-          de cima. Mesmo cabeçalho das outras seções da tela. */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-section font-semibold text-fg flex items-center gap-1.5">
-          <Video size={16} className="text-brand" /> Reuniões
-        </h2>
-        <Card className={`p-5 flex items-center justify-between gap-4 ${!isGoogleConfigured() ? "opacity-60" : ""}`}>
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="w-10 h-10 rounded-lg bg-brand-subtle text-brand flex items-center justify-center flex-shrink-0">
-              <Video size={18} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-fs-4 font-medium text-fg">Google Calendar / Meet</p>
-              <SituacaoDaConta
-                configurado={isGoogleConfigured()}
-                indisponivel="o Google ainda não foi configurado no servidor do Connect; fale com o suporte"
-                conectada={Boolean(google)}
-                expirada={Boolean(google) && googleHealth === "NEEDS_RECONNECT"}
-                email={google?.accountEmail ?? null}
-              />
-            </div>
-          </div>
-          {isGoogleConfigured() &&
-            (google ? (
-              <DisconnectButton action={desconectarIntegracao.bind(null, "GOOGLE")} />
-            ) : (
-              // `nativo`: a rota de API redireciona para o Google, e o <Link>
-              // do Button com href tentaria navegar pelo roteador. Primário md,
-              // o mesmo corpo do Desconectar ao lado.
-              <Button href="/api/integrations/google/connect" nativo className="flex-shrink-0">
-                Conectar
-              </Button>
-            ))}
+      {visiveis.length === 0 ? (
+        <Card className="p-6 text-center text-fs-3 text-fg-muted">
+          {filtro === "problema" ? "Nenhuma integração com problema." : "Nenhuma integração ligada ainda."}
         </Card>
-
-        <Card className={`p-5 flex items-center justify-between gap-4 ${!isMicrosoftConfigured() ? "opacity-60" : ""}`}>
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="w-10 h-10 rounded-lg bg-brand-subtle text-brand flex items-center justify-center flex-shrink-0">
-              <Video size={18} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-fs-4 font-medium text-fg">Microsoft Teams / Outlook</p>
-              <SituacaoDaConta
-                configurado={isMicrosoftConfigured()}
-                indisponivel="a Microsoft ainda não foi configurada no servidor do Connect; fale com o suporte"
-                conectada={Boolean(microsoft)}
-                expirada={Boolean(microsoft) && microsoftHealth === "NEEDS_RECONNECT"}
-                email={microsoft?.accountEmail ?? null}
-              />
-            </div>
-          </div>
-          {isMicrosoftConfigured() &&
-            (microsoft ? (
-              <DisconnectButton action={desconectarIntegracao.bind(null, "MICROSOFT")} />
-            ) : (
-              <Button href="/api/integrations/microsoft/connect" nativo className="flex-shrink-0">
-                Conectar
-              </Button>
-            ))}
-        </Card>
-      </section>
-
-      {canManageAi && (
-        <div className="mt-8">
-          <div className="mb-3">
-            <h2 className="text-section font-semibold text-fg flex items-center gap-1.5">
-              <Sparkles size={16} className="text-brand" /> Inteligência artificial
-            </h2>
-            <p className="text-helper text-fg-muted mt-0.5 max-w-[70ch]">
-              Chave usada por todos os agentes de IA do Connect (triagem de currículo, atendimento
-              do WhatsApp, resumos). Cada escritório usa a própria conta — sem configurar aqui, a IA
-              fica desligada.
-            </p>
-          </div>
-          <Card className="p-5">
-            <AiConfigForm
-              hasConfig={Boolean(aiConfig)}
-              defaultValues={aiConfig ? { provider: aiConfig.provider, model: aiConfig.model } : undefined}
-            />
-          </Card>
-        </div>
+      ) : (
+        <CatalogoDeIntegracoes blocos={visiveis} hrefDe={(chave) => comFiltro(`/admin/integracoes?integracao=${chave}`)} />
       )}
 
-      {canManageChatwoot && (
-        <div className="mt-8">
-          <div className="mb-3">
-            <h2 className="text-section font-semibold text-fg flex items-center gap-1.5">
-              <MessageCircle size={16} className="text-brand" /> Chatwoot
-            </h2>
-            <p className="text-helper text-fg-muted mt-0.5 max-w-[70ch]">
-              Histórico de conversas vinculado às empresas e pessoas cadastradas, somente leitura por enquanto. Ver
-              conversas em <span className="font-medium text-fg">Conversas</span> no menu lateral.
-            </p>
-          </div>
-          <Card className="p-5">
-            <ChatwootConfigForm
-              hasConfig={Boolean(chatwootConnection)}
-              defaultValues={chatwootConnection ? { baseUrl: chatwootConnection.baseUrl, accountId: chatwootConnection.accountId } : undefined}
-              webhookUrl={chatwootWebhookUrl}
-              lastSyncAtLabel={chatwootConnection?.lastSyncAt ? formatInstantDate(chatwootConnection.lastSyncAt) : null}
+      {bloco && (
+        <PainelDeCadastro titulo={bloco.nome} voltarPara={aqui} largo={bloco.chave === "omie" || bloco.chave === "chatwoot"}>
+          {bloco.chave === "reunioes" ? (
+            <ContasDeReuniao
+              google={{ conectada: Boolean(google), expirada: Boolean(google) && googleHealth === "NEEDS_RECONNECT", email: google?.accountEmail ?? null }}
+              microsoft={{
+                conectada: Boolean(microsoft),
+                expirada: Boolean(microsoft) && microsoftHealth === "NEEDS_RECONNECT",
+                email: microsoft?.accountEmail ?? null,
+              }}
             />
-          </Card>
-          {/* Botão, e não texto azul (polimento de 30/09): leva a outra tela. */}
-          <Button href="/admin/atendentes" variant="secondary" size="sm" className="mt-3">
-            <Headset size={14} /> Gerenciar vínculos de acesso (contas e atendentes)
-          </Button>
-        </div>
+          ) : bloco.chave === "ia" ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-fs-3 text-fg-secondary">
+                Chave usada por todos os agentes de IA do Connect (triagem de currículo, atendimento do WhatsApp, resumos).
+                Cada escritório usa a própria conta — sem configurar aqui, a IA fica desligada. Os agentes, os tetos e o gasto
+                ficam em Configurações › Inteligência artificial.
+              </p>
+              <AiConfigForm
+                hasConfig={Boolean(aiConfig)}
+                defaultValues={aiConfig ? { provider: aiConfig.provider, model: aiConfig.model } : undefined}
+              />
+            </div>
+          ) : bloco.chave === "omie" ? (
+            <ContasOmie contas={contasOmie} empresas={empresasParaOmie} podeDesfazerVirada={ctx.role === "SUPER_ADMIN"} />
+          ) : bloco.chave === "chatwoot" ? (
+            <div className="flex flex-col gap-5">
+              <p className="text-fs-3 text-fg-secondary">
+                Histórico de conversas vinculado às empresas e pessoas cadastradas, somente leitura por enquanto. As conversas
+                ficam em Conversas, no menu lateral.
+              </p>
+              <ChatwootConfigForm
+                hasConfig={Boolean(chatwootConnection)}
+                defaultValues={chatwootConnection ? { baseUrl: chatwootConnection.baseUrl, accountId: chatwootConnection.accountId } : undefined}
+                webhookUrl={chatwootWebhookUrl}
+                lastSyncAtLabel={chatwootConnection?.lastSyncAt ? formatInstantDate(chatwootConnection.lastSyncAt) : null}
+              />
+              {/* O ligar e desligar, que era o cartão do Chatwoot na vitrine
+                  (a credencial é a do formulário acima). */}
+              {doCodigo.get("chatwoot")?.conectada && (
+                <ConfiguracaoDaIntegracao integracao={doCodigo.get("chatwoot")!} urlPublica={urlPublica} setor={setorDe(doCodigo.get("chatwoot")!)} soLigar />
+              )}
+              {/* Os papéis dos atendentes moram aqui desde 20/10/2026 (escolha 3A). */}
+              {chatwootConnection && <PapeisDosAtendentes tenantId={ctx.tenantId} canEdit={canWriteEntity(ctx)} />}
+            </div>
+          ) : doCodigo.get(bloco.chave) ? (
+            <div className="flex flex-col gap-5">
+              {/* O Serpro: o certificado lido e o teste, antes do formulário. */}
+              {bloco.chave === "serpro_integra_contador" && serpro && (
+                <ServicoDoSerpro
+                  certificado={
+                    serpro.certificado?.ok
+                      ? {
+                          titular: serpro.certificado.titular,
+                          cnpj: serpro.certificado.cnpj ? formatCnpj(serpro.certificado.cnpj) : null,
+                          validoAte: serpro.certificado.validoAte,
+                        }
+                      : null
+                  }
+                  motivo={prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null}
+                  demonstracao={serpro.ambiente === "demonstracao"}
+                />
+              )}
+              <ConfiguracaoDaIntegracao integracao={doCodigo.get(bloco.chave)!} urlPublica={urlPublica} setor={setorDe(doCodigo.get(bloco.chave)!)} />
+            </div>
+          ) : null}
+        </PainelDeCadastro>
       )}
     </PageContainer>
   );
 }
 
+/** As contas de reunião de quem olha, no painel do bloco "Reuniões". */
+function ContasDeReuniao({
+  google,
+  microsoft,
+}: {
+  google: { conectada: boolean; expirada: boolean; email: string | null };
+  microsoft: { conectada: boolean; expirada: boolean; email: string | null };
+}) {
+  const linhas = [
+    {
+      nome: "Google Calendar / Meet",
+      provedor: "GOOGLE" as const,
+      conta: google,
+      configurado: isGoogleConfigured(),
+      indisponivel: "o Google ainda não foi configurado no servidor do Connect; fale com o suporte",
+      conectar: "/api/integrations/google/connect",
+    },
+    {
+      nome: "Microsoft Teams / Outlook",
+      provedor: "MICROSOFT" as const,
+      conta: microsoft,
+      configurado: isMicrosoftConfigured(),
+      indisponivel: "a Microsoft ainda não foi configurada no servidor do Connect; fale com o suporte",
+      conectar: "/api/integrations/microsoft/connect",
+    },
+  ];
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-fs-3 text-fg-secondary">
+        Conecte sua conta pessoal para agendar reuniões (Google Meet ou Microsoft Teams) direto das atividades dos Quadros.
+        Vale só para você.
+      </p>
+      {linhas.map((l) => (
+        <Card key={l.provedor} className={`flex items-center justify-between gap-4 p-4 ${!l.configurado ? "opacity-60" : ""}`}>
+          <div className="min-w-0">
+            <p className="text-fs-3 font-medium text-fg">{l.nome}</p>
+            <SituacaoDaConta
+              configurado={l.configurado}
+              indisponivel={l.indisponivel}
+              conectada={l.conta.conectada}
+              expirada={l.conta.expirada}
+              email={l.conta.email}
+            />
+          </div>
+          {l.configurado &&
+            (l.conta.conectada ? (
+              <DisconnectButton action={desconectarIntegracao.bind(null, l.provedor)} />
+            ) : (
+              // `nativo`: a rota de API redireciona para o provedor, e o <Link>
+              // do Button com href tentaria navegar pelo roteador.
+              <Button href={l.conectar} nativo className="flex-shrink-0">
+                Conectar
+              </Button>
+            ))}
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 /**
- * A situação da conta de reunião no `Selo`, como a vitrine logo acima
- * (15/10/2026): era texto colorido com ícone — "Conectado como…" em verde e
- * "Conexão expirada" em vermelho. O e-mail e o que fazer vão ao lado, em cinza.
+ * A situação da conta de reunião no `Selo` (15/10/2026): era texto colorido
+ * com ícone — "Conectado como…" em verde e "Conexão expirada" em vermelho. O
+ * e-mail e o que fazer vão ao lado, em cinza.
  */
 function SituacaoDaConta({
   configurado,

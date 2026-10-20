@@ -9,7 +9,7 @@
 
 import { dataValida } from "../periodo";
 
-/** Teto de um lote — o da troca de centro em lote também é por tela. */
+/** Teto de um lote — vale também para conferir e alterar as marcadas. */
 export const MAXIMO_DO_LOTE = 200;
 
 export type ContaParaOLote = {

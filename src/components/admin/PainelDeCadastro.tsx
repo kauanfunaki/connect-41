@@ -18,16 +18,25 @@ import { SlideOver } from "@/components/ui/SlideOver";
 export function PainelDeCadastro({
   titulo,
   voltarPara,
+  largo = false,
   children,
 }: {
   titulo: string;
   /** O endereço da lista, sem o painel. */
   voltarPara: string;
+  /** Para o formulário que pede espaço: o usuário, com os setores em pílulas (3A). */
+  largo?: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   return (
-    <SlideOver open onClose={() => router.push(voltarPara, { scroll: false })} title={titulo} width="max-w-lg" fundo="leve">
+    <SlideOver
+      open
+      onClose={() => router.push(voltarPara, { scroll: false })}
+      title={titulo}
+      width={largo ? "max-w-2xl" : "max-w-lg"}
+      fundo="leve"
+    >
       {children}
     </SlideOver>
   );

@@ -29,7 +29,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Conta com o selo “A conferir” ainda não foi revisada: clique no botão “⋯” da linha e escolha “Conferir”. Para várias de uma vez, marque as caixas à esquerda e clique em “Conferir marcadas”.",
           "Clique em “Pagar”, o botão azul da linha.",
-          "Na janela, informe a data, a conta bancária e o valor. Não é possível usar data futura; valor menor que o da conta é um pagamento parcial, e o resto continua em aberto.",
+          "Na janela, informe a data, a conta bancária e o valor. A conta corrente prevista no título já vem marcada. Não é possível usar data futura; valor menor que o da conta é um pagamento parcial, e o resto continua em aberto.",
           "Clique em “Registrar pagamento”. Registrar o pagamento é o que se chama de baixa.",
           "Se errou, clique em “Ver baixa” na linha da conta paga e em “Desfazer” no pagamento errado.",
         ],
@@ -44,12 +44,13 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         ],
       },
       {
-        titulo: "Definir o centro de custo de várias contas",
+        titulo: "Alterar várias contas de uma vez",
         passos: [
-          "Marque a caixa à esquerda das contas, ou a do cabeçalho para marcar todas. As caixas só aparecem quando a empresa tem centros de custo (unidades, obras ou projetos).",
-          "Na barra que aparece, escolha o centro de custo.",
-          "Clique em “Definir centro de custo”.",
-          "Para retirar o centro, escolha “Sem centro de custo” e clique no mesmo botão.",
+          "Marque a caixa à esquerda das contas, ou a do cabeçalho para marcar todas.",
+          "Na barra que aparece, clique em “Alterar marcadas”.",
+          "Na janela, marque o que muda — “Vencimento”, “Previsão”, “Competência”, “Categoria”, “Centro de custo”, “Projeto” ou “Conta corrente” — e escolha o novo valor. O que não for marcado fica como está em cada conta.",
+          "Confira quantas contas vão mudar e as que ficam de fora, com o motivo: conta paga ou conciliada não muda o vencimento, e conta que vem do Omie se altera no Omie.",
+          "Clique em “Alterar”. Para tirar o centro, o projeto ou a conta, marque o campo e escolha “Sem centro de custo”, “Sem projeto” ou “Não prevista”. Conta com rateio fica de fora quando muda a categoria, o centro ou o projeto: esses se mudam nas linhas do rateio, em “Editar”.",
         ],
       },
     ],
@@ -57,6 +58,8 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado, e o motivo aparece ao passar o mouse sobre ele.",
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "“Abrir pendência” e “Enviar para aprovação” só aparecem quando o escritório usa esses módulos.",
+      "Para levar a lista para o Excel, clique em “Exportar CSV”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram), com a empresa, o centro, o projeto, o saldo e a aprovação de cada conta.",
+      "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
     ],
   },
 
@@ -82,7 +85,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Conta com o selo “A conferir” ainda não foi revisada: clique no botão “⋯” da linha e escolha “Conferir”. Para várias de uma vez, marque as caixas à esquerda e clique em “Conferir marcadas”.",
           "Clique em “Receber”, o botão azul da linha.",
-          "Na janela, informe a data, a conta bancária e o valor. Não é possível usar data futura; valor menor que o da conta é um recebimento parcial, e o resto continua em aberto.",
+          "Na janela, informe a data, a conta bancária e o valor. A conta corrente prevista no título já vem marcada. Não é possível usar data futura; valor menor que o da conta é um recebimento parcial, e o resto continua em aberto.",
           "Clique em “Registrar recebimento”. Registrar o recebimento é o que se chama de baixa.",
           "Se errou, clique em “Ver baixa” na linha da conta recebida e em “Desfazer” no recebimento errado.",
         ],
@@ -97,18 +100,21 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         ],
       },
       {
-        titulo: "Definir o centro de custo de várias contas",
+        titulo: "Alterar várias contas de uma vez",
         passos: [
-          "Marque a caixa à esquerda das contas, ou a do cabeçalho para marcar todas. As caixas só aparecem quando a empresa tem centros de custo (unidades, obras ou projetos).",
-          "Na barra que aparece, escolha o centro de custo.",
-          "Clique em “Definir centro de custo”.",
-          "Para retirar o centro, escolha “Sem centro de custo” e clique no mesmo botão.",
+          "Marque a caixa à esquerda das contas, ou a do cabeçalho para marcar todas.",
+          "Na barra que aparece, clique em “Alterar marcadas”.",
+          "Na janela, marque o que muda — “Vencimento”, “Previsão”, “Competência”, “Categoria”, “Centro de custo”, “Projeto” ou “Conta corrente” — e escolha o novo valor. O que não for marcado fica como está em cada conta.",
+          "Confira quantas contas vão mudar e as que ficam de fora, com o motivo: conta paga ou conciliada não muda o vencimento, e conta que vem do Omie se altera no Omie.",
+          "Clique em “Alterar”. Para tirar o centro, o projeto ou a conta, marque o campo e escolha “Sem centro de custo”, “Sem projeto” ou “Não prevista”. Conta com rateio fica de fora quando muda a categoria, o centro ou o projeto: esses se mudam nas linhas do rateio, em “Editar”.",
         ],
       },
     ],
     dicas: [
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "Conta “Renegociada” ou “Perda” saiu do em aberto pela tela “Cobrança” (acordo ou baixa por perda).",
+      "Para levar a lista para o Excel, clique em “Exportar CSV”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram), com a empresa, o centro, o projeto, o saldo e a aprovação de cada conta.",
+      "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
     ],
   },
 
@@ -127,8 +133,21 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Clique em “Novo lançamento”, no topo da tela.",
           "Em “Tipo”, escolha “Conta a pagar” ou “Conta a receber” e selecione o “Fornecedor” ou o “Cliente (sacado)”. Se ele ainda não existe, escolha “+ Cadastrar nova contraparte”.",
           "Escolha a “Categoria” (obrigatória em conta a pagar) e preencha “Competência” (o mês a que a conta pertence), “Vencimento” e “Valor”.",
+          "Se a conta deve ser paga em outro dia que não o vencimento, informe a “Previsão”: o fluxo de caixa projeta por ela.",
+          "Para dividir a conta entre categorias, centros de custo ou projetos, clique em “Ratear”, ao lado de “Categoria”. Monte as linhas por valor ou por percentual; embaixo aparece o que falta para fechar o valor da conta. A DRE soma cada linha na categoria dela.",
+          "Se quiser, escolha a “Conta corrente” por onde a conta deve ser paga ou recebida: a baixa já vem com ela.",
           "Se a conta já foi paga ou recebida, informe a data em “Já pago em” ou “Já recebido em”. Se não, deixe em branco.",
           "Clique em “Lançar”. A conta já aparece em Contas a pagar ou a receber e na DRE.",
+        ],
+      },
+      {
+        titulo: "Repetir uma conta (aluguel, folha, mensalidade)",
+        passos: [
+          "No lançamento, abra o bloco “Repetir” e escolha a “Frequência”: todo mês, a cada 15 dias, toda semana ou todo ano.",
+          "Em “Quantas vezes”, informe o total, contando esta. Em “Em fim de semana ou feriado”, escolha adiar, antecipar ou manter a data.",
+          "Clique em “Lançar”. As próximas contas nascem junto, em aberto, com o mesmo valor, contraparte e categoria; a competência anda com o mês do vencimento.",
+          "Nas listas, a posição na série aparece antes da descrição, como “3/12”. Cada conta se edita, paga e cancela sozinha.",
+          "Para parar a série, clique em “Cancelar” numa das contas e escolha “Esta e as próximas da série”. As anteriores e a já paga não mudam.",
         ],
       },
       {
@@ -173,7 +192,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Escolha o mês e clique em “Aplicar”.",
           "Na aba “Realizado e projeção”, o quadro “Saldo das contas” mostra o saldo bancário que vem da conciliação.",
           "A tabela do realizado traz entradas, saídas e saldo dos seis meses até o mês escolhido, pela data em que as contas foram pagas ou recebidas.",
-          "Os cartões da projeção somam o que vence de hoje até 7, 15, 30, 60, 90 e 180 dias: o que há a receber menos o que há a pagar.",
+          "Os cartões da projeção somam o que vence de hoje até 7, 15, 30, 60, 90 e 180 dias: o que há a receber menos o que há a pagar. Conta com “Previsão” entra na data prevista, não no vencimento.",
         ],
       },
       {

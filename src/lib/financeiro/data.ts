@@ -4,6 +4,8 @@
 // banco — e a montagem das linhas que a tela lê.
 
 import { getPrisma } from "@/lib/prisma";
+import { presaAoOmie } from "@/lib/integracoes/omie/virada";
+import { rotuloDaSerie } from "./repeticao";
 import type { Prisma } from "@/generated/prisma/client";
 import { saoPauloParts, addDaysToKey } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
@@ -26,6 +28,8 @@ export type LinhaDaConta = {
   valorCentavos: number;
   vencimentoKey: string;
   vencimento: Date;
+  /** A data de previsão (lote D, 20/10), quando há. */
+  previsao?: Date | null;
   pagoEm: Date | null;
   competencia: string;
   descricao: string | null;
@@ -33,6 +37,8 @@ export type LinhaDaConta = {
   empresaNome: string;
   contraparteNome: string;
   categoriaNome: string | null;
+  /** Quantas linhas de rateio a conta tem (lote D, 20/10). A categoria é a da linha maior. */
+  rateio?: number;
   status: "PROVISORIO" | "CONFERIDO" | "PAGO" | "CANCELADO";
   /** Aprovação por alçada — AGUARDANDO e REPROVADO travam a baixa. */
   approvalStatus: "NAO_REQUER" | "AGUARDANDO" | "APROVADO" | "REPROVADO";
@@ -50,6 +56,10 @@ export type LinhaDaConta = {
   /** Número do documento e emissão (19/10) — como o setor acha a conta. */
   numeroDocumento: string | null;
   emissao: Date | null;
+  /** Veio do Omie e a empresa ainda não virou para o Connect (lote E): baixa e cancelamento, só no Omie. */
+  presaAoOmie: boolean;
+  /** A posição na série da repetição ("3/12"), quando nasceu de uma (lote D). */
+  serie: string | null;
 };
 
 export type FiltroDeContas = {
@@ -106,6 +116,7 @@ const CAMPOS = {
   status: true,
   amount: true,
   dueDate: true,
+  forecastDate: true,
   paidAt: true,
   competence: true,
   description: true,
@@ -113,13 +124,18 @@ const CAMPOS = {
   approvalStatus: true,
   closeReason: true,
   agreementId: true,
-  company: { select: { id: true, name: true, displayName: true } },
+  company: { select: { id: true, name: true, displayName: true, omieCutoverAt: true } },
+  omieTitleId: true,
+  omieMovementId: true,
   counterparty: { select: { name: true } },
   category: { select: { name: true } },
+  _count: { select: { allocations: true } },
   costCenterId: true,
   costCenter: { select: { name: true } },
   project: { select: { name: true } },
   documentNumber: true,
+  recurrenceIndex: true,
+  recurrenceTotal: true,
   issueDate: true,
   paidPrincipal: true,
 } satisfies Prisma.FinanceEntrySelect;
@@ -150,7 +166,9 @@ export async function listarContas(
   tenantId: string,
   kind: TipoDeConta,
   filtro: FiltroDeContas,
-  agora: Date
+  agora: Date,
+  /** O teto da lista: a tela para em `LIMITE_DE_CONTAS`; a exportação, em `LIMITE_DA_EXPORTACAO`. */
+  limite: number = LIMITE_DE_CONTAS
 ): Promise<ResultadoDeContas> {
   const prisma = getPrisma();
   const hojeKey = saoPauloParts(agora).dateKey;
@@ -173,7 +191,7 @@ export async function listarContas(
       where: daFila,
       select: CAMPOS,
       orderBy: [{ dueDate: "asc" }, { id: "asc" }],
-      take: LIMITE_DE_CONTAS,
+      take: limite,
     }),
     prisma.financeEntry.count({ where: doFiltro }),
     prisma.financeEntry.count({ where: { ...doFiltro, ...whereDoRecorte(recorte, hojeKey) } }),
@@ -185,7 +203,7 @@ export async function listarContas(
     ),
   ]);
 
-  const vagas = LIMITE_DE_CONTAS - naFila.length;
+  const vagas = limite - naFila.length;
   const historico =
     recorte === "todas" && vagas > 0
       ? await prisma.financeEntry.findMany({
@@ -204,6 +222,7 @@ export async function listarContas(
       valorCentavos: centavosDeDecimal(e.amount),
       vencimentoKey,
       vencimento: e.dueDate,
+      previsao: e.forecastDate,
       pagoEm: e.paidAt,
       competencia: e.competence,
       descricao: e.description,
@@ -211,6 +230,7 @@ export async function listarContas(
       empresaNome: nomeExibicao(e.company),
       contraparteNome: e.counterparty.name,
       categoriaNome: e.category?.name ?? null,
+      rateio: e._count.allocations,
       status: e.status,
       approvalStatus: e.approvalStatus,
       documentoId: e.fiscalDocumentId,
@@ -222,6 +242,8 @@ export async function listarContas(
       baixadoCentavos: centavosDeDecimal(e.paidPrincipal),
       numeroDocumento: e.documentNumber,
       emissao: e.issueDate,
+      presaAoOmie: presaAoOmie(e, e.company),
+      serie: rotuloDaSerie(e),
     };
   });
 

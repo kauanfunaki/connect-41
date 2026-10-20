@@ -66,7 +66,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
           action={
             isFullAccess(ctx.role) ? (
               <Button
-                href="/admin/integracoes"
+                href="/admin/integracoes?integracao=chatwoot"
                 variant="primary" className="font-medium"
               >
                 Ir para Integrações
@@ -96,8 +96,10 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
         action={
           view === "avaliacao" &&
           isFullAccess(ctx.role) && (
-            <Button href="/admin/atendentes" variant="secondary">
-              <Settings size={14} /> Gerenciar atendentes
+            // Os papéis dos atendentes ficam na seção do Chatwoot, em
+            // Integrações; quem cada um é na equipe, em Usuários (3A, 20/10).
+            <Button href="/admin/integracoes?integracao=chatwoot" variant="secondary">
+              <Settings size={14} /> Papéis dos atendentes
             </Button>
           )
         }

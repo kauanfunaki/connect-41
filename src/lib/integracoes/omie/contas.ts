@@ -17,6 +17,10 @@ import { estruturaDe, type LinhaDaEstrutura } from "./estrutura";
 export const PREFIXO_DA_EMPRESA = "empresa:";
 export const instanciaDaEmpresa = (companyId: string) => `${PREFIXO_DA_EMPRESA}${companyId}`;
 
+/** A linha de progresso da leitura do financeiro da empresa (`sincronizacaoFinanceiro`). */
+export const PREFIXO_DO_FINANCEIRO = "financeiro:";
+export const instanciaDoFinanceiro = (companyId: string) => `${PREFIXO_DO_FINANCEIRO}${companyId}`;
+
 export type ContaOmieNaTela = {
   companyId: string;
   empresa: string;
@@ -27,6 +31,10 @@ export type ContaOmieNaTela = {
   lastError: string | null;
   /** A App Key aparece (não é segredo); o App Secret nunca sai do servidor. */
   appKey: string;
+  /** A virada para o Connect (lote E): desde quando o Connect é a fonte do financeiro. */
+  viradaEm: Date | null;
+  /** Já importou as contas do Omie alguma vez — tem a leitura do financeiro. */
+  importouAsContas: boolean;
 };
 
 export async function listarContasOmie(tenantId: string, agora: Date): Promise<ContaOmieNaTela[]> {
@@ -35,11 +43,18 @@ export async function listarContasOmie(tenantId: string, agora: Date): Promise<C
     where: { tenantId, integrationCode: "omie", instanceKey: { startsWith: PREFIXO_DA_EMPRESA } },
   });
   const ids = conexoes.map((c) => c.instanceKey.slice(PREFIXO_DA_EMPRESA.length));
-  const empresas = await prisma.company.findMany({
-    where: { tenantId, id: { in: ids } },
-    select: { id: true, name: true, displayName: true, cnpj: true },
-  });
+  const [empresas, leituras] = await Promise.all([
+    prisma.company.findMany({
+      where: { tenantId, id: { in: ids } },
+      select: { id: true, name: true, displayName: true, cnpj: true, omieCutoverAt: true },
+    }),
+    prisma.tenantIntegration.findMany({
+      where: { tenantId, integrationCode: "omie", instanceKey: { in: ids.map(instanciaDoFinanceiro) } },
+      select: { instanceKey: true },
+    }),
+  ]);
   const porId = new Map(empresas.map((e) => [e.id, e]));
+  const comLeitura = new Set(leituras.map((l) => l.instanceKey.slice(PREFIXO_DO_FINANCEIRO.length)));
   return conexoes
     .map((c) => {
       const companyId = c.instanceKey.slice(PREFIXO_DA_EMPRESA.length);
@@ -53,6 +68,8 @@ export async function listarContasOmie(tenantId: string, agora: Date): Promise<C
         lastRunAt: c.lastRunAt,
         lastError: c.lastError,
         appKey: lerConfig(c.configEnc).appKey ?? "",
+        viradaEm: e?.omieCutoverAt ?? null,
+        importouAsContas: comLeitura.has(companyId),
       };
     })
     .sort((a, b) => a.empresa.localeCompare(b.empresa, "pt-BR"));

@@ -1204,6 +1204,11 @@ model Company {
   // de DDL. SetNull, nunca Cascade: apagar um grupo não pode apagar as
   // empresas do cliente.
   clientGroupId         String?
+  /// A virada do Omie para o Connect (lote E, 20/10/2026): desde quando o
+  /// Connect é a fonte do financeiro desta empresa. Nula enquanto as contas
+  /// vêm do Omie — até a virada, a conta que veio de lá é do Omie: o Connect
+  /// não a edita, não a baixa nem a cancela, porque a leitura seguinte desfaria.
+  omieCutoverAt         DateTime?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -2708,6 +2713,8 @@ model FinanceCategory {
   /// Baixas que puseram juros e multa, ou o desconto, nesta categoria.
   baixasComJuros    FinanceEntryPayment[] @relation("PaymentInterestCategory")
   baixasComDesconto FinanceEntryPayment[] @relation("PaymentDiscountCategory")
+  /// Linhas de rateio nesta categoria.
+  allocations       FinanceEntryAllocation[]
 
   @@unique([tenantId, scope, name, kind])
   @@index([tenantId, kind])
@@ -2831,6 +2838,12 @@ model FinanceEntry {
   /// Omie). Opcional, um por lançamento, como o centro.
   projectId String?
 
+  /// Conta corrente prevista (lote D, 20/10): por onde a conta deve ser paga
+  /// ou recebida — no Omie, a "Conta Corrente" do título. É sugestão: a baixa
+  /// já vem com ela, e quem diz de onde o dinheiro saiu é a baixa
+  /// (`FinanceEntryPayment.bankAccountId`). Opcional, da empresa da conta.
+  bankAccountId String?
+
   /// Data de emissão do documento que gerou a conta. Herda `issuedAt` da nota
   /// e `dDtEmissao` do Omie; no manual, é o que a pessoa digita. Opcional: não
   /// entra em fluxo nem em DRE — é como o setor acha e confere a conta.
@@ -2844,6 +2857,12 @@ model FinanceEntry {
   paidAt      DateTime?
   amount      Decimal   @db.Decimal(12, 2)
   description String?   @db.VarChar(255)
+
+  /// Data de previsão (lote D, 20/10 — a "Data de Previsão" do Omie): quando o
+  /// dinheiro deve andar de fato, se não for no vencimento. Nula é o próprio
+  /// vencimento. É por ela que o fluxo de caixa projeta o título; a situação
+  /// (vencida, a vencer) continua pelo vencimento.
+  forecastDate DateTime?
 
   /// Documento fiscal que originou o lançamento. **1:1**: relançar o mesmo
   /// documento duplicaria valor no financeiro, e o unique é quem impede.
@@ -2884,6 +2903,13 @@ model FinanceEntry {
   /// `src/lib/financeiro/baixa/servidor.ts`, junto com `status` e `paidAt`:
   /// a conta só fica PAGO, com `paidAt`, quando o saldo zera.
   paidPrincipal Decimal @default(0) @db.Decimal(12, 2)
+
+  /// A série da repetição (lote D, 19/10 — a "repetição" do Omie): as contas
+  /// que nasceram juntas de um lançamento que repete têm o mesmo id, e cada uma
+  /// sabe a sua posição ("3 de 12"). Cada uma continua uma conta comum.
+  recurrenceId    String? @db.VarChar(36)
+  recurrenceIndex Int?
+  recurrenceTotal Int?
 
   createdById  String?
   /// Quem conferiu o provisório. Nulo enquanto ninguém olhou.
@@ -2926,6 +2952,7 @@ model FinanceEntry {
   category              FinanceCategory?        @relation(fields: [categoryId], references: [id])
   costCenter            CostCenter?             @relation(fields: [costCenterId], references: [id])
   project               FinanceProject?         @relation(fields: [projectId], references: [id])
+  bankAccount           BankAccount?            @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
   fiscalDocument        FiscalDocument?         @relation(fields: [fiscalDocumentId], references: [id])
   createdBy             User?                   @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
   reviewedBy            User?                   @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
@@ -2944,6 +2971,10 @@ model FinanceEntry {
   collectionEvents      CollectionEvent[]
   reminderLogs          CollectionReminderLog[]
   attachments           FinanceEntryAttachment[]
+  /// O rateio (lote D, 20/10): a conta dividida em categorias, centros e
+  /// projetos. Vazio é a conta inteira na categoria, no centro e no projeto
+  /// dela — o caso de quase todas.
+  allocations           FinanceEntryAllocation[]
 
   @@unique([companyId, omieTitleId])
   @@unique([companyId, omieMovementId])
@@ -2959,6 +2990,8 @@ model FinanceEntry {
   @@index([tenantId, companyId, costCenterId])
   @@index([tenantId, companyId, projectId])
   @@index([tenantId, transferId])
+  @@index([bankAccountId])
+  @@index([tenantId, recurrenceId])
   @@map("finance_entries")
 }
 
@@ -2990,6 +3023,39 @@ model FinanceEntryAttachment {
   @@map("finance_entry_attachments")
 }
 
+/// Uma linha do rateio de uma conta (lote D, 20/10 — o "rateio" de categorias
+/// e de departamentos do Omie, em linhas): parte do valor numa categoria, num
+/// centro de custo e num projeto. As linhas somam o valor da conta, e a conta
+/// guarda o resumo — a categoria da linha maior, o centro e o projeto quando
+/// todas as linhas têm o mesmo — para as listas e para quem lê uma categoria só.
+///
+/// A DRE lê as linhas: na competência, cada uma com o valor dela; no caixa, o
+/// principal de cada baixa dividido na proporção delas (`baixa/consultas.ts`).
+/// As regras moram em src/lib/financeiro/rateio.ts.
+model FinanceEntryAllocation {
+  id           String   @id @default(uuid())
+  tenantId     String
+  entryId      String
+  /// A ordem das linhas, como a pessoa montou.
+  position     Int
+  categoryId   String?
+  costCenterId String?
+  projectId    String?
+  amount       Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+
+  entry      FinanceEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  category   FinanceCategory? @relation(fields: [categoryId], references: [id])
+  costCenter CostCenter?      @relation(fields: [costCenterId], references: [id])
+  project    FinanceProject?  @relation(fields: [projectId], references: [id])
+
+  @@index([entryId])
+  @@index([categoryId])
+  @@index([costCenterId])
+  @@index([projectId])
+  @@map("finance_entry_allocations")
+}
+
 /// Projeto de uma empresa cliente (19/10) — o "Projeto" do Omie.
 ///
 /// Por empresa, como o centro de custo, e pelo mesmo motivo: o projeto de uma
@@ -3008,6 +3074,8 @@ model FinanceProject {
   tenant  Tenant         @relation(fields: [tenantId], references: [id])
   company Company        @relation(fields: [companyId], references: [id])
   entries FinanceEntry[]
+  /// Linhas de rateio neste projeto.
+  allocations FinanceEntryAllocation[]
 
   @@unique([companyId, name])
   @@index([tenantId, companyId, active])
@@ -3037,6 +3105,8 @@ model CostCenter {
   company  Company               @relation(fields: [companyId], references: [id])
   entries  FinanceEntry[]
   padraoDe FinanceCounterparty[]
+  /// Linhas de rateio neste centro.
+  allocations FinanceEntryAllocation[]
 
   @@unique([companyId, name])
   @@unique([companyId, code])
@@ -3813,6 +3883,8 @@ model BankAccount {
   imports      BankStatementImport[]
   transactions BankTransaction[]
   payments     FinanceEntryPayment[]
+  /// Os títulos que têm esta conta como a prevista.
+  entries      FinanceEntry[]
 
   @@unique([tenantId, companyId, bankCode, accountDigits])
   @@unique([companyId, omieAccountId])

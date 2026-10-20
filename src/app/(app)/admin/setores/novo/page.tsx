@@ -1,24 +1,8 @@
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { notFound } from "next/navigation";
-import { SetorForm } from "@/components/admin/SetorForm";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { criarSetor } from "../actions";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { redirect } from "next/navigation";
 
-export default async function NovoSetorPage() {
-  const ctx = await getAuthContext();
-  if (!isFullWrite(ctx.role)) notFound();
-
-  return (
-    <PageContainer>
-      <PageHeader title="Novo setor" />
-
-      <div className="max-w-[720px]">
-        <Card className="p-6">
-          <SetorForm action={criarSetor} cancelHref="/admin/setores" />
-        </Card>
-      </div>
-    </PageContainer>
-  );
+// Setores e módulos numa tela só, com criar e editar no painel ao lado, desde
+// 20/10/2026 (escolhas 4A e 2B dos Ajustes de 15/10). Este endereço fica para
+// os links antigos.
+export default function NovoSetorPage() {
+  redirect("/admin/setores?novo=1");
 }
