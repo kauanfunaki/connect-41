@@ -28,6 +28,7 @@ import { centroDoLancamento, type CentroConhecido } from "@/lib/financeiro/centr
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
 import { categoriaDaEmpresa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { projetoInformado } from "@/lib/financeiro/projetoServidor";
+import { contaPrevistaInformada } from "@/lib/financeiro/contaPrevistaServidor";
 import { quitarConta } from "@/lib/financeiro/baixa/servidor";
 import { fichaOpcional, leitorDaFicha } from "@/lib/financeiro/fichaDaContraparte";
 import { lerEmail } from "@/lib/financeiro/cobranca/regua";
@@ -132,6 +133,9 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   if (!centro.ok) return { error: centro.erro };
   const projeto = await projetoInformado({ tenantId: c.tenantId, companyId, informadoId: texto("projectId") || null });
   if (!projeto.ok) return { error: projeto.erro };
+  // A conta corrente prevista (lote D, 20/10): com "já pago em", é dela que a baixa sai.
+  const contaPrevista = await contaPrevistaInformada({ tenantId: c.tenantId, companyId, informadoId: texto("bankAccountId") || null });
+  if (!contaPrevista.ok) return { error: contaPrevista.erro };
 
   const status = statusInicialDoManual(d.pagoEmKey);
   // Aprovação por alçada: conta a pagar em aberto numa empresa com alçada nasce
@@ -187,6 +191,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           categoryId: d.categoryId,
           costCenterId: centro.centroId,
           projectId: projeto.projetoId,
+          bankAccountId: contaPrevista.contaId,
           issueDate: d.emissaoKey ? instanteDaData(d.emissaoKey) : null,
           documentNumber: d.numeroDocumento,
           competence: d.competencia,
@@ -201,7 +206,14 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         select: { id: true, amount: true },
       });
       if (d.pagoEmKey) {
-        await quitarConta(tx, { tenantId: c.tenantId, entryId: criado.id, paidAt: instanteDaData(d.pagoEmKey), origin: "LANCAMENTO", userId: c.ctx.userId || null });
+        await quitarConta(tx, {
+          tenantId: c.tenantId,
+          entryId: criado.id,
+          paidAt: instanteDaData(d.pagoEmKey),
+          bankAccountId: contaPrevista.contaId,
+          origin: "LANCAMENTO",
+          userId: c.ctx.userId || null,
+        });
       }
       if (approvalStatus === "AGUARDANDO") await registrarEnvios(tx, [criado.id], c.ctx.userId || null);
   

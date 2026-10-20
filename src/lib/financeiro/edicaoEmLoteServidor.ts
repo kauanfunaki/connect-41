@@ -15,6 +15,7 @@ import { travasDaEdicao } from "./edicao";
 import { podeEditarOTipo } from "./acessoDaConta";
 import { competenciaValida, dataValida, instanteDaData } from "./periodo";
 import type { ForaDoLote } from "./baixa/lote";
+import { nomeDaContaBancaria } from "./contaPrevista";
 import {
   campoDoLote,
   categoriasEmComum,
@@ -43,6 +44,7 @@ const CAMPOS_DA_CONTA = {
   categoryId: true,
   costCenterId: true,
   projectId: true,
+  bankAccountId: true,
   competence: true,
   dueDate: true,
   updatedAt: true,
@@ -113,8 +115,8 @@ export type DadosDaAlteracao =
       ok: true;
       kind: "PAGAR" | "RECEBER";
       contas: ContaDaAlteracao[];
-      /** As empresas das contas marcadas, com os projetos ativos de cada uma. */
-      empresas: (Opcao & { projetos: Opcao[] })[];
+      /** As empresas das contas marcadas, com os projetos e as contas bancárias ativas de cada uma. */
+      empresas: (Opcao & { projetos: Opcao[]; contas: Opcao[] })[];
       /** As categorias que valem em todas as empresas marcadas. */
       categorias: Opcao[];
     }
@@ -129,12 +131,17 @@ export async function dadosDaAlteracaoEmLote(valores: string[]): Promise<DadosDa
   const empresas = new Map<string, string>();
   for (const c of contas) empresas.set(c.companyId, nomeExibicao(c.company));
   const ids = [...empresas.keys()];
-  const [categorias, projetos] = await Promise.all([
+  const [categorias, projetos, contasBancarias] = await Promise.all([
     categoriasDoPlano(tenantId, kind, ids),
     getPrisma().financeProject.findMany({
       where: { tenantId, companyId: { in: ids }, active: true },
       select: { id: true, name: true, companyId: true },
       orderBy: { name: "asc" },
+    }),
+    getPrisma().bankAccount.findMany({
+      where: { tenantId, companyId: { in: ids }, active: true },
+      select: { id: true, nickname: true, accountNumber: true, companyId: true },
+      orderBy: { nickname: "asc" },
     }),
   ]);
 
@@ -143,7 +150,12 @@ export async function dadosDaAlteracaoEmLote(valores: string[]): Promise<DadosDa
     kind,
     contas: contas.map(comoAlteracao),
     empresas: [...empresas]
-      .map(([id, nome]) => ({ id, nome, projetos: projetos.filter((p) => p.companyId === id).map((p) => ({ id: p.id, nome: p.name })) }))
+      .map(([id, nome]) => ({
+        id,
+        nome,
+        projetos: projetos.filter((p) => p.companyId === id).map((p) => ({ id: p.id, nome: p.name })),
+        contas: contasBancarias.filter((c) => c.companyId === id).map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) })),
+      }))
       .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
     categorias: categoriasEmComum(categorias, ids).map((c) => ({ id: c.id, nome: c.nome })),
   };
@@ -230,6 +242,17 @@ export async function alterarContasEmLote(formData: FormData): Promise<Resultado
     }
   }
 
+  if (campos.includes("conta")) {
+    const id = texto("bankAccountId") || null;
+    escolha.contaDaEmpresa = null;
+    if (id) {
+      const conta = await prisma.bankAccount.findFirst({ where: { id, tenantId }, select: { companyId: true, active: true } });
+      if (!conta) return { error: "Conta corrente não encontrada." };
+      if (!conta.active) return { error: "Conta corrente inativa — escolha outra ou reative em Banco e caixa." };
+      escolha.contaDaEmpresa = conta.companyId;
+    }
+  }
+
   const porId = new Map(contas.map((c) => [c.id, c]));
   const { entram, ficam } = separarAlteracao(contas.map(comoAlteracao), escolha);
   const chaveDoDia = (d: Date) => saoPauloParts(d).dateKey;
@@ -241,7 +264,12 @@ export async function alterarContasEmLote(formData: FormData): Promise<Resultado
     const data: Prisma.FinanceEntryUncheckedUpdateManyInput = {};
     const antes: Record<string, string | null> = {};
     const depois: Record<string, string | null> = {};
-    const mudar = (coluna: "dueDate" | "competence" | "categoryId" | "costCenterId" | "projectId", de: string | null, para: string | null, valor: unknown) => {
+    const mudar = (
+      coluna: "dueDate" | "competence" | "categoryId" | "costCenterId" | "projectId" | "bankAccountId",
+      de: string | null,
+      para: string | null,
+      valor: unknown
+    ) => {
       if (de === para) return;
       (data as Record<string, unknown>)[coluna] = valor;
       antes[coluna] = de;
@@ -257,6 +285,10 @@ export async function alterarContasEmLote(formData: FormData): Promise<Resultado
     if (campos.includes("projeto")) {
       const projetoId = escolha.projetoDaEmpresa === null ? null : texto("projectId");
       mudar("projectId", conta.projectId, projetoId, projetoId);
+    }
+    if (campos.includes("conta")) {
+      const contaId = escolha.contaDaEmpresa === null ? null : texto("bankAccountId");
+      mudar("bankAccountId", conta.bankAccountId, contaId, contaId);
     }
 
     if (Object.keys(data).length === 0) {

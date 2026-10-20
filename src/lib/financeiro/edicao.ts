@@ -26,6 +26,7 @@ export const CAMPOS_EDITAVEIS = [
   "categoria",
   "centro",
   "projeto",
+  "conta",
   "competencia",
   "emissao",
   "numeroDocumento",

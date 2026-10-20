@@ -47,6 +47,7 @@ export function FormLancamentoManual({
   competenciaPadrao,
   centros = [],
   projetos = [],
+  contasBancarias = [],
   leitorDeBoleto = false,
 }: {
   companyId: string;
@@ -56,6 +57,8 @@ export function FormLancamentoManual({
   centros?: Centro[];
   /** Projetos ativos da empresa. Sem nenhum, o campo aparece desabilitado e diz onde cadastrar. */
   projetos?: Projeto[];
+  /** Contas bancárias ativas da empresa, para a conta corrente prevista (lote D, 20/10). */
+  contasBancarias?: { id: string; nome: string }[];
   /** Hoje em São Paulo, do servidor. */
   hojeISO: string;
   competenciaPadrao: string;
@@ -274,7 +277,26 @@ export function FormLancamentoManual({
           <CampoForm label="Nº do documento" htmlFor="lancamento-numero">
             <Input id="lancamento-numero" name="numeroDocumento" maxLength={60} placeholder="Boleto, contrato, título" defaultValue={leitura?.numeroDocumento ?? undefined} />
           </CampoForm>
-          <CampoDeProjeto id="lancamento-projeto" companyId={companyId} projetos={projetos} className="lg:col-span-2" />
+          <CampoDeProjeto id="lancamento-projeto" companyId={companyId} projetos={projetos} />
+          {/* A conta corrente prevista (lote D, 20/10): a baixa já vem com ela. */}
+          <CampoForm
+            label="Conta corrente"
+            htmlFor="lancamento-conta"
+            helper={
+              contasBancarias.length === 0
+                ? "Nenhuma conta bancária nesta empresa (Banco e caixa)."
+                : `Opcional. Por onde deve ser ${kind === "PAGAR" ? "paga" : "recebida"} — a baixa já vem com ela.`
+            }
+          >
+            <Select id="lancamento-conta" name="bankAccountId" defaultValue="" disabled={contasBancarias.length === 0}>
+              <option value="">{contasBancarias.length === 0 ? "Nenhuma conta cadastrada" : "Não prevista"}</option>
+              {contasBancarias.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </Select>
+          </CampoForm>
 
           <CampoForm label="Descrição" htmlFor="lancamento-descricao" className="sm:col-span-2 lg:col-span-4">
             <Input id="lancamento-descricao" name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" defaultValue={leitura?.descricao ?? undefined} />

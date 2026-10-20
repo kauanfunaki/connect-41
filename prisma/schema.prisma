@@ -2828,6 +2828,12 @@ model FinanceEntry {
   /// Omie). Opcional, um por lançamento, como o centro.
   projectId String?
 
+  /// Conta corrente prevista (lote D, 20/10): por onde a conta deve ser paga
+  /// ou recebida — no Omie, a "Conta Corrente" do título. É sugestão: a baixa
+  /// já vem com ela, e quem diz de onde o dinheiro saiu é a baixa
+  /// (`FinanceEntryPayment.bankAccountId`). Opcional, da empresa da conta.
+  bankAccountId String?
+
   /// Data de emissão do documento que gerou a conta. Herda `issuedAt` da nota
   /// e `dDtEmissao` do Omie; no manual, é o que a pessoa digita. Opcional: não
   /// entra em fluxo nem em DRE — é como o setor acha e confere a conta.
@@ -2923,6 +2929,7 @@ model FinanceEntry {
   category              FinanceCategory?        @relation(fields: [categoryId], references: [id])
   costCenter            CostCenter?             @relation(fields: [costCenterId], references: [id])
   project               FinanceProject?         @relation(fields: [projectId], references: [id])
+  bankAccount           BankAccount?            @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
   fiscalDocument        FiscalDocument?         @relation(fields: [fiscalDocumentId], references: [id])
   createdBy             User?                   @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
   reviewedBy            User?                   @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
@@ -2956,6 +2963,7 @@ model FinanceEntry {
   @@index([tenantId, companyId, costCenterId])
   @@index([tenantId, companyId, projectId])
   @@index([tenantId, transferId])
+  @@index([bankAccountId])
   @@map("finance_entries")
 }
 
@@ -3810,6 +3818,8 @@ model BankAccount {
   imports      BankStatementImport[]
   transactions BankTransaction[]
   payments     FinanceEntryPayment[]
+  /// Os títulos que têm esta conta como a prevista.
+  entries      FinanceEntry[]
 
   @@unique([tenantId, companyId, bankCode, accountDigits])
   @@unique([companyId, omieAccountId])

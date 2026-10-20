@@ -55,8 +55,8 @@ export function MarcarTodasAsContas() {
  * O que se faz com as contas marcadas na tabela: pagar (ou receber) todas de
  * uma vez — a baixa em lote da fila do BPO, 19/10 —, conferir as provisórias
  * (escolha 12A, 20/10: o "Conferir" saiu da linha) e alterar vencimento,
- * competência, categoria, centro e projeto (lote D, 20/10 — a janela que
- * substituiu o seletor de centro que ficava na barra).
+ * competência, categoria, centro, projeto e conta corrente prevista (lote D,
+ * 20/10 — a janela que substituiu o seletor de centro que ficava na barra).
  *
  * As caixas ficam nas linhas da tabela (componente de servidor) e se associam a
  * este formulário pelo atributo `form` — assim a tabela não vira componente de
