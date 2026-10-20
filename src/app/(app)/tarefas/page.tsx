@@ -17,7 +17,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { Contador } from "@/components/ui/Contador";
-import { ConfigurarTarefasButton } from "@/components/tarefas/ConfigurarTarefasButton";
+import { ConfigurarTarefasButton, ID_DA_FAIXA_DO_MEU_DIA } from "@/components/tarefas/ConfigurarTarefasButton";
 import { LinhaDoDia } from "@/components/tarefas/LinhaDoDia";
 import { PrazoItem } from "@/components/agenda/PrazoItem";
 import { getPrisma } from "@/lib/prisma";
@@ -257,6 +257,9 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
           </div>
         }
       />
+      {/* O lugar da faixa do Configurar, que edita o Meu dia na própria tela
+          (escolha 11A, 20/10/2026). */}
+      {podeConfigurar && <div id={ID_DA_FAIXA_DO_MEU_DIA} />}
 
       {/* Sem o cartão azul (15/10/2026): o primeiro número é de situação
           (atrasados), não o total — com zero, ele virava o número principal. */}
