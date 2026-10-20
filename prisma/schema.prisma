@@ -2848,6 +2848,12 @@ model FinanceEntry {
   amount      Decimal   @db.Decimal(12, 2)
   description String?   @db.VarChar(255)
 
+  /// Data de previsão (lote D, 20/10 — a "Data de Previsão" do Omie): quando o
+  /// dinheiro deve andar de fato, se não for no vencimento. Nula é o próprio
+  /// vencimento. É por ela que o fluxo de caixa projeta o título; a situação
+  /// (vencida, a vencer) continua pelo vencimento.
+  forecastDate DateTime?
+
   /// Documento fiscal que originou o lançamento. **1:1**: relançar o mesmo
   /// documento duplicaria valor no financeiro, e o unique é quem impede.
   fiscalDocumentId String? @unique
