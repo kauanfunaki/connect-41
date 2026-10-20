@@ -168,7 +168,7 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
     (await getPrisma().tag.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true } })).map((r) => ({
       id: r.id,
       nome: r.name,
-      href: `/admin/tags/${r.id}/editar`,
+      href: `/admin/tags?editar=${r.id}`,
       empresaId: null,
     })),
   CustomField: async (tenantId, ids) =>
@@ -183,14 +183,14 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
       id: r.id,
       nome: r.name,
       // Só a do escritório tem tela própria; a de uma empresa mora no cadastro financeiro dela.
-      href: r.companyId ? null : `/admin/plano-de-contas/${r.id}/editar`,
+      href: r.companyId ? null : `/admin/plano-de-contas?editar=${r.id}`,
       empresaId: r.companyId,
     })),
   ServiceRequestSubject: async (tenantId, ids) =>
     (await getPrisma().serviceRequestSubject.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, label: true } })).map((r) => ({
       id: r.id,
       nome: r.label,
-      href: `/admin/assuntos/${r.id}/editar`,
+      href: `/admin/assuntos?editar=${r.id}`,
       empresaId: null,
     })),
   AssessmentTemplate: async (tenantId, ids) =>
