@@ -2894,6 +2894,13 @@ model FinanceEntry {
   /// a conta só fica PAGO, com `paidAt`, quando o saldo zera.
   paidPrincipal Decimal @default(0) @db.Decimal(12, 2)
 
+  /// A série da repetição (lote D, 19/10 — a "repetição" do Omie): as contas
+  /// que nasceram juntas de um lançamento que repete têm o mesmo id, e cada uma
+  /// sabe a sua posição ("3 de 12"). Cada uma continua uma conta comum.
+  recurrenceId    String? @db.VarChar(36)
+  recurrenceIndex Int?
+  recurrenceTotal Int?
+
   createdById  String?
   /// Quem conferiu o provisório. Nulo enquanto ninguém olhou.
   reviewedById String?
@@ -2970,6 +2977,7 @@ model FinanceEntry {
   @@index([tenantId, companyId, projectId])
   @@index([tenantId, transferId])
   @@index([bankAccountId])
+  @@index([tenantId, recurrenceId])
   @@map("finance_entries")
 }
 
