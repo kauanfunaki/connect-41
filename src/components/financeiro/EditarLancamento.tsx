@@ -130,7 +130,8 @@ function Formulario({
   const id = useId();
   const { conta, travas, opcoes } = dados;
   const [erro, setErro] = useState<string | null>(null);
-  // O rateio (lote D, 20/10): muda com a categoria — o que trava uma trava o outro.
+  // O rateio (lote D, 20/10): muda com a categoria — o que trava uma trava o
+  // outro. Travado, as linhas aparecem só para ler (a conta rateada do Omie).
   const podeRatear = !travas.categoria;
   const [rateando, setRateando] = useState(conta.rateio.length > 0);
   const [valorTexto, setValorTexto] = useState(conta.valor);
@@ -216,6 +217,7 @@ function Formulario({
             iniciais={conta.rateio}
             categoriaInicial={conta.categoriaId ?? undefined}
             onDesfazer={() => setRateando(false)}
+            travado={travas.categoria}
           />
         ) : (
           <CampoForm
