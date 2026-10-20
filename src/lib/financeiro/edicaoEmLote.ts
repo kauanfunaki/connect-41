@@ -3,7 +3,8 @@
 // `edicaoEmLoteServidor.ts`.
 //
 // Muda o que é data ou classificação — vencimento, competência, categoria,
-// centro de custo e projeto — com as travas da janela "Editar" de uma conta
+// centro de custo, projeto e a conta corrente prevista — com as travas da
+// janela "Editar" de uma conta
 // (`travasDaEdicao`): o que ela não deixa mudar numa conta, o lote também não.
 // A conta com trava em algum campo escolhido fica de fora inteira, com o
 // porquê: mudar só parte do pedido deixaria a conta num meio-termo que
@@ -15,7 +16,7 @@
 import type { CampoEditavel, Travas } from "./edicao";
 import { MAXIMO_DO_LOTE, type ForaDoLote } from "./baixa/lote";
 
-export const CAMPOS_DO_LOTE = ["vencimento", "competencia", "categoria", "centro", "projeto"] as const satisfies readonly CampoEditavel[];
+export const CAMPOS_DO_LOTE = ["vencimento", "competencia", "categoria", "centro", "projeto", "conta"] as const satisfies readonly CampoEditavel[];
 
 export type CampoDoLote = (typeof CAMPOS_DO_LOTE)[number];
 
@@ -42,8 +43,8 @@ export type ContaDaAlteracao = {
 };
 
 /**
- * O que a pessoa escolheu mudar. Centro e projeto vão com a empresa do
- * escolhido; `null` neles e na categoria é "tirar".
+ * O que a pessoa escolheu mudar. Centro, projeto e conta corrente vão com a
+ * empresa do escolhido; `null` neles e na categoria é "tirar".
  */
 export type EscolhaDaAlteracao = {
   campos: CampoDoLote[];
@@ -55,6 +56,7 @@ export type EscolhaDaAlteracao = {
   categoriaValeEm?: ReadonlySet<string>;
   centroDaEmpresa?: string | null;
   projetoDaEmpresa?: string | null;
+  contaDaEmpresa?: string | null;
 };
 
 const SEM_CATEGORIA_NO_PAGAR = "Conta a pagar precisa de categoria — despesa sem classificação não fecha o DRE.";
@@ -82,6 +84,9 @@ export function porQueFica(conta: ContaDaAlteracao, escolha: EscolhaDaAlteracao)
   }
   if (campos.includes("projeto") && escolha.projetoDaEmpresa && escolha.projetoDaEmpresa !== conta.empresaId) {
     return "O projeto escolhido é de outra empresa.";
+  }
+  if (campos.includes("conta") && escolha.contaDaEmpresa && escolha.contaDaEmpresa !== conta.empresaId) {
+    return "A conta corrente escolhida é de outra empresa.";
   }
   return null;
 }

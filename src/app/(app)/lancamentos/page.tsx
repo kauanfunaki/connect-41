@@ -32,6 +32,7 @@ import { podeCancelarManual } from "@/lib/financeiro/manual";
 import { moeda } from "@/lib/financeiro/formato";
 import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { projetosAtivosDaEmpresa } from "@/lib/financeiro/projetoServidor";
+import { contasBancariasDaEmpresa } from "@/lib/financeiro/contaPrevistaServidor";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { estadoDosAgentes } from "@/lib/ia/data";
@@ -212,7 +213,7 @@ async function FormularioDaEmpresa({
   mes: string;
 }) {
   const prisma = getPrisma();
-  const [contrapartes, categorias, centros, projetos, agentes] = await Promise.all([
+  const [contrapartes, categorias, centros, projetos, agentes, contasBancarias] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId, companyId, active: true },
       select: { id: true, name: true, document: true, defaultCategoryId: true, defaultCostCenterId: true },
@@ -226,6 +227,7 @@ async function FormularioDaEmpresa({
     centrosAtivosDaEmpresa(tenantId, companyId),
     projetosAtivosDaEmpresa(tenantId, companyId),
     estadoDosAgentes(tenantId, [AGENTE_DO_BOLETO]),
+    contasBancariasDaEmpresa(tenantId, companyId),
   ]);
   // A leitura de boleto (lote H2) nasce desligada: aparece só ligada e com chave de IA.
   const leitor = agentes.get(AGENTE_DO_BOLETO);
@@ -244,6 +246,7 @@ async function FormularioDaEmpresa({
       }))}
       centros={centros}
       projetos={projetos}
+      contasBancarias={contasBancarias}
       categorias={categorias.map((c) => ({ id: c.id, nome: c.name, kind: c.kind }))}
     />
   );

@@ -321,10 +321,10 @@ export async function resolverReferencias(
 
   // Os ids que o "de → para" cita: pasta, centro de custo, responsável,
   // empresa — e, desde a edição de lançamento (19/10), projeto, categoria e
-  // contraparte.
+  // contraparte; e a conta corrente prevista (lote D, 20/10).
   const ids = [...citados].slice(0, 300);
   for (const id of ids) empresaIds.add(id);
-  const [empresas, pastas, centros, usuarios, projetos, categorias, contrapartes] = await Promise.all([
+  const [empresas, pastas, centros, usuarios, projetos, categorias, contrapartes, contasBancarias] = await Promise.all([
     semFalhar("empresas", BUSCADORES.Company(tenantId, [...empresaIds]), []),
     ids.length ? semFalhar("pastas citadas", BUSCADORES.DriveFolder(tenantId, ids), []) : Promise.resolve([]),
     ids.length ? semFalhar("centros citados", BUSCADORES.CostCenter(tenantId, ids), []) : Promise.resolve([]),
@@ -332,10 +332,11 @@ export async function resolverReferencias(
     ids.length ? semFalhar("projetos citados", BUSCADORES.FinanceProject(tenantId, ids), []) : Promise.resolve([]),
     ids.length ? semFalhar("categorias citadas", BUSCADORES.FinanceCategory(tenantId, ids), []) : Promise.resolve([]),
     ids.length ? semFalhar("contrapartes citadas", BUSCADORES.FinanceCounterparty(tenantId, ids), []) : Promise.resolve([]),
+    ids.length ? semFalhar("contas bancárias citadas", BUSCADORES.BankAccount(tenantId, ids), []) : Promise.resolve([]),
   ]);
 
   const nomes = new Map<string, string>(Object.entries(setores));
-  for (const l of [...pastas, ...centros, ...usuarios, ...projetos, ...categorias, ...contrapartes, ...empresas]) if (l.nome) nomes.set(l.id, l.nome);
+  for (const l of [...pastas, ...centros, ...usuarios, ...projetos, ...categorias, ...contrapartes, ...contasBancarias, ...empresas]) if (l.nome) nomes.set(l.id, l.nome);
   for (const [chave, a] of alvos) {
     const id = chave.slice(chave.indexOf(":") + 1);
     if (a.nome && !nomes.has(id)) nomes.set(id, a.nome);

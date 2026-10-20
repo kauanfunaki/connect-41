@@ -34,8 +34,8 @@ function resumo(r: Gravado) {
 
 /**
  * "Alterar marcadas" (lote D da fila do BPO, 20/10 — o "Alterar em lote" do
- * Omie): vencimento, competência, categoria, centro de custo e projeto das
- * contas marcadas, de uma vez. Só muda o que a pessoa marca; o resto fica
+ * Omie): vencimento, competência, categoria, centro de custo, projeto e conta
+ * corrente prevista das contas marcadas, de uma vez. Só muda o que a pessoa marca; o resto fica
  * como está em cada conta.
  *
  * Abre com "Carregando…" e pergunta ao servidor as travas de cada conta e as
@@ -173,6 +173,7 @@ function Formulario({
   const [categoriaId, setCategoriaId] = useState("");
   const [centroId, setCentroId] = useState("");
   const [projetoId, setProjetoId] = useState("");
+  const [contaId, setContaId] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
@@ -185,12 +186,15 @@ function Formulario({
   const comProjetos = dados.empresas.filter((e) => e.projetos.length > 0);
   const empresaDoCentro = centroId ? (comCentros.find((e) => e.centros.some((c) => c.id === centroId))?.id ?? null) : null;
   const empresaDoProjeto = projetoId ? (comProjetos.find((e) => e.projetos.some((p) => p.id === projetoId))?.id ?? null) : null;
+  const comContas = dados.empresas.filter((e) => e.contas.length > 0);
+  const empresaDaConta = contaId ? (comContas.find((e) => e.contas.some((c) => c.id === contaId))?.id ?? null) : null;
 
   const { entram, ficam } = separarAlteracao(dados.contas, {
     campos,
     categoriaId: categoriaId || null,
     centroDaEmpresa: empresaDoCentro,
     projetoDaEmpresa: empresaDoProjeto,
+    contaDaEmpresa: empresaDaConta,
   });
   // Conta a pagar não fica sem categoria: até escolher, não há o que prever.
   const faltaCategoria = aPagar && marcada("categoria") && !categoriaId;
@@ -328,6 +332,31 @@ function Formulario({
           >
             <option value="">Sem projeto</option>
             {opcoesPorEmpresa(comProjetos.map((e) => ({ id: e.id, nome: e.nome, itens: e.projetos })))}
+          </Select>
+        </Linha>
+        <Linha
+          id={`${id}-m-conta`}
+          rotulo="Conta corrente"
+          marcada={marcada("conta")}
+          onAlternar={() => alternar("conta")}
+          ajuda={
+            comContas.length === 0
+              ? "Nenhuma conta bancária nas empresas marcadas. Dá para tirar a conta prevista, ou cadastrar em Banco e caixa."
+              : variasEmpresas
+                ? "A prevista, que a baixa já traz marcada. Uma conta é de uma empresa só: as contas das outras ficam de fora."
+                : "A prevista, que a baixa já traz marcada."
+          }
+        >
+          <Select
+            id={`${id}-conta`}
+            name="bankAccountId"
+            value={contaId}
+            onChange={(e) => setContaId(e.target.value)}
+            disabled={!marcada("conta")}
+            aria-label="Conta corrente"
+          >
+            <option value="">Não prevista</option>
+            {opcoesPorEmpresa(comContas.map((e) => ({ id: e.id, nome: e.nome, itens: e.contas })))}
           </Select>
         </Linha>
       </div>

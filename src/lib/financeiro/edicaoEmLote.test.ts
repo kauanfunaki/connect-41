@@ -71,7 +71,13 @@ describe("porQueFica", () => {
     expect(porQueFica(daE2, { campos: ["categoria"], categoriaId: "c", categoriaValeEm: new Set(["e1"]) })).toMatch(/plano de contas/);
     expect(porQueFica(daE2, { campos: ["centro"], centroDaEmpresa: "e1" })).toMatch(/centro de custo escolhido é de outra/);
     expect(porQueFica(daE2, { campos: ["projeto"], projetoDaEmpresa: "e1" })).toMatch(/projeto escolhido é de outra/);
-    expect(porQueFica(daE2, { campos: ["centro", "projeto"], centroDaEmpresa: null, projetoDaEmpresa: null })).toBeNull();
+    expect(porQueFica(daE2, { campos: ["conta"], contaDaEmpresa: "e1" })).toMatch(/conta corrente escolhida é de outra/);
+    expect(porQueFica(daE2, { campos: ["centro", "projeto", "conta"], centroDaEmpresa: null, projetoDaEmpresa: null, contaDaEmpresa: null })).toBeNull();
+  });
+
+  it("a conta corrente prevista muda até em conta paga e do Omie — é sugestão para a baixa", () => {
+    expect(porQueFica(conta("1", { status: "PAGO", paidAt: new Date(), doOmie: true }), { campos: ["conta"], contaDaEmpresa: "e1" })).toBeNull();
+    expect(porQueFica(conta("1", { status: "CANCELADO", closeReason: "PERDA" }), { campos: ["conta"], contaDaEmpresa: "e1" })).toMatch(/perda/);
   });
 });
 
@@ -101,6 +107,7 @@ describe("idsMarcados e campoDoLote", () => {
 
   it("só os campos do lote — valor e fornecedor ficam na janela de uma conta", () => {
     expect(campoDoLote("vencimento")).toBe(true);
+    expect(campoDoLote("conta")).toBe(true);
     expect(campoDoLote("valor")).toBe(false);
     expect(campoDoLote("contraparte")).toBe(false);
   });
