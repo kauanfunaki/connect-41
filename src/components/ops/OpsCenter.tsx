@@ -46,7 +46,6 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
   const [pagina, setPagina] = useState(Math.max(1, Math.min(100000, Number.parseInt(params.get("page") ?? "1", 10) || 1))), [loading, setLoading] = useState(true), [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false), [erroAcao, setErroAcao] = useState("");
   const [edicao, setEdicao] = useState<WatcherOps | "novo" | null>(null), [form, setForm] = useState<Formulario>(emBranco);
-  const [tokenPara, setTokenPara] = useState<WatcherOps | null>(null), [token, setToken] = useState("");
   const [instabilidade, setInstabilidade] = useState<WatcherOps | null>(null), [nota, setNota] = useState(""), [chamado, setChamado] = useState("");
   const [detalhe, setDetalhe] = useState<EventoOps | null>(null);
   const requisicao = useRef<AbortController | null>(null);
@@ -107,7 +106,7 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
 
   return <PageContainer>
     <PageHeader title="Ops Center" subtitle="Acompanhe as automações, os arquivos processados e o que precisa de atenção."
-      action={<div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => void atualizar()} disabled={loading}><RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Atualizar</Button>{podeGerir && <Button onClick={() => editar("novo")}><Plus size={15} /> Nova automação</Button>}</div>}
+      action={<div className="flex flex-wrap gap-2">{podeGerir && <Button variant="secondary" href="/admin/integracoes?integracao=ops_center"><KeyRound size={15} /> Integração dos bots</Button>}<Button variant="secondary" onClick={() => void atualizar()} disabled={loading}><RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Atualizar</Button>{podeGerir && <Button onClick={() => editar("novo")}><Plus size={15} /> Nova automação</Button>}</div>}
       meta={<span>{painel ? `Atualizado em ${data(painel.serverTime)} · atualização a cada 30 segundos` : "Carregando o painel…"}</span>} />
 
     <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -146,7 +145,6 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
               <div className="mt-4">{botoesDePasta(w)}</div>
               {podeGerir && <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
                 <Button size="xs" variant="ghost" onClick={() => editar(w)}><Pencil size={13} /> Editar</Button>
-                <Button size="xs" variant="ghost" onClick={() => { setTokenPara(w); setToken(""); setErroAcao(""); }}><KeyRound size={13} /> Integração</Button>
                 <Button size="xs" variant="ghost" onClick={() => { setInstabilidade(w); setNota(w.instabilityNote ?? ""); setChamado(w.instabilityTicketId ?? ""); setErroAcao(""); }}><AlertTriangle size={13} /> {w.instabilityReportedAt ? "Revisar instabilidade" : "Sinalizar instabilidade"}</Button>
               </div>}
             </Card>;
@@ -189,20 +187,6 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
         {erroAcao && <p role="alert" className="text-ui text-danger">{erroAcao}</p>}
         <div className="flex justify-end gap-2"><Button type="button" variant="secondary" disabled={ocupado} onClick={() => setEdicao(null)}>Cancelar</Button><Button type="submit" loading={ocupado}>Salvar automação</Button></div>
       </form>
-    </Modal>
-
-    <Modal open={!!tokenPara} onClose={() => { if (!ocupado) { setTokenPara(null); setToken(""); } }} title="Integração da automação" maxWidth="max-w-xl">
-      {tokenPara && <div className="mt-3 space-y-4 text-ui text-fg-secondary"><p className="font-semibold text-fg">{tokenPara.name}</p><p>Gere uma chave para o bot enviar seus resultados. Ao gerar outra chave, a anterior para de funcionar. A chave nova aparece apenas nesta janela.</p>
-        <p className="break-all rounded-md bg-surface-2 p-3 font-mono text-helper">POST /api/ops/events<br />POST {endpoint(tokenPara)}/heartbeat</p>
-        <p>Envie a atividade a cada 30 segundos e um evento por tentativa de processamento. Guarde a chave na configuração protegida do bot.</p>
-        {token && <Campo titulo="Chave gerada"><Input readOnly value={token} onFocus={e => e.target.select()} /><Button variant="secondary" type="button" onClick={() => void copiar(token)}><Copy size={14} /> Copiar chave</Button></Campo>}
-        {!tokenPara.isActive && <p className="text-warning-fg">Ative o recebimento no cadastro antes de gerar a chave.</p>}
-        {erroAcao && <p role="alert" className="text-danger">{erroAcao}</p>}
-        <div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" disabled={ocupado} onClick={() => { setTokenPara(null); setToken(""); }}>Fechar</Button>
-          {tokenPara.hasToken && !token && <Button variant="danger" disabled={ocupado} onClick={() => void agir(async () => { await gravar(`${endpoint(tokenPara)}/token`, "DELETE", { version: tokenPara.version }); setTokenPara(null); toast.success("Chave revogada."); })}>Revogar chave</Button>}
-          {!token && <Button disabled={ocupado || !tokenPara.isActive} onClick={() => void agir(async () => { const r = await gravar(`${endpoint(tokenPara)}/token`, "POST", { version: tokenPara.version }); setToken(r.token ?? ""); })}>Gerar chave</Button>}
-        </div>
-      </div>}
     </Modal>
 
     <Modal open={!!instabilidade} onClose={() => { if (!ocupado) setInstabilidade(null); }} title="Instabilidade da automação" maxWidth="max-w-xl">

@@ -58,7 +58,11 @@ try {
   for (const [slug, name, ownerId] of [["bot_fiscal", "Conversão fiscal", userId], ["bot_documentos", "Organização de documentos", colegaId]]) {
     await chamada("/api/ops/watchers", "POST", { slug, name, ownerId, description: "Automação fictícia para conferência do painel.", client: "Empresa de teste", folderInput: "N:\\EXEMPLO\\ENTRADA", folderOutput: "N:\\EXEMPLO\\SAIDA" });
   }
-  const chave = (await chamada("/api/ops/watchers/bot_fiscal/token", "POST", { version: 0 })).token;
+  await page.goto(`${base}/admin/integracoes?integracao=ops_center`);
+  await page.getByRole("heading", { name: "Ops Center — bots", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Gerar chave", exact: true }).click();
+  const chave = await page.locator("#ops-shared-token").inputValue();
+  assert.match(chave, /^ops_[a-f0-9]{64}$/); ok("Integrações gera uma única chave compartilhada para o escritório");
   const envio = { watcherSlug: "bot_fiscal", eventId: "ui-erro-1", filename: "exemplo.xml", status: "ERROR", errorMessage: "Falha fictícia de processamento." };
   for (let i = 0; i < 2; i++) {
     const r = await fetch(`${base}/api/ops/events`, { method: "POST", headers: { Authorization: `Bearer ${chave}`, "Content-Type": "application/json" }, body: JSON.stringify(envio) });
@@ -66,9 +70,12 @@ try {
   }
   const avisos = await db.query("SELECT COUNT(*) AS n FROM notifications WHERE tenantId=? AND userId=? AND type='OPS_AUTOMACAO_ERRO'", [tenantId, userId]);
   assert.equal(Number(avisos[0].n), 1); ok("Erro recebido pela API gera aviso único ao dono");
-  assert.equal((await fetch(`${base}/api/ops/events`, { method: "POST", headers: { "Content-Type": "application/json", "x-user-role": "ADMIN", "x-tenant-id": tenantId }, body: JSON.stringify(envio) })).status, 401); ok("Ingestão exige token próprio");
+  const mesmoTokenOutroBot = await fetch(`${base}/api/ops/events`, { method: "POST", headers: { Authorization: `Bearer ${chave}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...envio, watcherSlug: "bot_documentos", eventId: "ui-sucesso-2", status: "SUCCESS" }) });
+  assert.equal(mesmoTokenOutroBot.status, 200); ok("A mesma chave atende outra automação pelo slug informado");
+  assert.equal((await fetch(`${base}/api/ops/events`, { method: "POST", headers: { "Content-Type": "application/json", "x-user-role": "ADMIN", "x-tenant-id": tenantId }, body: JSON.stringify(envio) })).status, 401); ok("Ingestão exige chave de integração");
 
   await page.goto(`${base}/ops`); await page.getByRole("heading", { name: "Ops Center", exact: true }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Integração", exact: true }).count(), 0); await page.getByRole("link", { name: "Integração dos bots", exact: true }).waitFor(); ok("Credencial centralizada no menu, sem ação de integração por automação");
   await page.getByRole("heading", { name: "Organização de documentos", exact: true }).waitFor();
   await page.getByRole("button", { name: "Minhas automações", exact: true }).click();
   await page.getByRole("heading", { name: "Organização de documentos", exact: true }).waitFor({ state: "hidden" });
