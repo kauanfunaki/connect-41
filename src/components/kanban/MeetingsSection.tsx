@@ -78,7 +78,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
             // Revisão de 05/10: botão não é link — o destino era texto azul no meio da frase.
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
               <p className="text-fs-2 text-fg-muted">Conecte sua conta Google ou Microsoft antes de agendar.</p>
-              <Button href="/admin/integracoes" variant="secondary" size="xs">
+              <Button href="/admin/integracoes?integracao=reunioes" variant="secondary" size="xs">
                 Abrir Integrações
               </Button>
             </div>
