@@ -175,7 +175,7 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
     (await getPrisma().customField.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, label: true } })).map((r) => ({
       id: r.id,
       nome: r.label,
-      href: `/admin/campos/${r.id}/editar`,
+      href: `/admin/campos?editar=${r.id}`,
       empresaId: null,
     })),
   FinanceCategory: async (tenantId, ids) =>

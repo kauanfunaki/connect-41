@@ -1,31 +1,8 @@
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { notFound } from "next/navigation";
-import { CampoForm } from "@/components/admin/CampoForm";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { criarCampo } from "../actions";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { getSectorMaps } from "@/lib/sectors";
+import { redirect } from "next/navigation";
 
-export default async function NovoCampoPage() {
-  const ctx = await getAuthContext();
-  const canManageAny = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
-  if (!canManageAny) notFound();
-
-  const { options: allSectorOptions } = await getSectorMaps(ctx.tenantId);
-  const sectorOptions = isFullWrite(ctx.role)
-    ? allSectorOptions
-    : allSectorOptions.filter((s) => ctx.sectors.includes(s.value));
-
-  return (
-    <PageContainer>
-      <PageHeader title="Novo campo" />
-
-      <div className="max-w-[720px]">
-        <Card className="p-6">
-          <CampoForm action={criarCampo} cancelHref="/admin/campos" sectorOptions={sectorOptions} />
-        </Card>
-      </div>
-    </PageContainer>
-  );
+// O construtor dos campos, com criar e editar no painel ao lado, desde
+// 20/10/2026 (escolhas 5A e 2B dos Ajustes de 15/10). Este endereço fica
+// para os links antigos.
+export default function NovoCampoPage() {
+  redirect("/admin/campos?novo=1");
 }
