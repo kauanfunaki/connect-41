@@ -39,6 +39,9 @@ const GRADE = {
  * "%", os centavos saem do valor da conta (`valorTexto`), fechando o total
  * quando os percentuais fecham 100. Embaixo, o que falta para fechar — o
  * servidor recusa rateio que não soma o valor da conta.
+ *
+ * `travado` (o motivo) mostra as linhas só para ler, sem o campo oculto: é a
+ * conta do Omie antes da virada, cujo rateio vem de lá (20/10).
  */
 export function CamposDoRateio({
   categorias,
@@ -48,6 +51,7 @@ export function CamposDoRateio({
   iniciais,
   categoriaInicial,
   onDesfazer,
+  travado,
   className = "",
 }: {
   categorias: Opcao[];
@@ -60,6 +64,8 @@ export function CamposDoRateio({
   /** A categoria que já estava escolhida — vira a da primeira linha. */
   categoriaInicial?: string;
   onDesfazer: () => void;
+  /** Por que o rateio não se edita aqui; ausente, edita. */
+  travado?: string;
   className?: string;
 }) {
   const id = useId();
@@ -120,27 +126,30 @@ export function CamposDoRateio({
 
   return (
     <div className={`flex flex-col gap-3 rounded-md border border-border p-3 ${className}`.trim()}>
-      <input type="hidden" name="rateio" value={json} />
+      {!travado && <input type="hidden" name="rateio" value={json} />}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-label font-semibold text-fg">Rateio</span>
-        <div className="flex items-center gap-3">
-          <div className="inline-flex rounded-md border border-border p-0.5" role="group" aria-label="Ratear por">
-            {(["valor", "percentual"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => trocarModo(m)}
-                aria-pressed={modo === m}
-                className={`h-6 rounded px-2 text-micro font-medium transition-colors ${modo === m ? "bg-brand-subtle text-brand" : "text-fg-muted hover:text-fg"}`}
-              >
-                {m === "valor" ? "Valor" : "%"}
-              </button>
-            ))}
+        {travado && <span className="text-helper text-fg-secondary">{travado}</span>}
+        {!travado && (
+          <div className="flex items-center gap-3">
+            <div className="inline-flex rounded-md border border-border p-0.5" role="group" aria-label="Ratear por">
+              {(["valor", "percentual"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => trocarModo(m)}
+                  aria-pressed={modo === m}
+                  className={`h-6 rounded px-2 text-micro font-medium transition-colors ${modo === m ? "bg-brand-subtle text-brand" : "text-fg-muted hover:text-fg"}`}
+                >
+                  {m === "valor" ? "Valor" : "%"}
+                </button>
+              ))}
+            </div>
+            <Button type="button" variant="linkMuted" className="text-helper" onClick={onDesfazer}>
+              Desfazer rateio
+            </Button>
           </div>
-          <Button type="button" variant="linkMuted" className="text-helper" onClick={onDesfazer}>
-            Desfazer rateio
-          </Button>
-        </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -157,6 +166,7 @@ export function CamposDoRateio({
               compact
               value={l.categoriaId}
               onChange={(e) => mudar(l.chave, "categoriaId", e.target.value)}
+              disabled={!!travado}
               aria-label={`Categoria da linha ${i + 1}`}
             >
               <option value="">Escolha a categoria…</option>
@@ -167,7 +177,7 @@ export function CamposDoRateio({
               ))}
             </Select>
             {comCentro && (
-              <Select compact value={l.centroId} onChange={(e) => mudar(l.chave, "centroId", e.target.value)} aria-label={`Centro de custo da linha ${i + 1}`}>
+              <Select compact value={l.centroId} onChange={(e) => mudar(l.chave, "centroId", e.target.value)} disabled={!!travado} aria-label={`Centro de custo da linha ${i + 1}`}>
                 <option value="">Sem centro</option>
                 {centros.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -177,7 +187,7 @@ export function CamposDoRateio({
               </Select>
             )}
             {comProjeto && (
-              <Select compact value={l.projetoId} onChange={(e) => mudar(l.chave, "projetoId", e.target.value)} aria-label={`Projeto da linha ${i + 1}`}>
+              <Select compact value={l.projetoId} onChange={(e) => mudar(l.chave, "projetoId", e.target.value)} disabled={!!travado} aria-label={`Projeto da linha ${i + 1}`}>
                 <option value="">Sem projeto</option>
                 {projetos.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -194,6 +204,7 @@ export function CamposDoRateio({
                 placeholder="0,00"
                 value={l.valor}
                 onChange={(e) => mudar(l.chave, "valor", e.target.value)}
+                disabled={!!travado}
                 aria-label={`Valor da linha ${i + 1}`}
               />
             ) : (
@@ -204,37 +215,42 @@ export function CamposDoRateio({
                 placeholder="0"
                 value={l.percentual}
                 onChange={(e) => mudar(l.chave, "percentual", e.target.value)}
+                disabled={!!travado}
                 aria-label={`Percentual da linha ${i + 1}`}
               />
             )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setLinhas((atual) => atual.filter((x) => x.chave !== l.chave))}
-              disabled={linhas.length <= 2}
-              aria-label={`Tirar a linha ${i + 1}`}
-              title={linhas.length <= 2 ? "Rateio tem ao menos duas linhas — para voltar a uma categoria só, use “Desfazer rateio”." : undefined}
-            >
-              <Trash2 size={14} />
-            </Button>
+            {!travado && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setLinhas((atual) => atual.filter((x) => x.chave !== l.chave))}
+                disabled={linhas.length <= 2}
+                aria-label={`Tirar a linha ${i + 1}`}
+                title={linhas.length <= 2 ? "Rateio tem ao menos duas linhas — para voltar a uma categoria só, use “Desfazer rateio”." : undefined}
+              >
+                <Trash2 size={14} />
+              </Button>
+            )}
           </div>
         ))}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button
-          type="button"
-          variant="link"
-          className="inline-flex items-center gap-1 text-helper"
-          disabled={linhas.length >= MAXIMO_DE_LINHAS_DO_RATEIO}
-          onClick={() => {
-            setLinhas((atual) => [...atual, { chave: proxima, categoriaId: "", centroId: "", projetoId: "", valor: "", percentual: "" }]);
-            setProxima((n) => n + 1);
-          }}
-        >
-          <Plus size={13} /> Adicionar linha
-        </Button>
+        {!travado && (
+          <Button
+            type="button"
+            variant="link"
+            className="inline-flex items-center gap-1 text-helper"
+            disabled={linhas.length >= MAXIMO_DE_LINHAS_DO_RATEIO}
+            onClick={() => {
+              setLinhas((atual) => [...atual, { chave: proxima, categoriaId: "", centroId: "", projetoId: "", valor: "", percentual: "" }]);
+              setProxima((n) => n + 1);
+            }}
+          >
+            <Plus size={13} /> Adicionar linha
+          </Button>
+        )}
         <p id={`${id}-situacao`} className={`text-helper font-medium ${situacao.tom}`} aria-live="polite">
           {situacao.texto}
         </p>
