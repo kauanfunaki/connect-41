@@ -161,7 +161,7 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
     (await getPrisma().sector.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, label: true } })).map((r) => ({
       id: r.id,
       nome: r.label,
-      href: `/admin/setores/${r.id}/editar`,
+      href: `/admin/setores?editar=${r.id}`,
       empresaId: null,
     })),
   Tag: async (tenantId, ids) =>
