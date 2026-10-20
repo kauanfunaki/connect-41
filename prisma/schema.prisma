@@ -2878,6 +2878,12 @@ model FinanceEntry {
   /// é a dos títulos.
   omieMovementId String? @db.VarChar(20)
 
+  /// O departamento do título no Omie (`cCodDepartamento`), quando ele tem um
+  /// só (20/10): o centro de custo da conta vem dele, pelo de-para de código
+  /// ou nome, e trava na edição até a virada. Nulo sem departamento e no
+  /// título rateado — aí o departamento mora nas linhas do rateio.
+  omieDepartmentId String? @db.VarChar(40)
+
   /// A baixa do Omie (linhas `cTpLancamento: "CC"` dos movimentos): em que
   /// conta corrente o dinheiro passou (`nCodCC`), o código da baixa, quanto
   /// passou (`nValorMovCC`, já com juro e desconto) e quando o BPO conciliou

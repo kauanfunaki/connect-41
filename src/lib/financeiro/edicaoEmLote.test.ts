@@ -54,6 +54,12 @@ describe("porQueFica", () => {
     expect(porQueFica(omie, { campos: ["centro", "projeto"] })).toBeNull();
   });
 
+  it("do Omie com um departamento só: o centro fica de fora com o motivo, e o projeto muda (20/10)", () => {
+    const comDepartamento = conta("1", { doOmie: true, centroDoOmie: true });
+    expect(porQueFica(comDepartamento, { campos: ["centro"], centroDaEmpresa: "e1" })).toMatch(/departamento do título no Omie/);
+    expect(porQueFica(comDepartamento, { campos: ["projeto"], projetoDaEmpresa: "e1" })).toBeNull();
+  });
+
   it("do Omie: a conta prevista e a previsão de um lote misto mudam só nas que não vêm de lá (20/10)", () => {
     const contas = [conta("1"), conta("2", { doOmie: true }), conta("3", { doOmie: true, status: "PAGO", paidAt: new Date() })];
     for (const campos of [["conta"], ["previsao"]] as const) {
