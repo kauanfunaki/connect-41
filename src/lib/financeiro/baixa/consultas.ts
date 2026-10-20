@@ -25,6 +25,8 @@ export type MovimentoDeCaixa = MovimentoDaBaixa & {
   paymentId: string;
   entryId: string;
   companyId: string;
+  /** A contraparte da conta — a tabela dinâmica abre o caixa por fornecedor e cliente. */
+  counterpartyId: string;
   costCenterId: string | null;
   projectId: string | null;
   /** A competência da conta (a DRE econômica e a reconciliação usam). */
@@ -56,6 +58,7 @@ export async function movimentosDeCaixa(where: Prisma.FinanceEntryPaymentWhereIn
           kind: true,
           categoryId: true,
           companyId: true,
+          counterpartyId: true,
           costCenterId: true,
           projectId: true,
           competence: true,
@@ -72,6 +75,7 @@ export async function movimentosDeCaixa(where: Prisma.FinanceEntryPaymentWhereIn
       paymentId: b.id,
       entryId: b.entry.id,
       companyId: b.entry.companyId,
+      counterpartyId: b.entry.counterpartyId,
       competence: b.entry.competence,
       agreementId: b.entry.agreementId,
       dueDate: b.entry.dueDate,

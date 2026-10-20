@@ -524,6 +524,17 @@ export const MODULE_CATALOG: ModuleDef[] = [
     icon: "TrendingUp",
     group: "Banco e caixa",
   },
+  // A tabela dinâmica do financeiro (20/10/2026 — "como o Omie, para visualizar
+  // e exportar"): contas e baixas em linhas e colunas, com visões prontas.
+  {
+    code: "bpo_tabela_dinamica",
+    label: "Tabela dinâmica",
+    sectorCode: "bpo",
+    description: "Contas e baixas em linhas e colunas, com visões prontas e exportação para o Excel",
+    defaultEnabled: true,
+    icon: "FileSpreadsheet",
+    group: "Relatórios",
+  },
   {
     code: "bpo_conciliacao",
     label: "Conciliação bancária",
@@ -715,6 +726,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_contas_receber:      "/receber",
   bpo_lancamentos:         "/lancamentos",
   bpo_fluxo_caixa:         "/fluxo-de-caixa",
+  bpo_tabela_dinamica:     "/tabela-dinamica",
   bpo_conciliacao:         "/conciliacao",
   bpo_cadastros:           "/cadastros-financeiros",
   bpo_pendencias:          "/pendencias",

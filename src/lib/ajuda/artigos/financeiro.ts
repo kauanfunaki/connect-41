@@ -177,6 +177,46 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
+  // ─── Tabela dinâmica (20/10/2026) ─────────────────────────────────────────
+  {
+    chave: "bpo_tabela_dinamica",
+    titulo: "Tabela dinâmica",
+    caminhos: ["/tabela-dinamica"],
+    resumo:
+      "Monta as contas e as baixas em linhas e colunas — por categoria, fornecedor, centro de custo, mês — e soma o valor, o pago, o saldo ou a quantidade, como as tabelas dinâmicas do Omie. Tem visões prontas e leva tudo para o Excel.",
+    secoes: [
+      {
+        titulo: "Abrir uma visão pronta",
+        passos: [
+          "Em “Empresa”, no topo, escolha a empresa ou “Todas as empresas”.",
+          "Clique numa das visões prontas, como “Despesas por categoria” ou “A pagar por fornecedor”. A tabela se monta com a configuração dela.",
+          "Ajuste o que quiser no quadro de configuração e clique em “Aplicar”.",
+        ],
+      },
+      {
+        titulo: "Montar a sua tabela",
+        passos: [
+          "Em “Base”, escolha “Contas” (os títulos, pela competência ou pelo vencimento) ou “Baixas” (o que entrou e saiu de verdade, pelo mês do pagamento).",
+          "Em “Linhas”, escolha o que fica à esquerda — até dois níveis, como “Centro de custo” e depois “Categoria”. Em “Colunas”, o que fica no topo, como o mês.",
+          "Em “Valor”, escolha o que somar: valor, pago ou recebido, saldo em aberto, entradas menos saídas ou a quantidade.",
+          "Filtre pelo tipo (a pagar ou a receber), pelo período e, nas contas, pela situação. Clique em “Aplicar”.",
+          "Com dois níveis de linha, clique numa linha para abrir o detalhe dela.",
+        ],
+      },
+      {
+        titulo: "Levar para o Excel",
+        passos: [
+          "Clique em “Exportar Excel”, acima da tabela. Vai a mesma configuração da tela.",
+          "O arquivo traz três abas: a tabela montada, os dados linha a linha numa Tabela do Excel (para você fazer a sua tabela dinâmica lá) e os filtros usados.",
+        ],
+      },
+    ],
+    dicas: [
+      "Conta com rateio entra em cada categoria, centro e projeto pela parte dela; na quantidade, conta uma vez só.",
+      "A tela mostra até 300 linhas e 36 colunas; o resto vai para “Outros”. A exportação leva tudo.",
+      "O link da tela guarda a configuração: dá para salvar nos favoritos ou mandar para alguém.",
+    ],
+  },
   // ─── Fluxo de caixa ───────────────────────────────────────────────────────
   {
     chave: "bpo_fluxo_caixa",
