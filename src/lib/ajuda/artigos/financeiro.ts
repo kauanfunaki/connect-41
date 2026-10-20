@@ -57,6 +57,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado, e o motivo aparece ao passar o mouse sobre ele.",
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "“Abrir pendência” e “Enviar para aprovação” só aparecem quando o escritório usa esses módulos.",
+      "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
     ],
   },
 
@@ -109,6 +110,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     dicas: [
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "Conta “Renegociada” ou “Perda” saiu do em aberto pela tela “Cobrança” (acordo ou baixa por perda).",
+      "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
     ],
   },
 
@@ -129,6 +131,16 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Escolha a “Categoria” (obrigatória em conta a pagar) e preencha “Competência” (o mês a que a conta pertence), “Vencimento” e “Valor”.",
           "Se a conta já foi paga ou recebida, informe a data em “Já pago em” ou “Já recebido em”. Se não, deixe em branco.",
           "Clique em “Lançar”. A conta já aparece em Contas a pagar ou a receber e na DRE.",
+        ],
+      },
+      {
+        titulo: "Repetir uma conta (aluguel, folha, mensalidade)",
+        passos: [
+          "No lançamento, abra o bloco “Repetir” e escolha a “Frequência”: todo mês, a cada 15 dias, toda semana ou todo ano.",
+          "Em “Quantas vezes”, informe o total, contando esta. Em “Em fim de semana ou feriado”, escolha adiar, antecipar ou manter a data.",
+          "Clique em “Lançar”. As próximas contas nascem junto, em aberto, com o mesmo valor, contraparte e categoria; a competência anda com o mês do vencimento.",
+          "Nas listas, a posição na série aparece antes da descrição, como “3/12”. Cada conta se edita, paga e cancela sozinha.",
+          "Para parar a série, clique em “Cancelar” numa das contas e escolha “Esta e as próximas da série”. As anteriores e a já paga não mudam.",
         ],
       },
       {
