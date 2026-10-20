@@ -17,12 +17,12 @@ import { validarBaixa, saldoEmAberto } from "./baixa/regras";
 import { registrarBaixa, quitarConta, apagarBaixa, RecusaDaBaixa, type OrigemDaBaixa } from "./baixa/servidor";
 import { MAXIMO_DO_LOTE, separarLote, validarDiaDoLote, type ForaDoLote } from "./baixa/lote";
 import { nomeExibicao } from "@/lib/companyName";
+import { contaPrevistaEmComum } from "./contaPrevista";
 import { decimalDeCentavos } from "./manual";
 import { instanteDaData } from "./periodo";
 import { setorDoModulo } from "@/lib/modules";
 import { motivoDoBloqueioDeBaixa } from "./aprovacao/regras";
 import { sincronizarAcordos } from "./cobranca/sincronizar";
-import { podeDefinirCentro, MAXIMO_DE_CONTAS_POR_DEFINICAO } from "./centroDeCusto";
 
 // `SECTOR` é o de origem, usado só como padrão. As ações servem `/pagar` e
 // `/receber`, que podem estar em setores diferentes num tenant: o gate aceita
@@ -176,6 +176,8 @@ export type DadosDaBaixa =
       /** Motivo de a aprovação por alçada travar a baixa. */
       bloqueio: string | null;
       contas: { id: string; nome: string }[];
+      /** A conta corrente prevista no título (lote D, 20/10): a janela já a traz marcada. */
+      contaPrevistaId: string | null;
       baixas: BaixaDaConta[];
     }
   | { ok: false; erro: string };
@@ -203,6 +205,7 @@ export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
       paidPrincipal: true,
       approvalStatus: true,
       companyId: true,
+      bankAccountId: true,
       counterparty: { select: { name: true } },
       payments: {
         select: {
@@ -233,6 +236,7 @@ export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
     saldoCentavos: saldoEmAberto(valor, centavosDeDecimal(conta.paidPrincipal)),
     bloqueio: motivoDoBloqueioDeBaixa(conta),
     contas: await contasDaEmpresa(ctx.tenantId, conta.companyId),
+    contaPrevistaId: conta.bankAccountId,
     baixas: conta.payments.map((p) => ({
       id: p.id,
       dataKey: saoPauloParts(p.paidAt).dateKey,
@@ -372,8 +376,11 @@ export type DadosDoLote =
       kind: "PAGAR" | "RECEBER";
       entram: ContaDoLote[];
       ficam: ForaDoLote[];
-      /** As empresas das contas que entram, com as contas bancárias de cada uma. */
-      empresas: { id: string; nome: string; contas: { id: string; nome: string }[] }[];
+      /**
+       * As empresas das contas que entram, com as contas bancárias de cada uma
+       * e a prevista quando todas as contas dela no lote preveem a mesma.
+       */
+      empresas: { id: string; nome: string; contas: { id: string; nome: string }[]; contaPrevistaId: string | null }[];
     }
   | { ok: false; erro: string };
 
@@ -430,6 +437,10 @@ export async function dadosDaBaixaEmLote(valores: string[]): Promise<DadosDoLote
   if (lote.linhas.length !== ids.length) return { ok: false, erro: "Alguma conta marcada não existe mais — atualize a tela." };
   if (lote.tipos.size > 1) return { ok: false, erro: "Marque só contas a pagar ou só contas a receber." };
   const empresas = [...new Map(lote.entram.map((c) => [c.empresaId, c.empresaNome])).entries()];
+  const previstas = await getPrisma().financeEntry.findMany({
+    where: { id: { in: lote.entram.map((c) => c.id) }, tenantId: ctx.tenantId },
+    select: { companyId: true, bankAccountId: true },
+  });
   return {
     ok: true,
     kind: lote.linhas[0]!.kind,
@@ -442,7 +453,14 @@ export async function dadosDaBaixaEmLote(valores: string[]): Promise<DadosDoLote
       saldoCentavos,
     })),
     ficam: lote.ficam,
-    empresas: await Promise.all(empresas.map(async ([id, nome]) => ({ id, nome, contas: await contasDaEmpresa(ctx.tenantId, id) }))),
+    empresas: await Promise.all(
+      empresas.map(async ([id, nome]) => ({
+        id,
+        nome,
+        contas: await contasDaEmpresa(ctx.tenantId, id),
+        contaPrevistaId: contaPrevistaEmComum(previstas.filter((p) => p.companyId === id).map((p) => p.bankAccountId)),
+      }))
+    ),
   };
 }
 
@@ -578,90 +596,3 @@ export async function desfazerBaixa(paymentId: string): Promise<AcaoDeContaState
   revalidar();
   return null;
 }
-
-// ─── Centro de custo ────────────────────────────────────────────────────────
-
-const MODULO_DO_TIPO = { PAGAR: "bpo_contas_pagar", RECEBER: "bpo_contas_receber" } as const;
-
-/**
- * Define (ou tira, com `costCenterId` vazio) o centro de custo de uma ou várias
- * contas selecionadas em `/pagar` ou `/receber`.
- *
- * Numa transação, uma atualização por centro anterior condicionada a ele: se
- * outra pessoa trocou o centro de alguma conta entre a leitura e aqui, nada
- * muda e a tela pede para atualizar — em vez de sobrescrever a decisão dela.
- * Uma linha de auditoria por conta, com o centro de antes e o de depois.
- */
-export async function definirCentroDeCusto(formData: FormData): Promise<AcaoDeContaState> {
-  const { erro, ctx } = await contexto();
-  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
-  const tenantId = ctx.tenantId;
-
-  const ids = [...new Set(formData.getAll("entryIds").map((v) => String(v)).filter(Boolean))];
-  const centroId = String(formData.get("costCenterId") ?? "").trim() || null;
-  const prisma = getPrisma();
-
-  const [contas, centro] = await Promise.all([
-    ids.length > 0 && ids.length <= MAXIMO_DE_CONTAS_POR_DEFINICAO
-      ? prisma.financeEntry.findMany({
-          where: { id: { in: ids }, tenantId },
-          select: { id: true, kind: true, companyId: true, costCenterId: true },
-        })
-      : Promise.resolve([]),
-    centroId
-      ? prisma.costCenter.findFirst({ where: { id: centroId, tenantId }, select: { id: true, companyId: true, active: true, name: true } })
-      : Promise.resolve(null),
-  ]);
-  if (centroId && !centro) return { error: "Centro de custo não encontrado." };
-
-  // O gate de `contexto` aceita quem atua em qualquer um dos dois módulos; aqui
-  // já se sabe o tipo de cada conta, e cada tipo exige o setor do seu módulo.
-  for (const kind of new Set(contas.map((c) => c.kind))) {
-    const setor = (await setorDoModulo(tenantId, MODULO_DO_TIPO[kind])) ?? SECTOR;
-    if (!canActOnSector(ctx, setor)) return { error: kind === "PAGAR" ? "Sem permissão em contas a pagar." : "Sem permissão em contas a receber." };
-  }
-
-  const veredito = podeDefinirCentro(contas, centro ? { companyId: centro.companyId, active: centro.active, nome: centro.name } : null, ids.length);
-  if (!veredito.pode) return { error: veredito.motivo };
-
-  const mudam = contas.filter((c) => c.costCenterId !== centroId);
-  if (mudam.length === 0) return null;
-
-  const porAnterior = new Map<string | null, string[]>();
-  for (const c of mudam) porAnterior.set(c.costCenterId, [...(porAnterior.get(c.costCenterId) ?? []), c.id]);
-
-  const aplicou = await prisma.$transaction(async (tx) => {
-    for (const [anterior, grupo] of porAnterior) {
-      const r = await tx.financeEntry.updateMany({
-        where: { id: { in: grupo }, tenantId, costCenterId: anterior },
-        data: { costCenterId: centroId },
-      });
-      if (r.count !== grupo.length) throw new CentroMudou();
-    }
-    return true;
-  }).catch((e) => {
-    if (e instanceof CentroMudou) return false;
-    throw e;
-  });
-  if (!aplicou) return { error: "O centro de alguma conta acabou de mudar — atualize a tela." };
-
-  for (const c of mudam) {
-    await logAudit({
-      tenantId,
-      userId: ctx.userId,
-      action: "finance.cost_center_set",
-      entityType: "FinanceEntry",
-      entityId: c.id,
-      metadata: { de: c.costCenterId, para: centroId, emLote: mudam.length > 1 },
-    });
-  }
-
-  revalidar();
-  // O centro muda a DRE por centro e o quadro por centro da DRE econômica.
-  revalidatePath("/dre/economica");
-  revalidatePath("/lancamentos");
-  return null;
-}
-
-/** Aborta a transação quando uma conta mudou de centro entre a leitura e a escrita. */
-class CentroMudou extends Error {}

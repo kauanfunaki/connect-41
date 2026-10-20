@@ -4,7 +4,9 @@
 // ─── Realizado é caixa, projeção é título ────────────────────────────────────
 //
 // O realizado olha `paidAt`: dinheiro que andou, no mês em que andou. A
-// projeção olha o que **ainda não andou** — título em aberto, pelo vencimento.
+// projeção olha o que **ainda não andou** — título em aberto, pela data de
+// previsão quando o título tem uma (lote D, 20/10 — como no Omie), senão pelo
+// vencimento.
 // Não há saldo bancário no Connect (conciliação é outra etapa), então a
 // projeção é o líquido dos títulos, e a tela diz isso em vez de inventar um
 // saldo inicial.
@@ -52,7 +54,12 @@ export type TituloEmAberto = {
   kind: "PAGAR" | "RECEBER";
   centavos: number;
   vencimentoKey: string;
+  /** A data de previsão, quando o título tem uma — é por ela que a projeção o põe no tempo. */
+  previsaoKey?: string | null;
 };
+
+/** Quando o título deve andar: a previsão, senão o vencimento. */
+export const diaPrevisto = (t: TituloEmAberto): string => t.previsaoKey ?? t.vencimentoKey;
 
 export const JANELAS_DA_PROJECAO = [7, 15, 30, 60, 90, 180] as const;
 
@@ -71,9 +78,12 @@ export type Projecao = {
 };
 
 /**
- * O que vence em cada janela, **acumulado** a partir de hoje.
+ * O que vence em cada janela, **acumulado** a partir de hoje — pelo dia
+ * previsto (`diaPrevisto`): a conta que vence hoje com previsão para daqui a
+ * vinte dias entra na janela de 30, não na de 7.
  *
- * O vencido fica fora das janelas de propósito. Somá-lo na janela de 7 dias
+ * O vencido fica fora das janelas de propósito (e o previsto para antes de
+ * hoje que não andou também). Somá-lo na janela de 7 dias
  * diria que o dinheiro atrasado há três meses entra esta semana — que é o
  * otimismo que um fluxo de caixa não pode ter.
  */
@@ -85,7 +95,7 @@ export function projecaoPorJanela(
   const vencidos = { entradas: 0, saidas: 0 };
   const saida = janelas.map((dias) => ({ dias, entradas: 0, saidas: 0, saldo: 0 }));
   for (const t of titulos) {
-    const dias = diasEntre(hojeKey, t.vencimentoKey);
+    const dias = diasEntre(hojeKey, diaPrevisto(t));
     if (dias < 0) {
       if (t.kind === "RECEBER") vencidos.entradas += t.centavos;
       else vencidos.saidas += t.centavos;
@@ -101,11 +111,11 @@ export function projecaoPorJanela(
   return { vencidos, janelas: saida };
 }
 
-/** Títulos em aberto por mês de vencimento — a coluna de caixa do forecast. */
+/** Títulos em aberto pelo mês previsto (a previsão, senão o vencimento) — a coluna de caixa do forecast. */
 export function abertosPorMes(titulos: TituloEmAberto[], competencias: string[]): Map<string, number> {
   const m = new Map(competencias.map((c) => [c, 0]));
   for (const t of titulos) {
-    const c = t.vencimentoKey.slice(0, 7);
+    const c = diaPrevisto(t).slice(0, 7);
     if (!m.has(c)) continue;
     m.set(c, m.get(c)! + (t.kind === "RECEBER" ? t.centavos : -t.centavos));
   }

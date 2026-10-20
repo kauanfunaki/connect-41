@@ -54,6 +54,28 @@ describe("projecaoPorJanela", () => {
     );
     expect([...m.entries()]).toEqual([["2026-10", 600], ["2026-11", 0]]);
   });
+
+  it("com data de previsão, o título entra no dia previsto, não no vencimento (lote D)", () => {
+    const titulos = [
+      // Vence hoje, previsto para daqui a 20 dias: sai da janela de 7.
+      { kind: "PAGAR" as const, centavos: 500, vencimentoKey: HOJE, previsaoKey: "2026-10-05" },
+      // Venceu em agosto, com previsão para a semana que vem: volta para as janelas.
+      { kind: "RECEBER" as const, centavos: 2_000, vencimentoKey: "2026-08-01", previsaoKey: "2026-09-20" },
+      // Sem previsão: o vencimento.
+      { kind: "RECEBER" as const, centavos: 100, vencimentoKey: "2026-09-16", previsaoKey: null },
+    ];
+    const p = projecaoPorJanela(titulos, HOJE, [7, 30]);
+    expect(p.vencidos).toEqual({ entradas: 0, saidas: 0 });
+    expect(p.janelas).toEqual([
+      { dias: 7, entradas: 2_100, saidas: 0, saldo: 2_100 },
+      { dias: 30, entradas: 2_100, saidas: 500, saldo: 1_600 },
+    ]);
+    expect([...abertosPorMes(titulos, ["2026-08", "2026-09", "2026-10"]).entries()]).toEqual([
+      ["2026-08", 0],
+      ["2026-09", 2_100],
+      ["2026-10", -500],
+    ]);
+  });
 });
 
 describe("consolidarPorEmpresa", () => {

@@ -28,6 +28,8 @@ export type LinhaDaConta = {
   valorCentavos: number;
   vencimentoKey: string;
   vencimento: Date;
+  /** A data de previsão (lote D, 20/10), quando há. */
+  previsao?: Date | null;
   pagoEm: Date | null;
   competencia: string;
   descricao: string | null;
@@ -112,6 +114,7 @@ const CAMPOS = {
   status: true,
   amount: true,
   dueDate: true,
+  forecastDate: true,
   paidAt: true,
   competence: true,
   description: true,
@@ -216,6 +219,7 @@ export async function listarContas(
       valorCentavos: centavosDeDecimal(e.amount),
       vencimentoKey,
       vencimento: e.dueDate,
+      previsao: e.forecastDate,
       pagoEm: e.paidAt,
       competencia: e.competence,
       descricao: e.description,

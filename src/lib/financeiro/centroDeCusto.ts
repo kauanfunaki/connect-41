@@ -113,40 +113,6 @@ export function casarCentroDeCusto(
   return { ok: true, centroId: [...encontrados][0]! };
 }
 
-/** Teto de contas por vez na ação de definir centro — é tela de trabalho, não migração. */
-export const MAXIMO_DE_CONTAS_POR_DEFINICAO = 200;
-
-/**
- * Pode definir (ou tirar) o centro destas contas?
- *
- * Tirar vale para qualquer conta. Definir exige centro ativo e **todas as
- * contas da empresa do centro**: a seleção em `/pagar` mistura empresas, e o
- * centro de uma não tem significado na outra. O status da conta não importa —
- * paga, renegociada ou perdida continuam na DRE, e o centro é classificação
- * de gestão, não baixa.
- */
-export function podeDefinirCentro(
-  contas: { id: string; companyId: string }[],
-  centro: { companyId: string; active: boolean; nome: string } | null,
-  pedidas: number
-): { pode: true } | { pode: false; motivo: string } {
-  if (pedidas === 0) return { pode: false, motivo: "Selecione ao menos uma conta." };
-  if (pedidas > MAXIMO_DE_CONTAS_POR_DEFINICAO) {
-    return { pode: false, motivo: `Selecione no máximo ${MAXIMO_DE_CONTAS_POR_DEFINICAO} contas por vez.` };
-  }
-  if (contas.length !== pedidas) return { pode: false, motivo: "Alguma conta selecionada não existe mais — atualize a tela." };
-  if (!centro) return { pode: true };
-  if (!centro.active) return { pode: false, motivo: `O centro "${centro.nome}" está inativo.` };
-  const deOutra = contas.filter((c) => c.companyId !== centro.companyId).length;
-  if (deOutra > 0) {
-    return {
-      pode: false,
-      motivo: `${deOutra} ${deOutra === 1 ? "conta selecionada é" : "contas selecionadas são"} de outra empresa — o centro "${centro.nome}" é só da empresa dele.`,
-    };
-  }
-  return { pode: true };
-}
-
 // ─── Filtro da DRE por centro ───────────────────────────────────────────────
 
 export type FiltroDeCentro = { tipo: "todos" } | { tipo: "sem" } | { tipo: "centro"; id: string };

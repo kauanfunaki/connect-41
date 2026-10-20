@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { formatarReaisDeCentavos } from "@/lib/format";
 import { dadosDaBaixaEmLote, registrarPagamentosEmLote, type DadosDoLote, type ResultadoDoLote } from "@/lib/financeiro/acoes";
 import type { ForaDoLote } from "@/lib/financeiro/baixa/lote";
+import { contaSugeridaNaBaixa } from "@/lib/financeiro/contaPrevista";
 
 const reais = (c: number) => formatarReaisDeCentavos(c);
 const dataBr = (k: string) => k.split("-").reverse().join("/");
@@ -189,9 +190,20 @@ function Formulario({
             key={e.id}
             label={`${aPagar ? "Saiu da conta" : "Entrou na conta"}${variasEmpresas ? ` · ${e.nome}` : ""}`}
             htmlFor={`${id}-conta-${e.id}`}
-            helper={e.contas.length === 0 ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)." : "Opcional. É a conta que a conciliação procura."}
+            helper={
+              e.contas.length === 0
+                ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)."
+                : e.contaPrevistaId && contaSugeridaNaBaixa(e.contas, e.contaPrevistaId) === e.contaPrevistaId
+                  ? "A prevista nas contas desta empresa. É a que a conciliação procura."
+                  : "Opcional. É a conta que a conciliação procura."
+            }
           >
-            <Select id={`${id}-conta-${e.id}`} name={`conta:${e.id}`} defaultValue={e.contas.length === 1 ? e.contas[0]!.id : ""} disabled={e.contas.length === 0}>
+            <Select
+              id={`${id}-conta-${e.id}`}
+              name={`conta:${e.id}`}
+              defaultValue={contaSugeridaNaBaixa(e.contas, e.contaPrevistaId)}
+              disabled={e.contas.length === 0}
+            >
               <option value="">Não informada</option>
               {e.contas.map((c) => (
                 <option key={c.id} value={c.id}>
