@@ -1,5 +1,5 @@
 "use server";
-import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { isPrismaMissingTableError, isPrismaUniqueError } from "@/lib/prismaErrors";
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
@@ -8,6 +8,8 @@ import { logAudit } from "@/lib/audit";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { verifySmtpConnection, type SmtpTestConfig } from "@/lib/email/sendMail";
 import { lerExpediente } from "@/lib/agendaExpediente";
+import { aparenciaDoFormulario } from "@/lib/aparencia/formulario";
+import { FALTA_ATUALIZAR_O_BANCO_DA_APARENCIA } from "@/lib/aparencia/leitura";
 
 export type TenantState = { error: string } | { success: true } | null;
 
@@ -80,6 +82,42 @@ export async function salvarExpedienteDoEscritorio(_prev: ExpedienteState, form:
 
   revalidatePath("/admin/tenant");
   revalidatePath("/agenda");
+  return { success: true };
+}
+
+export type AparenciaState = { error: string } | { success: true } | null;
+
+// A aparência do portal (21/10/2026): a cor principal, as cores dos grupos, o
+// logo no menu e a cor também no Connect da equipe. A validação é a mesma da
+// tela (`aparenciaDoFormulario`), refeita aqui.
+export async function salvarAparencia(_prev: AparenciaState, form: FormData): Promise<AparenciaState> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!isFullWrite(ctx.role)) return { error: "Sem permissão para mudar a aparência do portal." };
+
+  const lida = aparenciaDoFormulario(form);
+  if ("erro" in lida) return { error: lida.erro };
+  const data = {
+    corPrincipal: lida.corPrincipal,
+    // `{}` e não null: o Prisma pede `Prisma.JsonNull` para o nulo de JSON, e o vazio diz o mesmo.
+    coresDosGrupos: lida.coresDosGrupos,
+    coresPorGrupo: lida.coresPorGrupo,
+    logoNoPortal: lida.logoNoPortal,
+    noConnect: lida.noConnect,
+  };
+
+  try {
+    await getPrisma().tenantAparencia.upsert({ where: { tenantId: ctx.tenantId }, create: { tenantId: ctx.tenantId, ...data }, update: data });
+  } catch (err) {
+    if (isPrismaMissingTableError(err)) return { error: FALTA_ATUALIZAR_O_BANCO_DA_APARENCIA };
+    console.error("[salvarAparencia]", err);
+    return { error: "Erro ao salvar a aparência do portal." };
+  }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tenant.aparencia.update", entityType: "Tenant", entityId: ctx.tenantId, metadata: data });
+
+  // O layout do portal e o da equipe leem a aparência: os dois de uma vez.
+  revalidatePath("/", "layout");
   return { success: true };
 }
 

@@ -118,7 +118,7 @@ export async function criarContraparte(formData: FormData): Promise<ResultadoDoC
     entityId: criada.id,
     metadata: { companyId, centroPadrao: centroId },
   });
-  revalidatePath("/cadastros-financeiros");
+  revalidatePath("/fornecedores-e-sacados");
   return { ok: true };
 }
 
@@ -220,7 +220,7 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
       ...(centroId !== atual.defaultCostCenterId ? { centroPadrao: { de: atual.defaultCostCenterId, para: centroId } } : {}),
     },
   });
-  revalidatePath("/cadastros-financeiros");
+  revalidatePath("/fornecedores-e-sacados");
   return { ok: true };
 }
 
@@ -228,7 +228,7 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
 
 // O centro aparece nos seletores do lançamento e das contas, e na DRE por centro.
 function revalidarCentros() {
-  for (const p of ["/cadastros-financeiros", "/lancamentos", "/pagar", "/receber", "/conciliacao", "/dre/economica"]) {
+  for (const p of ["/fornecedores-e-sacados", "/lancamentos", "/pagar", "/receber", "/conciliacao", "/dre/economica"]) {
     revalidatePath(p);
   }
 }
@@ -344,7 +344,7 @@ export async function atualizarCentroDeCusto(formData: FormData): Promise<Result
 
 // O projeto aparece nos seletores do lançamento, da conciliação e da edição de conta.
 function revalidarProjetos() {
-  for (const p of ["/cadastros-financeiros", "/lancamentos", "/pagar", "/receber", "/conciliacao"]) {
+  for (const p of ["/fornecedores-e-sacados", "/lancamentos", "/pagar", "/receber", "/conciliacao"]) {
     revalidatePath(p);
   }
 }
@@ -431,7 +431,7 @@ export async function atualizarProjeto(formData: FormData): Promise<ResultadoDoC
 // Nada é apagado — ver `src/lib/financeiro/planoDeContas.ts`.
 
 function revalidarPlano() {
-  for (const p of ["/cadastros-financeiros", "/lancamentos", "/conciliacao", "/documentos-fiscais", "/dre", "/dre/economica"]) {
+  for (const p of ["/fornecedores-e-sacados", "/lancamentos", "/conciliacao", "/documentos-fiscais", "/dre", "/dre/economica"]) {
     revalidatePath(p);
   }
 }

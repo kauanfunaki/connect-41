@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/Switch";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Modal } from "@/components/ui/Modal";
-import { criarProjeto, atualizarProjeto } from "@/app/(app)/cadastros-financeiros/actions";
+import { criarProjeto, atualizarProjeto } from "@/app/(app)/fornecedores-e-sacados/actions";
 import { FormFooter } from "@/components/ui/FormFooter";
 
 // Modal, como o centro de custo da mesma tela (ver FormCentroDeCusto). Projeto
