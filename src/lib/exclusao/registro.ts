@@ -293,6 +293,10 @@ const USUARIO: Ligacao[] = [
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [
+  { modelo: "GithubConnection", coluna: "githubUserId", tratamento: "manter", motivo: "identidade externa do GitHub, sem vínculo com User do Connect" },
+  { modelo: "GithubAccountLease", coluna: "githubUserId", tratamento: "manter", motivo: "coordenação por identidade externa do GitHub, não por usuário do Connect" },
+  { modelo: "GithubConnection", coluna: "connectedBy", tratamento: "desligar" },
+  { modelo: "GithubOAuthAttempt", coluna: "userId", tratamento: "apagar" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },

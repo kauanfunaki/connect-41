@@ -43,7 +43,7 @@ export async function getTenantModuleStates(tenantId: string): Promise<ModuleSta
     const row = overrides.get(m.code);
     return {
       ...m,
-      sectorCode: resolverSetorDoModulo(m.sectorCode, row?.sectorCode),
+      sectorCode: resolverSetorDoModulo(m.sectorCode, row?.sectorCode, m.fixedSector),
       catalogSectorCode: m.sectorCode,
       enabled: (allowedByPlan === null || allowedByPlan.has(m.code)) && (row?.enabled ?? m.defaultEnabled),
     };
@@ -76,7 +76,7 @@ export async function setorDoModulo(tenantId: string, code: string): Promise<str
     where: { tenantId_moduleCode: { tenantId, moduleCode: code } },
     select: { sectorCode: true },
   });
-  return resolverSetorDoModulo(def.sectorCode, row?.sectorCode);
+  return resolverSetorDoModulo(def.sectorCode, row?.sectorCode, def.fixedSector);
 }
 
 // Setores que têm ao menos um módulo ativo para o tenant — usado pra sidebar não
@@ -103,6 +103,7 @@ export async function setModuleEnabled(tenantId: string, code: string, enabled: 
  */
 export async function setModuleSector(tenantId: string, code: string, sectorCode: string | null): Promise<void> {
   const def = getModuleDef(code);
+  if (def?.fixedSector && sectorCode && sectorCode !== def.sectorCode) throw new Error("Este módulo é exclusivo do setor de origem.");
   if (!def) return;
   const prisma = getPrisma();
   await prisma.tenantModule.upsert({

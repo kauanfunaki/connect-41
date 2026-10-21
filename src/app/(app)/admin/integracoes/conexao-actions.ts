@@ -23,6 +23,7 @@ export async function salvarConexao(_prev: ConexaoState, form: FormData): Promis
   if (!isFullWrite(ctx.role)) return { error: "Sem permissão para configurar integrações." };
 
   const code = String(form.get("code") ?? "");
+  if (code === "github") return { error: "Use o painel de conexão do GitHub." };
   const def = integracaoDoCatalogo(code);
   if (!def) return { error: "Integração desconhecida." };
 

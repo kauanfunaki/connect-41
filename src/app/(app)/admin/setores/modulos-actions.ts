@@ -20,6 +20,7 @@ export async function transferirModulo(code: string, sectorCode: string): Promis
   if (!ctx.tenantId || !isFullWrite(ctx.role)) return;
   const def = getModuleDef(code);
   if (!def) return;
+  if (def.fixedSector && sectorCode !== def.sectorCode) return;
 
   const ativos = await getActiveSectors(ctx.tenantId);
   if (!ativos.some((s) => s.code === sectorCode)) return;
