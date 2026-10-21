@@ -54,7 +54,8 @@ export default async function RegrasDeConciliacaoPage({ searchParams }: { search
 
   const params = await searchParams;
   const empresas = await empresasDoSeletor(tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais — como a conciliação.
+  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   const subtitulo = "O que se repete no extrato — tarifa, rendimento, aluguel, folha, um fornecedor fixo — vira lançamento sem ninguém digitar.";
@@ -63,7 +64,7 @@ export default async function RegrasDeConciliacaoPage({ searchParams }: { search
       <ArrowLeft size={14} /> Conciliação
     </Button>
   );
-  const filtroDaEmpresa = <FiltroDaEmpresa acao="/conciliacao/regras" empresas={empresas} valor={companyId} />;
+  const filtroDaEmpresa = <FiltroDaEmpresa acao="/conciliacao/regras" empresas={noSeletor} foco={foco} valor={companyId} />;
 
   if (!empresa || !companyId) {
     return (
