@@ -15,7 +15,7 @@ import {
   atualizarCategoriaDaEmpresa,
   esconderDoPadraoNaEmpresa,
   linhaDaDreNaEmpresa,
-} from "@/app/(app)/cadastros-financeiros/actions";
+} from "@/app/(app)/fornecedores-e-sacados/actions";
 import { FormFooter } from "@/components/ui/FormFooter";
 
 export type OpcaoDeLinha = { code: string; label: string };

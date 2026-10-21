@@ -743,7 +743,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_fluxo_caixa:         "/fluxo-de-caixa",
   bpo_tabela_dinamica:     "/tabela-dinamica",
   bpo_conciliacao:         "/conciliacao",
-  bpo_cadastros:           "/cadastros-financeiros",
+  bpo_cadastros:           "/fornecedores-e-sacados",
   bpo_pendencias:          "/pendencias",
   bpo_aprovacoes:          "/aprovacoes",
   bpo_comunicacao:         "/comunicacao",
@@ -755,10 +755,19 @@ export const MODULE_ROUTES: Record<string, string> = {
 };
 
 /**
- * Módulos cuja tela fica no menu **Geral**, para todos, e não na lista de
- * telas do setor dono: o setor só serve para ligar e desligar o módulo.
+ * Módulos que moram numa aba de **Cadastros**, no menu Geral, e não na lista de
+ * telas do setor dono (21/10/2026). Diferente de Solicitações e Arquivos, a aba
+ * só aparece, e a tela só abre, para quem vê o setor do módulo: Fornecedores e
+ * sacados é do BPO, e repetia no menu dele o "Cadastros" do Geral.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk"]);
+export const MODULOS_NOS_CADASTROS: ReadonlySet<string> = new Set(["bpo_cadastros"]);
+
+/**
+ * Módulos cuja tela fica no menu **Geral**, e não na lista de telas do setor
+ * dono: o setor só serve para ligar e desligar o módulo. Solicitações, Arquivos
+ * e Chamados são para todos; os de `MODULOS_NOS_CADASTROS`, só para o setor.
+ */
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS]);
 
 /** Funcionalidades acessadas por fluxos internos, sem entrada na navegação. */
 export const MODULOS_SEM_MENU: ReadonlySet<string> = new Set(["fiscal_documentos"]);
