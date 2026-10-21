@@ -2,11 +2,12 @@
 
 import { Fragment, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { CircleHelp, CircleUserRound, LogOut, Menu, X } from "lucide-react";
 import { NavItem, classeDoItem } from "@/components/shell/NavLink";
 import { IconButton } from "@/components/ui/IconButton";
 import { iconeDaTela } from "@/components/portal/iconeDaTela";
-import { SECOES_DO_PORTAL, telasVisiveis } from "@/lib/portal/telas";
+import { GRUPO_DA_SECAO, SECOES_DO_PORTAL, grupoDoCaminho, telasVisiveis } from "@/lib/portal/telas";
 import { sairDoPortal } from "@/app/(portal)/portal/login/actions";
 
 // A partir de lg a lateral é coluna fixa; abaixo, gaveta. No servidor vale
@@ -34,6 +35,7 @@ export function PortalShell({
   grupoNome,
   modulos,
   bloqueadas = [],
+  logo = null,
   children,
 }: {
   grupoNome: string | null;
@@ -41,9 +43,14 @@ export function PortalShell({
   modulos: string[];
   /** As telas que o escritório ainda não liberou (14/10/2026) — saem do menu. */
   bloqueadas?: string[];
+  /** O logo do escritório no lugar do logo do Connect (Aparência do portal, 21/10/2026). */
+  logo?: { src: string; nome: string } | null;
   children: React.ReactNode;
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
+  // O grupo da tela aberta (21/10/2026): o traço do título, o brilho e o
+  // cartão do número pegam a cor dele (ver `[data-grupo]` no globals.css).
+  const grupoDaTela = grupoDoCaminho(usePathname());
   const visiveis = telasVisiveis(new Set(modulos), new Set(bloqueadas));
   // A gaveta fechada (abaixo de lg) só saía da tela com translate: os links
   // seguiam no Tab e no leitor de tela (TalkBack, VoiceOver). `inert` tira os
@@ -65,7 +72,7 @@ export function PortalShell({
   return (
     // `h-dvh`, e não `h-screen` (07/10/2026): no navegador do celular 100vh é
     // maior que a área visível, e o fim da tela ficava atrás da barra dele.
-    <div className="flex h-dvh overflow-hidden bg-canvas">
+    <div className="flex h-dvh overflow-hidden bg-canvas" data-grupo={grupoDaTela ?? undefined}>
       {menuAberto && (
         <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMenuAberto(false)} aria-hidden="true" />
       )}
@@ -84,12 +91,26 @@ export function PortalShell({
             href="/portal"
             onClick={() => setMenuAberto(false)}
             aria-label="Ir para o Início"
-            className="inline-flex items-center rounded-md px-2 py-1 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            className="inline-flex min-w-0 max-w-[184px] items-center rounded-md px-2 py-1 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo-horizontal-light.svg" alt="" className="block dark:hidden h-8 w-auto object-contain" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo-horizontal-dark.svg" alt="" className="hidden dark:block h-8 w-auto object-contain" />
+            {logo ? (
+              // O logo do escritório (21/10/2026), com o nome ao lado: o envio
+              // corta a imagem em quadrado (a mesma do workspace), e um quadrado
+              // de 32px sozinho não diz de quem é. Igual nos dois temas — é a
+              // imagem que ele mandou, sem versão clara e escura.
+              <span className="flex min-w-0 items-center gap-2.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logo.src} alt="" className="size-8 flex-shrink-0 rounded-md object-contain" />
+                <span className="truncate font-display text-card-title font-semibold text-fg">{logo.nome}</span>
+              </span>
+            ) : (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/logo-horizontal-light.svg" alt="" className="block dark:hidden h-8 w-auto object-contain" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/logo-horizontal-dark.svg" alt="" className="hidden dark:block h-8 w-auto object-contain" />
+              </>
+            )}
           </Link>
           {/* Botão de ícone com caixa de 32px: o X sozinho era um alvo de 18px,
               e é no celular que este botão existe. O posicionamento fica num
@@ -119,7 +140,7 @@ export function PortalShell({
             .map((i) => (
               // Exato só o Início: "/portal" é o começo de todas as outras, e
               // acenderia junto.
-              <NavItem key={i.href} href={i.href} icon={iconeDaTela(i)} label={i.rotulo} exact={i.href === "/portal"} />
+              <NavItem key={i.href} href={i.href} icon={iconeDaTela(i)} label={i.rotulo} exact={i.href === "/portal"} grupo={i.grupo} />
             ))}
           {SECOES_DO_PORTAL.map((secao) => {
             const itens = visiveis.filter((i) => i.secao === secao);
@@ -129,9 +150,14 @@ export function PortalShell({
             // encostavam um no outro, como na sidebar do Connect não acontece.
             return (
               <Fragment key={secao}>
-                <p className="px-2.5 pt-4 pb-1.5 c41-rotulo">{secao}</p>
+                {/* O pontinho na cor do grupo da seção (21/10/2026), como o do
+                    setor no `Painel` da Home. */}
+                <p data-grupo={GRUPO_DA_SECAO[secao]} className="flex items-center gap-1.5 px-2.5 pt-4 pb-1.5 c41-rotulo">
+                  <span aria-hidden className="size-1.5 flex-shrink-0 rounded-full bg-grupo" />
+                  {secao}
+                </p>
                 {itens.map((i) => (
-                  <NavItem key={i.href} href={i.href} icon={iconeDaTela(i)} label={i.rotulo} />
+                  <NavItem key={i.href} href={i.href} icon={iconeDaTela(i)} label={i.rotulo} grupo={i.grupo} />
                 ))}
               </Fragment>
             );

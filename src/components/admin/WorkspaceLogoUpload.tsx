@@ -9,9 +9,13 @@ type Props = {
   tenantId: string;
   tenantName: string;
   logoUrl: string | null;
+  /** Avisa quem mostra o logo em outro lugar — a prévia da Aparência do portal (21/10/2026). */
+  aoTrocar?: (logoUrl: string | null) => void;
+  /** "logo" na Aparência do portal; "foto" na ficha do workspace, como sempre foi. */
+  oQue?: "foto" | "logo";
 };
 
-export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogoUrl }: Props) {
+export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogoUrl, aoTrocar, oQue = "foto" }: Props) {
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +32,7 @@ export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogo
         setError(data.error ?? "Erro ao remover foto.");
       } else {
         setLogoUrl(null);
+        aoTrocar?.(null);
       }
     } catch {
       setError("Erro ao remover foto.");
@@ -58,6 +63,7 @@ export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogo
         setError(data.error ?? "Erro ao enviar foto.");
       } else {
         setLogoUrl(data.logoUrl);
+        aoTrocar?.(data.logoUrl);
       }
     } catch {
       setError("Erro ao enviar foto.");
@@ -79,7 +85,7 @@ export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogo
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >
-            {uploading ? "Enviando…" : logoUrl ? "Trocar foto" : "Adicionar foto"}
+            {uploading ? "Enviando…" : logoUrl ? `Trocar ${oQue}` : `Adicionar ${oQue}`}
           </Button>
           {logoUrl && (
             <Button
