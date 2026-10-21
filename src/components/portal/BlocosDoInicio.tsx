@@ -29,6 +29,7 @@ import { processosAguardandoCliente, processosEmAndamentoDoPortal } from "@/lib/
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { contarDocumentos } from "@/lib/fiscal/data";
 import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
+import type { GrupoDeCor } from "@/lib/aparencia/cores";
 import { competenciaDoInstante } from "@/lib/financeiro/periodo";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatCalendarDate, formatInstantDate } from "@/lib/format";
@@ -69,6 +70,18 @@ function Indisponivel({ texto = "Não deu para carregar agora. Atualize a págin
 }
 
 // ─── O que precisa de você ───────────────────────────────────────────────────
+
+// O grupo de cor de cada item (21/10/2026): o ícone fica na cor da tela para
+// onde o botão leva — o azul do financeiro, o roxo dos processos.
+const GRUPO_DA_ATENCAO: Record<ItemDaAtencao["chave"], GrupoDeCor> = {
+  aprovacoes: "financeiro",
+  pendencias: "atendimento",
+  solicitacoesAguardando: "atendimento",
+  processosAguardando: "processos",
+  envios: "atendimento",
+  solicitacoesRespondidas: "atendimento",
+  comunicados: "atendimento",
+};
 
 const ICONE_DA_ATENCAO: Record<ItemDaAtencao["chave"], React.ReactNode> = {
   aprovacoes: <ModuleIcon code="bpo_aprovacoes" />,
@@ -175,9 +188,11 @@ export async function PrecisaDeVoce({
             // toda: é o alvo que importa, e ao lado do texto ele espremia a frase.
             <li key={i.chave} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 sm:px-5 py-3.5">
               <div className="flex min-w-0 flex-1 basis-60 items-center gap-3">
+                {/* O pedido segue no âmbar: é o alerta, e não o assunto. */}
                 <span
+                  data-grupo={i.tom === "pedido" ? undefined : GRUPO_DA_ATENCAO[i.chave]}
                   className={`inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg [&>svg]:size-[18px] ${
-                    i.tom === "pedido" ? "bg-warning/10 text-warning-fg" : "bg-brand-subtle text-brand"
+                    i.tom === "pedido" ? "bg-warning/10 text-warning-fg" : "bg-grupo/10 text-grupo-fg"
                   }`}
                 >
                   {ICONE_DA_ATENCAO[i.chave]}
@@ -289,6 +304,7 @@ export async function FinanceiroDoInicio({
   return (
     <Painel
       setor="Financeiro"
+      cor="var(--c41-grupo-financeiro)"
       titulo={titulo}
       rodape={
         financeiro.atalhos.length > 0 ? (
@@ -331,6 +347,7 @@ export async function ProcessosDoInicio({ escopo, variasEmpresas }: { escopo: Es
   return (
     <Painel
       setor="Societário"
+      cor="var(--c41-grupo-processos)"
       titulo="Processos em andamento"
       destaque={dados && dados.total > 0 ? { valor: numero(dados.total), legenda: "em andamento" } : undefined}
       rodape={
@@ -379,12 +396,25 @@ export async function ProcessosDoInicio({ escopo, variasEmpresas }: { escopo: Es
  * mão, com o mesmo hover — o desenho que o Card passou a ter. O foco é o anel
  * global do app.
  */
-function Atalho({ href, icone, titulo, descricao }: { href: string; icone: React.ReactNode; titulo: string; descricao: React.ReactNode }) {
+function Atalho({
+  href,
+  icone,
+  titulo,
+  descricao,
+  grupo,
+}: {
+  href: string;
+  icone: React.ReactNode;
+  titulo: string;
+  descricao: React.ReactNode;
+  /** A cor do grupo da tela de destino (21/10/2026); sem grupo, a cor principal. */
+  grupo?: GrupoDeCor;
+}) {
   return (
-    <li className="min-w-0">
+    <li className="min-w-0" data-grupo={grupo}>
       <Card href={href} className="group h-full p-4">
         <span className="flex h-full items-center gap-3">
-          <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand [&>svg]:size-[18px]">
+          <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-grupo/10 text-grupo-fg [&>svg]:size-[18px]">
             {icone}
           </span>
           <span className="min-w-0 flex-1">
@@ -421,13 +451,14 @@ export function AtalhosDoInicio({
         {pedir && (
           <Atalho
             href={pedir.href}
+            grupo="atendimento"
             icone={<MessageSquarePlus />}
             titulo={pedir.rotulo}
             descricao="Documento, alteração ou dúvida: a equipe responde por aqui."
           />
         )}
         {documentos !== null && (
-          <Atalho href={comEmpresa("/portal/documentos", empresaId)} icone={<FileText />} titulo="Ver documentos fiscais" descricao={documentos} />
+          <Atalho href={comEmpresa("/portal/documentos", empresaId)} grupo="fiscal" icone={<FileText />} titulo="Ver documentos fiscais" descricao={documentos} />
         )}
         <Atalho href="/portal/ajuda" icone={<CircleHelp />} titulo="Ajuda" descricao="Como fazer cada coisa no portal, passo a passo." />
       </ul>

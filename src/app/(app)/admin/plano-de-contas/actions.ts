@@ -190,7 +190,7 @@ export async function carregarPlanoPadrao(): Promise<{ error: string } | { ok: t
     metadata: { criadas: plano.criar.length, completadas: plano.completar.length, jaCompletas: plano.jaCompletas },
   });
   revalidatePath("/admin/plano-de-contas");
-  revalidatePath("/cadastros-financeiros");
+  revalidatePath("/fornecedores-e-sacados");
   return {
     ok: true,
     mensagem:

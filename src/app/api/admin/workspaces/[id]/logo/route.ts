@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -12,13 +12,20 @@ const ALLOWED_TYPES: Record<string, string> = {
 };
 const MAX_SIZE = 2 * 1024 * 1024;
 
+// Quem troca o logo: o suporte (SUPER_ADMIN), em qualquer escritório; e,
+// desde 21/10/2026, o administrador do próprio escritório — o logo entrou na
+// Aparência do portal (Administração › Empresa), que é tela dele.
+function podeTrocarLogo(ctx: Awaited<ReturnType<typeof getAuthContext>>, id: string): boolean {
+  return ctx.role === "SUPER_ADMIN" || (isFullWrite(ctx.role) && !!ctx.tenantId && ctx.tenantId === id);
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
-  if (ctx.role !== "SUPER_ADMIN") {
+  const { id } = await params;
+  if (!podeTrocarLogo(ctx, id)) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
 
-  const { id } = await params;
   const prisma = getPrisma();
   const tenant = await prisma.tenant.findUnique({ where: { id }, select: { id: true } });
   if (!tenant) return NextResponse.json({ error: "Workspace não encontrado." }, { status: 404 });
@@ -52,11 +59,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
-  if (ctx.role !== "SUPER_ADMIN") {
+  const { id } = await params;
+  if (!podeTrocarLogo(ctx, id)) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
 
-  const { id } = await params;
   const prisma = getPrisma();
   await prisma.tenant.update({ where: { id }, data: { logoUrl: null } });
   revalidatePath("/", "layout");
