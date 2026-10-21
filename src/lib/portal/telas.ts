@@ -8,6 +8,8 @@
 // não está disponível". As bloqueadas vêm do banco (`telasBloqueadas.ts`) e
 // entram em `telasVisiveis` como segundo argumento.
 
+import type { GrupoDeCor } from "@/lib/aparencia/cores";
+
 export type SecaoDoPortal = "Financeiro" | "Societário" | "Com a equipe";
 
 export type TelaDoPortal = {
@@ -16,6 +18,14 @@ export type TelaDoPortal = {
   /** O módulo que sustenta a tela; `null` = sempre visível. */
   modulo: string | null;
   secao: SecaoDoPortal | null;
+  /**
+   * O grupo de cor da tela (21/10/2026, ver `lib/aparencia/cores.ts`): o
+   * ícone no menu, o traço do título e o cartão do número. Pelo assunto, e não
+   * pela seção do menu — as Aprovações moram em "Com a equipe", mas são contas
+   * a pagar e ficam no azul do financeiro, como no Omie. `null` = a cor
+   * principal (Início).
+   */
+  grupo: GrupoDeCor | null;
   /** O que a tela faz, nas palavras do cabeçalho dela. */
   descricao: string;
   /** Some quando este módulo está ligado: a tela foi substituída por outra. */
@@ -25,6 +35,13 @@ export type TelaDoPortal = {
 };
 
 export const SECOES_DO_PORTAL: readonly SecaoDoPortal[] = ["Financeiro", "Societário", "Com a equipe"];
+
+/** A cor do título de cada seção do menu: a do grupo que a seção mais tem. */
+export const GRUPO_DA_SECAO: Record<SecaoDoPortal, GrupoDeCor> = {
+  Financeiro: "financeiro",
+  Societário: "processos",
+  "Com a equipe": "atendimento",
+};
 
 // Cada tela aparece só se o módulo que a sustenta está ligado no tenant. O
 // acervo fiscal não tem gate de módulo no portal desde que nasceu, e segue sem.
@@ -37,6 +54,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Início",
     modulo: null,
     secao: null,
+    grupo: null,
     descricao: "O que precisa de você e o resumo das suas empresas.",
   },
   {
@@ -44,24 +62,27 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Documentos fiscais",
     modulo: null,
     secao: null,
+    grupo: "fiscal",
     descricao: "Notas emitidas e recebidas pelas suas empresas.",
   },
-  { href: "/portal/dre", rotulo: "DRE", modulo: "bpo_dre", secao: "Financeiro", descricao: "Demonstrativo de resultado por empresa e mês." },
+  { href: "/portal/dre", rotulo: "DRE", modulo: "bpo_dre", secao: "Financeiro", grupo: "financeiro", descricao: "Demonstrativo de resultado por empresa e mês." },
   {
     href: "/portal/fluxo-de-caixa",
     rotulo: "Fluxo de caixa",
     modulo: "bpo_fluxo_caixa",
     secao: "Financeiro",
+    grupo: "financeiro",
     descricao: "O que entrou e saiu nos últimos seis meses, e o que vence daqui para frente.",
   },
-  { href: "/portal/relatorios", rotulo: "Relatório", modulo: "bpo_fluxo_caixa", secao: "Financeiro", descricao: "O mês consolidado por empresa." },
-  { href: "/portal/pagar", rotulo: "Contas a pagar", modulo: "bpo_contas_pagar", secao: "Financeiro", descricao: "O que suas empresas têm a pagar." },
-  { href: "/portal/receber", rotulo: "Contas a receber", modulo: "bpo_contas_receber", secao: "Financeiro", descricao: "O que suas empresas têm a receber." },
+  { href: "/portal/relatorios", rotulo: "Relatório", modulo: "bpo_fluxo_caixa", secao: "Financeiro", grupo: "financeiro", descricao: "O mês consolidado por empresa." },
+  { href: "/portal/pagar", rotulo: "Contas a pagar", modulo: "bpo_contas_pagar", secao: "Financeiro", grupo: "financeiro", descricao: "O que suas empresas têm a pagar." },
+  { href: "/portal/receber", rotulo: "Contas a receber", modulo: "bpo_contas_receber", secao: "Financeiro", grupo: "financeiro", descricao: "O que suas empresas têm a receber." },
   {
     href: "/portal/cobranca",
     rotulo: "Cobrança",
     modulo: "bpo_cobranca",
     secao: "Financeiro",
+    grupo: "financeiro",
     descricao: "Contas a receber vencidas das suas empresas, o andamento da cobrança e os acordos.",
   },
   {
@@ -69,6 +90,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Processos",
     modulo: "societario_processos",
     secao: "Societário",
+    grupo: "processos",
     descricao: "Abertura, alterações, baixa e licenças das suas empresas.",
   },
   {
@@ -76,6 +98,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Exigências",
     modulo: "societario_processos",
     secao: "Societário",
+    grupo: "processos",
     descricao: "O que os órgãos pediram nos processos das suas empresas.",
   },
   {
@@ -83,6 +106,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Solicitações",
     modulo: "portal_solicitacoes",
     secao: "Com a equipe",
+    grupo: "atendimento",
     descricao: "Peça documentos, alterações ou o que precisar do escritório, com prazo de resposta.",
   },
   {
@@ -90,6 +114,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Comunicados",
     modulo: "portal_solicitacoes",
     secao: "Com a equipe",
+    grupo: "atendimento",
     descricao: "Avisos do escritório para você: recesso, prazos, orientações.",
   },
   // Os envios ao cliente (08/10/2026), que até então só chegavam por link no
@@ -101,6 +126,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Documentos do escritório",
     modulo: "portal_solicitacoes",
     secao: "Com a equipe",
+    grupo: "atendimento",
     descricao: "Documentos que o escritório mandou para você ler, baixar e, quando pedido, dar o aceite.",
   },
   // Os Arquivos (09/10/2026): as pastas que o escritório compartilhou com o
@@ -110,6 +136,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Arquivos",
     modulo: "arquivos",
     secao: "Com a equipe",
+    grupo: "atendimento",
     descricao: "Pastas que o escritório compartilhou com você, e onde você manda os seus arquivos.",
   },
   {
@@ -117,6 +144,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Pendências",
     modulo: "bpo_pendencias",
     secao: "Com a equipe",
+    grupo: "atendimento",
     descricao: "O que a equipe precisa de você.",
     // Desde 01/10 qualquer setor pede ao cliente, com o canal do portal ligado.
     ouCom: "portal_solicitacoes",
@@ -126,6 +154,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Aprovações",
     modulo: "bpo_aprovacoes",
     secao: "Com a equipe",
+    grupo: "financeiro",
     descricao: "Contas a pagar que só são pagas depois da sua aprovação.",
   },
   {
@@ -133,6 +162,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Conversa",
     modulo: "bpo_comunicacao",
     secao: "Com a equipe",
+    grupo: "atendimento",
     descricao: "Fale com a equipe e mande arquivos, por empresa.",
     // Decisão de 01/10: com as solicitações, tudo o que o cliente manda tem
     // dono, prazo e situação — a conversa livre sai do menu (o histórico fica
@@ -167,4 +197,18 @@ export function telaPelosModulos(t: TelaDoPortal, modulos: ReadonlySet<string>):
  */
 export function telasVisiveis(modulos: ReadonlySet<string>, bloqueadas: ReadonlySet<string> = new Set()): TelaDoPortal[] {
   return TELAS_DO_PORTAL.filter((t) => telaPelosModulos(t, modulos) && !(bloqueadas.has(t.href) && telaBloqueavel(t.href)));
+}
+
+/**
+ * O grupo de cor da tela aberta: a do catálogo cujo endereço começa o caminho
+ * (o detalhe `/portal/processos/abc` é dos Processos). O Início, Minha conta,
+ * Ajuda e o que não é do catálogo ficam sem grupo — na cor principal.
+ */
+export function grupoDoCaminho(pathname: string): GrupoDeCor | null {
+  let achada: TelaDoPortal | null = null;
+  for (const t of TELAS_DO_PORTAL) {
+    if (t.href === "/portal") continue;
+    if ((pathname === t.href || pathname.startsWith(`${t.href}/`)) && (!achada || t.href.length > achada.href.length)) achada = t;
+  }
+  return achada?.grupo ?? null;
 }
