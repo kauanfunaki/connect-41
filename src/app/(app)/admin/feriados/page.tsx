@@ -1,73 +1,90 @@
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { CalendarDays } from "lucide-react";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { Badge } from "@/components/ui/Badge";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { formatCalendarDate } from "@/lib/format";
+import { dataBR, hojeIso, lerAnoIso } from "@/lib/datas/calendario";
+import { feriadosNacionais, juntarFeriados } from "@/lib/datas/feriadosNacionais";
 import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { NovoFeriado } from "@/components/admin/AddFeriadoForm";
-import { ImportFeriadosButton } from "@/components/admin/ImportFeriadosButton";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { criarFeriado, excluirFeriado, importarFeriadosNacionais } from "./actions";
+import { criarFeriado, excluirFeriado } from "./actions";
 
-export default async function FeriadosPage() {
+// Só as exceções se cadastram aqui (21/10/2026, pedido do Kauan de 15/10): os
+// nacionais entram sozinhos, todo ano, calculados — a importação da BrasilAPI,
+// que o admin fazia na virada do ano, saiu. A lista do ano mostra os dois, e
+// só a exceção tem o "⋯".
+export default async function FeriadosPage({ searchParams }: { searchParams: Promise<{ ano?: string }> }) {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
 
-  const prisma = getPrisma();
-  const feriados = await prisma.holiday.findMany({
-    where: { tenantId: ctx.tenantId },
+  const anoAtual = Number(hojeIso().slice(0, 4));
+  const pedido = lerAnoIso((await searchParams).ano);
+  const ano = pedido && pedido >= 2000 && pedido <= 2100 ? pedido : anoAtual;
+
+  const cadastrados = await getPrisma().holiday.findMany({
+    where: { tenantId: ctx.tenantId, date: { gte: new Date(`${ano}-01-01`), lt: new Date(`${ano + 1}-01-01`) } },
     orderBy: { date: "asc" },
+    select: { id: true, date: true, name: true },
   });
+  const feriados = juntarFeriados(
+    feriadosNacionais(ano),
+    cadastrados.map((h) => ({ id: h.id, data: h.date.toISOString().slice(0, 10), nome: h.name }))
+  );
+  const excecoes = feriados.filter((f) => !f.automatico).length;
 
   return (
     <PageContainer>
       <PageHeader
         title="Feriados"
-        subtitle={<>{feriados.length} feriado{feriados.length !== 1 ? "s" : ""} cadastrado{feriados.length !== 1 ? "s" : ""}</>}
+        subtitle={
+          <>
+            Os nacionais entram sozinhos todo ano. Cadastre aqui os estaduais, municipais, pontes e recessos do
+            escritório.
+          </>
+        }
         action={<NovoFeriado action={criarFeriado} />}
       />
 
-      {/* A importação fica no cartão; o cadastro de um feriado é o "+ Novo
-          feriado" do cabeçalho, numa janela (escolha 5A, 08/10/2026) — o
-          formulário morava aberto aqui, embaixo da importação. */}
-      <Card className="p-4 mb-6">
-        <ImportFeriadosButton action={importarFeriadosNacionais} />
-        <p className="text-helper text-fg-muted mt-1.5">
-          Importa só feriados nacionais (via BrasilAPI). Os estaduais e municipais entram um a um,
-          em “Novo feriado”.
-        </p>
-      </Card>
+      <AbasDeLink
+        ativa={String(ano)}
+        abas={[anoAtual - 1, anoAtual, anoAtual + 1].map((a) => ({
+          chave: String(a),
+          rotulo: String(a),
+          href: `/admin/feriados?ano=${a}`,
+        }))}
+      />
 
-      {feriados.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={<CalendarDays />}
-            title="Nenhum feriado cadastrado"
-            description="Importe os feriados nacionais acima, ou cadastre os estaduais e municipais em “Novo feriado”."
-          />
-        </Card>
-      ) : (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
+      <Card className="p-0 overflow-hidden">
+        <p className="px-4 py-2.5 border-b border-border text-helper text-fg-muted">
+          {feriados.length - excecoes} nacionais e {excecoes} exceç{excecoes === 1 ? "ão" : "ões"} do escritório em {ano}.
+        </p>
+        <div className="divide-y divide-border">
           {feriados.map((f) => (
-            <div key={f.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-              <p className="min-w-0 text-fs-3 text-fg">{f.name}</p>
+            <div key={f.data} className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <p className="min-w-0 text-fs-3 text-fg">{f.nome}</p>
               <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="text-fs-2 text-fg-muted tnum">{formatCalendarDate(f.date)}</span>
-                {/* Excluir no "⋯" (polimento de 30/09): era texto vermelho colado na data. */}
-                <AcoesDoItem
-                  excluir={{
-                    action: excluirFeriado.bind(null, f.id),
-                    titulo: `Excluir o feriado "${f.name}"?`,
-                  }}
-                />
+                <Badge variant={f.automatico ? "neutral" : "info"}>{f.automatico ? "Nacional · automático" : "Do escritório"}</Badge>
+                <span className="text-fs-2 text-fg-muted tnum">{dataBR(f.data)}</span>
+                {/* Excluir no "⋯" (polimento de 30/09); o nacional não tem o que editar,
+                    e o espaço fica para a data alinhar com a das exceções. */}
+                {f.id ? (
+                  <AcoesDoItem
+                    excluir={{
+                      action: excluirFeriado.bind(null, f.id),
+                      titulo: `Excluir o feriado "${f.nome}"?`,
+                    }}
+                  />
+                ) : (
+                  <span className="w-7" aria-hidden />
+                )}
               </div>
             </div>
           ))}
         </div>
-      )}
+      </Card>
     </PageContainer>
   );
 }
