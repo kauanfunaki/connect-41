@@ -119,6 +119,7 @@ const EMPRESA: Ligacao[] = [
   // comunicado já enviado fica, sem esta empresa entre os destinatários.
   { modelo: "PortalUserCompany", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["acesso ao portal ligado a ela (a conta continua)", "acessos ao portal ligados a ela (as contas continuam)"] },
   { modelo: "ClientAnnouncementCompany", campo: "company", fk: "companyId", tratamento: "cascata" },
+  { modelo: "DominioAccountMap", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["conta do de-para da Domínio", "contas do de-para da Domínio"] },
   { modelo: "BankReconciliationRule", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["regra de conciliação", "regras de conciliação"] },
 
   // Ficam, sem o vínculo.
@@ -302,6 +303,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
   { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
+  { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
   { modelo: "BankReconciliationRule", coluna: "createdById", tratamento: "manter", motivo: "quem criou a regra; a tela não expõe o id" },
   { modelo: "BankRuleApplication", coluna: "createdById", tratamento: "manter", motivo: "registro de quem lançou pela regra" },
   { modelo: "BankRuleApplication", coluna: "undoneById", tratamento: "manter", motivo: "registro de quem desfez o lançamento da regra" },
