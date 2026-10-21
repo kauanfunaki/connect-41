@@ -78,6 +78,8 @@ import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
 import { areaSpedAtiva, menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
 import { grupoDaTelaDaEquipe } from "@/lib/aparencia/gruposDaEquipe";
+import { useNumeroConferido } from "./useNumeroConferido";
+import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -170,6 +172,8 @@ type Props = {
   unreadCount: number;
   /** O módulo das solicitações do portal está ligado — mostra "Solicitações" no Geral. */
   solicitacoesLigadas?: boolean;
+  /** Quantas solicitações novas esperam a pessoa — o número no item, conferido a cada minuto. */
+  solicitacoesNovas?: number;
   /** Os Arquivos estão ligados — mostra "Arquivos" no Geral. */
   arquivosLigados?: boolean;
   chamadosLigados?: boolean;
@@ -215,6 +219,7 @@ export function AppShell({
   canOpenAdmin,
   unreadCount,
   solicitacoesLigadas = false,
+  solicitacoesNovas = 0,
   arquivosLigados = false,
   chamadosLigados = false,
   telasDoGeral = TODAS_AS_TELAS_DO_GERAL,
@@ -264,6 +269,8 @@ export function AppShell({
   const linkDaAjuda = artigoDaTela ? `/ajuda/${encodeURIComponent(artigoDaTela)}?de=${encodeURIComponent(pathname)}` : "/ajuda";
   const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes") || pathname.startsWith("/assinatura");
   const corDoSetor = activeSector?.color;
+  // O número do item Solicitações (21/10/2026), conferido a cada minuto.
+  const novasSolicitacoes = useNumeroConferido(solicitacoesNovas, contarSolicitacoesNovas, solicitacoesLigadas && telasDoGeral.includes("solicitacoes"));
   const grupoDaTela = grupoDaTelaDaEquipe(pathname);
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
   const podeTrocar = sectors.length > 1 || accessibleTenants.length > 1;
@@ -301,7 +308,7 @@ export function AppShell({
         </PainelDoItem>
       )}
       {noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />}
-      {solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" />}
+      {solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} />}
       {chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<Inbox size={16} />} label="Chamados" />}
       {arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" />}
       {noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />}

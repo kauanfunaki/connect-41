@@ -9,6 +9,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { iconeDaTela } from "@/components/portal/iconeDaTela";
 import { GRUPO_DA_SECAO, SECOES_DO_PORTAL, grupoDoCaminho, telasVisiveis } from "@/lib/portal/telas";
 import { sairDoPortal } from "@/app/(portal)/portal/login/actions";
+import { SugestaoDoPortal } from "./SugestaoDoPortal";
 
 // A partir de lg a lateral é coluna fixa; abaixo, gaveta. No servidor vale
 // "tela grande": a gaveta só fica inerte depois da hidratação, no celular. O
@@ -36,6 +37,7 @@ export function PortalShell({
   modulos,
   bloqueadas = [],
   logo = null,
+  sugestao = false,
   children,
 }: {
   grupoNome: string | null;
@@ -45,6 +47,8 @@ export function PortalShell({
   bloqueadas?: string[];
   /** O logo do escritório no lugar do logo do Connect (Aparência do portal, 21/10/2026). */
   logo?: { src: string; nome: string } | null;
+  /** O botão "Sugestão ou problema" no rodapé (21/10/2026) — com as solicitações ligadas. */
+  sugestao?: boolean;
   children: React.ReactNode;
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
@@ -171,6 +175,7 @@ export function PortalShell({
         <div className="border-t border-border px-3 py-3 flex-shrink-0 space-y-0.5" onClick={() => setMenuAberto(false)}>
           <NavItem href="/portal/conta" icon={<CircleUserRound />} label="Minha conta" />
           <NavItem href="/portal/ajuda" icon={<CircleHelp />} label="Ajuda" />
+          {sugestao && <SugestaoDoPortal />}
           <form action={sairDoPortal}>
             <button
               type="submit"
