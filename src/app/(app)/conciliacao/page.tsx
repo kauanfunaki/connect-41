@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Landmark, History } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDateTime } from "@/lib/format";
@@ -87,10 +87,10 @@ export default async function ConciliacaoPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  const setor = ctx.tenantId ? ((await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR) : SECTOR;
-  if (!ctx.tenantId || !canViewSector(ctx, setor)) notFound();
+  const setores = ctx.tenantId ? ((await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR]) : [SECTOR];
+  if (!ctx.tenantId || !canViewSector(ctx, setores)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
+  const podeAgir = canActOnSector(ctx, setores);
   const tenantId = ctx.tenantId;
 
   const params = await searchParams;

@@ -297,6 +297,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "module.enable": e("ligou o módulo"),
   "module.disable": e("desligou o módulo"),
   "module.transfer": e("passou para outro setor o módulo"),
+  "module.share": e("mostrou em mais um setor o módulo"),
+  "module.unshare": e("tirou de um setor o módulo"),
   "tag.create": c("criou a tag"),
   "tag.update": e("editou a tag"),
   "tag.delete": x("excluiu a tag"),

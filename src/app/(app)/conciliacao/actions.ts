@@ -13,7 +13,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts, addDaysToKey } from "@/lib/agenda";
@@ -59,8 +59,8 @@ class Recusa extends Error {}
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode;
-  if (!canActOnSector(ctx, setor)) return { ok: false as const, erro: "Sem permissão para conciliar." };
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [getModuleDef(MODULE)!.sectorCode];
+  if (!canActOnSector(ctx, setores)) return { ok: false as const, erro: "Sem permissão para conciliar." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo não habilitado." };
   return { ok: true as const, ctx, tenantId: ctx.tenantId, userId: ctx.userId || null, prisma: getPrisma() };
 }

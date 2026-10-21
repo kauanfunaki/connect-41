@@ -5,7 +5,7 @@ import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedVagaW
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { boardPath } from "@/lib/kanbanPaths";
 import { digitsOnly } from "@/lib/validation/common";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
 
 const LIMIT = 5;
@@ -20,7 +20,7 @@ const MODULO_DE_PROCESSOS = "societario_processos";
 async function abreProcessos(ctx: AuthContext): Promise<boolean> {
   if (!ctx.tenantId) return false;
   const [setor, ligado] = await Promise.all([
-    setorDoModulo(ctx.tenantId, MODULO_DE_PROCESSOS),
+    setoresDoModulo(ctx.tenantId, MODULO_DE_PROCESSOS),
     isModuleEnabled(ctx.tenantId, MODULO_DE_PROCESSOS),
   ]);
   return ligado && canActOnSector(ctx, setor ?? "societario");

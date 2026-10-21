@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { MessageSquareWarning, Paperclip, Hourglass, MessageCircleReply, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { formatInstantDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -45,9 +45,10 @@ export default async function PendenciasPage({
 }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  const setor = setores[0];
+  if (!canViewSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
+  const podeAgir = canActOnSector(ctx, setores);
 
   const params = await searchParams;
   const recorte: RecorteDePendencia = RECORTES_DE_PENDENCIA.find((r) => r.chave === params.recorte)?.chave ?? "andamento";

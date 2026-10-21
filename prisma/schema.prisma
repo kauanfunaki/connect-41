@@ -848,6 +848,7 @@ model Tenant {
   customValues              CustomValue[]
   sectors                   Sector[]
   tenantModules             TenantModule[]
+  tenantModuleSectors       TenantModuleSector[]
   localFiscalScenarios      LocalFiscalScenario[]
   tags                      Tag[]
   accessGrants              UserTenantAccess[]
@@ -1114,6 +1115,25 @@ model TenantModule {
   @@unique([tenantId, moduleCode])
   @@index([tenantId])
   @@map("tenant_modules")
+}
+
+// Os outros setores que também usam uma tela (21/10/2026). O setor dono segue
+// em `TenantModule.sectorCode` (ou no catálogo); aqui ficam só os a mais — a
+// prévia do SPED do Fiscal ligada ao Contábil e ao BPO. Sem linha = a tela é
+// só do dono, como era antes desta tabela. Código de `Sector`, sem FK, como em
+// todo lugar que guarda setor. Resolvido só em `src/lib/modules.ts`.
+model TenantModuleSector {
+  id         String   @id @default(uuid())
+  tenantId   String
+  moduleCode String   @db.VarChar(60)
+  sectorCode String   @db.VarChar(40)
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, moduleCode, sectorCode])
+  @@index([tenantId])
+  @@map("tenant_module_sectors")
 }
 
 // Catálogo de planos comercializáveis (vive em código+banco, editável só por

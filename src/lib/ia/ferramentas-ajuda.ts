@@ -98,7 +98,7 @@ export const FERRAMENTAS_DE_AJUDA: Record<string, FerramentaRegistrada> = {
       return {
         gerais: TELAS_GERAIS.map((t) => (t.caminho.startsWith("/") && !t.caminho.includes("{") ? { ...t, link: linkDaTela(t.tela, t.caminho) } : t)),
         doSetor: estados
-          .filter((m) => m.enabled && setores.has(m.sectorCode))
+          .filter((m) => m.enabled && m.sectorCodes.some((s) => setores.has(s)))
           .map((m) => {
             const caminho = getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`;
             return { tela: m.label, setor: m.sectorCode, caminho, link: linkDaTela(m.label, caminho), descricao: m.description };

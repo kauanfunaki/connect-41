@@ -6,7 +6,7 @@ import { BotaoDeExportar } from "@/components/shared/BotaoDeExportar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { listarContas, competenciasComContas, type TipoDeConta } from "@/lib/financeiro/data";
@@ -56,7 +56,7 @@ export async function ContasPage({
   // (`setorDoModulo`), então a tela acompanha uma transferência.
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !getModuleDef(modulo)) notFound();
-  const sector = await setorDoModulo(ctx.tenantId, modulo);
+  const sector = await setoresDoModulo(ctx.tenantId, modulo);
   if (!sector || !canActOnSector(ctx, sector)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, modulo))) notFound();
 
@@ -140,9 +140,9 @@ export async function ContasPage({
     isModuleEnabled(ctx.tenantId, "bpo_pendencias"),
     isModuleEnabled(ctx.tenantId, "bpo_aprovacoes"),
     isModuleEnabled(ctx.tenantId, MODULO_DE_COBRANCA),
-    setorDoModulo(ctx.tenantId, "bpo_pendencias"),
-    setorDoModulo(ctx.tenantId, "bpo_aprovacoes"),
-    setorDoModulo(ctx.tenantId, MODULO_DE_COBRANCA),
+    setoresDoModulo(ctx.tenantId, "bpo_pendencias"),
+    setoresDoModulo(ctx.tenantId, "bpo_aprovacoes"),
+    setoresDoModulo(ctx.tenantId, MODULO_DE_COBRANCA),
   ]);
   const podeAbrirPendencia = pendenciasLigado && canActOnSector(ctx, setorDePendencias ?? "bpo");
   const podeEnviarParaAprovacao = kind === "PAGAR" && aprovacoesLigado && canActOnSector(ctx, setorDeAprovacoes ?? "bpo");

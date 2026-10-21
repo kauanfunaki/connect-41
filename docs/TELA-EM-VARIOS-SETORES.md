@@ -64,6 +64,17 @@ uma vez só na busca (Ctrl+K) e nos favoritos, com o nome do setor dono.
 portal) continua indo para o **setor dono**, para ninguém passar a receber
 aviso que não recebia.
 
+**Dados separados por setor.** Algumas telas guardam o setor em cada
+registro e mostram a cada pessoa só os do setor dela (Testes, Vagas, Quadros,
+as propostas da IA do Societário). Ligadas a outro setor, elas abrem para ele
+com essa mesma regra: quem é do setor ligado vê os registros do próprio setor,
+não os do dono. É a regra de hoje, sem atalho; as telas que motivaram o pedido
+(notas, prévia do SPED, fornecedores) são por empresa, e todos veem igual.
+
+**Mover e "Também em…" juntos.** Mover a tela para um setor que já estava em
+"Também em…" tira ele dessa lista (ele vira o dono). O antigo dono não entra
+sozinho na lista: perde o acesso, como no "Mover para…" de hoje.
+
 ## O que muda para quem já usa
 
 **Nada, até um administrador ligar uma tela a outro setor.**

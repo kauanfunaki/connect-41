@@ -10,7 +10,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { listarCtePorRota, ErroDoSped } from "@/lib/sped/client";
 import { credenciaisDoSped } from "@/lib/sped/credenciais";
 import { raizesDoAlcance, janelaDoMesCorrente, ehDataValida } from "@/lib/sped/raizes";
@@ -62,7 +62,7 @@ export default async function CtePage({
   searchParams: Promise<{ raiz?: string; de?: string; ate?: string; cursor?: string }>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const sp = await searchParams;
