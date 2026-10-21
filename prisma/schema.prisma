@@ -1542,6 +1542,10 @@ model Company {
   // de DDL. SetNull, nunca Cascade: apagar um grupo não pode apagar as
   // empresas do cliente.
   clientGroupId         String?
+  /// O modelo do DRE desta empresa (21/10/2026): vazio é o padrão; "por_area" é
+  /// o customizado de despesas por área. Os modelos moram em código — ver
+  /// `src/lib/dre/estrutura.ts`.
+  dreModelo             String?       @db.VarChar(30)
   /// A virada do Omie para o Connect (lote E, 20/10/2026): desde quando o
   /// Connect é a fonte do financeiro desta empresa. Nula enquanto as contas
   /// vêm do Omie — até a virada, a conta que veio de lá é do Omie: o Connect

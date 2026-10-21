@@ -34,6 +34,7 @@ import { comRotulosEconomicos } from "@/lib/dre/economica";
 import { resultadoDePorGrupo, somarPorGrupo } from "@/lib/dre/analises";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
 import { opcoesDaUrl } from "@/lib/dre/estrutura";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { SeletorDosImpostos, sufixoDosImpostos } from "@/components/dre/SeletorDosImpostos";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { lerFiltroDeCentro, valorDoFiltroDeCentro, SEM_CENTRO } from "@/lib/financeiro/centroDeCusto";
@@ -85,13 +86,15 @@ export default async function DreEconomicaPage({
 
   const params = await searchParams;
   const visao = VISOES.find((v) => v.chave === params.visao)?.chave ?? "mes";
-  // As duas visões dos impostos (20/10/2026): no EBITDA, o padrão; fora, a da Irriga.
-  const opcoes = opcoesDaUrl(params.impostos);
   // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
   // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
   const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
   const companyId = empresa?.id ?? null;
+  // O modelo do DRE da empresa (21/10/2026) e, no padrão, as duas visões dos
+  // impostos (20/10/2026): no EBITDA, o padrão; ou fora do resultado.
+  const modelo = companyId ? await modeloDaEmpresa(ctx.tenantId, companyId) : undefined;
+  const opcoes = opcoesDaUrl(params.impostos, modelo);
 
   const cabecalho = (
     <PageHeader title="DRE econômica" subtitle="Demonstrativo de resultado por competência — o que pertence ao mês, pago ou não." />
@@ -175,7 +178,7 @@ export default async function DreEconomicaPage({
   );
   const temCobranca = cobranca.acrescimos !== 0 || cobranca.descontos !== 0 || cobranca.perdas !== 0;
   const resultado = comRotulosEconomicos(
-    visao === "mes" ? serie.get(mes)!.resultado : resultadoDePorGrupo(somarPorGrupo(meses.map((m) => m.resultado.porGrupo)), opcoes)
+    visao === "mes" ? serie.get(mes)!.resultado : resultadoDePorGrupo(somarPorGrupo(meses.map((m) => m.resultado.porGrupo), modelo), opcoes)
   );
   const imposto = impostoForaDoResultado(resultado, opcoes);
   // Sem lançamento nem ajuste da cobrança no mês anterior, sem comparação.
@@ -194,14 +197,22 @@ export default async function DreEconomicaPage({
         mes: {
           rotulo: `${rotuloDaCompetencia(mes)} — mês`,
           realizado: comRotulosEconomicos(serie.get(mes)!.resultado),
-          orcado: comRotulosEconomicos(resultadoDePorGrupo(porGrupoOrcado(orcamento.grade, [numeroDoMes]))),
+          orcado: comRotulosEconomicos(resultadoDePorGrupo(porGrupoOrcado(orcamento.grade, [numeroDoMes], orcamento.modelo), opcoes)),
         },
         acumulado: {
           rotulo: `Acumulado jan a ${rotuloDaCompetencia(mes)}`,
           realizado: comRotulosEconomicos(
-            resultadoDePorGrupo(somarPorGrupo(acumuladoDoAno(mes).map((c) => serie.get(c)!.resultado.porGrupo)))
+            resultadoDePorGrupo(
+              somarPorGrupo(
+                acumuladoDoAno(mes).map((c) => serie.get(c)!.resultado.porGrupo),
+                modelo
+              ),
+              opcoes
+            )
           ),
-          orcado: comRotulosEconomicos(resultadoDePorGrupo(porGrupoOrcado(orcamento.grade, mesesDoAcumulado(numeroDoMes)))),
+          orcado: comRotulosEconomicos(
+            resultadoDePorGrupo(porGrupoOrcado(orcamento.grade, mesesDoAcumulado(numeroDoMes), orcamento.modelo), opcoes)
+          ),
         },
       }
     : null;
@@ -246,11 +257,13 @@ export default async function DreEconomicaPage({
             </Select>
           )}
         </FiltroDePeriodo>
-        <SeletorDosImpostos
-          opcoes={opcoes}
-          base="/dre/economica"
-          params={{ empresa: companyId, mes, visao: visao === "mes" ? undefined : visao, centro: centroNaUrl || undefined }}
-        />
+        {modelo?.impostos === "escolha" && (
+          <SeletorDosImpostos
+            opcoes={opcoes}
+            base="/dre/economica"
+            params={{ empresa: companyId, mes, visao: visao === "mes" ? undefined : visao, centro: centroNaUrl || undefined }}
+          />
+        )}
       </FiltroDaEmpresa>
       <AbasDeLink abas={VISOES.map((v) => ({ ...v, href: hrefDaVisao(v.chave) }))} ativa={visao} />
 
@@ -318,8 +331,10 @@ export default async function DreEconomicaPage({
                   <li className="flex items-start gap-2">
                     <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning-fg" />
                     <span>
-                      <strong>{moeda(Math.abs(imposto))}</strong> de impostos sobre a receita não entram no resultado — é a visão
-                      “Impostos fora do resultado”.
+                      <strong>{moeda(Math.abs(imposto))}</strong> de impostos sobre a receita não entram no resultado —{" "}
+                      {modelo?.impostos === "fora"
+                        ? `a margem parte da Receita Bruta, como na planilha do modelo “${modelo.nome}”.`
+                        : "é a visão “Impostos fora do resultado”."}
                     </span>
                   </li>
                 )}

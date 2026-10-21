@@ -13,6 +13,8 @@ import { validarCentroDeCusto } from "@/lib/financeiro/centroDeCusto";
 import { categoriaDaEmpresa, ondeDoPadrao } from "@/lib/financeiro/planoDeContas";
 import { criarCategoriaNoPlanoDaEmpresa, nomeDaCategoria } from "@/lib/financeiro/categoriaDaEmpresa";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
+import type { ModeloDoDre } from "@/lib/dre/estrutura";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { validarFicha, leitorDaFicha, CAMPOS_DA_FICHA } from "@/lib/financeiro/fichaDaContraparte";
 import { validarProjeto, nomeEmUso } from "@/lib/financeiro/projeto";
@@ -415,9 +417,10 @@ function revalidarPlano() {
   }
 }
 
-function lerLinhaDaDre(valor: string): { ok: true; grupo: string | null } | { ok: false } {
+/** A linha da DRE escolhida, nos grupos do modelo do DRE da empresa (21/10/2026). */
+function lerLinhaDaDre(valor: string, modelo: ModeloDoDre): { ok: true; grupo: string | null } | { ok: false } {
   if (!valor) return { ok: true, grupo: null };
-  const g = grupoDeTexto(valor);
+  const g = grupoDeTexto(valor, modelo);
   return g ? { ok: true, grupo: g } : { ok: false };
 }
 
@@ -431,7 +434,7 @@ export async function criarCategoriaDaEmpresa(formData: FormData): Promise<Resul
   const kind = texto("kind");
   if (!nome) return { error: "Informe o nome da categoria (até 120 caracteres)." };
   if (kind !== "PAGAR" && kind !== "RECEBER") return { error: "Escolha se é despesa ou receita." };
-  const linha = lerLinhaDaDre(texto("linhaDre"));
+  const linha = lerLinhaDaDre(texto("linhaDre"), await modeloDaEmpresa(c.tenantId, companyId));
   if (!linha.ok) return { error: "Linha da DRE desconhecida." };
 
   // A regra de criar mora em `src/lib/financeiro/categoriaDaEmpresa.ts`
@@ -465,7 +468,7 @@ export async function atualizarCategoriaDaEmpresa(formData: FormData): Promise<R
 
   const nome = nomeDaCategoria(texto("nome"));
   if (!nome) return { error: "Informe o nome da categoria (até 120 caracteres)." };
-  const linha = lerLinhaDaDre(texto("linhaDre"));
+  const linha = lerLinhaDaDre(texto("linhaDre"), await modeloDaEmpresa(c.tenantId, atual.companyId));
   if (!linha.ok) return { error: "Linha da DRE desconhecida." };
   const noPadrao = await c.prisma.financeCategory.findFirst({
     where: { ...ondeDoPadrao(c.tenantId), kind: atual.kind, name: nome },
@@ -542,7 +545,7 @@ export async function esconderDoPadraoNaEmpresa(
 export async function linhaDaDreNaEmpresa(companyId: string, categoryId: string, valor: string): Promise<ResultadoDoCadastro> {
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
-  const linha = lerLinhaDaDre(valor);
+  const linha = lerLinhaDaDre(valor, await modeloDaEmpresa(c.tenantId, companyId));
   if (!linha.ok) return { error: "Linha da DRE desconhecida." };
   const cat = await c.prisma.financeCategory.findFirst({
     where: categoriaDaEmpresa(c.tenantId, companyId, categoryId),

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Input } from "@/components/ui/Input";
-import { GRUPOS } from "@/lib/dre/estrutura";
+import { modeloDoCodigo, type CodigoDoModelo } from "@/lib/dre/estrutura";
 import { montarLinhas } from "@/lib/dre/calculo";
 import { rotuloEconomico } from "@/lib/dre/economica";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
@@ -14,7 +14,6 @@ import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { salvarGrade } from "@/app/(app)/dre/orcamento/actions";
 
 /** Os subtotais que a grade mostra embaixo — os mesmos da DRE, pelo mesmo motor. */
-const SUBTOTAIS = ["receita_liquida", "margem_contribuicao", "ebitda", "resultado_liquido"];
 
 const TH = "py-2 px-2 font-medium text-right whitespace-nowrap";
 
@@ -29,17 +28,23 @@ const TH = "py-2 px-2 font-medium text-right whitespace-nowrap";
  */
 export function GradeDoOrcamento({
   budgetId,
+  modelo: codigoDoModelo,
   lidoEm,
   grade,
   somenteLeitura,
 }: {
   budgetId: string;
+  /** O modelo do DRE da empresa (21/10/2026): os grupos e os subtotais da grade são os dele. */
+  modelo: CodigoDoModelo;
   /** `updatedAt` da versão quando a tela foi montada — a gravação é condicionada a ele. */
   lidoEm: string;
   grade: Record<string, string[]>;
   somenteLeitura: boolean;
 }) {
   const router = useRouter();
+  const modelo = modeloDoCodigo(codigoDoModelo);
+  const GRUPOS = modelo.grupos;
+  const opcoes = useMemo(() => ({ impostosNoEbitda: true, modelo }), [modelo]);
   const [valores, setValores] = useState(grade);
   const [erro, setErro] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
@@ -62,10 +67,10 @@ export function GradeDoOrcamento({
       });
     }
     return { centavos: g, invalidas: ruins };
-  }, [valores]);
+  }, [valores, GRUPOS]);
 
-  const porMes = useMemo(() => MESES.map((m) => montarLinhas(porGrupoOrcado(centavos, [m]))), [centavos]);
-  const anual = useMemo(() => montarLinhas(porGrupoOrcado(centavos, MESES)), [centavos]);
+  const porMes = useMemo(() => MESES.map((m) => montarLinhas(porGrupoOrcado(centavos, [m], modelo), opcoes)), [centavos, modelo, opcoes]);
+  const anual = useMemo(() => montarLinhas(porGrupoOrcado(centavos, MESES, modelo), opcoes), [centavos, modelo, opcoes]);
   const valorDe = (linhas: ReturnType<typeof montarLinhas>, code: string) => linhas.find((l) => l.code === code)?.centavos ?? 0;
 
   const totalDoMes = (origem: "recebimento" | "pagamento", i: number) =>
@@ -177,7 +182,7 @@ export function GradeDoOrcamento({
               </td>
             </tr>
 
-            {SUBTOTAIS.map((code) => {
+            {modelo.subtotaisDoOrcamento.map((code) => {
               const linha = anual.find((l) => l.code === code)!;
               const destaque = linha.destaque;
               return (

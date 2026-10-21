@@ -29,7 +29,7 @@ import {
   type ResultadoDoDre,
   type ValorDaLinha,
 } from "./calculo";
-import { LINHA_DO_RESULTADO, OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
+import { LINHA_DO_RESULTADO, MODELOS, OPCOES_PADRAO, modeloDoCodigo, type ModeloDoDre, type OpcoesDoDre } from "./estrutura";
 import {
   contaNaDreEconomica,
   resumoDaCobrancaNaDre,
@@ -103,12 +103,10 @@ export function calcularDreEconomica(
   };
 }
 
-const ROTULOS_ECONOMICOS: Record<string, string> = {
-  ebitda: "RESULTADO OPERACIONAL (EBITDA)",
-  ebitda_pct: "Resultado Operacional (EBITDA) sobre Receita Bruta %",
-  resultado_liquido: "RESULTADO DO PERÍODO",
-  resultado_liquido_pct: "Resultado do Período sobre Receita Bruta %",
-};
+// Os rótulos de competência de todos os modelos juntos: os códigos das linhas
+// de resultado não se repetem entre eles ("ebitda" no padrão, "gerador_de_caixa"
+// no por área), então a troca não precisa saber o modelo.
+const ROTULOS_ECONOMICOS: Record<string, string> = Object.assign({}, ...MODELOS.map((m) => m.rotulosEconomicos));
 
 /** Rótulo da linha lido como competência. */
 export function rotuloEconomico(code: string, rotuloOriginal: string): string {
@@ -133,7 +131,22 @@ export function fracaoDaLinha(r: ResultadoDoDre, code: string): number | null {
   return r.linhas.find((l) => l.code === code)?.fracao ?? null;
 }
 
-/** A linha de resultado final da estrutura da 41 — o resultado líquido operacional. */
+/** A linha de resultado final do padrão — o resultado líquido operacional. */
 export const LINHA_DE_RESULTADO = LINHA_DO_RESULTADO;
-/** A linha operacional — o gerador de caixa (EBITDA). */
+/** A linha operacional do padrão — o gerador de caixa (EBITDA). */
 export const LINHA_OPERACIONAL = "ebitda";
+
+/** O modelo de um resultado — o padrão quando ele não diz (21/10/2026). */
+export function modeloDoResultado(r: ResultadoDoDre): ModeloDoDre {
+  return modeloDoCodigo(r.modelo);
+}
+
+/** A linha de resultado final do modelo do resultado. */
+export function linhaDeResultadoDe(r: ResultadoDoDre): string {
+  return modeloDoResultado(r).linhaDoResultado;
+}
+
+/** A linha operacional do modelo do resultado. */
+export function linhaOperacionalDe(r: ResultadoDoDre): string {
+  return modeloDoResultado(r).linhaOperacional;
+}

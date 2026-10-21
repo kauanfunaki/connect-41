@@ -19,7 +19,7 @@
 // em setembro diz que a empresa faturou 25% menos do que faturou.
 
 import { chaveDaCategoria, compararCategorias, montarLinhas, type DetalheDosGrupos, type ValorDaLinha } from "@/lib/dre/calculo";
-import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA, DESCONSIDERAR, OPCOES_PADRAO, type OpcoesDoDre } from "@/lib/dre/estrutura";
+import { NAO_CLASSIFICADO, TRANSFERENCIA, DESCONSIDERAR, OPCOES_PADRAO, modeloDas, type CodigoDoModelo, type OpcoesDoDre } from "@/lib/dre/estrutura";
 
 export type MesDoAno = {
   mes: number;
@@ -52,6 +52,8 @@ export type DreAnual = {
    * por categoria, pode não somar ao centavo a média da linha.
    */
   detalhe: Record<string, CategoriaNoAno[]>;
+  /** O modelo das linhas (21/10/2026) — o relatório anual desenha as dele. Vazio é o padrão. */
+  modelo?: CodigoDoModelo;
 };
 
 export const ROTULO_DO_MES = [
@@ -59,7 +61,6 @@ export const ROTULO_DO_MES = [
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",
 ];
 
-const TODOS_OS_GRUPOS = [...GRUPOS.map((g) => g.code), NAO_CLASSIFICADO, TRANSFERENCIA, DESCONSIDERAR];
 
 /**
  * Monta as quatorze colunas: doze meses, soma e média.
@@ -68,6 +69,8 @@ const TODOS_OS_GRUPOS = [...GRUPOS.map((g) => g.code), NAO_CLASSIFICADO, TRANSFE
  */
 export function dreDoAno(meses: MesDoAno[], opcoes: OpcoesDoDre = OPCOES_PADRAO): DreAnual {
   const porMes = new Map(meses.map((m) => [m.mes, m]));
+  const modelo = modeloDas(opcoes);
+  const TODOS_OS_GRUPOS = [...modelo.grupos.map((g) => g.code), NAO_CLASSIFICADO, TRANSFERENCIA, DESCONSIDERAR];
 
   const colunas: ColunaDoAno[] = [];
   for (let mes = 1; mes <= 12; mes++) {
@@ -96,7 +99,7 @@ export function dreDoAno(meses: MesDoAno[], opcoes: OpcoesDoDre = OPCOES_PADRAO)
   colunas.push({ mes: null, rotulo: "Média", linhas: montarLinhas(media, opcoes) });
   colunas.push({ mes: null, rotulo: "Ano", linhas: montarLinhas(soma, opcoes) });
 
-  return { colunas, mesesComMovimento: comMovimento.length, detalhe: detalheDoAno(comMovimento) };
+  return { colunas, mesesComMovimento: comMovimento.length, detalhe: detalheDoAno(comMovimento), modelo: modelo.codigo };
 }
 
 /**

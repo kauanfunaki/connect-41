@@ -16,8 +16,21 @@
 
 import { chaveDaCategoria } from "@/lib/dre/calculo";
 import { MAPEAMENTO_PADRAO } from "@/lib/dre/mapeamento-padrao";
+import { DE_PARA_POR_AREA } from "@/lib/dre/deParaPorArea";
+import { MODELO_PADRAO, type ModeloDoDre } from "@/lib/dre/estrutura";
 
 const GRUPO_PADRAO = new Map(MAPEAMENTO_PADRAO.map((p) => [chaveDaCategoria(p.categoria), p.grupo]));
+const GRUPO_POR_AREA = new Map(DE_PARA_POR_AREA.map((p) => [chaveDaCategoria(p.categoria), p.grupo]));
+
+/**
+ * O grupo que o de-para do modelo do DRE da empresa dá para o nome (21/10/2026):
+ * no padrão, o `MAPEAMENTO_PADRAO`; no por área, o de-para daquela época. Nulo
+ * quando o de-para não conhece o nome.
+ */
+export function grupoDoDeParaDoModelo(nome: string, modelo: ModeloDoDre = MODELO_PADRAO): string | null {
+  const k = chaveDaCategoria(nome);
+  return (modelo.codigo === "por_area" ? GRUPO_POR_AREA : GRUPO_PADRAO).get(k) ?? null;
+}
 
 export type CategoriaNova = { name: string; kind: "PAGAR" | "RECEBER"; dreGroup: string | null };
 
@@ -27,7 +40,8 @@ const MAX_NOME = 120;
 export function categoriasParaCriar(
   nomesNoArquivo: (string | null)[],
   nomesExistentes: string[],
-  origem: "pagamento" | "recebimento"
+  origem: "pagamento" | "recebimento",
+  modelo: ModeloDoDre = MODELO_PADRAO
 ): CategoriaNova[] {
   const existentes = new Set(nomesExistentes.map(chaveDaCategoria));
   const novas = new Map<string, CategoriaNova>();
@@ -39,7 +53,7 @@ export function categoriasParaCriar(
     novas.set(k, {
       name: nome,
       kind: origem === "pagamento" ? "PAGAR" : "RECEBER",
-      dreGroup: GRUPO_PADRAO.get(k) ?? null,
+      dreGroup: grupoDoDeParaDoModelo(nome, modelo),
     });
   }
   return [...novas.values()];

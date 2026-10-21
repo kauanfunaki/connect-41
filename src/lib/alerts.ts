@@ -492,10 +492,10 @@ async function checkOrcamentoEstourado(tenantId: string, today: Date): Promise<n
 
     const orcamento = (await orcamentosAprovados(tenantId, v.companyId, [ano])).get(ano);
     if (!orcamento) continue;
-    const serie = await serieEconomica(tenantId, v.companyId, [competencia]);
+    const serie = await serieEconomica(tenantId, v.companyId, [competencia], { tipo: "todos" }, { impostosNoEbitda: true, modelo: orcamento.modelo });
     const realizado = serie.get(competencia)?.resultado.porGrupo ?? {};
 
-    const estouro = maiorEstouro(realizado, porGrupoOrcado(orcamento.grade, [mes]), ESTOURO_MINIMO_CENTAVOS);
+    const estouro = maiorEstouro(realizado, porGrupoOrcado(orcamento.grade, [mes], orcamento.modelo), ESTOURO_MINIMO_CENTAVOS);
     if (!estouro) continue;
     if (!(await reservarPorChave(tenantId, alertKey, today))) continue;
 

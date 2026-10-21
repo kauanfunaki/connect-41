@@ -5,7 +5,7 @@ import { Check, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
-import { FORA_DO_RESULTADO, GRUPOS, rotuloDoGrupo } from "@/lib/dre/estrutura";
+import { FORA_DO_RESULTADO, modeloDoCodigo, rotuloDoGrupo, type CodigoDoModelo, type GrupoDoDre, type ModeloDoDre } from "@/lib/dre/estrutura";
 import { totalForaDasLinhas, type Desconsiderada, type ItemDaFila } from "@/lib/dre/fila";
 import {
   classificarCategoria,
@@ -17,6 +17,8 @@ import { formatarReaisDeCentavos as moeda } from "@/lib/format";
 
 type Props = {
   companyId: string;
+  /** O modelo do DRE da empresa (21/10/2026): os grupos do seletor são os dele. */
+  modelo: CodigoDoModelo;
   itens: ItemDaFila[];
   /**
    * Para onde levar o "sem categoria" do financeiro, por lado. Nulo quando
@@ -44,7 +46,8 @@ const SAIDA_MS = 1600;
  * do servidor já chega sem ela (a ação revalida `/dre`); quem a segura na tela
  * pelo tempo do "Salvo" é `saindo`.
  */
-export function FilaDeClassificacao({ companyId, itens, contas, excecoes, desconsideradas }: Props) {
+export function FilaDeClassificacao({ companyId, modelo: codigoDoModelo, itens, contas, excecoes, desconsideradas }: Props) {
+  const modelo = modeloDoCodigo(codigoDoModelo);
   const [estado, setEstado] = useState<Record<string, EstadoDaLinha>>({});
   const [saindo, setSaindo] = useState<Record<string, ItemDaFila>>({});
 
@@ -120,6 +123,7 @@ export function FilaDeClassificacao({ companyId, itens, contas, excecoes, descon
           {linhas.map((i) => (
             <LinhaDaFila
               key={i.categoria}
+              grupos={modelo.grupos}
               item={i}
               estado={estado[i.categoria] ?? null}
               contas={contas}
@@ -129,7 +133,7 @@ export function FilaDeClassificacao({ companyId, itens, contas, excecoes, descon
         </ul>
       )}
 
-      <ForaDoPadrao companyId={companyId} excecoes={excecoes} desconsideradas={desconsideradas} />
+      <ForaDoPadrao companyId={companyId} modelo={modelo} excecoes={excecoes} desconsideradas={desconsideradas} />
     </div>
   );
 }
@@ -140,11 +144,13 @@ export function FilaDeClassificacao({ companyId, itens, contas, excecoes, descon
  * seletor desce para baixo do nome, na largura toda.
  */
 function LinhaDaFila({
+  grupos,
   item,
   estado,
   contas,
   onEscolher,
 }: {
+  grupos: GrupoDoDre[];
   item: ItemDaFila;
   estado: EstadoDaLinha | null;
   contas: Props["contas"];
@@ -188,7 +194,7 @@ function LinhaDaFila({
             <option value="">Classificar em…</option>
             {/* Só os grupos do lado do valor: um recebimento num grupo de despesa
                 fica fora da conta (ver `grupoDoLancamento`) e voltaria para a fila. */}
-            {GRUPOS.filter((g) => g.origem === item.origem).map((g) => (
+            {grupos.filter((g) => g.origem === item.origem).map((g) => (
               <option key={g.code} value={g.code}>
                 {g.label}
               </option>
@@ -243,10 +249,12 @@ function SemCategoria({ item, contas }: { item: ItemDaFila; contas: Props["conta
  */
 function ForaDoPadrao({
   companyId,
+  modelo,
   excecoes,
   desconsideradas,
 }: {
   companyId: string;
+  modelo: ModeloDoDre;
   excecoes: Props["excecoes"];
   desconsideradas: Desconsiderada[];
 }) {
@@ -332,7 +340,7 @@ function ForaDoPadrao({
               {excecoes.map((e) => (
                 <li key={e.categoryId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-1.5">
                   <span className="min-w-0 text-ui text-fg">
-                    {e.nome} <span className="text-fg-muted">→ {rotuloDoGrupo(e.grupo)}</span>
+                    {e.nome} <span className="text-fg-muted">→ {rotuloDoGrupo(e.grupo, modelo)}</span>
                   </span>
                   {voltar(e.categoryId, e.nome)}
                 </li>

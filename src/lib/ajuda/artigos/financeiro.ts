@@ -653,10 +653,19 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Escolher onde entram os impostos",
         passos: [
-          "Ao lado dos filtros, clique em “Impostos no EBITDA” (o padrão) ou em “Impostos fora do resultado”.",
+          "No modelo padrão, ao lado dos filtros, clique em “Impostos no EBITDA” (o padrão) ou em “Impostos fora do resultado”.",
           "Em “Impostos no EBITDA”, os impostos sobre a receita descontam do “Gerador de caixa (EBITDA)” e do resultado líquido.",
           "Em “Impostos fora do resultado”, eles aparecem só na receita líquida; o aviso em amarelo mostra quanto ficou de fora.",
           "A escolha vai junto ao trocar de mês, de aba e de empresa, e também para o arquivo de “Exportar”.",
+        ],
+      },
+      {
+        titulo: "Trocar o modelo do DRE da empresa",
+        passos: [
+          "Com a empresa escolhida, clique em “Modelo”, ao lado dos filtros. O botão diz o modelo em uso: “Padrão” ou “Customizado”.",
+          "Leia a descrição de cada modelo e escolha o que a empresa usa. O painel mostra o que muda antes de gravar: de onde sai o grupo de cada categoria e quais ficam para classificar.",
+          "Clique em “Usar este modelo”. O DRE, a DRE econômica, as análises, o orçamento e a exportação da empresa passam a usar os grupos e as linhas do modelo.",
+          "Se alguma categoria ficou sem grupo, clique em “Classificar” e escolha o grupo dela no modelo novo.",
         ],
       },
       {
@@ -682,6 +691,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Valor sem grupo não entra em nenhuma linha do relatório até ser classificado.",
       "Importar de novo o mesmo mês do Omie substitui o que estava lá.",
       "Para o resultado pelo mês a que cada conta pertence, pago ou não, use a “DRE econômica”.",
+      "O modelo do DRE é de cada empresa: o padrão, ou um customizado como o de despesas por área. Só a coordenação do setor troca o modelo.",
     ],
   },
 
@@ -699,7 +709,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Escolha a empresa em “Empresa” (a tela troca sozinha); depois o mês, e clique em “Aplicar”.",
           "Escolha a visão nas abas: “Mês”, “Acumulado no ano” ou “Últimos 12 meses”.",
           "Leia os cartões do topo: “Receita bruta”, “Margem de contribuição”, “Resultado operacional (EBITDA)” e “Resultado do período”.",
-          "Para tirar os impostos sobre a receita do resultado, clique em “Impostos fora do resultado”, ao lado dos filtros. “Impostos no EBITDA” é o padrão.",
+          "No modelo padrão, para tirar os impostos sobre a receita do resultado, clique em “Impostos fora do resultado”, ao lado dos filtros. “Impostos no EBITDA” é o padrão.",
           "Confira os avisos em amarelo, como lançamentos ainda a conferir que entram no resultado.",
         ],
       },
