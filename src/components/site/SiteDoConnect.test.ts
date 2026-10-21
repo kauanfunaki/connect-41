@@ -363,9 +363,13 @@ describe("as conversas da Ceci no site", () => {
     }
   });
 
-  // Quando a Ceci chegar ao portal, este teste cai — e o "Em breve" sai do site.
-  it("ainda não há agente no Portal do Cliente", () => {
-    expect(AGENT_CATALOG.some((a) => /portal/.test(a.code) || a.sectorCode === "portal")).toBe(false);
+  // A Ceci do portal existe desde 21/10/2026, mas como piloto (2 ou 3
+  // clientes do BPO, ligada por empresa): o site segue com "Em breve" enquanto
+  // ela nasce desligada. Quando virar padrão, este teste cai — e o "Em breve" sai.
+  it("a Ceci do portal ainda é piloto: nasce desligada", () => {
+    const doPortal = AGENT_CATALOG.filter((a) => /portal/.test(a.code) || a.sectorCode === "portal");
+    expect(doPortal.map((a) => a.code)).toEqual(["ceci_portal"]);
+    expect(doPortal.every((a) => !a.padraoLigado)).toBe(true);
   });
 
   it("os cartões de sugestão dizem o mesmo que os do chat", () => {
