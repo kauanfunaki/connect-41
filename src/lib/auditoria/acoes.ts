@@ -31,6 +31,14 @@ const x = (frase: string, extra: Partial<DescricaoDaAcao> = {}): DescricaoDaAcao
 const o = (frase: string, extra: Partial<DescricaoDaAcao> = {}): DescricaoDaAcao => ({ tipo: "outro", frase, ...extra });
 
 export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
+  "github.pause": e("pausou a sincronização do GitHub"),
+  "github.resume": e("retomou a sincronização do GitHub"),
+  "github.disconnect": e("desconectou a conta do GitHub"),
+  "github.discover": o("atualizou a lista de repositórios do GitHub"),
+  "github.track": e("passou a acompanhar um usuário do GitHub"),
+  "github.untrack": e("deixou de acompanhar um usuário do GitHub"),
+  "github.credentials": e("configurou as credenciais do OAuth App do GitHub"),
+  "github.settings": e("configurou os repositórios monitorados do GitHub"),
   "helpdesk.created": c("abriu o chamado"),
   "helpdesk.updated": e("atualizou o chamado"),
   "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
@@ -117,6 +125,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "financeiro.bank_rule.applied": e("aplicou às linhas pendentes do extrato a regra de conciliação"),
   "financeiro.bank_rule.undone": e("desfez o que uma regra de conciliação lançou"),
   "financeiro.entry.created_by_bank_rule": c("lançou pela regra de conciliação o lançamento"),
+  "financeiro.entry.created_by_recurrence": c("criou as próximas contas da repetição"),
   "financeiro.categoria.linha_da_dre": e("ligou a uma linha da DRE a categoria"),
   "financeiro.categoria_da_empresa.criada": c("criou a categoria"),
   "financeiro.categoria_da_empresa.alterada": e("editou a categoria"),
@@ -356,6 +365,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "integration.connect": c("conectou a conta das reuniões", { comNome: false }),
   "integration.disconnect": x("desconectou a conta das reuniões", { comNome: false }),
   "integration.save": e("salvou uma integração"),
+  "integration.webhook_url": e("apontou para o Connect o endereço dos avisos da integração"),
   "integration.omie.conta": e("configurou a conta do Omie da empresa"),
 
   // ── Clientes e planos (só a 41 Tech) ───────────────────────────────────────
@@ -427,6 +437,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   BankStatementImport: "extrato importado",
   BankTransaction: "movimento do extrato",
   BankReconciliationRule: "regra de conciliação",
+  FinanceRecurrence: "repetição",
   BankRuleApplication: "lançamento por regra de conciliação",
   BpoCredential: "senha do repositório",
   Branch: "filial",
@@ -604,6 +615,7 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["solicitacao_assunto.", "configuracoes"],
   ["tenant.", "configuracoes"],
   ["integration.", "configuracoes"],
+  ["github.", "configuracoes"],
   ["subscription.", "planos"],
   ["subscription_plan.", "planos"],
   ["site.", "planos"],

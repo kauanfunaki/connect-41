@@ -76,11 +76,11 @@ export async function getTenantModuleStates(tenantId: string): Promise<ModuleSta
 
   return MODULE_CATALOG.map((m) => {
     const row = overrides.get(m.code);
-    const dono = resolverSetorDoModulo(m.sectorCode, row?.sectorCode);
+    const dono = resolverSetorDoModulo(m.sectorCode, row?.sectorCode, m.fixedSector);
     return {
       ...m,
       sectorCode: dono,
-      sectorCodes: resolverSetoresDoModulo(dono, ligados.porModulo.get(m.code) ?? []),
+      sectorCodes: m.fixedSector ? [dono] : resolverSetoresDoModulo(dono, ligados.porModulo.get(m.code) ?? []),
       catalogSectorCode: m.sectorCode,
       enabled: (allowedByPlan === null || allowedByPlan.has(m.code)) && (row?.enabled ?? m.defaultEnabled),
     };
@@ -113,7 +113,7 @@ export async function setorDoModulo(tenantId: string, code: string): Promise<str
     where: { tenantId_moduleCode: { tenantId, moduleCode: code } },
     select: { sectorCode: true },
   });
-  return resolverSetorDoModulo(def.sectorCode, row?.sectorCode);
+  return resolverSetorDoModulo(def.sectorCode, row?.sectorCode, def.fixedSector);
 }
 
 /**
@@ -126,6 +126,8 @@ export async function setorDoModulo(tenantId: string, code: string): Promise<str
  * ligar a tela a outro setor não muda quem recebe notificação.
  */
 export async function setoresDoModulo(tenantId: string, code: string): Promise<string[] | null> {
+  const def = getModuleDef(code);
+  if (def?.fixedSector) return [def.sectorCode];
   const [dono, ligados] = await Promise.all([setorDoModulo(tenantId, code), lerSetoresLigados(tenantId, code)]);
   if (dono === null) return null;
   return resolverSetoresDoModulo(dono, ligados.porModulo.get(code) ?? []);
@@ -155,6 +157,7 @@ export async function setModuleEnabled(tenantId: string, code: string, enabled: 
  */
 export async function setModuleSector(tenantId: string, code: string, sectorCode: string | null): Promise<void> {
   const def = getModuleDef(code);
+  if (def?.fixedSector && sectorCode && sectorCode !== def.sectorCode) throw new Error("Este módulo é exclusivo do setor de origem.");
   if (!def) return;
   const prisma = getPrisma();
   await prisma.tenantModule.upsert({
@@ -170,7 +173,9 @@ export async function setModuleSector(tenantId: string, code: string, sectorCode
  * então quem chama já tira o dono e os repetidos (ver `setoresParaLigar`).
  */
 export async function setModuleSharedSectors(tenantId: string, code: string, sectorCodes: readonly string[]): Promise<void> {
-  if (!getModuleDef(code)) return;
+  const def = getModuleDef(code);
+  if (!def) return;
+  if (def.fixedSector && sectorCodes.length) throw new Error("Este módulo é exclusivo do setor de origem.");
   const prisma = getPrisma();
   await prisma.$transaction([
     prisma.tenantModuleSector.deleteMany({ where: { tenantId, moduleCode: code } }),

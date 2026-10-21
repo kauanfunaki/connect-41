@@ -14,6 +14,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Aviso } from "@/components/ui/Aviso";
+import { ApontarAvisos } from "@/components/admin/ApontarAvisos";
 
 type Props = {
   hasConfig: boolean;
@@ -137,9 +138,13 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
         <div className="pt-4 border-t border-border">
           <p className="text-helper text-fg-muted mb-1.5">
             Cole esta URL na tela de Webhooks do Chatwoot (Configurações → Integrações → Webhooks) para receber
-            atualizações incrementais:
+            atualizações incrementais — ou, se o webhook já existe com outro endereço, aponte-o daqui:
           </p>
           <code className="block text-fs-2 bg-surface-hover border border-border rounded-md px-3 py-2 break-all">{webhookUrl}</code>
+          {/* O webhook já existe no Chatwoot com o endereço antigo (21/10): o Connect troca sozinho, pela API. */}
+          <div className="mt-2">
+            <ApontarAvisos alvo={{ tipo: "chatwoot" }} />
+          </div>
         </div>
       )}
 
