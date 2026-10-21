@@ -1697,6 +1697,10 @@ model Company {
   /// Administração › Portal do cliente › Ceci. Ligada na matriz, vale para as
   /// filiais que o acesso vê por ela. Ver src/lib/portal/ceci.ts.
   ceciNoPortal          Boolean       @default(false)
+  /// O robô da pasta de rede traz os documentos desta empresa para os
+  /// Arquivos (21/10/2026). Desligado por padrão: o piloto liga empresa a
+  /// empresa em Administração › Arquivos. Ver src/lib/drive/pastaDeRede.ts.
+  pastaDeRedeNoDrive    Boolean       @default(false)
   /// A virada do Omie para o Connect (lote E, 20/10/2026): desde quando o
   /// Connect é a fonte do financeiro desta empresa. Nula enquanto as contas
   /// vêm do Omie — até a virada, a conta que veio de lá é do Omie: o Connect
@@ -1769,6 +1773,7 @@ model Company {
   // recebe documento fiscal. A constraint garante a unicidade; quem garante a
   // regra é o tipo, não o banco.
   driveFolders          DriveFolder[]
+  driveDaRede           DriveNetworkFile[]
   @@unique([tenantId, cnpj])
   // Mesmo desenho do CNPJ, para o cliente pessoa física. Dois índices únicos
   // separados, e não um sobre um campo só de documento: o par (tenant, CPF) e
@@ -8292,6 +8297,32 @@ model DriveFileAccess {
 }
 
 /// O modelo de pastas que toda empresa ganha ao abrir os Arquivos (/admin/arquivos).
+/// O que o robô da pasta de rede já trouxe para os Arquivos (21/10/2026): um
+/// por caminho e conteúdo. O mesmo arquivo reenviado não entra de novo; o
+/// mesmo caminho com conteúdo novo entra como outro arquivo. Fica mesmo depois
+/// que a equipe apaga o arquivo nos Arquivos — senão o robô o traria de volta.
+model DriveNetworkFile {
+  id           String   @id @default(uuid())
+  tenantId     String
+  companyId    String
+  /// O caminho dentro da pasta da empresa na rede, com "/" ("Fiscal/2026/nota.pdf").
+  relativePath String   @db.VarChar(500)
+  /// SHA-256 do caminho: o caminho inteiro não cabe no índice único do MySQL.
+  pathHash     String   @db.Char(64)
+  /// SHA-256 do conteúdo, em hexadecimal.
+  sha256       String   @db.Char(64)
+  watcherSlug  String   @db.VarChar(80)
+  /// O arquivo criado nos Arquivos. Nulo enquanto o envio está em curso.
+  driveFileId  String?
+  createdAt    DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, companyId, pathHash, sha256])
+  @@index([tenantId, companyId, createdAt])
+  @@map("drive_network_files")
+}
+
 model DriveTemplateFolder {
   id               String   @id @default(uuid())
   tenantId         String

@@ -14,6 +14,7 @@
     "test:ops:db": "node scripts/test-ops-db.mjs",
     "test:ops:ui": "node scripts/test-ops-ui.mjs",
     "ops:heartbeat": "node scripts/ops-heartbeat.mjs",
+    "rede:robo": "node scripts/pasta-de-rede.mjs",
     "test:helpdesk": "vitest run src/lib/chamados",
     "test:helpdesk:db": "node scripts/test-helpdesk-db.mjs",
     "test:helpdesk:ui": "node scripts/test-helpdesk-ui.mjs",

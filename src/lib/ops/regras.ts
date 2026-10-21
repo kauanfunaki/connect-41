@@ -59,5 +59,5 @@ export function caminhoDoEvento(evento: { filename: string; filenameRenamed: str
 }
 
 export function ehIngestaoOps(method: string, pathname: string) {
-  return method === "POST" && (pathname === "/api/ops/events" || /^\/api\/ops\/watchers\/[a-z0-9]+(?:[-_][a-z0-9]+)*\/heartbeat$/.test(pathname));
+  return method === "POST" && (pathname === "/api/ops/events" || /^\/api\/ops\/watchers\/[a-z0-9]+(?:[-_][a-z0-9]+)*\/(?:heartbeat|arquivos)$/.test(pathname));
 }
