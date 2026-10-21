@@ -41,6 +41,7 @@ import { lerRateio, resumoDoRateio } from "@/lib/financeiro/rateio";
 import { conferirRateio, gravarRateio } from "@/lib/financeiro/rateioServidor";
 import { lerRetencoes, liquidoDaConta, resumoDasRetencoes } from "@/lib/financeiro/retencoes";
 import { aplicarRetencoes, cancelarContasDosImpostos, RecusaDaRetencao } from "@/lib/financeiro/retencoesServidor";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 import { randomUUID } from "crypto";
 
 const MODULE = "bpo_lancamentos";
@@ -87,6 +88,9 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const companyId = texto("companyId");
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const hojeKey = saoPauloParts(new Date()).dateKey;
   // O rateio (lote D, 20/10): com ele, a categoria, o centro e o projeto da
@@ -415,6 +419,9 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
 
   const c = await contexto(conta.companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   // A conta de um imposto retido sai pela retenção, na conta de origem — senão
   // a retenção ficaria dizendo de um imposto que ninguém vai recolher.
   if (conta.retentionOrigin) return { error: "Conta de imposto retido — tire a retenção na edição da conta de origem." };
@@ -479,6 +486,9 @@ export async function cancelarProximasDaSerie(entryId: string): Promise<Resultad
 
   const c = await contexto(conta.companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const daSerie = await prisma.financeEntry.findMany({
     where: { tenantId: c.tenantId, companyId: conta.companyId, recurrenceId: conta.recurrenceId, recurrenceIndex: { gte: conta.recurrenceIndex } },
@@ -605,6 +615,9 @@ export type ResultadoDaImportacaoCsv =
 export async function confirmarImportacao(companyId: string, texto: string): Promise<ResultadoDaImportacaoCsv> {
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   if (texto.length > MAXIMO_DE_BYTES) return { error: "Arquivo maior que 2 MB." };
 
   const previa = await prepararParaEmpresa(c.tenantId, companyId, texto);

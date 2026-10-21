@@ -38,6 +38,8 @@ import {
 import { lerPassos, textoDosPassos } from "@/lib/financeiro/cobranca/regua";
 import { MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
 import { centroComum } from "@/lib/financeiro/centroDeCusto";
+import { empresasDasContas, lerEmpresaEmFoco, recusaDoFoco } from "@/lib/empresas/focoServidor";
+import { motivoForaDoFoco } from "@/lib/empresas/foco";
 
 const MODULE = MODULO_DE_COBRANCA;
 
@@ -108,6 +110,9 @@ export async function registrarContato(formData: FormData): Promise<Resultado> {
   const entryId = texto(formData, "entryId");
   const titulo = await tituloDoTenant(c.prisma, c.tenantId, entryId);
   if (!titulo || titulo.kind !== "RECEBER") return { error: "Título não encontrado." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [titulo.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   // Pago e cancelado comum não estão em cobrança; renegociado cobra-se nas
   // parcelas. Perda aceita contato: é justamente o que se registra antes de
   // reverter uma perda porque o sacado reapareceu.
@@ -162,6 +167,9 @@ export async function atribuirResponsavel(entryId: string, userId: string): Prom
   if (!c.ok) return { error: c.erro };
   const titulo = await tituloDoTenant(c.prisma, c.tenantId, entryId);
   if (!titulo || titulo.kind !== "RECEBER") return { error: "Título não encontrado." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [titulo.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   let nome: string | null = null;
   if (userId) {
@@ -205,6 +213,9 @@ export async function criarAcordo(formData: FormData): Promise<ResultadoDoAcordo
   const ids = [...new Set(formData.getAll("entryIds").map((v) => String(v)).filter(Boolean))];
   if (ids.length === 0) return { error: "Escolha ao menos um título." };
   if (ids.length > 200) return { error: "Títulos demais num só acordo." };
+  // Com foco (21/10/2026), um título de outra empresa recusa o acordo inteiro.
+  const foraDoFoco = await recusaDoFoco(c.ctx, empresasDasContas(c.tenantId, ids));
+  if (foraDoFoco) return { error: foraDoFoco };
   const hoje = hojeKey();
 
   const termos = validarTermosDoAcordo(
@@ -382,14 +393,19 @@ export async function quebrarAcordo(acordoId: string, motivoBruto: string): Prom
   if (!c.ok) return { error: c.erro };
   const m = motivoOpcional(motivoBruto);
   if (!m.ok) return { error: m.erro };
+  // O foco lido antes da transação (21/10/2026): lá dentro, só a regra, sem consulta a mais.
+  const foco = await lerEmpresaEmFoco(c.ctx);
 
   try {
     await c.prisma.$transaction(async (tx) => {
       const a = await tx.collectionAgreement.findFirst({
         where: { id: acordoId, tenantId: c.tenantId },
-        select: { id: true, status: true, parcelas: { select: { id: true, status: true, paidAt: true } } },
+        select: { id: true, status: true, companyId: true, parcelas: { select: { id: true, status: true, paidAt: true } } },
       });
       if (!a) throw new Recusa("Acordo não encontrado.");
+      // Uma empresa por vez no BPO (21/10/2026): o acordo, as parcelas e os originais são da mesma empresa.
+      const foraDoFoco = motivoForaDoFoco(foco, [a.companyId]);
+      if (foraDoFoco) throw new Recusa(foraDoFoco);
       const v = podeQuebrar(a.status);
       if (!v.pode) throw new Recusa(v.motivo);
       const mudou = await tx.collectionAgreement.updateMany({
@@ -429,6 +445,8 @@ export async function desfazerAcordo(acordoId: string, motivoBruto: string): Pro
   if (!c.ok) return { error: c.erro };
   const m = motivoOpcional(motivoBruto);
   if (!m.ok) return { error: m.erro };
+  // O foco lido antes da transação (21/10/2026): lá dentro, só a regra, sem consulta a mais.
+  const foco = await lerEmpresaEmFoco(c.ctx);
 
   try {
     await c.prisma.$transaction(async (tx) => {
@@ -437,11 +455,15 @@ export async function desfazerAcordo(acordoId: string, motivoBruto: string): Pro
         select: {
           id: true,
           status: true,
+          companyId: true,
           parcelas: { select: { id: true, status: true, closeReason: true, paidAt: true } },
           originais: { select: { id: true, status: true, closeReason: true, statusBeforeClose: true } },
         },
       });
       if (!a) throw new Recusa("Acordo não encontrado.");
+      // Uma empresa por vez no BPO (21/10/2026): o acordo, as parcelas e os originais são da mesma empresa.
+      const foraDoFoco = motivoForaDoFoco(foco, [a.companyId]);
+      if (foraDoFoco) throw new Recusa(foraDoFoco);
       const v = podeDesfazer(a.status, a.parcelas);
       if (!v.pode) throw new Recusa(v.motivo);
 
@@ -502,6 +524,9 @@ export async function baixarPorPerda(entryId: string, motivoBruto: string): Prom
 
   const titulo = await tituloDoTenant(c.prisma, c.tenantId, entryId);
   if (!titulo) return { error: "Título não encontrado." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [titulo.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const v = podeBaixarPorPerda(
     {
       kind: titulo.kind,
@@ -574,9 +599,12 @@ export async function reverterPerda(entryId: string, motivoBruto: string): Promi
 
   const titulo = await c.prisma.financeEntry.findFirst({
     where: { id: entryId, tenantId: c.tenantId },
-    select: { id: true, status: true, closeReason: true, statusBeforeClose: true, amount: true, lossReason: true },
+    select: { id: true, status: true, closeReason: true, statusBeforeClose: true, amount: true, lossReason: true, companyId: true },
   });
   if (!titulo) return { error: "Título não encontrado." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [titulo.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const v = podeReverterPerda(titulo);
   if (!v.pode) return { error: v.motivo };
 
@@ -649,6 +677,9 @@ export async function alternarEmpresaNaRegua(companyId: string, fora: boolean): 
   if (!c.gerencia) return { error: "Só a coordenação altera a régua." };
   const empresa = await c.prisma.company.findFirst({ where: { id: companyId, tenantId: c.tenantId }, select: { id: true } });
   if (!empresa) return { error: "Empresa não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [empresa.id]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   if (fora) {
     // Idempotente: tirar de novo quem já está fora não é erro.

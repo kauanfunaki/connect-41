@@ -38,6 +38,9 @@ import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccord
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { safeFindConversations } from "@/lib/chatwoot/conversations";
 import { gerarResumoEmpresa } from "./ai-actions";
+import { TrabalharNestaEmpresa } from "@/components/empresas/BotoesDoFoco";
+import { lerEmpresaEmFoco, podeUsarOFoco } from "@/lib/empresas/focoServidor";
+import { situacaoAceitaNoFoco } from "@/lib/empresas/foco";
 import { gravarUltimaEmpresa } from "@/lib/empresas/ultimaEmpresa";
 import { acessoAoPortalDaEmpresa } from "@/lib/portal/acessoNaFicha";
 import { FALTA_ATUALIZAR_O_BANCO_DO_PORTAL } from "@/lib/portal/empresasDaContaDb";
@@ -166,6 +169,12 @@ export default async function EmpresaPage({
   );
   const usersBySector = Object.fromEntries(usersBySectorEntries);
 
+  // "Trabalhar nesta empresa" (BPO, 21/10/2026): para quem trabalha nas telas
+  // do BPO, e só em empresa em atividade — a régua do foco (`foco.ts`).
+  const [podeFocar, emFoco] = situacaoAceitaNoFoco(company.status)
+    ? await Promise.all([podeUsarOFoco(ctx), lerEmpresaEmFoco(ctx)])
+    : [false, null];
+
   return (
     <PageContainer>
       {/* Era uma cópia à mão da trilha (até 30/09), com outro espaçamento
@@ -195,6 +204,7 @@ export default async function EmpresaPage({
         canRemoveLogo={podeExcluir(ctx)}
         canRequestHandoff={canRequestHandoff}
         podeExcluir={podeExcluir(ctx)}
+        foco={podeFocar ? <TrabalharNestaEmpresa companyId={company.id} emFoco={emFoco?.companyId === company.id} /> : undefined}
       />
 
       <CompanyDetailTabs

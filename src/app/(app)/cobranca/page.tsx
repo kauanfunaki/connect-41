@@ -85,8 +85,12 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
   // explícita (`?empresa=todas`): a fila para em 2.000 títulos e os acordos em
   // 500. A régua é do escritório e não depende da empresa.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true });
-  const escopo = escopoFinanceiroDaEscolha(ctx.tenantId, escolha, { permitirTodas: true });
+  // Com uma empresa em foco (21/10/2026), só a base dela; "Todas" é a base.
+  const { escolha, noSeletor, foco, empresasDeTodas } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, {
+    permitirTodas: true,
+    comFoco: true,
+  });
+  const escopo = escopoFinanceiroDaEscolha(ctx.tenantId, escolha, { permitirTodas: true, grupo: empresasDeTodas });
   const naUrl = empresaNaUrl(escolha);
   // Trocar de aba conserva a empresa — até 13/10/2026 as abas a perdiam.
   const daAba = (href: string) => (naUrl ? `${href}${href.includes("?") ? "&" : "?"}empresa=${encodeURIComponent(naUrl)}` : href);
@@ -100,10 +104,11 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
       {aba !== "regua" && (
         <FiltroDaEmpresa
           acao="/cobranca"
-          empresas={empresas}
+          empresas={noSeletor}
           valor={naUrl ?? null}
           todas="explicita"
           manter={{ aba: aba === "fila" ? undefined : aba }}
+          foco={foco}
         />
       )}
       <div className="mt-4">
@@ -120,14 +125,14 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
         <EscolhaAEmpresa
           escolha={escolha}
           porQue="Para não carregar os títulos de todos os clientes de uma vez, a cobrança abre numa empresa."
-          todasHref={hrefDaEmpresa("/cobranca", "", { todas: "explicita", manter: { aba: aba === "fila" ? undefined : aba } })}
+          todasHref={foco ? undefined : hrefDaEmpresa("/cobranca", "", { todas: "explicita", manter: { aba: aba === "fila" ? undefined : aba } })}
         />
       )}
       {aba === "fila" && escopo && (
         <Fila tenantId={ctx.tenantId} userId={ctx.userId} setor={setor} escopo={escopo} escolha={escolha} params={params} />
       )}
       {aba === "acordos" && escopo && <Acordos escopo={escopo} status={params.status} podeAgir={podeAgir} />}
-      {aba === "regua" && <Regua tenantId={ctx.tenantId} empresas={empresas} gerencia={gerencia} />}
+      {aba === "regua" && <Regua tenantId={ctx.tenantId} empresas={noSeletor} soDaBase={empresasDeTodas} gerencia={gerencia} />}
     </PageContainer>
   );
 }
@@ -607,8 +612,19 @@ async function Acordos({
 
 // ─── Régua ──────────────────────────────────────────────────────────────────
 
-async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empresas: EmpresaDoSeletor[]; gerencia: boolean }) {
-  const d = await dadosDaAbaRegua(tenantId);
+async function Regua({
+  tenantId,
+  empresas,
+  soDaBase,
+  gerencia,
+}: {
+  tenantId: string;
+  empresas: EmpresaDoSeletor[];
+  /** Com uma empresa em foco (21/10/2026), as listas mostram só a base dela. */
+  soDaBase: string[] | null;
+  gerencia: boolean;
+}) {
+  const d = await dadosDaAbaRegua(tenantId, soDaBase);
   const fora = new Set(d.foraDaRegua.map((f) => f.companyId));
 
   return (

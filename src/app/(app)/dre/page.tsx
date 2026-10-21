@@ -5,10 +5,9 @@ import { getAuthContext, canActOnSector, type AuthContext } from "@/lib/auth/con
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { SeletorDeEmpresaDaTela } from "@/components/empresas/SeletorDeEmpresaDaTela";
-import { EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { EscolhaAEmpresa, FiltroDaEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
-import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
+import { escolherEmpresaDaTela, type FocoNaTela } from "@/lib/empresas/ultimaEmpresa";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { Card } from "@/components/ui/Card";
@@ -84,7 +83,8 @@ export default async function DrePage({
   // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
   // (13/10/2026). Era a primeira em ordem alfabética, e a classificação e o
   // "Importar do Omie" gravavam nela sem ninguém ter escolhido.
-  const { escolha, empresa: daTela } = await escolherEmpresaDaTela(ctx, empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
+  const { escolha, empresa: daTela, noSeletor, foco } = await escolherEmpresaDaTela(ctx, empresa, empresas, { comFoco: true });
   const companyId = daTela?.id ?? null;
   if (!daTela || !companyId) {
     return (
@@ -95,7 +95,7 @@ export default async function DrePage({
         ) : (
           <>
             <div className="mb-4">
-              <SeletorDeEmpresa empresas={empresas} companyId={null} visao={visao} />
+              <SeletorDeEmpresa empresas={noSeletor} foco={foco} companyId={null} visao={visao} />
             </div>
             <EscolhaAEmpresa escolha={escolha} porQue="A DRE é de uma empresa por vez." />
           </>
@@ -154,7 +154,7 @@ export default async function DrePage({
           {/* Empresa e período, depois as abas — a ordem da família da DRE
               (padrão aceito pelo Kauan em 08/10/2026). */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <SeletorDeEmpresa empresas={empresas} companyId={companyId} visao={visao} impostos={impostos} />
+            <SeletorDeEmpresa empresas={noSeletor} foco={foco} companyId={companyId} visao={visao} impostos={impostos} />
             <FiltrosDaTela
               campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
             />
@@ -207,7 +207,7 @@ export default async function DrePage({
           subtitle="Demonstrativo de resultado, por empresa e mês."
           action={<ImportarDoOmie companyId={companyId} />}
         />
-        <SeletorDeEmpresa empresas={empresas} companyId={companyId} visao={visao} />
+        <SeletorDeEmpresa empresas={noSeletor} foco={foco} companyId={companyId} visao={visao} />
         {/* Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo. */}
         <Card className="mt-4">
           <EmptyState
@@ -267,7 +267,7 @@ export default async function DrePage({
             embaixo das abas. Numa lista com busca, e não 18 pílulas numa
             fileira — a regra da conferência de 30/09 para competência. */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <SeletorDeEmpresa empresas={empresas} companyId={companyId} visao={visao} impostos={impostos} />
+          <SeletorDeEmpresa empresas={noSeletor} foco={foco} companyId={companyId} visao={visao} impostos={impostos} />
           <FiltrosDaTela
             campos={[
               {
@@ -435,18 +435,23 @@ function SeletorDeEmpresa({
   companyId,
   visao,
   impostos,
+  foco,
 }: {
   empresas: EmpresaNaAba[];
   companyId: string | null;
   visao: string | undefined;
   impostos?: string;
+  /** A empresa em foco (21/10/2026) — a fileira avisa o endereço que pedia outra. */
+  foco: FocoNaTela | null;
 }) {
   return (
-    <SeletorDeEmpresaDaTela
+    <FiltroDaEmpresa
+      className=""
       empresas={empresas.map((e) => ({ ...e, nome: e.tradeName || e.name }))}
       valor={companyId}
       acao="/dre"
       manter={{ visao: visao === "ano" ? "ano" : undefined, impostos: impostos === "fora" ? "fora" : undefined }}
+      foco={foco}
     />
   );
 }

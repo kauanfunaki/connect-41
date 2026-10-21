@@ -6,7 +6,7 @@ import { saoPauloParts } from "@/lib/agenda";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatarNumero } from "@/lib/format";
-import { TODAS_AS_EMPRESAS } from "@/lib/empresas/escolhaDaEmpresa";
+import { leituraNoFoco } from "@/lib/empresas/focoServidor";
 import { TIPO_DO_XLSX } from "@/lib/planilha/tabelaDoExcel";
 import { centavosDeDecimal } from "./contas";
 import { listarContas, type LinhaDaConta, type TipoDeConta } from "./data";
@@ -40,9 +40,13 @@ export async function exportarContas(req: NextRequest, kind: TipoDeConta, modulo
   const competencia = /^\d{4}-\d{2}$/.test(sp.get("competencia") ?? "") ? sp.get("competencia")! : undefined;
   const recorte = recorteDaUrl(kind, sp.get("recorte"));
 
+  // Com uma empresa em foco (21/10/2026): "todas" é a base, e outra empresa não sai.
+  const noFoco = await leituraNoFoco(ctx, empresa);
+  if (!noFoco.ok) return NextResponse.json({ error: noFoco.erro }, { status: 403 });
+  const { empresaId, empresaIds } = noFoco;
+
   const agora = new Date();
-  const empresaId = empresa === TODAS_AS_EMPRESAS ? undefined : empresa;
-  const resultado = await listarContas(ctx.tenantId, kind, { recorte, competencia, empresaId }, agora, LIMITE_DA_EXPORTACAO);
+  const resultado = await listarContas(ctx.tenantId, kind, { recorte, competencia, empresaId, empresaIds }, agora, LIMITE_DA_EXPORTACAO);
   const diaDe = (d: Date) => saoPauloParts(d).dateKey;
   const nome = [kind === "PAGAR" ? "contas-a-pagar" : "contas-a-receber", competencia ?? recorte, saoPauloParts(agora).dateKey].join("-");
   const cabecalhos = (tipo: string, extensao: string) => ({
@@ -62,7 +66,7 @@ export async function exportarContas(req: NextRequest, kind: TipoDeConta, modulo
       ? getPrisma()
           .company.findFirst({ where: { id: empresaId, tenantId: ctx.tenantId }, select: { name: true, displayName: true } })
           .then((c) => (c ? nomeExibicao(c) : empresaId))
-      : Promise.resolve("Todas as empresas"),
+      : Promise.resolve(empresaIds ? "Todas da base (matriz e filiais)" : "Todas as empresas"),
   ]);
   const recortes: readonly { chave: string; rotulo: string }[] = kind === "PAGAR" ? RECORTES_A_PAGAR : RECORTES_A_RECEBER;
   const quando = saoPauloParts(agora);

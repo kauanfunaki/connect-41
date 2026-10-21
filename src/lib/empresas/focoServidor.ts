@@ -7,13 +7,14 @@
 // no foco sem ninguém escolher de novo, e a empresa excluída ou inativada
 // encerra o foco sozinha.
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { getPrisma } from "@/lib/prisma";
-import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { canViewSector, type AuthContext } from "@/lib/auth/context";
 import { sessionCookieDomain } from "@/lib/auth/cookies";
 import { getTenantModuleStates } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
+import { TODAS_AS_EMPRESAS } from "./escolhaDaEmpresa";
 import {
   COOKIE_DO_FOCO,
   MODULOS_DO_FOCO,
@@ -31,23 +32,29 @@ import {
  */
 export async function empresaParaOFoco(ctx: AuthContext, companyId: string): Promise<EmpresaEmFoco | null> {
   if (!ctx.tenantId || !companyId) return null;
+  return empresaConferida(ctx.tenantId, companyId);
+}
+
+// Uma vez por requisição (21/10/2026): o layout, a tela e o seletor leem o
+// foco na mesma ida ao servidor. O escopo de empresa é o escritório inteiro
+// (`scopedCompanyWhere`), então o tenant basta como chave.
+const empresaConferida = cache(async (tenantId: string, companyId: string): Promise<EmpresaEmFoco | null> => {
   const prisma = getPrisma();
-  // `id` depois do escopo, como em `ultimaEmpresa.ts`: nada no escopo troca a empresa.
   const empresa = await prisma.company.findFirst({
-    where: { ...(await scopedCompanyWhere(ctx)), id: companyId },
+    where: { tenantId, id: companyId },
     select: { id: true, name: true, displayName: true, logoUrl: true, status: true, parentCompanyId: true },
   });
   if (!empresa || !situacaoAceitaNoFoco(empresa.status)) return null;
 
   const matrizId = matrizDoFoco(empresa);
   const base = await prisma.company.findMany({
-    where: { tenantId: ctx.tenantId, OR: [{ id: matrizId }, { parentCompanyId: matrizId }] },
+    where: { tenantId, OR: [{ id: matrizId }, { parentCompanyId: matrizId }] },
     select: { id: true },
   });
   const grupo = new Set(base.map((e) => e.id));
   grupo.add(empresa.id);
   return { companyId: empresa.id, nome: nomeExibicao(empresa), logoUrl: empresa.logoUrl, matrizId, grupo: [...grupo] };
-}
+});
 
 /**
  * A empresa em foco de quem está logado, já conferida — ou `null`, sem foco.
@@ -62,13 +69,57 @@ export async function lerEmpresaEmFoco(ctx: AuthContext): Promise<EmpresaEmFoco 
  * A trava de gravação, num ponto só: por que a action deve recusar — ou
  * `null`, quando pode gravar (sem foco, ou com todas as empresas dentro dele).
  * Toda action que grava dinheiro nas telas do foco chama esta, com a empresa
- * de cada registro que vai mexer, antes de gravar.
+ * de cada registro que vai mexer (e a de destino, quando muda), antes de
+ * gravar. A recusa é da gravação inteira: num lote, uma conta de fora basta.
+ *
+ * As empresas podem vir prontas ou numa função (21/10/2026): sem foco — o
+ * caso de quase todo mundo —, a função nem roda, e a action não paga a
+ * consulta a mais.
  *
  * Erro de banco aqui sobe: na dúvida, a action não grava.
  */
-export async function recusaDoFoco(ctx: AuthContext, companyIds: readonly string[]): Promise<string | null> {
-  if (companyIds.length === 0) return null;
-  return motivoForaDoFoco(await lerEmpresaEmFoco(ctx), companyIds);
+export async function recusaDoFoco(
+  ctx: AuthContext,
+  empresas: readonly (string | null | undefined)[] | (() => Promise<readonly (string | null | undefined)[]>)
+): Promise<string | null> {
+  if (Array.isArray(empresas) && empresas.length === 0) return null;
+  const foco = await lerEmpresaEmFoco(ctx);
+  if (!foco) return null;
+  const lista = typeof empresas === "function" ? await empresas() : empresas;
+  return motivoForaDoFoco(foco, lista.filter((id): id is string => typeof id === "string" && id.length > 0));
+}
+
+/**
+ * As empresas dos lançamentos (contas a pagar e a receber), para a trava —
+ * só as deste escritório; id de fora não entra (a action já não o acha).
+ */
+export function empresasDasContas(tenantId: string, entryIds: readonly string[]): () => Promise<string[]> {
+  return async () => {
+    if (entryIds.length === 0) return [];
+    const linhas = await getPrisma().financeEntry.findMany({
+      where: { tenantId, id: { in: [...entryIds] } },
+      select: { companyId: true },
+    });
+    return linhas.map((l) => l.companyId);
+  };
+}
+
+/** O que uma exportação lê, com o foco respeitado: a empresa pedida, ou as de "todas". */
+export type LeituraNoFoco =
+  | { ok: true; empresaId: string | undefined; empresaIds: string[] | undefined }
+  | { ok: false; erro: string };
+
+/**
+ * A empresa de uma exportação (`?empresa=`), com o foco (21/10/2026): o
+ * arquivo sai pelo endereço, sem passar pela tela, então a trava é aqui. Com
+ * foco, "todas" é a base (matriz e filiais) e outra empresa é recusada; sem
+ * foco, nada muda.
+ */
+export async function leituraNoFoco(ctx: AuthContext, empresa: string): Promise<LeituraNoFoco> {
+  const foco = await lerEmpresaEmFoco(ctx);
+  if (empresa === TODAS_AS_EMPRESAS) return { ok: true, empresaId: undefined, empresaIds: foco ? [...foco.grupo] : undefined };
+  const recusa = motivoForaDoFoco(foco, [empresa], "exportar");
+  return recusa ? { ok: false, erro: recusa } : { ok: true, empresaId: empresa, empresaIds: undefined };
 }
 
 /** Quem vê o setor de alguma tela do foco, com o módulo ligado, pode trabalhar numa empresa por vez. */

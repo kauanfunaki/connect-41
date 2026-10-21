@@ -22,9 +22,10 @@
 // Com uma empresa em foco (15/10/2026, `foco.ts`), a tela só oferece a matriz
 // e as filiais dela, e a ordem passa a ser: a da URL, se for do foco; a
 // empresa em foco; a última aberta, se for do foco e a escolhida não estiver
-// na tela. A URL de outra empresa (ou de "todas") não abre a tela dela: a
-// tela fica na empresa em foco e avisa o que o endereço pedia, com o botão
-// para sair do foco e abrir a outra (`pedidaForaDoFoco`).
+// na tela. A URL de outra empresa não abre a tela dela: a tela fica na
+// empresa em foco e avisa o que o endereço pedia, com o botão para sair do
+// foco e abrir a outra (`pedidaForaDoFoco`). "Todas", com foco, é a base
+// inteira — a matriz e as filiais (21/10/2026: a BLD vê as 21 juntas).
 
 /** O valor de `?empresa=` que pede todas as empresas, nas telas que oferecem. */
 export const TODAS_AS_EMPRESAS = "todas";
@@ -79,8 +80,9 @@ export function resolverEmpresaDaTela({ pedida, ultima, disponiveis, permitirTod
   return { tipo: "escolher", motivo: "nenhuma" };
 }
 
-// Com foco, só as empresas do grupo contam; "Todas" deixa de existir — o foco
-// é justamente não ver as outras.
+// Com foco, só as empresas do grupo contam. "Todas" vira "todas da base": só
+// existe quando a tela permite e mostra mais de uma empresa do grupo — numa
+// empresa sem filial, "todas" seria ela mesma.
 function resolverNoFoco(
   pedida: string,
   ultima: string | null,
@@ -94,10 +96,11 @@ function resolverNoFoco(
 
   if (pedida !== "") {
     if (noFoco.has(pedida)) return { tipo: "empresa", companyId: pedida, origem: "url" };
+    if (pedida === TODAS_AS_EMPRESAS && todasNoFoco(permitirTodas, naTela.length)) return { tipo: "todas" };
     // Empresa do foco que não está nesta tela, ou id que não existe: como sem
-    // foco. Outra empresa da tela (ou "todas") segue abaixo, na empresa em
-    // foco — e a tela avisa (`pedidaForaDoFoco`).
-    if (!foraDoGrupo(pedida, naLista, permitirTodas, grupo)) return { tipo: "escolher", motivo: "invalida" };
+    // foco. Outra empresa da tela (ou "todas" numa empresa só) segue abaixo,
+    // na empresa em foco — e a tela avisa (`pedidaForaDoFoco`).
+    if (!foraDoGrupo(pedida, naLista, permitirTodas, grupo, naTela.length)) return { tipo: "escolher", motivo: "invalida" };
   }
 
   if (noFoco.has(foco.companyId)) return { tipo: "empresa", companyId: foco.companyId, origem: "foco" };
@@ -108,19 +111,33 @@ function resolverNoFoco(
   return { tipo: "escolher", motivo: naTela.length === 0 ? "foco-fora-da-tela" : "nenhuma" };
 }
 
-function foraDoGrupo(pedida: string, naLista: ReadonlySet<string>, permitirTodas: boolean, grupo: ReadonlySet<string>): boolean {
-  return pedida === TODAS_AS_EMPRESAS ? permitirTodas : naLista.has(pedida) && !grupo.has(pedida);
+/** Com foco, a tela oferece "Todas" (da base) só com mais de uma empresa do grupo nela. */
+export function todasNoFoco(permitirTodas: boolean, empresasDoGrupoNaTela: number): boolean {
+  return permitirTodas && empresasDoGrupoNaTela > 1;
+}
+
+function foraDoGrupo(
+  pedida: string,
+  naLista: ReadonlySet<string>,
+  permitirTodas: boolean,
+  grupo: ReadonlySet<string>,
+  doGrupoNaTela: number
+): boolean {
+  if (pedida === TODAS_AS_EMPRESAS) return permitirTodas && !todasNoFoco(permitirTodas, doGrupoNaTela);
+  return naLista.has(pedida) && !grupo.has(pedida);
 }
 
 /**
- * A URL pediu, com foco, outra empresa que a tela mostraria (ou "todas"): a
- * tela abre na empresa em foco e precisa dizer isso, para o link não trocar
- * de empresa calado.
+ * A URL pediu, com foco, outra empresa que a tela mostraria (ou "todas", numa
+ * empresa sem filial): a tela abre na empresa em foco e precisa dizer isso,
+ * para o link não trocar de empresa calado.
  */
 export function pedidaForaDoFoco({ pedida, disponiveis, permitirTodas = false, foco = null }: Omit<EntradaDaEscolha, "ultima">): boolean {
   const limpa = pedida?.trim() ?? "";
   if (!foco || limpa === "") return false;
-  return foraDoGrupo(limpa, new Set(disponiveis), permitirTodas, new Set(foco.grupo));
+  const grupo = new Set(foco.grupo);
+  const doGrupoNaTela = disponiveis.filter((id) => grupo.has(id)).length;
+  return foraDoGrupo(limpa, new Set(disponiveis), permitirTodas, grupo, doGrupoNaTela);
 }
 
 /** O id da empresa escolhida, ou `null` (todas ou nenhuma ainda). */

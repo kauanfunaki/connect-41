@@ -103,7 +103,8 @@ export default async function LancamentosPage({
   // Até 13/10/2026 caía na primeira em ordem alfabética, e quem lançava sem
   // olhar o seletor gravava na empresa errada.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
+  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   const cabecalho = (action?: React.ReactNode) => (
@@ -118,8 +119,9 @@ export default async function LancamentosPage({
   const filtroDaEmpresa = (
     <FiltroDaEmpresa
       acao="/lancamentos"
-      empresas={empresas}
+      empresas={noSeletor}
       valor={companyId}
+      foco={foco}
       manter={{ mes: aba === "lista" ? mes : undefined, aba: aba === "lista" ? undefined : aba }}
     >
       {aba === "lista" && companyId && (

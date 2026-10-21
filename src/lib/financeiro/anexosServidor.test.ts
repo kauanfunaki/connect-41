@@ -20,6 +20,11 @@ const m = vi.hoisted(() => {
   };
 });
 
+// Sem empresa em foco (21/10/2026): a trava do foco tem o teste dela (`focoServidor.test.ts`).
+vi.mock("@/lib/empresas/focoServidor", () => ({
+  recusaDoFoco: async () => null,
+  leituraNoFoco: async (_ctx: unknown, empresa: string) => ({ ok: true, empresaId: empresa, empresaIds: undefined }),
+}));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => m.db }));
 vi.mock("@/lib/auth/context", async () => ({ ...(await import("@/lib/auth/papeis")), getAuthContext: async () => m.ctx }));
 vi.mock("./acessoDaConta", () => ({ podeEditarOTipo: m.podeEditar }));

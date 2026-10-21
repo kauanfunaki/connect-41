@@ -20,6 +20,7 @@ import { decimalDeCentavos } from "@/lib/financeiro/manual";
 import { moeda } from "@/lib/financeiro/formato";
 import { podeDecidir, podeEnviarParaAprovacao, validarMotivo, lerTeto, type Decisao } from "@/lib/financeiro/aprovacao/regras";
 import { avisarAprovadores, avisarCriador, MODULO_DE_APROVACOES } from "@/lib/financeiro/aprovacao/servidor";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 const MODULE = MODULO_DE_APROVACOES;
 
@@ -76,6 +77,9 @@ export async function enviarParaAprovacao(entryId: string): Promise<Resultado> {
   if (!c.ok) return { error: c.erro };
   const conta = await contaDoTenant(c.prisma, entryId, c.tenantId);
   if (!conta) return { error: "Lançamento não encontrado." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const v = podeEnviarParaAprovacao(conta);
   if (!v.pode) return { error: v.motivo };
 
