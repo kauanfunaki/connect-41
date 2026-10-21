@@ -6,10 +6,13 @@ import { isModuleEnabled } from "@/lib/modules";
 import { centavosDeDecimal } from "@/lib/dre/data";
 import { gradeDeLinhas, type Grade } from "./grade";
 import { versaoAprovada } from "./versoes";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
+import type { ModeloDoDre } from "@/lib/dre/estrutura";
 
 export const MODULO_DE_ORCAMENTO = "dre_orcamento";
 
-export type OrcamentoAprovado = { id: string; nome: string; ano: number; grade: Grade };
+/** `modelo` é o do DRE da empresa (21/10/2026): a grade está nos grupos dele. */
+export type OrcamentoAprovado = { id: string; nome: string; ano: number; grade: Grade; modelo: ModeloDoDre };
 
 /**
  * A versão aprovada de cada ano pedido, com a grade. Ano sem aprovada fica
@@ -19,7 +22,8 @@ export async function orcamentosAprovados(tenantId: string, companyId: string, a
   const saida = new Map<number, OrcamentoAprovado>();
   const unicos = [...new Set(anos)];
   if (unicos.length === 0) return saida;
-  const versoes = await getPrisma().budget.findMany({
+  const [versoes, modelo] = await Promise.all([
+    getPrisma().budget.findMany({
     where: { tenantId, companyId, year: { in: unicos }, status: "APROVADO" },
     select: {
       id: true,
@@ -29,7 +33,9 @@ export async function orcamentosAprovados(tenantId: string, companyId: string, a
       approvedAt: true,
       lines: { select: { groupCode: true, month: true, amount: true } },
     },
-  });
+    }),
+    modeloDaEmpresa(tenantId, companyId),
+  ]);
   for (const ano of unicos) {
     const v = versaoAprovada(versoes.filter((x) => x.year === ano));
     if (!v) continue;
@@ -37,7 +43,11 @@ export async function orcamentosAprovados(tenantId: string, companyId: string, a
       id: v.id,
       nome: v.name,
       ano,
-      grade: gradeDeLinhas(v.lines.map((l) => ({ groupCode: l.groupCode, month: l.month, centavos: centavosDeDecimal(l.amount) }))),
+      grade: gradeDeLinhas(
+        v.lines.map((l) => ({ groupCode: l.groupCode, month: l.month, centavos: centavosDeDecimal(l.amount) })),
+        modelo
+      ),
+      modelo,
     });
   }
   return saida;

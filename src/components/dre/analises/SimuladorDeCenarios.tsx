@@ -8,17 +8,9 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { montarLinhas } from "@/lib/dre/calculo";
 import { simularCenario, CENARIOS_PRONTOS, PREMISSAS_ZERADAS, type PremissasDoCenario } from "@/lib/dre/analises";
-import { rotuloEconomico, LINHA_DE_RESULTADO, LINHA_OPERACIONAL } from "@/lib/dre/economica";
+import { rotuloEconomico } from "@/lib/dre/economica";
+import { modeloDoCodigo, type CodigoDoModelo } from "@/lib/dre/estrutura";
 import { moeda, percentual, tomDoValor } from "@/lib/financeiro/formato";
-
-const LINHAS_DO_SIMULADOR = ["receita_bruta", "margem_contribuicao", "custo_administrativo", LINHA_OPERACIONAL, LINHA_DE_RESULTADO];
-
-const CAMPOS: { chave: keyof PremissasDoCenario; rotulo: string; dica: string }[] = [
-  { chave: "receita", rotulo: "Receita", dica: "Impostos, CMV, mão de obra e comerciais acompanham." },
-  { chave: "custoOperacional", rotulo: "Custo operacional além da receita", dica: "Custo que sobe mais (ou menos) que a venda." },
-  { chave: "custoAdministrativo", rotulo: "Custo administrativo", dica: "A estrutura: pessoal do administrativo, pró-labore, aluguel, sistemas." },
-  { chave: "financiamentos", rotulo: "Financiamentos e empréstimos", dica: "Parcelas, juros e parcelamentos." },
-];
 
 export type BaseDoCenario = { chave: string; rotulo: string; porGrupo: Record<string, number> };
 
@@ -32,15 +24,25 @@ export type BaseDoCenario = { chave: string; rotulo: string; porGrupo: Record<st
  * `montarLinhas` —, então o número daqui é o que a DRE mostraria se o mês
  * tivesse sido assim.
  */
-export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
+export function SimuladorDeCenarios({ bases, modelo: codigoDoModelo }: { bases: BaseDoCenario[]; modelo: CodigoDoModelo }) {
+  // As premissas e as linhas são as do modelo do DRE da empresa (21/10/2026).
+  const modelo = modeloDoCodigo(codigoDoModelo);
+  const opcoes = useMemo(() => ({ impostosNoEbitda: true, modelo }), [modelo]);
+  const campos: { chave: keyof PremissasDoCenario; rotulo: string; dica: string }[] = [
+    { chave: "receita", rotulo: "Receita", dica: modelo.simulador.dicaDaReceita },
+    ...modelo.simulador.campos.map((c) => ({ chave: c.chave, rotulo: c.rotulo, dica: c.dica })),
+  ];
   const [premissas, setPremissas] = useState<PremissasDoCenario>(PREMISSAS_ZERADAS);
   const [pronto, setPronto] = useState("base");
   const [chaveDaBase, setChaveDaBase] = useState(bases[0]?.chave ?? "");
   const baseEscolhida = bases.find((b) => b.chave === chaveDaBase) ?? bases[0]!;
   const porGrupo = baseEscolhida.porGrupo;
 
-  const base = useMemo(() => montarLinhas(porGrupo), [porGrupo]);
-  const simulado = useMemo(() => montarLinhas(simularCenario(porGrupo, premissas)), [porGrupo, premissas]);
+  const base = useMemo(() => montarLinhas(porGrupo, opcoes), [porGrupo, opcoes]);
+  const simulado = useMemo(
+    () => montarLinhas(simularCenario(porGrupo, premissas, opcoes.modelo), opcoes),
+    [porGrupo, premissas, opcoes]
+  );
 
   const valor = (linhas: ReturnType<typeof montarLinhas>, code: string) => linhas.find((l) => l.code === code)?.centavos ?? 0;
   const receitaSimulada = valor(simulado, "receita_bruta");
@@ -84,7 +86,7 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
           </div>
         </CampoForm>
         <FieldGrid>
-          {CAMPOS.map((c) => (
+          {campos.map((c) => (
             <CampoForm key={c.chave} label={c.rotulo} htmlFor={`premissa-${c.chave}`} helper={c.dica}>
               <Input
                 id={`premissa-${c.chave}`}
@@ -112,7 +114,7 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
             </tr>
           </thead>
           <tbody>
-            {LINHAS_DO_SIMULADOR.map((code) => {
+            {modelo.simulador.linhas.map((code) => {
               const linha = base.find((l) => l.code === code)!;
               const b = valor(base, code);
               const s = valor(simulado, code);
@@ -131,7 +133,7 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
               <td className="py-2 pl-4 pr-3 text-micro text-fg-muted">Margem do período simulada</td>
               <td />
               <td className="py-2 pr-4 text-right text-fs-2 tabular-nums">
-                {percentual(receitaSimulada === 0 ? null : valor(simulado, LINHA_DE_RESULTADO) / receitaSimulada)}
+                {percentual(receitaSimulada === 0 ? null : valor(simulado, modelo.linhaDoResultado) / receitaSimulada)}
               </td>
             </tr>
           </tbody>

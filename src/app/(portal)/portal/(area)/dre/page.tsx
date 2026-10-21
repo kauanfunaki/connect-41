@@ -14,6 +14,8 @@ import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { dreDoAnoDaEmpresa, dreDoMes, mesesComMovimento } from "@/lib/dre/data";
 import { dreDoAno, type DreAnual } from "@/lib/dre/anual";
+import { OPCOES_PADRAO } from "@/lib/dre/estrutura";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { serieEconomica } from "@/lib/dre/dataEconomica";
 import { comRotulosEconomicos, type DreEconomica } from "@/lib/dre/economica";
 import {
@@ -222,9 +224,11 @@ async function dreDoAnoNoRegime(
   ano: number,
   regime: "caixa" | "competencia"
 ): Promise<DreAnual> {
-  if (regime === "caixa") return dreDoAno((await dreDoAnoDaEmpresa(tenantId, companyId, ano)).meses);
+  // O modelo do DRE da empresa (21/10/2026), lido uma vez para as duas pontas.
+  const opcoes = { ...OPCOES_PADRAO, modelo: await modeloDaEmpresa(tenantId, companyId) };
+  if (regime === "caixa") return dreDoAno((await dreDoAnoDaEmpresa(tenantId, companyId, ano, opcoes)).meses, opcoes);
   const competencias = acumuladoDoAno(competenciaDe(ano, 12));
-  const serie = await serieEconomica(tenantId, companyId, competencias);
+  const serie = await serieEconomica(tenantId, companyId, competencias, { tipo: "todos" }, opcoes);
   return dreDoAno(
     competencias.map((c) => {
       const d = serie.get(c)!;
@@ -234,6 +238,7 @@ async function dreDoAnoNoRegime(
         temMovimento: temResultado(d),
         porCategoria: d.resultado.porCategoria,
       };
-    })
+    }),
+    opcoes
   );
 }

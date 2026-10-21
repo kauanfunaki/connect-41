@@ -16,7 +16,7 @@
 // BigInt porque centavos × fator em pontos-base passa de 2^53 bem antes do teto
 // do `Decimal(14,2)`.
 
-import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA, grupoAtual } from "@/lib/dre/estrutura";
+import { MODELO_PADRAO, NAO_CLASSIFICADO, TRANSFERENCIA, grupoAtual, type ModeloDoDre } from "@/lib/dre/estrutura";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
 
 export const MESES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
@@ -30,13 +30,31 @@ export type Grade = Record<string, number[]>;
 
 export type LinhaDaGrade = { groupCode: string; month: number; centavos: number };
 
-const CODIGOS = new Set(GRUPOS.map((g) => g.code));
-const ORIGEM = new Map(GRUPOS.map((g) => [g.code, g.origem]));
+// A grade é do modelo do DRE da empresa (21/10/2026): os grupos dele, na ordem
+// dele. Toda função recebe o modelo; o padrão é o default.
 
-export function gradeVazia(): Grade {
+export function gradeVazia(modelo: ModeloDoDre = MODELO_PADRAO): Grade {
   const g: Grade = {};
-  for (const grupo of GRUPOS) g[grupo.code] = MESES.map(() => 0);
+  for (const grupo of modelo.grupos) g[grupo.code] = MESES.map(() => 0);
   return g;
+}
+
+/**
+ * O grupo do modelo em que uma linha gravada entra, ou `null`. No padrão, o
+ * código do padrão antigo (antes de 20/10/2026) entra no grupo novo que o
+ * absorveu. Nos outros modelos, só o código do próprio modelo.
+ */
+function grupoDaLinha(groupCode: string, modelo: ModeloDoDre): string | null {
+  const grupo = modelo.codigo === "padrao" ? grupoAtual(groupCode) : groupCode;
+  return modelo.grupos.some((g) => g.code === grupo) ? grupo : null;
+}
+
+/**
+ * Quantas linhas gravadas não têm lugar na grade do modelo — orçamento feito
+ * noutro modelo. A tela avisa, em vez de mostrar a grade com buraco calado.
+ */
+export function linhasForaDoModelo(linhas: LinhaDaGrade[], modelo: ModeloDoDre = MODELO_PADRAO): number {
+  return linhas.filter((l) => l.centavos !== 0 && grupoDaLinha(l.groupCode, modelo) === null).length;
 }
 
 /**
@@ -46,20 +64,20 @@ export function gradeVazia(): Grade {
  * Grupo que não existe em nenhum dos dois é ignorado: linha órfã não tem onde
  * aparecer, e somá-la em outro grupo seria inventar.
  */
-export function gradeDeLinhas(linhas: LinhaDaGrade[]): Grade {
-  const g = gradeVazia();
+export function gradeDeLinhas(linhas: LinhaDaGrade[], modelo: ModeloDoDre = MODELO_PADRAO): Grade {
+  const g = gradeVazia(modelo);
   for (const l of linhas) {
-    const grupo = grupoAtual(l.groupCode);
-    if (!CODIGOS.has(grupo) || l.month < 1 || l.month > 12) continue;
+    const grupo = grupoDaLinha(l.groupCode, modelo);
+    if (grupo === null || l.month < 1 || l.month > 12) continue;
     g[grupo]![l.month - 1]! += l.centavos;
   }
   return g;
 }
 
 /** As linhas a gravar: só as diferentes de zero — célula sem linha vale zero. */
-export function linhasDaGrade(grade: Grade): LinhaDaGrade[] {
+export function linhasDaGrade(grade: Grade, modelo: ModeloDoDre = MODELO_PADRAO): LinhaDaGrade[] {
   const saida: LinhaDaGrade[] = [];
-  for (const grupo of GRUPOS) {
+  for (const grupo of modelo.grupos) {
     const valores = grade[grupo.code] ?? [];
     MESES.forEach((m, i) => {
       const c = valores[i] ?? 0;
@@ -82,13 +100,16 @@ export function campoDaCelula(groupCode: string, month: number): string {
  * inválido" sem dizer onde é procurar agulha. Campo de grupo ou mês que não
  * existe é recusa: a tela só manda o que a estrutura tem.
  */
-export function lerGrade(campos: Iterable<[string, string]>): { ok: true; grade: Grade } | { ok: false; erro: string } {
-  const grade = gradeVazia();
+export function lerGrade(
+  campos: Iterable<[string, string]>,
+  modelo: ModeloDoDre = MODELO_PADRAO
+): { ok: true; grade: Grade } | { ok: false; erro: string } {
+  const grade = gradeVazia(modelo);
   for (const [chave, bruto] of campos) {
     if (!chave.startsWith("v:")) continue;
     const [, codigo, mesTexto] = chave.split(":");
     const mes = Number(mesTexto);
-    const grupo = GRUPOS.find((g) => g.code === codigo);
+    const grupo = modelo.grupos.find((g) => g.code === codigo);
     if (!grupo || !Number.isInteger(mes) || mes < 1 || mes > 12) return { ok: false, erro: "A grade veio com uma célula que não existe — recarregue a tela." };
     const texto = String(bruto ?? "").trim();
     if (texto === "") continue;
@@ -107,9 +128,9 @@ export function lerGrade(campos: Iterable<[string, string]>): { ok: true; grade:
  * positivo, pagamento negativo —, no formato de `montarLinhas`. Os dois grupos
  * fora do resultado entram zerados para o formato ser o mesmo da DRE.
  */
-export function porGrupoOrcado(grade: Grade, meses: readonly number[]): Record<string, number> {
+export function porGrupoOrcado(grade: Grade, meses: readonly number[], modelo: ModeloDoDre = MODELO_PADRAO): Record<string, number> {
   const saida: Record<string, number> = { [NAO_CLASSIFICADO]: 0, [TRANSFERENCIA]: 0 };
-  for (const grupo of GRUPOS) {
+  for (const grupo of modelo.grupos) {
     const valores = grade[grupo.code] ?? [];
     const soma = meses.reduce((n, m) => n + (valores[m - 1] ?? 0), 0);
     saida[grupo.code] = grupo.origem === "pagamento" ? -soma : soma;
@@ -149,9 +170,9 @@ export function reajustar(centavos: number, pct: number): number {
 }
 
 /** A grade inteira reajustada, célula a célula. */
-export function copiarComReajuste(grade: Grade, pct: number): Grade {
-  const g = gradeVazia();
-  for (const grupo of GRUPOS) g[grupo.code] = MESES.map((_, i) => Math.min(reajustar(grade[grupo.code]?.[i] ?? 0, pct), MAIOR_VALOR_ORCADO));
+export function copiarComReajuste(grade: Grade, pct: number, modelo: ModeloDoDre = MODELO_PADRAO): Grade {
+  const g = gradeVazia(modelo);
+  for (const grupo of modelo.grupos) g[grupo.code] = MESES.map((_, i) => Math.min(reajustar(grade[grupo.code]?.[i] ?? 0, pct), MAIOR_VALOR_ORCADO));
   return g;
 }
 
@@ -166,12 +187,12 @@ export function copiarComReajuste(grade: Grade, pct: number): Grade {
  *
  * `porMes[i]` é o `porGrupo` de janeiro (i = 0) a dezembro; `null` é mês sem DRE.
  */
-export function gradeDoRealizado(porMes: (Record<string, number> | null)[], pct: number): Grade {
-  const g = gradeVazia();
-  for (const grupo of GRUPOS) {
+export function gradeDoRealizado(porMes: (Record<string, number> | null)[], pct: number, modelo: ModeloDoDre = MODELO_PADRAO): Grade {
+  const g = gradeVazia(modelo);
+  for (const grupo of modelo.grupos) {
     g[grupo.code] = MESES.map((_, i) => {
       const valor = porMes[i]?.[grupo.code] ?? 0;
-      const magnitude = ORIGEM.get(grupo.code) === "pagamento" ? -valor : valor;
+      const magnitude = grupo.origem === "pagamento" ? -valor : valor;
       return Math.min(reajustar(Math.max(0, magnitude), pct), MAIOR_VALOR_ORCADO);
     });
   }

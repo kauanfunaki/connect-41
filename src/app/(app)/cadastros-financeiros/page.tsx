@@ -26,7 +26,8 @@ import { NovoCentroDeCusto, EditarCentroDeCusto } from "@/components/financeiro/
 import { NovoProjeto, EditarProjeto } from "@/components/financeiro/FormProjeto";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
-import { ESCOLHAS_DE_GRUPO } from "@/lib/dre/estrutura";
+import { escolhasDeGrupo } from "@/lib/dre/estrutura";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { NovaCategoriaDaEmpresa, LinhaDaDre, EsconderDoPadrao, EditarCategoriaDaEmpresa } from "@/components/financeiro/PlanoDaEmpresa";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
@@ -717,7 +718,7 @@ async function AbaDoPlano({
   topo: (acao?: React.ReactNode) => React.ReactNode;
 }) {
   const prisma = getPrisma();
-  const [categorias, ocultas, excecoes, uso] = await Promise.all([
+  const [categorias, ocultas, excecoes, uso, modelo] = await Promise.all([
     prisma.financeCategory.findMany({
       where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
       select: { id: true, name: true, kind: true, planGroup: true, dreGroup: true, active: true, companyId: true, omieCode: true },
@@ -726,14 +727,20 @@ async function AbaDoPlano({
     prisma.financeCategoryHidden.findMany({ where: { tenantId, companyId }, select: { categoryId: true } }),
     prisma.dreCategoryMapping.findMany({ where: { tenantId, companyId }, select: { categoryId: true, grupo: true } }),
     prisma.financeEntry.groupBy({ by: ["categoryId"], where: { tenantId, companyId, categoryId: { not: null } }, _count: { _all: true } }),
+    modeloDaEmpresa(tenantId, companyId),
   ]);
   const oculta = new Set(ocultas.map((o) => o.categoryId));
-  const excecao = new Map(excecoes.map((e) => [e.categoryId, e.grupo]));
+  // A exceção lida no modelo do DRE da empresa (21/10/2026): o seletor mostra
+  // os grupos dele.
+  const excecao = new Map(excecoes.map((e) => [e.categoryId, grupoDeTexto(e.grupo, modelo) ?? e.grupo]));
   const lancamentos = new Map(uso.map((u) => [u.categoryId, u._count._all]));
-  // Os doze grupos e as escolhas de fora do resultado — transferência e
-  // "desconsiderar" (13/10/2026) —, as mesmas da fila da DRE.
-  const linhas = ESCOLHAS_DE_GRUPO;
-  const rotulo = (codigo: string | null) => (codigo ? (linhas.find((l) => l.code === grupoDeTexto(codigo))?.label ?? codigo) : "sem linha");
+  // Os grupos do modelo do DRE da empresa e as escolhas de fora do resultado —
+  // transferência e "desconsiderar" (13/10/2026) —, as mesmas da fila da DRE.
+  const linhas = escolhasDeGrupo(modelo);
+  const rotulo = (codigo: string | null) =>
+    codigo
+      ? (linhas.find((l) => l.code === grupoDeTexto(codigo, modelo))?.label ?? (modelo.codigo === "padrao" ? codigo : "sem linha neste modelo"))
+      : "sem linha";
   const grupos = [...new Set(categorias.map((c) => c.planGroup).filter((g): g is string => !!g))].sort();
   const daEmpresa = categorias.filter((c) => c.companyId).length;
 
@@ -781,7 +788,7 @@ async function AbaDoPlano({
                           <LinhaDaDre
                             companyId={companyId}
                             categoryId={c.id}
-                            valor={propria ? (grupoDeTexto(c.dreGroup) ?? "") : (excecao.get(c.id) ?? "")}
+                            valor={propria ? (grupoDeTexto(c.dreGroup, modelo) ?? "") : (excecao.get(c.id) ?? "")}
                             linhas={linhas}
                             rotuloDoPadrao={propria ? undefined : rotulo(c.dreGroup)}
                           />
@@ -797,7 +804,7 @@ async function AbaDoPlano({
                           <span className="ml-auto">
                             {propria ? (
                               <EditarCategoriaDaEmpresa
-                                categoria={{ id: c.id, nome: c.name, grupo: c.planGroup, linha: grupoDeTexto(c.dreGroup) ?? "", ativa: c.active }}
+                                categoria={{ id: c.id, nome: c.name, grupo: c.planGroup, linha: grupoDeTexto(c.dreGroup, modelo) ?? "", ativa: c.active }}
                                 linhas={linhas}
                               />
                             ) : (
@@ -855,7 +862,7 @@ async function AbaDoPlano({
                               <LinhaDaDre
                                 companyId={companyId}
                                 categoryId={c.id}
-                                valor={propria ? (grupoDeTexto(c.dreGroup) ?? "") : (excecao.get(c.id) ?? "")}
+                                valor={propria ? (grupoDeTexto(c.dreGroup, modelo) ?? "") : (excecao.get(c.id) ?? "")}
                                 linhas={linhas}
                                 rotuloDoPadrao={propria ? undefined : rotulo(c.dreGroup)}
                               />
@@ -868,7 +875,7 @@ async function AbaDoPlano({
                             {podeEditar &&
                               (propria ? (
                                 <EditarCategoriaDaEmpresa
-                                  categoria={{ id: c.id, nome: c.name, grupo: c.planGroup, linha: grupoDeTexto(c.dreGroup) ?? "", ativa: c.active }}
+                                  categoria={{ id: c.id, nome: c.name, grupo: c.planGroup, linha: grupoDeTexto(c.dreGroup, modelo) ?? "", ativa: c.active }}
                                   linhas={linhas}
                                 />
                               ) : (
