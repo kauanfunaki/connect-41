@@ -20,6 +20,7 @@ export async function transferirModulo(code: string, sectorCode: string): Promis
   if (!ctx.tenantId || !isFullWrite(ctx.role)) return;
   const def = getModuleDef(code);
   if (!def) return;
+  if (def.fixedSector && sectorCode !== def.sectorCode) return;
 
   const ativos = await getActiveSectors(ctx.tenantId);
   if (!ativos.some((s) => s.code === sectorCode)) return;
@@ -55,7 +56,7 @@ export async function transferirModulo(code: string, sectorCode: string): Promis
 export async function ligarModuloAoSetor(code: string, sectorCode: string, ligar: boolean): Promise<void> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !isFullWrite(ctx.role)) return;
-  if (!getModuleDef(code) || MODULOS_DO_MENU_GERAL.has(code)) return;
+  if (!getModuleDef(code) || getModuleDef(code)?.fixedSector || MODULOS_DO_MENU_GERAL.has(code)) return;
 
   const [dono, ligados, ativos] = await Promise.all([
     setorDoModulo(ctx.tenantId, code),

@@ -31,6 +31,14 @@ const x = (frase: string, extra: Partial<DescricaoDaAcao> = {}): DescricaoDaAcao
 const o = (frase: string, extra: Partial<DescricaoDaAcao> = {}): DescricaoDaAcao => ({ tipo: "outro", frase, ...extra });
 
 export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
+  "github.pause": e("pausou a sincronização do GitHub"),
+  "github.resume": e("retomou a sincronização do GitHub"),
+  "github.disconnect": e("desconectou a conta do GitHub"),
+  "github.discover": o("atualizou a lista de repositórios do GitHub"),
+  "github.track": e("passou a acompanhar um usuário do GitHub"),
+  "github.untrack": e("deixou de acompanhar um usuário do GitHub"),
+  "github.credentials": e("configurou as credenciais do OAuth App do GitHub"),
+  "github.settings": e("configurou os repositórios monitorados do GitHub"),
   "helpdesk.created": c("abriu o chamado"),
   "helpdesk.updated": e("atualizou o chamado"),
   "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
@@ -603,6 +611,7 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["solicitacao_assunto.", "configuracoes"],
   ["tenant.", "configuracoes"],
   ["integration.", "configuracoes"],
+  ["github.", "configuracoes"],
   ["subscription.", "planos"],
   ["subscription_plan.", "planos"],
   ["site.", "planos"],
