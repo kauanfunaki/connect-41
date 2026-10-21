@@ -777,6 +777,18 @@ export const MODULOS_NOS_CADASTROS: ReadonlySet<string> = new Set(["bpo_cadastro
  */
 export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS]);
 
+/**
+ * As telas do grupo "Cliente" do BPO que moram nas abas das Solicitações
+ * (21/10/2026), como Fornecedores e sacados nos Cadastros: saem do menu do BPO
+ * e aparecem como aba de /solicitacoes só para quem vê o módulo. Com o módulo
+ * das Solicitações desligado, voltam ao menu do setor — senão sumiriam.
+ */
+export const TELAS_DO_BPO_NAS_SOLICITACOES = [
+  { modulo: "bpo_pendencias", chave: "pendencias", rotulo: "Pendências do BPO", href: "/pendencias" },
+  { modulo: "bpo_aprovacoes", chave: "aprovacoes", rotulo: "Aprovações", href: "/aprovacoes" },
+] as const;
+export const MODULOS_NAS_SOLICITACOES: ReadonlySet<string> = new Set(TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.modulo));
+
 /** Funcionalidades acessadas por fluxos internos, sem entrada na navegação. */
 export const MODULOS_SEM_MENU: ReadonlySet<string> = new Set(["fiscal_documentos"]);
 
