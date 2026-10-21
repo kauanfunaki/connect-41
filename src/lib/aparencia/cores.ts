@@ -27,14 +27,14 @@ export type GrupoDeCor = (typeof GRUPOS_DE_COR)[number];
 export const GRUPOS: Record<GrupoDeCor, { rotulo: string; telas: string; padrao: string }> = {
   financeiro: {
     rotulo: "Financeiro",
-    telas: "Contas a pagar e a receber, cobrança, fluxo de caixa, relatório, DRE e aprovações.",
+    telas: "Contas a pagar e a receber, lançamentos, conciliação, cobrança, fluxo de caixa, DRE e aprovações.",
     padrao: "#1A7FD6",
   },
-  fiscal: { rotulo: "Fiscal e notas", telas: "Documentos fiscais: as notas emitidas e recebidas.", padrao: "#F07B1D" },
-  processos: { rotulo: "Processos", telas: "Processos societários e exigências.", padrao: "#8B5CF6" },
+  fiscal: { rotulo: "Fiscal e notas", telas: "As notas emitidas e recebidas, a emissão de NFS-e e as telas do Fiscal.", padrao: "#F07B1D" },
+  processos: { rotulo: "Processos", telas: "Processos societários, licenças e exigências.", padrao: "#8B5CF6" },
   atendimento: {
     rotulo: "Solicitações",
-    telas: "Solicitações, pendências, comunicados, documentos do escritório, arquivos e conversa.",
+    telas: "Solicitações, pendências, comunicados, documentos do escritório, arquivos e conversas.",
     padrao: "#12A07A",
   },
 };

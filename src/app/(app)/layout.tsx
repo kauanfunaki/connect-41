@@ -167,7 +167,10 @@ export default async function AppLayout({
 
   return (
     <ToastProvider>
-      {aparencia.noConnect && <EstiloDaAparencia aparencia={aparencia} grupos={false} />}
+      {/* As cores dos grupos valem também aqui (21/10/2026): cada tela leva a
+          do grupo dela (ver `grupoDaTelaDaEquipe`). A cor principal do
+          escritório, só com "Usar também no Connect da equipe". */}
+      <EstiloDaAparencia aparencia={aparencia.noConnect ? aparencia : { ...aparencia, corPrincipal: null }} />
       <AppShell
         faixaDoFoco={
           foco ? (
