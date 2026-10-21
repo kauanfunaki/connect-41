@@ -114,6 +114,8 @@ const EMPRESA: Ligacao[] = [
   // As pastas da casa nascem com a empresa; o que conta como histórico são os
   // arquivos dentro delas (contados à parte em `empresa.ts`).
   { modelo: "DriveFolder", campo: "company", fk: "companyId", tratamento: "cascata" },
+  // O registro do que o robô da pasta de rede já trouxe (21/10/2026) vai junto com a empresa.
+  { modelo: "DriveNetworkFile", campo: "company", fk: "companyId", tratamento: "cascata" },
   // Portal por empresa (14/10/2026): sai a ligação da empresa com o acesso, e
   // a conta continua (com as outras empresas dela, ou sem nenhuma). O
   // comunicado já enviado fica, sem esta empresa entre os destinatários.

@@ -19,6 +19,8 @@ Usar HTTPS e `Authorization: Bearer <chave>`. A chave só aceita dados da automa
 
 Atividade: `POST /api/ops/watchers/<slug>/heartbeat`, sem corpo, a cada 30 segundos. Sem sinal durante três minutos a tela mostra Sem comunicação; antes do primeiro sinal, Sem sinal de atividade. O painel não inicia nem encerra processos e não lê pastas da rede.
 
+Arquivos da pasta de rede (21/10/2026): `POST /api/ops/watchers/<slug>/arquivos`, multipart, até 10 MB por arquivo. O robô `scripts/pasta-de-rede.mjs` usa esse endpoint para guardar nos Arquivos o que acha na pasta de rede das empresas do piloto, e o Connect registra cada entrada ou recusa como evento da automação. O roteiro está em `docs/PASTA-DE-REDE.md`.
+
 Resultado: `POST /api/ops/events`, com:
 
 ```json
