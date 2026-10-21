@@ -356,6 +356,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "integration.connect": c("conectou a conta das reuniões", { comNome: false }),
   "integration.disconnect": x("desconectou a conta das reuniões", { comNome: false }),
   "integration.save": e("salvou uma integração"),
+  "integration.webhook_url": e("apontou para o Connect o endereço dos avisos da integração"),
   "integration.omie.conta": e("configurou a conta do Omie da empresa"),
 
   // ── Clientes e planos (só a 41 Tech) ───────────────────────────────────────

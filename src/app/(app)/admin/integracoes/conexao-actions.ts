@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
+import { getPrisma } from "@/lib/prisma";
 import { integracaoDoCatalogo } from "@/lib/integracoes/catalogo";
-import { salvarIntegracao } from "@/lib/integracoes/data";
+import { lerConfig, salvarIntegracao } from "@/lib/integracoes/data";
+import { apontarWebhookDaEvolution, apontarWebhookDoChatwoot, urlDoAviso, type ResultadoDoEndereco } from "@/lib/integracoes/enderecoDosAvisos";
+import { resolveConnectionCredentials } from "@/lib/chatwoot/connection";
 import { TAMANHO_MAXIMO_DO_CERTIFICADO } from "@/lib/serpro/certificado";
 import { validarConfigDoSerpro } from "@/lib/serpro/cliente";
 import { CODIGO_DA_INTEGRACAO } from "@/lib/serpro/regras";
@@ -71,4 +74,63 @@ export async function salvarConexao(_prev: ConexaoState, form: FormData): Promis
 
   revalidatePath("/admin/integracoes");
   return { success: true };
+}
+
+export type ResultadoDoApontar = { error: string } | { ok: true; mensagem: string };
+
+/**
+ * Aponta para o endereço do Connect (`APP_PUBLIC_URL`) os avisos que chegam
+ * de fora (21/10): o webhook do Chatwoot, ou o da instância da Evolution.
+ * Só administrador, como o resto das integrações.
+ */
+export async function apontarAvisosParaOConnect(
+  alvo: { tipo: "chatwoot" } | { tipo: "whatsapp"; integrationId: string }
+): Promise<ResultadoDoApontar> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!isFullWrite(ctx.role)) return { error: "Sem permissão para configurar integrações." };
+  const urlPublica = process.env.APP_PUBLIC_URL;
+  if (!urlPublica) return { error: "APP_PUBLIC_URL não está configurada no servidor — é ela que diz o endereço do Connect." };
+
+  let r: ResultadoDoEndereco;
+  let entityType: string;
+  let entityId: string;
+  let urlNova: string;
+  if (alvo.tipo === "chatwoot") {
+    const conexao = await resolveConnectionCredentials(ctx.tenantId);
+    if (!conexao) return { error: "O Chatwoot não está configurado, ou falta o token." };
+    urlNova = urlDoAviso(urlPublica, `/api/integrations/chatwoot/webhook/${conexao.connectionId}`);
+    r = await apontarWebhookDoChatwoot(conexao.creds, urlNova);
+    entityType = "ChatwootConnection";
+    entityId = conexao.connectionId;
+  } else {
+    const integracao = await getPrisma().tenantIntegration.findFirst({
+      where: { id: alvo.integrationId, tenantId: ctx.tenantId },
+      select: { id: true, integrationCode: true, configEnc: true },
+    });
+    if (!integracao) return { error: "Conexão não encontrada." };
+    const def = integracaoDoCatalogo(integracao.integrationCode);
+    if (!def?.caminhoDoWebhook) return { error: "Esta conexão não recebe avisos." };
+    if (integracao.integrationCode !== "whatsapp_recrutamento_evolution") {
+      return { error: "Na Meta, a URL do webhook é do app, no painel de desenvolvedor: troque por lá, com a URL mostrada aqui." };
+    }
+    urlNova = urlDoAviso(urlPublica, def.caminhoDoWebhook.replace("{id}", integracao.id));
+    r = await apontarWebhookDaEvolution(lerConfig(integracao.configEnc), urlNova);
+    entityType = "TenantIntegration";
+    entityId = integracao.id;
+  }
+  if (!r.ok) return { error: r.erro };
+
+  if (r.mudou) {
+    await logAudit({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      action: "integration.webhook_url",
+      entityType,
+      entityId,
+      metadata: { antes: r.antes, depois: urlNova },
+    });
+  }
+  revalidatePath("/admin/integracoes");
+  return { ok: true, mensagem: r.mudou ? `Pronto: os avisos agora chegam em ${urlNova}.` : "Os avisos já chegavam no endereço do Connect." };
 }
