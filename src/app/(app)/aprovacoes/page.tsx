@@ -7,6 +7,7 @@ import { getModuleDef } from "@/lib/module-catalog";
 import { formatInstantDate } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusDot } from "@/components/shared/StatusDot";
@@ -83,6 +84,9 @@ export default async function AprovacoesPage({
         subtitle="Contas a pagar que esperam o “pode pagar” do cliente ou da coordenação. Aguardando e reprovada não são baixadas."
         action={aba === "alcadas" ? <NovaAlcada companyId={empresaId} usuarios={usuariosDaAlcada} /> : undefined}
       />
+      {/* Aba das Solicitações desde 21/10/2026, quando elas estão ligadas: a
+          tela saiu do menu do BPO (ver TELAS_DO_BPO_NAS_SOLICITACOES). */}
+      {(await isModuleEnabled(ctx.tenantId, "portal_solicitacoes")) && <AbasDoAtendimento ativa="aprovacoes" />}
       {/* Empresa primeiro, num seletor só para as duas abas (15/10/2026): na
           Fila ela estava dentro do Filtros e nas Alçadas era o seletor antigo,
           sem o rótulo nem a última aberta, numa fileira embaixo das abas. */}

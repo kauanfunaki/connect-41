@@ -18,7 +18,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllSectors } from "@/lib/sectors";
 import { getTenantModuleStates, lerSetoresLigados } from "@/lib/modules";
-import { MODULOS_DO_MENU_GERAL } from "@/lib/module-catalog";
+import { MODULOS_DO_MENU_GERAL, MODULOS_NAS_SOLICITACOES } from "@/lib/module-catalog";
 import { lerOcultasDoGeral } from "@/lib/menuGeralDb";
 import { TELAS_DO_GERAL, podeConfigurarMenuGeral } from "@/lib/menuGeral";
 import { atualizarSetor, criarSetor } from "./actions";
@@ -210,7 +210,7 @@ export default async function SetoresPage({
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         {/* As telas do menu Geral (Solicitações, Arquivos, Chamados) já são de todos. */}
-                        {!m.fixedSector && !MODULOS_DO_MENU_GERAL.has(m.code) && (
+                        {!m.fixedSector && !MODULOS_DO_MENU_GERAL.has(m.code) && !MODULOS_NAS_SOLICITACOES.has(m.code) && (
                           <TambemEmSetores
                             nome={m.label}
                             setores={ativos

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { lerSetoresLigados, setModuleEnabled, setModuleSector, setModuleSharedSectors, setorDoModulo } from "@/lib/modules";
-import { MODULOS_DO_MENU_GERAL, getModuleDef } from "@/lib/module-catalog";
+import { MODULOS_DO_MENU_GERAL, MODULOS_NAS_SOLICITACOES, getModuleDef } from "@/lib/module-catalog";
 import { setorParaGravar, setoresParaLigar } from "@/lib/modulo-setor";
 import { getActiveSectors } from "@/lib/sectors";
 import { logAudit } from "@/lib/audit";
@@ -56,7 +56,7 @@ export async function transferirModulo(code: string, sectorCode: string): Promis
 export async function ligarModuloAoSetor(code: string, sectorCode: string, ligar: boolean): Promise<void> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !isFullWrite(ctx.role)) return;
-  if (!getModuleDef(code) || getModuleDef(code)?.fixedSector || MODULOS_DO_MENU_GERAL.has(code)) return;
+  if (!getModuleDef(code) || getModuleDef(code)?.fixedSector || MODULOS_DO_MENU_GERAL.has(code) || MODULOS_NAS_SOLICITACOES.has(code)) return;
 
   const [dono, ligados, ativos] = await Promise.all([
     setorDoModulo(ctx.tenantId, code),
