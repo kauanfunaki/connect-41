@@ -172,7 +172,7 @@ export async function classificarCategoriaDoArquivo(
   if ("error" in criada) return { error: criada.error };
 
   // A categoria nova aparece no plano da empresa e nas duas DREs.
-  for (const p of ["/dre", "/dre/economica", "/cadastros-financeiros"]) revalidatePath(p);
+  for (const p of ["/dre", "/dre/economica", "/fornecedores-e-sacados"]) revalidatePath(p);
   return { success: true };
 }
 
@@ -269,6 +269,6 @@ export async function trocarModeloDoDre(companyId: string, codigo: string): Prom
     },
   });
 
-  for (const p of ["/dre", "/dre/economica", "/dre/analises", "/dre/orcamento", "/cadastros-financeiros"]) revalidatePath(p);
+  for (const p of ["/dre", "/dre/economica", "/dre/analises", "/dre/orcamento", "/fornecedores-e-sacados"]) revalidatePath(p);
   return { success: true };
 }

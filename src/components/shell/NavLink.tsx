@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useSyncExternalStore } from "react";
-import { CADASTROS_LAST_TAB_KEY, type CadastrosTab } from "@/lib/cadastrosNav";
+import { CADASTROS_LAST_TAB_KEY, CAMINHO_DOS_FORNECEDORES, type CadastrosTab } from "@/lib/cadastrosNav";
 import { caminhoDoMenuAtivo as isActivePath } from "@/lib/caminhoDoMenu";
 
 function subscribeToStorage(callback: () => void) {
@@ -239,13 +239,14 @@ type CadastrosNavItemProps = {
 // Item único da sidebar para as áreas de Empresas e Pessoas (agrupadas em
 // "Cadastros"). Fica ativo em qualquer rota /empresas/* ou /pessoas/*, e leva
 // para a última aba visitada (persistida via CadastrosTabSync), com Empresas
-// como padrão na ausência dessa informação.
+// como padrão na ausência dessa informação. Fornecedores e sacados, a aba do
+// BPO (21/10/2026), também acende o item.
 export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
   const lastTab = useSyncExternalStore(subscribeToStorage, getLastTabSnapshot, getLastTabServerSnapshot);
 
-  const active = isActivePath(pathname, "/empresas") || isActivePath(pathname, "/pessoas");
+  const active = isActivePath(pathname, "/empresas") || isActivePath(pathname, "/pessoas") || isActivePath(pathname, CAMINHO_DOS_FORNECEDORES);
   const href = `/${lastTab}`;
 
   if (naFaixa) {
