@@ -62,7 +62,7 @@ function travas(plano: readonly Pick<Passo<never>, "modelo" | "acao" | "coluna">
 }
 
 /** O plano e, depois dele, os passos "[demo]" de sempre do script. */
-const PASSOS_DO_SCRIPT = ["PortalUser", "Company", "ClientGroup", "FinanceCategory"].map((modelo) => ({ modelo, acao: "apagar" as const }));
+const PASSOS_DO_SCRIPT = ["PortalUser", "Company", "FinanceCategory"].map((modelo) => ({ modelo, acao: "apagar" as const }));
 const COMPLETO = [...PLANO_DA_LIMPEZA_DO_BPO, ...PASSOS_DO_SCRIPT];
 
 describe("ordem da limpeza × chaves do banco", () => {

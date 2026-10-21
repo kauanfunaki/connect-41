@@ -35,8 +35,9 @@
 // - a demonstração do BPO e qualquer outra empresa "[demo]" (a "Transportes
 //   Modelo", de antes de 15/10, também), pelo plano da exclusão de empresa do
 //   Connect — ver src/lib/demonstracao/bpo/limpeza.ts;
-// - por fim, os acessos do portal, as empresas, os grupos de cliente e as
-//   categorias do plano do escritório com o prefixo "[demo]".
+// - por fim, os acessos do portal, as empresas e as categorias do plano do
+//   escritório com o prefixo "[demo]". Os grupos de cliente "[demo]" de antes
+//   de 21/10 ficam na tabela antiga, sem uso, até a etapa 4 apagá-la.
 //
 // Os arquivos que alguém enviar às pastas durante a apresentação ficam no disco
 // do servidor (o script roda em outra máquina); a simulação diz quantos são.
@@ -118,7 +119,6 @@ async function limparDemo(
     conta(await tx.portalUser.deleteMany({ where: comMarca }), "acessos do portal");
     // As filiais apontam para a matriz com SET NULL: saem juntas.
     conta(await tx.company.deleteMany({ where: comMarca }), "empresas");
-    conta(await tx.clientGroup.deleteMany({ where: comMarca }), "grupos de cliente");
     // As categorias "[demo]" do plano do escritório, da demonstração de antes de 15/10.
     conta(await tx.financeCategory.deleteMany({ where: { ...comMarca, companyId: null } }), "categorias do plano do escritório");
     if (soEnsaio) throw new Error(ENSAIO_DA_LIMPEZA);
@@ -170,17 +170,16 @@ function imprimirBpo(r: PreviaDaLimpezaDoBpo) {
 /** O que a limpeza apagaria, sem apagar nada. */
 async function simularLimpeza(p: PrismaClient, tenantId: string): Promise<void> {
   const comMarca = { tenantId, name: { startsWith: MARCA } };
-  const [usuarios, empresas, grupos, categorias, testes] = await Promise.all([
+  const [usuarios, empresas, categorias, testes] = await Promise.all([
     p.portalUser.count({ where: comMarca }),
     p.company.count({ where: comMarca }),
-    p.clientGroup.count({ where: comMarca }),
     p.financeCategory.count({ where: { ...comMarca, companyId: null } }),
     pendenciasDeTeste(p, tenantId),
   ]);
   console.log("\n--- simulação da limpeza: nada foi apagado. O que sairia: ---");
   imprimirRecrutamento(await previaDaLimpeza(p, await alvoDaLimpeza(p, tenantId)), false);
   imprimirBpo(await previaDaLimpezaDoBpo(p, await alvoDaLimpezaDoBpo(p, tenantId)));
-  console.log(`\n  no fim: ${empresas} empresas [demo], ${usuarios} acessos do portal, ${grupos} grupos de cliente, ${categorias} categorias [demo] do plano do escritório`);
+  console.log(`\n  no fim: ${empresas} empresas [demo], ${usuarios} acessos do portal, ${categorias} categorias [demo] do plano do escritório`);
   console.log(`  ${testes.length} pendências de teste em cliente real${testes.length > 0 ? ":" : ""}`);
   for (const x of testes) console.log(`    - "${x.title}" · ${x.company.name} · ${x.status} · criada em ${x.createdAt.toISOString().slice(0, 10)}`);
   console.log("\nPróximo passo: --limpar --ensaio (apaga e desfaz). Depois, --limpar --aplicar.\n");
