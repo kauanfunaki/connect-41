@@ -19,7 +19,9 @@ import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getActiveSectors } from "@/lib/sectors";
 import { logAudit } from "@/lib/audit";
+import { nomeExibicao } from "@/lib/companyName";
 import { chaveDoModelo, validarNomeDaPasta } from "@/lib/drive/regras";
+import { FALTA_ATUALIZAR_O_BANCO_DA_REDE } from "@/lib/drive/pastaDeRede";
 
 export type ResultadoDoModelo = { error: string } | { ok: true };
 
@@ -125,5 +127,42 @@ export async function moverPastaDoModelo(id: string, direcao: "subir" | "descer"
   // Regrava a ordem inteira: corrige de quebra posições repetidas.
   await prisma.$transaction(ordem.map((tid, posicao) => prisma.driveTemplateFolder.update({ where: { id: tid }, data: { position: posicao } })));
   revalidar();
+  return { ok: true };
+}
+
+export type ResultadoDaRede = { ok: true } | { erro: string };
+
+/**
+ * Liga ou desliga a pasta de rede de uma empresa (21/10/2026): com ela ligada,
+ * o que o robô do escritório acha na pasta da empresa na rede entra nos
+ * Arquivos. O mesmo cuidado da Ceci no portal: só administrador, nunca com a
+ * assinatura em somente leitura, e a empresa tem de ser do escritório.
+ */
+export async function definirPastaDeRedeDaEmpresa(companyId: string, ligada: boolean): Promise<ResultadoDaRede> {
+  const ctx = await administrador();
+  if (!ctx) return { erro: "Só o Administrador ou o Super Admin liga ou desliga a pasta de rede." };
+  if (typeof companyId !== "string" || !companyId || typeof ligada !== "boolean") return { erro: "Empresa não encontrada." };
+
+  const prisma = getPrisma();
+  let empresa: { name: string; displayName: string | null } | null;
+  try {
+    const r = await prisma.company.updateMany({ where: { id: companyId, tenantId: ctx.tenantId }, data: { pastaDeRedeNoDrive: ligada } });
+    if (r.count === 0) return { erro: "Empresa não encontrada." };
+    empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId: ctx.tenantId }, select: { name: true, displayName: true } });
+  } catch (err) {
+    if ((err as { code?: unknown })?.code === "P2022") return { erro: FALTA_ATUALIZAR_O_BANCO_DA_REDE };
+    console.error("[admin/arquivos] pasta de rede da empresa", err);
+    return { erro: "Não foi possível salvar agora. Tente de novo em instantes." };
+  }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: ligada ? "drive.rede_ligada" : "drive.rede_desligada",
+    entityType: "Company",
+    entityId: companyId,
+    metadata: { empresa: empresa ? nomeExibicao(empresa) : null },
+  });
+  revalidatePath("/admin/arquivos");
   return { ok: true };
 }

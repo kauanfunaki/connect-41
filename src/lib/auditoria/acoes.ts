@@ -354,6 +354,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "drive.template_update": e("editou no modelo de pastas a pasta"),
   "drive.template_enable": e("reativou no modelo de pastas a pasta"),
   "drive.template_disable": e("desativou no modelo de pastas a pasta"),
+  // A pasta de rede ligada aos Arquivos, por empresa (21/10/2026).
+  "drive.rede_ligada": e("ligou a pasta de rede nos Arquivos para a empresa", { chaveDoNome: "empresa" }),
+  "drive.rede_desligada": e("desligou a pasta de rede nos Arquivos para a empresa", { chaveDoNome: "empresa" }),
   "tenant.update": e("editou os dados do escritório"),
   "tenant.agenda.update": e("mudou o horário da Agenda do escritório", { comNome: false }),
   "tenant.smtp.update": e("configurou o e-mail de envio", { comNome: false }),
@@ -590,6 +593,7 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["lead.", "comercial"],
   ["drive.", "arquivos"],
   ["drive.template_", "configuracoes"],
+  ["drive.rede_", "configuracoes"],
   ["solicitacao.", "portal"],
   ["clientDocument.", "portal"],
   ["comunicado.", "portal"],
