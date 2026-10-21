@@ -435,7 +435,7 @@ export function FiltroDaColuna({
 }
 
 /**
- * O funil para tabela **paginada** (Empresas, Pessoas, Clientes): filtra no
+ * O funil para tabela **paginada** (Empresas, Pessoas): filtra no
  * servidor, pela URL, e não nas linhas da tela.
  *
  * Numa lista de 20 por página, filtrar só as linhas visíveis engana — "Simples

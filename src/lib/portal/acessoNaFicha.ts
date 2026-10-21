@@ -4,7 +4,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { formatInstantDate } from "@/lib/format";
-import { lerContasDasEmpresas, portalPorEmpresaPronto } from "./empresasDaContaDb";
+import { lerContasDasEmpresas } from "./empresasDaContaDb";
 
 export type ViaNaFicha = { tipo: "direto"; incluiFiliais: boolean } | { tipo: "matriz"; matrizId: string };
 
@@ -20,15 +20,13 @@ export type AcessoNaFicha = {
 export type ContaParaLigar = { id: string; nome: string; email: string; ativo: boolean };
 
 export type DadosDoAcessoNaFicha = {
-  /** A migration de 14/10/2026 já rodou? Sem ela, a aba só mostra. */
-  pronto: boolean;
   acessos: AcessoNaFicha[];
   outras: ContaParaLigar[];
 };
 
 export async function acessoAoPortalDaEmpresa(tenantId: string, companyId: string): Promise<DadosDoAcessoNaFicha> {
   const prisma = getPrisma();
-  const [pronto, porEmpresa] = await Promise.all([portalPorEmpresaPronto(), lerContasDasEmpresas(tenantId, [companyId])]);
+  const porEmpresa = await lerContasDasEmpresas(tenantId, [companyId]);
   const vias = porEmpresa.get(companyId) ?? new Map();
   const ids = [...vias.keys()];
 
@@ -48,7 +46,6 @@ export async function acessoAoPortalDaEmpresa(tenantId: string, companyId: strin
   ]);
 
   return {
-    pronto,
     acessos: contas.map((c) => ({
       id: c.id,
       nome: c.name,
