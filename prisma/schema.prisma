@@ -7,6 +7,162 @@ datasource db {
   provider = "mysql"
 }
 
+/// Conta compartilhada do escritório. A credencial existe somente em TenantIntegration.configEnc.
+model GithubConnection {
+  id                   String @id @default(uuid())
+  tenantId             String
+  integrationId        String @unique
+  githubUserId         String? @db.VarChar(100)
+  login                String? @db.VarChar(100)
+  connectedBy          String?
+  status               String @default("disconnected") @db.VarChar(30)
+  generation           Int @default(0)
+  timezone             String @default("America/Sao_Paulo") @db.VarChar(80)
+  intervalMinutes      Int @default(30)
+  nextSyncAt           DateTime?
+  verifiedAt           DateTime?
+  inventoryAt          DateTime?
+  lastError            String? @db.VarChar(500)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  integration          TenantIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  repositories         GithubRepository[]
+  users                GithubUser[]
+  jobs                 GithubSyncJob[]
+  @@index([tenantId, status])
+  @@map("github_connections")
+}
+
+model GithubRepository {
+  id                   String @id @default(uuid())
+  tenantId             String
+  connectionId         String
+  externalId           String @db.VarChar(100)
+  owner                String @db.VarChar(100)
+  name                 String @db.VarChar(100)
+  fullName             String @db.VarChar(210)
+  defaultBranch        String @db.VarChar(255)
+  private              Boolean @default(false)
+  fork                 Boolean @default(false)
+  archived             Boolean @default(false)
+  selected             Boolean @default(false)
+  accessible           Boolean @default(true)
+  accessCheckedAt      DateTime?
+  discoveredIn         String? @db.VarChar(40)
+  lastError            String? @db.VarChar(500)
+  createdAt            DateTime @default(now())
+  connection           GithubConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  contributions        GithubContribution[]
+  daily                GithubDailyContribution[]
+  jobs                 GithubSyncJob[]
+  @@unique([connectionId, externalId])
+  @@index([tenantId, connectionId, selected, accessible])
+  @@map("github_repositories")
+}
+
+model GithubUser {
+  id                   String @id @default(uuid())
+  tenantId             String
+  connectionId         String
+  externalId           String @db.VarChar(100)
+  login                String @db.VarChar(100)
+  name                 String? @db.VarChar(200)
+  isBot                Boolean @default(false)
+  unidentified         Boolean @default(false)
+  tracked              Boolean @default(false)
+  connection           GithubConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  contributions        GithubContribution[]
+  daily                GithubDailyContribution[]
+  @@unique([connectionId, externalId])
+  @@index([tenantId, connectionId, login])
+  @@map("github_users")
+}
+
+model GithubContribution {
+  id                   String @id @default(uuid())
+  tenantId             String
+  repositoryId         String
+  userId               String
+  type                 String @db.VarChar(20)
+  externalId           String @db.VarChar(100)
+  occurredAt           DateTime
+  day                  String @db.Char(10)
+  url                  String @db.VarChar(1000)
+  number               Int?
+  current              Boolean @default(true)
+  seenIn               String? @db.VarChar(40)
+  repository           GithubRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  user                 GithubUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([repositoryId, type, externalId])
+  @@index([tenantId, repositoryId, day, current])
+  @@index([tenantId, userId, day, type])
+  @@map("github_contributions")
+}
+
+model GithubDailyContribution {
+  id                   String @id @default(uuid())
+  tenantId             String
+  repositoryId         String
+  userId               String
+  day                  String @db.Char(10)
+  type                 String @db.VarChar(20)
+  count                Int
+  repository           GithubRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  user                 GithubUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([repositoryId, userId, day, type])
+  @@index([tenantId, userId, day])
+  @@index([tenantId, repositoryId, day])
+  @@map("github_daily_contributions")
+}
+
+/// Uma tarefa por recurso; cursor e cobertura sobrevivem a reinícios e à conclusão de um lote.
+model GithubSyncJob {
+  id                   String @id @default(uuid())
+  tenantId             String
+  connectionId         String
+  repositoryId         String?
+  key                  String @db.VarChar(150)
+  resource             String @db.VarChar(20)
+  state                String @default("queued") @db.VarChar(20)
+  generation           Int
+  priority             Int @default(10)
+  cursor               Json?
+  coveredFrom          DateTime?
+  coveredThrough       DateTime?
+  nextAttemptAt        DateTime @default(now())
+  attempts             Int @default(0)
+  error                String? @db.VarChar(500)
+  updatedAt            DateTime @updatedAt
+  connection           GithubConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  repository           GithubRepository? @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  @@unique([connectionId, key])
+  @@index([state, nextAttemptAt, priority])
+  @@index([tenantId, connectionId, generation])
+  @@map("github_sync_jobs")
+}
+
+/// Lease compartilhada entre conexões da mesma identidade GitHub; também coordena pausa por rate limit.
+model GithubAccountLease {
+  githubUserId         String @id @db.VarChar(100)
+  owner                String? @db.VarChar(40)
+  expiresAt            DateTime?
+  nextAttemptAt        DateTime?
+  @@map("github_account_leases")
+}
+
+model GithubOAuthAttempt {
+  stateHash            String @id @db.Char(64)
+  connectionId         String
+  tenantId             String
+  userId               String
+  sessionHash          String @db.Char(64)
+  verifierEnc          String @db.Text
+  generation           Int
+  expiresAt            DateTime
+  @@index([expiresAt])
+  @@map("github_oauth_attempts")
+}
+
 model OpsWatcher {
   tenantId String
   ownerId String?
@@ -6577,6 +6733,7 @@ model TenantIntegration {
   runs                IntegrationRun[]
   chatwootConnections ChatwootConnection[]
   spedSyncStates      SpedSyncState[]
+  githubConnection    GithubConnection?
 
   @@unique([tenantId, integrationCode, instanceKey])
   @@index([tenantId, enabled])
