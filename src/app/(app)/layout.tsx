@@ -31,6 +31,8 @@ import { EstiloDaAparencia } from "@/components/aparencia/EstiloDaAparencia";
 import { lerEmpresaEmFoco } from "@/lib/empresas/focoServidor";
 import { alcanceDoFoco } from "@/lib/empresas/foco";
 import { FaixaDoFoco, ProvedorDoFoco } from "@/components/empresas/FaixaDoFoco";
+import { contarNovasDaEquipe } from "@/lib/solicitacoes/consultas";
+import { setoresDaFila } from "@/lib/solicitacoes/acesso";
 
 export default async function AppLayout({
   children,
@@ -127,10 +129,10 @@ export default async function AppLayout({
   // Sem as arquivadas e os tipos ocultos (05/10/2026). Falha aqui não derruba
   // o app inteiro (deploy antes da migration, por exemplo): o sino fica sem número.
   const dono = { tenantId, userId: ctx.userId };
-  // A cor principal do escritório também aqui, só se ele ligou "Usar também no
-  // Connect da equipe" (21/10/2026; desligado por padrão). Os grupos de cor
-  // são do portal: a equipe já tem as cores dos setores.
-  const [unreadCount, me, accessibleTenants, { aparencia }] = await Promise.all([
+  // A aparência do escritório (21/10/2026): as cores dos grupos de telas, e a
+  // cor principal só se ele ligou "Usar também no Connect da equipe".
+  // As solicitações novas (21/10/2026): o número do item Solicitações do menu.
+  const [unreadCount, me, accessibleTenants, { aparencia }, solicitacoesNovas] = await Promise.all([
     ctx.userId
       ? tiposOcultos(dono)
           .then((ocultos) => contarNaoLidasVisiveis(dono, ocultos))
@@ -154,6 +156,12 @@ export default async function AppLayout({
       })
     ),
     aparenciaDoEscritorio(tenantId),
+    solicitacoesLigadas && ctx.userId
+      ? contarNovasDaEquipe({ tenantId, setores: setoresDaFila(ctx), userId: ctx.userId }).catch((err) => {
+          console.error("[layout] solicitações novas", err);
+          return 0;
+        })
+      : Promise.resolve(0),
   ]);
 
   // A empresa em foco (BPO, uma empresa por vez — 21/10/2026): a faixa do
@@ -189,6 +197,7 @@ export default async function AppLayout({
         canOpenAdmin={canOpenAdmin}
         unreadCount={unreadCount}
         solicitacoesLigadas={solicitacoesLigadas}
+        solicitacoesNovas={solicitacoesNovas}
         arquivosLigados={arquivosLigados}
         chamadosLigados={chamadosLigados}
         telasDoGeral={telasDoGeral}
