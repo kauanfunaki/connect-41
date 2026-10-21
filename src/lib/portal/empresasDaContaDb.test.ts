@@ -1,14 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // O que se testa: a leitura do banco do portal por empresa (14/10/2026) — que
-// toda consulta leva o escritório, que o aviso só sai para acesso ativo, e que
-// sem a tabela nova (código antes da migration) a leitura cai na regra do
-// Cliente em vez de derrubar o portal.
+// toda consulta leva o escritório e que o aviso só sai para acesso ativo. A
+// volta para a regra do Cliente, sem a tabela nova, saiu em 21/10/2026.
 
 const m = vi.hoisted(() => ({
   portalUserCompany: { findMany: vi.fn() },
   company: { findMany: vi.fn() },
-  portalUser: { findFirst: vi.fn(), findMany: vi.fn() },
+  portalUser: { findMany: vi.fn() },
 }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => m }));
 
@@ -16,11 +15,10 @@ const { lerEmpresasDaConta, lerContasDasEmpresas, usuariosAtivosDasEmpresas, ids
 
 const semTabela = () => Object.assign(new Error("The table `portal_user_companies` does not exist"), { code: "P2021" });
 const T = "escritorio-41";
-const emp = (id: string, extra: Record<string, unknown> = {}) => ({ id, tenantId: T, parentCompanyId: null, status: "ACTIVE", clientGroupId: null, ...extra });
+const emp = (id: string, extra: Record<string, unknown> = {}) => ({ id, tenantId: T, parentCompanyId: null, status: "ACTIVE", ...extra });
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 describe("lerEmpresasDaConta — o alcance do portal", () => {
@@ -45,26 +43,12 @@ describe("lerEmpresasDaConta — o alcance do portal", () => {
     expect(m.company.findMany).not.toHaveBeenCalled();
   });
 
-  it("sem a tabela nova: as empresas do cliente da conta (a regra de antes), no escritório", async () => {
-    m.portalUserCompany.findMany.mockRejectedValueOnce(semTabela());
-    m.portalUser.findFirst.mockResolvedValueOnce({ clientGroupId: "g-bld" });
-    m.company.findMany.mockResolvedValueOnce([{ id: "a" }, { id: "b" }]);
-
-    expect(await idsDasEmpresasDaConta(T, "pu-1")).toEqual(["a", "b"]);
-    expect(m.portalUser.findFirst.mock.calls[0]![0].where).toEqual({ id: "pu-1", tenantId: T });
-    expect(m.company.findMany.mock.calls[0]![0].where).toEqual({ tenantId: T, clientGroupId: "g-bld" });
-  });
-
-  it("sem a tabela e sem cliente: nada — nunca tudo", async () => {
-    m.portalUserCompany.findMany.mockRejectedValueOnce(semTabela());
-    m.portalUser.findFirst.mockResolvedValueOnce({ clientGroupId: null });
-    expect(await idsDasEmpresasDaConta(T, "pu-1")).toEqual([]);
-    expect(m.company.findMany).not.toHaveBeenCalled();
-  });
-
-  it("outro erro do banco sobe — não vira lista vazia", async () => {
+  it("erro do banco sobe — inclusive a falta da tabela: não vira lista vazia nem a regra do Cliente", async () => {
     m.portalUserCompany.findMany.mockRejectedValueOnce(new Error("conexão caiu"));
     await expect(lerEmpresasDaConta(T, "pu-1")).rejects.toThrow("conexão caiu");
+    m.portalUserCompany.findMany.mockRejectedValueOnce(semTabela());
+    await expect(idsDasEmpresasDaConta(T, "pu-1")).rejects.toThrow("does not exist");
+    expect(m.company.findMany).not.toHaveBeenCalled();
   });
 });
 
@@ -105,14 +89,11 @@ describe("lerContasDasEmpresas / usuariosAtivosDasEmpresas — quem recebe aviso
     expect(m.portalUser.findMany).not.toHaveBeenCalled();
   });
 
-  it("sem a tabela nova: quem é do cliente da empresa (a regra de antes)", async () => {
-    m.company.findMany.mockResolvedValueOnce([emp("a", { clientGroupId: "g1" }), emp("b")]);
+  it("sem a tabela nova o erro sobe, e ninguém é avisado por engano", async () => {
+    m.company.findMany.mockResolvedValueOnce([emp("a"), emp("b")]);
     m.portalUserCompany.findMany.mockRejectedValueOnce(semTabela());
-    m.portalUser.findMany.mockResolvedValueOnce([{ id: "ana", clientGroupId: "g1" }]);
-    const contas = await lerContasDasEmpresas(T, ["a", "b"]);
-    expect([...contas.get("a")!.keys()]).toEqual(["ana"]);
-    expect(contas.get("b")!.size).toBe(0);
-    expect(m.portalUser.findMany.mock.calls[0]![0].where).toEqual({ tenantId: T, clientGroupId: { in: ["g1"] } });
+    await expect(usuariosAtivosDasEmpresas(T, ["a", "b"])).rejects.toThrow("does not exist");
+    expect(m.portalUser.findMany).not.toHaveBeenCalled();
   });
 
   it("lista vazia de empresas: nada, sem consulta", async () => {

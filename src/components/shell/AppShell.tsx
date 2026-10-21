@@ -102,7 +102,6 @@ const SECTOR_ICONS: Record<string, React.ReactNode> = {
 // (pedido de 30/09, referência do HubStrom).
 const TELAS_DE_CADASTROS: TelaDoPainel[] = [
   { label: "Empresas", href: "/empresas", icon: <Building2 /> },
-  { label: "Clientes", href: "/clientes", icon: <BriefcaseBusiness /> },
   { label: "Pessoas", href: "/pessoas", icon: <Users /> },
 ];
 // Só entra no painel de quem vê o BPO (21/10/2026): a mesma regra do Ctrl+K,
@@ -191,6 +190,11 @@ type Props = {
    * escolha guardada no cookie.
    */
   menuRecolhidoInicial?: boolean;
+  /**
+   * A faixa da empresa em foco (21/10/2026), montada no layout: fica parada
+   * entre o topo e a rolagem, nas telas do BPO (`FaixaDoFoco`).
+   */
+  faixaDoFoco?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -220,6 +224,7 @@ export function AppShell({
   canSelfRegularizeSubscription = false,
   paresDeAjuda = [],
   menuRecolhidoInicial = false,
+  faixaDoFoco,
   children,
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -734,6 +739,8 @@ export function AppShell({
             </Aviso>
           </div>
         )}
+
+        {faixaDoFoco}
 
         {/* Page content */}
         {/* O `relative` faz do <main> o bloco de contenção dos elementos com

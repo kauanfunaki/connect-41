@@ -10,7 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -63,7 +63,7 @@ export default async function AnalisesPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canViewSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
@@ -71,7 +71,8 @@ export default async function AnalisesPage({
   // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
   // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
+  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   if (!empresa || !companyId) {
@@ -82,7 +83,7 @@ export default async function AnalisesPage({
           <EmptyState title="Nenhuma empresa ativa" icon={<FileText />} />
         ) : (
           <>
-            <FiltroDaEmpresa acao="/dre/analises" empresas={empresas} valor={null} manter={{ aba, mes: params.mes }} />
+            <FiltroDaEmpresa acao="/dre/analises" empresas={noSeletor} foco={foco} valor={null} manter={{ aba, mes: params.mes }} />
             <EscolhaAEmpresa escolha={escolha} porQue="As análises são de uma empresa por vez." />
           </>
         )}
@@ -106,7 +107,7 @@ export default async function AnalisesPage({
         subtitle={`Sobre a DRE por competência e o caixa de ${rotuloDaCompetencia(mes)} — cálculo determinístico, sem IA externa.`}
       />
       {/* A empresa navega sozinha (e vira a última aberta); o mês, com "Aplicar". */}
-      <FiltroDaEmpresa acao="/dre/analises" empresas={empresas} valor={companyId} manter={{ aba, mes }}>
+      <FiltroDaEmpresa acao="/dre/analises" empresas={noSeletor} foco={foco} valor={companyId} manter={{ aba, mes }}>
         <FiltroDePeriodo acao="/dre/analises" mes={mes} mesEmNumero extras={{ empresa: companyId, aba }} naFileira />
       </FiltroDaEmpresa>
       <AbasDeLink
@@ -117,7 +118,7 @@ export default async function AnalisesPage({
       {aba === "economico-financeiro" && <AbaEconomicoFinanceiro {...base} />}
       {aba === "reconciliacao" && <AbaReconciliacao {...base} />}
       {aba === "comparativos" && (
-        <AbaComparativos {...base} modo={params.modo} regime={params.regime} empresa2={params.empresa2} empresas={empresas} />
+        <AbaComparativos {...base} modo={params.modo} regime={params.regime} empresa2={params.empresa2} empresas={noSeletor} />
       )}
       {aba === "forecast" && <AbaForecast {...base} metodo={params.metodo} />}
       {aba === "cenarios" && <AbaCenarios {...base} />}

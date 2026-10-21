@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Layers, Users, Truck, HandCoins, ListTree, FolderKanban } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { formatCnpj, formatCpf } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -123,19 +123,20 @@ export default async function CadastrosFinanceirosPage({
   const ctx = await getAuthContext();
   // Setor que opera o módulo neste tenant (ver `setorDoModulo`); o do catálogo
   // é só o padrão.
-  const setor = ctx.tenantId ? ((await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR) : SECTOR;
-  if (!ctx.tenantId || !canViewSector(ctx, setor)) notFound();
+  const setores = ctx.tenantId ? ((await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR]) : [SECTOR];
+  if (!ctx.tenantId || !canViewSector(ctx, setores)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
   const aba = ABAS.find((a) => a.chave === params.aba)?.chave ?? "fornecedores";
   const situacao = lerSituacao(params.situacao);
-  const podeEditar = canActOnSector(ctx, setor);
+  const podeEditar = canActOnSector(ctx, setores);
   // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
   // (13/10/2026). Era a primeira em ordem alfabética, e o "Novo cadastro" caía
   // nela sem ninguém ter escolhido.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
+  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   // A ação da tela vai no cabeçalho, como em pendências e no resto do app
@@ -156,7 +157,8 @@ export default async function CadastrosFinanceirosPage({
   const filtroDaEmpresa = (
     <FiltroDaEmpresa
       acao="/fornecedores-e-sacados"
-      empresas={empresas}
+      empresas={noSeletor}
+      foco={foco}
       valor={companyId}
       manter={{ aba: aba === "fornecedores" ? undefined : aba }}
     />

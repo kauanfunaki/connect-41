@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -44,7 +44,7 @@ export default async function FluxoDeCaixaPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canViewSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
@@ -59,7 +59,8 @@ export default async function FluxoDeCaixaPage({
   // todos os clientes; somar o caixa de empresas diferentes também não diz o
   // caixa de ninguém. A visão de todas é a aba "Por empresa", que soma no banco.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só a base dela — também em "Por empresa".
+  const { escolha, noSeletor, foco, empresasDeTodas } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const escopo = escopoFinanceiroDaEscolha(ctx.tenantId, escolha);
   const empresaId = escopo?.companyIds?.[0] ?? null;
 
@@ -74,7 +75,7 @@ export default async function FluxoDeCaixaPage({
       />
       {/* A empresa navega sozinha (e vira a última aberta); o mês, com "Aplicar". */}
       {aba === "fluxo" ? (
-        <FiltroDaEmpresa acao="/fluxo-de-caixa" empresas={empresas} valor={empresaId} manter={{ mes }}>
+        <FiltroDaEmpresa acao="/fluxo-de-caixa" empresas={noSeletor} valor={empresaId} manter={{ mes }} foco={foco}>
           <FiltroDePeriodo acao="/fluxo-de-caixa" mes={mes} extras={{ empresa: empresaId ?? undefined }} naFileira />
         </FiltroDaEmpresa>
       ) : (
@@ -89,7 +90,7 @@ export default async function FluxoDeCaixaPage({
       />
 
       {aba === "empresas" ? (
-        <PorEmpresa tenantId={ctx.tenantId} mes={mes} hojeKey={hojeKey} />
+        <PorEmpresa tenantId={ctx.tenantId} companyIds={empresasDeTodas} mes={mes} hojeKey={hojeKey} />
       ) : escopo ? (
         <Fluxo escopo={escopo} mes={mes} hojeKey={hojeKey} />
       ) : (
@@ -132,8 +133,19 @@ async function Fluxo({ escopo, mes, hojeKey }: { escopo: EscopoFinanceiro; mes: 
   );
 }
 
-async function PorEmpresa({ tenantId, mes, hojeKey }: { tenantId: string; mes: string; hojeKey: string }) {
-  const { somas, vencidas } = await dadosDoConsolidado({ tenantId, companyIds: null }, mes, hojeKey);
+async function PorEmpresa({
+  tenantId,
+  companyIds,
+  mes,
+  hojeKey,
+}: {
+  tenantId: string;
+  /** Com uma empresa em foco, a base dela; sem foco, `null` — o escritório. */
+  companyIds: string[] | null;
+  mes: string;
+  hojeKey: string;
+}) {
+  const { somas, vencidas } = await dadosDoConsolidado({ tenantId, companyIds }, mes, hojeKey);
   const linhas = consolidarPorEmpresa(somas, vencidas);
   const nomes = await nomesDasEmpresas(tenantId, linhas.map((l) => l.companyId));
   return (

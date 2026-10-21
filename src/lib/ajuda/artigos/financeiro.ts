@@ -6,6 +6,46 @@
 import type { ArtigoDeAjuda } from "../tipos";
 
 export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
+  // ─── Uma empresa por vez (21/10/2026) ─────────────────────────────────────
+  {
+    chave: "geral:empresa-por-vez",
+    titulo: "Trabalhar numa empresa por vez",
+    caminhos: [],
+    resumo:
+      "Para não lançar na empresa errada: escolha a empresa em que vai trabalhar, e as telas do financeiro passam a mostrar e gravar só ela — com a matriz e as filiais juntas —, até você trocar ou sair. É como abrir a base da empresa no Omie.",
+    secoes: [
+      {
+        titulo: "Começar a trabalhar numa empresa",
+        passos: [
+          "Abra a ficha da empresa, em “Empresas”.",
+          "Clique em “Trabalhar nesta empresa”, no topo da ficha.",
+          "Pronto: ao abrir “Contas a pagar”, “Contas a receber”, “Lançamentos”, “Conciliação”, “Fluxo de caixa”, “Tabela dinâmica”, “Fornecedores e sacados”, “Cobrança”, “Emitir NFS-e” ou a DRE, a faixa “Trabalhando em”, logo abaixo do topo, mostra o nome da empresa.",
+          "No campo “Empresa” de cada tela aparecem só a empresa, a matriz e as filiais dela. Onde a tela oferecia “Todas as empresas”, aparece “Todas da base (matriz e filiais)”.",
+        ],
+      },
+      {
+        titulo: "Trocar de empresa ou sair",
+        passos: [
+          "Na faixa do topo, clique em “Trocar empresa” e busque a outra empresa por nome ou CNPJ. A tela volta para o começo, já na nova empresa.",
+          "Para voltar a ver todas as empresas, clique em “Sair”, na faixa. As telas abrem na última empresa que você abriu.",
+          "Na ficha da empresa em que você está trabalhando, o selo “Trabalhando nesta empresa” tem o mesmo “Sair”.",
+        ],
+      },
+      {
+        titulo: "Quando algo é de outra empresa",
+        passos: [
+          "Um link para outra empresa (de uma notificação, por exemplo) abre a tela na empresa em que você está trabalhando, com um aviso dizendo o que o link pedia. Clique em “Sair do foco e abrir” no aviso para ver a outra.",
+          "Se algo tentar gravar em outra empresa — pagar, lançar, conciliar, alterar em lote, exportar —, nada é gravado, e o Connect diz em que empresa você está. Use “Trocar empresa” ou “Sair”, na faixa do topo, e faça de novo.",
+        ],
+      },
+    ],
+    dicas: [
+      "A escolha fica guardada neste navegador, por um mês: ao abrir o Connect de novo, você continua na mesma empresa. Em outro computador ou navegador, escolha de novo.",
+      "A matriz e as filiais são uma base só: na empresa com filiais, você lança e confere em qualquer uma delas sem trocar.",
+      "A faixa aparece só nas telas do financeiro. As outras telas do Connect continuam mostrando todas as empresas.",
+    ],
+  },
+
   // ─── Contas a pagar ───────────────────────────────────────────────────────
   {
     chave: "bpo_contas_pagar",
@@ -18,7 +58,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Encontrar as contas que você procura",
         passos: [
           "Use os cartões do topo: “Em aberto”, “Vencido” e “Vence hoje” — com a “Situação” em “Todas”, aparece também o “Pago”. Clique em “Em aberto” ou “Vencido” para ver só essas contas.",
-          "Clique em “Filtros” e escolha a “Situação” (“Vencidas” ou “Todas”) ou a “Competência” (o mês a que a conta pertence). A empresa se escolhe em “Empresa”, no topo: a tela abre na última empresa que você abriu, e “Todas as empresas” mostra o escritório inteiro.",
+          "Clique em “Filtros” e escolha a “Situação” (“Vencidas” ou “Todas”) ou a “Competência” (o mês a que a conta pertence). A empresa se escolhe em “Empresa”, no topo: a tela abre na última empresa que você abriu, e “Todas as empresas” mostra o escritório inteiro. Trabalhando numa empresa por vez, a tela abre nela, e “Todas da base” mostra a matriz e as filiais juntas.",
           "Para refinar a lista, clique no ícone de filtro ao lado do nome da coluna, como “Vencimento”, “Fornecedor” ou “Categoria”.",
           "Contas marcadas com “sem categoria” ainda precisam ser classificadas.",
           "Na aba “Análise — atraso e ranking”, veja as “Faixas de atraso” e os “Maiores fornecedores em aberto”.",
@@ -79,7 +119,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Encontrar as contas que você procura",
         passos: [
           "Use os cartões do topo: “Em aberto”, “Vencido” e “Vence hoje” — com a “Situação” em “Todas”, aparece também o “Recebido”. Clique em “Em aberto” ou “Vencido” para ver só essas contas.",
-          "Clique em “Filtros” e escolha a “Situação” (“Vencidas” ou “Todas”) ou a “Competência” (o mês a que a conta pertence). A empresa se escolhe em “Empresa”, no topo: a tela abre na última empresa que você abriu, e “Todas as empresas” mostra o escritório inteiro.",
+          "Clique em “Filtros” e escolha a “Situação” (“Vencidas” ou “Todas”) ou a “Competência” (o mês a que a conta pertence). A empresa se escolhe em “Empresa”, no topo: a tela abre na última empresa que você abriu, e “Todas as empresas” mostra o escritório inteiro. Trabalhando numa empresa por vez, a tela abre nela, e “Todas da base” mostra a matriz e as filiais juntas.",
           "Para refinar a lista, clique no ícone de filtro ao lado do nome da coluna, como “Vencimento”, “Cliente” ou “Categoria”.",
           "Na aba “Análise — atraso e ranking”, veja as “Faixas de atraso” e os “Maiores clientes em aberto”.",
         ],
@@ -135,7 +175,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Lançar uma conta sem nota",
         passos: [
-          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu.",
+          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu — ou, trabalhando numa empresa por vez, nela.",
           "Clique em “Novo lançamento”, no topo da tela.",
           "Em “Tipo”, escolha “Conta a pagar” ou “Conta a receber” e selecione o “Fornecedor” ou o “Cliente (sacado)”. Se ele ainda não existe, escolha “+ Cadastrar nova contraparte”.",
           "Escolha a “Categoria” (obrigatória em conta a pagar) e preencha “Competência” (o mês a que a conta pertence), “Vencimento” e “Valor”.",
@@ -195,7 +235,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Abrir uma visão pronta",
         passos: [
-          "Em “Empresa”, no topo, escolha a empresa ou “Todas as empresas”.",
+          "Em “Empresa”, no topo, escolha a empresa ou “Todas as empresas” (“Todas da base”, trabalhando numa empresa por vez).",
           "Clique numa das visões prontas, como “Despesas por categoria” ou “A pagar por fornecedor”. A tabela se monta com a configuração dela.",
           "Ajuste o que quiser no quadro de configuração e clique em “Aplicar”.",
         ],
@@ -235,7 +275,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Ver o realizado e a projeção",
         passos: [
-          "Em “Empresa”, no topo, escolha a empresa — o realizado e a projeção são de uma empresa por vez. A soma de todas, mês a mês, fica na aba “Por empresa”.",
+          "Em “Empresa”, no topo, escolha a empresa — o realizado e a projeção são de uma empresa por vez. A soma de todas, mês a mês, fica na aba “Por empresa” — trabalhando numa empresa por vez, só a matriz e as filiais dela.",
           "Escolha o mês e clique em “Aplicar”.",
           "Na aba “Realizado e projeção”, o quadro “Saldo das contas” mostra o saldo bancário que vem da conciliação.",
           "A tabela do realizado traz entradas, saídas e saldo dos seis meses até o mês escolhido, pela data em que as contas foram pagas ou recebidas.",
@@ -270,7 +310,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Cadastrar a conta bancária",
         passos: [
-          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu.",
+          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu — ou, trabalhando numa empresa por vez, nela.",
           "Clique em “Nova conta”.",
           "Preencha “Nome da conta”, “Tipo”, “Banco (COMPE)” (o código do banco, como 001 ou 341), “Agência” e “Conta com dígito”.",
           "O “Tipo” diz o que a conta faz. “Com extrato” (conta corrente, poupança, conta de pagamento, conta garantida, aplicação) importa OFX e concilia. “Dinheiro sem extrato” (caixinha, carteira virtual) entra no saldo e no fluxo de caixa pelas baixas feitas por ela. “Fora do caixa” (empréstimo, mútuo, crediário, administradora de cartões) não é dinheiro da empresa: fica fora do saldo bancário e do fluxo, e o dinheiro anda quando se transfere entre ela e o banco, na linha do extrato. Sem extrato, banco e número são opcionais.",
@@ -325,7 +365,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Cadastrar um fornecedor ou sacado",
         passos: [
           "Abra “Cadastros” na barra lateral e clique na aba “Fornecedores e sacados”. A aba só aparece para quem é do BPO.",
-          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu.",
+          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu — ou, trabalhando numa empresa por vez, nela.",
           "Clique em “Novo cadastro”.",
           "Preencha “Nome” e, se tiver, “CPF ou CNPJ” e “E-mail”.",
           "Escolha a “Categoria padrão” e o “Centro de custo padrão”, que a próxima conta dessa contraparte herda.",
@@ -501,7 +541,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Na aba “Fila”, veja os cartões “Títulos vencidos”, “Valor”, “Sem contato” e “Sacado sem e-mail”.",
           "Comece pelo quadro “Próximas ações de hoje”, com os contatos agendados para o dia.",
-          "A fila abre na última empresa que você abriu; troque em “Empresa”, no topo, ou escolha “Todas as empresas”. Clique em “Filtros” para escolher “Atraso”, “Situação” ou “Responsável” (“Meus” mostra só os seus).",
+          "A fila abre na última empresa que você abriu (ou na empresa em que você está trabalhando); troque em “Empresa”, no topo, ou escolha “Todas as empresas”. Clique em “Filtros” para escolher “Atraso”, “Situação” ou “Responsável” (“Meus” mostra só os seus).",
           "Clique em “Abrir” na linha do título para ver os detalhes e agir.",
         ],
       },
@@ -638,7 +678,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Ver o DRE de um mês",
         passos: [
-          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu.",
+          "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu — ou, trabalhando numa empresa por vez, nela.",
           "Na aba “Por mês”, o DRE abre no mês mais recente com movimento.",
           "Para ver outro mês, clique em “Filtros” e escolha o “Mês”.",
           "Confira, abaixo do relatório, quantos lançamentos entraram e se algum valor não fechou.",

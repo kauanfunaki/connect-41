@@ -2,17 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   contasDaEmpresa,
   empresasDaConta,
-  empresasPeloCliente,
   idsDasEmpresasDaConta,
-  ligacoesDoPreenchimento,
   nomeDoAcesso,
   type EmpresaDaRegra,
   type LigacaoDoAcesso,
 } from "./empresasDaConta";
 
 // O que se testa: a regra do portal por empresa (14/10/2026) — o que cada
-// acesso enxerga e quem enxerga cada empresa —, e que a troca do Cliente pela
-// ligação direta não tira empresa de ninguém.
+// acesso enxerga e quem enxerga cada empresa.
 
 const T = "escritorio-41";
 const e = (id: string, extra: Partial<EmpresaDaRegra> = {}): EmpresaDaRegra => ({
@@ -149,56 +146,6 @@ describe("contasDaEmpresa — quem recebe o aviso", () => {
         if (vistas.has(empresa.id)) expect(veem.get(conta)).toEqual(vistas.get(empresa.id));
       }
     }
-  });
-});
-
-describe("a troca do Cliente pela ligação direta (migration 20261014210000)", () => {
-  // Hoje: a conta vê as empresas com o mesmo cliente (`clientGroupId`). O
-  // cliente "bld" tem a matriz e duas filiais; a filial "bld-sul" não foi posta
-  // no cliente; a "bld-velha" (inativa) foi.
-  const EMPRESAS = [
-    { ...MATRIZ, clientGroupId: "bld" },
-    { ...FILIAL, clientGroupId: "bld" },
-    { ...INATIVA, clientGroupId: "bld" },
-    { ...PROSPECTO, clientGroupId: null },
-    { ...CANCELADA, clientGroupId: null },
-    { ...NETA, clientGroupId: null },
-    { ...SOLTA, clientGroupId: "irriga" },
-    { ...e("bld-de-outro", { tenantId: "outro" }), clientGroupId: "bld" },
-  ];
-  const CONTAS = [
-    { id: "ana", tenantId: T, clientGroupId: "bld" },
-    { id: "duda", tenantId: T, clientGroupId: "irriga" },
-    { id: "sem-cliente", tenantId: T, clientGroupId: null },
-    { id: "vazio", tenantId: T, clientGroupId: "cliente-sem-empresa" },
-  ];
-
-  for (const conta of CONTAS) {
-    it(`${conta.id}: ninguém perde empresa, e só ganha filial em operação da matriz`, () => {
-      const hoje = new Set(empresasPeloCliente(conta, EMPRESAS));
-      const depois = new Set(idsDasEmpresasDaConta(T, ligacoesDoPreenchimento(conta, EMPRESAS), EMPRESAS));
-      expect([...hoje].filter((id) => !depois.has(id)), "perderia").toEqual([]);
-      for (const ganhou of [...depois].filter((id) => !hoje.has(id))) {
-        const empresa = EMPRESAS.find((x) => x.id === ganhou)!;
-        expect(empresa.parentCompanyId && hoje.has(empresa.parentCompanyId), ganhou).toBeTruthy();
-        expect(["INACTIVE", "CHURNED"]).not.toContain(empresa.status);
-      }
-    });
-  }
-
-  it("a conta da BLD ganha a filial que não estava no cliente, e continua com a inativa que estava", () => {
-    const ana = CONTAS[0]!;
-    const depois = idsDasEmpresasDaConta(T, ligacoesDoPreenchimento(ana, EMPRESAS), EMPRESAS).sort();
-    expect(depois).toEqual(["bld-matriz", "bld-mogi", "bld-mogi-2", "bld-sul", "bld-velha"]);
-  });
-
-  it("o preenchimento liga direto, com as filiais, só as empresas do cliente no escritório da conta", () => {
-    expect(ligacoesDoPreenchimento(CONTAS[0]!, EMPRESAS)).toEqual([
-      { portalUserId: "ana", companyId: "bld-matriz", incluiFiliais: true },
-      { portalUserId: "ana", companyId: "bld-mogi", incluiFiliais: true },
-      { portalUserId: "ana", companyId: "bld-velha", incluiFiliais: true },
-    ]);
-    expect(ligacoesDoPreenchimento(CONTAS[2]!, EMPRESAS)).toEqual([]);
   });
 });
 

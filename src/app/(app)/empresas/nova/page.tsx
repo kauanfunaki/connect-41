@@ -5,17 +5,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { criarEmpresa } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
-import { getActiveClientGroupOptions } from "@/lib/clientGroupsDb";
 import { getMatrizOptions } from "@/lib/companyHierarchyDb";
 
 export default async function NovaEmpresaPage() {
   const ctx = await getAuthContext();
   if (!canWrite(ctx.role)) notFound();
 
-  const [clientGroupOptions, matrizOptions] = await Promise.all([
-    getActiveClientGroupOptions(ctx.tenantId),
-    getMatrizOptions(ctx.tenantId),
-  ]);
+  const matrizOptions = await getMatrizOptions(ctx.tenantId);
 
   return (
     <PageContainer>
@@ -27,7 +23,6 @@ export default async function NovaEmpresaPage() {
       <EmpresaForm
         action={criarEmpresa}
         cancelHref="/empresas"
-        clientGroupOptions={clientGroupOptions}
         matrizOptions={matrizOptions}
       />
     </PageContainer>

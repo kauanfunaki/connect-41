@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatarCompetencia, formatarNumero } from "@/lib/format";
-import { TODAS_AS_EMPRESAS } from "@/lib/empresas/escolhaDaEmpresa";
+import { leituraNoFoco } from "@/lib/empresas/focoServidor";
 import { gerarPlanilhaDeTabelas, TIPO_DO_XLSX } from "@/lib/planilha/tabelaDoExcel";
 import { DIMENSOES, MEDIDAS, MODULO_DA_TABELA_DINAMICA, ROTULO_DA_BASE, lerConfiguracao, montarTabela } from "@/lib/relatorios/tabelaDinamica";
 import { fatosDaBase, LIMITE_DE_FATOS } from "@/lib/relatorios/tabelaDinamicaServidor";
@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
   const ctx = await getAuthContext();
   const naoAchou = NextResponse.json({ error: "Não encontrado" }, { status: 404 });
   if (!ctx.tenantId) return naoAchou;
-  const setor = await setorDoModulo(ctx.tenantId, MODULO_DA_TABELA_DINAMICA);
-  if (!setor || !canViewSector(ctx, setor)) return naoAchou;
+  const setores = await setoresDoModulo(ctx.tenantId, MODULO_DA_TABELA_DINAMICA);
+  if (!setores || !canViewSector(ctx, setores)) return naoAchou;
   if (!(await isModuleEnabled(ctx.tenantId, MODULO_DA_TABELA_DINAMICA))) return naoAchou;
 
   const params = Object.fromEntries(req.nextUrl.searchParams);
@@ -33,15 +33,18 @@ export async function GET(req: NextRequest) {
   const agora = new Date();
   const quando = saoPauloParts(agora);
   const c = lerConfiguracao(params, quando.dateKey);
-  const empresaId = empresa === TODAS_AS_EMPRESAS ? null : empresa;
+  // Com uma empresa em foco (21/10/2026): "todas" é a base, e outra empresa não sai.
+  const noFoco = await leituraNoFoco(ctx, empresa);
+  if (!noFoco.ok) return NextResponse.json({ error: noFoco.erro }, { status: 403 });
+  const empresaId = noFoco.empresaId ?? null;
 
   const [{ fatos, limitada }, empresaNome] = await Promise.all([
-    fatosDaBase(ctx.tenantId, empresaId, c, agora),
+    fatosDaBase(ctx.tenantId, empresaId ?? noFoco.empresaIds ?? null, c, agora),
     empresaId
       ? getPrisma()
           .company.findFirst({ where: { id: empresaId, tenantId: ctx.tenantId }, select: { name: true, displayName: true } })
           .then((e) => (e ? nomeExibicao(e) : null))
-      : Promise.resolve("Todas as empresas"),
+      : Promise.resolve(noFoco.empresaIds ? "Todas da base (matriz e filiais)" : "Todas as empresas"),
   ]);
   if (empresaNome === null) return naoAchou;
 

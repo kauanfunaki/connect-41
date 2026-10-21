@@ -5,14 +5,14 @@ import { podeNoModulo } from "@/lib/auth/modulo";
 
 const ABAS: AbaDeLink[] = [
   { chave: "empresas", rotulo: "Empresas", href: "/empresas" },
-  // Clientes fica entre Empresas e Pessoas de propósito: é o nível ACIMA da
-  // empresa, e a ordem da barra desenha essa hierarquia.
-  { chave: "clientes", rotulo: "Clientes", href: "/clientes" },
   { chave: "pessoas", rotulo: "Pessoas", href: "/pessoas" },
 ];
 
-// Barra de abas do topo de /empresas, /clientes e /pessoas — troca de aba navega para a
+// Barra de abas do topo de /empresas e /pessoas — troca de aba navega para a
 // listagem correspondente (rotas continuam as mesmas de sempre).
+//
+// A aba Clientes saiu em 15/10/2026 (etapa 3 da saída do Cliente): o cadastro
+// é por empresa, e /clientes leva para cá.
 //
 // Abas por link (`AbasDeLink`) desde 07/10/2026: era o `Tabs` com
 // `role="tab"` e `router.push`, o erro que o `SegmentedControl` descreve —

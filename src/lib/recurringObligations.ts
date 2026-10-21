@@ -7,6 +7,7 @@
 // dias diferentes). Obrigação criada no meio do período gera o item do
 // período corrente na próxima execução (até 15min).
 import { getPrisma } from "@/lib/prisma";
+import { nacionaisEmUso } from "@/lib/feriados";
 import { notifyUser, notifySector } from "@/lib/notifications";
 import { formatCalendarDate } from "@/lib/format";
 import type { RecurringFrequency } from "@/generated/prisma/enums";
@@ -97,11 +98,12 @@ export async function generateRecurringObligations(): Promise<{ generated: numbe
     where: { date: { gte: startOfMonthUTC(now), lte: new Date(now.getTime() + 45 * DAY_MS) } },
     select: { tenantId: true, date: true },
   });
+  // Os nacionais valem para todo tenant e não estão no banco: saem da conta
+  // (21/10/2026). O cadastro tem só as exceções de cada escritório.
+  const nacionais = [...nacionaisEmUso(now).keys()].map((d) => new Date(d).getTime());
   const holidaysByTenant = new Map<string, Set<number>>();
-  for (const h of holidayRows) {
-    if (!holidaysByTenant.has(h.tenantId)) holidaysByTenant.set(h.tenantId, new Set());
-    holidaysByTenant.get(h.tenantId)!.add(h.date.getTime());
-  }
+  for (const ob of obligations) holidaysByTenant.set(ob.tenantId, new Set(nacionais));
+  for (const h of holidayRows) holidaysByTenant.get(h.tenantId)?.add(h.date.getTime());
 
   let generated = 0;
   for (const ob of obligations) {
@@ -118,7 +120,7 @@ export async function generateRecurringObligations(): Promise<{ generated: numbe
     }
 
     try {
-      const dueDate = nextBusinessDay(period.target, holidaysByTenant.get(ob.tenantId) ?? new Set());
+      const dueDate = nextBusinessDay(period.target, holidaysByTenant.get(ob.tenantId) ?? new Set(nacionais));
 
       const firstStage = await prisma.pipelineStage.findFirst({
         where: { pipelineId: ob.pipelineId },

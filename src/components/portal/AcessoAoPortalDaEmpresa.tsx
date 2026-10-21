@@ -27,9 +27,6 @@ type Props = AcoesDaLinha & {
   empresa: { id: string; nome: string; filiais: number; matriz: { id: string; nome: string } | null };
   acessos: AcessoNaFicha[];
   outras: ContaParaLigar[];
-  /** A migration de 14/10/2026 já rodou? Sem ela, a aba só mostra. */
-  pronto: boolean;
-  avisoSemBanco: string;
   podeExcluir: boolean;
   criarAction: (anterior: EstadoDoAcesso, form: FormData) => Promise<EstadoDoAcesso>;
   ligarAction: (portalUserId: string, companyId: string, incluiFiliais: boolean) => Promise<ResultadoDoAcesso>;
@@ -54,8 +51,6 @@ export function AcessoAoPortalDaEmpresa({
   empresa,
   acessos,
   outras,
-  pronto,
-  avisoSemBanco,
   podeExcluir,
   criarAction,
   ligarAction,
@@ -121,7 +116,7 @@ export function AcessoAoPortalDaEmpresa({
         <MenuDeMaisAcoes rotulo={`Mais ações de ${a.nome}`}>
           {(fechar) => (
             <>
-              {direto && temFiliais && pronto && (
+              {direto && temFiliais && (
                 <ItemDoMenu
                   icone={<Network />}
                   disabled={ocupado}
@@ -133,7 +128,7 @@ export function AcessoAoPortalDaEmpresa({
                   {a.via.tipo === "direto" && a.via.incluiFiliais ? "Não incluir as filiais" : "Incluir as filiais"}
                 </ItemDoMenu>
               )}
-              {direto && pronto && (
+              {direto && (
                 <ItemDoMenu
                   icone={<Unlink />}
                   disabled={ocupado}
@@ -193,36 +188,28 @@ export function AcessoAoPortalDaEmpresa({
           </h2>
           <p className="mt-1 max-w-3xl text-helper text-fg-muted">{explicacao}</p>
         </div>
-        {pronto && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" onClick={() => setLigando(true)} disabled={outras.length === 0}>
-              <Link2 size={14} /> Ligar acesso existente
-            </Button>
-            <JanelaDeCadastro rotulo="Novo acesso" maxWidth="max-w-xl">
-              {(fechar) => (
-                <FormularioDoAcesso
-                  escolha={{ tipo: "fixa", empresa: { id: empresa.id, nome: empresa.nome, filiais: empresa.filiais } }}
-                  criarAction={criarAction}
-                  fechar={fechar}
-                />
-              )}
-            </JanelaDeCadastro>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={() => setLigando(true)} disabled={outras.length === 0}>
+            <Link2 size={14} /> Ligar acesso existente
+          </Button>
+          <JanelaDeCadastro rotulo="Novo acesso" maxWidth="max-w-xl">
+            {(fechar) => (
+              <FormularioDoAcesso
+                escolha={{ tipo: "fixa", empresa: { id: empresa.id, nome: empresa.nome, filiais: empresa.filiais } }}
+                criarAction={criarAction}
+                fechar={fechar}
+              />
+            )}
+          </JanelaDeCadastro>
+        </div>
       </div>
-
-      {!pronto && <Aviso tom="atencao">{avisoSemBanco}</Aviso>}
 
       <CascoDaTabela contagem={contarItens(acessos.length, "acesso", "acessos")}>
         {acessos.length === 0 ? (
           <EmptyState
             icon={<UsersRound />}
             title="Ninguém acessa esta empresa pelo portal"
-            description={
-              pronto
-                ? "Crie um acesso em “Novo acesso”, ou ligue um que já existe: a pessoa recebe por e-mail o link para definir a senha."
-                : undefined
-            }
+            description="Crie um acesso em “Novo acesso”, ou ligue um que já existe: a pessoa recebe por e-mail o link para definir a senha."
           />
         ) : (
           <>
