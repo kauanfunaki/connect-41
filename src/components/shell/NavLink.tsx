@@ -104,6 +104,11 @@ type NavItemProps = {
   ativo?: boolean | ((pathname: string) => boolean);
   /** Tem telas dentro (o painel ao lado) — na faixa, o pontinho no canto. */
   comTelas?: boolean;
+  /**
+   * O grupo de cor do portal (21/10/2026): o ícone na cor do grupo e a barra
+   * do ativo também. O fundo do ativo segue na cor principal, com ícone branco.
+   */
+  grupo?: string | null;
   menu?: { aberto: boolean; onClick: () => void; painelId: string };
 };
 
@@ -126,7 +131,7 @@ function BarraAtiva() {
   return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
 }
 
-export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, menu }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, menu }: NavItemProps) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
   const active = typeof ativo === "function" ? ativo(pathname) : ativo ?? (exact ? pathname === href : isActivePath(pathname, href));
@@ -162,10 +167,11 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      data-grupo={grupo ?? undefined}
       className={classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
-      <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>
+      <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${grupo && !active ? "text-grupo" : ""}`.trim()}>{icon}</span>
       {label}
     </Link>
   );
