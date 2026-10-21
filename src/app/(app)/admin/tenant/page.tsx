@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { Building2, CalendarClock, Mail } from "lucide-react";
+import { Building2, CalendarClock, Mail, Palette } from "lucide-react";
+import { Aviso } from "@/components/ui/Aviso";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
@@ -11,17 +12,20 @@ import { SecaoDeConfiguracao } from "@/components/configuracoes/SecaoDeConfigura
 import { ExpedienteForm } from "@/components/agenda/ExpedienteForm";
 import { EXPEDIENTE_PADRAO } from "@/lib/agendaExpediente";
 import { carregarExpedienteDoEscritorio } from "@/lib/agendaExpedienteDb";
-import { atualizarTenant, salvarExpedienteDoEscritorio } from "./actions";
+import { AparenciaDoPortalForm } from "@/components/admin/AparenciaDoPortalForm";
+import { FALTA_ATUALIZAR_O_BANCO_DA_APARENCIA, lerAparencia } from "@/lib/aparencia/leitura";
+import { atualizarTenant, salvarAparencia, salvarExpedienteDoEscritorio } from "./actions";
 
 export default async function TenantPage() {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
-  const [tenant, smtpConfig, expediente] = await Promise.all([
+  const [tenant, smtpConfig, expediente, leituraDaAparencia] = await Promise.all([
     prisma.tenant.findFirst({ where: { id: ctx.tenantId } }),
     prisma.tenantSmtpConfig.findUnique({ where: { tenantId: ctx.tenantId } }),
     carregarExpedienteDoEscritorio(ctx.tenantId),
+    lerAparencia(ctx.tenantId),
   ]);
   if (!tenant) notFound();
 
@@ -51,6 +55,30 @@ export default async function TenantPage() {
               plan: tenant.plan,
               active: tenant.active,
             }}
+          />
+        </Card>
+      </SecaoDeConfiguracao>
+
+      {/* A aparência do portal (21/10/2026): a cor do escritório, uma cor por
+          grupo de telas (no jeito do Omie) e o logo. O `id` é o destino do
+          link da Administração › Portal do cliente. */}
+      <SecaoDeConfiguracao
+        id="aparencia-do-portal"
+        titulo="Aparência do portal"
+        descricao="A cor e o logo que os clientes do escritório veem no portal, e uma cor para cada grupo de telas. A prévia mostra os dois temas antes de salvar."
+        icone={<Palette />}
+      >
+        {leituraDaAparencia.situacao === "sem-tabela" && <Aviso tom="atencao">{FALTA_ATUALIZAR_O_BANCO_DA_APARENCIA}</Aviso>}
+        {leituraDaAparencia.situacao === "erro" && (
+          <Aviso>Não foi possível ler a aparência agora. Atualize a página em instantes antes de salvar.</Aviso>
+        )}
+        <Card className="p-6">
+          <AparenciaDoPortalForm
+            action={salvarAparencia}
+            inicial={leituraDaAparencia.aparencia}
+            tenantId={ctx.tenantId}
+            escritorio={leituraDaAparencia.escritorio}
+            bloqueado={leituraDaAparencia.situacao !== "ok"}
           />
         </Card>
       </SecaoDeConfiguracao>
