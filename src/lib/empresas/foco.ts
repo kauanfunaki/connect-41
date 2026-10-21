@@ -30,7 +30,7 @@ export const TELAS_DO_FOCO = [
   "/pagar",
   "/receber",
   "/conciliacao",
-  "/cadastros-financeiros",
+  "/fornecedores-e-sacados",
   "/cobranca",
   "/emitir-nfse",
   "/fluxo-de-caixa",
