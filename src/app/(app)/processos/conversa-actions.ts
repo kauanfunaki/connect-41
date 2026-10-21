@@ -9,7 +9,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { guardarTambemNosArquivos } from "@/lib/drive/guardarTambem";
 import { nomeExibicao } from "@/lib/companyName";
@@ -34,7 +34,7 @@ export type ResultadoNoProcesso = { error: string } | { ok: true; aviso: string 
 async function contexto(formData: FormData) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
     return { ok: false as const, erro: "Sem permissão no Societário." };
   }
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo não habilitado." };

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { deferirProtocolo, registrarExigencia } from "./actions";
 
 // Aplicar ou descartar o aviso da Junta que chegou por e-mail.
@@ -21,7 +21,7 @@ export type AvisoState = { error: string } | { ok: true };
 async function avisoPendente(avisoId: string) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { erro: "Não autenticado", ctx: null, aviso: null } as const;
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
     return { erro: "Sem permissão no Societário", ctx: null, aviso: null } as const;
   }
   const aviso = await getPrisma().avisoDeOrgao.findFirst({

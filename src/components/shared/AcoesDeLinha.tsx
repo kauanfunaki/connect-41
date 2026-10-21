@@ -10,7 +10,7 @@ type Props = {
   foraDeOperacao: boolean;
   onToggle: () => void;
   editarHref: string;
-  /** Itens do "⋯" depois do Inativar/Reativar — em Clientes, "Excluir". Recebe o `close` do menu. */
+  /** Itens a mais no "⋯", depois do Inativar/Reativar. Recebe o `close` do menu. */
   itensExtras?: (close: () => void) => React.ReactNode;
   className?: string;
 };

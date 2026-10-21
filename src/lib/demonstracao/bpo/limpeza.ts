@@ -16,8 +16,7 @@
 // - a integração do Omie das empresas da demonstração;
 // - as notificações cuja mensagem começa com "[demo]".
 //
-// Quem apaga as empresas em si, o acesso do portal e os grupos de cliente
-// continua sendo o script (os passos "[demo]" de sempre), depois disto.
+// Quem apaga as empresas em si e o acesso do portal continua sendo o script (os passos "[demo]" de sempre), depois disto.
 //
 // Os arquivos que alguém enviar para as pastas durante a apresentação ficam no
 // disco do servidor: o script roda em outra máquina e não alcança o disco. A

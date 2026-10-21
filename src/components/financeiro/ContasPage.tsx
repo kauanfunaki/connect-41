@@ -1,12 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { RECORTES_A_PAGAR, RECORTES_A_RECEBER } from "@/lib/financeiro/exportacao";
-import { instanciaDoFinanceiro } from "@/lib/integracoes/omie/contas";
+import { empresaLidaDoOmie } from "@/lib/integracoes/omie/viradaServidor";
 import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3 } from "lucide-react";
 import { BotaoDeExportar } from "@/components/shared/BotaoDeExportar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { listarContas, competenciasComContas, type TipoDeConta } from "@/lib/financeiro/data";
@@ -56,7 +56,7 @@ export async function ContasPage({
   // (`setorDoModulo`), então a tela acompanha uma transferência.
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !getModuleDef(modulo)) notFound();
-  const sector = await setorDoModulo(ctx.tenantId, modulo);
+  const sector = await setoresDoModulo(ctx.tenantId, modulo);
   if (!sector || !canActOnSector(ctx, sector)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, modulo))) notFound();
 
@@ -101,10 +101,13 @@ export async function ContasPage({
     cnpj: e.cnpj,
     matrizId: e.parentCompanyId,
   })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  const { escolha } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true });
+  // Com uma empresa em foco (21/10/2026), só a base dela: a empresa, a matriz
+  // e as filiais — e "Todas" é a base inteira, não o escritório.
+  const daTela = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true, comFoco: true });
+  const { escolha, foco, empresasDeTodas } = daTela;
   const empresaId = idDaEscolha(escolha);
   const comConta = new Set(empresasComContas.map((e) => e.companyId));
-  const noSeletor = empresas.filter((e) => comConta.has(e.id) || e.id === empresaId);
+  const noSeletor = daTela.noSeletor.filter((e) => comConta.has(e.id) || e.id === empresaId);
   const titulo = aPagar ? "Contas a pagar" : "Contas a receber";
   const subtitulo = aPagar
     ? "O que as empresas têm a pagar, do documento fiscal à baixa — pelo valor líquido, já com as retenções."
@@ -117,6 +120,7 @@ export async function ContasPage({
       valor={empresaNaUrl(escolha) ?? null}
       todas="explicita"
       manter={{ aba: params.aba === "analise" ? "analise" : undefined, competencia: params.competencia, recorte: params.recorte }}
+      foco={foco}
     />
   );
 
@@ -128,7 +132,7 @@ export async function ContasPage({
         <EscolhaAEmpresa
           escolha={escolha}
           porQue="Para não carregar as contas de todos os clientes de uma vez, a tela abre numa empresa."
-          todasHref={hrefDaEmpresa(base, "", { todas: "explicita", manter: { recorte: params.recorte } })}
+          todasHref={foco ? undefined : hrefDaEmpresa(base, "", { todas: "explicita", manter: { recorte: params.recorte } })}
         />
       </PageContainer>
     );
@@ -140,9 +144,9 @@ export async function ContasPage({
     isModuleEnabled(ctx.tenantId, "bpo_pendencias"),
     isModuleEnabled(ctx.tenantId, "bpo_aprovacoes"),
     isModuleEnabled(ctx.tenantId, MODULO_DE_COBRANCA),
-    setorDoModulo(ctx.tenantId, "bpo_pendencias"),
-    setorDoModulo(ctx.tenantId, "bpo_aprovacoes"),
-    setorDoModulo(ctx.tenantId, MODULO_DE_COBRANCA),
+    setoresDoModulo(ctx.tenantId, "bpo_pendencias"),
+    setoresDoModulo(ctx.tenantId, "bpo_aprovacoes"),
+    setoresDoModulo(ctx.tenantId, MODULO_DE_COBRANCA),
   ]);
   const podeAbrirPendencia = pendenciasLigado && canActOnSector(ctx, setorDePendencias ?? "bpo");
   const podeEnviarParaAprovacao = kind === "PAGAR" && aprovacoesLigado && canActOnSector(ctx, setorDeAprovacoes ?? "bpo");
@@ -150,29 +154,16 @@ export async function ContasPage({
   // A empresa escolhida ainda é lida do Omie (lote E): as contas que vieram de
   // lá se pagam e cancelam no Omie até a virada — a tela diz isso no topo, em
   // vez de só recusar no clique.
-  const lidaDoOmie = empresaId
-    ? await prisma.company
-        .findFirst({ where: { id: empresaId, tenantId: ctx.tenantId }, select: { omieCutoverAt: true } })
-        .then(async (e) =>
-          e && !e.omieCutoverAt
-            ? Boolean(
-                await prisma.tenantIntegration.findFirst({
-                  where: { tenantId: ctx.tenantId, integrationCode: "omie", instanceKey: instanciaDoFinanceiro(empresaId), enabled: true },
-                  select: { id: true },
-                })
-              )
-            : false
-        )
-    : false;
+  const lidaDoOmie = empresaId ? await empresaLidaDoOmie(ctx.tenantId, empresaId) : false;
 
   const [resultado, competencias] = await Promise.all([
     listarContas(
       ctx.tenantId,
       kind,
-      { recorte, competencia: params.competencia, empresaId: empresaId ?? undefined },
+      { recorte, competencia: params.competencia, empresaId: empresaId ?? undefined, empresaIds: empresasDeTodas ?? undefined },
       agora
     ),
-    competenciasComContas(ctx.tenantId, kind, empresaId ?? undefined),
+    competenciasComContas(ctx.tenantId, kind, empresaId ?? empresasDeTodas ?? undefined),
   ]);
 
   // Selo de cobrança só em a receber, e só na aba de contas — a análise não lista título.

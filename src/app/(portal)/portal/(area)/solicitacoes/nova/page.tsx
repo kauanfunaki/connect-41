@@ -11,20 +11,40 @@ import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { assuntosAtivos } from "@/lib/solicitacoes/assuntos";
+import { Aviso } from "@/components/ui/Aviso";
+import { LIMITE_DA_DESCRICAO } from "@/lib/solicitacoes/regras";
 import { abrirSolicitacao } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function NovaSolicitacaoPage() {
+/**
+ * A solicitação já preenchida que a Ceci preparou (21/10/2026) chega pelo
+ * endereço: `empresa`, `assunto` e `descricao`. Só vale a empresa do acesso e
+ * o assunto ativo — o resto fica em branco —, e nada é enviado: o cliente
+ * revisa e aperta "Enviar solicitação", pela action de sempre.
+ */
+export default async function NovaSolicitacaoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ empresa?: string; assunto?: string; descricao?: string }>;
+}) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("portal_solicitacoes")) notFound();
   if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/solicitacoes")) return <TelaIndisponivel />;
 
+  const pedido = await searchParams;
   const [empresas, assuntos] = await Promise.all([
     // As empresas do alcance do cliente, e não as ativas do tenant: o portal é dele.
     empresasDoSeletor(escopo.tenantId, escopo.companyIds ?? []),
     assuntosAtivos(escopo.tenantId),
   ]);
+
+  const inicial = {
+    empresaId: empresas.some((e) => e.id === pedido.empresa) ? pedido.empresa : undefined,
+    assuntoId: assuntos.some((a) => a.id === pedido.assunto) ? pedido.assunto : undefined,
+    descricao: typeof pedido.descricao === "string" ? pedido.descricao.slice(0, LIMITE_DA_DESCRICAO) : undefined,
+  };
+  const daCeci = !!(inicial.empresaId || inicial.assuntoId || inicial.descricao);
 
   return (
     <PageContainer>
@@ -46,7 +66,14 @@ export default async function NovaSolicitacaoPage() {
         </Card>
       ) : (
         <Card className="p-5">
+          {daCeci && (
+            <Aviso tom="info" className="mb-4">
+              A Ceci preencheu esta solicitação com o que você contou. Confira, ajuste o que precisar e envie — nada foi
+              enviado ainda.
+            </Aviso>
+          )}
           <NovaSolicitacaoForm
+            inicial={inicial}
             empresas={empresas}
             assuntos={assuntos.map((a) => ({ id: a.id, label: a.label, description: a.description, responseDays: a.responseDays }))}
             acao={abrirSolicitacao}

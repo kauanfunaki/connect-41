@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { logAudit } from "@/lib/audit";
 import { MAX_OBSERVACOES_DO_LEAD, MODULO_LEADS, ehStatusDoLead } from "@/lib/leads/regras";
@@ -38,8 +38,8 @@ export async function salvarAcompanhamentoDoLead(id: string, form: FormData): Pr
 
   const responsavel = String(form.get("responsavel") ?? "") || null;
   if (responsavel && responsavel !== lead.assigneeId) {
-    const setor = await setorDoModulo(ctx.tenantId, MODULO_LEADS);
-    const possiveis = setor ? await getSectorUsers(ctx.tenantId, setor) : [];
+    const setores = await setoresDoModulo(ctx.tenantId, MODULO_LEADS);
+    const possiveis = setores ? await getSectorUsers(ctx.tenantId, setores) : [];
     if (!possiveis.some((p) => p.id === responsavel)) return { error: "Escolha como responsável alguém do setor." };
   }
 

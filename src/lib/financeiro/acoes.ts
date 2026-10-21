@@ -24,9 +24,10 @@ import { cartoesParaABaixa, type CartaoParaABaixa } from "./cartaoServidor";
 import { disponivelDoAdiantamento } from "./adiantamentoServidor";
 import { decimalDeCentavos } from "./manual";
 import { instanteDaData } from "./periodo";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { motivoDoBloqueioDeBaixa } from "./aprovacao/regras";
 import { sincronizarAcordos } from "./cobranca/sincronizar";
+import { empresasDasContas, recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 // `SECTOR` é o de origem, usado só como padrão. As ações servem `/pagar` e
 // `/receber`, que podem estar em setores diferentes num tenant: o gate aceita
@@ -40,7 +41,7 @@ export type AcaoDeContaState = { error: string } | null;
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { erro: "Não autenticado" as const, ctx: null };
-  const setores = await Promise.all(MODULOS.map((m) => setorDoModulo(ctx.tenantId, m)));
+  const setores = await Promise.all(MODULOS.map((m) => setoresDoModulo(ctx.tenantId, m)));
   if (!setores.some((s) => canActOnSector(ctx, s ?? SECTOR))) return { erro: "Sem permissão no BPO" as const, ctx: null };
   return { erro: null, ctx };
 }
@@ -57,6 +58,7 @@ async function contaDoTenant(entryId: string, tenantId: string) {
       paidAt: true,
       amount: true,
       approvalStatus: true,
+      companyId: true,
       counterparty: { select: { name: true } },
     },
   });
@@ -75,6 +77,9 @@ export async function conferirConta(entryId: string): Promise<AcaoDeContaState> 
 
   const conta = await contaDoTenant(entryId, ctx.tenantId);
   if (!conta) return { error: "Lançamento não encontrado." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const veredito = podeConferir(conta);
   if (!veredito.pode) return { error: veredito.motivo };
@@ -112,6 +117,9 @@ export async function conferirContasEmLote(valores: string[]): Promise<Resultado
   const tenantId = ctx.tenantId;
   const ids = idsDoLote(Array.isArray(valores) ? valores : []);
   if ("erro" in ids) return { error: ids.erro };
+  // Com foco (21/10/2026), uma conta de outra empresa recusa o lote inteiro.
+  const foraDoFoco = await recusaDoFoco(ctx, empresasDasContas(tenantId, ids));
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const prisma = getPrisma();
   const provisorias = await prisma.financeEntry.findMany({
@@ -334,6 +342,9 @@ export async function registrarPagamento(formData: FormData): Promise<{ error: s
     },
   });
   if (!conta) return { error: "Lançamento não encontrado." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   if (conta.status === "CANCELADO") return { error: "Lançamento cancelado não volta a ser conta." };
   // Aprovação por alçada: aguardando ou reprovada não sai do caixa — nem em parte.
   const bloqueio = motivoDoBloqueioDeBaixa(conta);
@@ -551,6 +562,9 @@ export async function registrarPagamentosEmLote(formData: FormData): Promise<Res
 
   const lote = await lerLote(tenantId, ids);
   if (lote.linhas.length !== ids.length) return { error: "Alguma conta marcada não existe mais — atualize a tela." };
+  // Com foco (21/10/2026), uma conta de outra empresa recusa o lote inteiro.
+  const foraDoFoco = await recusaDoFoco(ctx, [...new Set(lote.linhas.map((c) => c.companyId))]);
+  if (foraDoFoco) return { error: foraDoFoco };
   if (lote.tipos.size > 1) return { error: "Marque só contas a pagar ou só contas a receber." };
   if (lote.entram.length === 0) return { error: "Nenhuma das contas marcadas pode ser baixada." };
 
@@ -630,9 +644,12 @@ export async function desfazerBaixa(paymentId: string): Promise<AcaoDeContaState
   const prisma = getPrisma();
   const baixa = await prisma.financeEntryPayment.findFirst({
     where: { id: paymentId, tenantId },
-    select: { entryId: true, principal: true, cash: true, paidAt: true, entry: { select: { counterparty: { select: { name: true } } } } },
+    select: { entryId: true, principal: true, cash: true, paidAt: true, entry: { select: { companyId: true, counterparty: { select: { name: true } } } } },
   });
   if (!baixa) return { error: "Baixa não encontrada — atualize a tela." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [baixa.entry.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   try {
     await prisma.$transaction(async (tx) => {

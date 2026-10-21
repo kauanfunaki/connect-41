@@ -4,6 +4,7 @@
 // banco — e a única decisão de peso é a ordem, explicada em `ordenarFila`.
 
 import { getPrisma } from "@/lib/prisma";
+import { feriadosDoEscritorio } from "@/lib/feriados";
 import { nomeExibicao } from "@/lib/companyName";
 import { normalizar } from "@/lib/buscaDeTelas";
 import {
@@ -50,18 +51,14 @@ export function chaveDoFeriado(data: Date): string {
 }
 
 /**
- * Feriados do tenant, como chaves "AAAA-MM-DD".
+ * Feriados do tenant, como chaves "AAAA-MM-DD": os nacionais, calculados, mais
+ * as exceções cadastradas (21/10/2026 — antes, só o que o admin importava).
  *
  * Carregados uma vez por página e passados adiante: a contagem de dias úteis é
  * função pura de propósito, e quem tem banco é quem busca.
  */
 export async function feriadosDoTenant(tenantId: string): Promise<Set<string>> {
-  const prisma = getPrisma();
-  const feriados = await prisma.holiday.findMany({
-    where: { tenantId },
-    select: { date: true },
-  });
-  return new Set(feriados.map((f) => chaveDoFeriado(f.date)));
+  return new Set((await feriadosDoEscritorio(tenantId)).keys());
 }
 
 const PESO_DA_SITUACAO: Record<SituacaoDoProcesso, number> = {

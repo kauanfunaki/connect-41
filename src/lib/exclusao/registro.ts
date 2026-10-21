@@ -119,6 +119,8 @@ const EMPRESA: Ligacao[] = [
   // comunicado já enviado fica, sem esta empresa entre os destinatários.
   { modelo: "PortalUserCompany", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["acesso ao portal ligado a ela (a conta continua)", "acessos ao portal ligados a ela (as contas continuam)"] },
   { modelo: "ClientAnnouncementCompany", campo: "company", fk: "companyId", tratamento: "cascata" },
+  { modelo: "DominioAccountMap", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["conta do de-para da Domínio", "contas do de-para da Domínio"] },
+  { modelo: "BankReconciliationRule", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["regra de conciliação", "regras de conciliação"] },
 
   // Ficam, sem o vínculo.
   { modelo: "Company", campo: "parent", fk: "parentCompanyId", tratamento: "desligar", rotulo: ["filial (vira matriz solta)", "filiais (viram matrizes soltas)"] },
@@ -139,6 +141,7 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   { modelo: "SerproPedido", coluna: "companyId", tratamento: "apagar" },
   // Preferência "última empresa aberta": sem a empresa, não vale nada.
   { modelo: "UserLastCompany", coluna: "companyId", tratamento: "apagar" },
+  { modelo: "BankRuleApplication", coluna: "companyId", tratamento: "apagar" },
   { modelo: "AuditLog", coluna: "entityId", tratamento: "manter", motivo: "a trilha guarda o que foi excluído" },
   { modelo: "AgentRun", coluna: "entityId", tratamento: "manter", motivo: "trilha de execução da IA" },
   { modelo: "AgentProposal", coluna: "entityId", tratamento: "manter", motivo: "proposta da IA já decidida, guardada como trilha" },
@@ -300,6 +303,10 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
   { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
+  { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
+  { modelo: "BankReconciliationRule", coluna: "createdById", tratamento: "manter", motivo: "quem criou a regra; a tela não expõe o id" },
+  { modelo: "BankRuleApplication", coluna: "createdById", tratamento: "manter", motivo: "registro de quem lançou pela regra" },
+  { modelo: "BankRuleApplication", coluna: "undoneById", tratamento: "manter", motivo: "registro de quem desfez o lançamento da regra" },
   { modelo: "HelpdeskChecklistItem", coluna: "doneById", tratamento: "manter", motivo: "trilha de quem conferiu o item; a tela não expõe o id" },
   { modelo: "HelpdeskApproval", coluna: "decidedById", tratamento: "manter", motivo: "histórico da decisão de aprovação" },
   { modelo: "HelpdeskReopenRequest", coluna: "requestedById", tratamento: "manter", motivo: "histórico do pedido de reabertura" },
@@ -311,7 +318,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "UserLastCompany", coluna: "userId", tratamento: "apagar" },
   // O tutorial do primeiro acesso já visto: sai com a conta. A mesma coluna
   // guarda o id de acessos do portal (subject PORTAL_USER) — esses saem com o
-  // acesso (`excluirAcessoDoPortal`, `excluirCliente`).
+  // acesso (`excluirAcessoDoPortal`).
   { modelo: "TutorialVisto", coluna: "userId", tratamento: "apagar" },
   // Autor guardado sem chave — passa para quem exclui, como os de cima.
   { modelo: "CandidaturaNota", coluna: "createdById", tratamento: "reatribuir" },

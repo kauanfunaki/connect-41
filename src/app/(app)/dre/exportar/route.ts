@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthContext } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
 import { podeAbrirADre } from "@/lib/dre/acesso";
+import { leituraNoFoco } from "@/lib/empresas/focoServidor";
 import { lancamentosDoAno, lancamentosDoMes, mesesComMovimento, type MesDoDre } from "@/lib/dre/data";
 import { montarDreNoModeloDoBpo, nomeDoArquivoDaDre, type EntradaDoModelo } from "@/lib/dre/modeloDoBpo";
 import { gerarXlsxDoModeloDoBpo } from "@/lib/dre/modeloDoBpoXlsx";
@@ -41,6 +42,9 @@ export async function GET(req: NextRequest) {
       })
     : null;
   if (!empresa) return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
+  // Com uma empresa em foco (21/10/2026), a DRE de outra empresa não sai.
+  const noFoco = await leituraNoFoco(ctx, empresa.id);
+  if (!noFoco.ok) return NextResponse.json({ error: noFoco.erro }, { status: 403 });
 
   let entrada: EntradaDoModelo;
   let periodo: string;

@@ -25,14 +25,17 @@ export function NovaSolicitacaoForm({
   empresas,
   assuntos,
   acao,
+  inicial = {},
 }: {
   empresas: (EmpresaParaEscolher & { nome: string })[];
   assuntos: Assunto[];
   acao: (formData: FormData) => Promise<ResultadoDaAbertura>;
+  /** O que a Ceci preparou (21/10/2026), já conferido pela página. O cliente revisa e envia. */
+  inicial?: { empresaId?: string; assuntoId?: string; descricao?: string };
 }) {
   const router = useRouter();
   const [erro, setErro] = useState<string | null>(null);
-  const [assuntoId, setAssuntoId] = useState<string | null>(null);
+  const [assuntoId, setAssuntoId] = useState<string | null>(inicial.assuntoId ?? null);
   const [pendente, startTransition] = useTransition();
   const umaEmpresa = empresas.length === 1 ? empresas[0] : null;
 
@@ -61,6 +64,7 @@ export function NovaSolicitacaoForm({
             id="solicitacao-empresa"
             name="companyId"
             options={opcoesDeEmpresa(empresas)}
+            defaultValue={inicial.empresaId}
             avatar
             lembrarRecentes="empresas"
             placeholder="Buscar empresa…"
@@ -96,7 +100,7 @@ export function NovaSolicitacaoForm({
         required
         helper="Quanto mais detalhes, mais rápido a equipe resolve: período, nome do funcionário, número da nota…"
       >
-        <Textarea id="solicitacao-descricao" name="description" rows={5} maxLength={5000} required />
+        <Textarea id="solicitacao-descricao" name="description" rows={5} maxLength={5000} required defaultValue={inicial.descricao} />
       </CampoForm>
 
       <CampoForm label="Anexos" htmlFor="solicitacao-anexo-0" helper="PDF, PNG, JPG ou XML de até 10 MB cada.">

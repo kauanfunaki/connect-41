@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { ShieldCheck, Hourglass, Wallet, XCircle, Ban, ListChecks, Scale } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { formatInstantDate } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
@@ -53,10 +53,10 @@ export default async function AprovacoesPage({
 }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
-  const gerencia = canManageSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  if (!canViewSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
+  const podeAgir = canActOnSector(ctx, setores);
+  const gerencia = canManageSector(ctx, setores);
 
   const params = await searchParams;
   const aba = params.aba === "alcadas" && gerencia ? "alcadas" : "fila";
