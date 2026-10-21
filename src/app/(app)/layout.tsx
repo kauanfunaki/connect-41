@@ -15,7 +15,7 @@ import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
-import { getModuleRoute, MODULOS_DO_MENU_GERAL, MODULOS_NAS_SOLICITACOES, MODULOS_SEM_MENU } from "@/lib/module-catalog";
+import { getModuleRoute, MODULOS_DO_MENU_GERAL, FORA_DO_MENU_COM_SOLICITACOES, MODULOS_SEM_MENU } from "@/lib/module-catalog";
 import { bancoFiscalLocal } from "@/lib/fiscal/local/ambiente";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
@@ -113,10 +113,11 @@ export default async function AppLayout({
   const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
   const activeSectorModules = activeSector
     ? moduleStates
-        // Pendências ao cliente e Aprovações moram nas abas das Solicitações
-        // (21/10/2026), enquanto elas estão ligadas.
-        .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && !MODULOS_DO_MENU_GERAL.has(m.code) && !semMenu.has(m.code) && !(solicitacoesLigadas && MODULOS_NAS_SOLICITACOES.has(m.code)))
-        .map((m) => ({ code: m.code, label: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "Solicitações dos clientes" : m.label, href: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "/solicitacoes" : getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
+        // Com as Solicitações ligadas, o grupo Cliente do BPO sai do menu do
+        // setor: Pendências e Aprovações moram nas abas delas, e a Conversa
+        // repetia o item Solicitações do Geral (21/10/2026).
+        .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && !MODULOS_DO_MENU_GERAL.has(m.code) && !semMenu.has(m.code) && !(solicitacoesLigadas && FORA_DO_MENU_COM_SOLICITACOES.has(m.code)))
+        .map((m) => ({ code: m.code, label: m.label, href: getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
   // abrir agora — fixada de módulo desligado depois continua guardada, só não
