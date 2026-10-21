@@ -14,6 +14,7 @@ import { campoDispensado, valorDaEscolha } from "@/lib/integracoes/catalogo";
 import type { IntegracaoNaTela } from "@/lib/integracoes/data";
 import type { Saude } from "@/lib/integracoes/execucao";
 import { Aviso } from "@/components/ui/Aviso";
+import { ApontarAvisos } from "@/components/admin/ApontarAvisos";
 
 export const SAUDE_LABEL: Record<Saude, string> = {
   nunca_rodou: "Nunca rodou",
@@ -119,6 +120,13 @@ export function ConfiguracaoDaIntegracao({
             <span className="text-warning-fg"> — APP_PUBLIC_URL não configurada: complete com o domínio do Connect</span>
           )}
         </p>
+      )}
+      {/* Na Evolution, o Connect troca o endereço lá sozinho (21/10); na Meta,
+          a URL é do app, no painel de desenvolvedor. */}
+      {!soLigar && i.caminhoDoWebhook && urlPublica && i.id && i.code === "whatsapp_recrutamento_evolution" && (
+        <div>
+          <ApontarAvisos alvo={{ tipo: "whatsapp", integrationId: i.id }} />
+        </div>
       )}
 
       {i.lastError && (
