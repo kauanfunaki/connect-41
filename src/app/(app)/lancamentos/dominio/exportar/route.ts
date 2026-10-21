@@ -4,6 +4,7 @@ import { getModuleDef } from "@/lib/module-catalog";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { competenciaValida } from "@/lib/financeiro/periodo";
+import { leituraNoFoco } from "@/lib/empresas/focoServidor";
 import { exportacaoDoMes } from "@/lib/financeiro/dominio/servidor";
 import { txtDaDominio, xlsxDaDominio } from "@/lib/financeiro/dominio/planilha";
 import { TIPO_DO_XLSX } from "@/lib/planilha/tabelaDoExcel";
@@ -30,6 +31,9 @@ export async function GET(req: NextRequest) {
   const mes = competenciaValida(sp.get("mes"));
   const empresaId = sp.get("empresa");
   if (!mes || !empresaId) return NextResponse.json({ error: "Escolha a empresa e o mês." }, { status: 400 });
+  // Com uma empresa em foco: outra empresa não sai (o arquivo vem pelo endereço, sem a tela).
+  const noFoco = await leituraNoFoco(ctx, empresaId);
+  if (!noFoco.ok) return NextResponse.json({ error: noFoco.erro }, { status: 403 });
   const r = await exportacaoDoMes(ctx.tenantId, empresaId, mes);
   if (!r) return naoAchou;
   if (r.linhas.length === 0) return NextResponse.json({ error: "Nenhuma baixa pronta para a Domínio neste mês." }, { status: 400 });
