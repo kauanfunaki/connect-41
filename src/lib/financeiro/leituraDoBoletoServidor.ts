@@ -7,7 +7,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { gerarEstruturado } from "@/lib/ai";
 import { saoPauloParts } from "@/lib/agenda";
@@ -41,7 +41,7 @@ function mensagemDeErroDaIa(err: unknown): string {
 export async function lerBoletoParaLancar(formData: FormData): Promise<ResultadoDaLeituraDoBoleto> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado." };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode)) return { error: "Sem permissão para lançar." };
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode)) return { error: "Sem permissão para lançar." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { error: "Módulo não habilitado." };
 
   const prisma = getPrisma();

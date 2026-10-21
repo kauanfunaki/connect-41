@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeftRight, BadgeCheck, FilePen, Target } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate } from "@/lib/format";
@@ -51,8 +51,8 @@ export default async function OrcamentoPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  const setor = ctx.tenantId ? ((await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR) : SECTOR;
-  if (!ctx.tenantId || !canViewSector(ctx, setor)) notFound();
+  const setores = ctx.tenantId ? ((await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR]) : [SECTOR];
+  if (!ctx.tenantId || !canViewSector(ctx, setores)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
@@ -64,8 +64,8 @@ export default async function OrcamentoPage({
   // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
   const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
-  const podeEditar = canActOnSector(ctx, setor);
-  const coordena = canManageSector(ctx, setor);
+  const podeEditar = canActOnSector(ctx, setores);
+  const coordena = canManageSector(ctx, setores);
 
   const cabecalho = (action?: React.ReactNode) => (
     <PageHeader

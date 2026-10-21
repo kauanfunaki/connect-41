@@ -14,15 +14,16 @@
 //
 // Decisões do Kauan em 2026-09-02, que este script implementa:
 //   - destino: tenant "41 Tech", onde já vivem as 11 empresas de hoje;
-//   - cliente: agrupado pela RAIZ do CNPJ (reusa `planejarGrupos`);
 //   - filiais: `parentCompanyId` derivado do CNPJ (0001 é matriz);
 //   - contatos: só os externos com nome próprio (ver `contatoAproveitavel`).
+//
+// Até 15/10/2026 o script também criava um Cliente por raiz de CNPJ e punha a
+// empresa nele. O Cliente saiu do Connect (etapa 3): a empresa nova entra sem.
 
 import fs from "node:fs";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { CompanyStatus, PersonType } from "../src/generated/prisma/enums";
-import { cnpjRoot } from "../src/lib/clientGroups";
 import { lerPlanilhaAcessorias, planejarImportacao } from "../src/lib/importAcessorias";
 import { camposDoRegime } from "../src/lib/taxRegime";
 
@@ -55,14 +56,10 @@ async function main() {
   const linhas = await lerPlanilhaAcessorias(arquivo);
   const existentes = await prisma.company.findMany({
     where: { tenantId: tenant.id },
-    select: { id: true, cnpj: true, name: true, clientGroupId: true, parentCompanyId: true },
-  });
-  const gruposExistentes = await prisma.clientGroup.findMany({
-    where: { tenantId: tenant.id },
-    select: { id: true, name: true, cnpjRoot: true },
+    select: { id: true, cnpj: true, name: true, parentCompanyId: true },
   });
 
-  const plano = planejarImportacao(linhas, existentes, gruposExistentes);
+  const plano = planejarImportacao(linhas, existentes);
 
   log(`\n=== IMPORTAÇÃO ACESSÓRIAS ${aplicar ? "(APLICANDO)" : "(DRY-RUN)"} ===`);
   log(`arquivo         : ${arquivo}`);
@@ -73,8 +70,6 @@ async function main() {
   log(`empresas novas          : ${plano.novas.length}`);
   log(`empresas já existentes  : ${plano.jaExistem.length}`);
   log(`empresas a substituir   : ${plano.substituicoes.length} (nome divergente — apaga e recria do arquivo)`);
-  log(`clientes a criar        : ${plano.clientesNovos.length}`);
-  log(`clientes reaproveitados : ${plano.clientesExistentes.length}`);
   log(`vínculos matriz→filial  : ${plano.filiais.length}`);
   log(`contatos aproveitáveis  : ${plano.contatos.length} (de ${plano.totalContatos} na planilha)`);
   log("");
@@ -91,25 +86,11 @@ async function main() {
     log("");
   }
 
-  if (plano.raizesAmbiguas.length > 0) {
-    log(`AVISO — ${plano.raizesAmbiguas.length} raiz(es) de CNPJ com mais de um cliente cadastrado.`);
-    log("A empresa vai para o primeiro, e o resultado é arbitrário: unifique em /clientes antes de");
-    log("rodar, senão matriz e filiais podem cair em blocos diferentes na listagem.");
-    for (const r of plano.raizesAmbiguas) log(`   raiz ${r.cnpjRoot}: ${r.clientes.join(" | ")}`);
-    log("");
-  }
-
   if (plano.filiaisSemMatriz.length > 0) {
     log(`${plano.filiaisSemMatriz.length} filial(is) cuja matriz 0001 não está no arquivo — entram soltas:`);
     for (const f of plano.filiaisSemMatriz.slice(0, 10)) log(`   ${f.cnpj} ${f.name}`);
     log("");
   }
-
-  log("Clientes multi-empresa que serão criados (confira os nomes):");
-  for (const c of plano.clientesNovos.filter((c) => c.empresas.length > 1)) {
-    log(`   ${c.name}  (${c.empresas.length} empresas, raiz ${c.cnpjRoot})`);
-  }
-  log("");
 
   if (!aplicar) {
     log("Dry-run: nada foi escrito. Rode de novo com --aplicar depois de conferir o que está acima.");
@@ -118,8 +99,8 @@ async function main() {
   }
 
   // ---- Aplicação, em ordem de dependência ----
-  // 0. apagar as substituídas, 1. clientes, 2. empresas (que apontam para
-  // cliente), 3. filiais (que apontam para empresa já criada), 4. contatos.
+  // 0. apagar as substituídas, 1. empresas, 2. filiais (que apontam para
+  // empresa já criada), 3. contatos.
 
   // Nada aqui cascateia sozinho: só `company_services` tem onDelete Cascade.
   // Documento de cliente e seus destinatários/visualizações são Restrict, então
@@ -150,21 +131,8 @@ async function main() {
   }
   if (plano.substituicoes.length > 0) log(`empresas apagadas: ${plano.substituicoes.length}`);
 
-  const idPorRaiz = new Map<string, string>();
-  for (const g of plano.clientesExistentes) idPorRaiz.set(g.cnpjRoot, g.id);
-
-  for (const c of plano.clientesNovos) {
-    const criado = await prisma.clientGroup.create({
-      data: { tenantId: tenant.id, name: c.name, cnpjRoot: c.cnpjRoot },
-      select: { id: true },
-    });
-    idPorRaiz.set(c.cnpjRoot, criado.id);
-  }
-  log(`clientes criados: ${plano.clientesNovos.length}`);
-
   let criadas = 0;
   for (const e of plano.novas) {
-    const raiz = cnpjRoot(e.cnpj);
     await prisma.company.create({
       data: {
         tenantId: tenant.id,
@@ -189,7 +157,6 @@ async function main() {
         website: e.website,
         status: CompanyStatus.ACTIVE,
         source: "Acessórias",
-        clientGroupId: raiz ? idPorRaiz.get(raiz) ?? null : null,
       },
     });
     criadas++;

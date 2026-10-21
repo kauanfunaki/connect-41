@@ -329,6 +329,37 @@ export const AGENT_CATALOG: AgenteDef[] = [
     tetoMensalChamadas: 3_000,
     padraoLigado: false,
   },
+  // A Ceci no portal do cliente (21/10/2026; estudo de 13/10). Responde o
+  // cliente só com os dados das empresas do acesso dele, e nunca escreve: no
+  // máximo prepara uma solicitação que o próprio cliente revisa e envia. As
+  // ferramentas são só as `portal_*`, e só ela as tem (`ferramentas-portal.test.ts`).
+  // Faixa rápida: ~1 centavo por pergunta no estudo. Piloto com 2 ou 3
+  // clientes do BPO, ligado por empresa; nasce desligada.
+  {
+    code: "ceci_portal",
+    label: "Ceci · Portal do cliente (chat)",
+    sectorCode: null,
+    description:
+      "Responde no portal do cliente sobre as empresas do acesso dele — pendências, contas a pagar e a receber, processos, notas e solicitações — só leitura, e prepara solicitações para o cliente revisar e enviar",
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [
+      "portal_empresas",
+      "portal_pendencias",
+      "portal_pendencia",
+      "portal_contas",
+      "portal_notas",
+      "portal_processos",
+      "portal_processo",
+      "portal_solicitacoes",
+      "portal_solicitacao",
+      "portal_assuntos",
+      "portal_preparar_solicitacao",
+    ],
+    tetoMensalCentavos: 5_000,
+    tetoMensalChamadas: 5_000,
+    padraoLigado: false,
+  },
   // As duas funções de IA do protótipo do Societário que vieram para o Connect
   // (29/09). Não conversam: uma volta cada, e o que dizem vira proposta na fila
   // do setor (`AgentProposal`) para o coordenador aprovar.

@@ -69,7 +69,9 @@ export default async function AppLayout({
       : null;
 
   // Pelo estado do tenant, e não pelo catálogo: um módulo transferido (o DRE no
-  // Financeiro) aparece no setor que o opera, não no de origem.
+  // Financeiro) aparece no setor que o opera, não no de origem. Uma tela ligada
+  // a mais de um setor (21/10/2026) aparece no menu de cada um, com o mesmo
+  // endereço; na busca e nas fixadas, uma vez só, com o nome do setor dono.
   //
   // Carregado sempre, e não só com setor ativo: o Ctrl+K busca tela de qualquer
   // setor que a pessoa enxerga, e as fixadas também atravessam setor.
@@ -87,7 +89,7 @@ export default async function AppLayout({
   const chamadosLigados = await temAcessoAoModulo({ ctx, config: helpdeskConfig });
   const telasNavegaveis = semTelasDoGeralOcultas(
     moduleStates
-      .filter((m) => m.enabled && !MODULOS_SEM_MENU.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : canViewSector(ctx, m.sectorCode)))
+      .filter((m) => m.enabled && !MODULOS_SEM_MENU.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : canViewSector(ctx, m.sectorCodes)))
       .map((m) => ({
         code: m.code,
         label: m.label,
@@ -101,7 +103,7 @@ export default async function AppLayout({
   const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
   const activeSectorModules = activeSector
     ? moduleStates
-        .filter((m) => m.enabled && m.sectorCode === activeSector.code && !MODULOS_DO_MENU_GERAL.has(m.code) && !MODULOS_SEM_MENU.has(m.code))
+        .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && !MODULOS_DO_MENU_GERAL.has(m.code) && !MODULOS_SEM_MENU.has(m.code))
         .map((m) => ({ code: m.code, label: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "Solicitações dos clientes" : m.label, href: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "/solicitacoes" : getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode

@@ -11,7 +11,6 @@ import { getCompanySectors, getApplicableCustomFields, saveCustomFieldValues } f
 import { pick, pickDate } from "@/lib/forms";
 import { isValidCNPJ, isValidCPF, digitsOnly } from "@/lib/validation/common";
 import { logAudit } from "@/lib/audit";
-import { cnpjRoot, lerEscolhaDeCliente } from "@/lib/clientGroups";
 import { validarMatriz } from "@/lib/companyHierarchyDb";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
 import { camposDoRegime } from "@/lib/taxRegime";
@@ -120,71 +119,6 @@ function normalizarDocumento<T extends { kind: CompanyKind; cnpj: string | null;
     : { ...data, cpf: null };
 }
 
-/**
- * Resolve o cliente escolhido no formulário para um `clientGroupId`, criando o
- * grupo quando o usuário pediu um novo. Devolve `null` quando não foi escolhido.
- *
- * **Opcional desde 2026-09-02**, revertendo a decisão de 01/09. O motivo:
- * obrigatório + criação automática 1:1 produziu 315 clientes que eram cópia do
- * nome da própria empresa — não agrupavam nada e enchiam a listagem de faixas
- * inúteis. Cliente passa a existir só quando de fato junta empresas de um mesmo
- * dono, que é para o que ele serve.
- *
- * A checagem de tenant não é cerimônia: `clientGroupId` chega do formulário,
- * ou seja, do cliente, e o Prisma não expressa "grupo e empresa do mesmo
- * tenant" como constraint (seria FK composta entre duas tabelas). Sem esta
- * consulta, um id de outro tenant faria a empresa atravessar a fronteira de
- * acesso.
- */
-async function resolverClientGroupId(
-  form: FormData,
-  tenantId: string,
-  cnpj: string | null
-): Promise<{ clientGroupId: string | null } | { error: string }> {
-  const escolha = lerEscolhaDeCliente(
-    form.get("clientGroupId") as string | null,
-    form.get("clientGroupNewName") as string | null
-  );
-
-  if (escolha.tipo === "ausente") return { clientGroupId: null };
-
-  const prisma = getPrisma();
-
-  if (escolha.tipo === "existente") {
-    const grupo = await prisma.clientGroup.findFirst({
-      where: { id: escolha.clientGroupId, tenantId },
-      select: { id: true },
-    });
-    if (!grupo) return { error: "Cliente não encontrado." };
-    return { clientGroupId: grupo.id };
-  }
-
-  // Grupo novo: guarda a raiz do CNPJ da empresa que o está criando. Se uma
-  // filial da mesma raiz for cadastrada depois, o campo já diz a qual grupo ela
-  // pertence — é dica de agrupamento, não identidade (holding tem raízes
-  // diferentes e cliente pessoa física não tem nenhuma).
-  // A raiz já é de outro cliente: a empresa é filial (ou o mesmo cliente com
-  // outro nome). Criar um segundo cliente com a mesma raiz é o que a trava do
-  // banco recusa desde 25/09 — aqui a recusa vira orientação.
-  const raiz = cnpjRoot(cnpj);
-  if (raiz) {
-    const existente = await prisma.clientGroup.findFirst({
-      where: { tenantId, cnpjRoot: raiz },
-      select: { name: true },
-    });
-    if (existente) {
-      return {
-        error: `A raiz deste CNPJ já pertence ao cliente "${existente.name}". Escolha esse cliente em vez de criar um novo.`,
-      };
-    }
-  }
-  const novo = await prisma.clientGroup.create({
-    data: { tenantId, name: escolha.name, cnpjRoot: raiz },
-    select: { id: true },
-  });
-  return { clientGroupId: novo.id };
-}
-
 export async function criarEmpresa(
   _prev: EmpresaState,
   form: FormData
@@ -200,17 +134,12 @@ export async function criarEmpresa(
   const matrizError = await validarMatriz(ctx.tenantId, null, data.parentCompanyId);
   if (matrizError) return { error: matrizError };
 
-  // Depois de validar a empresa: um cliente novo não deve ser criado se o
-  // cadastro vai ser recusado por CNPJ inválido, duplicado ou matriz inválida.
-  const cliente = await resolverClientGroupId(form, ctx.tenantId, data.cnpj);
-  if ("error" in cliente) return { error: cliente.error };
-
   const prisma = getPrisma();
   let id: string;
 
   try {
     const company = await prisma.company.create({
-      data: { tenantId: ctx.tenantId, ...data, clientGroupId: cliente.clientGroupId },
+      data: { tenantId: ctx.tenantId, ...data },
     });
     id = company.id;
   } catch (err) {
@@ -254,13 +183,12 @@ export async function atualizarEmpresa(
   const matrizError = await validarMatriz(ctx.tenantId, id, data.parentCompanyId);
   if (matrizError) return { error: matrizError };
 
-  const cliente = await resolverClientGroupId(form, ctx.tenantId, data.cnpj);
-  if ("error" in cliente) return { error: cliente.error };
-
+  // O Cliente saiu do cadastro em 15/10/2026 (etapa 3): a edição não mexe mais
+  // na coluna antiga, que fica como está até sair do banco.
   try {
     await prisma.company.update({
       where: { id },
-      data: { ...data, clientGroupId: cliente.clientGroupId },
+      data,
     });
   } catch (err) {
     console.error("[atualizarEmpresa]", err);

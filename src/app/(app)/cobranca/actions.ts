@@ -11,7 +11,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
@@ -52,16 +52,16 @@ class Recusa extends Error {}
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode;
-  if (!canActOnSector(ctx, setor)) return { ok: false as const, erro: "Sem permissão na cobrança." };
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [getModuleDef(MODULE)!.sectorCode];
+  if (!canActOnSector(ctx, setores)) return { ok: false as const, erro: "Sem permissão na cobrança." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo de cobrança não habilitado." };
   return {
     ok: true as const,
     ctx,
-    setor,
+    setores,
     tenantId: ctx.tenantId,
     userId: ctx.userId || null,
-    gerencia: canManageSector(ctx, setor),
+    gerencia: canManageSector(ctx, setores),
     prisma: getPrisma(),
   };
 }
@@ -174,7 +174,7 @@ export async function atribuirResponsavel(entryId: string, userId: string): Prom
   let nome: string | null = null;
   if (userId) {
     // Responsável é quem atua no setor que opera a cobrança neste tenant.
-    const usuarios = await getSectorUsers(c.tenantId, c.setor);
+    const usuarios = await getSectorUsers(c.tenantId, c.setores);
     const u = usuarios.find((x) => x.id === userId);
     if (!u) return { error: "Usuário não encontrado no setor da cobrança." };
     nome = u.name;

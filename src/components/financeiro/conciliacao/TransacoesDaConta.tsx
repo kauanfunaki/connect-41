@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Check, ListChecks, Plus, EyeOff, Undo2, RotateCcw, Sparkles, Lock, ArrowLeftRight } from "lucide-react";
+import { Check, ListChecks, Plus, EyeOff, Undo2, RotateCcw, Sparkles, Lock, ArrowLeftRight, Wand2 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import type { VarianteDoBadge } from "@/components/ui/Badge";
@@ -28,6 +28,9 @@ import {
   transferirEntreContas,
   type LancamentoParaEscolha,
 } from "@/app/(app)/conciliacao/actions";
+import { lancarPelaRegra } from "@/app/(app)/conciliacao/regras/actions";
+import { FormularioDaRegra, PreviaDaRegra, DesfazerDaRegra } from "./RegraDeConciliacao";
+import { camposDaLinha, type CamposDaRegra } from "@/lib/financeiro/conciliacao/regras";
 import { moeda } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
 import { formatarCompetencia, formatarNumero } from "@/lib/format";
@@ -78,6 +81,21 @@ export type LinhaDaTransacao = {
   vinculados: LancamentoResumido[];
   /** Conciliada como transferência entre contas (19/10): desfazer desfaz as duas pontas. */
   transferencia: boolean;
+  /**
+   * Na pendente sem sugestão forte, a regra de conciliação que pega a linha
+   * (21/10). `aviso` diz por que a regra em "lançar sozinha" só sugere aqui.
+   */
+  regra: { id: string; nome: string; acao: string; aviso: string | null } | null;
+  /** Na conciliada por uma regra: o registro — desfazer é o da regra, que cancela o lançamento. */
+  regraAplicada: { applicationId: string; nome: string; automatica: boolean } | null;
+  /** Na conciliada com um lançamento só, à mão: o que a regra "sempre que vier assim" copia. */
+  paraRegra: {
+    counterpartyId: string;
+    categoryId: string | null;
+    costCenterId: string | null;
+    projectId: string | null;
+    contraparteNome: string;
+  } | null;
 };
 
 type Contraparte = { id: string; nome: string; documento: string | null; defaultCategoryId: string | null; defaultCostCenterId?: string | null };
@@ -138,7 +156,10 @@ export function TransacoesDaConta({
   centros = [],
   projetos = [],
   companyId,
+  bankAccountId,
   outrasContas = [],
+  contasDaRegra = [],
+  lidaDoOmie = false,
 }: {
   linhas: LinhaDaTransacao[];
   podeAgir: boolean;
@@ -150,14 +171,51 @@ export function TransacoesDaConta({
   projetos?: Projeto[];
   /** A empresa da conta — a busca pelo CNPJ diz se a ficha já existe nela. */
   companyId: string;
+  /** A conta do extrato — a regra criada de uma linha nasce valendo só nela. */
+  bankAccountId: string;
   /** As outras contas ativas da empresa. Sem nenhuma, não há "Transferência". */
   outrasContas?: { id: string; nome: string }[];
+  /** As contas com extrato da empresa, para a condição da regra. */
+  contasDaRegra?: { id: string; nome: string }[];
+  /** A empresa ainda é lida do Omie (lote E): a regra só sugere. */
+  lidaDoOmie?: boolean;
 }) {
   const { dialog, requestConfirm } = useConfirm();
   const [escolhendo, setEscolhendo] = useState<LinhaDaTransacao | null>(null);
   const [criando, setCriando] = useState<LinhaDaTransacao | null>(null);
   const [ignorando, setIgnorando] = useState<LinhaDaTransacao | null>(null);
   const [transferindo, setTransferindo] = useState<LinhaDaTransacao | null>(null);
+  // A regra "sempre que vier assim" (21/10): oferecida depois do "Criar
+  // lançamento", ou pedida na linha conciliada. Criada, abre a prévia.
+  const [oferta, setOferta] = useState<{ linha: LinhaDaTransacao; campos: CamposDaRegra } | null>(null);
+  const [regraNova, setRegraNova] = useState<{ linha: LinhaDaTransacao; campos: CamposDaRegra } | null>(null);
+  const [previa, setPrevia] = useState<{ id: string; nome: string } | null>(null);
+  const opcoesDaRegra = {
+    contrapartes: contrapartes.map((c) => ({ id: c.id, nome: c.nome, documento: c.documento })),
+    categorias,
+    centros,
+    projetos,
+    contas: contasDaRegra,
+  };
+
+  function camposDe(l: LinhaDaTransacao, lancamento: NonNullable<LinhaDaTransacao["paraRegra"]>): CamposDaRegra {
+    return camposDaLinha({ centavos: l.centavos, memo: l.memo, nome: l.nome, bankAccountId, contraparteNome: lancamento.contraparteNome }, lancamento);
+  }
+
+  function lancarComRegra(l: LinhaDaTransacao) {
+    const r = l.regra!;
+    requestConfirm(
+      {
+        title: "Lançar pela regra?",
+        description: `${moeda(Math.abs(l.centavos))} de ${dataCurta(l.dataKey)} vira um lançamento pago e conciliado: ${r.acao}.${r.aviso ? ` ${r.aviso}` : ""}`,
+        confirmLabel: "Lançar",
+      },
+      async () => {
+        const res = await lancarPelaRegra(l.id, r.id);
+        if ("error" in res) throw new Error(res.error);
+      }
+    );
+  }
 
   function confirmarSugestao(l: LinhaDaTransacao) {
     const s = l.sugestao!;
@@ -319,6 +377,15 @@ export function TransacoesDaConta({
                           </span>
                         )
                       )}
+                      {l.regra && (
+                        <Aviso tom="marca" icone={<Wand2 />} className="max-w-[420px]">
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-micro font-medium">Regra · {l.regra.nome}</span>
+                            <span className="text-fs-2 text-fg-secondary">{l.regra.acao}</span>
+                            {l.regra.aviso && <span className="text-micro text-fg-secondary">{l.regra.aviso}</span>}
+                          </span>
+                        </Aviso>
+                      )}
                       {podeAgir && (
                         <div className="flex flex-wrap items-center gap-1.5">
                           {l.sugestao && !l.sugestao.bloqueio && (
@@ -329,6 +396,11 @@ export function TransacoesDaConta({
                           {l.provavel && !l.provavel.bloqueio && (
                             <Button size="xs" variant="secondary" onClick={() => conciliarComProvavel(l)}>
                               <Check size={12} /> Conciliar com este
+                            </Button>
+                          )}
+                          {l.regra && (
+                            <Button size="xs" variant={l.provavel ? "secondary" : "primary"} onClick={() => lancarComRegra(l)}>
+                              <Wand2 size={12} /> Lançar pela regra
                             </Button>
                           )}
                           <Button size="xs" variant="secondary" onClick={() => setEscolhendo(l)}>
@@ -355,10 +427,34 @@ export function TransacoesDaConta({
                       {l.vinculados.map((v) => (
                         <ResumoDoLancamento key={v.id} l={v} />
                       ))}
+                      {l.regraAplicada && (
+                        <span className="inline-flex items-center gap-1 text-micro text-fg-muted">
+                          <Wand2 size={12} className="flex-shrink-0" />
+                          {l.regraAplicada.automatica ? "Lançada sozinha pela regra" : "Lançada pela regra"} “{l.regraAplicada.nome}”
+                        </span>
+                      )}
                       {podeAgir && (
-                        <Button variant="secondary" size="xs" onClick={() => desfazer(l)}>
-                          <Undo2 size={12} /> Desfazer
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {/* O desfazer da regra cancela o lançamento que ela criou; o
+                              comum deixaria a conta em aberto, à espera de outra linha. */}
+                          {l.regraAplicada ? (
+                            <DesfazerDaRegra applicationId={l.regraAplicada.applicationId} nome={l.regraAplicada.nome} />
+                          ) : (
+                            <Button variant="secondary" size="xs" onClick={() => desfazer(l)}>
+                              <Undo2 size={12} /> Desfazer
+                            </Button>
+                          )}
+                          {l.paraRegra && (
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              onClick={() => setRegraNova({ linha: l, campos: camposDe(l, l.paraRegra!) })}
+                              title="Sempre que vier uma linha assim, lançar igual"
+                            >
+                              <Wand2 size={12} /> Criar regra
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
@@ -393,8 +489,53 @@ export function TransacoesDaConta({
           centros={centros}
           projetos={projetos}
           onClose={() => setCriando(null)}
+          onCriado={(lancamento) => {
+            const contraparteNome = contrapartes.find((c) => c.id === lancamento.counterpartyId)?.nome ?? null;
+            setOferta({ linha: criando, campos: camposDe(criando, { ...lancamento, contraparteNome: contraparteNome ?? criando.nome ?? "" }) });
+          }}
         />
       )}
+      {oferta && (
+        <Modal open onClose={() => setOferta(null)} title="Lançado e conciliado">
+          <div className="flex flex-col gap-4">
+            <p className="text-helper text-fg-secondary">
+              Isto se repete? Com uma regra de conciliação, o Connect sugere — ou lança sozinho — as próximas linhas assim do
+              extrato, com o mesmo lançamento.
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={() => setOferta(null)}>
+                Agora não
+              </Button>
+              <Button
+                onClick={() => {
+                  setRegraNova(oferta);
+                  setOferta(null);
+                }}
+              >
+                <Wand2 size={14} /> Criar regra
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {regraNova && (
+        <FormularioDaRegra
+          companyId={companyId}
+          inicial={regraNova.campos}
+          opcoes={opcoesDaRegra}
+          lidaDoOmie={lidaDoOmie}
+          porQue={
+            <>
+              Sempre que vier uma linha assim — {dataCurta(regraNova.linha.dataKey)} · {descricaoDaTransacao(regraNova.linha)} ·{" "}
+              <strong className="text-fg">{moeda(regraNova.linha.centavos)}</strong> —, lançar igual. Ajuste o texto e o valor: o que
+              muda todo mês (data, número do documento) não deve entrar.
+            </>
+          }
+          onClose={() => setRegraNova(null)}
+          onSalva={(r) => r.nova && setPrevia({ id: r.id, nome: r.nome })}
+        />
+      )}
+      {previa && <PreviaDaRegra id={previa.id} nome={previa.nome} onClose={() => setPrevia(null)} />}
       {ignorando && <IgnorarTransacao transacao={ignorando} onClose={() => setIgnorando(null)} />}
     </>
   );
@@ -671,6 +812,7 @@ function CriarLancamento({
   centros,
   projetos,
   onClose,
+  onCriado,
 }: {
   transacao: LinhaDaTransacao;
   companyId: string;
@@ -679,6 +821,8 @@ function CriarLancamento({
   centros: Centro[];
   projetos: Projeto[];
   onClose: () => void;
+  /** O que foi lançado — a tela oferece a regra "sempre que vier assim". */
+  onCriado?: (lancamento: { counterpartyId: string; categoryId: string | null; costCenterId: string | null; projectId: string | null }) => void;
 }) {
   const kind = transacao.centavos < 0 ? "PAGAR" : "RECEBER";
   const doTipo = categorias.filter((c) => c.kind === kind);
@@ -708,7 +852,10 @@ function CriarLancamento({
           startTransition(async () => {
             const r = await criarLancamentoDaTransacao(dados);
             if ("error" in r) setErro(r.error);
-            else onClose();
+            else {
+              onClose();
+              onCriado?.(r.lancamento);
+            }
           });
         }}
       >

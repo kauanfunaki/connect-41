@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getPrisma } from "@/lib/prisma";
 import { saoPauloParts } from "@/lib/agenda";
@@ -42,8 +42,8 @@ import { ConfiguracaoDaTabela } from "@/components/relatorios/ConfiguracaoDaTabe
 export default async function TabelaDinamicaPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !getModuleDef(MODULO_DA_TABELA_DINAMICA)) notFound();
-  const setor = await setorDoModulo(ctx.tenantId, MODULO_DA_TABELA_DINAMICA);
-  if (!setor || !canViewSector(ctx, setor)) notFound();
+  const setores = await setoresDoModulo(ctx.tenantId, MODULO_DA_TABELA_DINAMICA);
+  if (!setores || !canViewSector(ctx, setores)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULO_DA_TABELA_DINAMICA))) notFound();
 
   const params = await searchParams;
