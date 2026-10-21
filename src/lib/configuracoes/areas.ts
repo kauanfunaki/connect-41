@@ -207,7 +207,7 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
       {
         chave: "feriados",
         rotulo: "Feriados",
-        descricao: "Os feriados usados na Escala de trabalho.",
+        descricao: "Os nacionais entram sozinhos; aqui, os estaduais, municipais, pontes e recessos.",
         href: "/admin/feriados",
         rota: "/admin/feriados",
         acesso: "admin",
