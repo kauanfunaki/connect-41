@@ -895,6 +895,7 @@ model Tenant {
   oauthAccounts             OAuthAccount[]
   meetings                  Meeting[]
   agendaConfig              TenantAgendaConfig?
+  aparencia                 TenantAparencia?
   userAgendaConfigs         UserAgendaConfig[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
@@ -5816,6 +5817,34 @@ model TenantAgendaConfig {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("tenant_agenda_configs")
+}
+
+// A aparência do escritório (21/10/2026): a cor principal que o portal dos
+// clientes usa no lugar do azul do Connect, a cor de cada grupo de telas do
+// portal (no jeito do Omie) e o logo no menu. Cálculo e padrões em
+// src/lib/aparencia/cores.ts; a leitura (que nunca derruba o portal) em
+// src/lib/aparencia/leitura.ts. Tabela própria pelo mesmo motivo do
+// TenantAgendaConfig: coluna nova em `tenants` lida antes da migration
+// derrubaria toda leitura de tenant.
+
+/// Sem linha, o portal fica como sempre foi: o azul do Connect e as cores de fábrica dos grupos.
+model TenantAparencia {
+  tenantId       String   @id
+  /// "#RRGGBB"; null = o azul do Connect.
+  corPrincipal   String?  @db.VarChar(7)
+  /// Só os grupos trocados: { "fiscal": "#RRGGBB" }. Os outros ficam no padrão de fábrica.
+  coresDosGrupos Json?
+  /// Desligado, todos os grupos usam a cor principal.
+  coresPorGrupo  Boolean  @default(true)
+  /// O logo do escritório (tenants.logoUrl) no lugar do logo do Connect, no menu do portal.
+  logoNoPortal   Boolean  @default(false)
+  /// A cor principal também no Connect da equipe.
+  noConnect      Boolean  @default(false)
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_aparencias")
 }
 
 /// Horário próprio de uma pessoa. Sem linha, ela usa o do escritório. Por

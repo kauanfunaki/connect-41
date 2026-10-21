@@ -26,6 +26,8 @@ import { agentesDoChat } from "@/lib/ia/chat/agentes";
 import { PARES_DE_CAMINHO } from "@/lib/ajuda/artigos";
 import { configDoHelpdesk } from "@/lib/chamados/contexto";
 import { temAcessoAoModulo } from "@/lib/chamados/consultas";
+import { aparenciaDoEscritorio } from "@/lib/aparencia/leitura";
+import { EstiloDaAparencia } from "@/components/aparencia/EstiloDaAparencia";
 
 export default async function AppLayout({
   children,
@@ -120,7 +122,10 @@ export default async function AppLayout({
   // Sem as arquivadas e os tipos ocultos (05/10/2026). Falha aqui não derruba
   // o app inteiro (deploy antes da migration, por exemplo): o sino fica sem número.
   const dono = { tenantId, userId: ctx.userId };
-  const [unreadCount, me, accessibleTenants] = await Promise.all([
+  // A cor principal do escritório também aqui, só se ele ligou "Usar também no
+  // Connect da equipe" (21/10/2026; desligado por padrão). Os grupos de cor
+  // são do portal: a equipe já tem as cores dos setores.
+  const [unreadCount, me, accessibleTenants, { aparencia }] = await Promise.all([
     ctx.userId
       ? tiposOcultos(dono)
           .then((ocultos) => contarNaoLidasVisiveis(dono, ocultos))
@@ -143,10 +148,12 @@ export default async function AppLayout({
         orderBy: { name: "asc" },
       })
     ),
+    aparenciaDoEscritorio(tenantId),
   ]);
 
   return (
     <ToastProvider>
+      {aparencia.noConnect && <EstiloDaAparencia aparencia={aparencia} grupos={false} />}
       <AppShell
         tenantId={tenantId}
         accessibleTenants={accessibleTenants}

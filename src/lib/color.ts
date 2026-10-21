@@ -77,7 +77,7 @@ export function readableTextOn(background: string): string {
   return onDark > onLight * DARK_TEXT_MARGIN ? DARK_TEXT : LIGHT_TEXT;
 }
 
-function toHex({ r, g, b }: Rgb): string {
+export function toHex({ r, g, b }: Rgb): string {
   return `#${[r, g, b].map((c) => Math.round(c).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
 }
 
