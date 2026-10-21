@@ -105,6 +105,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "financeiro.transfer.created": c("registrou como transferência entre contas um movimento do extrato"),
   "financeiro.bank_transaction.ignored": e("ignorou um movimento do extrato"),
   "financeiro.bank_transaction.reopened": e("reabriu um movimento do extrato"),
+  // Exportação para a Domínio (fila do BPO, 21/10).
+  "financeiro.dominio.exported": o("exportou para a Domínio as baixas da empresa"),
+  "financeiro.dominio.depara_saved": e("atualizou o de-para da Domínio da empresa"),
   // Regras de conciliação (fila do BPO, 21/10).
   "financeiro.bank_rule.created": c("criou a regra de conciliação"),
   "financeiro.bank_rule.updated": e("editou a regra de conciliação"),

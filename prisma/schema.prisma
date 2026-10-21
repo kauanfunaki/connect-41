@@ -1545,6 +1545,10 @@ model Company {
   /// vêm do Omie — até a virada, a conta que veio de lá é do Omie: o Connect
   /// não a edita, não a baixa nem a cancela, porque a leitura seguinte desfaria.
   omieCutoverAt         DateTime?
+  /// O "Código Matriz/Filial" da empresa na Domínio (fila do BPO, 21/10): vai
+  /// em toda linha da planilha de importação. É o `empresas.codigo_dominio`
+  /// do SPED Generator ("113" + a filial com dois dígitos: matriz 11301).
+  dominioBranchCode     String?       @db.VarChar(20)
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -1580,6 +1584,7 @@ model Company {
   collectionReminderOptOut CollectionReminderOptOut?
   costCenters              CostCenter[]
   financeProjects          FinanceProject[]
+  dominioAccountMaps       DominioAccountMap[]
   bankReconciliationRules  BankReconciliationRule[]
   financeEntryPayments     FinanceEntryPayment[]
   budgets                  Budget[]
@@ -4493,6 +4498,44 @@ model BankTransactionMatch {
   @@index([transactionId])
   @@index([financeEntryId])
   @@map("bank_transaction_matches")
+}
+
+// ─── Exportação para a Domínio (fila do BPO, 21/10) ──────────────────────────
+
+/// O que o de-para da Domínio liga a uma conta contábil.
+enum DominioMapKind {
+  /// Uma categoria do plano (despesa, receita, juros, desconto).
+  CATEGORIA
+  /// Uma conta bancária da empresa (o banco, a caixinha, o cartão).
+  CONTA_BANCARIA
+  /// Um fornecedor ou cliente: a baixa liquida a conta dele, e não a despesa
+  /// direto — o modelo em que a provisão já veio do SPED Generator.
+  CONTRAPARTE
+}
+
+/// O de-para da empresa para a Domínio: um cadastro do financeiro → o código
+/// reduzido da conta contábil. É do Contábil: o Connect não adivinha conta, e
+/// a baixa sem conta no de-para fica fora do arquivo, como pendência
+/// (`src/lib/financeiro/dominio/lancamentos.ts`). `refId` é o id do cadastro,
+/// sem chave estrangeira — são três tabelas; um de-para de cadastro excluído
+/// só deixa de ser usado.
+model DominioAccountMap {
+  id          String         @id @default(uuid())
+  tenantId    String
+  companyId   String
+  kind        DominioMapKind
+  refId       String         @db.VarChar(36)
+  /// O código reduzido da conta na Domínio, só dígitos.
+  account     String         @db.VarChar(20)
+  updatedById String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, kind, refId])
+  @@index([tenantId, companyId])
+  @@map("dominio_account_maps")
 }
 
 // ─── Regras de conciliação (fila do BPO, 21/10) ─────────────────────────────
