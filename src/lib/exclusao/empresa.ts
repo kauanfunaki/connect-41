@@ -128,7 +128,9 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
   },
   { modelo: "ClientDocument", acao: "apagar", executar: (tx, a) => n(tx.clientDocument.deleteMany({ where: daEmpresa(a) })) },
 
-  // Conciliação: os vínculos, as transações do extrato, as importações.
+  // Conciliação: o registro das regras (as regras vão em cascata com a
+  // empresa), os vínculos, as transações do extrato, as importações.
+  { modelo: "BankRuleApplication", acao: "apagar", executar: (tx, a) => n(tx.bankRuleApplication.deleteMany({ where: daEmpresa(a) })) },
   {
     modelo: "BankTransactionMatch",
     acao: "apagar",

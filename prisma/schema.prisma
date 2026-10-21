@@ -1580,6 +1580,7 @@ model Company {
   collectionReminderOptOut CollectionReminderOptOut?
   costCenters              CostCenter[]
   financeProjects          FinanceProject[]
+  bankReconciliationRules  BankReconciliationRule[]
   financeEntryPayments     FinanceEntryPayment[]
   budgets                  Budget[]
   societarioProcesses      Process[]
@@ -3055,6 +3056,7 @@ model FinanceCategory {
   baixasComDesconto FinanceEntryPayment[] @relation("PaymentDiscountCategory")
   /// Linhas de rateio nesta categoria.
   allocations       FinanceEntryAllocation[]
+  reconciliationRules BankReconciliationRule[]
 
   @@unique([tenantId, scope, name, kind])
   @@index([tenantId, kind])
@@ -3141,6 +3143,7 @@ model FinanceCounterparty {
   defaultCostCenter CostCenter?           @relation(fields: [defaultCostCenterId], references: [id])
   entries           FinanceEntry[]
   agreements        CollectionAgreement[]
+  reconciliationRules BankReconciliationRule[]
 
   @@unique([tenantId, companyId, document])
   @@index([tenantId, companyId])
@@ -3337,6 +3340,8 @@ model FinanceEntry {
   retentions            FinanceEntryRetention[] @relation("RetentionsOfEntry")
   /// Quando esta conta é a de um imposto retido: a retenção que a gerou.
   retentionOrigin       FinanceEntryRetention?  @relation("RetentionTaxEntry")
+  /// A regra de conciliação que criou esta conta, quando foi uma (21/10).
+  ruleApplications      BankRuleApplication[]
 
   @@unique([companyId, omieTitleId])
   @@unique([companyId, omieMovementId])
@@ -3477,6 +3482,7 @@ model FinanceProject {
   entries FinanceEntry[]
   /// Linhas de rateio neste projeto.
   allocations FinanceEntryAllocation[]
+  reconciliationRules BankReconciliationRule[]
 
   @@unique([companyId, name])
   @@index([tenantId, companyId, active])
@@ -3508,6 +3514,7 @@ model CostCenter {
   padraoDe FinanceCounterparty[]
   /// Linhas de rateio neste centro.
   allocations FinanceEntryAllocation[]
+  reconciliationRules BankReconciliationRule[]
 
   @@unique([companyId, name])
   @@unique([companyId, code])
@@ -4306,6 +4313,8 @@ model BankAccount {
   entries      FinanceEntry[]        @relation("ContaPrevista")
   /// No cartão de crédito: as faturas dele, uma por ciclo.
   cardInvoices FinanceEntry[]        @relation("FaturasDoCartao")
+  /// As regras de conciliação que valem só nesta conta (21/10).
+  reconciliationRules BankReconciliationRule[]
 
   @@unique([tenantId, companyId, bankCode, accountDigits])
   @@unique([companyId, omieAccountId])
@@ -4375,6 +4384,8 @@ model BankTransaction {
   import       BankStatementImport    @relation(fields: [importId], references: [id])
   reconciledBy User?                  @relation("BankTransactionReconciledBy", fields: [reconciledById], references: [id], onDelete: SetNull)
   matches      BankTransactionMatch[]
+  /// O lançamento que uma regra de conciliação criou para esta linha (21/10).
+  ruleApplications BankRuleApplication[]
 
   @@unique([bankAccountId, fitId])
   @@index([tenantId, bankAccountId, status, postedAt])
@@ -4482,6 +4493,112 @@ model BankTransactionMatch {
   @@index([transactionId])
   @@index([financeEntryId])
   @@map("bank_transaction_matches")
+}
+
+// ─── Regras de conciliação (fila do BPO, 21/10) ─────────────────────────────
+//
+// Como as do Nibo: o que se repete no extrato (tarifa, rendimento, aluguel,
+// folha, um fornecedor fixo) vira lançamento sem ninguém digitar. A condição
+// olha a linha do extrato; a ação é o lançamento que ela cria, já conciliado.
+// As regras puras moram em src/lib/financeiro/conciliacao/regras.ts.
+
+/// O sentido da linha do extrato que a regra pega. Decide também o tipo do
+/// lançamento: saída é conta a pagar; entrada, conta a receber.
+enum BankRuleDirection {
+  ENTRADA
+  SAIDA
+}
+
+/// `SUGERIR` mostra a regra na linha e a pessoa confirma; `LANCAR` lança
+/// sozinho na importação do extrato — fora da empresa ainda lida do Omie, onde
+/// toda regra só sugere (lote E: o Omie é a fonte até a virada).
+enum BankRuleMode {
+  SUGERIR
+  LANCAR
+}
+
+/// Uma regra de conciliação de uma empresa.
+model BankReconciliationRule {
+  id        String @id @default(uuid())
+  tenantId  String
+  companyId String
+  name      String @db.VarChar(120)
+
+  // A condição. Texto e valor são as duas que identificam a linha; a regra
+  // precisa de ao menos uma (`validarRegra`). Conta nula é qualquer conta da
+  // empresa.
+  direction     BankRuleDirection
+  /// O que o histórico ou o favorecido do extrato contém — comparado sem
+  /// acento nem pontuação, em maiúsculas (`normalizarTexto`).
+  textContains  String?           @db.VarChar(120)
+  /// Faixa do valor da linha, sem sinal. Iguais é o valor exato; nulos, qualquer valor.
+  minAmount     Decimal?          @db.Decimal(14, 2)
+  maxAmount     Decimal?          @db.Decimal(14, 2)
+  bankAccountId String?
+
+  // A ação: o lançamento que a regra cria.
+  counterpartyId String
+  /// Obrigatória na saída (conta a pagar), como no lançamento manual.
+  categoryId     String?
+  /// Nulo herda o padrão da contraparte, como no lançamento manual.
+  costCenterId   String?
+  projectId      String?
+  /// A descrição do lançamento. Nula usa o histórico do extrato.
+  description    String? @db.VarChar(255)
+
+  mode        BankRuleMode @default(SUGERIR)
+  /// Pausada não sugere nem lança — e continua na lista para voltar.
+  active      Boolean      @default(true)
+  createdById String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  company      Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bankAccount  BankAccount?          @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  counterparty FinanceCounterparty   @relation(fields: [counterpartyId], references: [id], onDelete: Cascade)
+  category     FinanceCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  costCenter   CostCenter?           @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  project      FinanceProject?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  applications BankRuleApplication[]
+
+  @@index([tenantId, companyId])
+  @@index([bankAccountId])
+  @@index([counterpartyId])
+  @@index([categoryId])
+  @@index([costCenterId])
+  @@index([projectId])
+  @@map("bank_reconciliation_rules")
+}
+
+/// O registro de qual regra lançou o quê: uma linha por lançamento criado por
+/// regra, confirmado pela pessoa ou automático. Desfazer cancela o lançamento,
+/// devolve a linha do extrato às pendentes e marca `undoneAt` — e a regra não
+/// lança sozinha de novo naquela linha.
+model BankRuleApplication {
+  id             String    @id @default(uuid())
+  tenantId       String
+  companyId      String
+  /// Nulo depois que a regra é excluída; o nome fica em `ruleName`.
+  ruleId         String?
+  ruleName       String    @db.VarChar(120)
+  transactionId  String
+  financeEntryId String
+  /// Lançada sozinha na importação do extrato (modo `LANCAR`), sem clique.
+  automatic      Boolean   @default(false)
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  undoneAt       DateTime?
+  undoneById     String?
+
+  rule         BankReconciliationRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  transaction  BankTransaction         @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  financeEntry FinanceEntry            @relation(fields: [financeEntryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, createdAt])
+  @@index([ruleId])
+  @@index([transactionId])
+  @@index([financeEntryId])
+  @@map("bank_rule_applications")
 }
 
 /// Onde a sincronização com o SPED parou, por raiz de CNPJ.
