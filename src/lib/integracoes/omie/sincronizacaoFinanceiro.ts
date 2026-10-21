@@ -66,7 +66,8 @@ import { getPrisma } from "@/lib/prisma";
 import { saoPauloParts } from "@/lib/agenda";
 import { executar, lerConfig } from "@/lib/integracoes/data";
 import { chaveDaCategoria } from "@/lib/dre/calculo";
-import { MAPEAMENTO_PADRAO } from "@/lib/dre/mapeamento-padrao";
+import { grupoDoDeParaDoModelo } from "@/lib/dre/categoriasDoImport";
+import { modeloDoCodigo } from "@/lib/dre/estrutura";
 import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { chamarOmie } from "./cliente";
@@ -132,7 +133,6 @@ const POR_PAGINA = 500;
 const MAX_PAGINAS = 20;
 const MAX_PAGINAS_DE_CADASTRO = 10;
 
-const GRUPO_PADRAO = new Map(MAPEAMENTO_PADRAO.map((p) => [chaveDaCategoria(p.categoria), p.grupo]));
 const emAndamento = new Set<string>();
 
 type Cred = { appKey: string; appSecret: string };
@@ -222,7 +222,7 @@ export async function sincronizarFinanceiroDaEmpresa(
   const prisma = getPrisma();
   // Virada para o Connect (lote E): daí em diante o Connect é a fonte, e uma
   // leitura desfaria o que o BPO mudou nas contas que vieram do Omie.
-  const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { omieCutoverAt: true } });
+  const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { omieCutoverAt: true, dreModelo: true } });
   if (empresa?.omieCutoverAt) {
     return { companyId, ok: false, erro: "Esta empresa já virou para o Connect — as contas não são mais lidas do Omie." };
   }
@@ -289,7 +289,8 @@ export async function sincronizarFinanceiroDaEmpresa(
           name: info.nome,
           kind,
           planGroup: info.grupo?.slice(0, 120) ?? null,
-          dreGroup: GRUPO_PADRAO.get(chaveDaCategoria(info.nome)) ?? null,
+          // O de-para do modelo do DRE da empresa (21/10/2026).
+          dreGroup: grupoDoDeParaDoModelo(info.nome, modeloDoCodigo(empresa?.dreModelo)),
           omieCode: codigo,
           active: !info.inativa,
         },

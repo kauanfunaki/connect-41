@@ -8,6 +8,7 @@ import { Contador } from "@/components/ui/Contador";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { FilaDeClassificacao } from "@/components/dre/FilaDeClassificacao";
 import { totalForaDasLinhas, type Desconsiderada, type ItemDaFila } from "@/lib/dre/fila";
+import type { CodigoDoModelo } from "@/lib/dre/estrutura";
 import { formatarReaisDeCentavos as moeda } from "@/lib/format";
 
 // A classificação da DRE num painel lateral (13/10/2026, do teste da Amanda,
@@ -24,6 +25,8 @@ import { formatarReaisDeCentavos as moeda } from "@/lib/format";
 
 type Dados = {
   companyId: string;
+  /** O modelo do DRE da empresa: os grupos do "Classificar em…" são os dele. */
+  modelo: CodigoDoModelo;
   itens: ItemDaFila[];
   contas: { pagamento: string | null; recebimento: string | null };
   excecoes: { categoryId: string; nome: string; grupo: string }[];

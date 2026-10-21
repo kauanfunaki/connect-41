@@ -23,10 +23,12 @@ import { dreDoAno } from "@/lib/dre/anual";
 import { RelatorioAnual } from "@/components/dre/RelatorioAnual";
 import { ImportarDoOmie } from "@/components/dre/ImportarDoOmie";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
-import { TRANSFERENCIA, opcoesDaUrl } from "@/lib/dre/estrutura";
+import { TRANSFERENCIA, opcoesDaUrl, type ModeloDoDre } from "@/lib/dre/estrutura";
 import { SeletorDosImpostos, sufixoDosImpostos } from "@/components/dre/SeletorDosImpostos";
+import { SeletorDoModeloDoDre } from "@/components/dre/SeletorDoModeloDoDre";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { desconsideradasDoPeriodo, excecoesDaEmpresa, itensDaFila, totalForaDasLinhas, type ItemDaFila } from "@/lib/dre/fila";
-import { podeAbrirADre } from "@/lib/dre/acesso";
+import { podeAbrirADre, podeTrocarOModeloDoDre } from "@/lib/dre/acesso";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { competenciaDe } from "@/lib/financeiro/periodo";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
@@ -69,8 +71,6 @@ export default async function DrePage({
   if (!(await podeAbrirADre(ctx))) notFound();
 
   const { empresa, mes, visao, ano, impostos } = await searchParams;
-  // As duas visões dos impostos (20/10/2026): no EBITDA, o padrão; fora, a da Irriga.
-  const opcoes = opcoesDaUrl(impostos);
   const prisma = getPrisma();
 
   const empresas = await prisma.company.findMany({
@@ -108,7 +108,15 @@ export default async function DrePage({
     <EmpresaDaTela empresa={{ nome: daTela.tradeName || daTela.name, cnpj: daTela.cnpj }}>{tela}</EmpresaDaTela>
   );
 
-  const meses = await mesesComMovimento(ctx.tenantId, companyId);
+  // O modelo do DRE da empresa (21/10/2026) e, no padrão, as duas visões dos
+  // impostos (20/10/2026): no EBITDA, o padrão; ou fora do resultado.
+  const [meses, modelo, podeTrocarModelo] = await Promise.all([
+    mesesComMovimento(ctx.tenantId, companyId),
+    modeloDaEmpresa(ctx.tenantId, companyId),
+    podeTrocarOModeloDoDre(ctx),
+  ]);
+  const opcoes = opcoesDaUrl(impostos, modelo);
+  const seletorDoModelo = <SeletorDoModeloDoDre companyId={companyId} modelo={modelo.codigo} podeTrocar={podeTrocarModelo} />;
 
   // ─── Visão de doze meses ─────────────────────────────────────────────────
   if (visao === "ano") {
@@ -132,6 +140,7 @@ export default async function DrePage({
       <PageContainer>
         <PainelDeClassificacao
           companyId={companyId}
+          modelo={modelo.codigo}
           itens={fila}
           contas={await linksDasContas(ctx, companyId, fila)}
           excecoes={excecoesDaEmpresa(categoriasDoAno)}
@@ -149,7 +158,10 @@ export default async function DrePage({
             <FiltrosDaTela
               campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
             />
-            <SeletorDosImpostos opcoes={opcoes} base="/dre" params={{ empresa: companyId, visao: "ano", ano: String(anoEscolhido) }} />
+            {modelo.impostos === "escolha" && (
+              <SeletorDosImpostos opcoes={opcoes} base="/dre" params={{ empresa: companyId, visao: "ano", ano: String(anoEscolhido) }} />
+            )}
+            {seletorDoModelo}
             <BotaoDeClassificar />
           </div>
           <AbasDaVisao companyId={companyId} ativa="ano" ano={anoEscolhido} sufixo={sufixoDosImpostos(opcoes)} />
@@ -162,11 +174,7 @@ export default async function DrePage({
             <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
               <span className="text-fg">
                 <strong>{moeda(Math.abs(impostoDoAno))}</strong> de impostos sobre a receita saíram
-                do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — é a
-                visão “Impostos fora do resultado”.
-                <span className="block text-fs-2 text-fg-secondary mt-1">
-                  Em “Impostos no EBITDA”, o padrão, eles descontam do EBITDA e do resultado.
-                </span>
+                do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — <PorQueOImpostoFicaFora modelo={modelo} />
               </span>
             </Aviso>
           )}
@@ -233,6 +241,7 @@ export default async function DrePage({
     <PageContainer>
       <PainelDeClassificacao
         companyId={companyId}
+        modelo={modelo.codigo}
         itens={fila}
         contas={await linksDasContas(ctx, companyId, fila)}
         excecoes={excecoesDaEmpresa(categorias)}
@@ -270,7 +279,8 @@ export default async function DrePage({
               },
             ]}
           />
-          <SeletorDosImpostos opcoes={opcoes} base="/dre" params={{ empresa: companyId, mes }} />
+          {modelo.impostos === "escolha" && <SeletorDosImpostos opcoes={opcoes} base="/dre" params={{ empresa: companyId, mes }} />}
+          {seletorDoModelo}
           <BotaoDeClassificar />
         </div>
         <AbasDaVisao companyId={companyId} ativa="mes" ano={escolhido.ano} sufixo={sufixoDosImpostos(opcoes)} />
@@ -285,19 +295,16 @@ export default async function DrePage({
           className="mb-4"
         />
 
-        {/* Na visão "Impostos fora do resultado" (a da Irriga), quanto ficou de
-            fora — um número que muda o resultado precisa aparecer na tela. */}
+        {/* Quando os impostos ficam fora do resultado — no modelo por área, ou
+            na visão "Impostos fora do resultado" do padrão —, quanto ficou de
+            fora: um número que muda o resultado precisa aparecer na tela. */}
         {impostoDeFora !== 0 && (
           // O `Aviso` do app (08/10/2026), com o texto em `fg`: o parágrafo é
           // longo, e o âmbar como cor de texto fica abaixo do contraste AA.
           <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
             <span className="text-fg">
               <strong>{moeda(Math.abs(impostoDeFora))}</strong> de impostos sobre a receita saíram do
-              caixa e <strong>não entram</strong> no resultado abaixo — é a visão “Impostos fora do
-              resultado”.
-              <span className="block text-fs-2 text-fg-secondary mt-1">
-                Em “Impostos no EBITDA”, o padrão, eles descontam do EBITDA e do resultado.
-              </span>
+              caixa e <strong>não entram</strong> no resultado abaixo — <PorQueOImpostoFicaFora modelo={modelo} />
             </span>
           </Aviso>
         )}
@@ -336,6 +343,24 @@ export default async function DrePage({
         </NotaDeFonte>
       </PainelDeClassificacao>
     </PageContainer>
+  );
+}
+
+/**
+ * O porquê do imposto fora do resultado, conforme o modelo: no por área é a
+ * regra do modelo; no padrão, a visão escolhida no seletor dos impostos.
+ */
+function PorQueOImpostoFicaFora({ modelo }: { modelo: ModeloDoDre }) {
+  if (modelo.impostos === "fora") {
+    return <>a margem de contribuição parte da Receita Bruta, como na planilha do modelo “{modelo.nome}”.</>;
+  }
+  return (
+    <>
+      é a visão “Impostos fora do resultado”.
+      <span className="block text-fs-2 text-fg-secondary mt-1">
+        Em “Impostos no EBITDA”, o padrão, eles descontam do EBITDA e do resultado.
+      </span>
+    </>
   );
 }
 

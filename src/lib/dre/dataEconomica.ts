@@ -20,7 +20,8 @@ import { saoPauloParts } from "@/lib/agenda";
 import { chaveDaCategoria, calcularDre, type LancamentoDoDre, type Mapeamento, type ResultadoDoDre } from "./calculo";
 import { resolverCategorias } from "./mapeamento";
 import { centavosDeDecimal } from "./data";
-import { OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
+import { OPCOES_PADRAO, modeloDas, type ModeloDoDre, type OpcoesDoDre } from "./estrutura";
+import { modeloDaEmpresaOu } from "./modeloDaEmpresa";
 import { calcularDreEconomica, paraLancamentoDoDre, type DreEconomica, type LancamentoFinanceiro } from "./economica";
 import { resultadoDePorGrupo, somarPorGrupo, type ConjuntosDaReconciliacao } from "./analises";
 import { quadroPorCentro, type QuadroPorCentro } from "./centroDeCusto";
@@ -35,28 +36,35 @@ import {
   somarMeses,
 } from "@/lib/financeiro/periodo";
 
-type Contexto = { mapeamento: Mapeamento; nomePorId: Map<string, string> };
+type Contexto = {
+  mapeamento: Mapeamento;
+  nomePorId: Map<string, string>;
+  /** O modelo com que as categorias foram resolvidas (21/10/2026). */
+  modelo: ModeloDoDre;
+};
 
 /**
  * O de-para desta empresa: o plano dela (padrão + categorias próprias, com as
  * escondidas e inativas — lançamento antigo continua somando) + exceções.
  */
-export async function contextoDoDre(tenantId: string, companyId: string): Promise<Contexto> {
+export async function contextoDoDre(tenantId: string, companyId: string, modeloPedido?: ModeloDoDre): Promise<Contexto> {
   const prisma = getPrisma();
-  const [categorias, excecoes] = await Promise.all([
+  const [categorias, excecoes, modelo] = await Promise.all([
     prisma.financeCategory.findMany({
       where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
       select: { id: true, name: true, dreGroup: true, companyId: true },
     }),
     prisma.dreCategoryMapping.findMany({ where: { tenantId, companyId }, select: { categoryId: true, grupo: true } }),
+    modeloDaEmpresaOu(tenantId, companyId, modeloPedido),
   ]);
   const resolvidas = resolverCategorias(
     padraoAntesDaEmpresa(categorias).map((c) => ({ id: c.id, nome: c.name, dreGroup: c.dreGroup })),
-    excecoes
+    excecoes,
+    modelo
   );
   const mapeamento: Mapeamento = new Map();
   for (const c of resolvidas) if (c.grupo) mapeamento.set(chaveDaCategoria(c.nome), c.grupo);
-  return { mapeamento, nomePorId: new Map(resolvidas.map((c) => [c.id, c.nome])) };
+  return { mapeamento, nomePorId: new Map(resolvidas.map((c) => [c.id, c.nome])), modelo };
 }
 
 /**
@@ -227,7 +235,7 @@ export async function serieEconomica(
 ): Promise<Map<string, DreEconomica>> {
   const prisma = getPrisma();
   const [ctx, linhas, ajustes] = await Promise.all([
-    contextoDoDre(tenantId, companyId),
+    contextoDoDre(tenantId, companyId, opcoes.modelo),
     prisma.financeEntry.findMany({
       where: { tenantId, companyId, competence: { in: competencias }, ...WHERE_ECONOMICO, ...whereDoCentro(centro) },
       select: SELECAO,
@@ -244,7 +252,7 @@ export async function serieEconomica(
       calcularDreEconomica(
         porMes.get(c)!,
         ctx.mapeamento,
-        opcoes,
+        { ...opcoes, modelo: ctx.modelo },
         (ajustes.get(c) ?? []).filter((a) => passaNoFiltroDeCentro(a.centroDeCustoId, centro))
       ),
     ])
@@ -265,7 +273,7 @@ export async function quadroPorCentroDoPeriodo(
 ): Promise<QuadroPorCentro> {
   const prisma = getPrisma();
   const [ctx, linhas, ajustes, centros] = await Promise.all([
-    contextoDoDre(tenantId, companyId),
+    contextoDoDre(tenantId, companyId, opcoes.modelo),
     prisma.financeEntry.findMany({
       where: { tenantId, companyId, competence: { in: competencias }, ...WHERE_ECONOMICO },
       select: SELECAO,
@@ -281,7 +289,7 @@ export async function quadroPorCentroDoPeriodo(
     [...ajustes.values()].flat(),
     ctx.mapeamento,
     centros.map((c) => ({ id: c.id, nome: c.name, codigo: c.code, active: c.active })),
-    opcoes
+    { ...opcoes, modelo: ctx.modelo }
   );
 }
 
@@ -300,7 +308,7 @@ export async function serieDeCaixa(
   const inicio = [...competencias].sort()[0]!;
   const fim = [...competencias].sort().at(-1)!;
   const [ctx, movimentos] = await Promise.all([
-    contextoDoDre(tenantId, companyId),
+    contextoDoDre(tenantId, companyId, opcoes.modelo),
     // Das baixas (lote C, 19/10): cada uma no mês em que foi paga.
     movimentosDeCaixa(baixasNoPeriodo({ tenantId, companyId }, inicioDaCompetencia(inicio), inicioDaCompetencia(somarMeses(fim, 1)))),
   ]);
@@ -308,7 +316,7 @@ export async function serieDeCaixa(
   for (const m of movimentos) {
     porMes.get(competenciaDoInstante(m.paidAt))?.push(paraLancamentoDoDre(paraFinanceiro(linhaDoMovimento(m), ctx.nomePorId)));
   }
-  return new Map(competencias.map((c) => [c, calcularDre(porMes.get(c)!, ctx.mapeamento, opcoes)]));
+  return new Map(competencias.map((c) => [c, calcularDre(porMes.get(c)!, ctx.mapeamento, { ...opcoes, modelo: ctx.modelo })]));
 }
 
 /**
@@ -322,7 +330,7 @@ export async function dadosDaReconciliacao(
   tenantId: string,
   companyId: string,
   competencia: string
-): Promise<{ conjuntos: ConjuntosDaReconciliacao; mapeamento: Mapeamento }> {
+): Promise<{ conjuntos: ConjuntosDaReconciliacao; mapeamento: Mapeamento; modelo: ModeloDoDre }> {
   const prisma = getPrisma();
   const de = inicioDaCompetencia(competencia);
   const ate = inicioDaCompetencia(somarMeses(competencia, 1));
@@ -364,7 +372,7 @@ export async function dadosDaReconciliacao(
   for (const doCaixa of caixaPorConta.values()) {
     for (const m of doCaixa) conjuntos.soCaixa.push(paraLancamentoDoDre(paraFinanceiro(linhaDoMovimento(m), ctx.nomePorId)));
   }
-  return { conjuntos, mapeamento: ctx.mapeamento };
+  return { conjuntos, mapeamento: ctx.mapeamento, modelo: ctx.modelo };
 }
 
 /** Vencimento × liquidação do que foi liquidado no mês, por tipo. */
@@ -401,13 +409,15 @@ export async function resultadoDoPeriodo(
   companyId: string,
   competencias: string[],
   regime: "competencia" | "caixa",
-  opcoes: OpcoesDoDre = OPCOES_PADRAO
+  opcoesPedidas: OpcoesDoDre = OPCOES_PADRAO
 ): Promise<ResultadoDoDre> {
+  // O total remonta as linhas: precisa do modelo antes das séries.
+  const opcoes: OpcoesDoDre = { ...opcoesPedidas, modelo: await modeloDaEmpresaOu(tenantId, companyId, opcoesPedidas.modelo) };
   const porGrupo =
     regime === "competencia"
       ? [...(await serieEconomica(tenantId, companyId, competencias, { tipo: "todos" }, opcoes)).values()].map((m) => m.resultado.porGrupo)
       : [...(await serieDeCaixa(tenantId, companyId, competencias, opcoes)).values()].map((r) => r.porGrupo);
-  return resultadoDePorGrupo(somarPorGrupo(porGrupo), opcoes);
+  return resultadoDePorGrupo(somarPorGrupo(porGrupo, modeloDas(opcoes)), opcoes);
 }
 
 /** Competências com lançamento nesta empresa, mais recente primeiro. */

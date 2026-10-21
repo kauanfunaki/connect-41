@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { LINHAS } from "@/lib/dre/estrutura";
+import { TODAS_AS_LINHAS } from "@/lib/dre/estrutura";
 
 // A linha de grupo da DRE que abre nas categorias (13/10/2026, do teste da
 // Amanda, do BPO): "CMV" sozinho não diz de onde veio o número, e a resposta
@@ -13,8 +13,8 @@ import { LINHAS } from "@/lib/dre/estrutura";
 // no portal do cliente, `TabelaDaDre`) e a do ano (`RelatorioAnual`): o estado,
 // o botão e o recuo das categorias.
 
-/** O grupo de uma linha do relatório, quando ela é linha de grupo. */
-const GRUPO_DA_LINHA = new Map(LINHAS.flatMap((l) => (l.tipo === "grupo" ? [[l.code, l.grupo] as const] : [])));
+/** O grupo de uma linha do relatório, quando ela é linha de grupo — de qualquer modelo. */
+const GRUPO_DA_LINHA = new Map(TODAS_AS_LINHAS.flatMap((l) => (l.tipo === "grupo" ? [[l.code, l.grupo] as const] : [])));
 
 export function grupoDaLinha(code: string): string | null {
   return GRUPO_DA_LINHA.get(code) ?? null;
