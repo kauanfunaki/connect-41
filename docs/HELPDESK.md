@@ -6,8 +6,8 @@ O módulo `helpdesk` porta o atendimento do Hub para o Connect: categorias e for
 
 1. Na publicação autorizada, aplique as migrations com `npx prisma migrate deploy` no ambiente de destino. A migration `20261019210000_helpdesk` cria somente tabelas novas e suas chaves; não importa dados do Hub.
 2. Publique o build normal do Connect, mantendo o volume persistente `storage/`.
-3. Em **Configurações → Módulos**, encontre **Chamados**. Escolha um setor ativo que será responsável pelo atendimento e habilite o módulo. Ele nasce desligado e continua sujeito aos módulos liberados pelo plano contratado.
-4. No mesmo cartão, abra **Configurar setores solicitantes**. Marque os setores que podem abrir chamados. A seleção começa vazia; administradores continuam podendo abrir.
+3. Em **Configurações → Setores e módulos**, no setor Tech, encontre **Chamados**. Escolha um setor ativo que será responsável pelo atendimento e habilite o módulo. Ele nasce desligado e continua sujeito aos módulos liberados pelo plano contratado.
+4. Em **Configurações → Rotinas e cálculos → Chamados internos** (`/admin/modulos/helpdesk`), escolha os setores solicitantes. Marque os setores que podem abrir chamados. A seleção começa vazia; administradores continuam podendo abrir.
 5. Em **Chamados → Configurar**, cadastre categorias, campos, evidências e checklist. Categorias sujeitas a aprovação precisam de outro aprovador ativo além de quem solicita.
 
 Chamados começa desativado no controle de módulos. Ao ativá-lo, o atalho aparece para quem tem acesso, sem uma ocultação adicional por padrão no menu Geral. Personalizações de visibilidade feitas explicitamente pelo administrador continuam sendo respeitadas.

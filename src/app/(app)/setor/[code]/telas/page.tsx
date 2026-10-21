@@ -47,7 +47,7 @@ export default async function TelasDoSetorPage({ params }: { params: Promise<{ c
           <EmptyState
             icon={<LayoutGrid size={20} />}
             title="Nenhuma tela ativa para este setor"
-            description="As telas de cada setor são ligadas pelo administrador em Configurações → Módulos."
+            description="As telas de cada setor são ligadas pelo administrador em Configurações → Setores e módulos."
           />
         </Card>
       ) : (
