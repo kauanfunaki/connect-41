@@ -4,7 +4,7 @@ import { rotuloDaSerie } from "@/lib/financeiro/repeticao";
 import { NotebookPen, Plus, Upload } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate } from "@/lib/format";
@@ -86,11 +86,11 @@ export default async function LancamentosPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canViewSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
-  const podeLancar = canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const podeLancar = canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   // Sem permissão para lançar, a tela de criar não existe: cai na lista.
   const pedida = TELAS.find((t) => t.chave === params.aba) ?? TELAS[0];
   const tela = pedida.chave === "lista" || podeLancar ? pedida : TELAS[0];

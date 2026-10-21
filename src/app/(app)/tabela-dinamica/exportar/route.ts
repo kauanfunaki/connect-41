@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
   const ctx = await getAuthContext();
   const naoAchou = NextResponse.json({ error: "Não encontrado" }, { status: 404 });
   if (!ctx.tenantId) return naoAchou;
-  const setor = await setorDoModulo(ctx.tenantId, MODULO_DA_TABELA_DINAMICA);
-  if (!setor || !canViewSector(ctx, setor)) return naoAchou;
+  const setores = await setoresDoModulo(ctx.tenantId, MODULO_DA_TABELA_DINAMICA);
+  if (!setores || !canViewSector(ctx, setores)) return naoAchou;
   if (!(await isModuleEnabled(ctx.tenantId, MODULO_DA_TABELA_DINAMICA))) return naoAchou;
 
   const params = Object.fromEntries(req.nextUrl.searchParams);

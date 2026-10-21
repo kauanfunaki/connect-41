@@ -16,7 +16,15 @@ const logAudit = vi.fn();
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/context", async (orig) => ({ ...(await orig<object>()), getAuthContext: async () => ctx }));
-vi.mock("@/lib/modules", () => ({ setorDoModulo: async () => "recrutamento" }));
+vi.mock("@/lib/modules", () => {
+  const mod = { setorDoModulo: async () => "recrutamento" };
+  // Os setores da tela (21/10/2026): aqui, só o dono, como antes.
+  const setoresDoModulo = async (t: string, c: string) => {
+    const s = await (mod.setorDoModulo as (t: string, c: string) => Promise<string | null>)(t, c);
+    return s == null ? null : [s];
+  };
+  return { ...mod, setoresDoModulo };
+});
 vi.mock("@/lib/notifications", () => ({ notifyUser: (...a: unknown[]) => notifyUser(...a) }));
 vi.mock("@/lib/audit", () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
 

@@ -34,7 +34,7 @@ export default async function ArtigoDeAjudaPage({
   const modulo = moduloDoArtigo(artigo);
   if (modulo) {
     const estado = (await getTenantModuleStates(ctx.tenantId)).find((m) => m.code === modulo);
-    if (!estado?.enabled || !canViewSector(ctx, estado.sectorCode)) notFound();
+    if (!estado?.enabled || !canViewSector(ctx, estado.sectorCodes)) notFound();
   }
 
   // "Abrir a tela" leva de volta à tela de onde a pessoa veio pelo "?", com os

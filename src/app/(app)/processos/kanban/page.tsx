@@ -8,7 +8,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorUsers } from "@/lib/sectorUsers";
@@ -33,13 +33,13 @@ export default async function KanbanDeProcessosPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canViewSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
   const prisma = getPrisma();
   const [responsaveis, tipos, feriados] = await Promise.all([
-    getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR),
+    getSectorUsers(ctx.tenantId, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR),
     prisma.processType.findMany({
       where: { tenantId: ctx.tenantId, active: true },
       orderBy: { name: "asc" },
