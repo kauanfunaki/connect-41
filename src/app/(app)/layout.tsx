@@ -26,6 +26,9 @@ import { agentesDoChat } from "@/lib/ia/chat/agentes";
 import { PARES_DE_CAMINHO } from "@/lib/ajuda/artigos";
 import { configDoHelpdesk } from "@/lib/chamados/contexto";
 import { temAcessoAoModulo } from "@/lib/chamados/consultas";
+import { lerEmpresaEmFoco } from "@/lib/empresas/focoServidor";
+import { alcanceDoFoco } from "@/lib/empresas/foco";
+import { FaixaDoFoco, ProvedorDoFoco } from "@/components/empresas/FaixaDoFoco";
 
 export default async function AppLayout({
   children,
@@ -147,9 +150,23 @@ export default async function AppLayout({
     ),
   ]);
 
+  // A empresa em foco (BPO, uma empresa por vez — 21/10/2026): a faixa do
+  // topo, nas telas que seguem o foco. Sem o cookie, nem consulta o banco;
+  // erro aqui não derruba o app — a tela confere de novo (`ConferirFoco`) e a
+  // trava das ações lê o foco por conta própria.
+  const foco = await lerEmpresaEmFoco(ctx).catch((err) => {
+    console.error("[layout] empresa em foco", err);
+    return null;
+  });
+
   return (
     <ToastProvider>
       <AppShell
+        faixaDoFoco={
+          foco ? (
+            <FaixaDoFoco foco={{ companyId: foco.companyId, nome: foco.nome, logoUrl: foco.logoUrl, alcance: alcanceDoFoco(foco) }} />
+          ) : undefined
+        }
         tenantId={tenantId}
         accessibleTenants={accessibleTenants}
         sectors={visibleSectors}
@@ -178,7 +195,7 @@ export default async function AppLayout({
         <MeetingAlertOverlay />
         <AvisoDeVersaoNova />
         <DicaFlutuante />
-        {children}
+        <ProvedorDoFoco companyId={foco?.companyId ?? null}>{children}</ProvedorDoFoco>
         {modal}
         <ChatDeIA agentes={agentesDoChatDeIA} nome={me?.name ?? ""} />
       </AppShell>

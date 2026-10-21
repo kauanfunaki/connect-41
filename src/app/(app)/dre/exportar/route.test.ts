@@ -18,6 +18,11 @@ const estado = vi.hoisted(() => ({
   pedidos: [] as unknown[],
 }));
 
+// Sem empresa em foco (21/10/2026): a trava do foco tem o teste dela (`focoServidor.test.ts`).
+vi.mock("@/lib/empresas/focoServidor", () => ({
+  recusaDoFoco: async () => null,
+  leituraNoFoco: async (_ctx: unknown, empresa: string) => ({ ok: true, empresaId: empresa, empresaIds: undefined }),
+}));
 vi.mock("@/lib/auth/context", () => ({ getAuthContext: async () => estado.ctx }));
 vi.mock("@/lib/modules", () => {
   const mod = {

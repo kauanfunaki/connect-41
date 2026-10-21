@@ -134,7 +134,8 @@ export default async function CadastrosFinanceirosPage({
   // (13/10/2026). Era a primeira em ordem alfabética, e o "Novo cadastro" caía
   // nela sem ninguém ter escolhido.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
+  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   // A ação da tela vai no cabeçalho, como em pendências e no resto do app
@@ -151,7 +152,8 @@ export default async function CadastrosFinanceirosPage({
   const filtroDaEmpresa = (
     <FiltroDaEmpresa
       acao="/cadastros-financeiros"
-      empresas={empresas}
+      empresas={noSeletor}
+      foco={foco}
       valor={companyId}
       manter={{ aba: aba === "fornecedores" ? undefined : aba }}
     />

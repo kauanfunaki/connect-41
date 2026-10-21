@@ -9,6 +9,7 @@ import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { podeEditarOTipo } from "./acessoDaConta";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 import { validarCartao } from "./cartao";
 import { CARTAO_DE_CREDITO } from "./tiposDeConta";
 
@@ -34,6 +35,9 @@ export async function salvarCartao(formData: FormData): Promise<{ error: string 
     if (id) {
       const atual = await prisma.bankAccount.findFirst({ where: { id, tenantId, type: CARTAO_DE_CREDITO }, select: { id: true, companyId: true } });
       if (!atual) return { error: "Cartão não encontrado — atualize a tela." };
+      // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+      const foraDoFoco = await recusaDoFoco(ctx, [atual.companyId]);
+      if (foraDoFoco) return { error: foraDoFoco };
       const ativo = texto("ativo") !== "0";
       await prisma.bankAccount.update({ where: { id: atual.id }, data: { ...d, active: ativo } });
       await logAudit({
@@ -47,6 +51,9 @@ export async function salvarCartao(formData: FormData): Promise<{ error: string 
     } else {
       const empresa = await prisma.company.findFirst({ where: { id: texto("companyId"), tenantId }, select: { id: true } });
       if (!empresa) return { error: "Escolha a empresa antes de cadastrar o cartão." };
+      // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+      const foraDoFoco = await recusaDoFoco(ctx, [empresa.id]);
+      if (foraDoFoco) return { error: foraDoFoco };
       const criado = await prisma.bankAccount.create({ data: { tenantId, companyId: empresa.id, type: CARTAO_DE_CREDITO, ...d }, select: { id: true } });
       await logAudit({
         tenantId,
