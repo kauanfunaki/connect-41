@@ -10,8 +10,8 @@
 // mesmo argumento de linearidade da reconciliação lucro → caixa.
 
 import type { LancamentoDoDre, Mapeamento } from "./calculo";
-import { GRUPOS, OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
-import { calcularDreEconomica, valorDaLinha, LINHA_DE_RESULTADO, type LancamentoFinanceiro } from "./economica";
+import { OPCOES_PADRAO, modeloDas, type OpcoesDoDre } from "./estrutura";
+import { calcularDreEconomica, valorDaLinha, linhaDeResultadoDe, type LancamentoFinanceiro } from "./economica";
 
 export type CentroDoQuadro = { id: string; nome: string; codigo: string | null; active: boolean };
 
@@ -35,7 +35,6 @@ export type QuadroPorCentro = {
   total: Omit<LinhaDoQuadroPorCentro, "centroId" | "nome" | "codigo" | "ativo">;
 };
 
-const ORIGEM_PAGAMENTO = GRUPOS.filter((g) => g.origem === "pagamento").map((g) => g.code);
 
 /**
  * O resultado de cada centro num período.
@@ -53,6 +52,8 @@ export function quadroPorCentro(
   opcoes: OpcoesDoDre = OPCOES_PADRAO
 ): QuadroPorCentro {
   const chave = (id: string | null | undefined) => id ?? "";
+  // Despesas somam todos os grupos de pagamento do modelo da empresa.
+  const ORIGEM_PAGAMENTO = modeloDas(opcoes).grupos.filter((g) => g.origem === "pagamento").map((g) => g.code);
   const lancPorCentro = new Map<string, LancamentoFinanceiro[]>();
   const ajustesPorCentro = new Map<string, LancamentoDoDre[]>();
   for (const l of lancamentos) {
@@ -74,7 +75,7 @@ export function quadroPorCentro(
       ativo,
       receitaBruta: valorDaLinha(dre.resultado, "receita_bruta"),
       despesas: ORIGEM_PAGAMENTO.reduce((n, g) => n + (dre.resultado.porGrupo[g] ?? 0), 0),
-      resultado: valorDaLinha(dre.resultado, LINHA_DE_RESULTADO),
+      resultado: valorDaLinha(dre.resultado, linhaDeResultadoDe(dre.resultado)),
       lancamentos: dre.lancamentos,
     };
   };

@@ -1,31 +1,34 @@
 // A estrutura do DRE, como a 41 o monta.
 //
-// ─── O padrão desde 20/10/2026: a estrutura do modelo novo, o cálculo da Irriga ───
+// ─── Um modelo por empresa (21/10/2026) ─────────────────────────────────────
 //
-// Até aqui o padrão era o da Irriga (`10-DRE Irriga_2025_010.xlsx`, lida em
-// 11/09/2026), com as despesas abertas por área — comerciais, pessoal,
-// diretoria, administrativas, financeiras — porque a Irriga pediu assim. Em
-// 20/10/2026 a Amanda mandou o modelo novo de DRE, o de uma empresa cliente
-// (aba `DRE FINANCEIRO`), e o Kauan decidiu: **a estrutura é a do modelo novo,
-// o cálculo é o da Irriga, e todas as empresas — a Irriga inclusive — usam este
-// padrão.**
+// A visualização do DRE depende do cliente (pedido do Kauan, 21/10/2026): há
+// o **padrão** e há os **customizados**. A empresa escolhe o dela
+// (`Company.dreModelo`); vazio é o padrão. Os modelos moram em código:
 //
-// - **Estrutura do modelo novo:** sete grupos — receita bruta, impostos, custo
-//   operacional, custo administrativo, financiamentos, outras despesas (com os
-//   investimentos) e outras receitas — e as linhas receita líquida, margem de
-//   contribuição, gerador de caixa (EBITDA) e resultado líquido operacional.
-// - **Cálculo da Irriga:** a base é a receita bruta (a soma dos recebimentos).
-//   A planilha do modelo novo usa um "Faturamento fiscal" digitado à mão como
-//   base de quase tudo — é a parte customizada para aquela empresa, e fica de
-//   fora. Os
-//   percentuais são sobre a receita bruta: despesa em valor absoluto
-//   ("24%", não "−24%"), resultado com o sinal.
-// - **Os impostos, nas duas visões** (pedido do Kauan): no EBITDA, como as
-//   duas abas do modelo novo fecham, ou fora do resultado, como a Irriga — ver
-//   `OpcoesDoDre`. A tela alterna.
+// - **Padrão** (`MODELO_PADRAO`, este arquivo): sete grupos — receita bruta,
+//   impostos, custo operacional, custo administrativo, financiamentos, outras
+//   despesas (com os investimentos) e outras receitas — e as linhas receita
+//   líquida, margem de contribuição, gerador de caixa (EBITDA) e resultado
+//   líquido operacional. É o modelo novo de DRE que a Amanda mandou em
+//   20/10/2026, com o cálculo do modelo anterior: a base é a receita bruta (a
+//   soma dos recebimentos) — a planilha do modelo novo usa um "Faturamento
+//   fiscal" digitado à mão, a parte customizada para aquela empresa, que fica
+//   de fora. Os impostos têm duas visões, com a escolha na tela: no EBITDA ou
+//   fora do resultado (`OpcoesDoDre`).
+// - **Despesas por área** (`MODELO_POR_AREA`, `estruturaPorArea.ts`): o que
+//   era o padrão até 20/10/2026 — doze grupos, as despesas abertas por área
+//   (comerciais, pessoal, diretoria, administrativas, financeiras), os
+//   investimentos à parte e o fluxo de caixa livre no fim, com os impostos
+//   sempre fora do resultado. Volta como customizado para quem usava.
 //
-// O que era da Irriga e já estava classificado migra pelo de-para
-// `GRUPO_DO_ANTIGO` (migration `20261020230000_dre_padrao_cargo`).
+// Os percentuais são sobre a receita bruta: despesa em valor absoluto ("24%",
+// não "−24%"), resultado com o sinal.
+//
+// O que estava classificado nos doze grupos migrou para os sete pelo de-para
+// `GRUPO_DO_ANTIGO` (migration `20261020230000_dre_padrao_cargo`). Quem volta
+// ao modelo por área tem a classificação refeita pelo histórico — ver
+// `restauracaoPorArea.ts`.
 //
 // ─── O que é fixo e o que é por cliente ─────────────────────────────────────
 //
@@ -39,6 +42,8 @@
 //
 // O DRE de caixa soma o que foi pago e recebido no mês (as baixas). A DRE
 // econômica (`economica.ts`) usa a mesma estrutura pela competência.
+
+import { MODELO_POR_AREA } from "./estruturaPorArea";
 
 /** De onde o valor de um grupo vem. */
 export type OrigemDoGrupo = "recebimento" | "pagamento";
@@ -67,7 +72,7 @@ export const GRUPOS: GrupoDoDre[] = [
 ];
 
 /**
- * Os grupos do padrão antigo (o da Irriga, até 20/10/2026) e o grupo novo de
+ * Os grupos do padrão antigo (o modelo por área, até 20/10/2026) e o grupo novo de
  * cada um. É o de-para da migration e o de quem ainda lê um código antigo —
  * um orçamento exportado, uma planilha guardada: `grupoAtual` traduz.
  *
@@ -158,8 +163,12 @@ export const ESCOLHAS_DE_GRUPO: { code: string; label: string }[] = [
   ...FORA_DO_RESULTADO,
 ];
 
-/** O rótulo de um código de grupo — o antigo pelo novo —, ou o próprio texto quando não é um. */
-export function rotuloDoGrupo(code: string): string {
+/**
+ * O rótulo de um código de grupo no modelo, ou o próprio texto quando não é
+ * um. No padrão, o código antigo sai com o rótulo do grupo novo que o absorveu.
+ */
+export function rotuloDoGrupo(code: string, modelo?: ModeloDoDre): string {
+  if (modelo && modelo.codigo !== "padrao") return escolhasDeGrupo(modelo).find((g) => g.code === code)?.label ?? code;
   const atual = grupoAtual(code);
   return ESCOLHAS_DE_GRUPO.find((g) => g.code === atual)?.label ?? code;
 }
@@ -167,11 +176,12 @@ export function rotuloDoGrupo(code: string): string {
 /**
  * O grupo aceita lançamento deste lado? Os de fora do resultado aceitam os
  * dois — transferência e desconsiderada não somam em linha nenhuma, então a
- * conferência de origem não tem o que proteger.
+ * conferência de origem não tem o que proteger. Vale para o grupo de qualquer
+ * modelo: a origem de um código é a mesma em todos.
  */
 export function grupoAceitaOrigem(code: string, origem: OrigemDoGrupo): boolean {
-  const grupo = grupoPorCodigo(code);
-  return grupo ? grupo.origem === origem : FORA_DO_RESULTADO.some((f) => f.code === code);
+  const esperada = origemDoGrupo(code);
+  return esperada ? esperada === origem : FORA_DO_RESULTADO.some((f) => f.code === code);
 }
 
 // ─── As linhas do relatório ─────────────────────────────────────────────────
@@ -196,7 +206,7 @@ const PCT = (code: string, label: string, numerador: string, absoluto: boolean):
   label,
   tipo: "percentual",
   numerador,
-  // O cálculo da Irriga: todo percentual é sobre a receita bruta.
+  // Todo percentual do padrão é sobre a receita bruta.
   denominador: "receita_bruta",
   absoluto,
 });
@@ -205,7 +215,7 @@ const PCT = (code: string, label: string, numerador: string, absoluto: boolean):
  * O relatório, na ordem da aba `DRE FINANCEIRO` do modelo novo.
  *
  * As parcelas do EBITDA dependem da opção dos impostos — as daqui são as com
- * os impostos dentro; `parcelasDoEbitda` tira quando a visão é a da Irriga.
+ * os impostos dentro; `parcelasDoSubtotal` tira na visão "fora do resultado".
  */
 export const LINHAS: LinhaDoDre[] = [
   { code: "receita_bruta", label: "RECEITA BRUTA", tipo: "grupo", grupo: "receita_bruta" },
@@ -265,34 +275,234 @@ export function linhaPorCodigo(code: string): LinhaDoDre | null {
   return LINHAS.find((l) => l.code === code) ?? null;
 }
 
+// ─── Os modelos ─────────────────────────────────────────────────────────────
+
+export type CodigoDoModelo = "padrao" | "por_area";
+
+/** Uma premissa do simulador de cenários e os grupos em que ela vale. */
+export type CampoDoSimulador = {
+  chave: "custoOperacional" | "custoAdministrativo" | "financiamentos";
+  rotulo: string;
+  dica: string;
+  grupos: string[];
+};
+
+/**
+ * Um modelo de DRE: os grupos, as linhas e o que cada tela precisa saber dele.
+ * Tudo que dependia de um código de linha fixo ("ebitda", "custo_operacional")
+ * nas telas e nas análises mora aqui, para o modelo da empresa valer em todas.
+ */
+export type ModeloDoDre = {
+  codigo: CodigoDoModelo;
+  /** O nome no seletor da empresa. */
+  nome: string;
+  /** Uma frase para o seletor e a ajuda. */
+  descricao: string;
+  grupos: GrupoDoDre[];
+  linhas: LinhaDoDre[];
+  /** O resultado operacional (o EBITDA, o gerador de caixa) e o resultado final. */
+  linhaOperacional: string;
+  linhaDoResultado: string;
+  /**
+   * Os impostos sobre a receita: `escolha` — a tela alterna entre no EBITDA e
+   * fora do resultado; `fora` — sempre fora, como a planilha do modelo.
+   */
+  impostos: "escolha" | "fora";
+  /** O rótulo das linhas de resultado lidas por competência (DRE econômica). */
+  rotulosEconomicos: Readonly<Record<string, string>>;
+  /** Os nomes dos dois resultados nos cartões do topo: [operacional, final]. */
+  numeros: { caixa: readonly [string, string]; competencia: readonly [string, string] };
+  analises: {
+    /** As linhas do comparativo, na ordem. */
+    comparativo: string[];
+    /** As linhas lado a lado na comparação caixa × competência. */
+    principais: string[];
+    /** As linhas somadas no indicador "peso das despesas fixas", e a fórmula dele. */
+    estrutura: string[];
+    formulaDaEstrutura: string;
+    /** O que a margem operacional quer dizer neste modelo. */
+    leituraDoOperacional: string;
+    /** Os grupos de despesa que a pergunta "o operacional caiu?" não conta. */
+    foraDoOperacional: string[];
+  };
+  simulador: {
+    /** As linhas da tabela do simulador. */
+    linhas: string[];
+    /** O que acompanha a premissa de receita, para a dica do campo. */
+    dicaDaReceita: string;
+    /** Os grupos que andam junto com a receita. */
+    variaveis: string[];
+    campos: CampoDoSimulador[];
+  };
+  /** Os subtotais da grade do orçamento. */
+  subtotaisDoOrcamento: string[];
+};
+
+export const MODELO_PADRAO: ModeloDoDre = {
+  codigo: "padrao",
+  nome: "Padrão",
+  descricao: "Custo operacional, custo administrativo e financiamentos; EBITDA e resultado líquido operacional.",
+  grupos: GRUPOS,
+  linhas: LINHAS,
+  linhaOperacional: "ebitda",
+  linhaDoResultado: LINHA_DO_RESULTADO,
+  impostos: "escolha",
+  rotulosEconomicos: {
+    ebitda: "RESULTADO OPERACIONAL (EBITDA)",
+    ebitda_pct: "Resultado Operacional (EBITDA) sobre Receita Bruta %",
+    resultado_liquido: "RESULTADO DO PERÍODO",
+    resultado_liquido_pct: "Resultado do Período sobre Receita Bruta %",
+  },
+  numeros: {
+    caixa: ["Gerador de caixa (EBITDA)", "Resultado líquido operacional"],
+    competencia: ["Resultado operacional (EBITDA)", "Resultado do período"],
+  },
+  analises: {
+    comparativo: [
+      "receita_bruta",
+      "impostos",
+      "receita_liquida",
+      "custo_operacional",
+      "margem_contribuicao",
+      "custo_administrativo",
+      "financiamentos",
+      "ebitda",
+      "outras_despesas",
+      "outras_receitas",
+      "resultado_liquido",
+    ],
+    principais: [
+      "receita_bruta",
+      "impostos",
+      "custo_operacional",
+      "margem_contribuicao",
+      "custo_administrativo",
+      "financiamentos",
+      "ebitda",
+      "outras_despesas",
+      "resultado_liquido",
+    ],
+    estrutura: ["custo_administrativo", "financiamentos"],
+    formulaDaEstrutura: "|Custo administrativo + Financiamentos| / Receita bruta",
+    leituraDoOperacional: "O gerador de caixa (EBITDA): o resultado da operação antes das outras despesas e receitas.",
+    foraDoOperacional: ["outras_despesas", "outras_receitas"],
+  },
+  simulador: {
+    linhas: ["receita_bruta", "margem_contribuicao", "custo_administrativo", "ebitda", "resultado_liquido"],
+    dicaDaReceita: "Impostos e custo operacional acompanham.",
+    variaveis: ["impostos", "custo_operacional"],
+    campos: [
+      {
+        chave: "custoOperacional",
+        rotulo: "Custo operacional além da receita",
+        dica: "Custo que sobe mais (ou menos) que a venda.",
+        grupos: ["custo_operacional"],
+      },
+      {
+        chave: "custoAdministrativo",
+        rotulo: "Custo administrativo",
+        dica: "A estrutura: pessoal do administrativo, pró-labore, aluguel, sistemas.",
+        grupos: ["custo_administrativo"],
+      },
+      { chave: "financiamentos", rotulo: "Financiamentos e empréstimos", dica: "Parcelas, juros e parcelamentos.", grupos: ["financiamentos"] },
+    ],
+  },
+  subtotaisDoOrcamento: ["receita_liquida", "margem_contribuicao", "ebitda", "resultado_liquido"],
+};
+
 export type OpcoesDoDre = {
   /**
-   * Os impostos sobre a receita entram no EBITDA (e daí no resultado)?
+   * Os impostos sobre a receita entram no EBITDA (e daí no resultado)? Só no
+   * modelo que deixa escolher (`impostos: "escolha"`, o padrão):
    *
-   * - `true` — **o padrão**: como as duas abas do modelo novo fecham. A margem parte
-   *   da receita bruta, e o EBITDA desconta os impostos.
-   * - `false` — a visão da Irriga: os impostos aparecem na receita líquida e
-   *   ficam fora da margem, do EBITDA e do resultado. A tela diz quanto ficou
-   *   de fora (`impostoForaDoResultado`).
+   * - `true` — **o padrão**: como as duas abas do modelo novo fecham. A margem
+   *   parte da receita bruta, e o EBITDA desconta os impostos.
+   * - `false` — os impostos aparecem na receita líquida e ficam fora da margem,
+   *   do EBITDA e do resultado. A tela diz quanto ficou de fora
+   *   (`impostoForaDoResultado`).
    *
    * O Kauan pediu as duas, com a escolha na tela (20/10/2026).
    */
   impostosNoEbitda: boolean;
+  /**
+   * O modelo da empresa. Vazio é o padrão; os loaders (`data.ts`,
+   * `dataEconomica.ts`) preenchem com o da empresa quando quem chama não diz.
+   */
+  modelo?: ModeloDoDre;
 };
 
 export const OPCOES_PADRAO: OpcoesDoDre = { impostosNoEbitda: true };
 
-/** A visão da Irriga: os impostos fora do resultado. */
+/** Os impostos fora do resultado. */
 export const OPCOES_SEM_IMPOSTOS: OpcoesDoDre = { impostosNoEbitda: false };
 
-/** As opções a partir do endereço da tela: `impostos=fora` é a visão da Irriga. */
-export function opcoesDaUrl(valor: string | null | undefined): OpcoesDoDre {
-  return valor === "fora" ? OPCOES_SEM_IMPOSTOS : OPCOES_PADRAO;
+/** As opções a partir do endereço da tela: `impostos=fora` tira os impostos do resultado. */
+export function opcoesDaUrl(valor: string | null | undefined, modelo?: ModeloDoDre): OpcoesDoDre {
+  const base = valor === "fora" ? OPCOES_SEM_IMPOSTOS : OPCOES_PADRAO;
+  return modelo ? { ...base, modelo } : base;
 }
 
-/** As parcelas do EBITDA, conforme a opção dos impostos. */
+/** O modelo das opções — o padrão quando elas não dizem. */
+export function modeloDas(opcoes: OpcoesDoDre | undefined): ModeloDoDre {
+  return opcoes?.modelo ?? MODELO_PADRAO;
+}
+
+/**
+ * As parcelas de um subtotal, conforme a opção dos impostos: no modelo que
+ * deixa escolher, a linha operacional (o EBITDA) perde os impostos quando a
+ * visão é "fora do resultado". Nos outros, as parcelas são as da linha.
+ */
+export function parcelasDoSubtotal(linha: Extract<LinhaDoDre, { tipo: "subtotal" }>, opcoes: OpcoesDoDre): string[] {
+  const modelo = modeloDas(opcoes);
+  const tira = modelo.impostos === "escolha" && linha.code === modelo.linhaOperacional && !opcoes.impostosNoEbitda;
+  return tira ? linha.parcelas.filter((p) => p !== "impostos") : linha.parcelas;
+}
+
+/** As parcelas do EBITDA do padrão, conforme a opção dos impostos. */
 export function parcelasDoEbitda(opcoes: OpcoesDoDre): string[] {
   const linha = linhaPorCodigo("ebitda");
-  const parcelas = linha?.tipo === "subtotal" ? linha.parcelas : [];
-  return opcoes.impostosNoEbitda ? parcelas : parcelas.filter((p) => p !== "impostos");
+  return linha?.tipo === "subtotal" ? parcelasDoSubtotal(linha, { ...opcoes, modelo: MODELO_PADRAO }) : [];
+}
+
+// ─── O registro ─────────────────────────────────────────────────────────────
+
+/** Os modelos que a empresa pode escolher, na ordem do seletor. */
+export const MODELOS: ModeloDoDre[] = [MODELO_PADRAO, MODELO_POR_AREA];
+
+/** O modelo de um código gravado na empresa — vazio ou desconhecido é o padrão. */
+export function modeloDoCodigo(codigo: string | null | undefined): ModeloDoDre {
+  return MODELOS.find((m) => m.codigo === codigo) ?? MODELO_PADRAO;
+}
+
+/** O código é de um modelo que existe? Para validar o que chega da tela. */
+export function ehCodigoDeModelo(codigo: string): codigo is CodigoDoModelo {
+  return MODELOS.some((m) => m.codigo === codigo);
+}
+
+function semRepetir<T extends { code: string }>(lista: T[]): T[] {
+  const vistos = new Set<string>();
+  return lista.filter((x) => (vistos.has(x.code) ? false : (vistos.add(x.code), true)));
+}
+
+/**
+ * Os grupos de todos os modelos, um por código. O mesmo código tem a mesma
+ * origem em todos ("outras_despesas" é pagamento no padrão e no por área), e é
+ * isso que deixa a conferência de origem e o alerta de orçamento valerem sem
+ * saber o modelo.
+ */
+export const TODOS_OS_GRUPOS: GrupoDoDre[] = semRepetir(MODELOS.flatMap((m) => m.grupos));
+
+/** As linhas de todos os modelos, uma por código — para quem só precisa saber o tipo de uma linha. */
+export const TODAS_AS_LINHAS: LinhaDoDre[] = semRepetir(MODELOS.flatMap((m) => m.linhas));
+
+const ORIGEM_DE_TODOS = new Map(TODOS_OS_GRUPOS.map((g) => [g.code, g.origem]));
+
+/** A origem de um grupo de qualquer modelo; vazio quando o código não é grupo. */
+export function origemDoGrupo(code: string): OrigemDoGrupo | undefined {
+  return ORIGEM_DE_TODOS.get(code);
+}
+
+/** Os grupos do modelo e as duas escolhas de fora, na ordem dos seletores. */
+export function escolhasDeGrupo(modelo: ModeloDoDre): { code: string; label: string }[] {
+  return [...modelo.grupos.map((g) => ({ code: g.code, label: g.label })), ...FORA_DO_RESULTADO];
 }

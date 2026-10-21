@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       anoDaUrl(sp.get("ano")) ??
       (await mesesComMovimento(ctx.tenantId, empresa.id))[0]?.ano ??
       new Date().getFullYear();
-    const { porMes, mapeamento } = await lancamentosDoAno(ctx.tenantId, empresa.id, ano);
+    const { porMes, mapeamento, modelo } = await lancamentosDoAno(ctx.tenantId, empresa.id, ano);
     entrada = {
       colunas: Array.from({ length: 12 }, (_, i) => ({
         rotulo: rotuloDoMes({ ano, mes: i + 1 }),
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
       })),
       mapeamento,
       colunaDeTotal: `Total ${ano}`,
-      opcoes,
+      opcoes: { ...opcoes, modelo },
     };
     periodo = String(ano);
   } else {
@@ -66,8 +66,8 @@ export async function GET(req: NextRequest) {
     if (!mes) {
       return NextResponse.json({ error: "Nenhum pagamento ou recebimento nesta empresa" }, { status: 404 });
     }
-    const { lancamentos, mapeamento } = await lancamentosDoMes(ctx.tenantId, empresa.id, mes);
-    entrada = { colunas: [{ rotulo: rotuloDoMes(mes), lancamentos }], mapeamento, colunaDeTotal: null, opcoes };
+    const { lancamentos, mapeamento, modelo } = await lancamentosDoMes(ctx.tenantId, empresa.id, mes);
+    entrada = { colunas: [{ rotulo: rotuloDoMes(mes), lancamentos }], mapeamento, colunaDeTotal: null, opcoes: { ...opcoes, modelo } };
     periodo = `${String(mes.mes).padStart(2, "0")}-${mes.ano}`;
   }
 

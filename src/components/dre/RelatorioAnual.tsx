@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
-import { LINHAS } from "@/lib/dre/estrutura";
+import { modeloDoCodigo } from "@/lib/dre/estrutura";
 import { linhaAoLongoDoAno, type DreAnual } from "@/lib/dre/anual";
 import { rotuloEconomico } from "@/lib/dre/economica";
 import { formatarReaisDeCentavos as moeda } from "@/lib/format";
@@ -33,6 +33,8 @@ type Props = {
 export function RelatorioAnual({ anual, regime = "caixa" }: Props) {
   const { aberta, alternar } = useLinhasAbertas();
   const temDetalhe = Object.keys(anual.detalhe).length > 0;
+  // As linhas do modelo do DRE da empresa (21/10/2026).
+  const LINHAS = modeloDoCodigo(anual.modelo).linhas;
 
   return (
     <div className="overflow-x-auto border border-border rounded-lg bg-surface shadow-xs">

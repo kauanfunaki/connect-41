@@ -17,7 +17,16 @@
 // rótulo além do código faz esse trabalho aproveitar, em vez de exigir que
 // alguém reescreva doze linhas para o relatório sair.
 
-import { DESCONSIDERAR, GRUPOS, GRUPO_DO_ANTIGO, ROTULOS_DO_PADRAO_ANTIGO, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import {
+  DESCONSIDERAR,
+  GRUPOS,
+  GRUPO_DO_ANTIGO,
+  MODELO_PADRAO,
+  ROTULOS_DO_PADRAO_ANTIGO,
+  TRANSFERENCIA,
+  type CodigoDoModelo,
+  type ModeloDoDre,
+} from "@/lib/dre/estrutura";
 
 /** Normaliza para comparar: sem acento, sem caixa, espaço colapsado. */
 function chave(texto: string): string {
@@ -47,16 +56,38 @@ POR_CHAVE.set(chave("Desconsiderar no DRE"), DESCONSIDERAR);
 for (const [antigo, novo] of Object.entries(GRUPO_DO_ANTIGO)) POR_CHAVE.set(chave(antigo), novo);
 for (const [rotulo, novo] of Object.entries(ROTULOS_DO_PADRAO_ANTIGO)) if (!POR_CHAVE.has(chave(rotulo))) POR_CHAVE.set(chave(rotulo), novo);
 
+// Os outros modelos (21/10/2026) casam o código e o rótulo dos grupos deles e
+// as escolhas de fora — e só. O código de um grupo do padrão que o modelo não
+// tem ("custo_operacional" no por área) não vira grupo nenhum: pode ser CMV,
+// mão de obra ou comerciais, e escolher um seria inventar. Fica sem grupo, para
+// alguém classificar.
+const POR_CHAVE_DO_MODELO = new Map<CodigoDoModelo, Map<string, string>>([["padrao", POR_CHAVE]]);
+
+function chavesDo(modelo: ModeloDoDre): Map<string, string> {
+  let mapa = POR_CHAVE_DO_MODELO.get(modelo.codigo);
+  if (!mapa) {
+    mapa = new Map<string, string>();
+    for (const g of modelo.grupos) {
+      mapa.set(chave(g.code), g.code);
+      mapa.set(chave(g.label), g.code);
+    }
+    for (const fora of [TRANSFERENCIA, "Transferência entre contas"]) mapa.set(chave(fora), TRANSFERENCIA);
+    for (const fora of [DESCONSIDERAR, "Desconsiderar no DRE"]) mapa.set(chave(fora), DESCONSIDERAR);
+    POR_CHAVE_DO_MODELO.set(modelo.codigo, mapa);
+  }
+  return mapa;
+}
+
 /**
- * O código de grupo que este texto significa, ou `null`.
+ * O código de grupo que este texto significa no modelo, ou `null`.
  *
  * `null` em texto que não bate é deliberado, e é o oposto de escolher o grupo
  * mais parecido: um valor no grupo errado sai no relatório como se estivesse
  * certo, e ninguém confere o que parece certo. Não classificado é visível.
  */
-export function grupoDeTexto(texto: string | null | undefined): string | null {
+export function grupoDeTexto(texto: string | null | undefined, modelo: ModeloDoDre = MODELO_PADRAO): string | null {
   if (!texto) return null;
-  return POR_CHAVE.get(chave(texto)) ?? null;
+  return chavesDo(modelo).get(chave(texto)) ?? null;
 }
 
 export type CategoriaParaMapear = {
@@ -88,7 +119,8 @@ export type CategoriaResolvida = {
  */
 export function resolverCategorias(
   categorias: CategoriaParaMapear[],
-  excecoes: ExcecaoDaEmpresa[]
+  excecoes: ExcecaoDaEmpresa[],
+  modelo: ModeloDoDre = MODELO_PADRAO
 ): CategoriaResolvida[] {
   const porCategoria = new Map(excecoes.map((e) => [e.categoryId, e.grupo]));
 
@@ -97,10 +129,10 @@ export function resolverCategorias(
     // Exceção que aponta para grupo inexistente é erro de dado, e tratá-la como
     // válida faria o valor sumir num grupo que nenhuma linha soma. Cai para o
     // padrão, e se o padrão também não resolver, para o não classificado.
-    const daExcecao = excecao ? grupoDeTexto(excecao) : null;
+    const daExcecao = excecao ? grupoDeTexto(excecao, modelo) : null;
     if (daExcecao) return { id: c.id, nome: c.nome, grupo: daExcecao, origem: "excecao" as const };
 
-    const doPadrao = grupoDeTexto(c.dreGroup);
+    const doPadrao = grupoDeTexto(c.dreGroup, modelo);
     if (doPadrao) return { id: c.id, nome: c.nome, grupo: doPadrao, origem: "padrao" as const };
 
     return { id: c.id, nome: c.nome, grupo: null, origem: null };

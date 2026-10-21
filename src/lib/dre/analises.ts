@@ -16,8 +16,17 @@
 // alguém refazer a conta à mão e perder a confiança no resto.
 
 import { calcularDre, montarLinhas, type LancamentoDoDre, type Mapeamento, type ResultadoDoDre } from "./calculo";
-import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA, DESCONSIDERAR, OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
-import { LINHA_DE_RESULTADO, LINHA_OPERACIONAL, valorDaLinha } from "./economica";
+import {
+  NAO_CLASSIFICADO,
+  TRANSFERENCIA,
+  DESCONSIDERAR,
+  MODELO_PADRAO,
+  OPCOES_PADRAO,
+  modeloDas,
+  type ModeloDoDre,
+  type OpcoesDoDre,
+} from "./estrutura";
+import { linhaDeResultadoDe, linhaOperacionalDe, modeloDoResultado, valorDaLinha } from "./economica";
 import { runwayEmDias } from "@/lib/financeiro/conciliacao/saldoConsolidado";
 
 // ─── Reconciliação lucro → caixa ────────────────────────────────────────────
@@ -39,7 +48,8 @@ export type ConjuntosDaReconciliacao = {
 };
 
 function resultadoDe(l: LancamentoDoDre[], m: Mapeamento, o: OpcoesDoDre): number {
-  return valorDaLinha(calcularDre(l, m, o), LINHA_DE_RESULTADO);
+  const r = calcularDre(l, m, o);
+  return valorDaLinha(r, linhaDeResultadoDe(r));
 }
 
 /**
@@ -123,20 +133,12 @@ export type LinhaComparada = {
   variacao: number | null;
 };
 
-/** Linhas de valor (grupos e subtotais) que valem comparar — percentual não se compara por diferença. */
-export const LINHAS_DO_COMPARATIVO = [
-  "receita_bruta",
-  "impostos",
-  "receita_liquida",
-  "custo_operacional",
-  "margem_contribuicao",
-  "custo_administrativo",
-  "financiamentos",
-  "ebitda",
-  "outras_despesas",
-  "outras_receitas",
-  "resultado_liquido",
-];
+/**
+ * Linhas de valor (grupos e subtotais) que valem comparar no padrão —
+ * percentual não se compara por diferença. Cada modelo tem as dele
+ * (`ModeloDoDre.analises.comparativo`).
+ */
+export const LINHAS_DO_COMPARATIVO = MODELO_PADRAO.analises.comparativo;
 
 /**
  * Duas DREs lado a lado, linha a linha.
@@ -147,7 +149,7 @@ export const LINHAS_DO_COMPARATIVO = [
 export function compararResultados(
   atual: ResultadoDoDre,
   comparado: ResultadoDoDre,
-  codigos: string[] = LINHAS_DO_COMPARATIVO,
+  codigos: string[] = modeloDoResultado(atual).analises.comparativo,
   rotulo: (code: string, original: string) => string = (_, o) => o
 ): LinhaComparada[] {
   return codigos.map((code) => {
@@ -166,16 +168,24 @@ export function compararResultados(
 }
 
 /** Soma resultados de vários meses num só — o acumulado. */
-export function somarPorGrupo(lista: Record<string, number>[]): Record<string, number> {
+export function somarPorGrupo(lista: Record<string, number>[], modelo: ModeloDoDre = MODELO_PADRAO): Record<string, number> {
   const total: Record<string, number> = { [NAO_CLASSIFICADO]: 0, [TRANSFERENCIA]: 0, [DESCONSIDERAR]: 0 };
-  for (const g of GRUPOS) total[g.code] = 0;
+  for (const g of modelo.grupos) total[g.code] = 0;
   for (const p of lista) for (const [k, v] of Object.entries(p)) total[k] = (total[k] ?? 0) + v;
   return total;
 }
 
 /** Um `ResultadoDoDre` a partir de totais por grupo já agregados. */
 export function resultadoDePorGrupo(porGrupo: Record<string, number>, opcoes: OpcoesDoDre = OPCOES_PADRAO): ResultadoDoDre {
-  return { linhas: montarLinhas(porGrupo, opcoes), porGrupo, naoClassificado: [], desconsiderado: [], porCategoria: {}, diferencaDeFechamento: 0 };
+  return {
+    linhas: montarLinhas(porGrupo, opcoes),
+    porGrupo,
+    naoClassificado: [],
+    desconsiderado: [],
+    porCategoria: {},
+    diferencaDeFechamento: 0,
+    modelo: modeloDas(opcoes).codigo,
+  };
 }
 
 // ─── Atraso médio de liquidação ─────────────────────────────────────────────
@@ -278,8 +288,14 @@ export function projetarSerie(
 
 // ─── Cenários ───────────────────────────────────────────────────────────────
 
+/**
+ * As premissas, com os nomes do padrão. Em que grupos cada uma vale é do
+ * modelo (`ModeloDoDre.simulador.campos`): no por área, "custo operacional" é
+ * o CMV, "custo administrativo" são as despesas fixas e "financiamentos" são
+ * as financeiras.
+ */
 export type PremissasDoCenario = {
-  /** Variação da receita bruta, em %. Impostos e custo operacional acompanham. */
+  /** Variação da receita bruta, em %. O variável do modelo acompanha. */
   receita: number;
   /** Variação do custo operacional **além** do que já acompanha a receita, em %. */
   custoOperacional: number;
@@ -297,18 +313,20 @@ export const CENARIOS_PRONTOS: { chave: string; rotulo: string; premissas: Premi
   { chave: "otimista", rotulo: "Otimista", premissas: { receita: 10, custoOperacional: -3, custoAdministrativo: 0, financiamentos: -5 } },
 ];
 
-/** Grupos que andam junto com a receita — o variável da estrutura da 41. */
-const VARIAVEIS = ["impostos", "custo_operacional"];
-
 /**
  * Aplica as premissas aos totais por grupo de um mês real.
  *
- * O variável — os impostos e o custo operacional — escala com a receita. O
- * custo administrativo e os financiamentos só mudam pela premissa deles.
- * Outras receitas e outras despesas (com os investimentos) ficam constantes:
- * não há premissa honesta para eles a partir de um mês só.
+ * O variável do modelo (no padrão, os impostos e o custo operacional) escala
+ * com a receita — e, se uma premissa vale para ele, com ela também. Os outros
+ * grupos de premissa só mudam pela premissa deles. O resto (outras receitas e
+ * outras despesas) fica constante: não há premissa honesta para ele a partir de
+ * um mês só.
  */
-export function simularCenario(porGrupo: Record<string, number>, p: PremissasDoCenario): Record<string, number> {
+export function simularCenario(
+  porGrupo: Record<string, number>,
+  p: PremissasDoCenario,
+  modelo: ModeloDoDre = MODELO_PADRAO
+): Record<string, number> {
   const fator = (pct: number) => 1 + pct / 100;
   const r = fator(p.receita);
   const saida: Record<string, number> = { ...porGrupo };
@@ -317,10 +335,15 @@ export function simularCenario(porGrupo: Record<string, number>, p: PremissasDoC
   const aplicar = (g: string, multiplicador: number) => {
     if (g in porGrupo) saida[g] = Math.round(porGrupo[g]! * multiplicador);
   };
+  const premissaDo = (g: string) => modelo.simulador.campos.find((c) => c.grupos.includes(g));
   aplicar("receita_bruta", r);
-  for (const g of VARIAVEIS) aplicar(g, r * (g === "custo_operacional" ? fator(p.custoOperacional) : 1));
-  aplicar("custo_administrativo", fator(p.custoAdministrativo));
-  aplicar("financiamentos", fator(p.financiamentos));
+  for (const g of modelo.simulador.variaveis) {
+    const campo = premissaDo(g);
+    aplicar(g, r * (campo ? fator(p[campo.chave]) : 1));
+  }
+  for (const campo of modelo.simulador.campos) {
+    for (const g of campo.grupos) if (!modelo.simulador.variaveis.includes(g)) aplicar(g, fator(p[campo.chave]));
+  }
   return saida;
 }
 
@@ -402,7 +425,8 @@ function indicadorDeRunway(
 
 export function calcularIndicadores(d: DadosDosIndicadores): Indicador[] {
   const receita = valorDaLinha(d.economico, "receita_bruta");
-  const despesasDoMes = GRUPOS.filter((g) => g.origem === "pagamento").reduce(
+  const modelo = modeloDoResultado(d.economico);
+  const despesasDoMes = modelo.grupos.filter((g) => g.origem === "pagamento").reduce(
     (n, g) => n + Math.abs(d.economico.porGrupo[g.code] ?? 0),
     0
   );
@@ -436,9 +460,9 @@ export function calcularIndicadores(d: DadosDosIndicadores): Indicador[] {
         categoria: "Rentabilidade",
         rotulo: "Margem operacional",
         formula: "Resultado operacional / Receita bruta",
-        leitura: "O gerador de caixa (EBITDA): o resultado da operação antes das outras despesas e receitas.",
+        leitura: modelo.analises.leituraDoOperacional,
         formato: "percentual",
-        valor: fracao(valorDaLinha(d.economico, LINHA_OPERACIONAL), receita),
+        valor: fracao(valorDaLinha(d.economico, linhaOperacionalDe(d.economico)), receita),
       },
       semReceita
     ),
@@ -450,7 +474,7 @@ export function calcularIndicadores(d: DadosDosIndicadores): Indicador[] {
         formula: "Resultado do período / Receita bruta",
         leitura: "Quanto da receita virou resultado no fim da estrutura.",
         formato: "percentual",
-        valor: fracao(valorDaLinha(d.economico, LINHA_DE_RESULTADO), receita),
+        valor: fracao(valorDaLinha(d.economico, linhaDeResultadoDe(d.economico)), receita),
       },
       semReceita
     ),
@@ -459,10 +483,10 @@ export function calcularIndicadores(d: DadosDosIndicadores): Indicador[] {
         codigo: "peso_despesas_fixas",
         categoria: "Rentabilidade",
         rotulo: "Peso das despesas fixas",
-        formula: "|Custo administrativo + Financiamentos| / Receita bruta",
+        formula: modelo.analises.formulaDaEstrutura,
         leitura: "Quanto da receita o custo de estrutura consome.",
         formato: "percentual",
-        valor: fracao(Math.abs(valorDaLinha(d.economico, "custo_administrativo") + valorDaLinha(d.economico, "financiamentos")), receita),
+        valor: fracao(Math.abs(modelo.analises.estrutura.reduce((n, l) => n + valorDaLinha(d.economico, l), 0)), receita),
       },
       semReceita
     ),

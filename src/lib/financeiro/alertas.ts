@@ -14,7 +14,7 @@
 // está olhando. A receber já tem fila própria e régua de e-mail na Cobrança —
 // avisar de novo aqui seria a terceira vez que o mesmo vencido aparece.
 
-import { GRUPOS } from "@/lib/dre/estrutura";
+import { TODOS_OS_GRUPOS } from "@/lib/dre/estrutura";
 import { moeda } from "./formato";
 
 export type ContasDoDia = {
@@ -68,8 +68,12 @@ export type EstouroDeOrcamento = {
   excedente: number;
 };
 
-/** Grupos de despesa da DRE: são os únicos que "estouram". */
-const DESPESAS = GRUPOS.filter((g) => g.origem === "pagamento");
+/**
+ * Grupos de despesa da DRE: são os únicos que "estouram". Os de todos os
+ * modelos (21/10/2026): o orçado e o realizado chegam no modelo da empresa, e
+ * o grupo que ela não tem fica zerado dos dois lados.
+ */
+const DESPESAS = TODOS_OS_GRUPOS.filter((g) => g.origem === "pagamento");
 
 /**
  * O grupo de despesa que mais passou do orçado no mês, ou `null`.
