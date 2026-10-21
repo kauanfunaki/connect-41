@@ -8,7 +8,7 @@ Roteiro de 21/10/2026 para ligar a Ceci no portal de 2 ou 3 clientes do BPO. O c
 2. **Chave de IA do escritório.** Em **Configurações › Inteligência artificial**, confira se a chave do escritório está cadastrada. Sem chave, a Ceci não aparece.
 3. **Ligar o agente.** Ainda em **Inteligência artificial**, ligue o agente **"Ceci · Portal do cliente (chat)"**. Ele nasce desligado.
    - O teto do mês vem de fábrica em **R$ 50,00** e **5.000 perguntas**. Pela estimativa de 13/10, de cerca de 1 centavo por pergunta, isso sobra para o piloto.
-   - Quando o teto é atingido, a Ceci continua visível, mas responde que o limite do mês acabou.
+   - Quando o teto é atingido, a Ceci continua visível, mas responde ao cliente que atingiu o limite de uso do escritório e pede para falar com o escritório ou tentar mais tarde.
 
 ## 2. Escolher os clientes
 
