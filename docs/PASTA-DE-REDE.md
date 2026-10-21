@@ -40,7 +40,7 @@ O robô **só lê** a rede. Ele não apaga, não move e não renomeia nada lá.
 ## 3. Cadastrar a automação no Ops Center
 
 1. Em **Ops Center**, crie a automação com o identificador `pasta-de-rede`. Em "pasta de entrada", ponha a raiz da rede, para referência. O responsável recebe no sino os erros da automação.
-2. Gere a chave da automação, ou use a chave compartilhada do escritório. A chave aparece uma vez só.
+2. Use a chave compartilhada do escritório, em **Configurações › Integrações › Ops Center — bots** (**Gerar chave**). Desde o #251 não há mais chave por automação. A chave aparece uma vez só, e é a mesma dos outros robôs.
 
 ## 4. Ligar as empresas do piloto
 

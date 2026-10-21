@@ -16,6 +16,7 @@ import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
 import { getModuleRoute, MODULOS_DO_MENU_GERAL, MODULOS_SEM_MENU } from "@/lib/module-catalog";
+import { bancoFiscalLocal } from "@/lib/fiscal/local/ambiente";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 import { baseDomain, hostSuffix, setoresDoSeletor } from "@/lib/auth/activeSector";
@@ -85,6 +86,11 @@ export default async function AppLayout({
   // saem do menu, do Ctrl+K e das fixadas. Pelo setor que a lateral mostra (um
   // código que não existe aqui cai em "Todos", como acima). Só visibilidade:
   // o endereço da tela continua abrindo.
+  // Documentos fiscais sai do menu só onde a prévia do SPED abre (o banco
+  // fiscal local): ali o caminho é o Acervo. Em produção a prévia mostra
+  // "Processamento fiscal indisponível", e sem esta exceção a tela ficava sem
+  // entrada nenhuma (21/10/2026).
+  const semMenu: ReadonlySet<string> = bancoFiscalLocal() ? MODULOS_SEM_MENU : new Set<string>();
   const [moduleStates, telasDoGeral] = await Promise.all([
     getTenantModuleStates(tenantId),
     telasDoGeralDaPessoa({ ...ctx, activeSector: activeSector?.code ?? null }),
@@ -93,7 +99,7 @@ export default async function AppLayout({
   const chamadosLigados = await temAcessoAoModulo({ ctx, config: helpdeskConfig });
   const telasNavegaveis = semTelasDoGeralOcultas(
     moduleStates
-      .filter((m) => m.enabled && !MODULOS_SEM_MENU.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : canViewSector(ctx, m.sectorCodes)))
+      .filter((m) => m.enabled && !semMenu.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : canViewSector(ctx, m.sectorCodes)))
       .map((m) => ({
         code: m.code,
         label: m.label,
@@ -107,7 +113,7 @@ export default async function AppLayout({
   const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
   const activeSectorModules = activeSector
     ? moduleStates
-        .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && !MODULOS_DO_MENU_GERAL.has(m.code) && !MODULOS_SEM_MENU.has(m.code))
+        .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && !MODULOS_DO_MENU_GERAL.has(m.code) && !semMenu.has(m.code))
         .map((m) => ({ code: m.code, label: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "Solicitações dos clientes" : m.label, href: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "/solicitacoes" : getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
