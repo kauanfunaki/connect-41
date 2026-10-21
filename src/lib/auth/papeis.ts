@@ -58,20 +58,29 @@ export function canAct(role: UserRole): boolean {
   return role !== "READONLY";
 }
 
-export function canManageSector(ctx: Quem, sectorCode: string): boolean {
+// Um setor ou os setores de uma tela (21/10/2026): uma tela ligada a mais de um
+// setor abre para quem alcança **algum** deles, no mesmo nível de sempre. Com
+// um setor só, a regra é a de antes, letra por letra.
+type SetorOuSetores = string | readonly string[];
+
+function eDeAlgum(ctx: Quem, setores: SetorOuSetores): boolean {
+  return typeof setores === "string" ? ctx.sectors.includes(setores) : setores.some((s) => ctx.sectors.includes(s));
+}
+
+export function canManageSector(ctx: Quem, sectorCode: SetorOuSetores): boolean {
   if (ctx.subscriptionReadOnly) return false;
   if (isFullWrite(ctx.role)) return true;
   if (ctx.role === "READONLY") return false;
-  return ctx.role === "SECTOR_ADMIN" && ctx.sectors.includes(sectorCode);
+  return ctx.role === "SECTOR_ADMIN" && eDeAlgum(ctx, sectorCode);
 }
 
-export function canActOnSector(ctx: Quem, sectorCode: string): boolean {
+export function canActOnSector(ctx: Quem, sectorCode: SetorOuSetores): boolean {
   if (ctx.subscriptionReadOnly) return false;
   if (isFullAccess(ctx.role)) return ctx.role !== "READONLY";
-  return ctx.sectors.includes(sectorCode);
+  return eDeAlgum(ctx, sectorCode);
 }
 
-export function canViewSector(ctx: Quem, sectorCode: string): boolean {
+export function canViewSector(ctx: Quem, sectorCode: SetorOuSetores): boolean {
   if (isFullAccess(ctx.role)) return true;
-  return ctx.sectors.includes(sectorCode);
+  return eDeAlgum(ctx, sectorCode);
 }

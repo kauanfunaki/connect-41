@@ -11,7 +11,15 @@ vi.mock("@/lib/auth/context", async () => {
   const papeis = await import("@/lib/auth/papeis");
   return { ...papeis, getAuthContext: vi.fn(async () => quem.ctx) };
 });
-vi.mock("@/lib/modules", () => ({ setorDoModulo: vi.fn(async (_t: string, m: string) => quem.setores[m] ?? null) }));
+vi.mock("@/lib/modules", () => {
+  const mod = { setorDoModulo: vi.fn(async (_t: string, m: string) => quem.setores[m] ?? null) };
+  // Os setores da tela (21/10/2026): aqui, só o dono, como antes.
+  const setoresDoModulo = async (t: string, c: string) => {
+    const s = await (mod.setorDoModulo as (t: string, c: string) => Promise<string | null>)(t, c);
+    return s == null ? null : [s];
+  };
+  return { ...mod, setoresDoModulo };
+});
 
 import { podeEditarOTipo, podeVerOTipo } from "./acessoDaConta";
 

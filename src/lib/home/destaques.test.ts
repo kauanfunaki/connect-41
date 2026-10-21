@@ -5,9 +5,12 @@ import { DEFAULT_HOME_WIDGETS, parseHomeWidgets, serializeHomeWidgets, visibleWi
 // Os módulos do tenant, simulados como em acessoDosPaineis.test: todos os dos
 // painéis ativos, cada um no setor do catálogo.
 const estados = vi.hoisted(() => ({
-  lista: [] as { code: string; enabled: boolean; sectorCode: string }[],
+  lista: [] as { code: string; enabled: boolean; sectorCode: string; sectorCodes?: string[] }[],
 }));
-vi.mock("@/lib/modules", () => ({ getTenantModuleStates: async () => estados.lista }));
+// Sem `sectorCodes` no caso, a tela é só do dono (21/10/2026).
+vi.mock("@/lib/modules", () => ({
+  getTenantModuleStates: async () => estados.lista.map((e) => ({ sectorCodes: [e.sectorCode], ...e })),
+}));
 
 import { acessoDosPaineis, type AcessoDoPainel } from "./acessoDosPaineis";
 import { escolherDestaques, type NumerosDaHome } from "./destaques";

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { MODULE_ROUTES } from "@/lib/module-catalog";
 
 // Dispatcher fino: cada módulo real vive na sua própria rota (ex: /vagas);
@@ -19,8 +19,9 @@ export default async function SectorModulePage({
   if (!canViewSector(ctx, code)) notFound();
 
   // O setor do tenant, não o do catálogo: o link de um módulo transferido é
-  // montado com o setor que o opera.
-  if ((await setorDoModulo(ctx.tenantId, moduleCode)) !== code) notFound();
+  // montado com o setor que o opera. Desde 21/10/2026 vale qualquer setor da
+  // tela — a compartilhada tem link no menu de cada um.
+  if (!(await setoresDoModulo(ctx.tenantId, moduleCode))?.includes(code)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, moduleCode))) notFound();
 
   const target = MODULE_ROUTES[moduleCode];

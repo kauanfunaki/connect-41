@@ -3,7 +3,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, canManageSector, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import {
   aplicarAjustes,
@@ -37,7 +37,7 @@ export async function configDoValora(tenantId: string): Promise<ConfigDoValora> 
 export async function acessoAoValora() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return null;
-  const setor = (await setorDoModulo(ctx.tenantId, MODULO_VALORA)) ?? getModuleDef(MODULO_VALORA)!.sectorCode;
+  const setor = (await setoresDoModulo(ctx.tenantId, MODULO_VALORA)) ?? [getModuleDef(MODULO_VALORA)!.sectorCode];
   if (!canViewSector(ctx, setor)) return null;
   if (!(await isModuleEnabled(ctx.tenantId, MODULO_VALORA))) return null;
   return {

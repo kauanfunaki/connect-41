@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, canActOnSector, podeExcluir } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { scopedAssessmentLinkWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
@@ -77,8 +77,8 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
   const quiz = link.scores as unknown as QuizScores | null;
 
   // "Gerar novo link": a mesma regra da action (`gerarLinkTeste`).
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  const podeGerar = canWrite(ctx.role) && canActOnSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  const podeGerar = canWrite(ctx.role) && canActOnSector(ctx, setores);
 
   const situacao = respondido ? (
     <Selo tom="sucesso">Respondido</Selo>

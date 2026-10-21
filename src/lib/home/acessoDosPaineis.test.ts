@@ -4,9 +4,12 @@ import type { AuthContext } from "@/lib/auth/context";
 // Os módulos do tenant, simulados: todos os dos painéis ativos, cada um no
 // setor do catálogo — salvo quando o teste muda.
 const estados = vi.hoisted(() => ({
-  lista: [] as { code: string; enabled: boolean; sectorCode: string }[],
+  lista: [] as { code: string; enabled: boolean; sectorCode: string; sectorCodes?: string[] }[],
 }));
-vi.mock("@/lib/modules", () => ({ getTenantModuleStates: async () => estados.lista }));
+// Sem `sectorCodes` no caso, a tela é só do dono (21/10/2026).
+vi.mock("@/lib/modules", () => ({
+  getTenantModuleStates: async () => estados.lista.map((e) => ({ sectorCodes: [e.sectorCode], ...e })),
+}));
 
 import { acessoDosPaineis } from "./acessoDosPaineis";
 
@@ -93,5 +96,14 @@ describe("quem vê qual painel da Home", () => {
     estados.lista = estados.lista.map((e) => (e.code === "tech_certificados" ? { ...e, sectorCode: "fiscal" } : e));
     expect(await paineis(ctx("SECTOR_USER", ["fiscal"]))).toEqual(["painel-certificados"]);
     expect(await paineis(ctx("SECTOR_USER", ["tech"]))).toEqual([]);
+  });
+
+  it("tela em mais de um setor (21/10/2026): conta para cada um, e o dono não perde", async () => {
+    estados.lista = estados.lista.map((e) => (e.code === "tech_certificados" ? { ...e, sectorCodes: ["tech", "fiscal"] } : e));
+    expect(await paineis(ctx("SECTOR_USER", ["fiscal"]))).toEqual(["painel-certificados"]);
+    expect(await paineis(ctx("SECTOR_USER", ["tech"]))).toEqual(["painel-certificados"]);
+    expect(await paineis(ctx("ADMIN", [], { activeSector: "fiscal" }))).toEqual(["painel-certificados"]);
+    // O painel leva o setor de quem vê, para o link e o rótulo.
+    expect((await acessoDosPaineis(ctx("SECTOR_USER", ["fiscal"]))).get("painel-certificados")!.setor).toBe("fiscal");
   });
 });

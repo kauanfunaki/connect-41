@@ -6,7 +6,7 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Aviso } from "@/components/ui/Aviso";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { formatInstantDate, formatarReais } from "@/lib/format";
 import { getPrisma } from "@/lib/prisma";
 import { agenteDoCatalogo } from "@/lib/ia/catalogo";
@@ -34,8 +34,9 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
   const { id } = await params;
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canManageSector(ctx, setor)) notFound();
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  const setor = setores[0];
+  if (!canManageSector(ctx, setores)) notFound();
 
   const proposta = await propostaDoSetor(id, ctx.tenantId, setor);
   if (!proposta) notFound();
