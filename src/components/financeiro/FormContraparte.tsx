@@ -10,7 +10,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
-import { criarContraparte, atualizarContraparte } from "@/app/(app)/cadastros-financeiros/actions";
+import { criarContraparte, atualizarContraparte } from "@/app/(app)/fornecedores-e-sacados/actions";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { useBuscaDoCnpj, ajudaDaBusca, AvisoDaSituacao, type AchadoNaReceita } from "./BuscaDoCnpj";
 import { completarComReceita, fichaNoFormulario, type CampoDaFicha } from "@/lib/financeiro/fichaDaContraparte";

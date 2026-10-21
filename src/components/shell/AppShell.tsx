@@ -34,6 +34,7 @@ import {
   X,
   Building2,
   Users,
+  Truck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
@@ -52,6 +53,7 @@ import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO, getModuleDef } from "@/lib/module-catalog";
 import { quadrosAtivo } from "@/lib/caminhoDoMenu";
+import { CAMINHO_DOS_FORNECEDORES } from "@/lib/cadastrosNav";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { trocarSetor } from "@/components/shell/contexto";
 import {
@@ -102,6 +104,9 @@ const TELAS_DE_CADASTROS: TelaDoPainel[] = [
   { label: "Empresas", href: "/empresas", icon: <Building2 /> },
   { label: "Pessoas", href: "/pessoas", icon: <Users /> },
 ];
+// Só entra no painel de quem vê o BPO (21/10/2026): a mesma regra do Ctrl+K,
+// que já traz a tela só para quem a abre (ver `telasDeCadastros`).
+const TELA_DOS_FORNECEDORES: TelaDoPainel = { label: "Fornecedores e sacados", href: CAMINHO_DOS_FORNECEDORES, icon: <Truck /> };
 const TELAS_DA_GESTAO: TelaDoPainel[] = ABAS_DA_GESTAO.map((a) => ({ label: a.rotulo, href: a.href, icon: a.icone }));
 
 /**
@@ -282,11 +287,14 @@ export function AppShell({
     chamadosLigados && noGeral("chamados"),
     noGeral("agenda"),
   ].some(Boolean);
+  // Fornecedores e sacados é aba de Cadastros só para o BPO (21/10/2026). As
+  // telas navegáveis já vêm filtradas pelo setor e pelo módulo ligado.
+  const telasDeCadastros = telasNavegaveis.some((t) => t.code === "bpo_cadastros") ? [...TELAS_DE_CADASTROS, TELA_DOS_FORNECEDORES] : TELAS_DE_CADASTROS;
   // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
   const itensDoGeral = (
     <>
       {noGeral("cadastros") && (
-        <PainelDoItem titulo="Cadastros" telas={TELAS_DE_CADASTROS} cor={corDoSetor}>
+        <PainelDoItem titulo="Cadastros" telas={telasDeCadastros} cor={corDoSetor}>
           <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
         </PainelDoItem>
       )}
