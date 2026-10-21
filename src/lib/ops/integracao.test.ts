@@ -13,7 +13,7 @@ vi.mock("@/lib/prisma", () => ({ getPrisma: () => { if (!db) throw new Error("Ba
 vi.mock("@/lib/auth/context", async original => ({ ...await original<typeof import("@/lib/auth/context")>(), getAuthContext: mocks.auth }));
 vi.mock("@/lib/webPush", () => ({ sendWebPushToUser: mocks.push }));
 
-import { acessoOps, autenticarWatcher, conferirResponsavel, gerarToken, hashToken, painelOps, receberEvento } from "./servidor";
+import { acessoOps, autenticarWatcher, conferirResponsavel, gerarToken, gerarTokenCompartilhado, hashToken, painelOps, receberEvento } from "./servidor";
 import { criarWatcher, editarWatcher, eventoWatcher, heartbeatWatcher, lerJsonOps, obterPainel, responderOps, sinalizarInstabilidade, tokenWatcher } from "./http";
 import { filtrosSchema } from "./regras";
 
@@ -23,7 +23,7 @@ describe.skipIf(!url)("Ops Center com MySQL descartável", () => {
   const token = `ops_${randomBytes(32).toString("hex")}`, slug = "bot_teste";
   const evento = (status = "ERROR", id = randomUUID()) => ({ eventId: id, watcherSlug: slug, filename: "arquivo_ficticio.xml", status });
   const req = (path: string, body?: unknown, chave?: string) => new Request(`http://localhost${path}`, { method: "POST", headers: { "Content-Type": "application/json", ...(chave ? { Authorization: `Bearer ${chave}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
-  const autenticado = () => ({ tenantId, slug, tokenHash: hashToken(token) });
+  const autenticado = () => ({ tenantId, slug, tokenHash: hashToken(token), compartilhado: false });
   const usuario = async (tenant: string, name: string, role: "ADMIN" | "SECTOR_USER" = "SECTOR_USER", setor = "tech") => {
     const id = randomUUID(); await db!.user.create({ data: { id, tenantId: tenant, name, email: `${id}@example.test`, passwordHash: "teste-sem-login", role, sectors: { create: { sectorCode: setor } } } }); return id;
   };
@@ -42,6 +42,7 @@ describe.skipIf(!url)("Ops Center com MySQL descartável", () => {
     mocks.auth.mockImplementation(() => Promise.resolve(ctx));
     // Limpa exclusivamente os registros das fixtures criadas por esta suíte.
     await db!.notification.deleteMany({ where: { tenantId } });
+    await db!.opsApiCredential.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
     await db!.opsEvent.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
     await db!.opsWatcher.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
     await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "tech_ops_center" }, data: { enabled: true, sectorCode: null } });
@@ -123,6 +124,20 @@ describe.skipIf(!url)("Ops Center com MySQL descartável", () => {
     await expect(autenticarWatcher(req("/", undefined, token))).rejects.toMatchObject({ status: 401 });
     await expect(receberEvento(autenticado(), evento())).rejects.toMatchObject({ status: 401 });
     await editarWatcher(req("/", { name: "Bot", isActive: false, ownerId: dono, version: 1 }), slug);
+    await expect(autenticarWatcher(req("/", undefined, nova.token!))).rejects.toMatchObject({ status: 401 });
+  });
+  it("uma chave compartilhada recebe dados e heartbeat de mais de uma automação", async () => {
+    await db!.opsWatcher.create({ data: { tenantId, slug: "outro_bot", name: "Outro bot", ownerId: dono } });
+    const nova = await gerarTokenCompartilhado(ctx, 0);
+    expect(nova.token).toMatch(/^ops_[a-f0-9]{64}$/);
+    const credencial = await autenticarWatcher(req("/", undefined, nova.token!), slug);
+    expect(credencial).toMatchObject({ tenantId, slug, compartilhado: true });
+    const segundoBot = await autenticarWatcher(req("/", undefined, nova.token!), "outro_bot");
+    await receberEvento(segundoBot, { ...evento("SUCCESS"), watcherSlug: "outro_bot" });
+    await heartbeatWatcher(req("/", undefined, nova.token!), slug);
+    await heartbeatWatcher(req("/", undefined, nova.token!), "outro_bot");
+    expect(await db!.opsEvent.count({ where: { tenantId } })).toBe(1);
+    expect(await gerarTokenCompartilhado(ctx, 1, true)).toMatchObject({ token: null, hasToken: false, version: 2 });
     await expect(autenticarWatcher(req("/", undefined, nova.token!))).rejects.toMatchObject({ status: 401 });
   });
   it("heartbeat confirma recebimento sem declarar processamento", async () => {
