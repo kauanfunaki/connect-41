@@ -12,6 +12,7 @@ import { CeciDoPortal } from "@/components/portal/CeciDoPortal";
 import { ceciNoPortalDaConta } from "@/lib/portal/ceci";
 import { primeiroNomeParaOPrompt } from "@/lib/ia/ceci";
 import { getPrisma } from "@/lib/prisma";
+import { sugestaoLigada } from "@/lib/solicitacoes/sugestaoServidor";
 
 // A moldura de quem já entrou no portal: sidebar com as telas, o nome do
 // acesso (a empresa, ou a primeira e quantas mais — era o nome do Cliente até
@@ -55,11 +56,17 @@ export default async function AreaDoClienteLayout({ children }: { children: Reac
     getPrisma().portalUser.findFirst({ where: { id: sessao.sub, tenantId: sessao.tenantId }, select: { name: true } }),
   ]);
   const logo = aparencia.logoNoPortal && escritorio.logoUrl ? { src: escritorio.logoUrl, nome: escritorio.nome } : null;
+  // "Sugestão ou problema" no rodapé do menu (21/10/2026). Falha aqui não
+  // derruba o portal: o botão só não aparece.
+  const comSugestao = await sugestaoLigada(sessao.tenantId, modulos, bloqueadas).catch((err) => {
+    console.error("[portal] sugestão", err);
+    return false;
+  });
 
   return (
     <ToastProvider>
       <EstiloDaAparencia aparencia={aparencia} />
-      <PortalShell grupoNome={nome} modulos={[...modulos]} bloqueadas={[...bloqueadas]} logo={logo}>
+      <PortalShell grupoNome={nome} modulos={[...modulos]} bloqueadas={[...bloqueadas]} logo={logo} sugestao={comSugestao}>
         {children}
       </PortalShell>
       <TutorialDoPortal />

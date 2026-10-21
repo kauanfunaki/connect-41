@@ -171,6 +171,19 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     ],
   },
   {
+    chave: "sugestao",
+    titulo: "Mandar uma sugestão ou avisar de um problema no portal",
+    resumo: "Uma ideia, ou algo que não funcionou: vai direto para a equipe que cuida do portal.",
+    icone: "solicitacao",
+    modulos: ["portal_solicitacoes"],
+    telas: ["/portal/solicitacoes"],
+    passos: [
+      "No rodapé do menu, clique em Sugestão ou problema.",
+      "Dê uma nota de 1 a 5 para o portal e conte o que aconteceu ou o que você sugere. A equipe recebe junto a tela em que você estava.",
+      "Clique em Enviar. A mensagem vira uma solicitação, com número, e a resposta chega por ela, em Solicitações.",
+    ],
+  },
+  {
     chave: "comunicado",
     titulo: "Ler os comunicados do escritório",
     resumo: "Recesso, mudança de prazo, orientação: os avisos que o escritório manda para todos.",
