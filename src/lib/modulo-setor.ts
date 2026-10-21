@@ -25,3 +25,38 @@ export function setorParaGravar(setorDoCatalogo: string, escolhido: string): str
   const s = escolhido.trim();
   return s === "" || s === setorDoCatalogo ? null : s;
 }
+
+/**
+ * Os setores de uma tela (21/10/2026): o dono primeiro, depois os que também
+ * usam, sem repetir e sem vazio. Um setor ligado que virou o dono (a tela foi
+ * movida para ele) conta uma vez só.
+ */
+export function resolverSetoresDoModulo(setorDono: string, setoresLigados: readonly (string | null | undefined)[]): string[] {
+  const setores = [setorDono];
+  for (const s of setoresLigados) {
+    const codigo = s?.trim();
+    if (codigo && !setores.includes(codigo)) setores.push(codigo);
+  }
+  return setores;
+}
+
+/**
+ * O que gravar como setores a mais de uma tela, a partir do que o
+ * administrador marcou: só setores ativos, sem o dono e sem repetir.
+ */
+export function setoresParaLigar(setorDono: string, marcados: readonly string[], ativos: readonly string[]): string[] {
+  return resolverSetoresDoModulo(setorDono, marcados.filter((s) => ativos.includes(s.trim()))).slice(1);
+}
+
+/**
+ * Em qual dos setores da tela ela aparece numa lista agrupada por setor (a
+ * Ajuda, por exemplo), para não repetir: o setor escolhido no alto da tela, se
+ * for um deles; senão o primeiro que é da pessoa; senão o dono.
+ */
+export function setorParaMostrar(setores: readonly string[], quem: { activeSector: string | null; sectors: readonly string[] }): string {
+  return (
+    (quem.activeSector && setores.includes(quem.activeSector) ? quem.activeSector : undefined) ??
+    setores.find((s) => quem.sectors.includes(s)) ??
+    setores[0]
+  );
+}

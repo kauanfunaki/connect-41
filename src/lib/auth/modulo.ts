@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector, type AuthContext } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 
 // Porta de entrada das telas e das ações de um módulo (02/10/2026).
 //
@@ -19,8 +19,11 @@ export type NivelNoModulo = "ver" | "agir" | "gerir";
  * no nível pedido. Os níveis são os de sempre — `canViewSector`,
  * `canActOnSector` e `canManageSector` — e "gerir" é o que as ações antigas
  * pediam com `canWrite(role)`, só que preso ao setor certo.
+ *
+ * `setor` aceita os setores da tela (21/10/2026): uma tela ligada a mais de um
+ * setor abre para quem alcança algum deles, no mesmo nível.
  */
-export function alcancaModulo(ctx: AuthContext, setor: string, ligado: boolean, nivel: NivelNoModulo): boolean {
+export function alcancaModulo(ctx: AuthContext, setor: string | readonly string[], ligado: boolean, nivel: NivelNoModulo): boolean {
   if (!ligado) return false;
   if (nivel === "gerir") return canManageSector(ctx, setor);
   if (nivel === "agir") return canActOnSector(ctx, setor);
@@ -28,7 +31,7 @@ export function alcancaModulo(ctx: AuthContext, setor: string, ligado: boolean, 
 }
 
 async function situacaoDoModulo(tenantId: string, modulo: string) {
-  const [setor, ligado] = await Promise.all([setorDoModulo(tenantId, modulo), isModuleEnabled(tenantId, modulo)]);
+  const [setor, ligado] = await Promise.all([setoresDoModulo(tenantId, modulo), isModuleEnabled(tenantId, modulo)]);
   return { setor, ligado };
 }
 
@@ -40,11 +43,11 @@ export async function podeNoModulo(ctx: AuthContext, modulo: string, nivel: Nive
 }
 
 /**
- * Para a página de um módulo: devolve o contexto e o setor que opera o módulo,
- * ou responde 404 — o mesmo de uma rota que não existe, para não confirmar a
- * quem não é do setor que a tela existe.
+ * Para a página de um módulo: devolve o contexto e os setores da tela (o dono
+ * primeiro), ou responde 404 — o mesmo de uma rota que não existe, para não
+ * confirmar a quem não é do setor que a tela existe.
  */
-export async function abrirTelaDoModulo(modulo: string): Promise<{ ctx: AuthContext; setor: string }> {
+export async function abrirTelaDoModulo(modulo: string): Promise<{ ctx: AuthContext; setor: string[] }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
   const { setor, ligado } = await situacaoDoModulo(ctx.tenantId, modulo);

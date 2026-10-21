@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
-vi.mock("@/lib/modules", () => ({ isModuleEnabled: vi.fn(), setorDoModulo: vi.fn() }));
+vi.mock("@/lib/modules", () => ({ isModuleEnabled: vi.fn(), setorDoModulo: vi.fn(), setoresDoModulo: vi.fn() }));
 vi.mock("@/lib/auth/context", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/auth/context")>();
   return { ...original, getAuthContext: vi.fn() };
@@ -23,6 +23,46 @@ function ctx(parcial: Partial<AuthContext>): AuthContext {
     ...parcial,
   } as AuthContext;
 }
+
+describe("alcancaModulo com uma tela em mais de um setor (21/10/2026)", () => {
+  // A prévia do SPED: dona Fiscal, ligada ao Contábil e ao BPO.
+  const SETORES = ["fiscal", "contabil", "bpo"];
+
+  it("abre para quem é de qualquer um dos setores, no mesmo nível de sempre", () => {
+    const doContabil = ctx({ role: "SECTOR_USER", sectors: ["contabil"] });
+    expect(alcancaModulo(doContabil, SETORES, true, "ver")).toBe(true);
+    expect(alcancaModulo(doContabil, SETORES, true, "agir")).toBe(true);
+    expect(alcancaModulo(doContabil, SETORES, true, "gerir")).toBe(false);
+    expect(alcancaModulo(ctx({ role: "SECTOR_ADMIN", sectors: ["bpo"] }), SETORES, true, "gerir")).toBe(true);
+  });
+
+  it("quem não é de nenhum segue de fora — ligar um setor não abre para os outros", () => {
+    const doDp = ctx({ role: "SECTOR_ADMIN", sectors: ["dp"] });
+    expect(alcancaModulo(doDp, SETORES, true, "ver")).toBe(false);
+  });
+
+  it("a lista com só o dono é a regra de antes, letra por letra", () => {
+    const papeis = [
+      ctx({ role: "SECTOR_USER", sectors: ["fiscal"] }),
+      ctx({ role: "SECTOR_ADMIN", sectors: ["fiscal"] }),
+      ctx({ role: "SECTOR_ADMIN", sectors: ["dp"] }),
+      ctx({ role: "READONLY" }),
+      ctx({ role: "ADMIN" }),
+      ctx({ role: "SECTOR_ADMIN", sectors: ["fiscal"], subscriptionReadOnly: true }),
+    ];
+    for (const c of papeis) {
+      for (const nivel of ["ver", "agir", "gerir"] as const) {
+        for (const ligado of [true, false]) {
+          expect(alcancaModulo(c, ["fiscal"], ligado, nivel)).toBe(alcancaModulo(c, "fiscal", ligado, nivel));
+        }
+      }
+    }
+  });
+
+  it("módulo desligado fecha para todos os setores dele", () => {
+    expect(alcancaModulo(ctx({ role: "SECTOR_USER", sectors: ["contabil"] }), SETORES, false, "ver")).toBe(false);
+  });
+});
 
 describe("alcancaModulo", () => {
   it("quem é só do BPO não vê nem grava no DP — o achado de 30/09", () => {

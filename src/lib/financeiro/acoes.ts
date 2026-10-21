@@ -24,7 +24,7 @@ import { cartoesParaABaixa, type CartaoParaABaixa } from "./cartaoServidor";
 import { disponivelDoAdiantamento } from "./adiantamentoServidor";
 import { decimalDeCentavos } from "./manual";
 import { instanteDaData } from "./periodo";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { motivoDoBloqueioDeBaixa } from "./aprovacao/regras";
 import { sincronizarAcordos } from "./cobranca/sincronizar";
 
@@ -40,7 +40,7 @@ export type AcaoDeContaState = { error: string } | null;
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { erro: "Não autenticado" as const, ctx: null };
-  const setores = await Promise.all(MODULOS.map((m) => setorDoModulo(ctx.tenantId, m)));
+  const setores = await Promise.all(MODULOS.map((m) => setoresDoModulo(ctx.tenantId, m)));
   if (!setores.some((s) => canActOnSector(ctx, s ?? SECTOR))) return { erro: "Sem permissão no BPO" as const, ctx: null };
   return { erro: null, ctx };
 }

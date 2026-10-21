@@ -9,7 +9,7 @@ import { revalidatePath } from "next/cache";
 import { presaAoOmie } from "@/lib/integracoes/omie/virada";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
@@ -41,6 +41,7 @@ import { lerRateio, resumoDoRateio } from "@/lib/financeiro/rateio";
 import { conferirRateio, gravarRateio } from "@/lib/financeiro/rateioServidor";
 import { lerRetencoes, liquidoDaConta, resumoDasRetencoes } from "@/lib/financeiro/retencoes";
 import { aplicarRetencoes, cancelarContasDosImpostos, RecusaDaRetencao } from "@/lib/financeiro/retencoesServidor";
+import { feriadosDoEscritorio } from "@/lib/feriados";
 import { randomUUID } from "crypto";
 
 const MODULE = "bpo_lancamentos";
@@ -48,7 +49,7 @@ const MODULE = "bpo_lancamentos";
 async function contexto(companyId: string) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode)) return { ok: false as const, erro: "Sem permissão para lançar." };
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode)) return { ok: false as const, erro: "Sem permissão para lançar." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo não habilitado." };
 
   const prisma = getPrisma();
@@ -199,13 +200,13 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const approvalStatus = entrada.statusInicial(companyId, d.kind, status);
 
   // A repetição (lote D, 19/10): as próximas nascem agora, em aberto, cada uma
-  // com a aprovação dela. Os feriados são os do escritório (Administração ›
-  // Feriados), em dia de calendário.
+  // com a aprovação dela. Os feriados são os do escritório — nacionais mais as
+  // exceções de Administração › Feriados (21/10/2026) —, em dia de calendário.
   const proximas = rep.repeticao
     ? ocorrenciasDaRepeticao(
         { vencimentoKey: d.vencimentoKey, competencia: d.competencia },
         rep.repeticao,
-        new Set((await c.prisma.holiday.findMany({ where: { tenantId: c.tenantId }, select: { date: true } })).map((h) => h.date.toISOString().slice(0, 10)))
+        new Set((await feriadosDoEscritorio(c.tenantId)).keys())
       ).slice(1)
     : [];
   const serie = rep.repeticao ? { recurrenceId: randomUUID(), recurrenceTotal: rep.repeticao.vezes } : null;

@@ -45,6 +45,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "person.delete": x("excluiu a pessoa"),
   "companyservice.create": c("adicionou um setor contratado"),
   "companyservice.assign": e("trocou o responsável de um setor contratado"),
+  // A tela Clientes saiu em 15/10/2026 (etapa 3 da saída do Cliente): as
+  // ações ficam aqui para o histórico continuar legível.
   "clientGroup.create": c("criou o cliente"),
   "clientGroup.update": e("editou o cliente"),
   "clientGroup.activate": e("reativou o cliente"),
@@ -106,6 +108,15 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   // Exportação para a Domínio (fila do BPO, 21/10).
   "financeiro.dominio.exported": o("exportou para a Domínio as baixas da empresa"),
   "financeiro.dominio.depara_saved": e("atualizou o de-para da Domínio da empresa"),
+  // Regras de conciliação (fila do BPO, 21/10).
+  "financeiro.bank_rule.created": c("criou a regra de conciliação"),
+  "financeiro.bank_rule.updated": e("editou a regra de conciliação"),
+  "financeiro.bank_rule.paused": e("pausou a regra de conciliação"),
+  "financeiro.bank_rule.resumed": e("retomou a regra de conciliação"),
+  "financeiro.bank_rule.deleted": x("excluiu a regra de conciliação"),
+  "financeiro.bank_rule.applied": e("aplicou às linhas pendentes do extrato a regra de conciliação"),
+  "financeiro.bank_rule.undone": e("desfez o que uma regra de conciliação lançou"),
+  "financeiro.entry.created_by_bank_rule": c("lançou pela regra de conciliação o lançamento"),
   "financeiro.categoria.linha_da_dre": e("ligou a uma linha da DRE a categoria"),
   "financeiro.categoria_da_empresa.criada": c("criou a categoria"),
   "financeiro.categoria_da_empresa.alterada": e("editou a categoria"),
@@ -258,6 +269,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "portal.user.company.filiais": e("mudou o “incluir filiais” do acesso ao portal de"),
   "portal.tela.liberada": e("liberou no portal a tela", { chaveDoNome: "tela" }),
   "portal.tela.bloqueada": e("bloqueou no portal a tela", { chaveDoNome: "tela" }),
+  // A Ceci no portal, ligada por empresa (21/10/2026).
+  "portal.ceci.ligada": e("ligou a Ceci no portal para a empresa", { chaveDoNome: "empresa" }),
+  "portal.ceci.desligada": e("desligou a Ceci no portal para a empresa", { chaveDoNome: "empresa" }),
 
   // ── Conversas, transferências e agenda ─────────────────────────────────────
   "chatwoot.contact.linked": e("vinculou um contato do Chatwoot a um cadastro"),
@@ -300,6 +314,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "module.enable": e("ligou o módulo"),
   "module.disable": e("desligou o módulo"),
   "module.transfer": e("passou para outro setor o módulo"),
+  "module.share": e("mostrou em mais um setor o módulo"),
+  "module.unshare": e("tirou de um setor o módulo"),
   "tag.create": c("criou a tag"),
   "tag.update": e("editou a tag"),
   "tag.delete": x("excluiu a tag"),
@@ -409,6 +425,8 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   BankAccount: "conta bancária",
   BankStatementImport: "extrato importado",
   BankTransaction: "movimento do extrato",
+  BankReconciliationRule: "regra de conciliação",
+  BankRuleApplication: "lançamento por regra de conciliação",
   BpoCredential: "senha do repositório",
   Branch: "filial",
   Budget: "orçamento",

@@ -23,7 +23,6 @@ const m = vi.hoisted(() => {
     ctx: { tenantId: "escritorio-a", userId: "admin-1", role: "ADMIN" as UserRole, subscriptionReadOnly: false },
     logAudit: vi.fn(),
     sendPasswordResetEmail: vi.fn(),
-    pronto: vi.fn(),
     ligadas: vi.fn(),
     alcance: vi.fn(),
   };
@@ -37,8 +36,6 @@ vi.mock("@/lib/auth/password", () => ({ hashPassword: async () => "hash-aleatori
 vi.mock("@/lib/auth/passwordReset", () => ({ createPasswordResetToken: async () => "token-de-teste" }));
 vi.mock("@/lib/email/sendMail", () => ({ sendPasswordResetEmail: m.sendPasswordResetEmail }));
 vi.mock("@/lib/portal/empresasDaContaDb", () => ({
-  FALTA_ATUALIZAR_O_BANCO_DO_PORTAL: "Falta a atualização do banco.",
-  portalPorEmpresaPronto: m.pronto,
   empresasLigadasDasContas: async (_t: string, contas: { id: string }[]) => new Map(contas.map((c) => [c.id, m.ligadas(c.id) ?? []])),
   idsDasEmpresasDaConta: m.alcance,
 }));
@@ -86,7 +83,6 @@ beforeEach(() => {
   m.ctx.role = "ADMIN";
   m.ctx.subscriptionReadOnly = false;
   m.db.$transaction.mockImplementation(async (fn: (tx: typeof m.db) => unknown) => fn(m.db));
-  m.pronto.mockResolvedValue(true);
   m.ligadas.mockReturnValue([]);
   m.alcance.mockResolvedValue(["emp-irriga"]);
   m.db.portalUser.findFirst.mockResolvedValue(null);
@@ -156,12 +152,6 @@ describe("criarAcessoDoPortal — o acesso nasce ligado às empresas, sem Client
   it("sem empresa: pede ao menos uma", async () => {
     const r = await criarAcessoDoPortal(null, formulario({ nome: "Ana", email: "ana@cliente.com" }, []));
     expect(r).toEqual({ erro: "Escolha ao menos uma empresa que esta conta enxerga." });
-  });
-
-  it("antes da migration: avisa que falta atualizar o banco, sem tentar criar", async () => {
-    m.pronto.mockResolvedValueOnce(false);
-    expect(await criarAcessoDoPortal(null, formulario({ nome: "Ana", email: "ana@cliente.com" }))).toEqual({ erro: "Falta a atualização do banco." });
-    expect(m.db.portalUser.create).not.toHaveBeenCalled();
   });
 
   it("colaborador e coordenação de setor não criam", async () => {
@@ -368,13 +358,10 @@ describe("ligar e desligar empresa — a aba \"Acesso ao portal\" da ficha", () 
     expect(m.logAudit).not.toHaveBeenCalled();
   });
 
-  it("sem permissão, nem antes da migration, nada muda", async () => {
+  it("sem permissão, nada muda", async () => {
     m.ctx.role = "SECTOR_USER";
     expect(await ligarEmpresaAoAcesso("pu-1", IRRIGA.id, true)).toEqual({ erro: "Sem permissão." });
     expect(await desligarEmpresaDoAcesso("pu-1", IRRIGA.id)).toEqual({ erro: "Sem permissão." });
-    m.ctx.role = "ADMIN";
-    m.pronto.mockResolvedValue(false);
-    expect(await ligarEmpresaAoAcesso("pu-1", IRRIGA.id, true)).toEqual({ erro: "Falta a atualização do banco." });
     expect(m.db.portalUserCompany.upsert).not.toHaveBeenCalled();
   });
 });
@@ -385,7 +372,6 @@ describe("excluirAcessoDoPortal", () => {
     name: "Maria Teste",
     email: "maria@exemplo.com",
     active: false,
-    clientGroupId: null,
     _count: { ...contagemZerada, clientRequestMessages: 3, approvalLimits: 1 },
   };
 

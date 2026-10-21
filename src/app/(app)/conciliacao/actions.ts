@@ -13,7 +13,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts, addDaysToKey } from "@/lib/agenda";
@@ -45,6 +45,8 @@ import { inicioDeHoje } from "@/lib/financeiro/consultas";
 import { quitarConta, registrarBaixa, apagarBaixa, mudarDiaDaBaixa, RecusaDaBaixa } from "@/lib/financeiro/baixa/servidor";
 import { baixaDoAjuste, lerAjuste, type BaixaDoAjuste } from "@/lib/financeiro/conciliacao/ajuste";
 import { saldoEmAberto } from "@/lib/financeiro/baixa/regras";
+import { lancarEConciliar, RecusaDaLinha } from "@/lib/financeiro/conciliacao/lancarDaTransacao";
+import { lancarPelasRegrasNaImportacao } from "@/lib/financeiro/conciliacao/regrasServidor";
 
 const MODULE = "bpo_conciliacao";
 
@@ -59,8 +61,8 @@ class Recusa extends Error {}
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode;
-  if (!canActOnSector(ctx, setor)) return { ok: false as const, erro: "Sem permissão para conciliar." };
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [getModuleDef(MODULE)!.sectorCode];
+  if (!canActOnSector(ctx, setores)) return { ok: false as const, erro: "Sem permissão para conciliar." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo não habilitado." };
   return { ok: true as const, ctx, tenantId: ctx.tenantId, userId: ctx.userId || null, prisma: getPrisma() };
 }
@@ -199,6 +201,8 @@ export type ResumoDaImportacao = {
   avisos: string[];
   /** Linhas que já estavam conciliadas no Omie e saíram da fila na hora. */
   conciliadasPeloOmie: number;
+  /** Linhas novas que uma regra em modo "lançar" lançou e conciliou (21/10). */
+  lancadasPorRegra: number;
 };
 
 export type ResultadoDaImportacao = { error: string } | { ok: true; resumo: ResumoDaImportacao };
@@ -326,7 +330,16 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
     avisos,
     // Conta ligada ao Omie: o que o BPO já conciliou lá sai da fila agora.
     conciliadasPeloOmie: await conciliarContaPeloOmie(c.tenantId, conta.id),
+    lancadasPorRegra: 0,
   };
+  // Depois do Omie, as regras de conciliação (21/10): só as linhas novas, e só
+  // as que uma regra em modo "lançar" pega sem dúvida. Regra que não consegue
+  // lançar (a categoria saiu do plano) vira aviso, não erro da importação.
+  if (novas > 0) {
+    const pelasRegras = await lancarPelasRegrasNaImportacao({ tenantId: c.tenantId, userId: c.userId, bankAccountId: conta.id, importId });
+    resumo.lancadasPorRegra = pelasRegras.lancadas;
+    resumo.avisos.push(...pelasRegras.recusas);
+  }
 
   await logAudit({
     tenantId: c.tenantId,
@@ -341,6 +354,7 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
       lidas: resumo.lidas,
       novas: resumo.novas,
       repetidas: resumo.repetidas,
+      lancadasPorRegra: resumo.lancadasPorRegra,
       charset: ex.charset,
     },
   });
@@ -672,7 +686,12 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
  * lançamento manual nasce quando não está pago. Desfazer a conciliação deixa o
  * lançamento em aberto (e candidato a casar de novo), em vez de apagá-lo.
  */
-export async function criarLancamentoDaTransacao(formData: FormData): Promise<Resultado> {
+/** O que foi lançado — a tela oferece a regra "sempre que vier assim" com isto (21/10). */
+export type ResultadoDoLancamento =
+  | { error: string }
+  | { ok: true; lancamento: { counterpartyId: string; categoryId: string | null; costCenterId: string | null; projectId: string | null } };
+
+export async function criarLancamentoDaTransacao(formData: FormData): Promise<ResultadoDoLancamento> {
   const c = await contexto();
   if (!c.ok) return { error: c.erro };
 
@@ -745,8 +764,9 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
   if (!projeto.ok) return { error: projeto.erro };
 
   let entryId: string;
+  let counterpartyIdCriado: string;
   try {
-    entryId = await c.prisma.$transaction(async (tx) => {
+    [entryId, counterpartyIdCriado] = await c.prisma.$transaction(async (tx) => {
       const contraparte =
         existente ??
         (await tx.financeCounterparty.create({
@@ -762,62 +782,31 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
           select: { id: true, defaultCategoryId: true },
         }));
 
-      const pagoEm = instanteDaData(dataKey);
-      // Nasce pago, pela baixa logo abaixo: é o registro de um dinheiro que já
-      // saiu. Não entra em aprovação por alçada (fica no padrão NAO_REQUER).
-      const criado = await tx.financeEntry.create({
-        data: {
-          tenantId: c.tenantId,
-          companyId,
-          kind: d.kind,
-          status: "CONFERIDO",
-          counterpartyId: contraparte.id,
-          categoryId: d.categoryId,
-          costCenterId: centro.centroId,
-          projectId: projeto.projetoId,
-          competence: d.competencia,
-          dueDate: pagoEm,
-          amount: decimalDeCentavos(d.centavos),
-          description: d.descricao,
-          createdById: c.userId,
-          reviewedById: c.userId,
-          reviewedAt: new Date(),
-        },
-        select: { id: true, amount: true },
-      });
-      const baixa = await quitarConta(tx, {
+      // Nasce pago e conciliado (`lancarEConciliar`): é o registro de um
+      // dinheiro que já saiu. Não entra em aprovação por alçada.
+      const { entryId: criadoId } = await lancarEConciliar(tx, {
         tenantId: c.tenantId,
-        entryId: criado.id,
-        paidAt: pagoEm,
-        bankAccountId: t.bankAccountId,
-        origin: "CONCILIACAO",
+        companyId,
         userId: c.userId,
+        transacao: { id: t.id, bankAccountId: t.bankAccountId },
+        dataKey,
+        kind: d.kind,
+        centavos: d.centavos,
+        counterpartyId: contraparte.id,
+        categoryId: d.categoryId,
+        costCenterId: centro.centroId,
+        projectId: projeto.projetoId,
+        competencia: d.competencia,
+        descricao: d.descricao,
       });
 
       if (d.kind === "PAGAR" && d.categoryId && !contraparte.defaultCategoryId) {
         await tx.financeCounterparty.update({ where: { id: contraparte.id }, data: { defaultCategoryId: d.categoryId } });
       }
-
-      await tx.bankTransactionMatch.create({
-        data: {
-          transactionId: t.id,
-          financeEntryId: criado.id,
-          paymentId: baixa.paymentId,
-          amount: criado.amount,
-          entryStatusBefore: "CONFERIDO",
-          entryPaidAtBefore: null,
-          createdById: c.userId,
-        },
-      });
-      const marcada = await tx.bankTransaction.updateMany({
-        where: { id: t.id, status: "PENDENTE" },
-        data: { status: "CONCILIADA", reconciledAt: new Date(), reconciledById: c.userId },
-      });
-      if (marcada.count !== 1) throw new Recusa("Esta transação acabou de ser alterada por outra pessoa — atualize a tela.");
-      return criado.id;
+      return [criadoId, contraparte.id] as const;
     });
   } catch (err) {
-    if (err instanceof Recusa) return { error: err.message };
+    if (err instanceof Recusa || err instanceof RecusaDaLinha) return { error: err.message };
     throw err;
   }
 
@@ -839,7 +828,10 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
   });
 
   revalidar();
-  return { ok: true };
+  return {
+    ok: true,
+    lancamento: { counterpartyId: counterpartyIdCriado, categoryId: d.categoryId, costCenterId: centro.centroId, projectId: projeto.projetoId },
+  };
 }
 
 // ─── Transferência entre contas (19/10) ─────────────────────────────────────

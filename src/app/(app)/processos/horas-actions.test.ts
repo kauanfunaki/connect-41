@@ -8,7 +8,15 @@ const process = { findFirst: vi.fn() };
 const timeEntry = { updateMany: vi.fn(), deleteMany: vi.fn() };
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ process, timeEntry }) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/modules", () => ({ setorDoModulo: vi.fn(async () => "societario") }));
+vi.mock("@/lib/modules", () => {
+  const mod = { setorDoModulo: vi.fn(async () => "societario") };
+  // Os setores da tela (21/10/2026): aqui, só o dono, como antes.
+  const setoresDoModulo = async (t: string, c: string) => {
+    const s = await (mod.setorDoModulo as (t: string, c: string) => Promise<string | null>)(t, c);
+    return s == null ? null : [s];
+  };
+  return { ...mod, setoresDoModulo };
+});
 
 const ctx = {
   userId: "eu",

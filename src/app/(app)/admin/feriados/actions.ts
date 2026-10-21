@@ -6,6 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { feriadosNacionais } from "@/lib/datas/feriadosNacionais";
 
 export type HolidayState = { error: string } | null;
 
@@ -19,6 +20,10 @@ export async function criarFeriado(_prev: HolidayState, form: FormData): Promise
   if (!dateRaw) return { error: "Informe a data do feriado." };
   if (!name) return { error: "Nome do feriado é obrigatório" };
 
+  // O nacional entra sozinho (21/10/2026): cadastrar de novo só duplicaria.
+  const nacional = feriadosNacionais(Number(dateRaw.slice(0, 4))).find((f) => f.data === dateRaw);
+  if (nacional) return { error: `Esse dia já é feriado nacional (${nacional.nome}) e entra sozinho.` };
+
   const prisma = getPrisma();
   try {
     await prisma.holiday.create({ data: { tenantId: ctx.tenantId, date: new Date(dateRaw), name } });
@@ -31,62 +36,7 @@ export async function criarFeriado(_prev: HolidayState, form: FormData): Promise
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "holiday.create", entityType: "Holiday", metadata: { name, date: dateRaw } });
 
   revalidatePath("/admin/feriados");
-  redirect("/admin/feriados");
-}
-
-export type ImportFeriadosResult = { error: string } | { success: true; imported: number; skipped: number };
-
-type BrasilApiFeriado = { date: string; name: string; type: string };
-
-// BrasilAPI (brasilapi.com.br) — feriados nacionais, gratuita, sem chave.
-// Cobre só feriados nacionais; estaduais/municipais seguem manuais (a API
-// pública não tem esse recorte por município/UF).
-export async function importarFeriadosNacionais(year: number): Promise<ImportFeriadosResult> {
-  const ctx = await getAuthContext();
-  if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!isFullWrite(ctx.role)) return { error: "Sem permissão para cadastrar feriados." };
-
-  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
-    return { error: "Ano inválido." };
-  }
-
-  let feriados: BrasilApiFeriado[];
-  try {
-    const res = await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return { error: "Não foi possível consultar a lista de feriados nacionais." };
-    feriados = await res.json();
-  } catch (err) {
-    console.error("[importarFeriadosNacionais]", err);
-    return { error: "Não foi possível consultar a lista de feriados nacionais." };
-  }
-
-  const prisma = getPrisma();
-  const existing = await prisma.holiday.findMany({
-    where: { tenantId: ctx.tenantId, date: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) } },
-    select: { date: true },
-  });
-  const existingKeys = new Set(existing.map((e) => e.date.toISOString().slice(0, 10)));
-
-  const toCreate = feriados.filter((f) => !existingKeys.has(f.date));
-
-  if (toCreate.length > 0) {
-    await prisma.holiday.createMany({
-      data: toCreate.map((f) => ({ tenantId: ctx.tenantId, date: new Date(f.date), name: f.name })),
-    });
-  }
-
-  await logAudit({
-    tenantId: ctx.tenantId,
-    userId: ctx.userId,
-    action: "holiday.import",
-    entityType: "Holiday",
-    metadata: { year, imported: toCreate.length, skipped: feriados.length - toCreate.length },
-  });
-
-  revalidatePath("/admin/feriados");
-  return { success: true, imported: toCreate.length, skipped: feriados.length - toCreate.length };
+  redirect(`/admin/feriados?ano=${dateRaw.slice(0, 4)}`);
 }
 
 export async function excluirFeriado(id: string): Promise<void> {

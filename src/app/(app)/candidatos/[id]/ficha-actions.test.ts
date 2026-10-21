@@ -37,10 +37,18 @@ const prisma = new Proxy(
 
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/modules", () => ({
+vi.mock("@/lib/modules", () => {
+  const mod = {
   setorDoModulo: vi.fn(async () => "recrutamento"),
   isModuleEnabled: vi.fn(async () => true),
-}));
+};
+  // Os setores da tela (21/10/2026): aqui, só o dono, como antes.
+  const setoresDoModulo = async (t: string, c: string) => {
+    const s = await (mod.setorDoModulo as (t: string, c: string) => Promise<string | null>)(t, c);
+    return s == null ? null : [s];
+  };
+  return { ...mod, setoresDoModulo };
+});
 
 const ctx = {
   userId: "eu",

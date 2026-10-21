@@ -6,7 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 // auth/context traz next/headers (foi o que quebrou o build da fase 2 do Drive).
 import type { AuthContext } from "@/lib/auth/context";
 import { canManageSector, canViewSector } from "@/lib/auth/papeis";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { hojeIso } from "@/lib/datas/calendario";
@@ -37,9 +37,10 @@ export type AcessoAsAutorizacoes = { ctx: AuthContext; tenantId: string; podeEdi
 export async function acessoAsAutorizacoes(c: AuthContext): Promise<AcessoAsAutorizacoes | null> {
   if (!c.tenantId) return null;
   if (!(await isModuleEnabled(c.tenantId, MODULO_AUTORIZACOES))) return null;
-  const setor = await setorDasAutorizacoes(c.tenantId);
-  if (!canViewSector(c, setor)) return null;
-  const podeAdministrar = canManageSector(c, setor);
+  // Os setores da tela (21/10/2026), não só o dono: ver `setoresDoModulo`.
+  const setores = (await setoresDoModulo(c.tenantId, MODULO_AUTORIZACOES)) ?? [await setorDasAutorizacoes(c.tenantId)];
+  if (!canViewSector(c, setores)) return null;
+  const podeAdministrar = canManageSector(c, setores);
   return { ctx: c, tenantId: c.tenantId, podeEditar: podeAdministrar, podeConfigurar: podeAdministrar };
 }
 

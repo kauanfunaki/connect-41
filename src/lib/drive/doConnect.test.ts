@@ -26,11 +26,19 @@ vi.mock("@/lib/prisma", () => ({
     companyMessageAttachment: { findMany: async () => [] },
   }),
 }));
-vi.mock("@/lib/modules", () => ({
+vi.mock("@/lib/modules", () => {
+  const mod = {
   isModuleEnabled: async (_t: string, codigo: string) => estado.modulos.has(codigo),
   setorDoModulo: async (_t: string, codigo: string) =>
     ({ bpo_pendencias: "bpo", societario_processos: "societario", bpo_comunicacao: "bpo" })[codigo] ?? null,
-}));
+};
+  // Os setores da tela (21/10/2026): aqui, só o dono, como antes.
+  const setoresDoModulo = async (t: string, c: string) => {
+    const s = await (mod.setorDoModulo as (t: string, c: string) => Promise<string | null>)(t, c);
+    return s == null ? null : [s];
+  };
+  return { ...mod, setoresDoModulo };
+});
 vi.mock("@/lib/auth/sensitiveFields", () => ({ canViewSensitiveField: async () => estado.sensivelLiberado }));
 vi.mock("@/lib/documents", async (original) => ({
   ...(await original<typeof import("@/lib/documents")>()),
