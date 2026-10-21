@@ -5,9 +5,12 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
-import { grupoAceitaOrigem } from "@/lib/dre/estrutura";
+import { ehCodigoDeModelo, grupoAceitaOrigem, modeloDoCodigo } from "@/lib/dre/estrutura";
 import { SEM_CATEGORIA } from "@/lib/dre/calculo";
-import { podeAbrirADre } from "@/lib/dre/acesso";
+import { podeAbrirADre, podeTrocarOModeloDoDre } from "@/lib/dre/acesso";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
+import type { FonteDaTroca, PlanoDaTroca } from "@/lib/dre/restauracaoPorArea";
+import { aplicarTrocaDeModelo, planoDaTrocaDaEmpresa } from "@/lib/dre/trocaDeModelo";
 import { ondeDaEmpresa, padraoAntesDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import {
   MAX_NOME_DA_CATEGORIA,
@@ -77,9 +80,10 @@ export async function classificarCategoria(
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
 
-  // Valida contra a estrutura, não contra o banco: grupo inventado sairia do
-  // relatório sem somar em linha nenhuma, que é o mesmo que sumir.
-  const valido = grupoDeTexto(grupo);
+  // Valida contra a estrutura do modelo da empresa, não contra o banco: grupo
+  // inventado sairia do relatório sem somar em linha nenhuma, que é o mesmo
+  // que sumir.
+  const valido = grupoDeTexto(grupo, await modeloDaEmpresa(c.tenantId, companyId));
   if (!valido) return { error: "Grupo do DRE desconhecido." };
 
   const categoria = await c.prisma.financeCategory.findFirst({
@@ -119,7 +123,7 @@ export async function classificarCategoriaDoArquivo(
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
 
-  const valido = grupoDeTexto(grupo);
+  const valido = grupoDeTexto(grupo, await modeloDaEmpresa(c.tenantId, companyId));
   if (!valido) return { error: "Grupo do DRE desconhecido." };
   if (origem !== "pagamento" && origem !== "recebimento") return { error: "Lado do lançamento desconhecido." };
   // A fila só oferece os grupos do lado certo; a conferência aqui é para quem
@@ -189,5 +193,82 @@ export async function voltarAoPadrao(companyId: string, categoryId: string): Pro
   });
 
   revalidatePath("/dre");
+  return { success: true };
+}
+
+// ─── O modelo do DRE da empresa (21/10/2026) ────────────────────────────────
+
+/** O que a troca vai fazer, antes de fazer — para a tela mostrar e pedir a confirmação. */
+export type PreviaDaTroca = {
+  de: string;
+  para: string;
+  /** Categorias cujo grupo é gravado. */
+  gravacoes: number;
+  porFonte: Record<FonteDaTroca, number>;
+  /** As que ficam para classificar no modelo novo, pelo nome (as primeiras). */
+  semGrupo: string[];
+  totalSemGrupo: number;
+};
+
+async function planoDaTroca(
+  companyId: string,
+  codigo: string
+): Promise<{ ok: true; c: Contexto; plano: PlanoDaTroca } | { ok: false; erro: string }> {
+  const c = await contexto(companyId);
+  if (!c.ok) return c;
+  if (!(await podeTrocarOModeloDoDre(c.ctx))) return { ok: false, erro: "Só a coordenação do setor troca o modelo do DRE." };
+  if (!ehCodigoDeModelo(codigo)) return { ok: false, erro: "Modelo do DRE desconhecido." };
+
+  const plano = await planoDaTrocaDaEmpresa(c.prisma, c.tenantId, companyId, modeloDoCodigo(codigo));
+  return { ok: true, c, plano };
+}
+
+/** A prévia da troca de modelo — nada é gravado. */
+export async function preverTrocaDeModelo(companyId: string, codigo: string): Promise<{ error: string } | { previa: PreviaDaTroca }> {
+  const r = await planoDaTroca(companyId, codigo);
+  if (!r.ok) return { error: r.erro };
+  const { plano } = r;
+  return {
+    previa: {
+      de: modeloDoCodigo(plano.de).nome,
+      para: modeloDoCodigo(plano.para).nome,
+      gravacoes: plano.gravacoes.length,
+      porFonte: plano.porFonte,
+      semGrupo: plano.semGrupo.slice(0, 12).map((x) => x.nome),
+      totalSemGrupo: plano.semGrupo.length,
+    },
+  };
+}
+
+/**
+ * Troca o modelo do DRE da empresa e refaz a classificação dela no modelo novo
+ * (`restauracaoPorArea.ts`). Tudo numa transação; a auditoria guarda o grupo
+ * de cada categoria, que serve de histórico na próxima troca.
+ */
+export async function trocarModeloDoDre(companyId: string, codigo: string): Promise<AcaoDoDre> {
+  const r = await planoDaTroca(companyId, codigo);
+  if (!r.ok) return { error: r.erro };
+  const { c, plano } = r;
+  if (plano.de === plano.para) return { success: true };
+
+  await aplicarTrocaDeModelo(c.prisma, c.tenantId, companyId, plano);
+
+  await logAudit({
+    tenantId: c.tenantId,
+    userId: c.ctx.userId,
+    action: "dre.modelo",
+    entityType: "Company",
+    entityId: companyId,
+    metadata: {
+      de: plano.de,
+      para: plano.para,
+      gravacoes: plano.gravacoes.length,
+      semGrupo: plano.semGrupo.length,
+      porFonte: plano.porFonte,
+      classificacao: plano.classificacao,
+    },
+  });
+
+  for (const p of ["/dre", "/dre/economica", "/dre/analises", "/dre/orcamento", "/cadastros-financeiros"]) revalidatePath(p);
   return { success: true };
 }

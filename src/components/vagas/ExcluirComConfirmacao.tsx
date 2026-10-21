@@ -1,7 +1,8 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 type Props = {
@@ -9,29 +10,37 @@ type Props = {
   /** Pergunta do diálogo — "Excluir o seu parecer?". */
   titulo: string;
   descricao?: string;
+  /** `xs` ao lado de botão `xs` (o "⋯" de 28px); `sm` ao lado de botão `sm` (32px). */
   size?: "xs" | "sm";
 };
 
 /**
- * "Excluir" com confirmação, para o parecer da candidatura e o link de teste.
+ * "Excluir" com confirmação, para o parecer da candidatura.
  *
- * Os dois usavam o `DeleteFieldButton` do cadastro de campos personalizados
- * (até 30/09): texto azul sublinhado, e o diálogo perguntava "Excluir o campo
- * 'seu parecer'?" e avisava que "todos os valores preenchidos nele serão
- * perdidos" — frase de campo, não de parecer. Aqui é botão (a regra "botão não
- * é link" da conferência) e cada tela diz o que está excluindo.
+ * Usava o `DeleteFieldButton` do cadastro de campos personalizados (até 30/09):
+ * texto azul sublinhado, e o diálogo perguntava "Excluir o campo 'seu
+ * parecer'?". Virou botão vermelho à vista e, desde 15/10/2026, vai no "⋯" —
+ * a ação que apaga fica no menu mesmo sendo a única (D3). Cada tela diz o que
+ * está excluindo.
  */
 export function ExcluirComConfirmacao({ action, titulo, descricao = "Esta ação não pode ser desfeita.", size = "xs" }: Props) {
   const { dialog, requestConfirm } = useConfirm();
   return (
     <>
-      <Button
-        variant="danger"
-        size={size}
-        onClick={() => requestConfirm({ title: titulo, description: descricao, destructive: true, confirmLabel: "Excluir" }, action)}
-      >
-        <Trash2 size={size === "xs" ? 11 : 13} /> Excluir
-      </Button>
+      <MenuDeMaisAcoes size={size === "xs" ? "sm" : "md"} align="right" width={180}>
+        {({ close }) => (
+          <ItemDoMenu
+            icone={<Trash2 />}
+            danger
+            onClick={() => {
+              close();
+              requestConfirm({ title: titulo, description: descricao, destructive: true, confirmLabel: "Excluir" }, action);
+            }}
+          >
+            Excluir
+          </ItemDoMenu>
+        )}
+      </MenuDeMaisAcoes>
       {dialog}
     </>
   );

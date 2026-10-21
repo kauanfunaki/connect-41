@@ -8,7 +8,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const findMany = vi.fn();
 const count = vi.fn();
 const aggregate = vi.fn();
-vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ financeEntry: { findMany, count, aggregate } }) }));
+// A baixa mais antiga, para o "pago desde" (lote C, 19/10).
+const aggregateDasBaixas = vi.fn();
+vi.mock("@/lib/prisma", () => ({
+  getPrisma: () => ({ financeEntry: { findMany, count, aggregate }, financeEntryPayment: { aggregate: aggregateDasBaixas } }),
+}));
 
 const { listarContas, whereDoRecorte, LIMITE_DE_CONTAS } = await import("./data");
 
@@ -35,18 +39,26 @@ function entrada(over: { dueDate: string; status?: string; paidAt?: Date | null;
     company: { id: "c1", name: "Empresa", displayName: null },
     counterparty: { name: "Fornecedor" },
     category: { name: "Aluguel" },
+    _count: { allocations: 0 },
+    retentions: [],
     costCenterId: null,
     costCenter: null,
+    project: null,
+    documentNumber: null,
+    issueDate: null,
+    paidPrincipal: decimal("0"),
   };
 }
 
-/** Os quatro `aggregate` de `totaisDoEscopo`: pagas, vencidas, de hoje, a vencer. */
+/** Os quatro `aggregate` de `totaisDoEscopo`: pagas (o quitado), vencidas, de hoje, a vencer (valor e quitado). */
 function somasDoBanco(pago: string, vencido: string, hoje: string, aVencer: string) {
+  const zero = decimal("0");
   aggregate
-    .mockResolvedValueOnce({ _sum: { amount: decimal(pago) }, _min: { paidAt: null } })
-    .mockResolvedValueOnce({ _sum: { amount: decimal(vencido) } })
-    .mockResolvedValueOnce({ _sum: { amount: decimal(hoje) } })
-    .mockResolvedValueOnce({ _sum: { amount: decimal(aVencer) } });
+    .mockResolvedValueOnce({ _sum: { paidPrincipal: decimal(pago) } })
+    .mockResolvedValueOnce({ _sum: { amount: decimal(vencido), paidPrincipal: zero } })
+    .mockResolvedValueOnce({ _sum: { amount: decimal(hoje), paidPrincipal: zero } })
+    .mockResolvedValueOnce({ _sum: { amount: decimal(aVencer), paidPrincipal: zero } });
+  aggregateDasBaixas.mockResolvedValue({ _min: { paidAt: null } });
 }
 
 beforeEach(() => {

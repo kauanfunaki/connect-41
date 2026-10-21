@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { NavegadorDeArquivos } from "@/components/arquivos/NavegadorDeArquivos";
 import { buscarNoDrive, destinosDaEmpresa, empresaDoDrive, navegadorDaEquipe, pastaDeEnviados } from "@/lib/drive/servidor";
 import { anexosDoConnect } from "@/lib/drive/doConnect";
+import { enderecoDaPasta, trilhaDaPasta } from "@/lib/drive/tela";
 import { PastaDoConnect } from "@/components/arquivos/PastaDoConnect";
 import { abrirArquivos } from "../../acesso";
 
@@ -33,6 +35,13 @@ export default async function ArquivosDaEmpresaPage({
     const [grupos, destinos] = await Promise.all([anexosDoConnect(ctx, id), destinosDaEmpresa(ctx, id)]);
     return (
       <PageContainer>
+        <Breadcrumb
+          items={[
+            { label: "Arquivos", href: "/arquivos" },
+            { label: empresa.nome, href: enderecoDaPasta(`/arquivos/empresa/${id}`, null), truncate: true },
+            { label: "Do Connect" },
+          ]}
+        />
         <PageHeader
           title={empresa.nome}
           subtitle="Arquivos da empresa. O que estiver numa pasta compartilhada aparece no portal do cliente."
@@ -42,7 +51,7 @@ export default async function ArquivosDaEmpresaPage({
             </Button>
           }
         />
-        <PastaDoConnect grupos={grupos} destinos={destinos ?? []} base={`/arquivos/empresa/${id}`} />
+        <PastaDoConnect grupos={grupos} destinos={destinos ?? []} />
       </PageContainer>
     );
   }
@@ -54,8 +63,12 @@ export default async function ArquivosDaEmpresaPage({
   ]);
   if (!dados?.empresa) notFound();
 
+  const base = `/arquivos/empresa/${id}`;
   return (
     <PageContainer>
+      {/* A trilha acima do título, começando em Arquivos (P04, 15/10/2026): ficava
+          embaixo dele, ao lado da busca, e começava na pasta raiz. */}
+      <Breadcrumb items={[{ label: "Arquivos", href: "/arquivos" }, ...trilhaDaPasta(dados, base, dados.empresa.nome)]} />
       <PageHeader
         title={dados.empresa.nome}
         subtitle="Arquivos da empresa. O que estiver numa pasta compartilhada aparece no portal do cliente."
@@ -67,8 +80,9 @@ export default async function ArquivosDaEmpresaPage({
       />
       <NavegadorDeArquivos
         dados={dados}
-        base={`/arquivos/empresa/${id}`}
+        base={base}
         rotuloDaRaiz="Pastas da empresa"
+        trilhaNoCabecalho
         busca={busca ? { termo: busca, resultados: resultados ?? [] } : null}
       />
     </PageContainer>

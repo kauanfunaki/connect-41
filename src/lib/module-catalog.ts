@@ -163,9 +163,21 @@ export type ModuleDef = {
   icon: IconeDeModulo;
   /** Grupo dentro do setor; a ordem de exibição é a de `ORDEM_DOS_GRUPOS`. */
   group: GrupoDeModulo;
+  /** Exibe a tela diretamente na lateral, mesmo em setores agrupados. */
+  menuDireto?: boolean;
 };
 
 export const MODULE_CATALOG: ModuleDef[] = [
+  {
+    code: "tech_ops_center", label: "Ops Center", sectorCode: "tech",
+    description: "Automações, sinal de atividade, resultados de processamento e instabilidades",
+    defaultEnabled: false, icon: "Workflow", group: "Operação", menuDireto: true,
+  },
+  {
+    code: "helpdesk", label: "Chamados", sectorCode: "tech",
+    description: "Helpdesk interno: solicitações dos setores, atendimento, SLA e triagem conversacional por IA",
+    defaultEnabled: false, icon: "MessageSquareWarning", group: "Atendimento",
+  },
   {
     // Era item do menu geral até 30/09; o Kauan decidiu que é do setor novo
     // Controladoria, que cuida do atendimento do escritório. A avaliação dos
@@ -397,7 +409,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "fiscal_documentos",
-    label: "Documentos fiscais — integrado",
+    label: "Documentos fiscais",
     sectorCode: "fiscal",
     description: "Acervo de NF-e, NFC-e, CT-e e NFS-e por empresa e competência, com entrada de XML e destino no financeiro",
     // Desligado por padrão, ao contrário dos outros: é o primeiro módulo do
@@ -411,11 +423,11 @@ export const MODULE_CATALOG: ModuleDef[] = [
   ...([
     ["fiscal_painel", "Painel fiscal", "Indicadores, progresso e pendências do cenário de teste", "ChartColumn", "Operação"],
     ["fiscal_classificacao", "Classificação", "Destinação e crédito de produtos, contratos e recibos em teste", "ClipboardList", "Operação"],
-    ["fiscal_operacao", "Execuções", "Extração, geração, fila, logs e erros simulados", "Workflow", "Operação"],
+    ["fiscal_operacao", "Executar", "Extração, geração, fila, logs e erros simulados", "Workflow", "Operação"],
     ["fiscal_acervo", "Documentos e importações", "Acervo, serviços, contratos, importação e cobertura com dados fictícios", "ReceiptText", "Documentos"],
     ["fiscal_icms_ipi", "ICMS e IPI", "Apuração, demonstrativo, ajustes e DCIP/DIME em teste", "FileSpreadsheet", "Apuração"],
     ["fiscal_contribuicoes", "PIS e COFINS", "Parâmetros, ajustes, fechamento e SPED Contribuições em teste", "Receipt", "Apuração"],
-    ["fiscal_entregas", "Arquivos e entregas", "Versões de SPED, validação e entregas simuladas", "CheckCheck", "Conferência"],
+    ["fiscal_entregas", "SPED gerados", "Versões de SPED, validação e entregas simuladas", "CheckCheck", "Conferência"],
     ["fiscal_conferencia", "Conferência fiscal", "Prévia financeira e confronto de documentos em teste", "Landmark", "Conferência"],
     ["fiscal_configuracoes", "Configurações fiscais", "Parâmetros e consulta de regras fiscais por CFOP e fonte", "Building2", "Cadastros"],
   ] satisfies [string, string, string, IconeDeModulo, GrupoDeModulo][]).map(([code, label, description, icon, group]) => ({
@@ -431,7 +443,8 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Quais clientes já autorizaram o escritório na Receita Federal (a antiga procuração do e-CAC), quem falta pedir e o que vence",
     defaultEnabled: true,
     icon: "ShieldCheck",
-    group: "Documentos",
+    group: "Apoio",
+    menuDireto: true,
   },
   {
     code: "societario_licencas",
@@ -523,6 +536,17 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
     icon: "TrendingUp",
     group: "Banco e caixa",
+  },
+  // A tabela dinâmica do financeiro (20/10/2026 — "como o Omie, para visualizar
+  // e exportar"): contas e baixas em linhas e colunas, com visões prontas.
+  {
+    code: "bpo_tabela_dinamica",
+    label: "Tabela dinâmica",
+    sectorCode: "bpo",
+    description: "Contas e baixas em linhas e colunas, com visões prontas e exportação para o Excel",
+    defaultEnabled: true,
+    icon: "FileSpreadsheet",
+    group: "Relatórios",
   },
   {
     code: "bpo_conciliacao",
@@ -670,6 +694,8 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
+  tech_ops_center:         "/ops",
+  helpdesk: "/chamados",
   controladoria_conversas: "/conversas",
   portal_solicitacoes:     "/solicitacoes",
   arquivos:                "/arquivos",
@@ -715,6 +741,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_contas_receber:      "/receber",
   bpo_lancamentos:         "/lancamentos",
   bpo_fluxo_caixa:         "/fluxo-de-caixa",
+  bpo_tabela_dinamica:     "/tabela-dinamica",
   bpo_conciliacao:         "/conciliacao",
   bpo_cadastros:           "/cadastros-financeiros",
   bpo_pendencias:          "/pendencias",
@@ -731,7 +758,10 @@ export const MODULE_ROUTES: Record<string, string> = {
  * Módulos cuja tela fica no menu **Geral**, para todos, e não na lista de
  * telas do setor dono: o setor só serve para ligar e desligar o módulo.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos"]);
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk"]);
+
+/** Funcionalidades acessadas por fluxos internos, sem entrada na navegação. */
+export const MODULOS_SEM_MENU: ReadonlySet<string> = new Set(["fiscal_documentos"]);
 
 export function getModuleRoute(code: string): string | undefined {
   return MODULE_ROUTES[code];

@@ -7,16 +7,41 @@ import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import type { EscopoFinanceiro } from "@/lib/financeiro/consultas";
+import { temExtrato, TIPOS_FORA_DO_CAIXA } from "@/lib/financeiro/tiposDeConta";
 import { situacaoDoSaldo, saldoDeReferencia, type SituacaoDoSaldo } from "./saldo";
 import { saldoAtualDaConta, consolidarSaldos, type SaldoConsolidado } from "./saldoConsolidado";
 
 type ContaParaSaldo = {
   id: string;
+  /** Sem extrato (lote D, 20/10 — caixinha, empréstimo…), o saldo sai das baixas feitas pela conta. */
+  type?: string;
   openingBalance: { toString(): string } | null;
   openingBalanceDate: Date | null;
 };
 
 type SaldoCarregado = { situacao: SituacaoDoSaldo; ultimaMovimentacaoKey: string | null };
+
+/**
+ * O movimento por dia de cada conta sem extrato, pelas baixas feitas por ela:
+ * a conta a receber entra, a conta a pagar sai, pelo que andou (`cash`) — a
+ * transferência é um par de contas, e cada ponta tem o sentido dela.
+ */
+async function movimentoPelasBaixas(tenantId: string, ids: string[]): Promise<Map<string, { dataKey: string; centavos: number }[]>> {
+  const mapa = new Map<string, Map<string, number>>();
+  if (ids.length === 0) return new Map();
+  const baixas = await getPrisma().financeEntryPayment.findMany({
+    where: { tenantId, bankAccountId: { in: ids } },
+    select: { bankAccountId: true, paidAt: true, cash: true, entry: { select: { kind: true } } },
+  });
+  for (const b of baixas) {
+    const dia = saoPauloParts(b.paidAt).dateKey;
+    const conta = mapa.get(b.bankAccountId!) ?? new Map<string, number>();
+    const sinal = b.entry.kind === "RECEBER" ? 1 : -1;
+    conta.set(dia, (conta.get(dia) ?? 0) + sinal * centavosDeDecimal(b.cash));
+    mapa.set(b.bankAccountId!, conta);
+  }
+  return new Map([...mapa].map(([id, dias]) => [id, [...dias].map(([dataKey, centavos]) => ({ dataKey, centavos }))]));
+}
 
 /**
  * Soma por dia no banco (`groupBy` em `postedAt`, que é sempre o meio-dia do
@@ -27,7 +52,8 @@ async function carregarSaldos(tenantId: string, contas: ContaParaSaldo[]): Promi
   const prisma = getPrisma();
   const ids = contas.map((c) => c.id);
   if (ids.length === 0) return new Map();
-  const [porDia, importacoes] = await Promise.all([
+  const semExtrato = contas.filter((c) => c.type !== undefined && !temExtrato(c.type));
+  const [porDia, importacoes, pelasBaixas] = await Promise.all([
     prisma.bankTransaction.groupBy({
       by: ["bankAccountId", "postedAt"],
       where: { tenantId, bankAccountId: { in: ids } },
@@ -37,10 +63,26 @@ async function carregarSaldos(tenantId: string, contas: ContaParaSaldo[]): Promi
       where: { tenantId, bankAccountId: { in: ids }, ledgerBalance: { not: null } },
       select: { bankAccountId: true, ledgerBalance: true, ledgerBalanceAt: true, createdAt: true },
     }),
+    movimentoPelasBaixas(tenantId, semExtrato.map((c) => c.id)),
   ]);
 
   const mapa = new Map<string, SaldoCarregado>();
+  for (const c of semExtrato) {
+    // Sem extrato, não há saldo do banco a conferir: o saldo é o inicial (zero
+    // se não tem) mais as baixas desde a data dele.
+    const transacoes = pelasBaixas.get(c.id) ?? [];
+    mapa.set(c.id, {
+      situacao: situacaoDoSaldo({
+        saldoInicialCentavos: c.openingBalance === null ? 0 : centavosDeDecimal(c.openingBalance),
+        saldoInicialKey: c.openingBalanceDate ? saoPauloParts(c.openingBalanceDate).dateKey : "0000-01-01",
+        transacoes,
+        banco: null,
+      }),
+      ultimaMovimentacaoKey: transacoes.reduce<string | null>((m, t) => (m === null || t.dataKey > m ? t.dataKey : m), null),
+    });
+  }
   for (const c of contas) {
+    if (mapa.has(c.id)) continue;
     const referencia = saldoDeReferencia(
       importacoes
         .filter((i) => i.bankAccountId === c.id)
@@ -84,11 +126,14 @@ export async function saldoBancarioDoEscopo(escopo: EscopoFinanceiro): Promise<S
     where: {
       tenantId: escopo.tenantId,
       active: true,
+      // O que não é dinheiro da empresa (lote D, 20/10) fica fora; a caixinha entra, pelo saldo das baixas.
+      type: { notIn: [...TIPOS_FORA_DO_CAIXA] },
       ...(escopo.companyIds === null ? {} : { companyId: { in: escopo.companyIds } }),
     },
     select: {
       id: true,
       nickname: true,
+      type: true,
       openingBalance: true,
       openingBalanceDate: true,
       company: { select: { name: true, displayName: true } },

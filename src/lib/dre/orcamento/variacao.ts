@@ -15,7 +15,7 @@
 // Numericamente as três coincidem com o sinal da diferença na convenção da
 // DRE — o que os testes provam —, mas a regra fica escrita pelo que significa.
 
-import { GRUPOS, LINHAS } from "@/lib/dre/estrutura";
+import { TODAS_AS_LINHAS, origemDoGrupo } from "@/lib/dre/estrutura";
 import type { ResultadoDoDre } from "@/lib/dre/calculo";
 import { valorDaLinha } from "@/lib/dre/economica";
 import { LINHAS_DO_COMPARATIVO } from "@/lib/dre/analises";
@@ -33,14 +33,15 @@ export type Variacao = {
   avaliacao: Avaliacao;
 };
 
-const ORIGEM = new Map(GRUPOS.map((g) => [g.code, g.origem]));
-
-/** A natureza de uma linha de valor; `null` para as de percentual. */
+/**
+ * A natureza de uma linha de valor; `null` para as de percentual. Lê as linhas
+ * de todos os modelos: o mesmo código é do mesmo tipo em todos.
+ */
 export function naturezaDaLinha(code: string): NaturezaDaLinha | null {
-  const linha = LINHAS.find((l) => l.code === code);
+  const linha = TODAS_AS_LINHAS.find((l) => l.code === code);
   if (!linha || linha.tipo === "percentual") return null;
   if (linha.tipo === "subtotal") return "resultado";
-  return ORIGEM.get(linha.grupo) === "pagamento" ? "despesa" : "receita";
+  return origemDoGrupo(linha.grupo) === "pagamento" ? "despesa" : "receita";
 }
 
 export function avaliar(natureza: NaturezaDaLinha, realizado: number, orcado: number): Avaliacao {

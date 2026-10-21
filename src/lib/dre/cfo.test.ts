@@ -4,8 +4,8 @@ import { resultadoDePorGrupo } from "./analises";
 
 const base: DadosDoCfo = {
   competencia: "2026-09",
-  atual: resultadoDePorGrupo({ receita_bruta: 100_000, cmv: -50_000, administrativas: -20_000 }),
-  anterior: resultadoDePorGrupo({ receita_bruta: 100_000, cmv: -30_000, administrativas: -20_000 }),
+  atual: resultadoDePorGrupo({ receita_bruta: 100_000, custo_operacional: -50_000, custo_administrativo: -20_000 }),
+  anterior: resultadoDePorGrupo({ receita_bruta: 100_000, custo_operacional: -30_000, custo_administrativo: -20_000 }),
   reconciliacao: [
     { code: "resultado_economico", label: "Resultado", centavos: 30_000, tipo: "total" },
     { code: "receitas_nao_recebidas", label: "Receitas não recebidas", centavos: -25_000, tipo: "ajuste" },
@@ -33,7 +33,7 @@ describe("responderAoCfo", () => {
   it("margem: aponta o grupo que mais piorou", () => {
     const r = responderAoCfo("margem_caiu", base);
     expect(r.diagnostico).toContain("caiu");
-    expect(r.causaProvavel).toContain("CMV");
+    expect(r.causaProvavel).toContain("Custo Operacional");
     expect(r.prioridade).toBe("Alta");
   });
 

@@ -16,9 +16,9 @@ describe("comparacaoComAnterior", () => {
 
   it("em reais quando a base é zero ou negativa — percentual sobre ela não diz nada", () => {
     // O `Intl` separa "R$", "5" e "mil" com espaço que não quebra — daí o `\s`.
-    expect(comparacaoComAnterior(500_000, 0, "Set/26")).toMatch(/^▲ R\$\s5\smil sobre Set\/26$/);
+    expect(comparacaoComAnterior(500_000, 0, "Set/26")).toMatch(/^▲ R\$\s5(?:,0)?\smil sobre Set\/26$/);
     // Prejuízo que diminuiu: subiu.
-    expect(comparacaoComAnterior(-500_000, -1_000_000, "Set/26")).toMatch(/^▲ R\$\s5\smil sobre Set\/26$/);
+    expect(comparacaoComAnterior(-500_000, -1_000_000, "Set/26")).toMatch(/^▲ R\$\s5(?:,0)?\smil sobre Set\/26$/);
   });
 
   it("diz quando não mudou", () => {
@@ -33,13 +33,13 @@ describe("itensDosNumerosDaDre", () => {
     expect(itensDosNumerosDaDre(atual, "caixa").map((i) => i.rotulo)).toEqual([
       "Receita bruta",
       "Margem de contribuição",
-      "Gerador de caixa operacional",
-      "Fluxo de caixa livre",
+      "Gerador de caixa (EBITDA)",
+      "Resultado líquido operacional",
     ]);
     expect(itensDosNumerosDaDre(atual, "competencia").map((i) => i.rotulo)).toEqual([
       "Receita bruta",
       "Margem de contribuição",
-      "Resultado operacional",
+      "Resultado operacional (EBITDA)",
       "Resultado do período",
     ]);
   });

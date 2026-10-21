@@ -10,6 +10,7 @@ import { registrarAvaliacao } from "./actions";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 
 export default async function AvaliarColaboradorPage({
   params,
@@ -50,7 +51,12 @@ export default async function AvaliarColaboradorPage({
           <EmptyState
             icon={<Star />}
             title="Nenhuma competência cadastrada ainda"
-            description="Cadastre em Admin → Competências antes de avaliar."
+            description="Cadastre as competências na aba Competências, em Avaliações de desempenho, antes de avaliar."
+            action={
+              <Button href="/avaliacoes?aba=competencias" variant="secondary" size="sm">
+                Ir para as competências
+              </Button>
+            }
           />
         </Card>
       ) : (

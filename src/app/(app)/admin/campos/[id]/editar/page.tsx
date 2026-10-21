@@ -1,48 +1,9 @@
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { notFound } from "next/navigation";
-import { getPrisma } from "@/lib/prisma";
-import { CampoForm } from "@/components/admin/CampoForm";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { atualizarCampo } from "../../actions";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { redirect } from "next/navigation";
 
-export default async function EditarCampoPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+// O construtor dos campos, com criar e editar no painel ao lado, desde
+// 20/10/2026 (escolhas 5A e 2B dos Ajustes de 15/10). Este endereço fica
+// para os links antigos.
+export default async function EditarCampoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
-
-  const prisma = getPrisma();
-  const field = await prisma.customField.findFirst({ where: { id, tenantId: ctx.tenantId } });
-  if (!field) notFound();
-  if (!canManageSector(ctx, field.sectorCode)) notFound();
-
-  return (
-    <PageContainer>
-      <PageHeader title="Editar campo" />
-
-      <div className="max-w-[720px]">
-        <Card className="p-6">
-          <CampoForm
-            action={atualizarCampo}
-            cancelHref="/admin/campos"
-            sectorOptions={[]}
-            defaultValues={{
-              id: field.id,
-              sectorCode: field.sectorCode,
-              entityType: field.entityType,
-              label: field.label,
-              fieldType: field.fieldType,
-              options: Array.isArray(field.options) ? (field.options as string[]) : [],
-              required: field.required,
-              order: field.order,
-            }}
-          />
-        </Card>
-      </div>
-    </PageContainer>
-  );
+  redirect(`/admin/campos?editar=${encodeURIComponent(id)}`);
 }

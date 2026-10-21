@@ -23,8 +23,9 @@ import { AcoesDaVersao } from "@/components/dre/orcamento/AcoesDaVersao";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { centavosDeDecimal } from "@/lib/dre/data";
 import { competenciaDe } from "@/lib/financeiro/periodo";
-import { GRUPOS } from "@/lib/dre/estrutura";
-import { gradeDeLinhas, textoDaCelula } from "@/lib/dre/orcamento/grade";
+import { gradeDeLinhas, linhasForaDoModelo, textoDaCelula } from "@/lib/dre/orcamento/grade";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
+import { Aviso } from "@/components/ui/Aviso";
 import { lerAno, versaoAprovada, versaoPadrao } from "@/lib/dre/orcamento/versoes";
 import { MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
@@ -114,8 +115,12 @@ export default async function OrcamentoPage({
   const linhas = selecionada
     ? await prisma.budgetLine.findMany({ where: { budgetId: selecionada.id }, select: { groupCode: true, month: true, amount: true } })
     : [];
-  const grade = gradeDeLinhas(linhas.map((l) => ({ groupCode: l.groupCode, month: l.month, centavos: centavosDeDecimal(l.amount) })));
-  const textos = Object.fromEntries(GRUPOS.map((g) => [g.code, (grade[g.code] ?? []).map(textoDaCelula)]));
+  // A grade é a do modelo do DRE da empresa (21/10/2026).
+  const modelo = await modeloDaEmpresa(ctx.tenantId, companyId);
+  const lidas = linhas.map((l) => ({ groupCode: l.groupCode, month: l.month, centavos: centavosDeDecimal(l.amount) }));
+  const grade = gradeDeLinhas(lidas, modelo);
+  const foraDoModelo = linhasForaDoModelo(lidas, modelo);
+  const textos = Object.fromEntries(modelo.grupos.map((g) => [g.code, (grade[g.code] ?? []).map(textoDaCelula)]));
 
   const href = (id: string) => `/dre/orcamento?empresa=${companyId}&ano=${ano}&versao=${id}`;
   // O comparativo abre no mês mais recente do ano que já passou (ou dezembro).
@@ -164,7 +169,12 @@ export default async function OrcamentoPage({
         <Card>
           <EmptyState
             title={`Nenhuma versão de orçamento em ${ano}`}
-            description="Crie uma versão vazia, copie outra versão com reajuste, ou parta do realizado de um ano anterior."
+            // O vazio aponta o botão do cabeçalho, e não o repete (P19, 15/10/2026).
+            description={
+              podeEditar
+                ? "Use “+ Nova versão”, no alto da tela, para criar uma vazia, copiar outra versão com reajuste ou partir do realizado de um ano anterior."
+                : "Ninguém criou uma versão para este ano ainda."
+            }
             icon={<Target />}
           />
         </Card>
@@ -211,9 +221,21 @@ export default async function OrcamentoPage({
             </div>
           </Card>
 
+          {foraDoModelo > 0 && (
+            // Orçamento feito noutro modelo do DRE: a grade mostra só o que cabe
+            // nos grupos do modelo de agora, e diz quanto ficou de fora.
+            <Aviso tom="atencao" className="mb-3">
+              <span className="text-fg">
+                {foraDoModelo} {foraDoModelo === 1 ? "valor desta versão está" : "valores desta versão estão"} em grupos de
+                outro modelo do DRE e não aparecem na grade — esta empresa usa o modelo “{modelo.nome}”. Crie uma versão
+                nova (do realizado ou vazia) para orçar nos grupos dele.
+              </span>
+            </Aviso>
+          )}
           <GradeDoOrcamento
             key={selecionada.id}
             budgetId={selecionada.id}
+            modelo={modelo.codigo}
             lidoEm={selecionada.updatedAt.toISOString()}
             grade={textos}
             somenteLeitura={selecionada.status === "APROVADO" || !podeEditar}

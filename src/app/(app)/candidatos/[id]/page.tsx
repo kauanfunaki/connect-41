@@ -36,6 +36,7 @@ import { TagsDoCandidato } from "@/components/candidatos/TagsDoCandidato";
 import { alternarTagPessoa } from "../actions";
 import { extrairDadosCurriculo } from "./ai-actions";
 import { salvarSecaoDoCandidato } from "./ficha-actions";
+import { linkPendenteNaFicha } from "@/lib/testes/linkDoTeste";
 
 const vazioViraNulo = (v: string | null | undefined) => v?.trim() || null;
 
@@ -86,7 +87,7 @@ export default async function CandidatoPage({
     prisma.assessmentLink.findFirst({
       where: { tenantId: ctx.tenantId, personId: id },
       orderBy: { createdAt: "desc" },
-      include: { template: { select: { name: true } } },
+      include: { template: { select: { name: true } }, candidatura: { select: { vaga: { select: { title: true } } } } },
     }),
     canEdit
       ? prisma.assessmentTemplate.findMany({
@@ -107,7 +108,7 @@ export default async function CandidatoPage({
   ]);
   const initialTesteLink =
     testeLink?.status === "PENDENTE"
-      ? { status: "PENDENTE" as const, token: testeLink.token, expiresAtLabel: formatInstantDate(testeLink.expiresAt) }
+      ? linkPendenteNaFicha(testeLink, new Date())
       : testeLink?.status === "RESPONDIDO" && testeLink.type === "DISC"
         ? {
             status: "RESPONDIDO" as const,
@@ -228,6 +229,9 @@ export default async function CandidatoPage({
             canManage={canEdit}
             templates={templates}
             urlPublica={(process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "")}
+            nome={person.name}
+            telefone={person.phone}
+            vaga={testeLink?.candidatura?.vaga.title ?? null}
           />
 
           <BlocoDoCurriculo

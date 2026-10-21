@@ -9,6 +9,12 @@ type Props = {
   /** O texto do botão, que é também o título da janela ("Novo feriado"). */
   rotulo: string;
   maxWidth?: string;
+  /**
+   * Abre a janela junto com a tela — o endereço antigo da página de cadastro
+   * (`/kanban/novo`) leva à lista com `?novo=1` (15/10/2026). Ao fechar, o
+   * `novo` sai do endereço, para a janela não voltar ao recarregar.
+   */
+  abertaDeInicio?: boolean;
   /** O formulário. Recebe `fechar`, para fechar a janela quando o cadastro der certo. */
   children: (fechar: () => void) => React.ReactNode;
 };
@@ -22,9 +28,18 @@ type Props = {
  * cartão que abria no lugar do botão —, e cada tela tinha o "criar" num lugar.
  * Agora é o "+ Novo …" à direita do título, como nas outras listas do Connect.
  */
-export function JanelaDeCadastro({ rotulo, maxWidth = "max-w-lg", children }: Props) {
-  const [aberta, setAberta] = useState(false);
-  const fechar = () => setAberta(false);
+export function JanelaDeCadastro({ rotulo, maxWidth = "max-w-lg", abertaDeInicio = false, children }: Props) {
+  const [aberta, setAberta] = useState(abertaDeInicio);
+  const fechar = () => {
+    setAberta(false);
+    if (abertaDeInicio) {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("novo")) {
+        url.searchParams.delete("novo");
+        window.history.replaceState(null, "", url);
+      }
+    }
+  };
 
   return (
     <>

@@ -37,6 +37,7 @@ import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/priorida
 import { prazoCombinado } from "@/lib/societario/dados-do-processo";
 import { campoDaData } from "@/lib/societario/datas";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { DocumentosDoProcesso } from "@/components/societario/DocumentosDoProcesso";
@@ -347,13 +348,17 @@ export default async function ProcessoDetalhePage({
           acima das colunas. Concluído e sem motivo, a faixa fica vazia e some
           (`empty:hidden`), sem deixar a margem. */}
       <div className="mb-6 flex flex-col gap-3 empty:hidden">
+        {/* No `Aviso` neutro (15/10/2026): era uma caixa cinza montada à mão. A
+            cor fica com o selo da situação, no topo. */}
         {processo.statusReason && (
-          <p className="text-ui text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
-            <span className="font-medium">Motivo:</span> {processo.statusReason}
-            {processo.statusChangedAt && (
-              <span className="text-fg-muted"> · desde {formatInstantDate(processo.statusChangedAt)}</span>
-            )}
-          </p>
+          <Aviso tom="neutro">
+            <p className="text-fg break-words">
+              <span className="font-medium">Motivo:</span> {processo.statusReason}
+              {processo.statusChangedAt && (
+                <span className="text-fg-muted"> · desde {formatInstantDate(processo.statusChangedAt)}</span>
+              )}
+            </p>
+          </Aviso>
         )}
         <SituacaoDoProcesso processoId={processo.id} status={processo.status} mudar={mudarSituacaoDoProcesso} />
       </div>

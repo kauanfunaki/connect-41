@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Link2Off } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Entrar } from "@/components/carreiras/ContaDoCandidato";
 import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
+import { TelaDeAvisoPublica } from "@/components/publico/TelaDeAvisoPublica";
 import { MolduraDoPortal } from "@/components/carreiras/MolduraDe41Carreiras";
 import { MARCA_41_CARREIRAS, nomeDoEscritorio } from "@/lib/carreiras/enderecoDeCarreiras";
 import { portalDaRequisicao } from "@/lib/carreiras/portalDaRequisicao";
@@ -43,22 +45,29 @@ export default async function EntrarPage({
   // campo do e-mail da inscrição para pedir um (era "Link incompleto").
   if (portal.da41) return <AcessoAConta41 slug={slug} rotas={portal.rotas} token={t || undefined} />;
 
+  // Sem o código, o aviso único das telas públicas, com a ação embaixo
+  // (15/10/2026): era "Link incompleto." numa frase solta ao lado do botão.
+  // Revisão de 05/10: botão não é link — pedir outro link é ação.
+  if (!t) {
+    return (
+      <TelaDeAvisoPublica
+        icone={<Link2Off />}
+        titulo="Link incompleto"
+        texto="Este link de acesso às suas candidaturas veio sem o código. Peça um novo com o e-mail da inscrição."
+      >
+        <Button href={portal.rotas.conta} variant="secondary" className="mt-1">
+          Pedir novo link
+        </Button>
+      </TelaDeAvisoPublica>
+    );
+  }
+
   return (
     <MolduraDoPortal>
       <div className="max-w-md mx-auto">
         <CabecalhoPublico centralizado titulo="Minhas candidaturas" subtitulo={nomeDoEscritorio(portal, tenant.name)} />
         <Card className="p-5">
-          {t ? (
-            <Entrar slug={slug} token={t} />
-          ) : (
-            // Revisão de 05/10: botão não é link — pedir outro link é ação.
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <p className="text-ui text-fg">Link incompleto.</p>
-              <Button href={portal.rotas.conta} variant="secondary" size="sm">
-                Pedir novo link
-              </Button>
-            </div>
-          )}
+          <Entrar slug={slug} token={t} />
         </Card>
       </div>
     </MolduraDoPortal>

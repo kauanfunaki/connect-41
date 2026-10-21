@@ -106,6 +106,13 @@ export function BlocoDoCurriculo({ personId, arquivo, resumo, podeEditar, ler }:
                 <Sparkles size={13} /> Ler com IA
               </Button>
             )}
+            {/* No lugar do "Ler com IA", quando o arquivo não é PDF: botão, e
+                não link no meio da frase (15/10/2026). */}
+            {podeEditar && !arquivo.pdf && (
+              <Button type="button" variant="secondary" size="sm" onClick={() => setAnexando(true)}>
+                <Paperclip size={13} /> Anexar em PDF
+              </Button>
+            )}
           </div>
         </div>
       ) : (
@@ -122,12 +129,7 @@ export function BlocoDoCurriculo({ personId, arquivo, resumo, podeEditar, ler }:
       )}
 
       {arquivo && !arquivo.pdf && podeEditar && (
-        <p className="mt-2 text-helper text-fg-muted">
-          A IA só lê currículo em PDF.{" "}
-          <Button type="button" variant="link" onClick={() => setAnexando(true)}>
-            Anexar o currículo em PDF
-          </Button>
-        </p>
+        <p className="mt-2 text-helper text-fg-muted">A IA só lê currículo em PDF. Anexe o currículo em PDF para ela ler.</p>
       )}
 
       {erro && <Aviso className="mt-3">{erro}</Aviso>}

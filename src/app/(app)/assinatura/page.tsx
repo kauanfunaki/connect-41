@@ -8,7 +8,16 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { countActiveUsers } from "@/lib/subscriptions";
 import { SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscription-labels";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { formatCalendarDate, formatInstantDate, formatarReais } from "@/lib/format";
+
+/** O tom de cada situação, o mesmo do painel das assinaturas da 41 Tech. */
+const TOM_DA_ASSINATURA: Record<keyof typeof SUBSCRIPTION_STATUS_LABEL, TomDoSelo> = {
+  ACTIVE: "sucesso",
+  TRIAL: "marca",
+  PAST_DUE: "perigo",
+  CANCELED: "neutro",
+};
 
 // Só existe pra tenants SELF_SERVICE (frente 2 do modelo comercial) — em
 // MANAGED é a 41 Tech quem administra a assinatura, o cliente não precisa
@@ -50,13 +59,16 @@ export default async function AssinaturaPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
             <Card className="p-5 h-full">
               <p className="text-helper text-fg-muted mb-1">Plano</p>
-              <p className="text-fs-7 font-semibold text-fg">{subscription.plan.name}</p>
+              {/* A situação no `Selo`, ao lado do plano (15/10/2026): era texto
+                  corrido, "· Status: Ativa". */}
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-fs-7 font-semibold text-fg">{subscription.plan.name}</p>
+                <Selo tom={TOM_DA_ASSINATURA[subscription.status]}>{SUBSCRIPTION_STATUS_LABEL[subscription.status]}</Selo>
+              </div>
               <p className="text-fs-3 text-fg-muted mt-1">
                 {subscription.plan.billingType === "FLAT_MONTHLY"
                   ? `${fmt(subscription.plan.basePrice)}/mês`
                   : `${fmt(subscription.plan.pricePerUser)}/usuário/mês`}
-                {" · "}
-                Status: {SUBSCRIPTION_STATUS_LABEL[subscription.status]}
               </p>
               {subscription.currentPeriodEnd && (
                 <p className="text-fs-2 text-fg-muted mt-1">

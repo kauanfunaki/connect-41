@@ -32,12 +32,18 @@ import { saldosDasContas } from "@/lib/financeiro/conciliacao/saldoDasContas";
 import {
   rankearCandidatos,
   sugestaoDaTransacao,
+  nivelDoCasamento,
+  type CandidatoPontuado,
   tipoCompativel,
   type LancamentoCandidato,
   type Motivo,
 } from "@/lib/financeiro/conciliacao/casamento";
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
+import { saldoEmAberto } from "@/lib/financeiro/baixa/regras";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { TIPOS_COM_EXTRATO, TIPOS_COM_PORTA_PROPRIA, ajudaDoTipo, ehContaForaDoCaixa, rotuloDoTipo, temExtrato, type TipoDeConta } from "@/lib/financeiro/tiposDeConta";
+import { BANCO_SEM_EXTRATO } from "@/lib/financeiro/conciliacao/conta";
+import { nomeDaContaBancaria } from "@/lib/financeiro/contaPrevista";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
@@ -128,7 +134,8 @@ export default async function ConciliacaoPage({
 
   const prisma = getPrisma();
   const contas = await prisma.bankAccount.findMany({
-    where: { tenantId, companyId },
+    // O adiantamento e o cartão de crédito (lote D, 20/10) moram em Contas a pagar e a receber.
+    where: { tenantId, companyId, type: { notIn: [...TIPOS_COM_PORTA_PROPRIA] } },
     select: {
       id: true,
       nickname: true,
@@ -147,7 +154,10 @@ export default async function ConciliacaoPage({
 
   const saldos = await saldosDasContas(tenantId, contas);
 
-  const conta = contas.find((c) => c.id === params.conta) ?? contas.find((c) => c.active) ?? contas[0] ?? null;
+  // Abre na primeira conta com extrato: a caixinha e as fora do caixa (lote D,
+  // 20/10) não têm o que conciliar.
+  const comExtrato = contas.filter((c) => temExtrato(c.type));
+  const conta = contas.find((c) => c.id === params.conta) ?? comExtrato.find((c) => c.active) ?? comExtrato[0] ?? null;
 
   return comEmpresa(
     <PageContainer>
@@ -160,7 +170,7 @@ export default async function ConciliacaoPage({
       />
       {filtroDaEmpresa}
 
-      <h2 className="text-card-title font-semibold text-fg mb-3">Contas bancárias</h2>
+      <h2 className="text-section font-semibold text-fg mb-3">Contas bancárias</h2>
 
       {contas.length === 0 ? (
         <Card className="mb-6">
@@ -185,9 +195,7 @@ export default async function ConciliacaoPage({
                     >
                       {c.nickname}
                     </Link>
-                    <span className="block text-micro text-fg-muted">
-                      Banco {c.bankCode} · {c.agency ? `ag. ${c.agency} · ` : ""}c/{c.type === "POUPANCA" ? "p" : "c"} {c.accountNumber}
-                    </span>
+                    <span className="block text-micro text-fg-muted">{descricaoDaConta(c)}</span>
                     {c.omieAccountLabel && (
                       <span className="block text-micro text-fg-muted" title="O que o BPO conciliar nesta conta no Omie sai da fila daqui">
                         Ligada ao Omie: {c.omieAccountLabel}
@@ -197,7 +205,7 @@ export default async function ConciliacaoPage({
                   {/* Ativo/inativo de cadastro é a bolinha (escolha 2A, 08/10/2026). */}
                   {!c.active && <StatusDot color="var(--c41-fg-muted)" label="Inativa" className="flex-shrink-0" />}
                 </div>
-                <BlocoDoSaldo situacao={saldos.get(c.id)!} />
+                {temExtrato(c.type) ? <BlocoDoSaldo situacao={saldos.get(c.id)!} /> : <SaldoSemExtrato tipo={c.type} situacao={saldos.get(c.id)!} />}
                 {/* mt-auto: os botões ficam no pé do cartão, na mesma altura
                     em todos da linha, tenha o saldo uma linha ou quatro. */}
                 {podeAgir && (
@@ -210,6 +218,7 @@ export default async function ConciliacaoPage({
                         bankCode: c.bankCode,
                         agency: c.agency,
                         accountNumber: c.accountNumber,
+                        // A consulta deixa o adiantamento e o cartão de fora: aqui só há tipo do cadastro.
                         type: c.type,
                         saldoInicial: c.openingBalance === null ? "" : textoDeCentavos(centavosDeDecimal(c.openingBalance)),
                         saldoInicialKey: c.openingBalanceDate ? saoPauloParts(c.openingBalanceDate).dateKey : "",
@@ -226,16 +235,54 @@ export default async function ConciliacaoPage({
         </div>
       )}
 
-      {conta && (
+      {conta && temExtrato(conta.type) && (
         <ExtratoDaConta
           tenantId={tenantId}
           companyId={companyId}
           conta={conta}
+          // As outras contas ativas da empresa — o destino (ou a origem) de uma
+          // transferência: banco, caixinha, empréstimo, administradora (lote D, 20/10).
+          outrasContas={contas.filter((c) => c.active && c.id !== conta.id).map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) }))}
           podeAgir={podeAgir}
           params={params}
         />
       )}
+      {conta && !temExtrato(conta.type) && (
+        <Card className="p-4">
+          <p className="text-ui font-semibold text-fg">{conta.nickname}</p>
+          <p className="mt-1 text-helper text-fg-secondary">
+            {rotuloDoTipo(conta.type)} não tem extrato a conciliar: o saldo é o inicial mais as baixas feitas por ela. Ela entra numa conta a pagar ou a
+            receber em “Saiu da conta” / “Entrou na conta”, e o dinheiro anda entre ela e o banco pela transferência, na linha do extrato do banco.
+          </p>
+          {ajudaDoTipo(conta.type) && <p className="mt-1 text-helper text-fg-muted">{ajudaDoTipo(conta.type)}</p>}
+        </Card>
+      )}
     </PageContainer>
+  );
+}
+
+/** "Conta corrente · Banco 341 · ag. 1234 · 12345-6" — sem o banco e o número que a conta sem extrato não tem. */
+function descricaoDaConta(c: { type: TipoDeConta; bankCode: string; agency: string | null; accountNumber: string }): string {
+  const partes: string[] = [rotuloDoTipo(c.type)];
+  if (c.bankCode !== BANCO_SEM_EXTRATO) partes.push(`Banco ${c.bankCode}`);
+  if (c.agency) partes.push(`ag. ${c.agency}`);
+  if (c.accountNumber) partes.push(c.accountNumber);
+  return partes.join(" · ");
+}
+
+/** O saldo da conta sem extrato, pelas baixas. A fora do caixa diz que não entra no saldo bancário. */
+function SaldoSemExtrato({ tipo, situacao }: { tipo: TipoDeConta; situacao: SituacaoDoSaldo }) {
+  const centavos = situacao.tipo === "sem_saldo_do_banco" ? situacao.calculadoCentavos : 0;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-baseline justify-between gap-2 text-fs-2">
+        <span className="text-fg-muted">Saldo pelas baixas</span>
+        <span className={`tabular-nums font-medium ${tomDoValor(centavos)}`}>{moeda(centavos)}</span>
+      </div>
+      <p className="text-micro text-fg-muted">
+        {ehContaForaDoCaixa(tipo) ? "Sem extrato e fora do caixa: não entra no saldo bancário nem no fluxo de caixa." : "Sem extrato: o saldo inicial mais as baixas feitas por ela."}
+      </p>
+    </div>
   );
 }
 
@@ -307,12 +354,14 @@ async function ExtratoDaConta({
   tenantId,
   companyId,
   conta,
+  outrasContas,
   podeAgir,
   params,
 }: {
   tenantId: string;
   companyId: string;
   conta: { id: string; nickname: string; active: boolean };
+  outrasContas: { id: string; nome: string }[];
   podeAgir: boolean;
   params: Record<string, string | undefined>;
 }) {
@@ -372,6 +421,7 @@ async function ExtratoDaConta({
                 dueDate: true,
                 paidAt: true,
                 description: true,
+                transferId: true,
                 counterparty: { select: { name: true } },
               },
             },
@@ -392,10 +442,25 @@ async function ExtratoDaConta({
   const candidatos = pendentes.length && podeAgir ? await candidatosDaEmpresa(tenantId, companyId, pendentes) : [];
   const descricoes = new Map(candidatos.map((c) => [c.id, c.descricao]));
 
+  // O candidato como a linha o mostra — o da sugestão forte e o "mais
+  // provável" das torres (19/10) têm a mesma forma.
+  const resumoDoCandidato = (c: CandidatoPontuado) => ({
+    id: c.lancamento.id,
+    contraparteNome: c.lancamento.contraparteNome,
+    descricao: descricoes.get(c.lancamento.id) ?? null,
+    centavos: c.lancamento.centavos,
+    vencimentoKey: c.lancamento.vencimentoKey,
+    pagoEmKey: c.lancamento.pagoEmKey,
+    motivo: c.motivos.map((m) => MOTIVOS[m]).join(" · "),
+    bloqueio: c.lancamento.bloqueioDeBaixa ?? null,
+  });
+
   const linhas: LinhaDaTransacao[] = visiveis.map((t) => {
     const centavos = centavosDeDecimal(t.amount);
     const dataKey = saoPauloParts(t.postedAt).dateKey;
     let sugestao: LinhaDaTransacao["sugestao"] = null;
+    let provavel: LinhaDaTransacao["provavel"] = null;
+    let nivel: LinhaDaTransacao["nivel"] = null;
     let candidatosDeMesmoValor = 0;
     let travadosDeMesmoValor = 0;
     if (t.status === "PENDENTE") {
@@ -403,19 +468,10 @@ async function ExtratoDaConta({
       candidatosDeMesmoValor = ranking.length;
       travadosDeMesmoValor = ranking.filter((c) => c.lancamento.bloqueioDeBaixa).length;
       const forte = sugestaoDaTransacao(ranking);
-      if (forte) {
-        const l = forte.candidato.lancamento;
-        sugestao = {
-          id: l.id,
-          contraparteNome: l.contraparteNome,
-          descricao: descricoes.get(l.id) ?? null,
-          centavos: l.centavos,
-          vencimentoKey: l.vencimentoKey,
-          pagoEmKey: l.pagoEmKey,
-          motivo: forte.candidato.motivos.map((m) => MOTIVOS[m]).join(" · "),
-          bloqueio: forte.bloqueio,
-        };
-      }
+      if (forte) sugestao = { ...resumoDoCandidato(forte.candidato), bloqueio: forte.bloqueio };
+      const casamento = nivelDoCasamento(ranking);
+      nivel = casamento.nivel;
+      if (!forte && casamento.destaque) provavel = resumoDoCandidato(casamento.destaque);
     }
     return {
       id: t.id,
@@ -427,8 +483,11 @@ async function ExtratoDaConta({
       viaOmie: t.reconciledViaOmie,
       ignoredReason: t.ignoredReason,
       sugestao,
+      provavel,
+      nivel,
       candidatosDeMesmoValor,
       travadosDeMesmoValor,
+      transferencia: t.matches.some((m) => m.financeEntry.transferId !== null),
       vinculados: t.matches.map((m) => ({
         id: m.financeEntry.id,
         contraparteNome: m.financeEntry.counterparty.name,
@@ -440,7 +499,7 @@ async function ExtratoDaConta({
     };
   });
 
-  const [contrapartes, categorias, centros] =
+  const [contrapartes, categorias, centros, projetos] =
     podeAgir && pendentes.length > 0
       ? await Promise.all([
           prisma.financeCounterparty.findMany({
@@ -458,12 +517,17 @@ async function ExtratoDaConta({
             select: { id: true, name: true },
             orderBy: { name: "asc" },
           }),
+          prisma.financeProject.findMany({
+            where: { tenantId, companyId, active: true },
+            select: { id: true, name: true },
+            orderBy: { name: "asc" },
+          }),
         ])
-      : [[], [], []];
+      : [[], [], [], []];
 
   return (
     <>
-      <h2 className="text-card-title font-semibold text-fg mb-3">Extrato — {conta.nickname}</h2>
+      <h2 className="text-section font-semibold text-fg mb-3">Extrato — {conta.nickname}</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-5">
         {podeAgir && conta.active ? (
@@ -566,6 +630,9 @@ async function ExtratoDaConta({
               }))}
               categorias={categorias.map((c) => ({ id: c.id, nome: c.name, kind: c.kind }))}
               centros={centros.map((c) => ({ id: c.id, nome: c.name }))}
+              projetos={projetos.map((p) => ({ id: p.id, nome: p.name }))}
+              companyId={companyId}
+              outrasContas={outrasContas}
             />
             {limitado && (
               <p className="text-micro text-fg-muted mt-2">
@@ -600,42 +667,82 @@ async function candidatosDaEmpresa(
   if (absolutos.length === 0) return [];
 
   const prisma = getPrisma();
-  const linhas = await prisma.financeEntry.findMany({
-    where: {
-      tenantId,
-      companyId,
-      kind: { in: tipos },
-      status: { not: "CANCELADO" },
-      bankMatch: { is: null },
-      amount: { in: absolutos.map(decimalDeCentavos) },
-    },
-    select: {
-      id: true,
-      kind: true,
-      status: true,
-      amount: true,
-      dueDate: true,
-      paidAt: true,
-      description: true,
-      approvalStatus: true,
-      counterparty: { select: { name: true, document: true } },
-    },
-    take: 2_000,
-  });
-  return linhas.map((l) => {
-    return {
+  const valoresExatos = absolutos.map(decimalDeCentavos);
+  // Duas fontes (lote C, 19/10): a conta em aberto, pelo saldo — conciliar
+  // quita —, e a baixa já feita sem extrato, pelo total que andou. A conta com
+  // baixa parcial entra pelo saldo, que pode não ser o valor dela: por isso o
+  // `paidPrincipal > 0`, e o saldo é conferido aqui embaixo.
+  const [contas, baixas] = await Promise.all([
+    prisma.financeEntry.findMany({
+      where: {
+        tenantId,
+        companyId,
+        kind: { in: tipos },
+        paidAt: null,
+        status: { notIn: ["CANCELADO", "PAGO"] },
+        OR: [{ amount: { in: valoresExatos } }, { paidPrincipal: { gt: 0 } }],
+      },
+      select: {
+        id: true,
+        kind: true,
+        status: true,
+        amount: true,
+        paidPrincipal: true,
+        dueDate: true,
+        description: true,
+        approvalStatus: true,
+        counterparty: { select: { name: true, document: true } },
+      },
+      take: 2_000,
+    }),
+    prisma.financeEntryPayment.findMany({
+      where: {
+        tenantId,
+        companyId,
+        bankMatch: { is: null },
+        cash: { in: valoresExatos },
+        entry: { kind: { in: tipos }, status: { not: "CANCELADO" } },
+        // A baixa por conta sem extrato (caixinha, adiantamento, cartão, empréstimo…) não passou pelo banco: não casa com o extrato.
+        OR: [{ bankAccountId: null }, { bankAccount: { type: { in: [...TIPOS_COM_EXTRATO] } } }],
+      },
+      select: {
+        id: true,
+        cash: true,
+        paidAt: true,
+        entry: { select: { kind: true, status: true, dueDate: true, description: true, counterparty: { select: { name: true, document: true } } } },
+      },
+      take: 2_000,
+    }),
+  ]);
+  return [
+    ...contas.map((l) => ({
       id: l.id,
       descricao: l.description,
       kind: l.kind,
       status: l.status,
-      centavos: centavosDeDecimal(l.amount),
+      centavos: saldoEmAberto(centavosDeDecimal(l.amount), centavosDeDecimal(l.paidPrincipal)),
       vencimentoKey: saoPauloParts(l.dueDate).dateKey,
-      pagoEmKey: l.paidAt ? saoPauloParts(l.paidAt).dateKey : null,
+      pagoEmKey: null,
       contraparteNome: l.counterparty.name,
       contraparteDocumento: l.counterparty.document,
       conciliado: false,
       // A mesma frase que a action devolve ao confirmar — só que antes do clique.
       bloqueioDeBaixa: motivoDoBloqueioDeBaixa(l),
-    };
-  });
+    })),
+    ...baixas.map((b) => ({
+      // O prefixo diz à action que é uma baixa, e não a conta (`PREFIXO_DA_BAIXA`).
+      id: `baixa:${b.id}`,
+      descricao: b.entry.description,
+      kind: b.entry.kind,
+      status: b.entry.status,
+      centavos: centavosDeDecimal(b.cash),
+      vencimentoKey: saoPauloParts(b.entry.dueDate).dateKey,
+      // Baixa já registrada: a data dela é o sinal mais forte para o extrato.
+      pagoEmKey: saoPauloParts(b.paidAt).dateKey,
+      contraparteNome: b.entry.counterparty.name,
+      contraparteDocumento: b.entry.counterparty.document,
+      conciliado: false,
+      bloqueioDeBaixa: null,
+    })),
+  ];
 }

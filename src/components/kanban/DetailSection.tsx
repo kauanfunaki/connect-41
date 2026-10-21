@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 
 type Props = {
   title: string;
-  /** Resumo curto ao lado do título quando a seção está fechada — ex.: "3", "0/7 · 0%". */
+  /** Resumo curto à direita do título — ex.: "3", "0/7". */
   summary?: React.ReactNode;
   /** Começa aberta. Padrão é fechada, inclusive com conteúdo. */
   defaultOpen?: boolean;
@@ -13,33 +12,20 @@ type Props = {
 };
 
 // Seção colapsável do rodapé do detalhamento de tarefa (Subtarefas, Tarefas
-// relacionadas, Checklist, Anexos), no formato do ClickUp: sem cartão nem
-// borda em volta, só um cabeçalho clicável com contagem.
+// relacionadas, Checklist, Anexos, Horas apontadas).
 //
 // Fecha por padrão MESMO com conteúdo — as quatro seções abertas ao mesmo
 // tempo empurravam a descrição e os campos da tarefa pra fora da tela, e na
-// maior parte das vezes o que se quer ver ao abrir uma tarefa é o topo. A
-// contagem no cabeçalho é o que evita que fechado vire "escondido".
+// maior parte das vezes o que se quer ver ao abrir uma tarefa é o topo. O
+// resumo no cabeçalho é o que evita que fechado vire "escondido".
+//
+// No desenho aprovado da lista longa (15/10/2026): o `BlocoRecolhivel`, com o
+// resumo encostado à direita da linha. Era um abre-e-fecha escrito aqui, sem
+// borda, com a contagem colada ao título.
 export function DetailSection({ title, summary, defaultOpen = false, children }: Props) {
-  const [open, setOpen] = useState(defaultOpen);
-
   return (
-    <div className="border-b border-border/60 last:border-b-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="w-full flex items-center gap-2 py-2.5 text-left group"
-      >
-        <ChevronDown
-          size={14}
-          className={`flex-shrink-0 text-fg-muted transition-transform ${open ? "" : "-rotate-90"}`}
-        />
-        <span className="text-fs-3 font-semibold text-fg group-hover:text-brand transition-colors">{title}</span>
-        {summary != null && <span className="text-fs-1 text-fg-muted tnum">{summary}</span>}
-      </button>
-
-      {open && <div className="pb-4 pl-[22px]">{children}</div>}
-    </div>
+    <BlocoRecolhivel titulo={title} resumo={summary} abertoInicial={defaultOpen} classeDoConteudo="px-4 pb-4">
+      {children}
+    </BlocoRecolhivel>
   );
 }

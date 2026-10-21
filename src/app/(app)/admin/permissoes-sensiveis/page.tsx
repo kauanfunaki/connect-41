@@ -1,9 +1,11 @@
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { SensitiveGrantToggle } from "@/components/admin/SensitiveGrantToggle";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import { alternarPermissaoSensivel } from "./actions";
 import type { UserRole, SensitiveFieldGroup } from "@/generated/prisma/enums";
 
@@ -39,12 +41,35 @@ export default async function PermissoesSensiveisPage() {
           Sem concessão explícita, o acesso é negado — inclusive para o administrador. Toda mudança fica na auditoria."
       />
 
+      {/* No celular, um cartão por papel, com os quatro grupos embaixo
+          (15/10/2026): a matriz de 560px rolava de lado. */}
+      <CartoesNoCelular>
+        {ROLES.map((r) => (
+          <Cartao key={r.code}>
+            <TopoDoCartao nome={r.label} />
+            <InfoDoCartao>{r.hint}</InfoDoCartao>
+            <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 text-ui">
+              {FIELD_GROUPS.map((f) => (
+                <Fragment key={f.code}>
+                  <span className="text-fg-secondary">{f.label}</span>
+                  <SensitiveGrantToggle
+                    action={alternarPermissaoSensivel.bind(null, r.code, f.code)}
+                    granted={granted.has(`${r.code}:${f.code}`)}
+                    label={`${r.label} × ${f.label}`}
+                  />
+                </Fragment>
+              ))}
+            </div>
+          </Cartao>
+        ))}
+      </CartoesNoCelular>
+
       {/* Casco padrão (polimento de 30/09). Sem funil: é uma matriz fixa de
           quatro papéis por quatro grupos, não uma lista. */}
-      <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+      <TabelaNoDesktop padrao>
         <table className="w-full min-w-[560px]">
           <thead>
-            <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
+            <tr className="border-b border-border">
               <th className="px-4 py-3">Papel</th>
               {FIELD_GROUPS.map((f) => (
                 <th key={f.code} className="px-4 py-3">
@@ -73,10 +98,10 @@ export default async function PermissoesSensiveisPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </TabelaNoDesktop>
 
       <p className="text-fs-2 text-fg-muted mt-3">
-        Suporte (SUPER_ADMIN) sempre tem acesso — não aparece na matriz.
+        O Super Admin (o suporte do Connect) sempre tem acesso — não aparece na matriz.
       </p>
     </PageContainer>
   );

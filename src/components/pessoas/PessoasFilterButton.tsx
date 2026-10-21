@@ -35,9 +35,8 @@ const SITUACOES: { value: string; label: string }[] = [
   { value: SITUACAO_TODOS, label: "Todos" },
 ];
 
-// Componente cliente próprio pelo mesmo motivo do EmpresasFilterButton: o
-// painel usa a callback close() do Dropdown, que não pode ser passada como
-// children de um Server Component.
+// Componente cliente próprio: o painel usa a callback close() do Dropdown,
+// que não pode ser passada como children de um Server Component.
 export function PessoasFilterButton({
   search,
   companyId,
@@ -72,7 +71,7 @@ export function PessoasFilterButton({
       {({ close }) => (
         <div className="space-y-3">
           <div className="space-y-1">
-            <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">{rotuloDaSituacao}</p>
+            <p className="c41-rotulo px-1">{rotuloDaSituacao}</p>
             <div className="space-y-0.5">
               {SITUACOES.map((s) => (
                 <Link
@@ -93,7 +92,7 @@ export function PessoasFilterButton({
 
           {mostrarEmpresa && (
             <div className="space-y-2">
-              <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">Empresa</p>
+              <p className="c41-rotulo px-1">Empresa</p>
               <CompanyFilterSelect companies={companies} value={companyId ?? ""} className="w-full" />
               {companyId && (
                 <Link

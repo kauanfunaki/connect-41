@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
+import { Switch } from "@/components/ui/Switch";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { salvarRegua, alternarEmpresaNaRegua } from "@/app/(app)/cobranca/actions";
@@ -51,11 +53,13 @@ export function ConfigDaRegua({ ligada, passos, podeEditar }: { ligada: boolean;
         salvar(dados);
       }}
     >
+      {/* Interruptor do Connect (15/10/2026), e não a lista Desligada/Ligada.
+          Continua valendo no "Salvar", junto dos passos, e com a confirmação
+          ao ligar; envia "1" ou "0", como a lista. */}
       <CampoForm label="Situação" htmlFor="regua-ligada">
-        <Select id="regua-ligada" name="ligada" defaultValue={ligada ? "1" : "0"} disabled={!podeEditar}>
-          <option value="0">Desligada</option>
-          <option value="1">Ligada</option>
-        </Select>
+        <div className="flex min-h-9 items-center">
+          <Switch id="regua-ligada" name="ligada" value="1" valorDesligado="0" defaultChecked={ligada} disabled={!podeEditar} rotulo="Ligada" />
+        </div>
       </CampoForm>
       <CampoForm label="Passos (dias de atraso)" htmlFor="regua-passos" helper="Separados por vírgula. Padrão: 1, 7, 15, 30.">
         <Input id="regua-passos" name="passos" defaultValue={passos} disabled={!podeEditar} />
@@ -86,11 +90,13 @@ export function EmpresaNaRegua({
   companyId,
   fora,
 }: {
-  empresas?: { id: string; nome: string }[];
+  empresas?: EmpresaParaEscolher[];
   companyId?: string;
   fora: boolean;
 }) {
   const [escolhida, setEscolhida] = useState(companyId ?? "");
+  // Remonta o seletor depois de tirar a empresa: ele não é controlado.
+  const [versao, setVersao] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
@@ -99,21 +105,31 @@ export function EmpresaNaRegua({
     startTransition(async () => {
       const r = await alternarEmpresaNaRegua(id, fora);
       if ("error" in r) setErro(r.error);
-      else if (empresas) setEscolhida("");
+      else if (empresas) {
+        setEscolhida("");
+        setVersao((v) => v + 1);
+      }
     });
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {empresas && (
-        <Select compact value={escolhida} onChange={(e) => setEscolhida(e.target.value)} className="w-72 max-w-full" aria-label="Empresa">
-          <option value="">Escolha a empresa…</option>
-          {empresas.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nome}
-            </option>
-          ))}
-        </Select>
+        // A lista de empresas com busca, logo, CNPJ e recentes (15/10/2026):
+        // era um <select> com todas as empresas ativas.
+        <SearchableSelect
+          key={versao}
+          name="companyId"
+          options={opcoesDeEmpresa(empresas)}
+          compact
+          avatar
+          lembrarRecentes="empresas"
+          placeholder="Buscar empresa…"
+          textoSemValor="Escolha a empresa…"
+          onChange={setEscolhida}
+          className="w-72 max-w-full"
+          aria-label="Empresa"
+        />
       )}
       {/* Ao lado do seletor compacto (32px), o botão é `sm`; sozinho na linha
           da lista, `xs`, como as outras ações de linha. */}

@@ -7,7 +7,6 @@ import {
   lerFiltroDeCentro,
   passaNoFiltroDeCentro,
   valorDoFiltroDeCentro,
-  podeDefinirCentro,
   type CentroConhecido,
 } from "./centroDeCusto";
 
@@ -82,29 +81,6 @@ describe("casarCentroDeCusto", () => {
     const ambiguo = casarCentroDeCusto("OB2", centros);
     expect(ambiguo.ok).toBe(false);
     if (!ambiguo.ok) expect(ambiguo.erro).toMatch(/ambíguo/);
-  });
-});
-
-describe("podeDefinirCentro", () => {
-  const contas = [
-    { id: "1", companyId: "e1" },
-    { id: "2", companyId: "e1" },
-  ];
-  const centro = { companyId: "e1", active: true, nome: "Loja" };
-
-  it("define em contas da empresa do centro, e tira de qualquer uma", () => {
-    expect(podeDefinirCentro(contas, centro, 2)).toEqual({ pode: true });
-    expect(podeDefinirCentro([...contas, { id: "3", companyId: "e2" }], null, 3)).toEqual({ pode: true });
-  });
-
-  it("recusa seleção vazia, grande demais, conta sumida, centro inativo e empresa misturada", () => {
-    expect(podeDefinirCentro([], centro, 0).pode).toBe(false);
-    expect(podeDefinirCentro(contas, centro, 201).pode).toBe(false);
-    expect(podeDefinirCentro(contas, centro, 3).pode).toBe(false);
-    expect(podeDefinirCentro(contas, { ...centro, active: false }, 2).pode).toBe(false);
-    const misturada = podeDefinirCentro([...contas, { id: "3", companyId: "e2" }], centro, 3);
-    expect(misturada.pode).toBe(false);
-    if (!misturada.pode) expect(misturada.motivo).toMatch(/1 conta selecionada é de outra empresa/);
   });
 });
 

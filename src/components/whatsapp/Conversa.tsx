@@ -155,6 +155,8 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
           {conversa.candidaturaId && (
             <ItemDoMenu
               icone={<Unlink />}
+              // Desfazer fica no "⋯" mesmo quando é a única ação (D3, 15/10/2026).
+              danger
               disabled={ocupado}
               onClick={() => {
                 close();
@@ -348,7 +350,7 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
             return (
               <div key={m.id} className={minha ? "self-end max-w-[80%]" : "self-start max-w-[80%]"}>
                 <div
-                  className={`rounded-2xl px-3.5 py-2 text-ui whitespace-pre-wrap ${
+                  className={`rounded-lg px-3.5 py-2 text-ui whitespace-pre-wrap ${
                     minha
                       ? m.status === "BLOQUEADA"
                         ? "bg-warning-bg border border-warning/30 text-fg rounded-br-md"

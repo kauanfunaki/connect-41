@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { caminhoDoMenuAtivo as ativa } from "@/lib/caminhoDoMenu";
 import { useNaFaixa } from "@/components/shell/NavLink";
 
-export type TelaDoPainel = { label: string; href: string; icon?: React.ReactNode };
+export type TelaDoPainel = { label: string; href: string; icon?: React.ReactNode; ativa?: boolean };
 
 /** Um painel aberto por vez: quem abre avisa, e os outros fecham. */
 const EVENTO_ABRIU = "c41-painel-do-item";
@@ -37,6 +37,7 @@ export function PainelDoItem({
   titulo,
   telas,
   cor,
+  abrirPorClique = false,
   children,
 }: {
   /** Rótulo do alto do painel, em versalete na cor do setor. */
@@ -44,7 +45,9 @@ export function PainelDoItem({
   telas: TelaDoPainel[];
   /** Cor do setor do rótulo — o painel mora no `body`, fora do alcance de `--c41-setor`. */
   cor?: string;
-  children: React.ReactNode;
+  /** Menu de navegação também disponível por clique, na faixa e no toque. */
+  abrirPorClique?: boolean;
+  children: React.ReactNode | ((props: { aberto: boolean; alternar: () => void; painelId: string }) => React.ReactNode);
 }) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
@@ -66,21 +69,35 @@ export function PainelDoItem({
     if (!item) return;
     const altura = painelRef.current?.offsetHeight ?? 0;
     const top = Math.max(8, Math.min(item.top - 10, window.innerHeight - altura - 8));
-    setPos({ top, left: (sidebar?.right ?? item.right) + 8 });
-  }, []);
+    const left = (sidebar?.right ?? item.right) + 8;
+    setPos({ top, left: abrirPorClique ? Math.max(8, Math.min(left, window.innerWidth - 268)) : left });
+  }, [abrirPorClique]);
 
   function agendar(abrir: boolean) {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setAberto(abrir), abrir ? ABRE_MS : FECHA_MS);
   }
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  function fechar() {
+    clearTimeout(timer.current);
+    setAberto(false);
+  }
+  function alternar() {
+    setAberto((atual) => !atual);
+  }
+
+  // Uma abertura agendada antes de navegar não deve reabrir o painel na
+  // próxima tela. O clique também cancela o temporizador imediatamente.
+  useEffect(() => () => clearTimeout(timer.current), [pathname]);
 
   // Foco de teclado num item e o mouse noutro abriam dois painéis ao mesmo
   // tempo (visto em 30/09): abrir um fecha os outros.
   useEffect(() => {
     function outroAbriu(e: Event) {
-      if ((e as CustomEvent<string>).detail !== id) setAberto(false);
+      if ((e as CustomEvent<string>).detail !== id) {
+        clearTimeout(timer.current);
+        setAberto(false);
+      }
     }
     window.addEventListener(EVENTO_ABRIU, outroAbriu);
     return () => window.removeEventListener(EVENTO_ABRIU, outroAbriu);
@@ -96,18 +113,31 @@ export function PainelDoItem({
     posicionar();
     const id = requestAnimationFrame(posicionar);
     function tecla(e: KeyboardEvent) {
-      if (e.key === "Escape") setAberto(false);
+      if (e.key === "Escape") {
+        clearTimeout(timer.current);
+        setAberto(false);
+        if (abrirPorClique) {
+          e.preventDefault(); e.stopPropagation();
+          itemRef.current?.querySelector("button")?.focus();
+        }
+      }
+    }
+    function fora(e: PointerEvent) {
+      const alvo = e.target as Node;
+      if (!itemRef.current?.contains(alvo) && !painelRef.current?.contains(alvo)) fechar();
     }
     window.addEventListener("scroll", posicionar, true);
     window.addEventListener("resize", posicionar);
     document.addEventListener("keydown", tecla);
+    if (abrirPorClique) document.addEventListener("pointerdown", fora);
     return () => {
       cancelAnimationFrame(id);
       window.removeEventListener("scroll", posicionar, true);
       window.removeEventListener("resize", posicionar);
       document.removeEventListener("keydown", tecla);
+      document.removeEventListener("pointerdown", fora);
     };
-  }, [aberto, posicionar]);
+  }, [aberto, posicionar, abrirPorClique]);
 
   // Trocou de tela: o painel fecha (o clique num item dele navegou).
   const [rotaAnterior, setRotaAnterior] = useState(pathname);
@@ -116,27 +146,38 @@ export function PainelDoItem({
     setAberto(false);
   }
 
-  if (telas.length === 0 || naFaixa) return <>{children}</>;
+  const gatilho = typeof children === "function" ? children({ aberto, alternar, painelId: id }) : children;
+  if (telas.length === 0 || (naFaixa && !abrirPorClique)) return <>{gatilho}</>;
 
   return (
     <div
       ref={itemRef}
+      onClick={abrirPorClique ? () => clearTimeout(timer.current) : fechar}
       onMouseEnter={() => podeAbrir() && agendar(true)}
       onMouseLeave={() => agendar(false)}
-      onFocus={() => podeAbrir() && agendar(true)}
+      onFocus={() => !abrirPorClique && podeAbrir() && agendar(true)}
       onBlur={(e) => {
         const para = e.relatedTarget as Node | null;
         if (para && painelRef.current?.contains(para)) return;
         agendar(false);
       }}
     >
-      {children}
+      {gatilho}
       {aberto &&
         createPortal(
           <div
+            id={id}
             ref={painelRef}
             role="menu"
             aria-label={titulo}
+            onKeyDown={(e) => {
+              if (!abrirPorClique || !["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+              e.preventDefault();
+              const itens = [...(painelRef.current?.querySelectorAll<HTMLElement>("[role='menuitem']") ?? [])];
+              const atual = itens.indexOf(document.activeElement as HTMLElement);
+              const proximo = e.key === "Home" ? 0 : e.key === "End" ? itens.length - 1 : (atual + (e.key === "ArrowDown" ? 1 : -1) + itens.length) % itens.length;
+              itens[proximo]?.focus();
+            }}
             onMouseEnter={() => agendar(true)}
             onMouseLeave={() => agendar(false)}
             onBlur={(e) => {
@@ -157,14 +198,14 @@ export function PainelDoItem({
             </p>
             <ul className="flex flex-col gap-0.5">
               {telas.map((t) => {
-                const atual = ativa(pathname, t.href);
+                const atual = t.ativa ?? ativa(pathname, t.href);
                 return (
                   <li key={t.href}>
                     <Link
                       href={t.href}
                       role="menuitem"
                       aria-current={atual ? "page" : undefined}
-                      onClick={() => setAberto(false)}
+                      onClick={fechar}
                       className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-dropdown font-medium transition-colors ${
                         atual ? "bg-selected-bg text-brand" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
                       }`}

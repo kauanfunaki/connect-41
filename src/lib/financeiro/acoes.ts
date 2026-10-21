@@ -7,15 +7,26 @@
 // numa delas faria a outra importar de um vizinho por acidente.
 
 import { revalidatePath } from "next/cache";
+import { MOTIVO_DO_OMIE, presaAoOmie } from "@/lib/integracoes/omie/virada";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
-import { podeMarcarPago, podeConferir } from "./contas";
+import { podeConferir, centavosDeDecimal } from "./contas";
+import { validarBaixa, saldoEmAberto } from "./baixa/regras";
+import { registrarBaixa, quitarConta, apagarBaixa, RecusaDaBaixa, type OrigemDaBaixa } from "./baixa/servidor";
+import { MAXIMO_DO_LOTE, separarLote, validarDiaDoLote, type ForaDoLote } from "./baixa/lote";
+import { nomeExibicao } from "@/lib/companyName";
+import { contaPrevistaEmComum, nomeDaContaBancaria } from "./contaPrevista";
+import { ehContaDeAdiantamento, tipoDoAdiantamento, validarUsoDoAdiantamento } from "./adiantamento";
+import { temPortaPropria, TIPOS_FORA_DO_CAIXA } from "./tiposDeConta";
+import { cartoesParaABaixa, type CartaoParaABaixa } from "./cartaoServidor";
+import { disponivelDoAdiantamento } from "./adiantamentoServidor";
+import { decimalDeCentavos } from "./manual";
+import { instanteDaData } from "./periodo";
 import { setorDoModulo } from "@/lib/modules";
 import { motivoDoBloqueioDeBaixa } from "./aprovacao/regras";
 import { sincronizarAcordos } from "./cobranca/sincronizar";
-import { podeDefinirCentro, MAXIMO_DE_CONTAS_POR_DEFINICAO } from "./centroDeCusto";
 
 // `SECTOR` é o de origem, usado só como padrão. As ações servem `/pagar` e
 // `/receber`, que podem estar em setores diferentes num tenant: o gate aceita
@@ -87,209 +98,567 @@ export async function conferirConta(entryId: string): Promise<AcaoDeContaState> 
   return null;
 }
 
+export type ResultadoDaConferencia = { error: string } | { ok: true; conferidas: number; puladas: number };
+
 /**
- * Baixa: registra que o dinheiro saiu (ou entrou) naquele dia.
- *
- * A data vem de fora porque **baixa atrasada é comum** — alguém lança na
- * segunda o que pagou na sexta, e forçar "hoje" jogaria o pagamento na
- * competência errada do fluxo de caixa.
- *
- * Pagar direto do `PROVISORIO` é permitido: pagar implica ter conferido, e
- * exigir dois cliques para o mesmo ato só faria a pessoa clicar dois.
+ * Confere as contas marcadas (escolha 12A, 20/10/2026): o "Conferir" saiu da
+ * linha para o "⋯" e para a barra das marcadas. A mesma regra da conta a
+ * conta (`podeConferir`): só a provisória é conferida; a já conferida, paga
+ * ou cancelada fica como está e conta nas puladas.
  */
-export async function marcarComoPago(
-  entryId: string,
-  dataISO: string
-): Promise<AcaoDeContaState> {
+export async function conferirContasEmLote(valores: string[]): Promise<ResultadoDaConferencia> {
   const { erro, ctx } = await contexto();
   if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const tenantId = ctx.tenantId;
+  const ids = idsDoLote(Array.isArray(valores) ? valores : []);
+  if ("erro" in ids) return { error: ids.erro };
 
-  const conta = await contaDoTenant(entryId, ctx.tenantId);
+  const prisma = getPrisma();
+  const provisorias = await prisma.financeEntry.findMany({
+    where: { id: { in: ids }, tenantId, status: "PROVISORIO" },
+    select: { id: true },
+  });
+  if (provisorias.length === 0) return { error: "Nenhuma das contas marcadas está a conferir." };
+
+  // O status de novo no `where`: a que alguém conferiu ou pagou no meio-tempo
+  // fica como está. O instante marca as que esta chamada conferiu, para a
+  // auditoria registrar só elas.
+  const agora = new Date();
+  await prisma.financeEntry.updateMany({
+    where: { id: { in: provisorias.map((c) => c.id) }, tenantId, status: "PROVISORIO" },
+    data: { status: "CONFERIDO", reviewedById: ctx.userId ?? null, reviewedAt: agora },
+  });
+  const conferidas = await prisma.financeEntry.findMany({
+    where: { id: { in: provisorias.map((c) => c.id) }, tenantId, status: "CONFERIDO", reviewedAt: agora },
+    select: { id: true, counterparty: { select: { name: true } } },
+  });
+
+  for (const c of conferidas) {
+    await logAudit({
+      tenantId,
+      userId: ctx.userId,
+      action: "finance.review",
+      entityType: "FinanceEntry",
+      entityId: c.id,
+      metadata: { contraparte: c.counterparty.name, emLote: true },
+    });
+  }
+
+  revalidar();
+  return { ok: true, conferidas: conferidas.length, puladas: ids.length - conferidas.length };
+}
+
+// ─── Baixa (lote C, 19/10) ─────────────────────────────────────────────────
+//
+// A baixa deixou de ser só uma data: é um registro com conta bancária, juros,
+// multa e desconto, e pode ser parcial — ver `src/lib/financeiro/baixa/`. A
+// janela pede os dados (`dadosDaBaixa`), grava (`registrarPagamento`) e
+// lista as baixas da conta para desfazer uma a uma (`desfazerBaixa`).
+
+export type BaixaDaConta = {
+  id: string;
+  dataKey: string;
+  principalCentavos: number;
+  jurosCentavos: number;
+  multaCentavos: number;
+  descontoCentavos: number;
+  caixaCentavos: number;
+  contaNome: string | null;
+  observacao: string | null;
+  origem: OrigemDaBaixa;
+  /** Ligada a uma linha do extrato — desfazer é na conciliação. */
+  conciliada: boolean;
+};
+
+export type DadosDaBaixa =
+  | {
+      ok: true;
+      kind: "PAGAR" | "RECEBER";
+      contraparteNome: string;
+      valorCentavos: number;
+      saldoCentavos: number;
+      /** Motivo de a aprovação por alçada travar a baixa. */
+      bloqueio: string | null;
+      contas: { id: string; nome: string }[];
+      /** A conta corrente prevista no título (lote D, 20/10): a janela já a traz marcada. */
+      contaPrevistaId: string | null;
+      /**
+       * O adiantamento de quem é a conta (lote D, 20/10), quando há disponível:
+       * a baixa pode sair dele em vez do banco.
+       */
+      adiantamento: { contaId: string; nome: string; disponivelCentavos: number } | null;
+      /**
+       * Os cartões de crédito da empresa (lote D, 20/10), na conta a pagar que
+       * não é fatura nem transferência: a baixa pelo cartão entra na fatura do
+       * ciclo, e os dias dizem em qual.
+       */
+      cartoes: CartaoParaABaixa[];
+      /**
+       * As contas fora do caixa sem porta própria (lote D, 20/10): empréstimo,
+       * mútuo, crediário, administradora de cartões. A baixa por elas não mexe
+       * no caixa — o dinheiro anda quando elas forem transferidas para o banco.
+       */
+      outras: { id: string; nome: string }[];
+      baixas: BaixaDaConta[];
+    }
+  | { ok: false; erro: string };
+
+/** Contas de dinheiro ativas da empresa — banco e caixinha —, para o "de qual conta saiu". */
+async function contasDaEmpresa(tenantId: string, companyId: string) {
+  const contas = await getPrisma().bankAccount.findMany({
+    // O adiantamento entra à parte, com o disponível de quem é a conta; o cartão
+    // também, com os dias da fatura; e as outras fora do caixa, num grupo delas.
+    where: { tenantId, companyId, active: true, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
+    select: { id: true, nickname: true, accountNumber: true, type: true },
+    orderBy: { nickname: "asc" },
+  });
+  return contas.map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) }));
+}
+
+/** As contas fora do caixa sem porta própria — empréstimo, mútuo, crediário, administradora. */
+async function outrasDaEmpresa(tenantId: string, companyId: string) {
+  const contas = await getPrisma().bankAccount.findMany({
+    where: { tenantId, companyId, active: true, type: { in: TIPOS_FORA_DO_CAIXA.filter((t) => !temPortaPropria(t)) } },
+    select: { id: true, nickname: true, accountNumber: true, type: true },
+    orderBy: { nickname: "asc" },
+  });
+  return contas.map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) }));
+}
+
+/** O adiantamento disponível do fornecedor (ou cliente) da conta, na conta de adiantamento da empresa. */
+async function adiantamentoDaConta(tenantId: string, companyId: string, kind: "PAGAR" | "RECEBER", counterpartyId: string) {
+  const tipo = tipoDoAdiantamento(kind);
+  const conta = await getPrisma().bankAccount.findFirst({ where: { tenantId, companyId, type: tipo, active: true }, select: { id: true, nickname: true } });
+  if (!conta) return null;
+  const disponivelCentavos = await disponivelDoAdiantamento(getPrisma(), tenantId, companyId, tipo, counterpartyId);
+  return disponivelCentavos > 0 ? { contaId: conta.id, nome: conta.nickname, disponivelCentavos } : null;
+}
+
+/** A conta, o saldo, as contas bancárias e as baixas que já tem — o que a janela da baixa precisa. */
+export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { ok: false, erro: erro ?? "Não autenticado" };
+  const conta = await getPrisma().financeEntry.findFirst({
+    where: { id: entryId, tenantId: ctx.tenantId },
+    select: {
+      kind: true,
+      status: true,
+      amount: true,
+      paidPrincipal: true,
+      approvalStatus: true,
+      companyId: true,
+      bankAccountId: true,
+      counterpartyId: true,
+      cardAccountId: true,
+      transferId: true,
+      counterparty: { select: { name: true } },
+      payments: {
+        select: {
+          id: true,
+          paidAt: true,
+          principal: true,
+          interest: true,
+          fine: true,
+          discount: true,
+          cash: true,
+          note: true,
+          origin: true,
+          bankAccount: { select: { nickname: true, accountNumber: true } },
+          bankMatch: { select: { id: true } },
+        },
+        orderBy: { paidAt: "asc" },
+      },
+    },
+  });
+  if (!conta) return { ok: false, erro: "Lançamento não encontrado." };
+  if (conta.status === "CANCELADO") return { ok: false, erro: "Lançamento cancelado não recebe baixa." };
+  const valor = centavosDeDecimal(conta.amount);
+  return {
+    ok: true,
+    kind: conta.kind,
+    contraparteNome: conta.counterparty.name,
+    valorCentavos: valor,
+    saldoCentavos: saldoEmAberto(valor, centavosDeDecimal(conta.paidPrincipal)),
+    bloqueio: motivoDoBloqueioDeBaixa(conta),
+    contas: await contasDaEmpresa(ctx.tenantId, conta.companyId),
+    contaPrevistaId: conta.bankAccountId,
+    adiantamento: await adiantamentoDaConta(ctx.tenantId, conta.companyId, conta.kind, conta.counterpartyId),
+    cartoes:
+      conta.kind === "PAGAR" && !conta.cardAccountId && !conta.transferId ? await cartoesParaABaixa(getPrisma(), ctx.tenantId, conta.companyId) : [],
+    outras: conta.transferId ? [] : await outrasDaEmpresa(ctx.tenantId, conta.companyId),
+    baixas: conta.payments.map((p) => ({
+      id: p.id,
+      dataKey: saoPauloParts(p.paidAt).dateKey,
+      principalCentavos: centavosDeDecimal(p.principal),
+      jurosCentavos: centavosDeDecimal(p.interest),
+      multaCentavos: centavosDeDecimal(p.fine),
+      descontoCentavos: centavosDeDecimal(p.discount),
+      caixaCentavos: centavosDeDecimal(p.cash),
+      contaNome: p.bankAccount ? `${p.bankAccount.nickname} ${p.bankAccount.accountNumber}` : null,
+      observacao: p.note,
+      origem: p.origin,
+      conciliada: p.bankMatch !== null,
+    })),
+  };
+}
+
+/**
+ * Registra uma baixa: o dinheiro saiu (ou entrou) naquele dia, daquela conta,
+ * com aquele valor. Parcial quando o valor fica abaixo do saldo — a conta
+ * continua em aberto com o resto.
+ *
+ * A data vem de fora porque **baixa atrasada é comum** — alguém lança na
+ * segunda o que pagou na sexta. Pagar direto do `PROVISORIO` é permitido:
+ * pagar implica ter conferido.
+ */
+export async function registrarPagamento(formData: FormData): Promise<{ error: string } | { ok: true; quitada: boolean }> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const texto = (k: string) => String(formData.get(k) ?? "").trim();
+  const entryId = texto("entryId");
+  const tenantId = ctx.tenantId;
+  const prisma = getPrisma();
+
+  const conta = await prisma.financeEntry.findFirst({
+    where: { id: entryId, tenantId },
+    select: {
+      id: true,
+      kind: true,
+      status: true,
+      amount: true,
+      paidPrincipal: true,
+      approvalStatus: true,
+      companyId: true,
+      counterpartyId: true,
+      counterparty: { select: { name: true } },
+    },
+  });
   if (!conta) return { error: "Lançamento não encontrado." };
-
-  const bruto = (dataISO || "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(bruto)) return { error: "Informe a data do pagamento." };
-
-  const hojeKey = saoPauloParts(new Date()).dateKey;
-  const veredito = podeMarcarPago(conta, bruto, hojeKey);
-  if (!veredito.pode) return { error: veredito.motivo };
-  // Aprovação por alçada: aguardando ou reprovada não sai do caixa.
+  if (conta.status === "CANCELADO") return { error: "Lançamento cancelado não volta a ser conta." };
+  // Aprovação por alçada: aguardando ou reprovada não sai do caixa — nem em parte.
   const bloqueio = motivoDoBloqueioDeBaixa(conta);
   if (bloqueio) return { error: bloqueio };
 
-  // Meio-dia para a data não escorregar de dia ao atravessar o fuso — o mesmo
-  // cuidado da contagem de dias úteis do societário.
-  const pagoEm = new Date(`${bruto}T12:00:00-03:00`);
+  const saldo = saldoEmAberto(centavosDeDecimal(conta.amount), centavosDeDecimal(conta.paidPrincipal));
+  const v = validarBaixa(
+    { data: texto("data"), principal: texto("valor"), juros: texto("juros"), multa: texto("multa"), desconto: texto("desconto") },
+    saldo,
+    saoPauloParts(new Date()).dateKey
+  );
+  if (!v.ok) return { error: v.erro };
+  const d = v.dados;
 
-  // Condicionado ao estado lido: se a conta foi reenviada para aprovação (ou
-  // paga por outra pessoa, ou cancelada) entre a leitura e aqui, a baixa não
-  // passa por cima.
-  //
-  // Na mesma transação, o acordo de que a conta é parcela: a última parcela
-  // paga torna o acordo cumprido junto com a baixa.
-  const prisma = getPrisma();
-  const tenantId = ctx.tenantId;
-  const baixada = await prisma.$transaction(async (tx) => {
-    const r = await tx.financeEntry.updateMany({
-      where: {
-        id: entryId,
+  const contaBancariaId = texto("contaBancariaId") || null;
+  let peloAdiantamento: ReturnType<typeof tipoDoAdiantamento> | null = null;
+  if (contaBancariaId) {
+    const banco = await prisma.bankAccount.findFirst({ where: { id: contaBancariaId, tenantId, companyId: conta.companyId }, select: { id: true, type: true } });
+    if (!banco) return { error: "Conta bancária não encontrada nesta empresa." };
+    // Pela conta de adiantamento (lote D, 20/10): a do tipo da conta, até o disponível de quem é a conta.
+    if (ehContaDeAdiantamento(banco.type)) {
+      if (banco.type !== tipoDoAdiantamento(conta.kind)) return { error: "Esse adiantamento é do outro lado — escolha o de fornecedores numa conta a pagar, e o de clientes numa a receber." };
+      peloAdiantamento = banco.type;
+    }
+  }
+  const observacao = texto("observacao").slice(0, 255) || null;
+
+  let gravada: { paymentId: string; quitada: boolean };
+  try {
+    gravada = await prisma.$transaction(async (tx) => {
+      if (peloAdiantamento) {
+        // O disponível lido na transação: dois usos ao mesmo tempo não passam do que há.
+        const disponivel = await disponivelDoAdiantamento(tx, tenantId, conta.companyId, peloAdiantamento, conta.counterpartyId);
+        const uso = validarUsoDoAdiantamento({ usoCentavos: d.caixaCentavos, disponivelCentavos: disponivel, contraparteNome: conta.counterparty.name });
+        if (!uso.ok) throw new RecusaDaBaixa(uso.erro);
+      }
+      const b = await registrarBaixa(tx, {
         tenantId,
-        status: { in: ["PROVISORIO", "CONFERIDO"] },
-        paidAt: null,
-        approvalStatus: { in: ["NAO_REQUER", "APROVADO"] },
-      },
-      data: { status: "PAGO", paidAt: pagoEm },
+        entryId,
+        paidAt: instanteDaData(d.dataKey),
+        principalCentavos: d.principalCentavos,
+        jurosCentavos: d.jurosCentavos,
+        multaCentavos: d.multaCentavos,
+        descontoCentavos: d.descontoCentavos,
+        bankAccountId: contaBancariaId,
+        note: observacao,
+        origin: "MANUAL",
+        userId: ctx.userId ?? null,
+      });
+      // A baixa que quita a última parcela de um acordo cumpre o acordo.
+      await sincronizarAcordos(tx, tenantId, [entryId]);
+      return b;
     });
-    if (r.count === 1) await sincronizarAcordos(tx, tenantId, [entryId]);
-    return r;
-  });
-  if (baixada.count !== 1) return { error: "A conta acabou de mudar (aprovação, baixa ou cancelamento) — atualize a tela." };
+  } catch (err) {
+    if (err instanceof RecusaDaBaixa) return { error: err.message };
+    throw err;
+  }
 
   await logAudit({
-    tenantId: ctx.tenantId,
+    tenantId,
     userId: ctx.userId,
     action: "finance.pay",
     entityType: "FinanceEntry",
     entityId: entryId,
     metadata: {
       kind: conta.kind,
-      valor: conta.amount.toString(),
-      pagoEm: bruto,
       contraparte: conta.counterparty.name,
+      pagoEm: d.dataKey,
+      valor: decimalDeCentavos(d.principalCentavos),
+      ...(d.jurosCentavos ? { juros: decimalDeCentavos(d.jurosCentavos) } : {}),
+      ...(d.multaCentavos ? { multa: decimalDeCentavos(d.multaCentavos) } : {}),
+      ...(d.descontoCentavos ? { desconto: decimalDeCentavos(d.descontoCentavos) } : {}),
+      total: decimalDeCentavos(d.caixaCentavos),
+      parcial: !gravada.quitada,
+      contaBancaria: contaBancariaId,
+      baixa: gravada.paymentId,
+    },
+  });
+
+  revalidar();
+  return { ok: true, quitada: gravada.quitada };
+}
+
+// ─── Baixa em lote (fila do BPO, 19/10) ──────────────────────────────────────
+//
+// As contas marcadas na tela, cada uma pelo saldo, num dia só — ver
+// `baixa/lote.ts`. A janela pede o que vai entrar (`dadosDaBaixaEmLote`) e
+// grava (`registrarPagamentosEmLote`).
+
+export type ContaDoLote = {
+  id: string;
+  contraparteNome: string;
+  empresaId: string;
+  empresaNome: string;
+  vencimentoKey: string;
+  saldoCentavos: number;
+};
+
+export type DadosDoLote =
+  | {
+      ok: true;
+      kind: "PAGAR" | "RECEBER";
+      entram: ContaDoLote[];
+      ficam: ForaDoLote[];
+      /**
+       * As empresas das contas que entram, com as contas bancárias de cada uma
+       * e a prevista quando todas as contas dela no lote preveem a mesma.
+       */
+      empresas: { id: string; nome: string; contas: { id: string; nome: string }[]; contaPrevistaId: string | null }[];
+    }
+  | { ok: false; erro: string };
+
+function idsDoLote(valores: unknown[]): string[] | { erro: string } {
+  const ids = [...new Set(valores.map((v) => String(v ?? "")).filter(Boolean))];
+  if (ids.length === 0) return { erro: "Marque ao menos uma conta." };
+  if (ids.length > MAXIMO_DO_LOTE) return { erro: `No máximo ${MAXIMO_DO_LOTE} contas por lote.` };
+  return ids;
+}
+
+/** As contas do lote, separadas no que entra e no que fica — a janela e a gravação leem igual. */
+async function lerLote(tenantId: string, ids: string[]) {
+  const linhas = await getPrisma().financeEntry.findMany({
+    where: { id: { in: ids }, tenantId },
+    select: {
+      id: true,
+      kind: true,
+      status: true,
+      amount: true,
+      paidPrincipal: true,
+      approvalStatus: true,
+      dueDate: true,
+      companyId: true,
+      omieTitleId: true,
+      omieMovementId: true,
+      company: { select: { name: true, displayName: true, omieCutoverAt: true } },
+      counterparty: { select: { name: true } },
+    },
+    orderBy: { dueDate: "asc" },
+  });
+  const tipos = new Set(linhas.map((l) => l.kind));
+  const separadas = separarLote(
+    linhas.map((l) => ({
+      id: l.id,
+      contraparteNome: l.counterparty.name,
+      empresaId: l.companyId,
+      empresaNome: nomeExibicao(l.company),
+      vencimentoKey: saoPauloParts(l.dueDate).dateKey,
+      status: l.status,
+      saldoCentavos: saldoEmAberto(centavosDeDecimal(l.amount), centavosDeDecimal(l.paidPrincipal)),
+      bloqueio: presaAoOmie(l, l.company) ? MOTIVO_DO_OMIE.baixa : motivoDoBloqueioDeBaixa(l),
+    }))
+  );
+  return { linhas, tipos, ...separadas };
+}
+
+/** O que a janela da baixa em lote mostra: as que entram, as que ficam e as contas bancárias. */
+export async function dadosDaBaixaEmLote(valores: string[]): Promise<DadosDoLote> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { ok: false, erro: erro ?? "Não autenticado" };
+  const ids = idsDoLote(Array.isArray(valores) ? valores : []);
+  if ("erro" in ids) return { ok: false, erro: ids.erro };
+  const lote = await lerLote(ctx.tenantId, ids);
+  if (lote.linhas.length !== ids.length) return { ok: false, erro: "Alguma conta marcada não existe mais — atualize a tela." };
+  if (lote.tipos.size > 1) return { ok: false, erro: "Marque só contas a pagar ou só contas a receber." };
+  const empresas = [...new Map(lote.entram.map((c) => [c.empresaId, c.empresaNome])).entries()];
+  const previstas = await getPrisma().financeEntry.findMany({
+    where: { id: { in: lote.entram.map((c) => c.id) }, tenantId: ctx.tenantId },
+    select: { companyId: true, bankAccountId: true },
+  });
+  return {
+    ok: true,
+    kind: lote.linhas[0]!.kind,
+    entram: lote.entram.map(({ id, contraparteNome, empresaId, empresaNome, vencimentoKey, saldoCentavos }) => ({
+      id,
+      contraparteNome,
+      empresaId,
+      empresaNome,
+      vencimentoKey,
+      saldoCentavos,
+    })),
+    ficam: lote.ficam,
+    empresas: await Promise.all(
+      empresas.map(async ([id, nome]) => ({
+        id,
+        nome,
+        contas: await contasDaEmpresa(ctx.tenantId, id),
+        contaPrevistaId: contaPrevistaEmComum(previstas.filter((p) => p.companyId === id).map((p) => p.bankAccountId)),
+      }))
+    ),
+  };
+}
+
+export type ResultadoDoLote =
+  | { error: string }
+  | { ok: true; baixadas: number; totalCentavos: number; recusadas: ForaDoLote[] };
+
+/**
+ * Baixa as contas marcadas pelo saldo de cada uma, no dia informado, com a
+ * conta bancária da empresa de cada uma (`conta:<empresaId>`, opcional).
+ *
+ * Uma transação por conta: a que foi recusada — paga por outra pessoa no
+ * meio-tempo, aprovação pendente — vai para `recusadas`, e as outras seguem.
+ * O registro (`quitarConta`) relê o saldo com a conta travada, então a conta
+ * que alguém pagou em parte enquanto a janela estava aberta é quitada pelo que
+ * falta, e não pelo saldo que a janela mostrou.
+ */
+export async function registrarPagamentosEmLote(formData: FormData): Promise<ResultadoDoLote> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const tenantId = ctx.tenantId;
+  const ids = idsDoLote(formData.getAll("entryIds"));
+  if ("erro" in ids) return { error: ids.erro };
+  const dia = validarDiaDoLote(String(formData.get("data") ?? ""), saoPauloParts(new Date()).dateKey);
+  if (!dia.ok) return { error: dia.erro };
+
+  const lote = await lerLote(tenantId, ids);
+  if (lote.linhas.length !== ids.length) return { error: "Alguma conta marcada não existe mais — atualize a tela." };
+  if (lote.tipos.size > 1) return { error: "Marque só contas a pagar ou só contas a receber." };
+  if (lote.entram.length === 0) return { error: "Nenhuma das contas marcadas pode ser baixada." };
+
+  // A conta bancária de cada empresa, conferida: só conta ativa da própria empresa.
+  const bancoDa = new Map<string, string | null>();
+  for (const empresaId of new Set(lote.entram.map((c) => c.empresaId))) {
+    const escolhida = String(formData.get(`conta:${empresaId}`) ?? "").trim() || null;
+    if (escolhida) {
+      // Em lote, só banco: o adiantamento e o cartão se usam na baixa de uma conta.
+      const banco = await getPrisma().bankAccount.findFirst({
+        where: { id: escolhida, tenantId, companyId: empresaId, active: true, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
+        select: { id: true },
+      });
+      if (!banco) return { error: "Conta bancária não encontrada na empresa — atualize a tela." };
+    }
+    bancoDa.set(empresaId, escolhida);
+  }
+  const observacao = String(formData.get("observacao") ?? "").trim().slice(0, 255) || null;
+  const paidAt = instanteDaData(dia.dataKey);
+
+  const recusadas: ForaDoLote[] = [...lote.ficam];
+  let baixadas = 0;
+  let totalCentavos = 0;
+  for (const c of lote.entram) {
+    try {
+      const b = await getPrisma().$transaction(async (tx) => {
+        const gravada = await quitarConta(tx, {
+          tenantId,
+          entryId: c.id,
+          paidAt,
+          bankAccountId: bancoDa.get(c.empresaId) ?? null,
+          note: observacao,
+          origin: "MANUAL",
+          userId: ctx.userId || null,
+        });
+        await sincronizarAcordos(tx, tenantId, [c.id]);
+        return gravada;
+      });
+      baixadas++;
+      totalCentavos += b.caixaCentavos;
+      await logAudit({
+        tenantId,
+        userId: ctx.userId,
+        action: "finance.pay",
+        entityType: "FinanceEntry",
+        entityId: c.id,
+        metadata: {
+          kind: lote.linhas[0]!.kind,
+          contraparte: c.contraparteNome,
+          pagoEm: dia.dataKey,
+          valor: decimalDeCentavos(b.caixaCentavos),
+          contaBancaria: bancoDa.get(c.empresaId) ?? null,
+          baixa: b.paymentId,
+          emLote: true,
+        },
+      });
+    } catch (err) {
+      if (!(err instanceof RecusaDaBaixa)) throw err;
+      recusadas.push({ id: c.id, contraparteNome: c.contraparteNome, motivo: err.message });
+    }
+  }
+
+  revalidar();
+  return { ok: true, baixadas, totalCentavos, recusadas };
+}
+
+/**
+ * Desfaz uma baixa. Existe porque a alternativa seria corrigir a data por cima
+ * e sobrescrever em silêncio o pagamento real — desfazer e refazer deixa
+ * rastro no AuditLog. Baixa conciliada se desfaz na conciliação, que devolve a
+ * linha do extrato junto.
+ */
+export async function desfazerBaixa(paymentId: string): Promise<AcaoDeContaState> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const tenantId = ctx.tenantId;
+  const prisma = getPrisma();
+  const baixa = await prisma.financeEntryPayment.findFirst({
+    where: { id: paymentId, tenantId },
+    select: { entryId: true, principal: true, cash: true, paidAt: true, entry: { select: { counterparty: { select: { name: true } } } } },
+  });
+  if (!baixa) return { error: "Baixa não encontrada — atualize a tela." };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await apagarBaixa(tx, paymentId, tenantId);
+      // Parcela de acordo cumprido que deixa de estar paga devolve o acordo a ativo.
+      await sincronizarAcordos(tx, tenantId, [baixa.entryId]);
+    });
+  } catch (err) {
+    if (err instanceof RecusaDaBaixa) return { error: err.message };
+    throw err;
+  }
+
+  await logAudit({
+    tenantId,
+    userId: ctx.userId,
+    action: "finance.unpay",
+    entityType: "FinanceEntry",
+    entityId: baixa.entryId,
+    metadata: {
+      contraparte: baixa.entry.counterparty.name,
+      valor: baixa.principal.toString(),
+      total: baixa.cash.toString(),
+      pagoEm: saoPauloParts(baixa.paidAt).dateKey,
     },
   });
 
   revalidar();
   return null;
 }
-
-/**
- * Desfaz a baixa.
- *
- * Existe porque a alternativa seria deixar corrigir a data por cima, e
- * sobrescrever em silêncio a data real do pagamento — que é justamente o dado
- * que a conciliação vai usar para casar com o extrato. Desfazer e refazer deixa
- * rastro no AuditLog; editar por cima, não.
- *
- * Volta para `CONFERIDO`, não para `PROVISORIO`: alguém já olhou esta conta.
- */
-export async function desfazerPagamento(entryId: string): Promise<AcaoDeContaState> {
-  const { erro, ctx } = await contexto();
-  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
-
-  const conta = await contaDoTenant(entryId, ctx.tenantId);
-  if (!conta) return { error: "Lançamento não encontrado." };
-  if (conta.status !== "PAGO" && conta.paidAt === null) {
-    return { error: "Esta conta não está paga." };
-  }
-
-  // Parcela de acordo cumprido que deixa de estar paga devolve o acordo a ativo.
-  const prisma = getPrisma();
-  const tenantId = ctx.tenantId;
-  await prisma.$transaction(async (tx) => {
-    await tx.financeEntry.update({
-      where: { id: entryId },
-      data: { status: "CONFERIDO", paidAt: null },
-    });
-    await sincronizarAcordos(tx, tenantId, [entryId]);
-  });
-
-  await logAudit({
-    tenantId: ctx.tenantId,
-    userId: ctx.userId,
-    action: "finance.unpay",
-    entityType: "FinanceEntry",
-    entityId: entryId,
-    metadata: { contraparte: conta.counterparty.name },
-  });
-
-  revalidar();
-  return null;
-}
-
-// ─── Centro de custo ────────────────────────────────────────────────────────
-
-const MODULO_DO_TIPO = { PAGAR: "bpo_contas_pagar", RECEBER: "bpo_contas_receber" } as const;
-
-/**
- * Define (ou tira, com `costCenterId` vazio) o centro de custo de uma ou várias
- * contas selecionadas em `/pagar` ou `/receber`.
- *
- * Numa transação, uma atualização por centro anterior condicionada a ele: se
- * outra pessoa trocou o centro de alguma conta entre a leitura e aqui, nada
- * muda e a tela pede para atualizar — em vez de sobrescrever a decisão dela.
- * Uma linha de auditoria por conta, com o centro de antes e o de depois.
- */
-export async function definirCentroDeCusto(formData: FormData): Promise<AcaoDeContaState> {
-  const { erro, ctx } = await contexto();
-  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
-  const tenantId = ctx.tenantId;
-
-  const ids = [...new Set(formData.getAll("entryIds").map((v) => String(v)).filter(Boolean))];
-  const centroId = String(formData.get("costCenterId") ?? "").trim() || null;
-  const prisma = getPrisma();
-
-  const [contas, centro] = await Promise.all([
-    ids.length > 0 && ids.length <= MAXIMO_DE_CONTAS_POR_DEFINICAO
-      ? prisma.financeEntry.findMany({
-          where: { id: { in: ids }, tenantId },
-          select: { id: true, kind: true, companyId: true, costCenterId: true },
-        })
-      : Promise.resolve([]),
-    centroId
-      ? prisma.costCenter.findFirst({ where: { id: centroId, tenantId }, select: { id: true, companyId: true, active: true, name: true } })
-      : Promise.resolve(null),
-  ]);
-  if (centroId && !centro) return { error: "Centro de custo não encontrado." };
-
-  // O gate de `contexto` aceita quem atua em qualquer um dos dois módulos; aqui
-  // já se sabe o tipo de cada conta, e cada tipo exige o setor do seu módulo.
-  for (const kind of new Set(contas.map((c) => c.kind))) {
-    const setor = (await setorDoModulo(tenantId, MODULO_DO_TIPO[kind])) ?? SECTOR;
-    if (!canActOnSector(ctx, setor)) return { error: kind === "PAGAR" ? "Sem permissão em contas a pagar." : "Sem permissão em contas a receber." };
-  }
-
-  const veredito = podeDefinirCentro(contas, centro ? { companyId: centro.companyId, active: centro.active, nome: centro.name } : null, ids.length);
-  if (!veredito.pode) return { error: veredito.motivo };
-
-  const mudam = contas.filter((c) => c.costCenterId !== centroId);
-  if (mudam.length === 0) return null;
-
-  const porAnterior = new Map<string | null, string[]>();
-  for (const c of mudam) porAnterior.set(c.costCenterId, [...(porAnterior.get(c.costCenterId) ?? []), c.id]);
-
-  const aplicou = await prisma.$transaction(async (tx) => {
-    for (const [anterior, grupo] of porAnterior) {
-      const r = await tx.financeEntry.updateMany({
-        where: { id: { in: grupo }, tenantId, costCenterId: anterior },
-        data: { costCenterId: centroId },
-      });
-      if (r.count !== grupo.length) throw new CentroMudou();
-    }
-    return true;
-  }).catch((e) => {
-    if (e instanceof CentroMudou) return false;
-    throw e;
-  });
-  if (!aplicou) return { error: "O centro de alguma conta acabou de mudar — atualize a tela." };
-
-  for (const c of mudam) {
-    await logAudit({
-      tenantId,
-      userId: ctx.userId,
-      action: "finance.cost_center_set",
-      entityType: "FinanceEntry",
-      entityId: c.id,
-      metadata: { de: c.costCenterId, para: centroId, emLote: mudam.length > 1 },
-    });
-  }
-
-  revalidar();
-  // O centro muda a DRE por centro e o quadro por centro da DRE econômica.
-  revalidatePath("/dre/economica");
-  revalidatePath("/lancamentos");
-  return null;
-}
-
-/** Aborta a transação quando uma conta mudou de centro entre a leitura e a escrita. */
-class CentroMudou extends Error {}

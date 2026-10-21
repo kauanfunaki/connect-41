@@ -57,7 +57,7 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
         // Revisão de 05/10: botão não é link — o destino era texto azul no meio da frase.
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <p className="text-body text-fg-muted">Conecte sua conta Google ou Microsoft antes de agendar.</p>
-          <Button href="/admin/integracoes" variant="secondary" size="sm">
+          <Button href="/admin/integracoes?integracao=reunioes" variant="secondary" size="sm">
             Abrir Integrações
           </Button>
         </div>

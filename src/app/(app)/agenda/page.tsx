@@ -164,7 +164,7 @@ export default async function AgendaPage({
                   Sua conta {contasVencidas.join(" e ")} expirou — reuniões novas não vão gerar link até
                   você reconectar.
                 </p>
-                <Button href="/admin/integracoes" variant="danger" size="xs">
+                <Button href="/admin/integracoes?integracao=reunioes" variant="danger" size="xs">
                   <RefreshCw size={11} /> Reconectar agora
                 </Button>
               </Aviso>

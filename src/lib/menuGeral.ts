@@ -14,7 +14,8 @@
 // Uma diferença de propósito: aqui se guardam as telas ESCONDIDAS, e não as
 // visíveis. Esconder é a exceção; uma tela nova que entrar no Geral amanhã
 // aparece para todo setor, inclusive para quem já escondeu outras — em vez de
-// nascer escondida justamente nos setores que já mexeram no menu.
+// nascer escondida justamente nos setores que já mexeram no menu. Chamados
+// nasce com o módulo desativado; ao ativá-lo, segue a visibilidade normal.
 //
 // É VISIBILIDADE, NÃO PERMISSÃO. Esconder tira a tela do menu, do Ctrl+K, das
 // telas fixadas e do tutorial; quem tiver o endereço continua abrindo a tela
@@ -41,7 +42,7 @@ export function podeConfigurarMenuGeral(ctx: { role: UserRole; subscriptionReadO
 }
 
 /** As telas do Geral que podem ser escondidas. Início e Meu dia nunca. */
-export type TelaDoGeral = "espacos" | "cadastros" | "transferencias" | "solicitacoes" | "arquivos" | "agenda";
+export type TelaDoGeral = "espacos" | "cadastros" | "transferencias" | "solicitacoes" | "arquivos" | "agenda" | "chamados";
 
 export type DefDaTelaDoGeral = {
   chave: TelaDoGeral;
@@ -65,10 +66,11 @@ export type DefDaTelaDoGeral = {
  * de pastas e listas dentro da tela, segue se chamando espaço.
  */
 export const TELAS_DO_GERAL: readonly DefDaTelaDoGeral[] = [
+  { chave: "chamados", rotulo: "Chamados", descricao: "Solicitações internas e acompanhamento do atendimento.", modulo: "helpdesk" },
   {
     chave: "espacos",
     rotulo: "Quadros",
-    descricao: "As listas de tarefas do setor, em lista ou kanban, organizadas em espaços e pastas.",
+    descricao: "As tarefas do setor, com as atividades em lista ou em kanban, organizadas em espaços e pastas.",
     soDentroDoSetor: true,
   },
   {
@@ -100,6 +102,21 @@ export const TELAS_DO_GERAL: readonly DefDaTelaDoGeral[] = [
   },
 ];
 
+/** A disponibilidade inicial é controlada pelos módulos, sem ocultação adicional. */
+export const TELAS_OCULTAS_POR_PADRAO: readonly TelaDoGeral[] = [];
+
+/** Visibilidade efetiva do setor: padrões, escolhas explícitas e registros antigos. */
+export function telasOcultasDoGeralDoSetor(
+  setor: string,
+  ocultasPorSetor: Readonly<Record<string, readonly TelaDoGeral[]>>,
+  visiveisPorSetor: Readonly<Record<string, readonly TelaDoGeral[]>> = {},
+): TelaDoGeral[] {
+  const ocultas = new Set<TelaDoGeral>(TELAS_OCULTAS_POR_PADRAO);
+  for (const tela of ocultasPorSetor[setor] ?? []) ocultas.add(tela);
+  for (const tela of visiveisPorSetor[setor] ?? []) ocultas.delete(tela);
+  return TODAS_AS_TELAS_DO_GERAL.filter((t) => ocultas.has(t));
+}
+
 /** O que fica no menu de qualquer jeito — a tela de configuração diz isso com estes nomes. */
 export const TELAS_SEMPRE_NO_MENU: readonly string[] = ["Início", "Meu dia"];
 
@@ -122,20 +139,52 @@ export function telaDoGeralDoModulo(codigoDoModulo: string): TelaDoGeral | null 
  * o menu — e, na dúvida, nada fica escondido (o menu de antes).
  */
 export function lerTelasOcultas(bruto: string | null | undefined): TelaDoGeral[] {
-  if (!bruto) return [];
+  return lerPreferenciasDoMenuGeral(bruto).ocultas;
+}
+
+/** Mantém a leitura dos arrays antigos e aceita escolhas explícitas do padrão oculto. */
+export function lerPreferenciasDoMenuGeral(bruto: string | null | undefined): { ocultas: TelaDoGeral[]; visiveis: TelaDoGeral[] } {
+  if (!bruto) return { ocultas: [], visiveis: [] };
   let lido: unknown;
-  try {
-    lido = JSON.parse(bruto);
-  } catch {
-    return [];
-  }
-  if (!Array.isArray(lido)) return [];
-  return limpar(lido);
+  try { lido = JSON.parse(bruto); } catch { return { ocultas: [], visiveis: [] }; }
+  if (Array.isArray(lido)) return { ocultas: limpar(lido), visiveis: [] };
+  if (!lido || typeof lido !== "object") return { ocultas: [], visiveis: [] };
+  const estado = lido as { ocultas?: unknown; visiveis?: unknown };
+  return {
+    ocultas: Array.isArray(estado.ocultas) ? limpar(estado.ocultas) : [],
+    visiveis: Array.isArray(estado.visiveis) ? limpar(estado.visiveis) : [],
+  };
 }
 
 /** Para gravar: só chaves conhecidas, sem repetição, na ordem do menu. */
 export function gravarTelasOcultas(chaves: readonly unknown[]): string {
   return JSON.stringify(limpar(chaves));
+}
+
+export function gravarPreferenciasDoMenuGeral(ocultas: readonly unknown[], visiveis: readonly unknown[]): string {
+  const esconder = limpar(ocultas);
+  const mostrar = limpar(visiveis).filter((t) => TELAS_OCULTAS_POR_PADRAO.includes(t));
+  return mostrar.length ? JSON.stringify({ ocultas: esconder, visiveis: mostrar }) : JSON.stringify(esconder);
+}
+
+export function alternarPreferenciaDoMenuGeral(
+  estado: { ocultas: readonly TelaDoGeral[]; visiveis: readonly TelaDoGeral[] },
+  tela: TelaDoGeral,
+  visivel: boolean,
+): { ocultas: TelaDoGeral[]; visiveis: TelaDoGeral[] } {
+  const ocultas = new Set(estado.ocultas);
+  const mostradas = new Set(estado.visiveis);
+  if (visivel) {
+    ocultas.delete(tela);
+    if (TELAS_OCULTAS_POR_PADRAO.includes(tela)) mostradas.add(tela);
+  } else {
+    ocultas.add(tela);
+    mostradas.delete(tela);
+  }
+  return {
+    ocultas: TODAS_AS_TELAS_DO_GERAL.filter((t) => ocultas.has(t)),
+    visiveis: TODAS_AS_TELAS_DO_GERAL.filter((t) => mostradas.has(t)),
+  };
 }
 
 function limpar(valores: readonly unknown[]): TelaDoGeral[] {
@@ -173,18 +222,19 @@ export function setoresQueDecidemOGeral(activeSector: string | null, setoresDaPe
 /**
  * As telas do Geral que aparecem, na ordem do menu.
  *
- * `setores` é o resultado de `setoresQueDecidemOGeral`. Lista vazia (pessoa
- * sem setor nenhum) também mostra tudo: não há setor para recortar, e menu
- * sem Cadastros nem Agenda por falta de setor seria castigo, não escolha.
+ * `setores` é o resultado de `setoresQueDecidemOGeral`. Sem recorte, todos
+ * seguem os padrões gerais; telas novas aparecem por padrão, exceto as que
+ * foram declaradas inicialmente escondidas.
  */
 export function telasDoGeralVisiveis(
   setores: readonly string[] | null,
   ocultasPorSetor: Readonly<Record<string, readonly TelaDoGeral[]>>,
+  visiveisPorSetor: Readonly<Record<string, readonly TelaDoGeral[]>> = {},
 ): TelaDoGeral[] {
-  if (setores === null || setores.length === 0) return [...TODAS_AS_TELAS_DO_GERAL];
+  if (setores === null || setores.length === 0) return TODAS_AS_TELAS_DO_GERAL.filter((t) => !TELAS_OCULTAS_POR_PADRAO.includes(t));
   const aparece = new Set<TelaDoGeral>();
   for (const setor of setores) {
-    const ocultas = new Set(ocultasPorSetor[setor] ?? []);
+    const ocultas = new Set(telasOcultasDoGeralDoSetor(setor, ocultasPorSetor, visiveisPorSetor));
     for (const tela of TODAS_AS_TELAS_DO_GERAL) if (!ocultas.has(tela)) aparece.add(tela);
   }
   return TODAS_AS_TELAS_DO_GERAL.filter((t) => aparece.has(t));

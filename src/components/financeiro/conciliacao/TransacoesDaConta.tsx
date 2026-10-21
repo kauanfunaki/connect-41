@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Check, ListChecks, Plus, EyeOff, Undo2, RotateCcw, Sparkles, Lock } from "lucide-react";
+import { Check, ListChecks, Plus, EyeOff, Undo2, RotateCcw, Sparkles, Lock, ArrowLeftRight } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import type { VarianteDoBadge } from "@/components/ui/Badge";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { CampoMes } from "@/components/ui/CampoMes";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -23,13 +25,20 @@ import {
   ignorarTransacao,
   reabrirTransacao,
   lancamentosParaEscolha,
+  transferirEntreContas,
   type LancamentoParaEscolha,
 } from "@/app/(app)/conciliacao/actions";
-import { moeda, tomDoValor } from "@/lib/financeiro/formato";
+import { moeda } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
-import { formatarCompetencia } from "@/lib/format";
+import { formatarCompetencia, formatarNumero } from "@/lib/format";
+import { centavosDeTexto } from "@/lib/financeiro/manual";
+import type { AjusteDaConciliacao } from "@/lib/financeiro/conciliacao/ajuste";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
+import { CamposDaContraparteNova } from "@/components/financeiro/ContraparteNova";
+import { CampoDeProjeto } from "@/components/financeiro/CampoDeProjeto";
+import { BARRAS_DO_NIVEL, ROTULO_DO_NIVEL, EXPLICACAO_DO_NIVEL, type NivelDoCasamento } from "@/lib/financeiro/conciliacao/casamento";
 
 export type LancamentoResumido = {
   id: string;
@@ -55,15 +64,25 @@ export type LinhaDaTransacao = {
    * `bloqueio`, é uma conta travada na aprovação: mostra o motivo, não confirma.
    */
   sugestao: (LancamentoResumido & { motivo: string; bloqueio: string | null }) | null;
+  /**
+   * Sem sugestão forte, o candidato que se destaca dos outros (19/10, as
+   * "torres" do Omie): mostrado para a pessoa conferir e conciliar com um clique.
+   */
+  provavel: (LancamentoResumido & { motivo: string; bloqueio: string | null }) | null;
+  /** O grau de casamento da pendente — as barras. Nulo fora da pendente. */
+  nivel: NivelDoCasamento | null;
   /** Lançamentos de valor exato — com ou sem sugestão forte. */
   candidatosDeMesmoValor: number;
   /** Quantos desses estão travados na aprovação por alçada. */
   travadosDeMesmoValor: number;
   vinculados: LancamentoResumido[];
+  /** Conciliada como transferência entre contas (19/10): desfazer desfaz as duas pontas. */
+  transferencia: boolean;
 };
 
 type Contraparte = { id: string; nome: string; documento: string | null; defaultCategoryId: string | null; defaultCostCenterId?: string | null };
 type Centro = { id: string; nome: string };
+type Projeto = { id: string; nome: string };
 type Categoria = { id: string; nome: string; kind: "PAGAR" | "RECEBER" };
 
 // Situação da transação no `Selo` miúdo (escolha 2A, 08/10/2026). Ignorada é
@@ -76,6 +95,26 @@ const STATUS: Record<LinhaDaTransacao["status"], { rotulo: string; variante: Var
 
 function descricaoDaTransacao(l: Pick<LinhaDaTransacao, "memo" | "nome">): string {
   return [l.nome, l.memo].filter(Boolean).join(" · ") || "Sem descrição no extrato";
+}
+
+/**
+ * As "torres" do Omie (19/10): quatro barras, cheias até o grau de casamento.
+ * O nome do nível vai do lado, em texto miúdo — barra sozinha não diz nada a
+ * quem nunca usou o Omie, e a cor não pode ser a única pista.
+ */
+function SinalDoCasamento({ nivel }: { nivel: NivelDoCasamento }) {
+  const cheias = BARRAS_DO_NIVEL[nivel];
+  const cor = nivel === "encontrado" ? "bg-success" : nivel === "nenhum" ? "bg-fg-muted" : "bg-brand";
+  return (
+    <span className="inline-flex items-center gap-1.5" title={EXPLICACAO_DO_NIVEL[nivel]}>
+      <span aria-hidden className="inline-flex h-3.5 items-end gap-[2px]">
+        {[1, 2, 3, 4].map((b) => (
+          <span key={b} className={`w-[3px] rounded-sm ${b <= cheias ? cor : "bg-border"}`} style={{ height: `${b * 25}%` }} />
+        ))}
+      </span>
+      <span className="text-micro text-fg-muted whitespace-nowrap">{ROTULO_DO_NIVEL[nivel]}</span>
+    </span>
+  );
 }
 
 function avisoDeTravados(candidatos: number, travados: number): string | null {
@@ -97,6 +136,9 @@ export function TransacoesDaConta({
   contrapartes,
   categorias,
   centros = [],
+  projetos = [],
+  companyId,
+  outrasContas = [],
 }: {
   linhas: LinhaDaTransacao[];
   podeAgir: boolean;
@@ -104,11 +146,18 @@ export function TransacoesDaConta({
   categorias: Categoria[];
   /** Centros de custo ativos da empresa; sem nenhum, o campo não aparece. */
   centros?: Centro[];
+  /** Projetos ativos da empresa; sem nenhum, o campo aparece desabilitado e diz onde cadastrar. */
+  projetos?: Projeto[];
+  /** A empresa da conta — a busca pelo CNPJ diz se a ficha já existe nela. */
+  companyId: string;
+  /** As outras contas ativas da empresa. Sem nenhuma, não há "Transferência". */
+  outrasContas?: { id: string; nome: string }[];
 }) {
   const { dialog, requestConfirm } = useConfirm();
   const [escolhendo, setEscolhendo] = useState<LinhaDaTransacao | null>(null);
   const [criando, setCriando] = useState<LinhaDaTransacao | null>(null);
   const [ignorando, setIgnorando] = useState<LinhaDaTransacao | null>(null);
+  const [transferindo, setTransferindo] = useState<LinhaDaTransacao | null>(null);
 
   function confirmarSugestao(l: LinhaDaTransacao) {
     const s = l.sugestao!;
@@ -125,12 +174,28 @@ export function TransacoesDaConta({
     );
   }
 
+  function conciliarComProvavel(l: LinhaDaTransacao) {
+    const p = l.provavel!;
+    requestConfirm(
+      {
+        title: "Conciliar com este lançamento?",
+        description: `${moeda(Math.abs(l.centavos))} de ${dataCurta(l.dataKey)} liquida "${p.contraparteNome}" (${p.motivo}). Não há certeza de que é este — confira. O lançamento fica pago em ${dataCurta(l.dataKey)}.`,
+        confirmLabel: "Conciliar",
+      },
+      async () => {
+        const r = await confirmarConciliacao(l.id, [p.id]);
+        if ("error" in r) throw new Error(r.error);
+      }
+    );
+  }
+
   function desfazer(l: LinhaDaTransacao) {
     requestConfirm(
       {
-        title: "Desfazer a conciliação?",
-        description:
-          "A transação volta a pendente e cada lançamento volta ao que era antes — em aberto, ou pago na data original.",
+        title: l.transferencia ? "Desfazer a transferência?" : "Desfazer a conciliação?",
+        description: l.transferencia
+          ? "Os dois lançamentos da transferência são cancelados, e esta linha — e a da outra conta, se estava conciliada — voltam a pendente."
+          : "A transação volta a pendente e cada lançamento volta ao que era antes — em aberto, ou pago na data original.",
         confirmLabel: "Desfazer",
         destructive: true,
       },
@@ -162,6 +227,7 @@ export function TransacoesDaConta({
             extrato: l.nome ?? "",
             tipo: l.centavos < 0 ? "Saída" : "Entrada",
             situacao: rotuloDoStatus(l),
+            casamento: l.nivel ? ROTULO_DO_NIVEL[l.nivel] : "",
           },
         }))}
       >
@@ -179,7 +245,13 @@ export function TransacoesDaConta({
                 <FiltroDaColuna rotulo="Valor" campos={[{ chave: "tipo", rotulo: "Entrada ou saída" }]} />
               </th>
               <th className="py-2 pr-3 font-medium">
-                <FiltroDaColuna rotulo="Situação" chave="situacao" />
+                <FiltroDaColuna
+                  rotulo="Situação"
+                  campos={[
+                    { chave: "situacao", rotulo: "Situação" },
+                    { chave: "casamento", rotulo: "Casamento" },
+                  ]}
+                />
               </th>
               <th className="py-2 font-medium">Lançamento</th>
             </tr>
@@ -191,32 +263,54 @@ export function TransacoesDaConta({
                 <td className="py-2.5 pr-3 max-w-[300px]">
                   <span className="block break-words">{descricaoDaTransacao(l)}</span>
                 </td>
-                <td className={`py-2.5 pr-3 text-right tabular-nums font-medium whitespace-nowrap ${tomDoValor(l.centavos)}`}>
+                {/* Valor neutro (D1, 15/10/2026): entrada e saída são categoria,
+                    não situação — o "−" já diz o sinal, como no Fluxo de caixa. */}
+                <td className="py-2.5 pr-3 text-right tabular-nums font-medium whitespace-nowrap">
                   {moeda(l.centavos)}
                 </td>
                 <td className="py-2.5 pr-3">
-                  <Selo tom={tomDaVariante(STATUS[l.status].variante)}>{rotuloDoStatus(l)}</Selo>
+                  <div className="flex flex-col items-start gap-1">
+                    <Selo tom={tomDaVariante(STATUS[l.status].variante)}>{rotuloDoStatus(l)}</Selo>
+                    {l.nivel && <SinalDoCasamento nivel={l.nivel} />}
+                  </div>
                 </td>
                 <td className="py-2.5">
                   {l.status === "PENDENTE" && (
                     <div className="flex flex-col gap-2 items-start">
+                      {/* A sugestão e a conta travada no `Aviso` do app (15/10/2026):
+                          eram caixas com borda e fundo próprios. */}
                       {l.sugestao?.bloqueio ? (
-                        <div className="flex flex-col gap-0.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-1.5 max-w-[420px]">
-                          <span className="inline-flex items-center gap-1 text-micro font-medium text-warning-fg">
-                            <Lock size={12} /> Casa com uma conta travada na aprovação · {l.sugestao.motivo}
+                        <Aviso tom="atencao" icone={<Lock />} className="max-w-[420px]">
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-micro font-medium">
+                              Casa com uma conta travada na aprovação · {l.sugestao.motivo}
+                            </span>
+                            <ResumoDoLancamento l={l.sugestao} />
+                            <span className="text-micro text-fg-secondary">
+                              {l.sugestao.bloqueio} Não crie outro lançamento para esta transação: concilie depois da aprovação.
+                            </span>
                           </span>
-                          <ResumoDoLancamento l={l.sugestao} />
-                          <span className="text-micro text-fg-secondary">
-                            {l.sugestao.bloqueio} Não crie outro lançamento para esta transação: concilie depois da aprovação.
-                          </span>
-                        </div>
+                        </Aviso>
                       ) : l.sugestao ? (
-                        <div className="flex flex-col gap-0.5 rounded-md border border-brand/30 bg-brand/5 px-2.5 py-1.5">
-                          <span className="inline-flex items-center gap-1 text-micro font-medium text-brand">
-                            <Sparkles size={12} /> Sugestão · {l.sugestao.motivo}
+                        <Aviso tom="marca" icone={<Sparkles />}>
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-micro font-medium">Sugestão · {l.sugestao.motivo}</span>
+                            <ResumoDoLancamento l={l.sugestao} />
                           </span>
-                          <ResumoDoLancamento l={l.sugestao} />
-                        </div>
+                        </Aviso>
+                      ) : l.provavel ? (
+                        // O mais provável, sem a certeza da sugestão: tom neutro
+                        // e "conciliar com este", não "confirmar".
+                        <Aviso tom="neutro" icone={l.provavel.bloqueio ? <Lock /> : <ListChecks />} className="max-w-[420px]">
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-micro font-medium">
+                              Mais provável · {l.provavel.motivo}
+                              {l.candidatosDeMesmoValor > 1 && ` · ${l.candidatosDeMesmoValor} de mesmo valor`}
+                            </span>
+                            <ResumoDoLancamento l={l.provavel} />
+                            {l.provavel.bloqueio && <span className="text-micro text-fg-secondary">{l.provavel.bloqueio}</span>}
+                          </span>
+                        </Aviso>
                       ) : (
                         l.candidatosDeMesmoValor > 0 && (
                           <span className="text-micro text-fg-muted">
@@ -232,12 +326,22 @@ export function TransacoesDaConta({
                               <Check size={12} /> Confirmar
                             </Button>
                           )}
+                          {l.provavel && !l.provavel.bloqueio && (
+                            <Button size="xs" variant="secondary" onClick={() => conciliarComProvavel(l)}>
+                              <Check size={12} /> Conciliar com este
+                            </Button>
+                          )}
                           <Button size="xs" variant="secondary" onClick={() => setEscolhendo(l)}>
                             <ListChecks size={12} /> Escolher lançamentos
                           </Button>
                           <Button size="xs" variant="secondary" onClick={() => setCriando(l)}>
                             <Plus size={12} /> Criar lançamento
                           </Button>
+                          {outrasContas.length > 0 && (
+                            <Button size="xs" variant="secondary" onClick={() => setTransferindo(l)}>
+                              <ArrowLeftRight size={12} /> Transferência
+                            </Button>
+                          )}
                           <Button size="xs" variant="ghost" onClick={() => setIgnorando(l)}>
                             <EyeOff size={12} /> Ignorar
                           </Button>
@@ -279,8 +383,17 @@ export function TransacoesDaConta({
 
       {dialog}
       {escolhendo && <EscolherLancamentos transacao={escolhendo} onClose={() => setEscolhendo(null)} />}
+      {transferindo && <TransferirEntreContas transacao={transferindo} contas={outrasContas} onClose={() => setTransferindo(null)} />}
       {criando && (
-        <CriarLancamento transacao={criando} contrapartes={contrapartes} categorias={categorias} centros={centros} onClose={() => setCriando(null)} />
+        <CriarLancamento
+          transacao={criando}
+          companyId={companyId}
+          contrapartes={contrapartes}
+          categorias={categorias}
+          centros={centros}
+          projetos={projetos}
+          onClose={() => setCriando(null)}
+        />
       )}
       {ignorando && <IgnorarTransacao transacao={ignorando} onClose={() => setIgnorando(null)} />}
     </>
@@ -304,10 +417,16 @@ function ResumoDoLancamento({ l }: { l: LancamentoResumido }) {
 
 function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransacao; onClose: () => void }) {
   const alvo = Math.abs(transacao.centavos);
+  const aPagar = transacao.centavos < 0;
   const [busca, setBusca] = useState("");
   const [lista, setLista] = useState<LancamentoParaEscolha[] | null>(null);
   const [limitado, setLimitado] = useState(false);
-  const [marcados, setMarcados] = useState<Map<string, number>>(new Map());
+  const [marcados, setMarcados] = useState<Map<string, LancamentoParaEscolha>>(new Map());
+  // A diferença com uma conta só (fila do BPO, 19/10): juros e multa quando a
+  // linha passa da conta; desconto ou baixa parcial quando fica abaixo.
+  const [jurosTexto, setJurosTexto] = useState<string | null>(null);
+  const [multaTexto, setMultaTexto] = useState("");
+  const [abaixo, setAbaixo] = useState<"desconto" | "parcial" | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, startCarga] = useTransition();
   const [salvando, startSalvar] = useTransition();
@@ -341,16 +460,46 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
     };
   }, [transacao.id]);
 
-  const soma = [...marcados.values()].reduce((a, b) => a + b, 0);
+  const soma = [...marcados.values()].reduce((a, l) => a + l.centavos, 0);
   const falta = alvo - soma;
+  const unica = marcados.size === 1 && ![...marcados.values()][0]!.ehBaixa;
+
+  // Juros, sem nada digitado, é o que a multa deixa da diferença.
+  const lido = (t: string) => (t.trim() === "" ? 0 : centavosDeTexto(t));
+  const multa = lido(multaTexto);
+  const juros = jurosTexto === null ? (multa === null ? null : Math.max(0, falta - multa)) : lido(jurosTexto);
+  const encargosFecham = juros !== null && multa !== null && juros + multa === falta;
+
+  const ajuste: AjusteDaConciliacao | null =
+    !unica || falta === 0
+      ? null
+      : falta > 0
+        ? encargosFecham
+          ? { tipo: "encargos", jurosCentavos: juros!, multaCentavos: multa! }
+          : null
+        : abaixo
+          ? { tipo: abaixo }
+          : null;
+  const podeConciliar = marcados.size > 0 && (falta === 0 || ajuste !== null);
 
   function alternar(l: LancamentoParaEscolha) {
     setMarcados((atual) => {
       const novo = new Map(atual);
       if (novo.has(l.id)) novo.delete(l.id);
-      else novo.set(l.id, l.centavos);
+      else novo.set(l.id, l);
       return novo;
     });
+    setJurosTexto(null);
+    setMultaTexto("");
+    setAbaixo(null);
+  }
+
+  function notaDaSoma() {
+    if (marcados.size === 0 || falta === 0) return null;
+    if (ajuste?.tipo === "encargos") return <span> · conta {moeda(soma)} + juros e multa {moeda(falta)}</span>;
+    if (ajuste?.tipo === "desconto") return <span> · conta {moeda(soma)} − desconto {moeda(-falta)}</span>;
+    if (ajuste?.tipo === "parcial") return <span> · baixa parcial: ficam {moeda(-falta)} em aberto</span>;
+    return <span className="text-danger"> · {falta > 0 ? `faltam ${moeda(falta)}` : `passou ${moeda(-falta)}`}</span>;
   }
 
   return (
@@ -358,20 +507,30 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
       <div className="flex flex-col gap-4">
         <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
-          <strong className={tomDoValor(transacao.centavos)}>{moeda(transacao.centavos)}</strong>. Marque um ou mais
-          lançamentos {transacao.centavos < 0 ? "a pagar" : "a receber"} cuja soma feche o valor no centavo.
+          <strong className="text-fg">{moeda(transacao.centavos)}</strong>. Marque um ou mais
+          lançamentos {aPagar ? "a pagar" : "a receber"} cuja soma feche o valor no centavo — ou uma conta só, e
+          lance a diferença como juros, desconto ou baixa parcial.
         </p>
+        {/* A caixa de busca do Connect (15/10/2026): Enter busca e o "limpar"
+            volta à lista inicial — era um campo comum com o botão "Buscar". O
+            termo sai do formulário, e não do estado, que no "limpar" ainda
+            não foi atualizado quando o envio acontece. */}
         <form
-          className="flex items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            carregar(busca);
+            carregar(String(new FormData(e.currentTarget).get("q") ?? ""));
           }}
         >
-          <Input compact value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por contraparte ou descrição" aria-label="Buscar" className="max-w-xs" />
-          <Button type="submit" variant="secondary" size="sm" disabled={carregando}>
-            Buscar
-          </Button>
+          <CampoDeBusca
+            compact
+            name="q"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            enviarAoLimpar
+            placeholder="Nome, descrição, valor ou data (ex.: 150,00 ou 15/10)"
+            aria-label="Buscar lançamento"
+            className="w-96 max-w-full"
+          />
         </form>
 
         <div className="max-h-[380px] overflow-y-auto border border-border rounded-md">
@@ -380,7 +539,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
           ) : lista.length === 0 ? (
             <p className="p-3 text-fs-2 text-fg-muted">
               Nenhum lançamento em aberto ou sem conciliação {busca ? "com esta busca" : "perto desta data"}. Busque pelo
-              nome ou crie o lançamento.
+              nome, pelo valor ou pela data, ou crie o lançamento.
             </p>
           ) : (
             <table className="w-full text-ui">
@@ -418,6 +577,55 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
         </div>
         {limitado && <p className="text-micro text-fg-muted">Mostrando os 200 primeiros. Refine pela busca.</p>}
 
+        {unica && falta > 0 && (
+          <div className="flex flex-col gap-3 rounded-md border border-border p-3">
+            <p className="text-fs-2 text-fg">
+              A linha passa da conta em <strong className="tabular-nums">{moeda(falta)}</strong>. Lance a diferença como juros e
+              multa — a conta fica {aPagar ? "paga" : "recebida"}, e o total da baixa é o da linha.
+            </p>
+            <FieldGrid columns="sm:grid-cols-2">
+              <CampoForm label="Juros" htmlFor="ajuste-juros">
+                <Input
+                  id="ajuste-juros"
+                  prefix="R$"
+                  inputMode="decimal"
+                  value={jurosTexto ?? (juros === null ? "" : formatarNumero(juros / 100, 2))}
+                  onChange={(e) => setJurosTexto(e.target.value)}
+                />
+              </CampoForm>
+              <CampoForm label="Multa" htmlFor="ajuste-multa">
+                <Input id="ajuste-multa" prefix="R$" inputMode="decimal" value={multaTexto} onChange={(e) => setMultaTexto(e.target.value)} placeholder="0,00" />
+              </CampoForm>
+            </FieldGrid>
+            {!encargosFecham && (
+              <p className="text-micro text-danger">
+                {juros === null || multa === null
+                  ? "Juros ou multa ilegível. Use, por exemplo, 12,50."
+                  : `Juros e multa somam ${moeda(juros + multa)}; a diferença é ${moeda(falta)}.`}
+              </p>
+            )}
+          </div>
+        )}
+        {unica && falta < 0 && (
+          <RadioGroup
+            legenda={`A linha fica ${moeda(-falta)} abaixo da conta`}
+            colunas="sm:grid-cols-2"
+            valor={abaixo}
+            onChange={setAbaixo}
+            opcoes={[
+              {
+                valor: "desconto",
+                rotulo: `${aPagar ? "Desconto obtido" : "Desconto concedido"} de ${moeda(-falta)}`,
+                descricao: aPagar ? "O fornecedor abateu o resto: a conta fica paga." : "O cliente pagou com desconto: a conta fica recebida.",
+              },
+              { valor: "parcial", rotulo: "Baixa parcial", descricao: `A conta continua em aberto com ${moeda(-falta)}.` },
+            ]}
+          />
+        )}
+        {marcados.size > 1 && falta !== 0 && (
+          <p className="text-micro text-fg-muted">Para lançar juros, desconto ou baixa parcial, marque uma conta só.</p>
+        )}
+
         {erro && <Aviso>{erro}</Aviso>}
         {/* O rodapé padrão (08/10/2026), num formulário só dele: a soma do que
             está marcado vai na nota, e o erro, acima, não a esconde. */}
@@ -426,7 +634,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
             e.preventDefault();
             setErro(null);
             startSalvar(async () => {
-              const r = await confirmarConciliacao(transacao.id, [...marcados.keys()]);
+              const r = await confirmarConciliacao(transacao.id, [...marcados.keys()], falta === 0 ? undefined : ajuste);
               if ("error" in r) setErro(r.error);
               else onClose();
             });
@@ -437,13 +645,11 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
             submitLabel="Conciliar"
             pendingLabel="Conciliando…"
             onCancel={onClose}
-            submitDisabled={marcados.size === 0 || falta !== 0}
+            submitDisabled={!podeConciliar}
             nota={
               <span className="tabular-nums text-fg">
                 Selecionado: <strong>{moeda(soma)}</strong> de {moeda(alvo)}
-                {marcados.size > 0 && falta !== 0 && (
-                  <span className="text-danger"> · {falta > 0 ? `faltam ${moeda(falta)}` : `passou ${moeda(-falta)}`}</span>
-                )}
+                {notaDaSoma()}
               </span>
             }
           />
@@ -459,15 +665,19 @@ const NOVA = "__nova__";
 
 function CriarLancamento({
   transacao,
+  companyId,
   contrapartes,
   categorias,
   centros,
+  projetos,
   onClose,
 }: {
   transacao: LinhaDaTransacao;
+  companyId: string;
   contrapartes: Contraparte[];
   categorias: Categoria[];
   centros: Centro[];
+  projetos: Projeto[];
   onClose: () => void;
 }) {
   const kind = transacao.centavos < 0 ? "PAGAR" : "RECEBER";
@@ -505,7 +715,7 @@ function CriarLancamento({
         <input type="hidden" name="transactionId" value={transacao.id} />
         <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
-          <strong className={tomDoValor(transacao.centavos)}>{moeda(transacao.centavos)}</strong>. O lançamento nasce pago
+          <strong className="text-fg">{moeda(transacao.centavos)}</strong>. O lançamento nasce pago
           nesta data, com este valor, e já conciliado.
         </p>
         {transacao.sugestao?.bloqueio && (
@@ -533,14 +743,11 @@ function CriarLancamento({
           </Select>
         </CampoForm>
 
+        {/* CNPJ primeiro (19/10, pedido 2 do BPO): a Receita preenche o nome
+            no lugar do favorecido do extrato, e o resto da ficha vai junto. */}
         {contraparte === NOVA && (
-          <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_200px]">
-            <CampoForm label="Nome da nova contraparte" htmlFor="criar-nome" required>
-              <Input id="criar-nome" name="contraparteNome" maxLength={180} defaultValue={transacao.nome ?? ""} required />
-            </CampoForm>
-            <CampoForm label="CPF ou CNPJ" htmlFor="criar-doc" helper="Opcional. Com documento, a ficha existente é reaproveitada.">
-              <Input id="criar-doc" name="contraparteDocumento" inputMode="numeric" />
-            </CampoForm>
+          <FieldGrid columns="sm:grid-cols-[200px_minmax(0,1fr)]">
+            <CamposDaContraparteNova idBase="criar" companyId={companyId} nomePadrao={transacao.nome ?? ""} classeDoAviso="sm:col-span-2" />
           </FieldGrid>
         )}
 
@@ -565,22 +772,26 @@ function CriarLancamento({
           </CampoForm>
         </FieldGrid>
 
-        {centros.length > 0 && (
-          <CampoForm
-            label="Centro de custo"
-            htmlFor="criar-centro"
-            helper={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional."}
-          >
-            <Select id="criar-centro" name="costCenterId" defaultValue="">
-              <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
-              {centros.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </Select>
-          </CampoForm>
-        )}
+        {/* Projeto sempre (19/10): ver `CampoDeProjeto`. */}
+        <FieldGrid columns={centros.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}>
+            {centros.length > 0 && (
+              <CampoForm
+                label="Centro de custo"
+                htmlFor="criar-centro"
+                helper={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional."}
+              >
+                <Select id="criar-centro" name="costCenterId" defaultValue="">
+                  <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
+                  {centros.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+            )}
+            <CampoDeProjeto id="criar-projeto" companyId={companyId} projetos={projetos} />
+        </FieldGrid>
 
         <CampoForm label="Descrição" htmlFor="criar-descricao">
           <Input id="criar-descricao" name="descricao" maxLength={255} defaultValue={(transacao.memo ?? transacao.nome ?? "").slice(0, 255)} />
@@ -593,6 +804,68 @@ function CriarLancamento({
           onCancel={onClose}
           erro={erro}
         />
+      </form>
+    </Modal>
+  );
+}
+
+// ─── Transferência entre contas (19/10) ─────────────────────────────────────
+
+function TransferirEntreContas({
+  transacao,
+  contas,
+  onClose,
+}: {
+  transacao: LinhaDaTransacao;
+  contas: { id: string; nome: string }[];
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
+  const sai = transacao.centavos < 0;
+
+  return (
+    <Modal open onClose={() => !pendente && onClose()} title="Transferência entre contas" maxWidth="max-w-lg">
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const dados = new FormData(e.currentTarget);
+          setErro(null);
+          startTransition(async () => {
+            const r = await transferirEntreContas(dados);
+            if ("error" in r) {
+              setErro(r.error);
+              return;
+            }
+            toast.success(r.aviso);
+            onClose();
+          });
+        }}
+      >
+        <input type="hidden" name="transactionId" value={transacao.id} />
+        <p className="text-helper text-fg-secondary">
+          {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} · <strong className="text-fg">{moeda(transacao.centavos)}</strong>.{" "}
+          {sai ? "Sai desta conta e entra na conta escolhida." : "Entra nesta conta, vindo da conta escolhida."}
+        </p>
+        <CampoForm label={sai ? "Para a conta" : "Da conta"} htmlFor="transferencia-conta" required>
+          <Select id="transferencia-conta" name="outraContaId" defaultValue={contas.length === 1 ? contas[0]!.id : ""} required>
+            <option value="" disabled>
+              Escolha…
+            </option>
+            {contas.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
+          </Select>
+        </CampoForm>
+        <p className="text-helper text-fg-muted">
+          Os dois lançamentos — a saída de uma conta e a entrada na outra — nascem pagos neste dia, na categoria de
+          transferência, que fica fora da DRE. Se o extrato da outra conta já tem a linha deste valor, ela é conciliada junto.
+        </p>
+        <FormFooter pending={pendente} pendingLabel="Registrando…" submitLabel="Registrar transferência" onCancel={onClose} erro={erro} />
       </form>
     </Modal>
   );

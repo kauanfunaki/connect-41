@@ -123,16 +123,14 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
 
       {todos.length === 0 ? (
         <Card>
+          {/* Sem repetir o "Novo sócio": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<Users />}
             title="Nenhum sócio cadastrado"
-            description="O quadro societário alimenta a viabilidade no Empresa Fácil: é do endereço do sócio que sai a resposta de “Reside no local?”. “Buscar na Receita” traz quem é sócio e desde quando."
-            action={
-              podeEditar && (
-                <Button href={novoHref} variant="primary">
-                  <Plus size={14} /> Cadastrar sócio
-                </Button>
-              )
+            description={
+              podeEditar
+                ? "O quadro societário alimenta a viabilidade no Empresa Fácil: é do endereço do sócio que sai a resposta de “Reside no local?”. Use “Buscar na Receita” ou “+ Novo sócio”, no alto da tela, para trazer quem é sócio e desde quando."
+                : "O quadro societário alimenta a viabilidade no Empresa Fácil: é do endereço do sócio que sai a resposta de “Reside no local?”."
             }
           />
         </Card>
@@ -181,7 +179,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
 
           {exSocios.length > 0 && (
             <section className="mb-4" aria-labelledby="ex-socios">
-              <h2 id="ex-socios" className="text-card-title font-semibold text-fg mb-2">
+              <h2 id="ex-socios" className="text-section font-semibold text-fg mb-2">
                 Ex-sócios
               </h2>
               <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">

@@ -38,7 +38,7 @@ export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
         <p className="text-fs-3 text-fg-muted">Nenhuma pergunta no chat neste período.</p>
       ) : (
         <div className="flex flex-col gap-1">
-          <p className="text-fs-1 uppercase tracking-wide text-fg-muted">Perguntas por IA</p>
+          <p className="c41-rotulo">Perguntas por IA</p>
           <ul className="flex flex-col">
             {dados.perguntas.map((p) => (
               <li key={p.agentCode} className="flex flex-wrap items-baseline gap-x-3 py-1.5 border-b border-border-soft last:border-0 text-fs-3">
@@ -54,7 +54,7 @@ export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
 
       {dados.encaminhamentos.length > 0 && (
         <div className="flex flex-col gap-1">
-          <p className="text-fs-1 uppercase tracking-wide text-fg-muted">Passadas para outro setor</p>
+          <p className="c41-rotulo">Passadas para outro setor</p>
           <ul className="flex flex-col">
             {dados.encaminhamentos.map((e) => (
               <li key={`${e.de}-${e.para}`} className="flex flex-wrap items-baseline gap-x-3 py-1.5 border-b border-border-soft last:border-0 text-fs-3">

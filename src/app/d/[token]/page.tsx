@@ -7,24 +7,20 @@ import { formatInstantDateTimeComSegundos } from "@/lib/format";
 import { Download, Link2Off } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
+import { TelaDeAvisoPublica } from "@/components/publico/TelaDeAvisoPublica";
+import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 
 export const metadata = { title: "Documento" };
 
-// Mesma moldura da tela de erro desta rota (error.tsx) e do 404: ícone, título
-// e texto empilhados no centro.
+// O aviso único das telas públicas (15/10/2026), o mesmo da tela de erro desta
+// rota (error.tsx) e do 404 — era uma cópia à mão da moldura.
 function InvalidLink() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="max-w-md text-center flex flex-col items-center gap-3">
-        <span className="w-10 h-10 rounded-lg bg-surface-hover text-fg-muted flex items-center justify-center">
-          <Link2Off size={18} />
-        </span>
-        <h1 className="text-fs-7 font-semibold text-fg">Link inválido ou expirado</h1>
-        <p className="text-fs-3 text-fg-muted">
-          Este link de documento não existe mais ou foi digitado incorretamente. Entre em contato com quem enviou o documento para receber um novo link.
-        </p>
-      </div>
-    </div>
+    <TelaDeAvisoPublica
+      icone={<Link2Off />}
+      titulo="Link inválido ou expirado"
+      texto="Este link de documento não existe mais ou foi digitado incorretamente. Entre em contato com quem enviou o documento para receber um novo link."
+    />
   );
 }
 
@@ -41,7 +37,7 @@ export default async function ClientDocumentViewPage({
   const recipient = await prisma.clientDocumentRecipient.findUnique({
     where: { token },
     include: {
-      clientDocument: { include: { company: { select: { name: true } } } },
+      clientDocument: { include: { company: { select: { name: true } }, tenant: { select: { name: true, logoUrl: true } } } },
     },
   });
 
@@ -68,13 +64,23 @@ export default async function ClientDocumentViewPage({
   return (
     <div className="min-h-screen py-10 px-4">
       <div className="max-w-2xl mx-auto">
-        <p className="text-fs-2 text-fg-muted mb-1">{doc.company.name}</p>
-        <h1 className="text-title font-semibold text-fg tracking-[-0.01em] mb-6">{doc.title}</h1>
-
-        <div
-          className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 sm:p-6 text-fs-4 text-fg leading-relaxed [&_a]:text-brand [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-fs-7 [&_h1]:font-semibold [&_h2]:text-fs-6 [&_h2]:font-semibold [&_h3]:text-fs-4 [&_h3]:font-semibold"
-          dangerouslySetInnerHTML={{ __html: bodyHtml }}
+        {/* O topo das telas públicas, com o logo do escritório, como os links de
+            admissão e de teste (15/10/2026): era um título montado à mão, com a
+            empresa em cima. */}
+        <CabecalhoPublico
+          logo={doc.tenant.logoUrl ? { src: doc.tenant.logoUrl, alt: doc.tenant.name } : null}
+          titulo={doc.title}
+          subtitulo={doc.company.name}
         />
+
+        {/* Texto de leitura como no portal (/portal/envios/[id], 15/10/2026):
+            15px e no máximo 72 caracteres por linha — eram 14px e ~90. */}
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 sm:p-6">
+          <div
+            className="max-w-[72ch] text-body text-fg leading-relaxed break-words [&_a]:text-brand [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-fs-7 [&_h1]:font-semibold [&_h2]:text-fs-6 [&_h2]:font-semibold [&_h3]:text-fs-4 [&_h3]:font-semibold"
+            dangerouslySetInnerHTML={{ __html: bodyHtml }}
+          />
+        </div>
 
         {/* `nativo` (um `<a>` simples), e não o Button com href puro: este
             vira <Link>, e o prefetch dele chamaria a rota do arquivo (que

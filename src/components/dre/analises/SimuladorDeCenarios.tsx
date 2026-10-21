@@ -8,17 +8,9 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { montarLinhas } from "@/lib/dre/calculo";
 import { simularCenario, CENARIOS_PRONTOS, PREMISSAS_ZERADAS, type PremissasDoCenario } from "@/lib/dre/analises";
-import { rotuloEconomico, LINHA_DE_RESULTADO, LINHA_OPERACIONAL } from "@/lib/dre/economica";
+import { rotuloEconomico } from "@/lib/dre/economica";
+import { modeloDoCodigo, type CodigoDoModelo } from "@/lib/dre/estrutura";
 import { moeda, percentual, tomDoValor } from "@/lib/financeiro/formato";
-
-const LINHAS_DO_SIMULADOR = ["receita_bruta", "margem_contribuicao", "total_despesas_fixas", LINHA_OPERACIONAL, LINHA_DE_RESULTADO];
-
-const CAMPOS: { chave: keyof PremissasDoCenario; rotulo: string; dica: string }[] = [
-  { chave: "receita", rotulo: "Receita", dica: "Impostos, CMV, mão de obra e comerciais acompanham." },
-  { chave: "cmv", rotulo: "CMV além da receita", dica: "Custo que sobe mais (ou menos) que a venda." },
-  { chave: "despesasFixas", rotulo: "Despesas fixas", dica: "Pessoal, diretoria e administrativas." },
-  { chave: "financeiras", rotulo: "Despesas financeiras", dica: "Juros e tarifas." },
-];
 
 export type BaseDoCenario = { chave: string; rotulo: string; porGrupo: Record<string, number> };
 
@@ -32,15 +24,25 @@ export type BaseDoCenario = { chave: string; rotulo: string; porGrupo: Record<st
  * `montarLinhas` —, então o número daqui é o que a DRE mostraria se o mês
  * tivesse sido assim.
  */
-export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
+export function SimuladorDeCenarios({ bases, modelo: codigoDoModelo }: { bases: BaseDoCenario[]; modelo: CodigoDoModelo }) {
+  // As premissas e as linhas são as do modelo do DRE da empresa (21/10/2026).
+  const modelo = modeloDoCodigo(codigoDoModelo);
+  const opcoes = useMemo(() => ({ impostosNoEbitda: true, modelo }), [modelo]);
+  const campos: { chave: keyof PremissasDoCenario; rotulo: string; dica: string }[] = [
+    { chave: "receita", rotulo: "Receita", dica: modelo.simulador.dicaDaReceita },
+    ...modelo.simulador.campos.map((c) => ({ chave: c.chave, rotulo: c.rotulo, dica: c.dica })),
+  ];
   const [premissas, setPremissas] = useState<PremissasDoCenario>(PREMISSAS_ZERADAS);
   const [pronto, setPronto] = useState("base");
   const [chaveDaBase, setChaveDaBase] = useState(bases[0]?.chave ?? "");
   const baseEscolhida = bases.find((b) => b.chave === chaveDaBase) ?? bases[0]!;
   const porGrupo = baseEscolhida.porGrupo;
 
-  const base = useMemo(() => montarLinhas(porGrupo), [porGrupo]);
-  const simulado = useMemo(() => montarLinhas(simularCenario(porGrupo, premissas)), [porGrupo, premissas]);
+  const base = useMemo(() => montarLinhas(porGrupo, opcoes), [porGrupo, opcoes]);
+  const simulado = useMemo(
+    () => montarLinhas(simularCenario(porGrupo, premissas, opcoes.modelo), opcoes),
+    [porGrupo, premissas, opcoes]
+  );
 
   const valor = (linhas: ReturnType<typeof montarLinhas>, code: string) => linhas.find((l) => l.code === code)?.centavos ?? 0;
   const receitaSimulada = valor(simulado, "receita_bruta");
@@ -53,21 +55,23 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
             "Partir de:" era texto solto no começo da fileira. São um
             `SegmentedControl` desde 08/10/2026: eram fileiras de `Button` que
             alternavam primário e secundário, a "pílula que parece filtro e aba"
-            que a conferência de 30/09 aboliu. */}
+            que a conferência de 30/09 aboliu. O rótulo é o do `CampoForm`
+            (15/10/2026): era um <p> à mão, com outra altura de linha. */}
         {bases.length > 1 && (
-          <div>
-            <p className="text-label font-medium text-fg mb-1.5">Partir de</p>
-            <SegmentedControl
-              label="Partir de"
-              active={baseEscolhida.chave}
-              items={bases.map((b) => ({ key: b.chave, label: b.rotulo }))}
-              onChange={setChaveDaBase}
-              className="max-w-full flex-wrap"
-            />
-          </div>
+          <CampoForm label="Partir de" htmlFor="simulador-base">
+            <div id="simulador-base">
+              <SegmentedControl
+                label="Partir de"
+                active={baseEscolhida.chave}
+                items={bases.map((b) => ({ key: b.chave, label: b.rotulo }))}
+                onChange={setChaveDaBase}
+                className="max-w-full flex-wrap"
+              />
+            </div>
+          </CampoForm>
         )}
-        <div>
-          <p className="text-label font-medium text-fg mb-1.5">Cenário</p>
+        <CampoForm label="Cenário" htmlFor="simulador-cenario">
+          <div id="simulador-cenario">
           <SegmentedControl
             label="Cenário"
             active={pronto}
@@ -79,9 +83,10 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
             }}
             className="max-w-full flex-wrap"
           />
-        </div>
+          </div>
+        </CampoForm>
         <FieldGrid>
-          {CAMPOS.map((c) => (
+          {campos.map((c) => (
             <CampoForm key={c.chave} label={c.rotulo} htmlFor={`premissa-${c.chave}`} helper={c.dica}>
               <Input
                 id={`premissa-${c.chave}`}
@@ -109,7 +114,7 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
             </tr>
           </thead>
           <tbody>
-            {LINHAS_DO_SIMULADOR.map((code) => {
+            {modelo.simulador.linhas.map((code) => {
               const linha = base.find((l) => l.code === code)!;
               const b = valor(base, code);
               const s = valor(simulado, code);
@@ -128,7 +133,7 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
               <td className="py-2 pl-4 pr-3 text-micro text-fg-muted">Margem do período simulada</td>
               <td />
               <td className="py-2 pr-4 text-right text-fs-2 tabular-nums">
-                {percentual(receitaSimulada === 0 ? null : valor(simulado, LINHA_DE_RESULTADO) / receitaSimulada)}
+                {percentual(receitaSimulada === 0 ? null : valor(simulado, modelo.linhaDoResultado) / receitaSimulada)}
               </td>
             </tr>
           </tbody>

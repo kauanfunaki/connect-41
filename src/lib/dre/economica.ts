@@ -10,8 +10,8 @@
 // contribuição" significar coisas diferentes nas duas telas, e a comparação
 // econômico × financeiro deixaria de comparar a mesma coisa.
 //
-// O que muda é o nome das três últimas linhas: numa leitura de competência,
-// "gerador de caixa" e "fluxo de caixa livre" seriam nomes errados para o
+// O que muda é o nome das duas linhas de resultado: numa leitura de competência,
+// "gerador de caixa" e "resultado líquido operacional" seriam nomes errados para o
 // mesmo número. `comRotulosEconomicos` troca só o rótulo; a conta é idêntica.
 //
 // ─── O que não entra ─────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ import {
   type ResultadoDoDre,
   type ValorDaLinha,
 } from "./calculo";
-import { OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
+import { LINHA_DO_RESULTADO, MODELOS, OPCOES_PADRAO, modeloDoCodigo, type ModeloDoDre, type OpcoesDoDre } from "./estrutura";
 import {
   contaNaDreEconomica,
   resumoDaCobrancaNaDre,
@@ -103,14 +103,10 @@ export function calcularDreEconomica(
   };
 }
 
-const ROTULOS_ECONOMICOS: Record<string, string> = {
-  gerador_de_caixa: "RESULTADO OPERACIONAL",
-  gerador_de_caixa_pct: "Resultado Operacional sobre Receita Bruta %",
-  fluxo_apos_investimentos: "RESULTADO APÓS INVESTIMENTOS",
-  fluxo_apos_investimentos_pct: "Resultado após Investimentos sobre Receita Bruta %",
-  fluxo_de_caixa_livre: "RESULTADO DO PERÍODO",
-  fluxo_de_caixa_livre_pct: "Resultado do Período sobre Receita Bruta %",
-};
+// Os rótulos de competência de todos os modelos juntos: os códigos das linhas
+// de resultado não se repetem entre eles ("ebitda" no padrão, "gerador_de_caixa"
+// no por área), então a troca não precisa saber o modelo.
+const ROTULOS_ECONOMICOS: Record<string, string> = Object.assign({}, ...MODELOS.map((m) => m.rotulosEconomicos));
 
 /** Rótulo da linha lido como competência. */
 export function rotuloEconomico(code: string, rotuloOriginal: string): string {
@@ -135,7 +131,22 @@ export function fracaoDaLinha(r: ResultadoDoDre, code: string): number | null {
   return r.linhas.find((l) => l.code === code)?.fracao ?? null;
 }
 
-/** A linha de resultado final da estrutura da 41. */
-export const LINHA_DE_RESULTADO = "fluxo_de_caixa_livre";
-/** A linha operacional — o mais perto de um EBITDA que a estrutura da 41 tem. */
-export const LINHA_OPERACIONAL = "gerador_de_caixa";
+/** A linha de resultado final do padrão — o resultado líquido operacional. */
+export const LINHA_DE_RESULTADO = LINHA_DO_RESULTADO;
+/** A linha operacional do padrão — o gerador de caixa (EBITDA). */
+export const LINHA_OPERACIONAL = "ebitda";
+
+/** O modelo de um resultado — o padrão quando ele não diz (21/10/2026). */
+export function modeloDoResultado(r: ResultadoDoDre): ModeloDoDre {
+  return modeloDoCodigo(r.modelo);
+}
+
+/** A linha de resultado final do modelo do resultado. */
+export function linhaDeResultadoDe(r: ResultadoDoDre): string {
+  return modeloDoResultado(r).linhaDoResultado;
+}
+
+/** A linha operacional do modelo do resultado. */
+export function linhaOperacionalDe(r: ResultadoDoDre): string {
+  return modeloDoResultado(r).linhaOperacional;
+}
