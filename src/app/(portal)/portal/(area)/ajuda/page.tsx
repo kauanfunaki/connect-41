@@ -16,6 +16,8 @@ import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { montarTutorialDoPortal } from "@/lib/tutorial/servidor";
 import { BotaoVerTutorial } from "@/components/tutorial/TutorialDoPrimeiroAcesso";
 import { concluirTutorialDoPortal } from "@/app/(portal)/portal/tutorial-actions";
+import { Ceci } from "@/components/ia/Ceci";
+import { LIMITE_DE_PERGUNTAS_DO_PORTAL_POR_DIA, ceciNoPortalDaConta } from "@/lib/portal/ceci";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,7 @@ const ICONES: Record<IconeDoPasso, React.ReactNode> = {
   documentos: <ModuleIcon code="fiscal_documentos" />,
   conta: <CircleUserRound />,
   senha: <KeyRound />,
+  ceci: <Ceci tamanho={20} />,
 };
 
 /**
@@ -57,18 +60,21 @@ export default async function AjudaDoPortalPage() {
   if (!sessao) redirect("/portal/login");
 
   // O tutorial do primeiro acesso, para rever (13/10/2026).
-  const [ligados, alcance, tutorial, bloqueadas] = await Promise.all([
+  // A Ceci (21/10/2026): o passo dela só para quem a vê no canto da tela.
+  const [ligados, alcance, tutorial, bloqueadas, comCeci] = await Promise.all([
     getEnabledModuleCodes(sessao.tenantId),
     alcanceDoCliente(sessao),
     montarTutorialDoPortal(sessao),
     telasBloqueadasDoPortal(sessao.tenantId),
+    ceciNoPortalDaConta(sessao.tenantId, sessao.sub).catch(() => false),
   ]);
   const modulos = new Set(ligados);
   const variasEmpresas = alcance.tipo === "EMPRESAS" && alcance.companyIds.length > 1;
 
   // As telas que o escritório ainda não liberou (14/10/2026) saem da lista, e
   // os passos que só falam delas também.
-  const passos: PassoDaAjuda[] = passosDoPortal(modulos, { variasEmpresas, bloqueadas }).map((p) => ({ ...p, icone: ICONES[p.icone] }));
+  const ceci = comCeci ? { perguntasPorDia: LIMITE_DE_PERGUNTAS_DO_PORTAL_POR_DIA } : null;
+  const passos: PassoDaAjuda[] = passosDoPortal(modulos, { variasEmpresas, bloqueadas, ceci }).map((p) => ({ ...p, icone: ICONES[p.icone] }));
   const visiveis = telasVisiveis(modulos, bloqueadas);
   const telas: TelaDaAjuda[] = visiveis.map((t) => ({
     chave: t.href,
