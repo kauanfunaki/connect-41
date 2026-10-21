@@ -17,9 +17,9 @@ import { validarBaixa, saldoEmAberto } from "./baixa/regras";
 import { registrarBaixa, quitarConta, apagarBaixa, RecusaDaBaixa, type OrigemDaBaixa } from "./baixa/servidor";
 import { MAXIMO_DO_LOTE, separarLote, validarDiaDoLote, type ForaDoLote } from "./baixa/lote";
 import { nomeExibicao } from "@/lib/companyName";
-import { contaPrevistaEmComum } from "./contaPrevista";
+import { contaPrevistaEmComum, nomeDaContaBancaria } from "./contaPrevista";
 import { ehContaDeAdiantamento, tipoDoAdiantamento, validarUsoDoAdiantamento } from "./adiantamento";
-import { TIPOS_FORA_DO_CAIXA } from "./tiposDeConta";
+import { temPortaPropria, TIPOS_FORA_DO_CAIXA } from "./tiposDeConta";
 import { cartoesParaABaixa, type CartaoParaABaixa } from "./cartaoServidor";
 import { disponivelDoAdiantamento } from "./adiantamentoServidor";
 import { decimalDeCentavos } from "./manual";
@@ -193,19 +193,36 @@ export type DadosDaBaixa =
        * ciclo, e os dias dizem em qual.
        */
       cartoes: CartaoParaABaixa[];
+      /**
+       * As contas fora do caixa sem porta própria (lote D, 20/10): empréstimo,
+       * mútuo, crediário, administradora de cartões. A baixa por elas não mexe
+       * no caixa — o dinheiro anda quando elas forem transferidas para o banco.
+       */
+      outras: { id: string; nome: string }[];
       baixas: BaixaDaConta[];
     }
   | { ok: false; erro: string };
 
-/** Contas bancárias ativas da empresa, para o "de qual conta saiu". */
+/** Contas de dinheiro ativas da empresa — banco e caixinha —, para o "de qual conta saiu". */
 async function contasDaEmpresa(tenantId: string, companyId: string) {
   const contas = await getPrisma().bankAccount.findMany({
-    // Só banco: o adiantamento entra à parte, com o disponível de quem é a conta, e o cartão também, com os dias da fatura.
+    // O adiantamento entra à parte, com o disponível de quem é a conta; o cartão
+    // também, com os dias da fatura; e as outras fora do caixa, num grupo delas.
     where: { tenantId, companyId, active: true, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
-    select: { id: true, nickname: true, accountNumber: true },
+    select: { id: true, nickname: true, accountNumber: true, type: true },
     orderBy: { nickname: "asc" },
   });
-  return contas.map((c) => ({ id: c.id, nome: `${c.nickname} ${c.accountNumber}` }));
+  return contas.map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) }));
+}
+
+/** As contas fora do caixa sem porta própria — empréstimo, mútuo, crediário, administradora. */
+async function outrasDaEmpresa(tenantId: string, companyId: string) {
+  const contas = await getPrisma().bankAccount.findMany({
+    where: { tenantId, companyId, active: true, type: { in: TIPOS_FORA_DO_CAIXA.filter((t) => !temPortaPropria(t)) } },
+    select: { id: true, nickname: true, accountNumber: true, type: true },
+    orderBy: { nickname: "asc" },
+  });
+  return contas.map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) }));
 }
 
 /** O adiantamento disponível do fornecedor (ou cliente) da conta, na conta de adiantamento da empresa. */
@@ -268,6 +285,7 @@ export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
     adiantamento: await adiantamentoDaConta(ctx.tenantId, conta.companyId, conta.kind, conta.counterpartyId),
     cartoes:
       conta.kind === "PAGAR" && !conta.cardAccountId && !conta.transferId ? await cartoesParaABaixa(getPrisma(), ctx.tenantId, conta.companyId) : [],
+    outras: conta.transferId ? [] : await outrasDaEmpresa(ctx.tenantId, conta.companyId),
     baixas: conta.payments.map((p) => ({
       id: p.id,
       dataKey: saoPauloParts(p.paidAt).dateKey,

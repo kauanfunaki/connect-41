@@ -4,7 +4,7 @@
 import { getPrisma } from "@/lib/prisma";
 import { contaPrevistaDoLancamento, nomeDaContaBancaria, type ContaBancaria } from "./contaPrevista";
 import { TIPOS_DE_ADIANTAMENTO } from "./adiantamento";
-import { ehCartaoDeCredito, TIPOS_FORA_DO_CAIXA } from "./tiposDeConta";
+import { ehCartaoDeCredito, TIPOS_COM_PORTA_PROPRIA } from "./tiposDeConta";
 
 /**
  * As contas bancárias ativas da empresa, para os seletores. A `atualId` entra
@@ -23,16 +23,17 @@ export async function contasBancariasDaEmpresa(
     where: {
       tenantId,
       companyId,
-      type: { notIn: opcoes.comCartoes ? [...TIPOS_DE_ADIANTAMENTO] : [...TIPOS_FORA_DO_CAIXA] },
+      // O adiantamento se escolhe na baixa, e o cartão só na conta a pagar; a
+      // caixinha, o empréstimo e as outras entram.
+      type: { notIn: opcoes.comCartoes ? [...TIPOS_DE_ADIANTAMENTO] : [...TIPOS_COM_PORTA_PROPRIA] },
       OR: [{ active: true }, ...(atualId ? [{ id: atualId }] : [])],
     },
     select: { id: true, nickname: true, accountNumber: true, active: true, type: true },
     orderBy: { nickname: "asc" },
   });
   return contas.map((c) => {
-    const cartao = ehCartaoDeCredito(c.type);
-    const nome = `${nomeDaContaBancaria(c)}${cartao ? " (cartão)" : ""}`;
-    return { id: c.id, nome: c.active ? nome : `${nome} (inativa)`, ...(cartao ? { cartao } : {}) };
+    const nome = nomeDaContaBancaria(c);
+    return { id: c.id, nome: c.active ? nome : `${nome} (inativa)`, ...(ehCartaoDeCredito(c.type) ? { cartao: true } : {}) };
   });
 }
 
