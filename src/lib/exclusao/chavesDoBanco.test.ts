@@ -2,6 +2,9 @@ import { readFileSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { descrever, divergencias, estadoDoBanco, lerMigrations, relacoesComOBanco, type Migration } from "./chavesDoBanco";
+
+/** A etapa 4 da saída do Cliente (21/10/2026): é ela que apaga as tabelas do Cliente. */
+const ETAPA_4 = "20261021210000_cliente_fora_do_banco";
 import { lerEsquema } from "./lerEsquema";
 
 // O que se testa: o leitor das migrations (chave a chave, coluna a coluna) e a
@@ -321,7 +324,8 @@ describe("migration 20261014210000_portal_por_empresa", () => {
 describe("migration 20261021180000_cliente_sem_chaves (etapa 3 da saída do Cliente)", () => {
   const PASTA = "20261021180000_cliente_sem_chaves";
   const sql = readFileSync(path.join(MIGRATIONS, PASTA, "migration.sql"), "utf8");
-  const banco = estadoDoBanco(lerMigrations(MIGRATIONS));
+  // O banco logo depois dela — a etapa 4 (`ETAPA_4`) é que apaga as tabelas.
+  const banco = estadoDoBanco(lerMigrations(MIGRATIONS, { antesDe: ETAPA_4 }));
   const comandos = sql
     .split("\n")
     .filter((l) => l.trim() && !l.trim().startsWith("--"))
@@ -356,5 +360,46 @@ describe("migration 20261021180000_cliente_sem_chaves (etapa 3 da saída do Clie
     expect(banco.colunas.get("portal_users")!.has("clientGroupId")).toBe(true);
     expect(banco.colunas.has("client_groups")).toBe(true);
     expect(banco.colunas.has("client_announcement_groups")).toBe(true);
+  });
+});
+
+describe("migration 20261021210000_cliente_fora_do_banco (etapa 4 da saída do Cliente)", () => {
+  const sql = readFileSync(path.join(MIGRATIONS, ETAPA_4, "migration.sql"), "utf8");
+  const antes = estadoDoBanco(lerMigrations(MIGRATIONS, { antesDe: ETAPA_4 }));
+  const depois = estadoDoBanco(lerMigrations(MIGRATIONS));
+  const comandos = sql
+    .split("\n")
+    .filter((l) => l.trim() && !l.trim().startsWith("--"))
+    .join("\n")
+    .split(";")
+    .map((c) => c.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  it("só apaga o que é do Cliente: as duas tabelas, as duas colunas e os índices delas", () => {
+    expect(comandos).toEqual([
+      "ALTER TABLE `companies` DROP INDEX `companies_tenantId_clientGroupId_idx`",
+      "ALTER TABLE `companies` DROP COLUMN `clientGroupId`",
+      "ALTER TABLE `portal_users` DROP INDEX `portal_users_tenantId_clientGroupId_idx`",
+      "ALTER TABLE `portal_users` DROP COLUMN `clientGroupId`",
+      "DROP TABLE `client_announcement_groups`",
+      "DROP TABLE `client_groups`",
+    ]);
+  });
+
+  it("nenhuma chave aponta para o que ela apaga — nada cai em cascata", () => {
+    const presas = [...antes.chaves.values()].filter(
+      (c) =>
+        c.alvo === "client_groups" ||
+        c.alvo === "client_announcement_groups" ||
+        ((c.tabela === "companies" || c.tabela === "portal_users") && c.colunas.includes("clientGroupId"))
+    );
+    expect(presas.map((c) => c.nome)).toEqual([]);
+  });
+
+  it("depois dela, o Cliente não existe mais no banco", () => {
+    expect(depois.colunas.has("client_groups")).toBe(false);
+    expect(depois.colunas.has("client_announcement_groups")).toBe(false);
+    expect(depois.colunas.get("companies")!.has("clientGroupId")).toBe(false);
+    expect(depois.colunas.get("portal_users")!.has("clientGroupId")).toBe(false);
   });
 });
