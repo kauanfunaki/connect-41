@@ -31,6 +31,7 @@ import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { NovaCategoriaDaEmpresa, LinhaDaDre, EsconderDoPadrao, EditarCategoriaDaEmpresa } from "@/components/financeiro/PlanoDaEmpresa";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
 
 export const dynamic = "force-dynamic";
 
@@ -139,18 +140,22 @@ export default async function CadastrosFinanceirosPage({
 
   // A ação da tela vai no cabeçalho, como em pendências e no resto do app
   // (08/10/2026): o "Novo cadastro" ficava à direita da fileira do filtro.
+  // Aba de Cadastros desde 21/10/2026: a barra de Empresas e Pessoas vem em cima.
   const comAcao = (action?: React.ReactNode) => (
-    <PageHeader
-      title="Fornecedores e sacados"
-      subtitle="As contrapartes, os centros de custo, os projetos e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
-      action={action}
-    />
+    <>
+      <CadastrosTabsBar active="fornecedores" />
+      <PageHeader
+        title="Fornecedores e sacados"
+        subtitle="As contrapartes, os centros de custo, os projetos e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
+        action={action}
+      />
+    </>
   );
   const cabecalho = comAcao();
   // Trocar de empresa conserva a aba; a busca é da empresa anterior e fica para trás.
   const filtroDaEmpresa = (
     <FiltroDaEmpresa
-      acao="/cadastros-financeiros"
+      acao="/fornecedores-e-sacados"
       empresas={empresas}
       valor={companyId}
       manter={{ aba: aba === "fornecedores" ? undefined : aba }}
@@ -177,7 +182,7 @@ export default async function CadastrosFinanceirosPage({
   );
 
   const prisma = getPrisma();
-  const href = (a: string) => `/cadastros-financeiros?empresa=${companyId}${a === "fornecedores" ? "" : `&aba=${a}`}`;
+  const href = (a: string) => `/fornecedores-e-sacados?empresa=${companyId}${a === "fornecedores" ? "" : `&aba=${a}`}`;
   const centros = await prisma.costCenter.findMany({
     where: { tenantId: ctx.tenantId, companyId },
     select: { id: true, name: true, code: true, active: true },
@@ -357,7 +362,7 @@ export default async function CadastrosFinanceirosPage({
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "cadastro", "cadastros")}
         busca={
-          <form method="get" action="/cadastros-financeiros" className="max-w-full">
+          <form method="get" action="/fornecedores-e-sacados" className="max-w-full">
             <input type="hidden" name="empresa" value={companyId} />
             {aba !== "fornecedores" && <input type="hidden" name="aba" value={aba} />}
             {situacao !== "ativos" && <input type="hidden" name="situacao" value={situacao} />}

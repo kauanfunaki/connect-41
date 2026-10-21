@@ -85,7 +85,7 @@ export async function contasDoOmieAction(companyId: string, gravar: boolean): Pr
       entityId: companyId,
       metadata: r.counters,
     });
-    for (const p of ["/admin/integracoes", "/pagar", "/receber", "/dre", "/dre/economica", "/fluxo-de-caixa", "/cadastros-financeiros"]) revalidatePath(p);
+    for (const p of ["/admin/integracoes", "/pagar", "/receber", "/dre", "/dre/economica", "/fluxo-de-caixa", "/fornecedores-e-sacados"]) revalidatePath(p);
   }
   return { ok: true, mensagem: mensagemDoFinanceiro(r.counters, r.gravou) };
 }
