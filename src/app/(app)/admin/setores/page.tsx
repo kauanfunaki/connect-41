@@ -188,13 +188,13 @@ export default async function SetoresPage({
                         )}
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        <MoverModuloPara
+                        {!m.fixedSector && <MoverModuloPara
                           nome={m.label}
                           destinos={ativos
                             .filter((s) => s.code !== m.sectorCode)
                             .map((s) => ({ value: s.code, label: s.label, cor: s.color }))}
                           action={transferirModulo.bind(null, m.code)}
-                        />
+                        />}
                         <ToggleModuleButton action={alternarModulo.bind(null, m.code, !m.enabled)} enabled={m.enabled} nome={m.label} />
                       </div>
                     </div>
