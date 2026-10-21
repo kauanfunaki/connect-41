@@ -35,7 +35,8 @@ describe("Ops Center", () => {
   it("só dispensa sessão nos POSTs exatos de ingestão", () => {
     expect(ehIngestaoOps("POST", "/api/ops/events")).toBe(true);
     expect(ehIngestaoOps("POST", "/api/ops/watchers/meu_bot/heartbeat")).toBe(true);
-    for (const rota of ["/api/ops", "/api/ops/watchers", "/api/ops/events-extra", "/api/ops/watchers/meu_bot/token", "/api/ops/watchers/meu_bot/instability"]) expect(ehIngestaoOps("POST", rota)).toBe(false);
+    expect(ehIngestaoOps("POST", "/api/ops/watchers/pasta-de-rede/arquivos")).toBe(true);
+    for (const rota of ["/api/ops", "/api/ops/watchers", "/api/ops/events-extra", "/api/ops/watchers/meu_bot/token", "/api/ops/watchers/meu_bot/instability", "/api/ops/watchers/meu_bot/arquivos/x"]) expect(ehIngestaoOps("POST", rota)).toBe(false);
     expect(ehIngestaoOps("GET", "/api/ops/events")).toBe(false);
   });
   it("aceita o filtro de minhas e trata vazios do cadastro", () => {
