@@ -15,7 +15,7 @@ import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
-import { getModuleRoute, MODULOS_DO_MENU_GERAL, MODULOS_SEM_MENU } from "@/lib/module-catalog";
+import { getModuleRoute, MODULOS_DO_MENU_GERAL, MODULOS_NAS_SOLICITACOES, MODULOS_SEM_MENU } from "@/lib/module-catalog";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 import { baseDomain, hostSuffix, setoresDoSeletor } from "@/lib/auth/activeSector";
@@ -107,7 +107,9 @@ export default async function AppLayout({
   const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
   const activeSectorModules = activeSector
     ? moduleStates
-        .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && !MODULOS_DO_MENU_GERAL.has(m.code) && !MODULOS_SEM_MENU.has(m.code))
+        // Pendências ao cliente e Aprovações moram nas abas das Solicitações
+        // (21/10/2026), enquanto elas estão ligadas.
+        .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && !MODULOS_DO_MENU_GERAL.has(m.code) && !MODULOS_SEM_MENU.has(m.code) && !(solicitacoesLigadas && MODULOS_NAS_SOLICITACOES.has(m.code)))
         .map((m) => ({ code: m.code, label: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "Solicitações dos clientes" : m.label, href: m.code === "bpo_comunicacao" && solicitacoesLigadas ? "/solicitacoes" : getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
