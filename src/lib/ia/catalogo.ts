@@ -354,6 +354,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "portal_solicitacoes",
       "portal_solicitacao",
       "portal_assuntos",
+      "portal_preparar_solicitacao",
     ],
     tetoMensalCentavos: 5_000,
     tetoMensalChamadas: 5_000,

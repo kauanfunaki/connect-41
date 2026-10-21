@@ -12,11 +12,14 @@ export const OUTRO = "escritorio-outro";
 export const DIA = new Date("2026-10-10T12:00:00Z");
 
 /** Cliente A (do acesso): matriz e filial. Cliente B: vizinho, mesmo escritório. Outro escritório: u-1. */
+// Todas com a Ceci ligada (fase 3) — a filial pela matriz —, para o teste
+// provar que a trava é o acesso, e não a chave da Ceci.
+const MATRIZ_A = { id: "a-matriz", tenantId: T, parentCompanyId: null, parent: null, status: "ACTIVE", name: "A Matriz", displayName: null, clientGroupId: "g-a", ceciNoPortal: true };
 export const EMPRESAS = [
-  { id: "a-matriz", tenantId: T, parentCompanyId: null, status: "ACTIVE", name: "A Matriz", displayName: null, clientGroupId: "g-a" },
-  { id: "a-filial", tenantId: T, parentCompanyId: "a-matriz", status: "ACTIVE", name: "A Filial", displayName: null, clientGroupId: "g-a" },
-  { id: "b-1", tenantId: T, parentCompanyId: null, status: "ACTIVE", name: "B Vizinho", displayName: null, clientGroupId: "g-b" },
-  { id: "u-1", tenantId: OUTRO, parentCompanyId: null, status: "ACTIVE", name: "U Outro", displayName: null, clientGroupId: "g-u" },
+  MATRIZ_A,
+  { id: "a-filial", tenantId: T, parentCompanyId: "a-matriz", parent: MATRIZ_A, status: "ACTIVE", name: "A Filial", displayName: null, clientGroupId: "g-a", ceciNoPortal: false },
+  { id: "b-1", tenantId: T, parentCompanyId: null, parent: null, status: "ACTIVE", name: "B Vizinho", displayName: null, clientGroupId: "g-b", ceciNoPortal: true },
+  { id: "u-1", tenantId: OUTRO, parentCompanyId: null, parent: null, status: "ACTIVE", name: "U Outro", displayName: null, clientGroupId: "g-u", ceciNoPortal: true },
 ];
 export const DO_ACESSO = ["a-matriz", "a-filial"];
 
