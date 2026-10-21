@@ -13,6 +13,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { podeEditarOTipo } from "./acessoDaConta";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 import { anexosDaConta, armazenamentoDosAnexos, MAXIMO_DE_ANEXOS_POR_CONTA, type AnexoDaConta } from "./anexos";
 import { arquivosDoFormulario } from "./pendencias/armazenamento";
 
@@ -31,12 +32,15 @@ export async function anexarAoLancamento(formData: FormData): Promise<ResultadoD
   // Conta de outro escritório responde como inexistente.
   const conta = await prisma.financeEntry.findFirst({
     where: { id: entryId, tenantId: quem.tenantId },
-    select: { id: true, kind: true, _count: { select: { attachments: true } } },
+    select: { id: true, kind: true, companyId: true, _count: { select: { attachments: true } } },
   });
   if (!conta) return { error: "Lançamento não encontrado." };
   const acesso = await podeEditarOTipo(conta.kind);
   if (!acesso.ctx) return { error: acesso.erro };
   const { ctx } = acesso;
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const arquivos = arquivosDoFormulario(formData, "anexos");
   if (arquivos.length === 0) return { error: "Escolha um arquivo." };
@@ -78,12 +82,15 @@ export async function removerAnexoDoLancamento(anexoId: string): Promise<Resulta
   const prisma = getPrisma();
   const anexo = await prisma.financeEntryAttachment.findFirst({
     where: { id: anexoId, tenantId: quem.tenantId },
-    select: { id: true, entryId: true, fileName: true, fileUrl: true, entry: { select: { kind: true } } },
+    select: { id: true, entryId: true, fileName: true, fileUrl: true, entry: { select: { kind: true, companyId: true } } },
   });
   if (!anexo) return { error: "Anexo não encontrado." };
   const acesso = await podeEditarOTipo(anexo.entry.kind);
   if (!acesso.ctx) return { error: acesso.erro };
   const { ctx } = acesso;
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [anexo.entry.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const apagado = await prisma.financeEntryAttachment.deleteMany({ where: { id: anexo.id, tenantId: ctx.tenantId } });
   if (apagado.count === 1) await armazenamentoDosAnexos.apagarArquivos([anexo.fileUrl]);

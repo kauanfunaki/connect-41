@@ -13,7 +13,7 @@
 import { getPrisma } from "@/lib/prisma";
 import { canActOnSector, canViewSector, type AuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { grupoSensivelDoDocumento, lerArquivoDoDocumentoDaFicha } from "@/lib/documents";
 import { podeVerSolicitacao } from "@/lib/solicitacoes/acesso";
@@ -56,9 +56,9 @@ export type ItemDoConnect = {
 
 export type GrupoDoConnect = { origem: OrigemDoConnect; rotulo: string; itens: ItemDoConnect[] };
 
-/** O setor que opera um módulo neste escritório (ou o do catálogo). */
-async function setorDe(tenantId: string, modulo: string): Promise<string> {
-  return (await setorDoModulo(tenantId, modulo)) ?? getModuleDef(modulo)?.sectorCode ?? modulo;
+/** Os setores de um módulo neste escritório (ou o do catálogo) — o dono e os que também usam (21/10/2026). */
+async function setoresDe(tenantId: string, modulo: string): Promise<string[]> {
+  return (await setoresDoModulo(tenantId, modulo)) ?? [getModuleDef(modulo)?.sectorCode ?? modulo];
 }
 
 /**
@@ -79,8 +79,8 @@ async function origensAoAlcance(ctx: AuthContext): Promise<{ ok: Set<OrigemDoCon
   // como na rota deles, só pelo escritório.
   if (solicitacoes) ok.add("solicitacoes").add("envios");
   if (pendencias.ligados) ok.add("pendencias");
-  if (processos && canActOnSector(ctx, await setorDe(t, "societario_processos"))) ok.add("processos");
-  if (conversa && canViewSector(ctx, await setorDe(t, "bpo_comunicacao"))) ok.add("conversa");
+  if (processos && canActOnSector(ctx, await setoresDe(t, "societario_processos"))) ok.add("processos");
+  if (conversa && canViewSector(ctx, await setoresDe(t, "bpo_comunicacao"))) ok.add("conversa");
   return { ok, pendencias };
 }
 

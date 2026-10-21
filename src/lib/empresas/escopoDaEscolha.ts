@@ -15,14 +15,17 @@ export type EscopoDaEscolha = { tenantId: string; companyIds: string[] | null };
 /**
  * O escopo do financeiro: a empresa escolhida, ou o tenant inteiro só quando
  * a escolha é "todas" e a tela permite (lista com teto). Sem empresa, `null`.
+ *
+ * Com uma empresa em foco (21/10/2026), "todas" é a base dela — a matriz e as
+ * filiais (`grupo`) —, nunca o escritório inteiro.
  */
 export function escopoFinanceiroDaEscolha(
   tenantId: string,
   escolha: EscolhaDaEmpresa,
-  opcoes: { permitirTodas?: boolean } = {}
+  opcoes: { permitirTodas?: boolean; grupo?: readonly string[] | null } = {}
 ): EscopoDaEscolha | null {
   if (escolha.tipo === "empresa") return { tenantId, companyIds: [escolha.companyId] };
-  if (escolha.tipo === "todas" && opcoes.permitirTodas) return { tenantId, companyIds: null };
+  if (escolha.tipo === "todas" && opcoes.permitirTodas) return { tenantId, companyIds: opcoes.grupo ? [...opcoes.grupo] : null };
   return null;
 }
 

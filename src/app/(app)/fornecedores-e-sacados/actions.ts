@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { digitosDoDocumento } from "@/lib/financeiro/manual";
@@ -18,6 +18,7 @@ import type { ModeloDoDre } from "@/lib/dre/estrutura";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { validarFicha, leitorDaFicha, CAMPOS_DA_FICHA } from "@/lib/financeiro/fichaDaContraparte";
 import { validarProjeto, nomeEmUso } from "@/lib/financeiro/projeto";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 const MODULE = "bpo_cadastros";
 
@@ -26,7 +27,7 @@ export type ResultadoDoCadastro = { error: string } | { ok: true };
 async function contexto(companyId: string) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode)) return { ok: false as const, erro: "Sem permissão." };
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode)) return { ok: false as const, erro: "Sem permissão." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo não habilitado." };
   const prisma = getPrisma();
   const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId: ctx.tenantId }, select: { id: true } });
@@ -66,6 +67,9 @@ export async function criarContraparte(formData: FormData): Promise<ResultadoDoC
   const companyId = texto("companyId");
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const nome = texto("nome");
   const documento = digitosDoDocumento(texto("documento"));
@@ -158,6 +162,9 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
 
   const c = await contexto(atual.companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [atual.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const nome = texto("nome");
   const categoriaId = texto("defaultCategoryId") || null;
@@ -261,6 +268,9 @@ export async function criarCentroDeCusto(formData: FormData): Promise<ResultadoD
   const companyId = texto("companyId");
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const v = validarCentroDeCusto({ nome: texto("nome"), codigo: texto("codigo") });
   if (!v.ok) return { error: v.erro };
@@ -301,6 +311,9 @@ export async function atualizarCentroDeCusto(formData: FormData): Promise<Result
 
   const c = await contexto(atual.companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [atual.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const v = validarCentroDeCusto({ nome: texto("nome"), codigo: texto("codigo") });
   if (!v.ok) return { error: v.erro };
@@ -341,6 +354,9 @@ export async function criarProjeto(formData: FormData): Promise<ResultadoDoCadas
   const companyId = texto("companyId");
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const v = validarProjeto(texto("nome"));
   if (!v.ok) return { error: v.erro };
@@ -381,6 +397,9 @@ export async function atualizarProjeto(formData: FormData): Promise<ResultadoDoC
 
   const c = await contexto(atual.companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [atual.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const v = validarProjeto(texto("nome"));
   if (!v.ok) return { error: v.erro };
@@ -429,6 +448,9 @@ export async function criarCategoriaDaEmpresa(formData: FormData): Promise<Resul
   const companyId = texto("companyId");
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const nome = nomeDaCategoria(texto("nome"));
   const kind = texto("kind");
@@ -465,6 +487,9 @@ export async function atualizarCategoriaDaEmpresa(formData: FormData): Promise<R
   if (!atual?.companyId) return { error: "Categoria não encontrada." };
   const c = await contexto(atual.companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [atual.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const nome = nomeDaCategoria(texto("nome"));
   if (!nome) return { error: "Informe o nome da categoria (até 120 caracteres)." };
@@ -510,6 +535,9 @@ export async function esconderDoPadraoNaEmpresa(
 ): Promise<ResultadoDoCadastro> {
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const cat = await c.prisma.financeCategory.findFirst({
     where: { id: categoryId, ...ondeDoPadrao(c.tenantId) },
     select: { id: true },
@@ -545,6 +573,9 @@ export async function esconderDoPadraoNaEmpresa(
 export async function linhaDaDreNaEmpresa(companyId: string, categoryId: string, valor: string): Promise<ResultadoDoCadastro> {
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const linha = lerLinhaDaDre(valor, await modeloDaEmpresa(c.tenantId, companyId));
   if (!linha.ok) return { error: "Linha da DRE desconhecida." };
   const cat = await c.prisma.financeCategory.findFirst({

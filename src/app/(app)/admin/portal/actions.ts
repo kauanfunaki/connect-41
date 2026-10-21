@@ -6,7 +6,7 @@
 //
 // Desde 14/10/2026 (etapa 2 da saída do Cliente) o acesso é ligado direto a N
 // empresas, com "incluir filiais" (marcado por padrão — decisão do Kauan,
-// 13/10). Conta nova nasce sem Cliente. Criar, editar, ligar e desligar
+// 13/10). O Cliente saiu de vez em 21/10/2026 (etapa 3). Criar, editar, ligar e desligar
 // empresa seguem a permissão de sempre do admin do portal (`isFullWrite`);
 // excluir é só administrador (`podeExcluir`).
 
@@ -29,10 +29,8 @@ import {
 } from "@/lib/exclusaoConfirmada";
 import { listaDeNomes, mensagemDoEmailRepetido, type AcessoExistente } from "@/lib/portal/acessoExistente";
 import {
-  FALTA_ATUALIZAR_O_BANCO_DO_PORTAL,
   empresasLigadasDasContas,
   idsDasEmpresasDaConta,
-  portalPorEmpresaPronto,
   type BancoDoPortal,
   type EmpresaLigada,
 } from "@/lib/portal/empresasDaContaDb";
@@ -108,7 +106,7 @@ async function empresasDoEscritorio(tenantId: string, escolhas: EscolhaDeEmpresa
 }
 
 async function ligadasDaConta(tenantId: string, id: string): Promise<EmpresaLigada[]> {
-  return (await empresasLigadasDasContas(tenantId, [{ id, clientGroupId: null }])).get(id) ?? [];
+  return (await empresasLigadasDasContas(tenantId, [{ id }])).get(id) ?? [];
 }
 
 /** O acesso que já usa o e-mail, com as empresas dele — para a tela dizer de quem é. */
@@ -217,7 +215,6 @@ export async function criarAcessoDoPortal(_anterior: EstadoDoAcesso, form: FormD
   if (invalido) return { erro: invalido };
   const { nome, email } = campos;
 
-  if (!(await portalPorEmpresaPronto())) return { erro: FALTA_ATUALIZAR_O_BANCO_DO_PORTAL };
   const empresas = await empresasDoEscritorio(ctx.tenantId, campos.empresas);
   if (!empresas) return { erro: "Empresa não encontrada." };
 
@@ -370,7 +367,6 @@ export async function editarAcessoDoPortal(_anterior: EstadoDoAcesso, form: Form
   if (invalido) return { erro: invalido };
   const { nome, email } = campos;
 
-  if (!(await portalPorEmpresaPronto())) return { erro: FALTA_ATUALIZAR_O_BANCO_DO_PORTAL };
   const prisma = getPrisma();
   const conta = await prisma.portalUser.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true, name: true, email: true } });
   if (!conta) return { erro: "Acesso não encontrado." };
@@ -454,7 +450,6 @@ async function contaEEmpresa(tenantId: string, portalUserId: string, companyId: 
 export async function ligarEmpresaAoAcesso(portalUserId: string, companyId: string, incluiFiliais: boolean): Promise<ResultadoDoAcesso> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !isFullWrite(ctx.role)) return { erro: "Sem permissão." };
-  if (!(await portalPorEmpresaPronto())) return { erro: FALTA_ATUALIZAR_O_BANCO_DO_PORTAL };
 
   const achados = await contaEEmpresa(ctx.tenantId, portalUserId, companyId);
   if (!achados) return { erro: "Acesso ou empresa não encontrado." };
@@ -495,7 +490,6 @@ export async function ligarEmpresaAoAcesso(portalUserId: string, companyId: stri
 export async function desligarEmpresaDoAcesso(portalUserId: string, companyId: string): Promise<ResultadoDoAcesso> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !isFullWrite(ctx.role)) return { erro: "Sem permissão." };
-  if (!(await portalPorEmpresaPronto())) return { erro: FALTA_ATUALIZAR_O_BANCO_DO_PORTAL };
 
   const achados = await contaEEmpresa(ctx.tenantId, portalUserId, companyId);
   if (!achados) return { erro: "Acesso ou empresa não encontrado." };
@@ -529,7 +523,7 @@ export async function resumoDoAcessoParaExcluir(id: string): Promise<{ erro: str
 
   const conta = await getPrisma().portalUser.findFirst({
     where: { id, tenantId: ctx.tenantId },
-    select: { id: true, name: true, email: true, clientGroupId: true, _count: { select: CONTAGEM_DO_ACESSO } },
+    select: { id: true, name: true, email: true, _count: { select: CONTAGEM_DO_ACESSO } },
   });
   if (!conta) return { erro: "Acesso não encontrado." };
   const ligadas = (await empresasLigadasDasContas(ctx.tenantId, [conta])).get(conta.id) ?? [];
@@ -570,7 +564,6 @@ export async function excluirAcessoDoPortal(id: string, confirmacao: string): Pr
       name: true,
       email: true,
       active: true,
-      clientGroupId: true,
       _count: { select: CONTAGEM_DO_ACESSO },
     },
   });

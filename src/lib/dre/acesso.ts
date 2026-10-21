@@ -7,7 +7,7 @@
 
 import type { AuthContext } from "@/lib/auth/context";
 import { canActOnSector, canManageSector } from "@/lib/auth/papeis";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 
 type Quem = Pick<AuthContext, "tenantId" | "role" | "sectors" | "subscriptionReadOnly">;
 
@@ -19,8 +19,8 @@ type Quem = Pick<AuthContext, "tenantId" | "role" | "sectors" | "subscriptionRea
  */
 export async function podeAbrirADre(ctx: Quem): Promise<boolean> {
   if (!ctx.tenantId) return false;
-  const setor = (await setorDoModulo(ctx.tenantId, "bpo_dre")) ?? "bpo";
-  if (!canActOnSector(ctx, setor)) return false;
+  const setores = (await setoresDoModulo(ctx.tenantId, "bpo_dre")) ?? ["bpo"];
+  if (!canActOnSector(ctx, setores)) return false;
   return isModuleEnabled(ctx.tenantId, "bpo_dre");
 }
 
@@ -31,6 +31,6 @@ export async function podeAbrirADre(ctx: Quem): Promise<boolean> {
  */
 export async function podeTrocarOModeloDoDre(ctx: Quem): Promise<boolean> {
   if (!(await podeAbrirADre(ctx))) return false;
-  const setor = (await setorDoModulo(ctx.tenantId!, "bpo_dre")) ?? "bpo";
-  return canManageSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId!, "bpo_dre")) ?? ["bpo"];
+  return canManageSector(ctx, setores);
 }

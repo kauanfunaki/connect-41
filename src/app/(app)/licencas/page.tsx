@@ -1,7 +1,7 @@
 import { AlertTriangle, CalendarClock, ShieldCheck, ListChecks } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
@@ -31,7 +31,7 @@ export default async function LicencasPage({
 }) {
   const ctx = await getAuthContext();
   // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, "societario_licencas")) ?? "societario")) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, "societario_licencas")) ?? "societario")) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, "societario_licencas"))) notFound();
 
   const { recorte } = await searchParams;

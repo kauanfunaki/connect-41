@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Colunas } from "@/components/shared/Graficos";
 import { Aviso } from "@/components/ui/Aviso";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { formatInstantDate, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { estadoDosAgentes } from "@/lib/ia/data";
@@ -47,8 +47,9 @@ const MES = new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" }
 export default async function IaDoSocietarioPage() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canManageSector(ctx, setor)) notFound();
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  const setor = setores[0];
+  if (!canManageSector(ctx, setores)) notFound();
 
   const [{ pendentes, revisadas }, qualidade, estados] = await Promise.all([
     propostasDoSetor(ctx.tenantId, setor),

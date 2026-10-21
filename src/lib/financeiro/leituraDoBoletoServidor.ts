@@ -7,7 +7,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { gerarEstruturado } from "@/lib/ai";
 import { saoPauloParts } from "@/lib/agenda";
@@ -15,6 +15,7 @@ import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { nomeExibicao } from "@/lib/companyName";
 import { AGENTE_DO_BOLETO, SCHEMA_DO_BOLETO, SISTEMA_DO_BOLETO, lerRespostaDoBoleto, type LeituraDoBoleto } from "./leituraDoBoleto";
 import { TAMANHO_MAXIMO_DO_ANEXO } from "./pendencias/anexo";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 const MODULE = "bpo_lancamentos";
 
@@ -40,7 +41,7 @@ function mensagemDeErroDaIa(err: unknown): string {
 export async function lerBoletoParaLancar(formData: FormData): Promise<ResultadoDaLeituraDoBoleto> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado." };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode)) return { error: "Sem permissão para lançar." };
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode)) return { error: "Sem permissão para lançar." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { error: "Módulo não habilitado." };
 
   const prisma = getPrisma();
@@ -50,6 +51,9 @@ export async function lerBoletoParaLancar(formData: FormData): Promise<Resultado
     select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true },
   });
   if (!empresa) return { error: "Empresa não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só lança nele — e não gasta a IA fora dele.
+  const foraDoFoco = await recusaDoFoco(ctx, [empresa.id]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const arquivo = formData.get("boleto");
   if (!(arquivo instanceof File) || arquivo.size === 0) return { error: "Escolha o PDF do boleto." };
