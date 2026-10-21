@@ -6,7 +6,7 @@
 // mudança de uma delas.
 
 import type { AuthContext } from "@/lib/auth/context";
-import { canActOnSector } from "@/lib/auth/papeis";
+import { canActOnSector, canManageSector } from "@/lib/auth/papeis";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 
 type Quem = Pick<AuthContext, "tenantId" | "role" | "sectors" | "subscriptionReadOnly">;
@@ -22,4 +22,15 @@ export async function podeAbrirADre(ctx: Quem): Promise<boolean> {
   const setor = (await setorDoModulo(ctx.tenantId, "bpo_dre")) ?? "bpo";
   if (!canActOnSector(ctx, setor)) return false;
   return isModuleEnabled(ctx.tenantId, "bpo_dre");
+}
+
+/**
+ * Quem troca o modelo do DRE de uma empresa (21/10/2026): a coordenação do
+ * setor que opera a DRE. A troca refaz a classificação da empresa inteira —
+ * é decisão de quem responde pelo relatório, como aprovar o orçamento.
+ */
+export async function podeTrocarOModeloDoDre(ctx: Quem): Promise<boolean> {
+  if (!(await podeAbrirADre(ctx))) return false;
+  const setor = (await setorDoModulo(ctx.tenantId!, "bpo_dre")) ?? "bpo";
+  return canManageSector(ctx, setor);
 }

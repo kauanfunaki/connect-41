@@ -29,6 +29,12 @@ if (!statements.length) {
 }
 // Só adições são automáticas; qualquer mudança destrutiva exige revisão manual.
 for (const statement of statements) {
+  // Atualização revisada do histórico de auditoria: torna o ator opcional e
+  // preserva seu nome. Não remove linhas nem colunas; apenas permite SET NULL.
+  const auditoria = /^ALTER TABLE `audit_logs` DROP FOREIGN KEY `audit_logs_userId_fkey`$/.test(statement)
+    || /^DROP INDEX `audit_logs_userId_fkey` ON `audit_logs`$/.test(statement)
+    || /^ALTER TABLE `audit_logs` ADD COLUMN `actorName` VARCHAR\(120\) NULL,\s*MODIFY `userId` VARCHAR\(191\) NULL$/.test(statement);
+  if (auditoria) continue;
   if (!/^(CREATE TABLE|CREATE (UNIQUE )?INDEX|ALTER TABLE `[^`]+` ADD (COLUMN|CONSTRAINT))\b/.test(statement)
     || /\b(DROP|MODIFY|CHANGE|TRUNCATE|RENAME)\b/i.test(statement)) {
     throw new Error("Diff não exclusivamente aditivo. Nenhuma alteração aplicada; revisão manual necessária.");

@@ -66,7 +66,7 @@ async function main() {
     where: { tenantId, email: "cliente.demo@exemplo.invalido" },
     select: { id: true },
   });
-  if (!cliente) throw new Error("Rode a demonstração antes (scripts/dados-de-demonstracao.ts --aplicar).");
+  if (!cliente) throw new Error("Rode a demonstração antes (scripts/local/demonstracao-transportes.ts).");
   await p.portalUser.update({ where: { id: cliente.id }, data: { passwordHash: await hashPassword(senhaDoPortal), active: true } });
   console.log("senha de teste do cliente do portal definida (LOCAL_PORTAL_PASSWORD)");
 

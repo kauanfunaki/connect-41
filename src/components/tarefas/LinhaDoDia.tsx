@@ -3,9 +3,9 @@ import { ArrowRightLeft, FileSignature, Inbox, MessageSquareWarning, SquareKanba
 import { SelosDoItem, ORIGEM } from "@/components/gestao/ItemDaGestao";
 import type { Classificacao, ItemDeTrabalho, Origem } from "@/lib/gestao/regras";
 
-// "Tarefa", e não "Card": é o nome da tarefa do Kanban em todo lugar (padrão
+// "Atividade", e não "Card": é o nome da tarefa do Kanban em todo lugar (padrão
 // aceito em 08/10/2026). O mapa da Gestão segue o dela.
-const ROTULO_DA_ORIGEM: Record<Origem, string> = { ...ORIGEM, CARD: "Tarefa" };
+const ROTULO_DA_ORIGEM: Record<Origem, string> = { ...ORIGEM, CARD: "Atividade" };
 
 const ICONE: Record<Origem, React.ReactNode> = {
   PROCESSO: <FileSignature />,

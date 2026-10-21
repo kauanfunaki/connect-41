@@ -1,14 +1,16 @@
 // Contas do Omie → `FinanceEntry` da empresa (25/09). Tradução em `financeiro.ts`.
 //
 // **Só leitura do lado do Omie.** Três listagens: categorias, clientes/
-// fornecedores (para o nome da contraparte) e movimentos financeiros.
+// fornecedores (para o nome da contraparte) e movimentos financeiros — e os
+// departamentos, quando algum título rateia entre eles (20/10).
 //
 // ─── As regras que decidem ───────────────────────────────────────────────────
 //
 // - **Prévia antes de gravar.** Os campos vêm da documentação e ainda não foram
 //   vistos numa resposta real; `gravar: false` faz a leitura inteira e só conta.
 // - **O Omie manda na conta que veio dele.** Lido de novo, o título atualiza a
-//   situação, o pagamento, o valor, o vencimento e a categoria. Exceção: conta
+//   situação, o pagamento, o valor, o vencimento e a categoria — e, desde
+//   20/10, a previsão e a conta corrente prevista. Exceção: conta
 //   que no Connect entrou em acordo ou foi baixada por perda — essa decisão é
 //   do Connect, e a leitura não a desfaz (`preservados`).
 // - **Entra como conferida**, não provisória: quem lançou no Omie foi o BPO.
@@ -18,6 +20,19 @@
 //   entra no plano **dela** (é particularidade do cliente), com a linha da DRE
 //   do de-para padrão quando o nome é conhecido. Nome igual ao do plano padrão
 //   usa a do padrão, para não duplicar.
+// - **Rateio (20/10):** o título rateado no Omie (duas ou mais categorias, ou
+//   dois ou mais departamentos) entra com as linhas do rateio
+//   (`finance_entry_allocations`), e a conta guarda o resumo delas. Cada
+//   categoria pelo código, como a do título; cada departamento no centro de
+//   custo da empresa de mesmo código ou nome (`centrosDosDepartamentos`) — sem
+//   par, a linha fica sem centro, e o centro não é criado aqui. O projeto, e o
+//   centro de título sem departamento, ficam como estão no Connect. Rateio
+//   desfeito no Omie tira as linhas daqui. Até a virada, o rateio trava na
+//   edição junto com a categoria.
+// - **Departamento único (20/10):** o título sem rateio com um departamento
+//   só põe na conta o centro de mesmo código ou nome (sem par, nenhum) e
+//   guarda o código (`omieDepartmentId`) — é o que trava o centro na edição
+//   até a virada. Sem departamento, o centro do Connect fica como está e livre.
 // - **Janela:** títulos com vencimento desde 1º de janeiro do ano passado, em
 //   páginas de 500, até 20 páginas por execução; conta grande continua de onde
 //   parou na próxima (`cursor` da linha `financeiro:{empresa}`).
@@ -37,17 +52,37 @@
 //
 // Limite conhecido: título com mais de uma baixa cujas linhas caiam em páginas
 // diferentes fica com a da última página. É pagamento parcial, e raro.
+//
+// ─── Parciais (fila do BPO, 19/10) ───────────────────────────────────────────
+//
+// O título pago em parte lá entra aqui em aberto **com o que já foi pago**: as
+// baixas dele são lidas uma a uma (`mapearBaixasDoTitulo`) e cada uma vira uma
+// baixa do Connect no seu dia, com o código de lá. Se a soma não fecha com o
+// `nValPago` do título (baixa com juros, leitura que falhou), o pago vai numa
+// baixa só, no dia do último pagamento. Na prévia, só a baixa única — a
+// leitura das baixas é uma chamada a mais por parcial.
 
 import { getPrisma } from "@/lib/prisma";
 import { saoPauloParts } from "@/lib/agenda";
 import { executar, lerConfig } from "@/lib/integracoes/data";
 import { chaveDaCategoria } from "@/lib/dre/calculo";
-import { MAPEAMENTO_PADRAO } from "@/lib/dre/mapeamento-padrao";
+import { grupoDoDeParaDoModelo } from "@/lib/dre/categoriasDoImport";
+import { modeloDoCodigo } from "@/lib/dre/estrutura";
 import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { chamarOmie } from "./cliente";
-import { instanciaDaEmpresa } from "./contas";
-import { lerCategorias, mapearMovimento, paginaDeCategorias, paginaDeMovimentos, type TituloDoOmie } from "./financeiro";
+import { instanciaDaEmpresa, PREFIXO_DO_FINANCEIRO, instanciaDoFinanceiro } from "./contas";
+import {
+  centrosDosDepartamentos,
+  lerCategorias,
+  lerDepartamentos,
+  mapearBaixasDoTitulo,
+  mapearMovimento,
+  paginaDeCategorias,
+  paginaDeDepartamentos,
+  paginaDeMovimentos,
+  type TituloDoOmie,
+} from "./financeiro";
 import {
   juntarBaixas,
   lerContasCorrentes,
@@ -59,15 +94,45 @@ import {
   mesmoNumero,
 } from "./conciliacao";
 import { conciliarEmpresaPeloOmie } from "@/lib/financeiro/conciliacao/omieServidor";
+import { BAIXA_NO_ESPELHO, espelharBaixaDoOmie, paraOEspelho, recalcularConta } from "@/lib/financeiro/baixa/servidor";
+import { planoDoEspelho, planoMexe, type TituloNoEspelho } from "@/lib/financeiro/baixa/regras";
+import { centavosDeDecimal } from "@/lib/financeiro/contas";
+import { resumoDoRateio, type LinhaDoRateio } from "@/lib/financeiro/rateio";
+import { gravarRateio } from "@/lib/financeiro/rateioServidor";
+import type { Prisma } from "@/generated/prisma/client";
 
-export const PREFIXO_DO_FINANCEIRO = "financeiro:";
-export const instanciaDoFinanceiro = (companyId: string) => `${PREFIXO_DO_FINANCEIRO}${companyId}`;
+
+/**
+ * A baixa da conta acompanha o Omie, e a conta é refeita a partir das baixas
+ * (lote C, 19/10). A gravação acima escreveu status e data do Omie; aqui eles
+ * passam a valer por causa da baixa — e a baixa feita no Connect, se houver,
+ * continua valendo (`espelharBaixaDoOmie`).
+ */
+async function espelharEFechar(tx: Prisma.TransactionClient, entryId: string, titulo: TituloNoEspelho) {
+  const conta = await tx.financeEntry.findUniqueOrThrow({ where: { id: entryId }, select: { tenantId: true, companyId: true } });
+  await espelharBaixaDoOmie(tx, { id: entryId, tenantId: conta.tenantId, companyId: conta.companyId }, titulo);
+  await recalcularConta(tx, entryId);
+}
+export { PREFIXO_DO_FINANCEIRO, instanciaDoFinanceiro };
+
+/** As linhas do rateio da conta são as que a leitura montou? Na ordem, com o valor. */
+function mesmasLinhas(
+  atuais: { categoryId: string | null; costCenterId: string | null; projectId: string | null; amount: { toString(): string } }[],
+  novas: LinhaDoRateio[]
+): boolean {
+  return (
+    atuais.length === novas.length &&
+    atuais.every((a, i) => {
+      const n = novas[i]!;
+      return a.categoryId === n.categoriaId && a.costCenterId === n.centroId && a.projectId === n.projetoId && centavosDeDecimal(a.amount) === n.centavos;
+    })
+  );
+}
 
 const POR_PAGINA = 500;
 const MAX_PAGINAS = 20;
 const MAX_PAGINAS_DE_CADASTRO = 10;
 
-const GRUPO_PADRAO = new Map(MAPEAMENTO_PADRAO.map((p) => [chaveDaCategoria(p.categoria), p.grupo]));
 const emAndamento = new Set<string>();
 
 type Cred = { appKey: string; appSecret: string };
@@ -155,6 +220,12 @@ export async function sincronizarFinanceiroDaEmpresa(
   if (emAndamento.has(chave)) return { companyId, ok: false, erro: "Já existe uma leitura das contas desta empresa em andamento." };
 
   const prisma = getPrisma();
+  // Virada para o Connect (lote E): daí em diante o Connect é a fonte, e uma
+  // leitura desfaria o que o BPO mudou nas contas que vieram do Omie.
+  const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { omieCutoverAt: true, dreModelo: true } });
+  if (empresa?.omieCutoverAt) {
+    return { companyId, ok: false, erro: "Esta empresa já virou para o Connect — as contas não são mais lidas do Omie." };
+  }
   const conta = await prisma.tenantIntegration.findUnique({
     where: { tenantId_integrationCode_instanceKey: { tenantId, integrationCode: "omie", instanceKey: instanciaDaEmpresa(companyId) } },
   });
@@ -218,7 +289,8 @@ export async function sincronizarFinanceiroDaEmpresa(
           name: info.nome,
           kind,
           planGroup: info.grupo?.slice(0, 120) ?? null,
-          dreGroup: GRUPO_PADRAO.get(chaveDaCategoria(info.nome)) ?? null,
+          // O de-para do modelo do DRE da empresa (21/10/2026).
+          dreGroup: grupoDoDeParaDoModelo(info.nome, modeloDoCodigo(empresa?.dreModelo)),
           omieCode: codigo,
           active: !info.inativa,
         },
@@ -228,6 +300,47 @@ export async function sincronizarFinanceiroDaEmpresa(
       porCodigo.set(codigo, criada.id);
       criadasAgora.set(`${t.kind}|${codigo}`, criada.id);
       return criada.id;
+    }
+
+    // ─── departamentos → centros de custo (20/10) ──────────────────────────
+    // A lista do Omie e os centros ativos da empresa, uma vez por leitura, e
+    // só quando algum título tem departamento.
+    let centroPorDepartamento: Promise<Map<string, string>> | null = null;
+    async function centroDoDepartamento(codigo: string): Promise<string | null> {
+      centroPorDepartamento ??= (async () => {
+        const departamentos = lerDepartamentos(await todasAsPaginas(cred, "geral/departamentos", "ListarDepartamentos", paginaDeDepartamentos));
+        const centros = await prisma.costCenter.findMany({ where: { tenantId, companyId, active: true }, select: { id: true, name: true, code: true } });
+        return centrosDosDepartamentos(departamentos, centros);
+      })();
+      return (await centroPorDepartamento).get(codigo) ?? null;
+    }
+
+    /**
+     * O rateio do título com as categorias e os centros do Connect. O que o
+     * Omie não diz fica como está aqui: o projeto, e o centro quando o título
+     * não tem departamento. Na prévia, categoria ainda a criar vai nula.
+     */
+    async function rateioDoTitulo(t: TituloDoOmie, atual: { costCenterId: string | null; projectId: string | null } | undefined): Promise<LinhaDoRateio[]> {
+      if (t.rateioIlegivel) somar("rateio_ilegivel");
+      if (t.rateio.length === 0) return [];
+      somar("rateados");
+      const linhas: LinhaDoRateio[] = [];
+      for (const l of t.rateio) {
+        const categoria = await categoriaDo({ kind: t.kind, categoriaCodigo: l.categoriaCodigo });
+        if (!categoria) somar("rateio_linhas_sem_categoria");
+        let centroId = atual?.costCenterId ?? null;
+        if (l.departamentoCodigo) {
+          centroId = await centroDoDepartamento(l.departamentoCodigo);
+          if (!centroId) somar("rateio_departamento_sem_centro");
+        }
+        linhas.push({
+          categoriaId: categoria && !categoria.startsWith("previa:") ? categoria : null,
+          centroId,
+          projetoId: atual?.projectId ?? null,
+          centavos: l.centavos,
+        });
+      }
+      return linhas;
     }
 
     // ─── contrapartes ──────────────────────────────────────────────────────
@@ -295,10 +408,12 @@ export async function sincronizarFinanceiroDaEmpresa(
     // Conta ativa que só existe no Omie entra no Connect já ligada: o Omie é a
     // fonte, e sem a conta aqui não há onde importar o extrato. Conta do
     // Connect com o mesmo número que não ligou (dúvida) não ganha gêmea.
+    const aCriar: string[] = [];
     for (const o of contasDoOmie) {
       if (o.inativa || jaUsadas.has(o.id)) continue;
       if (contasDoConnect.some((c) => c.bankCode === o.banco && mesmoNumero(c.accountDigits, o.conta))) continue;
       somar("contas_criadas");
+      aCriar.push(o.id);
       if (!opcoes.gravar) continue;
       try {
         await prisma.bankAccount.create({
@@ -318,6 +433,27 @@ export async function sincronizarFinanceiroDaEmpresa(
       } catch (err) {
         if (!isPrismaUniqueError(err)) throw err;
       }
+    }
+
+    // A conta do Omie (`nCodCC`) → a conta do Connect ligada a ela, já com as
+    // ligações e as contas criadas acima: é a conta corrente prevista do título
+    // (20/10). Na prévia nada foi ligado nem criado; vale o que seria, para o resumo.
+    const contaDoConnect = new Map<string, string>();
+    if (opcoes.gravar) {
+      const ligadasAgora = await prisma.bankAccount.findMany({
+        where: { tenantId, companyId, omieAccountId: { not: null } },
+        select: { id: true, omieAccountId: true },
+      });
+      for (const c of ligadasAgora) contaDoConnect.set(c.omieAccountId!, c.id);
+    } else {
+      for (const c of contasDoConnect) if (c.omieAccountId) contaDoConnect.set(c.omieAccountId, c.id);
+      for (const [id, omie] of ligadas) if (!contaDoConnect.has(omie.id)) contaDoConnect.set(omie.id, id);
+      for (const id of aCriar) contaDoConnect.set(id, `previa:${id}`);
+    }
+    /** A conta corrente prevista: a do Connect ligada à do Omie; sem par, nenhuma. */
+    function contaPrevista(contaDoOmie: string | null): string | null {
+      const id = contaDoOmie ? contaDoConnect.get(contaDoOmie) : undefined;
+      return id && !id.startsWith("previa:") ? id : null;
     }
 
     // Contraparte dos lançamentos de conta que não têm cliente/fornecedor no Omie.
@@ -356,6 +492,8 @@ export async function sincronizarFinanceiroDaEmpresa(
         nPagina: pagina,
         nRegPorPagina: POR_PAGINA,
         dDtVencDe: janelaDesde(agora),
+        // Sem ele, o movimento vem sem as listas do rateio (20/10).
+        cExibirDepartamentos: "S",
       });
       const { itens, totalDePaginas } = paginaDeMovimentos(corpo);
       cont.paginas++;
@@ -372,7 +510,10 @@ export async function sincronizarFinanceiroDaEmpresa(
         select: {
           id: true, omieTitleId: true, status: true, paidAt: true, amount: true, dueDate: true,
           categoryId: true, competence: true, closeReason: true, agreementId: true,
-          omieBaixaId: true, omieReconciledAt: true,
+          omieBaixaId: true, omieReconciledAt: true, issueDate: true, documentNumber: true,
+          forecastDate: true, bankAccountId: true, costCenterId: true, projectId: true, omieDepartmentId: true,
+          payments: { select: BAIXA_NO_ESPELHO },
+          allocations: { select: { categoryId: true, costCenterId: true, projectId: true, amount: true }, orderBy: { position: "asc" } },
         },
       });
       const atualPorTitulo = new Map(jaNoConnect.map((e) => [e.omieTitleId!, e]));
@@ -391,28 +532,49 @@ export async function sincronizarFinanceiroDaEmpresa(
         }
         const categoryId = await categoriaDo(t);
         if (!categoryId) somar("sem_categoria");
+        if (t.contaCorrenteId && !contaDoConnect.has(t.contaCorrenteId)) somar("conta_prevista_sem_par");
+        // O rateio (20/10): as linhas vêm do Omie, e a conta guarda o resumo
+        // delas — a categoria da linha maior, e o centro e o projeto comuns.
+        const rateio = await rateioDoTitulo(t, atual);
+        const resumo = rateio.length > 0 ? resumoDoRateio(rateio) : null;
+        // Sem rateio e com um departamento só, o centro vem dele (20/10).
+        const centroDoTitulo = !resumo && t.departamentoCodigo ? await centroDoDepartamento(t.departamentoCodigo) : undefined;
+        if (centroDoTitulo === null) somar("departamento_sem_centro");
+        const doCentro: { costCenterId?: string | null; projectId?: string | null } = resumo
+          ? { costCenterId: resumo.centroId, projectId: resumo.projetoId }
+          : centroDoTitulo !== undefined
+            ? { costCenterId: centroDoTitulo }
+            : {};
         const dados = {
           status,
           paidAt: t.pagamento,
           amount: t.valor.toFixed(2),
           dueDate: t.vencimento,
           competence: t.competencia,
-          categoryId: categoryId && !categoryId.startsWith("previa:") ? categoryId : null,
+          categoryId: resumo ? resumo.categoriaId : categoryId && !categoryId.startsWith("previa:") ? categoryId : null,
+          // Emissão e número do título (19/10): o Omie manda neles como no resto.
+          issueDate: t.emissao,
+          documentNumber: t.numeroDocumento,
+          // Previsão e conta corrente prevista (20/10), idem — sem elas no
+          // Omie, ficam sem aqui também.
+          forecastDate: t.previsao,
+          bankAccountId: contaPrevista(t.contaCorrenteId),
+          // O departamento único (20/10): com ele, o centro trava na edição.
+          omieDepartmentId: t.departamentoCodigo,
         } as const;
+        const titulo = await tituloNoEspelho(t);
 
         if (!atual) {
           somar("novos");
           if (opcoes.gravar) {
-            await prisma.financeEntry.create({
-              data: {
-                tenantId,
-                companyId,
-                kind: t.kind,
-                counterpartyId: await contraparteDo(t),
-                description: t.descricao,
-                omieTitleId: t.omieTitleId,
-                ...dados,
-              },
+            const counterpartyId = await contraparteDo(t);
+            await prisma.$transaction(async (tx) => {
+              const criado = await tx.financeEntry.create({
+                data: { tenantId, companyId, kind: t.kind, counterpartyId, description: t.descricao, omieTitleId: t.omieTitleId, ...dados, ...doCentro },
+                select: { id: true },
+              });
+              if (rateio.length > 0) await gravarRateio(tx, { tenantId, entryId: criado.id, linhas: rateio });
+              await espelharEFechar(tx, criado.id, titulo);
             });
           } else {
             await contraparteDo(t);
@@ -424,29 +586,54 @@ export async function sincronizarFinanceiroDaEmpresa(
         // baixa que a fase de conta tinha gravado — senão a tela de
         // conciliação o daria como conciliado sem pagamento.
         const estornado = status !== "PAGO" && (atual.omieBaixaId !== null || atual.omieReconciledAt !== null);
+        // Paga ou não, e desde quando, sai das baixas (lote C): compara o que o
+        // espelho faria, e não o status do Omie com o da conta — a conta paga no
+        // Connect e em aberto no Omie seria regravada em toda leitura.
+        const valorCentavos = centavosDeDecimal(dados.amount);
+        const plano = planoDoEspelho(atual.payments.map(paraOEspelho), titulo);
+        if (plano.conflito) somar("baixas_em_conflito");
+        // Rateio que o Omie desfez sai daqui também (as linhas vazias).
+        const rateioMudou = !mesmasLinhas(atual.allocations, rateio);
         const mudou =
+          rateioMudou ||
+          (doCentro.costCenterId !== undefined && atual.costCenterId !== doCentro.costCenterId) ||
+          (doCentro.projectId !== undefined && atual.projectId !== doCentro.projectId) ||
+          atual.omieDepartmentId !== dados.omieDepartmentId ||
           estornado ||
-          atual.status !== dados.status ||
-          (atual.paidAt?.getTime() ?? null) !== (dados.paidAt?.getTime() ?? null) ||
+          (atual.status === "CANCELADO") !== (status === "CANCELADO") ||
+          planoMexe(plano) ||
+          (status !== "CANCELADO" && (atual.status === "PAGO") !== (plano.baixadoCentavos >= valorCentavos)) ||
           atual.amount.toFixed(2) !== dados.amount ||
           atual.dueDate.getTime() !== dados.dueDate.getTime() ||
           atual.competence !== dados.competence ||
-          (dados.categoryId !== null && atual.categoryId !== dados.categoryId);
+          (dados.categoryId !== null && atual.categoryId !== dados.categoryId) ||
+          // A primeira leitura depois de 19/10 preenche a emissão e o número das
+          // contas que já estavam no Connect.
+          (atual.issueDate?.getTime() ?? null) !== (dados.issueDate?.getTime() ?? null) ||
+          atual.documentNumber !== dados.documentNumber ||
+          // Idem para a previsão e a conta prevista, na primeira depois de 20/10.
+          (atual.forecastDate?.getTime() ?? null) !== (dados.forecastDate?.getTime() ?? null) ||
+          atual.bankAccountId !== dados.bankAccountId;
         if (!mudou) {
           somar("iguais");
           continue;
         }
         somar("atualizados");
         if (opcoes.gravar) {
-          await prisma.financeEntry.update({
-            where: { id: atual.id },
-            // Categoria só troca quando o Omie tem uma: a classificada no
-            // Connect não some porque o Omie não a informou.
-            data: {
-              ...dados,
-              categoryId: dados.categoryId ?? atual.categoryId,
-              ...(estornado ? { omieBaixaId: null, omiePaidAmount: null, omieReconciledAt: null } : {}),
-            },
+          await prisma.$transaction(async (tx) => {
+            await tx.financeEntry.update({
+              where: { id: atual.id },
+              // Categoria só troca quando o Omie tem uma: a classificada no
+              // Connect não some porque o Omie não a informou.
+              data: {
+                ...dados,
+                categoryId: dados.categoryId ?? atual.categoryId,
+                ...doCentro,
+                ...(estornado ? { omieBaixaId: null, omiePaidAmount: null, omieReconciledAt: null } : {}),
+              },
+            });
+            if (rateioMudou) await gravarRateio(tx, { tenantId, entryId: atual.id, linhas: rateio });
+            await espelharEFechar(tx, atual.id, titulo);
           });
         }
       }
@@ -464,6 +651,40 @@ export async function sincronizarFinanceiroDaEmpresa(
       somar("extrato_conciliado_pelo_omie", await conciliarEmpresaPeloOmie(tenantId, companyId));
     }
     return { cont, proxima };
+
+    /**
+     * O título como o espelho das baixas o lê. Na parcial, as baixas de lá uma a
+     * uma — só quando gravando, e só se a soma fechar com o pago do título.
+     */
+    async function tituloNoEspelho(t: TituloDoOmie): Promise<TituloNoEspelho> {
+      const base = { pagoCentavos: t.pagoCentavos, paidAtMs: t.ultimoPagamento?.getTime() ?? null };
+      if (!t.parcial || t.pagoCentavos === 0) return base;
+      if (!t.ultimoPagamento) {
+        somar("parciais_sem_data");
+        return { pagoCentavos: 0, paidAtMs: null };
+      }
+      if (!opcoes.gravar) return base;
+      let baixas: ReturnType<typeof mapearBaixasDoTitulo> = null;
+      try {
+        const corpo = await chamarOmie(cred, "financas/mf", "ListarMovimentos", {
+          nPagina: 1,
+          nRegPorPagina: 50,
+          cTpLancamento: "BX",
+          nCodTitulo: Number(t.omieTitleId),
+        });
+        baixas = mapearBaixasDoTitulo(corpo, t.omieTitleId);
+      } catch {
+        // Leitura das baixas que falhou não derruba o título: o pago vai numa
+        // baixa só, e a próxima leitura tenta de novo.
+        baixas = null;
+      }
+      const fecha = baixas !== null && baixas.length > 0 && baixas.reduce((s, b) => s + b.principalCentavos, 0) === t.pagoCentavos;
+      if (!fecha) {
+        somar("parciais_numa_baixa");
+        return base;
+      }
+      return { ...base, baixas: baixas!.map((b) => ({ chave: b.chave, principalCentavos: b.principalCentavos, paidAtMs: b.paidAt.getTime() })) };
+    }
 
     /** Uma página das linhas de conta corrente. Devolve `true` na última. */
     async function lerPaginaDeConta(n: number): Promise<boolean> {
@@ -526,7 +747,7 @@ export async function sincronizarFinanceiroDaEmpresa(
         where: { tenantId, companyId, omieMovementId: { in: avulsos.map((t) => t.movimentoId) } },
         select: {
           id: true, omieMovementId: true, paidAt: true, amount: true, competence: true,
-          categoryId: true, omieAccountId: true, omieReconciledAt: true,
+          categoryId: true, omieAccountId: true, omieReconciledAt: true, bankAccountId: true,
         },
       });
       const porMovimento = new Map(jaLancados.map((e) => [e.omieMovementId!, e]));
@@ -542,25 +763,34 @@ export async function sincronizarFinanceiroDaEmpresa(
           omieAccountId: t.contaId,
           omiePaidAmount: t.valor.toFixed(2),
           omieReconciledAt: t.conciliadoEm,
+          // A conta prevista é a conta em que o movimento passou: a edição a
+          // trava como a do título (20/10), e a leitura a mantém.
+          bankAccountId: contaPrevista(t.contaId),
         } as const;
         const atual = porMovimento.get(t.movimentoId);
         if (!atual) {
           somar(t.transferencia ? "transferencias_novas" : "lancamentos_de_conta_novos");
           if (opcoes.gravar) {
-            await prisma.financeEntry.create({
-              data: {
-                tenantId,
-                companyId,
-                kind: t.kind,
-                counterpartyId: t.transferencia
-                  ? await contraparteChamada(NOME_DA_TRANSFERENCIA)
-                  : t.contraparteCodigo || t.contraparteDocumento
-                    ? await contraparteDo(t)
-                    : await contraparteChamada(NOME_DO_LANCAMENTO_DE_CONTA),
-                description: `${t.transferencia ? NOME_DA_TRANSFERENCIA : NOME_DO_LANCAMENTO_DE_CONTA} (Omie)`,
-                omieMovementId: t.movimentoId,
-                ...dados,
-              },
+            const counterpartyId = t.transferencia
+              ? await contraparteChamada(NOME_DA_TRANSFERENCIA)
+              : t.contraparteCodigo || t.contraparteDocumento
+                ? await contraparteDo(t)
+                : await contraparteChamada(NOME_DO_LANCAMENTO_DE_CONTA);
+            await prisma.$transaction(async (tx) => {
+              const criado = await tx.financeEntry.create({
+                data: {
+                  tenantId,
+                  companyId,
+                  kind: t.kind,
+                  counterpartyId,
+                  description: `${t.transferencia ? NOME_DA_TRANSFERENCIA : NOME_DO_LANCAMENTO_DE_CONTA} (Omie)`,
+                  omieMovementId: t.movimentoId,
+                  ...dados,
+                },
+                select: { id: true },
+              });
+              // Movimento de conta é sempre dinheiro que andou: nasce com a baixa.
+              await espelharEFechar(tx, criado.id, { pagoCentavos: centavosDeDecimal(dados.amount), paidAtMs: dados.paidAt.getTime() });
             });
           }
           continue;
@@ -570,14 +800,18 @@ export async function sincronizarFinanceiroDaEmpresa(
           atual.amount.toFixed(2) !== dados.amount ||
           atual.competence !== dados.competence ||
           atual.omieAccountId !== dados.omieAccountId ||
+          atual.bankAccountId !== dados.bankAccountId ||
           (atual.omieReconciledAt?.getTime() ?? null) !== (t.conciliadoEm?.getTime() ?? null) ||
           (dados.categoryId !== null && atual.categoryId !== dados.categoryId);
         if (!mudou) continue;
         somar("lancamentos_de_conta_atualizados");
         if (opcoes.gravar) {
-          await prisma.financeEntry.update({
-            where: { id: atual.id },
-            data: { ...dados, categoryId: dados.categoryId ?? atual.categoryId },
+          await prisma.$transaction(async (tx) => {
+            await tx.financeEntry.update({
+              where: { id: atual.id },
+              data: { ...dados, categoryId: dados.categoryId ?? atual.categoryId },
+            });
+            await espelharEFechar(tx, atual.id, { pagoCentavos: centavosDeDecimal(dados.amount), paidAtMs: dados.paidAt.getTime() });
           });
         }
       }

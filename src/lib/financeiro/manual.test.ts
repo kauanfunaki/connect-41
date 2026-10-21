@@ -67,9 +67,20 @@ describe("validarCamposDoLancamento", () => {
         centavos: 150_000,
         descricao: null,
         pagoEmKey: null,
+        emissaoKey: null,
+        numeroDocumento: null,
         categoryId: "cat-1",
       },
     });
+  });
+
+  it("emissão e número do documento: opcionais, emissão nunca no futuro e número no tamanho da coluna", () => {
+    const ok = validarCamposDoLancamento({ ...base, emissao: "2026-09-01", numeroDocumento: "  Boleto   123 " }, HOJE);
+    expect(ok).toMatchObject({ ok: true, dados: { emissaoKey: "2026-09-01", numeroDocumento: "Boleto 123" } });
+    expect(validarCamposDoLancamento({ ...base, emissao: "2026-09-16" }, HOJE)).toMatchObject({ ok: false, erro: expect.stringMatching(/futura/) });
+    expect(validarCamposDoLancamento({ ...base, emissao: "2026-02-30" }, HOJE)).toMatchObject({ ok: false });
+    expect(validarCamposDoLancamento({ ...base, numeroDocumento: "x".repeat(61) }, HOJE)).toMatchObject({ ok: false });
+    expect(validarCamposDoLancamento({ ...base, numeroDocumento: "x".repeat(60) }, HOJE).ok).toBe(true);
   });
 
   it("conta a pagar sem categoria não passa — despesa sem classificação não fecha o DRE", () => {

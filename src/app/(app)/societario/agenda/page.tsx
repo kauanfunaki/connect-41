@@ -19,6 +19,7 @@ import {
 } from "@/lib/societario/prazos";
 import { itensDePrazo } from "@/lib/societario/painel-data";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { AbasDePrazos } from "@/components/societario/AbasDePrazos";
 import { ListaDePrazos } from "@/components/societario/ListaDePrazos";
 
@@ -84,27 +85,33 @@ export default async function AgendaDePrazosPage({
       />
       <AbasDePrazos ativa="agenda" />
 
-      {/* Agrupamento e responsável no botão "Filtros" — eram pílulas e um
-          formulário com "Filtrar" (conferência de 30/09). A tela já tem uma
-          linha de abas (Exigências | Agenda); uma segunda confundiria. */}
-      <FiltrosDaTela
-        className="mb-5"
-        campos={[
-          {
-            chave: "visao",
-            rotulo: "Agrupar",
-            vazioLabel: "Por semana",
-            // O rótulo já diz "Por mês" — o "Por" de novo aqui dava "Por por mês" (05/10/2026).
-            opcoes: VISOES.filter((v) => v.chave !== "semana").map((v) => ({ value: v.chave, label: v.rotulo })),
-          },
-          {
-            chave: "responsavel",
-            rotulo: "Responsável",
-            vazioLabel: "Todos",
-            opcoes: responsaveis.map((r) => ({ value: r.id, label: r.name })),
-          },
-        ]}
-      />
+      {/* "Por semana / Por mês" é troca de visão, e não filtro (15/10/2026):
+          vai no seletor de segmentos, à vista, como Listas/Kanban nos Quadros;
+          estava escondida como "Agrupar" dentro do Filtros. O responsável
+          segue no "Filtros" — era um formulário com "Filtrar" (30/09). */}
+      <div className="flex flex-wrap items-center gap-2 mb-5">
+        <SegmentedControl
+          label="Agrupar a agenda"
+          active={visao}
+          items={VISOES.map((v) => {
+            const q = new URLSearchParams();
+            if (v.chave !== "semana") q.set("visao", v.chave);
+            if (responsavelFiltro) q.set("responsavel", responsavelFiltro);
+            const busca = q.toString();
+            return { key: v.chave, label: v.rotulo, href: busca ? `/societario/agenda?${busca}` : "/societario/agenda" };
+          })}
+        />
+        <FiltrosDaTela
+          campos={[
+            {
+              chave: "responsavel",
+              rotulo: "Responsável",
+              vazioLabel: "Todos",
+              opcoes: responsaveis.map((r) => ({ value: r.id, label: r.name })),
+            },
+          ]}
+        />
+      </div>
 
       {grupos.length === 0 ? (
         <EmptyState
@@ -120,7 +127,7 @@ export default async function AgendaDePrazosPage({
               className={g.vencido ? "rounded-lg border border-danger/30 bg-danger-bg/40 px-3 pt-2" : undefined}
             >
               <h2
-                className={`text-card-title font-semibold mb-1 ${
+                className={`text-section font-semibold mb-1 ${
                   g.vencido ? "text-danger" : g.chave === grupoAtual ? "text-brand" : "text-fg-secondary"
                 }`}
               >

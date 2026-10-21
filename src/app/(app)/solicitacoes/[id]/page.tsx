@@ -8,6 +8,7 @@ import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { InfoRow } from "@/components/empresas/InfoRow";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { SeloDaSolicitacao, SeloDoPrazoDeResposta } from "@/components/solicitacoes/SelosDaSolicitacao";
@@ -72,35 +73,24 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
 
       <Card className="mb-5 p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3 text-fs-3 min-w-0 flex-1">
-            <div>
-              <dt className="text-fs-1 font-semibold uppercase tracking-wider text-fg-muted">Aberta por</dt>
-              <dd className="mt-0.5 text-fg">
-                {s.abertaPor} · {formatInstantDateTime(s.abertaEm)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-fs-1 font-semibold uppercase tracking-wider text-fg-muted">Responsável</dt>
-              <dd className="mt-0.5 text-fg">{s.responsavel?.nome ?? "Ninguém assumiu"}</dd>
-            </div>
-            <div>
-              <dt className="text-fs-1 font-semibold uppercase tracking-wider text-fg-muted">
-                {s.respondidaEm ? "Primeira resposta" : "Resposta prometida até"}
-              </dt>
-              <dd className="mt-0.5 text-fg tabular-nums">
-                {s.respondidaEm ? formatInstantDateTime(s.respondidaEm) : formatInstantDate(s.prazo)}
-              </dd>
-            </div>
+          {/* Os fatos no par rótulo/valor das fichas (`InfoRow`, como na do
+              lead) — eram rótulos em caixa alta escritos à mão (15/10/2026). */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-4 min-w-0 flex-1">
+            <InfoRow label="Aberta por" value={`${s.abertaPor} · ${formatInstantDateTime(s.abertaEm)}`} />
+            <InfoRow label="Responsável" value={s.responsavel?.nome ?? "Ninguém assumiu"} />
+            <InfoRow
+              label={s.respondidaEm ? "Primeira resposta" : "Resposta prometida até"}
+              value={s.respondidaEm ? formatInstantDateTime(s.respondidaEm) : formatInstantDate(s.prazo)}
+              mono
+            />
             {!aberta && s.encerradaEm && (
-              <div className="sm:col-span-3">
-                <dt className="text-fs-1 font-semibold uppercase tracking-wider text-fg-muted">Encerrada</dt>
-                <dd className="mt-0.5 text-fg">
-                  {formatInstantDateTime(s.encerradaEm)}
-                  {s.encerradaPor ? ` · ${s.encerradaPor}` : " · pelo cliente"}
-                </dd>
-              </div>
+              <InfoRow
+                label="Encerrada"
+                value={`${formatInstantDateTime(s.encerradaEm)}${s.encerradaPor ? ` · ${s.encerradaPor}` : " · pelo cliente"}`}
+                className="sm:col-span-3"
+              />
             )}
-          </dl>
+          </div>
           {podeAgir && (
             <AcoesDaSolicitacao
               id={s.id}

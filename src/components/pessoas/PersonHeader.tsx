@@ -3,41 +3,26 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Copy, Check, Building2, Mail, Phone, Pencil, ArrowRightLeft } from "lucide-react";
-import { StatusDot } from "@/components/shared/StatusDot";
 import { BotaoExcluirCadastro } from "@/components/exclusao/ExcluirCadastro";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { maskCpf, formatPhone } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
+import { SITUACAO_DO_VINCULO } from "@/lib/colaboradores/situacao";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO: "Candidato",
   COLABORADOR: "Colaborador",
 };
 
-// O tipo é categoria — Badge; a situação do vínculo é a bolinha (escolha 2A,
-// 08/10/2026). A bolinha era sempre cinza, até em "Ativo", que na lista de
-// pessoas é verde: agora tem a cor da situação, e o desligado fica neutro.
+// O tipo é categoria — Badge; a situação do vínculo é o `Selo` (15/10/2026),
+// com o rótulo e o tom da coluna Situação de Colaboradores de clientes
+// (`SITUACAO_DO_VINCULO`). Era a bolinha, que é só do ativo/inativo de cadastro.
 const TYPE_VARIANT: Record<PersonType, "info" | "success"> = {
   CANDIDATO: "info",
   COLABORADOR: "success",
-};
-
-const STATUS_LABEL: Record<PersonEmploymentStatus, string> = {
-  ADMISSAO_EM_ANDAMENTO: "Admissão em andamento",
-  ATIVO: "Ativo",
-  EM_FERIAS: "Em férias",
-  AFASTADO: "Afastado",
-  DESLIGADO: "Desligado",
-};
-
-const STATUS_COLOR: Record<PersonEmploymentStatus, string> = {
-  ADMISSAO_EM_ANDAMENTO: "var(--c41-brand)",
-  ATIVO: "var(--c41-success)",
-  EM_FERIAS: "var(--c41-warning)",
-  AFASTADO: "var(--c41-warning)",
-  DESLIGADO: "var(--c41-fg-muted)",
 };
 
 type Props = {
@@ -96,7 +81,7 @@ export function PersonHeader({
               </h1>
               <Badge variant={TYPE_VARIANT[type]}>{TYPE_LABEL[type]}</Badge>
               {type === "COLABORADOR" && (
-                <StatusDot color={STATUS_COLOR[employmentStatus]} label={STATUS_LABEL[employmentStatus]} />
+                <Selo tom={SITUACAO_DO_VINCULO[employmentStatus].tom}>{SITUACAO_DO_VINCULO[employmentStatus].rotulo}</Selo>
               )}
             </div>
 

@@ -8,7 +8,7 @@
 
 import { FaixaDeTotais, type ItemDeTotal } from "@/components/ui/FaixaDeTotais";
 import type { ResultadoDoDre } from "@/lib/dre/calculo";
-import { valorDaLinha, fracaoDaLinha, LINHA_DE_RESULTADO, LINHA_OPERACIONAL } from "@/lib/dre/economica";
+import { valorDaLinha, fracaoDaLinha, modeloDoResultado } from "@/lib/dre/economica";
 import { quantoMudou } from "@/lib/home/tendencia";
 import { moeda, percentual } from "@/lib/financeiro/formato";
 
@@ -37,9 +37,10 @@ function tomDoNumero(centavos: number): string | undefined {
 }
 
 /**
- * Os quatro números. Na de caixa, as duas últimas linhas levam os nomes do
- * regime de caixa ("Gerador de caixa operacional", "Fluxo de caixa livre"),
- * como a tabela logo abaixo.
+ * Os quatro números. As duas últimas são a linha operacional e a de resultado
+ * do modelo do DRE da empresa (21/10/2026), com os nomes do regime — no
+ * padrão, "Gerador de caixa (EBITDA)" e "Resultado líquido operacional" na de
+ * caixa —, como a tabela logo abaixo.
  *
  * A margem leva o percentual no detalhe, e não colado no valor: "R$ 37.645,50
  * · 58,…" cortava no cartão (auditoria dos gráficos, 07/10).
@@ -56,12 +57,14 @@ export function itensDosNumerosDaDre(
   const comparar = (code: string) =>
     anterior ? comparacaoComAnterior(valorDaLinha(resultado, code), valorDaLinha(anterior.resultado, code), anterior.rotulo) : undefined;
   const margem = fracaoDaLinha(resultado, "margem_contribuicao_pct");
+  const modelo = modeloDoResultado(resultado);
+  const [operacional, final] = modelo.numeros[regime];
 
   return [
     item("Receita bruta", "receita_bruta", comparar("receita_bruta")),
     item("Margem de contribuição", "margem_contribuicao", margem === null ? undefined : `${percentual(margem)} da receita`),
-    item(regime === "caixa" ? "Gerador de caixa operacional" : "Resultado operacional", LINHA_OPERACIONAL, comparar(LINHA_OPERACIONAL)),
-    item(regime === "caixa" ? "Fluxo de caixa livre" : "Resultado do período", LINHA_DE_RESULTADO, comparar(LINHA_DE_RESULTADO)),
+    item(operacional, modelo.linhaOperacional, comparar(modelo.linhaOperacional)),
+    item(final, modelo.linhaDoResultado, comparar(modelo.linhaDoResultado)),
   ];
 }
 

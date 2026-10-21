@@ -39,7 +39,7 @@ export async function salvarAgente(_prev: AgenteState, form: FormData): Promise<
   const model = (form.get("model") as string)?.trim() || null;
 
   const reais = lerTeto(form.get("monthlyCapCents"));
-  if (!reais.ok) return { error: "Teto de gasto inválido — use um número inteiro de centavos, ou deixe em branco." };
+  if (!reais.ok) return { error: "Teto de gasto inválido — use um valor em reais, como 25,00, ou deixe em branco." };
   const chamadas = lerTeto(form.get("monthlyCapCalls"));
   if (!chamadas.ok) return { error: "Teto de chamadas inválido — use um número inteiro, ou deixe em branco." };
 

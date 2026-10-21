@@ -42,7 +42,9 @@ export default async function ComunicadoPage({ params }: { params: Promise<{ id:
       />
 
       <Card className="mb-5 p-5">
-        <p className="text-fs-4 text-fg whitespace-pre-wrap break-words leading-relaxed">{c.texto}</p>
+        {/* Texto de leitura em até 72 caracteres por linha, como o comunicado
+            no portal (15/10/2026): ia de uma borda à outra do cartão. */}
+        <p className="max-w-[72ch] text-body text-fg whitespace-pre-wrap break-words leading-relaxed">{c.texto}</p>
         {c.anexos.length > 0 && (
           <ul className="mt-4 flex flex-col gap-1">
             {c.anexos.map((a) => (

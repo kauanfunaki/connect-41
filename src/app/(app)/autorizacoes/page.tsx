@@ -2,16 +2,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShieldCheck, ShieldAlert, Send, Hourglass } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Selo } from "@/components/ui/Selo";
 import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { AtualizarEmLote, BotaoDaAutorizacao, ConferirNoSerpro, PedidoAoCliente } from "@/components/autorizacoes/DialogosDaAutorizacao";
 import { TOM_DA_SITUACAO } from "@/components/autorizacoes/AutorizacaoNaFicha";
 import { acessoAsAutorizacoes, carteiraDasAutorizacoes, quemRecebe, sugestaoDeQuemRecebe } from "@/lib/autorizacoes/servidor";
@@ -32,6 +34,7 @@ import { hojeIso } from "@/lib/datas/calendario";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { conferenciaEmAndamento, estimativaDaConferencia } from "@/lib/autorizacoes/serpro";
 import { reais } from "@/lib/serpro/regras";
+import { chavesSemAcessoNoSerpro } from "@/lib/serpro/acompanhamento";
 import { getAuthContext } from "@/lib/auth/context";
 import type { TaxRegimeKind } from "@/generated/prisma/enums";
 
@@ -65,7 +68,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
   const acesso = await acessoAsAutorizacoes(await getAuthContext());
   if (!acesso) notFound();
   const params = await searchParams;
-  const recorte: Recorte = RECORTES.find((r) => r.chave === params.situacao)?.chave ?? "pendentes";
+  const recorte: Recorte = RECORTES.find((r) => r.chave === params.situacao)?.chave ?? "todas";
   const regime = REGIMES.find(([k]) => k === params.regime)?.[0] ?? null;
   const busca = (params.q ?? "").trim().toLowerCase();
   const digitos = busca.replace(/\D/g, "");
@@ -80,7 +83,11 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
   // A ligação com o Serpro (09/10/2026): conferir um cliente ou a carteira.
   // Sem ligação pronta, nada do Serpro aparece; com conexão salva, o consumo.
   const serpro = await configuracaoDoSerpro(acesso.tenantId);
-  const serproPronto = acesso.podeEditar && prontidaoDoSerpro(serpro).pronta;
+  // Na demonstração (20/10/2026) a conferência dos clientes não roda: o trial só responde aos exemplos.
+  const serproPronto = acesso.podeEditar && prontidaoDoSerpro(serpro).pronta && serpro?.ambiente === "producao";
+  // O "x" dos Eventos de Atualização (Fase 1, 20/10/2026): o Serpro negou o acesso
+  // em D-1, de graça — o sinal de quem precisa de autorização antes de uma chamada paga.
+  const semAcessoNoSerpro = serpro?.ambiente === "producao" ? await chavesSemAcessoNoSerpro(acesso.tenantId) : new Set<string>();
   const [emAndamento, estimativa] = serproPronto
     ? await Promise.all([conferenciaEmAndamento(acesso.tenantId), estimativaDaConferencia(acesso.tenantId)])
     : [null, null];
@@ -103,7 +110,15 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
   ).length;
   const ativas = conta((s) => s === "ativa" || s === "a_renovar");
   const consideradas = linhas.length - conta((s) => s === "nao_se_aplica");
-  const href = (s: Recorte) => `/autorizacoes${s === "pendentes" ? "" : `?situacao=${s}`}`;
+  const href = (s: Recorte) => {
+    const query = new URLSearchParams();
+    if (regime) query.set("regime", regime);
+    if (params.q) query.set("q", params.q);
+    if (s !== recorte && s !== "todas") query.set("situacao", s);
+    return `/autorizacoes${query.size ? `?${query}` : ""}`;
+  };
+
+  const noCartao = (r: Recorte) => ({ href: href(r), ativo: recorte === r });
 
   return (
     <PageContainer>
@@ -125,10 +140,17 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                 }}
               />
             )}
+            {/* Botão, como os do lado (15/10/2026): era link de texto cinza com
+                altura de botão. */}
+            {serpro?.ambiente === "producao" && (
+              <Button href="/autorizacoes/caixa-postal" variant="secondary" size="sm">
+                Caixa Postal
+              </Button>
+            )}
             {serpro && (
-              <Link href="/autorizacoes/consumo" className="inline-flex items-center h-8 px-2 text-ui text-fg-muted hover:text-brand transition-colors">
+              <Button href="/autorizacoes/consumo" variant="secondary" size="sm">
                 Consumo do Serpro
-              </Link>
+              </Button>
             )}
           </div>
         }
@@ -144,35 +166,41 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
       {!recebe && (
         <Aviso tom="atencao" className="mb-4">
           Falta definir quem recebe as autorizações: o CNPJ do escritório contábil que o cliente informa no Portal.{" "}
-          {acesso.podeConfigurar ? "Clique em “Como pedir ao cliente” para definir." : "Peça à coordenação do setor para definir."}
+          {acesso.podeConfigurar ? "Clique em “Como pedir ao cliente” para definir." : "Peça ao administrador do setor para definir."}
         </Aviso>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <MetricCard
-          label="Validar no Portal"
-          value={conta((s) => s === "validar")}
-          sub={validarLogo ? `${validarLogo} cai em até 5 dias` : "o cliente já cadastrou"}
-          tom={validarLogo ? "critico" : undefined}
-          icon={<Hourglass size={15} />}
-          href={href("validar")}
-        />
-        <MetricCard label="Falta pedir" value={conta(precisaDePedido)} sub="inclui caídas, canceladas e vencidas" icon={<ShieldAlert size={15} />} href={href("pedir")} />
-        <MetricCard label="Com o cliente" value={conta((s) => s === "pedida")} sub="pedida, ainda não cadastrou" icon={<Send size={15} />} href={href("pedida")} />
-        <MetricCard
-          label="Ativas"
-          value={ativas}
-          sub={`de ${plural(consideradas, "cliente", "clientes")}${conta((s) => s === "a_renovar") ? ` · ${conta((s) => s === "a_renovar")} a renovar` : ""}`}
-          icon={<ShieldCheck size={15} />}
-          href={href("ativa")}
-        />
-      </div>
+      {/* A faixa de totais (15/10/2026): eram MetricCard soltos numa grade
+          própria, que levavam ao recorte sem marcar qual estava aberto. Agora
+          o recorte da lista acende, e clicar nele de novo volta ao padrão. */}
+      <FaixaDeTotais
+        className="mb-6"
+        itens={[
+          {
+            rotulo: "Validar no Portal",
+            valor: String(conta((s) => s === "validar")),
+            detalhe: validarLogo ? `${validarLogo} cai em até 5 dias` : "o cliente já cadastrou",
+            tom: validarLogo ? "text-danger" : undefined,
+            icone: <Hourglass />,
+            ...noCartao("validar"),
+          },
+          { rotulo: "Falta pedir", valor: String(conta(precisaDePedido)), detalhe: "inclui caídas, canceladas e vencidas", icone: <ShieldAlert />, ...noCartao("pedir") },
+          { rotulo: "Com o cliente", valor: String(conta((s) => s === "pedida")), detalhe: "pedida, ainda não cadastrou", icone: <Send />, ...noCartao("pedida") },
+          {
+            rotulo: "Ativas",
+            valor: String(ativas),
+            detalhe: `de ${plural(consideradas, "cliente", "clientes")}${conta((s) => s === "a_renovar") ? ` · ${conta((s) => s === "a_renovar")} a renovar` : ""}`,
+            icone: <ShieldCheck />,
+            ...noCartao("ativa"),
+          },
+        ]}
+      />
 
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "cliente", "clientes")}
         busca={
           <form method="get" action="/autorizacoes" className="max-w-full">
-            {recorte !== "pendentes" && <input type="hidden" name="situacao" value={recorte} />}
+            {recorte !== "todas" && <input type="hidden" name="situacao" value={recorte} />}
             {regime && <input type="hidden" name="regime" value={regime} />}
             <CampoDeBusca
               compact
@@ -191,8 +219,8 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
               {
                 chave: "situacao",
                 rotulo: "Situação",
-                vazioLabel: "Pendentes",
-                opcoes: RECORTES.filter((r) => r.chave !== "pendentes").map((r) => ({ value: r.chave, label: r.rotulo })),
+                vazioLabel: "Todas",
+                opcoes: RECORTES.filter((r) => r.chave !== "todas").map((r) => ({ value: r.chave, label: r.rotulo })),
               },
               { chave: "regime", rotulo: "Regime", vazioLabel: "Todos", opcoes: REGIMES.map(([value, label]) => ({ value, label })) },
             ]}
@@ -218,6 +246,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                   <InfoDoCartao>{andamentoDaAutorizacao(l.situacao, l.registro, hoje)}</InfoDoCartao>
                   <PeDoCartao>
                     <Selo tom={TOM_DA_SITUACAO[l.situacao]}>{ROTULO_DA_SITUACAO[l.situacao]}</Selo>
+                    {semAcessoNoSerpro.has(l.chave) && <Selo tom="perigo">Serpro sem acesso</Selo>}
                     {acesso.podeEditar && <BotaoDaAutorizacao chave={l.chave} nome={l.empresa.nome} documento={l.documento} registro={l.registro} hoje={hoje} serpro={serproPronto} />}
                   </PeDoCartao>
                 </Cartao>
@@ -254,7 +283,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                   </thead>
                   <tbody>
                     {visiveis.map((l) => (
-                      <LinhaFiltravel key={l.chave} id={l.chave} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
+                      <LinhaFiltravel key={l.chave} id={l.chave} className="border-b border-border-soft align-middle hover:bg-surface-hover transition-colors">
                         <td className="py-2.5 pr-3">
                           <Link href={`/empresas/${l.empresa.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
                             {l.empresa.nome}
@@ -272,6 +301,11 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                         </td>
                         <td className="py-2.5 pr-3">
                           <Selo tom={TOM_DA_SITUACAO[l.situacao]}>{ROTULO_DA_SITUACAO[l.situacao]}</Selo>
+                          {semAcessoNoSerpro.has(l.chave) && (
+                            <span className="block mt-1" title="O Serpro negou o acesso no último acompanhamento: falta a Autorização de Acesso, ou ela não cobre o serviço.">
+                              <Selo tom="perigo">Serpro sem acesso</Selo>
+                            </span>
+                          )}
                         </td>
                         <td className="py-2.5 pr-3 text-fg-secondary">
                           {andamentoDaAutorizacao(l.situacao, l.registro, hoje)}
@@ -290,12 +324,12 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
             </TabelaFiltravel>
           </>
         )}
-        <p className="text-micro text-fg-muted mt-3">
+        <NotaDeFonte>
           Uma linha por raiz de CNPJ: a autorização dada pela matriz vale para as filiais. O escritório valida no Portal de Serviços da Receita, aba
           “Recebidas”, em até 30 dias do cadastro do cliente — depois disso ela cai. O setor é avisado faltando 10 e 3 dias e no último dia, e 60,
           30 e 7 dias antes do fim da validade.
           {semDocumento > 0 && ` ${plural(semDocumento, "empresa ativa sem CNPJ ou CPF válido ficou", "empresas ativas sem CNPJ ou CPF válido ficaram")} de fora.`}
-        </p>
+        </NotaDeFonte>
       </CascoDaTabela>
     </PageContainer>
   );

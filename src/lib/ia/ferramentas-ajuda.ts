@@ -39,7 +39,7 @@ export const TELAS_GERAIS = [
   },
   { tela: "Agenda", caminho: "/agenda", descricao: "Os prazos dos seus setores no calendário e, para coordenadores, as reuniões." },
   // "Quadros" se chamava "Espaços" até 14/10/2026 (o mesmo nome do menu, em `menuGeral.ts`).
-  { tela: "Quadros", caminho: CAMINHO_DOS_QUADROS, descricao: "As listas de tarefas do setor, em lista ou kanban, organizadas em espaços e pastas." },
+  { tela: "Quadros", caminho: CAMINHO_DOS_QUADROS, descricao: "As tarefas do setor, com as atividades em lista ou em kanban, organizadas em espaços e pastas." },
   { tela: "Busca", caminho: "Ctrl+K", descricao: "Acha qualquer tela, empresa ou pessoa pelo nome." },
   { tela: "Ajuda", caminho: "/ajuda", descricao: "Esta central: o que cada tela faz e os primeiros passos no Connect." },
 ] as const;

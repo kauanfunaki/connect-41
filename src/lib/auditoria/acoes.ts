@@ -31,6 +31,11 @@ const x = (frase: string, extra: Partial<DescricaoDaAcao> = {}): DescricaoDaAcao
 const o = (frase: string, extra: Partial<DescricaoDaAcao> = {}): DescricaoDaAcao => ({ tipo: "outro", frase, ...extra });
 
 export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
+  "helpdesk.created": c("abriu o chamado"),
+  "helpdesk.updated": e("atualizou o chamado"),
+  "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
+  "helpdesk.category": e("configurou a categoria de chamados"),
+  "helpdesk.sla": e("configurou a política de SLA dos chamados"),
   // ── Cadastros ──────────────────────────────────────────────────────────────
   "company.create": c("criou a empresa"),
   "company.update": e("editou a empresa"),
@@ -62,6 +67,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "autorizacoes.salvar": e("atualizou a autorização de acesso"),
   "autorizacoes.serpro": o("conferiu no Serpro a autorização de acesso"),
   "autorizacoes.serpro_lote": o("conferiu no Serpro as autorizações de acesso, em lote"),
+  "autorizacoes.serpro_sitfis": o("pediu no Serpro a situação fiscal da empresa"),
+  "autorizacoes.serpro_caixa_postal": o("abriu uma mensagem da Caixa Postal da Receita, dando ciência"),
 
   // ── BPO ────────────────────────────────────────────────────────────────────
   "financeiro.entry.created_manual": c("criou o lançamento"),
@@ -74,6 +81,13 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "finance.unpay": e("desfez a baixa do lançamento"),
   "finance.review": e("conferiu o lançamento"),
   "finance.cost_center_set": e("trocou o centro de custo do lançamento"),
+  "finance.edit": e("editou o lançamento"),
+  "finance.advance": c("registrou o adiantamento"),
+  "finance.advance_undone": e("desfez o adiantamento"),
+  "finance.card_created": c("cadastrou o cartão de crédito"),
+  "finance.card_updated": e("editou o cartão de crédito"),
+  "finance.attachment_added": e("anexou um arquivo ao lançamento"),
+  "finance.attachment_removed": e("tirou um anexo do lançamento"),
   "financeiro.approval.sent": o("mandou para a aprovação do cliente o lançamento"),
   "financeiro.approval.resent": o("reenviou para a aprovação do cliente o lançamento"),
   "financeiro.approval.approved": e("aprovou o lançamento"),
@@ -88,6 +102,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "financeiro.bank_statement.imported": c("importou um extrato bancário"),
   "financeiro.bank_transaction.reconciled": e("conciliou um movimento do extrato"),
   "financeiro.bank_transaction.unreconciled": e("desfez a conciliação de um movimento do extrato"),
+  "financeiro.transfer.created": c("registrou como transferência entre contas um movimento do extrato"),
   "financeiro.bank_transaction.ignored": e("ignorou um movimento do extrato"),
   "financeiro.bank_transaction.reopened": e("reabriu um movimento do extrato"),
   "financeiro.categoria.linha_da_dre": e("ligou a uma linha da DRE a categoria"),
@@ -113,6 +128,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "financeiro.company_message.sent": o("mandou uma mensagem para a empresa"),
   "financeiro.cost_center.created": c("criou o centro de custo"),
   "financeiro.cost_center.updated": e("editou o centro de custo"),
+  "financeiro.project.created": c("criou o projeto"),
+  "financeiro.project.updated": e("editou o projeto"),
   "financeiro.counterparty.created": c("cadastrou o fornecedor ou sacado"),
   "financeiro.counterparty.updated": e("editou o fornecedor ou sacado"),
   "financeCategory.create": c("criou a categoria"),
@@ -123,6 +140,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "dre.import": c("importou de um arquivo a DRE da empresa"),
   "dre.map": e("ligou uma categoria a uma linha da DRE da empresa"),
   "dre.unmap": e("desligou uma categoria da DRE da empresa"),
+  // A troca do modelo do DRE (21/10/2026), com o grupo de cada categoria em `classificacao`.
+  "dre.modelo": e("trocou o modelo do DRE da empresa"),
   // Correção feita por script, com o "de → para" em `linhaDaDre` (14/10/2026).
   "dre.categoria.linha_corrigida": e("corrigiu a linha da DRE da categoria"),
   "dre.budget.created": c("criou o orçamento"),
@@ -133,6 +152,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "bpoCredential.update": e("editou no repositório a senha"),
   "bpoCredential.delete": x("excluiu do repositório a senha"),
   "integration.omie.financeiro": o("trouxe do Omie o financeiro da empresa"),
+  "integration.omie.virada": o("virou do Omie para o Connect o financeiro da empresa"),
+  "integration.omie.virada_desfeita": o("desfez a virada do Omie da empresa"),
   "integration.omie.nfse_emitir": c("emitiu pelo Omie uma NFS-e"),
   "integration.omie.nfse_cancelar": o("cancelou no Omie uma NFS-e"),
 
@@ -283,6 +304,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "tag.delete": x("excluiu a tag"),
   "customfield.create": c("criou o campo customizado"),
   "customfield.update": e("editou o campo customizado"),
+  "customfield.reorder": e("reordenou os campos customizados"),
   "customfield.delete": x("excluiu o campo customizado"),
   "competency.create": c("criou a competência"),
   "competency.update": e("editou a competência"),
@@ -374,8 +396,12 @@ export function codigosDoTipo(codigos: Iterable<string>, tipo: TipoDaAcao): stri
  * tela ("FinanceEntry", "DriveFolder").
  */
 export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
+  HelpdeskTicket: "chamado",
+  HelpdeskCategory: "categoria de chamados",
+  HelpdeskSlaPolicy: "política de SLA dos chamados",
   AccessAuthorization: "autorização de acesso",
   AccessAuthorizationGrantee: "quem recebe as autorizações",
+  SerproMensagem: "mensagem da Caixa Postal",
   AgentConversation: "conversa com a Ceci",
   AgentProposal: "proposta da IA",
   AssessmentTemplate: "modelo de teste",
@@ -403,6 +429,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   ConfiguracaoDoConnect: "configuração do Connect",
   Competency: "competência",
   CostCenter: "centro de custo",
+  FinanceProject: "projeto",
   CustomField: "campo customizado",
   DigitalCertificate: "certificado digital",
   DriveFile: "arquivo",
@@ -421,7 +448,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   OAuthAccount: "conta das reuniões",
   OmieEmissao: "emissão de NFS-e",
   Person: "pessoa",
-  PipelineItem: "item do Kanban",
+  PipelineItem: "atividade",
   PortalApprovalLimit: "alçada de aprovação",
   PortalTelaBloqueada: "tela do portal",
   PortalUser: "acesso ao portal",
@@ -454,6 +481,7 @@ export function nomeDoTipo(entityType: string | null | undefined): string | null
 // ─── Áreas ───────────────────────────────────────────────────────────────────
 
 export type ChaveDaAreaDaAuditoria =
+  | "chamados"
   | "cadastros"
   | "fiscal"
   | "bpo"
@@ -472,6 +500,7 @@ export type ChaveDaAreaDaAuditoria =
 
 /** Rótulo e cor do ponto de cada área (a cor dos setores padrão, onde há setor). */
 export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotulo: string; cor: string }>> = {
+  chamados: { rotulo: "Chamados", cor: "#2E6FB8" },
   cadastros: { rotulo: "Cadastros", cor: "#0891B2" },
   fiscal: { rotulo: "Fiscal", cor: "#C5374B" },
   bpo: { rotulo: "BPO", cor: "#B7791F" },
@@ -495,6 +524,7 @@ export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotul
  * configurações ("drive.template_" é o Modelo de pastas).
  */
 const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]> = [
+  ["helpdesk.", "chamados"],
   ["company.", "cadastros"],
   ["person.", "cadastros"],
   ["companyservice.", "cadastros"],
@@ -509,8 +539,12 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["dre.", "bpo"],
   ["bpoCredential.", "bpo"],
   ["integration.omie.financeiro", "bpo"],
+  ["integration.omie.virada", "bpo"],
   ["integration.omie.nfse_", "bpo"],
   ["termination.", "dp"],
+  // As competências das avaliações de desempenho, desde 20/10/2026 dentro do
+  // módulo do DP (eram das Configurações).
+  ["competency.", "dp"],
   ["vaga.", "recrutamento"],
   ["candidatura.", "recrutamento"],
   ["assessmentTemplate.", "recrutamento"],
@@ -543,7 +577,6 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["module.", "configuracoes"],
   ["tag.", "configuracoes"],
   ["customfield.", "configuracoes"],
-  ["competency.", "configuracoes"],
   ["holiday.", "configuracoes"],
   ["fieldPermission.", "configuracoes"],
   ["recurringObligation.", "configuracoes"],

@@ -6,7 +6,7 @@ import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
-import { EmpresasFilterButton } from "@/components/empresas/EmpresasFilterButton";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
@@ -192,7 +192,28 @@ export default async function EmpresasPage({
       <CascoDaTabela
         contagem={contarItens(total, "empresa", "empresas")}
         busca={<DebouncedSearchInput placeholder="Buscar por nome ou ID…" className="w-72 max-w-full" />}
-        filtros={<EmpresasFilterButton search={search} page={page} statusFilter={statusFilter} tabs={FILTER_TABS} />}
+        filtros={
+          // O painel do "Filtros" das outras telas, com a etiqueta "×" do que
+          // está filtrado ao lado do botão (15/10/2026): era uma lista de links
+          // sem rótulo de campo. O cliente vem de um link de /clientes — sem
+          // uma saída visível, quem buscava outra empresa e não achava concluía
+          // que ela não existe; a etiqueta "Cliente: X ×" fica na barra, ao
+          // lado da busca (era uma pílula montada à mão, acima do casco).
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "status",
+                rotulo: "Situação",
+                vazioLabel: "Em operação",
+                opcoes: [...FILTER_TABS, { value: STATUS_TODOS, label: "Todos, incluindo inativos" }],
+              },
+              ...(cliente
+                ? [{ chave: "cliente", rotulo: "Cliente", vazioLabel: "Todos", opcoes: [{ value: cliente, label: clienteFiltrado?.name ?? "desconhecido" }] }]
+                : []),
+            ]}
+          />
+        }
       >
       {/* Fica acima da tabela e do estado vazio: é por aqui que se desfaz o
           funil quando ele esvazia a lista. */}
@@ -207,15 +228,13 @@ export default async function EmpresasPage({
         <EmptyState
           icon={<Building2 />}
           title={search || statusFilter || temFiltroDeColuna ? "Nenhuma empresa encontrada" : "Nenhuma empresa cadastrada ainda"}
+          // Sem repetir o "Nova empresa": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026).
           description={
             search || statusFilter || temFiltroDeColuna
               ? "Tente ajustar a busca ou os filtros."
-              : "Comece cadastrando a primeira empresa do tenant."
-          }
-          action={
-            !search && !statusFilter && !temFiltroDeColuna && canCreate ? (
-              <Button href="/empresas/nova"><Plus size={14} /> Nova empresa</Button>
-            ) : undefined
+              : canCreate
+                ? "Use “+ Nova empresa”, no alto da tela, para cadastrar a primeira."
+                : "As empresas atendidas aparecem aqui quando forem cadastradas."
           }
         />
       ) : (

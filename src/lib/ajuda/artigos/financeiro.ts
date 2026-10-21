@@ -27,11 +27,11 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Conferir e registrar o pagamento",
         passos: [
-          "Na linha da conta, clique em “Conferir” para marcar que ela foi revisada. O botão só aparece enquanto a conta está a conferir.",
-          "Clique em “Pagar”.",
-          "Em “Data do pagamento”, informe o dia em que o dinheiro saiu. Não é possível usar data futura.",
-          "Clique em “Confirmar”. Registrar o pagamento é o que se chama de baixa.",
-          "Se errou, clique no botão “⋯” da conta paga e escolha “Desfazer pagamento”.",
+          "Conta com o selo “A conferir” ainda não foi revisada: clique no botão “⋯” da linha e escolha “Conferir”. Para várias de uma vez, marque as caixas à esquerda e clique em “Conferir marcadas”.",
+          "Clique em “Pagar”, o botão azul da linha.",
+          "Na janela, informe a data, a conta bancária e o valor. A conta corrente prevista no título já vem marcada. Não é possível usar data futura; valor menor que o da conta é um pagamento parcial, e o resto continua em aberto.",
+          "Clique em “Registrar pagamento”. Registrar o pagamento é o que se chama de baixa.",
+          "Se errou, clique em “Ver baixa” na linha da conta paga e em “Desfazer” no pagamento errado.",
         ],
       },
       {
@@ -44,19 +44,26 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         ],
       },
       {
-        titulo: "Definir o centro de custo de várias contas",
+        titulo: "Alterar várias contas de uma vez",
         passos: [
-          "Marque a caixa à esquerda das contas, ou a do cabeçalho para marcar todas. As caixas só aparecem quando a empresa tem centros de custo (unidades, obras ou projetos).",
-          "Na barra que aparece, escolha o centro de custo.",
-          "Clique em “Definir centro de custo”.",
-          "Para retirar o centro, escolha “Sem centro de custo” e clique no mesmo botão.",
+          "Marque a caixa à esquerda das contas, ou a do cabeçalho para marcar todas.",
+          "Na barra que aparece, clique em “Alterar marcadas”.",
+          "Na janela, marque o que muda — “Vencimento”, “Previsão”, “Competência”, “Categoria”, “Centro de custo”, “Projeto” ou “Conta corrente” — e escolha o novo valor. O que não for marcado fica como está em cada conta.",
+          "Confira quantas contas vão mudar e as que ficam de fora, com o motivo: conta paga ou conciliada não muda o vencimento, e conta que vem do Omie se altera no Omie.",
+          "Clique em “Alterar”. Para tirar o centro, o projeto ou a conta, marque o campo e escolha “Sem centro de custo”, “Sem projeto” ou “Não prevista”. Conta com rateio fica de fora quando muda a categoria, o centro ou o projeto: esses se mudam nas linhas do rateio, em “Editar”.",
         ],
       },
     ],
     dicas: [
-      "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado e mostra o motivo logo abaixo.",
+      "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado, e o motivo aparece ao passar o mouse sobre ele.",
+      "Pagou o fornecedor antes da conta chegar? Escolha a empresa e, em “Adiantamentos a fornecedores”, clique em “Novo adiantamento”: o dinheiro sai do banco e fica guardado para ele, fora da DRE. Quando a conta chegar, clique em “Pagar” e escolha o adiantamento em “Saiu da conta” — a despesa entra na DRE ali, e o banco não se mexe de novo.",
+      "Pagou no cartão de crédito? Cadastre o cartão uma vez, com a empresa escolhida, em “Cartões de crédito” › “Novo cartão”, com o dia em que a fatura fecha e o dia em que vence. Depois, ao pagar a conta, escolha o cartão em “Saiu da conta” (ou, ao lançar, em “Conta corrente”, com “Já pago em”): a despesa entra na DRE no dia da compra, e a compra vai para a fatura do ciclo — uma conta a pagar ao cartão, criada e somada sozinha. Pague a fatura pelo banco, como qualquer conta; é aí que o dinheiro sai no fluxo de caixa. Para tirar uma compra da fatura, desfaça a baixa da conta; a fatura que já tem pagamento não muda.",
+      "Conta com “R$ X retidos” embaixo do valor tem imposto retido na fonte: o valor é o líquido, e cada imposto tem a conta dele. Para mudar uma retenção, clique em “Editar” na conta do fornecedor e abra “Retenções na fonte”; a conta do imposto acompanha enquanto não tiver baixa. Cancelar a conta do fornecedor cancela as dos impostos em aberto.",
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "“Abrir pendência” e “Enviar para aprovação” só aparecem quando o escritório usa esses módulos.",
+      "Para levar a lista para o Excel, clique em “Exportar” › “Excel”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram). O arquivo vem numa Tabela do Excel, com data como data e valor como número — no Excel, “Inserir” › “Tabela dinâmica” já pega a tabela. Conta rateada sai numa linha por parte do rateio. “Exportar” › “CSV” continua para outros sistemas.",
+      "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
+      "A conta rateada no Omie chega rateada: uma linha por categoria e departamento, com o departamento no centro de custo de mesmo nome ou código. A conta com um departamento só chega no centro dele. Departamento sem centro correspondente fica “Sem centro”. Até a virada, o rateio e o centro que vieram do departamento também se alteram no Omie.",
     ],
   },
 
@@ -80,11 +87,11 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Conferir e registrar o recebimento",
         passos: [
-          "Na linha da conta, clique em “Conferir” para marcar que ela foi revisada. O botão só aparece enquanto a conta está a conferir.",
-          "Clique em “Receber”.",
-          "Em “Data do recebimento”, informe o dia em que o dinheiro entrou. Não é possível usar data futura.",
-          "Clique em “Confirmar”. Registrar o recebimento é o que se chama de baixa.",
-          "Se errou, clique no botão “⋯” da conta recebida e escolha “Desfazer recebimento”.",
+          "Conta com o selo “A conferir” ainda não foi revisada: clique no botão “⋯” da linha e escolha “Conferir”. Para várias de uma vez, marque as caixas à esquerda e clique em “Conferir marcadas”.",
+          "Clique em “Receber”, o botão azul da linha.",
+          "Na janela, informe a data, a conta bancária e o valor. A conta corrente prevista no título já vem marcada. Não é possível usar data futura; valor menor que o da conta é um recebimento parcial, e o resto continua em aberto.",
+          "Clique em “Registrar recebimento”. Registrar o recebimento é o que se chama de baixa.",
+          "Se errou, clique em “Ver baixa” na linha da conta recebida e em “Desfazer” no recebimento errado.",
         ],
       },
       {
@@ -97,18 +104,23 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         ],
       },
       {
-        titulo: "Definir o centro de custo de várias contas",
+        titulo: "Alterar várias contas de uma vez",
         passos: [
-          "Marque a caixa à esquerda das contas, ou a do cabeçalho para marcar todas. As caixas só aparecem quando a empresa tem centros de custo (unidades, obras ou projetos).",
-          "Na barra que aparece, escolha o centro de custo.",
-          "Clique em “Definir centro de custo”.",
-          "Para retirar o centro, escolha “Sem centro de custo” e clique no mesmo botão.",
+          "Marque a caixa à esquerda das contas, ou a do cabeçalho para marcar todas.",
+          "Na barra que aparece, clique em “Alterar marcadas”.",
+          "Na janela, marque o que muda — “Vencimento”, “Previsão”, “Competência”, “Categoria”, “Centro de custo”, “Projeto” ou “Conta corrente” — e escolha o novo valor. O que não for marcado fica como está em cada conta.",
+          "Confira quantas contas vão mudar e as que ficam de fora, com o motivo: conta paga ou conciliada não muda o vencimento, e conta que vem do Omie se altera no Omie.",
+          "Clique em “Alterar”. Para tirar o centro, o projeto ou a conta, marque o campo e escolha “Sem centro de custo”, “Sem projeto” ou “Não prevista”. Conta com rateio fica de fora quando muda a categoria, o centro ou o projeto: esses se mudam nas linhas do rateio, em “Editar”.",
         ],
       },
     ],
     dicas: [
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "Conta “Renegociada” ou “Perda” saiu do em aberto pela tela “Cobrança” (acordo ou baixa por perda).",
+      "O cliente pagou antes da conta a receber? Escolha a empresa e, em “Adiantamentos de clientes”, clique em “Novo adiantamento”. Depois, ao receber a conta, escolha o adiantamento em “Entrou na conta”.",
+      "Para levar a lista para o Excel, clique em “Exportar” › “Excel”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram). O arquivo vem numa Tabela do Excel, com data como data e valor como número — no Excel, “Inserir” › “Tabela dinâmica” já pega a tabela. Conta rateada sai numa linha por parte do rateio. “Exportar” › “CSV” continua para outros sistemas.",
+      "Enquanto a empresa é lida do Omie, a conta que veio de lá se paga, cancela e altera no Omie, e a leitura traz para cá. Depois da virada (Configurações › Integrações › Omie por empresa › “Virar para o Connect”), tudo isso passa a ser no Connect.",
+      "A conta rateada no Omie chega rateada: uma linha por categoria e departamento, com o departamento no centro de custo de mesmo nome ou código. A conta com um departamento só chega no centro dele. Departamento sem centro correspondente fica “Sem centro”. Até a virada, o rateio e o centro que vieram do departamento também se alteram no Omie.",
     ],
   },
 
@@ -127,8 +139,22 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Clique em “Novo lançamento”, no topo da tela.",
           "Em “Tipo”, escolha “Conta a pagar” ou “Conta a receber” e selecione o “Fornecedor” ou o “Cliente (sacado)”. Se ele ainda não existe, escolha “+ Cadastrar nova contraparte”.",
           "Escolha a “Categoria” (obrigatória em conta a pagar) e preencha “Competência” (o mês a que a conta pertence), “Vencimento” e “Valor”.",
+          "Se a conta deve ser paga em outro dia que não o vencimento, informe a “Previsão”: o fluxo de caixa projeta por ela.",
+          "Para dividir a conta entre categorias, centros de custo ou projetos, clique em “Ratear”, ao lado de “Categoria”. Monte as linhas por valor ou por percentual; embaixo aparece o que falta para fechar o valor da conta. A DRE soma cada linha na categoria dela.",
+          "Se a nota de um serviço tomado tem imposto retido (IRRF, PIS, COFINS, CSLL, INSS ou ISS), abra “Retenções na fonte” e informe cada um. O “Valor” passa a ser o bruto da nota, a conta do fornecedor fica no líquido, e cada imposto ganha a conta dele, a pagar à Receita (ou à prefeitura, no ISS), vencendo no dia 20 do mês seguinte (o ISS, no dia 10).",
+          "Se quiser, escolha a “Conta corrente” por onde a conta deve ser paga ou recebida: a baixa já vem com ela.",
           "Se a conta já foi paga ou recebida, informe a data em “Já pago em” ou “Já recebido em”. Se não, deixe em branco.",
           "Clique em “Lançar”. A conta já aparece em Contas a pagar ou a receber e na DRE.",
+        ],
+      },
+      {
+        titulo: "Repetir uma conta (aluguel, folha, mensalidade)",
+        passos: [
+          "No lançamento, abra o bloco “Repetir” e escolha a “Frequência”: todo mês, a cada 15 dias, toda semana ou todo ano.",
+          "Em “Quantas vezes”, informe o total, contando esta. Em “Em fim de semana ou feriado”, escolha adiar, antecipar ou manter a data.",
+          "Clique em “Lançar”. As próximas contas nascem junto, em aberto, com o mesmo valor, contraparte e categoria; a competência anda com o mês do vencimento.",
+          "Nas listas, a posição na série aparece antes da descrição, como “3/12”. Cada conta se edita, paga e cancela sozinha.",
+          "Para parar a série, clique em “Cancelar” numa das contas e escolha “Esta e as próximas da série”. As anteriores e a já paga não mudam.",
         ],
       },
       {
@@ -158,6 +184,46 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
+  // ─── Tabela dinâmica (20/10/2026) ─────────────────────────────────────────
+  {
+    chave: "bpo_tabela_dinamica",
+    titulo: "Tabela dinâmica",
+    caminhos: ["/tabela-dinamica"],
+    resumo:
+      "Monta as contas e as baixas em linhas e colunas — por categoria, fornecedor, centro de custo, mês — e soma o valor, o pago, o saldo ou a quantidade, como as tabelas dinâmicas do Omie. Tem visões prontas e leva tudo para o Excel.",
+    secoes: [
+      {
+        titulo: "Abrir uma visão pronta",
+        passos: [
+          "Em “Empresa”, no topo, escolha a empresa ou “Todas as empresas”.",
+          "Clique numa das visões prontas, como “Despesas por categoria” ou “A pagar por fornecedor”. A tabela se monta com a configuração dela.",
+          "Ajuste o que quiser no quadro de configuração e clique em “Aplicar”.",
+        ],
+      },
+      {
+        titulo: "Montar a sua tabela",
+        passos: [
+          "Em “Base”, escolha “Contas” (os títulos, pela competência ou pelo vencimento) ou “Baixas” (o que entrou e saiu de verdade, pelo mês do pagamento).",
+          "Em “Linhas”, escolha o que fica à esquerda — até dois níveis, como “Centro de custo” e depois “Categoria”. Em “Colunas”, o que fica no topo, como o mês.",
+          "Em “Valor”, escolha o que somar: valor, pago ou recebido, saldo em aberto, entradas menos saídas ou a quantidade.",
+          "Filtre pelo tipo (a pagar ou a receber), pelo período e, nas contas, pela situação. Clique em “Aplicar”.",
+          "Com dois níveis de linha, clique numa linha para abrir o detalhe dela.",
+        ],
+      },
+      {
+        titulo: "Levar para o Excel",
+        passos: [
+          "Clique em “Exportar Excel”, acima da tabela. Vai a mesma configuração da tela.",
+          "O arquivo traz três abas: a tabela montada, os dados linha a linha numa Tabela do Excel (para você fazer a sua tabela dinâmica lá) e os filtros usados.",
+        ],
+      },
+    ],
+    dicas: [
+      "Conta com rateio entra em cada categoria, centro e projeto pela parte dela; na quantidade, conta uma vez só.",
+      "A tela mostra até 300 linhas e 36 colunas; o resto vai para “Outros”. A exportação leva tudo.",
+      "O link da tela guarda a configuração: dá para salvar nos favoritos ou mandar para alguém.",
+    ],
+  },
   // ─── Fluxo de caixa ───────────────────────────────────────────────────────
   {
     chave: "bpo_fluxo_caixa",
@@ -173,7 +239,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Escolha o mês e clique em “Aplicar”.",
           "Na aba “Realizado e projeção”, o quadro “Saldo das contas” mostra o saldo bancário que vem da conciliação.",
           "A tabela do realizado traz entradas, saídas e saldo dos seis meses até o mês escolhido, pela data em que as contas foram pagas ou recebidas.",
-          "Os cartões da projeção somam o que vence de hoje até 7, 15, 30, 60, 90 e 180 dias: o que há a receber menos o que há a pagar.",
+          "Os cartões da projeção somam o que vence de hoje até 7, 15, 30, 60, 90 e 180 dias: o que há a receber menos o que há a pagar. Conta com “Previsão” entra na data prevista, não no vencimento.",
         ],
       },
       {
@@ -207,6 +273,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu.",
           "Clique em “Nova conta”.",
           "Preencha “Nome da conta”, “Tipo”, “Banco (COMPE)” (o código do banco, como 001 ou 341), “Agência” e “Conta com dígito”.",
+          "O “Tipo” diz o que a conta faz. “Com extrato” (conta corrente, poupança, conta de pagamento, conta garantida, aplicação) importa OFX e concilia. “Dinheiro sem extrato” (caixinha, carteira virtual) entra no saldo e no fluxo de caixa pelas baixas feitas por ela. “Fora do caixa” (empréstimo, mútuo, crediário, administradora de cartões) não é dinheiro da empresa: fica fora do saldo bancário e do fluxo, e o dinheiro anda quando se transfere entre ela e o banco, na linha do extrato. Sem extrato, banco e número são opcionais.",
           "Se quiser conferir o saldo, informe o “Saldo inicial” e a data em “Data do saldo inicial”.",
           "Clique em “Salvar”.",
         ],
@@ -585,6 +652,24 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         ],
       },
       {
+        titulo: "Escolher onde entram os impostos",
+        passos: [
+          "No modelo padrão, ao lado dos filtros, clique em “Impostos no EBITDA” (o padrão) ou em “Impostos fora do resultado”.",
+          "Em “Impostos no EBITDA”, os impostos sobre a receita descontam do “Gerador de caixa (EBITDA)” e do resultado líquido.",
+          "Em “Impostos fora do resultado”, eles aparecem só na receita líquida; o aviso em amarelo mostra quanto ficou de fora.",
+          "A escolha vai junto ao trocar de mês, de aba e de empresa, e também para o arquivo de “Exportar”.",
+        ],
+      },
+      {
+        titulo: "Trocar o modelo do DRE da empresa",
+        passos: [
+          "Com a empresa escolhida, clique em “Modelo”, ao lado dos filtros. O botão diz o modelo em uso: “Padrão” ou “Customizado”.",
+          "Leia a descrição de cada modelo e escolha o que a empresa usa. O painel mostra o que muda antes de gravar: de onde sai o grupo de cada categoria e quais ficam para classificar.",
+          "Clique em “Usar este modelo”. O DRE, a DRE econômica, as análises, o orçamento e a exportação da empresa passam a usar os grupos e as linhas do modelo.",
+          "Se alguma categoria ficou sem grupo, clique em “Classificar” e escolha o grupo dela no modelo novo.",
+        ],
+      },
+      {
         titulo: "Classificar categorias sem grupo",
         passos: [
           "Quando aparecer o aviso de categorias sem grupo no DRE, veja a lista logo abaixo dele.",
@@ -607,6 +692,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Valor sem grupo não entra em nenhuma linha do relatório até ser classificado.",
       "Importar de novo o mesmo mês do Omie substitui o que estava lá.",
       "Para o resultado pelo mês a que cada conta pertence, pago ou não, use a “DRE econômica”.",
+      "O modelo do DRE é de cada empresa: o padrão, ou um customizado como o de despesas por área. Só a coordenação do setor troca o modelo.",
     ],
   },
 
@@ -623,7 +709,8 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Escolha a empresa em “Empresa” (a tela troca sozinha); depois o mês, e clique em “Aplicar”.",
           "Escolha a visão nas abas: “Mês”, “Acumulado no ano” ou “Últimos 12 meses”.",
-          "Leia os cartões do topo: “Receita bruta”, “Margem de contribuição”, “Resultado operacional” e “Resultado do período”.",
+          "Leia os cartões do topo: “Receita bruta”, “Margem de contribuição”, “Resultado operacional (EBITDA)” e “Resultado do período”.",
+          "No modelo padrão, para tirar os impostos sobre a receita do resultado, clique em “Impostos fora do resultado”, ao lado dos filtros. “Impostos no EBITDA” é o padrão.",
           "Confira os avisos em amarelo, como lançamentos ainda a conferir que entram no resultado.",
         ],
       },
@@ -691,7 +778,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Clique na aba “Cenários”.",
           "Em “Cenário”, escolha “Pessimista”, “Base”, “Otimista” ou “Personalizado”.",
-          "Ajuste os percentuais de “Receita”, “CMV além da receita” (custo da mercadoria vendida), “Despesas fixas” e “Despesas financeiras”.",
+          "Ajuste os percentuais de “Receita”, “Custo operacional além da receita”, “Custo administrativo” e “Financiamentos e empréstimos”.",
           "Compare a coluna “Simulado” com a DRE do mês.",
         ],
       },

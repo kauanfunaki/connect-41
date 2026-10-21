@@ -19,6 +19,8 @@ import { centavosDeDecimal } from "@/lib/dre/data";
 import { decimalDeCentavos } from "@/lib/financeiro/manual";
 import { competenciaDe } from "@/lib/financeiro/periodo";
 import { serieEconomica } from "@/lib/dre/dataEconomica";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
+import type { ModeloDoDre } from "@/lib/dre/estrutura";
 import {
   gradeVazia,
   gradeDeLinhas,
@@ -64,8 +66,8 @@ function texto(formData: FormData, k: string): string {
   return String(formData.get(k) ?? "").trim();
 }
 
-function linhasParaGravar(budgetId: string, grade: Grade) {
-  return linhasDaGrade(grade).map((l) => ({ budgetId, groupCode: l.groupCode, month: l.month, amount: decimalDeCentavos(l.centavos) }));
+function linhasParaGravar(budgetId: string, grade: Grade, modelo: ModeloDoDre) {
+  return linhasDaGrade(grade, modelo).map((l) => ({ budgetId, groupCode: l.groupCode, month: l.month, amount: decimalDeCentavos(l.centavos) }));
 }
 
 /**
@@ -92,6 +94,8 @@ export async function criarVersao(formData: FormData): Promise<ResultadoDoOrcame
   if (!nome.ok) return { error: nome.erro };
   const reajuste = lerReajuste(texto(formData, "reajuste"));
   if (!reajuste.ok) return { error: reajuste.erro };
+  // A grade é a do modelo do DRE da empresa (21/10/2026).
+  const modelo = await modeloDaEmpresa(c.tenantId, companyId);
 
   const origem = texto(formData, "origem");
   let grade: Grade;
@@ -104,22 +108,27 @@ export async function criarVersao(formData: FormData): Promise<ResultadoDoOrcame
     });
     if (!fonte) return { error: "Escolha a versão de origem desta empresa." };
     grade = copiarComReajuste(
-      gradeDeLinhas(fonte.lines.map((l) => ({ groupCode: l.groupCode, month: l.month, centavos: centavosDeDecimal(l.amount) }))),
-      reajuste.pct
+      gradeDeLinhas(
+        fonte.lines.map((l) => ({ groupCode: l.groupCode, month: l.month, centavos: centavosDeDecimal(l.amount) })),
+        modelo
+      ),
+      reajuste.pct,
+      modelo
     );
     detalhe = { origem, versaoOrigemId: fonte.id, reajuste: reajuste.pct };
   } else if (origem === "realizado") {
     const anoOrigem = lerAno(texto(formData, "anoOrigem"));
     if (!anoOrigem) return { error: "Ano do realizado inválido." };
     const competencias = Array.from({ length: 12 }, (_, i) => competenciaDe(anoOrigem, i + 1));
-    const serie = await serieEconomica(c.tenantId, companyId, competencias);
+    const serie = await serieEconomica(c.tenantId, companyId, competencias, { tipo: "todos" }, { impostosNoEbitda: true, modelo });
     grade = gradeDoRealizado(
       competencias.map((comp) => serie.get(comp)?.resultado.porGrupo ?? null),
-      reajuste.pct
+      reajuste.pct,
+      modelo
     );
     detalhe = { origem, anoOrigem, reajuste: reajuste.pct };
   } else if (origem === "vazia" || origem === "") {
-    grade = gradeVazia();
+    grade = gradeVazia(modelo);
     detalhe = { origem: "vazia" };
   } else {
     return { error: "Origem da versão inválida." };
@@ -132,7 +141,7 @@ export async function criarVersao(formData: FormData): Promise<ResultadoDoOrcame
         data: { tenantId: c.tenantId, companyId, year: ano, name: nome.nome, status: "RASCUNHO", createdById: c.userId! },
         select: { id: true },
       });
-      const linhas = linhasParaGravar(criado.id, grade);
+      const linhas = linhasParaGravar(criado.id, grade, modelo);
       if (linhas.length > 0) await tx.budgetLine.createMany({ data: linhas });
       return criado.id;
     });
@@ -177,7 +186,11 @@ export async function salvarGrade(formData: FormData): Promise<ResultadoDoOrcame
   const editavel = podeEditarVersao(versao.status);
   if (!editavel.pode) return { error: editavel.motivo };
 
-  const lida = lerGrade([...formData.entries()].map(([k, v]) => [k, String(v)] as [string, string]));
+  const modelo = await modeloDaEmpresa(c.tenantId, versao.companyId);
+  const lida = lerGrade(
+    [...formData.entries()].map(([k, v]) => [k, String(v)] as [string, string]),
+    modelo
+  );
   if (!lida.ok) return { error: lida.erro };
 
   try {
@@ -188,7 +201,7 @@ export async function salvarGrade(formData: FormData): Promise<ResultadoDoOrcame
       });
       if (marcado.count !== 1) throw new Recusa("Esta versão mudou depois que você abriu (outra gravação ou aprovação) — recarregue a tela.");
       await tx.budgetLine.deleteMany({ where: { budgetId } });
-      const linhas = linhasParaGravar(budgetId, lida.grade);
+      const linhas = linhasParaGravar(budgetId, lida.grade, modelo);
       if (linhas.length > 0) await tx.budgetLine.createMany({ data: linhas });
     });
   } catch (err) {
@@ -202,7 +215,7 @@ export async function salvarGrade(formData: FormData): Promise<ResultadoDoOrcame
     action: "dre.budget.saved",
     entityType: "Budget",
     entityId: budgetId,
-    metadata: { companyId: versao.companyId, ano: versao.year, nome: versao.name, celulas: linhasDaGrade(lida.grade).length },
+    metadata: { companyId: versao.companyId, ano: versao.year, nome: versao.name, celulas: linhasDaGrade(lida.grade, modelo).length },
   });
   revalidar();
   return { ok: true, budgetId };

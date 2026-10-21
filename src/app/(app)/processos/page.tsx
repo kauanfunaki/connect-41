@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
+import { Contador } from "@/components/ui/Contador";
 import { Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle } from "lucide-react";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
@@ -126,10 +127,8 @@ export default async function ProcessosPage({
     const s = q.toString();
     return s ? `/processos?${s}` : "/processos";
   };
-  // O kanban não tem caixa de busca: levar o `q` para lá filtraria o quadro
-  // sem mostrar o porquê. Vão só os filtros que ele também tem.
+  // O kanban tem a mesma busca na barra desde 15/10/2026: o `q` vai junto.
   const filtrosDoKanban = new URLSearchParams(filtrosNaUrl);
-  filtrosDoKanban.delete("q");
 
   return (
     <PageContainer>
@@ -150,7 +149,17 @@ export default async function ProcessosPage({
         {coordena && (
           <Button href="/societario/ia" variant="secondary">
             <Sparkles size={14} />
-            Ceci · Societário{propostasDaIa > 0 ? ` · ${propostasDaIa}` : ""}
+            Ceci · Societário
+            {/* As propostas no `Contador`, como o "Classificar" da DRE (15/10/2026):
+                o número ia escrito no texto do botão. */}
+            {propostasDaIa > 0 && (
+              <>
+                <span className="sr-only">: {propostasDaIa === 1 ? "1 proposta para revisar" : `${propostasDaIa} propostas para revisar`}</span>
+                <span aria-hidden className="inline-flex">
+                  <Contador valor={propostasDaIa} tom="marca" className="ml-0.5" />
+                </span>
+              </>
+            )}
           </Button>
         )}
         <Button href={filtrosDoKanban.size > 0 ? `/processos/kanban?${filtrosDoKanban}` : "/processos/kanban"} variant="secondary">

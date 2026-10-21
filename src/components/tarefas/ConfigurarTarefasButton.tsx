@@ -1,29 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { SlidersHorizontal } from "lucide-react";
-import { Modal } from "@/components/ui/Modal";
+import { useState, useSyncExternalStore, useTransition } from "react";
+import { createPortal } from "react-dom";
+import { Check, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
-import { Checkbox } from "@/components/ui/Checkbox";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { Switch } from "@/components/ui/Switch";
 import { useToast } from "@/components/ui/Toast";
-import {
-  TASK_WIDGETS,
-  DEFAULT_TASK_WIDGETS,
-  type TaskWidgetKey,
-  type TaskWidgetSlot,
-} from "@/lib/taskWidgets";
+import { TASK_WIDGETS, DEFAULT_TASK_WIDGETS, type TaskWidgetKey } from "@/lib/taskWidgets";
 import type { ActionState } from "@/lib/actionState";
 
-const SLOT_LABEL: Record<TaskWidgetSlot, string> = {
-  main: "Coluna principal",
-  side: "Coluna lateral",
-};
-
-const SLOT_ORDER: TaskWidgetSlot[] = ["main", "side"];
-
 export type SetorOption = { code: string; label: string };
+
+const semAssinatura = () => () => {};
+
+/** O lugar da faixa de edição, logo abaixo do cabeçalho do Meu dia. */
+export const ID_DA_FAIXA_DO_MEU_DIA = "faixa-do-meu-dia";
 
 type Props = {
   sectors: SetorOption[];
@@ -35,29 +27,32 @@ type Props = {
 
 // Configuração da tela /tarefas, por setor. Só o SUPER_ADMIN chega aqui.
 //
-// Espelha o modal de personalizar a Home, com duas diferenças que vêm do fato
-// de a configuração ser do workspace e não da pessoa: o seletor de setor no
-// topo (a Home é sempre "a minha") e a ausência das setas de ordenar (a ordem
-// é a do catálogo — com a união entre setores, duas ordens conflitantes não
-// teriam desempate).
+// Na própria tela desde 20/10/2026 (escolha 11A dos Ajustes de 15/10, a mesma
+// do Início): o botão abre uma faixa no topo do Meu dia, com o setor, um
+// interruptor por bloco e Concluir. Era uma janela com caixas de marcar.
+// Continua por setor e sem ordem — a ordem é a do catálogo: com a união entre
+// setores, duas ordens conflitantes não teriam desempate.
 export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, resetAction }: Props) {
-  const [open, setOpen] = useState(false);
+  const [aberto, setAberto] = useState(false);
   const [sectorCode, setSectorCode] = useState(sectors[0]?.code ?? "");
-  const [selected, setSelected] = useState<TaskWidgetKey[]>(
-    () => configBySector[sectors[0]?.code] ?? DEFAULT_TASK_WIDGETS
-  );
+  const [selected, setSelected] = useState<TaskWidgetKey[]>(() => configBySector[sectors[0]?.code] ?? DEFAULT_TASK_WIDGETS);
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
+
+  // A faixa vai para o lugar dela na página, abaixo do cabeçalho; o botão
+  // fica no cabeçalho. No servidor não há documento (o padrão do SlideOver).
+  const noNavegador = useSyncExternalStore(semAssinatura, () => true, () => false);
+  const alvo = noNavegador && aberto ? document.getElementById(ID_DA_FAIXA_DO_MEU_DIA) : null;
 
   function loadSector(code: string) {
     setSectorCode(code);
     setSelected(configBySector[code] ?? DEFAULT_TASK_WIDGETS);
   }
 
-  function openModal() {
+  function abrir() {
     // Reabrir depois de cancelar não pode manter o rascunho descartado.
     loadSector(sectorCode || sectors[0]?.code || "");
-    setOpen(true);
+    setAberto(true);
   }
 
   function toggle(key: TaskWidgetKey) {
@@ -71,7 +66,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
         toast.error(result.error);
         return;
       }
-      setOpen(false);
+      setAberto(false);
       toast.success("Meu dia configurado para este setor.");
     });
   }
@@ -83,7 +78,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
         toast.error(result.error);
         return;
       }
-      setOpen(false);
+      setAberto(false);
       toast.success("Setor restaurado ao padrão.");
     });
   }
@@ -92,85 +87,69 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
 
   const sectorLabel = sectors.find((s) => s.code === sectorCode)?.label ?? sectorCode;
 
+  const faixa = (
+    <div
+      role="region"
+      aria-label="Configurando o Meu dia"
+      className="sticky top-2 z-20 mb-4 flex flex-col gap-3 rounded-lg border border-brand/30 bg-brand-subtle px-4 py-3 shadow-[var(--c41-shadow-sm)]"
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <SlidersHorizontal size={16} className="flex-shrink-0 text-brand" aria-hidden />
+        <p className="font-semibold text-fg">Configurando o Meu dia de</p>
+        <Select compact value={sectorCode} onChange={(e) => loadSector(e.target.value)} aria-label="Setor" className="w-56 max-w-full">
+          {sectors.map((s) => (
+            <option key={s.code} value={s.code}>
+              {s.label}
+            </option>
+          ))}
+        </Select>
+        <p className="min-w-0 text-fs-2 text-fg-secondary">
+          Vale para todo mundo do setor — quem participa de mais de um vê a soma dos blocos.
+        </p>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={reset} disabled={isPending}>
+            <RotateCcw size={13} /> Restaurar padrão
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setAberto(false)} disabled={isPending}>
+            Cancelar
+          </Button>
+          <Button size="sm" onClick={save} loading={isPending} loadingLabel="Salvando…">
+            <Check size={13} /> Concluir
+          </Button>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        {TASK_WIDGETS.map((def) => (
+          <span key={def.key} title={def.description} className="inline-flex">
+            <Switch checked={selected.includes(def.key)} onCheckedChange={() => toggle(def.key)} rotulo={def.label} />
+          </span>
+        ))}
+      </div>
+      {selected.length === 0 && (
+        <p className="text-fs-2 text-warning-fg">
+          Sem nenhum bloco ligado, quem é só de {sectorLabel} vai abrir o Meu dia numa tela vazia. É uma escolha válida
+          enquanto o setor não tiver módulos próprios — só não é acidente.
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <>
+      {/* Contorno sem fundo em repouso e em `sm`, a altura do "Todas as
+          tarefas" ao lado (15/10/2026). */}
       <Button
         variant="secondary"
-        size="md"
-        className="bg-surface-hover hover:border-brand"
-        onClick={openModal}
+        size="sm"
+        onClick={aberto ? () => setAberto(false) : abrir}
+        aria-pressed={aberto}
         title="Configurar o Meu dia"
         aria-label="Configurar o Meu dia"
       >
         <SlidersHorizontal size={14} />
         <span className="hidden sm:inline">Configurar</span>
       </Button>
-
-      <Modal open={open} onClose={() => setOpen(false)} title="Configurar o Meu dia" maxWidth="max-w-lg">
-        <p className="text-helper text-fg-muted mb-4">
-          Escolha o que aparece no Meu dia para cada setor. Vale para todo mundo do
-          setor — quem participa de mais de um vê a soma dos blocos.
-        </p>
-
-        <CampoForm label="Setor" htmlFor="tarefas-setor">
-          <Select
-            id="tarefas-setor"
-            value={sectorCode}
-            onChange={(e) => loadSector(e.target.value)}
-          >
-            {sectors.map((s) => (
-              <option key={s.code} value={s.code}>{s.label}</option>
-            ))}
-          </Select>
-        </CampoForm>
-
-        <div className="space-y-5 mt-5">
-          {SLOT_ORDER.map((slot) => {
-            const defs = TASK_WIDGETS.filter((w) => w.slot === slot);
-            if (defs.length === 0) return null;
-
-            return (
-              <div key={slot}>
-                <p className="text-fs-1 font-semibold text-fg-muted uppercase tracking-wider mb-2">
-                  {SLOT_LABEL[slot]}
-                </p>
-                <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
-                  {defs.map((def) => (
-                    <div key={def.key} className="flex items-center gap-3 px-3 py-2.5 bg-surface">
-                      <Checkbox
-                        id={`task-widget-${def.key}`}
-                        checked={selected.includes(def.key)}
-                        onChange={() => toggle(def.key)}
-                      />
-                      <label htmlFor={`task-widget-${def.key}`} className="flex-1 min-w-0 cursor-pointer">
-                        <span className="block text-fs-3 font-medium text-fg truncate">{def.label}</span>
-                        <span className="block text-micro text-fg-muted truncate">{def.description}</span>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {selected.length === 0 && (
-          <p className="text-fs-2 text-fg-secondary bg-surface-hover border border-border rounded-md px-3 py-2 mt-4">
-            Sem nenhum bloco marcado, quem é só de {sectorLabel} vai abrir o Meu dia numa
-            tela vazia. É uma escolha válida enquanto o setor não tiver módulos próprios —
-            só não é acidente.
-          </p>
-        )}
-
-        <div className="flex items-center gap-3 pt-5">
-          <Button onClick={save} loading={isPending}>
-            Salvar
-          </Button>
-          <Button variant="ghost" onClick={reset} disabled={isPending}>
-            Restaurar padrão
-          </Button>
-        </div>
-      </Modal>
+      {alvo && createPortal(faixa, alvo)}
     </>
   );
 }

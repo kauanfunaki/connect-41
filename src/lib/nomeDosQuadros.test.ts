@@ -7,7 +7,8 @@ import { nomeDaTela } from "@/lib/ia/chat/telas";
 import { artigoDaChave, artigoDoCaminho } from "@/lib/ajuda/artigos";
 
 // "Espaços" virou "Quadros" e a visão da lista virou "Listas"/"Kanban"
-// (Kauan, 14/10/2026). O nome mora em vários lugares — o menu, a central de
+// (Kauan, 14/10/2026). Em 20/10 a lista virou "Tarefa", os itens viraram
+// "Atividades", e as duas visões da tarefa ficaram "Lista" e "Kanban". O nome mora em vários lugares — o menu, a central de
 // Ajuda, o artigo, o que a Ceci lê — e este teste garante que todos dizem o
 // mesmo. A chave `espacos` não muda: é ela que fica gravada no banco.
 
@@ -66,17 +67,33 @@ describe("a tela Quadros (antes Espaços)", () => {
   });
 });
 
-describe("a visão da lista: Listas e Kanban", () => {
-  it("o seletor da lista", () => {
+describe("as visões da tarefa: Lista e Kanban", () => {
+  it("o seletor da tarefa", () => {
     const codigo = semComentarios("src/components/kanban/BoardView.tsx");
-    expect(codigo).toContain('label: "Listas"');
+    expect(codigo).toContain('label: "Lista"');
     expect(codigo).toContain('label: "Kanban"');
-    expect(codigo).not.toMatch(/label: "(Lista|Quadro)"/);
+    expect(codigo).not.toMatch(/label: "(Listas|Quadro)"/);
   });
 
   it("a ajuda fala dos nomes novos", () => {
     const artigo = JSON.stringify(artigoDaChave("geral:espacos"));
-    expect(artigo).toContain("“Listas” e “Kanban”");
-    expect(artigo).not.toMatch(/“(Lista|Quadro)”/);
+    expect(artigo).toContain("“Lista” e “Kanban”");
+    expect(artigo).not.toMatch(/“(Listas|Quadro)”/);
+  });
+});
+
+describe("Quadro › Pasta › Tarefa › Atividade (20/10/2026)", () => {
+  it("a lista se chama tarefa, e o item, atividade, nas telas que criam cada um", () => {
+    expect(semComentarios("src/components/kanban/NewListButton.tsx")).toContain('"Nova tarefa"');
+    expect(semComentarios("src/components/kanban/NewListButton.tsx")).not.toContain('"Nova lista"');
+    expect(semComentarios("src/components/kanban/NovoItemModal.tsx")).toContain('"Nova atividade"');
+    expect(semComentarios("src/components/kanban/ItemForm.tsx")).toContain('"Criar atividade"');
+    expect(semComentarios("src/components/kanban/TaskListView.tsx")).not.toMatch(/"Adicionar tarefa"/);
+  });
+
+  it("o espaço e a pasta listam tarefas, com a coluna Tarefa", () => {
+    expect(semComentarios("src/app/(app)/setor/[code]/espacos/[spaceId]/page.tsx")).toContain(">Tarefas<");
+    expect(semComentarios("src/app/(app)/setor/[code]/pastas/[folderId]/page.tsx")).toContain(">Tarefas<");
+    expect(semComentarios("src/components/kanban/ListsTable.tsx")).toContain('rotulo="Tarefa"');
   });
 });

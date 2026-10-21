@@ -235,10 +235,17 @@ export default async function TestesPage({
         <FiltrosDasColunasNaUrl colunas={[{ chave: "teste", rotulo: "Teste" }]} />
 
         {links.length === 0 ? (
+          // O vazio nomeia o botão do cabeçalho, e não "acima" (P19, 15/10/2026).
           <EmptyState
             icon={<ClipboardList />}
             title="Nenhum teste encontrado"
-            description="Ajuste os filtros ou envie o primeiro teste pra um candidato acima."
+            description={
+              statusFilter || testesEscolhidos.length > 0
+                ? "Nenhum teste neste filtro. Ajuste os filtros para ver os outros."
+                : canCreate
+                  ? "Use “+ Enviar teste”, no alto da tela, para mandar o primeiro a um candidato."
+                  : "Os testes enviados aos candidatos aparecem aqui."
+            }
           />
         ) : (
           <>

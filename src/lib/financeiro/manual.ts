@@ -9,6 +9,7 @@
 // é a parte que precisa de teste sem banco.
 
 import { categoriaObrigatoria } from "./lancamento";
+import { MOTIVO_DO_OMIE } from "@/lib/integracoes/omie/virada";
 import { competenciaValida, dataValida } from "./periodo";
 
 export type TipoDoLancamento = "PAGAR" | "RECEBER";
@@ -67,6 +68,10 @@ export type CamposDoLancamento = {
   valor: string | null | undefined;
   descricao?: string | null;
   pagoEm?: string | null;
+  /** Data de emissão do documento (19/10). Opcional. */
+  emissao?: string | null;
+  /** Número do documento — boleto, contrato, título. Opcional, texto livre. */
+  numeroDocumento?: string | null;
   /** Já resolvida — id no formulário, nome casado no CSV. */
   categoryId: string | null;
 };
@@ -78,10 +83,15 @@ export type LancamentoValidado = {
   centavos: number;
   descricao: string | null;
   pagoEmKey: string | null;
+  emissaoKey: string | null;
+  numeroDocumento: string | null;
   categoryId: string | null;
 };
 
 export type Validacao<T> = { ok: true; dados: T } | { ok: false; erro: string };
+
+/** Tamanho da coluna `documentNumber`. */
+export const TAMANHO_MAXIMO_DO_NUMERO_DO_DOCUMENTO = 60;
 
 /** Teto do `Decimal(12,2)`: dez dígitos inteiros. Acima disso o banco recusa com erro genérico. */
 const MAIOR_VALOR_EM_CENTAVOS = 9_999_999_999_99;
@@ -97,7 +107,9 @@ const MAIOR_VALOR_EM_CENTAVOS = 9_999_999_999_99;
  * - **pago no futuro** — é agendamento, não baixa. A mesma recusa de
  *   `podeMarcarPago`, porque um lançamento que já nasce pago é uma baixa;
  * - **competência inválida** — a DRE econômica filtra por ela; texto fora do
- *   formato faria o lançamento existir e não aparecer em mês nenhum.
+ *   formato faria o lançamento existir e não aparecer em mês nenhum;
+ * - **emissão no futuro** — documento ainda não emitido não gera conta; o ano
+ *   digitado errado ("2062") é o caso real que isto pega.
  */
 export function validarCamposDoLancamento(
   campos: CamposDoLancamento,
@@ -133,6 +145,18 @@ export function validarCamposDoLancamento(
     }
   }
 
+  let emissaoKey: string | null = null;
+  if ((campos.emissao ?? "").trim() !== "") {
+    emissaoKey = dataValida(campos.emissao);
+    if (!emissaoKey) return { ok: false, erro: "Data de emissão inválida." };
+    if (emissaoKey > hojeKey) return { ok: false, erro: "A data de emissão não pode ser futura." };
+  }
+
+  const numeroDocumento = (campos.numeroDocumento ?? "").trim().replace(/\s+/g, " ");
+  if (numeroDocumento.length > TAMANHO_MAXIMO_DO_NUMERO_DO_DOCUMENTO) {
+    return { ok: false, erro: `Número do documento com mais de ${TAMANHO_MAXIMO_DO_NUMERO_DO_DOCUMENTO} caracteres.` };
+  }
+
   return {
     ok: true,
     dados: {
@@ -142,6 +166,8 @@ export function validarCamposDoLancamento(
       centavos,
       descricao: descricao === "" ? null : descricao,
       pagoEmKey,
+      emissaoKey,
+      numeroDocumento: numeroDocumento === "" ? null : numeroDocumento,
       categoryId: campos.categoryId,
     },
   };
@@ -178,6 +204,10 @@ export function podeCancelarManual(conta: {
   paidAt: Date | null;
   fiscalDocumentId: string | null;
   agreementId?: string | null;
+  /** O que as baixas já quitaram (lote C). Em aberto com baixa é parcial. */
+  paidPrincipal?: { toString(): string } | null;
+  /** Veio do Omie numa empresa que ainda não virou para o Connect (lote E). */
+  presoAoOmie?: boolean;
 }): { pode: true } | { pode: false; motivo: string } {
   if (conta.agreementId) {
     return { pode: false, motivo: "Parcela de acordo de cobrança — desfaça o acordo na tela de cobrança." };
@@ -185,9 +215,14 @@ export function podeCancelarManual(conta: {
   if (conta.fiscalDocumentId) {
     return { pode: false, motivo: "Este lançamento veio de um documento fiscal — estorne na ficha da nota." };
   }
+  if (conta.presoAoOmie) return { pode: false, motivo: MOTIVO_DO_OMIE.cancelar };
   if (conta.status === "CANCELADO") return { pode: false, motivo: "Já está cancelado." };
   if (conta.status === "PAGO" || conta.paidAt !== null) {
     return { pode: false, motivo: "Está pago. Desfaça a baixa antes de cancelar." };
+  }
+  // Baixa parcial é dinheiro que andou: cancelar a conta o esconderia do caixa.
+  if (conta.paidPrincipal && Number(conta.paidPrincipal.toString()) > 0) {
+    return { pode: false, motivo: "Tem baixa parcial. Desfaça as baixas antes de cancelar." };
   }
   return { pode: true };
 }

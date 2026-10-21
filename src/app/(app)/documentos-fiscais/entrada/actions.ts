@@ -150,6 +150,8 @@ export async function importarXmls(_anterior: EstadoDaEntrada, form: FormData): 
           // usa. Ver `valorLiquido` em src/lib/fiscal/xml.ts.
           netAmount: doc.valorLiquido,
           retentionsTotal: doc.retencoesTotal,
+          // Cada tributo retido (lote D, 20/10): o lançamento gera a conta de cada imposto.
+          retentionsByTax: doc.retencoesPorTributo ?? undefined,
           issuedAt: doc.emitidoEm,
           competence: competencia,
           origin: "UPLOAD",

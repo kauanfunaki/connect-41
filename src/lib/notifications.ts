@@ -2,8 +2,11 @@ import { getPrisma } from "@/lib/prisma";
 import type { EntityType } from "@/generated/prisma/enums";
 import { sendWebPushToUser } from "@/lib/webPush";
 import { linkDaNotificacao } from "@/lib/notificacaoLink";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 export type NotifyInput = {
+  /** Id estável opcional para efeitos retomáveis, como os eventos de chamados. */
+  deduplicationId?: string;
   tenantId: string;
   type: string;
   message: string;
@@ -56,8 +59,10 @@ async function quemEscondeuOTipo(tenantId: string, type: string, userIds: string
 
 export async function notifyUser(userId: string, input: NotifyInput): Promise<void> {
   const prisma = getPrisma();
+  try {
   await prisma.notification.create({
     data: {
+      ...(input.deduplicationId ? { id: input.deduplicationId } : {}),
       tenantId: input.tenantId,
       userId,
       type: input.type,
@@ -67,6 +72,10 @@ export async function notifyUser(userId: string, input: NotifyInput): Promise<vo
       actorUserId: input.actorUserId || null,
     },
   });
+  } catch (err) {
+    if (input.deduplicationId && isPrismaUniqueError(err)) return;
+    throw err;
+  }
 
   if ((await quemEscondeuOTipo(input.tenantId, input.type, [userId])).has(userId)) return;
   await sendWebPushToUser(input.tenantId, userId, {

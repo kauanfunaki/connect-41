@@ -11,6 +11,8 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { ondeDaEmpresa, padraoAntesDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { movimentosDeCaixa, baixasNoPeriodo } from "@/lib/financeiro/baixa/consultas";
+import { decimalDeCentavos } from "@/lib/financeiro/manual";
 import {
   calcularDre,
   impostoForaDoResultado,
@@ -21,7 +23,8 @@ import {
   type ValorDaCategoria,
 } from "@/lib/dre/calculo";
 import { resolverCategorias, type CategoriaResolvida } from "@/lib/dre/mapeamento";
-import { OPCOES_PADRAO, type OpcoesDoDre } from "@/lib/dre/estrutura";
+import { OPCOES_PADRAO, type ModeloDoDre, type OpcoesDoDre } from "@/lib/dre/estrutura";
+import { modeloDaEmpresaOu } from "@/lib/dre/modeloDaEmpresa";
 import type { MesDoAno } from "@/lib/dre/anual";
 
 /** Primeiro instante de um mês em São Paulo, como Date UTC. */
@@ -58,9 +61,10 @@ export async function dreDoMes(
   mes: MesDoDre,
   opcoes: OpcoesDoDre = OPCOES_PADRAO
 ): Promise<DreDaEmpresa> {
-  const { lancamentos, mapeamento, categorias, fonte } = await lancamentosDoMes(tenantId, companyId, mes);
+  const { lancamentos, mapeamento, categorias, fonte, modelo } = await lancamentosDoMes(tenantId, companyId, mes, opcoes.modelo);
   return {
-    resultado: calcularDre(lancamentos, mapeamento, opcoes),
+    // O modelo da empresa (21/10/2026), quando quem chama não disse outro.
+    resultado: calcularDre(lancamentos, mapeamento, { ...opcoes, modelo }),
     categorias,
     lancamentos: lancamentos.length,
     fonte,
@@ -73,6 +77,8 @@ export type LancamentosDoMes = {
   mapeamento: Mapeamento;
   categorias: CategoriaResolvida[];
   fonte: FonteDoDre;
+  /** O modelo com que as categorias foram resolvidas — o da empresa, se quem chamou não disse. */
+  modelo: ModeloDoDre;
 };
 
 /**
@@ -85,23 +91,20 @@ export type LancamentosDoMes = {
 export async function lancamentosDoMes(
   tenantId: string,
   companyId: string,
-  mes: MesDoDre
+  mes: MesDoDre,
+  modeloPedido?: ModeloDoDre
 ): Promise<LancamentosDoMes> {
   const prisma = getPrisma();
   const de = inicioDoMes(mes.ano, mes.mes);
   const ate = inicioDoMes(mes.mes === 12 ? mes.ano + 1 : mes.ano, mes.mes === 12 ? 1 : mes.mes + 1);
 
-  const [entries, categorias, excecoes, importados] = await Promise.all([
-    prisma.financeEntry.findMany({
-      where: {
-        tenantId,
-        companyId,
-        // Pago dentro do mês. Lançamento em aberto não entra num DRE de caixa —
-        // ele ainda não moveu dinheiro.
-        paidAt: { gte: de, lt: ate },
-      },
-      select: { kind: true, amount: true, categoryId: true },
-    }),
+  const [entries, categorias, excecoes, importados, modelo] = await Promise.all([
+    // Pago dentro do mês, das baixas (lote C, 19/10): a parcial entra no mês
+    // dela, e juros, multa e desconto nas categorias deles. Lançamento sem
+    // baixa não entra num DRE de caixa — ainda não moveu dinheiro.
+    movimentosDeCaixa(baixasNoPeriodo({ tenantId, companyId }, de, ate)).then((ms) =>
+      ms.map((m) => ({ kind: m.kind, amount: decimalDeCentavos(m.centavos), categoryId: m.categoryId }))
+    ),
     prisma.financeCategory.findMany({
       where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
       select: { id: true, name: true, dreGroup: true, companyId: true },
@@ -119,11 +122,13 @@ export async function lancamentosDoMes(
         linhas: { select: { categoria: true, valorCentavos: true } },
       },
     }),
+    modeloDaEmpresaOu(tenantId, companyId, modeloPedido),
   ]);
 
   const resolvidas = resolverCategorias(
     padraoAntesDaEmpresa(categorias).map((c) => ({ id: c.id, nome: c.name, dreGroup: c.dreGroup })),
-    excecoes
+    excecoes,
+    modelo
   );
 
   const nomePorId = new Map(resolvidas.map((c) => [c.id, c.nome]));
@@ -147,6 +152,7 @@ export async function lancamentosDoMes(
       lancamentos: lancamentosImportados,
       mapeamento,
       categorias: resolvidas,
+      modelo,
       fonte: {
         tipo: "import",
         arquivos: importados.map((i) => i.arquivo),
@@ -173,6 +179,7 @@ export async function lancamentosDoMes(
     lancamentos,
     mapeamento,
     categorias: resolvidas,
+    modelo,
     fonte: { tipo: "financeiro", arquivos: [], importadoEm: null },
   };
 }
@@ -221,8 +228,8 @@ export function centavosDeDecimal(valor: { toString(): string }): number {
 export async function mesesComMovimento(tenantId: string, companyId: string): Promise<MesDoDre[]> {
   const prisma = getPrisma();
   const [pagos, imports] = await Promise.all([
-    prisma.financeEntry.findMany({
-      where: { tenantId, companyId, paidAt: { not: null } },
+    prisma.financeEntryPayment.findMany({
+      where: { tenantId, companyId, entry: { status: { not: "CANCELADO" } } },
       select: { paidAt: true },
       orderBy: { paidAt: "desc" },
       take: 5_000,
@@ -298,8 +305,11 @@ export async function dreDoAnoDaEmpresa(
   temMesImportado: boolean;
   /** Impostos do ano que não entram no resultado. Zero quando a opção muda. */
   impostoForaDoResultado: number;
+  /** O modelo do ano — o da empresa, se quem chamou não disse. */
+  modelo: ModeloDoDre;
 }> {
-  const { porMes, mapeamento, categorias, mesesImportados } = await lancamentosDoAno(tenantId, companyId, ano);
+  const { porMes, mapeamento, categorias, mesesImportados, modelo } = await lancamentosDoAno(tenantId, companyId, ano, opcoes.modelo);
+  const opc: OpcoesDoDre = { ...opcoes, modelo };
 
   const meses: MesDoAno[] = [];
   // Somado no laço, e não num segundo passe: os mesmos doze cálculos já
@@ -311,9 +321,9 @@ export async function dreDoAnoDaEmpresa(
 
   for (let mes = 1; mes <= 12; mes++) {
     const lista = porMes.get(mes) ?? [];
-    const r = calcularDre(lista, mapeamento, opcoes);
+    const r = calcularDre(lista, mapeamento, opc);
     meses.push({ mes, porGrupo: r.porGrupo, temMovimento: lista.length > 0, porCategoria: r.porCategoria });
-    impostos += impostoForaDoResultado(r, opcoes);
+    impostos += impostoForaDoResultado(r, opc);
     somarNoAno(soltosNoAno, r.naoClassificado);
     somarNoAno(desconsideradosNoAno, r.desconsiderado);
     if (r.naoClassificado.some((n) => n.categoria === SEM_CATEGORIA)) {
@@ -329,6 +339,7 @@ export async function dreDoAnoDaEmpresa(
     fontesDoSemCategoria: [...fontesDoSemCategoria],
     temMesImportado: mesesImportados.size > 0,
     impostoForaDoResultado: impostos,
+    modelo,
   };
 }
 
@@ -356,6 +367,8 @@ export type LancamentosDoAno = {
   categorias: CategoriaResolvida[];
   /** Os meses que saíram do arquivo importado, e não do financeiro. */
   mesesImportados: Set<number>;
+  /** O modelo com que as categorias foram resolvidas. */
+  modelo: ModeloDoDre;
 };
 
 /**
@@ -368,17 +381,17 @@ export type LancamentosDoAno = {
 export async function lancamentosDoAno(
   tenantId: string,
   companyId: string,
-  ano: number
+  ano: number,
+  modeloPedido?: ModeloDoDre
 ): Promise<LancamentosDoAno> {
   const prisma = getPrisma();
   const de = inicioDoMes(ano, 1);
   const ate = inicioDoMes(ano + 1, 1);
 
-  const [entries, categorias, excecoes, imports] = await Promise.all([
-    prisma.financeEntry.findMany({
-      where: { tenantId, companyId, paidAt: { gte: de, lt: ate } },
-      select: { kind: true, amount: true, categoryId: true, paidAt: true },
-    }),
+  const [entries, categorias, excecoes, imports, modelo] = await Promise.all([
+    movimentosDeCaixa(baixasNoPeriodo({ tenantId, companyId }, de, ate)).then((ms) =>
+      ms.map((m) => ({ kind: m.kind, amount: decimalDeCentavos(m.centavos), categoryId: m.categoryId, paidAt: m.paidAt }))
+    ),
     prisma.financeCategory.findMany({
       where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
       select: { id: true, name: true, dreGroup: true, companyId: true },
@@ -391,11 +404,13 @@ export async function lancamentosDoAno(
       where: { tenantId, companyId, ano },
       select: { mes: true, origem: true, linhas: { select: { categoria: true, valorCentavos: true } } },
     }),
+    modeloDaEmpresaOu(tenantId, companyId, modeloPedido),
   ]);
 
   const resolvidas = resolverCategorias(
     padraoAntesDaEmpresa(categorias).map((c) => ({ id: c.id, nome: c.name, dreGroup: c.dreGroup })),
-    excecoes
+    excecoes,
+    modelo
   );
   const mapeamento = mapeamentoDe(resolvidas);
   const nomePorId = new Map(resolvidas.map((c) => [c.id, c.nome]));
@@ -430,5 +445,5 @@ export async function lancamentosDoAno(
     porMes.set(mes, lista);
   }
 
-  return { porMes, mapeamento, categorias: resolvidas, mesesImportados: mesImportado };
+  return { porMes, mapeamento, categorias: resolvidas, mesesImportados: mesImportado, modelo };
 }

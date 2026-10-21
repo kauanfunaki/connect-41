@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 
 export type SubtaskData = {
   id: string;
@@ -56,7 +57,7 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
   return (
     <div>
       {subtasks.length === 0 && (
-        <p className="text-fs-2 text-fg-muted italic mb-2">Nenhuma subtarefa ainda.</p>
+        <p className="text-fs-2 text-fg-muted italic mb-2">Nenhuma subatividade ainda.</p>
       )}
 
       {subtasks.length > 0 && (
@@ -76,7 +77,7 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
                   s.isTerminal ? reabrirAction(pipelineId, s.id) : concluirAction(pipelineId, s.id)
                 )
               }
-              aria-label={s.isTerminal ? "Reabrir subtarefa" : "Concluir subtarefa"}
+              aria-label={s.isTerminal ? "Reabrir subatividade" : "Concluir subatividade"}
               className="group/dot flex-shrink-0 transition-transform hover:scale-125 disabled:cursor-default disabled:hover:scale-100"
             >
               <StageDot
@@ -93,19 +94,21 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
             </Link>
             <span className="text-fs-1 text-fg-muted flex-shrink-0">{s.stageName}</span>
             {canDelete && (
-              <button
-                type="button"
+              // O `IconButton`, como os do checklist (15/10/2026): era um
+              // botão de ícone desenhado à mão.
+              <IconButton
+                size="sm"
                 onClick={() =>
                   requestConfirm(
-                    { title: `Remover a subtarefa "${s.title}"?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Remover" },
+                    { title: `Remover a subatividade "${s.title}"?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Remover" },
                     () => deleteAction(s.id)
                   )
                 }
-                className="text-fg-muted hover:text-danger p-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label="Remover subtarefa"
+                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                aria-label="Remover subatividade"
               >
                 <Trash2 size={13} />
-              </button>
+              </IconButton>
             )}
           </div>
         ))}
@@ -118,7 +121,7 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addSubtask()}
-            placeholder="Adicionar subtarefa…"
+            placeholder="Adicionar subatividade…"
           />
           <Button
             variant="primary"

@@ -1,4 +1,6 @@
-import { documentosDoContexto, mesmoEscopo, precisaRevisar, totaisDoContexto, type ArquivoTeste, type Cenario } from "./cenario";
+import { documentosDoContexto, mesmoEscopo, precisaRevisar, totaisDoContexto, type Cenario } from "./cenario";
+import { ultimasVersoesDoContexto } from "./vigencia";
+export { arquivoNoContexto, ultimasVersoesDoContexto } from "./vigencia";
 
 export type EtapaFiscal = {
   titulo: string;
@@ -9,19 +11,6 @@ export type EtapaFiscal = {
   acao: string;
   completa: boolean;
 };
-
-// O histórico permanece acessível, mas só a última versão de cada obrigação
-// e estabelecimento deve definir a próxima ação da competência.
-export function ultimasVersoesDoContexto(cenario: Cenario): ArquivoTeste[] {
-  const versoes = new Map<string, ArquivoTeste>();
-  for (const arquivo of cenario.arquivos) {
-    if (arquivo.dominio || !mesmoEscopo(arquivo.contexto, cenario.contexto)) continue;
-    const chave = `${arquivo.tipo}:${arquivo.contexto.estabelecimentoId}`;
-    const anterior = versoes.get(chave);
-    if (!anterior || arquivo.versao > anterior.versao) versoes.set(chave, arquivo);
-  }
-  return [...versoes.values()];
-}
 
 export function fluxoDaCompetencia(cenario: Cenario, modulos: readonly string[]): EtapaFiscal[] {
   const docs = documentosDoContexto(cenario);

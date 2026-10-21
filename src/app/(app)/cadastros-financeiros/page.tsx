@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Layers, Users, Truck, HandCoins, ListTree } from "lucide-react";
+import { Layers, Users, Truck, HandCoins, ListTree, FolderKanban } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -13,17 +13,21 @@ import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Badge } from "@/components/ui/Badge";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
-import { NovaContraparte, EditarContraparte } from "@/components/financeiro/FormContraparte";
+import { NovaContraparte, EditarContraparte, type ContraparteDaFicha } from "@/components/financeiro/FormContraparte";
 import { NovoCentroDeCusto, EditarCentroDeCusto } from "@/components/financeiro/FormCentroDeCusto";
+import { NovoProjeto, EditarProjeto } from "@/components/financeiro/FormProjeto";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
-import { ESCOLHAS_DE_GRUPO } from "@/lib/dre/estrutura";
+import { escolhasDeGrupo } from "@/lib/dre/estrutura";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { NovaCategoriaDaEmpresa, LinhaDaDre, EsconderDoPadrao, EditarCategoriaDaEmpresa } from "@/components/financeiro/PlanoDaEmpresa";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
@@ -38,6 +42,7 @@ const ABAS = [
   { chave: "sacados", rotulo: "Sacados", icone: <HandCoins /> },
   { chave: "todos", rotulo: "Todos", icone: <Users /> },
   { chave: "centros", rotulo: "Centros de custo", icone: <Layers /> },
+  { chave: "projetos", rotulo: "Projetos", icone: <FolderKanban /> },
   { chave: "plano", rotulo: "Plano de contas", icone: <ListTree /> },
 ] as const;
 
@@ -53,6 +58,48 @@ function Ativo({ ativo }: { ativo: boolean }) {
 function documento(d: string | null): string {
   if (!d) return "—";
   return d.length === 14 ? formatCnpj(d) : d.length === 11 ? formatCpf(d) : d;
+}
+
+/**
+ * Cadastro esconde os inativos (15/10/2026), como Empresas e Pessoas: sem
+ * `?situacao=`, só os ativos, com o aviso de quantos ficaram de fora e o
+ * filtro para trazê-los. Inativo continua nas contas antigas — só sai da lista.
+ */
+type Situacao = "ativos" | "inativos" | "todos";
+
+function lerSituacao(v: string | undefined): Situacao {
+  return v === "inativos" || v === "todos" ? v : "ativos";
+}
+
+function naSituacao(ativo: boolean, s: Situacao): boolean {
+  return s === "todos" || (s === "ativos" ? ativo : !ativo);
+}
+
+const FILTRO_DA_SITUACAO: CampoDeFiltro[] = [
+  {
+    chave: "situacao",
+    rotulo: "Situação",
+    vazioLabel: "Ativos",
+    opcoes: [
+      { value: "inativos", label: "Inativos" },
+      { value: "todos", label: "Todos" },
+    ],
+  },
+];
+
+/** "3 cadastros inativos fora desta lista. [Mostrar todos]" — o aviso de Pessoas. */
+function InativosDeFora({ n, um, varios, href }: { n: number; um: string; varios: string; href: string }) {
+  if (n === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mb-4">
+      <p>
+        {n} {n === 1 ? um : varios} fora desta lista.
+      </p>
+      <Button href={href} variant="ghost" size="xs">
+        Mostrar todos
+      </Button>
+    </div>
+  );
 }
 
 /**
@@ -81,6 +128,7 @@ export default async function CadastrosFinanceirosPage({
 
   const params = await searchParams;
   const aba = ABAS.find((a) => a.chave === params.aba)?.chave ?? "fornecedores";
+  const situacao = lerSituacao(params.situacao);
   const podeEditar = canActOnSector(ctx, setor);
   // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
   // (13/10/2026). Era a primeira em ordem alfabética, e o "Novo cadastro" caía
@@ -94,7 +142,7 @@ export default async function CadastrosFinanceirosPage({
   const comAcao = (action?: React.ReactNode) => (
     <PageHeader
       title="Fornecedores e sacados"
-      subtitle="As contrapartes, os centros de custo e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
+      subtitle="As contrapartes, os centros de custo, os projetos e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
       action={action}
     />
   );
@@ -117,7 +165,7 @@ export default async function CadastrosFinanceirosPage({
         ) : (
           <>
             {filtroDaEmpresa}
-            <EscolhaAEmpresa escolha={escolha} porQue="Fornecedores, sacados, centros de custo e o plano de contas são de cada empresa." />
+            <EscolhaAEmpresa escolha={escolha} porQue="Fornecedores, sacados, centros de custo, projetos e o plano de contas são de cada empresa." />
           </>
         )}
       </PageContainer>
@@ -165,7 +213,31 @@ export default async function CadastrosFinanceirosPage({
         {comAcao(podeEditar ? <NovoCentroDeCusto companyId={companyId} /> : undefined)}
         {filtroDaEmpresa}
         <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
-        <AbaDeCentros tenantId={ctx.tenantId} companyId={companyId} centros={centros} podeEditar={podeEditar} />
+        <AbaDeCentros
+          tenantId={ctx.tenantId}
+          companyId={companyId}
+          centros={centros}
+          podeEditar={podeEditar}
+          situacao={situacao}
+          hrefDeTodos={`${href("centros")}&situacao=todos`}
+        />
+      </PageContainer>
+    );
+  }
+
+  if (aba === "projetos") {
+    return comEmpresa(
+      <PageContainer>
+        {comAcao(podeEditar ? <NovoProjeto companyId={companyId} /> : undefined)}
+        {filtroDaEmpresa}
+        <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
+        <AbaDeProjetos
+          tenantId={ctx.tenantId}
+          companyId={companyId}
+          podeEditar={podeEditar}
+          situacao={situacao}
+          hrefDeTodos={`${href("projetos")}&situacao=todos`}
+        />
       </PageContainer>
     );
   }
@@ -183,6 +255,19 @@ export default async function CadastrosFinanceirosPage({
         defaultCategory: { select: { name: true } },
         defaultCostCenterId: true,
         defaultCostCenter: { select: { name: true, active: true } },
+        tradeName: true,
+        phone: true,
+        zipCode: true,
+        addressStreet: true,
+        addressNumber: true,
+        addressComplement: true,
+        neighborhood: true,
+        city: true,
+        stateCode: true,
+        bankCode: true,
+        bankAgency: true,
+        bankAccount: true,
+        pixKey: true,
       },
       orderBy: { name: "asc" },
     }),
@@ -213,16 +298,43 @@ export default async function CadastrosFinanceirosPage({
   }
 
   const busca = (params.q ?? "").trim().toLowerCase();
-  const visiveis = contrapartes.filter((c) => {
+  const daAbaEBusca = contrapartes.filter((c) => {
     const n = contas.get(c.id) ?? { pagar: 0, receber: 0 };
     const naAba = aba === "todos" || (aba === "fornecedores" ? n.pagar > 0 : n.receber > 0);
     const naBusca = !busca || c.name.toLowerCase().includes(busca) || (c.document ?? "").includes(busca.replace(/\D/g, "") || "\u0000");
     return naAba && naBusca;
   });
+  const visiveis = daAbaEBusca.filter((c) => naSituacao(c.active, situacao));
+  const inativosDeFora = situacao === "ativos" ? daAbaEBusca.length - visiveis.length : 0;
+  const hrefDeTodos = `${href(aba)}${params.q ? `&q=${encodeURIComponent(params.q)}` : ""}&situacao=todos`;
 
   const listaDeCategorias = categorias.map((c) => ({ id: c.id, nome: c.name }));
   // Inativo não é oferecido como padrão novo — ver `centroPadraoValido`.
   const centrosAtivos = centros.filter((c) => c.active).map((c) => ({ id: c.id, nome: c.name }));
+  // A ficha inteira vai para o modal de edição — o cartão e a tabela usam a mesma.
+  const fichaDe = (c: (typeof contrapartes)[number]): ContraparteDaFicha => ({
+    id: c.id,
+    nome: c.name,
+    documento: c.document,
+    email: c.email,
+    defaultCategoryId: c.defaultCategoryId,
+    ativo: c.active,
+    defaultCostCenterId: c.defaultCostCenterId,
+    centroPadraoNome: c.defaultCostCenter?.name ?? null,
+    tradeName: c.tradeName,
+    phone: c.phone,
+    zipCode: c.zipCode,
+    addressStreet: c.addressStreet,
+    addressNumber: c.addressNumber,
+    addressComplement: c.addressComplement,
+    neighborhood: c.neighborhood,
+    city: c.city,
+    stateCode: c.stateCode,
+    bankCode: c.bankCode,
+    bankAgency: c.bankAgency,
+    bankAccount: c.bankAccount,
+    pixKey: c.pixKey,
+  });
 
   return comEmpresa(
     <PageContainer>
@@ -238,22 +350,26 @@ export default async function CadastrosFinanceirosPage({
             : "Todos os cadastros desta empresa, incluindo os que ainda não têm movimentação."}
         {" "}Uma mesma ficha pode aparecer nas duas abas quando tem contas a pagar e a receber. Cadastros sem movimentação ficam em Todos.
       </p>
+      <InativosDeFora n={inativosDeFora} um="cadastro inativo" varios="cadastros inativos" href={hrefDeTodos} />
 
       {/* No casco das listas irmãs, com a contagem e a busca na barra
           (08/10/2026): a busca ficava solta acima da tabela, sem contagem. */}
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "cadastro", "cadastros")}
         busca={
-          <form method="get" action="/cadastros-financeiros">
+          <form method="get" action="/cadastros-financeiros" className="max-w-full">
             <input type="hidden" name="empresa" value={companyId} />
             {aba !== "fornecedores" && <input type="hidden" name="aba" value={aba} />}
-            <Input compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome ou documento…" aria-label="Buscar cadastro" className="w-72 max-w-full" />
+            {situacao !== "ativos" && <input type="hidden" name="situacao" value={situacao} />}
+            {/* Com a lupa e o "limpar" das outras listas (15/10/2026). */}
+            <CampoDeBusca compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome ou documento…" aria-label="Buscar cadastro" className="w-72 max-w-full" />
           </form>
         }
+        filtros={<FiltrosDaTela campos={FILTRO_DA_SITUACAO} naBarra />}
       >
       {visiveis.length === 0 ? (
         <EmptyState
-          title={busca ? "Nada encontrado" : "Nenhum cadastro nesta aba"}
+          title={busca ? "Nada encontrado" : situacao === "inativos" ? "Nenhum cadastro inativo nesta aba" : "Nenhum cadastro nesta aba"}
           description="Cadastros nascem do lançamento de uma nota, de um lançamento manual, da importação por CSV, ou daqui."
           icon={<Users />}
         />
@@ -280,20 +396,7 @@ export default async function CadastrosFinanceirosPage({
                     <Ativo ativo={c.active} />
                     {podeEditar && (
                       <span className="ml-auto">
-                        <EditarContraparte
-                          categorias={listaDeCategorias}
-                          centros={centrosAtivos}
-                          contraparte={{
-                            id: c.id,
-                            nome: c.name,
-                            documento: c.document,
-                            email: c.email,
-                            defaultCategoryId: c.defaultCategoryId,
-                            ativo: c.active,
-                            defaultCostCenterId: c.defaultCostCenterId,
-                            centroPadraoNome: c.defaultCostCenter?.name ?? null,
-                          }}
-                        />
+                        <EditarContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} contraparte={fichaDe(c)} />
                       </span>
                     )}
                   </PeDoCartao>
@@ -351,20 +454,7 @@ export default async function CadastrosFinanceirosPage({
                     </td>
                     <td className="py-2.5">
                       {podeEditar && (
-                        <EditarContraparte
-                          categorias={listaDeCategorias}
-                          centros={centrosAtivos}
-                          contraparte={{
-                            id: c.id,
-                            nome: c.name,
-                            documento: c.document,
-                            email: c.email,
-                            defaultCategoryId: c.defaultCategoryId,
-                            ativo: c.active,
-                            defaultCostCenterId: c.defaultCostCenterId,
-                            centroPadraoNome: c.defaultCostCenter?.name ?? null,
-                          }}
-                        />
+                        <EditarContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} contraparte={fichaDe(c)} />
                       )}
                     </td>
                   </LinhaFiltravel>
@@ -390,24 +480,41 @@ export default async function CadastrosFinanceirosPage({
 async function AbaDeCentros({
   tenantId,
   companyId,
-  centros,
+  centros: todosOsCentros,
   podeEditar,
+  situacao,
+  hrefDeTodos,
 }: {
   tenantId: string;
   companyId: string;
   centros: { id: string; name: string; code: string | null; active: boolean }[];
   podeEditar: boolean;
+  situacao: Situacao;
+  hrefDeTodos: string;
 }) {
+  // Inativo fora da lista por padrão, como nos cadastros (15/10/2026).
+  const centros = todosOsCentros.filter((c) => naSituacao(c.active, situacao));
+  const inativosDeFora = situacao === "ativos" ? todosOsCentros.length - centros.length : 0;
+  const filtros = <FiltrosDaTela campos={FILTRO_DA_SITUACAO} naBarra />;
   // No casco, com a contagem na barra e o vazio dentro (08/10/2026).
   if (centros.length === 0) {
     return (
-      <CascoDaTabela contagem={contarItens(0, "centro de custo", "centros de custo")}>
-        <EmptyState
-          title="Nenhum centro de custo nesta empresa"
-          description="Centro de custo é opcional: cadastre unidades, obras ou projetos para ver a DRE econômica por centro."
-          icon={<Layers />}
-        />
-      </CascoDaTabela>
+      <>
+        <InativosDeFora n={inativosDeFora} um="centro de custo inativo" varios="centros de custo inativos" href={hrefDeTodos} />
+        <CascoDaTabela contagem={contarItens(0, "centro de custo", "centros de custo")} filtros={filtros}>
+          <EmptyState
+            title={
+              situacao === "inativos"
+                ? "Nenhum centro de custo inativo"
+                : inativosDeFora > 0
+                  ? "Nenhum centro de custo ativo"
+                  : "Nenhum centro de custo nesta empresa"
+            }
+            description="Centro de custo é opcional: cadastre unidades, obras ou projetos para ver a DRE econômica por centro."
+            icon={<Layers />}
+          />
+        </CascoDaTabela>
+      </>
     );
   }
 
@@ -431,7 +538,8 @@ async function AbaDeCentros({
 
   return (
     <>
-      <CascoDaTabela contagem={contarItens(centros.length, "centro de custo", "centros de custo")}>
+      <InativosDeFora n={inativosDeFora} um="centro de custo inativo" varios="centros de custo inativos" href={hrefDeTodos} />
+      <CascoDaTabela contagem={contarItens(centros.length, "centro de custo", "centros de custo")} filtros={filtros}>
       <CartoesNoCelular>
         {centros.map((c) => (
           <Cartao key={c.id}>
@@ -492,6 +600,108 @@ async function AbaDeCentros({
 }
 
 /**
+ * Projetos da empresa (19/10) — o "Projeto" do Omie. A mesma lista dos centros
+ * de custo: nome, quantos lançamentos tem, situação; inativo fora por padrão.
+ */
+async function AbaDeProjetos({
+  tenantId,
+  companyId,
+  podeEditar,
+  situacao,
+  hrefDeTodos,
+}: {
+  tenantId: string;
+  companyId: string;
+  podeEditar: boolean;
+  situacao: Situacao;
+  hrefDeTodos: string;
+}) {
+  const prisma = getPrisma();
+  const [todos, uso] = await Promise.all([
+    prisma.financeProject.findMany({
+      where: { tenantId, companyId },
+      select: { id: true, name: true, active: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.financeEntry.groupBy({
+      by: ["projectId"],
+      where: { tenantId, companyId, projectId: { not: null } },
+      _count: { _all: true },
+    }),
+  ]);
+  const projetos = todos.filter((p) => naSituacao(p.active, situacao));
+  const inativosDeFora = situacao === "ativos" ? todos.length - projetos.length : 0;
+  const lancamentos = new Map(uso.map((u) => [u.projectId, u._count._all]));
+  const filtros = <FiltrosDaTela campos={FILTRO_DA_SITUACAO} naBarra />;
+
+  return (
+    <>
+      <InativosDeFora n={inativosDeFora} um="projeto inativo" varios="projetos inativos" href={hrefDeTodos} />
+      <CascoDaTabela contagem={contarItens(projetos.length, "projeto", "projetos")} filtros={filtros}>
+        {projetos.length === 0 ? (
+          <EmptyState
+            title={
+              situacao === "inativos" ? "Nenhum projeto inativo" : inativosDeFora > 0 ? "Nenhum projeto ativo" : "Nenhum projeto nesta empresa"
+            }
+            description="Projeto é opcional: cadastre obras, eventos ou contratos para acompanhar receita e despesa de cada um."
+            icon={<FolderKanban />}
+          />
+        ) : (
+          <>
+            <CartoesNoCelular>
+              {projetos.map((p) => (
+                <Cartao key={p.id}>
+                  <TopoDoCartao nome={p.name} />
+                  <InfoDoCartao className="tabular-nums mt-1">{lancamentos.get(p.id) ?? 0} lançamento(s)</InfoDoCartao>
+                  <PeDoCartao>
+                    <Ativo ativo={p.active} />
+                    {podeEditar && (
+                      <span className="ml-auto">
+                        <EditarProjeto projeto={{ id: p.id, nome: p.name, ativo: p.active }} />
+                      </span>
+                    )}
+                  </PeDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
+
+            <TabelaNoDesktop padrao>
+              <table className="w-full min-w-[560px]">
+                <thead>
+                  <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
+                    <th className="py-2 pr-3 font-medium">Nome</th>
+                    <th className="py-2 pr-3 font-medium text-right">Lançamentos</th>
+                    <th className="py-2 pr-3 font-medium">Situação</th>
+                    <th className="py-2 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projetos.map((p) => (
+                    <tr key={p.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
+                      <td className="py-2.5 pr-3 font-medium">{p.name}</td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums">{lancamentos.get(p.id) ?? 0}</td>
+                      <td className="py-2.5 pr-3">
+                        <Ativo ativo={p.active} />
+                      </td>
+                      <td className="py-2.5">{podeEditar && <EditarProjeto projeto={{ id: p.id, nome: p.name, ativo: p.active }} />}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TabelaNoDesktop>
+          </>
+        )}
+      </CascoDaTabela>
+      <NotaDeFonte>
+        Um projeto por lançamento, escolhido no lançamento, na conciliação ou na edição da conta. Inativo some dos seletores e
+        continua nas contas que já têm o projeto. Projeto não é apagado. Na importação por CSV, a coluna <code>projeto</code> casa
+        pelo nome.
+      </NotaDeFonte>
+    </>
+  );
+}
+
+/**
  * O plano de contas **desta empresa**: o padrão do escritório, o que a empresa
  * escondeu dele e as categorias só dela (criadas aqui ou trazidas do Omie).
  */
@@ -508,7 +718,7 @@ async function AbaDoPlano({
   topo: (acao?: React.ReactNode) => React.ReactNode;
 }) {
   const prisma = getPrisma();
-  const [categorias, ocultas, excecoes, uso] = await Promise.all([
+  const [categorias, ocultas, excecoes, uso, modelo] = await Promise.all([
     prisma.financeCategory.findMany({
       where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
       select: { id: true, name: true, kind: true, planGroup: true, dreGroup: true, active: true, companyId: true, omieCode: true },
@@ -517,14 +727,20 @@ async function AbaDoPlano({
     prisma.financeCategoryHidden.findMany({ where: { tenantId, companyId }, select: { categoryId: true } }),
     prisma.dreCategoryMapping.findMany({ where: { tenantId, companyId }, select: { categoryId: true, grupo: true } }),
     prisma.financeEntry.groupBy({ by: ["categoryId"], where: { tenantId, companyId, categoryId: { not: null } }, _count: { _all: true } }),
+    modeloDaEmpresa(tenantId, companyId),
   ]);
   const oculta = new Set(ocultas.map((o) => o.categoryId));
-  const excecao = new Map(excecoes.map((e) => [e.categoryId, e.grupo]));
+  // A exceção lida no modelo do DRE da empresa (21/10/2026): o seletor mostra
+  // os grupos dele.
+  const excecao = new Map(excecoes.map((e) => [e.categoryId, grupoDeTexto(e.grupo, modelo) ?? e.grupo]));
   const lancamentos = new Map(uso.map((u) => [u.categoryId, u._count._all]));
-  // Os doze grupos e as escolhas de fora do resultado — transferência e
-  // "desconsiderar" (13/10/2026) —, as mesmas da fila da DRE.
-  const linhas = ESCOLHAS_DE_GRUPO;
-  const rotulo = (codigo: string | null) => (codigo ? (linhas.find((l) => l.code === grupoDeTexto(codigo))?.label ?? codigo) : "sem linha");
+  // Os grupos do modelo do DRE da empresa e as escolhas de fora do resultado —
+  // transferência e "desconsiderar" (13/10/2026) —, as mesmas da fila da DRE.
+  const linhas = escolhasDeGrupo(modelo);
+  const rotulo = (codigo: string | null) =>
+    codigo
+      ? (linhas.find((l) => l.code === grupoDeTexto(codigo, modelo))?.label ?? (modelo.codigo === "padrao" ? codigo : "sem linha neste modelo"))
+      : "sem linha";
   const grupos = [...new Set(categorias.map((c) => c.planGroup).filter((g): g is string => !!g))].sort();
   const daEmpresa = categorias.filter((c) => c.companyId).length;
 
@@ -554,8 +770,54 @@ async function AbaDoPlano({
           if (doLado.length === 0) return null;
           return (
             <div key={kind} className="mb-6">
-              <h3 className="text-card-title font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
-              <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+              <h3 className="text-section font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
+              {/* No celular, cartões como nas outras abas (15/10/2026): as duas
+                  tabelas rolavam de lado, com a linha da DRE fora da tela. */}
+              <CartoesNoCelular>
+                {doLado.map((c) => {
+                  const escondida = oculta.has(c.id);
+                  const propria = c.companyId !== null;
+                  return (
+                    <Cartao key={c.id} className={escondida || !c.active ? "opacity-60" : ""}>
+                      <TopoDoCartao nome={c.name} />
+                      <InfoDoCartao className="tabular-nums">
+                        {c.planGroup ?? "Sem grupo do plano"} · {lancamentos.get(c.id) ?? 0} lançamento(s)
+                      </InfoDoCartao>
+                      <div className="mt-2">
+                        {podeEditar && !escondida ? (
+                          <LinhaDaDre
+                            companyId={companyId}
+                            categoryId={c.id}
+                            valor={propria ? (grupoDeTexto(c.dreGroup, modelo) ?? "") : (excecao.get(c.id) ?? "")}
+                            linhas={linhas}
+                            rotuloDoPadrao={propria ? undefined : rotulo(c.dreGroup)}
+                          />
+                        ) : (
+                          <InfoDoCartao>Linha da DRE: {rotulo(excecao.get(c.id) ?? c.dreGroup)}</InfoDoCartao>
+                        )}
+                      </div>
+                      <PeDoCartao>
+                        {propria && <Badge variant="info">{c.omieCode ? "Do Omie" : "Desta empresa"}</Badge>}
+                        {escondida && <StatusDot color="var(--c41-fg-muted)" label="Não usada aqui" />}
+                        {!c.active && <StatusDot color="var(--c41-fg-muted)" label="Inativa" />}
+                        {podeEditar && (
+                          <span className="ml-auto">
+                            {propria ? (
+                              <EditarCategoriaDaEmpresa
+                                categoria={{ id: c.id, nome: c.name, grupo: c.planGroup, linha: grupoDeTexto(c.dreGroup, modelo) ?? "", ativa: c.active }}
+                                linhas={linhas}
+                              />
+                            ) : (
+                              <EsconderDoPadrao companyId={companyId} categoryId={c.id} oculta={escondida} />
+                            )}
+                          </span>
+                        )}
+                      </PeDoCartao>
+                    </Cartao>
+                  );
+                })}
+              </CartoesNoCelular>
+              <TabelaNoDesktop padrao>
                 {/* Largura fixa e as mesmas colunas nas duas tabelas
                     (08/10/2026): cada uma calculava a sua, e "Categoria" e
                     "Lançamentos" ficavam desalinhados entre Despesas e Receitas. */}
@@ -600,7 +862,7 @@ async function AbaDoPlano({
                               <LinhaDaDre
                                 companyId={companyId}
                                 categoryId={c.id}
-                                valor={propria ? (grupoDeTexto(c.dreGroup) ?? "") : (excecao.get(c.id) ?? "")}
+                                valor={propria ? (grupoDeTexto(c.dreGroup, modelo) ?? "") : (excecao.get(c.id) ?? "")}
                                 linhas={linhas}
                                 rotuloDoPadrao={propria ? undefined : rotulo(c.dreGroup)}
                               />
@@ -613,7 +875,7 @@ async function AbaDoPlano({
                             {podeEditar &&
                               (propria ? (
                                 <EditarCategoriaDaEmpresa
-                                  categoria={{ id: c.id, nome: c.name, grupo: c.planGroup, linha: grupoDeTexto(c.dreGroup) ?? "", ativa: c.active }}
+                                  categoria={{ id: c.id, nome: c.name, grupo: c.planGroup, linha: grupoDeTexto(c.dreGroup, modelo) ?? "", ativa: c.active }}
                                   linhas={linhas}
                                 />
                               ) : (
@@ -625,7 +887,7 @@ async function AbaDoPlano({
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TabelaNoDesktop>
             </div>
           );
         })

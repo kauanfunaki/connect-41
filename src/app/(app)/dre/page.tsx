@@ -23,9 +23,12 @@ import { dreDoAno } from "@/lib/dre/anual";
 import { RelatorioAnual } from "@/components/dre/RelatorioAnual";
 import { ImportarDoOmie } from "@/components/dre/ImportarDoOmie";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
-import { OPCOES_PADRAO, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { TRANSFERENCIA, opcoesDaUrl, type ModeloDoDre } from "@/lib/dre/estrutura";
+import { SeletorDosImpostos, sufixoDosImpostos } from "@/components/dre/SeletorDosImpostos";
+import { SeletorDoModeloDoDre } from "@/components/dre/SeletorDoModeloDoDre";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { desconsideradasDoPeriodo, excecoesDaEmpresa, itensDaFila, totalForaDasLinhas, type ItemDaFila } from "@/lib/dre/fila";
-import { podeAbrirADre } from "@/lib/dre/acesso";
+import { podeAbrirADre, podeTrocarOModeloDoDre } from "@/lib/dre/acesso";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { competenciaDe } from "@/lib/financeiro/periodo";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
@@ -62,12 +65,12 @@ type EmpresaNaAba = {
 export default async function DrePage({
   searchParams,
 }: {
-  searchParams: Promise<{ empresa?: string; mes?: string; visao?: string; ano?: string }>;
+  searchParams: Promise<{ empresa?: string; mes?: string; visao?: string; ano?: string; impostos?: string }>;
 }) {
   const ctx = await getAuthContext();
   if (!(await podeAbrirADre(ctx))) notFound();
 
-  const { empresa, mes, visao, ano } = await searchParams;
+  const { empresa, mes, visao, ano, impostos } = await searchParams;
   const prisma = getPrisma();
 
   const empresas = await prisma.company.findMany({
@@ -105,7 +108,15 @@ export default async function DrePage({
     <EmpresaDaTela empresa={{ nome: daTela.tradeName || daTela.name, cnpj: daTela.cnpj }}>{tela}</EmpresaDaTela>
   );
 
-  const meses = await mesesComMovimento(ctx.tenantId, companyId);
+  // O modelo do DRE da empresa (21/10/2026) e, no padrão, as duas visões dos
+  // impostos (20/10/2026): no EBITDA, o padrão; ou fora do resultado.
+  const [meses, modelo, podeTrocarModelo] = await Promise.all([
+    mesesComMovimento(ctx.tenantId, companyId),
+    modeloDaEmpresa(ctx.tenantId, companyId),
+    podeTrocarOModeloDoDre(ctx),
+  ]);
+  const opcoes = opcoesDaUrl(impostos, modelo);
+  const seletorDoModelo = <SeletorDoModeloDoDre companyId={companyId} modelo={modelo.codigo} podeTrocar={podeTrocarModelo} />;
 
   // ─── Visão de doze meses ─────────────────────────────────────────────────
   if (visao === "ano") {
@@ -119,8 +130,8 @@ export default async function DrePage({
       fontesDoSemCategoria,
       temMesImportado,
       impostoForaDoResultado: impostoDoAno,
-    } = await dreDoAnoDaEmpresa(ctx.tenantId, companyId, anoEscolhido);
-    const anual = dreDoAno(porMes);
+    } = await dreDoAnoDaEmpresa(ctx.tenantId, companyId, anoEscolhido, opcoes);
+    const anual = dreDoAno(porMes, opcoes);
 
     // O ano mistura meses importados e meses do financeiro.
     const fila = itensDaFila(soltosDoAno, categoriasDoAno, { temImport: temMesImportado, doSemCategoria: fontesDoSemCategoria });
@@ -129,6 +140,7 @@ export default async function DrePage({
       <PageContainer>
         <PainelDeClassificacao
           companyId={companyId}
+          modelo={modelo.codigo}
           itens={fila}
           contas={await linksDasContas(ctx, companyId, fila)}
           excecoes={excecoesDaEmpresa(categoriasDoAno)}
@@ -137,18 +149,22 @@ export default async function DrePage({
           <PageHeader
             title="DRE"
             subtitle="Demonstrativo de resultado de caixa — os doze meses lado a lado."
-            action={<AcoesDoTopo companyId={companyId} exportar={`/dre/exportar?empresa=${companyId}&visao=ano&ano=${anoEscolhido}`} />}
+            action={<AcoesDoTopo companyId={companyId} exportar={`/dre/exportar?empresa=${companyId}&visao=ano&ano=${anoEscolhido}${sufixoDosImpostos(opcoes)}`} />}
           />
           {/* Empresa e período, depois as abas — a ordem da família da DRE
               (padrão aceito pelo Kauan em 08/10/2026). */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <SeletorDeEmpresa empresas={empresas} companyId={companyId} visao={visao} />
+            <SeletorDeEmpresa empresas={empresas} companyId={companyId} visao={visao} impostos={impostos} />
             <FiltrosDaTela
               campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
             />
+            {modelo.impostos === "escolha" && (
+              <SeletorDosImpostos opcoes={opcoes} base="/dre" params={{ empresa: companyId, visao: "ano", ano: String(anoEscolhido) }} />
+            )}
+            {seletorDoModelo}
             <BotaoDeClassificar />
           </div>
-          <AbasDaVisao companyId={companyId} ativa="ano" ano={anoEscolhido} />
+          <AbasDaVisao companyId={companyId} ativa="ano" ano={anoEscolhido} sufixo={sufixoDosImpostos(opcoes)} />
           {/* Os dois avisos que só a visão mensal tinha. Uma categoria que
               some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
               passam onde um grande não passaria. */}
@@ -158,11 +174,7 @@ export default async function DrePage({
             <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
               <span className="text-fg">
                 <strong>{moeda(Math.abs(impostoDoAno))}</strong> de impostos sobre a receita saíram
-                do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — a
-                margem de contribuição parte da Receita Bruta, como na planilha do BPO.
-                <span className="block text-fs-2 text-fg-secondary mt-1">
-                  Reproduzido de propósito. Confirmar com o BPO se é assim mesmo.
-                </span>
+                do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — <PorQueOImpostoFicaFora modelo={modelo} />
               </span>
             </Aviso>
           )}
@@ -213,8 +225,8 @@ export default async function DrePage({
   const anteriorAoEscolhido = escolhido.mes === 1 ? { ano: escolhido.ano - 1, mes: 12 } : { ano: escolhido.ano, mes: escolhido.mes - 1 };
   const temAnterior = meses.some((m) => m.ano === anteriorAoEscolhido.ano && m.mes === anteriorAoEscolhido.mes);
   const [{ resultado, categorias, lancamentos, fonte }, anterior] = await Promise.all([
-    dreDoMes(ctx.tenantId, companyId, escolhido),
-    temAnterior ? dreDoMes(ctx.tenantId, companyId, anteriorAoEscolhido) : Promise.resolve(null),
+    dreDoMes(ctx.tenantId, companyId, escolhido, opcoes),
+    temAnterior ? dreDoMes(ctx.tenantId, companyId, anteriorAoEscolhido, opcoes) : Promise.resolve(null),
   ]);
 
   const fila = itensDaFila(resultado.naoClassificado, categorias, {
@@ -222,13 +234,14 @@ export default async function DrePage({
     doSemCategoria: [fonte.tipo],
   });
 
-  const impostoDeFora = impostoForaDoResultado(resultado, OPCOES_PADRAO);
+  const impostoDeFora = impostoForaDoResultado(resultado, opcoes);
   const transferencias = resultado.porGrupo[TRANSFERENCIA] ?? 0;
 
   return comEmpresa(
     <PageContainer>
       <PainelDeClassificacao
         companyId={companyId}
+        modelo={modelo.codigo}
         itens={fila}
         contas={await linksDasContas(ctx, companyId, fila)}
         excecoes={excecoesDaEmpresa(categorias)}
@@ -243,7 +256,7 @@ export default async function DrePage({
           action={
             <AcoesDoTopo
               companyId={companyId}
-              exportar={`/dre/exportar?empresa=${companyId}&visao=mes&mes=${escolhido.ano}-${escolhido.mes}`}
+              exportar={`/dre/exportar?empresa=${companyId}&visao=mes&mes=${escolhido.ano}-${escolhido.mes}${sufixoDosImpostos(opcoes)}`}
             />
           }
         />
@@ -254,7 +267,7 @@ export default async function DrePage({
             embaixo das abas. Numa lista com busca, e não 18 pílulas numa
             fileira — a regra da conferência de 30/09 para competência. */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <SeletorDeEmpresa empresas={empresas} companyId={companyId} visao={visao} />
+          <SeletorDeEmpresa empresas={empresas} companyId={companyId} visao={visao} impostos={impostos} />
           <FiltrosDaTela
             campos={[
               {
@@ -266,9 +279,11 @@ export default async function DrePage({
               },
             ]}
           />
+          {modelo.impostos === "escolha" && <SeletorDosImpostos opcoes={opcoes} base="/dre" params={{ empresa: companyId, mes }} />}
+          {seletorDoModelo}
           <BotaoDeClassificar />
         </div>
-        <AbasDaVisao companyId={companyId} ativa="mes" ano={escolhido.ano} />
+        <AbasDaVisao companyId={companyId} ativa="mes" ano={escolhido.ano} sufixo={sufixoDosImpostos(opcoes)} />
 
         {/* Os números do topo, como na DRE econômica (08/10/2026, escolha 9A do
             Kauan: na DRE, o padrão entra nos números do topo e a tabela fica
@@ -280,20 +295,16 @@ export default async function DrePage({
           className="mb-4"
         />
 
-        {/* Existe porque a regra é um chute até o BPO confirmar — e um chute que
-            muda o resultado precisa aparecer na tela, não só no código. */}
+        {/* Quando os impostos ficam fora do resultado — no modelo por área, ou
+            na visão "Impostos fora do resultado" do padrão —, quanto ficou de
+            fora: um número que muda o resultado precisa aparecer na tela. */}
         {impostoDeFora !== 0 && (
           // O `Aviso` do app (08/10/2026), com o texto em `fg`: o parágrafo é
           // longo, e o âmbar como cor de texto fica abaixo do contraste AA.
           <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
             <span className="text-fg">
               <strong>{moeda(Math.abs(impostoDeFora))}</strong> de impostos sobre a receita saíram do
-              caixa e <strong>não entram</strong> no resultado abaixo — a margem de contribuição parte
-              da Receita Bruta, como na planilha que o BPO usa hoje.
-              <span className="block text-fs-2 text-fg-secondary mt-1">
-                Reproduzido de propósito, para o número bater com o que o cliente já recebe.
-                Confirmar com o BPO se é assim mesmo.
-              </span>
+              caixa e <strong>não entram</strong> no resultado abaixo — <PorQueOImpostoFicaFora modelo={modelo} />
             </span>
           </Aviso>
         )}
@@ -303,12 +314,13 @@ export default async function DrePage({
         <AvisoDeSemGrupo />
 
         {/* De onde saiu o número. Relatório que muda de fonte sem avisar é
-            relatório em que ninguém confia duas vezes. */}
-        <p className="text-micro text-fg-muted mb-3">
+            relatório em que ninguém confia duas vezes. Na `NotaDeFonte` (15/10/2026),
+            como as outras notas da tela; o `mt-3` dela some na margem do bloco de cima. */}
+        <NotaDeFonte className="mb-3">
           {fonte.tipo === "import"
             ? `Montado do arquivo importado do Omie${fonte.arquivos.length > 0 ? ` (${[...new Set(fonte.arquivos)].join(", ")})` : ""}.`
             : "Montado dos lançamentos pagos e recebidos no Connect."}
-        </p>
+        </NotaDeFonte>
 
         <RelatorioDoDre resultado={resultado} />
 
@@ -331,6 +343,24 @@ export default async function DrePage({
         </NotaDeFonte>
       </PainelDeClassificacao>
     </PageContainer>
+  );
+}
+
+/**
+ * O porquê do imposto fora do resultado, conforme o modelo: no por área é a
+ * regra do modelo; no padrão, a visão escolhida no seletor dos impostos.
+ */
+function PorQueOImpostoFicaFora({ modelo }: { modelo: ModeloDoDre }) {
+  if (modelo.impostos === "fora") {
+    return <>a margem de contribuição parte da Receita Bruta, como na planilha do modelo “{modelo.nome}”.</>;
+  }
+  return (
+    <>
+      é a visão “Impostos fora do resultado”.
+      <span className="block text-fs-2 text-fg-secondary mt-1">
+        Em “Impostos no EBITDA”, o padrão, eles descontam do EBITDA e do resultado.
+      </span>
+    </>
   );
 }
 
@@ -361,13 +391,13 @@ function ExportarNoModeloDoBpo({ href }: { href: string }) {
 }
 
 /** "Por mês" e "Ano inteiro" trocam a tela — são abas, não filtro. */
-function AbasDaVisao({ companyId, ativa, ano }: { companyId: string; ativa: "mes" | "ano"; ano: number }) {
+function AbasDaVisao({ companyId, ativa, ano, sufixo }: { companyId: string; ativa: "mes" | "ano"; ano: number; sufixo: string }) {
   return (
     <AbasDeLink
       ativa={ativa}
       abas={[
-        { chave: "mes", rotulo: "Por mês", href: `/dre?empresa=${companyId}`, icone: <CalendarDays /> },
-        { chave: "ano", rotulo: "Ano inteiro", href: `/dre?empresa=${companyId}&visao=ano&ano=${ano}`, icone: <CalendarRange /> },
+        { chave: "mes", rotulo: "Por mês", href: `/dre?empresa=${companyId}${sufixo}`, icone: <CalendarDays /> },
+        { chave: "ano", rotulo: "Ano inteiro", href: `/dre?empresa=${companyId}&visao=ano&ano=${ano}${sufixo}`, icone: <CalendarRange /> },
       ]}
     />
   );
@@ -404,17 +434,19 @@ function SeletorDeEmpresa({
   empresas,
   companyId,
   visao,
+  impostos,
 }: {
   empresas: EmpresaNaAba[];
   companyId: string | null;
   visao: string | undefined;
+  impostos?: string;
 }) {
   return (
     <SeletorDeEmpresaDaTela
       empresas={empresas.map((e) => ({ ...e, nome: e.tradeName || e.name }))}
       valor={companyId}
       acao="/dre"
-      manter={{ visao: visao === "ano" ? "ano" : undefined }}
+      manter={{ visao: visao === "ano" ? "ano" : undefined, impostos: impostos === "fora" ? "fora" : undefined }}
     />
   );
 }

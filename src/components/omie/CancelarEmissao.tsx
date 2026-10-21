@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Ban } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { cancelarEmissaoAction } from "@/app/(app)/emitir-nfse/actions";
@@ -37,16 +38,24 @@ export function CancelarEmissao({ emissaoId, naPrefeitura, rotulo }: { emissaoId
 
   return (
     <>
-      <Button
-        variant="danger"
-        size="xs"
-        onClick={() => {
-          setErro(null);
-          setAberto(true);
-        }}
-      >
-        <Ban size={12} /> Cancelar
-      </Button>
+      {/* No "⋯", em vermelho (11A, 15/10/2026): era um botão vermelho à vista
+          em toda linha. Cancelar encerra a nota, e fica no menu mesmo sendo a
+          única ação. */}
+      <MenuDeMaisAcoes rotulo={`Mais ações da ${rotulo}`} align="right" width={200}>
+        {({ close }) => (
+          <ItemDoMenu
+            icone={<Ban />}
+            danger
+            onClick={() => {
+              close();
+              setErro(null);
+              setAberto(true);
+            }}
+          >
+            {naPrefeitura ? "Cancelar a nota" : "Cancelar a OS"}
+          </ItemDoMenu>
+        )}
+      </MenuDeMaisAcoes>
       <ConfirmDialog
         open={aberto}
         title={naPrefeitura ? `Cancelar a ${rotulo}?` : `Cancelar a ${rotulo} no Omie?`}

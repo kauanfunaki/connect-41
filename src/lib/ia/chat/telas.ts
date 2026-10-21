@@ -45,8 +45,7 @@ const NOME_DA_ROTA: ReadonlyMap<string, string> = (() => {
   const m = new Map<string, string>();
   for (const [code, rota] of Object.entries(MODULE_ROUTES)) {
     const label = getModuleDef(code)?.label;
-    // "Documentos fiscais — integrado": o que vem depois do travessão é nota
-    // do catálogo, não nome de tela.
+    // Rótulos explicativos do catálogo não alteram o nome exibido da tela.
     if (label) m.set(rota, label.split(" — ")[0]!.trim());
   }
   for (const [rota, nome] of Object.entries(TELAS_GERAIS)) m.set(rota, nome);

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/Button";
 
 export const metadata: Metadata = {
   title: "Política de privacidade · Portal 41",
-  description: "Como o Portal do Cliente da 41 trata os seus dados.",
+  description: "Como o Portal 41 e o escritório tratam os seus dados.",
 };
 
 const ATUALIZADA_EM = "5 de outubro de 2026";

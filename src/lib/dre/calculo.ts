@@ -17,13 +17,14 @@
 // aqui, e ele não volta para conta nenhuma — é saída de tela.
 
 import {
-  GRUPOS,
-  LINHAS,
   NAO_CLASSIFICADO,
   TRANSFERENCIA,
   DESCONSIDERAR,
   OPCOES_PADRAO,
-  parcelasDaMargem,
+  modeloDas,
+  origemDoGrupo,
+  parcelasDoSubtotal,
+  type CodigoDoModelo,
   type OpcoesDoDre,
 } from "@/lib/dre/estrutura";
 
@@ -84,7 +85,7 @@ export function chaveDaCategoria(categoria: string): string {
     .trim();
 }
 
-export function montarMapeamento(pares: { categoria: string; grupo: string }[]): Mapeamento {
+export function montarMapeamento(pares: readonly { categoria: string; grupo: string }[]): Mapeamento {
   const m = new Map<string, string>();
   for (const p of pares) m.set(chaveDaCategoria(p.categoria), p.grupo);
   return m;
@@ -140,9 +141,12 @@ export type ResultadoDoDre = {
    * devolvendo `#N/A`. Aqui ela é um número que a tela pode afirmar.
    */
   diferencaDeFechamento: number;
+  /**
+   * O modelo das linhas (21/10/2026): as telas leem dele qual é a linha
+   * operacional e a de resultado. Vazio é o padrão.
+   */
+  modelo?: CodigoDoModelo;
 };
-
-const ORIGEM_DO_GRUPO = new Map(GRUPOS.map((g) => [g.code, g.origem]));
 
 /**
  * O grupo em que um lançamento entra, ou `null` quando ele cai no não
@@ -161,7 +165,7 @@ export function grupoDoLancamento(l: LancamentoDoDre, mapeamento: Mapeamento): s
   // Grupo cuja origem não bate com a do lançamento é de-para errado, não
   // dado errado — e somar um recebimento dentro de um grupo de despesa
   // produz número plausível. Cai no não classificado, para alguém olhar.
-  const origemEsperada = grupo ? ORIGEM_DO_GRUPO.get(grupo) : undefined;
+  const origemEsperada = grupo ? origemDoGrupo(grupo) : undefined;
   const serve =
     grupo === TRANSFERENCIA || grupo === DESCONSIDERAR || origemEsperada === undefined || origemEsperada === l.origem;
   return serve ? grupo : null;
@@ -183,8 +187,9 @@ export function calcularDre(
   mapeamento: Mapeamento,
   opcoes: OpcoesDoDre = OPCOES_PADRAO
 ): ResultadoDoDre {
+  const modelo = modeloDas(opcoes);
   const porGrupo: Record<string, number> = { [NAO_CLASSIFICADO]: 0, [TRANSFERENCIA]: 0, [DESCONSIDERAR]: 0 };
-  for (const g of GRUPOS) porGrupo[g.code] = 0;
+  for (const g of modelo.grupos) porGrupo[g.code] = 0;
 
   const soltos = new Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>();
   const desconsiderados = new Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>();
@@ -220,6 +225,7 @@ export function calcularDre(
       [...doGrupo.entries()].map(([grupo, mapa]) => [grupo, [...mapa.values()].sort((a, b) => compararCategorias(a.categoria, b.categoria))])
     ),
     diferencaDeFechamento: totalEntrado - somaDosGrupos,
+    modelo: modelo.codigo,
   };
 }
 
@@ -292,7 +298,7 @@ export function montarLinhas(
   const valor = new Map<string, number>();
   const linhas: ValorDaLinha[] = [];
 
-  for (const linha of LINHAS) {
+  for (const linha of modeloDas(opcoes).linhas) {
     if (linha.tipo === "grupo") {
       const c = porGrupo[linha.grupo] ?? 0;
       valor.set(linha.code, c);
@@ -301,10 +307,9 @@ export function montarLinhas(
     }
 
     if (linha.tipo === "subtotal") {
-      // A margem é a única linha cuja composição depende de opção — ver
-      // `OpcoesDoDre.margemPartirDaLiquida`.
-      const parcelas =
-        linha.code === "margem_contribuicao" ? parcelasDaMargem(opcoes) : linha.parcelas;
+      // A linha operacional do padrão é a única cuja composição depende de
+      // opção — ver `OpcoesDoDre.impostosNoEbitda`.
+      const parcelas = parcelasDoSubtotal(linha, opcoes);
       const c = parcelas.reduce((n, p) => n + (valor.get(p) ?? 0), 0);
       valor.set(linha.code, c);
       linhas.push({
@@ -345,11 +350,11 @@ export function centavosDaLinha(r: ResultadoDoDre, code: string): number | null 
 /**
  * Quanto de imposto ficou fora do resultado.
  *
- * Existe para a tela poder dizer isso em voz alta enquanto
- * `margemPartirDaLiquida` for `false`. Zero quando a opção está ligada, porque
- * aí o imposto já está dentro.
+ * Existe para a tela poder dizer isso em voz alta: no modelo que deixa os
+ * impostos sempre fora (o por área), e no padrão na visão "fora do resultado"
+ * (`impostosNoEbitda: false`). Zero no padrão com os impostos no EBITDA.
  */
 export function impostoForaDoResultado(r: ResultadoDoDre, opcoes: OpcoesDoDre = OPCOES_PADRAO): number {
-  if (opcoes.margemPartirDaLiquida) return 0;
+  if (modeloDas(opcoes).impostos === "escolha" && opcoes.impostosNoEbitda) return 0;
   return centavosDaLinha(r, "impostos") ?? 0;
 }

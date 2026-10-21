@@ -1,31 +1,7 @@
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { notFound } from "next/navigation";
-import { TagForm } from "@/components/admin/TagForm";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { criarTag } from "../actions";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { getSectorMaps } from "@/lib/sectors";
+import { redirect } from "next/navigation";
 
-export default async function NovaTagPage() {
-  const ctx = await getAuthContext();
-  const canManageAny = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
-  if (!canManageAny) notFound();
-
-  const { options: allSectorOptions } = await getSectorMaps(ctx.tenantId);
-  const sectorOptions = isFullWrite(ctx.role)
-    ? allSectorOptions
-    : allSectorOptions.filter((s) => ctx.sectors.includes(s.value));
-
-  return (
-    <PageContainer>
-      <PageHeader title="Nova tag" />
-
-      <div className="max-w-[720px]">
-        <Card className="p-6">
-          <TagForm action={criarTag} cancelHref="/admin/tags" sectorOptions={sectorOptions} />
-        </Card>
-      </div>
-    </PageContainer>
-  );
+// O formulário abre no painel ao lado da lista desde 20/10/2026 (escolha 2B
+// dos Ajustes de 15/10). Este endereço fica para os links antigos.
+export default function NovaTagPage() {
+  redirect("/admin/tags?novo=1");
 }

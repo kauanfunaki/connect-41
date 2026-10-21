@@ -76,13 +76,12 @@ export default async function PortalSolicitacoesPage({
                   ? "Nenhuma solicitação esperando você"
                   : "Nenhuma solicitação encerrada"
             }
-            description={recorte === "abertas" ? "Precisa de algo do escritório? Abra uma solicitação: a equipe certa recebe na hora." : undefined}
-            action={
-              recorte === "abertas" ? (
-                <Button href="/portal/solicitacoes/nova" variant="secondary">
-                  <Plus size={14} /> Nova solicitação
-                </Button>
-              ) : undefined
+            // Sem repetir o "Nova solicitação": ele mora no cabeçalho (regra de 08/10),
+            // e o texto diz onde (P19, 15/10/2026).
+            description={
+              recorte === "abertas"
+                ? "Precisa de algo do escritório? Use “+ Nova solicitação”, no alto da tela: a equipe certa recebe na hora."
+                : undefined
             }
           />
         </Card>

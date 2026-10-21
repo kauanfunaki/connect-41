@@ -64,7 +64,7 @@ function TeiaDoDisc({ scores }: { scores: DiscScores }) {
           x={ROTULO[d].x}
           y={ROTULO[d].y}
           textAnchor={ROTULO[d].ancora}
-          className="fill-fg-secondary text-[11px] font-semibold"
+          className="fill-fg-secondary text-fs-1 font-semibold"
         >
           {d} {notaDaLetra(scores, d)}%
         </text>

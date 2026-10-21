@@ -42,7 +42,7 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
       <FiltroDeSetor setores={g.setores} />
 
       <section aria-labelledby="lista" className="flex flex-col gap-2">
-        <h2 id="lista" className="text-card-title font-semibold text-fg">
+        <h2 id="lista" className="text-section font-semibold text-fg">
           Parados e com prazo ({atencao.length})
         </h2>
         {atencao.length === 0 ? (
@@ -50,7 +50,7 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
             <EmptyState icon={<BellOff />} title="Nenhum alerta" description="Nada passou do limite de parado nem está com prazo vencendo." />
           </Card>
         ) : (
-          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface shadow-xs">
             {atencao.map((x) => (
               <ItemDaGestao
                 key={`${x.item.origem}:${x.item.id}`}
@@ -68,13 +68,13 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
 
       <section aria-labelledby="limites" className="flex flex-col gap-2">
         <div>
-          <h2 id="limites" className="text-card-title font-semibold text-fg">
+          <h2 id="limites" className="text-section font-semibold text-fg">
             Limites por setor
           </h2>
           <p className="text-fs-2 text-fg-muted">
             Depois de quantos dias sem movimentação um item conta como parado, e com quantos dias de antecedência o prazo avisa. Vazio usa o
             padrão ({LIMITES_PADRAO.diasParado} e {LIMITES_PADRAO.diasAvisoPrazo} dias). Processo esperando o órgão só conta como parado depois de 30
-            dias; card que ainda não começou só avisa pelo prazo.
+            dias; tarefa que ainda não começou só avisa pelo prazo.
           </p>
         </div>
         {/* No celular, um cartão por setor, com os campos rotulados, em vez da

@@ -56,6 +56,10 @@ const c = (icone: IconeDaNotificacao, tom: Tom, titulo: string): TipoNoCatalogo 
 const a = (icone: IconeDaNotificacao, tom: Tom, titulo: string): TipoNoCatalogo => ({ aba: "alertas", icone, tom, titulo });
 
 export const CATALOGO: Record<string, TipoNoCatalogo> = {
+  OPS_AUTOMACAO_ERRO: a("alerta", "danger", "Erro em automação"),
+  CHAMADO_ATUALIZADO: p("solicitacao", "info", "Atualização no chamado"),
+  CHAMADO_INTERNO: p("comentario", "info", "Atualização interna no chamado"),
+  CHAMADO_SLA: a("prazo", "warning", "Prazo de chamado vencido"),
   // ── Para mim ──
   HANDOFF_RECEIVED: p("transferencia", "brand", "Transferência recebida"),
   HANDOFF_ASSIGNED: p("transferencia", "brand", "Transferência para você"),
@@ -96,6 +100,9 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   AUTORIZACAO_VALIDAR: a("prazo", "warning", "Autorização de acesso a validar"),
   AUTORIZACAO_VENCENDO: a("documento", "warning", "Autorização de acesso a vencer"),
   SERPRO_CONFERENCIA: a("documento", "info", "Conferência no Serpro"),
+  // Fase 1 do Integra Contador (20/10/2026).
+  SERPRO_CAIXA_POSTAL: a("mensagem", "warning", "Caixa Postal da Receita"),
+  SERPRO_SITFIS: a("documento", "info", "Situação fiscal"),
   ADMISSAO_STALE: a("alerta", "warning", "Admissão parada"),
   HANDOFF_STALE: a("alerta", "warning", "Transferência parada"),
   FINANCE_CONTAS_DIA: a("dinheiro", "info", "Contas do dia"),
