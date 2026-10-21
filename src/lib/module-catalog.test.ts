@@ -11,6 +11,8 @@ import {
   getModulesForSector,
   MODULOS_DO_MENU_GERAL,
   MODULOS_SEM_MENU,
+  MODULOS_NAS_SOLICITACOES,
+  TELAS_DO_BPO_NAS_SOLICITACOES,
 } from "./module-catalog";
 import { DEFAULT_SECTORS } from "./sector-constants";
 
@@ -61,6 +63,16 @@ describe("catálogo de módulos", () => {
   it("as telas do menu Geral e as sem menu são do catálogo", () => {
     const fora = [...MODULOS_DO_MENU_GERAL, ...MODULOS_SEM_MENU].filter((code) => !getModuleDef(code));
     expect(fora).toEqual([]);
+  });
+
+  it("as telas do BPO nas Solicitações são módulos do BPO, com a rota da aba", () => {
+    // 21/10/2026: saem do menu do BPO e viram abas de /solicitacoes.
+    for (const t of TELAS_DO_BPO_NAS_SOLICITACOES) {
+      expect(getModuleDef(t.modulo)?.sectorCode).toBe("bpo");
+      expect(MODULE_ROUTES[t.modulo]).toBe(t.href);
+      expect(MODULOS_DO_MENU_GERAL.has(t.modulo)).toBe(false);
+    }
+    expect([...MODULOS_NAS_SOLICITACOES]).toEqual(["bpo_pendencias", "bpo_aprovacoes"]);
   });
 
   it("rota começa com barra", () => {
