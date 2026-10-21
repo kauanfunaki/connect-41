@@ -11,6 +11,14 @@ Módulo `tech_ops_center`, rota `/ops`, grupo Operação do Tech. Reproduz o pai
 
 As chaves individuais emitidas antes desta mudança continuam válidas durante a transição para não interromper bots já configurados. Depois de trocar cada bot para a chave compartilhada, desative e reative a automação correspondente para revogar sua chave antiga.
 
+### Tabela da chave compartilhada ausente após publicação
+
+O erro Prisma `P2021` em `opsApiCredential.findUnique`, informando que `ops_api_credentials` não existe, indica que falta aplicar `prisma/migrations/20261020230000_ops_shared_credential/migration.sql` no banco daquele ambiente. A migration cria uma única tabela, seus índices e a referência ao escritório; não remove dados nem altera as chaves individuais existentes.
+
+No processo autorizado de implantação, usar o código e o Prisma CLI da versão publicada para conferir `npx prisma migrate status`, revisar as pendências e executar `npx prisma migrate deploy`. O `prisma generate` do Dockerfile gera o client, mas não aplica migrations. A imagem standalone contém o runtime da aplicação; o job de migrations precisa ter o diretório `prisma/migrations` e o CLI instalado pelo lockfile do projeto. Não usar reset ou db push para corrigir esse caso.
+
+Enquanto a tabela ou suas colunas estiverem ausentes, Integrações mostra **Indisponível** no Ops Center e informa a atualização pendente no painel. As outras integrações continuam acessíveis. A tela não apresenta a credencial como **Sem chave** e não permite gerar ou trocar a chave sem conseguir consultar seu estado. Depois de aplicar a migration, recarregar a página retoma o formulário normal. Outras falhas de leitura mostram indisponibilidade temporária, sem afirmar que falta uma migration.
+
 O dono é um usuário ativo do mesmo escritório com acesso ao setor do módulo. Sem dono, a automação permanece visível em Todas, mas erros não têm destinatário. O filtro Minhas automações usa a identidade da sessão e filtra cartões, totais do dia e histórico. A atribuição atual determina esse recorte, inclusive para eventos anteriores à troca de dono.
 
 ## Recebimento pelos bots
