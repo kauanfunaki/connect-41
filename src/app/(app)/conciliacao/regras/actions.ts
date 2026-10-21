@@ -21,6 +21,7 @@ import { projetoInformado } from "@/lib/financeiro/projetoServidor";
 import { temExtrato } from "@/lib/financeiro/tiposDeConta";
 import { RecusaDaBaixa } from "@/lib/financeiro/baixa/servidor";
 import { empresaLidaDoOmie } from "@/lib/integracoes/omie/viradaServidor";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 import { tipoDaRegra, validarRegra, type CamposDaRegra } from "@/lib/financeiro/conciliacao/regras";
 import {
   desfazerLancamentoDaRegra,
@@ -80,6 +81,9 @@ export async function salvarRegra(formData: FormData): Promise<ResultadoDaRegra>
   const companyId = existente?.companyId ?? texto(formData, "companyId").trim();
   const empresa = await c.prisma.company.findFirst({ where: { id: companyId, tenantId: c.tenantId }, select: { id: true } });
   if (!empresa) return { error: "Empresa não encontrada." };
+  // Uma empresa por vez (21/10): com o foco ligado, só a base em foco.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const campos: CamposDaRegra = {
     nome: texto(formData, "nome"),
@@ -167,6 +171,8 @@ export async function alterarRegraAtiva(id: string, ativa: boolean): Promise<Res
   if (!c.ok) return { error: c.erro };
   const regra = await regraDoTenant(c.prisma, c.tenantId, id);
   if (!regra) return { error: "Regra não encontrada." };
+  const foraDoFoco = await recusaDoFoco(c.ctx, [regra.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   await c.prisma.bankReconciliationRule.updateMany({ where: { id, tenantId: c.tenantId }, data: { active: ativa } });
   await logAudit({
     tenantId: c.tenantId,
@@ -189,6 +195,8 @@ export async function excluirRegra(id: string): Promise<Resultado> {
   if (!c.ok) return { error: c.erro };
   const regra = await regraDoTenant(c.prisma, c.tenantId, id);
   if (!regra) return { error: "Regra não encontrada." };
+  const foraDoFoco = await recusaDoFoco(c.ctx, [regra.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   await c.prisma.bankReconciliationRule.deleteMany({ where: { id, tenantId: c.tenantId } });
   await logAudit({
     tenantId: c.tenantId,
@@ -230,6 +238,8 @@ export async function aplicarRegra(id: string, transactionIds: string[]): Promis
   if (transactionIds.length > MAXIMO_POR_VEZ) return { error: `No máximo ${MAXIMO_POR_VEZ} linhas por vez.` };
   const regra = await regraDoTenant(c.prisma, c.tenantId, id);
   if (!regra) return { error: "Regra não encontrada." };
+  const foraDoFoco = await recusaDoFoco(c.ctx, [regra.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const preparada = await prepararAcao(c.tenantId, regra);
   if (!preparada.ok) return { error: preparada.erro };
 
@@ -266,6 +276,8 @@ export async function lancarPelaRegra(transactionId: string, ruleId: string): Pr
   if (!regra) return { error: "Regra não encontrada." };
   if (!linha) return { error: "Transação não encontrada." };
   if (!regra.ativa) return { error: "Esta regra está pausada — retome-a na tela das regras." };
+  const foraDoFoco = await recusaDoFoco(c.ctx, [regra.companyId, linha.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const preparada = await prepararAcao(c.tenantId, regra);
   if (!preparada.ok) return { error: preparada.erro };
   const r = await lancarLinhaPelaRegra({ tenantId: c.tenantId, userId: c.userId, acao: preparada.acao, linha, automatico: false });
@@ -287,6 +299,11 @@ export async function lancarPelaRegra(transactionId: string, ruleId: string): Pr
 export async function desfazerLancamentoPelaRegra(applicationId: string): Promise<Resultado> {
   const c = await contexto();
   if (!c.ok) return { error: c.erro };
+  const foraDoFoco = await recusaDoFoco(c.ctx, async () => {
+    const a = await c.prisma.bankRuleApplication.findFirst({ where: { id: applicationId, tenantId: c.tenantId }, select: { companyId: true } });
+    return a ? [a.companyId] : [];
+  });
+  if (foraDoFoco) return { error: foraDoFoco };
   try {
     const r = await c.prisma.$transaction((tx) => desfazerLancamentoDaRegra(tx, c.tenantId, applicationId, c.userId));
     await logAudit({
