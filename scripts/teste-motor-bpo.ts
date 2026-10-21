@@ -180,7 +180,6 @@ async function limparSandbox(tenantId: string) {
   const comMarca = { tenantId, name: { contains: MARCA } };
   conta(await prisma.portalUser.deleteMany({ where: comMarca }));
   conta(await prisma.company.deleteMany({ where: comMarca }));
-  conta(await prisma.clientGroup.deleteMany({ where: comMarca }));
   conta(await prisma.financeCategory.deleteMany({ where: comMarca }));
   conta(await prisma.processOrgan.deleteMany({ where: comMarca }));
   conta(await prisma.alertDispatch.deleteMany({ where: { tenantId, alertKey: { startsWith: "BANCADA_" } } }));
@@ -599,12 +598,8 @@ async function a5(tenantId: string, c: Cadastros) {
   titulo("A5 · alçada e aprovação pelo portal");
   const prisma = getPrisma();
 
-  const grupo = await prisma.clientGroup.create({
-    data: { tenantId, name: `${MARCA} Grupo ACME` },
-    select: { id: true },
-  });
-  await prisma.company.update({ where: { id: c.empresa.id }, data: { clientGroupId: grupo.id } });
   // O acesso vê a empresa pela ligação direta (portal por empresa, 14/10/2026).
+  // O Cliente que a bancada criava aqui saiu com a etapa 3 (15/10/2026).
   const cliente = await prisma.portalUser.create({
     data: {
       tenantId,

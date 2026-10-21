@@ -9,7 +9,7 @@ import { getEnabledModuleCodes } from "@/lib/modules";
 import { formatInstantDate } from "@/lib/format";
 import { lerTelasBloqueadas } from "@/lib/portal/telasBloqueadas";
 import { FALTA_ATUALIZAR_O_BANCO, resumoDasLiberadas, telasParaLiberar } from "@/lib/portal/telasLiberadas";
-import { FALTA_ATUALIZAR_O_BANCO_DO_PORTAL, empresasLigadasDasContas, portalPorEmpresaPronto } from "@/lib/portal/empresasDaContaDb";
+import { empresasLigadasDasContas } from "@/lib/portal/empresasDaContaDb";
 import { opcoesDeEmpresaDoPortal } from "@/lib/portal/opcoesDeEmpresa";
 import { NovoAcessoDoPortal, PortalAcessosList } from "@/components/portal/PortalAcessosList";
 import { TelasLiberadasDoPortal } from "@/components/portal/TelasLiberadasDoPortal";
@@ -54,14 +54,13 @@ export default async function AdminPortalPage({ searchParams }: { searchParams: 
   if (aba === "ceci") return <AbaDaCeci tenantId={ctx.tenantId} somenteLeitura={ctx.subscriptionReadOnly} />;
 
   const prisma = getPrisma();
-  const [acessos, empresas, pronto] = await Promise.all([
+  const [acessos, empresas] = await Promise.all([
     prisma.portalUser.findMany({
       where: { tenantId: ctx.tenantId },
       orderBy: [{ active: "desc" }, { name: "asc" }],
-      select: { id: true, name: true, email: true, active: true, lastLoginAt: true, clientGroupId: true },
+      select: { id: true, name: true, email: true, active: true, lastLoginAt: true },
     }),
     opcoesDeEmpresaDoPortal(ctx.tenantId),
-    portalPorEmpresaPronto(),
   ]);
   const ligadas = await empresasLigadasDasContas(ctx.tenantId, acessos);
 
@@ -72,15 +71,9 @@ export default async function AdminPortalPage({ searchParams }: { searchParams: 
         title="Portal do cliente"
         subtitle="Contas de clientes que entram no portal. Cada conta enxerga as empresas ligadas a ela — e, com “incluir
           filiais”, as filiais delas. Também dá para criar e ligar acessos na ficha de cada empresa."
-        action={pronto && <NovoAcessoDoPortal empresas={empresas} criarAction={criarAcessoDoPortal} />}
+        action={<NovoAcessoDoPortal empresas={empresas} criarAction={criarAcessoDoPortal} />}
       />
       <AbasDeLink abas={ABAS} ativa="acessos" />
-
-      {!pronto && (
-        <Aviso tom="atencao" className="mb-4 max-w-3xl">
-          {FALTA_ATUALIZAR_O_BANCO_DO_PORTAL}
-        </Aviso>
-      )}
 
       <PortalAcessosList
         acessos={acessos.map((a) => ({

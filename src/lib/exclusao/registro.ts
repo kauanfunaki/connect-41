@@ -311,7 +311,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "UserLastCompany", coluna: "userId", tratamento: "apagar" },
   // O tutorial do primeiro acesso já visto: sai com a conta. A mesma coluna
   // guarda o id de acessos do portal (subject PORTAL_USER) — esses saem com o
-  // acesso (`excluirAcessoDoPortal`, `excluirCliente`).
+  // acesso (`excluirAcessoDoPortal`).
   { modelo: "TutorialVisto", coluna: "userId", tratamento: "apagar" },
   // Autor guardado sem chave — passa para quem exclui, como os de cima.
   { modelo: "CandidaturaNota", coluna: "createdById", tratamento: "reatribuir" },

@@ -45,6 +45,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "person.delete": x("excluiu a pessoa"),
   "companyservice.create": c("adicionou um setor contratado"),
   "companyservice.assign": e("trocou o responsável de um setor contratado"),
+  // A tela Clientes saiu em 15/10/2026 (etapa 3 da saída do Cliente): as
+  // ações ficam aqui para o histórico continuar legível.
   "clientGroup.create": c("criou o cliente"),
   "clientGroup.update": e("editou o cliente"),
   "clientGroup.activate": e("reativou o cliente"),

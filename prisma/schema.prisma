@@ -829,7 +829,6 @@ model Tenant {
   subscription              Subscription?
   users                     User[]
   companies                 Company[]
-  clientGroups              ClientGroup[]
   people                    Person[]
   pipelines                 Pipeline[]
   pipelineItems             PipelineItem[]
@@ -1370,19 +1369,18 @@ enum PasswordResetSubject {
 /// 1. **Não existe papel para atribuir errado.** Com papel novo em `User`, um
 ///    clique errado no cadastro daria acesso interno a um cliente. Aqui o pior
 ///    caso de um erro é o cliente não conseguir entrar.
-/// 2. **`clientGroupId` é OBRIGATÓRIO.** Com o papel, ele teria de ser anulável
-///    (conta interna não tem grupo), e "conta de portal sem grupo" existiria
-///    como estado a defender. Aqui esse estado não é representável.
+/// 2. **A conta é das empresas ligadas a ela** (`PortalUserCompany`, desde
+///    14/10/2026). Com o papel, conta interna e conta de cliente dividiriam a
+///    mesma tabela, e "conta de cliente sem empresa" seria só mais um filtro.
 /// 3. **Sessão própria.** O token do portal tem `kind: "portal"` e cookie
 ///    próprio; o verificador interno o recusa e vice-versa. Uma sessão não vira
 ///    a outra nem por engano de cookie.
 model PortalUser {
   id            String @id @default(uuid())
   tenantId      String
-  /// O cliente das contas criadas antes de 14/10/2026. Não decide mais nada: o
-  /// que a conta enxerga são as empresas ligadas a ela (`PortalUserCompany`).
-  /// Conta nova nasce sem; a coluna sai com o Cliente (etapa 3).
-  clientGroupId String?
+  // `clientGroupId` saiu do schema em 21/10/2026 (etapa 3 da saída do
+  // Cliente). A coluna continua no banco, sem chave e sem uso, até a etapa 4
+  // apagar — ver a migration 20261021180000_cliente_sem_chaves.
 
   name         String    @db.VarChar(120)
   email        String    @db.VarChar(120)
@@ -1394,9 +1392,6 @@ model PortalUser {
   updatedAt DateTime @updatedAt
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
-  // SetNull desde 14/10/2026 (era RESTRICT): excluir um cliente não leva mais
-  // os acessos junto — eles são das empresas.
-  clientGroup ClientGroup? @relation(fields: [clientGroupId], references: [id], onDelete: SetNull)
   empresas    PortalUserCompany[]
 
   clientRequestMessages    ClientRequestMessage[]    @relation("ClientRequestMessageAuthorPortal")
@@ -1415,7 +1410,6 @@ model PortalUser {
   driveFilesEnviados       DriveFile[]               @relation("DriveFileEnviadoPeloCliente")
   driveAcessos             DriveFileAccess[]
   @@unique([tenantId, email])
-  @@index([tenantId, clientGroupId])
   @@map("portal_users")
 }
 
@@ -1463,44 +1457,11 @@ model PasswordResetToken {
 
 // ─── Entidades Centrais ───────────────────────────────────────────────────────
 
-// O "cliente" do escritório, um nível acima da empresa: um cliente pode ter
-// N CNPJs. O caso medido é o grupo BLD — 5 estabelecimentos sob a raiz
-// 17122471, uma controladoria só, confirmado na base do SPED em 2026-08-21.
-// Sem este nível, o usuário do portal teria de ser escopado a uma lista solta
-// de Company, e o agrupamento viraria configuração manual.
-//
-// O protótipo do Marcos chegou no mesmo desenho por outro caminho: lá `Client`
-// agrupa `Company` e a tabela `User` tem `clientId`. Nome aqui é `ClientGroup`
-// e não `Client` porque `ClientDocument*` já usa o prefixo `Client` com outro
-// sentido — documento enviado a UM CNPJ.
-model ClientGroup {
-  id       String  @id @default(uuid())
-  tenantId String
-  name     String  @db.VarChar(180)
-  // Raiz do CNPJ (8 dígitos) quando o grupo é um CNPJ raiz com N
-  // estabelecimentos. É dica de agrupamento e origem do backfill, NÃO
-  // identidade: holding com raízes diferentes também é um grupo, e cliente
-  // pessoa física não tem nenhuma. Por isso é opcional.
-  //
-  // Única por escritório desde 25/09: a mesma raiz em dois clientes é o mesmo
-  // cliente cadastrado duas vezes — o que um import rodado de novo faria em
-  // silêncio. Nulo não colide (MySQL permite vários), então pessoa física e
-  // holding sem raiz continuam como eram.
-  cnpjRoot String? @db.VarChar(8)
-  active   Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant      Tenant       @relation(fields: [tenantId], references: [id])
-  companies   Company[]
-  portalUsers PortalUser[]
-  announcements ClientAnnouncementGroup[]
-
-  @@unique([tenantId, cnpjRoot])
-  @@index([tenantId])
-  @@map("client_groups")
-}
+// O Cliente (`ClientGroup`, tabela `client_groups`) saiu do schema em
+// 21/10/2026, na etapa 3 da saída do Cliente (decisão do Kauan em 13/10:
+// Empresa e Cliente eram a mesma coisa). O portal é ligado direto às empresas
+// (`PortalUserCompany`), com as filiais junto da matriz. As tabelas antigas
+// ficam no banco, sem chave e sem uso, até a etapa 4 apagar.
 
 model Company {
   id                    String        @id @default(uuid())
@@ -1568,13 +1529,8 @@ model Company {
   // SetNull, nunca Cascade: apagar a matriz não pode apagar as filiais junto —
   // elas viram matrizes soltas, o que é recuperável, ao contrário de sumir.
   parentCompanyId       String?
-  // Opcional no schema de propósito: exigir NOT NULL obrigaria o backfill a
-  // rodar DENTRO da migration, e um backfill que falha no meio deixa o
-  // `migrate deploy` morto com o schema pela metade em produção. O script
-  // `scripts/backfill-client-groups.ts` preenche 100% depois, fora da janela
-  // de DDL. SetNull, nunca Cascade: apagar um grupo não pode apagar as
-  // empresas do cliente.
-  clientGroupId         String?
+  // `clientGroupId` (o Cliente da empresa) saiu do schema em 21/10/2026, na
+  // etapa 3; a coluna fica no banco, sem chave, até a etapa 4.
   /// O modelo do DRE desta empresa (21/10/2026): vazio é o padrão; "por_area" é
   /// o customizado de despesas por área. Os modelos moram em código — ver
   /// `src/lib/dre/estrutura.ts`.
@@ -1595,7 +1551,6 @@ model Company {
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
   parent      Company?     @relation("CompanyFiliais", fields: [parentCompanyId], references: [id], onDelete: SetNull)
   filiais     Company[]    @relation("CompanyFiliais")
-  clientGroup ClientGroup? @relation(fields: [clientGroupId], references: [id], onDelete: SetNull)
 
   services                 CompanyService[]
   people                   Person[]
@@ -1658,7 +1613,6 @@ model Company {
   @@unique([tenantId, cpf])
   @@index([tenantId])
   @@index([tenantId, status])
-  @@index([tenantId, clientGroupId])
   @@index([tenantId, taxRegimeKind])
   @@map("companies")
 }
@@ -3856,7 +3810,6 @@ model ClientAnnouncement {
 
   tenant      Tenant                         @relation(fields: [tenantId], references: [id])
   createdBy   User?                          @relation("ClientAnnouncementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  groups      ClientAnnouncementGroup[]
   companies   ClientAnnouncementCompany[]
   reads       ClientAnnouncementRead[]
   attachments ClientAnnouncementAttachment[]
@@ -3865,21 +3818,10 @@ model ClientAnnouncement {
   @@map("client_announcements")
 }
 
-/// Os clientes que recebiam, até 14/10/2026. Comunicado novo vai para empresas
-/// (`ClientAnnouncementCompany`), e os antigos foram copiados para lá na
-/// migration `20261014210000_portal_por_empresa`. Fica intocada até a etapa 3.
-model ClientAnnouncementGroup {
-  id             String @id @default(uuid())
-  announcementId String
-  clientGroupId  String
-
-  announcement ClientAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  clientGroup  ClientGroup        @relation(fields: [clientGroupId], references: [id], onDelete: Cascade)
-
-  @@unique([announcementId, clientGroupId])
-  @@index([clientGroupId])
-  @@map("client_announcement_groups")
-}
+// Os clientes que recebiam (`client_announcement_groups`, até 14/10/2026)
+// saíram do schema em 21/10/2026 (etapa 3). Os comunicados antigos já tinham
+// sido copiados para as empresas na migration 20261014210000_portal_por_empresa;
+// a tabela fica no banco, sem chave, até a etapa 4.
 
 /// As empresas que recebem, fixadas no envio (14/10/2026): empresa cadastrada
 /// depois não recebe comunicado antigo como se fosse novo. O portal mostra o
@@ -4593,8 +4535,8 @@ model SpedSyncState {
 /// antiga dava, e a sincronização passa a ler daqui. Cliente novo não entra
 /// sozinho na busca.
 ///
-/// Sem relação (FK), de propósito: sem a tabela (deploy antes da migration) a
-/// leitura cai na regra antiga.
+/// Sem relação (FK), de propósito: a tabela nasceu na etapa 2 para o SPED não
+/// depender do Cliente.
 model SpedSyncRoot {
   tenantId  String
   /// 8 dígitos — a chave de contribuinte do lado do SPED.

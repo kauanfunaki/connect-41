@@ -102,7 +102,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como encontrar uma empresa",
         passos: [
-          "Abra “Cadastros” na barra lateral. A tela tem as abas “Empresas”, “Clientes” e “Pessoas”; fique em “Empresas”.",
+          "Abra “Cadastros” na barra lateral. A tela tem as abas “Empresas” e “Pessoas”; fique em “Empresas”.",
           "Digite parte do nome ou do ID no campo “Buscar por nome ou ID…”.",
           "Para trocar o status mostrado, clique em “Filtros” e escolha “Ativo”, “Prospecto”, “Inativo”, “Cancelado” ou “Todos, incluindo inativos”.",
           "Para filtrar por regime ou cidade, clique no funil ao lado do título das colunas “Regime” e “Localização” e marque os valores.",
@@ -164,7 +164,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Inativar não apaga nada: a empresa só sai da lista padrão e pode ser reativada depois.",
       "Cadastrar, editar e inativar empresas é para administradores e gestores de setor. Excluir de vez é só para administradores.",
       "Empresa com mais de 2.000 notas fiscais não pode ser excluída por aqui: é histórico de verdade. Inative.",
-      "O portal não depende do “Cliente” da empresa: quem vê cada empresa se define em “Acesso ao portal”, na ficha dela, ou em Configurações › Portal do cliente.",
+      "Quem vê cada empresa no portal se define em “Acesso ao portal”, na ficha dela, ou em Configurações › Portal do cliente.",
     ],
   },
 
