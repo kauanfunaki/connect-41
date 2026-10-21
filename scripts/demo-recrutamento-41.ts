@@ -51,7 +51,7 @@ function resumo(plano: PlanoDaDemonstracao, comSegundo: boolean): string[] {
   const situacoes = new Map<keyof typeof SITUACAO_DO_VINCULO, number>();
   for (const p of plano.pessoas) if (p.type === "COLABORADOR") situacoes.set(p.employmentStatus, (situacoes.get(p.employmentStatus) ?? 0) + 1);
   return [
-    `${c.empresas} empresas [demo], cada uma com o seu grupo de cliente: ${plano.empresas.map((e) => e.tradeName).join(", ")}`,
+    `${c.empresas} empresas [demo]: ${plano.empresas.map((e) => e.tradeName).join(", ")}`,
     `${c.cargos} cargos nessas empresas`,
     `${c.vagas} vagas — ${c.vagasNoPortal} abertas e publicadas no 41 Carreiras (inscrições até ${dataBr(new Date(Math.min(...prazos)))} a ${dataBr(new Date(Math.max(...prazos)))}), ${c.vagas - c.vagasNoPortal} encerrada fora do portal`,
     `${c.versoesDeRequisitos} versões de requisitos (obrigatórios e desejáveis, com peso e cortes)`,

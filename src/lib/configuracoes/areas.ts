@@ -274,8 +274,8 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
     telas: [
       {
         chave: "workspaces",
-        // "Workspaces", como o título da tela: "Clientes" já é o cadastro de
-        // clientes de cada escritório (Cadastros › Clientes).
+        // "Workspaces", como o título da tela: para o escritório, "clientes"
+        // são as empresas que ele atende.
         rotulo: "Workspaces",
         descricao: "Os escritórios clientes do Connect, a foto de cada um e o acesso do suporte.",
         href: "/admin/workspaces",

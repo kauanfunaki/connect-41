@@ -69,7 +69,7 @@ describe("o cookie e o token da sessão", () => {
     const { value } = entrarEm(ENTROU, true);
     const payload = verifyPortalAccess(value);
     expect(payload).toMatchObject({ kind: "portal", sub: "pu1", tenantId: "t1" });
-    expect(payload.clientGroupId).toBeUndefined();
+    expect(payload).not.toHaveProperty("clientGroupId");
     // A sessão longa continua não valendo como sessão interna.
     expect(() => verifyAccess(value)).toThrow();
   });
