@@ -91,7 +91,8 @@ export default async function ConciliacaoPage({
   // (13/10/2026). Era a primeira em ordem alfabética: conciliar, cadastrar
   // conta e importar OFX gravavam nela sem ninguém ter escolhido.
   const empresas = await empresasDoSeletor(tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
+  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   const cabecalho = (
@@ -102,7 +103,7 @@ export default async function ConciliacaoPage({
   );
 
   // Trocar de empresa não leva a conta escolhida: a conta é de uma empresa só.
-  const filtroDaEmpresa = <FiltroDaEmpresa acao="/conciliacao" empresas={empresas} valor={companyId} />;
+  const filtroDaEmpresa = <FiltroDaEmpresa acao="/conciliacao" empresas={noSeletor} foco={foco} valor={companyId} />;
 
   if (!empresa || !companyId) {
     return (

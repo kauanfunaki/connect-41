@@ -15,6 +15,7 @@ import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { nomeExibicao } from "@/lib/companyName";
 import { AGENTE_DO_BOLETO, SCHEMA_DO_BOLETO, SISTEMA_DO_BOLETO, lerRespostaDoBoleto, type LeituraDoBoleto } from "./leituraDoBoleto";
 import { TAMANHO_MAXIMO_DO_ANEXO } from "./pendencias/anexo";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 const MODULE = "bpo_lancamentos";
 
@@ -50,6 +51,9 @@ export async function lerBoletoParaLancar(formData: FormData): Promise<Resultado
     select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true },
   });
   if (!empresa) return { error: "Empresa não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só lança nele — e não gasta a IA fora dele.
+  const foraDoFoco = await recusaDoFoco(ctx, [empresa.id]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const arquivo = formData.get("boleto");
   if (!(arquivo instanceof File) || arquivo.size === 0) return { error: "Escolha o PDF do boleto." };

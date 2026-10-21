@@ -101,10 +101,13 @@ export async function ContasPage({
     cnpj: e.cnpj,
     matrizId: e.parentCompanyId,
   })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  const { escolha } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true });
+  // Com uma empresa em foco (21/10/2026), só a base dela: a empresa, a matriz
+  // e as filiais — e "Todas" é a base inteira, não o escritório.
+  const daTela = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true, comFoco: true });
+  const { escolha, foco, empresasDeTodas } = daTela;
   const empresaId = idDaEscolha(escolha);
   const comConta = new Set(empresasComContas.map((e) => e.companyId));
-  const noSeletor = empresas.filter((e) => comConta.has(e.id) || e.id === empresaId);
+  const noSeletor = daTela.noSeletor.filter((e) => comConta.has(e.id) || e.id === empresaId);
   const titulo = aPagar ? "Contas a pagar" : "Contas a receber";
   const subtitulo = aPagar
     ? "O que as empresas têm a pagar, do documento fiscal à baixa — pelo valor líquido, já com as retenções."
@@ -117,6 +120,7 @@ export async function ContasPage({
       valor={empresaNaUrl(escolha) ?? null}
       todas="explicita"
       manter={{ aba: params.aba === "analise" ? "analise" : undefined, competencia: params.competencia, recorte: params.recorte }}
+      foco={foco}
     />
   );
 
@@ -128,7 +132,7 @@ export async function ContasPage({
         <EscolhaAEmpresa
           escolha={escolha}
           porQue="Para não carregar as contas de todos os clientes de uma vez, a tela abre numa empresa."
-          todasHref={hrefDaEmpresa(base, "", { todas: "explicita", manter: { recorte: params.recorte } })}
+          todasHref={foco ? undefined : hrefDaEmpresa(base, "", { todas: "explicita", manter: { recorte: params.recorte } })}
         />
       </PageContainer>
     );
@@ -156,10 +160,10 @@ export async function ContasPage({
     listarContas(
       ctx.tenantId,
       kind,
-      { recorte, competencia: params.competencia, empresaId: empresaId ?? undefined },
+      { recorte, competencia: params.competencia, empresaId: empresaId ?? undefined, empresaIds: empresasDeTodas ?? undefined },
       agora
     ),
-    competenciasComContas(ctx.tenantId, kind, empresaId ?? undefined),
+    competenciasComContas(ctx.tenantId, kind, empresaId ?? empresasDeTodas ?? undefined),
   ]);
 
   // Selo de cobrança só em a receber, e só na aba de contas — a análise não lista título.

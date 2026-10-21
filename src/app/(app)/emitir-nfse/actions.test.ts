@@ -9,6 +9,11 @@ import { competenciaDoInstante } from "@/lib/financeiro/periodo";
 let ctx: AuthContext;
 let ligado = true;
 let setor = "bpo";
+// Sem empresa em foco (21/10/2026): a trava do foco tem o teste dela (`focoServidor.test.ts`).
+vi.mock("@/lib/empresas/focoServidor", () => ({
+  recusaDoFoco: async () => null,
+  leituraNoFoco: async (_ctx: unknown, empresa: string) => ({ ok: true, empresaId: empresa, empresaIds: undefined }),
+}));
 vi.mock("@/lib/auth/context", () => ({ getAuthContext: async () => ctx }));
 vi.mock("@/lib/modules", () => {
   const mod = { isModuleEnabled: async () => ligado, setorDoModulo: async () => setor };

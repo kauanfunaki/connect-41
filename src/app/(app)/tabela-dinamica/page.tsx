@@ -57,7 +57,11 @@ export default async function TabelaDinamicaPage({ searchParams }: { searchParam
   const empresas = empresasDoEscritorio
     .map((e) => ({ id: e.id, nome: nomeExibicao(e), logoUrl: e.logoUrl, cnpj: e.cnpj, matrizId: e.parentCompanyId }))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  const { escolha } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true });
+  // Com uma empresa em foco (21/10/2026), só a base dela; "Todas" é a base.
+  const { escolha, noSeletor, foco, empresasDeTodas } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, {
+    permitirTodas: true,
+    comFoco: true,
+  });
   const empresaId = idDaEscolha(escolha);
   const empresaUrl = empresaNaUrl(escolha) ?? null;
   const manter = Object.fromEntries(paramsDaConfiguracao(config, { visao: params.visao }));
@@ -69,7 +73,7 @@ export default async function TabelaDinamicaPage({ searchParams }: { searchParam
     />
   );
   const filtroDaEmpresa = (
-    <FiltroDaEmpresa acao="/tabela-dinamica" empresas={empresas} valor={empresaUrl} todas="explicita" manter={manter} />
+    <FiltroDaEmpresa acao="/tabela-dinamica" empresas={noSeletor} valor={empresaUrl} todas="explicita" manter={manter} foco={foco} />
   );
 
   if (escolha.tipo === "escolher") {
@@ -80,13 +84,13 @@ export default async function TabelaDinamicaPage({ searchParams }: { searchParam
         <EscolhaAEmpresa
           escolha={escolha}
           porQue="A tabela abre numa empresa para não somar o escritório inteiro sem querer."
-          todasHref={hrefDaEmpresa("/tabela-dinamica", "", { todas: "explicita", manter })}
+          todasHref={foco ? undefined : hrefDaEmpresa("/tabela-dinamica", "", { todas: "explicita", manter })}
         />
       </PageContainer>
     );
   }
 
-  const { fatos, limitada } = await fatosDaBase(ctx.tenantId, empresaId, config, agora);
+  const { fatos, limitada } = await fatosDaBase(ctx.tenantId, empresaId ?? empresasDeTodas, config, agora);
   const tabela = montarTabela(fatos, config);
   const comEmpresa = (q: URLSearchParams) => {
     if (empresaUrl) q.set("empresa", empresaUrl);

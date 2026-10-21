@@ -89,7 +89,8 @@ export default async function DreEconomicaPage({
   // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
   // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
+  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
   // O modelo do DRE da empresa (21/10/2026) e, no padrão, as duas visões dos
   // impostos (20/10/2026): no EBITDA, o padrão; ou fora do resultado.
@@ -109,7 +110,8 @@ export default async function DreEconomicaPage({
           <>
             <FiltroDaEmpresa
               acao="/dre/economica"
-              empresas={empresas}
+              empresas={noSeletor}
+              foco={foco}
               valor={null}
               manter={{ mes: params.mes, visao: visao === "mes" ? undefined : visao }}
             />
@@ -233,7 +235,8 @@ export default async function DreEconomicaPage({
           o mês e a visão — o centro é da empresa anterior e fica para trás. */}
       <FiltroDaEmpresa
         acao="/dre/economica"
-        empresas={empresas}
+        empresas={noSeletor}
+        foco={foco}
         valor={companyId}
         manter={{ mes, visao: visao === "mes" ? undefined : visao, impostos: opcoes.impostosNoEbitda ? undefined : "fora" }}
       >
