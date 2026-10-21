@@ -10,7 +10,7 @@
 import { revalidatePath } from "next/cache";
 import { getAuthContext, type AuthContext } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
@@ -26,7 +26,7 @@ const SEM_PERMISSAO = "Só o administrador do setor emite e cancela NFS-e.";
 async function emissor(): Promise<{ ok: true; ctx: AuthContext; tenantId: string; userId: string } | { ok: false; erro: string }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { ok: false, erro: "Não autenticado." };
-  const [setor, ligado] = await Promise.all([setorDoModulo(ctx.tenantId, MODULO_EMITIR_NFSE), isModuleEnabled(ctx.tenantId, MODULO_EMITIR_NFSE)]);
+  const [setor, ligado] = await Promise.all([setoresDoModulo(ctx.tenantId, MODULO_EMITIR_NFSE), isModuleEnabled(ctx.tenantId, MODULO_EMITIR_NFSE)]);
   const acesso = acessoAEmissao(ctx, setor ?? getModuleDef(MODULO_EMITIR_NFSE)!.sectorCode, ligado);
   if (!acesso.emitir) return { ok: false, erro: ligado ? SEM_PERMISSAO : "O módulo Emitir NFS-e não está ligado." };
   return { ok: true, ctx, tenantId: ctx.tenantId, userId: ctx.userId };

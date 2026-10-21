@@ -43,7 +43,6 @@ import { lerEmpresaEmFoco, podeUsarOFoco } from "@/lib/empresas/focoServidor";
 import { situacaoAceitaNoFoco } from "@/lib/empresas/foco";
 import { gravarUltimaEmpresa } from "@/lib/empresas/ultimaEmpresa";
 import { acessoAoPortalDaEmpresa } from "@/lib/portal/acessoNaFicha";
-import { FALTA_ATUALIZAR_O_BANCO_DO_PORTAL } from "@/lib/portal/empresasDaContaDb";
 import { AcessoAoPortalDaEmpresa } from "@/components/portal/AcessoAoPortalDaEmpresa";
 import {
   criarAcessoDoPortal,
@@ -85,7 +84,6 @@ export default async function EmpresaPage({
     include: {
       services: { orderBy: { createdAt: "asc" } },
       people: { orderBy: { name: "asc" }, take: 10 },
-      clientGroup: { select: { id: true, name: true } },
       parent: { select: { id: true, name: true, displayName: true, cnpj: true } },
       filiais: {
         orderBy: { name: "asc" },
@@ -224,8 +222,6 @@ export default async function EmpresaPage({
               }}
               acessos={portal.acessos}
               outras={portal.outras}
-              pronto={portal.pronto}
-              avisoSemBanco={FALTA_ATUALIZAR_O_BANCO_DO_PORTAL}
               podeExcluir={podeExcluir(ctx)}
               criarAction={criarAcessoDoPortal}
               ligarAction={ligarEmpresaAoAcesso}

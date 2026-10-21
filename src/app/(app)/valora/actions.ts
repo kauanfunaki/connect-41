@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { MODULO_VALORA, configDoValora } from "@/lib/valora/servidor";
@@ -17,8 +17,8 @@ const STATUS = ["ABERTA", "GANHA", "PERDIDA"] as const;
 async function contexto(gerir: boolean) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  const setor = (await setorDoModulo(ctx.tenantId, MODULO_VALORA)) ?? getModuleDef(MODULO_VALORA)!.sectorCode;
-  const pode = gerir ? canManageSector(ctx, setor) : canActOnSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULO_VALORA)) ?? [getModuleDef(MODULO_VALORA)!.sectorCode];
+  const pode = gerir ? canManageSector(ctx, setores) : canActOnSector(ctx, setores);
   if (!pode) return { ok: false as const, erro: "Sem permissão." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULO_VALORA))) return { ok: false as const, erro: "Módulo não habilitado." };
   return { ok: true as const, ctx, tenantId: ctx.tenantId };

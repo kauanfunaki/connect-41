@@ -35,7 +35,7 @@ export default async function TelasDoSetorPage({ params }: { params: Promise<{ c
   // Solicitações e Arquivos são do Geral: escondidas no menu desta pessoa
   // (Configurações › Setores, 14/10/2026), também não se oferecem para fixar.
   const modulos = semTelasDoGeralOcultas(
-    allModules.filter((m) => m.sectorCode === code && m.enabled),
+    allModules.filter((m) => m.sectorCodes.includes(code) && m.enabled),
     telasDoGeral,
   );
 

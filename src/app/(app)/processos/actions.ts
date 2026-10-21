@@ -33,7 +33,7 @@ import {
 } from "@/lib/societario/arquivamento";
 import { salvarGuia, lerGuia } from "@/lib/societario/guias";
 import { sendTaxaAoClienteEmail } from "@/lib/email/sendMail";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -45,7 +45,7 @@ export type ProcessoState = { error: string } | null;
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { erro: "Não autenticado" as const, ctx: null };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { erro: "Sem permissão no Societário" as const, ctx: null };
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { erro: "Sem permissão no Societário" as const, ctx: null };
   return { erro: null, ctx };
 }
 
@@ -119,7 +119,7 @@ export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promi
 
   // Responsável só pode ser alguém do Societário (ou admin). Sem o campo no
   // formulário, fica com quem abriu — que é como era antes de o campo existir.
-  const responsaveis = await getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const responsaveis = await getSectorUsers(ctx.tenantId, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   const validos = new Set(responsaveis.map((r) => r.id));
   const informouResponsavel = form.has("ownerUserId");
   if (!informouResponsavel && ctx.userId) validos.add(ctx.userId);
@@ -846,7 +846,7 @@ export async function atualizarDadosDoProcesso(_prev: ProcessoState, form: FormD
   });
   if (!processo) return { error: "Processo não encontrado." };
 
-  const responsaveis = await getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const responsaveis = await getSectorUsers(ctx.tenantId, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   const validos = new Set(responsaveis.map((r) => r.id));
   if (processo.ownerUserId) validos.add(processo.ownerUserId);
 

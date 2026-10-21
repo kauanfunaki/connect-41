@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { getModuleDef } from "@/lib/module-catalog";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { saoPauloParts } from "@/lib/agenda";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
@@ -30,8 +30,8 @@ export async function exportarContas(req: NextRequest, kind: TipoDeConta, modulo
   const ctx = await getAuthContext();
   const naoAchou = NextResponse.json({ error: "Não encontrado" }, { status: 404 });
   if (!ctx.tenantId || !getModuleDef(modulo)) return naoAchou;
-  const setor = await setorDoModulo(ctx.tenantId, modulo);
-  if (!setor || !canActOnSector(ctx, setor)) return naoAchou;
+  const setores = await setoresDoModulo(ctx.tenantId, modulo);
+  if (!setores || !canActOnSector(ctx, setores)) return naoAchou;
   if (!(await isModuleEnabled(ctx.tenantId, modulo))) return naoAchou;
 
   const sp = req.nextUrl.searchParams;

@@ -24,7 +24,7 @@ export type AcessoAEmissao = { ver: boolean; emitir: boolean };
  */
 export function acessoAEmissao(
   ctx: Pick<AuthContext, "role" | "sectors" | "subscriptionReadOnly">,
-  setor: string,
+  setor: string | readonly string[],
   ligado: boolean
 ): AcessoAEmissao {
   if (!ligado) return { ver: false, emitir: false };

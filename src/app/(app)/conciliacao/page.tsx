@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Landmark, History } from "lucide-react";
+import { Landmark, History, Wand2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDateTime } from "@/lib/format";
@@ -25,23 +25,16 @@ import { dataCurta } from "@/components/financeiro/conciliacao/data";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { dataValida } from "@/lib/financeiro/periodo";
-import { decimalDeCentavos } from "@/lib/financeiro/manual";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import type { SituacaoDoSaldo } from "@/lib/financeiro/conciliacao/saldo";
 import { saldosDasContas } from "@/lib/financeiro/conciliacao/saldoDasContas";
-import {
-  rankearCandidatos,
-  sugestaoDaTransacao,
-  nivelDoCasamento,
-  type CandidatoPontuado,
-  tipoCompativel,
-  type LancamentoCandidato,
-  type Motivo,
-} from "@/lib/financeiro/conciliacao/casamento";
-import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
-import { saldoEmAberto } from "@/lib/financeiro/baixa/regras";
+import { rankearCandidatos, sugestaoDaTransacao, nivelDoCasamento, type CandidatoPontuado, type Motivo } from "@/lib/financeiro/conciliacao/casamento";
+import { candidatosDaEmpresa } from "@/lib/financeiro/conciliacao/candidatos";
+import { decisaoDaLinha, descricaoDaAcao, EXPLICACAO_DO_SO_SUGERE } from "@/lib/financeiro/conciliacao/regras";
+import { regrasDaEmpresa, regrasDesfeitas } from "@/lib/financeiro/conciliacao/regrasServidor";
+import { empresaLidaDoOmie } from "@/lib/integracoes/omie/viradaServidor";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
-import { TIPOS_COM_EXTRATO, TIPOS_COM_PORTA_PROPRIA, ajudaDoTipo, ehContaForaDoCaixa, rotuloDoTipo, temExtrato, type TipoDeConta } from "@/lib/financeiro/tiposDeConta";
+import { TIPOS_COM_PORTA_PROPRIA, ajudaDoTipo, ehContaForaDoCaixa, rotuloDoTipo, temExtrato, type TipoDeConta } from "@/lib/financeiro/tiposDeConta";
 import { BANCO_SEM_EXTRATO } from "@/lib/financeiro/conciliacao/conta";
 import { nomeDaContaBancaria } from "@/lib/financeiro/contaPrevista";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
@@ -87,10 +80,10 @@ export default async function ConciliacaoPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  const setor = ctx.tenantId ? ((await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR) : SECTOR;
-  if (!ctx.tenantId || !canViewSector(ctx, setor)) notFound();
+  const setores = ctx.tenantId ? ((await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR]) : [SECTOR];
+  if (!ctx.tenantId || !canViewSector(ctx, setores)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
+  const podeAgir = canActOnSector(ctx, setores);
   const tenantId = ctx.tenantId;
 
   const params = await searchParams;
@@ -244,6 +237,8 @@ export default async function ConciliacaoPage({
           // As outras contas ativas da empresa — o destino (ou a origem) de uma
           // transferência: banco, caixinha, empréstimo, administradora (lote D, 20/10).
           outrasContas={contas.filter((c) => c.active && c.id !== conta.id).map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) }))}
+          // As contas com extrato — a condição "na conta" da regra de conciliação (21/10).
+          contasDaRegra={comExtrato.filter((c) => c.active).map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) }))}
           podeAgir={podeAgir}
           params={params}
         />
@@ -356,6 +351,7 @@ async function ExtratoDaConta({
   companyId,
   conta,
   outrasContas,
+  contasDaRegra,
   podeAgir,
   params,
 }: {
@@ -363,6 +359,7 @@ async function ExtratoDaConta({
   companyId: string;
   conta: { id: string; nickname: string; active: boolean };
   outrasContas: { id: string; nome: string }[];
+  contasDaRegra: { id: string; nome: string }[];
   podeAgir: boolean;
   params: Record<string, string | undefined>;
 }) {
@@ -423,6 +420,10 @@ async function ExtratoDaConta({
                 paidAt: true,
                 description: true,
                 transferId: true,
+                counterpartyId: true,
+                categoryId: true,
+                costCenterId: true,
+                projectId: true,
                 counterparty: { select: { name: true } },
               },
             },
@@ -441,6 +442,23 @@ async function ExtratoDaConta({
 
   // Candidatos de valor exato para as pendentes da tela, numa consulta só.
   const candidatos = pendentes.length && podeAgir ? await candidatosDaEmpresa(tenantId, companyId, pendentes) : [];
+  // As regras de conciliação (21/10): a sugestão nas pendentes e, nas
+  // conciliadas por uma regra, quem lançou — o desfazer delas é o da regra.
+  const conciliadas = visiveis.filter((t) => t.status === "CONCILIADA").map((t) => t.id);
+  const [regras, lidaDoOmie, desfeitas, aplicacoes] = podeAgir
+    ? await Promise.all([
+        regrasDaEmpresa(prisma, tenantId, companyId, { soAtivas: true }),
+        empresaLidaDoOmie(tenantId, companyId),
+        regrasDesfeitas(prisma, tenantId, pendentes.map((t) => t.id)),
+        conciliadas.length
+          ? prisma.bankRuleApplication.findMany({
+              where: { tenantId, transactionId: { in: conciliadas }, undoneAt: null },
+              select: { id: true, transactionId: true, financeEntryId: true, ruleName: true, automatic: true },
+            })
+          : [],
+      ])
+    : [[], false, new Map<string, Set<string>>(), []];
+  const aplicacaoDaLinha = new Map(aplicacoes.map((a) => [a.transactionId, a]));
   const descricoes = new Map(candidatos.map((c) => [c.id, c.descricao]));
 
   // O candidato como a linha o mostra — o da sugestão forte e o "mais
@@ -464,6 +482,7 @@ async function ExtratoDaConta({
     let nivel: LinhaDaTransacao["nivel"] = null;
     let candidatosDeMesmoValor = 0;
     let travadosDeMesmoValor = 0;
+    let regra: LinhaDaTransacao["regra"] = null;
     if (t.status === "PENDENTE") {
       const ranking = rankearCandidatos({ centavos, dataKey, memo: t.memo, nome: t.payeeName }, candidatos);
       candidatosDeMesmoValor = ranking.length;
@@ -473,7 +492,38 @@ async function ExtratoDaConta({
       const casamento = nivelDoCasamento(ranking);
       nivel = casamento.nivel;
       if (!forte && casamento.destaque) provavel = resumoDoCandidato(casamento.destaque);
+      // Com sugestão forte, a linha é de um lançamento que já existe: a regra
+      // criaria outro — fica de fora.
+      const decisao = forte
+        ? null
+        : decisaoDaLinha(regras, { centavos, memo: t.memo, nome: t.payeeName, bankAccountId: conta.id }, {
+            lidaDoOmie,
+            candidatosDeMesmoValor,
+            desfeitas: desfeitas.get(t.id),
+          });
+      if (decisao && decisao.tipo !== "nenhuma") {
+        regra = {
+          id: decisao.regra.id,
+          nome: decisao.regra.nome,
+          acao: descricaoDaAcao(decisao.regra),
+          aviso: decisao.tipo === "sugerir" && decisao.porQue ? EXPLICACAO_DO_SO_SUGERE[decisao.porQue] : null,
+        };
+      }
     }
+    const aplicada = aplicacaoDaLinha.get(t.id);
+    const [unico] = t.matches;
+    // "Sempre que vier assim…": a linha conciliada com um lançamento só, que não
+    // é transferência, não veio do Omie e não foi a regra que lançou.
+    const paraRegra =
+      t.status === "CONCILIADA" && t.matches.length === 1 && unico && !unico.financeEntry.transferId && !t.reconciledViaOmie && !aplicada
+        ? {
+            counterpartyId: unico.financeEntry.counterpartyId,
+            categoryId: unico.financeEntry.categoryId,
+            costCenterId: unico.financeEntry.costCenterId,
+            projectId: unico.financeEntry.projectId,
+            contraparteNome: unico.financeEntry.counterparty.name,
+          }
+        : null;
     return {
       id: t.id,
       dataKey,
@@ -488,6 +538,9 @@ async function ExtratoDaConta({
       nivel,
       candidatosDeMesmoValor,
       travadosDeMesmoValor,
+      regra,
+      regraAplicada: aplicada ? { applicationId: aplicada.id, nome: aplicada.ruleName, automatica: aplicada.automatic } : null,
+      paraRegra,
       transferencia: t.matches.some((m) => m.financeEntry.transferId !== null),
       vinculados: t.matches.map((m) => ({
         id: m.financeEntry.id,
@@ -500,8 +553,9 @@ async function ExtratoDaConta({
     };
   });
 
+  // Também com só conciliadas: o "criar regra" a partir da linha usa os cadastros.
   const [contrapartes, categorias, centros, projetos] =
-    podeAgir && pendentes.length > 0
+    podeAgir && linhas.length > 0
       ? await Promise.all([
           prisma.financeCounterparty.findMany({
             where: { tenantId, companyId, active: true },
@@ -528,7 +582,12 @@ async function ExtratoDaConta({
 
   return (
     <>
-      <h2 className="text-section font-semibold text-fg mb-3">Extrato — {conta.nickname}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 className="text-section font-semibold text-fg">Extrato — {conta.nickname}</h2>
+        <Button href={`/conciliacao/regras?empresa=${companyId}`} variant="secondary" size="sm">
+          <Wand2 size={14} /> Regras de conciliação{regras.length > 0 ? ` (${regras.length})` : ""}
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-5">
         {podeAgir && conta.active ? (
@@ -633,7 +692,10 @@ async function ExtratoDaConta({
               centros={centros.map((c) => ({ id: c.id, nome: c.name }))}
               projetos={projetos.map((p) => ({ id: p.id, nome: p.name }))}
               companyId={companyId}
+              bankAccountId={conta.id}
               outrasContas={outrasContas}
+              contasDaRegra={contasDaRegra}
+              lidaDoOmie={lidaDoOmie}
             />
             {limitado && (
               <p className="text-micro text-fg-muted mt-2">
@@ -647,103 +709,9 @@ async function ExtratoDaConta({
         A sugestão aparece só quando um lançamento de mesmo valor se destaca pela data e pelo nome — nada é conciliado
         sem confirmação. Conciliar marca os lançamentos como pagos na data do extrato; desfazer devolve o estado anterior.
         Em conta ligada ao Omie, a linha que bate no valor e no dia com uma única baixa já conciliada lá sai da fila
-        sozinha, como “Conciliada no Omie”.
+        sozinha, como “Conciliada no Omie”. As regras de conciliação da empresa aparecem na linha que pegam; a que está em
+        “lançar sozinha” lança na importação do extrato quando não há dúvida.
       </NotaDeFonte>
     </>
   );
-}
-
-/**
- * Lançamentos da empresa que podem casar com as pendentes da tela: tipo
- * compatível, não cancelados, sem vínculo e de valor igual ao de alguma delas.
- */
-async function candidatosDaEmpresa(
-  tenantId: string,
-  companyId: string,
-  pendentes: { amount: { toString(): string } }[]
-): Promise<(LancamentoCandidato & { descricao: string | null })[]> {
-  const valores = [...new Set(pendentes.map((p) => centavosDeDecimal(p.amount)))];
-  const tipos = [...new Set(valores.map(tipoCompativel).filter((k): k is "PAGAR" | "RECEBER" => k !== null))];
-  const absolutos = [...new Set(valores.map((v) => Math.abs(v)).filter((v) => v > 0))];
-  if (absolutos.length === 0) return [];
-
-  const prisma = getPrisma();
-  const valoresExatos = absolutos.map(decimalDeCentavos);
-  // Duas fontes (lote C, 19/10): a conta em aberto, pelo saldo — conciliar
-  // quita —, e a baixa já feita sem extrato, pelo total que andou. A conta com
-  // baixa parcial entra pelo saldo, que pode não ser o valor dela: por isso o
-  // `paidPrincipal > 0`, e o saldo é conferido aqui embaixo.
-  const [contas, baixas] = await Promise.all([
-    prisma.financeEntry.findMany({
-      where: {
-        tenantId,
-        companyId,
-        kind: { in: tipos },
-        paidAt: null,
-        status: { notIn: ["CANCELADO", "PAGO"] },
-        OR: [{ amount: { in: valoresExatos } }, { paidPrincipal: { gt: 0 } }],
-      },
-      select: {
-        id: true,
-        kind: true,
-        status: true,
-        amount: true,
-        paidPrincipal: true,
-        dueDate: true,
-        description: true,
-        approvalStatus: true,
-        counterparty: { select: { name: true, document: true } },
-      },
-      take: 2_000,
-    }),
-    prisma.financeEntryPayment.findMany({
-      where: {
-        tenantId,
-        companyId,
-        bankMatch: { is: null },
-        cash: { in: valoresExatos },
-        entry: { kind: { in: tipos }, status: { not: "CANCELADO" } },
-        // A baixa por conta sem extrato (caixinha, adiantamento, cartão, empréstimo…) não passou pelo banco: não casa com o extrato.
-        OR: [{ bankAccountId: null }, { bankAccount: { type: { in: [...TIPOS_COM_EXTRATO] } } }],
-      },
-      select: {
-        id: true,
-        cash: true,
-        paidAt: true,
-        entry: { select: { kind: true, status: true, dueDate: true, description: true, counterparty: { select: { name: true, document: true } } } },
-      },
-      take: 2_000,
-    }),
-  ]);
-  return [
-    ...contas.map((l) => ({
-      id: l.id,
-      descricao: l.description,
-      kind: l.kind,
-      status: l.status,
-      centavos: saldoEmAberto(centavosDeDecimal(l.amount), centavosDeDecimal(l.paidPrincipal)),
-      vencimentoKey: saoPauloParts(l.dueDate).dateKey,
-      pagoEmKey: null,
-      contraparteNome: l.counterparty.name,
-      contraparteDocumento: l.counterparty.document,
-      conciliado: false,
-      // A mesma frase que a action devolve ao confirmar — só que antes do clique.
-      bloqueioDeBaixa: motivoDoBloqueioDeBaixa(l),
-    })),
-    ...baixas.map((b) => ({
-      // O prefixo diz à action que é uma baixa, e não a conta (`PREFIXO_DA_BAIXA`).
-      id: `baixa:${b.id}`,
-      descricao: b.entry.description,
-      kind: b.entry.kind,
-      status: b.entry.status,
-      centavos: centavosDeDecimal(b.cash),
-      vencimentoKey: saoPauloParts(b.entry.dueDate).dateKey,
-      // Baixa já registrada: a data dela é o sinal mais forte para o extrato.
-      pagoEmKey: saoPauloParts(b.paidAt).dateKey,
-      contraparteNome: b.entry.counterparty.name,
-      contraparteDocumento: b.entry.counterparty.document,
-      conciliado: false,
-      bloqueioDeBaixa: null,
-    })),
-  ];
 }

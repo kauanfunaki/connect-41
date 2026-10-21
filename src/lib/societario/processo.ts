@@ -252,8 +252,9 @@ export type Prazo = {
  * Dias úteis entre duas datas, sem contar o dia de início.
  *
  * Começar hoje e olhar hoje dá zero — o processo não consumiu prazo ainda. A
- * contagem pula sábado, domingo e os feriados que o tenant cadastrou em
- * `/admin/feriados`, que é a razão de os feriados entrarem como parâmetro: a
+ * contagem pula sábado, domingo e os feriados do tenant — os nacionais,
+ * calculados, e os que ele cadastrou em `/admin/feriados` (`feriadosDoTenant`)
+ * —, que é a razão de os feriados entrarem como parâmetro: a
  * função continua pura e testável, e quem chama carrega o cadastro daquele
  * escritório. **Feriado é por tenant de propósito** — municipal de Londrina não
  * vale para um cliente de outra cidade.

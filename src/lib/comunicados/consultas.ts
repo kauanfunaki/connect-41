@@ -4,12 +4,11 @@
 //
 // Desde 14/10/2026 o comunicado vai para empresas (`ClientAnnouncementCompany`),
 // e não mais para Clientes; os antigos foram copiados para as empresas dos
-// clientes que os receberam (migration 20261014210000). Sem a tabela nova
-// (código antes da migration), a leitura cai nos Clientes — a regra de antes.
+// clientes que os receberam (migration 20261014210000). A volta para os
+// Clientes, sem a tabela nova, saiu em 21/10/2026 com o Cliente (etapa 3).
 
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import { nomeExibicao } from "@/lib/companyName";
 import { STATUS_OCULTOS_POR_PADRAO } from "@/lib/companyStatusFilter";
 import { lerContasDasEmpresas } from "@/lib/portal/empresasDaContaDb";
@@ -38,38 +37,26 @@ type Destinatario = { id: string; nome: string; contas: Set<string> };
 
 /**
  * Os destinatários de cada comunicado, com as contas do portal que enxergam
- * cada um hoje. Sem a tabela nova, os clientes e as contas deles.
+ * cada um hoje.
  */
 async function destinatariosDosComunicados(tenantId: string, ids: string[]): Promise<Map<string, Destinatario[]>> {
   const saida = new Map<string, Destinatario[]>(ids.map((id) => [id, []]));
   if (ids.length === 0) return saida;
   const prisma = getPrisma();
-  try {
-    const linhas = await prisma.clientAnnouncementCompany.findMany({
-      where: { announcementId: { in: ids } },
-      select: { announcementId: true, company: { select: { id: true, name: true, displayName: true, tenantId: true } } },
+  const linhas = await prisma.clientAnnouncementCompany.findMany({
+    where: { announcementId: { in: ids } },
+    select: { announcementId: true, company: { select: { id: true, name: true, displayName: true, tenantId: true } } },
+  });
+  const doEscritorio = linhas.filter((l) => l.company.tenantId === tenantId);
+  const contas = await lerContasDasEmpresas(tenantId, [...new Set(doEscritorio.map((l) => l.company.id))]);
+  for (const l of doEscritorio) {
+    saida.get(l.announcementId)?.push({
+      id: l.company.id,
+      nome: nomeExibicao(l.company),
+      contas: new Set(contas.get(l.company.id)?.keys() ?? []),
     });
-    const doEscritorio = linhas.filter((l) => l.company.tenantId === tenantId);
-    const contas = await lerContasDasEmpresas(tenantId, [...new Set(doEscritorio.map((l) => l.company.id))]);
-    for (const l of doEscritorio) {
-      saida.get(l.announcementId)?.push({
-        id: l.company.id,
-        nome: nomeExibicao(l.company),
-        contas: new Set(contas.get(l.company.id)?.keys() ?? []),
-      });
-    }
-    return saida;
-  } catch (err) {
-    if (!isPrismaMissingTableError(err)) throw err;
-    const linhas = await prisma.clientAnnouncementGroup.findMany({
-      where: { announcementId: { in: ids } },
-      select: { announcementId: true, clientGroup: { select: { id: true, name: true, portalUsers: { select: { id: true } } } } },
-    });
-    for (const l of linhas) {
-      saida.get(l.announcementId)?.push({ id: l.clientGroup.id, nome: l.clientGroup.name, contas: new Set(l.clientGroup.portalUsers.map((u) => u.id)) });
-    }
-    return saida;
   }
+  return saida;
 }
 
 export type LinhaDoComunicado = {
@@ -186,21 +173,6 @@ export function paraAsEmpresas(companyIds: string[]): Prisma.ClientAnnouncementW
   return { companies: { some: { companyId: { in: companyIds } } } };
 }
 
-/** O mesmo, pela regra de antes (sem a tabela nova): o comunicado foi para o cliente de alguma das empresas. */
-export function paraOsClientesDasEmpresas(companyIds: string[]): Prisma.ClientAnnouncementWhereInput {
-  return { groups: { some: { clientGroup: { companies: { some: { id: { in: companyIds } } } } } } };
-}
-
-/** Roda a consulta com o filtro novo; sem a tabela nova, com o de antes. */
-async function comFolga<T>(companyIds: string[], consulta: (filtro: Prisma.ClientAnnouncementWhereInput) => Promise<T>): Promise<T> {
-  try {
-    return await consulta(paraAsEmpresas(companyIds));
-  } catch (err) {
-    if (!isPrismaMissingTableError(err)) throw err;
-    return consulta(paraOsClientesDasEmpresas(companyIds));
-  }
-}
-
 export type ComunicadoDoCliente = {
   id: string;
   titulo: string;
@@ -212,42 +184,36 @@ export type ComunicadoDoCliente = {
 /** Os comunicados das empresas do cliente, o mais novo primeiro, com o "lido" deste usuário. */
 export async function comunicadosDoCliente(tenantId: string, companyIds: string[], portalUserId: string): Promise<ComunicadoDoCliente[]> {
   if (companyIds.length === 0) return [];
-  const lista = await comFolga(companyIds, (filtro) =>
-    getPrisma().clientAnnouncement.findMany({
-      where: { tenantId, ...filtro },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-      select: { id: true, title: true, sectorCode: true, createdAt: true, reads: { where: { portalUserId }, select: { id: true } } },
-    })
-  );
+  const lista = await getPrisma().clientAnnouncement.findMany({
+    where: { tenantId, ...paraAsEmpresas(companyIds) },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    select: { id: true, title: true, sectorCode: true, createdAt: true, reads: { where: { portalUserId }, select: { id: true } } },
+  });
   return lista.map((c) => ({ id: c.id, titulo: c.title, setor: c.sectorCode, enviadoEm: c.createdAt, lido: c.reads.length > 0 }));
 }
 
 /** Quantos o usuário ainda não abriu — o aviso da home do portal. */
 export async function comunicadosNaoLidos(tenantId: string, companyIds: string[], portalUserId: string): Promise<number> {
   if (companyIds.length === 0) return 0;
-  return comFolga(companyIds, (filtro) =>
-    getPrisma().clientAnnouncement.count({ where: { tenantId, ...filtro, reads: { none: { portalUserId } } } })
-  );
+  return getPrisma().clientAnnouncement.count({ where: { tenantId, ...paraAsEmpresas(companyIds), reads: { none: { portalUserId } } } });
 }
 
 /** Um comunicado das empresas do cliente — e registra a leitura, na primeira vez. */
 export async function abrirComunicadoDoCliente(tenantId: string, companyIds: string[], portalUserId: string, id: string) {
   if (companyIds.length === 0) return null;
   const prisma = getPrisma();
-  const c = await comFolga(companyIds, (filtro) =>
-    prisma.clientAnnouncement.findFirst({
-      where: { id, tenantId, ...filtro },
-      select: {
-        id: true,
-        title: true,
-        body: true,
-        sectorCode: true,
-        createdAt: true,
-        attachments: { select: { id: true, fileName: true, sizeBytes: true }, orderBy: { createdAt: "asc" } },
-      },
-    })
-  );
+  const c = await prisma.clientAnnouncement.findFirst({
+    where: { id, tenantId, ...paraAsEmpresas(companyIds) },
+    select: {
+      id: true,
+      title: true,
+      body: true,
+      sectorCode: true,
+      createdAt: true,
+      attachments: { select: { id: true, fileName: true, sizeBytes: true }, orderBy: { createdAt: "asc" } },
+    },
+  });
   if (!c) return null;
   // `upsert` com update vazio: a primeira leitura é a que vale, e abrir de novo
   // não muda o "leu em".
@@ -262,10 +228,8 @@ export async function abrirComunicadoDoCliente(tenantId: string, companyIds: str
 /** O anexo de um comunicado das empresas do cliente — e só se for. */
 export async function anexoDoComunicadoDoCliente(tenantId: string, companyIds: string[], anexoId: string) {
   if (companyIds.length === 0) return null;
-  return comFolga(companyIds, (filtro) =>
-    getPrisma().clientAnnouncementAttachment.findFirst({
-      where: { id: anexoId, announcement: { tenantId, ...filtro } },
-      select: { fileName: true, fileUrl: true, mimeType: true },
-    })
-  );
+  return getPrisma().clientAnnouncementAttachment.findFirst({
+    where: { id: anexoId, announcement: { tenantId, ...paraAsEmpresas(companyIds) } },
+    select: { fileName: true, fileUrl: true, mimeType: true },
+  });
 }

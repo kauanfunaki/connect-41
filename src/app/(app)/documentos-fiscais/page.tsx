@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { listarDocumentos, competenciasDisponiveis, resumoPorDestino } from "@/lib/fiscal/data";
 import { AcervoTable, PaginacaoDoAcervo } from "@/components/fiscal/AcervoTable";
 import { BuscaDoAcervo, FiltrosDoAcervo } from "@/components/fiscal/AcervoFiltros";
@@ -36,7 +36,7 @@ export default async function DocumentosFiscaisPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   // Gate de módulo além do gate de setor: o módulo é vendido por plano, e quem
   // é do fiscal num tenant que não contratou não deve ver a tela.
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();

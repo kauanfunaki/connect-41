@@ -17,7 +17,15 @@ vi.mock("@/lib/empresas/focoServidor", () => ({
 }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => m.db }));
 vi.mock("@/lib/auth/context", async () => ({ ...(await import("@/lib/auth/papeis")), getAuthContext: async () => m.ctx }));
-vi.mock("@/lib/modules", () => ({ setorDoModulo: async () => null, isModuleEnabled: m.ligado }));
+vi.mock("@/lib/modules", () => {
+  const mod = { setorDoModulo: async () => null, isModuleEnabled: m.ligado };
+  // Os setores da tela (21/10/2026): aqui, só o dono, como antes.
+  const setoresDoModulo = async (t: string, c: string) => {
+    const s = await (mod.setorDoModulo as (t: string, c: string) => Promise<string | null>)(t, c);
+    return s == null ? null : [s];
+  };
+  return { ...mod, setoresDoModulo };
+});
 vi.mock("@/lib/ai", () => ({ gerarEstruturado: m.gerar }));
 
 import { lerBoletoParaLancar } from "./leituraDoBoletoServidor";
