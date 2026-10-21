@@ -103,8 +103,9 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
         <h3 className="text-label font-semibold text-fg">Cores dos grupos</h3>
         <Switch name="coresPorGrupo" checked={porGrupo} onCheckedChange={setPorGrupo} rotulo="Uma cor para cada grupo de telas" />
         <p className="text-helper text-fg-muted">
-          Como no Omie: aparece no ícone do menu, no traço do título e no cartão do número de cada tela. Desligado, tudo fica na cor
-          principal.
+          Como no Omie, no portal e no Connect da equipe: aparece no traço do título, na barra do item aberto e no cartão do número de
+          cada tela (no portal, também no ícone do menu). Desligado, tudo fica na cor principal. A cor de cada setor continua só na
+          bolinha dele, no menu e na troca de setor.
         </p>
         {porGrupo && (
           <ul className="divide-y divide-border rounded-md border border-border">
@@ -162,7 +163,8 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
           rotulo="Usar a cor principal também no Connect da equipe"
         />
         <p className="text-helper text-fg-muted">
-          Desligado, a equipe segue no azul do Connect. Os setores continuam com as cores deles.
+          Desligado, a equipe segue no azul do Connect nos botões e no item aberto do menu. As cores dos grupos valem para a equipe de
+          qualquer jeito.
         </p>
       </div>
 

@@ -64,8 +64,8 @@ export default async function TenantPage() {
           link da Administração › Portal do cliente. */}
       <SecaoDeConfiguracao
         id="aparencia-do-portal"
-        titulo="Aparência do portal"
-        descricao="A cor e o logo que os clientes do escritório veem no portal, e uma cor para cada grupo de telas. A prévia mostra os dois temas antes de salvar."
+        titulo="Aparência"
+        descricao="A cor e o logo que os clientes do escritório veem no portal, e uma cor para cada grupo de telas — no portal e no Connect da equipe. A prévia mostra os dois temas antes de salvar."
         icone={<Palette />}
       >
         {leituraDaAparencia.situacao === "sem-tabela" && <Aviso tom="atencao">{FALTA_ATUALIZAR_O_BANCO_DA_APARENCIA}</Aviso>}
