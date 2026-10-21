@@ -255,6 +255,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "portal.user.company.filiais": e("mudou o “incluir filiais” do acesso ao portal de"),
   "portal.tela.liberada": e("liberou no portal a tela", { chaveDoNome: "tela" }),
   "portal.tela.bloqueada": e("bloqueou no portal a tela", { chaveDoNome: "tela" }),
+  // A Ceci no portal, ligada por empresa (21/10/2026).
+  "portal.ceci.ligada": e("ligou a Ceci no portal para a empresa", { chaveDoNome: "empresa" }),
+  "portal.ceci.desligada": e("desligou a Ceci no portal para a empresa", { chaveDoNome: "empresa" }),
 
   // ── Conversas, transferências e agenda ─────────────────────────────────────
   "chatwoot.contact.linked": e("vinculou um contato do Chatwoot a um cadastro"),

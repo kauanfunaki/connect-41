@@ -22,10 +22,16 @@ import {
   excluirAcessoDoPortal,
 } from "./actions";
 import { definirTelaDoPortal } from "./telas-actions";
+import { definirCeciDaEmpresa } from "./ceci-actions";
+import { CeciDoPortalAdmin } from "@/components/portal/CeciDoPortalAdmin";
+import { FALTA_ATUALIZAR_O_BANCO_DA_CECI, LIMITE_DE_PERGUNTAS_DO_PORTAL_POR_DIA, empresasDoPortalParaACeci, situacaoDaCeci } from "@/lib/portal/ceci";
+import { formatarReaisDeCentavos } from "@/lib/format";
+import Link from "next/link";
 
 const ABAS = [
   { chave: "acessos", rotulo: "Acessos", href: "/admin/portal" },
   { chave: "telas", rotulo: "Telas liberadas", href: "/admin/portal?aba=telas" },
+  { chave: "ceci", rotulo: "Ceci", href: "/admin/portal?aba=ceci" },
 ];
 
 // O portal do cliente, do lado do escritório. Tela de administração do tenant,
@@ -45,6 +51,7 @@ export default async function AdminPortalPage({ searchParams }: { searchParams: 
 
   const { aba } = await searchParams;
   if (aba === "telas") return <AbaDasTelas tenantId={ctx.tenantId} somenteLeitura={ctx.subscriptionReadOnly} />;
+  if (aba === "ceci") return <AbaDaCeci tenantId={ctx.tenantId} somenteLeitura={ctx.subscriptionReadOnly} />;
 
   const prisma = getPrisma();
   const [acessos, empresas, pronto] = await Promise.all([
@@ -150,6 +157,66 @@ async function AbaDasTelas({ tenantId, somenteLeitura }: { tenantId: string; som
         definirAction={definirTelaDoPortal}
         somenteLeitura={leitura.situacao !== "ok" || somenteLeitura}
       />
+    </PageContainer>
+  );
+}
+
+/**
+ * A Ceci no portal (21/10/2026): o piloto da IA para os clientes, ligado
+ * empresa a empresa. O agente, a chave e o teto do mês são da tela de
+ * Inteligência artificial; aqui ficam as empresas, e o resumo do agente para
+ * quem liga uma empresa saber se a Ceci vai mesmo aparecer.
+ */
+async function AbaDaCeci({ tenantId, somenteLeitura }: { tenantId: string; somenteLeitura: boolean }) {
+  const [empresas, situacao] = await Promise.all([empresasDoPortalParaACeci(tenantId), situacaoDaCeci(tenantId, new Date())]);
+  const ligadas = empresas?.filter((e) => e.ligada).length ?? 0;
+  const pronta = situacao.ligado && situacao.temChave;
+
+  return (
+    <PageContainer>
+      <PageHeader
+        title="Portal do cliente"
+        subtitle="A Ceci no portal responde ao cliente sobre as empresas dele: pendências, contas, processos, notas e solicitações."
+      />
+      <AbasDeLink abas={ABAS} ativa="ceci" />
+
+      <div className="mb-5 max-w-3xl space-y-2 text-fs-2 text-fg-secondary leading-relaxed">
+        <p>
+          Ela só consulta o que o portal já mostra ao cliente, e só das empresas ligadas aqui que estão no acesso dele. Não
+          faz nada sozinha: quando o cliente precisa da equipe, ela prepara uma solicitação, que ele mesmo revisa e envia.
+        </p>
+        <p>
+          Ligada na matriz, vale também para as filiais que o acesso vê por ela. Cada cliente faz até{" "}
+          {LIMITE_DE_PERGUNTAS_DO_PORTAL_POR_DIA} perguntas por dia.
+        </p>
+        <p className="font-medium text-fg tabular-nums">
+          {ligadas} {ligadas === 1 ? "empresa ligada" : "empresas ligadas"} · {formatarReaisDeCentavos(situacao.gastoCentavos)} de{" "}
+          {formatarReaisDeCentavos(situacao.tetoCentavos)} no mês · {situacao.chamadas} de {situacao.tetoChamadas} perguntas
+        </p>
+      </div>
+
+      {!pronta && (
+        <Aviso tom="atencao" className="mb-4 max-w-3xl">
+          {!situacao.temChave
+            ? "O escritório ainda não tem chave de IA: sem ela, a Ceci não aparece no portal."
+            : "O agente “Ceci · Portal do cliente” está desligado: com ele desligado, a Ceci não aparece no portal, mesmo nas empresas ligadas."}{" "}
+          <Link href="/admin/ia" className="font-medium underline">
+            Abrir Inteligência artificial
+          </Link>
+        </Aviso>
+      )}
+      {empresas === null && (
+        <Aviso tom="atencao" className="mb-4 max-w-3xl">
+          {FALTA_ATUALIZAR_O_BANCO_DA_CECI}
+        </Aviso>
+      )}
+      {somenteLeitura && (
+        <Aviso tom="atencao" className="mb-4 max-w-3xl">
+          A assinatura está em somente leitura: dá para ver, mas não para mudar.
+        </Aviso>
+      )}
+
+      <CeciDoPortalAdmin empresas={empresas ?? []} definirAction={definirCeciDaEmpresa} somenteLeitura={empresas === null || somenteLeitura} />
     </PageContainer>
   );
 }
