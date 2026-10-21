@@ -11,7 +11,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
@@ -33,6 +33,7 @@ import {
 } from "@/lib/dre/orcamento/grade";
 import { planoDeAprovacao, podeEditarVersao, podeReabrir, validarNomeDaVersao, lerAno } from "@/lib/dre/orcamento/versoes";
 import { MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 const MODULE = MODULO_DE_ORCAMENTO;
 
@@ -44,15 +45,15 @@ class Recusa extends Error {}
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode;
-  if (!canActOnSector(ctx, setor)) return { ok: false as const, erro: "Sem permissão no orçamento." };
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [getModuleDef(MODULE)!.sectorCode];
+  if (!canActOnSector(ctx, setores)) return { ok: false as const, erro: "Sem permissão no orçamento." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo de orçamento não habilitado." };
   return {
     ok: true as const,
     ctx,
     tenantId: ctx.tenantId,
     userId: ctx.userId || null,
-    coordena: canManageSector(ctx, setor),
+    coordena: canManageSector(ctx, setores),
     prisma: getPrisma(),
   };
 }
@@ -87,6 +88,9 @@ export async function criarVersao(formData: FormData): Promise<ResultadoDoOrcame
   const companyId = texto(formData, "companyId");
   const empresa = await c.prisma.company.findFirst({ where: { id: companyId, tenantId: c.tenantId }, select: { id: true } });
   if (!empresa) return { error: "Empresa não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [empresa.id]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const ano = lerAno(texto(formData, "ano"));
   if (!ano) return { error: "Ano inválido." };
@@ -183,6 +187,9 @@ export async function salvarGrade(formData: FormData): Promise<ResultadoDoOrcame
     select: { id: true, status: true, companyId: true, year: true, name: true },
   });
   if (!versao) return { error: "Versão não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [versao.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const editavel = podeEditarVersao(versao.status);
   if (!editavel.pode) return { error: editavel.motivo };
 
@@ -242,6 +249,9 @@ export async function aprovarVersao(budgetId: string): Promise<ResultadoDoOrcame
     select: { id: true, companyId: true, year: true, name: true },
   });
   if (!versao) return { error: "Versão não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [versao.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   let rebaixadas: string[];
   try {
@@ -291,6 +301,9 @@ export async function reabrirVersao(budgetId: string): Promise<ResultadoDoOrcame
     select: { id: true, status: true, companyId: true, year: true, name: true },
   });
   if (!versao) return { error: "Versão não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [versao.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const veredito = podeReabrir(versao.status);
   if (!veredito.pode) return { error: veredito.motivo };
 

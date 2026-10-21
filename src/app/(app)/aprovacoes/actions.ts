@@ -10,7 +10,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
@@ -20,6 +20,7 @@ import { decimalDeCentavos } from "@/lib/financeiro/manual";
 import { moeda } from "@/lib/financeiro/formato";
 import { podeDecidir, podeEnviarParaAprovacao, validarMotivo, lerTeto, type Decisao } from "@/lib/financeiro/aprovacao/regras";
 import { avisarAprovadores, avisarCriador, MODULO_DE_APROVACOES } from "@/lib/financeiro/aprovacao/servidor";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 const MODULE = MODULO_DE_APROVACOES;
 
@@ -30,15 +31,15 @@ class Recusa extends Error {}
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode;
-  if (!canActOnSector(ctx, setor)) return { ok: false as const, erro: "Sem permissão nas aprovações." };
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [getModuleDef(MODULE)!.sectorCode];
+  if (!canActOnSector(ctx, setores)) return { ok: false as const, erro: "Sem permissão nas aprovações." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo de aprovações não habilitado." };
   return {
     ok: true as const,
     ctx,
     tenantId: ctx.tenantId,
     userId: ctx.userId || null,
-    gerencia: canManageSector(ctx, setor),
+    gerencia: canManageSector(ctx, setores),
     prisma: getPrisma(),
   };
 }
@@ -76,6 +77,9 @@ export async function enviarParaAprovacao(entryId: string): Promise<Resultado> {
   if (!c.ok) return { error: c.erro };
   const conta = await contaDoTenant(c.prisma, entryId, c.tenantId);
   if (!conta) return { error: "Lançamento não encontrado." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const v = podeEnviarParaAprovacao(conta);
   if (!v.pode) return { error: v.motivo };
 

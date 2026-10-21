@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { presaAoOmie } from "@/lib/integracoes/omie/virada";
 import { rotuloDaSerie } from "@/lib/financeiro/repeticao";
-import { NotebookPen, Plus, Upload } from "lucide-react";
+import { FileSpreadsheet, NotebookPen, Plus, Upload } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate } from "@/lib/format";
@@ -86,11 +86,11 @@ export default async function LancamentosPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canViewSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
-  const podeLancar = canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const podeLancar = canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   // Sem permissão para lançar, a tela de criar não existe: cai na lista.
   const pedida = TELAS.find((t) => t.chave === params.aba) ?? TELAS[0];
   const tela = pedida.chave === "lista" || podeLancar ? pedida : TELAS[0];
@@ -103,7 +103,8 @@ export default async function LancamentosPage({
   // Até 13/10/2026 caía na primeira em ordem alfabética, e quem lançava sem
   // olhar o seletor gravava na empresa errada.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
+  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   const cabecalho = (action?: React.ReactNode) => (
@@ -118,8 +119,9 @@ export default async function LancamentosPage({
   const filtroDaEmpresa = (
     <FiltroDaEmpresa
       acao="/lancamentos"
-      empresas={empresas}
+      empresas={noSeletor}
       valor={companyId}
+      foco={foco}
       manter={{ mes: aba === "lista" ? mes : undefined, aba: aba === "lista" ? undefined : aba }}
     >
       {aba === "lista" && companyId && (
@@ -162,6 +164,10 @@ export default async function LancamentosPage({
         cabecalho(
           podeLancar ? (
             <div className="flex flex-wrap items-center gap-2">
+              {/* A planilha das baixas do mês para o Contábil (fila do BPO, 21/10). */}
+              <Button href={`/lancamentos/dominio?empresa=${companyId}&mes=${mes}`} variant="secondary">
+                <FileSpreadsheet size={14} /> Exportar para a Domínio
+              </Button>
               <Button href={href("importar")} variant="secondary">
                 <Upload size={14} /> Importar CSV
               </Button>

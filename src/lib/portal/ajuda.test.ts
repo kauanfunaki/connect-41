@@ -115,3 +115,32 @@ describe("telasVisiveis — a mesma régua do menu", () => {
     for (const t of TELAS_DO_PORTAL) expect(t.href.startsWith("/portal")).toBe(true);
   });
 });
+
+describe("o passo da Ceci (21/10/2026)", () => {
+  const passos = (modulos: string[], ceci: { perguntasPorDia: number } | null, bloqueadas: string[] = []) =>
+    passosDoPortal(new Set(modulos), { variasEmpresas: false, ceci, bloqueadas: new Set(bloqueadas) });
+
+  it("só para quem tem a Ceci no portal", () => {
+    expect(passos(["portal_solicitacoes"], null).map((p) => p.chave)).not.toContain("ceci");
+    expect(passos(["portal_solicitacoes"], { perguntasPorDia: 20 }).map((p) => p.chave)).toContain("ceci");
+  });
+
+  it("diz o limite do dia que vale, sem a marca no texto", () => {
+    const ceci = passos([], { perguntasPorDia: 20 }).find((p) => p.chave === "ceci")!;
+    expect(ceci.passos.join(" ")).toContain("até 20 perguntas por dia");
+    expect(ceci.passos.join(" ")).not.toContain("{perguntas}");
+  });
+
+  it("a solicitação preparada só com a tela de solicitações no menu", () => {
+    const linha = (p: ReturnType<typeof passos>) => p.find((x) => x.chave === "ceci")!.passos.some((l) => l.includes("Revisar e enviar"));
+    expect(linha(passos(["portal_solicitacoes"], { perguntasPorDia: 20 }))).toBe(true);
+    expect(linha(passos([], { perguntasPorDia: 20 }))).toBe(false);
+    expect(linha(passos(["portal_solicitacoes"], { perguntasPorDia: 20 }, ["/portal/solicitacoes"]))).toBe(false);
+  });
+
+  it("diz que ela só consulta e pode errar", () => {
+    const texto = passos([], { perguntasPorDia: 20 }).find((p) => p.chave === "ceci")!.passos.join(" ");
+    expect(texto).toContain("só consulta");
+    expect(texto).toContain("pode errar");
+  });
+});

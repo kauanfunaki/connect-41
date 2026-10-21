@@ -6,7 +6,7 @@ import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/
 import { formatInstantDate } from "@/lib/format";
 import { BpoCredentialsList, NewCredentialModal } from "@/components/bpoSenhas/BpoCredentialsList";
 import { criarCredencial, atualizarCredencial, excluirCredencial, revelarCredencial } from "./actions";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
@@ -17,9 +17,10 @@ const MODULE = "bpo_senhas";
 export default async function BpoSenhasPage() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canActOnSector(ctx, setor)) notFound();
-  const canManage = canManageSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  const setor = setores[0];
+  if (!canActOnSector(ctx, setores)) notFound();
+  const canManage = canManageSector(ctx, setores);
   // O vazio cita quem coordena o setor que opera o módulo, e não "o BPO" (05/10/2026).
   const setorRotulo = sectorLabel((await getSectorMaps(ctx.tenantId)).labels, setor);
 
