@@ -114,7 +114,10 @@ describe("toda tela e todo download do portal perguntam se a tela está liberada
     const pastas = readdirSync(AREA).filter((n) => statSync(path.join(AREA, n)).isDirectory() && !n.startsWith("["));
     const doCatalogo = new Set(TELAS_DO_PORTAL.map((t) => t.href.replace(/^\/portal\/?/, "")));
     // Minha conta e Ajuda ficam fora do catálogo de propósito: nunca se bloqueiam.
-    expect(pastas.filter((p) => !doCatalogo.has(p) && p !== "conta" && p !== "ajuda")).toEqual([]);
+    // `ceci` não é tela: é a rota do chat da Ceci (21/10/2026), que tem chave
+    // própria por empresa e só lê pelas ferramentas, que perguntam pela tela
+    // de cada dado (`exigirTela` em `ferramentas-portal.ts`).
+    expect(pastas.filter((p) => !doCatalogo.has(p) && p !== "conta" && p !== "ajuda" && p !== "ceci")).toEqual([]);
   });
 
   it.each(BLOQUEAVEIS.map((t) => t.href))("%s: cada arquivo pergunta pela própria tela", (href) => {
