@@ -9,7 +9,8 @@
 // Função pura e separada de `modules.ts` porque aquele arquivo toca o banco.
 
 /** O setor efetivo: o transferido, quando houver; senão o do catálogo. */
-export function resolverSetorDoModulo(setorDoCatalogo: string, setorDoTenant: string | null | undefined): string {
+export function resolverSetorDoModulo(setorDoCatalogo: string, setorDoTenant: string | null | undefined, fixo = false): string {
+  if (fixo) return setorDoCatalogo;
   const transferido = setorDoTenant?.trim();
   return transferido ? transferido : setorDoCatalogo;
 }

@@ -165,9 +165,16 @@ export type ModuleDef = {
   group: GrupoDeModulo;
   /** Exibe a tela diretamente na lateral, mesmo em setores agrupados. */
   menuDireto?: boolean;
+  /** Módulo exclusivo do setor de origem; não permite transferência. */
+  fixedSector?: boolean;
 };
 
 export const MODULE_CATALOG: ModuleDef[] = [
+  {
+    code: "tech_github_contributions", label: "GitHub — Contribuições", sectorCode: "tech",
+    description: "Heatmap de commits, pull requests, issues e revisões nos repositórios monitorados",
+    defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
+  },
   {
     code: "tech_ops_center", label: "Ops Center", sectorCode: "tech",
     description: "Automações, sinal de atividade, resultados de processamento e instabilidades",
@@ -694,6 +701,7 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
+  tech_github_contributions: "/github",
   tech_ops_center:         "/ops",
   helpdesk: "/chamados",
   controladoria_conversas: "/conversas",

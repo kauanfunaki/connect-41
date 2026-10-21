@@ -90,6 +90,17 @@ export type IntegracaoDef = {
  */
 export const INTEGRATION_CATALOG: IntegracaoDef[] = [
   {
+    code: "github", label: "GitHub", vendor: "GitHub", natureza: "SYNC", sectorCode: "tech",
+    description: "Commits, pull requests, issues e revisões dos repositórios monitorados pelo Tech",
+    defaultEnabled: false,
+    campos: [
+      { name: "accessToken", label: "Autorização GitHub", type: "secret", required: true },
+      { name: "refreshToken", label: "Renovação GitHub", type: "secret", required: false },
+      { name: "expiresAt", label: "Expiração", type: "secret", required: false },
+      { name: "scope", label: "Permissões", type: "secret", required: false },
+    ],
+  },
+  {
     code: "omie",
     label: "Omie",
     vendor: "Omie",

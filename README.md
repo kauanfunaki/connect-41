@@ -10,6 +10,12 @@ Configuração, migração, operação, limites e testes isolados: [guia do help
 
 O módulo Ops Center do Tech acompanha automações, donos, atividade e resultados. Inclui o filtro Minhas automações e avisa o dono no Connect ao receber um erro. Nasce desligado por escritório. Ativação, contrato dos bots e validação: [guia do Ops Center](docs/OPS-CENTER.md).
 
+## GitHub — Contribuições
+
+Heatmaps de commits, pull requests, issues e revisões nos repositórios selecionados em **Integrações → GitHub**. O módulo é exclusivo do Tech, nasce desligado e usa OAuth, credenciais cifradas por escritório e sincronização em lotes com retomada.
+
+Configuração, ativação, regras de contagem e testes isolados: [guia do GitHub](docs/GITHUB-CONTRIBUTIONS.md). Verificações: `npm run test:github`, `npm run test:github:db` e `npm run test:github:ui`.
+
 ## Getting Started
 
 First, run the development server:
