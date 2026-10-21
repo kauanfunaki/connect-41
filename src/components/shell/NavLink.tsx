@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { createContext, useContext, useSyncExternalStore } from "react";
 import { CADASTROS_LAST_TAB_KEY, CAMINHO_DOS_FORNECEDORES, type CadastrosTab } from "@/lib/cadastrosNav";
 import { caminhoDoMenuAtivo as isActivePath } from "@/lib/caminhoDoMenu";
+import { Contador } from "@/components/ui/Contador";
 
 function subscribeToStorage(callback: () => void) {
   window.addEventListener("storage", callback);
@@ -109,6 +110,11 @@ type NavItemProps = {
    * do ativo também. O fundo do ativo segue na cor principal, com ícone branco.
    */
   grupo?: string | null;
+  /**
+   * Quantas coisas esperam a pessoa nesta tela (21/10/2026 — as solicitações
+   * novas): o número no fim da linha; na faixa, um ponto. Zero não mostra nada.
+   */
+  contador?: number;
   menu?: { aberto: boolean; onClick: () => void; painelId: string };
 };
 
@@ -131,7 +137,7 @@ function BarraAtiva() {
   return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
 }
 
-export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, menu }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, menu }: NavItemProps) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
   const active = typeof ativo === "function" ? ativo(pathname) : ativo ?? (exact ? pathname === href : isActivePath(pathname, href));
@@ -157,8 +163,9 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
 
   if (naFaixa) {
     return (
-      <Link href={href} aria-current={active ? "page" : undefined} {...nomeNaFaixa(label)} className={classeDoItemNaFaixa(active)}>
+      <Link href={href} aria-current={active ? "page" : undefined} {...nomeNaFaixa(contador > 0 ? `${label} (${contador} novas)` : label)} className={classeDoItemNaFaixa(active)}>
         <IconeNaFaixa icon={icon} active={active} comTelas={comTelas} />
+        {contador > 0 && <span aria-hidden className="absolute top-[5px] right-[5px] size-2 rounded-full bg-danger-solid ring-2 ring-surface" />}
       </Link>
     );
   }
@@ -173,6 +180,11 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
       {active && <BarraAtiva />}
       <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${grupo && !active ? "text-grupo" : ""}`.trim()}>{icon}</span>
       {label}
+      {contador > 0 && (
+        <span className="ml-auto" aria-label={`${contador} ${contador === 1 ? "nova" : "novas"}`}>
+          <Contador valor={contador} tom={active ? "neutro" : "alerta"} pequeno />
+        </span>
+      )}
     </Link>
   );
 }

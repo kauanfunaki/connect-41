@@ -18,7 +18,8 @@ import { nomeExibicao } from "@/lib/companyName";
 import { arquivosDoFormulario } from "@/lib/financeiro/pendencias/armazenamento";
 import { validarResposta } from "@/lib/financeiro/pendencias/regras";
 import { anexosDaSolicitacao } from "@/lib/solicitacoes/armazenamento";
-import { podeAgirNaSolicitacao } from "@/lib/solicitacoes/acesso";
+import { podeAgirNaSolicitacao, setoresDaFila } from "@/lib/solicitacoes/acesso";
+import { contarNovasDaEquipe } from "@/lib/solicitacoes/consultas";
 import { transicao, DEPOIS_DA_RESPOSTA, type AcaoNaSolicitacao, type DepoisDaResposta } from "@/lib/solicitacoes/regras";
 import {
   avisarClienteDaSolicitacao,
@@ -281,4 +282,16 @@ export async function encaminharSolicitacao(id: string, setor: string, motivo: s
 
   revalidar(s.id);
   return { ok: true };
+}
+
+/**
+ * Quantas solicitações novas esperam a pessoa (21/10/2026): o número do item
+ * Solicitações do menu, que o Connect confere a cada minuto. Zero sem acesso
+ * ou com o módulo desligado — o número nunca diz mais do que a tela mostra.
+ */
+export async function contarSolicitacoesNovas(): Promise<number> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !ctx.userId) return 0;
+  if (!(await isModuleEnabled(ctx.tenantId, MODULO))) return 0;
+  return contarNovasDaEquipe({ tenantId: ctx.tenantId, setores: setoresDaFila(ctx), userId: ctx.userId });
 }
