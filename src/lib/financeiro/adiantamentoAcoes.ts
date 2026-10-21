@@ -17,6 +17,7 @@ import { quitarConta } from "./baixa/servidor";
 import { categoriaDeTransferencia } from "./conciliacao/transferenciaServidor";
 import { descricaoDoAdiantamento, ehContaDeAdiantamento, tipoDoAdiantamento, validarNovoAdiantamento } from "./adiantamento";
 import { ehContaForaDoCaixa, TIPOS_FORA_DO_CAIXA } from "./tiposDeConta";
+import { nomeDaContaBancaria } from "./contaPrevista";
 import { contaDeAdiantamento, disponivelDoAdiantamento } from "./adiantamentoServidor";
 
 type Opcao = { id: string; nome: string };
@@ -37,14 +38,14 @@ export async function dadosParaAdiantar(companyId: string, kind: "PAGAR" | "RECE
     prisma.financeCounterparty.findMany({ where: { tenantId, companyId, active: true }, select: { id: true, name: true, document: true }, orderBy: { name: "asc" } }),
     prisma.bankAccount.findMany({
       where: { tenantId, companyId, active: true, type: { notIn: [...TIPOS_FORA_DO_CAIXA] } },
-      select: { id: true, nickname: true, accountNumber: true },
+      select: { id: true, nickname: true, accountNumber: true, type: true },
       orderBy: { nickname: "asc" },
     }),
   ]);
   return {
     ok: true,
     contrapartes: contrapartes.map((c) => ({ id: c.id, nome: c.document ? `${c.name} · ${c.document}` : c.name })),
-    contas: contas.map((c) => ({ id: c.id, nome: `${c.nickname} ${c.accountNumber}` })),
+    contas: contas.map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) })),
     hojeKey: saoPauloParts(new Date()).dateKey,
   };
 }

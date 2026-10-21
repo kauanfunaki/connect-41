@@ -273,6 +273,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu.",
           "Clique em “Nova conta”.",
           "Preencha “Nome da conta”, “Tipo”, “Banco (COMPE)” (o código do banco, como 001 ou 341), “Agência” e “Conta com dígito”.",
+          "O “Tipo” diz o que a conta faz. “Com extrato” (conta corrente, poupança, conta de pagamento, conta garantida, aplicação) importa OFX e concilia. “Dinheiro sem extrato” (caixinha, carteira virtual) entra no saldo e no fluxo de caixa pelas baixas feitas por ela. “Fora do caixa” (empréstimo, mútuo, crediário, administradora de cartões) não é dinheiro da empresa: fica fora do saldo bancário e do fluxo, e o dinheiro anda quando se transfere entre ela e o banco, na linha do extrato. Sem extrato, banco e número são opcionais.",
           "Se quiser conferir o saldo, informe o “Saldo inicial” e a data em “Data do saldo inicial”.",
           "Clique em “Salvar”.",
         ],

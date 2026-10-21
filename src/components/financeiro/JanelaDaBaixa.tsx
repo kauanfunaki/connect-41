@@ -161,8 +161,8 @@ function FormularioDaBaixa({
 }) {
   const id = useId();
   const aPagar = dados.kind === "PAGAR";
-  // A prevista no título (lote D, 20/10), se ainda ativa — banco ou cartão —; senão a única conta da empresa.
-  const contaSugerida = dados.cartoes.some((c) => c.id === dados.contaPrevistaId)
+  // A prevista no título (lote D, 20/10), se ainda ativa — banco, caixinha, cartão ou outra —; senão a única conta da empresa.
+  const contaSugerida = [...dados.cartoes, ...dados.outras].some((c) => c.id === dados.contaPrevistaId)
     ? dados.contaPrevistaId!
     : contaSugeridaNaBaixa(dados.contas, dados.contaPrevistaId);
   const [contaEscolhida, setContaEscolhida] = useState(contaSugerida);
@@ -172,7 +172,9 @@ function FormularioDaBaixa({
   // O cartão de crédito (lote D, 20/10): a compra entra na fatura do ciclo do dia.
   const cartao = dados.cartoes.find((c) => c.id === contaEscolhida) ?? null;
   const fatura = cartao && dataKey ? cicloDaCompra(dataKey, cartao) : null;
-  const semConta = dados.contas.length === 0 && !dados.adiantamento && dados.cartoes.length === 0;
+  // As fora do caixa — empréstimo, administradora de cartões… (lote D, 20/10): a baixa não mexe no caixa.
+  const outra = dados.outras.find((c) => c.id === contaEscolhida) ?? null;
+  const semConta = dados.contas.length === 0 && !dados.adiantamento && dados.cartoes.length === 0 && dados.outras.length === 0;
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
   const [valor, setValor] = useState(noCampo(dados.saldoCentavos));
@@ -219,7 +221,9 @@ function FormularioDaBaixa({
                 ? fatura
                   ? `Entra na fatura de ${mesDoCiclo(fatura.ciclo)}, que fecha em ${dataBr(fatura.fechamentoKey)} e vence em ${dataBr(fatura.vencimentoKey)}. O banco não se mexe agora: o dinheiro sai quando a fatura for paga.`
                   : "Entra na fatura do ciclo da data do pagamento."
-                : semConta
+                : outra
+                  ? `Fica em ${outra.nome}, fora do caixa: o dinheiro anda quando ela for transferida para o banco (ou do banco para ela).`
+                  : semConta
                   ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)."
                   : contaSugerida && contaSugerida === dados.contaPrevistaId && contaEscolhida === contaSugerida
                     ? "A prevista no título. É a conta que a conciliação procura."
@@ -247,6 +251,15 @@ function FormularioDaBaixa({
             {dados.cartoes.length > 0 && (
               <optgroup label="Cartão de crédito">
                 {dados.cartoes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {dados.outras.length > 0 && (
+              <optgroup label="Fora do caixa">
+                {dados.outras.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nome}
                   </option>
