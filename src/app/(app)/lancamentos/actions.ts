@@ -36,7 +36,7 @@ import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { arquivosDoFormulario, type AnexoGravado } from "@/lib/financeiro/pendencias/armazenamento";
 import { armazenamentoDosAnexos } from "@/lib/financeiro/anexos";
 import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
-import { ocorrenciasDaRepeticao, validarRepeticao } from "@/lib/financeiro/repeticao";
+import { horizonteDaSerie, ocorrenciasDaRepeticao, totalDaSerie, validarRepeticao } from "@/lib/financeiro/repeticao";
 import { lerRateio, resumoDoRateio } from "@/lib/financeiro/rateio";
 import { conferirRateio, gravarRateio } from "@/lib/financeiro/rateioServidor";
 import { lerRetencoes, liquidoDaConta, resumoDasRetencoes } from "@/lib/financeiro/retencoes";
@@ -117,7 +117,13 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   );
   if (!v.ok) return { error: v.erro };
   const d = v.dados;
-  const rep = validarRepeticao({ frequencia: texto("repetirFrequencia"), vezes: texto("repetirVezes"), ajuste: texto("repetirAjuste") });
+  const rep = validarRepeticao({
+    frequencia: texto("repetirFrequencia"),
+    fim: texto("repetirFim"),
+    vezes: texto("repetirVezes"),
+    ate: texto("repetirAte"),
+    ajuste: texto("repetirAjuste"),
+  });
   if (!rep.ok) return { error: rep.erro };
 
   // As retenções na fonte (lote D, 20/10), só na conta a pagar: o valor
@@ -206,14 +212,22 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   // A repetição (lote D, 19/10): as próximas nascem agora, em aberto, cada uma
   // com a aprovação dela. Os feriados são os do escritório — nacionais mais as
   // exceções de Administração › Feriados (21/10/2026) —, em dia de calendário.
+  // A série até uma data ou sem fim (21/10) nasce até o horizonte; as
+  // seguintes, o agendador cria (`estenderSeries`), pela regra gravada em
+  // `FinanceRecurrence`.
+  const primeiraDaSerie = { vencimentoKey: d.vencimentoKey, competencia: d.competencia };
+  const feriados = rep.repeticao ? new Set((await feriadosDoEscritorio(c.tenantId)).keys()) : new Set<string>();
+  const total = rep.repeticao ? totalDaSerie(primeiraDaSerie, rep.repeticao, feriados) : null;
+  if (total && !total.ok) return { error: total.erro };
   const proximas = rep.repeticao
     ? ocorrenciasDaRepeticao(
-        { vencimentoKey: d.vencimentoKey, competencia: d.competencia },
+        primeiraDaSerie,
         rep.repeticao,
-        new Set((await feriadosDoEscritorio(c.tenantId)).keys())
+        feriados,
+        rep.repeticao.fim.tipo === "VEZES" ? undefined : horizonteDaSerie(rep.repeticao.frequencia, hojeKey)
       ).slice(1)
     : [];
-  const serie = rep.repeticao ? { recurrenceId: randomUUID(), recurrenceTotal: rep.repeticao.vezes } : null;
+  const serie = rep.repeticao && total?.ok ? { recurrenceId: randomUUID(), recurrenceTotal: total.total } : null;
   const statusDasProximas = statusInicialDoManual(null);
   const aprovacaoDasProximas = entrada.statusInicial(companyId, d.kind, statusDasProximas);
 
@@ -283,6 +297,24 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         select: { id: true, amount: true },
       });
       if (resumo) await gravarRateio(tx, { tenantId: c.tenantId, entryId: criado.id, linhas: linhasDoRateio });
+      if (serie && rep.repeticao) {
+        await tx.financeRecurrence.create({
+          data: {
+            id: serie.recurrenceId,
+            tenantId: c.tenantId,
+            companyId,
+            frequency: rep.repeticao.frequencia,
+            dayAdjust: rep.repeticao.ajuste,
+            endMode: rep.repeticao.fim.tipo,
+            endDate: rep.repeticao.fim.tipo === "ATE" ? rep.repeticao.fim.dataKey : null,
+            total: serie.recurrenceTotal,
+            firstDueDate: d.vencimentoKey,
+            firstCompetence: d.competencia,
+            lastIndex: 1 + proximas.length,
+            createdById: c.ctx.userId || null,
+          },
+        });
+      }
       if (retencoes.length > 0) {
         await aplicarRetencoes(tx, {
           tenantId: c.tenantId,
@@ -385,7 +417,12 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
       ...(leitura ? { lidoPorIa: leitura.id } : {}),
       ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
       ...(rep.repeticao && serie
-        ? { repeticao: `${rep.repeticao.frequencia} × ${rep.repeticao.vezes}`, ajusteDoDia: rep.repeticao.ajuste, serie: serie.recurrenceId }
+        ? {
+            repeticao: `${rep.repeticao.frequencia} × ${serie.recurrenceTotal ?? "sem fim"}`,
+            ...(rep.repeticao.fim.tipo === "ATE" ? { ate: rep.repeticao.fim.dataKey } : {}),
+            ajusteDoDia: rep.repeticao.ajuste,
+            serie: serie.recurrenceId,
+          }
         : {}),
     },
   });
@@ -517,7 +554,10 @@ export async function cancelarProximasDaSerie(entryId: string): Promise<Resultad
       });
     canceladas += r;
   }
-  if (canceladas === 0) return { error: "Nenhuma conta desta posição em diante pode ser cancelada." };
+  // A série até uma data ou sem fim para de nascer (21/10): o agendador não
+  // cria mais nada dela, mesmo que alguma das próximas tenha ficado (paga).
+  const parou = await prisma.financeRecurrence.updateMany({ where: { id: conta.recurrenceId, tenantId: c.tenantId, active: true }, data: { active: false } });
+  if (canceladas === 0 && parou.count === 0) return { error: "Nenhuma conta desta posição em diante pode ser cancelada." };
 
   await logAudit({
     tenantId: c.tenantId,

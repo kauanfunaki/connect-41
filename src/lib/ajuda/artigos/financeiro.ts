@@ -190,11 +190,12 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Repetir uma conta (aluguel, folha, mensalidade)",
         passos: [
-          "No lançamento, abra o bloco “Repetir” e escolha a “Frequência”: todo mês, a cada 15 dias, toda semana ou todo ano.",
-          "Em “Quantas vezes”, informe o total, contando esta. Em “Em fim de semana ou feriado”, escolha adiar, antecipar ou manter a data.",
-          "Clique em “Lançar”. As próximas contas nascem junto, em aberto, com o mesmo valor, contraparte e categoria; a competência anda com o mês do vencimento.",
-          "Nas listas, a posição na série aparece antes da descrição, como “3/12”. Cada conta se edita, paga e cancela sozinha.",
-          "Para parar a série, clique em “Cancelar” numa das contas e escolha “Esta e as próximas da série”. As anteriores e a já paga não mudam.",
+          "No lançamento, abra o bloco “Repetir” e escolha a “Frequência”: todo mês, a cada 15 dias, toda semana, todo ano ou todo dia útil.",
+          "Em “Termina”, escolha “Depois de algumas vezes” e informe o total em “Quantas vezes”, contando esta; “Até uma data” e informe o último vencimento em “Até”; ou “Sem data de fim”.",
+          "Em “Em fim de semana ou feriado”, escolha adiar, antecipar ou manter a data. No todo dia útil, o fim de semana e o feriado já ficam de fora.",
+          "Clique em “Lançar”. Com número de vezes, todas as contas nascem junto. Até uma data ou sem fim, nascem as do próximo ano (dois meses no todo dia útil), e as seguintes nascem sozinhas conforme o tempo anda, copiando a última conta da série.",
+          "Nas listas, a posição na série aparece antes da descrição, como “3/12”, ou “3/∞” na sem fim. Cada conta se edita, paga e cancela sozinha.",
+          "Para parar a série, clique em “Cancelar” numa das contas e escolha “Esta e as próximas da série”. As anteriores e a já paga não mudam, e nenhuma conta nova nasce depois.",
         ],
       },
       {

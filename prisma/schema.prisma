@@ -1586,6 +1586,7 @@ model Company {
   financeProjects          FinanceProject[]
   dominioAccountMaps       DominioAccountMap[]
   bankReconciliationRules  BankReconciliationRule[]
+  financeRecurrences       FinanceRecurrence[]
   financeEntryPayments     FinanceEntryPayment[]
   budgets                  Budget[]
   societarioProcesses      Process[]
@@ -3268,6 +3269,8 @@ model FinanceEntry {
   /// A série da repetição (lote D, 19/10 — a "repetição" do Omie): as contas
   /// que nasceram juntas de um lançamento que repete têm o mesmo id, e cada uma
   /// sabe a sua posição ("3 de 12"). Cada uma continua uma conta comum.
+  /// `recurrenceTotal` nulo é a série sem data de fim (21/10): "3/∞"; a regra
+  /// dela, para as próximas nascerem com o tempo, está em `FinanceRecurrence`.
   recurrenceId    String? @db.VarChar(36)
   recurrenceIndex Int?
   recurrenceTotal Int?
@@ -8139,4 +8142,43 @@ model LocalFiscalScenario {
   @@id([tenantId, userId])
   @@index([userId])
   @@map("local_fiscal_scenarios")
+}
+
+/// A regra de uma série da repetição (21/10, o que sobrou da fila do BPO): a
+/// série sem data de fim, ou até uma data, não nasce inteira — nascem as contas
+/// até o horizonte (`horizonteDaSerie`), e o agendador interno cria as
+/// seguintes conforme o tempo anda (`estenderSeries`). O id é o
+/// `recurrenceId` das contas. A série com número de vezes também ganha a
+/// linha, já completa.
+///
+/// As datas ficam em "AAAA-MM-DD", dia de calendário sem fuso, como as contas
+/// as calculam (src/lib/financeiro/repeticao.ts).
+model FinanceRecurrence {
+  id              String  @id @db.VarChar(36)
+  tenantId        String
+  companyId       String
+  /// MENSAL, QUINZENAL, SEMANAL, ANUAL ou DIARIA (todo dia útil).
+  frequency       String  @db.VarChar(12)
+  /// ADIAR, ANTECIPAR ou MANTER — o vencimento em fim de semana ou feriado.
+  dayAdjust       String  @db.VarChar(10)
+  /// VEZES, ATE (até `endDate`) ou SEM_FIM.
+  endMode         String  @db.VarChar(8)
+  endDate         String? @db.VarChar(10)
+  /// Quantas contas a série tem ao todo; nulo na sem fim.
+  total           Int?
+  firstDueDate    String  @db.VarChar(10)
+  firstCompetence String  @db.VarChar(7)
+  /// A posição da última conta já criada. A série termina quando chega em `total`.
+  lastIndex       Int
+  /// Falso depois do "cancelar esta e as próximas": nada mais nasce.
+  active          Boolean @default(true)
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([active, endMode])
+  @@index([tenantId, companyId])
+  @@map("finance_recurrences")
 }
