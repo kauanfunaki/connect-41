@@ -51,6 +51,15 @@ export function whereDaRespostaAtrasada(agora: Date): Prisma.ServiceRequestWhere
   return { status: { in: EM_ABERTO }, firstResponseAt: null, responseDue: { lt: inicioDeHoje(agora) } };
 }
 
+/**
+ * As solicitações novas da fila da pessoa — chegaram e ninguém da 41 respondeu
+ * ("Novas", `ABERTA`). É o número do item Solicitações do menu (21/10/2026), e
+ * o mesmo do cartão "Novas" da tela.
+ */
+export async function contarNovasDaEquipe(escopo: EscopoDaEquipe): Promise<number> {
+  return getPrisma().serviceRequest.count({ where: { AND: [whereDaEquipe(escopo), { status: "ABERTA" }] } });
+}
+
 export type LinhaDaFila = {
   id: string;
   numero: number;

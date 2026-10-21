@@ -20,6 +20,7 @@ import {
 } from "@/app/(app)/notificacoes/actions";
 import type { AbaOuTodas } from "@/lib/notificacoes/catalogo";
 import type { NotificacaoNaTela } from "@/lib/notificacoes/consultas";
+import { INTERVALO_DA_CONFERENCIA_MS } from "./useNumeroConferido";
 
 type Contagens = Record<AbaOuTodas, number>;
 type Dados = { itens: NotificacaoNaTela[]; contagens: Contagens; ocultos: number };
@@ -62,14 +63,20 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
   // a lista de uma aba com o título de outra.
   const pedido = useRef(0);
 
-  // Entre uma navegação e outra, voltar à aba do navegador confere o número.
+  // Entre uma navegação e outra, voltar à aba do navegador confere o número —
+  // e, desde 21/10/2026, também a cada minuto com a aba aberta: a solicitação
+  // que chega avisa sem ninguém recarregar a página.
   const aoVoltar = useEffectEvent(() => {
     if (document.visibilityState === "visible") void contarNaoLidas().then((v) => setContagemDoTopo(v)).catch(() => {});
   });
   useEffect(() => {
     const ouvir = () => aoVoltar();
     document.addEventListener("visibilitychange", ouvir);
-    return () => document.removeEventListener("visibilitychange", ouvir);
+    const relogio = setInterval(ouvir, INTERVALO_DA_CONFERENCIA_MS);
+    return () => {
+      document.removeEventListener("visibilitychange", ouvir);
+      clearInterval(relogio);
+    };
   }, []);
 
   useEffect(() => {
