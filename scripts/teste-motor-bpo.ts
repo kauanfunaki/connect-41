@@ -180,8 +180,6 @@ async function limparSandbox(tenantId: string) {
   const comMarca = { tenantId, name: { contains: MARCA } };
   conta(await prisma.portalUser.deleteMany({ where: comMarca }));
   conta(await prisma.company.deleteMany({ where: comMarca }));
-  // Os Clientes de bancadas antigas: a tabela ainda existe nesta versão.
-  conta(await prisma.clientGroup.deleteMany({ where: comMarca }));
   conta(await prisma.financeCategory.deleteMany({ where: comMarca }));
   conta(await prisma.processOrgan.deleteMany({ where: comMarca }));
   conta(await prisma.alertDispatch.deleteMany({ where: { tenantId, alertKey: { startsWith: "BANCADA_" } } }));

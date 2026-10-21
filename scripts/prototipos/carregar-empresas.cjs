@@ -19,7 +19,8 @@
 // - Tudo o que entra aqui é dado de TESTE. `origin = "Connect"` no cliente e a
 //   nota com o id do Connect na empresa marcam a procedência.
 //
-// Mapeamento: ClientGroup (Connect) → Client (protótipo); Company → Company.
+// Mapeamento: cada matriz do Connect, com as filiais (era o ClientGroup até
+// 21/10/2026) → Client (protótipo); Company → Company.
 // Cliente pessoa física vira Client tipo PF, sem Company (o protótipo exige
 // CNPJ em Company). Empresa sem CNPJ e sem CPF não entra.
 

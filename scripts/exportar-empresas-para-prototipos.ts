@@ -58,36 +58,31 @@ async function main() {
         phone: true,
         status: true,
         parentCompanyId: true,
-        clientGroupId: true,
-        clientGroup: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: "asc" },
     });
 
-    // Empresa sem grupo (o backfill deveria ter zerado isso) vira grupo 1:1,
-    // que é a mesma regra do backfill para quem não divide raiz de CNPJ.
+    // Um grupo por matriz, com as filiais dela (21/10/2026): era o Cliente do
+    // Connect, que saiu. O protótipo continua recebendo "grupos" — cada um
+    // vira um Client lá. Filial cuja matriz não está no export fica sozinha.
+    const nomePorId = new Map(empresas.map((e) => [e.id, e.name]));
     const grupos = new Map<string, { id: string; name: string; empresas: typeof empresas }>();
     for (const e of empresas) {
-      const chave = e.clientGroup?.id ?? `avulsa:${e.id}`;
-      const nome = e.clientGroup?.name ?? e.name;
-      if (!grupos.has(chave)) grupos.set(chave, { id: chave, name: nome, empresas: [] });
+      const chave = e.parentCompanyId && nomePorId.has(e.parentCompanyId) ? e.parentCompanyId : e.id;
+      if (!grupos.has(chave)) grupos.set(chave, { id: chave, name: nomePorId.get(chave)!, empresas: [] });
       grupos.get(chave)!.empresas.push(e);
     }
 
     const dados = {
       geradoEm: new Date().toISOString(),
       tenant: tenant.name,
-      grupos: [...grupos.values()].map((g) => ({
-        ...g,
-        empresas: g.empresas.map(({ clientGroup: _g, ...e }) => e),
-      })),
+      grupos: [...grupos.values()],
     };
 
-    const semGrupo = empresas.filter((e) => !e.clientGroupId).length;
     const semDoc = empresas.filter((e) => !e.cnpj && !e.cpf).length;
     console.log(`tenant           : ${tenant.name}`);
     console.log(`empresas         : ${empresas.length}`);
-    console.log(`grupos           : ${grupos.size}${semGrupo ? ` (${semGrupo} empresas sem grupo viraram grupo próprio)` : ""}`);
+    console.log(`grupos (matrizes): ${grupos.size}`);
     console.log(`sem CNPJ nem CPF : ${semDoc} (não entram nos protótipos)`);
 
     const pacote = empacotar({
