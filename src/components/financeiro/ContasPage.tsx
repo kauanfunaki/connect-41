@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { RECORTES_A_PAGAR, RECORTES_A_RECEBER } from "@/lib/financeiro/exportacao";
-import { instanciaDoFinanceiro } from "@/lib/integracoes/omie/contas";
+import { empresaLidaDoOmie } from "@/lib/integracoes/omie/viradaServidor";
 import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3 } from "lucide-react";
 import { BotaoDeExportar } from "@/components/shared/BotaoDeExportar";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -150,20 +150,7 @@ export async function ContasPage({
   // A empresa escolhida ainda é lida do Omie (lote E): as contas que vieram de
   // lá se pagam e cancelam no Omie até a virada — a tela diz isso no topo, em
   // vez de só recusar no clique.
-  const lidaDoOmie = empresaId
-    ? await prisma.company
-        .findFirst({ where: { id: empresaId, tenantId: ctx.tenantId }, select: { omieCutoverAt: true } })
-        .then(async (e) =>
-          e && !e.omieCutoverAt
-            ? Boolean(
-                await prisma.tenantIntegration.findFirst({
-                  where: { tenantId: ctx.tenantId, integrationCode: "omie", instanceKey: instanciaDoFinanceiro(empresaId), enabled: true },
-                  select: { id: true },
-                })
-              )
-            : false
-        )
-    : false;
+  const lidaDoOmie = empresaId ? await empresaLidaDoOmie(ctx.tenantId, empresaId) : false;
 
   const [resultado, competencias] = await Promise.all([
     listarContas(
