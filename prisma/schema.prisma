@@ -1536,8 +1536,8 @@ model PortalUser {
   id            String @id @default(uuid())
   tenantId      String
   // `clientGroupId` saiu do schema em 21/10/2026 (etapa 3 da saída do
-  // Cliente). A coluna continua no banco, sem chave e sem uso, até a etapa 4
-  // apagar — ver a migration 20261021180000_cliente_sem_chaves.
+  // Cliente), e do banco na etapa 4 — ver as migrations
+  // 20261021180000_cliente_sem_chaves e 20261021210000_cliente_fora_do_banco.
 
   name         String    @db.VarChar(120)
   email        String    @db.VarChar(120)
@@ -1618,7 +1618,7 @@ model PasswordResetToken {
 // 21/10/2026, na etapa 3 da saída do Cliente (decisão do Kauan em 13/10:
 // Empresa e Cliente eram a mesma coisa). O portal é ligado direto às empresas
 // (`PortalUserCompany`), com as filiais junto da matriz. As tabelas antigas
-// ficam no banco, sem chave e sem uso, até a etapa 4 apagar.
+// saíram do banco na etapa 4 (20261021210000_cliente_fora_do_banco).
 
 model Company {
   id                    String        @id @default(uuid())
@@ -1687,7 +1687,7 @@ model Company {
   // elas viram matrizes soltas, o que é recuperável, ao contrário de sumir.
   parentCompanyId       String?
   // `clientGroupId` (o Cliente da empresa) saiu do schema em 21/10/2026, na
-  // etapa 3; a coluna fica no banco, sem chave, até a etapa 4.
+  // etapa 3, e do banco na etapa 4.
   /// O modelo do DRE desta empresa (21/10/2026): vazio é o padrão; "por_area" é
   /// o customizado de despesas por área. Os modelos moram em código — ver
   /// `src/lib/dre/estrutura.ts`.
