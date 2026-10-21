@@ -5,7 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatarCompetencia, formatarNumero } from "@/lib/format";
-import { TODAS_AS_EMPRESAS } from "@/lib/empresas/escolhaDaEmpresa";
+import { leituraNoFoco } from "@/lib/empresas/focoServidor";
 import { gerarPlanilhaDeTabelas, TIPO_DO_XLSX } from "@/lib/planilha/tabelaDoExcel";
 import { DIMENSOES, MEDIDAS, MODULO_DA_TABELA_DINAMICA, ROTULO_DA_BASE, lerConfiguracao, montarTabela } from "@/lib/relatorios/tabelaDinamica";
 import { fatosDaBase, LIMITE_DE_FATOS } from "@/lib/relatorios/tabelaDinamicaServidor";
@@ -33,15 +33,18 @@ export async function GET(req: NextRequest) {
   const agora = new Date();
   const quando = saoPauloParts(agora);
   const c = lerConfiguracao(params, quando.dateKey);
-  const empresaId = empresa === TODAS_AS_EMPRESAS ? null : empresa;
+  // Com uma empresa em foco (21/10/2026): "todas" é a base, e outra empresa não sai.
+  const noFoco = await leituraNoFoco(ctx, empresa);
+  if (!noFoco.ok) return NextResponse.json({ error: noFoco.erro }, { status: 403 });
+  const empresaId = noFoco.empresaId ?? null;
 
   const [{ fatos, limitada }, empresaNome] = await Promise.all([
-    fatosDaBase(ctx.tenantId, empresaId, c, agora),
+    fatosDaBase(ctx.tenantId, empresaId ?? noFoco.empresaIds ?? null, c, agora),
     empresaId
       ? getPrisma()
           .company.findFirst({ where: { id: empresaId, tenantId: ctx.tenantId }, select: { name: true, displayName: true } })
           .then((e) => (e ? nomeExibicao(e) : null))
-      : Promise.resolve("Todas as empresas"),
+      : Promise.resolve(noFoco.empresaIds ? "Todas da base (matriz e filiais)" : "Todas as empresas"),
   ]);
   if (empresaNome === null) return naoAchou;
 

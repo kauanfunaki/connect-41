@@ -91,7 +91,8 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
   // A empresa da URL, a última aberta pela pessoa, a única com conta do Omie —
   // ou nenhuma, e a tela pede (13/10/2026). Era a primeira em ordem alfabética:
   // a nota sairia pela empresa que ninguém escolheu.
-  const { escolha, empresa: escolhida } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
+  const { escolha, empresa: escolhida, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = escolhida?.id ?? null;
 
   // "Nova NFS-e" à direita do título, quando a empresa está escolhida (P19, 15/10/2026).
@@ -107,7 +108,7 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
     return (
       <PageContainer>
         {cabecalho()}
-        <FiltroDaEmpresa acao="/emitir-nfse" empresas={empresas} valor={null} />
+        <FiltroDaEmpresa acao="/emitir-nfse" empresas={noSeletor} foco={foco} valor={null} />
         <EscolhaAEmpresa escolha={escolha} porQue="A nota sai pelo Omie de uma empresa por vez." />
       </PageContainer>
     );
@@ -146,7 +147,7 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
         podeEmitir ? <NovaNfse companyId={companyId} empresaNome={empresa.nome} competenciaAtual={competenciaDoInstante(agora)} /> : undefined
       )}
 
-      <FiltroDaEmpresa acao="/emitir-nfse" empresas={empresas} valor={companyId} />
+      <FiltroDaEmpresa acao="/emitir-nfse" empresas={noSeletor} foco={foco} valor={companyId} />
 
       <div className="flex flex-col gap-2 mb-4">
         {conta.saude === "com_erro" && conta.lastError && (

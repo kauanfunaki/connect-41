@@ -24,6 +24,8 @@ export type PropsDoSeletorDeEmpresa = {
    * Fora delas, não vem.
    */
   focoDaTela?: string | null;
+  /** O nome do "Todas" no seletor — com foco, "Todas da base (matriz e filiais)". */
+  rotuloDeTodas?: string;
 };
 
 /**
@@ -41,7 +43,7 @@ export type PropsDoSeletorDeEmpresa = {
  * usando) com o `SeletorDeEmpresaDoFiltro`: os dois navegavam sozinhos, e
  * nenhum lembrava a escolha.
  */
-export function SeletorDeEmpresaDaTela({ empresas, valor, acao, manter, todas, focoDaTela }: PropsDoSeletorDeEmpresa) {
+export function SeletorDeEmpresaDaTela({ empresas, valor, acao, manter, todas, focoDaTela, rotuloDeTodas = "Todas as empresas" }: PropsDoSeletorDeEmpresa) {
   const router = useRouter();
   const [pendente, iniciar] = useTransition();
   const escolhida = valor && valor !== TODAS_AS_EMPRESAS ? valor : "";
@@ -71,7 +73,7 @@ export function SeletorDeEmpresaDaTela({ empresas, valor, acao, manter, todas, f
         avatar
         lembrarRecentes="empresas"
         defaultValue={escolhida}
-        vazioLabel={todas ? "Todas as empresas" : undefined}
+        vazioLabel={todas ? rotuloDeTodas : undefined}
         textoSemValor={valor === null && todas !== "padrao" ? "Escolha a empresa…" : undefined}
         placeholder="Buscar empresa por nome ou CNPJ…"
         onChange={escolher}

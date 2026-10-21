@@ -14,6 +14,7 @@ import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import { travasDaEdicao } from "./edicao";
 import { podeEditarOTipo } from "./acessoDaConta";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 import { competenciaValida, dataValida, instanteDaData } from "./periodo";
 import type { ForaDoLote } from "./baixa/lote";
 import { nomeDaContaBancaria } from "./contaPrevista";
@@ -202,6 +203,9 @@ export async function alterarContasEmLote(formData: FormData): Promise<Resultado
   const { ctx, tenantId, kind, contas } = lidas;
   const prisma = getPrisma();
   const empresas = [...new Set(contas.map((c) => c.companyId))];
+  // Com foco (21/10/2026), uma conta de outra empresa recusa o lote inteiro.
+  const foraDoFoco = await recusaDoFoco(ctx, empresas);
+  if (foraDoFoco) return { error: foraDoFoco };
   const escolha: EscolhaDaAlteracao = { campos };
 
   let vencimento: Date | undefined;

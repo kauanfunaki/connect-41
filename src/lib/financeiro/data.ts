@@ -67,6 +67,12 @@ export type LinhaDaConta = {
 export type FiltroDeContas = {
   competencia?: string;
   empresaId?: string;
+  /**
+   * Sem `empresaId` ("todas"), as empresas que entram — com uma empresa em
+   * foco (21/10/2026), a matriz e as filiais da base. Sem as duas, o
+   * escritório inteiro.
+   */
+  empresaIds?: string[];
   /** "abertas" esconde pago e cancelado — é o recorte de trabalho. */
   recorte?: RecorteDeContas;
 };
@@ -181,7 +187,7 @@ export async function listarContas(
     tenantId,
     kind,
     ...(filtro.competencia ? { competence: filtro.competencia } : {}),
-    ...(filtro.empresaId ? { companyId: filtro.empresaId } : {}),
+    ...(filtro.empresaId ? { companyId: filtro.empresaId } : filtro.empresaIds ? { companyId: { in: filtro.empresaIds } } : {}),
   };
   // "todas" começa pelas em aberto; o histórico entra depois, até o teto.
   const daFila: Prisma.FinanceEntryWhereInput = {
@@ -268,12 +274,13 @@ export async function listarContas(
 export async function competenciasComContas(
   tenantId: string,
   kind: TipoDeConta,
-  empresaId?: string
+  /** Uma empresa, as da base em foco ("todas" com foco), ou nada — o escritório. */
+  empresaId?: string | string[]
 ): Promise<string[]> {
   const prisma = getPrisma();
   const linhas = await prisma.financeEntry.groupBy({
     by: ["competence"],
-    where: { tenantId, kind, ...(empresaId ? { companyId: empresaId } : {}) },
+    where: { tenantId, kind, ...(Array.isArray(empresaId) ? { companyId: { in: empresaId } } : empresaId ? { companyId: empresaId } : {}) },
     orderBy: { competence: "desc" },
     take: 36,
   });

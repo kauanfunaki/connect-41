@@ -24,6 +24,7 @@ import {
   valorDoCookieDoFoco,
 } from "@/lib/empresas/foco";
 import { empresaParaOFoco, opcoesDoCookieDoFoco, podeUsarOFoco } from "@/lib/empresas/focoServidor";
+import { gravarUltimaEmpresa } from "@/lib/empresas/ultimaEmpresa";
 
 export type ResultadoDoFoco = { ok: true; descricao: string } | { ok: false; erro: string };
 
@@ -50,6 +51,9 @@ export async function trabalharNaEmpresa(companyId: string): Promise<ResultadoDo
     valorDoCookieDoFoco({ tenantId: ctx.tenantId, userId: ctx.userId, companyId: foco.companyId }),
     opcoesDoCookieDoFoco(VALIDADE_DO_FOCO_EM_SEGUNDOS)
   );
+  // Vira também a última aberta (21/10/2026): ao sair do foco, as telas
+  // continuam nesta empresa, e não na que estava aberta antes dele.
+  await gravarUltimaEmpresa(ctx, foco.companyId);
   return { ok: true, descricao: descricaoDoFoco(foco) };
 }
 

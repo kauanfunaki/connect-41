@@ -86,6 +86,11 @@ export type EmpresaDaTela<E> = {
   noSeletor: E[];
   /** A empresa em foco, nas telas que seguem o foco (`comFoco`); `null` sem foco. */
   foco: FocoNaTela | null;
+  /**
+   * O que "Todas" cobre (21/10/2026): com foco, a matriz e as filiais da base;
+   * sem foco, `null` — o escritório inteiro, como sempre.
+   */
+  empresasDeTodas: string[] | null;
 };
 
 function nomeNaLista(e: object): string | null {
@@ -119,7 +124,7 @@ export async function escolherEmpresaDaTela<E extends { id: string }>(
   const entrada = { pedida, disponiveis: empresas.map((e) => e.id), permitirTodas: opcoes.permitirTodas, foco };
   const escolha = resolverEmpresaDaTela({ ...entrada, ultima });
   const empresa = escolha.tipo === "empresa" ? (empresas.find((e) => e.id === escolha.companyId) ?? null) : null;
-  if (!foco) return { escolha, empresa, noSeletor: empresas, foco: null };
+  if (!foco) return { escolha, empresa, noSeletor: empresas, foco: null, empresasDeTodas: null };
 
   const pedidaLimpa = pedida?.trim() ?? "";
   const daUrl = pedidaForaDoFoco(entrada)
@@ -127,5 +132,11 @@ export async function escolherEmpresaDaTela<E extends { id: string }>(
       ? "todas as empresas"
       : (nomeNaLista(empresas.find((e) => e.id === pedidaLimpa)!) ?? "outra empresa")
     : null;
-  return { escolha, empresa, noSeletor: empresas.filter((e) => foco.grupo.includes(e.id)), foco: { ...foco, pedida: daUrl } };
+  return {
+    escolha,
+    empresa,
+    noSeletor: empresas.filter((e) => foco.grupo.includes(e.id)),
+    foco: { ...foco, pedida: daUrl },
+    empresasDeTodas: [...foco.grupo],
+  };
 }

@@ -34,6 +34,7 @@ export const TELAS_DO_FOCO = [
   "/cobranca",
   "/emitir-nfse",
   "/fluxo-de-caixa",
+  "/tabela-dinamica",
   "/dre",
   "/dre/economica",
   "/dre/analises",
@@ -50,6 +51,7 @@ export const MODULOS_DO_FOCO: ReadonlySet<string> = new Set([
   "bpo_cobranca",
   "bpo_emitir_nfse",
   "bpo_fluxo_caixa",
+  "bpo_tabela_dinamica",
   "bpo_dre",
   "dre_economica",
   "dre_analises",
@@ -155,7 +157,16 @@ export function descricaoDoFoco(foco: EmpresaEmFoco): string {
  * com todas as empresas da gravação dentro dele. É a regra que toda action
  * de dinheiro das telas do foco aplica, por `recusaDoFoco`.
  */
-export function motivoForaDoFoco(foco: EmpresaEmFoco | null, companyIds: readonly string[]): string | null {
+export function motivoForaDoFoco(
+  foco: EmpresaEmFoco | null,
+  companyIds: readonly string[],
+  /** `exportar` (21/10/2026): a mesma trava, na exportação — nada é gravado, nada sai. */
+  oQue: "gravar" | "exportar" = "gravar"
+): string | null {
   if (companyIds.every((id) => dentroDoFoco(foco, id))) return null;
-  return `Nada foi gravado: você está trabalhando só em ${descricaoDoFoco(foco!)}, e isto é de outra empresa. Para gravar nela, use “Trocar empresa” ou “Sair”, na faixa do topo.`;
+  const onde = descricaoDoFoco(foco!);
+  if (oQue === "exportar") {
+    return `Nada foi exportado: você está trabalhando só em ${onde}, e isto é de outra empresa. Para exportar dela, use “Trocar empresa” ou “Sair”, na faixa do topo.`;
+  }
+  return `Nada foi gravado: você está trabalhando só em ${onde}, e isto é de outra empresa. Para gravar nela, use “Trocar empresa” ou “Sair”, na faixa do topo.`;
 }
