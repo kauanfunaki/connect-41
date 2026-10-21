@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { resolverSetorDoModulo, setorParaGravar } from "./modulo-setor";
 
 describe("resolverSetorDoModulo", () => {
+  it("mantém módulo exclusivo no setor de origem mesmo com override antigo", () => {
+    expect(resolverSetorDoModulo("tech", "fiscal", true)).toBe("tech");
+  });
   it("usa o setor do catálogo quando o tenant não transferiu", () => {
     expect(resolverSetorDoModulo("bpo", null)).toBe("bpo");
     expect(resolverSetorDoModulo("bpo", undefined)).toBe("bpo");
