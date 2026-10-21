@@ -13,6 +13,7 @@ const ler = (arquivo: string) => readFileSync(path.join(raiz, arquivo), "utf8");
 
 const TELAS = [
   "src/app/(app)/lancamentos/page.tsx",
+  "src/app/(app)/lancamentos/dominio/page.tsx",
   "src/components/financeiro/ContasPage.tsx",
   "src/app/(app)/conciliacao/page.tsx",
   "src/app/(app)/conciliacao/regras/page.tsx",
@@ -36,6 +37,7 @@ const ACOES = [
   "src/lib/financeiro/cartaoAcoes.ts",
   "src/lib/financeiro/leituraDoBoletoServidor.ts",
   "src/app/(app)/lancamentos/actions.ts",
+  "src/app/(app)/lancamentos/dominio/actions.ts",
   "src/app/(app)/fornecedores-e-sacados/actions.ts",
   "src/app/(app)/conciliacao/actions.ts",
   "src/app/(app)/conciliacao/regras/actions.ts",
@@ -50,6 +52,7 @@ const ACOES = [
 const EXPORTACOES = [
   "src/lib/financeiro/exportacaoServidor.ts",
   "src/app/(app)/tabela-dinamica/exportar/route.ts",
+  "src/app/(app)/lancamentos/dominio/exportar/route.ts",
   "src/app/(app)/dre/exportar/route.ts",
 ];
 

@@ -49,7 +49,8 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
   const params = await searchParams;
   const mes = competenciaValida(params.mes) ?? competenciaDoInstante(new Date());
   const empresas = await empresasDoSeletor(tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco, só ela, a matriz e as filiais — como Lançamentos.
+  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   const cabecalho = (
@@ -64,7 +65,7 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
     />
   );
   const filtro = (
-    <FiltroDaEmpresa acao="/lancamentos/dominio" empresas={empresas} valor={companyId} manter={{ mes }}>
+    <FiltroDaEmpresa acao="/lancamentos/dominio" empresas={noSeletor} foco={foco} valor={companyId} manter={{ mes }}>
       {companyId && <FiltroDePeriodo acao="/lancamentos/dominio" mes={mes} extras={{ empresa: companyId }} naFileira />}
     </FiltroDaEmpresa>
   );

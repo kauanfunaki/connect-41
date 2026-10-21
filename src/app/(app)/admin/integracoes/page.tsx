@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
-import { Activity, Building2, FileStack, FlaskConical, Leaf, MessageCircle, MessageSquareText, ShieldCheck, Sparkles, Video } from "lucide-react";
+import { Activity, Building2, FileStack, FlaskConical, GitBranch, Leaf, MessageCircle, MessageSquareText, ShieldCheck, Sparkles, Video } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
@@ -33,8 +33,12 @@ import { Selo, tomDaVariante, type TomDoSelo } from "@/components/ui/Selo";
 import { OpsCredentialForm } from "@/components/admin/OpsCredentialForm";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { MODULO_OPS } from "@/lib/ops/regras";
+import { GithubIntegration } from "@/components/admin/GithubIntegration";
+import { GITHUB_MODULE } from "@/lib/github/types";
+import { integrationView } from "@/lib/github/service";
 
 const ERROR_LABEL: Record<string, string> = {
+  "github-conexao": "Não foi possível conectar o GitHub. Confira a autorização, mantenha o mesmo escritório aberto e tente novamente.",
   "sem-permissao": "Sem permissão para conectar integrações.",
   "google-nao-configurado": "Integração com Google ainda não foi configurada pela 41 Tech (faltam credenciais no servidor).",
   "microsoft-nao-configurado": "Integração com Microsoft ainda não foi configurada pela 41 Tech (faltam credenciais no servidor).",
@@ -108,6 +112,8 @@ export default async function IntegracoesPage({
   // configuração do escritório inteiro — só quem o administra vê e mexe.
   const podeConfigurar = isFullWrite(ctx.role);
   const podeGerirOps = podeConfigurar && await podeNoModulo(ctx, MODULO_OPS, "gerir");
+  const podeGerirGithub = podeConfigurar && await podeNoModulo(ctx, GITHUB_MODULE, "gerir");
+  const github = podeGerirGithub ? await integrationView(ctx.tenantId).catch(() => null) : null;
   const [integracoes, contasOmie, empresasParaOmie, serpro, aiConfig, chatwootConnection, { labels: nomesDosSetores }, credencialOps] = podeConfigurar
     ? await Promise.all([
         listarIntegracoes(ctx.tenantId!, agora),
@@ -134,7 +140,7 @@ export default async function IntegracoesPage({
     // As do catálogo, uma por código. O Omie tem bloco próprio (a conta é por
     // empresa); o Serpro ganha a prontidão na situação.
     for (const i of integracoes) {
-      if (i.code === "omie") continue;
+      if (i.code === "omie" || i.code === "github") continue;
       let { selo, estado } = situacaoDoCatalogo(i);
       let detalhe: string | null = i.lastError ? `Último erro: ${i.lastError}` : setorDe(i) ? `Setor ${setorDe(i)}` : null;
       if (i.code === "serpro_integra_contador" && i.conectada && prontidaoSerpro && !prontidaoSerpro.pronta && estado !== "problema") {
@@ -190,6 +196,14 @@ export default async function IntegracoesPage({
       estado: credencialOps?.tokenHash ? "ligada" : "desligada",
       detalhe: "Os bots continuam identificados pelo próprio slug.",
     });
+    if (podeGerirGithub) blocos.push({
+      chave: "github", nome: "GitHub", icone: <GitBranch />,
+      descricao: "Conta e repositórios monitorados pelo módulo de contribuições do Tech.",
+      selo: github?.error || github?.status === "needs_reconnect" ? { tom: "atencao", rotulo: "Com pendência" }
+        : github?.connected ? { tom: "sucesso", rotulo: github.enabled ? "Sincronizando" : "Conectada" } : { tom: "neutro", rotulo: "Não conectada" },
+      estado: github?.error || github?.status === "needs_reconnect" ? "problema" : github?.connected ? "ligada" : "desligada",
+      detalhe: github?.login ? `Conta ${github.login} · exclusivo do Tech` : "Exclusivo do Tech",
+    });
   }
 
   // As reuniões são da conta de cada um: o bloco vale para quem olha.
@@ -225,7 +239,7 @@ export default async function IntegracoesPage({
       {error && <Aviso className="mb-4">{ERROR_LABEL[error] ?? "Erro ao conectar integração."}</Aviso>}
       {connected && (
         <Aviso tom="sucesso" className="mb-4">
-          Conta {connected === "google" ? "Google" : "Microsoft"} conectada com sucesso.
+          Conta {connected === "github" ? "GitHub" : connected === "google" ? "Google" : "Microsoft"} conectada com sucesso.
         </Aviso>
       )}
 
@@ -251,7 +265,7 @@ export default async function IntegracoesPage({
       )}
 
       {bloco && (
-        <PainelDeCadastro titulo={bloco.nome} voltarPara={aqui} largo={bloco.chave === "omie" || bloco.chave === "chatwoot"}>
+        <PainelDeCadastro titulo={bloco.nome} voltarPara={aqui} largo={bloco.chave === "omie" || bloco.chave === "chatwoot" || bloco.chave === "github"}>
           {bloco.chave === "reunioes" ? (
             <ContasDeReuniao
               google={{ conectada: Boolean(google), expirada: Boolean(google) && googleHealth === "NEEDS_RECONNECT", email: google?.accountEmail ?? null }}
@@ -275,6 +289,8 @@ export default async function IntegracoesPage({
             </div>
           ) : bloco.chave === "omie" ? (
             <ContasOmie contas={contasOmie} empresas={empresasParaOmie} podeDesfazerVirada={ctx.role === "SUPER_ADMIN"} />
+          ) : bloco.chave === "github" ? (
+            <GithubIntegration />
           ) : bloco.chave === "ops_center" ? (
             <OpsCredentialForm hasToken={Boolean(credencialOps?.tokenHash)} version={credencialOps?.version ?? 0} />
           ) : bloco.chave === "chatwoot" ? (

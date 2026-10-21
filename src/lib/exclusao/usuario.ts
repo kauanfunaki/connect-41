@@ -50,6 +50,8 @@ function reatribuir(modelo: string, coluna: string, executar: Passo<AlvoUsuario>
 }
 
 export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
+  { modelo: "GithubConnection", acao: "anular", coluna: "connectedBy", executar: (tx, a) => n(tx.githubConnection.updateMany({ where: { tenantId: a.tenantId, connectedBy: a.id }, data: { connectedBy: null } })) },
+  { modelo: "GithubOAuthAttempt", acao: "apagar", executar: (tx, a) => n(tx.githubOAuthAttempt.deleteMany({ where: { tenantId: a.tenantId, userId: a.id } })) },
   reatribuir("HelpdeskDraft", "createdById", (tx, a) => n(tx.helpdeskDraft.updateMany({ where: { tenantId: a.tenantId, createdById: a.id }, data: { createdById: a.para } }))),
   reatribuir("HelpdeskTicket", "createdById", (tx, a) => n(tx.helpdeskTicket.updateMany({ where: { tenantId: a.tenantId, createdById: a.id }, data: { createdById: a.para } }))),
   reatribuir("HelpdeskAttachment", "uploadedById", (tx, a) => n(tx.helpdeskAttachment.updateMany({ where: { tenantId: a.tenantId, uploadedById: a.id }, data: { uploadedById: a.para } }))),

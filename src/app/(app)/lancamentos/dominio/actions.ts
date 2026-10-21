@@ -10,6 +10,7 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { contaReduzidaValida } from "@/lib/financeiro/dominio/planilha";
 import type { TipoDoDePara } from "@/lib/financeiro/dominio/lancamentos";
@@ -38,6 +39,9 @@ export async function salvarDeParaDaDominio(formData: FormData): Promise<Resulta
   const companyId = String(formData.get("companyId") ?? "");
   const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { id: true } });
   if (!empresa) return { error: "Empresa não encontrada." };
+  // Uma empresa por vez: com o foco ligado, só a base em foco.
+  const foraDoFoco = await recusaDoFoco(ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const filial = String(formData.get("codigoFilial") ?? "").trim();
   if (filial !== "" && !/^\d{1,20}$/.test(filial)) return { error: "O código Matriz/Filial da Domínio é só número (ex.: 11301)." };

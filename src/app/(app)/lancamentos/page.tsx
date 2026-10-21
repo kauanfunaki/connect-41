@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { presaAoOmie } from "@/lib/integracoes/omie/virada";
-import { rotuloDaSerie } from "@/lib/financeiro/repeticao";
+import { rotuloDaSerie, temProximasNaSerie } from "@/lib/financeiro/repeticao";
 import { FileSpreadsheet, NotebookPen, Plus, Upload } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
@@ -364,7 +364,7 @@ async function ListaDeManuais({
                         <span className="ml-auto flex gap-1.5">
                           {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
                           {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
-                            <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
+                            <CancelarLancamento entryId={l.id} naSerie={temProximasNaSerie(l)} />
                           )}
                         </span>
                       )}
@@ -436,7 +436,7 @@ async function ListaDeManuais({
                               <div className="flex flex-wrap justify-end gap-1.5">
                                 {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
                                 {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
-                                  <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
+                                  <CancelarLancamento entryId={l.id} naSerie={temProximasNaSerie(l)} />
                                 )}
                               </div>
                             )}
