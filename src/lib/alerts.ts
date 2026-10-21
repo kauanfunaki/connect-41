@@ -950,6 +950,14 @@ export function startAlertScheduler(): void {
         if (r.arquivos > 0 || r.pastas > 0) console.log("[drive] lixeira esvaziada", r);
       })
       .catch((err) => console.error("[drive] falha ao esvaziar a lixeira", err));
+    // A repetição até uma data ou sem fim (21/10/2026): as próximas contas
+    // nascem conforme o horizonte anda. Sem série para estender, uma consulta.
+    import("@/lib/financeiro/repeticaoServidor")
+      .then(({ estenderSeries }) => estenderSeries())
+      .then((r) => {
+        if (r.criadas > 0) console.log("[repeticao] contas criadas", r);
+      })
+      .catch((err) => console.error("[repeticao] falha ao estender as séries", err));
   };
 
   run(); // primeira execução já na subida, não espera os 15min iniciais
