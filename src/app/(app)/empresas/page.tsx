@@ -195,10 +195,7 @@ export default async function EmpresasPage({
         filtros={
           // O painel do "Filtros" das outras telas, com a etiqueta "×" do que
           // está filtrado ao lado do botão (15/10/2026): era uma lista de links
-          // sem rótulo de campo. O cliente vem de um link de /clientes — sem
-          // uma saída visível, quem buscava outra empresa e não achava concluía
-          // que ela não existe; a etiqueta "Cliente: X ×" fica na barra, ao
-          // lado da busca (era uma pílula montada à mão, acima do casco).
+          // sem rótulo de campo. O filtro "Cliente" saiu com o Cliente (21/10).
           <FiltrosDaTela
             naBarra
             campos={[
@@ -208,9 +205,6 @@ export default async function EmpresasPage({
                 vazioLabel: "Em operação",
                 opcoes: [...FILTER_TABS, { value: STATUS_TODOS, label: "Todos, incluindo inativos" }],
               },
-              ...(cliente
-                ? [{ chave: "cliente", rotulo: "Cliente", vazioLabel: "Todos", opcoes: [{ value: cliente, label: clienteFiltrado?.name ?? "desconhecido" }] }]
-                : []),
             ]}
           />
         }
