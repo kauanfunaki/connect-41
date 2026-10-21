@@ -10,7 +10,15 @@ let ctx: AuthContext;
 let ligado = true;
 let setor = "bpo";
 vi.mock("@/lib/auth/context", () => ({ getAuthContext: async () => ctx }));
-vi.mock("@/lib/modules", () => ({ isModuleEnabled: async () => ligado, setorDoModulo: async () => setor }));
+vi.mock("@/lib/modules", () => {
+  const mod = { isModuleEnabled: async () => ligado, setorDoModulo: async () => setor };
+  // Os setores da tela (21/10/2026): aqui, só o dono, como antes.
+  const setoresDoModulo = async (t: string, c: string) => {
+    const s = await (mod.setorDoModulo as (t: string, c: string) => Promise<string | null>)(t, c);
+    return s == null ? null : [s];
+  };
+  return { ...mod, setoresDoModulo };
+});
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const logAudit = vi.fn();
 vi.mock("@/lib/audit", () => ({ logAudit: (a: unknown) => logAudit(a) }));

@@ -9,6 +9,8 @@ import {
   slugDoGrupo,
   getModuleDef,
   getModulesForSector,
+  MODULOS_DO_MENU_GERAL,
+  MODULOS_SEM_MENU,
 } from "./module-catalog";
 import { DEFAULT_SECTORS } from "./sector-constants";
 
@@ -40,6 +42,21 @@ describe("catálogo de módulos", () => {
       (m) => `${m.code} -> ${m.sectorCode}`
     );
     expect(forasteiros).toEqual([]);
+  });
+
+  // Uma tela em mais de um setor (21/10/2026) continua com um endereço só: o
+  // menu de cada setor leva à mesma rota, e o favorito, o link do sino e o link
+  // copiado valem em qualquer um. Duas telas na mesma rota quebrariam isso.
+  it("cada tela tem um endereço só, sem dividir com outra", () => {
+    const porRota = new Map<string, string[]>();
+    for (const [code, rota] of Object.entries(MODULE_ROUTES)) porRota.set(rota, [...(porRota.get(rota) ?? []), code]);
+    const divididas = [...porRota].filter(([, codes]) => codes.length > 1).map(([rota, codes]) => `${rota}: ${codes.join(", ")}`);
+    expect(divididas).toEqual([]);
+  });
+
+  it("as telas do menu Geral e as sem menu são do catálogo", () => {
+    const fora = [...MODULOS_DO_MENU_GERAL, ...MODULOS_SEM_MENU].filter((code) => !getModuleDef(code));
+    expect(fora).toEqual([]);
   });
 
   it("rota começa com barra", () => {

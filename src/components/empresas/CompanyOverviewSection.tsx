@@ -37,7 +37,6 @@ type Props = {
     cnaePrincipal: string | null;
     cnaeSecundarios: string | null;
     source: string | null;
-    clientGroup: { id: string; name: string } | null;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -88,7 +87,6 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
           <InfoRow label="Nome no sistema" value={company.displayName} />
           <InfoRow label="ID" value={company.externalId} mono />
           <InfoRow label="Regime tributário" value={company.taxRegime} className="sm:col-span-2" />
-          <InfoRow label="Cliente" value={company.clientGroup?.name ?? null} className="sm:col-span-2" />
         </div>
       </Card>
 

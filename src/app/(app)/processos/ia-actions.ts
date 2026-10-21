@@ -4,7 +4,7 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { conversarComAgente } from "@/lib/ai";
 import type { PropostaDeEscrita } from "@/lib/ia/ferramentas";
 import { concluirEtapa, dispensarEtapa } from "./actions";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { SISTEMA_DO_SOCIETARIO as SISTEMA } from "@/lib/societario/assistente";
 
 const AGENTE = "assistente_do_societario";
@@ -20,7 +20,7 @@ export type RespostaDoSocietario =
 export async function perguntarAoSocietario(pergunta: string): Promise<RespostaDoSocietario> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) return { error: "Sem permissão no Societário." };
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) return { error: "Sem permissão no Societário." };
 
   const texto = pergunta.trim();
   if (!texto) return { error: "Escreva a pergunta." };

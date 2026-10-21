@@ -11,6 +11,7 @@
 
 import { canActOnSector, canViewSector, type AuthContext } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
+import { setorParaMostrar } from "@/lib/modulo-setor";
 import type { HomeWidgetKey } from "@/lib/homeWidgets";
 
 type Regra = { modulo: string; acesso: "ver" | "agir" };
@@ -57,10 +58,11 @@ export async function acessoDosPaineis(ctx: AuthContext): Promise<Map<HomeWidget
     for (const r of regras) {
       const estado = estados.find((e) => e.code === r.modulo);
       if (!estado?.enabled) continue;
-      if (ctx.activeSector && estado.sectorCode !== ctx.activeSector) continue;
-      const pode = r.acesso === "agir" ? canActOnSector(ctx, estado.sectorCode) : canViewSector(ctx, estado.sectorCode);
+      // Os setores da tela (21/10/2026): a compartilhada conta em cada um deles.
+      if (ctx.activeSector && !estado.sectorCodes.includes(ctx.activeSector)) continue;
+      const pode = r.acesso === "agir" ? canActOnSector(ctx, estado.sectorCodes) : canViewSector(ctx, estado.sectorCodes);
       if (!pode) continue;
-      setor ??= estado.sectorCode;
+      setor ??= setorParaMostrar(estado.sectorCodes, ctx);
       modulos.add(r.modulo);
     }
     if (setor) acesso.set(chave, { setor, modulos });

@@ -29,7 +29,7 @@ import { SeletorDoModeloDoDre } from "@/components/dre/SeletorDoModeloDoDre";
 import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { desconsideradasDoPeriodo, excecoesDaEmpresa, itensDaFila, totalForaDasLinhas, type ItemDaFila } from "@/lib/dre/fila";
 import { podeAbrirADre, podeTrocarOModeloDoDre } from "@/lib/dre/acesso";
-import { getEnabledModuleCodes, isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { getEnabledModuleCodes, isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { DreDoCliente } from "@/components/dre/DreDoCliente";
 import { competenciaDe } from "@/lib/financeiro/periodo";
@@ -491,7 +491,7 @@ async function linksDasContas(ctx: AuthContext, companyId: string, fila: ItemDaF
   const precisa = fila.some((i) => i.acao.tipo === "sem-categoria" && i.acao.fontes.includes("financeiro"));
   if (!precisa || !ctx.tenantId) return { pagamento: null, recebimento: null };
   const pode = async (modulo: string) => {
-    const setor = await setorDoModulo(ctx.tenantId, modulo);
+    const setor = await setoresDoModulo(ctx.tenantId, modulo);
     return !!setor && canActOnSector(ctx, setor) && (await isModuleEnabled(ctx.tenantId, modulo));
   };
   const [pagar, receber] = await Promise.all([pode("bpo_contas_pagar"), pode("bpo_contas_receber")]);

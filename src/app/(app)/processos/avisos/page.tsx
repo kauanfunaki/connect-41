@@ -5,7 +5,7 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { avisosPendentes } from "@/lib/societario/avisos";
 import { AvisosDaJunta } from "@/components/societario/AvisosDaJunta";
 import { aplicarAviso, descartarAviso } from "../avisos-actions";
@@ -17,7 +17,7 @@ const MODULE = "societario_processos";
 // os que não bateram com nenhum protocolo aberto, que só aparecem aqui.
 export default async function AvisosDaJuntaPage() {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const avisos = await avisosPendentes(ctx.tenantId);

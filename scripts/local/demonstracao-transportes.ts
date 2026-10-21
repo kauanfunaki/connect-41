@@ -41,15 +41,9 @@ const reais = (v: number) => v.toFixed(2);
 // ─── Criação ────────────────────────────────────────────────────────────────
 
 async function criar(p: PrismaClient, tenantId: string, autorId: string, outroAutorId: string) {
-  const grupo = await p.clientGroup.create({
-    data: { tenantId, name: `${MARCA} Grupo Modelo` },
-    select: { id: true },
-  });
-
   const empresa = await p.company.create({
     data: {
       tenantId,
-      clientGroupId: grupo.id,
       name: `${MARCA} TRANSPORTES MODELO LTDA`,
       displayName: `${MARCA} Transportes Modelo`,
       cnpj: "11222333000181",
@@ -417,7 +411,7 @@ async function criar(p: PrismaClient, tenantId: string, autorId: string, outroAu
     }
   }
 
-  return { empresa, grupo, clienteDoPortal, banco, acordo };
+  return { empresa, clienteDoPortal, banco, acordo };
 }
 
 // ─── Execução ───────────────────────────────────────────────────────────────

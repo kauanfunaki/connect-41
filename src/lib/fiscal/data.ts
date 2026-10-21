@@ -66,10 +66,21 @@ export function mesclarCompetencias(listas: string[][], limite = MESES_NO_FILTRO
   return [...new Set(listas.flat())].sort().reverse().slice(0, limite);
 }
 
-function whereDoFiltro(alcance: AlcanceFiscal, filtro: FiltroDoAcervo): Prisma.FiscalDocumentWhereInput {
+/**
+ * O `where` da listagem: o alcance E o filtro, nunca o filtro no lugar do alcance.
+ *
+ * Até 21/10/2026 o alcance e o filtro iam no mesmo objeto, e o
+ * `companyId` do filtro **substituía** o `companyId: { in: [...] }` do
+ * alcance — pedir a empresa de outro cliente trazia as notas dela. Nada
+ * vazava porque a tela do portal conferia a empresa antes de chamar; a IA do
+ * portal vai chamar esta consulta com o que o modelo pedir, e a trava tem de
+ * estar aqui. O alcance mora num `AND` à parte, que nenhum campo de filtro (nem
+ * quem espalha este `where` e acrescenta chaves) consegue sobrescrever.
+ */
+export function whereDoFiltro(alcance: AlcanceFiscal, filtro: FiltroDoAcervo): Prisma.FiscalDocumentWhereInput {
   const busca = filtro.busca?.trim();
   return {
-    ...whereDoAlcance(alcance),
+    AND: [whereDoAlcance(alcance)],
     // Documento removido na origem sai da listagem — é o "a projeção apaga" do
     // contrato. A linha continua no banco de propósito (ver `removedAtOrigin`
     // no schema), e quem abre o link direto ainda a encontra, com o aviso.
@@ -174,7 +185,7 @@ export async function obterDocumento(alcance: AlcanceFiscal, id: string) {
     // O alcance entra no `where`, não numa checagem depois de buscar: buscar
     // primeiro e conferir depois já teria trazido o dado para a memória do
     // processo, e é assim que um `console.log` vira vazamento.
-    where: { ...whereDoAlcance(alcance), id },
+    where: { AND: [whereDoAlcance(alcance)], id },
     include: {
       company: { select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true } },
       uploadedBy: { select: { name: true } },
@@ -202,7 +213,7 @@ export async function obterDocumento(alcance: AlcanceFiscal, id: string) {
 export async function acharPorDedupKey(alcance: AlcanceFiscal, dedupKey: string) {
   const prisma = getPrisma();
   return prisma.fiscalDocument.findFirst({
-    where: { ...whereDoAlcance(alcance), dedupKey },
+    where: { AND: [whereDoAlcance(alcance)], dedupKey },
     select: { id: true, number: true, company: { select: { name: true, displayName: true } } },
   });
 }

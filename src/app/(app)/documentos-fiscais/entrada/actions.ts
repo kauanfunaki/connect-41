@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { lerXmlFiscal } from "@/lib/fiscal/xml";
 import { chaveDeDeduplicacao, competenciaDe } from "@/lib/fiscal/documentos";
@@ -31,7 +31,7 @@ const MAX_ARQUIVOS = 50;
 
 export async function importarXmls(_anterior: EstadoDaEntrada, form: FormData): Promise<EstadoDaEntrada> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { erro: "Sem permissão." };
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { erro: "Sem permissão." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { erro: "Módulo não habilitado." };
 
   const arquivos = form.getAll("xmls").filter((f): f is File => f instanceof File && f.size > 0);

@@ -16,42 +16,15 @@
 // passa a ler da fotografia. Cliente novo não entra sozinho na busca, e
 // inativar um cliente não tira a raiz dele.
 //
-// Sem a tabela (código antes da migration), a leitura cai na regra antiga —
-// que, até a migration rodar, dá o mesmo conjunto.
+// A volta para a regra antiga, sem a tabela, saiu em 21/10/2026 com o
+// Cliente (etapa 3): a tabela existe em produção desde 15/10. A regra antiga e
+// o espelho da migration ficam na história do git (commit a7d260b).
 
 import { getPrisma } from "@/lib/prisma";
-import { isPrismaMissingTableError } from "@/lib/prismaErrors";
-
-/** Um cliente como a regra antiga o lia. */
-export type ClienteComRaiz = { tenantId: string; cnpjRoot: string | null; active: boolean };
 
 /** A raiz é usável? 8 caracteres — a chave de contribuinte do lado do SPED. */
 function raizValida(r: string | null | undefined): r is string {
   return !!r && r.length === 8;
-}
-
-/** A regra até 14/10/2026: as raízes dos clientes ativos do escritório, sem repetir. */
-export function raizesPelosClientes(clientes: readonly Omit<ClienteComRaiz, "tenantId">[]): string[] {
-  return [...new Set(clientes.filter((c) => c.active).map((c) => c.cnpjRoot).filter(raizValida))];
-}
-
-/**
- * O que a migration grava em `sped_sync_roots`: por escritório, as raízes que
- * a regra antiga dava. O espelho do terceiro INSERT da migration
- * `20261014210000` — os testes conferem que, para os mesmos clientes, o
- * conjunto de cada escritório não cresce nem encolhe.
- */
-export function fotografiaDasRaizes(clientes: readonly ClienteComRaiz[]): { tenantId: string; cnpjRaiz: string }[] {
-  const vistas = new Set<string>();
-  const saida: { tenantId: string; cnpjRaiz: string }[] = [];
-  for (const c of clientes) {
-    if (!c.active || !raizValida(c.cnpjRoot)) continue;
-    const chave = `${c.tenantId}:${c.cnpjRoot}`;
-    if (vistas.has(chave)) continue;
-    vistas.add(chave);
-    saida.push({ tenantId: c.tenantId, cnpjRaiz: c.cnpjRoot });
-  }
-  return saida;
 }
 
 /** As raízes da fotografia, como a sincronização as lê. */
@@ -61,17 +34,6 @@ export function raizesDaFotografia(linhas: readonly { cnpjRaiz: string }[]): str
 
 /** As raízes que o SPED sincroniza neste escritório. */
 export async function raizesSincronizadas(tenantId: string): Promise<string[]> {
-  const prisma = getPrisma();
-  try {
-    const linhas = await prisma.spedSyncRoot.findMany({ where: { tenantId }, select: { cnpjRaiz: true }, orderBy: { cnpjRaiz: "asc" } });
-    return raizesDaFotografia(linhas);
-  } catch (err) {
-    if (!isPrismaMissingTableError(err)) throw err;
-    console.error("[sped] tabela das raízes ainda não existe — migration pendente; usando os clientes", err);
-    const clientes = await prisma.clientGroup.findMany({
-      where: { tenantId, active: true, cnpjRoot: { not: null } },
-      select: { cnpjRoot: true, active: true },
-    });
-    return raizesPelosClientes(clientes);
-  }
+  const linhas = await getPrisma().spedSyncRoot.findMany({ where: { tenantId }, select: { cnpjRaiz: true }, orderBy: { cnpjRaiz: "asc" } });
+  return raizesDaFotografia(linhas);
 }
