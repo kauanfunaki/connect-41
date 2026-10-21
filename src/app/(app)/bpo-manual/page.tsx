@@ -14,7 +14,7 @@ import {
   atualizarPaginaManual,
   excluirPaginaManual,
 } from "./actions";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
@@ -29,11 +29,12 @@ const MODULE = "bpo_manual";
 export default async function BpoManualPage() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canActOnSector(ctx, setor)) notFound();
-  const canAct = canActOnSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  const setor = setores[0];
+  if (!canActOnSector(ctx, setores)) notFound();
+  const canAct = canActOnSector(ctx, setores);
   // Excluir documento, página e capa do manual: só o administrador (13/10/2026).
-  const canDelete = canManageSector(ctx, setor) && podeExcluir(ctx);
+  const canDelete = canManageSector(ctx, setores) && podeExcluir(ctx);
   // O vazio cita quem coordena o setor que opera o módulo, e não "o BPO" (05/10/2026).
   const setorRotulo = sectorLabel((await getSectorMaps(ctx.tenantId)).labels, setor);
 

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Building2, ClipboardList, MessagesSquare, Paperclip, Clock } from "lucide-react";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -45,12 +45,12 @@ export default async function ComunicacaoPage({
 }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  if (!canViewSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
   // Com as solicitações ligadas (01/10), a conversa livre saiu do portal: o
   // cliente não vê mais mensagem nova daqui. A tela fica só como histórico.
   const substituida = await isModuleEnabled(ctx.tenantId, "portal_solicitacoes");
-  const podeAgir = canActOnSector(ctx, setor) && !substituida;
+  const podeAgir = canActOnSector(ctx, setores) && !substituida;
 
   const { empresa: companyId } = await searchParams;
   const escopo = { tenantId: ctx.tenantId, companyIds: null };

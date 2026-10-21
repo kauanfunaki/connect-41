@@ -29,7 +29,7 @@ export const CAMINHO_DOS_QUADROS = "/setor/{setor}";
 export const TELAS_GERAIS = [
   { tela: "Início", caminho: "/home", descricao: "Resumo do dia com os painéis dos seus setores; o botão Personalizar escolhe o que aparece." },
   { tela: "Meu dia", caminho: "/tarefas", descricao: "O que é seu para hoje: o que venceu, o que vence, o que parou e o que está andando, de todos os setores. Coordenador vê também o time." },
-  { tela: "Cadastros", caminho: "/empresas", descricao: "Empresas, pessoas e clientes do escritório." },
+  { tela: "Cadastros", caminho: "/empresas", descricao: "Empresas e pessoas do escritório." },
   { tela: "Transferências", caminho: "/transferencias", descricao: "Passar um assunto para outro setor, com prazo e prioridade." },
   {
     tela: "Solicitações",
@@ -98,7 +98,7 @@ export const FERRAMENTAS_DE_AJUDA: Record<string, FerramentaRegistrada> = {
       return {
         gerais: TELAS_GERAIS.map((t) => (t.caminho.startsWith("/") && !t.caminho.includes("{") ? { ...t, link: linkDaTela(t.tela, t.caminho) } : t)),
         doSetor: estados
-          .filter((m) => m.enabled && setores.has(m.sectorCode))
+          .filter((m) => m.enabled && m.sectorCodes.some((s) => setores.has(s)))
           .map((m) => {
             const caminho = getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`;
             return { tela: m.label, setor: m.sectorCode, caminho, link: linkDaTela(m.label, caminho), descricao: m.description };

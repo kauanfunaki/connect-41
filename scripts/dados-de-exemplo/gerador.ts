@@ -13,7 +13,7 @@
 // O que entra:
 // - equipe: cinco pessoas, uma por setor, SEM senha que funcione — ninguém
 //   entra com elas; servem de responsável, dono e destino de transferência;
-// - seis empresas ativas, cada uma no seu grupo, com o responsável por setor;
+// - seis empresas ativas, com o responsável por setor;
 // - DP: colaboradores das empresas, admissões, férias (uma vencida), afastados,
 //   desligamentos (um finalizado no mês) e horas extras para aprovar; e três
 //   funcionários internos do escritório;
@@ -130,7 +130,6 @@ export async function carregarDadosDeExemplo(
   // ── Empresas ────────────────────────────────────────────────────────────
   const empresa = {} as Record<Chave, string>;
   for (const e of EMPRESAS) {
-    const grupo = await p.clientGroup.create({ data: { tenantId, name: e.fantasia, cnpjRoot: cnpj(e.base).slice(0, 8) } });
     const c = await p.company.create({
       data: {
         tenantId,
@@ -143,7 +142,6 @@ export async function carregarDadosDeExemplo(
         stateCode: "PR",
         ...camposDoRegime(e.regime),
         cnaePrincipal: e.cnae,
-        clientGroupId: grupo.id,
         responsibleUserId: adminId,
         email: `contato@${e.chave}.exemplo.invalido`,
         foundationDate: dia(-365 * (3 + EMPRESAS.indexOf(e))),

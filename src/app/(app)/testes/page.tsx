@@ -17,7 +17,7 @@ import { NovoTesteForm } from "@/components/teste/NovoTesteForm";
 import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { lerLista } from "@/lib/filtroNaUrl";
 import type { AssessmentLinkStatus } from "@/generated/prisma/enums";
-import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
+import { setoresDoModulo, isModuleEnabled } from "@/lib/modules";
 import { Selo } from "@/components/ui/Selo";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
@@ -77,7 +77,7 @@ export default async function TestesPage({
   const ondeStatus = statusFilter ? { status: statusFilter } : {};
   const where = { AND: [base, ondeTeste, ondeStatus] };
 
-  const canCreate = canWrite(ctx.role) && canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const canCreate = canWrite(ctx.role) && canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
 
   const [links, total, candidatos, templates, porStatus, porTeste] = await Promise.all([
     prisma.assessmentLink.findMany({

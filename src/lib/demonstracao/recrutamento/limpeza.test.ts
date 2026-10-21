@@ -313,7 +313,6 @@ describe("gravarDemonstracao", () => {
         "candidatura",
         "candidaturaNota",
         "cargo",
-        "clientGroup",
         "company",
         "interviewScorecard",
         "person",
@@ -340,7 +339,6 @@ describe("gravarDemonstracao", () => {
       expect(e.source).toBe(FONTE_DA_DEMO);
       expect(e.status).toBe("ACTIVE");
     }
-    for (const g of dados("clientGroup")) expect(String(g.name).startsWith(MARCA)).toBe(true);
   });
 
   it("vagas do setor de Recrutamento, com o administrador como responsável", async () => {

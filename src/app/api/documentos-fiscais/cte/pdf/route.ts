@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { obterPdf, ErroDoSped } from "@/lib/sped/client";
 import { credenciaisDoSped } from "@/lib/sped/credenciais";
 import { raizesDoAlcance } from "@/lib/sped/raizes";
@@ -33,7 +33,7 @@ const MODULE = "fiscal_documentos";
 export async function GET(req: NextRequest) {
   const ctx = await getAuthContext();
   // Setor que opera o módulo neste tenant; `SECTOR` é só o padrão.
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) {

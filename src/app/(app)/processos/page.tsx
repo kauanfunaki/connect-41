@@ -8,7 +8,7 @@ import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { listarFila, contarPorSituacao, feriadosDoTenant, filtrarPelaBusca } from "@/lib/societario/fila";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADES, PRIORIDADE_LABEL, ehPrioridade } from "@/lib/societario/prioridade";
@@ -57,7 +57,7 @@ export default async function ProcessosPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   // Gate de módulo além do gate de setor: o módulo é vendido por plano, e quem
   // é do societário num tenant que não contratou não deve ver a tela.
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
@@ -80,12 +80,13 @@ export default async function ProcessosPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
     }),
-    getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR),
+    getSectorUsers(ctx.tenantId, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR),
     contarAvisosPendentes(ctx.tenantId),
   ]);
   // A IA do Societário é da coordenação (decisão de 28/09): só ela vê o atalho.
-  const setorDoSocietario = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  const coordena = canManageSector(ctx, setorDoSocietario);
+  const setoresDoSocietario = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  const setorDoSocietario = setoresDoSocietario[0];
+  const coordena = canManageSector(ctx, setoresDoSocietario);
   const propostasDaIa = coordena ? await contarPendentesDoSetor(ctx.tenantId, setorDoSocietario) : 0;
 
   // Os filtros da URL só valem quando são valores conhecidos: o parâmetro é

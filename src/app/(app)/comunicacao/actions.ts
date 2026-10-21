@@ -10,7 +10,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { nomeExibicao } from "@/lib/companyName";
@@ -27,8 +27,8 @@ export type ResultadoDaMensagem = { error: string } | { ok: true; aviso: string 
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  const setor = (await setorDoModulo(ctx.tenantId, MODULO_DE_COMUNICACAO)) ?? getModuleDef(MODULO_DE_COMUNICACAO)!.sectorCode;
-  if (!canActOnSector(ctx, setor)) return { ok: false as const, erro: "Sem permissão na conversa com o cliente." };
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULO_DE_COMUNICACAO)) ?? [getModuleDef(MODULO_DE_COMUNICACAO)!.sectorCode];
+  if (!canActOnSector(ctx, setores)) return { ok: false as const, erro: "Sem permissão na conversa com o cliente." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULO_DE_COMUNICACAO))) return { ok: false as const, erro: "Módulo não habilitado." };
   return { ok: true as const, ctx, tenantId: ctx.tenantId, userId: ctx.userId || null, prisma: getPrisma() };
 }

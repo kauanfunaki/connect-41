@@ -85,6 +85,12 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
               {resumo.conciliadasPeloOmie === 1 ? " saiu" : " saíram"} da fila.
             </p>
           )}
+          {resumo.lancadasPorRegra > 0 && (
+            <p>
+              {resumo.lancadasPorRegra} {resumo.lancadasPorRegra === 1 ? "foi lançada e conciliada" : "foram lançadas e conciliadas"} pelas
+              regras de conciliação — desfaça no registro das regras se alguma não for.
+            </p>
+          )}
           {resumo.zeradas > 0 && <p>{resumo.zeradas} com valor zero não foram importadas.</p>}
           {resumo.avisos.map((a) => (
             <p key={a} className="text-warning-fg">

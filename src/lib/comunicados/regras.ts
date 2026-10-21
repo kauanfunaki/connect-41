@@ -94,18 +94,3 @@ export function empresasQueLeram(
 ): number {
   return empresas.filter((e) => [...(contasPorEmpresa.get(e) ?? [])].some((c) => leitores.has(c))).length;
 }
-
-/**
- * As empresas de um comunicado antigo (enviado a Clientes, até 14/10/2026):
- * as dos clientes que o receberam, no escritório do comunicado. O espelho, em
- * TypeScript, do segundo INSERT da migration `20261014210000` — para os testes
- * conferirem que ninguém deixa de ver um comunicado que já via.
- */
-export function empresasDoComunicadoAntigo(
-  tenantId: string,
-  clientesQueReceberam: readonly string[],
-  empresas: readonly { id: string; tenantId: string; clientGroupId: string | null }[]
-): string[] {
-  const clientes = new Set(clientesQueReceberam);
-  return empresas.filter((e) => e.tenantId === tenantId && e.clientGroupId !== null && clientes.has(e.clientGroupId)).map((e) => e.id);
-}

@@ -3,6 +3,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { CentralDeAjuda, type SetorDaAjuda, type TelaDaAjuda } from "@/components/ajuda/CentralDeAjuda";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
+import { setorParaMostrar } from "@/lib/modulo-setor";
 import { getModuleRoute } from "@/lib/module-catalog";
 import { getSectorMaps } from "@/lib/sectors";
 import { CAMINHO_DOS_QUADROS, TELAS_GERAIS } from "@/lib/ia/ferramentas-ajuda";
@@ -42,10 +43,12 @@ export default async function AjudaPage() {
     montarTutorialDaEquipe(ctx),
   ]);
 
-  const visiveis = estados.filter((m) => m.enabled && canViewSector(ctx, m.sectorCode));
+  const visiveis = estados.filter((m) => m.enabled && canViewSector(ctx, m.sectorCodes));
   const porSetor = new Map<string, TelaDaAjuda[]>();
   for (const m of visiveis) {
-    const lista = porSetor.get(m.sectorCode) ?? [];
+    // A tela de mais de um setor entra uma vez, no setor da pessoa (21/10/2026).
+    const setor = setorParaMostrar(m.sectorCodes, ctx);
+    const lista = porSetor.get(setor) ?? [];
     const caminho = getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`;
     lista.push({
       chave: m.code,
@@ -55,7 +58,7 @@ export default async function AjudaPage() {
       codigo: m.code,
       ...ajudaDaTela(m.code, caminho),
     });
-    porSetor.set(m.sectorCode, lista);
+    porSetor.set(setor, lista);
   }
 
   // Com setor ativo, ele vem primeiro: é o que a pessoa está fazendo agora.
