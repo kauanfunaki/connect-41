@@ -8,7 +8,6 @@
 // `notifiedAt` diz à equipe quando terminou.
 
 import { getPrisma } from "@/lib/prisma";
-import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import { usuariosAtivosDasEmpresas, type UsuarioDoPortal } from "@/lib/portal/empresasDaContaDb";
 import { getSectorMaps } from "@/lib/sectors";
 import { sendComunicadoAoClienteEmail } from "@/lib/email/sendMail";
@@ -45,23 +44,12 @@ export async function avisarClientesDoComunicado(tenantId: string, id: string): 
 
 /**
  * Os acessos ativos que enxergam alguma das empresas do comunicado — uma vez
- * cada um, mesmo com várias delas. Sem a tabela nova (antes da migration), os
- * acessos dos clientes que recebem.
+ * cada um, mesmo com várias delas.
  */
 export async function quemRecebeOComunicado(tenantId: string, announcementId: string): Promise<UsuarioDoPortal[]> {
-  const prisma = getPrisma();
-  try {
-    const empresas = await prisma.clientAnnouncementCompany.findMany({ where: { announcementId }, select: { companyId: true } });
-    return usuariosAtivosDasEmpresas(
-      tenantId,
-      empresas.map((e) => e.companyId)
-    );
-  } catch (err) {
-    if (!isPrismaMissingTableError(err)) throw err;
-    const grupos = await prisma.clientAnnouncementGroup.findMany({ where: { announcementId }, select: { clientGroupId: true } });
-    return prisma.portalUser.findMany({
-      where: { tenantId, active: true, clientGroupId: { in: grupos.map((g) => g.clientGroupId) } },
-      select: { id: true, name: true, email: true },
-    });
-  }
+  const empresas = await getPrisma().clientAnnouncementCompany.findMany({ where: { announcementId }, select: { companyId: true } });
+  return usuariosAtivosDasEmpresas(
+    tenantId,
+    empresas.map((e) => e.companyId)
+  );
 }

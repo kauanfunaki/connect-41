@@ -6,7 +6,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { saoPauloParts, addDaysToKey } from "@/lib/agenda";
 import { AVISO_EM_DIAS } from "@/lib/societario/licencas";
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 export default async function MinhaAreaPage() {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !ctx.userId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !ctx.userId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const agora = new Date();

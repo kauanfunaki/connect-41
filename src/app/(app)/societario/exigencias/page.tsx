@@ -10,7 +10,7 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { saoPauloParts } from "@/lib/agenda";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canActOnSector, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatInstantDate } from "@/lib/format";
@@ -40,14 +40,14 @@ export default async function ExigenciasPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canViewSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
   // Ver é do setor; resolver é de quem age nele — o botão some para o resto.
-  const podeAgir = canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const podeAgir = canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
 
   const params = await searchParams;
   const situacao = lerSituacaoDaExigencia(params.situacao);
-  const responsaveis = await getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const responsaveis = await getSectorUsers(ctx.tenantId, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   const responsavelFiltro =
     params.responsavel === "nenhum" || responsaveis.some((r) => r.id === params.responsavel)
       ? params.responsavel

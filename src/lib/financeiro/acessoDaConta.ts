@@ -7,7 +7,7 @@
 // (o do tipo, ou o de Lançamentos) pode mexer nela; quem só vê, só vê.
 
 import { getAuthContext, canActOnSector, canViewSector, type AuthContext } from "@/lib/auth/context";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 
 const SECTOR = "bpo";
 /** O módulo da tela dona de cada tipo de conta. */
@@ -15,8 +15,11 @@ export const MODULO_DO_TIPO = { PAGAR: "bpo_contas_pagar", RECEBER: "bpo_contas_
 
 type Tipo = keyof typeof MODULO_DO_TIPO;
 
+// Cada módulo traz os setores dele (21/10/2026): uma tela ligada a mais de um
+// setor libera quem é de qualquer um.
 async function setoresDoTipo(tenantId: string, kind: Tipo): Promise<string[]> {
-  return Promise.all([MODULO_DO_TIPO[kind], "bpo_lancamentos"].map(async (m) => (await setorDoModulo(tenantId, m)) ?? SECTOR));
+  const porModulo = await Promise.all([MODULO_DO_TIPO[kind], "bpo_lancamentos"].map(async (m) => (await setoresDoModulo(tenantId, m)) ?? [SECTOR]));
+  return porModulo.flat();
 }
 
 /** Quem pode mudar a conta: quem atua no setor do módulo do tipo dela, ou no de Lançamentos. */

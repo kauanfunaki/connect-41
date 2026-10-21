@@ -4,8 +4,9 @@ import { EmpresasTable } from 'connect-41';
 // passava `statusStyle` e o componente hoje recebe `statusColor` — a prop foi
 // renomeada depois do sync, e indexar `undefined` derrubava a árvore inteira:
 // o render check acusava "root empty", que é a forma que a deriva de props
-// assume aqui. As linhas também ganharam campos desde então (cliente, matriz,
-// regime, cidade), e `agruparPorCliente`/`montarArvore` leem exatamente esses.
+// assume aqui. As linhas também ganharam campos desde então (matriz, regime,
+// cidade), e `montarArvore` lê a matriz. O cliente saiu das linhas em
+// 15/10/2026, com o agrupamento por cliente.
 const STATUS_LABEL = {
   PROSPECT: 'Prospecto',
   ACTIVE: 'Ativo',
@@ -20,8 +21,7 @@ const STATUS_COLOR = {
   CHURNED: 'bg-danger/10 text-danger border-danger/25',
 } as const;
 
-// Duas empresas do mesmo cliente, uma delas filial: é o caso que exercita o
-// cabeçalho de grupo e a linha recolhível ao mesmo tempo.
+// Uma matriz com a filial: é o caso que exercita a linha recolhível.
 const companies = [
   {
     id: 'c1',
@@ -37,8 +37,6 @@ const companies = [
     logoUrl: null,
     city: 'Londrina',
     stateCode: 'PR',
-    clientGroupId: 'g1',
-    clientGroupName: 'Grupo Alfa',
     parentCompanyId: null,
   },
   {
@@ -55,8 +53,6 @@ const companies = [
     logoUrl: null,
     city: 'Curitiba',
     stateCode: 'PR',
-    clientGroupId: 'g1',
-    clientGroupName: 'Grupo Alfa',
     parentCompanyId: 'c1',
   },
   {
@@ -73,8 +69,6 @@ const companies = [
     logoUrl: null,
     city: 'Maringá',
     stateCode: 'PR',
-    clientGroupId: 'g2',
-    clientGroupName: 'Beta',
     parentCompanyId: null,
   },
   // Pessoa física: identificada por CPF, sem CNPJ e sem regime — mora na mesma
@@ -93,8 +87,6 @@ const companies = [
     logoUrl: null,
     city: null,
     stateCode: null,
-    clientGroupId: null,
-    clientGroupName: null,
     parentCompanyId: null,
   },
 ];

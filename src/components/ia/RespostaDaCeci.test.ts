@@ -62,3 +62,20 @@ describe("resposta da Ceci na tela", () => {
     expect(h).toContain("Prazo: sem prazo — Status: aberta");
   });
 });
+
+describe("no portal do cliente (semLinks, 21/10/2026)", () => {
+  const doPortal = (texto: string) => renderToStaticMarkup(React.createElement(RespostaDaCeci, { texto, semLinks: true }));
+
+  it("nenhum link: nem o escrito, nem o caminho solto de uma tela da equipe", () => {
+    const h = doPortal("Veja [as contas](/pagar) e também /pendencias.\n\n[Abrir as pendências](/pendencias)\n- **[Item](/pagar)** — x");
+    expect(hrefs(h)).toEqual([]);
+    expect(h).toContain("as contas");
+    expect(h).toContain("<strong class=\"font-semibold text-fg\">Item</strong>");
+  });
+
+  it("negrito e lista continuam", () => {
+    const h = doPortal("**R$ 100,00** a pagar\n- **Aluguel** — vence hoje");
+    expect(h).toContain('<strong class="font-semibold text-fg">R$ 100,00</strong>');
+    expect(h).toContain("<li");
+  });
+});

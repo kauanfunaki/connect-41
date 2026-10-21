@@ -8,7 +8,6 @@ import { atualizarEmpresa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
-import { getActiveClientGroupOptions } from "@/lib/clientGroupsDb";
 import { getMatrizOptions } from "@/lib/companyHierarchyDb";
 
 export default async function EditarEmpresaPage({
@@ -29,7 +28,6 @@ export default async function EditarEmpresaPage({
 
   const companySectors = await getCompanySectors(ctx.tenantId, id);
   const customFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
-  const clientGroupOptions = await getActiveClientGroupOptions(ctx.tenantId);
   const matrizOptions = await getMatrizOptions(ctx.tenantId, id);
 
   return (
@@ -49,7 +47,6 @@ export default async function EditarEmpresaPage({
           action={atualizarEmpresa}
           cancelHref={`/empresas/${id}`}
           customFields={customFields}
-          clientGroupOptions={clientGroupOptions}
           matrizOptions={matrizOptions}
           defaultValues={{
             id,
@@ -79,7 +76,6 @@ export default async function EditarEmpresaPage({
             website:               company.website               ?? undefined,
             status:                company.status,
             source:                company.source                ?? undefined,
-            clientGroupId:         company.clientGroupId          ?? undefined,
             parentCompanyId:       company.parentCompanyId        ?? undefined,
           }}
         />

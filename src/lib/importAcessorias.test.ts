@@ -82,7 +82,6 @@ describe("planejarImportacao", () => {
         { ...matriz, contatoNome: "Ana Clara Martins", contatoEmail: "ana@bld.com.br" },
         { ...matriz, contatoNome: "Joao Pedro Silva", contatoEmail: "joao@bld.com.br" },
       ],
-      [],
       []
     );
     expect(p.empresas).toHaveLength(1);
@@ -90,13 +89,13 @@ describe("planejarImportacao", () => {
   });
 
   it("pendura a filial na matriz pelo estabelecimento 0001", () => {
-    const p = planejarImportacao([matriz, filial], [], []);
+    const p = planejarImportacao([matriz, filial], []);
     expect(p.filiais).toEqual([{ cnpjFilial: "17122471000256", cnpjMatriz: "17122471000175" }]);
     expect(p.filiaisSemMatriz).toEqual([]);
   });
 
   it("filial sem a matriz no arquivo entra solta, e é reportada", () => {
-    const p = planejarImportacao([filial], [], []);
+    const p = planejarImportacao([filial], []);
     expect(p.filiais).toEqual([]);
     expect(p.filiaisSemMatriz).toEqual([{ cnpj: "17122471000256", name: "BLD LOGISTICA LTDA - Filial 02" }]);
   });
@@ -104,8 +103,7 @@ describe("planejarImportacao", () => {
   it("pendura na matriz que já estava no Connect, fora do arquivo", () => {
     const p = planejarImportacao(
       [filial],
-      [{ id: "c1", cnpj: "17122471000175", name: "BLD LOGISTICA LTDA" }],
-      []
+      [{ id: "c1", cnpj: "17122471000175", name: "BLD LOGISTICA LTDA" }]
     );
     expect(p.filiais).toEqual([{ cnpjFilial: "17122471000256", cnpjMatriz: "17122471000175" }]);
   });
@@ -113,8 +111,7 @@ describe("planejarImportacao", () => {
   it("não recria empresa que já existe, e casa por CNPJ mesmo com máscara na base", () => {
     const p = planejarImportacao(
       [matriz, outra],
-      [{ id: "c1", cnpj: "17.122.471/0001-75", name: "BLD LOGISTICA LTDA" }],
-      []
+      [{ id: "c1", cnpj: "17.122.471/0001-75", name: "BLD LOGISTICA LTDA" }]
     );
     expect(p.novas.map((e) => e.cnpj)).toEqual(["46997704000181"]);
     expect(p.jaExistem).toEqual([{ cnpj: "17122471000175", id: "c1" }]);
@@ -123,8 +120,7 @@ describe("planejarImportacao", () => {
   it("nome divergente vira substituição: apaga a antiga e recria do arquivo", () => {
     const p = planejarImportacao(
       [linha({ cnpj: "38116926000110", name: "GENETICA SOLUCOES LTDA" })],
-      [{ id: "c1", cnpj: "38116926000110", name: "41Contabil" }],
-      []
+      [{ id: "c1", cnpj: "38116926000110", name: "41Contabil" }]
     );
     expect(p.divergenciasDeNome).toEqual([
       { cnpj: "38116926000110", nomeAtual: "41Contabil", nomeNovo: "GENETICA SOLUCOES LTDA" },
@@ -132,8 +128,7 @@ describe("planejarImportacao", () => {
     expect(p.substituicoes).toEqual([
       { id: "c1", cnpj: "38116926000110", nomeAtual: "41Contabil" },
     ]);
-    // Entra como nova: depois de apagada é isso que ela é, e o agrupamento por
-    // raiz precisa enxergá-la para dar cliente à empresa recriada.
+    // Entra como nova: depois de apagada é isso que ela é.
     expect(p.novas.map((e) => e.cnpj)).toEqual(["38116926000110"]);
     expect(p.jaExistem).toEqual([]);
   });
@@ -141,30 +136,25 @@ describe("planejarImportacao", () => {
   it("mesmo nome não vira substituição — só divergência apaga", () => {
     const p = planejarImportacao(
       [matriz],
-      [{ id: "c1", cnpj: "17122471000175", name: "BLD LOGISTICA LTDA" }],
-      []
+      [{ id: "c1", cnpj: "17122471000175", name: "BLD LOGISTICA LTDA" }]
     );
     expect(p.substituicoes).toEqual([]);
     expect(p.novas).toEqual([]);
     expect(p.jaExistem).toEqual([{ cnpj: "17122471000175", id: "c1" }]);
   });
 
-  it("agrupa por raiz: matriz e filial num cliente só", () => {
-    const p = planejarImportacao([matriz, filial, outra], [], []);
-    const bld = p.clientesNovos.find((c) => c.cnpjRoot === "17122471");
-    expect(bld?.empresas).toHaveLength(2);
-    expect(p.clientesNovos).toHaveLength(2);
-  });
-
-  it("reaproveita cliente que já existe para a mesma raiz", () => {
-    const p = planejarImportacao([filial], [], [{ id: "g1", name: "BLD", cnpjRoot: "17122471" }]);
-    expect(p.clientesExistentes).toEqual([{ id: "g1", cnpjRoot: "17122471" }]);
-    expect(p.clientesNovos).toEqual([]);
+  // Até 15/10/2026 o plano também criava um Cliente por raiz de CNPJ. O
+  // Cliente saiu (etapa 3): o plano não fala mais dele.
+  it("não planeja Cliente nenhum: só empresas, filiais e contatos", () => {
+    const p = planejarImportacao([matriz, filial, outra], []);
+    expect(Object.keys(p).filter((k) => /client/i.test(k))).toEqual([]);
+    expect(p.novas).toHaveLength(3);
+    expect(p.filiais).toEqual([{ cnpjFilial: "17122471000256", cnpjMatriz: "17122471000175" }]);
   });
 
   it("não repete o mesmo contato na mesma empresa", () => {
     const c = { contatoNome: "Ana Clara Martins", contatoEmail: "ana@bld.com.br" };
-    const p = planejarImportacao([{ ...matriz, ...c }, { ...matriz, ...c }], [], []);
+    const p = planejarImportacao([{ ...matriz, ...c }, { ...matriz, ...c }], []);
     expect(p.contatos).toHaveLength(1);
   });
 
@@ -175,7 +165,6 @@ describe("planejarImportacao", () => {
         { ...matriz, contatoNome: "Cliente", contatoEmail: "x@bld.com.br" },
         { ...matriz, contatoNome: "Ana Clara Martins", contatoEmail: "ana@bld.com.br" },
       ],
-      [],
       []
     );
     expect(p.contatos.map((c) => c.name)).toEqual(["Ana Clara Martins"]);
@@ -183,9 +172,9 @@ describe("planejarImportacao", () => {
   });
 
   it("arquivo vazio não gera plano nenhum", () => {
-    const p = planejarImportacao([], [], []);
+    const p = planejarImportacao([], []);
     expect(p.empresas).toEqual([]);
-    expect(p.clientesNovos).toEqual([]);
+    expect(p.filiais).toEqual([]);
     expect(p.contatos).toEqual([]);
   });
 });

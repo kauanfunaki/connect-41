@@ -19,17 +19,24 @@ import { lerMarkdown, type Bloco, type Trecho } from "@/lib/ia/chat/markdown";
  * botão ("Abrir as pendências aguardando o cliente"), no meio da frase vira
  * texto azul. `aoNavegar` fecha o chat para a tela aparecer (no celular o
  * painel cobre tudo).
+ *
+ * `semLinks` é o portal do cliente (21/10/2026): as telas que o Markdown
+ * conhece são as da equipe, e o cliente não as abre. Lá todo link vira texto e
+ * a citação vira só o nome; os botões do portal vêm à parte, conferidos no
+ * servidor (`separarBotoes`).
  */
 export function RespostaDaCeci({
   texto,
   citados = {},
   aoNavegar,
+  semLinks = false,
 }: {
   texto: string;
   citados?: Record<string, Citado>;
   aoNavegar?: () => void;
+  semLinks?: boolean;
 }) {
-  const blocos = lerMarkdown(texto);
+  const blocos = lerMarkdown(texto).map((b) => (semLinks ? semLinksNoBloco(b) : b)).filter((b): b is Bloco => b !== null);
   return (
     <div className="flex flex-col gap-1.5">
       {blocos.map((b, i) => (
@@ -37,6 +44,31 @@ export function RespostaDaCeci({
       ))}
     </div>
   );
+}
+
+/** Link vira o rótulo e citação vira o nome; a linha de botões sai. Puro. */
+export function semLinksNoTrecho(t: Trecho): Trecho {
+  if (t.t === "link") return { t: "texto", v: t.rotulo };
+  if (t.t === "citacao") return { t: "texto", v: t.nome };
+  if (t.t === "negrito" || t.t === "italico") return { ...t, filhos: t.filhos.map(semLinksNoTrecho) };
+  return t;
+}
+
+export function semLinksNoBloco(b: Bloco): Bloco | null {
+  const ts = (x: Trecho[]) => x.map(semLinksNoTrecho);
+  switch (b.t) {
+    case "paragrafo":
+    case "titulo":
+      return { ...b, filhos: ts(b.filhos) };
+    case "lista":
+      return { ...b, itens: b.itens.map((it) => ({ filhos: ts(it.filhos), sub: it.sub.map(ts) })) };
+    case "tabela":
+      return { ...b, cabecalho: b.cabecalho.map(ts), linhas: b.linhas.map((l) => l.map(ts)) };
+    case "botoes":
+      return null;
+    default:
+      return b;
+  }
 }
 
 function BlocoDaResposta({ bloco: b, citados, aoNavegar }: { bloco: Bloco; citados: Record<string, Citado>; aoNavegar?: () => void }) {

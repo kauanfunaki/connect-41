@@ -23,7 +23,7 @@ import { notifyUser } from "@/lib/notifications";
 import { desfechoDaTela, LIMPEZA_AO_ENCERRAR, type Desfecho } from "@/lib/whatsapp/atendimentos";
 import { atendimentoAberto, fecharAtendimentos, garantirAtendimentoAberto } from "@/lib/whatsapp/atendimentos-dados";
 import { provedorDaIntegracao } from "@/lib/whatsapp/provedores";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 
 export type AcaoNaConversa = { error: string } | { success: true } | null;
@@ -37,7 +37,7 @@ const MODULE = "recrutamento_whatsapp";
 async function abrirConversa(threadId: string) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado" };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) {
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) {
     return { ok: false as const, erro: "Sem permissão no Recrutamento." };
   }
   const tenantId = ctx.tenantId;
@@ -249,8 +249,8 @@ export async function agirEmLote(threadIds: string[], acao: AcaoEmLote): Promise
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
   const tenantId = ctx.tenantId;
-  const setor = (await setorDoModulo(tenantId, MODULE)) ?? SETOR;
-  if (!canActOnSector(ctx, setor)) return { error: "Sem permissão no Recrutamento." };
+  const setores = (await setoresDoModulo(tenantId, MODULE)) ?? [SETOR];
+  if (!canActOnSector(ctx, setores)) return { error: "Sem permissão no Recrutamento." };
 
   const ids = [...new Set(threadIds.filter((x) => typeof x === "string" && x.length > 0))];
   if (ids.length === 0) return { error: "Selecione ao menos uma conversa." };
@@ -258,7 +258,7 @@ export async function agirEmLote(threadIds: string[], acao: AcaoEmLote): Promise
   if (acao.tipo === "encerrar" && !desfechoDaTela(acao.desfecho)) return { error: "Escolha como os atendimentos terminaram." };
   // Só recebe conversa quem atende o WhatsApp do setor — o id vem do navegador.
   const destino =
-    acao.tipo === "transferir" ? (await pessoasDoAtendimento(tenantId, setor)).find((p) => p.id === acao.paraId) : undefined;
+    acao.tipo === "transferir" ? (await pessoasDoAtendimento(tenantId, setores)).find((p) => p.id === acao.paraId) : undefined;
   if (acao.tipo === "transferir" && !destino) return { error: "Essa pessoa não atende o WhatsApp do Recrutamento." };
 
   const prisma = getPrisma();
