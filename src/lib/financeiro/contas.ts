@@ -218,3 +218,9 @@ export function centavosDeDecimal(valor: { toString(): string }): number {
 export function reaisDeCentavos(cents: number): number {
   return cents / 100;
 }
+
+/**
+ * Id do formulário de `/pagar` e `/receber` a que as caixas de cada linha se
+ * associam — o das ações em lote (pagar as marcadas, definir o centro).
+ */
+export const FORM_DAS_CONTAS = "acoes-em-lote-das-contas";

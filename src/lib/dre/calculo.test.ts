@@ -8,7 +8,7 @@ import {
   type LancamentoDoDre,
 } from "./calculo";
 import { MAPEAMENTO_PADRAO } from "./mapeamento-padrao";
-import { OUTUBRO_2025, ESPERADO_OUTUBRO_2025 } from "./outubro-2025.fixture";
+import { OUTUBRO_2025, ESPERADO_OUTUBRO_2025, ESPERADO_OUTUBRO_2025_PADRAO } from "./outubro-2025.fixture";
 import {
   GRUPOS,
   LINHAS,
@@ -16,7 +16,12 @@ import {
   TRANSFERENCIA,
   DESCONSIDERAR,
   OPCOES_PADRAO,
+  OPCOES_SEM_IMPOSTOS,
+  GRUPO_DO_ANTIGO,
   grupoAceitaOrigem,
+  grupoAtual,
+  opcoesDaUrl,
+  parcelasDoEbitda,
   rotuloDoGrupo,
 } from "./estrutura";
 
@@ -31,50 +36,48 @@ function l(categoria: string | null, reais: number, origem: "recebimento" | "pag
 // ─────────────────────────────────────────────────────────────────────────────
 describe("outubro de 2025 da Irriga", () => {
   const r = calcularDre(OUTUBRO_2025, PADRAO);
+  const semImpostos = calcularDre(OUTUBRO_2025, PADRAO, OPCOES_SEM_IMPOSTOS);
 
-  // ─── Por que a tolerância é de 1 centavo, e só nos subtotais fundos ───────
-  //
-  // Quinze das dezoito linhas batem ao centavo. As três que não são as mais
-  // profundas — gerador de caixa, fluxo após investimentos e fluxo livre — e a
-  // diferença é sempre **um centavo**.
-  //
-  // Não é erro nosso: **a planilha não fecha com ela mesma**. Ela mostra margem
-  // de contribuição 241.416,76 e total de despesas fixas −88.485,90, cuja soma
-  // é 152.930,86 — e exibe 152.930,85 na linha seguinte. É acúmulo de ponto
-  // flutuante no Excel, que carrega a casa escondida e arredonda só na tela.
-  //
-  // Em centavos inteiros isso não acontece, e é por isso que a conta aqui é
-  // inteira. A tolerância existe para o teste falar do que importa — a regra de
-  // composição — em vez de travar num centavo que vem da origem.
-  const TOLERANCIA_DE_ARREDONDAMENTO = new Set([
-    "gerador_de_caixa",
-    "fluxo_apos_investimentos",
-    "fluxo_de_caixa_livre",
-  ]);
-
-  it.each(Object.keys(ESPERADO_OUTUBRO_2025))("a linha %s bate com a planilha", (code) => {
-    const nosso = centavosDaLinha(r, code)!;
-    const deles = ESPERADO_OUTUBRO_2025[code]!;
-    if (TOLERANCIA_DE_ARREDONDAMENTO.has(code)) {
-      expect(Math.abs(nosso - deles)).toBeLessThanOrEqual(1);
-    } else {
-      expect(nosso).toBe(deles);
-    }
+  // O padrão de 20/10/2026, linha a linha, contra o mês montado à mão a partir
+  // da planilha (ver o fixture).
+  it.each(Object.keys(ESPERADO_OUTUBRO_2025_PADRAO))("a linha %s bate com o mês montado da planilha", (code) => {
+    expect(centavosDaLinha(r, code)).toBe(ESPERADO_OUTUBRO_2025_PADRAO[code]);
   });
 
-  // O outro lado da moeda: internamente, a nossa conta fecha exata. É o que a
-  // tolerância acima não pode esconder.
+  // O cálculo continua o da Irriga: as linhas que as duas estruturas têm em
+  // comum batem com a planilha que o BPO entregou.
+  it("receita, impostos, receita líquida e margem são os da planilha da Irriga", () => {
+    for (const code of ["receita_bruta", "impostos", "receita_liquida", "margem_contribuicao", "outras_receitas"]) {
+      expect(centavosDaLinha(r, code), code).toBe(ESPERADO_OUTUBRO_2025[code]);
+    }
+    const e = ESPERADO_OUTUBRO_2025;
+    expect(centavosDaLinha(r, "custo_operacional")).toBe(e.cmv! + e.mao_de_obra! + e.comerciais!);
+  });
+
+  // ─── Por que a tolerância é de 1 centavo ──────────────────────────────────
+  //
+  // **A planilha da Irriga não fecha com ela mesma.** Ela mostra margem de
+  // contribuição 241.416,76 e total de despesas fixas −88.485,90, cuja soma é
+  // 152.930,86 — e exibe 152.930,85 na linha seguinte. É acúmulo de ponto
+  // flutuante no Excel, que carrega a casa escondida e arredonda só na tela.
+  // Em centavos inteiros isso não acontece; o centavo vem da origem.
+  it("sem os impostos, o resultado é o fluxo de caixa livre da planilha da Irriga", () => {
+    const resultado = centavosDaLinha(semImpostos, "resultado_liquido")!;
+    expect(Math.abs(resultado - ESPERADO_OUTUBRO_2025.fluxo_de_caixa_livre!)).toBeLessThanOrEqual(1);
+    // E o EBITDA é o gerador de caixa dela, menos o que o modelo novo leva para
+    // financiamentos (sai das outras despesas) e o IOF (vai para elas).
+    const gerador = ESPERADO_OUTUBRO_2025.gerador_de_caixa!;
+    const ebitda = centavosDaLinha(semImpostos, "ebitda")!;
+    expect(Math.abs(ebitda - (gerador - 1_929_650 + 133_947))).toBeLessThanOrEqual(1);
+  });
+
+  // O outro lado da moeda: internamente, a nossa conta fecha exata.
   it("os subtotais fecham exatamente entre si, sem centavo perdido", () => {
     const v = (c: string) => centavosDaLinha(r, c)!;
-    expect(v("gerador_de_caixa")).toBe(v("margem_contribuicao") + v("total_despesas_fixas"));
-    expect(v("fluxo_apos_investimentos")).toBe(v("gerador_de_caixa") + v("investimentos"));
-    expect(v("fluxo_de_caixa_livre")).toBe(
-      v("fluxo_apos_investimentos") + v("outras_receitas") + v("outras_despesas")
-    );
-    expect(v("total_despesas_fixas")).toBe(
-      v("pessoal") + v("diretoria") + v("administrativas") + v("financeiras")
-    );
     expect(v("receita_liquida")).toBe(v("receita_bruta") + v("impostos"));
+    expect(v("margem_contribuicao")).toBe(v("receita_bruta") + v("custo_operacional"));
+    expect(v("ebitda")).toBe(v("margem_contribuicao") + v("impostos") + v("custo_administrativo") + v("financiamentos"));
+    expect(v("resultado_liquido")).toBe(v("ebitda") + v("outras_despesas") + v("outras_receitas"));
   });
 
   // A conferência que a planilha faz à mão, nas abas `Check`: nada entra e
@@ -101,33 +104,43 @@ describe("outubro de 2025 da Irriga", () => {
     expect(r.naoClassificado[0]!.centavos).toBe(6_180_271);
   });
 
-  // O outro achado: os impostos são calculados e não entram no resultado. Em
-  // outubro, R$ 46.148,78 que saíram do caixa e não estão no fluxo livre.
-  it("o imposto fica fora do resultado — e o número é dito", () => {
-    expect(impostoForaDoResultado(r)).toBe(-4_614_878);
-
+  // As duas visões dos impostos (20/10/2026). No padrão, o resultado é a soma
+  // de todos os grupos: nada que saiu do caixa fica de fora.
+  it("no padrão, os impostos descontam do EBITDA e nada fica fora do resultado", () => {
+    expect(impostoForaDoResultado(r)).toBe(0);
     const somaDosGrupos = GRUPOS.reduce((n, g) => n + (r.porGrupo[g.code] ?? 0), 0);
-    const fluxo = centavosDaLinha(r, "fluxo_de_caixa_livre")!;
-    expect(fluxo - somaDosGrupos).toBe(4_614_878);
+    expect(centavosDaLinha(r, "resultado_liquido")).toBe(somaDosGrupos);
   });
 
-  it("com a margem partindo da líquida, o imposto entra e o fluxo muda", () => {
-    const corrigido = calcularDre(OUTUBRO_2025, PADRAO, { margemPartirDaLiquida: true });
-    const somaDosGrupos = GRUPOS.reduce((n, g) => n + (corrigido.porGrupo[g.code] ?? 0), 0);
-    expect(centavosDaLinha(corrigido, "fluxo_de_caixa_livre")).toBe(somaDosGrupos);
-    expect(impostoForaDoResultado(corrigido, { margemPartirDaLiquida: true })).toBe(0);
+  // Na visão "fora do resultado": R$ 46.148,78 que saíram do caixa e não estão
+  // no resultado — e o número é dito.
+  it("na visão sem impostos, eles ficam fora do resultado — e o número é dito", () => {
+    expect(impostoForaDoResultado(semImpostos, OPCOES_SEM_IMPOSTOS)).toBe(-4_614_878);
+    const somaDosGrupos = GRUPOS.reduce((n, g) => n + (semImpostos.porGrupo[g.code] ?? 0), 0);
+    expect(centavosDaLinha(semImpostos, "resultado_liquido")! - somaDosGrupos).toBe(4_614_878);
   });
 
-  // O percentual de mão de obra divide pela líquida, não pela bruta, apesar do
-  // rótulo. Reproduzido de propósito — e travado, para a divergência não virar
-  // descuido de quem mexer depois.
-  it("o % de mão de obra usa a receita líquida, como na planilha", () => {
-    const pct = r.linhas.find((x) => x.code === "mao_de_obra_pct")!.fracao!;
-    const mo = centavosDaLinha(r, "mao_de_obra")!;
-    const liquida = centavosDaLinha(r, "receita_liquida")!;
+  it("as duas visões só diferem nos impostos: receita líquida e margem são as mesmas", () => {
+    for (const code of ["receita_bruta", "impostos", "receita_liquida", "custo_operacional", "margem_contribuicao"]) {
+      expect(centavosDaLinha(semImpostos, code), code).toBe(centavosDaLinha(r, code));
+    }
+    expect(centavosDaLinha(semImpostos, "ebitda")! - centavosDaLinha(r, "ebitda")!).toBe(4_614_878);
+  });
+
+  // Como as duas planilhas, todo percentual divide pela receita bruta — a da
+  // Irriga dividia a mão de obra pela líquida, e isso ficou para trás.
+  it("todo percentual divide pela receita bruta: despesa em valor absoluto, resultado com o sinal", () => {
     const bruta = centavosDaLinha(r, "receita_bruta")!;
-    expect(pct).toBeCloseTo(Math.abs(mo / liquida), 6);
-    expect(pct).not.toBeCloseTo(Math.abs(mo / bruta), 6);
+    for (const linha of r.linhas) {
+      if (linha.tipo !== "percentual") continue;
+      const numerador = centavosDaLinha(r, linha.code.replace(/_pct$/, ""))!;
+      const esperado = ["impostos", "custo_operacional", "custo_administrativo", "financiamentos", "outras_despesas"].some(
+        (g) => linha.code === `${g}_pct`
+      )
+        ? Math.abs(numerador / bruta)
+        : numerador / bruta;
+      expect(linha.fracao!, linha.code).toBeCloseTo(esperado, 9);
+    }
   });
 });
 
@@ -165,9 +178,9 @@ describe("classificação", () => {
   // Somar um recebimento dentro de um grupo de despesa produz número
   // plausível — e plausível é o que ninguém confere.
   it("origem que não bate com a do grupo não entra na conta", () => {
-    const mapa = montarMapeamento([{ categoria: "Aluguel", grupo: "administrativas" }]);
+    const mapa = montarMapeamento([{ categoria: "Aluguel", grupo: "custo_administrativo" }]);
     const r = calcularDre([l("Aluguel", 1_000, "recebimento")], mapa);
-    expect(r.porGrupo.administrativas).toBe(0);
+    expect(r.porGrupo.custo_administrativo).toBe(0);
     expect(r.porGrupo[NAO_CLASSIFICADO]).toBe(100_000);
   });
 
@@ -184,7 +197,7 @@ describe("classificação", () => {
     );
     expect(r.porGrupo[TRANSFERENCIA]).toBe(0);
     expect(r.porGrupo[NAO_CLASSIFICADO]).toBe(0);
-    expect(centavosDaLinha(r, "fluxo_de_caixa_livre")).toBe(0);
+    expect(centavosDaLinha(r, "resultado_liquido")).toBe(0);
     expect(r.diferencaDeFechamento).toBe(0);
   });
 });
@@ -208,14 +221,14 @@ describe("o detalhe de cada linha", () => {
   // Alfabética desde 15/10/2026 (era do maior para o menor), sem olhar caixa:
   // "compra", minúsculo, fica entre as do C, e não depois do "Frete".
   it("o grupo abre nas categorias, em ordem alfabética, e a soma é a da linha", () => {
-    const cmv = r.porCategoria.cmv!;
-    expect(cmv.map((c) => [c.categoria, c.centavos])).toEqual([
+    const operacional = r.porCategoria.custo_operacional!;
+    expect(operacional.map((c) => [c.categoria, c.centavos])).toEqual([
       ["Aluguel de Equipamentos", -2_000],
       ["compra de consumiveis", -1_000],
       ["Compra de Matéria Prima - Bobina", -40_000],
       ["Frete", -15_000],
     ]);
-    expect(cmv.reduce((s, c) => s + c.centavos, 0)).toBe(centavosDaLinha(r, "cmv"));
+    expect(operacional.reduce((s, c) => s + c.centavos, 0)).toBe(centavosDaLinha(r, "custo_operacional"));
   });
 
   it("o sem grupo e o lançamento de grupo fixo não se confundem com categoria", () => {
@@ -270,7 +283,7 @@ describe("desconsiderar", () => {
     expect(grupoAceitaOrigem(DESCONSIDERAR, "pagamento")).toBe(true);
     expect(grupoAceitaOrigem(DESCONSIDERAR, "recebimento")).toBe(true);
     expect(grupoAceitaOrigem("receita_bruta", "pagamento")).toBe(false);
-    expect(grupoAceitaOrigem("cmv", "pagamento")).toBe(true);
+    expect(grupoAceitaOrigem("custo_operacional", "pagamento")).toBe(true);
     expect(grupoAceitaOrigem("inventado", "pagamento")).toBe(false);
   });
 
@@ -283,7 +296,7 @@ describe("desconsiderar", () => {
 describe("o relatório", () => {
   it("mês sem lançamento nenhum zera tudo, sem quebrar", () => {
     const r = calcularDre([], PADRAO);
-    expect(centavosDaLinha(r, "fluxo_de_caixa_livre")).toBe(0);
+    expect(centavosDaLinha(r, "resultado_liquido")).toBe(0);
     expect(r.diferencaDeFechamento).toBe(0);
   });
 
@@ -298,8 +311,8 @@ describe("o relatório", () => {
 
   it("despesa aparece como percentual positivo; resultado mantém o sinal", () => {
     const r = calcularDre(OUTUBRO_2025, PADRAO);
-    expect(r.linhas.find((x) => x.code === "cmv_pct")!.fracao!).toBeGreaterThan(0);
-    expect(r.linhas.find((x) => x.code === "fluxo_de_caixa_livre_pct")!.fracao!).toBeLessThan(0);
+    expect(r.linhas.find((x) => x.code === "custo_operacional_pct")!.fracao!).toBeGreaterThan(0);
+    expect(r.linhas.find((x) => x.code === "resultado_liquido_pct")!.fracao!).toBeLessThan(0);
   });
 
   it("toda linha da estrutura sai no resultado, na ordem", () => {
@@ -319,7 +332,45 @@ describe("o relatório", () => {
     expect(new Set(chaves).size).toBe(chaves.length);
   });
 
-  it("a opção padrão é a que reproduz a planilha", () => {
-    expect(OPCOES_PADRAO.margemPartirDaLiquida).toBe(false);
+  it("a opção padrão põe os impostos no EBITDA; \"impostos=fora\" no endereço tira", () => {
+    expect(OPCOES_PADRAO.impostosNoEbitda).toBe(true);
+    expect(opcoesDaUrl(undefined)).toEqual(OPCOES_PADRAO);
+    expect(opcoesDaUrl("qualquer")).toEqual(OPCOES_PADRAO);
+    expect(opcoesDaUrl("fora")).toEqual(OPCOES_SEM_IMPOSTOS);
+    expect(parcelasDoEbitda(OPCOES_PADRAO)).toContain("impostos");
+    expect(parcelasDoEbitda(OPCOES_SEM_IMPOSTOS)).not.toContain("impostos");
+  });
+
+  it("os sete grupos da estrutura do modelo novo, na ordem dele", () => {
+    expect(GRUPOS.map((g) => g.code)).toEqual([
+      "receita_bruta",
+      "impostos",
+      "custo_operacional",
+      "custo_administrativo",
+      "financiamentos",
+      "outras_despesas",
+      "outras_receitas",
+    ]);
+  });
+});
+
+// O padrão até 20/10/2026 tinha doze grupos; o código antigo ainda chega por
+// orçamento gravado e por dado que a migration não pegou.
+describe("os grupos do padrão antigo", () => {
+  it("todo código antigo vira um grupo que existe", () => {
+    const validos = new Set(GRUPOS.map((g) => g.code));
+    for (const [antigo, novo] of Object.entries(GRUPO_DO_ANTIGO)) {
+      expect(validos.has(novo), `${antigo} → ${novo}`).toBe(true);
+      expect(validos.has(antigo), antigo).toBe(false);
+    }
+  });
+
+  it("grupoAtual traduz o antigo e deixa o resto como está", () => {
+    expect(grupoAtual("cmv")).toBe("custo_operacional");
+    expect(grupoAtual("financeiras")).toBe("custo_administrativo");
+    expect(grupoAtual("investimentos")).toBe("outras_despesas");
+    expect(grupoAtual("impostos")).toBe("impostos");
+    expect(grupoAtual(TRANSFERENCIA)).toBe(TRANSFERENCIA);
+    expect(grupoAtual("inventado")).toBe("inventado");
   });
 });

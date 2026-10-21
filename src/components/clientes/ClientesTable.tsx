@@ -10,7 +10,6 @@ import { StatusDot } from "@/components/shared/StatusDot";
 import { AcoesDeLinha } from "@/components/shared/AcoesDeLinha";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { useConfirm } from "@/components/ui/useConfirm";
-import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { useExclusaoDeCliente, type AcoesDeExclusaoDoCliente } from "@/components/clientes/ExclusaoDeCliente";
 
@@ -76,33 +75,30 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
     );
   }
 
-  // Excluir vai no "⋯", longe do Editar e do Inativar (regra de 30/09: a ação
-  // que destrói não fica a um clique de quem só queria editar).
+  // Excluir vai no "⋯", longe do Editar (regra de 30/09: a ação que destrói
+  // não fica a um clique de quem só queria editar) — o mesmo "⋯" do Inativar
+  // desde 15/10/2026, para a linha não ter dois.
   function acoesCliente(c: Row) {
     return (
-      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-        <AcoesDeLinha
-          foraDeOperacao={!c.active}
-          onToggle={() => startTransition(() => { void alternarAtivo(c.id); })}
-          editarHref={`/clientes/${c.id}/editar`}
-        />
-        {podeExcluir && (
-          <MenuDeMaisAcoes rotulo={`Mais ações de ${c.name}`} sempreMenu>
-            {({ close }) => (
-              <ItemDoMenu
-                icone={<Trash2 />}
-                danger
-                onClick={() => {
-                  close();
-                  abrirExclusao({ id: c.id, nome: c.name });
-                }}
-              >
-                Excluir
-              </ItemDoMenu>
-            )}
-          </MenuDeMaisAcoes>
-        )}
-      </span>
+      <AcoesDeLinha
+        foraDeOperacao={!c.active}
+        onToggle={() => startTransition(() => { void alternarAtivo(c.id); })}
+        editarHref={`/clientes/${c.id}/editar`}
+        itensExtras={(close) =>
+          podeExcluir && (
+            <ItemDoMenu
+              icone={<Trash2 />}
+              danger
+              onClick={() => {
+                close();
+                abrirExclusao({ id: c.id, nome: c.name });
+              }}
+            >
+              Excluir
+            </ItemDoMenu>
+          )
+        }
+      />
     );
   }
 

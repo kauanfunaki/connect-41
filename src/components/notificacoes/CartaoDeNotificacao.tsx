@@ -28,7 +28,9 @@ import {
 import type { IconeDaNotificacao, Tom } from "@/lib/notificacoes/catalogo";
 import type { NotificacaoNaTela, TipoDoChip } from "@/lib/notificacoes/consultas";
 import { tempoRelativo } from "@/lib/notificacoes/tempo";
+import { IconButton } from "@/components/ui/IconButton";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Badge } from "@/components/ui/Badge";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 
 // O cartão de uma notificação — o mesmo no sino e na central (02/10/2026):
@@ -151,44 +153,45 @@ export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onArquivar, on
         <span className="block text-fs-3 text-fg-secondary leading-snug mt-0.5 line-clamp-2">{n.mensagem}</span>
         <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
           {n.autor && <span className="text-fs-1 font-medium text-fg-secondary">{n.autor.nome}</span>}
+          {/* A origem é categoria: o `Badge` neutro, com o ícone (15/10/2026) —
+              era uma pílula montada aqui. */}
           {n.chip && Chip && (
-            <span className="inline-flex max-w-full items-center gap-1 h-5 px-1.5 rounded-md border border-border bg-surface text-fs-1 font-medium text-fg-secondary">
-              <Chip size={11} className="flex-shrink-0 text-fg-muted" />
+            <Badge variant="neutral" className="max-w-full min-w-0 gap-1">
+              <Chip size={11} className="flex-shrink-0" />
               <span className="truncate">{n.chip.rotulo}</span>
-            </span>
+            </Badge>
           )}
           {!semTempo && <span className="text-fs-1 text-fg-muted tabular-nums">{tempoRelativo(new Date(n.criadaEm))}</span>}
         </span>
       </button>
       {/* Ações no hover (e no foco, para o teclado). Sempre visíveis no toque. */}
       <span className="flex-shrink-0 flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
-        <button
-          type="button"
+        {/* O `IconButton` do app (15/10/2026): eram três botões de ícone
+            desenhados à mão. */}
+        <IconButton
+          size="sm"
           onClick={() => onAlternarLida(n)}
           title={n.lida ? "Marcar como não lida" : "Marcar como lida"}
-          aria-label={n.lida ? "Marcar como não lida" : "Marcar como lida"}
-          className="size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-2"
         >
           {n.lida ? <RotateCcw size={14} /> : <Check size={14} />}
-        </button>
-        <button
-          type="button"
+        </IconButton>
+        <IconButton
+          size="sm"
           onClick={() => onArquivar(n)}
           title={n.arquivada ? "Desarquivar" : "Arquivar"}
           aria-label={n.arquivada ? "Desarquivar notificação" : "Arquivar notificação"}
-          className="size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-2"
         >
           {n.arquivada ? <ArchiveRestore size={14} /> : <Archive size={14} />}
-        </button>
-        <button
-          type="button"
+        </IconButton>
+        <IconButton
+          size="sm"
           onClick={() => onRemover(n)}
           title="Remover"
           aria-label="Remover notificação"
-          className="size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-danger hover:bg-danger-bg"
+          className="hover:text-danger! hover:bg-danger-bg!"
         >
           <X size={14} />
-        </button>
+        </IconButton>
       </span>
     </div>
   );

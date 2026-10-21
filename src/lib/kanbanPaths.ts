@@ -13,3 +13,28 @@
 export function boardPath(pipeline: { id: string }): string {
   return `/kanban/${pipeline.id}`;
 }
+
+/**
+ * A trilha até a lista, no caminho que a tela da lista mostra: setor › espaço
+ * › (pasta ›) lista. A tarefa e a "Nova tarefa" em página cheia começavam a
+ * trilha em "Kanban", a lista antiga de kanbans (P04, 15/10/2026).
+ */
+export function trilhaDaLista(
+  pipeline: {
+    id: string;
+    name: string;
+    sectorCode: string;
+    space: { id: string; name: string };
+    folder: { id: string; name: string } | null;
+  },
+  nomeDoSetor: string
+): { label: string; href?: string; truncate?: boolean }[] {
+  return [
+    { label: nomeDoSetor, href: `/setor/${pipeline.sectorCode}` },
+    { label: pipeline.space.name, href: `/setor/${pipeline.sectorCode}/espacos/${pipeline.space.id}`, truncate: true },
+    ...(pipeline.folder
+      ? [{ label: pipeline.folder.name, href: `/setor/${pipeline.sectorCode}/pastas/${pipeline.folder.id}`, truncate: true }]
+      : []),
+    { label: pipeline.name, href: boardPath(pipeline), truncate: true },
+  ];
+}

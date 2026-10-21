@@ -22,6 +22,8 @@ import { acessoAsAutorizacoes, autorizacaoDaEmpresa } from "@/lib/autorizacoes/s
 import { AutorizacaoNaFicha } from "@/components/autorizacoes/AutorizacaoNaFicha";
 import { hojeIso } from "@/lib/datas/calendario";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
+import { receitaDaEmpresa } from "@/lib/serpro/acompanhamento";
+import { ReceitaNaFicha } from "@/components/autorizacoes/ReceitaNaFicha";
 import { CompanyFiliaisSection } from "@/components/empresas/CompanyFiliaisSection";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import type { CompanyStatus } from "@/generated/prisma/enums";
@@ -106,7 +108,12 @@ export default async function EmpresaPage({
   // quem vê o setor do módulo (o Fiscal).
   const acessoAutorizacao = await acessoAsAutorizacoes(ctx);
   const autorizacao = acessoAutorizacao ? await autorizacaoDaEmpresa(ctx.tenantId, company.id) : null;
-  const serproPronto = !!acessoAutorizacao?.podeEditar && prontidaoDoSerpro(await configuracaoDoSerpro(ctx.tenantId)).pronta;
+  // Na demonstração (20/10/2026) a conferência não roda: o trial só responde aos exemplos.
+  const serpro = acessoAutorizacao ? await configuracaoDoSerpro(ctx.tenantId) : null;
+  const prontidaoSerpro = serpro ? prontidaoDoSerpro(serpro) : null;
+  const serproPronto = !!acessoAutorizacao?.podeEditar && !!prontidaoSerpro?.pronta && serpro?.ambiente === "producao";
+  // O que o Serpro disse da empresa (Fase 1, 20/10/2026): com a conexão de produção salva.
+  const receita = serpro?.ambiente === "producao" ? await receitaDaEmpresa(ctx.tenantId, company.id) : null;
 
   const [companySectors, sectorMaps, documents, pipelineItems, activities] = await Promise.all([
     getCompanySectors(ctx.tenantId, id),
@@ -226,6 +233,15 @@ export default async function EmpresaPage({
             <CompanyOverviewSection company={company} customFields={customFields} />
             {autorizacao && (
               <AutorizacaoNaFicha dados={autorizacao} nome={nomeExibicao(company)} hoje={hojeIso()} podeEditar={acessoAutorizacao!.podeEditar} serpro={serproPronto} />
+            )}
+            {receita && (
+              <ReceitaNaFicha
+                dados={receita}
+                companyId={company.id}
+                podePedir={acessoAutorizacao!.podeEditar}
+                podeAbrir={acessoAutorizacao!.podeConfigurar}
+                motivo={prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null}
+              />
             )}
             <ServicesSection
               companyId={company.id}

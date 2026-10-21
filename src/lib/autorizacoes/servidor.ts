@@ -5,7 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 // Só o tipo de auth/context: o agendador dos alertas importa este arquivo, e
 // auth/context traz next/headers (foi o que quebrou o build da fase 2 do Drive).
 import type { AuthContext } from "@/lib/auth/context";
-import { canActOnSector, canManageSector, canViewSector } from "@/lib/auth/papeis";
+import { canManageSector, canViewSector } from "@/lib/auth/papeis";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
@@ -30,7 +30,7 @@ export async function setorDasAutorizacoes(tenantId: string): Promise<string> {
   return (await setorDoModulo(tenantId, MODULO_AUTORIZACOES)) ?? getModuleDef(MODULO_AUTORIZACOES)!.sectorCode;
 }
 
-/** podeEditar: marca a situação dos clientes. podeConfigurar: define quem recebe (a coordenação do setor). */
+/** Apenas quem administra o setor pode alterar autorizações ou definir quem recebe. */
 export type AcessoAsAutorizacoes = { ctx: AuthContext; tenantId: string; podeEditar: boolean; podeConfigurar: boolean };
 
 /** null = não vê (a página dá 404 e a ficha não mostra o bloco). */
@@ -39,7 +39,8 @@ export async function acessoAsAutorizacoes(c: AuthContext): Promise<AcessoAsAuto
   if (!(await isModuleEnabled(c.tenantId, MODULO_AUTORIZACOES))) return null;
   const setor = await setorDasAutorizacoes(c.tenantId);
   if (!canViewSector(c, setor)) return null;
-  return { ctx: c, tenantId: c.tenantId, podeEditar: canActOnSector(c, setor), podeConfigurar: canManageSector(c, setor) };
+  const podeAdministrar = canManageSector(c, setor);
+  return { ctx: c, tenantId: c.tenantId, podeEditar: podeAdministrar, podeConfigurar: podeAdministrar };
 }
 
 export type QuemRecebe = { nome: string; cnpj: string };
@@ -61,7 +62,7 @@ export async function sugestaoDeQuemRecebe(tenantId: string): Promise<QuemRecebe
 }
 
 export async function definirQuemRecebe(acesso: AcessoAsAutorizacoes, nome: string, cnpj: string): Promise<{ ok: true } | { ok: false; erro: string }> {
-  if (!acesso.podeConfigurar) return { ok: false, erro: "Só a coordenação do setor define quem recebe as autorizações." };
+  if (!acesso.podeConfigurar) return { ok: false, erro: "Só o administrador do setor define quem recebe as autorizações." };
   const v = validarQuemRecebe(nome, cnpj);
   if (!v.ok) return v;
   const prisma = getPrisma();

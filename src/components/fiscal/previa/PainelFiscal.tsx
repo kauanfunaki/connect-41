@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Check, CheckCircle2, History, ListChecks } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, FileText, History, ListChecks } from "lucide-react";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -22,7 +22,9 @@ export function PainelFiscal({ visao }: { visao: string }) {
   const atividades = cenario.atividades.filter((a) => mesmoEscopo(a.contexto, cenario.contexto));
 
   return <div className="space-y-5">
-    <AbasDeLink ativa={visao} className="rounded-t-md bg-surface [&>a[aria-current=page]]:bg-selected-bg" abas={[
+    {/* As abas no desenho de sempre — só o texto e a barra embaixo (15/10/2026):
+        tinham fundo próprio e a ativa preenchida. */}
+    <AbasDeLink ativa={visao} className="" abas={[
       { chave: "resumo", rotulo: "Visão geral", href: "/fiscal", icone: <ListChecks /> },
       { chave: "historico", rotulo: "Histórico", href: "/fiscal?visao=historico", icone: <History /> },
     ]} />
@@ -44,9 +46,9 @@ export function PainelFiscal({ visao }: { visao: string }) {
       </Card>
 
       <MetricasFiscais itens={[
-        ["Documentos recebidos", documentosDoContexto(cenario).length],
-        ["Pendências de documentos", totais.pendentes + totais.rejeitados, `${totais.pendentes} para classificar · ${totais.rejeitados} em quarentena`],
-        ["Etapas concluídas", `${completas} de ${etapas.length}`, "No recorte selecionado"],
+        { rotulo: "Documentos recebidos", valor: documentosDoContexto(cenario).length, icone: <FileText />, href: modulos.includes("fiscal_acervo") ? "/fiscal/documentos?aba=acervo&grupo=todos" : undefined },
+        { rotulo: "Pendências de documentos", valor: totais.pendentes + totais.rejeitados, icone: <ListChecks />, detalhe: `${totais.pendentes} para classificar · ${totais.rejeitados} em quarentena`, tom: totais.pendentes + totais.rejeitados > 0 ? "text-warning-fg" : undefined },
+        { rotulo: "Etapas concluídas", valor: `${completas} de ${etapas.length}`, icone: <CheckCircle2 />, detalhe: "No recorte selecionado" },
       ]} />
 
       <BlocoFiscal titulo="Caminho da competência" descricao="Uma etapa por vez. O destaque acima indica onde continuar." acao={<span className="text-ui font-semibold text-brand">{progresso}%</span>}>

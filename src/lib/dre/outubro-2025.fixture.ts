@@ -108,3 +108,35 @@ export const ESPERADO_OUTUBRO_2025: Record<string, number> = {
   outras_despesas: -14857720,
   fluxo_de_caixa_livre: -3325427,
 };
+
+/**
+ * O mesmo mês no padrão de 20/10/2026 (estrutura do modelo novo, cálculo da Irriga),
+ * com os impostos no EBITDA — a visão padrão. Montado à mão a partir da
+ * planilha acima, e não do código, para o teste ter um lado que não depende
+ * dele:
+ *
+ * - custo operacional = CMV + mão de obra + comerciais;
+ * - custo administrativo = pessoal + diretoria + administrativas + a tarifa do
+ *   banco (953,92) — as financeiras menos o IOF;
+ * - financiamentos = Impostos Parcelados (13.412,53) + Pagamento de
+ *   Empréstimos (5.883,97), que saem das outras despesas;
+ * - outras despesas = as de antes + investimentos + IOF (1.339,47) − os dois
+ *   que foram para financiamentos;
+ * - EBITDA = margem + impostos + administrativo + financiamentos;
+ * - resultado = EBITDA + outras despesas + outras receitas. Sem os impostos, é
+ *   o fluxo de caixa livre da planilha, a menos do centavo que ela perde no
+ *   ponto flutuante (ver o teste).
+ */
+export const ESPERADO_OUTUBRO_2025_PADRAO: Record<string, number> = {
+  receita_bruta: 90033998,
+  impostos: -4614878,
+  receita_liquida: 85419120,
+  custo_operacional: -65892322,
+  margem_contribuicao: 24141676,
+  custo_administrativo: -8714643,
+  financiamentos: -1929650,
+  ebitda: 8882505,
+  outras_despesas: -17068138,
+  outras_receitas: 245329,
+  resultado_liquido: -7940304,
+};

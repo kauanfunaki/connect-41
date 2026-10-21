@@ -10,6 +10,7 @@ import { RejeitarProposta } from "./RejeitarProposta";
 import type { AcaoDaIa } from "@/app/(app)/societario/ia/actions";
 import type { PlanoDoContrato, SocioLido } from "@/lib/societario/contratoSocial";
 import { Aviso } from "@/components/ui/Aviso";
+import { useToast } from "@/components/ui/Toast";
 
 const INTEIRO = new Intl.NumberFormat("pt-BR");
 const DUAS_CASAS = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -96,7 +97,10 @@ export function RevisarContrato({
   const [plano, setPlano] = useState(planoInicial);
   const [avisos, setAvisos] = useState(avisosIniciais);
   const [previaVelha, setPreviaVelha] = useState(false);
-  const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  // O sucesso vai para o toast, e o erro fica no `Aviso` acima do rodapé, como
+  // nos outros formulários (15/10/2026) — os dois eram texto colorido solto.
+  const toast = useToast();
+  const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
   const mudar = (i: number, campo: keyof Linha, valor: string | boolean) => {
@@ -108,7 +112,7 @@ export function RevisarContrato({
   const atualizarPrevia = () =>
     startTransition(async () => {
       const r = await acoes.previa(propostaId, marcadas());
-      if ("error" in r) setMsg({ tipo: "erro", texto: r.error });
+      if ("error" in r) setErro(r.error);
       else {
         setPlano(r.plano);
         setAvisos(r.avisos);
@@ -224,19 +228,20 @@ export function RevisarContrato({
         )}
         {plano.foraDoContrato.length > 0 && (
           // Revisão de 05/10: botão não é link — "Sócios" era texto sublinhado no meio da frase.
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <p className="text-ui text-warning-fg">
+          // No `Aviso` de atenção (15/10/2026): era texto âmbar solto.
+          <Aviso tom="atencao" className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            <p className="text-fg">
               No cadastro e fora deste contrato: {plano.foraDoContrato.map((f) => f.nome).join(", ")}. Ninguém sai sozinho — se saiu,
               registre a saída com a data na tela de sócios.
             </p>
             <Button href={`/empresas/${companyId}/socios`} variant="secondary" size="xs">
               Abrir sócios
             </Button>
-          </div>
+          </Aviso>
         )}
       </section>
 
-      {msg && <p className={`text-ui ${msg.tipo === "erro" ? "text-danger" : "text-success-fg"}`}>{msg.texto}</p>}
+      {erro && <Aviso>{erro}</Aviso>}
 
       {/* Rodapé do formulário: rejeitar (a saída destrutiva) à esquerda, e o
           primário sozinho à direita. Estavam juntos, e o campo do motivo, ao
@@ -251,11 +256,11 @@ export function RevisarContrato({
             title={previaVelha ? "Atualize a prévia antes de salvar" : undefined}
             onClick={() =>
               startTransition(async () => {
-                setMsg(null);
+                setErro(null);
                 const r = await acoes.aplicar(propostaId, marcadas());
-                if ("error" in r) setMsg({ tipo: "erro", texto: r.error });
+                if ("error" in r) setErro(r.error);
                 else {
-                  setMsg({ tipo: "ok", texto: r.mensagem ?? "Sócios salvos." });
+                  toast.success(r.mensagem ?? "Sócios salvos.");
                   router.refresh();
                 }
               })

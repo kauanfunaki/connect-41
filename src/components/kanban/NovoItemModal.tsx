@@ -7,5 +7,5 @@ import { Modal } from "@/components/ui/Modal";
 export function NovoItemModal({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const fechar = useCallback(() => router.back(), [router]);
-  return <Modal open onClose={fechar} title="Nova tarefa" maxWidth="max-w-3xl">{children}</Modal>;
+  return <Modal open onClose={fechar} title="Nova atividade" maxWidth="max-w-3xl">{children}</Modal>;
 }

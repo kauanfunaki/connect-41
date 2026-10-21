@@ -1,5 +1,4 @@
-import { Fragment, Suspense } from "react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   Building2,
@@ -12,11 +11,12 @@ import {
 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
 import { AvatarImage } from "@/components/shared/AvatarImage";
-import { CustomizeHomeButton } from "@/components/home/CustomizeHomeButton";
+import { InicioEditavel, type LayoutDoInicio } from "@/components/home/InicioEditavel";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
 import { numero } from "@/components/shared/Graficos";
 import { getPrisma } from "@/lib/prisma";
@@ -26,7 +26,7 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { boardPath } from "@/lib/kanbanPaths";
 import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
-import { parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
+import { HOME_WIDGETS, parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
 import { acessoDosPaineis, type AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
 import { contarTarefas } from "@/lib/home/paineis";
 import { precarregarHistoricoDaHome } from "@/lib/home/historico";
@@ -380,10 +380,6 @@ export default async function HomePage() {
   const abaixoDosPaineis = visibleWidgets("abaixo-dos-paineis", selectedWidgets, restrictedOpts);
   const mainWidgets = visibleWidgets("main", selectedWidgets, restrictedOpts);
   const sideWidgets = visibleWidgets("side", selectedWidgets, restrictedOpts);
-  // Com uma das colunas vazia o grid de duas colunas jogaria a sobrevivente na
-  // faixa larga (ou estreita) errada — nesse caso a Home vira coluna única.
-  const twoColumns = mainWidgets.length > 0 && sideWidgets.length > 0;
-
   // Faixa de destaques (06/10): os números saem só dos painéis que estão na
   // Home desta pessoa — com acesso e não ocultos em "Personalizar". Painel
   // oculto não é consultado, nem pela faixa.
@@ -506,7 +502,9 @@ export default async function HomePage() {
           label="Transferências"
           value={pendingHandoffsCount}
           delay={80}
-          highlight={pendingHandoffsCount > 0}
+          // O tom pela situação, e não o `highlight` antigo (15/10/2026):
+          // transferência em aberto espera alguém — âmbar.
+          tom={pendingHandoffsCount > 0 ? "atencao" : undefined}
           sub={pendingHandoffsCount > 0 ? "em aberto" : undefined}
         />
         {/* No lugar de "Pessoas cadastradas" (08/10, escolha 7A): um número
@@ -552,7 +550,7 @@ export default async function HomePage() {
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-section font-semibold text-fg mb-3.5">Meu dia</h2>
         {meuDiaItems.length === 0 ? (
-          <p className="text-body text-fg-muted">Nenhuma tarefa com prazo ou atribuída a você.</p>
+          <p className="text-body text-fg-muted">Nenhuma atividade com prazo ou atribuída a você.</p>
         ) : (
           <div className="space-y-1">
             {meuDiaItems.map((item) => {
@@ -618,10 +616,10 @@ export default async function HomePage() {
         <h2 className="text-section font-semibold text-fg mb-3.5">Visão do workspace</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <p className="text-fs-1 font-medium text-fg-muted uppercase tracking-wide mb-2.5">
+            <p className="c41-rotulo mb-2.5">
               Top {STAGE_CHART_LIMIT} · tarefas por estágio
             </p>
-            <HorizontalBarChart data={stageChartData} emptyLabel="Nenhuma tarefa em aberto nos seus kanbans." />
+            <HorizontalBarChart data={stageChartData} emptyLabel="Nenhuma atividade em aberto nos seus Quadros." />
             {stageChartHiddenCount > 0 && (
               <p className="text-fs-1 text-fg-muted mt-2.5">
                 + {stageChartHiddenCount} outro{stageChartHiddenCount !== 1 ? "s" : ""} estágio
@@ -630,7 +628,7 @@ export default async function HomePage() {
             )}
           </div>
           <div>
-            <p className="text-fs-1 font-medium text-fg-muted uppercase tracking-wide mb-2.5">Movimentações (14 dias)</p>
+            <p className="c41-rotulo mb-2.5">Movimentações (14 dias)</p>
             <TrendChart data={trendData} />
           </div>
         </div>
@@ -683,7 +681,7 @@ export default async function HomePage() {
                     ) : (
                       `${g.label} `
                     )}
-                    <span className="font-medium">{(g.entityId ? entityNames[g.entityId] : null) ?? "(tarefa)"}</span>
+                    <span className="font-medium">{(g.entityId ? entityNames[g.entityId] : null) ?? "(atividade)"}</span>
                   </p>
                   <p className="text-helper text-fg-muted">{formatRelativeTime(g.createdAt)}</p>
                 </div>
@@ -701,10 +699,11 @@ export default async function HomePage() {
         </h2>
         <div className="flex flex-col gap-2">
           {sectorWidgets.map((s) => (
-            <Link
+            // O cartão-atalho do app (`Card href`): borda azul, sobe 2px.
+            <Card
               key={s.code}
               href={`/setor/${s.code}`}
-              className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
+              className="group flex items-center justify-between gap-2 px-3.5 py-2.5"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
@@ -717,93 +716,52 @@ export default async function HomePage() {
                 </div>
               </div>
               <ChevronRight size={15} className="text-fg-muted flex-shrink-0 group-hover:text-fg transition-colors" />
-            </Link>
+            </Card>
           ))}
         </div>
       </div>
     ),
   };
 
+  // Os visíveis de cada faixa vão prontos para o Início, que liga a edição
+  // na própria tela (escolha 11A dos Ajustes de 15/10, 20/10/2026). Só os
+  // visíveis são montados: o escondido nem consulta o banco.
+  const layout: LayoutDoInicio = {
+    top: topWidgets,
+    paineis: painelWidgets,
+    "abaixo-dos-paineis": abaixoDosPaineis,
+    main: mainWidgets,
+    side: sideWidgets,
+  };
+  const nos = Object.fromEntries(
+    Object.values(layout)
+      .flat()
+      .map((key) => [key, widgetNodes[key] || null])
+  ) as Partial<Record<HomeWidgetKey, React.ReactNode>>;
+
   return (
     <PageContainer>
-      {/* Header */}
-      <PageHeader
-        title={firstName ? `Olá, ${firstName}` : "Início"}
-        subtitle={<>{pendingForMe > 0
+      <InicioEditavel
+        key={JSON.stringify(layout)}
+        titulo={firstName ? `Olá, ${firstName}` : "Início"}
+        subtitulo={<>{pendingForMe > 0
               ? `${pendingForMe} pendência${pendingForMe !== 1 ? "s" : ""} precisa${pendingForMe !== 1 ? "m" : ""} de você`
               : <>Aqui está um resumo do workspace {tenant?.name ? <span className="text-fg font-medium">{tenant.name}</span> : ""}</>}</>}
-        action={
-          <div className="flex items-center gap-3">
-            <p className="hidden sm:block text-helper text-fg-muted tnum">{today}</p>
-            <CustomizeHomeButton
-              selected={selectedWidgets}
-              disponiveis={disponiveis}
-              saveAction={salvarWidgetsHome}
-              resetAction={restaurarWidgetsHome}
-            />
-            <QuickCreateMenu
-              canCreateCompany={canCreateCompany}
-              canCreatePerson={canCreatePerson}
-              canCreateTransfer={canCreateTransfer}
-            />
-          </div>
+        data={today}
+        criar={
+          <QuickCreateMenu
+            canCreateCompany={canCreateCompany}
+            canCreatePerson={canCreatePerson}
+            canCreateTransfer={canCreateTransfer}
+          />
         }
+        layout={layout}
+        nos={nos}
+        disponiveis={HOME_WIDGETS.filter((w) => disponiveis.includes(w.key)).map((w) => ({ key: w.key, rotulo: w.label, faixa: w.slot }))}
+        comDestaques={comDestaques}
+        salvar={salvarWidgetsHome}
+        restaurar={restaurarWidgetsHome}
       />
-
-      {topWidgets.map((key) => (
-        <Fragment key={key}>{widgetNodes[key]}</Fragment>
-      ))}
-
-      {/* Painéis: a grade de gráficos (30/09). Duas colunas até telas bem
-          largas — com a sidebar, três painéis a 1440px apertam as barras.
-          Com a faixa de destaques em cima (06/10), os gráficos ficam mais
-          baixos: o número que manda já está na faixa. */}
-      {painelWidgets.length > 0 && (
-        <div
-          data-compacto={comDestaques ? "true" : undefined}
-          className="group/grade grid grid-cols-1 lg:grid-cols-2 min-[1760px]:grid-cols-3 gap-4 mb-4 items-stretch"
-        >
-          {painelWidgets.map((key) => (
-            <Fragment key={key}>{widgetNodes[key]}</Fragment>
-          ))}
-        </div>
-      )}
-
-      {/* Entre os painéis e as colunas: os Indicadores (08/10, escolha 7A). */}
-      {abaixoDosPaineis.map((key) => (
-        <Fragment key={key}>{widgetNodes[key]}</Fragment>
-      ))}
-
-      {/* Corpo: coluna principal (meu trabalho) + coluna lateral */}
-      {(mainWidgets.length > 0 || sideWidgets.length > 0) && (
-        <div className={`grid gap-4 ${twoColumns ? "grid-cols-1 lg:grid-cols-[1.7fr_1fr]" : "grid-cols-1"}`}>
-          {mainWidgets.length > 0 && (
-            <div className="flex flex-col gap-4 min-w-0">
-              {mainWidgets.map((key) => (
-                <Fragment key={key}>{widgetNodes[key]}</Fragment>
-              ))}
-            </div>
-          )}
-
-          {sideWidgets.length > 0 && (
-            <div className="flex flex-col gap-4 min-w-0">
-              {sideWidgets.map((key) => (
-                <Fragment key={key}>{widgetNodes[key]}</Fragment>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {topWidgets.length === 0 &&
-        painelWidgets.length === 0 &&
-        abaixoDosPaineis.length === 0 &&
-        mainWidgets.length === 0 &&
-        sideWidgets.length === 0 && (
-        <p className="text-body text-fg-muted">
-          Todos os blocos estão ocultos. Use <span className="text-fg font-medium">Personalizar</span> para trazer algum de volta.
-        </p>
-      )}
     </PageContainer>
   );
 }

@@ -39,21 +39,37 @@ export async function conciliarContaPeloOmie(tenantId: string, bankAccountId: st
       omieReconciledAt: { not: null },
       status: "PAGO",
       paidAt: { not: null },
-      bankMatch: { is: null },
+      // A baixa da conta (lote C): a do Omie, ainda sem extrato.
+      payments: { some: { bankMatch: { is: null }, origin: { in: ["OMIE", "MIGRACAO"] } } },
     },
-    select: { id: true, kind: true, status: true, amount: true, paidAt: true, omiePaidAmount: true },
+    select: {
+      id: true,
+      kind: true,
+      status: true,
+      amount: true,
+      paidAt: true,
+      omiePaidAmount: true,
+      payments: { select: { id: true, origin: true, bankMatch: { select: { id: true } } } },
+    },
+  });
+  // Só a conta que o Omie quitou sozinho: com baixa feita aqui junto (uma
+  // parcial no Connect e o resto no Omie), o valor que o Omie pagou não é o da
+  // baixa dele, e o par sairia errado — fica para gente.
+  const doOmieSozinho = lancamentos.flatMap((l) => {
+    const [b, ...outras] = l.payments;
+    return b && outras.length === 0 && !b.bankMatch && (b.origin === "OMIE" || b.origin === "MIGRACAO") ? [{ ...l, paymentId: b.id }] : [];
   });
 
   const pares = parearPeloOmie(
     transacoes.map((t) => ({ id: t.id, centavos: centavosDeDecimal(t.amount), dataKey: saoPauloParts(t.postedAt).dateKey })),
-    lancamentos.map((l) => ({
+    doOmieSozinho.map((l) => ({
       id: l.id,
       kind: l.kind,
       centavos: centavosDeDecimal(l.omiePaidAmount ?? l.amount),
       pagoEmKey: saoPauloParts(l.paidAt!).dateKey,
     }))
   );
-  const porId = new Map(lancamentos.map((l) => [l.id, l]));
+  const porId = new Map(doOmieSozinho.map((l) => [l.id, l]));
 
   let feitas = 0;
   for (const p of pares) {
@@ -64,6 +80,7 @@ export async function conciliarContaPeloOmie(tenantId: string, bankAccountId: st
           data: {
             transactionId: p.transacaoId,
             financeEntryId: l.id,
+            paymentId: l.paymentId,
             amount: l.amount,
             entryStatusBefore: l.status,
             entryPaidAtBefore: l.paidAt,
@@ -78,8 +95,8 @@ export async function conciliarContaPeloOmie(tenantId: string, bankAccountId: st
       });
       feitas++;
     } catch {
-      // Unique do vínculo (o lançamento acabou de ser conciliado por outra
-      // linha) ou corrida no status: fica para gente, sem erro.
+      // Unique do vínculo (a baixa acabou de ser conciliada por outra linha)
+      // ou corrida no status: fica para gente, sem erro.
     }
   }
 

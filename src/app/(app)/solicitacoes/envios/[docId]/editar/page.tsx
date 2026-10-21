@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -49,9 +50,11 @@ export default async function EditarEnvioPage({
 
       <div className="w-full max-w-[860px]">
         {travado ? (
-          <Card className="p-6 text-fs-3 text-fg-muted">
+          // Aviso neutro onde estaria o formulário (15/10/2026), como a pendência
+          // encerrada no portal: era texto cinza num cartão.
+          <Aviso tom="neutro">
             Este envio já foi publicado e não pode mais ser editado — o cliente precisa ver sempre o mesmo conteúdo que foi de fato recebido. Crie um novo envio se precisar alterar o conteúdo.
-          </Card>
+          </Aviso>
         ) : (
           <Card className="p-6">
             <ClientDocumentForm

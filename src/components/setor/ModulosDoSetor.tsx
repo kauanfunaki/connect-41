@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { BotaoFixarTela } from "@/components/setor/BotaoFixarTela";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { Card } from "@/components/ui/Card";
 import { agruparModulos, slugDoGrupo, type GrupoDeModulo } from "@/lib/module-catalog";
 
 export type ModuloDoSetor = { code: string; label: string; description: string };
@@ -60,17 +60,15 @@ export function ModulosDoSetor({
             {/* Com um grupo só na tela o título do grupo repetiria o subtítulo da
                 página, que já diz o nome dele. */}
             {visiveis.length > 1 && (
-              <h2 className="text-fs-1 font-semibold uppercase tracking-wider text-fg-muted mb-2.5">{grupo}</h2>
+              <h2 className="c41-rotulo mb-2.5">{grupo}</h2>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {itens.map((m) => (
                 // O alfinete é irmão do link, e não filho: botão dentro de <a>
-                // é inválido e o clique abriria a tela junto.
+                // é inválido e o clique abriria a tela junto. O cartão é o
+                // cartão-atalho do app (`Card href`): borda azul, sobe 2px.
                 <div key={m.code} className="group relative">
-                  <Link
-                    href={`/setor/${code}/${m.code}`}
-                    className="block h-full bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 pr-11 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
-                  >
+                  <Card href={`/setor/${code}/${m.code}`} className="h-full p-4 pr-11">
                     <div className="flex items-center gap-2.5">
                       <span
                         className="inline-flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0"
@@ -81,7 +79,7 @@ export function ModulosDoSetor({
                       <p className="text-fs-4 font-semibold text-fg leading-tight">{m.label}</p>
                     </div>
                     <p className="text-fs-2 text-fg-muted mt-2 leading-relaxed">{m.description}</p>
-                  </Link>
+                  </Card>
                   <div className="absolute top-3 right-3">
                     <BotaoFixarTela code={m.code} fixada={fixada.has(m.code)} />
                   </div>

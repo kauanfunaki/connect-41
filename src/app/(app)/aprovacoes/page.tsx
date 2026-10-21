@@ -11,7 +11,8 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { FiltroDePeriodo, AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDaEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { saoPauloParts } from "@/lib/agenda";
@@ -82,21 +83,28 @@ export default async function AprovacoesPage({
         subtitle="Contas a pagar que esperam o “pode pagar” do cliente ou da coordenação. Aguardando e reprovada não são baixadas."
         action={aba === "alcadas" ? <NovaAlcada companyId={empresaId} usuarios={usuariosDaAlcada} /> : undefined}
       />
-      <div className="mt-4">
-        <AbasDeLink abas={abas} ativa={aba} />
-      </div>
+      {/* Empresa primeiro, num seletor só para as duas abas (15/10/2026): na
+          Fila ela estava dentro do Filtros e nas Alçadas era o seletor antigo,
+          sem o rótulo nem a última aberta, numa fileira embaixo das abas. */}
+      <FiltroDaEmpresa
+        acao="/aprovacoes"
+        empresas={empresas}
+        valor={empresaId}
+        todas="padrao"
+        manter={{ aba: aba === "alcadas" ? "alcadas" : undefined, situacao: aba === "fila" ? params.situacao : undefined }}
+      />
+      <AbasDeLink abas={abas} ativa={aba} />
       {aba === "fila" ? (
         <Fila
           tenantId={ctx.tenantId}
           userId={ctx.userId}
-          empresas={empresas}
           empresaId={empresaId}
           situacao={SITUACOES.find((s) => s.chave === params.situacao) ?? SITUACOES[2]}
           podeAgir={podeAgir}
           gerencia={gerencia}
         />
       ) : (
-        <Alcadas tenantId={ctx.tenantId} empresas={empresas} empresaId={empresaId} />
+        <Alcadas tenantId={ctx.tenantId} empresaId={empresaId} />
       )}
     </PageContainer>
   );
@@ -105,7 +113,6 @@ export default async function AprovacoesPage({
 async function Fila({
   tenantId,
   userId,
-  empresas,
   empresaId,
   situacao,
   podeAgir,
@@ -113,7 +120,6 @@ async function Fila({
 }: {
   tenantId: string;
   userId: string;
-  empresas: { id: string; nome: string }[];
   empresaId: string | null;
   situacao: (typeof SITUACOES)[number];
   podeAgir: boolean;
@@ -228,7 +234,8 @@ async function Fila({
           },
         ]}
       />
-      {/* Situação e empresa no botão "Filtros" (conferência de 30/09). */}
+      {/* Situação no botão "Filtros" (conferência de 30/09); a empresa saiu
+          para o seletor do topo (15/10/2026). */}
       <CascoDaTabela
         contagem={contarItens(decididas.length, "conta", "contas", linhas.length > LIMITE)}
         filtros={
@@ -241,7 +248,6 @@ async function Fila({
                 vazioLabel: "Aguardando e reprovadas",
                 opcoes: SITUACOES.filter((s) => s.chave !== "todas").map((s) => ({ value: s.chave, label: s.rotulo })),
               },
-              { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
             ]}
           />
         }
@@ -362,11 +368,9 @@ async function Fila({
 
 async function Alcadas({
   tenantId,
-  empresas,
   empresaId,
 }: {
   tenantId: string;
-  empresas: { id: string; nome: string }[];
   empresaId: string | null;
 }) {
   const prisma = getPrisma();
@@ -385,8 +389,6 @@ async function Alcadas({
 
   return (
     <>
-      <FiltroDePeriodo acao="/aprovacoes" empresas={empresas} empresaId={empresaId} permitirTodas extras={{ aba: "alcadas" }} navegaSozinho />
-
       {/* No casco da fila ao lado, com a contagem na barra e o vazio dentro
           (08/10/2026). */}
       <CascoDaTabela contagem={contarItens(alcadas.length, "alçada", "alçadas")}>
@@ -411,20 +413,32 @@ async function Alcadas({
             ))}
           </CartoesNoCelular>
 
+          {/* Funil na Empresa, no usuário e na Situação, que repetem valor
+              (15/10/2026), como na Fila ao lado. */}
+          <TabelaFiltravel
+            linhas={alcadas.map((a) => ({
+              id: a.id,
+              valores: {
+                empresa: nomeExibicao(a.company),
+                usuario: a.portalUser.name,
+                situacao: rotuloDaAlcada(a.active, a.portalUser.active),
+              },
+            }))}
+          >
           <TabelaNoDesktop padrao>
           <table className="w-full min-w-[720px]">
             <thead>
               <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">Empresa</th>
-                <th className="py-2 pr-3 font-medium">Usuário do portal</th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Empresa" chave="empresa" /></th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Usuário do portal" chave="usuario" /></th>
                 <th className="py-2 pr-3 font-medium text-right">Teto</th>
-                <th className="py-2 pr-3 font-medium">Situação</th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
                 <th className="py-2 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {alcadas.map((a) => (
-                <tr key={a.id} className="border-b border-border-soft">
+                <LinhaFiltravel key={a.id} id={a.id} className="border-b border-border-soft">
                   <td className="py-2.5 pr-3">{nomeExibicao(a.company)}</td>
                   <td className="py-2.5 pr-3">
                     {a.portalUser.name}
@@ -437,11 +451,12 @@ async function Alcadas({
                   <td className="py-2.5">
                     <AlternarAlcada id={a.id} ativa={a.active} />
                   </td>
-                </tr>
+                </LinhaFiltravel>
               ))}
             </tbody>
           </table>
           </TabelaNoDesktop>
+          </TabelaFiltravel>
         </>
       )}
       </CascoDaTabela>
@@ -454,14 +469,13 @@ async function Alcadas({
  * selo de situação (escolha 2A do Kauan, 08/10/2026). Alçada ativa de usuário
  * desativado não conta — ver `whereDaAlcadaValida` —, e diz o porquê.
  */
+function rotuloDaAlcada(ativa: boolean, usuarioAtivo: boolean): string {
+  return !usuarioAtivo ? "Usuário inativo" : ativa ? "Ativa" : "Inativa";
+}
+
 function SituacaoDaAlcada({ ativa, usuarioAtivo }: { ativa: boolean; usuarioAtivo: boolean }) {
   const valendo = ativa && usuarioAtivo;
-  return (
-    <StatusDot
-      color={valendo ? "var(--c41-success)" : "var(--c41-fg-muted)"}
-      label={!usuarioAtivo ? "Usuário inativo" : ativa ? "Ativa" : "Inativa"}
-    />
-  );
+  return <StatusDot color={valendo ? "var(--c41-success)" : "var(--c41-fg-muted)"} label={rotuloDaAlcada(ativa, usuarioAtivo)} />;
 }
 
 /** Os acessos ativos que enxergam a empresa no portal (ligados a ela ou à matriz dela, desde 14/10/2026). */

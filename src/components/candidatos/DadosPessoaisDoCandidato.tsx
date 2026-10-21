@@ -255,7 +255,7 @@ function Parte({
       className={`rounded-md ${aberta ? "-mx-3 border border-brand/40 p-3 shadow-[0_0_0_3px_var(--c41-focus-ring)]" : ""}`}
     >
       <div className="mb-2 flex min-h-7 items-center justify-between gap-2">
-        <h3 className="text-micro font-semibold uppercase tracking-wide text-fg-muted">{TITULO[secao]}</h3>
+        <h3 className="c41-rotulo">{TITULO[secao]}</h3>
         {/* Um bloco de cada vez: com um aberto, os outros lápis somem. */}
         {podeEditar && editando === null && (
           <IconButton size="sm" title={`Editar ${TITULO[secao].toLowerCase()}`} onClick={() => onEditar(secao)}>

@@ -92,6 +92,11 @@ export type AgenteDef = {
 
 export const AGENT_CATALOG: AgenteDef[] = [
   {
+    code: "triagem_chamados", label: "Triagem de chamados", sectorCode: null,
+    description: "Confere se há informação suficiente para iniciar o atendimento e conversa com o solicitante para complementar",
+    faixa: "rapido", escreve: false, ferramentas: [], tetoMensalCentavos: 10_000, tetoMensalChamadas: 2_000, padraoLigado: false,
+  },
+  {
     code: "triagem_curriculo",
     label: "Triagem de currículo",
     sectorCode: "recrutamento",
@@ -352,6 +357,24 @@ export const AGENT_CATALOG: AgenteDef[] = [
     ferramentas: [],
     tetoMensalCentavos: 10_000,
     tetoMensalChamadas: 500,
+    padraoLigado: false,
+  },
+  // Lote H2 do BPO (19/10): a leitura do boleto que o Nibo faz. Uma volta, sem
+  // ferramenta; o que lê preenche o Novo lançamento e a pessoa confere antes de
+  // gravar — a confirmação é o próprio "Lançar".
+  {
+    code: "leitor_de_boleto",
+    label: "Leitura de boleto",
+    sectorCode: "bpo",
+    description:
+      "Lê o PDF do boleto e preenche o Novo lançamento — fornecedor pelo CNPJ, valor, vencimento, emissão, número e linha digitável. A linha digitável confere valor e vencimento; a pessoa revisa antes de lançar",
+    // Rápida: o boleto é curto, e o que mais importa (valor e vencimento) é
+    // conferido pelo dígito verificador da linha, não pela confiança na IA.
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 10_000,
+    tetoMensalChamadas: 3_000,
     padraoLigado: false,
   },
   {

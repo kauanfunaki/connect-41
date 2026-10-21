@@ -126,15 +126,13 @@ export default async function PessoasPage({
         <EmptyState
           icon={<Users />}
           title={search ? "Nenhuma pessoa encontrada" : "Nenhuma pessoa cadastrada ainda"}
+          // Sem repetir o "Nova pessoa": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026).
           description={
             search
               ? "Tente ajustar a busca."
-              : "São os funcionários do próprio escritório. O pessoal das empresas clientes fica em Colaboradores de clientes."
-          }
-          action={
-            !search && canCreate ? (
-              <Button href="/pessoas/nova?internal=1"><Plus size={14} /> Nova pessoa</Button>
-            ) : undefined
+              : canCreate
+                ? "São os funcionários do próprio escritório — use “+ Nova pessoa”, no alto da tela, para cadastrar. O pessoal das empresas clientes fica em Colaboradores de clientes."
+                : "São os funcionários do próprio escritório. O pessoal das empresas clientes fica em Colaboradores de clientes."
           }
         />
       ) : (

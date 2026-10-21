@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { FilePlus2, RefreshCw } from "lucide-react";
 import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { CampoMes } from "@/components/ui/CampoMes";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -45,6 +45,11 @@ function valorParaCampo(n: number): string {
  * editável — a do cadastro do serviço, ou, sem ela, a da OS mais recente não
  * cancelada da empresa —, e o serviço sem código municipal nem LC 116 no
  * cadastro mostra o aviso e aceita os códigos para esta nota.
+ *
+ * O botão mora no cabeçalho da tela e o formulário numa janela (P19, 15/10/2026):
+ * ficava numa linha própria embaixo dos avisos e abria num cartão no topo da
+ * lista, empurrando a tabela. Na confirmação, a janela dá lugar ao diálogo — que
+ * já repete tudo o que vai na nota — e volta preenchida se a pessoa cancelar.
  */
 export function NovaNfse({
   companyId,
@@ -188,14 +193,6 @@ export function NovaNfse({
     });
   }
 
-  if (!aberto) {
-    return (
-      <Button onClick={abrir}>
-        <FilePlus2 size={14} /> Nova NFS-e
-      </Button>
-    );
-  }
-
   const opcoesDeTomador: Opcao[] = (listas?.clientes ?? []).map((c) => ({
     value: c.codigo,
     label: c.nome,
@@ -212,15 +209,18 @@ export function NovaNfse({
   const daUltimaOS = doServico?.naUltimaOS ?? null;
 
   return (
-    <Card className="p-4 w-full">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <h2 className="text-card-title font-semibold">Nova NFS-e — {empresaNome}</h2>
-        {listas && (
+    <>
+      <Button onClick={abrir}>
+        <FilePlus2 size={14} /> Nova NFS-e
+      </Button>
+      <Modal open={aberto && !confirmando} onClose={() => setAberto(false)} title={`Nova NFS-e — ${empresaNome}`} maxWidth="max-w-3xl">
+      {listas && (
+        <div className="flex justify-end mb-3">
           <Button variant="ghost" size="xs" onClick={() => carregar(true)} loading={carregando} loadingLabel="Lendo o Omie…">
             <RefreshCw size={12} /> Listas lidas às {formatInstantDateTime(new Date(listas.lidasEm), { hour: "2-digit", minute: "2-digit" })} — atualizar
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {!listas && carregando && <p className="text-ui text-fg-muted">Lendo tomadores e serviços no Omie da empresa…</p>}
       {erroDasListas && (
@@ -370,6 +370,7 @@ export function NovaNfse({
           />
         </form>
       )}
+      </Modal>
 
       <ConfirmDialog
         open={confirmando}
@@ -418,6 +419,6 @@ export function NovaNfse({
           label="Entendo que isto emite uma nota de verdade na prefeitura."
         />
       </ConfirmDialog>
-    </Card>
+    </>
   );
 }

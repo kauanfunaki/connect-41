@@ -10,10 +10,9 @@
 //
 // Função pura: recebe tudo pronto e só redige.
 
-import { GRUPOS } from "./estrutura";
 import type { ResultadoDoDre } from "./calculo";
 import type { PassoDaReconciliacao } from "./analises";
-import { LINHA_DE_RESULTADO, LINHA_OPERACIONAL, valorDaLinha, fracaoDaLinha } from "./economica";
+import { linhaDeResultadoDe, linhaOperacionalDe, modeloDoResultado, valorDaLinha, fracaoDaLinha } from "./economica";
 
 export type ChaveDaPergunta =
   | "margem_caiu"
@@ -74,8 +73,6 @@ function pct(f: number | null): string {
   return f === null ? "—" : PCT.format(f);
 }
 
-const DESPESAS = GRUPOS.filter((g) => g.origem === "pagamento");
-
 type Variacao = { code: string; label: string; atual: number; anterior: number; delta: number };
 
 /**
@@ -83,7 +80,8 @@ type Variacao = { code: string; label: string; atual: number; anterior: number; 
  * vem negativa na estrutura, então crescer é ficar mais negativa.
  */
 function variacoesDeDespesa(atual: ResultadoDoDre, anterior: ResultadoDoDre): Variacao[] {
-  return DESPESAS.map((g) => {
+  const despesas = modeloDoResultado(atual).grupos.filter((g) => g.origem === "pagamento");
+  return despesas.map((g) => {
     const a = atual.porGrupo[g.code] ?? 0;
     const b = anterior.porGrupo[g.code] ?? 0;
     return { code: g.code, label: g.label, atual: a, anterior: b, delta: a - b };
@@ -169,13 +167,14 @@ export function responderAoCfo(pergunta: ChaveDaPergunta, d: DadosDoCfo): Respos
     }
 
     case "queda_operacional": {
-      const agora = valorDaLinha(d.atual, LINHA_OPERACIONAL);
-      const antes = valorDaLinha(d.anterior, LINHA_OPERACIONAL);
+      const agora = valorDaLinha(d.atual, linhaOperacionalDe(d.atual));
+      const antes = valorDaLinha(d.anterior, linhaOperacionalDe(d.anterior));
+      const fora = modeloDoResultado(d.atual).analises.foraDoOperacional;
       const delta = agora - antes;
       const movimentos = [
         { label: "Receita bruta", delta: receita - valorDaLinha(d.anterior, "receita_bruta") },
         ...variacoesDeDespesa(d.atual, d.anterior)
-          .filter((v) => !["investimentos", "outras_despesas"].includes(v.code))
+          .filter((v) => !fora.includes(v.code))
           .map((v) => ({ label: v.label, delta: v.delta })),
       ].sort((a, b) => a.delta - b.delta);
       return {
@@ -250,7 +249,8 @@ export function responderAoCfo(pergunta: ChaveDaPergunta, d: DadosDoCfo): Respos
     }
 
     case "reduzir_despesas": {
-      const ranking = DESPESAS.map((g) => ({ label: g.label, valor: Math.abs(d.atual.porGrupo[g.code] ?? 0) }))
+      const despesas = modeloDoResultado(d.atual).grupos.filter((g) => g.origem === "pagamento");
+      const ranking = despesas.map((g) => ({ label: g.label, valor: Math.abs(d.atual.porGrupo[g.code] ?? 0) }))
         .filter((r) => r.valor > 0)
         .sort((a, b) => b.valor - a.valor);
       const maior = ranking[0];
@@ -295,5 +295,5 @@ export function responderAoCfo(pergunta: ChaveDaPergunta, d: DadosDoCfo): Respos
 
 /** Resultado do período — atalho para a tela resumir antes das perguntas. */
 export function resultadoDoPeriodo(r: ResultadoDoDre): number {
-  return valorDaLinha(r, LINHA_DE_RESULTADO);
+  return valorDaLinha(r, linhaDeResultadoDe(r));
 }

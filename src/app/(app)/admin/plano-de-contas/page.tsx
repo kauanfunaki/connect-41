@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { Landmark } from "lucide-react";
+import { AlertTriangle, Landmark } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -14,7 +15,9 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { CarregarPlanoPadrao } from "@/components/admin/CarregarPlanoPadrao";
 import { rotuloDoGrupo } from "@/lib/dre/estrutura";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
-import { alternarCategoria } from "./actions";
+import { PainelDeCadastro } from "@/components/admin/PainelDeCadastro";
+import { FinanceCategoryForm } from "@/components/admin/FinanceCategoryForm";
+import { alternarCategoria, atualizarCategoria, criarCategoria } from "./actions";
 
 /** A linha da DRE pelo nome que a tela mostra; texto que não é grupo conhecido aparece como está. */
 function linhaDaDre(dreGroup: string): string {
@@ -29,9 +32,11 @@ const LADOS = [
   { kind: "RECEBER" as const, titulo: "Contas a receber", nota: "Categoria é opcional no lançamento" },
 ];
 
-export default async function PlanoDeContasPage() {
+export default async function PlanoDeContasPage({ searchParams }: { searchParams: Promise<{ novo?: string; editar?: string }> }) {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
+  // Criar e editar no painel ao lado (escolha 2B, 20/10/2026) — ver `PainelDeCadastro`.
+  const { novo, editar } = await searchParams;
 
   const prisma = getPrisma();
   // Só o padrão do escritório. As categorias de cada empresa (criadas no plano
@@ -42,6 +47,7 @@ export default async function PlanoDeContasPage() {
   });
 
   const ativasParaPagar = categorias.filter((c) => c.kind === "PAGAR" && c.active).length;
+  const emEdicao = editar ? categorias.find((c) => c.id === editar) : undefined;
 
   return (
     <PageContainer>
@@ -56,7 +62,7 @@ export default async function PlanoDeContasPage() {
         action={
           <div className="flex flex-wrap items-center gap-2">
             <CarregarPlanoPadrao />
-            <Button href="/admin/plano-de-contas/novo" variant="primary" className="font-medium">
+            <Button href="/admin/plano-de-contas?novo=1" variant="primary" className="font-medium">
               + Nova categoria
             </Button>
           </div>
@@ -68,30 +74,23 @@ export default async function PlanoDeContasPage() {
       </p>
 
       {ativasParaPagar === 0 && (
-        <Card className="mb-6 border-warning/30 bg-warning/8">
-          <div className="px-4 py-3 space-y-1">
-            <p className="text-fs-3 font-medium text-fg">
-              Nenhuma categoria ativa em contas a pagar
-            </p>
-            <p className="text-fs-2 text-fg-muted">
-              Enquanto isso, nenhum documento fiscal vira conta a pagar: o lançamento é recusado
-              por falta de categoria. Cadastre ao menos uma para destravar o fluxo.
-            </p>
-          </div>
-        </Card>
+        // No `Aviso` de atenção (15/10/2026): era um cartão âmbar montado à mão.
+        <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-6">
+          <p className="font-medium text-fg">Nenhuma categoria ativa em contas a pagar</p>
+          <p className="text-fs-2 text-fg-muted mt-0.5">
+            Enquanto isso, nenhum documento fiscal vira conta a pagar: o lançamento é recusado
+            por falta de categoria. Cadastre ao menos uma para destravar o fluxo.
+          </p>
+        </Aviso>
       )}
 
       {categorias.length === 0 ? (
         <Card>
+          {/* Sem repetir o "+ Nova categoria": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<Landmark />}
             title="Plano de contas vazio"
-            description="Cadastre as categorias que classificam despesas e receitas. Elas aparecem no dropdown quando um documento fiscal vira lançamento."
-            action={
-              <Button href="/admin/plano-de-contas/novo" variant="primary" className="font-medium">
-                + Nova categoria
-              </Button>
-            }
+            description="Use “Carregar o plano padrão” ou “+ Nova categoria”, no alto da tela, para cadastrar as categorias que classificam despesas e receitas. Elas aparecem na lista quando um documento fiscal vira lançamento."
           />
         </Card>
       ) : (
@@ -101,7 +100,7 @@ export default async function PlanoDeContasPage() {
             return (
               <div key={kind}>
                 <div className="flex items-baseline gap-2 mb-2">
-                  <h2 className="text-fs-5 font-medium text-fg">{titulo}</h2>
+                  <h2 className="text-section font-semibold text-fg">{titulo}</h2>
                   <span className="text-fs-2 text-fg-muted">{nota}</span>
                 </div>
                 {doLado.length === 0 ? (
@@ -125,7 +124,7 @@ export default async function PlanoDeContasPage() {
                               className="ml-auto"
                               foraDeOperacao={!c.active}
                               onToggle={alternarCategoria.bind(null, c.id, !c.active)}
-                              editarHref={`/admin/plano-de-contas/${c.id}/editar`}
+                              editarHref={`/admin/plano-de-contas?editar=${c.id}`}
                             />
                           </PeDoCartao>
                         </Cartao>
@@ -152,7 +151,7 @@ export default async function PlanoDeContasPage() {
                       <TabelaNoDesktop padrao>
                         <table className="w-full min-w-[820px]">
                           <thead>
-                            <tr className="border-b border-border text-fs-1 uppercase tracking-wide text-fg-muted">
+                            <tr className="border-b border-border">
                               <th className="px-4 py-3">Categoria</th>
                               <th className="px-4 py-3">
                                 <FiltroDaColuna rotulo="Grupo" chave="grupo" />
@@ -201,7 +200,7 @@ export default async function PlanoDeContasPage() {
                                   <AcoesDeLinha
                                     foraDeOperacao={!c.active}
                                     onToggle={alternarCategoria.bind(null, c.id, !c.active)}
-                                    editarHref={`/admin/plano-de-contas/${c.id}/editar`}
+                                    editarHref={`/admin/plano-de-contas?editar=${c.id}`}
                                   />
                                 </td>
                               </LinhaFiltravel>
@@ -216,6 +215,22 @@ export default async function PlanoDeContasPage() {
             );
           })}
         </div>
+      )}
+
+      {novo === "1" && (
+        <PainelDeCadastro titulo="Nova categoria" voltarPara="/admin/plano-de-contas">
+          <FinanceCategoryForm action={criarCategoria} cancelHref="/admin/plano-de-contas" />
+        </PainelDeCadastro>
+      )}
+      {emEdicao && (
+        <PainelDeCadastro titulo="Editar categoria" voltarPara="/admin/plano-de-contas">
+          <FinanceCategoryForm
+            key={emEdicao.id}
+            action={atualizarCategoria}
+            cancelHref="/admin/plano-de-contas"
+            defaultValues={{ id: emEdicao.id, name: emEdicao.name, kind: emEdicao.kind, dreGroup: emEdicao.dreGroup }}
+          />
+        </PainelDeCadastro>
       )}
     </PageContainer>
   );

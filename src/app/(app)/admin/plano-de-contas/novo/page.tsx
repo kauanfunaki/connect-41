@@ -1,27 +1,7 @@
-import { notFound } from "next/navigation";
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { FinanceCategoryForm } from "@/components/admin/FinanceCategoryForm";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { criarCategoria } from "../actions";
+import { redirect } from "next/navigation";
 
-export default async function NovaCategoriaPage() {
-  const ctx = await getAuthContext();
-  if (!isFullWrite(ctx.role)) notFound();
-
-  return (
-    <PageContainer>
-      <PageHeader title="Nova categoria" />
-
-      <div className="max-w-[720px]">
-        <Card className="p-6">
-          <FinanceCategoryForm
-            action={criarCategoria}
-            cancelHref="/admin/plano-de-contas"
-          />
-        </Card>
-      </div>
-    </PageContainer>
-  );
+// O formulário abre no painel ao lado da lista desde 20/10/2026 (escolha 2B
+// dos Ajustes de 15/10). Este endereço fica para os links antigos.
+export default function NovaCategoriaPage() {
+  redirect("/admin/plano-de-contas?novo=1");
 }

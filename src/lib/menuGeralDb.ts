@@ -6,19 +6,20 @@ import { getPrisma } from "@/lib/prisma";
 import { isFullAccess } from "@/lib/auth/papeis";
 import type { AuthContext } from "@/lib/auth/context";
 import {
-  TODAS_AS_TELAS_DO_GERAL,
-  lerTelasOcultas,
+  lerPreferenciasDoMenuGeral,
   setoresQueDecidemOGeral,
   telasDoGeralVisiveis,
   type TelaDoGeral,
 } from "@/lib/menuGeral";
 
 export type OcultasDoGeral = {
-  /** As telas escondidas de cada setor que tem configuração. Setor ausente = nada escondido. */
+  /** Escolhas salvas para esconder; setor sem linha recebe os padrões. */
   porSetor: Record<string, TelaDoGeral[]>;
+  /** Escolhas explícitas para mostrar itens que ficam escondidos por padrão. */
+  visiveisPorSetor: Record<string, TelaDoGeral[]>;
   /**
    * `false` quando o banco não respondeu — inclusive a tabela ainda não existir
-   * (deploy antes da migration). O menu segue mostrando tudo; a tela de
+   * (deploy antes da migration). O menu segue usando os padrões; a tela de
    * configuração usa isto para avisar que não consegue salvar.
    */
   disponivel: boolean;
@@ -28,22 +29,26 @@ export type OcultasDoGeral = {
  * As telas escondidas por setor neste escritório. Uma consulta por requisição
  * (`cache`): o layout, a página e o tutorial pedem a mesma coisa.
  *
- * Nunca derruba a tela: qualquer erro vira "nada escondido", que é o menu de
- * antes desta configuração existir.
+ * Nunca derruba a tela: qualquer erro vira os padrões de visibilidade do menu.
  */
 export const lerOcultasDoGeral = cache(async (tenantId: string): Promise<OcultasDoGeral> => {
-  if (!tenantId) return { porSetor: {}, disponivel: false };
+  if (!tenantId) return { porSetor: {}, visiveisPorSetor: {}, disponivel: false };
   try {
     const linhas = await getPrisma().sectorMenuView.findMany({
       where: { tenantId },
       select: { sectorCode: true, hiddenScreens: true },
     });
     const porSetor: Record<string, TelaDoGeral[]> = {};
-    for (const l of linhas) porSetor[l.sectorCode] = lerTelasOcultas(l.hiddenScreens);
-    return { porSetor, disponivel: true };
+    const visiveisPorSetor: Record<string, TelaDoGeral[]> = {};
+    for (const l of linhas) {
+      const preferencias = lerPreferenciasDoMenuGeral(l.hiddenScreens);
+      porSetor[l.sectorCode] = preferencias.ocultas;
+      visiveisPorSetor[l.sectorCode] = preferencias.visiveis;
+    }
+    return { porSetor, visiveisPorSetor, disponivel: true };
   } catch (err) {
     console.error("[menu-geral] leitura das telas escondidas", err);
-    return { porSetor: {}, disponivel: false };
+    return { porSetor: {}, visiveisPorSetor: {}, disponivel: false };
   }
 });
 
@@ -57,7 +62,7 @@ export async function telasDoGeralDaPessoa(
   ctx: Pick<AuthContext, "tenantId" | "activeSector" | "sectors" | "role">,
 ): Promise<TelaDoGeral[]> {
   const setores = setoresQueDecidemOGeral(ctx.activeSector, ctx.sectors, isFullAccess(ctx.role));
-  if (setores === null || setores.length === 0 || !ctx.tenantId) return [...TODAS_AS_TELAS_DO_GERAL];
-  const { porSetor } = await lerOcultasDoGeral(ctx.tenantId);
-  return telasDoGeralVisiveis(setores, porSetor);
+  if (setores === null || setores.length === 0 || !ctx.tenantId) return telasDoGeralVisiveis(null, {});
+  const { porSetor, visiveisPorSetor } = await lerOcultasDoGeral(ctx.tenantId);
+  return telasDoGeralVisiveis(setores, porSetor, visiveisPorSetor);
 }

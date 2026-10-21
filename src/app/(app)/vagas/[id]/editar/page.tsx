@@ -6,6 +6,8 @@ import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { VagaForm } from "@/components/vagas/VagaForm";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
+import { nomeExibicao } from "@/lib/companyName";
 import { rotuloDePublicarVaga } from "@/lib/carreiras/enderecoDeCarreiras";
 import { atualizarVaga } from "../../actions";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -30,7 +32,7 @@ export default async function EditarVagaPage({
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
     }),
     prisma.cargo.findMany({
       where: { tenantId: ctx.tenantId, active: true },
@@ -57,7 +59,7 @@ export default async function EditarVagaPage({
         <VagaForm
           action={atualizarVaga}
           cancelHref={`/vagas/${id}`}
-          companies={companies}
+          companies={companies.map((c) => ({ ...c, nome: nomeExibicao(c) }))}
           cargos={cargos}
           users={users}
           sectorOptions={sectorOptions}

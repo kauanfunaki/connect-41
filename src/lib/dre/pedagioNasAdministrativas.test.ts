@@ -24,40 +24,40 @@ describe("o padrão novo", () => {
     expect(PLANO_PADRAO_41.find((p) => p.nome === "Pedágio")).toMatchObject({
       kind: "PAGAR",
       grupo: "CMV / CSV",
-      dre: "administrativas",
+      dre: "custo_administrativo",
     });
   });
 
   it("o resto do CMV / CSV do plano continua no CMV", () => {
     const doGrupo = PLANO_PADRAO_41.filter((p) => p.grupo === "CMV / CSV" && p.nome !== "Pedágio");
     expect(doGrupo.length).toBeGreaterThan(0);
-    expect(doGrupo.every((p) => p.dre === "cmv")).toBe(true);
+    expect(doGrupo.every((p) => p.dre === "custo_operacional")).toBe(true);
   });
 
   it("o de-para do Omie classifica o Pedágio nas administrativas", () => {
     const grupo = new Map(MAPEAMENTO_PADRAO.map((p) => [chaveDaCategoria(p.categoria), p.grupo]));
-    expect(grupo.get(chaveDaCategoria("PEDAGIO"))).toBe("administrativas");
+    expect(grupo.get(chaveDaCategoria("PEDAGIO"))).toBe("custo_administrativo");
   });
 
   it("o arquivo do Omie que traz o Pedágio cria a categoria já nas administrativas", () => {
     expect(categoriasParaCriar(["Pedágio"], [], "pagamento")).toEqual([
-      { name: "Pedágio", kind: "PAGAR", dreGroup: "administrativas" },
+      { name: "Pedágio", kind: "PAGAR", dreGroup: "custo_administrativo" },
     ]);
   });
 
-  it("na DRE, o pedágio soma nas Despesas Fixas (Administrativas), não no CMV", () => {
+  it("na DRE, o pedágio soma nas Custo Administrativo, não no CMV", () => {
     const r = calcularDre([{ categoria: "Pedágio", valorCentavos: -12_345, origem: "pagamento" }], montarMapeamento(MAPEAMENTO_PADRAO));
-    expect(r.porGrupo.administrativas).toBe(-12_345);
-    expect(r.porGrupo.cmv).toBe(0);
+    expect(r.porGrupo.custo_administrativo).toBe(-12_345);
+    expect(r.porGrupo.custo_operacional).toBe(0);
   });
 
   it("escritório sem a categoria recebe ela já nas administrativas", () => {
-    expect(planejarCarga([], PLANO_PADRAO_41).criar.find((c) => c.nome === "Pedágio")?.dre).toBe("administrativas");
+    expect(planejarCarga([], PLANO_PADRAO_41).criar.find((c) => c.nome === "Pedágio")?.dre).toBe("custo_administrativo");
   });
 
   it("e não corrige sozinho o que já está gravado no CMV — é o que o script faz", () => {
     const carga = planejarCarga(
-      [{ id: "x", name: "Pedágio", kind: "PAGAR", planGroup: "CMV / CSV", dreGroup: "cmv" }],
+      [{ id: "x", name: "Pedágio", kind: "PAGAR", planGroup: "CMV / CSV", dreGroup: "custo_operacional" }],
       PLANO_PADRAO_41
     );
     expect(carga.completar.find((m) => m.id === "x")).toBeUndefined();
@@ -86,17 +86,17 @@ describe("o nome da categoria", () => {
 function cenario(): { categorias: CategoriaLida[]; excecoes: ExcecaoLida[] } {
   return {
     categorias: [
-      { id: "pad", tenantId: "t1", companyId: null, name: "Pedágio", kind: "PAGAR", dreGroup: "cmv" },
+      { id: "pad", tenantId: "t1", companyId: null, name: "Pedágio", kind: "PAGAR", dreGroup: "custo_operacional" },
       // Do Omie, com o rótulo digitado em vez do código.
       { id: "omie", tenantId: "t1", companyId: "transp", name: "PEDAGIO", kind: "PAGAR", dreGroup: "CMV sobre Receita Bruta" },
       // Empresa que pôs o dela em outra linha de propósito.
-      { id: "out", tenantId: "t1", companyId: "outra", name: "pedágio", kind: "PAGAR", dreGroup: "comerciais" },
-      { id: "t2pad", tenantId: "t2", companyId: null, name: "Pedágio", kind: "PAGAR", dreGroup: "administrativas" },
+      { id: "out", tenantId: "t1", companyId: "outra", name: "pedágio", kind: "PAGAR", dreGroup: "financiamentos" },
+      { id: "t2pad", tenantId: "t2", companyId: null, name: "Pedágio", kind: "PAGAR", dreGroup: "custo_administrativo" },
       // Outra do CMV, que não entra.
-      { id: "pneu", tenantId: "t1", companyId: null, name: "Pneus", kind: "PAGAR", dreGroup: "cmv" },
+      { id: "pneu", tenantId: "t1", companyId: null, name: "Pneus", kind: "PAGAR", dreGroup: "custo_operacional" },
     ],
     excecoes: [
-      { id: "ex1", tenantId: "t1", companyId: "comexcecao", categoryId: "pad", grupo: "cmv" },
+      { id: "ex1", tenantId: "t1", companyId: "comexcecao", categoryId: "pad", grupo: "custo_operacional" },
       { id: "ex2", tenantId: "t1", companyId: "deliberada", categoryId: "pad", grupo: "outras_despesas" },
     ],
   };
@@ -118,7 +118,7 @@ describe("a correção do que já está gravado", () => {
   it("a auditoria diz CMV → Administrativas, com motivo que cabe na linha do tempo", () => {
     const { categorias, excecoes } = cenario();
     const omie = planejarCorrecao(C, categorias, excecoes).mudar.find((a) => a.id === "omie")!;
-    expect(deParaDaLinha(C, omie)).toBe("CMV sobre Receita Bruta → Despesas Fixas (Administrativas)");
+    expect(deParaDaLinha(C, omie)).toBe("Custo Operacional → Custo Administrativo");
     const detalhes = detalhesDaAuditoria(C, omie);
     expect(detalhes).toMatchObject({ nome: "PEDAGIO", companyId: "transp", gravadoAntes: "CMV sobre Receita Bruta" });
     expect(detalhes.motivo.length).toBeLessThanOrEqual(140);
@@ -149,8 +149,8 @@ describe("a correção do que já está gravado", () => {
     ]);
 
     const trocadas = new Set(plano.mudar.map((a) => a.id));
-    const cats = categorias.map((c) => (trocadas.has(c.id) ? { ...c, dreGroup: "administrativas" } : c));
-    const exc = excecoes.map((e) => (trocadas.has(e.id) ? { ...e, grupo: "administrativas" } : e));
+    const cats = categorias.map((c) => (trocadas.has(c.id) ? { ...c, dreGroup: "custo_administrativo" } : c));
+    const exc = excecoes.map((e) => (trocadas.has(e.id) ? { ...e, grupo: "custo_administrativo" } : e));
     expect(planejarCorrecao(C, cats, exc).mudar).toEqual([]);
     expect(impactoNaDre(C, cats, exc, planejarCorrecao(C, cats, exc), valores)).toEqual([]);
   });

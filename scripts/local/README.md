@@ -1,5 +1,11 @@
 # Connect local, com dados fictícios
 
+O menu lateral oferece uma entrada **SPED**, que abre **Classificação e apuração**,
+**SPED gerados** e **Executar** ao passar o mouse ou clicar, inclusive na faixa
+recolhida e no celular. Classificação e apuração abre em Classificação; Executar
+tem as abas Executar e Histórico. As operações são simuladas e
+salvas no banco local. Guia e roteiro: [Fluxo SPED local](../../docs/FISCAL-PREVIA-VISUAL.md).
+
 Um Connect inteiro rodando na máquina, com banco próprio no Docker e só dado
 inventado. Existe para gravar os vídeos da ajuda (`scripts/videos/`), que vão para
 o YouTube e não podem mostrar cliente de verdade — e serve para qualquer teste que
@@ -47,7 +53,7 @@ banco, cria as tabelas pelo schema e carrega:
 
 - o seed (escritório "41 Tech", setores e o administrador `adm6@41bpo.com.br`, que
   no banco local se chama **Camila Duarte**, pessoa fictícia);
-- a demonstração do BPO (`scripts/dados-de-demonstracao.ts`): o Grupo Modelo, a
+- a demonstração antiga do BPO (`scripts/local/demonstracao-transportes.ts` — a da produção, desde 15/10/2026, é a Padaria Pão de Ouro de `scripts/dados-de-demonstracao.ts`): o Grupo Modelo, a
   Transportes Modelo, contas, extrato, pendências, aprovações;
 - o preparo dos vídeos (`preparar-ambiente.ts`): setor Controladoria, senha do
   cliente do portal (que se chama **Rafael Nogueira**, fictício), a filial, um
@@ -95,12 +101,31 @@ O atualizador aceita apenas adições de schema e salva um backup em
 altera senhas. Sem `--aplicar`, mostra apenas a comparação. Use somente com o
 container `connect41-local` na porta 3307; não é um migrador de produção.
 
+A única exceção revisada é a atualização de `audit_logs`: acrescenta o nome do
+ator e permite `userId` nulo, recriando a chave com `ON DELETE SET NULL`.
+Ela preserva todos os registros; outras remoções ou alterações continuam bloqueadas.
+
 O comando opcional `build:local` no Windows recusa iniciar enquanto houver um
 standalone rodando, evitando que o Next apague arquivos antes de encontrar a
 pasta bloqueada. O `build` compartilhado permanece igual em outras máquinas e CI;
 nenhuma atualização do banco é executada automaticamente por esses comandos.
 
 ## Subir o Connect
+
+### Dados fiscais de teste no banco
+
+Após atualizar o schema local, execute pelo lançador protegido:
+
+```
+node scripts/local/com-banco-local.mjs npx tsx scripts/local/preparar-fiscal.ts
+```
+
+Prepara os documentos fictícios em `local_fiscal_scenarios`, separados por usuário
+e escritório, sem versões ou protocolos iniciais. Repetir o comando preserva as
+alterações existentes. As ações fiscais passam pelo servidor com permissões e
+controle de revisão; o navegador não grava mais o cenário no localStorage.
+Essa simulação aceita somente `connect41` em localhost:3307. Continua sem gerar
+arquivos fiscais reais; o motor Python será integrado separadamente.
 
 ```
 $env:PORT='3100'
@@ -143,6 +168,22 @@ node scripts/local/com-banco-local.mjs npx tsx scripts/local/perfis-de-teste.ts
 Cria `bpo.teste@`, `dp.teste@` e `dpcoord.teste@exemplo.invalido` (coordenador do
 BPO, usuário do DP e coordenador do DP), com a `LOCAL_PORTAL_PASSWORD`, e uma
 colaboradora fictícia para a ficha da pessoa. Rode depois de recriar o banco.
+
+## Conferir a demonstração do BPO da produção (15/10/2026)
+
+A demonstração da apresentação ao BPO (Padaria Pão de Ouro, `scripts/dados-de-demonstracao.ts`)
+não entra no banco local de sempre (ele segue com a Transportes Modelo dos vídeos). Para
+conferir a de produção num banco local, grave-a e rode a conferência — DRE, saldo e
+sugestões da conciliação, Meu dia, Meu time e o motor de avisos, pelas mesmas funções das telas:
+
+```
+node scripts/local/com-banco-local.mjs npx tsx scripts/dados-de-demonstracao.ts --usuario <e-mail> --aplicar
+node scripts/local/com-banco-local.mjs npx tsx scripts/local/verificar-demonstracao-bpo.ts --usuario <e-mail>
+node scripts/local/com-banco-local.mjs npx tsx scripts/dados-de-demonstracao.ts --limpar --aplicar
+```
+
+A limpeza tira **todas** as empresas "[demo]" do banco — a Transportes Modelo também. Depois,
+`node scripts/local/recriar-banco.mjs` para voltar ao banco dos vídeos.
 
 ## Vídeos
 

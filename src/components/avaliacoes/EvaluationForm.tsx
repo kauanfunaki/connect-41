@@ -40,7 +40,7 @@ export function EvaluationForm({ action, competencies, cancelHref, defaultValues
       )}
 
       <div>
-        <FormSection title="Notas por Competência (0-10)">
+        <FormSection title="Notas por competência (0 a 10)">
           {/* Nota de 0 a 10 não precisa de meia tela: cada competência é uma
               linha com o nome à esquerda e a nota numa coluna estreita à
               direita. Com o rótulo em cima (até 30/09), nome de competência

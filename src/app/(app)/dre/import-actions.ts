@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { lerExportDoOmie, mesesDoExport, mesDaData, ExportIlegivel, type Celula } from "@/lib/dre/omie";
 import { podeAbrirADre } from "@/lib/dre/acesso";
 import { categoriasParaCriar } from "@/lib/dre/categoriasDoImport";
+import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 
 export type ResultadoDaImportacao =
@@ -102,6 +103,8 @@ export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaI
   const nome = arquivo.name.slice(0, 255);
 
   let criadas: { dreGroup: string | null }[] = [];
+  // A categoria nova nasce com o grupo do de-para do modelo do DRE da empresa.
+  const modelo = await modeloDaEmpresa(tenantId, companyId);
   try {
     await prisma.$transaction(
       async (tx) => {
@@ -116,7 +119,8 @@ export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaI
         const novas = categoriasParaCriar(
           leitura.linhas.map((l) => l.categoria),
           existentes.map((e) => e.name),
-          leitura.origem
+          leitura.origem,
+          modelo
         );
         if (novas.length > 0) {
           await tx.financeCategory.createMany({

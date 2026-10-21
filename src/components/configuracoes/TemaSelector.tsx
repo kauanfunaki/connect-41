@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { applyPreferencia, readPreferencia, type PreferenciaDeTema } from "@/lib/theme";
+import { useSyncExternalStore } from "react";
+import { applyPreferencia, assinarTema, readPreferencia, type PreferenciaDeTema } from "@/lib/theme";
 
 // Cores fixas da miniatura, e não os tokens: o cartão de "escuro" tem de
 // parecer escuro mesmo com a tela em tema claro, e vice-versa. São os valores
@@ -62,12 +62,12 @@ const OPCOES: { valor: PreferenciaDeTema; rotulo: string; previa: React.ReactNod
  * escolher vendo, e não por um rótulo. "Padrão do sistema" segue o aparelho.
  */
 export function TemaSelector() {
-  // O servidor não tem cookie de documento nem DOM; no cliente a preferência
-  // real já está aplicada no <html>. O cliente vence de propósito.
-  const [preferencia, setPreferencia] = useState<PreferenciaDeTema>(readPreferencia);
+  // A preferência pelo store do tema (`assinarTema`, Ajustes 15/10): o
+  // servidor não tem cookie de documento nem DOM e desenha o claro; o React
+  // troca para a do navegador logo depois de hidratar.
+  const preferencia = useSyncExternalStore<PreferenciaDeTema>(assinarTema, readPreferencia, () => "light");
 
   function escolher(valor: PreferenciaDeTema) {
-    setPreferencia(valor);
     applyPreferencia(valor);
   }
 
@@ -82,7 +82,6 @@ export function TemaSelector() {
             role="radio"
             aria-checked={ativo}
             onClick={() => escolher(o.valor)}
-            suppressHydrationWarning
             className={`group flex flex-col overflow-hidden rounded-lg border text-left transition-[border-color,box-shadow] ${
               ativo
                 ? "border-brand shadow-[0_0_0_3px_var(--c41-focus-ring)]"
@@ -93,7 +92,6 @@ export function TemaSelector() {
             <span className="flex items-center gap-2.5 px-3.5 py-3 bg-surface">
               <span
                 aria-hidden
-                suppressHydrationWarning
                 className={`inline-flex size-4 items-center justify-center rounded-full border-2 transition-colors ${
                   ativo ? "border-brand" : "border-border-strong group-hover:border-brand/50"
                 }`}

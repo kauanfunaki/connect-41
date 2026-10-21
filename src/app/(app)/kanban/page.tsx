@@ -1,19 +1,25 @@
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Columns3, Plus } from "lucide-react";
+import { Columns3 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Button } from "@/components/ui/Button";
+import { NovoKanban } from "@/components/kanban/NovoKanban";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
 
-export default async function KanbanListPage() {
+export default async function KanbanListPage({ searchParams }: { searchParams: Promise<{ novo?: string }> }) {
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
-  const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
+  const { labels: sectorLabels, colors: sectorColors, options: allSectorOptions } = await getSectorMaps(ctx.tenantId);
+  // `?novo=1` é o endereço antigo /kanban/novo: a lista abre com a janela aberta.
+  const { novo } = await searchParams;
+  // SECTOR_ADMIN só pode criar kanban nos próprios setores; ADMIN/SUPER_ADMIN em qualquer um.
+  const sectorOptions = isFullWrite(ctx.role)
+    ? allSectorOptions
+    : allSectorOptions.filter((s) => ctx.sectors.includes(s.value));
 
   const prisma = getPrisma();
   const pipelines = await prisma.pipeline.findMany({
@@ -30,25 +36,22 @@ export default async function KanbanListPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Kanban"
-        subtitle={<>{pipelines.length} kanban{pipelines.length !== 1 ? "s" : ""} configurado{pipelines.length !== 1 ? "s" : ""}</>}
-        action={<>{canCreate && (
-          <Button
-            href="/kanban/novo"
-            variant="primary"
-          >
-            <Plus size={14} /> Novo kanban
-          </Button>
-        )}</>}
+        title="Todas as tarefas"
+        subtitle={<>{pipelines.length} tarefa{pipelines.length !== 1 ? "s" : ""} de todos os seus setores</>}
+        action={canCreate ? <NovoKanban key={novo === "1" ? "novo" : "lista"} sectorOptions={sectorOptions} abertaDeInicio={novo === "1"} /> : undefined}
       />
       {pipelines.length === 0 ? (
         <Card>
+          {/* Sem repetir o "Novo kanban": ele mora no cabeçalho, e o texto diz onde
+              (P19, 15/10/2026). */}
           <EmptyState
             icon={<Columns3 />}
-            title="Nenhum kanban cadastrado ainda"
-            description="Crie o primeiro kanban do setor pra começar a organizar o funil."
-            // Era um <button> dentro de um <Link> (HTML inválido): o Button com href já é o link.
-            action={canCreate ? <Button href="/kanban/novo"><Plus size={14} /> Novo kanban</Button> : undefined}
+            title="Nenhuma tarefa cadastrada ainda"
+            description={
+              canCreate
+                ? "Use “+ Nova tarefa”, no alto da tela, para criar a primeira do setor e começar a organizar o trabalho."
+                : "As tarefas dos setores aparecem aqui quando forem criadas."
+            }
           />
         </Card>
       ) : (
@@ -60,7 +63,7 @@ export default async function KanbanListPage() {
                   className="w-2 h-2 rounded-full flex-shrink-0"
                   style={{ background: sectorColors[sectorCode] ?? "var(--c41-sector-gestao)" }}
                 />
-                <h2 className="text-card-title font-semibold text-fg">
+                <h2 className="text-section font-semibold text-fg">
                   {sectorLabel(sectorLabels, sectorCode)}
                 </h2>
               </div>

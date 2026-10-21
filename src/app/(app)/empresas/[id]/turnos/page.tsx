@@ -63,19 +63,14 @@ export default async function TurnosPage({
 
       {turnos.length === 0 ? (
         <Card>
+          {/* Sem repetir o "Novo turno": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<Clock />}
             title="Nenhum turno cadastrado"
-            description="Cadastre os turnos de trabalho desta empresa para vincular colaboradores e organizar a escala."
-            action={
-              canManage && (
-                <Button
-                  href={novoHref}
-                  variant="primary"
-                >
-                  <Plus size={14} /> Cadastrar turno
-                </Button>
-              )
+            description={
+              canManage
+                ? "Use “+ Novo turno”, no alto da tela, para cadastrar os turnos de trabalho desta empresa, vincular colaboradores e organizar a escala."
+                : "Os turnos desta empresa aparecem aqui quando forem cadastrados."
             }
           />
         </Card>

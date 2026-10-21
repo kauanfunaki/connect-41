@@ -5,9 +5,21 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/components/fiscal/previa/FiscalPagina", () => ({ FiscalPagina: () => null }));
 import Conferencia from "./conferencia/page";
 import Configuracoes from "./configuracoes/page";
+import Documentos from "./documentos/page";
+import Operacao from "./operacao/page";
+import Classificacao from "./classificacao/page";
+import Contribuicoes from "./contribuicoes/page";
 
 beforeEach(() => { vi.clearAllMocks(); });
 describe("compatibilidade com links fiscais antigos", () => {
+  it.each([["produtos", "grupo=produtos"], ["apoio", "grupo=apoio"], ["decisoes", "situacao=Classificado"]])("converte a aba de classificação %s em filtro, preservando a busca", async (aba, filtro) => {
+    await expect(Classificacao({ searchParams: Promise.resolve({ aba, q: "exemplo" }) })).rejects.toThrow(`redirect:/fiscal/classificacao?q=exemplo&${filtro}`);
+    expect(mocks.abrir).toHaveBeenCalledWith("fiscal_classificacao");
+  });
+  it("leva o antigo SPED Contribuições para arquivos da obrigação", async () => {
+    await expect(Contribuicoes({ searchParams: Promise.resolve({ aba: "sped" }) })).rejects.toThrow("redirect:/fiscal/entregas?obrigacao=contribuicoes");
+    expect(mocks.abrir).toHaveBeenCalledWith("fiscal_contribuicoes");
+  });
   it.each(["depara", "lancamentos"])("redireciona %s somente após conferir acesso", async aba => {
     await expect(Conferencia({ searchParams: Promise.resolve({ aba }) })).rejects.toThrow("redirect:/fiscal/conferencia?aba=previa");
     expect(mocks.abrir).toHaveBeenCalledWith("fiscal_conferencia");
@@ -21,6 +33,16 @@ describe("compatibilidade com links fiscais antigos", () => {
     await expect(Configuracoes({ searchParams: Promise.resolve({ aba: "cfop" }) })).rejects.toThrow("redirect:/fiscal/configuracoes?aba=regras");
     expect(mocks.abrir).toHaveBeenCalledWith("fiscal_configuracoes");
     expect(mocks.abrir.mock.invocationCallOrder[0]).toBeLessThan(mocks.redirect.mock.invocationCallOrder[0]);
+  });
+  // Recortes da mesma lista viraram filtro dela (15/10/2026).
+  it.each(["nfse", "apoio", "quarentena"])("leva a antiga aba %s do acervo para o filtro Grupo", async aba => {
+    await expect(Documentos({ searchParams: Promise.resolve({ aba }) })).rejects.toThrow(`redirect:/fiscal/documentos?aba=acervo&grupo=${aba}`);
+    expect(mocks.abrir).toHaveBeenCalledWith("fiscal_acervo");
+    expect(mocks.abrir.mock.invocationCallOrder[0]).toBeLessThan(mocks.redirect.mock.invocationCallOrder[0]);
+  });
+  it.each([["fila", "fila"], ["erros", "erro"]])("leva a antiga aba %s das execuções para o filtro Estado", async (aba, estado) => {
+    await expect(Operacao({ searchParams: Promise.resolve({ aba }) })).rejects.toThrow(`redirect:/fiscal/operacao?aba=historico&estado=${estado}`);
+    expect(mocks.abrir).toHaveBeenCalledWith("fiscal_operacao");
   });
   it("não redireciona quem não tem acesso ao módulo", async () => {
     mocks.abrir.mockRejectedValueOnce(new Error("sem acesso"));

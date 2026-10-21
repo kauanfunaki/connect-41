@@ -87,7 +87,9 @@ export function CriarAcordo({
         <div className="flex flex-col gap-4">
           <fieldset>
             <legend className="text-label font-medium text-fg mb-1.5">Títulos vencidos deste sacado nesta empresa</legend>
-            <div className="flex flex-col items-start gap-2 max-h-48 overflow-y-auto">
+            {/* Sem a rolagem própria de 192px (15/10/2026): a janela já rola, e
+                uma lista rolando dentro dela escondia títulos. */}
+            <div className="flex flex-col items-start gap-2">
               {candidatos.map((c) => (
                 <Checkbox
                   key={c.id}
@@ -151,26 +153,30 @@ export function CriarAcordo({
                 )}{" "}
                 Os originais continuam como receita na competência deles.
               </p>
-              <table className="w-full text-ui">
-                <thead>
-                  <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-b border-border">
-                    <th className="py-1 pr-3 font-medium">Parcela</th>
-                    <th className="py-1 pr-3 font-medium">Vencimento</th>
-                    <th className="py-1 font-medium text-right">Valor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {simulacao.map((p) => (
-                    <tr key={p.numero} className="border-b border-border-soft">
-                      <td className="py-1 pr-3 tabular-nums">
-                        {p.numero}/{simulacao.length}
-                      </td>
-                      <td className="py-1 pr-3 tabular-nums">{dataCurta(p.vencimentoKey)}</td>
-                      <td className="py-1 text-right tabular-nums">{moeda(p.valorCentavos)}</td>
+              {/* A prévia na tabela padrão (15/10/2026): era uma tabelinha com o
+                  cabeçalho cinza escrito à mão. */}
+              <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <th className="px-3">Parcela</th>
+                      <th className="px-3">Vencimento</th>
+                      <th className="px-3">Valor</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {simulacao.map((p) => (
+                      <tr key={p.numero} className="border-b border-border-soft">
+                        <td className="px-3 tabular-nums">
+                          {p.numero}/{simulacao.length}
+                        </td>
+                        <td className="px-3 tabular-nums">{dataCurta(p.vencimentoKey)}</td>
+                        <td className="px-3 tabular-nums">{moeda(p.valorCentavos)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

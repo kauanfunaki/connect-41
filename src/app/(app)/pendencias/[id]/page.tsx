@@ -7,7 +7,7 @@ import { podeAbrirPendencia, reguaDasPendencias } from "@/lib/financeiro/pendenc
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
@@ -49,7 +49,8 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): o pai é sempre a lista de pendências. */}
+      <Breadcrumb items={[{ label: "Pendências ao cliente", href: "/pendencias" }, { label: p.titulo, truncate: true }]} />
       <PageHeader
         title={p.titulo}
         subtitle={

@@ -78,7 +78,9 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
     <>
       {d.situation === "CANCELADA" && <Selo tom={tomDaVariante(SITUACAO_VARIANTE[d.situation])}>{SITUACAO_LABEL[d.situation]}</Selo>}
       <Selo tom={tomDaVariante(DESTINO_VARIANTE[d.destination])}>{DESTINO_LABEL[d.destination]}</Selo>
-      {estorno && <span className="text-micro font-semibold text-danger">estornar</span>}
+      {/* O estorno é um selo de perigo, como os outros da linha (15/10/2026):
+          era a palavra "estornar" solta em vermelho. */}
+      {estorno && <Selo tom="perigo">Estornar</Selo>}
     </>
   );
 

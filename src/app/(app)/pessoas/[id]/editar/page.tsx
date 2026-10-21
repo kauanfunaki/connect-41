@@ -10,6 +10,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { getPersonSectors, getApplicableCustomFields } from "@/lib/customFields";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 
 function toDateInput(d: Date | null): string | undefined {
   return d ? d.toISOString().slice(0, 10) : undefined;
@@ -30,7 +31,7 @@ export default async function EditarPessoaPage({
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
     }),
     prisma.cargo.findMany({
       where: { tenantId: ctx.tenantId, active: true },

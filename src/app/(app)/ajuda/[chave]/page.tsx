@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, ChevronRight, LifeBuoy, Lightbulb } from "lucide-react";
+import { ArrowUpRight, LifeBuoy, Lightbulb } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { VideoDoYouTube } from "@/components/ajuda/VideoDoYouTube";
@@ -37,9 +37,10 @@ export default async function ArtigoDeAjudaPage({
     if (!estado?.enabled || !canViewSector(ctx, estado.sectorCode)) notFound();
   }
 
-  // "Voltar" leva à tela de onde a pessoa veio pelo "?" — só caminho interno.
+  // "Abrir a tela" leva de volta à tela de onde a pessoa veio pelo "?", com os
+  // filtros dela — só caminho interno. Sem o "?", à tela do artigo.
   const voltarPara = de && de.startsWith("/") && !de.startsWith("//") ? de : null;
-  const abrir = artigo.caminhos[0];
+  const abrir = voltarPara ?? artigo.caminhos[0];
   const video = videoDoArtigo(artigo.chave);
   const idDoVideoDoArtigo = idDoVideo(video);
 
@@ -47,26 +48,15 @@ export default async function ArtigoDeAjudaPage({
     <PageContainer>
       {/* Onde a pessoa está: a central de ajuda e, dentro dela, este artigo
           (revisão de 05/10 — o "Ver toda a ajuda" no fim do cartão passava
-          batido). "Voltar para a tela" só quando ela veio pelo "?". */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-3 text-fs-3">
-        <nav aria-label="Caminho" className="flex items-center gap-1.5 min-w-0">
-          <Link href="/ajuda" className="inline-flex items-center gap-1.5 font-medium text-brand hover:underline flex-shrink-0">
-            <LifeBuoy size={14} /> Central de ajuda
-          </Link>
-          <ChevronRight size={13} aria-hidden className="text-fg-muted flex-shrink-0" />
-          <span className="text-fg-secondary truncate">{artigo.titulo}</span>
-        </nav>
-        {voltarPara && (
-          <Link href={voltarPara} className="inline-flex items-center gap-1.5 text-fg-muted hover:text-fg transition-colors">
-            <ArrowLeft size={14} /> Voltar para a tela
-          </Link>
-        )}
-      </div>
+          batido). Pela trilha do app desde 15/10/2026 (P04): era escrita à mão,
+          com link azul, e com um "← Voltar para a tela" ao lado — o caminho de
+          volta à tela agora é o "Abrir a tela" do cabeçalho. */}
+      <Breadcrumb items={[{ label: "Central de ajuda", href: "/ajuda" }, { label: artigo.titulo, truncate: true }]} />
       <PageHeader
         title={artigo.titulo}
         subtitle={artigo.resumo}
         action={
-          abrir && abrir !== voltarPara ? (
+          abrir ? (
             <Button href={abrir}>
               Abrir a tela <ArrowUpRight size={15} />
             </Button>
@@ -116,7 +106,7 @@ export default async function ArtigoDeAjudaPage({
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
           {artigo.dicas && artigo.dicas.length > 0 && (
             <Card className="p-4 flex flex-col gap-2.5">
-              <p className="flex items-center gap-2 text-fs-2 font-semibold uppercase tracking-wide text-fg-muted">
+              <p className="flex items-center gap-2 c41-rotulo">
                 <Lightbulb size={14} className="text-warning-fg" /> Bom saber
               </p>
               <ul className="flex flex-col gap-2">
@@ -129,7 +119,7 @@ export default async function ArtigoDeAjudaPage({
             </Card>
           )}
           <Card className="p-4 flex flex-col gap-2">
-            <p className="text-fs-2 font-semibold uppercase tracking-wide text-fg-muted">Nesta página</p>
+            <p className="c41-rotulo">Nesta página</p>
             <ul className="flex flex-col gap-1.5">
               {artigo.secoes.map((s, i) => (
                 <li key={s.titulo}>

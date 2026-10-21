@@ -18,6 +18,16 @@
 //   (`administrativas`), e não para o CMV. O grupo do plano continua
 //   "CMV / CSV", como na planilha. O que já estava no banco passa pelo script
 //   `scripts/dre-pedagio-para-administrativas.ts`.
+// - 20/10/2026: o DRE padrão passou a ser a estrutura do modelo novo (sete grupos —
+//   ver o cabeçalho de src/lib/dre/estrutura.ts). Os `dre` antigos viraram os
+//   novos pelo de-para `GRUPO_DO_ANTIGO`: CMV, mão de obra e comerciais →
+//   `custo_operacional`; pessoal, diretoria e administrativas →
+//   `custo_administrativo` (as financeiras também); investimentos →
+//   `outras_despesas`. O banco migra pela migration `20261020230000_dre_padrao_cargo`.
+//   E sete categorias seguem o bloco de financiamentos do modelo novo (`financiamentos`):
+//   Empréstimos bancários à pagar, Impostos Parcelados, Juros sobre empréstimos,
+//   Juros e Encargos limite de crédito / cartão, Juros sobre desconto de títulos e
+//   os dois Consórcios — conferir com a Amanda.
 
 import type { FinanceEntryKind } from "@/generated/prisma/enums";
 
@@ -47,13 +57,13 @@ export const PLANO_PADRAO_41: CategoriaDoPlanoPadrao[] = [
     "kind": "PAGAR",
     "grupo": null,
     "nome": "INSS sobre Pró-Labore",
-    "dre": "diretoria"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": null,
     "nome": "Pró-Labore",
-    "dre": "diretoria"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
@@ -65,395 +75,395 @@ export const PLANO_PADRAO_41: CategoriaDoPlanoPadrao[] = [
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Adiantamento a Fornecedores",
-    "dre": "cmv",
+    "dre": "custo_operacional",
     "obs": "Pagamento antecipado de compras de produtos ou serviços"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Agregados",
-    "dre": "cmv",
+    "dre": "custo_operacional",
     "obs": "Agregados: São veículos particulares contratados de forma contínua pela transportadora. Costumam trabalhar exclusivamente ou quase exclusivamente para a empresa. Podem seguir regras específicas, como adesivação do veículo com a marca da transportadora. Têm uma relação mais próxima, mas não são empregados formais."
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Combustivel da Operação",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Comissões dos Motoristas",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Compra de Embalagens",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Compra de Insumos",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Compra de Matéria Prima",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Compra de Produtos para Revenda",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Compra de Serviços de Industrialização e Tratamentos",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Compra de Serviços de Terceiros",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Despesas com Exportação",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Despesas com Importações",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Despesas de Viagens - Motoristas próprios",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Despesas de Viagens pessoal da Operação",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Frete sobre compras",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Frete sobre vendas",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Fretes Sub-Contratados de Terceiros",
-    "dre": "cmv",
+    "dre": "custo_operacional",
     "obs": "Terceiros: São contratados de forma eventual, por demanda específica (fretes pontuais). Não possuem vínculo regular ou exclusividade com a transportadora. Geralmente mantêm sua identidade própria (sem personalização ou exigências específicas da transportadora)."
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Gerenciamento de Riscos",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Monitoramento e segurança de carga",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Pedágio",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Pneus",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Prestador de Serviço eventuais para Operação",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Seguro Aduaneiro",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "CMV / CSV",
     "nome": "Seguro de Carga",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "13º Salário pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Abono Salarial pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Adiantamento Salarial ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Alimentação interna pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Assistência Médica - Plano de saúde ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Bonificações pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Cesta básica pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Férias pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "FGTS ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Folha de Pagamento ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Horas Extras pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "INSS ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "IRRF ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Rescisões pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Seguro de vida pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Uniformes e EPIs pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Vale Alimentação pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Vale Refeição pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da ADM",
     "nome": "Vale Transporte pessoal ADM",
-    "dre": "pessoal"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "13º Salário pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Abono Salarial pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Adiantamento Salarial OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Alimentação interna pessoal OP",
-    "dre": "mao_de_obra",
+    "dre": "custo_operacional",
     "obs": "Quando refeição ou lanches servidos no local"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Aluguel de veículos OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Assistência Médica - Plano de saúde OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Bonificações pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Cesta básica pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Comissões Comerciais",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Cursos e Treinamentos Operação",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Férias pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "FGTS OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Folha de Pagamento OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Horas Extras pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "INSS OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "IRRF OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Rescisões pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Seguro de vida pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Uniformes e EPIs pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Vale Alimentação pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Vale Refeição pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Custo pessoal da Operação",
     "nome": "Vale Transporte pessoal OP",
-    "dre": "mao_de_obra"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
@@ -519,13 +529,13 @@ export const PLANO_PADRAO_41: CategoriaDoPlanoPadrao[] = [
     "kind": "PAGAR",
     "grupo": "Impostos",
     "nome": "Impostos Retidos Serviços Tomados (PIS/COFINS/CSLL/IRRF)",
-    "dre": "cmv"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Impostos",
     "nome": "Impostos Parcelados",
-    "dre": "impostos"
+    "dre": "financiamentos"
   },
   {
     "kind": "PAGAR",
@@ -538,50 +548,50 @@ export const PLANO_PADRAO_41: CategoriaDoPlanoPadrao[] = [
     "kind": "PAGAR",
     "grupo": "Investimentos",
     "nome": "Compra de Ativos - Veículos",
-    "dre": "investimentos",
+    "dre": "outras_despesas",
     "obs": "Utilizar para lançar valores de entradas ou quando compra a vista"
   },
   {
     "kind": "PAGAR",
     "grupo": "Investimentos",
     "nome": "Consórcios de automóveis",
-    "dre": "investimentos"
+    "dre": "financiamentos"
   },
   {
     "kind": "PAGAR",
     "grupo": "Investimentos",
     "nome": "Consórcios de imóveis",
-    "dre": "investimentos"
+    "dre": "financiamentos"
   },
   {
     "kind": "PAGAR",
     "grupo": "Investimentos",
     "nome": "Investimento em equipamentos",
-    "dre": "investimentos"
+    "dre": "outras_despesas"
   },
   {
     "kind": "PAGAR",
     "grupo": "Investimentos",
     "nome": "Investimento em Imóveis",
-    "dre": "investimentos"
+    "dre": "outras_despesas"
   },
   {
     "kind": "PAGAR",
     "grupo": "Investimentos",
     "nome": "Investimento em Título de Capitalização",
-    "dre": "investimentos"
+    "dre": "outras_despesas"
   },
   {
     "kind": "PAGAR",
     "grupo": "Investimentos",
     "nome": "Investimento em veículos",
-    "dre": "investimentos"
+    "dre": "outras_despesas"
   },
   {
     "kind": "PAGAR",
     "grupo": "Investimentos",
     "nome": "Investimentos Financeiros - Titulos, LCI, LCA, Ações, CDI, CBD",
-    "dre": "investimentos"
+    "dre": "outras_despesas"
   },
   {
     "kind": "PAGAR",
@@ -605,7 +615,7 @@ export const PLANO_PADRAO_41: CategoriaDoPlanoPadrao[] = [
     "kind": "PAGAR",
     "grupo": "Outras despesas totais",
     "nome": "Empréstimos bancários à pagar",
-    "dre": "outras_despesas",
+    "dre": "financiamentos",
     "obs": "Parcelas de empréstimos adquiridos"
   },
   {
@@ -643,7 +653,7 @@ export const PLANO_PADRAO_41: CategoriaDoPlanoPadrao[] = [
     "kind": "PAGAR",
     "grupo": "Outras despesas totais",
     "nome": "Juros e Encargos limite de crédito / cartão",
-    "dre": "outras_despesas"
+    "dre": "financiamentos"
   },
   {
     "kind": "PAGAR",
@@ -661,13 +671,13 @@ export const PLANO_PADRAO_41: CategoriaDoPlanoPadrao[] = [
     "kind": "PAGAR",
     "grupo": "Outras despesas totais",
     "nome": "Juros sobre desconto de títulos",
-    "dre": "outras_despesas"
+    "dre": "financiamentos"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outras despesas totais",
     "nome": "Juros sobre empréstimos",
-    "dre": "outras_despesas"
+    "dre": "financiamentos"
   },
   {
     "kind": "PAGAR",
@@ -703,340 +713,340 @@ export const PLANO_PADRAO_41: CategoriaDoPlanoPadrao[] = [
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Água e Esgoto",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Aluguel de Equipamentos administrativos",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Aluguel de Imóvel",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Aluguel de veículos ADM",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Combustível Adm",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Compra de móveis e utensílios",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Confraternizações",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Consultoria",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Consultoria em Auditorias",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Consultoria Empresarial",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Consultoria Financeira",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Consultoria Juridica / Advogados",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Consultoria profissionais - diversas",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Contabilidade",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Contribuição Sindical Empresarial",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Correios",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Cursos e Treinamentos Administrativo",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Despachantes",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Despesas bancárias - cestas e tarifas em geral",
-    "dre": "administrativas",
+    "dre": "custo_administrativo",
     "obs": "Utilizar para tarifas de pix, transferências, cestas mensais."
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Despesas com cartórios",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Despesas com Protestos de clientes",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Despesas de Viagens pessoal da Adm",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Energia Elétrica",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Equipamentos de Informática",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Estacionamento pessoal ADM",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "IPTU",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "IPVA e Licenciamento Veículos ADM",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Limpeza",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Manutenção de equipamentos/móveis/utensilios",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Manutenção de imobilizado",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Manutenção de informática",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Manutenção de veiculos ADM",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Manutenção Predial",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Material de Escritório, Copa, Cozinha e Limpeza",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Medicina ocupacional e Segurança do Trabalho",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Monitoramento e segurança predial",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Seguro Predial",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Serasa",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Sindicatos",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Softwares - Licença e aluguel",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Tarifas de serviços de cobrança e boletos",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Taxas condominiais",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Taxas e licenças administrativas e profissionais",
-    "dre": "administrativas",
+    "dre": "custo_administrativo",
     "obs": "CREA"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos administrativos",
     "nome": "Telefone Fixo, Celular, Internet",
-    "dre": "administrativas"
+    "dre": "custo_administrativo"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Aluguel de Equipamentos para Operação",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Aluguel de pátio, barracão ou armazém",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Consultoria em Marketing",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Despesas com viagens Comerciais",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Despesas em Publicidade, Propaganda e divulgação",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Estacionamento da Operação",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Estacionamento pessoal Operação",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "IPVA e Licenciamento Veículos OP",
-    "dre": "comerciais",
+    "dre": "custo_operacional",
     "obs": "AET"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Manutenção de veiculos da OP",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Materiais para Operação",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Peças para manutenção de veículos ou máquinas da operação",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "PAGAR",
     "grupo": "Outros custos Operacionais",
     "nome": "Seguro de Veícúlos Frota própria",
-    "dre": "comerciais"
+    "dre": "custo_operacional"
   },
   {
     "kind": "RECEBER",

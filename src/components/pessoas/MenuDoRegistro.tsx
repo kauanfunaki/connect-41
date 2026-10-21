@@ -12,6 +12,8 @@ type Props = {
   /** "Remover" nos registros da ficha; "Excluir" na turma, que leva os participantes junto. */
   rotulo?: string;
   onRemover: () => Promise<void>;
+  /** `sm` (28px) na linha de tabela, ao lado de um botão `xs` — a turma do treinamento. */
+  size?: "sm" | "md";
 };
 
 /**
@@ -23,12 +25,12 @@ type Props = {
  * linhas de Cadastros (`AcoesDeLinha`) e das licenças (`AcoesDaLicenca`); a
  * confirmação continua sendo o `useConfirm`.
  */
-export function MenuDoRegistro({ titulo, descricao, rotulo = "Remover", onRemover }: Props) {
+export function MenuDoRegistro({ titulo, descricao, rotulo = "Remover", onRemover, size = "md" }: Props) {
   const { dialog, requestConfirm } = useConfirm();
 
   return (
     <>
-      <MenuDeMaisAcoes align="right" width={180} size="md">
+      <MenuDeMaisAcoes align="right" width={180} size={size}>
         {({ close }) => (
           <ItemDoMenu
             icone={<Trash2 />}

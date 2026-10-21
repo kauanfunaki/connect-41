@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef } from "react";
+import { useCallback, useEffect, useId, useRef, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { useDialog } from "@/components/ui/useDialog";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
@@ -35,6 +36,14 @@ type Props = {
 // branco sobre o vermelho do tema, que no escuro dava 3,17:1. O destrutivo
 // segue cheio (`dangerSolid`, tom fixo de 4,99:1): cheio ou contorno, como o
 // `Button danger`, fica para o Kauan decidir.
+//
+// Vai para o <body> por portal, como o `Modal` (Ajustes 15/10, G2): aberto
+// dentro de um bloco com `transform` — o "⋯" de excluir pasta, centralizado
+// por translate no cartão —, o `fixed` ficava preso ao bloco e o diálogo
+// saía espremido no canto do cartão. No servidor e na hidratação fica no
+// lugar; muda no navegador.
+const semAssinatura = () => () => {};
+
 export function ConfirmDialog({
   open,
   title,
@@ -53,6 +62,7 @@ export function ConfirmDialog({
 }: Props) {
   const confirmRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
+  const noNavegador = useSyncExternalStore(semAssinatura, () => true, () => false);
 
   // ESC não cancela enquanto a ação está em voo — a pessoa perderia o retorno
   // (inclusive a mensagem de erro) de algo que já foi disparado no servidor.
@@ -70,9 +80,9 @@ export function ConfirmDialog({
 
   if (!open) return null;
 
-  return (
+  const dialogo = (
     <div
-      className="c41-esmaecer fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="c41-esmaecer fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 text-left"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && !pending) onCancel();
       }}
@@ -112,4 +122,5 @@ export function ConfirmDialog({
       </div>
     </div>
   );
+  return noNavegador ? createPortal(dialogo, document.body) : dialogo;
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import Script from "next/script";
 import { IBM_Plex_Sans, IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { SCRIPT_DO_TEMA } from "@/lib/theme";
@@ -52,10 +53,10 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={`${plexSans.variable} ${plexMono.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: SCRIPT_DO_TEMA }} />
-      </head>
       <body className="min-h-full flex flex-col bg-canvas text-fg font-sans">
+        <Script id="theme-init" strategy="beforeInteractive">
+          {SCRIPT_DO_TEMA}
+        </Script>
         {children}
         {/* O balão próprio no lugar do "Preencha este campo" do navegador, em
             todo formulário do app — equipe, portal e telas públicas. */}

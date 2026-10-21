@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NavegadorDeArquivos } from "@/components/arquivos/NavegadorDeArquivos";
 import { buscarNoDrive, navegadorDaEquipe } from "@/lib/drive/servidor";
+import { trilhaDaPasta } from "@/lib/drive/tela";
 import { abrirArquivos } from "../acesso";
 
 /**
@@ -21,11 +23,15 @@ export default async function PastasDoEscritorioPage({ searchParams }: { searchP
 
   return (
     <PageContainer>
+      {/* A trilha acima do título, começando em Arquivos (P04, 15/10/2026): ficava
+          embaixo dele, ao lado da busca, e começava na pasta raiz. */}
+      <Breadcrumb items={[{ label: "Arquivos", href: "/arquivos" }, ...trilhaDaPasta(dados, "/arquivos/internas", "Pastas do escritório")]} />
       <PageHeader title="Pastas do escritório" subtitle="Arquivos da casa, fora das empresas. Não aparecem no portal do cliente." />
       <NavegadorDeArquivos
         dados={dados}
         base="/arquivos/internas"
         rotuloDaRaiz="Pastas do escritório"
+        trilhaNoCabecalho
         busca={busca ? { termo: busca, resultados: resultados ?? [] } : null}
       />
     </PageContainer>

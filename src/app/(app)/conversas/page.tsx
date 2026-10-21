@@ -50,8 +50,11 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
 
   const configured = await isChatwootConfigured(ctx.tenantId);
   if (!configured) {
+    // Com o título da tela mesmo sem o Chatwoot (P04, 15/10/2026): abria só
+    // com o vazio, sem dizer em que tela a pessoa estava.
     return (
       <PageContainer>
+        <PageHeader title="Conversas" subtitle="Auditoria de atendimentos do Chatwoot. Somente leitura." />
         <EmptyState
           icon={<MessageCircle />}
           title="Chatwoot não configurado"
@@ -63,7 +66,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
           action={
             isFullAccess(ctx.role) ? (
               <Button
-                href="/admin/integracoes"
+                href="/admin/integracoes?integracao=chatwoot"
                 variant="primary" className="font-medium"
               >
                 Ir para Integrações
@@ -93,8 +96,10 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
         action={
           view === "avaliacao" &&
           isFullAccess(ctx.role) && (
-            <Button href="/admin/atendentes" variant="secondary">
-              <Settings size={14} /> Gerenciar atendentes
+            // Os papéis dos atendentes ficam na seção do Chatwoot, em
+            // Integrações; quem cada um é na equipe, em Usuários (3A, 20/10).
+            <Button href="/admin/integracoes?integracao=chatwoot" variant="secondary">
+              <Settings size={14} /> Papéis dos atendentes
             </Button>
           )
         }

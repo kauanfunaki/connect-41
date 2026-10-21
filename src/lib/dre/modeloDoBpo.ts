@@ -4,14 +4,14 @@
 //
 // A aba `DRE FINANCEIRO` da planilha que o setor usa hoje (a DRE de um grupo,
 // três anos lado a lado), confirmada pelo Kauan em 13/10/2026 como o modelo da
-// exportação. Ela tem a mesma ideia da `estrutura.ts` — categorias somadas em
-// blocos, subtotais e percentuais sobre a receita bruta — mas **outro corte**:
-// seis blocos e quatro resultados, em vez dos doze grupos do Connect.
+// exportação. Desde 20/10/2026 é também a estrutura do Connect (a do modelo novo —
+// ver o cabeçalho de `estrutura.ts`): um bloco por grupo, na mesma ordem.
 //
 //   faturamento (uma linha por categoria)  → RECEITA BRUTA
 //   impostos                               → IMPOSTOS SOBRE RECEITA BRUTA, %, RECEITA LÍQUIDA
 //   custos operacionais                    → CUSTO OPERACIONAL TOTAL, %, MARGEM DE CONTRIBUIÇÃO, %
-//   custos administrativos                 → CUSTO ADMINISTRATIVO TOTAL, %, GERADOR DE CAIXA (EBITDA), %
+//   custos administrativos                 → CUSTO ADMINISTRATIVO TOTAL, %
+//   financiamentos e empréstimos           → DESPESAS TOTAIS FINANCIAMENTOS…, %, GERADOR DE CAIXA (EBITDA), %
 //   outras despesas                        → OUTRAS DESPESAS TOTAIS, %
 //   outras receitas                        → OUTRAS RECEITAS TOTAIS, %
 //                                            RESULTADO LÍQUIDO OPERACIONAL, %
@@ -31,13 +31,14 @@
 // pré-visualização do e-mail, do Drive, do celular), e é o que os testes leem.
 
 import { grupoDoLancamento, chaveDaCategoria, SEM_CATEGORIA, type LancamentoDoDre, type Mapeamento } from "@/lib/dre/calculo";
-import { DESCONSIDERAR, GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { DESCONSIDERAR, OPCOES_PADRAO, TRANSFERENCIA, modeloDas, type ModeloDoDre, type OpcoesDoDre } from "@/lib/dre/estrutura";
 
 export type CodigoDoBloco =
   | "receita"
   | "impostos"
   | "custo_operacional"
   | "custo_administrativo"
+  | "financiamentos"
   | "outras_despesas"
   | "outras_receitas";
 
@@ -52,50 +53,60 @@ type BlocoDoModelo = {
 };
 
 /**
- * Onde cada grupo do Connect cai no modelo — decisão de 13/10/2026.
+ * Onde cada grupo do Connect cai no modelo: desde 20/10/2026, um bloco por
+ * grupo — a estrutura do Connect passou a ser a deste modelo (o modelo novo).
  *
  * A categoria vai **pelo grupo dela**, nunca pelo nome: o de-para do Connect já
  * é a decisão de onde cada categoria entra, e reabri-la aqui faria o arquivo
  * discordar da tela.
+ */
+export const BLOCOS_DO_MODELO: BlocoDoModelo[] = [
+  { code: "receita", grupos: ["receita_bruta"], natureza: "receita", total: "RECEITA BRUTA" },
+  { code: "impostos", grupos: ["impostos"], natureza: "despesa", total: "IMPOSTOS SOBRE RECEITA BRUTA" },
+  { code: "custo_operacional", grupos: ["custo_operacional"], natureza: "despesa", total: "CUSTO OPERACIONAL TOTAL" },
+  { code: "custo_administrativo", grupos: ["custo_administrativo"], natureza: "despesa", total: "CUSTO ADMINISTRATIVO TOTAL" },
+  {
+    code: "financiamentos",
+    grupos: ["financiamentos"],
+    natureza: "despesa",
+    total: "DESPESAS TOTAIS FINANCIAMENTOS, EMPRÉSTIMOS e PARCELAMENTOS",
+  },
+  { code: "outras_despesas", grupos: ["outras_despesas"], natureza: "despesa", total: "OUTRAS DESPESAS TOTAIS" },
+  { code: "outras_receitas", grupos: ["outras_receitas"], natureza: "receita", total: "OUTRAS RECEITAS TOTAIS" },
+];
+
+/**
+ * Os blocos do modelo customizado "despesas por área" (21/10/2026) — o corte
+ * que a exportação usou até 20/10/2026, quando o Connect tinha os doze grupos:
  *
  * - **Custo operacional = CMV + mão de obra + comerciais**: são as parcelas da
  *   margem de contribuição do Connect, e o modelo também faz a margem como
  *   receita bruta menos o custo operacional. A margem do arquivo é a da tela.
  * - **Custo administrativo = pessoal + diretoria + administrativas +
- *   financeiras**: o "total de despesas fixas" do Connect. O pró-labore
- *   (diretoria) fica aqui, e não em outras despesas como no modelo, porque o
- *   grupo dele no Connect é despesa fixa.
+ *   financeiras**: o "total de despesas fixas" do Connect.
  * - **Outras despesas = investimentos + outras despesas**: no modelo, compra de
  *   ativo e investimento já moram em outras despesas, abaixo do EBITDA.
+ *
+ * Não há bloco de financiamentos: o modelo por área não tem esse grupo.
  */
-export const BLOCOS_DO_MODELO: BlocoDoModelo[] = [
+export const BLOCOS_POR_AREA: BlocoDoModelo[] = [
   { code: "receita", grupos: ["receita_bruta"], natureza: "receita", total: "RECEITA BRUTA" },
   { code: "impostos", grupos: ["impostos"], natureza: "despesa", total: "IMPOSTOS SOBRE RECEITA BRUTA" },
-  {
-    code: "custo_operacional",
-    grupos: ["cmv", "mao_de_obra", "comerciais"],
-    natureza: "despesa",
-    total: "CUSTO OPERACIONAL TOTAL",
-  },
+  { code: "custo_operacional", grupos: ["cmv", "mao_de_obra", "comerciais"], natureza: "despesa", total: "CUSTO OPERACIONAL TOTAL" },
   {
     code: "custo_administrativo",
     grupos: ["pessoal", "diretoria", "administrativas", "financeiras"],
     natureza: "despesa",
     total: "CUSTO ADMINISTRATIVO TOTAL",
   },
-  {
-    code: "outras_despesas",
-    grupos: ["investimentos", "outras_despesas"],
-    natureza: "despesa",
-    total: "OUTRAS DESPESAS TOTAIS",
-  },
+  { code: "outras_despesas", grupos: ["investimentos", "outras_despesas"], natureza: "despesa", total: "OUTRAS DESPESAS TOTAIS" },
   { code: "outras_receitas", grupos: ["outras_receitas"], natureza: "receita", total: "OUTRAS RECEITAS TOTAIS" },
 ];
 
-const BLOCO_DO_GRUPO = new Map<string, BlocoDoModelo>();
-for (const b of BLOCOS_DO_MODELO) for (const g of b.grupos) BLOCO_DO_GRUPO.set(g, b);
-
-const ORDEM_DO_GRUPO = new Map(GRUPOS.map((g, i) => [g.code, i]));
+/** Os blocos do arquivo para o modelo do DRE da empresa. */
+export function blocosDoModelo(modelo: ModeloDoDre): BlocoDoModelo[] {
+  return modelo.codigo === "por_area" ? BLOCOS_POR_AREA : BLOCOS_DO_MODELO;
+}
 
 /** As linhas do modelo que não são categoria, com o rótulo de lá. */
 const ROTULO = {
@@ -105,6 +116,7 @@ const ROTULO = {
   margem_contribuicao: "MARGEM DE CONTRIBUIÇÃO",
   margem_contribuicao_pct: "MARGEM DE CONTRIBUIÇÃO SOBRE RECEITA BRUTA %",
   custo_administrativo_pct: "CUSTO ADMINISTRATIVO SOBRE RECEITA BRUTA %",
+  financiamentos_pct: "DESPESAS TOTAIS FINANCIAMENTOS, EMPRÉSTIMOS e PARCELAMENTOS %",
   gerador_de_caixa: "GERADOR DE CAIXA (EBITDA)",
   // "Líquida" no rótulo e divisão pela BRUTA na fórmula: está assim no modelo,
   // e fica assim para o arquivo ler igual ao que o cliente já recebe.
@@ -157,6 +169,8 @@ export type EntradaDoModelo = {
    * a exportação de um mês só. No modelo cada coluna **é** um ano inteiro.
    */
   colunaDeTotal: string | null;
+  /** A opção dos impostos da tela — o EBITDA do arquivo é o da tela. */
+  opcoes?: OpcoesDoDre;
 };
 
 export type CelulaDoModelo = {
@@ -233,8 +247,16 @@ function nomeDe(l: LancamentoDoDre): string {
 }
 
 export function montarDreNoModeloDoBpo(entrada: EntradaDoModelo): PlanilhaDoModelo {
-  const { colunas, mapeamento, colunaDeTotal } = entrada;
+  const { colunas, mapeamento, colunaDeTotal, opcoes = OPCOES_PADRAO } = entrada;
   if (colunas.length === 0) throw new Error("A DRE no modelo do BPO precisa de pelo menos uma coluna.");
+
+  const modelo = modeloDas(opcoes);
+  const blocos = blocosDoModelo(modelo);
+  const BLOCO_DO_GRUPO = new Map<string, BlocoDoModelo>();
+  for (const b of blocos) for (const g of b.grupos) BLOCO_DO_GRUPO.set(g, b);
+  // Dentro do bloco de vários grupos (o por área), as categorias saem na ordem
+  // dos grupos do modelo: CMV, mão de obra, comerciais.
+  const ORDEM_DO_GRUPO = new Map(modelo.grupos.map((g, i) => [g.code, i]));
 
   const nMeses = colunas.length;
   const comTotal = colunaDeTotal !== null;
@@ -409,14 +431,14 @@ export function montarDreNoModeloDoBpo(entrada: EntradaDoModelo): PlanilhaDoMode
     });
   };
 
-  const [receita, impostos, operacional, administrativo, outrasDespesas, outrasReceitas] = BLOCOS_DO_MODELO as [
-    BlocoDoModelo,
-    BlocoDoModelo,
-    BlocoDoModelo,
-    BlocoDoModelo,
-    BlocoDoModelo,
-    BlocoDoModelo,
-  ];
+  const doCodigo = (code: CodigoDoBloco) => blocos.find((b) => b.code === code);
+  const receita = doCodigo("receita")!;
+  const impostos = doCodigo("impostos")!;
+  const operacional = doCodigo("custo_operacional")!;
+  const administrativo = doCodigo("custo_administrativo")!;
+  const financiamentos = doCodigo("financiamentos");
+  const outrasDespesas = doCodigo("outras_despesas")!;
+  const outrasReceitas = doCodigo("outras_receitas")!;
 
   bloco(receita, "receita_bruta");
 
@@ -436,24 +458,31 @@ export function montarDreNoModeloDoBpo(entrada: EntradaDoModelo): PlanilhaDoMode
 
   bloco(operacional, "custo_operacional");
   percentual("custo_operacional_pct", ROTULO.custo_operacional_pct, "custo_operacional", true, 2, "percentual", "despesa", "custo_operacional");
-  // A margem parte da receita BRUTA, como na tela (`OPCOES_PADRAO`) e no modelo.
+  // A margem parte da receita BRUTA, como na tela e no modelo.
   resultado("margem_contribuicao", ROTULO.margem_contribuicao, [[1, "receita_bruta"], [-1, "custo_operacional"]]);
   percentual("margem_contribuicao_pct", ROTULO.margem_contribuicao_pct, "margem_contribuicao", false, 0, "percentual_resultado", "resultado", null);
 
   bloco(administrativo, "custo_administrativo");
   percentual("custo_administrativo_pct", ROTULO.custo_administrativo_pct, "custo_administrativo", true, 0, "percentual", "despesa", "custo_administrativo");
-  // ─── O imposto entra aqui, e não entra na tela ────────────────────────────
+
+  if (financiamentos) {
+    bloco(financiamentos, "financiamentos");
+    percentual("financiamentos_pct", ROTULO.financiamentos_pct, "financiamentos", true, 0, "percentual", "despesa", "financiamentos");
+  }
+  // ─── Os impostos no EBITDA do arquivo ─────────────────────────────────────
   //
-  // O modelo desconta os impostos no EBITDA (`B6-B8-B32-B60`); o "gerador de
-  // caixa" da tela não desconta — é o chute de 11/09 em `OPCOES_PADRAO`,
-  // tirado da planilha da Irriga, e a tela avisa. O arquivo segue o modelo: o
+  // No padrão, o arquivo segue a tela: desconta os impostos como o modelo
+  // (`B7+B16+B53+B93+B107`), ou não, na visão "fora do resultado". No por área,
+  // o arquivo sempre descontou (`B6-B8-B32-B60`), embora a tela não desconte: o
   // EBITDA e o resultado daqui ficam abaixo dos da tela exatamente pelo valor
-  // dos impostos. É mais um dado para a pergunta que está com o BPO.
+  // dos impostos. Mantido como era.
+  const impostosNoEbitda = modelo.impostos === "fora" || opcoes.impostosNoEbitda;
   resultado("gerador_de_caixa", ROTULO.gerador_de_caixa, [
     [1, "receita_bruta"],
-    [-1, "impostos"],
+    ...(impostosNoEbitda ? ([[-1, "impostos"]] as [1 | -1, string][]) : []),
     [-1, "custo_operacional"],
     [-1, "custo_administrativo"],
+    ...(financiamentos ? ([[-1, "financiamentos"]] as [1 | -1, string][]) : []),
   ]);
   percentual("gerador_de_caixa_pct", ROTULO.gerador_de_caixa_pct, "gerador_de_caixa", false, 0, "percentual_resultado", "resultado", null);
 

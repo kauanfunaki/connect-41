@@ -22,6 +22,7 @@ import { orcamentosAprovados, MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/da
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
 import { itensDaGestao } from "@/lib/gestao/itens";
 import { pedidosAoClienteLigados } from "@/lib/financeiro/pendencias/setor";
+import { MARCA_DA_DEMONSTRACAO, SO_EMPRESA_DE_VERDADE } from "@/lib/demonstracao/marca";
 import {
   DIAS_DE_AVISO_DO_VENCIMENTO,
   MODULO_ARQUIVOS,
@@ -35,6 +36,8 @@ import {
 import { SELECT_PASTA } from "@/lib/drive/servidor";
 import { representantesDasChaves, setorDasAutorizacoes } from "@/lib/autorizacoes/servidor";
 import { processarConferencias } from "@/lib/autorizacoes/serpro";
+import { acompanharNoSerpro } from "@/lib/serpro/acompanhamento";
+import { processarPedidosDoSitfis } from "@/lib/serpro/situacaoFiscal";
 import {
   diasEntre as diasAteODia,
   faixaDeAviso as faixaDaAutorizacao,
@@ -351,14 +354,17 @@ async function checkContasAPagar(tenantId: string, today: Date): Promise<number>
       status: { in: ["PROVISORIO", "CONFERIDO"] },
       paidAt: null,
       dueDate: { gte: new Date(`${ontemKey}T00:00:00-03:00`), lte: new Date(`${hojeKey}T23:59:59.999-03:00`) },
+      // A conta fictícia da demonstração não avisa o setor (15/10/2026).
+      company: SO_EMPRESA_DE_VERDADE,
     },
-    select: { amount: true, dueDate: true },
+    select: { amount: true, paidPrincipal: true, dueDate: true },
   });
 
   const resumo = { venceHoje: 0, totalHoje: 0, venceramOntem: 0, totalOntem: 0 };
   for (const c of contas) {
     const dia = saoPauloParts(c.dueDate).dateKey;
-    const centavos = centavosDeDecimal(c.amount);
+    // O que falta pagar: com baixa parcial (lote C), o saldo.
+    const centavos = centavosDeDecimal(c.amount) - centavosDeDecimal(c.paidPrincipal);
     if (dia === hojeKey) {
       resumo.venceHoje += 1;
       resumo.totalHoje += centavos;
@@ -392,6 +398,7 @@ async function checkPendenciasVencidas(tenantId: string, today: Date): Promise<n
       status: "ABERTA",
       dueDate: { lt: new Date(`${hojeKey}T00:00:00-03:00`) },
       createdById: { not: null },
+      company: SO_EMPRESA_DE_VERDADE,
     },
     _count: { _all: true },
   });
@@ -424,6 +431,7 @@ async function checkSolicitacoesNoPrazo(tenantId: string, today: Date): Promise<
       status: { in: ["ABERTA", "EM_ANDAMENTO", "AGUARDANDO_CLIENTE"] },
       firstResponseAt: null,
       responseDue: { lte: fimDeHoje },
+      company: SO_EMPRESA_DE_VERDADE,
     },
     select: {
       id: true,
@@ -468,7 +476,7 @@ async function checkOrcamentoEstourado(tenantId: string, today: Date): Promise<n
 
   const prisma = getPrisma();
   const versoes = await prisma.budget.findMany({
-    where: { tenantId, year: ano, status: "APROVADO" },
+    where: { tenantId, year: ano, status: "APROVADO", company: SO_EMPRESA_DE_VERDADE },
     select: { companyId: true, company: { select: { name: true, displayName: true } } },
     distinct: ["companyId"],
   });
@@ -484,10 +492,10 @@ async function checkOrcamentoEstourado(tenantId: string, today: Date): Promise<n
 
     const orcamento = (await orcamentosAprovados(tenantId, v.companyId, [ano])).get(ano);
     if (!orcamento) continue;
-    const serie = await serieEconomica(tenantId, v.companyId, [competencia]);
+    const serie = await serieEconomica(tenantId, v.companyId, [competencia], { tipo: "todos" }, { impostosNoEbitda: true, modelo: orcamento.modelo });
     const realizado = serie.get(competencia)?.resultado.porGrupo ?? {};
 
-    const estouro = maiorEstouro(realizado, porGrupoOrcado(orcamento.grade, [mes]), ESTOURO_MINIMO_CENTAVOS);
+    const estouro = maiorEstouro(realizado, porGrupoOrcado(orcamento.grade, [mes], orcamento.modelo), ESTOURO_MINIMO_CENTAVOS);
     if (!estouro) continue;
     if (!(await reservarPorChave(tenantId, alertKey, today))) continue;
 
@@ -788,10 +796,22 @@ async function checkItensDaGestao(tenantId: string, today: Date): Promise<number
   if (!(await isModuleEnabled(tenantId, MODULO_GESTAO))) return 0;
   const itens = await itensDaGestao(tenantId, "todos", today);
   const coordenadores = new Map<string, string[]>();
+  // Card, pendência e solicitação das empresas da demonstração não avisam
+  // ninguém (15/10/2026): o card fictício vencido apareceria para o
+  // responsável todos os dias até a limpeza.
+  const daDemonstracao = new Set(
+    (
+      await getPrisma().company.findMany({
+        where: { tenantId, name: { startsWith: MARCA_DA_DEMONSTRACAO } },
+        select: { id: true },
+      })
+    ).map((e) => e.id)
+  );
   let sent = 0;
 
   for (const { item, c } of itens) {
     if (item.origem === "TRANSFERENCIA") continue;
+    if (item.empresaId && daDemonstracao.has(item.empresaId)) continue;
     // Um tipo para cada (05/10/2026): a pessoa pode desligar o "parado" e
     // manter o prazo. Até aqui os dois saíam como GESTAO_ALERTA.
     const avisos: { chave: string; mensagem: string; tipo: "GESTAO_PARADO" | "GESTAO_PRAZO" }[] = [];
@@ -834,6 +854,7 @@ async function checkItensDaGestao(tenantId: string, today: Date): Promise<number
 
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
   const checks: Array<[string, () => Promise<number>]> = [
+    ["chamados", async () => (await import("@/lib/chamados/alertas")).verificarSla(tenantId, today)],
     ["vacations", () => checkVacationsExpiring(tenantId, today)],
     ["probation", () => checkProbationDeadlines(tenantId, today)],
     ["exames", () => checkExamesVencendo(tenantId, today)],
@@ -852,6 +873,11 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     // Não é alerta: é o lote da conferência das autorizações no Serpro, que
     // anda aqui porque precisa de um relógio e o agendador já roda por tenant.
     ["serpro", () => processarConferencias(tenantId)],
+    // Também não são alertas (Fase 1 do Integra Contador, 20/10/2026): os
+    // Eventos de Atualização do dia e a Caixa Postal, e o relatório de situação
+    // fiscal pedido na ficha, que o Serpro entrega depois do tempo de espera.
+    ["serpro eventos", () => acompanharNoSerpro(tenantId)],
+    ["serpro sitfis", () => processarPedidosDoSitfis(tenantId)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],
   ];
 
