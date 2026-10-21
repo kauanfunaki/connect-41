@@ -349,6 +349,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "tenant.update": e("editou os dados do escritório"),
   "tenant.agenda.update": e("mudou o horário da Agenda do escritório", { comNome: false }),
   "tenant.smtp.update": e("configurou o e-mail de envio", { comNome: false }),
+  "tenant.aparencia.update": e("mudou a aparência do portal", { comNome: false }),
   "tenant.chatwoot.update": e("configurou a conexão com o Chatwoot", { comNome: false }),
   "tenant.chatwoot.remove": x("removeu a conexão com o Chatwoot", { comNome: false }),
   "chatwoot.agent.linked": e("vinculou um atendente do Chatwoot a um usuário"),

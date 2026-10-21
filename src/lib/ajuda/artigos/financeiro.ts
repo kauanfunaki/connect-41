@@ -358,13 +358,14 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
   {
     chave: "bpo_cadastros",
     titulo: "Fornecedores e sacados",
-    caminhos: ["/cadastros-financeiros"],
+    caminhos: ["/fornecedores-e-sacados"],
     resumo:
       "Cadastro das contrapartes de cada empresa cliente: fornecedores (de quem ela compra) e sacados (os clientes que pagam a ela), além dos centros de custo e do plano de contas da empresa.",
     secoes: [
       {
         titulo: "Cadastrar um fornecedor ou sacado",
         passos: [
+          "Abra “Cadastros” na barra lateral e clique na aba “Fornecedores e sacados”. A aba só aparece para quem é do BPO.",
           "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu — ou, trabalhando numa empresa por vez, nela.",
           "Clique em “Novo cadastro”.",
           "Preencha “Nome” e, se tiver, “CPF ou CNPJ” e “E-mail”.",

@@ -461,7 +461,7 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
       chave: "bpo_cadastros",
       logado: true,
       async executar(r) {
-        await r.ir("/cadastros-financeiros");
+        await r.ir("/fornecedores-e-sacados");
         await r.cartaz(SELO, "Fornecedores e sacados", "Os cadastros, os centros de custo e o plano de contas da empresa");
         await r.legenda("Fornecedor é de quem a empresa compra. Sacado é o cliente que paga a ela.");
         await escolherEmpresa(r, "Transportes Modelo");
