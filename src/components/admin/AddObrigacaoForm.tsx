@@ -92,7 +92,7 @@ export function AddObrigacaoForm({
       </FieldGrid>
 
       <FieldGrid>
-        <CampoForm label="Kanban de destino" htmlFor="pipelineId" required>
+        <CampoForm label="Tarefa de destino" htmlFor="pipelineId" required>
           <Select
             id="pipelineId"
             name="pipelineId"
@@ -147,7 +147,7 @@ export function AddObrigacaoForm({
           </CampoForm>
         )}
         <CampoForm label="Instruções (opcional)" htmlFor="description">
-          <Input id="description" name="description" type="text" placeholder="entram na descrição do item do kanban" />
+          <Input id="description" name="description" type="text" placeholder="entram na descrição da atividade" />
         </CampoForm>
       </FieldGrid>
 

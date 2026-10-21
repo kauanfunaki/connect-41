@@ -5,6 +5,9 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
+import { Selo } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { AgenteCard } from "@/components/admin/AgenteCard";
 import { ChamadasDeIA } from "@/components/admin/ChamadasDeIA";
@@ -24,9 +27,13 @@ import { Aviso } from "@/components/ui/Aviso";
 
 // Teto de gasto e chave de IA são configuração do tenant inteiro, não de setor
 // — mesmo critério da tela de Integrações.
-export default async function AgentesDeIAPage() {
+/** O provedor da chave, para a situação no topo. */
+const PROVEDOR: Record<string, string> = { ANTHROPIC: "Anthropic", OPENAI: "OpenAI" };
+
+export default async function AgentesDeIAPage({ searchParams }: { searchParams: Promise<{ aba?: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !isFullWrite(ctx.role)) notFound();
+  const { aba } = await searchParams;
 
   const agora = new Date();
   const prisma = getPrisma();
@@ -37,7 +44,7 @@ export default async function AgentesDeIAPage() {
 
   // Sem config de tenant não há IA (a chave pelo ambiente saiu em 23/09). É o
   // que faz o aviso abaixo aparecer para quem precisa cadastrar a sua.
-  const [linhas, chamadas, audiencia, painel, { labels: nomesDosSetores }] = await Promise.all([
+  const [linhas, chamadas, audiencia, painel, { labels: nomesDosSetores, colors: coresDosSetores }] = await Promise.all([
     listarAgentes(ctx.tenantId, config?.provider ?? null, config?.model ?? null, agora),
     ultimasChamadas(ctx.tenantId, 30),
     audienciaDoChat(ctx.tenantId),
@@ -62,28 +69,46 @@ export default async function AgentesDeIAPage() {
   const totalChamadas = linhas.reduce((n, l) => n + l.gasto.chamadas, 0);
   const totalSemCusto = linhas.reduce((n, l) => n + l.gasto.semCusto, 0);
 
+  const quantasChamadas = chamadas.length;
+  const abas = [
+    { chave: "agentes", rotulo: "Agentes", href: "/admin/ia", contagem: linhas.length },
+    ...(painel ? [{ chave: "respostas", rotulo: "Respostas do chat", href: "/admin/ia?aba=respostas" }] : []),
+    { chave: "chamadas", rotulo: "Últimas chamadas", href: "/admin/ia?aba=chamadas", contagem: quantasChamadas },
+    { chave: "publico", rotulo: "Quem usa o chat", href: "/admin/ia?aba=publico" },
+  ];
+  const ativa = aba && abas.some((a) => a.chave === aba) ? aba : "agentes";
+  const corDo = (l: LinhaDeAgente) => (l.def.sectorCode ? coresDosSetores[l.def.sectorCode] : undefined);
+
   return (
     <PageContainer>
       <PageHeader
         title="Inteligência artificial"
-        subtitle="Os agentes do chat e as demais funções de IA: o que fizeram neste mês, quanto custou e até onde podem ir. Só administradores veem esta tela."
+        subtitle="Quanto a IA fez e gastou neste mês, e até onde cada agente pode ir."
+        // A situação da chave no topo (7A): sem ela, nenhum agente roda.
+        action={
+          config ? (
+            <Selo tom="sucesso">Chave {PROVEDOR[config.provider] ?? config.provider} ativa</Selo>
+          ) : (
+            <Selo tom="atencao">Sem chave de IA</Selo>
+          )
+        }
       />
 
       {!config && (
         // Revisão de 05/10: botão não é link — o "Cadastrar em Integrações" era texto azul.
         <Aviso tom="atencao" className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2">
           <p className="text-fg">Nenhuma chave de IA cadastrada para esta empresa — nenhum agente roda sem ela.</p>
-          <Button href="/admin/integracoes" variant="secondary" size="sm">
+          <Button href="/admin/integracoes?integracao=ia" variant="secondary" size="sm">
             Cadastrar em Integrações
           </Button>
         </Aviso>
       )}
 
       {/* Os números do mês em cartão, como nas outras telas (polimento de
-          30/09) — era um bloco com o total e as chamadas numa linha só. "Sem
-          custo apurado" continua ao lado do total, e não num rodapé: o total só
-          significa alguma coisa quando esse cartão está em zero. */}
+          30/09). "Sem custo apurado" fica ao lado do total, e não num rodapé:
+          o total só significa alguma coisa quando esse cartão está em zero. */}
       <FaixaDeTotais
+        className=""
         itens={[
           { rotulo: "Gasto no mês", valor: moeda(totalCentavos), icone: <Wallet /> },
           { rotulo: "Chamadas", valor: formatarNumero(totalChamadas, 0), icone: <Activity /> },
@@ -95,68 +120,89 @@ export default async function AgentesDeIAPage() {
           },
         ]}
       />
-      <p className="text-fs-2 text-fg-muted -mt-2 mb-5">
-        O mês começa à meia-noite de São Paulo. Os valores usam a tabela de preço escrita em{" "}
-        {formatInstantDate(new Date(PRECOS_ESCRITOS_EM))} — enquanto ela não for conferida contra a
-        página de preços do provedor, quem protege de verdade é o teto de chamadas.
-      </p>
 
-      <section className="flex flex-col gap-3 mb-8" aria-labelledby="agentes-do-chat">
-        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
-          <div>
-            <h2 id="agentes-do-chat" className="text-section font-semibold text-fg">
-              Agentes — chat da Ceci
-            </h2>
-            <p className="text-fs-3 text-fg-secondary max-w-[70ch]">
-              A Ceci, assistente do Connect, no chat do canto inferior direito: um agente por setor e a Ajuda do
-              Connect, todos com o mesmo nome e o mesmo jeito de falar. Ligar um agente aqui é o que o faz aparecer no
-              chat para quem opera aquele setor. O do Societário também atende o cartão de perguntas da fila de processos.
-            </p>
-          </div>
-          <p className="text-fs-3 tabular-nums text-fg-secondary">{moeda(gastoDe(doChat))} no mês</p>
-        </div>
-        <PublicoDoChat todos={audiencia === "TODOS"} disponivel={audiencia !== null} />
-        {painel && <PainelDoOrquestrador dados={painel} />}
-        {painel && <AvaliacoesDoChat dados={painel} />}
-        {doChat.map((linha) => (
-          <AgenteCard key={linha.def.code} linha={linha} podeEditar />
-        ))}
-      </section>
-
-      <section className="flex flex-col gap-3 mb-8" aria-labelledby="outras-funcoes">
-        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
-          <div>
-            <h2 id="outras-funcoes" className="text-section font-semibold text-fg">
-              Outras utilizações de IA
-            </h2>
-            <p className="text-fs-3 text-fg-secondary max-w-[70ch]">
-              Funções que usam IA dentro de uma tela ou em segundo plano — ler currículo, pontuar candidato, resumir
-              empresa, atender no WhatsApp. Não aparecem no chat.
-            </p>
-          </div>
-          <p className="text-fs-3 tabular-nums text-fg-secondary">{moeda(gastoDe(outras))} no mês</p>
-        </div>
-        {[...porSetor.entries()].map(([setor, ls]) => (
-          <div key={setor} className="flex flex-col gap-3">
-            <p className="text-fs-1 uppercase tracking-wide text-fg-muted pt-1">{setor}</p>
-            {ls.map((linha) => (
-              <AgenteCard key={linha.def.code} linha={linha} podeEditar />
-            ))}
-          </div>
-        ))}
-      </section>
-
-      {/* Mesmo cabeçalho das duas seções de cima (era 15px contra 17px). */}
-      <section className="flex flex-col gap-3">
-        <div className="border-b border-border pb-2">
-          <h2 className="text-section font-semibold text-fg">Últimas chamadas</h2>
-          <p className="text-fs-3 text-fg-secondary">
-            Quem pediu, sobre o quê e como terminou. É a resposta para “por que esse texto apareceu
-            nesta ficha”.
+      {/* As explicações longas num "Como funciona" que abre e fecha (7A,
+          20/10/2026): eram parágrafos em cada seção e uma nota de 11px. Começa
+          fechado, como os outros recolhíveis. */}
+      <BlocoRecolhivel titulo="Como funciona" className="mt-4 mb-5 bg-surface">
+        <div className="space-y-2 text-fs-3 text-fg-secondary">
+          <p>
+            <span className="font-medium text-fg">Agentes do chat.</span> A Ceci, assistente do Connect, no chat do canto
+            inferior direito: um agente por setor e a Ajuda do Connect, todos com o mesmo nome e o mesmo jeito de falar.
+            Ligar um agente aqui é o que o faz aparecer no chat para quem opera aquele setor. O do Societário também
+            atende o cartão de perguntas da fila de processos.
+          </p>
+          <p>
+            <span className="font-medium text-fg">Outras utilizações.</span> Funções que usam IA dentro de uma tela ou em
+            segundo plano — ler currículo, pontuar candidato, resumir empresa, atender no WhatsApp. Não aparecem no chat.
+          </p>
+          <p>
+            <span className="font-medium text-fg">Os valores.</span> O mês começa à meia-noite de São Paulo. Os valores
+            usam a tabela de preço escrita em {formatInstantDate(new Date(PRECOS_ESCRITOS_EM))} — enquanto ela não for
+            conferida contra a página de preços do provedor, quem protege de verdade é o teto de chamadas.
           </p>
         </div>
-        <ChamadasDeIA chamadas={chamadas} agora={agora} />
-      </section>
+      </BlocoRecolhivel>
+
+      {/* Cada assunto na sua aba (escolha 7A dos Ajustes de 15/10, 20/10/2026):
+          era uma página só, com os agentes em cartões largos empilhados, o
+          orquestrador, as avaliações e as chamadas um embaixo do outro. */}
+      <AbasDeLink abas={abas} ativa={ativa} />
+
+      {ativa === "agentes" && (
+        <div className="space-y-8">
+          <section className="flex flex-col gap-3" aria-labelledby="agentes-do-chat">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="agentes-do-chat" className="text-section font-semibold text-fg">
+                Chat da Ceci
+              </h2>
+              <p className="text-fs-3 tabular-nums text-fg-secondary">{moeda(gastoDe(doChat))} no mês</p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {doChat.map((linha) => (
+                <AgenteCard key={linha.def.code} linha={linha} podeEditar cor={corDo(linha)} />
+              ))}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-3" aria-labelledby="outras-funcoes">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="outras-funcoes" className="text-section font-semibold text-fg">
+                Outras utilizações de IA
+              </h2>
+              <p className="text-fs-3 tabular-nums text-fg-secondary">{moeda(gastoDe(outras))} no mês</p>
+            </div>
+            {[...porSetor.entries()].map(([setor, ls]) => (
+              <div key={setor} className="flex flex-col gap-2">
+                <p className="c41-rotulo pt-1">{setor}</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {ls.map((linha) => (
+                    <AgenteCard key={linha.def.code} linha={linha} podeEditar cor={corDo(linha)} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+        </div>
+      )}
+
+      {ativa === "respostas" && painel && (
+        <div className="flex flex-col gap-3">
+          <PainelDoOrquestrador dados={painel} />
+          <AvaliacoesDoChat dados={painel} />
+        </div>
+      )}
+
+      {ativa === "chamadas" && (
+        <section className="flex flex-col gap-3" aria-label="Últimas chamadas">
+          <p className="text-fs-3 text-fg-secondary">
+            Quem pediu, sobre o quê e como terminou. É a resposta para “por que esse texto apareceu nesta ficha”.
+          </p>
+          <ChamadasDeIA chamadas={chamadas} agora={agora} />
+        </section>
+      )}
+
+      {ativa === "publico" && <PublicoDoChat todos={audiencia === "TODOS"} disponivel={audiencia !== null} />}
     </PageContainer>
   );
 }

@@ -1,23 +1,35 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { Download, Eye, FileSearch, KeyRound, Plus, PlugZap, RefreshCw } from "lucide-react";
+import { ArrowRightLeft, Download, Eye, FileSearch, KeyRound, Plus, PlugZap, RefreshCw, Undo2 } from "lucide-react";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
-import { contasDoOmieAction, importarNotasOmieAction, previaDasNotasOmieAction, salvarContaOmieAction, testarContaOmieAction } from "@/app/(app)/admin/integracoes/omie-actions";
+import {
+  contasDoOmieAction,
+  desfazerViradaAction,
+  importarNotasOmieAction,
+  previaDasNotasOmieAction,
+  salvarContaOmieAction,
+  testarContaOmieAction,
+  virarParaOConnectAction,
+} from "@/app/(app)/admin/integracoes/omie-actions";
+import { useConfirm } from "@/components/ui/useConfirm";
+import { formatInstantDate } from "@/lib/format";
 import type { ContaOmieNaTela } from "@/lib/integracoes/omie/contas";
 import type { Saude } from "@/lib/integracoes/execucao";
 import type { PreviaDeChamada } from "@/lib/integracoes/omie/contas";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 type Previa = { nfe: PreviaDeChamada; nfse: PreviaDeChamada } | { erro: string };
 
@@ -81,9 +93,11 @@ function FormConta({ empresas, inicial, onFim }: { empresas: (EmpresaParaEscolhe
           há dois campos, e eles dividem a linha em duas colunas, sem um terço
           vazio no fim. */}
       {inicial && <input type="hidden" name="companyId" value={companyId} />}
-      <FieldGrid columns={inicial ? "sm:grid-cols-2" : "md:grid-cols-3"}>
+      {/* Conta nova na janela (15/10/2026): a empresa ocupa a linha, e as duas
+          chaves dividem a de baixo. */}
+      <FieldGrid columns="sm:grid-cols-2">
         {!inicial && (
-          <CampoForm label="Empresa" htmlFor={`${id}-empresa`}>
+          <CampoForm label="Empresa" htmlFor={`${id}-empresa`} className="sm:col-span-2">
             <SearchableSelect
               id={`${id}-empresa`}
               name="companyId"
@@ -113,7 +127,7 @@ function FormConta({ empresas, inicial, onFim }: { empresas: (EmpresaParaEscolhe
         pending={pendente}
         onCancel={onFim}
         erro={erro}
-        semDivisoria
+        semDivisoria={Boolean(inicial)}
       />
     </form>
   );
@@ -124,7 +138,17 @@ function FormConta({ empresas, inicial, onFim }: { empresas: (EmpresaParaEscolhe
  * cada empresa tem App Key e App Secret próprios (no Omie, em Configurações ›
  * Aplicativos). Login e senha do Omie não servem para a API.
  */
-export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; empresas: (EmpresaParaEscolher & { nome: string })[] }) {
+export function ContasOmie({
+  contas,
+  empresas,
+  podeDesfazerVirada = false,
+}: {
+  contas: ContaOmieNaTela[];
+  empresas: (EmpresaParaEscolher & { nome: string })[];
+  /** Super Admin: o "Voltar a ler do Omie", para a virada feita por engano. */
+  podeDesfazerVirada?: boolean;
+}) {
+  const { dialog, requestConfirm } = useConfirm();
   const [novo, setNovo] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
   const [teste, setTeste] = useState<Record<string, { ok: boolean; texto: string }>>({});
@@ -178,6 +202,48 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
     }
   }
 
+  // A virada para o Connect (lote E): a última leitura, e a leitura do
+  // financeiro desliga. A confirmação diz o que muda, porque desfazer é só
+  // com o Super Admin.
+  function virar(c: ContaOmieNaTela) {
+    requestConfirm(
+      {
+        title: `Virar ${c.empresa} para o Connect?`,
+        description:
+          "O Connect lê as contas do Omie uma última vez e desliga a leitura. Daí em diante as contas desta empresa — inclusive as que vieram do Omie — se editam, pagam e cancelam só no Connect, e o que mudar no Omie não chega mais aqui. Faça quando o BPO parar de lançar no Omie desta empresa. As notas emitidas no Omie continuam entrando.",
+        confirmLabel: "Virar para o Connect",
+      },
+      async () => {
+        setTestando(c.companyId);
+        try {
+          const r = await virarParaOConnectAction(c.companyId);
+          setTeste((t) => ({ ...t, [c.companyId]: "error" in r ? { ok: false, texto: r.error } : { ok: true, texto: r.mensagem ?? "Virada feita." } }));
+        } catch {
+          setTeste((t) => ({ ...t, [c.companyId]: { ok: false, texto: FALHA_DE_REDE } }));
+        } finally {
+          setTestando(null);
+        }
+      }
+    );
+  }
+
+  function desfazerVirada(c: ContaOmieNaTela) {
+    requestConfirm(
+      {
+        title: `Voltar a ler ${c.empresa} do Omie?`,
+        description:
+          "A leitura das contas do Omie volta a ligar. A próxima reescreve, nas contas que vieram do Omie, o que foi mudado no Connect desde a virada — valor, vencimento, competência e categoria voltam aos do Omie. Use só para desfazer uma virada feita por engano.",
+        confirmLabel: "Voltar a ler do Omie",
+        destructive: true,
+      },
+      async () => {
+        const r = await desfazerViradaAction(c.companyId);
+        if ("error" in r) throw new Error(r.error);
+        setTeste((t) => ({ ...t, [c.companyId]: { ok: true, texto: r.mensagem ?? "Virada desfeita." } }));
+      }
+    );
+  }
+
   async function testar(companyId: string) {
     setTestando(companyId);
     try {
@@ -189,6 +255,139 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
       setTestando(null);
     }
   }
+
+  // A situação, as ações e a prévia de cada conta, usadas na linha da tabela e
+  // no cartão do celular (15/10/2026: a tabela de 720px rolava de lado).
+  const resultadoDe = (c: ContaOmieNaTela) =>
+    testando === c.companyId || lendo === c.companyId ? (
+      // A consulta que saiu do "⋯" não tem mais botão para
+      // dizer "Lendo…": o aviso fica aqui, onde o resultado vai aparecer.
+      <span className="block text-fs-1 mt-1 text-fg-muted">Consultando o Omie…</span>
+    ) : teste[c.companyId] ? (
+      <span className={`block text-fs-1 mt-1 ${teste[c.companyId].ok ? "text-success-fg" : "text-danger"}`}>{teste[c.companyId].texto}</span>
+    ) : (
+      c.lastError && <span className="block text-fs-1 mt-1 text-danger">{c.lastError}</span>
+    );
+
+  // A virada aparece ao lado da saúde da conta: depois dela, as contas são do
+  // Connect, e a conta do Omie só serve às notas.
+  const viradaDe = (c: ContaOmieNaTela) =>
+    c.viradaEm ? (
+      <span className="block text-fs-1 mt-1 text-fg-secondary">
+        <Selo tom="sucesso">Virou para o Connect</Selo> <span className="text-fg-muted">em {formatInstantDate(c.viradaEm)}</span>
+      </span>
+    ) : c.importouAsContas ? (
+      <span className="block text-fs-1 mt-1 text-fg-muted">Contas lidas do Omie a cada 6 horas</span>
+    ) : null;
+
+  const acoesDe = (c: ContaOmieNaTela) => (
+    <span className="inline-flex items-center gap-1.5">
+      {/* Só `disabled`, e não `loading`: o `loading` do
+          Button escreve "Salvando…", e aqui nada está sendo
+          salvo — o andamento aparece na coluna Situação. */}
+      <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => testar(c.companyId)}>
+        <PlugZap size={11} /> Testar
+      </Button>
+      {c.saude === "ok" && contasVistas[c.companyId] && !c.viradaEm && (
+        <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => lerContas(c.companyId, true)}>
+          <Download size={11} /> Importar contas
+        </Button>
+      )}
+      <MenuDeMaisAcoes rotulo={`Mais ações de ${c.empresa}`} largura={200}>
+        {(fechar) => (
+          <>
+            <ItemDoMenu
+              icone={<KeyRound />}
+              onClick={() => {
+                fechar();
+                setEditando(c.companyId);
+              }}
+            >
+              Trocar chave
+            </ItemDoMenu>
+            {c.saude === "ok" && (
+              <>
+                <ItemDoMenu
+                  icone={<RefreshCw />}
+                  disabled={testando !== null}
+                  onClick={() => {
+                    fechar();
+                    importar(c.companyId);
+                  }}
+                >
+                  Importar notas
+                </ItemDoMenu>
+                <ItemDoMenu
+                  icone={<FileSearch />}
+                  disabled={lendo !== null}
+                  onClick={() => {
+                    fechar();
+                    previa(c.companyId);
+                  }}
+                >
+                  Prévia das notas
+                </ItemDoMenu>
+                {!c.viradaEm && (
+                  <ItemDoMenu
+                    icone={<Eye />}
+                    disabled={testando !== null}
+                    onClick={() => {
+                      fechar();
+                      lerContas(c.companyId, false);
+                    }}
+                  >
+                    Prévia das contas
+                  </ItemDoMenu>
+                )}
+              </>
+            )}
+            {!c.viradaEm && (
+              <ItemDoMenu
+                icone={<ArrowRightLeft />}
+                descricao="A última leitura, e daí em diante as contas são do Connect."
+                disabled={testando !== null}
+                onClick={() => {
+                  fechar();
+                  virar(c);
+                }}
+              >
+                Virar para o Connect
+              </ItemDoMenu>
+            )}
+            {c.viradaEm && podeDesfazerVirada && (
+              <ItemDoMenu
+                icone={<Undo2 />}
+                danger
+                onClick={() => {
+                  fechar();
+                  desfazerVirada(c);
+                }}
+              >
+                Voltar a ler do Omie
+              </ItemDoMenu>
+            )}
+          </>
+        )}
+      </MenuDeMaisAcoes>
+    </span>
+  );
+
+  const previaDe = (c: ContaOmieNaTela, p: Previa) => (
+    <>
+      <p className="text-fs-2 mb-2">
+        <span className="font-medium">Prévia das notas — {c.empresa}.</span>{" "}
+        <span className="text-fg-muted">Só leitura: nada foi gravado no Connect nem alterado no Omie.</span>
+      </p>
+      {"erro" in p ? (
+        <p className="text-fs-2 text-danger">{p.erro}</p>
+      ) : (
+        <div className="grid gap-3 lg:grid-cols-2">
+          <BlocoDaPrevia titulo="NF-e (produtos/nfconsultar · ListarNF)" p={p.nfe} />
+          <BlocoDaPrevia titulo="NFS-e (servicos/nfse · ListarNFSEs)" p={p.nfse} />
+        </div>
+      )}
+    </>
+  );
 
   return (
     <Card className="p-4">
@@ -205,18 +404,16 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
             horas. Só leitura: nada é alterado no Omie.
           </p>
         </div>
-        {!novo && (
-          <Button size="sm" onClick={() => setNovo(true)}>
-            <Plus size={14} /> Adicionar empresa
-          </Button>
-        )}
+        <Button size="sm" onClick={() => setNovo(true)}>
+          <Plus size={14} /> Adicionar empresa
+        </Button>
       </div>
 
-      {novo && (
-        <div className="mb-4 rounded-md border border-border p-4">
-          <FormConta empresas={semConta} onFim={() => setNovo(false)} />
-        </div>
-      )}
+      {/* Conta nova numa janela, com o rodapé padrão (P19, 15/10/2026): o
+          formulário abria dentro do cartão, acima da lista, empurrando-a. */}
+      <Modal open={novo} onClose={() => setNovo(false)} title="Adicionar empresa" maxWidth="max-w-xl">
+        {novo && <FormConta empresas={semConta} onFim={() => setNovo(false)} />}
+      </Modal>
 
       {contas.length === 0 ? (
         <p className="text-fs-3 text-fg-muted">Nenhuma empresa com conta do Omie cadastrada ainda.</p>
@@ -225,13 +422,38 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
         // 30/09). As ações eram cinco textos cinza e dois botões na mesma
         // célula: ficam à vista "Testar" e, depois da prévia, "Importar
         // contas"; o resto vai no "⋯".
+        <>
+        <CartoesNoCelular>
+          {contas.map((c) => (
+            <Cartao key={c.companyId}>
+              {editando === c.companyId ? (
+                <>
+                  <p className="text-fs-2 font-medium mb-2">{c.empresa}</p>
+                  <FormConta empresas={[]} inicial={{ companyId: c.companyId, appKey: c.appKey }} onFim={() => setEditando(null)} />
+                </>
+              ) : (
+                <>
+                  <TopoDoCartao nome={c.empresa} />
+                  <InfoDoCartao className="tnum">App Key {c.appKey || "—"}</InfoDoCartao>
+                  <div className="mt-2">
+                    <Selo tom={tomDaVariante(SAUDE[c.saude].variante)}>{SAUDE[c.saude].rotulo}</Selo>
+                    {viradaDe(c)}
+                    {resultadoDe(c)}
+                  </div>
+                  <PeDoCartao>{acoesDe(c)}</PeDoCartao>
+                  {previas[c.companyId] && <div className="mt-3 border-t border-border-soft pt-3">{previaDe(c, previas[c.companyId])}</div>}
+                </>
+              )}
+            </Cartao>
+          ))}
+        </CartoesNoCelular>
         <TabelaFiltravel
           linhas={contas.map((c) => ({ id: c.companyId, valores: { situacao: SAUDE[c.saude].rotulo } }))}
         >
-          <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+          <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
             <table className="w-full min-w-[720px]">
               <thead>
-                <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="border-b border-border">
                   <th className="py-2 pr-3">Empresa</th>
                   <th className="py-2 pr-3">App Key</th>
                   <th className="py-2 pr-3">
@@ -257,79 +479,11 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                       <td className="py-2.5 pr-3 text-fg-secondary tnum">{c.appKey || "—"}</td>
                       <td className="py-2.5 pr-3">
                         <Selo tom={tomDaVariante(SAUDE[c.saude].variante)}>{SAUDE[c.saude].rotulo}</Selo>
-                        {testando === c.companyId || lendo === c.companyId ? (
-                          // A consulta que saiu do "⋯" não tem mais botão para
-                          // dizer "Lendo…": o aviso fica aqui, onde o resultado vai aparecer.
-                          <span className="block text-fs-1 mt-1 text-fg-muted">Consultando o Omie…</span>
-                        ) : teste[c.companyId] ? (
-                          <span className={`block text-fs-1 mt-1 ${teste[c.companyId].ok ? "text-success-fg" : "text-danger"}`}>{teste[c.companyId].texto}</span>
-                        ) : (
-                          c.lastError && <span className="block text-fs-1 mt-1 text-danger">{c.lastError}</span>
-                        )}
+                        {viradaDe(c)}
+                        {resultadoDe(c)}
                       </td>
                       <td className="py-2.5 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          {/* Só `disabled`, e não `loading`: o `loading` do
-                              Button escreve "Salvando…", e aqui nada está sendo
-                              salvo — o andamento aparece na coluna Situação. */}
-                          <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => testar(c.companyId)}>
-                            <PlugZap size={11} /> Testar
-                          </Button>
-                          {c.saude === "ok" && contasVistas[c.companyId] && (
-                            <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => lerContas(c.companyId, true)}>
-                              <Download size={11} /> Importar contas
-                            </Button>
-                          )}
-                          <MenuDeMaisAcoes rotulo={`Mais ações de ${c.empresa}`} largura={200}>
-                            {(fechar) => (
-                              <>
-                                <ItemDoMenu
-                                  icone={<KeyRound />}
-                                  onClick={() => {
-                                    fechar();
-                                    setEditando(c.companyId);
-                                  }}
-                                >
-                                  Trocar chave
-                                </ItemDoMenu>
-                                {c.saude === "ok" && (
-                                  <>
-                                    <ItemDoMenu
-                                      icone={<RefreshCw />}
-                                      disabled={testando !== null}
-                                      onClick={() => {
-                                        fechar();
-                                        importar(c.companyId);
-                                      }}
-                                    >
-                                      Importar notas
-                                    </ItemDoMenu>
-                                    <ItemDoMenu
-                                      icone={<FileSearch />}
-                                      disabled={lendo !== null}
-                                      onClick={() => {
-                                        fechar();
-                                        previa(c.companyId);
-                                      }}
-                                    >
-                                      Prévia das notas
-                                    </ItemDoMenu>
-                                    <ItemDoMenu
-                                      icone={<Eye />}
-                                      disabled={testando !== null}
-                                      onClick={() => {
-                                        fechar();
-                                        lerContas(c.companyId, false);
-                                      }}
-                                    >
-                                      Prévia das contas
-                                    </ItemDoMenu>
-                                  </>
-                                )}
-                              </>
-                            )}
-                          </MenuDeMaisAcoes>
-                        </span>
+                        {acoesDe(c)}
                       </td>
                     </LinhaFiltravel>
                   )
@@ -344,18 +498,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                             linha a linha: alinhado à esquerda, fora da regra de
                             centralizar do casco. */}
                         <td colSpan={4} className="py-3 text-left!">
-                          <p className="text-fs-2 mb-2">
-                            <span className="font-medium">Prévia das notas — {c.empresa}.</span>{" "}
-                            <span className="text-fg-muted">Só leitura: nada foi gravado no Connect nem alterado no Omie.</span>
-                          </p>
-                          {"erro" in p ? (
-                            <p className="text-fs-2 text-danger">{p.erro}</p>
-                          ) : (
-                            <div className="grid gap-3 lg:grid-cols-2">
-                              <BlocoDaPrevia titulo="NF-e (produtos/nfconsultar · ListarNF)" p={p.nfe} />
-                              <BlocoDaPrevia titulo="NFS-e (servicos/nfse · ListarNFSEs)" p={p.nfse} />
-                            </div>
-                          )}
+                          {previaDe(c, p)}
                         </td>
                       </tr>
                     );
@@ -364,7 +507,9 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
             </table>
           </div>
         </TabelaFiltravel>
+        </>
       )}
+      {dialog}
     </Card>
   );
 }

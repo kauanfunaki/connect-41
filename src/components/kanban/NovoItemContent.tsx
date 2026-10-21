@@ -10,27 +10,48 @@ import { NovoItemModal } from "@/components/kanban/NovoItemModal";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { accessiblePipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
+import { getSectorMaps } from "@/lib/sectors";
+import { trilhaDaLista } from "@/lib/kanbanPaths";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
+import { nomeExibicao } from "@/lib/companyName";
+import type { Opcao } from "@/components/shared/SearchableSelect";
 
 export async function NovoItemContent({ id, estagio, emModal = false }: { id: string; estagio?: string; emModal?: boolean }) {
   const ctx = await getAuthContext();
 
   const prisma = getPrisma();
-  const pipeline = await prisma.pipeline.findFirst({ where: { id, ...accessiblePipelineWhere(ctx) }, include: { stages: { orderBy: { order: "asc" } } } });
+  const pipeline = await prisma.pipeline.findFirst({
+    where: { id, ...accessiblePipelineWhere(ctx) },
+    include: {
+      stages: { orderBy: { order: "asc" } },
+      // Para a trilha da página cheia (setor › espaço › pasta › lista).
+      space: { select: { id: true, name: true } },
+      folder: { select: { id: true, name: true } },
+    },
+  });
   if (!pipeline) notFound();
   if (!canManageSector(ctx, pipeline.sectorCode)) notFound();
 
-  const entities =
+  // As opções já no desenho do seletor com busca (15/10/2026): empresa com
+  // logo, CNPJ, a filial embaixo da matriz e recentes; pessoa com a foto.
+  const entities: Opcao[] =
     pipeline.entityType === "COMPANY"
-      ? await prisma.company.findMany({
-          where: await scopedCompanyWhere(ctx),
-          orderBy: { name: "asc" },
-          select: { id: true, name: true },
-        })
-      : await prisma.person.findMany({
-          where: await scopedPersonWhere(ctx),
-          orderBy: { name: "asc" },
-          select: { id: true, name: true },
-        });
+      ? opcoesDeEmpresa(
+          (
+            await prisma.company.findMany({
+              where: await scopedCompanyWhere(ctx),
+              orderBy: { name: "asc" },
+              select: CAMPOS_DA_EMPRESA_NO_SELETOR,
+            })
+          ).map((c) => ({ ...c, nome: nomeExibicao(c) }))
+        )
+      : (
+          await prisma.person.findMany({
+            where: await scopedPersonWhere(ctx),
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, photoUrl: true },
+          })
+        ).map((p) => ({ value: p.id, label: p.name, imagem: p.photoUrl }));
 
   const [tags, sectorUsers] = await Promise.all([
     prisma.tag.findMany({
@@ -56,16 +77,14 @@ export async function NovoItemContent({ id, estagio, emModal = false }: { id: st
     />
   );
   if (emModal) return <NovoItemModal>{formulario}</NovoItemModal>;
+  const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
   return (
     <PageContainer>
+      {/* No caminho que a lista mostra, e não a partir de "Kanban" (P04, 15/10/2026). */}
       <Breadcrumb
-        items={[
-          { label: "Kanban", href: "/kanban" },
-          { label: pipeline.name, href: `/kanban/${id}`, truncate: true },
-          { label: "Nova tarefa" },
-        ]}
+        items={[...trilhaDaLista(pipeline, sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode), { label: "Nova atividade" }]}
       />
-      <PageHeader title="Nova tarefa" />
+      <PageHeader title="Nova atividade" />
 
       {/* No cartão de 720px dos formulários curtos (30/09): na largura da
           tela, o select da empresa ia de uma borda à outra. */}

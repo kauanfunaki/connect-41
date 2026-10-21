@@ -8,6 +8,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
+import { Lock } from "lucide-react";
 
 type Props = {
   action: (prev: TenantState, form: FormData) => Promise<TenantState>;
@@ -37,8 +38,9 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
         </Aviso>
       )}
 
-      {/* CNPJ na largura dele (18 caracteres); o slug fica embaixo, na mesma
-          coluna do nome. */}
+      {/* CNPJ na largura dele (18 caracteres). O slug, que não se edita aqui,
+          é uma linha de informação embaixo (escolha 1B, 20/10/2026): no campo
+          desabilitado ele parecia um campo quebrado. */}
       <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_14rem]">
         <CampoForm label="Nome" htmlFor="name" required>
           <Input
@@ -58,20 +60,11 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
             placeholder="00.000.000/0000-00"
           />
         </CampoForm>
-        <CampoForm
-          label="Slug"
-          htmlFor="slug"
-          helper="Identificador interno do tenant — não pode ser alterado por aqui."
-        >
-          <Input
-            id="slug"
-            type="text"
-            value={defaultValues.slug}
-            disabled
-            className="font-mono"
-          />
-        </CampoForm>
       </FieldGrid>
+      <p className="flex items-center gap-2 text-helper text-fg-muted">
+        <Lock size={13} className="flex-shrink-0" aria-hidden />
+        Código interno <span className="font-mono text-fg">{defaultValues.slug}</span> · não muda por aqui
+      </p>
 
       {isSuperAdmin && (
         <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_14rem]" className="border-t border-border pt-4">
@@ -88,7 +81,7 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
               id="active"
               name="active"
               defaultChecked={defaultValues.active}
-              label="Tenant ativo"
+              label="Workspace ativo"
             />
           </AlinhadoAoCampo>
         </FieldGrid>

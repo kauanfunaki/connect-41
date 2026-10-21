@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { FileDropzone, type ArquivoNaFila } from "@/components/ui/FileDropzone";
 import { nomeExibicao } from "@/lib/companyName";
 import { opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
@@ -59,7 +60,13 @@ export function EntradaXmlForm({ empresas, action }: Props) {
   return (
     <div className="space-y-6">
       <Card className="p-5">
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            enviar();
+          }}
+        >
           <CampoForm
             label="Arquivos XML"
             htmlFor="xmls"
@@ -105,19 +112,18 @@ export function EntradaXmlForm({ empresas, action }: Props) {
             />
           </CampoForm>
 
-          {erro && <p className="text-helper text-danger">{erro}</p>}
-
           {/* Rodapé padrão da página de formulário: Cancelar volta ao acervo,
-              o primário por último, os dois à direita. */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <Button href="/documentos-fiscais" variant="secondary">
-              Cancelar
-            </Button>
-            <Button type="button" onClick={enviar} disabled={pendente || arquivos.length === 0}>
-              {pendente ? "Lendo…" : `Importar${arquivos.length > 0 ? ` ${arquivos.length}` : ""}`}
-            </Button>
-          </div>
-        </div>
+              o primário por último, os dois à direita — o `FormFooter`
+              (15/10/2026), com o "Lendo…" no carregando do botão. */}
+          <FormFooter
+            pending={pendente}
+            submitLabel={`Importar${arquivos.length > 0 ? ` ${arquivos.length}` : ""}`}
+            pendingLabel="Lendo…"
+            submitDisabled={arquivos.length === 0}
+            cancelHref="/documentos-fiscais"
+            erro={erro}
+          />
+        </form>
       </Card>
 
       {vereditos && (

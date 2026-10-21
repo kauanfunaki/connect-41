@@ -11,9 +11,27 @@ describe("grupoDeTexto", () => {
   // o rótulo digitado à mão no plano de contas, e casar por rótulo aproveita
   // esse trabalho em vez de exigir que alguém reescreva doze linhas.
   it("aceita o rótulo, com acento e caixa quaisquer", () => {
-    expect(grupoDeTexto("Despesas Fixas (Pessoal)")).toBe("pessoal");
-    expect(grupoDeTexto("  despesas   fixas (pessoal)  ")).toBe("pessoal");
-    expect(grupoDeTexto("CMV SOBRE RECEITA BRUTA")).toBe("cmv");
+    expect(grupoDeTexto("Custo Administrativo")).toBe("custo_administrativo");
+    expect(grupoDeTexto("  custo   ADMINISTRATIVO  ")).toBe("custo_administrativo");
+    expect(grupoDeTexto("OUTRAS DESPESAS (COM INVESTIMENTOS)")).toBe("outras_despesas");
+  });
+
+  // O padrão até 20/10/2026 tinha doze grupos. Código ou rótulo antigo — um
+  // dreGroup que a migration não pegou, uma planilha guardada — cai no grupo
+  // novo, e não no não classificado.
+  it("aceita o código e o rótulo do padrão antigo, no grupo novo", () => {
+    expect(grupoDeTexto("cmv")).toBe("custo_operacional");
+    expect(grupoDeTexto("mao_de_obra")).toBe("custo_operacional");
+    expect(grupoDeTexto("comerciais")).toBe("custo_operacional");
+    expect(grupoDeTexto("pessoal")).toBe("custo_administrativo");
+    expect(grupoDeTexto("diretoria")).toBe("custo_administrativo");
+    expect(grupoDeTexto("administrativas")).toBe("custo_administrativo");
+    expect(grupoDeTexto("financeiras")).toBe("custo_administrativo");
+    expect(grupoDeTexto("investimentos")).toBe("outras_despesas");
+    expect(grupoDeTexto("Despesas Fixas (Pessoal)")).toBe("custo_administrativo");
+    expect(grupoDeTexto("  despesas   fixas (pessoal)  ")).toBe("custo_administrativo");
+    expect(grupoDeTexto("CMV SOBRE RECEITA BRUTA")).toBe("custo_operacional");
+    expect(grupoDeTexto("Investimentos Totais")).toBe("outras_despesas");
   });
 
   it("reconhece transferência pelos dois nomes", () => {
@@ -39,19 +57,31 @@ describe("grupoDeTexto", () => {
 
 describe("resolverCategorias", () => {
   const cats = [
-    { id: "c1", nome: "Aluguel", dreGroup: "administrativas" },
-    { id: "c2", nome: "Frete", dreGroup: "cmv" },
+    { id: "c1", nome: "Aluguel", dreGroup: "custo_administrativo" },
+    { id: "c2", nome: "Frete", dreGroup: "custo_operacional" },
     { id: "c3", nome: "Coisa Nova", dreGroup: null },
   ];
 
   it("sem exceção, vale o padrão do escritório", () => {
     const r = resolverCategorias(cats, []);
-    expect(r.find((c) => c.id === "c1")).toMatchObject({ grupo: "administrativas", origem: "padrao" });
+    expect(r.find((c) => c.id === "c1")).toMatchObject({ grupo: "custo_administrativo", origem: "padrao" });
   });
 
   it("a exceção da empresa ganha do padrão", () => {
-    const r = resolverCategorias(cats, [{ categoryId: "c1", grupo: "comerciais" }]);
-    expect(r.find((c) => c.id === "c1")).toMatchObject({ grupo: "comerciais", origem: "excecao" });
+    const r = resolverCategorias(cats, [{ categoryId: "c1", grupo: "financiamentos" }]);
+    expect(r.find((c) => c.id === "c1")).toMatchObject({ grupo: "financiamentos", origem: "excecao" });
+  });
+
+  it("código antigo no plano ou na exceção resolve para o grupo novo", () => {
+    const r = resolverCategorias(
+      [
+        { id: "a", nome: "Aluguel", dreGroup: "administrativas" },
+        { id: "b", nome: "Frete", dreGroup: "cmv" },
+      ],
+      [{ categoryId: "b", grupo: "investimentos" }]
+    );
+    expect(r.find((c) => c.id === "a")).toMatchObject({ grupo: "custo_administrativo", origem: "padrao" });
+    expect(r.find((c) => c.id === "b")).toMatchObject({ grupo: "outras_despesas", origem: "excecao" });
   });
 
   // A tela precisa distinguir "o escritório definiu" de "esta empresa foge do
@@ -65,7 +95,7 @@ describe("resolverCategorias", () => {
   // válida faria o valor sumir num grupo que nenhuma linha soma.
   it("exceção inválida cai para o padrão, não para o limbo", () => {
     const r = resolverCategorias(cats, [{ categoryId: "c1", grupo: "grupo_que_nao_existe" }]);
-    expect(r.find((c) => c.id === "c1")).toMatchObject({ grupo: "administrativas", origem: "padrao" });
+    expect(r.find((c) => c.id === "c1")).toMatchObject({ grupo: "custo_administrativo", origem: "padrao" });
   });
 
   it("sem padrão e sem exceção, fica sem grupo", () => {
@@ -79,13 +109,13 @@ describe("resolverCategorias", () => {
   });
 
   it("exceção de categoria que não existe é ignorada, sem quebrar", () => {
-    const r = resolverCategorias(cats, [{ categoryId: "inexistente", grupo: "cmv" }]);
+    const r = resolverCategorias(cats, [{ categoryId: "inexistente", grupo: "custo_operacional" }]);
     expect(r).toHaveLength(3);
   });
 
   it("conta as que ficaram sem grupo", () => {
     expect(contarSemGrupo(resolverCategorias(cats, []))).toBe(1);
-    expect(contarSemGrupo(resolverCategorias(cats, [{ categoryId: "c3", grupo: "cmv" }]))).toBe(0);
+    expect(contarSemGrupo(resolverCategorias(cats, [{ categoryId: "c3", grupo: "custo_operacional" }]))).toBe(0);
   });
 
   it("lista vazia não quebra", () => {

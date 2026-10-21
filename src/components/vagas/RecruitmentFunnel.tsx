@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ClipboardCheck, FileText, LogOut, MoreHorizontal, UserX } from "lucide-react";
+import { ClipboardCheck, FileText, LogOut, UserX } from "lucide-react";
 import { ACTIVE_STAGES, STAGE_LABEL, linhaDaColuna, numerosDasColunas, resumoDoFunil, type Stage } from "@/lib/recruitmentFunnel";
 import { rotuloDaOrigem } from "@/lib/recrutamento/origem";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -10,8 +10,8 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
-import { Popover, ItemDoMenu } from "@/components/ui/Popover";
-import { IconButton } from "@/components/ui/IconButton";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { Selo } from "@/components/ui/Selo";
 import { ROTULO_DA_FAIXA, type Faixa } from "@/lib/recrutamento/triagem";
 import { Aviso } from "@/components/ui/Aviso";
@@ -289,26 +289,15 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
                         </Button>
                       )}
                       {canManage && !isContratado && (
-                        <Popover
+                        // O "⋯" do app (15/10/2026), que era montado à mão aqui
+                        // com Popover + IconButton. Com 36px no celular — 28px
+                        // é pequeno para o dedo (auditoria DRG-37, 07/10/2026).
+                        <MenuDeMaisAcoes
                           align="right"
                           width={180}
+                          rotulo={`Mais ações para ${c.personName}`}
                           aria-label={`Encerrar a candidatura de ${c.personName}`}
-                          trigger={({ open, toggle }) => (
-                            // O `IconButton` do app, com 36px no celular — o
-                            // botão à mão tinha 28px, pequeno para o dedo
-                            // (auditoria DRG-37, 07/10/2026).
-                            <IconButton
-                              size="sm"
-                              variant="framed"
-                              active={open}
-                              onClick={toggle}
-                              aria-label={`Mais ações para ${c.personName}`}
-                              aria-expanded={open}
-                              className="max-md:w-9 max-md:h-9"
-                            >
-                              <MoreHorizontal size={14} />
-                            </IconButton>
-                          )}
+                          classeDoGatilho="max-md:w-9 max-md:h-9"
                         >
                           {({ close }) => (
                             <>
@@ -333,7 +322,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
                               </ItemDoMenu>
                             </>
                           )}
-                        </Popover>
+                        </MenuDeMaisAcoes>
                       )}
                     </div>
                   </article>

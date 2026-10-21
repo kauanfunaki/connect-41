@@ -21,9 +21,9 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { AcaoComMotivo } from "@/components/cobranca/AcaoComMotivo";
+import { DecisoesNoMenu } from "@/components/cobranca/AcaoComMotivo";
 import { ConfigDaRegua, EmpresaNaRegua } from "@/components/cobranca/ConfigDaRegua";
-import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { empresasDoSeletor, type EmpresaDoSeletor } from "@/lib/financeiro/consultas";
 import { moeda } from "@/lib/financeiro/formato";
 import { FAIXAS_DE_ATRASO, type ChaveDaFaixa } from "@/lib/financeiro/analise";
 import {
@@ -488,7 +488,7 @@ async function Acordos({
                     <p className="text-fs-2 mt-1 tabular-nums">
                       Originais {moeda(a.originalCentavos)} → acordado <strong>{moeda(a.acordadoCentavos)}</strong>
                       {a.diferencaCentavos !== 0 && (
-                        <span className={a.diferencaCentavos > 0 ? "text-success-fg" : "text-danger"}>
+                        <span>
                           {" "}
                           ({a.diferencaCentavos > 0 ? "acréscimo" : "desconto"} de {moeda(Math.abs(a.diferencaCentavos))})
                         </span>
@@ -497,35 +497,50 @@ async function Acordos({
                     </p>
                     {a.notas && <p className="text-helper text-fg-secondary mt-1 max-w-[720px]">{a.notas}</p>}
                   </div>
+                  {/* Quebrar e desfazer encerram o acordo: vão no "⋯", em
+                      vermelho, com a janela do motivo (11A, 15/10/2026). */}
                   {podeAgir && (
                     <div className="flex flex-wrap items-center gap-1.5">
-                      {podeQuebrar(a.status).pode && (
-                        <AcaoComMotivo
-                          rotulo="Marcar como quebrado"
-                          titulo="Acordo quebrado"
-                          descricao="As parcelas não pagas continuam em aberto como a dívida e voltam para a cobrança comum (e para a régua)."
-                          confirmar="Marcar como quebrado"
-                          acao={quebrarAcordo.bind(null, a.id)}
-                        />
+                      {!desfazer.pode && (a.status === "ATIVO" || a.status === "QUEBRADO") && (
+                        <span className="text-micro text-fg-muted max-w-[220px]">{desfazer.motivo}</span>
                       )}
-                      {desfazer.pode ? (
-                        <AcaoComMotivo
-                          rotulo="Desfazer"
-                          variante="danger"
-                          titulo="Desfazer acordo"
-                          descricao="Cancela as parcelas e devolve os títulos originais ao em aberto, com o valor e o vencimento de antes. A diferença do acordo sai da DRE econômica."
-                          confirmar="Desfazer acordo"
-                          acao={desfazerAcordo.bind(null, a.id)}
-                        />
-                      ) : (
-                        (a.status === "ATIVO" || a.status === "QUEBRADO") && <span className="text-micro text-fg-muted max-w-[220px]">{desfazer.motivo}</span>
-                      )}
+                      <DecisoesNoMenu
+                        rotulo={`Mais ações do acordo de ${a.sacadoNome}`}
+                        decisoes={[
+                          ...(podeQuebrar(a.status).pode
+                            ? [
+                                {
+                                  rotulo: "Marcar como quebrado",
+                                  variante: "danger" as const,
+                                  titulo: "Acordo quebrado",
+                                  descricao:
+                                    "As parcelas não pagas continuam em aberto como a dívida e voltam para a cobrança comum (e para a régua).",
+                                  confirmar: "Marcar como quebrado",
+                                  acao: quebrarAcordo.bind(null, a.id),
+                                },
+                              ]
+                            : []),
+                          ...(desfazer.pode
+                            ? [
+                                {
+                                  rotulo: "Desfazer acordo",
+                                  variante: "danger" as const,
+                                  titulo: "Desfazer acordo",
+                                  descricao:
+                                    "Cancela as parcelas e devolve os títulos originais ao em aberto, com o valor e o vencimento de antes. A diferença do acordo sai da DRE econômica.",
+                                  confirmar: "Desfazer acordo",
+                                  acao: desfazerAcordo.bind(null, a.id),
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
                     </div>
                   )}
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="overflow-x-auto">
-                    <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Parcelas</p>
+                    <p className="c41-rotulo mb-1">Parcelas</p>
                     <table className="w-full text-ui">
                       <tbody>
                         {a.parcelas.map((p, i) => (
@@ -546,9 +561,14 @@ async function Acordos({
                               ) : p.status === "CANCELADO" ? (
                                 <Selo tom={tomDaVariante(TOM_DA_SITUACAO.CANCELADA)}>Cancelada</Selo>
                               ) : (
-                                <Button href={`/cobranca/${p.id}`} variant="secondary" size="xs">
-                                  Em aberto <ArrowRight size={12} />
-                                </Button>
+                                // Em aberto também é selo, como as outras (15/10/2026): era um
+                                // botão "Em aberto →". O caminho para a parcela fica no "Abrir".
+                                <span className="inline-flex flex-wrap items-center gap-1.5">
+                                  <Selo tom={tomDaVariante(TOM_DA_SITUACAO.EM_ABERTO)}>Em aberto</Selo>
+                                  <Button href={`/cobranca/${p.id}`} variant="secondary" size="xs">
+                                    Abrir <ArrowRight size={12} />
+                                  </Button>
+                                </span>
                               )}
                             </td>
                           </tr>
@@ -557,7 +577,7 @@ async function Acordos({
                     </table>
                   </div>
                   <div className="overflow-x-auto">
-                    <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Títulos originais</p>
+                    <p className="c41-rotulo mb-1">Títulos originais</p>
                     <table className="w-full text-ui">
                       <tbody>
                         {a.originais.map((o) => (
@@ -587,7 +607,7 @@ async function Acordos({
 
 // ─── Régua ──────────────────────────────────────────────────────────────────
 
-async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empresas: { id: string; nome: string }[]; gerencia: boolean }) {
+async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empresas: EmpresaDoSeletor[]; gerencia: boolean }) {
   const d = await dadosDaAbaRegua(tenantId);
   const fora = new Set(d.foraDaRegua.map((f) => f.companyId));
 

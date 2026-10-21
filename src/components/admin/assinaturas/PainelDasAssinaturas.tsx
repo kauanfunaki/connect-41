@@ -392,11 +392,26 @@ function PainelDeEdicao({
               <option value="" disabled>
                 Selecione um plano
               </option>
-              {planos.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.ativo ? p.nome : `${p.nome} (inativo)`}
-                </option>
-              ))}
+              {/* Plano inativo numa seção própria do seletor (15/10/2026), e não
+                  "(inativo)" escrito no nome da opção. */}
+              {planos
+                .filter((p) => p.ativo)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
+                ))}
+              {planos.some((p) => !p.ativo) && (
+                <optgroup label="Inativos">
+                  {planos
+                    .filter((p) => !p.ativo)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nome}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
             </Select>
           </CampoForm>
           <CampoForm label="Situação" htmlFor={`${id}-status`}>

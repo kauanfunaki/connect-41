@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { ManualWorkspace } from "@/components/bpoManual/ManualWorkspace";
+import { NovoDocumento } from "@/components/bpoManual/NovoDocumento";
 import {
   criarDocumentoManual,
   renomearDocumentoManual,
@@ -56,9 +57,12 @@ export default async function BpoManualPage() {
       {/* Subtítulo no próprio PageHeader (30/09) — estava escrito à parte, com
           o cabeçalho aninhado num bloco com margem própria. */}
       <div className="flex-shrink-0">
+        {/* "+ Novo documento" à direita do título, numa janela (P19, 15/10/2026):
+            ficava no pé da árvore de documentos. */}
         <PageHeader
           title="Repositório de manuais"
           subtitle="Instruções internas do setor — escritas pelos colaboradores para alinhamento em ausências e férias."
+          action={canAct ? <NovoDocumento action={criarDocumentoManual} /> : undefined}
         />
       </div>
 
@@ -83,7 +87,6 @@ export default async function BpoManualPage() {
               updatedAt: p.updatedAt.toISOString(),
             })),
           }))}
-          createDocumentAction={criarDocumentoManual}
           renameDocumentAction={renomearDocumentoManual}
           deleteDocumentAction={excluirDocumentoManual}
           updateDocumentIconAction={atualizarIconeDocumento}

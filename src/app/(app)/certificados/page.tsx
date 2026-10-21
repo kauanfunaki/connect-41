@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { KeyRound, AlertTriangle, CalendarClock, CalendarRange, Unlink } from "lucide-react";
+import { KeyRound, AlertTriangle, History, Unlink } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -58,6 +58,9 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
     dias: diasAte(c.expiresAt, hoje),
   }));
   const emUso = linhas.filter((c) => c.situacao !== "substituido");
+  const vencidos = emUso.filter((c) => c.situacao === "vencido").length;
+  const aRenovar = vencidos + emUso.filter((c) => c.situacao === "a_renovar").length;
+  const em30 = emUso.filter((c) => c.dias >= 0 && c.dias <= 30).length;
 
   const naAba = (c: (typeof linhas)[number]) => {
     if (aba === "substituidos") return c.situacao === "substituido";
@@ -87,20 +90,40 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
         action={acesso.podeImportar ? <ImportarRelatorio /> : undefined}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {/* Vermelho, como o painel da Home e o selo da linha — e só quando há
-            vencido: era âmbar até com zero (`highlight` sem condição). */}
-        <MetricCard
-          label="Vencidos"
-          value={emUso.filter((c) => c.situacao === "vencido").length}
-          tom={emUso.some((c) => c.situacao === "vencido") ? "critico" : undefined}
-          icon={<AlertTriangle size={15} />}
-          href={href("renovar")}
-        />
-        <MetricCard label="Vencem em 30 dias" value={emUso.filter((c) => c.dias >= 0 && c.dias <= 30).length} icon={<CalendarClock size={15} />} href={href("renovar")} />
-        <MetricCard label="Vencem em 60 dias" value={emUso.filter((c) => c.dias >= 0 && c.dias <= 60).length} icon={<CalendarRange size={15} />} href={href("renovar")} />
-        <MetricCard label="Sem empresa no Connect" value={emUso.filter((c) => !c.company).length} icon={<Unlink size={15} />} href={href("sem-empresa")} />
-      </div>
+      {/* A faixa de totais, um cartão por recorte da lista (15/10/2026): eram
+          quatro cartões soltos numa grade própria, e "Vencem em 30 dias" e "em
+          60 dias" abriam o mesmo recorte sem nenhum marcar o que está à mostra.
+          Os prazos viram o detalhe do "A renovar"; vermelho só com vencido. */}
+      <FaixaDeTotais
+        className="mb-6"
+        itens={[
+          {
+            rotulo: "A renovar",
+            valor: String(aRenovar),
+            tom: vencidos > 0 ? "text-danger" : aRenovar > 0 ? "text-warning-fg" : undefined,
+            icone: <AlertTriangle />,
+            detalhe: `${vencidos} ${vencidos === 1 ? "vencido" : "vencidos"} · ${em30} em 30 dias`,
+            href: href("renovar"),
+            ativo: aba === "renovar",
+          },
+          { rotulo: "Todos em uso", valor: String(emUso.length), icone: <KeyRound />, href: href("todos"), ativo: aba === "todos" },
+          {
+            rotulo: "Sem empresa no Connect",
+            valor: String(emUso.filter((c) => !c.company).length),
+            icone: <Unlink />,
+            href: href("sem-empresa"),
+            ativo: aba === "sem-empresa",
+          },
+          {
+            rotulo: "Substituídos",
+            valor: String(linhas.length - emUso.length),
+            tom: "text-fg-muted",
+            icone: <History />,
+            href: href("substituidos"),
+            ativo: aba === "substituidos",
+          },
+        ]}
+      />
 
       {/* O recorte (a renovar, em uso, sem empresa, substituídos) é filtro da
           mesma lista, não outra tela: foi das abas para o "Filtros" no
@@ -139,7 +162,16 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
 
         {visiveis.length === 0 ? (
           <EmptyState
-            title={certs.length === 0 ? "Nenhum certificado importado" : busca ? "Nada encontrado" : "Nada nesta aba"}
+            // O recorte é filtro de situação, não aba (15/10/2026): o vazio fala dele.
+            title={
+              certs.length === 0
+                ? "Nenhum certificado importado"
+                : busca
+                  ? "Nada encontrado"
+                  : aba === "renovar"
+                    ? "Nenhum certificado a renovar"
+                    : "Nenhum certificado nesta situação"
+            }
             // Texto para quem usa a tela (05/10/2026) — mostrava o caminho do script no repositório.
             description={
               certs.length === 0

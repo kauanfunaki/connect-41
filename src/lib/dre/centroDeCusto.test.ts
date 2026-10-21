@@ -7,7 +7,7 @@ import { passaNoFiltroDeCentro } from "@/lib/financeiro/centroDeCusto";
 
 const mapeamento = montarMapeamento([
   { categoria: "Vendas", grupo: "receita_bruta" },
-  { categoria: "Aluguel", grupo: "administrativas" },
+  { categoria: "Aluguel", grupo: "custo_administrativo" },
   { categoria: "Simples", grupo: "impostos" },
   { categoria: "Juros recebidos", grupo: "outras_receitas" },
 ]);
@@ -59,7 +59,7 @@ describe("quadroPorCentro", () => {
     expect(quadro.total.receitaBruta).toBe(valorDaLinha(semFiltro.resultado, "receita_bruta"));
     expect(quadro.total.resultado).toBe(valorDaLinha(semFiltro.resultado, LINHA_DE_RESULTADO));
     expect(quadro.total.lancamentos).toBe(semFiltro.lancamentos);
-    const despesasSemFiltro = ["impostos", "cmv", "mao_de_obra", "comerciais", "pessoal", "diretoria", "administrativas", "financeiras", "investimentos", "outras_despesas"]
+    const despesasSemFiltro = ["impostos", "custo_operacional", "custo_administrativo", "financiamentos", "outras_despesas"]
       .reduce((n, g) => n + (semFiltro.resultado.porGrupo[g] ?? 0), 0);
     expect(quadro.total.despesas).toBe(despesasSemFiltro);
   });
@@ -69,9 +69,10 @@ describe("quadroPorCentro", () => {
     const loja = quadro.linhas.find((x) => x.centroId === "loja")!;
     // Obra: 1.000 de venda − 300 de aluguel − 40 de perda.
     expect(obra.resultado).toBe(100_000 - 30_000 - 4_000);
-    // Loja: 500 + 200 renegociado (receita) + 20 de acréscimo; o imposto fica fora do resultado.
+    // Loja: 500 + 200 renegociado (receita) + 20 de acréscimo − 50 de imposto, que no
+    // padrão desconta do EBITDA.
     expect(loja.receitaBruta).toBe(70_000);
-    expect(loja.resultado).toBe(70_000 + 2_000);
+    expect(loja.resultado).toBe(70_000 + 2_000 - 5_000);
     expect(loja.despesas).toBe(-5_000);
   });
 

@@ -2,29 +2,46 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight, ListChecks, Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { canManageSector } from "@/lib/auth/context";
+import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { NovoCiclo } from "@/components/avaliacoes/AddCicloForm";
+import { NovaCompetencia } from "@/components/avaliacoes/AddCompetenciaForm";
+import { CompetenciaRow, colunasDasCompetencias } from "@/components/avaliacoes/CompetenciaRow";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
 import { formatCalendarDate } from "@/lib/format";
-import { criarCiclo } from "./actions";
+import { atualizarCompetencia, criarCiclo, criarCompetencia, excluirCompetencia } from "./actions";
 
-export default async function AvaliacoesPage() {
+export default async function AvaliacoesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const { ctx, setor } = await abrirTelaDoModulo("dp_avaliacoes");
   const canManage = canManageSector(ctx, setor);
+  // Competências é uma aba daqui desde 20/10/2026 (escolha 8A dos Ajustes de
+  // 15/10): era uma tela das Configurações, só do administrador.
+  const aba = (await searchParams).aba === "competencias" ? "competencias" : "ciclos";
 
   const prisma = getPrisma();
-  const ciclos = await prisma.evaluationCycle.findMany({
-    where: { tenantId: ctx.tenantId },
-    orderBy: { startDate: "desc" },
-    include: { _count: { select: { evaluations: true } } },
-  });
+  const [ciclos, competencias] = await Promise.all([
+    prisma.evaluationCycle.findMany({
+      where: { tenantId: ctx.tenantId },
+      orderBy: { startDate: "desc" },
+      include: { _count: { select: { evaluations: true } } },
+    }),
+    prisma.competency.findMany({
+      where: { tenantId: ctx.tenantId },
+      orderBy: { name: "asc" },
+      include: { _count: { select: { scores: true } } },
+    }),
+  ]);
 
   const periodo = (c: (typeof ciclos)[number]) =>
     `${formatCalendarDate(c.startDate)}${c.endDate ? ` — ${formatCalendarDate(c.endDate)}` : ""}`;
@@ -36,17 +53,37 @@ export default async function AvaliacoesPage() {
       <SeloDoDP cor="bg-surface-2 text-fg-muted border-border">Encerrado</SeloDoDP>
     );
 
+  const abas = [
+    { chave: "ciclos", rotulo: "Ciclos", href: "/avaliacoes", contagem: ciclos.length },
+    { chave: "competencias", rotulo: "Competências", href: "/avaliacoes?aba=competencias", contagem: competencias.length },
+  ];
+
   return (
     <PageContainer>
       <PageHeader
         title="Avaliações de desempenho"
-        subtitle={<>{ciclos.length} ciclo{ciclos.length !== 1 ? "s" : ""} de avaliação</>}
+        subtitle={
+          aba === "competencias"
+            ? "O que se avalia em cada ciclo, com a nota de 0 a 10 de cada competência."
+            : "Os ciclos de avaliação e as competências avaliadas em cada um."
+        }
         // O criar no cabeçalho, com o formulário numa janela — era um formulário
-        // aberto no topo da lista (escolha 5A do Kauan, 08/10/2026).
-        action={canManage ? <NovoCiclo action={criarCiclo} /> : undefined}
+        // aberto no topo da lista (escolha 5A do Kauan, 08/10/2026). Cada aba
+        // cria o que ela lista.
+        action={
+          !canManage ? undefined : aba === "competencias" ? (
+            <NovaCompetencia action={criarCompetencia} />
+          ) : (
+            <NovoCiclo action={criarCiclo} />
+          )
+        }
       />
 
-      {ciclos.length === 0 ? (
+      <AbasDeLink abas={abas} ativa={aba} />
+
+      {aba === "competencias" ? (
+        <AbaDasCompetencias competencias={competencias} podeEditar={canManage} podeApagar={canManage && podeExcluir(ctx)} />
+      ) : ciclos.length === 0 ? (
         <Card>
           <EmptyState
             icon={<Star />}
@@ -124,5 +161,53 @@ export default async function AvaliacoesPage() {
         </>
       )}
     </PageContainer>
+  );
+}
+
+function AbaDasCompetencias({
+  competencias,
+  podeEditar,
+  podeApagar,
+}: {
+  competencias: { id: string; name: string; description: string | null; _count: { scores: number } }[];
+  podeEditar: boolean;
+  podeApagar: boolean;
+}) {
+  if (competencias.length === 0) {
+    return (
+      <Card>
+        <EmptyState
+          icon={<ListChecks />}
+          title="Nenhuma competência cadastrada"
+          description={
+            podeEditar
+              ? "Cadastre em “Nova competência” o que se avalia nos ciclos. Sem nenhuma, não dá para avaliar."
+              : "Quem gere as avaliações ainda não cadastrou as competências. Sem nenhuma, não dá para avaliar."
+          }
+        />
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="divide-y divide-border">
+      <div
+        className={`hidden sm:grid ${colunasDasCompetencias(podeEditar || podeApagar)} gap-x-4 px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-muted`}
+      >
+        <span>Competência</span>
+        <span>Descrição</span>
+        <span>Uso</span>
+        {(podeEditar || podeApagar) && <span className="sr-only">Ações</span>}
+      </div>
+      {competencias.map((c) => (
+        <CompetenciaRow
+          key={c.id}
+          competencia={c}
+          usos={c._count.scores}
+          updateAction={podeEditar ? atualizarCompetencia : undefined}
+          deleteAction={podeApagar && c._count.scores === 0 ? excluirCompetencia.bind(null, c.id) : undefined}
+        />
+      ))}
+    </Card>
   );
 }

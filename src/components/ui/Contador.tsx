@@ -1,4 +1,4 @@
-export type TomDoContador = "neutro" | "marca" | "cheio" | "alerta";
+export type TomDoContador = "neutro" | "marca" | "cheio" | "alerta" | "atencao";
 
 // Quatro contadores com desenhos diferentes até 07/10/2026: o do sino
 // (vermelho, 16px de altura, 10px de fonte), os das abas do sino e da central
@@ -8,6 +8,8 @@ export type TomDoContador = "neutro" | "marca" | "cheio" | "alerta";
 //   marca  — a mesma contagem na aba selecionada
 //   cheio  — o que pede leitura (não lidas): azul 41 com texto branco
 //   alerta — o selo do sino, vermelho com texto branco
+//   atencao — o que espera alguém (conversas paradas), âmbar a 10% com letra
+//             -fg (15/10/2026: era pílula à mão no WhatsApp e na caixa)
 // Os cheios usam os preenchimentos fixos (`--c41-*-solid`): branco sobre o tom
 // do tema escuro reprova AA.
 const COR: Record<TomDoContador, string> = {
@@ -15,6 +17,7 @@ const COR: Record<TomDoContador, string> = {
   marca: "bg-brand/10 text-brand",
   cheio: "bg-brand-solid text-on-brand",
   alerta: "bg-danger-solid text-white",
+  atencao: "bg-warning-bg text-warning-fg",
 };
 
 type Props = {

@@ -85,6 +85,25 @@ export function enderecoDaPasta(base: string, pastaId: string | null, extra?: Re
   return q ? `${base}${base.includes("?") ? "&" : "?"}${q}` : base;
 }
 
+/**
+ * A trilha das pastas: a raiz ("Pastas do escritório", o nome da empresa) e o
+ * caminho até a pasta aberta, que é o item sem link.
+ */
+export function trilhaDaPasta(
+  dados: Pick<NavegadorNaTela, "pasta" | "caminho">,
+  base: string,
+  rotuloDaRaiz: string
+): { label: string; href?: string; truncate?: boolean }[] {
+  return [
+    { label: rotuloDaRaiz, href: dados.pasta ? enderecoDaPasta(base, null) : undefined, truncate: true },
+    ...dados.caminho.map((p, i) => ({
+      label: p.nome,
+      href: i < dados.caminho.length - 1 ? enderecoDaPasta(base, p.id) : undefined,
+      truncate: true,
+    })),
+  ];
+}
+
 /** "3 itens", "1 item", "vazia". */
 export function rotuloDeItens(n: number): string {
   if (n === 0) return "vazia";

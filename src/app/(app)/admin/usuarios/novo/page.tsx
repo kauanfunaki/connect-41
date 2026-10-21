@@ -1,57 +1,7 @@
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { notFound } from "next/navigation";
-import { UsuarioForm } from "@/components/admin/UsuarioForm";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { criarUsuario } from "../actions";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { assignableRoles, ROLE_OPTIONS } from "@/lib/roles";
-import { getSectorMaps } from "@/lib/sectors";
-import { canAddUser } from "@/lib/subscriptions";
-import { Aviso } from "@/components/ui/Aviso";
+import { redirect } from "next/navigation";
 
-export default async function NovoUsuarioPage() {
-  const ctx = await getAuthContext();
-  if (!isFullWrite(ctx.role)) notFound();
-
-  const allowed = assignableRoles(ctx.role);
-  const roleOptions = ROLE_OPTIONS.filter((r) => allowed.includes(r.value));
-  const { options: sectorOptions } = await getSectorMaps(ctx.tenantId);
-
-  // A listagem já esconde o botão quando o limite estourou; isto cobre quem
-  // chega por URL direta, pra não preencher um formulário que não salva.
-  const seatCheck = await canAddUser(ctx.tenantId);
-  if (!seatCheck.allowed) {
-    return (
-      <PageContainer>
-
-        <Aviso tom="atencao">
-          <p className="text-fg">{seatCheck.reason}</p>
-        </Aviso>
-
-        <Button href="/admin/usuarios" variant="secondary" className="mt-4">
-          <ArrowLeft size={14} /> Voltar para Usuários
-        </Button>
-      </PageContainer>
-    );
-  }
-
-  return (
-    <PageContainer>
-      <PageHeader title="Novo usuário" />
-
-      <div className="max-w-[720px]">
-        <Card className="p-6">
-          <UsuarioForm
-            action={criarUsuario}
-            cancelHref="/admin/usuarios"
-            roleOptions={roleOptions}
-            sectorOptions={sectorOptions}
-          />
-        </Card>
-      </div>
-    </PageContainer>
-  );
+// Criar e editar o usuário abrem no painel ao lado da tabela desde 20/10/2026
+// (escolha 3A dos Ajustes de 15/10). Este endereço fica para os links antigos.
+export default function NovoUsuarioPage() {
+  redirect("/admin/usuarios?novo=1");
 }

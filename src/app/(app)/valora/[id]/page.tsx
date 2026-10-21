@@ -4,10 +4,11 @@ import { AlertTriangle, Building2, ClipboardList, MessageSquareText, Receipt } f
 import { getPrisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { Badge } from "@/components/ui/Badge";
+import { MetricCard } from "@/components/ui/MetricCard";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { EditarProposta } from "@/components/valora/EditarProposta";
 import { acessoAoValora } from "@/lib/valora/servidor";
@@ -92,7 +93,8 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): o pai é sempre o Valora. */}
+      <Breadcrumb items={[{ label: "Valora", href: "/valora" }, { label: p.cliente, truncate: true }]} />
       <PageHeader
         title={p.cliente}
         subtitle={`Simulada em ${formatInstantDate(p.createdAt)} por ${p.createdBy.name} · ${ROTULO_REGIME[perfil.regime] ?? perfil.regime}`}
@@ -183,11 +185,14 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
 
         <Card className="p-5 flex flex-col gap-4 lg:sticky lg:top-4">
           <TituloDoCartao icone={<Receipt size={16} />} titulo="Preço calculado no dia" />
-          <div>
-            <p className="text-fs-2 text-fg-secondary">Honorário mensal (alvo)</p>
-            <p className="font-display text-metric font-semibold tabular-nums leading-tight">{brl(resultado.mensal?.alvo ?? alvo)}</p>
-            {resultado.parametros && <p className="text-fs-2 text-fg-muted">com {resultado.parametros.margemAlvoPct}% de margem</p>}
-          </div>
+          {/* O número principal no cartão de número, em azul cheio (15/10/2026):
+              era um valor de 30px escrito à mão. */}
+          <MetricCard
+            label="Honorário mensal (alvo)"
+            value={brl(resultado.mensal?.alvo ?? alvo)}
+            detalhe={resultado.parametros ? `com ${resultado.parametros.margemAlvoPct}% de margem` : undefined}
+            destaque
+          />
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             <InfoRow label="Piso" value={brl(resultado.mensal?.piso)} mono />
             <InfoRow label="Tabela" value={brl(resultado.mensal?.tabela)} mono />

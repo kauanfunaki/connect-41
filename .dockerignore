@@ -11,3 +11,13 @@ Dockerfile
 .dockerignore
 # regenerado durante o build (prisma generate)
 src/generated
+# Estado privado de runtime não deve entrar no contexto nem na imagem de CI.
+storage
+public/uploads
+videos
+android/backup-key
+*.pfx
+*.p12
+*.pem
+*.keystore
+*.jks

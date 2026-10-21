@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import type { HandoffState } from "@/app/(app)/transferencias/actions";
 import type { EntityType } from "@/generated/prisma/enums";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -15,8 +15,21 @@ import { MentionTextarea, type MentionUser } from "@/components/transferencias/M
 import { SectorAssigneePicker } from "@/components/transferencias/SectorAssigneePicker";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
+import { nomeExibicao } from "@/lib/companyName";
 
-type EntityOption = { id: string; name: string; cnpj?: string | null };
+type EntityOption = {
+  id: string;
+  name: string;
+  cnpj?: string | null;
+  /** Da empresa, para o seletor com logo e a filial embaixo da matriz. */
+  displayName?: string | null;
+  logoUrl?: string | null;
+  parentCompanyId?: string | null;
+  /** Da pessoa. */
+  photoUrl?: string | null;
+};
 
 type FixedEntity = { entityType: EntityType; entityId: string; entityName: string; entityCnpj?: string | null };
 
@@ -60,6 +73,15 @@ export function HandoffForm({
   const [descriptionValue, setDescriptionValue] = useState(inicial?.description ?? "");
   const [instructions, setInstructions] = useState<Record<string, string>>({});
   const entityOptions = entityType === "COMPANY" ? companies : people;
+  // As opções do seletor com busca: empresa com logo, CNPJ, filial e recentes;
+  // pessoa com a foto.
+  const opcoesDoSeletor = useMemo(
+    () =>
+      entityType === "COMPANY"
+        ? opcoesDeEmpresa(companies.map((c) => ({ ...c, nome: nomeExibicao(c) })))
+        : people.map((p) => ({ value: p.id, label: p.name, imagem: p.photoUrl ?? null })),
+    [entityType, companies, people]
+  );
   const { dialog: templateConfirmDialog, requestConfirm: requestTemplateConfirm } = useConfirm();
 
   function toggleSector(code: string, checked: boolean) {
@@ -187,12 +209,21 @@ export function HandoffForm({
                 : undefined
             }
           >
-            <Select id="entityId" name="entityId" required value={entityId} onChange={(e) => handleEntityChange(e.target.value)}>
-              <option value="" disabled>Selecionar…</option>
-              {entityOptions.map((e) => (
-                <option key={e.id} value={e.id}>{e.name}</option>
-              ))}
-            </Select>
+            {/* Com busca, logo e recentes (15/10/2026): era um <select> com
+                todas as opções do escopo. A chave remonta o campo ao trocar de
+                tipo, que zera a escolha. */}
+            <SearchableSelect
+              key={entityType}
+              id="entityId"
+              name="entityId"
+              options={opcoesDoSeletor}
+              defaultValue={entityId}
+              onChange={handleEntityChange}
+              avatar
+              textoSemValor="Selecionar…"
+              placeholder={entityType === "COMPANY" ? "Buscar empresa…" : "Buscar pessoa…"}
+              lembrarRecentes={entityType === "COMPANY" ? "empresas" : undefined}
+            />
           </CampoForm>
         </div>
       )}
@@ -288,7 +319,7 @@ export function HandoffForm({
       {selectedInOrder.length > 0 && (
         <div className="space-y-4 border-t border-border pt-5">
           {/* Título no estilo dos títulos de seção de formulário (FormSection). */}
-          <h3 className="text-fs-2 font-semibold text-fg-muted uppercase tracking-wider">Instrução por setor</h3>
+          <h3 className="c41-rotulo">Instrução por setor</h3>
           {selectedInOrder.map((s) => (
             <CampoForm key={s.value} label={`Instrução para ${s.label}`} htmlFor={`instruction_${s.value}`}>
               <Textarea

@@ -25,7 +25,7 @@ type Props = {
   podeExcluirColuna: boolean;
 };
 
-// Botão "Editar lista" — CRUD completo de estágios (nome, cor, tipo/bolinha,
+// Botão "Editar tarefa" — CRUD completo de estágios (nome, cor, tipo/bolinha,
 // ordem, exclusão) num modal só, reconciliado de uma vez pela action
 // atualizarEstagios ao salvar.
 export function EditPipelineStagesModal({ initialStages, action, podeExcluirColuna }: Props) {
@@ -94,7 +94,7 @@ export function EditPipelineStagesModal({ initialStages, action, podeExcluirColu
         <Pencil size={14} /> Editar lista
       </Button>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Editar lista" maxWidth="max-w-lg">
+      <Modal open={open} onClose={() => setOpen(false)} title="Editar tarefa" maxWidth="max-w-lg">
         <div className="space-y-3">
           {/* Cabeçalho — sem isso "Título do estágio" (nome livre) e "Status
               da bolinha" (tipo que rege a cor/estado do StageDot) pareciam o
@@ -106,7 +106,7 @@ export function EditPipelineStagesModal({ initialStages, action, podeExcluirColu
             <span className="w-7 flex-shrink-0" />
             <span className="w-9 flex-shrink-0" />
             <span className="flex-1 min-w-0 text-fs-1 font-medium text-fg-muted">Título do estágio</span>
-            <span className="w-[150px] flex-shrink-0 text-fs-1 font-medium text-fg-muted">Conclui tarefas</span>
+            <span className="w-[150px] flex-shrink-0 text-fs-1 font-medium text-fg-muted">Conclui atividades</span>
             <span className="w-3.5 flex-shrink-0" />
             {algumaLixeira && <span className="w-7 flex-shrink-0" />}
           </div>
@@ -132,7 +132,7 @@ export function EditPipelineStagesModal({ initialStages, action, podeExcluirColu
                   className="flex-1 min-w-0"
                 />
                 <div className="w-[150px] flex-shrink-0">
-                  <Switch checked={row.type === "DONE"} onCheckedChange={(checked) => update(i, { type: checked ? "DONE" : "NOT_STARTED" })} rotulo="Conclui tarefas" aria-label={`Conclui tarefas no estágio ${i + 1}`} size="sm" />
+                  <Switch checked={row.type === "DONE"} onCheckedChange={(checked) => update(i, { type: checked ? "DONE" : "NOT_STARTED" })} rotulo="Conclui atividades" aria-label={`Conclui atividades no estágio ${i + 1}`} size="sm" />
                 </div>
                 <StageDot color={row.color} type={row.type} />
                 {mostraLixeira(row) ? (

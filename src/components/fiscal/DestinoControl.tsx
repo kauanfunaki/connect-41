@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -85,7 +85,13 @@ export function DestinoControl({ documentoId, destinoAtual, motivoAtual, podeDec
       )}
 
       {pedindoMotivo && (
-        <div className="mt-4 space-y-4">
+        <form
+          className="mt-4 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            aplicar("IGNORADO", motivo);
+          }}
+        >
           <CampoForm
             label="Por que fica fora do financeiro?"
             htmlFor="motivo"
@@ -99,19 +105,19 @@ export function DestinoControl({ documentoId, destinoAtual, motivoAtual, podeDec
               placeholder="Ex.: nota de teste do emissor, já lançada manualmente no Omie…"
             />
           </CampoForm>
-          {/* Rodapé padrão: Cancelar à esquerda do primário, os dois à direita. */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <Button type="button" variant="secondary" onClick={() => setPedindoMotivo(false)} disabled={pendente}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={() => aplicar("IGNORADO", motivo)} disabled={pendente || !motivo.trim()}>
-              {pendente ? "Salvando…" : "Ignorar documento"}
-            </Button>
-          </div>
-        </div>
+          {/* O `FormFooter` (15/10/2026): o rodapé era montado à mão, com o
+              "Salvando…" num texto trocado. */}
+          <FormFooter
+            pending={pendente}
+            submitLabel="Ignorar documento"
+            submitDisabled={!motivo.trim()}
+            onCancel={() => setPedindoMotivo(false)}
+            erro={erro}
+          />
+        </form>
       )}
 
-      {erro && <p className="text-helper text-danger mt-3">{erro}</p>}
+      {erro && !pedindoMotivo && <p className="text-helper text-danger mt-3">{erro}</p>}
     </div>
   );
 }

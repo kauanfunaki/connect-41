@@ -7,6 +7,8 @@
 
 import { hojeIso } from "@/lib/datas/calendario";
 import { normalizePhoneBR } from "@/lib/chatwoot/linking";
+import { formatInstantDate } from "@/lib/format";
+import type { AssessmentType } from "@/generated/prisma/enums";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -94,4 +96,41 @@ export function mensagemDoTeste({
 export function linkDoWhatsApp(telefone: string | null | undefined, mensagem: string): string {
   const numero = normalizePhoneBR(telefone)?.replace(/\D/g, "") ?? "";
   return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+}
+
+/** "13/10" — dia e mês, no fuso do escritório. */
+export function diaEMesDoLink(d: Date): string {
+  return formatInstantDate(d, { day: "2-digit", month: "2-digit" });
+}
+
+/**
+ * O link pendente como o quadro "Teste" da ficha do candidato e da candidatura
+ * o recebe (`TesteCard`, 15/10/2026): o mesmo desenho 1A da página do teste,
+ * com o prazo já calculado no servidor — calcular no navegador daria uma barra
+ * diferente da que veio pronta. `type` e `templateId` são o que o "Gerar novo
+ * link" repete.
+ */
+export type LinkPendenteNaFicha = {
+  status: "PENDENTE";
+  id: string;
+  token: string;
+  validoAte: string;
+  prazo: PrazoDoLink;
+  type: AssessmentType;
+  templateId: string | null;
+};
+
+export function linkPendenteNaFicha(
+  link: { id: string; token: string; createdAt: Date; expiresAt: Date; type: AssessmentType; templateId: string | null },
+  agora: Date
+): LinkPendenteNaFicha {
+  return {
+    status: "PENDENTE",
+    id: link.id,
+    token: link.token,
+    validoAte: diaEMesDoLink(link.expiresAt),
+    prazo: prazoDoLink({ criadoEm: link.createdAt, expiraEm: link.expiresAt, agora }),
+    type: link.type,
+    templateId: link.templateId,
+  };
 }

@@ -44,7 +44,7 @@ export function pareceImpostoRetido(nome: string): boolean {
 
 export const IMPOSTOS_RETIDOS_NO_CMV: CorrecaoDaLinha = {
   de: "impostos",
-  para: "cmv",
+  para: "custo_operacional",
   ehDaCategoria: ehImpostosRetidosServicosTomados,
   pareceComACategoria: pareceImpostoRetido,
   motivo: "imposto retido de serviço tomado fica no CMV, não nos impostos sobre a receita (pedido de 14/10/2026)",

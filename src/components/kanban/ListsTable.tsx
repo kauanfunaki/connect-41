@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Folder as FolderIcon } from "lucide-react";
 import { formatCalendarDate } from "@/lib/format";
 import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -12,6 +13,8 @@ export type ListRow = {
   total: number;
   startDate: Date | null;
   endDate: Date | null;
+  /** A pasta da lista, na tabela do espaço; `null` é a lista solta. */
+  pasta?: { id: string; nome: string } | null;
 };
 
 type Props = {
@@ -21,9 +24,17 @@ type Props = {
    * server action crua (não uma closure): quem passa é um Server Component, e
    * ali só o `.bind` de uma action consegue atravessar a fronteira. */
   deleteAction?: (pipelineId: string) => Promise<PipelineState>;
+  /**
+   * Mostra a coluna "Pasta", com o link para ela (a tabela do espaço, que traz
+   * todas as listas — Ajustes 15/10, G3). O endereço da pasta é este + o id.
+   */
+  pastaBasePath?: string;
 };
 
 const DATA_CURTA = { day: "2-digit", month: "short" } as const;
+
+/** A lista fora de pasta, na coluna e no funil. */
+const SEM_PASTA = "Sem pasta";
 
 /** Data-calendário em ISO (AAAA-MM-DD) para o funil — gravada à meia-noite UTC. */
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -38,9 +49,12 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
  * dentro de link é HTML inválido. No celular ficam só o nome e o menu, como antes.
  *
  * Funil no nome e nas duas datas (02/10/2026), como nas outras tabelas;
- * Progresso fica sem, por ser número.
+ * Progresso fica sem, por ser número. No espaço, a coluna "Pasta" (com funil)
+ * diz onde cada lista mora — as das pastas aparecem ali também, sem precisar
+ * abrir pasta por pasta (Ajustes 15/10, G3).
  */
-export function ListsTable({ lists, basePath, deleteAction }: Props) {
+export function ListsTable({ lists, basePath, deleteAction, pastaBasePath }: Props) {
+  const comPasta = pastaBasePath !== undefined;
   if (lists.length === 0) return null;
 
   return (
@@ -49,6 +63,7 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
         id: l.id,
         valores: {
           lista: l.name,
+          pasta: l.pasta?.nome ?? SEM_PASTA,
           inicio: l.startDate ? iso(l.startDate) : "",
           termino: l.endDate ? iso(l.endDate) : "",
         },
@@ -59,8 +74,13 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
           <thead>
             <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
               <th className="px-4 py-3">
-                <FiltroDaColuna rotulo="Lista" chave="lista" />
+                <FiltroDaColuna rotulo="Tarefa" chave="lista" />
               </th>
+              {comPasta && (
+                <th className="px-4 py-3 w-48 hidden sm:table-cell">
+                  <FiltroDaColuna rotulo="Pasta" chave="pasta" />
+                </th>
+              )}
               <th className="px-4 py-3 w-44 hidden sm:table-cell">Progresso</th>
               <th className="px-4 py-3 w-28 hidden md:table-cell">
                 <FiltroDaColuna rotulo="Início" chave="inicio" tipo="data" />
@@ -91,6 +111,23 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
                       </span>
                     </Link>
                   </td>
+                  {comPasta && (
+                    <td className="px-4 py-2.5 hidden sm:table-cell">
+                      {l.pasta ? (
+                        <Link
+                          href={`${pastaBasePath}/${l.pasta.id}`}
+                          className="inline-flex items-center gap-1.5 max-w-full text-fg-secondary hover:text-brand transition-colors"
+                        >
+                          <FolderIcon size={13} className="flex-shrink-0" />
+                          <span className="truncate" title={l.pasta.nome}>
+                            {l.pasta.nome}
+                          </span>
+                        </Link>
+                      ) : (
+                        <span className="text-fg-muted">{SEM_PASTA}</span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 hidden sm:table-cell">
                     {l.total > 0 ? (
                       <div className="flex items-center gap-2">
@@ -113,7 +150,7 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
                   </td>
                   {deleteAction && (
                     <td className="px-4 py-2.5">
-                      <DeleteEntityMenu kind="lista" name={l.name} action={deleteAction.bind(null, l.id)} />
+                      <DeleteEntityMenu kind="tarefa" name={l.name} action={deleteAction.bind(null, l.id)} />
                     </td>
                   )}
                 </LinhaFiltravel>

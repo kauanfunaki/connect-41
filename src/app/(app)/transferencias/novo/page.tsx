@@ -13,6 +13,7 @@ import { getSectorUsers } from "@/lib/sectorUsers";
 import type { EntityType } from "@/generated/prisma/enums";
 import { mensagemComPropostas } from "@/lib/ia/chat/conversas";
 import { lerPropostas } from "@/lib/ia/chat/regras";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 
 export default async function NovoHandoffPage({
   searchParams,
@@ -104,12 +105,12 @@ export default async function NovoHandoffPage({
     prisma.company.findMany({
       where: await scopedCompanyWhere(ctx),
       orderBy: { name: "asc" },
-      select: { id: true, name: true, cnpj: true },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
     }),
     prisma.person.findMany({
       where: await scopedPersonWhere(ctx),
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, photoUrl: true },
     }),
   ]);
 

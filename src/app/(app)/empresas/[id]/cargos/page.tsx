@@ -63,19 +63,14 @@ export default async function CargosPage({
 
       {cargos.length === 0 ? (
         <Card>
+          {/* Sem repetir o "Novo cargo": ele mora no cabeçalho, e o texto diz onde (P19, 15/10/2026). */}
           <EmptyState
             icon={<Briefcase />}
             title="Nenhum cargo cadastrado"
-            description="Cadastre os cargos desta empresa para organizar faixas salariais, requisitos e a estrutura de colaboradores."
-            action={
-              canManage && (
-                <Button
-                  href={novoHref}
-                  variant="primary"
-                >
-                  <Plus size={14} /> Cadastrar cargo
-                </Button>
-              )
+            description={
+              canManage
+                ? "Use “+ Novo cargo”, no alto da tela, para cadastrar os cargos desta empresa e organizar faixas salariais, requisitos e a estrutura de colaboradores."
+                : "Os cargos desta empresa aparecem aqui quando forem cadastrados."
             }
           />
         </Card>

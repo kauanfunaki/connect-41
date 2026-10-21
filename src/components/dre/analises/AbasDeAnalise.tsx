@@ -45,7 +45,7 @@ import {
   type Indicador,
   type LinhaComparada,
 } from "@/lib/dre/analises";
-import { rotuloEconomico, valorDaLinha, LINHA_DE_RESULTADO, LINHA_OPERACIONAL } from "@/lib/dre/economica";
+import { rotuloEconomico, valorDaLinha, linhaDeResultadoDe, linhaOperacionalDe, modeloDoResultado } from "@/lib/dre/economica";
 import { responderAoCfo, PERGUNTAS_DO_CFO, type ChaveDaPergunta } from "@/lib/dre/cfo";
 import { titulosEmAberto, movimentosRealizados } from "@/lib/financeiro/consultas";
 import { saldoBancarioDoEscopo } from "@/lib/financeiro/conciliacao/saldoDasContas";
@@ -81,7 +81,7 @@ function NotaDeFonte({ children }: { children: React.ReactNode }) {
 
 function TabelaComparada({ linhas, rotuloA, rotuloB, destacarAcima }: { linhas: LinhaComparada[]; rotuloA: string; rotuloB: string; destacarAcima?: number }) {
   return (
-    <div className="overflow-x-auto border border-border rounded-lg bg-surface">
+    <div className="overflow-x-auto border border-border rounded-lg bg-surface shadow-xs">
       <table className="w-full min-w-[640px] text-ui">
         <thead>
           <tr className={CABECALHO}>
@@ -116,18 +116,6 @@ function TabelaComparada({ linhas, rotuloA, rotuloB, destacarAcima }: { linhas: 
   );
 }
 
-const LINHAS_PRINCIPAIS = [
-  "receita_bruta",
-  "cmv",
-  "mao_de_obra",
-  "comerciais",
-  "margem_contribuicao",
-  "total_despesas_fixas",
-  LINHA_OPERACIONAL,
-  "investimentos",
-  LINHA_DE_RESULTADO,
-];
-
 // ─── Econômico × financeiro ─────────────────────────────────────────────────
 
 export async function AbaEconomicoFinanceiro({ tenantId, companyId, mes }: Base) {
@@ -136,14 +124,16 @@ export async function AbaEconomicoFinanceiro({ tenantId, companyId, mes }: Base)
     serieDeCaixa(tenantId, companyId, [mes]),
     paresDeLiquidacao(tenantId, companyId, mes),
   ]);
-  // A linha final muda de nome conforme o regime; lado a lado, os dois nomes.
+  // As linhas e os nomes são os do modelo do DRE da empresa (21/10/2026). A
+  // linha de resultado muda de nome conforme o regime; lado a lado, os dois.
+  const modelo = modeloDoResultado(econ.get(mes)!.resultado);
   const rotulo = (code: string, original: string) =>
-    code === LINHA_OPERACIONAL
-      ? "Resultado operacional × Gerador de caixa"
-      : code === LINHA_DE_RESULTADO
-        ? "Resultado do período × Fluxo de caixa livre"
+    code === modelo.linhaOperacional
+      ? `${modelo.numeros.competencia[0]} × ${modelo.numeros.caixa[0]}`
+      : code === modelo.linhaDoResultado
+        ? `${modelo.numeros.competencia[1]} × ${modelo.numeros.caixa[1]}`
         : rotuloEconomico(code, original);
-  const linhas = compararResultados(econ.get(mes)!.resultado, caixa.get(mes)!, LINHAS_PRINCIPAIS, rotulo);
+  const linhas = compararResultados(econ.get(mes)!.resultado, caixa.get(mes)!, modelo.analises.principais, rotulo);
   const atrasoReceber = atrasoMedioEmDias(pares.RECEBER);
   const atrasoPagar = atrasoMedioEmDias(pares.PAGAR);
 
@@ -187,8 +177,8 @@ function passosDaCascata(passos: PassoDaReconciliacao[]): PassoDaCascata[] {
 }
 
 export async function AbaReconciliacao({ tenantId, companyId, mes }: Base) {
-  const { conjuntos, mapeamento } = await dadosDaReconciliacao(tenantId, companyId, mes);
-  const passos = reconciliarLucroCaixa(conjuntos, mapeamento);
+  const { conjuntos, mapeamento, modelo } = await dadosDaReconciliacao(tenantId, companyId, mes);
+  const passos = reconciliarLucroCaixa(conjuntos, mapeamento, { impostosNoEbitda: true, modelo });
 
   return (
     <>
@@ -311,7 +301,7 @@ export async function AbaComparativos({
     rotuloA = `Realizado ${periodo.length === 1 ? rotuloDaCompetencia(mes) : `jan a ${rotuloDaCompetencia(mes)}`}`;
     rotuloB = `Orçado — ${orcamento.nome}`;
     atual = await resultadoDoPeriodo(tenantId, companyId, periodo, "competencia");
-    comparado = resultadoDePorGrupo(porGrupoOrcado(orcamento.grade, meses));
+    comparado = resultadoDePorGrupo(porGrupoOrcado(orcamento.grade, meses, orcamento.modelo), { impostosNoEbitda: true, modelo: orcamento.modelo });
   } else if (modo === "empresa") {
     if (!outra)
       return (
@@ -397,9 +387,10 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
       mesesDoHistorico,
       mesesFuturos
     );
+  const modelo = modeloDoResultado(serie.get(historico[0]!)!.resultado);
   const receita = projetar("receita_bruta");
-  const operacional = projetar(LINHA_OPERACIONAL);
-  const resultado = projetar(LINHA_DE_RESULTADO);
+  const operacional = projetar(modelo.linhaOperacional);
+  const resultado = projetar(modelo.linhaDoResultado);
   const abertos = abertosPorMes(titulos, futuros);
 
   // O orçado de cada mês mostrado, da versão aprovada do ano dele — a janela
@@ -411,7 +402,7 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
   const orcadoDoMes = (c: string, code: string): number | null => {
     const { ano, mes: m } = partesDaCompetencia(c);
     const o = orcamentos.get(ano);
-    return o ? valorDaLinha(resultadoDePorGrupo(porGrupoOrcado(o.grade, [m])), code) : null;
+    return o ? valorDaLinha(resultadoDePorGrupo(porGrupoOrcado(o.grade, [m], o.modelo), { impostosNoEbitda: true, modelo: o.modelo }), code) : null;
   };
   const temOrcado = orcamentos.size > 0;
   const celulaOrcada = (c: string, code: string) => {
@@ -434,7 +425,7 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
           },
         ]}
       />
-      <div className="overflow-x-auto border border-border rounded-lg bg-surface">
+      <div className="overflow-x-auto border border-border rounded-lg bg-surface shadow-xs">
         <table className="w-full min-w-[680px] text-ui">
           <thead>
             <tr className={CABECALHO}>
@@ -457,9 +448,9 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
                   </td>
                   <td className="py-2 pr-3 text-right tabular-nums">{moeda(valorDaLinha(r, "receita_bruta"))}</td>
                   {temOrcado && celulaOrcada(c, "receita_bruta")}
-                  <td className="py-2 pr-3 text-right tabular-nums">{moeda(valorDaLinha(r, LINHA_OPERACIONAL))}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums">{moeda(valorDaLinha(r, LINHA_DE_RESULTADO))}</td>
-                  {temOrcado && celulaOrcada(c, LINHA_DE_RESULTADO)}
+                  <td className="py-2 pr-3 text-right tabular-nums">{moeda(valorDaLinha(r, linhaOperacionalDe(r)))}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{moeda(valorDaLinha(r, linhaDeResultadoDe(r)))}</td>
+                  {temOrcado && celulaOrcada(c, modelo.linhaDoResultado)}
                   <td className="py-2 pr-4 text-right">—</td>
                 </tr>
               );
@@ -471,7 +462,7 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
                 {temOrcado && celulaOrcada(c, "receita_bruta")}
                 <td className={`py-2 pr-3 text-right tabular-nums ${tomDoValor(operacional[i]!)}`}>{moeda(operacional[i]!)}</td>
                 <td className={`py-2 pr-3 text-right tabular-nums ${tomDoValor(resultado[i]!)}`}>{moeda(resultado[i]!)}</td>
-                {temOrcado && celulaOrcada(c, LINHA_DE_RESULTADO)}
+                {temOrcado && celulaOrcada(c, modelo.linhaDoResultado)}
                 <td className="py-2 pr-4 text-right tabular-nums">{moeda(abertos.get(c)!)}</td>
               </tr>
             ))}
@@ -498,6 +489,7 @@ export async function AbaCenarios({ tenantId, companyId, mes }: Base) {
   const { ano, mes: numeroDoMes } = partesDaCompetencia(mes);
   const [serie, comOrcamento] = await Promise.all([serieEconomica(tenantId, companyId, [mes]), orcamentoLigado(tenantId)]);
   const dre = serie.get(mes)!;
+  const modelo = modeloDoResultado(dre.resultado);
   const orcamento = comOrcamento ? (await orcamentosAprovados(tenantId, companyId, [ano])).get(ano) ?? null : null;
 
   // Duas bases possíveis: o mês real e, com versão aprovada, o orçado do mesmo
@@ -505,7 +497,13 @@ export async function AbaCenarios({ tenantId, companyId, mes }: Base) {
   const bases = [
     ...(dre.lancamentos > 0 ? [{ chave: "real", rotulo: `Mês real (${rotuloDaCompetencia(mes)})`, porGrupo: dre.resultado.porGrupo }] : []),
     ...(orcamento
-      ? [{ chave: "orcamento", rotulo: `Orçamento de ${rotuloDaCompetencia(mes)} (${orcamento.nome})`, porGrupo: porGrupoOrcado(orcamento.grade, [numeroDoMes]) }]
+      ? [
+          {
+            chave: "orcamento",
+            rotulo: `Orçamento de ${rotuloDaCompetencia(mes)} (${orcamento.nome})`,
+            porGrupo: porGrupoOrcado(orcamento.grade, [numeroDoMes], orcamento.modelo),
+          },
+        ]
       : []),
   ];
   if (bases.length === 0) {
@@ -518,11 +516,12 @@ export async function AbaCenarios({ tenantId, companyId, mes }: Base) {
   }
   return (
     <>
-      <SimuladorDeCenarios bases={bases} />
+      <SimuladorDeCenarios bases={bases} modelo={modelo.codigo} />
       <NotaDeFonte>
         Simulação sobre a DRE econômica de {rotuloDaCompetencia(mes)}
         {orcamento ? " ou sobre o orçado do mês na versão aprovada" : ""}, calculada no navegador e não gravada. O variável
-        da margem de contribuição acompanha a receita; investimentos e não operacionais ficam constantes.
+        acompanha a receita ({modelo.simulador.dicaDaReceita.replace(/\.$/, "").toLowerCase()}); outras despesas e outras receitas
+        ficam constantes.
         {comOrcamento && !orcamento && ` Com uma versão de orçamento aprovada para ${ano}, dá para partir do orçado.`}
       </NotaDeFonte>
     </>
@@ -577,7 +576,7 @@ export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
     <>
       {CATEGORIAS.map((cat) => (
         <section key={cat} className="mb-5">
-          <h3 className="text-card-title font-semibold text-fg mb-2">{cat}</h3>
+          <h3 className="text-section font-semibold text-fg mb-2">{cat}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {indicadores
               .filter((i) => i.categoria === cat)
@@ -649,7 +648,10 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
       competencia: mes,
       atual: serie.get(mes)!.resultado,
       anterior: serie.get(anterior)!.resultado,
-      reconciliacao: reconciliarLucroCaixa(reconciliacao.conjuntos, reconciliacao.mapeamento),
+      reconciliacao: reconciliarLucroCaixa(reconciliacao.conjuntos, reconciliacao.mapeamento, {
+        impostosNoEbitda: true,
+        modelo: reconciliacao.modelo,
+      }),
       proximos60: projecao.janelas[0]!,
       vencidos: projecao.vencidos,
       aReceber: ranking.map((r) => ({ nome: r.contraparteNome, emAberto: r.emAberto, vencido: r.vencido })),
@@ -702,7 +704,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
               <Secao titulo="Diagnóstico" texto={resposta.diagnostico} />
               {resposta.evidencias.length > 0 && (
                 <div>
-                  <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Evidências</p>
+                  <p className="c41-rotulo mb-1">Evidências</p>
                   <ul className="flex flex-col gap-0.5 text-ui text-fg-secondary">
                     {resposta.evidencias.map((e) => (
                       <li key={e}>· {e}</li>
@@ -717,7 +719,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
               </div>
               {resposta.planoDeAcao.length > 0 && (
                 <div>
-                  <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Plano de ação</p>
+                  <p className="c41-rotulo mb-1">Plano de ação</p>
                   <ol className="list-decimal pl-5 text-ui flex flex-col gap-0.5">
                     {resposta.planoDeAcao.map((p) => (
                       <li key={p}>{p}</li>
@@ -751,7 +753,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
 function Secao({ titulo, texto }: { titulo: string; texto: string }) {
   return (
     <div>
-      <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">{titulo}</p>
+      <p className="c41-rotulo mb-1">{titulo}</p>
       <p className="text-ui text-fg">{texto}</p>
     </div>
   );

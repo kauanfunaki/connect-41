@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calcularDre, centavosDaLinha, montarMapeamento, type LancamentoDoDre } from "./calculo";
 import { MAPEAMENTO_PADRAO } from "./mapeamento-padrao";
 import { OUTUBRO_2025 } from "./outubro-2025.fixture";
-import { DESCONSIDERAR, GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA } from "./estrutura";
+import { DESCONSIDERAR, GRUPOS, NAO_CLASSIFICADO, OPCOES_SEM_IMPOSTOS, TRANSFERENCIA } from "./estrutura";
 import {
   BLOCOS_DO_MODELO,
   ROTULO_FORA_DESCONSIDERADA,
@@ -33,14 +33,15 @@ function linha(p: PlanilhaDoModelo, codigo: string) {
 const UM_DE_CADA: LancamentoDoDre[] = [
   l("Clientes - Venda de Mercadoria Fabricadas", 1000, "recebimento"),
   l("Impostos Federais - PIS", -50, "pagamento"),
-  l("Frete", -100, "pagamento"), // cmv
-  l("Serviços de terceiros", -200, "pagamento"), // mão de obra
-  l("Marketing", -50, "pagamento"), // comerciais
-  l("FGTS", -40, "pagamento"), // pessoal
-  l("Pró-labore", -60, "pagamento"), // diretoria
-  l("Contabilidade", -30, "pagamento"), // administrativas
-  l("Tarifas Bancárias", -10, "pagamento"), // financeiras
-  l("Compra de ativo imobilizado", -80, "pagamento"), // investimentos
+  l("Frete", -100, "pagamento"), // custo operacional
+  l("Serviços de terceiros", -200, "pagamento"), // custo operacional
+  l("Marketing", -50, "pagamento"), // custo operacional
+  l("FGTS", -40, "pagamento"), // custo administrativo
+  l("Pró-labore", -60, "pagamento"), // custo administrativo
+  l("Contabilidade", -30, "pagamento"), // custo administrativo
+  l("Tarifas Bancárias", -10, "pagamento"), // custo administrativo
+  l("Impostos Parcelados", -15, "pagamento"), // financiamentos
+  l("Compra de ativo imobilizado", -80, "pagamento"), // outras despesas
   l("Multas", -20, "pagamento"), // outras despesas
   l("Empréstimos Bancários", 30, "recebimento"), // outras receitas
 ];
@@ -54,7 +55,7 @@ describe("os blocos do modelo", () => {
     for (const b of BLOCOS_DO_MODELO) for (const g of b.grupos) expect(conhecidos.has(g), g).toBe(true);
   });
 
-  it("sai na ordem do modelo: receita, impostos, custo operacional, administrativo, outras despesas, outras receitas", () => {
+  it("sai na ordem do modelo: receita, impostos, custo operacional, administrativo, financiamentos, outras despesas, outras receitas", () => {
     const p = umMes(UM_DE_CADA);
     expect(p.linhas.map((x) => x.rotulo)).toEqual([
       "Clientes - Venda de Mercadoria Fabricadas",
@@ -64,20 +65,23 @@ describe("os blocos do modelo", () => {
       "IMPOSTOS SOBRE RECEITA BRUTA %",
       "RECEITA LÍQUIDA",
       "",
-      // Dentro do bloco, na ordem dos grupos do Connect: CMV, mão de obra, comerciais.
+      // Um grupo por bloco: dentro dele, as categorias em ordem alfabética.
       "Frete",
-      "Serviços de terceiros",
       "Marketing",
+      "Serviços de terceiros",
       "CUSTO OPERACIONAL TOTAL",
       "CUSTO OPERACIONAL SOBRE RECEITA BRUTA %",
       "MARGEM DE CONTRIBUIÇÃO",
       "MARGEM DE CONTRIBUIÇÃO SOBRE RECEITA BRUTA %",
+      "Contabilidade",
       "FGTS",
       "Pró-labore",
-      "Contabilidade",
       "Tarifas Bancárias",
       "CUSTO ADMINISTRATIVO TOTAL",
       "CUSTO ADMINISTRATIVO SOBRE RECEITA BRUTA %",
+      "Impostos Parcelados",
+      "DESPESAS TOTAIS FINANCIAMENTOS, EMPRÉSTIMOS e PARCELAMENTOS",
+      "DESPESAS TOTAIS FINANCIAMENTOS, EMPRÉSTIMOS e PARCELAMENTOS %",
       "GERADOR DE CAIXA (EBITDA)",
       "GERADOR DE CAIXA (EBITDA) SOBRE RECEITA LÍQUIDA %",
       "Compra de ativo imobilizado",
@@ -116,6 +120,7 @@ describe("subtotais e percentuais", () => {
     expect(v("impostos")).toBe(5000);
     expect(v("custo_operacional")).toBe(35000);
     expect(v("custo_administrativo")).toBe(14000);
+    expect(v("financiamentos")).toBe(1500);
     expect(v("outras_despesas")).toBe(10000);
     expect(v("outras_receitas")).toBe(3000);
   });
@@ -123,8 +128,22 @@ describe("subtotais e percentuais", () => {
   it("os resultados fazem a conta do modelo", () => {
     expect(v("receita_liquida")).toBe(95000); // 1000 − 50
     expect(v("margem_contribuicao")).toBe(65000); // 1000 − 350: parte da bruta
-    expect(v("gerador_de_caixa")).toBe(46000); // 1000 − 50 − 350 − 140: aqui o imposto entra
-    expect(v("resultado_liquido")).toBe(39000); // 460 − 100 + 30
+    expect(v("gerador_de_caixa")).toBe(44500); // 1000 − 50 − 350 − 140 − 15: o imposto entra, no padrão
+    expect(v("resultado_liquido")).toBe(37500); // 445 − 100 + 30
+  });
+
+  it("na visão de impostos fora do resultado, o EBITDA não desconta os impostos", () => {
+    const q = montarDreNoModeloDoBpo({
+      colunas: [{ rotulo: "Out/26", lancamentos: UM_DE_CADA }],
+      mapeamento: PADRAO,
+      colunaDeTotal: null,
+      opcoes: OPCOES_SEM_IMPOSTOS,
+    });
+    expect(linha(q, "gerador_de_caixa").celulas[0]!.centavos).toBe(49500);
+    expect(linha(q, "gerador_de_caixa").celulas[0]!.formula).toBe("B4-B13-B21-B24");
+    expect(linha(q, "resultado_liquido").celulas[0]!.centavos).toBe(42500);
+    // A receita líquida continua mostrando os impostos.
+    expect(linha(q, "receita_liquida").celulas[0]!.centavos).toBe(95000);
   });
 
   it("as fórmulas são as do modelo, apontando para as linhas certas", () => {
@@ -134,10 +153,12 @@ describe("subtotais e percentuais", () => {
     expect(f("custo_operacional")).toBe("SUM(B10:B12)");
     expect(f("margem_contribuicao")).toBe("B4-B13");
     expect(f("custo_administrativo")).toBe("SUM(B17:B20)");
-    expect(f("gerador_de_caixa")).toBe("B4-B6-B13-B21");
-    expect(f("outras_despesas")).toBe("SUM(B25:B26)");
-    expect(f("outras_receitas")).toBe("SUM(B29:B29)");
-    expect(f("resultado_liquido")).toBe("B23-B27+B30");
+    expect(f("financiamentos")).toBe("SUM(B23:B23)");
+    // Como o modelo novo (`B7+B16+B53+B93+B107`): o EBITDA desconta os impostos.
+    expect(f("gerador_de_caixa")).toBe("B4-B6-B13-B21-B24");
+    expect(f("outras_despesas")).toBe("SUM(B28:B29)");
+    expect(f("outras_receitas")).toBe("SUM(B32:B32)");
+    expect(f("resultado_liquido")).toBe("B26-B30+B33");
     // Categoria é valor, não fórmula — no modelo ela vem do SUMIF da aba do ano.
     expect(p.linhas[0]!.celulas[0]!.formula).toBeNull();
   });
@@ -147,14 +168,15 @@ describe("subtotais e percentuais", () => {
     expect(pct("custo_operacional_pct")).toBeCloseTo(0.35);
     expect(pct("margem_contribuicao_pct")).toBeCloseTo(0.65);
     expect(pct("custo_administrativo_pct")).toBeCloseTo(0.14);
-    expect(pct("gerador_de_caixa_pct")).toBeCloseTo(0.46);
+    expect(pct("financiamentos_pct")).toBeCloseTo(0.015);
+    expect(pct("gerador_de_caixa_pct")).toBeCloseTo(0.445);
     expect(pct("outras_despesas_pct")).toBeCloseTo(0.1);
     expect(pct("outras_receitas_pct")).toBeCloseTo(0.03);
-    expect(pct("resultado_liquido_pct")).toBeCloseTo(0.39);
+    expect(pct("resultado_liquido_pct")).toBeCloseTo(0.375);
     expect(f("impostos_pct")).toBe('IF(B4=0,"",ABS(B6/B4))');
     expect(f("margem_contribuicao_pct")).toBe('IF(B4=0,"",B15/B4)');
     // O "sobre receita líquida" do rótulo divide pela bruta, como no modelo.
-    expect(f("gerador_de_caixa_pct")).toBe('IF(B4=0,"",B23/B4)');
+    expect(f("gerador_de_caixa_pct")).toBe('IF(B4=0,"",B26/B4)');
   });
 
   it("resultado negativo mantém o sinal no percentual", () => {
@@ -170,9 +192,9 @@ describe("subtotais e percentuais", () => {
 });
 
 describe("bate com a tela — outubro de 2025 da Irriga", () => {
-  // O mesmo mês que `calculo.test.ts` confere contra a planilha do BPO. O
-  // arquivo tem de dizer o mesmo que a tela, com a única diferença declarada:
-  // o EBITDA e o resultado do modelo descontam os impostos.
+  // O mesmo mês que `calculo.test.ts` confere contra a planilha do BPO. Desde
+  // 20/10/2026 a tela e o arquivo têm a mesma estrutura: o arquivo diz o mesmo
+  // que a tela, linha por linha, nas duas visões dos impostos.
   const r = calcularDre(OUTUBRO_2025, PADRAO);
   const p = umMes(OUTUBRO_2025);
   const tela = (code: string) => centavosDaLinha(r, code)!;
@@ -184,20 +206,30 @@ describe("bate com a tela — outubro de 2025 da Irriga", () => {
     expect(arquivo("receita_liquida")).toBe(tela("receita_liquida"));
   });
 
-  it("custo operacional é CMV + mão de obra + comerciais, e a margem é a da tela", () => {
-    expect(arquivo("custo_operacional")).toBe(-(tela("cmv") + tela("mao_de_obra") + tela("comerciais")));
+  it("custo operacional, margem, custo administrativo e financiamentos", () => {
+    expect(arquivo("custo_operacional")).toBe(-tela("custo_operacional"));
     expect(arquivo("margem_contribuicao")).toBe(tela("margem_contribuicao"));
+    expect(arquivo("custo_administrativo")).toBe(-tela("custo_administrativo"));
+    expect(arquivo("financiamentos")).toBe(-tela("financiamentos"));
   });
 
-  it("custo administrativo é o total de despesas fixas", () => {
-    expect(arquivo("custo_administrativo")).toBe(-tela("total_despesas_fixas"));
-  });
-
-  it("o EBITDA e o resultado ficam abaixo dos da tela exatamente pelos impostos", () => {
-    expect(arquivo("gerador_de_caixa")).toBe(tela("gerador_de_caixa") + tela("impostos"));
-    expect(arquivo("outras_despesas")).toBe(-(tela("investimentos") + tela("outras_despesas")));
+  it("o EBITDA e o resultado são os da tela", () => {
+    expect(arquivo("gerador_de_caixa")).toBe(tela("ebitda"));
+    expect(arquivo("outras_despesas")).toBe(-tela("outras_despesas"));
     expect(arquivo("outras_receitas")).toBe(tela("outras_receitas"));
-    expect(arquivo("resultado_liquido")).toBe(tela("fluxo_de_caixa_livre") + tela("impostos"));
+    expect(arquivo("resultado_liquido")).toBe(tela("resultado_liquido"));
+  });
+
+  it("na visão sem impostos, também", () => {
+    const rSem = calcularDre(OUTUBRO_2025, PADRAO, OPCOES_SEM_IMPOSTOS);
+    const pSem = montarDreNoModeloDoBpo({
+      colunas: [{ rotulo: "Out/25", lancamentos: OUTUBRO_2025 }],
+      mapeamento: PADRAO,
+      colunaDeTotal: null,
+      opcoes: OPCOES_SEM_IMPOSTOS,
+    });
+    expect(linha(pSem, "gerador_de_caixa").celulas[0]!.centavos).toBe(centavosDaLinha(rSem, "ebitda"));
+    expect(linha(pSem, "resultado_liquido").celulas[0]!.centavos).toBe(centavosDaLinha(rSem, "resultado_liquido"));
   });
 
   it("o que a tela deixa sem grupo é o que a conferência marca como fora", () => {
@@ -215,7 +247,7 @@ describe("empresa sem movimento", () => {
 
   it("sai o esqueleto do modelo, sem categoria, com os totais em zero", () => {
     expect(p.linhas.some((x) => x.tipo === "categoria")).toBe(false);
-    expect(p.linhas).toHaveLength(19);
+    expect(p.linhas).toHaveLength(21);
     expect(p.linhaDaReceitaBruta).toBe(3);
     for (const x of p.linhas.filter((y) => y.tipo === "total")) {
       // Zero digitado: SUM de intervalo vazio não existe.

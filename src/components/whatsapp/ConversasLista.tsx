@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckSquare, MessageSquare, X } from "lucide-react";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -189,21 +190,24 @@ export function ConversasLista() {
       </div>
     );
 
+  // O retorno do lote no `Aviso` do app (15/10/2026): era uma caixa montada à
+  // mão. Fica na tela, e não num toast, porque lista o motivo de cada
+  // conversa que ficou de fora. Âmbar quando alguma ficou; o erro já se anuncia
+  // pelo `Aviso` de perigo, o resto pela região de status.
   const avisoDoLote = retorno && (
-    <div
-      role="status"
-      className={`rounded-md border px-3 py-2 text-ui ${retorno.erro ? "border-danger/30 bg-danger/5 text-danger" : "border-border bg-surface text-fg"}`}
-    >
-      <p>{retorno.texto}</p>
-      {retorno.puladas.length > 0 && (
-        <ul className="mt-1 text-fs-2 text-fg-secondary">
-          {retorno.puladas.map((p, i) => (
-            <li key={`${p.nome}-${i}`}>
-              {p.nome}: {p.motivo}
-            </li>
-          ))}
-        </ul>
-      )}
+    <div role={retorno.erro ? undefined : "status"}>
+      <Aviso tom={retorno.erro ? "perigo" : retorno.puladas.length > 0 ? "atencao" : "sucesso"}>
+        <p>{retorno.texto}</p>
+        {retorno.puladas.length > 0 && (
+          <ul className="mt-1 text-fs-2 text-fg-secondary">
+            {retorno.puladas.map((p, i) => (
+              <li key={`${p.nome}-${i}`}>
+                {p.nome}: {p.motivo}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Aviso>
     </div>
   );
 

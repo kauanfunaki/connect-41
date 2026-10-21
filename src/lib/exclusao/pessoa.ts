@@ -175,7 +175,7 @@ export async function itensDasPessoas(db: Tx, tenantId: string, ids: string[]): 
     ...compactar([
       item("Document.entityId", documentos, ["documento da ficha", "documentos da ficha"], "apagar", true),
       item("Handoff.entityId", transferencias, ["transferência entre setores", "transferências entre setores"], "apagar", true),
-      item("PipelineItem.entityId", tarefas, ["tarefa do Kanban (fica, sem a pessoa)", "tarefas do Kanban (ficam, sem a pessoa)"], "desligar"),
+      item("PipelineItem.entityId", tarefas, ["atividade dos Quadros (fica, sem a pessoa)", "atividades dos Quadros (ficam, sem a pessoa)"], "desligar"),
       item("WhatsappThread.personId", conversas, ["conversa do WhatsApp (fica, sem a pessoa)", "conversas do WhatsApp (ficam, sem a pessoa)"], "desligar"),
     ]),
   ];

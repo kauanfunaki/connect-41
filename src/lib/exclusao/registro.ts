@@ -74,11 +74,13 @@ const EMPRESA: Ligacao[] = [
   // Histórico — só sai com "Excluir com tudo o que está ligado".
   { modelo: "FiscalDocument", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["nota fiscal", "notas fiscais"], historico: true },
   { modelo: "FinanceEntry", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["lançamento financeiro", "lançamentos financeiros"], historico: true },
+  { modelo: "FinanceEntryPayment", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["baixa", "baixas"], historico: true },
   { modelo: "FinanceCounterparty", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["fornecedor ou cliente do financeiro", "fornecedores e clientes do financeiro"], historico: true },
   { modelo: "FinanceCategory", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["categoria própria do plano de contas", "categorias próprias do plano de contas"], historico: true },
   { modelo: "BankAccount", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["conta bancária", "contas bancárias"], historico: true },
   { modelo: "CollectionAgreement", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["acordo de cobrança", "acordos de cobrança"], historico: true },
   { modelo: "CostCenter", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["centro de custo", "centros de custo"], historico: true },
+  { modelo: "FinanceProject", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["projeto", "projetos"], historico: true },
   { modelo: "Budget", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["orçamento", "orçamentos"], historico: true },
   { modelo: "DreImport", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["importação da DRE", "importações da DRE"], historico: true },
   { modelo: "DreCategoryMapping", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["classificação da DRE", "classificações da DRE"], historico: true },
@@ -133,6 +135,8 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   { modelo: "Notification", coluna: "entityId", tratamento: "apagar" },
   { modelo: "PipelineItem", coluna: "entityId", tratamento: "desligar" },
   { modelo: "ValoraProposta", coluna: "companyId", tratamento: "desligar" },
+  // O pedido de situação fiscal da ficha (Serpro, 20/10/2026): sem a empresa, não serve a ninguém.
+  { modelo: "SerproPedido", coluna: "companyId", tratamento: "apagar" },
   // Preferência "última empresa aberta": sem a empresa, não vale nada.
   { modelo: "UserLastCompany", coluna: "companyId", tratamento: "apagar" },
   { modelo: "AuditLog", coluna: "entityId", tratamento: "manter", motivo: "a trilha guarda o que foi excluído" },
@@ -191,7 +195,7 @@ const PESSOA_SOLTAS: ColunaSolta[] = [
 
 const USUARIO: Ligacao[] = [
   // Autor obrigatório no banco — passa para quem exclui.
-  { modelo: "Activity", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["comentário ou movimentação no Kanban", "comentários e movimentações no Kanban"], historico: true },
+  { modelo: "Activity", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["comentário ou movimentação nos Quadros", "comentários e movimentações nos Quadros"], historico: true },
   { modelo: "TimeEntry", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["apontamento de horas", "apontamentos de horas"], historico: true },
   { modelo: "Document", campo: "uploadedBy", fk: "uploadedById", tratamento: "reatribuir", rotulo: ["documento anexado", "documentos anexados"], historico: true },
   { modelo: "ClientDocument", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["documento enviado ao cliente", "documentos enviados ao cliente"], historico: true },
@@ -224,6 +228,7 @@ const USUARIO: Ligacao[] = [
   { modelo: "Process", campo: "owner", fk: "ownerUserId", tratamento: "desligar", rotulo: ["processo do Societário sob responsabilidade dele", "processos do Societário sob responsabilidade dele"] },
   { modelo: "ServiceRequest", campo: "assignee", fk: "assigneeId", tratamento: "desligar", rotulo: ["solicitação do portal atribuída a ele", "solicitações do portal atribuídas a ele"] },
   { modelo: "Lead", campo: "assignee", fk: "assigneeId", tratamento: "desligar", rotulo: ["lead sob responsabilidade dele", "leads sob responsabilidade dele"] },
+  { modelo: "OpsWatcher", campo: "owner", fk: "ownerId", tratamento: "desligar", rotulo: ["automação sob responsabilidade dele", "automações sob responsabilidade dele"] },
   { modelo: "WhatsappThread", campo: "assignedTo", fk: "assignedToId", tratamento: "desligar", rotulo: ["conversa do WhatsApp atribuída a ele", "conversas do WhatsApp atribuídas a ele"] },
   { modelo: "FinanceEntry", campo: "collectionOwner", fk: "collectionOwnerId", tratamento: "desligar", rotulo: ["cobrança sob responsabilidade dele", "cobranças sob responsabilidade dele"] },
 
@@ -235,6 +240,7 @@ const USUARIO: Ligacao[] = [
   { modelo: "BankStatementImport", campo: "importedBy", fk: "importedById", tratamento: "desligar" },
   { modelo: "BankTransaction", campo: "reconciledBy", fk: "reconciledById", tratamento: "desligar" },
   { modelo: "BankTransactionMatch", campo: "createdBy", fk: "createdById", tratamento: "desligar" },
+  { modelo: "FinanceEntryPayment", campo: "createdBy", fk: "createdById", tratamento: "desligar" },
   { modelo: "Budget", campo: "approvedBy", fk: "approvedById", tratamento: "desligar" },
   { modelo: "ChatwootAgentLink", campo: "linkedUser", fk: "linkedUserId", tratamento: "desligar" },
   { modelo: "ClientAnnouncement", campo: "createdBy", fk: "createdById", tratamento: "desligar" },
@@ -254,6 +260,7 @@ const USUARIO: Ligacao[] = [
   { modelo: "FinanceEntry", campo: "createdBy", fk: "createdById", tratamento: "desligar" },
   { modelo: "FinanceEntry", campo: "lossBy", fk: "lossById", tratamento: "desligar" },
   { modelo: "FinanceEntry", campo: "reviewedBy", fk: "reviewedById", tratamento: "desligar" },
+  { modelo: "FinanceEntryAttachment", campo: "uploadedByUser", fk: "uploadedByUserId", tratamento: "desligar" },
   { modelo: "FiscalDocument", campo: "uploadedBy", fk: "uploadedById", tratamento: "desligar" },
   { modelo: "ProcessDocument", campo: "uploadedByUser", fk: "uploadedByUserId", tratamento: "desligar" },
   { modelo: "ProcessMessage", campo: "authorUser", fk: "authorUserId", tratamento: "desligar" },
@@ -268,7 +275,7 @@ const USUARIO: Ligacao[] = [
   // Da própria conta — o banco apaga junto.
   { modelo: "AgentConversation", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["conversa com a Ceci", "conversas com a Ceci"] },
   { modelo: "Notification", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["notificação", "notificações"] },
-  { modelo: "PipelineItemAssignee", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["atribuição de tarefa do Kanban (a tarefa fica, sem ele)", "atribuições de tarefa do Kanban (as tarefas ficam, sem ele)"] },
+  { modelo: "PipelineItemAssignee", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["atribuição de atividade dos Quadros (a atividade fica, sem ele)", "atribuições de atividade dos Quadros (as atividades ficam, sem ele)"] },
   { modelo: "VagaRecrutador", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "PipelineItemWatcher", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "HandoffSectorAssignee", campo: "user", fk: "userId", tratamento: "cascata" },
@@ -280,11 +287,23 @@ const USUARIO: Ligacao[] = [
   { modelo: "UserAgendaConfig", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPinnedModule", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPreference", campo: "user", fk: "userId", tratamento: "cascata" },
+  { modelo: "LocalFiscalScenario", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserSector", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserTenantAccess", campo: "user", fk: "userId", tratamento: "cascata" },
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [
+  { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
+  { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
+  { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },
+  { modelo: "HelpdeskParticipant", coluna: "userId", tratamento: "apagar" },
+  { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
+  { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
+  { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
+  { modelo: "HelpdeskChecklistItem", coluna: "doneById", tratamento: "manter", motivo: "trilha de quem conferiu o item; a tela não expõe o id" },
+  { modelo: "HelpdeskApproval", coluna: "decidedById", tratamento: "manter", motivo: "histórico da decisão de aprovação" },
+  { modelo: "HelpdeskReopenRequest", coluna: "requestedById", tratamento: "manter", motivo: "histórico do pedido de reabertura" },
+  { modelo: "HelpdeskReopenRequest", coluna: "decidedById", tratamento: "manter", motivo: "histórico da decisão de reabertura" },
   // Sessão e troca de senha: saem com a conta.
   { modelo: "RefreshToken", coluna: "userId", tratamento: "apagar" },
   { modelo: "PasswordResetToken", coluna: "userId", tratamento: "apagar" },
@@ -310,6 +329,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Notification", coluna: "actorUserId", tratamento: "manter", motivo: "a notificação já foi entregue; o texto leva o nome" },
   { modelo: "AgentRun", coluna: "userId", tratamento: "manter", motivo: "trilha de execução da IA" },
   { modelo: "SerproCall", coluna: "userId", tratamento: "manter", motivo: "trilha de consultas ao Serpro (cobradas por chamada)" },
+  { modelo: "SerproMensagem", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a mensagem deu ciência da intimação" },
+  { modelo: "SerproPedido", coluna: "pedidoPorId", tratamento: "desligar" },
   { modelo: "AccessAuthorization", coluna: "updatedByUserId", tratamento: "manter", motivo: "trilha de quem mexeu na autorização" },
   { modelo: "AccessAuthorizationGrantee", coluna: "updatedByUserId", tratamento: "manter", motivo: "trilha de quem mexeu na autorização" },
   { modelo: "DriveFolderSeen", coluna: "seenByUserId", tratamento: "manter", motivo: "marca de leitura da pasta de enviados" },

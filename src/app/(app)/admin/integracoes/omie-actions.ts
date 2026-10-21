@@ -8,6 +8,9 @@ import { mensagemDaImportacao } from "@/lib/integracoes/omie/notas";
 import { sincronizarNotasDaEmpresa } from "@/lib/integracoes/omie/sincronizacao";
 import { sincronizarFinanceiroDaEmpresa } from "@/lib/integracoes/omie/sincronizacaoFinanceiro";
 import { mensagemDoFinanceiro } from "@/lib/integracoes/omie/financeiro";
+import { instanciaDoFinanceiro } from "@/lib/integracoes/omie/contas";
+import { podeVirar } from "@/lib/integracoes/omie/virada";
+import { getPrisma } from "@/lib/prisma";
 
 type Resultado = { error: string } | { ok: true; mensagem?: string };
 
@@ -86,3 +89,95 @@ export async function contasDoOmieAction(companyId: string, gravar: boolean): Pr
   }
   return { ok: true, mensagem: mensagemDoFinanceiro(r.counters, r.gravou) };
 }
+
+const TELAS_DO_FINANCEIRO = ["/admin/integracoes", "/pagar", "/receber", "/lancamentos", "/conciliacao", "/dre", "/dre/economica", "/fluxo-de-caixa"];
+
+/**
+ * A virada da empresa do Omie para o Connect (lote E da fila do BPO, 20/10).
+ *
+ * 1. A última leitura das contas do Omie, para o Connect partir de onde o Omie
+ *    está. Ela roda um bloco de páginas por vez; se não chegou ao fim, a
+ *    virada espera (`podeVirar`) — a leitura continua sozinha nas próximas
+ *    rodadas, e a pessoa tenta de novo.
+ * 2. A leitura do financeiro desliga, e a empresa ganha a data da virada —
+ *    juntos, numa transação, e só se ninguém virou antes.
+ *
+ * Daí em diante o Connect é a fonte: as contas que vieram do Omie se editam,
+ * pagam e cancelam aqui, e a leitura não roda mais para esta empresa. A
+ * leitura das notas emitidas no Omie continua: é outra linha, e não mexe no
+ * financeiro.
+ */
+export async function virarParaOConnectAction(companyId: string): Promise<Resultado> {
+  const ctx = await contexto();
+  if (!ctx) return { error: "Sem permissão para configurar integrações." };
+  const tenantId = ctx.tenantId!;
+  const prisma = getPrisma();
+  const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { omieCutoverAt: true } });
+  if (!empresa) return { error: "Empresa não encontrada." };
+  const progresso = await prisma.tenantIntegration.findUnique({
+    where: { tenantId_integrationCode_instanceKey: { tenantId, integrationCode: "omie", instanceKey: instanciaDoFinanceiro(companyId) } },
+    select: { id: true },
+  });
+  const antes = podeVirar({ viradaEm: empresa.omieCutoverAt, importouAsContas: Boolean(progresso), leituraPendente: false });
+  if (!antes.pode) return { error: antes.motivo };
+
+  let leitura: Record<string, number> | null = null;
+  if (progresso) {
+    const r = await sincronizarFinanceiroDaEmpresa(tenantId, companyId, "MANUAL", { gravar: true });
+    if (!r.ok) return { error: `A última leitura do Omie falhou, e a virada não foi feita: ${r.erro}` };
+    leitura = r.counters ?? null;
+    const depois = await prisma.tenantIntegration.findUnique({ where: { id: progresso.id }, select: { cursor: true } });
+    const veredito = podeVirar({ viradaEm: null, importouAsContas: true, leituraPendente: Boolean(depois?.cursor) });
+    if (!veredito.pode) return { error: veredito.motivo };
+  }
+
+  const viradaEm = new Date();
+  const virou = await prisma.$transaction(async (tx) => {
+    const r = await tx.company.updateMany({ where: { id: companyId, tenantId, omieCutoverAt: null }, data: { omieCutoverAt: viradaEm } });
+    if (r.count !== 1) return false;
+    if (progresso) await tx.tenantIntegration.update({ where: { id: progresso.id }, data: { enabled: false } });
+    return true;
+  });
+  if (!virou) return { error: "Esta empresa já virou para o Connect." };
+
+  await logAudit({
+    tenantId,
+    userId: ctx.userId,
+    action: "integration.omie.virada",
+    entityType: "Company",
+    entityId: companyId,
+    metadata: { ultimaLeitura: leitura },
+  });
+  for (const p of TELAS_DO_FINANCEIRO) revalidatePath(p);
+  return {
+    ok: true,
+    mensagem: "Virada feita: o Connect passou a ser a fonte das contas desta empresa, e a leitura das contas do Omie foi desligada. As notas emitidas no Omie continuam entrando no acervo.",
+  };
+}
+
+/**
+ * Desfaz a virada — só o Super Admin, para o engano. A leitura volta a ligar,
+ * e a próxima reescreve, nas contas que vieram do Omie, o que o BPO mudou no
+ * Connect desde a virada; a baixa feita aqui continua valendo (o espelho a
+ * guarda), mas fica fora do Omie.
+ */
+export async function desfazerViradaAction(companyId: string): Promise<Resultado> {
+  const ctx = await contexto();
+  if (!ctx || ctx.role !== "SUPER_ADMIN") return { error: "Só o Super Admin desfaz a virada." };
+  const tenantId = ctx.tenantId!;
+  const prisma = getPrisma();
+  const desfez = await prisma.$transaction(async (tx) => {
+    const r = await tx.company.updateMany({ where: { id: companyId, tenantId, omieCutoverAt: { not: null } }, data: { omieCutoverAt: null } });
+    if (r.count !== 1) return false;
+    await tx.tenantIntegration.updateMany({
+      where: { tenantId, integrationCode: "omie", instanceKey: instanciaDoFinanceiro(companyId) },
+      data: { enabled: true },
+    });
+    return true;
+  });
+  if (!desfez) return { error: "Esta empresa não está virada." };
+  await logAudit({ tenantId, userId: ctx.userId, action: "integration.omie.virada_desfeita", entityType: "Company", entityId: companyId });
+  for (const p of TELAS_DO_FINANCEIRO) revalidatePath(p);
+  return { ok: true, mensagem: "Virada desfeita: as contas desta empresa voltam a ser lidas do Omie na próxima rodada." };
+}
+

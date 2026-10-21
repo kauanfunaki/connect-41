@@ -12,8 +12,8 @@ import type { PipelineState } from "@/app/(app)/kanban/actions";
 import type { PipelineEntityType } from "@/generated/prisma/enums";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
+import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 
-type EntityOption = { id: string; name: string };
 type TagOption = { id: string; name: string; color: string };
 type UserOption = { id: string; name: string };
 
@@ -21,7 +21,8 @@ type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
   pipelineId: string;
   entityType: PipelineEntityType;
-  entities: EntityOption[];
+  /** Empresas (`opcoesDeEmpresa`) ou pessoas, já como opções do seletor com busca. */
+  entities: Opcao[];
   tags?: TagOption[];
   sectorUsers?: UserOption[];
   cancelHref: string;
@@ -45,7 +46,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
         </Aviso>
       )}
 
-      <Field label="Título da tarefa" htmlFor="title" helper="Informe um título ou selecione uma empresa/pessoa.">
+      <Field label="Título da atividade" htmlFor="title" helper="Informe um título ou selecione uma empresa/pessoa.">
         <Input id="title" name="title" autoFocus placeholder="Ex.: Conferir documentos" />
       </Field>
       <Field label="Estágio" htmlFor="stageId" required>
@@ -53,13 +54,19 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
           {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
         </Select>
       </Field>
+      {/* Com busca, logo e recentes (15/10/2026): era um <select> com todas as
+          empresas (ou pessoas) do escopo. */}
       <Field label={entityType === "COMPANY" ? "Empresa" : "Pessoa"} htmlFor="entityId">
-        <Select id="entityId" name="entityId">
-          <option value="">Selecionar…</option>
-          {entities.map((e) => (
-            <option key={e.id} value={e.id}>{e.name}</option>
-          ))}
-        </Select>
+        <SearchableSelect
+          id="entityId"
+          name="entityId"
+          options={entities}
+          avatar
+          vazioLabel="Nenhuma"
+          textoSemValor="Selecionar…"
+          placeholder={entityType === "COMPANY" ? "Buscar empresa…" : "Buscar pessoa…"}
+          lembrarRecentes={entityType === "COMPANY" ? "empresas" : undefined}
+        />
       </Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -80,7 +87,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
           id="description"
           name="description"
           rows={3}
-          placeholder="Adicione uma descrição para esta tarefa…"
+          placeholder="Adicione uma descrição para esta atividade…"
         />
       </Field>
 
@@ -125,7 +132,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
       <FormFooter
         pending={isPending}
         pendingLabel="Criando…"
-        submitLabel="Criar tarefa"
+        submitLabel="Criar atividade"
         cancelHref={emModal ? undefined : cancelHref}
         onCancel={emModal ? () => router.back() : undefined}
       />

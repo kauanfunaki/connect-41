@@ -50,6 +50,12 @@ function reatribuir(modelo: string, coluna: string, executar: Passo<AlvoUsuario>
 }
 
 export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
+  reatribuir("HelpdeskDraft", "createdById", (tx, a) => n(tx.helpdeskDraft.updateMany({ where: { tenantId: a.tenantId, createdById: a.id }, data: { createdById: a.para } }))),
+  reatribuir("HelpdeskTicket", "createdById", (tx, a) => n(tx.helpdeskTicket.updateMany({ where: { tenantId: a.tenantId, createdById: a.id }, data: { createdById: a.para } }))),
+  reatribuir("HelpdeskAttachment", "uploadedById", (tx, a) => n(tx.helpdeskAttachment.updateMany({ where: { tenantId: a.tenantId, uploadedById: a.id }, data: { uploadedById: a.para } }))),
+  reatribuir("HelpdeskComment", "authorId", (tx, a) => n(tx.helpdeskComment.updateMany({ where: { tenantId: a.tenantId, authorId: a.id }, data: { authorId: a.para } }))),
+  { modelo: "HelpdeskAssignee", acao: "apagar", executar: (tx, a) => n(tx.helpdeskAssignee.deleteMany({ where: { tenantId: a.tenantId, userId: a.id } })) },
+  { modelo: "HelpdeskParticipant", acao: "apagar", executar: (tx, a) => n(tx.helpdeskParticipant.deleteMany({ where: { tenantId: a.tenantId, userId: a.id } })) },
   // Avaliação de entrevista é uma por avaliador e candidatura: onde quem
   // exclui já avaliou a mesma candidatura, a do usuário excluído sai em vez de
   // passar (passaria a ser uma duplicata).
@@ -145,6 +151,13 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
     acao: "anular",
     coluna: "responsibleUserId",
     executar: (tx, a) => n(tx.company.updateMany({ where: { tenantId: a.tenantId, responsibleUserId: a.id }, data: { responsibleUserId: null } })),
+  },
+  // Quem pediu a situação fiscal (Serpro, 20/10/2026): o pedido fica, sem a pessoa para avisar.
+  {
+    modelo: "SerproPedido",
+    acao: "anular",
+    coluna: "pedidoPorId",
+    executar: (tx, a) => n(tx.serproPedido.updateMany({ where: { tenantId: a.tenantId, pedidoPorId: a.id }, data: { pedidoPorId: null } })),
   },
   {
     modelo: "Vaga",

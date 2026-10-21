@@ -7,10 +7,10 @@ import { logAudit } from "@/lib/audit";
 import type { ActionState } from "@/lib/actionState";
 import {
   TELAS_DO_GERAL,
-  alternarTelaOculta,
+  alternarPreferenciaDoMenuGeral,
   ehTelaDoGeral,
-  gravarTelasOcultas,
-  lerTelasOcultas,
+  gravarPreferenciasDoMenuGeral,
+  lerPreferenciasDoMenuGeral,
   podeConfigurarMenuGeral,
 } from "@/lib/menuGeral";
 
@@ -43,7 +43,8 @@ export async function alternarTelaDoGeral(sectorId: string, tela: string, visive
   let ocultas: string;
   try {
     const atual = await prisma.sectorMenuView.findUnique({ where: chave, select: { hiddenScreens: true } });
-    ocultas = gravarTelasOcultas(alternarTelaOculta(lerTelasOcultas(atual?.hiddenScreens), tela, visivel));
+    const estado = alternarPreferenciaDoMenuGeral(lerPreferenciasDoMenuGeral(atual?.hiddenScreens), tela, visivel);
+    ocultas = gravarPreferenciasDoMenuGeral(estado.ocultas, estado.visiveis);
     await prisma.sectorMenuView.upsert({
       where: chave,
       create: { tenantId: ctx.tenantId, sectorCode: setor.code, hiddenScreens: ocultas },
@@ -69,8 +70,8 @@ export async function alternarTelaDoGeral(sectorId: string, tela: string, visive
 }
 
 /**
- * Volta o setor ao padrão — todas as telas aparecem — apagando a linha. Sem
- * linha, tela nova que entrar no Geral também aparece.
+ * Volta o setor aos padrões, apagando a linha. Telas de módulos ativados
+ * seguem a visibilidade normal, respeitando as permissões de acesso.
  */
 export async function restaurarMenuGeral(sectorId: string): Promise<ActionState> {
   const ctx = await getAuthContext();

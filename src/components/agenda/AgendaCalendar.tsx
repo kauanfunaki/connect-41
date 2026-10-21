@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { CreateMeetingDialog } from "./CreateMeetingDialog";
 import { MiniCalendar } from "./MiniCalendar";
@@ -15,6 +14,7 @@ import type { CalendarDay, CompanyOption, MeetingActions, MeetingRow, UserOption
 import type { SetoresDaAgenda } from "./PrazoItem";
 import type { PrazoDaAgenda } from "@/lib/prazosDaAgenda";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 
 const VIEW_LABEL: Record<AgendaView, string> = { dia: "Dia", semana: "Semana", mes: "Mês" };
@@ -124,24 +124,18 @@ export function AgendaCalendar({
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-section font-semibold text-fg">{agendaTitle(view, dateKey)}</h2>
               <div className="flex items-center gap-1">
-                <Link
-                  href={agendaHref(view, shiftAgendaDate(view, dateKey, -1))}
-                  className="w-7 h-7 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
-                  aria-label={PREV_LABEL[view]}
-                >
+                {/* As setas são o `IconButton` com `href` (15/10/2026): eram
+                    `<Link>` com a classe de botão escrita à mão. */}
+                <IconButton size="sm" href={agendaHref(view, shiftAgendaDate(view, dateKey, -1))} aria-label={PREV_LABEL[view]}>
                   <ChevronLeft size={15} />
-                </Link>
+                </IconButton>
                 {/* Era texto com fundo no hover (30/09): "Hoje" é ação, com borda de botão. */}
                 <Button href={agendaHref(view, todayKey)} variant="secondary" size="xs">
                   Hoje
                 </Button>
-                <Link
-                  href={agendaHref(view, shiftAgendaDate(view, dateKey, 1))}
-                  className="w-7 h-7 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
-                  aria-label={NEXT_LABEL[view]}
-                >
+                <IconButton size="sm" href={agendaHref(view, shiftAgendaDate(view, dateKey, 1))} aria-label={NEXT_LABEL[view]}>
                   <ChevronRight size={15} />
-                </Link>
+                </IconButton>
                 <MiniCalendar view={view} selectedKeys={days.map((d) => d.dateKey)} referenceKey={dateKey} />
               </div>
             </div>

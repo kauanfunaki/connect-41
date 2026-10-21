@@ -30,7 +30,7 @@ describe("a DRE do mês (equipe e portal)", () => {
   const html = renderToStaticMarkup(React.createElement(TabelaDaDre, { linhas: resultado.linhas, detalhe: resultado.porCategoria }));
 
   it("a linha de grupo com categorias é um botão fechado", () => {
-    expect(html).toMatch(/<button type="button" aria-expanded="false"[^>]*>[\s\S]*?CMV SOBRE RECEITA BRUTA/);
+    expect(html).toMatch(/<button type="button" aria-expanded="false"[^>]*>[\s\S]*?CUSTO OPERACIONAL TOTAL/);
     expect(html).toContain("(2 categorias)");
   });
 
@@ -40,7 +40,7 @@ describe("a DRE do mês (equipe e portal)", () => {
 
   it("linha de grupo zerada não abre, e subtotal não é botão", () => {
     const botoes = html.match(/aria-expanded/g) ?? [];
-    expect(botoes).toHaveLength(2); // receita bruta e CMV
+    expect(botoes).toHaveLength(2); // receita bruta e custo operacional
     expect(html).not.toMatch(/<button[^>]*>[\s\S]{0,200}MARGEM DE CONTRIBUIÇÃO<\/span>/);
   });
 });
@@ -50,7 +50,7 @@ describe("a DRE do ano", () => {
   const html = renderToStaticMarkup(React.createElement(RelatorioAnual, { anual }));
 
   it("usa o mesmo botão, fechado", () => {
-    expect(html).toMatch(/<button type="button" aria-expanded="false"[^>]*>[\s\S]*?CMV SOBRE RECEITA BRUTA/);
+    expect(html).toMatch(/<button type="button" aria-expanded="false"[^>]*>[\s\S]*?CUSTO OPERACIONAL TOTAL/);
     expect(html).not.toContain("Compra de Matéria Prima - Bobina");
   });
 });

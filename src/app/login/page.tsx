@@ -53,7 +53,7 @@ export default async function LoginPage({
               type="email"
               autoComplete="email"
               required
-              placeholder="voce@41contabil.com.br"
+              placeholder="voce@empresa.com.br"
               icon={<MailIcon />}
             />
           </CampoForm>

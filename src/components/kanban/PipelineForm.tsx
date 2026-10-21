@@ -19,9 +19,11 @@ type Stage = { name: string; color: string };
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
   sectorOptions: { value: string; label: string }[];
+  /** Na janela do "+ Novo kanban": o Cancelar fecha, em vez de voltar à lista. */
+  onCancel?: () => void;
 };
 
-export function PipelineForm({ action, sectorOptions }: Props) {
+export function PipelineForm({ action, sectorOptions, onCancel }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [stages, setStages] = useState<Stage[]>([
     { name: "", color: DEFAULT_COLORS[0] },
@@ -54,7 +56,7 @@ export function PipelineForm({ action, sectorOptions }: Props) {
       {/* Os três dados numa linha (30/09): o tipo de entidade ficava sozinho
           numa linha de largura inteira embaixo do par nome/setor. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Field label="Nome do kanban" htmlFor="name" required>
+        <Field label="Nome da tarefa" htmlFor="name" required>
           <Input
             id="name"
             name="name"
@@ -133,8 +135,9 @@ export function PipelineForm({ action, sectorOptions }: Props) {
       <FormFooter
         pending={isPending}
         pendingLabel="Criando…"
-        submitLabel="Criar kanban"
-        cancelHref="/kanban"
+        submitLabel="Criar tarefa"
+        cancelHref={onCancel ? undefined : "/kanban"}
+        onCancel={onCancel}
       />
     </form>
   );

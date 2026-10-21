@@ -19,10 +19,21 @@ export type CampoDeIntegracao = {
    *
    * `certificado` é um arquivo .pfx (A1), guardado em base64 dentro da
    * configuração cifrada. Para a tela é um segredo: nunca volta, só "guardado".
+   *
+   * `escolha` é uma lista fechada (`opcoes`); sem valor gravado, vale a
+   * primeira opção (20/10/2026, o ambiente do Serpro).
    */
-  type: "text" | "secret" | "url" | "certificado";
+  type: "text" | "secret" | "url" | "certificado" | "escolha";
   required: boolean;
   help?: string;
+  /** Só no `escolha`: o valor gravado e o que a tela mostra. A primeira é o padrão. */
+  opcoes?: { valor: string; rotulo: string }[];
+  /**
+   * Quando outro campo tem este valor, este sai do formulário e deixa de ser
+   * obrigatório (o guardado continua guardado): na demonstração do Serpro não
+   * há chave nem certificado (20/10/2026).
+   */
+  dispensadoQuando?: { campo: string; valor: string };
 };
 
 export type NaturezaDaIntegracao =
@@ -287,6 +298,10 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
     // é decisão pendente da coordenação — trocar a origem do certificado não
     // muda o resto. O termo de autorização (software house) também espera a
     // decisão de em nome de quem contratar: até lá, contratante = escritório.
+    //
+    // O ambiente (20/10/2026): a demonstração é o trial do Serpro, com dados
+    // fictícios e token público, sem contrato — serve para escrever e testar
+    // cada serviço antes da chave. Nela não há chave, certificado nem custo.
     code: "serpro_integra_contador",
     label: "Serpro — Integra Contador",
     vendor: "Serpro",
@@ -297,10 +312,22 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
     defaultEnabled: false,
     campos: [
       {
+        name: "ambiente",
+        label: "Ambiente",
+        type: "escolha",
+        required: false,
+        opcoes: [
+          { valor: "producao", rotulo: "Produção" },
+          { valor: "demonstracao", rotulo: "Demonstração (sem contrato)" },
+        ],
+        help: "A demonstração é o ambiente de testes do Serpro: só responde aos exemplos fictícios da documentação, sem chave, sem certificado e sem custo.",
+      },
+      {
         name: "consumerKey",
         label: "Consumer Key",
         type: "text",
         required: true,
+        dispensadoQuando: { campo: "ambiente", valor: "demonstracao" },
         help: "Área do Cliente do Serpro › Chaves de Acesso.",
       },
       {
@@ -308,12 +335,14 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         label: "Consumer Secret",
         type: "secret",
         required: true,
+        dispensadoQuando: { campo: "ambiente", valor: "demonstracao" },
       },
       {
         name: "certificado",
         label: "Certificado e-CNPJ A1 (.pfx)",
         type: "certificado",
         required: true,
+        dispensadoQuando: { campo: "ambiente", valor: "demonstracao" },
         help: "O mesmo e-CNPJ usado na contratação. Fica cifrado no Connect e só é usado na conexão com o Serpro.",
       },
       {
@@ -321,12 +350,14 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         label: "Senha do certificado",
         type: "secret",
         required: true,
+        dispensadoQuando: { campo: "ambiente", valor: "demonstracao" },
       },
       {
         name: "tetoMensal",
         label: "Teto mensal (R$)",
         type: "text",
         required: true,
+        dispensadoQuando: { campo: "ambiente", valor: "demonstracao" },
         help: "Acima disso o Connect não faz chamadas cobradas até o mês virar. O Serpro cobra de R$ 0,06 a R$ 0,40 por chamada, conforme o tipo e o volume do mês.",
       },
     ],
@@ -345,18 +376,35 @@ export function integracaoDoCatalogo(code: string): IntegracaoDef | null {
  * de novo igual.
  *
  * Campo em branco e campo ausente contam igual — string vazia não é credencial.
+ * Campo dispensado pelo valor de outro (`dispensadoQuando`) não falta.
  */
 export function camposFaltando(
   def: IntegracaoDef,
   config: Record<string, unknown>
 ): string[] {
   return def.campos
-    .filter((c) => c.required)
+    .filter((c) => c.required && !campoDispensado(def.campos, c, config))
     .filter((c) => {
       const valor = config[c.name];
       return typeof valor !== "string" || valor.trim() === "";
     })
     .map((c) => c.label);
+}
+
+/** O valor de um campo `escolha`: o gravado, se é uma das opções, ou a primeira. */
+export function valorDaEscolha(campo: CampoDeIntegracao, config: Record<string, unknown>): string {
+  const v = config[campo.name];
+  return typeof v === "string" && campo.opcoes?.some((o) => o.valor === v) ? v : (campo.opcoes?.[0]?.valor ?? "");
+}
+
+/** Este campo está dispensado pelo valor de outro? */
+export function campoDispensado(campos: CampoDeIntegracao[], campo: CampoDeIntegracao, config: Record<string, unknown>): boolean {
+  const regra = campo.dispensadoQuando;
+  if (!regra) return false;
+  const outro = campos.find((c) => c.name === regra.campo);
+  if (!outro) return false;
+  const valor = outro.type === "escolha" ? valorDaEscolha(outro, config) : config[outro.name];
+  return valor === regra.valor;
 }
 
 /**

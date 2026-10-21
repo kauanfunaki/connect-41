@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ChevronRight,
   Home,
   ContactRound,
   Columns3,
@@ -26,7 +27,6 @@ import {
   CalendarCheck,
   ChevronDown,
   ClipboardCheck,
-  Layers,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -50,7 +50,8 @@ import {
 } from "@/components/shell/NavLink";
 import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
-import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
+import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO, getModuleDef } from "@/lib/module-catalog";
+import { quadrosAtivo } from "@/lib/caminhoDoMenu";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { trocarSetor } from "@/components/shell/contexto";
 import {
@@ -67,11 +68,13 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 import { IconButton } from "@/components/ui/IconButton";
 import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
+import { areaSpedAtiva, menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -126,54 +129,6 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
   );
 }
 
-/**
- * O topo da faixa de ícones (14/10/2026): o setor ativo, com o ícone dele e a
- * bolinha na cor do setor — no lugar da logo, que não cabe em 64px (o Início
- * continua sendo o primeiro item). O clique abre a mesma troca de setor e
- * escritório do nome no cabeçalho; o mouse ou o foco mostram o nome.
- *
- * Ícone, e não as iniciais: Contábil, Comercial, Corretora e Controladoria
- * dariam todos "Co". Setor fora da lista de ícones mostra a primeira letra.
- */
-function SetorNaFaixa({ setor, podeTrocar, onTrocar }: { setor: Sector | null; podeTrocar: boolean; onTrocar: () => void }) {
-  const nome = setor?.label ?? "Todos os setores";
-  const icone = setor ? (SECTOR_ICONS[setor.code] ?? <span className="text-ui font-semibold">{setor.label.charAt(0)}</span>) : <Layers size={16} />;
-  const classe = "relative flex items-center justify-center size-10 flex-shrink-0 rounded-lg border border-border bg-surface text-fg-secondary";
-  const miolo = (
-    <>
-      <span aria-hidden className="[&>svg]:w-[18px] [&>svg]:h-[18px]">
-        {icone}
-      </span>
-      {setor && (
-        <span
-          aria-hidden
-          data-marca="cor-do-setor"
-          className="absolute -top-1 -right-1 size-3 rounded-full border-2 border-sidebar-bg"
-          style={{ backgroundColor: setor.color }}
-        />
-      )}
-    </>
-  );
-  const rotulo = setor ? `Setor ${setor.label}` : "Todos os setores";
-  if (!podeTrocar) {
-    return (
-      <span role="img" {...nomeNaFaixa(rotulo, nome)} className={classe}>
-        {miolo}
-      </span>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={onTrocar}
-      {...nomeNaFaixa(`${rotulo}. Trocar setor ou escritório`, `${nome}\nTrocar setor ou escritório`)}
-      className={`${classe} transition-colors hover:text-fg hover:bg-surface-hover hover:border-border-strong`}
-    >
-      {miolo}
-    </button>
-  );
-}
-
 // A partir de lg a lateral é coluna fixa; abaixo, gaveta. No servidor vale
 // "tela grande": a gaveta só fica inerte depois da hidratação, no celular.
 function assinarTela(aviso: () => void) {
@@ -211,6 +166,7 @@ type Props = {
   solicitacoesLigadas?: boolean;
   /** Os Arquivos estão ligados — mostra "Arquivos" no Geral. */
   arquivosLigados?: boolean;
+  chamadosLigados?: boolean;
   /**
    * As telas do Geral que o setor (ou os setores da pessoa, em "Todos os
    * setores") não escondeu — ver `src/lib/menuGeral.ts`. Sem a prop, todas.
@@ -249,6 +205,7 @@ export function AppShell({
   unreadCount,
   solicitacoesLigadas = false,
   arquivosLigados = false,
+  chamadosLigados = false,
   telasDoGeral = TODAS_AS_TELAS_DO_GERAL,
   profileName,
   profileRoleLabel,
@@ -316,6 +273,7 @@ export function AppShell({
     noGeral("transferencias"),
     solicitacoesLigadas && noGeral("solicitacoes"),
     arquivosLigados && noGeral("arquivos"),
+    chamadosLigados && noGeral("chamados"),
     noGeral("agenda"),
   ].some(Boolean);
   // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
@@ -328,6 +286,7 @@ export function AppShell({
       )}
       {noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />}
       {solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" />}
+      {chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<Inbox size={16} />} label="Chamados" />}
       {arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" />}
       {noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />}
     </>
@@ -380,11 +339,23 @@ export function AppShell({
               voltou ao menu: clicar no logo para voltar ao começo é convenção de
               site, e nem todo mundo da equipe conhece — os dois caminhos ficam.
               O `aria-current` fica só no item do menu, para não marcar duas vezes. */}
-          {/* Na faixa, o topo é o setor ativo (à esquerda, como os ícones de baixo:
-              nada desliza enquanto a lateral encolhe). */}
+          {/* Na faixa, o topo é a marca do Connect, que leva ao Início — o mesmo
+              do logo da lateral aberta (Ajustes 15/10, G1). Era o setor ativo
+              abrindo a troca de setor, que já tem o botão no cabeçalho, ao lado
+              do recolher. À esquerda, como os ícones de baixo: nada desliza
+              enquanto a lateral encolhe. */}
           {naFaixa ? (
             <div className="flex items-center h-[60px] px-3 border-b border-border flex-shrink-0">
-              <SetorNaFaixa setor={activeSector} podeTrocar={podeTrocar} onTrocar={() => setTrocaAberta(true)} />
+              <Link
+                href="/home"
+                {...nomeNaFaixa("Ir para o Início", "Início")}
+                className="flex items-center justify-center size-10 flex-shrink-0 rounded-lg transition-opacity hover:opacity-80"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/symbol-color.svg" alt="" className="block dark:hidden size-8 object-contain" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/symbol-color-dark-bg.svg" alt="" className="hidden dark:block size-8 object-contain" />
+              </Link>
             </div>
           ) : (
             <div className={`flex items-center justify-center gap-2.5 h-[60px] px-5 border-b border-border flex-shrink-0 relative ${larguraFinal}`}>
@@ -443,7 +414,7 @@ export function AppShell({
           {/* Na faixa, sem barra de rolagem à vista (a roda do mouse e o Tab
               rolam): a barra comia a borda dos quadrados de 40px. */}
           <nav
-            onClick={() => setMobileOpen(false)}
+            onClick={(e) => { if ((e.target as Element).closest("a")) setMobileOpen(false); }}
             className={`${
               naFaixa ? "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "scroll-y scroll-gutter-stable"
             } flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-0.5 ${larguraFinal}`}
@@ -485,7 +456,12 @@ export function AppShell({
                   </TituloDoBloco>
                 )}
                 {noGeral("espacos") && (
-                  <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Quadros" />
+                  <NavItem
+                    href={`/setor/${activeSector.code}`}
+                    ativo={(p) => quadrosAtivo(p, activeSector.code)}
+                    icon={<FolderKanban size={16} />}
+                    label="Quadros"
+                  />
                 )}
                 {itensDoGeral}
 
@@ -496,22 +472,46 @@ export function AppShell({
                     — pedido do Kauan em 17/09, no lugar de abrir e fechar seções. */}
                 <TelasFixadas telas={telasFixadas} />
 
+                {/* O nome do setor leva a todas as telas dele (Ajustes 15/10, G10):
+                    era só um rótulo com a bolinha, e a tela "Telas" do setor só
+                    se achava pela trilha de um grupo. A bolinha na cor do setor,
+                    com anel, e a seta dizendo que é caminho; aceso quando a tela é
+                    a dele. O nome fica na cor do texto: a do setor, em letra
+                    miúda, some no tema escuro. */}
                 {activeSectorModules.length > 0 && (
                   <TituloDoBloco nome={activeSector.label}>
-                    <p className="c41-rotulo flex items-center gap-2 px-2.5 pt-4 pb-1.5">
+                    <Link
+                      href={`/setor/${activeSector.code}/telas`}
+                      onClick={() => setMobileOpen(false)}
+                      aria-current={pathname === `/setor/${activeSector.code}/telas` ? "page" : undefined}
+                      data-dica={`Todas as telas de ${activeSector.label}`}
+                      className="group c41-rotulo flex items-center gap-2 mt-3 mb-0.5 -mx-1 px-3.5 py-1.5 rounded-md hover:bg-surface-hover aria-[current=page]:bg-surface-hover transition-colors"
+                    >
                       <span
                         aria-hidden
-                        className="inline-block size-2 rounded-full flex-shrink-0"
+                        className="inline-block size-2.5 rounded-full flex-shrink-0 ring-2 ring-[color-mix(in_srgb,var(--c41-setor)_25%,transparent)]"
                         style={{ backgroundColor: activeSector.color }}
                       />
-                      <span className="truncate">{activeSector.label}</span>
-                    </p>
+                      <span className="truncate text-fg-secondary group-hover:text-fg">
+                        {activeSector.label}
+                      </span>
+                      <ChevronRight size={12} aria-hidden className="ml-auto flex-shrink-0 text-fg-muted group-hover:text-fg" />
+                    </Link>
                   </TituloDoBloco>
                 )}
                 {(() => {
-                  const grupos = agruparModulos(activeSectorModules);
-                  if (grupos.length <= 1 || activeSectorModules.length <= 8) {
-                    return activeSectorModules.map((m) =>
+                  const sped = menuSped(activeSectorModules);
+                  const modulos = activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code));
+                  const itemSped = sped.laterais.length > 0 && <PainelDoItem titulo="SPED" cor={activeSector.color} abrirPorClique telas={sped.laterais.map((item) => ({
+                    label: item.label, href: item.href, icon: <ModuleIcon code={item.modulo} />,
+                    ativa: areaSpedAtiva(pathname) === (item.modulo === "fiscal_classificacao" ? "SPED" : item.label),
+                  }))}>
+                    {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} />}
+                  </PainelDoItem>;
+                  const diretos = modulos.filter((m) => getModuleDef(m.code)?.menuDireto);
+                  const grupos = agruparModulos(modulos.filter((m) => !getModuleDef(m.code)?.menuDireto));
+                  if (grupos.length <= 1 || modulos.length <= 8) {
+                    return <>{itemSped}{modulos.map((m) =>
                       // O painel da Gestão mostra as abas dele ao lado, como fazia
                       // quando era item do menu geral.
                       m.code === "gestao_painel" ? (
@@ -521,11 +521,11 @@ export function AppShell({
                       ) : (
                         <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />
                       )
-                    );
+                    )}</>;
                   }
                   // A tela do grupo continua (é o clique); o painel ao lado mostra
                   // as telas dele sem precisar abri-la.
-                  return grupos.map(({ grupo, itens }) => (
+                  return <>{itemSped}{diretos.map((m) => <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />)}{grupos.map(({ grupo, itens }) => (
                     <PainelDoItem
                       key={grupo}
                       titulo={grupo}
@@ -539,7 +539,7 @@ export function AppShell({
                         itens={itens}
                       />
                     </PainelDoItem>
-                  ));
+                  ))}</>;
                 })()}
               </>
             ) : (
@@ -557,9 +557,9 @@ export function AppShell({
 
                 {sectors.length > 0 && (
                   <>
-                    <TituloDoBloco nome="Meus Setores">
+                    <TituloDoBloco nome="Meus setores">
                       <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
-                        Meus Setores
+                        Meus setores
                       </p>
                     </TituloDoBloco>
                     {/* Sem painel ao lado: o clique entra no ambiente do setor
@@ -706,19 +706,23 @@ export function AppShell({
           </div>
         </header>
 
+        {/* No `Aviso` de perigo (15/10/2026), na largura da página: era uma
+            faixa vermelha desenhada à mão, de ponta a ponta. */}
         {subscriptionReadOnly && (
-          <div className="flex-shrink-0 bg-danger/10 border-b border-danger/20 px-4 py-2 text-ui text-danger flex items-center justify-center gap-2 text-center">
-            Assinatura pendente — este workspace está em modo somente leitura.{" "}
-            {/* Em MANAGED a tela /assinatura dá 404 (é a 41 Tech quem administra),
-                então o link viraria um beco sem saída — vira instrução de contato.
-                Revisão de 05/10: botão não é link — era texto sublinhado na faixa. */}
-            {canSelfRegularizeSubscription ? (
-              <Button href="/assinatura" variant="secondary" size="xs">
-                Regularizar assinatura
-              </Button>
-            ) : (
-              <span className="font-medium">Entre em contato com a 41 Tech.</span>
-            )}
+          <div className="flex-shrink-0 w-full max-w-[1440px] mx-auto px-6 pt-4">
+            <Aviso tom="perigo" className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-center">
+              Assinatura pendente — este workspace está em modo somente leitura.{" "}
+              {/* Em MANAGED a tela /assinatura dá 404 (é a 41 Tech quem administra),
+                  então o link viraria um beco sem saída — vira instrução de contato.
+                  Revisão de 05/10: botão não é link — era texto sublinhado na faixa. */}
+              {canSelfRegularizeSubscription ? (
+                <Button href="/assinatura" variant="secondary" size="xs">
+                  Regularizar assinatura
+                </Button>
+              ) : (
+                <span className="font-medium">Entre em contato com a 41 Tech.</span>
+              )}
+            </Aviso>
           </div>
         )}
 
