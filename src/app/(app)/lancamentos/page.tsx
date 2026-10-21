@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { presaAoOmie } from "@/lib/integracoes/omie/virada";
 import { rotuloDaSerie } from "@/lib/financeiro/repeticao";
-import { NotebookPen, Plus, Upload } from "lucide-react";
+import { FileSpreadsheet, NotebookPen, Plus, Upload } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -162,6 +162,10 @@ export default async function LancamentosPage({
         cabecalho(
           podeLancar ? (
             <div className="flex flex-wrap items-center gap-2">
+              {/* A planilha das baixas do mês para o Contábil (fila do BPO, 21/10). */}
+              <Button href={`/lancamentos/dominio?empresa=${companyId}&mes=${mes}`} variant="secondary">
+                <FileSpreadsheet size={14} /> Exportar para a Domínio
+              </Button>
               <Button href={href("importar")} variant="secondary">
                 <Upload size={14} /> Importar CSV
               </Button>

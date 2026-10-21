@@ -119,6 +119,7 @@ const EMPRESA: Ligacao[] = [
   // comunicado já enviado fica, sem esta empresa entre os destinatários.
   { modelo: "PortalUserCompany", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["acesso ao portal ligado a ela (a conta continua)", "acessos ao portal ligados a ela (as contas continuam)"] },
   { modelo: "ClientAnnouncementCompany", campo: "company", fk: "companyId", tratamento: "cascata" },
+  { modelo: "DominioAccountMap", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["conta do de-para da Domínio", "contas do de-para da Domínio"] },
 
   // Ficam, sem o vínculo.
   { modelo: "Company", campo: "parent", fk: "parentCompanyId", tratamento: "desligar", rotulo: ["filial (vira matriz solta)", "filiais (viram matrizes soltas)"] },
@@ -300,6 +301,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
   { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
+  { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
   { modelo: "HelpdeskChecklistItem", coluna: "doneById", tratamento: "manter", motivo: "trilha de quem conferiu o item; a tela não expõe o id" },
   { modelo: "HelpdeskApproval", coluna: "decidedById", tratamento: "manter", motivo: "histórico da decisão de aprovação" },
   { modelo: "HelpdeskReopenRequest", coluna: "requestedById", tratamento: "manter", motivo: "histórico do pedido de reabertura" },
