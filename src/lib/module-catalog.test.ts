@@ -12,6 +12,7 @@ import {
   MODULOS_DO_MENU_GERAL,
   MODULOS_SEM_MENU,
   MODULOS_NAS_SOLICITACOES,
+  FORA_DO_MENU_COM_SOLICITACOES,
   TELAS_DO_BPO_NAS_SOLICITACOES,
 } from "./module-catalog";
 import { DEFAULT_SECTORS } from "./sector-constants";
@@ -73,6 +74,8 @@ describe("catálogo de módulos", () => {
       expect(MODULOS_DO_MENU_GERAL.has(t.modulo)).toBe(false);
     }
     expect([...MODULOS_NAS_SOLICITACOES]).toEqual(["bpo_pendencias", "bpo_aprovacoes"]);
+    // A Conversa sai junto: ela levava ao mesmo /solicitacoes do menu Geral.
+    expect([...FORA_DO_MENU_COM_SOLICITACOES].sort()).toEqual(["bpo_aprovacoes", "bpo_comunicacao", "bpo_pendencias"]);
   });
 
   it("rota começa com barra", () => {

@@ -789,6 +789,15 @@ export const TELAS_DO_BPO_NAS_SOLICITACOES = [
 ] as const;
 export const MODULOS_NAS_SOLICITACOES: ReadonlySet<string> = new Set(TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.modulo));
 
+/**
+ * O que sai do menu do setor quando as Solicitações estão ligadas: as abas
+ * acima e a Conversa com o cliente. A Conversa aparecia no menu do BPO como
+ * "Solicitações dos clientes", levando a /solicitacoes — o mesmo item do menu
+ * Geral, duplicado (relato do Kauan, 21/10/2026). Até ela virar solicitação, a
+ * tela dela segue no Ctrl+K e nas fixadas.
+ */
+export const FORA_DO_MENU_COM_SOLICITACOES: ReadonlySet<string> = new Set([...MODULOS_NAS_SOLICITACOES, "bpo_comunicacao"]);
+
 /** Funcionalidades acessadas por fluxos internos, sem entrada na navegação. */
 export const MODULOS_SEM_MENU: ReadonlySet<string> = new Set(["fiscal_documentos"]);
 
