@@ -1,7 +1,7 @@
 import { ZodError } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
-import { acessoOps, ErroOps, autenticarWatcher, receberEvento, gerarToken, conferirChamado, conferirResponsavel, exigirAtualizacao, painelOps } from "./servidor";
+import { acessoOps, ErroOps, autenticarWatcher, receberEvento, gerarToken, gerarTokenCompartilhado, conferirChamado, conferirResponsavel, exigirAtualizacao, painelOps } from "./servidor";
 import { editarWatcherSchema, filtrosSchema, instabilidadeSchema, slugSchema, versaoSchema, watcherSchema } from "./regras";
 
 export async function responderOps(fn: () => Promise<unknown>) {
@@ -67,6 +67,11 @@ export async function tokenWatcher(request: Request, slug: string, revogar = fal
   const { version } = versaoSchema.parse(await lerJsonOps(request));
   return gerarToken(ctx, slug, version, revogar);
 }
+export async function tokenCompartilhadoOps(request: Request, revogar = false) {
+  exigirOrigem(request); const ctx = await acessoOps("gerir");
+  const { version } = versaoSchema.parse(await lerJsonOps(request));
+  return gerarTokenCompartilhado(ctx, version, revogar);
+}
 export async function sinalizarInstabilidade(request: Request, slug: string, resolver = false) {
   exigirOrigem(request); const ctx = await acessoOps("gerir"); slugSchema.parse(slug);
   const body = await lerJsonOps(request);
@@ -81,8 +86,14 @@ export async function sinalizarInstabilidade(request: Request, slug: string, res
 }
 export async function heartbeatWatcher(request: Request, slug: string) {
   slugSchema.parse(slug); const w = await autenticarWatcher(request, slug);
-  // Condição evita aceitar a chave antiga se ela for revogada em paralelo.
-  const r = await getPrisma().opsWatcher.updateMany({ where: { tenantId: w.tenantId, slug, tokenHash: w.tokenHash, isActive: true }, data: { lastHeartbeatAt: new Date() } });
+  const r = await getPrisma().$transaction(async tx => {
+    if (w.compartilhado) {
+      await tx.$queryRaw`SELECT tenantId FROM ops_api_credentials WHERE tenantId = ${w.tenantId} FOR UPDATE`;
+      const credencial = await tx.opsApiCredential.findUnique({ where: { tenantId: w.tenantId } });
+      if (credencial?.tokenHash !== w.tokenHash) throw new ErroOps("Token revogado.", 401);
+    }
+    return tx.opsWatcher.updateMany({ where: { tenantId: w.tenantId, slug, isActive: true, ...(!w.compartilhado ? { tokenHash: w.tokenHash } : {}) }, data: { lastHeartbeatAt: new Date() } });
+  });
   if (!r.count) throw new ErroOps("Token revogado.", 401);
   return { ok: true };
 }

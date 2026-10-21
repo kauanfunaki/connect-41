@@ -18,11 +18,18 @@ try {
   const tables = await db.query("SHOW TABLES");
   if (!tables.length) {
     const sql = executar(["node_modules/prisma/build/index.js", "migrate", "diff", "--from-empty", "--to-schema", "prisma/schema.prisma", "--script"]);
-    // A base é gerada pelo Prisma; as tabelas do Ops vêm da migration entregue.
-    const base = sql.split(/(?=-- (?:CreateTable|CreateIndex|AddForeignKey))/).filter(block => !/(?:CREATE TABLE|ALTER TABLE|CREATE (?:UNIQUE )?INDEX[^;]* ON) `ops_(?:watchers|events)`/.test(block)).join("");
+    // A base é gerada pelo Prisma; as tabelas do Ops vêm das migrations entregues.
+    const base = sql.split(/(?=-- (?:CreateTable|CreateIndex|AddForeignKey))/).filter(block => !/(?:CREATE TABLE|ALTER TABLE|CREATE (?:UNIQUE )?INDEX[^;]* ON) `ops_(?:watchers|events|api_credentials)`/.test(block)).join("");
     await db.query(base);
+  }
+  const nomes = new Set((await db.query("SHOW TABLES")).map(row => Object.values(row)[0]));
+  if (!nomes.has("ops_watchers")) {
     await db.query(await readFile("prisma/migrations/20261020120000_ops_center/migration.sql", "utf8"));
-    console.log("Migration do Ops aplicada apenas ao banco descartável.");
+    console.log("Migration base do Ops aplicada apenas ao banco descartável.");
+  }
+  if (!nomes.has("ops_api_credentials")) {
+    await db.query(await readFile("prisma/migrations/20261020230000_ops_shared_credential/migration.sql", "utf8"));
+    console.log("Migration da chave compartilhada aplicada apenas ao banco descartável.");
   }
 } finally { await db.end(); }
 executar(["node_modules/prisma/build/index.js", "migrate", "diff", "--from-config-datasource", "--to-schema", "prisma/schema.prisma", "--exit-code"]);
