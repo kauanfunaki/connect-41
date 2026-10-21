@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // verdade sobre o banco dos dois clientes da fase 1 (`doisClientes.ts`).
 
 import type { bancoDeTeste } from "@/lib/portal/bancoDeTeste";
-import { ATAQUES, DIA, T, bancoDeDoisClientes, empresa, linhas, soDoAcesso } from "@/lib/portal/doisClientes";
+import { ATAQUES, DIA, EMPRESAS, T, bancoDeDoisClientes, empresa, linhas, soDoAcesso } from "@/lib/portal/doisClientes";
 
 const m = vi.hoisted(() => ({
   banco: null as ReturnType<typeof bancoDeTeste> | null,
@@ -20,7 +20,8 @@ vi.mock("@/lib/solicitacoes/assuntos", () => ({
   assuntosAtivos: async () => [{ id: "as-1", label: "Dúvida", description: "Qualquer dúvida", sectorCode: "bpo", responseDays: 2 }],
 }));
 
-const { FERRAMENTAS_DO_PORTAL, PREFIXO_DO_PORTAL, abrirPortal } = await import("./ferramentas-portal");
+const { FERRAMENTAS_DO_PORTAL, PREFIXO_DO_PORTAL, SOLICITACAO_PREPARADA, abrirPortal } = await import("./ferramentas-portal");
+const { viraProposta } = await import("./ferramentas");
 const { AGENT_CATALOG, agenteDoCatalogo } = await import("./catalogo");
 
 const TODOS_OS_MODULOS = ["bpo_contas_pagar", "bpo_contas_receber", "bpo_pendencias", "societario_processos", "portal_solicitacoes"];
@@ -79,12 +80,18 @@ beforeEach(() => {
 describe("só a Ceci do portal tem as ferramentas do portal, e ela só tem estas", () => {
   const nomes = Object.keys(FERRAMENTAS_DO_PORTAL);
 
-  it("toda ferramenta daqui é de leitura e tem o prefixo", () => {
+  it("toda ferramenta daqui tem o prefixo e é de leitura — menos a que prepara a solicitação, que nem executa", () => {
     for (const [nome, f] of Object.entries(FERRAMENTAS_DO_PORTAL)) {
       expect(nome.startsWith(PREFIXO_DO_PORTAL)).toBe(true);
       expect(f.def.nome).toBe(nome);
-      expect(f.def.natureza).toBe("leitura");
-      expect(f.executar).toBeTypeOf("function");
+      if (nome === SOLICITACAO_PREPARADA) {
+        expect(f.def.natureza).toBe("escrita");
+        expect(f.executar).toBeUndefined();
+        expect(viraProposta(f.def, f.executar)).toBe(true);
+      } else {
+        expect(f.def.natureza).toBe("leitura");
+        expect(f.executar).toBeTypeOf("function");
+      }
     }
   });
 
@@ -148,6 +155,31 @@ describe("nunca lê empresa de outro cliente", () => {
     expect(await chamar("portal_empresas", {}, ctx)).toEqual({ empresas: [] });
     const r = (await chamar("portal_contas", { tipo: "PAGAR", situacao: "todas", empresaId: "" }, ctx)) as { contas: unknown[] };
     expect(r.contas).toEqual([]);
+  });
+});
+
+describe("só as empresas com a Ceci ligada pelo escritório", () => {
+  it("a filial entra pela matriz ligada", async () => {
+    const p = await abrirPortal(DO_PORTAL);
+    expect([...p.acesso.companyIds].sort()).toEqual(["a-filial", "a-matriz"]);
+  });
+
+  it("com a matriz desligada, só a empresa ligada direto — e a de fora do piloto é 'não encontrada'", async () => {
+    const empresas = EMPRESAS.map((e) =>
+      e.id === "a-matriz" ? { ...e, ceciNoPortal: false } : e.id === "a-filial" ? { ...e, ceciNoPortal: true, parent: { ...e.parent, ceciNoPortal: false } } : e
+    );
+    m.banco = bancoDeDoisClientes({ serviceRequest, company: empresas });
+    expect(await chamar("portal_empresas")).toEqual({ empresas: [{ id: "a-filial", nome: "A Filial", cnpj: null }] });
+    await expect(chamar("portal_contas", { tipo: "PAGAR", situacao: "todas", empresaId: "a-matriz" })).rejects.toThrow("Empresa não encontrada");
+    const r = (await chamar("portal_contas", { tipo: "PAGAR", situacao: "todas", empresaId: "" })) as { contas: { empresa: string }[] };
+    expect(r.contas.map((c) => c.empresa)).toEqual(["A Filial"]);
+  });
+
+  it("nenhuma ligada: a Ceci não lê nada", async () => {
+    m.banco = bancoDeDoisClientes({ serviceRequest, company: EMPRESAS.map((e) => ({ ...e, ceciNoPortal: false, parent: e.parent ? { ...e.parent, ceciNoPortal: false } : null })) });
+    expect(await chamar("portal_empresas")).toEqual({ empresas: [] });
+    const r = (await chamar("portal_solicitacoes", { recorte: "aguardando", empresaId: "" })) as { solicitacoes: unknown[] };
+    expect(r.solicitacoes).toEqual([]);
   });
 });
 

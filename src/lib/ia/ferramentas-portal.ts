@@ -21,8 +21,9 @@
 //   equipe: mensagem interna e responsável da solicitação, destino da nota no
 //   financeiro (lançada/ignorada), setor que pediu, ids de lançamento.
 //
-// Nenhuma ferramenta daqui escreve. A solicitação pré-preenchida (fase 3) é
-// proposta, que o próprio cliente revisa e envia pela tela.
+// Nenhuma ferramenta daqui escreve. A solicitação pré-preenchida (fase 3,
+// `portal_preparar_solicitacao`) é proposta, que o próprio cliente revisa e
+// envia pela tela.
 
 import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferramentas";
 import { getEnabledModuleCodes } from "@/lib/modules";
@@ -35,10 +36,10 @@ import {
   escopoDePendenciasDoAcesso,
   escopoDoClienteDoAcesso,
   escopoFinanceiroDoAcesso,
-  lerEscopoDoAcesso,
   naEmpresa,
   type EscopoDoAcesso,
 } from "@/lib/portal/escopoDoAcesso";
+import { lerEscopoDaCeci } from "@/lib/portal/ceci";
 import { contasDoEscopo, empresasDoSeletor, totaisDoEscopo } from "@/lib/financeiro/consultas";
 import { carregarPendencia, listarPendencias } from "@/lib/financeiro/pendencias/consultas";
 import { ROTULO_DO_TIPO } from "@/lib/financeiro/pendencias/regras";
@@ -58,6 +59,9 @@ import { competenciaOpcional, link, reais } from "@/lib/ia/ferramentas-bpo";
 /** O prefixo de toda ferramenta daqui — e só daqui (`ferramentas-portal.test.ts`). */
 export const PREFIXO_DO_PORTAL = "portal_";
 
+/** A ferramenta que prepara a solicitação (vira proposta, nunca grava). */
+export const SOLICITACAO_PREPARADA = "portal_preparar_solicitacao";
+
 /** Linhas mostradas por lista; o total vem à parte. */
 const LINHAS = 20;
 
@@ -72,7 +76,9 @@ export type PortalDaFerramenta = { acesso: EscopoDoAcesso; telas: ReadonlySet<st
 
 /**
  * Abre o portal para a ferramenta: confere que quem chama é um acesso do
- * portal e lê do banco as empresas e as telas dele.
+ * portal e lê do banco as empresas e as telas dele. As empresas são as do
+ * acesso com a Ceci ligada pelo escritório (fase 3, `src/lib/portal/ceci.ts`):
+ * empresa fora do piloto não existe para a Ceci, mesmo sendo do acesso.
  *
  * Recusa a conversa da equipe (`userId` preenchido): um agente da equipe com
  * esta ferramenta na allowlist por engano leria pelo escopo de um cliente que
@@ -82,7 +88,7 @@ export async function abrirPortal(ctx: ContextoDaFerramenta): Promise<PortalDaFe
   const portalUserId = ctx.escopo.portalUserId;
   if (ctx.userId !== null || !portalUserId) throw new Error("Esta consulta é só do portal do cliente.");
   const [acesso, modulos, bloqueadas] = await Promise.all([
-    lerEscopoDoAcesso(ctx.tenantId, portalUserId),
+    lerEscopoDaCeci(ctx.tenantId, portalUserId),
     getEnabledModuleCodes(ctx.tenantId),
     lerTelasBloqueadas(ctx.tenantId),
   ]);
@@ -179,7 +185,7 @@ export const FERRAMENTAS_DO_PORTAL: Record<string, FerramentaRegistrada> = {
     def: {
       nome: "portal_empresas",
       descricao:
-        "As empresas do acesso desta pessoa no portal (com as filiais), com o id que as outras ferramentas aceitam para filtrar. Só estas empresas existem para você.",
+        "As empresas desta pessoa sobre as quais você pode responder (com as filiais), com o id que as outras ferramentas aceitam para filtrar. Só estas empresas existem para você.",
       parametros: { type: "object", properties: {}, additionalProperties: false },
       natureza: "leitura",
     },
@@ -548,6 +554,31 @@ export const FERRAMENTAS_DO_PORTAL: Record<string, FerramentaRegistrada> = {
       return {
         assuntos: assuntos.map((a) => ({ id: a.id, assunto: a.label, quando: a.description, respostaEmDiasUteis: a.responseDays })),
       };
+    },
+  },
+
+  // A única que não é leitura, e ela não grava nada: é `escrita` sem
+  // `executar`, então o laço a transforma em proposta (`viraProposta`). Quem
+  // responde (`src/lib/ia/portal/responder.ts`) confere a empresa e o assunto
+  // e devolve ao chat um link para a tela de nova solicitação já preenchida —
+  // o cliente revisa, muda o que quiser e envia ele mesmo, pela action de
+  // sempre. (21/10/2026, fase 3.)
+  [SOLICITACAO_PREPARADA]: {
+    def: {
+      nome: SOLICITACAO_PREPARADA,
+      descricao:
+        "Prepara uma solicitação para a pessoa abrir no escritório — ela revisa e envia ela mesma na tela de nova solicitação. NADA é enviado por você. Use quando o que a pessoa precisa é com a equipe (pedir um documento, uma correção, uma dúvida que os dados não respondem), depois de portal_assuntos. A descrição é em primeira pessoa, como se a pessoa tivesse escrito, com os detalhes que ela deu.",
+      parametros: {
+        type: "object",
+        properties: {
+          empresaId: { type: "string", description: "O id de portal_empresas" },
+          assuntoId: { type: "string", description: "O id de portal_assuntos" },
+          descricao: { type: "string", description: "O que a pessoa precisa, com período, nomes e números que ela disse" },
+        },
+        required: ["empresaId", "assuntoId", "descricao"],
+        additionalProperties: false,
+      },
+      natureza: "escrita",
     },
   },
 };
