@@ -3,7 +3,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, type AuthContext } from "@/lib/auth/context";
 import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { mensagemQueCabe } from "@/lib/notifications";
 import { sendWebPushToUser } from "@/lib/webPush";
 import { isSubscriptionReadOnly } from "@/lib/subscription-policy";
@@ -157,9 +157,9 @@ export async function conferirChamado(ctx: AuthContext, ticketId: string) {
 }
 
 export async function responsaveisOps(tenantId: string) {
-  const setor = await setorDoModulo(tenantId, MODULO_OPS);
+  const setores = (await setoresDoModulo(tenantId, MODULO_OPS)) ?? ["tech"];
   return getPrisma().user.findMany({ where: { tenantId, active: true, OR: [
-    { role: { in: ["ADMIN", "SUPER_ADMIN", "READONLY"] } }, { sectors: { some: { sectorCode: setor ?? "tech" } } },
+    { role: { in: ["ADMIN", "SUPER_ADMIN", "READONLY"] } }, { sectors: { some: { sectorCode: { in: setores } } } },
   ] }, select: { id: true, name: true }, orderBy: { name: "asc" } });
 }
 

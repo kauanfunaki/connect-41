@@ -10,7 +10,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { canActOnSector, canViewSector, isFullWrite, type AuthContext } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { estadoDosAgentes } from "@/lib/ia/data";
@@ -309,17 +309,20 @@ export async function agentesDoChat(ctx: AuthContext): Promise<AgenteDoChat[]> {
     if (!agenteDoCatalogo(c.code)) continue;
     const estado = estados.get(c.code);
     if (!estado?.ligado || !estado.temChave) continue;
-    let setor: string | null = null;
+    // Os setores da tela do agente (21/10/2026): o dono e os que também usam.
+    // `setor` segue sendo o dono; "do setor ativo" vale para qualquer um deles.
+    let setores: string[] = [];
     if (c.modulo) {
-      setor = (await setorDoModulo(ctx.tenantId, c.modulo)) ?? getModuleDef(c.modulo)?.sectorCode ?? null;
-      if (!setor || !canActOnSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, c.modulo))) continue;
+      const def = getModuleDef(c.modulo);
+      setores = (await setoresDoModulo(ctx.tenantId, c.modulo)) ?? (def ? [def.sectorCode] : []);
+      if (setores.length === 0 || !canActOnSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, c.modulo))) continue;
     }
     disponiveis.push({
       code: c.code,
       especialidade: especialidadeDoAgente(c.code) ?? NOME_DA_ASSISTENTE,
       sugestoes: c.sugestoes,
-      setor,
-      doSetorAtivo: setor !== null && setor === ctx.activeSector,
+      setor: setores[0] ?? null,
+      doSetorAtivo: ctx.activeSector !== null && setores.includes(ctx.activeSector),
     });
   }
   return disponiveis.sort((a, b) => Number(b.doSetorAtivo) - Number(a.doSetorAtivo));
@@ -366,16 +369,16 @@ async function escopoBaseDoAgente(
     // para o Financeiro, e quem opera contas a pagar não herda o DRE por isso.
     const modulos: string[] = [];
     for (const modulo of Object.keys(MODULOS_DO_BPO)) {
-      const setor = (await setorDoModulo(ctx.tenantId, modulo)) ?? getModuleDef(modulo)?.sectorCode ?? null;
-      if (setor && canActOnSector(ctx, setor) && (await isModuleEnabled(ctx.tenantId, modulo))) modulos.push(modulo);
+      const setores = await setoresDoModulo(ctx.tenantId, modulo);
+      if (setores && canActOnSector(ctx, setores) && (await isModuleEnabled(ctx.tenantId, modulo))) modulos.push(modulo);
     }
     return { modulos: modulos.join(",") };
   }
   if (agentCode === "assistente_do_dp") {
     const modulos: string[] = [];
     for (const modulo of Object.keys(MODULOS_DO_DP)) {
-      const setor = (await setorDoModulo(ctx.tenantId, modulo)) ?? getModuleDef(modulo)?.sectorCode ?? null;
-      if (setor && canActOnSector(ctx, setor) && (await isModuleEnabled(ctx.tenantId, modulo))) modulos.push(modulo);
+      const setores = await setoresDoModulo(ctx.tenantId, modulo);
+      if (setores && canActOnSector(ctx, setores) && (await isModuleEnabled(ctx.tenantId, modulo))) modulos.push(modulo);
     }
     // Campo sensível: o que o papel não pode ver na tela não vai ao modelo.
     const sensiveis: string[] = [];

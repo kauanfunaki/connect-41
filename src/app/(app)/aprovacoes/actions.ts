@@ -10,7 +10,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
@@ -30,15 +30,15 @@ class Recusa extends Error {}
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode;
-  if (!canActOnSector(ctx, setor)) return { ok: false as const, erro: "Sem permissão nas aprovações." };
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [getModuleDef(MODULE)!.sectorCode];
+  if (!canActOnSector(ctx, setores)) return { ok: false as const, erro: "Sem permissão nas aprovações." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo de aprovações não habilitado." };
   return {
     ok: true as const,
     ctx,
     tenantId: ctx.tenantId,
     userId: ctx.userId || null,
-    gerencia: canManageSector(ctx, setor),
+    gerencia: canManageSector(ctx, setores),
     prisma: getPrisma(),
   };
 }

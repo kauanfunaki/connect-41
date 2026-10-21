@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { AcoesDoModelo } from "@/components/teste/AcoesDoModelo";
-import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
+import { setoresDoModulo, isModuleEnabled } from "@/lib/modules";
 import { StatusDot } from "@/components/shared/StatusDot";
 
 // Ativo/arquivado é situação de cadastro: a bolinha, como em Candidatos e
@@ -36,7 +36,7 @@ export default async function TemplatesPage() {
   // Vaga e teste são do setor que contrata (o escopo já filtra); aqui só o
   // módulo ligado, que antes não era checado e deixava a tela abrir desligada.
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!canManageSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
 
   const prisma = getPrisma();
   const templates = await prisma.assessmentTemplate.findMany({

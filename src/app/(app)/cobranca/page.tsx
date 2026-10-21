@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlarmClock, Handshake, Mail, FileWarning, Wallet, PhoneOff, MailX, ListChecks, Settings2, ArrowRight } from "lucide-react";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatInstantDate, formatInstantDateTime, formatarCompetencia } from "@/lib/format";
@@ -73,10 +73,10 @@ function dataDaChave(key: string): string {
 export default async function CobrancaPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
-  const gerencia = canManageSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  if (!canViewSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
+  const podeAgir = canActOnSector(ctx, setores);
+  const gerencia = canManageSector(ctx, setores);
 
   const params = await searchParams;
   const aba = params.aba === "acordos" ? "acordos" : params.aba === "regua" ? "regua" : "fila";
@@ -124,7 +124,7 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
         />
       )}
       {aba === "fila" && escopo && (
-        <Fila tenantId={ctx.tenantId} userId={ctx.userId} setor={setor} escopo={escopo} escolha={escolha} params={params} />
+        <Fila tenantId={ctx.tenantId} userId={ctx.userId} setores={setores} escopo={escopo} escolha={escolha} params={params} />
       )}
       {aba === "acordos" && escopo && <Acordos escopo={escopo} status={params.status} podeAgir={podeAgir} />}
       {aba === "regua" && <Regua tenantId={ctx.tenantId} empresas={empresas} gerencia={gerencia} />}
@@ -137,14 +137,15 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
 async function Fila({
   tenantId,
   userId,
-  setor,
+  setores,
   escopo,
   escolha,
   params,
 }: {
   tenantId: string;
   userId: string;
-  setor: string;
+  /** Os setores da cobrança (21/10/2026): o responsável pode ser de qualquer um. */
+  setores: string[];
   /** Uma empresa, ou todas — só quando pedido (`?empresa=todas`). */
   escopo: EscopoDaEscolha;
   escolha: EscolhaDaEmpresa;
@@ -159,7 +160,7 @@ async function Fila({
 
   const [fila, usuarios] = await Promise.all([
     filaDeCobranca(tenantId, { empresaId, faixa: faixa as ChaveDaFaixa | null, situacao, responsavel }, new Date()),
-    getSectorUsers(tenantId, setor),
+    getSectorUsers(tenantId, setores),
   ]);
   const hojeKey = saoPauloParts(new Date()).dateKey;
 

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatInstantDate, formatInstantDateTime, formatarCompetencia } from "@/lib/format";
@@ -48,14 +48,14 @@ const ROTULO_DO_EVENTO: Record<string, string> = {
 export default async function TituloEmCobrancaPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
-  const gerencia = canManageSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  if (!canViewSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
+  const podeAgir = canActOnSector(ctx, setores);
+  const gerencia = canManageSector(ctx, setores);
 
   const { id } = await params;
   const agora = new Date();
-  const [t, usuarios] = await Promise.all([carregarTitulo(ctx.tenantId, id, agora), getSectorUsers(ctx.tenantId, setor)]);
+  const [t, usuarios] = await Promise.all([carregarTitulo(ctx.tenantId, id, agora), getSectorUsers(ctx.tenantId, setores)]);
   if (!t) notFound();
   const hojeKey = saoPauloParts(agora).dateKey;
   const l = t.linha;
