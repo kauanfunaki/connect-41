@@ -42,6 +42,11 @@ function paraMensagem(m: LinhaCrua): MensagemDaConversa {
   };
 }
 
+/** Se há alguma mensagem no escopo — o histórico que o portal ainda mostra para consulta. */
+export async function temConversa(escopo: EscopoDaConversa): Promise<boolean> {
+  return (await getPrisma().companyMessage.findFirst({ where: whereDoEscopo(escopo), select: { id: true } })) !== null;
+}
+
 /** Teto de mensagens carregadas de uma vez. Conversa mais longa que isso mostra o fim. */
 const LIMITE_DA_CONVERSA = 300;
 
