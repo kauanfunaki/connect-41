@@ -24,11 +24,18 @@ import { horizonteDaSerie, ocorrenciasDaRepeticao, type AjusteDoDia, type FimDaS
 const SERIES_POR_VEZ = 200;
 
 /** A regra gravada, de volta no formato das funções puras. Nula se a linha não faz sentido. */
-export function repeticaoDaSerie(s: { frequency: string; dayAdjust: string; endMode: string; endDate: string | null }): Repeticao | null {
+export function repeticaoDaSerie(s: {
+  frequency: string;
+  dayAdjust: string;
+  endMode: string;
+  endDate: string | null;
+  dueDay?: number | null;
+}): Repeticao | null {
   const fim: FimDaSerie | null =
     s.endMode === "SEM_FIM" ? { tipo: "SEM_FIM" } : s.endMode === "ATE" && s.endDate ? { tipo: "ATE", dataKey: s.endDate } : null;
   if (!fim) return null;
-  return { frequencia: s.frequency as Frequencia, ajuste: s.dayAdjust as AjusteDoDia, fim };
+  // O dia que mudou no "daqui em diante" (22/10/2026) vale para as que nascerem.
+  return { frequencia: s.frequency as Frequencia, ajuste: s.dayAdjust as AjusteDoDia, fim, ...(s.dueDay ? { dia: s.dueDay } : {}) };
 }
 
 export type ResultadoDaExtensao = { series: number; criadas: number };
