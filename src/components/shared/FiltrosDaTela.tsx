@@ -68,6 +68,9 @@ export function FiltrosDaTela({
     else q.delete(chave);
     q.delete("pagina");
     q.delete("page");
+    // O cursor das listas do motor SPED carrega os filtros: com outro filtro
+    // ele vira `cursor_invalido` (22/10/2026).
+    q.delete("cursor");
     const s = q.toString();
     return s ? `${pathname}?${s}` : pathname;
   }
@@ -213,6 +216,7 @@ export function FiltrosDaTela({
                   for (const c of campos) q.delete(c.chave);
                   q.delete("pagina");
                   q.delete("page");
+                  q.delete("cursor");
                   const s = q.toString();
                   window.location.assign(s ? `${pathname}?${s}` : pathname);
                 }}
