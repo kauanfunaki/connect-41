@@ -11,23 +11,23 @@ import { GithubError, identity, loginSchema, settingsSchema } from "./rules";
 import { ensureConnection, getConnection, guardGeneration, queueInventory, queueRepositories } from "./store";
 import { validToken, withGithubLease } from "./sync";
 import type { IntegrationView } from "./types";
+import { syncProgress } from "./progress";
 
 export async function integrationView(tenantId: string): Promise<IntegrationView> {
   const connection = await getConnection(tenantId);
   const config = connection ? lerConfig(connection.integration.configEnc) : {}, serverReady = githubServerReady();
   const base = { configured: githubConfigured(config), serverReady, callbackUrl: serverReady ? githubCallback() : null,
     clientId: config.clientId ?? "", hasClientSecret: Boolean(config.clientSecret), connected: false, login: null, status: "disconnected", enabled: false, generation: 0,
-    timezone: "America/Sao_Paulo", intervalMinutes: 30, error: null, inventoryAt: null, pending: 0, failed: 0, repositories: [] };
+    timezone: "America/Sao_Paulo", intervalMinutes: 30, error: null, inventoryAt: null, pending: 0, failed: 0, repositories: [], progress: null };
   if (!connection) return base;
-  const [repos, pending, failed] = await Promise.all([
+  const [repos, progress] = await Promise.all([
     getPrisma().githubRepository.findMany({ where: { tenantId, connectionId: connection.id }, orderBy: { fullName: "asc" }, take: 1001 }),
-    getPrisma().githubSyncJob.count({ where: { tenantId, connectionId: connection.id, generation: connection.generation, state: "queued", ...(!connection.integration.enabled ? { resource: "INVENTORY" } : {}) } }),
-    getPrisma().githubSyncJob.count({ where: { tenantId, connectionId: connection.id, generation: connection.generation, state: "error" } }),
+    syncProgress(connection),
   ]);
   return { ...base, connected: connection.status === "connected", login: connection.login, status: connection.status, enabled: connection.integration.enabled,
     generation: connection.generation, timezone: connection.timezone, intervalMinutes: connection.intervalMinutes,
     error: repos.length > 1000 ? "Mais de 1.000 repositórios encontrados. Refine o acesso da conta para configurar a seleção nesta versão." : connection.lastError,
-    inventoryAt: connection.inventoryAt?.toISOString() ?? null, pending, failed,
+    inventoryAt: connection.inventoryAt?.toISOString() ?? null, pending: progress.pending, failed: progress.failed, progress,
     repositories: repos.map(repo => ({ id: repo.id, fullName: repo.fullName, owner: repo.owner, private: repo.private, fork: repo.fork,
       archived: repo.archived, selected: repo.selected, accessible: repo.accessible, error: repo.lastError })) };
 }

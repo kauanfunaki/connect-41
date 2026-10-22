@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GitCommitHorizontal, RefreshCw, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -18,12 +18,13 @@ import { githubFetch } from "@/lib/github/browser";
 import { TYPE_LABELS, CONTRIBUTION_TYPES, type DashboardView, type DayEvent, type HeatmapUser } from "@/lib/github/types";
 import { dateLabel } from "@/lib/github/calendar";
 import { ContributionCalendar } from "./ContributionCalendar";
+import { SyncStatus } from "./SyncStatus";
 
 export function GithubContributions({ initialQuery, canManage, canConfigure }: { initialQuery: string; canManage: boolean; canConfigure: boolean }) {
   const router = useRouter(), [data, setData] = useState<DashboardView | null>(null), [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true), [pump, setPump] = useState(false), [busy, setBusy] = useState(false);
-  const [detail, setDetail] = useState<{ user: HeatmapUser; day: string } | null>(null);
-  const processing = useRef(false);
+  const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
+  const [detail, setDetail] = useState<{ userId: string; day: string } | null>(null);
+  const openDay = useCallback((userId: string, day: string) => setDetail({ userId, day }), []);
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const result = await githubFetch<DashboardView>(`/api/github?${initialQuery}`, undefined, signal); setData(result); setError(null); return result;
   }, [initialQuery]);
@@ -35,31 +36,31 @@ export function GithubContributions({ initialQuery, canManage, canConfigure }: {
     return () => { controller.abort(); window.clearTimeout(timer); };
   }, [refresh]);
   useEffect(() => {
-    if (!data || !data.pending && !data.unavailable) return;
+    if (!data?.connected) return;
     let disposed = false; const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      if (document.visibilityState !== "visible" || processing.current) return;
-      processing.current = true;
+    let reading = false;
+    const read = async () => {
+      if (disposed || document.visibilityState !== "visible" || reading) return;
+      reading = true;
       try {
-        if (canManage && pump && data.pending) await githubFetch("/api/github/sync", { action: "process" }, controller.signal);
-        if (!disposed) await refresh(controller.signal);
-      } catch (err) { if (!disposed) { setError(err instanceof Error ? err.message : "Atualização indisponível."); setPump(false); } }
-      finally { processing.current = false; }
-    }, 15000);
-    const visible = () => { if (document.visibilityState === "visible") void refresh(controller.signal).catch(() => {}); };
-    document.addEventListener("visibilitychange", visible);
-    return () => { disposed = true; controller.abort(); window.clearTimeout(timer); document.removeEventListener("visibilitychange", visible); };
-  }, [data, pump, canManage, refresh]);
+        await refresh(controller.signal);
+      } catch (err) { if (!disposed) setError(err instanceof Error ? err.message : "Atualização indisponível."); }
+      finally { reading = false; }
+    };
+    const timer = window.setInterval(() => void read(), 30000);
+    document.addEventListener("visibilitychange", read);
+    return () => { disposed = true; controller.abort(); window.clearInterval(timer); document.removeEventListener("visibilitychange", read); };
+  }, [data?.connected, refresh]);
   async function synchronize() {
     setBusy(true); setError(null);
     try {
-      await githubFetch("/api/github/sync", { action: "queue" }); setPump(true);
-      await githubFetch("/api/github/sync", { action: "process" }); await refresh();
+      await githubFetch("/api/github/sync", { action: "queue" }); await refresh();
     } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível sincronizar."); }
     finally { setBusy(false); }
   }
   function changePage(page: number) { const params = new URLSearchParams(initialQuery); params.set("page", String(page)); router.replace(`/github?${params}`, { scroll: false }); }
   const params = new URLSearchParams(initialQuery), organizations = [...new Set(data?.repositories.map(repo => repo.owner) ?? [])].sort();
+  const detailUser = data?.users.find(user => user.id === detail?.userId);
   return <PageContainer>
     <PageHeader title="GitHub — Contribuições" subtitle="Atividade da equipe nos repositórios monitorados pelo Tech" action={<div className="flex flex-wrap gap-2">
       {canConfigure && <Button href="/admin/integracoes?integracao=github" variant="secondary"><Settings2 size={15} /> Integração GitHub</Button>}
@@ -72,6 +73,7 @@ export function GithubContributions({ initialQuery, canManage, canConfigure }: {
         {data.coveredThrough && <span>Dados coletados até {formatInstantDateTime(new Date(data.coveredThrough), { timeZone: data.timezone })}</span>}
         {data.connected && !data.enabled && <span>Sincronização pausada</span>}</div>
       {data.message && <Aviso tom="atencao">{data.message}</Aviso>}
+      <SyncStatus progress={data.progress} timezone={data.timezone} />
       {data.connected && !data.complete && <Aviso tom="info">Coleta parcial: dias sem atividade registrada ainda não representam zero confirmado.{data.pending > 0 && ` ${data.pending} tarefas pendentes.`}{data.failed > 0 && ` ${data.failed} tarefas precisam de nova tentativa.`}{data.unavailable > 0 && ` ${data.unavailable} repositórios aguardam confirmação ou estão sem acesso e foram excluídos dos totais.`}</Aviso>}
       <Card className="p-4"><form key={initialQuery} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" onSubmit={event => {
         event.preventDefault(); const form = new FormData(event.currentTarget), next = new URLSearchParams();
@@ -97,12 +99,12 @@ export function GithubContributions({ initialQuery, canManage, canConfigure }: {
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-fg">{user.login}{user.isBot && <span className="ml-2 text-fs-2 font-normal text-fg-muted">bot</span>}{user.tracked && <span className="ml-2 text-fs-2 font-normal text-fg-muted">acompanhado</span>}</p>
             <p className="mt-1 text-fs-2 text-fg-muted">{Number(user.total).toLocaleString("pt-BR")} contribuições · {user.activeDays} dias com atividade</p></div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-fs-2 text-fg-secondary">{CONTRIBUTION_TYPES.map(type => <span key={type}>{TYPE_LABELS[type]}: <strong className="font-medium text-fg">{user.counts[type]}</strong></span>)}</div></div>
-          <ContributionCalendar label={user.login} from={data.from} to={data.to} days={user.days} complete={data.complete} onDay={day => setDetail({ user, day })} />
+          <ContributionCalendar label={user.login} userId={user.id} from={data.from} to={data.to} days={user.days} complete={data.complete} onDay={openDay} />
         </Card>)}
       {data.totalUsers > data.pageSize && <div className="flex items-center justify-between gap-3 text-fs-3 text-fg-muted"><Button variant="secondary" disabled={data.page <= 1} onClick={() => changePage(data.page - 1)}>Anterior</Button><span>Página {data.page} de {Math.ceil(data.totalUsers / data.pageSize)}</span><Button variant="secondary" disabled={data.page * data.pageSize >= data.totalUsers} onClick={() => changePage(data.page + 1)}>Próxima</Button></div>}
       <p className="text-fs-2 text-fg-muted">Commits do branch padrão, aberturas de PRs e issues e revisões submetidas. Os totais refletem os repositórios selecionados e podem diferir do calendário do perfil GitHub. Bots ficam ocultos por padrão.</p>
     </div>}
-    {detail && data && <DayDetails user={detail.user} day={detail.day} query={initialQuery} complete={data.complete} timezone={data.timezone} onClose={() => setDetail(null)} />}
+    {detail && detailUser && data && <DayDetails key={`${detail.userId}:${detail.day}`} user={detailUser} day={detail.day} query={initialQuery} complete={data.complete} timezone={data.timezone} onClose={() => setDetail(null)} />}
   </PageContainer>;
 }
 
