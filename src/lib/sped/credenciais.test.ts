@@ -42,7 +42,13 @@ describe("credenciaisDoSped", () => {
 
   it("integração ligada e completa devolve a credencial dela, sem barra no fim da URL", async () => {
     findUnique.mockResolvedValue({ enabled: true, configEnc: "x" });
-    expect(await credenciaisDoSped("t1")).toEqual({ baseUrl: "https://sped.cliente.com.br", token: "t-cliente" });
+    expect(await credenciaisDoSped("t1")).toEqual({ baseUrl: "https://sped.cliente.com.br", token: "t-cliente", tokenEscrita: null });
+  });
+
+  it("o token de escrita é opcional e, quando gravado, vem junto", async () => {
+    findUnique.mockResolvedValue({ enabled: true, configEnc: "x" });
+    lerConfig.mockReturnValue({ ...COMPLETA, serviceTokenEscrita: " t-escrita " });
+    expect(await credenciaisDoSped("t1")).toEqual({ baseUrl: "https://sped.cliente.com.br", token: "t-cliente", tokenEscrita: "t-escrita" });
   });
 
   // Calado, parece que o cliente simplesmente não tem documento.
