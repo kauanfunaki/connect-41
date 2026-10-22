@@ -529,6 +529,47 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
+  // ─── Painel da carteira (22/10/2026) ──────────────────────────────────────
+  {
+    chave: "bpo_painel_carteira",
+    titulo: "Painel da carteira",
+    caminhos: ["/carteira-bpo"],
+    resumo:
+      "Mostra, numa linha por empresa atendida pelo BPO, o que pede atenção: contas vencidas a pagar e a receber, dias sem extrato, linhas a conciliar, saldo que não bate, pendências, aprovações e o último acesso do cliente ao portal.",
+    secoes: [
+      {
+        titulo: "Achar a empresa que precisa de você",
+        passos: [
+          "Abra “Painel da carteira”. A lista começa pelas empresas mais urgentes: as que somam mais contas vencidas e linhas a conciliar.",
+          "Os cartões do topo somam a carteira que está na tela — com o filtro de analista, só as empresas dele.",
+          "Clique no nome de uma coluna para ordenar por ela; clique de novo para inverter. No celular, a ordem fica em “Filtros”, em “Ordem”.",
+          "Busque pelo nome da empresa ou pelo CNPJ no campo de busca.",
+        ],
+      },
+      {
+        titulo: "Filtrar pelo analista",
+        passos: [
+          "Quem é o analista de alguma empresa abre o painel nas suas empresas (“Minhas empresas”).",
+          "Clique em “Filtros”, depois em “Analista”, e escolha “Todos os analistas”, “Sem analista” ou uma pessoa.",
+          "O analista é o responsável do serviço do BPO na ficha da empresa.",
+        ],
+      },
+      {
+        titulo: "Ir direto ao que resolver",
+        passos: [
+          "Clique no valor vencido para abrir “Contas a pagar” ou “Contas a receber” já na empresa, só nas vencidas.",
+          "Clique nos dias sem extrato, nas linhas a conciliar ou no saldo que não bate para abrir a “Conciliação bancária” da empresa.",
+          "Clique nas pendências ou nas aprovações para abrir a fila delas já filtrada na empresa.",
+        ],
+      },
+    ],
+    dicas: [
+      "A carteira são as empresas com o serviço do BPO ativo. Empresa inativa ou que saiu não aparece.",
+      "“Sem conta” quer dizer que a empresa não tem conta bancária com extrato cadastrada; “nunca”, que tem conta e nenhum extrato foi importado.",
+      "O painel mostra a carteira inteira mesmo quando você está trabalhando numa empresa por vez.",
+    ],
+  },
+
   // ─── Cobrança ─────────────────────────────────────────────────────────────
   {
     chave: "bpo_cobranca",
