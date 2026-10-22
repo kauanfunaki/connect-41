@@ -10,6 +10,10 @@ import jwt from "jsonwebtoken";
 import mariadb from "mariadb";
 import { chromium } from "playwright";
 
+// O conector SQL codifica Date no fuso do processo; o Prisma e o servidor
+// de produção usam instantes UTC. A fixture precisa gravar o mesmo instante.
+process.env.TZ = "UTC";
+
 const target = new URL(process.env.GITHUB_TEST_DATABASE_URL ?? "http://invalid");
 if (!["127.0.0.1", "localhost"].includes(target.hostname) || target.port !== "33381" || target.pathname !== "/connect41") throw new Error("Defina GITHUB_TEST_DATABASE_URL para o banco descartável em 127.0.0.1:33381/connect41.");
 const output = path.resolve(".local/github"); await mkdir(output, { recursive: true });
@@ -18,7 +22,7 @@ if (path.dirname(path.resolve(workspace)) !== output || !path.basename(workspace
 const executable = path.join(workspace, ".next/standalone/server.js"); await access(executable);
 const port = await new Promise((resolve, reject) => { const server = createServer(); server.once("error", reject); server.listen(0, "127.0.0.1", () => { const port = server.address().port; server.close(() => resolve(port)); }); });
 const base = `http://127.0.0.1:${port}`, secret = "github-ui-fixture-session", encryption = "github-ui-fixture-encryption";
-const db = await mariadb.createConnection({ host: target.hostname, port: 33381, user: decodeURIComponent(target.username), password: decodeURIComponent(target.password), database: "connect41", allowPublicKeyRetrieval: true });
+const db = await mariadb.createConnection({ host: target.hostname, port: 33381, user: decodeURIComponent(target.username), password: decodeURIComponent(target.password), database: "connect41", allowPublicKeyRetrieval: true, timezone: "+00:00" });
 const tenantId = randomUUID(), adminId = randomUUID(), techId = randomUUID(), fiscalId = randomUUID(), connectionId = randomUUID(), integrationId = randomUUID(), accountId = `U_account_${tenantId}`;
 const repositories = [0, 1].map(index => ({ id: randomUUID(), node_id: `R_ui_${index}`, owner: { login: index ? "beta" : "alpha" }, name: index ? "tools" : "app", full_name: index ? "beta/tools" : "alpha/app", default_branch: "main", private: index === 0, fork: false, archived: false }));
 const now = new Date(), from = new Date(now.getTime() - 367 * 86400000), types = ["COMMIT", "PULL_REQUEST", "ISSUE", "REVIEW"];
@@ -58,6 +62,10 @@ for (const [index, login] of ["ana-dev", "bruno-dev", "carla-review", "sem-ativi
     await db.query("INSERT INTO github_daily_contributions (id,tenantId,repositoryId,userId,day,type,`count`) VALUES (?,?,?,?,?,?,1)", [randomUUID(), tenantId, repo.id, userId, day, type]);
   }
 }
+// Volume representativo: vinte usuários com um ano de calendário cada.
+for (let index = 0; index < 16; index++) await db.query("INSERT INTO github_users (id,tenantId,connectionId,externalId,login,tracked) VALUES (?,?,?,?,?,true)", [randomUUID(), tenantId, connectionId, `U_volume_${index}`, `zz-volume-${String(index).padStart(2, "0")}`]);
+// Liberação controlada no cenário de retomada abaixo; o cron precisa respeitá-la.
+await db.query("INSERT INTO github_account_leases (githubUserId,nextAttemptAt) VALUES (?,?)", [accountId, new Date(Date.now() + 3600000)]);
 const hook = path.join(output, "fixture-fetch.mjs");
 await writeFile(hook, `if (process.env.GITHUB_UI_FIXTURE !== "1" || new URL(process.env.DATABASE_URL).port !== "33381") throw new Error("Fixture recusada");
 const original = globalThis.fetch; const repos = ${JSON.stringify(repositories)}; const accountId = ${JSON.stringify(accountId)};
@@ -79,7 +87,7 @@ globalThis.fetch = async (input, init) => {
  return Response.json({ message: "Fixture não encontrada" }, { status: 404 });
 };`);
 const system = Object.fromEntries(["PATH", "Path", "SystemRoot", "WINDIR", "TEMP", "TMP", "LOCALAPPDATA", "APPDATA", "USERPROFILE", "COMSPEC", "PATHEXT"].flatMap(name => process.env[name] ? [[name, process.env[name]]] : []));
-const env = { ...system, DATABASE_URL: target.toString(), NODE_ENV: "production", PORT: String(port), HOSTNAME: "127.0.0.1", APP_PUBLIC_URL: base, APP_DOMAIN: "", NEXT_TELEMETRY_DISABLED: "1",
+const env = { ...system, TZ: "UTC", DATABASE_URL: target.toString(), NODE_ENV: "production", PORT: String(port), HOSTNAME: "127.0.0.1", APP_PUBLIC_URL: base, APP_DOMAIN: "", NEXT_TELEMETRY_DISABLED: "1",
   JWT_ACCESS_SECRET: secret, JWT_REFRESH_SECRET: secret + "-refresh", SECRETS_ENCRYPTION_KEY: encryption, GITHUB_UI_FIXTURE: "1" };
 log = await open(path.join(output, "ui-server.log"), "w");
 server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executable], { cwd: path.dirname(executable), env, windowsHide: true, stdio: ["ignore", log.fd, log.fd] });
@@ -93,8 +101,14 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   await context.addCookies([cookie(adminId)]); page = await context.newPage(); page.setDefaultTimeout(30000);
   page.on("pageerror", error => result.browserErrors.push(error.message));
   const api = async (route = "/api/github") => { const response = await context.request.get(base + route); assert.ok(response.ok(), `${response.status()} ${await response.text()}`); return response.json(); };
+  const renderStart = performance.now();
   await page.goto(base + "/github"); await page.getByText("ana-dev", { exact: true }).waitFor();
   assert.equal((await api()).total, 120); assert.equal((await api()).complete, true);
+  const renderedDays = await page.locator("button[data-level]").count();
+  assert.equal((await api()).totalUsers, 20);
+  assert.ok(renderedDays > 0 && renderedDays < 20 * 300, "Calendários fora da viewport não devem montar milhares de botões");
+  result.performance = { users: 20, mountedDayButtons: renderedDays, eagerDayButtons: 20 * 366, firstViewMs: Math.round(performance.now() - renderStart) };
+  ok("Vinte usuários com montagem adiada dos calendários fora da viewport");
   await page.getByRole("group", { name: "Calendário de sem-atividade", exact: true }).waitFor(); ok("Calendários individuais, quatro tipos, cobertura e usuário sem atividade");
   await page.screenshot({ path: path.join(output, "github-desktop.png"), fullPage: true, animations: "disabled" });
   const calendar = page.getByRole("group", { name: "Calendário de ana-dev", exact: true });
@@ -136,6 +150,21 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   await page.getByRole("button", { name: "Pausar", exact: true }).click();
   await page.getByRole("button", { name: "Retomar", exact: true }).waitFor();
   const paused = await api(); assert.equal(paused.enabled, false); assert.equal(paused.total, 60); ok("Integrações salva seleção, pausa a coleta e preserva o histórico selecionado");
+  await page.getByRole("button", { name: "Retomar", exact: true }).click();
+  await page.getByRole("button", { name: "Pausar", exact: true }).waitFor();
+  await page.goto("about:blank");
+  await db.query("UPDATE github_account_leases SET nextAttemptAt=NULL WHERE githubUserId=?", [accountId]);
+  let remaining = 1;
+  for (let attempt = 0; attempt < 90; attempt++) {
+    remaining = Number((await db.query("SELECT COUNT(*) n FROM github_sync_jobs j JOIN github_connections c ON c.id=j.connectionId WHERE c.id=? AND j.generation=c.generation AND j.state='queued'", [connectionId]))[0].n);
+    if (!remaining) break;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  assert.equal(remaining, 0, "O servidor deve concluir a fila sem uma página Connect aberta");
+  assert.ok(Number((await db.query("SELECT COUNT(*) n FROM integration_runs WHERE integrationId=? AND `trigger`='CRON' AND ok=true", [integrationId]))[0].n) > 0);
+  ok("Standalone conclui a fila em segundo plano com o navegador em about:blank");
+  await page.goto(base + "/admin/integracoes?integracao=github");
+  await page.getByRole("link", { name: "Reconectar / trocar conta", exact: true }).waitFor();
   let authorization;
   await page.route(base + "/api/integrations/github/connect", async route => {
     const response = await route.fetch({ maxRedirects: 0 });

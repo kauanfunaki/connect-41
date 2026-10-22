@@ -1,13 +1,28 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { calendarDays, calendarLevel, dateLabel } from "@/lib/github/calendar";
 const LEVELS = ["bg-surface-2", "bg-success/20", "bg-success/40", "bg-success/70", "bg-success"];
-export function ContributionCalendar({ from, to, days, complete, onDay, label }: {
-  from: string; to: string; days: { day: string; count: number }[]; complete: boolean; onDay: (day: string) => void; label: string;
-}) {
-  const cells = calendarDays(from, to), counts = new Map(days.map(day => [day.day, day.count])), buttons = useRef(new Map<string, HTMLButtonElement>());
-  const [focused, setFocused] = useState(from);
+type Props = { from: string; to: string; days: { day: string; count: number }[]; complete: boolean; onDay: (userId: string, day: string) => void; label: string; userId: string };
+export const ContributionCalendar = memo(function ContributionCalendar(props: Props) {
+  const container = useRef<HTMLDivElement>(null), [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (!container.current || visible) return;
+    const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) { setVisible(true); observer.disconnect(); } }, { rootMargin: "300px" });
+    observer.observe(container.current);
+    return () => observer.disconnect();
+  }, [visible]);
+  return <div ref={container} style={{ minHeight: 140 }}>
+    {visible ? <CalendarGrid key={`${props.from}:${props.to}`} {...props} /> : <div role="group" aria-label={`Calendário de ${props.label}`} className="h-32 rounded bg-surface-2" />}
+  </div>;
+}, (previous, next) => previous.from === next.from && previous.to === next.to && previous.complete === next.complete && previous.label === next.label
+  && previous.userId === next.userId && previous.onDay === next.onDay && previous.days.length === next.days.length
+  && previous.days.every((day, index) => day.day === next.days[index].day && day.count === next.days[index].count));
+
+function CalendarGrid({ from, to, days, complete, onDay, label, userId }: Props) {
+  const cells = useMemo(() => calendarDays(from, to), [from, to]);
+  const counts = useMemo(() => new Map(days.map(day => [day.day, day.count])), [days]), buttons = useRef(new Map<string, HTMLButtonElement>());
+  const focused = useRef(from);
   return <div className="overflow-x-auto pb-2" role="group" aria-label={`Calendário de ${label}`}>
     <div className="grid w-max gap-[3px]" style={{ gridTemplateRows: "repeat(7, 13px)", gridAutoFlow: "column", gridAutoColumns: "13px" }}>
       {cells.map((day, index) => {
@@ -15,10 +30,10 @@ export function ContributionCalendar({ from, to, days, complete, onDay, label }:
         const count = counts.get(day) ?? 0, unknown = count === 0 && !complete;
         const title = `${dateLabel(day)}: ${unknown ? "coleta incompleta" : `${count} ${count === 1 ? "contribuição" : "contribuições"}`}`;
         return <button key={day} type="button" ref={element => { if (element) buttons.current.set(day, element); else buttons.current.delete(day); }}
-          tabIndex={focused === day ? 0 : -1} aria-label={title} title={title} data-level={calendarLevel(count)}
+          tabIndex={from === day ? 0 : -1} aria-label={title} title={title} data-level={calendarLevel(count)}
           className={`size-[13px] rounded-[3px] border border-border/40 outline-none hover:ring-2 hover:ring-brand focus-visible:ring-2 focus-visible:ring-brand ${LEVELS[calendarLevel(count)]}`}
           style={unknown ? { backgroundImage: "repeating-linear-gradient(135deg, transparent, transparent 2px, var(--c41-border) 2px, var(--c41-border) 3px)" } : undefined}
-          onFocus={() => setFocused(day)} onClick={() => onDay(day)} onKeyDown={event => {
+          onFocus={event => { const previous = buttons.current.get(focused.current); if (previous) previous.tabIndex = -1; focused.current = day; event.currentTarget.tabIndex = 0; }} onClick={() => onDay(userId, day)} onKeyDown={event => {
             const delta: Record<string, number> = { ArrowUp: -1, ArrowDown: 1, ArrowLeft: -7, ArrowRight: 7 };
             let target: string | null | undefined;
             if (event.key in delta) target = cells[index + delta[event.key]];

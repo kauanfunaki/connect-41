@@ -12,5 +12,7 @@ export async function register() {
 
     const { startAlertScheduler } = await import("@/lib/alerts");
     startAlertScheduler();
+    const { startGithubScheduler } = await import("@/lib/github/scheduler");
+    startGithubScheduler();
   }
 }

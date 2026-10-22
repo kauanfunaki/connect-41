@@ -15,7 +15,7 @@ vi.mock("@/lib/audit", () => ({ logAudit: mocks.audit }));
 import { githubAccess } from "./access";
 import { beginOAuth, finishOAuth } from "./oauth";
 import { connectionQuery, ensureConnection, getConnection, queueRepositories } from "./store";
-import { processConnection, scheduleSync, withGithubLease } from "./sync";
+import { processConnection, processGithubCron, scheduleSync, withGithubLease } from "./sync";
 import { filtersSchema, historyStart, dayAt } from "./rules";
 import { dashboard, dayEvents } from "./queries";
 import { changeIntegration, integrationView } from "./service";
@@ -206,9 +206,27 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
   it("exclui dados após revogação e preserva os registros para recuperação", async () => {
     await collect(); revoked = true;
     await db!.githubConnection.update({ where: { id: connectionId }, data: { verifiedAt: new Date(0) } });
+    const calls = fetcher.mock.calls.length;
+    expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(0);
+    expect(fetcher.mock.calls).toHaveLength(calls);
+    await processGithubCron();
     const view = await dashboard(tenantId, filtersSchema.parse({}));
     expect(view.connected).toBe(false); expect(view.users).toEqual([]); expect(view.total).toBe(0);
     expect(await db!.githubContribution.count({ where: { tenantId } })).toBe(4);
+  });
+  it("coleta e retoma lotes automaticamente sem nenhuma página aberta", async () => {
+    for (let round = 0; round < 12; round++) await processGithubCron();
+    const view = await dashboard(tenantId, filtersSchema.parse({}));
+    expect(view.total).toBe(4); expect(view.pending).toBe(0); expect(view.complete).toBe(true);
+    expect(view.progress).toMatchObject({ state: "idle", pending: 0, failed: 0 });
+    expect(await db!.integrationRun.count({ where: { integrationId: (await getConnection(tenantId))!.integrationId, trigger: "CRON", ok: true } })).toBeGreaterThan(0);
+    // A leitura repetida não disputa a lease nem gera novas requisições GitHub.
+    const calls = fetcher.mock.calls.length;
+    await withGithubLease(githubId, async () => {
+      expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(4);
+    });
+    expect(fetcher.mock.calls).toHaveLength(calls);
+    await processGithubCron(); expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(4);
   });
   it("isola detalhes por escritório, repositório selecionado e tipo", async () => {
     await collect();
