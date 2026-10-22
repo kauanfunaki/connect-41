@@ -2630,6 +2630,18 @@ model ClientDocument {
   // recebimento que este módulo já registra.
   requiresSignature Boolean              @default(false)
   publishedAt       DateTime?
+  // Envio agendado (22/10/2026): rascunho com data marcada. Enquanto
+  // `status` é DRAFT o cliente não vê nada (portal e link público só mostram
+  // PUBLISHED); o agendador interno publica e manda os e-mails de
+  // `scheduledEmails` quando chega a hora. A data fica depois de publicado,
+  // como registro de que saiu agendado.
+  scheduledFor      DateTime?
+  scheduledEmails   Json?
+  // Lembrete de não lido (22/10/2026): se ninguém do cliente abriu o envio em
+  // `reminderDays` dias, sai UM lembrete (e-mail aos destinatários + push do
+  // portal). `reminderSentAt` é a trava do agendador — gravado antes do envio.
+  reminderDays      Int?
+  reminderSentAt    DateTime?
   createdById       String
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
@@ -2640,6 +2652,8 @@ model ClientDocument {
   recipients ClientDocumentRecipient[]
 
   @@index([tenantId, companyId])
+  @@index([status, scheduledFor])
+  @@index([status, reminderSentAt])
   @@map("client_documents")
 }
 

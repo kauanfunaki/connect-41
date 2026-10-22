@@ -967,6 +967,16 @@ export function startAlertScheduler(): void {
         if (r.criadas > 0 || r.removidas > 0 || r.reprogramadas > 0) console.log("[obrigacoes] carteira ajustada", r);
       })
       .catch((err) => console.error("[obrigacoes] falha na geração por regime", err));
+    // Os envios ao cliente (22/10/2026): o agendado sai na hora marcada, e o
+    // lembrete de não lido sai quando o prazo vence — cada um travado antes do
+    // e-mail, então duas passadas juntas não mandam em dobro. Sem nada
+    // vencido, duas consultas por índice.
+    import("@/lib/envios/agendador")
+      .then(({ rodarEnviosAutomaticos }) => rodarEnviosAutomaticos())
+      .then((r) => {
+        if (r.agendados.publicados > 0 || r.lembretes.lembrados > 0) console.log("[envios] agendados e lembretes", r);
+      })
+      .catch((err) => console.error("[envios] falha nos envios agendados e lembretes", err));
   };
 
   run(); // primeira execução já na subida, não espera os 15min iniciais
