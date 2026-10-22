@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { ajustarDia, horizonteDaSerie, ocorrenciasDaRepeticao, rotuloDaSerie, temProximasNaSerie, totalDaSerie, validarRepeticao } from "./repeticao";
+import {
+  ajustarDia,
+  frequenciaComDiaDoMes,
+  horizonteDaSerie,
+  ocorrenciasDaRepeticao,
+  rotuloDaSerie,
+  temProximasNaSerie,
+  totalDaSerie,
+  validarRepeticao,
+  vencimentoNaPosicao,
+} from "./repeticao";
 
 // O que se testa (19/10, lote D): a série nasce com as datas e as
 // competências certas — fim de mês, fim de semana, feriado e virada de ano.
@@ -145,5 +155,34 @@ describe("a série sem número de vezes", () => {
     expect(horizonteDaSerie("DIARIA", "2026-10-21")).toBe("2026-12-21");
     expect(horizonteDaSerie("SEMANAL", "2026-10-21")).toBe("2027-04-21");
     expect(horizonteDaSerie("ANUAL", "2026-10-31")).toBe("2029-10-31");
+  });
+});
+
+// O dia que mudou no "mudar a série daqui em diante" (22/10/2026).
+describe("o dia novo da série", () => {
+  it("as próximas nascem no dia novo; a primeira, a competência e o fim continuam como eram", () => {
+    const r = { frequencia: "MENSAL" as const, ajuste: "MANTER" as const, fim: { tipo: "ATE" as const, dataKey: "2027-01-12" }, dia: 31 };
+    const o = ocorrenciasDaRepeticao({ vencimentoKey: "2026-10-10", competencia: "2026-10" }, r);
+    // O "até 12/01" conta pelo dia 10 de sempre: a de janeiro entra, no dia 31.
+    expect(o.map((x) => x.vencimentoKey)).toEqual(["2026-10-10", "2026-11-30", "2026-12-31", "2027-01-31"]);
+    expect(o.map((x) => x.competencia)).toEqual(["2026-10", "2026-11", "2026-12", "2027-01"]);
+  });
+
+  it("na semanal o dia do mês não vale", () => {
+    const r = { frequencia: "SEMANAL" as const, ajuste: "MANTER" as const, fim: { tipo: "VEZES" as const, vezes: 2 }, dia: 31 };
+    expect(ocorrenciasDaRepeticao({ vencimentoKey: "2026-10-10", competencia: "2026-10" }, r).map((x) => x.vencimentoKey)).toEqual([
+      "2026-10-10",
+      "2026-10-17",
+    ]);
+    expect(frequenciaComDiaDoMes("SEMANAL")).toBe(false);
+    expect(frequenciaComDiaDoMes("ANUAL")).toBe(true);
+  });
+
+  it("vencimentoNaPosicao: o mês da regra, o dia novo, ajustado — a primeira também", () => {
+    // 15/11/2026 é domingo.
+    expect(vencimentoNaPosicao("2026-10-10", "MENSAL", "ADIAR", 2, 15)).toBe("2026-11-16");
+    expect(vencimentoNaPosicao("2026-10-10", "MENSAL", "MANTER", 5, 31)).toBe("2027-02-28");
+    expect(vencimentoNaPosicao("2026-10-10", "MENSAL", "MANTER", 1, 20)).toBe("2026-10-20");
+    expect(vencimentoNaPosicao("2026-10-10", "ANUAL", "MANTER", 3, 5)).toBe("2028-10-05");
   });
 });

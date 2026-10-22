@@ -126,6 +126,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "financeiro.bank_rule.undone": e("desfez o que uma regra de conciliação lançou"),
   "financeiro.entry.created_by_bank_rule": c("lançou pela regra de conciliação o lançamento"),
   "financeiro.entry.created_by_recurrence": c("criou as próximas contas da repetição"),
+  // Mudar a série daqui em diante (22/10/2026): o aluguel reajustado.
+  "financeiro.entry.series_changed": e("mudou, desta conta em diante, a série do lançamento"),
   "financeiro.categoria.linha_da_dre": e("ligou a uma linha da DRE a categoria"),
   "financeiro.categoria_da_empresa.criada": c("criou a categoria"),
   "financeiro.categoria_da_empresa.alterada": e("editou a categoria"),
