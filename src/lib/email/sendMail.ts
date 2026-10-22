@@ -185,6 +185,12 @@ export type SendClientDocumentEmailInput = {
   companyName: string;
   senderName: string;
   hasAttachment: boolean;
+  /**
+   * O lembrete de não lido (22/10/2026): o mesmo e-mail, com o mesmo link e a
+   * mesma marca do escritório, só que o texto e o assunto dizem que é
+   * lembrete — o cliente reconhece o documento que já recebeu.
+   */
+  lembrete?: boolean;
 };
 
 // Propositalmente NÃO envia o corpo do documento nem o anexo dentro do e-mail —
@@ -219,8 +225,13 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
   const html = emailShell(
     `
     <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
-      <strong>${escapeHtml(input.senderName)}</strong> compartilhou um novo documento com você em nome de
-      <strong>${escapeHtml(input.companyName)}</strong>.
+      ${
+        input.lembrete
+          ? `Lembrete: <strong>${escapeHtml(input.senderName)}</strong> compartilhou um documento com você em nome de
+      <strong>${escapeHtml(input.companyName)}</strong>, e ele ainda não foi aberto.`
+          : `<strong>${escapeHtml(input.senderName)}</strong> compartilhou um novo documento com você em nome de
+      <strong>${escapeHtml(input.companyName)}</strong>.`
+      }
     </p>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="doc-card" style="margin:0 0 24px; border:1px solid; border-radius:10px;">
@@ -228,7 +239,7 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
         <td style="padding:16px 18px;">
           <p class="email-text-muted" style="margin:0 0 4px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; font-family:Arial,Helvetica,sans-serif;">Documento</p>
           <p class="email-text-strong" style="margin:0 0 3px; font-size:15px; font-weight:700; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(input.documentTitle)}</p>
-          <p class="email-text-muted" style="margin:0; font-size:12.5px; font-family:Arial,Helvetica,sans-serif;">Disponível para visualização</p>
+          <p class="email-text-muted" style="margin:0; font-size:12.5px; font-family:Arial,Helvetica,sans-serif;">${input.lembrete ? "Aguardando a sua leitura" : "Disponível para visualização"}</p>
         </td>
       </tr>
     </table>
@@ -282,7 +293,7 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
     await enviarComRegistro(transporter, "sendClientDocumentEmail", {
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: input.to,
-      subject: `Novo documento: ${input.documentTitle}`,
+      subject: input.lembrete ? `Lembrete: documento aguardando leitura — ${input.documentTitle}` : `Novo documento: ${input.documentTitle}`,
       html,
     });
     return { ok: true };
