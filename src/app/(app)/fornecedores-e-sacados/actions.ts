@@ -19,6 +19,13 @@ import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { validarFicha, leitorDaFicha, CAMPOS_DA_FICHA } from "@/lib/financeiro/fichaDaContraparte";
 import { validarProjeto, nomeEmUso } from "@/lib/financeiro/projeto";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
+import { lerRegraDoFormulario } from "@/lib/financeiro/baixa/encargos";
+
+/** Os juros e a multa da ficha (22/10/2026): os campos `encargosMulta`, `encargosJuros` e `encargosDesconto`. */
+function encargosDaFicha(formData: FormData) {
+  const nome = { multa: "encargosMulta", juros: "encargosJuros", desconto: "encargosDesconto" } as const;
+  return lerRegraDoFormulario((c) => String(formData.get(nome[c]) ?? ""));
+}
 
 const MODULE = "bpo_cadastros";
 
@@ -82,6 +89,8 @@ export async function criarContraparte(formData: FormData): Promise<ResultadoDoC
   if (!documentoValido(documento)) return { error: "Documento não é CPF (11 dígitos) nem CNPJ (14)." };
   const ficha = validarFicha(leitorDaFicha(formData));
   if (!ficha.ok) return { error: ficha.erro };
+  const encargos = encargosDaFicha(formData);
+  if (!encargos.ok) return { error: encargos.erro };
   if (!(await categoriaDePagar(c.prisma, c.tenantId, companyId, categoriaId))) return { error: "Categoria não encontrada." };
   if (!(await centroPadraoValido(c.prisma, c.tenantId, companyId, centroId))) {
     return { error: "Centro de custo não encontrado ou inativo nesta empresa." };
@@ -107,6 +116,7 @@ export async function criarContraparte(formData: FormData): Promise<ResultadoDoC
       defaultCategoryId: categoriaId,
       defaultCostCenterId: centroId,
       ...ficha.dados,
+      ...encargos.dados,
     },
     select: { id: true },
   });
@@ -156,6 +166,9 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
       bankAgency: true,
       bankAccount: true,
       pixKey: true,
+      lateFinePercent: true,
+      lateInterestPercent: true,
+      earlyDiscountPercent: true,
     },
   });
   if (!atual) return { error: "Cadastro não encontrado." };
@@ -179,6 +192,8 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
   if (!documentoValido(novoDocumento)) return { error: "Documento não é CPF (11 dígitos) nem CNPJ (14)." };
   const ficha = validarFicha(leitorDaFicha(formData));
   if (!ficha.ok) return { error: ficha.erro };
+  const encargos = encargosDaFicha(formData);
+  if (!encargos.ok) return { error: encargos.erro };
   if (!(await categoriaDePagar(prisma, c.tenantId, atual.companyId, categoriaId))) return { error: "Categoria não encontrada." };
   if (!(await centroPadraoValido(prisma, c.tenantId, atual.companyId, centroId, atual.defaultCostCenterId))) {
     return { error: "Centro de custo não encontrado ou inativo nesta empresa." };
@@ -200,12 +215,24 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
       defaultCostCenterId: centroId,
       active: ativo,
       ...ficha.dados,
+      ...encargos.dados,
       ...(novoDocumento ? { document: novoDocumento } : {}),
     },
   });
   // Quais campos da ficha mudaram — os nomes, não os valores: dado bancário e
   // chave PIX não vão para o log.
   const fichaAlterada = CAMPOS_DA_FICHA.filter((campo) => atual[campo] !== ficha.dados[campo]);
+  const encargosAntes = {
+    multa: decimalNoLog(atual.lateFinePercent),
+    juros: decimalNoLog(atual.lateInterestPercent),
+    desconto: decimalNoLog(atual.earlyDiscountPercent),
+  };
+  const encargosDepois = {
+    multa: decimalNoLog(encargos.dados.lateFinePercent),
+    juros: decimalNoLog(encargos.dados.lateInterestPercent),
+    desconto: decimalNoLog(encargos.dados.earlyDiscountPercent),
+  };
+  const encargosMudaram = JSON.stringify(encargosAntes) !== JSON.stringify(encargosDepois);
   await logAudit({
     tenantId: c.tenantId,
     userId: c.ctx.userId,
@@ -217,6 +244,7 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
       documentoPreenchido: !!novoDocumento,
       comEmail: email !== null,
       ...(fichaAlterada.length ? { fichaAlterada } : {}),
+      ...(encargosMudaram ? { jurosEMulta: { de: encargosAntes, para: encargosDepois } } : {}),
       ...(centroId !== atual.defaultCostCenterId ? { centroPadrao: { de: atual.defaultCostCenterId, para: centroId } } : {}),
     },
   });
@@ -604,5 +632,57 @@ export async function linhaDaDreNaEmpresa(companyId: string, categoryId: string,
     metadata: { companyId, linha: linha.grupo },
   });
   revalidarPlano();
+  return { ok: true };
+}
+
+// ─── Juros e multa pelo atraso (22/10/2026) ─────────────────────────────────
+
+/** O percentual como o log o guarda: "2.5" (sem os zeros da coluna), ou nulo. */
+function decimalNoLog(v: { toString(): string } | null): string | null {
+  if (v === null) return null;
+  const n = Number(v.toString());
+  return Number.isFinite(n) ? String(n) : v.toString();
+}
+
+/**
+ * A regra de juros e multa da empresa — a aba "Juros e multa" de Fornecedores
+ * e sacados. Os três vazios desligam: a janela da baixa volta a vir em zero.
+ * O fornecedor ou cliente com regra própria (na ficha dele) não muda.
+ */
+export async function salvarEncargosDaEmpresa(formData: FormData): Promise<ResultadoDoCadastro> {
+  const companyId = String(formData.get("companyId") ?? "").trim();
+  const c = await contexto(companyId);
+  if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO: com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
+  const regra = lerRegraDoFormulario((campo) => String(formData.get(campo) ?? ""));
+  if (!regra.ok) return { error: regra.erro };
+
+  const antes = await c.prisma.company.findUnique({
+    where: { id: companyId },
+    select: { lateFinePercent: true, lateInterestPercent: true, earlyDiscountPercent: true },
+  });
+  await c.prisma.company.update({ where: { id: companyId }, data: regra.dados });
+  await logAudit({
+    tenantId: c.tenantId,
+    userId: c.ctx.userId,
+    action: "financeiro.encargos.empresa_salvos",
+    entityType: "Company",
+    entityId: companyId,
+    metadata: {
+      de: {
+        multa: decimalNoLog(antes?.lateFinePercent ?? null),
+        juros: decimalNoLog(antes?.lateInterestPercent ?? null),
+        desconto: decimalNoLog(antes?.earlyDiscountPercent ?? null),
+      },
+      para: {
+        multa: decimalNoLog(regra.dados.lateFinePercent),
+        juros: decimalNoLog(regra.dados.lateInterestPercent),
+        desconto: decimalNoLog(regra.dados.earlyDiscountPercent),
+      },
+    },
+  });
+  revalidatePath("/fornecedores-e-sacados");
   return { ok: true };
 }

@@ -129,6 +129,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   // Mudar a série daqui em diante (22/10/2026): o aluguel reajustado.
   "financeiro.entry.series_changed": e("mudou, desta conta em diante, a série do lançamento"),
   "financeiro.categoria.linha_da_dre": e("ligou a uma linha da DRE a categoria"),
+  // Juros e multa pelo atraso (22/10/2026).
+  "financeiro.encargos.empresa_salvos": e("salvou a regra de juros e multa pelo atraso da empresa"),
   "financeiro.categoria_da_empresa.criada": c("criou a categoria"),
   "financeiro.categoria_da_empresa.alterada": e("editou a categoria"),
   "financeiro.categoria_padrao.escondida": e("escondeu da empresa uma categoria do plano padrão"),
