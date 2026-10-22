@@ -958,6 +958,15 @@ export function startAlertScheduler(): void {
         if (r.criadas > 0) console.log("[repeticao] contas criadas", r);
       })
       .catch((err) => console.error("[repeticao] falha ao estender as séries", err));
+    // As obrigações por regime (22/10/2026): as próximas competências da
+    // carteira nascem, e a empresa que mudou de regime perde as futuras que
+    // deixou de ter. Sem modelo cadastrado, uma consulta.
+    import("@/lib/obrigacoes/geracao")
+      .then(({ gerarObrigacoesPorRegime }) => gerarObrigacoesPorRegime())
+      .then((r) => {
+        if (r.criadas > 0 || r.removidas > 0 || r.reprogramadas > 0) console.log("[obrigacoes] carteira ajustada", r);
+      })
+      .catch((err) => console.error("[obrigacoes] falha na geração por regime", err));
   };
 
   run(); // primeira execução já na subida, não espera os 15min iniciais
