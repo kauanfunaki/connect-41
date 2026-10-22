@@ -7,6 +7,7 @@ import { HASH_DESCARTAVEL, verifyPassword } from "@/lib/auth/password";
 import { signPortalEscolha, verifyPortalEscolha } from "@/lib/auth/jwt";
 import { PORTAL_COOKIE } from "@/lib/auth/portal";
 import { cookieDaSessaoDoPortal, querLembrar } from "@/lib/auth/sessaoDoPortal";
+import { cookieDoEscritorioDoPortal } from "@/lib/portal/marcaNaEntrada";
 import { CAMINHO_DO_COOKIE_DA_ESCOLHA, COOKIE_DA_ESCOLHA } from "@/lib/auth/googleDoPortal";
 import { MAX_CONTAS_POR_EMAIL } from "@/app/(portal)/usuario";
 import { nomesDasContasNoLogin } from "@/lib/portal/empresasDaContaDb";
@@ -138,6 +139,10 @@ async function iniciarSessao(
   const sessao = cookieDaSessaoDoPortal(conta, lembrar);
   const store = await cookies();
   store.set(sessao.name, sessao.value, sessao.options);
+  // De qual escritório é este aparelho (22/10/2026): o próximo login já abre
+  // com a marca dele. Sobrevive ao "Sair", de propósito.
+  const escritorio = cookieDoEscritorioDoPortal(conta.tenantId);
+  store.set(escritorio.name, escritorio.value, escritorio.options);
   // A escolha que veio do Google, se havia, já foi usada.
   if (store.get(COOKIE_DA_ESCOLHA)) store.set(COOKIE_DA_ESCOLHA, "", { path: CAMINHO_DO_COOKIE_DA_ESCOLHA, maxAge: 0 });
 
