@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { Lock, Undo2 } from "lucide-react";
+import { FileDown, Lock, Undo2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -334,7 +334,7 @@ function ListaDeBaixas({ baixas, aPagar, onDesfeito }: { baixas: BaixaDaConta[];
     <div className="flex flex-col gap-2">
       <h3 className="text-label font-semibold text-fg">{baixas.length === 1 ? "Baixa desta conta" : `As ${baixas.length} baixas desta conta`}</h3>
       <div className="overflow-x-auto rounded-md border border-border">
-        <table className="w-full min-w-[560px] text-ui">
+        <table className="w-full min-w-[640px] text-ui">
           <thead>
             <tr className="border-b border-border bg-table-header-bg text-micro uppercase tracking-wide text-fg-muted">
               <th className="px-3 py-2 text-left font-medium">Data</th>
@@ -361,7 +361,16 @@ function ListaDeBaixas({ baixas, aPagar, onDesfeito }: { baixas: BaixaDaConta[];
                 <td className="px-3 py-2 text-right tabular-nums">{b.jurosCentavos + b.multaCentavos ? reais(b.jurosCentavos + b.multaCentavos) : "—"}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{b.descontoCentavos ? reais(b.descontoCentavos) : "—"}</td>
                 <td className="px-3 py-2 text-right tabular-nums font-medium">{reais(b.caixaCentavos)}</td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-3 py-2 text-right whitespace-nowrap">
+                  {/* O recibo da baixa em PDF (22/10/2026): só leitura, sai de toda baixa. */}
+                  <a
+                    href={`/api/financeiro/baixas/${b.id}/recibo`}
+                    className="mr-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-micro text-brand hover:underline"
+                    title="Baixar o recibo desta baixa em PDF"
+                    download
+                  >
+                    <FileDown size={12} /> Recibo
+                  </a>
                   {b.conciliada ? (
                     <span className="text-micro text-fg-muted whitespace-nowrap" title="Desfaça na conciliação, que devolve a linha do extrato junto.">
                       conciliada
