@@ -28,6 +28,8 @@ export function FiltroDoMotor({ raizes, raiz, estabelecimentos, estabelecimentoI
     const q = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(mudanca)) { if (v) q.set(k, v); else q.delete(k); }
     for (const k of ["cursor", "pagina", "execucao", "arquivo"]) q.delete(k);
+    // Os cursores das listas de decisão (`c_<tipo>`) carregam o filtro também.
+    for (const k of [...q.keys()]) if (k.startsWith("c_")) q.delete(k);
     router.push(`${pathname}?${q.toString()}`);
   };
   return <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">

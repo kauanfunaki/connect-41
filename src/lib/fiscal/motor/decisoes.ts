@@ -344,3 +344,19 @@ export function cnpjsDeEstabelecimento(def: DefinicaoDeDecisao, corpo: { chave?:
   ler(corpo.valor, def.valor);
   return [...saida];
 }
+
+/**
+ * O decimal como a pessoa digita ("1.234,56", "10,5", "-3") no formato do
+ * motor ("1234.56"). Devolve `null` quando não é número — a tela avisa em vez
+ * de mandar e tomar 422.
+ */
+export function normalizarDecimal(digitado: string): string | null {
+  let v = digitado.trim().replace(/\s/g, "").replace(/^R\$/, "");
+  if (v.includes(",")) v = v.replace(/\./g, "").replace(",", ".");
+  return DECIMAL.test(v) ? v : null;
+}
+
+/** "2026-09, 2026-10" → ["2026-09", "2026-10"], sem repetidas. */
+export function lerCompetencias(digitado: string): string[] {
+  return [...new Set(digitado.split(/[\s,;]+/).map((c) => c.trim()).filter(Boolean))];
+}
