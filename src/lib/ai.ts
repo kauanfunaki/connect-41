@@ -32,6 +32,7 @@ import { conversarComFerramentas } from "@/lib/ia/conversa";
 import { conversarComFerramentasOpenAi } from "@/lib/ia/conversa-openai";
 import type { ResultadoDoLaco, TurnoAnterior } from "@/lib/ia/laco";
 import type { AnexoDaPergunta } from "@/lib/ia/chat/anexos";
+import { blocosAnthropicDosAnexos, type AnexoEstruturado } from "@/lib/ia/anexos-estruturados";
 import {
   humanizarTexto,
   normalizarAvaliacoes,
@@ -660,7 +661,16 @@ export async function conversarComAgente(params: {
 // requisito, se atende e onde está a evidência. A nota sai do código
 // (`calcularNota` em src/lib/recrutamento/triagem.ts), não da IA.
 
-export type AnexoEstruturado = { nome: string; mime: string; base64: string; imagem?: boolean };
+export type { AnexoEstruturado };
+
+/**
+ * Mensagem de falha da chamada estrita — sem corpo de erro do provedor, que
+ * pode ecoar o que foi enviado (22/10/2026: antes `somenteOpenAi`).
+ */
+function falhaEstrita(provedor: AiProvider, status: number | undefined): Error {
+  const nome = provedor === "ANTHROPIC" ? "Anthropic" : "OpenAI";
+  return new Error(status ? `${nome} indisponível (HTTP ${status}).` : `${nome} indisponível.`);
+}
 
 /** Chamada de uma volta com saída estruturada, nos dois provedores. PDF opcional. */
 async function chamarComFormato(
@@ -675,64 +685,95 @@ async function chamarComFormato(
     schema: Record<string, unknown>;
     maxTokens: number;
     anexos?: AnexoEstruturado[];
-    somenteOpenAi?: boolean;
+    /**
+     * Chamada estrita (triagem de chamados): teto de tokens de saída aplicado,
+     * sem repetição automática, resposta incompleta ou recusada vira erro e o
+     * corpo de erro do provedor não aparece. Até 22/10/2026 isto se chamava
+     * `somenteOpenAi` e recusava a chave Anthropic do escritório; agora vale
+     * para os dois provedores — o provedor é o que o escritório configurou.
+     */
+    estrito?: boolean;
     timeoutMs?: number;
+    /** Só a OpenAI guarda respostas; no Anthropic não há o que desligar. */
     store?: boolean;
   }
 ): Promise<ComUso<unknown>> {
-  if (p.somenteOpenAi && c.provider !== "OPENAI") throw new Error("A triagem de chamados requer a configuração OpenAI deste escritório.");
   if (c.provider === "ANTHROPIC") {
     const client = new Anthropic({ apiKey: c.apiKey });
-    const response = await client.messages.create({
-      model: c.model,
-      max_tokens: p.maxTokens,
-      system: p.sistema,
-      output_config: { format: { type: "json_schema", schema: p.schema } },
-      messages: [
+    const anexos = p.anexos?.length ? await blocosAnthropicDosAnexos(p.anexos) : [];
+    let response: Anthropic.Message;
+    try {
+      response = await client.messages.create(
         {
-          role: "user",
-          content: [
-            ...(p.pdfBase64
-              ? [{ type: "document" as const, source: { type: "base64" as const, media_type: "application/pdf" as const, data: p.pdfBase64 } }]
-              : []),
-            { type: "text" as const, text: p.texto },
+          model: c.model,
+          max_tokens: p.maxTokens,
+          system: p.sistema,
+          output_config: { format: { type: "json_schema", schema: p.schema } },
+          messages: [
+            {
+              role: "user",
+              content: [
+                ...(p.pdfBase64
+                  ? [{ type: "document" as const, source: { type: "base64" as const, media_type: "application/pdf" as const, data: p.pdfBase64 } }]
+                  : []),
+                ...anexos,
+                { type: "text" as const, text: p.texto },
+              ],
+            },
           ],
         },
-      ],
-    });
-    if (response.stop_reason === "refusal") throw new Error("A IA recusou processar este conteúdo.");
+        {
+          ...(p.timeoutMs ? { timeout: p.timeoutMs } : {}),
+          // Chamada paga não se repete sozinha na triagem: quem tenta de novo é a pessoa.
+          ...(p.estrito ? { maxRetries: 0 } : {}),
+        }
+      );
+    } catch (err) {
+      if (p.estrito) throw falhaEstrita("ANTHROPIC", err instanceof Anthropic.APIError ? err.status : undefined);
+      throw err;
+    }
+    if (response.stop_reason === "refusal") {
+      throw new Error(p.estrito ? "A Anthropic não concluiu a análise." : "A IA recusou processar este conteúdo.");
+    }
+    if (p.estrito && response.stop_reason !== "end_turn") throw new Error("A Anthropic não concluiu a análise.");
     const bloco = response.content.find((b) => b.type === "text");
     if (!bloco || bloco.type !== "text") throw new Error("Resposta da IA sem conteúdo.");
     return { valor: JSON.parse(bloco.text), uso: usoAnthropic(response.usage) };
   }
 
-  const res = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${c.apiKey}`, "Content-Type": "application/json" },
-    ...(p.timeoutMs ? { signal: AbortSignal.timeout(p.timeoutMs) } : {}),
-    body: JSON.stringify({
-      model: c.model,
-      instructions: p.sistema,
-      ...(p.store !== undefined ? { store: p.store } : {}),
-      ...(p.somenteOpenAi ? { max_output_tokens: p.maxTokens } : {}),
-      input: [
-        {
-          role: "user",
-          content: [
-            ...(p.pdfBase64 ? [{ type: "input_file", filename: p.nomeDoArquivo ?? "curriculo.pdf", file_data: `data:application/pdf;base64,${p.pdfBase64}` }] : []),
-            ...(p.anexos ?? []).map(a => a.imagem
-              ? { type: "input_image", image_url: `data:${a.mime};base64,${a.base64}`, detail: "auto" }
-              : { type: "input_file", filename: a.nome, file_data: `data:${a.mime};base64,${a.base64}` }),
-            { type: "input_text", text: p.texto },
-          ],
-        },
-      ],
-      text: { format: { type: "json_schema", name: p.nome, schema: p.schema, strict: true } },
-    }),
-  });
-  if (!res.ok) throw new Error(p.somenteOpenAi ? `OpenAI indisponível (HTTP ${res.status}).` : `Falha na chamada à OpenAI: ${await res.text()}`);
+  let res: Response;
+  try {
+    res = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${c.apiKey}`, "Content-Type": "application/json" },
+      ...(p.timeoutMs ? { signal: AbortSignal.timeout(p.timeoutMs) } : {}),
+      body: JSON.stringify({
+        model: c.model,
+        instructions: p.sistema,
+        ...(p.store !== undefined ? { store: p.store } : {}),
+        ...(p.estrito ? { max_output_tokens: p.maxTokens } : {}),
+        input: [
+          {
+            role: "user",
+            content: [
+              ...(p.pdfBase64 ? [{ type: "input_file", filename: p.nomeDoArquivo ?? "curriculo.pdf", file_data: `data:application/pdf;base64,${p.pdfBase64}` }] : []),
+              ...(p.anexos ?? []).map(a => a.imagem
+                ? { type: "input_image", image_url: `data:${a.mime};base64,${a.base64}`, detail: "auto" }
+                : { type: "input_file", filename: a.nome, file_data: `data:${a.mime};base64,${a.base64}` }),
+              { type: "input_text", text: p.texto },
+            ],
+          },
+        ],
+        text: { format: { type: "json_schema", name: p.nome, schema: p.schema, strict: true } },
+      }),
+    });
+  } catch (err) {
+    if (p.estrito) throw falhaEstrita("OPENAI", undefined);
+    throw err;
+  }
+  if (!res.ok) throw p.estrito ? falhaEstrita("OPENAI", res.status) : new Error(`Falha na chamada à OpenAI: ${await res.text()}`);
   const data = await res.json();
-  if (p.somenteOpenAi && (data.status !== "completed" || data.output?.some((o: { content?: { type: string }[] }) => o.content?.some(b => b.type === "refusal")))) throw new Error("A OpenAI não concluiu a análise.");
+  if (p.estrito && (data.status !== "completed" || data.output?.some((o: { content?: { type: string }[] }) => o.content?.some(b => b.type === "refusal")))) throw new Error("A OpenAI não concluiu a análise.");
   const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
   if (!text) throw new Error("Resposta da IA sem conteúdo.");
   return { valor: JSON.parse(text), uso: usoOpenAi(data.usage) };
@@ -758,7 +799,8 @@ export async function gerarEstruturado(params: {
   maxTokens: number;
   contexto?: ContextoDaChamada;
   anexos?: AnexoEstruturado[];
-  somenteOpenAi?: boolean;
+  /** Ver `estrito` em `chamarComFormato`. */
+  estrito?: boolean;
   timeoutMs?: number;
   store?: boolean;
 }): Promise<{ valor: unknown; runId: string | null }> {
@@ -780,7 +822,7 @@ export async function gerarEstruturado(params: {
         schema: params.schema,
         maxTokens: params.maxTokens,
         anexos: params.anexos,
-        somenteOpenAi: params.somenteOpenAi,
+        estrito: params.estrito,
         timeoutMs: params.timeoutMs,
         store: params.store,
       }),
