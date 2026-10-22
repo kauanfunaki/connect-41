@@ -11,6 +11,11 @@ import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 import { CampoGuardarNosArquivos } from "@/components/arquivos/CampoGuardarNosArquivos";
+import { Select } from "@/components/ui/Select";
+import { CampoData } from "@/components/ui/CampoData";
+import { CampoHora } from "@/components/ui/CampoHora";
+import { EmailChipsInput } from "@/components/documentosCliente/EmailChipsInput";
+import { OPCOES_DO_LEMBRETE } from "@/lib/envios/lembrete";
 
 type Props = {
   action: (prev: ClientDocumentState, form: FormData) => Promise<ClientDocumentState>;
@@ -24,13 +29,24 @@ type Props = {
   empresas?: Opcao[];
   documentId?: string;
   cancelHref: string;
-  defaultValues?: { title: string; bodyHtml: string; fileName?: string | null; requiresSignature?: boolean };
+  defaultValues?: {
+    title: string;
+    bodyHtml: string;
+    fileName?: string | null;
+    requiresSignature?: boolean;
+    /** O lembrete de não lido escolhido (22/10/2026). */
+    reminderDays?: number | null;
+    /** O agendamento gravado: data/hora de Brasília e os e-mails (22/10/2026). */
+    agendamento?: { data: string; hora: string; emails: string[] } | null;
+  };
 };
 
 export function ClientDocumentForm({ action, companyId, empresas, documentId, cancelHref, defaultValues }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   // A empresa do envio, para o "Guardar também em Arquivos" buscar as pastas dela.
   const [empresaId, setEmpresaId] = useState<string | null>(companyId ?? null);
+  const agendamento = defaultValues?.agendamento ?? null;
+  const [agendar, setAgendar] = useState(!!agendamento);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -82,6 +98,50 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
           defaultChecked={defaultValues?.requiresSignature ?? false}
           label="Pedir o aceite eletrônico do cliente (nome, data/hora e IP, no portal ou na página do link por e-mail)."
         />
+      </div>
+
+      {/* Quando enviar (22/10/2026): o lembrete de não lido e o envio agendado. */}
+      <div className="border-t border-border pt-4 space-y-4">
+        <CampoForm
+          label="Lembrete de não lido"
+          htmlFor="reminderDays"
+          helper="Se ninguém do cliente abrir o documento no prazo, sai um lembrete (e-mail a quem recebeu e aviso no portal). Um só por envio."
+        >
+          <Select id="reminderDays" name="reminderDays" defaultValue={defaultValues?.reminderDays ? String(defaultValues.reminderDays) : ""}>
+            {OPCOES_DO_LEMBRETE.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+        </CampoForm>
+
+        <Checkbox
+          name="agendar"
+          checked={agendar}
+          onChange={(e) => setAgendar(e.target.checked)}
+          label="Agendar o envio: publicar e mandar por e-mail sozinho, na data e hora escolhidas (horário de Brasília)."
+        />
+        {agendar && (
+          <div className="space-y-4 pl-6">
+            <div className="flex flex-wrap gap-4">
+              <CampoForm label="Data" htmlFor="agendarData" required>
+                <CampoData id="agendarData" name="agendarData" defaultValue={agendamento?.data} required />
+              </CampoForm>
+              <CampoForm label="Hora" htmlFor="agendarHora" helper="Sem hora, 08:00.">
+                <CampoHora id="agendarHora" name="agendarHora" defaultValue={agendamento?.hora} />
+              </CampoForm>
+            </div>
+            <Checkbox
+              name="agendarEmailEmpresa"
+              defaultChecked={!agendamento}
+              label="Mandar também ao e-mail cadastrado da empresa (se houver)."
+            />
+            <CampoForm label="E-mails avulsos" htmlFor="agendarEmails" helper="Até a hora marcada o cliente não vê nada — nem no portal, nem por e-mail.">
+              <EmailChipsInput id="agendarEmails" name="agendarEmails" defaultEmails={agendamento?.emails} />
+            </CampoForm>
+          </div>
+        )}
       </div>
 
       <FormFooter cancelHref={cancelHref} pending={isPending} />
