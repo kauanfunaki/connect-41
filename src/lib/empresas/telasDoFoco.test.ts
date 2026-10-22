@@ -32,6 +32,7 @@ const ACOES = [
   "src/lib/financeiro/acoes.ts",
   "src/lib/financeiro/edicaoServidor.ts",
   "src/lib/financeiro/edicaoEmLoteServidor.ts",
+  "src/lib/financeiro/mudancaDaSerieServidor.ts",
   "src/lib/financeiro/anexosServidor.ts",
   "src/lib/financeiro/adiantamentoAcoes.ts",
   "src/lib/financeiro/cartaoAcoes.ts",

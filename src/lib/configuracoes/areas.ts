@@ -205,6 +205,16 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
         acesso: "admin",
       },
       {
+        // O modelo do setor aplicado à carteira pela regra (22/10/2026). Abre
+        // também para o gestor de setor, nos modelos dos setores dele.
+        chave: "obrigacoes-por-regime",
+        rotulo: "Obrigações por regime",
+        descricao: "O DAS, a DCTFWeb, a DEFIS… cadastrados uma vez e gerados para as empresas de cada regime.",
+        href: "/admin/obrigacoes/regime",
+        rota: "/admin/obrigacoes/regime",
+        acesso: "gestorDeCampos",
+      },
+      {
         chave: "feriados",
         rotulo: "Feriados",
         descricao: "Os nacionais entram sozinhos; aqui, os estaduais, municipais, pontes e recessos.",

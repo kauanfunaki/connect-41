@@ -149,7 +149,12 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
           disabled={!logoUrl}
           onChange={(e) => setLogoNoPortal(e.target.checked)}
           label="Mostrar o logo e o nome do escritório no menu do portal"
-          helper={logoUrl ? "No lugar do logo do Connect." : "Adicione o logo primeiro. O envio vale na hora, sem o Salvar."}
+          // 22/10/2026: o logo e a cor também vão para a entrada do portal e os e-mails ao cliente.
+          helper={
+            logoUrl
+              ? "No lugar do logo do Connect — também na entrada do portal e no topo dos e-mails ao cliente."
+              : "Adicione o logo primeiro. O envio vale na hora, sem o Salvar."
+          }
         />
       </div>
 

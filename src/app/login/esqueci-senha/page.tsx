@@ -3,6 +3,7 @@ import { MolduraDoPortal } from "@/components/portal/MolduraDoPortal";
 import { Card } from "@/components/ui/Card";
 import { EsqueciSenhaForm } from "@/components/login/EsqueciSenhaForm";
 import { solicitarRedefinicaoSenha } from "./actions";
+import { marcaDaEntradaDoPortal } from "@/lib/portal/marcaNaEntrada";
 
 // O cliente do portal chega aqui por /portal/esqueci-senha, com `?de=portal`,
 // para o "Voltar para o login" devolvê-lo ao login dele, e não ao da equipe.
@@ -12,8 +13,10 @@ export default async function EsqueciSenhaPage({ searchParams }: { searchParams:
   // O desenho é o mesmo — muda o rótulo e o carrossel, que no portal fala do
   // que o cliente encontra lá dentro.
   if (de === "portal") {
+    // A marca do escritório do último login neste aparelho (22/10/2026).
+    const marca = await marcaDaEntradaDoPortal();
     return (
-      <MolduraDoPortal titulo="Esqueci minha senha" subtitulo="Informe o seu e-mail e enviamos um link para criar uma senha nova.">
+      <MolduraDoPortal titulo="Esqueci minha senha" subtitulo="Informe o seu e-mail e enviamos um link para criar uma senha nova." marca={marca}>
         <Card className="p-6">
           <EsqueciSenhaForm action={solicitarRedefinicaoSenha} voltarPara="/portal/login" />
         </Card>

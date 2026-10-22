@@ -35,7 +35,7 @@ const registro = () => ({
   financeEntry: null,
   space: { sectorCode: "setor" },
   vaga: { id: "v1", sectorCode: "setor", restrictedToRecruiters: false },
-  _count: { items: 0, folders: 0, pipelines: 0, recurringObligations: 0, links: 0 },
+  _count: { items: 0, folders: 0, pipelines: 0, recurringObligations: 0, modelosDeObrigacao: 0, links: 0 },
 });
 
 function modelo(nome: string): unknown {

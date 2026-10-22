@@ -50,7 +50,22 @@ export const MAXIMO_DE_OCORRENCIAS = 120;
  */
 export const MAXIMO_ATE_A_DATA = 1000;
 
-export type Repeticao = { frequencia: Frequencia; ajuste: AjusteDoDia; fim: FimDaSerie };
+export type Repeticao = {
+  frequencia: Frequencia;
+  ajuste: AjusteDoDia;
+  fim: FimDaSerie;
+  /**
+   * O dia do mês das próximas, quando mudou depois do lançamento ("mudar a
+   * série daqui em diante", 22/10/2026). Sem ele, o do primeiro vencimento. Só
+   * vale na mensal e na anual.
+   */
+  dia?: number | null;
+};
+
+/** A frequência em que o dia do vencimento é um dia do mês — o "mudar o dia" só faz sentido nelas. */
+export function frequenciaComDiaDoMes(frequencia: string): boolean {
+  return frequencia === "MENSAL" || frequencia === "ANUAL";
+}
 
 /**
  * Os campos "Repetir" do formulário. Sem frequência, não repete (`null`).
@@ -194,6 +209,11 @@ export function ocorrenciasDaRepeticao(
 ): Ocorrencia[] {
   if (!dataValida(primeira.vencimentoKey)) return [];
   const ancora = Number(primeira.vencimentoKey.slice(8, 10));
+  // O dia novo (22/10/2026) muda só o dia dentro do mês: o fim da série, o
+  // horizonte e a competência continuam contados pelo dia de sempre, para o
+  // "3/12" não mudar de total por causa de um dia — a última do "até uma data"
+  // pode cair uns dias depois dela.
+  const diaNovo = r.dia && frequenciaComDiaDoMes(r.frequencia) ? r.dia : null;
   const vezes = r.fim.tipo === "VEZES" ? r.fim.vezes : MAXIMO_ATE_A_DATA + 1;
   const ate = [r.fim.tipo === "ATE" ? r.fim.dataKey : null, limiteKey ?? null].filter((k): k is string => Boolean(k)).sort()[0] ?? null;
   const saida: Ocorrencia[] = [];
@@ -213,9 +233,10 @@ export function ocorrenciasDaRepeticao(
     }
     // A primeira sempre entra: é a conta que a pessoa lançou.
     if (i > 0 && ate && bruta > ate) break;
+    const noDia = diaNovo && i > 0 ? somarMeses(primeira.vencimentoKey, r.frequencia === "ANUAL" ? i * 12 : i, diaNovo) : bruta;
     saida.push({
       indice: i + 1,
-      vencimentoKey: i === 0 || r.frequencia === "DIARIA" ? bruta : ajustarDia(bruta, r.ajuste, feriados),
+      vencimentoKey: i === 0 || r.frequencia === "DIARIA" ? bruta : ajustarDia(noDia, r.ajuste, feriados),
       competencia: somarMesesNaCompetencia(primeira.competencia, mesesEntre(primeira.vencimentoKey, bruta)),
     });
   }
@@ -239,4 +260,25 @@ export function totalDaSerie(
   if (n > MAXIMO_ATE_A_DATA) return { ok: false, erro: `Até essa data são mais de ${MAXIMO_ATE_A_DATA} contas — confira a data, ou use "sem data de fim".` };
   if (n < 2) return { ok: false, erro: "Até essa data a conta não chega a repetir — escolha uma data mais adiante." };
   return { ok: true, total: n };
+}
+
+/**
+ * O vencimento da conta na posição `indice` de uma série mensal ou anual, no
+ * dia `dia` ("mudar a série daqui em diante", 22/10/2026): o mês é o que a
+ * regra dá para a posição — não o do vencimento gravado, que o ajuste do fim
+ * de semana pode ter empurrado para o mês seguinte —, o dia é o novo (ou o
+ * último do mês, quando ele não tem esse dia), e o fim de semana ou feriado se
+ * ajusta como a série manda. Aqui a primeira também se ajusta: quem pediu o
+ * dia novo foi a pessoa, não a regra.
+ */
+export function vencimentoNaPosicao(
+  primeiroVencimentoKey: string,
+  frequencia: Frequencia,
+  ajuste: AjusteDoDia,
+  indice: number,
+  dia: number,
+  feriados: ReadonlySet<string> = new Set()
+): string {
+  const passos = (indice - 1) * (frequencia === "ANUAL" ? 12 : 1);
+  return ajustarDia(somarMeses(primeiroVencimentoKey, passos, dia), ajuste, feriados);
 }

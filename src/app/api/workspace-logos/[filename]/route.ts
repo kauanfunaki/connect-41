@@ -25,7 +25,12 @@ export async function GET(
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": CONTENT_TYPES[ext] ?? "application/octet-stream",
-        "Cache-Control": "private, max-age=86400",
+        // `public` desde 22/10/2026: o logo vai nos e-mails ao cliente, e o
+        // proxy de imagens do leitor de e-mail (o do Gmail, por exemplo) só
+        // guarda cópia do que é público. A rota já era aberta (proxy.ts), serve
+        // só o logo do escritório, e a URL muda (`?v=`) quando o logo troca.
+        "Cache-Control": "public, max-age=86400",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch {
