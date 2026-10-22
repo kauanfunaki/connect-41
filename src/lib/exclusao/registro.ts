@@ -238,6 +238,7 @@ const USUARIO: Ligacao[] = [
   { modelo: "ServiceRequest", campo: "assignee", fk: "assigneeId", tratamento: "desligar", rotulo: ["solicitação do portal atribuída a ele", "solicitações do portal atribuídas a ele"] },
   { modelo: "Lead", campo: "assignee", fk: "assigneeId", tratamento: "desligar", rotulo: ["lead sob responsabilidade dele", "leads sob responsabilidade dele"] },
   { modelo: "OpsWatcher", campo: "owner", fk: "ownerId", tratamento: "desligar", rotulo: ["automação sob responsabilidade dele", "automações sob responsabilidade dele"] },
+  { modelo: "TechInternalItem", campo: "assignee", fk: "assigneeId", tratamento: "desligar", rotulo: ["pendência interna do Tech sob responsabilidade dele", "pendências internas do Tech sob responsabilidade dele"] },
   { modelo: "WhatsappThread", campo: "assignedTo", fk: "assignedToId", tratamento: "desligar", rotulo: ["conversa do WhatsApp atribuída a ele", "conversas do WhatsApp atribuídas a ele"] },
   { modelo: "FinanceEntry", campo: "collectionOwner", fk: "collectionOwnerId", tratamento: "desligar", rotulo: ["cobrança sob responsabilidade dele", "cobranças sob responsabilidade dele"] },
 
@@ -306,6 +307,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "GithubAccountLease", coluna: "githubUserId", tratamento: "manter", motivo: "coordenação por identidade externa do GitHub, não por usuário do Connect" },
   { modelo: "GithubConnection", coluna: "connectedBy", tratamento: "desligar" },
   { modelo: "GithubOAuthAttempt", coluna: "userId", tratamento: "apagar" },
+  { modelo: "TechInternalComment", coluna: "authorId", tratamento: "manter", motivo: "comentário preserva o autor original e seu nome no momento do registro" },
+  { modelo: "TechInternalChange", coluna: "authorId", tratamento: "manter", motivo: "histórico preserva o autor original e seu nome no momento da alteração" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },

@@ -13,8 +13,9 @@ vi.mock("@/lib/prisma", () => ({ getPrisma: () => { if (!db) throw new Error("Ba
 vi.mock("@/lib/auth/context", async original => ({ ...await original<typeof import("@/lib/auth/context")>(), getAuthContext: mocks.auth }));
 vi.mock("@/lib/webPush", () => ({ sendWebPushToUser: mocks.push }));
 
-import { acessoOps, autenticarWatcher, conferirResponsavel, gerarToken, gerarTokenCompartilhado, hashToken, painelOps, receberEvento } from "./servidor";
-import { criarWatcher, editarWatcher, eventoWatcher, heartbeatWatcher, lerJsonOps, obterPainel, responderOps, sinalizarInstabilidade, tokenWatcher } from "./http";
+import { acessoOps, autenticarWatcher, conferirResponsavel, gerarToken, gerarTokenCompartilhado, revogarTokenCompartilhado, hashToken, painelOps, receberEvento } from "./servidor";
+import { criarWatcher, editarWatcher, eventoWatcher, heartbeatWatcher, lerJsonOps, listarChavesOps, obterPainel, responderOps, sinalizarInstabilidade, tokenCompartilhadoOps, tokenWatcher } from "./http";
+import { credencialOpsNaTela } from "./credencial";
 import { filtrosSchema } from "./regras";
 
 describe.skipIf(!url)("Ops Center com MySQL descartável", () => {
@@ -42,6 +43,7 @@ describe.skipIf(!url)("Ops Center com MySQL descartável", () => {
     mocks.auth.mockImplementation(() => Promise.resolve(ctx));
     // Limpa exclusivamente os registros das fixtures criadas por esta suíte.
     await db!.notification.deleteMany({ where: { tenantId } });
+    await db!.opsApiKey.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
     await db!.opsApiCredential.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
     await db!.opsEvent.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
     await db!.opsWatcher.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
@@ -128,7 +130,7 @@ describe.skipIf(!url)("Ops Center com MySQL descartável", () => {
   });
   it("uma chave compartilhada recebe dados e heartbeat de mais de uma automação", async () => {
     await db!.opsWatcher.create({ data: { tenantId, slug: "outro_bot", name: "Outro bot", ownerId: dono } });
-    const nova = await gerarTokenCompartilhado(ctx, 0);
+    const nova = await gerarTokenCompartilhado(ctx, "Servidor principal");
     expect(nova.token).toMatch(/^ops_[a-f0-9]{64}$/);
     const credencial = await autenticarWatcher(req("/", undefined, nova.token!), slug);
     expect(credencial).toMatchObject({ tenantId, slug, compartilhado: true });
@@ -137,8 +139,90 @@ describe.skipIf(!url)("Ops Center com MySQL descartável", () => {
     await heartbeatWatcher(req("/", undefined, nova.token!), slug);
     await heartbeatWatcher(req("/", undefined, nova.token!), "outro_bot");
     expect(await db!.opsEvent.count({ where: { tenantId } })).toBe(1);
-    expect(await gerarTokenCompartilhado(ctx, 1, true)).toMatchObject({ token: null, hasToken: false, version: 2 });
+    expect(await revogarTokenCompartilhado(ctx, nova.key.id)).toEqual({ ok: true });
     await expect(autenticarWatcher(req("/", undefined, nova.token!))).rejects.toMatchObject({ status: 401 });
+  });
+  it("gera várias chaves simultaneamente e mantém todas válidas sem expor seus hashes", async () => {
+    const keys = await Promise.all(["Servidor A", "Servidor B", "Equipe C"].map(name => gerarTokenCompartilhado(ctx, name)));
+    expect(new Set(keys.map(key => key.token)).size).toBe(3);
+    expect(new Set(keys.map(key => key.key.id)).size).toBe(3);
+    const payload = evento("SUCCESS");
+    for (const key of keys) {
+      const authenticated = await autenticarWatcher(req("/", undefined, key.token), slug);
+      await heartbeatWatcher(req("/", undefined, key.token), slug);
+      await receberEvento(authenticated, payload);
+      expect(authenticated).toMatchObject({ tenantId, chaveId: key.key.id, compartilhado: true });
+    }
+    expect(await db!.opsEvent.count({ where: { tenantId } })).toBe(1);
+    const view = await listarChavesOps();
+    expect(view).toMatchObject({ status: "ready", hasToken: true });
+    if (view.status !== "ready") throw new Error("Lista indisponível");
+    expect(view.keys).toHaveLength(3);
+    for (const key of keys) {
+      expect(JSON.stringify(view)).not.toContain(key.token);
+      expect(JSON.stringify(view)).not.toContain(hashToken(key.token));
+      expect((await db!.opsApiKey.findUnique({ where: { id: key.key.id } }))?.tokenHash).toBe(hashToken(key.token));
+    }
+  });
+  it("revoga somente a chave escolhida e recusa um evento autenticado antes da revogação", async () => {
+    const [a, b] = await Promise.all([gerarTokenCompartilhado(ctx, "Servidor A"), gerarTokenCompartilhado(ctx, "Servidor B")]);
+    const previous = await autenticarWatcher(req("/", undefined, a.token), slug);
+    await revogarTokenCompartilhado(ctx, a.key.id);
+    await expect(receberEvento(previous, evento("SUCCESS"))).rejects.toMatchObject({ status: 401 });
+    await expect(heartbeatWatcher(req("/", undefined, a.token), slug)).rejects.toMatchObject({ status: 401 });
+    await heartbeatWatcher(req("/", undefined, b.token), slug);
+    await receberEvento(await autenticarWatcher(req("/", undefined, b.token)), evento("SUCCESS"));
+    const view = await credencialOpsNaTela(tenantId);
+    expect(view.status === "ready" && view.keys.map(key => key.id)).toEqual([b.key.id]);
+    expect((await db!.opsApiKey.findUnique({ where: { id: a.key.id } }))?.revokedAt).toBeInstanceOf(Date);
+  });
+  it("preserva a chave compartilhada anterior e as chaves individuais dos bots", async () => {
+    const previousToken = `ops_${randomBytes(32).toString("hex")}`;
+    await db!.opsApiCredential.create({ data: { tenantId, tokenHash: hashToken(previousToken), version: 4 } });
+    const nova = await gerarTokenCompartilhado(ctx, "Novo servidor");
+    expect(await db!.opsApiCredential.findUnique({ where: { tenantId } })).toMatchObject({ version: 4, tokenHash: hashToken(previousToken) });
+    expect(await credencialOpsNaTela(tenantId)).toMatchObject({ hasToken: true, keys: expect.arrayContaining([expect.objectContaining({ id: "legacy" }), expect.objectContaining({ id: nova.key.id })]) });
+    await heartbeatWatcher(req("/", undefined, previousToken), slug);
+    await heartbeatWatcher(req("/", undefined, token), slug);
+    await expect(revogarTokenCompartilhado(ctx, "legacy", 3)).rejects.toMatchObject({ status: 409 });
+    await revogarTokenCompartilhado(ctx, nova.key.id);
+    const legacyAuthenticated = await autenticarWatcher(req("/", undefined, previousToken), slug);
+    const outra = await gerarTokenCompartilhado(ctx, "Outro servidor");
+    await revogarTokenCompartilhado(ctx, "legacy", 4);
+    await expect(receberEvento(legacyAuthenticated, evento())).rejects.toMatchObject({ status: 401 });
+    await expect(heartbeatWatcher(req("/", undefined, previousToken), slug)).rejects.toMatchObject({ status: 401 });
+    await heartbeatWatcher(req("/", undefined, outra.token), slug);
+    await heartbeatWatcher(req("/", undefined, token), slug);
+  });
+  it("não permite revogar chave de outro escritório ou enviar dados a bots externos", async () => {
+    const nova = await gerarTokenCompartilhado(ctx, "Servidor A");
+    await expect(revogarTokenCompartilhado({ ...ctx, tenantId: outroTenant }, nova.key.id)).rejects.toMatchObject({ status: 404 });
+    await db!.opsWatcher.create({ data: { tenantId: outroTenant, slug: "externo", name: "Externo" } });
+    await expect(heartbeatWatcher(req("/", undefined, nova.token), "externo")).rejects.toMatchObject({ status: 401 });
+    await expect(receberEvento(await autenticarWatcher(req("/", undefined, nova.token)), { ...evento(), watcherSlug: "externo" })).rejects.toMatchObject({ status: 401 });
+    expect(await credencialOpsNaTela(outroTenant)).toMatchObject({ hasToken: false, keys: [] });
+    await db!.opsWatcher.updateMany({ where: { tenantId, slug }, data: { isActive: false } });
+    await expect(heartbeatWatcher(req("/", undefined, nova.token), slug)).rejects.toMatchObject({ status: 401 });
+  });
+  it("revoga duas chaves em paralelo sem afetar uma terceira", async () => {
+    const [a, b, c] = await Promise.all(["A", "B", "C"].map(name => gerarTokenCompartilhado(ctx, name)));
+    await Promise.all([a, b].map(key => revogarTokenCompartilhado(ctx, key.key.id)));
+    await expect(revogarTokenCompartilhado(ctx, a.key.id)).rejects.toMatchObject({ status: 404 });
+    await heartbeatWatcher(req("/", undefined, c.token), slug);
+    expect((await credencialOpsNaTela(tenantId))).toMatchObject({ keys: [expect.objectContaining({ id: c.key.id })] });
+  });
+  it("a API exige gestão e valida o nome antes de criar ou revogar chaves", async () => {
+    const nova = await tokenCompartilhadoOps(req("/api/ops/credential", { name: "API" }));
+    expect(nova).toHaveProperty("token");
+    const empty = await responderOps(() => tokenCompartilhadoOps(req("/api/ops/credential", { name: " " })));
+    expect(empty.status).toBe(400);
+    await expect(tokenCompartilhadoOps(req("/api/ops/credential", { version: 0 }), true)).rejects.toMatchObject({ status: 409 });
+    ctx = { ...ctx, role: "SECTOR_USER", userId: colega };
+    await expect(listarChavesOps()).rejects.toMatchObject({ status: 403 });
+    await expect(tokenCompartilhadoOps(req("/api/ops/credential", { name: "Negada" }))).rejects.toMatchObject({ status: 403 });
+    ctx = { ...ctx, role: "ADMIN", subscriptionReadOnly: true };
+    await expect(tokenCompartilhadoOps(req("/api/ops/credential", { id: "legacy", version: 0 }), true)).rejects.toMatchObject({ status: 403 });
+    expect(await db!.opsApiKey.count({ where: { tenantId, revokedAt: null } })).toBe(1);
   });
   it("heartbeat confirma recebimento sem declarar processamento", async () => {
     await heartbeatWatcher(req("/", undefined, token), slug);
