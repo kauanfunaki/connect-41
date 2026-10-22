@@ -1,13 +1,11 @@
 // Leitura do banco da regra de `empresasDaConta.ts`: as empresas de uma conta
 // do portal e as contas de cada empresa (14/10/2026).
 //
-// Sem a tabela `portal_user_companies` (o código subiu antes da migration
-// 20261014210000), a leitura cai na regra do Cliente — a de até hoje: a conta
-// vê as empresas do cliente dela. O portal não quebra e ninguém ganha nem perde
-// empresa enquanto a migration não roda.
+// A volta para a regra do Cliente, quando a tabela `portal_user_companies`
+// ainda não existia, saiu em 21/10/2026 com o Cliente (etapa 3): a migration
+// 20261014210000 rodou em produção em 15/10, e vem antes da desta etapa.
 
 import { getPrisma } from "@/lib/prisma";
-import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import type { Prisma } from "@/generated/prisma/client";
 import { nomeExibicao } from "@/lib/companyName";
 import { contasDaEmpresa, empresasDaConta, nomeDoAcesso, type Via } from "./empresasDaConta";
@@ -16,20 +14,6 @@ import { contasDaEmpresa, empresasDaConta, nomeDoAcesso, type Via } from "./empr
 export type BancoDoPortal = Prisma.TransactionClient;
 
 const CAMPOS_DA_REGRA = { id: true, tenantId: true, parentCompanyId: true, status: true } as const;
-
-// A falta da tabela se repete em toda tela do portal até a migration rodar:
-// avisa uma vez por processo.
-let avisouSemTabela = false;
-
-/** É a tabela nova que ainda não existe? Então a leitura cai na regra do Cliente. */
-export function semTabelaDoPortalPorEmpresa(err: unknown): boolean {
-  if (!isPrismaMissingTableError(err)) return false;
-  if (!avisouSemTabela) {
-    avisouSemTabela = true;
-    console.error("[portal] tabela das empresas do acesso ainda não existe — migration pendente; usando a regra do Cliente", err);
-  }
-  return true;
-}
 
 function banco(db?: BancoDoPortal): BancoDoPortal {
   return db ?? (getPrisma() as unknown as BancoDoPortal);
@@ -41,16 +25,10 @@ function banco(db?: BancoDoPortal): BancoDoPortal {
  */
 export async function lerEmpresasDaConta(tenantId: string, portalUserId: string, db?: BancoDoPortal): Promise<Map<string, Via>> {
   const prisma = banco(db);
-  let ligacoes: { companyId: string; incluiFiliais: boolean }[];
-  try {
-    ligacoes = await prisma.portalUserCompany.findMany({
-      where: { tenantId, portalUserId },
-      select: { companyId: true, incluiFiliais: true },
-    });
-  } catch (err) {
-    if (!semTabelaDoPortalPorEmpresa(err)) throw err;
-    return empresasPeloClienteDaConta(prisma, tenantId, portalUserId);
-  }
+  const ligacoes = await prisma.portalUserCompany.findMany({
+    where: { tenantId, portalUserId },
+    select: { companyId: true, incluiFiliais: true },
+  });
   if (ligacoes.length === 0) return new Map();
 
   const ids = ligacoes.map((l) => l.companyId);
@@ -64,18 +42,6 @@ export async function lerEmpresasDaConta(tenantId: string, portalUserId: string,
     orderBy: { name: "asc" },
   });
   return empresasDaConta(tenantId, ligacoes, empresas);
-}
-
-/** A regra de até 14/10/2026, para quando a tabela nova ainda não existe. */
-async function empresasPeloClienteDaConta(prisma: BancoDoPortal, tenantId: string, portalUserId: string): Promise<Map<string, Via>> {
-  const conta = await prisma.portalUser.findFirst({ where: { id: portalUserId, tenantId }, select: { clientGroupId: true } });
-  if (!conta?.clientGroupId) return new Map();
-  const empresas = await prisma.company.findMany({
-    where: { tenantId, clientGroupId: conta.clientGroupId },
-    select: { id: true },
-    orderBy: { name: "asc" },
-  });
-  return new Map(empresas.map((e) => [e.id, { tipo: "direto", incluiFiliais: false } as const]));
 }
 
 /** Só os ids — o que as telas do portal filtram. */
@@ -98,38 +64,20 @@ export async function lerContasDasEmpresas(
 
   const empresas = await prisma.company.findMany({
     where: { tenantId, id: { in: [...companyIds] } },
-    select: { ...CAMPOS_DA_REGRA, clientGroupId: true },
+    select: CAMPOS_DA_REGRA,
   });
   const matrizIds = [...new Set(empresas.map((e) => e.parentCompanyId).filter((m): m is string => !!m))];
 
-  let ligacoes: { portalUserId: string; companyId: string; incluiFiliais: boolean }[];
-  try {
-    ligacoes = await prisma.portalUserCompany.findMany({
-      where: {
-        tenantId,
-        OR: [
-          { companyId: { in: [...companyIds] } },
-          ...(matrizIds.length > 0 ? [{ companyId: { in: matrizIds }, incluiFiliais: true }] : []),
-        ],
-      },
-      select: { portalUserId: true, companyId: true, incluiFiliais: true },
-    });
-  } catch (err) {
-    if (!semTabelaDoPortalPorEmpresa(err)) throw err;
-    // A regra do Cliente: quem é do cliente da empresa.
-    const grupos = [...new Set(empresas.map((e) => e.clientGroupId).filter((g): g is string => !!g))];
-    const contas =
-      grupos.length > 0
-        ? await prisma.portalUser.findMany({ where: { tenantId, clientGroupId: { in: grupos } }, select: { id: true, clientGroupId: true } })
-        : [];
-    for (const e of empresas) {
-      saida.set(
-        e.id,
-        new Map(contas.filter((c) => c.clientGroupId === e.clientGroupId).map((c) => [c.id, { tipo: "direto", incluiFiliais: false } as const]))
-      );
-    }
-    return saida;
-  }
+  const ligacoes = await prisma.portalUserCompany.findMany({
+    where: {
+      tenantId,
+      OR: [
+        { companyId: { in: [...companyIds] } },
+        ...(matrizIds.length > 0 ? [{ companyId: { in: matrizIds }, incluiFiliais: true }] : []),
+      ],
+    },
+    select: { portalUserId: true, companyId: true, incluiFiliais: true },
+  });
 
   const matrizes =
     matrizIds.length > 0 ? await prisma.company.findMany({ where: { tenantId, id: { in: matrizIds } }, select: { id: true, tenantId: true } }) : [];
@@ -184,61 +132,28 @@ export async function nomesDasContasNoLogin(contas: readonly { id: string; tenan
   return new Map(nomes);
 }
 
-/**
- * A tabela das ligações já existe? Antes da migration `20261014210000` não:
- * as telas que criam e mudam acesso avisam que falta atualizar o banco, em vez
- * de quebrar no meio.
- */
-export async function portalPorEmpresaPronto(db?: BancoDoPortal): Promise<boolean> {
-  try {
-    await banco(db).portalUserCompany.findFirst({ select: { id: true } });
-    return true;
-  } catch (err) {
-    if (semTabelaDoPortalPorEmpresa(err)) return false;
-    throw err;
-  }
-}
-
-export const FALTA_ATUALIZAR_O_BANCO_DO_PORTAL =
-  "Falta a atualização do banco desta versão do Connect. Até ela rodar, os acessos do portal seguem pelo cliente, e não dá para criar acesso nem ligar empresa.";
-
 /** Uma empresa ligada direto a um acesso, para a lista e o "Editar". */
 export type EmpresaLigada = { id: string; nome: string; incluiFiliais: boolean; filiais: number };
 
 /**
  * As empresas ligadas direto a cada conta (sem as que vêm pela matriz), com
  * quantas filiais cada uma tem — o que Administração › Portal do cliente
- * mostra e edita. Sem a tabela nova, as empresas do cliente de cada conta.
+ * mostra e edita.
  */
 export async function empresasLigadasDasContas(
   tenantId: string,
-  contas: readonly { id: string; clientGroupId: string | null }[]
+  contas: readonly { id: string }[]
 ): Promise<Map<string, EmpresaLigada[]>> {
   const saida = new Map<string, EmpresaLigada[]>(contas.map((c) => [c.id, []]));
   if (contas.length === 0) return saida;
   const prisma = getPrisma();
   const campos = { id: true, name: true, displayName: true, _count: { select: { filiais: true } } } as const;
-  try {
-    const ligacoes = await prisma.portalUserCompany.findMany({
-      where: { tenantId, portalUserId: { in: contas.map((c) => c.id) }, company: { tenantId } },
-      select: { portalUserId: true, incluiFiliais: true, company: { select: campos } },
-    });
-    for (const l of ligacoes) {
-      saida.get(l.portalUserId)?.push({ id: l.company.id, nome: nomeExibicao(l.company), incluiFiliais: l.incluiFiliais, filiais: l.company._count.filiais });
-    }
-  } catch (err) {
-    if (!semTabelaDoPortalPorEmpresa(err)) throw err;
-    const grupos = [...new Set(contas.map((c) => c.clientGroupId).filter((g): g is string => !!g))];
-    const empresas =
-      grupos.length > 0 ? await prisma.company.findMany({ where: { tenantId, clientGroupId: { in: grupos } }, select: { ...campos, clientGroupId: true } }) : [];
-    for (const c of contas) {
-      saida.set(
-        c.id,
-        empresas
-          .filter((e) => e.clientGroupId === c.clientGroupId)
-          .map((e) => ({ id: e.id, nome: nomeExibicao(e), incluiFiliais: false, filiais: e._count.filiais }))
-      );
-    }
+  const ligacoes = await prisma.portalUserCompany.findMany({
+    where: { tenantId, portalUserId: { in: contas.map((c) => c.id) }, company: { tenantId } },
+    select: { portalUserId: true, incluiFiliais: true, company: { select: campos } },
+  });
+  for (const l of ligacoes) {
+    saida.get(l.portalUserId)?.push({ id: l.company.id, nome: nomeExibicao(l.company), incluiFiliais: l.incluiFiliais, filiais: l.company._count.filiais });
   }
   for (const lista of saida.values()) lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   return saida;

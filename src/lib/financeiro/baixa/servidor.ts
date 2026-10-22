@@ -253,11 +253,24 @@ export async function registrarBaixa(tx: Tx, b: NovaBaixa): Promise<BaixaGravada
   return { paymentId: criada.id, quitada, caixaCentavos: caixa, principal: criada.principal };
 }
 
-/** Quita o saldo inteiro de uma vez — a conciliação, o lançamento que nasce pago, a transferência. */
-export async function quitarConta(tx: Tx, b: Omit<NovaBaixa, "principalCentavos">): Promise<BaixaGravada> {
+/** Juros, multa e desconto calculados sobre o saldo lido com a conta travada. */
+export type EncargosPeloSaldo = (saldoCentavos: number) => Pick<NovaBaixa, "jurosCentavos" | "multaCentavos" | "descontoCentavos">;
+
+/**
+ * Quita o saldo inteiro de uma vez — a conciliação, o lançamento que nasce
+ * pago, a transferência, a baixa em lote. `encargosPeloSaldo` (22/10/2026, a
+ * baixa em lote com juros e multa pela regra): os encargos saem do saldo
+ * relido aqui, com a conta travada, e não do que a tela mostrou.
+ */
+export async function quitarConta(
+  tx: Tx,
+  b: Omit<NovaBaixa, "principalCentavos">,
+  encargosPeloSaldo?: EncargosPeloSaldo
+): Promise<BaixaGravada> {
   const conta = await travarConta(tx, b.entryId);
   if (!conta || conta.tenantId !== b.tenantId) throw new RecusaDaBaixa("Lançamento não encontrado.");
-  return registrarBaixa(tx, { ...b, principalCentavos: saldoEmAberto(conta.valorCentavos, conta.baixadoCentavos) });
+  const saldo = saldoEmAberto(conta.valorCentavos, conta.baixadoCentavos);
+  return registrarBaixa(tx, { ...b, principalCentavos: saldo, ...(encargosPeloSaldo ? encargosPeloSaldo(saldo) : {}) });
 }
 
 /**

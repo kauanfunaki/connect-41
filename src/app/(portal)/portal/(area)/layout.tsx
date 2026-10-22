@@ -6,6 +6,13 @@ import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { TutorialDoPortal } from "@/components/tutorial/TutorialDoPortal";
+import { EstiloDaAparencia } from "@/components/aparencia/EstiloDaAparencia";
+import { aparenciaDoEscritorio } from "@/lib/aparencia/leitura";
+import { CeciDoPortal } from "@/components/portal/CeciDoPortal";
+import { ceciNoPortalDaConta } from "@/lib/portal/ceci";
+import { primeiroNomeParaOPrompt } from "@/lib/ia/ceci";
+import { getPrisma } from "@/lib/prisma";
+import { sugestaoLigada } from "@/lib/solicitacoes/sugestaoServidor";
 
 // A moldura de quem já entrou no portal: sidebar com as telas, o nome do
 // acesso (a empresa, ou a primeira e quantas mais — era o nome do Cliente até
@@ -30,18 +37,41 @@ export default async function AreaDoClienteLayout({ children }: { children: Reac
   // As telas que o escritório ainda não liberou (14/10/2026) saem do menu. O
   // layout não roda de novo a cada navegação: quem barra o endereço direto é
   // cada tela (`telaBloqueadaNoPortal`).
-  const [nome, modulos, bloqueadas] = await Promise.all([
+  //
+  // As cores e o logo do escritório (21/10/2026, Administração › Empresa ›
+  // Aparência do portal). Sem nada escolhido, o `EstiloDaAparencia` não
+  // escreve nada e o portal é o de sempre.
+  // A Ceci (21/10/2026) só aparece quando o escritório a ligou para alguma
+  // empresa do acesso, com o agente ligado e chave de IA. A rota da pergunta
+  // confere tudo de novo — isto só desenha o botão.
+  const [nome, modulos, bloqueadas, { aparencia, escritorio }, comCeci, conta] = await Promise.all([
     nomeDoAcessoNoPortal(sessao.tenantId, sessao.sub),
     getEnabledModuleCodes(sessao.tenantId),
     telasBloqueadasDoPortal(sessao.tenantId),
+    aparenciaDoEscritorio(sessao.tenantId),
+    ceciNoPortalDaConta(sessao.tenantId, sessao.sub).catch((err) => {
+      console.error("[portal] Ceci", err);
+      return false;
+    }),
+    getPrisma().portalUser.findFirst({ where: { id: sessao.sub, tenantId: sessao.tenantId }, select: { name: true } }),
   ]);
+  const logo = aparencia.logoNoPortal && escritorio.logoUrl ? { src: escritorio.logoUrl, nome: escritorio.nome } : null;
+  // "Sugestão ou problema" no rodapé do menu (21/10/2026). Falha aqui não
+  // derruba o portal: o botão só não aparece.
+  const comSugestao = await sugestaoLigada(sessao.tenantId, modulos, bloqueadas).catch((err) => {
+    console.error("[portal] sugestão", err);
+    return false;
+  });
 
   return (
     <ToastProvider>
-      <PortalShell grupoNome={nome} modulos={[...modulos]} bloqueadas={[...bloqueadas]}>
+      <EstiloDaAparencia aparencia={aparencia} />
+      <PortalShell grupoNome={nome} modulos={[...modulos]} bloqueadas={[...bloqueadas]} logo={logo} sugestao={comSugestao}>
         {children}
       </PortalShell>
       <TutorialDoPortal />
+      {comCeci && <CeciDoPortal primeiroNome={primeiroNomeParaOPrompt(conta?.name)} />}
     </ToastProvider>
   );
 }
+

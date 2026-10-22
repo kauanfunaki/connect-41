@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { formatInstantDate, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
 import { feriadosDoTenant } from "@/lib/societario/fila";
@@ -92,7 +92,7 @@ export default async function VisaoSocietariaDoClientePage({
   params: Promise<{ companyId: string }>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canViewSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const { companyId } = await params;

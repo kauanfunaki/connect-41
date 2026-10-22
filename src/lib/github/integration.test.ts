@@ -15,18 +15,19 @@ vi.mock("@/lib/audit", () => ({ logAudit: mocks.audit }));
 import { githubAccess } from "./access";
 import { beginOAuth, finishOAuth } from "./oauth";
 import { connectionQuery, ensureConnection, getConnection, queueRepositories } from "./store";
-import { processConnection, scheduleSync, withGithubLease } from "./sync";
+import { processConnection, processGithubCron, scheduleSync, withGithubLease } from "./sync";
 import { filtersSchema, historyStart, dayAt } from "./rules";
 import { dashboard, dayEvents } from "./queries";
 import { changeIntegration, integrationView } from "./service";
 import { getDashboard, githubResponse, postIntegration, validCronToken } from "./http";
-import { setModuleSector, setorDoModulo } from "@/lib/modules";
+import { setModuleSector, setModuleSharedSectors, setorDoModulo, setoresDoModulo, getTenantModuleStates } from "@/lib/modules";
 import { GITHUB_MODULE } from "./types";
 
 describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout: 30000 }, () => {
   let tenantId: string, ctx: AuthContext, connectionId: string, repositoryId: string, githubId: string;
   let sha: string, revoked: boolean, malformed: boolean, limited: boolean, rewritten: boolean, secondIdentity: boolean;
   let fetcher: ReturnType<typeof vi.fn<typeof fetch>>;
+  const credentials = () => ({ clientId: `fixture-${tenantId}`, clientSecret: `${tenantId}-fake-secret` });
   const stamp = () => new Date(Date.now() - 86400000).toISOString();
   const user = (login: string) => ({ node_id: `U_fixture_${login}`, login, type: "User" });
   const repo = () => ({ node_id: `R_${tenantId}`, name: "exemplo", full_name: "acme/exemplo", owner: { login: "acme" }, default_branch: "main", private: true, fork: false, archived: false });
@@ -36,7 +37,7 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     number: old ? 3 : 2, created_at: old ? "2022-01-01T12:00:00Z" : stamp(), updated_at: stamp() });
   beforeAll(() => {
     vi.stubEnv("SECRETS_ENCRYPTION_KEY", "github-tests-only-encryption");
-    vi.stubEnv("GITHUB_CLIENT_ID", "github-tests-client"); vi.stubEnv("GITHUB_CLIENT_SECRET", "github-tests-secret"); vi.stubEnv("APP_PUBLIC_URL", "http://localhost:3111");
+    vi.stubEnv("GITHUB_CLIENT_ID", ""); vi.stubEnv("GITHUB_CLIENT_SECRET", ""); vi.stubEnv("APP_PUBLIC_URL", "http://localhost:3111");
   });
   beforeEach(async () => {
     tenantId = randomUUID(); githubId = `U_account_${tenantId}`; sha = "a".repeat(40); revoked = false; malformed = false; limited = false; rewritten = false; secondIdentity = false;
@@ -48,7 +49,7 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     mocks.auth.mockResolvedValue(ctx);
     const connection = await ensureConnection(tenantId); connectionId = connection.id;
     await db!.githubConnection.update({ where: { id: connectionId }, data: { githubUserId: githubId, login: "conta-ficticia", status: "connected", verifiedAt: new Date() } });
-    await db!.tenantIntegration.update({ where: { id: connection.integrationId }, data: { enabled: true, configEnc: encryptSecret(JSON.stringify({ accessToken: "github-fake-access-only-for-tests", scope: "repo read:user" })) } });
+    await db!.tenantIntegration.update({ where: { id: connection.integrationId }, data: { enabled: true, configEnc: encryptSecret(JSON.stringify({ ...credentials(), accessToken: "github-fake-access-only-for-tests", scope: "repo read:user" })) } });
     const repository = await db!.githubRepository.create({ data: { tenantId, connectionId, externalId: repo().node_id, owner: "acme", name: "exemplo", fullName: "acme/exemplo", defaultBranch: "main", private: true, selected: true, accessCheckedAt: new Date() } });
     repositoryId = repository.id;
     fetcher = vi.fn<typeof fetch>(async input => {
@@ -75,6 +76,7 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
   afterEach(async () => {
     await db!.githubOAuthAttempt.deleteMany({ where: { tenantId } });
     await db!.tenantIntegration.deleteMany({ where: { tenantId } });
+    await db!.tenantModuleSector.deleteMany({ where: { tenantId } });
     await db!.tenantModule.deleteMany({ where: { tenantId } });
     await db!.user.deleteMany({ where: { tenantId } });
     await db!.tenant.delete({ where: { id: tenantId } });
@@ -134,13 +136,15 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
   }, 30000);
   it("renova tokens expirados sob a mesma lease e guarda a rotação somente cifrada", async () => {
     const connection = (await getConnection(tenantId))!, original = fetcher.getMockImplementation()!;
-    await db!.tenantIntegration.update({ where: { id: connection.integrationId }, data: { configEnc: encryptSecret(JSON.stringify({ accessToken: "old-fake", refreshToken: "old-refresh-fake", expiresAt: new Date(0).toISOString(), scope: "repo read:user" })) } });
+    await db!.tenantIntegration.update({ where: { id: connection.integrationId }, data: { configEnc: encryptSecret(JSON.stringify({ ...credentials(), accessToken: "old-fake", refreshToken: "old-refresh-fake", expiresAt: new Date(0).toISOString(), scope: "repo read:user" })) } });
     fetcher.mockImplementation(async (input, init) => String(input).includes("/login/oauth/access_token")
       ? Response.json({ access_token: "renewed-fake", refresh_token: "rotated-fake", expires_in: 3600, scope: "repo,read:user" }) : original(input, init));
     await collect(); await dashboard(tenantId, filtersSchema.parse({}));
     const stored = (await getConnection(tenantId))!.integration.configEnc;
     expect(stored).not.toContain("renewed-fake");
-    expect(JSON.parse(decryptSecret(stored))).toMatchObject({ accessToken: "renewed-fake", refreshToken: "rotated-fake" });
+    expect(JSON.parse(decryptSecret(stored))).toMatchObject({ ...credentials(), accessToken: "renewed-fake", refreshToken: "rotated-fake" });
+    const sent = fetcher.mock.calls.find(([input]) => String(input).includes("access_token"))?.[1]?.body;
+    expect(new URLSearchParams(String(sent)).get("client_secret")).toBe(credentials().clientSecret);
     expect(fetcher.mock.calls.filter(([input]) => String(input).includes("/login/oauth/access_token"))).toHaveLength(1);
   });
   it("retoma a cobertura das revisões já coletadas mesmo sem PRs alterados", async () => {
@@ -202,9 +206,27 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
   it("exclui dados após revogação e preserva os registros para recuperação", async () => {
     await collect(); revoked = true;
     await db!.githubConnection.update({ where: { id: connectionId }, data: { verifiedAt: new Date(0) } });
+    const calls = fetcher.mock.calls.length;
+    expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(0);
+    expect(fetcher.mock.calls).toHaveLength(calls);
+    await processGithubCron();
     const view = await dashboard(tenantId, filtersSchema.parse({}));
     expect(view.connected).toBe(false); expect(view.users).toEqual([]); expect(view.total).toBe(0);
     expect(await db!.githubContribution.count({ where: { tenantId } })).toBe(4);
+  });
+  it("coleta e retoma lotes automaticamente sem nenhuma página aberta", async () => {
+    for (let round = 0; round < 12; round++) await processGithubCron();
+    const view = await dashboard(tenantId, filtersSchema.parse({}));
+    expect(view.total).toBe(4); expect(view.pending).toBe(0); expect(view.complete).toBe(true);
+    expect(view.progress).toMatchObject({ state: "idle", pending: 0, failed: 0 });
+    expect(await db!.integrationRun.count({ where: { integrationId: (await getConnection(tenantId))!.integrationId, trigger: "CRON", ok: true } })).toBeGreaterThan(0);
+    // A leitura repetida não disputa a lease nem gera novas requisições GitHub.
+    const calls = fetcher.mock.calls.length;
+    await withGithubLease(githubId, async () => {
+      expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(4);
+    });
+    expect(fetcher.mock.calls).toHaveLength(calls);
+    await processGithubCron(); expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(4);
   });
   it("isola detalhes por escritório, repositório selecionado e tipo", async () => {
     await collect();
@@ -229,8 +251,13 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     await changeIntegration(ctx, { action: "disconnect", generation: 1 });
     expect((await dashboard(tenantId, filtersSchema.parse({}))).connected).toBe(false);
     expect(await db!.githubContribution.count({ where: { tenantId } })).toBe(4);
+    expect(JSON.parse(decryptSecret((await getConnection(tenantId))!.integration.configEnc))).toEqual(credentials());
   });
-  it("bloqueia Fiscal e assinatura em somente leitura e impede transferência do módulo", async () => {
+  it("bloqueia Fiscal e assinatura em somente leitura e impede transferência ou compartilhamento do módulo", async () => {
+    await db!.tenantModuleSector.create({ data: { tenantId, moduleCode: GITHUB_MODULE, sectorCode: "fiscal" } });
+    await expect(setModuleSharedSectors(tenantId, GITHUB_MODULE, ["fiscal"])).rejects.toThrow("exclusivo");
+    expect(await setoresDoModulo(tenantId, GITHUB_MODULE)).toEqual(["tech"]);
+    expect((await getTenantModuleStates(tenantId)).find(item => item.code === GITHUB_MODULE)?.sectorCodes).toEqual(["tech"]);
     mocks.auth.mockResolvedValue({ ...ctx, role: "SECTOR_USER", sectors: ["fiscal"] });
     await expect(githubAccess()).rejects.toMatchObject({ status: 403 });
     mocks.auth.mockResolvedValue({ ...ctx, role: "SECTOR_USER", sectors: ["tech"] });
@@ -251,6 +278,9 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     expect((await getConnection(tenantId))?.generation).toBe(1);
     const sent = fetcher.mock.calls.find(([input]) => String(input).includes("access_token"))?.[1]?.body;
     expect(new URLSearchParams(String(sent)).get("code_verifier")?.length).toBeGreaterThan(43);
+    expect(parsed.searchParams.get("client_id")).toBe(credentials().clientId);
+    expect(new URLSearchParams(String(sent)).get("client_secret")).toBe(credentials().clientSecret);
+    expect(JSON.parse(decryptSecret((await getConnection(tenantId))!.integration.configEnc))).toMatchObject(credentials());
   });
   it("trocar de conta arquiva a conexão anterior e não mistura nem apaga seus dados", async () => {
     await collect(); const attempt = await beginOAuth(ctx, "sessao-ficticia"); secondIdentity = true;
@@ -260,6 +290,65 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     expect(await db!.githubConnection.findUnique({ where: { id: connectionId } })).toMatchObject({ status: "archived" });
     expect(await db!.githubContribution.count({ where: { tenantId } })).toBe(4);
     expect(await db!.githubRepository.count({ where: { connectionId: current.id } })).toBe(0);
+    expect(JSON.parse(decryptSecret((await getConnection(tenantId))!.integration.configEnc))).toMatchObject(credentials());
+  });
+  it("cadastra as primeiras credenciais pela API sem variáveis GitHub e não devolve o segredo", async () => {
+    await db!.tenantIntegration.delete({ where: { id: (await getConnection(tenantId))!.integrationId } });
+    expect(await integrationView(tenantId)).toMatchObject({ configured: false, serverReady: true, clientId: "", hasClientSecret: false, generation: 0 });
+    await postIntegration(new Request("http://localhost/api/github/integration", { method: "POST", headers: { origin: "http://localhost" },
+      body: JSON.stringify({ action: "credentials", generation: 0, ...credentials() }) }));
+    const connection = (await getConnection(tenantId))!, view = await integrationView(tenantId);
+    expect(connection.integration.configEnc).not.toContain(credentials().clientSecret);
+    expect(JSON.parse(decryptSecret(connection.integration.configEnc))).toEqual(credentials());
+    expect(view).toMatchObject({ configured: true, clientId: credentials().clientId, hasClientSecret: true, connected: false, generation: 1,
+      callbackUrl: "http://localhost:3111/api/integrations/github/callback" });
+    expect(JSON.stringify(view)).not.toContain(credentials().clientSecret);
+    expect(JSON.stringify(mocks.audit.mock.calls)).not.toContain(credentials().clientSecret);
+    const attempt = await beginOAuth(ctx, "nova-sessao");
+    expect(new URL(attempt.url).searchParams.get("client_id")).toBe(credentials().clientId);
+  });
+  it("trocar segredo invalida OAuth pendente, tokens e lotes, preservando histórico", async () => {
+    await collect(); const attempt = await beginOAuth(ctx, "sessao-ficticia");
+    await changeIntegration(ctx, { action: "credentials", generation: 0, clientId: credentials().clientId, clientSecret: "novo-segredo-ficticio" });
+    const connection = (await getConnection(tenantId))!;
+    expect(connection).toMatchObject({ generation: 1, status: "needs_reconnect", verifiedAt: null, integration: { enabled: false } });
+    expect(JSON.parse(decryptSecret(connection.integration.configEnc))).toEqual({ clientId: credentials().clientId, clientSecret: "novo-segredo-ficticio" });
+    await expect(finishOAuth(ctx, "sessao-ficticia", attempt.state, "codigo-ficticio")).rejects.toMatchObject({ status: 403 });
+    expect(await db!.githubContribution.count({ where: { tenantId } })).toBe(4);
+    expect((await dashboard(tenantId, filtersSchema.parse({}))).connected).toBe(false);
+    const next = await beginOAuth(ctx, "sessao-ficticia");
+    await finishOAuth(ctx, "sessao-ficticia", next.state, "novo-codigo-ficticio");
+    expect((await getConnection(tenantId))?.id).toBe(connectionId);
+    expect(await db!.githubContribution.count({ where: { tenantId } })).toBe(4);
+  });
+  it("segredo vazio mantém o mesmo app; novo Client ID exige segredo e geração atual", async () => {
+    await changeIntegration(ctx, { action: "credentials", generation: 0, clientId: credentials().clientId, clientSecret: "" });
+    expect((await getConnection(tenantId))?.generation).toBe(0);
+    await expect(changeIntegration(ctx, { action: "credentials", generation: 0, clientId: "outro-app", clientSecret: "" })).rejects.toThrow("Client Secret");
+    await expect(changeIntegration(ctx, { action: "credentials", generation: 9, ...credentials() })).rejects.toMatchObject({ status: 409 });
+    expect((await getConnection(tenantId))?.status).toBe("connected");
+  });
+  it("duas alterações concorrentes não sobrescrevem credenciais com tela desatualizada", async () => {
+    const results = await Promise.allSettled(["segredo-a", "segredo-b"].map(clientSecret => changeIntegration(ctx, { action: "credentials", generation: 0, clientId: credentials().clientId, clientSecret })));
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find(result => result.status === "rejected")).toMatchObject({ reason: { status: 409 } });
+    expect((await getConnection(tenantId))?.generation).toBe(1);
+  });
+  it("credenciais de outro escritório não são reutilizadas e acesso de consulta não pode salvar", async () => {
+    const otherTenant = randomUUID();
+    expect(await integrationView(otherTenant)).toMatchObject({ configured: false, clientId: "", hasClientSecret: false });
+    await expect(beginOAuth({ ...ctx, tenantId: otherTenant }, "sessao-ficticia")).rejects.toThrow("Client ID");
+    mocks.auth.mockResolvedValue({ ...ctx, role: "SECTOR_USER", sectors: ["tech"] });
+    expect((await githubResponse(() => postIntegration(new Request("http://localhost/api/github/integration", { method: "POST", body: JSON.stringify({ action: "credentials", generation: 0, ...credentials() }) })))).status).toBe(403);
+    expect((await getConnection(tenantId))?.generation).toBe(0);
+  });
+  it("sem chave da instalação bloqueia gravação e conserva configuração anterior", async () => {
+    const before = (await getConnection(tenantId))!.integration.configEnc;
+    vi.stubEnv("SECRETS_ENCRYPTION_KEY", "");
+    try {
+      await expect(changeIntegration(ctx, { action: "credentials", generation: 0, ...credentials() })).rejects.toMatchObject({ status: 503 });
+      expect((await getConnection(tenantId))!.integration.configEnc).toBe(before);
+    } finally { vi.stubEnv("SECRETS_ENCRYPTION_KEY", "github-tests-only-encryption"); }
   });
   it("rotas recusam JSON inválido, origem externa e consultas sem módulo ativo", async () => {
     expect((await githubResponse(() => postIntegration(new Request("http://localhost/api/github/integration", { method: "POST", headers: { origin: "https://evil.test" }, body: "{}" })))).status).toBe(403);

@@ -985,7 +985,6 @@ model Tenant {
   subscription              Subscription?
   users                     User[]
   companies                 Company[]
-  clientGroups              ClientGroup[]
   people                    Person[]
   pipelines                 Pipeline[]
   pipelineItems             PipelineItem[]
@@ -1004,6 +1003,7 @@ model Tenant {
   customValues              CustomValue[]
   sectors                   Sector[]
   tenantModules             TenantModule[]
+  tenantModuleSectors       TenantModuleSector[]
   localFiscalScenarios      LocalFiscalScenario[]
   tags                      Tag[]
   accessGrants              UserTenantAccess[]
@@ -1051,12 +1051,15 @@ model Tenant {
   oauthAccounts             OAuthAccount[]
   meetings                  Meeting[]
   agendaConfig              TenantAgendaConfig?
+  aparencia                 TenantAparencia?
   userAgendaConfigs         UserAgendaConfig[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
   aiConfig                  TenantAiConfig?
   alertDispatches           AlertDispatch[]
   recurringObligations      RecurringObligation[]
+  modelosDeObrigacao        ModeloDeObrigacao[]
+  obrigacoesGeradas         ObrigacaoGerada[]
   chatwootConnections       ChatwootConnection[]
   bpoCredentials            BpoCredential[]
   bpoCredentialViews        BpoCredentialView[]
@@ -1270,6 +1273,25 @@ model TenantModule {
   @@unique([tenantId, moduleCode])
   @@index([tenantId])
   @@map("tenant_modules")
+}
+
+// Os outros setores que também usam uma tela (21/10/2026). O setor dono segue
+// em `TenantModule.sectorCode` (ou no catálogo); aqui ficam só os a mais — a
+// prévia do SPED do Fiscal ligada ao Contábil e ao BPO. Sem linha = a tela é
+// só do dono, como era antes desta tabela. Código de `Sector`, sem FK, como em
+// todo lugar que guarda setor. Resolvido só em `src/lib/modules.ts`.
+model TenantModuleSector {
+  id         String   @id @default(uuid())
+  tenantId   String
+  moduleCode String   @db.VarChar(60)
+  sectorCode String   @db.VarChar(40)
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, moduleCode, sectorCode])
+  @@index([tenantId])
+  @@map("tenant_module_sectors")
 }
 
 // Catálogo de planos comercializáveis (vive em código+banco, editável só por
@@ -1506,19 +1528,18 @@ enum PasswordResetSubject {
 /// 1. **Não existe papel para atribuir errado.** Com papel novo em `User`, um
 ///    clique errado no cadastro daria acesso interno a um cliente. Aqui o pior
 ///    caso de um erro é o cliente não conseguir entrar.
-/// 2. **`clientGroupId` é OBRIGATÓRIO.** Com o papel, ele teria de ser anulável
-///    (conta interna não tem grupo), e "conta de portal sem grupo" existiria
-///    como estado a defender. Aqui esse estado não é representável.
+/// 2. **A conta é das empresas ligadas a ela** (`PortalUserCompany`, desde
+///    14/10/2026). Com o papel, conta interna e conta de cliente dividiriam a
+///    mesma tabela, e "conta de cliente sem empresa" seria só mais um filtro.
 /// 3. **Sessão própria.** O token do portal tem `kind: "portal"` e cookie
 ///    próprio; o verificador interno o recusa e vice-versa. Uma sessão não vira
 ///    a outra nem por engano de cookie.
 model PortalUser {
   id            String @id @default(uuid())
   tenantId      String
-  /// O cliente das contas criadas antes de 14/10/2026. Não decide mais nada: o
-  /// que a conta enxerga são as empresas ligadas a ela (`PortalUserCompany`).
-  /// Conta nova nasce sem; a coluna sai com o Cliente (etapa 3).
-  clientGroupId String?
+  // `clientGroupId` saiu do schema em 21/10/2026 (etapa 3 da saída do
+  // Cliente), e do banco na etapa 4 — ver as migrations
+  // 20261021180000_cliente_sem_chaves e 20261021210000_cliente_fora_do_banco.
 
   name         String    @db.VarChar(120)
   email        String    @db.VarChar(120)
@@ -1530,9 +1551,6 @@ model PortalUser {
   updatedAt DateTime @updatedAt
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
-  // SetNull desde 14/10/2026 (era RESTRICT): excluir um cliente não leva mais
-  // os acessos junto — eles são das empresas.
-  clientGroup ClientGroup? @relation(fields: [clientGroupId], references: [id], onDelete: SetNull)
   empresas    PortalUserCompany[]
 
   clientRequestMessages    ClientRequestMessage[]    @relation("ClientRequestMessageAuthorPortal")
@@ -1551,7 +1569,6 @@ model PortalUser {
   driveFilesEnviados       DriveFile[]               @relation("DriveFileEnviadoPeloCliente")
   driveAcessos             DriveFileAccess[]
   @@unique([tenantId, email])
-  @@index([tenantId, clientGroupId])
   @@map("portal_users")
 }
 
@@ -1599,44 +1616,11 @@ model PasswordResetToken {
 
 // ─── Entidades Centrais ───────────────────────────────────────────────────────
 
-// O "cliente" do escritório, um nível acima da empresa: um cliente pode ter
-// N CNPJs. O caso medido é o grupo BLD — 5 estabelecimentos sob a raiz
-// 17122471, uma controladoria só, confirmado na base do SPED em 2026-08-21.
-// Sem este nível, o usuário do portal teria de ser escopado a uma lista solta
-// de Company, e o agrupamento viraria configuração manual.
-//
-// O protótipo do Marcos chegou no mesmo desenho por outro caminho: lá `Client`
-// agrupa `Company` e a tabela `User` tem `clientId`. Nome aqui é `ClientGroup`
-// e não `Client` porque `ClientDocument*` já usa o prefixo `Client` com outro
-// sentido — documento enviado a UM CNPJ.
-model ClientGroup {
-  id       String  @id @default(uuid())
-  tenantId String
-  name     String  @db.VarChar(180)
-  // Raiz do CNPJ (8 dígitos) quando o grupo é um CNPJ raiz com N
-  // estabelecimentos. É dica de agrupamento e origem do backfill, NÃO
-  // identidade: holding com raízes diferentes também é um grupo, e cliente
-  // pessoa física não tem nenhuma. Por isso é opcional.
-  //
-  // Única por escritório desde 25/09: a mesma raiz em dois clientes é o mesmo
-  // cliente cadastrado duas vezes — o que um import rodado de novo faria em
-  // silêncio. Nulo não colide (MySQL permite vários), então pessoa física e
-  // holding sem raiz continuam como eram.
-  cnpjRoot String? @db.VarChar(8)
-  active   Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant      Tenant       @relation(fields: [tenantId], references: [id])
-  companies   Company[]
-  portalUsers PortalUser[]
-  announcements ClientAnnouncementGroup[]
-
-  @@unique([tenantId, cnpjRoot])
-  @@index([tenantId])
-  @@map("client_groups")
-}
+// O Cliente (`ClientGroup`, tabela `client_groups`) saiu do schema em
+// 21/10/2026, na etapa 3 da saída do Cliente (decisão do Kauan em 13/10:
+// Empresa e Cliente eram a mesma coisa). O portal é ligado direto às empresas
+// (`PortalUserCompany`), com as filiais junto da matriz. As tabelas antigas
+// saíram do banco na etapa 4 (20261021210000_cliente_fora_do_banco).
 
 model Company {
   id                    String        @id @default(uuid())
@@ -1704,29 +1688,47 @@ model Company {
   // SetNull, nunca Cascade: apagar a matriz não pode apagar as filiais junto —
   // elas viram matrizes soltas, o que é recuperável, ao contrário de sumir.
   parentCompanyId       String?
-  // Opcional no schema de propósito: exigir NOT NULL obrigaria o backfill a
-  // rodar DENTRO da migration, e um backfill que falha no meio deixa o
-  // `migrate deploy` morto com o schema pela metade em produção. O script
-  // `scripts/backfill-client-groups.ts` preenche 100% depois, fora da janela
-  // de DDL. SetNull, nunca Cascade: apagar um grupo não pode apagar as
-  // empresas do cliente.
-  clientGroupId         String?
+  // `clientGroupId` (o Cliente da empresa) saiu do schema em 21/10/2026, na
+  // etapa 3, e do banco na etapa 4.
   /// O modelo do DRE desta empresa (21/10/2026): vazio é o padrão; "por_area" é
   /// o customizado de despesas por área. Os modelos moram em código — ver
   /// `src/lib/dre/estrutura.ts`.
   dreModelo             String?       @db.VarChar(30)
+  /// A Ceci no portal do cliente responde sobre esta empresa (21/10/2026).
+  /// Desligada por padrão: o escritório liga empresa a empresa, no piloto, em
+  /// Administração › Portal do cliente › Ceci. Ligada na matriz, vale para as
+  /// filiais que o acesso vê por ela. Ver src/lib/portal/ceci.ts.
+  ceciNoPortal          Boolean       @default(false)
+  /// O robô da pasta de rede traz os documentos desta empresa para os
+  /// Arquivos (21/10/2026). Desligado por padrão: o piloto liga empresa a
+  /// empresa em Administração › Arquivos. Ver src/lib/drive/pastaDeRede.ts.
+  pastaDeRedeNoDrive    Boolean       @default(false)
   /// A virada do Omie para o Connect (lote E, 20/10/2026): desde quando o
   /// Connect é a fonte do financeiro desta empresa. Nula enquanto as contas
   /// vêm do Omie — até a virada, a conta que veio de lá é do Omie: o Connect
   /// não a edita, não a baixa nem a cancela, porque a leitura seguinte desfaria.
   omieCutoverAt         DateTime?
+  /// O "Código Matriz/Filial" da empresa na Domínio (fila do BPO, 21/10): vai
+  /// em toda linha da planilha de importação. É o `empresas.codigo_dominio`
+  /// do SPED Generator ("113" + a filial com dois dígitos: matriz 11301).
+  dominioBranchCode     String?       @db.VarChar(20)
+  /// Juros e multa pelo atraso (22/10/2026): a regra da empresa para a janela
+  /// da baixa já vir com juros e multa calculados quando o pagamento é depois
+  /// do vencimento — e com o desconto, quando é até o vencimento. Multa em %
+  /// sobre o valor baixado, uma vez; juros em % ao mês, simples, pro rata por
+  /// dia corrido (mês de 30 dias). Tudo nulo é sem regra: nada muda, os campos
+  /// ficam em zero. O fornecedor ou cliente pode ter a dele
+  /// (`FinanceCounterparty.lateFinePercent` e as outras). O cálculo é
+  /// src/lib/financeiro/baixa/encargos.ts.
+  lateFinePercent       Decimal?      @db.Decimal(7, 4)
+  lateInterestPercent   Decimal?      @db.Decimal(7, 4)
+  earlyDiscountPercent  Decimal?      @db.Decimal(7, 4)
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
   parent      Company?     @relation("CompanyFiliais", fields: [parentCompanyId], references: [id], onDelete: SetNull)
   filiais     Company[]    @relation("CompanyFiliais")
-  clientGroup ClientGroup? @relation(fields: [clientGroupId], references: [id], onDelete: SetNull)
 
   services                 CompanyService[]
   people                   Person[]
@@ -1741,6 +1743,7 @@ model Company {
   meetings                 Meeting[]
   clientDocuments          ClientDocument[]
   recurringObligations     RecurringObligation[]
+  obrigacoesGeradas        ObrigacaoGerada[]
   chatwootContactLinks     ChatwootContactLink[]
   bpoCredentials           BpoCredential[]
   fiscalDocuments          FiscalDocument[]
@@ -1756,6 +1759,9 @@ model Company {
   collectionReminderOptOut CollectionReminderOptOut?
   costCenters              CostCenter[]
   financeProjects          FinanceProject[]
+  dominioAccountMaps       DominioAccountMap[]
+  bankReconciliationRules  BankReconciliationRule[]
+  financeRecurrences       FinanceRecurrence[]
   financeEntryPayments     FinanceEntryPayment[]
   budgets                  Budget[]
   societarioProcesses      Process[]
@@ -1781,6 +1787,7 @@ model Company {
   // recebe documento fiscal. A constraint garante a unicidade; quem garante a
   // regra é o tipo, não o banco.
   driveFolders          DriveFolder[]
+  driveDaRede           DriveNetworkFile[]
   @@unique([tenantId, cnpj])
   // Mesmo desenho do CNPJ, para o cliente pessoa física. Dois índices únicos
   // separados, e não um sobre um campo só de documento: o par (tenant, CPF) e
@@ -1789,7 +1796,6 @@ model Company {
   @@unique([tenantId, cpf])
   @@index([tenantId])
   @@index([tenantId, status])
-  @@index([tenantId, clientGroupId])
   @@index([tenantId, taxRegimeKind])
   @@map("companies")
 }
@@ -1970,6 +1976,7 @@ model Pipeline {
   stages               PipelineStage[]
   items                PipelineItem[]
   recurringObligations RecurringObligation[]
+  modelosDeObrigacao   ModeloDeObrigacao[]
 
   @@index([tenantId, sectorCode])
   @@index([spaceId])
@@ -2050,6 +2057,7 @@ model PipelineItem {
   timeEntries TimeEntry[]
   candidatura Candidatura?
   meetings    Meeting[]
+  obrigacaoGerada ObrigacaoGerada?
 
   @@index([tenantId, pipelineId])
   @@index([tenantId, entityType, entityId])
@@ -2622,6 +2630,18 @@ model ClientDocument {
   // recebimento que este módulo já registra.
   requiresSignature Boolean              @default(false)
   publishedAt       DateTime?
+  // Envio agendado (22/10/2026): rascunho com data marcada. Enquanto
+  // `status` é DRAFT o cliente não vê nada (portal e link público só mostram
+  // PUBLISHED); o agendador interno publica e manda os e-mails de
+  // `scheduledEmails` quando chega a hora. A data fica depois de publicado,
+  // como registro de que saiu agendado.
+  scheduledFor      DateTime?
+  scheduledEmails   Json?
+  // Lembrete de não lido (22/10/2026): se ninguém do cliente abriu o envio em
+  // `reminderDays` dias, sai UM lembrete (e-mail aos destinatários + push do
+  // portal). `reminderSentAt` é a trava do agendador — gravado antes do envio.
+  reminderDays      Int?
+  reminderSentAt    DateTime?
   createdById       String
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
@@ -2632,6 +2652,8 @@ model ClientDocument {
   recipients ClientDocumentRecipient[]
 
   @@index([tenantId, companyId])
+  @@index([status, scheduledFor])
+  @@index([status, reminderSentAt])
   @@map("client_documents")
 }
 
@@ -3232,6 +3254,7 @@ model FinanceCategory {
   baixasComDesconto FinanceEntryPayment[] @relation("PaymentDiscountCategory")
   /// Linhas de rateio nesta categoria.
   allocations       FinanceEntryAllocation[]
+  reconciliationRules BankReconciliationRule[]
 
   @@unique([tenantId, scope, name, kind])
   @@index([tenantId, kind])
@@ -3308,6 +3331,14 @@ model FinanceCounterparty {
   /// fornecedor que atende duas unidades não pode ficar preso à primeira.
   defaultCostCenterId String?
 
+  /// Juros e multa pelo atraso só deste fornecedor ou cliente (22/10/2026) —
+  /// passa por cima da regra da empresa (`Company.lateFinePercent`). Os três
+  /// nulos seguem a da empresa; com algum preenchido, a regra é esta, e o
+  /// vazio vale zero.
+  lateFinePercent      Decimal? @db.Decimal(7, 4)
+  lateInterestPercent  Decimal? @db.Decimal(7, 4)
+  earlyDiscountPercent Decimal? @db.Decimal(7, 4)
+
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3318,6 +3349,7 @@ model FinanceCounterparty {
   defaultCostCenter CostCenter?           @relation(fields: [defaultCostCenterId], references: [id])
   entries           FinanceEntry[]
   agreements        CollectionAgreement[]
+  reconciliationRules BankReconciliationRule[]
 
   @@unique([tenantId, companyId, document])
   @@index([tenantId, companyId])
@@ -3437,6 +3469,8 @@ model FinanceEntry {
   /// A série da repetição (lote D, 19/10 — a "repetição" do Omie): as contas
   /// que nasceram juntas de um lançamento que repete têm o mesmo id, e cada uma
   /// sabe a sua posição ("3 de 12"). Cada uma continua uma conta comum.
+  /// `recurrenceTotal` nulo é a série sem data de fim (21/10): "3/∞"; a regra
+  /// dela, para as próximas nascerem com o tempo, está em `FinanceRecurrence`.
   recurrenceId    String? @db.VarChar(36)
   recurrenceIndex Int?
   recurrenceTotal Int?
@@ -3514,6 +3548,8 @@ model FinanceEntry {
   retentions            FinanceEntryRetention[] @relation("RetentionsOfEntry")
   /// Quando esta conta é a de um imposto retido: a retenção que a gerou.
   retentionOrigin       FinanceEntryRetention?  @relation("RetentionTaxEntry")
+  /// A regra de conciliação que criou esta conta, quando foi uma (21/10).
+  ruleApplications      BankRuleApplication[]
 
   @@unique([companyId, omieTitleId])
   @@unique([companyId, omieMovementId])
@@ -3654,6 +3690,7 @@ model FinanceProject {
   entries FinanceEntry[]
   /// Linhas de rateio neste projeto.
   allocations FinanceEntryAllocation[]
+  reconciliationRules BankReconciliationRule[]
 
   @@unique([companyId, name])
   @@index([tenantId, companyId, active])
@@ -3685,6 +3722,7 @@ model CostCenter {
   padraoDe FinanceCounterparty[]
   /// Linhas de rateio neste centro.
   allocations FinanceEntryAllocation[]
+  reconciliationRules BankReconciliationRule[]
 
   @@unique([companyId, name])
   @@unique([companyId, code])
@@ -3987,7 +4025,6 @@ model ClientAnnouncement {
 
   tenant      Tenant                         @relation(fields: [tenantId], references: [id])
   createdBy   User?                          @relation("ClientAnnouncementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  groups      ClientAnnouncementGroup[]
   companies   ClientAnnouncementCompany[]
   reads       ClientAnnouncementRead[]
   attachments ClientAnnouncementAttachment[]
@@ -3996,21 +4033,10 @@ model ClientAnnouncement {
   @@map("client_announcements")
 }
 
-/// Os clientes que recebiam, até 14/10/2026. Comunicado novo vai para empresas
-/// (`ClientAnnouncementCompany`), e os antigos foram copiados para lá na
-/// migration `20261014210000_portal_por_empresa`. Fica intocada até a etapa 3.
-model ClientAnnouncementGroup {
-  id             String @id @default(uuid())
-  announcementId String
-  clientGroupId  String
-
-  announcement ClientAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  clientGroup  ClientGroup        @relation(fields: [clientGroupId], references: [id], onDelete: Cascade)
-
-  @@unique([announcementId, clientGroupId])
-  @@index([clientGroupId])
-  @@map("client_announcement_groups")
-}
+// Os clientes que recebiam (`client_announcement_groups`, até 14/10/2026)
+// saíram do schema em 21/10/2026 (etapa 3). Os comunicados antigos já tinham
+// sido copiados para as empresas na migration 20261014210000_portal_por_empresa;
+// a tabela fica no banco, sem chave, até a etapa 4.
 
 /// As empresas que recebem, fixadas no envio (14/10/2026): empresa cadastrada
 /// depois não recebe comunicado antigo como se fosse novo. O portal mostra o
@@ -4495,6 +4521,8 @@ model BankAccount {
   entries      FinanceEntry[]        @relation("ContaPrevista")
   /// No cartão de crédito: as faturas dele, uma por ciclo.
   cardInvoices FinanceEntry[]        @relation("FaturasDoCartao")
+  /// As regras de conciliação que valem só nesta conta (21/10).
+  reconciliationRules BankReconciliationRule[]
 
   @@unique([tenantId, companyId, bankCode, accountDigits])
   @@unique([companyId, omieAccountId])
@@ -4564,6 +4592,8 @@ model BankTransaction {
   import       BankStatementImport    @relation(fields: [importId], references: [id])
   reconciledBy User?                  @relation("BankTransactionReconciledBy", fields: [reconciledById], references: [id], onDelete: SetNull)
   matches      BankTransactionMatch[]
+  /// O lançamento que uma regra de conciliação criou para esta linha (21/10).
+  ruleApplications BankRuleApplication[]
 
   @@unique([bankAccountId, fitId])
   @@index([tenantId, bankAccountId, status, postedAt])
@@ -4673,6 +4703,150 @@ model BankTransactionMatch {
   @@map("bank_transaction_matches")
 }
 
+// ─── Exportação para a Domínio (fila do BPO, 21/10) ──────────────────────────
+
+/// O que o de-para da Domínio liga a uma conta contábil.
+enum DominioMapKind {
+  /// Uma categoria do plano (despesa, receita, juros, desconto).
+  CATEGORIA
+  /// Uma conta bancária da empresa (o banco, a caixinha, o cartão).
+  CONTA_BANCARIA
+  /// Um fornecedor ou cliente: a baixa liquida a conta dele, e não a despesa
+  /// direto — o modelo em que a provisão já veio do SPED Generator.
+  CONTRAPARTE
+}
+
+/// O de-para da empresa para a Domínio: um cadastro do financeiro → o código
+/// reduzido da conta contábil. É do Contábil: o Connect não adivinha conta, e
+/// a baixa sem conta no de-para fica fora do arquivo, como pendência
+/// (`src/lib/financeiro/dominio/lancamentos.ts`). `refId` é o id do cadastro,
+/// sem chave estrangeira — são três tabelas; um de-para de cadastro excluído
+/// só deixa de ser usado.
+model DominioAccountMap {
+  id          String         @id @default(uuid())
+  tenantId    String
+  companyId   String
+  kind        DominioMapKind
+  refId       String         @db.VarChar(36)
+  /// O código reduzido da conta na Domínio, só dígitos.
+  account     String         @db.VarChar(20)
+  updatedById String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, kind, refId])
+  @@index([tenantId, companyId])
+  @@map("dominio_account_maps")
+}
+
+// ─── Regras de conciliação (fila do BPO, 21/10) ─────────────────────────────
+//
+// Como as do Nibo: o que se repete no extrato (tarifa, rendimento, aluguel,
+// folha, um fornecedor fixo) vira lançamento sem ninguém digitar. A condição
+// olha a linha do extrato; a ação é o lançamento que ela cria, já conciliado.
+// As regras puras moram em src/lib/financeiro/conciliacao/regras.ts.
+
+/// O sentido da linha do extrato que a regra pega. Decide também o tipo do
+/// lançamento: saída é conta a pagar; entrada, conta a receber.
+enum BankRuleDirection {
+  ENTRADA
+  SAIDA
+}
+
+/// `SUGERIR` mostra a regra na linha e a pessoa confirma; `LANCAR` lança
+/// sozinho na importação do extrato — fora da empresa ainda lida do Omie, onde
+/// toda regra só sugere (lote E: o Omie é a fonte até a virada).
+enum BankRuleMode {
+  SUGERIR
+  LANCAR
+}
+
+/// Uma regra de conciliação de uma empresa.
+model BankReconciliationRule {
+  id        String @id @default(uuid())
+  tenantId  String
+  companyId String
+  name      String @db.VarChar(120)
+
+  // A condição. Texto e valor são as duas que identificam a linha; a regra
+  // precisa de ao menos uma (`validarRegra`). Conta nula é qualquer conta da
+  // empresa.
+  direction     BankRuleDirection
+  /// O que o histórico ou o favorecido do extrato contém — comparado sem
+  /// acento nem pontuação, em maiúsculas (`normalizarTexto`).
+  textContains  String?           @db.VarChar(120)
+  /// Faixa do valor da linha, sem sinal. Iguais é o valor exato; nulos, qualquer valor.
+  minAmount     Decimal?          @db.Decimal(14, 2)
+  maxAmount     Decimal?          @db.Decimal(14, 2)
+  bankAccountId String?
+
+  // A ação: o lançamento que a regra cria.
+  counterpartyId String
+  /// Obrigatória na saída (conta a pagar), como no lançamento manual.
+  categoryId     String?
+  /// Nulo herda o padrão da contraparte, como no lançamento manual.
+  costCenterId   String?
+  projectId      String?
+  /// A descrição do lançamento. Nula usa o histórico do extrato.
+  description    String? @db.VarChar(255)
+
+  mode        BankRuleMode @default(SUGERIR)
+  /// Pausada não sugere nem lança — e continua na lista para voltar.
+  active      Boolean      @default(true)
+  createdById String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  company      Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bankAccount  BankAccount?          @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  counterparty FinanceCounterparty   @relation(fields: [counterpartyId], references: [id], onDelete: Cascade)
+  category     FinanceCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  costCenter   CostCenter?           @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  project      FinanceProject?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  applications BankRuleApplication[]
+
+  @@index([tenantId, companyId])
+  @@index([bankAccountId])
+  @@index([counterpartyId])
+  @@index([categoryId])
+  @@index([costCenterId])
+  @@index([projectId])
+  @@map("bank_reconciliation_rules")
+}
+
+/// O registro de qual regra lançou o quê: uma linha por lançamento criado por
+/// regra, confirmado pela pessoa ou automático. Desfazer cancela o lançamento,
+/// devolve a linha do extrato às pendentes e marca `undoneAt` — e a regra não
+/// lança sozinha de novo naquela linha.
+model BankRuleApplication {
+  id             String    @id @default(uuid())
+  tenantId       String
+  companyId      String
+  /// Nulo depois que a regra é excluída; o nome fica em `ruleName`.
+  ruleId         String?
+  ruleName       String    @db.VarChar(120)
+  transactionId  String
+  financeEntryId String
+  /// Lançada sozinha na importação do extrato (modo `LANCAR`), sem clique.
+  automatic      Boolean   @default(false)
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  undoneAt       DateTime?
+  undoneById     String?
+
+  rule         BankReconciliationRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  transaction  BankTransaction         @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  financeEntry FinanceEntry            @relation(fields: [financeEntryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, createdAt])
+  @@index([ruleId])
+  @@index([transactionId])
+  @@index([financeEntryId])
+  @@map("bank_rule_applications")
+}
+
 /// Onde a sincronização com o SPED parou, por raiz de CNPJ.
 ///
 /// Guarda **uma coisa que importa**: o `cursor_retomada`, opaco em base64,
@@ -4724,8 +4898,8 @@ model SpedSyncState {
 /// antiga dava, e a sincronização passa a ler daqui. Cliente novo não entra
 /// sozinho na busca.
 ///
-/// Sem relação (FK), de propósito: sem a tabela (deploy antes da migration) a
-/// leitura cai na regra antiga.
+/// Sem relação (FK), de propósito: a tabela nasceu na etapa 2 para o SPED não
+/// depender do Cliente.
 model SpedSyncRoot {
   tenantId  String
   /// 8 dígitos — a chave de contribuinte do lado do SPED.
@@ -5849,6 +6023,106 @@ model RecurringObligation {
   @@map("recurring_obligations")
 }
 
+// ─── Obrigações por regime (22/10/2026) ────────────────────────────────────
+//
+// A RecurringObligation acima é cadastrada empresa a empresa. O modelo abaixo é
+// cadastrado uma vez por setor ("DAS — dia 20 do mês seguinte, Simples") e uma
+// regra diz a que empresas da carteira ele se aplica. O motor
+// (src/lib/obrigacoes/geracao.ts) gera, para cada empresa que bate com a
+// regra, as atividades das próximas competências no kanban do setor — o mesmo
+// PipelineItem que a obrigação recorrente gera, para as telas, os alertas e os
+// responsáveis continuarem iguais. As datas saem de src/lib/obrigacoes/calendario.ts.
+// Nenhum modelo vem cadastrado: a lista por setor entra depois, como dado.
+
+enum PeriodicidadeDaObrigacao {
+  MENSAL
+  TRIMESTRAL
+  ANUAL
+}
+
+// O que fazer quando o dia legal não é dia útil.
+enum AjusteDoVencimento {
+  ANTECIPAR
+  ADIAR
+}
+
+// Filtro de três estados da regra: tanto faz, só quem tem, só quem não tem.
+enum FiltroSimNao {
+  QUALQUER
+  SIM
+  NAO
+}
+
+model ModeloDeObrigacao {
+  id                   String                   @id @default(uuid())
+  tenantId             String
+  nome                 String                   @db.VarChar(160)
+  descricao            String?                  @db.Text
+  // O setor vem do kanban de destino, como na RecurringObligation.
+  sectorCode           String                   @db.VarChar(40)
+  pipelineId           String
+  periodicidade        PeriodicidadeDaObrigacao @default(MENSAL)
+  /// Meses entre o último mês da competência e o mês do vencimento: DAS de
+  /// setembro vence em outubro = 1; DEFIS de 2026 (dezembro) vence em março = 3.
+  mesesAposCompetencia Int                      @default(1)
+  /// 1..31 (mês mais curto usa o último dia). Nulo = último dia útil do mês.
+  diaLegal             Int?
+  /// O prazo interno: N dias úteis antes da data legal (0 = a própria data).
+  diasUteisAntes       Int                      @default(0)
+  ajuste               AjusteDoVencimento       @default(ADIAR)
+  // ── A regra de aplicação. Lista vazia = qualquer valor. ──
+  /// TaxRegimeKind[] — ["SIMPLES_NACIONAL", "MEI"].
+  regimes              Json?
+  semMovimento         FiltroSimNao             @default(QUALQUER)
+  comFuncionarios      FiltroSimNao             @default(QUALQUER)
+  /// UFs, ["SP", "MG"].
+  estados              Json?
+  /// Nomes de cidade, comparados sem acento e sem maiúscula.
+  cidades              Json?
+  /// Só empresas com o setor do modelo contratado e ativo (CompanyService).
+  exigeSetorContratado Boolean                  @default(true)
+  active               Boolean                  @default(true)
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id])
+  pipeline Pipeline          @relation(fields: [pipelineId], references: [id])
+  geradas  ObrigacaoGerada[]
+
+  @@index([tenantId, active])
+  @@index([tenantId, sectorCode])
+  @@map("modelos_de_obrigacao")
+}
+
+// Cada obrigação concreta que o motor gerou: um modelo, uma empresa, uma
+// competência. A chave única é o que torna a geração idempotente. Quando a
+// atividade é excluída à mão no kanban, a linha fica (pipelineItemId nulo) e a
+// competência não volta a ser gerada.
+model ObrigacaoGerada {
+  id             String   @id @default(uuid())
+  tenantId       String
+  modeloId       String
+  companyId      String
+  /// "AAAA-MM": o mês da competência (mensal), o último mês do trimestre
+  /// (trimestral) ou dezembro (anual).
+  competencia    String   @db.VarChar(7)
+  /// Datas "AAAA-MM-DD" já ajustadas ao dia útil.
+  dataLegal      String   @db.VarChar(10)
+  prazoInterno   String   @db.VarChar(10)
+  pipelineItemId String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
+  modelo       ModeloDeObrigacao @relation(fields: [modeloId], references: [id], onDelete: Cascade)
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pipelineItem PipelineItem?     @relation(fields: [pipelineItemId], references: [id], onDelete: SetNull)
+
+  @@unique([modeloId, companyId, competencia])
+  @@index([tenantId, companyId])
+  @@map("obrigacoes_geradas")
+}
+
 // Dedup do motor de alertas (cron externo, ver src/lib/alerts.ts) — evita
 // notificar a mesma condição mais de uma vez no mesmo dia mesmo que o job
 // rode várias vezes (ex: scheduler externo chamando a cada 15min). sentOn é
@@ -5972,6 +6246,34 @@ model TenantAgendaConfig {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("tenant_agenda_configs")
+}
+
+// A aparência do escritório (21/10/2026): a cor principal que o portal dos
+// clientes usa no lugar do azul do Connect, a cor de cada grupo de telas do
+// portal (no jeito do Omie) e o logo no menu. Cálculo e padrões em
+// src/lib/aparencia/cores.ts; a leitura (que nunca derruba o portal) em
+// src/lib/aparencia/leitura.ts. Tabela própria pelo mesmo motivo do
+// TenantAgendaConfig: coluna nova em `tenants` lida antes da migration
+// derrubaria toda leitura de tenant.
+
+/// Sem linha, o portal fica como sempre foi: o azul do Connect e as cores de fábrica dos grupos.
+model TenantAparencia {
+  tenantId       String   @id
+  /// "#RRGGBB"; null = o azul do Connect.
+  corPrincipal   String?  @db.VarChar(7)
+  /// Só os grupos trocados: { "fiscal": "#RRGGBB" }. Os outros ficam no padrão de fábrica.
+  coresDosGrupos Json?
+  /// Desligado, todos os grupos usam a cor principal.
+  coresPorGrupo  Boolean  @default(true)
+  /// O logo do escritório (tenants.logoUrl) no lugar do logo do Connect, no menu do portal.
+  logoNoPortal   Boolean  @default(false)
+  /// A cor principal também no Connect da equipe.
+  noConnect      Boolean  @default(false)
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_aparencias")
 }
 
 /// Horário próprio de uma pessoa. Sem linha, ela usa o do escritório. Por
@@ -8133,6 +8435,32 @@ model DriveFileAccess {
 }
 
 /// O modelo de pastas que toda empresa ganha ao abrir os Arquivos (/admin/arquivos).
+/// O que o robô da pasta de rede já trouxe para os Arquivos (21/10/2026): um
+/// por caminho e conteúdo. O mesmo arquivo reenviado não entra de novo; o
+/// mesmo caminho com conteúdo novo entra como outro arquivo. Fica mesmo depois
+/// que a equipe apaga o arquivo nos Arquivos — senão o robô o traria de volta.
+model DriveNetworkFile {
+  id           String   @id @default(uuid())
+  tenantId     String
+  companyId    String
+  /// O caminho dentro da pasta da empresa na rede, com "/" ("Fiscal/2026/nota.pdf").
+  relativePath String   @db.VarChar(500)
+  /// SHA-256 do caminho: o caminho inteiro não cabe no índice único do MySQL.
+  pathHash     String   @db.Char(64)
+  /// SHA-256 do conteúdo, em hexadecimal.
+  sha256       String   @db.Char(64)
+  watcherSlug  String   @db.VarChar(80)
+  /// O arquivo criado nos Arquivos. Nulo enquanto o envio está em curso.
+  driveFileId  String?
+  createdAt    DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, companyId, pathHash, sha256])
+  @@index([tenantId, companyId, createdAt])
+  @@map("drive_network_files")
+}
+
 model DriveTemplateFolder {
   id               String   @id @default(uuid())
   tenantId         String
@@ -8169,4 +8497,52 @@ model LocalFiscalScenario {
   @@id([tenantId, userId])
   @@index([userId])
   @@map("local_fiscal_scenarios")
+}
+
+/// A regra de uma série da repetição (21/10, o que sobrou da fila do BPO): a
+/// série sem data de fim, ou até uma data, não nasce inteira — nascem as contas
+/// até o horizonte (`horizonteDaSerie`), e o agendador interno cria as
+/// seguintes conforme o tempo anda (`estenderSeries`). O id é o
+/// `recurrenceId` das contas. A série com número de vezes também ganha a
+/// linha, já completa.
+///
+/// As datas ficam em "AAAA-MM-DD", dia de calendário sem fuso, como as contas
+/// as calculam (src/lib/financeiro/repeticao.ts).
+model FinanceRecurrence {
+  id              String  @id @db.VarChar(36)
+  tenantId        String
+  companyId       String
+  /// MENSAL, QUINZENAL, SEMANAL, ANUAL ou DIARIA (todo dia útil). O
+  /// parcelamento (22/10/2026) grava MENSAL com `endMode` VEZES: as parcelas
+  /// nascem todas juntas, e a regra só guarda o dia e o ajuste para o "mudar a
+  /// série daqui em diante".
+  frequency       String  @db.VarChar(12)
+  /// ADIAR, ANTECIPAR ou MANTER — o vencimento em fim de semana ou feriado.
+  dayAdjust       String  @db.VarChar(10)
+  /// VEZES, ATE (até `endDate`) ou SEM_FIM.
+  endMode         String  @db.VarChar(8)
+  endDate         String? @db.VarChar(10)
+  /// Quantas contas a série tem ao todo; nulo na sem fim.
+  total           Int?
+  firstDueDate    String  @db.VarChar(10)
+  firstCompetence String  @db.VarChar(7)
+  /// A posição da última conta já criada. A série termina quando chega em `total`.
+  lastIndex       Int
+  /// O dia do vencimento quando ele mudou depois do lançamento ("mudar a série
+  /// daqui em diante", 22/10/2026 — o aluguel que passou do dia 10 para o 15).
+  /// Nulo é o dia do primeiro vencimento, como sempre foi. Só vale na série
+  /// mensal e na anual: é o dia do mês. O fim da série continua contando os
+  /// mesmos meses — ver `ocorrenciasDaRepeticao`.
+  dueDay          Int?
+  /// Falso depois do "cancelar esta e as próximas": nada mais nasce.
+  active          Boolean @default(true)
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([active, endMode])
+  @@index([tenantId, companyId])
+  @@map("finance_recurrences")
 }

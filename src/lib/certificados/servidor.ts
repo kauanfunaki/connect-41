@@ -3,7 +3,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { chaveDoCertificado, validarLinha, type CertificadoValidado } from "./certificados";
 
@@ -17,10 +17,11 @@ export async function setorDosCertificados(tenantId: string): Promise<string> {
 export async function acessoAosCertificados() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return null;
-  const setor = await setorDosCertificados(ctx.tenantId);
-  if (!canViewSector(ctx, setor)) return null;
+  // Os setores da tela (21/10/2026), não só o dono: ver `setoresDoModulo`.
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULO_CERTIFICADOS)) ?? [getModuleDef(MODULO_CERTIFICADOS)!.sectorCode];
+  if (!canViewSector(ctx, setores)) return null;
   if (!(await isModuleEnabled(ctx.tenantId, MODULO_CERTIFICADOS))) return null;
-  return { ctx, tenantId: ctx.tenantId, podeImportar: canActOnSector(ctx, setor) };
+  return { ctx, tenantId: ctx.tenantId, podeImportar: canActOnSector(ctx, setores) };
 }
 
 export async function listarCertificados(tenantId: string) {

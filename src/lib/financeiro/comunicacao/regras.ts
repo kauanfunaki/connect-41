@@ -81,3 +81,14 @@ export function ordenarConversas<T extends { resumo: ResumoDaConversa; empresaNo
     return a.empresaNome.localeCompare(b.empresaNome, "pt-BR");
   });
 }
+
+/**
+ * A conversa virou histórico (22/10/2026, decisão do Kauan): com as
+ * Solicitações ligadas, ninguém escreve mais nela, nem a equipe nem o cliente.
+ * O que já foi conversado fica para consulta, dos dois lados; o que é novo vai
+ * por uma solicitação, que tem número, prazo e responsável.
+ */
+export const CONVERSA_SO_PARA_CONSULTA = {
+  equipe: "A conversa virou histórico. Para falar com o cliente, use as Solicitações (Pedidos ao cliente).",
+  cliente: "A conversa virou histórico. Para falar com a equipe, abra uma solicitação.",
+} as const;

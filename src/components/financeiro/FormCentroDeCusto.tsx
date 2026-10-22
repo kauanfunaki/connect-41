@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/Switch";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
-import { criarCentroDeCusto, atualizarCentroDeCusto } from "@/app/(app)/cadastros-financeiros/actions";
+import { criarCentroDeCusto, atualizarCentroDeCusto } from "@/app/(app)/fornecedores-e-sacados/actions";
 import { FormFooter } from "@/components/ui/FormFooter";
 
 // Modal, como o cadastro de contrapartes da mesma tela (ver FormContraparte):

@@ -11,7 +11,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { notifySector, notifyUser } from "@/lib/notifications";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
@@ -38,8 +38,9 @@ async function coordenacao() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { erro: "Não autenticado", ctx: null, setor: SECTOR } as const;
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { erro: "Módulo do Societário desligado.", ctx: null, setor: SECTOR } as const;
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canManageSector(ctx, setor)) {
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  const setor = setores[0];
+  if (!canManageSector(ctx, setores)) {
     return { erro: "Só a coordenação do Societário usa esta tela e aprova as propostas da Ceci.", ctx: null, setor } as const;
   }
   return { erro: null, ctx, setor } as const;

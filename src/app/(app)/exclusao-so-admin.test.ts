@@ -35,7 +35,7 @@ const registro = () => ({
   financeEntry: null,
   space: { sectorCode: "setor" },
   vaga: { id: "v1", sectorCode: "setor", restrictedToRecruiters: false },
-  _count: { items: 0, folders: 0, pipelines: 0, recurringObligations: 0, links: 0 },
+  _count: { items: 0, folders: 0, pipelines: 0, recurringObligations: 0, modelosDeObrigacao: 0, links: 0 },
 });
 
 function modelo(nome: string): unknown {
@@ -74,10 +74,18 @@ vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn(), notFound: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ logAudit: vi.fn() }));
-vi.mock("@/lib/modules", () => ({
+vi.mock("@/lib/modules", () => {
+  const mod = {
   setorDoModulo: vi.fn(async () => "setor"),
   isModuleEnabled: vi.fn(async () => true),
-}));
+};
+  // Os setores da tela (21/10/2026): aqui, só o dono, como antes.
+  const setoresDoModulo = async (t: string, c: string) => {
+    const s = await (mod.setorDoModulo as (t: string, c: string) => Promise<string | null>)(t, c);
+    return s == null ? null : [s];
+  };
+  return { ...mod, setoresDoModulo };
+});
 vi.mock("@/lib/auth/modulo", () => ({ podeNoModulo: vi.fn(async () => true) }));
 
 const ctx = {

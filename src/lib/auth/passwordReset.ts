@@ -60,3 +60,19 @@ export async function consumePasswordResetToken(
   });
   return { subject: record.subject, id: record.userId };
 }
+
+/**
+ * De quem é um token ainda válido, **sem** consumi-lo (22/10/2026). Só para a
+ * tela de nova senha do portal vestir a marca do escritório da conta; quem
+ * troca a senha continua sendo `consumePasswordResetToken`.
+ */
+export async function donoDoTokenDeRedefinicao(
+  raw: string
+): Promise<{ subject: PasswordResetSubject; id: string } | null> {
+  if (!raw) return null;
+  const record = await getPrisma().passwordResetToken.findFirst({
+    where: { tokenHash: hashToken(raw), usedAt: null, expiresAt: { gt: new Date() } },
+    select: { subject: true, userId: true },
+  });
+  return record ? { subject: record.subject, id: record.userId } : null;
+}

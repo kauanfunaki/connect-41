@@ -10,6 +10,7 @@ import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
 import { podeEditarOTipo } from "./acessoDaConta";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 import { centavosDeDecimal } from "./contas";
 import { centavosDeTexto, decimalDeCentavos } from "./manual";
 import { competenciaDoInstante, instanteDaData } from "./periodo";
@@ -76,6 +77,9 @@ export async function registrarAdiantamento(formData: FormData): Promise<{ error
   ]);
   if (!contraparte) return { error: kind === "PAGAR" ? "Escolha o fornecedor." : "Escolha o cliente." };
   if (!banco || ehContaForaDoCaixa(banco.type)) return { error: kind === "PAGAR" ? "Escolha a conta de onde saiu o dinheiro." : "Escolha a conta onde o dinheiro entrou." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const v = validarNovoAdiantamento({ valorCentavos: centavosDeTexto(texto("valor")), data: texto("data"), hojeKey: saoPauloParts(new Date()).dateKey });
   if (!v.ok) return { error: v.erro };
@@ -158,6 +162,9 @@ export async function desfazerAdiantamento(transferId: string): Promise<{ error:
   const acesso = await podeEditarOTipo(noBanco.kind);
   if (!acesso.ctx || acesso.ctx.tenantId !== noBanco.tenantId) return { error: acesso.erro ?? "Adiantamento não encontrado." };
   const ctx = acesso.ctx;
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [noBanco.companyId, naConta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   if (noBanco.payments.some((b) => b.bankMatch)) return { error: "A saída do banco já foi conciliada com o extrato — desfaça a conciliação antes." };
 
   const tipo = tipoDoAdiantamento(noBanco.kind);

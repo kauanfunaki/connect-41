@@ -489,17 +489,21 @@ export async function carregarAcordo(tenantId: string, id: string): Promise<Acor
 
 // ─── Régua (aba) ────────────────────────────────────────────────────────────
 
-export async function dadosDaAbaRegua(tenantId: string) {
+export async function dadosDaAbaRegua(
+  tenantId: string,
+  /** Com uma empresa em foco (21/10/2026), só a base dela; `null`, o escritório. */
+  companyIds: string[] | null = null
+) {
   const prisma = getPrisma();
   const [config, foraDaRegua, envios, errosNaSemana] = await Promise.all([
     configDaRegua(tenantId),
     prisma.collectionReminderOptOut.findMany({
-      where: { tenantId },
+      where: { tenantId, ...(companyIds ? { companyId: { in: companyIds } } : {}) },
       select: { companyId: true, createdAt: true, company: { select: { name: true, displayName: true } }, createdBy: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.collectionReminderLog.findMany({
-      where: { tenantId },
+      where: { tenantId, ...(companyIds ? { entry: { companyId: { in: companyIds } } } : {}) },
       select: {
         id: true,
         step: true,
@@ -512,7 +516,14 @@ export async function dadosDaAbaRegua(tenantId: string) {
       orderBy: { sentAt: "desc" },
       take: 100,
     }),
-    prisma.collectionReminderLog.count({ where: { tenantId, ok: false, sentAt: { gte: new Date(Date.now() - 7 * 86_400_000) } } }),
+    prisma.collectionReminderLog.count({
+      where: {
+        tenantId,
+        ok: false,
+        sentAt: { gte: new Date(Date.now() - 7 * 86_400_000) },
+        ...(companyIds ? { entry: { companyId: { in: companyIds } } } : {}),
+      },
+    }),
   ]);
   return {
     config,

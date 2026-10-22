@@ -950,6 +950,33 @@ export function startAlertScheduler(): void {
         if (r.arquivos > 0 || r.pastas > 0) console.log("[drive] lixeira esvaziada", r);
       })
       .catch((err) => console.error("[drive] falha ao esvaziar a lixeira", err));
+    // A repetição até uma data ou sem fim (21/10/2026): as próximas contas
+    // nascem conforme o horizonte anda. Sem série para estender, uma consulta.
+    import("@/lib/financeiro/repeticaoServidor")
+      .then(({ estenderSeries }) => estenderSeries())
+      .then((r) => {
+        if (r.criadas > 0) console.log("[repeticao] contas criadas", r);
+      })
+      .catch((err) => console.error("[repeticao] falha ao estender as séries", err));
+    // As obrigações por regime (22/10/2026): as próximas competências da
+    // carteira nascem, e a empresa que mudou de regime perde as futuras que
+    // deixou de ter. Sem modelo cadastrado, uma consulta.
+    import("@/lib/obrigacoes/geracao")
+      .then(({ gerarObrigacoesPorRegime }) => gerarObrigacoesPorRegime())
+      .then((r) => {
+        if (r.criadas > 0 || r.removidas > 0 || r.reprogramadas > 0) console.log("[obrigacoes] carteira ajustada", r);
+      })
+      .catch((err) => console.error("[obrigacoes] falha na geração por regime", err));
+    // Os envios ao cliente (22/10/2026): o agendado sai na hora marcada, e o
+    // lembrete de não lido sai quando o prazo vence — cada um travado antes do
+    // e-mail, então duas passadas juntas não mandam em dobro. Sem nada
+    // vencido, duas consultas por índice.
+    import("@/lib/envios/agendador")
+      .then(({ rodarEnviosAutomaticos }) => rodarEnviosAutomaticos())
+      .then((r) => {
+        if (r.agendados.publicados > 0 || r.lembretes.lembrados > 0) console.log("[envios] agendados e lembretes", r);
+      })
+      .catch((err) => console.error("[envios] falha nos envios agendados e lembretes", err));
   };
 
   run(); // primeira execução já na subida, não espera os 15min iniciais

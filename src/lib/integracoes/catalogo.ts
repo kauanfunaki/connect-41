@@ -190,10 +190,6 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         required: false,
         help: "Token de escrita do motor. Sem ele, o Connect só consulta.",
       },
-      {
-        name: "accountingWriteToken", label: "Token de escrita contábil", type: "secret", required: false,
-        help: "Opcional. Credencial separada para cadastrar regras e importar o CSV no Contábil. O token de leitura continua sem alterar regras.",
-      },
     ],
   },
   {

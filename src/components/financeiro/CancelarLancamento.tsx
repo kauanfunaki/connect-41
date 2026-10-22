@@ -39,7 +39,7 @@ export function CancelarLancamento({ entryId, naSerie = false }: { entryId: stri
       {
         title: "Cancelar esta e as próximas da repetição?",
         description:
-          "Esta e as que vêm depois dela na série saem de todos os totais e ficam no histórico de auditoria. As anteriores não mudam, e a já paga (ou com parte paga) fica como está.",
+          "Esta e as que vêm depois dela na série saem de todos os totais e ficam no histórico de auditoria. As anteriores não mudam, e a já paga (ou com parte paga) fica como está. Na repetição até uma data ou sem fim, nenhuma conta nova nasce depois.",
         confirmLabel: "Cancelar esta e as próximas",
         destructive: true,
       },

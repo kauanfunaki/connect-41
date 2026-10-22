@@ -32,7 +32,7 @@ export function CampoDeProjeto({
       helper={vazio ? "Nenhum projeto nesta empresa. Cadastre em Fornecedores e sacados › Projetos." : "Opcional. Um projeto por lançamento."}
       acao={
         vazio ? (
-          <a href={`/cadastros-financeiros?empresa=${companyId}&aba=projetos`} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+          <a href={`/fornecedores-e-sacados?empresa=${companyId}&aba=projetos`} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
             Cadastrar projeto
           </a>
         ) : undefined

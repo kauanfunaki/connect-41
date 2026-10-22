@@ -120,33 +120,6 @@ export function contasDaEmpresa(
 }
 
 /**
- * As ligações que a migration cria para as contas que já existem: todas as
- * empresas do cliente da conta (no mesmo escritório), com as filiais. É o
- * espelho, em TypeScript, do primeiro INSERT de
- * `prisma/migrations/20261014210000_portal_por_empresa` — a prévia
- * (`scripts/previa-portal-por-empresa.ts`) e os testes usam esta, para a
- * conta "hoje × depois" sair da mesma regra que a migration aplica.
- */
-export function ligacoesDoPreenchimento(
-  conta: { id: string; tenantId: string; clientGroupId: string | null },
-  empresas: readonly { id: string; tenantId: string; clientGroupId: string | null }[]
-): LigacaoDoAcesso[] {
-  if (!conta.clientGroupId) return [];
-  return empresas
-    .filter((e) => e.tenantId === conta.tenantId && e.clientGroupId === conta.clientGroupId)
-    .map((e) => ({ portalUserId: conta.id, companyId: e.id, incluiFiliais: true }));
-}
-
-/** O que a conta via pela regra do Cliente (até 14/10/2026): as empresas do cliente dela, no escritório dela. */
-export function empresasPeloCliente(
-  conta: { tenantId: string; clientGroupId: string | null },
-  empresas: readonly { id: string; tenantId: string; clientGroupId: string | null }[]
-): string[] {
-  if (!conta.clientGroupId) return [];
-  return empresas.filter((e) => e.tenantId === conta.tenantId && e.clientGroupId === conta.clientGroupId).map((e) => e.id);
-}
-
-/**
  * O nome que o portal mostra para a conta no topo do menu e no Início — era o
  * nome do Cliente. Uma empresa: o nome dela. Várias: a primeira e quantas mais.
  */

@@ -9,7 +9,7 @@ import { revalidatePath } from "next/cache";
 import { presaAoOmie } from "@/lib/integracoes/omie/virada";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
@@ -36,11 +36,14 @@ import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { arquivosDoFormulario, type AnexoGravado } from "@/lib/financeiro/pendencias/armazenamento";
 import { armazenamentoDosAnexos } from "@/lib/financeiro/anexos";
 import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
-import { ocorrenciasDaRepeticao, validarRepeticao } from "@/lib/financeiro/repeticao";
+import { AJUSTES_DO_DIA, horizonteDaSerie, ocorrenciasDaRepeticao, totalDaSerie, validarRepeticao, type AjusteDoDia } from "@/lib/financeiro/repeticao";
+import { lerParcelas, type Parcela } from "@/lib/financeiro/parcelamento";
 import { lerRateio, resumoDoRateio } from "@/lib/financeiro/rateio";
 import { conferirRateio, gravarRateio } from "@/lib/financeiro/rateioServidor";
 import { lerRetencoes, liquidoDaConta, resumoDasRetencoes } from "@/lib/financeiro/retencoes";
 import { aplicarRetencoes, cancelarContasDosImpostos, RecusaDaRetencao } from "@/lib/financeiro/retencoesServidor";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
+import { feriadosDoEscritorio } from "@/lib/feriados";
 import { randomUUID } from "crypto";
 
 const MODULE = "bpo_lancamentos";
@@ -48,7 +51,7 @@ const MODULE = "bpo_lancamentos";
 async function contexto(companyId: string) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode)) return { ok: false as const, erro: "Sem permissão para lançar." };
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode)) return { ok: false as const, erro: "Sem permissão para lançar." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo não habilitado." };
 
   const prisma = getPrisma();
@@ -70,6 +73,8 @@ export type ResultadoDoManual =
       aguardandoAprovacao?: boolean;
       /** Quantas próximas da série nasceram junto. */
       repetidas?: number;
+      /** Em quantas parcelas a conta nasceu (22/10/2026); ausente se não parcelou. */
+      parcelas?: number;
       /** Quantas contas de imposto retido nasceram junto (lote D, 20/10). */
       impostos?: number;
     };
@@ -87,6 +92,9 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const companyId = texto("companyId");
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const hojeKey = saoPauloParts(new Date()).dateKey;
   // O rateio (lote D, 20/10): com ele, a categoria, o centro e o projeto da
@@ -112,8 +120,33 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   );
   if (!v.ok) return { error: v.erro };
   const d = v.dados;
-  const rep = validarRepeticao({ frequencia: texto("repetirFrequencia"), vezes: texto("repetirVezes"), ajuste: texto("repetirAjuste") });
+  const rep = validarRepeticao({
+    frequencia: texto("repetirFrequencia"),
+    fim: texto("repetirFim"),
+    vezes: texto("repetirVezes"),
+    ate: texto("repetirAte"),
+    ajuste: texto("repetirAjuste"),
+  });
   if (!rep.ok) return { error: rep.erro };
+
+  // O parcelamento (22/10/2026): o valor digitado é o total, e cada parcela
+  // vira uma conta, com o valor e o vencimento que a pessoa conferiu na tela.
+  // As parcelas são uma série como a da repetição ("3/12").
+  const parcelar = texto("parcelar") === "1";
+  let parcelas: Parcela[] | null = null;
+  let ajusteDasParcelas: AjusteDoDia = "ADIAR";
+  if (parcelar) {
+    if (rep.repeticao) return { error: "Parcelar e repetir juntos não — parcelar divide um valor; repetir lança a conta inteira de novo a cada mês. Escolha um." };
+    // Nasce em aberto: a baixa de cada parcela é dada quando ela for paga.
+    if (d.pagoEmKey) return { error: "Conta parcelada nasce em aberto — deixe \"já pago em\" vazio e dê a baixa de cada parcela quando ela for paga." };
+    if (comRateio) return { error: "Rateio e parcelamento juntos ainda não — parcele, e faça o rateio de cada parcela na edição da conta." };
+    const lidas = lerParcelas(texto("parcelas"), d.centavos);
+    if (!lidas.ok) return { error: lidas.erro };
+    parcelas = lidas.parcelas;
+    const ajuste = texto("parcelarAjuste") || "ADIAR";
+    if (!AJUSTES_DO_DIA.some((a) => a.valor === ajuste)) return { error: "Ajuste de fim de semana inválido." };
+    ajusteDasParcelas = ajuste as AjusteDoDia;
+  }
 
   // As retenções na fonte (lote D, 20/10), só na conta a pagar: o valor
   // digitado é o bruto da nota, a conta do fornecedor fica no líquido, e cada
@@ -123,12 +156,16 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const retencoes = lidas.retencoes;
   let valorDaConta = d.centavos;
   if (retencoes.length > 0) {
+    if (parcelas) return { error: "Retenção ainda não vai junto com o parcelamento — parcele sem retenção e informe a de cada parcela na edição." };
     if (rep.repeticao) return { error: "Retenção ainda não vai junto com a repetição — lance a série sem retenção e informe a de cada conta na edição." };
     if (comRateio) return { error: "Rateio e retenção juntos ainda não — lance com a retenção e faça o rateio do líquido na edição da conta." };
     const l = liquidoDaConta(d.centavos, retencoes);
     if (!l.ok) return { error: l.erro };
     valorDaConta = l.liquidoCentavos;
   }
+  // Parcelada, a conta lançada é a primeira parcela.
+  if (parcelas) valorDaConta = parcelas[0]!.centavos;
+  const vencimentoDaConta = parcelas ? parcelas[0]!.vencimentoKey : d.vencimentoKey;
 
   const rateio = comRateio
     ? await conferirRateio({ tenantId: c.tenantId, companyId, kind: d.kind, linhas: linhasDoRateio, totalCentavos: d.centavos })
@@ -199,16 +236,49 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const approvalStatus = entrada.statusInicial(companyId, d.kind, status);
 
   // A repetição (lote D, 19/10): as próximas nascem agora, em aberto, cada uma
-  // com a aprovação dela. Os feriados são os do escritório (Administração ›
-  // Feriados), em dia de calendário.
-  const proximas = rep.repeticao
+  // com a aprovação dela. Os feriados são os do escritório — nacionais mais as
+  // exceções de Administração › Feriados (21/10/2026) —, em dia de calendário.
+  // A série até uma data ou sem fim (21/10) nasce até o horizonte; as
+  // seguintes, o agendador cria (`estenderSeries`), pela regra gravada em
+  // `FinanceRecurrence`.
+  const primeiraDaSerie = { vencimentoKey: d.vencimentoKey, competencia: d.competencia };
+  const feriados = rep.repeticao ? new Set((await feriadosDoEscritorio(c.tenantId)).keys()) : new Set<string>();
+  const total = rep.repeticao ? totalDaSerie(primeiraDaSerie, rep.repeticao, feriados) : null;
+  if (total && !total.ok) return { error: total.erro };
+  // Cada próxima com o valor dela: na repetição, a conta inteira de novo; no
+  // parcelamento, a parcela — e a competência da compra, que é uma só (ver
+  // `parcelamento.ts`).
+  const proximas: { indice: number; vencimentoKey: string; competencia: string; centavos: number }[] = rep.repeticao
     ? ocorrenciasDaRepeticao(
-        { vencimentoKey: d.vencimentoKey, competencia: d.competencia },
+        primeiraDaSerie,
         rep.repeticao,
-        new Set((await c.prisma.holiday.findMany({ where: { tenantId: c.tenantId }, select: { date: true } })).map((h) => h.date.toISOString().slice(0, 10)))
-      ).slice(1)
-    : [];
-  const serie = rep.repeticao ? { recurrenceId: randomUUID(), recurrenceTotal: rep.repeticao.vezes } : null;
+        feriados,
+        rep.repeticao.fim.tipo === "VEZES" ? undefined : horizonteDaSerie(rep.repeticao.frequencia, hojeKey)
+      )
+        .slice(1)
+        .map((o) => ({ ...o, centavos: d.centavos }))
+    : parcelas
+      ? parcelas.slice(1).map((p) => ({ indice: p.indice, vencimentoKey: p.vencimentoKey, competencia: d.competencia, centavos: p.centavos }))
+      : [];
+  const serie =
+    rep.repeticao && total?.ok
+      ? { recurrenceId: randomUUID(), recurrenceTotal: total.total }
+      : parcelas
+        ? { recurrenceId: randomUUID(), recurrenceTotal: parcelas.length }
+        : null;
+  // A regra da série. A do parcelamento é a mensal com número de vezes — todas
+  // nascem agora, e o agendador não olha para ela; fica para o "mudar a série
+  // daqui em diante" saber o dia e o ajuste de cada mês.
+  const regraDaSerie = rep.repeticao
+    ? {
+        frequency: rep.repeticao.frequencia,
+        dayAdjust: rep.repeticao.ajuste,
+        endMode: rep.repeticao.fim.tipo,
+        endDate: rep.repeticao.fim.tipo === "ATE" ? rep.repeticao.fim.dataKey : null,
+      }
+    : parcelas
+      ? { frequency: "MENSAL", dayAdjust: ajusteDasParcelas, endMode: "VEZES", endDate: null }
+      : null;
   const statusDasProximas = statusInicialDoManual(null);
   const aprovacaoDasProximas = entrada.statusInicial(companyId, d.kind, statusDasProximas);
 
@@ -265,7 +335,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           issueDate: d.emissaoKey ? instanteDaData(d.emissaoKey) : null,
           documentNumber: d.numeroDocumento,
           competence: d.competencia,
-          dueDate: instanteDaData(d.vencimentoKey),
+          dueDate: instanteDaData(vencimentoDaConta),
           forecastDate: previsaoKey && !d.pagoEmKey ? instanteDaData(previsaoKey) : null,
           amount: decimalDeCentavos(valorDaConta),
           description: d.descricao,
@@ -278,6 +348,21 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         select: { id: true, amount: true },
       });
       if (resumo) await gravarRateio(tx, { tenantId: c.tenantId, entryId: criado.id, linhas: linhasDoRateio });
+      if (serie && regraDaSerie) {
+        await tx.financeRecurrence.create({
+          data: {
+            id: serie.recurrenceId,
+            tenantId: c.tenantId,
+            companyId,
+            ...regraDaSerie,
+            total: serie.recurrenceTotal,
+            firstDueDate: vencimentoDaConta,
+            firstCompetence: d.competencia,
+            lastIndex: 1 + proximas.length,
+            createdById: c.ctx.userId || null,
+          },
+        });
+      }
       if (retencoes.length > 0) {
         await aplicarRetencoes(tx, {
           tenantId: c.tenantId,
@@ -315,8 +400,10 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
             bankAccountId: contaPrevista.contaId,
             competence: o.competencia,
             dueDate: instanteDaData(o.vencimentoKey),
-            amount: decimalDeCentavos(d.centavos),
+            amount: decimalDeCentavos(o.centavos),
             description: d.descricao,
+            // A parcela é do mesmo documento: a nota ou o contrato parcelado.
+            ...(parcelas ? { issueDate: d.emissaoKey ? instanteDaData(d.emissaoKey) : null, documentNumber: d.numeroDocumento } : {}),
             createdById: c.ctx.userId || null,
             reviewedById: c.ctx.userId || null,
             reviewedAt: new Date(),
@@ -357,8 +444,12 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
     throw err;
   }
 
-  const aguardando = (approvalStatus === "AGUARDANDO" ? 1 : 0) + (aprovacaoDasProximas === "AGUARDANDO" ? proximas.length : 0);
-  const aviso = aguardando > 0 ? await avisarAprovadores(c.tenantId, Array.from({ length: aguardando }, () => ({ companyId, amount: entry.amount }))) : null;
+  // Cada conta que espera aprovação com o valor dela — as parcelas não têm o mesmo.
+  const aguardando = [
+    ...(approvalStatus === "AGUARDANDO" ? [{ companyId, amount: entry.amount }] : []),
+    ...(aprovacaoDasProximas === "AGUARDANDO" ? proximas.map((o) => ({ companyId, amount: decimalDeCentavos(o.centavos) })) : []),
+  ];
+  const aviso = aguardando.length > 0 ? await avisarAprovadores(c.tenantId, aguardando) : null;
 
   await logAudit({
     tenantId: c.tenantId,
@@ -380,13 +471,27 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
       ...(leitura ? { lidoPorIa: leitura.id } : {}),
       ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
       ...(rep.repeticao && serie
-        ? { repeticao: `${rep.repeticao.frequencia} × ${rep.repeticao.vezes}`, ajusteDoDia: rep.repeticao.ajuste, serie: serie.recurrenceId }
+        ? {
+            repeticao: `${rep.repeticao.frequencia} × ${serie.recurrenceTotal ?? "sem fim"}`,
+            ...(rep.repeticao.fim.tipo === "ATE" ? { ate: rep.repeticao.fim.dataKey } : {}),
+            ajusteDoDia: rep.repeticao.ajuste,
+            serie: serie.recurrenceId,
+          }
+        : {}),
+      ...(parcelas && serie
+        ? { parcelamento: { parcelas: parcelas.length, total: decimalDeCentavos(d.centavos), ajusteDoDia: ajusteDasParcelas, serie: serie.recurrenceId } }
         : {}),
     },
   });
 
   revalidar();
-  return { ok: true, aguardandoAprovacao: approvalStatus === "AGUARDANDO", repetidas: proximas.length, impostos: retencoes.length };
+  return {
+    ok: true,
+    aguardandoAprovacao: approvalStatus === "AGUARDANDO",
+    repetidas: parcelas ? 0 : proximas.length,
+    ...(parcelas ? { parcelas: parcelas.length } : {}),
+    impostos: retencoes.length,
+  };
 }
 
 /** Cancela um lançamento manual em aberto. Nunca apaga. */
@@ -415,6 +520,9 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
 
   const c = await contexto(conta.companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   // A conta de um imposto retido sai pela retenção, na conta de origem — senão
   // a retenção ficaria dizendo de um imposto que ninguém vai recolher.
   if (conta.retentionOrigin) return { error: "Conta de imposto retido — tire a retenção na edição da conta de origem." };
@@ -479,6 +587,9 @@ export async function cancelarProximasDaSerie(entryId: string): Promise<Resultad
 
   const c = await contexto(conta.companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const daSerie = await prisma.financeEntry.findMany({
     where: { tenantId: c.tenantId, companyId: conta.companyId, recurrenceId: conta.recurrenceId, recurrenceIndex: { gte: conta.recurrenceIndex } },
@@ -506,7 +617,10 @@ export async function cancelarProximasDaSerie(entryId: string): Promise<Resultad
       });
     canceladas += r;
   }
-  if (canceladas === 0) return { error: "Nenhuma conta desta posição em diante pode ser cancelada." };
+  // A série até uma data ou sem fim para de nascer (21/10): o agendador não
+  // cria mais nada dela, mesmo que alguma das próximas tenha ficado (paga).
+  const parou = await prisma.financeRecurrence.updateMany({ where: { id: conta.recurrenceId, tenantId: c.tenantId, active: true }, data: { active: false } });
+  if (canceladas === 0 && parou.count === 0) return { error: "Nenhuma conta desta posição em diante pode ser cancelada." };
 
   await logAudit({
     tenantId: c.tenantId,
@@ -605,6 +719,9 @@ export type ResultadoDaImportacaoCsv =
 export async function confirmarImportacao(companyId: string, texto: string): Promise<ResultadoDaImportacaoCsv> {
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   if (texto.length > MAXIMO_DE_BYTES) return { error: "Arquivo maior que 2 MB." };
 
   const previa = await prepararParaEmpresa(c.tenantId, companyId, texto);

@@ -2,28 +2,32 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { encryptSecret } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
+import { lerConfig } from "@/lib/integracoes/data";
 import type { AuthContext } from "@/lib/auth/context";
 import { GithubClient } from "./client";
-import { githubConfigured } from "./oauth";
+import { githubCallback, githubConfigured, githubServerReady } from "./oauth";
+import { credentialsSchema, mergeCredentials } from "./config";
 import { GithubError, identity, loginSchema, settingsSchema } from "./rules";
-import { getConnection, guardGeneration, queueInventory, queueRepositories } from "./store";
+import { ensureConnection, getConnection, guardGeneration, queueInventory, queueRepositories } from "./store";
 import { validToken, withGithubLease } from "./sync";
 import type { IntegrationView } from "./types";
+import { syncProgress } from "./progress";
 
 export async function integrationView(tenantId: string): Promise<IntegrationView> {
   const connection = await getConnection(tenantId);
-  const base = { configured: githubConfigured(), connected: false, login: null, status: "disconnected", enabled: false, generation: 0,
-    timezone: "America/Sao_Paulo", intervalMinutes: 30, error: null, inventoryAt: null, pending: 0, failed: 0, repositories: [] };
+  const config = connection ? lerConfig(connection.integration.configEnc) : {}, serverReady = githubServerReady();
+  const base = { configured: githubConfigured(config), serverReady, callbackUrl: serverReady ? githubCallback() : null,
+    clientId: config.clientId ?? "", hasClientSecret: Boolean(config.clientSecret), connected: false, login: null, status: "disconnected", enabled: false, generation: 0,
+    timezone: "America/Sao_Paulo", intervalMinutes: 30, error: null, inventoryAt: null, pending: 0, failed: 0, repositories: [], progress: null };
   if (!connection) return base;
-  const [repos, pending, failed] = await Promise.all([
+  const [repos, progress] = await Promise.all([
     getPrisma().githubRepository.findMany({ where: { tenantId, connectionId: connection.id }, orderBy: { fullName: "asc" }, take: 1001 }),
-    getPrisma().githubSyncJob.count({ where: { tenantId, connectionId: connection.id, generation: connection.generation, state: "queued", ...(!connection.integration.enabled ? { resource: "INVENTORY" } : {}) } }),
-    getPrisma().githubSyncJob.count({ where: { tenantId, connectionId: connection.id, generation: connection.generation, state: "error" } }),
+    syncProgress(connection),
   ]);
   return { ...base, connected: connection.status === "connected", login: connection.login, status: connection.status, enabled: connection.integration.enabled,
     generation: connection.generation, timezone: connection.timezone, intervalMinutes: connection.intervalMinutes,
     error: repos.length > 1000 ? "Mais de 1.000 repositórios encontrados. Refine o acesso da conta para configurar a seleção nesta versão." : connection.lastError,
-    inventoryAt: connection.inventoryAt?.toISOString() ?? null, pending, failed,
+    inventoryAt: connection.inventoryAt?.toISOString() ?? null, pending: progress.pending, failed: progress.failed, progress,
     repositories: repos.map(repo => ({ id: repo.id, fullName: repo.fullName, owner: repo.owner, private: repo.private, fork: repo.fork,
       archived: repo.archived, selected: repo.selected, accessible: repo.accessible, error: repo.lastError })) };
 }
@@ -32,7 +36,28 @@ const AUDIT_ACTIONS = {
   pause: "github.pause", resume: "github.resume", disconnect: "github.disconnect", discover: "github.discover",
   track: "github.track", untrack: "github.untrack", settings: "github.settings",
 } as const;
+async function saveCredentials(ctx: AuthContext, input: unknown) {
+  const values = credentialsSchema.parse(input);
+  if (!githubServerReady()) throw new GithubError("A instalação precisa configurar o endereço público e a chave de proteção das credenciais. Fale com o suporte.", 503);
+  await ensureConnection(ctx.tenantId);
+  const db = getPrisma(), connection = (await getConnection(ctx.tenantId))!;
+  if (connection.generation !== values.generation) throw new GithubError("A conexão mudou. Atualize a tela antes de continuar.", 409);
+  const previous = lerConfig(connection.integration.configEnc), credentials = mergeCredentials(values, previous);
+  if (credentials.clientId === previous.clientId && credentials.clientSecret === previous.clientSecret) return { ok: true };
+  await db.$transaction(async tx => {
+    const updated = await tx.githubConnection.updateMany({ where: { id: connection.id, tenantId: ctx.tenantId, generation: values.generation },
+      data: { generation: { increment: 1 }, status: connection.githubUserId ? "needs_reconnect" : "disconnected", verifiedAt: null, nextSyncAt: null, lastError: null } });
+    if (updated.count !== 1) throw new GithubError("A conexão foi alterada por outra pessoa.", 409);
+    await tx.tenantIntegration.update({ where: { id: connection.integrationId }, data: { configEnc: encryptSecret(JSON.stringify(credentials)), enabled: false, lastError: null } });
+    await tx.githubOAuthAttempt.deleteMany({ where: { connectionId: connection.id, tenantId: ctx.tenantId } });
+    await tx.githubSyncJob.updateMany({ where: { connectionId: connection.id, tenantId: ctx.tenantId, state: "queued" }, data: { state: "canceled" } });
+    await tx.githubRepository.updateMany({ where: { connectionId: connection.id, tenantId: ctx.tenantId }, data: { accessible: false, accessCheckedAt: null } });
+  });
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "github.credentials", entityType: "TenantIntegration", entityId: connection.integrationId });
+  return { ok: true };
+}
 export async function changeIntegration(ctx: AuthContext, input: unknown) {
+  if (z.object({ action: z.literal("credentials") }).safeParse(input).success) return saveCredentials(ctx, input);
   const db = getPrisma(), connection = await getConnection(ctx.tenantId);
   if (!connection) throw new GithubError("Conecte a conta GitHub antes de configurar.");
   const selection = z.object({ action: z.literal("settings") }).safeParse(input);
@@ -66,6 +91,7 @@ export async function changeIntegration(ctx: AuthContext, input: unknown) {
     }
     const enable = (action === "settings" || action === "resume") && selectedIds.length > 0;
     if (action === "resume" && !selectedIds.length) throw new GithubError("Selecione ao menos um repositório antes de iniciar.");
+    const config = action === "disconnect" ? lerConfig(connection.integration.configEnc) : {};
     await db.$transaction(async tx => {
       const updated = await tx.githubConnection.updateMany({ where: { id: connection.id, tenantId: ctx.tenantId, generation }, data: {
         generation: { increment: 1 }, status: action === "disconnect" ? "disconnected" : "connected", lastError: null, nextSyncAt: null,
@@ -73,7 +99,7 @@ export async function changeIntegration(ctx: AuthContext, input: unknown) {
       } });
       if (!updated.count) throw new GithubError("A conexão foi alterada por outra pessoa.", 409);
       await tx.tenantIntegration.update({ where: { id: connection.integrationId }, data: { enabled: enable,
-        ...(action === "disconnect" ? { configEnc: encryptSecret("{}") } : {}) } });
+        ...(action === "disconnect" ? { configEnc: encryptSecret(JSON.stringify({ clientId: config.clientId ?? "", clientSecret: config.clientSecret ?? "" })) } : {}) } });
       await tx.githubSyncJob.updateMany({ where: { connectionId: connection.id, tenantId: ctx.tenantId, state: "queued" }, data: { state: "canceled" } });
       if (settings) {
         await tx.githubRepository.updateMany({ where: { connectionId: connection.id, tenantId: ctx.tenantId }, data: { selected: false } });

@@ -221,6 +221,11 @@ export type ContaDoPortal = {
   descricao: string | null;
   /** O selo da aprovação por alçada, quando a lista deve mostrá-lo (`seloDeAprovacaoVisivel`). */
   aprovacao: StatusDeAprovacao | null;
+  /**
+   * As baixas da conta (22/10/2026), da mais antiga para a mais nova: o
+   * cliente baixa o recibo de cada uma pelo portal.
+   */
+  baixas: { id: string; pagoEm: Date; caixaCentavos: number }[];
 };
 
 /**
@@ -250,6 +255,7 @@ export async function contasDoEscopo(
       company: { select: { name: true, displayName: true } },
       counterparty: { select: { name: true } },
       category: { select: { name: true } },
+      payments: { select: { id: true, paidAt: true, cash: true }, orderBy: { paidAt: "asc" } },
     },
     orderBy: { dueDate: "desc" },
     take: 500,
@@ -269,6 +275,7 @@ export async function contasDoEscopo(
       categoriaNome: l.category?.name ?? null,
       descricao: l.description,
       aprovacao: seloDeAprovacaoVisivel(l) ? l.approvalStatus : null,
+      baixas: (l.payments ?? []).map((p) => ({ id: p.id, pagoEm: p.paidAt, caixaCentavos: centavosDeDecimal(p.cash) })),
     };
   });
 }

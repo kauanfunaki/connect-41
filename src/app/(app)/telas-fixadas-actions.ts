@@ -3,7 +3,7 @@
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { getModuleDef } from "@/lib/module-catalog";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { avaliarFixar } from "@/lib/telasFixadas";
 import { configDoHelpdesk } from "@/lib/chamados/contexto";
@@ -30,8 +30,8 @@ export async function alternarTelaFixada(code: string): Promise<ResultadoDeFixar
   const def = getModuleDef(code);
   if (!def) return { error: "Tela desconhecida." };
 
-  const setor = (await setorDoModulo(ctx.tenantId, code)) ?? def.sectorCode;
-  if (code === "helpdesk" ? !(await temAcessoAoModulo({ ctx, config: await configDoHelpdesk(ctx.tenantId) })) : !canViewSector(ctx, setor)) return { error: "Sem acesso a esta tela." };
+  const setores = (await setoresDoModulo(ctx.tenantId, code)) ?? [def.sectorCode];
+  if (code === "helpdesk" ? !(await temAcessoAoModulo({ ctx, config: await configDoHelpdesk(ctx.tenantId) })) : !canViewSector(ctx, setores)) return { error: "Sem acesso a esta tela." };
 
   const prisma = getPrisma();
   const { userId, tenantId } = ctx;

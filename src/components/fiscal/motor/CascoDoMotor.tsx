@@ -50,9 +50,5 @@ export function CascoDoMotor({ tela, caminho, abas, aba, titulo, descricao, acao
 
 /** Área que o motor ainda não expõe: escondida, nunca preenchida com dado fictício (§8.3). */
 export function SemFonteNoMotor({ area }: { area: string }) {
-  return <EmptyState title={`${area}: ainda não disponível no Connect`} description="Consulte esta área no painel do SPED." />;
-}
-
-export function MotorIndisponivel() {
-  return <EmptyState title="Processamento fiscal indisponível" description="Configure e ative SPED Generator em Integrações para acessar os dados fiscais." />;
+  return <EmptyState title={`${area}: ainda não disponível no Connect`} description="O motor SPED ainda não expõe estes dados pela API. Continue usando o painel do motor para esta área; nada aqui é fictício." />;
 }

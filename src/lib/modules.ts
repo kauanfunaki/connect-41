@@ -1,11 +1,45 @@
 import { getPrisma } from "@/lib/prisma";
 import { MODULE_CATALOG, getModuleDef, type ModuleDef } from "@/lib/module-catalog";
-import { resolverSetorDoModulo } from "@/lib/modulo-setor";
+import { resolverSetorDoModulo, resolverSetoresDoModulo } from "@/lib/modulo-setor";
 
 // `sectorCode` já vem resolvido para o tenant (ver `src/lib/modulo-setor.ts`);
 // `catalogSectorCode` é onde o módulo nasce, para a tela de admin mostrar que
 // ele foi transferido.
-export type ModuleState = ModuleDef & { enabled: boolean; catalogSectorCode: string };
+//
+// `sectorCodes` (21/10/2026): todos os setores da tela — o dono (`sectorCode`)
+// primeiro, depois os que também usam. Menu, permissão e busca leem esta lista;
+// o que é "do setor da tela" no singular (aviso, rótulo) segue no dono.
+export type ModuleState = ModuleDef & { enabled: boolean; catalogSectorCode: string; sectorCodes: string[] };
+
+/**
+ * Os setores a mais de cada tela neste tenant (21/10/2026), por código da tela.
+ *
+ * Nunca derruba a tela: sem a tabela (deploy antes da migration) ou com o banco
+ * fora, cada tela fica só no setor dono — o Connect de antes desta mudança.
+ * `disponivel` diz à tela de configuração se dá para salvar.
+ */
+export async function lerSetoresLigados(
+  tenantId: string,
+  moduleCode?: string,
+): Promise<{ porModulo: Map<string, string[]>; disponivel: boolean }> {
+  const porModulo = new Map<string, string[]>();
+  try {
+    const linhas = await getPrisma().tenantModuleSector.findMany({
+      where: moduleCode ? { tenantId, moduleCode } : { tenantId },
+      select: { moduleCode: true, sectorCode: true },
+      orderBy: { createdAt: "asc" },
+    });
+    for (const l of linhas) {
+      const atual = porModulo.get(l.moduleCode);
+      if (atual) atual.push(l.sectorCode);
+      else porModulo.set(l.moduleCode, [l.sectorCode]);
+    }
+    return { porModulo, disponivel: true };
+  } catch (err) {
+    console.error("[modulos] leitura dos setores ligados", err);
+    return { porModulo, disponivel: false };
+  }
+}
 
 // null = plano não restringe módulos (planos antigos, ou tenant sem
 // assinatura configurada ainda) — nesse caso só o TenantModule/defaultEnabled
@@ -33,17 +67,20 @@ export async function getTenantModuleStates(tenantId: string): Promise<ModuleSta
   if (MODULE_CATALOG.length === 0) return [];
 
   const prisma = getPrisma();
-  const [rows, allowedByPlan] = await Promise.all([
+  const [rows, allowedByPlan, ligados] = await Promise.all([
     prisma.tenantModule.findMany({ where: { tenantId } }),
     getPlanAllowedModules(tenantId),
+    lerSetoresLigados(tenantId),
   ]);
   const overrides = new Map(rows.map((r) => [r.moduleCode, r]));
 
   return MODULE_CATALOG.map((m) => {
     const row = overrides.get(m.code);
+    const dono = resolverSetorDoModulo(m.sectorCode, row?.sectorCode, m.fixedSector);
     return {
       ...m,
-      sectorCode: resolverSetorDoModulo(m.sectorCode, row?.sectorCode, m.fixedSector),
+      sectorCode: dono,
+      sectorCodes: m.fixedSector ? [dono] : resolverSetoresDoModulo(dono, ligados.porModulo.get(m.code) ?? []),
       catalogSectorCode: m.sectorCode,
       enabled: (allowedByPlan === null || allowedByPlan.has(m.code)) && (row?.enabled ?? m.defaultEnabled),
     };
@@ -79,11 +116,28 @@ export async function setorDoModulo(tenantId: string, code: string): Promise<str
   return resolverSetorDoModulo(def.sectorCode, row?.sectorCode, def.fixedSector);
 }
 
+/**
+ * Todos os setores da tela neste tenant (21/10/2026): o dono primeiro, depois
+ * os que também usam. É o que o gate de permissão usa — `canViewSector` e
+ * companhia aceitam a lista e liberam quem alcança algum deles. Módulo fora
+ * do catálogo devolve `null`, como `setorDoModulo`.
+ *
+ * Para aviso e rótulo ("o setor da tela") continua valendo `setorDoModulo`:
+ * ligar a tela a outro setor não muda quem recebe notificação.
+ */
+export async function setoresDoModulo(tenantId: string, code: string): Promise<string[] | null> {
+  const def = getModuleDef(code);
+  if (def?.fixedSector) return [def.sectorCode];
+  const [dono, ligados] = await Promise.all([setorDoModulo(tenantId, code), lerSetoresLigados(tenantId, code)]);
+  if (dono === null) return null;
+  return resolverSetoresDoModulo(dono, ligados.porModulo.get(code) ?? []);
+}
+
 // Setores que têm ao menos um módulo ativo para o tenant — usado pra sidebar não
 // mostrar um setor sem nenhum módulo plugado nele.
 export async function getSectorsWithEnabledModules(tenantId: string): Promise<Set<string>> {
   const states = await getTenantModuleStates(tenantId);
-  return new Set(states.filter((s) => s.enabled).map((s) => s.sectorCode));
+  return new Set(states.filter((s) => s.enabled).flatMap((s) => s.sectorCodes));
 }
 
 export async function setModuleEnabled(tenantId: string, code: string, enabled: boolean): Promise<void> {
@@ -111,4 +165,20 @@ export async function setModuleSector(tenantId: string, code: string, sectorCode
     create: { tenantId, moduleCode: code, enabled: def.defaultEnabled, sectorCode },
     update: { sectorCode },
   });
+}
+
+/**
+ * Grava os setores que também usam a tela (21/10/2026), trocando a lista
+ * inteira. O dono nunca entra aqui — ele mora em `TenantModule.sectorCode` —,
+ * então quem chama já tira o dono e os repetidos (ver `setoresParaLigar`).
+ */
+export async function setModuleSharedSectors(tenantId: string, code: string, sectorCodes: readonly string[]): Promise<void> {
+  const def = getModuleDef(code);
+  if (!def) return;
+  if (def.fixedSector && sectorCodes.length) throw new Error("Este módulo é exclusivo do setor de origem.");
+  const prisma = getPrisma();
+  await prisma.$transaction([
+    prisma.tenantModuleSector.deleteMany({ where: { tenantId, moduleCode: code } }),
+    prisma.tenantModuleSector.createMany({ data: sectorCodes.map((sectorCode) => ({ tenantId, moduleCode: code, sectorCode })) }),
+  ]);
 }

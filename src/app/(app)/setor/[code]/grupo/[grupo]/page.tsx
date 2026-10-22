@@ -40,7 +40,7 @@ export default async function GrupoDoSetorPage({
     codigosDeTelasFixadas(ctx.userId, ctx.tenantId),
     telasDoGeralDaPessoa(ctx),
   ]);
-  const modules = allModules.filter((m) => m.sectorCode === code && m.enabled);
+  const modules = allModules.filter((m) => m.sectorCodes.includes(code) && m.enabled);
   // Grupo sem módulo ligado neste cliente não é tela vazia: é endereço que não
   // existe aqui — o módulo pode estar desligado ou pertencer a outro setor.
   // Conferido antes de tirar as telas do Geral escondidas: esconder do menu

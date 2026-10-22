@@ -8,7 +8,7 @@ vi.mock("@/lib/fiscal/motor/servidor", () => ({ modoDoFiscal: m.modo }));
 vi.mock("@/lib/fiscal/local/servidor", () => ({ lerEstadoFiscalLocal: m.ler }));
 vi.mock("@/components/fiscal/previa/ContextoFiscal", () => ({ ContextoFiscalProvider: function ContextoFiscalProvider() { return null; } }));
 vi.mock("@/components/shared/PageContainer", () => ({ PageContainer: function PageContainer() { return null; } }));
-vi.mock("@/components/fiscal/motor/CascoDoMotor", () => ({ MotorIndisponivel: function MotorIndisponivel() { return null; } }));
+vi.mock("@/components/ui/EmptyState", () => ({ EmptyState: function EmptyState() { return null; } }));
 const { default: FiscalLayout } = await import("./layout");
 
 const tipo = (el: unknown) => (isValidElement(el) ? (el.type as { name: string }).name : null);
@@ -24,17 +24,14 @@ describe("layout fiscal: seleção do modo", () => {
     expect(filhos(el)).toContain("conteudo");
     expect(m.ler).not.toHaveBeenCalled();
   });
-  it("não exibe cenário local quando a integração está ausente", async () => {
+  it("sem motor e com banco local: a prévia de sempre", async () => {
     m.modo.mockResolvedValue("local");
-    const el = await FiscalLayout({ children: "x" });
-    expect(tipo(el)).toBe("PageContainer");
-    expect(tipo(filhos(el))).toBe("MotorIndisponivel");
-    expect(m.ler).not.toHaveBeenCalled();
+    expect(tipo(await FiscalLayout({ children: "x" }))).toBe("ContextoFiscalProvider");
   });
   it("sem nenhuma das duas: indisponível", async () => {
     m.modo.mockResolvedValue("indisponivel");
     const el = await FiscalLayout({ children: "x" });
     expect(tipo(el)).toBe("PageContainer");
-    expect(tipo(filhos(el))).toBe("MotorIndisponivel");
+    expect(tipo(filhos(el))).toBe("EmptyState");
   });
 });

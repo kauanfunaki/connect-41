@@ -11,7 +11,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { lerFichaDaReceita, type FichaDaReceita } from "./fichaDaContraparte";
 
@@ -31,7 +31,7 @@ export async function consultarCnpjDaContraparte(documento: string, companyId: s
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false, erro: "Não autenticado." };
   const tenantId = ctx.tenantId;
-  const setores = await Promise.all(MODULOS.map(async (m) => (await setorDoModulo(tenantId, m)) ?? getModuleDef(m)?.sectorCode ?? "bpo"));
+  const setores = await Promise.all(MODULOS.map(async (m) => (await setoresDoModulo(tenantId, m)) ?? getModuleDef(m)?.sectorCode ?? "bpo"));
   if (!setores.some((s) => canActOnSector(ctx, s))) return { ok: false, erro: "Sem permissão." };
 
   const cnpj = (documento ?? "").replace(/\D/g, "");

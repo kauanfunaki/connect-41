@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
+import { FiscalPagina } from "@/components/fiscal/previa/FiscalPagina";
 import { modoDoFiscal } from "@/lib/fiscal/motor/servidor";
 import { prepararTelaDoMotor } from "@/lib/fiscal/motor/tela";
-import { MotorIndisponivel, CascoDoMotor, SemFonteNoMotor } from "@/components/fiscal/motor/CascoDoMotor";
+import { CascoDoMotor, SemFonteNoMotor } from "@/components/fiscal/motor/CascoDoMotor";
 
 /** As antigas abas que recortavam o acervo viraram o filtro Grupo (15/10/2026). */
 const GRUPOS_ANTIGOS = ["nfse", "apoio", "quarentena"];
@@ -17,5 +19,5 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   }
   const aba = typeof params.aba === "string" ? params.aba : undefined;
   if (aba && GRUPOS_ANTIGOS.includes(aba)) redirect(`/fiscal/documentos?aba=acervo&grupo=${aba}`);
-  return <MotorIndisponivel />;
+  return <Suspense fallback={<p className="text-ui text-fg-secondary">Carregando prévia fiscal…</p>}><FiscalPagina pagina="documentos" /></Suspense>;
 }

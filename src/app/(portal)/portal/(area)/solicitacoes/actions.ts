@@ -21,6 +21,7 @@ import { validarResposta } from "@/lib/financeiro/pendencias/regras";
 import { anexosDaSolicitacao } from "@/lib/solicitacoes/armazenamento";
 import { somarDiasUteis, transicao, validarAbertura } from "@/lib/solicitacoes/regras";
 import { avisarEquipeDaSolicitacao, responsavelDaEmpresaNoSetor } from "@/lib/solicitacoes/avisos";
+import { ASSUNTO_DA_SUGESTAO, validarSugestao } from "@/lib/solicitacoes/sugestao";
 
 const MODULO = "portal_solicitacoes";
 
@@ -75,6 +76,24 @@ export async function abrirSolicitacao(formData: FormData): Promise<ResultadoDaA
   const texto = validarAbertura(String(formData.get("description") ?? ""));
   if (!texto.ok) return { error: texto.erro };
 
+  return gravarSolicitacao(cliente, empresa, assunto, texto.texto, arquivosDoFormulario(formData, "anexos"));
+}
+
+type ClienteDoPortal = NonNullable<Awaited<ReturnType<typeof clienteAtivoDoPortal>>>;
+type AssuntoDaAbertura = { id: string; label: string; sectorCode: string; responseDays: number };
+
+/**
+ * Grava a solicitação já conferida e avisa a equipe — o miolo da abertura,
+ * que a sugestão do portal (21/10/2026) também usa.
+ */
+async function gravarSolicitacao(
+  cliente: ClienteDoPortal,
+  empresa: { id: string; name: string; displayName: string | null },
+  assunto: AssuntoDaAbertura,
+  descricao: string,
+  arquivos: ReturnType<typeof arquivosDoFormulario>
+): Promise<ResultadoDaAbertura> {
+  const prisma = getPrisma();
   const feriados = await feriadosDoTenant(cliente.tenantId);
   const prazo = lerDataDoCampo(somarDiasUteis(saoPauloParts(new Date()).dateKey, assunto.responseDays, feriados));
   if (!prazo.ok || !prazo.data) throw new Error("Prazo de resposta inválido.");
@@ -82,8 +101,9 @@ export async function abrirSolicitacao(formData: FormData): Promise<ResultadoDaA
 
   const assigneeId = await responsavelDaEmpresaNoSetor(cliente.tenantId, empresa.id, assunto.sectorCode);
 
-  const gravados = await anexosDaSolicitacao.gravarAnexos(cliente.tenantId, arquivosDoFormulario(formData, "anexos"));
+  const gravados = await anexosDaSolicitacao.gravarAnexos(cliente.tenantId, arquivos);
   if (!gravados.ok) return { error: gravados.erro };
+  const anexos = gravados.anexos;
 
   // O número é o maior do tenant + 1, dentro da transação. Dois clientes
   // abrindo no mesmo instante podem calcular o mesmo número: o índice único
@@ -101,16 +121,16 @@ export async function abrirSolicitacao(formData: FormData): Promise<ResultadoDaA
               companyId: empresa.id,
               subjectId: assunto.id,
               sectorCode: assunto.sectorCode,
-              description: texto.texto,
+              description: descricao,
               responseDue,
               assigneeId,
               openedByPortalUserId: cliente.usuario.id,
             },
             select: { id: true, number: true },
           });
-          if (gravados.anexos.length > 0) {
+          if (anexos.length > 0) {
             await tx.serviceRequestAttachment.createMany({
-              data: gravados.anexos.map((a) => ({ requestId: s.id, uploadedByPortalUserId: cliente.usuario.id, ...a })),
+              data: anexos.map((a) => ({ requestId: s.id, uploadedByPortalUserId: cliente.usuario.id, ...a })),
             });
           }
           return s;
@@ -120,11 +140,11 @@ export async function abrirSolicitacao(formData: FormData): Promise<ResultadoDaA
       }
     }
   } catch (err) {
-    await anexosDaSolicitacao.apagarAnexosGravados(gravados.anexos);
+    await anexosDaSolicitacao.apagarAnexosGravados(anexos);
     throw err;
   }
   if (!criada) {
-    await anexosDaSolicitacao.apagarAnexosGravados(gravados.anexos);
+    await anexosDaSolicitacao.apagarAnexosGravados(anexos);
     throw new Error("Não foi possível numerar a solicitação.");
   }
 
@@ -257,4 +277,56 @@ export async function cancelarSolicitacaoCliente(id: string): Promise<{ error: s
 
   revalidar(s.id);
   return null;
+}
+
+/**
+ * "Sugestão ou problema no portal" (21/10/2026): a nota e o texto do botão do
+ * rodapé viram uma solicitação comum, no assunto da sugestão, para o Tech. O
+ * assunto nasce na primeira sugestão se o escritório não o criou; desativado
+ * por ele, a sugestão é recusada (e o botão nem aparece — `sugestaoLigada`).
+ * A empresa é a primeira do acesso: a sugestão é do portal, não de uma empresa.
+ */
+export async function enviarSugestaoDoPortal(formData: FormData): Promise<ResultadoDaAbertura> {
+  const c = await clienteComSolicitacoes();
+  if (!c.ok) return { error: c.erro };
+  const { cliente } = c;
+  const prisma = getPrisma();
+
+  const lida = validarSugestao({
+    nota: String(formData.get("nota") ?? ""),
+    texto: String(formData.get("texto") ?? ""),
+    tela: String(formData.get("tela") ?? ""),
+  });
+  if (!lida.ok) return { error: lida.erro };
+
+  const empresa = await prisma.company.findFirst({
+    where: { tenantId: cliente.tenantId, id: { in: cliente.companyIds } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, displayName: true },
+  });
+  if (!empresa) return { error: "O seu acesso ainda não tem empresa ligada. Fale com o escritório." };
+
+  const assunto = await assuntoDaSugestao(cliente.tenantId);
+  if (!assunto) return { error: "O escritório não está recebendo sugestões pelo portal agora." };
+
+  return gravarSolicitacao(cliente, empresa, assunto, lida.descricao, []);
+}
+
+/** O assunto da sugestão: o do escritório, ou criado agora. Nulo se ele o desativou. */
+async function assuntoDaSugestao(tenantId: string): Promise<AssuntoDaAbertura | null> {
+  const prisma = getPrisma();
+  const select = { id: true, label: true, sectorCode: true, responseDays: true, active: true } as const;
+  const existente = await prisma.serviceRequestSubject.findFirst({ where: { tenantId, label: ASSUNTO_DA_SUGESTAO.label }, select });
+  if (existente) return existente.active ? existente : null;
+  try {
+    const maior = await prisma.serviceRequestSubject.aggregate({ where: { tenantId }, _max: { order: true } });
+    return await prisma.serviceRequestSubject.create({
+      data: { tenantId, ...ASSUNTO_DA_SUGESTAO, order: (maior._max.order ?? 0) + 1 },
+      select,
+    });
+  } catch (err) {
+    // Duas sugestões ao mesmo tempo: o índice único (tenant, nome) recusa a segunda, que usa a primeira.
+    if (!isPrismaUniqueError(err)) throw err;
+    return prisma.serviceRequestSubject.findFirst({ where: { tenantId, label: ASSUNTO_DA_SUGESTAO.label, active: true }, select });
+  }
 }

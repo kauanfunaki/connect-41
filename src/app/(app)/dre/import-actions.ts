@@ -10,6 +10,7 @@ import { podeAbrirADre } from "@/lib/dre/acesso";
 import { categoriasParaCriar } from "@/lib/dre/categoriasDoImport";
 import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 export type ResultadoDaImportacao =
   | { error: string }
@@ -66,6 +67,9 @@ export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaI
     select: { id: true },
   });
   if (!empresa) return { error: "Empresa não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [empresa.id]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   let leitura;
   try {

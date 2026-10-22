@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
+import { FiscalPagina } from "@/components/fiscal/previa/FiscalPagina";
 import { modoDoFiscal } from "@/lib/fiscal/motor/servidor";
 import { prepararTelaDoMotor } from "@/lib/fiscal/motor/tela";
-import { MotorIndisponivel, CascoDoMotor } from "@/components/fiscal/motor/CascoDoMotor";
+import { CascoDoMotor } from "@/components/fiscal/motor/CascoDoMotor";
 import { OperacaoMotor } from "@/components/fiscal/motor/OperacaoMotor";
 
 export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -21,5 +23,5 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   }
   // Fila e Erros viraram o filtro Estado do Histórico (15/10/2026).
   if (aba === "fila" || aba === "erros") redirect(`/fiscal/operacao?aba=historico&estado=${aba === "fila" ? "fila" : "erro"}`);
-  return <MotorIndisponivel />;
+  return <Suspense fallback={<p className="text-ui text-fg-secondary">Carregando prévia fiscal…</p>}><FiscalPagina pagina="operacao" /></Suspense>;
 }

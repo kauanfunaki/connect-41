@@ -20,7 +20,7 @@ import { getModuleDef } from "@/lib/module-catalog";
 import { validarResposta } from "@/lib/financeiro/pendencias/regras";
 import { arquivosDoFormulario } from "@/lib/financeiro/pendencias/armazenamento";
 import { anexosDaConversa } from "@/lib/financeiro/comunicacao/armazenamento";
-import { MODULO_DE_COMUNICACAO as MODULO } from "@/lib/financeiro/comunicacao/regras";
+import { CONVERSA_SO_PARA_CONSULTA, MODULO_DE_COMUNICACAO as MODULO } from "@/lib/financeiro/comunicacao/regras";
 
 export type ResultadoDoPortal = { error: string } | { ok: true };
 
@@ -28,6 +28,8 @@ export async function enviarMensagemCliente(formData: FormData): Promise<Resulta
   const cliente = await clienteAtivoDoPortal();
   if (!cliente) return { error: "Sessão expirada. Entre de novo no portal." };
   if (!cliente.modulos.has(MODULO)) return { error: "A conversa não está habilitada." };
+  // Com as Solicitações, a conversa é só histórico (22/10/2026).
+  if (cliente.modulos.has("portal_solicitacoes")) return { error: CONVERSA_SO_PARA_CONSULTA.cliente };
 
   const companyId = String(formData.get("companyId") ?? "");
   const prisma = getPrisma();

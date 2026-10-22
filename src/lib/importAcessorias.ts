@@ -3,8 +3,10 @@
 // A leitura do arquivo fica em `lerPlanilhaAcessorias`; tudo que decide o que
 // vira o quê está em `planejarImportacao`, que é função pura e testada. O
 // script (`scripts/importar-acessorias.ts`) só executa o plano.
-
-import { planejarGrupos, type EmpresaParaAgrupar } from "@/lib/clientGroups";
+//
+// Até 15/10/2026 a importação também criava os Clientes (um por raiz de CNPJ)
+// e punha cada empresa no seu. O Cliente saiu do Connect (etapa 3): ficam as
+// empresas, as filiais (pela matriz 0001) e os contatos.
 
 /** Uma linha do relatório, já limpa. O arquivo repete a empresa por contato. */
 export type LinhaAcessorias = {
@@ -124,23 +126,8 @@ export type PlanoDeImportacao = {
    * Elas também entram em `novas`, porque depois de apagadas é isso que são.
    */
   substituicoes: { id: string; cnpj: string; nomeAtual: string }[];
-  clientesNovos: { name: string; cnpjRoot: string; empresas: string[] }[];
-  clientesExistentes: { id: string; cnpjRoot: string }[];
   filiais: { cnpjFilial: string; cnpjMatriz: string }[];
   filiaisSemMatriz: { cnpj: string; name: string }[];
-  /**
-   * Raízes de CNPJ que já têm MAIS DE UM cliente no tenant.
-   *
-   * Aconteceu de verdade em 02/09 e passou em silêncio: a raiz 17122471 tinha
-   * "Gabriel BLD" (com a matriz dentro) e um "BLD LOGISTICA LTDA" vazio. O
-   * `Map` por raiz ficava com o último, então as 20 filiais entraram num
-   * cliente e a matriz continuou no outro — e a listagem, que agrupa por
-   * cliente antes de montar a árvore, mostrou os dois em blocos separados.
-   *
-   * Agora é reportado: escolher em silêncio entre dois clientes plausíveis não
-   * é decisão de script.
-   */
-  raizesAmbiguas: { cnpjRoot: string; clientes: string[] }[];
   contatos: ContatoPlanejado[];
 };
 
@@ -153,8 +140,7 @@ export type PlanoDeImportacao = {
  */
 export function planejarImportacao(
   linhas: LinhaAcessorias[],
-  existentes: { id: string; cnpj: string | null; name: string }[],
-  gruposExistentes: { id: string; name: string; cnpjRoot: string | null }[]
+  existentes: { id: string; cnpj: string | null; name: string }[]
 ): PlanoDeImportacao {
   // 1. Uma empresa por CNPJ — o arquivo repete a empresa a cada contato.
   const porCnpj = new Map<string, EmpresaDaPlanilha>();
@@ -197,48 +183,14 @@ export function planejarImportacao(
     if (atual.name.trim().toLowerCase() !== e.name.trim().toLowerCase()) {
       divergenciasDeNome.push({ cnpj: e.cnpj, nomeAtual: atual.name, nomeNovo: e.name });
       substituicoes.push({ id: atual.id, cnpj: e.cnpj, nomeAtual: atual.name });
-      // Vai ser apagada, então entra como nova — inclusive no agrupamento por
-      // raiz, que precisa enxergá-la para dar cliente à empresa recriada.
+      // Vai ser apagada, então entra como nova.
       novas.push(e);
       continue;
     }
     jaExistem.push({ cnpj: e.cnpj, id: atual.id });
   }
 
-  // 3. Clientes, pela raiz do CNPJ. Reusa a regra que o backfill já usou.
-  const paraAgrupar: EmpresaParaAgrupar[] = novas.map((e) => ({ id: e.cnpj, name: e.name, cnpj: e.cnpj }));
-  // Agrupa por raiz em vez de `new Map(...)` direto: o Map descarta o anterior
-  // quando a chave repete, que foi exatamente como a BLD se partiu em dois.
-  const gruposPorRaiz = new Map<string, { id: string; name: string }[]>();
-  for (const g of gruposExistentes) {
-    if (!g.cnpjRoot) continue;
-    const lista = gruposPorRaiz.get(g.cnpjRoot) ?? [];
-    lista.push({ id: g.id, name: g.name });
-    gruposPorRaiz.set(g.cnpjRoot, lista);
-  }
-  const raizesAmbiguas = [...gruposPorRaiz.entries()]
-    .filter(([, l]) => l.length > 1)
-    .map(([cnpjRoot, l]) => ({ cnpjRoot, clientes: l.map((g) => g.name) }));
-  const clientesNovos: { name: string; cnpjRoot: string; empresas: string[] }[] = [];
-  const clientesExistentes: { id: string; cnpjRoot: string }[] = [];
-
-  for (const g of planejarGrupos(paraAgrupar)) {
-    if (!g.cnpjRoot) continue;
-    const candidatos = gruposPorRaiz.get(g.cnpjRoot);
-    if (candidatos && candidatos.length > 0) {
-      // Com mais de um candidato a escolha é arbitrária; `raizesAmbiguas` avisa
-      // para alguém unificar antes de rodar, em vez de descobrir na tela depois.
-      clientesExistentes.push({ id: candidatos[0].id, cnpjRoot: g.cnpjRoot });
-      continue;
-    }
-    clientesNovos.push({
-      name: g.name,
-      cnpjRoot: g.cnpjRoot,
-      empresas: g.empresas.map((e) => e.name),
-    });
-  }
-
-  // 4. Filiais: estabelecimento 0001 é a matriz da sua raiz. Vale para todas as
+  // 3. Filiais: estabelecimento 0001 é a matriz da sua raiz. Vale para todas as
   // empresas do arquivo, não só as novas — uma filial nova pode pendurar numa
   // matriz que já estava no Connect.
   const matrizPorRaiz = new Map<string, string>();
@@ -256,7 +208,7 @@ export function planejarImportacao(
     else filiaisSemMatriz.push({ cnpj: e.cnpj, name: e.name });
   }
 
-  // 5. Contatos, com a peneira e sem repetir a mesma pessoa na mesma empresa.
+  // 4. Contatos, com a peneira e sem repetir a mesma pessoa na mesma empresa.
   const vistos = new Set<string>();
   const contatos: ContatoPlanejado[] = [];
   for (const c of contatosBrutos) {
@@ -280,11 +232,8 @@ export function planejarImportacao(
     jaExistem,
     divergenciasDeNome,
     substituicoes,
-    clientesNovos,
-    clientesExistentes,
     filiais,
     filiaisSemMatriz,
-    raizesAmbiguas,
     contatos,
   };
 }

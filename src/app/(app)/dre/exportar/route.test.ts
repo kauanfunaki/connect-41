@@ -18,11 +18,24 @@ const estado = vi.hoisted(() => ({
   pedidos: [] as unknown[],
 }));
 
+// Sem empresa em foco (21/10/2026): a trava do foco tem o teste dela (`focoServidor.test.ts`).
+vi.mock("@/lib/empresas/focoServidor", () => ({
+  recusaDoFoco: async () => null,
+  leituraNoFoco: async (_ctx: unknown, empresa: string) => ({ ok: true, empresaId: empresa, empresaIds: undefined }),
+}));
 vi.mock("@/lib/auth/context", () => ({ getAuthContext: async () => estado.ctx }));
-vi.mock("@/lib/modules", () => ({
+vi.mock("@/lib/modules", () => {
+  const mod = {
   isModuleEnabled: async (_t: string, codigo: string) => estado.ligados.has(codigo),
   setorDoModulo: async (_t: string, codigo: string) => (codigo === "bpo_dre" ? estado.setorDoDre : null),
-}));
+};
+  // Os setores da tela (21/10/2026): aqui, só o dono, como antes.
+  const setoresDoModulo = async (t: string, c: string) => {
+    const s = await (mod.setorDoModulo as (t: string, c: string) => Promise<string | null>)(t, c);
+    return s == null ? null : [s];
+  };
+  return { ...mod, setoresDoModulo };
+});
 vi.mock("@/lib/prisma", () => ({
   getPrisma: () => ({
     company: {

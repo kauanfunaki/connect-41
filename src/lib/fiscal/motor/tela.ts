@@ -28,7 +28,7 @@ export async function prepararTelaDoMotor(params: Record<string, string | string
   const motor = await abrirMotor(ctx.tenantId);
   if (!motor) return null;
   const estados = await getTenantModuleStates(ctx.tenantId);
-  const modulos = estados.filter((m) => m.enabled && canViewSector(ctx, m.sectorCode)).map((m) => m.code);
+  const modulos = estados.filter((m) => m.enabled && canViewSector(ctx, m.sectorCodes)).map((m) => m.code);
   const pedida = param(params, "raiz");
   const raiz = pedida && motor.raizes.includes(pedida) ? pedida : motor.raizes[0];
   let mapa = VAZIO;

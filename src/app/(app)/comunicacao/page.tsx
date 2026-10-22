@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Building2, ClipboardList, MessagesSquare, Paperclip, Clock } from "lucide-react";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -45,12 +45,12 @@ export default async function ComunicacaoPage({
 }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  if (!canViewSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
   // Com as solicitações ligadas (01/10), a conversa livre saiu do portal: o
   // cliente não vê mais mensagem nova daqui. A tela fica só como histórico.
   const substituida = await isModuleEnabled(ctx.tenantId, "portal_solicitacoes");
-  const podeAgir = canActOnSector(ctx, setor) && !substituida;
+  const podeAgir = canActOnSector(ctx, setores) && !substituida;
 
   const { empresa: companyId } = await searchParams;
   const escopo = { tenantId: ctx.tenantId, companyIds: null };
@@ -145,7 +145,9 @@ export default async function ComunicacaoPage({
         texto={
           conversas.some((c) => c.resumo.esperandoEscritorio)
             ? "As que estão esperando o escritório vêm primeiro na lista. Use ↑↓ no painel para passar de uma para outra."
-            : "Abra uma conversa à esquerda, ou escolha uma empresa acima para começar."
+            : substituida
+              ? "Abra uma conversa à esquerda para consultar o histórico."
+              : "Abra uma conversa à esquerda, ou escolha uma empresa acima para começar."
         }
       />
     );
@@ -159,7 +161,7 @@ export default async function ComunicacaoPage({
         // Revisão de 05/10: botão não é link — "Solicitações" era texto azul no meio da frase.
         <Aviso tom="info" className="mb-4">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fg">
-            <span>A conversa saiu do portal: agora o cliente fala com a equipe pelas Solicitações. Esta tela fica como histórico.</span>
+            <span>A conversa virou histórico: ninguém escreve mais aqui, e o cliente consulta o que já foi dito em “Conversas anteriores”, no portal. O que é novo vai pelas Solicitações.</span>
             <Button href="/solicitacoes" variant="secondary" size="xs">
               Abrir solicitações
             </Button>
@@ -174,7 +176,7 @@ export default async function ComunicacaoPage({
         lista={
           <ColunaDaLista>
             {conversas.length === 0 ? (
-              <EmptyState icon={<MessagesSquare />} title="Nenhuma conversa ainda" description="Escolha uma empresa acima para começar." />
+              <EmptyState icon={<MessagesSquare />} title="Nenhuma conversa ainda" description={substituida ? "Nenhuma empresa tem conversa anterior." : "Escolha uma empresa acima para começar."} />
             ) : (
               conversas.map((c) => (
                 <CartaoDeConversa

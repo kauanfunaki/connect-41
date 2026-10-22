@@ -73,3 +73,4 @@ export async function visiveis(ctx: AuthContext, raiz: string) {
 export function revalidarFiscal() {
   revalidatePath("/fiscal", "layout");
 }
+

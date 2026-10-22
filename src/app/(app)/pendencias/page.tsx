@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import { MessageSquareWarning, Paperclip, Hourglass, MessageCircleReply, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { formatInstantDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
@@ -45,9 +46,11 @@ export default async function PendenciasPage({
 }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  const setor = setores[0];
+  if (!canViewSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
+  const podeAgir = canActOnSector(ctx, setores);
+  const solicitacoesLigadas = await isModuleEnabled(ctx.tenantId, "portal_solicitacoes");
 
   const params = await searchParams;
   const recorte: RecorteDePendencia = RECORTES_DE_PENDENCIA.find((r) => r.chave === params.recorte)?.chave ?? "andamento";
@@ -92,6 +95,10 @@ export default async function PendenciasPage({
           ) : undefined
         }
       />
+
+      {/* Aba das Solicitações desde 21/10/2026, quando elas estão ligadas: a
+          tela saiu do menu do BPO (ver TELAS_DO_BPO_NAS_SOLICITACOES). */}
+      {solicitacoesLigadas && <AbasDoAtendimento ativa="pendencias" />}
 
       {/* Cada cartão abre o recorte que ele conta. */}
       <div className="mt-4">

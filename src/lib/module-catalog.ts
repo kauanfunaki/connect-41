@@ -171,16 +171,6 @@ export type ModuleDef = {
 
 export const MODULE_CATALOG: ModuleDef[] = [
   {
-    code: "contabil_sped", label: "SPED", sectorCode: "contabil",
-    description: "Conferência, de-para e arquivos de lançamentos para a Domínio em quatro etapas",
-    defaultEnabled: true, icon: "FileSpreadsheet", group: "Operação", menuDireto: true,
-  },
-  {
-    code: "tech_controle_interno", label: "Controle interno", sectorCode: "tech",
-    description: "Bugs, melhorias, novas funcionalidades, testes e migrações da equipe Tech",
-    defaultEnabled: false, icon: "ClipboardList", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
-  },
-  {
     code: "tech_github_contributions", label: "GitHub — Contribuições", sectorCode: "tech",
     description: "Heatmap de commits, pull requests, issues e revisões nos repositórios monitorados",
     defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
@@ -438,14 +428,14 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Documentos",
   },
   ...([
-    ["fiscal_painel", "Painel fiscal", "Indicadores, progresso e pendências da base do SPED", "ChartColumn", "Operação"],
-    ["fiscal_classificacao", "Classificação", "Destinação e crédito dos produtos da base fiscal", "ClipboardList", "Operação"],
-    ["fiscal_operacao", "Executar", "Geração de EFD, fila, logs e histórico do motor", "Workflow", "Operação"],
-    ["fiscal_acervo", "Documentos e importações", "Consulta e conferência dos documentos usados na EFD", "ReceiptText", "Documentos"],
-    ["fiscal_icms_ipi", "ICMS e IPI", "Apuração, demonstrativo, ajustes e DCIP/DIME", "FileSpreadsheet", "Apuração"],
-    ["fiscal_contribuicoes", "PIS e COFINS", "Parâmetros, ajustes e EFD Contribuições", "Receipt", "Apuração"],
-    ["fiscal_entregas", "SPED gerados", "Versões de SPED, pré-validação e entregas registradas", "CheckCheck", "Conferência"],
-    ["fiscal_conferencia", "Conferência fiscal", "Conferência dos arquivos e documentos fiscais", "Landmark", "Conferência"],
+    ["fiscal_painel", "Painel fiscal", "Indicadores, progresso e pendências do cenário de teste", "ChartColumn", "Operação"],
+    ["fiscal_classificacao", "Classificação", "Destinação e crédito de produtos, contratos e recibos em teste", "ClipboardList", "Operação"],
+    ["fiscal_operacao", "Executar", "Extração, geração, fila, logs e erros simulados", "Workflow", "Operação"],
+    ["fiscal_acervo", "Documentos e importações", "Acervo, serviços, contratos, importação e cobertura com dados fictícios", "ReceiptText", "Documentos"],
+    ["fiscal_icms_ipi", "ICMS e IPI", "Apuração, demonstrativo, ajustes e DCIP/DIME em teste", "FileSpreadsheet", "Apuração"],
+    ["fiscal_contribuicoes", "PIS e COFINS", "Parâmetros, ajustes, fechamento e SPED Contribuições em teste", "Receipt", "Apuração"],
+    ["fiscal_entregas", "SPED gerados", "Versões de SPED, validação e entregas simuladas", "CheckCheck", "Conferência"],
+    ["fiscal_conferencia", "Conferência fiscal", "Prévia financeira e confronto de documentos em teste", "Landmark", "Conferência"],
     ["fiscal_configuracoes", "Configurações fiscais", "Parâmetros e consulta de regras fiscais por CFOP e fonte", "Building2", "Cadastros"],
   ] satisfies [string, string, string, IconeDeModulo, GrupoDeModulo][]).map(([code, label, description, icon, group]) => ({
     code, label, description, icon, group, sectorCode: "fiscal", defaultEnabled: true,
@@ -627,6 +617,19 @@ export const MODULE_CATALOG: ModuleDef[] = [
     icon: "AlarmClock",
     group: "Contas",
   },
+  // O painel da carteira (22/10/2026): uma linha por empresa atendida pelo
+  // BPO, com o que pede atenção em cada uma — como o painel de clientes do
+  // Nibo BPO. Em "Relatórios" e não em "Operação": o BPO abre pelas contas
+  // (ver o teste do catálogo), e o painel só lê o que as outras telas gravam.
+  {
+    code: "bpo_painel_carteira",
+    label: "Painel da carteira",
+    sectorCode: "bpo",
+    description: "Uma linha por empresa atendida: vencidos, extrato, conciliação, saldo, pendências, aprovações e acesso ao portal",
+    defaultEnabled: true,
+    icon: "Briefcase",
+    group: "Relatórios",
+  },
   {
     // Fase 2 da integração com o Omie (decidida pelo Kauan em 13/10/2026): a
     // NFS-e sai pelo Omie da empresa, pedida daqui. Desligado por padrão e
@@ -711,8 +714,6 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
-  contabil_sped: "/contabil/sped",
-  tech_controle_interno: "/tech/controle-interno",
   tech_github_contributions: "/github",
   tech_ops_center:         "/ops",
   helpdesk: "/chamados",
@@ -763,22 +764,53 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_fluxo_caixa:         "/fluxo-de-caixa",
   bpo_tabela_dinamica:     "/tabela-dinamica",
   bpo_conciliacao:         "/conciliacao",
-  bpo_cadastros:           "/cadastros-financeiros",
+  bpo_cadastros:           "/fornecedores-e-sacados",
   bpo_pendencias:          "/pendencias",
   bpo_aprovacoes:          "/aprovacoes",
   bpo_comunicacao:         "/comunicacao",
   bpo_cobranca:            "/cobranca",
   bpo_emitir_nfse:         "/emitir-nfse",
+  bpo_painel_carteira:     "/carteira-bpo",
   dre_economica:           "/dre/economica",
   dre_analises:            "/dre/analises",
   dre_orcamento:           "/dre/orcamento",
 };
 
 /**
- * Módulos cuja tela fica no menu **Geral**, para todos, e não na lista de
- * telas do setor dono: o setor só serve para ligar e desligar o módulo.
+ * Módulos que moram numa aba de **Cadastros**, no menu Geral, e não na lista de
+ * telas do setor dono (21/10/2026). Diferente de Solicitações e Arquivos, a aba
+ * só aparece, e a tela só abre, para quem vê o setor do módulo: Fornecedores e
+ * sacados é do BPO, e repetia no menu dele o "Cadastros" do Geral.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk"]);
+export const MODULOS_NOS_CADASTROS: ReadonlySet<string> = new Set(["bpo_cadastros"]);
+
+/**
+ * Módulos cuja tela fica no menu **Geral**, e não na lista de telas do setor
+ * dono: o setor só serve para ligar e desligar o módulo. Solicitações, Arquivos
+ * e Chamados são para todos; os de `MODULOS_NOS_CADASTROS`, só para o setor.
+ */
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS]);
+
+/**
+ * As telas do grupo "Cliente" do BPO que moram nas abas das Solicitações
+ * (21/10/2026), como Fornecedores e sacados nos Cadastros: saem do menu do BPO
+ * e aparecem como aba de /solicitacoes só para quem vê o módulo. Com o módulo
+ * das Solicitações desligado, voltam ao menu do setor — senão sumiriam.
+ */
+export const TELAS_DO_BPO_NAS_SOLICITACOES = [
+  { modulo: "bpo_pendencias", chave: "pendencias", rotulo: "Pendências do BPO", href: "/pendencias" },
+  { modulo: "bpo_aprovacoes", chave: "aprovacoes", rotulo: "Aprovações", href: "/aprovacoes" },
+] as const;
+export const MODULOS_NAS_SOLICITACOES: ReadonlySet<string> = new Set(TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.modulo));
+
+/**
+ * O que sai do menu do setor quando as Solicitações estão ligadas: as abas
+ * acima e a Conversa com o cliente. A Conversa aparecia no menu do BPO como
+ * "Solicitações dos clientes", levando a /solicitacoes — o mesmo item do menu
+ * Geral, duplicado (relato do Kauan, 21/10/2026). Até ela virar solicitação, a
+ * tela dela segue no Ctrl+K e nas fixadas.
+ */
+export const FORA_DO_MENU_COM_SOLICITACOES: ReadonlySet<string> = new Set([...MODULOS_NAS_SOLICITACOES, "bpo_comunicacao"]);
 
 /** Funcionalidades acessadas por fluxos internos, sem entrada na navegação. */
 export const MODULOS_SEM_MENU: ReadonlySet<string> = new Set(["fiscal_documentos"]);

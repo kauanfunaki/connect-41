@@ -29,7 +29,8 @@ export type IconeDoPasso =
   | "financeiro"
   | "documentos"
   | "conta"
-  | "senha";
+  | "senha"
+  | "ceci";
 
 /**
  * `telas`: as telas de que a linha (ou o passo) fala. Some quando **todas**
@@ -48,6 +49,8 @@ type PassoDoCatalogo = {
   semModulos?: readonly string[];
   /** Só para quem tem mais de uma empresa no acesso. */
   soComVariasEmpresas?: boolean;
+  /** Só para quem tem a Ceci no portal (21/10/2026) — o escritório liga por empresa. */
+  soComCeci?: boolean;
   /** As telas que o passo ensina a usar: com todas bloqueadas, ele some (14/10/2026). */
   telas?: readonly string[];
   passos: readonly Linha[];
@@ -128,6 +131,30 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
       "O aviso diz só que há algo novo, nunca o valor ou o conteúdo. O detalhe fica aqui dentro do portal.",
     ],
   },
+  // A Ceci no portal (21/10/2026): só para quem a tem — o escritório liga por
+  // empresa, no piloto. Os nomes são os da tela (`CeciDoPortal`): "Revisar e
+  // enviar", o "+" de nova conversa. O limite do dia vem de quem chama, para
+  // o texto dizer o número que vale (`{perguntas}`).
+  {
+    chave: "ceci",
+    titulo: "Perguntar à Ceci",
+    resumo: "A assistente do escritório responde sobre as suas empresas e prepara as suas solicitações.",
+    icone: "ceci",
+    soComCeci: true,
+    passos: [
+      "Clique na Ceci, no canto de baixo da tela, para abrir o chat. Ela aparece em todas as telas do portal.",
+      "Escreva a sua pergunta e aperte Enter, ou toque numa das sugestões. Por exemplo: \"O que vence esta semana?\", \"Tenho alguma pendência?\" ou \"Em que pé está a alteração do contrato?\".",
+      "A Ceci consulta o que o portal já mostra das suas empresas: pendências, contas a pagar e a receber, processos, notas fiscais e solicitações. Quando a resposta tem uma tela, aparece um botão para abri-la.",
+      {
+        texto: "Quando você precisa de algo da equipe, a Ceci prepara uma solicitação. Clique em Revisar e enviar: a tela de Nova solicitação abre preenchida. Confira, ajuste o que quiser e clique em Enviar solicitação.",
+        modulos: ["portal_solicitacoes"],
+        telas: ["/portal/solicitacoes"],
+      },
+      "A Ceci só consulta. Ela não envia nada sozinha, não paga, não aprova, não responde pendência e não muda cadastro.",
+      "Ela é uma inteligência artificial e pode errar. Antes de decidir algo importante, confira na tela ou fale com a equipe.",
+      "Cada acesso faz até {perguntas} perguntas por dia. Para começar outra conversa, clique em + no topo do chat.",
+    ],
+  },
   {
     chave: "solicitacao",
     titulo: "Pedir algo ao escritório",
@@ -141,6 +168,19 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
       "Conte o que você precisa, anexe os arquivos e clique em Enviar solicitação.",
       "A solicitação ganha um número, e você é avisado por e-mail quando a equipe responder. A conversa continua ali mesmo.",
       "Quando a equipe precisar de algo seu, a solicitação fica como \"Aguardando você\". Se não precisar mais, use Cancelar solicitação.",
+    ],
+  },
+  {
+    chave: "sugestao",
+    titulo: "Mandar uma sugestão ou avisar de um problema no portal",
+    resumo: "Uma ideia, ou algo que não funcionou: vai direto para a equipe que cuida do portal.",
+    icone: "solicitacao",
+    modulos: ["portal_solicitacoes"],
+    telas: ["/portal/solicitacoes"],
+    passos: [
+      "No rodapé do menu, clique em Sugestão ou problema.",
+      "Dê uma nota de 1 a 5 para o portal e conte o que aconteceu ou o que você sugere. A equipe recebe junto a tela em que você estava.",
+      "Clique em Enviar. A mensagem vira uma solicitação, com número, e a resposta chega por ela, em Solicitações.",
     ],
   },
   {
@@ -349,23 +389,30 @@ function algumaLiberada(bloqueadas: ReadonlySet<string>, telas: readonly string[
  */
 export function passosDoPortal(
   modulos: ReadonlySet<string>,
-  opcoes: { variasEmpresas: boolean; bloqueadas?: ReadonlySet<string> }
+  opcoes: {
+    variasEmpresas: boolean;
+    bloqueadas?: ReadonlySet<string>;
+    /** A Ceci aparece para este acesso, e quantas perguntas por dia (21/10/2026). Sem isto, o passo dela some. */
+    ceci?: { perguntasPorDia: number } | null;
+  }
 ): PassoDoPortal[] {
   const bloqueadas = opcoes.bloqueadas ?? new Set<string>();
+  const ceci = opcoes.ceci ?? null;
   return CATALOGO.filter(
     (p) =>
       algumLigado(modulos, p.modulos) &&
       !(p.semModulos ?? []).some((m) => modulos.has(m)) &&
       (!p.soComVariasEmpresas || opcoes.variasEmpresas) &&
+      (!p.soComCeci || ceci !== null) &&
       algumaLiberada(bloqueadas, p.telas)
   ).map((p) => ({
     chave: p.chave,
     titulo: p.titulo,
     resumo: p.resumo,
     icone: p.icone,
-    passos: p.passos.flatMap((l) =>
-      typeof l === "string" ? [l] : algumLigado(modulos, l.modulos) && algumaLiberada(bloqueadas, l.telas) ? [l.texto] : []
-    ),
+    passos: p.passos
+      .flatMap((l) => (typeof l === "string" ? [l] : algumLigado(modulos, l.modulos) && algumaLiberada(bloqueadas, l.telas) ? [l.texto] : []))
+      .map((l) => (ceci ? l.replace("{perguntas}", String(ceci.perguntasPorDia)) : l)),
     // O vídeo vem do arquivo dos links (05/10), e só quando já foi colado.
     video: videoDoPassoDoPortal(p.chave) ?? undefined,
   }));
