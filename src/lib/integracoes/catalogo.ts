@@ -182,6 +182,14 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         help:
           "Token da base de documentos deste cliente. Cada cliente conecta a própria; sem esta integração ligada, nada é sincronizado nem consultado.",
       },
+      {
+        // API-CONNECT §8.1 (22/10/2026): só POST, PUT e DELETE em /api/connect/v1.
+        name: "serviceTokenEscrita",
+        label: "Token de escrita",
+        type: "secret",
+        required: false,
+        help: "Token de escrita do motor. Sem ele, o Connect só consulta.",
+      },
     ],
   },
   {
