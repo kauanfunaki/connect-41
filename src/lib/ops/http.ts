@@ -1,8 +1,9 @@
 import { ZodError } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
-import { acessoOps, ErroOps, autenticarWatcher, receberEvento, gerarToken, gerarTokenCompartilhado, conferirChamado, conferirResponsavel, exigirAtualizacao, painelOps } from "./servidor";
-import { editarWatcherSchema, filtrosSchema, instabilidadeSchema, slugSchema, versaoSchema, watcherSchema } from "./regras";
+import { acessoOps, ErroOps, autenticarWatcher, receberEvento, gerarToken, gerarTokenCompartilhado, revogarTokenCompartilhado, conferirCredencialOps, conferirChamado, conferirResponsavel, exigirAtualizacao, painelOps } from "./servidor";
+import { criarChaveSchema, revogarChaveSchema, editarWatcherSchema, filtrosSchema, instabilidadeSchema, slugSchema, versaoSchema, watcherSchema } from "./regras";
+import { credencialOpsNaTela } from "./credencial";
 
 export async function responderOps(fn: () => Promise<unknown>) {
   try { return Response.json(await fn(), { headers: { "Cache-Control": "no-store" } }); }
@@ -69,8 +70,16 @@ export async function tokenWatcher(request: Request, slug: string, revogar = fal
 }
 export async function tokenCompartilhadoOps(request: Request, revogar = false) {
   exigirOrigem(request); const ctx = await acessoOps("gerir");
-  const { version } = versaoSchema.parse(await lerJsonOps(request));
-  return gerarTokenCompartilhado(ctx, version, revogar);
+  const input = await lerJsonOps(request);
+  if (revogar) {
+    const { id, version } = revogarChaveSchema.parse(input);
+    return revogarTokenCompartilhado(ctx, id, version);
+  }
+  return gerarTokenCompartilhado(ctx, criarChaveSchema.parse(input).name);
+}
+export async function listarChavesOps() {
+  const ctx = await acessoOps("gerir");
+  return credencialOpsNaTela(ctx.tenantId);
 }
 export async function sinalizarInstabilidade(request: Request, slug: string, resolver = false) {
   exigirOrigem(request); const ctx = await acessoOps("gerir"); slugSchema.parse(slug);
@@ -87,11 +96,8 @@ export async function sinalizarInstabilidade(request: Request, slug: string, res
 export async function heartbeatWatcher(request: Request, slug: string) {
   slugSchema.parse(slug); const w = await autenticarWatcher(request, slug);
   const r = await getPrisma().$transaction(async tx => {
-    if (w.compartilhado) {
-      await tx.$queryRaw`SELECT tenantId FROM ops_api_credentials WHERE tenantId = ${w.tenantId} FOR UPDATE`;
-      const credencial = await tx.opsApiCredential.findUnique({ where: { tenantId: w.tenantId } });
-      if (credencial?.tokenHash !== w.tokenHash) throw new ErroOps("Token revogado.", 401);
-    }
+    await tx.$queryRaw`SELECT slug FROM ops_watchers WHERE tenantId = ${w.tenantId} AND slug = ${slug} FOR UPDATE`;
+    await conferirCredencialOps(tx, w);
     return tx.opsWatcher.updateMany({ where: { tenantId: w.tenantId, slug, isActive: true, ...(!w.compartilhado ? { tokenHash: w.tokenHash } : {}) }, data: { lastHeartbeatAt: new Date() } });
   });
   if (!r.count) throw new ErroOps("Token revogado.", 401);
