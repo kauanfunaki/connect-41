@@ -26,6 +26,7 @@ import { listarContasOmie } from "@/lib/integracoes/omie/contas";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { getSectorMaps } from "@/lib/sectors";
 import { desconectarIntegracao } from "./actions";
+import { ServicoDoSped } from "@/components/admin/ServicoDoSped";
 import { ServicoDoSerpro } from "@/components/admin/ServicoDoSerpro";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { Aviso } from "@/components/ui/Aviso";
@@ -329,6 +330,13 @@ export default async function IntegracoesPage({
                   }
                   motivo={prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null}
                   demonstracao={serpro.ambiente === "demonstracao"}
+                />
+              )}
+              {/* O motor SPED: o que está guardado (nunca o valor) e o teste do /saude. */}
+              {bloco.chave === "sped" && (
+                <ServicoDoSped
+                  leitura={doCodigo.get("sped")!.segredosGuardados.includes("serviceToken")}
+                  escrita={doCodigo.get("sped")!.segredosGuardados.includes("serviceTokenEscrita")}
                 />
               )}
               <ConfiguracaoDaIntegracao integracao={doCodigo.get(bloco.chave)!} urlPublica={urlPublica} setor={setorDe(doCodigo.get(bloco.chave)!)} />
