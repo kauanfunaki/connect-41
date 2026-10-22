@@ -213,9 +213,61 @@ describe("dadosDaMudancaDaSerie", () => {
     expect(r).toMatchObject({ ok: true, emAberto: 2, dia: { pode: true }, nascemSozinhas: true, conta: { posicao: "2/∞", valor: "1.500,00", dia: 10 } });
   });
 
-  it("a série antiga, sem regra, não muda o dia", async () => {
+  it("a série antiga, sem regra e mensal: o dia muda, e a janela diz como", async () => {
     m.db.financeRecurrence.findFirst.mockResolvedValue(null);
+    serieAntiga(MENSAL_QUE_ANTECIPA);
     const r = await dadosDaMudancaDaSerie("e2");
-    expect(r).toMatchObject({ ok: true, dia: { pode: false }, nascemSozinhas: false });
+    expect(r).toMatchObject({ ok: true, dia: { pode: true, aviso: expect.stringContaining("antecipam") }, nascemSozinhas: false });
+  });
+
+  it("a série antiga semanal, ou que não diz de quanto em quanto repete, não muda o dia", async () => {
+    m.db.financeRecurrence.findFirst.mockResolvedValue(null);
+    serieAntiga([antiga(1, "2026-10-05"), antiga(2, "2026-10-12"), antiga(3, "2026-10-19")]);
+    expect(await dadosDaMudancaDaSerie("e2")).toMatchObject({ ok: true, dia: { pode: false, motivo: expect.stringContaining("mensal ou anual") } });
+    serieAntiga([antiga(2, "2026-11-10")]);
+    expect(await dadosDaMudancaDaSerie("e2")).toMatchObject({ ok: true, dia: { pode: false, motivo: expect.stringContaining("antes de 21/10") } });
+  });
+});
+
+// A série antiga, sem regra (22/10/2026): a frequência e o ajuste vêm das
+// contas dela (todas — a consulta sem `recurrenceIndex`); as em aberto desta
+// em diante mudam no mês que já têm.
+const antiga = (indice: number, vencimentoKey: string) => ({ recurrenceIndex: indice, dueDate: instante(vencimentoKey), competence: vencimentoKey.slice(0, 7) });
+// 10/10/2026 é sábado: a série antecipou para sexta, 09/10.
+const MENSAL_QUE_ANTECIPA = [antiga(1, "2026-10-09"), antiga(2, "2026-11-10"), antiga(3, "2026-12-10")];
+
+function serieAntiga(todas: ReturnType<typeof antiga>[]) {
+  m.db.financeEntry.findMany.mockImplementation(async ({ where }: { where: { recurrenceIndex?: unknown } }) =>
+    where.recurrenceIndex ? [daSerie(2, { competence: "2026-11" }), daSerie(3, { competence: "2026-12" })] : todas
+  );
+}
+
+describe("mudar o dia na série antiga, sem regra", () => {
+  it("mensal: cada conta em aberto no mês dela, no dia novo, com o ajuste que a série usava — sem regra para gravar", async () => {
+    m.db.financeRecurrence.findFirst.mockResolvedValue(null);
+    serieAntiga(MENSAL_QUE_ANTECIPA);
+    const r = await mudarSerieDaquiEmDiante(form({ dia: "15" }));
+    expect(r).toMatchObject({ ok: true, mudaram: 2 });
+    const datas = m.tx.financeEntry.updateMany.mock.calls.map((c) => c[0].data.dueDate.toISOString().slice(0, 10));
+    // 15/11/2026 é domingo: antecipa para sexta, 13/11.
+    expect(datas).toEqual(["2026-11-13", "2026-12-15"]);
+    expect(m.tx.financeRecurrence.update).not.toHaveBeenCalled();
+    expect(m.logAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: expect.objectContaining({ pedido: { dia: 15 }, serieSemRegra: { frequencia: "MENSAL", ajuste: "ANTECIPAR" } }) })
+    );
+  });
+
+  it("semanal: recusa com a explicação de sempre, sem gravar", async () => {
+    m.db.financeRecurrence.findFirst.mockResolvedValue(null);
+    serieAntiga([antiga(1, "2026-10-05"), antiga(2, "2026-10-12"), antiga(3, "2026-10-19")]);
+    expect(await mudarSerieDaquiEmDiante(form({ dia: "5" }))).toMatchObject({ error: expect.stringContaining("mensal ou anual") });
+    expect(m.db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("com a regra sem dia guardado, o dia novo vai para ela", async () => {
+    m.db.financeRecurrence.findFirst.mockResolvedValue({ ...REGRA, dayAdjust: "ADIAR" });
+    const r = await mudarSerieDaquiEmDiante(form({ dia: "15" }));
+    expect(r).toMatchObject({ ok: true });
+    expect(m.tx.financeRecurrence.update).toHaveBeenCalledWith({ where: { id: "s1" }, data: { dueDay: 15 } });
   });
 });

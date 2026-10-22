@@ -7,6 +7,8 @@ import { ROTULO_DA_SITUACAO, type EnvioParaOCliente, type SituacaoDoEnvio } from
 // aceito encerram.
 const TOM_DA_SITUACAO: Record<SituacaoDoEnvio, TomDoSelo> = {
   rascunho: "atencao",
+  // Agendado (22/10/2026): ninguém precisa fazer nada, a hora é que falta.
+  agendado: "neutro",
   enviado: "marca",
   "aguardando-aceite": "atencao",
   visto: "sucesso",

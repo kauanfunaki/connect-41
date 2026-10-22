@@ -617,6 +617,19 @@ export const MODULE_CATALOG: ModuleDef[] = [
     icon: "AlarmClock",
     group: "Contas",
   },
+  // O painel da carteira (22/10/2026): uma linha por empresa atendida pelo
+  // BPO, com o que pede atenção em cada uma — como o painel de clientes do
+  // Nibo BPO. Em "Relatórios" e não em "Operação": o BPO abre pelas contas
+  // (ver o teste do catálogo), e o painel só lê o que as outras telas gravam.
+  {
+    code: "bpo_painel_carteira",
+    label: "Painel da carteira",
+    sectorCode: "bpo",
+    description: "Uma linha por empresa atendida: vencidos, extrato, conciliação, saldo, pendências, aprovações e acesso ao portal",
+    defaultEnabled: true,
+    icon: "Briefcase",
+    group: "Relatórios",
+  },
   {
     // Fase 2 da integração com o Omie (decidida pelo Kauan em 13/10/2026): a
     // NFS-e sai pelo Omie da empresa, pedida daqui. Desligado por padrão e
@@ -757,6 +770,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_comunicacao:         "/comunicacao",
   bpo_cobranca:            "/cobranca",
   bpo_emitir_nfse:         "/emitir-nfse",
+  bpo_painel_carteira:     "/carteira-bpo",
   dre_economica:           "/dre/economica",
   dre_analises:            "/dre/analises",
   dre_orcamento:           "/dre/orcamento",

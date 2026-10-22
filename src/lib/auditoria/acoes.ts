@@ -268,6 +268,13 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "clientDocument.publish": o("publicou no portal o documento"),
   "clientDocument.send": o("enviou ao cliente o documento"),
   "clientDocument.resend": o("reenviou ao cliente o documento"),
+  // Envios agendados e lembrete de não lido (22/10/2026).
+  "clientDocument.schedule": e("agendou o envio do documento"),
+  "clientDocument.unschedule": e("cancelou o agendamento do envio do documento"),
+  "clientDocument.scheduled_send": o("publicou na hora agendada o documento"),
+  "clientDocument.scheduled_send_now": o("mandou já o envio agendado do documento"),
+  "clientDocument.reminder": o("lembrou o cliente de abrir o documento"),
+  "clientDocument.receipt": o("baixou o comprovante de leitura do documento"),
   "comunicado.enviado": o("enviou um comunicado aos clientes"),
   "portal.user.created": c("deu acesso ao portal para"),
   "portal.user.updated": e("editou o acesso ao portal de"),

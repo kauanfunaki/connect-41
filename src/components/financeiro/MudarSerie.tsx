@@ -140,7 +140,12 @@ function Formulario({
         <CampoForm
           label="Dia do vencimento"
           htmlFor={`${id}-dia`}
-          helper={dados.dia.pode ? `Hoje, dia ${conta.dia}. No mês sem esse dia, o último; fim de semana e feriado se ajustam como a série.` : dados.dia.motivo}
+          helper={
+            dados.dia.pode
+              ? // A série antiga, sem regra (22/10/2026), diz como o dia novo vai ser aplicado.
+                `Hoje, dia ${conta.dia}. ${dados.dia.aviso ?? "No mês sem esse dia, o último; fim de semana e feriado se ajustam como a série."}`
+              : dados.dia.motivo
+          }
         >
           <CampoNumero id={`${id}-dia`} name="dia" min={1} max={31} placeholder="Manter" disabled={!dados.dia.pode} />
         </CampoForm>
