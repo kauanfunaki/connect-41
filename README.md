@@ -14,6 +14,8 @@ O módulo Ops Center do Tech acompanha automações, donos, atividade e resultad
 
 Heatmaps de commits, pull requests, issues e revisões nos repositórios selecionados em **Integrações → GitHub**. O módulo é exclusivo do Tech, nasce desligado e usa OAuth, credenciais cifradas por escritório e sincronização em lotes com retomada.
 
+O servidor de produção inicia a coleta automática junto do Next: fechar a página não interrompe a fila. O painel mostra o andamento e carrega os calendários conforme a rolagem. Não exige nova migration para essas melhorias; `GITHUB_SYNC_ENABLED=false` reserva a execução para um cron externo.
+
 Configuração, ativação, regras de contagem e testes isolados: [guia do GitHub](docs/GITHUB-CONTRIBUTIONS.md). Verificações: `npm run test:github`, `npm run test:github:db` e `npm run test:github:ui`.
 
 ## Getting Started
