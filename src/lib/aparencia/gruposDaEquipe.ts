@@ -23,6 +23,7 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   bpo_cadastros: "financeiro",
   bpo_aprovacoes: "financeiro",
   bpo_cobranca: "financeiro",
+  bpo_painel_carteira: "financeiro",
   bpo_dre: "financeiro",
   dre_economica: "financeiro",
   dre_analises: "financeiro",
