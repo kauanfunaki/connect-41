@@ -4,6 +4,8 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth/modulo", () => ({ abrirTelaDoModulo: mocks.abrir, podeNoModulo: async () => true }));
 vi.mock("@/lib/fiscal/motor/servidor", () => ({ modoDoFiscal: mocks.modo }));
 vi.mock("@/lib/fiscal/motor/tela", () => ({ prepararTelaDoMotor: mocks.tela }));
+vi.mock("@/components/fiscal/motor/DecisoesMotor", () => ({ DecisoesMotor: () => null }));
+vi.mock("@/lib/fiscal/motor/permissoes", () => ({ permissoesDeDecisao: async () => ({}) }));
 vi.mock("@/components/fiscal/motor/CascoDoMotor", () => ({ CascoDoMotor: () => null, SemFonteNoMotor: () => null }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/components/fiscal/previa/FiscalPagina", () => ({ FiscalPagina: () => null }));

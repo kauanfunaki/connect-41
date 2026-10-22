@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DECISOES, TIPOS_DE_DECISAO, TIPOS_VISIVEIS, cnpjsDeEstabelecimento, conferirCorpo, motivoDoCampo, textoDoValor } from "./decisoes";
+import { lerCompetencias, normalizarDecimal, DECISOES, TIPOS_DE_DECISAO, TIPOS_VISIVEIS, cnpjsDeEstabelecimento, conferirCorpo, motivoDoCampo, textoDoValor } from "./decisoes";
 
 describe("definição dos tipos de decisão (§5.1)", () => {
   it("cobre os dez tipos do contrato; documento_excluido fica oculto até D4", () => {
@@ -50,5 +50,19 @@ describe("conferência do corpo", () => {
   it("texto da tabela usa o rótulo da opção", () => {
     expect(textoDoValor(DECISOES.classificacao_item, "tipo_item", "07")).toBe("07 · Material de uso e consumo");
     expect(textoDoValor(DECISOES.ajuste_apuracao, "natureza", "debito")).toBe("Débito");
+  });
+});
+
+describe("entrada digitada", () => {
+  it("decimal brasileiro vira o formato do motor", () => {
+    expect(normalizarDecimal("1.234,56")).toBe("1234.56");
+    expect(normalizarDecimal("10,5")).toBe("10.5");
+    expect(normalizarDecimal("-3")).toBe("-3");
+    expect(normalizarDecimal("12.50")).toBe("12.50");
+    expect(normalizarDecimal("abc")).toBeNull();
+    expect(normalizarDecimal("1,23456")).toBeNull();
+  });
+  it("lista de competências", () => {
+    expect(lerCompetencias("2026-09, 2026-10;2026-09")).toEqual(["2026-09", "2026-10"]);
   });
 });
