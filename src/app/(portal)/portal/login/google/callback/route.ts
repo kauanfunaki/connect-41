@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { signPortalEscolha } from "@/lib/auth/jwt";
 import { cookieDaSessaoDoPortal } from "@/lib/auth/sessaoDoPortal";
+import { cookieDoEscritorioDoPortal } from "@/lib/portal/marcaNaEntrada";
 import {
   CAMINHO_DO_COOKIE_DA_ESCOLHA,
   COOKIE_DA_ESCOLHA,
@@ -68,6 +69,9 @@ export async function GET(req: NextRequest) {
       .catch((err: unknown) => console.error("[portal/login/google] lastLoginAt", err));
     const res = semEstado(irPara("/portal"));
     res.cookies.set(sessao.name, sessao.value, sessao.options);
+    // A marca do escritório no próximo login deste aparelho (22/10/2026).
+    const escritorio = cookieDoEscritorioDoPortal(conta.tenantId);
+    res.cookies.set(escritorio.name, escritorio.value, escritorio.options);
     return res;
   }
 
