@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CalendarClock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -91,12 +92,18 @@ export default async function ObrigacoesPage() {
           gera automaticamente o item de kanban na frequência escolhida (diária, semanal, quinzenal
           ou mensal), com vencimento prorrogado para o próximo dia útil."
         action={
-          <NovaObrigacao
-            action={criarObrigacao}
-            companies={companies}
-            pipelines={pipelines.map((p) => ({ ...p, sectorLabel: sectorLabel(labels, p.sectorCode) }))}
-            users={users}
-          />
+          <>
+            {/* As por regime (22/10/2026): o modelo do setor aplicado à carteira, em vez de empresa a empresa. */}
+            <Button href="/admin/obrigacoes/regime" variant="secondary">
+              Obrigações por regime
+            </Button>
+            <NovaObrigacao
+              action={criarObrigacao}
+              companies={companies}
+              pipelines={pipelines.map((p) => ({ ...p, sectorLabel: sectorLabel(labels, p.sectorCode) }))}
+              users={users}
+            />
+          </>
         }
       />
 

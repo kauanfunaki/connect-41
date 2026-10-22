@@ -7,9 +7,11 @@ type Props = {
   action: () => Promise<void>;
   ativo: boolean;
   nome: string;
+  /** O que desligar e religar fazem, quando não é o da obrigação recorrente (as por regime, 22/10/2026). */
+  descricoes?: { desativar: string; reativar: string };
 };
 
-export function ToggleObrigacaoButton({ action, ativo, nome }: Props) {
+export function ToggleObrigacaoButton({ action, ativo, nome, descricoes }: Props) {
   const { dialog, requestConfirm } = useConfirm();
 
   // Controlado: o interruptor só muda quando a confirmação passa e a página
@@ -17,8 +19,8 @@ export function ToggleObrigacaoButton({ action, ativo, nome }: Props) {
   function pedirTroca() {
     const title = ativo ? `Desativar "${nome}"?` : `Reativar "${nome}"?`;
     const description = ativo
-      ? "Nenhum item novo será gerado até reativar (itens já criados ficam)."
-      : "A geração mensal volta a partir do mês corrente.";
+      ? (descricoes?.desativar ?? "Nenhum item novo será gerado até reativar (itens já criados ficam).")
+      : (descricoes?.reativar ?? "A geração mensal volta a partir do mês corrente.");
     requestConfirm({ title, description, destructive: ativo, confirmLabel: ativo ? "Desativar" : "Reativar" }, action);
   }
 
