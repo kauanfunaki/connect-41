@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Wallet } from "lucide-react";
+import { FileDown, Wallet } from "lucide-react";
 import { SeloDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
 import { PageContainer } from "@/components/shared/PageContainer";
 import type { VarianteDoBadge } from "@/components/ui/Badge";
@@ -10,7 +10,7 @@ import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "./PortalCabecalho";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
-import { contasDoEscopo, totaisDoEscopo } from "@/lib/financeiro/consultas";
+import { contasDoEscopo, totaisDoEscopo, type ContaDoPortal } from "@/lib/financeiro/consultas";
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate, formatarCompetencia } from "@/lib/format";
@@ -68,6 +68,7 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
   const linkDaAprovacao = aPagar && modulos.has("bpo_aprovacoes") && !bloqueadas.has("/portal/aprovacoes");
   const rotuloDa = (s: SituacaoDaConta) => (s === "PAGA" && !aPagar ? "Recebida" : SITUACAO[s].rotulo);
   const quitadaEm = aPagar ? "pago em" : "recebido em";
+  const tela = aPagar ? "pagar" : "receber";
 
   return (
     <PageContainer>
@@ -129,6 +130,7 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
               )}
               <PeDoCartao>
                 <Selo tom={tomDaVariante(SITUACAO[c.situacao].variante)}>{rotuloDa(c.situacao)}</Selo>
+                <LinksDosRecibos baixas={c.baixas} tela={tela} />
                 {c.aprovacao &&
                   (c.aprovacao === "AGUARDANDO" && linkDaAprovacao ? (
                     <Link href="/portal/aprovacoes" className="inline-flex" title="Abrir as aprovações">
@@ -199,6 +201,7 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
                   <td className="py-2.5">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Selo tom={tomDaVariante(SITUACAO[c.situacao].variante)}>{rotuloDa(c.situacao)}</Selo>
+                      <LinksDosRecibos baixas={c.baixas} tela={tela} />
                       {/* O mesmo selo que a equipe vê: "vencida" sem ele parece descuido do
                           escritório, quando a conta está esperando a aprovação do próprio cliente. */}
                       {c.aprovacao &&
@@ -228,5 +231,29 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
       )}
       </CascoDaTabela>
     </PageContainer>
+  );
+}
+
+/**
+ * O recibo de cada baixa da conta (22/10/2026): o mesmo PDF que a equipe tira
+ * na janela da baixa, sem a observação interna. Com mais de uma baixa
+ * (pagamento em partes), um recibo por baixa, numerados pela ordem.
+ */
+function LinksDosRecibos({ baixas, tela }: { baixas: ContaDoPortal["baixas"]; tela: "pagar" | "receber" }) {
+  if (baixas.length === 0) return null;
+  return (
+    <>
+      {baixas.map((b, i) => (
+        <a
+          key={b.id}
+          href={`/portal/${tela}/recibos/${b.id}`}
+          download
+          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-micro text-brand hover:underline"
+          title={`Baixar o recibo de ${moeda(b.caixaCentavos)} de ${formatInstantDate(b.pagoEm)} em PDF`}
+        >
+          <FileDown size={12} aria-hidden /> {baixas.length > 1 ? `Recibo ${i + 1}` : "Recibo"}
+        </a>
+      ))}
+    </>
   );
 }
