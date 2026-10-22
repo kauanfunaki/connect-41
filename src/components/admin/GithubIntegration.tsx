@@ -9,16 +9,17 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { githubFetch } from "@/lib/github/browser";
 import type { IntegrationView } from "@/lib/github/types";
+import { SyncStatus } from "@/components/github/SyncStatus";
 
 export function GithubIntegration() {
   const { requestConfirm, dialog } = useConfirm();
   const [data, setData] = useState<IntegrationView | null>(null), [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(false);
   const [selection, setSelection] = useState<string[]>([]), [search, setSearch] = useState(""), [interval, setIntervalMinutes] = useState(30), [timezone, setTimezone] = useState("America/Sao_Paulo");
-  const [login, setLogin] = useState(""), [pump, setPump] = useState(false);
+  const [login, setLogin] = useState("");
   const [clientId, setClientId] = useState(""), [clientSecret, setClientSecret] = useState(""), [saved, setSaved] = useState(false);
   const [credentialsChanged, setCredentialsChanged] = useState(false);
   const credentialsDirty = useRef(false);
-  const dirty = useRef(false), processing = useRef(false);
+  const dirty = useRef(false);
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const next = await githubFetch<IntegrationView>("/api/github/integration", undefined, signal); setData(next);
     if (!credentialsDirty.current) setClientId(next.clientId);
@@ -27,23 +28,26 @@ export function GithubIntegration() {
   }, []);
   useEffect(() => { const controller = new AbortController(); const timer = window.setTimeout(() => { void refresh(controller.signal).catch(err => { if (!controller.signal.aborted) setError(err.message); }); }, 0); return () => { controller.abort(); window.clearTimeout(timer); }; }, [refresh]);
   useEffect(() => {
-    if (!pump || !data?.pending) return;
+    if (!data?.connected) return;
     let disposed = false; const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      if (document.visibilityState !== "visible" || processing.current) { if (!disposed) void refresh(controller.signal).catch(() => {}); return; }
-      processing.current = true;
-      try { await githubFetch("/api/github/sync", { action: "process" }, controller.signal); if (!disposed) await refresh(controller.signal); }
-      catch (err) { if (!disposed) { setError(err instanceof Error ? err.message : "Não foi possível atualizar."); setPump(false); } }
-      finally { processing.current = false; }
-    }, 5000);
-    return () => { disposed = true; controller.abort(); window.clearTimeout(timer); };
-  }, [data, pump, refresh]);
+    let reading = false;
+    const read = async () => {
+      if (disposed || document.visibilityState !== "visible" || reading) return;
+      reading = true;
+      try { await refresh(controller.signal); }
+      catch (err) { if (!disposed) setError(err instanceof Error ? err.message : "Não foi possível atualizar."); }
+      finally { reading = false; }
+    };
+    const timer = window.setInterval(() => void read(), 15000);
+    document.addEventListener("visibilitychange", read);
+    return () => { disposed = true; controller.abort(); window.clearInterval(timer); document.removeEventListener("visibilitychange", read); };
+  }, [data?.connected, refresh]);
   async function act(action: string, extras: Record<string, unknown> = {}) {
-    if (!data) return; setBusy(true); setError(null); setSaved(false); setPump(false);
+    if (!data) return; setBusy(true); setError(null); setSaved(false);
     try {
       await githubFetch("/api/github/integration", { action, generation: data.generation, ...extras });
       if (action === "credentials") { credentialsDirty.current = false; setCredentialsChanged(false); setClientSecret(""); setSaved(true); }
-      dirty.current = false; const next = await refresh(); setPump(next.pending > 0);
+      dirty.current = false; await refresh();
     } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível salvar."); }
     finally { setBusy(false); }
   }
@@ -89,8 +93,8 @@ export function GithubIntegration() {
       <div className="flex flex-wrap gap-2"><Button disabled={busy} onClick={() => void act("settings", { repositories: selection, timezone, intervalMinutes: interval })}>Salvar e sincronizar</Button>
         <Button variant="secondary" disabled={busy} onClick={() => void act(data.enabled ? "pause" : "resume")}>{data.enabled ? "Pausar" : "Retomar"}</Button>
         <Button href="/github" variant="secondary">Abrir contribuições</Button></div>
-      <p className="text-fs-2 text-fg-muted" aria-live="polite">{data.pending} tarefas pendentes · {data.failed} com falha{data.pending > 0 && (pump ? " · processando lotes enquanto esta tela estiver aberta" : " · aguardando processamento")}</p>
-      {data.pending > 0 && !pump && <Button size="sm" variant="secondary" onClick={() => setPump(true)}>Processar pendências</Button>}
+      <SyncStatus progress={data.progress} timezone={data.timezone} />
+      <Button size="sm" variant="secondary" onClick={() => void refresh().catch(err => setError(err.message))}>Atualizar status</Button>
       <form className="space-y-2 border-t border-border pt-4" onSubmit={event => { event.preventDefault(); void act("track", { login }).then(() => setLogin("")); }}><label className="block text-fg-secondary" htmlFor="github-track-login">Acompanhar usuário mesmo sem atividade</label>
         <div className="flex flex-wrap gap-2"><Input id="github-track-login" required value={login} onChange={event => setLogin(event.target.value)} placeholder="Login no GitHub" className="min-w-0 flex-1" /><Button type="submit" variant="secondary" disabled={busy}>Acompanhar</Button></div></form>
     </>}
