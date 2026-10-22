@@ -69,8 +69,8 @@ export function MetricasFiscais({ itens }: { itens: MetricaFiscal[] }) {
  * cartão: a primeira coluna no topo, as outras com o rótulo do cabeçalho — a
  * tabela rolava de lado.
  */
-export function TabelaFiscal({ colunas, linhas, vazio = "Nenhum item neste filtro." }: { colunas: string[]; linhas: { id: string; celulas: ReactNode[] }[]; vazio?: string }) {
-  if (!linhas.length) return <EmptyState icon={<FileText />} title={vazio} description="Troque os filtros ou use as ações de teste para adicionar informações." />;
+export function TabelaFiscal({ colunas, linhas, vazio = "Nenhum item neste filtro.", descricaoVazio = "Troque os filtros ou use as ações de teste para adicionar informações." }: { colunas: string[]; linhas: { id: string; celulas: ReactNode[] }[]; vazio?: string; descricaoVazio?: string }) {
+  if (!linhas.length) return <EmptyState icon={<FileText />} title={vazio} description={descricaoVazio} />;
   const resto = colunas.slice(1);
   return <>
     <CartoesNoCelular>

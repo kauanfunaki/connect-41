@@ -26,6 +26,7 @@ import { listarContasOmie } from "@/lib/integracoes/omie/contas";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { getSectorMaps } from "@/lib/sectors";
 import { desconectarIntegracao } from "./actions";
+import { ServicoDoSped } from "@/components/admin/ServicoDoSped";
 import { ServicoDoSerpro } from "@/components/admin/ServicoDoSerpro";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { Aviso } from "@/components/ui/Aviso";
@@ -192,7 +193,7 @@ export default async function IntegracoesPage({
       chave: "ops_center",
       nome: "Ops Center — bots",
       icone: <Activity />,
-      descricao: "Uma chave compartilhada pelo escritório para todas as automações do Ops Center.",
+      descricao: "Chaves de integração dos bots, com geração e revogação individual por escritório.",
       selo: credencialOps && credencialOps.status !== "ready" ? { tom: "atencao", rotulo: "Indisponível" }
         : credencialOps?.hasToken ? { tom: "sucesso", rotulo: "Chave configurada" } : { tom: "neutro", rotulo: "Sem chave" },
       estado: credencialOps && credencialOps.status !== "ready" ? "problema" : credencialOps?.hasToken ? "ligada" : "desligada",
@@ -295,7 +296,7 @@ export default async function IntegracoesPage({
             <GithubIntegration />
           ) : bloco.chave === "ops_center" ? (
             credencialOps?.status === "ready"
-              ? <OpsCredentialForm hasToken={credencialOps.hasToken} version={credencialOps.version} />
+              ? <OpsCredentialForm keys={credencialOps.keys} version={credencialOps.version} />
               : <Aviso tom="atencao">{credencialOps?.message ?? "Configuração do Ops Center indisponível. Atualize a página para tentar novamente."}</Aviso>
           ) : bloco.chave === "chatwoot" ? (
             <div className="flex flex-col gap-5">
@@ -333,6 +334,13 @@ export default async function IntegracoesPage({
                   }
                   motivo={prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null}
                   demonstracao={serpro.ambiente === "demonstracao"}
+                />
+              )}
+              {/* O motor SPED: o que está guardado (nunca o valor) e o teste do /saude. */}
+              {bloco.chave === "sped" && (
+                <ServicoDoSped
+                  leitura={doCodigo.get("sped")!.segredosGuardados.includes("serviceToken")}
+                  escrita={doCodigo.get("sped")!.segredosGuardados.includes("serviceTokenEscrita")}
                 />
               )}
               <ConfiguracaoDaIntegracao integracao={doCodigo.get(bloco.chave)!} urlPublica={urlPublica} setor={setorDe(doCodigo.get(bloco.chave)!)} />
