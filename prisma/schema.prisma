@@ -1710,6 +1710,17 @@ model Company {
   /// em toda linha da planilha de importação. É o `empresas.codigo_dominio`
   /// do SPED Generator ("113" + a filial com dois dígitos: matriz 11301).
   dominioBranchCode     String?       @db.VarChar(20)
+  /// Juros e multa pelo atraso (22/10/2026): a regra da empresa para a janela
+  /// da baixa já vir com juros e multa calculados quando o pagamento é depois
+  /// do vencimento — e com o desconto, quando é até o vencimento. Multa em %
+  /// sobre o valor baixado, uma vez; juros em % ao mês, simples, pro rata por
+  /// dia corrido (mês de 30 dias). Tudo nulo é sem regra: nada muda, os campos
+  /// ficam em zero. O fornecedor ou cliente pode ter a dele
+  /// (`FinanceCounterparty.lateFinePercent` e as outras). O cálculo é
+  /// src/lib/financeiro/baixa/encargos.ts.
+  lateFinePercent       Decimal?      @db.Decimal(7, 4)
+  lateInterestPercent   Decimal?      @db.Decimal(7, 4)
+  earlyDiscountPercent  Decimal?      @db.Decimal(7, 4)
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -3300,6 +3311,14 @@ model FinanceCounterparty {
   /// lançamento: centro é decisão de gestão, não classificação contábil — um
   /// fornecedor que atende duas unidades não pode ficar preso à primeira.
   defaultCostCenterId String?
+
+  /// Juros e multa pelo atraso só deste fornecedor ou cliente (22/10/2026) —
+  /// passa por cima da regra da empresa (`Company.lateFinePercent`). Os três
+  /// nulos seguem a da empresa; com algum preenchido, a regra é esta, e o
+  /// vazio vale zero.
+  lateFinePercent      Decimal? @db.Decimal(7, 4)
+  lateInterestPercent  Decimal? @db.Decimal(7, 4)
+  earlyDiscountPercent Decimal? @db.Decimal(7, 4)
 
   active    Boolean  @default(true)
   createdAt DateTime @default(now())

@@ -127,6 +127,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "financeiro.entry.created_by_bank_rule": c("lançou pela regra de conciliação o lançamento"),
   "financeiro.entry.created_by_recurrence": c("criou as próximas contas da repetição"),
   "financeiro.categoria.linha_da_dre": e("ligou a uma linha da DRE a categoria"),
+  // Juros e multa pelo atraso (22/10/2026).
+  "financeiro.encargos.empresa_salvos": e("salvou a regra de juros e multa pelo atraso da empresa"),
   "financeiro.categoria_da_empresa.criada": c("criou a categoria"),
   "financeiro.categoria_da_empresa.alterada": e("editou a categoria"),
   "financeiro.categoria_padrao.escondida": e("escondeu da empresa uma categoria do plano padrão"),
