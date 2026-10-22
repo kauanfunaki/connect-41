@@ -18,6 +18,8 @@
  * Onde o envio está, do ponto de vista da equipe. Uma só por envio, na ordem
  * em que acontece:
  * - `rascunho`: ainda não publicado — o cliente não vê;
+ * - `agendado` (22/10/2026): rascunho com data marcada para sair sozinho —
+ *   o cliente também não vê até lá;
  * - `enviado`: publicado (no portal e, se mandaram, por e-mail), e ninguém abriu;
  * - `aguardando-aceite`: pede aceite, alguém já abriu e ninguém aceitou;
  * - `visto`: não pede aceite, e alguém abriu;
@@ -27,10 +29,11 @@
  * basta um aceite dela — a mesma régua do comunicado, que conta como "lido" o
  * cliente em que alguém leu.
  */
-export type SituacaoDoEnvio = "rascunho" | "enviado" | "aguardando-aceite" | "visto" | "aceito";
+export type SituacaoDoEnvio = "rascunho" | "agendado" | "enviado" | "aguardando-aceite" | "visto" | "aceito";
 
 export const SITUACOES_DO_ENVIO: readonly { chave: SituacaoDoEnvio; rotulo: string }[] = [
   { chave: "rascunho", rotulo: "Rascunho" },
+  { chave: "agendado", rotulo: "Agendado" },
   { chave: "enviado", rotulo: "Enviado, não visto" },
   { chave: "aguardando-aceite", rotulo: "Aguardando aceite" },
   { chave: "visto", rotulo: "Visto" },
@@ -50,9 +53,11 @@ type LinhaComProva = { sentAt: Date | null; firstViewedAt: Date | null; signedAt
 export function situacaoDoEnvio(envio: {
   status: "DRAFT" | "PUBLISHED";
   requiresSignature: boolean;
+  /** A data do envio agendado; depois de publicado, fica só como registro. */
+  scheduledFor?: Date | null;
   recipients: readonly LinhaComProva[];
 }): SituacaoDoEnvio {
-  if (envio.status === "DRAFT") return "rascunho";
+  if (envio.status === "DRAFT") return envio.scheduledFor ? "agendado" : "rascunho";
   if (envio.requiresSignature && envio.recipients.some((r) => r.signedAt)) return "aceito";
   if (envio.recipients.some((r) => r.firstViewedAt)) return envio.requiresSignature ? "aguardando-aceite" : "visto";
   return "enviado";

@@ -10,6 +10,7 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ClientDocumentForm } from "@/components/documentosCliente/ClientDocumentForm";
 import { rotaDoEnvio, rotaDosEnvios } from "@/lib/envios/regras";
+import { camposDoAgendamento, emailsDoAgendamento } from "@/lib/envios/agendamento";
 import { atualizarDocumento } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +63,16 @@ export default async function EditarEnvioPage({
               companyId={document.company.id}
               documentId={document.id}
               cancelHref={rotaDoEnvio(document.id)}
-              defaultValues={{ title: document.title, bodyHtml: document.bodyHtml, fileName: document.fileName, requiresSignature: document.requiresSignature }}
+              defaultValues={{
+                title: document.title,
+                bodyHtml: document.bodyHtml,
+                fileName: document.fileName,
+                requiresSignature: document.requiresSignature,
+                reminderDays: document.reminderDays,
+                agendamento: document.scheduledFor
+                  ? { ...camposDoAgendamento(document.scheduledFor), emails: emailsDoAgendamento(document.scheduledEmails) }
+                  : null,
+              }}
             />
           </Card>
         )}

@@ -9,14 +9,16 @@ type Props = {
   name: string;
   id?: string;
   placeholder?: string;
+  /** Os e-mails já escolhidos (a edição do envio agendado, 22/10/2026). */
+  defaultEmails?: string[];
 };
 
 // Chips em vez de textarea de texto corrido — cada e-mail vira uma pílula
 // removível individualmente, com validação na hora (a textarea antiga
 // aceitava qualquer texto e só descartava endereço inválido em silêncio no
 // servidor, sem o usuário nunca saber que "avulso.com" nunca chegou a sair).
-export function EmailChipsInput({ name, id, placeholder = "contador@empresa.com" }: Props) {
-  const [emails, setEmails] = useState<string[]>([]);
+export function EmailChipsInput({ name, id, placeholder = "contador@empresa.com", defaultEmails }: Props) {
+  const [emails, setEmails] = useState<string[]>(defaultEmails ?? []);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
 

@@ -16,10 +16,13 @@ import { guardarTambemNosArquivos } from "@/lib/drive/guardarTambem";
 import {
   sanitizeDocumentHtml,
   saveClientDocumentFile,
-  generateRecipientToken,
 } from "@/lib/clientDocuments";
 import { sendClientDocumentEmail } from "@/lib/email/sendMail";
+import { Prisma } from "@/generated/prisma/client";
 import { emailDoDestinatario, rotaDoEnvio, rotaDosEnvios } from "@/lib/envios/regras";
+import { lerAgendamento } from "@/lib/envios/agendamento";
+import { lerDiasDoLembrete } from "@/lib/envios/lembrete";
+import { entregarPorEmail, publicarEnvioAgendado } from "@/lib/envios/agendador";
 
 export type ClientDocumentState = { error: string } | { success: true } | null;
 
@@ -51,6 +54,26 @@ function parseExtraEmails(raw: string): string[] {
   );
 }
 
+/**
+ * O "Quando enviar" do formulário do envio (22/10/2026): o lembrete de não
+ * lido e, marcado "Agendar o envio", a data/hora (Brasília) e os e-mails que
+ * saem nela — o da empresa, se marcado, e os avulsos, resolvidos agora.
+ */
+function lerEnvioDoFormulario(
+  form: FormData,
+  company: { email: string | null },
+  agora: Date
+): { error: string } | { reminderDays: number | null; scheduledFor: Date | null; scheduledEmails: string[] | null } {
+  const reminderDays = lerDiasDoLembrete(form.get("reminderDays"));
+  if (form.get("agendar") !== "on") return { reminderDays, scheduledFor: null, scheduledEmails: null };
+  const agendamento = lerAgendamento({ data: form.get("agendarData"), hora: form.get("agendarHora") }, agora);
+  if (!agendamento.ok) return { error: agendamento.erro };
+  if (!agendamento.quando) return { error: "Escolha a data do agendamento, ou desmarque \u201cAgendar o envio\u201d." };
+  const emails = new Set(parseExtraEmails(String(form.get("agendarEmails") ?? "")));
+  if (form.get("agendarEmailEmpresa") === "on" && company.email) emails.add(emailDoDestinatario(company.email));
+  return { reminderDays, scheduledFor: agendamento.quando, scheduledEmails: [...emails] };
+}
+
 export async function criarDocumento(_prev: ClientDocumentState, form: FormData): Promise<ClientDocumentState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
@@ -67,6 +90,8 @@ export async function criarDocumento(_prev: ClientDocumentState, form: FormData)
   const bodyHtmlRaw = (form.get("bodyHtml") as string) ?? "";
   if (!title) return { error: "Título é obrigatório." };
   if (!bodyHtmlRaw.trim()) return { error: "O conteúdo do documento não pode ficar vazio." };
+  const envio = lerEnvioDoFormulario(form, company, new Date());
+  if ("error" in envio) return envio;
 
   const file = form.get("file");
   let fileData: { fileName: string; fileUrl: string; mimeType: string; fileSize: number } | null = null;
@@ -90,11 +115,17 @@ export async function criarDocumento(_prev: ClientDocumentState, form: FormData)
       mimeType: fileData?.mimeType,
       fileSize: fileData?.fileSize,
       requiresSignature: form.get("requiresSignature") === "true",
+      reminderDays: envio.reminderDays,
+      scheduledFor: envio.scheduledFor,
+      scheduledEmails: envio.scheduledEmails ?? Prisma.DbNull,
       createdById: ctx.userId,
     },
   });
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.create", entityType: "ClientDocument", entityId: document.id, metadata: { title, companyId } });
+  if (envio.scheduledFor) {
+    await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.schedule", entityType: "ClientDocument", entityId: document.id, metadata: { title, quando: envio.scheduledFor.toISOString(), emails: envio.scheduledEmails } });
+  }
 
   // "Guardar também em Arquivos". A action termina em redirect, sem onde mostrar
   // aviso: a falha da cópia fica só no log (o envio foi salvo de qualquer jeito).
@@ -134,6 +165,8 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
   const bodyHtmlRaw = (form.get("bodyHtml") as string) ?? "";
   if (!title) return { error: "Título é obrigatório." };
   if (!bodyHtmlRaw.trim()) return { error: "O conteúdo do documento não pode ficar vazio." };
+  const envio = lerEnvioDoFormulario(form, company, new Date());
+  if ("error" in envio) return envio;
 
   const file = form.get("file");
   let fileData: { fileName: string; fileUrl: string; mimeType: string; fileSize: number } | null = null;
@@ -145,19 +178,37 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
     }
   }
 
-  await prisma.clientDocument.update({
-    where: { id },
+  // Só o rascunho ainda não publicado muda (22/10/2026): se o agendador
+  // publicou o envio enquanto o formulário estava aberto, nada é gravado.
+  const gravado = await prisma.clientDocument.updateMany({
+    where: { id, status: "DRAFT" },
     data: {
       title,
       bodyHtml: sanitizeDocumentHtml(bodyHtmlRaw),
       requiresSignature: form.get("requiresSignature") === "true",
+      reminderDays: envio.reminderDays,
+      scheduledFor: envio.scheduledFor,
+      scheduledEmails: envio.scheduledEmails ?? Prisma.DbNull,
       ...(fileData
         ? { fileName: fileData.fileName, fileUrl: fileData.fileUrl, mimeType: fileData.mimeType, fileSize: fileData.fileSize }
         : {}),
     },
   });
+  if (gravado.count !== 1) return { error: "Este envio acabou de ser publicado e não pode mais ser editado." };
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.update", entityType: "ClientDocument", entityId: id, metadata: { title } });
+  const agendouAntes = existing.scheduledFor?.getTime() ?? null;
+  const agendaAgora = envio.scheduledFor?.getTime() ?? null;
+  if (agendouAntes !== agendaAgora) {
+    await logAudit({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      action: envio.scheduledFor ? "clientDocument.schedule" : "clientDocument.unschedule",
+      entityType: "ClientDocument",
+      entityId: id,
+      metadata: { title, quando: envio.scheduledFor?.toISOString() ?? null, emails: envio.scheduledEmails },
+    });
+  }
 
   if (fileData && file instanceof File) await guardarTambemNosArquivos(ctx, form, companyId, [file]);
 
@@ -202,8 +253,17 @@ export async function publicarDocumento(id: string, companyId: string): Promise<
   const prisma = getPrisma();
   const existing = await prisma.clientDocument.findFirst({ where: { id, tenantId: ctx.tenantId, companyId } });
   if (!existing || existing.status !== "DRAFT") return;
+  // O agendado publicado à mão é o "Enviar agora": leva os e-mails do agendamento.
+  if (existing.scheduledFor) {
+    await publicarEnvioAgendado(id, { agora: new Date(), por: { userId: ctx.userId, tenantId: ctx.tenantId } });
+    revalidarEnvio(id);
+    return;
+  }
 
-  await prisma.clientDocument.update({ where: { id }, data: { status: "PUBLISHED", publishedAt: new Date() } });
+  // Trava condicional (22/10/2026): o rascunho que o agendador publicou no
+  // mesmo instante não é publicado de novo.
+  const publicou = await prisma.clientDocument.updateMany({ where: { id, status: "DRAFT" }, data: { status: "PUBLISHED", publishedAt: new Date() } });
+  if (publicou.count !== 1) return;
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.publish", entityType: "ClientDocument", entityId: id });
 
   revalidarEnvio(id);
@@ -235,31 +295,19 @@ export async function enviarDocumento(_prev: ClientDocumentState, form: FormData
 
   const sender = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } });
 
-  const failures: string[] = [];
-  for (const email of emails) {
-    let recipient = await prisma.clientDocumentRecipient.findFirst({ where: { clientDocumentId: documentId, email } });
-    if (!recipient) {
-      recipient = await prisma.clientDocumentRecipient.create({
-        data: { clientDocumentId: documentId, email, token: generateRecipientToken() },
-      });
-    }
-
-    const result = await sendClientDocumentEmail({
-      tenantId: ctx.tenantId,
-      to: email,
-      documentTitle: document.title,
-      viewToken: recipient.token,
-      companyName: company.name,
-      senderName: sender?.name ?? "Equipe",
-      hasAttachment: !!document.fileUrl,
-    });
-
-    if (result.ok) {
-      await prisma.clientDocumentRecipient.update({ where: { id: recipient.id }, data: { sentAt: new Date() } });
-    } else {
-      failures.push(`${email}: ${result.error}`);
-    }
+  // O lembrete de não lido escolhido no envio (22/10/2026). Depois que o
+  // lembrete saiu, não se programa outro: é um por envio.
+  if (form.has("reminderDays") && !document.reminderSentAt) {
+    await prisma.clientDocument.update({ where: { id: documentId }, data: { reminderDays: lerDiasDoLembrete(form.get("reminderDays")) } });
   }
+
+  const { falhas: failures } = await entregarPorEmail({
+    tenantId: ctx.tenantId,
+    documento: document,
+    empresaNome: company.name,
+    remetente: sender?.name ?? "Equipe",
+    emails,
+  });
 
   if (failures.length > 0) {
     return { error: `Falha ao enviar para: ${failures.join("; ")}` };
@@ -269,6 +317,32 @@ export async function enviarDocumento(_prev: ClientDocumentState, form: FormData
 
   revalidarEnvio(documentId);
   return { success: true };
+}
+
+/** "Enviar agora" do envio agendado (22/10/2026): publica e manda os e-mails do agendamento já. */
+export async function enviarAgendadoAgora(id: string, companyId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || ctx.subscriptionReadOnly || !canWrite(ctx.role)) return;
+  if (!(await assertCompanyInScope(companyId, ctx))) return;
+  const existe = await getPrisma().clientDocument.findFirst({ where: { id, tenantId: ctx.tenantId, companyId }, select: { id: true } });
+  if (!existe) return;
+  await publicarEnvioAgendado(id, { agora: new Date(), por: { userId: ctx.userId, tenantId: ctx.tenantId } });
+  revalidarEnvio(id);
+}
+
+/** Cancela o agendamento (22/10/2026): o envio volta a ser rascunho comum, sem data nem e-mails guardados. */
+export async function cancelarAgendamento(id: string, companyId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || ctx.subscriptionReadOnly || !canWrite(ctx.role)) return;
+  if (!(await assertCompanyInScope(companyId, ctx))) return;
+  const cancelado = await getPrisma().clientDocument.updateMany({
+    where: { id, tenantId: ctx.tenantId, companyId, status: "DRAFT", scheduledFor: { not: null } },
+    data: { scheduledFor: null, scheduledEmails: Prisma.DbNull },
+  });
+  if (cancelado.count === 1) {
+    await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.unschedule", entityType: "ClientDocument", entityId: id });
+  }
+  revalidarEnvio(id);
 }
 
 export async function reenviarParaDestinatario(recipientId: string, companyId: string): Promise<void> {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Eye, Download, PenLine, Pencil } from "lucide-react";
+import { Eye, Download, PenLine, Pencil, CalendarClock, BellRing } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -20,7 +20,16 @@ import { SendDocumentForm } from "@/components/documentosCliente/SendDocumentFor
 import { SeloDoEnvio } from "@/components/documentosCliente/SeloDoEnvio";
 import { emailDoDestinatario, rotaDeEditarOEnvio, rotaDosEnvios, situacaoDoEnvio } from "@/lib/envios/regras";
 import { emailsComPortal, pessoasNoPortal } from "@/lib/envios/consultas";
-import { publicarDocumento, excluirDocumento, enviarDocumento, reenviarParaDestinatario } from "../actions";
+import { emailsDoAgendamento } from "@/lib/envios/agendamento";
+import { textoDoLembrete } from "@/lib/envios/lembrete";
+import {
+  publicarDocumento,
+  excluirDocumento,
+  enviarDocumento,
+  reenviarParaDestinatario,
+  enviarAgendadoAgora,
+  cancelarAgendamento,
+} from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +71,10 @@ export default async function EnvioPage({
     emailsComPortal(ctx.tenantId, company.id, document.recipients.map((r) => r.email)),
   ]);
   const publicado = document.status === "PUBLISHED";
+  // Envio agendado (22/10/2026): rascunho com data, que sai sozinho.
+  const agendado = !publicado && !!document.scheduledFor;
+  const emailsAgendados = emailsDoAgendamento(document.scheduledEmails);
+  const lembrete = textoDoLembrete(document);
 
   // Como o cliente recebe: o portal (se o canal está ligado e a empresa tem
   // gente com acesso) e o e-mail, que segue para quem não tem portal.
@@ -116,8 +129,31 @@ export default async function EnvioPage({
               {document.recipients.length === 0 && (document.createdById === ctx.userId || podeExcluir(ctx)) && (
                 <DeleteButton action={excluirDocumento.bind(null, document.id, companyId)} nome={document.title} />
               )}
-              {/* Com confirmação desde 08/10/2026: publicar deixou de ser um passo
-                  interno — o envio aparece na hora no portal do cliente. */}
+              {agendado ? (
+                <>
+                  <ConfirmActionButton
+                    action={cancelarAgendamento.bind(null, document.id, companyId)}
+                    label="Cancelar agendamento"
+                    title="Cancelar o agendamento?"
+                    description="O envio volta a ser um rascunho comum: não sai sozinho, e os e-mails escolhidos no agendamento são esquecidos."
+                    confirmLabel="Cancelar agendamento"
+                    successMessage="Agendamento cancelado."
+                  />
+                  <ConfirmActionButton
+                    action={enviarAgendadoAgora.bind(null, document.id, companyId)}
+                    label="Enviar agora"
+                    title="Enviar agora, sem esperar a data?"
+                    description={`O envio é publicado já${
+                      emailsAgendados.length ? ` e o e-mail sai para ${emailsAgendados.join(", ")}` : ""
+                    }. Publicado, o conteúdo não pode mais ser editado.`}
+                    confirmLabel="Enviar agora"
+                    successMessage="Envio publicado."
+                    variant="primary"
+                  />
+                </>
+              ) : (
+              /* Com confirmação desde 08/10/2026: publicar deixou de ser um passo
+                  interno — o envio aparece na hora no portal do cliente. */
               <ConfirmActionButton
                 action={publicarDocumento.bind(null, document.id, companyId)}
                 label="Publicar"
@@ -131,6 +167,7 @@ export default async function EnvioPage({
                 successMessage="Envio publicado."
                 variant="primary"
               />
+              )}
             </div>
           )
         }
@@ -138,6 +175,19 @@ export default async function EnvioPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
+          {agendado && document.scheduledFor && (
+            <Card className="p-5">
+              <h2 className="text-section font-semibold text-fg mb-1 flex items-center gap-2">
+                <CalendarClock size={16} /> Agendado para {formatInstantDateTime(document.scheduledFor)}
+              </h2>
+              <p className="text-fs-2 text-fg-muted">
+                Até lá o cliente não vê nada. Na hora, o envio é publicado no portal
+                {emailsAgendados.length > 0 ? ` e o e-mail sai para ${emailsAgendados.join(", ")}.` : " (nenhum e-mail escolhido)."}{" "}
+                {canManage && "Para mudar a data ou os e-mails, use Editar."}
+              </p>
+            </Card>
+          )}
+
           <Card className="p-5">
             <h2 className="text-section font-semibold text-fg mb-4">Conteúdo</h2>
             <div
@@ -161,7 +211,13 @@ export default async function EnvioPage({
               <p className="text-fs-2 text-fg-muted mb-4">
                 Cada e-mail leva um link próprio para a página do documento, com a mesma prova de leitura e aceite do portal.
               </p>
-              <SendDocumentForm action={enviarDocumento} documentId={document.id} companyId={companyId} companyEmail={company.email} />
+              <SendDocumentForm
+                action={enviarDocumento}
+                documentId={document.id}
+                companyId={companyId}
+                companyEmail={company.email}
+                lembrete={document.reminderSentAt ? false : { dias: document.reminderDays }}
+              />
             </Card>
           )}
         </div>
@@ -172,10 +228,20 @@ export default async function EnvioPage({
             <p className="text-fs-2 text-fg-muted">
               Cada abertura — pelo portal ou pelo link do e-mail — e cada download do anexo ficam registrados com data/hora e IP.
             </p>
-            <p className="text-fs-2 text-fg-secondary mt-2 mb-4">{comoChega}</p>
+            <p className={`text-fs-2 text-fg-secondary mt-2 ${lembrete || (publicado && document.scheduledFor) ? "" : "mb-4"}`}>{comoChega}</p>
+            {publicado && document.scheduledFor && (
+              <p className={`text-fs-2 text-fg-muted mt-1 flex items-center gap-1.5 ${lembrete ? "" : "mb-4"}`}>
+                <CalendarClock size={12} /> Saiu agendado para {formatInstantDateTime(document.scheduledFor)}.
+              </p>
+            )}
+            {lembrete && (
+              <p className="text-fs-2 text-fg-muted mt-1 mb-4 flex items-center gap-1.5">
+                <BellRing size={12} /> {lembrete}.
+              </p>
+            )}
 
             {document.recipients.length === 0 ? (
-              <p className="text-fs-3 text-fg-muted">{publicado ? "Ninguém abriu ainda." : "Ainda não publicado."}</p>
+              <p className="text-fs-3 text-fg-muted">{publicado ? "Ninguém abriu ainda." : agendado ? "Ainda não enviado (agendado)." : "Ainda não publicado."}</p>
             ) : (
               <div className="space-y-4">
                 {document.recipients.map((r) => {

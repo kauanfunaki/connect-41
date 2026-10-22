@@ -27,6 +27,12 @@ const linha = (campos: Partial<{ email: string; createdAt: Date; sentAt: Date | 
 });
 
 describe("situacaoDoEnvio — onde o envio está, para a equipe", () => {
+  it("rascunho com data marcada é agendado; publicado, a data fica só de registro (22/10/2026)", () => {
+    expect(situacaoDoEnvio({ status: "DRAFT", requiresSignature: false, scheduledFor: em(25), recipients: [] })).toBe("agendado");
+    expect(situacaoDoEnvio({ status: "PUBLISHED", requiresSignature: false, scheduledFor: em(25), recipients: [] })).toBe("enviado");
+    expect(ehSituacaoDoEnvio("agendado")).toBe(true);
+  });
+
   it("rascunho é rascunho, mesmo que algo estranho tenha prova", () => {
     expect(situacaoDoEnvio({ status: "DRAFT", requiresSignature: true, recipients: [linha({ firstViewedAt: em(2) })] })).toBe("rascunho");
   });
