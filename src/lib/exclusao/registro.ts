@@ -124,6 +124,9 @@ const EMPRESA: Ligacao[] = [
   { modelo: "DominioAccountMap", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["conta do de-para da Domínio", "contas do de-para da Domínio"] },
   { modelo: "BankReconciliationRule", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["regra de conciliação", "regras de conciliação"] },
   { modelo: "FinanceRecurrence", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["série de repetição", "séries de repetição"] },
+  // A marca de cada obrigação por regime gerada (22/10/2026). A atividade em si
+  // é um PipelineItem, que fica sem a empresa como as outras.
+  { modelo: "ObrigacaoGerada", campo: "company", fk: "companyId", tratamento: "cascata" },
 
   // Ficam, sem o vínculo.
   { modelo: "Company", campo: "parent", fk: "parentCompanyId", tratamento: "desligar", rotulo: ["filial (vira matriz solta)", "filiais (viram matrizes soltas)"] },
