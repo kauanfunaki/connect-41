@@ -49,6 +49,7 @@ describe("menu das configurações por papel", () => {
     expect(telasDoMenu(ADMIN_AUTO)["Escritório e assinatura"]).toContain("Minha assinatura");
     expect(telasDoMenu(ADMIN)["Rotinas e cálculos"]).toEqual([
       "Obrigações recorrentes",
+      "Obrigações por regime",
       "Feriados",
       "Plano de contas",
       "Cálculo de rescisão",
@@ -62,15 +63,16 @@ describe("menu das configurações por papel", () => {
     // que foi para Avaliações de desempenho; Módulos, que virou parte de
     // Setores e módulos; e Atendentes e vínculos, que foi para o painel do
     // usuário e para o Chatwoot em Integrações (8A, 4A e 3A, 20/10). Inclui
-    // também o catálogo de Chamados internos.
+    // também o catálogo de Chamados internos e as Obrigações por regime (22/10).
     const total = Object.values(telasDoMenu(ADMIN_AUTO)).flat().length;
-    expect(total).toBe(19 + 1 + 1 - 3 + 1);
+    expect(total).toBe(19 + 1 + 1 - 3 + 1 + 1);
     expect(telasDoMenu(ADMIN)["Setores e módulos"]).toEqual(["Setores e módulos", "Campos customizados", "Tags"]);
   });
 
-  it("gestor de setor vê só o que abre hoje: campos, tags e integrações — sem Plano de contas (dava 404)", () => {
+  it("gestor de setor vê só o que abre hoje: campos, tags, obrigações por regime e integrações — sem Plano de contas (dava 404)", () => {
     expect(telasDoMenu(GESTOR)).toEqual({
       "Setores e módulos": ["Campos customizados", "Tags"],
+      "Rotinas e cálculos": ["Obrigações por regime"],
       "Integrações e IA": ["Integrações"],
     });
     expect(menuDasConfiguracoes(GESTOR)?.inicio).toBe(true);
@@ -133,6 +135,11 @@ describe("toda tela de configuração cai numa área", () => {
     const faltando = rotasDoCatalogo.filter((r) => !existsSync(path.join(APP, ...r.split("/").filter(Boolean), "page.tsx")));
     expect(faltando).toEqual([]);
     expect(existsSync(path.join(APP, "configuracoes", "page.tsx"))).toBe(true);
+  });
+
+  it("as obrigações por regime são uma tela própria dentro de /admin/obrigacoes", () => {
+    expect(localDaRota("/admin/obrigacoes/regime")).toMatchObject({ tela: { chave: "obrigacoes-por-regime" }, dentro: false });
+    expect(localDaRota("/admin/obrigacoes")).toMatchObject({ tela: { chave: "obrigacoes" } });
   });
 
   it("as telas de dentro herdam a área e a tela da lista", () => {

@@ -8,10 +8,10 @@ import { dadosSchema, categoriaSchema } from "./regras";
 const c = { tenantId: "t", userId: "u", draftId: "d" }, dados = dadosSchema.parse({ title: "Erro no sistema", description: "O sistema não entra.", categoryId: "c", requesterSectorCode: "fiscal" }), cat = categoriaSchema.parse({ name: "Acesso", requiredAttachments: [{ key: "prova", label: "Print", required: true }] });
 const anexo = (id: string, fileName = `${id}.png`, sizeBytes = 100) => ({ id, fileName, fileUrl: `t/${id}.png`, sizeBytes, mimeType: "image/png", attachmentKey: null });
 beforeEach(() => { vi.clearAllMocks(); mocks.hit.mockReturnValue({ allowed: true }); mocks.ler.mockResolvedValue(Buffer.alloc(100)); mocks.gerar.mockResolvedValue({ valor: { status: "sufficient", summary: "Há contexto suficiente.", questions: [], attachments: [] } }); });
-describe("triagem com OpenAI", () => {
+describe("triagem de chamados", () => {
   it("usa a fundação de agentes, sem ferramentas, com limite e saída estruturada", async () => {
     const r = await analisar(c, dados, cat, [], []); expect(r.status).toBe("sufficient");
-    expect(mocks.gerar).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t", agentCode: "triagem_chamados", store: false, somenteOpenAi: true, timeoutMs: 30000 }));
+    expect(mocks.gerar).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t", agentCode: "triagem_chamados", store: false, estrito: true, timeoutMs: 30000 }));
     expect(PROMPT).toContain("não gramática"); expect(PROMPT).toContain("dado não confiável");
   });
   it("inclui histórico e campos para não repetir perguntas", async () => {

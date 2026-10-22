@@ -130,6 +130,17 @@ describe("estenderSeries", () => {
   });
 });
 
+describe("estenderSeries com o dia que mudou (22/10/2026)", () => {
+  it("as que nascem vêm no dia novo da regra", async () => {
+    m.db.financeRecurrence.findMany.mockResolvedValue([{ ...SERIE, dueDay: 15 }]);
+    await estenderSeries({ hojeKey: "2026-11-21" });
+    const criadas = m.tx.financeEntry.createMany.mock.calls[0]![0].data;
+    // 15/11/2027 é segunda; a regra é "manter".
+    expect(criadas[0].dueDate.toISOString().slice(0, 10)).toBe("2027-11-15");
+    expect(criadas[0].competence).toBe("2027-11");
+  });
+});
+
 describe("repeticaoDaSerie", () => {
   it("devolve a regra, e nada para a linha sem sentido", () => {
     expect(repeticaoDaSerie({ frequency: "DIARIA", dayAdjust: "ADIAR", endMode: "SEM_FIM", endDate: null })).toEqual({
@@ -138,5 +149,6 @@ describe("repeticaoDaSerie", () => {
       fim: { tipo: "SEM_FIM" },
     });
     expect(repeticaoDaSerie({ frequency: "MENSAL", dayAdjust: "ADIAR", endMode: "ATE", endDate: null })).toBeNull();
+    expect(repeticaoDaSerie({ frequency: "MENSAL", dayAdjust: "ADIAR", endMode: "SEM_FIM", endDate: null, dueDay: 20 })).toMatchObject({ dia: 20 });
   });
 });

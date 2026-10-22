@@ -1058,6 +1058,8 @@ model Tenant {
   aiConfig                  TenantAiConfig?
   alertDispatches           AlertDispatch[]
   recurringObligations      RecurringObligation[]
+  modelosDeObrigacao        ModeloDeObrigacao[]
+  obrigacoesGeradas         ObrigacaoGerada[]
   chatwootConnections       ChatwootConnection[]
   bpoCredentials            BpoCredential[]
   bpoCredentialViews        BpoCredentialView[]
@@ -1710,6 +1712,17 @@ model Company {
   /// em toda linha da planilha de importação. É o `empresas.codigo_dominio`
   /// do SPED Generator ("113" + a filial com dois dígitos: matriz 11301).
   dominioBranchCode     String?       @db.VarChar(20)
+  /// Juros e multa pelo atraso (22/10/2026): a regra da empresa para a janela
+  /// da baixa já vir com juros e multa calculados quando o pagamento é depois
+  /// do vencimento — e com o desconto, quando é até o vencimento. Multa em %
+  /// sobre o valor baixado, uma vez; juros em % ao mês, simples, pro rata por
+  /// dia corrido (mês de 30 dias). Tudo nulo é sem regra: nada muda, os campos
+  /// ficam em zero. O fornecedor ou cliente pode ter a dele
+  /// (`FinanceCounterparty.lateFinePercent` e as outras). O cálculo é
+  /// src/lib/financeiro/baixa/encargos.ts.
+  lateFinePercent       Decimal?      @db.Decimal(7, 4)
+  lateInterestPercent   Decimal?      @db.Decimal(7, 4)
+  earlyDiscountPercent  Decimal?      @db.Decimal(7, 4)
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -1730,6 +1743,7 @@ model Company {
   meetings                 Meeting[]
   clientDocuments          ClientDocument[]
   recurringObligations     RecurringObligation[]
+  obrigacoesGeradas        ObrigacaoGerada[]
   chatwootContactLinks     ChatwootContactLink[]
   bpoCredentials           BpoCredential[]
   fiscalDocuments          FiscalDocument[]
@@ -1962,6 +1976,7 @@ model Pipeline {
   stages               PipelineStage[]
   items                PipelineItem[]
   recurringObligations RecurringObligation[]
+  modelosDeObrigacao   ModeloDeObrigacao[]
 
   @@index([tenantId, sectorCode])
   @@index([spaceId])
@@ -2042,6 +2057,7 @@ model PipelineItem {
   timeEntries TimeEntry[]
   candidatura Candidatura?
   meetings    Meeting[]
+  obrigacaoGerada ObrigacaoGerada?
 
   @@index([tenantId, pipelineId])
   @@index([tenantId, entityType, entityId])
@@ -3300,6 +3316,14 @@ model FinanceCounterparty {
   /// lançamento: centro é decisão de gestão, não classificação contábil — um
   /// fornecedor que atende duas unidades não pode ficar preso à primeira.
   defaultCostCenterId String?
+
+  /// Juros e multa pelo atraso só deste fornecedor ou cliente (22/10/2026) —
+  /// passa por cima da regra da empresa (`Company.lateFinePercent`). Os três
+  /// nulos seguem a da empresa; com algum preenchido, a regra é esta, e o
+  /// vazio vale zero.
+  lateFinePercent      Decimal? @db.Decimal(7, 4)
+  lateInterestPercent  Decimal? @db.Decimal(7, 4)
+  earlyDiscountPercent Decimal? @db.Decimal(7, 4)
 
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -5985,6 +6009,106 @@ model RecurringObligation {
   @@map("recurring_obligations")
 }
 
+// ─── Obrigações por regime (22/10/2026) ────────────────────────────────────
+//
+// A RecurringObligation acima é cadastrada empresa a empresa. O modelo abaixo é
+// cadastrado uma vez por setor ("DAS — dia 20 do mês seguinte, Simples") e uma
+// regra diz a que empresas da carteira ele se aplica. O motor
+// (src/lib/obrigacoes/geracao.ts) gera, para cada empresa que bate com a
+// regra, as atividades das próximas competências no kanban do setor — o mesmo
+// PipelineItem que a obrigação recorrente gera, para as telas, os alertas e os
+// responsáveis continuarem iguais. As datas saem de src/lib/obrigacoes/calendario.ts.
+// Nenhum modelo vem cadastrado: a lista por setor entra depois, como dado.
+
+enum PeriodicidadeDaObrigacao {
+  MENSAL
+  TRIMESTRAL
+  ANUAL
+}
+
+// O que fazer quando o dia legal não é dia útil.
+enum AjusteDoVencimento {
+  ANTECIPAR
+  ADIAR
+}
+
+// Filtro de três estados da regra: tanto faz, só quem tem, só quem não tem.
+enum FiltroSimNao {
+  QUALQUER
+  SIM
+  NAO
+}
+
+model ModeloDeObrigacao {
+  id                   String                   @id @default(uuid())
+  tenantId             String
+  nome                 String                   @db.VarChar(160)
+  descricao            String?                  @db.Text
+  // O setor vem do kanban de destino, como na RecurringObligation.
+  sectorCode           String                   @db.VarChar(40)
+  pipelineId           String
+  periodicidade        PeriodicidadeDaObrigacao @default(MENSAL)
+  /// Meses entre o último mês da competência e o mês do vencimento: DAS de
+  /// setembro vence em outubro = 1; DEFIS de 2026 (dezembro) vence em março = 3.
+  mesesAposCompetencia Int                      @default(1)
+  /// 1..31 (mês mais curto usa o último dia). Nulo = último dia útil do mês.
+  diaLegal             Int?
+  /// O prazo interno: N dias úteis antes da data legal (0 = a própria data).
+  diasUteisAntes       Int                      @default(0)
+  ajuste               AjusteDoVencimento       @default(ADIAR)
+  // ── A regra de aplicação. Lista vazia = qualquer valor. ──
+  /// TaxRegimeKind[] — ["SIMPLES_NACIONAL", "MEI"].
+  regimes              Json?
+  semMovimento         FiltroSimNao             @default(QUALQUER)
+  comFuncionarios      FiltroSimNao             @default(QUALQUER)
+  /// UFs, ["SP", "MG"].
+  estados              Json?
+  /// Nomes de cidade, comparados sem acento e sem maiúscula.
+  cidades              Json?
+  /// Só empresas com o setor do modelo contratado e ativo (CompanyService).
+  exigeSetorContratado Boolean                  @default(true)
+  active               Boolean                  @default(true)
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id])
+  pipeline Pipeline          @relation(fields: [pipelineId], references: [id])
+  geradas  ObrigacaoGerada[]
+
+  @@index([tenantId, active])
+  @@index([tenantId, sectorCode])
+  @@map("modelos_de_obrigacao")
+}
+
+// Cada obrigação concreta que o motor gerou: um modelo, uma empresa, uma
+// competência. A chave única é o que torna a geração idempotente. Quando a
+// atividade é excluída à mão no kanban, a linha fica (pipelineItemId nulo) e a
+// competência não volta a ser gerada.
+model ObrigacaoGerada {
+  id             String   @id @default(uuid())
+  tenantId       String
+  modeloId       String
+  companyId      String
+  /// "AAAA-MM": o mês da competência (mensal), o último mês do trimestre
+  /// (trimestral) ou dezembro (anual).
+  competencia    String   @db.VarChar(7)
+  /// Datas "AAAA-MM-DD" já ajustadas ao dia útil.
+  dataLegal      String   @db.VarChar(10)
+  prazoInterno   String   @db.VarChar(10)
+  pipelineItemId String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
+  modelo       ModeloDeObrigacao @relation(fields: [modeloId], references: [id], onDelete: Cascade)
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pipelineItem PipelineItem?     @relation(fields: [pipelineItemId], references: [id], onDelete: SetNull)
+
+  @@unique([modeloId, companyId, competencia])
+  @@index([tenantId, companyId])
+  @@map("obrigacoes_geradas")
+}
+
 // Dedup do motor de alertas (cron externo, ver src/lib/alerts.ts) — evita
 // notificar a mesma condição mais de uma vez no mesmo dia mesmo que o job
 // rode várias vezes (ex: scheduler externo chamando a cada 15min). sentOn é
@@ -8374,7 +8498,10 @@ model FinanceRecurrence {
   id              String  @id @db.VarChar(36)
   tenantId        String
   companyId       String
-  /// MENSAL, QUINZENAL, SEMANAL, ANUAL ou DIARIA (todo dia útil).
+  /// MENSAL, QUINZENAL, SEMANAL, ANUAL ou DIARIA (todo dia útil). O
+  /// parcelamento (22/10/2026) grava MENSAL com `endMode` VEZES: as parcelas
+  /// nascem todas juntas, e a regra só guarda o dia e o ajuste para o "mudar a
+  /// série daqui em diante".
   frequency       String  @db.VarChar(12)
   /// ADIAR, ANTECIPAR ou MANTER — o vencimento em fim de semana ou feriado.
   dayAdjust       String  @db.VarChar(10)
@@ -8387,6 +8514,12 @@ model FinanceRecurrence {
   firstCompetence String  @db.VarChar(7)
   /// A posição da última conta já criada. A série termina quando chega em `total`.
   lastIndex       Int
+  /// O dia do vencimento quando ele mudou depois do lançamento ("mudar a série
+  /// daqui em diante", 22/10/2026 — o aluguel que passou do dia 10 para o 15).
+  /// Nulo é o dia do primeiro vencimento, como sempre foi. Só vale na série
+  /// mensal e na anual: é o dia do mês. O fim da série continua contando os
+  /// mesmos meses — ver `ocorrenciasDaRepeticao`.
+  dueDay          Int?
   /// Falso depois do "cancelar esta e as próximas": nada mais nasce.
   active          Boolean @default(true)
   createdById     String?

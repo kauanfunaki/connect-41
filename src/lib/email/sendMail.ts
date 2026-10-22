@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { getPrisma } from "@/lib/prisma";
 import { decryptSecret } from "@/lib/crypto";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
+import { cabecalhoDoEmail, corDoBotao, fileteDoEmail, marcaDoEmail, rodapeDoEmail, type MarcaDoEmail } from "./marcaDoEmail";
 
 export type SmtpTestConfig = {
   host: string;
@@ -112,7 +113,11 @@ async function getTenantTransport(tenantId: string) {
 // marca em vez de navy): fica legível tanto no fundo claro quanto no escuro,
 // sem depender de detectar o tema. Não dá pra reaproveitar as variantes
 // light/dark do app aqui — cada uma só funciona num dos dois fundos.
-function emailShell(bodyHtml: string, eyebrow: string): string {
+//
+// `marca` (22/10/2026): nos e-mails ao cliente, o cabeçalho do escritório no
+// lugar do Connect quando a Aparência do portal está ligada — ver
+// src/lib/email/marcaDoEmail.ts. Exportado para o teste do cabeçalho.
+export function emailShell(bodyHtml: string, eyebrow: string, marca?: MarcaDoEmail | null): string {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const year = new Date().getFullYear();
 
@@ -143,10 +148,10 @@ function emailShell(bodyHtml: string, eyebrow: string): string {
       <tr>
         <td align="center" style="padding:40px 16px;">
           <table role="presentation" width="520" cellpadding="0" cellspacing="0" class="email-card" bgcolor="#FFFFFF" style="max-width:520px; width:100%; border-radius:14px; overflow:hidden; border:1px solid; background-color:#FFFFFF; font-family:Arial,Helvetica,sans-serif;">
+            ${fileteDoEmail(marca)}
             <tr>
               <td align="center" class="email-card" bgcolor="#FFFFFF" style="padding:36px 28px 20px; background-color:#FFFFFF;">
-                <img src="${baseUrl}/brand/logo-horizontal-email.png" height="28" alt="Connect" style="display:block; border:0; outline:none; height:28px; width:auto;" />
-                <p class="email-text-muted" style="margin:12px 0 0; font-size:13px; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(eyebrow)}</p>
+                ${cabecalhoDoEmail(marca, baseUrl, eyebrow)}
               </td>
             </tr>
             <tr>
@@ -160,8 +165,7 @@ function emailShell(bodyHtml: string, eyebrow: string): string {
             <tr>
               <td align="center" class="email-footer email-divider" bgcolor="#FAFBFD" style="padding:18px 28px; border-top:1px solid; background-color:#FAFBFD;">
                 <p class="email-text-faint" style="margin:0; font-size:11px; line-height:1.6; font-family:Arial,Helvetica,sans-serif;">
-                  Este e-mail foi enviado automaticamente pelo Connect.<br />
-                  © ${year} Connect
+                  ${rodapeDoEmail(marca, year)}
                 </p>
               </td>
             </tr>
@@ -200,6 +204,8 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
 
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const viewUrl = `${baseUrl}/d/${input.viewToken}`;
+  const marca = await marcaDoEmail(input.tenantId);
+  const cor = corDoBotao(marca);
 
   // Botão "bulletproof": tabela com `bgcolor` + <a> estilizado inline, com
   // <v:roundrect> como fallback do Outlook desktop (que não faz border-radius).
@@ -235,7 +241,7 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
       <tr>
         <td align="center">
           <!--[if mso]>
-          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${viewUrl}" style="height:44px;v-text-anchor:middle;width:220px;" arcsize="18%" strokecolor="#1F5EEA" fillcolor="#1F5EEA">
+          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${viewUrl}" style="height:44px;v-text-anchor:middle;width:220px;" arcsize="18%" strokecolor="${cor}" fillcolor="${cor}">
           <w:anchorlock/>
           <center style="color:#FFFFFF; mso-style-textfill-fill-color:#FFFFFF; mso-style-textfill-fill-alpha:100%; font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">Visualizar documento</center>
           </v:roundrect>
@@ -243,7 +249,7 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
           <!--[if !mso]><!-->
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
             <tr>
-              <td align="center" bgcolor="#1F5EEA" style="border-radius:8px; background-color:#1F5EEA;">
+              <td align="center" bgcolor="${cor}" style="border-radius:8px; background-color:${cor};">
                 <a href="${viewUrl}" style="display:inline-block; padding:13px 30px; font-family:Arial,Helvetica,sans-serif; font-size:14px; font-weight:bold; line-height:18px; color:#FFFFFF; text-decoration:none; border-radius:8px;">
                   <span style="color:#FFFFFF; mso-style-textfill-fill-color:#FFFFFF; mso-style-textfill-fill-alpha:100%; text-decoration:none;">Visualizar documento</span>
                 </a>
@@ -268,7 +274,8 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
       <span style="word-break:break-all;">${viewUrl}</span>
     </p>
   `,
-    "Compartilhamento de documentos"
+    "Compartilhamento de documentos",
+    marca
   );
 
   try {
@@ -313,8 +320,25 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
   // Sem quebra de linha: o nome também vai no assunto, que é cabeçalho.
   const escritorio = input.escritorio?.replace(/[\r\n]+/g, " ").trim() || null;
   const daConta = escritorio ? ` do escritório <strong>${escapeHtml(escritorio)}</strong>` : "";
+  const marcaDoPortal = input.destino === "portal" ? await marcaDoEmail(input.tenantId) : null;
 
-  const html = `
+  // O link de senha do cliente do portal (o primeiro acesso inclusive) sai com
+  // a marca do escritório (22/10/2026), no mesmo casco dos avisos do portal. O
+  // da equipe segue o de sempre.
+  const html =
+    input.destino === "portal"
+      ? emailShell(
+          `
+    <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+      Olá! Recebemos um pedido para criar ou redefinir a senha do seu acesso ao portal${daConta}. Se foi você, use o botão abaixo:
+    </p>
+    ${botaoDoEmail(resetUrl, "Definir senha", marcaDoPortal)}
+    <p class="email-text-muted" style="font-size:12px; margin:16px 0 0; font-family:Arial,Helvetica,sans-serif;">O link expira em 1 hora. Se você não pediu, pode ignorar este e-mail.</p>
+  `,
+          "Portal do cliente",
+          marcaDoPortal
+        )
+      : `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
       <p style="font-size: 14px; line-height: 1.5;">Olá,</p>
       <p style="font-size: 14px; line-height: 1.5;">
@@ -614,6 +638,7 @@ export async function sendTaxaAoClienteEmail(input: SendTaxaAoClienteEmailInput)
 
   const valor = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(input.valorCentavos / 100);
   const vencimento = input.vencimento ? formatInstantDate(input.vencimento) : null;
+  const marca = await marcaDoEmail(input.tenantId);
 
   const html = emailShell(
     `
@@ -641,7 +666,8 @@ export async function sendTaxaAoClienteEmail(input: SendTaxaAoClienteEmailInput)
       Em caso de dúvida sobre a guia, entre em contato com o escritório.
     </p>
   `,
-    "Societário"
+    "Societário",
+    marca
   );
 
   try {
@@ -661,14 +687,15 @@ export async function sendTaxaAoClienteEmail(input: SendTaxaAoClienteEmailInput)
 }
 
 /** O botão "bulletproof" do e-mail de documentos, reaproveitado pelos avisos do portal. */
-function botaoDoEmail(url: string, rotulo: string): string {
+function botaoDoEmail(url: string, rotulo: string, marca?: MarcaDoEmail | null): string {
+  const cor = corDoBotao(marca);
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr><td height="8" style="height:8px; line-height:8px; font-size:0;">&nbsp;</td></tr>
       <tr>
         <td align="center">
           <!--[if mso]>
-          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${url}" style="height:44px;v-text-anchor:middle;width:220px;" arcsize="18%" strokecolor="#1F5EEA" fillcolor="#1F5EEA">
+          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${url}" style="height:44px;v-text-anchor:middle;width:220px;" arcsize="18%" strokecolor="${cor}" fillcolor="${cor}">
           <w:anchorlock/>
           <center style="color:#FFFFFF; font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">${escapeHtml(rotulo)}</center>
           </v:roundrect>
@@ -676,7 +703,7 @@ function botaoDoEmail(url: string, rotulo: string): string {
           <!--[if !mso]><!-->
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
             <tr>
-              <td align="center" bgcolor="#1F5EEA" style="border-radius:8px; background-color:#1F5EEA;">
+              <td align="center" bgcolor="${cor}" style="border-radius:8px; background-color:${cor};">
                 <a href="${url}" style="display:inline-block; padding:13px 30px; font-family:Arial,Helvetica,sans-serif; font-size:14px; font-weight:bold; line-height:18px; color:#FFFFFF; text-decoration:none; border-radius:8px;">
                   <span style="color:#FFFFFF; text-decoration:none;">${escapeHtml(rotulo)}</span>
                 </a>
@@ -750,6 +777,7 @@ export async function temSmtpConfigurado(tenantId: string): Promise<boolean> {
 // fica atrás do login do portal.
 export async function sendPendenciaAoClienteEmail(input: SendPendenciaAoClienteEmailInput): Promise<ResultadoDoAviso> {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const marca = await marcaDoEmail(input.tenantId);
   const url = `${baseUrl}/portal/pendencias/${input.requestId}`;
   const assunto = {
     nova: `Nova pendência: ${input.titulo}`,
@@ -779,9 +807,10 @@ export async function sendPendenciaAoClienteEmail(input: SendPendenciaAoClienteE
         </td>
       </tr>
     </table>
-    ${botaoDoEmail(url, "Abrir no portal")}
+    ${botaoDoEmail(url, "Abrir no portal", marca)}
   `,
-      "Portal do cliente"
+      "Portal do cliente",
+      marca
     ),
   }));
   return enviarAvisoIndividual(input.tenantId, "sendPendenciaAoClienteEmail", mensagens);
@@ -801,6 +830,7 @@ export type SendSolicitacaoAoClienteEmailInput = {
 // lista** — nunca o que foi escrito, que pode citar valor, conta ou documento.
 export async function sendSolicitacaoAoClienteEmail(input: SendSolicitacaoAoClienteEmailInput): Promise<ResultadoDoAviso> {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const marca = await marcaDoEmail(input.tenantId);
   const url = `${baseUrl}/portal/solicitacoes/${input.solicitacaoId}`;
   const assunto = {
     resposta: `Resposta na sua solicitação nº ${input.numero}`,
@@ -828,9 +858,10 @@ export async function sendSolicitacaoAoClienteEmail(input: SendSolicitacaoAoClie
         </td>
       </tr>
     </table>
-    ${botaoDoEmail(url, "Abrir no portal")}
+    ${botaoDoEmail(url, "Abrir no portal", marca)}
   `,
-      "Portal do cliente"
+      "Portal do cliente",
+      marca
     ),
   }));
   return enviarAvisoIndividual(input.tenantId, "sendSolicitacaoAoClienteEmail", mensagens);
@@ -849,6 +880,7 @@ export type SendComunicadoAoClienteEmailInput = {
 // a leitura é registrada.
 export async function sendComunicadoAoClienteEmail(input: SendComunicadoAoClienteEmailInput): Promise<ResultadoDoAviso> {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const marca = await marcaDoEmail(input.tenantId);
   const url = `${baseUrl}/portal/comunicados/${input.comunicadoId}`;
   const mensagens = input.destinatarios.map((d) => ({
     to: d.email,
@@ -867,9 +899,10 @@ export async function sendComunicadoAoClienteEmail(input: SendComunicadoAoClient
         </td>
       </tr>
     </table>
-    ${botaoDoEmail(url, "Ler no portal")}
+    ${botaoDoEmail(url, "Ler no portal", marca)}
   `,
-      "Portal do cliente"
+      "Portal do cliente",
+      marca
     ),
   }));
   return enviarAvisoIndividual(input.tenantId, "sendComunicadoAoClienteEmail", mensagens);
@@ -887,6 +920,7 @@ export type SendMensagemAoClienteEmailInput = {
 // existe mensagem nova e de qual empresa; o conteúdo fica atrás do login.
 export async function sendMensagemAoClienteEmail(input: SendMensagemAoClienteEmailInput): Promise<ResultadoDoAviso> {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const marca = await marcaDoEmail(input.tenantId);
   const url = `${baseUrl}/portal/comunicacao`;
   const mensagens = input.destinatarios.map((d) => ({
     to: d.email,
@@ -896,9 +930,10 @@ export async function sendMensagemAoClienteEmail(input: SendMensagemAoClienteEma
     <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
       Olá, ${escapeHtml(d.nome)}. A equipe deixou uma mensagem sobre <strong>${escapeHtml(input.empresaNome)}</strong> no portal.
     </p>
-    ${botaoDoEmail(url, "Ler no portal")}
+    ${botaoDoEmail(url, "Ler no portal", marca)}
   `,
-      "Portal do cliente"
+      "Portal do cliente",
+      marca
     ),
   }));
   return enviarAvisoIndividual(input.tenantId, "sendMensagemAoClienteEmail", mensagens);
@@ -917,6 +952,7 @@ export type SendNovidadeNoProcessoEmailInput = {
 // texto e o arquivo ficam atrás do login do portal.
 export async function sendNovidadeNoProcessoEmail(input: SendNovidadeNoProcessoEmailInput): Promise<ResultadoDoAviso> {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const marca = await marcaDoEmail(input.tenantId);
   const url = `${baseUrl}/portal/processos/${input.processId}`;
   const oQue = input.motivo === "mensagem" ? "deixou uma mensagem" : "anexou um documento";
   const mensagens = input.destinatarios.map((d) => ({
@@ -927,9 +963,10 @@ export async function sendNovidadeNoProcessoEmail(input: SendNovidadeNoProcessoE
     <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
       Olá, ${escapeHtml(d.nome)}. A equipe ${oQue} no processo <strong>${escapeHtml(input.processoNome)}</strong>.
     </p>
-    ${botaoDoEmail(url, "Abrir no portal")}
+    ${botaoDoEmail(url, "Abrir no portal", marca)}
   `,
-      "Portal do cliente"
+      "Portal do cliente",
+      marca
     ),
   }));
   return enviarAvisoIndividual(input.tenantId, "sendNovidadeNoProcessoEmail", mensagens);
@@ -949,6 +986,7 @@ export type SendArquivosCompartilhadosEmailInput = {
 // atrás do login do portal, como nos outros avisos.
 export async function sendArquivosCompartilhadosEmail(input: SendArquivosCompartilhadosEmailInput): Promise<ResultadoDoAviso> {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const marca = await marcaDoEmail(input.tenantId);
   const url = `${baseUrl}/portal/arquivos?empresa=${encodeURIComponent(input.companyId)}&pasta=${encodeURIComponent(input.pastaId)}`;
   const mensagens = input.destinatarios.map((d) => ({
     to: d.email,
@@ -958,9 +996,10 @@ export async function sendArquivosCompartilhadosEmail(input: SendArquivosCompart
     <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
       Olá, ${escapeHtml(d.nome)}. A equipe compartilhou arquivos de <strong>${escapeHtml(input.empresaNome)}</strong> na pasta <strong>${escapeHtml(input.pastaNome)}</strong>.
     </p>
-    ${botaoDoEmail(url, "Ver no portal")}
+    ${botaoDoEmail(url, "Ver no portal", marca)}
   `,
-      "Portal do cliente"
+      "Portal do cliente",
+      marca
     ),
   }));
   return enviarAvisoIndividual(input.tenantId, "sendArquivosCompartilhadosEmail", mensagens);
@@ -977,6 +1016,7 @@ export type SendAprovacaoPendenteEmailInput = {
 // títulos manda cem avisos se cada título virar um e-mail.
 export async function sendAprovacaoPendenteEmail(input: SendAprovacaoPendenteEmailInput): Promise<ResultadoDoAviso> {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const marca = await marcaDoEmail(input.tenantId);
   const url = `${baseUrl}/portal/aprovacoes`;
   const mensagens = input.destinatarios.map((d) => {
     const frase =
@@ -989,9 +1029,10 @@ export async function sendAprovacaoPendenteEmail(input: SendAprovacaoPendenteEma
     <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
       Olá, ${escapeHtml(d.nome)}. ${frase} A baixa só é feita depois da aprovação.
     </p>
-    ${botaoDoEmail(url, "Revisar no portal")}
+    ${botaoDoEmail(url, "Revisar no portal", marca)}
   `,
-        "Portal do cliente"
+        "Portal do cliente",
+        marca
       ),
     };
   });

@@ -193,7 +193,7 @@ export async function excluirLista(pipelineId: string): Promise<PipelineState> {
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({
     where: { id: pipelineId, tenantId },
-    include: { space: true, _count: { select: { items: true, recurringObligations: true } } },
+    include: { space: true, _count: { select: { items: true, recurringObligations: true, modelosDeObrigacao: true } } },
   });
   if (!pipeline) return { error: "Tarefa não encontrada." };
   if (!canManageSector(ctx, pipeline.sectorCode)) return { error: "Sem permissão para excluir esta tarefa." };
@@ -208,6 +208,11 @@ export async function excluirLista(pipelineId: string): Promise<PipelineState> {
   // conteúdo visível no board, mas trava a exclusão do mesmo jeito.
   if (pipeline._count.recurringObligations > 0) {
     return { error: "Esta tarefa é destino de obrigações recorrentes. Aponte-as para outra tarefa antes de excluí-la." };
+  }
+  // O mesmo para as obrigações por regime (22/10/2026): o modelo gera as
+  // atividades da carteira nesta tarefa, e o banco recusa apagá-la por baixo.
+  if (pipeline._count.modelosDeObrigacao > 0) {
+    return { error: "Esta tarefa é destino de obrigações por regime. Aponte-as para outra tarefa antes de excluí-la." };
   }
 
   try {
