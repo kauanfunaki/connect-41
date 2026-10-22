@@ -8,6 +8,11 @@
 // aberto daqui em diante já leva o valor, a categoria e a descrição novos para
 // elas. O dia novo, que vem da regra e não da conta copiada, vai para a regra
 // (`FinanceRecurrence.dueDay`).
+//
+// A série de antes de 21/10, sem regra (22/10/2026): o dia muda pelo que as
+// contas dela dizem (`inferirSerieAntiga`) — mensal ou anual, cada conta no
+// mês que já tem. Não há regra para gravar o dia, e ela não cria contas
+// sozinha.
 
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@/generated/prisma/client";
@@ -26,10 +31,18 @@ import { decimalDeCentavos } from "./manual";
 import { instanteDaData } from "./periodo";
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "./aprovacao/servidor";
 import { frequenciaComDiaDoMes, rotuloDaSerie, vencimentoNaPosicao, type AjusteDoDia, type Frequencia } from "./repeticao";
-import { camposDaMudanca, contasDaquiEmDiante, lerMudancaDaSerie, type ContaDaSerie } from "./mudancaDaSerie";
+import {
+  camposDaMudanca,
+  contasDaquiEmDiante,
+  inferirSerieAntiga,
+  lerMudancaDaSerie,
+  vencimentoNaSerieAntiga,
+  type ContaDaSerie,
+  type InferenciaDaSerieAntiga,
+} from "./mudancaDaSerie";
 
 const VEM_DO_OMIE = "Vem do Omie, e a empresa ainda é lida de lá — mude no Omie; a próxima leitura traz para cá.";
-const SERIE_ANTIGA = "Esta série é de antes de 21/10 e não guardou a regra — mude o vencimento conta a conta, em Editar.";
+const SERIE_ANTIGA = "Esta série é de antes de 21/10 e não guardou a regra, e não deu para saber de quanto em quanto tempo ela repete — mude o vencimento conta a conta, em Editar.";
 const SEM_DIA_DO_MES = "O dia do vencimento só muda na série mensal ou anual — nas outras, mude conta a conta, em Editar.";
 
 /** A conta de onde a pessoa pediu a mudança. */
@@ -53,6 +66,37 @@ async function lerConta(tenantId: string, entryId: string) {
       company: { select: { omieCutoverAt: true } },
     },
   });
+}
+
+/**
+ * A série antiga, sem regra (22/10/2026): a frequência e o ajuste do dia lidos
+ * das contas dela — todas, as anteriores e as pagas inclusas, que são o
+ * histórico de como ela repetiu. As canceladas também: a data delas é a que a
+ * série deu.
+ */
+async function inferirDaSerie(tenantId: string, companyId: string, recurrenceId: string): Promise<InferenciaDaSerieAntiga> {
+  const contas = await getPrisma().financeEntry.findMany({
+    where: { tenantId, companyId, recurrenceId },
+    select: { recurrenceIndex: true, dueDate: true, competence: true },
+    orderBy: { recurrenceIndex: "asc" },
+  });
+  return inferirSerieAntiga(
+    contas
+      .filter((c) => c.recurrenceIndex)
+      .map((c) => ({ indice: c.recurrenceIndex!, vencimentoKey: saoPauloParts(c.dueDate).dateKey, competencia: c.competence }))
+  );
+}
+
+/** O dia pode mudar? Com regra, pela frequência dela; sem, pelo que as contas dizem. */
+function vereditoDoDia(regra: { frequency: string } | null, antiga: InferenciaDaSerieAntiga | null): { pode: true; aviso?: string } | { pode: false; motivo: string } {
+  if (regra) return frequenciaComDiaDoMes(regra.frequency) ? { pode: true } : { pode: false, motivo: SEM_DIA_DO_MES };
+  if (!antiga || !antiga.ok) return { pode: false, motivo: antiga?.ok === false && antiga.motivo === "sem_dia_do_mes" ? SEM_DIA_DO_MES : SERIE_ANTIGA };
+  return {
+    pode: true,
+    aviso: `Série de antes de 21/10: cada conta fica no mês que já tem, no dia novo (no mês sem esse dia, o último); fim de semana e feriado ${
+      antiga.ajuste === "MANTER" ? "mantêm a data" : antiga.ajuste === "ANTECIPAR" ? "antecipam" : "adiam"
+    }, como as contas da série vinham.`,
+  };
 }
 
 /** Esta conta e as próximas da série, com o que as travas da edição precisam. */
@@ -79,6 +123,7 @@ async function contasDaSerie(tenantId: string, companyId: string, recurrenceId: 
       categoryId: true,
       description: true,
       dueDate: true,
+      competence: true,
       updatedAt: true,
       bankMatches: { select: { id: true }, take: 1 },
       retentionOrigin: { select: { tax: true } },
@@ -145,8 +190,11 @@ export type DadosDaMudancaDaSerie =
       categorias: Opcao[];
       /** Quantas contas em aberto há desta em diante (esta inclusa). */
       emAberto: number;
-      /** O dia do vencimento pode mudar — ou o porquê de não poder. */
-      dia: { pode: true } | { pode: false; motivo: string };
+      /**
+       * O dia do vencimento pode mudar — ou o porquê de não poder. `aviso`: na
+       * série antiga, sem regra, como o dia novo vai ser aplicado (22/10/2026).
+       */
+      dia: { pode: true; aviso?: string } | { pode: false; motivo: string };
       /** A série cria contas sozinha com o tempo (até uma data ou sem fim) e ainda não acabou. */
       nascemSozinhas: boolean;
     }
@@ -173,6 +221,7 @@ export async function dadosDaMudancaDaSerie(entryId: string): Promise<DadosDaMud
     }),
     contasDaSerie(ctx.tenantId, conta.companyId, conta.recurrenceId, conta.recurrenceIndex),
   ]);
+  const antiga = regra ? null : await inferirDaSerie(ctx.tenantId, conta.companyId, conta.recurrenceId);
   const emAberto = contasDaquiEmDiante(
     daSerie.map((d) => d.conta),
     conta.recurrenceIndex,
@@ -193,7 +242,7 @@ export async function dadosDaMudancaDaSerie(entryId: string): Promise<DadosDaMud
     },
     categorias: categorias.map((c) => ({ id: c.id, nome: c.name })),
     emAberto,
-    dia: !regra ? { pode: false, motivo: SERIE_ANTIGA } : !frequenciaComDiaDoMes(regra.frequency) ? { pode: false, motivo: SEM_DIA_DO_MES } : { pode: true },
+    dia: vereditoDoDia(regra, antiga),
     nascemSozinhas: Boolean(regra?.active && regra.endMode !== "VEZES"),
   };
 }
@@ -242,10 +291,13 @@ export async function mudarSerieDaquiEmDiante(formData: FormData): Promise<Resul
     where: { id: recurrenceId, tenantId },
     select: { id: true, frequency: true, dayAdjust: true, endMode: true, firstDueDate: true, active: true },
   });
+  // A série antiga, sem regra (22/10/2026): o dia muda pelo que as contas dizem.
+  const antiga = m.dia !== undefined && !regra ? await inferirDaSerie(tenantId, companyId, recurrenceId) : null;
   if (m.dia !== undefined) {
-    if (!regra) return { error: SERIE_ANTIGA };
-    if (!frequenciaComDiaDoMes(regra.frequency)) return { error: SEM_DIA_DO_MES };
+    const veredito = vereditoDoDia(regra, antiga);
+    if (!veredito.pode) return { error: veredito.motivo };
   }
+  const inferida = antiga?.ok ? antiga : null;
 
   const daSerie = await contasDaSerie(tenantId, companyId, recurrenceId, recurrenceIndex);
   const selecao = contasDaquiEmDiante(
@@ -267,9 +319,12 @@ export async function mudarSerieDaquiEmDiante(formData: FormData): Promise<Resul
     if (m.centavos !== undefined && m.centavos !== centavosDeDecimal(l.amount)) data.amount = decimalDeCentavos(m.centavos);
     if (m.categoriaId !== undefined && m.categoriaId !== l.categoryId) data.categoryId = m.categoriaId;
     if (m.descricao !== undefined && m.descricao !== l.description) data.description = m.descricao;
-    if (m.dia !== undefined && regra) {
-      const key = vencimentoNaPosicao(regra.firstDueDate, regra.frequency as Frequencia, regra.dayAdjust as AjusteDoDia, c.indice, m.dia, feriados);
-      if (key !== saoPauloParts(l.dueDate).dateKey) data.dueDate = instanteDaData(key);
+    if (m.dia !== undefined && (regra || inferida)) {
+      const atual = saoPauloParts(l.dueDate).dateKey;
+      const key = regra
+        ? vencimentoNaPosicao(regra.firstDueDate, regra.frequency as Frequencia, regra.dayAdjust as AjusteDoDia, c.indice, m.dia, feriados)
+        : vencimentoNaSerieAntiga({ indice: c.indice, vencimentoKey: atual, competencia: l.competence }, inferida!, m.dia, feriados);
+      if (key !== atual) data.dueDate = instanteDaData(key);
     }
     const reenviar =
       "amount" in data &&
@@ -349,6 +404,7 @@ export async function mudarSerieDaquiEmDiante(formData: FormData): Promise<Resul
       ficaram,
       ...(reenviadas.length > 0 ? { reenviadasParaAprovacao: reenviadas.length, emailsDeAprovacao: avisoDeAprovacao?.enviados ?? 0 } : {}),
       ...(mudaDia ? { diaDaRegra: m.dia } : {}),
+      ...(inferida ? { serieSemRegra: { frequencia: inferida.frequencia, ajuste: inferida.ajuste } } : {}),
     },
   });
 
