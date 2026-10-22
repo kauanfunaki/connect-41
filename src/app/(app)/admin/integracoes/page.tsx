@@ -34,7 +34,6 @@ import { Selo, tomDaVariante, type TomDoSelo } from "@/components/ui/Selo";
 import { OpsCredentialForm } from "@/components/admin/OpsCredentialForm";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { MODULO_OPS } from "@/lib/ops/regras";
-import { credencialOpsNaTela } from "@/lib/ops/credencial";
 import { GithubIntegration } from "@/components/admin/GithubIntegration";
 import { GITHUB_MODULE } from "@/lib/github/types";
 import { integrationView } from "@/lib/github/service";
@@ -125,7 +124,7 @@ export default async function IntegracoesPage({
         prisma.tenantAiConfig.findUnique({ where: { tenantId: ctx.tenantId } }),
         prisma.chatwootConnection.findFirst({ where: { tenantId: ctx.tenantId }, orderBy: { createdAt: "asc" } }),
         getSectorMaps(ctx.tenantId),
-        podeGerirOps ? credencialOpsNaTela(ctx.tenantId) : Promise.resolve(null),
+        podeGerirOps ? prisma.opsApiCredential.findUnique({ where: { tenantId: ctx.tenantId }, select: { tokenHash: true, version: true } }) : Promise.resolve(null),
       ])
     : [[], [], [], null, null, null, { labels: {} as Record<string, string> }, null];
   const prontidaoSerpro = serpro ? prontidaoDoSerpro(serpro) : null;
@@ -193,11 +192,10 @@ export default async function IntegracoesPage({
       chave: "ops_center",
       nome: "Ops Center — bots",
       icone: <Activity />,
-      descricao: "Chaves de integração dos bots, com geração e revogação individual por escritório.",
-      selo: credencialOps && credencialOps.status !== "ready" ? { tom: "atencao", rotulo: "Indisponível" }
-        : credencialOps?.hasToken ? { tom: "sucesso", rotulo: "Chave configurada" } : { tom: "neutro", rotulo: "Sem chave" },
-      estado: credencialOps && credencialOps.status !== "ready" ? "problema" : credencialOps?.hasToken ? "ligada" : "desligada",
-      detalhe: credencialOps && credencialOps.status !== "ready" ? credencialOps.message : "Os bots continuam identificados pelo próprio slug.",
+      descricao: "Uma chave compartilhada pelo escritório para todas as automações do Ops Center.",
+      selo: credencialOps?.tokenHash ? { tom: "sucesso", rotulo: "Chave configurada" } : { tom: "neutro", rotulo: "Sem chave" },
+      estado: credencialOps?.tokenHash ? "ligada" : "desligada",
+      detalhe: "Os bots continuam identificados pelo próprio slug.",
     });
     if (podeGerirGithub) blocos.push({
       chave: "github", nome: "GitHub", icone: <GitBranch />,
@@ -295,9 +293,7 @@ export default async function IntegracoesPage({
           ) : bloco.chave === "github" ? (
             <GithubIntegration />
           ) : bloco.chave === "ops_center" ? (
-            credencialOps?.status === "ready"
-              ? <OpsCredentialForm keys={credencialOps.keys} version={credencialOps.version} />
-              : <Aviso tom="atencao">{credencialOps?.message ?? "Configuração do Ops Center indisponível. Atualize a página para tentar novamente."}</Aviso>
+            <OpsCredentialForm hasToken={Boolean(credencialOps?.tokenHash)} version={credencialOps?.version ?? 0} />
           ) : bloco.chave === "chatwoot" ? (
             <div className="flex flex-col gap-5">
               <p className="text-fs-3 text-fg-secondary">
