@@ -18,7 +18,15 @@ import { lerConfig } from "@/lib/integracoes/data";
 import { integracaoDoCatalogo, camposFaltando } from "@/lib/integracoes/catalogo";
 import type { CredenciaisSped } from "./client";
 
-export async function credenciaisDoSped(tenantId: string): Promise<CredenciaisSped | null> {
+/**
+ * A credencial do motor (22/10/2026, API-CONNECT §8.1): a de leitura de sempre
+ * e, quando o escritório a gravou, a de escrita. `tokenEscrita` nulo não
+ * invalida a integração — o Connect só consulta, e as ações aparecem
+ * desabilitadas. Nunca vai ao navegador.
+ */
+export type CredenciaisDoMotor = CredenciaisSped & { tokenEscrita: string | null };
+
+export async function credenciaisDoSped(tenantId: string): Promise<CredenciaisDoMotor | null> {
   const prisma = getPrisma();
   const linha = await prisma.tenantIntegration.findUnique({
     where: {
@@ -41,5 +49,6 @@ export async function credenciaisDoSped(tenantId: string): Promise<CredenciaisSp
     return null;
   }
 
-  return { baseUrl: config.baseUrl.replace(/\/+$/, ""), token: config.serviceToken };
+  const escrita = typeof config.serviceTokenEscrita === "string" ? config.serviceTokenEscrita.trim() : "";
+  return { baseUrl: config.baseUrl.replace(/\/+$/, ""), token: config.serviceToken, tokenEscrita: escrita || null };
 }
