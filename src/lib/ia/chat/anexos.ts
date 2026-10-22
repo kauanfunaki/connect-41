@@ -58,32 +58,44 @@ export async function lerAnexos(brutos: Bruto[]): Promise<{ anexos: AnexoDaPergu
 }
 
 /** Corta no teto de linhas e caracteres — e avisa o modelo que cortou. */
-function limitar(texto: string): string {
+function limitar(texto: string, maxLinhas = MAX_LINHAS_DA_PLANILHA, maxCaracteres = MAX_CARACTERES_DA_PLANILHA): string {
   const todas = texto.split(/\r?\n/);
-  let saida = todas.slice(0, MAX_LINHAS_DA_PLANILHA).join("\n");
-  let cortou = todas.length > MAX_LINHAS_DA_PLANILHA;
-  if (saida.length > MAX_CARACTERES_DA_PLANILHA) {
-    saida = saida.slice(0, MAX_CARACTERES_DA_PLANILHA);
+  let saida = todas.slice(0, maxLinhas).join("\n");
+  let cortou = todas.length > maxLinhas;
+  if (saida.length > maxCaracteres) {
+    saida = saida.slice(0, maxCaracteres);
     cortou = true;
   }
   return cortou ? `${saida}\n[…cortado — o arquivo é maior que isto]` : saida;
 }
 
-/** Cada aba como linhas separadas por ";", com o nome da aba em cima. */
-export async function planilhaComoTexto(bytes: Uint8Array): Promise<string> {
+/**
+ * Cada aba como linhas separadas por ";", com o nome da aba em cima.
+ *
+ * Os tetos são opcionais (22/10/2026): a triagem de chamados com Anthropic usa
+ * esta mesma leitura com até mil linhas por aba — o limite que ela já declara
+ * ao modelo —, e o chat continua com os 300 de sempre.
+ */
+export async function planilhaComoTexto(
+  bytes: Uint8Array,
+  tetos: { maxLinhas?: number; maxCaracteres?: number } = {}
+): Promise<string> {
+  const maxLinhas = tetos.maxLinhas ?? MAX_LINHAS_DA_PLANILHA;
+  const maxCaracteres = tetos.maxCaracteres ?? MAX_CARACTERES_DA_PLANILHA;
   const livro = new ExcelJS.Workbook();
   await livro.xlsx.load(Buffer.from(bytes) as unknown as ArrayBuffer);
   const partes: string[] = [];
   livro.eachSheet((aba) => {
     const linhas: string[] = [];
     aba.eachRow({ includeEmpty: false }, (linha) => {
-      if (linhas.length >= MAX_LINHAS_DA_PLANILHA) return;
+      if (linhas.length >= maxLinhas) return;
       const valores = (linha.values as unknown[]).slice(1).map(valorDaCelula);
       linhas.push(valores.join(";"));
     });
     partes.push(`# ${aba.name}\n${linhas.join("\n")}`);
   });
-  return limitar(partes.join("\n\n"));
+  // Sem teto explícito, o corte total de linhas continua o do chat.
+  return limitar(partes.join("\n\n"), tetos.maxLinhas === undefined ? MAX_LINHAS_DA_PLANILHA : Number.MAX_SAFE_INTEGER, maxCaracteres);
 }
 
 function valorDaCelula(v: unknown): string {
