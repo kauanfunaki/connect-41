@@ -28,6 +28,7 @@ import { setoresDoModulo } from "@/lib/modules";
 import { motivoDoBloqueioDeBaixa } from "./aprovacao/regras";
 import { sincronizarAcordos } from "./cobranca/sincronizar";
 import { empresasDasContas, recusaDoFoco } from "@/lib/empresas/focoServidor";
+import { regraQueVale, type RegraComOrigem } from "./baixa/encargos";
 
 // `SECTOR` é o de origem, usado só como padrão. As ações servem `/pagar` e
 // `/receber`, que podem estar em setores diferentes num tenant: o gate aceita
@@ -208,6 +209,14 @@ export type DadosDaBaixa =
        */
       outras: { id: string; nome: string }[];
       baixas: BaixaDaConta[];
+      /** O vencimento ("AAAA-MM-DD") — os juros e a multa contam a partir dele. */
+      vencimentoKey: string;
+      /**
+       * Juros e multa pelo atraso (22/10/2026): a regra do fornecedor ou
+       * cliente, ou a da empresa. Com ela, a janela já vem com juros, multa e
+       * desconto calculados pela data; nula, os campos ficam em zero.
+       */
+      regraDeEncargos: RegraComOrigem | null;
     }
   | { ok: false; erro: string };
 
@@ -259,7 +268,9 @@ export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
       counterpartyId: true,
       cardAccountId: true,
       transferId: true,
-      counterparty: { select: { name: true } },
+      dueDate: true,
+      counterparty: { select: { name: true, lateFinePercent: true, lateInterestPercent: true, earlyDiscountPercent: true } },
+      company: { select: { lateFinePercent: true, lateInterestPercent: true, earlyDiscountPercent: true } },
       payments: {
         select: {
           id: true,
@@ -307,6 +318,9 @@ export async function dadosDaBaixa(entryId: string): Promise<DadosDaBaixa> {
       origem: p.origin,
       conciliada: p.bankMatch !== null,
     })),
+    vencimentoKey: saoPauloParts(conta.dueDate).dateKey,
+    // A transferência entre contas e a fatura do cartão não têm atraso a cobrar.
+    regraDeEncargos: conta.transferId || conta.cardAccountId ? null : regraQueVale(conta.company, conta.counterparty),
   };
 }
 

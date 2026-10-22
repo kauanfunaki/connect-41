@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Layers, Users, Truck, HandCoins, ListTree, FolderKanban } from "lucide-react";
+import { Layers, Users, Truck, HandCoins, ListTree, FolderKanban, Percent } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
@@ -32,6 +32,8 @@ import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { NovaCategoriaDaEmpresa, LinhaDaDre, EsconderDoPadrao, EditarCategoriaDaEmpresa } from "@/components/financeiro/PlanoDaEmpresa";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
+import { FormEncargosDaEmpresa } from "@/components/financeiro/FormEncargos";
+import { descricaoDaRegra, regraDasColunas, regraNoCampo } from "@/lib/financeiro/baixa/encargos";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +47,7 @@ const ABAS = [
   { chave: "centros", rotulo: "Centros de custo", icone: <Layers /> },
   { chave: "projetos", rotulo: "Projetos", icone: <FolderKanban /> },
   { chave: "plano", rotulo: "Plano de contas", icone: <ListTree /> },
+  { chave: "encargos", rotulo: "Juros e multa", icone: <Percent /> },
 ] as const;
 
 /**
@@ -249,6 +252,17 @@ export default async function CadastrosFinanceirosPage({
     );
   }
 
+  if (aba === "encargos") {
+    return comEmpresa(
+      <PageContainer>
+        {cabecalho}
+        {filtroDaEmpresa}
+        <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
+        <AbaDeEncargos tenantId={ctx.tenantId} companyId={companyId} podeEditar={podeEditar} />
+      </PageContainer>
+    );
+  }
+
   const [contrapartes, movimento, categorias] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId: ctx.tenantId, companyId },
@@ -275,6 +289,9 @@ export default async function CadastrosFinanceirosPage({
         bankAgency: true,
         bankAccount: true,
         pixKey: true,
+        lateFinePercent: true,
+        lateInterestPercent: true,
+        earlyDiscountPercent: true,
       },
       orderBy: { name: "asc" },
     }),
@@ -341,6 +358,7 @@ export default async function CadastrosFinanceirosPage({
     bankAgency: c.bankAgency,
     bankAccount: c.bankAccount,
     pixKey: c.pixKey,
+    encargos: regraNoCampo(c),
   });
 
   return comEmpresa(
@@ -900,5 +918,66 @@ async function AbaDoPlano({
         })
       )}
     </>
+  );
+}
+
+/**
+ * Juros e multa pelo atraso (22/10/2026): a regra da empresa, que a janela da
+ * baixa usa para já vir com juros, multa e desconto calculados pela data — e
+ * a lista de quem tem regra própria, na ficha. A conta é
+ * src/lib/financeiro/baixa/encargos.ts.
+ */
+async function AbaDeEncargos({ tenantId, companyId, podeEditar }: { tenantId: string; companyId: string; podeEditar: boolean }) {
+  const prisma = getPrisma();
+  const [empresa, comRegra] = await Promise.all([
+    prisma.company.findFirst({
+      where: { id: companyId, tenantId },
+      select: { lateFinePercent: true, lateInterestPercent: true, earlyDiscountPercent: true },
+    }),
+    prisma.financeCounterparty.findMany({
+      where: {
+        tenantId,
+        companyId,
+        OR: [{ lateFinePercent: { not: null } }, { lateInterestPercent: { not: null } }, { earlyDiscountPercent: { not: null } }],
+      },
+      select: { id: true, name: true, active: true, lateFinePercent: true, lateInterestPercent: true, earlyDiscountPercent: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+  const regra = regraDasColunas(empresa);
+  return (
+    <div className="flex flex-col gap-4">
+      <Card className="p-5">
+        <h2 className="mb-1 text-label font-semibold text-fg">Regra da empresa</h2>
+        <p className="mb-4 text-helper text-fg-secondary">
+          {regra ? `${descricaoDaRegra(regra)}.` : "Sem regra: juros, multa e desconto da baixa ficam em zero, e quem baixa preenche."} Ao dar baixa com
+          data depois do vencimento, a janela já vem com a multa e os juros calculados sobre o valor baixado; até o vencimento, com o desconto.
+          Quem baixa ainda pode mudar. A conciliação com o extrato não usa a regra: lá a diferença é a do banco.
+        </p>
+        <FormEncargosDaEmpresa companyId={companyId} valores={regraNoCampo(empresa)} podeEditar={podeEditar} />
+      </Card>
+      <Card className="p-5">
+        <h2 className="mb-1 text-label font-semibold text-fg">Com regra própria</h2>
+        <p className="mb-3 text-helper text-fg-secondary">
+          Fornecedores e clientes cuja ficha tem juros e multa próprios — passam por cima da regra da empresa. Edite na ficha, em
+          Fornecedores, Sacados ou Todos.
+        </p>
+        {comRegra.length === 0 ? (
+          <p className="text-ui text-fg-muted">Nenhum cadastro com regra própria.</p>
+        ) : (
+          <ul className="divide-y divide-border-soft text-ui">
+            {comRegra.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2">
+                <span className="font-medium">
+                  {c.name}
+                  {!c.active && <span className="ml-1 text-micro text-fg-muted">(inativo)</span>}
+                </span>
+                <span className="text-fg-secondary">{descricaoDaRegra(regraDasColunas(c)!)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
   );
 }
