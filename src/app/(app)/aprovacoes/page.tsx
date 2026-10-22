@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import { ShieldCheck, Hourglass, Wallet, XCircle, Ban, ListChecks, Scale } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { formatInstantDate } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusDot } from "@/components/shared/StatusDot";
@@ -53,10 +54,10 @@ export default async function AprovacoesPage({
 }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
-  const gerencia = canManageSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  if (!canViewSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
+  const podeAgir = canActOnSector(ctx, setores);
+  const gerencia = canManageSector(ctx, setores);
 
   const params = await searchParams;
   const aba = params.aba === "alcadas" && gerencia ? "alcadas" : "fila";
@@ -83,6 +84,9 @@ export default async function AprovacoesPage({
         subtitle="Contas a pagar que esperam o “pode pagar” do cliente ou da coordenação. Aguardando e reprovada não são baixadas."
         action={aba === "alcadas" ? <NovaAlcada companyId={empresaId} usuarios={usuariosDaAlcada} /> : undefined}
       />
+      {/* Aba das Solicitações desde 21/10/2026, quando elas estão ligadas: a
+          tela saiu do menu do BPO (ver TELAS_DO_BPO_NAS_SOLICITACOES). */}
+      {(await isModuleEnabled(ctx.tenantId, "portal_solicitacoes")) && <AbasDoAtendimento ativa="aprovacoes" />}
       {/* Empresa primeiro, num seletor só para as duas abas (15/10/2026): na
           Fila ela estava dentro do Filtros e nas Alçadas era o seletor antigo,
           sem o rótulo nem a última aberta, numa fileira embaixo das abas. */}

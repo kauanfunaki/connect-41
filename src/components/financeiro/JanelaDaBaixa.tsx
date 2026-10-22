@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { Lock, Undo2 } from "lucide-react";
+import { FileDown, Lock, Undo2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -17,6 +17,10 @@ import { centavosDeTexto } from "@/lib/financeiro/manual";
 import { dadosDaBaixa, registrarPagamento, desfazerBaixa, type DadosDaBaixa, type BaixaDaConta } from "@/lib/financeiro/acoes";
 import { contaSugeridaNaBaixa } from "@/lib/financeiro/contaPrevista";
 import { cicloDaCompra, mesDoCiclo } from "@/lib/financeiro/cartao";
+import { descricaoDaRegra, encargosDaBaixa } from "@/lib/financeiro/baixa/encargos";
+
+/** Os campos que a regra de juros e multa preenche (22/10/2026). */
+type CampoDoEncargo = "juros" | "multa" | "desconto";
 
 // A janela da baixa (19/10, lote C — pedidos 4 e 6 do BPO). Abre do botão
 // Pagar/Receber e do "⋯ › Baixas" de Contas a pagar e a receber. Era um balão
@@ -178,12 +182,26 @@ function FormularioDaBaixa({
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
   const [valor, setValor] = useState(noCampo(dados.saldoCentavos));
-  const [juros, setJuros] = useState("");
-  const [multa, setMulta] = useState("");
-  const [desconto, setDesconto] = useState("");
+  const [digitado, setDigitado] = useState<Record<CampoDoEncargo, string>>({ juros: "", multa: "", desconto: "" });
+  // Juros e multa pelo atraso (22/10/2026): com regra, os três campos vêm
+  // calculados pela data e pelo valor da baixa, e acompanham as mudanças até a
+  // pessoa digitar neles — daí vale o que ela digitou. Sem regra, ficam vazios
+  // (zero), como antes.
+  const [aMao, setAMao] = useState<ReadonlySet<CampoDoEncargo>>(new Set());
 
   // O total ao vivo: o que vai bater com a linha do extrato.
   const lido = (t: string) => (t.trim() === "" ? 0 : centavosDeTexto(t));
+  const regra = dados.regraDeEncargos;
+  const calculado = encargosDaBaixa({ principalCentavos: lido(valor) ?? 0, vencimentoKey: dados.vencimentoKey, pagamentoKey: dataKey }, regra);
+  const doCampo = (c: CampoDoEncargo, centavos: number) => (aMao.has(c) || !regra ? digitado[c] : centavos ? noCampo(centavos) : "");
+  const juros = doCampo("juros", calculado.jurosCentavos);
+  const multa = doCampo("multa", calculado.multaCentavos);
+  const desconto = doCampo("desconto", calculado.descontoCentavos);
+  const digitar = (c: CampoDoEncargo) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const texto = e.target.value;
+    setDigitado((d) => ({ ...d, [c]: texto }));
+    setAMao((m) => new Set(m).add(c));
+  };
   const partes = [lido(valor), lido(juros), lido(multa), lido(desconto)];
   const legivel = partes.every((p) => p !== null);
   const [p, j, m, d] = partes.map((x) => x ?? 0) as [number, number, number, number];
@@ -280,15 +298,32 @@ function FormularioDaBaixa({
           <Input id={`${id}-valor`} name="valor" prefix="R$" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} required />
         </CampoForm>
         <CampoForm label="Juros" htmlFor={`${id}-juros`}>
-          <Input id={`${id}-juros`} name="juros" prefix="R$" inputMode="decimal" value={juros} onChange={(e) => setJuros(e.target.value)} placeholder="0,00" />
+          <Input id={`${id}-juros`} name="juros" prefix="R$" inputMode="decimal" value={juros} onChange={digitar("juros")} placeholder="0,00" />
         </CampoForm>
         <CampoForm label="Multa" htmlFor={`${id}-multa`}>
-          <Input id={`${id}-multa`} name="multa" prefix="R$" inputMode="decimal" value={multa} onChange={(e) => setMulta(e.target.value)} placeholder="0,00" />
+          <Input id={`${id}-multa`} name="multa" prefix="R$" inputMode="decimal" value={multa} onChange={digitar("multa")} placeholder="0,00" />
         </CampoForm>
         <CampoForm label="Desconto" htmlFor={`${id}-desconto`}>
-          <Input id={`${id}-desconto`} name="desconto" prefix="R$" inputMode="decimal" value={desconto} onChange={(e) => setDesconto(e.target.value)} placeholder="0,00" />
+          <Input id={`${id}-desconto`} name="desconto" prefix="R$" inputMode="decimal" value={desconto} onChange={digitar("desconto")} placeholder="0,00" />
         </CampoForm>
       </FieldGrid>
+
+      {regra && (
+        <p className="-mt-2 text-helper text-fg-muted">
+          {calculado.diasDeAtraso > 0
+            ? `${calculado.diasDeAtraso} ${calculado.diasDeAtraso === 1 ? "dia" : "dias"} depois do vencimento (${dataBr(dados.vencimentoKey)}). `
+            : `Até o vencimento (${dataBr(dados.vencimentoKey)}). `}
+          Calculado pela regra {regra.origem === "contraparte" ? (aPagar ? "do fornecedor" : "do cliente") : "da empresa"}: {descricaoDaRegra(regra).toLowerCase()}.
+          {aMao.size > 0 && (
+            <>
+              {" "}
+              <button type="button" className="text-brand hover:underline" onClick={() => setAMao(new Set())}>
+                Recalcular
+              </button>
+            </>
+          )}
+        </p>
+      )}
 
       <CampoForm label="Observação" htmlFor={`${id}-obs`}>
         <Input id={`${id}-obs`} name="observacao" maxLength={255} placeholder="Ex.: pago com atraso, juros do boleto" />
@@ -334,7 +369,7 @@ function ListaDeBaixas({ baixas, aPagar, onDesfeito }: { baixas: BaixaDaConta[];
     <div className="flex flex-col gap-2">
       <h3 className="text-label font-semibold text-fg">{baixas.length === 1 ? "Baixa desta conta" : `As ${baixas.length} baixas desta conta`}</h3>
       <div className="overflow-x-auto rounded-md border border-border">
-        <table className="w-full min-w-[560px] text-ui">
+        <table className="w-full min-w-[640px] text-ui">
           <thead>
             <tr className="border-b border-border bg-table-header-bg text-micro uppercase tracking-wide text-fg-muted">
               <th className="px-3 py-2 text-left font-medium">Data</th>
@@ -361,7 +396,16 @@ function ListaDeBaixas({ baixas, aPagar, onDesfeito }: { baixas: BaixaDaConta[];
                 <td className="px-3 py-2 text-right tabular-nums">{b.jurosCentavos + b.multaCentavos ? reais(b.jurosCentavos + b.multaCentavos) : "—"}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{b.descontoCentavos ? reais(b.descontoCentavos) : "—"}</td>
                 <td className="px-3 py-2 text-right tabular-nums font-medium">{reais(b.caixaCentavos)}</td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-3 py-2 text-right whitespace-nowrap">
+                  {/* O recibo da baixa em PDF (22/10/2026): só leitura, sai de toda baixa. */}
+                  <a
+                    href={`/api/financeiro/baixas/${b.id}/recibo`}
+                    className="mr-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-micro text-brand hover:underline"
+                    title="Baixar o recibo desta baixa em PDF"
+                    download
+                  >
+                    <FileDown size={12} /> Recibo
+                  </a>
                   {b.conciliada ? (
                     <span className="text-micro text-fg-muted whitespace-nowrap" title="Desfaça na conciliação, que devolve a linha do extrato junto.">
                       conciliada

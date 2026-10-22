@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { nomeDoArquivoParaTela } from "@/lib/whatsapp/documento";
 
 const STORAGE_DIR = path.join(process.cwd(), "storage", "resumes");
@@ -28,7 +28,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ mes
   if (!ctx.userId || !ctx.tenantId) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? "recrutamento")) {
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? "recrutamento")) {
     return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
   }
 

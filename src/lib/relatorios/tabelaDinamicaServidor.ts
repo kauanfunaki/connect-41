@@ -28,16 +28,22 @@ function intervalo(de: string | null, ate: string | null): { gte?: Date; lt?: Da
   };
 }
 
-/** Os fatos da base escolhida, numa empresa ou no escritório inteiro (`empresaId` nulo). */
-export async function fatosDaBase(tenantId: string, empresaId: string | null, c: Configuracao, agora: Date): Promise<FatosDaBase> {
+/** Uma empresa, as da base em foco, ou `null` — o escritório. */
+export type EmpresasDosFatos = string | string[] | null;
+
+/**
+ * Os fatos da base escolhida, numa empresa ou no escritório inteiro (`empresaId`
+ * nulo) — ou, com uma empresa em foco (21/10/2026), nas empresas da base dela.
+ */
+export async function fatosDaBase(tenantId: string, empresaId: EmpresasDosFatos, c: Configuracao, agora: Date): Promise<FatosDaBase> {
   return c.base === "baixas" ? fatosDeBaixas(tenantId, empresaId, c) : fatosDeContas(tenantId, empresaId, c, agora);
 }
 
-async function fatosDeContas(tenantId: string, empresaId: string | null, c: Configuracao, agora: Date): Promise<FatosDaBase> {
+async function fatosDeContas(tenantId: string, empresaId: EmpresasDosFatos, c: Configuracao, agora: Date): Promise<FatosDaBase> {
   const hojeKey = saoPauloParts(agora).dateKey;
   const f = c.filtros;
   const e: Prisma.FinanceEntryWhereInput[] = [{ tenantId, status: { not: "CANCELADO" } }];
-  if (empresaId) e.push({ companyId: empresaId });
+  if (empresaId) e.push({ companyId: Array.isArray(empresaId) ? { in: empresaId } : empresaId });
   if (f.tipo !== "ambos") e.push({ kind: f.tipo });
   if (f.de || f.ate) {
     e.push(
@@ -107,12 +113,12 @@ async function fatosDeContas(tenantId: string, empresaId: string | null, c: Conf
   return { fatos: fatosDasContas(contas, hojeKey), limitada };
 }
 
-async function fatosDeBaixas(tenantId: string, empresaId: string | null, c: Configuracao): Promise<FatosDaBase> {
+async function fatosDeBaixas(tenantId: string, empresaId: EmpresasDosFatos, c: Configuracao): Promise<FatosDaBase> {
   const f = c.filtros;
   const { gte, lt } = intervalo(f.de, f.ate);
   // Sem período, o acervo inteiro — o teto de linhas segura o volume.
   let movimentos = await movimentosDeCaixa(
-    baixasNoPeriodo({ tenantId, ...(empresaId ? { companyId: empresaId } : {}) }, gte ?? new Date(0), lt ?? new Date(Date.UTC(9999, 0, 1)))
+    baixasNoPeriodo({ tenantId, ...(Array.isArray(empresaId) ? { companyIds: empresaId } : empresaId ? { companyId: empresaId } : {}) }, gte ?? new Date(0), lt ?? new Date(Date.UTC(9999, 0, 1)))
   );
   if (f.tipo !== "ambos") movimentos = movimentos.filter((m) => m.kind === f.tipo);
   const limitada = movimentos.length > LIMITE_DE_FATOS;

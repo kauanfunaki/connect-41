@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { obterDocumento } from "@/lib/fiscal/data";
 import { alcanceDaEquipe } from "../alcance";
@@ -29,8 +29,8 @@ export async function definirDestino(
   motivo?: string
 ): Promise<{ error: string } | { ok: true }> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão." };
-  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só a coordenação do fiscal decide o destino." };
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão." };
+  if (!canManageSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só a coordenação do fiscal decide o destino." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { error: "Módulo não habilitado." };
 
   const alcance = alcanceDaEquipe(ctx.tenantId);

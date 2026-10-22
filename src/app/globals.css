@@ -20,6 +20,7 @@
    ou diretamente pelas variáveis --c41-*. Troca claro/escuro automática via
    data-theme="dark"|"light" no elemento raiz.
    ========================================================================== */
+.c41-previa-clara,
 :root {
   color-scheme: light;
 
@@ -39,6 +40,25 @@
   --c41-sector-societario:#C8860D; --c41-sector-financeiro:#0E9384; --c41-sector-fiscal:#C5374B;
   --c41-sector-contabil:#4F46E5; --c41-sector-bpo:#B7791F; --c41-sector-comercial:#E15A2B;
   --c41-sector-corretora:#0891B2; --c41-sector-gestao:#586577;
+
+  /* Cor por grupo de telas do portal (21/10/2026), no jeito do Omie — azul no
+     financeiro, laranja nas notas. Padrão de fábrica; o escritório troca em
+     Administração › Empresa › Aparência do portal, e o `EstiloDaAparencia`
+     sobrescreve estes valores. Três tons por grupo, todos calculados em
+     `lib/aparencia/cores.ts` (o teste confere que estes são os de lá):
+       --c41-grupo-X        ícone, traço, filete — 3:1 sobre o surface-hover
+       --c41-grupo-X-fg     letra — 4,5:1 sobre o surface-hover
+       --c41-grupo-X-solid  fundo com letra branca — 4,5:1, igual nos dois temas
+     Use pelo `data-grupo="X"` e os utilitários `text-grupo`, `text-grupo-fg`,
+     `bg-grupo-solid` (ver `[data-grupo]` mais abaixo). */
+  --c41-grupo-financeiro:#1A7FD6;  --c41-grupo-financeiro-fg:#166DB8;
+  --c41-grupo-financeiro-solid:#1877C9; --c41-grupo-financeiro-solid-fim:#1566AD;
+  --c41-grupo-fiscal:#CE6A19;      --c41-grupo-fiscal-fg:#A75514;
+  --c41-grupo-fiscal-solid:#B65E16; --c41-grupo-fiscal-solid-fim:#9D5113;
+  --c41-grupo-processos:#8B5CF6;   --c41-grupo-processos-fg:#774FD3;
+  --c41-grupo-processos-solid:#8357E7; --c41-grupo-processos-solid-fim:#714BC7;
+  --c41-grupo-atendimento:#119773; --c41-grupo-atendimento-fg:#0E7A5D;
+  --c41-grupo-atendimento-solid:#0F8566; --c41-grupo-atendimento-solid-fim:#0D7258;
 
   /* superfícies/texto — TEMA CLARO
      Paleta B "Mais azul" (escolha do Kauan em 13/10/2026, página Cores do
@@ -133,6 +153,7 @@
   --c41-scrollbar-thumb-active:rgba(15,26,51,.4);
 }
 
+.c41-previa-escura,
 :root[data-theme="dark"] {
   color-scheme: dark;
   --c41-canvas:          #0D1322;
@@ -184,6 +205,11 @@
   --c41-scrollbar-thumb:       rgba(255,255,255,.14);
   --c41-scrollbar-thumb-hover: rgba(255,255,255,.24);
   --c41-scrollbar-thumb-active:rgba(255,255,255,.34);
+  /* Os grupos do portal no escuro: o mesmo matiz, clareado até ler. */
+  --c41-grupo-financeiro:#1A7FD6;  --c41-grupo-financeiro-fg:#4B9BDE;
+  --c41-grupo-fiscal:#F07B1D;      --c41-grupo-fiscal-fg:#F07B1D;
+  --c41-grupo-processos:#8B5CF6;   --c41-grupo-processos-fg:#A480F6;
+  --c41-grupo-atendimento:#12A07A; --c41-grupo-atendimento-fg:#24A884;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -232,6 +258,10 @@
     --c41-scrollbar-thumb:       rgba(255,255,255,.14);
     --c41-scrollbar-thumb-hover: rgba(255,255,255,.24);
     --c41-scrollbar-thumb-active:rgba(255,255,255,.34);
+    --c41-grupo-financeiro:#1A7FD6;  --c41-grupo-financeiro-fg:#4B9BDE;
+    --c41-grupo-fiscal:#F07B1D;      --c41-grupo-fiscal-fg:#F07B1D;
+    --c41-grupo-processos:#8B5CF6;   --c41-grupo-processos-fg:#A480F6;
+    --c41-grupo-atendimento:#12A07A; --c41-grupo-atendimento-fg:#24A884;
   }
 }
 
@@ -289,6 +319,13 @@
   --color-sector-contabil:var(--c41-sector-contabil); --color-sector-bpo:var(--c41-sector-bpo);
   --color-sector-comercial:var(--c41-sector-comercial); --color-sector-corretora:var(--c41-sector-corretora);
   --color-sector-gestao:var(--c41-sector-gestao);
+
+  /* O grupo do portal em volta (`data-grupo`): `text-grupo` no ícone,
+     `text-grupo-fg` na letra, `bg-grupo-solid` com letra branca, `bg-grupo/10`
+     no fundo clarinho. Fora de grupo, é a cor da marca. */
+  --color-grupo:       var(--c41-grupo);
+  --color-grupo-fg:    var(--c41-grupo-fg);
+  --color-grupo-solid: var(--c41-grupo-solid);
 
   --font-sans: var(--font-ibm-plex-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-ibm-plex-mono), ui-monospace, Consolas, monospace;
@@ -807,6 +844,7 @@ input[type="search"]::-webkit-search-decoration {
    traço do título, brilho da direita) e movimento só onde ele informa — a
    tela chegando, o painel abrindo.
    ========================================================================== */
+.c41-previa-clara,
 :root {
   --c41-shadow-xs: 0 1px 2px rgba(15,26,51,.06);
   --c41-shadow-md: 0 10px 28px -8px rgba(15,26,51,.16);
@@ -814,6 +852,10 @@ input[type="search"]::-webkit-search-decoration {
   /* Cor do setor ativo. O AppShell troca por `activeSector.color`; fora de
      setor (e no portal) é o azul da marca. */
   --c41-setor:     var(--c41-brand);
+  /* O grupo do portal em volta (21/10/2026); fora de grupo, a marca. */
+  --c41-grupo:       var(--c41-brand);
+  --c41-grupo-fg:    var(--c41-brand);
+  --c41-grupo-solid: var(--c41-brand-solid);
   /* Faixa de destaques da Home (06/10, opção C): cartão cheio, letra branca,
      igual nos dois temas. Azul é o volume; o vinho é o alerta (vencido,
      atrasado, estourado). Branco sobre o tom mais claro de cada degradê:
@@ -829,6 +871,7 @@ input[type="search"]::-webkit-search-decoration {
   --c41-destaque-numero-de:  var(--c41-brand-600);
   --c41-destaque-numero-ate: var(--c41-brand-700);
 }
+.c41-previa-escura,
 :root[data-theme="dark"] {
   --c41-shadow-xs: 0 1px 2px rgba(0,0,0,.45);
   --c41-shadow-md: 0 12px 32px -8px rgba(0,0,0,.65);
@@ -842,6 +885,48 @@ input[type="search"]::-webkit-search-decoration {
     --c41-glow:      rgba(80,130,255,.22);
     --c41-destaque-numero-ate: var(--c41-brand-800);
   }
+}
+
+/* A prévia escura da Aparência do portal (21/10/2026) recebe a cor escolhida
+   no próprio elemento: os tokens que só o bloco claro escreve como `var()` de
+   outro precisam ser escritos de novo aqui, ou chegariam já resolvidos com a
+   marca do <html>. */
+.c41-previa-escura {
+  --c41-brand-solid: var(--c41-brand-600); --c41-brand-solid-hover: var(--c41-brand-700);
+  --c41-destaque-de: var(--c41-brand-700); --c41-destaque-ate: var(--c41-brand-900);
+  --c41-destaque-numero-de: var(--c41-brand-600);
+  --c41-setor: var(--c41-brand);
+  --c41-grupo: var(--c41-brand); --c41-grupo-fg: var(--c41-brand); --c41-grupo-solid: var(--c41-brand-solid);
+}
+
+/* O grupo de telas do portal (21/10/2026). Dentro de `data-grupo="X"` o
+   grupo vira "o setor" da tela — o traço do título, a barra do item do menu e
+   o brilho da direita leem `--c41-setor` — e o cartão do número principal
+   (FaixaDeTotais) fica na cor sólida do grupo, com a mesma letra branca. O
+   item ativo do menu e os botões seguem na cor principal do escritório. */
+[data-grupo="financeiro"] {
+  --c41-grupo: var(--c41-grupo-financeiro); --c41-grupo-fg: var(--c41-grupo-financeiro-fg);
+  --c41-grupo-solid: var(--c41-grupo-financeiro-solid);
+  --c41-setor: var(--c41-grupo-financeiro);
+  --c41-destaque-numero-de: var(--c41-grupo-financeiro-solid); --c41-destaque-numero-ate: var(--c41-grupo-financeiro-solid-fim);
+}
+[data-grupo="fiscal"] {
+  --c41-grupo: var(--c41-grupo-fiscal); --c41-grupo-fg: var(--c41-grupo-fiscal-fg);
+  --c41-grupo-solid: var(--c41-grupo-fiscal-solid);
+  --c41-setor: var(--c41-grupo-fiscal);
+  --c41-destaque-numero-de: var(--c41-grupo-fiscal-solid); --c41-destaque-numero-ate: var(--c41-grupo-fiscal-solid-fim);
+}
+[data-grupo="processos"] {
+  --c41-grupo: var(--c41-grupo-processos); --c41-grupo-fg: var(--c41-grupo-processos-fg);
+  --c41-grupo-solid: var(--c41-grupo-processos-solid);
+  --c41-setor: var(--c41-grupo-processos);
+  --c41-destaque-numero-de: var(--c41-grupo-processos-solid); --c41-destaque-numero-ate: var(--c41-grupo-processos-solid-fim);
+}
+[data-grupo="atendimento"] {
+  --c41-grupo: var(--c41-grupo-atendimento); --c41-grupo-fg: var(--c41-grupo-atendimento-fg);
+  --c41-grupo-solid: var(--c41-grupo-atendimento-solid);
+  --c41-setor: var(--c41-grupo-atendimento);
+  --c41-destaque-numero-de: var(--c41-grupo-atendimento-solid); --c41-destaque-numero-ate: var(--c41-grupo-atendimento-solid-fim);
 }
 
 /* O brilho do topo da área de conteúdo: azul à esquerda, a cor do setor à

@@ -114,11 +114,19 @@ const EMPRESA: Ligacao[] = [
   // As pastas da casa nascem com a empresa; o que conta como histórico são os
   // arquivos dentro delas (contados à parte em `empresa.ts`).
   { modelo: "DriveFolder", campo: "company", fk: "companyId", tratamento: "cascata" },
+  // O registro do que o robô da pasta de rede já trouxe (21/10/2026) vai junto com a empresa.
+  { modelo: "DriveNetworkFile", campo: "company", fk: "companyId", tratamento: "cascata" },
   // Portal por empresa (14/10/2026): sai a ligação da empresa com o acesso, e
   // a conta continua (com as outras empresas dela, ou sem nenhuma). O
   // comunicado já enviado fica, sem esta empresa entre os destinatários.
   { modelo: "PortalUserCompany", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["acesso ao portal ligado a ela (a conta continua)", "acessos ao portal ligados a ela (as contas continuam)"] },
   { modelo: "ClientAnnouncementCompany", campo: "company", fk: "companyId", tratamento: "cascata" },
+  { modelo: "DominioAccountMap", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["conta do de-para da Domínio", "contas do de-para da Domínio"] },
+  { modelo: "BankReconciliationRule", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["regra de conciliação", "regras de conciliação"] },
+  { modelo: "FinanceRecurrence", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["série de repetição", "séries de repetição"] },
+  // A marca de cada obrigação por regime gerada (22/10/2026). A atividade em si
+  // é um PipelineItem, que fica sem a empresa como as outras.
+  { modelo: "ObrigacaoGerada", campo: "company", fk: "companyId", tratamento: "cascata" },
 
   // Ficam, sem o vínculo.
   { modelo: "Company", campo: "parent", fk: "parentCompanyId", tratamento: "desligar", rotulo: ["filial (vira matriz solta)", "filiais (viram matrizes soltas)"] },
@@ -139,6 +147,7 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   { modelo: "SerproPedido", coluna: "companyId", tratamento: "apagar" },
   // Preferência "última empresa aberta": sem a empresa, não vale nada.
   { modelo: "UserLastCompany", coluna: "companyId", tratamento: "apagar" },
+  { modelo: "BankRuleApplication", coluna: "companyId", tratamento: "apagar" },
   { modelo: "AuditLog", coluna: "entityId", tratamento: "manter", motivo: "a trilha guarda o que foi excluído" },
   { modelo: "AgentRun", coluna: "entityId", tratamento: "manter", motivo: "trilha de execução da IA" },
   { modelo: "AgentProposal", coluna: "entityId", tratamento: "manter", motivo: "proposta da IA já decidida, guardada como trilha" },
@@ -304,6 +313,11 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
   { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
+  { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
+  { modelo: "BankReconciliationRule", coluna: "createdById", tratamento: "manter", motivo: "quem criou a regra; a tela não expõe o id" },
+  { modelo: "FinanceRecurrence", coluna: "createdById", tratamento: "manter", motivo: "quem lançou a série; as contas que o agendador cria levam esse nome" },
+  { modelo: "BankRuleApplication", coluna: "createdById", tratamento: "manter", motivo: "registro de quem lançou pela regra" },
+  { modelo: "BankRuleApplication", coluna: "undoneById", tratamento: "manter", motivo: "registro de quem desfez o lançamento da regra" },
   { modelo: "HelpdeskChecklistItem", coluna: "doneById", tratamento: "manter", motivo: "trilha de quem conferiu o item; a tela não expõe o id" },
   { modelo: "HelpdeskApproval", coluna: "decidedById", tratamento: "manter", motivo: "histórico da decisão de aprovação" },
   { modelo: "HelpdeskReopenRequest", coluna: "requestedById", tratamento: "manter", motivo: "histórico do pedido de reabertura" },
@@ -315,7 +329,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "UserLastCompany", coluna: "userId", tratamento: "apagar" },
   // O tutorial do primeiro acesso já visto: sai com a conta. A mesma coluna
   // guarda o id de acessos do portal (subject PORTAL_USER) — esses saem com o
-  // acesso (`excluirAcessoDoPortal`, `excluirCliente`).
+  // acesso (`excluirAcessoDoPortal`).
   { modelo: "TutorialVisto", coluna: "userId", tratamento: "apagar" },
   // Autor guardado sem chave — passa para quem exclui, como os de cima.
   { modelo: "CandidaturaNota", coluna: "createdById", tratamento: "reatribuir" },

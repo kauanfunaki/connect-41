@@ -5,7 +5,7 @@ import { MessageCircle, Building2, User, Gauge, Settings, ClipboardCheck, PenLin
 import { getPrisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { getAuthContext, isFullAccess, canViewSector, podeExcluir } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { scopedChatwootConversationWhere } from "@/lib/auth/scope";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
 import { chaveDoSegmento, indexarVinculosPorNome, normalizarNomeAtendente } from "@/lib/chatwoot/evaluation";
@@ -45,8 +45,8 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
   const ctx = await getAuthContext();
   // Módulo do setor Controladoria desde 30/09 (era do menu geral): vê quem é
   // do setor que opera o módulo, como em qualquer outra tela de setor.
-  const setor = (await setorDoModulo(ctx.tenantId, MODULO)) ?? "controladoria";
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULO))) notFound();
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULO)) ?? ["controladoria"];
+  if (!canViewSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, MODULO))) notFound();
 
   const configured = await isChatwootConfigured(ctx.tenantId);
   if (!configured) {

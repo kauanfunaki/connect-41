@@ -27,6 +27,7 @@ import { aplicarRetencoes, RecusaDaRetencao, retencoesDaConta, type RetencaoDaCo
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "./aprovacao/servidor";
 import { podeEditarOTipo } from "./acessoDaConta";
 import { anexosDaConta, type AnexoDaConta } from "./anexos";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 /** Teto do `Decimal(12,2)`, o mesmo do lançamento manual. */
 const MAIOR_VALOR_EM_CENTAVOS = 9_999_999_999_99;
@@ -251,6 +252,9 @@ export async function editarLancamento(formData: FormData): Promise<ResultadoDaE
   if (!conta) return { error: "Lançamento não encontrado." };
   const acesso = await podeEditarOTipo(conta.kind);
   if (!acesso.ctx) return { error: acesso.erro ?? "Sem permissão." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   // A janela leva o `updatedAt` com que abriu: o que mudou desde então não é
   // sobrescrito por quem estava olhando a versão velha.
   if (texto("versao") !== conta.updatedAt.toISOString()) return { error: "A conta mudou desde que a janela abriu — feche e abra de novo." };

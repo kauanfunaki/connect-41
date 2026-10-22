@@ -23,6 +23,7 @@ export function MolduraDeEntrada({
   titulo,
   subtitulo,
   carrossel,
+  logo = null,
   children,
 }: {
   /** Acima do título: de quem é esta entrada ("Portal do Cliente", "Área da equipe"). */
@@ -30,6 +31,12 @@ export function MolduraDeEntrada({
   titulo: string;
   subtitulo: string;
   carrossel: React.ReactNode;
+  /**
+   * O logo do escritório no lugar do logo do Connect (22/10/2026, a entrada do
+   * portal com a Aparência do escritório). O nome vai ao lado, como no menu do
+   * portal: o logo é a imagem quadrada do workspace, e sozinha não diz de quem é.
+   */
+  logo?: { src: string; nome: string } | null;
   children: React.ReactNode;
 }) {
   return (
@@ -42,8 +49,18 @@ export function MolduraDeEntrada({
         >
           <div aria-hidden className="absolute inset-0 opacity-[0.07]" style={GRADE} />
           <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="h-7 w-auto" />
+            {logo ? (
+              // Sobre um quadro branco: o logo é a imagem que o escritório
+              // mandou, sem versão para fundo escuro, e o topo aqui é escuro.
+              <span className="flex min-w-0 items-center gap-2.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logo.src} alt="" className="size-9 flex-shrink-0 rounded-md bg-white object-contain p-0.5" />
+                <span className="truncate font-display text-fs-6 font-semibold text-white">{logo.nome}</span>
+              </span>
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="h-7 w-auto" />
+            )}
             <p className="mt-7 text-fs-1 font-semibold uppercase tracking-[0.1em] text-white/60">{rotulo}</p>
             <h1 className="mt-1.5 text-title font-semibold tracking-[-0.01em] leading-tight">{titulo}</h1>
             <p className="mt-2 text-fs-4 leading-relaxed text-white/75 max-w-[36ch]">{subtitulo}</p>
@@ -71,10 +88,20 @@ export function MolduraDeEntrada({
         </div>
 
         <div className="hidden lg:flex absolute top-8 left-10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-horizontal-light.svg" alt="Connect" className="block dark:hidden h-8 w-auto" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="hidden dark:block h-8 w-auto" />
+          {logo ? (
+            <span className="flex min-w-0 max-w-[320px] items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logo.src} alt="" className="size-10 flex-shrink-0 rounded-md bg-white object-contain p-0.5" />
+              <span className="truncate font-display text-fs-6 font-semibold text-fg">{logo.nome}</span>
+            </span>
+          ) : (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/logo-horizontal-light.svg" alt="Connect" className="block dark:hidden h-8 w-auto" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="hidden dark:block h-8 w-auto" />
+            </>
+          )}
         </div>
 
         <div className="relative flex-1 flex flex-col items-center justify-start lg:justify-center px-4 lg:px-10 pb-10 lg:py-24 -mt-20 lg:mt-0">

@@ -34,6 +34,7 @@ import {
   X,
   Building2,
   Users,
+  Truck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
@@ -52,6 +53,7 @@ import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO, getModuleDef } from "@/lib/module-catalog";
 import { quadrosAtivo } from "@/lib/caminhoDoMenu";
+import { CAMINHO_DOS_FORNECEDORES } from "@/lib/cadastrosNav";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { trocarSetor } from "@/components/shell/contexto";
 import {
@@ -75,6 +77,9 @@ import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
 import { areaSpedAtiva, menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
+import { grupoDaTelaDaEquipe } from "@/lib/aparencia/gruposDaEquipe";
+import { useNumeroConferido } from "./useNumeroConferido";
+import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -100,9 +105,11 @@ const SECTOR_ICONS: Record<string, React.ReactNode> = {
 // (pedido de 30/09, referência do HubStrom).
 const TELAS_DE_CADASTROS: TelaDoPainel[] = [
   { label: "Empresas", href: "/empresas", icon: <Building2 /> },
-  { label: "Clientes", href: "/clientes", icon: <BriefcaseBusiness /> },
   { label: "Pessoas", href: "/pessoas", icon: <Users /> },
 ];
+// Só entra no painel de quem vê o BPO (21/10/2026): a mesma regra do Ctrl+K,
+// que já traz a tela só para quem a abre (ver `telasDeCadastros`).
+const TELA_DOS_FORNECEDORES: TelaDoPainel = { label: "Fornecedores e sacados", href: CAMINHO_DOS_FORNECEDORES, icon: <Truck /> };
 const TELAS_DA_GESTAO: TelaDoPainel[] = ABAS_DA_GESTAO.map((a) => ({ label: a.rotulo, href: a.href, icon: a.icone }));
 
 /**
@@ -165,6 +172,8 @@ type Props = {
   unreadCount: number;
   /** O módulo das solicitações do portal está ligado — mostra "Solicitações" no Geral. */
   solicitacoesLigadas?: boolean;
+  /** Quantas solicitações novas esperam a pessoa — o número no item, conferido a cada minuto. */
+  solicitacoesNovas?: number;
   /** Os Arquivos estão ligados — mostra "Arquivos" no Geral. */
   arquivosLigados?: boolean;
   chamadosLigados?: boolean;
@@ -186,6 +195,11 @@ type Props = {
    * escolha guardada no cookie.
    */
   menuRecolhidoInicial?: boolean;
+  /**
+   * A faixa da empresa em foco (21/10/2026), montada no layout: fica parada
+   * entre o topo e a rolagem, nas telas do BPO (`FaixaDoFoco`).
+   */
+  faixaDoFoco?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -205,6 +219,7 @@ export function AppShell({
   canOpenAdmin,
   unreadCount,
   solicitacoesLigadas = false,
+  solicitacoesNovas = 0,
   arquivosLigados = false,
   chamadosLigados = false,
   telasDoGeral = TODAS_AS_TELAS_DO_GERAL,
@@ -215,6 +230,7 @@ export function AppShell({
   canSelfRegularizeSubscription = false,
   paresDeAjuda = [],
   menuRecolhidoInicial = false,
+  faixaDoFoco,
   children,
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -253,6 +269,9 @@ export function AppShell({
   const linkDaAjuda = artigoDaTela ? `/ajuda/${encodeURIComponent(artigoDaTela)}?de=${encodeURIComponent(pathname)}` : "/ajuda";
   const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes") || pathname.startsWith("/assinatura");
   const corDoSetor = activeSector?.color;
+  // O número do item Solicitações (21/10/2026), conferido a cada minuto.
+  const novasSolicitacoes = useNumeroConferido(solicitacoesNovas, contarSolicitacoesNovas, solicitacoesLigadas && telasDoGeral.includes("solicitacoes"));
+  const grupoDaTela = grupoDaTelaDaEquipe(pathname);
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
   const podeTrocar = sectors.length > 1 || accessibleTenants.length > 1;
   // A gaveta fechada (abaixo de lg) só saía da tela com translate: os links
@@ -277,16 +296,19 @@ export function AppShell({
     chamadosLigados && noGeral("chamados"),
     noGeral("agenda"),
   ].some(Boolean);
+  // Fornecedores e sacados é aba de Cadastros só para o BPO (21/10/2026). As
+  // telas navegáveis já vêm filtradas pelo setor e pelo módulo ligado.
+  const telasDeCadastros = telasNavegaveis.some((t) => t.code === "bpo_cadastros") ? [...TELAS_DE_CADASTROS, TELA_DOS_FORNECEDORES] : TELAS_DE_CADASTROS;
   // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
   const itensDoGeral = (
     <>
       {noGeral("cadastros") && (
-        <PainelDoItem titulo="Cadastros" telas={TELAS_DE_CADASTROS} cor={corDoSetor}>
+        <PainelDoItem titulo="Cadastros" telas={telasDeCadastros} cor={corDoSetor}>
           <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
         </PainelDoItem>
       )}
       {noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />}
-      {solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" />}
+      {solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} />}
       {chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<Inbox size={16} />} label="Chamados" />}
       {arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" />}
       {noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />}
@@ -304,13 +326,18 @@ export function AppShell({
   }, [mobileOpen]);
 
   return (
-    // `--c41-setor` leva a cor do setor ativo a tudo que está dentro: a barra
-    // do item ativo, o traço do título, o brilho da direita (globals.css).
+    // `--c41-setor` é a cor da tela: a barra do item ativo, o traço do título,
+    // o brilho da direita (globals.css). Desde 21/10/2026 ela vem do grupo da
+    // tela aberta (`data-grupo`, financeiro em azul, notas em laranja — como no
+    // portal), e não mais do setor: no BPO tudo ficava laranja. Fora dos
+    // grupos, a cor principal. A cor do setor fica na bolinha dele
+    // (`--c41-cor-do-setor`).
     // `h-dvh`, e não `h-screen` (07/10/2026): no navegador do celular 100vh é
     // maior que a área visível, e o pé da página ficava atrás da barra dele.
     <div
       className="flex h-dvh overflow-hidden bg-canvas"
-      style={activeSector ? ({ "--c41-setor": activeSector.color } as React.CSSProperties) : undefined}
+      data-grupo={grupoDaTela ?? undefined}
+      style={activeSector ? ({ "--c41-cor-do-setor": activeSector.color } as React.CSSProperties) : undefined}
     >
       {/* Backdrop — só em telas pequenas, quando a sidebar vira drawer sobreposto. */}
       {mobileOpen && (
@@ -490,7 +517,7 @@ export function AppShell({
                     >
                       <span
                         aria-hidden
-                        className="inline-block size-2.5 rounded-full flex-shrink-0 ring-2 ring-[color-mix(in_srgb,var(--c41-setor)_25%,transparent)]"
+                        className="inline-block size-2.5 rounded-full flex-shrink-0 ring-2 ring-[color-mix(in_srgb,var(--c41-cor-do-setor)_25%,transparent)]"
                         style={{ backgroundColor: activeSector.color }}
                       />
                       <span className="truncate text-fg-secondary group-hover:text-fg">
@@ -726,6 +753,8 @@ export function AppShell({
             </Aviso>
           </div>
         )}
+
+        {faixaDoFoco}
 
         {/* Page content */}
         {/* O `relative` faz do <main> o bloco de contenção dos elementos com

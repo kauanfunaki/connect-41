@@ -8,6 +8,7 @@ import { isModuleEnabled } from "@/lib/modules";
 import { isSubscriptionReadOnly } from "@/lib/subscription-policy";
 import { GithubClient, hasNext, repoPath, repositorySchema } from "./client";
 import { exchangeToken, type TokenConfig } from "./oauth";
+import { oauthCredentials } from "./config";
 import { GithubError, historyStart, normalize } from "./rules";
 import { GITHUB_MODULE, type ContributionType } from "./types";
 import { type GithubDb, getConnection, guardGeneration, initialWindow, jobCursor, persistContributions, queueInventory, queueRepositories, queueResource, rebuildDaily } from "./store";
@@ -34,10 +35,10 @@ export async function validToken(connection: Connection, owner: string): Promise
   if (!config.accessToken) throw new GithubError("Reconecte a conta GitHub em Integrações.", 401, undefined, "auth");
   if (!config.expiresAt || Date.parse(config.expiresAt) > Date.now() + 60000) return config.accessToken;
   if (!config.refreshToken) throw new GithubError("Autorização GitHub expirada. Reconecte a conta.", 401, undefined, "auth");
-  const fresh = await exchangeToken({ grant_type: "refresh_token", refresh_token: config.refreshToken }, config as TokenConfig);
+  const fresh = await exchangeToken(oauthCredentials(config), { grant_type: "refresh_token", refresh_token: config.refreshToken }, config as TokenConfig);
   await getPrisma().$transaction(async tx => {
     await guardLease(tx, connection, owner);
-    await tx.tenantIntegration.update({ where: { id: connection.integrationId }, data: { configEnc: encryptSecret(JSON.stringify(fresh)) } });
+    await tx.tenantIntegration.update({ where: { id: connection.integrationId }, data: { configEnc: encryptSecret(JSON.stringify({ ...config, ...fresh })) } });
   });
   return fresh.accessToken;
 }
@@ -72,7 +73,7 @@ async function failure(connection: Connection, owner: string, error: unknown, jo
     if (known.category === "auth") {
       await tx.githubConnection.update({ where: { id: connection.id }, data: { status: "needs_reconnect", verifiedAt: null, lastError: known.message } });
     } else await tx.githubConnection.update({ where: { id: connection.id }, data: { lastError: known.message } });
-    if (known.category === "limit") await tx.githubAccountLease.updateMany({ where: { githubUserId: connection.githubUserId!, owner }, data: { nextAttemptAt: retryAt } });
+    if (known.category === "limit" || !job && known.category === "network") await tx.githubAccountLease.updateMany({ where: { githubUserId: connection.githubUserId!, owner }, data: { nextAttemptAt: retryAt } });
     if (job) {
       await tx.githubSyncJob.update({ where: { id: job.id }, data: { state: known.category === "auth" || known.category === "access" || job.attempts >= 4 ? "error" : "queued",
         error: known.message, attempts: { increment: 1 }, nextAttemptAt: retryAt } });
@@ -81,11 +82,11 @@ async function failure(connection: Connection, owner: string, error: unknown, jo
     }
   });
 }
-export async function confirmAccess(connection: Connection, maxRepositories = 3) {
+export async function confirmAccess(connection: Connection, maxRepositories = 3, milliseconds = 8000, staleMilliseconds = 300000) {
   if (!await allowSync(connection, true)) return;
   await withGithubLease(connection.githubUserId!, async owner => {
     try {
-      const client = new GithubClient(await validToken(connection, owner)), db = getPrisma(), threshold = new Date(Date.now() - 300000);
+      const client = new GithubClient(await validToken(connection, owner)), db = getPrisma(), threshold = new Date(Date.now() - staleMilliseconds), deadline = Date.now() + milliseconds;
       if (!connection.verifiedAt || connection.verifiedAt < threshold) {
         const viewer = await client.viewer();
         if (viewer.externalId !== connection.githubUserId) throw new GithubError("A identidade GitHub foi alterada. Reconecte a conta.", 401, undefined, "auth");
@@ -94,6 +95,7 @@ export async function confirmAccess(connection: Connection, maxRepositories = 3)
       const repos = await db.githubRepository.findMany({ where: { tenantId: connection.tenantId, connectionId: connection.id, selected: true,
         OR: [{ accessCheckedAt: null }, { accessCheckedAt: { lt: threshold } }] }, orderBy: { accessCheckedAt: "asc" }, take: maxRepositories });
       for (const repo of repos) {
+        if (Date.now() >= deadline) break;
         try {
           const metadata = repositorySchema.parse((await client.request(repoPath(repo.owner, repo.name))).data);
           if (metadata.node_id !== repo.externalId) throw new GithubError("O repositório foi substituído. Atualize a lista em Integrações.", 403, undefined, "access");
@@ -259,18 +261,29 @@ export async function processConnection(tenantId: string, options: { millisecond
   });
 }
 export async function processGithubCron() {
-  const db = getPrisma(), deadline = Date.now() + 22000;
+  const db = getPrisma(), now = new Date(), deadline = Date.now() + 22000, stale = new Date(Date.now() - 240000);
   const connections = await db.githubConnection.findMany({ where: { status: "connected", integration: { integrationCode: "github", instanceKey: "default" },
-    AND: [{ OR: [{ integration: { enabled: true } }, { jobs: { some: { state: "queued", resource: "INVENTORY", nextAttemptAt: { lte: new Date() } } } }] }],
-    OR: [{ nextSyncAt: null }, { nextSyncAt: { lte: new Date() } }, { jobs: { some: { state: "queued", nextAttemptAt: { lte: new Date() } } } }] }, orderBy: { updatedAt: "asc" }, take: 10, include: { integration: true } });
+    OR: [
+      { verifiedAt: null }, { verifiedAt: { lte: stale } },
+      { repositories: { some: { selected: true, OR: [{ accessCheckedAt: null }, { accessCheckedAt: { lte: stale } }] } } },
+      { integration: { enabled: true }, OR: [{ nextSyncAt: null }, { nextSyncAt: { lte: now } }, { jobs: { some: { state: "queued", nextAttemptAt: { lte: now } } } }] },
+      { jobs: { some: { state: "queued", resource: "INVENTORY", nextAttemptAt: { lte: now } } } },
+    ] }, orderBy: { updatedAt: "asc" }, take: 10, include: { integration: true } });
   const results: { tenantId: string; steps?: number; error?: string }[] = [];
   for (const connection of connections) {
     if (Date.now() >= deadline) break;
     try {
+      // Conferir antes de expirar a janela de leitura evita que abrir o painel
+      // concorra pela lease com os lotes e faça os totais desaparecerem.
+      await confirmAccess(connection, 20, Math.min(5000, deadline - Date.now()), 240000);
+      if (Date.now() >= deadline) break;
       await scheduleSync(connection);
       const result = await processConnection(connection.tenantId, { milliseconds: Math.min(10000, deadline - Date.now()), steps: 6, trigger: "CRON" });
       results.push({ tenantId: connection.tenantId, ...result });
-    } catch (error) { results.push({ tenantId: connection.tenantId, error: error instanceof GithubError ? error.message : "Falha na conexão GitHub." }); }
+    } catch (error) {
+      // Uma lease ocupada ou em espera não é falha de coleta.
+      if (!(error instanceof GithubError) || error.status !== 409) results.push({ tenantId: connection.tenantId, error: error instanceof GithubError ? error.message : "Falha na conexão GitHub." });
+    }
   }
   return { ok: true, connections: results };
 }

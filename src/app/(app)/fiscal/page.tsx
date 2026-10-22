@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
+import { FiscalPagina } from "@/components/fiscal/previa/FiscalPagina";
 import { modoDoFiscal } from "@/lib/fiscal/motor/servidor";
 import { prepararTelaDoMotor } from "@/lib/fiscal/motor/tela";
-import { MotorIndisponivel, CascoDoMotor } from "@/components/fiscal/motor/CascoDoMotor";
+import { CascoDoMotor } from "@/components/fiscal/motor/CascoDoMotor";
 import { PainelMotor } from "@/components/fiscal/motor/PainelMotor";
 
 export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -12,5 +14,5 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       <PainelMotor tela={tela} />
     </CascoDoMotor>;
   }
-  return <MotorIndisponivel />;
+  return <Suspense fallback={<p className="text-ui text-fg-secondary">Carregando prévia fiscal…</p>}><FiscalPagina pagina="painel" /></Suspense>;
 }

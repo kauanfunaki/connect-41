@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlarmClock, Handshake, Mail, FileWarning, Wallet, PhoneOff, MailX, ListChecks, Settings2, ArrowRight } from "lucide-react";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatInstantDate, formatInstantDateTime, formatarCompetencia } from "@/lib/format";
@@ -73,10 +73,10 @@ function dataDaChave(key: string): string {
 export default async function CobrancaPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
-  const gerencia = canManageSector(ctx, setor);
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
+  if (!canViewSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
+  const podeAgir = canActOnSector(ctx, setores);
+  const gerencia = canManageSector(ctx, setores);
 
   const params = await searchParams;
   const aba = params.aba === "acordos" ? "acordos" : params.aba === "regua" ? "regua" : "fila";
@@ -85,8 +85,12 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
   // explícita (`?empresa=todas`): a fila para em 2.000 títulos e os acordos em
   // 500. A régua é do escritório e não depende da empresa.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true });
-  const escopo = escopoFinanceiroDaEscolha(ctx.tenantId, escolha, { permitirTodas: true });
+  // Com uma empresa em foco (21/10/2026), só a base dela; "Todas" é a base.
+  const { escolha, noSeletor, foco, empresasDeTodas } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, {
+    permitirTodas: true,
+    comFoco: true,
+  });
+  const escopo = escopoFinanceiroDaEscolha(ctx.tenantId, escolha, { permitirTodas: true, grupo: empresasDeTodas });
   const naUrl = empresaNaUrl(escolha);
   // Trocar de aba conserva a empresa — até 13/10/2026 as abas a perdiam.
   const daAba = (href: string) => (naUrl ? `${href}${href.includes("?") ? "&" : "?"}empresa=${encodeURIComponent(naUrl)}` : href);
@@ -100,10 +104,11 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
       {aba !== "regua" && (
         <FiltroDaEmpresa
           acao="/cobranca"
-          empresas={empresas}
+          empresas={noSeletor}
           valor={naUrl ?? null}
           todas="explicita"
           manter={{ aba: aba === "fila" ? undefined : aba }}
+          foco={foco}
         />
       )}
       <div className="mt-4">
@@ -120,14 +125,14 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
         <EscolhaAEmpresa
           escolha={escolha}
           porQue="Para não carregar os títulos de todos os clientes de uma vez, a cobrança abre numa empresa."
-          todasHref={hrefDaEmpresa("/cobranca", "", { todas: "explicita", manter: { aba: aba === "fila" ? undefined : aba } })}
+          todasHref={foco ? undefined : hrefDaEmpresa("/cobranca", "", { todas: "explicita", manter: { aba: aba === "fila" ? undefined : aba } })}
         />
       )}
       {aba === "fila" && escopo && (
-        <Fila tenantId={ctx.tenantId} userId={ctx.userId} setor={setor} escopo={escopo} escolha={escolha} params={params} />
+        <Fila tenantId={ctx.tenantId} userId={ctx.userId} setores={setores} escopo={escopo} escolha={escolha} params={params} />
       )}
       {aba === "acordos" && escopo && <Acordos escopo={escopo} status={params.status} podeAgir={podeAgir} />}
-      {aba === "regua" && <Regua tenantId={ctx.tenantId} empresas={empresas} gerencia={gerencia} />}
+      {aba === "regua" && <Regua tenantId={ctx.tenantId} empresas={noSeletor} soDaBase={empresasDeTodas} gerencia={gerencia} />}
     </PageContainer>
   );
 }
@@ -137,14 +142,15 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
 async function Fila({
   tenantId,
   userId,
-  setor,
+  setores,
   escopo,
   escolha,
   params,
 }: {
   tenantId: string;
   userId: string;
-  setor: string;
+  /** Os setores da cobrança (21/10/2026): o responsável pode ser de qualquer um. */
+  setores: string[];
   /** Uma empresa, ou todas — só quando pedido (`?empresa=todas`). */
   escopo: EscopoDaEscolha;
   escolha: EscolhaDaEmpresa;
@@ -159,7 +165,7 @@ async function Fila({
 
   const [fila, usuarios] = await Promise.all([
     filaDeCobranca(tenantId, { empresaId, faixa: faixa as ChaveDaFaixa | null, situacao, responsavel }, new Date()),
-    getSectorUsers(tenantId, setor),
+    getSectorUsers(tenantId, setores),
   ]);
   const hojeKey = saoPauloParts(new Date()).dateKey;
 
@@ -607,8 +613,19 @@ async function Acordos({
 
 // ─── Régua ──────────────────────────────────────────────────────────────────
 
-async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empresas: EmpresaDoSeletor[]; gerencia: boolean }) {
-  const d = await dadosDaAbaRegua(tenantId);
+async function Regua({
+  tenantId,
+  empresas,
+  soDaBase,
+  gerencia,
+}: {
+  tenantId: string;
+  empresas: EmpresaDoSeletor[];
+  /** Com uma empresa em foco (21/10/2026), as listas mostram só a base dela. */
+  soDaBase: string[] | null;
+  gerencia: boolean;
+}) {
+  const d = await dadosDaAbaRegua(tenantId, soDaBase);
   const fora = new Set(d.foraDaRegua.map((f) => f.companyId));
 
   return (

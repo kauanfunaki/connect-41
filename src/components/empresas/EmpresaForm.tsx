@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/Button";
 import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatCnpj, formatCpf, formatPhone, formatCep } from "@/lib/format";
-import { NOVO_CLIENTE } from "@/lib/clientGroups";
 import { OPCOES_DE_REGIME } from "@/lib/taxRegime";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 import { Aviso } from "@/components/ui/Aviso";
@@ -64,7 +63,6 @@ export type EmpresaDefaultValues = {
   website?: string;
   status?: CompanyStatus;
   source?: string;
-  clientGroupId?: string;
   parentCompanyId?: string;
 };
 
@@ -73,7 +71,6 @@ type Props = {
   cancelHref: string;
   defaultValues?: EmpresaDefaultValues;
   customFields?: CustomFieldInput[];
-  clientGroupOptions?: { value: string; label: string }[];
   matrizOptions?: Opcao[];
 };
 
@@ -82,7 +79,6 @@ export function EmpresaForm({
   cancelHref,
   defaultValues,
   customFields = [],
-  clientGroupOptions = [],
   matrizOptions = [],
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
@@ -124,9 +120,7 @@ export function EmpresaForm({
     cnaePrincipal: defaultValues?.cnaePrincipal ?? "",
     cnaeSecundarios: defaultValues?.cnaeSecundarios ?? "",
     source: defaultValues?.source ?? "",
-    clientGroupId: defaultValues?.clientGroupId ?? "",
     parentCompanyId: defaultValues?.parentCompanyId ?? "",
-    clientGroupNewName: "",
   }));
 
   const lastStep = STEP_LABELS.length - 1;
@@ -201,14 +195,9 @@ export function EmpresaForm({
     [step, stepError, maxStepReached]
   );
 
-  // Na revisão o cliente aparece pelo nome, não pelo uuid — inclusive quando é
-  // um que ainda vai ser criado no submit.
+  // Na revisão a matriz aparece pelo nome, não pelo uuid.
   const matriz = matrizOptions.find((m) => m.value === values.parentCompanyId);
   const matrizLabel = matriz && (matriz.descricao ? `${matriz.label} — ${matriz.descricao}` : matriz.label);
-  const clientLabel =
-    values.clientGroupId === NOVO_CLIENTE
-      ? values.clientGroupNewName
-      : clientGroupOptions.find((c) => c.value === values.clientGroupId)?.label ?? "";
 
   const lastFetchedCnpjRef = useRef<string | null>(null);
 
@@ -421,33 +410,12 @@ export function EmpresaForm({
             </FieldGrid>
           </FormSection>
 
-          {/* Cliente e matriz são vínculo com outros cadastros, não dado da
-              empresa: seção própria, para não se misturarem aos nomes. */}
-          <FormSection title="Cliente e matriz">
+          {/* A matriz é vínculo com outro cadastro, não dado da empresa: seção
+              própria, para não se misturar aos nomes. O campo "Cliente" saiu
+              daqui em 15/10/2026 (etapa 3 da saída do Cliente): quem vê a
+              empresa no portal se define na ficha, em "Acesso ao portal". */}
+          <FormSection title="Matriz">
             <FieldGrid columns={GRADE}>
-              {/* Até 14/10/2026 o texto dizia que sem cliente a empresa não
-                  aparecia no portal — deixou de ser verdade: o portal agora se
-                  configura na ficha da empresa, em "Acesso ao portal". O campo
-                  sai na etapa 3 da saída do Cliente. A lista segue só com
-                  clientes ativos; um inativo se reativa em Cadastros → Clientes. */}
-              <CampoForm
-                label="Cliente"
-                htmlFor="clientGroupId"
-                className="sm:col-span-2"
-                helper="Agrupa as empresas de um mesmo dono. O portal do cliente não depende disto: ele se configura na ficha da empresa, em “Acesso ao portal”."
-              >
-                {/* Mesmo motivo da matriz: são 340 clientes. O "+ Novo
-                    cliente" entra como primeira opção da lista. */}
-                <SearchableSelect
-                  id="clientGroupId"
-                  name="clientGroupId"
-                  options={[{ value: NOVO_CLIENTE, label: "+ Novo cliente…" }, ...clientGroupOptions]}
-                  defaultValue={values.clientGroupId}
-                  vazioLabel="Nenhum"
-                  placeholder="Buscar cliente…"
-                  onChange={(v) => setValues((prev) => ({ ...prev, clientGroupId: v }))}
-                />
-              </CampoForm>
               <CampoForm
                 label="Empresa matriz"
                 htmlFor="parentCompanyId"
@@ -468,21 +436,6 @@ export function EmpresaForm({
                   onChange={(v) => setValues((prev) => ({ ...prev, parentCompanyId: v }))}
                 />
               </CampoForm>
-              {/* Depois dos dois, e não entre eles: aparecer e sumir no meio
-                  empurraria a "Empresa matriz" de lugar a cada troca. */}
-              {values.clientGroupId === NOVO_CLIENTE && (
-                <CampoForm label="Nome do novo cliente" htmlFor="clientGroupNewName" required className="sm:col-span-2">
-                  <Input
-                    id="clientGroupNewName"
-                    name="clientGroupNewName"
-                    type="text"
-                    required
-                    maxLength={180}
-                    value={values.clientGroupNewName}
-                    placeholder="Ex: Grupo Aurora"
-                  />
-                </CampoForm>
-              )}
             </FieldGrid>
           </FormSection>
         </div>
@@ -632,7 +585,6 @@ export function EmpresaForm({
                 { label: ehPF ? "Nome" : "Razão social", value: values.name },
                 { label: "Nome fantasia", value: values.tradeName },
                 { label: "Nome no sistema", value: values.displayName },
-                { label: "Cliente", value: clientLabel },
                 { label: "Empresa matriz", value: matrizLabel },
                 { label: "Regime tributário", value: values.taxRegime },
                 { label: "ID", value: values.externalId },

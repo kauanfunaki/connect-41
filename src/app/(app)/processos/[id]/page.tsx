@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { getAuthContext, canActOnSector, podeExcluir } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatInstantDate } from "@/lib/format";
@@ -65,7 +65,7 @@ export default async function ProcessoDetalhePage({
   params: Promise<{ id: string }>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const { id } = await params;
@@ -238,7 +238,7 @@ export default async function ProcessoDetalhePage({
 
   // O responsável atual entra na lista mesmo que tenha saído do setor — senão o
   // formulário de editar mostraria "sem responsável" e salvaria isso sem querer.
-  const equipe = await getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const equipe = await getSectorUsers(ctx.tenantId, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   const responsaveis =
     processo.owner && !equipe.some((u) => u.id === processo.owner!.id) ? [...equipe, processo.owner] : equipe;
   const combinado = processo.dueAt ? prazoCombinado(processo.dueAt, new Date()) : null;

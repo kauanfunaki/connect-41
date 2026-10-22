@@ -18,6 +18,7 @@ import {
   type EnvioParaOCliente,
   type SituacaoDoEnvio,
 } from "./regras";
+import { textoDoLembrete } from "./lembrete";
 
 // ─── Lado da equipe ──────────────────────────────────────────────────────────
 
@@ -36,6 +37,10 @@ export type LinhaDoEnvio = {
   destinatarios: number;
   viram: number;
   situacao: SituacaoDoEnvio;
+  /** A data marcada do envio agendado (22/10/2026). */
+  agendadoPara: Date | null;
+  /** "Lembrete enviado em …" / "Lembrete se ninguém abrir em N dias" (22/10/2026). */
+  lembrete: string | null;
 };
 
 /**
@@ -64,6 +69,9 @@ export async function listarEnviosDaEquipe(
       fileUrl: true,
       createdAt: true,
       publishedAt: true,
+      scheduledFor: true,
+      reminderDays: true,
+      reminderSentAt: true,
       company: { select: { id: true, name: true, displayName: true } },
       recipients: { select: { sentAt: true, firstViewedAt: true, signedAt: true } },
     },
@@ -83,6 +91,8 @@ export async function listarEnviosDaEquipe(
       destinatarios: d.recipients.length,
       viram: d.recipients.filter((r) => r.firstViewedAt).length,
       situacao: situacaoDoEnvio(d),
+      agendadoPara: d.scheduledFor,
+      lembrete: textoDoLembrete(d),
     })),
   };
 }

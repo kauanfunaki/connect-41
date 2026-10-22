@@ -10,17 +10,19 @@ import { StatusDot } from "@/components/shared/StatusDot";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { ToggleModuleButton } from "@/components/admin/ToggleModuleButton";
 import { MoverModuloPara } from "@/components/admin/MoverModuloPara";
+import { TambemEmSetores } from "@/components/admin/TambemEmSetores";
 import { TelasDoMenuGeral, type TelaDaConfiguracao } from "@/components/admin/TelasDoMenuGeral";
 import { PainelDeCadastro } from "@/components/admin/PainelDeCadastro";
 import { SetorForm } from "@/components/admin/SetorForm";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllSectors } from "@/lib/sectors";
-import { getTenantModuleStates } from "@/lib/modules";
+import { getTenantModuleStates, lerSetoresLigados } from "@/lib/modules";
+import { MODULOS_DO_MENU_GERAL, MODULOS_NAS_SOLICITACOES } from "@/lib/module-catalog";
 import { lerOcultasDoGeral } from "@/lib/menuGeralDb";
 import { TELAS_DO_GERAL, podeConfigurarMenuGeral } from "@/lib/menuGeral";
 import { atualizarSetor, criarSetor } from "./actions";
-import { alternarModulo, transferirModulo } from "./modulos-actions";
+import { alternarModulo, ligarModuloAoSetor, transferirModulo } from "./modulos-actions";
 import { alternarTelaDoGeral, restaurarMenuGeral } from "./menu-geral-actions";
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
@@ -47,7 +49,7 @@ export default async function SetoresPage({
   const { setor: setorPedido, novo, editar } = await searchParams;
 
   const prisma = getPrisma();
-  const [sectors, ocultasDoGeral, modulos, pessoasPorSetor] = await Promise.all([
+  const [sectors, ocultasDoGeral, modulos, pessoasPorSetor, setoresLigados] = await Promise.all([
     getAllSectors(ctx.tenantId),
     lerOcultasDoGeral(ctx.tenantId),
     getTenantModuleStates(ctx.tenantId),
@@ -56,6 +58,7 @@ export default async function SetoresPage({
       where: { user: { tenantId: ctx.tenantId, active: true } },
       _count: { _all: true },
     }),
+    lerSetoresLigados(ctx.tenantId),
   ]);
   const quantasPessoas = new Map(pessoasPorSetor.map((p) => [p.sectorCode, p._count._all]));
   const emEdicao = editar ? sectors.find((s) => s.id === editar) : undefined;
@@ -63,7 +66,12 @@ export default async function SetoresPage({
     sectors.find((s) => s.code === setorPedido) ?? emEdicao ?? sectors.find((s) => s.active) ?? sectors[0];
   const aqui = escolhido ? `/admin/setores?setor=${encodeURIComponent(escolhido.code)}` : "/admin/setores";
 
-  const modulosDo = (code: string) => modulos.filter((m) => m.sectorCode === code);
+  // Os do setor e, depois, os que ele usa por "Também em…" (21/10/2026) — estes
+  // continuam sendo configurados no setor dono.
+  const modulosDo = (code: string) => [
+    ...modulos.filter((m) => m.sectorCode === code),
+    ...modulos.filter((m) => m.sectorCode !== code && m.sectorCodes.includes(code)),
+  ];
   const ativos = sectors.filter((s) => s.active);
   const rotuloDo = (code: string) => sectors.find((s) => s.code === code)?.label ?? code;
 
@@ -173,7 +181,7 @@ export default async function SetoresPage({
                   <EmptyState
                     icon={<LayoutGrid />}
                     title="Nenhum módulo neste setor"
-                    description="Para trazer um módulo para cá, abra o setor que o opera hoje e use “Mover para…” na linha dele."
+                    description="Para trazer um módulo para cá, abra o setor que o opera hoje e use “Mover para…” ou “Também em…” na linha dele."
                   />
                 </div>
               ) : (
@@ -183,19 +191,47 @@ export default async function SetoresPage({
                       <div className="min-w-0 flex-1 basis-64">
                         <p className={`text-fs-3 font-medium ${m.enabled ? "text-fg" : "text-fg-muted"}`}>{m.label}</p>
                         <p className="text-fs-1 text-fg-muted">{m.description}</p>
-                        {m.sectorCode !== m.catalogSectorCode && (
-                          <p className="text-fs-1 text-fg-muted mt-0.5">Veio de {rotuloDo(m.catalogSectorCode)}</p>
+                        {m.sectorCode !== escolhido?.code ? (
+                          <p className="text-fs-1 text-fg-muted mt-0.5">
+                            Também aqui · de {rotuloDo(m.sectorCode)}, onde se liga, desliga e move
+                          </p>
+                        ) : (
+                          <>
+                            {m.sectorCode !== m.catalogSectorCode && (
+                              <p className="text-fs-1 text-fg-muted mt-0.5">Veio de {rotuloDo(m.catalogSectorCode)}</p>
+                            )}
+                            {m.sectorCodes.length > 1 && (
+                              <p className="text-fs-1 text-fg-muted mt-0.5">
+                                Também em {m.sectorCodes.slice(1).map(rotuloDo).join(", ")}
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        {!m.fixedSector && <MoverModuloPara
-                          nome={m.label}
-                          destinos={ativos
-                            .filter((s) => s.code !== m.sectorCode)
-                            .map((s) => ({ value: s.code, label: s.label, cor: s.color }))}
-                          action={transferirModulo.bind(null, m.code)}
-                        />}
-                        <ToggleModuleButton action={alternarModulo.bind(null, m.code, !m.enabled)} enabled={m.enabled} nome={m.label} />
+                        {/* As telas do menu Geral (Solicitações, Arquivos, Chamados) já são de todos. */}
+                        {!m.fixedSector && !MODULOS_DO_MENU_GERAL.has(m.code) && !MODULOS_NAS_SOLICITACOES.has(m.code) && (
+                          <TambemEmSetores
+                            nome={m.label}
+                            setores={ativos
+                              .filter((s) => s.code !== m.sectorCode)
+                              .map((s) => ({ value: s.code, label: s.label, cor: s.color, ligado: m.sectorCodes.includes(s.code) }))}
+                            disponivel={setoresLigados.disponivel}
+                            action={ligarModuloAoSetor.bind(null, m.code)}
+                          />
+                        )}
+                        {m.sectorCode === escolhido?.code && (
+                          <>
+                            {!m.fixedSector && <MoverModuloPara
+                              nome={m.label}
+                              destinos={ativos
+                                .filter((s) => s.code !== m.sectorCode)
+                                .map((s) => ({ value: s.code, label: s.label, cor: s.color }))}
+                              action={transferirModulo.bind(null, m.code)}
+                            />}
+                            <ToggleModuleButton action={alternarModulo.bind(null, m.code, !m.enabled)} enabled={m.enabled} nome={m.label} />
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}

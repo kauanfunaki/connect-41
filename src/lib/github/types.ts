@@ -13,9 +13,16 @@ export type RepositoryView = {
   selected: boolean; accessible: boolean; error: string | null;
 };
 export type IntegrationView = {
+  serverReady: boolean; callbackUrl: string | null; clientId: string; hasClientSecret: boolean;
   configured: boolean; connected: boolean; login: string | null; status: string; enabled: boolean;
   generation: number; timezone: string; intervalMinutes: number; error: string | null;
   inventoryAt: string | null; pending: number; failed: number; repositories: RepositoryView[];
+  progress: SyncProgress | null;
+};
+export type SyncProgress = {
+  state: "disconnected" | "paused" | "processing" | "waiting" | "queued" | "error" | "idle";
+  automatic: boolean; done: number; pending: number; failed: number; total: number;
+  lastActivityAt: string | null; nextAttemptAt: string | null;
 };
 export type HeatmapUser = {
   id: string; login: string; isBot: boolean; tracked: boolean; total: number; activeDays: number;
@@ -27,5 +34,6 @@ export type DashboardView = {
   pending: number; failed: number; message: string | null; users: HeatmapUser[]; totalUsers: number;
   page: number; pageSize: number; repositories: { id: string; fullName: string; owner: string }[];
   unavailable: number; unidentified: number; total: number;
+  progress: SyncProgress | null;
 };
 export type DayEvent = { id: string; type: ContributionType; url: string; occurredAt: string; repository: string; login: string; number: number | null };

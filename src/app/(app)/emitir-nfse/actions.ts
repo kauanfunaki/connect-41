@@ -8,8 +8,9 @@
 // da conta, e só quem emite precisa delas.
 
 import { revalidatePath } from "next/cache";
-import { getAuthContext } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { getAuthContext, type AuthContext } from "@/lib/auth/context";
+import { getPrisma } from "@/lib/prisma";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
@@ -18,16 +19,17 @@ import { acessoAEmissao, MODULO_EMITIR_NFSE } from "@/lib/integracoes/omie/acess
 import { validarPedido } from "@/lib/integracoes/omie/emissao";
 import { cancelarEmissao, emitirNfse, listasParaEmitir, type ListasParaATela } from "@/lib/integracoes/omie/emissaoServidor";
 import type { EstadoDaEmissao } from "@/lib/integracoes/omie/emissao";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 const SEM_PERMISSAO = "Só o administrador do setor emite e cancela NFS-e.";
 
-async function emissor(): Promise<{ ok: true; tenantId: string; userId: string } | { ok: false; erro: string }> {
+async function emissor(): Promise<{ ok: true; ctx: AuthContext; tenantId: string; userId: string } | { ok: false; erro: string }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { ok: false, erro: "Não autenticado." };
-  const [setor, ligado] = await Promise.all([setorDoModulo(ctx.tenantId, MODULO_EMITIR_NFSE), isModuleEnabled(ctx.tenantId, MODULO_EMITIR_NFSE)]);
+  const [setor, ligado] = await Promise.all([setoresDoModulo(ctx.tenantId, MODULO_EMITIR_NFSE), isModuleEnabled(ctx.tenantId, MODULO_EMITIR_NFSE)]);
   const acesso = acessoAEmissao(ctx, setor ?? getModuleDef(MODULO_EMITIR_NFSE)!.sectorCode, ligado);
   if (!acesso.emitir) return { ok: false, erro: ligado ? SEM_PERMISSAO : "O módulo Emitir NFS-e não está ligado." };
-  return { ok: true, tenantId: ctx.tenantId, userId: ctx.userId };
+  return { ok: true, ctx, tenantId: ctx.tenantId, userId: ctx.userId };
 }
 
 function revalidar() {
@@ -69,6 +71,9 @@ export async function emitirNfseAction(
   const e = await emissor();
   if (!e.ok) return e;
   if (!dados.companyId) return { ok: false, erro: "Escolha a empresa." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(e.ctx, [dados.companyId]);
+  if (foraDoFoco) return { ok: false, erro: foraDoFoco };
   if (dados.confirmado !== true) return { ok: false, erro: "Confirme que esta é uma nota de verdade antes de emitir." };
 
   const v = validarPedido(
@@ -117,6 +122,12 @@ export async function cancelarEmissaoAction(emissaoId: string): Promise<{ ok: tr
   const e = await emissor();
   if (!e.ok) return e;
   if (!emissaoId) return { ok: false, erro: "Emissão não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só cancela nota dele.
+  const foraDoFoco = await recusaDoFoco(e.ctx, async () => {
+    const emissao = await getPrisma().omieEmissao.findFirst({ where: { id: emissaoId, tenantId: e.tenantId }, select: { companyId: true } });
+    return emissao ? [emissao.companyId] : [];
+  });
+  if (foraDoFoco) return { ok: false, erro: foraDoFoco };
   const r = await cancelarEmissao({ tenantId: e.tenantId, emissaoId, userId: e.userId });
   // A tentativa recusada também fica no registro: cancelar nota é ato que se audita inteiro.
   await logAudit({

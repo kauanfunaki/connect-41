@@ -9,16 +9,19 @@ import type { AuthContext } from "@/lib/auth/context";
 import { credenciaisDoSped, type CredenciaisDoMotor } from "@/lib/sped/credenciais";
 import { raizesDoAlcance } from "@/lib/sped/raizes";
 import { criarClienteDoMotor, type AtorDoMotor, type ClienteDoMotor } from "@/lib/sped/motor";
+import { lerEstadoFiscalLocal } from "@/lib/fiscal/local/servidor";
 import { alcanceDaEquipe } from "@/app/(app)/documentos-fiscais/alcance";
 import { escolherModo, type ModoFiscal } from "./modo";
 import { mapearEstabelecimentos, soDigitos, type CompanyFiscal, type MapaDaRaiz } from "./estabelecimentos";
 
 const credenciais = cache((tenantId: string) => credenciaisDoSped(tenantId));
 
-/** A integração é a única fonte das telas fiscais, também no desenvolvimento. */
+/** A fonte das telas fiscais deste escritório. A prévia local só é lida quando não há motor. */
 export async function modoDoFiscal(ctx: AuthContext): Promise<ModoFiscal> {
   if (!ctx.tenantId) return "indisponivel";
-  return escolherModo({ motorConfigurado: !!(await credenciais(ctx.tenantId)) });
+  const motorConfigurado = !!(await credenciais(ctx.tenantId));
+  if (motorConfigurado) return escolherModo({ motorConfigurado, previaLocal: false });
+  return escolherModo({ motorConfigurado, previaLocal: !!(await lerEstadoFiscalLocal(ctx)) });
 }
 
 export type MotorDoEscritorio = {

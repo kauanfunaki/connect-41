@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
+import { FiscalPagina } from "@/components/fiscal/previa/FiscalPagina";
 import { modoDoFiscal } from "@/lib/fiscal/motor/servidor";
 import { prepararTelaDoMotor } from "@/lib/fiscal/motor/tela";
-import { MotorIndisponivel, CascoDoMotor, SemFonteNoMotor } from "@/components/fiscal/motor/CascoDoMotor";
+import { CascoDoMotor, SemFonteNoMotor } from "@/components/fiscal/motor/CascoDoMotor";
 
 export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { ctx } = await abrirTelaDoModulo("fiscal_conferencia");
@@ -14,5 +16,5 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   }
   const aba = typeof params.aba === "string" ? params.aba : undefined;
   if (aba === "depara" || aba === "lancamentos") redirect("/fiscal/conferencia?aba=previa");
-  return <MotorIndisponivel />;
+  return <Suspense fallback={<p className="text-ui text-fg-secondary">Carregando prévia fiscal…</p>}><FiscalPagina pagina="conferencia" /></Suspense>;
 }

@@ -9,6 +9,7 @@ import { entrarNoPortal, type EstadoDoLogin } from "./actions";
 import { PortalLoginForm } from "@/components/portal/PortalLoginForm";
 import { MolduraDoPortal } from "@/components/portal/MolduraDoPortal";
 import { escritorioDaFicha } from "@/lib/leads/servidor";
+import { marcaDaEntradaDoPortal } from "@/lib/portal/marcaNaEntrada";
 
 type EscolhaDoGoogle = Extract<NonNullable<EstadoDoLogin>, { escolher: unknown }>["escolher"];
 
@@ -45,7 +46,12 @@ export default async function PortalLoginPage({ searchParams }: { searchParams: 
   const { google } = await searchParams;
   // O "Não possui conta?" só aparece com a ficha recebendo — botão para uma
   // ficha fora do ar é pior que botão nenhum.
-  const [ficha, escolha] = await Promise.all([escritorioDaFicha(), google === "escolher" ? escolhaPendenteDoGoogle() : null]);
+  // A marca do escritório do último login neste aparelho (22/10/2026).
+  const [ficha, escolha, marca] = await Promise.all([
+    escritorioDaFicha(),
+    google === "escolher" ? escolhaPendenteDoGoogle() : null,
+    marcaDaEntradaDoPortal(),
+  ]);
   const fichaDisponivel = ficha !== null;
   const aviso =
     google === "escolher"
@@ -58,6 +64,7 @@ export default async function PortalLoginPage({ searchParams }: { searchParams: 
     <MolduraDoPortal
       titulo="Bem-vindo de volta"
       subtitulo="Acompanhe a sua empresa com o escritório: documentos, pendências, aprovações e processos."
+      marca={marca}
     >
       <PortalLoginForm
         action={entrarNoPortal}

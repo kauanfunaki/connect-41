@@ -13,7 +13,7 @@ const ler = (arquivo: string) => readFileSync(path.join(raiz, arquivo), "utf8");
 const TELAS_DE_UMA_EMPRESA = [
   "src/app/(app)/lancamentos/page.tsx",
   "src/app/(app)/conciliacao/page.tsx",
-  "src/app/(app)/cadastros-financeiros/page.tsx",
+  "src/app/(app)/fornecedores-e-sacados/page.tsx",
   "src/app/(app)/dre/page.tsx",
   "src/app/(app)/dre/economica/page.tsx",
   "src/app/(app)/dre/analises/page.tsx",

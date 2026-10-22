@@ -10,10 +10,6 @@ Configuração, migração, operação, limites e testes isolados: [guia do help
 
 O módulo Ops Center do Tech acompanha automações, donos, atividade e resultados. Inclui o filtro Minhas automações e avisa o dono no Connect ao receber um erro. Nasce desligado por escritório. Ativação, contrato dos bots e validação: [guia do Ops Center](docs/OPS-CENTER.md).
 
-## Controle interno do Tech
-
-Pendências internas em lista: bugs, melhorias, novas funcionalidades, testes e migrações, com prioridade, sistema, responsável e prazo opcionais, comentários e histórico. Nasce desligado e é exclusivo do Tech, respeitando o acesso global de consulta. Ativação e testes isolados: [guia do controle interno](docs/TECH-CONTROLE-INTERNO.md).
-
 ## GitHub — Contribuições
 
 Heatmaps de commits, pull requests, issues e revisões nos repositórios selecionados em **Integrações → GitHub**. O módulo é exclusivo do Tech, nasce desligado e usa OAuth, credenciais cifradas por escritório e sincronização em lotes com retomada.
@@ -56,13 +52,3 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Contábil — SPED
-
-O Contábil oferece SPED em quatro etapas: escolher período, conferir, resolver pendências e gerar os arquivos da Domínio. Usa o motor Python e a fila existentes, sem copiar o acervo para o Connect. O módulo nasce ligado; operações dependem da integração configurada e das permissões do escritório.
-
-Configuração, limites, operação e validação isolada: [guia do Contábil](docs/CONTABIL-SPED.md).
-
-## Fiscal — EFD
-
-As telas fiscais usam a API `/api/connect/v1` do SPED para consultar arquivos, solicitar processamento e administrar decisões. Configuração e operação: [guia EFD](docs/EFD-CONNECT.md). Pré-requisitos do motor: [repasse para o Kauan](docs/EFD-CONTRATO-KAUAN.md).

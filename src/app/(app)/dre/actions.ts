@@ -18,6 +18,7 @@ import {
   criarCategoriaNoPlanoDaEmpresa,
   nomeDaCategoria,
 } from "@/lib/financeiro/categoriaDaEmpresa";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 export type AcaoDoDre = { error: string } | { success: true } | null;
 
@@ -79,6 +80,9 @@ export async function classificarCategoria(
 ): Promise<AcaoDoDre> {
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   // Valida contra a estrutura do modelo da empresa, não contra o banco: grupo
   // inventado sairia do relatório sem somar em linha nenhuma, que é o mesmo
@@ -122,6 +126,9 @@ export async function classificarCategoriaDoArquivo(
 ): Promise<AcaoDoDre> {
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const valido = grupoDeTexto(grupo, await modeloDaEmpresa(c.tenantId, companyId));
   if (!valido) return { error: "Grupo do DRE desconhecido." };
@@ -172,7 +179,7 @@ export async function classificarCategoriaDoArquivo(
   if ("error" in criada) return { error: criada.error };
 
   // A categoria nova aparece no plano da empresa e nas duas DREs.
-  for (const p of ["/dre", "/dre/economica", "/cadastros-financeiros"]) revalidatePath(p);
+  for (const p of ["/dre", "/dre/economica", "/fornecedores-e-sacados"]) revalidatePath(p);
   return { success: true };
 }
 
@@ -180,6 +187,9 @@ export async function classificarCategoriaDoArquivo(
 export async function voltarAoPadrao(companyId: string, categoryId: string): Promise<AcaoDoDre> {
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
 
   await c.prisma.dreCategoryMapping.deleteMany({ where: { companyId, categoryId } });
 
@@ -249,6 +259,9 @@ export async function trocarModeloDoDre(companyId: string, codigo: string): Prom
   const r = await planoDaTroca(companyId, codigo);
   if (!r.ok) return { error: r.erro };
   const { c, plano } = r;
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   if (plano.de === plano.para) return { success: true };
 
   await aplicarTrocaDeModelo(c.prisma, c.tenantId, companyId, plano);
@@ -269,6 +282,6 @@ export async function trocarModeloDoDre(companyId: string, codigo: string): Prom
     },
   });
 
-  for (const p of ["/dre", "/dre/economica", "/dre/analises", "/dre/orcamento", "/cadastros-financeiros"]) revalidatePath(p);
+  for (const p of ["/dre", "/dre/economica", "/dre/analises", "/dre/orcamento", "/fornecedores-e-sacados"]) revalidatePath(p);
   return { success: true };
 }

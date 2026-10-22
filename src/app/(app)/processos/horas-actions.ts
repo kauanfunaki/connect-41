@@ -7,7 +7,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 import { lerDataDoCampo } from "@/lib/societario/datas";
 import { lerLancamentoDeHoras } from "@/lib/horas/edicao";
 import { minutosApontados, segundosDesde } from "@/lib/datetime";
@@ -20,7 +20,7 @@ export type HorasState = { error: string } | { ok: true } | null;
 async function processoNoAlcance(processId: string) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return null;
-  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return null;
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return null;
   const p = await getPrisma().process.findFirst({
     where: { id: processId, tenantId: ctx.tenantId },
     select: { id: true, activeTimerUserId: true, activeTimerStartedAt: true },

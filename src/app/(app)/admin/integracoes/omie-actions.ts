@@ -11,6 +11,7 @@ import { mensagemDoFinanceiro } from "@/lib/integracoes/omie/financeiro";
 import { instanciaDoFinanceiro } from "@/lib/integracoes/omie/contas";
 import { podeVirar } from "@/lib/integracoes/omie/virada";
 import { getPrisma } from "@/lib/prisma";
+import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
 type Resultado = { error: string } | { ok: true; mensagem?: string };
 
@@ -27,6 +28,9 @@ export async function salvarContaOmieAction(dados: { companyId: string; appKey: 
   const ctx = await contexto();
   if (!ctx) return { error: "Sem permissão para configurar integrações." };
   if (!dados.companyId) return { error: "Escolha a empresa." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [dados.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   if (!dados.appKey.trim()) return { error: "Informe a App Key." };
   const r = await salvarContaOmie({ tenantId: ctx.tenantId!, ...dados });
   if (!r.ok) return { error: r.erro };
@@ -60,6 +64,9 @@ export async function previaDasNotasOmieAction(companyId: string) {
 export async function importarNotasOmieAction(companyId: string): Promise<Resultado> {
   const ctx = await contexto();
   if (!ctx) return { error: "Sem permissão para configurar integrações." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const r = await sincronizarNotasDaEmpresa(ctx.tenantId!, companyId, "MANUAL");
   revalidatePath("/admin/integracoes");
   if (!r.ok) return { error: r.erro };
@@ -74,6 +81,11 @@ export async function importarNotasOmieAction(companyId: string): Promise<Result
 export async function contasDoOmieAction(companyId: string, gravar: boolean): Promise<Resultado> {
   const ctx = await contexto();
   if (!ctx) return { error: "Sem permissão para configurar integrações." };
+  // Com foco (21/10/2026), gravar só nele; a prévia (`gravar: false`) não grava e fica livre.
+  if (gravar) {
+    const foraDoFoco = await recusaDoFoco(ctx, [companyId]);
+    if (foraDoFoco) return { error: foraDoFoco };
+  }
   const r = await sincronizarFinanceiroDaEmpresa(ctx.tenantId!, companyId, "MANUAL", { gravar });
   if (!r.ok) return { error: r.erro };
   if (gravar) {
@@ -85,7 +97,7 @@ export async function contasDoOmieAction(companyId: string, gravar: boolean): Pr
       entityId: companyId,
       metadata: r.counters,
     });
-    for (const p of ["/admin/integracoes", "/pagar", "/receber", "/dre", "/dre/economica", "/fluxo-de-caixa", "/cadastros-financeiros"]) revalidatePath(p);
+    for (const p of ["/admin/integracoes", "/pagar", "/receber", "/dre", "/dre/economica", "/fluxo-de-caixa", "/fornecedores-e-sacados"]) revalidatePath(p);
   }
   return { ok: true, mensagem: mensagemDoFinanceiro(r.counters, r.gravou) };
 }
@@ -114,6 +126,9 @@ export async function virarParaOConnectAction(companyId: string): Promise<Result
   const prisma = getPrisma();
   const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { omieCutoverAt: true } });
   if (!empresa) return { error: "Empresa não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só vira a empresa dele.
+  const foraDoFoco = await recusaDoFoco(ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const progresso = await prisma.tenantIntegration.findUnique({
     where: { tenantId_integrationCode_instanceKey: { tenantId, integrationCode: "omie", instanceKey: instanciaDoFinanceiro(companyId) } },
     select: { id: true },
@@ -164,6 +179,9 @@ export async function virarParaOConnectAction(companyId: string): Promise<Result
 export async function desfazerViradaAction(companyId: string): Promise<Resultado> {
   const ctx = await contexto();
   if (!ctx || ctx.role !== "SUPER_ADMIN") return { error: "Só o Super Admin desfaz a virada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só desfaz a do grupo dele.
+  const foraDoFoco = await recusaDoFoco(ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const tenantId = ctx.tenantId!;
   const prisma = getPrisma();
   const desfez = await prisma.$transaction(async (tx) => {

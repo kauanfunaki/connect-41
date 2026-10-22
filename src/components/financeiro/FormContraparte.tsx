@@ -10,10 +10,11 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
-import { criarContraparte, atualizarContraparte } from "@/app/(app)/cadastros-financeiros/actions";
+import { criarContraparte, atualizarContraparte } from "@/app/(app)/fornecedores-e-sacados/actions";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { useBuscaDoCnpj, ajudaDaBusca, AvisoDaSituacao, type AchadoNaReceita } from "./BuscaDoCnpj";
 import { completarComReceita, fichaNoFormulario, type CampoDaFicha } from "@/lib/financeiro/fichaDaContraparte";
+import { CamposDosEncargos, resumoDosEncargos, type EncargosNoCampo } from "./FormEncargos";
 
 type Categoria = { id: string; nome: string };
 /** Centros ativos da empresa — o que se pode escolher como padrão. */
@@ -30,6 +31,8 @@ export type ContraparteDaFicha = {
   defaultCostCenterId?: string | null;
   /** Nome do centro padrão atual — aparece mesmo se ele foi inativado. */
   centroPadraoNome?: string | null;
+  /** Juros e multa pelo atraso só desta ficha (22/10/2026); vazios seguem a da empresa. */
+  encargos?: EncargosNoCampo;
 } & Partial<Record<CampoDaFicha, string | null>>;
 
 // Cadastro e edição num modal, como a conta bancária da conciliação. Até 30/09
@@ -41,6 +44,8 @@ export type ContraparteDaFicha = {
 // busca pelo CNPJ, que preenche o que a Receita tem (pedido 2 do BPO). O
 // endereço e os dados bancários ficam em blocos que recolhem, fechados, com o
 // resumo na linha; a busca abre o do endereço para a pessoa ver o que veio.
+
+const SEM_ENCARGOS: EncargosNoCampo = { multa: "", juros: "", desconto: "" };
 
 function resumoDoEndereco(f: Record<CampoDaFicha, string>): string {
   const cidade = [f.city, f.stateCode].filter(Boolean).join("/");
@@ -223,6 +228,17 @@ function FormularioDaContraparte({
           <CampoForm label="Chave PIX" htmlFor={`${id}-pixKey`}>
             <Input {...campo("pixKey")} maxLength={140} />
           </CampoForm>
+        </div>
+      </BlocoRecolhivel>
+
+      {/* Juros e multa pelo atraso (22/10/2026): por cima da regra da empresa,
+          que mora na aba "Juros e multa". Vazio segue a da empresa. */}
+      <BlocoRecolhivel titulo="Juros e multa por atraso" resumo={resumoDosEncargos(contraparte?.encargos ?? SEM_ENCARGOS)}>
+        <div className="flex flex-col gap-2 pt-1">
+          <p className="text-helper text-fg-muted">
+            Só deste cadastro. Vazio segue a regra da empresa; com algum campo preenchido, a regra é esta, e o vazio vale zero.
+          </p>
+          <CamposDosEncargos valores={contraparte?.encargos ?? SEM_ENCARGOS} prefixo="encargos" />
         </div>
       </BlocoRecolhivel>
 

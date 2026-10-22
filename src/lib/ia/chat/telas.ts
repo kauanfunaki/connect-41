@@ -27,7 +27,6 @@ const TELAS_GERAIS: Readonly<Record<string, string>> = {
   "/agenda": "Agenda",
   "/empresas": "Empresas",
   "/pessoas": "Pessoas",
-  "/clientes": "Clientes",
   // Quadros (até 14/10/2026, "Espaços"): a tela do setor e as listas que abrem
   // a partir dela, em /kanban/<id>.
   "/setor": "Quadros",

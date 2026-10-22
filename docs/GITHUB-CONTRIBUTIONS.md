@@ -7,11 +7,15 @@ O módulo `tech_github_contributions` é exclusivo do **Tech**, nasce desligado 
 ## Preparar e ativar
 
 1. Em uma publicação autorizada, aplicar `prisma/migrations/20261021120000_github_contributions/migration.sql` pelo fluxo normal `prisma migrate deploy`. É uma migration aditiva: cria oito tabelas do GitHub, sem alterar registros dos outros módulos. Não usar reset ou db push em produção.
-2. Cadastrar um **OAuth App** no GitHub para o ambiente e informar o callback `<APP_PUBLIC_URL>/api/integrations/github/callback`.
-3. Configurar no servidor `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `APP_PUBLIC_URL` e a chave `SECRETS_ENCRYPTION_KEY` já usada pelo Connect. O domínio dos cookies continua seguindo `APP_DOMAIN`. Em produção, o endereço público deve usar HTTPS; HTTP é aceito apenas em loopback para verificação local.
-4. Publicar o build normal do Connect e habilitar **GitHub — Contribuições** em Módulos, no Tech.
+2. Configurar no servidor `APP_PUBLIC_URL` e a chave `SECRETS_ENCRYPTION_KEY` já usada pelo Connect. Cada instalação de empresa, com seu banco próprio, deve ter sua própria chave. Guardar a chave junto ao backup seguro da instalação: restaurar o banco exige a mesma chave para ler as credenciais. O domínio dos cookies continua seguindo `APP_DOMAIN`. Em produção, o endereço público deve usar HTTPS; HTTP é aceito apenas em loopback para verificação local.
+3. Publicar o build normal do Connect e habilitar **GitHub — Contribuições** em Módulos, no Tech.
+4. Cadastrar um **OAuth App** no GitHub da empresa. Copiar a **Authorization callback URL** exibida em **Integrações → GitHub → OAuth App da empresa** para o cadastro no GitHub. Preencher **Client ID** e **Client Secret** nessa tela e clicar em **Salvar credenciais**. O cadastro segue a [documentação oficial do GitHub](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app).
 5. Como administrador, abrir **Integrações → GitHub**, clicar em **Conectar GitHub** e autorizar a conta. Manter o mesmo escritório e a mesma sessão até retornar.
-6. Clicar em **Processar pendências** para carregar os repositórios, selecionar os desejados e usar **Salvar e sincronizar**. Repositórios próprios, de colaboração e de organizações aparecem conforme o acesso autorizado.
+6. Aguardar o carregamento automático dos repositórios, selecionar os desejados e usar **Salvar e sincronizar**. Repositórios próprios, de colaboração e de organizações aparecem conforme o acesso autorizado. A coleta continua no servidor mesmo depois de fechar a página.
+
+Client ID e Client Secret ficam cifrados em `TenantIntegration.configEnc`, no banco da empresa. A tela devolve apenas o Client ID e a indicação de segredo salvo. Não é necessário configurar `GITHUB_CLIENT_ID` ou `GITHUB_CLIENT_SECRET` no ambiente. Para instalações que usavam essas variáveis, preencher as mesmas credenciais na tela e autorizar a conta novamente; o histórico é preservado.
+
+Ao editar, deixar Client Secret vazio mantém o segredo do mesmo Client ID. Trocar o Client ID exige informar seu novo segredo. Alterar qualquer credencial cancela autorizações pendentes, remove os tokens locais, pausa a sincronização e exige conectar novamente. Salvar os mesmos valores preserva a conexão. **Desconectar** remove apenas os tokens da conta e mantém as credenciais do OAuth App para reconexão. A renovação dos tokens usa as credenciais daquela conexão, conforme o [fluxo OAuth do GitHub](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps).
 
 Para ler repositórios privados, OAuth usa o escopo `repo`, que também concede escrita. O módulo implementa somente consultas de atividade; o token não é tecnicamente restrito à leitura. Organizações podem exigir aprovação do aplicativo ou autorização SSO. Não ampliar permissões de uma organização automaticamente. Referências: [escopos OAuth](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps) e [autorização por organizações](https://docs.github.com/en/apps/oauth-apps/using-oauth-apps/authorizing-oauth-apps#oauth-apps-and-organizations).
 
@@ -49,9 +53,11 @@ O calendário representa os repositórios escolhidos no Connect. Pode diferir do
 
 O intervalo padrão é de 30 minutos, configurável entre 10 e 1.440 minutos. O botão **Atualizar dados** cria tarefas persistidas; não depende de trabalho solto após uma resposta HTTP.
 
-Para operação contínua, configurar o agendador existente para chamar `POST /api/cron/github-sync`, por exemplo a cada minuto, usando o header `Authorization: Bearer <CRON_SERVICE_TOKEN>`. O módulo decide quais conexões e tarefas estão vencidas; o intervalo da conta não exige um agendamento separado por escritório. A criação do módulo não instala nem altera tarefas externas.
+No servidor persistente de produção (standalone/EasyPanel), `src/instrumentation.ts` inicia o executor GitHub automaticamente. Ele retoma tarefas na subida e verifica a fila a cada dez segundos depois de terminar o lote anterior, sem sobrepor rodadas no mesmo processo. A lease no banco coordena réplicas e o cron. Reinícios preservam os checkpoints. Desenvolvimento e build não iniciam esse executor. Falhas do relógio aguardam um minuto; as tarefas também respeitam seus próprios prazos de nova tentativa e o limite do GitHub.
 
-Enquanto o administrador processa pendências na tela de Integrações ou solicita uma atualização no painel, a interface consome os mesmos lotes, com requisições limitadas. Fechar a tela preserva o progresso; o agendador continua de onde parou quando estiver configurado. Usuários de consulta não executam a sincronização manual.
+Não é necessário configurar um cron externo. A rota autenticada `POST /api/cron/github-sync` continua disponível para contingência, com `Authorization: Bearer <CRON_SERVICE_TOKEN>`. Para usar exclusivamente um agendador externo, definir `GITHUB_SYNC_ENABLED=false` no servidor e chamar essa rota periodicamente. Ambientes serverless precisam desse agendador externo; o relógio interno requer processo Node persistente.
+
+**Salvar e sincronizar**, **Retomar** e **Atualizar dados** colocam as tarefas na fila do servidor. As telas apenas consultam o resultado; nenhuma depende de manter Chrome aberto ou em primeiro plano. O status informa tarefas concluídas, pendentes, falhas, última atividade e prazo de nova tentativa. O total de tarefas pode aumentar quando PRs geram consultas de revisões, por isso não é apresentado como percentual fixo.
 
 A carga inicial prioriza os últimos 30 dias e depois completa os últimos 12 meses. REST é consultada com paginação de até 100 itens. Cada repositório e recurso tem cursor e cobertura próprios. Revisões de PRs antigos atualizados no período também são consultadas. Semanalmente, uma reconciliação percorre novamente a janela histórica.
 
@@ -68,7 +74,7 @@ Há uma lease no banco por identidade GitHub, compartilhada entre conexões, e v
 - Conectar, trocar conta, selecionar repositórios, configurar, pausar e desconectar: administração do escritório e gestão do módulo.
 - Integração, histórico e consultas são separados por escritório. Todas as rotas repetem a autorização no servidor.
 
-O acesso da conta e dos repositórios selecionados é confirmado novamente em intervalos de até cinco minutos. A verificação é limitada por consulta; dados de repositórios ainda não confirmados ficam fora dos totais até concluir a conferência. Após revogação detectada, a visualização é bloqueada e pede reconexão. Uma restrição específica de repositório o retira dos totais, preservando os dados para recuperação.
+O executor começa a revalidar conta e repositórios após quatro minutos, em lotes de até vinte repositórios e com orçamento de tempo. As leituras do painel e dos eventos usam apenas o banco, sem chamadas à API GitHub ou disputa da lease. A janela de confirmação continua limitada a cinco minutos: confirmações vencidas ou ausentes ficam fora dos totais até a conferência do servidor. Após revogação detectada, a visualização é bloqueada e pede reconexão. Uma restrição específica de repositório o retira dos totais, preservando os dados para recuperação. Pausar a coleta mantém a conferência periódica de acesso.
 
 **Pausar** interrompe novos lotes e mantém o acervo confirmado, sujeito à verificação de acesso. **Desconectar** retira os tokens locais e interrompe coleta e visualização, sem apagar o histórico. A desconexão não revoga indiscriminadamente uma autorização que possa atender outra conexão no GitHub; a remoção definitiva da concessão pode ser feita no próprio GitHub.
 
@@ -76,11 +82,12 @@ Reconectar a mesma conta permite retomar. Trocar de conta arquiva a conexão ant
 
 | Situação | Ação |
 | --- | --- |
-| Conexão ainda não configurada | Conferir as credenciais do OAuth App e o endereço público no servidor |
+| Credenciais do OAuth App ausentes | Preencher Client ID e Client Secret em Integrações → GitHub |
+| Instalação sem endereço público ou proteção de credenciais | Configurar APP_PUBLIC_URL e SECRETS_ENCRYPTION_KEY no servidor |
 | Sessão de conexão mudou ou expirou | Voltar ao mesmo escritório e repetir a conexão |
 | Organização não aparece | Conferir aprovação do aplicativo e SSO com o administrador da organização |
 | Limite de consultas | Aguardar o prazo indicado pelo GitHub; o checkpoint foi preservado |
-| Carga parada ao fechar a tela | Conferir a chamada autenticada do agendador e os registros em Integrações |
+| Carga parada ao fechar a tela | Publicar a versão com executor interno, conferir GITHUB_SYNC_ENABLED e os logs do processo Node; se false, conferir o cron externo |
 | Migração ausente | Aplicar a migration no fluxo autorizado; a tela não cria tabelas automaticamente |
 
 O servidor nunca devolve tokens, códigos OAuth ou a configuração cifrada ao navegador. Os registros guardam IDs, datas, tipos e links; não guardam código-fonte, diffs, corpos completos de issues/revisões ou e-mails privados. Não há clone de repositórios.
@@ -91,6 +98,8 @@ Tecnologia: Next.js 16, React 19, Prisma e MariaDB/MySQL existentes. Sem serviç
 
 - `src/lib/github/`: OAuth, cliente REST, regras, persistência, sincronização e consultas.
 - `src/components/github/`: painel, calendário e detalhe diário.
+- `src/lib/github/scheduler.ts`: relógio automático com um lote por vez; `progress.ts`: resumo persistido do andamento.
+- Calendários fora da área visível são montados ao rolar; a navegação por teclado é mantida. Datas usam um único formatador e cache limitado, e calendários inalterados não são redesenhados a cada consulta de status. O resumo de cobertura agrega tarefas no banco sem transferir a lista inteira de revisões para a aplicação.
 - `src/components/admin/GithubIntegration.tsx`: conta, seleção e controles em Integrações.
 - `/api/github`, `/api/github/events`, `/api/github/integration` e `/api/github/sync`: APIs autenticadas.
 - `/api/integrations/github/connect` e `/callback`: autorização OAuth com PKCE e estado de uso único, vinculado à sessão e ao escritório.
@@ -117,7 +126,11 @@ npm run test:github:ui
 
 O teste de banco confere a migration e exercita paginação, datas, contagens, retomada, concorrência, histórico reescrito, tokens, revogação, isolamento, permissões e OAuth com GitHub simulado. O teste de navegador usa o standalone, pessoas fictícias, API GitHub simulada e capturas em `.local/github/`, incluindo celular, tema escuro e áreas úteis equivalentes a 125%, 150% e 200%. A cópia de build não carrega credenciais de produção nem interrompe servidores existentes.
 
-Validação local em 21/10/2026: 32 testes do GitHub aprovados, nove cenários de navegador aprovados sem erros de JavaScript, migration aplicada e compatível com o schema no banco descartável, TypeScript e build standalone aprovados. A suíte completa passou com 5.490 testes; o lint terminou sem erros e com um aviso preexistente em `scripts/exportar-empresas-para-prototipos.ts`. O banco descartável foi encerrado ao concluir.
+Validação inicial do módulo em 21/10/2026: 32 testes do GitHub aprovados, nove cenários de navegador aprovados sem erros de JavaScript, migration aplicada e compatível com o schema no banco descartável, TypeScript e build standalone aprovados. A suíte completa passou com 5.490 testes; o lint terminou sem erros e com um aviso preexistente em `scripts/exportar-empresas-para-prototipos.ts`. O banco descartável foi encerrado ao concluir.
+
+Validação do cadastro OAuth por empresa em 21/10/2026: 38 testes do GitHub com MySQL descartável e API simulada e 70 testes relacionados de auditoria/catálogo aprovados. Onze verificações no navegador aprovadas, incluindo o formulário no celular, segredo oculto, callback da instalação, salvamento sem alterações, troca de segredo e retorno OAuth sem variáveis GitHub no servidor. TypeScript, lint dos arquivos alterados e build standalone aprovados. Nenhuma nova migration é necessária para esta alteração. Capturas e resultado do navegador em `.local/github/github-integration.png`, `github-oauth-mobile.png` e `ui-result.json`. O MySQL usado nesta rodada foi criado somente para verificação e encerrado ao concluir.
+
+Validação da execução automática e desempenho em 22/10/2026: 42 testes do módulo com MySQL descartável/API simulada e 13 checks de navegador aprovados, sem erros de JavaScript. O standalone concluiu a fila com o navegador em `about:blank`, sem tela Connect aberta. No cenário com 20 usuários e um ano de calendário, a primeira área exibida montou 366 botões de dias em vez de 7.320 (95% menos); os demais calendários são montados com a rolagem. Cobertura, filtros, detalhes, teclado, celular e escalas continuaram funcionando. Build standalone, TypeScript, lint dos arquivos alterados e `git diff --check` aprovados. A fixture SQL usa UTC para representar os mesmos instantes do Prisma. Não há nova migration; o contêiner descartável foi encerrado e removido ao concluir. Relatório e capturas em `.local/github/ui-result.json` e `.local/github/github-*.png`.
 
 Essas verificações não substituem a homologação do OAuth App real com as organizações desejadas. Prazo da carga inicial e capacidade devem ser medidos com os volumes reais, respeitando os limites da API.
 

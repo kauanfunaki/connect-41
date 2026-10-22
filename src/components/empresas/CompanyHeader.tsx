@@ -46,6 +46,8 @@ type Props = {
   canRequestHandoff: boolean;
   /** Só administrador exclui (13/10/2026) — o diálogo mostra o que está ligado antes. */
   podeExcluir: boolean;
+  /** "Trabalhar nesta empresa" (BPO, 21/10/2026), para quem trabalha nas telas do BPO. */
+  foco?: React.ReactNode;
 };
 
 export function CompanyHeader({
@@ -65,6 +67,7 @@ export function CompanyHeader({
   canRemoveLogo = false,
   canRequestHandoff,
   podeExcluir,
+  foco,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl);
@@ -223,6 +226,7 @@ export function CompanyHeader({
         {/* Eram links estilizados à mão (30/09): botão não é link. Altura `sm`
             para casar com o "⋯" do lado, que é h-8. */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {foco}
           {canRequestHandoff && (
             <Button href={`/transferencias/novo?entityType=COMPANY&entityId=${id}`} variant="secondary" size="sm">
               <ArrowRightLeft size={14} />

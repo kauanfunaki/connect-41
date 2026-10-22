@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { presaAoOmie } from "@/lib/integracoes/omie/virada";
-import { rotuloDaSerie } from "@/lib/financeiro/repeticao";
-import { NotebookPen, Plus, Upload } from "lucide-react";
+import { rotuloDaSerie, temProximasNaSerie } from "@/lib/financeiro/repeticao";
+import { FileSpreadsheet, NotebookPen, Plus, Upload } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate } from "@/lib/format";
@@ -27,6 +27,7 @@ import { FormLancamentoManual } from "@/components/financeiro/FormLancamentoManu
 import { ImportarLancamentosCsv } from "@/components/financeiro/ImportarLancamentosCsv";
 import { CancelarLancamento } from "@/components/financeiro/CancelarLancamento";
 import { BotaoEditarLancamento } from "@/components/financeiro/EditarLancamento";
+import { BotaoMudarSerie } from "@/components/financeiro/MudarSerie";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { competenciaValida, competenciaDoInstante } from "@/lib/financeiro/periodo";
@@ -86,11 +87,11 @@ export default async function LancamentosPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canViewSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
-  const podeLancar = canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const podeLancar = canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   // Sem permissão para lançar, a tela de criar não existe: cai na lista.
   const pedida = TELAS.find((t) => t.chave === params.aba) ?? TELAS[0];
   const tela = pedida.chave === "lista" || podeLancar ? pedida : TELAS[0];
@@ -103,7 +104,8 @@ export default async function LancamentosPage({
   // Até 13/10/2026 caía na primeira em ordem alfabética, e quem lançava sem
   // olhar o seletor gravava na empresa errada.
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
+  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   const cabecalho = (action?: React.ReactNode) => (
@@ -118,8 +120,9 @@ export default async function LancamentosPage({
   const filtroDaEmpresa = (
     <FiltroDaEmpresa
       acao="/lancamentos"
-      empresas={empresas}
+      empresas={noSeletor}
       valor={companyId}
+      foco={foco}
       manter={{ mes: aba === "lista" ? mes : undefined, aba: aba === "lista" ? undefined : aba }}
     >
       {aba === "lista" && companyId && (
@@ -162,6 +165,10 @@ export default async function LancamentosPage({
         cabecalho(
           podeLancar ? (
             <div className="flex flex-wrap items-center gap-2">
+              {/* A planilha das baixas do mês para o Contábil (fila do BPO, 21/10). */}
+              <Button href={`/lancamentos/dominio?empresa=${companyId}&mes=${mes}`} variant="secondary">
+                <FileSpreadsheet size={14} /> Exportar para a Domínio
+              </Button>
               <Button href={href("importar")} variant="secondary">
                 <Upload size={14} /> Importar CSV
               </Button>
@@ -307,6 +314,10 @@ async function ListaDeManuais({
     l.closeReason === "RENEGOCIADO" || l.closeReason === "PERDA"
       ? { rotulo: l.closeReason === "PERDA" ? "Perda" : "Renegociado", variante: tomDoFechamento(l.closeReason) }
       : STATUS[l.status]!;
+  // "Daqui em diante" (22/10/2026) na conta em aberto que tem próximas na
+  // série; a do Omie antes da virada é dele, e a janela diria só isso.
+  const mudaASerie = (l: (typeof linhas)[number]) =>
+    temProximasNaSerie(l) && (l.status === "PROVISORIO" || l.status === "CONFERIDO") && !l.paidAt && !presaAoOmie(l, l.company);
 
   // O total da barra por lado, sem os cancelados: somar a pagar com a receber
   // não diz nada, e o cancelado já saiu dos totais (ver a nota de rodapé).
@@ -357,8 +368,10 @@ async function ListaDeManuais({
                       {podeCancelar && (
                         <span className="ml-auto flex gap-1.5">
                           {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
+                          {/* Mudar a série daqui em diante (22/10/2026): o aluguel reajustado. */}
+                          {mudaASerie(l) && <BotaoMudarSerie entryId={l.id} />}
                           {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
-                            <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
+                            <CancelarLancamento entryId={l.id} naSerie={temProximasNaSerie(l)} />
                           )}
                         </span>
                       )}
@@ -429,8 +442,11 @@ async function ListaDeManuais({
                             {podeCancelar && (
                               <div className="flex flex-wrap justify-end gap-1.5">
                                 {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
+                                {mudaASerie(l) && <BotaoMudarSerie entryId={l.id} />}
+                          {/* Mudar a série daqui em diante (22/10/2026): o aluguel reajustado. */}
+                          {mudaASerie(l) && <BotaoMudarSerie entryId={l.id} />}
                                 {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
-                                  <CancelarLancamento entryId={l.id} naSerie={Boolean(l.recurrenceId && l.recurrenceIndex && l.recurrenceTotal && l.recurrenceIndex < l.recurrenceTotal)} />
+                                  <CancelarLancamento entryId={l.id} naSerie={temProximasNaSerie(l)} />
                                 )}
                               </div>
                             )}

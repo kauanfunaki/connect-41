@@ -17,7 +17,7 @@ import { BuscarSociosNaReceita } from "@/components/empresas/BuscarSociosNaRecei
 import { AcoesDoSocio } from "@/components/empresas/RegistrarSaidaDoSocio";
 import { moeda } from "@/lib/financeiro/formato";
 import { excluirSocio, importarDaReceita, previaDaReceita, registrarSaida } from "./actions";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { estadoDosAgentes } from "@/lib/ia/data";
 import { LerContratoSocial } from "@/components/societario/ia/LerContratoSocial";
 import { lerContratoSocialAction } from "@/app/(app)/societario/ia/actions";
@@ -85,7 +85,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
   // Ler contrato social pela IA: da coordenação do Societário (decisão de 28/09).
   const coordenaSocietario =
     (await isModuleEnabled(ctx.tenantId, "societario_processos")) &&
-    canManageSector(ctx, (await setorDoModulo(ctx.tenantId, "societario_processos")) ?? "societario");
+    canManageSector(ctx, (await setoresDoModulo(ctx.tenantId, "societario_processos")) ?? "societario");
   const estadoDoLeitor = coordenaSocietario ? (await estadoDosAgentes(ctx.tenantId, [AGENTE_CONTRATO])).get(AGENTE_CONTRATO) : undefined;
   const leitorDoContratoLigado = !!estadoDoLeitor && estadoDoLeitor.ligado && estadoDoLeitor.temChave;
 

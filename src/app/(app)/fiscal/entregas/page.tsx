@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
+import { FiscalPagina } from "@/components/fiscal/previa/FiscalPagina";
 import { modoDoFiscal } from "@/lib/fiscal/motor/servidor";
 import { prepararTelaDoMotor } from "@/lib/fiscal/motor/tela";
-import { MotorIndisponivel, CascoDoMotor } from "@/components/fiscal/motor/CascoDoMotor";
+import { CascoDoMotor } from "@/components/fiscal/motor/CascoDoMotor";
 import { DecisoesMotor } from "@/components/fiscal/motor/DecisoesMotor";
 import { permissoesDeDecisao } from "@/lib/fiscal/motor/permissoes";
 import { ArquivosMotor } from "@/components/fiscal/motor/ArquivosMotor";
@@ -22,5 +24,5 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     }
   }
   if (params.aba === "dominio") redirect("/fiscal/entregas?aba=entregas");
-  return <MotorIndisponivel />;
+  return <Suspense fallback={<p className="text-ui text-fg-secondary">Carregando prévia fiscal…</p>}><FiscalPagina pagina="entregas" /></Suspense>;
 }

@@ -13,7 +13,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts, addDaysToKey } from "@/lib/agenda";
@@ -45,6 +45,10 @@ import { inicioDeHoje } from "@/lib/financeiro/consultas";
 import { quitarConta, registrarBaixa, apagarBaixa, mudarDiaDaBaixa, RecusaDaBaixa } from "@/lib/financeiro/baixa/servidor";
 import { baixaDoAjuste, lerAjuste, type BaixaDoAjuste } from "@/lib/financeiro/conciliacao/ajuste";
 import { saldoEmAberto } from "@/lib/financeiro/baixa/regras";
+import { lerEmpresaEmFoco, recusaDoFoco } from "@/lib/empresas/focoServidor";
+import { motivoForaDoFoco } from "@/lib/empresas/foco";
+import { lancarEConciliar, RecusaDaLinha } from "@/lib/financeiro/conciliacao/lancarDaTransacao";
+import { lancarPelasRegrasNaImportacao } from "@/lib/financeiro/conciliacao/regrasServidor";
 
 const MODULE = "bpo_conciliacao";
 
@@ -59,8 +63,8 @@ class Recusa extends Error {}
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode;
-  if (!canActOnSector(ctx, setor)) return { ok: false as const, erro: "Sem permissão para conciliar." };
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [getModuleDef(MODULE)!.sectorCode];
+  if (!canActOnSector(ctx, setores)) return { ok: false as const, erro: "Sem permissão para conciliar." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo não habilitado." };
   return { ok: true as const, ctx, tenantId: ctx.tenantId, userId: ctx.userId || null, prisma: getPrisma() };
 }
@@ -122,6 +126,9 @@ export async function salvarContaBancaria(formData: FormData): Promise<Resultado
         select: { id: true, companyId: true, bankCode: true, accountDigits: true, type: true, _count: { select: { transactions: true } } },
       });
       if (!atual) return { error: "Conta bancária não encontrada." };
+      // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+      const foraDoFoco = await recusaDoFoco(c.ctx, [atual.companyId]);
+      if (foraDoFoco) return { error: foraDoFoco };
       // O adiantamento e o cartão de crédito (lote D, 20/10) têm o cadastro deles, em Contas a pagar e a receber.
       if (temPortaPropria(atual.type)) return { error: "O adiantamento e o cartão de crédito se editam em Contas a pagar e a receber." };
       const trocouIdentidade = atual.bankCode !== d.bankCode || atual.accountDigits !== d.accountDigits;
@@ -144,6 +151,9 @@ export async function salvarContaBancaria(formData: FormData): Promise<Resultado
     } else {
       const empresa = await c.prisma.company.findFirst({ where: { id: companyId, tenantId: c.tenantId }, select: { id: true } });
       if (!empresa) return { error: "Empresa não encontrada." };
+      // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+      const foraDoFoco = await recusaDoFoco(c.ctx, [empresa.id]);
+      if (foraDoFoco) return { error: foraDoFoco };
       const criada = await c.prisma.bankAccount.create({
         data: { tenantId: c.tenantId, companyId: empresa.id, ...dados },
         select: { id: true },
@@ -170,8 +180,11 @@ export async function salvarContaBancaria(formData: FormData): Promise<Resultado
 export async function alterarContaAtiva(bankAccountId: string, ativa: boolean): Promise<Resultado> {
   const c = await contexto();
   if (!c.ok) return { error: c.erro };
-  const conta = await c.prisma.bankAccount.findFirst({ where: { id: bankAccountId, tenantId: c.tenantId }, select: { id: true } });
+  const conta = await c.prisma.bankAccount.findFirst({ where: { id: bankAccountId, tenantId: c.tenantId }, select: { id: true, companyId: true } });
   if (!conta) return { error: "Conta bancária não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   await c.prisma.bankAccount.update({ where: { id: conta.id }, data: { active: ativa } });
   await logAudit({
     tenantId: c.tenantId,
@@ -199,6 +212,8 @@ export type ResumoDaImportacao = {
   avisos: string[];
   /** Linhas que já estavam conciliadas no Omie e saíram da fila na hora. */
   conciliadasPeloOmie: number;
+  /** Linhas novas que uma regra em modo "lançar" lançou e conciliou (21/10). */
+  lancadasPorRegra: number;
 };
 
 export type ResultadoDaImportacao = { error: string } | { ok: true; resumo: ResumoDaImportacao };
@@ -225,6 +240,9 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
     select: { id: true, companyId: true, active: true, bankCode: true, agency: true, accountNumber: true, type: true },
   });
   if (!conta) return { error: "Conta bancária não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   if (!conta.active) return { error: "Conta inativa. Reative antes de importar." };
   // Só a conta com extrato importa OFX (lote D, 20/10): a caixinha, o adiantamento, o cartão e o empréstimo não têm.
   if (!temExtrato(conta.type)) return { error: `${rotuloDoTipo(conta.type)} não tem extrato — o saldo dela sai das baixas.` };
@@ -326,7 +344,16 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
     avisos,
     // Conta ligada ao Omie: o que o BPO já conciliou lá sai da fila agora.
     conciliadasPeloOmie: await conciliarContaPeloOmie(c.tenantId, conta.id),
+    lancadasPorRegra: 0,
   };
+  // Depois do Omie, as regras de conciliação (21/10): só as linhas novas, e só
+  // as que uma regra em modo "lançar" pega sem dúvida. Regra que não consegue
+  // lançar (a categoria saiu do plano) vira aviso, não erro da importação.
+  if (novas > 0) {
+    const pelasRegras = await lancarPelasRegrasNaImportacao({ tenantId: c.tenantId, userId: c.userId, bankAccountId: conta.id, importId });
+    resumo.lancadasPorRegra = pelasRegras.lancadas;
+    resumo.avisos.push(...pelasRegras.recusas);
+  }
 
   await logAudit({
     tenantId: c.tenantId,
@@ -341,6 +368,7 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
       lidas: resumo.lidas,
       novas: resumo.novas,
       repetidas: resumo.repetidas,
+      lancadasPorRegra: resumo.lancadasPorRegra,
       charset: ex.charset,
     },
   });
@@ -396,10 +424,16 @@ export async function confirmarConciliacao(transactionId: string, ids: string[],
     return { error: "Juros, desconto ou baixa parcial: marque uma conta só." };
   }
 
+  // O foco lido antes da transação (21/10/2026): lá dentro, só a regra, sem consulta a mais.
+  const foco = await lerEmpresaEmFoco(c.ctx);
   try {
     const resumo = await c.prisma.$transaction(async (tx) => {
       const t = await transacaoDoTenant(tx, transactionId, c.tenantId);
       if (!t) throw new Recusa("Transação não encontrada.");
+      // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele. As
+      // contas e baixas escolhidas só são lidas nesta mesma empresa (abaixo).
+      const foraDoFoco = motivoForaDoFoco(foco, [t.bankAccount.companyId]);
+      if (foraDoFoco) throw new Recusa(foraDoFoco);
       if (t.status !== "PENDENTE") throw new Recusa("Esta transação não está mais pendente — atualize a tela.");
       const companyId = t.bankAccount.companyId;
 
@@ -566,6 +600,8 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
   const c = await contexto();
   if (!c.ok) return { error: c.erro };
 
+  // O foco lido antes da transação (21/10/2026): lá dentro, só a regra, sem consulta a mais.
+  const foco = await lerEmpresaEmFoco(c.ctx);
   try {
     const resumo = await c.prisma.$transaction(async (tx) => {
       const t = await tx.bankTransaction.findFirst({
@@ -575,6 +611,7 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
           status: true,
           postedAt: true,
           reconciledViaOmie: true,
+          bankAccount: { select: { companyId: true } },
           matches: {
             select: {
               id: true,
@@ -582,12 +619,15 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
               entryStatusBefore: true,
               entryPaidAtBefore: true,
               payment: { select: { id: true, origin: true, paidAt: true } },
-              financeEntry: { select: { status: true, paidAt: true, transferId: true } },
+              financeEntry: { select: { status: true, paidAt: true, transferId: true, companyId: true } },
             },
           },
         },
       });
       if (!t) throw new Recusa("Transação não encontrada.");
+      // Com foco (21/10/2026), a conta e cada lançamento casado têm de estar nele.
+      const foraDoFoco = motivoForaDoFoco(foco, [t.bankAccount.companyId, ...t.matches.map((m) => m.financeEntry.companyId)]);
+      if (foraDoFoco) throw new Recusa(foraDoFoco);
       if (t.status !== "CONCILIADA") throw new Recusa("Esta transação não está conciliada.");
 
       const pagoEm = instanteDaData(saoPauloParts(t.postedAt).dateKey).getTime();
@@ -672,13 +712,21 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
  * lançamento manual nasce quando não está pago. Desfazer a conciliação deixa o
  * lançamento em aberto (e candidato a casar de novo), em vez de apagá-lo.
  */
-export async function criarLancamentoDaTransacao(formData: FormData): Promise<Resultado> {
+/** O que foi lançado — a tela oferece a regra "sempre que vier assim" com isto (21/10). */
+export type ResultadoDoLancamento =
+  | { error: string }
+  | { ok: true; lancamento: { counterpartyId: string; categoryId: string | null; costCenterId: string | null; projectId: string | null } };
+
+export async function criarLancamentoDaTransacao(formData: FormData): Promise<ResultadoDoLancamento> {
   const c = await contexto();
   if (!c.ok) return { error: c.erro };
 
   const transactionId = texto(formData, "transactionId");
   const t = await transacaoDoTenant(c.prisma, transactionId, c.tenantId);
   if (!t) return { error: "Transação não encontrada." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [t.bankAccount.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   if (t.status !== "PENDENTE") return { error: "Esta transação não está mais pendente — atualize a tela." };
   const companyId = t.bankAccount.companyId;
 
@@ -745,8 +793,9 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
   if (!projeto.ok) return { error: projeto.erro };
 
   let entryId: string;
+  let counterpartyIdCriado: string;
   try {
-    entryId = await c.prisma.$transaction(async (tx) => {
+    [entryId, counterpartyIdCriado] = await c.prisma.$transaction(async (tx) => {
       const contraparte =
         existente ??
         (await tx.financeCounterparty.create({
@@ -762,62 +811,31 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
           select: { id: true, defaultCategoryId: true },
         }));
 
-      const pagoEm = instanteDaData(dataKey);
-      // Nasce pago, pela baixa logo abaixo: é o registro de um dinheiro que já
-      // saiu. Não entra em aprovação por alçada (fica no padrão NAO_REQUER).
-      const criado = await tx.financeEntry.create({
-        data: {
-          tenantId: c.tenantId,
-          companyId,
-          kind: d.kind,
-          status: "CONFERIDO",
-          counterpartyId: contraparte.id,
-          categoryId: d.categoryId,
-          costCenterId: centro.centroId,
-          projectId: projeto.projetoId,
-          competence: d.competencia,
-          dueDate: pagoEm,
-          amount: decimalDeCentavos(d.centavos),
-          description: d.descricao,
-          createdById: c.userId,
-          reviewedById: c.userId,
-          reviewedAt: new Date(),
-        },
-        select: { id: true, amount: true },
-      });
-      const baixa = await quitarConta(tx, {
+      // Nasce pago e conciliado (`lancarEConciliar`): é o registro de um
+      // dinheiro que já saiu. Não entra em aprovação por alçada.
+      const { entryId: criadoId } = await lancarEConciliar(tx, {
         tenantId: c.tenantId,
-        entryId: criado.id,
-        paidAt: pagoEm,
-        bankAccountId: t.bankAccountId,
-        origin: "CONCILIACAO",
+        companyId,
         userId: c.userId,
+        transacao: { id: t.id, bankAccountId: t.bankAccountId },
+        dataKey,
+        kind: d.kind,
+        centavos: d.centavos,
+        counterpartyId: contraparte.id,
+        categoryId: d.categoryId,
+        costCenterId: centro.centroId,
+        projectId: projeto.projetoId,
+        competencia: d.competencia,
+        descricao: d.descricao,
       });
 
       if (d.kind === "PAGAR" && d.categoryId && !contraparte.defaultCategoryId) {
         await tx.financeCounterparty.update({ where: { id: contraparte.id }, data: { defaultCategoryId: d.categoryId } });
       }
-
-      await tx.bankTransactionMatch.create({
-        data: {
-          transactionId: t.id,
-          financeEntryId: criado.id,
-          paymentId: baixa.paymentId,
-          amount: criado.amount,
-          entryStatusBefore: "CONFERIDO",
-          entryPaidAtBefore: null,
-          createdById: c.userId,
-        },
-      });
-      const marcada = await tx.bankTransaction.updateMany({
-        where: { id: t.id, status: "PENDENTE" },
-        data: { status: "CONCILIADA", reconciledAt: new Date(), reconciledById: c.userId },
-      });
-      if (marcada.count !== 1) throw new Recusa("Esta transação acabou de ser alterada por outra pessoa — atualize a tela.");
-      return criado.id;
+      return [criadoId, contraparte.id] as const;
     });
   } catch (err) {
-    if (err instanceof Recusa) return { error: err.message };
+    if (err instanceof Recusa || err instanceof RecusaDaLinha) return { error: err.message };
     throw err;
   }
 
@@ -839,7 +857,10 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
   });
 
   revalidar();
-  return { ok: true };
+  return {
+    ok: true,
+    lancamento: { counterpartyId: counterpartyIdCriado, categoryId: d.categoryId, costCenterId: centro.centroId, projectId: projeto.projetoId },
+  };
 }
 
 // ─── Transferência entre contas (19/10) ─────────────────────────────────────
@@ -914,6 +935,8 @@ export async function transferirEntreContas(formData: FormData): Promise<Resulta
   const outraContaId = texto(formData, "outraContaId");
 
   let r: { companyId: string; transferId: string; outra: string; kind: "PAGAR" | "RECEBER"; valor: string; outraPontaConciliada: boolean };
+  // O foco lido antes da transação (21/10/2026): lá dentro, só a regra, sem consulta a mais.
+  const foco = await lerEmpresaEmFoco(c.ctx);
   try {
     r = await c.prisma.$transaction(async (tx) => {
       const t = await tx.bankTransaction.findFirst({
@@ -940,6 +963,9 @@ export async function transferirEntreContas(formData: FormData): Promise<Resulta
       if (outra && temPortaPropria(outra.type)) throw new Recusa("O adiantamento e o cartão de crédito têm a porta deles, em Contas a pagar e a receber — escolha outra conta.");
       const v = validarOutraConta({ id: t.bankAccount.id, companyId: t.bankAccount.companyId }, outra);
       if (!v.ok || !outra) throw new Recusa(v.ok ? "Escolha a outra conta." : v.erro);
+      // Com foco (21/10/2026), as duas contas têm de estar nele.
+      const foraDoFoco = motivoForaDoFoco(foco, [t.bankAccount.companyId, outra.companyId]);
+      if (foraDoFoco) throw new Recusa(foraDoFoco);
 
       const companyId = t.bankAccount.companyId;
       const dataKey = saoPauloParts(t.postedAt).dateKey;
@@ -1052,6 +1078,15 @@ export async function transferirEntreContas(formData: FormData): Promise<Resulta
 
 // ─── Ignorar e reabrir ──────────────────────────────────────────────────────
 
+/** A empresa da conta da transação, para a trava do foco — só lida com foco ligado. */
+async function empresaDaTransacao(tenantId: string, transactionId: string): Promise<string[]> {
+  const t = await getPrisma().bankTransaction.findFirst({
+    where: { id: transactionId, tenantId },
+    select: { bankAccount: { select: { companyId: true } } },
+  });
+  return t ? [t.bankAccount.companyId] : [];
+}
+
 /** Ignora uma pendente. Motivo obrigatório: "ignorada" sem motivo é só pendência escondida. */
 export async function ignorarTransacao(transactionId: string, motivo: string): Promise<Resultado> {
   const c = await contexto();
@@ -1059,6 +1094,9 @@ export async function ignorarTransacao(transactionId: string, motivo: string): P
   const razao = (motivo ?? "").trim();
   if (razao.length < 3) return { error: "Diga por que esta transação não é um lançamento." };
   if (razao.length > 255) return { error: "Motivo com mais de 255 caracteres." };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, () => empresaDaTransacao(c.tenantId, transactionId));
+  if (foraDoFoco) return { error: foraDoFoco };
 
   const r = await c.prisma.bankTransaction.updateMany({
     where: { id: transactionId, tenantId: c.tenantId, status: "PENDENTE" },
@@ -1081,6 +1119,9 @@ export async function ignorarTransacao(transactionId: string, motivo: string): P
 export async function reabrirTransacao(transactionId: string): Promise<Resultado> {
   const c = await contexto();
   if (!c.ok) return { error: c.erro };
+  // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
+  const foraDoFoco = await recusaDoFoco(c.ctx, () => empresaDaTransacao(c.tenantId, transactionId));
+  if (foraDoFoco) return { error: foraDoFoco };
   const r = await c.prisma.bankTransaction.updateMany({
     where: { id: transactionId, tenantId: c.tenantId, status: "IGNORADA" },
     data: { status: "PENDENTE", ignoredReason: null, reconciledAt: null, reconciledById: null },
@@ -1173,6 +1214,9 @@ export async function lancamentosParaEscolha(transactionId: string, busca: strin
   if (!c.ok) return { error: c.erro };
   const t = await transacaoDoTenant(c.prisma, transactionId, c.tenantId);
   if (!t) return { error: "Transação não encontrada." };
+  // Com foco (21/10/2026), nem lista as contas de outra empresa.
+  const foraDoFoco = await recusaDoFoco(c.ctx, [t.bankAccount.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
   const kind = tipoCompativel(centavosDeDecimal(t.amount));
   if (!kind) return { ok: true, lancamentos: [], limitado: false };
 

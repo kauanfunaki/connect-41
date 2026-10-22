@@ -6,7 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { logAudit } from "@/lib/audit";
-import { setorDoModulo } from "@/lib/modules";
+import { setoresDoModulo } from "@/lib/modules";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -53,7 +53,7 @@ function parseQuestions(form: FormData): ParsedQuestion[] | { error: string } {
 export async function criarTemplate(_prev: TemplateState, form: FormData): Promise<TemplateState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão para criar modelos de teste." };
+  if (!canManageSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão para criar modelos de teste." };
 
   const name = ((form.get("name") as string) ?? "").trim();
   const description = ((form.get("description") as string) ?? "").trim();

@@ -16,8 +16,7 @@
 // - a integração do Omie das empresas da demonstração;
 // - as notificações cuja mensagem começa com "[demo]".
 //
-// Quem apaga as empresas em si, o acesso do portal e os grupos de cliente
-// continua sendo o script (os passos "[demo]" de sempre), depois disto.
+// Quem apaga as empresas em si e o acesso do portal continua sendo o script (os passos "[demo]" de sempre), depois disto.
 //
 // Os arquivos que alguém enviar para as pastas durante a apresentação ficam no
 // disco do servidor: o script roda em outra máquina e não alcança o disco. A
@@ -132,6 +131,8 @@ export const PLANO_DA_LIMPEZA_DO_BPO: readonly Passo<AlvoDaLimpezaDoBpo>[] = [
   { modelo: "PipelineItem", acao: "apagar", executar: async (tx, a) => (vazio(a.espacos) ? 0 : n(tx.pipelineItem.deleteMany({ where: dosEspacos(a) }))) },
   // Obrigação recorrente que alguém crie numa lista da demonstração: a lista não sai com ela pendurada.
   { modelo: "RecurringObligation", acao: "apagar", executar: async (tx, a) => (vazio(a.espacos) ? 0 : n(tx.recurringObligation.deleteMany({ where: dosEspacos(a) }))) },
+  // Idem para a obrigação por regime (22/10/2026); as geradas dela vão junto (cascata).
+  { modelo: "ModeloDeObrigacao", acao: "apagar", executar: async (tx, a) => (vazio(a.espacos) ? 0 : n(tx.modeloDeObrigacao.deleteMany({ where: dosEspacos(a) }))) },
   // As etapas vão junto (cascata).
   {
     modelo: "Pipeline",
