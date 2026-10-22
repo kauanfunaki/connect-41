@@ -10,7 +10,10 @@ import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
-import { conversaDaEmpresa } from "@/lib/financeiro/comunicacao/consultas";
+import { conversaDaEmpresa, temConversa } from "@/lib/financeiro/comunicacao/consultas";
+import { CONVERSA_SO_PARA_CONSULTA } from "@/lib/financeiro/comunicacao/regras";
+import { Aviso } from "@/components/ui/Aviso";
+import { Button } from "@/components/ui/Button";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { enviarMensagemCliente } from "./actions";
 
@@ -26,9 +29,12 @@ export default async function PortalComunicacaoPage({
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_comunicacao")) notFound();
   if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/comunicacao")) return <TelaIndisponivel />;
-  // As solicitações substituíram a conversa livre (01/10): o link antigo e o
-  // aviso por e-mail de mensagem levam para o caminho novo.
-  if (modulos.has("portal_solicitacoes")) redirect("/portal/solicitacoes");
+  // As solicitações substituíram a conversa livre (01/10). Desde 22/10/2026 o
+  // que já foi conversado fica para consulta, só leitura, a partir do link
+  // "Conversas anteriores" das Solicitações; quem nunca conversou vai direto
+  // para o caminho novo, como antes.
+  const soConsulta = modulos.has("portal_solicitacoes");
+  if (soConsulta && !(await temConversa(escopo))) redirect("/portal/solicitacoes");
 
   // As empresas do alcance do cliente, e não as ativas do tenant: o portal é dele.
   const empresas = await empresasDoSeletor(escopo.tenantId, escopo.companyIds ?? []);
@@ -40,10 +46,21 @@ export default async function PortalComunicacaoPage({
   return (
     <PageContainer>
       <PortalCabecalho
-        titulo="Conversa"
-        descricao="Fale com a equipe e mande arquivos, por empresa."
-        somenteLeitura={false}
+        titulo={soConsulta ? "Conversas anteriores" : "Conversa"}
+        descricao={soConsulta ? "O que você já conversou com a equipe, por empresa." : "Fale com a equipe e mande arquivos, por empresa."}
+        somenteLeitura={soConsulta}
       />
+
+      {soConsulta && (
+        <Aviso tom="info" className="mb-4">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fg">
+            <span>{CONVERSA_SO_PARA_CONSULTA.cliente} Cada pedido tem número, prazo de resposta e a conversa com a equipe.</span>
+            <Button href="/portal/solicitacoes/nova" variant="secondary" size="xs">
+              Nova solicitação
+            </Button>
+          </span>
+        </Aviso>
+      )}
 
       {empresas.length === 0 ? (
         <Card>
@@ -68,7 +85,7 @@ export default async function PortalComunicacaoPage({
                   <EmptyState
                     icon={<MessagesSquare />}
                     title="Nenhuma mensagem ainda"
-                    description="Escreva abaixo — a equipe é avisada na hora."
+                    description={soConsulta ? "Esta empresa não tem conversa anterior." : "Escreva abaixo — a equipe é avisada na hora."}
                   />
                 </Card>
               ) : (
@@ -86,6 +103,7 @@ export default async function PortalComunicacaoPage({
                 )
               )}
 
+              {!soConsulta && (
               <Card className="mt-5 p-4">
                 <ResponderPendencia
                   alvo={selecionada.id}
@@ -95,6 +113,7 @@ export default async function PortalComunicacaoPage({
                   dica="A equipe é avisada quando você escreve."
                 />
               </Card>
+              )}
             </>
           )}
         </>

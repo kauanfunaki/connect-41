@@ -12,6 +12,7 @@ import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { listarDoCliente } from "@/lib/solicitacoes/consultas";
+import { temConversa } from "@/lib/financeiro/comunicacao/consultas";
 import { emAberto } from "@/lib/solicitacoes/regras";
 import { formatInstantDate } from "@/lib/format";
 
@@ -33,7 +34,16 @@ export default async function PortalSolicitacoesPage({
   const { recorte: pedido } = await searchParams;
   // "Aguardando você" (05/10) é onde o Início leva quando a equipe espera o cliente.
   const recorte = pedido === "encerradas" || pedido === "aguardando" ? pedido : "abertas";
-  const linhas = await listarDoCliente({ tenantId: escopo.tenantId, companyIds: escopo.companyIds ?? [] }, recorte);
+  const [linhas, conversasAnteriores] = await Promise.all([
+    listarDoCliente({ tenantId: escopo.tenantId, companyIds: escopo.companyIds ?? [] }, recorte),
+    // A conversa de antes das Solicitações, só para consulta (22/10/2026): o
+    // link aparece só para quem tem o que consultar.
+    modulos.has("bpo_comunicacao")
+      ? temConversa({ tenantId: escopo.tenantId, companyIds: escopo.companyIds ?? [] }).then(
+          async (tem) => tem && !(await telaBloqueadaNoPortal(escopo.tenantId, "/portal/comunicacao"))
+        )
+      : Promise.resolve(false),
+  ]);
 
   return (
     <PageContainer>
@@ -108,6 +118,16 @@ export default async function PortalSolicitacoesPage({
             </li>
           ))}
         </ul>
+      )}
+
+      {conversasAnteriores && (
+        // Botão, e não link no meio da frase (revisão de 05/10).
+        <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted">
+          <span>Procurando uma conversa de antes das solicitações?</span>
+          <Button href="/portal/comunicacao" variant="secondary" size="xs">
+            Ver conversas anteriores
+          </Button>
+        </div>
       )}
     </PageContainer>
   );
