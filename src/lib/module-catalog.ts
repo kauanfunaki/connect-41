@@ -171,6 +171,16 @@ export type ModuleDef = {
 
 export const MODULE_CATALOG: ModuleDef[] = [
   {
+    code: "contabil_sped", label: "SPED", sectorCode: "contabil",
+    description: "Conferência, de-para e arquivos de lançamentos para a Domínio em quatro etapas",
+    defaultEnabled: true, icon: "FileSpreadsheet", group: "Operação", menuDireto: true,
+  },
+  {
+    code: "tech_controle_interno", label: "Controle interno", sectorCode: "tech",
+    description: "Bugs, melhorias, novas funcionalidades, testes e migrações da equipe Tech",
+    defaultEnabled: false, icon: "ClipboardList", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
+  },
+  {
     code: "tech_github_contributions", label: "GitHub — Contribuições", sectorCode: "tech",
     description: "Heatmap de commits, pull requests, issues e revisões nos repositórios monitorados",
     defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
@@ -428,14 +438,14 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Documentos",
   },
   ...([
-    ["fiscal_painel", "Painel fiscal", "Indicadores, progresso e pendências do cenário de teste", "ChartColumn", "Operação"],
-    ["fiscal_classificacao", "Classificação", "Destinação e crédito de produtos, contratos e recibos em teste", "ClipboardList", "Operação"],
-    ["fiscal_operacao", "Executar", "Extração, geração, fila, logs e erros simulados", "Workflow", "Operação"],
-    ["fiscal_acervo", "Documentos e importações", "Acervo, serviços, contratos, importação e cobertura com dados fictícios", "ReceiptText", "Documentos"],
-    ["fiscal_icms_ipi", "ICMS e IPI", "Apuração, demonstrativo, ajustes e DCIP/DIME em teste", "FileSpreadsheet", "Apuração"],
-    ["fiscal_contribuicoes", "PIS e COFINS", "Parâmetros, ajustes, fechamento e SPED Contribuições em teste", "Receipt", "Apuração"],
-    ["fiscal_entregas", "SPED gerados", "Versões de SPED, validação e entregas simuladas", "CheckCheck", "Conferência"],
-    ["fiscal_conferencia", "Conferência fiscal", "Prévia financeira e confronto de documentos em teste", "Landmark", "Conferência"],
+    ["fiscal_painel", "Painel fiscal", "Indicadores, progresso e pendências da base do SPED", "ChartColumn", "Operação"],
+    ["fiscal_classificacao", "Classificação", "Destinação e crédito dos produtos da base fiscal", "ClipboardList", "Operação"],
+    ["fiscal_operacao", "Executar", "Geração de EFD, fila, logs e histórico do motor", "Workflow", "Operação"],
+    ["fiscal_acervo", "Documentos e importações", "Consulta e conferência dos documentos usados na EFD", "ReceiptText", "Documentos"],
+    ["fiscal_icms_ipi", "ICMS e IPI", "Apuração, demonstrativo, ajustes e DCIP/DIME", "FileSpreadsheet", "Apuração"],
+    ["fiscal_contribuicoes", "PIS e COFINS", "Parâmetros, ajustes e EFD Contribuições", "Receipt", "Apuração"],
+    ["fiscal_entregas", "SPED gerados", "Versões de SPED, pré-validação e entregas registradas", "CheckCheck", "Conferência"],
+    ["fiscal_conferencia", "Conferência fiscal", "Conferência dos arquivos e documentos fiscais", "Landmark", "Conferência"],
     ["fiscal_configuracoes", "Configurações fiscais", "Parâmetros e consulta de regras fiscais por CFOP e fonte", "Building2", "Cadastros"],
   ] satisfies [string, string, string, IconeDeModulo, GrupoDeModulo][]).map(([code, label, description, icon, group]) => ({
     code, label, description, icon, group, sectorCode: "fiscal", defaultEnabled: true,
@@ -701,6 +711,8 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
+  contabil_sped: "/contabil/sped",
+  tech_controle_interno: "/tech/controle-interno",
   tech_github_contributions: "/github",
   tech_ops_center:         "/ops",
   helpdesk: "/chamados",

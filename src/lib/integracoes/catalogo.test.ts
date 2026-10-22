@@ -82,6 +82,16 @@ describe("Chatwoot e SPED, depois da convergência de 11/09", () => {
     expect(def.campos.find((c) => c.name === "serviceToken")!.type).toBe("secret");
   });
 
+  // API-CONNECT §8.1: escrita é credencial à parte, opcional — sem ela o
+  // Connect só consulta, e a integração continua completa.
+  it("o SPED aceita um token de escrita opcional, também segredo", () => {
+    const def = integracaoDoCatalogo("sped")!;
+    const escrita = def.campos.find((c) => c.name === "serviceTokenEscrita")!;
+    expect(escrita.type).toBe("secret");
+    expect(escrita.required).toBe(false);
+    expect(camposFaltando(def, { baseUrl: "https://x", serviceToken: "t" })).toEqual([]);
+  });
+
   it("nenhuma das duas nasce ligada", () => {
     expect(integracaoDoCatalogo("chatwoot")!.defaultEnabled).toBe(false);
     expect(integracaoDoCatalogo("sped")!.defaultEnabled).toBe(false);
