@@ -145,7 +145,9 @@ export default async function ComunicacaoPage({
         texto={
           conversas.some((c) => c.resumo.esperandoEscritorio)
             ? "As que estão esperando o escritório vêm primeiro na lista. Use ↑↓ no painel para passar de uma para outra."
-            : "Abra uma conversa à esquerda, ou escolha uma empresa acima para começar."
+            : substituida
+              ? "Abra uma conversa à esquerda para consultar o histórico."
+              : "Abra uma conversa à esquerda, ou escolha uma empresa acima para começar."
         }
       />
     );
@@ -159,7 +161,7 @@ export default async function ComunicacaoPage({
         // Revisão de 05/10: botão não é link — "Solicitações" era texto azul no meio da frase.
         <Aviso tom="info" className="mb-4">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fg">
-            <span>A conversa saiu do portal: agora o cliente fala com a equipe pelas Solicitações. Esta tela fica como histórico.</span>
+            <span>A conversa virou histórico: ninguém escreve mais aqui, e o cliente consulta o que já foi dito em “Conversas anteriores”, no portal. O que é novo vai pelas Solicitações.</span>
             <Button href="/solicitacoes" variant="secondary" size="xs">
               Abrir solicitações
             </Button>
@@ -174,7 +176,7 @@ export default async function ComunicacaoPage({
         lista={
           <ColunaDaLista>
             {conversas.length === 0 ? (
-              <EmptyState icon={<MessagesSquare />} title="Nenhuma conversa ainda" description="Escolha uma empresa acima para começar." />
+              <EmptyState icon={<MessagesSquare />} title="Nenhuma conversa ainda" description={substituida ? "Nenhuma empresa tem conversa anterior." : "Escolha uma empresa acima para começar."} />
             ) : (
               conversas.map((c) => (
                 <CartaoDeConversa
