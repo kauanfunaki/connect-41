@@ -36,7 +36,8 @@ import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { arquivosDoFormulario, type AnexoGravado } from "@/lib/financeiro/pendencias/armazenamento";
 import { armazenamentoDosAnexos } from "@/lib/financeiro/anexos";
 import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
-import { horizonteDaSerie, ocorrenciasDaRepeticao, totalDaSerie, validarRepeticao } from "@/lib/financeiro/repeticao";
+import { AJUSTES_DO_DIA, horizonteDaSerie, ocorrenciasDaRepeticao, totalDaSerie, validarRepeticao, type AjusteDoDia } from "@/lib/financeiro/repeticao";
+import { lerParcelas, type Parcela } from "@/lib/financeiro/parcelamento";
 import { lerRateio, resumoDoRateio } from "@/lib/financeiro/rateio";
 import { conferirRateio, gravarRateio } from "@/lib/financeiro/rateioServidor";
 import { lerRetencoes, liquidoDaConta, resumoDasRetencoes } from "@/lib/financeiro/retencoes";
@@ -72,6 +73,8 @@ export type ResultadoDoManual =
       aguardandoAprovacao?: boolean;
       /** Quantas próximas da série nasceram junto. */
       repetidas?: number;
+      /** Em quantas parcelas a conta nasceu (22/10/2026); ausente se não parcelou. */
+      parcelas?: number;
       /** Quantas contas de imposto retido nasceram junto (lote D, 20/10). */
       impostos?: number;
     };
@@ -126,6 +129,25 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   });
   if (!rep.ok) return { error: rep.erro };
 
+  // O parcelamento (22/10/2026): o valor digitado é o total, e cada parcela
+  // vira uma conta, com o valor e o vencimento que a pessoa conferiu na tela.
+  // As parcelas são uma série como a da repetição ("3/12").
+  const parcelar = texto("parcelar") === "1";
+  let parcelas: Parcela[] | null = null;
+  let ajusteDasParcelas: AjusteDoDia = "ADIAR";
+  if (parcelar) {
+    if (rep.repeticao) return { error: "Parcelar e repetir juntos não — parcelar divide um valor; repetir lança a conta inteira de novo a cada mês. Escolha um." };
+    // Nasce em aberto: a baixa de cada parcela é dada quando ela for paga.
+    if (d.pagoEmKey) return { error: "Conta parcelada nasce em aberto — deixe \"já pago em\" vazio e dê a baixa de cada parcela quando ela for paga." };
+    if (comRateio) return { error: "Rateio e parcelamento juntos ainda não — parcele, e faça o rateio de cada parcela na edição da conta." };
+    const lidas = lerParcelas(texto("parcelas"), d.centavos);
+    if (!lidas.ok) return { error: lidas.erro };
+    parcelas = lidas.parcelas;
+    const ajuste = texto("parcelarAjuste") || "ADIAR";
+    if (!AJUSTES_DO_DIA.some((a) => a.valor === ajuste)) return { error: "Ajuste de fim de semana inválido." };
+    ajusteDasParcelas = ajuste as AjusteDoDia;
+  }
+
   // As retenções na fonte (lote D, 20/10), só na conta a pagar: o valor
   // digitado é o bruto da nota, a conta do fornecedor fica no líquido, e cada
   // imposto ganha a conta dele.
@@ -134,12 +156,16 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const retencoes = lidas.retencoes;
   let valorDaConta = d.centavos;
   if (retencoes.length > 0) {
+    if (parcelas) return { error: "Retenção ainda não vai junto com o parcelamento — parcele sem retenção e informe a de cada parcela na edição." };
     if (rep.repeticao) return { error: "Retenção ainda não vai junto com a repetição — lance a série sem retenção e informe a de cada conta na edição." };
     if (comRateio) return { error: "Rateio e retenção juntos ainda não — lance com a retenção e faça o rateio do líquido na edição da conta." };
     const l = liquidoDaConta(d.centavos, retencoes);
     if (!l.ok) return { error: l.erro };
     valorDaConta = l.liquidoCentavos;
   }
+  // Parcelada, a conta lançada é a primeira parcela.
+  if (parcelas) valorDaConta = parcelas[0]!.centavos;
+  const vencimentoDaConta = parcelas ? parcelas[0]!.vencimentoKey : d.vencimentoKey;
 
   const rateio = comRateio
     ? await conferirRateio({ tenantId: c.tenantId, companyId, kind: d.kind, linhas: linhasDoRateio, totalCentavos: d.centavos })
@@ -219,15 +245,40 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const feriados = rep.repeticao ? new Set((await feriadosDoEscritorio(c.tenantId)).keys()) : new Set<string>();
   const total = rep.repeticao ? totalDaSerie(primeiraDaSerie, rep.repeticao, feriados) : null;
   if (total && !total.ok) return { error: total.erro };
-  const proximas = rep.repeticao
+  // Cada próxima com o valor dela: na repetição, a conta inteira de novo; no
+  // parcelamento, a parcela — e a competência da compra, que é uma só (ver
+  // `parcelamento.ts`).
+  const proximas: { indice: number; vencimentoKey: string; competencia: string; centavos: number }[] = rep.repeticao
     ? ocorrenciasDaRepeticao(
         primeiraDaSerie,
         rep.repeticao,
         feriados,
         rep.repeticao.fim.tipo === "VEZES" ? undefined : horizonteDaSerie(rep.repeticao.frequencia, hojeKey)
-      ).slice(1)
-    : [];
-  const serie = rep.repeticao && total?.ok ? { recurrenceId: randomUUID(), recurrenceTotal: total.total } : null;
+      )
+        .slice(1)
+        .map((o) => ({ ...o, centavos: d.centavos }))
+    : parcelas
+      ? parcelas.slice(1).map((p) => ({ indice: p.indice, vencimentoKey: p.vencimentoKey, competencia: d.competencia, centavos: p.centavos }))
+      : [];
+  const serie =
+    rep.repeticao && total?.ok
+      ? { recurrenceId: randomUUID(), recurrenceTotal: total.total }
+      : parcelas
+        ? { recurrenceId: randomUUID(), recurrenceTotal: parcelas.length }
+        : null;
+  // A regra da série. A do parcelamento é a mensal com número de vezes — todas
+  // nascem agora, e o agendador não olha para ela; fica para o "mudar a série
+  // daqui em diante" saber o dia e o ajuste de cada mês.
+  const regraDaSerie = rep.repeticao
+    ? {
+        frequency: rep.repeticao.frequencia,
+        dayAdjust: rep.repeticao.ajuste,
+        endMode: rep.repeticao.fim.tipo,
+        endDate: rep.repeticao.fim.tipo === "ATE" ? rep.repeticao.fim.dataKey : null,
+      }
+    : parcelas
+      ? { frequency: "MENSAL", dayAdjust: ajusteDasParcelas, endMode: "VEZES", endDate: null }
+      : null;
   const statusDasProximas = statusInicialDoManual(null);
   const aprovacaoDasProximas = entrada.statusInicial(companyId, d.kind, statusDasProximas);
 
@@ -284,7 +335,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           issueDate: d.emissaoKey ? instanteDaData(d.emissaoKey) : null,
           documentNumber: d.numeroDocumento,
           competence: d.competencia,
-          dueDate: instanteDaData(d.vencimentoKey),
+          dueDate: instanteDaData(vencimentoDaConta),
           forecastDate: previsaoKey && !d.pagoEmKey ? instanteDaData(previsaoKey) : null,
           amount: decimalDeCentavos(valorDaConta),
           description: d.descricao,
@@ -297,18 +348,15 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         select: { id: true, amount: true },
       });
       if (resumo) await gravarRateio(tx, { tenantId: c.tenantId, entryId: criado.id, linhas: linhasDoRateio });
-      if (serie && rep.repeticao) {
+      if (serie && regraDaSerie) {
         await tx.financeRecurrence.create({
           data: {
             id: serie.recurrenceId,
             tenantId: c.tenantId,
             companyId,
-            frequency: rep.repeticao.frequencia,
-            dayAdjust: rep.repeticao.ajuste,
-            endMode: rep.repeticao.fim.tipo,
-            endDate: rep.repeticao.fim.tipo === "ATE" ? rep.repeticao.fim.dataKey : null,
+            ...regraDaSerie,
             total: serie.recurrenceTotal,
-            firstDueDate: d.vencimentoKey,
+            firstDueDate: vencimentoDaConta,
             firstCompetence: d.competencia,
             lastIndex: 1 + proximas.length,
             createdById: c.ctx.userId || null,
@@ -352,8 +400,10 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
             bankAccountId: contaPrevista.contaId,
             competence: o.competencia,
             dueDate: instanteDaData(o.vencimentoKey),
-            amount: decimalDeCentavos(d.centavos),
+            amount: decimalDeCentavos(o.centavos),
             description: d.descricao,
+            // A parcela é do mesmo documento: a nota ou o contrato parcelado.
+            ...(parcelas ? { issueDate: d.emissaoKey ? instanteDaData(d.emissaoKey) : null, documentNumber: d.numeroDocumento } : {}),
             createdById: c.ctx.userId || null,
             reviewedById: c.ctx.userId || null,
             reviewedAt: new Date(),
@@ -394,8 +444,12 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
     throw err;
   }
 
-  const aguardando = (approvalStatus === "AGUARDANDO" ? 1 : 0) + (aprovacaoDasProximas === "AGUARDANDO" ? proximas.length : 0);
-  const aviso = aguardando > 0 ? await avisarAprovadores(c.tenantId, Array.from({ length: aguardando }, () => ({ companyId, amount: entry.amount }))) : null;
+  // Cada conta que espera aprovação com o valor dela — as parcelas não têm o mesmo.
+  const aguardando = [
+    ...(approvalStatus === "AGUARDANDO" ? [{ companyId, amount: entry.amount }] : []),
+    ...(aprovacaoDasProximas === "AGUARDANDO" ? proximas.map((o) => ({ companyId, amount: decimalDeCentavos(o.centavos) })) : []),
+  ];
+  const aviso = aguardando.length > 0 ? await avisarAprovadores(c.tenantId, aguardando) : null;
 
   await logAudit({
     tenantId: c.tenantId,
@@ -424,11 +478,20 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
             serie: serie.recurrenceId,
           }
         : {}),
+      ...(parcelas && serie
+        ? { parcelamento: { parcelas: parcelas.length, total: decimalDeCentavos(d.centavos), ajusteDoDia: ajusteDasParcelas, serie: serie.recurrenceId } }
+        : {}),
     },
   });
 
   revalidar();
-  return { ok: true, aguardandoAprovacao: approvalStatus === "AGUARDANDO", repetidas: proximas.length, impostos: retencoes.length };
+  return {
+    ok: true,
+    aguardandoAprovacao: approvalStatus === "AGUARDANDO",
+    repetidas: parcelas ? 0 : proximas.length,
+    ...(parcelas ? { parcelas: parcelas.length } : {}),
+    impostos: retencoes.length,
+  };
 }
 
 /** Cancela um lançamento manual em aberto. Nunca apaga. */

@@ -8374,7 +8374,10 @@ model FinanceRecurrence {
   id              String  @id @db.VarChar(36)
   tenantId        String
   companyId       String
-  /// MENSAL, QUINZENAL, SEMANAL, ANUAL ou DIARIA (todo dia útil).
+  /// MENSAL, QUINZENAL, SEMANAL, ANUAL ou DIARIA (todo dia útil). O
+  /// parcelamento (22/10/2026) grava MENSAL com `endMode` VEZES: as parcelas
+  /// nascem todas juntas, e a regra só guarda o dia e o ajuste para o "mudar a
+  /// série daqui em diante".
   frequency       String  @db.VarChar(12)
   /// ADIAR, ANTECIPAR ou MANTER — o vencimento em fim de semana ou feriado.
   dayAdjust       String  @db.VarChar(10)
@@ -8387,6 +8390,12 @@ model FinanceRecurrence {
   firstCompetence String  @db.VarChar(7)
   /// A posição da última conta já criada. A série termina quando chega em `total`.
   lastIndex       Int
+  /// O dia do vencimento quando ele mudou depois do lançamento ("mudar a série
+  /// daqui em diante", 22/10/2026 — o aluguel que passou do dia 10 para o 15).
+  /// Nulo é o dia do primeiro vencimento, como sempre foi. Só vale na série
+  /// mensal e na anual: é o dia do mês. O fim da série continua contando os
+  /// mesmos meses — ver `ocorrenciasDaRepeticao`.
+  dueDay          Int?
   /// Falso depois do "cancelar esta e as próximas": nada mais nasce.
   active          Boolean @default(true)
   createdById     String?

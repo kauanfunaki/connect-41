@@ -21,6 +21,7 @@ import { CamposDaContraparteNova } from "./ContraparteNova";
 import { CampoDeProjeto } from "./CampoDeProjeto";
 import { CamposDoRateio } from "./CamposDoRateio";
 import { CamposDaRepeticao } from "./CamposDaRepeticao";
+import { CamposDoParcelamento } from "./CamposDoParcelamento";
 import { CamposDasRetencoes, totalRetido, type ValoresDasRetencoes } from "./CamposDasRetencoes";
 import { formatarReaisDeCentavos } from "@/lib/format";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
@@ -81,6 +82,11 @@ export function FormLancamentoManual({
   const [salvo, setSalvo] = useState(false);
   const [aguardando, setAguardando] = useState(false);
   const [repetidas, setRepetidas] = useState(0);
+  // O parcelamento (22/10/2026): divide o valor, a partir do vencimento.
+  const [parcelas, setParcelas] = useState("");
+  const [vencimentoTexto, setVencimentoTexto] = useState("");
+  const [parceladas, setParceladas] = useState(0);
+  const parcelando = Number(parcelas) >= 2;
   // As retenções na fonte (lote D, 20/10): com elas, o valor é o bruto da nota.
   const [retencoes, setRetencoes] = useState<ValoresDasRetencoes>({});
   const [impostos, setImpostos] = useState(0);
@@ -119,6 +125,7 @@ export function FormLancamentoManual({
     const padrao = ficha?.defaultCategoryId;
     setCategoria(padrao && categorias.some((c) => c.id === padrao && c.kind === "PAGAR") ? padrao : "");
     setValorTexto(novo.leitura.valorCentavos ? valorNoCampo(novo.leitura.valorCentavos) : "");
+    setVencimentoTexto(novo.leitura.vencimentoKey ?? "");
     setVersao((v) => v + 1);
     setErro(null);
     setSalvo(false);
@@ -129,6 +136,7 @@ export function FormLancamentoManual({
     setContraparte("");
     setCategoria("");
     setValorTexto("");
+    setVencimentoTexto("");
     setVersao((v) => v + 1);
   }
 
@@ -152,6 +160,9 @@ export function FormLancamentoManual({
       setSalvo(true);
       setAguardando(Boolean(r.aguardandoAprovacao));
       setRepetidas(r.repetidas ?? 0);
+      setParceladas(r.parcelas ?? 0);
+      setParcelas("");
+      setVencimentoTexto("");
       setImpostos(r.impostos ?? 0);
       setRetencoes({});
       formRef.current?.reset();
@@ -295,14 +306,20 @@ export function FormLancamentoManual({
             <CampoMes id="lancamento-competencia" name="competencia" defaultValue={competenciaPadrao} required />
           </CampoForm>
           <CampoForm label="Vencimento" htmlFor="lancamento-vencimento" required helper={leitura && conferir("vencimento") ? CONFIRA : undefined}>
-            <CampoData id="lancamento-vencimento" name="vencimento" defaultValue={leitura?.vencimentoKey ?? undefined} required />
+            <CampoData
+              id="lancamento-vencimento"
+              name="vencimento"
+              defaultValue={leitura?.vencimentoKey ?? undefined}
+              onChange={setVencimentoTexto}
+              required
+            />
           </CampoForm>
           {/* A data de previsão (lote D, 20/10): o fluxo de caixa projeta por ela. */}
           <CampoForm label="Previsão" htmlFor="lancamento-previsao" helper="Quando deve ser paga de fato. Em branco, o vencimento.">
             <CampoData id="lancamento-previsao" name="previsao" />
           </CampoForm>
           <CampoForm
-            label={retido > 0 ? "Valor bruto (da nota)" : "Valor"}
+            label={parcelando ? "Valor total (todas as parcelas)" : retido > 0 ? "Valor bruto (da nota)" : "Valor"}
             htmlFor="lancamento-valor"
             required
             helper={
@@ -382,6 +399,15 @@ export function FormLancamentoManual({
           {/* Repetir (lote D): as próximas nascem junto — ver `CamposDaRepeticao`. */}
           <CamposDaRepeticao className="sm:col-span-2 lg:col-span-4" />
 
+          {/* Parcelar (22/10/2026): o valor dividido em parcelas — ver `CamposDoParcelamento`. */}
+          <CamposDoParcelamento
+            className="sm:col-span-2 lg:col-span-4"
+            parcelas={parcelas}
+            onParcelas={setParcelas}
+            valorTexto={valorTexto}
+            primeiroVencimento={vencimentoTexto}
+          />
+
           {/* Anexos (lote H2): o boleto, a nota, o comprovante — ficam na conta. */}
           <CampoForm
             label="Anexos"
@@ -408,6 +434,7 @@ export function FormLancamentoManual({
             salvo && (
               <span className="inline-flex items-center gap-1.5 text-success-fg">
                 <Check size={14} className="flex-shrink-0" /> Lançado{repetidas > 0 ? `, com mais ${repetidas} na série` : ""}
+                {parceladas > 0 ? ` em ${parceladas} parcelas` : ""}
                 {impostos > 0 ? `, com ${impostos} ${impostos === 1 ? "conta de imposto retido" : "contas de imposto retido"}` : ""}. Ele já aparece nas contas e na DRE.
                 {/* Empresa com alçada: a conta nasce aguardando, e a baixa fica travada até alguém aprovar. */}
                 {aguardando && " Aguardando aprovação antes da baixa."}

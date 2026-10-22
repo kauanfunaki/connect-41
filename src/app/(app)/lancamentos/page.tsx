@@ -27,6 +27,7 @@ import { FormLancamentoManual } from "@/components/financeiro/FormLancamentoManu
 import { ImportarLancamentosCsv } from "@/components/financeiro/ImportarLancamentosCsv";
 import { CancelarLancamento } from "@/components/financeiro/CancelarLancamento";
 import { BotaoEditarLancamento } from "@/components/financeiro/EditarLancamento";
+import { BotaoMudarSerie } from "@/components/financeiro/MudarSerie";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { competenciaValida, competenciaDoInstante } from "@/lib/financeiro/periodo";
@@ -313,6 +314,10 @@ async function ListaDeManuais({
     l.closeReason === "RENEGOCIADO" || l.closeReason === "PERDA"
       ? { rotulo: l.closeReason === "PERDA" ? "Perda" : "Renegociado", variante: tomDoFechamento(l.closeReason) }
       : STATUS[l.status]!;
+  // "Daqui em diante" (22/10/2026) na conta em aberto que tem próximas na
+  // série; a do Omie antes da virada é dele, e a janela diria só isso.
+  const mudaASerie = (l: (typeof linhas)[number]) =>
+    temProximasNaSerie(l) && (l.status === "PROVISORIO" || l.status === "CONFERIDO") && !l.paidAt && !presaAoOmie(l, l.company);
 
   // O total da barra por lado, sem os cancelados: somar a pagar com a receber
   // não diz nada, e o cancelado já saiu dos totais (ver a nota de rodapé).
@@ -363,6 +368,8 @@ async function ListaDeManuais({
                       {podeCancelar && (
                         <span className="ml-auto flex gap-1.5">
                           {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
+                          {/* Mudar a série daqui em diante (22/10/2026): o aluguel reajustado. */}
+                          {mudaASerie(l) && <BotaoMudarSerie entryId={l.id} />}
                           {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
                             <CancelarLancamento entryId={l.id} naSerie={temProximasNaSerie(l)} />
                           )}
@@ -435,6 +442,9 @@ async function ListaDeManuais({
                             {podeCancelar && (
                               <div className="flex flex-wrap justify-end gap-1.5">
                                 {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
+                                {mudaASerie(l) && <BotaoMudarSerie entryId={l.id} />}
+                          {/* Mudar a série daqui em diante (22/10/2026): o aluguel reajustado. */}
+                          {mudaASerie(l) && <BotaoMudarSerie entryId={l.id} />}
                                 {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
                                   <CancelarLancamento entryId={l.id} naSerie={temProximasNaSerie(l)} />
                                 )}
