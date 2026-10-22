@@ -11,9 +11,10 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { formatarReaisDeCentavos } from "@/lib/format";
 import { dadosDaBaixaEmLote, registrarPagamentosEmLote, type DadosDoLote, type ResultadoDoLote } from "@/lib/financeiro/acoes";
-import type { ForaDoLote } from "@/lib/financeiro/baixa/lote";
+import { algumaTemRegra, encargosDoLote, type ForaDoLote } from "@/lib/financeiro/baixa/lote";
 import { contaSugeridaNaBaixa } from "@/lib/financeiro/contaPrevista";
 
 const reais = (c: number) => formatarReaisDeCentavos(c);
@@ -21,8 +22,11 @@ const dataBr = (k: string) => k.split("-").reverse().join("/");
 
 /**
  * A baixa em lote (fila do BPO, 19/10): as contas marcadas na tabela, cada uma
- * pelo saldo, num dia só. Juros, multa, desconto e parcial são da janela de
- * uma conta (o botão Pagar da linha) — aqui cada conta quita o que deve.
+ * pelo saldo, num dia só. Parcial e juros digitados à mão são da janela de
+ * uma conta (o botão Pagar da linha). Desde 22/10/2026, "Calcular juros e
+ * multa pelo atraso" aplica a regra de cada conta (a do fornecedor ou cliente,
+ * senão a da empresa) pelo vencimento dela e pelo dia do lote; nasce ligada
+ * quando alguma conta marcada tem regra.
  *
  * Abre com "Carregando…" e pergunta ao servidor o que entra: a tabela não sabe
  * do saldo de quem pagou em parte nem da aprovação relida agora, e a conta
@@ -124,7 +128,13 @@ function Formulario({
   const aPagar = dados.kind === "PAGAR";
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
-  const total = dados.entram.reduce((s, c) => s + c.saldoCentavos, 0);
+  const [dataKey, setDataKey] = useState(hojeISO);
+  const temRegra = algumaTemRegra(dados.entram.map((c) => ({ regra: c.regraDeEncargos })));
+  const [comEncargos, setComEncargos] = useState(temRegra);
+  // A prévia dos encargos: o servidor refaz conta a conta pela regra do banco.
+  const encargos = comEncargos && dataKey ? encargosDoLote(dados.entram.map((c) => ({ ...c, regra: c.regraDeEncargos })), dataKey) : null;
+  const principal = dados.entram.reduce((s, c) => s + c.saldoCentavos, 0);
+  const total = principal + (encargos ? encargos.jurosCentavos + encargos.multaCentavos - encargos.descontoCentavos : 0);
   const variasEmpresas = dados.empresas.length > 1;
 
   if (dados.entram.length === 0) {
@@ -160,22 +170,34 @@ function Formulario({
       {dados.entram.map((c) => (
         <input key={c.id} type="hidden" name="entryIds" value={c.id} />
       ))}
+      {comEncargos && <input type="hidden" name="encargos" value="1" />}
 
       <div className="max-h-[260px] overflow-y-auto border border-border rounded-md">
         <table className="w-full text-ui">
           <tbody>
-            {dados.entram.map((c) => (
-              <tr key={c.id} className="border-b border-border-soft last:border-b-0">
-                <td className="py-2 px-3">
-                  <span className="font-medium text-fg">{c.contraparteNome}</span>
-                  <span className="block text-micro text-fg-muted">
-                    venc. {dataBr(c.vencimentoKey)}
-                    {variasEmpresas && ` · ${c.empresaNome}`}
-                  </span>
-                </td>
-                <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">{reais(c.saldoCentavos)}</td>
-              </tr>
-            ))}
+            {dados.entram.map((c) => {
+              const e = encargos?.porConta.get(c.id);
+              const acrescimo = e ? e.jurosCentavos + e.multaCentavos - e.descontoCentavos : 0;
+              return (
+                <tr key={c.id} className="border-b border-border-soft last:border-b-0">
+                  <td className="py-2 px-3">
+                    <span className="font-medium text-fg">{c.contraparteNome}</span>
+                    <span className="block text-micro text-fg-muted">
+                      venc. {dataBr(c.vencimentoKey)}
+                      {variasEmpresas && ` · ${c.empresaNome}`}
+                    </span>
+                  </td>
+                  <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
+                    {reais(c.saldoCentavos + acrescimo)}
+                    {e && (
+                      <span className="block text-micro text-fg-muted">
+                        {e.descontoCentavos ? `− ${reais(e.descontoCentavos)} de desconto` : `+ ${reais(e.jurosCentavos + e.multaCentavos)} de juros e multa`}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -183,7 +205,7 @@ function Formulario({
 
       <FieldGrid>
         <CampoForm label={aPagar ? "Data do pagamento" : "Data do recebimento"} htmlFor={`${id}-data`} required>
-          <CampoData id={`${id}-data`} name="data" defaultValue={hojeISO} max={hojeISO} required />
+          <CampoData id={`${id}-data`} name="data" value={dataKey} onChange={setDataKey} max={hojeISO} required />
         </CampoForm>
         {dados.empresas.map((e) => (
           <CampoForm
@@ -219,8 +241,28 @@ function Formulario({
         <Input id={`${id}-obs`} name="observacao" maxLength={255} placeholder="Ex.: pagamentos da semana" />
       </CampoForm>
 
+      <Checkbox
+        id={`${id}-encargos`}
+        label="Calcular juros e multa pelo atraso"
+        checked={comEncargos}
+        onChange={(e) => setComEncargos(e.target.checked)}
+        disabled={!temRegra}
+        helper={
+          temRegra
+            ? "Pela regra de cada conta — a do fornecedor ou cliente, senão a da empresa —, contando do vencimento dela até a data acima. O desconto vale para quem paga até o vencimento."
+            : "Nenhuma das contas marcadas tem regra de juros e multa (Fornecedores e sacados › Juros e multa)."
+        }
+      />
+      {encargos && (
+        <p className="text-fs-2 text-fg-secondary" aria-live="polite">
+          {encargos.contasComEncargos === 0
+            ? "Nenhuma conta leva juros, multa ou desconto nesta data."
+            : `${encargos.contasComEncargos === 1 ? "1 conta leva" : `${encargos.contasComEncargos} contas levam`}: juros ${reais(encargos.jurosCentavos)} · multa ${reais(encargos.multaCentavos)} · desconto ${reais(encargos.descontoCentavos)}. Total do lote ${reais(principal)} → ${reais(total)}.`}
+        </p>
+      )}
+
       <p className="text-helper text-fg-muted">
-        Cada conta é {aPagar ? "paga" : "recebida"} pelo saldo. Para juros, multa, desconto ou baixa parcial, use o botão{" "}
+        Cada conta é {aPagar ? "paga" : "recebida"} pelo saldo{comEncargos ? ", com os encargos da regra" : ""}. Para juros digitados à mão ou baixa parcial, use o botão{" "}
         {aPagar ? "Pagar" : "Receber"} da linha.
       </p>
 

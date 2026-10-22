@@ -28,7 +28,7 @@ import { setoresDoModulo } from "@/lib/modules";
 import { motivoDoBloqueioDeBaixa } from "./aprovacao/regras";
 import { sincronizarAcordos } from "./cobranca/sincronizar";
 import { empresasDasContas, recusaDoFoco } from "@/lib/empresas/focoServidor";
-import { regraQueVale, type RegraComOrigem } from "./baixa/encargos";
+import { encargosDaBaixa, regraQueVale, type RegraComOrigem } from "./baixa/encargos";
 
 // `SECTOR` é o de origem, usado só como padrão. As ações servem `/pagar` e
 // `/receber`, que podem estar em setores diferentes num tenant: o gate aceita
@@ -455,6 +455,12 @@ export type ContaDoLote = {
   empresaNome: string;
   vencimentoKey: string;
   saldoCentavos: number;
+  /**
+   * Juros e multa no lote (22/10/2026): a regra que vale para a conta — a do
+   * fornecedor ou cliente, senão a da empresa —, como na janela de uma conta.
+   * Nula sem regra, e na transferência e na fatura do cartão.
+   */
+  regraDeEncargos: RegraComOrigem | null;
 };
 
 export type DadosDoLote =
@@ -493,8 +499,10 @@ async function lerLote(tenantId: string, ids: string[]) {
       companyId: true,
       omieTitleId: true,
       omieMovementId: true,
-      company: { select: { name: true, displayName: true, omieCutoverAt: true } },
-      counterparty: { select: { name: true } },
+      transferId: true,
+      cardAccountId: true,
+      company: { select: { name: true, displayName: true, omieCutoverAt: true, lateFinePercent: true, lateInterestPercent: true, earlyDiscountPercent: true } },
+      counterparty: { select: { name: true, lateFinePercent: true, lateInterestPercent: true, earlyDiscountPercent: true } },
     },
     orderBy: { dueDate: "asc" },
   });
@@ -509,6 +517,8 @@ async function lerLote(tenantId: string, ids: string[]) {
       status: l.status,
       saldoCentavos: saldoEmAberto(centavosDeDecimal(l.amount), centavosDeDecimal(l.paidPrincipal)),
       bloqueio: presaAoOmie(l, l.company) ? MOTIVO_DO_OMIE.baixa : motivoDoBloqueioDeBaixa(l),
+      // A transferência entre contas e a fatura do cartão não têm atraso a cobrar (como em `dadosDaBaixa`).
+      regraDeEncargos: l.transferId || l.cardAccountId ? null : regraQueVale(l.company, l.counterparty),
     }))
   );
   return { linhas, tipos, ...separadas };
@@ -531,13 +541,14 @@ export async function dadosDaBaixaEmLote(valores: string[]): Promise<DadosDoLote
   return {
     ok: true,
     kind: lote.linhas[0]!.kind,
-    entram: lote.entram.map(({ id, contraparteNome, empresaId, empresaNome, vencimentoKey, saldoCentavos }) => ({
+    entram: lote.entram.map(({ id, contraparteNome, empresaId, empresaNome, vencimentoKey, saldoCentavos, regraDeEncargos }) => ({
       id,
       contraparteNome,
       empresaId,
       empresaNome,
       vencimentoKey,
       saldoCentavos,
+      regraDeEncargos,
     })),
     ficam: lote.ficam,
     empresas: await Promise.all(
@@ -564,6 +575,11 @@ export type ResultadoDoLote =
  * O registro (`quitarConta`) relê o saldo com a conta travada, então a conta
  * que alguém pagou em parte enquanto a janela estava aberta é quitada pelo que
  * falta, e não pelo saldo que a janela mostrou.
+ *
+ * `encargos=1` (22/10/2026): cada conta leva juros, multa e desconto pela
+ * regra dela (lida aqui, no banco), pelo vencimento dela e pelo dia do lote,
+ * sobre o saldo relido com a conta travada. O total que a janela mostrou é só
+ * prévia — o formulário não manda valor de encargo nenhum.
  */
 export async function registrarPagamentosEmLote(formData: FormData): Promise<ResultadoDoLote> {
   const { erro, ctx } = await contexto();
@@ -598,22 +614,35 @@ export async function registrarPagamentosEmLote(formData: FormData): Promise<Res
   }
   const observacao = String(formData.get("observacao") ?? "").trim().slice(0, 255) || null;
   const paidAt = instanteDaData(dia.dataKey);
+  const comEncargos = String(formData.get("encargos") ?? "") === "1";
 
   const recusadas: ForaDoLote[] = [...lote.ficam];
   let baixadas = 0;
   let totalCentavos = 0;
   for (const c of lote.entram) {
     try {
+      const regra = comEncargos ? c.regraDeEncargos : null;
+      let encargos = { jurosCentavos: 0, multaCentavos: 0, descontoCentavos: 0 };
       const b = await getPrisma().$transaction(async (tx) => {
-        const gravada = await quitarConta(tx, {
-          tenantId,
-          entryId: c.id,
-          paidAt,
-          bankAccountId: bancoDa.get(c.empresaId) ?? null,
-          note: observacao,
-          origin: "MANUAL",
-          userId: ctx.userId || null,
-        });
+        const gravada = await quitarConta(
+          tx,
+          {
+            tenantId,
+            entryId: c.id,
+            paidAt,
+            bankAccountId: bancoDa.get(c.empresaId) ?? null,
+            note: observacao,
+            origin: "MANUAL",
+            userId: ctx.userId || null,
+          },
+          regra
+            ? (saldo) => {
+                const e = encargosDaBaixa({ principalCentavos: saldo, vencimentoKey: c.vencimentoKey, pagamentoKey: dia.dataKey }, regra);
+                encargos = { jurosCentavos: e.jurosCentavos, multaCentavos: e.multaCentavos, descontoCentavos: e.descontoCentavos };
+                return encargos;
+              }
+            : undefined
+        );
         await sincronizarAcordos(tx, tenantId, [c.id]);
         return gravada;
       });
@@ -629,7 +658,12 @@ export async function registrarPagamentosEmLote(formData: FormData): Promise<Res
           kind: lote.linhas[0]!.kind,
           contraparte: c.contraparteNome,
           pagoEm: dia.dataKey,
-          valor: decimalDeCentavos(b.caixaCentavos),
+          valor: b.principal.toString(),
+          ...(encargos.jurosCentavos ? { juros: decimalDeCentavos(encargos.jurosCentavos) } : {}),
+          ...(encargos.multaCentavos ? { multa: decimalDeCentavos(encargos.multaCentavos) } : {}),
+          ...(encargos.descontoCentavos ? { desconto: decimalDeCentavos(encargos.descontoCentavos) } : {}),
+          total: decimalDeCentavos(b.caixaCentavos),
+          ...(regra ? { encargosPelaRegra: regra.origem } : {}),
           contaBancaria: bancoDa.get(c.empresaId) ?? null,
           baixa: b.paymentId,
           emLote: true,
