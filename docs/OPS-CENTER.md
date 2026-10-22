@@ -57,12 +57,12 @@ O estado e o lock ficam em `.local/ops-heartbeat-state.json` e não substituem a
 
 Os dois agentes do motor SPED (`agente.py`, um na VPS e um no Windows do escritório) entram no Ops Center como automações comuns, pela chave compartilhada — sem código novo no Connect. O contrato do lado do motor é `docs/API-CONNECT.md` §7.2, no repositório do motor.
 
-1. Em Ops Center, cadastrar duas automações, uma por máquina, com os slugs `sped-agente-vps` e `sped-agente-escritorio` (o slug é livre, mas precisa ser exatamente o mesmo `OPS_SLUG` da máquina). Escolher o dono de cada uma: é quem recebe o aviso de erro de geração.
+1. Em Ops Center, cadastrar duas automações, uma por máquina, com os slugs `sped-agente-vps` e `sped-agente-windows` (o slug é livre, mas precisa ser exatamente o mesmo `OPS_SLUG` da máquina). Escolher o dono de cada uma: é quem recebe o aviso de erro de geração.
 2. Em Administração → Integrações → Ops Center — bots, usar a chave compartilhada já existente (ou gerar uma, se ainda não houver; gerar de novo revoga a anterior para todos os bots).
 3. No ambiente de cada agente, definir as três variáveis, fora do repositório:
    - `OPS_URL` = endereço público do Connect, sem barra no fim (o mesmo `APP_PUBLIC_URL`);
    - `OPS_TOKEN` = a chave compartilhada;
-   - `OPS_SLUG` = `sped-agente-vps` na VPS e `sped-agente-escritorio` no Windows.
+   - `OPS_SLUG` = `sped-agente-vps` na VPS e `sped-agente-windows` no Windows.
    Sem as três, o agente não envia nada e continua processando a fila normalmente.
 4. Reiniciar o agente. O heartbeat sai a cada 30 segundos, inclusive durante uma geração longa; cada pedido finalizado vira um evento (`SUCCESS` com código de saída 0, `ERROR` nos outros casos), com `eventId` `sped-fila-<id>-<uuid>`, o rótulo do estabelecimento em `client` e a mensagem da fila (nunca o log) em `errorMessage`.
 5. Conferir no `/ops`: a automação sai de "Sem sinal de atividade" no primeiro heartbeat; um pedido concluído e um com erro aparecem no histórico, e o erro avisa o dono.
