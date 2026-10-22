@@ -26,8 +26,6 @@ export const instabilidadeSchema = z.object({
   version: z.number().int().min(0), note: z.string().trim().min(3).max(2000), ticketId: textoOpcional(191),
 });
 export const versaoSchema = z.object({ version: z.number().int().min(0) });
-export const criarChaveSchema = z.object({ name: z.string().trim().min(1).max(120).default("Chave dos bots") });
-export const revogarChaveSchema = z.object({ id: z.union([z.literal("legacy"), z.uuid()]).default("legacy"), version: z.number().int().min(0).optional() });
 export const filtrosSchema = z.object({
   watcher: slugSchema.optional(), status: z.enum(STATUS_OPS).optional(),
   date: z.iso.date().optional(), page: z.coerce.number().int().min(1).max(100000).default(1),

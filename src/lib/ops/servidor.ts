@@ -88,7 +88,7 @@ export async function painelOps(ctx: AuthContext, filtros: FiltrosOps): Promise<
   };
 }
 
-export type CredencialAutenticadaOps = { tenantId: string; slug: string | null; tokenHash: string; compartilhado: boolean; chaveId?: string };
+export type CredencialAutenticadaOps = { tenantId: string; slug: string | null; tokenHash: string; compartilhado: boolean };
 
 export async function autenticarWatcher(request: Request, slug?: string): Promise<CredencialAutenticadaOps> {
   const token = request.headers.get("authorization")?.match(/^Bearer (ops_[a-f0-9]{64})$/)?.[1];
@@ -109,38 +109,11 @@ export async function autenticarWatcher(request: Request, slug?: string): Promis
   }
   const w = await db.opsWatcher.findUnique({ where: { tokenHash: hashToken(token) },
     include: { tenant: { select: { active: true, subscription: { select: { status: true } } } } } });
-  if (w) {
-    if (!w.isActive || (slug && w.slug !== slug)) throw new ErroOps("Token da automação inválido.", 401);
-    if (!w.tenant.active || isSubscriptionReadOnly(w.tenant.subscription?.status) || !await isModuleEnabled(w.tenantId, MODULO_OPS)) {
-      throw new ErroOps("Recebimento indisponível neste escritório.", 403);
-    }
-    return { tenantId: w.tenantId, slug: w.slug, tokenHash, compartilhado: false };
-  }
-  const key = await db.opsApiKey.findUnique({ where: { tokenHash },
-    include: { tenant: { select: { active: true, subscription: { select: { status: true } } } } } });
-  if (!key || key.revokedAt) throw new ErroOps("Token da automação inválido.", 401);
-  if (!key.tenant.active || isSubscriptionReadOnly(key.tenant.subscription?.status) || !await isModuleEnabled(key.tenantId, MODULO_OPS)) {
+  if (!w || !w.isActive || (slug && w.slug !== slug)) throw new ErroOps("Token da automação inválido.", 401);
+  if (!w.tenant.active || isSubscriptionReadOnly(w.tenant.subscription?.status) || !await isModuleEnabled(w.tenantId, MODULO_OPS)) {
     throw new ErroOps("Recebimento indisponível neste escritório.", 403);
   }
-  if (slug) {
-    const watcher = await db.opsWatcher.findUnique({ where: { tenantId_slug: { tenantId: key.tenantId, slug } }, select: { isActive: true } });
-    if (!watcher?.isActive) throw new ErroOps("Token da automação inválido.", 401);
-  }
-  return { tenantId: key.tenantId, slug: slug ?? null, tokenHash, compartilhado: true, chaveId: key.id };
-}
-
-// A verificação e o recebimento usam a mesma transação e a mesma trava da revogação.
-export async function conferirCredencialOps(tx: Prisma.TransactionClient, w: CredencialAutenticadaOps) {
-  if (!w.compartilhado) return;
-  if (w.chaveId) {
-    await tx.$queryRaw`SELECT id FROM ops_api_keys WHERE id = ${w.chaveId} AND tenantId = ${w.tenantId} FOR UPDATE`;
-    const key = await tx.opsApiKey.findFirst({ where: { id: w.chaveId, tenantId: w.tenantId, tokenHash: w.tokenHash, revokedAt: null }, select: { id: true } });
-    if (!key) throw new ErroOps("Token revogado.", 401);
-  } else {
-    await tx.$queryRaw`SELECT tenantId FROM ops_api_credentials WHERE tenantId = ${w.tenantId} FOR UPDATE`;
-    const credential = await tx.opsApiCredential.findUnique({ where: { tenantId: w.tenantId }, select: { tokenHash: true } });
-    if (credential?.tokenHash !== w.tokenHash) throw new ErroOps("Token revogado.", 401);
-  }
+  return { tenantId: w.tenantId, slug: w.slug, tokenHash, compartilhado: false };
 }
 
 export function exigirAtualizacao(count: number) {
@@ -155,26 +128,26 @@ export async function gerarToken(ctx: AuthContext, slug: string, version: number
   return { token };
 }
 
-export async function gerarTokenCompartilhado(ctx: AuthContext, name = "Chave dos bots") {
+export async function gerarTokenCompartilhado(ctx: AuthContext, version: number, revogar = false) {
   if (!ctx.tenantId) throw new ErroOps("Entre novamente para continuar.", 401);
-  const token = `ops_${randomBytes(32).toString("hex")}`;
-  const key = await getPrisma().opsApiKey.create({ data: { tenantId: ctx.tenantId, name, tokenHash: hashToken(token) },
-    select: { id: true, name: true, createdAt: true } });
-  return { token, key: { ...key, createdAt: key.createdAt.toISOString(), legacy: false } };
-}
-
-export async function revogarTokenCompartilhado(ctx: AuthContext, id: string, version?: number) {
-  if (!ctx.tenantId) throw new ErroOps("Entre novamente para continuar.", 401);
-  const db = getPrisma();
-  if (id === "legacy") {
-    if (version === undefined) throw new ErroOps("Atualize a lista antes de revogar a chave anterior.", 409);
-    const result = await db.opsApiCredential.updateMany({ where: { tenantId: ctx.tenantId, version, tokenHash: { not: null } }, data: { tokenHash: null, version: { increment: 1 } } });
-    if (result.count !== 1) throw new ErroOps("A chave mudou em outra aba. Atualize e tente novamente.", 409);
+  const db = getPrisma(), tenantId = ctx.tenantId;
+  const token = revogar ? null : `ops_${randomBytes(32).toString("hex")}`;
+  const hash = token ? hashToken(token) : null;
+  const atual = await db.opsApiCredential.findUnique({ where: { tenantId }, select: { version: true } });
+  if (!atual) {
+    if (version !== 0 || revogar) throw new ErroOps("A credencial mudou em outra aba. Atualize e tente novamente.", 409);
+    try {
+      await db.opsApiCredential.create({ data: { tenantId, tokenHash: hash, version: 1 } });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw new ErroOps("A credencial mudou em outra aba. Atualize e tente novamente.", 409);
+      throw err;
+    }
   } else {
-    const result = await db.opsApiKey.updateMany({ where: { id, tenantId: ctx.tenantId, revokedAt: null }, data: { revokedAt: new Date() } });
-    if (result.count !== 1) throw new ErroOps("Chave não encontrada ou já revogada. Atualize a lista.", 404);
+    const r = await db.opsApiCredential.updateMany({ where: { tenantId, version, ...(revogar ? { tokenHash: { not: null } } : {}) },
+      data: { tokenHash: hash, version: { increment: 1 } } });
+    exigirAtualizacao(r.count);
   }
-  return { ok: true };
+  return { token, hasToken: !revogar, version: version + 1 };
 }
 
 export async function conferirChamado(ctx: AuthContext, ticketId: string) {
@@ -207,7 +180,11 @@ export async function receberEvento(w: CredencialAutenticadaOps, input: unknown)
       // Serializa com troca do dono, desativação e revogação da chave usada.
       await tx.$queryRaw`SELECT slug FROM ops_watchers WHERE tenantId = ${w.tenantId} AND slug = ${watcherSlug} FOR UPDATE`;
       const atual = await tx.opsWatcher.findUnique({ where: { tenantId_slug: { tenantId: w.tenantId, slug: watcherSlug } } });
-      await conferirCredencialOps(tx, w);
+      if (w.compartilhado) {
+        await tx.$queryRaw`SELECT tenantId FROM ops_api_credentials WHERE tenantId = ${w.tenantId} FOR UPDATE`;
+        const credencialAtual = await tx.opsApiCredential.findUnique({ where: { tenantId: w.tenantId } });
+        if (!credencialAtual?.tokenHash || credencialAtual.tokenHash !== w.tokenHash) throw new ErroOps("Token revogado.", 401);
+      }
       if (!atual?.isActive || (!w.compartilhado && atual.tokenHash !== w.tokenHash)) throw new ErroOps("Token revogado.", 401);
       const evento = await tx.opsEvent.create({ data: { ...chave, ...campos, payloadHash, processedAt: processedAt ? new Date(processedAt) : new Date() } });
       const owner = atual.ownerId && campos.status === "ERROR" ? await tx.user.findFirst({ where: { tenantId: w.tenantId, id: atual.ownerId, active: true }, select: { id: true } }) : null;
