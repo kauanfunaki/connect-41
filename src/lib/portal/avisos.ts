@@ -18,7 +18,8 @@ export type AvisoDoPortal =
   | { tipo: "aprovacao"; quantidade: number }
   | { tipo: "solicitacao"; motivo: "resposta" | "aguardando" | "concluida"; numero: number; assunto: string; id: string }
   | { tipo: "comunicado"; titulo: string; id: string }
-  | { tipo: "arquivos"; empresaNome: string; companyId: string; pastaId: string };
+  | { tipo: "arquivos"; empresaNome: string; companyId: string; pastaId: string }
+  | { tipo: "envio"; motivo: "lembrete"; titulo: string; id: string };
 
 export type TextoEmPush = { title: string; body: string; url: string };
 
@@ -80,6 +81,10 @@ export function textoDoAviso(aviso: AvisoDoPortal): TextoEmPush {
         body: `O escritório compartilhou arquivos de ${aviso.empresaNome}.`,
         url: `/portal/arquivos?empresa=${aviso.companyId}&pasta=${aviso.pastaId}`,
       };
+    case "envio":
+      // O lembrete de não lido (22/10/2026): o título do envio é o mesmo do
+      // assunto do e-mail; o corpo do documento fica atrás do login.
+      return { title: "Documento aguardando a sua leitura", body: aviso.titulo, url: `/portal/envios/${aviso.id}` };
   }
 }
 

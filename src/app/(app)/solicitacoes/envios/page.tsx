@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileCheck, FilePen, Hourglass, Paperclip, PenLine, Plus } from "lucide-react";
+import { CalendarClock, FileCheck, FilePen, Hourglass, Paperclip, PenLine, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { isModuleEnabled } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
-import { formatInstantDate, formatarNumero } from "@/lib/format";
+import { formatInstantDate, formatInstantDateTime, formatarNumero } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -80,6 +80,7 @@ export default async function EnviosPage({
   // situação escolhida (são o mapa da lista, como nas outras abas).
   const quantos = (s: SituacaoDoEnvio) => todas.filter((l) => l.situacao === s).length;
   const rascunhos = quantos("rascunho");
+  const agendados = quantos("agendado");
   const naoVistos = quantos("enviado");
   const semAceite = quantos("aguardando-aceite");
 
@@ -97,6 +98,13 @@ export default async function EnviosPage({
 
   // Destinatário é quem recebeu o link por e-mail ou abriu pelo portal (a
   // primeira abertura no portal cria a linha da pessoa).
+  // A data da linha: a marcada, no agendado (22/10/2026); a da publicação; a da criação.
+  const dataDaLinha = (l: (typeof linhas)[number]) =>
+    l.situacao === "agendado" && l.agendadoPara
+      ? { data: l.agendadoPara, rotulo: "agendado para", comHora: true }
+      : { data: l.publicadoEm ?? l.criadoEm, rotulo: l.situacao === "rascunho" ? "criado" : "publicado", comHora: false };
+  const naoPublicado = (s: SituacaoDoEnvio) => s === "rascunho" || s === "agendado";
+
   const destinatarios = (n: number, viram: number) =>
     n === 0 ? "Ninguém abriu ainda" : `${viram} de ${n} ${n === 1 ? "destinatário viu" : "destinatários viram"}`;
 
@@ -126,6 +134,13 @@ export default async function EnviosPage({
               icone: <FilePen />,
               href: href({ situacao: "rascunho" }),
               ativo: situacao === "rascunho",
+            },
+            {
+              rotulo: "Agendados",
+              valor: formatarNumero(agendados, 0),
+              icone: <CalendarClock />,
+              href: href({ situacao: "agendado" }),
+              ativo: situacao === "agendado",
             },
             {
               rotulo: "Enviados, não vistos",
@@ -189,9 +204,11 @@ export default async function EnviosPage({
                     {l.pedeAceite ? " · pede aceite" : ""}
                   </InfoDoCartao>
                   <InfoDoCartao className="tabular-nums">
-                    {l.situacao === "rascunho" ? "criado" : "publicado"} em {formatInstantDate(l.publicadoEm ?? l.criadoEm)}
-                    {l.situacao !== "rascunho" && ` · ${destinatarios(l.destinatarios, l.viram)}`}
+                    {dataDaLinha(l).rotulo} em{" "}
+                    {dataDaLinha(l).comHora ? formatInstantDateTime(dataDaLinha(l).data) : formatInstantDate(dataDaLinha(l).data)}
+                    {!naoPublicado(l.situacao) && ` · ${destinatarios(l.destinatarios, l.viram)}`}
                   </InfoDoCartao>
+                  {l.lembrete && <InfoDoCartao>{l.lembrete}</InfoDoCartao>}
                   <PeDoCartao>
                     <SeloDoEnvio situacao={l.situacao} />
                   </PeDoCartao>
@@ -208,7 +225,7 @@ export default async function EnviosPage({
                   empresa: l.empresaNome,
                   situacao: ROTULO_DA_SITUACAO[l.situacao],
                   aceite: l.pedeAceite ? "Pede aceite" : "Sem aceite",
-                  data: saoPauloParts(l.publicadoEm ?? l.criadoEm).dateKey,
+                  data: saoPauloParts(dataDaLinha(l).data).dateKey,
                 },
               }))}
             >
@@ -257,13 +274,18 @@ export default async function EnviosPage({
                           )}
                         </td>
                         <td className="py-2.5 pr-3 text-fg-secondary">{l.empresaNome}</td>
-                        <td className="py-2.5 pr-3 text-fg-secondary">{l.situacao === "rascunho" ? "—" : destinatarios(l.destinatarios, l.viram)}</td>
+                        <td className="py-2.5 pr-3 text-fg-secondary">
+                          {naoPublicado(l.situacao) ? "—" : destinatarios(l.destinatarios, l.viram)}
+                          {l.lembrete && <span className="block text-fs-1 text-fg-muted">{l.lembrete}</span>}
+                        </td>
                         <td className="py-2.5 pr-3">
                           <SeloDoEnvio situacao={l.situacao} />
                         </td>
                         <td className="py-2.5 tabular-nums whitespace-nowrap text-fg-muted">
-                          <span className="block">{formatInstantDate(l.publicadoEm ?? l.criadoEm)}</span>
-                          <span className="block text-fs-1">{l.situacao === "rascunho" ? "criado" : "publicado"}</span>
+                          <span className="block">
+                            {dataDaLinha(l).comHora ? formatInstantDateTime(dataDaLinha(l).data) : formatInstantDate(dataDaLinha(l).data)}
+                          </span>
+                          <span className="block text-fs-1">{dataDaLinha(l).rotulo}</span>
                         </td>
                       </LinhaFiltravel>
                     ))}
