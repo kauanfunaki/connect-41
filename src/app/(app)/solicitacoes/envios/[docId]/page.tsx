@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Eye, Download, PenLine, Pencil, CalendarClock, BellRing } from "lucide-react";
+import { Eye, Download, PenLine, Pencil, CalendarClock, BellRing, FileCheck } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -228,6 +228,12 @@ export default async function EnvioPage({
             <p className="text-fs-2 text-fg-muted">
               Cada abertura — pelo portal ou pelo link do e-mail — e cada download do anexo ficam registrados com data/hora e IP.
             </p>
+            {/* O comprovante em PDF (22/10/2026): a mesma prova, num papel para guardar ou mandar. */}
+            <div className="mt-3">
+              <Button href={`/solicitacoes/envios/${document.id}/comprovante`} download variant="secondary" size="sm">
+                <FileCheck size={13} /> Comprovante (PDF)
+              </Button>
+            </div>
             <p className={`text-fs-2 text-fg-secondary mt-2 ${lembrete || (publicado && document.scheduledFor) ? "" : "mb-4"}`}>{comoChega}</p>
             {publicado && document.scheduledFor && (
               <p className={`text-fs-2 text-fg-muted mt-1 flex items-center gap-1.5 ${lembrete ? "" : "mb-4"}`}>
