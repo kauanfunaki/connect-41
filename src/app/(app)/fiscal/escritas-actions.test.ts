@@ -241,3 +241,45 @@ describe("Conferência", () => {
     expect(m.fetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("Conferência › prestadores: regime MEI/normal (§14.1)", () => {
+  const CNPJ = "11222333000181";
+  it("corrige neste cliente: PUT com a competência da tela, sem campo de autor; audita e relê a Conferência", async () => {
+    responder("regime_definir");
+    const r = await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: "mei", competencia: "2032-03", chave: CHAVE });
+    expect(r).toMatchObject({ ok: true, dados: { prestador: { regime: "mei", origem: "cliente" } } });
+    expect(r.mensagem).toMatch(/passa a MEI neste cliente/);
+    const { url, init } = enviado();
+    expect([init.method, url]).toEqual(["PUT", "https://motor/api/connect/v1/conferencia/prestadores/regime?cnpj_raiz=17122471"]);
+    expect(JSON.parse(init.body as string)).toEqual({ cnpj: CNPJ, regime: "mei", competencia: "2032-03" });
+    expect(m.pode).toHaveBeenCalledWith(m.ctx, "fiscal_conferencia", "agir");
+    expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.regime.definido", entityType: "SpedPrestador", entityId: CNPJ }));
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/conferencia"]);
+  });
+  it("`null` apaga a correção: volta ao cadastro ou ao nome, e a frase diz qual", async () => {
+    responder("regime_apagar");
+    const r = await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: null, competencia: "2032-03" });
+    expect(r).toMatchObject({ ok: true, dados: { prestador: { origem: "nome", regime: "normal" } } });
+    expect(r.mensagem).toMatch(/volta a normal, pelo nome/);
+    expect(JSON.parse(enviado().init.body as string)).toMatchObject({ regime: null });
+    expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.regime.apagado" }));
+  });
+  it("regime fora do enum ou CNPJ inválido: recusa sem chamar; 422 do motor chega com o campo", async () => {
+    expect((await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: "simples", competencia: "2032-03" })).ok).toBe(false);
+    expect((await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: "123", regime: "mei", competencia: "2032-03" })).ok).toBe(false);
+    expect(m.fetch).not.toHaveBeenCalled();
+    responder("erro_regime_invalido");
+    const r = await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: "mei", competencia: "2032-03" });
+    expect(r).toMatchObject({ ok: false, codigo: "parametro_invalido", campos: { regime: expect.any(String) } });
+    expect(m.audit).not.toHaveBeenCalled();
+  });
+  it("portão: sem agir no módulo da Conferência, ou sem token de escrita, nem chama", async () => {
+    m.pode.mockResolvedValue(false);
+    expect((await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: "mei", competencia: "2032-03" })).ok).toBe(false);
+    m.pode.mockResolvedValue(true);
+    m.motor.escrita = false;
+    expect(await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: "mei", competencia: "2032-03" })).toMatchObject({ codigo: "escrita_nao_habilitada" });
+    expect((await acoes.definirRegimeDoPrestadorNoMotor({ raiz: "99999999", cnpj: CNPJ, regime: "mei", competencia: "2032-03" })).ok).toBe(false);
+    expect(m.fetch).not.toHaveBeenCalled();
+  });
+});
