@@ -171,8 +171,8 @@ export type ModuleDef = {
 
 /** O modo das telas fiscais na descrição (23/10/2026): real com a integração do SPED, prévia sem ela. */
 const COM_O_MOTOR = "Opera o motor do SPED Generator quando a integração está configurada; sem ela, mostra a prévia de teste";
-/** A área que o motor ainda não expõe pela API: com a integração, a tela avisa e manda para o painel do motor. */
-const SO_NA_PREVIA = "Com a integração do SPED Generator configurada, o motor ainda não expõe esta área (use o painel do motor); sem ela, mostra a prévia de teste";
+/** A área que o motor expõe só para leitura (§11 da API do Connect): as ações dela continuam no painel do motor. */
+const SO_LEITURA = "Lê o motor do SPED Generator quando a integração está configurada, e as ações da área continuam no painel do motor; sem ela, mostra a prévia de teste";
 
 export const MODULE_CATALOG: ModuleDef[] = [
   {
@@ -437,16 +437,17 @@ export const MODULE_CATALOG: ModuleDef[] = [
   // ela, mostram a prévia de teste do banco local (ver `fiscal/layout.tsx`).
   // As descrições diziam "em teste/simulado" em todas, o que deixou de ser
   // verdade no modo real (23/10/2026): agora dizem o que cada uma faz, e se o
-  // motor já expõe a área ou se, com ele, ela ainda fica só no painel do motor.
+  // motor opera a área ou só a lê (Documentos e Conferência, cujas ações ficam
+  // no painel do motor).
   ...([
     ["fiscal_painel", "Painel fiscal", `Saúde dos agentes, fila e arquivos da competência. ${COM_O_MOTOR}`, "ChartColumn", "Operação"],
     ["fiscal_classificacao", "Classificação", `Destinação e crédito de produtos, contratos e recibos. ${COM_O_MOTOR}`, "ClipboardList", "Operação"],
     ["fiscal_operacao", "Executar", `Pedidos de extração e geração, fila, histórico e logs. ${COM_O_MOTOR}`, "Workflow", "Operação"],
-    ["fiscal_acervo", "Documentos e importações", `Acervo, serviços, contratos, importação e cobertura. ${SO_NA_PREVIA}`, "ReceiptText", "Documentos"],
+    ["fiscal_acervo", "Documentos e importações", `Acervo, serviços, contratos, importação e cobertura. ${SO_LEITURA}`, "ReceiptText", "Documentos"],
     ["fiscal_icms_ipi", "ICMS e IPI", `Ajustes da apuração (E111, DIME e DCIP), apuração e demonstrativo. ${COM_O_MOTOR}`, "FileSpreadsheet", "Apuração"],
     ["fiscal_contribuicoes", "PIS e COFINS", `Ajustes do bloco M, decisões por registro, parâmetros e fechamento da EFD Contribuições. ${COM_O_MOTOR}`, "Receipt", "Apuração"],
     ["fiscal_entregas", "SPED gerados", `Versões de SPED, validação, entrega e decisões depois da geração. ${COM_O_MOTOR}`, "CheckCheck", "Conferência"],
-    ["fiscal_conferencia", "Conferência fiscal", `Prévia financeira e confronto de documentos. ${SO_NA_PREVIA}`, "Landmark", "Conferência"],
+    ["fiscal_conferencia", "Conferência fiscal", `Prévia financeira e confronto de documentos. ${SO_LEITURA}`, "Landmark", "Conferência"],
     ["fiscal_configuracoes", "Configurações fiscais", `Cadastro dos estabelecimentos, parâmetros e regras fiscais por CFOP e fonte. ${COM_O_MOTOR}`, "Building2", "Cadastros"],
   ] satisfies [string, string, string, IconeDeModulo, GrupoDeModulo][]).map(([code, label, description, icon, group]) => ({
     code, label, description, icon, group, sectorCode: "fiscal", defaultEnabled: true,
