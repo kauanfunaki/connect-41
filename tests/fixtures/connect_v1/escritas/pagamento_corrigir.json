@@ -1,0 +1,66 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/fechamento/pagamentos/corrigir?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "caminho": "TESTE-TELAS/rpa.pdf",
+      "pagina": 4,
+      "ordem": 1,
+      "valor": "55.50",
+      "documento": "98765432100",
+      "motivo": "conferi o PDF"
+    }
+  },
+  "resposta": {
+    "status": 200,
+    "corpo": {
+      "pagamento": {
+        "caminho": "TESTE-TELAS/rpa.pdf",
+        "raiz": "//srv/BPO",
+        "pagina": 4,
+        "ordem": 1,
+        "tipo": "rpa",
+        "arquivo": "rpa.pdf",
+        "competencia": "2032-03",
+        "nome": "MARIA TESTE",
+        "documento": "98765432100",
+        "numero": "",
+        "data_pagamento": "2032-03-10",
+        "data_servico": "",
+        "valor_bruto": "50.00",
+        "valor_liquido": "45.00",
+        "retencoes": null,
+        "centro_custo": "",
+        "comprovante": "",
+        "categoria": "",
+        "situacao": "conferir",
+        "observacao": "",
+        "chave_negocio": "rpa|98765432100|2032-03-10|55.50",
+        "valor_corrigido": "55.50",
+        "documento_corrigido": "98765432100",
+        "corrigido_por": "Kátia Souza",
+        "corrigido_em": "2026-10-23T14:31:31+00:00",
+        "competencia_corrigida": "",
+        "data_pagamento_corrigida": "",
+        "nome_corrigido": "",
+        "tipo_corrigido": "",
+        "categoria_corrigida": "",
+        "decisao": "",
+        "decidido_por": "",
+        "decidido_em": null,
+        "motivo_decisao": "conferi o PDF"
+      },
+      "registro_ids": [
+        283
+      ]
+    },
+    "x_custo": "leve"
+  }
+}

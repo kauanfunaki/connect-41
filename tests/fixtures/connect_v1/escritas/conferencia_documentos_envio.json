@@ -1,0 +1,42 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/conferencia/documentos?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "content_type": "multipart/form-data",
+    "cabecalhos": {
+      "Idempotency-Key": "c41:ca77e5b78f4f41358bb0890a629eb2fe"
+    },
+    "partes": [
+      {
+        "campo": "arquivo",
+        "nome": "TESTE-ESCRITAS-omie.csv",
+        "tamanho": 135,
+        "sha256": "d5d2d91ced7cae39a62b75db94dc41f8e56fcc9407349c1c058f6291da8f6dc1",
+        "conteudo": "﻿Numero;Competencia;Fornecedor;Data;Valor\n1;2032-03;FORNECEDOR OMIE 1;2032-03-02;900,00\n77;2032-03;OUTRO FORNECEDOR;2032-03-03;10,00\n"
+      }
+    ]
+  },
+  "resposta": {
+    "status": 201,
+    "corpo": {
+      "arquivo": "TESTE-ESCRITAS-omie.csv",
+      "competencia": "2032-03",
+      "linhas": 2,
+      "resumo": {
+        "sem_documento": {
+          "documentos": 2,
+          "valor": "910.00"
+        }
+      },
+      "no_banco": 0,
+      "a_conferir": 2
+    },
+    "x_custo": "pesada"
+  }
+}

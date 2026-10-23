@@ -74,3 +74,13 @@ export function revalidarFiscal() {
   revalidatePath("/fiscal", "layout");
 }
 
+/**
+ * Depois de uma escrita de §13: relê só as telas que a escrita mudou. Numa
+ * Server Action a tela aberta se redesenha na hora; numa rota (envio de
+ * arquivo), a próxima visita relê — por isso a tela também chama
+ * `router.refresh()` ao receber o sucesso.
+ */
+export function revalidarTelas(...caminhos: string[]) {
+  for (const c of new Set(caminhos)) revalidatePath(c);
+}
+
