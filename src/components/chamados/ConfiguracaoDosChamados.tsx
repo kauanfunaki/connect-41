@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Campo, nomeDaCategoria, type CategoriaDaTela } from "./CamposDoChamado";
-import { categoria, politica, setores as gravarSetores } from "@/app/(app)/chamados/actions";
+import { categoria, politica, fallbackIa, setores as gravarSetores } from "@/app/(app)/chamados/actions";
 import { categoriaSchema, PRIORIDADES, ROTULOS_PRIORIDADE, type Categoria } from "@/lib/chamados/regras";
 import { SLA_PADRAO } from "@/lib/chamados/sla";
 
@@ -24,9 +24,11 @@ export function SetoresDosChamados({ setores, selecionados, responsavel }: { set
   }} className="space-y-4"><fieldset disabled={busy} className="grid gap-3 sm:grid-cols-2">{setores.map(s => <Marcar key={s.code} name="setor" value={s.code} defaultChecked={selecionados.includes(s.code)}>{s.label}</Marcar>)}</fieldset><p className="text-helper text-fg-muted">Sem setores selecionados, apenas administradores abrem chamados. Remover um setor preserva o acompanhamento dos chamados anteriores.</p><Button type="submit" loading={busy}>Salvar setores</Button></form>{erro && <p role="alert" className="text-ui text-danger">{erro}</p>}{ok && <p role="status" className="text-ui text-success-fg">Setores salvos.</p>}</Card>;
 }
 
-export function ConfiguracaoDosChamados({ categorias, usuarios, politicas }: { categorias: CategoriaDaTela[]; usuarios: { id: string; name: string }[]; politicas: { priority: string; firstResponseMinutes: number; resolutionMinutes: number }[] }) {
+type Fallback = { configurado: boolean; enabled: boolean; podeConfigurar: boolean; lastRunAt: Date | null; lastError: string | null };
+export function ConfiguracaoDosChamados({ categorias, usuarios, politicas, fallback }: { categorias: CategoriaDaTela[]; usuarios: { id: string; name: string }[]; politicas: { priority: string; firstResponseMinutes: number; resolutionMinutes: number }[]; fallback: Fallback }) {
   const [escolhida, setEscolhida] = useState<string>("nova"), [versao, setVersao] = useState(0);
   return <div className="space-y-6">
+    <FallbackDosChamados estado={fallback} />
     <Card className="p-5 space-y-4"><h2 className="font-semibold text-fg">Categorias e formulários</h2><Campo label="Editar categoria"><Select value={escolhida} onChange={e => setEscolhida(e.target.value)}><option value="nova">Criar nova categoria</option>{categorias.map(c => <option key={c.id} value={c.id}>{nomeDaCategoria(categorias, c.id)}{c.active ? "" : " (desativada)"}</option>)}</Select></Campo>
       <EditorCategoria key={`${escolhida}:${versao}`} inicial={categorias.find(c => c.id === escolhida)} categorias={categorias} usuarios={usuarios} aoSalvar={() => { setEscolhida("nova"); setVersao(v => v + 1); }} />
     </Card>
@@ -34,6 +36,20 @@ export function ConfiguracaoDosChamados({ categorias, usuarios, politicas }: { c
       <div className="grid gap-4 md:grid-cols-2">{PRIORIDADES.map(p => <Politica key={p} prioridade={p} inicial={politicas.find(s => s.priority === p) ?? SLA_PADRAO[p]} />)}</div>
     </Card>
   </div>;
+}
+function FallbackDosChamados({ estado }: { estado: Fallback }) {
+  const router = useRouter();
+  const [apiKey, setApiKey] = useState(""), [enabled, setEnabled] = useState(estado.enabled);
+  const [busy, setBusy] = useState(false), [erro, setErro] = useState(""), [ok, setOk] = useState(false);
+  return <Card className="p-5 space-y-4"><h2 className="font-semibold text-fg">IA alternativa para chamados</h2>
+    <p className="text-ui text-fg-secondary">Se a IA principal falhar, a Groq pode classificar e revisar o texto do chamado. O plano gratuito tem limites de uso. Crie uma chave em <a className="text-brand underline" href="https://console.groq.com/keys" target="_blank" rel="noreferrer">Groq → API Keys</a> e salve abaixo. Mantenha o agente Triagem de chamados habilitado.</p>
+    <p className="text-helper text-fg-muted">{estado.configurado ? "Chave salva e protegida. Deixe em branco para mantê-la." : "Nenhuma chave alternativa cadastrada."} Anexos ficam disponíveis para a equipe; o fallback lê somente o texto.</p>
+    {estado.lastError && <p className="text-helper text-warning">{estado.lastError}</p>}
+    {estado.podeConfigurar && <form className="space-y-3" onSubmit={e => { e.preventDefault(); setBusy(true); setErro(""); setOk(false); void fallbackIa({ apiKey, enabled }).then(r => { if (!r.ok) setErro(r.error); else { setApiKey(""); setOk(true); router.refresh(); } }).catch(() => setErro("Falha ao salvar a configuração.")).finally(() => setBusy(false)); }}>
+      <fieldset disabled={busy} className="space-y-3"><Campo label="Chave da Groq"><Input type="password" autoComplete="new-password" maxLength={500} value={apiKey} onChange={e => setApiKey(e.target.value)} required={!estado.configurado} /></Campo><Marcar checked={enabled} onChange={e => setEnabled(e.target.checked)}>Usar Groq quando a IA principal estiver indisponível</Marcar><Button type="submit" variant="secondary" loading={busy}>Salvar IA alternativa</Button></fieldset>
+    </form>}
+    {erro && <p role="alert" className="text-ui text-danger">{erro}</p>}{ok && <p role="status" className="text-ui text-success-fg">IA alternativa salva.</p>}
+  </Card>;
 }
 function Politica({ prioridade, inicial }: { prioridade: (typeof PRIORIDADES)[number]; inicial: { firstResponseMinutes: number; resolutionMinutes: number } }) {
   const [busy, setBusy] = useState(false), [erro, setErro] = useState(""), [ok, setOk] = useState(false);

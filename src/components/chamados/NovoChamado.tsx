@@ -13,10 +13,10 @@ import type { DadosDoChamado, Parecer } from "@/lib/chamados/regras";
 
 type Anexo = { id: string; fileName: string; attachmentKey: string | null };
 export type RascunhoDaTela = { id: string; version: number; dados: DadosDoChamado; parecer: Parecer | null; anexos: Anexo[]; mensagens: { id: string; role: string; body: string }[] };
-export function NovoChamado({ inicial, categorias, setores }: { inicial: RascunhoDaTela | null; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[] }) {
+export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }: { inicial: RascunhoDaTela | null; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[] }) {
   const router = useRouter(), formulario = useRef<HTMLFormElement>(null);
   const [dados, setDados] = useState<DadosDoChamado>(inicial?.dados ?? { title: "", description: "", categoryId: "", requesterSectorCode: setores.length === 1 ? setores[0].code : "", priority: "MEDIA", requestData: {}, tags: [] });
-  const [etapaCategoria, setEtapaCategoria] = useState(!inicial?.dados.categoryId);
+  const [categorias, setCategorias] = useState(categoriasIniciais);
   const [draft, setDraft] = useState(inicial ? { id: inicial.id, version: inicial.version } : null);
   const [parecer, setParecer] = useState(inicial?.parecer ?? null), [anexos, setAnexos] = useState(inicial?.anexos ?? []);
   const [mensagens, setMensagens] = useState(inicial?.mensagens ?? []), [resposta, setResposta] = useState("");
@@ -24,7 +24,10 @@ export function NovoChamado({ inicial, categorias, setores }: { inicial: Rascunh
   const [chave, setChave] = useState(""); const abort = useRef<AbortController | null>(null);
   const cat = categorias.find(c => c.id === dados.categoryId);
   const mudou = useRef(false);
-  function editar(novos: DadosDoChamado) { setDados(novos); setParecer(null); mudou.current = true; setAviso(""); }
+  function editar(novos: DadosDoChamado) {
+    const reclassificar = novos.title !== dados.title || novos.description !== dados.description || novos.requesterSectorCode !== dados.requesterSectorCode;
+    setDados({ ...novos, categoryId: reclassificar ? "" : novos.categoryId }); setParecer(null); mudou.current = true; setAviso("");
+  }
   async function obterRascunho() {
     if (draft) return draft;
     const r = await iniciar(); if (!r.ok) throw new Error(r.error);
@@ -41,29 +44,18 @@ export function NovoChamado({ inicial, categorias, setores }: { inicial: Rascunh
     finally { setBusy(""); }
   }
   function validarFormulario() {
-    if (!dados.categoryId) {
-      setErro("Selecione uma categoria para o chamado.");
-      const seletor = document.getElementById("categoria-chamado");
-      seletor?.scrollIntoView({ behavior: "smooth", block: "center" }); seletor?.focus();
-      return false;
-    }
     return formulario.current?.reportValidity() ?? false;
   }
-  if (etapaCategoria) return <Card className="p-4 sm:p-6">
-    <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={[]} somenteCategoria />
-    <div className="mt-5 flex flex-wrap justify-end gap-2">
-      <Button href="/chamados" variant="ghost">Cancelar</Button>
-      <Button disabled={!dados.categoryId || !!busy} onClick={() => { setErro(""); setEtapaCategoria(false); }}>Próximo <span aria-hidden="true">→</span></Button>
-    </div>
-    {erro && <p role="alert" className="mt-3 text-ui text-danger">{erro}</p>}
-  </Card>;
   async function enviar(revisar: boolean) {
     if (!validarFormulario()) return;
     await executar(revisar ? "Analisando informações…" : "Enviando chamado…", async () => {
-      const d = mudou.current || !draft || !inicial ? await salvar() : draft;
+      const d = mudou.current || !draft ? await salvar() : draft;
       const r = revisar ? await avaliar(d.id, d.version) : await finalizar(d.id, d.version);
       if (!r.ok) throw new Error(r.error);
       if ("ticketId" in r.valor && r.valor.ticketId) { router.push(`/chamados/${r.valor.ticketId}`); return; }
+      if ("version" in r.valor) setDraft({ id: d.id, version: r.valor.version });
+      if ("dados" in r.valor && r.valor.dados) setDados(r.valor.dados);
+      if ("categorias" in r.valor && r.valor.categorias) setCategorias(r.valor.categorias);
       if ("parecer" in r.valor && r.valor.parecer) {
         const novoParecer = r.valor.parecer;
         setParecer(novoParecer); setMensagens(m => [...m, { id: crypto.randomUUID(), role: "assistant", body: [novoParecer.summary, ...novoParecer.questions].join("\n\n") }]);
@@ -73,7 +65,8 @@ export function NovoChamado({ inicial, categorias, setores }: { inicial: Rascunh
   return <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(20rem,1fr)]">
     <form ref={formulario} onSubmit={e => { e.preventDefault(); void enviar(true); }} className="min-w-0 space-y-5">
       <Card className="p-5"><fieldset disabled={!!busy} className="space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2><Button variant="ghost" size="sm" onClick={() => setEtapaCategoria(true)}>Alterar categoria{cat ? ` · ${nomeDaCategoria(categorias, cat.id)}` : ""}</Button></div>
+        <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
+        <p className="text-ui text-fg-secondary" role="status">{cat ? <>Classificação: <strong className="text-fg">{nomeDaCategoria(categorias, cat.id)}</strong></> : "A IA identifica o grupo e a categoria ao enviar. Descreva o que você precisa."}</p>
         <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria />
       </fieldset></Card>
       <Card className="p-5 space-y-4"><h2 className="font-semibold text-fg">Anexos</h2>
@@ -95,7 +88,7 @@ export function NovoChamado({ inicial, categorias, setores }: { inicial: Rascunh
         {cat?.requiredAttachments.filter(a => a.required && !anexos.some(x => x.attachmentKey === a.key)).map(a => <p key={a.key} className="text-helper text-warning">Falta anexar: {a.label}</p>)}
       </Card>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={!!busy || !categorias.length}>Enviar chamado</Button>
+        <Button type="submit" disabled={!!busy}>Enviar chamado</Button>
         <Button variant="secondary" disabled={!!busy} onClick={() => { if (validarFormulario()) void executar("Salvando rascunho…", async () => { await salvar(); setAviso("Rascunho salvo. Você pode retomar pela lista de chamados."); }); }}>Salvar rascunho</Button>
         <Button href="/chamados" variant="ghost">Voltar à lista</Button>
       </div>
@@ -118,6 +111,8 @@ export function NovoChamado({ inicial, categorias, setores }: { inicial: Rascunh
           const r = await avaliar(d.id, d.version, texto); if (!r.ok) throw new Error(r.error);
           if (r.valor.ticketId) { router.push(`/chamados/${r.valor.ticketId}`); return; }
           setDraft({ id: d.id, version: r.valor.version }); setResposta("");
+          if (r.valor.dados) setDados(r.valor.dados);
+          if (r.valor.categorias) setCategorias(r.valor.categorias);
           if (r.valor.parecer) { setParecer(r.valor.parecer); setMensagens(m => [...m, { id: crypto.randomUUID(), role: "user", body: texto }, { id: crypto.randomUUID(), role: "assistant", body: [r.valor.parecer!.summary, ...r.valor.parecer!.questions].join("\n\n") }]); }
         });
       }} className="space-y-3"><Campo label="Complementar informações"><Textarea required rows={4} maxLength={10000} disabled={!!busy} value={resposta} onChange={e => setResposta(e.target.value)} /></Campo><Button type="submit" disabled={!!busy}>Responder ao assistente</Button></form>}

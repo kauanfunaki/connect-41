@@ -16,13 +16,14 @@ import { formatInstantDate } from "@/lib/format";
 import { BotaoFixarTela } from "@/components/setor/BotaoFixarTela";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { corDaCategoria } from "@/lib/chamados/cores";
+import { caminhoDaCategoria } from "@/lib/chamados/catalogo";
 
 export const dynamic = "force-dynamic";
 type Filtros = Record<string, string | undefined>;
 export default async function ChamadosPage({ searchParams }: { searchParams: Promise<Filtros> }) {
   const c = await contexto().catch(() => null); if (!c) notFound();
   const filtros = await searchParams;
-  const [dados, cats, users, setores] = await Promise.all([lista(c, filtros), categorias(c), usuarios(c), getActiveSectors(c.ctx.tenantId)]);
+  const [dados, cats, users, setores] = await Promise.all([lista(c, filtros), categorias(c, true), usuarios(c), getActiveSectors(c.ctx.tenantId)]);
   if (!podeAbrir(c.ctx, c.config) && !podeVerInterno(c.ctx, c.config) && !dados.total && !dados.drafts.length) {
     const anteriores = await lista(c, { aba: "historico" }); if (!anteriores.total) notFound();
   }
@@ -53,7 +54,7 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
       <form className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" method="get">
         <input type="hidden" name="aba" value={aba} />
         {filtros.q && <input type="hidden" name="q" value={filtros.q} />}{filtros.prioridade && <input type="hidden" name="prioridade" value={filtros.prioridade} />}{filtros.meus === "1" && <input type="hidden" name="meus" value="1" />}
-        <Select name="categoria" aria-label="Categoria" defaultValue={filtros.categoria ?? ""}><option value="">Todas as categorias</option>{cats.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}</Select>
+        <Select name="categoria" aria-label="Grupo e categoria" defaultValue={filtros.categoria ?? ""}><option value="">Todos os grupos e categorias</option>{cats.map(cat => <option key={cat.id} value={cat.id}>{caminhoDaCategoria(cats, cat.id)}</option>)}</Select>
         <Select name="setor" aria-label="Setor solicitante" defaultValue={filtros.setor ?? ""}><option value="">Todos os setores solicitantes</option>{setores.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}</Select>
         <Select name="responsavel" aria-label="Responsável" defaultValue={filtros.responsavel ?? ""}><option value="">Todos os responsáveis</option>{users.filter(u => u.sectors.some(s => s.sectorCode === c.config.sectorCode)).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}</Select>
         <div className="flex flex-wrap gap-2"><Button type="submit" variant="secondary">Aplicar</Button><Button href={url({ categoria: null, setor: null, responsavel: null, pagina: null })} variant="ghost">Limpar filtros</Button></div>
@@ -68,7 +69,7 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
       const setor = setores.find(s => s.code === t.requesterSectorCode);
       const corCategoria = corDaCategoria(t.categoryId);
       return <Card key={t.id} className="border-l-[3px] p-4" style={{ borderLeftColor: setor?.color ?? "#586577" }}><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><Link href={`/chamados/${t.id}`} className="break-words text-label font-semibold text-brand hover:underline">{t.title}</Link><p className="mt-2 flex flex-wrap items-center gap-1.5 text-helper">
-        <span className="inline-flex items-center rounded-md border px-2 py-0.5 font-medium" style={{ color: corCategoria, borderColor: `color-mix(in srgb, ${corCategoria} 32%, transparent)`, backgroundColor: `color-mix(in srgb, ${corCategoria} 10%, var(--c41-surface))` }}>{t.category.name}</span>
+        <span aria-label="Grupo e categoria" className="inline-flex items-center rounded-md border px-2 py-0.5 font-medium" style={{ color: corCategoria, borderColor: `color-mix(in srgb, ${corCategoria} 32%, transparent)`, backgroundColor: `color-mix(in srgb, ${corCategoria} 10%, var(--c41-surface))` }}>{caminhoDaCategoria(cats, t.categoryId) || t.category.name}</span>
         <span className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5" style={{ color: setor?.color ?? "#586577", backgroundColor: `color-mix(in srgb, ${setor?.color ?? "#586577"} 10%, var(--c41-surface))` }}><span aria-hidden className="size-1.5 rounded-full" style={{ backgroundColor: setor?.color ?? "#586577" }} />{setor?.label ?? t.requesterSectorCode}</span>
         <span className="text-fg-secondary">· {formatInstantDate(t.createdAt)}</span></p></div><div className="flex flex-wrap gap-2 text-helper"><span className="rounded bg-brand/8 px-2 py-1 text-brand">{ROTULOS[t.status]}</span><span className="rounded bg-surface-hover px-2 py-1 text-fg-secondary">{ROTULOS_PRIORIDADE[t.priority]}</span></div></div><div className="mt-3 flex flex-wrap justify-between gap-2 text-helper text-fg-secondary"><span>{t.assignees.length ? t.assignees.map(a => nome(a.userId)).join(", ") : "Aguardando distribuição"}</span>{t.status === "NA_FILA" && <span>Posição {dados.posicoes.get(t.id)} de {dados.totalFila} na fila</span>}{t.cycles[0] && <span>Prazo: {formatInstantDate(t.cycles[0].resolutionDueAt)}{t.cycles[0].pausedAt ? " · SLA pausado" : ""}</span>}</div></Card>;
     })}</div>}
