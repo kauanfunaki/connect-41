@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // #22"): o que `lancarDocumento` grava com duas duplicatas, com uma, com
 // duplicatas que não fecham e sem duplicata; que o segundo lançamento não cria
 // parcela nenhuma; e que o estorno leva a série inteira — ou não leva nada.
+// Desde a decisão de 23/10 (1:N), todas as parcelas são ligadas à nota, cada
+// uma na sua posição (`fiscalDocumentInstallment`), e as travas da conta da
+// nota valem para cada uma.
 
 const m = vi.hoisted(() => {
   const tx = {
@@ -53,6 +56,8 @@ vi.mock("@/lib/financeiro/aprovacao/servidor", () => ({
 vi.mock("@/lib/financeiro/centroDeCustoServidor", () => ({ centroNaCriacao: async () => ({ ok: true, centroId: null }) }));
 
 import { lancarDocumento, estornarLancamento } from "./lancar";
+import { travasDaEdicao } from "@/lib/financeiro/edicao";
+import { podeCancelarManual } from "@/lib/financeiro/manual";
 
 const dec = (v: string) => ({ toString: () => v });
 
@@ -78,7 +83,7 @@ function nota(over: Record<string, unknown> = {}) {
     situation: "AUTORIZADA",
     destination: "PENDENTE",
     removedAtOrigin: false,
-    financeEntry: null,
+    financeEntries: [],
     ...over,
   };
 }
@@ -91,6 +96,7 @@ const tresDuplicatas = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  m.db.$transaction.mockImplementation(async (fn: (t: typeof m.tx) => unknown) => fn(m.tx));
   m.db.financeCounterparty.findFirst.mockResolvedValue({ id: "zahra", defaultCategoryId: "compras", defaultCostCenterId: null });
   m.db.financeCategory.findFirst.mockResolvedValue({ id: "compras" });
   m.tx.financeEntry.create.mockResolvedValue({ id: "e1", amount: dec("333.34") });
@@ -108,6 +114,7 @@ describe("lancarDocumento — duplicatas da nota", () => {
       amount: "333.34",
       competence: "2026-09",
       fiscalDocumentId: "doc1",
+      fiscalDocumentInstallment: 1,
       recurrenceIndex: 1,
       recurrenceTotal: 3,
       status: "PROVISORIO",
@@ -121,9 +128,11 @@ describe("lancarDocumento — duplicatas da nota", () => {
     expect(outras.map((o: { recurrenceIndex: number }) => o.recurrenceIndex)).toEqual([2, 3]);
     for (const o of outras) {
       expect(o).toMatchObject({ competence: "2026-09", recurrenceId: primeira.recurrenceId, recurrenceTotal: 3, documentNumber: "123/1" });
-      // O vínculo com a nota é 1:1 — fica só na primeira.
-      expect(o.fiscalDocumentId).toBeUndefined();
+      // 1:N (23/10): cada parcela é ligada à nota, na sua posição.
+      expect(o.fiscalDocumentId).toBe("doc1");
+      expect(o.issueDate).toEqual(primeira.issueDate);
     }
+    expect(outras.map((o: { fiscalDocumentInstallment: number }) => o.fiscalDocumentInstallment)).toEqual([2, 3]);
     expect(m.tx.financeRecurrence.create.mock.calls[0]![0].data).toMatchObject({
       id: primeira.recurrenceId,
       endMode: "VEZES",
@@ -175,11 +184,13 @@ describe("lancarDocumento — duplicatas da nota", () => {
     const conta = m.tx.financeEntry.create.mock.calls[0]![0].data;
     expect(conta.dueDate.toISOString().slice(0, 10)).toBe("2026-10-01");
     expect(conta.recurrenceId).toBeUndefined();
+    // A conta única é a posição 1 da nota — a mesma guarda do segundo clique.
+    expect(conta).toMatchObject({ fiscalDocumentId: "doc1", fiscalDocumentInstallment: 1 });
     expect(m.logAudit.mock.calls[0]![0].metadata.duplicatas).toBeUndefined();
   });
 
   it("já lançada: recusa antes de gravar qualquer parcela", async () => {
-    m.obterDocumento.mockResolvedValue(nota({ installments: tresDuplicatas, destination: "LANCADO", financeEntry: { id: "e1" } }));
+    m.obterDocumento.mockResolvedValue(nota({ installments: tresDuplicatas, destination: "LANCADO", financeEntries: [{ id: "e1" }] }));
     const r = await lancarDocumento("doc1", {});
     expect(r).toHaveProperty("error");
     expect(m.db.$transaction).not.toHaveBeenCalled();
@@ -195,56 +206,196 @@ describe("lancarDocumento — duplicatas da nota", () => {
   });
 });
 
-describe("estornarLancamento — conta parcelada pela nota", () => {
-  const lancada = (over: Record<string, unknown> = {}) =>
-    nota({
-      destination: "LANCADO",
-      financeEntry: { id: "e1", status: "PROVISORIO", closeReason: null, recurrenceId: "s1", recurrenceTotal: 3, ...over },
+
+describe("lancarDocumento — dois cliques ao mesmo tempo, com o unique de (nota, posição)", () => {
+  // Um banco de mentira que faz o que o InnoDB faz com o unique: a chave
+  // (fiscalDocumentId, fiscalDocumentInstallment) inserida por uma transação
+  // em curso ou já gravada barra a mesma chave na outra, e a transação que
+  // falha desfaz tudo o que inseriu.
+  function bancoComUnique() {
+    const chaves = new Set<string>();
+    const gravadas: Record<string, unknown>[] = [];
+    m.db.$transaction.mockImplementation(async (fn: (t: typeof m.tx) => unknown) => {
+      const minhas: string[] = [];
+      const linhas: Record<string, unknown>[] = [];
+      const inserir = (d: Record<string, unknown>) => {
+        if (d.fiscalDocumentId) {
+          const chave = `${d.fiscalDocumentId}#${d.fiscalDocumentInstallment ?? 1}`;
+          if (chaves.has(chave)) throw new Error("Unique constraint failed on the constraint: `finance_entries_fiscalDocumentId_fiscalDocumentInstallment_key`");
+          chaves.add(chave);
+          minhas.push(chave);
+        }
+        linhas.push(d);
+      };
+      const tx = {
+        ...m.tx,
+        financeEntry: {
+          ...m.tx.financeEntry,
+          create: async ({ data }: { data: Record<string, unknown> }) => {
+            // Cede a vez: as duas transações chegam aqui "juntas".
+            await Promise.resolve();
+            inserir(data);
+            return { id: `e${gravadas.length + linhas.length}`, amount: data.amount };
+          },
+          createMany: async ({ data }: { data: Record<string, unknown>[] }) => {
+            for (const d of data) inserir(d);
+            return { count: data.length };
+          },
+        },
+      };
+      try {
+        const r = await fn(tx as unknown as typeof m.tx);
+        gravadas.push(...linhas);
+        return r;
+      } catch (e) {
+        for (const c of minhas) chaves.delete(c);
+        throw e;
+      }
     });
-  const parcela = (id: string, i: number, over: Record<string, unknown> = {}) => ({
+    return { gravadas };
+  }
+
+  it("parcelada: só uma transação grava, com as três parcelas ligadas à nota; a outra não deixa parcela nenhuma", async () => {
+    const { gravadas } = bancoComUnique();
+    // As duas leem a nota antes de qualquer uma gravar: a checagem em aplicação passa nas duas.
+    m.obterDocumento.mockResolvedValue(nota({ installments: tresDuplicatas }));
+    const [a, b] = await Promise.all([lancarDocumento("doc1", {}), lancarDocumento("doc1", {})]);
+    const resultados = [a, b];
+    expect(resultados.filter((r) => "ok" in r)).toHaveLength(1);
+    expect(resultados.filter((r) => "error" in r)).toEqual([{ error: "Este documento já virou lançamento." }]);
+    expect(gravadas).toHaveLength(3);
+    expect(gravadas.map((g) => g.fiscalDocumentId)).toEqual(["doc1", "doc1", "doc1"]);
+    expect(gravadas.map((g) => g.fiscalDocumentInstallment)).toEqual([1, 2, 3]);
+  });
+
+  it("conta única: o segundo clique bate na posição 1, como no 1:1 de antes", async () => {
+    const { gravadas } = bancoComUnique();
+    m.obterDocumento.mockResolvedValue(nota());
+    const resultados = await Promise.all([lancarDocumento("doc1", {}), lancarDocumento("doc1", {})]);
+    expect(resultados.filter((r) => "ok" in r)).toHaveLength(1);
+    expect(gravadas).toHaveLength(1);
+  });
+
+  it("o relançamento depois do estorno volta a valer: a chave saiu junto com as contas", async () => {
+    const { gravadas } = bancoComUnique();
+    m.obterDocumento.mockResolvedValue(nota({ installments: tresDuplicatas }));
+    expect(await lancarDocumento("doc1", {})).toHaveProperty("ok");
+    // Uma nota diferente não esbarra nas chaves desta.
+    m.obterDocumento.mockResolvedValue(nota({ id: "doc2", installments: tresDuplicatas }));
+    expect(await lancarDocumento("doc2", {})).toHaveProperty("ok");
+    expect(gravadas).toHaveLength(6);
+  });
+});
+
+describe("as travas da conta da nota valem para cada parcela", () => {
+  async function parcelasNascidas() {
+    m.obterDocumento.mockResolvedValue(nota({ installments: tresDuplicatas }));
+    await lancarDocumento("doc1", {});
+    return [m.tx.financeEntry.create.mock.calls[0]![0].data, ...m.tx.financeEntry.createMany.mock.calls[0]![0].data] as {
+      fiscalDocumentId: string;
+    }[];
+  }
+  const base = { status: "PROVISORIO" as const, paidAt: null, closeReason: null, agreementId: null, doOmie: false, conciliada: false };
+
+  it("emissão, número, valor e contraparte travados na edição de qualquer parcela", async () => {
+    for (const p of await parcelasNascidas()) {
+      const v = travasDaEdicao({ ...base, fiscalDocumentId: p.fiscalDocumentId });
+      expect(v.pode).toBe(true);
+      if (!v.pode) continue;
+      for (const campo of ["emissao", "numeroDocumento", "valor", "contraparte"] as const) {
+        expect(v.travas[campo]).toMatch(/nota fiscal/);
+      }
+      // O vencimento continua livre, como na conta da nota de sempre.
+      expect(v.travas.vencimento).toBeUndefined();
+    }
+  });
+
+  it("nenhuma parcela se cancela sozinha — o caminho é o estorno da nota", async () => {
+    for (const p of await parcelasNascidas()) {
+      expect(podeCancelarManual({ status: "PROVISORIO", paidAt: null, fiscalDocumentId: p.fiscalDocumentId })).toEqual({
+        pode: false,
+        motivo: expect.stringMatching(/estorne na ficha da nota/),
+      });
+    }
+  });
+});
+
+describe("estornarLancamento — todas as contas da nota", () => {
+  const lancada = () => nota({ destination: "LANCADO", financeEntries: [{ id: "e1" }] });
+  const conta = (id: string, i: number, over: Record<string, unknown> = {}) => ({
     id,
     status: "PROVISORIO",
     paidPrincipal: dec("0"),
     closeReason: null,
     agreementId: null,
-    recurrenceIndex: i,
+    recurrenceId: "s1",
+    fiscalDocumentInstallment: i,
     ...over,
   });
 
-  it("leva as parcelas e a série juntas", async () => {
+  it("lê as contas pelo vínculo com a nota e leva as parcelas e a série juntas", async () => {
     m.obterDocumento.mockResolvedValue(lancada());
-    m.db.financeEntry.findMany.mockResolvedValue([parcela("e2", 2), parcela("e3", 3)]);
-    m.tx.financeEntry.deleteMany.mockResolvedValue({ count: 2 });
+    m.db.financeEntry.findMany.mockResolvedValue([conta("e1", 1), conta("e2", 2), conta("e3", 3)]);
+    m.tx.financeEntry.deleteMany.mockResolvedValue({ count: 3 });
     expect(await estornarLancamento("doc1")).toEqual({ ok: true });
+    expect(m.db.financeEntry.findMany.mock.calls[0]![0].where).toEqual({ tenantId: "t1", fiscalDocumentId: "doc1" });
     expect(m.cancelarContasDosImpostos.mock.calls[0]![2]).toEqual(["e1", "e2", "e3"]);
-    expect(m.tx.financeEntry.deleteMany.mock.calls[0]![0].where.id).toEqual({ in: ["e2", "e3"] });
-    expect(m.tx.financeEntry.delete).toHaveBeenCalledWith({ where: { id: "e1" } });
-    expect(m.tx.financeRecurrence.deleteMany).toHaveBeenCalledWith({ where: { id: "s1", tenantId: "t1" } });
+    expect(m.tx.financeEntry.deleteMany.mock.calls[0]![0].where).toMatchObject({
+      id: { in: ["e1", "e2", "e3"] },
+      fiscalDocumentId: "doc1",
+      paidPrincipal: 0,
+      agreementId: null,
+      payments: { none: {} },
+    });
+    expect(m.tx.financeRecurrence.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ["s1"] }, tenantId: "t1" } });
     expect(m.tx.fiscalDocument.update).toHaveBeenCalledWith({ where: { id: "doc1" }, data: { destination: "PENDENTE" } });
+    expect(m.logAudit.mock.calls[0]![0].metadata).toEqual({ fiscalDocumentId: "doc1", parcelas: 3, serie: "s1" });
   });
 
   it("uma parcela com baixa barra o estorno inteiro — nada é apagado", async () => {
     m.obterDocumento.mockResolvedValue(lancada());
-    m.db.financeEntry.findMany.mockResolvedValue([parcela("e2", 2, { paidPrincipal: dec("100.00") }), parcela("e3", 3)]);
+    m.db.financeEntry.findMany.mockResolvedValue([conta("e1", 1), conta("e2", 2, { paidPrincipal: dec("100.00") }), conta("e3", 3)]);
     const r = await estornarLancamento("doc1");
-    expect(r).toEqual({ error: expect.stringMatching(/parcela 2/) });
+    expect(r).toEqual({ error: expect.stringMatching(/parcela 2 desta nota já tem baixa/) });
+    expect(m.db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("a 1ª parcela paga ou renegociada também barra", async () => {
+    m.obterDocumento.mockResolvedValue(lancada());
+    m.db.financeEntry.findMany.mockResolvedValue([conta("e1", 1, { status: "PAGO" }), conta("e2", 2)]);
+    expect(await estornarLancamento("doc1")).toEqual({ error: expect.stringMatching(/parcela 1 desta nota já foi paga/) });
+    m.db.financeEntry.findMany.mockResolvedValue([conta("e1", 1), conta("e2", 2, { agreementId: "ac1" })]);
+    expect(await estornarLancamento("doc1")).toEqual({ error: expect.stringMatching(/parcela 2 .*acordo/) });
     expect(m.db.$transaction).not.toHaveBeenCalled();
   });
 
   it("a baixa que chegou entre a leitura e o estorno: a transação desfaz tudo", async () => {
     m.obterDocumento.mockResolvedValue(lancada());
-    m.db.financeEntry.findMany.mockResolvedValue([parcela("e2", 2), parcela("e3", 3)]);
-    m.tx.financeEntry.deleteMany.mockResolvedValue({ count: 1 });
+    m.db.financeEntry.findMany.mockResolvedValue([conta("e1", 1), conta("e2", 2), conta("e3", 3)]);
+    m.tx.financeEntry.deleteMany.mockResolvedValue({ count: 2 });
     const r = await estornarLancamento("doc1");
     expect(r).toEqual({ error: expect.stringMatching(/acabou de mudar/) });
-    expect(m.tx.financeEntry.delete).not.toHaveBeenCalled();
+    expect(m.tx.fiscalDocument.update).not.toHaveBeenCalled();
   });
 
-  it("conta sem série: o estorno de sempre", async () => {
-    m.obterDocumento.mockResolvedValue(lancada({ recurrenceId: null, recurrenceTotal: null }));
+  it("conta única (inclusive a ligada 1:1 de antes da migration): o estorno de sempre, com as frases de sempre", async () => {
+    m.obterDocumento.mockResolvedValue(lancada());
+    m.db.financeEntry.findMany.mockResolvedValue([conta("e1", 1, { recurrenceId: null })]);
+    m.tx.financeEntry.deleteMany.mockResolvedValue({ count: 1 });
     expect(await estornarLancamento("doc1")).toEqual({ ok: true });
-    expect(m.db.financeEntry.findMany).not.toHaveBeenCalled();
-    expect(m.tx.financeEntry.deleteMany).not.toHaveBeenCalled();
     expect(m.tx.financeRecurrence.deleteMany).not.toHaveBeenCalled();
+    expect(m.logAudit.mock.calls[0]![0].metadata).toEqual({ fiscalDocumentId: "doc1" });
+
+    m.db.financeEntry.findMany.mockResolvedValue([conta("e1", 1, { recurrenceId: null, status: "PAGO" })]);
+    expect(await estornarLancamento("doc1")).toEqual({ error: expect.stringMatching(/^O lançamento já foi pago/) });
+    m.db.financeEntry.findMany.mockResolvedValue([conta("e1", 1, { recurrenceId: null, closeReason: "PERDA" })]);
+    expect(await estornarLancamento("doc1")).toEqual({ error: expect.stringMatching(/perda/) });
+  });
+
+  it("nota sem conta: nada a estornar", async () => {
+    m.obterDocumento.mockResolvedValue(nota());
+    m.db.financeEntry.findMany.mockResolvedValue([]);
+    expect(await estornarLancamento("doc1")).toEqual({ error: "Este documento não tem lançamento." });
+    expect(m.db.$transaction).not.toHaveBeenCalled();
   });
 });

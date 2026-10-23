@@ -25,6 +25,10 @@ type Lancamento = {
   centroDeCusto?: string | null;
   /** Em quantas parcelas nasceu, quando nasceu das duplicatas da nota (23/10). */
   parcelas?: number | null;
+  /** Cada parcela ligada à nota (1:N desde 23/10), na ordem da nota. */
+  parcelasLancadas?:
+    | { id: string; indice: number; status: "PROVISORIO" | "CONFERIDO" | "PAGO" | "CANCELADO"; vencimentoLabel: string; valorLabel: string }[]
+    | null;
 };
 
 /**
@@ -122,8 +126,8 @@ export function LancamentoCard({
               para a direita, com fio embaixo, o único desenho diferente da
               página. */}
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-            {/* Parcelada pelas duplicatas, a ficha é a da 1ª parcela — as outras
-                estão nas contas a pagar, na mesma série. */}
+            {/* Parcelada pelas duplicatas, a ficha é a da 1ª parcela; todas
+                estão listadas logo abaixo, e todas ligadas a esta nota. */}
             <ItemDaFicha
               rotulo={lancamento.parcelas && lancamento.parcelas > 1 ? `Valor (1ª de ${lancamento.parcelas} parcelas)` : "Valor"}
               valor={lancamento.amountLabel}
@@ -140,6 +144,20 @@ export function LancamentoCard({
               <ItemDaFicha rotulo="Centro de custo" valor={lancamento.centroDeCusto ?? "—"} />
             )}
           </dl>
+          {lancamento.parcelasLancadas && lancamento.parcelasLancadas.length > 1 && (
+            <ul className="divide-y divide-border border border-border rounded-md mt-4">
+              {lancamento.parcelasLancadas.map((p, _i, todas) => (
+                <li key={p.id} className="flex items-center justify-between gap-3 px-3 py-2 text-body">
+                  <span className="text-fg-secondary">
+                    {p.indice}/{todas.length}
+                  </span>
+                  <span className="tnum text-fg">{p.vencimentoLabel}</span>
+                  <span className="tnum text-fg">{p.valorLabel}</span>
+                  <Selo tom={tomDaVariante(STATUS_VARIANTE[p.status])}>{STATUS_LABEL[p.status]}</Selo>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {podeDecidir && (
             <div className="flex items-center justify-end gap-3 pt-4 mt-5 border-t border-border">

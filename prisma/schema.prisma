@@ -3171,7 +3171,8 @@ model FiscalDocument {
   tenant       Tenant        @relation(fields: [tenantId], references: [id])
   company      Company       @relation(fields: [companyId], references: [id])
   uploadedBy   User?         @relation(fields: [uploadedById], references: [id])
-  financeEntry FinanceEntry?
+  /// As contas que a nota gerou: uma, ou uma por duplicata (23/10/2026).
+  financeEntries FinanceEntry[]
   /// A emissão pelo Connect (via Omie) que gerou esta nota, quando foi assim.
   omieEmissao  OmieEmissao?
 
@@ -3422,9 +3423,18 @@ model FinanceEntry {
   /// (vencida, a vencer) continua pelo vencimento.
   forecastDate DateTime?
 
-  /// Documento fiscal que originou o lançamento. **1:1**: relançar o mesmo
-  /// documento duplicaria valor no financeiro, e o unique é quem impede.
-  fiscalDocumentId String? @unique
+  /// Documento fiscal que originou o lançamento. **1:N** desde 23/10/2026: a
+  /// conta que nasce parcelada pelas duplicatas da nota tem todas as parcelas
+  /// ligadas a ela (a trava da edição, o cancelamento e o estorno valem para
+  /// cada uma). Relançar o mesmo documento duplicaria valor no financeiro — o
+  /// que impede é o unique de (`fiscalDocumentId`, `fiscalDocumentInstallment`).
+  fiscalDocumentId String?
+  /// A posição desta conta entre as que a nota gerou: 1 na conta única e na 1ª
+  /// parcela, 2..N nas outras. **Não nulo, padrão 1**, de propósito: todo
+  /// lançamento de nota que não diga a posição é o 1º, e o segundo clique de
+  /// "lançar" bate no unique antes de qualquer parcela nascer. Sem nota
+  /// (`fiscalDocumentId` nulo) o número não significa nada e o unique não casa.
+  fiscalDocumentInstallment Int @default(1)
 
   /// Título do Omie que originou o lançamento (`nCodTitulo` dos movimentos
   /// financeiros). É a chave da sincronização: o mesmo título lido de novo
@@ -3563,6 +3573,8 @@ model FinanceEntry {
   @@unique([companyId, omieTitleId])
   @@unique([companyId, omieMovementId])
   @@unique([cardAccountId, cardCycle])
+  /// A guarda do "lançar" da nota (1:N, 23/10/2026) — ver `fiscalDocumentInstallment`.
+  @@unique([fiscalDocumentId, fiscalDocumentInstallment])
   @@index([companyId, omieAccountId, omieReconciledAt])
   @@index([tenantId, companyId, competence])
   @@index([tenantId, companyId, kind, status])

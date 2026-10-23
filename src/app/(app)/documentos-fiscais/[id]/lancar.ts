@@ -34,6 +34,38 @@ const MODULE = "fiscal_documentos";
 /** Uma parcela mudou entre a leitura e o estorno — desfaz a transação inteira. */
 class ParcelaMudou extends Error {}
 
+/**
+ * Por que esta conta da nota não pode ser apagada pelo estorno — `null` quando
+ * pode. Duas frases: a da conta única (a de sempre) e a da parcela.
+ */
+function motivoQueBarraOEstorno(c: {
+  status: string;
+  paidPrincipal: { toString(): string };
+  closeReason: string | null;
+  agreementId: string | null;
+}): { conta: string; parcela: string } | null {
+  // Estornar algo já pago é problema de baixa bancária, não de acervo fiscal.
+  // Apagar aqui esconderia um pagamento que saiu da conta.
+  if (c.status === "PAGO") {
+    return { conta: "O lançamento já foi pago. O estorno tem de ser feito no financeiro, com a baixa.", parcela: "já foi paga." };
+  }
+  if (Number(c.paidPrincipal.toString()) > 0) {
+    return { conta: "O lançamento tem baixa parcial. Desfaça as baixas no financeiro antes de estornar.", parcela: "já tem baixa." };
+  }
+  // Apagar o título apagaria junto a receita que a DRE econômica mantém e o
+  // vínculo com o acordo (ou a decisão de perda). Desfaça na cobrança antes.
+  if (c.closeReason === "RENEGOCIADO" || c.agreementId !== null) {
+    return {
+      conta: "O título foi renegociado num acordo de cobrança. Desfaça o acordo antes de estornar.",
+      parcela: "foi renegociada num acordo de cobrança.",
+    };
+  }
+  if (c.closeReason === "PERDA") {
+    return { conta: "O título foi baixado por perda na cobrança. Reverta a perda antes de estornar.", parcela: "foi baixada por perda na cobrança." };
+  }
+  return null;
+}
+
 export type ResultadoDoLancamento = { error: string } | { ok: true; entryId: string };
 
 /**
@@ -93,7 +125,7 @@ export async function lancarDocumento(
     situacao: doc.situation,
     destino: doc.destination,
     removidoNaOrigem: doc.removedAtOrigin,
-    jaTemLancamento: doc.financeEntry !== null,
+    jaTemLancamento: doc.financeEntries.length > 0,
     valor: doc.amount === null ? null : String(doc.amount),
     direcao,
   });
@@ -201,15 +233,19 @@ export async function lancarDocumento(
           // O documento continua exibindo `amount`: o acervo espelha o DANFSE,
           // e é a conta que muda, não a nota.
           //
-          // Parcelada pelas duplicatas, esta é a primeira parcela — e é ela que
-          // guarda o vínculo com a nota (`fiscalDocumentId` é 1:1). O unique é o
-          // que barra o segundo clique antes de qualquer outra parcela nascer.
+          // Parcelada pelas duplicatas, esta é a primeira parcela.
           amount: parcelas ? decimalDeCentavos(parcelas[0]!.centavos) : valorDaConta,
           description: descricao,
           // Emissão e número são os da nota (19/10) — e por isso travados na edição.
           issueDate: doc.issuedAt,
           documentNumber: numeroDoDocumento,
+          // O vínculo com a nota (1:N desde 23/10: todas as parcelas o têm). A
+          // posição 1 é a guarda do segundo clique: o unique de
+          // (fiscalDocumentId, fiscalDocumentInstallment) barra o outro
+          // "lançar" aqui, antes de qualquer outra parcela nascer — a
+          // transação concorrente espera esta terminar e cai no duplicado.
           fiscalDocumentId: doc.id,
+          fiscalDocumentInstallment: 1,
           createdById: ctx.userId,
           ...(serie ? { ...serie, recurrenceIndex: 1 } : {}),
         },
@@ -238,7 +274,9 @@ export async function lancarDocumento(
         });
         // As outras parcelas: a mesma conta, com o vencimento e o valor da
         // duplicata, e a competência da compra em todas (`parcelamento.ts`).
-        // Emissão e número da nota vão junto — a parcela é do mesmo documento.
+        // Emissão e número da nota vão junto, e o vínculo também (1:N, 23/10):
+        // a parcela é do mesmo documento — trava na edição, não se cancela
+        // sozinha e sai no estorno da nota, como a 1ª.
         await tx.financeEntry.createMany({
           data: parcelas.slice(1).map((p, i) => ({
             id: idsDasProximas[i]!,
@@ -256,6 +294,8 @@ export async function lancarDocumento(
             description: descricao,
             issueDate: doc.issuedAt,
             documentNumber: numeroDoDocumento,
+            fiscalDocumentId: doc.id,
+            fiscalDocumentInstallment: p.indice,
             createdById: ctx.userId,
             ...serie,
             recurrenceIndex: p.indice,
@@ -345,9 +385,9 @@ export async function lancarDocumento(
     return { ok: true, entryId: entry.id };
   } catch (e) {
     if (e instanceof RecusaDaRetencao) return { error: e.message };
-    // O unique de `fiscalDocumentId` é a garantia real contra duplicar valor:
-    // dois cliques simultâneos passam pela checagem em aplicação e só um
-    // sobrevive aqui.
+    // O unique de (`fiscalDocumentId`, `fiscalDocumentInstallment`) é a
+    // garantia real contra duplicar valor: dois cliques simultâneos passam pela
+    // checagem em aplicação e só um sobrevive aqui — o outro bate na posição 1.
     return { error: "Este documento já virou lançamento." };
   }
 }
@@ -369,66 +409,69 @@ export async function estornarLancamento(documentoId: string): Promise<{ error: 
 
   const prisma = getPrisma();
   const doc = await obterDocumento(alcanceDaEquipe(ctx.tenantId), documentoId);
-  if (!doc?.financeEntry) return { error: "Este documento não tem lançamento." };
-  if (doc.financeEntry.status === "PAGO") {
-    // Estornar algo já pago é problema de baixa bancária, não de acervo fiscal.
-    // Apagar aqui esconderia um pagamento que saiu da conta.
-    return { error: "O lançamento já foi pago. O estorno tem de ser feito no financeiro, com a baixa." };
-  }
-  if (doc.financeEntry.closeReason === "RENEGOCIADO" || doc.financeEntry.closeReason === "PERDA") {
-    // Apagar o título apagaria junto a receita que a DRE econômica mantém e o
-    // vínculo com o acordo (ou a decisão de perda). Desfaça na cobrança antes.
+  if (!doc) return { error: "Este documento não tem lançamento." };
+
+  // Todas as contas da nota (1:N desde 23/10): a conta única, ou as parcelas
+  // que nasceram das duplicatas. Lidas de novo, com o que o estorno precisa
+  // conferir — a ficha não traz baixa nem acordo. A conta que nasceu parcelada
+  // estorna inteira: as parcelas são a mesma nota, e deixar a 2ª e a 3ª sem a
+  // 1ª seria lançar parte de uma compra (ou venda) que voltou para pendente.
+  const contas = await prisma.financeEntry.findMany({
+    where: { tenantId: ctx.tenantId, fiscalDocumentId: doc.id },
+    select: {
+      id: true,
+      status: true,
+      paidPrincipal: true,
+      closeReason: true,
+      agreementId: true,
+      recurrenceId: true,
+      fiscalDocumentInstallment: true,
+    },
+    orderBy: { fiscalDocumentInstallment: "asc" },
+  });
+  if (contas.length === 0) return { error: "Este documento não tem lançamento." };
+
+  // A mesma regra para cada uma — com baixa (inteira ou parcial), renegociada
+  // ou perdida, o estorno para, e nada é apagado.
+  const parcelada = contas.length > 1;
+  for (const c of contas) {
+    const motivo = motivoQueBarraOEstorno(c);
+    if (!motivo) continue;
     return {
-      error:
-        doc.financeEntry.closeReason === "RENEGOCIADO"
-          ? "O título foi renegociado num acordo de cobrança. Desfaça o acordo antes de estornar."
-          : "O título foi baixado por perda na cobrança. Reverta a perda antes de estornar.",
+      error: parcelada
+        ? `A parcela ${c.fiscalDocumentInstallment} desta nota ${motivo.parcela} Desfaça no financeiro antes de estornar.`
+        : motivo.conta,
     };
   }
 
-  const entryId = doc.financeEntry.id;
-
-  // A conta que nasceu parcelada pelas duplicatas (23/10) estorna inteira: as
-  // parcelas são a mesma nota, e deixar a 2ª e a 3ª sem a 1ª seria lançar parte
-  // de uma compra que voltou para pendente. A mesma regra da 1ª vale para cada
-  // uma — com baixa (inteira ou parcial) ou renegociada, o estorno para.
-  const serieId = doc.financeEntry.recurrenceId;
-  const outrasParcelas = serieId
-    ? await prisma.financeEntry.findMany({
-        where: { tenantId: ctx.tenantId, companyId: doc.companyId, recurrenceId: serieId, id: { not: entryId } },
-        select: { id: true, status: true, paidPrincipal: true, closeReason: true, agreementId: true, recurrenceIndex: true },
-      })
-    : [];
-  const presa = outrasParcelas.find(
-    (p) =>
-      p.status === "PAGO" ||
-      Number(p.paidPrincipal.toString()) > 0 ||
-      p.closeReason === "RENEGOCIADO" ||
-      p.closeReason === "PERDA" ||
-      p.agreementId !== null
-  );
-  if (presa) {
-    return {
-      error: `A parcela ${presa.recurrenceIndex ?? "?"} desta nota já tem baixa ou foi renegociada. Desfaça no financeiro antes de estornar.`,
-    };
-  }
-  const idsDoEstorno = [entryId, ...outrasParcelas.map((p) => p.id)];
+  const ids = contas.map((c) => c.id);
+  const series = [...new Set(contas.flatMap((c) => (c.recurrenceId ? [c.recurrenceId] : [])))];
 
   try {
     await prisma.$transaction(async (tx) => {
       // As contas dos impostos retidos (lote D, 20/10) ficam canceladas, como
       // histórico; a que já tem baixa barra o estorno.
-      await cancelarContasDosImpostos(tx, ctx.tenantId, idsDoEstorno);
-      if (outrasParcelas.length > 0) {
-        // Condicionado ao estado lido: a baixa que chegou entre a leitura e
-        // aqui não é apagada por baixo — a contagem não fecha e nada muda.
-        const apagadas = await tx.financeEntry.deleteMany({
-          where: { id: { in: outrasParcelas.map((p) => p.id) }, tenantId: ctx.tenantId, paidPrincipal: 0, payments: { none: {} } },
-        });
-        if (apagadas.count !== outrasParcelas.length) throw new ParcelaMudou("Uma parcela desta nota acabou de mudar — atualize a tela.");
+      await cancelarContasDosImpostos(tx, ctx.tenantId, ids);
+      // Condicionado ao estado lido: a baixa ou o acordo que chegou entre a
+      // leitura e aqui não é apagado por baixo — a contagem não fecha e a
+      // transação inteira desfaz.
+      const apagadas = await tx.financeEntry.deleteMany({
+        where: {
+          id: { in: ids },
+          tenantId: ctx.tenantId,
+          fiscalDocumentId: doc.id,
+          status: { not: "PAGO" },
+          paidPrincipal: 0,
+          agreementId: null,
+          payments: { none: {} },
+        },
+      });
+      if (apagadas.count !== ids.length) {
+        throw new ParcelaMudou(
+          parcelada ? "Uma parcela desta nota acabou de mudar — atualize a tela." : "O lançamento acabou de mudar — atualize a tela."
+        );
       }
-      await tx.financeEntry.delete({ where: { id: entryId } });
-      if (serieId) await tx.financeRecurrence.deleteMany({ where: { id: serieId, tenantId: ctx.tenantId } });
+      if (series.length > 0) await tx.financeRecurrence.deleteMany({ where: { id: { in: series }, tenantId: ctx.tenantId } });
       await tx.fiscalDocument.update({ where: { id: doc.id }, data: { destination: "PENDENTE" } });
     });
   } catch (e) {
@@ -441,8 +484,8 @@ export async function estornarLancamento(documentoId: string): Promise<{ error: 
     userId: ctx.userId,
     action: "financeiro.entry.reversed",
     entityType: "FinanceEntry",
-    entityId: entryId,
-    metadata: { fiscalDocumentId: doc.id, ...(outrasParcelas.length > 0 ? { parcelas: idsDoEstorno.length, serie: serieId } : {}) },
+    entityId: ids[0]!,
+    metadata: { fiscalDocumentId: doc.id, ...(parcelada ? { parcelas: ids.length, serie: series[0] ?? null } : {}) },
   });
 
   revalidatePath("/documentos-fiscais");
