@@ -1,0 +1,28 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/fechamento/alugueis-imoveis/informar?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "fornecedor": "FORNECEDOR TESTE ESCRITAS",
+      "aprovado_fora_da_regra": "S"
+    }
+  },
+  "resposta": {
+    "status": 422,
+    "corpo": {
+      "erro": "para aprovar fora da regra, escreva a tratativa -- o que foi combinado e o que falta buscar depois",
+      "codigo": "parametro_invalido",
+      "campos": {
+        "tratativa": "para aprovar fora da regra, escreva a tratativa -- o que foi combinado e o que falta buscar depois"
+      }
+    },
+    "x_custo": "leve"
+  }
+}

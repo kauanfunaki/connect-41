@@ -1,0 +1,33 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/conferencia/documentos?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "content_type": "multipart/form-data",
+    "cabecalhos": {
+      "Idempotency-Key": "c41:c3bbd19d0f4248988c4c76f22b417de0"
+    },
+    "partes": [
+      {
+        "campo": "arquivo",
+        "nome": "vazio.csv",
+        "tamanho": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "conteudo": ""
+      }
+    ]
+  },
+  "resposta": {
+    "status": 422,
+    "corpo": {
+      "erro": "arquivo vazio",
+      "codigo": "arquivo_invalido"
+    },
+    "x_custo": "pesada"
+  }
+}

@@ -20,6 +20,7 @@ import { z } from "zod";
 import { ErroDoSped, extrairErro, type CorpoDeErro } from "./client";
 import type { TipoDeDecisao } from "@/lib/fiscal/motor/decisoes";
 import * as T from "./telasDoMotor";
+import * as E from "./escritasDoMotor";
 
 export type CredenciaisDoMotorV1 = { baseUrl: string; token: string; tokenEscrita: string | null };
 
@@ -123,6 +124,8 @@ const MENSAGENS: Record<string, string> = {
   raiz_invalida: "Raiz de CNPJ inválida.",
   nao_encontrado: "Registro não encontrado no motor SPED.",
   motor_ocupado: "O motor está ocupado com outra leitura pesada; tente em alguns segundos.",
+  tamanho_ausente: "O envio chegou ao motor sem o tamanho declarado. Tente de novo; se persistir, avise o responsável pela integração.",
+  multipart_invalido: "O motor SPED não conseguiu ler o envio do arquivo. Tente de novo.",
   tempo_esgotado_pesada: "O motor SPED não terminou esta leitura em um minuto. Tente de novo em instantes; se persistir, avise o responsável pelo motor.",
 };
 
@@ -140,6 +143,9 @@ const PADRAO: Record<string, string> = {
   obrigacao_incompativel: "Este arquivo é de outra obrigação: a leitura pedida não se aplica a ele.",
   uf_nao_suportada: "DCIP e DIME só existem para estabelecimento de Santa Catarina.",
   sem_arquivo: "Não há SPED gerado considerado para esta competência.",
+  cobertura_em_andamento: "Esta competência já está sendo apurada. Acompanhe o pedido na fila.",
+  pagamento_nao_aceitavel: "O motor não aceitou este pagamento: falta informação para o aceite.",
+  arquivo_invalido: "O motor SPED não conseguiu ler o arquivo enviado.",
 };
 
 /** O `Retry-After` em segundos, quando é um número (o motor não manda data). */
@@ -385,6 +391,12 @@ type Pedido = {
   custo?: "leve" | "pesada";
   /** Parâmetros que vão mesmo vazios, porque o vazio quer dizer algo. */
   vazios?: string[];
+  /**
+   * Envio de arquivo (§13.0.9): o corpo é este multipart, serializado aqui
+   * para mandar o `Content-Length` exato, que o motor exige e confere antes
+   * de ler. `teto` é o limite do corpo inteiro na rota do motor.
+   */
+  multipart?: { form: FormData; teto: number; mensagemDeTamanho: string };
 };
 
 const RETRY_LEITURA = new Set([502, 503, 504]);
@@ -420,18 +432,31 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
       } else if (pedido.exigeChave) {
         throw new ErroDoMotor(0, "idempotencia_ausente", MENSAGENS.idempotencia_ausente);
       }
-      if (pedido.corpo !== undefined) headers["Content-Type"] = "application/json";
+      if (pedido.corpo !== undefined && !pedido.multipart) headers["Content-Type"] = "application/json";
     } else {
       headers.Authorization = `Bearer ${creds.token}`;
     }
 
     const endereco = url(pedido.caminho, pedido.raiz, pedido.query, pedido.vazios);
-    const pesada = !escrita && pedido.custo === "pesada";
+    // `pesada` (§11.0.7 e §13.0.8), leitura ou escrita: 60 s e nenhuma nova
+    // tentativa automática, nem em 5xx — repetir dobraria a carga de quem já
+    // ocupa o motor, e `503 motor_ocupado` é a tela que oferece de novo.
+    const pesada = pedido.custo === "pesada";
     const timeout = pedido.timeoutMs ?? (pesada ? TIMEOUT_PESADA_MS : escrita ? TIMEOUT_ESCRITA_MS : TIMEOUT_LEITURA_MS);
-    // Leitura leve: uma nova tentativa. Pesada: nenhuma. Escrita: até duas, e
-    // só com a mesma chave — sem chave, repetir um POST poderia criar duas vezes.
-    const maxTentativas = escrita ? (pedido.escrita?.chave ? 3 : 1) : pesada ? 1 : 2;
-    const corpo = pedido.corpo === undefined ? undefined : JSON.stringify(pedido.corpo);
+    // Leitura leve: uma nova tentativa. Pesada: nenhuma. Escrita leve: até
+    // duas, e só com a mesma chave — sem chave, repetir um POST poderia criar duas vezes.
+    const maxTentativas = pesada ? 1 : escrita ? (pedido.escrita?.chave ? 3 : 1) : 2;
+    let corpo: string | Uint8Array<ArrayBuffer> | undefined = pedido.corpo === undefined ? undefined : JSON.stringify(pedido.corpo);
+    if (pedido.multipart) {
+      // O multipart como o `fetch` o montaria, mas em bytes: assim o
+      // `Content-Length` vai declarado e o teto é conferido antes de sair.
+      const serializado = new Response(pedido.multipart.form);
+      const bytes = new Uint8Array(await serializado.arrayBuffer());
+      if (bytes.byteLength > pedido.multipart.teto) throw new ErroDoMotor(0, "corpo_grande", pedido.multipart.mensagemDeTamanho);
+      headers["Content-Type"] = serializado.headers.get("Content-Type") ?? "multipart/form-data";
+      headers["Content-Length"] = String(bytes.byteLength);
+      corpo = bytes;
+    }
 
     for (let tentativa = 1; ; tentativa++) {
       const ultima = tentativa >= maxTentativas;
@@ -561,8 +586,58 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
       ler("/conferencia/documentos", raiz, T.documentosDaConferenciaSchema, { ...filtro, competencia: competenciaValida(filtro.competencia) }),
   };
 
+  /** Um envio de arquivo (§13.3, §13.10, §13.11): o multipart com os arquivos como vieram, sem converter. */
+  const enviar = <S extends z.ZodTypeAny>(destino: E.DestinoDeEnvio, raiz: string, arquivos: readonly File[], campos: Record<string, string>, escrita: Escrita, schema: S) => {
+    const regra = E.ENVIOS[destino];
+    const form = new FormData();
+    for (const [k, v] of Object.entries(campos)) if (v !== "") form.append(k, v);
+    for (const a of arquivos) form.append(regra.parte, a, a.name);
+    return json({ metodo: "POST", caminho: regra.caminho, raiz, escrita, exigeChave: true, custo: "pesada", multipart: { form, teto: regra.teto, mensagemDeTamanho: E.mensagemDeTamanho(destino) } }, schema);
+  };
+  const competenciaOpcional = (c: string | undefined): Record<string, string> => (c ? { competencia: competenciaValida(c) } : {});
+
+  /** As escritas das telas fiscais (§13). Todas com o ator; a chave vem do gesto do usuário. */
+  const escritas = {
+    // §13.1 — fila: vira a ação `cobertura`, 202 com a `Execucao`.
+    // `confirmar_duplicado` só vai quando é `true` (o padrão do motor é `false`).
+    apurarCobertura: (raiz: string, corpo: { empresa_id: number; competencia: string; confirmar_duplicado?: boolean }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/cobertura/apurar", raiz, corpo: { empresa_id: idDe(corpo.empresa_id), competencia: competenciaValida(corpo.competencia), ...(corpo.confirmar_duplicado ? { confirmar_duplicado: true } : {}) }, escrita, exigeChave: true }, execucaoMotorSchema),
+    // §13.2
+    resolverRejeitado: (raiz: string, id: number, corpo: { resolvido: boolean; observacao?: string }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: `/quarentena/${idDe(id)}/resolver`, raiz, corpo, escrita }, E.rejeitadoResolvidoSchema),
+    // §13.3 — pesada, até 25 MiB.
+    enviarDocumentos: (raiz: string, arquivos: readonly File[], escrita: Escrita) =>
+      enviar("documentos", raiz, arquivos, {}, escrita, E.envioDeDocumentosSchema),
+    // §13.4 e §13.5
+    decidirPagamento: (raiz: string, corpo: E.ChaveDoPagamento & { decisao: E.DecisaoDePagamento; motivo?: string }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/fechamento/pagamentos/decidir", raiz, corpo, escrita }, E.pagamentoGravadoSchema),
+    corrigirPagamento: (raiz: string, corpo: E.CorrecaoDePagamento, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/fechamento/pagamentos/corrigir", raiz, corpo, escrita }, E.pagamentoGravadoSchema),
+    // §13.6
+    informarContrato: (raiz: string, corpo: E.CorpoDoContrato, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/fechamento/alugueis-imoveis/informar", raiz, corpo, escrita }, E.contratoInformadoSchema),
+    // §13.7 — pesada, sem corpo.
+    apurarCteDoArquivo: (raiz: string, id: number, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: `/arquivos/${idDe(id)}/apurar-cte`, raiz, escrita, custo: "pesada" }, E.cteApuradoSchema),
+    // §13.8 — devolve a prévia inteira.
+    gravarSimulacao: (raiz: string, corpo: E.CorpoDaSimulacao, escrita: Escrita) =>
+      json({ metodo: "PUT", caminho: "/conferencia/simulacoes", raiz, corpo: { ...corpo, competencia: competenciaValida(corpo.competencia) }, escrita }, E.simulacaoGravadaSchema),
+    // §13.9 — pesada.
+    apurarCombustivel: (raiz: string, corpo: { empresa_id: number; competencia: string }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/conferencia/combustivel/apurar", raiz, corpo: { empresa_id: idDe(corpo.empresa_id), competencia: competenciaValida(corpo.competencia) }, escrita, custo: "pesada" }, E.combustivelApuradoSchema),
+    // §13.10 — pesada, até 20 MiB; a decisão é leve.
+    conferirRelatorioOmie: (raiz: string, arquivo: File, competencia: string | undefined, escrita: Escrita) =>
+      enviar("omie", raiz, [arquivo], competenciaOpcional(competencia), escrita, E.relatorioOmieConferidoSchema),
+    decidirDocumentoDaConferencia: (raiz: string, id: number, corpo: E.CorpoDaDecisaoDoDocumento, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: `/conferencia/documentos/${idDe(id)}/decidir`, raiz, corpo, escrita }, E.documentoDecididoSchema),
+    // §13.11 — pesada, .xlsx até 20 MiB.
+    confrontarPlanilha: (raiz: string, arquivo: File, competencia: string | undefined, escrita: Escrita) =>
+      enviar("confronto", raiz, [arquivo], competenciaOpcional(competencia), escrita, E.confrontoEnviadoSchema),
+  };
+
   return {
     ...telas,
+    ...escritas,
     // §3
     saude: (raiz: string) => json({ metodo: "GET", caminho: "/saude", raiz }, saudeSchema),
     listarEmpresas: (raiz: string, incluirInativas = true) =>
