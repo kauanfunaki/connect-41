@@ -3093,6 +3093,14 @@ model FiscalDocument {
   /// os números do XML não fecham, e na nota que chegou sem XML (o SPED só manda
   /// o índice) ou antes desta coluna — aí as retenções se informam na edição.
   retentionsByTax Json?
+  /// As duplicatas da NF-e (`<cobr><dup>`, 23/10/2026): [{ "numero": "001",
+  /// "vencimento": "2026-06-08", "valor": "333.34" }], o formato do motor — ver
+  /// src/lib/fiscal/duplicatas.ts. Vêm do XML no upload e do campo `duplicatas`
+  /// do índice do SPED. É o que faz a conta a pagar da nota de compra nascer
+  /// parcelada (src/lib/financeiro/parcelasDaNota.ts). `[]` é nota lida e sem
+  /// cobrança; nulo é "a nota não disse" — NFS-e, CT-e, linha parcial do SPED ou
+  /// nota anterior à coluna —, e a conta nasce como sempre.
+  installments    Json?
   issuedAt        DateTime
 
   /// Competência "AAAA-MM" — string e não data, porque é agrupador de mês e não

@@ -14,6 +14,7 @@
 // número da nota.
 
 import { XMLParser } from "fast-xml-parser";
+import { centavosDaDuplicata, duplicatasParaGravar, type DuplicataDaNota } from "./duplicatas";
 
 export type TipoDocumentoFiscal = "NFE" | "NFCE" | "CTE" | "NFSE";
 
@@ -99,6 +100,14 @@ export type DocumentoFiscalExtraido = {
    * na fila de lançamento.
    */
   cancelada: boolean;
+  /**
+   * As duplicatas da NF-e/NFC-e (`<cobr><dup>`, 23/10/2026), no formato do
+   * motor — ver src/lib/fiscal/duplicatas.ts. `[]` é nota sem cobrança; `null`
+   * é duplicata ilegível (tudo ou nada) e, em CT-e e NFS-e, "não se aplica".
+   * Sem `<dup>` e com o `<pag>` todo à vista, uma duplicata vencendo na
+   * emissão — a mesma regra do motor, para as duas origens concordarem.
+   */
+  duplicatas?: DuplicataDaNota[] | null;
 };
 
 export type MotivoRecusa =
@@ -224,6 +233,50 @@ function parte(no: unknown): ParteDoDocumento {
  * `dEmi` (só data) antes disso; CT-e usa `dhEmi`. Data inválida é recusa, não
  * "hoje": documento fiscal sem data é documento que não dá para competenciar.
  */
+/** Todos os filhos com este nome — o `filho` pega só o primeiro. */
+function filhos(no: unknown, nome: string): unknown[] {
+  if (!ehObjeto(no)) return [];
+  const v = no[nome];
+  return v === undefined ? [] : Array.isArray(v) ? v : [v];
+}
+
+/**
+ * `<cobr><dup>` da NF-e; sem ele, o `<pag>` à vista. Ver `duplicatas` no tipo.
+ *
+ * O `<pag>` não é cobrança, é informação complementar: valor ruim ali não
+ * invalida nada, só não vira duplicata. A data do à vista é a da emissão como
+ * está escrita no XML (os dez primeiros caracteres do `dhEmi`), e não o
+ * instante convertido, que em UTC pode cair no dia seguinte.
+ */
+function duplicatasDaNfe(inf: unknown, ide: unknown): DuplicataDaNota[] | null {
+  const dups = filhos(filho(inf, "cobr"), "dup");
+  if (dups.length > 0) {
+    return duplicatasParaGravar(
+      dups.map((d) => ({ numero: texto(filho(d, "nDup")), vencimento: texto(filho(d, "dVenc")), valor: texto(filho(d, "vDup")) }))
+    ) ?? null;
+  }
+  const pag = filho(inf, "pag");
+  const formas = filhos(pag, "detPag");
+  if (formas.length === 0) return [];
+  let centavos = 0;
+  for (const f of formas) {
+    if (texto(filho(f, "indPag")) !== "0" || texto(filho(f, "tPag")) === "90") return [];
+    const c = centavosDaDuplicata(texto(filho(f, "vPag")));
+    if (c === null) return [];
+    centavos += c;
+  }
+  const troco = texto(filho(pag, "vTroco"));
+  if (troco) {
+    const c = centavosDaDuplicata(troco);
+    if (c === null) return [];
+    centavos -= c;
+  }
+  if (centavos <= 0) return [];
+  const emissao = (texto(filho(ide, "dhEmi")) ?? texto(filho(ide, "dEmi")) ?? "").slice(0, 10);
+  const valor = `${Math.trunc(centavos / 100)}.${String(centavos % 100).padStart(2, "0")}`;
+  return duplicatasParaGravar([{ numero: null, vencimento: emissao, valor }]) ?? [];
+}
+
 function dataDeEmissao(ide: unknown): Date | null {
   const bruto = texto(filho(ide, "dhEmi")) ?? texto(filho(ide, "dEmi"));
   if (!bruto) return null;
@@ -617,6 +670,7 @@ function lerNfe(nfe: unknown): ResultadoLeitura {
       // nota — por isso é sempre falso aqui, nunca "não sei".
       competenciaDeclarada: null,
       cancelada: false,
+      duplicatas: duplicatasDaNfe(inf, ide),
     },
   };
 }

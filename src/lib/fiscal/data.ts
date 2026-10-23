@@ -200,6 +200,10 @@ export async function obterDocumento(alcance: AlcanceFiscal, id: string) {
           closeReason: true,
           dueDate: true,
           amount: true,
+          // A série, quando a conta nasceu parcelada pelas duplicatas da nota
+          // (23/10): a ficha diz "1ª de 3", e o estorno leva as parcelas juntas.
+          recurrenceId: true,
+          recurrenceTotal: true,
           category: { select: { name: true } },
           counterparty: { select: { name: true } },
           costCenter: { select: { name: true } },
