@@ -1,0 +1,65 @@
+{
+  "status": 200,
+  "corpo": {
+    "competencia": "2032-03",
+    "linhas": [
+      {
+        "grupo": "saida",
+        "rotulo": "CT-e (transporte)",
+        "documentos": 3,
+        "valor": null,
+        "origem": "somado do SPED gerado — 0 de 1 arquivos apurados",
+        "apurar": true,
+        "pendentes": [
+          58
+        ]
+      },
+      {
+        "grupo": "entrada_com_nota",
+        "rotulo": "NF-e (entrada)",
+        "documentos": 1,
+        "valor": "1000.00",
+        "origem": "índice de documentos",
+        "apurar": false,
+        "pendentes": []
+      },
+      {
+        "grupo": "entrada_com_nota",
+        "rotulo": "NFS-e (entrada)",
+        "documentos": 1,
+        "valor": "300.00",
+        "origem": "índice de documentos",
+        "apurar": false,
+        "pendentes": []
+      },
+      {
+        "grupo": "entrada_sem_nota",
+        "rotulo": "Contrato de motorista",
+        "documentos": 1,
+        "valor": "2000.00",
+        "origem": "leitura do PDF (valor bruto)",
+        "apurar": false,
+        "pendentes": []
+      },
+      {
+        "grupo": "entrada_sem_nota",
+        "rotulo": "RPA",
+        "documentos": 2,
+        "valor": "200.00",
+        "origem": "leitura do PDF (valor bruto)",
+        "apurar": false,
+        "pendentes": []
+      }
+    ],
+    "totais": {
+      "saidas": "0.00",
+      "entradas_com_nota": "1300.00",
+      "entradas_sem_nota": "2200.00",
+      "entradas": "3500.00",
+      "saidas_menos_entradas": "-3500.00",
+      "incompletas": 1,
+      "arquivos_a_apurar": 1
+    }
+  },
+  "x_custo": "leve"
+}

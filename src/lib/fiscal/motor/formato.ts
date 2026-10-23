@@ -39,3 +39,15 @@ export function duracao(inicio: string | null, fim: string | null, agora = Date.
   const texto = s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min` : s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`;
   return fim ? texto : `${texto} em andamento`;
 }
+
+/** Alíquota ou percentual do motor ("9.2500") — só para exibir; `null` é "—". */
+export function percentualDoMotor(valor: string | null | undefined): string {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  const n = Number(valor);
+  return Number.isFinite(n) ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(n)}%` : valor;
+}
+
+/** Contagem do motor; `null` (não levantado) é "—", nunca 0. */
+export function contagemDoMotor(valor: number | null | undefined): string {
+  return valor === null || valor === undefined ? "—" : new Intl.NumberFormat("pt-BR").format(valor);
+}

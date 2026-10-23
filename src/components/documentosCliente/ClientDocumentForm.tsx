@@ -39,14 +39,21 @@ type Props = {
     /** O agendamento gravado: data/hora de Brasília e os e-mails (22/10/2026). */
     agendamento?: { data: string; hora: string; emails: string[] } | null;
   };
+  /**
+   * O lembrete padrão do escritório (23/10/2026), que o envio novo já traz
+   * escolhido — Administração › Portal do cliente › Envios. Na edição vale o
+   * do próprio envio (`defaultValues.reminderDays`).
+   */
+  lembretePadrao?: number | null;
 };
 
-export function ClientDocumentForm({ action, companyId, empresas, documentId, cancelHref, defaultValues }: Props) {
+export function ClientDocumentForm({ action, companyId, empresas, documentId, cancelHref, defaultValues, lembretePadrao = null }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   // A empresa do envio, para o "Guardar também em Arquivos" buscar as pastas dela.
   const [empresaId, setEmpresaId] = useState<string | null>(companyId ?? null);
   const agendamento = defaultValues?.agendamento ?? null;
   const [agendar, setAgendar] = useState(!!agendamento);
+  const lembreteInicial = defaultValues ? (defaultValues.reminderDays ?? null) : lembretePadrao;
 
   return (
     <form action={formAction} className="space-y-5">
@@ -107,7 +114,7 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
           htmlFor="reminderDays"
           helper="Se ninguém do cliente abrir o documento no prazo, sai um lembrete (e-mail a quem recebeu e aviso no portal). Um só por envio."
         >
-          <Select id="reminderDays" name="reminderDays" defaultValue={defaultValues?.reminderDays ? String(defaultValues.reminderDays) : ""}>
+          <Select id="reminderDays" name="reminderDays" defaultValue={lembreteInicial ? String(lembreteInicial) : ""}>
             {OPCOES_DO_LEMBRETE.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}

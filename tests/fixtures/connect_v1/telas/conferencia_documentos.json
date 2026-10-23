@@ -1,0 +1,109 @@
+{
+  "status": 200,
+  "corpo": {
+    "itens": [
+      {
+        "id": 16,
+        "arquivo": "TESTE-TELAS-omie.xlsx",
+        "competencia": "2032-03",
+        "linha_num": 1,
+        "numero": "1",
+        "fornecedor": "FORNECEDOR OMIE 1",
+        "data_documento": "",
+        "valor": "900.00",
+        "situacao": "sem_documento",
+        "chave": "",
+        "nome_emit": "",
+        "cnpj_emit": "",
+        "valor_nota": null,
+        "evidencia": "",
+        "decisao": "",
+        "decidido_por": "",
+        "observacao": "",
+        "decidido_em": null
+      },
+      {
+        "id": 17,
+        "arquivo": "TESTE-TELAS-omie.xlsx",
+        "competencia": "2032-03",
+        "linha_num": 2,
+        "numero": "2",
+        "fornecedor": "FORNECEDOR OMIE 2",
+        "data_documento": "",
+        "valor": "800.00",
+        "situacao": "divergencia",
+        "chave": "",
+        "nome_emit": "",
+        "cnpj_emit": "",
+        "valor_nota": null,
+        "evidencia": "",
+        "decisao": "",
+        "decidido_por": "",
+        "observacao": "",
+        "decidido_em": null
+      },
+      {
+        "id": 18,
+        "arquivo": "TESTE-TELAS-omie.xlsx",
+        "competencia": "2032-03",
+        "linha_num": 3,
+        "numero": "3",
+        "fornecedor": "FORNECEDOR OMIE 3",
+        "data_documento": "",
+        "valor": "700.00",
+        "situacao": "ok",
+        "chave": "",
+        "nome_emit": "",
+        "cnpj_emit": "",
+        "valor_nota": null,
+        "evidencia": "",
+        "decisao": "",
+        "decidido_por": "",
+        "observacao": "",
+        "decidido_em": null
+      }
+    ],
+    "proximo_cursor": null,
+    "resumo": {
+      "por_situacao": {
+        "divergencia": {
+          "documentos": 1,
+          "valor": "800.00"
+        },
+        "ok": {
+          "documentos": 1,
+          "valor": "700.00"
+        },
+        "sem_documento": {
+          "documentos": 1,
+          "valor": "900.00"
+        }
+      },
+      "por_decisao": {
+        "(sem decisão)": 3
+      },
+      "arquivos": [
+        {
+          "arquivo": "TESTE-TELAS-omie.xlsx",
+          "conferido_em": "2026-10-23T12:51:31+00:00"
+        }
+      ],
+      "total": 3,
+      "no_banco": 1,
+      "a_conferir": 2,
+      "sem_decisao": 3
+    },
+    "rotulos": {
+      "ok": "no banco",
+      "ok_item": "no banco (o relatório traz um item da nota)",
+      "divergencia": "fornecedor confere, valor não",
+      "sem_documento": "sem documento na base"
+    },
+    "decisoes": [
+      "aceito",
+      "corrigido",
+      "pendente"
+    ]
+  },
+  "x_custo": "leve"
+}

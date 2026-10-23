@@ -22,7 +22,7 @@ import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { direcaoDoLancamento, precisaDeEstorno } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { nomeExibicao } from "@/lib/companyName";
-import { formatCalendarDate, formatInstantDate, formatCnpj, formatCpf, formatarReais, formatarCompetencia } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatCnpj, formatCpf, formatarReais, formatarCompetencia, formatarReaisDeCentavos } from "@/lib/format";
 import {
   TIPO_LABEL,
   ORIGEM_LABEL,
@@ -36,6 +36,7 @@ import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { resumoDasRetencoes, retencoesDaNota } from "@/lib/financeiro/retencoes";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { Aviso } from "@/components/ui/Aviso";
+import { planoDaNota } from "@/lib/financeiro/parcelasDaNota";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -72,6 +73,10 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
     destinatarioDocumento: doc.recipientDocument,
   });
   const estorno = precisaDeEstorno({ situacao: doc.situation, destino: doc.destination });
+  // As contas da nota (1:N desde 23/10): a única, ou as parcelas das
+  // duplicatas, na ordem da nota. A ficha mostra a 1ª e lista as outras.
+  const contasDaNota = doc.financeEntries;
+  const primeiraConta = contasDaNota[0] ?? null;
 
   // O veredito é calculado aqui, no servidor, e não no componente: a mesma
   // função que a action usa para recusar é a que a tela usa para explicar. Duas
@@ -80,7 +85,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
     situacao: doc.situation,
     destino: doc.destination,
     removidoNaOrigem: doc.removedAtOrigin,
-    jaTemLancamento: doc.financeEntry !== null,
+    jaTemLancamento: primeiraConta !== null,
     valor: doc.amount === null ? null : String(doc.amount),
     direcao,
   });
@@ -94,14 +99,43 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
   });
 
   const categorias =
-    veredito.pode && !doc.financeEntry
+    veredito.pode && !primeiraConta
       ? await getPrisma().financeCategory.findMany({
           where: ondeDaEmpresa(ctx.tenantId, doc.companyId, { kind: direcao === "RECEBER" ? "RECEBER" : "PAGAR" }),
           orderBy: { name: "asc" },
           select: { id: true, name: true },
         })
       : [];
-  const centros = veredito.pode && !doc.financeEntry ? await centrosAtivosDaEmpresa(ctx.tenantId, doc.companyId) : [];
+  const centros = veredito.pode && !primeiraConta ? await centrosAtivosDaEmpresa(ctx.tenantId, doc.companyId) : [];
+
+  // As duplicatas da nota (23/10): a mesma função que a action usa para
+  // parcelar monta a prévia — a tela mostra exatamente as contas que nascem.
+  const planoDasDuplicatas =
+    veredito.pode && !primeiraConta
+      ? planoDaNota({
+          duplicatas: doc.installments,
+          totalCentavos: (doc.netAmount ?? doc.amount) === null ? null : centavosDeDecimal((doc.netAmount ?? doc.amount)!),
+          kind: veredito.kind,
+          // A nota que retém nasce inteira, na compra e na venda (23/10).
+          comRetencoes: retidoPorTributo !== null,
+        })
+      : null;
+  const duplicatas =
+    planoDasDuplicatas?.tipo === "PARCELAS"
+      ? {
+          tipo: "PARCELAS" as const,
+          parcelas: planoDasDuplicatas.parcelas.map((p) => ({
+            indice: p.indice,
+            numero: p.numero,
+            vencimentoLabel: formatCalendarDate(new Date(`${p.vencimentoKey}T00:00:00Z`)),
+            valorLabel: formatarReaisDeCentavos(p.centavos),
+          })),
+        }
+      : planoDasDuplicatas?.tipo === "VENCIMENTO"
+        ? { tipo: "VENCIMENTO" as const, numero: planoDasDuplicatas.numero }
+        : planoDasDuplicatas?.tipo === "RECUSADO"
+          ? { tipo: "RECUSADO" as const, motivo: planoDasDuplicatas.motivo }
+          : null;
 
   const titulo = `${TIPO_LABEL[doc.type]} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`;
 
@@ -222,19 +256,35 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
         podeDecidir={canManageSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)}
         categorias={categorias}
         centros={centros}
-        vencimentoPresumidoIso={vencimentoPresumido(doc.issuedAt).toISOString().slice(0, 10)}
-        impedimento={veredito.pode || doc.financeEntry ? null : veredito.explicacao}
+        vencimentoPresumidoIso={
+          planoDasDuplicatas?.tipo === "VENCIMENTO"
+            ? planoDasDuplicatas.vencimentoKey
+            : vencimentoPresumido(doc.issuedAt).toISOString().slice(0, 10)
+        }
+        duplicatas={duplicatas}
+        impedimento={veredito.pode || primeiraConta ? null : veredito.explicacao}
         lancamento={
-          doc.financeEntry
+          primeiraConta
             ? {
-                id: doc.financeEntry.id,
-                kind: doc.financeEntry.kind,
-                status: doc.financeEntry.status,
-                dueDateLabel: formatCalendarDate(doc.financeEntry.dueDate),
-                amountLabel: formatarReais(Number(doc.financeEntry.amount)),
-                categoria: doc.financeEntry.category?.name ?? null,
-                contraparte: doc.financeEntry.counterparty.name,
-                centroDeCusto: doc.financeEntry.costCenter?.name ?? null,
+                id: primeiraConta.id,
+                kind: primeiraConta.kind,
+                status: primeiraConta.status,
+                dueDateLabel: formatCalendarDate(primeiraConta.dueDate),
+                amountLabel: formatarReais(Number(primeiraConta.amount)),
+                categoria: primeiraConta.category?.name ?? null,
+                contraparte: primeiraConta.counterparty.name,
+                centroDeCusto: primeiraConta.costCenter?.name ?? null,
+                parcelas: contasDaNota.length > 1 ? contasDaNota.length : null,
+                parcelasLancadas:
+                  contasDaNota.length > 1
+                    ? contasDaNota.map((c) => ({
+                        id: c.id,
+                        indice: c.fiscalDocumentInstallment,
+                        status: c.status,
+                        vencimentoLabel: formatCalendarDate(c.dueDate),
+                        valorLabel: formatarReais(Number(c.amount)),
+                      }))
+                    : null,
               }
             : null
         }
@@ -253,7 +303,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           cnpj: e.cnpj,
           matrizId: e.parentCompanyId,
         }))}
-        bloqueado={doc.financeEntry !== null}
+        bloqueado={primeiraConta !== null}
         editadoEm={doc.editedAt ? formatInstantDate(doc.editedAt) : null}
         valores={{
           companyId: doc.companyId,

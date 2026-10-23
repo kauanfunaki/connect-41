@@ -1,0 +1,29 @@
+{
+  "status": 200,
+  "corpo": {
+    "itens": [
+      {
+        "competencia": "2032-02",
+        "saldo_credor_ant": "0.00",
+        "debitos": "0.00",
+        "creditos": "0.00",
+        "saldo_apurado": "0.00",
+        "saldo_a_transportar": "500.00",
+        "origem": "gerador",
+        "atualizado_em": "2026-10-23T12:51:31+00:00"
+      },
+      {
+        "competencia": "2032-03",
+        "saldo_credor_ant": "500.00",
+        "debitos": "1320.00",
+        "creditos": "450.00",
+        "saldo_apurado": "370.00",
+        "saldo_a_transportar": "10.00",
+        "origem": "gerador",
+        "atualizado_em": "2026-10-23T12:51:31+00:00"
+      }
+    ],
+    "proximo_cursor": null
+  },
+  "x_custo": "leve"
+}

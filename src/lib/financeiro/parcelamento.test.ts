@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { dividirEmParcelas, lerParcelas, propostaDeParcelas, somaDasParcelas, vencimentosDasParcelas, MAXIMO_DE_PARCELAS } from "./parcelamento";
+import {
+  competenciaDaParcela,
+  dividirEmParcelas,
+  lerCompetenciaDasParcelas,
+  lerParcelas,
+  propostaDeParcelas,
+  somaDasParcelas,
+  vencimentosDasParcelas,
+  MAXIMO_DE_PARCELAS,
+} from "./parcelamento";
 
 // O parcelamento (22/10/2026): um total dividido em parcelas, com os centavos
 // que sobram numa parcela só, um vencimento por mês no ajuste da repetição, e
@@ -109,5 +118,28 @@ describe("lerParcelas", () => {
     expect(lerParcelas(json(muitas), muitas.length)).toMatchObject({ ok: false });
     expect(lerParcelas("{", 1)).toMatchObject({ ok: false });
     expect(lerParcelas(json({ a: 1 }), 1)).toMatchObject({ ok: false });
+  });
+});
+
+// A competência das parcelas (23/10/2026): a da compra, em todas, ou o mês
+// do vencimento de cada uma.
+describe("competência das parcelas", () => {
+  it("ausente ou vazio é a da compra (o formulário de antes não mandava); o resto é recusado", () => {
+    expect(lerCompetenciaDasParcelas(undefined)).toBe("COMPRA");
+    expect(lerCompetenciaDasParcelas(null)).toBe("COMPRA");
+    expect(lerCompetenciaDasParcelas("")).toBe("COMPRA");
+    expect(lerCompetenciaDasParcelas("COMPRA")).toBe("COMPRA");
+    expect(lerCompetenciaDasParcelas("VENCIMENTO")).toBe("VENCIMENTO");
+    expect(lerCompetenciaDasParcelas("vencimento")).toBeNull();
+    expect(lerCompetenciaDasParcelas("2026-10")).toBeNull();
+  });
+
+  it("da compra: a digitada, em todas; do vencimento: o mês de cada uma, virando o ano", () => {
+    const proposta = propostaDeParcelas({ totalCentavos: 100000, parcelas: 4, primeiroVencimentoKey: "2026-10-15" });
+    expect(proposta.map((p) => competenciaDaParcela(p, "2026-09", "COMPRA"))).toEqual(["2026-09", "2026-09", "2026-09", "2026-09"]);
+    expect(proposta.map((p) => competenciaDaParcela(p, "2026-09", "VENCIMENTO"))).toEqual(
+      proposta.map((p) => p.vencimentoKey.slice(0, 7))
+    );
+    expect(proposta.map((p) => competenciaDaParcela(p, "2026-09", "VENCIMENTO"))).toEqual(["2026-10", "2026-11", "2026-12", "2027-01"]);
   });
 });

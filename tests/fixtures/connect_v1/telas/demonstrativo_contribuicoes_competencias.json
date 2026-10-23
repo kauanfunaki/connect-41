@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "corpo": {
+    "competencias": [
+      "2032-03"
+    ],
+    "anos": [
+      "2032"
+    ]
+  },
+  "x_custo": "leve"
+}

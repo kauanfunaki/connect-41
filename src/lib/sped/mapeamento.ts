@@ -6,6 +6,7 @@
 
 import type { DocumentoDoSped } from "./client";
 import { chaveDeDeduplicacao, type TipoDocumento } from "@/lib/fiscal/documentos";
+import { duplicatasParaGravar, type DuplicataDaNota } from "@/lib/fiscal/duplicatas";
 
 export type TipoNoAcervo = TipoDocumento;
 
@@ -54,6 +55,12 @@ export type LinhaMapeada = {
   renderizavel: boolean;
   spedTipo: string;
   spedIdentificador: string;
+  /**
+   * As duplicatas conferidas, para a coluna `installments`. `undefined` e
+   * `null` não se gravam — "não sei" não apaga o que já se sabia. Ver
+   * `duplicatasParaGravar`.
+   */
+  duplicatas: DuplicataDaNota[] | null | undefined;
 };
 
 export type FalhaDeMapeamento = { motivo: "sem_identidade" | "data_invalida" | "sem_emitente"; detalhe: string };
@@ -111,6 +118,7 @@ export function mapearDocumento(doc: DocumentoDoSped): LinhaMapeada | FalhaDeMap
     renderizavel: doc.renderizavel !== false,
     spedTipo: doc.tipo,
     spedIdentificador: doc.identificador,
+    duplicatas: duplicatasParaGravar(doc.duplicatas),
   };
 }
 
