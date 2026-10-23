@@ -27,7 +27,8 @@ export function FiltroDoMotor({ raizes, raiz, estabelecimentos, estabelecimentoI
   const trocar = (mudanca: Record<string, string | null>) => {
     const q = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(mudanca)) { if (v) q.set(k, v); else q.delete(k); }
-    for (const k of ["cursor", "pagina", "execucao", "arquivo"]) q.delete(k);
+    // O item aberto e o clique numa linha (CFOP, importação) são do recorte anterior.
+    for (const k of ["cursor", "pagina", "execucao", "arquivo", "importacao", "grupo", "cfop", "cst", "aliquota"]) q.delete(k);
     // Os cursores das listas de decisão (`c_<tipo>`) carregam o filtro também.
     for (const k of [...q.keys()]) if (k.startsWith("c_")) q.delete(k);
     router.push(`${pathname}?${q.toString()}`);
