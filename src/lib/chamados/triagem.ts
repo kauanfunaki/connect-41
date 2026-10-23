@@ -1,4 +1,5 @@
-import { gerarEstruturado, type AnexoEstruturado } from "@/lib/ai";
+import { type AnexoEstruturado } from "@/lib/ai";
+import { gerarComFallback } from "./ia-fallback";
 import { hit } from "@/lib/rateLimit";
 import { parecerSchema, indisponivel, type Parecer, type DadosDoChamado, type Categoria } from "./regras";
 import { anexosDoChamado } from "./armazenamento";
@@ -53,7 +54,7 @@ export async function analisar(c: { tenantId: string; userId: string; draftId: s
     // Provedor é o do escritório (22/10/2026): OpenAI ou Anthropic, com a mesma
     // saída estruturada, o mesmo teto e a mesma linha de auditoria da fundação.
     // O modelo sai da faixa `rapido` do catálogo, salvo override do escritório.
-    const { valor } = await gerarEstruturado({ tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT,
+    const { valor } = await gerarComFallback({ tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT,
       texto: JSON.stringify({ chamado: dados, categoria, conversa: historico, anexosRecebidos: enviados.map(a => ({ id: a.id, name: a.fileName })), anexosNaoInterpretados: ignorados, limitacoes: "DOCX: texto sem imagens embutidas. XLSX/CSV: até 1.000 linhas por aba; gráficos não interpretados." }),
       anexos: arquivos, nome: "triagem_chamados", schema: SCHEMA_DA_TRIAGEM, maxTokens: 3000, estrito: true, timeoutMs: 30000, store: false,
       contexto: { userId: c.userId, entityType: "HelpdeskDraft", entityId: c.draftId },

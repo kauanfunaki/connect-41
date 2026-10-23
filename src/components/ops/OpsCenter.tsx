@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, KeyRound, Pencil, Plus, RefreshCw, UserRound, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, KeyRound, Pencil, Plus, RefreshCw, Search, UserRound, XCircle } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -15,15 +15,28 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useToast } from "@/components/ui/Toast";
 import { atividade, caminhoDoEvento, ROTULOS_OPS } from "@/lib/ops/regras";
 import type { EventoOps, PainelOps, WatcherOps } from "@/lib/ops/tipos";
+import styles from "./OpsCenter.module.css";
 
 const COR: Record<EventoOps["status"], TomDoSelo> = { SUCCESS: "sucesso", ERROR: "perigo", WARNING: "atencao" };
 const data = (iso: string | null) => iso ? formatInstantDateTime(new Date(iso)) : "—";
 const nomeArquivo = (p: string) => p.split(/[\\/]/).pop() || p;
-const contar = (n: number, singular: string, plural: string) => `${n} ${n === 1 ? singular : plural}`;
+const numero = (n: number) => Number(n).toLocaleString("pt-BR");
+type Situacao = "online" | "unstable" | "offline";
+const SITUACOES: Record<Situacao, { label: string; cor: string }> = {
+  online: { label: "Online", cor: "text-success-fg" },
+  unstable: { label: "Instável", cor: "text-warning-fg" },
+  offline: { label: "Offline", cor: "text-danger" },
+};
+function situacao(w: WatcherOps, agora: number): Situacao {
+  const sinal = atividade(w.lastHeartbeatAt, w.isActive, agora);
+  if (sinal !== "Em execução") return "offline";
+  return w.instabilityReportedAt ? "unstable" : "online";
+}
+const iniciais = (nome: string) => nome.trim().split(/\s+/).filter(Boolean).map(p => p[0]).filter((_, i, partes) => i === 0 || i === partes.length - 1).join("").toLocaleUpperCase("pt-BR");
 const emBranco = { slug: "", name: "", ownerId: "", description: "", client: "", folderInput: "", folderOutput: "", isActive: true };
 type Formulario = typeof emBranco;
 function Campo({ titulo, children }: { titulo: string; children: React.ReactNode }) {
@@ -43,6 +56,13 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
   const [status, setStatus] = useState(params.get("status") ?? "");
   const [dia, setDia] = useState(params.get("date") ?? "");
   const [minhas, setMinhas] = useState(params.get("mine") === "1");
+  const [visao, setVisao] = useState<"automations" | "history">(() => {
+    const inicial = params.get("view");
+    if (inicial === "automations" || inicial === "history") return inicial;
+    return params.has("watcher") || params.has("status") || params.has("date") || Number(params.get("page")) > 1 ? "history" : "automations";
+  });
+  const [busca, setBusca] = useState("");
+  const [filtroSituacao, setFiltroSituacao] = useState<"all" | "online" | "unstable" | "offline">("all");
   const [pagina, setPagina] = useState(Math.max(1, Math.min(100000, Number.parseInt(params.get("page") ?? "1", 10) || 1))), [loading, setLoading] = useState(true), [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false), [erroAcao, setErroAcao] = useState("");
   const [edicao, setEdicao] = useState<WatcherOps | "novo" | null>(null), [form, setForm] = useState<Formulario>(emBranco);
@@ -78,7 +98,7 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
   }, [atualizar]);
 
   // O recorte fica no endereço para os links do sino abrirem o erro certo.
-  useEffect(() => { window.history.replaceState(null, "", `/ops?${query}`); }, [query]);
+  useEffect(() => { window.history.replaceState(null, "", `/ops?${query}&view=${visao}`); }, [query, visao]);
 
   async function copiar(texto: string) {
     try { await navigator.clipboard.writeText(texto); toast.success("Copiado."); }
@@ -98,76 +118,120 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
   const summary = painel?.summary;
   const totalPaginas = painel ? Math.max(1, Math.ceil(painel.total / painel.pageSize)) : 1;
   const paginaAtual = painel?.page ?? pagina;
+  const agora = painel ? new Date(painel.serverTime).getTime() : 0;
+  const online = painel?.watchers.filter(w => atividade(w.lastHeartbeatAt, w.isActive, agora) === "Em execução").length ?? 0;
+  const termo = busca.toLocaleLowerCase("pt-BR").trim();
+  const automacoes = painel?.watchers.filter(w => (
+    !termo || [w.name, w.ownerName, w.description, w.client, w.slug].some(v => v?.toLocaleLowerCase("pt-BR").includes(termo))
+  ) && (filtroSituacao === "all" || situacao(w, agora) === filtroSituacao)) ?? [];
   const atualizarCampo = (key: keyof Formulario, value: string | boolean) => setForm(f => ({ ...f, [key]: value }));
-  const botoesDePasta = (w: WatcherOps) => <div className="flex flex-wrap gap-2">
-    {w.folderInput && <Button size="xs" variant="secondary" title={w.folderInput} onClick={() => void copiar(w.folderInput!)}><FolderInput size={14} /> Entrada</Button>}
-    {w.folderOutput && <Button size="xs" variant="secondary" title={w.folderOutput} onClick={() => void copiar(w.folderOutput!)}><FolderOutput size={14} /> Saída</Button>}
+  const botoesDePasta = (w: WatcherOps) => <div className="grid grid-cols-2 gap-2">
+    <Button size="sm" variant="secondary" title={w.folderInput ? `Copiar caminho: ${w.folderInput}` : "Pasta de entrada não configurada"} disabled={!w.folderInput} onClick={() => void copiar(w.folderInput!)}><FolderInput size={14} /> Entrada</Button>
+    <Button size="sm" variant="secondary" title={w.folderOutput ? `Copiar caminho: ${w.folderOutput}` : "Pasta de saída não configurada"} disabled={!w.folderOutput} onClick={() => void copiar(w.folderOutput!)}><FolderOutput size={14} /> Saída</Button>
   </div>;
 
   return <PageContainer>
-    <PageHeader title="Ops Center" subtitle="Acompanhe as automações, os arquivos processados e o que precisa de atenção."
-      action={<div className="flex flex-wrap gap-2">{podeGerir && <Button variant="secondary" href="/admin/integracoes?integracao=ops_center"><KeyRound size={15} /> Integração dos bots</Button>}<Button variant="secondary" onClick={() => void atualizar()} disabled={loading}><RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Atualizar</Button>{podeGerir && <Button onClick={() => editar("novo")}><Plus size={15} /> Nova automação</Button>}</div>}
+    <PageHeader title="Ops Center" subtitle="Acompanhe a saúde e os resultados das suas automações."
+      action={<div className="grid w-[calc(100vw-3rem)] grid-cols-3 gap-2 sm:w-auto sm:gap-3" aria-label="Resumo do dia">
+        <Card className="px-3 py-3 sm:min-w-28 sm:px-4"><p className="text-helper text-fg-muted">Online agora</p><p className="mt-1 text-section-title font-semibold tabular-nums text-fg">{painel ? numero(online) : "—"} <span className="text-helper font-normal text-fg-muted">{painel ? `de ${numero(painel.watchers.length)}` : ""}</span></p></Card>
+        <Card className="px-3 py-3 sm:min-w-28 sm:px-4"><p className="text-helper text-fg-muted">Processados hoje</p><p className="mt-1 text-section-title font-semibold tabular-nums text-fg">{summary ? numero(summary.total) : "—"}</p></Card>
+        <Card className="px-3 py-3 sm:min-w-28 sm:px-4"><p className="text-helper text-fg-muted">Com erro</p><p className={`mt-1 text-section-title font-semibold tabular-nums ${summary?.error ? "text-danger" : "text-fg"}`}>{summary ? numero(summary.error) : "—"}</p></Card>
+      </div>}
       meta={<span>{painel ? `Atualizado em ${data(painel.serverTime)} · atualização a cada 30 segundos` : "Carregando o painel…"}</span>} />
 
-    <div className="mb-5 flex flex-wrap items-center gap-3">
-      <div role="group" aria-label="Automações por responsável" className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface p-1">
-        <Button size="sm" variant={!minhas ? "primary" : "ghost"} aria-pressed={!minhas} onClick={() => { setMinhas(false); setPagina(1); }}>Todas</Button>
-        <Button size="sm" variant={minhas ? "primary" : "ghost"} aria-pressed={minhas} onClick={() => { setMinhas(true); setWatcher(""); setPagina(1); }}><UserRound size={14} /> Minhas automações</Button>
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <SegmentedControl label="Visualizações do Ops Center" active={visao} onChange={setVisao} tone="brand" items={[
+        { key: "automations", label: "Automações", icon: <Activity size={14} /> },
+        { key: "history", label: "Histórico", icon: <History size={14} />, contagem: painel?.total },
+      ]} />
+      <div className="flex flex-wrap gap-2">
+        {podeGerir && <Button size="sm" variant="secondary" href="/admin/integracoes?integracao=ops_center"><KeyRound size={14} /> Integração dos bots</Button>}
+        <Button size="sm" variant="secondary" onClick={() => void atualizar()} disabled={loading}><RefreshCw size={14} className={loading ? "motion-safe:animate-spin" : ""} /> Atualizar</Button>
+        {podeGerir && <Button size="sm" onClick={() => editar("novo")}><Plus size={14} /> Nova automação</Button>}
       </div>
-      <span className="text-helper text-fg-secondary">{minhas ? "Somente as automações sob sua responsabilidade." : "Automações do setor e seus responsáveis."}</span>
+    </div>
+
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <SegmentedControl label="Automações por responsável" active={minhas ? "mine" : "all"} onChange={value => { setMinhas(value === "mine"); setWatcher(""); setPagina(1); }} items={[
+        { key: "all", label: "Todas" }, { key: "mine", label: "Minhas automações", icon: <UserRound size={14} /> },
+      ]} />
+      {summary && <p className="flex flex-wrap gap-x-4 gap-y-1 text-helper text-fg-secondary">
+        <span><strong className="font-semibold text-success-fg">{numero(summary.success)}</strong> sucessos hoje</span>
+        <span><strong className={summary.warning ? "font-semibold text-warning-fg" : "font-semibold"}>{numero(summary.warning)}</strong> avisos</span>
+        <span>Taxa de sucesso: <strong className="font-semibold text-fg">{summary.successRate === null ? "—" : `${numero(summary.successRate)}%`}</strong></span>
+      </p>}
     </div>
 
     {erro && <div role="alert" className="mb-5 rounded-lg border border-danger/30 bg-danger/5 p-4 text-ui text-danger">{erro} {painel && "Os dados abaixo são da última atualização recebida."} <Button variant="link" onClick={() => void atualizar()}>Tentar novamente</Button></div>}
     {!painel && !erro && <Card className="p-8 text-center text-fg-secondary" role="status">Carregando automações e resultados…</Card>}
     {painel && <>
-      <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <MetricCard label="Processados hoje" value={summary!.total} icon={<FileText size={16} />} />
-        <MetricCard label="Sucessos" value={summary!.success} tom="ok" icon={<CheckCircle2 size={16} />} />
-        <MetricCard label="Erros" value={summary!.error} tom={summary!.error ? "critico" : "neutro"} icon={<XCircle size={16} />} />
-        <MetricCard label="Avisos" value={summary!.warning} tom={summary!.warning ? "atencao" : "neutro"} icon={<AlertTriangle size={16} />} />
-        <MetricCard label="Taxa de sucesso" value={summary!.successRate === null ? "—" : `${Number(summary!.successRate).toLocaleString("pt-BR")}%`} detalhe="Dia atual · horário de Brasília" />
-      </div>
-
-      <section aria-labelledby="ops-automacoes" className="mb-8">
-        <div className="mb-3 flex flex-wrap items-center gap-3"><h2 id="ops-automacoes" className="text-section-title font-semibold text-fg">Automações</h2><span className="text-helper text-fg-secondary">{painel.watchers.length} cadastradas · {painel.watchers.filter(w => w.instabilityReportedAt).length} com instabilidade</span></div>
+      {visao === "automations" ? <section aria-labelledby="ops-automacoes">
+        <Card className="mb-5 flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between">
+          <label className="block w-full lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>
+          <div className="max-w-full overflow-x-auto p-1">
+            <SegmentedControl label="Filtrar automações por status" active={filtroSituacao} onChange={setFiltroSituacao} items={[
+              { key: "all", label: "Todos" }, { key: "online", label: "Online", tone: "success" },
+              { key: "unstable", label: "Instável", tone: "warning" }, { key: "offline", label: "Offline", tone: "danger" },
+            ]} />
+          </div>
+        </Card>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 id="ops-automacoes" className="text-section-title font-semibold text-fg">Automações</h2><span className="text-helper text-fg-muted" role="status">{numero(automacoes.length)} de {numero(painel.watchers.length)} automações{minhas ? " · sob sua responsabilidade" : ""}</span></div>
         {!painel.watchers.length ? <Card className="p-8 text-center"><Activity className="mx-auto mb-3 text-fg-muted" size={28} /><p className="font-semibold text-fg">{minhas ? "Nenhuma automação atribuída a você" : "Nenhuma automação cadastrada"}</p><p className="mt-2 text-ui text-fg-secondary">{minhas ? "O gestor pode definir o dono de cada automação no cadastro." : "Cadastre a automação e configure o envio de atividade e resultados para começar."}</p></Card> :
-          <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">{painel.watchers.map(w => {
-            const sinal = atividade(w.lastHeartbeatAt, w.isActive, new Date(painel.serverTime).getTime());
-            return <Card key={w.slug} className={`min-w-0 p-5 ${w.instabilityReportedAt ? "border-warning/50" : ""}`}>
-              <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="break-words font-semibold text-fg">{w.name}</h3><p className="mt-1 break-words text-helper text-fg-secondary">{w.client || w.slug}</p></div><Activity size={19} className="shrink-0 text-brand" /></div>
-              <div className="mt-3 flex flex-wrap gap-2"><Selo tom={sinal === "Em execução" ? "sucesso" : sinal === "Sem comunicação" ? "perigo" : "neutro"}>{sinal}</Selo>{w.instabilityReportedAt && <Selo tom="atencao">Instabilidade</Selo>}</div>
-              <p className="mt-3 flex items-center gap-2 text-ui text-fg-secondary"><UserRound size={14} className="shrink-0" /><span className="break-words">{w.ownerName || "Sem responsável"}</span></p>
-              {w.description && <p className="mt-2 break-words text-helper text-fg-secondary">{w.description}</p>}
-              <p className="mt-3 text-helper text-fg-secondary">Hoje: <strong className="text-fg">{contar(w.totalToday, "processado", "processados")}</strong> · {contar(w.successToday, "sucesso", "sucessos")} · {contar(w.errorToday, "erro", "erros")}</p>
-              <p className="mt-2 text-helper text-fg-muted">Último sinal: {data(w.lastHeartbeatAt)}</p>
-              {w.lastEvent && <button className="mt-3 block w-full rounded-md bg-surface-2 p-3 text-left text-helper hover:bg-surface-hover" onClick={() => setDetalhe(w.lastEvent)}><span className="flex flex-wrap items-center gap-2"><Selo tom={COR[w.lastEvent.status]}>{ROTULOS_OPS[w.lastEvent.status]}</Selo><span className="text-fg-secondary">{data(w.lastEvent.processedAt)}</span></span><span className="mt-2 block truncate text-fg" title={w.lastEvent.filename}>{nomeArquivo(w.lastEvent.filenameRenamed || w.lastEvent.filename)}</span></button>}
-              {w.instabilityReportedAt && <div className="mt-3 rounded-md bg-warning/8 p-3 text-helper text-warning-fg"><p className="whitespace-pre-wrap break-words">{w.instabilityNote}</p><p className="mt-2">{w.instabilityReportedByName} · {data(w.instabilityReportedAt)}</p>{w.instabilityTicketId && <Button variant="link" href={`/chamados/${encodeURIComponent(w.instabilityTicketId)}`} className="mt-2">Ver chamado</Button>}</div>}
-              <div className="mt-4">{botoesDePasta(w)}</div>
-              {podeGerir && <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
-                <Button size="xs" variant="ghost" onClick={() => editar(w)}><Pencil size={13} /> Editar</Button>
+          !automacoes.length ? <Card className="flex min-h-64 flex-col items-center justify-center border-dashed p-6 text-center"><Search size={26} className="mb-3 text-fg-muted" /><p className="font-semibold text-fg">Nenhuma automação encontrada</p><p className="mt-2 text-ui text-fg-secondary">Tente ajustar sua busca ou o filtro de status.</p><Button variant="link" className="mt-3" onClick={() => { setBusca(""); setFiltroSituacao("all"); }}>Limpar busca e status</Button></Card> :
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{automacoes.map(w => {
+            const estado = situacao(w, agora), sinal = SITUACOES[estado];
+            return <Card role="article" key={w.slug} className={`flex min-w-0 flex-col p-5 transition-[border-color,box-shadow] hover:border-brand/30 hover:shadow-md ${w.instabilityReportedAt ? "border-warning/50" : ""}`}>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className={`mb-2 flex items-center gap-2 text-helper font-semibold ${sinal.cor}`}><span aria-hidden className={`h-2 w-2 shrink-0 rounded-full bg-current ${estado === "online" || estado === "unstable" ? styles.statusDot : ""}`} />{sinal.label}</p>
+                  <h3 className="break-words text-section-title font-semibold leading-snug text-fg">{w.name}</h3>
+                  <p className="mt-1 break-words text-helper text-fg-muted">{w.client || w.slug}</p>
+                </div>
+                {podeGerir && <Button size="icon" variant="secondary" aria-label={`Editar ${w.name}`} title="Editar automação" onClick={() => editar(w)}><Pencil size={15} /></Button>}
+              </div>
+              <div className="mb-4 flex items-center gap-2.5">
+                <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-helper font-semibold text-brand">{w.ownerName ? iniciais(w.ownerName) : <UserRound size={16} />}</span>
+                <div className="min-w-0"><p className="text-micro font-semibold uppercase tracking-wider text-fg-muted">Responsável</p><p className="break-words text-ui font-medium text-fg-secondary">{w.ownerName || "Sem responsável"}</p></div>
+              </div>
+              <p className="min-h-10 flex-1 break-words text-ui leading-relaxed text-fg-secondary">{w.description || "Sem descrição cadastrada."}</p>
+              <div className="my-4 grid grid-cols-2 divide-x divide-border rounded-lg bg-surface-2 py-3">
+                <div className="min-w-0 px-3"><p className="mb-1.5 flex items-center gap-1.5 text-helper text-fg-secondary"><CheckCircle2 size={14} className="shrink-0 text-success-fg" /> Sucessos</p><strong className="text-section-title font-semibold tabular-nums text-fg">{numero(w.successToday)}</strong><span className="ml-1 text-helper text-fg-muted">hoje</span></div>
+                <div className="min-w-0 px-3"><p className="mb-1.5 flex items-center gap-1.5 text-helper text-fg-secondary"><XCircle size={14} className="shrink-0 text-danger" /> Erros</p><strong className={`text-section-title font-semibold tabular-nums ${w.errorToday ? "text-danger" : "text-fg"}`}>{numero(w.errorToday)}</strong><span className="ml-1 text-helper text-fg-muted">hoje</span></div>
+              </div>
+              <p className="mb-2 text-helper text-fg-muted">{numero(w.totalToday)} processados hoje · último sinal: {data(w.lastHeartbeatAt)}</p>
+              {w.lastEvent && <button type="button" className="mb-3 block w-full rounded-md border border-border p-2.5 text-left text-helper transition-colors hover:bg-surface-hover" onClick={() => setDetalhe(w.lastEvent)}><span className="flex flex-wrap items-center gap-2"><Selo tom={COR[w.lastEvent.status]}>{ROTULOS_OPS[w.lastEvent.status]}</Selo><span className="text-fg-muted">{data(w.lastEvent.processedAt)}</span></span><span className="mt-2 block truncate text-fg" title={w.lastEvent.filename}>{nomeArquivo(w.lastEvent.filenameRenamed || w.lastEvent.filename)}</span></button>}
+              {w.instabilityReportedAt && <div className="mb-3 rounded-md bg-warning-bg p-3 text-helper text-warning-fg"><p className="mb-1 font-semibold">Instabilidade sinalizada</p><p className="whitespace-pre-wrap break-words">{w.instabilityNote}</p><p className="mt-2 break-words">{w.instabilityReportedByName} · {data(w.instabilityReportedAt)}</p>{w.instabilityTicketId && <Button variant="link" href={`/chamados/${encodeURIComponent(w.instabilityTicketId)}`} className="mt-2">Ver chamado</Button>}</div>}
+              <div className="mt-auto pt-1">{botoesDePasta(w)}</div>
+              {podeGerir && <div className="mt-3 border-t border-border pt-3">
                 <Button size="xs" variant="ghost" onClick={() => { setInstabilidade(w); setNota(w.instabilityNote ?? ""); setChamado(w.instabilityTicketId ?? ""); setErroAcao(""); }}><AlertTriangle size={13} /> {w.instabilityReportedAt ? "Revisar instabilidade" : "Sinalizar instabilidade"}</Button>
               </div>}
             </Card>;
           })}</div>}
-        <p className="mt-3 text-helper text-fg-muted">“Sem comunicação” indica ausência de sinal há pelo menos 3 minutos. Os caminhos podem ser copiados para abrir no Explorador de Arquivos.</p>
-      </section>
+        <p className="mt-4 text-helper leading-relaxed text-fg-muted">Offline indica recebimento desativado, nenhum sinal recebido ou ausência de sinal há pelo menos 3 minutos. Instável indica uma sinalização em aberto com comunicação ativa. Entrada e Saída copiam os caminhos para abrir no Explorador de Arquivos. Contadores do dia no horário de Brasília.</p>
+      </section> :
 
-      <section aria-labelledby="ops-historico"><h2 id="ops-historico" className="mb-3 text-section-title font-semibold text-fg">Histórico de processamento</h2>
-        <Card>
+      <section aria-labelledby="ops-historico">
+        <Card className="overflow-hidden">
+          <div className="flex items-start gap-3 border-b border-border p-5"><span aria-hidden className="rounded-md bg-brand-subtle p-2 text-brand"><History size={18} /></span><div><h2 id="ops-historico" className="text-section-title font-semibold text-fg">Histórico de processamento</h2><p className="mt-1 text-helper text-fg-secondary">Últimos arquivos processados pelas automações, do mais recente para o mais antigo.</p></div></div>
           <div className="grid gap-3 border-b border-border p-4 sm:grid-cols-2 lg:grid-cols-4">
             <Campo titulo="Automação"><Select compact value={watcher} onChange={e => { setWatcher(e.target.value); setPagina(1); }}><option value="">Todas as automações</option>{painel.watchers.map(w => <option key={w.slug} value={w.slug}>{w.name}</option>)}</Select></Campo>
             <Campo titulo="Resultado"><Select compact value={status} onChange={e => { setStatus(e.target.value); setPagina(1); }}><option value="">Todos os resultados</option><option value="SUCCESS">Sucesso</option><option value="ERROR">Erro</option><option value="WARNING">Aviso</option></Select></Campo>
             <Campo titulo="Data do processamento"><CampoData compact value={dia} onChange={value => { setDia(value); setPagina(1); }} /></Campo>
             <div className="flex items-end"><Button variant="ghost" size="sm" onClick={() => { setWatcher(""); setStatus(""); setDia(""); setPagina(1); }}>Limpar filtros</Button></div>
           </div>
-          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Eventos de processamento"><table className="w-full text-left text-ui">
+          <div className="hidden overflow-x-auto md:block" tabIndex={0} role="region" aria-label="Eventos de processamento"><table className="w-full text-left text-ui">
             <thead className="border-b border-border bg-surface-2 text-helper text-fg-secondary"><tr>{["Data e hora", "Automação", "Arquivo", "Resultado", "Cliente", "Detalhes"].map(t => <th key={t} scope="col" className="px-4 py-3 font-semibold whitespace-nowrap">{t}</th>)}</tr></thead>
             <tbody className="divide-y divide-border">{painel.events.map(e => <tr key={e.id} className="hover:bg-surface-hover"><td className="whitespace-nowrap px-4 py-3 text-fg-secondary">{data(e.processedAt)}</td><td className="px-4 py-3 text-fg">{e.watcherName}</td><td className="max-w-72 px-4 py-3"><button className="block max-w-full truncate text-brand hover:underline" title={caminhoDoEvento(e, painel.watchers.find(w => w.slug === e.watcherSlug))} onClick={() => void copiar(caminhoDoEvento(e, painel.watchers.find(w => w.slug === e.watcherSlug)))}>{nomeArquivo(e.filenameRenamed || e.filename)}</button></td><td className="px-4 py-3"><Selo tom={COR[e.status]}>{ROTULOS_OPS[e.status]}</Selo></td><td className="px-4 py-3 text-fg-secondary">{e.client || "—"}</td><td className="px-4 py-3"><Button variant="link" onClick={() => setDetalhe(e)}>Ver detalhes</Button></td></tr>)}</tbody>
           </table></div>
+          <div className="divide-y divide-border md:hidden">{painel.events.map(e => <article key={e.id} className="min-w-0 p-4">
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words text-ui font-semibold text-fg">{e.watcherName}</h3><p className="mt-1 text-helper text-fg-muted">{data(e.processedAt)}</p></div><Selo tom={COR[e.status]}>{ROTULOS_OPS[e.status]}</Selo></div>
+            <button type="button" className="mt-3 flex w-full min-w-0 items-center gap-2 rounded-md bg-surface-2 p-2.5 text-left text-ui text-brand hover:bg-surface-hover" title={caminhoDoEvento(e, painel.watchers.find(w => w.slug === e.watcherSlug))} onClick={() => void copiar(caminhoDoEvento(e, painel.watchers.find(w => w.slug === e.watcherSlug)))}><FileText size={14} className="shrink-0" /><span className="truncate">{nomeArquivo(e.filenameRenamed || e.filename)}</span></button>
+            <div className="mt-3 flex items-center justify-between gap-3 text-helper"><span className="min-w-0 break-words text-fg-secondary">{e.client || "Sem cliente informado"}</span><Button variant="link" className="shrink-0" onClick={() => setDetalhe(e)}>Ver detalhes</Button></div>
+          </article>)}</div>
           {!painel.events.length && <p className="p-8 text-center text-ui text-fg-secondary">Nenhum evento encontrado para este recorte.</p>}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border p-4 text-helper text-fg-secondary"><span>{painel.total} eventos · página {paginaAtual} de {totalPaginas}</span><div className="flex gap-2"><Button size="sm" variant="secondary" aria-label="Página anterior" disabled={loading || paginaAtual <= 1} onClick={() => setPagina(paginaAtual - 1)}><ChevronLeft size={15} /> Anterior</Button><Button size="sm" variant="secondary" aria-label="Próxima página" disabled={loading || paginaAtual >= totalPaginas} onClick={() => setPagina(paginaAtual + 1)}>Próxima <ChevronRight size={15} /></Button></div></div>
         </Card>
-      </section>
+      </section>}
     </>}
 
     <Modal open={!!edicao} onClose={() => { if (!ocupado) setEdicao(null); }} title={edicao === "novo" ? "Nova automação" : "Editar automação"} maxWidth="max-w-xl">
