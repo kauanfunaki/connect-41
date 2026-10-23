@@ -447,7 +447,7 @@ describe("lancarDocumento — conta a receber da nota de venda (23/10): a mesma 
     expect(m.logAudit.mock.calls[0]![0].metadata.duplicatas.recusadas).toMatch(/somam/);
   });
 
-  it("nota de venda com retenção: inteira, com o motivo — e nenhuma conta de imposto (quem recolhe é o cliente)", async () => {
+  it("nota de venda com retenção: parcela pelo líquido — e nenhuma conta de imposto (quem recolhe é o cliente)", async () => {
     m.obterDocumento.mockResolvedValue(
       venda({
         amount: dec("1000.00"),
@@ -460,10 +460,28 @@ describe("lancarDocumento — conta a receber da nota de venda (23/10): a mesma 
       })
     );
     await lancarDocumento("doc1", {});
+    expect(String(m.tx.financeEntry.create.mock.calls[0]![0].data.amount)).toBe("492.50");
+    expect(m.tx.financeEntry.createMany).toHaveBeenCalled();
+    expect(m.aplicarRetencoes).not.toHaveBeenCalled();
+    expect(m.logAudit.mock.calls[0]![0].metadata.duplicatas.recusadas).toBeUndefined();
+  });
+
+  it("nota de venda com retenção e duplicatas pelo bruto: inteira, com o motivo", async () => {
+    m.obterDocumento.mockResolvedValue(
+      venda({
+        amount: dec("1000.00"),
+        netAmount: dec("985.00"),
+        retentionsByTax: { IRRF: "15.00" },
+        installments: [
+          { numero: "1", vencimento: "2026-10-01", valor: "500.00" },
+          { numero: "2", vencimento: "2026-11-01", valor: "500.00" },
+        ],
+      })
+    );
+    await lancarDocumento("doc1", {});
     expect(String(m.tx.financeEntry.create.mock.calls[0]![0].data.amount)).toBe("985.00");
     expect(m.tx.financeEntry.createMany).not.toHaveBeenCalled();
-    expect(m.aplicarRetencoes).not.toHaveBeenCalled();
-    expect(m.logAudit.mock.calls[0]![0].metadata.duplicatas.recusadas).toMatch(/Retenção/);
+    expect(m.logAudit.mock.calls[0]![0].metadata.duplicatas.recusadas).toMatch(/somam/);
   });
 
   it("duplicatas ilegíveis ou acima de 120: inteira, com o motivo", async () => {

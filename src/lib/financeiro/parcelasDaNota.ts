@@ -44,9 +44,10 @@ export function planoDaNota(p: {
   /** A pagar (nota de compra) ou a receber (nota de venda): a regra é a mesma. */
   kind: "PAGAR" | "RECEBER";
   /**
-   * A nota declara retenção — não combina com parcelar ainda. Na compra, a
-   * conta vai gerar as contas dos impostos retidos; na venda, quem retém é o
-   * cliente, e o líquido por parcela ainda não foi combinado.
+   * A nota declara retenção. Na compra, não combina com parcelar ainda: a conta
+   * gera as contas dos impostos retidos. Na venda (decidido em 23/10), quem
+   * retém é o cliente e não nasce conta de imposto: a conta a receber é o
+   * líquido, e as duplicatas são conferidas contra ele.
    */
   comRetencoes?: boolean;
 }): PlanoDaNota {
@@ -61,7 +62,7 @@ export function planoDaNota(p: {
   if (lidas.length > MAXIMO_DE_PARCELAS) {
     return { tipo: "RECUSADO", motivo: `A nota tem ${lidas.length} duplicatas, e o parcelamento vai até ${MAXIMO_DE_PARCELAS}.` };
   }
-  if (p.comRetencoes) {
+  if (p.comRetencoes && p.kind === "PAGAR") {
     return { tipo: "RECUSADO", motivo: "Retenção ainda não vai junto com o parcelamento — a conta nasce inteira." };
   }
   if (p.totalCentavos === null) return { tipo: "RECUSADO", motivo: "A nota não tem valor apurado para conferir as duplicatas." };
