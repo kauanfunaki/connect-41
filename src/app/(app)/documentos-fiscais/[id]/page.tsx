@@ -22,7 +22,7 @@ import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { direcaoDoLancamento, precisaDeEstorno } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { nomeExibicao } from "@/lib/companyName";
-import { formatCalendarDate, formatInstantDate, formatCnpj, formatCpf, formatarReais, formatarCompetencia } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatCnpj, formatCpf, formatarReais, formatarCompetencia, formatarReaisDeCentavos } from "@/lib/format";
 import {
   TIPO_LABEL,
   ORIGEM_LABEL,
@@ -36,6 +36,7 @@ import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { resumoDasRetencoes, retencoesDaNota } from "@/lib/financeiro/retencoes";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { Aviso } from "@/components/ui/Aviso";
+import { planoDaNota } from "@/lib/financeiro/parcelasDaNota";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -102,6 +103,34 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
         })
       : [];
   const centros = veredito.pode && !doc.financeEntry ? await centrosAtivosDaEmpresa(ctx.tenantId, doc.companyId) : [];
+
+  // As duplicatas da nota (23/10): a mesma função que a action usa para
+  // parcelar monta a prévia — a tela mostra exatamente as contas que nascem.
+  const planoDasDuplicatas =
+    veredito.pode && !doc.financeEntry
+      ? planoDaNota({
+          duplicatas: doc.installments,
+          totalCentavos: (doc.netAmount ?? doc.amount) === null ? null : centavosDeDecimal((doc.netAmount ?? doc.amount)!),
+          kind: veredito.kind,
+          comRetencoes: retidoPorTributo !== null && veredito.kind === "PAGAR",
+        })
+      : null;
+  const duplicatas =
+    planoDasDuplicatas?.tipo === "PARCELAS"
+      ? {
+          tipo: "PARCELAS" as const,
+          parcelas: planoDasDuplicatas.parcelas.map((p) => ({
+            indice: p.indice,
+            numero: p.numero,
+            vencimentoLabel: formatCalendarDate(new Date(`${p.vencimentoKey}T00:00:00Z`)),
+            valorLabel: formatarReaisDeCentavos(p.centavos),
+          })),
+        }
+      : planoDasDuplicatas?.tipo === "VENCIMENTO"
+        ? { tipo: "VENCIMENTO" as const, numero: planoDasDuplicatas.numero }
+        : planoDasDuplicatas?.tipo === "RECUSADO"
+          ? { tipo: "RECUSADO" as const, motivo: planoDasDuplicatas.motivo }
+          : null;
 
   const titulo = `${TIPO_LABEL[doc.type]} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`;
 
@@ -222,7 +251,12 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
         podeDecidir={canManageSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)}
         categorias={categorias}
         centros={centros}
-        vencimentoPresumidoIso={vencimentoPresumido(doc.issuedAt).toISOString().slice(0, 10)}
+        vencimentoPresumidoIso={
+          planoDasDuplicatas?.tipo === "VENCIMENTO"
+            ? planoDasDuplicatas.vencimentoKey
+            : vencimentoPresumido(doc.issuedAt).toISOString().slice(0, 10)
+        }
+        duplicatas={duplicatas}
         impedimento={veredito.pode || doc.financeEntry ? null : veredito.explicacao}
         lancamento={
           doc.financeEntry
@@ -235,6 +269,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
                 categoria: doc.financeEntry.category?.name ?? null,
                 contraparte: doc.financeEntry.counterparty.name,
                 centroDeCusto: doc.financeEntry.costCenter?.name ?? null,
+                parcelas: doc.financeEntry.recurrenceId ? doc.financeEntry.recurrenceTotal : null,
               }
             : null
         }
