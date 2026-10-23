@@ -1,0 +1,28 @@
+{
+  "requisicao": {
+    "metodo": "PUT",
+    "caminho": "/api/connect/v1/conferencia/prestadores/regime?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "cnpj": "11222333000181",
+      "regime": "simples"
+    }
+  },
+  "resposta": {
+    "status": 422,
+    "corpo": {
+      "erro": "regime deve ser \"mei\", \"normal\" ou null",
+      "codigo": "parametro_invalido",
+      "campos": {
+        "regime": "regime deve ser \"mei\", \"normal\" ou null"
+      }
+    },
+    "x_custo": "leve"
+  }
+}
