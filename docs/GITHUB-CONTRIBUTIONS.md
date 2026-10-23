@@ -1,6 +1,6 @@
 # GitHub — Contribuições
 
-O módulo mostra a atividade diária de cada usuário nos repositórios monitorados pela conta GitHub conectada ao escritório. Conta commits, aberturas de pull requests e issues e revisões submetidas. A conexão fica em **Integrações → GitHub**; o painel abre em `/github`.
+O módulo mostra a atividade diária de cada usuário nos repositórios monitorados pela conta GitHub conectada ao escritório. Conta commits, aberturas de pull requests e issues e revisões submetidas. A conexão fica em **Integrações → GitHub**. O menu lateral **GitHub** oferece **Geral** (`/github`) e **Desenvolvedores** (`/github/desenvolvedores`).
 
 O módulo `tech_github_contributions` é exclusivo do **Tech**, nasce desligado e respeita o plano contratado. Não pode ser transferido para outro setor. Administradores mantêm o acesso amplo previsto nos papéis do Connect.
 
@@ -23,6 +23,10 @@ A conta é compartilhada pelo escritório. Quem tem permissão para consultar o 
 
 ## Uso do painel
 
+- **Geral** reúne commits, PRs abertos, revisões e desenvolvedores ativos, gráfico de cadência, atividade do time e oito eventos mais recentes. As contagens abrangem todos os desenvolvedores dos filtros, sem o limite de vinte pessoas da lista. O gráfico agrupa períodos longos em até trinta janelas, somando as contribuições; o detalhe de cada ponto informa a janela. A atividade do time soma os quatro tipos, sem nota de produtividade.
+- **Desenvolvedores** lista as pessoas acompanhadas e autores descobertos nos repositórios com acesso confirmado, incluindo quem está sem atividade no período, com os heatmaps e o detalhe diário existentes. O tipo selecionado também restringe os autores descobertos. Bots e autorias não identificadas seguem as regras abaixo.
+- As duas abas preservam período e filtros na navegação. Busca por desenvolvedor e datas ficam à vista; repositório, organização, tipo e bots ficam em **Filtros**. O andamento detalhado fica em **Sincronização**.
+- O painel usa apenas os campos já coletados. Não apresenta títulos de commits/PRs, linhas alteradas, status de aprovação/merge nem variações percentuais, pois esses dados não são armazenados pela integração atual. Não exige nova migration.
 - Filtrar por período de até 12 meses, repositório, organização/dono, login e tipo de contribuição. A seleção fica na URL.
 - Consultar os totais separados por tipo e o calendário de cada usuário. A comparação é paginada em 20 usuários.
 - Selecionar um dia para abrir as atividades e seus links no GitHub. O detalhe tem páginas de 50 eventos.
@@ -99,7 +103,8 @@ Tecnologia: Next.js 16, React 19, Prisma e MariaDB/MySQL existentes. Sem serviç
 - `src/lib/github/`: OAuth, cliente REST, regras, persistência, sincronização e consultas.
 - `src/components/github/`: painel, calendário e detalhe diário.
 - `src/lib/github/scheduler.ts`: relógio automático com um lote por vez; `progress.ts`: resumo persistido do andamento.
-- Calendários fora da área visível são montados ao rolar; a navegação por teclado é mantida. Datas usam um único formatador e cache limitado, e calendários inalterados não são redesenhados a cada consulta de status. O resumo de cobertura agrega tarefas no banco sem transferir a lista inteira de revisões para a aplicação.
+- Calendários são montados perto da área visível e liberados ao sair dela, preservando altura, posição horizontal e o calendário com foco de teclado. A montagem adiada anterior acumulava todos os dias depois de percorrer a lista. Datas usam um único formatador e cache limitado.
+- O painel envia a revisão já exibida nas consultas periódicas. Sem alteração, a API devolve somente o progresso, dispensando usuários, totais, calendários e cobertura. Cada consulta continua autorizada e confere a validade do acesso aos repositórios. Alterações confirmadas, filtros, virada do dia, pausa e expiração do acesso invalidam a revisão; não há cache compartilhado de dados privados. Consultas independentes da carga completa são executadas em paralelo.
 - `src/components/admin/GithubIntegration.tsx`: conta, seleção e controles em Integrações.
 - `/api/github`, `/api/github/events`, `/api/github/integration` e `/api/github/sync`: APIs autenticadas.
 - `/api/integrations/github/connect` e `/callback`: autorização OAuth com PKCE e estado de uso único, vinculado à sessão e ao escritório.
@@ -133,6 +138,8 @@ Validação do cadastro OAuth por empresa em 21/10/2026: 38 testes do GitHub com
 Validação da execução automática e desempenho em 22/10/2026: 42 testes do módulo com MySQL descartável/API simulada e 13 checks de navegador aprovados, sem erros de JavaScript. O standalone concluiu a fila com o navegador em `about:blank`, sem tela Connect aberta. No cenário com 20 usuários e um ano de calendário, a primeira área exibida montou 366 botões de dias em vez de 7.320 (95% menos); os demais calendários são montados com a rolagem. Cobertura, filtros, detalhes, teclado, celular e escalas continuaram funcionando. Build standalone, TypeScript, lint dos arquivos alterados e `git diff --check` aprovados. A fixture SQL usa UTC para representar os mesmos instantes do Prisma. Não há nova migration; o contêiner descartável foi encerrado e removido ao concluir. Relatório e capturas em `.local/github/ui-result.json` e `.local/github/github-*.png`.
 
 Essas verificações não substituem a homologação do OAuth App real com as organizações desejadas. Prazo da carga inicial e capacidade devem ser medidos com os volumes reais, respeitando os limites da API.
+
+Validação das abas Geral e Desenvolvedores em 23/10/2026: 49 testes do módulo com MySQL descartável e GitHub simulado aprovados, incluindo resumo de uma equipe maior que a paginação, usuário sem atividade e retirada de dados após expiração de acesso. TypeScript, lint dos arquivos alterados, build standalone isolado e 16 verificações de navegador aprovados. A validação visual cobre menu lateral, filtros entre abas, heatmaps, detalhe diário, teclado, celular e escalas de 125%, 150% e 200%, incluindo a largura dos campos de data. Relatório e capturas em `.local/github/ui-result.json` e `.local/github/github-*.png`. Sem nova migration nem alteração da integração real.
 
 ## Atualização e retorno
 
