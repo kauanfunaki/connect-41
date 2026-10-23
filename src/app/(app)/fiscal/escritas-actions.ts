@@ -17,8 +17,8 @@ import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 import { ErroDoMotor, type ExecucaoDoMotor } from "@/lib/sped/motor";
 import {
-  CAMPOS_CORRIGIVEIS, CAMPOS_SIM_NAO_DO_CONTRATO, CAMPOS_TEXTO_DO_CONTRATO, COMPETENCIA, DECISOES_DE_PAGAMENTO, DECISOES_DO_DOCUMENTO, DINHEIRO,
-  type CombustivelApurado, type ContratoInformado, type CteApurado, type PagamentoGravado,
+  CAMPOS_CORRIGIVEIS, CAMPOS_SIM_NAO_DO_CONTRATO, CAMPOS_TEXTO_DO_CONTRATO, COMPETENCIA, DECISOES_DE_PAGAMENTO, DECISOES_DO_DOCUMENTO, DINHEIRO, REGIMES,
+  type CombustivelApurado, type ContratoInformado, type CteApurado, type PagamentoGravado, type RegimeGravado,
 } from "@/lib/sped/escritasDoMotor";
 import type { DocumentoDaConferencia, PreviaFinanceira, RejeitadoDoMotor } from "@/lib/sped/telasDoMotor";
 import { chaveSchema, doErro, idSchema, prepararEscrita, raizSchema, recusa, recusado, revalidarTelas, visiveis, type ResultadoDoMotor } from "@/lib/fiscal/motor/acoes";
@@ -345,6 +345,49 @@ export async function decidirDocumentoDaConferenciaNoMotor(entrada: unknown): Pr
       entityType: "SpedConferenciaDocumento", entityId: String(id), metadata: { nome: `${item.numero || `#${id}`} · ${item.fornecedor}`, raiz, decisao, observacao, chaveDaNota: chaveDaNota || null } });
     revalidarTelas(CONFERENCIA);
     return { ok: true, mensagem: decisao ? "Decisão gravada." : "Decisão desfeita.", dados: item };
+  } catch (err) {
+    return doErro(err);
+  }
+}
+
+
+// ─── Conferência › Prévia: regime MEI/normal do prestador (§14.1) ───────────
+
+const regimeSchema = z.object({
+  raiz: raizSchema,
+  cnpj: z.string().regex(/^\d{14}$/, "CNPJ do prestador inválido."),
+  // `null` apaga a correção do cliente: volta ao cadastro global ou ao palpite pelo nome.
+  regime: z.enum(REGIMES).nullable(),
+  nome: z.string().trim().max(200).default(""),
+  competencia,
+  chave: chaveSchema.optional(),
+});
+
+/**
+ * Corrige o regime de um prestador **só para este cliente** (a tabela da raiz
+ * no motor): o cadastro global, que vale para todos, continua do painel.
+ * Sem registro de decisões (não muda SPED); muda a prévia, que é relida.
+ */
+export async function definirRegimeDoPrestadorNoMotor(entrada: unknown): Promise<ResultadoDoMotor<RegimeGravado>> {
+  const e = regimeSchema.safeParse(entrada);
+  if (!e.success) return recusa(primeiraMensagem(e.error, "Pedido inválido."));
+  const { raiz, cnpj, regime, nome, chave } = e.data;
+  const p = await prepararEscrita(raiz, MODULO.conferencia, "agir");
+  if (recusado(p)) return p;
+  try {
+    const r = await p.motor.cliente.definirRegimeDoPrestador(raiz, { cnpj, regime, ...(nome ? { nome } : {}), competencia: e.data.competencia }, { ator: p.ator, chave });
+    const rotulo = r.prestador.nome ? `${r.prestador.nome} (${cnpj})` : cnpj;
+    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: regime === null ? "fiscal.sped.regime.apagado" : "fiscal.sped.regime.definido",
+      entityType: "SpedPrestador", entityId: cnpj, metadata: { nome: rotulo, raiz, regime, valeAgora: r.prestador.regime, origem: r.prestador.origem, competencia: e.data.competencia } });
+    revalidarTelas(CONFERENCIA);
+    const vale = r.prestador.regime === "mei" ? "MEI" : "normal";
+    return {
+      ok: true,
+      mensagem: regime === null
+        ? `Correção apagada: ${rotulo} volta a ${vale}, ${r.prestador.origem === "cadastro" ? "pelo cadastro global" : "pelo nome"}.`
+        : `${rotulo} passa a ${vale} neste cliente. A prévia foi recalculada.`,
+      dados: r,
+    };
   } catch (err) {
     return doErro(err);
   }
