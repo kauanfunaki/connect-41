@@ -1,0 +1,36 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/documentos?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "content_type": "multipart/form-data",
+    "cabecalhos": {
+      "Idempotency-Key": "c41:59b005a04d2c4a2fab5a25e017eac0bb"
+    },
+    "partes": [
+      {
+        "campo": "outra",
+        "nome": "a.pdf",
+        "tamanho": 4,
+        "sha256": "315d429b7714cedb6ad04ac31240145257692630457f3c88253c5beceac76027",
+        "conteudo": "%PDF"
+      }
+    ]
+  },
+  "resposta": {
+    "status": 422,
+    "corpo": {
+      "erro": "parte desconhecida: outra (use 'arquivos')",
+      "codigo": "parametro_invalido",
+      "campos": {
+        "outra": "parte desconhecida: outra (use 'arquivos')"
+      }
+    },
+    "x_custo": "pesada"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/quarentena/109/resolver?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "resolvido": true,
+      "observacao": "evento, não documento"
+    }
+  },
+  "resposta": {
+    "status": 200,
+    "corpo": {
+      "id": 109,
+      "importacao_id": 98,
+      "arquivo": "TESTE-TELAS/rejeitado_2.xml",
+      "motivo": "sem Id=NFe",
+      "chave": null,
+      "classe": "desconhecido",
+      "resolvido": true,
+      "resolvido_por": "Kátia Souza",
+      "resolvido_em": "2026-10-23T14:31:31+00:00",
+      "observacao": "evento, não documento",
+      "criado_em": "2026-10-23T14:31:30+00:00"
+    },
+    "x_custo": "leve"
+  }
+}
