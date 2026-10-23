@@ -1,0 +1,38 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/uploads?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {
+      "Idempotency-Key": "c41:a76f5dce2ad044ba930b65278cd75973"
+    },
+    "corpo": {
+      "nome": "lote-grande.zip",
+      "tamanho": 8388618
+    }
+  },
+  "resposta": {
+    "status": 201,
+    "corpo": {
+      "id": "f09cdb175348bf9478735a802d27a4d1",
+      "nome": "lote-grande.zip",
+      "tamanho": 8388618,
+      "tamanho_parte": 8388608,
+      "partes_esperadas": 2,
+      "partes_recebidas": [],
+      "recebido": 0,
+      "estado": "aberta",
+      "criado_por": "Kátia Souza",
+      "criado_em": "2026-10-23T15:13:54+00:00",
+      "expira_em": "2026-10-24T15:13:54+00:00",
+      "importacao_id": null
+    },
+    "x_custo": "leve",
+    "location": "/api/connect/v1/uploads/f09cdb175348bf9478735a802d27a4d1?cnpj_raiz=17122471"
+  }
+}

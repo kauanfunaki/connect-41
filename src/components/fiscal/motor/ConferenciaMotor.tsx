@@ -15,7 +15,7 @@ import { BlocoLivre, ErroDaLeitura, PaginacaoDoMotor } from "./LeituraDoMotor";
 import { escritaNaTela } from "@/lib/fiscal/motor/permissoes";
 import { LINHAS_SIMULAVEIS, pendenciasDaPrevia, ROTULO_DA_LINHA_SIMULAVEL } from "@/lib/sped/escritasDoMotor";
 import { ApurarCte } from "./EscritasFechamento";
-import { ApurarCombustivel, DecidirDocumento, EnviarPlanilhaDoBpo, EnviarRelatorioOmie, SimularLinha } from "./EscritasConferencia";
+import { ApurarCombustivel, CorrigirRegime, DecidirDocumento, EnviarPlanilhaDoBpo, EnviarRelatorioOmie, OrigemDoRegimeSelo, SimularLinha } from "./EscritasConferencia";
 
 const CAMINHO = "/fiscal/conferencia";
 const din = (v: string | null) => <span className="tabular-nums">{reaisDoMotor(v)}</span>;
@@ -62,11 +62,15 @@ export async function PreviaFinanceiraMotor({ tela, params }: { tela: TelaDoMoto
       ] }))} />
     </BlocoFiscal>
     <BlocoRecolhivel titulo="Prestadores de NFS-e tomada (MEI e normal)" abertoInicial={false}>
-      <div>{d.prestadores.erro !== null ? <ErroDaLeitura falha={d.prestadores} hrefDeNovo={aqui} /> : <div className="grid gap-5 lg:grid-cols-2">
+      <div className="space-y-3">
+        {escrita.visivel && <p className="text-helper text-fg-secondary">A correção de regime vale só para este cliente e vence o cadastro global, que continua no painel do motor. “Desfazer correção” volta ao cadastro ou ao palpite pelo nome.</p>}
+        {d.prestadores.erro !== null ? <ErroDaLeitura falha={d.prestadores} hrefDeNovo={aqui} /> : <div className="grid gap-5 xl:grid-cols-2">
         {([["MEI", d.prestadores.dados.mei, d.prestadores.dados.prestadores_mei], ["Normal", d.prestadores.dados.normal, d.prestadores.dados.prestadores_normal]] as const).map(([lado, total, lista]) => <section key={lado} aria-label={lado}>
           <h4 className="mb-2 text-label font-semibold text-fg">{lado} · {reaisDoMotor(total)}</h4>
-          <TabelaFiscal vazio="Nenhum prestador." descricaoVazio="" colunas={["Prestador", "Documentos", "Valor", "Classificação"]} linhas={lista.map((x, i) => ({ id: `${x.cnpj}-${i}`, celulas: [
-            <span key="n" className="block max-w-56 break-words">{x.nome || "—"}<span className="block text-helper text-fg-muted">{x.cnpj}</span></span>, String(x.documentos ?? "—"), din(x.valor), x.por_cadastro ? "Pelo cadastro" : "Pelo documento",
+          <TabelaFiscal vazio="Nenhum prestador." descricaoVazio="" colunas={["Prestador", "Documentos", "Valor", "Origem", ...(escrita.visivel ? ["Corrigir"] : [])]} linhas={lista.map((x, i) => ({ id: `${x.cnpj}-${i}`, celulas: [
+            <span key="n" className="block max-w-56 break-words">{x.nome || "—"}<span className="block text-helper text-fg-muted">{x.cnpj}</span></span>, String(x.documentos ?? "—"), din(x.valor),
+            <OrigemDoRegimeSelo key="o" regime={x.regime} origem={x.origem} porCadastro={x.por_cadastro} />,
+            ...(escrita.visivel ? [<CorrigirRegime key="c" raiz={contexto.raiz} competencia={p.competencia} cnpj={x.cnpj} nome={x.nome} regime={x.regime || (lado === "MEI" ? "mei" : "normal")} origem={x.origem} permissao={escrita} />] : []),
           ] }))} />
         </section>)}
       </div>}</div>

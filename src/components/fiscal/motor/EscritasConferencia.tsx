@@ -1,6 +1,6 @@
 "use client";
 
-// As escritas da Conferência fiscal (API-CONNECT §13.8 a §13.11).
+// As escritas da Conferência fiscal (API-CONNECT §13.8 a §13.11 e §14.1).
 
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -10,10 +10,11 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { CampoFiscal, TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
-import { apurarCombustivelNoMotor, decidirDocumentoDaConferenciaNoMotor, gravarSimulacaoNoMotor } from "@/app/(app)/fiscal/escritas-actions";
+import { apurarCombustivelNoMotor, decidirDocumentoDaConferenciaNoMotor, definirRegimeDoPrestadorNoMotor, gravarSimulacaoNoMotor } from "@/app/(app)/fiscal/escritas-actions";
+import { Badge } from "@/components/ui/Badge";
 import type { PermissaoDeEscrita } from "@/lib/fiscal/motor/escrita";
 import { reaisDoMotor } from "@/lib/fiscal/motor/formato";
-import { dinheiroDoCampo, type CombustivelApurado, type ConfrontoEnviado, type RelatorioOmieConferido, type SimulacaoGravada } from "@/lib/sped/escritasDoMotor";
+import { dinheiroDoCampo, regimeNaTela, type OrigemDoRegime, type Regime, type CombustivelApurado, type ConfrontoEnviado, type RelatorioOmieConferido, type SimulacaoGravada } from "@/lib/sped/escritasDoMotor";
 import type { PreviaFinanceira } from "@/lib/sped/telasDoMotor";
 import { AvisoDoResultado, EnvioDeArquivo, MotivoSemEscrita, useLacoPesado, type Resultado } from "./EscritasComuns";
 import { useChaveDeIdempotencia } from "./useChaveDeIdempotencia";
@@ -169,3 +170,45 @@ export function DecidirDocumento({ raiz, id, decisao, observacao, chaveDaNota, p
   </>;
 }
 
+
+/** O selo da camada que decidiu o regime (§14.1). Servidor ou cliente: não tem estado. */
+export function OrigemDoRegimeSelo({ regime, origem, porCadastro }: { regime: string; origem: OrigemDoRegime | null; porCadastro: boolean }) {
+  const t = regimeNaTela({ regime, origem });
+  // Motor anterior a §14: sem `origem`, o que havia era `por_cadastro`.
+  if (!t.origem) return <span className="text-helper text-fg-secondary">{porCadastro ? "Pelo cadastro" : "Pelo documento"}</span>;
+  return <span title={t.origem.dica}><Badge variant={t.origem.variante}>{t.origem.rotulo}</Badge></span>;
+}
+
+/**
+ * Corrigir o regime MEI/normal de um prestador **neste cliente** (§14.1). A
+ * correção vence o cadastro global só nesta raiz; "desfazer" (`null`) volta
+ * ao cadastro ou ao palpite pelo nome. A prévia é relida depois.
+ */
+export function CorrigirRegime({ raiz, competencia, cnpj, nome, regime, origem, permissao }: {
+  raiz: string;
+  competencia: string;
+  cnpj: string;
+  nome: string;
+  regime: string;
+  origem: OrigemDoRegime | null;
+  permissao: PermissaoDeEscrita;
+}) {
+  const router = useRouter();
+  const [chave, , depoisDe] = useChaveDeIdempotencia();
+  const [pendente, startTransition] = useTransition();
+  const [resultado, setResultado] = useState<Resultado | null>(null);
+  if (!permissao.visivel || !/^\d{14}$/.test(cnpj)) return null;
+  const t = regimeNaTela({ regime, origem });
+  const corrigir = (novo: Regime | null) => startTransition(async () => {
+    const r = await definirRegimeDoPrestadorNoMotor({ raiz, cnpj, regime: novo, nome, competencia, chave });
+    depoisDe(r);
+    setResultado({ ok: r.ok, mensagem: r.mensagem });
+    if (r.ok) router.refresh();
+  });
+  return <span className="flex min-w-32 flex-col items-center gap-1">
+    <span className="flex flex-wrap justify-center gap-1">
+      {t.acoes.map((a) => <Button key={String(a.regime)} size="xs" variant={a.regime === null ? "ghost" : "secondary"} disabled={!permissao.pode || pendente} title={permissao.motivo ?? (a.regime === null ? "Volta ao cadastro global ou ao palpite pelo nome" : "Vale só para este cliente")} onClick={() => corrigir(a.regime)}>{a.rotulo}</Button>)}
+    </span>
+    {resultado && <span role={resultado.ok ? "status" : "alert"} className={`max-w-56 text-helper ${resultado.ok ? "text-success-fg" : "text-warning-fg"}`}>{resultado.mensagem}</span>}
+  </span>;
+}
