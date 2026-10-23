@@ -17,7 +17,7 @@ O dono é um usuário ativo do mesmo escritório com acesso ao setor do módulo.
 
 Usar HTTPS e `Authorization: Bearer <chave>`. A chave só aceita dados da automação à qual pertence. Os endpoints de consulta e configuração exigem a sessão da equipe. O corpo JSON tem limite de 32 KiB.
 
-Atividade: `POST /api/ops/watchers/<slug>/heartbeat`, sem corpo, a cada 30 segundos. Sem sinal durante três minutos a tela mostra Sem comunicação; antes do primeiro sinal, Sem sinal de atividade. O painel não inicia nem encerra processos e não lê pastas da rede.
+Atividade: `POST /api/ops/watchers/<slug>/heartbeat`, sem corpo, a cada 30 segundos. Sem sinal durante três minutos, antes do primeiro sinal ou com recebimento desativado, a tela mostra Offline. O painel não inicia nem encerra processos e não lê pastas da rede.
 
 Arquivos da pasta de rede (21/10/2026): `POST /api/ops/watchers/<slug>/arquivos`, multipart, até 10 MB por arquivo. O robô `scripts/pasta-de-rede.mjs` usa esse endpoint para guardar nos Arquivos o que acha na pasta de rede das empresas do piloto, e o Connect registra cada entrada ou recusa como evento da automação. O roteiro está em `docs/PASTA-DE-REDE.md`.
 
@@ -65,7 +65,7 @@ Os dois agentes do motor SPED (`agente.py`, um na VPS e um no Windows do escrit�
    - `OPS_SLUG` = `sped-agente-vps` na VPS e `sped-agente-windows` no Windows.
    Sem as três, o agente não envia nada e continua processando a fila normalmente.
 4. Reiniciar o agente. O heartbeat sai a cada 30 segundos, inclusive durante uma geração longa; cada pedido finalizado vira um evento (`SUCCESS` com código de saída 0, `ERROR` nos outros casos), com `eventId` `sped-fila-<id>-<uuid>`, o rótulo do estabelecimento em `client` e a mensagem da fila (nunca o log) em `errorMessage`.
-5. Conferir no `/ops`: a automação sai de "Sem sinal de atividade" no primeiro heartbeat; um pedido concluído e um com erro aparecem no histórico, e o erro avisa o dono.
+5. Conferir no `/ops`: a automação fica Online no primeiro heartbeat, ou Instável se tiver uma sinalização de instabilidade em aberto; um pedido concluído e um com erro aparecem no histórico, e o erro avisa o dono.
 
 O Ops Center só observa: pausar, reiniciar ou destravar a fila continua nas telas fiscais (Executar › Histórico › Destravar) ou no painel do motor. A saúde vista pelo próprio motor (`GET /saude`, tabela `agentes_batimento`) aparece no Painel fiscal, e as duas fontes podem divergir por alguns segundos.
 
@@ -76,6 +76,10 @@ Cada evento `ERROR` gera um aviso para o dono atual no sino/central do Connect, 
 É possível sinalizar uma instabilidade, abrir um chamado pelo fluxo existente e vincular seu ID, desde que o chamado esteja visível para quem faz o vínculo. Resolver a sinalização preserva o histórico de processamento. O módulo não cria nem transmite chamados automaticamente.
 
 Resumo e contadores usam o dia em São Paulo. Os filtros de automação, resultado e data recortam o histórico. A tela atualiza a cada 30 segundos quando visível, permite atualização manual e informa falhas sem apresentar os dados anteriores como atuais. Desativação de usuário interrompe novos avisos; exclusão do usuário deixa a automação sem responsável.
+
+A visualização **Automações** mostra cartões com responsável, sucessos e erros do dia, último sinal e caminhos de entrada/saída. A busca local aceita nome, responsável, descrição, cliente e identificador. Os filtros Online, Instável e Offline recortam somente os cartões; o resumo do dia continua considerando todas as automações do recorte Todas/Minhas. Online significa comunicação recente sem instabilidade sinalizada; Instável indica comunicação recente com sinalização em aberto. Offline inclui recebimento desativado, nenhum sinal recebido e ausência de comunicação por pelo menos três minutos. Online agora conta todas as automações com comunicação recente, inclusive as instáveis.
+
+A visualização **Histórico** mantém os filtros e a paginação dos arquivos processados, com tabela no computador e cartões em telas menores. Links de notificações com filtros abrem diretamente o histórico. Entrada e Saída copiam os caminhos configurados; ficam indisponíveis quando a pasta não foi informada. A tela segue as fontes, cores, ícones e temas do Connect; a animação de atividade respeita a preferência por movimento reduzido.
 
 ## Verificação local
 
