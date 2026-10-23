@@ -41,6 +41,7 @@ import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 import { CamposDaContraparteNova } from "@/components/financeiro/ContraparteNova";
 import { CampoDeProjeto } from "@/components/financeiro/CampoDeProjeto";
+import { CamposDoRateio } from "@/components/financeiro/CamposDoRateio";
 import { BARRAS_DO_NIVEL, ROTULO_DO_NIVEL, EXPLICACAO_DO_NIVEL, type NivelDoCasamento } from "@/lib/financeiro/conciliacao/casamento";
 
 export type LancamentoResumido = {
@@ -489,7 +490,9 @@ export function TransacoesDaConta({
           centros={centros}
           projetos={projetos}
           onClose={() => setCriando(null)}
-          onCriado={(lancamento) => {
+          onCriado={(lancamento, rateado) => {
+            // A regra lança numa categoria só: para a conta rateada, não se oferece.
+            if (rateado) return;
             const contraparteNome = contrapartes.find((c) => c.id === lancamento.counterpartyId)?.nome ?? null;
             setOferta({ linha: criando, campos: camposDe(criando, { ...lancamento, contraparteNome: contraparteNome ?? criando.nome ?? "" }) });
           }}
@@ -821,13 +824,19 @@ function CriarLancamento({
   centros: Centro[];
   projetos: Projeto[];
   onClose: () => void;
-  /** O que foi lançado — a tela oferece a regra "sempre que vier assim". */
-  onCriado?: (lancamento: { counterpartyId: string; categoryId: string | null; costCenterId: string | null; projectId: string | null }) => void;
+  /** O que foi lançado — a tela oferece a regra "sempre que vier assim". `rateado`: saiu rateada. */
+  onCriado?: (
+    lancamento: { counterpartyId: string; categoryId: string | null; costCenterId: string | null; projectId: string | null },
+    rateado?: boolean
+  ) => void;
 }) {
   const kind = transacao.centavos < 0 ? "PAGAR" : "RECEBER";
   const doTipo = categorias.filter((c) => c.kind === kind);
   const [contraparte, setContraparte] = useState("");
   const [categoria, setCategoria] = useState("");
+  // O rateio na conciliação (lote M1 do mercado, 23/10/2026): as linhas fecham o valor da linha do extrato.
+  const [rateando, setRateando] = useState(false);
+  const valorDaLinha = Number(Math.abs(transacao.centavos) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
   // Em branco o servidor herda o padrão da contraparte; a tela só diz qual é.
@@ -841,7 +850,7 @@ function CriarLancamento({
   }
 
   return (
-    <Modal open onClose={onClose} title={kind === "PAGAR" ? "Criar conta a pagar" : "Criar conta a receber"} maxWidth="max-w-xl">
+    <Modal open onClose={onClose} title={kind === "PAGAR" ? "Criar conta a pagar" : "Criar conta a receber"} maxWidth={rateando ? "max-w-3xl" : "max-w-xl"}>
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => {
@@ -854,7 +863,7 @@ function CriarLancamento({
             if ("error" in r) setErro(r.error);
             else {
               onClose();
-              onCriado?.(r.lancamento);
+              onCriado?.(r.lancamento, r.rateado);
             }
           });
         }}
@@ -898,29 +907,50 @@ function CriarLancamento({
           </FieldGrid>
         )}
 
-        <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_180px]">
-          <CampoForm
-            label="Categoria"
-            htmlFor="criar-categoria"
-            required={kind === "PAGAR"}
-            helper={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
-          >
-            <Select id="criar-categoria" name="categoryId" value={categoria} onChange={(e) => setCategoria(e.target.value)} required={kind === "PAGAR"}>
-              <option value="">{kind === "PAGAR" ? "Escolha…" : "Sem categoria"}</option>
-              {doTipo.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </Select>
-          </CampoForm>
+        <input type="hidden" name="comRateio" value={rateando ? "1" : "0"} />
+        <FieldGrid columns={rateando ? "sm:grid-cols-[180px]" : "sm:grid-cols-[minmax(0,1fr)_180px]"}>
+          {!rateando && (
+            <CampoForm
+              label="Categoria"
+              htmlFor="criar-categoria"
+              required={kind === "PAGAR"}
+              helper={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
+              acao={
+                <Button type="button" variant="link" className="text-helper" onClick={() => setRateando(true)}>
+                  Ratear
+                </Button>
+              }
+            >
+              <Select id="criar-categoria" name="categoryId" value={categoria} onChange={(e) => setCategoria(e.target.value)} required={kind === "PAGAR"}>
+                <option value="">{kind === "PAGAR" ? "Escolha…" : "Sem categoria"}</option>
+                {doTipo.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
+          )}
           <CampoForm label="Competência" htmlFor="criar-competencia" required helper="Padrão: o mês do extrato.">
             <CampoMes id="criar-competencia" name="competencia" defaultValue={transacao.dataKey.slice(0, 7)} required />
           </CampoForm>
         </FieldGrid>
 
+        {/* Rateada, categoria, centro e projeto saem das linhas, que fecham o valor da linha do extrato. */}
+        {rateando && (
+          <CamposDoRateio
+            categorias={doTipo}
+            centros={centros}
+            projetos={projetos}
+            valorTexto={valorDaLinha}
+            categoriaInicial={categoria}
+            onDesfazer={() => setRateando(false)}
+          />
+        )}
+
         {/* Projeto sempre (19/10): ver `CampoDeProjeto`. */}
-        <FieldGrid columns={centros.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}>
+        {!rateando && (
+          <FieldGrid columns={centros.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}>
             {centros.length > 0 && (
               <CampoForm
                 label="Centro de custo"
@@ -938,7 +968,8 @@ function CriarLancamento({
               </CampoForm>
             )}
             <CampoDeProjeto id="criar-projeto" companyId={companyId} projetos={projetos} />
-        </FieldGrid>
+          </FieldGrid>
+        )}
 
         <CampoForm label="Descrição" htmlFor="criar-descricao">
           <Input id="criar-descricao" name="descricao" maxLength={255} defaultValue={(transacao.memo ?? transacao.nome ?? "").slice(0, 255)} />
