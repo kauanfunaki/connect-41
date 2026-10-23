@@ -44,8 +44,9 @@ export function resumoDoParcelamento(parcelas: string, totalCentavos: number | n
  * refaz a divisão (e desfaz o que foi mudado à mão).
  *
  * Cada parcela vira uma conta, ligada às outras pela série ("3/12"), como a
- * repetição — mas não junto com ela, nem com rateio, retenção ou "já pago
- * em": o servidor recusa e diz o caminho.
+ * repetição — mas não junto com ela nem com "já pago em": o servidor recusa e
+ * diz o caminho. Com rateio e retenção (lote M1 do mercado, 23/10/2026), cada
+ * parcela leva a parte dela de cada um — ver `divisaoDoLancamento.ts`.
  *
  * A competência (23/10/2026) é a da compra, a mesma em todas — o de sempre —,
  * ou a do vencimento de cada parcela, para quem quer cada uma no mês em que
