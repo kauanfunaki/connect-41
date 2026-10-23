@@ -253,7 +253,7 @@ export function LancamentoCard({
               <p className="text-helper text-fg-muted mb-2">
                 A nota traz {duplicatas.parcelas.length} duplicatas: a conta nasce em{" "}
                 <span className="font-medium text-fg">{duplicatas.parcelas.length} parcelas</span>, cada uma no vencimento e
-                no valor da sua, todas na competência da compra.
+                no valor da sua, todas na competência da nota.
               </p>
               <ul className="divide-y divide-border border border-border rounded-md">
                 {duplicatas.parcelas.map((p) => (

@@ -30,6 +30,7 @@ const m = vi.hoisted(() => {
     avisarAprovadores: vi.fn(),
     statusInicial: vi.fn(() => "NAO_REQUER"),
     cancelarContasDosImpostos: vi.fn(),
+    aplicarRetencoes: vi.fn(),
   };
 });
 
@@ -44,7 +45,7 @@ vi.mock("@/lib/auth/context", () => ({
 vi.mock("@/lib/modules", () => ({ isModuleEnabled: async () => true, setoresDoModulo: async () => null }));
 vi.mock("@/lib/fiscal/data", () => ({ obterDocumento: m.obterDocumento }));
 vi.mock("@/lib/financeiro/retencoesServidor", () => ({
-  aplicarRetencoes: vi.fn(),
+  aplicarRetencoes: m.aplicarRetencoes,
   cancelarContasDosImpostos: m.cancelarContasDosImpostos,
   RecusaDaRetencao: class extends Error {},
 }));
@@ -397,5 +398,105 @@ describe("estornarLancamento — todas as contas da nota", () => {
     m.db.financeEntry.findMany.mockResolvedValue([]);
     expect(await estornarLancamento("doc1")).toEqual({ error: "Este documento não tem lançamento." });
     expect(m.db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("lancarDocumento — conta a receber da nota de venda (23/10): a mesma regra da compra", () => {
+  /** NF-e de venda: a BLD (a empresa do escritório) emite, a Zahra compra. */
+  const venda = (over: Record<string, unknown> = {}) =>
+    nota({
+      issuerName: "BLD",
+      issuerDocument: "17122471000175",
+      recipientName: "ZAHRA",
+      recipientDocument: "39952818000140",
+      ...over,
+    });
+
+  it("três duplicatas que fecham: três parcelas a receber, cada uma ligada à nota, no vencimento e no valor da sua", async () => {
+    m.obterDocumento.mockResolvedValue(venda({ installments: tresDuplicatas }));
+    expect(await lancarDocumento("doc1", { vencimento: "2027-01-31" })).toEqual({ ok: true, entryId: "e1" });
+    // A contraparte é o cliente (o destinatário), não a própria empresa.
+    expect(m.db.financeCounterparty.findFirst.mock.calls[0]![0].where.document).toBe("39952818000140");
+    const primeira = m.tx.financeEntry.create.mock.calls[0]![0].data;
+    expect(primeira).toMatchObject({ kind: "RECEBER", amount: "333.34", fiscalDocumentId: "doc1", fiscalDocumentInstallment: 1, recurrenceTotal: 3 });
+    expect(primeira.dueDate.toISOString().slice(0, 10)).toBe("2026-10-01");
+    const outras = m.tx.financeEntry.createMany.mock.calls[0]![0].data;
+    expect(outras).toHaveLength(2);
+    for (const o of outras) expect(o).toMatchObject({ kind: "RECEBER", fiscalDocumentId: "doc1", recurrenceId: primeira.recurrenceId });
+    expect(outras.map((o: { fiscalDocumentInstallment: number }) => o.fiscalDocumentInstallment)).toEqual([2, 3]);
+    expect(outras.map((o: { dueDate: Date }) => o.dueDate.toISOString().slice(0, 10))).toEqual(["2026-11-01", "2026-12-01"]);
+    expect(m.tx.financeRecurrence.create).toHaveBeenCalledTimes(1);
+    expect(m.logAudit.mock.calls[0]![0].metadata).toMatchObject({ kind: "RECEBER", duplicatas: { parcelas: 3 } });
+  });
+
+  it("uma duplicata: uma conta a receber, vencendo nela", async () => {
+    m.obterDocumento.mockResolvedValue(venda({ installments: [{ numero: "1", vencimento: "2026-09-21", valor: "1000.00" }] }));
+    await lancarDocumento("doc1", {});
+    const conta = m.tx.financeEntry.create.mock.calls[0]![0].data;
+    expect(conta).toMatchObject({ kind: "RECEBER", fiscalDocumentInstallment: 1 });
+    expect(conta.dueDate.toISOString().slice(0, 10)).toBe("2026-09-21");
+    expect(m.tx.financeEntry.createMany).not.toHaveBeenCalled();
+    expect(m.logAudit.mock.calls[0]![0].metadata.duplicatas).toEqual({ parcelas: 1, vencimentoDaNota: "2026-09-21" });
+  });
+
+  it("soma que não fecha: a conta a receber inteira, e o motivo na auditoria", async () => {
+    m.obterDocumento.mockResolvedValue(venda({ installments: [tresDuplicatas[0], tresDuplicatas[1]] }));
+    await lancarDocumento("doc1", {});
+    expect(String(m.tx.financeEntry.create.mock.calls[0]![0].data.amount)).toBe("1000.00");
+    expect(m.tx.financeEntry.createMany).not.toHaveBeenCalled();
+    expect(m.logAudit.mock.calls[0]![0].metadata.duplicatas.recusadas).toMatch(/somam/);
+  });
+
+  it("nota de venda com retenção: inteira, com o motivo — e nenhuma conta de imposto (quem recolhe é o cliente)", async () => {
+    m.obterDocumento.mockResolvedValue(
+      venda({
+        amount: dec("1000.00"),
+        netAmount: dec("985.00"),
+        retentionsByTax: { IRRF: "15.00" },
+        installments: [
+          { numero: "1", vencimento: "2026-10-01", valor: "492.50" },
+          { numero: "2", vencimento: "2026-11-01", valor: "492.50" },
+        ],
+      })
+    );
+    await lancarDocumento("doc1", {});
+    expect(String(m.tx.financeEntry.create.mock.calls[0]![0].data.amount)).toBe("985.00");
+    expect(m.tx.financeEntry.createMany).not.toHaveBeenCalled();
+    expect(m.aplicarRetencoes).not.toHaveBeenCalled();
+    expect(m.logAudit.mock.calls[0]![0].metadata.duplicatas.recusadas).toMatch(/Retenção/);
+  });
+
+  it("duplicatas ilegíveis ou acima de 120: inteira, com o motivo", async () => {
+    m.obterDocumento.mockResolvedValue(venda({ installments: { nao: "é lista" } }));
+    await lancarDocumento("doc1", {});
+    expect(m.tx.financeEntry.createMany).not.toHaveBeenCalled();
+    expect(m.logAudit.mock.calls[0]![0].metadata.duplicatas.recusadas).toMatch(/não se leem/);
+  });
+
+  it("sem duplicatas: a conta a receber de sempre, vencimento presumido", async () => {
+    m.obterDocumento.mockResolvedValue(venda());
+    await lancarDocumento("doc1", {});
+    const conta = m.tx.financeEntry.create.mock.calls[0]![0].data;
+    expect(conta.kind).toBe("RECEBER");
+    expect(conta.recurrenceId).toBeUndefined();
+    expect(conta.dueDate.toISOString().slice(0, 10)).toBe("2026-10-01");
+    expect(m.logAudit.mock.calls[0]![0].metadata.duplicatas).toBeUndefined();
+  });
+
+  it("estorno da venda parcelada: todas as parcelas a receber saem juntas", async () => {
+    m.obterDocumento.mockResolvedValue(venda({ destination: "LANCADO", financeEntries: [{ id: "e1" }] }));
+    const parcela = (id: string, i: number) => ({
+      id,
+      status: "CONFERIDO",
+      paidPrincipal: dec("0"),
+      closeReason: null,
+      agreementId: null,
+      recurrenceId: "s1",
+      fiscalDocumentInstallment: i,
+    });
+    m.db.financeEntry.findMany.mockResolvedValue([parcela("e1", 1), parcela("e2", 2)]);
+    m.tx.financeEntry.deleteMany.mockResolvedValue({ count: 2 });
+    expect(await estornarLancamento("doc1")).toEqual({ ok: true });
+    expect(m.tx.financeEntry.deleteMany.mock.calls[0]![0].where.id).toEqual({ in: ["e1", "e2"] });
   });
 });

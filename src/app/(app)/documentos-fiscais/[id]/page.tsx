@@ -116,7 +116,8 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           duplicatas: doc.installments,
           totalCentavos: (doc.netAmount ?? doc.amount) === null ? null : centavosDeDecimal((doc.netAmount ?? doc.amount)!),
           kind: veredito.kind,
-          comRetencoes: retidoPorTributo !== null && veredito.kind === "PAGAR",
+          // A nota que retém nasce inteira, na compra e na venda (23/10).
+          comRetencoes: retidoPorTributo !== null,
         })
       : null;
   const duplicatas =
