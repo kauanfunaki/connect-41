@@ -21,11 +21,18 @@ import {
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "@/lib/financeiro/aprovacao/servidor";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
 import { categoriaDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { planoDaNota } from "@/lib/financeiro/parcelasDaNota";
+import { instanteDaData } from "@/lib/financeiro/periodo";
+import { decimalDeCentavos } from "@/lib/financeiro/manual";
+import { randomUUID } from "crypto";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
+
+/** Uma parcela mudou entre a leitura e o estorno — desfaz a transação inteira. */
+class ParcelaMudou extends Error {}
 
 export type ResultadoDoLancamento = { error: string } | { ok: true; entryId: string };
 
@@ -95,7 +102,39 @@ export async function lancarDocumento(
     return { error: "Escolha a categoria: despesa sem classificação não fecha o DRE." };
   }
 
-  const vencimento = opcoes.vencimento ? new Date(opcoes.vencimento) : vencimentoPresumido(doc.issuedAt);
+  // As retenções por tributo que a NFS-e declara (lote D, 20/10): na conta a
+  // pagar, cada uma vira a conta do imposto, junto com a da nota.
+  const retencoes =
+    veredito.kind === "PAGAR"
+      ? retencoesDaNota(doc.retentionsByTax, {
+          brutoCentavos: doc.amount === null ? null : centavosDeDecimal(doc.amount),
+          liquidoCentavos: doc.netAmount === null ? null : centavosDeDecimal(doc.netAmount),
+        })
+      : [];
+
+  // As duplicatas da nota de compra (23/10, "parado #22"): com duas ou mais
+  // que fecham com a conta, ela nasce parcelada — uma parcela por duplicata;
+  // com uma, vence no dia dela. Ver `parcelasDaNota.ts`. A mesma função monta
+  // a prévia da ficha, então a tela mostra exatamente o que nasce aqui.
+  const valorDaConta = doc.netAmount ?? doc.amount!;
+  const plano = planoDaNota({
+    duplicatas: doc.installments,
+    totalCentavos: centavosDeDecimal(valorDaConta),
+    kind: veredito.kind,
+    comRetencoes: retencoes.length > 0,
+  });
+  const parcelas = plano.tipo === "PARCELAS" ? plano.parcelas : null;
+
+  // Parcelada, o vencimento de cada parcela é o da duplicata, e o do
+  // formulário não vale (a tela nem o mostra). Senão, o que a pessoa escolheu —
+  // que a ficha preenche com o da duplicata única, quando há — ou o presumido.
+  const vencimento = parcelas
+    ? instanteDaData(parcelas[0]!.vencimentoKey)
+    : opcoes.vencimento
+      ? new Date(opcoes.vencimento)
+      : plano.tipo === "VENCIMENTO"
+        ? instanteDaData(plano.vencimentoKey)
+        : vencimentoPresumido(doc.issuedAt);
   if (Number.isNaN(vencimento.getTime())) return { error: "Vencimento inválido." };
 
   // O centro escolhido na ficha vence; sem ele, o padrão da contraparte.
@@ -109,21 +148,17 @@ export async function lancarDocumento(
 
   // Nasce PROVISORIO, portanto em aberto: conta a pagar de empresa com alçada
   // já entra aguardando aprovação.
-  // As retenções por tributo que a NFS-e declara (lote D, 20/10): na conta a
-  // pagar, cada uma vira a conta do imposto, junto com a da nota.
-  const retencoes =
-    veredito.kind === "PAGAR"
-      ? retencoesDaNota(doc.retentionsByTax, {
-          brutoCentavos: doc.amount === null ? null : centavosDeDecimal(doc.amount),
-          liquidoCentavos: doc.netAmount === null ? null : centavosDeDecimal(doc.netAmount),
-        })
-      : [];
-
   const approvalStatus = (await contextoDeEntrada(ctx.tenantId, [doc.companyId])).statusInicial(
     doc.companyId,
     veredito.kind,
     "PROVISORIO"
   );
+  // A série das parcelas, como a do parcelamento manual: o mesmo id em todas, e
+  // cada uma sabe a sua posição ("2/3").
+  const serie = parcelas ? { recurrenceId: randomUUID(), recurrenceTotal: parcelas.length } : null;
+  const numeroDoDocumento = `${doc.number}${doc.series ? `/${doc.series}` : ""}`.slice(0, 60);
+  const descricao = `${doc.type} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`;
+  const idsDasProximas = parcelas ? parcelas.slice(1).map(() => randomUUID()) : [];
 
   try {
     const entry = await prisma.$transaction(async (tx) => {
@@ -165,17 +200,69 @@ export async function lancarDocumento(
           //
           // O documento continua exibindo `amount`: o acervo espelha o DANFSE,
           // e é a conta que muda, não a nota.
-          amount: doc.netAmount ?? doc.amount!,
-          description: `${doc.type} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`,
+          //
+          // Parcelada pelas duplicatas, esta é a primeira parcela — e é ela que
+          // guarda o vínculo com a nota (`fiscalDocumentId` é 1:1). O unique é o
+          // que barra o segundo clique antes de qualquer outra parcela nascer.
+          amount: parcelas ? decimalDeCentavos(parcelas[0]!.centavos) : valorDaConta,
+          description: descricao,
           // Emissão e número são os da nota (19/10) — e por isso travados na edição.
           issueDate: doc.issuedAt,
-          documentNumber: `${doc.number}${doc.series ? `/${doc.series}` : ""}`.slice(0, 60),
+          documentNumber: numeroDoDocumento,
           fiscalDocumentId: doc.id,
           createdById: ctx.userId,
+          ...(serie ? { ...serie, recurrenceIndex: 1 } : {}),
         },
         select: { id: true, amount: true },
       });
       if (approvalStatus === "AGUARDANDO") await registrarEnvios(tx, [criado.id], ctx.userId || null);
+      if (parcelas && serie) {
+        // A regra da série, como a do parcelamento manual: todas nascem agora e
+        // o agendador não olha para ela (VEZES). `MANTER`: o dia é o que a
+        // duplicata diz, não se ajusta a dia útil.
+        await tx.financeRecurrence.create({
+          data: {
+            id: serie.recurrenceId,
+            tenantId: ctx.tenantId!,
+            companyId: doc.companyId,
+            frequency: "MENSAL",
+            dayAdjust: "MANTER",
+            endMode: "VEZES",
+            endDate: null,
+            total: serie.recurrenceTotal,
+            firstDueDate: parcelas[0]!.vencimentoKey,
+            firstCompetence: doc.competence,
+            lastIndex: parcelas.length,
+            createdById: ctx.userId || null,
+          },
+        });
+        // As outras parcelas: a mesma conta, com o vencimento e o valor da
+        // duplicata, e a competência da compra em todas (`parcelamento.ts`).
+        // Emissão e número da nota vão junto — a parcela é do mesmo documento.
+        await tx.financeEntry.createMany({
+          data: parcelas.slice(1).map((p, i) => ({
+            id: idsDasProximas[i]!,
+            tenantId: ctx.tenantId!,
+            companyId: doc.companyId,
+            kind: veredito.kind,
+            status: "PROVISORIO" as const,
+            approvalStatus,
+            counterpartyId: contraparte.id,
+            categoryId: categoriaId,
+            costCenterId: centro.centroId,
+            competence: doc.competence,
+            dueDate: instanteDaData(p.vencimentoKey),
+            amount: decimalDeCentavos(p.centavos),
+            description: descricao,
+            issueDate: doc.issuedAt,
+            documentNumber: numeroDoDocumento,
+            createdById: ctx.userId,
+            ...serie,
+            recurrenceIndex: p.indice,
+          })),
+        });
+        if (approvalStatus === "AGUARDANDO") await registrarEnvios(tx, idsDasProximas, ctx.userId || null);
+      }
       if (retencoes.length > 0) {
         await aplicarRetencoes(tx, {
           tenantId: ctx.tenantId!,
@@ -188,7 +275,7 @@ export async function lancarDocumento(
             categoryId: categoriaId,
             costCenterId: centro.centroId,
             projectId: null,
-            documentNumber: `${doc.number}${doc.series ? `/${doc.series}` : ""}`.slice(0, 60),
+            documentNumber: numeroDoDocumento,
           },
           passos: retencoes.map((r) => ({ tipo: "criar" as const, tributo: r.tributo, centavos: r.centavos })),
         });
@@ -211,8 +298,14 @@ export async function lancarDocumento(
       return criado;
     });
 
+    // Cada conta que espera aprovação com o valor dela — as parcelas não têm o mesmo.
     const aviso =
-      approvalStatus === "AGUARDANDO" ? await avisarAprovadores(ctx.tenantId, [{ companyId: doc.companyId, amount: entry.amount }]) : null;
+      approvalStatus === "AGUARDANDO"
+        ? await avisarAprovadores(ctx.tenantId, [
+            { companyId: doc.companyId, amount: entry.amount },
+            ...(parcelas ?? []).slice(1).map((p) => ({ companyId: doc.companyId, amount: decimalDeCentavos(p.centavos) })),
+          ])
+        : null;
 
     await logAudit({
       tenantId: ctx.tenantId,
@@ -227,6 +320,22 @@ export async function lancarDocumento(
         centroDeCusto: centro.centroId,
         approvalStatus,
         ...(retencoes.length > 0 ? { retencoes: resumoDasRetencoes(retencoes) } : {}),
+        // O que as duplicatas da nota decidiram — e, quando não deu para usá-las,
+        // por quê: é o que explica, depois, uma conta inteira de nota parcelada.
+        ...(parcelas && serie
+          ? {
+              duplicatas: {
+                parcelas: parcelas.length,
+                serie: serie.recurrenceId,
+                vencimentos: parcelas.map((p) => p.vencimentoKey),
+                total: decimalDeCentavos(centavosDeDecimal(valorDaConta)),
+              },
+            }
+          : plano.tipo === "VENCIMENTO"
+            ? { duplicatas: { parcelas: 1, vencimentoDaNota: plano.vencimentoKey } }
+            : plano.tipo === "RECUSADO"
+              ? { duplicatas: { recusadas: plano.motivo } }
+              : {}),
         ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
       },
     });
@@ -278,16 +387,52 @@ export async function estornarLancamento(documentoId: string): Promise<{ error: 
   }
 
   const entryId = doc.financeEntry.id;
+
+  // A conta que nasceu parcelada pelas duplicatas (23/10) estorna inteira: as
+  // parcelas são a mesma nota, e deixar a 2ª e a 3ª sem a 1ª seria lançar parte
+  // de uma compra que voltou para pendente. A mesma regra da 1ª vale para cada
+  // uma — com baixa (inteira ou parcial) ou renegociada, o estorno para.
+  const serieId = doc.financeEntry.recurrenceId;
+  const outrasParcelas = serieId
+    ? await prisma.financeEntry.findMany({
+        where: { tenantId: ctx.tenantId, companyId: doc.companyId, recurrenceId: serieId, id: { not: entryId } },
+        select: { id: true, status: true, paidPrincipal: true, closeReason: true, agreementId: true, recurrenceIndex: true },
+      })
+    : [];
+  const presa = outrasParcelas.find(
+    (p) =>
+      p.status === "PAGO" ||
+      Number(p.paidPrincipal.toString()) > 0 ||
+      p.closeReason === "RENEGOCIADO" ||
+      p.closeReason === "PERDA" ||
+      p.agreementId !== null
+  );
+  if (presa) {
+    return {
+      error: `A parcela ${presa.recurrenceIndex ?? "?"} desta nota já tem baixa ou foi renegociada. Desfaça no financeiro antes de estornar.`,
+    };
+  }
+  const idsDoEstorno = [entryId, ...outrasParcelas.map((p) => p.id)];
+
   try {
     await prisma.$transaction(async (tx) => {
       // As contas dos impostos retidos (lote D, 20/10) ficam canceladas, como
       // histórico; a que já tem baixa barra o estorno.
-      await cancelarContasDosImpostos(tx, ctx.tenantId, [entryId]);
+      await cancelarContasDosImpostos(tx, ctx.tenantId, idsDoEstorno);
+      if (outrasParcelas.length > 0) {
+        // Condicionado ao estado lido: a baixa que chegou entre a leitura e
+        // aqui não é apagada por baixo — a contagem não fecha e nada muda.
+        const apagadas = await tx.financeEntry.deleteMany({
+          where: { id: { in: outrasParcelas.map((p) => p.id) }, tenantId: ctx.tenantId, paidPrincipal: 0, payments: { none: {} } },
+        });
+        if (apagadas.count !== outrasParcelas.length) throw new ParcelaMudou("Uma parcela desta nota acabou de mudar — atualize a tela.");
+      }
       await tx.financeEntry.delete({ where: { id: entryId } });
+      if (serieId) await tx.financeRecurrence.deleteMany({ where: { id: serieId, tenantId: ctx.tenantId } });
       await tx.fiscalDocument.update({ where: { id: doc.id }, data: { destination: "PENDENTE" } });
     });
   } catch (e) {
-    if (e instanceof RecusaDaRetencao) return { error: e.message };
+    if (e instanceof RecusaDaRetencao || e instanceof ParcelaMudou) return { error: e.message };
     throw e;
   }
 
@@ -297,7 +442,7 @@ export async function estornarLancamento(documentoId: string): Promise<{ error: 
     action: "financeiro.entry.reversed",
     entityType: "FinanceEntry",
     entityId: entryId,
-    metadata: { fiscalDocumentId: doc.id },
+    metadata: { fiscalDocumentId: doc.id, ...(outrasParcelas.length > 0 ? { parcelas: idsDoEstorno.length, serie: serieId } : {}) },
   });
 
   revalidatePath("/documentos-fiscais");

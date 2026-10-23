@@ -152,6 +152,8 @@ export async function importarXmls(_anterior: EstadoDaEntrada, form: FormData): 
           retentionsTotal: doc.retencoesTotal,
           // Cada tributo retido (lote D, 20/10): o lançamento gera a conta de cada imposto.
           retentionsByTax: doc.retencoesPorTributo ?? undefined,
+          // As duplicatas da NF-e (23/10): a conta a pagar da nota nasce parcelada por elas.
+          installments: doc.duplicatas ?? undefined,
           issuedAt: doc.emitidoEm,
           competence: competencia,
           origin: "UPLOAD",
