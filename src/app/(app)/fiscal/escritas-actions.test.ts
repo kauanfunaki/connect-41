@@ -241,3 +241,83 @@ describe("Conferência", () => {
     expect(m.fetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("Conferência › prestadores: regime MEI/normal (§14.1)", () => {
+  const CNPJ = "11222333000181";
+  it("corrige neste cliente: PUT com a competência da tela, sem campo de autor; audita e relê a Conferência", async () => {
+    responder("regime_definir");
+    const r = await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: "mei", competencia: "2032-03", chave: CHAVE });
+    expect(r).toMatchObject({ ok: true, dados: { prestador: { regime: "mei", origem: "cliente" } } });
+    expect(r.mensagem).toMatch(/passa a MEI neste cliente/);
+    const { url, init } = enviado();
+    expect([init.method, url]).toEqual(["PUT", "https://motor/api/connect/v1/conferencia/prestadores/regime?cnpj_raiz=17122471"]);
+    expect(JSON.parse(init.body as string)).toEqual({ cnpj: CNPJ, regime: "mei", competencia: "2032-03" });
+    expect(m.pode).toHaveBeenCalledWith(m.ctx, "fiscal_conferencia", "agir");
+    expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.regime.definido", entityType: "SpedPrestador", entityId: CNPJ }));
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/conferencia"]);
+  });
+  it("`null` apaga a correção: volta ao cadastro ou ao nome, e a frase diz qual", async () => {
+    responder("regime_apagar");
+    const r = await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: null, competencia: "2032-03" });
+    expect(r).toMatchObject({ ok: true, dados: { prestador: { origem: "nome", regime: "normal" } } });
+    expect(r.mensagem).toMatch(/volta a normal, pelo nome/);
+    expect(JSON.parse(enviado().init.body as string)).toMatchObject({ regime: null });
+    expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.regime.apagado" }));
+  });
+  it("regime fora do enum ou CNPJ inválido: recusa sem chamar; 422 do motor chega com o campo", async () => {
+    expect((await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: "simples", competencia: "2032-03" })).ok).toBe(false);
+    expect((await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: "123", regime: "mei", competencia: "2032-03" })).ok).toBe(false);
+    expect(m.fetch).not.toHaveBeenCalled();
+    responder("erro_regime_invalido");
+    const r = await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: "mei", competencia: "2032-03" });
+    expect(r).toMatchObject({ ok: false, codigo: "parametro_invalido", campos: { regime: expect.any(String) } });
+    expect(m.audit).not.toHaveBeenCalled();
+  });
+  it("portão: sem agir no módulo da Conferência, ou sem token de escrita, nem chama", async () => {
+    m.pode.mockResolvedValue(false);
+    expect((await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: "mei", competencia: "2032-03" })).ok).toBe(false);
+    m.pode.mockResolvedValue(true);
+    m.motor.escrita = false;
+    expect(await acoes.definirRegimeDoPrestadorNoMotor({ raiz: R, cnpj: CNPJ, regime: "mei", competencia: "2032-03" })).toMatchObject({ codigo: "escrita_nao_habilitada" });
+    expect((await acoes.definirRegimeDoPrestadorNoMotor({ raiz: "99999999", cnpj: CNPJ, regime: "mei", competencia: "2032-03" })).ok).toBe(false);
+    expect(m.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("Documentos › quarentena: reprocessar (§14.2)", () => {
+  it("vira a ação `quarentena` da fila: 202 com a execução, a chave do gesto, audita e relê Documentos e a fila", async () => {
+    responder("quarentena_reprocessar");
+    const r = await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "desconhecido", chave: CHAVE });
+    expect(r).toMatchObject({ ok: true, dados: { id: 68, acao: "quarentena", estado: "pendente" } });
+    const { url, init } = enviado();
+    expect([init.method, url]).toEqual(["POST", "https://motor/api/connect/v1/quarentena/reprocessar?cnpj_raiz=17122471"]);
+    expect(JSON.parse(init.body as string)).toEqual({ classe: "desconhecido" });
+    expect((init.headers as Record<string, string>)["Idempotency-Key"]).toBe(CHAVE);
+    expect(m.pode).toHaveBeenCalledWith(m.ctx, "fiscal_acervo", "agir");
+    expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.quarentena.reprocessada", entityType: "SpedExecucao", entityId: "68" }));
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/documentos", "/fiscal/operacao"]);
+  });
+  it("409 reprocessamento_em_andamento: aponta o pedido aberto e devolve o existente; nada auditado", async () => {
+    responder("erro_reprocessamento_em_andamento");
+    const r = await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "todas", chave: CHAVE });
+    expect(r).toMatchObject({ ok: false, codigo: "reprocessamento_em_andamento", detalhe: { existente: { id: 68 } }, renovarChave: true });
+    expect(r.mensagem).toMatch(/#68/);
+    expect(m.audit).not.toHaveBeenCalled();
+    expect(m.revalidar).not.toHaveBeenCalled();
+  });
+  it("sem chave, classe fora do formato, sem agir ou sem token: recusa sem chamar", async () => {
+    expect((await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "desconhecido" })).ok).toBe(false);
+    expect((await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "../x", chave: CHAVE })).ok).toBe(false);
+    m.pode.mockResolvedValue(false);
+    expect((await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "desconhecido", chave: CHAVE })).ok).toBe(false);
+    m.pode.mockResolvedValue(true);
+    m.motor.escrita = false;
+    expect(await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "desconhecido", chave: CHAVE })).toMatchObject({ codigo: "escrita_nao_habilitada" });
+    expect(m.fetch).not.toHaveBeenCalled();
+  });
+  it("falha de rede: mesma chave na próxima tentativa (renovarChave falso)", async () => {
+    m.fetch.mockRejectedValue(new TypeError("rede"));
+    const r = await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "desconhecido", chave: CHAVE });
+    expect(r).toMatchObject({ ok: false, codigo: "falha_de_rede", renovarChave: false });
+  });
+});

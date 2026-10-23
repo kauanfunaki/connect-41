@@ -1,0 +1,27 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/uploads?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {
+      "Idempotency-Key": "c41:da90ef61adb141738e60e39085e2c2a2"
+    },
+    "corpo": {
+      "nome": "enorme.zip",
+      "tamanho": 629145600
+    }
+  },
+  "resposta": {
+    "status": 413,
+    "corpo": {
+      "erro": "upload acima de 500 MiB (o teto do painel)",
+      "codigo": "corpo_grande"
+    },
+    "x_custo": "leve"
+  }
+}

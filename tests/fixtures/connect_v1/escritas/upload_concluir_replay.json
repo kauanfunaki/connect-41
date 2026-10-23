@@ -1,0 +1,61 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/uploads/bab7c54df686aa60a645bbcd4930cff7/concluir?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "sha256": "9419d2d8db02fbe3a719148d67d212eeb9ba66567505d05962d0ed2cdd61269b"
+    }
+  },
+  "resposta": {
+    "status": 201,
+    "corpo": {
+      "resumo": {
+        "lidos": 3,
+        "cancelamentos": 0,
+        "novos": 2,
+        "duplicados": 0,
+        "erros": 0,
+        "ignorados": 1,
+        "por_tipo": {
+          "CT-e": 1,
+          "NF-e": 0,
+          "NFS-e": 0,
+          "arquivo": 1
+        }
+      },
+      "relatorio": [
+        {
+          "arquivo": "lote-setembro.zip/MATRIZ/apoio.pdf",
+          "tipo": "arquivo",
+          "chave": "4af9d2f3a202",
+          "situacao": "novo",
+          "detalhe": "gravado"
+        },
+        {
+          "arquivo": "lote-setembro.zip/MATRIZ/cte.xml",
+          "tipo": "CT-e",
+          "chave": "41260517122471000175570300132412961914774242",
+          "situacao": "novo",
+          "detalhe": "gravado"
+        },
+        {
+          "arquivo": "lote-setembro.zip/leia-me.txt",
+          "tipo": "-",
+          "situacao": "ignorado",
+          "detalhe": "extensão .txt não é aceita"
+        }
+      ],
+      "importacao_id": 206,
+      "upload_id": "bab7c54df686aa60a645bbcd4930cff7"
+    },
+    "x_custo": "pesada",
+    "idempotent_replay": "true"
+  }
+}
