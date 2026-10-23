@@ -10,7 +10,9 @@ import { FileDropzone, type ArquivoNaFila } from "@/components/ui/FileDropzone";
 import type { ResultadoDoMotor } from "@/lib/fiscal/motor/acoes";
 import type { PermissaoDeEscrita } from "@/lib/fiscal/motor/escrita";
 import { conferirArquivos, ENVIOS, type DestinoDeEnvio } from "@/lib/sped/escritasDoMotor";
+import { modoDoEnvio, TETO_DO_UPLOAD, type ProgressoDoEnvio } from "@/lib/sped/envioEmPartes";
 import { useChaveDeIdempotencia } from "./useChaveDeIdempotencia";
+import { useEnvioEmPartes } from "./useEnvioEmPartes";
 
 export type Resultado = { ok: boolean; mensagem: string };
 
@@ -76,6 +78,10 @@ export function useLacoPesado<T>(executar: (item: T, chave: string) => Promise<R
  * a rota deriva dele e do conteúdo a `Idempotency-Key`, então tentar de novo o
  * mesmo arquivo depois de falha de rede, 5xx ou `motor_ocupado` é replay no
  * motor, e não um segundo envio.
+ *
+ * Em Documentos, acima de 25 MB (até 500 MB) o envio troca sozinho para a
+ * sessão em partes (§14.4, `useEnvioEmPartes`): progresso por arquivo,
+ * cancelar e retomar de onde parou.
  */
 export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoConcluir, aoFalhar, rotuloDoBotao }: {
   destino: DestinoDeEnvio;
@@ -93,27 +99,44 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
   const [filaExtra, setFilaExtra] = useState<ArquivoNaFila[]>([]);
   const [gesto, , depoisDe] = useChaveDeIdempotencia();
   const [enviando, setEnviando] = useState(false);
-  const [resultado, setResultado] = useState<Resultado | null>(null);
+  const [resultado, setResultado] = useState<(Resultado & { retomavel?: boolean }) | null>(null);
   const accept = ACEITOS[destino];
   const arquivos = fila.map((a) => a.file);
   const extras = filaExtra.map((a) => a.file);
-  const problema = fila.length ? conferirArquivos(destino, arquivos, extras) : null;
+  const emPartes = destino === "documentos" ? modoDoEnvio(arquivos) : null;
+  const problema = !fila.length ? null : emPartes?.modo === "partes" ? null : emPartes?.modo === "recusado" ? emPartes.motivo : conferirArquivos(destino, arquivos, extras);
 
-  const terminar = (r: ResultadoDoMotor<T>) => {
-    setResultado({ ok: r.ok, mensagem: r.mensagem });
+  const marcar = useCallback((arquivo: File, mudanca: Partial<ArquivoNaFila>) => setFila((f) => f.map((a) => (a.file === arquivo ? { ...a, ...mudanca } : a))), []);
+  const aoProgresso = useCallback((arquivo: File, p: ProgressoDoEnvio) => marcar(arquivo, { estado: "enviando", progresso: Math.min(99, Math.round((p.enviados / Math.max(p.total, 1)) * 100)) }), [marcar]);
+  const aoConcluirArquivo = useCallback((arquivo: File) => marcar(arquivo, { estado: "concluido", progresso: 100 }), [marcar]);
+  const partes = useEnvioEmPartes(raiz, aoProgresso, aoConcluirArquivo);
+
+  const terminar = (r: ResultadoDoMotor<T>, retomavel = false) => {
+    setResultado({ ok: r.ok, mensagem: r.mensagem, retomavel });
     if (r.ok) {
       setFila([]);
       setFilaExtra([]);
       if (r.dados !== undefined) aoConcluir?.(r.dados);
       router.refresh();
     } else {
-      setFila((f) => f.map((a) => ({ ...a, estado: "erro", progresso: 0, erro: undefined })));
+      setFila((f) => f.map((a) => (a.estado === "concluido" ? a : { ...a, estado: "erro", progresso: 0, erro: undefined })));
       aoFalhar?.(r);
     }
   };
 
+  const enviarEmPartes = async () => {
+    setEnviando(true);
+    setResultado(null);
+    const pendentes = fila.filter((a) => a.estado !== "concluido").map((a) => a.file);
+    const fim = await partes.enviar(pendentes);
+    setEnviando(false);
+    if (fim.ok) terminar({ ok: true, mensagem: fim.mensagem, dados: fim.dados as T });
+    else terminar({ ok: false, mensagem: fim.mensagem, renovarChave: false }, fim.retomavel);
+  };
+
   const enviar = async () => {
-    const recusa = conferirArquivos(destino, arquivos, extras);
+    if (emPartes?.modo === "partes") return enviarEmPartes();
+    const recusa = emPartes?.modo === "recusado" ? emPartes.motivo : conferirArquivos(destino, arquivos, extras);
     if (recusa) { setResultado({ ok: false, mensagem: recusa }); return; }
     setEnviando(true);
     setResultado(null);
@@ -135,11 +158,19 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
     terminar(r);
   };
 
+  const cancelar = async () => {
+    await partes.cancelar();
+    setEnviando(false);
+    setFila((f) => f.map((a) => (a.estado === "concluido" ? a : { ...a, estado: "pendente", progresso: 0 })));
+    setResultado({ ok: false, mensagem: "Envio cancelado: as partes já mandadas foram apagadas no motor." });
+  };
+
   const adicionar = (setter: typeof setFila, varios: boolean) => (files: File[]) => {
     setResultado(null);
-    setter((f) => [...(varios ? f.filter((a) => a.estado !== "erro") : []), ...files.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`, file, progresso: 0, estado: "pendente" as const }))]);
+    setter((f) => [...(varios ? f.filter((a) => a.estado !== "erro" || emPartes?.modo === "partes") : []), ...files.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`, file, progresso: 0, estado: "pendente" as const }))]);
   };
-  const tetoMb = Math.floor(regra.teto / (1024 * 1024));
+  const tetoMb = destino === "documentos" ? Math.floor(TETO_DO_UPLOAD / (1024 * 1024)) : Math.floor(regra.teto / (1024 * 1024));
+  const p = partes.progresso;
 
   if (!permissao.visivel) return <MotivoSemEscrita permissao={permissao} />;
   return <div className="space-y-3">
@@ -151,9 +182,13 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
         onAdicionar={adicionar(setFilaExtra, true)} onRemover={(id) => setFilaExtra((f) => f.filter((a) => a.id !== id))} />
     </div>}
     {problema && <Aviso tom="atencao">{problema}</Aviso>}
+    {emPartes?.modo === "partes" && fila.length > 0 && !enviando && <p className="text-helper text-fg-secondary">Acima de 25 MB: o Connect manda em partes de 8 MB, um arquivo por vez. Se a conexão cair, “Retomar” continua de onde parou.</p>}
     <div className="flex flex-wrap items-center gap-3">
-      <Button size="sm" disabled={!permissao.pode || fila.length === 0 || !!problema} loading={enviando} loadingLabel="Enviando ao motor…" onClick={enviar}>{rotuloDoBotao}</Button>
-      {enviando && <span className="text-helper text-fg-muted">O motor lê o arquivo na hora: pode levar até um minuto.</span>}
+      <Button size="sm" disabled={!permissao.pode || fila.length === 0 || !!problema} loading={enviando} loadingLabel={emPartes?.modo === "partes" ? "Enviando em partes…" : "Enviando ao motor…"} onClick={enviar}>{resultado?.retomavel ? "Retomar" : rotuloDoBotao}</Button>
+      {enviando && emPartes?.modo === "partes" && <Button size="sm" variant="secondary" onClick={cancelar}>Cancelar envio</Button>}
+      {!enviando && resultado?.retomavel && <Button size="sm" variant="ghost" onClick={cancelar}>Desistir e apagar as partes</Button>}
+      {enviando && emPartes?.modo !== "partes" && <span className="text-helper text-fg-muted">O motor lê o arquivo na hora: pode levar até um minuto.</span>}
+      {enviando && p && <span className="text-helper text-fg-muted" aria-live="polite">{p.arquivo}: {p.fase === "criando" ? "abrindo a sessão…" : p.fase === "enviando" ? `${Math.round(p.enviados / (1024 * 1024))} de ${Math.round(p.total / (1024 * 1024))} MB enviados` : p.fase === "concluindo" ? "o motor está juntando as partes e importando…" : "conferindo a conclusão no motor…"}</span>}
     </div>
     <MotivoSemEscrita permissao={permissao} />
     <AvisoDoResultado resultado={resultado} />
