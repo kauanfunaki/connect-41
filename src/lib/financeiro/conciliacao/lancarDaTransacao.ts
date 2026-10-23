@@ -8,6 +8,8 @@ import type { Prisma } from "@/generated/prisma/client";
 import { instanteDaData } from "../periodo";
 import { decimalDeCentavos } from "../manual";
 import { quitarConta } from "../baixa/servidor";
+import { gravarRateio } from "../rateioServidor";
+import type { LinhaDoRateio } from "../rateio";
 
 type Tx = Prisma.TransactionClient;
 
@@ -29,6 +31,12 @@ export type LancamentoDaLinha = {
   projectId: string | null;
   competencia: string;
   descricao: string | null;
+  /**
+   * O rateio da conta (lote M1 do mercado, 23/10/2026), já conferido e
+   * fechando `centavos`; com ele, categoria, centro e projeto são o resumo
+   * das linhas. Ausente ou vazio: a conta numa categoria só.
+   */
+  rateio?: LinhaDoRateio[];
 };
 
 /**
@@ -62,6 +70,7 @@ export async function lancarEConciliar(tx: Tx, l: LancamentoDaLinha): Promise<{ 
     },
     select: { id: true, amount: true },
   });
+  if (l.rateio && l.rateio.length > 0) await gravarRateio(tx, { tenantId: l.tenantId, entryId: criado.id, linhas: l.rateio });
   const baixa = await quitarConta(tx, {
     tenantId: l.tenantId,
     entryId: criado.id,
