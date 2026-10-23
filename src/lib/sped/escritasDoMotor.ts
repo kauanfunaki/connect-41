@@ -282,3 +282,53 @@ export function dinheiroDoCampo(v: string): string | null {
   const normal = t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t;
   return DINHEIRO.test(normal) ? normal : null;
 }
+
+// ─── Pagamento na tela (§11.3.5 → §13.4 e §13.5) ────────────────────────────
+
+/** A chave de um `PagamentoAConferir` da leitura; `null` quando a linha não a traz (a tela não oferece decidir). */
+export function chaveDoPagamentoDaLinha(linha: Record<string, unknown>): ChaveDoPagamento | null {
+  const { caminho, pagina, ordem } = linha;
+  if (typeof caminho !== "string" || !caminho) return null;
+  if (typeof pagina !== "number" || !Number.isInteger(pagina) || typeof ordem !== "number" || !Number.isInteger(ordem)) return null;
+  return { caminho, pagina, ordem };
+}
+
+/** A coluna da correção já gravada de cada campo corrigível (`_COLS_PAGAMENTO_LEITURA`). */
+const COLUNA_CORRIGIDA: Record<CampoCorrigivel, string> = {
+  valor: "valor_corrigido", documento: "documento_corrigido", competencia: "competencia_corrigida",
+  data_pagamento: "data_pagamento_corrigida", nome: "nome_corrigido", tipo: "tipo_corrigido",
+};
+/** A coluna original, que a tela mostra como referência. */
+export const COLUNA_ORIGINAL: Record<CampoCorrigivel, string> = {
+  valor: "valor_bruto", documento: "documento", competencia: "competencia", data_pagamento: "data_pagamento", nome: "nome", tipo: "tipo",
+};
+
+/** O formulário da correção começa com a correção já gravada (vazio = sem correção). */
+export function correcaoGravada(linha: Record<string, unknown>): Record<CampoCorrigivel, string> {
+  return Object.fromEntries(CAMPOS_CORRIGIVEIS.map((c) => {
+    const v = linha[COLUNA_CORRIGIDA[c]];
+    return [c, v === null || v === undefined ? "" : String(v)];
+  })) as Record<CampoCorrigivel, string>;
+}
+
+/**
+ * O corpo da correção pela convenção do painel (§13.5): só vai o campo que a
+ * pessoa mexeu; mexer até esvaziar manda `""`, que **limpa** a correção. O
+ * valor digitado com vírgula vira string decimal; `undefined` no lugar de um
+ * valor que não é dinheiro, para a tela recusar antes.
+ */
+export function camposDaCorrecao(inicial: Record<CampoCorrigivel, string>, atual: Record<CampoCorrigivel, string>): Partial<Record<CampoCorrigivel, string>> | { erro: string } {
+  const corpo: Partial<Record<CampoCorrigivel, string>> = {};
+  for (const c of CAMPOS_CORRIGIVEIS) {
+    const antes = inicial[c].trim();
+    let depois = atual[c].trim();
+    if (c === "valor" && depois) {
+      const d = dinheiroDoCampo(depois);
+      if (d === null) return { erro: "Valor inválido: use 1.234,56 ou 1234.56." };
+      depois = d;
+    }
+    if (c === "documento") depois = depois.replace(/\D/g, "");
+    if (depois !== antes) corpo[c] = depois;
+  }
+  return corpo;
+}

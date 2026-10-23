@@ -15,19 +15,32 @@ import { carregarDemonstrativoContrib, carregarFechamento, competenciasDoDemonst
 import type { Params } from "@/lib/fiscal/motor/telas/comum";
 import type { LinhaDaApuracaoContrib } from "@/lib/sped/telasDoMotor";
 import { BlocoLivre, CarregandoLeituraPesada, ErroDaLeitura, PaginacaoDoMotor, TabelaLivre } from "./LeituraDoMotor";
+import { escritaNaTela } from "@/lib/fiscal/motor/permissoes";
+import { chaveDoPagamentoDaLinha, COLUNA_ORIGINAL, CAMPOS_CORRIGIVEIS, correcaoGravada } from "@/lib/sped/escritasDoMotor";
+import { AcoesDoPagamento, ApurarCte, InformarContrato } from "./EscritasFechamento";
 
 const CAMINHO = "/fiscal/contribuicoes";
 const din = (v: string | null) => <span className="tabular-nums">{reaisDoMotor(v)}</span>;
 /** As colunas de pagamento que a tela procura primeiro; o resto do `_COLS_PAGAMENTO_LEITURA` vem depois, como veio. */
 const COLUNAS_DE_PAGAMENTO = ["tipo", "competencia", "nome", "documento", "data_pagamento", "valor_bruto", "valor_liquido", "falta_para_aceitar", "decisao", "decidido_por", "motivo_decisao", "mesmo_documento_em"] as const;
 
-/** Aba Fechamento (§11.3.3 a 11.3.7). Só leituras leves; o que é escrita continua no painel. */
+const originaisDa = (l: Record<string, unknown>) => Object.fromEntries(CAMPOS_CORRIGIVEIS.map((c) => [c, l[COLUNA_ORIGINAL[c]] == null ? "" : String(l[COLUNA_ORIGINAL[c]])])) as Record<(typeof CAMPOS_CORRIGIVEIS)[number], string>;
+
+/**
+ * Aba Fechamento (§11.3.3 a 11.3.7, leituras leves) com as escritas de §13.4 a
+ * §13.7 para quem age no módulo: decidir e corrigir pagamento, informar
+ * contrato de aluguel e apurar o CT-e dos arquivos pendentes.
+ */
 export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; params: Params }) {
   const { contexto } = tela;
   if (!contexto) return null;
-  const d = await carregarFechamento(tela, params);
+  const [d, escrita] = await Promise.all([carregarFechamento(tela, params), escritaNaTela(tela.ctx, tela.motor, "fiscal_contribuicoes")]);
   if (!d) return null;
   const aqui = (m: Record<string, string | null> = {}) => hrefComParams(CAMINHO, params, m);
+  const acoesDoPagamento = escrita.visivel ? (l: Record<string, unknown>) => {
+    const chave = chaveDoPagamentoDaLinha(l);
+    return chave ? <AcoesDoPagamento raiz={contexto.raiz} chave={chave} decisao={typeof l.decisao === "string" ? l.decisao : ""} falta={typeof l.falta_para_aceitar === "string" && l.falta_para_aceitar ? l.falta_para_aceitar : null} correcao={correcaoGravada(l)} originais={originaisDa(l)} permissao={escrita} /> : "—";
+  } : undefined;
   const comps = d.competencias.dados ?? [];
   const anos = [...new Set(comps.map((c) => c.slice(0, 4)))];
   const filtros: CampoDeFiltro[] = [{ chave: "periodo", rotulo: "Período", vazioLabel: `Competência do recorte (${contexto.competencia})`, sempreVisivel: true, opcoes: [...anos.map((a) => ({ value: a, label: `Ano de ${a}` })), ...comps.map((c) => ({ value: c, label: c }))] }];
@@ -37,6 +50,7 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
       <FiltrosDaTela campos={filtros} />
     </div>
     {d.competencias.erro !== null && <ErroDaLeitura falha={d.competencias} hrefDeNovo={aqui()} />}
+    {escrita.visivel && escrita.motivo && <Aviso tom="neutro">{escrita.motivo}</Aviso>}
 
     {d.blocos.erro !== null ? <ErroDaLeitura falha={d.blocos} hrefDeNovo={aqui()} /> : (() => {
       const b = d.blocos.dados;
@@ -66,7 +80,8 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
         const f = d.faturamento.dados;
         const aApurar = f.linhas.filter((l) => l.apurar);
         return <div className="space-y-3">
-          {aApurar.length > 0 && <Aviso tom="atencao">Apure o CT-e destes arquivos no painel do motor: {aApurar.flatMap((l) => l.pendentes).map((id) => `#${id}`).join(", ") || aApurar.map((l) => l.rotulo).join(", ")}. Até lá, o valor fica como “não levantado”.</Aviso>}
+          {aApurar.length > 0 && <Aviso tom="atencao">Falta apurar o CT-e destes arquivos: {aApurar.flatMap((l) => l.pendentes).map((id) => `#${id}`).join(", ") || aApurar.map((l) => l.rotulo).join(", ")}. Até lá, o valor fica como “não levantado”.{escrita.visivel ? "" : " Apure no painel do motor."}</Aviso>}
+          <ApurarCte raiz={contexto.raiz} ids={[...new Set(aApurar.flatMap((l) => l.pendentes))]} tela="contribuicoes" permissao={escrita} />
           <TabelaFiscal vazio="Sem linhas de faturamento." descricaoVazio="" colunas={["Grupo", "Documentos", "Valor", "Origem"]} linhas={f.linhas.map((l, i) => ({ id: `${l.grupo}-${i}`, celulas: [l.rotulo, contagemDoMotor(l.documentos), din(l.valor), <span key="o" className="text-helper">{l.origem || "—"}</span>] }))} />
           <dl className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">{([
             ["Saídas", reaisDoMotor(f.totais.saidas)], ["Entradas com nota", reaisDoMotor(f.totais.entradas_com_nota)], ["Entradas sem nota", reaisDoMotor(f.totais.entradas_sem_nota)],
@@ -76,7 +91,7 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
       })()}
     </BlocoFiscal>
 
-    <BlocoFiscal titulo="Conferência dos pagamentos" descricao={`${d.filaInteira ? "A fila inteira, de todas as competências" : `Período ${d.periodo}`}. Decidir continua no painel do motor.`} acao={<span className="flex flex-wrap gap-2">
+    <BlocoFiscal titulo="Conferência dos pagamentos" descricao={`${d.filaInteira ? "A fila inteira, de todas as competências" : `Período ${d.periodo}`}.${escrita.visivel ? " Aceitar pede o que a coluna falta_para_aceitar indica; aceitar deixa o SPED de Contribuições do período defasado." : ""}`} acao={<span className="flex flex-wrap gap-2">
       <Button size="sm" variant="secondary" href={aqui({ fila: d.filaInteira ? null : "toda" })} scroll={false}>{d.filaInteira ? "Só do período" : "Ver a fila inteira"}</Button>
       <Button size="sm" variant="ghost" href={aqui({ sem_credito: d.semCredito ? null : "1" })} scroll={false}>{d.semCredito ? "Esconder os sem crédito" : "Incluir os sem crédito"}</Button>
     </span>}>
@@ -85,7 +100,7 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
         return <div className="space-y-3">
           {c.conferir_truncado && <Aviso tom="atencao">A fila passou de 2000 linhas: mostrando as primeiras. Restrinja o período.</Aviso>}
           {c.ocultos.linhas > 0 && <Aviso tom="neutro">{contagemDoMotor(c.ocultos.linhas)} linha(s) ocultas ({reaisDoMotor(c.ocultos.valor)}): {Object.entries(c.ocultos.motivos).map(([m, n]) => `${m} (${contagemDoMotor(n)})`).join("; ")}.</Aviso>}
-          <TabelaLivre linhas={c.conferir as Record<string, unknown>[]} candidatas={COLUNAS_DE_PAGAMENTO} vazio="Nenhum pagamento a conferir." />
+          <TabelaLivre linhas={c.conferir as Record<string, unknown>[]} candidatas={COLUNAS_DE_PAGAMENTO} vazio="Nenhum pagamento a conferir." acoes={acoesDoPagamento} />
         </div>;
       })()}
     </BlocoFiscal>
@@ -102,9 +117,9 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
     <BlocoRecolhivel titulo="Aluguéis de imóveis pendentes" abertoInicial={false}>
       <div className="space-y-4">
         {d.alugueis.erro !== null ? <ErroDaLeitura falha={d.alugueis} hrefDeNovo={aqui()} /> : <>
-          <TabelaLivre linhas={d.alugueis.dados.grupos} vazio="Nenhum aluguel pendente." />
+          <TabelaLivre linhas={d.alugueis.dados.grupos} vazio="Nenhum aluguel pendente." acoes={escrita.visivel ? (g) => typeof g.fornecedor === "string" && g.fornecedor ? <InformarContrato raiz={contexto.raiz} fornecedor={g.fornecedor} permissao={escrita} /> : "—" : undefined} />
           {d.alugueis.dados.ressalvas.length > 0 && <section aria-label="Aprovações com ressalva"><h4 className="mb-2 text-label font-semibold text-fg">Aprovações com ressalva</h4><TabelaLivre linhas={d.alugueis.dados.ressalvas} /></section>}
-          <p className="text-helper text-fg-muted">Informar contrato continua no painel do motor.</p>
+          {!escrita.visivel && <p className="text-helper text-fg-muted">Informar contrato continua no painel do motor.</p>}
         </>}
       </div>
     </BlocoRecolhivel>
