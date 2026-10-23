@@ -1,0 +1,287 @@
+{
+  "requisicao": {
+    "metodo": "PUT",
+    "caminho": "/api/connect/v1/conferencia/simulacoes?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "competencia": "2032-03",
+      "linha": "rpas",
+      "valor": "1234.56",
+      "observacao": "RPA de março"
+    }
+  },
+  "resposta": {
+    "status": 200,
+    "corpo": {
+      "competencia": "2032-03",
+      "aliquotas": {
+        "cheia": "9.2500",
+        "presumida": "6.9375"
+      },
+      "linhas": [
+        {
+          "chave": "meli",
+          "rotulo": "FATURAMENTO MELI",
+          "grupo": "faturamento",
+          "aliquota": "9.2500",
+          "base": "10000.00",
+          "imposto": "925.00",
+          "simulada": false,
+          "fonte": "CT-e lido do SPED gerado — 1 de 1 SPED apurados — ATENÇÃO: só 1 de 3 estabelecimentos têm SPED gerado nesta competência; o valor está incompleto",
+          "pendente": false
+        },
+        {
+          "chave": "frigorifico",
+          "rotulo": "FRIGORIFICO",
+          "grupo": "faturamento",
+          "aliquota": "9.2500",
+          "base": "0.00",
+          "imposto": "0.00",
+          "simulada": false,
+          "fonte": "CT-e lido do SPED gerado — 1 de 1 SPED apurados — ATENÇÃO: só 1 de 3 estabelecimentos têm SPED gerado nesta competência; o valor está incompleto",
+          "pendente": false
+        },
+        {
+          "chave": "notas_servico",
+          "rotulo": "NOTAS DE SERVIÇO",
+          "grupo": "faturamento",
+          "aliquota": "9.2500",
+          "base": null,
+          "imposto": null,
+          "simulada": false,
+          "fonte": "nenhuma NFS-e emitida importada",
+          "pendente": true
+        },
+        {
+          "chave": "rpas",
+          "rotulo": "RPAS",
+          "grupo": "entrada",
+          "aliquota": "6.9375",
+          "base": "1234.56",
+          "imposto": "85.65",
+          "simulada": true,
+          "fonte": "digitado na tela",
+          "pendente": false
+        },
+        {
+          "chave": "nsfe_mei",
+          "rotulo": "NSFE MEI",
+          "grupo": "entrada",
+          "aliquota": "6.9375",
+          "base": "0.00",
+          "imposto": "0.00",
+          "simulada": false,
+          "fonte": "0 prestadores MEI/Simples",
+          "pendente": false
+        },
+        {
+          "chave": "nsfe",
+          "rotulo": "NSFE",
+          "grupo": "entrada",
+          "aliquota": "9.2500",
+          "base": "300.00",
+          "imposto": "27.75",
+          "simulada": false,
+          "fonte": "1 prestadores",
+          "pendente": false
+        },
+        {
+          "chave": "combustivel",
+          "rotulo": "COMBUSTÍVEL",
+          "grupo": "entrada",
+          "aliquota": "9.2500",
+          "base": null,
+          "imposto": null,
+          "simulada": false,
+          "fonte": "não apurado — os itens da NF-e exigem uma varredura",
+          "pendente": true
+        },
+        {
+          "chave": "locacao_veiculos",
+          "rotulo": "LOCAÇÃO DE VEÍCULOS",
+          "grupo": "entrada",
+          "aliquota": "9.2500",
+          "base": null,
+          "imposto": null,
+          "simulada": false,
+          "fonte": "nenhum documento desta natureza na competência",
+          "pendente": true
+        },
+        {
+          "chave": "contrato_imoveis",
+          "rotulo": "CONTRATO IMOVEIS",
+          "grupo": "entrada",
+          "aliquota": "9.2500",
+          "base": null,
+          "imposto": null,
+          "simulada": false,
+          "fonte": "nenhum documento desta natureza na competência",
+          "pendente": true
+        },
+        {
+          "chave": "contratos_motoristas",
+          "rotulo": "CONTRATOS MOTORISTAS",
+          "grupo": "entrada",
+          "aliquota": "6.9375",
+          "base": "2000.00",
+          "imposto": "138.75",
+          "simulada": false,
+          "fonte": "pagamentos da competência (valor bruto)",
+          "pendente": false
+        },
+        {
+          "chave": "notas_produtos",
+          "rotulo": "NOTAS FISCAIS PRODUTOS",
+          "grupo": "entrada",
+          "aliquota": "9.2500",
+          "base": "1000.00",
+          "imposto": "92.50",
+          "simulada": false,
+          "fonte": "1 NF-e de entrada no índice",
+          "pendente": false
+        },
+        {
+          "chave": "cte_terceiros",
+          "rotulo": "CTE C&C",
+          "grupo": "entrada",
+          "aliquota": "9.2500",
+          "base": "416.67",
+          "imposto": "38.54",
+          "simulada": false,
+          "fonte": "CT-e lido do SPED gerado — 1 de 1 SPED apurados — ATENÇÃO: só 1 de 3 estabelecimentos têm SPED gerado nesta competência; o valor está incompleto",
+          "pendente": false
+        },
+        {
+          "chave": "cte_batel",
+          "rotulo": "CTE BATEL",
+          "grupo": "entrada",
+          "aliquota": "9.2500",
+          "base": "0.00",
+          "imposto": "0.00",
+          "simulada": false,
+          "fonte": "CT-e lido do SPED gerado — 1 de 1 SPED apurados — ATENÇÃO: só 1 de 3 estabelecimentos têm SPED gerado nesta competência; o valor está incompleto",
+          "pendente": false
+        },
+        {
+          "chave": "credito_mes_anterior",
+          "rotulo": "CRÉDITO MÊS ANTERIOR",
+          "grupo": "entrada",
+          "aliquota": null,
+          "base": null,
+          "imposto": null,
+          "simulada": true,
+          "fonte": "saldo credor apurado no mês anterior",
+          "pendente": true
+        }
+      ],
+      "totais": {
+        "base_faturamento": "10000.00",
+        "base_entradas": "4951.23",
+        "debito": "925.00",
+        "credito": "383.19",
+        "a_pagar": "541.81",
+        "parcial": true,
+        "pendentes": [
+          "NOTAS DE SERVIÇO",
+          "COMBUSTÍVEL",
+          "LOCAÇÃO DE VEÍCULOS",
+          "CONTRATO IMOVEIS",
+          "CRÉDITO MÊS ANTERIOR"
+        ]
+      },
+      "contratos_para_zerar": "7809.87",
+      "simulacoes": [
+        {
+          "linha": "rpas",
+          "valor": "1234.56",
+          "observacao": "RPA de março",
+          "atualizado_em": "2026-10-23T14:31:31+00:00"
+        }
+      ],
+      "cte": {
+        "meli": "10000.00",
+        "frigorifico": "0.00",
+        "cte_terceiros": "416.67",
+        "cte_batel": "0.00",
+        "arquivos": 1,
+        "apurados": 1,
+        "pendentes": [],
+        "estabelecimentos": 1,
+        "estabelecimentos_esperados": 3,
+        "sem_arquivo": [
+          "17122471000175",
+          "17122471001490"
+        ]
+      },
+      "combustivel": {
+        "valor": null,
+        "valor_cfop": null,
+        "por_filial": [],
+        "apuradas": 0,
+        "empresas": 3,
+        "pendentes": [
+          "17122471000175",
+          "17122471001147",
+          "17122471001490"
+        ],
+        "notas_falhadas": 0
+      },
+      "confronto": {
+        "por_situacao": {
+          "achado": {
+            "documentos": 1,
+            "valor": "100.00"
+          },
+          "sem_nota": {
+            "documentos": 2,
+            "valor": "500.00"
+          }
+        },
+        "planilhas": [
+          {
+            "planilha": "TESTE-TELAS.xlsx",
+            "confrontado_em": "2026-10-23T14:31:30+00:00"
+          }
+        ],
+        "total_sem_nota": "500.00",
+        "documentos_sem_nota": 2
+      },
+      "conferencia": {
+        "por_situacao": {
+          "divergencia": {
+            "documentos": 1,
+            "valor": "800.00"
+          },
+          "ok": {
+            "documentos": 1,
+            "valor": "700.00"
+          },
+          "sem_documento": {
+            "documentos": 1,
+            "valor": "900.00"
+          }
+        },
+        "por_decisao": {
+          "(sem decisão)": 3
+        },
+        "arquivos": [
+          {
+            "arquivo": "TESTE-TELAS-omie.xlsx",
+            "conferido_em": "2026-10-23T14:31:30+00:00"
+          }
+        ],
+        "total": 3,
+        "no_banco": 1,
+        "a_conferir": 2,
+        "sem_decisao": 3
+      }
+    },
+    "x_custo": "leve"
+  }
+}

@@ -20,6 +20,7 @@ import { z } from "zod";
 import { ErroDoSped, extrairErro, type CorpoDeErro } from "./client";
 import type { TipoDeDecisao } from "@/lib/fiscal/motor/decisoes";
 import * as T from "./telasDoMotor";
+import * as E from "./escritasDoMotor";
 
 export type CredenciaisDoMotorV1 = { baseUrl: string; token: string; tokenEscrita: string | null };
 
@@ -123,6 +124,8 @@ const MENSAGENS: Record<string, string> = {
   raiz_invalida: "Raiz de CNPJ inválida.",
   nao_encontrado: "Registro não encontrado no motor SPED.",
   motor_ocupado: "O motor está ocupado com outra leitura pesada; tente em alguns segundos.",
+  tamanho_ausente: "O envio chegou ao motor sem o tamanho declarado. Tente de novo; se persistir, avise o responsável pela integração.",
+  multipart_invalido: "O motor SPED não conseguiu ler o envio do arquivo. Tente de novo.",
   tempo_esgotado_pesada: "O motor SPED não terminou esta leitura em um minuto. Tente de novo em instantes; se persistir, avise o responsável pelo motor.",
 };
 
@@ -140,6 +143,20 @@ const PADRAO: Record<string, string> = {
   obrigacao_incompativel: "Este arquivo é de outra obrigação: a leitura pedida não se aplica a ele.",
   uf_nao_suportada: "DCIP e DIME só existem para estabelecimento de Santa Catarina.",
   sem_arquivo: "Não há SPED gerado considerado para esta competência.",
+  cobertura_em_andamento: "Esta competência já está sendo apurada. Acompanhe o pedido na fila.",
+  pagamento_nao_aceitavel: "O motor não aceitou este pagamento: falta informação para o aceite.",
+  arquivo_invalido: "O motor SPED não conseguiu ler o arquivo enviado.",
+  // §14.0.7
+  reprocessamento_em_andamento: "Já há um reprocessamento da quarentena aberto nesta raiz. Acompanhe o pedido na fila.",
+  importacao_existente: "Esta planilha já tem faturas no motor. Para trocá-las, envie de novo marcando “substituir”.",
+  uploads_em_aberto: "Já há 4 envios em partes abertos nesta raiz. Conclua ou cancele um deles antes de começar outro.",
+  upload_encerrado: "Este envio em partes já foi concluído.",
+  upload_em_andamento: "A conclusão deste envio ainda está rodando no motor. Aguarde alguns segundos.",
+  ocr_indisponivel: "O motor SPED não tem leitura por OCR. Envie sem OCR (os PDF sem texto ficam como inválidos) ou importe pelo painel.",
+  parte_invalida: "Uma parte do envio chegou com o tamanho errado. Tente de novo.",
+  parte_corrompida: "Uma parte do envio chegou corrompida ao motor. Tente de novo.",
+  upload_incompleto: "Faltam partes do envio no motor.",
+  sha256_divergente: "O arquivo montado no motor não confere com o do seu computador. As partes serão reenviadas.",
 };
 
 /** O `Retry-After` em segundos, quando é um número (o motor não manda data). */
@@ -385,6 +402,18 @@ type Pedido = {
   custo?: "leve" | "pesada";
   /** Parâmetros que vão mesmo vazios, porque o vazio quer dizer algo. */
   vazios?: string[];
+  /**
+   * Envio de arquivo (§13.0.9): o corpo é este multipart, serializado aqui
+   * para mandar o `Content-Length` exato, que o motor exige e confere antes
+   * de ler. `teto` é o limite do corpo inteiro na rota do motor.
+   */
+  multipart?: { form: FormData; teto: number; mensagemDeTamanho: string };
+  /**
+   * Corpo cru (§14.4, a parte de um upload): `application/octet-stream` com o
+   * `Content-Length` declarado. Um stream não se relê: uma tentativa só, e
+   * quem chama repete a parte (o PUT é idempotente).
+   */
+  cru?: { corpo: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer>; tamanho: number; sha256?: string };
 };
 
 const RETRY_LEITURA = new Set([502, 503, 504]);
@@ -420,18 +449,37 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
       } else if (pedido.exigeChave) {
         throw new ErroDoMotor(0, "idempotencia_ausente", MENSAGENS.idempotencia_ausente);
       }
-      if (pedido.corpo !== undefined) headers["Content-Type"] = "application/json";
+      if (pedido.corpo !== undefined && !pedido.multipart && !pedido.cru) headers["Content-Type"] = "application/json";
     } else {
       headers.Authorization = `Bearer ${creds.token}`;
     }
 
     const endereco = url(pedido.caminho, pedido.raiz, pedido.query, pedido.vazios);
-    const pesada = !escrita && pedido.custo === "pesada";
+    // `pesada` (§11.0.7 e §13.0.8), leitura ou escrita: 60 s e nenhuma nova
+    // tentativa automática, nem em 5xx — repetir dobraria a carga de quem já
+    // ocupa o motor, e `503 motor_ocupado` é a tela que oferece de novo.
+    const pesada = pedido.custo === "pesada";
     const timeout = pedido.timeoutMs ?? (pesada ? TIMEOUT_PESADA_MS : escrita ? TIMEOUT_ESCRITA_MS : TIMEOUT_LEITURA_MS);
-    // Leitura leve: uma nova tentativa. Pesada: nenhuma. Escrita: até duas, e
-    // só com a mesma chave — sem chave, repetir um POST poderia criar duas vezes.
-    const maxTentativas = escrita ? (pedido.escrita?.chave ? 3 : 1) : pesada ? 1 : 2;
-    const corpo = pedido.corpo === undefined ? undefined : JSON.stringify(pedido.corpo);
+    // Leitura leve: uma nova tentativa. Pesada: nenhuma. Escrita leve: até
+    // duas, e só com a mesma chave — sem chave, repetir um POST poderia criar duas vezes.
+    const maxTentativas = pesada || pedido.cru ? 1 : escrita ? (pedido.escrita?.chave ? 3 : 1) : 2;
+    let corpo: string | Uint8Array<ArrayBuffer> | ReadableStream<Uint8Array> | undefined = pedido.corpo === undefined ? undefined : JSON.stringify(pedido.corpo);
+    if (pedido.cru) {
+      headers["Content-Type"] = "application/octet-stream";
+      headers["Content-Length"] = String(pedido.cru.tamanho);
+      if (pedido.cru.sha256) headers["X-Parte-SHA256"] = pedido.cru.sha256;
+      corpo = pedido.cru.corpo;
+    }
+    if (pedido.multipart) {
+      // O multipart como o `fetch` o montaria, mas em bytes: assim o
+      // `Content-Length` vai declarado e o teto é conferido antes de sair.
+      const serializado = new Response(pedido.multipart.form);
+      const bytes = new Uint8Array(await serializado.arrayBuffer());
+      if (bytes.byteLength > pedido.multipart.teto) throw new ErroDoMotor(0, "corpo_grande", pedido.multipart.mensagemDeTamanho);
+      headers["Content-Type"] = serializado.headers.get("Content-Type") ?? "multipart/form-data";
+      headers["Content-Length"] = String(bytes.byteLength);
+      corpo = bytes;
+    }
 
     for (let tentativa = 1; ; tentativa++) {
       const ultima = tentativa >= maxTentativas;
@@ -443,7 +491,9 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
           body: corpo,
           cache: "no-store",
           signal: AbortSignal.timeout(timeout),
-        });
+          // Corpo em stream (a parte do upload): o `fetch` do Node exige `duplex`.
+          ...(corpo instanceof ReadableStream ? { duplex: "half" } : {}),
+        } as RequestInit);
       } catch (err) {
         const nome = err instanceof Error ? err.name : "";
         const codigo = nome === "TimeoutError" || nome === "AbortError" ? "tempo_esgotado" : "falha_de_rede";
@@ -561,8 +611,112 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
       ler("/conferencia/documentos", raiz, T.documentosDaConferenciaSchema, { ...filtro, competencia: competenciaValida(filtro.competencia) }),
   };
 
+  /**
+   * Um envio de arquivo (§13.3, §13.10, §13.11, §14.3): o multipart com os
+   * campos primeiro e os arquivos como vieram, sem converter; `extras` vão na
+   * segunda parte da regra (os `pdfs` das faturas do BPO).
+   */
+  const enviar = <S extends z.ZodTypeAny>(destino: E.DestinoDeEnvio, raiz: string, arquivos: readonly File[], campos: Record<string, string>, escrita: Escrita, schema: S, extras: readonly File[] = []) => {
+    const regra = E.ENVIOS[destino];
+    const form = new FormData();
+    for (const [k, v] of Object.entries(campos)) if (v !== "") form.append(k, v);
+    for (const a of arquivos) form.append(regra.parte, a, a.name);
+    if (extras.length && !regra.extra) throw new ErroDoMotor(0, "arquivo_invalido", "Este envio não aceita arquivos a mais.");
+    for (const a of extras) form.append(regra.extra!.parte, a, a.name);
+    return json({ metodo: "POST", caminho: regra.caminho, raiz, escrita, exigeChave: true, custo: "pesada", multipart: { form, teto: regra.teto, mensagemDeTamanho: E.mensagemDeTamanho(destino) } }, schema);
+  };
+  const idDoUpload = (id: string) => {
+    if (!E.ID_DO_UPLOAD.test(id)) throw new ErroDoMotor(0, "nao_encontrado", MENSAGENS.nao_encontrado);
+    return id;
+  };
+  /** Escrita sem corpo na resposta (204). */
+  const semCorpo = async (pedido: Pedido): Promise<void> => {
+    await chamar(pedido);
+  };
+  const competenciaOpcional = (c: string | undefined): Record<string, string> => (c ? { competencia: competenciaValida(c) } : {});
+
+  /** As escritas das telas fiscais (§13). Todas com o ator; a chave vem do gesto do usuário. */
+  const escritas = {
+    // §13.1 — fila: vira a ação `cobertura`, 202 com a `Execucao`.
+    // `confirmar_duplicado` só vai quando é `true` (o padrão do motor é `false`).
+    apurarCobertura: (raiz: string, corpo: { empresa_id: number; competencia: string; confirmar_duplicado?: boolean }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/cobertura/apurar", raiz, corpo: { empresa_id: idDe(corpo.empresa_id), competencia: competenciaValida(corpo.competencia), ...(corpo.confirmar_duplicado ? { confirmar_duplicado: true } : {}) }, escrita, exigeChave: true }, execucaoMotorSchema),
+    // §13.2
+    resolverRejeitado: (raiz: string, id: number, corpo: { resolvido: boolean; observacao?: string }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: `/quarentena/${idDe(id)}/resolver`, raiz, corpo, escrita }, E.rejeitadoResolvidoSchema),
+    // §13.3 — pesada, até 25 MiB.
+    enviarDocumentos: (raiz: string, arquivos: readonly File[], escrita: Escrita) =>
+      enviar("documentos", raiz, arquivos, {}, escrita, E.envioDeDocumentosSchema),
+    // §13.4 e §13.5
+    decidirPagamento: (raiz: string, corpo: E.ChaveDoPagamento & { decisao: E.DecisaoDePagamento; motivo?: string }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/fechamento/pagamentos/decidir", raiz, corpo, escrita }, E.pagamentoGravadoSchema),
+    corrigirPagamento: (raiz: string, corpo: E.CorrecaoDePagamento, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/fechamento/pagamentos/corrigir", raiz, corpo, escrita }, E.pagamentoGravadoSchema),
+    // §13.6
+    informarContrato: (raiz: string, corpo: E.CorpoDoContrato, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/fechamento/alugueis-imoveis/informar", raiz, corpo, escrita }, E.contratoInformadoSchema),
+    // §13.7 — pesada, sem corpo.
+    apurarCteDoArquivo: (raiz: string, id: number, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: `/arquivos/${idDe(id)}/apurar-cte`, raiz, escrita, custo: "pesada" }, E.cteApuradoSchema),
+    // §13.8 — devolve a prévia inteira.
+    gravarSimulacao: (raiz: string, corpo: E.CorpoDaSimulacao, escrita: Escrita) =>
+      json({ metodo: "PUT", caminho: "/conferencia/simulacoes", raiz, corpo: { ...corpo, competencia: competenciaValida(corpo.competencia) }, escrita }, E.simulacaoGravadaSchema),
+    // §13.9 — pesada.
+    apurarCombustivel: (raiz: string, corpo: { empresa_id: number; competencia: string }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/conferencia/combustivel/apurar", raiz, corpo: { empresa_id: idDe(corpo.empresa_id), competencia: competenciaValida(corpo.competencia) }, escrita, custo: "pesada" }, E.combustivelApuradoSchema),
+    // §13.10 — pesada, até 20 MiB; a decisão é leve.
+    conferirRelatorioOmie: (raiz: string, arquivo: File, competencia: string | undefined, escrita: Escrita) =>
+      enviar("omie", raiz, [arquivo], competenciaOpcional(competencia), escrita, E.relatorioOmieConferidoSchema),
+    decidirDocumentoDaConferencia: (raiz: string, id: number, corpo: E.CorpoDaDecisaoDoDocumento, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: `/conferencia/documentos/${idDe(id)}/decidir`, raiz, corpo, escrita }, E.documentoDecididoSchema),
+    // §13.11 — pesada, .xlsx até 20 MiB.
+    confrontarPlanilha: (raiz: string, arquivo: File, competencia: string | undefined, escrita: Escrita) =>
+      enviar("confronto", raiz, [arquivo], competenciaOpcional(competencia), escrita, E.confrontoEnviadoSchema),
+  };
+
+  /** As escritas de §14 (lacunas fechadas). */
+  const lacunas = {
+    // §14.1 — leve. `regime: null` apaga a correção do cliente; `competencia`, quando vem, traz a lista de volta.
+    definirRegimeDoPrestador: async (raiz: string, corpo: { cnpj: string; regime: E.Regime | null; nome?: string; competencia?: string }, escrita: Escrita) => {
+      if (!/^\d{14}$/.test(corpo.cnpj)) throw new ErroDoMotor(0, "parametro_invalido", "CNPJ do prestador inválido.");
+      return json({ metodo: "PUT", caminho: "/conferencia/prestadores/regime", raiz, corpo: { cnpj: corpo.cnpj, regime: corpo.regime, ...(corpo.nome ? { nome: corpo.nome } : {}), ...competenciaOpcional(corpo.competencia) }, escrita }, E.regimeGravadoSchema);
+    },
+    // §14.2 — fila: vira a ação `quarentena`, 202 com a `Execucao`.
+    reprocessarQuarentena: async (raiz: string, corpo: { classe: string }, escrita: Escrita) => {
+      if (!/^[a-z_]{1,30}$/.test(corpo.classe)) throw new ErroDoMotor(0, "parametro_invalido", "Classe da quarentena inválida.");
+      return json({ metodo: "POST", caminho: "/quarentena/reprocessar", raiz, corpo: { classe: corpo.classe }, escrita, exigeChave: true }, execucaoMotorSchema);
+    },
+    // §14.3 — pesadas, multipart até 25 MiB.
+    importarPagamentosApoio: async (raiz: string, arquivos: readonly File[], campos: { tipo: E.TipoDePagamentoApoio; pasta?: string; ocr?: boolean }, escrita: Escrita) =>
+      enviar("pagamentos_apoio", raiz, arquivos, { tipo: campos.tipo, ...(campos.pasta ? { pasta: campos.pasta } : {}), ...(campos.ocr ? { ocr: "true" } : {}) }, escrita, E.pagamentosApoioImportadosSchema),
+    importarFaturasBpo: async (raiz: string, planilha: File, pdfs: readonly File[], campos: { substituir?: boolean }, escrita: Escrita) =>
+      enviar("faturas_bpo", raiz, [planilha], campos.substituir ? { substituir: "true" } : {}, escrita, E.faturasBpoImportadasSchema, pdfs),
+    // §14.4 — sessões de upload.
+    criarUpload: (raiz: string, corpo: { nome: string; tamanho: number }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/uploads", raiz, corpo, escrita, exigeChave: true }, E.uploadSchema),
+    obterUpload: async (raiz: string, id: string) => json({ metodo: "GET", caminho: `/uploads/${idDoUpload(id)}`, raiz }, E.uploadSchema),
+    /**
+     * Uma parte, com o corpo **em stream** (do navegador ao motor sem ficar
+     * inteiro na memória do Connect). Sem `Idempotency-Key`: o motor a ignora
+     * nas partes (§14.0.3). Uma tentativa só: quem chama repete a parte.
+     */
+    enviarParteDoUpload: async (raiz: string, id: string, numero: number, corpo: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer>, info: { tamanho: number; sha256?: string }, escrita: Escrita) => {
+      if (!Number.isSafeInteger(numero) || numero < 1) throw new ErroDoMotor(0, "parte_invalida", "Número de parte inválido.");
+      return json({ metodo: "PUT", caminho: `/uploads/${idDoUpload(id)}/partes/${numero}`, raiz, escrita, timeoutMs: TIMEOUT_PESADA_MS, cru: { corpo, tamanho: info.tamanho, sha256: info.sha256 } }, E.parteRecebidaSchema);
+    },
+    /** Pesada; idempotente por conta própria (a mesma `sha256` devolve o mesmo relatório), por isso sem chave. */
+    concluirUpload: async (raiz: string, id: string, sha256: string, escrita: Escrita) => {
+      if (!/^[0-9a-f]{64}$/.test(sha256)) throw new ErroDoMotor(0, "parametro_invalido", "SHA-256 do arquivo inválido.");
+      return json({ metodo: "POST", caminho: `/uploads/${idDoUpload(id)}/concluir`, raiz, corpo: { sha256 }, escrita, custo: "pesada" }, E.uploadConcluidoSchema);
+    },
+    apagarUpload: async (raiz: string, id: string, escrita: Escrita) =>
+      semCorpo({ metodo: "DELETE", caminho: `/uploads/${idDoUpload(id)}`, raiz, escrita }),
+  };
+
   return {
     ...telas,
+    ...escritas,
+    ...lacunas,
     // §3
     saude: (raiz: string) => json({ metodo: "GET", caminho: "/saude", raiz }, saudeSchema),
     listarEmpresas: (raiz: string, incluirInativas = true) =>

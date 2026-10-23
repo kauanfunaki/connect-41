@@ -1,0 +1,24 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/quarentena/999999999/resolver?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "resolvido": true
+    }
+  },
+  "resposta": {
+    "status": 404,
+    "corpo": {
+      "erro": "rejeitado não encontrado",
+      "codigo": "nao_encontrado"
+    },
+    "x_custo": "leve"
+  }
+}

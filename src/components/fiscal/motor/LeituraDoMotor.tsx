@@ -64,10 +64,10 @@ function celula(v: unknown): ReactNode {
  * que vieram (as `candidatas` primeiro), com os nomes do motor. Coluna que
  * nenhuma linha trouxe não aparece.
  */
-export function TabelaLivre({ linhas, candidatas = [], vazio = "Nada a mostrar.", limite = 200 }: { linhas: Record<string, unknown>[]; candidatas?: readonly string[]; vazio?: string; limite?: number }) {
+export function TabelaLivre({ linhas, candidatas = [], vazio = "Nada a mostrar.", limite = 200, acoes }: { linhas: Record<string, unknown>[]; candidatas?: readonly string[]; vazio?: string; limite?: number; /** Uma coluna "Ações" no fim, por linha (as escritas de §13). */ acoes?: (linha: Record<string, unknown>) => ReactNode }) {
   const colunas = colunasPresentes(linhas, candidatas);
   return <>
-    <TabelaFiscal vazio={vazio} descricaoVazio="" colunas={colunas} linhas={linhas.slice(0, limite).map((l, i) => ({ id: String(l.id ?? i), celulas: colunas.map((c) => celula(l[c])) }))} />
+    <TabelaFiscal vazio={vazio} descricaoVazio="" colunas={acoes ? [...colunas, "Ações"] : colunas} linhas={linhas.slice(0, limite).map((l, i) => ({ id: String(l.id ?? i), celulas: [...colunas.map((c) => celula(l[c])), ...(acoes ? [acoes(l)] : [])] }))} />
     {linhas.length > limite && <p className="mt-2 text-helper text-fg-muted">Mostrando {limite} de {linhas.length} linhas.</p>}
   </>;
 }

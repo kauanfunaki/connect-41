@@ -1,0 +1,26 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/cobertura/apurar?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {
+      "Idempotency-Key": "c41:9a4ae03a412c4015a481d1c6a67e5b47"
+    },
+    "corpo": {
+      "empresa_id": 1,
+      "competencia": "2032-02"
+    }
+  },
+  "resposta": {
+    "status": 403,
+    "corpo": {
+      "erro": "este token só lê; escrita exige o token de escrita",
+      "codigo": "token_sem_escrita"
+    }
+  }
+}
