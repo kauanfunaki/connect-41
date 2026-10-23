@@ -1,0 +1,22 @@
+{
+  "status": 200,
+  "corpo": {
+    "por_competencia": [
+      {
+        "competencia": "2032-03",
+        "sentido": "entrada",
+        "quantidade": 1,
+        "valor": "300.00",
+        "sem_xml": 1,
+        "prestadores": 1
+      }
+    ],
+    "totais": {
+      "quantidade": 1,
+      "sem_xml": 1,
+      "competencias": 1
+    },
+    "quarentena_por_triar": 3
+  },
+  "x_custo": "leve"
+}

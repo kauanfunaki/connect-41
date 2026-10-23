@@ -1,0 +1,8 @@
+{
+  "status": 503,
+  "corpo": {
+    "erro": "o motor está ocupado com outras leituras de arquivo; tente em alguns segundos",
+    "codigo": "motor_ocupado"
+  },
+  "x_custo": "pesada"
+}

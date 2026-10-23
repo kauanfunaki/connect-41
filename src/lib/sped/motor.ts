@@ -19,6 +19,7 @@ import "server-only";
 import { z } from "zod";
 import { ErroDoSped, extrairErro, type CorpoDeErro } from "./client";
 import type { TipoDeDecisao } from "@/lib/fiscal/motor/decisoes";
+import * as T from "./telasDoMotor";
 
 export type CredenciaisDoMotorV1 = { baseUrl: string; token: string; tokenEscrita: string | null };
 
@@ -29,6 +30,8 @@ const PREFIXO = "/api/connect/v1";
 const TIMEOUT_LEITURA_MS = 15_000;
 const TIMEOUT_ESCRITA_MS = 30_000;
 const TIMEOUT_DOWNLOAD_MS = 120_000;
+/** Leituras `pesada` (§11.0.7): 60 s, o teto do gunicorn do motor, e nenhuma nova tentativa automática. */
+export const TIMEOUT_PESADA_MS = 60_000;
 const RAIZ = /^\d{8}$/;
 export const FORMATO_DA_CHAVE = /^[A-Za-z0-9:_-]{16,100}$/;
 
@@ -62,6 +65,8 @@ export class ErroDoMotor extends ErroDoSped {
     mensagem: string,
     /** O corpo inteiro do erro: `existente` no 409 de duplicata, `validacao_id`, `campos`... */
     readonly corpo: Record<string, unknown> = {},
+    /** Segundos do `Retry-After` (503 `motor_ocupado`, 409 em andamento), quando o motor mandou. */
+    readonly retryAfter: number | null = null,
   ) {
     super(status, codigo, mensagem);
     this.name = "ErroDoMotor";
@@ -73,6 +78,11 @@ export class ErroDoMotor extends ErroDoSped {
   }
 
   /** 4xx — a mesma chave não adianta: a próxima ação usa outra. */
+  /** O semáforo das leituras pesadas está cheio (§11.0.7): a tela oferece "tentar de novo". */
+  get ocupado(): boolean {
+    return this.codigo === "motor_ocupado";
+  }
+
   get definitivo(): boolean {
     return this.status >= 400 && this.status < 500 && this.codigo !== "idempotencia_em_andamento";
   }
@@ -112,6 +122,8 @@ const MENSAGENS: Record<string, string> = {
   falha_de_rede: "Não foi possível falar com o motor SPED. Confira a conexão e tente de novo.",
   raiz_invalida: "Raiz de CNPJ inválida.",
   nao_encontrado: "Registro não encontrado no motor SPED.",
+  motor_ocupado: "O motor está ocupado com outra leitura pesada; tente em alguns segundos.",
+  tempo_esgotado_pesada: "O motor SPED não terminou esta leitura em um minuto. Tente de novo em instantes; se persistir, avise o responsável pelo motor.",
 };
 
 /** Quando o motor não manda texto, o que dizer por código. */
@@ -125,10 +137,20 @@ const PADRAO: Record<string, string> = {
   execucao_nao_cancelavel: "Só é possível cancelar um pedido que ainda está na fila.",
   execucao_ativa: "O agente ainda deu sinal há pouco: a execução não pode ser destravada agora.",
   validacao_em_andamento: "Já existe uma validação em andamento para este arquivo.",
+  obrigacao_incompativel: "Este arquivo é de outra obrigação: a leitura pedida não se aplica a ele.",
+  uf_nao_suportada: "DCIP e DIME só existem para estabelecimento de Santa Catarina.",
+  sem_arquivo: "Não há SPED gerado considerado para esta competência.",
 };
+
+/** O `Retry-After` em segundos, quando é um número (o motor não manda data). */
+function lerRetryAfter(resposta: Response): number | null {
+  const n = Number(resposta.headers.get("Retry-After"));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 
 /** A mensagem em português de um erro do motor (§2.1). */
 export function mensagemDoErro(status: number, codigo: string | null, erroDoMotor: string | null): string {
+  if (codigo === "motor_ocupado") return MENSAGENS.motor_ocupado;
   if (codigo && MENSAGENS[codigo]) return MENSAGENS[codigo];
   if (erroDoMotor) return erroDoMotor;
   if (codigo && PADRAO[codigo]) return PADRAO[codigo];
@@ -149,7 +171,10 @@ async function erroDaResposta(resposta: Response): Promise<ErroDoMotor> {
   // No v1 `erro` é a frase e `codigo` o identificador; nos formatos antigos,
   // `erro` era o código — aí não serve de frase.
   const frase = typeof corpo.erro === "string" && corpo.erro && corpo.erro !== codigo ? corpo.erro : null;
-  return new ErroDoMotor(resposta.status, codigo, mensagemDoErro(resposta.status, codigo, frase), corpo);
+  const retryAfter = lerRetryAfter(resposta);
+  let mensagem = mensagemDoErro(resposta.status, codigo, frase);
+  if (codigo === "motor_ocupado" && retryAfter) mensagem = `${mensagem.replace(/\.$/, "")} (cerca de ${retryAfter} s).`;
+  return new ErroDoMotor(resposta.status, codigo, mensagem, corpo, retryAfter);
 }
 
 // ─── Esquemas das respostas ──────────────────────────────────────────────────
@@ -352,6 +377,14 @@ type Pedido = {
   exigeChave?: boolean;
   timeoutMs?: number;
   accept?: string;
+  /**
+   * A classe da rota (§11.0.7). `pesada` lê o LONGBLOB de um SPED gerado:
+   * 60 s de timeout e **nenhuma** nova tentativa — nem em 502/504 —, porque
+   * repetir dobraria a carga de quem já está ocupando o motor.
+   */
+  custo?: "leve" | "pesada";
+  /** Parâmetros que vão mesmo vazios, porque o vazio quer dizer algo. */
+  vazios?: string[];
 };
 
 const RETRY_LEITURA = new Set([502, 503, 504]);
@@ -361,9 +394,11 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
   const esperar = deps.esperar ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const base = creds.baseUrl.replace(/\/+$/, "");
 
-  function url(caminho: string, raiz: string, query: Query = {}): string {
+  function url(caminho: string, raiz: string, query: Query = {}, vazios: readonly string[] = []): string {
     const p = new URLSearchParams({ cnpj_raiz: raiz });
     for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== null && v !== "") p.set(k, String(v));
+    // Parâmetro vazio com sentido próprio (`classe=` = todas, §11.1.3).
+    for (const k of vazios) if (!p.has(k)) p.set(k, "");
     return `${base}${PREFIXO}${caminho}?${p.toString()}`;
   }
 
@@ -390,11 +425,12 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
       headers.Authorization = `Bearer ${creds.token}`;
     }
 
-    const endereco = url(pedido.caminho, pedido.raiz, pedido.query);
-    const timeout = pedido.timeoutMs ?? (escrita ? TIMEOUT_ESCRITA_MS : TIMEOUT_LEITURA_MS);
-    // Leitura: uma nova tentativa. Escrita: até duas, e só com a mesma chave —
-    // sem chave, repetir um POST poderia criar duas vezes.
-    const maxTentativas = escrita ? (pedido.escrita?.chave ? 3 : 1) : 2;
+    const endereco = url(pedido.caminho, pedido.raiz, pedido.query, pedido.vazios);
+    const pesada = !escrita && pedido.custo === "pesada";
+    const timeout = pedido.timeoutMs ?? (pesada ? TIMEOUT_PESADA_MS : escrita ? TIMEOUT_ESCRITA_MS : TIMEOUT_LEITURA_MS);
+    // Leitura leve: uma nova tentativa. Pesada: nenhuma. Escrita: até duas, e
+    // só com a mesma chave — sem chave, repetir um POST poderia criar duas vezes.
+    const maxTentativas = escrita ? (pedido.escrita?.chave ? 3 : 1) : pesada ? 1 : 2;
     const corpo = pedido.corpo === undefined ? undefined : JSON.stringify(pedido.corpo);
 
     for (let tentativa = 1; ; tentativa++) {
@@ -412,13 +448,14 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
         const nome = err instanceof Error ? err.name : "";
         const codigo = nome === "TimeoutError" || nome === "AbortError" ? "tempo_esgotado" : "falha_de_rede";
         if (!ultima) { await esperar(500 * tentativa); continue; }
-        throw new ErroDoMotor(0, codigo, MENSAGENS[codigo]);
+        throw new ErroDoMotor(0, codigo, pesada && codigo === "tempo_esgotado" ? MENSAGENS.tempo_esgotado_pesada : MENSAGENS[codigo]);
       }
       if (resposta.ok) return resposta;
 
       const erro = await erroDaResposta(resposta);
       if (!ultima) {
-        if (!escrita && RETRY_LEITURA.has(resposta.status)) { await esperar(500); continue; }
+        // `motor_ocupado` não se repete sozinho: o motor não enfileira, e a tela oferece "tentar de novo".
+        if (!escrita && RETRY_LEITURA.has(resposta.status) && !erro.ocupado) { await esperar(500); continue; }
         if (escrita && resposta.status >= 500) { await esperar(500 * tentativa); continue; }
         if (escrita && erro.codigo === "idempotencia_em_andamento") {
           const depois = Number(resposta.headers.get("Retry-After"));
@@ -438,6 +475,10 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
     } catch {
       throw new ErroDoMotor(resposta.status, "resposta_invalida", MENSAGENS.resposta_invalida);
     }
+    const custo = resposta.headers.get("X-Custo");
+    if (custo === "pesada" && pedido.custo !== "pesada") {
+      console.warn(`[sped/motor] ${pedido.caminho} veio com X-Custo: pesada, mas o Connect a trata como leve`);
+    }
     const lido = schema.safeParse(bruto);
     if (!lido.success) {
       console.warn(`[sped/motor] resposta fora do contrato em ${pedido.metodo} ${pedido.caminho}:`, lido.error.issues.slice(0, 3));
@@ -451,7 +492,77 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
     return id;
   };
 
+  /** Leitura de §11: `custo` decide timeout e nova tentativa. */
+  const ler = <S extends z.ZodTypeAny>(caminho: string, raiz: string, schema: S, query: Query = {}, custo: "leve" | "pesada" = "leve") =>
+    json({ metodo: "GET", caminho, raiz, query, custo }, schema);
+  const competenciaValida = (c: string, aceitaAno = false) => {
+    if (/^\d{4}-(0[1-9]|1[0-2])$/.test(c) || (aceitaAno && /^\d{4}$/.test(c))) return c;
+    throw new ErroDoMotor(0, "parametro_invalido", "Competência inválida.");
+  };
+
+  const telas = {
+    // §11.1 Documentos e importações — leves
+    listarImportacoes: async (raiz: string, opcoes: { limite?: number; cursor?: string | null } = {}) =>
+      ler("/importacoes", raiz, T.importacoesSchema, opcoes),
+    obterImportacao: async (raiz: string, id: number) => ler(`/importacoes/${idDe(id)}`, raiz, T.importacaoSchema),
+    resumoDaQuarentena: async (raiz: string) => ler("/quarentena/resumo", raiz, T.resumoQuarentenaSchema),
+    listarQuarentena: async (raiz: string, filtros: { importacao_id?: number; classe?: string; apenas_pendentes?: boolean; limite?: number; cursor?: string | null } = {}) =>
+      // `classe=` vazio traz todas; ausente, o motor usa `desconhecido`.
+      json({ metodo: "GET", caminho: "/quarentena", raiz, query: filtros, vazios: filtros.classe === "" ? ["classe"] : [], custo: "leve" }, T.quarentenaSchema),
+    /** O XML de um rejeitado, sem ler o corpo: quem chama repassa como stream. */
+    xmlDaQuarentena: async (raiz: string, id: number) =>
+      chamar({ metodo: "GET", caminho: `/quarentena/${idDe(id)}/xml`, raiz, accept: "application/xml" }),
+    obterCobertura: async (raiz: string, empresaId: number, competencia: string) =>
+      ler("/cobertura", raiz, T.coberturaRespostaSchema, { empresa_id: idDe(empresaId), competencia: competenciaValida(competencia) }),
+    listarCoberturas: async (raiz: string, opcoes: { empresa_id?: number; limite?: number } = {}) =>
+      ler("/cobertura/lista", raiz, T.listaDeCoberturaSchema, { ...opcoes, limite: opcoes.limite === undefined ? undefined : Math.min(Math.max(Math.trunc(opcoes.limite), 1), 300) }),
+    errosDeExtracao: async (raiz: string, periodo: { data_ini?: string; data_fim?: string } = {}) =>
+      ler("/erros-extracao", raiz, T.errosExtracaoSchema, periodo),
+    resumoNfse: async (raiz: string) => ler("/nfse/resumo", raiz, T.resumoNfseSchema),
+
+    // §11.2 ICMS e IPI
+    apuracaoDoArquivo: async (raiz: string, id: number) => ler(`/arquivos/${idDe(id)}/apuracao`, raiz, T.apuracaoIcmsSchema, {}, "pesada"),
+    documentosDoCfop: async (raiz: string, id: number, filtro: { grupo: T.GrupoCfop; cfop: string; cst?: string; aliquota?: string | null; limite?: number }) => {
+      if (!T.GRUPOS_CFOP.includes(filtro.grupo)) throw new ErroDoMotor(0, "parametro_invalido", "Grupo de CFOP inválido.");
+      const limite = Math.min(Math.max(Math.trunc(filtro.limite ?? 200), 1), 2000);
+      return ler(`/arquivos/${idDe(id)}/apuracao/documentos`, raiz, T.documentosDoCfopSchema, { ...filtro, limite }, "pesada");
+    },
+    demonstrativoDoArquivo: async (raiz: string, id: number) => ler(`/arquivos/${idDe(id)}/demonstrativo`, raiz, T.demonstrativoIcmsSchema, {}, "pesada"),
+    saldosIcms: async (raiz: string, empresaId: number) => ler("/saldos-icms", raiz, T.saldosIcmsSchema, { empresa_id: idDe(empresaId) }),
+    dcipDime: async (raiz: string, empresaId: number, competencia: string) =>
+      ler("/dcip-dime", raiz, T.dcipDimeSchema, { empresa_id: idDe(empresaId), competencia: competenciaValida(competencia) }),
+    tabelasIcms: async (raiz: string) => ler("/tabelas/icms", raiz, T.tabelasIcmsSchema),
+
+    // §11.3 PIS e COFINS
+    competenciasDoDemonstrativoContrib: async (raiz: string) => ler("/demonstrativo-contribuicoes/competencias", raiz, T.competenciasEAnosSchema),
+    demonstrativoContribuicoes: async (raiz: string, filtro: { ano?: string; competencia?: string; filial?: "todas" | number; relatorio?: "entradas" | "saidas"; ordenar?: "cst" | "cfop" | "valor" }) => {
+      // Um dos dois é obrigatório; vindo os dois, vale `competencia` — então só ela vai.
+      const periodo = filtro.competencia ? { competencia: competenciaValida(filtro.competencia) } : filtro.ano && /^\d{4}$/.test(filtro.ano) ? { ano: filtro.ano } : null;
+      if (!periodo) throw new ErroDoMotor(0, "parametro_invalido", "Informe o ano ou a competência do demonstrativo.");
+      return ler("/demonstrativo-contribuicoes", raiz, T.demonstrativoContribSchema, { ...periodo, filial: filtro.filial ?? "todas", relatorio: filtro.relatorio ?? "entradas", ordenar: filtro.ordenar ?? "cst" }, "pesada");
+    },
+    fechamento: async (raiz: string, competencia: string) => ler("/fechamento", raiz, T.fechamentoSchema, { competencia: competenciaValida(competencia, true) }),
+    competenciasDoFechamento: async (raiz: string) => ler("/fechamento/competencias", raiz, T.competenciasSchema),
+    faturamento: async (raiz: string, competencia: string) => ler("/fechamento/faturamento", raiz, T.faturamentoSchema, { competencia: competenciaValida(competencia, true) }),
+    conferenciaDoFechamento: async (raiz: string, filtro: { competencia?: string; sem_credito?: boolean } = {}) =>
+      ler("/fechamento/conferencia", raiz, T.conferenciaDoFechamentoSchema, { competencia: filtro.competencia ? competenciaValida(filtro.competencia, true) : undefined, sem_credito: filtro.sem_credito ?? false }),
+    duplicatas: async (raiz: string, filtro: { competencia?: string; tipo?: string; limite?: number; cursor?: string | null } = {}) =>
+      ler("/fechamento/duplicatas", raiz, T.duplicatasSchema, { ...filtro, competencia: filtro.competencia ? competenciaValida(filtro.competencia, true) : undefined }),
+    alugueisDeImoveis: async (raiz: string) => ler("/fechamento/alugueis-imoveis", raiz, T.alugueisSchema),
+
+    // §11.4 Conferência fiscal — só mês (o ano e o mês 13 são recusados)
+    competenciasDaConferencia: async (raiz: string) => ler("/conferencia/competencias", raiz, T.competenciasSchema),
+    previaDaConferencia: async (raiz: string, competencia: string) => ler("/conferencia/previa", raiz, T.previaFinanceiraSchema, { competencia: competenciaValida(competencia) }),
+    prestadores: async (raiz: string, competencia: string) => ler("/conferencia/prestadores", raiz, T.prestadoresSchema, { competencia: competenciaValida(competencia) }),
+    confronto: async (raiz: string, filtro: { competencia: string; situacao?: string; limite?: number; cursor?: string | null }) =>
+      // `situacao=` vazio = todas (§11.4.4); ausente, o motor usa `sem_nota`.
+      json({ metodo: "GET", caminho: "/conferencia/confronto", raiz, query: { ...filtro, competencia: competenciaValida(filtro.competencia) }, vazios: filtro.situacao === "" ? ["situacao"] : [], custo: "leve" }, T.confrontoSchema),
+    documentosDaConferencia: async (raiz: string, filtro: { competencia: string; situacao?: string; pendentes?: boolean; limite?: number; cursor?: string | null }) =>
+      ler("/conferencia/documentos", raiz, T.documentosDaConferenciaSchema, { ...filtro, competencia: competenciaValida(filtro.competencia) }),
+  };
+
   return {
+    ...telas,
     // §3
     saude: (raiz: string) => json({ metodo: "GET", caminho: "/saude", raiz }, saudeSchema),
     listarEmpresas: (raiz: string, incluirInativas = true) =>

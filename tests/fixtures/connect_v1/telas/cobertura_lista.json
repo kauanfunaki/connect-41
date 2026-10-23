@@ -1,0 +1,78 @@
+{
+  "status": 200,
+  "corpo": {
+    "itens": [
+      {
+        "empresa_id": 1,
+        "cnpj_empresa": "17122471001147",
+        "competencia": "2032-03",
+        "estado": "ok",
+        "apurado_em": "2026-10-23T12:51:31+00:00",
+        "duracao_seg": 21,
+        "cte_total": 500,
+        "nfe_total": 3,
+        "cte_por_serie": {
+          "001": 500
+        },
+        "cte_por_dia": {
+          "2032-03-01": 500
+        },
+        "nfe_por_fonte": {
+          "pasta": 3
+        },
+        "dias_sem_nada": [],
+        "mensagem": null,
+        "abandonada": false,
+        "avaliacao": {
+          "semaforo": "vermelho",
+          "motivos": [
+            {
+              "cor": "vermelho",
+              "texto": "CT-e caiu 50% contra 2032-02 (1.000 → 500)"
+            },
+            {
+              "cor": "vermelho",
+              "texto": "série(s) presente(s) em 2032-02 e ausente(s) agora: 002"
+            }
+          ],
+          "variacao_cte": "-0.5000"
+        }
+      },
+      {
+        "empresa_id": 1,
+        "cnpj_empresa": "17122471001147",
+        "competencia": "2032-02",
+        "estado": "ok",
+        "apurado_em": "2026-10-23T12:51:31+00:00",
+        "duracao_seg": 21,
+        "cte_total": 1000,
+        "nfe_total": 3,
+        "cte_por_serie": {
+          "001": 900,
+          "002": 100
+        },
+        "cte_por_dia": {
+          "2032-02-01": 1000
+        },
+        "nfe_por_fonte": {
+          "pasta": 3
+        },
+        "dias_sem_nada": [],
+        "mensagem": null,
+        "abandonada": false,
+        "avaliacao": {
+          "semaforo": "verde",
+          "motivos": [
+            {
+              "cor": "cinza",
+              "texto": "sem competência anterior apurada -- não dá pra comparar volume; apure o mês anterior também"
+            }
+          ],
+          "variacao_cte": null
+        }
+      }
+    ],
+    "proximo_cursor": null
+  },
+  "x_custo": "leve"
+}
