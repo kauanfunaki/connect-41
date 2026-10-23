@@ -56,7 +56,13 @@ const nextConfig: NextConfig = {
     // disso ele corta o corpo). Os Arquivos (09/10/2026) aceitam 10 MB por
     // arquivo numa rota (/api/arquivos/enviar e /portal/arquivos/enviar), e o
     // envelope multipart precisa caber junto: 1 MB de folga.
-    proxyClientMaxBodySize: "11mb",
+    //
+    // 26 MB desde 23/10/2026: o envio de documentos ao motor SPED
+    // (/api/fiscal/sped/envios/documentos, API-CONNECT §13.3) aceita até 25 MiB
+    // num corpo só, porque o motor faz a idempotência do lote inteiro. Abaixo
+    // disso o proxy cortaria o lote em silêncio e o multipart chegaria
+    // quebrado. As outras rotas continuam conferindo os próprios tetos.
+    proxyClientMaxBodySize: "26mb",
   },
   async headers() {
     return [
