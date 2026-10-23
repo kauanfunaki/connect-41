@@ -104,6 +104,36 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     expect(await db!.githubContribution.count({ where: { tenantId, current: true } })).toBe(4);
     expect((await db!.githubDailyContribution.aggregate({ where: { tenantId }, _sum: { count: true } }))._sum.count).toBe(4);
   });
+  it("resume toda a equipe no Geral, sem limitar os totais à página de desenvolvedores", async () => {
+    await collect();
+    const day = dayAt(new Date(stamp()));
+    const people = Array.from({ length: 21 }, (_, index) => ({ id: randomUUID(), tenantId, connectionId, externalId: `U_summary_${index}`, login: `resumo-${index}` }));
+    await db!.githubUser.createMany({ data: people });
+    await db!.githubDailyContribution.createMany({ data: people.map(person => ({ tenantId, repositoryId, userId: person.id, day, type: "COMMIT", count: 2 })) });
+    const view = await dashboard(tenantId, filtersSchema.parse({ view: "general" }));
+    expect(view.users).toEqual([]); expect(view.total).toBe(46);
+    expect(view.summary?.activeDevelopers).toBe(25);
+    expect(view.summary?.counts).toEqual({ COMMIT: 43, PULL_REQUEST: 1, ISSUE: 1, REVIEW: 1 });
+    expect(view.summary?.leaders).toHaveLength(4);
+    expect(view.summary?.leaders.every(person => person.total === 2)).toBe(true);
+    expect(view.summary?.recent).toHaveLength(4);
+    expect(view.summary?.days.reduce((sum, row) => sum + row.counts.COMMIT, 0)).toBe(43);
+    const filtered = await dashboard(tenantId, filtersSchema.parse({ view: "general", user: "daniela", type: "REVIEW" }));
+    expect(filtered.total).toBe(1); expect(filtered.summary?.activeDevelopers).toBe(1);
+    expect(filtered.summary?.recent.map(event => event.login)).toEqual(["daniela"]);
+    const unchanged = await dashboard(tenantId, filtersSchema.parse({ view: "general" }), view.revision);
+    expect(unchanged).toMatchObject({ unchanged: true });
+  });
+  it("mantém os desenvolvedores cadastrados quando não há atividade no período filtrado", async () => {
+    await collect();
+    const view = await dashboard(tenantId, filtersSchema.parse({ from: dayAt(new Date()), to: dayAt(new Date()) }));
+    expect(view.totalUsers).toBe(4); expect(view.users).toHaveLength(4);
+    expect(view.users.every(person => person.total === 0)).toBe(true);
+    const general = await dashboard(tenantId, filtersSchema.parse({ view: "general" }));
+    await db!.githubRepository.update({ where: { id: repositoryId }, data: { accessCheckedAt: new Date(Date.now() - 301000) } });
+    const expired = await dashboard(tenantId, filtersSchema.parse({ view: "general" }), general.revision);
+    expect(expired).toMatchObject({ total: 0, summary: null });
+  });
   it("revalida o acesso e dispensa calendários, totais e cobertura no polling sem mudanças", async () => {
     await collect();
     const filters = filtersSchema.parse({}), first = await dashboard(tenantId, filters);
