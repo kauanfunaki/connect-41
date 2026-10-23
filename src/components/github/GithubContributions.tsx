@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GitCommitHorizontal, RefreshCw, Settings2 } from "lucide-react";
+import Link from "next/link";
+import { GitCommitHorizontal, LayoutGrid, RefreshCw, Settings2, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { IconButton } from "@/components/ui/IconButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Aviso } from "@/components/ui/Aviso";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Accordion } from "@/components/ui/Accordion";
 import { Select } from "@/components/ui/Select";
 import { CampoData } from "@/components/ui/CampoData";
 import { formatInstantDateTime } from "@/lib/format";
@@ -19,8 +21,12 @@ import { TYPE_LABELS, CONTRIBUTION_TYPES, type DashboardView, type DashboardUnch
 import { dateLabel } from "@/lib/github/calendar";
 import { ContributionCalendar } from "./ContributionCalendar";
 import { SyncStatus } from "./SyncStatus";
+import { DeveloperAvatar, GithubOverview } from "./GithubOverview";
+import styles from "./GithubContributions.module.css";
 
-export function GithubContributions({ initialQuery, canManage, canConfigure }: { initialQuery: string; canManage: boolean; canConfigure: boolean }) {
+export function GithubContributions({ initialQuery: suppliedQuery, canManage, canConfigure, view = "general" }: { initialQuery: string; canManage: boolean; canConfigure: boolean; view?: "general" | "developers" }) {
+  const requestParams = new URLSearchParams(suppliedQuery); requestParams.set("view", view);
+  const initialQuery = requestParams.toString(), path = view === "general" ? "/github" : "/github/desenvolvedores";
   const router = useRouter(), [data, setData] = useState<DashboardView | null>(null), [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
   const [detail, setDetail] = useState<{ userId: string; day: string } | null>(null);
@@ -43,7 +49,7 @@ export function GithubContributions({ initialQuery, canManage, canConfigure }: {
   }, [initialQuery]);
   useEffect(() => {
     const controller = new AbortController(); const timer = window.setTimeout(() => {
-      setLoading(true); setDetail(null);
+      setLoading(true); setDetail(null); setData(null); revision.current = null;
       void refresh(controller.signal).catch(err => { if (!controller.signal.aborted) setError(err.message); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     }, 0);
     return () => { controller.abort(); window.clearTimeout(timer); };
@@ -71,53 +77,68 @@ export function GithubContributions({ initialQuery, canManage, canConfigure }: {
     } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível sincronizar."); }
     finally { setBusy(false); }
   }
-  function changePage(page: number) { const params = new URLSearchParams(initialQuery); params.set("page", String(page)); router.replace(`/github?${params}`, { scroll: false }); }
+  function navigate(params: URLSearchParams) { params.delete("view"); router.replace(`${path}?${params}`, { scroll: false }); }
+  function changePage(page: number) { const params = new URLSearchParams(initialQuery); params.set("page", String(page)); navigate(params); }
   const params = new URLSearchParams(initialQuery), organizations = [...new Set(data?.repositories.map(repo => repo.owner) ?? [])].sort();
   const detailUser = data?.users.find(user => user.id === detail?.userId);
-  return <PageContainer>
-    <PageHeader title="GitHub — Contribuições" subtitle="Atividade da equipe nos repositórios monitorados pelo Tech" action={<div className="flex flex-wrap gap-2">
-      {canConfigure && <Button href="/admin/integracoes?integracao=github" variant="secondary"><Settings2 size={15} /> Integração GitHub</Button>}
-      {canManage && data?.connected && <Button onClick={() => void synchronize()} disabled={busy || !data.enabled}><RefreshCw size={15} className={busy ? "animate-spin" : ""} /> Atualizar dados</Button>}
-    </div>} />
+  const tabParams = new URLSearchParams(suppliedQuery); tabParams.delete("page"); tabParams.delete("view");
+  const filtered = ["repository", "organization", "type", "bots"].some(key => params.has(key) && params.get(key) !== "0");
+  return <PageContainer className={styles.root}>
+    <header className={styles.heading}><div><h1>{view === "general" ? "Geral" : "Desenvolvedores"}</h1><p>{view === "general" ? "Acompanhe a atividade do time no GitHub." : "Desenvolvedores e suas contribuições."}</p></div>
+      <div className={styles.actions}>
+        {canManage && data?.connected && <IconButton title="Atualizar dados" variant="framed" onClick={() => void synchronize()} disabled={busy || !data.enabled}><RefreshCw size={16} className={busy ? "animate-spin" : ""} /></IconButton>}
+        {canConfigure && <IconButton href="/admin/integracoes?integracao=github" title="Integração GitHub" variant="framed"><Settings2 size={16} /></IconButton>}
+      </div>
+    </header>
+    <nav aria-label="GitHub" className={styles.tabs}>
+      <Link href={`/github?${tabParams}`} aria-current={view === "general" ? "page" : undefined}><LayoutGrid size={15} />Geral</Link>
+      <Link href={`/github/desenvolvedores?${tabParams}`} aria-current={view === "developers" ? "page" : undefined}><Users size={15} />Desenvolvedores</Link>
+    </nav>
     {error && <Aviso className="mb-4">{error}</Aviso>}
-    {loading && !data && <Card className="p-8 text-fs-3 text-fg-muted" aria-live="polite">Carregando contribuições…</Card>}
-    {data && <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-fs-2 text-fg-muted"><span>{data.login ? `Conta conectada: ${data.login}` : "Conta não conectada"}</span><span>{data.timezone}</span>
-        {data.coveredThrough && <span>Dados coletados até {formatInstantDateTime(new Date(data.coveredThrough), { timeZone: data.timezone })}</span>}
-        {data.connected && !data.enabled && <span>Sincronização pausada</span>}</div>
-      {data.message && <Aviso tom="atencao">{data.message}</Aviso>}
-      <SyncStatus progress={data.progress} timezone={data.timezone} />
-      {data.connected && !data.complete && <Aviso tom="info">Coleta parcial: dias sem atividade registrada ainda não representam zero confirmado.{data.pending > 0 && ` ${data.pending} tarefas pendentes.`}{data.failed > 0 && ` ${data.failed} tarefas precisam de nova tentativa.`}{data.unavailable > 0 && ` ${data.unavailable} repositórios aguardam confirmação ou estão sem acesso e foram excluídos dos totais.`}</Aviso>}
-      <Card className="p-4"><form key={initialQuery} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" onSubmit={event => {
+    {loading && <p className="mb-4 text-fs-2 text-fg-muted" role="status">Carregando contribuições…</p>}
+    {data && !loading && <>
+      <form key={initialQuery} onSubmit={event => {
         event.preventDefault(); const form = new FormData(event.currentTarget), next = new URLSearchParams();
         for (const [key, value] of form) if (typeof value === "string" && value.trim()) next.set(key, value.trim());
-        next.delete("page"); router.replace(`/github?${next}`, { scroll: false });
+        navigate(next);
       }}>
-        <label className="space-y-1 text-fs-2 text-fg-secondary"><span>De</span><CampoData name="from" aria-label="De" defaultValue={data.from} required /></label>
-        <label className="space-y-1 text-fs-2 text-fg-secondary"><span>Até</span><CampoData name="to" aria-label="Até" defaultValue={data.to} required /></label>
-        <label className="space-y-1 text-fs-2 text-fg-secondary"><span>Repositório</span><Select name="repository" aria-label="Repositório" defaultValue={params.get("repository") ?? ""}><option value="">Todos os monitorados</option>{data.repositories.map(repo => <option key={repo.id} value={repo.id}>{repo.fullName}</option>)}</Select></label>
-        <label className="space-y-1 text-fs-2 text-fg-secondary"><span>Organização / dono</span><Select name="organization" aria-label="Organização / dono" defaultValue={params.get("organization") ?? ""}><option value="">Todas</option>{organizations.map(org => <option key={org} value={org}>{org}</option>)}</Select></label>
-        <label className="space-y-1 text-fs-2 text-fg-secondary"><span>Usuário</span><Input name="user" defaultValue={params.get("user") ?? ""} placeholder="Buscar login" /></label>
-        <label className="space-y-1 text-fs-2 text-fg-secondary"><span>Tipo de contribuição</span><Select name="type" aria-label="Tipo de contribuição" defaultValue={params.get("type") ?? ""}><option value="">Todos os tipos</option>{CONTRIBUTION_TYPES.map(type => <option key={type} value={type}>{TYPE_LABELS[type]}</option>)}</Select></label>
-        <label className="flex items-center gap-2 self-end pb-2 text-fs-3 text-fg-secondary"><Checkbox name="bots" value="1" defaultChecked={params.get("bots") === "1"} /> Incluir bots</label>
-        <div className="flex flex-wrap items-end gap-2"><Button type="submit" variant="secondary">Aplicar filtros</Button><Button href="/github" variant="ghost">Limpar</Button></div>
-      </form></Card>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[
-        ["Contribuições", Number(data.total).toLocaleString("pt-BR")], ["Usuários", Number(data.totalUsers).toLocaleString("pt-BR")],
-        ["Repositórios disponíveis", data.repositories.length], ["Cobertura", data.complete ? "Confirmada" : "Parcial"],
-      ].map(([label, value]) => <Card key={label} className="p-4"><p className="text-fs-2 text-fg-muted">{label}</p><p className="mt-1 text-xl font-semibold text-fg">{value}</p></Card>)}</div>
-      {data.unidentified > 0 && <p className="text-fs-2 text-fg-muted">{data.unidentified} contribuições com autoria não identificada pelo GitHub, fora da comparação individual.</p>}
-      {!data.users.length ? <Card className="flex flex-col items-center gap-3 p-8 text-center"><GitCommitHorizontal className="text-fg-muted" size={30} /><p className="text-fs-3 text-fg-secondary">{data.complete ? "Nenhuma contribuição neste período e nestes filtros." : "Nenhuma contribuição coletada para os filtros atuais."}</p>{canConfigure && <Button href="/admin/integracoes?integracao=github" variant="secondary">Configurar repositórios</Button>}</Card>
-        : data.users.map(user => <Card key={user.id} className="p-4 sm:p-5">
-          <div className="mb-3 flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-fg">{user.login}{user.isBot && <span className="ml-2 text-fs-2 font-normal text-fg-muted">bot</span>}{user.tracked && <span className="ml-2 text-fs-2 font-normal text-fg-muted">acompanhado</span>}</p>
-            <p className="mt-1 text-fs-2 text-fg-muted">{Number(user.total).toLocaleString("pt-BR")} contribuições · {user.activeDays} dias com atividade</p></div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-fs-2 text-fg-secondary">{CONTRIBUTION_TYPES.map(type => <span key={type}>{TYPE_LABELS[type]}: <strong className="font-medium text-fg">{user.counts[type]}</strong></span>)}</div></div>
-          <ContributionCalendar label={user.login} userId={user.id} from={data.from} to={data.to} days={user.days} complete={data.complete} onDay={openDay} />
-        </Card>)}
-      {data.totalUsers > data.pageSize && <div className="flex items-center justify-between gap-3 text-fs-3 text-fg-muted"><Button variant="secondary" disabled={data.page <= 1} onClick={() => changePage(data.page - 1)}>Anterior</Button><span>Página {data.page} de {Math.ceil(data.totalUsers / data.pageSize)}</span><Button variant="secondary" disabled={data.page * data.pageSize >= data.totalUsers} onClick={() => changePage(data.page + 1)}>Próxima</Button></div>}
-      <p className="text-fs-2 text-fg-muted">Commits do branch padrão, aberturas de PRs e issues e revisões submetidas. Os totais refletem os repositórios selecionados e podem diferir do calendário do perfil GitHub. Bots ficam ocultos por padrão.</p>
-    </div>}
-    {detail && detailUser && data && <DayDetails key={`${detail.userId}:${detail.day}`} user={detailUser} day={detail.day} query={initialQuery} complete={data.complete} timezone={data.timezone} onClose={() => setDetail(null)} />}
+        <div className={styles.toolbar}>
+          <label className={styles.dateField}><span>De</span><CampoData name="from" aria-label="De" defaultValue={data.from} required /></label>
+          <label className={styles.dateField}><span>Até</span><CampoData name="to" aria-label="Até" defaultValue={data.to} required /></label>
+          <label className="min-w-0 flex-1 basis-48"><span className="sr-only">Buscar desenvolvedor</span><Input name="user" aria-label="Buscar desenvolvedor" defaultValue={params.get("user") ?? ""} placeholder="Buscar desenvolvedor…" /></label>
+          <Button type="submit" variant="secondary" size="sm">Aplicar filtros</Button>
+          {(filtered || params.has("user") || params.has("from") || params.has("to")) && <Button href={path} variant="ghost" size="sm">Limpar</Button>}
+        </div>
+        <Accordion key={initialQuery} className={styles.filters} abertoInicial={filtered} classeDoCabecalho={styles.filterToggle} titulo={`Filtros${filtered ? " ativos" : ""}`}><div className={styles.filterFields}>
+          <label><span>Repositório</span><Select name="repository" aria-label="Repositório" defaultValue={params.get("repository") ?? ""}><option value="">Todos os monitorados</option>{data.repositories.map(repo => <option key={repo.id} value={repo.id}>{repo.fullName}</option>)}</Select></label>
+          <label><span>Organização / dono</span><Select name="organization" aria-label="Organização / dono" defaultValue={params.get("organization") ?? ""}><option value="">Todas</option>{organizations.map(org => <option key={org} value={org}>{org}</option>)}</Select></label>
+          <label><span>Tipo de contribuição</span><Select name="type" aria-label="Tipo de contribuição" defaultValue={params.get("type") ?? ""}><option value="">Todos os tipos</option>{CONTRIBUTION_TYPES.map(type => <option key={type} value={type}>{TYPE_LABELS[type]}</option>)}</Select></label>
+          <label className="!flex items-center gap-2"><Checkbox name="bots" value="1" defaultChecked={params.get("bots") === "1"} /> Incluir bots</label>
+        </div></Accordion>
+      </form>
+      <div className={styles.status}><span className={styles.statusDot} data-complete={data.complete} />{data.complete ? "Cobertura confirmada" : "Cobertura parcial"}
+        {data.coveredThrough && <span>· Coletado até {formatInstantDateTime(new Date(data.coveredThrough), { timeZone: data.timezone })}</span>}
+      </div>
+      {data.message && <Aviso tom="atencao" className="mb-4">{data.message}</Aviso>}
+      {data.progress && <Accordion className={styles.syncDetails} classeDoCabecalho={styles.syncToggle} titulo={`Sincronização${!data.enabled ? " pausada" : data.pending ? ` · ${data.pending} tarefas pendentes` : data.failed ? ` · ${data.failed} com falha` : " · fila concluída"}`}><SyncStatus progress={data.progress} timezone={data.timezone} /></Accordion>}
+      {data.connected && !data.complete && <p className="mb-4 text-fs-2 text-fg-muted">Coleta parcial: dias vazios ainda não representam zero confirmado.{data.unavailable > 0 && ` ${data.unavailable} repositórios sem acesso confirmado, fora dos totais.`}</p>}
+      {view === "general" ? <GithubOverview data={data} query={suppliedQuery} /> : <>
+        <div className={styles.listHeading}><span>{data.totalUsers} desenvolvedores · {Number(data.total).toLocaleString("pt-BR")} contribuições</span>{canConfigure && <Link href="/admin/integracoes?integracao=github" className="text-fg-secondary hover:underline">Gerenciar desenvolvedores</Link>}</div>
+        <div className={styles.developerList}>
+          {!data.users.length ? <Card className="flex flex-col items-center gap-3 p-8 text-center"><GitCommitHorizontal className="text-fg-muted" size={28} /><p className="text-fs-3 text-fg-muted">Nenhum desenvolvedor encontrado.</p></Card>
+            : data.users.map(user => <section key={user.id} className={styles.developer}>
+              <div className={styles.developerHeading}><div className={styles.developerIdentity}><DeveloperAvatar login={user.login} /><div><h2>{user.login}{user.isBot && <span className="ml-2 text-fs-2 font-normal text-fg-muted">bot</span>}</h2>
+                <p>{Number(user.total).toLocaleString("pt-BR")} contribuições · {user.activeDays} dias com atividade</p></div></div>
+                <div className={styles.developerCounts}>{CONTRIBUTION_TYPES.map(type => <span key={type}>{TYPE_LABELS[type]} <strong>{user.counts[type]}</strong></span>)}</div>
+              </div>
+              <ContributionCalendar label={user.login} userId={user.id} from={data.from} to={data.to} days={user.days} complete={data.complete} onDay={openDay} />
+            </section>)}
+        </div>
+        {data.totalUsers > data.pageSize && <div className={styles.pagination}><Button variant="secondary" disabled={data.page <= 1} onClick={() => changePage(data.page - 1)}>Anterior</Button><span>{data.page} / {Math.ceil(data.totalUsers / data.pageSize)}</span><Button variant="secondary" disabled={data.page * data.pageSize >= data.totalUsers} onClick={() => changePage(data.page + 1)}>Próxima</Button></div>}
+      </>}
+      {data.unidentified > 0 && <p className="mt-4 text-fs-2 text-fg-muted">{data.unidentified} contribuições com autoria não identificada, fora dos totais individuais.</p>}
+    </>}
+    {detail && detailUser && data && !loading && <DayDetails key={`${detail.userId}:${detail.day}`} user={detailUser} day={detail.day} query={initialQuery} complete={data.complete} timezone={data.timezone} onClose={() => setDetail(null)} />}
   </PageContainer>;
 }
 
