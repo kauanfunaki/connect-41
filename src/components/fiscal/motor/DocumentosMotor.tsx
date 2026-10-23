@@ -103,7 +103,7 @@ export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; pa
       { rotulo: "Rejeitados por classe", valor: d.resumo.dados.por_classe.reduce((s, c) => s + c.total, 0), icone: <FileWarning />, detalhe: `${d.resumo.dados.por_classe.length} classe(s)` },
     ]} />}
 
-    {escrita.visivel && <BlocoFiscal titulo="Enviar documentos" descricao="XML de NF-e, CT-e e NFS-e, PDF e imagem de documento de apoio, CSV do relatório de NFS-e e .zip com qualquer desses — até 25 MB por envio. Duplicatas são descartadas pelo motor. Lotes maiores: painel do motor ou importação por pasta.">
+    {escrita.visivel && <BlocoFiscal titulo="Enviar documentos" descricao="XML de NF-e, CT-e e NFS-e, PDF e imagem de documento de apoio, CSV do relatório de NFS-e e .zip com qualquer desses. Até 25 MB vai num envio só; acima disso, até 500 MB, o Connect manda em partes de 8 MB, com progresso, e retoma de onde parou se a conexão cair. Duplicatas são descartadas pelo motor.">
       <EnviarDocumentos raiz={contexto.raiz} permissao={escrita} />
     </BlocoFiscal>}
 
