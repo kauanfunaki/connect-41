@@ -13,6 +13,7 @@
 
 import { diasEntre } from "@/lib/financeiro/periodo";
 import { normalizar } from "@/lib/buscaDeTelas";
+import { saldoDeReferencia } from "@/lib/financeiro/conciliacao/saldo";
 
 export type SomaDeVencidos = { n: number; centavos: number };
 
@@ -66,6 +67,54 @@ export function tomDosDiasSemExtrato(dias: number | null): "ok" | "atencao" | "c
   if (dias > 30) return "critico";
   if (dias > 7) return "atencao";
   return "ok";
+}
+
+// ─── Saldo que não bate ─────────────────────────────────────────────────────
+
+/**
+ * A janela da conferência do saldo de uma conta (23/10/2026): o painel só
+ * precisa do veredito "o saldo bate ou não", e para isso basta somar as
+ * transações entre o dia do saldo inicial e o dia do saldo do banco — não o
+ * histórico inteiro dia a dia, como `saldosDasContas` faz para a tela da
+ * conciliação (que mostra também o saldo "de agora"). O veredito é o mesmo
+ * de `situacaoDoSaldo`: divergente só quando a conferência chega a
+ * "conferido" e calculado e banco não fecham no centavo.
+ *
+ * `null` quando não há conferência possível — sem saldo inicial, sem saldo do
+ * banco em nenhuma importação, ou com o saldo do banco anterior ao inicial —,
+ * que em `situacaoDoSaldo` também nunca é divergência.
+ *
+ * `corteKey` `null`: a importação de referência não trouxe a data do saldo
+ * (`DTASOF`), e a conferência soma tudo a partir do saldo inicial.
+ */
+export type JanelaDaConferencia = {
+  contaId: string;
+  saldoInicialCentavos: number;
+  inicioKey: string;
+  corteKey: string | null;
+  bancoCentavos: number;
+};
+
+export function janelaDaConferencia(
+  conta: { id: string; saldoInicialCentavos: number | null; saldoInicialKey: string | null },
+  importacoes: { ledgerCentavos: number | null; ledgerKey: string | null; importadoEm: Date }[]
+): JanelaDaConferencia | null {
+  if (conta.saldoInicialCentavos === null || conta.saldoInicialKey === null) return null;
+  const referencia = saldoDeReferencia(importacoes);
+  if (!referencia || referencia.ledgerCentavos === null) return null;
+  if (referencia.ledgerKey !== null && referencia.ledgerKey < conta.saldoInicialKey) return null;
+  return {
+    contaId: conta.id,
+    saldoInicialCentavos: conta.saldoInicialCentavos,
+    inicioKey: conta.saldoInicialKey,
+    corteKey: referencia.ledgerKey,
+    bancoCentavos: referencia.ledgerCentavos,
+  };
+}
+
+/** Com a soma das transações da janela: o saldo calculado na data do banco não fecha com ele. */
+export function saldoDiverge(janela: JanelaDaConferencia, somaDaJanelaCentavos: number): boolean {
+  return janela.saldoInicialCentavos + somaDaJanelaCentavos !== janela.bancoCentavos;
 }
 
 // ─── Urgência ───────────────────────────────────────────────────────────────

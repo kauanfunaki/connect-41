@@ -1,0 +1,30 @@
+{
+  "status": 200,
+  "corpo": {
+    "itens": [
+      {
+        "route_id": 990320001,
+        "cte_key": null,
+        "data_rota": "2032-03-05",
+        "step_type": "rota",
+        "href": null,
+        "erro": "timeout de teste",
+        "ocorrido_em": "2026-10-23T12:51:31+00:00"
+      },
+      {
+        "route_id": 990320002,
+        "cte_key": "11111111111111111111111111111111111111111111",
+        "data_rota": "2032-03-06",
+        "step_type": "cte",
+        "href": "https://exemplo/x",
+        "erro": "404 de teste",
+        "ocorrido_em": "2026-10-23T12:51:31+00:00"
+      }
+    ],
+    "total": 2,
+    "rotas_inteiras": 1,
+    "documentos": 1,
+    "truncado": false
+  },
+  "x_custo": "leve"
+}

@@ -42,6 +42,7 @@ export const categoriaSchema = z.object({
 export type Categoria = z.infer<typeof categoriaSchema>;
 export const dadosSchema = z.object({ title: z.string().trim().min(3).max(255), description: z.string().trim().min(1).max(15000), categoryId: id, requesterSectorCode: z.string().min(1).max(40), priority: z.enum(PRIORIDADES).default("MEDIA"), requestData: z.record(z.string(), z.string().max(10000)).default({}), tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]) });
 export type DadosDoChamado = z.infer<typeof dadosSchema>;
+export const dadosRascunhoSchema = dadosSchema.extend({ categoryId: z.string().trim().max(191).default("") });
 
 export function validarFormulario(dados: DadosDoChamado, categoria: Categoria, anexos: { attachmentKey: string | null; mimeType: string }[]) {
   if (!categoria.active) throw new Error("Esta categoria está desativada.");

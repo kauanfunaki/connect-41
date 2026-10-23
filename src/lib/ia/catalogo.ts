@@ -93,7 +93,7 @@ export type AgenteDef = {
 export const AGENT_CATALOG: AgenteDef[] = [
   {
     code: "triagem_chamados", label: "Triagem de chamados", sectorCode: null,
-    description: "Confere se há informação suficiente para iniciar o atendimento e conversa com o solicitante para complementar",
+    description: "Classifica o grupo e a categoria do chamado, confere as informações e conversa com o solicitante para complementar",
     faixa: "rapido", escreve: false, ferramentas: [], tetoMensalCentavos: 10_000, tetoMensalChamadas: 2_000, padraoLigado: false,
   },
   {

@@ -1,0 +1,19 @@
+{
+  "status": 200,
+  "corpo": {
+    "pendente_desconhecido": 3,
+    "por_classe": [
+      {
+        "classe": "desconhecido",
+        "total": 3
+      }
+    ],
+    "por_motivo": [
+      {
+        "motivo": "sem Id=NFe",
+        "total": 3
+      }
+    ]
+  },
+  "x_custo": "leve"
+}

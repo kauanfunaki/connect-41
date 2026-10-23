@@ -12,10 +12,12 @@ import type { DirecaoDoLancamento } from "@/lib/fiscal/documentos";
 /**
  * Vencimento presumido quando o documento não diz.
  *
- * **A NF-e não carrega vencimento.** Ele vive na duplicata ou na cobrança, que
- * não vêm no XML. Trinta dias é a presunção do protótipo do BPO, e existe para
- * o lançamento nascer com uma data em vez de nascer sem — lançamento sem
- * vencimento não entra em fluxo de caixa e some do relatório de quem paga.
+ * O vencimento da NF-e vive na duplicata (`<cobr><dup>`). Desde 23/10 ela é
+ * lida (`FiscalDocument.installments`) e, quando fecha com a conta, manda — ver
+ * `parcelasDaNota.ts`. Isto aqui é para a nota que não diz: trinta dias é a
+ * presunção do protótipo do BPO, e existe para o lançamento nascer com uma
+ * data em vez de nascer sem — lançamento sem vencimento não entra em fluxo de
+ * caixa e some do relatório de quem paga.
  *
  * É presunção, não verdade: a tela deixa sobrescrever, e deve.
  */

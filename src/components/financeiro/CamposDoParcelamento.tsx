@@ -12,7 +12,14 @@ import { useFeriados } from "@/components/ui/useFeriados";
 import { formatarReaisDeCentavos } from "@/lib/format";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
 import { AJUSTES_DO_DIA, type AjusteDoDia } from "@/lib/financeiro/repeticao";
-import { MAXIMO_DE_PARCELAS, ONDE_FICA_O_RESTO, propostaDeParcelas, type OndeFicaOResto } from "@/lib/financeiro/parcelamento";
+import {
+  COMPETENCIAS_DAS_PARCELAS,
+  MAXIMO_DE_PARCELAS,
+  ONDE_FICA_O_RESTO,
+  propostaDeParcelas,
+  type CompetenciaDasParcelas,
+  type OndeFicaOResto,
+} from "@/lib/financeiro/parcelamento";
 
 const valorNoCampo = (centavos: number) => Number(centavos / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dataBr = (key: string) => key.split("-").reverse().join("/");
@@ -40,9 +47,13 @@ export function resumoDoParcelamento(parcelas: string, totalCentavos: number | n
  * repetição — mas não junto com ela, nem com rateio, retenção ou "já pago
  * em": o servidor recusa e diz o caminho.
  *
+ * A competência (23/10/2026) é a da compra, a mesma em todas — o de sempre —,
+ * ou a do vencimento de cada parcela, para quem quer cada uma no mês em que
+ * vence.
+ *
  * Vai no formulário como `parcelar`, `parcelas` (JSON com o vencimento e os
- * centavos de cada uma) e `parcelarAjuste`; quem confere é `lerParcelas`, no
- * servidor. O número de parcelas mora no formulário (`parcelas`/`onParcelas`)
+ * centavos de cada uma), `parcelarAjuste` e `parcelarCompetencia`; quem
+ * confere é `lerParcelas` (e `lerCompetenciaDasParcelas`), no servidor. O número de parcelas mora no formulário (`parcelas`/`onParcelas`)
  * para o rótulo do valor dizer "total".
  */
 export function CamposDoParcelamento({
@@ -62,6 +73,7 @@ export function CamposDoParcelamento({
 }) {
   const [resto, setResto] = useState<OndeFicaOResto>("PRIMEIRA");
   const [ajuste, setAjuste] = useState<AjusteDoDia>("ADIAR");
+  const [competencia, setCompetencia] = useState<CompetenciaDasParcelas>("COMPRA");
   const mapaDeFeriados = useFeriados();
   const feriados = useMemo(() => new Set(mapaDeFeriados.keys()), [mapaDeFeriados]);
 
@@ -98,7 +110,8 @@ export function CamposDoParcelamento({
         <input type="hidden" name="parcelar" value={parcelando ? "1" : "0"} />
         {parcelando && <input type="hidden" name="parcelas" value={json} />}
         <input type="hidden" name="parcelarAjuste" value={ajuste} />
-        <FieldGrid columns="sm:grid-cols-3">
+        <input type="hidden" name="parcelarCompetencia" value={competencia} />
+        <FieldGrid columns="sm:grid-cols-2">
           <CampoForm label="Parcelas" htmlFor="lancamento-parcelas" helper="Em branco, não parcela.">
             <CampoNumero
               id="lancamento-parcelas"
@@ -123,6 +136,20 @@ export function CamposDoParcelamento({
               {AJUSTES_DO_DIA.map((a) => (
                 <option key={a.valor} value={a.valor}>
                   {a.rotulo}
+                </option>
+              ))}
+            </Select>
+          </CampoForm>
+          <CampoForm label="Competência" htmlFor="lancamento-parcelas-competencia">
+            <Select
+              id="lancamento-parcelas-competencia"
+              value={competencia}
+              onChange={(e) => setCompetencia(e.target.value as CompetenciaDasParcelas)}
+              disabled={!parcelando}
+            >
+              {COMPETENCIAS_DAS_PARCELAS.map((c) => (
+                <option key={c.valor} value={c.valor}>
+                  {c.rotulo}
                 </option>
               ))}
             </Select>
@@ -176,7 +203,9 @@ export function CamposDoParcelamento({
 
         <p className="text-helper text-fg-muted">
           {parcelando
-            ? "Cada parcela vira uma conta em aberto, com a competência desta (a compra é uma só) e o mesmo número de documento, ligada às outras pela série (\"3/12\"). Cada uma se edita, paga e cancela sozinha, e \"Mudar daqui em diante\" muda as próximas de uma vez."
+            ? `Cada parcela vira uma conta em aberto, ${
+                competencia === "VENCIMENTO" ? "com a competência do mês em que vence" : "com a competência desta (a compra é uma só)"
+              } e o mesmo número de documento, ligada às outras pela série ("3/12"). Cada uma se edita, paga e cancela sozinha, e "Mudar daqui em diante" muda as próximas de uma vez.`
             : "Para uma compra ou um contrato dividido: o valor acima é o total, e cada parcela vira uma conta. Para a conta que se repete inteira todo mês (aluguel), use Repetir."}
         </p>
       </div>

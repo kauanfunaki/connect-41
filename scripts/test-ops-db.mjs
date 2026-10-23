@@ -19,7 +19,7 @@ try {
   if (!tables.length) {
     const sql = executar(["node_modules/prisma/build/index.js", "migrate", "diff", "--from-empty", "--to-schema", "prisma/schema.prisma", "--script"]);
     // A base é gerada pelo Prisma; as tabelas do Ops vêm das migrations entregues.
-    const base = sql.split(/(?=-- (?:CreateTable|CreateIndex|AddForeignKey))/).filter(block => !/(?:CREATE TABLE|ALTER TABLE|CREATE (?:UNIQUE )?INDEX[^;]* ON) `ops_(?:watchers|events|api_credentials)`/.test(block)).join("");
+    const base = sql.split(/(?=-- (?:CreateTable|CreateIndex|AddForeignKey))/).filter(block => !/(?:CREATE TABLE|ALTER TABLE|CREATE (?:UNIQUE )?INDEX[^;]* ON) `ops_(?:watchers|events|api_credentials|api_keys)`/.test(block)).join("");
     await db.query(base);
   }
   const nomes = new Set((await db.query("SHOW TABLES")).map(row => Object.values(row)[0]));
@@ -30,6 +30,15 @@ try {
   if (!nomes.has("ops_api_credentials")) {
     await db.query(await readFile("prisma/migrations/20261020230000_ops_shared_credential/migration.sql", "utf8"));
     console.log("Migration da chave compartilhada aplicada apenas ao banco descartável.");
+  }
+  if (!nomes.has("ops_api_keys")) {
+    const migration = await readFile("prisma/migrations/20261022120000_ops_multiple_credentials/migration.sql", "utf8");
+    if (!/^CREATE TABLE `ops_api_keys`/.test(migration) || /\b(?:DROP|TRUNCATE|DELETE|UPDATE|ALTER)\b/i.test(migration.replace(/ON (?:UPDATE CASCADE|DELETE RESTRICT)/g, ""))) throw new Error("A migration das chaves precisa ser exclusivamente aditiva.");
+    const before = await db.query("SELECT tenantId,tokenHash,version FROM ops_api_credentials ORDER BY tenantId");
+    await db.query(migration);
+    const after = await db.query("SELECT tenantId,tokenHash,version FROM ops_api_credentials ORDER BY tenantId");
+    if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error("A migration alterou credenciais anteriores.");
+    console.log("Migration de múltiplas chaves aplicada; credenciais anteriores preservadas.");
   }
 } finally { await db.end(); }
 executar(["node_modules/prisma/build/index.js", "migrate", "diff", "--from-config-datasource", "--to-schema", "prisma/schema.prisma", "--exit-code"]);

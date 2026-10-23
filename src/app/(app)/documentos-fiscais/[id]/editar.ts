@@ -61,7 +61,7 @@ export async function editarDocumento(
   // Documento já lançado não se edita por aqui: o lançamento copiou valor e
   // vencimento, e mexer no documento deixaria os dois divergentes em silêncio.
   // Estorne primeiro — aí a correção e o relançamento ficam explícitos.
-  if (doc.financeEntry) {
+  if (doc.financeEntries.length > 0) {
     return { error: "Estorne o lançamento antes de corrigir o documento." };
   }
 
@@ -205,7 +205,7 @@ export async function excluirDocumento(
   const alcance = alcanceDaEquipe(ctx.tenantId);
   const doc = await obterDocumento(alcance, documentoId);
   if (!doc) return { error: "Documento não encontrado." };
-  if (doc.financeEntry) return { error: "Estorne o lançamento antes de excluir o documento." };
+  if (doc.financeEntries.length > 0) return { error: "Estorne o lançamento antes de excluir o documento." };
 
   const prisma = getPrisma();
   await prisma.fiscalDocument.delete({ where: { id: documentoId } });
