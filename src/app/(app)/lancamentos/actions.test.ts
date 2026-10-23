@@ -18,6 +18,8 @@ const m = vi.hoisted(() => {
     financeCategory: { findFirst: vi.fn() },
     financeCounterparty: { findFirst: vi.fn() },
     agentRun: { findFirst: vi.fn() },
+    financeEntry: { findFirst: vi.fn(), findMany: vi.fn() },
+    financeRecurrence: { updateMany: vi.fn() },
     $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
   };
   return { db, tx, logAudit: vi.fn(), registrarEnvios: vi.fn(), avisarAprovadores: vi.fn(), statusInicial: vi.fn() };
@@ -43,7 +45,7 @@ vi.mock("@/lib/financeiro/rateioServidor", () => ({ conferirRateio: vi.fn(), gra
 vi.mock("@/lib/financeiro/retencoesServidor", () => ({ aplicarRetencoes: vi.fn(), cancelarContasDosImpostos: vi.fn(), RecusaDaRetencao: class extends Error {} }));
 vi.mock("@/lib/financeiro/anexos", () => ({ armazenamentoDosAnexos: { gravarAnexos: vi.fn(), apagarAnexosGravados: vi.fn() } }));
 
-const { criarLancamentoManual } = await import("./actions");
+const { criarLancamentoManual, cancelarProximasDaSerie } = await import("./actions");
 
 const PARCELAS = [
   { vencimento: "2026-10-22", centavos: 33334 },
@@ -182,5 +184,15 @@ describe("criarLancamentoManual parcelado", () => {
     expect(m.tx.financeEntry.create.mock.calls[0]![0].data).toMatchObject({ amount: "1000.00" });
     expect(m.tx.financeEntry.create.mock.calls[0]![0].data).not.toHaveProperty("recurrenceId");
     expect(m.tx.financeRecurrence.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("cancelarProximasDaSerie — a série que nasceu da nota", () => {
+  it("parcela ligada à nota não cancela as próximas nem desliga a série: o caminho é o estorno", async () => {
+    m.db.financeEntry.findFirst.mockResolvedValue({ id: "e2", companyId: "c1", recurrenceId: "s1", recurrenceIndex: 2, fiscalDocumentId: "doc1" });
+    const r = await cancelarProximasDaSerie("e2");
+    expect(r).toEqual({ error: expect.stringMatching(/estorne na ficha da nota/) });
+    expect(m.db.financeEntry.findMany).not.toHaveBeenCalled();
+    expect(m.db.financeRecurrence.updateMany).not.toHaveBeenCalled();
   });
 });

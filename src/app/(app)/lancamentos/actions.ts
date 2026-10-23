@@ -606,9 +606,14 @@ export async function cancelarProximasDaSerie(entryId: string): Promise<Resultad
   if (!ctx.tenantId) return { error: "Não autenticado." };
   const conta = await prisma.financeEntry.findFirst({
     where: { id: entryId, tenantId: ctx.tenantId },
-    select: { id: true, companyId: true, recurrenceId: true, recurrenceIndex: true },
+    select: { id: true, companyId: true, recurrenceId: true, recurrenceIndex: true, fiscalDocumentId: true },
   });
   if (!conta) return { error: "Lançamento não encontrado." };
+  // A série que nasceu das duplicatas da nota (23/10) é da nota: todas as
+  // parcelas são ligadas a ela, e nenhuma se cancela por aqui — o caminho é o
+  // estorno, na ficha da nota, que leva a série inteira. Sem esta recusa a
+  // série seria desligada (`active: false`) sem cancelar conta nenhuma.
+  if (conta.fiscalDocumentId) return { error: "Estas parcelas vieram de um documento fiscal — estorne na ficha da nota." };
   if (!conta.recurrenceId || !conta.recurrenceIndex) return { error: "Este lançamento não faz parte de uma repetição." };
 
   const c = await contexto(conta.companyId);
