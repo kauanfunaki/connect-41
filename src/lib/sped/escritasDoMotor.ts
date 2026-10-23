@@ -268,6 +268,7 @@ export type CorpoDaDecisaoDoDocumento = { decisao: (typeof DECISOES_DO_DOCUMENTO
  * com 422 e a lista dele.
  */
 export const LINHAS_SIMULAVEIS = ["rpas", "credito_mes_anterior"] as const;
+export const ROTULO_DA_LINHA_SIMULAVEL: Record<(typeof LINHAS_SIMULAVEIS)[number], string> = { rpas: "RPAs", credito_mes_anterior: "Crédito do mês anterior" };
 export type CorpoDaSimulacao = { competencia: string; linha: string; valor: string | null; observacao?: string };
 
 /** A competência de §11.4 e §13.1: `AAAA-MM`, mês 01 a 12. */
@@ -331,4 +332,30 @@ export function camposDaCorrecao(inicial: Record<CampoCorrigivel, string>, atual
     if (depois !== antes) corpo[c] = depois;
   }
   return corpo;
+}
+
+// ─── Prévia financeira → o que falta apurar (§11.4.2 → §13.7 a §13.9) ───────
+
+export type SimulacaoGravada = { linha: string; valor: string | null; observacao: string };
+export type PendenciasDaPrevia = { cte: number[]; combustivel: string[]; simulacoes: SimulacaoGravada[] };
+
+const registro = (v: unknown): Record<string, unknown> | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
+
+/**
+ * Os blocos livres da prévia (`cte`, `combustivel`, `simulacoes`) lidos como o
+ * motor os manda nas fixtures: `cte.pendentes` são ids de arquivo,
+ * `combustivel.pendentes` são CNPJs de estabelecimento e `simulacoes` as
+ * linhas digitadas. O que não vier nessa forma é ignorado — a tela só não
+ * oferece o botão.
+ */
+export function pendenciasDaPrevia(previa: { cte: unknown; combustivel: unknown; simulacoes: unknown }): PendenciasDaPrevia {
+  const cte = (registro(previa.cte)?.pendentes ?? []) as unknown[];
+  const comb = (registro(previa.combustivel)?.pendentes ?? []) as unknown[];
+  const sims = Array.isArray(previa.simulacoes) ? previa.simulacoes : [];
+  return {
+    cte: Array.isArray(cte) ? [...new Set(cte.filter((x): x is number => typeof x === "number" && Number.isSafeInteger(x) && x > 0))] : [],
+    combustivel: Array.isArray(comb) ? comb.filter((x): x is string => typeof x === "string" && /^\d{14}$/.test(x)) : [],
+    simulacoes: sims.map(registro).filter((x): x is Record<string, unknown> => !!x && typeof x.linha === "string")
+      .map((x) => ({ linha: x.linha as string, valor: typeof x.valor === "string" ? x.valor : null, observacao: typeof x.observacao === "string" ? x.observacao : "" })),
+  };
 }

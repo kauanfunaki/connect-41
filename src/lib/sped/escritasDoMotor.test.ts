@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { camposDaCorrecao, chaveDoEnvio, chaveDoPagamentoDaLinha, conferirArquivos, correcaoGravada, dinheiroDoCampo, ENVIOS, FOLGA_DO_ENVELOPE, mensagemDeTamanho, sha256DoArquivo, type ImpressaoDoEnvio } from "./escritasDoMotor";
+import { camposDaCorrecao, chaveDoEnvio, chaveDoPagamentoDaLinha, conferirArquivos, correcaoGravada, pendenciasDaPrevia, dinheiroDoCampo, ENVIOS, FOLGA_DO_ENVELOPE, mensagemDeTamanho, sha256DoArquivo, type ImpressaoDoEnvio } from "./escritasDoMotor";
 import { permissaoDeEscrita, SEM_PERFIL_DE_ESCRITA, SEM_TOKEN_DE_ESCRITA } from "@/lib/fiscal/motor/escrita";
 
 const MiB = 1024 * 1024;
@@ -103,5 +103,22 @@ describe("correção de pagamento pela convenção do painel", () => {
     expect(camposDaCorrecao(inicial, { ...inicial })).toEqual({});
     expect(camposDaCorrecao(inicial, { ...inicial, valor: "60,00", nome: "", documento: "987.654.321-00" })).toEqual({ valor: "60.00", nome: "", documento: "98765432100" });
     expect(camposDaCorrecao(inicial, { ...inicial, valor: "abc" })).toEqual({ erro: expect.any(String) });
+  });
+});
+
+describe("o que falta apurar, lido da prévia", () => {
+  it("na forma das fixtures do motor", async () => {
+    const { readFileSync } = await import("fs");
+    const path = await import("path");
+    const f = JSON.parse(readFileSync(path.resolve(__dirname, "../../../tests/fixtures/connect_v1/escritas/simulacao.json"), "utf8"));
+    expect(pendenciasDaPrevia(f.resposta.corpo)).toEqual({
+      cte: [],
+      combustivel: ["17122471000175", "17122471001147", "17122471001490"],
+      simulacoes: [{ linha: "rpas", valor: "1234.56", observacao: "RPA de março" }],
+    });
+  });
+  it("forma inesperada vira lista vazia, sem quebrar a tela", () => {
+    expect(pendenciasDaPrevia({ cte: null, combustivel: "x", simulacoes: { a: 1 } })).toEqual({ cte: [], combustivel: [], simulacoes: [] });
+    expect(pendenciasDaPrevia({ cte: { pendentes: [103, "104", 103] }, combustivel: { pendentes: ["123"] }, simulacoes: [{ linha: "rpas", valor: null }] })).toEqual({ cte: [103], combustivel: [], simulacoes: [{ linha: "rpas", valor: null, observacao: "" }] });
   });
 });
