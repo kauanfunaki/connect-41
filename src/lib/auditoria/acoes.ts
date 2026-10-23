@@ -44,6 +44,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
   "helpdesk.category": e("configurou a categoria de chamados"),
   "helpdesk.sla": e("configurou a política de SLA dos chamados"),
+  "helpdesk.ai_fallback": e("configurou a IA alternativa dos chamados"),
   // ── Cadastros ──────────────────────────────────────────────────────────────
   "company.create": c("criou a empresa"),
   "company.update": e("editou a empresa"),
