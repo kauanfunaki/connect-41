@@ -391,6 +391,9 @@ export function FormLancamentoManual({
                   Bruto {formatarReaisDeCentavos(centavosDeTexto(valorTexto) ?? 0)} − retido {formatarReaisDeCentavos(retido)} ={" "}
                   <strong className="text-fg">{formatarReaisDeCentavos((centavosDeTexto(valorTexto) ?? 0) - retido)}</strong> a pagar ao
                   fornecedor. As contas dos impostos nascem junto.
+                  {/* Lote M1 do mercado (23/10/2026): rateio e parcelas são digitados sobre o bruto. */}
+                  {parcelando && " As parcelas somam o bruto; cada uma fica com a parte dela das retenções e paga o líquido dela."}
+                  {rateando && " O rateio fecha o bruto; a conta guarda as linhas na proporção do líquido."}
                 </p>
               )}
             </CamposDasRetencoes>
