@@ -1,6 +1,6 @@
 "use client";
 
-// As escritas do Fechamento de PIS e COFINS (API-CONNECT §13.4 a §13.7).
+// As escritas do Fechamento de PIS e COFINS (API-CONNECT §13.4 a §13.7 e §14.3).
 
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -13,8 +13,9 @@ import { Select } from "@/components/ui/Select";
 import { CampoFiscal } from "@/components/fiscal/previa/Compartilhados";
 import { apurarCteNoMotor, corrigirPagamentoNoMotor, decidirPagamentoNoMotor, informarContratoNoMotor } from "@/app/(app)/fiscal/escritas-actions";
 import type { PermissaoDeEscrita } from "@/lib/fiscal/motor/escrita";
-import { camposDaCorrecao, CAMPOS_CORRIGIVEIS, type CampoCorrigivel, type ChaveDoPagamento, type CorpoDoContrato } from "@/lib/sped/escritasDoMotor";
-import { AvisoDoResultado, MotivoSemEscrita, useLacoPesado, type Resultado } from "./EscritasComuns";
+import { camposDaCorrecao, CAMPOS_CORRIGIVEIS, pastaValida, ROTULO_DO_TIPO_DE_APOIO, TIPOS_DE_PAGAMENTO_APOIO, type CampoCorrigivel, type ChaveDoPagamento, type CorpoDoContrato, type FaturasBpoImportadas, type PagamentosApoioImportados, type TipoDePagamentoApoio } from "@/lib/sped/escritasDoMotor";
+import { reaisDoMotor } from "@/lib/fiscal/motor/formato";
+import { AvisoDoResultado, EnvioDeArquivo, MotivoSemEscrita, useLacoPesado, type Resultado } from "./EscritasComuns";
 import { useChaveDeIdempotencia } from "./useChaveDeIdempotencia";
 
 const ROTULO_DO_CAMPO: Record<CampoCorrigivel, string> = {
@@ -195,5 +196,57 @@ export function ApurarCte({ raiz, ids, tela, permissao }: { raiz: string; ids: n
     </div>
     <MotivoSemEscrita permissao={permissao} />
     <AvisoDoResultado resultado={laco.resultado} />
+  </div>;
+}
+
+/**
+ * Importar pagamentos de apoio em PDF (§14.3): RPA, recibos, contratos de
+ * motorista e de locação e faturas, para a conferência dos pagamentos desta
+ * tela. O motor roda o mesmo código da ferramenta (`importacao_apoio.py`) e
+ * não guarda o PDF. Até 25 MB por envio. OCR só onde o motor tem o
+ * Tesseract: sem ele, `422 ocr_indisponivel`, e a tela diz para enviar sem.
+ */
+export function ImportarPagamentosApoio({ raiz, permissao }: { raiz: string; permissao: PermissaoDeEscrita }) {
+  const [tipo, setTipo] = useState<TipoDePagamentoApoio | "">("");
+  const [pasta, setPasta] = useState("");
+  const [ocr, setOcr] = useState(false);
+  const [semOcr, setSemOcr] = useState(false);
+  const [importado, setImportado] = useState<PagamentosApoioImportados | null>(null);
+  if (!permissao.visivel) return <MotivoSemEscrita permissao={permissao} />;
+  const pastaRuim = !pastaValida(pasta.trim());
+  return <div className="space-y-3">
+    <div className="grid gap-4 sm:grid-cols-3">
+      <CampoFiscal nome="Tipo dos documentos"><Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoDePagamentoApoio)}><option value="">Escolha</option>{TIPOS_DE_PAGAMENTO_APOIO.map((t) => <option key={t} value={t}>{ROTULO_DO_TIPO_DE_APOIO[t]}</option>)}</Select></CampoFiscal>
+      <CampoFiscal nome="Pasta do lote (opcional)"><Input maxLength={200} value={pasta} error={pastaRuim} placeholder="Ex.: 2026-09/recibos" onChange={(e) => setPasta(e.target.value)} /></CampoFiscal>
+      <div className="flex items-end"><Checkbox label="Ler por OCR as páginas sem texto" helper={semOcr ? "O motor não tem OCR: envie sem." : "Mais lento; só onde o motor tem OCR."} checked={ocr} disabled={semOcr} onChange={(e) => setOcr(e.target.checked)} /></div>
+    </div>
+    {tipo ? <EnvioDeArquivo<PagamentosApoioImportados> destino="pagamentos_apoio" raiz={raiz} permissao={permissao} campos={{ tipo, pasta: pastaRuim ? "" : pasta.trim(), ocr: ocr ? "true" : "" }} rotuloDoBotao="Importar os pagamentos"
+      aoConcluir={setImportado} aoFalhar={(r) => { if (r.codigo === "ocr_indisponivel") { setSemOcr(true); setOcr(false); } }} />
+      : <p className="text-helper text-fg-muted">Escolha o tipo: o motor grava cada arquivo com ele, e arquivo já gravado com outro tipo é recusado.</p>}
+    {importado && <div className="space-y-2 text-helper text-fg-secondary">
+      <p>Situações: {Object.entries(importado.situacoes).map(([k, n]) => `${k} ${n}`).join(" · ") || "—"}. Soma dos aceitáveis: bruto {reaisDoMotor(importado.soma_ok.bruto)}, líquido {reaisDoMotor(importado.soma_ok.liquido)}.{importado.paginas_sem_texto ? ` ${importado.paginas_sem_texto} página(s) sem texto.` : ""}</p>
+      {importado.recusadas.length > 0 && <Aviso tom="atencao">Recusados por já estarem gravados com outro tipo: {importado.recusadas.map((r) => `${r.arquivo} (${r.tipo_no_banco})`).join(", ")}.</Aviso>}
+    </div>}
+  </div>;
+}
+
+/**
+ * Importar a planilha de faturas do BPO (§14.3), com os comprovantes em PDF
+ * opcionais (ligam pelo número da nota no nome). A planilha já importada é
+ * `409 importacao_existente`: nada é gravado, e a tela oferece substituir as
+ * faturas dela (gravar por cima duplicaria o valor).
+ */
+export function ImportarFaturasBpo({ raiz, permissao }: { raiz: string; permissao: PermissaoDeEscrita }) {
+  const [substituir, setSubstituir] = useState(false);
+  const [existentes, setExistentes] = useState<number | null>(null);
+  const [importado, setImportado] = useState<FaturasBpoImportadas | null>(null);
+  if (!permissao.visivel) return <MotivoSemEscrita permissao={permissao} />;
+  return <div className="space-y-3">
+    {existentes !== null && <Aviso tom="atencao">A planilha já tem {existentes} fatura(s) no motor. Marque “substituir” para trocar as faturas dela pelas da planilha enviada.</Aviso>}
+    <Checkbox label="Substituir as faturas já importadas desta planilha" helper="Apaga as faturas da mesma planilha e grava as novas." checked={substituir} onChange={(e) => setSubstituir(e.target.checked)} />
+    <EnvioDeArquivo<FaturasBpoImportadas> destino="faturas_bpo" raiz={raiz} permissao={permissao} campos={substituir ? { substituir: "true" } : {}} rotuloDoBotao={substituir ? "Substituir as faturas" : "Importar as faturas"}
+      aoConcluir={(d) => { setImportado(d); setExistentes(null); setSubstituir(false); }}
+      aoFalhar={(r) => setExistentes(r.codigo === "importacao_existente" && typeof r.detalhe?.existentes === "number" ? r.detalhe.existentes : null)} />
+    {importado && <p className="text-helper text-fg-secondary">{importado.planilha}: {importado.pagamentos} pagamento(s), soma {reaisDoMotor(importado.soma_ok)}. Por competência: {Object.entries(importado.por_competencia).map(([c, v]) => `${c} ${reaisDoMotor(v)}`).join(" · ") || "—"}.</p>}
   </div>;
 }

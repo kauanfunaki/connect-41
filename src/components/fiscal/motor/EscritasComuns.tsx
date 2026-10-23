@@ -77,26 +77,43 @@ export function useLacoPesado<T>(executar: (item: T, chave: string) => Promise<R
  * mesmo arquivo depois de falha de rede, 5xx ou `motor_ocupado` é replay no
  * motor, e não um segundo envio.
  */
-export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoConcluir, rotuloDoBotao }: {
+export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoConcluir, aoFalhar, rotuloDoBotao }: {
   destino: DestinoDeEnvio;
   raiz: string;
   permissao: PermissaoDeEscrita;
   campos?: Record<string, string>;
   aoConcluir?: (dados: T) => void;
+  /** A recusa inteira (código e detalhe), para a tela oferecer o passo seguinte (ex.: substituir). */
+  aoFalhar?: (r: Extract<ResultadoDoMotor<T>, { ok: false }>) => void;
   rotuloDoBotao: string;
 }) {
   const router = useRouter();
   const regra = ENVIOS[destino];
   const [fila, setFila] = useState<ArquivoNaFila[]>([]);
+  const [filaExtra, setFilaExtra] = useState<ArquivoNaFila[]>([]);
   const [gesto, , depoisDe] = useChaveDeIdempotencia();
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<Resultado | null>(null);
-  const accept = destino === "documentos" ? ".xml,.pdf,.jpg,.jpeg,.png,.csv,.zip" : destino === "omie" ? ".csv" : ".xlsx";
-  const problema = fila.length ? conferirArquivos(destino, fila.map((a) => a.file)) : null;
+  const accept = ACEITOS[destino];
+  const arquivos = fila.map((a) => a.file);
+  const extras = filaExtra.map((a) => a.file);
+  const problema = fila.length ? conferirArquivos(destino, arquivos, extras) : null;
+
+  const terminar = (r: ResultadoDoMotor<T>) => {
+    setResultado({ ok: r.ok, mensagem: r.mensagem });
+    if (r.ok) {
+      setFila([]);
+      setFilaExtra([]);
+      if (r.dados !== undefined) aoConcluir?.(r.dados);
+      router.refresh();
+    } else {
+      setFila((f) => f.map((a) => ({ ...a, estado: "erro", progresso: 0, erro: undefined })));
+      aoFalhar?.(r);
+    }
+  };
 
   const enviar = async () => {
-    const arquivos = fila.map((a) => a.file);
-    const recusa = conferirArquivos(destino, arquivos);
+    const recusa = conferirArquivos(destino, arquivos, extras);
     if (recusa) { setResultado({ ok: false, mensagem: recusa }); return; }
     setEnviando(true);
     setResultado(null);
@@ -105,6 +122,7 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
     form.append("gesto", gesto);
     for (const [k, v] of Object.entries(campos)) if (v) form.append(k, v);
     for (const a of arquivos) form.append(regra.parte, a, a.name);
+    if (regra.extra) for (const a of extras) form.append(regra.extra.parte, a, a.name);
     let r: ResultadoDoMotor<T>;
     try {
       const resposta = await fetch(`/api/fiscal/sped/envios/${destino}?raiz=${raiz}`, { method: "POST", body: form });
@@ -114,21 +132,24 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
     }
     depoisDe(r);
     setEnviando(false);
-    setResultado({ ok: r.ok, mensagem: r.mensagem });
-    if (r.ok) {
-      setFila([]);
-      if (r.dados !== undefined) aoConcluir?.(r.dados);
-      router.refresh();
-    } else {
-      setFila((f) => f.map((a) => ({ ...a, estado: "erro", progresso: 0, erro: undefined })));
-    }
+    terminar(r);
   };
+
+  const adicionar = (setter: typeof setFila, varios: boolean) => (files: File[]) => {
+    setResultado(null);
+    setter((f) => [...(varios ? f.filter((a) => a.estado !== "erro") : []), ...files.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`, file, progresso: 0, estado: "pendente" as const }))]);
+  };
+  const tetoMb = Math.floor(regra.teto / (1024 * 1024));
 
   if (!permissao.visivel) return <MotivoSemEscrita permissao={permissao} />;
   return <div className="space-y-3">
-    <FileDropzone accept={accept} maxSizeMb={Math.floor(regra.teto / (1024 * 1024))} multiple={regra.varios} arquivos={fila} desabilitado={!permissao.pode || enviando}
-      onAdicionar={(files) => { setResultado(null); setFila((f) => [...(regra.varios ? f.filter((a) => a.estado !== "erro") : []), ...files.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`, file, progresso: 0, estado: "pendente" as const }))]); }}
-      onRemover={(id) => setFila((f) => f.filter((a) => a.id !== id))} />
+    <FileDropzone accept={accept} maxSizeMb={tetoMb} multiple={regra.varios} arquivos={fila} desabilitado={!permissao.pode || enviando}
+      onAdicionar={adicionar(setFila, regra.varios)} onRemover={(id) => setFila((f) => f.filter((a) => a.id !== id))} />
+    {regra.extra && <div className="space-y-1">
+      <p className="text-helper text-fg-secondary">{regra.extra.rotulo[0].toUpperCase() + regra.extra.rotulo.slice(1)} em PDF (opcional): ligam à fatura pelo número da nota no nome do arquivo; o conteúdo não é lido.</p>
+      <FileDropzone accept=".pdf" maxSizeMb={tetoMb} multiple arquivos={filaExtra} desabilitado={!permissao.pode || enviando}
+        onAdicionar={adicionar(setFilaExtra, true)} onRemover={(id) => setFilaExtra((f) => f.filter((a) => a.id !== id))} />
+    </div>}
     {problema && <Aviso tom="atencao">{problema}</Aviso>}
     <div className="flex flex-wrap items-center gap-3">
       <Button size="sm" disabled={!permissao.pode || fila.length === 0 || !!problema} loading={enviando} loadingLabel="Enviando ao motor…" onClick={enviar}>{rotuloDoBotao}</Button>
@@ -138,3 +159,11 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
     <AvisoDoResultado resultado={resultado} />
   </div>;
 }
+
+const ACEITOS: Record<DestinoDeEnvio, string> = {
+  documentos: ".xml,.pdf,.jpg,.jpeg,.png,.csv,.zip",
+  omie: ".csv",
+  confronto: ".xlsx",
+  pagamentos_apoio: ".pdf",
+  faturas_bpo: ".xlsx",
+};

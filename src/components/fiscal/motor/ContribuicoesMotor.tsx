@@ -17,7 +17,7 @@ import type { LinhaDaApuracaoContrib } from "@/lib/sped/telasDoMotor";
 import { BlocoLivre, CarregandoLeituraPesada, ErroDaLeitura, PaginacaoDoMotor, TabelaLivre } from "./LeituraDoMotor";
 import { escritaNaTela } from "@/lib/fiscal/motor/permissoes";
 import { chaveDoPagamentoDaLinha, COLUNA_ORIGINAL, CAMPOS_CORRIGIVEIS, correcaoGravada } from "@/lib/sped/escritasDoMotor";
-import { AcoesDoPagamento, ApurarCte, InformarContrato } from "./EscritasFechamento";
+import { AcoesDoPagamento, ApurarCte, ImportarFaturasBpo, ImportarPagamentosApoio, InformarContrato } from "./EscritasFechamento";
 
 const CAMINHO = "/fiscal/contribuicoes";
 const din = (v: string | null) => <span className="tabular-nums">{reaisDoMotor(v)}</span>;
@@ -66,7 +66,11 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
             f.rotulo, f.sentido === "entrada" ? "Entrada" : f.sentido === "saida" ? "Saída" : f.sentido || "—", contagemDoMotor(f.documentos), din(f.valor), contagemDoMotor(f.sem_valor), <span key="o" className="block max-w-64 break-words text-helper">{f.origem || "—"}</span>,
           ] }))} />
         </BlocoFiscal>
-        <BlocoFiscal titulo="Documentos de apoio" descricao="Contratos, recibos e RPA do período.">
+        <BlocoFiscal titulo="Documentos de apoio" descricao={`Contratos, recibos e RPA do período.${escrita.visivel ? " Os PDF e a planilha de faturas do BPO importados aqui entram na conferência dos pagamentos abaixo." : ""}`}>
+          {escrita.visivel && <div className="mb-4 space-y-2">
+            <BlocoRecolhivel titulo="Importar pagamentos de apoio (PDF, até 25 MB por envio)" abertoInicial={false}><div><ImportarPagamentosApoio raiz={contexto.raiz} permissao={escrita} /></div></BlocoRecolhivel>
+            <BlocoRecolhivel titulo="Importar a planilha de faturas do BPO (.xlsx e comprovantes, até 25 MB)" abertoInicial={false}><div><ImportarFaturasBpo raiz={contexto.raiz} permissao={escrita} /></div></BlocoRecolhivel>
+          </div>}
           <TabelaFiscal vazio="Nenhum documento de apoio." descricaoVazio="" colunas={["Tipo", "Documentos", "Pessoas", "Bruto", "Líquido", "Vias", "A conferir", "Inválidos", "Sem valor"]} linhas={b.apoio.map((a, i) => ({ id: `${a.tipo}-${i}`, celulas: [
             <span key="t">{a.rotulo}{a.cadastro && <span className="block text-helper text-fg-muted">cadastro</span>}</span>, contagemDoMotor(a.documentos), contagemDoMotor(a.pessoas), din(a.valor_bruto), din(a.valor_liquido), contagemDoMotor(a.vias),
             a.conferir ? <Selo key="c" tom="atencao">{contagemDoMotor(a.conferir)}</Selo> : contagemDoMotor(a.conferir), contagemDoMotor(a.invalidos), contagemDoMotor(a.sem_valor),

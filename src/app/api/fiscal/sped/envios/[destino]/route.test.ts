@@ -161,3 +161,81 @@ describe("relatório do Omie e planilha do BPO", () => {
     expect(m.audit).not.toHaveBeenCalled();
   });
 });
+
+describe("pagamentos de apoio e faturas do BPO (§14.3)", () => {
+  const recibo = () => new File(["%PDF-1.4 recibo"], "recibo frete.pdf");
+
+  it("pagamentos: tipo e pasta como campos, PDF na parte `arquivos`; módulo de PIS e COFINS; audita e relê Fechamento e Conferência", async () => {
+    responder("pagamentos_apoio_importar");
+    const r = await POST(...await pedido("pagamentos_apoio", [["gesto", GESTO], ["tipo", "recibo"], ["pasta", "TESTE-LACUNAS/2032-03"], ["arquivos", recibo()]]));
+    expect(r.status).toBe(200);
+    expect(await r.json()).toMatchObject({ ok: true, dados: { gravadas: 1, tipo: "recibo" } });
+    const [url, init] = m.fetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://motor/api/connect/v1/pagamentos-apoio/importar?cnpj_raiz=17122471");
+    const h = init.headers as Record<string, string>;
+    expect(h["Idempotency-Key"]).toMatch(/^c41:[0-9a-f]{64}$/);
+    const enviado = await new Response(init.body as BodyInit, { headers: { "Content-Type": h["Content-Type"] } }).formData();
+    expect([...enviado.keys()]).toEqual(["tipo", "pasta", "arquivos"]);
+    expect(m.pode).toHaveBeenCalledWith(expect.anything(), "fiscal_contribuicoes", "agir");
+    expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.pagamentos_apoio.importados", entityType: "SpedImportacaoApoio" }));
+    expect(m.revalidar).toHaveBeenCalledWith("/fiscal/contribuicoes");
+    expect(m.revalidar).toHaveBeenCalledWith("/fiscal/conferencia");
+  });
+
+  it("pagamentos: sem tipo, tipo fora da lista, pasta com `..` ou arquivo que não é PDF: recusa sem chamar", async () => {
+    for (const campos of [[], [["tipo", "nota_fiscal"]], [["tipo", "recibo"], ["pasta", "../fora"]]] as [string, string][][]) {
+      const r = await POST(...await pedido("pagamentos_apoio", [["gesto", GESTO], ...campos, ["arquivos", recibo()]]));
+      expect(r.status).toBe(422);
+      expect((await r.json()).codigo).toBe("parametro_invalido");
+    }
+    const jpg = await POST(...await pedido("pagamentos_apoio", [["gesto", GESTO], ["tipo", "recibo"], ["arquivos", new File(["x"], "foto.jpg")]]));
+    expect(jpg.status).toBe(422);
+    expect(m.fetch).not.toHaveBeenCalled();
+  });
+
+  it("pagamentos: OCR pedido onde o motor não tem — 422 ocr_indisponivel com a frase", async () => {
+    m.fetch.mockImplementationOnce(async () => new Response(JSON.stringify({ erro: "o motor não tem o Tesseract: envie com ocr=false", codigo: "ocr_indisponivel" }), { status: 422, headers: { "Content-Type": "application/json", "X-Custo": "pesada" } }));
+    const r = await POST(...await pedido("pagamentos_apoio", [["gesto", GESTO], ["tipo", "recibo"], ["ocr", "true"], ["arquivos", recibo()]]));
+    expect(r.status).toBe(422);
+    expect(await r.json()).toMatchObject({ codigo: "ocr_indisponivel", renovarChave: true });
+    const init = m.fetch.mock.calls[0][1] as RequestInit;
+    const enviado = await new Response(init.body as BodyInit, { headers: { "Content-Type": (init.headers as Record<string, string>)["Content-Type"] } }).formData();
+    expect(enviado.get("ocr")).toBe("true");
+    expect(m.audit).not.toHaveBeenCalled();
+  });
+
+  it("faturas: a planilha e os comprovantes nas partes do contrato; `substituir` muda a chave", async () => {
+    responder("faturas_bpo_importar"); responder("faturas_bpo_substituir");
+    const planilha = () => new File(["PK"], "TESTE-LACUNAS-faturas.xlsx");
+    const comp = () => new File(["%PDF-1.4 comprovante"], "LOCADORA FATURA 123456.pdf");
+    const r = await POST(...await pedido("faturas_bpo", [["gesto", GESTO], ["planilha", planilha()], ["pdfs", comp()]]));
+    expect(r.status).toBe(200);
+    const r2 = await POST(...await pedido("faturas_bpo", [["gesto", GESTO], ["substituir", "true"], ["planilha", planilha()], ["pdfs", comp()]]));
+    expect((await r2.json()).dados.removidas).toBe(2);
+    const corpos = await Promise.all(m.fetch.mock.calls.map(async (c) => {
+      const init = c[1] as RequestInit;
+      const h = init.headers as Record<string, string>;
+      return { chave: h["Idempotency-Key"], form: await new Response(init.body as BodyInit, { headers: { "Content-Type": h["Content-Type"] } }).formData() };
+    }));
+    expect([...corpos[0].form.keys()]).toEqual(["planilha", "pdfs"]);
+    expect([...corpos[1].form.keys()]).toEqual(["substituir", "planilha", "pdfs"]);
+    expect(corpos[1].chave).not.toBe(corpos[0].chave);
+    expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.faturas_bpo.importadas" }));
+  });
+
+  it("faturas: 409 importacao_existente diz quantas e como substituir; nada auditado", async () => {
+    responder("erro_importacao_existente");
+    const r = await POST(...await pedido("faturas_bpo", [["gesto", GESTO], ["planilha", new File(["PK"], "TESTE-LACUNAS-faturas.xlsx")]]));
+    expect(r.status).toBe(409);
+    const corpo = await r.json();
+    expect(corpo).toMatchObject({ codigo: "importacao_existente", detalhe: { existentes: 2 } });
+    expect(corpo.mensagem).toMatch(/2 fatura\(s\).*substituir/);
+    expect(m.audit).not.toHaveBeenCalled();
+  });
+
+  it("faturas: planilha que não é .xlsx, ou comprovante que não é PDF, nem sai", async () => {
+    expect((await POST(...await pedido("faturas_bpo", [["gesto", GESTO], ["planilha", new File(["a"], "f.csv")]]))).status).toBe(422);
+    expect((await POST(...await pedido("faturas_bpo", [["gesto", GESTO], ["planilha", new File(["PK"], "f.xlsx")], ["pdfs", new File(["x"], "c.png")]]))).status).toBe(422);
+    expect(m.fetch).not.toHaveBeenCalled();
+  });
+});
