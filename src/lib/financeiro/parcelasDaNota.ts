@@ -1,5 +1,6 @@
-// A conta a pagar que nasce das duplicatas da nota de compra (status "parado
-// #22", 23/10/2026).
+// A conta que nasce das duplicatas da nota (status "parado #22", 23/10/2026):
+// a conta a pagar da nota de compra e, desde a decisão do mesmo dia, a conta a
+// receber da nota de venda — a mesma regra nas duas.
 //
 // Até aqui a conta de uma NF-e nascia com um valor só e vencimento presumido
 // de 30 dias (`vencimentoPresumido`), quando a própria nota diz em quantas
@@ -26,7 +27,7 @@ import { lerDuplicatas } from "@/lib/fiscal/duplicatas";
 import { MAXIMO_DE_PARCELAS, somaDasParcelas, type Parcela } from "./parcelamento";
 
 export type PlanoDaNota =
-  /** A nota não diz nada (ou não é conta a pagar): a conta nasce como sempre. */
+  /** A nota não diz nada: a conta nasce como sempre. */
   | { tipo: "SEM_DUPLICATAS" }
   /** Uma duplicata que fecha com a conta: uma conta só, vencendo nela. */
   | { tipo: "VENCIMENTO"; vencimentoKey: string; numero: string | null }
@@ -40,14 +41,18 @@ export function planoDaNota(p: {
   duplicatas: unknown;
   /** O valor da conta: `netAmount ?? amount`, em centavos. */
   totalCentavos: number | null;
+  /** A pagar (nota de compra) ou a receber (nota de venda): a regra é a mesma. */
   kind: "PAGAR" | "RECEBER";
-  /** A conta vai gerar contas de imposto retido — não combina com parcelar ainda. */
+  /**
+   * A nota declara retenção — não combina com parcelar ainda. Na compra, a
+   * conta vai gerar as contas dos impostos retidos; na venda, quem retém é o
+   * cliente, e o líquido por parcela ainda não foi combinado.
+   */
   comRetencoes?: boolean;
 }): PlanoDaNota {
-  // O pedido é a conta a pagar da nota de compra. A de venda também tem
-  // duplicata, mas o recebimento é outra conversa (o boleto que a empresa
-  // emite) e não foi pedido.
-  if (p.kind !== "PAGAR") return { tipo: "SEM_DUPLICATAS" };
+  // Compra e venda (23/10): a duplicata da nota de venda é o que a empresa
+  // cobra do cliente, em quantas vezes e quando — a conta a receber nasce
+  // parcelada por ela com a mesma regra da conta a pagar.
   if (p.duplicatas === null || p.duplicatas === undefined) return { tipo: "SEM_DUPLICATAS" };
 
   const lidas = lerDuplicatas(p.duplicatas);

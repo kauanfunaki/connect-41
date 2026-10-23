@@ -135,25 +135,25 @@ export async function lancarDocumento(
   }
 
   // As retenções por tributo que a NFS-e declara (lote D, 20/10): na conta a
-  // pagar, cada uma vira a conta do imposto, junto com a da nota.
-  const retencoes =
-    veredito.kind === "PAGAR"
-      ? retencoesDaNota(doc.retentionsByTax, {
-          brutoCentavos: doc.amount === null ? null : centavosDeDecimal(doc.amount),
-          liquidoCentavos: doc.netAmount === null ? null : centavosDeDecimal(doc.netAmount),
-        })
-      : [];
+  // pagar, cada uma vira a conta do imposto, junto com a da nota. Na conta a
+  // receber quem recolhe é o cliente — não nasce conta de imposto, mas a nota
+  // que retém também não nasce parcelada (`planoDaNota`).
+  const retencoesDeclaradas = retencoesDaNota(doc.retentionsByTax, {
+    brutoCentavos: doc.amount === null ? null : centavosDeDecimal(doc.amount),
+    liquidoCentavos: doc.netAmount === null ? null : centavosDeDecimal(doc.netAmount),
+  });
+  const retencoes = veredito.kind === "PAGAR" ? retencoesDeclaradas : [];
 
-  // As duplicatas da nota de compra (23/10, "parado #22"): com duas ou mais
-  // que fecham com a conta, ela nasce parcelada — uma parcela por duplicata;
-  // com uma, vence no dia dela. Ver `parcelasDaNota.ts`. A mesma função monta
+  // As duplicatas da nota (23/10, "parado #22"), de compra ou de venda: com
+  // duas ou mais que fecham com a conta, ela nasce parcelada — uma parcela por
+  // duplicata; com uma, vence no dia dela. Ver `parcelasDaNota.ts`. A mesma função monta
   // a prévia da ficha, então a tela mostra exatamente o que nasce aqui.
   const valorDaConta = doc.netAmount ?? doc.amount!;
   const plano = planoDaNota({
     duplicatas: doc.installments,
     totalCentavos: centavosDeDecimal(valorDaConta),
     kind: veredito.kind,
-    comRetencoes: retencoes.length > 0,
+    comRetencoes: retencoesDeclaradas.length > 0,
   });
   const parcelas = plano.tipo === "PARCELAS" ? plano.parcelas : null;
 
