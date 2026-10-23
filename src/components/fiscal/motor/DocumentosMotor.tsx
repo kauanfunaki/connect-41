@@ -7,7 +7,7 @@ import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { BlocoFiscal, MetricasFiscais, TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
 import type { TelaDoMotor } from "@/lib/fiscal/motor/tela";
-import { hrefComParams } from "@/lib/fiscal/motor/url";
+import { hrefComParams, hrefDoMotor } from "@/lib/fiscal/motor/url";
 import { contagemDoMotor, data, dataHora, percentualDoMotor, reaisDoMotor } from "@/lib/fiscal/motor/formato";
 import { formatarReais } from "@/lib/format";
 import { tomDoSemaforo } from "@/lib/fiscal/previa/doMotor";
@@ -15,6 +15,8 @@ import { carregarAcervo, carregarCobertura, carregarImportacoes } from "@/lib/fi
 import type { Params } from "@/lib/fiscal/motor/telas/comum";
 import type { CoberturaDoMotor, ImportacaoDoMotor } from "@/lib/sped/telasDoMotor";
 import { ErroDaLeitura, EscolhaUmEstabelecimento, PaginacaoDoMotor } from "./LeituraDoMotor";
+import { escritaNaTela } from "@/lib/fiscal/motor/permissoes";
+import { ApurarCobertura, EnviarDocumentos, ResolverRejeitado } from "./EscritasDocumentos";
 
 const CAMINHO = "/fiscal/documentos";
 
@@ -85,7 +87,7 @@ function DetalheDaImportacao({ i, competencia }: { i: ImportacaoDoMotor; compete
 export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; params: Params }) {
   const { contexto } = tela;
   if (!contexto) return null;
-  const d = await carregarImportacoes(tela, params);
+  const [d, escrita] = await Promise.all([carregarImportacoes(tela, params), escritaNaTela(tela.ctx, tela.motor, "fiscal_acervo")]);
   if (!d) return null;
   const aqui = (m: Record<string, string | number | null> = {}) => hrefComParams(CAMINHO, params, m);
   const xml = (id: number, baixar = false) => `/api/fiscal/sped/quarentena/${id}/xml?raiz=${contexto.raiz}${baixar ? "&baixar=1" : ""}`;
@@ -99,6 +101,10 @@ export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; pa
       { rotulo: "Quarentena a decidir", valor: d.resumo.dados.pendente_desconhecido, icone: <ShieldAlert />, tom: d.resumo.dados.pendente_desconhecido > 0 ? "text-warning-fg" : undefined, detalhe: "classe desconhecido" },
       { rotulo: "Rejeitados por classe", valor: d.resumo.dados.por_classe.reduce((s, c) => s + c.total, 0), icone: <FileWarning />, detalhe: `${d.resumo.dados.por_classe.length} classe(s)` },
     ]} />}
+
+    {escrita.visivel && <BlocoFiscal titulo="Enviar documentos" descricao="XML de NF-e, CT-e e NFS-e, PDF e imagem de documento de apoio, CSV do relatório de NFS-e e .zip com qualquer desses — até 25 MB por envio. Duplicatas são descartadas pelo motor. Lotes maiores: painel do motor ou importação por pasta.">
+      <EnviarDocumentos raiz={contexto.raiz} permissao={escrita} />
+    </BlocoFiscal>}
 
     {d.detalhe && (d.detalhe.erro !== null ? <ErroDaLeitura falha={d.detalhe} hrefDeNovo={aqui()} /> : <DetalheDaImportacao i={d.detalhe.dados} competencia={contexto.competencia} />)}
 
@@ -120,14 +126,14 @@ export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; pa
       </div>
     </BlocoFiscal>
 
-    <BlocoFiscal titulo="Quarentena" descricao={`${d.detalhe?.dados ? `Rejeitados da importação #${d.detalhe.dados.id}` : "Rejeitados de todas as importações"}. Resolver e reabrir continuam no painel do motor.`} acao={d.detalhe ? <Button size="sm" variant="ghost" href={aqui({ importacao: null, c_quar: null })} scroll={false}>Ver todas as importações</Button> : undefined}>
+    <BlocoFiscal titulo="Quarentena" descricao={`${d.detalhe?.dados ? `Rejeitados da importação #${d.detalhe.dados.id}` : "Rejeitados de todas as importações"}. Resolver não apaga: o XML continua guardado no motor.`} acao={d.detalhe ? <Button size="sm" variant="ghost" href={aqui({ importacao: null, c_quar: null })} scroll={false}>Ver todas as importações</Button> : undefined}>
       <div className="space-y-3">
         {d.resumo.dados && d.resumo.dados.por_motivo.length > 0 && <BlocoRecolhivel titulo="Motivos dos que pedem decisão" abertoInicial={false}>
           <div><TabelaFiscal colunas={["Motivo", "Rejeitados"]} linhas={d.resumo.dados.por_motivo.map((m, i) => ({ id: `${i}`, celulas: [m.motivo || "—", contagemDoMotor(m.total)] }))} /></div>
         </BlocoRecolhivel>}
         {d.quarentena.erro !== null ? <ErroDaLeitura falha={d.quarentena} hrefDeNovo={aqui()} /> : <>
           <CascoDaTabela contagem={`${d.quarentena.dados.itens.length} rejeitado(s) nesta página`} filtros={<FiltrosDaTela naBarra campos={filtrosDaQuarentena} />}>
-            <TabelaFiscal vazio="Nenhum rejeitado neste filtro." descricaoVazio="Troque a classe ou inclua os resolvidos." colunas={["Arquivo", "Importação", "Classe", "Motivo", "Chave", "Situação", "Recebido", "XML"]} linhas={d.quarentena.dados.itens.map((r) => ({ id: String(r.id), celulas: [
+            <TabelaFiscal vazio="Nenhum rejeitado neste filtro." descricaoVazio="Troque a classe ou inclua os resolvidos." colunas={["Arquivo", "Importação", "Classe", "Motivo", "Chave", "Situação", "Recebido", "XML", ...(escrita.visivel ? ["Ação"] : [])]} linhas={d.quarentena.dados.itens.map((r) => ({ id: String(r.id), celulas: [
               <span key="a" className="block max-w-56 break-all text-helper">{r.arquivo || `#${r.id}`}</span>,
               r.importacao_id ? `#${r.importacao_id}` : "—",
               r.classe || "—",
@@ -136,7 +142,9 @@ export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; pa
               r.resolvido ? <span key="r"><Selo tom="sucesso">Resolvido</Selo><span className="block text-helper text-fg-muted">{r.resolvido_por ?? ""} {dataHora(r.resolvido_em)}</span></span> : <Selo key="r" tom="atencao">Pendente</Selo>,
               dataHora(r.criado_em),
               <span key="x" className="flex flex-wrap justify-center gap-2"><Button size="xs" variant="secondary" href={xml(r.id)} nativo target="_blank" rel="noopener">Ver</Button><Button size="xs" variant="ghost" href={xml(r.id, true)} download>Baixar</Button></span>,
+              ...(escrita.visivel ? [<ResolverRejeitado key="r" raiz={contexto.raiz} id={r.id} resolvido={r.resolvido} permissao={escrita} />] : []),
             ] }))} />
+            {escrita.visivel && escrita.motivo && <p className="px-5 py-2 text-helper text-fg-muted">{escrita.motivo}</p>}
           </CascoDaTabela>
           <PaginacaoDoMotor temCursor={!!d.cursorQuarentena} proximo={d.quarentena.dados.proximo_cursor} hrefInicio={aqui({ c_quar: null })} hrefProxima={(c) => aqui({ c_quar: c })} />
         </>}
@@ -156,20 +164,23 @@ function contadores(c: Record<string, number>) {
 export async function CoberturaMotor({ tela, params }: { tela: TelaDoMotor; params: Params }) {
   const { contexto, estabelecimento } = tela;
   if (!contexto) return null;
-  const d = await carregarCobertura(tela);
+  const [d, escrita] = await Promise.all([carregarCobertura(tela), escritaNaTela(tela.ctx, tela.motor, "fiscal_acervo")]);
   if (!d) return null;
   const aqui = hrefComParams(CAMINHO, params);
+  const hrefFila = tela.modulos.includes("fiscal_operacao") ? hrefDoMotor("/fiscal/operacao", contexto, { aba: "executar" }) : null;
+  const apurar = estabelecimento && escrita.visivel ? <ApurarCobertura raiz={contexto.raiz} estabelecimentoId={estabelecimento.id} competencia={contexto.competencia} permissao={escrita} hrefFila={hrefFila} /> : null;
   const porId = new Map(tela.mapa.visiveis.map((e) => [e.id, e]));
   const nfseDaCompetencia = (d.nfse.dados?.itens ?? []).filter((n) => n.competencia === contexto.competencia);
   return <div className="space-y-5">
     {!estabelecimento ? <Aviso tom="neutro">Escolha um estabelecimento para ver a avaliação da cobertura de {contexto.competencia}. A lista abaixo mostra as apurações de todos.</Aviso>
       : d.cobertura?.erro !== null && d.cobertura ? <ErroDaLeitura falha={d.cobertura} hrefDeNovo={aqui} />
         : d.cobertura?.dados && <BlocoFiscal titulo={`Cobertura de ${contexto.competencia}`} descricao={estabelecimento.companyNome} acao={d.cobertura.dados.avaliacao ? <Selo tom={tomDoSemaforo(d.cobertura.dados.avaliacao.semaforo)}>{d.cobertura.dados.avaliacao.semaforo === "neutro" ? "Sem avaliação" : d.cobertura.dados.avaliacao.semaforo === "verde" ? "Coberta" : d.cobertura.dados.avaliacao.semaforo === "amarelo" ? "Conferir" : "Incompleta"}</Selo> : undefined}>
-          {!d.cobertura.dados.registro ? <Aviso tom="neutro">Competência ainda não apurada; apure no painel do motor.</Aviso> : (() => {
+          {!d.cobertura.dados.registro ? <div className="space-y-3"><Aviso tom="neutro">Competência ainda não apurada.{apurar ? " A apuração vai para a fila do motor e leva alguns minutos." : " Apure no painel do motor."}</Aviso>{apurar}</div> : (() => {
             const r = d.cobertura.dados.registro;
             const ant = d.cobertura.dados.anterior;
             return <div className="space-y-4">
-              {r.abandonada && <Aviso tom="atencao">A apuração está “apurando” há mais de 15 minutos e foi dada como abandonada. Apure de novo no painel do motor.</Aviso>}
+              {r.abandonada && <Aviso tom="atencao">A apuração está “apurando” há mais de 15 minutos e foi dada como abandonada. {apurar ? "Apure de novo." : "Apure de novo no painel do motor."}</Aviso>}
+              {apurar && (r.estado !== "apurando" || r.abandonada) ? apurar : r.estado === "apurando" && !r.abandonada ? <p className="text-helper text-fg-muted">Apurando agora; acompanhe na fila do motor.</p> : null}
               {r.mensagem && <Aviso tom={r.estado === "erro" ? "perigo" : "neutro"}>{r.mensagem}</Aviso>}
               {(d.cobertura.dados.avaliacao?.motivos ?? []).length > 0 && <ul className="space-y-2">{d.cobertura.dados.avaliacao!.motivos.map((m, i) => <li key={i} className="flex items-start gap-2 text-ui text-fg"><Selo tom={COR_DO_MOTIVO[m.cor] ?? "neutro"}>{m.cor}</Selo><span>{m.texto}</span></li>)}</ul>}
               <dl className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">{([
@@ -188,7 +199,7 @@ export async function CoberturaMotor({ tela, params }: { tela: TelaDoMotor; para
         </BlocoFiscal>}
 
     <BlocoFiscal titulo="Apurações de cobertura" descricao={estabelecimento ? `As últimas de ${estabelecimento.companyNome}.` : "As últimas de todos os estabelecimentos que você vê."}>
-      {d.lista.erro !== null ? <ErroDaLeitura falha={d.lista} hrefDeNovo={aqui} /> : <TabelaFiscal vazio="Nenhuma apuração de cobertura." descricaoVazio="Apure no painel do motor." colunas={["Competência", "Estabelecimento", "Avaliação", "CT-e", "NF-e", "Apurada em"]} linhas={d.lista.dados.map((c) => ({ id: `${c.empresa_id}-${c.competencia}`, celulas: [
+      {d.lista.erro !== null ? <ErroDaLeitura falha={d.lista} hrefDeNovo={aqui} /> : <TabelaFiscal vazio="Nenhuma apuração de cobertura." descricaoVazio={escrita.visivel ? "Escolha um estabelecimento e use “Apurar cobertura”." : "Apure no painel do motor."} colunas={["Competência", "Estabelecimento", "Avaliação", "CT-e", "NF-e", "Apurada em"]} linhas={d.lista.dados.map((c) => ({ id: `${c.empresa_id}-${c.competencia}`, celulas: [
         c.competencia, porId.get(c.empresa_id)?.companyNome ?? c.cnpj_empresa,
         <Selo key="s" tom={tomDoSemaforo(c.avaliacao?.semaforo)}>{c.abandonada ? "Abandonada" : ESTADO_DA_COBERTURA[c.estado]}</Selo>,
         contagemDoMotor(c.cte_total), contagemDoMotor(c.nfe_total), dataHora(c.apurado_em),
