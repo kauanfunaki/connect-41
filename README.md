@@ -52,3 +52,12 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+## Tech e SPED Contábil
+
+- [Controle interno do Tech](docs/TECH-CONTROLE-INTERNO.md): Lista, Kanban e Agenda por prazo. Ativar em Setores e módulos.
+- [SPED Contábil](docs/CONTABIL-SPED.md): conferência, regras e arquivos via API/fila do motor SPED.
+- [Ops Center](docs/OPS-CENTER.md): chave principal e chaves adicionais com revogação individual.
+
+Antes da publicação, aplicar as migrations `20261021160000_tech_internal` e `20261023120000_ops_multiple_keys` no ambiente autorizado. O motor SPED exige implantação separada da API contábil.
