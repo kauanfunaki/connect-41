@@ -80,7 +80,7 @@ describe("Cobertura", () => {
   it("lê o registro do estabelecimento, os erros do mês e esconde a cobertura de quem a pessoa não vê", async () => {
     const { tela, chamadas } = telaDeTeste({
       "/cobertura": { registro: F.COBERTURA, anterior: null, avaliacao: F.AVALIACAO },
-      "/cobertura/lista": [{ ...F.COBERTURA, avaliacao: F.AVALIACAO }, { ...F.COBERTURA, empresa_id: 99, avaliacao: null }],
+      "/cobertura/lista": { itens: [{ ...F.COBERTURA, avaliacao: F.AVALIACAO }, { ...F.COBERTURA, empresa_id: 99, avaliacao: null }], proximo_cursor: null },
       "/erros-extracao": F.ERROS_EXTRACAO,
       "/nfse/resumo": F.NFSE_RESUMO,
     });
@@ -94,7 +94,7 @@ describe("Cobertura", () => {
 
   it("sem estabelecimento, não pede /cobertura; erro de uma leitura não derruba as outras", async () => {
     const { tela, chamadas } = telaDeTeste({
-      "/cobertura/lista": [],
+      "/cobertura/lista": { itens: [], proximo_cursor: null },
       "/erros-extracao": () => new Response(JSON.stringify({ erro: "x", codigo: "banco_indisponivel" }), { status: 503 }),
       "/nfse/resumo": F.NFSE_RESUMO,
     }, { estabelecimento: null });

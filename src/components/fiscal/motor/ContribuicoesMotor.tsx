@@ -111,6 +111,13 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
   </div>;
 }
 
+/** Um valor do quadro de créditos pelo `formato` do motor. */
+function valorDoCredito(formato: string, v: string | null) {
+  if (formato === "valor") return din(v);
+  if (formato === "aliquota") return percentualDoMotor(v);
+  return v ?? "—";
+}
+
 function ApuracaoDoAno({ titulo, linhas, competencias }: { titulo: string; linhas: LinhaDaApuracaoContrib[]; competencias: string[] }) {
   return <section aria-label={titulo}>
     <h3 className="mb-2 text-label font-semibold text-fg">{titulo}</h3>
@@ -148,7 +155,15 @@ async function DemonstrativoPesado({ tela, filtro, params }: { tela: TelaDoMotor
     </BlocoFiscal>
     <BlocoRecolhivel titulo="Créditos, por CFOP e estabelecimentos" abertoInicial={false}>
       <div className="space-y-4">
-        <section aria-label="Créditos"><h4 className="mb-2 text-label font-semibold text-fg">Créditos</h4><BlocoLivre valor={x.creditos} /></section>
+        <section aria-label="Créditos" className="space-y-4"><h4 className="text-label font-semibold text-fg">Créditos</h4>
+          {x.creditos.length === 0 ? <p className="text-ui text-fg-muted">Sem créditos.</p> : x.creditos.map((c, i) => <div key={`${c.cod_cred}-${i}`}>
+            <p className="mb-2 text-ui text-fg-secondary">Código {c.cod_cred || "—"} · origem {c.ind_cred_ori || "—"}</p>
+            <TabelaFiscal colunas={["Linha", ...competencias.flatMap((m) => [`PIS ${m}`, `COFINS ${m}`])]} linhas={c.linhas.map((l, j) => ({ id: `${l.chave}-${j}`, celulas: [
+              l.total ? <strong key="r">{l.rotulo}</strong> : l.rotulo,
+              ...competencias.flatMap((m) => (["pis", "cofins"] as const).map((imp) => valorDoCredito(l.formato, l.valores[imp]?.[m] ?? null))),
+            ] }))} />
+          </div>)}
+        </section>
         <section aria-label="Por CFOP"><h4 className="mb-2 text-label font-semibold text-fg">Por CFOP</h4><BlocoLivre valor={x.por_cfop} /></section>
         <section aria-label="Estabelecimentos"><h4 className="mb-2 text-label font-semibold text-fg">Estabelecimentos</h4><BlocoLivre valor={x.estabelecimentos} /></section>
       </div>
