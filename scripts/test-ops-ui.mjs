@@ -61,32 +61,28 @@ try {
   await chamada("/api/ops/watchers", "POST", { slug: "bot_pausado", name: "Rotina desativada", ownerId: colegaId, isActive: false });
   await page.goto(`${base}/admin/integracoes?integracao=ops_center`);
   await page.getByRole("heading", { name: "Ops Center — bots", exact: true }).waitFor();
-  await page.getByLabel("Nome da chave", { exact: true }).fill("Servidor A");
-  await page.getByRole("button", { name: "Gerar chave", exact: true }).click();
-  const chave = await page.getByLabel("Chave de Servidor A — copie agora", { exact: true }).inputValue();
-  assert.match(chave, /^ops_[a-f0-9]{64}$/);
-  await page.getByLabel("Nome da chave", { exact: true }).fill("Servidor B");
-  await page.getByRole("button", { name: "Gerar chave", exact: true }).click();
-  const segunda = await page.getByLabel("Chave de Servidor B — copie agora", { exact: true }).inputValue();
+  async function criarChave(nome) {
+    await page.getByLabel("Nome da chave", { exact: true }).fill(nome);
+    await page.getByRole("button", { name: "Adicionar chave", exact: true }).click();
+    await page.getByLabel(nome + " — copie agora; esta chave aparece uma única vez", { exact: true }).waitFor();
+    return page.locator("#ops-extra-token").inputValue();
+  }
+  const chave = await criarChave("Servidor A"), segunda = await criarChave("Servidor B");
   assert.notEqual(chave, segunda);
-  for (const token of [chave, segunda]) assert.equal((await fetch(`${base}/api/ops/watchers/bot_fiscal/heartbeat`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })).status, 200);
-  const lista = await (await contexto.request.get(`${base}/api/ops/credential`)).json();
-  assert.equal(lista.keys.length, 2); assert.ok(!JSON.stringify(lista).includes(chave)); assert.ok(!JSON.stringify(lista).includes(segunda)); assert.ok(!JSON.stringify(lista).includes("tokenHash"));
+  for (const token of [chave, segunda]) assert.equal((await fetch(base + "/api/ops/watchers/bot_fiscal/heartbeat", { method: "POST", headers: { Authorization: "Bearer " + token } })).status, 200);
   ok("Duas chaves são geradas pela página e continuam válidas para o mesmo bot");
-  await page.reload(); await page.getByRole("button", { name: "Revogar chave Servidor B", exact: true }).waitFor();
-  assert.equal(await page.locator('input[id^="ops-token-"]').count(), 0);
-  await page.screenshot({ path: path.join(saida, "ops-chaves.png"), fullPage: true, animations: "disabled" });
+  await page.reload(); await page.getByRole("heading", { name: "Chaves adicionais", exact: true }).waitFor();
+  assert.equal(await page.locator("#ops-extra-token").count(), 0);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: path.join(saida, "ops-chaves-mobile.png"), fullPage: true, animations: "disabled" });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.getByRole("button", { name: "Revogar chave Servidor B", exact: true }).click();
-  const confirmarRevogacao = page.getByRole("alertdialog", { name: "Revogar Servidor B?", exact: true });
+  const linhaB = page.getByRole("listitem").filter({ hasText: "Servidor B" });
+  await linhaB.getByRole("button", { name: "Revogar", exact: true }).click();
+  const confirmarRevogacao = page.getByRole("alertdialog");
   await confirmarRevogacao.getByRole("button", { name: "Revogar chave", exact: true }).click();
-  await confirmarRevogacao.waitFor({ state: "hidden" });
-  await page.getByRole("button", { name: "Revogar chave Servidor B", exact: true }).waitFor({ state: "hidden" });
-  assert.equal((await fetch(`${base}/api/ops/watchers/bot_fiscal/heartbeat`, { method: "POST", headers: { Authorization: `Bearer ${segunda}` } })).status, 401);
-  assert.equal((await fetch(`${base}/api/ops/watchers/bot_fiscal/heartbeat`, { method: "POST", headers: { Authorization: `Bearer ${chave}` } })).status, 200);
+  await linhaB.getByText(/Revogada/).waitFor();
+  assert.equal((await fetch(base + "/api/ops/watchers/bot_fiscal/heartbeat", { method: "POST", headers: { Authorization: "Bearer " + segunda } })).status, 401);
+  assert.equal((await fetch(base + "/api/ops/watchers/bot_fiscal/heartbeat", { method: "POST", headers: { Authorization: "Bearer " + chave } })).status, 200);
   ok("Reabrir oculta as chaves completas; revogar uma mantém a outra ativa e o layout funciona no celular");
   const envio = { watcherSlug: "bot_fiscal", eventId: "ui-erro-1", filename: "exemplo.xml", status: "ERROR", errorMessage: "Falha fictícia de processamento." };
   for (let i = 0; i < 2; i++) {

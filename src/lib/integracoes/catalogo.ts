@@ -190,6 +190,10 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         required: false,
         help: "Token de escrita do motor. Sem ele, o Connect só consulta.",
       },
+      {
+        name: "accountingWriteToken", label: "Token de escrita contábil", type: "secret", required: false,
+        help: "Credencial separada para cadastrar regras e importar CSV no Contábil. Requer a API contábil no motor SPED.",
+      },
     ],
   },
   {

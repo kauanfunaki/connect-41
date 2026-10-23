@@ -88,15 +88,16 @@ export async function painelOps(ctx: AuthContext, filtros: FiltrosOps): Promise<
   };
 }
 
-export type CredencialAutenticadaOps = { tenantId: string; slug: string | null; tokenHash: string; compartilhado: boolean };
+export type CredencialAutenticadaOps = { tenantId: string; slug: string | null; tokenHash: string; compartilhado: boolean; credentialId?: string };
 
 export async function autenticarWatcher(request: Request, slug?: string): Promise<CredencialAutenticadaOps> {
   const token = request.headers.get("authorization")?.match(/^Bearer (ops_[a-f0-9]{64})$/)?.[1];
   if (!token) throw new ErroOps("Token da automação inválido.", 401);
   const db = getPrisma();
   const tokenHash = hashToken(token);
-  const credencial = await db.opsApiCredential.findUnique({ where: { tokenHash },
-    include: { tenant: { select: { active: true, subscription: { select: { status: true } } } } } });
+  const include = { tenant: { select: { active: true, subscription: { select: { status: true } } } } } as const;
+  const adicional = await db.opsApiKey.findUnique({ where: { tokenHash }, include });
+  const credencial = adicional ?? await db.opsApiCredential.findUnique({ where: { tokenHash }, include });
   if (credencial) {
     if (!credencial.tenant.active || isSubscriptionReadOnly(credencial.tenant.subscription?.status) || !await isModuleEnabled(credencial.tenantId, MODULO_OPS)) {
       throw new ErroOps("Recebimento indisponível neste escritório.", 403);
@@ -105,7 +106,7 @@ export async function autenticarWatcher(request: Request, slug?: string): Promis
       const watcher = await db.opsWatcher.findUnique({ where: { tenantId_slug: { tenantId: credencial.tenantId, slug } }, select: { isActive: true } });
       if (!watcher?.isActive) throw new ErroOps("Token da automação inválido.", 401);
     }
-    return { tenantId: credencial.tenantId, slug: slug ?? null, tokenHash, compartilhado: true };
+    return { tenantId: credencial.tenantId, slug: slug ?? null, tokenHash, compartilhado: true, ...(adicional ? { credentialId: adicional.id } : {}) };
   }
   const w = await db.opsWatcher.findUnique({ where: { tokenHash: hashToken(token) },
     include: { tenant: { select: { active: true, subscription: { select: { status: true } } } } } });
@@ -150,6 +151,18 @@ export async function gerarTokenCompartilhado(ctx: AuthContext, version: number,
   return { token, hasToken: !revogar, version: version + 1 };
 }
 
+export async function validarTokenCompartilhado(tx: Prisma.TransactionClient, w: CredencialAutenticadaOps) {
+  if (w.credentialId) {
+    await tx.$queryRaw`SELECT id FROM ops_api_keys WHERE tenantId = ${w.tenantId} AND id = ${w.credentialId} FOR UPDATE`;
+    const key = await tx.opsApiKey.findFirst({ where: { id: w.credentialId, tenantId: w.tenantId }, select: { tokenHash: true } });
+    if (!key?.tokenHash || key.tokenHash !== w.tokenHash) throw new ErroOps("Token revogado.", 401);
+  } else {
+    await tx.$queryRaw`SELECT tenantId FROM ops_api_credentials WHERE tenantId = ${w.tenantId} FOR UPDATE`;
+    const key = await tx.opsApiCredential.findUnique({ where: { tenantId: w.tenantId }, select: { tokenHash: true } });
+    if (!key?.tokenHash || key.tokenHash !== w.tokenHash) throw new ErroOps("Token revogado.", 401);
+  }
+}
+
 export async function conferirChamado(ctx: AuthContext, ticketId: string) {
   const config = await configDoHelpdesk(ctx.tenantId);
   const chamado = await getPrisma().helpdeskTicket.findFirst({ where: { AND: [whereVisivel({ ctx, config }), { id: ticketId }] }, select: { id: true } });
@@ -180,11 +193,7 @@ export async function receberEvento(w: CredencialAutenticadaOps, input: unknown)
       // Serializa com troca do dono, desativação e revogação da chave usada.
       await tx.$queryRaw`SELECT slug FROM ops_watchers WHERE tenantId = ${w.tenantId} AND slug = ${watcherSlug} FOR UPDATE`;
       const atual = await tx.opsWatcher.findUnique({ where: { tenantId_slug: { tenantId: w.tenantId, slug: watcherSlug } } });
-      if (w.compartilhado) {
-        await tx.$queryRaw`SELECT tenantId FROM ops_api_credentials WHERE tenantId = ${w.tenantId} FOR UPDATE`;
-        const credencialAtual = await tx.opsApiCredential.findUnique({ where: { tenantId: w.tenantId } });
-        if (!credencialAtual?.tokenHash || credencialAtual.tokenHash !== w.tokenHash) throw new ErroOps("Token revogado.", 401);
-      }
+      if (w.compartilhado) await validarTokenCompartilhado(tx, w);
       if (!atual?.isActive || (!w.compartilhado && atual.tokenHash !== w.tokenHash)) throw new ErroOps("Token revogado.", 401);
       const evento = await tx.opsEvent.create({ data: { ...chave, ...campos, payloadHash, processedAt: processedAt ? new Date(processedAt) : new Date() } });
       const owner = atual.ownerId && campos.status === "ERROR" ? await tx.user.findFirst({ where: { tenantId: w.tenantId, id: atual.ownerId, active: true }, select: { id: true } }) : null;

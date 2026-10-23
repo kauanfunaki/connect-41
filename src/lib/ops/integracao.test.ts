@@ -16,6 +16,7 @@ vi.mock("@/lib/webPush", () => ({ sendWebPushToUser: mocks.push }));
 import { acessoOps, autenticarWatcher, conferirResponsavel, gerarToken, gerarTokenCompartilhado, hashToken, painelOps, receberEvento } from "./servidor";
 import { criarWatcher, editarWatcher, eventoWatcher, heartbeatWatcher, lerJsonOps, obterPainel, responderOps, sinalizarInstabilidade, tokenWatcher } from "./http";
 import { filtrosSchema } from "./regras";
+import { criarChaveOps, alterarChaveOps, listarChavesOps } from "./chaves";
 
 describe.skipIf(!url)("Ops Center com MySQL descartável", () => {
   let tenantId: string, outroTenant: string, dono: string, colega: string, externo: string, fiscal: string;
@@ -42,6 +43,7 @@ describe.skipIf(!url)("Ops Center com MySQL descartável", () => {
     mocks.auth.mockImplementation(() => Promise.resolve(ctx));
     // Limpa exclusivamente os registros das fixtures criadas por esta suíte.
     await db!.notification.deleteMany({ where: { tenantId } });
+    await db!.opsApiKey.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
     await db!.opsApiCredential.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
     await db!.opsEvent.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
     await db!.opsWatcher.deleteMany({ where: { tenantId: { in: [tenantId, outroTenant] } } });
@@ -144,6 +146,26 @@ describe.skipIf(!url)("Ops Center com MySQL descartável", () => {
     await heartbeatWatcher(req("/", undefined, token), slug);
     expect((await db!.opsWatcher.findUnique({ where: { tenantId_slug: { tenantId, slug } } }))?.lastHeartbeatAt).toBeInstanceOf(Date);
     expect(await db!.opsEvent.count({ where: { tenantId } })).toBe(0);
+  });
+  it("duas chaves adicionais coexistem com a principal e são revogadas separadamente", async () => {
+    const principal = await gerarTokenCompartilhado(ctx, 0);
+    const a = await criarChaveOps(ctx, "Servidor A"), b = await criarChaveOps(ctx, "Servidor B");
+    const authA = await autenticarWatcher(req("/", undefined, a.token), slug);
+    const authB = await autenticarWatcher(req("/", undefined, b.token), slug);
+    await receberEvento(authA, evento("SUCCESS"));
+    await heartbeatWatcher(req("/", undefined, b.token), slug);
+    const lista = await listarChavesOps(tenantId);
+    expect(lista).toHaveLength(2); expect(JSON.stringify(lista)).not.toContain("tokenHash"); expect(JSON.stringify(lista)).not.toContain(a.token);
+    await alterarChaveOps(ctx, a.id, 0, true);
+    await expect(autenticarWatcher(req("/", undefined, a.token))).rejects.toMatchObject({ status: 401 });
+    await expect(receberEvento(authA, evento())).rejects.toMatchObject({ status: 401 });
+    await expect(autenticarWatcher(req("/", undefined, principal.token!))).resolves.toMatchObject({ compartilhado: true });
+    await expect(receberEvento(authB, evento("SUCCESS"))).resolves.toMatchObject({ duplicate: false });
+    const nova = await alterarChaveOps(ctx, b.id, 0);
+    await expect(heartbeatWatcher(req("/", undefined, b.token), slug)).rejects.toMatchObject({ status: 401 });
+    await expect(heartbeatWatcher(req("/", undefined, nova.token!), slug)).resolves.toEqual({ ok: true });
+    await expect(alterarChaveOps(ctx, b.id, 0)).rejects.toMatchObject({ status: 409 });
+    await expect(alterarChaveOps({ ...ctx, tenantId: outroTenant }, b.id, 1, true)).rejects.toMatchObject({ status: 409 });
   });
   it("edição concorrente e origens externas são recusadas", async () => {
     await editarWatcher(req("/", { name: "Bot atualizado", version: 0 }), slug);

@@ -176,6 +176,17 @@ const SO_LEITURA = "Lê o motor do SPED Generator quando a integração está co
 
 export const MODULE_CATALOG: ModuleDef[] = [
   {
+    code: "contabil_sped", label: "SPED", sectorCode: "contabil",
+    description: "Conferência, de-para e arquivos de lançamentos para a Domínio",
+    defaultEnabled: true, icon: "FileSpreadsheet", group: "Operação", menuDireto: true,
+  },
+  {
+    code: "tech_controle_interno", label: "Controle interno", sectorCode: "tech",
+    description: "Lista, Kanban e agenda de bugs, melhorias e próximos passos da equipe Tech",
+    defaultEnabled: false, icon: "ClipboardList", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
+  },
+
+  {
     code: "tech_github_contributions", label: "GitHub — Contribuições", sectorCode: "tech",
     description: "Heatmap de commits, pull requests, issues e revisões nos repositórios monitorados",
     defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
@@ -726,6 +737,8 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
+  contabil_sped: "/contabil/sped",
+  tech_controle_interno: "/tech/controle-interno",
   tech_github_contributions: "/github",
   tech_ops_center:         "/ops",
   helpdesk: "/chamados",

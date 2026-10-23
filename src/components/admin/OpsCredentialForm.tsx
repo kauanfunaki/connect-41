@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { OpsAdditionalKeys } from "./OpsAdditionalKeys";
+import type { ChaveOps } from "@/lib/ops/chaves";
 
-export function OpsCredentialForm({ hasToken: inicial, version: versaoInicial }: { hasToken: boolean; version: number }) {
+export function OpsCredentialForm({ hasToken: inicial, version: versaoInicial, keys = [] }: { hasToken: boolean; version: number; keys?: ChaveOps[] }) {
   const toast = useToast();
   const { dialog, requestConfirm } = useConfirm();
   const [hasToken, setHasToken] = useState(inicial), [version, setVersion] = useState(versaoInicial);
@@ -37,7 +39,7 @@ export function OpsCredentialForm({ hasToken: inicial, version: versaoInicial }:
       return;
     }
     if (method === "DELETE") {
-      requestConfirm({ title: "Revogar a chave compartilhada?", description: "O envio de atividade de todos os bots será interrompido até gerar e configurar outra chave.", confirmLabel: "Revogar chave", destructive: true }, () => executar(method));
+      requestConfirm({ title: "Revogar a chave principal?", description: "Somente os bots que usam esta chave precisarão de outra chave configurada.", confirmLabel: "Revogar chave", destructive: true }, () => executar(method));
       return;
     }
     void executar(method);
@@ -49,8 +51,9 @@ export function OpsCredentialForm({ hasToken: inicial, version: versaoInicial }:
   }
 
   return <div className="space-y-4">
-    <p className="text-fs-3 text-fg-secondary">Uma chave do escritório é compartilhada pelas automações do Ops Center. Cada bot informa seu próprio identificador (slug) ao enviar atividade. O Connect armazena somente o hash; a chave completa aparece apenas ao gerar ou trocar.</p>
-    {hasToken ? <p className="text-helper text-fg-secondary">Chave configurada. Guarde-a na configuração protegida de cada bot autorizado.</p> : <p className="text-helper text-warning-fg">Nenhuma chave configurada. Os bots não conseguem enviar atividade.</p>}
+    <p className="text-fs-3 text-fg-secondary">Cadastre uma ou mais chaves para as automações do escritório. Cada bot informa seu identificador (slug). A chave completa aparece somente ao gerar ou trocar.</p>
+    <h3 className="font-semibold text-fg">Chave principal</h3>
+    {hasToken ? <p className="text-helper text-fg-secondary">Chave principal configurada. Guarde-a na configuração protegida dos bots autorizados.</p> : <p className="text-helper text-warning-fg">Nenhuma chave principal configurada. Você também pode usar as chaves adicionais abaixo.</p>}
     {token && <div className="space-y-2"><label htmlFor="ops-shared-token" className="block text-helper font-semibold text-fg-secondary">Nova chave — copie agora; ela não poderá ser consultada depois</label><div className="flex min-w-0 gap-2"><Input id="ops-shared-token" readOnly value={token} onFocus={e => e.target.select()} className="font-mono text-helper" /><Button type="button" variant="secondary" onClick={() => void copiar()}><Copy size={14} /> Copiar</Button></div></div>}
     {erro && <p role="alert" className="text-ui text-danger">{erro}</p>}
     <div className="flex flex-wrap justify-end gap-2">
@@ -58,7 +61,8 @@ export function OpsCredentialForm({ hasToken: inicial, version: versaoInicial }:
       <Button type="button" disabled={ocupado} loading={ocupado} onClick={() => void alterar("POST")}><KeyRound size={14} /> {hasToken ? "Trocar chave" : "Gerar chave"}</Button>
     </div>
     <p className="break-all rounded-md bg-surface-2 p-3 font-mono text-helper text-fg-secondary">Authorization: Bearer &lt;chave&gt;<br />POST /api/ops/events<br />POST /api/ops/watchers/&lt;slug&gt;/heartbeat</p>
-    <p className="text-helper text-fg-muted"><RefreshCw size={12} className="mr-1 inline" />Ao trocar ou revogar a chave, atualize as configurações dos bots. Chaves individuais antigas continuam válidas durante a transição.</p>
+    <p className="text-helper text-fg-muted"><RefreshCw size={12} className="mr-1 inline" />Ao trocar ou revogar uma chave, atualize somente os bots que a utilizam.</p>
+    <OpsAdditionalKeys initialKeys={keys} />
     {dialog}
   </div>;
 }
