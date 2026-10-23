@@ -35,6 +35,7 @@ import {
   Building2,
   Users,
   Truck,
+  GitBranch,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
@@ -536,6 +537,12 @@ export function AppShell({
                   }))}>
                     {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} />}
                   </PainelDoItem>;
+                  const itemModulo = (m: SectorModule) => m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" cor={activeSector.color} abrirPorClique telas={[
+                    { label: "Geral", href: "/github", icon: <LayoutGrid size={16} />, ativa: pathname === "/github" },
+                    { label: "Desenvolvedores", href: "/github/desenvolvedores", icon: <Users size={16} />, ativa: pathname.startsWith("/github/desenvolvedores") },
+                  ]}>
+                    {({ aberto, alternar, painelId }) => <NavItem href="/github" icon={<GitBranch size={16} />} label="GitHub" comTelas menu={{ aberto, onClick: alternar, painelId }} />}
+                  </PainelDoItem> : <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />;
                   const diretos = modulos.filter((m) => getModuleDef(m.code)?.menuDireto);
                   const grupos = agruparModulos(modulos.filter((m) => !getModuleDef(m.code)?.menuDireto));
                   if (grupos.length <= 1 || modulos.length <= 8) {
@@ -547,13 +554,13 @@ export function AppShell({
                           <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas={TELAS_DA_GESTAO.length > 0} />
                         </PainelDoItem>
                       ) : (
-                        <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />
+                        itemModulo(m)
                       )
                     )}</>;
                   }
                   // A tela do grupo continua (é o clique); o painel ao lado mostra
                   // as telas dele sem precisar abri-la.
-                  return <>{itemSped}{diretos.map((m) => <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />)}{grupos.map(({ grupo, itens }) => (
+                  return <>{itemSped}{diretos.map(itemModulo)}{grupos.map(({ grupo, itens }) => (
                     <PainelDoItem
                       key={grupo}
                       titulo={grupo}
