@@ -6,6 +6,7 @@
 // número inventado ao lado de um real (resumo, tentativaDe, documentos).
 
 import type { ArquivoDoMotor, CorpoDeExecucao, DecisaoDoMotor, EmpresaDoMotor, ExecucaoDoMotor, ValidacaoDoMotor } from "@/lib/sped/motor";
+import type { AvaliacaoDaCobertura, ImportacaoDoMotor, ItemDoConfronto, PreviaFinanceira } from "@/lib/sped/telasDoMotor";
 import type { ArquivoTeste, Cenario, ExecucaoTeste } from "./cenario";
 import { geracao, mesInteiro, type ParametrosExecucao } from "./execucao";
 
@@ -182,4 +183,124 @@ export function linhasDosTotais(totais: Record<string, unknown> | null): { campo
   };
   andar("", totais, 0);
   return saida.slice(0, 200);
+}
+
+// ─── Leituras das telas fiscais (§11, 23/10/2026) ───────────────────────────
+
+/**
+ * String decimal do motor em número, **só para exibir ou ordenar**. `null`
+ * (não levantado) continua `null` — nunca 0 (§11.0.3).
+ */
+export function numeroDoMotor(valor: string | null | undefined): number | null {
+  if (valor === null || valor === undefined || valor.trim() === "") return null;
+  const n = Number(valor);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** A importação do motor no modelo da prévia (§11.1.1). É da raiz: sem estabelecimento. */
+export function importacaoDoMotor(i: ImportacaoDoMotor, empresaId: string, competencia: string): Cenario["importacoes"][number] {
+  return {
+    id: String(i.id),
+    contexto: { empresaId, estabelecimentoId: "", competencia },
+    criadoEm: i.iniciado_em ?? "",
+    aceitos: i.gravados_cte + i.gravados_nfe,
+    rejeitados: i.rejeitados,
+    origem: i.origem,
+  };
+}
+
+/** A importação aparece na competência quando `por_competencia` tem essa chave. */
+export function importacaoNaCompetencia(i: ImportacaoDoMotor, competencia: string): boolean {
+  return Object.prototype.hasOwnProperty.call(i.por_competencia, competencia);
+}
+
+export const ESTADO_DO_CONFRONTO: Record<string, Cenario["confrontos"][number]["estado"]> = {
+  sem_nota: "Sem nota", achado: "Conciliado", com_nota: "Conciliado",
+};
+
+/**
+ * O pagamento do confronto no modelo da prévia (§11.4.4). `possivel_duplicidade`
+ * não tem equivalente no `cenario` e devolve `null`: a tela real mostra o selo
+ * próprio (`seloDoConfronto`). `documentoId` não tem fonte (só `numero_nota`).
+ */
+export function confrontoDoMotor(c: ItemDoConfronto, empresaId: string): Cenario["confrontos"][number] | null {
+  const estado = ESTADO_DO_CONFRONTO[c.situacao];
+  if (!estado) return null;
+  return { id: String(c.id), contexto: { empresaId, estabelecimentoId: "", competencia: c.competencia }, documentoId: "", estado, valor: numeroDoMotor(c.valor) ?? 0 };
+}
+
+/** O selo da situação do confronto. O rótulo do motor (`rotulos`) vence quando veio. */
+export function seloDoConfronto(situacao: string, rotulos: Record<string, string> | null = null): { rotulo: string; tom: "sucesso" | "atencao" | "perigo" | "neutro" } {
+  if (situacao === "possivel_duplicidade") return { rotulo: rotulos?.[situacao] ?? "Possível duplicidade", tom: "perigo" };
+  const estado = ESTADO_DO_CONFRONTO[situacao];
+  if (estado === "Sem nota") return { rotulo: rotulos?.[situacao] ?? estado, tom: "atencao" };
+  if (estado === "Conciliado") return { rotulo: rotulos?.[situacao] ?? estado, tom: "sucesso" };
+  return { rotulo: rotulos?.[situacao] ?? situacao, tom: "neutro" };
+}
+
+/**
+ * As alíquotas da prévia financeira no `cenario.parametros` (§11.4.2): só
+ * PIS+COFINS têm correspondência, e combinados. `icms` e `ipi` não têm fonte.
+ */
+export function aliquotasDaPrevia(p: Pick<PreviaFinanceira, "aliquotas">): { pisCofinsCheia: number | null; pisCofinsPresumida: number | null } {
+  return { pisCofinsCheia: numeroDoMotor(p.aliquotas.cheia), pisCofinsPresumida: numeroDoMotor(p.aliquotas.presumida) };
+}
+
+/** O semáforo da cobertura no tom do `Selo`. */
+export function tomDoSemaforo(s: AvaliacaoDaCobertura["semaforo"] | null | undefined): "sucesso" | "atencao" | "perigo" | "neutro" {
+  return s === "verde" ? "sucesso" : s === "amarelo" ? "atencao" : s === "vermelho" ? "perigo" : "neutro";
+}
+
+const TIPO_DO_ACERVO = { NFE: "NF-e", NFCE: "NFC-e", CTE: "CT-e", NFSE: "NFS-e" } as const;
+export type LinhaDoAcervoNoMotor = {
+  id: string;
+  numero: string;
+  tipo: (typeof TIPO_DO_ACERVO)[keyof typeof TIPO_DO_ACERVO];
+  /** `null` = indefinido: a linha fica fora do filtro de sentido e ganha selo próprio. */
+  sentido: "Entrada" | "Saída" | null;
+  participante: string;
+  /** `null` na linha `parcial` do índice: "—", nunca 0. */
+  valor: number | null;
+  xml: boolean;
+  emitidoEm: Date;
+};
+
+/**
+ * Uma linha da projeção `FiscalDocument` no modelo de documento da prévia
+ * (§11.1, aba Acervo). O sentido sai do CNPJ do estabelecimento contra as duas
+ * pontas — a projeção não guarda o `sentido` do índice, e é assim que o acervo
+ * já decide a direção do lançamento. Ficam de fora, sem fonte por documento:
+ * `cfop`, `ncm`, `cst`, `destino`, `credito`, `estado`, `motivo`.
+ */
+export function documentoDoAcervo(
+  d: { id: string; type: keyof typeof TIPO_DO_ACERVO; number: string; issuerName: string; issuerDocument: string; recipientName: string | null; recipientDocument: string | null; amount: { toString(): string } | number | null; renderizavel: boolean; issuedAt: Date },
+  cnpjDoEstabelecimento: string,
+): LinhaDoAcervoNoMotor {
+  const cnpj = cnpjDoEstabelecimento.replace(/\D/g, "");
+  const emitente = d.issuerDocument.replace(/\D/g, "") === cnpj;
+  const destinatario = (d.recipientDocument ?? "").replace(/\D/g, "") === cnpj;
+  const sentido = emitente && !destinatario ? "Saída" : destinatario && !emitente ? "Entrada" : null;
+  const participante = sentido === "Saída" ? d.recipientName ?? "—" : d.issuerName;
+  return {
+    id: d.id,
+    numero: d.number,
+    tipo: TIPO_DO_ACERVO[d.type],
+    sentido,
+    participante: participante || "—",
+    valor: d.amount === null ? null : numeroDoMotor(String(d.amount)),
+    xml: d.renderizavel,
+    emitidoEm: d.issuedAt,
+  };
+}
+
+/**
+ * As colunas de uma lista sem forma fixa no contrato (pagamentos a conferir,
+ * aluguéis, prestadores): as candidatas que existem em ao menos uma linha, na
+ * ordem dada, e depois as outras. Coluna sem fonte no motor não aparece.
+ */
+export function colunasPresentes(linhas: Record<string, unknown>[], candidatas: readonly string[] = [], limite = 12): string[] {
+  const presentes = new Set<string>();
+  for (const l of linhas) for (const [k, v] of Object.entries(l)) if (v !== undefined) presentes.add(k);
+  const ordem = [...candidatas.filter((c) => presentes.has(c)), ...[...presentes].filter((k) => !candidatas.includes(k))];
+  return ordem.slice(0, limite);
 }
