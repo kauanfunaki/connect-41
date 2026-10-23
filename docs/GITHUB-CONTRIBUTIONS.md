@@ -99,7 +99,8 @@ Tecnologia: Next.js 16, React 19, Prisma e MariaDB/MySQL existentes. Sem serviç
 - `src/lib/github/`: OAuth, cliente REST, regras, persistência, sincronização e consultas.
 - `src/components/github/`: painel, calendário e detalhe diário.
 - `src/lib/github/scheduler.ts`: relógio automático com um lote por vez; `progress.ts`: resumo persistido do andamento.
-- Calendários fora da área visível são montados ao rolar; a navegação por teclado é mantida. Datas usam um único formatador e cache limitado, e calendários inalterados não são redesenhados a cada consulta de status. O resumo de cobertura agrega tarefas no banco sem transferir a lista inteira de revisões para a aplicação.
+- Calendários são montados perto da área visível e liberados ao sair dela, preservando altura, posição horizontal e o calendário com foco de teclado. A montagem adiada anterior acumulava todos os dias depois de percorrer a lista. Datas usam um único formatador e cache limitado.
+- O painel envia a revisão já exibida nas consultas periódicas. Sem alteração, a API devolve somente o progresso, dispensando usuários, totais, calendários e cobertura. Cada consulta continua autorizada e confere a validade do acesso aos repositórios. Alterações confirmadas, filtros, virada do dia, pausa e expiração do acesso invalidam a revisão; não há cache compartilhado de dados privados. Consultas independentes da carga completa são executadas em paralelo.
 - `src/components/admin/GithubIntegration.tsx`: conta, seleção e controles em Integrações.
 - `/api/github`, `/api/github/events`, `/api/github/integration` e `/api/github/sync`: APIs autenticadas.
 - `/api/integrations/github/connect` e `/callback`: autorização OAuth com PKCE e estado de uso único, vinculado à sessão e ao escritório.

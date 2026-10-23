@@ -5,25 +5,38 @@ import { calendarDays, calendarLevel, dateLabel } from "@/lib/github/calendar";
 const LEVELS = ["bg-surface-2", "bg-success/20", "bg-success/40", "bg-success/70", "bg-success"];
 type Props = { from: string; to: string; days: { day: string; count: number }[]; complete: boolean; onDay: (userId: string, day: string) => void; label: string; userId: string };
 export const ContributionCalendar = memo(function ContributionCalendar(props: Props) {
-  const container = useRef<HTMLDivElement>(null), [visible, setVisible] = useState(false);
+  const container = useRef<HTMLDivElement>(null), [visible, setVisible] = useState(false), [focused, setFocused] = useState(false);
+  const restoreFocus = useRef(false), scrollLeftRef = useRef(0), mounted = visible || focused;
   useEffect(() => {
-    if (!container.current || visible) return;
-    const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) { setVisible(true); observer.disconnect(); } }, { rootMargin: "300px" });
+    if (!container.current) return;
+    // A montagem adiada sozinha acumulava os 7.320 botões depois de uma rolagem.
+    // Mantém apenas a área próxima da viewport e o calendário com foco de teclado.
+    const observer = new IntersectionObserver(entries => setVisible(entries.some(entry => entry.isIntersecting)), { rootMargin: "300px" });
     observer.observe(container.current);
     return () => observer.disconnect();
-  }, [visible]);
-  return <div ref={container} style={{ minHeight: 140 }}>
-    {visible ? <CalendarGrid key={`${props.from}:${props.to}`} {...props} /> : <div role="group" aria-label={`Calendário de ${props.label}`} className="h-32 rounded bg-surface-2" />}
+  }, []);
+  useEffect(() => {
+    if (mounted && restoreFocus.current) {
+      restoreFocus.current = false;
+      container.current?.querySelector<HTMLButtonElement>('button[tabindex="0"]')?.focus();
+    }
+  }, [mounted]);
+  return <div ref={container} style={{ minHeight: 140 }} role="group" aria-label={`Calendário de ${props.label}`}
+    onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
+    {mounted ? <CalendarGrid key={`${props.from}:${props.to}`} {...props} scrollLeftRef={scrollLeftRef} />
+      : <div tabIndex={0} aria-label={`Exibir calendário de ${props.label}`} className="h-32 rounded bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand"
+        onFocus={() => { restoreFocus.current = true; setFocused(true); }} />}
   </div>;
 }, (previous, next) => previous.from === next.from && previous.to === next.to && previous.complete === next.complete && previous.label === next.label
   && previous.userId === next.userId && previous.onDay === next.onDay && previous.days.length === next.days.length
   && previous.days.every((day, index) => day.day === next.days[index].day && day.count === next.days[index].count));
 
-function CalendarGrid({ from, to, days, complete, onDay, label, userId }: Props) {
+function CalendarGrid({ from, to, days, complete, onDay, userId, scrollLeftRef }: Props & { scrollLeftRef: { current: number } }) {
   const cells = useMemo(() => calendarDays(from, to), [from, to]);
   const counts = useMemo(() => new Map(days.map(day => [day.day, day.count])), [days]), buttons = useRef(new Map<string, HTMLButtonElement>());
-  const focused = useRef(from);
-  return <div className="overflow-x-auto pb-2" role="group" aria-label={`Calendário de ${label}`}>
+  const focused = useRef(from), scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (scroller.current) scroller.current.scrollLeft = scrollLeftRef.current; }, [scrollLeftRef]);
+  return <div ref={scroller} className="overflow-x-auto pb-2" onScroll={event => { scrollLeftRef.current = event.currentTarget.scrollLeft; }}>
     <div className="grid w-max gap-[3px]" style={{ gridTemplateRows: "repeat(7, 13px)", gridAutoFlow: "column", gridAutoColumns: "13px" }}>
       {cells.map((day, index) => {
         if (!day) return <span key={`empty-${index}`} aria-hidden="true" />;

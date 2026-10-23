@@ -17,7 +17,7 @@ process.env.TZ = "UTC";
 const target = new URL(process.env.GITHUB_TEST_DATABASE_URL ?? "http://invalid");
 if (!["127.0.0.1", "localhost"].includes(target.hostname) || target.port !== "33381" || target.pathname !== "/connect41") throw new Error("Defina GITHUB_TEST_DATABASE_URL para o banco descartável em 127.0.0.1:33381/connect41.");
 const output = path.resolve(".local/github"); await mkdir(output, { recursive: true });
-const { workspace } = JSON.parse(await readFile(path.join(output, "build-workspace.json"), "utf8"));
+const workspace = process.env.GITHUB_UI_BUILD_WORKSPACE ?? JSON.parse(await readFile(path.join(output, "build-workspace.json"), "utf8")).workspace;
 if (path.dirname(path.resolve(workspace)) !== output || !path.basename(workspace).startsWith("build-")) throw new Error("Build de verificação inválido.");
 const executable = path.join(workspace, ".next/standalone/server.js"); await access(executable);
 const port = await new Promise((resolve, reject) => { const server = createServer(); server.once("error", reject); server.listen(0, "127.0.0.1", () => { const port = server.address().port; server.close(() => resolve(port)); }); });
@@ -99,6 +99,8 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
   const cookie = (id, role = "ADMIN", sectors = ["tech"]) => ({ name: "access_token", value: jwt.sign({ sub: id, tenantId, role, sectors, accessibleTenants: [tenantId] }, secret, { expiresIn: "30m" }), url: base, httpOnly: true, sameSite: "Lax" });
   await context.addCookies([cookie(adminId)]); page = await context.newPage(); page.setDefaultTimeout(30000);
+  // A sessão é assinada pela fixture; não há refresh token de uma pessoa real.
+  await page.route(base + "/api/auth/refresh", route => route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' }));
   page.on("pageerror", error => result.browserErrors.push(error.message));
   const api = async (route = "/api/github") => { const response = await context.request.get(base + route); assert.ok(response.ok(), `${response.status()} ${await response.text()}`); return response.json(); };
   const renderStart = performance.now();
@@ -108,12 +110,60 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   assert.equal((await api()).totalUsers, 20);
   assert.ok(renderedDays > 0 && renderedDays < 20 * 300, "Calendários fora da viewport não devem montar milhares de botões");
   result.performance = { users: 20, mountedDayButtons: renderedDays, eagerDayButtons: 20 * 366, firstViewMs: Math.round(performance.now() - renderStart) };
-  ok("Vinte usuários com montagem adiada dos calendários fora da viewport");
+  result.performance.firstLoad = await page.evaluate(() => {
+    const navigation = performance.getEntriesByType("navigation")[0], resources = performance.getEntriesByType("resource");
+    const scripts = resources.filter(resource => resource.initiatorType === "script");
+    const api = resources.find(resource => new URL(resource.name).pathname === "/api/github");
+    return { documentTtfbMs: Math.round(navigation.responseStart - navigation.requestStart), apiMs: api ? Math.round(api.duration) : null,
+      scriptCount: scripts.length, scriptTransferBytes: scripts.reduce((sum, resource) => sum + resource.transferSize, 0), scriptDecodedBytes: scripts.reduce((sum, resource) => sum + resource.decodedBodySize, 0) };
+  });
+  const cdp = await context.newCDPSession(page); await cdp.send("Performance.enable");
+  const scrollStart = performance.now();
+  for (const group of await page.getByRole("group", { name: /^Calendário de / }).all()) {
+    await group.scrollIntoViewIfNeeded();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  }
+  await page.waitForTimeout(150);
+  result.performance.afterScrollDayButtons = await page.locator("button[data-level]").count();
+  result.performance.liveDomNodes = await page.locator("*").count();
+  result.performance.scrollMs = Math.round(performance.now() - scrollStart);
+  await cdp.send("HeapProfiler.collectGarbage");
+  const metrics = (await cdp.send("Performance.getMetrics")).metrics;
+  result.performance.domNodes = metrics.find(metric => metric.name === "Nodes")?.value;
+  result.performance.heapBytes = metrics.find(metric => metric.name === "JSHeapUsedSize")?.value;
+  const pollStart = performance.now();
+  const poll = page.waitForResponse(response => new URL(response.url()).pathname === "/api/github" && response.request().method() === "GET");
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  const polled = await poll;
+  result.performance.pollMs = Math.round(performance.now() - pollStart);
+  result.performance.pollBytes = (await polled.body()).length;
+  result.performance.pollUnchanged = (await polled.json()).unchanged === true;
+  if (process.env.GITHUB_PERF_BASELINE !== "1") {
+    assert.ok(result.performance.afterScrollDayButtons < 4 * 366, "Sair da viewport deve liberar os calendários visitados");
+    assert.equal(result.performance.pollUnchanged, true, "Polling sem mudanças deve dispensar os agregados/calendários");
+  }
+  await page.getByRole("group", { name: "Calendário de ana-dev", exact: true }).scrollIntoViewIfNeeded();
+  await page.locator("button[data-level]").first().waitFor();
+  ok("Vinte usuários com calendários limitados à área visível, inclusive após rolagem completa");
   await page.getByRole("group", { name: "Calendário de sem-atividade", exact: true }).waitFor(); ok("Calendários individuais, quatro tipos, cobertura e usuário sem atividade");
   await page.screenshot({ path: path.join(output, "github-desktop.png"), fullPage: true, animations: "disabled" });
   const calendar = page.getByRole("group", { name: "Calendário de ana-dev", exact: true });
   const first = calendar.locator("button[data-level]").first(); await first.focus(); await first.press("ArrowDown");
   assert.notEqual(await first.evaluate(element => element === document.activeElement), true); ok("Navegação por teclado no calendário");
+  if (process.env.GITHUB_PERF_BASELINE !== "1") {
+    const lastCalendar = page.getByRole("group", { name: "Calendário de zz-volume-15", exact: true });
+    await lastCalendar.scrollIntoViewIfNeeded();
+    await lastCalendar.locator("button[data-level]").first().waitFor();
+    assert.ok(await calendar.locator("button[data-level]").count() > 0, "Calendário com foco deve sobreviver fora da viewport");
+    await lastCalendar.locator("button[data-level]").first().focus();
+    await page.waitForFunction(() => !document.querySelector('[aria-label="Calendário de ana-dev"] button[data-level]'));
+    await calendar.scrollIntoViewIfNeeded();
+    await calendar.locator("button[data-level]").first().waitFor();
+    await calendar.locator("button[data-level]").first().focus();
+    await calendar.locator("button[data-level]").first().press("End");
+    assert.equal(await calendar.locator("button[data-level]").last().evaluate(element => element === document.activeElement), true);
+    ok("Virtualização preserva foco de teclado e libera calendários após mover o foco");
+  }
   await calendar.locator('button[data-level]:not([data-level="0"])').first().click();
   await page.getByRole("dialog").getByRole("link", { name: /Abrir no GitHub/ }).first().waitFor();
   await page.screenshot({ path: path.join(output, "github-day.png"), fullPage: true, animations: "disabled" });
@@ -197,6 +247,7 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   throw error;
 } finally {
   await writeFile(path.join(output, "ui-result.json"), JSON.stringify(result, null, 2));
+  if (process.env.GITHUB_PERF_BASELINE === "1") await writeFile(path.join(output, "performance-before.json"), JSON.stringify(result.performance ?? {}, null, 2));
   await browser?.close(); server?.kill();
   await db.query("DELETE FROM github_oauth_attempts WHERE tenantId=?", [tenantId]);
   await db.query("DELETE FROM tenant_integrations WHERE tenantId=?", [tenantId]);

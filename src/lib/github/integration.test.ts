@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
@@ -7,21 +8,23 @@ import { decryptSecret, encryptSecret } from "@/lib/crypto";
 
 const url = process.env.GITHUB_TEST_DATABASE_URL, target = url ? new URL(url) : null;
 if (target && (!["127.0.0.1", "localhost"].includes(target.hostname) || target.port !== "33381" || target.pathname !== "/connect41")) throw new Error("Banco não isolado recusado.");
-const db = target ? new PrismaClient({ adapter: new PrismaMariaDb({ host: target.hostname, port: 33381, user: decodeURIComponent(target.username), password: decodeURIComponent(target.password), database: "connect41", allowPublicKeyRetrieval: true }) }) : null;
+const sqlQueries: string[] = [];
+const db = target ? new PrismaClient({ adapter: new PrismaMariaDb({ host: target.hostname, port: 33381, user: decodeURIComponent(target.username), password: decodeURIComponent(target.password), database: "connect41", allowPublicKeyRetrieval: true }), log: [{ emit: "event", level: "query" }] }) : null;
+db?.$on("query", event => sqlQueries.push(event.query));
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), audit: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => { if (!db) throw new Error("Banco descartável não configurado."); return db; } }));
 vi.mock("@/lib/auth/context", async original => ({ ...await original<typeof import("@/lib/auth/context")>(), getAuthContext: mocks.auth }));
 vi.mock("@/lib/audit", () => ({ logAudit: mocks.audit }));
 import { githubAccess } from "./access";
 import { beginOAuth, finishOAuth } from "./oauth";
-import { connectionQuery, ensureConnection, getConnection, queueRepositories } from "./store";
+import { connectionQuery, ensureConnection, getConnection, guardGeneration, queueRepositories } from "./store";
 import { processConnection, processGithubCron, scheduleSync, withGithubLease } from "./sync";
 import { filtersSchema, historyStart, dayAt } from "./rules";
 import { dashboard, dayEvents } from "./queries";
 import { changeIntegration, integrationView } from "./service";
 import { getDashboard, githubResponse, postIntegration, validCronToken } from "./http";
 import { setModuleSector, setModuleSharedSectors, setorDoModulo, setoresDoModulo, getTenantModuleStates } from "@/lib/modules";
-import { GITHUB_MODULE } from "./types";
+import { GITHUB_MODULE, type DashboardView } from "./types";
 
 describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout: 30000 }, () => {
   let tenantId: string, ctx: AuthContext, connectionId: string, repositoryId: string, githubId: string;
@@ -102,6 +105,82 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     expect(await db!.githubContribution.count({ where: { tenantId, current: true } })).toBe(4);
     expect((await db!.githubDailyContribution.aggregate({ where: { tenantId }, _sum: { count: true } }))._sum.count).toBe(4);
   });
+  it("revalida o acesso e dispensa calendários, totais e cobertura no polling sem mudanças", async () => {
+    await collect();
+    const filters = filtersSchema.parse({}), first = await dashboard(tenantId, filters);
+    sqlQueries.length = 0;
+    const next = await dashboard(tenantId, filters, first.revision);
+    expect(next).toMatchObject({ unchanged: true, revision: first.revision, pending: 0, failed: 0 });
+    expect(sqlQueries.some(sql => /github_daily_contributions|github_users/.test(sql))).toBe(false);
+    expect(sqlQueries.some(sql => /github_repositories/.test(sql))).toBe(true);
+    expect(sqlQueries.filter(sql => /GROUP BY/.test(sql))).toHaveLength(1);
+    // A lease pode mudar sem alterar contribuições: o progresso continua atual.
+    await db!.githubAccountLease.update({ where: { githubUserId: githubId }, data: { owner: "fixture-active-worker", expiresAt: new Date(Date.now() + 60000) } });
+    expect(await dashboard(tenantId, filters, first.revision)).toMatchObject({ unchanged: true, progress: { state: "processing" } });
+  });
+  it("descarta a revisão quando mudam filtros, acompanhamento ou um lote confirmado", async () => {
+    await collect();
+    const filters = filtersSchema.parse({}), first = await dashboard(tenantId, filters);
+    const filtered = await dashboard(tenantId, filtersSchema.parse({ type: "REVIEW" }), first.revision);
+    expect(filtered).toMatchObject({ total: 1 }); expect(filtered.revision).not.toBe(first.revision);
+    const connection = (await getConnection(tenantId))!;
+    await db!.$transaction(async tx => {
+      await guardGeneration(tx, connection);
+      await tx.githubUser.create({ data: { tenantId, connectionId, externalId: "U_tracked", login: "sem-atividade", tracked: true } });
+    });
+    const tracked = await dashboard(tenantId, filters, first.revision);
+    expect("users" in tracked && tracked.users.some(user => user.login === "sem-atividade")).toBe(true);
+    expect(tracked.revision).not.toBe(first.revision);
+    sha = "b".repeat(40);
+    const original = fetcher.getMockImplementation()!;
+    fetcher.mockImplementation(async (input, init) => new URL(String(input)).pathname.includes("/compare/")
+      ? Response.json({ status: "ahead", commits: [commit()] }) : original(input, init));
+    await collect();
+    const collected = await dashboard(tenantId, filters, tracked.revision);
+    expect(collected).toMatchObject({ total: 5 }); expect(collected.revision).not.toBe(tracked.revision);
+  });
+  it("a revisão não prolonga acesso expirado nem ignora a remoção de um repositório", async () => {
+    await collect();
+    const filters = filtersSchema.parse({}), first = await dashboard(tenantId, filters);
+    await db!.githubRepository.update({ where: { id: repositoryId }, data: { accessCheckedAt: new Date(Date.now() - 301000) } });
+    const expired = await dashboard(tenantId, filters, first.revision);
+    expect(expired).toMatchObject({ total: 0, unavailable: 1, repositories: [] });
+    await db!.githubRepository.update({ where: { id: repositoryId }, data: { selected: false } });
+    expect(await dashboard(tenantId, filters, expired.revision)).toMatchObject({ total: 0, unavailable: 0, repositories: [] });
+  });
+  it("confere a autorização em cada polling mesmo com revisão válida", async () => {
+    await collect();
+    const first = await dashboard(tenantId, filtersSchema.parse({}));
+    mocks.auth.mockResolvedValue({ ...ctx, role: "SECTOR_USER", sectors: ["fiscal"] });
+    const response = await githubResponse(() => getDashboard(new Request(`http://localhost/api/github?revision=${first.revision}`)));
+    expect(response.status).toBe(403);
+  });
+  it("mantém o polling leve com vinte pessoas e um ano cheio de agregados", async () => {
+    const users = Array.from({ length: 20 }, (_, index) => ({ id: randomUUID(), tenantId, connectionId, externalId: `U_volume_${index}`, login: `volume-${index}`, tracked: true }));
+    await db!.githubUser.createMany({ data: users });
+    const records = users.flatMap(user => Array.from({ length: 366 }, (_, offset) => dayAt(new Date(Date.now() - offset * 86400000))).flatMap(day =>
+      ["COMMIT", "PULL_REQUEST", "ISSUE", "REVIEW"].map(type => ({ tenantId, repositoryId, userId: user.id, day, type, count: 1 }))));
+    for (let offset = 0; offset < records.length; offset += 500) await db!.githubDailyContribution.createMany({ data: records.slice(offset, offset + 500) });
+    const filters = filtersSchema.parse({}), fullMs: number[] = [], unchangedMs: number[] = [];
+    let full!: DashboardView, fullQueries = 0, unchangedQueries = 0, compactBytes = 0;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      sqlQueries.length = 0; const start = performance.now(); full = await dashboard(tenantId, filters);
+      fullMs.push(performance.now() - start); fullQueries = sqlQueries.length;
+    }
+    expect(full.total).toBe(29280); expect(full.users).toHaveLength(20);
+    for (let attempt = 0; attempt < 5; attempt++) {
+      sqlQueries.length = 0; const start = performance.now(), next = await dashboard(tenantId, filters, full.revision);
+      unchangedMs.push(performance.now() - start); unchangedQueries = sqlQueries.length;
+      expect(next).toMatchObject({ unchanged: true, revision: full.revision });
+      expect(sqlQueries.some(sql => /github_daily_contributions|github_users/.test(sql))).toBe(false);
+      compactBytes = Buffer.byteLength(JSON.stringify(next));
+    }
+    expect(unchangedQueries).toBeLessThan(fullQueries);
+    await mkdir(".local/github", { recursive: true });
+    await writeFile(".local/github/query-performance.json", JSON.stringify({ users: 20, aggregateRows: records.length,
+      full: { queries: fullQueries, bytes: Buffer.byteLength(JSON.stringify(full)), milliseconds: fullMs.map(ms => Math.round(ms)) },
+      unchanged: { queries: unchangedQueries, bytes: compactBytes, milliseconds: unchangedMs.map(ms => Math.round(ms)) } }, null, 2));
+  }, 60000);
   it("pagina o inventário e não seleciona novos repositórios automaticamente", async () => {
     const original = fetcher.getMockImplementation()!;
     const extras = Array.from({ length: 100 }, (_, index) => ({ ...repo(), node_id: `R_extra_${index}_${tenantId}`, name: `r${index}`, full_name: `acme/r${index}` }));

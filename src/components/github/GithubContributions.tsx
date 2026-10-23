@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GitCommitHorizontal, RefreshCw, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -15,7 +15,7 @@ import { Select } from "@/components/ui/Select";
 import { CampoData } from "@/components/ui/CampoData";
 import { formatInstantDateTime } from "@/lib/format";
 import { githubFetch } from "@/lib/github/browser";
-import { TYPE_LABELS, CONTRIBUTION_TYPES, type DashboardView, type DayEvent, type HeatmapUser } from "@/lib/github/types";
+import { TYPE_LABELS, CONTRIBUTION_TYPES, type DashboardView, type DashboardUnchanged, type DayEvent, type HeatmapUser } from "@/lib/github/types";
 import { dateLabel } from "@/lib/github/calendar";
 import { ContributionCalendar } from "./ContributionCalendar";
 import { SyncStatus } from "./SyncStatus";
@@ -25,12 +25,25 @@ export function GithubContributions({ initialQuery, canManage, canConfigure }: {
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
   const [detail, setDetail] = useState<{ userId: string; day: string } | null>(null);
   const openDay = useCallback((userId: string, day: string) => setDetail({ userId, day }), []);
+  const latestQuery = useRef(initialQuery), revision = useRef<{ query: string; value: string | null } | null>(null), requestId = useRef(0);
+  useEffect(() => { latestQuery.current = initialQuery; }, [initialQuery]);
   const refresh = useCallback(async (signal?: AbortSignal) => {
-    const result = await githubFetch<DashboardView>(`/api/github?${initialQuery}`, undefined, signal); setData(result); setError(null); return result;
+    const id = ++requestId.current, params = new URLSearchParams(initialQuery);
+    if (revision.current?.query === initialQuery && revision.current.value) params.set("revision", revision.current.value);
+    const result = await githubFetch<DashboardView | DashboardUnchanged>(`/api/github?${params}`, undefined, signal);
+    if (signal?.aborted || latestQuery.current !== initialQuery || requestId.current !== id) return;
+    revision.current = { query: initialQuery, value: result.revision };
+    setData(previous => {
+      if (!("unchanged" in result)) return result;
+      if (!previous || previous.revision !== result.revision) return previous;
+      if (JSON.stringify(previous.progress) === JSON.stringify(result.progress)) return previous;
+      return { ...previous, progress: result.progress, pending: result.pending, failed: result.failed };
+    });
+    setError(null);
   }, [initialQuery]);
   useEffect(() => {
     const controller = new AbortController(); const timer = window.setTimeout(() => {
-      setLoading(true);
+      setLoading(true); setDetail(null);
       void refresh(controller.signal).catch(err => { if (!controller.signal.aborted) setError(err.message); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     }, 0);
     return () => { controller.abort(); window.clearTimeout(timer); };
