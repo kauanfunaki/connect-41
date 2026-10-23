@@ -28,12 +28,22 @@ export type HeatmapUser = {
   id: string; login: string; isBot: boolean; tracked: boolean; total: number; activeDays: number;
   counts: Record<ContributionType, number>; days: { day: string; count: number }[];
 };
+export type GithubSummary = {
+  counts: Record<ContributionType, number>;
+  activeDevelopers: number;
+  days: { day: string; counts: Record<ContributionType, number> }[];
+  leaders: { id: string; login: string; total: number }[];
+  recent: (DayEvent & { reference: string })[];
+};
 export type DashboardView = {
+  revision: string | null;
   connected: boolean; enabled: boolean; login: string | null; timezone: string;
   from: string; to: string; complete: boolean; coveredThrough: string | null;
   pending: number; failed: number; message: string | null; users: HeatmapUser[]; totalUsers: number;
   page: number; pageSize: number; repositories: { id: string; fullName: string; owner: string }[];
   unavailable: number; unidentified: number; total: number;
   progress: SyncProgress | null;
+  summary: GithubSummary | null;
 };
+export type DashboardUnchanged = { unchanged: true; revision: string; progress: SyncProgress; pending: number; failed: number };
 export type DayEvent = { id: string; type: ContributionType; url: string; occurredAt: string; repository: string; login: string; number: number | null };

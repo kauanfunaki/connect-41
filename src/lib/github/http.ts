@@ -32,7 +32,10 @@ export async function readJson(request: Request) {
 }
 export async function getIntegration() { const ctx = await githubAccess("configurar"); return integrationView(ctx.tenantId); }
 export async function postIntegration(request: Request) { requireOrigin(request); const ctx = await githubAccess("configurar"); return changeIntegration(ctx, await readJson(request)); }
-export async function getDashboard(request: Request) { const ctx = await githubAccess(); return dashboard(ctx.tenantId, filtersSchema.parse(Object.fromEntries(new URL(request.url).searchParams))); }
+export async function getDashboard(request: Request) {
+  const ctx = await githubAccess(), params = new URL(request.url).searchParams;
+  return dashboard(ctx.tenantId, filtersSchema.parse(Object.fromEntries(params)), params.get("revision"));
+}
 export async function getDayEvents(request: Request) {
   const ctx = await githubAccess(), params = Object.fromEntries(new URL(request.url).searchParams), filters = filtersSchema.parse(params);
   const userId = z.string().uuid().parse(params.userId), date = filtersSchema.parse({ from: params.day, to: params.day }).from;

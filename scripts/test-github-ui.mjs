@@ -17,7 +17,7 @@ process.env.TZ = "UTC";
 const target = new URL(process.env.GITHUB_TEST_DATABASE_URL ?? "http://invalid");
 if (!["127.0.0.1", "localhost"].includes(target.hostname) || target.port !== "33381" || target.pathname !== "/connect41") throw new Error("Defina GITHUB_TEST_DATABASE_URL para o banco descartável em 127.0.0.1:33381/connect41.");
 const output = path.resolve(".local/github"); await mkdir(output, { recursive: true });
-const { workspace } = JSON.parse(await readFile(path.join(output, "build-workspace.json"), "utf8"));
+const workspace = process.env.GITHUB_UI_BUILD_WORKSPACE ?? JSON.parse(await readFile(path.join(output, "build-workspace.json"), "utf8")).workspace;
 if (path.dirname(path.resolve(workspace)) !== output || !path.basename(workspace).startsWith("build-")) throw new Error("Build de verificação inválido.");
 const executable = path.join(workspace, ".next/standalone/server.js"); await access(executable);
 const port = await new Promise((resolve, reject) => { const server = createServer(); server.once("error", reject); server.listen(0, "127.0.0.1", () => { const port = server.address().port; server.close(() => resolve(port)); }); });
@@ -98,32 +98,125 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   browser = await chromium.launch({ headless: true, ...(installed ? {} : { channel: "msedge" }) });
   const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
   const cookie = (id, role = "ADMIN", sectors = ["tech"]) => ({ name: "access_token", value: jwt.sign({ sub: id, tenantId, role, sectors, accessibleTenants: [tenantId] }, secret, { expiresIn: "30m" }), url: base, httpOnly: true, sameSite: "Lax" });
-  await context.addCookies([cookie(adminId)]); page = await context.newPage(); page.setDefaultTimeout(30000);
+  await context.addCookies([cookie(adminId), { name: "active_sector_code", value: "tech", url: base }]); page = await context.newPage(); page.setDefaultTimeout(30000);
+  // A sessão é assinada pela fixture; não há refresh token de uma pessoa real.
+  await page.route(base + "/api/auth/refresh", route => route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' }));
   page.on("pageerror", error => result.browserErrors.push(error.message));
   const api = async (route = "/api/github") => { const response = await context.request.get(base + route); assert.ok(response.ok(), `${response.status()} ${await response.text()}`); return response.json(); };
+  const datesFit = async () => {
+    for (const name of ["De", "Até"]) {
+      const field = page.getByRole("combobox", { name, exact: true });
+      const boxes = await field.evaluate(element => ({ input: element.getBoundingClientRect().toJSON(), label: element.closest("label").getBoundingClientRect().toJSON() }));
+      assert.ok(boxes.input.right <= boxes.label.right + 1 && boxes.input.left >= boxes.label.left - 1, `Campo ${name} deve caber no rótulo`);
+    }
+  };
+  await page.goto(base + "/github");
+  await page.getByRole("heading", { name: "Geral", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Atividade recente", exact: true }).waitFor();
+  const overview = await api("/api/github?view=general");
+  assert.equal(overview.summary.counts.COMMIT, 30); assert.equal(overview.summary.counts.PULL_REQUEST, 30);
+  assert.equal(overview.summary.counts.REVIEW, 30); assert.equal(overview.summary.activeDevelopers, 3);
+  assert.equal(overview.summary.recent.length, 8); assert.equal(overview.summary.leaders.length, 3);
+  assert.equal(await page.getByRole("group", { name: /^Calendário de / }).count(), 0);
+  await page.getByRole("img", { name: /^Cadência de / }).waitFor();
+  await datesFit();
+  await page.screenshot({ path: path.join(output, "github-geral.png"), fullPage: true, animations: "disabled" });
+  for (const [label, width, height] of [["geral-200", 683, 384], ["geral-mobile", 390, 844]]) {
+    await page.setViewportSize({ width, height });
+    await datesFit();
+    await page.screenshot({ path: path.join(output, `github-${label}.png`), fullPage: true, animations: "disabled" });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), label);
+    await page.getByRole("heading", { name: "Cadência de entregas", exact: true }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: path.join(output, `github-${label}-chart.png`), fullPage: true, animations: "disabled" });
+    await page.getByRole("heading", { name: "Geral", exact: true }).scrollIntoViewIfNeeded();
+  }
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.getByRole("button", { name: "GitHub", exact: true }).click();
+  const githubMenu = page.getByRole("menu", { name: "GitHub", exact: true });
+  await githubMenu.getByRole("menuitem", { name: "Geral", exact: true }).waitFor();
+  await githubMenu.getByRole("menuitem", { name: "Desenvolvedores", exact: true }).click();
+  await page.waitForURL(/github\/desenvolvedores/);
+  ok("Geral usa totais reais, gráfico e atividades recentes; abas funcionam em desktop e celular");
   const renderStart = performance.now();
-  await page.goto(base + "/github"); await page.getByText("ana-dev", { exact: true }).waitFor();
+  await page.goto(base + "/github/desenvolvedores"); await page.getByText("ana-dev", { exact: true }).waitFor();
   assert.equal((await api()).total, 120); assert.equal((await api()).complete, true);
   const renderedDays = await page.locator("button[data-level]").count();
   assert.equal((await api()).totalUsers, 20);
   assert.ok(renderedDays > 0 && renderedDays < 20 * 300, "Calendários fora da viewport não devem montar milhares de botões");
   result.performance = { users: 20, mountedDayButtons: renderedDays, eagerDayButtons: 20 * 366, firstViewMs: Math.round(performance.now() - renderStart) };
-  ok("Vinte usuários com montagem adiada dos calendários fora da viewport");
+  result.performance.firstLoad = await page.evaluate(() => {
+    const navigation = performance.getEntriesByType("navigation")[0], resources = performance.getEntriesByType("resource");
+    const scripts = resources.filter(resource => resource.initiatorType === "script");
+    const api = resources.find(resource => new URL(resource.name).pathname === "/api/github");
+    return { documentTtfbMs: Math.round(navigation.responseStart - navigation.requestStart), apiMs: api ? Math.round(api.duration) : null,
+      scriptCount: scripts.length, scriptTransferBytes: scripts.reduce((sum, resource) => sum + resource.transferSize, 0), scriptDecodedBytes: scripts.reduce((sum, resource) => sum + resource.decodedBodySize, 0) };
+  });
+  const cdp = await context.newCDPSession(page); await cdp.send("Performance.enable");
+  const scrollStart = performance.now();
+  for (const group of await page.getByRole("group", { name: /^Calendário de / }).all()) {
+    await group.scrollIntoViewIfNeeded();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  }
+  await page.waitForTimeout(150);
+  result.performance.afterScrollDayButtons = await page.locator("button[data-level]").count();
+  result.performance.liveDomNodes = await page.locator("*").count();
+  result.performance.scrollMs = Math.round(performance.now() - scrollStart);
+  await cdp.send("HeapProfiler.collectGarbage");
+  const metrics = (await cdp.send("Performance.getMetrics")).metrics;
+  result.performance.domNodes = metrics.find(metric => metric.name === "Nodes")?.value;
+  result.performance.heapBytes = metrics.find(metric => metric.name === "JSHeapUsedSize")?.value;
+  const pollStart = performance.now();
+  const poll = page.waitForResponse(response => new URL(response.url()).pathname === "/api/github" && response.request().method() === "GET");
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  const polled = await poll;
+  result.performance.pollMs = Math.round(performance.now() - pollStart);
+  result.performance.pollBytes = (await polled.body()).length;
+  result.performance.pollUnchanged = (await polled.json()).unchanged === true;
+  if (process.env.GITHUB_PERF_BASELINE !== "1") {
+    assert.ok(result.performance.afterScrollDayButtons < 4 * 366, "Sair da viewport deve liberar os calendários visitados");
+    assert.equal(result.performance.pollUnchanged, true, "Polling sem mudanças deve dispensar os agregados/calendários");
+  }
+  await page.getByRole("group", { name: "Calendário de ana-dev", exact: true }).scrollIntoViewIfNeeded();
+  await page.getByRole("group", { name: "Calendário de ana-dev", exact: true }).locator("button[data-level]").first().waitFor();
+  ok("Vinte usuários com calendários limitados à área visível, inclusive após rolagem completa");
   await page.getByRole("group", { name: "Calendário de sem-atividade", exact: true }).waitFor(); ok("Calendários individuais, quatro tipos, cobertura e usuário sem atividade");
   await page.screenshot({ path: path.join(output, "github-desktop.png"), fullPage: true, animations: "disabled" });
   const calendar = page.getByRole("group", { name: "Calendário de ana-dev", exact: true });
   const first = calendar.locator("button[data-level]").first(); await first.focus(); await first.press("ArrowDown");
   assert.notEqual(await first.evaluate(element => element === document.activeElement), true); ok("Navegação por teclado no calendário");
+  if (process.env.GITHUB_PERF_BASELINE !== "1") {
+    const lastCalendar = page.getByRole("group", { name: "Calendário de zz-volume-15", exact: true });
+    await lastCalendar.scrollIntoViewIfNeeded();
+    await lastCalendar.locator("button[data-level]").first().waitFor();
+    assert.ok(await calendar.locator("button[data-level]").count() > 0, "Calendário com foco deve sobreviver fora da viewport");
+    await lastCalendar.locator("button[data-level]").first().focus();
+    await page.waitForFunction(() => !document.querySelector('[aria-label="Calendário de ana-dev"] button[data-level]'));
+    await calendar.scrollIntoViewIfNeeded();
+    await calendar.locator("button[data-level]").first().waitFor();
+    await calendar.locator("button[data-level]").first().focus();
+    await calendar.locator("button[data-level]").first().press("End");
+    assert.equal(await calendar.locator("button[data-level]").last().evaluate(element => element === document.activeElement), true);
+    ok("Virtualização preserva foco de teclado e libera calendários após mover o foco");
+  }
   await calendar.locator('button[data-level]:not([data-level="0"])').first().click();
   await page.getByRole("dialog").getByRole("link", { name: /Abrir no GitHub/ }).first().waitFor();
   await page.screenshot({ path: path.join(output, "github-day.png"), fullPage: true, animations: "disabled" });
   await page.getByRole("dialog").getByRole("button", { name: "Fechar", exact: true }).click(); ok("Detalhe diário consulta os eventos e links que formam a contagem");
+  await page.getByRole("button", { name: "Filtros", exact: true }).click();
   await page.getByRole("combobox", { name: "Tipo de contribuição", exact: true }).click(); await page.getByRole("option", { name: "Revisões", exact: true }).click();
   await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click(); await page.waitForURL(/type=REVIEW/);
   assert.equal((await api("/api/github?type=REVIEW")).total, 30); ok("Filtros persistem na URL e os totais por tipo conferem");
-  await page.goto(base + "/github"); await page.getByText("ana-dev", { exact: true }).waitFor();
+  await page.getByRole("navigation", { name: "GitHub", exact: true }).getByRole("link", { name: "Geral", exact: true }).click();
+  await page.waitForURL(url => url.pathname === "/github" && url.searchParams.get("type") === "REVIEW");
+  await page.getByRole("heading", { name: "Atividade recente", exact: true }).waitFor();
+  const filteredOverview = await api("/api/github?view=general&type=REVIEW");
+  assert.equal(filteredOverview.summary.counts.COMMIT, 0); assert.equal(filteredOverview.summary.counts.REVIEW, 30);
+  await page.getByRole("navigation", { name: "GitHub", exact: true }).getByRole("link", { name: "Desenvolvedores", exact: true }).click();
+  await page.waitForURL(url => url.pathname === "/github/desenvolvedores" && url.searchParams.get("type") === "REVIEW");
+  ok("Menu lateral abre as duas opções e as abas preservam os filtros");
+  await page.goto(base + "/github/desenvolvedores"); await page.getByText("ana-dev", { exact: true }).waitFor();
   for (const [label, width, height] of [["125", 1093, 614], ["150", 911, 512], ["200", 683, 384], ["mobile", 390, 844]]) {
-    await page.setViewportSize({ width, height }); await page.screenshot({ path: path.join(output, `github-${label}.png`), fullPage: true, animations: "disabled" });
+    await page.setViewportSize({ width, height }); await datesFit(); await page.screenshot({ path: path.join(output, `github-${label}.png`), fullPage: true, animations: "disabled" });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), `Sem vazamento lateral em ${label}`);
   }
   ok("Layout em celular e áreas úteis equivalentes a 125%, 150% e 200%");
@@ -197,6 +290,7 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   throw error;
 } finally {
   await writeFile(path.join(output, "ui-result.json"), JSON.stringify(result, null, 2));
+  if (process.env.GITHUB_PERF_BASELINE === "1") await writeFile(path.join(output, "performance-before.json"), JSON.stringify(result.performance ?? {}, null, 2));
   await browser?.close(); server?.kill();
   await db.query("DELETE FROM github_oauth_attempts WHERE tenantId=?", [tenantId]);
   await db.query("DELETE FROM tenant_integrations WHERE tenantId=?", [tenantId]);
