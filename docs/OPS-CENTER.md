@@ -4,10 +4,10 @@ Módulo `tech_ops_center`, rota `/ops`, grupo Operação do Tech. Reproduz o pai
 
 ## Ativação
 
-1. Aplicar as migrations `20261020120000_ops_center` e `20261020230000_ops_shared_credential` no ambiente escolhido pelo responsável pelo deploy. A segunda cria uma tabela nova; não altera nem remove dados existentes. Esta implementação não aplica migrations no banco de uso do Connect.
+1. Aplicar as migrations `20261020120000_ops_center`, `20261020230000_ops_shared_credential` e `20261023120000_ops_multiple_keys` no ambiente escolhido pelo responsável pelo deploy. As duas últimas criam tabelas novas e preservam as chaves existentes. Esta implementação não aplica migrations no banco de uso do Connect.
 2. Em Administração → Setores → Tech, habilitar Ops Center para o escritório. O plano também precisa permitir o módulo caso tenha uma lista restrita.
 3. Abrir Ops Center, cadastrar cada automação e escolher seu dono. Gestores do setor e administradores podem configurar; usuários do setor e perfis de leitura podem consultar. O setor efetivo do módulo é respeitado se houver transferência.
-4. Em Administração → Integrações → Ops Center — bots, gerar a chave única do escritório e copiá-la para a configuração protegida das automações autorizadas. Ela aparece uma vez; o banco guarda apenas seu hash. Todos os bots usam a mesma chave e informam o próprio slug. Trocar a chave revoga a anterior para todos os bots; desativar uma automação preserva seu histórico e impede novos sinais e eventos.
+4. Em Administração → Integrações → Ops Center — bots, manter a chave principal ou usar **Chaves adicionais → Adicionar chave**, informando um nome. Podem coexistir duas ou mais chaves. Cada uma aparece uma única vez e tem troca/revogação própria; o banco guarda apenas o hash. Trocar ou revogar uma chave afeta somente os bots que a usam. A chave principal existente continua válida. Desativar uma automação preserva seu histórico e impede novos sinais e eventos.
 
 As chaves individuais emitidas antes desta mudança continuam válidas durante a transição para não interromper bots já configurados. Depois de trocar cada bot para a chave compartilhada, desative e reative a automação correspondente para revogar sua chave antiga.
 
@@ -15,7 +15,7 @@ O dono é um usuário ativo do mesmo escritório com acesso ao setor do módulo.
 
 ## Recebimento pelos bots
 
-Usar HTTPS e `Authorization: Bearer <chave>`. A chave só aceita dados da automação à qual pertence. Os endpoints de consulta e configuração exigem a sessão da equipe. O corpo JSON tem limite de 32 KiB.
+Usar HTTPS e `Authorization: Bearer <chave>`. Chaves compartilhadas valem para as automações ativas do mesmo escritório; as individuais antigas continuam limitadas ao seu slug. Os endpoints de consulta e configuração exigem a sessão da equipe. O corpo JSON tem limite de 32 KiB.
 
 Atividade: `POST /api/ops/watchers/<slug>/heartbeat`, sem corpo, a cada 30 segundos. Sem sinal durante três minutos, antes do primeiro sinal ou com recebimento desativado, a tela mostra Offline. O painel não inicia nem encerra processos e não lê pastas da rede.
 
