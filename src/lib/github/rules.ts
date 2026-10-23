@@ -15,6 +15,7 @@ export const filtersSchema = z.object({
   organization: z.string().max(100).optional(), user: z.string().max(100).optional(),
   type: z.enum(CONTRIBUTION_TYPES).optional(), bots: z.enum(["0", "1"]).default("0"),
   page: z.coerce.number().int().min(1).max(10000).default(1),
+  view: z.enum(["general", "developers"]).default("developers"),
 });
 export type Filters = z.infer<typeof filtersSchema>;
 export const settingsSchema = z.object({
