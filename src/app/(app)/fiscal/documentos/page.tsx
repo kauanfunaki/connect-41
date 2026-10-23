@@ -15,8 +15,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const { ctx } = await abrirTelaDoModulo("fiscal_acervo");
   const params = await searchParams;
   // Modo motor (API-CONNECT §11.1): Acervo pela projeção `FiscalDocument`,
-  // Importações e Cobertura pelas leituras leves da v1. "Enviar documentos"
-  // é da prévia e não tem rota no motor.
+  // Importações e Cobertura pelas leituras leves da v1; as escritas de §13
+  // (enviar documentos, resolver na quarentena, apurar cobertura) aparecem
+  // para quem age no módulo.
   if (await modoDoFiscal(ctx) === "motor") {
     const tela = await prepararTelaDoMotor(params);
     if (tela) {

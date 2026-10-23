@@ -1,0 +1,27 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/cobertura/apurar?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {
+      "Idempotency-Key": "c41:09d80be82c0e47268f86a42b7e941cfc"
+    },
+    "corpo": {
+      "empresa_id": 1,
+      "competencia": "2032-01"
+    }
+  },
+  "resposta": {
+    "status": 409,
+    "corpo": {
+      "erro": "essa competência já está sendo apurada.",
+      "codigo": "cobertura_em_andamento"
+    },
+    "x_custo": "leve"
+  }
+}

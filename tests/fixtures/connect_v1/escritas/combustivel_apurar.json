@@ -1,0 +1,33 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/conferencia/combustivel/apurar?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "empresa_id": 1,
+      "competencia": "2032-03"
+    }
+  },
+  "resposta": {
+    "status": 200,
+    "corpo": {
+      "competencia": "2032-03",
+      "cnpj_empresa": "17122471001147",
+      "valor_cfop": "0.00",
+      "valor_ncm": "0.00",
+      "valor_ambos": "0.00",
+      "itens": 0,
+      "notas_lidas": 0,
+      "notas_falhadas": 0,
+      "segundos": "0.00",
+      "empresa_id": 1
+    },
+    "x_custo": "pesada"
+  }
+}
