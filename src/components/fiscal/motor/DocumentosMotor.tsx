@@ -16,7 +16,7 @@ import type { Params } from "@/lib/fiscal/motor/telas/comum";
 import type { CoberturaDoMotor, ImportacaoDoMotor } from "@/lib/sped/telasDoMotor";
 import { ErroDaLeitura, EscolhaUmEstabelecimento, PaginacaoDoMotor } from "./LeituraDoMotor";
 import { escritaNaTela } from "@/lib/fiscal/motor/permissoes";
-import { ApurarCobertura, EnviarDocumentos, ResolverRejeitado } from "./EscritasDocumentos";
+import { ApurarCobertura, EnviarDocumentos, ReprocessarQuarentena, ResolverRejeitado } from "./EscritasDocumentos";
 
 const CAMINHO = "/fiscal/documentos";
 
@@ -92,6 +92,7 @@ export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; pa
   const aqui = (m: Record<string, string | number | null> = {}) => hrefComParams(CAMINHO, params, m);
   const xml = (id: number, baixar = false) => `/api/fiscal/sped/quarentena/${id}/xml?raiz=${contexto.raiz}${baixar ? "&baixar=1" : ""}`;
   const classes = d.resumo.dados?.por_classe ?? [];
+  const hrefFila = tela.modulos.includes("fiscal_operacao") ? hrefDoMotor("/fiscal/operacao", contexto, { aba: "executar" }) : null;
   const filtrosDaQuarentena: CampoDeFiltro[] = [
     { chave: "classe", rotulo: "Classe", vazioLabel: "Pede decisão (desconhecido)", opcoes: [{ value: "todas", label: "Todas as classes" }, ...classes.filter((c) => c.classe !== "desconhecido").map((c) => ({ value: c.classe, label: `${c.classe} (${contagemDoMotor(c.total)})` }))] },
     { chave: "pendentes", rotulo: "Situação", vazioLabel: "Só pendentes", opcoes: [{ value: "0", label: "Pendentes e resolvidos" }] },
@@ -128,6 +129,10 @@ export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; pa
 
     <BlocoFiscal titulo="Quarentena" descricao={`${d.detalhe?.dados ? `Rejeitados da importação #${d.detalhe.dados.id}` : "Rejeitados de todas as importações"}. Resolver não apaga: o XML continua guardado no motor.`} acao={d.detalhe ? <Button size="sm" variant="ghost" href={aqui({ importacao: null, c_quar: null })} scroll={false}>Ver todas as importações</Button> : undefined}>
       <div className="space-y-3">
+        {escrita.visivel && <div className="space-y-1">
+          <p className="text-helper text-fg-secondary">Reprocessar relê os rejeitados com os leitores de hoje e baixa os que passaram a ser legíveis (o XML continua guardado). Vira um pedido na fila do motor; as competências com documento recuperado precisam ser regeradas.</p>
+          <ReprocessarQuarentena raiz={contexto.raiz} classes={classes.map((c) => c.classe)} permissao={escrita} hrefFila={hrefFila} />
+        </div>}
         {d.resumo.dados && d.resumo.dados.por_motivo.length > 0 && <BlocoRecolhivel titulo="Motivos dos que pedem decisão" abertoInicial={false}>
           <div><TabelaFiscal colunas={["Motivo", "Rejeitados"]} linhas={d.resumo.dados.por_motivo.map((m, i) => ({ id: `${i}`, celulas: [m.motivo || "—", contagemDoMotor(m.total)] }))} /></div>
         </BlocoRecolhivel>}

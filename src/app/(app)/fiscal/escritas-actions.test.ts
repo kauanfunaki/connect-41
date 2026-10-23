@@ -283,3 +283,41 @@ describe("Conferência › prestadores: regime MEI/normal (§14.1)", () => {
     expect(m.fetch).not.toHaveBeenCalled();
   });
 });
+
+describe("Documentos › quarentena: reprocessar (§14.2)", () => {
+  it("vira a ação `quarentena` da fila: 202 com a execução, a chave do gesto, audita e relê Documentos e a fila", async () => {
+    responder("quarentena_reprocessar");
+    const r = await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "desconhecido", chave: CHAVE });
+    expect(r).toMatchObject({ ok: true, dados: { id: 68, acao: "quarentena", estado: "pendente" } });
+    const { url, init } = enviado();
+    expect([init.method, url]).toEqual(["POST", "https://motor/api/connect/v1/quarentena/reprocessar?cnpj_raiz=17122471"]);
+    expect(JSON.parse(init.body as string)).toEqual({ classe: "desconhecido" });
+    expect((init.headers as Record<string, string>)["Idempotency-Key"]).toBe(CHAVE);
+    expect(m.pode).toHaveBeenCalledWith(m.ctx, "fiscal_acervo", "agir");
+    expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.quarentena.reprocessada", entityType: "SpedExecucao", entityId: "68" }));
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/documentos", "/fiscal/operacao"]);
+  });
+  it("409 reprocessamento_em_andamento: aponta o pedido aberto e devolve o existente; nada auditado", async () => {
+    responder("erro_reprocessamento_em_andamento");
+    const r = await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "todas", chave: CHAVE });
+    expect(r).toMatchObject({ ok: false, codigo: "reprocessamento_em_andamento", detalhe: { existente: { id: 68 } }, renovarChave: true });
+    expect(r.mensagem).toMatch(/#68/);
+    expect(m.audit).not.toHaveBeenCalled();
+    expect(m.revalidar).not.toHaveBeenCalled();
+  });
+  it("sem chave, classe fora do formato, sem agir ou sem token: recusa sem chamar", async () => {
+    expect((await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "desconhecido" })).ok).toBe(false);
+    expect((await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "../x", chave: CHAVE })).ok).toBe(false);
+    m.pode.mockResolvedValue(false);
+    expect((await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "desconhecido", chave: CHAVE })).ok).toBe(false);
+    m.pode.mockResolvedValue(true);
+    m.motor.escrita = false;
+    expect(await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "desconhecido", chave: CHAVE })).toMatchObject({ codigo: "escrita_nao_habilitada" });
+    expect(m.fetch).not.toHaveBeenCalled();
+  });
+  it("falha de rede: mesma chave na próxima tentativa (renovarChave falso)", async () => {
+    m.fetch.mockRejectedValue(new TypeError("rede"));
+    const r = await acoes.reprocessarQuarentenaNoMotor({ raiz: R, classe: "desconhecido", chave: CHAVE });
+    expect(r).toMatchObject({ ok: false, codigo: "falha_de_rede", renovarChave: false });
+  });
+});

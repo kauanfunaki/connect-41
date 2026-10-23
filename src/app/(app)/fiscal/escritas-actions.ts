@@ -392,3 +392,38 @@ export async function definirRegimeDoPrestadorNoMotor(entrada: unknown): Promise
     return doErro(err);
   }
 }
+
+// ─── Documentos › Importações: reprocessar a quarentena (§14.2) ─────────────
+
+const reprocessarSchema = z.object({
+  raiz: raizSchema,
+  classe: z.string().regex(/^[a-z_]{1,30}$/, "Classe inválida."),
+  chave: chaveSchema,
+});
+
+/**
+ * Relê a quarentena da raiz com os parsers de hoje (a ação `quarentena` da
+ * fila): 202 com a execução. Já há um aberto: `409
+ * reprocessamento_em_andamento` com o `existente`, que a tela mostra.
+ */
+export async function reprocessarQuarentenaNoMotor(entrada: unknown): Promise<ResultadoDoMotor<ExecucaoDoMotor>> {
+  const e = reprocessarSchema.safeParse(entrada);
+  if (!e.success) return recusa(primeiraMensagem(e.error, "Pedido inválido."));
+  const { raiz, classe, chave } = e.data;
+  const p = await prepararEscrita(raiz, MODULO.documentos, "agir");
+  if (recusado(p)) return p;
+  try {
+    const execucao = await p.motor.cliente.reprocessarQuarentena(raiz, { classe }, { ator: p.ator, chave });
+    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.quarentena.reprocessada",
+      entityType: "SpedExecucao", entityId: String(execucao.id), metadata: { nome: `#${execucao.id} quarentena (${classe})`, raiz, classe, chave } });
+    revalidarTelas(DOCUMENTOS, OPERACAO);
+    return { ok: true, mensagem: `Reprocessamento da quarentena na fila do motor (pedido #${execucao.id}). Os documentos recuperados saem da quarentena quando o agente concluir; as competências deles precisam ser regeradas.`, dados: execucao };
+  } catch (err) {
+    const falha = doErro(err);
+    if (falha.codigo === "reprocessamento_em_andamento") {
+      const ex = falha.detalhe?.existente as { id?: number } | undefined;
+      if (ex?.id) falha.mensagem = `Já há o reprocessamento #${ex.id} da quarentena aberto nesta raiz. Acompanhe esse pedido na fila.`;
+    }
+    return falha;
+  }
+}
