@@ -63,9 +63,10 @@ describe("menu das configurações por papel", () => {
     // que foi para Avaliações de desempenho; Módulos, que virou parte de
     // Setores e módulos; e Atendentes e vínculos, que foi para o painel do
     // usuário e para o Chatwoot em Integrações (8A, 4A e 3A, 20/10). Inclui
-    // também o catálogo de Chamados internos e as Obrigações por regime (22/10).
+    // também o catálogo de Chamados internos e as Obrigações por regime (22/10),
+    // e os Envios ao cliente do Portal (23/10).
     const total = Object.values(telasDoMenu(ADMIN_AUTO)).flat().length;
-    expect(total).toBe(19 + 1 + 1 - 3 + 1 + 1);
+    expect(total).toBe(19 + 1 + 1 - 3 + 1 + 1 + 1);
     expect(telasDoMenu(ADMIN)["Setores e módulos"]).toEqual(["Setores e módulos", "Campos customizados", "Tags"]);
   });
 

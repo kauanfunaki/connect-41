@@ -5,8 +5,9 @@
 // acesso. Um só por envio, de propósito: o cliente que ignorou dois avisos não
 // lê o terceiro, e a equipe vê na ficha que o lembrete já saiu.
 //
-// Não há padrão do escritório: Envios não tem tela de configuração, e o prazo
-// é decidido envio a envio (o padrão do campo é "sem lembrete").
+// O prazo é decidido envio a envio. Desde 23/10/2026 o escritório tem um
+// padrão, que o envio novo já traz escolhido (`lembretePadrao.ts`, em
+// Administração › Portal do cliente › Envios); sem ele, "sem lembrete".
 //
 // Puro: a escolha do prazo, quando o lembrete vence e o texto da ficha. Quem
 // busca, trava e envia é `agendador.ts`.

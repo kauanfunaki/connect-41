@@ -1052,6 +1052,7 @@ model Tenant {
   meetings                  Meeting[]
   agendaConfig              TenantAgendaConfig?
   aparencia                 TenantAparencia?
+  enviosConfig              TenantEnviosConfig?
   userAgendaConfigs         UserAgendaConfig[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
@@ -6274,6 +6275,25 @@ model TenantAparencia {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("tenant_aparencias")
+}
+
+// O padrão do escritório para os envios ao cliente (23/10/2026): o lembrete
+// de não lido que um envio novo já traz escolhido (e quem envia ainda pode
+// trocar, envio a envio). Administração › Portal do cliente › Envios. Leitura
+// em src/lib/envios/lembretePadrao.ts, que nunca derruba o novo envio. Tabela
+// própria pelo mesmo motivo do TenantAgendaConfig: coluna nova em `tenants`
+// lida antes da migration derrubaria toda leitura de tenant.
+
+/// Sem linha, o envio novo vem "sem lembrete", como sempre foi.
+model TenantEnviosConfig {
+  tenantId     String   @id
+  /// 2, 5 ou 10 (`DIAS_DO_LEMBRETE`); null = sem lembrete.
+  lembreteDias Int?
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_envios_configs")
 }
 
 /// Horário próprio de uma pessoa. Sem linha, ela usa o do escritório. Por

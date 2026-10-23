@@ -10,9 +10,12 @@
 // esta e as próximas" e o "mudar a série daqui em diante" valerem para as duas
 // sem uma estrutura paralela.
 //
-// A competência é a mesma em todas as parcelas: a despesa (ou a receita)
-// aconteceu uma vez, no mês da compra; o que se divide é o pagamento. É o
-// contrário da repetição, em que cada conta é de um mês.
+// A competência, por padrão, é a mesma em todas as parcelas: a despesa (ou a
+// receita) aconteceu uma vez, no mês da compra; o que se divide é o
+// pagamento. É o contrário da repetição, em que cada conta é de um mês.
+// Desde 23/10/2026 dá para escolher "do vencimento de cada parcela": quem
+// apura pelo caixa (ou o contrato de serviço pago mês a mês) quer cada
+// parcela no mês em que vence (`competenciaDaParcela`).
 //
 // Funções puras; a gravação é `criarLancamentoManual`.
 
@@ -32,6 +35,37 @@ export const ONDE_FICA_O_RESTO: { valor: OndeFicaOResto; rotulo: string }[] = [
 ];
 
 export type Parcela = { indice: number; vencimentoKey: string; centavos: number };
+
+/**
+ * De onde sai a competência de cada parcela (23/10/2026): `COMPRA`, a
+ * digitada no formulário, a mesma em todas (o de sempre); `VENCIMENTO`, o mês
+ * do vencimento de cada uma.
+ */
+export type CompetenciaDasParcelas = "COMPRA" | "VENCIMENTO";
+
+export const COMPETENCIAS_DAS_PARCELAS: { valor: CompetenciaDasParcelas; rotulo: string }[] = [
+  { valor: "COMPRA", rotulo: "Da compra (a mesma em todas)" },
+  { valor: "VENCIMENTO", rotulo: "Do vencimento de cada parcela" },
+];
+
+/**
+ * O campo `parcelarCompetencia` do formulário. Ausente ou vazio é `COMPRA` —
+ * o formulário de antes de 23/10/2026 não mandava o campo, e a competência da
+ * compra era a única. Qualquer outro valor é recusado (`null`).
+ */
+export function lerCompetenciaDasParcelas(valor: unknown): CompetenciaDasParcelas | null {
+  if (valor === undefined || valor === null || valor === "") return "COMPRA";
+  return COMPETENCIAS_DAS_PARCELAS.some((c) => c.valor === valor) ? (valor as CompetenciaDasParcelas) : null;
+}
+
+/** A competência ("AAAA-MM") de uma parcela: a da compra, ou o mês do vencimento dela. */
+export function competenciaDaParcela(
+  parcela: Pick<Parcela, "vencimentoKey">,
+  competenciaDaCompra: string,
+  modo: CompetenciaDasParcelas
+): string {
+  return modo === "VENCIMENTO" ? parcela.vencimentoKey.slice(0, 7) : competenciaDaCompra;
+}
 
 /**
  * O total dividido em `n` partes iguais, com os centavos que sobram numa
