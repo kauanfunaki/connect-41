@@ -5,6 +5,8 @@ export type StepStatus = "done" | "current" | "error" | "upcoming";
 export type StepDef = {
   label: string;
   status: StepStatus;
+  /** Disponibilidade independente da conclusão, para fluxos de consulta. */
+  disabled?: boolean;
 };
 
 type Props = {
@@ -39,12 +41,12 @@ export function Stepper({ steps, onStepClick }: Props) {
         <li key={step.label} className="flex items-center">
           <button
             type="button"
-            disabled={step.status === "upcoming"}
+            disabled={step.disabled ?? step.status === "upcoming"}
             aria-current={step.status === "current" ? "step" : undefined}
             aria-invalid={step.status === "error" ? true : undefined}
-            aria-label={`${i + 1}. ${step.label} — ${STATUS_LABEL[step.status]}`}
+            aria-label={`${i + 1}. ${step.label} — ${step.status === "upcoming" && step.disabled === false ? "disponível" : STATUS_LABEL[step.status]}`}
             onClick={() => onStepClick?.(i)}
-            className={`flex items-center gap-2.5 ${step.status === "upcoming" ? "cursor-not-allowed" : "cursor-pointer"}`}
+            className={`flex items-center gap-2.5 ${(step.disabled ?? step.status === "upcoming") ? "cursor-not-allowed" : "cursor-pointer"}`}
           >
             <span
               // Concluída e atual em tom fixo nos dois temas (07/10/2026): o
@@ -56,7 +58,7 @@ export function Stepper({ steps, onStepClick }: Props) {
                     ? "bg-brand-solid border-brand-solid text-on-brand"
                     : step.status === "error"
                       ? "bg-danger-bg border-danger text-danger"
-                      : "bg-surface-hover border-border-strong text-fg-muted opacity-50"
+                      : step.disabled === false ? "bg-surface-hover border-border-strong text-fg-secondary" : "bg-surface-hover border-border-strong text-fg-muted opacity-50"
               }`}
             >
               {i + 1}
