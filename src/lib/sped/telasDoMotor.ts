@@ -487,7 +487,13 @@ export const previaFinanceiraSchema = z.looseObject({
 export type PreviaFinanceira = z.infer<typeof previaFinanceiraSchema>;
 
 /** `db.nfse_entrada_por_regime`, na forma das fixtures do motor (23/10/2026). */
-const prestadorSchema = z.looseObject({ cnpj: texto, nome: texto, documentos: contagemOpcional, valor: decimalOpcional, regime: texto, por_cadastro: z.boolean().nullish().transform((v) => v ?? false) });
+/**
+ * `origem` (§14.1, 23/10/2026): a camada que decidiu o regime — a correção do
+ * cliente, o cadastro global ou o palpite pelo nome. Motor anterior a §14 não
+ * manda; valor fora do enum também vira `null` (a tela só não mostra o selo).
+ */
+const origemDoRegime = z.enum(["cliente", "cadastro", "nome"]).nullish().catch(null).transform((v) => v ?? null);
+const prestadorSchema = z.looseObject({ cnpj: texto, nome: texto, documentos: contagemOpcional, valor: decimalOpcional, regime: texto, por_cadastro: z.boolean().nullish().transform((v) => v ?? false), origem: origemDoRegime });
 export type PrestadorNfse = z.infer<typeof prestadorSchema>;
 export const prestadoresSchema = z.looseObject({
   mei: decimalOpcional,

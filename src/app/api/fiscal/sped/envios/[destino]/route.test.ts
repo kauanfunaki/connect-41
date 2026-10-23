@@ -86,11 +86,11 @@ describe("envio de documentos", () => {
     expect(chaves[2]).not.toBe(chaves[0]);
   });
 
-  it("sem Content-Length: 411; acima do teto: 413 com o caminho do painel — sem ler o corpo nem chamar", async () => {
+  it("sem Content-Length: 411; acima do teto: 413 apontando o envio em partes — sem ler o corpo nem chamar", async () => {
     expect((await POST(...await pedido("documentos", [["gesto", GESTO], ["arquivos", pdf()]], { semTamanho: true }))).status).toBe(411);
     const grande = await POST(...await pedido("documentos", [["gesto", GESTO], ["arquivos", pdf()]], { tamanho: 27 * MiB }));
     expect(grande.status).toBe(413);
-    expect((await grande.json()).mensagem).toMatch(/painel do motor/);
+    expect((await grande.json()).mensagem).toMatch(/em partes/);
     expect(m.pode).not.toHaveBeenCalled();
     expect(m.fetch).not.toHaveBeenCalled();
   });
