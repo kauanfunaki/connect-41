@@ -31,12 +31,11 @@ describe("planoDaNota", () => {
         vencimentoKey: "2026-10-01",
       });
     });
-    it("soma que não fecha, retenção, ilegível e mais de 120: inteira, com o motivo", () => {
+    it("com retenção: parcela pelo líquido (quem retém é o cliente)", () => {
+      expect(planoDaNota({ duplicatas: duas, totalCentavos: 100000, kind: "RECEBER", comRetencoes: true })).toMatchObject({ tipo: "PARCELAS" });
+    });
+    it("soma que não fecha, ilegível e mais de 120: inteira, com o motivo", () => {
       expect(planoDaNota({ duplicatas: duas, totalCentavos: 100001, kind: "RECEBER" })).toMatchObject({ tipo: "RECUSADO", motivo: expect.stringMatching(/somam/) });
-      expect(planoDaNota({ duplicatas: duas, totalCentavos: 100000, kind: "RECEBER", comRetencoes: true })).toMatchObject({
-        tipo: "RECUSADO",
-        motivo: expect.stringMatching(/Retenção/),
-      });
       expect(planoDaNota({ duplicatas: "lixo", totalCentavos: 100000, kind: "RECEBER" })).toMatchObject({ tipo: "RECUSADO" });
       const muitas = Array.from({ length: 121 }, (_, i) => d(`2027-01-${String((i % 28) + 1).padStart(2, "0")}`, "1.00"));
       expect(planoDaNota({ duplicatas: muitas, totalCentavos: 12100, kind: "RECEBER" })).toMatchObject({
