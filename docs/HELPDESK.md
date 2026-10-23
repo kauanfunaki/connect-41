@@ -30,7 +30,11 @@ Remover um setor solicitante impede novas aberturas, preservando o acompanhament
 
 ## Abertura e revisão por IA
 
-Preencha a categoria, o setor de origem, o título, a descrição e os campos exigidos. Envie evidências usando o tipo indicado pela categoria. **Salvar rascunho** permite retomar pela lista. Ao enviar, o formulário válido é salvo antes de consultar a IA.
+Preencha o setor de origem, o título e a descrição. A abertura não exige escolher categoria: ao enviar, a IA identifica o grupo e a categoria pelo conteúdo e pelas respostas do solicitante. O rascunho aceita categoria vazia e pode ser retomado pela lista. Campos e evidências específicos aparecem depois da classificação e continuam obrigatórios antes da abertura. O texto original é preservado.
+
+No primeiro rascunho, o servidor prepara a lista padrão: **Desenvolvimento** (10 categorias), **Infraestrutura** (7) e **Suporte** (7), conforme `src/lib/chamados/catalogo.ts`. A preparação reutiliza nomes existentes, vincula categorias soltas ao grupo e preserva formulários, anexos, checklists, aprovações e desativações. Não altera chamados antigos nem exige nova migration. Grupos organizam a lista; a IA escolhe somente folhas ativas, com pais ativos. A lista e o detalhe mostram **Grupo › Categoria**; o filtro de um grupo inclui seus descendentes. A equipe pode corrigir a classificação em **Editar dados**.
+
+Se não houver resposta válida de nenhum provedor ou faltar contexto para classificar, fica **A classificar**. O usuário pode detalhar o texto e tentar novamente ou enviar para classificação pela equipe. O sistema não inventa uma categoria. Essa categoria de contingência precisa permanecer ativa. Classificações ficam registradas no rascunho e no evento de abertura; editar título, descrição ou setor invalida a classificação anterior.
 
 O rascunho não entra na fila, não inicia SLA e não gera pedido de aprovação nem notificações de atendimento. A conversa e o parecer ficam persistidos e são consultáveis no chamado após a abertura.
 
@@ -42,11 +46,15 @@ Alterações nos dados ou anexos invalidam o parecer anterior. Escritas usam ver
 
 ### Configuração da IA
 
-1. Em **Integrações → Inteligência artificial**, cadastre a chave do próprio escritório — **OpenAI ou Anthropic**; a triagem usa o provedor configurado. Ela permanece criptografada no servidor; não existe chave nova no frontend ou fallback global neste módulo.
+1. Em **Integrações → Inteligência artificial**, cadastre a chave do próprio escritório — **OpenAI ou Anthropic**; o provedor configurado é a primeira tentativa. Ela permanece criptografada no servidor; não existe chave global neste módulo.
 2. Na administração de agentes, habilite **Triagem de chamados** (`triagem_chamados`). O agente nasce desligado, usa a faixa `rapido` do catálogo (o modelo rápido do provedor configurado, o mesmo dos outros agentes dessa faixa) e aceita os overrides de modelo existentes.
 3. Revise os tetos: padrão de **R$ 100 e 2.000 chamadas mensais**. A fundação existente controla consumo e auditoria das execuções.
 
-Chave ausente/ilegível, agente desligado ou teto atingido tornam a revisão indisponível; a abertura continua com a opção de envio sem análise. Não há troca automática de provedor: a triagem usa o provedor da chave do escritório. (Até 22/10/2026 a triagem recusava a chave Anthropic.)
+Para usar a alternativa, um administrador acessa **Chamados → Configurar → IA alternativa para chamados**, cria uma chave em [Groq → API Keys](https://console.groq.com/keys), salva a chave e marca **Usar Groq quando a IA principal estiver indisponível**. A chave pertence ao escritório, fica cifrada em `TenantIntegration.configEnc` com a chave de instalação existente e nunca volta à tela. Atualização com campo vazio preserva a chave. Salvar a configuração não liga o agente: mantenha **Triagem de chamados** habilitado. Não é necessário instalar SDK ou mudar variáveis globais.
+
+Em falha da IA principal (inclusive chave ausente), há uma tentativa na Groq com `openai/gpt-oss-20b`, JSON Schema estrito e timeout de 20 segundos. O fallback atende tanto classificação quanto revisão, somente com texto: não envia binários, não afirma ler anexos e marca a cobertura como ilegível. A disponibilidade e os limites gratuitos dependem do [plano e limites da conta Groq](https://console.groq.com/docs/rate-limits). Não há cadastro automático de conta/chave nem garantia de uso gratuito em conta paga. O formato segue a [documentação de saída estruturada da Groq](https://console.groq.com/docs/structured-outputs).
+
+Agente desligado e tetos atingidos bloqueiam ambos os caminhos. Tentativas da Groq têm histórico em `IntegrationRun`, sem texto do chamado, chave ou corpo do erro; seu total mensal soma ao consumo de chamadas do agente antes de novas tentativas. Classificação e revisão são chamadas separadas e compartilham os tetos. Falha dos dois provedores preserva o envio opcional. Modelos externos precisam ser homologados com casos fictícios após cadastrar as chaves; testes simulados não comprovam acesso real.
 
 Com OpenAI, a chamada usa Responses API com JSON Schema estrito e `store: false`; com Anthropic, Messages API com saída estruturada (`output_config.format` JSON Schema). Nos dois: teto de tokens de saída, validação Zod, timeout de 30 segundos, resposta incompleta ou recusada vira indisponível, e no máximo dez avaliações por usuário/escritório por minuto. Custo e tetos mensais passam pela mesma fundação de agentes (`executarAgente`). Não há repetição automática de chamadas pagas. `store: false` não substitui a política de retenção da conta da API; na Anthropic, a retenção é a da conta. Como o Anthropic só lê PDF, imagem e texto, DOCX (texto) e XLSX (até mil linhas por aba) são convertidos em texto no servidor antes do envio; o que não puder ser convertido vai como aviso e o modelo marca o anexo como ilegível. O limite por minuto acompanha a implantação atual em uma instância; precisa de armazenamento compartilhado se o Connect passar a usar várias réplicas.
 
@@ -88,10 +96,10 @@ O agendador já existente verifica SLA e retoma entregas pendentes apenas com o 
 Problemas comuns:
 
 - **Módulo não aparece:** conferir plano, ativação, setor responsável ativo e seleção dos setores solicitantes. A configuração de visibilidade do menu Geral também pode esconder o atalho sem alterar permissões.
-- **Não há categoria:** cadastrar ao menos uma categoria ativa na configuração operacional.
+- **Não há categoria:** a lista padrão é preparada no primeiro rascunho; conferir se suas categorias e grupos estão ativos.
 - **Não há aprovador:** cadastrar outra pessoa ativa ou um gestor do setor de origem. O solicitante é excluído da escolha de aprovadores.
 - **A versão mudou:** atualizar a página; o sistema preserva a alteração confirmada e recusa sobrescrever a versão anterior.
-- **IA indisponível:** conferir a chave do escritório (OpenAI ou Anthropic), o agente e os tetos. O usuário pode enviar sem análise.
+- **IA indisponível:** conferir a chave principal, a alternativa Groq, o agente e os tetos. Sem classificação, o usuário pode enviar como A classificar.
 - **Arquivo indisponível:** conferir o volume persistente e restaurar banco/arquivos do mesmo backup, preservando os registros.
 
 ## Verificações locais
