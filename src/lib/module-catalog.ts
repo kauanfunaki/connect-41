@@ -169,6 +169,11 @@ export type ModuleDef = {
   fixedSector?: boolean;
 };
 
+/** O modo das telas fiscais na descrição (23/10/2026): real com a integração do SPED, prévia sem ela. */
+const COM_O_MOTOR = "Opera o motor do SPED Generator quando a integração está configurada; sem ela, mostra a prévia de teste";
+/** A área que o motor ainda não expõe pela API: com a integração, a tela avisa e manda para o painel do motor. */
+const SO_NA_PREVIA = "Com a integração do SPED Generator configurada, o motor ainda não expõe esta área (use o painel do motor); sem ela, mostra a prévia de teste";
+
 export const MODULE_CATALOG: ModuleDef[] = [
   {
     code: "tech_github_contributions", label: "GitHub — Contribuições", sectorCode: "tech",
@@ -427,16 +432,22 @@ export const MODULE_CATALOG: ModuleDef[] = [
     icon: "ReceiptText",
     group: "Documentos",
   },
+  // As telas do processamento fiscal. Desde a PR #279 (22/10/2026) operam o
+  // motor do SPED Generator quando a integração `sped` está configurada; sem
+  // ela, mostram a prévia de teste do banco local (ver `fiscal/layout.tsx`).
+  // As descrições diziam "em teste/simulado" em todas, o que deixou de ser
+  // verdade no modo real (23/10/2026): agora dizem o que cada uma faz, e se o
+  // motor já expõe a área ou se, com ele, ela ainda fica só no painel do motor.
   ...([
-    ["fiscal_painel", "Painel fiscal", "Indicadores, progresso e pendências do cenário de teste", "ChartColumn", "Operação"],
-    ["fiscal_classificacao", "Classificação", "Destinação e crédito de produtos, contratos e recibos em teste", "ClipboardList", "Operação"],
-    ["fiscal_operacao", "Executar", "Extração, geração, fila, logs e erros simulados", "Workflow", "Operação"],
-    ["fiscal_acervo", "Documentos e importações", "Acervo, serviços, contratos, importação e cobertura com dados fictícios", "ReceiptText", "Documentos"],
-    ["fiscal_icms_ipi", "ICMS e IPI", "Apuração, demonstrativo, ajustes e DCIP/DIME em teste", "FileSpreadsheet", "Apuração"],
-    ["fiscal_contribuicoes", "PIS e COFINS", "Parâmetros, ajustes, fechamento e SPED Contribuições em teste", "Receipt", "Apuração"],
-    ["fiscal_entregas", "SPED gerados", "Versões de SPED, validação e entregas simuladas", "CheckCheck", "Conferência"],
-    ["fiscal_conferencia", "Conferência fiscal", "Prévia financeira e confronto de documentos em teste", "Landmark", "Conferência"],
-    ["fiscal_configuracoes", "Configurações fiscais", "Parâmetros e consulta de regras fiscais por CFOP e fonte", "Building2", "Cadastros"],
+    ["fiscal_painel", "Painel fiscal", `Saúde dos agentes, fila e arquivos da competência. ${COM_O_MOTOR}`, "ChartColumn", "Operação"],
+    ["fiscal_classificacao", "Classificação", `Destinação e crédito de produtos, contratos e recibos. ${COM_O_MOTOR}`, "ClipboardList", "Operação"],
+    ["fiscal_operacao", "Executar", `Pedidos de extração e geração, fila, histórico e logs. ${COM_O_MOTOR}`, "Workflow", "Operação"],
+    ["fiscal_acervo", "Documentos e importações", `Acervo, serviços, contratos, importação e cobertura. ${SO_NA_PREVIA}`, "ReceiptText", "Documentos"],
+    ["fiscal_icms_ipi", "ICMS e IPI", `Ajustes da apuração (E111, DIME e DCIP), apuração e demonstrativo. ${COM_O_MOTOR}`, "FileSpreadsheet", "Apuração"],
+    ["fiscal_contribuicoes", "PIS e COFINS", `Ajustes do bloco M, decisões por registro, parâmetros e fechamento da EFD Contribuições. ${COM_O_MOTOR}`, "Receipt", "Apuração"],
+    ["fiscal_entregas", "SPED gerados", `Versões de SPED, validação, entrega e decisões depois da geração. ${COM_O_MOTOR}`, "CheckCheck", "Conferência"],
+    ["fiscal_conferencia", "Conferência fiscal", `Prévia financeira e confronto de documentos. ${SO_NA_PREVIA}`, "Landmark", "Conferência"],
+    ["fiscal_configuracoes", "Configurações fiscais", `Cadastro dos estabelecimentos, parâmetros e regras fiscais por CFOP e fonte. ${COM_O_MOTOR}`, "Building2", "Cadastros"],
   ] satisfies [string, string, string, IconeDeModulo, GrupoDeModulo][]).map(([code, label, description, icon, group]) => ({
     code, label, description, icon, group, sectorCode: "fiscal", defaultEnabled: true,
   })),

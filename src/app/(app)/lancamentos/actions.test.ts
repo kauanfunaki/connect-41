@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // O parcelamento no lançamento manual (22/10/2026): o valor é o total, cada
 // parcela vira uma conta com o valor e o vencimento conferidos na tela, todas
-// na mesma série ("3/12") e na competência da compra; e o que não combina com
+// na mesma série ("3/12") e na competência da compra (ou, desde 23/10/2026, na
+// do vencimento de cada parcela); e o que não combina com
 // parcelar (repetir, rateio, retenção, já pago) é recusado sem gravar.
 
 const m = vi.hoisted(() => {
@@ -114,6 +115,36 @@ describe("criarLancamentoManual parcelado", () => {
         metadata: expect.objectContaining({ parcelamento: expect.objectContaining({ parcelas: 3, total: "1000.00" }) }),
       })
     );
+  });
+
+  // 23/10/2026: a competência pode ser a do vencimento de cada parcela.
+  it("com a competência do vencimento, cada parcela fica no mês em que vence — a primeira também", async () => {
+    const r = await criarLancamentoManual(form({ competencia: "2026-09", parcelarCompetencia: "VENCIMENTO" }));
+    expect(r).toMatchObject({ ok: true, parcelas: 3 });
+    const primeira = m.tx.financeEntry.create.mock.calls[0]![0].data;
+    expect(primeira.competence).toBe("2026-10");
+    const proximas = m.tx.financeEntry.createMany.mock.calls[0]![0].data;
+    expect(proximas.map((p: { competence: string }) => p.competence)).toEqual(["2026-11", "2026-12"]);
+    expect(m.tx.financeRecurrence.create).toHaveBeenCalledWith({ data: expect.objectContaining({ firstCompetence: "2026-10" }) });
+    expect(m.logAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: expect.objectContaining({ parcelamento: expect.objectContaining({ competencia: "VENCIMENTO" }) }) })
+    );
+  });
+
+  it("com a competência da compra (ou sem o campo, o formulário de antes), todas ficam na digitada", async () => {
+    for (const campos of [{ parcelarCompetencia: "COMPRA" }, {}] as Record<string, string>[]) {
+      vi.clearAllMocks();
+      m.tx.financeEntry.create.mockResolvedValue({ id: "e1", amount: "333.34" });
+      await criarLancamentoManual(form({ competencia: "2026-09", ...campos }));
+      expect(m.tx.financeEntry.create.mock.calls[0]![0].data.competence).toBe("2026-09");
+      expect(m.tx.financeEntry.createMany.mock.calls[0]![0].data.map((p: { competence: string }) => p.competence)).toEqual(["2026-09", "2026-09"]);
+    }
+  });
+
+  it("recusa uma competência das parcelas que não é das duas, sem gravar", async () => {
+    const r = await criarLancamentoManual(form({ parcelarCompetencia: "2026-11" }));
+    expect(r).toMatchObject({ error: expect.stringContaining("competência das parcelas") });
+    expect(m.db.$transaction).not.toHaveBeenCalled();
   });
 
   it("com alçada, cada parcela vai para a aprovação com o valor dela", async () => {
