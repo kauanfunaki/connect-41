@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { ClientDocumentForm } from "@/components/documentosCliente/ClientDocumentForm";
 import { rotaDosEnvios } from "@/lib/envios/regras";
+import { lerLembretePadrao } from "@/lib/envios/lembretePadrao";
 import { criarDocumento } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +31,14 @@ export default async function NovoEnvioPage({
   const { empresa } = await searchParams;
   // As ativas, mais a da URL mesmo que não esteja ativa — quem veio da ficha
   // de uma empresa inativa não pode chegar com o campo vazio.
-  const empresas = await getPrisma().company.findMany({
-    where: { ...(await scopedCompanyWhere(ctx)), OR: [{ status: "ACTIVE" }, ...(empresa ? [{ id: empresa }] : [])] },
-    select: CAMPOS_DA_EMPRESA_NO_SELETOR,
-  });
+  // O lembrete de não lido já vem no padrão do escritório (23/10/2026).
+  const [empresas, lembretePadrao] = await Promise.all([
+    getPrisma().company.findMany({
+      where: { ...(await scopedCompanyWhere(ctx)), OR: [{ status: "ACTIVE" }, ...(empresa ? [{ id: empresa }] : [])] },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
+    }),
+    lerLembretePadrao(ctx.tenantId),
+  ]);
   const escolhida = empresa ? empresas.find((e) => e.id === empresa) : undefined;
 
   return (
@@ -56,6 +61,7 @@ export default async function NovoEnvioPage({
             companyId={escolhida?.id}
             empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
             cancelHref={rotaDosEnvios(escolhida?.id)}
+            lembretePadrao={lembretePadrao.dias}
           />
         </Card>
       </div>

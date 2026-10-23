@@ -2,7 +2,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Chamados internos
 
-O módulo `helpdesk` oferece atendimento interno por setor, formulários por categoria, fila, SLA, aprovações, anexos e triagem conversacional opcional com OpenAI. Nasce desligado e usa os controles de módulo, assinatura e IA por escritório já existentes no Connect.
+O módulo `helpdesk` oferece atendimento interno por setor, classificação automática por grupo e categoria, formulários, fila, SLA, aprovações, anexos e triagem conversacional. Usa a IA do escritório (OpenAI/Anthropic), com alternativa Groq configurável na tela dos chamados. Nasce desligado e usa os controles de módulo, assinatura e IA por escritório já existentes no Connect.
 
 Configuração, migração, operação, limites e testes isolados: [guia do helpdesk](docs/HELPDESK.md). Verificações específicas: `npm run test:helpdesk`, `npm run test:helpdesk:db` e `npm run test:helpdesk:ui`; os dois últimos exigem um banco descartável local explícito.
 

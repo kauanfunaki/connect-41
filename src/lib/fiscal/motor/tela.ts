@@ -46,13 +46,5 @@ export async function prepararTelaDoMotor(params: Record<string, string | string
   return { ctx, motor, contexto, mapa, estabelecimento, modulos, erro };
 }
 
-/** Lê do motor e devolve o erro em português no lugar de derrubar a página. */
-export async function doMotor<T>(leitura: () => Promise<T>): Promise<{ dados: T; erro: null } | { dados: null; erro: string }> {
-  try {
-    return { dados: await leitura(), erro: null };
-  } catch (err) {
-    if (err instanceof ErroDoMotor) return { dados: null, erro: err.message };
-    console.error("[fiscal/motor]", err);
-    return { dados: null, erro: "Falha inesperada ao ler o motor SPED." };
-  }
-}
+// `doMotor` mora em `./leitura` (sem auth nem banco, para os carregadores das telas serem testáveis).
+export { doMotor, type Leitura, type FalhaDaLeitura } from "./leitura";

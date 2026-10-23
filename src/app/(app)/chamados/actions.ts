@@ -5,6 +5,7 @@ import { contexto } from "@/lib/chamados/contexto";
 import { criarRascunho, salvarRascunho, avaliarRascunho, finalizarRascunho, alterar, comentar } from "@/lib/chamados/comandos";
 import { salvarCategoria, salvarPolitica, configurarSetores } from "@/lib/chamados/configuracao";
 import { removerAnexoRascunho } from "@/lib/chamados/anexos";
+import { salvarFallback } from "@/lib/chamados/ia-fallback";
 
 async function executar<T>(fn: () => Promise<T>) {
   try { const valor = await fn(); revalidatePath("/chamados", "layout"); return { ok: true as const, valor }; }
@@ -20,3 +21,4 @@ export async function categoria(input: unknown) { return executar(async () => sa
 export async function politica(input: unknown) { return executar(async () => salvarPolitica(await contexto(), input)); }
 export async function setores(input: unknown) { return executar(async () => { await configurarSetores(input); revalidatePath("/", "layout"); }); }
 export async function retirarAnexo(draftId: string, id: string, version: number) { return executar(async () => removerAnexoRascunho(await contexto(), draftId, id, version)); }
+export async function fallbackIa(input: unknown) { return executar(async () => salvarFallback(await contexto(), input)); }
