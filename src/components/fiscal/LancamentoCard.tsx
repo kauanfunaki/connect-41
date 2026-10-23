@@ -23,7 +23,19 @@ type Lancamento = {
   categoria: string | null;
   contraparte: string;
   centroDeCusto?: string | null;
+  /** Em quantas parcelas nasceu, quando nasceu das duplicatas da nota (23/10). */
+  parcelas?: number | null;
 };
+
+/**
+ * O que as duplicatas da nota decidem (23/10) — a prévia de
+ * `planoDaNota`, calculada no servidor. `null`: a nota não diz nada.
+ */
+type DuplicatasDaNota =
+  | { tipo: "PARCELAS"; parcelas: { indice: number; numero: string | null; vencimentoLabel: string; valorLabel: string }[] }
+  | { tipo: "VENCIMENTO"; numero: string | null }
+  | { tipo: "RECUSADO"; motivo: string }
+  | null;
 
 type Props = {
   lancamento: Lancamento | null;
@@ -31,6 +43,7 @@ type Props = {
   impedimento: string | null;
   direcao: "PAGAR" | "RECEBER" | "INDEFINIDA";
   vencimentoPresumidoIso: string;
+  duplicatas?: DuplicatasDaNota;
   categorias: Categoria[];
   /** Centros de custo ativos da empresa do documento. Sem nenhum, o campo não aparece. */
   centros?: Centro[];
@@ -63,6 +76,7 @@ export function LancamentoCard({
   impedimento,
   direcao,
   vencimentoPresumidoIso,
+  duplicatas = null,
   categorias,
   centros = [],
   podeDecidir,
@@ -108,8 +122,18 @@ export function LancamentoCard({
               para a direita, com fio embaixo, o único desenho diferente da
               página. */}
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-            <ItemDaFicha rotulo="Valor" valor={lancamento.amountLabel} numerico />
-            <ItemDaFicha rotulo="Vencimento" valor={lancamento.dueDateLabel} numerico />
+            {/* Parcelada pelas duplicatas, a ficha é a da 1ª parcela — as outras
+                estão nas contas a pagar, na mesma série. */}
+            <ItemDaFicha
+              rotulo={lancamento.parcelas && lancamento.parcelas > 1 ? `Valor (1ª de ${lancamento.parcelas} parcelas)` : "Valor"}
+              valor={lancamento.amountLabel}
+              numerico
+            />
+            <ItemDaFicha
+              rotulo={lancamento.parcelas && lancamento.parcelas > 1 ? "Vencimento da 1ª parcela" : "Vencimento"}
+              valor={lancamento.dueDateLabel}
+              numerico
+            />
             <ItemDaFicha rotulo="Contraparte" valor={lancamento.contraparte} />
             <ItemDaFicha rotulo="Categoria" valor={lancamento.categoria ?? "—"} />
             {lancamento.centroDeCusto !== undefined && (
@@ -128,7 +152,11 @@ export function LancamentoCard({
                 }}
                 label="Estornar lançamento"
                 title="Estornar o lançamento?"
-                description="O título sai do financeiro e o documento volta para Pendente. Dá para lançar de novo depois."
+                description={
+                  lancamento.parcelas && lancamento.parcelas > 1
+                    ? `As ${lancamento.parcelas} parcelas saem do financeiro e o documento volta para Pendente. Dá para lançar de novo depois.`
+                    : "O título sai do financeiro e o documento volta para Pendente. Dá para lançar de novo depois."
+                }
                 confirmLabel="Estornar"
                 successMessage="Lançamento estornado."
                 destructive
@@ -168,18 +196,23 @@ export function LancamentoCard({
                 ))}
               </Select>
             </CampoForm>
-            <CampoForm
-              label="Vencimento"
-              htmlFor="vencimento"
-              helper="Presumido em 30 dias — a nota não traz vencimento, ele vive na duplicata."
-            >
-              <CampoData
-                id="vencimento"
-               
-                value={vencimento}
-                onChange={(v) => setVencimento(v)}
-              />
-            </CampoForm>
+            {/* Parcelada pelas duplicatas, cada parcela vence no dia da sua — o
+                campo some para não sugerir que ele manda (a action o ignora). */}
+            {duplicatas?.tipo !== "PARCELAS" && (
+              <CampoForm
+                label="Vencimento"
+                htmlFor="vencimento"
+                helper={
+                  duplicatas?.tipo === "VENCIMENTO"
+                    ? `O da duplicata${duplicatas.numero ? ` ${duplicatas.numero}` : ""} da nota.`
+                    : duplicatas?.tipo === "RECUSADO"
+                      ? `Presumido em 30 dias. ${duplicatas.motivo}`
+                      : "Presumido em 30 dias — a nota não traz duplicata."
+                }
+              >
+                <CampoData id="vencimento" value={vencimento} onChange={(v) => setVencimento(v)} />
+              </CampoForm>
+            )}
             {centros.length > 0 && (
               <CampoForm
                 label="Centro de custo"
@@ -197,6 +230,27 @@ export function LancamentoCard({
               </CampoForm>
             )}
           </FieldGrid>
+          {duplicatas?.tipo === "PARCELAS" && (
+            <div className="mt-4">
+              <p className="text-helper text-fg-muted mb-2">
+                A nota traz {duplicatas.parcelas.length} duplicatas: a conta nasce em{" "}
+                <span className="font-medium text-fg">{duplicatas.parcelas.length} parcelas</span>, cada uma no vencimento e
+                no valor da sua, todas na competência da compra.
+              </p>
+              <ul className="divide-y divide-border border border-border rounded-md">
+                {duplicatas.parcelas.map((p) => (
+                  <li key={p.indice} className="flex items-center justify-between gap-3 px-3 py-2 text-body">
+                    <span className="text-fg-secondary">
+                      {p.indice}/{duplicatas.parcelas.length}
+                      {p.numero ? <span className="text-fg-muted"> · dup. {p.numero}</span> : null}
+                    </span>
+                    <span className="tnum text-fg">{p.vencimentoLabel}</span>
+                    <span className="tnum text-fg">{p.valorLabel}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="flex items-center justify-end gap-3 pt-4 mt-5 border-t border-border">
             <Button type="button" onClick={lancar} disabled={pendente}>
               {pendente ? "Lançando…" : "Lançar"}

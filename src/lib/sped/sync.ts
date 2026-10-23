@@ -157,6 +157,10 @@ export async function sincronizarRaiz(
           // aqui é o que faz a volta ser um update, e não um documento novo.
           removedAtOrigin: false,
           removedAtOriginAt: null,
+          // As duplicatas da nota (23/10): só quando o motor mandou uma lista
+          // conferida. Não mexe em conta já lançada — a conta a pagar nasce delas
+          // no `lancarDocumento`, uma vez, e o que veio depois fica no documento.
+          ...(mapeado.duplicatas ? { installments: mapeado.duplicatas } : {}),
         };
 
         // Upsert pela mesma chave que o upload usa. Documento que já entrou à
