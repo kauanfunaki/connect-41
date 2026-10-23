@@ -27,7 +27,7 @@ export async function dashboard(tenantId: string, filters: Filters, knownRevisio
   if (filters.repository && !access.repositories.some(repo => repo.id === filters.repository)) throw new GithubError("Repositório indisponível para consulta. Confira a conexão e a seleção.", 403);
   const base: DashboardView = { ...dates, revision: null, connected: connection?.status === "connected", enabled: connection?.integration.enabled ?? false,
     login: connection?.login ?? null, timezone, complete: false, coveredThrough: null, pending: 0, failed: 0, message: access.message,
-    users: [], totalUsers: 0, page: 1, pageSize, repositories: access.repositories, unavailable: access.unavailable, unidentified: 0, total: 0, progress: null };
+    users: [], totalUsers: 0, page: 1, pageSize, repositories: access.repositories, unavailable: access.unavailable, unidentified: 0, total: 0, progress: null, summary: null };
   if (!connection || connection.status !== "connected") return { ...base, message: connection?.lastError ?? "Conecte uma conta GitHub em Integrações." };
   const progress = await syncProgress(connection);
   base.progress = progress; base.pending = progress.pending; base.failed = progress.failed;
@@ -42,7 +42,9 @@ export async function dashboard(tenantId: string, filters: Filters, knownRevisio
   const repoIds = repositories.map(repo => repo.id);
   const common = { tenantId, repositoryId: { in: repoIds }, day: { gte: dates.from, lte: dates.to }, count: { gt: 0 }, ...(filters.type ? { type: filters.type } : {}) } satisfies Prisma.GithubDailyContributionWhereInput;
   const userFilter = { connectionId: connection.id, tenantId, unidentified: false, ...(filters.bots === "0" ? { isBot: false } : {}), ...(filters.user ? { login: { contains: filters.user } } : {}) };
-  const whereUser = { ...userFilter, OR: [{ tracked: true }, { daily: { some: common } }] } satisfies Prisma.GithubUserWhereInput;
+  // Mantém pessoas sem atividade no período, sem revelar autores de repositórios
+  // removidos ou sem acesso. Usuários acompanhados são cadastros explícitos.
+  const whereUser = { ...userFilter, OR: [{ tracked: true }, { daily: { some: { ...common, day: undefined } } }] } satisfies Prisma.GithubUserWhereInput;
   const [jobs, totalUsers, total, unidentified] = await Promise.all([
     db.githubSyncJob.groupBy({ by: ["repositoryId", "resource", "state"], where: { tenantId, connectionId: connection.id, ...(connection.integration.enabled ? { state: { not: "canceled" } } : {}) },
       _count: { _all: true, coveredFrom: true, coveredThrough: true }, _min: { coveredFrom: true, coveredThrough: true }, _max: { coveredFrom: true } }),
@@ -57,6 +59,29 @@ export async function dashboard(tenantId: string, filters: Filters, knownRevisio
   const ends = covered.flatMap(job => job._min.coveredThrough && job._count.coveredThrough === job._count._all ? [job._min.coveredThrough.getTime()] : []);
   base.coveredThrough = ends.length === covered.length && ends.length ? new Date(Math.min(...ends)).toISOString() : null;
   base.message ??= connection.lastError;
+  if (filters.view === "general") {
+    const [daily, activity, recent] = await Promise.all([
+      db.githubDailyContribution.groupBy({ by: ["day", "type"], where: { ...common, user: userFilter }, orderBy: { day: "asc" }, _sum: { count: true } }),
+      db.githubDailyContribution.groupBy({ by: ["userId"], where: { ...common, user: userFilter }, _sum: { count: true }, orderBy: [{ _sum: { count: "desc" } }, { userId: "asc" }] }),
+      db.githubContribution.findMany({ where: { tenantId, repositoryId: { in: repoIds }, day: common.day, current: true, user: userFilter, ...(filters.type ? { type: filters.type } : {}) },
+        orderBy: [{ occurredAt: "desc" }, { id: "asc" }], take: 8,
+        select: { id: true, type: true, url: true, externalId: true, occurredAt: true, number: true, repository: { select: { fullName: true } }, user: { select: { login: true } } } }),
+    ]);
+    const counts = emptyCounts(), byDay = new Map<string, ReturnType<typeof emptyCounts>>();
+    for (const row of daily) {
+      if (!CONTRIBUTION_TYPES.includes(row.type as ContributionType)) continue;
+      const type = row.type as ContributionType, count = row._sum.count ?? 0, day = byDay.get(row.day) ?? emptyCounts();
+      counts[type] += count; day[type] += count; byDay.set(row.day, day);
+    }
+    const leaders = activity.slice(0, 4);
+    const people = await db.githubUser.findMany({ where: { ...userFilter, id: { in: leaders.map(row => row.userId) } }, select: { id: true, login: true } });
+    const names = new Map(people.map(person => [person.id, person.login]));
+    return { ...base, totalUsers, total: total._sum.count ?? 0, unidentified: unidentified._sum.count ?? 0,
+      summary: { counts, activeDevelopers: activity.length, days: [...byDay].map(([day, counts]) => ({ day, counts })),
+        leaders: leaders.flatMap(row => names.has(row.userId) ? [{ id: row.userId, login: names.get(row.userId)!, total: row._sum.count ?? 0 }] : []),
+        recent: recent.map(row => ({ id: row.id, type: row.type as ContributionType, url: row.url, occurredAt: row.occurredAt.toISOString(), number: row.number,
+          repository: row.repository.fullName, login: row.user.login, reference: row.type === "COMMIT" ? row.externalId.slice(0, 7) : row.number ? `#${row.number}` : "Revisão" })) } };
+  }
   const page = Math.min(filters.page, Math.max(1, Math.ceil(totalUsers / pageSize)));
   const users = await db.githubUser.findMany({ where: whereUser, orderBy: [{ login: "asc" }, { id: "asc" }], skip: (page - 1) * pageSize, take: pageSize,
     select: { id: true, login: true, isBot: true, tracked: true } });
