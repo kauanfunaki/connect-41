@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chaveDoEnvio, conferirArquivos, dinheiroDoCampo, ENVIOS, FOLGA_DO_ENVELOPE, mensagemDeTamanho, sha256DoArquivo, type ImpressaoDoEnvio } from "./escritasDoMotor";
+import { camposDaCorrecao, chaveDoEnvio, chaveDoPagamentoDaLinha, conferirArquivos, correcaoGravada, dinheiroDoCampo, ENVIOS, FOLGA_DO_ENVELOPE, mensagemDeTamanho, sha256DoArquivo, type ImpressaoDoEnvio } from "./escritasDoMotor";
 import { permissaoDeEscrita, SEM_PERFIL_DE_ESCRITA, SEM_TOKEN_DE_ESCRITA } from "@/lib/fiscal/motor/escrita";
 
 const MiB = 1024 * 1024;
@@ -87,5 +87,21 @@ describe("quem vê os botões das escritas", () => {
     expect(permissaoDeEscrita({ agir: true, tokenDeEscrita: false })).toEqual({ pode: false, visivel: true, motivo: SEM_TOKEN_DE_ESCRITA });
     expect(permissaoDeEscrita({ agir: true, tokenDeEscrita: true })).toEqual({ pode: true, visivel: true, motivo: null });
     expect(SEM_TOKEN_DE_ESCRITA).toMatch(/token de escrita/);
+  });
+});
+
+describe("correção de pagamento pela convenção do painel", () => {
+  const linha = { caminho: "TESTE-TELAS/rpa.pdf", pagina: 4, ordem: 1, valor_corrigido: "55.50", documento_corrigido: "", nome_corrigido: "MARIA", competencia_corrigida: "", data_pagamento_corrigida: "", tipo_corrigido: "" };
+  it("a chave vem da linha; sem ela, nada a decidir", () => {
+    expect(chaveDoPagamentoDaLinha(linha)).toEqual({ caminho: "TESTE-TELAS/rpa.pdf", pagina: 4, ordem: 1 });
+    expect(chaveDoPagamentoDaLinha({ caminho: "x", pagina: "4", ordem: 1 })).toBeNull();
+    expect(chaveDoPagamentoDaLinha({ pagina: 1, ordem: 1 })).toBeNull();
+  });
+  it("só vai o que mudou; esvaziar manda \"\" (limpa); dinheiro com vírgula vira string decimal", () => {
+    const inicial = correcaoGravada(linha);
+    expect(inicial.valor).toBe("55.50");
+    expect(camposDaCorrecao(inicial, { ...inicial })).toEqual({});
+    expect(camposDaCorrecao(inicial, { ...inicial, valor: "60,00", nome: "", documento: "987.654.321-00" })).toEqual({ valor: "60.00", nome: "", documento: "98765432100" });
+    expect(camposDaCorrecao(inicial, { ...inicial, valor: "abc" })).toEqual({ erro: expect.any(String) });
   });
 });
