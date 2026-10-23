@@ -25,7 +25,9 @@ describe("Prévia financeira (§11.4.2 e 11.4.3)", () => {
     const d = await carregarPrevia(tela);
     expect(d?.previa.dados?.totais).toMatchObject({ parcial: true, a_pagar: "-12.34", pendentes: ["CT-e"] });
     expect(d?.previa.dados?.linhas[1]).toMatchObject({ base: null, imposto: null, aliquota: null });
-    expect(d?.prestadores.dados).toEqual(F.PRESTADORES);
+    // `origem` (§14.1) vem `null` quando o motor (anterior a §14) não a manda.
+    const comOrigem = (l: Record<string, unknown>[]) => l.map((x) => ({ origem: null, ...x }));
+    expect(d?.prestadores.dados).toEqual({ ...F.PRESTADORES, prestadores_mei: comOrigem(F.PRESTADORES.prestadores_mei), prestadores_normal: comOrigem(F.PRESTADORES.prestadores_normal) });
     expect(chamadas.every((u) => u.searchParams.get("competencia") === "2026-09")).toBe(true);
   });
   it("sem o módulo, nada é lido", async () => {

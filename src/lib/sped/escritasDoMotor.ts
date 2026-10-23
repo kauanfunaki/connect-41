@@ -12,7 +12,7 @@
 //   Connect e o motor conferem — o motor por último.
 
 import { z } from "zod";
-import { decimal, previaFinanceiraSchema, rejeitadoSchema, documentoDaConferenciaSchema } from "./telasDoMotor";
+import { decimal, previaFinanceiraSchema, prestadoresSchema, rejeitadoSchema, documentoDaConferenciaSchema } from "./telasDoMotor";
 
 const texto = z.string().nullish().transform((v) => v ?? "");
 const textoOuNulo = z.string().nullish().transform((v) => v ?? null);
@@ -23,16 +23,21 @@ const registroIds = z.array(z.number().int()).default([]);
 
 const MiB = 1024 * 1024;
 
-export const DESTINOS_DE_ENVIO = ["documentos", "omie", "confronto"] as const;
+export const DESTINOS_DE_ENVIO = ["documentos", "omie", "confronto", "pagamentos_apoio", "faturas_bpo"] as const;
 export type DestinoDeEnvio = (typeof DESTINOS_DE_ENVIO)[number];
 
 export type RegraDoEnvio = {
   /** A rota do motor. */
   caminho: string;
   /** O nome da parte do arquivo no multipart. */
-  parte: "arquivos" | "arquivo";
+  parte: "arquivos" | "arquivo" | "planilha";
   /** Mais de um arquivo por envio. */
   varios: boolean;
+  /**
+   * Uma segunda parte de arquivos, opcional e com várias (§14.3: os `pdfs`
+   * dos comprovantes ao lado da `planilha` do BPO).
+   */
+  extra?: { parte: "pdfs"; extensoes: readonly string[]; rotulo: string };
   /** O teto do corpo inteiro no motor (`Content-Length`), em bytes. */
   teto: number;
   /** Extensões aceitas (minúsculas, sem ponto); vazio = o motor decide e marca "ignorado". */
@@ -48,6 +53,10 @@ export const ENVIOS: Readonly<Record<DestinoDeEnvio, RegraDoEnvio>> = {
   documentos: { caminho: "/documentos", parte: "arquivos", varios: true, teto: 25 * MiB, extensoes: [], modulo: "fiscal_acervo", tela: "/fiscal/documentos", rotulo: "documentos" },
   omie: { caminho: "/conferencia/documentos", parte: "arquivo", varios: false, teto: 20 * MiB, extensoes: [], modulo: "fiscal_conferencia", tela: "/fiscal/conferencia", rotulo: "relatório do Omie" },
   confronto: { caminho: "/conferencia/confronto", parte: "arquivo", varios: false, teto: 20 * MiB, extensoes: ["xlsx"], modulo: "fiscal_conferencia", tela: "/fiscal/conferencia", rotulo: "planilha do BPO" },
+  // §14.3 — as duas importações de apoio, na tela onde os pagamentos de apoio
+  // são conferidos (PIS e COFINS › Fechamento, §14.6).
+  pagamentos_apoio: { caminho: "/pagamentos-apoio/importar", parte: "arquivos", varios: true, teto: 25 * MiB, extensoes: ["pdf"], modulo: "fiscal_contribuicoes", tela: "/fiscal/contribuicoes", rotulo: "pagamentos de apoio" },
+  faturas_bpo: { caminho: "/faturas-bpo/importar", parte: "planilha", varios: false, teto: 25 * MiB, extensoes: ["xlsx"], extra: { parte: "pdfs", extensoes: ["pdf"], rotulo: "comprovantes" }, modulo: "fiscal_contribuicoes", tela: "/fiscal/contribuicoes", rotulo: "planilha de faturas do BPO" },
 };
 
 /**
@@ -62,9 +71,9 @@ const formatarMiB = (bytes: number) => `${Math.round(bytes / MiB)} MB`;
 /** A frase da recusa por tamanho: o teto e o caminho para o que é maior. */
 export function mensagemDeTamanho(destino: DestinoDeEnvio): string {
   const r = ENVIOS[destino];
-  return destino === "documentos"
-    ? `O envio passa de ${formatarMiB(r.teto)}, o limite do Connect. Divida em lotes menores ou, para lotes grandes, use o painel do motor (até 500 MB) ou a importação por pasta.`
-    : `A ${r.rotulo} passa de ${formatarMiB(r.teto)}, o limite do motor. Reduza o arquivo ou envie pelo painel do motor.`;
+  if (destino === "documentos") return `O envio passa de ${formatarMiB(r.teto)} num corpo só. Acima disso o Connect manda em partes, até 500 MB.`;
+  if (destino === "pagamentos_apoio" || destino === "faturas_bpo") return `O envio passa de ${formatarMiB(r.teto)}, o limite do motor por envio. Divida em envios menores.`;
+  return `A ${r.rotulo} passa de ${formatarMiB(r.teto)}, o limite do motor. Reduza o arquivo ou envie pelo painel do motor.`;
 }
 
 const extensao = (nome: string) => (nome.includes(".") ? nome.split(".").pop()!.toLowerCase() : "");
@@ -76,18 +85,72 @@ export type ArquivoParaEnviar = { name: string; size: number; type?: string };
  * quantidade, extensão e tamanho (o total dos arquivos contra o teto menos a
  * folga do envelope). `null` quando está tudo certo.
  */
-export function conferirArquivos(destino: DestinoDeEnvio, arquivos: readonly ArquivoParaEnviar[]): string | null {
+export function conferirArquivos(destino: DestinoDeEnvio, arquivos: readonly ArquivoParaEnviar[], extras: readonly ArquivoParaEnviar[] = []): string | null {
   const r = ENVIOS[destino];
-  if (arquivos.length === 0) return r.varios ? "Escolha ao menos um arquivo." : "Escolha o arquivo.";
-  if (!r.varios && arquivos.length > 1) return "Envie um arquivo por vez.";
-  if (arquivos.some((a) => a.size === 0)) return `O arquivo ${arquivos.find((a) => a.size === 0)!.name} está vazio.`;
+  if (arquivos.length === 0) return r.varios ? "Escolha ao menos um arquivo." : r.parte === "planilha" ? "Escolha a planilha." : "Escolha o arquivo.";
+  if (!r.varios && arquivos.length > 1) return r.parte === "planilha" ? "Envie uma planilha por vez." : "Envie um arquivo por vez.";
+  if (extras.length && !r.extra) return "Este envio não aceita arquivos a mais.";
+  const todos = [...arquivos, ...extras];
+  if (todos.some((a) => a.size === 0)) return `O arquivo ${todos.find((a) => a.size === 0)!.name} está vazio.`;
   if (r.extensoes.length) {
     const fora = arquivos.find((a) => !r.extensoes.includes(extensao(a.name)));
-    if (fora) return destino === "confronto" ? `A planilha do BPO tem de ser .xlsx; ${fora.name} não é.` : `Formato não aceito: ${fora.name}.`;
+    if (fora) {
+      if (destino === "confronto" || destino === "faturas_bpo") return `A ${r.rotulo} tem de ser .xlsx; ${fora.name} não é.`;
+      if (destino === "pagamentos_apoio") return `Os pagamentos de apoio vão em PDF; ${fora.name} não é.`;
+      return `Formato não aceito: ${fora.name}.`;
+    }
   }
-  const total = arquivos.reduce((s, a) => s + a.size, 0);
+  if (r.extra) {
+    const fora = extras.find((a) => !r.extra!.extensoes.includes(extensao(a.name)));
+    if (fora) return `Os ${r.extra.rotulo} vão em PDF; ${fora.name} não é.`;
+  }
+  const total = todos.reduce((s, a) => s + a.size, 0);
   if (total > r.teto - FOLGA_DO_ENVELOPE) return mensagemDeTamanho(destino);
   return null;
+}
+
+// ─── Campos de formulário dos envios (§13.10, §13.11, §14.3) ────────────────
+
+/** Os tipos de `POST /pagamentos-apoio/importar` (o `--tipo` da ferramenta, fixture `erro_pagamentos_apoio_tipo`). */
+export const TIPOS_DE_PAGAMENTO_APOIO = ["rpa", "recibo", "contrato_motorista", "contrato_locacao", "fatura"] as const;
+export type TipoDePagamentoApoio = (typeof TIPOS_DE_PAGAMENTO_APOIO)[number];
+export const ROTULO_DO_TIPO_DE_APOIO: Record<TipoDePagamentoApoio, string> = {
+  rpa: "RPA", recibo: "Recibo", contrato_motorista: "Contrato de motorista", contrato_locacao: "Contrato de locação", fatura: "Fatura",
+};
+
+/** A subpasta "virtual" do lote (§14.3): até 200, sem `..` nem barra no começo. */
+export function pastaValida(pasta: string): boolean {
+  return pasta.length <= 200 && !pasta.split(/[\\/]/).includes("..") && !/^[\\/]/.test(pasta);
+}
+
+/**
+ * Os campos de formulário que cada envio aceita, na ordem do multipart, já
+ * validados. Campo ausente ou vazio não vai (o motor usa o padrão); os
+ * booleanos só vão quando `"true"`, porque o padrão é `"false"`. Uma função só,
+ * usada pela tela e pela rota do Connect.
+ */
+export function camposDoEnvio(destino: DestinoDeEnvio, ler: (campo: string) => string | null | undefined): { campos: Record<string, string> } | { erro: string; campo: string } {
+  const v = (k: string) => (ler(k) ?? "").trim();
+  const sim = (k: string) => v(k) === "true" || v(k) === "1";
+  switch (destino) {
+    case "documentos":
+      return { campos: {} };
+    case "omie":
+    case "confronto": {
+      const competencia = v("competencia");
+      if (competencia && !COMPETENCIA.test(competencia)) return { erro: "Competência inválida (AAAA-MM).", campo: "competencia" };
+      return { campos: competencia ? { competencia } : {} };
+    }
+    case "pagamentos_apoio": {
+      const tipo = v("tipo");
+      if (!(TIPOS_DE_PAGAMENTO_APOIO as readonly string[]).includes(tipo)) return { erro: "Escolha o tipo dos documentos.", campo: "tipo" };
+      const pasta = v("pasta");
+      if (!pastaValida(pasta)) return { erro: "Pasta inválida: até 200 caracteres, sem “..” nem barra no começo.", campo: "pasta" };
+      return { campos: { tipo, ...(pasta ? { pasta } : {}), ...(sim("ocr") ? { ocr: "true" } : {}) } };
+    }
+    case "faturas_bpo":
+      return { campos: sim("substituir") ? { substituir: "true" } : {} };
+  }
 }
 
 /** O que entra na derivação da chave de um envio: o pedido, não os bytes do multipart. */
@@ -243,6 +306,97 @@ export type ConfrontoEnviado = z.infer<typeof confrontoEnviadoSchema>;
 /** §13.2 — o item de §11.1.3. */
 export const rejeitadoResolvidoSchema = rejeitadoSchema;
 
+// ─── Respostas de §14 ────────────────────────────────────────────────────────
+
+export const REGIMES = ["mei", "normal"] as const;
+export type Regime = (typeof REGIMES)[number];
+export const ORIGENS_DO_REGIME = ["cliente", "cadastro", "nome"] as const;
+export type OrigemDoRegime = (typeof ORIGENS_DO_REGIME)[number];
+const regimeOuNulo = z.enum(REGIMES).nullish().transform((v) => v ?? null);
+
+/** §14.1 — o prestador depois da escrita, com as três camadas. */
+export const prestadorComRegimeSchema = z.looseObject({
+  cnpj: z.string(),
+  nome: texto,
+  regime: z.enum(REGIMES),
+  origem: z.enum(ORIGENS_DO_REGIME),
+  regime_cliente: regimeOuNulo,
+  regime_cadastro: regimeOuNulo,
+  regime_pelo_nome: regimeOuNulo,
+  definido_por: textoOuNulo,
+  atualizado_em: textoOuNulo,
+});
+export type PrestadorComRegime = z.infer<typeof prestadorComRegimeSchema>;
+/** `prestadores` só vem quando o corpo trouxe `competencia`: é o corpo de `GET /conferencia/prestadores`. */
+export const regimeGravadoSchema = z.looseObject({
+  prestador: prestadorComRegimeSchema,
+  prestadores: prestadoresSchema.optional().transform((v) => v ?? null),
+});
+export type RegimeGravado = z.infer<typeof regimeGravadoSchema>;
+
+const porChave = <T extends z.ZodTypeAny>(valor: T) => z.record(z.string(), valor).default({});
+
+/** §14.3 — `POST /pagamentos-apoio/importar`. */
+export const pagamentosApoioImportadosSchema = z.looseObject({
+  tipo: z.string(),
+  pasta: texto,
+  linhas: contagem,
+  gravadas: contagem,
+  situacoes: porChave(contagem),
+  por_competencia: porChave(contagem),
+  soma_ok: z.looseObject({ bruto: decimal, liquido: decimal }),
+  paginas_sem_texto: contagem,
+  ocr: z.looseObject({ lidas: contagem, falhou: contagem }),
+  recusadas: z.array(z.looseObject({ arquivo: texto, tipo_no_banco: texto, linhas: contagem })).default([]),
+  arquivos: z.array(z.looseObject({ arquivo: texto, caminho: texto, linhas: contagem })).default([]),
+});
+export type PagamentosApoioImportados = z.infer<typeof pagamentosApoioImportadosSchema>;
+
+/** §14.3 — `POST /faturas-bpo/importar`. */
+export const faturasBpoImportadasSchema = z.looseObject({
+  planilha: z.string(),
+  pagamentos: contagem,
+  situacoes: porChave(contagem),
+  soma_ok: decimal,
+  com_comprovante: contagem,
+  por_competencia: porChave(decimal),
+  removidas: contagem,
+  gravadas: contagem,
+});
+export type FaturasBpoImportadas = z.infer<typeof faturasBpoImportadasSchema>;
+
+/** §14.4 — o id opaco de uma sessão de upload. */
+export const ID_DO_UPLOAD = /^[0-9a-f]{32}$/;
+/** §14.4 — o objeto `Upload`. */
+export const uploadSchema = z.looseObject({
+  id: z.string().regex(ID_DO_UPLOAD),
+  nome: z.string(),
+  tamanho: contagem,
+  tamanho_parte: z.number().int().positive(),
+  partes_esperadas: z.number().int().positive(),
+  partes_recebidas: z.array(z.number().int()).default([]),
+  recebido: contagem,
+  estado: z.enum(["aberta", "concluindo", "concluida"]),
+  criado_por: texto,
+  criado_em: textoOuNulo,
+  expira_em: textoOuNulo,
+  importacao_id: z.number().int().nullish().transform((v) => v ?? null),
+});
+export type UploadDoMotor = z.infer<typeof uploadSchema>;
+/** §14.4 — resposta do `PUT /uploads/{id}/partes/{n}`. */
+export const parteRecebidaSchema = z.looseObject({
+  numero: z.number().int(),
+  tamanho: contagem,
+  sha256: z.string(),
+  recebido: contagem,
+  partes_recebidas: z.array(z.number().int()).default([]),
+  partes_esperadas: z.number().int(),
+});
+export type ParteRecebida = z.infer<typeof parteRecebidaSchema>;
+/** §14.4 — a conclusão: o relatório de §13.3 mais `upload_id`. */
+export const uploadConcluidoSchema = envioDeDocumentosSchema.extend({ upload_id: z.string() });
+export type UploadConcluido = z.infer<typeof uploadConcluidoSchema>;
+
 // ─── Corpos ──────────────────────────────────────────────────────────────────
 
 export type ChaveDoPagamento = { caminho: string; pagina: number; ordem: number };
@@ -358,4 +512,50 @@ export function pendenciasDaPrevia(previa: { cte: unknown; combustivel: unknown;
     simulacoes: sims.map(registro).filter((x): x is Record<string, unknown> => !!x && typeof x.linha === "string")
       .map((x) => ({ linha: x.linha as string, valor: typeof x.valor === "string" ? x.valor : null, observacao: typeof x.observacao === "string" ? x.observacao : "" })),
   };
+}
+
+// ─── Prestador na tela (§14.1) ───────────────────────────────────────────────
+
+export type RegimeNaTela = {
+  /** O selo da camada que decidiu; `null` quando o motor não mandou `origem` (anterior a §14). */
+  origem: { rotulo: string; variante: "info" | "neutral" | "warning"; dica: string } | null;
+  /** O regime que vale agora, como a tela escreve. */
+  rotulo: string;
+  /** As correções que a linha oferece: trocar para o outro regime e, só quando a correção é do cliente, apagá-la. */
+  acoes: { regime: Regime | null; rotulo: string }[];
+};
+
+const ORIGEM_NA_TELA: Record<OrigemDoRegime, NonNullable<RegimeNaTela["origem"]>> = {
+  cliente: { rotulo: "Corrigido neste cliente", variante: "info", dica: "A correção vale só para este cliente e vence o cadastro global." },
+  cadastro: { rotulo: "Cadastro global", variante: "neutral", dica: "O fato da Receita, gravado no painel do motor: vale para todos os clientes." },
+  nome: { rotulo: "Pelo nome", variante: "warning", dica: "Palpite pelo nome do prestador: nem o cliente nem o cadastro têm este CNPJ." },
+};
+
+/**
+ * Os dados da coluna de regime de um prestador (§14.1): o selo da origem e os
+ * botões. Corrigir para o regime que já vale não muda nada, então a linha só
+ * oferece o outro; "voltar ao cadastro" (`regime: null`) só faz sentido quando
+ * quem decidiu foi a correção do cliente.
+ */
+export function regimeNaTela(p: { regime: string; origem: OrigemDoRegime | null }): RegimeNaTela {
+  const atual: Regime | null = p.regime === "mei" || p.regime === "normal" ? p.regime : null;
+  const acoes: RegimeNaTela["acoes"] = [];
+  if (atual !== "mei") acoes.push({ regime: "mei", rotulo: "É MEI" });
+  if (atual !== "normal") acoes.push({ regime: "normal", rotulo: "É normal" });
+  if (p.origem === "cliente") acoes.push({ regime: null, rotulo: "Desfazer correção" });
+  return { origem: p.origem ? ORIGEM_NA_TELA[p.origem] : null, rotulo: atual === "mei" ? "MEI" : atual === "normal" ? "Normal" : p.regime || "—", acoes };
+}
+
+// ─── Relatório de vários envios (§14.4: uma sessão por arquivo) ─────────────
+
+/** Junta os relatórios de ingestão de vários envios num só, para a tela mostrar o lote inteiro. */
+export function somarEnvios(envios: readonly EnvioDeDocumentos[]): EnvioDeDocumentos | null {
+  if (envios.length === 0) return null;
+  const chaves = ["lidos", "cancelamentos", "novos", "duplicados", "erros", "ignorados"] as const;
+  const resumo = { ...envios[0].resumo, por_tipo: { ...envios[0].resumo.por_tipo } };
+  for (const e of envios.slice(1)) {
+    for (const k of chaves) resumo[k] += e.resumo[k];
+    for (const [t, n] of Object.entries(e.resumo.por_tipo)) resumo.por_tipo[t] = (resumo.por_tipo[t] ?? 0) + n;
+  }
+  return { ...envios[envios.length - 1], resumo, relatorio: envios.flatMap((e) => e.relatorio) };
 }

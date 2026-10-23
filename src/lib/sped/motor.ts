@@ -146,6 +146,17 @@ const PADRAO: Record<string, string> = {
   cobertura_em_andamento: "Esta competência já está sendo apurada. Acompanhe o pedido na fila.",
   pagamento_nao_aceitavel: "O motor não aceitou este pagamento: falta informação para o aceite.",
   arquivo_invalido: "O motor SPED não conseguiu ler o arquivo enviado.",
+  // §14.0.7
+  reprocessamento_em_andamento: "Já há um reprocessamento da quarentena aberto nesta raiz. Acompanhe o pedido na fila.",
+  importacao_existente: "Esta planilha já tem faturas no motor. Para trocá-las, envie de novo marcando “substituir”.",
+  uploads_em_aberto: "Já há 4 envios em partes abertos nesta raiz. Conclua ou cancele um deles antes de começar outro.",
+  upload_encerrado: "Este envio em partes já foi concluído.",
+  upload_em_andamento: "A conclusão deste envio ainda está rodando no motor. Aguarde alguns segundos.",
+  ocr_indisponivel: "O motor SPED não tem leitura por OCR. Envie sem OCR (os PDF sem texto ficam como inválidos) ou importe pelo painel.",
+  parte_invalida: "Uma parte do envio chegou com o tamanho errado. Tente de novo.",
+  parte_corrompida: "Uma parte do envio chegou corrompida ao motor. Tente de novo.",
+  upload_incompleto: "Faltam partes do envio no motor.",
+  sha256_divergente: "O arquivo montado no motor não confere com o do seu computador. As partes serão reenviadas.",
 };
 
 /** O `Retry-After` em segundos, quando é um número (o motor não manda data). */
@@ -397,6 +408,12 @@ type Pedido = {
    * de ler. `teto` é o limite do corpo inteiro na rota do motor.
    */
   multipart?: { form: FormData; teto: number; mensagemDeTamanho: string };
+  /**
+   * Corpo cru (§14.4, a parte de um upload): `application/octet-stream` com o
+   * `Content-Length` declarado. Um stream não se relê: uma tentativa só, e
+   * quem chama repete a parte (o PUT é idempotente).
+   */
+  cru?: { corpo: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer>; tamanho: number; sha256?: string };
 };
 
 const RETRY_LEITURA = new Set([502, 503, 504]);
@@ -432,7 +449,7 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
       } else if (pedido.exigeChave) {
         throw new ErroDoMotor(0, "idempotencia_ausente", MENSAGENS.idempotencia_ausente);
       }
-      if (pedido.corpo !== undefined && !pedido.multipart) headers["Content-Type"] = "application/json";
+      if (pedido.corpo !== undefined && !pedido.multipart && !pedido.cru) headers["Content-Type"] = "application/json";
     } else {
       headers.Authorization = `Bearer ${creds.token}`;
     }
@@ -445,8 +462,14 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
     const timeout = pedido.timeoutMs ?? (pesada ? TIMEOUT_PESADA_MS : escrita ? TIMEOUT_ESCRITA_MS : TIMEOUT_LEITURA_MS);
     // Leitura leve: uma nova tentativa. Pesada: nenhuma. Escrita leve: até
     // duas, e só com a mesma chave — sem chave, repetir um POST poderia criar duas vezes.
-    const maxTentativas = pesada ? 1 : escrita ? (pedido.escrita?.chave ? 3 : 1) : 2;
-    let corpo: string | Uint8Array<ArrayBuffer> | undefined = pedido.corpo === undefined ? undefined : JSON.stringify(pedido.corpo);
+    const maxTentativas = pesada || pedido.cru ? 1 : escrita ? (pedido.escrita?.chave ? 3 : 1) : 2;
+    let corpo: string | Uint8Array<ArrayBuffer> | ReadableStream<Uint8Array> | undefined = pedido.corpo === undefined ? undefined : JSON.stringify(pedido.corpo);
+    if (pedido.cru) {
+      headers["Content-Type"] = "application/octet-stream";
+      headers["Content-Length"] = String(pedido.cru.tamanho);
+      if (pedido.cru.sha256) headers["X-Parte-SHA256"] = pedido.cru.sha256;
+      corpo = pedido.cru.corpo;
+    }
     if (pedido.multipart) {
       // O multipart como o `fetch` o montaria, mas em bytes: assim o
       // `Content-Length` vai declarado e o teto é conferido antes de sair.
@@ -468,7 +491,9 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
           body: corpo,
           cache: "no-store",
           signal: AbortSignal.timeout(timeout),
-        });
+          // Corpo em stream (a parte do upload): o `fetch` do Node exige `duplex`.
+          ...(corpo instanceof ReadableStream ? { duplex: "half" } : {}),
+        } as RequestInit);
       } catch (err) {
         const nome = err instanceof Error ? err.name : "";
         const codigo = nome === "TimeoutError" || nome === "AbortError" ? "tempo_esgotado" : "falha_de_rede";
@@ -586,13 +611,27 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
       ler("/conferencia/documentos", raiz, T.documentosDaConferenciaSchema, { ...filtro, competencia: competenciaValida(filtro.competencia) }),
   };
 
-  /** Um envio de arquivo (§13.3, §13.10, §13.11): o multipart com os arquivos como vieram, sem converter. */
-  const enviar = <S extends z.ZodTypeAny>(destino: E.DestinoDeEnvio, raiz: string, arquivos: readonly File[], campos: Record<string, string>, escrita: Escrita, schema: S) => {
+  /**
+   * Um envio de arquivo (§13.3, §13.10, §13.11, §14.3): o multipart com os
+   * campos primeiro e os arquivos como vieram, sem converter; `extras` vão na
+   * segunda parte da regra (os `pdfs` das faturas do BPO).
+   */
+  const enviar = <S extends z.ZodTypeAny>(destino: E.DestinoDeEnvio, raiz: string, arquivos: readonly File[], campos: Record<string, string>, escrita: Escrita, schema: S, extras: readonly File[] = []) => {
     const regra = E.ENVIOS[destino];
     const form = new FormData();
     for (const [k, v] of Object.entries(campos)) if (v !== "") form.append(k, v);
     for (const a of arquivos) form.append(regra.parte, a, a.name);
+    if (extras.length && !regra.extra) throw new ErroDoMotor(0, "arquivo_invalido", "Este envio não aceita arquivos a mais.");
+    for (const a of extras) form.append(regra.extra!.parte, a, a.name);
     return json({ metodo: "POST", caminho: regra.caminho, raiz, escrita, exigeChave: true, custo: "pesada", multipart: { form, teto: regra.teto, mensagemDeTamanho: E.mensagemDeTamanho(destino) } }, schema);
+  };
+  const idDoUpload = (id: string) => {
+    if (!E.ID_DO_UPLOAD.test(id)) throw new ErroDoMotor(0, "nao_encontrado", MENSAGENS.nao_encontrado);
+    return id;
+  };
+  /** Escrita sem corpo na resposta (204). */
+  const semCorpo = async (pedido: Pedido): Promise<void> => {
+    await chamar(pedido);
   };
   const competenciaOpcional = (c: string | undefined): Record<string, string> => (c ? { competencia: competenciaValida(c) } : {});
 
@@ -635,9 +674,49 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
       enviar("confronto", raiz, [arquivo], competenciaOpcional(competencia), escrita, E.confrontoEnviadoSchema),
   };
 
+  /** As escritas de §14 (lacunas fechadas). */
+  const lacunas = {
+    // §14.1 — leve. `regime: null` apaga a correção do cliente; `competencia`, quando vem, traz a lista de volta.
+    definirRegimeDoPrestador: async (raiz: string, corpo: { cnpj: string; regime: E.Regime | null; nome?: string; competencia?: string }, escrita: Escrita) => {
+      if (!/^\d{14}$/.test(corpo.cnpj)) throw new ErroDoMotor(0, "parametro_invalido", "CNPJ do prestador inválido.");
+      return json({ metodo: "PUT", caminho: "/conferencia/prestadores/regime", raiz, corpo: { cnpj: corpo.cnpj, regime: corpo.regime, ...(corpo.nome ? { nome: corpo.nome } : {}), ...competenciaOpcional(corpo.competencia) }, escrita }, E.regimeGravadoSchema);
+    },
+    // §14.2 — fila: vira a ação `quarentena`, 202 com a `Execucao`.
+    reprocessarQuarentena: async (raiz: string, corpo: { classe: string }, escrita: Escrita) => {
+      if (!/^[a-z_]{1,30}$/.test(corpo.classe)) throw new ErroDoMotor(0, "parametro_invalido", "Classe da quarentena inválida.");
+      return json({ metodo: "POST", caminho: "/quarentena/reprocessar", raiz, corpo: { classe: corpo.classe }, escrita, exigeChave: true }, execucaoMotorSchema);
+    },
+    // §14.3 — pesadas, multipart até 25 MiB.
+    importarPagamentosApoio: async (raiz: string, arquivos: readonly File[], campos: { tipo: E.TipoDePagamentoApoio; pasta?: string; ocr?: boolean }, escrita: Escrita) =>
+      enviar("pagamentos_apoio", raiz, arquivos, { tipo: campos.tipo, ...(campos.pasta ? { pasta: campos.pasta } : {}), ...(campos.ocr ? { ocr: "true" } : {}) }, escrita, E.pagamentosApoioImportadosSchema),
+    importarFaturasBpo: async (raiz: string, planilha: File, pdfs: readonly File[], campos: { substituir?: boolean }, escrita: Escrita) =>
+      enviar("faturas_bpo", raiz, [planilha], campos.substituir ? { substituir: "true" } : {}, escrita, E.faturasBpoImportadasSchema, pdfs),
+    // §14.4 — sessões de upload.
+    criarUpload: (raiz: string, corpo: { nome: string; tamanho: number }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/uploads", raiz, corpo, escrita, exigeChave: true }, E.uploadSchema),
+    obterUpload: async (raiz: string, id: string) => json({ metodo: "GET", caminho: `/uploads/${idDoUpload(id)}`, raiz }, E.uploadSchema),
+    /**
+     * Uma parte, com o corpo **em stream** (do navegador ao motor sem ficar
+     * inteiro na memória do Connect). Sem `Idempotency-Key`: o motor a ignora
+     * nas partes (§14.0.3). Uma tentativa só: quem chama repete a parte.
+     */
+    enviarParteDoUpload: async (raiz: string, id: string, numero: number, corpo: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer>, info: { tamanho: number; sha256?: string }, escrita: Escrita) => {
+      if (!Number.isSafeInteger(numero) || numero < 1) throw new ErroDoMotor(0, "parte_invalida", "Número de parte inválido.");
+      return json({ metodo: "PUT", caminho: `/uploads/${idDoUpload(id)}/partes/${numero}`, raiz, escrita, timeoutMs: TIMEOUT_PESADA_MS, cru: { corpo, tamanho: info.tamanho, sha256: info.sha256 } }, E.parteRecebidaSchema);
+    },
+    /** Pesada; idempotente por conta própria (a mesma `sha256` devolve o mesmo relatório), por isso sem chave. */
+    concluirUpload: async (raiz: string, id: string, sha256: string, escrita: Escrita) => {
+      if (!/^[0-9a-f]{64}$/.test(sha256)) throw new ErroDoMotor(0, "parametro_invalido", "SHA-256 do arquivo inválido.");
+      return json({ metodo: "POST", caminho: `/uploads/${idDoUpload(id)}/concluir`, raiz, corpo: { sha256 }, escrita, custo: "pesada" }, E.uploadConcluidoSchema);
+    },
+    apagarUpload: async (raiz: string, id: string, escrita: Escrita) =>
+      semCorpo({ metodo: "DELETE", caminho: `/uploads/${idDoUpload(id)}`, raiz, escrita }),
+  };
+
   return {
     ...telas,
     ...escritas,
+    ...lacunas,
     // §3
     saude: (raiz: string) => json({ metodo: "GET", caminho: "/saude", raiz }, saudeSchema),
     listarEmpresas: (raiz: string, incluirInativas = true) =>
