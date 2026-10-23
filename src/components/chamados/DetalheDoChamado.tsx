@@ -11,7 +11,7 @@ import { formatInstantDateTime } from "@/lib/format";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { Campo, CamposDoChamado, type CategoriaDaTela } from "./CamposDoChamado";
+import { Campo, CamposDoChamado, nomeDaCategoria, type CategoriaDaTela } from "./CamposDoChamado";
 import { mudar, responder } from "@/app/(app)/chamados/actions";
 import { FORMATOS } from "@/lib/chamados/formatos";
 import { STATUS, ROTULOS, ROTULOS_PRIORIDADE, fechado, parecerSchema, type DadosDoChamado } from "@/lib/chamados/regras";
@@ -42,7 +42,7 @@ export function DetalheDoChamado({ chamado: t, usuarios, categorias, setores, pe
   }
   const acao = (op: string, valor: unknown) => void executar(() => mudar(t.id, t.version, op, valor));
   return <div className="space-y-4">
-    <div className="flex flex-wrap items-center gap-2 text-ui"><span className="rounded bg-brand/8 px-3 py-1 text-brand">{ROTULOS[t.status]}</span><span className="text-fg-secondary">{ROTULOS_PRIORIDADE[t.priority]} · {t.category.name} · {setores.find(s => s.code === t.requesterSectorCode)?.label ?? t.requesterSectorCode}</span><Button variant="ghost" size="sm" onClick={() => router.refresh()}>Atualizar</Button></div>
+    <div className="flex flex-wrap items-center gap-2 text-ui"><span className="rounded bg-brand/8 px-3 py-1 text-brand">{ROTULOS[t.status]}</span><span className="rounded bg-surface-hover px-3 py-1 text-fg" aria-label="Grupo e categoria">{nomeDaCategoria(categorias, t.categoryId) || t.category.name}</span><span className="text-fg-secondary">{ROTULOS_PRIORIDADE[t.priority]} · {setores.find(s => s.code === t.requesterSectorCode)?.label ?? t.requesterSectorCode}</span><Button variant="ghost" size="sm" onClick={() => router.refresh()}>Atualizar</Button></div>
     {erro && <p role="alert" className="rounded-md bg-danger/8 p-3 text-ui text-danger">{erro}</p>}{busy && <p role="status" className="text-ui text-fg-secondary">Salvando alteração…</p>}
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]">
       <div className="min-w-0 space-y-5">

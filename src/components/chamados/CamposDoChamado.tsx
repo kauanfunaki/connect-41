@@ -6,12 +6,11 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { PRIORIDADES, ROTULOS_PRIORIDADE, type Categoria, type DadosDoChamado } from "@/lib/chamados/regras";
+import { caminhoDaCategoria } from "@/lib/chamados/catalogo";
 
 export type CategoriaDaTela = Categoria & { id: string };
 export function nomeDaCategoria(categorias: CategoriaDaTela[], id: string): string {
-  const partes: string[] = [], vistos = new Set<string>(); let atual = categorias.find(c => c.id === id);
-  while (atual && !vistos.has(atual.id)) { vistos.add(atual.id); partes.unshift(atual.name); atual = categorias.find(c => c.id === atual!.parentId); }
-  return partes.join(" / ");
+  return caminhoDaCategoria(categorias, id);
 }
 export function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="flex min-w-0 flex-col gap-1.5 text-ui text-fg-secondary"><span className="font-semibold">{label}</span>{children}</label>;

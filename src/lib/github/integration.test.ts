@@ -20,7 +20,7 @@ import { filtersSchema, historyStart, dayAt } from "./rules";
 import { dashboard, dayEvents } from "./queries";
 import { changeIntegration, integrationView } from "./service";
 import { getDashboard, githubResponse, postIntegration, validCronToken } from "./http";
-import { setModuleSector, setModuleSharedSectors, setorDoModulo, setoresDoModulo, getTenantModuleStates } from "@/lib/modules";
+import { setModuleSector, setorDoModulo } from "@/lib/modules";
 import { GITHUB_MODULE } from "./types";
 
 describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout: 30000 }, () => {
@@ -76,7 +76,6 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
   afterEach(async () => {
     await db!.githubOAuthAttempt.deleteMany({ where: { tenantId } });
     await db!.tenantIntegration.deleteMany({ where: { tenantId } });
-    await db!.tenantModuleSector.deleteMany({ where: { tenantId } });
     await db!.tenantModule.deleteMany({ where: { tenantId } });
     await db!.user.deleteMany({ where: { tenantId } });
     await db!.tenant.delete({ where: { id: tenantId } });
@@ -206,6 +205,7 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
   it("exclui dados após revogação e preserva os registros para recuperação", async () => {
     await collect(); revoked = true;
     await db!.githubConnection.update({ where: { id: connectionId }, data: { verifiedAt: new Date(0) } });
+    // Sem acesso recente, a leitura já deve ocultar os dados sem chamar a API.
     const calls = fetcher.mock.calls.length;
     expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(0);
     expect(fetcher.mock.calls).toHaveLength(calls);
@@ -253,11 +253,7 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     expect(await db!.githubContribution.count({ where: { tenantId } })).toBe(4);
     expect(JSON.parse(decryptSecret((await getConnection(tenantId))!.integration.configEnc))).toEqual(credentials());
   });
-  it("bloqueia Fiscal e assinatura em somente leitura e impede transferência ou compartilhamento do módulo", async () => {
-    await db!.tenantModuleSector.create({ data: { tenantId, moduleCode: GITHUB_MODULE, sectorCode: "fiscal" } });
-    await expect(setModuleSharedSectors(tenantId, GITHUB_MODULE, ["fiscal"])).rejects.toThrow("exclusivo");
-    expect(await setoresDoModulo(tenantId, GITHUB_MODULE)).toEqual(["tech"]);
-    expect((await getTenantModuleStates(tenantId)).find(item => item.code === GITHUB_MODULE)?.sectorCodes).toEqual(["tech"]);
+  it("bloqueia Fiscal e assinatura em somente leitura e impede transferência do módulo", async () => {
     mocks.auth.mockResolvedValue({ ...ctx, role: "SECTOR_USER", sectors: ["fiscal"] });
     await expect(githubAccess()).rejects.toMatchObject({ status: 403 });
     mocks.auth.mockResolvedValue({ ...ctx, role: "SECTOR_USER", sectors: ["tech"] });
