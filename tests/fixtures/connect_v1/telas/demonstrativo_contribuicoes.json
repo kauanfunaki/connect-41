@@ -1,0 +1,861 @@
+{
+  "status": 200,
+  "corpo": {
+    "ano": "2032",
+    "competencia": "2032-03",
+    "filial": "todas",
+    "relatorio": "entradas",
+    "ordenar": "cst",
+    "estabelecimentos": {},
+    "meses": [
+      {
+        "competencia": "2032-03",
+        "arquivo": {
+          "arquivo_id": 59,
+          "qtd_linhas": 12
+        },
+        "tipo_escrit": "0",
+        "entradas_valor": "0.00",
+        "entradas_pis": "0.00",
+        "entradas_cofins": "0.00",
+        "saidas_valor": "0.00",
+        "saidas_pis": "0.00",
+        "saidas_cofins": "0.00",
+        "m": {
+          "pis": {
+            "credito_apurado": "16.50",
+            "aj_credito_acres": "89842.29",
+            "aj_credito_reduc": "0.00",
+            "credito_disponivel": "89858.79",
+            "credito_descontado": "89858.79",
+            "credito_desc_anterior": "0.00",
+            "saldo_credito": "0.00",
+            "contribuicao_apurada": "0.00",
+            "aj_contrib_acres": "0.00",
+            "aj_contrib_reduc": "0.00",
+            "contribuicao_periodo": "0.00",
+            "devido": "0.00",
+            "receita_bruta": "0.00",
+            "base_contribuicao": "0.00",
+            "retido_fonte": "0.00",
+            "outras_deducoes": "0.00",
+            "a_recolher": "0.00",
+            "total_a_recolher": "0.00",
+            "diferido": "0.00",
+            "diferido_anterior": "0.00",
+            "por_cod_cont": {},
+            "estorno_devolucao": "0.00",
+            "credito_periodo_seguinte": "0.00",
+            "credito_periodo_anterior": "0.00",
+            "ajustes": [
+              {
+                "registro": "M110",
+                "onde": "crédito",
+                "sentido": "acréscimo",
+                "valor": "59818.73",
+                "cod_aj": "05",
+                "num_doc": "",
+                "descricao": "CONTRATOS MOTORISTA 03-2032"
+              },
+              {
+                "registro": "M110",
+                "onde": "crédito",
+                "sentido": "acréscimo",
+                "valor": "122.27",
+                "cod_aj": "05",
+                "num_doc": "",
+                "descricao": "RECIBOS MOTORISTA 03-2032"
+              },
+              {
+                "registro": "M110",
+                "onde": "crédito",
+                "sentido": "acréscimo",
+                "valor": "29901.29",
+                "cod_aj": "05",
+                "num_doc": "",
+                "descricao": "RPA 03-2032"
+              }
+            ]
+          },
+          "cofins": {
+            "credito_apurado": "76.00",
+            "aj_credito_acres": "413819.02",
+            "aj_credito_reduc": "0.00",
+            "credito_disponivel": "413895.02",
+            "credito_descontado": "413895.02",
+            "credito_desc_anterior": "0.00",
+            "saldo_credito": "0.00",
+            "contribuicao_apurada": "0.00",
+            "aj_contrib_acres": "0.00",
+            "aj_contrib_reduc": "0.00",
+            "contribuicao_periodo": "0.00",
+            "devido": "0.00",
+            "receita_bruta": "0.00",
+            "base_contribuicao": "0.00",
+            "retido_fonte": "0.00",
+            "outras_deducoes": "0.00",
+            "a_recolher": "0.00",
+            "total_a_recolher": "0.00",
+            "diferido": "0.00",
+            "diferido_anterior": "0.00",
+            "por_cod_cont": {},
+            "estorno_devolucao": "0.00",
+            "credito_periodo_seguinte": "0.00",
+            "credito_periodo_anterior": "0.00",
+            "ajustes": [
+              {
+                "registro": "M510",
+                "onde": "crédito",
+                "sentido": "acréscimo",
+                "valor": "275528.69",
+                "cod_aj": "05",
+                "num_doc": "",
+                "descricao": "CONTRATOS MOTORISTA 03-2032"
+              },
+              {
+                "registro": "M510",
+                "onde": "crédito",
+                "sentido": "acréscimo",
+                "valor": "563.18",
+                "cod_aj": "05",
+                "num_doc": "",
+                "descricao": "RECIBOS MOTORISTA 03-2032"
+              },
+              {
+                "registro": "M510",
+                "onde": "crédito",
+                "sentido": "acréscimo",
+                "valor": "137727.15",
+                "cod_aj": "05",
+                "num_doc": "",
+                "descricao": "RPA 03-2032"
+              }
+            ]
+          }
+        },
+        "transportado": []
+      }
+    ],
+    "linhas": [],
+    "total": {
+      "cst": "TOTAL",
+      "cfop": "",
+      "nat_bc_cred": "",
+      "origem": "",
+      "aliq_pis": "0.0000",
+      "aliq_cofins": "0.0000",
+      "qtd": 0,
+      "valor": "0.00",
+      "base_pis": "0.00",
+      "valor_pis": "0.00",
+      "base_cofins": "0.00",
+      "valor_cofins": "0.00",
+      "com_credito": true
+    },
+    "cadeia": [
+      {
+        "competencia": "2032-03",
+        "imposto": "pis",
+        "entrou": "0.00",
+        "apurado": "16.50",
+        "descontado": "89858.79",
+        "saiu": "0.00",
+        "esperado_da_anterior": null,
+        "bate": true
+      },
+      {
+        "competencia": "2032-03",
+        "imposto": "cofins",
+        "entrou": "0.00",
+        "apurado": "76.00",
+        "descontado": "413895.02",
+        "saiu": "0.00",
+        "esperado_da_anterior": null,
+        "bate": true
+      }
+    ],
+    "apuracao": {
+      "pis": [
+        {
+          "rotulo": "01. Contribuição Não Cumulativa apurada a alíquota básica",
+          "chave": "cod:01",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "02. Contribuição Não Cumulativa apurada a alíquotas diferenciadas",
+          "chave": "cod:02",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "03. Contribuição Não Cumulativa apurada a alíquota por unidade de medida do produto",
+          "chave": "cod:03",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "04. Contribuição Não Cumulativa apurada a alíquota básica - Atividade Imobiliária",
+          "chave": "cod:04",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Estorno de créditos - Devolução Custo Incorrido",
+          "chave": "estorno_devolucao",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "71. Contribuição apurada de SCP – Incidência não cumulativa",
+          "chave": "cod:71",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor Total da Contribuição Não Cumulativa Apurada no Período",
+          "chave": "contribuicao_periodo",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Crédito de Períodos Anteriores Disponível no Início do Período",
+          "chave": "credito_periodo_anterior",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor do Crédito Descontado, Apurado em Período de Apuração Anterior",
+          "chave": "credito_desc_anterior",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor do Crédito Descontado, Apurado no Período de Apuração Atual",
+          "chave": "credito_descontado",
+          "total": false,
+          "valores": {
+            "2032-03": "89858.79"
+          },
+          "soma_ano": "89858.79"
+        },
+        {
+          "rotulo": "Valor Total da Contribuição Não Cumulativa Devida",
+          "chave": "devido",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor Total da Contribuição Não Cumulativa Retida na Fonte, Deduzido no Período",
+          "chave": "retido_fonte",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Outras Deduções do Regime Não Cumulativo do Período",
+          "chave": "outras_deducoes",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor da Contribuição Não Cumulativa a Recolher",
+          "chave": "a_recolher",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "PIS Não Cumulativo diferido do período anterior",
+          "chave": "diferido_anterior",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor Total da Contribuição Não Cumulativa a Recolher com Diferimento",
+          "chave": "recolher_com_diferimento",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor do Crédito para o Período Seguinte",
+          "chave": "credito_periodo_seguinte",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": null
+        },
+        {
+          "rotulo": "Valor das Retenções para o Período Seguinte",
+          "chave": "retencoes_seguinte",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": null
+        },
+        {
+          "rotulo": "Total do Crédito para o Período Seguinte",
+          "chave": "total_credito_seguinte",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": null
+        },
+        {
+          "rotulo": "Saldo devedor da Contribuição PIS/PASEP",
+          "chave": "total_a_recolher",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        }
+      ],
+      "cofins": [
+        {
+          "rotulo": "01. Contribuição Não Cumulativa apurada a alíquota básica",
+          "chave": "cod:01",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "02. Contribuição Não Cumulativa apurada a alíquotas diferenciadas",
+          "chave": "cod:02",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "03. Contribuição Não Cumulativa apurada a alíquota por unidade de medida do produto",
+          "chave": "cod:03",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "04. Contribuição Não Cumulativa apurada a alíquota básica - Atividade Imobiliária",
+          "chave": "cod:04",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Estorno de créditos - Devolução Custo Incorrido",
+          "chave": "estorno_devolucao",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "71. Contribuição apurada de SCP – Incidência não cumulativa",
+          "chave": "cod:71",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor Total da Contribuição Não Cumulativa Apurada no Período",
+          "chave": "contribuicao_periodo",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Crédito de Períodos Anteriores Disponível no Início do Período",
+          "chave": "credito_periodo_anterior",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor do Crédito Descontado, Apurado em Período de Apuração Anterior",
+          "chave": "credito_desc_anterior",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor do Crédito Descontado, Apurado no Período de Apuração Atual",
+          "chave": "credito_descontado",
+          "total": false,
+          "valores": {
+            "2032-03": "413895.02"
+          },
+          "soma_ano": "413895.02"
+        },
+        {
+          "rotulo": "Valor Total da Contribuição Não Cumulativa Devida",
+          "chave": "devido",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor Total da Contribuição Não Cumulativa Retida na Fonte, Deduzido no Período",
+          "chave": "retido_fonte",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Outras Deduções do Regime Não Cumulativo do Período",
+          "chave": "outras_deducoes",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor da Contribuição Não Cumulativa a Recolher",
+          "chave": "a_recolher",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "COFINS Não Cumulativo diferido do período anterior",
+          "chave": "diferido_anterior",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor Total da Contribuição Não Cumulativa a Recolher com Diferimento",
+          "chave": "recolher_com_diferimento",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        },
+        {
+          "rotulo": "Valor do Crédito para o Período Seguinte",
+          "chave": "credito_periodo_seguinte",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": null
+        },
+        {
+          "rotulo": "Valor das Retenções para o Período Seguinte",
+          "chave": "retencoes_seguinte",
+          "total": false,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": null
+        },
+        {
+          "rotulo": "Total do Crédito para o Período Seguinte",
+          "chave": "total_credito_seguinte",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": null
+        },
+        {
+          "rotulo": "Saldo devedor da Contribuição COFINS",
+          "chave": "total_a_recolher",
+          "total": true,
+          "valores": {
+            "2032-03": "0.00"
+          },
+          "soma_ano": "0.00"
+        }
+      ]
+    },
+    "creditos": [
+      {
+        "cod_cred": "101",
+        "ind_cred_ori": "0",
+        "linhas": [
+          {
+            "rotulo": "1. Código do Tipo de Crédito",
+            "chave": "cod_cred",
+            "formato": "codigo",
+            "total": false,
+            "valores": {
+              "pis": {
+                "2032-03": "101"
+              },
+              "cofins": {
+                "2032-03": "101"
+              }
+            }
+          },
+          {
+            "rotulo": "2. Base de Cálculo do Crédito em Reais",
+            "chave": "base_credito",
+            "formato": "valor",
+            "total": false,
+            "valores": {
+              "pis": {
+                "2032-03": "1000.00"
+              },
+              "cofins": {
+                "2032-03": "1000.00"
+              }
+            }
+          },
+          {
+            "rotulo": "3. Base de Cálculo do Crédito em Quantidades",
+            "chave": "base_quantidade",
+            "formato": "quantidade",
+            "total": false,
+            "valores": {
+              "pis": {
+                "2032-03": "0.0000"
+              },
+              "cofins": {
+                "2032-03": "0.0000"
+              }
+            }
+          },
+          {
+            "rotulo": "4. Alíquota do Crédito",
+            "chave": "aliquota",
+            "formato": "aliquota",
+            "total": false,
+            "valores": {
+              "pis": {
+                "2032-03": "1.6500"
+              },
+              "cofins": {
+                "2032-03": "7.6000"
+              }
+            }
+          },
+          {
+            "rotulo": "5. Valor Total do Crédito Apurado",
+            "chave": "credito_apurado",
+            "formato": "valor",
+            "total": true,
+            "valores": {
+              "pis": {
+                "2032-03": "16.50"
+              },
+              "cofins": {
+                "2032-03": "76.00"
+              }
+            }
+          },
+          {
+            "rotulo": "6. Valor Total dos Ajustes de Acréscimo",
+            "chave": "aj_credito_acres",
+            "formato": "valor",
+            "total": false,
+            "valores": {
+              "pis": {
+                "2032-03": "89842.29"
+              },
+              "cofins": {
+                "2032-03": "413819.02"
+              }
+            }
+          },
+          {
+            "rotulo": "7. Valor Total dos Ajustes de Redução",
+            "chave": "aj_credito_reduc",
+            "formato": "valor",
+            "total": false,
+            "valores": {
+              "pis": {
+                "2032-03": "0.00"
+              },
+              "cofins": {
+                "2032-03": "0.00"
+              }
+            }
+          },
+          {
+            "rotulo": "8. Valor Total do Crédito Diferido no Período",
+            "chave": "credito_diferido",
+            "formato": "valor",
+            "total": false,
+            "valores": {
+              "pis": {
+                "2032-03": "0.00"
+              },
+              "cofins": {
+                "2032-03": "0.00"
+              }
+            }
+          },
+          {
+            "rotulo": "9. Valor Total do Crédito Disponível no Período (5 + 6 - 7 - 8)",
+            "chave": "credito_disponivel",
+            "formato": "valor",
+            "total": true,
+            "valores": {
+              "pis": {
+                "2032-03": "89858.79"
+              },
+              "cofins": {
+                "2032-03": "413895.02"
+              }
+            }
+          },
+          {
+            "rotulo": "10. Valor do Crédito Disponível, Descontado da Contribuição Apurada no Período",
+            "chave": "credito_descontado",
+            "formato": "valor",
+            "total": false,
+            "valores": {
+              "pis": {
+                "2032-03": "89858.79"
+              },
+              "cofins": {
+                "2032-03": "413895.02"
+              }
+            }
+          },
+          {
+            "rotulo": "11. Saldo de Crédito a Utilizar em Períodos Futuros",
+            "chave": "saldo_credito",
+            "formato": "valor",
+            "total": true,
+            "valores": {
+              "pis": {
+                "2032-03": "0.00"
+              },
+              "cofins": {
+                "2032-03": "0.00"
+              }
+            }
+          }
+        ],
+        "naturezas": [
+          {
+            "nat": "02",
+            "nome": "Aquisição de bens utilizados como insumo",
+            "cst": "50",
+            "desc_cred": "",
+            "base_pis": "1000.00",
+            "base_cofins": "1000.00",
+            "por_competencia": {
+              "2032-03": {
+                "base_pis": "1000.00",
+                "base_cofins": "1000.00",
+                "residuo_pis": "1000.00"
+              }
+            },
+            "detalhe": [],
+            "qtd_documentos": 0,
+            "base_detalhada_pis": "0.00",
+            "base_detalhada_cofins": "0.00",
+            "residuo_pis": "1000.00",
+            "residuo_cofins": "1000.00"
+          }
+        ],
+        "ajustes": {
+          "pis": {
+            "acréscimo": {
+              "tipos": [
+                {
+                  "tipo": "CONTRATOS MOTORISTA",
+                  "total": 59819,
+                  "qtd": 1,
+                  "lancamentos": [
+                    {
+                      "competencia": "2032-03",
+                      "valor": "59818.73",
+                      "cod_aj": "05",
+                      "num_doc": "",
+                      "descricao": "CONTRATOS MOTORISTA 03-2032",
+                      "dt_ref": "31/03/2032"
+                    }
+                  ]
+                },
+                {
+                  "tipo": "RPA",
+                  "total": 29901,
+                  "qtd": 1,
+                  "lancamentos": [
+                    {
+                      "competencia": "2032-03",
+                      "valor": "29901.29",
+                      "cod_aj": "05",
+                      "num_doc": "",
+                      "descricao": "RPA 03-2032",
+                      "dt_ref": "31/03/2032"
+                    }
+                  ]
+                },
+                {
+                  "tipo": "RECIBOS MOTORISTA",
+                  "total": 122,
+                  "qtd": 1,
+                  "lancamentos": [
+                    {
+                      "competencia": "2032-03",
+                      "valor": "122.27",
+                      "cod_aj": "05",
+                      "num_doc": "",
+                      "descricao": "RECIBOS MOTORISTA 03-2032",
+                      "dt_ref": "31/03/2032"
+                    }
+                  ]
+                }
+              ],
+              "soma": "89842.29",
+              "declarado": "89842.29",
+              "residuo": "0.00",
+              "qtd": 3
+            },
+            "redução": {
+              "tipos": [],
+              "soma": "0.00",
+              "declarado": "0.00",
+              "residuo": "0.00",
+              "qtd": 0
+            }
+          },
+          "cofins": {
+            "acréscimo": {
+              "tipos": [
+                {
+                  "tipo": "CONTRATOS MOTORISTA",
+                  "total": 275529,
+                  "qtd": 1,
+                  "lancamentos": [
+                    {
+                      "competencia": "2032-03",
+                      "valor": "275528.69",
+                      "cod_aj": "05",
+                      "num_doc": "",
+                      "descricao": "CONTRATOS MOTORISTA 03-2032",
+                      "dt_ref": "31/03/2032"
+                    }
+                  ]
+                },
+                {
+                  "tipo": "RPA",
+                  "total": 137727,
+                  "qtd": 1,
+                  "lancamentos": [
+                    {
+                      "competencia": "2032-03",
+                      "valor": "137727.15",
+                      "cod_aj": "05",
+                      "num_doc": "",
+                      "descricao": "RPA 03-2032",
+                      "dt_ref": "31/03/2032"
+                    }
+                  ]
+                },
+                {
+                  "tipo": "RECIBOS MOTORISTA",
+                  "total": 563,
+                  "qtd": 1,
+                  "lancamentos": [
+                    {
+                      "competencia": "2032-03",
+                      "valor": "563.18",
+                      "cod_aj": "05",
+                      "num_doc": "",
+                      "descricao": "RECIBOS MOTORISTA 03-2032",
+                      "dt_ref": "31/03/2032"
+                    }
+                  ]
+                }
+              ],
+              "soma": "413819.02",
+              "declarado": "413819.02",
+              "residuo": "0.00",
+              "qtd": 3
+            },
+            "redução": {
+              "tipos": [],
+              "soma": "0.00",
+              "declarado": "0.00",
+              "residuo": "0.00",
+              "qtd": 0
+            }
+          }
+        },
+        "base_naturezas_pis": "1000.00",
+        "base_naturezas_cofins": "1000.00"
+      }
+    ],
+    "por_cfop": [],
+    "avisos": [],
+    "faltando": []
+  },
+  "x_custo": "pesada"
+}

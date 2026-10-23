@@ -1,0 +1,35 @@
+{
+  "status": 200,
+  "corpo": {
+    "itens": [
+      {
+        "id": 18,
+        "importacao_id": 11,
+        "arquivo": "TESTE-TELAS/rejeitado_2.xml",
+        "motivo": "sem Id=NFe",
+        "chave": null,
+        "classe": "desconhecido",
+        "resolvido": false,
+        "resolvido_por": null,
+        "resolvido_em": null,
+        "observacao": "",
+        "criado_em": "2026-10-23T12:51:31+00:00"
+      },
+      {
+        "id": 17,
+        "importacao_id": 11,
+        "arquivo": "TESTE-TELAS/rejeitado_1.xml",
+        "motivo": "sem Id=NFe",
+        "chave": null,
+        "classe": "desconhecido",
+        "resolvido": false,
+        "resolvido_por": null,
+        "resolvido_em": null,
+        "observacao": "",
+        "criado_em": "2026-10-23T12:51:31+00:00"
+      }
+    ],
+    "proximo_cursor": "eyJmIjoiODkxOGM0YjBhYjZhMTVjNyIsInUiOjE3fQ"
+  },
+  "x_custo": "leve"
+}

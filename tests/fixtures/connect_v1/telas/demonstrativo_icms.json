@@ -1,0 +1,191 @@
+{
+  "status": 200,
+  "corpo": {
+    "nome": "BLD TESTE TELAS AÇÃO",
+    "cnpj": "17122471001147",
+    "empresa": "11 - BLD2 - SP",
+    "competencia": "2032-03",
+    "saidas": [
+      {
+        "cfop": "5102",
+        "valor_contabil": "1000.00",
+        "base_calculo": "1000.00",
+        "aliquota": "12.0000",
+        "imposto": "120.00",
+        "isentas": "0.00",
+        "outras": "0.00"
+      },
+      {
+        "cfop": "5353",
+        "valor_contabil": "10000.00",
+        "base_calculo": "10000.00",
+        "aliquota": "12.0000",
+        "imposto": "1200.00",
+        "isentas": "0.00",
+        "outras": "0.00"
+      }
+    ],
+    "entradas": [
+      {
+        "cfop": "1102",
+        "valor_contabil": "1500.00",
+        "base_calculo": "1500.00",
+        "aliquota": "18.0000",
+        "imposto": "270.00",
+        "isentas": "0.00",
+        "outras": "0.00"
+      },
+      {
+        "cfop": "1353",
+        "valor_contabil": "416.67",
+        "base_calculo": "416.67",
+        "aliquota": "12.0000",
+        "imposto": "50.00",
+        "isentas": "0.00",
+        "outras": "0.00"
+      },
+      {
+        "cfop": "1556",
+        "valor_contabil": "250.00",
+        "base_calculo": "250.00",
+        "aliquota": "12.0000",
+        "imposto": "30.00",
+        "isentas": "0.00",
+        "outras": "0.00"
+      }
+    ],
+    "total_saidas": {
+      "cfop": "",
+      "valor_contabil": "11000.00",
+      "base_calculo": "11000.00",
+      "aliquota": "0.0000",
+      "imposto": "1320.00",
+      "isentas": "0.00",
+      "outras": "0.00"
+    },
+    "total_entradas": {
+      "cfop": "",
+      "valor_contabil": "2166.67",
+      "base_calculo": "2166.67",
+      "aliquota": "0.0000",
+      "imposto": "350.00",
+      "isentas": "0.00",
+      "outras": "0.00"
+    },
+    "debitos": [
+      {
+        "descricao": "Débitos pelas saídas",
+        "valor": "1320.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Outros débitos",
+        "valor": "0.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Estorno de créditos",
+        "valor": "0.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Total de débitos",
+        "valor": "1320.00",
+        "detalhe": false,
+        "total": true
+      }
+    ],
+    "creditos": [
+      {
+        "descricao": "Créditos pelas entradas",
+        "valor": "350.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Outros créditos",
+        "valor": "100.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "SP020000 — CREDITO DE TESTE DAS TELAS",
+        "valor": "100.00",
+        "detalhe": true,
+        "total": false
+      },
+      {
+        "descricao": "Estorno de débitos",
+        "valor": "0.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Total de créditos",
+        "valor": "450.00",
+        "detalhe": false,
+        "total": true
+      }
+    ],
+    "apuracao": [
+      {
+        "descricao": "Saldo credor do período anterior",
+        "valor": "500.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Total de débitos",
+        "valor": "1320.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Total de créditos",
+        "valor": "450.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Outros acréscimos",
+        "valor": "0.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Acréscimos",
+        "valor": "0.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Outras deduções",
+        "valor": "0.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "Deduções",
+        "valor": "0.00",
+        "detalhe": false,
+        "total": false
+      },
+      {
+        "descricao": "ICMS a recolher",
+        "valor": "370.00",
+        "detalhe": false,
+        "total": true
+      },
+      {
+        "descricao": "Saldo credor de ICMS para o mês seguinte",
+        "valor": "0.00",
+        "detalhe": false,
+        "total": true
+      }
+    ]
+  },
+  "x_custo": "pesada"
+}

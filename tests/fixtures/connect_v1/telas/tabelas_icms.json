@@ -1,0 +1,138 @@
+{
+  "status": 200,
+  "corpo": {
+    "naturezas": {
+      "debito": {
+        "rotulo": "Outros débitos",
+        "efeito": "aumenta o imposto"
+      },
+      "estorno_credito": {
+        "rotulo": "Estorno de crédito",
+        "efeito": "aumenta o imposto"
+      },
+      "credito": {
+        "rotulo": "Outros créditos",
+        "efeito": "reduz o imposto"
+      },
+      "estorno_debito": {
+        "rotulo": "Estorno de débito",
+        "efeito": "reduz o imposto"
+      },
+      "deducao": {
+        "rotulo": "Dedução do imposto apurado",
+        "efeito": "reduz o imposto"
+      },
+      "debito_especial": {
+        "rotulo": "Débito especial",
+        "efeito": "aumenta o imposto"
+      }
+    },
+    "codigos_conhecidos": [
+      {
+        "codigo": "PR020222",
+        "descricao": "Crédito sobre combustível"
+      },
+      {
+        "codigo": "PR020021",
+        "descricao": "Créditos do ativo permanente (CIAP)"
+      },
+      {
+        "codigo": "PR020041",
+        "descricao": "Crédito de material de uso e consumo"
+      },
+      {
+        "codigo": "PR020207",
+        "descricao": "Crédito ICMS art. 23 da LC 123 (Simples Nacional)"
+      },
+      {
+        "codigo": "PR029999",
+        "descricao": "Outros créditos — demais casos"
+      },
+      {
+        "codigo": "PR012000",
+        "descricao": "Estorno de crédito de insumos — Art. 25 RICMS"
+      },
+      {
+        "codigo": "PR000081",
+        "descricao": "Diferencial de alíquota"
+      },
+      {
+        "codigo": "PR039999",
+        "descricao": "Estorno de débito — demais casos"
+      }
+    ],
+    "codigos_sc": [
+      {
+        "codigo": "SC020102",
+        "descricao": "Crédito extemporâneo de combustível monofásico (DCIP 040/095)"
+      },
+      {
+        "codigo": "SC020065",
+        "descricao": "Crédito de ativo permanente — CIAP (DCIP 040/093)"
+      },
+      {
+        "codigo": "SC020010",
+        "descricao": "Crédito extemporâneo de ICMS-ST (DCIP 040/094)"
+      },
+      {
+        "codigo": "SC020012",
+        "descricao": "Crédito extemporâneo de ICMS normal (DCIP 040/072)"
+      },
+      {
+        "codigo": "SC020079",
+        "descricao": "Crédito extemporâneo por não registro ou erro na escrita (DCIP 040/073)"
+      }
+    ],
+    "itens_quadro_04": [
+      {
+        "item": "010",
+        "descricao": "Débito pelas saídas"
+      },
+      {
+        "item": "020",
+        "descricao": "Débito por diferencial de alíquota de ativo permanente"
+      },
+      {
+        "item": "030",
+        "descricao": "Débito por diferencial de alíquota de material de uso ou consumo"
+      },
+      {
+        "item": "050",
+        "descricao": "Estorno de crédito"
+      },
+      {
+        "item": "060",
+        "descricao": "Outros estornos de crédito"
+      },
+      {
+        "item": "070",
+        "descricao": "Outros débitos"
+      }
+    ],
+    "itens_quadro_05": [
+      {
+        "item": "020",
+        "descricao": "Crédito pelas entradas"
+      },
+      {
+        "item": "150",
+        "descricao": "Outros créditos"
+      },
+      {
+        "item": "160",
+        "descricao": "Outros créditos"
+      }
+    ],
+    "origens_quadro_46": [
+      {
+        "codigo": "14",
+        "descricao": "Créditos por DCIP"
+      },
+      {
+        "codigo": "1",
+        "descricao": "Crédito por transferência de créditos"
+      }
+    ]
+  },
+  "x_custo": "leve"
+}

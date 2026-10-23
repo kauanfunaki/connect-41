@@ -122,15 +122,8 @@ export type RespostaDaCobertura = z.infer<typeof coberturaRespostaSchema>;
 
 const itemDaListaDeCobertura = coberturaSchema.extend({ avaliacao: avaliacaoSchema.nullish().transform((v) => v ?? null) });
 export type ItemDaListaDeCobertura = z.infer<typeof itemDaListaDeCobertura>;
-/**
- * §11.1.4 não fixa o envelope de `/cobertura/lista` (é "sem cursor"). Aceita a
- * lista pura, como `cobertura.api_lista`, ou `{"itens": [...]}`, como as
- * outras listas da v1.
- */
-export const listaDeCoberturaSchema = z.union([
-  z.array(itemDaListaDeCobertura),
-  z.looseObject({ itens: z.array(itemDaListaDeCobertura) }).transform((v) => v.itens),
-]);
+/** `{"itens": [...], "proximo_cursor": null}` (§11.1.4, fixado em 23/10/2026): sem cursor, a lista inteira. */
+export const listaDeCoberturaSchema = z.looseObject({ itens: z.array(itemDaListaDeCobertura) }).transform((v) => v.itens);
 
 export const errosExtracaoSchema = z.looseObject({
   itens: z.array(z.looseObject({
@@ -159,13 +152,15 @@ const itemNfse = z.looseObject({
 });
 export type ResumoNfseItem = z.infer<typeof itemNfse>;
 /**
- * §11.1.6 descreve o item e o `quarentena_por_triar`, mas não o envelope.
- * Aceita `{"itens": [...], "quarentena_por_triar": n}` e a lista pura.
+ * A forma do painel (`nfse.api_resumo`, §11.1.6 fixado em 23/10/2026):
+ * `{"por_competencia": [Item], "totais": {...}, "quarentena_por_triar": n}`.
+ * A tela lê `itens` (o `por_competencia`).
  */
-export const resumoNfseSchema = z.union([
-  z.looseObject({ itens: z.array(itemNfse), quarentena_por_triar: contagemOpcional }),
-  z.array(itemNfse).transform((itens) => ({ itens, quarentena_por_triar: null })),
-]);
+export const resumoNfseSchema = z.looseObject({
+  por_competencia: z.array(itemNfse),
+  totais: z.looseObject({ quantidade: contagemOpcional, sem_xml: contagemOpcional, competencias: contagemOpcional }).nullish().transform((v) => v ?? null),
+  quarentena_por_triar: contagemOpcional,
+}).transform((v) => ({ itens: v.por_competencia, totais: v.totais, quarentena_por_triar: v.quarentena_por_triar }));
 export type ResumoNfse = z.infer<typeof resumoNfseSchema>;
 
 // ─── 11.2 ICMS e IPI ─────────────────────────────────────────────────────────
@@ -334,7 +329,18 @@ export const demonstrativoContribSchema = z.looseObject({
     bate: z.boolean(),
   })).default([]),
   apuracao: z.looseObject({ pis: z.array(linhaDaApuracaoContrib).default([]), cofins: z.array(linhaDaApuracaoContrib).default([]) }),
-  creditos: blocoLivre,
+  /** O quadro de créditos: `formato` diz como ler cada valor (`valor` em reais, `aliquota`/`quantidade` com 4 casas, `codigo` texto). */
+  creditos: z.array(z.looseObject({
+    cod_cred: exibivel,
+    ind_cred_ori: exibivel,
+    linhas: z.array(z.looseObject({
+      rotulo: z.string(),
+      chave: texto,
+      formato: texto,
+      total: z.boolean().nullish().transform((v) => v ?? false),
+      valores: z.record(z.string(), z.record(z.string(), z.string().nullable())).default({}),
+    })).default([]),
+  })).default([]),
   por_cfop: blocoLivre,
   avisos: z.array(exibivel).default([]),
   faltando: z.array(z.string()).default([]),
@@ -480,8 +486,16 @@ export const previaFinanceiraSchema = z.looseObject({
 });
 export type PreviaFinanceira = z.infer<typeof previaFinanceiraSchema>;
 
-/** `db.nfse_entrada_por_regime` não tem forma no contrato: chega como veio. */
-export const prestadoresSchema = z.union([z.array(z.unknown()), z.record(z.string(), z.unknown())]);
+/** `db.nfse_entrada_por_regime`, na forma das fixtures do motor (23/10/2026). */
+const prestadorSchema = z.looseObject({ cnpj: texto, nome: texto, documentos: contagemOpcional, valor: decimalOpcional, regime: texto, por_cadastro: z.boolean().nullish().transform((v) => v ?? false) });
+export type PrestadorNfse = z.infer<typeof prestadorSchema>;
+export const prestadoresSchema = z.looseObject({
+  mei: decimalOpcional,
+  normal: decimalOpcional,
+  prestadores_mei: z.array(prestadorSchema).default([]),
+  prestadores_normal: z.array(prestadorSchema).default([]),
+});
+export type PrestadoresNfse = z.infer<typeof prestadoresSchema>;
 
 export const SITUACOES_DO_CONFRONTO = ["sem_nota", "achado", "com_nota", "possivel_duplicidade"] as const;
 export const itemDoConfrontoSchema = z.looseObject({

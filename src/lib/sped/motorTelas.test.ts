@@ -33,7 +33,7 @@ describe("rotas e parâmetros de §11", () => {
       [(c) => c.resumoDaQuarentena(R), F.RESUMO_QUARENTENA, "/quarentena/resumo?cnpj_raiz=17122471"],
       [(c) => c.listarQuarentena(R, { importacao_id: 812, classe: "desconhecido", apenas_pendentes: true }), { itens: [F.REJEITADO], proximo_cursor: null }, "/quarentena?cnpj_raiz=17122471&importacao_id=812&classe=desconhecido&apenas_pendentes=true"],
       [(c) => c.obterCobertura(R, 3, "2026-09"), { registro: F.COBERTURA, anterior: null, avaliacao: F.AVALIACAO }, "/cobertura?cnpj_raiz=17122471&empresa_id=3&competencia=2026-09"],
-      [(c) => c.listarCoberturas(R, { limite: 999 }), [{ ...F.COBERTURA, avaliacao: F.AVALIACAO }], "/cobertura/lista?cnpj_raiz=17122471&limite=300"],
+      [(c) => c.listarCoberturas(R, { limite: 999 }), { itens: [{ ...F.COBERTURA, avaliacao: F.AVALIACAO }], proximo_cursor: null }, "/cobertura/lista?cnpj_raiz=17122471&limite=300"],
       [(c) => c.errosDeExtracao(R, { data_ini: "2026-09-01", data_fim: "2026-09-30" }), F.ERROS_EXTRACAO, "/erros-extracao?cnpj_raiz=17122471&data_ini=2026-09-01&data_fim=2026-09-30"],
       [(c) => c.resumoNfse(R), F.NFSE_RESUMO, "/nfse/resumo?cnpj_raiz=17122471"],
       [(c) => c.saldosIcms(R, 3), F.SALDOS, "/saldos-icms?cnpj_raiz=17122471&empresa_id=3"],
@@ -112,13 +112,17 @@ describe("números de §11.0.3", () => {
     const { c } = cliente([json({ ...F.IMPORTACAO, lidos: 1.5 })]);
     await expect(c.obterImportacao(R, 812)).rejects.toMatchObject({ codigo: "resposta_invalida" });
   });
-  it("aceita campo a mais (looseObject) e os dois envelopes de /cobertura/lista e /nfse/resumo", async () => {
+  it("aceita campo a mais (looseObject); /cobertura/lista em {itens} e /nfse/resumo na forma do painel", async () => {
     const a = cliente([json({ ...F.APURACAO, campo_novo: 1 })]);
     expect((await a.c.apuracaoDoArquivo(R, 301)).cfop.saidas_cte[0].valor_operacao).toBe("1000.00");
-    const b = cliente([json({ itens: [{ ...F.COBERTURA, avaliacao: null }] })]);
+    const b = cliente([json({ itens: [{ ...F.COBERTURA, avaliacao: null }], proximo_cursor: null })]);
     expect(await b.c.listarCoberturas(R)).toHaveLength(1);
-    const d = cliente([json(F.NFSE_RESUMO.itens)]);
-    expect((await d.c.resumoNfse(R)).quarentena_por_triar).toBeNull();
+    const d = cliente([json(F.NFSE_RESUMO)]);
+    const n = await d.c.resumoNfse(R);
+    expect([n.itens.length, n.totais?.sem_xml, n.quarentena_por_triar]).toEqual([1, 3, 2]);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const e = cliente([json(F.NFSE_RESUMO.por_competencia)]);
+    await expect(e.c.resumoNfse(R)).rejects.toMatchObject({ codigo: "resposta_invalida" });
   });
   it("as fixtures de todas as rotas passam pelos esquemas", async () => {
     const { c } = cliente([json(F.DEMONSTRATIVO_ICMS), json(F.DEMONSTRATIVO_CONTRIB)]);

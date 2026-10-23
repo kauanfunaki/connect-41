@@ -1,9 +1,9 @@
 // Exemplos das leituras de §11 (API-CONNECT, 23/10/2026), para os testes.
 //
-// O contrato pede as fixtures em `tests/fixtures/connect_v1/telas/*.json`,
-// "usadas nos dois lados". Elas nascem no repositório do motor, em paralelo;
-// até lá, estes objetos são os exemplos do próprio documento (e, onde o
-// documento só dá a forma, um preenchimento mínimo coerente com ela).
+// São os exemplos do próprio documento, pequenos e fáceis de variar num teste.
+// As respostas reais do motor, rota por rota, ficam em
+// `tests/fixtures/connect_v1/telas/*.json` (copiadas do repositório do motor,
+// "usadas nos dois lados") e são conferidas em `motorTelasFixtures.test.ts`.
 
 export const IMPORTACAO = {
   id: 812, origem: "pasta_fiscal", host: "WIN-FISCAL", estado: "concluida", dry_run: false,
@@ -28,7 +28,7 @@ export const AVALIACAO = { semaforo: "amarelo", motivos: [{ cor: "amarelo", text
 
 export const ERROS_EXTRACAO = { itens: [{ route_id: 77, cte_key: null, data_rota: "2026-09-03", step_type: "first_mile", href: null, erro: "timeout", ocorrido_em: "2026-09-04T01:00:00+00:00" }], total: 1, rotas_inteiras: 1, documentos: 0, truncado: false };
 
-export const NFSE_RESUMO = { itens: [{ competencia: "2026-09", sentido: "entrada", quantidade: 40, valor: "12000.00", sem_xml: 3, prestadores: 12 }], quarentena_por_triar: 2 };
+export const NFSE_RESUMO = { por_competencia: [{ competencia: "2026-09", sentido: "entrada", quantidade: 40, valor: "12000.00", sem_xml: 3, prestadores: 12 }], totais: { quantidade: 40, sem_xml: 3, competencias: 1 }, quarentena_por_triar: 2 };
 
 const linha = (cfop: string, valor: string) => ({ cfop, cst: "000", aliquota: "12.0000", qtd: 10, valor_operacao: valor, valor_bc: valor, valor_icms: "120.00" });
 export const APURACAO = {
@@ -75,7 +75,7 @@ export const DEMONSTRATIVO_CONTRIB = {
   linhas: [{ cst: "50", base: "1000.00", pis: "16.50" }], total: { base: "1000.00" },
   cadeia: [{ competencia: "2026-09", imposto: "pis", entrou: "0.00", apurado: "16.50", descontado: "0.00", saiu: "16.50", esperado_da_anterior: null, bate: false }],
   apuracao: { pis: [{ rotulo: "Contribuição apurada", valores: { "2026-09": "16.50" }, soma_ano: "16.50", total: false }], cofins: [] },
-  creditos: [], por_cfop: [], avisos: ["Outubro sem arquivo"], faltando: ["2026-10"], aliq_pis: "1.6500", aliq_cofins: "7.6000",
+  creditos: [{ cod_cred: "101", ind_cred_ori: "0", linhas: [{ rotulo: "Base", chave: "base_credito", formato: "valor", total: false, valores: { pis: { "2026-09": "1000.00" }, cofins: { "2026-09": "1000.00" } } }] }], por_cfop: [], avisos: ["Outubro sem arquivo"], faltando: ["2026-10"], aliq_pis: "1.6500", aliq_cofins: "7.6000",
 };
 
 export const FECHAMENTO = {
@@ -107,7 +107,7 @@ export const PREVIA = {
   totais: { base_faturamento: "1000.00", base_entradas: "0.00", debito: "92.50", credito: "104.84", a_pagar: "-12.34", parcial: true, pendentes: ["CT-e"] },
   contratos_para_zerar: "0.00", simulacoes: [], cte: { quebrados: 0 }, combustivel: { litros: "10.00" }, confronto: { sem_nota: 3 }, conferencia: { pendentes: 1 },
 };
-export const PRESTADORES = { mei: [{ cnpj: "1", nome: "MEI", origem: "cadastro" }], normal: [] };
+export const PRESTADORES = { mei: "0.00", normal: "300.00", prestadores_mei: [], prestadores_normal: [{ cnpj: "11222333000181", nome: "PRESTADOR TESTE", documentos: 1, valor: "300.00", regime: "normal", por_cadastro: false }] };
 export const CONFRONTO = {
   itens: [
     { id: 1, planilha: "pag.xlsx", competencia: "2026-09", posicao: 2, fornecedor: "Posto", documento: "123", numero_nota: null, data_pagamento: "2026-09-10", valor: "500.00", categoria: "Combustível", situacao: "sem_nota", evidencia: "" },

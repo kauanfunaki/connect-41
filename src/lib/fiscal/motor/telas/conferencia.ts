@@ -7,7 +7,7 @@
 
 import "server-only";
 import { doMotor, type Leitura } from "../leitura";
-import { SITUACOES_DO_CONFRONTO, type PaginaDoConfronto, type PaginaDosDocumentosDaConferencia, type PreviaFinanceira } from "@/lib/sped/telasDoMotor";
+import { SITUACOES_DO_CONFRONTO, type PaginaDoConfronto, type PaginaDosDocumentosDaConferencia, type PrestadoresNfse, type PreviaFinanceira } from "@/lib/sped/telasDoMotor";
 import type { ContextoDoMotor } from "../estabelecimentos";
 import { param } from "../url";
 import { cursorDaUrl, falha, MODULO, opcaoDaUrl, podeLer, SEM_PERMISSAO, type Params, type TelaDeLeitura } from "./comum";
@@ -29,7 +29,7 @@ export function contextoDaConferencia(contexto: ContextoDoMotor, params: Params,
   return primeira ? { ...contexto, competencia: primeira } : contexto;
 }
 
-export type PreviaDaTela = { previa: Leitura<PreviaFinanceira>; prestadores: Leitura<unknown> };
+export type PreviaDaTela = { previa: Leitura<PreviaFinanceira>; prestadores: Leitura<PrestadoresNfse> };
 
 export async function carregarPrevia(tela: TelaDeLeitura): Promise<PreviaDaTela | null> {
   const { contexto, motor } = tela;

@@ -1,0 +1,35 @@
+{
+  "status": 200,
+  "corpo": {
+    "itens": [
+      {
+        "id": 12,
+        "origem": "TESTE-TELAS",
+        "host": "MAQUINA-TESTE",
+        "estado": "concluida",
+        "dry_run": false,
+        "iniciado_em": "2026-10-23T12:51:31+00:00",
+        "concluido_em": "2026-10-23T12:51:31+00:00",
+        "filtro_dentro": null,
+        "cnpj_dest": "17122471000175",
+        "lidos": 4,
+        "gravados_cte": 0,
+        "gravados_nfe": 4,
+        "ja_existentes": 0,
+        "cancelados_pulados": 0,
+        "ignorados_cnpj": 0,
+        "rejeitados": 3,
+        "por_competencia": {
+          "2032-03": 4
+        },
+        "erro_fatal": null,
+        "por_cnpj": {
+          "17122471000175": 4
+        },
+        "outros_cnpj": 0
+      }
+    ],
+    "proximo_cursor": "eyJmIjoiYjMyZmQ3MzRmMzk3YjBmYSIsInUiOjEyfQ"
+  },
+  "x_custo": "leve"
+}

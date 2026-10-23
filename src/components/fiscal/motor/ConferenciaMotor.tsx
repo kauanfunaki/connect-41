@@ -43,7 +43,14 @@ export async function PreviaFinanceiraMotor({ tela, params }: { tela: TelaDoMoto
       ] }))} />
     </BlocoFiscal>
     <BlocoRecolhivel titulo="Prestadores de NFS-e tomada (MEI e normal)" abertoInicial={false}>
-      <div>{d.prestadores.erro !== null ? <ErroDaLeitura falha={d.prestadores} hrefDeNovo={aqui} /> : <BlocoLivre valor={d.prestadores.dados} />}</div>
+      <div>{d.prestadores.erro !== null ? <ErroDaLeitura falha={d.prestadores} hrefDeNovo={aqui} /> : <div className="grid gap-5 lg:grid-cols-2">
+        {([["MEI", d.prestadores.dados.mei, d.prestadores.dados.prestadores_mei], ["Normal", d.prestadores.dados.normal, d.prestadores.dados.prestadores_normal]] as const).map(([lado, total, lista]) => <section key={lado} aria-label={lado}>
+          <h4 className="mb-2 text-label font-semibold text-fg">{lado} · {reaisDoMotor(total)}</h4>
+          <TabelaFiscal vazio="Nenhum prestador." descricaoVazio="" colunas={["Prestador", "Documentos", "Valor", "Classificação"]} linhas={lista.map((x, i) => ({ id: `${x.cnpj}-${i}`, celulas: [
+            <span key="n" className="block max-w-56 break-words">{x.nome || "—"}<span className="block text-helper text-fg-muted">{x.cnpj}</span></span>, String(x.documentos ?? "—"), din(x.valor), x.por_cadastro ? "Pelo cadastro" : "Pelo documento",
+          ] }))} />
+        </section>)}
+      </div>}</div>
     </BlocoRecolhivel>
     {([["Simulações", p.simulacoes], ["CT-e quebrado", p.cte], ["Combustível", p.combustivel], ["Resumo do confronto", p.confronto], ["Resumo da conferência de documentos", p.conferencia]] as const).map(([titulo, valor]) =>
       <BlocoRecolhivel key={titulo} titulo={titulo} abertoInicial={false}><div><BlocoLivre valor={valor} /></div></BlocoRecolhivel>)}
