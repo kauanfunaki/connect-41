@@ -1,0 +1,51 @@
+{
+  "requisicao": {
+    "metodo": "PUT",
+    "caminho": "/api/connect/v1/conferencia/prestadores/regime?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "cnpj": "11222333000181",
+      "regime": "mei",
+      "competencia": "2032-03"
+    }
+  },
+  "resposta": {
+    "status": 200,
+    "corpo": {
+      "prestador": {
+        "cnpj": "11222333000181",
+        "nome": "PRESTADOR TESTE",
+        "regime": "mei",
+        "origem": "cliente",
+        "regime_cliente": "mei",
+        "regime_cadastro": null,
+        "regime_pelo_nome": "normal",
+        "definido_por": "Kátia Souza",
+        "atualizado_em": "2026-10-23T15:13:52+00:00"
+      },
+      "prestadores": {
+        "mei": "300.00",
+        "normal": "0.00",
+        "prestadores_mei": [
+          {
+            "cnpj": "11222333000181",
+            "nome": "PRESTADOR TESTE",
+            "documentos": 1,
+            "valor": "300.00",
+            "regime": "mei",
+            "por_cadastro": true,
+            "origem": "cliente"
+          }
+        ],
+        "prestadores_normal": []
+      }
+    },
+    "x_custo": "leve"
+  }
+}

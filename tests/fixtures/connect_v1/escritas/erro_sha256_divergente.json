@@ -1,0 +1,24 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/uploads/bab7c54df686aa60a645bbcd4930cff7/concluir?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "resposta": {
+    "status": 422,
+    "corpo": {
+      "erro": "o SHA-256 das partes juntas é 9419d2d8db02fbe3a719148d67d212eeb9ba66567505d05962d0ed2cdd61269b, e não o informado; reenvie as partes que divergem (o SHA-256 de cada uma vem na resposta do PUT) e conclua de novo",
+      "codigo": "sha256_divergente"
+    },
+    "x_custo": "pesada"
+  }
+}

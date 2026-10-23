@@ -1,0 +1,26 @@
+{
+  "requisicao": {
+    "metodo": "GET",
+    "caminho": "/api/connect/v1/uploads/bab7c54df686aa60a645bbcd4930cff7?cnpj_raiz=17122471"
+  },
+  "resposta": {
+    "status": 200,
+    "corpo": {
+      "id": "bab7c54df686aa60a645bbcd4930cff7",
+      "nome": "lote-setembro.zip",
+      "tamanho": 9701,
+      "tamanho_parte": 8388608,
+      "partes_esperadas": 1,
+      "partes_recebidas": [
+        1
+      ],
+      "recebido": 9701,
+      "estado": "aberta",
+      "criado_por": "Kátia Souza",
+      "criado_em": "2026-10-23T15:13:53+00:00",
+      "expira_em": "2026-10-24T15:13:53+00:00",
+      "importacao_id": null
+    },
+    "x_custo": "leve"
+  }
+}

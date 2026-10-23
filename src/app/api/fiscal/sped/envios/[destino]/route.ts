@@ -1,15 +1,17 @@
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { logAudit } from "@/lib/audit";
-import { ErroDoMotor } from "@/lib/sped/motor";
-import { chaveDoEnvio, COMPETENCIA, conferirArquivos, DESTINOS_DE_ENVIO, ENVIOS, mensagemDeTamanho, sha256DoArquivo, type DestinoDeEnvio } from "@/lib/sped/escritasDoMotor";
-import { doErro, prepararEscrita, recusa, recusado, revalidarTelas, type ResultadoDoMotor } from "@/lib/fiscal/motor/acoes";
+import { camposDoEnvio, chaveDoEnvio, conferirArquivos, DESTINOS_DE_ENVIO, ENVIOS, mensagemDeTamanho, ROTULO_DO_TIPO_DE_APOIO, sha256DoArquivo, type DestinoDeEnvio, type TipoDePagamentoApoio } from "@/lib/sped/escritasDoMotor";
+import { doErro, prepararEscrita, recusa, recusado, revalidarTelas } from "@/lib/fiscal/motor/acoes";
+import { responder, statusDoErro } from "@/lib/fiscal/motor/rotas";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Os três envios de arquivo das telas fiscais (API-CONNECT §13.3, §13.10 e
- * §13.11): documentos (até 25 MiB no total), o relatório do Omie e a planilha
- * do BPO (até 20 MiB cada).
+ * Os envios de arquivo das telas fiscais (API-CONNECT §13.3, §13.10, §13.11 e
+ * §14.3): documentos (até 25 MiB no total; acima disso a tela usa a sessão em
+ * partes, `/api/fiscal/sped/uploads`), o relatório do Omie e a planilha do BPO
+ * para o confronto (até 20 MiB cada), e as importações de pagamentos de apoio
+ * (PDF) e de faturas do BPO (planilha e comprovantes), até 25 MiB cada.
  *
  * ─── Por que rota e não Server Action ───────────────────────────────────────
  *
@@ -35,15 +37,6 @@ export const dynamic = "force-dynamic";
 /** O que o Connect aceita a mais que o teto do motor no corpo vindo do navegador: o envelope e os campos `raiz`/`gesto`. */
 const ENVELOPE_DO_NAVEGADOR = 1024 * 1024;
 
-const responder = (r: ResultadoDoMotor<unknown>, status = r.ok ? 200 : 400) => NextResponse.json(r, { status, headers: { "Cache-Control": "no-store" } });
-
-const statusDoErro = (err: unknown) => {
-  if (!(err instanceof ErroDoMotor)) return 502;
-  if (err.status === 0) return err.codigo === "tempo_esgotado" || err.codigo === "falha_de_rede" ? 504 : 400;
-  if (err.ocupado) return 503;
-  return err.status >= 500 ? 502 : err.status;
-};
-
 export async function POST(req: NextRequest, ctx: { params: Promise<{ destino: string }> }) {
   const { destino: bruto } = await ctx.params;
   if (!(DESTINOS_DE_ENVIO as readonly string[]).includes(bruto)) return responder(recusa("Envio desconhecido."), 404);
@@ -63,14 +56,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ destino: s
   if (!form) return responder(recusa("O envio chegou incompleto. Tente de novo."), 400);
   const gesto = String(form.get("gesto") ?? "");
   if (!/^[A-Za-z0-9:_-]{16,100}$/.test(gesto)) return responder(recusa("A ação foi enviada sem identificador. Recarregue a página e repita.", { codigo: "idempotencia_ausente" }), 400);
-  const competencia = String(form.get("competencia") ?? "").trim();
-  if (competencia && !COMPETENCIA.test(competencia)) return responder(recusa("Competência inválida (AAAA-MM).", { codigo: "parametro_invalido", campos: { competencia: "Competência inválida (AAAA-MM)." } }), 422);
+  const lidos = camposDoEnvio(destino, (k) => { const v = form.get(k); return typeof v === "string" ? v : null; });
+  if ("erro" in lidos) return responder(recusa(lidos.erro, { codigo: "parametro_invalido", campos: { [lidos.campo]: lidos.erro } }), 422);
+  const campos = lidos.campos;
+  const competencia = campos.competencia ?? "";
   const arquivos = form.getAll(regra.parte).filter((v): v is File => v instanceof File);
-  const problema = conferirArquivos(destino, arquivos);
+  const extras = regra.extra ? form.getAll(regra.extra.parte).filter((v): v is File => v instanceof File) : [];
+  const problema = conferirArquivos(destino, arquivos, extras);
   if (problema) return responder(recusa(problema, { codigo: problema === mensagemDeTamanho(destino) ? "corpo_grande" : "arquivo_invalido" }), problema === mensagemDeTamanho(destino) ? 413 : 422);
 
-  const impressoes = await Promise.all(arquivos.map(async (a) => ({ nome: a.name, tamanho: a.size, sha256: await sha256DoArquivo(a) })));
-  const chave = await chaveDoEnvio({ destino, raiz, usuario: p.ator.id, campos: competencia ? { competencia } : {}, arquivos: impressoes, gesto });
+  // A impressão leva os extras depois dos principais, na ordem do multipart.
+  const impressoes = await Promise.all([...arquivos, ...extras].map(async (a) => ({ nome: a.name, tamanho: a.size, sha256: await sha256DoArquivo(a) })));
+  const chave = await chaveDoEnvio({ destino, raiz, usuario: p.ator.id, campos, arquivos: impressoes, gesto });
   const escrita = { ator: p.ator, chave };
   const metaArquivos = impressoes.slice(0, 50).map((a) => ({ nome: a.nome, tamanho: a.tamanho, sha256: a.sha256 }));
 
@@ -81,6 +78,23 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ destino: s
         entityType: "SpedImportacao", entityId: String(r.importacao_id), metadata: { nome: `importação #${r.importacao_id}`, raiz, chave, arquivos: metaArquivos, resumo: { lidos: r.resumo.lidos, novos: r.resumo.novos, duplicados: r.resumo.duplicados, erros: r.resumo.erros, ignorados: r.resumo.ignorados } } });
       revalidarTelas(regra.tela);
       return responder({ ok: true, mensagem: `Importação #${r.importacao_id}: ${r.resumo.novos} novo(s), ${r.resumo.duplicados} duplicado(s), ${r.resumo.erros} com erro, ${r.resumo.ignorados} ignorado(s).`, dados: r });
+    }
+    if (destino === "pagamentos_apoio") {
+      const tipo = campos.tipo as TipoDePagamentoApoio;
+      const r = await p.motor.cliente.importarPagamentosApoio(raiz, arquivos, { tipo, pasta: campos.pasta, ocr: campos.ocr === "true" }, escrita);
+      await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.pagamentos_apoio.importados",
+        entityType: "SpedImportacaoApoio", entityId: `pagamentos_apoio:${tipo}`, metadata: { nome: `${ROTULO_DO_TIPO_DE_APOIO[tipo]}${r.pasta ? ` · ${r.pasta}` : ""}`, raiz, chave, tipo, pasta: r.pasta || null, ocr: campos.ocr === "true", arquivos: metaArquivos, linhas: r.linhas, gravadas: r.gravadas, porCompetencia: r.por_competencia, recusadas: r.recusadas.length } });
+      revalidarTelas(regra.tela, "/fiscal/conferencia");
+      const recusadas = r.recusadas.length ? ` ${r.recusadas.length} arquivo(s) recusado(s): já gravados com outro tipo.` : "";
+      const comps = Object.keys(r.por_competencia);
+      return responder({ ok: true, mensagem: `${r.arquivos.length} arquivo(s) importado(s): ${r.gravadas} linha(s) gravada(s) de ${r.linhas}.${recusadas}${comps.length ? ` Competências: ${comps.join(", ")} — o SPED de Contribuições delas muda na próxima geração.` : ""}`, dados: r });
+    }
+    if (destino === "faturas_bpo") {
+      const r = await p.motor.cliente.importarFaturasBpo(raiz, arquivos[0], extras, { substituir: campos.substituir === "true" }, escrita);
+      await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.faturas_bpo.importadas",
+        entityType: "SpedImportacaoApoio", entityId: `faturas_bpo:${r.planilha}`.slice(0, 120), metadata: { nome: r.planilha, raiz, chave, substituir: campos.substituir === "true", arquivos: metaArquivos, pagamentos: r.pagamentos, gravadas: r.gravadas, removidas: r.removidas, comComprovante: r.com_comprovante, porCompetencia: r.por_competencia } });
+      revalidarTelas(regra.tela, "/fiscal/conferencia");
+      return responder({ ok: true, mensagem: `Planilha importada: ${r.gravadas} fatura(s) gravada(s)${r.removidas ? `, ${r.removidas} substituída(s)` : ""}, ${r.com_comprovante} com comprovante.`, dados: r });
     }
     if (destino === "omie") {
       const r = await p.motor.cliente.conferirRelatorioOmie(raiz, arquivos[0], competencia || undefined, escrita);
@@ -98,6 +112,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ destino: s
     const falha = doErro(err);
     // O teto do motor é do corpo inteiro: a frase aponta o painel, não "menos itens".
     if (falha.codigo === "corpo_grande") falha.mensagem = mensagemDeTamanho(destino);
+    // A planilha já importada: a tela oferece substituir (outro campo, outra chave).
+    if (falha.codigo === "importacao_existente" && typeof falha.detalhe?.existentes === "number") {
+      falha.mensagem = `A planilha já tem ${falha.detalhe.existentes} fatura(s) no motor. Para trocá-las, marque “substituir as faturas já importadas” e envie de novo.`;
+    }
     // A chave é derivada do conteúdo: "tentar de novo" o mesmo arquivo repete a mesma chave (replay).
     return responder(falha, statusDoErro(err));
   }

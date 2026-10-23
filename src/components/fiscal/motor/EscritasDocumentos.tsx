@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Selo } from "@/components/ui/Selo";
 import { CampoFiscal, TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
-import { apurarCoberturaNoMotor, resolverRejeitadoNoMotor } from "@/app/(app)/fiscal/escritas-actions";
+import { Select } from "@/components/ui/Select";
+import { apurarCoberturaNoMotor, reprocessarQuarentenaNoMotor, resolverRejeitadoNoMotor } from "@/app/(app)/fiscal/escritas-actions";
 import type { PermissaoDeEscrita } from "@/lib/fiscal/motor/escrita";
 import type { EnvioDeDocumentos } from "@/lib/sped/escritasDoMotor";
 import { AvisoDoResultado, EnvioDeArquivo, MotivoSemEscrita, type Resultado } from "./EscritasComuns";
@@ -55,6 +56,50 @@ export function ApurarCobertura({ raiz, estabelecimentoId, competencia, permissa
     <div className="flex flex-wrap items-center gap-2">
       <Button size="sm" disabled={!permissao.pode} loading={pendente} loadingLabel="Enviando…" onClick={() => apurar(duplicado !== null)}>{duplicado !== null ? "Pedir de novo mesmo assim" : "Apurar cobertura"}</Button>
       {execucaoId && hrefFila && <Button size="sm" variant="secondary" href={`${hrefFila}&execucao=${execucaoId}`}>Acompanhar o pedido #{execucaoId}</Button>}
+    </div>
+    <MotivoSemEscrita permissao={permissao} />
+    <AvisoDoResultado resultado={resultado} />
+  </div>;
+}
+
+/**
+ * "Reprocessar quarentena" (§14.2): relê os rejeitados da raiz com os parsers
+ * de hoje, como pedido na fila (leva minutos). Já há um aberto: `409
+ * reprocessamento_em_andamento`, e a tela leva a esse pedido em vez de criar
+ * outro (não há "pedir de novo mesmo assim": os dois disputariam as mesmas
+ * linhas).
+ */
+export function ReprocessarQuarentena({ raiz, classes, permissao, hrefFila }: {
+  raiz: string;
+  /** As classes da quarentena com rejeitados (do resumo), para escolher o que reler. */
+  classes: string[];
+  permissao: PermissaoDeEscrita;
+  hrefFila: string | null;
+}) {
+  const router = useRouter();
+  const [chave, , depoisDe] = useChaveDeIdempotencia();
+  const [classe, setClasse] = useState("desconhecido");
+  const [pendente, startTransition] = useTransition();
+  const [resultado, setResultado] = useState<Resultado | null>(null);
+  const [execucaoId, setExecucaoId] = useState<number | null>(null);
+  if (!permissao.visivel) return null;
+  const opcoes = [...new Set(["desconhecido", ...classes.filter((c) => /^[a-z_]{1,30}$/.test(c))])];
+  const reprocessar = () => startTransition(async () => {
+    const r = await reprocessarQuarentenaNoMotor({ raiz, classe, chave });
+    depoisDe(r);
+    setResultado({ ok: r.ok, mensagem: r.mensagem });
+    if (r.ok && r.dados) { setExecucaoId(r.dados.id); router.refresh(); return; }
+    const ex = !r.ok && r.codigo === "reprocessamento_em_andamento" ? (r.detalhe?.existente as { id?: number } | undefined) : undefined;
+    setExecucaoId(ex?.id ?? null);
+  });
+  return <div className="space-y-2">
+    <div className="flex flex-wrap items-end gap-3">
+      <div className="w-64"><Select aria-label="Classe a reler" value={classe} disabled={!permissao.pode || pendente} onChange={(e) => setClasse(e.target.value)}>
+        {opcoes.map((c) => <option key={c} value={c}>{c === "desconhecido" ? "Os que pedem decisão (desconhecido)" : `Classe ${c}`}</option>)}
+        <option value="todas">Todas as classes</option>
+      </Select></div>
+      <Button size="sm" variant="secondary" disabled={!permissao.pode} loading={pendente} loadingLabel="Enviando…" onClick={reprocessar}>Reprocessar quarentena</Button>
+      {execucaoId && hrefFila && <Button size="sm" variant="ghost" href={`${hrefFila}&execucao=${execucaoId}`}>Acompanhar o pedido #{execucaoId}</Button>}
     </div>
     <MotivoSemEscrita permissao={permissao} />
     <AvisoDoResultado resultado={resultado} />
