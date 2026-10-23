@@ -287,6 +287,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "clientDocument.scheduled_send_now": o("mandou já o envio agendado do documento"),
   "clientDocument.reminder": o("lembrou o cliente de abrir o documento"),
   "clientDocument.receipt": o("baixou o comprovante de leitura do documento"),
+  // O padrão do escritório, em Administração › Portal do cliente › Envios (23/10/2026).
+  "clientDocument.reminder_default": e("mudou o lembrete de não lido padrão dos envios", { comNome: false }),
   "comunicado.enviado": o("enviou um comunicado aos clientes"),
   "portal.user.created": c("deu acesso ao portal para"),
   "portal.user.updated": e("editou o acesso ao portal de"),
@@ -518,6 +520,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   PipelineItem: "atividade",
   PortalApprovalLimit: "alçada de aprovação",
   PortalTelaBloqueada: "tela do portal",
+  TenantEnviosConfig: "padrão dos envios",
   PortalUser: "acesso ao portal",
   Process: "processo",
   RecurringObligation: "obrigação recorrente",

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // O parcelamento no lançamento manual (22/10/2026): o valor é o total, cada
 // parcela vira uma conta com o valor e o vencimento conferidos na tela, todas
-// na mesma série ("3/12") e na competência da compra; e o que não combina com
+// na mesma série ("3/12") e na competência da compra (ou, desde 23/10/2026, na
+// do vencimento de cada parcela); e o que não combina com
 // parcelar (repetir, rateio, retenção, já pago) é recusado sem gravar.
 
 const m = vi.hoisted(() => {
@@ -17,6 +18,8 @@ const m = vi.hoisted(() => {
     financeCategory: { findFirst: vi.fn() },
     financeCounterparty: { findFirst: vi.fn() },
     agentRun: { findFirst: vi.fn() },
+    financeEntry: { findFirst: vi.fn(), findMany: vi.fn() },
+    financeRecurrence: { updateMany: vi.fn() },
     $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
   };
   return { db, tx, logAudit: vi.fn(), registrarEnvios: vi.fn(), avisarAprovadores: vi.fn(), statusInicial: vi.fn() };
@@ -42,7 +45,7 @@ vi.mock("@/lib/financeiro/rateioServidor", () => ({ conferirRateio: vi.fn(), gra
 vi.mock("@/lib/financeiro/retencoesServidor", () => ({ aplicarRetencoes: vi.fn(), cancelarContasDosImpostos: vi.fn(), RecusaDaRetencao: class extends Error {} }));
 vi.mock("@/lib/financeiro/anexos", () => ({ armazenamentoDosAnexos: { gravarAnexos: vi.fn(), apagarAnexosGravados: vi.fn() } }));
 
-const { criarLancamentoManual } = await import("./actions");
+const { criarLancamentoManual, cancelarProximasDaSerie } = await import("./actions");
 
 const PARCELAS = [
   { vencimento: "2026-10-22", centavos: 33334 },
@@ -116,6 +119,36 @@ describe("criarLancamentoManual parcelado", () => {
     );
   });
 
+  // 23/10/2026: a competência pode ser a do vencimento de cada parcela.
+  it("com a competência do vencimento, cada parcela fica no mês em que vence — a primeira também", async () => {
+    const r = await criarLancamentoManual(form({ competencia: "2026-09", parcelarCompetencia: "VENCIMENTO" }));
+    expect(r).toMatchObject({ ok: true, parcelas: 3 });
+    const primeira = m.tx.financeEntry.create.mock.calls[0]![0].data;
+    expect(primeira.competence).toBe("2026-10");
+    const proximas = m.tx.financeEntry.createMany.mock.calls[0]![0].data;
+    expect(proximas.map((p: { competence: string }) => p.competence)).toEqual(["2026-11", "2026-12"]);
+    expect(m.tx.financeRecurrence.create).toHaveBeenCalledWith({ data: expect.objectContaining({ firstCompetence: "2026-10" }) });
+    expect(m.logAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: expect.objectContaining({ parcelamento: expect.objectContaining({ competencia: "VENCIMENTO" }) }) })
+    );
+  });
+
+  it("com a competência da compra (ou sem o campo, o formulário de antes), todas ficam na digitada", async () => {
+    for (const campos of [{ parcelarCompetencia: "COMPRA" }, {}] as Record<string, string>[]) {
+      vi.clearAllMocks();
+      m.tx.financeEntry.create.mockResolvedValue({ id: "e1", amount: "333.34" });
+      await criarLancamentoManual(form({ competencia: "2026-09", ...campos }));
+      expect(m.tx.financeEntry.create.mock.calls[0]![0].data.competence).toBe("2026-09");
+      expect(m.tx.financeEntry.createMany.mock.calls[0]![0].data.map((p: { competence: string }) => p.competence)).toEqual(["2026-09", "2026-09"]);
+    }
+  });
+
+  it("recusa uma competência das parcelas que não é das duas, sem gravar", async () => {
+    const r = await criarLancamentoManual(form({ parcelarCompetencia: "2026-11" }));
+    expect(r).toMatchObject({ error: expect.stringContaining("competência das parcelas") });
+    expect(m.db.$transaction).not.toHaveBeenCalled();
+  });
+
   it("com alçada, cada parcela vai para a aprovação com o valor dela", async () => {
     m.statusInicial.mockReturnValue("AGUARDANDO");
     m.avisarAprovadores.mockResolvedValue({ enviados: 1, semSmtp: false });
@@ -151,5 +184,15 @@ describe("criarLancamentoManual parcelado", () => {
     expect(m.tx.financeEntry.create.mock.calls[0]![0].data).toMatchObject({ amount: "1000.00" });
     expect(m.tx.financeEntry.create.mock.calls[0]![0].data).not.toHaveProperty("recurrenceId");
     expect(m.tx.financeRecurrence.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("cancelarProximasDaSerie — a série que nasceu da nota", () => {
+  it("parcela ligada à nota não cancela as próximas nem desliga a série: o caminho é o estorno", async () => {
+    m.db.financeEntry.findFirst.mockResolvedValue({ id: "e2", companyId: "c1", recurrenceId: "s1", recurrenceIndex: 2, fiscalDocumentId: "doc1" });
+    const r = await cancelarProximasDaSerie("e2");
+    expect(r).toEqual({ error: expect.stringMatching(/estorne na ficha da nota/) });
+    expect(m.db.financeEntry.findMany).not.toHaveBeenCalled();
+    expect(m.db.financeRecurrence.updateMany).not.toHaveBeenCalled();
   });
 });

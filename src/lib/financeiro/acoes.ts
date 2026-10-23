@@ -60,9 +60,32 @@ async function contaDoTenant(entryId: string, tenantId: string) {
       amount: true,
       approvalStatus: true,
       companyId: true,
+      fiscalDocumentId: true,
       counterparty: { select: { name: true } },
     },
   });
+}
+
+/**
+ * As contas em conferência junto com estas: a conta que nasceu das duplicatas
+ * de uma nota (23/10/2026) é conferida pela nota inteira — as parcelas têm o
+ * mesmo fornecedor, a mesma categoria e os valores da mesma nota, e conferir
+ * uma é conferir a nota. Devolve os ids pedidos mais as outras parcelas
+ * provisórias das mesmas notas. Conta sem nota é só ela.
+ */
+async function comAsParcelasDaNota(tenantId: string, ids: string[]): Promise<string[]> {
+  const prisma = getPrisma();
+  const notas = await prisma.financeEntry.findMany({
+    where: { id: { in: ids }, tenantId, fiscalDocumentId: { not: null } },
+    select: { fiscalDocumentId: true },
+  });
+  const documentos = [...new Set(notas.flatMap((n) => (n.fiscalDocumentId ? [n.fiscalDocumentId] : [])))];
+  if (documentos.length === 0) return ids;
+  const irmas = await prisma.financeEntry.findMany({
+    where: { tenantId, fiscalDocumentId: { in: documentos }, status: "PROVISORIO" },
+    select: { id: true },
+  });
+  return [...new Set([...ids, ...irmas.map((i) => i.id)])];
 }
 
 function revalidar() {
@@ -86,10 +109,20 @@ export async function conferirConta(entryId: string): Promise<AcaoDeContaState> 
   if (!veredito.pode) return { error: veredito.motivo };
 
   const prisma = getPrisma();
+  // Parcela de nota: as outras parcelas provisórias da mesma nota vão junto.
+  const outras = conta.fiscalDocumentId ? (await comAsParcelasDaNota(ctx.tenantId, [entryId])).filter((id) => id !== entryId) : [];
+  const agora = new Date();
   await prisma.financeEntry.update({
     where: { id: entryId },
-    data: { status: "CONFERIDO", reviewedById: ctx.userId ?? null, reviewedAt: new Date() },
+    data: { status: "CONFERIDO", reviewedById: ctx.userId ?? null, reviewedAt: agora },
   });
+  if (outras.length > 0) {
+    // O status de novo no `where`: a parcela que alguém pagou no meio-tempo fica como está.
+    await prisma.financeEntry.updateMany({
+      where: { id: { in: outras }, tenantId: ctx.tenantId, status: "PROVISORIO" },
+      data: { status: "CONFERIDO", reviewedById: ctx.userId ?? null, reviewedAt: agora },
+    });
+  }
 
   await logAudit({
     tenantId: ctx.tenantId,
@@ -97,7 +130,10 @@ export async function conferirConta(entryId: string): Promise<AcaoDeContaState> 
     action: "finance.review",
     entityType: "FinanceEntry",
     entityId: entryId,
-    metadata: { contraparte: conta.counterparty.name },
+    metadata: {
+      contraparte: conta.counterparty.name,
+      ...(outras.length > 0 ? { fiscalDocumentId: conta.fiscalDocumentId, parcelasDaNota: outras.length + 1 } : {}),
+    },
   });
 
   revalidar();
@@ -123,8 +159,10 @@ export async function conferirContasEmLote(valores: string[]): Promise<Resultado
   if (foraDoFoco) return { error: foraDoFoco };
 
   const prisma = getPrisma();
+  // A parcela de nota leva as outras da mesma nota (23/10) — conferir é pela nota.
+  const comAsDaNota = await comAsParcelasDaNota(tenantId, ids);
   const provisorias = await prisma.financeEntry.findMany({
-    where: { id: { in: ids }, tenantId, status: "PROVISORIO" },
+    where: { id: { in: comAsDaNota }, tenantId, status: "PROVISORIO" },
     select: { id: true },
   });
   if (provisorias.length === 0) return { error: "Nenhuma das contas marcadas está a conferir." };
@@ -154,7 +192,8 @@ export async function conferirContasEmLote(valores: string[]): Promise<Resultado
   }
 
   revalidar();
-  return { ok: true, conferidas: conferidas.length, puladas: ids.length - conferidas.length };
+  const conferidasAgora = new Set(conferidas.map((c) => c.id));
+  return { ok: true, conferidas: conferidas.length, puladas: ids.filter((id) => !conferidasAgora.has(id)).length };
 }
 
 // ─── Baixa (lote C, 19/10) ─────────────────────────────────────────────────

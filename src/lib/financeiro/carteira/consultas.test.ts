@@ -9,15 +9,13 @@ const db = vi.hoisted(() => ({
   financeEntry: { groupBy: vi.fn() },
   bankAccount: { findMany: vi.fn() },
   clientRequest: { groupBy: vi.fn() },
-  bankStatementImport: { groupBy: vi.fn() },
+  bankStatementImport: { groupBy: vi.fn(), findMany: vi.fn() },
   bankTransaction: { groupBy: vi.fn() },
   portalUser: { findMany: vi.fn() },
 }));
-const saldos = vi.hoisted(() => ({ saldosDasContas: vi.fn() }));
 const portal = vi.hoisted(() => ({ lerContasDasEmpresas: vi.fn() }));
 
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => db }));
-vi.mock("@/lib/financeiro/conciliacao/saldoDasContas", () => saldos);
 vi.mock("@/lib/portal/empresasDaContaDb", () => portal);
 
 const { carregarCarteira } = await import("./consultas");
@@ -75,13 +73,19 @@ describe("carregarCarteira", () => {
       { bankAccountId: "c1", _max: { createdAt: new Date("2026-10-10T15:00:00Z") } },
       { bankAccountId: "c2", _max: { createdAt: new Date("2026-10-15T15:00:00Z") } },
     ]);
-    db.bankTransaction.groupBy.mockResolvedValue([
-      { bankAccountId: "c1", _count: { _all: 5 } },
-      { bankAccountId: "c3", _count: { _all: 2 } },
-    ]);
-    saldos.saldosDasContas.mockResolvedValue(
-      new Map([["c1", { tipo: "conferido", divergenciaCentavos: 1234, calculadoNaDataCentavos: 0, calculadoCentavos: 0, bancoCentavos: 0, bancoDataKey: null }]])
+    // A soma da janela do saldo (23/10/2026) tem `_sum`; a contagem das pendentes, `_count`.
+    db.bankTransaction.groupBy.mockImplementation(async (args: { _sum?: unknown }) =>
+      args._sum
+        ? [{ bankAccountId: "c1", _sum: { amount: "12.34" } }]
+        : [
+            { bankAccountId: "c1", _count: { _all: 5 } },
+            { bankAccountId: "c3", _count: { _all: 2 } },
+          ]
     );
+    // Saldo inicial zero, banco também zero em 10/10: as transações da janela (12,34) não fecham.
+    db.bankStatementImport.findMany.mockResolvedValue([
+      { bankAccountId: "c1", ledgerBalance: "0", ledgerBalanceAt: new Date("2026-10-10T15:00:00Z"), createdAt: new Date("2026-10-10T15:00:00Z") },
+    ]);
     // p3 inativo: não volta da consulta, e a empresa fica "sem acesso".
     db.portalUser.findMany.mockResolvedValue([
       { id: "p1", lastLoginAt: new Date("2026-10-01T12:00:00Z") },
@@ -128,8 +132,15 @@ describe("carregarCarteira", () => {
       },
     ]);
 
-    // Só a conta com saldo inicial vai para a conferência do saldo.
-    expect(saldos.saldosDasContas).toHaveBeenCalledWith("t1", [expect.objectContaining({ id: "c1" })]);
+    // Só a conta com saldo inicial vai para a conferência do saldo, e a soma é só da janela.
+    expect(db.bankStatementImport.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { tenantId: "t1", bankAccountId: { in: ["c1"] }, ledgerBalance: { not: null } } })
+    );
+    const soma = db.bankTransaction.groupBy.mock.calls.find(([a]) => a._sum)![0];
+    expect(soma.where).toEqual({
+      tenantId: "t1",
+      OR: [{ bankAccountId: "c1", postedAt: { gte: new Date("2026-01-01T03:00:00Z"), lt: new Date("2026-10-11T03:00:00Z") } }],
+    });
     // A data do extrato é só das contas ativas.
     expect(db.bankStatementImport.groupBy).toHaveBeenCalledWith(
       expect.objectContaining({ where: { tenantId: "t1", bankAccountId: { in: ["c1", "c2"] } } })

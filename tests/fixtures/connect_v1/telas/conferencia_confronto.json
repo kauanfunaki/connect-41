@@ -1,0 +1,49 @@
+{
+  "status": 200,
+  "corpo": {
+    "itens": [
+      {
+        "id": 16,
+        "planilha": "TESTE-TELAS.xlsx",
+        "competencia": "2032-03",
+        "posicao": 1,
+        "fornecedor": "FORNECEDOR 1",
+        "documento": "11222333000181",
+        "numero_nota": "",
+        "data_pagamento": "",
+        "valor": "300.00",
+        "categoria": "",
+        "situacao": "sem_nota",
+        "evidencia": ""
+      }
+    ],
+    "proximo_cursor": "eyJmIjoiNjMyZWQxYzRkZmVkNTgyNSIsInUiOnsibyI6MX19",
+    "resumo": {
+      "por_situacao": {
+        "achado": {
+          "documentos": 1,
+          "valor": "100.00"
+        },
+        "sem_nota": {
+          "documentos": 2,
+          "valor": "500.00"
+        }
+      },
+      "planilhas": [
+        {
+          "planilha": "TESTE-TELAS.xlsx",
+          "confrontado_em": "2026-10-23T12:51:31+00:00"
+        }
+      ],
+      "total_sem_nota": "500.00",
+      "documentos_sem_nota": 2
+    },
+    "rotulos": {
+      "sem_nota": "sem nota",
+      "achado": "nota encontrada na base",
+      "com_nota": "nota declarada na planilha",
+      "possivel_duplicidade": "possível duplicidade com NFS-e"
+    }
+  },
+  "x_custo": "leve"
+}

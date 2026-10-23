@@ -32,6 +32,13 @@ export type DocumentoDoSped = {
   /** Lápide: o documento saiu da origem e viaja assim uma última vez. */
   removido: boolean;
   atualizado_em: string;
+  /**
+   * As duplicatas da NF-e (`<cobr><dup>`, campo aditivo de 23/10/2026 — ver
+   * docs/API-INTEGRACAO-DUPLICATAS.md no motor). `[]` = lida, sem cobrança;
+   * `null` = o motor não leu; **ausente** = motor anterior ao campo. Valor em
+   * string de duas casas. Quem grava é `duplicatasParaGravar`.
+   */
+  duplicatas?: { numero: string | null; vencimento: string; valor: string }[] | null;
 };
 
 export type PaginaDeDocumentos = {

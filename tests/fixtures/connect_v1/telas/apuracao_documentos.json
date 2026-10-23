@@ -1,0 +1,33 @@
+{
+  "status": 200,
+  "corpo": {
+    "documentos": [
+      {
+        "registro": "D100",
+        "chave": "35320311222333000185700100000050110000050100",
+        "numero": "501",
+        "participante": "T1",
+        "data": "11032032",
+        "valor_doc": "5000.00",
+        "valor_operacao": "5000.00",
+        "valor_bc": "5000.00",
+        "valor_icms": "600.00"
+      },
+      {
+        "registro": "D100",
+        "chave": "35320311222333000185700100000050210000050200",
+        "numero": "502",
+        "participante": "T1",
+        "data": "12032032",
+        "valor_doc": "5000.00",
+        "valor_operacao": "5000.00",
+        "valor_bc": "5000.00",
+        "valor_icms": "600.00"
+      }
+    ],
+    "total": 2,
+    "soma": "10000.00",
+    "truncado": false
+  },
+  "x_custo": "pesada"
+}

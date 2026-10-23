@@ -1,0 +1,44 @@
+{
+  "status": 200,
+  "corpo": {
+    "empresa_id": 4,
+    "cnpj": "17122471001490",
+    "competencia": "2032-03",
+    "ajustes": [
+      {
+        "id": 44,
+        "cnpj_empresa": "17122471001490",
+        "competencia": "2032-03",
+        "codigo": "SC020102",
+        "descricao": "crédito extemporâneo de combustível de teste",
+        "valor": "100.00",
+        "observacao": "",
+        "lancado_por": "testes",
+        "criado_em": "2026-10-23T12:51:31+00:00",
+        "atualizado_em": "2026-10-23T12:51:31+00:00",
+        "dime_item_credito": "160",
+        "dime_item_debito": "",
+        "dcip_numero": "261060013940345",
+        "dcip_origem": "14",
+        "cod_receita": "",
+        "classe_vencimento": "",
+        "dt_vencimento": "",
+        "dt_pagamento": "",
+        "numero_acordo": "",
+        "base_calculo": "0.00",
+        "natureza": "credito",
+        "subtipo_dcip": "040/095"
+      }
+    ],
+    "resumo": {
+      "total": "100.00",
+      "creditos_dcip": "100.00",
+      "quadro_46_ids": [
+        44
+      ],
+      "quadro_12_ids": [],
+      "sem_item_ids": []
+    }
+  },
+  "x_custo": "leve"
+}

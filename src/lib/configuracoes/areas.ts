@@ -173,6 +173,16 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
         acesso: "admin",
       },
       {
+        // 23/10/2026: o lembrete de não lido que o envio novo já traz escolhido.
+        chave: "portal-envios",
+        rotulo: "Envios ao cliente",
+        descricao: "O lembrete de não lido que um envio novo de documento já traz escolhido.",
+        href: "/admin/portal?aba=envios",
+        rota: "/admin/portal",
+        aba: "envios",
+        acesso: "admin",
+      },
+      {
         chave: "assuntos",
         rotulo: "Assuntos das solicitações",
         descricao: "O que o cliente escolhe ao pedir algo pelo portal, o setor que atende e o prazo.",
