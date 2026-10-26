@@ -120,7 +120,10 @@ describe("abrir a sessão", () => {
     expect(r.status).toBe(200);
     const corpo = await r.json();
     expect(corpo.dados.upload).toMatchObject({ id: ID, partes_esperadas: 1, tamanho_parte: 8 * MiB });
-    expect(conferirTokenDoUpload(corpo.dados.token, { id: ID, tenantId: "t1", raiz: R, userId: "u1" })).toBe("ok");
+    // O token vence no `expira_em` da fixture (24/10/2026 15:13 UTC): conferir
+    // com o relógio de verdade fazia o teste falhar a partir dessa data.
+    const antesDeVencer = Date.parse("2026-10-24T15:00:00Z");
+    expect(conferirTokenDoUpload(corpo.dados.token, { id: ID, tenantId: "t1", raiz: R, userId: "u1" }, antesDeVencer)).toBe("ok");
     const [url, init] = m.fetch.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://motor/api/connect/v1/uploads?cnpj_raiz=17122471");
     expect(JSON.parse(init.body as string)).toEqual({ nome: "lote-setembro.zip", tamanho: 9701 });
