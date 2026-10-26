@@ -57,7 +57,7 @@ function CalendarGrid({ from, to, days, complete, onDay, userId, scrollLeftRef }
           }} />;
       })}
     </div>
-    <div className="mt-2 flex min-w-max items-center justify-between gap-6 text-fs-1 text-fg-muted"><span>{dateLabel(from)} — {dateLabel(to)}</span>
+    <div className="mt-2 flex min-w-max items-center justify-between gap-6 text-micro text-fg-muted"><span>{dateLabel(from)} — {dateLabel(to)}</span>
       <span className="flex items-center gap-1.5">Menos {LEVELS.map((level, index) => <span key={index} aria-hidden="true" className={`inline-block size-2.5 rounded-sm ${level}`} />)} Mais{!complete && " · listrado: não confirmado"}</span>
     </div>
   </div>;

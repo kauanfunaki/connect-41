@@ -15,7 +15,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { VisoesTech } from "@/components/tech-interno/VisoesTech";
 import { intervaloMes } from "@/lib/tech-interno/agenda";
 import { listarItens, opcoesTech } from "@/lib/tech-interno/servidor";
-import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, hojeEmSaoPaulo, lerFiltros } from "@/lib/tech-interno/regras";
+import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, hojeEmSaoPaulo, lerFiltros, comVolta } from "@/lib/tech-interno/regras";
 
 export const dynamic = "force-dynamic";
 const TONS: Record<keyof typeof SITUACOES, TomDoSelo> = { PENDING: "marca", IN_PROGRESS: "atencao", VALIDATION: "atencao", DONE: "neutro", CANCELED: "neutro" };
@@ -31,6 +31,8 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
     q.set("page", String(page)); return `${ROTA_TECH_INTERNO}?${q}`;
   };
   const hoje = hojeEmSaoPaulo();
+  const atual = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "voltar") atual.set(k, v);
+  const voltar = atual.toString() ? `${ROTA_TECH_INTERNO}?${atual}` : ROTA_TECH_INTERNO, href = (destino: string) => comVolta(destino, voltar);
   const hrefVisao = (view: string, month = filtros.month) => {
     const q = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "page" && k !== "pagina") q.set(k, v);
     q.set("visao", view); q.set("mes", month); return `${ROTA_TECH_INTERNO}?${q}`;
@@ -43,31 +45,31 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
   const nomeSistema = (item: typeof lista.items[number]) => item.systemMode === "NEW" ? "Novo sistema" : item.systemMode === "NONE" ? "Sem sistema" : `${item.tool?.name ?? "Sistema indisponível"}${item.tool && !item.tool.active ? " (inativo)" : ""}`;
   return <PageContainer>
     <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech." action={<div className="flex flex-wrap gap-2">
-      {podeGerir && <Button href={`${ROTA_TECH_INTERNO}/sistemas`} variant="secondary">Sistemas</Button>}
-      {podeEditar && <Button href={`${ROTA_TECH_INTERNO}/novo`}>Novo item</Button>}
+      {podeGerir && <Button href={href(`${ROTA_TECH_INTERNO}/sistemas`)} variant="secondary">Sistemas</Button>}
+      {podeEditar && <Button href={href(`${ROTA_TECH_INTERNO}/novo`)}>Novo item</Button>}
     </div>} />
     <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
       <SegmentedControl label="Visualização do Controle interno" active={filtros.view} items={[{ key: "lista", label: "Lista", href: hrefVisao("lista") }, { key: "kanban", label: "Kanban", href: hrefVisao("kanban") }, { key: "agenda", label: "Agenda", href: hrefVisao("agenda") }]} />
       {filtros.view === "agenda" && <nav className="flex items-center gap-3" aria-label="Mês da agenda"><Button variant="secondary" size="sm" href={hrefVisao("agenda", mes.anterior)}>Mês anterior</Button><span className="text-ui font-medium">{new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(mes.inicio)}</span><Button variant="secondary" size="sm" href={hrefVisao("agenda", mes.proximo)}>Próximo mês</Button></nav>}
     </div>
     <CascoDaTabela contagem={`${lista.total} ${lista.total === 1 ? "item" : "itens"}`} busca={<DebouncedSearchInput key={filtros.q} paramName="q" placeholder="Buscar título ou descrição" />} filtros={<FiltrosDaTela naBarra campos={[
-      { chave: "situacao", rotulo: "Situação", vazioLabel: "Em aberto", opcoes: [...Object.entries(SITUACOES).map(([value, label]) => ({ value, label })), { value: "ALL", label: "Todos" }] },
+      { chave: "situacao", rotulo: "Situação", vazioLabel: filtros.view === "kanban" ? "Todas" : "Em aberto", opcoes: [...Object.entries(SITUACOES).map(([value, label]) => ({ value, label })), ...(filtros.view !== "kanban" || filtros.status === "ALL" ? [{ value: "ALL", label: "Todos" }] : [])] },
       { chave: "tipo", rotulo: "Tipo", opcoes: Object.entries(TIPOS).map(([value, label]) => ({ value, label })) },
       { chave: "prioridade", rotulo: "Prioridade", opcoes: PRIORIDADES.map((label, i) => ({ value: String(i), label })) },
       { chave: "sistema", rotulo: "Sistema", opcoes: [{ value: "NONE", label: "Sem sistema" }, { value: "NEW", label: "Novo sistema" }, ...opcoes.tools.map(t => ({ value: t.id, label: `${t.name}${t.active ? "" : " (inativo)"}` }))] },
       { chave: "responsavel", rotulo: "Responsável", opcoes: [{ value: "me", label: "Comigo" }, { value: "none", label: "Sem responsável" }, ...opcoes.users.map(u => ({ value: u.id, label: u.name }))] },
       { chave: "atrasados", rotulo: "Prazo", vazioLabel: "Todos", opcoes: [{ value: "1", label: "Atrasados" }] },
     ]} />}>
-      {filtros.view !== "lista" ? <VisoesTech view={filtros.view} month={filtros.month} today={hoje} canEdit={podeEditar} items={lista.items.map(item => ({ id: item.id, title: item.title, type: item.type, status: item.status, priority: item.priority, version: item.version, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null, assignee: item.assignee?.name ?? null, system: nomeSistema(item) }))} /> : !lista.items.length ? <EmptyState icon={<ClipboardList />} title="Nenhum item neste recorte" description="Cadastre uma pendência ou ajuste os filtros para encontrar outros itens." /> : <>
+      {filtros.view !== "lista" ? <VisoesTech voltar={voltar} view={filtros.view} month={filtros.month} today={hoje} canEdit={podeEditar} items={lista.items.map(item => ({ id: item.id, title: item.title, type: item.type, status: item.status, priority: item.priority, version: item.version, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null, assignee: item.assignee?.name ?? null, system: nomeSistema(item) }))} /> : !lista.items.length ? <EmptyState icon={<ClipboardList />} title="Nenhum item neste recorte" description="Cadastre uma pendência ou ajuste os filtros para encontrar outros itens." /> : <>
         <CartoesNoCelular>{lista.items.map(item => <Cartao key={item.id}>
-          <TopoDoCartao nome={<Link className="text-fg hover:text-brand" href={`${ROTA_TECH_INTERNO}/${item.id}`}>{item.title}</Link>} />
+          <TopoDoCartao nome={<Link className="text-fg hover:text-brand" href={href(`${ROTA_TECH_INTERNO}/${item.id}`)}>{item.title}</Link>} />
           <InfoDoCartao>{TIPOS[item.type]} · {PRIORIDADES[item.priority]}</InfoDoCartao><InfoDoCartao>{nomeSistema(item)}</InfoDoCartao>
           <InfoDoCartao>{item.assignee?.name ?? "Sem responsável"} · {prazoDoItem(item)}</InfoDoCartao>
           <PeDoCartao><Selo tom={TONS[item.status]}>{SITUACOES[item.status]}</Selo></PeDoCartao>
         </Cartao>)}</CartoesNoCelular>
         <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Tipo", "Prioridade", "Sistema", "Situação", "Responsável", "Prazo"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
           <tbody className="divide-y divide-border">{lista.items.map(item => <tr key={item.id} className="hover:bg-surface-hover">
-            <td className="px-4 py-3 min-w-48 max-w-xs break-words"><Link href={`${ROTA_TECH_INTERNO}/${item.id}`} className="font-medium text-fg hover:text-brand">{item.title}</Link></td>
+            <td className="px-4 py-3 min-w-48 max-w-xs break-words"><Link href={href(`${ROTA_TECH_INTERNO}/${item.id}`)} className="font-medium text-fg hover:text-brand">{item.title}</Link></td>
             <td className="px-4 py-3">{TIPOS[item.type]}</td><td className={`px-4 py-3 ${item.priority >= 2 ? "font-semibold" : ""}`}>{PRIORIDADES[item.priority]}</td>
             <td className="px-4 py-3 break-words max-w-48">{nomeSistema(item)}</td><td className="px-4 py-3"><Selo tom={TONS[item.status]}>{SITUACOES[item.status]}</Selo></td>
             <td className="px-4 py-3">{item.assignee?.name ?? "Sem responsável"}</td><td className="px-4 py-3 whitespace-nowrap">{prazoDoItem(item)}</td>

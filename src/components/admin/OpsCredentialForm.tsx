@@ -51,7 +51,7 @@ export function OpsCredentialForm({ hasToken: inicial, version: versaoInicial, k
   }
 
   return <div className="space-y-4">
-    <p className="text-fs-3 text-fg-secondary">Cadastre uma ou mais chaves para as automações do escritório. Cada bot informa seu identificador (slug). A chave completa aparece somente ao gerar ou trocar.</p>
+    <p className="text-ui text-fg-secondary">Cadastre uma ou mais chaves para as automações do escritório. Cada bot informa seu identificador (slug). A chave completa aparece somente ao gerar ou trocar.</p>
     <h3 className="font-semibold text-fg">Chave principal</h3>
     {hasToken ? <p className="text-helper text-fg-secondary">Chave principal configurada. Guarde-a na configuração protegida dos bots autorizados.</p> : <p className="text-helper text-warning-fg">Nenhuma chave principal configurada. Você também pode usar as chaves adicionais abaixo.</p>}
     {token && <div className="space-y-2"><label htmlFor="ops-shared-token" className="block text-helper font-semibold text-fg-secondary">Nova chave — copie agora; ela não poderá ser consultada depois</label><div className="flex min-w-0 gap-2"><Input id="ops-shared-token" readOnly value={token} onFocus={e => e.target.select()} className="font-mono text-helper" /><Button type="button" variant="secondary" onClick={() => void copiar()}><Copy size={14} /> Copiar</Button></div></div>}

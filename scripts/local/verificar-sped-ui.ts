@@ -61,18 +61,20 @@ async function main() {
     await sped.hover();
     const submenu = page.getByRole("menu", { name: "SPED", exact: true });
     await submenu.waitFor();
-    for (const label of ["Classificação e apuração", "SPED gerados", "Executar"]) assert.equal(await submenu.getByRole("menuitem", { name: label, exact: true }).count(), 1);
+    for (const label of ["Painel", "Classificação e apuração", "SPED gerados", "Executar"]) assert.equal(await submenu.getByRole("menuitem", { name: label, exact: true }).count(), 1);
     await page.screenshot({ path: resolve(pasta, "menu-sped-aberto.png"), animations: "disabled", caret: "initial" });
     await page.keyboard.press("Escape");
     await sped.press("ArrowDown");
     await submenu.waitFor();
-    assert.equal(await submenu.getByRole("menuitem", { name: "Classificação e apuração", exact: true }).evaluate((el) => document.activeElement === el), true);
+    assert.equal(await submenu.getByRole("menuitem", { name: "Painel", exact: true }).evaluate((el) => document.activeElement === el), true);
     await page.keyboard.press("ArrowDown");
-    assert.equal(await submenu.getByRole("menuitem", { name: "SPED gerados", exact: true }).evaluate((el) => document.activeElement === el), true);
+    assert.equal(await submenu.getByRole("menuitem", { name: "Classificação e apuração", exact: true }).evaluate((el) => document.activeElement === el), true);
     await page.keyboard.press("Escape");
-    assert.equal(await page.locator("main").getByRole("tab").count(), 2);
+    // Executar e Histórico são abas de link desde 26/10/2026, como no modo do motor.
+    const secoes = page.locator("main").getByRole("navigation", { name: "Seções de Executar", exact: true });
+    assert.equal(await secoes.getByRole("link").count(), 2);
     assert.equal(await page.locator("main").getByRole("link", { name: "Classificação", exact: true }).count(), 0);
-    assert((await page.getByRole("tab", { name: "Executar", exact: true }).boundingBox())!.y < (await page.getByRole("heading", { level: 1 }).boundingBox())!.y);
+    assert((await secoes.getByRole("link", { name: "Executar", exact: true }).boundingBox())!.y < (await page.getByRole("heading", { level: 1 }).boundingBox())!.y);
 
     await controlar("Retentar erros");
     await controlar("Solicitar retentar erros");
@@ -141,7 +143,7 @@ async function main() {
     const falhaId = (await estado()).execucoes[0].id;
     await controlar("Simular início");
     await controlar("Simular falha");
-    await page.getByRole("tab", { name: "Histórico", exact: true }).click(); await salvo();
+    await page.locator("main").getByRole("navigation", { name: "Seções de Executar", exact: true }).getByRole("link", { name: "Histórico", exact: true }).click(); await salvo();
     await controlar("Nova tentativa");
     const apos = await estado();
     assert.equal(apos.execucoes.find((e) => e.id === falhaId)?.estado, "Erro");

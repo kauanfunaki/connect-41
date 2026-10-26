@@ -26,16 +26,20 @@ export function CascoDoMotor({ tela, caminho, abas, aba, titulo, descricao, acao
   children: ReactNode;
 }) {
   const { contexto, motor, mapa } = tela;
-  const telas = menuSped(PAGINAS_FISCAIS.filter((p) => tela.modulos.includes(p.modulo)).map((p) => ({ code: p.modulo, href: p.caminho }))).telas;
+  const telas = menuSped(PAGINAS_FISCAIS.filter((p) => tela.modulos.includes(p.modulo)).map((p) => ({ code: p.modulo, href: p.caminho })), { motor: true }).telas;
+  // A troca entre ICMS/IPI e PIS e COFINS, que na prévia é o campo "Obrigação da apuração" (26/10/2026).
+  const obrigacoes = ([["fiscal_icms_ipi", "/fiscal/icms-ipi", "ICMS/IPI"], ["fiscal_contribuicoes", "/fiscal/contribuicoes", "PIS e COFINS"]] as const).filter(([modulo]) => tela.modulos.includes(modulo));
+  const trocaDeObrigacao = (caminho === "/fiscal/icms-ipi" || caminho === "/fiscal/contribuicoes") && obrigacoes.length > 1;
   const menuPrincipal = ["/fiscal/classificacao", "/fiscal/icms-ipi", "/fiscal/contribuicoes", "/fiscal/configuracoes"].includes(caminho) && telas.length > 0;
   const ativa = telas.find((t) => t.href === `${caminho}?aba=${aba}`) ?? telas.find((t) => t.href === caminho);
   return <>
-    {menuPrincipal && <AbasDeLink className="mb-5" ativa={caminho === "/fiscal/contribuicoes" ? "Apuração" : ativa?.label ?? ""} abas={telas.map((t) => {
+    {menuPrincipal && <AbasDeLink className="mb-5" aria-label="Telas do SPED" ativa={caminho === "/fiscal/contribuicoes" ? "Apuração" : ativa?.label ?? ""} abas={telas.map((t) => {
       const [base, query] = t.href.split("?");
       const extra = Object.fromEntries(new URLSearchParams(query ?? ""));
       return { chave: t.label, rotulo: t.label, href: hrefDoMotor(base, contexto, extra) };
     })} />}
-    {abas && abas.length > 1 && <AbasDeLink className="mb-5" ativa={aba ?? ""} abas={abas.map((a) => ({ chave: a.chave, rotulo: a.rotulo, href: hrefDoMotor(caminho, contexto, { aba: a.chave }) }))} />}
+    {trocaDeObrigacao && <AbasDeLink className="mb-5" aria-label="Obrigação da apuração" ativa={caminho} abas={obrigacoes.map(([, href, rotulo]) => ({ chave: href, rotulo, href: hrefDoMotor(href, contexto) }))} />}
+    {abas && abas.length > 1 && <AbasDeLink className="mb-5" aria-label={`Seções de ${titulo}`} ativa={aba ?? ""} abas={abas.map((a) => ({ chave: a.chave, rotulo: a.rotulo, href: hrefDoMotor(caminho, contexto, { aba: a.chave }) }))} />}
     <PageHeader title={titulo} subtitle={descricao} action={acao} />
     {contexto && <FiltroDoMotor raizes={motor.raizes} raiz={contexto.raiz} estabelecimentos={mapa.visiveis.map((e) => ({ id: e.id, rotulo: `${e.companyNome} · ${e.uf}${e.matriz ? " · matriz" : ""}${e.ativo ? "" : " · inativo"}` }))} estabelecimentoId={contexto.estabelecimentoId} competencia={contexto.competencia} semEstabelecimento={semEstabelecimento} />}
     <div className="mb-5 flex flex-col gap-3">
