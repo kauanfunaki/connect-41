@@ -15,7 +15,7 @@ import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
-import { getModuleRoute, MODULOS_DO_MENU_GERAL, FORA_DO_MENU_COM_SOLICITACOES, MODULOS_SEM_MENU } from "@/lib/module-catalog";
+import { getModuleRoute, MODULOS_DO_MENU_GERAL, FORA_DO_MENU_COM_SOLICITACOES, MODULOS_SEM_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
 import { bancoFiscalLocal } from "@/lib/fiscal/local/ambiente";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
@@ -111,12 +111,15 @@ export default async function AppLayout({
   // A fila das solicitações do portal mora no menu Geral (ver MODULOS_DO_MENU_GERAL).
   const solicitacoesLigadas = moduleStates.some((m) => m.code === "portal_solicitacoes" && m.enabled);
   const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
+  // No setor que atende os chamados (a Tech), eles saem do Geral e entram no
+  // menu do setor (26/10/2026, ver `chamadosNoMenuDoSetor`).
+  const chamadosNoSetor = chamadosLigados && chamadosNoMenuDoSetor(activeSector?.code ?? null, helpdeskConfig.sectorCode);
   const activeSectorModules = activeSector
     ? moduleStates
         // Com as Solicitações ligadas, o grupo Cliente do BPO sai do menu do
         // setor: Pendências e Aprovações moram nas abas delas, e a Conversa
         // repetia o item Solicitações do Geral (21/10/2026).
-        .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && !MODULOS_DO_MENU_GERAL.has(m.code) && !semMenu.has(m.code) && !(solicitacoesLigadas && FORA_DO_MENU_COM_SOLICITACOES.has(m.code)))
+        .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && (!MODULOS_DO_MENU_GERAL.has(m.code) || (m.code === "helpdesk" && chamadosNoSetor)) && !semMenu.has(m.code) && !(solicitacoesLigadas && FORA_DO_MENU_COM_SOLICITACOES.has(m.code)))
         .map((m) => ({ code: m.code, label: m.label, href: getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
@@ -208,7 +211,7 @@ export default async function AppLayout({
         solicitacoesLigadas={solicitacoesLigadas}
         solicitacoesNovas={solicitacoesNovas}
         arquivosLigados={arquivosLigados}
-        chamadosLigados={chamadosLigados}
+        chamadosLigados={chamadosLigados && !chamadosNoSetor}
         telasDoGeral={telasDoGeral}
         profileName={me?.name ?? "Usuário"}
         profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
