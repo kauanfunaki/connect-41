@@ -14,6 +14,7 @@ import {
   MODULOS_NAS_SOLICITACOES,
   FORA_DO_MENU_COM_SOLICITACOES,
   TELAS_DO_BPO_NAS_SOLICITACOES,
+  chamadosNoMenuDoSetor,
 } from "./module-catalog";
 import { DEFAULT_SECTORS } from "./sector-constants";
 
@@ -76,6 +77,18 @@ describe("catálogo de módulos", () => {
     expect([...MODULOS_NAS_SOLICITACOES]).toEqual(["bpo_pendencias", "bpo_aprovacoes"]);
     // A Conversa sai junto: ela levava ao mesmo /solicitacoes do menu Geral.
     expect([...FORA_DO_MENU_COM_SOLICITACOES].sort()).toEqual(["bpo_aprovacoes", "bpo_comunicacao", "bpo_pendencias"]);
+  });
+
+  // 26/10/2026: Chamados no Geral para todos, menos no setor que os atende.
+  it("Chamados vai para o menu do setor só no setor que atende os chamados", () => {
+    expect(MODULOS_DO_MENU_GERAL.has("helpdesk")).toBe(true);
+    expect(chamadosNoMenuDoSetor("tech", "tech")).toBe(true);
+    expect(chamadosNoMenuDoSetor("bpo", "tech")).toBe(false);
+    // Em "Todos os setores" não há menu de setor: fica no Geral.
+    expect(chamadosNoMenuDoSetor(null, "tech")).toBe(false);
+    // Transferido no escritório, vale o setor que opera, e não a Tech.
+    expect(chamadosNoMenuDoSetor("controladoria", "controladoria")).toBe(true);
+    expect(chamadosNoMenuDoSetor("tech", "controladoria")).toBe(false);
   });
 
   it("rota começa com barra", () => {
