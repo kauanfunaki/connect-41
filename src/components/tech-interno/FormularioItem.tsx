@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { salvarItemTech, comentarItemTech } from "@/app/(app)/tech/controle-interno/actions";
-import { TIPOS, PRIORIDADES, SITUACOES, ROTA_TECH_INTERNO } from "@/lib/tech-interno/regras";
+import { TIPOS, PRIORIDADES, SITUACOES, ROTA_TECH_INTERNO, comVolta } from "@/lib/tech-interno/regras";
 
 type Pessoa = { id: string; name: string };
 type Sistema = Pessoa & { active: boolean };
@@ -21,7 +22,7 @@ export type ItemDoFormulario = {
   assigneeName: string | null;
 };
 
-export function FormularioItem({ item, tools, users, podeEditar }: { item?: ItemDoFormulario; tools: Sistema[]; users: Pessoa[]; podeEditar: boolean }) {
+export function FormularioItem({ item, tools, users, podeEditar, voltar = ROTA_TECH_INTERNO }: { item?: ItemDoFormulario; tools: Sistema[]; users: Pessoa[]; podeEditar: boolean; voltar?: string }) {
   const router = useRouter();
   const [sistema, setSistema] = useState(item?.systemMode === "EXISTING" ? item.toolId ?? "NONE" : item?.systemMode ?? "NONE");
   const [erro, setErro] = useState("");
@@ -37,7 +38,7 @@ export function FormularioItem({ item, tools, users, podeEditar }: { item?: Item
         const r = await salvarItemTech(item?.id, form);
         if ("error" in r) { setErro(r.error); return; }
         show(item ? "Alterações salvas." : "Item criado.", "success");
-        if (!item) router.replace(`${ROTA_TECH_INTERNO}/${r.id}`);
+        if (!item) router.replace(comVolta(`${ROTA_TECH_INTERNO}/${r.id}`, voltar));
         else router.refresh();
       } catch { setErro("Não foi possível confirmar o salvamento. Atualize a página antes de tentar novamente."); }
     });
@@ -62,11 +63,8 @@ export function FormularioItem({ item, tools, users, podeEditar }: { item?: Item
       </div>
       <CampoForm label="Descrição" htmlFor="tech-description"><Textarea id="tech-description" name="description" rows={6} maxLength={10000} defaultValue={item?.description ?? ""} /></CampoForm>
     </fieldset>
-    <div className="flex flex-wrap items-center justify-end gap-3">
-      {erro && <p role="alert" className="text-helper text-danger">{erro}</p>}
-      {podeEditar && <Button type="submit" loading={pendente}>{item ? "Salvar alterações" : "Criar item"}</Button>}
-      {!podeEditar && <p className="text-helper text-fg-muted">Acesso somente para consulta.</p>}
-    </div>
+    {podeEditar ? <FormFooter pending={pendente} submitLabel={item ? "Salvar alterações" : "Criar item"} pendingLabel={item ? undefined : "Criando…"} cancelHref={voltar} erro={erro || undefined} />
+      : <p className="text-helper text-fg-muted text-right">Acesso somente para consulta.</p>}
   </form>;
 }
 

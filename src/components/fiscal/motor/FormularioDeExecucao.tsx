@@ -8,12 +8,12 @@ import { CampoData } from "@/components/ui/CampoData";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
-import { Modal } from "@/components/ui/Modal";
+import { useConfirm } from "@/components/ui/useConfirm";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
-import { BlocoFiscal, CampoFiscal } from "@/components/fiscal/previa/Compartilhados";
+import { BlocoFiscal, CampoFiscal, ETAPAS_DA_EXTRACAO } from "@/components/fiscal/previa/Compartilhados";
 import { MODOS_EXECUCAO, mesInteiro, parametrosExecucaoSchema, parametrosIniciais, type ModoExecucao, type ParametrosExecucao } from "@/lib/fiscal/previa/execucao";
 import { solicitarExecucaoNoMotor } from "@/app/(app)/fiscal/motor-actions";
-import { useChaveDeIdempotencia } from "./useChaveDeIdempotencia";
+import { useChavesPorAcao } from "./useChaveDeIdempotencia";
 
 type Existente = { id?: number; estado?: string; solicitado_por?: string | null; solicitado_em?: string | null };
 
@@ -33,36 +33,37 @@ export function FormularioDeExecucao({ raiz, estabelecimentos, estabelecimentoId
   motivo: string | null;
 }) {
   const router = useRouter();
-  const [chave, , depoisDe] = useChaveDeIdempotencia();
+  const [chaveDe, depoisDe] = useChavesPorAcao();
   const [pendente, startTransition] = useTransition();
+  const [enviando, setEnviando] = useState<ModoExecucao | null>(null);
+  const { dialog, requestConfirm } = useConfirm();
   const [p, setP] = useState<ParametrosExecucao>(() => ({ ...parametrosIniciais(competencia), saida: "saida_sped.txt" }));
   const [estab, setEstab] = useState<string>(estabelecimentoId ? String(estabelecimentoId) : "");
   const [obrigacao, setObrigacao] = useState<"sped" | "sped_contribuicoes">("sped");
   const [workers, setWorkers] = useState({ paralela: 32, simples: 8, erros: 32 });
   const [resultado, setResultado] = useState<{ ok: boolean; mensagem: string } | null>(null);
-  const [duplicata, setDuplicata] = useState<{ parametros: ParametrosExecucao; existente: Existente } | null>(null);
   const matriz = estabelecimentos.find((e) => e.matriz);
   const campo = <K extends keyof ParametrosExecucao>(k: K, v: ParametrosExecucao[K]) => setP((a) => ({ ...a, [k]: v }));
 
-  function enviar(parametros: ParametrosExecucao, confirmarDuplicado: boolean) {
-    startTransition(async () => {
-      const r = await solicitarExecucaoNoMotor({ raiz, estabelecimentoId: estab ? Number(estab) : null, parametros, confirmarDuplicado, chave });
-      depoisDe(r);
-      if (!r.ok && r.codigo === "execucao_duplicada") {
-        setDuplicata({ parametros, existente: (r.detalhe?.existente ?? {}) as Existente });
-        setResultado(null);
-        return;
-      }
-      setResultado({ ok: r.ok, mensagem: r.mensagem });
-      if (r.ok) router.refresh();
-    });
+  async function enviar(parametros: ParametrosExecucao, confirmarDuplicado: boolean) {
+    const r = await solicitarExecucaoNoMotor({ raiz, estabelecimentoId: estab ? Number(estab) : null, parametros, confirmarDuplicado, chave: chaveDe(parametros.modo) });
+    depoisDe(parametros.modo, r);
+    if (!r.ok && r.codigo === "execucao_duplicada") {
+      const existente = (r.detalhe?.existente ?? {}) as Existente;
+      setResultado(null);
+      requestConfirm({ title: "Já existe um pedido igual", description: `O pedido #${existente.id ?? "?"} (${existente.estado ?? "aberto"}${existente.solicitado_por ? `, de ${existente.solicitado_por}` : ""}) tem a mesma ação, estabelecimento e período. Enviar outro mesmo assim?`, confirmLabel: "Enviar mesmo assim" }, () => enviar(parametros, true));
+      return;
+    }
+    setResultado({ ok: r.ok, mensagem: r.mensagem });
+    if (r.ok) router.refresh();
   }
   function solicitar(modo: ModoExecucao) {
     const dados = { ...p, modo, workers: modo === "paralela" || modo === "simples" || modo === "erros" ? workers[modo] : p.workers, ...(modo === "sped_contribuicoes" && { forcarErros: false, forcarCobertura: false }) };
     const v = parametrosExecucaoSchema.safeParse(dados);
     if (!v.success) { setResultado({ ok: false, mensagem: v.error.issues[0].message }); return; }
     if (modo !== "sped_contribuicoes" && !estab) { setResultado({ ok: false, mensagem: "Escolha o estabelecimento." }); return; }
-    enviar(v.data, false);
+    setEnviando(modo);
+    startTransition(() => enviar(v.data, false));
   }
   const bloqueado = !podeSolicitar || pendente;
   return <div className="space-y-5">
@@ -77,7 +78,7 @@ export function FormularioDeExecucao({ raiz, estabelecimentos, estabelecimentoId
         <CampoFiscal nome="Data final"><CampoData aria-label="Data final" value={p.dataFim} onChange={(v) => campo("dataFim", v)} /></CampoFiscal>
       </div>
       <div className="mt-4 flex flex-wrap gap-5">
-        {(["first_mile", "last_mile"] as const).map((etapa) => <Checkbox key={etapa} id={`motor-${etapa}`} label={etapa} checked={p.etapas.includes(etapa)} onChange={(e) => campo("etapas", e.target.checked ? [...p.etapas, etapa] : p.etapas.filter((v) => v !== etapa))} />)}
+        {(["first_mile", "last_mile"] as const).map((etapa) => <Checkbox key={etapa} id={`motor-${etapa}`} label={ETAPAS_DA_EXTRACAO[etapa]} checked={p.etapas.includes(etapa)} onChange={(e) => campo("etapas", e.target.checked ? [...p.etapas, etapa] : p.etapas.filter((v) => v !== etapa))} />)}
         <Checkbox id="motor-sem-entradas" label="Pular entradas (SIEG)" checked={p.semEntradas} onChange={(e) => campo("semEntradas", e.target.checked)} />
       </div>
     </BlocoFiscal>
@@ -85,9 +86,9 @@ export function FormularioDeExecucao({ raiz, estabelecimentos, estabelecimentoId
     {(["paralela", "simples", "erros"] as const).map((modo) => <BlocoRecolhivel key={modo} titulo={MODOS_EXECUCAO[modo]} className="bg-surface" abertoInicial={false}>
       <div className="grid max-w-xl gap-4 sm:grid-cols-2">
         {modo === "paralela" && <CampoFiscal nome="Instâncias"><Input aria-label="Instâncias" type="number" min={1} max={16} value={p.instancias} onChange={(e) => campo("instancias", Number(e.target.value))} /></CampoFiscal>}
-        <CampoFiscal nome={modo === "paralela" ? "Workers por instância" : "Workers"}><Input aria-label={`Workers · ${MODOS_EXECUCAO[modo]}`} type="number" min={1} max={64} value={workers[modo]} onChange={(e) => setWorkers((a) => ({ ...a, [modo]: Number(e.target.value) }))} /></CampoFiscal>
+        <CampoFiscal nome={modo === "paralela" ? "Processos paralelos por instância" : "Processos paralelos"}><Input aria-label={`Processos paralelos · ${MODOS_EXECUCAO[modo]}`} type="number" min={1} max={64} value={workers[modo]} onChange={(e) => setWorkers((a) => ({ ...a, [modo]: Number(e.target.value) }))} /></CampoFiscal>
       </div>
-      <Button className="mt-4" disabled={bloqueado} onClick={() => solicitar(modo)}>Solicitar {MODOS_EXECUCAO[modo].toLocaleLowerCase("pt-BR")}</Button>
+      <Button className="mt-4" disabled={bloqueado} loading={pendente && enviando === modo} loadingLabel="Enviando…" onClick={() => solicitar(modo)}>Solicitar {MODOS_EXECUCAO[modo].toLocaleLowerCase("pt-BR")}</Button>
     </BlocoRecolhivel>)}
     <BlocoRecolhivel titulo="Gerar SPED" abertoInicial className="bg-surface">
       <p className="mb-4 text-ui text-fg-secondary">Um único mês inteiro. ICMS/IPI gera o estabelecimento escolhido; Contribuições gera a raiz inteira pela matriz{matriz ? ` (${matriz.rotulo})` : " — a matriz não está entre as empresas que você acessa"}.</p>
@@ -100,16 +101,8 @@ export function FormularioDeExecucao({ raiz, estabelecimentos, estabelecimentoId
         <Button variant="secondary" onClick={() => { const [dataIni, dataFim] = mesInteiro(p.dataIni.slice(0, 7) || competencia); setP((a) => ({ ...a, dataIni, dataFim })); }}>Ajustar para o mês inteiro</Button>
         {obrigacao === "sped" && <><Checkbox id="motor-forcar-erros" label="Gerar mesmo com erro pendente" checked={p.forcarErros} onChange={(e) => campo("forcarErros", e.target.checked)} /><Checkbox id="motor-forcar-cobertura" label="Gerar mesmo sem documentos" checked={p.forcarCobertura} onChange={(e) => campo("forcarCobertura", e.target.checked)} /></>}
       </div>
-      <Button className="mt-4" disabled={bloqueado || (obrigacao === "sped_contribuicoes" && !matriz)} loading={pendente} loadingLabel="Enviando…" onClick={() => solicitar(obrigacao)}>Solicitar geração</Button>
+      <Button className="mt-4" disabled={bloqueado || (obrigacao === "sped_contribuicoes" && !matriz)} loading={pendente && enviando === obrigacao} loadingLabel="Enviando…" onClick={() => solicitar(obrigacao)}>Solicitar geração</Button>
     </BlocoRecolhivel>
-    <Modal open={!!duplicata} title="Já existe um pedido igual" onClose={() => setDuplicata(null)}>
-      <p className="text-ui text-fg-secondary">
-        O pedido #{duplicata?.existente.id ?? "?"} ({duplicata?.existente.estado ?? "aberto"}{duplicata?.existente.solicitado_por ? `, de ${duplicata.existente.solicitado_por}` : ""}) tem a mesma ação, estabelecimento e período. Enviar outro mesmo assim?
-      </p>
-      <div className="mt-5 flex flex-wrap gap-3">
-        <Button disabled={pendente} onClick={() => { const d = duplicata; setDuplicata(null); if (d) enviar(d.parametros, true); }}>Enviar mesmo assim</Button>
-        <Button variant="secondary" onClick={() => setDuplicata(null)}>Não enviar</Button>
-      </div>
-    </Modal>
+    {dialog}
   </div>;
 }

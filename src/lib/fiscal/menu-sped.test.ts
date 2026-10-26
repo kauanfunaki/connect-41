@@ -10,7 +10,17 @@ describe("menu compacto do SPED", () => {
       "Classificação", "Apuração", "De-Para CFOP", "Regras", "DCIP e DIME",
     ]);
     expect(menuSped(modulos).href).toBe("/fiscal/classificacao");
-    expect(menuSped(modulos).laterais.map((t) => t.label)).toEqual(["Classificação e apuração", "SPED gerados", "Executar"]);
+    expect(menuSped(modulos).laterais.map((t) => t.label)).toEqual(["Painel", "Classificação e apuração", "SPED gerados", "Executar"]);
+  });
+  // No motor, só telas com fonte; Empresas é a entrada de Configurações (26/10/2026).
+  it("no modo motor, não oferece telas sem fonte e leva às empresas", () => {
+    expect(menuSped(modulos, { motor: true }).telas.map((t) => [t.label, t.href])).toEqual([
+      ["Classificação", "/fiscal/classificacao"], ["Apuração", "/fiscal/icms-ipi"], ["Empresas", "/fiscal/configuracoes"], ["DCIP e DIME", "/fiscal/icms-ipi?aba=dcip-dime"],
+    ]);
+  });
+  it("leva ao painel mesmo sem as telas principais", () => {
+    const menu = menuSped([{ code: "fiscal_painel", href: "/fiscal" }]);
+    expect(menu.laterais.map((t) => [t.label, t.href])).toEqual([["Painel", "/fiscal"]]);
   });
   it("remove os acessos desligados e usa uma entrada habilitada", () => {
     const menu = menuSped([{ code: "fiscal_contribuicoes", href: "/fiscal/contribuicoes" }]);
@@ -23,7 +33,7 @@ describe("menu compacto do SPED", () => {
     expect(menu.href).toBeUndefined();
     expect(menu.laterais.map((t) => t.label)).toEqual(["SPED gerados", "Executar"]);
   });
-  it.each([["/fiscal/icms-ipi", "SPED"], ["/fiscal/configuracoes", "SPED"], ["/fiscal/contribuicoes", "SPED"], ["/fiscal/entregas", "SPED gerados"], ["/fiscal/operacao", "Executar"], ["/autorizacoes", undefined]])("marca somente a área correspondente a %s", (path, area) => {
+  it.each([["/fiscal", "Painel"], ["/fiscal/documentos", "Outras"], ["/fiscal/conferencia", "Outras"], ["/fiscal/classificacao", "SPED"], ["/fiscal/icms-ipi", "SPED"], ["/fiscal/configuracoes", "SPED"], ["/fiscal/contribuicoes", "SPED"], ["/fiscal/entregas", "SPED gerados"], ["/fiscal/operacao", "Executar"], ["/autorizacoes", undefined]])("marca somente a área correspondente a %s", (path, area) => {
     expect(areaSpedAtiva(path)).toBe(area);
   });
   it("não absorve autorizações nem módulos de outros setores", () => {

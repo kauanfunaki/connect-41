@@ -2,7 +2,7 @@
 
 import { Checkbox } from "@/components/ui/Checkbox";
 
-import { Fragment, cloneElement, isValidElement, useId, useState, type ReactElement, type ReactNode } from "react";
+import { Fragment, cloneElement, isValidElement, useId, useState, type ReactElement, type ReactNode, type Ref } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { FileText, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -68,10 +68,21 @@ export function MetricasFiscais({ itens }: { itens: MetricaFiscal[] }) {
  * Era uma tabela própria, que só existia aqui. No celular, cada linha vira um
  * cartão: a primeira coluna no topo, as outras com o rótulo do cabeçalho — a
  * tabela rolava de lado.
+ *
+ * Texto à esquerda e números à direita (26/10/2026); tudo era centralizado.
+ * A coluna é numérica quando todas as células preenchidas são números ou
+ * valores (R$, %, `tabular-nums`).
  */
+const NUMERICO = /^[-+]?(R\$\s?)?[-+]?[\d.,]+\s?%?$/;
+function celulaNumerica(c: ReactNode): boolean {
+  if (typeof c === "number") return true;
+  if (typeof c === "string") return NUMERICO.test(c.trim());
+  return isValidElement<{ className?: string }>(c) && /\btabular-nums\b/.test(c.props.className ?? "");
+}
 export function TabelaFiscal({ colunas, linhas, vazio = "Nenhum item neste filtro.", descricaoVazio = "Troque os filtros ou use as ações de teste para adicionar informações." }: { colunas: string[]; linhas: { id: string; celulas: ReactNode[] }[]; vazio?: string; descricaoVazio?: string }) {
   if (!linhas.length) return <EmptyState icon={<FileText />} title={vazio} description={descricaoVazio} />;
   const resto = colunas.slice(1);
+  const numerica = colunas.map((_, i) => { const preenchidas = linhas.map((l) => l.celulas[i]).filter((c) => c !== null && c !== undefined && c !== "" && c !== "—"); return preenchidas.length > 0 && preenchidas.every(celulaNumerica); });
   return <>
     <CartoesNoCelular>
       {linhas.map((l) => <Cartao key={l.id}>
@@ -83,19 +94,21 @@ export function TabelaFiscal({ colunas, linhas, vazio = "Nenhum item neste filtr
     </CartoesNoCelular>
     <TabelaNoDesktop padrao>
       <table className="w-full">
-        <thead><tr>{colunas.map((c, i) => <th key={`${c}-${i}`} scope="col" className="px-3 text-center align-middle">{c}</th>)}</tr></thead>
-        <tbody>{linhas.map((l) => <tr key={l.id} className="border-b border-border-soft">{l.celulas.map((c, i) => <td key={i} className="px-3 text-center align-middle text-fg"><div className="flex items-center justify-center">{c}</div></td>)}</tr>)}</tbody>
+        <thead><tr>{colunas.map((c, i) => <th key={`${c}-${i}`} scope="col" className={`px-3 align-middle ${numerica[i] ? "text-right" : "text-left"}`}>{c}</th>)}</tr></thead>
+        <tbody>{linhas.map((l) => <tr key={l.id} className="border-b border-border-soft">{l.celulas.map((c, i) => <td key={i} className={`px-3 align-middle text-fg ${numerica[i] ? "text-right tabular-nums" : "text-left"}`}>{c}</td>)}</tr>)}</tbody>
       </table>
     </TabelaNoDesktop>
   </>;
 }
-/** O rótulo do campo é o do `CampoForm` (15/10/2026); era um <label> à mão. */
-export function CampoFiscal({ nome, children, className }: { nome: string; children: ReactNode; className?: string }) {
+/** O rótulo do campo é o do `CampoForm` (15/10/2026); era um <label> à mão. O `erro` vai para a mensagem do `CampoForm`, não para o rótulo (26/10/2026). */
+export function CampoFiscal({ nome, children, className, erro }: { nome: string; children: ReactNode; className?: string; erro?: string }) {
   const id = useId();
   const campo = isValidElement(children) ? cloneElement(children as ReactElement<{ id?: string }>, { id }) : children;
-  return <CampoForm label={nome} htmlFor={id} className={className}>{campo}</CampoForm>;
+  return <CampoForm label={nome} htmlFor={id} className={className} error={erro}>{campo}</CampoForm>;
 }
 export function AcoesFiscais({ children }: { children: ReactNode }) { return <div className="flex flex-wrap items-center gap-2">{children}</div>; }
+/** As etapas da extração (`step_types` do motor) em português; a tela mostrava `first_mile` e `last_mile` (26/10/2026). */
+export const ETAPAS_DA_EXTRACAO = { first_mile: "Primeira etapa da extração", last_mile: "Última etapa da extração" } as const;
 /** `filtros` vai junto na URL — o recorte da lista de destino (`grupo`, `estado`). */
 export function AtalhoFiscal({ modulo, aba, filtros, children, discreto = false }: { modulo: string; aba?: string; filtros?: Record<string, string>; children: ReactNode; discreto?: boolean }) {
   const { modulos } = useFiscal();
@@ -104,7 +117,7 @@ export function AtalhoFiscal({ modulo, aba, filtros, children, discreto = false 
   const query = new URLSearchParams({ ...(aba ? { aba } : {}), ...filtros }).toString();
   return <Button href={`${pagina.caminho}${query ? `?${query}` : ""}`} variant={discreto ? "link" : "secondary"} size="sm" className={discreto ? "text-ui" : undefined}>{children}<ArrowRight size={13} /></Button>;
 }
-export function PreviaTexto({ texto }: { texto: string }) { return <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-surface-2 p-4 text-helper text-fg">{texto}</pre>; }
+export function PreviaTexto({ texto, ref }: { texto: string; ref?: Ref<HTMLPreElement> }) { return <pre ref={ref} className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-surface-2 p-4 text-helper text-fg">{texto}</pre>; }
 export function DetalheDocumento({ documento: d }: { documento: DocumentoTeste }) {
   return <div className="space-y-4"><div className="flex flex-wrap gap-2"><Badge variant="info">{d.tipo}</Badge><EstadoFiscal>{d.estado}</EstadoFiscal></div><dl className="grid gap-4 sm:grid-cols-2">{[["Participante", d.participante], ["Descrição", d.descricao], ["Valor", reais(d.valor)], ["Competência", d.competencia], ["CFOP / NCM", `${d.cfop || "—"} / ${d.ncm || "—"}`], ["CST", d.cst], ["Destinação", d.destino], ["Crédito de teste", d.credito ? "Permitido" : "Não aproveitado"]].map(([label, value]) => <div key={label}><dt className="text-helper text-fg-secondary">{label}</dt><dd className="mt-1 text-ui text-fg">{value}</dd></div>)}</dl>{d.motivo && <p className="text-ui text-warning-fg">{d.motivo}</p>}<PreviaTexto texto={d.xml ? `<documento-de-exemplo numero="${d.numero}" tipo="${d.tipo}">\n  <descricao>${d.descricao}</descricao>\n  <valor>${d.valor.toFixed(2)}</valor>\n</documento-de-exemplo>\n\nConteúdo demonstrativo para inspeção visual.` : "Documento de apoio de exemplo. Prévia da primeira página: contrato ou recibo, participante e valor demonstrativos."} /></div>;
 }

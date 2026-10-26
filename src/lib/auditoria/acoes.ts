@@ -39,11 +39,16 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "github.untrack": e("deixou de acompanhar um usuário do GitHub"),
   "github.credentials": e("configurou as credenciais do OAuth App do GitHub"),
   "github.settings": e("configurou os repositórios monitorados do GitHub"),
+  "github.full_sync": o("forçou a atualização completa do histórico do GitHub"),
   "helpdesk.created": c("abriu o chamado"),
   "helpdesk.updated": e("atualizou o chamado"),
   "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
   "helpdesk.category": e("configurou a categoria de chamados"),
   "helpdesk.sla": e("configurou a política de SLA dos chamados"),
+  "tech_interno.item.create": c("criou o item do controle interno do Tech"),
+  "tech_interno.item.update": e("editou o item do controle interno do Tech"),
+  "tech_interno.item.status": e("mudou a situação do item do controle interno do Tech"),
+  "tech_interno.item.comment": e("comentou no item do controle interno do Tech"),
   "helpdesk.ai_fallback": e("configurou a IA alternativa dos chamados"),
   // ── Cadastros ──────────────────────────────────────────────────────────────
   "company.create": c("criou a empresa"),
@@ -484,6 +489,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   HelpdeskTicket: "chamado",
   HelpdeskCategory: "categoria de chamados",
   HelpdeskSlaPolicy: "política de SLA dos chamados",
+  TechInternalItem: "item do controle interno",
   AccessAuthorization: "autorização de acesso",
   AccessAuthorizationGrantee: "quem recebe as autorizações",
   SerproMensagem: "mensagem da Caixa Postal",
@@ -588,6 +594,7 @@ export function nomeDoTipo(entityType: string | null | undefined): string | null
 
 export type ChaveDaAreaDaAuditoria =
   | "chamados"
+  | "tech"
   | "cadastros"
   | "fiscal"
   | "bpo"
@@ -607,6 +614,7 @@ export type ChaveDaAreaDaAuditoria =
 /** Rótulo e cor do ponto de cada área (a cor dos setores padrão, onde há setor). */
 export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotulo: string; cor: string }>> = {
   chamados: { rotulo: "Chamados", cor: "#2E6FB8" },
+  tech: { rotulo: "Tech", cor: "#3B7BE8" },
   cadastros: { rotulo: "Cadastros", cor: "#0891B2" },
   fiscal: { rotulo: "Fiscal", cor: "#C5374B" },
   bpo: { rotulo: "BPO", cor: "#B7791F" },
@@ -631,6 +639,7 @@ export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotul
  */
 const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]> = [
   ["helpdesk.", "chamados"],
+  ["tech_interno.", "tech"],
   ["company.", "cadastros"],
   ["person.", "cadastros"],
   ["companyservice.", "cadastros"],

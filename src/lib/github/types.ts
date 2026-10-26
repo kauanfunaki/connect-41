@@ -35,15 +35,12 @@ export type GithubSummary = {
   leaders: { id: string; login: string; total: number }[];
   recent: (DayEvent & { reference: string })[];
 };
+// O painel lê só o acervo gravado; cobertura e fila ficam em Integrações (26/10/2026).
+// `message` aparece apenas quando não há o que mostrar: sem conexão ou sem repositório.
 export type DashboardView = {
-  revision: string | null;
   connected: boolean; enabled: boolean; login: string | null; timezone: string;
-  from: string; to: string; complete: boolean; coveredThrough: string | null;
-  pending: number; failed: number; message: string | null; users: HeatmapUser[]; totalUsers: number;
-  page: number; pageSize: number; repositories: { id: string; fullName: string; owner: string }[];
-  unavailable: number; unidentified: number; total: number;
-  progress: SyncProgress | null;
+  from: string; to: string; message: string | null; users: HeatmapUser[]; totalUsers: number;
+  page: number; pageSize: number; unidentified: number; total: number;
   summary: GithubSummary | null;
 };
-export type DashboardUnchanged = { unchanged: true; revision: string; progress: SyncProgress; pending: number; failed: number };
 export type DayEvent = { id: string; type: ContributionType; url: string; occurredAt: string; repository: string; login: string; number: number | null };

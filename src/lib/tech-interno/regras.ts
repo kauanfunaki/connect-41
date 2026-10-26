@@ -52,6 +52,15 @@ export function lerFiltros(params: Record<string, string | string[] | undefined>
   };
 }
 export type Filtros = ReturnType<typeof lerFiltros>;
+// O "Voltar para a lista" volta ao recorte de onde a pessoa saiu — visão, filtros
+// e página (26/10/2026). Só aceita a própria lista; o resto cai na lista limpa.
+export function destinoDeVolta(raw: unknown): string {
+  if (typeof raw !== "string" || raw.length > 2000 || /[\\\s]|\/\//.test(raw)) return ROTA_TECH_INTERNO;
+  return raw === ROTA_TECH_INTERNO || raw.startsWith(`${ROTA_TECH_INTERNO}?`) ? raw : ROTA_TECH_INTERNO;
+}
+export function comVolta(href: string, voltar: string) {
+  return voltar === ROTA_TECH_INTERNO ? href : `${href}${href.includes("?") ? "&" : "?"}voltar=${encodeURIComponent(voltar)}`;
+}
 export function hojeEmSaoPaulo(agora = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(agora);
 }
@@ -60,4 +69,20 @@ export type Alteracao = { field: string; before: string | null; after: string | 
 export function diferencas(antes: Record<string, string | null> | null, depois: Record<string, string | null>): Alteracao[] {
   return Object.entries(depois).filter(([campo, valor]) => !antes || antes[campo] !== valor)
     .map(([field, after]) => ({ field, before: antes?.[field] ?? null, after }));
+}
+
+// O histórico conta quem fez o quê em frase (26/10/2026): "trocou o responsável
+// de Ana para Bruno", em vez de "Responsável: Ana → Bruno".
+const ARTIGO: Record<string, string> = { "Situação": "a situação", "Tipo": "o tipo", "Prioridade": "a prioridade", "Sistema": "o sistema" };
+const diaLegivel = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) ? v.split("-").reverse().join("/") : v;
+export function fraseDaAlteracao({ field, before, after }: Alteracao, criacao = false): string {
+  const antes = before && diaLegivel(before), depois = after && diaLegivel(after);
+  if (criacao) return `${field}: ${field === "Descrição" ? "preenchida" : depois ?? "não informado"}`;
+  if (field === "Vínculo do sistema") return "trocou o sistema por outro com o mesmo nome";
+  if (field === "Vínculo do responsável") return "trocou o responsável por outra pessoa com o mesmo nome";
+  if (field === "Título") return `renomeou de “${antes ?? ""}” para “${depois ?? ""}”`;
+  if (field === "Descrição") return !antes ? "adicionou a descrição" : !depois ? "removeu a descrição" : "editou a descrição";
+  if (field === "Responsável") return !antes ? `definiu o responsável: ${depois}` : !depois ? `removeu o responsável (${antes})` : `trocou o responsável de ${antes} para ${depois}`;
+  if (field === "Prazo") return !antes ? `definiu o prazo para ${depois}` : !depois ? `removeu o prazo (era ${antes})` : `mudou o prazo de ${antes} para ${depois}`;
+  return `mudou ${ARTIGO[field] ?? field.toLowerCase()} de ${antes ?? "não informado"} para ${depois ?? "não informado"}`;
 }

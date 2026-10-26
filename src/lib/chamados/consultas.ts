@@ -37,8 +37,7 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
     let mudou = true;
     while (mudou) { mudou = false; for (const cat of arvore) if (cat.parentId && idsCategoria.has(cat.parentId) && !idsCategoria.has(cat.id)) { idsCategoria.add(cat.id); mudou = true; } }
   }
-  const base: Prisma.HelpdeskTicketWhereInput = { AND: [whereVisivel(c),
-    filtros.q ? { OR: [{ title: { contains: filtros.q.slice(0, 255) } }, { description: { contains: filtros.q.slice(0, 255) } }] } : {},
+  const base: Prisma.HelpdeskTicketWhereInput = { AND: [whereVisivel(c), await filtroDaBusca(c, filtros.q?.trim().slice(0, 255) ?? "", filtros.em),
     filtros.categoria ? { categoryId: { in: [...idsCategoria] } } : {}, filtros.setor ? { requesterSectorCode: filtros.setor } : {},
     filtros.responsavel ? { assignees: { some: { userId: filtros.responsavel } } } : {},
     filtros.meus === "1" ? { assignees: { some: { userId: c.ctx.userId } } } : {},
@@ -62,6 +61,20 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
   const [filaCount, aguardandoCount, pausaCount, historicoCount] = await Promise.all(["fila", "aguardando", "pausa", "historico"].map(countAba));
   const fila = await getPrisma().helpdeskTicket.findMany({ where: { AND: [whereVisivel(c), { status: "NA_FILA" }] }, orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true } });
   return { rows, total, page, drafts, counts: { fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, historico: historicoCount }, posicoes: new Map(fila.map((t, i) => [t.id, i + 1])), totalFila: fila.length };
+}
+// A busca procura no escopo escolhido ao lado da caixa (26/10/2026): no próprio
+// chamado (título, descrição, protocolo), no setor solicitante ou no responsável.
+async function filtroDaBusca(c: Contexto, q: string, em?: string): Promise<Prisma.HelpdeskTicketWhereInput> {
+  if (!q) return {};
+  if (em === "setor") {
+    const setores = await getPrisma().sector.findMany({ where: { tenantId: c.ctx.tenantId, OR: [{ label: { contains: q } }, { code: { contains: q } }] }, select: { code: true } });
+    return { requesterSectorCode: { in: setores.map(s => s.code) } };
+  }
+  if (em === "responsavel") {
+    const pessoas = await getPrisma().user.findMany({ where: { tenantId: c.ctx.tenantId, name: { contains: q } }, select: { id: true }, take: 200 });
+    return { assignees: { some: { userId: { in: pessoas.map(u => u.id) } } } };
+  }
+  return { OR: [{ title: { contains: q } }, { description: { contains: q } }, { id: { startsWith: q } }] };
 }
 export async function detalhe(c: Contexto, id: string) {
   const interno = podeVerInterno(c.ctx, c.config);

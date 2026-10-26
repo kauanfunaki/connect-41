@@ -11,6 +11,7 @@ import { cnpjFormatado, data, dataHora, tamanho } from "@/lib/fiscal/motor/forma
 import { formatarNumero } from "@/lib/format";
 import type { ArquivoDetalhado, RegistroDeDecisao } from "@/lib/sped/motor";
 import { AcoesDoArquivo } from "./AcoesDoArquivo";
+import { FocoAoAbrir } from "./FocoAoAbrir";
 
 const FILTROS: CampoDeFiltro[] = [
   { chave: "obrigacao", rotulo: "Obrigação", opcoes: [{ value: "icms_ipi", label: "EFD ICMS/IPI" }, { value: "contribuicoes", label: "EFD Contribuições" }] },
@@ -60,9 +61,9 @@ export async function ArquivosMotor({ tela, params, permiteRegerar, permiteEntre
   return <div className="space-y-5">
     {detalhe?.erro && <Aviso tom="atencao">{detalhe.erro}</Aviso>}
     {detalhe && !detalhe.erro && !detalhe.dados && <Aviso tom="atencao">Arquivo não encontrado entre as empresas que você acessa.</Aviso>}
-    {detalhe?.dados && <DetalheDoArquivo {...detalhe.dados} estabelecimento={porCnpj.get(detalhe.dados.a.cnpj)?.companyNome ?? cnpjFormatado(detalhe.dados.a.cnpj)}
+    {detalhe?.dados && <FocoAoAbrir key={detalhe.dados.a.id} rotulo={`Detalhes do arquivo #${detalhe.dados.a.id}`}><DetalheDoArquivo {...detalhe.dados} hrefFechar={hrefDe({ cursor: cursor ?? undefined })} estabelecimento={porCnpj.get(detalhe.dados.a.cnpj)?.companyNome ?? cnpjFormatado(detalhe.dados.a.cnpj)}
       hrefExecucao={detalhe.dados.a.execucao_id && tela.modulos.includes("fiscal_operacao") ? hrefDoMotor("/fiscal/operacao", contexto, { aba: "historico", execucao: detalhe.dados.a.execucao_id }) : null}
-      acoes={<AcoesDoArquivo raiz={contexto.raiz} id={detalhe.dados.a.id} hrefDownload={hrefDownload(detalhe.dados.a.id)} obrigacao={detalhe.dados.a.obrigacao} validando={detalhe.dados.a.validacao.estado === "validando"} entregue={detalhe.dados.a.entrega.estado === "registrada"} permiteRegerar={permiteRegerar} permiteEntregas={permiteEntregas} />} />}
+      acoes={<AcoesDoArquivo raiz={contexto.raiz} id={detalhe.dados.a.id} hrefDownload={hrefDownload(detalhe.dados.a.id)} obrigacao={detalhe.dados.a.obrigacao} validando={detalhe.dados.a.validacao.estado === "validando"} entregue={detalhe.dados.a.entrega.estado === "registrada"} permiteRegerar={permiteRegerar} permiteEntregas={permiteEntregas} />} /></FocoAoAbrir>}
     {lista.erro && <Aviso tom="atencao">{lista.erro}</Aviso>}
     <CascoDaTabela contagem={`${arquivos.length} arquivo(s) nesta página`} filtros={<FiltrosDaTela naBarra campos={FILTROS} />} acoes={tela.modulos.includes("fiscal_operacao") && <Button href={hrefDoMotor("/fiscal/operacao", contexto, { aba: "executar" })}>Gerar novo SPED</Button>}>
       <TabelaFiscal vazio="Nenhum SPED gerado neste filtro." descricaoVazio={`Competência ${contexto.competencia}. Troque o filtro, a competência ou o estabelecimento.`} colunas={["Arquivo / obrigação", "Estabelecimento", "Competência", "Versão", "Situação", "Gerado em", "Ações"]} linhas={arquivos.map((a) => ({ id: String(a.id), celulas: [
@@ -70,9 +71,9 @@ export async function ArquivosMotor({ tela, params, permiteRegerar, permiteEntre
         porCnpj.get(a.cnpj)?.companyNome ?? cnpjFormatado(a.cnpj),
         a.competencia,
         <span key="versao">v{a.versao}<span className="block text-helper text-fg-muted">{a.considerado ? "Vigente" : a.superado_por ? `Superada pela #${a.superado_por}` : "Não considerada"}</span></span>,
-        <span key="situacao" className="flex flex-col items-center gap-1"><EstadoFiscal>{situacaoDoArquivo(a)}</EstadoFiscal>{a.defasado && a.decisoes_posteriores ? <span className="text-helper text-fg-muted">{a.decisoes_posteriores} decisão(ões) depois</span> : null}</span>,
+        <span key="situacao" className="flex flex-col items-start gap-1"><EstadoFiscal>{situacaoDoArquivo(a)}</EstadoFiscal>{a.defasado && a.decisoes_posteriores ? <span className="text-helper text-fg-muted">{a.decisoes_posteriores} decisão(ões) depois</span> : null}</span>,
         dataHora(a.gerado_em),
-        <span key="acoes" className="flex flex-wrap items-center justify-center gap-2"><Button size="xs" variant="secondary" href={hrefDe({ arquivo: a.id, cursor: cursor ?? undefined })} scroll={false}>Ver detalhes</Button><Button size="xs" variant="ghost" href={hrefDownload(a.id)} download>Baixar</Button></span>,
+        <span key="acoes" className="flex flex-wrap items-center gap-2"><Button size="xs" variant="secondary" href={hrefDe({ arquivo: a.id, cursor: cursor ?? undefined })} scroll={false}>Ver detalhes</Button><Button size="xs" variant="ghost" href={hrefDownload(a.id)} download>Baixar</Button></span>,
       ] }))} />
     </CascoDaTabela>
     <div className="flex flex-wrap gap-3">
@@ -82,13 +83,14 @@ export async function ArquivosMotor({ tela, params, permiteRegerar, permiteEntre
   </div>;
 }
 
-function DetalheDoArquivo({ a, erros, achadosTotal, posteriores, estabelecimento, hrefExecucao, acoes }: {
+function DetalheDoArquivo({ a, erros, achadosTotal, posteriores, estabelecimento, hrefExecucao, hrefFechar, acoes }: {
   a: ArquivoDetalhado;
   erros: string[];
   achadosTotal: number | null;
   posteriores: { itens: RegistroDeDecisao[]; proximo_cursor: string | null; rastreado?: boolean } | null;
   estabelecimento: string;
   hrefExecucao: string | null;
+  hrefFechar: string;
   acoes: React.ReactNode;
 }) {
   const totais = linhasDosTotais(a.totais);
@@ -99,7 +101,7 @@ function DetalheDoArquivo({ a, erros, achadosTotal, posteriores, estabelecimento
     ["NF-e / CT-e", `${a.qtd_nfe ?? "—"} / ${a.qtd_cte ?? "—"}`],
     ["Execução", hrefExecucao ? <Button key="e" href={hrefExecucao} variant="link" size="xs">#{a.execucao_id}</Button> : a.execucao_id ? `#${a.execucao_id}` : "Arquivo anterior ao rastreio"],
   ];
-  return <BlocoFiscal titulo={a.nome_arquivo} descricao={`Arquivo #${a.id} no motor SPED`} acao={<EstadoFiscal>{situacaoDoArquivo(a)}</EstadoFiscal>}>
+  return <BlocoFiscal titulo={a.nome_arquivo} descricao={`Arquivo #${a.id} no motor SPED`} acao={<span className="flex flex-wrap items-center gap-2"><EstadoFiscal>{situacaoDoArquivo(a)}</EstadoFiscal><Button href={hrefFechar} variant="ghost" size="xs" scroll={false}>Fechar</Button></span>}>
     <div className="space-y-5">
       {acoes}
       <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{fatos.map(([rotulo, valor]) => <div key={rotulo}><dt className="text-helper text-fg-secondary">{rotulo}</dt><dd className="mt-1 text-ui text-fg">{valor}</dd></div>)}</dl>
@@ -141,7 +143,7 @@ function DetalheDoArquivo({ a, erros, achadosTotal, posteriores, estabelecimento
         <h3 className="mb-2 text-label font-semibold text-fg">Totais do arquivo</h3>
         {a.totais_erro ? <Aviso tom="atencao">Não foi possível ler os totais: {a.totais_erro}</Aviso>
           : totais.length === 0 ? <p className="text-ui text-fg-muted">Sem totais.</p>
-            : <TabelaFiscal colunas={["Campo (nome do motor)", "Valor"]} linhas={totais.map((t) => ({ id: t.campo, celulas: [t.campo, <span key="v" className="tabular-nums">{t.valor}</span>] }))} />}
+            : <TabelaFiscal colunas={["Campo", "Valor"]} linhas={totais.map((t) => ({ id: t.campo, celulas: [t.campo, <span key="v" className="tabular-nums">{t.valor}</span>] }))} />}
       </section>
     </div>
   </BlocoFiscal>;

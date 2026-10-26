@@ -24,7 +24,7 @@ export function PainelFiscal({ visao }: { visao: string }) {
   return <div className="space-y-5">
     {/* As abas no desenho de sempre — só o texto e a barra embaixo (15/10/2026):
         tinham fundo próprio e a ativa preenchida. */}
-    <AbasDeLink ativa={visao} className="" abas={[
+    <AbasDeLink ativa={visao} className="" aria-label="Visões do painel" abas={[
       { chave: "resumo", rotulo: "Visão geral", href: "/fiscal", icone: <ListChecks /> },
       { chave: "historico", rotulo: "Histórico", href: "/fiscal?visao=historico", icone: <History /> },
     ]} />
@@ -37,7 +37,7 @@ export function PainelFiscal({ visao }: { visao: string }) {
           <div className="max-w-2xl">
             <p className="mb-2 text-ui font-semibold text-brand">{etapa ? `Próxima ação · etapa ${proxima + 1} de ${etapas.length}` : "Competência concluída"}</p>
             <h2 className="text-section font-semibold text-fg">{etapa?.titulo ?? "As entregas estão registradas"}</h2>
-            <p className="mt-2 text-label text-fg-secondary">{etapa?.orientacao ?? "Consulte os protocolos em Arquivos e entregas ou selecione outra competência para continuar."}</p>
+            <p className="mt-2 text-label text-fg-secondary">{etapa?.orientacao ?? "Consulte os protocolos em SPED gerados ou selecione outra competência para continuar."}</p>
           </div>
           {etapa && pagina && modulos.includes(etapa.modulo) ? <Button href={`${pagina.caminho}?aba=${etapa.aba}`} size="lg">{etapa.acao}<ArrowRight size={16} /></Button>
             : !etapa && modulos.includes("fiscal_entregas") ? <Button href="/fiscal/entregas?aba=entregas" variant="secondary">Consultar entregas<ArrowRight size={16} /></Button>

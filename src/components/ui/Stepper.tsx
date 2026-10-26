@@ -31,14 +31,18 @@ const STATUS_LABEL: Record<StepStatus, string> = {
 // que dava pra rolar. Com wrap, etapas extras descem pra uma segunda linha em
 // vez de vazar/cortar.
 //
+// No celular (26/10/2026) as etapas empilham com a ligação vertical: com o
+// wrap, a linha de ligação ficava solta no fim e no começo de cada linha.
+// Do `sm` para cima, segue a fileira horizontal.
+//
 // Lista ordenada com `aria-current="step"`, e não `tablist`/`tab` (07/10/2026):
 // não há `tabpanel` do outro lado, e o leitor de tela anunciava "aba 1 de 6"
 // num assistente — o mesmo erro que o `SegmentedControl` descreve.
 export function Stepper({ steps, onStepClick }: Props) {
   return (
-    <ol className="flex items-center justify-center flex-wrap gap-y-3 px-6 py-5 border-b border-border">
+    <ol className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-center sm:flex-wrap sm:gap-y-3 px-6 py-5 border-b border-border">
       {steps.map((step, i) => (
-        <li key={step.label} className="flex items-center">
+        <li key={step.label} className="flex flex-col items-start sm:flex-row sm:items-center">
           <button
             type="button"
             disabled={step.disabled ?? step.status === "upcoming"}
@@ -77,7 +81,8 @@ export function Stepper({ steps, onStepClick }: Props) {
           </button>
           {i < steps.length - 1 && (
             <span
-              className={`w-8 sm:w-14 h-[1.5px] mx-2.5 flex-shrink-0 ${
+              aria-hidden
+              className={`ml-[14px] my-1 h-4 w-[1.5px] sm:ml-2.5 sm:mr-2.5 sm:my-0 sm:h-[1.5px] sm:w-14 flex-shrink-0 ${
                 step.status === "done" ? "bg-success" : "bg-border-strong"
               }`}
             />
