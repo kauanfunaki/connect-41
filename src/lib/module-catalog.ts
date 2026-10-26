@@ -817,6 +817,18 @@ export const MODULOS_NOS_CADASTROS: ReadonlySet<string> = new Set(["bpo_cadastro
 export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS]);
 
 /**
+ * Chamados fica no Geral para todo setor, menos o que atende os chamados
+ * (26/10/2026): lá a tela vai para o menu do próprio setor, junto das outras
+ * telas dele. É a Tech por padrão, mas vale o setor que opera o módulo no
+ * escritório (`setorDoModulo`), e não o do catálogo. Em "Todos os setores" não
+ * há menu de setor, e os Chamados seguem no Geral. Só lugar no menu: quem abre
+ * continua decidido por `temAcessoAoModulo`.
+ */
+export function chamadosNoMenuDoSetor(setorAtivo: string | null, setorDosChamados: string): boolean {
+  return !!setorAtivo && setorAtivo === setorDosChamados;
+}
+
+/**
  * As telas do grupo "Cliente" do BPO que moram nas abas das Solicitações
  * (21/10/2026), como Fornecedores e sacados nos Cadastros: saem do menu do BPO
  * e aparecem como aba de /solicitacoes só para quem vê o módulo. Com o módulo

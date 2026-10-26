@@ -177,6 +177,10 @@ type Props = {
   solicitacoesNovas?: number;
   /** Os Arquivos estão ligados — mostra "Arquivos" no Geral. */
   arquivosLigados?: boolean;
+  /**
+   * Mostra "Chamados" no Geral. Falso também no setor que atende os chamados:
+   * lá a tela vem em `activeSectorModules` (ver `chamadosNoMenuDoSetor`).
+   */
   chamadosLigados?: boolean;
   /**
    * As telas do Geral que o setor (ou os setores da pessoa, em "Todos os
