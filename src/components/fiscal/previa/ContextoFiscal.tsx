@@ -82,10 +82,15 @@ export function ContextoFiscalProvider({ children, tenantId, userId, inicial, mo
 
   return (
     <FiscalContext.Provider value={{ ...estado, pronto: pendentes === 0, resultado, simular: enviar, visualizar: (titulo, conteudo) => setPrevias((atuais) => [...atuais, { titulo, conteudo }]), pedirRestauracao, modulos, integrado }}>
-      <PageContainer>
-        {children}
-        <p className="mt-7 text-helper text-fg-muted">Dados fictícios no banco local · geração e validação simuladas, sem validade fiscal.</p>
-      </PageContainer>
+      {/* `aria-busy` enquanto há gravação pendente no banco local (26/10/2026):
+          substitui o texto "Salvo no banco local" como sinal de que a tela
+          terminou de gravar — para o leitor de tela e para o roteiro local. */}
+      <div data-fiscal-local aria-busy={pendentes > 0}>
+        <PageContainer>
+          {children}
+          <p className="mt-7 text-helper text-fg-muted">Dados fictícios no banco local · geração e validação simuladas, sem validade fiscal.</p>
+        </PageContainer>
+      </div>
       <Modal open={!!previa} title={previa?.titulo} onClose={() => setPrevias([])} maxWidth="max-w-3xl">
         <p className="mb-4 mt-1 text-helper text-fg-secondary">Ambiente local · esta prévia usa informações fictícias do banco de testes.</p>
         {previa?.conteudo}

@@ -48,7 +48,8 @@ async function main() {
     const page = await context.newPage();
     page.setDefaultTimeout(45000);
     const estado = async () => (await prisma.localFiscalScenario.findUniqueOrThrow({ where: { tenantId_userId: { tenantId: modelo.tenantId, userId: id } } })).data as unknown as Cenario;
-    const salvo = async () => { await page.getByText("Salvo no banco local", { exact: true }).waitFor(); };
+    // O texto "Salvo no banco local" saiu da tela; o sinal agora é o aria-busy da área fiscal.
+    const salvo = async () => { await page.locator('[data-fiscal-local][aria-busy="false"]').waitFor(); };
     const ir = async (path: string) => {
       await page.goto(path); await salvo();
       await page.evaluate(() => new Promise<void>((ok) => requestAnimationFrame(() => requestAnimationFrame(() => ok()))));
