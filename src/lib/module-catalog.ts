@@ -52,6 +52,7 @@ export type IconeDeModulo =
   | "Star"
   | "Stethoscope"
   | "Target"
+  | "Ticket"
   | "TrendingUp"
   | "UserRoundCheck"
   | "UserRoundPlus"
@@ -199,7 +200,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   {
     code: "helpdesk", label: "Chamados", sectorCode: "tech",
     description: "Helpdesk interno: solicitações dos setores, atendimento, SLA e triagem conversacional por IA",
-    defaultEnabled: false, icon: "MessageSquareWarning", group: "Atendimento",
+    defaultEnabled: false, icon: "Ticket", group: "Atendimento",
   },
   {
     // Era item do menu geral até 30/09; o Kauan decidiu que é do setor novo
