@@ -31,10 +31,10 @@ export async function integrationView(tenantId: string): Promise<IntegrationView
     repositories: repos.map(repo => ({ id: repo.id, fullName: repo.fullName, owner: repo.owner, private: repo.private, fork: repo.fork,
       archived: repo.archived, selected: repo.selected, accessible: repo.accessible, error: repo.lastError })) };
 }
-const simpleAction = z.object({ action: z.enum(["pause", "resume", "disconnect", "discover", "track", "untrack"]), generation: z.number().int().nonnegative(), login: loginSchema.optional(), userId: z.string().uuid().optional() });
+const simpleAction = z.object({ action: z.enum(["pause", "resume", "full", "disconnect", "discover", "track", "untrack"]), generation: z.number().int().nonnegative(), login: loginSchema.optional(), userId: z.string().uuid().optional() });
 const AUDIT_ACTIONS = {
   pause: "github.pause", resume: "github.resume", disconnect: "github.disconnect", discover: "github.discover",
-  track: "github.track", untrack: "github.untrack", settings: "github.settings",
+  track: "github.track", untrack: "github.untrack", settings: "github.settings", full: "github.full_sync",
 } as const;
 async function saveCredentials(ctx: AuthContext, input: unknown) {
   const values = credentialsSchema.parse(input);
@@ -89,8 +89,9 @@ export async function changeIntegration(ctx: AuthContext, input: unknown) {
         throw new GithubError("O fuso fica fixo após a primeira coleta para preservar a contagem dos dias.");
       }
     }
-    const enable = (action === "settings" || action === "resume") && selectedIds.length > 0;
-    if (action === "resume" && !selectedIds.length) throw new GithubError("Selecione ao menos um repositório antes de iniciar.");
+    const enable = (action === "settings" || action === "resume" || action === "full") && selectedIds.length > 0;
+    if ((action === "resume" || action === "full") && !selectedIds.length) throw new GithubError("Selecione ao menos um repositório antes de iniciar.");
+    if (action === "full" && !connection.integration.enabled) throw new GithubError("A sincronização está pausada. Retome antes de forçar a atualização completa.");
     const config = action === "disconnect" ? lerConfig(connection.integration.configEnc) : {};
     await db.$transaction(async tx => {
       const updated = await tx.githubConnection.updateMany({ where: { id: connection.id, tenantId: ctx.tenantId, generation }, data: {
@@ -108,7 +109,8 @@ export async function changeIntegration(ctx: AuthContext, input: unknown) {
       if (enable) {
         const next = { ...connection, generation: generation + 1 };
         await queueInventory(tx, next);
-        await queueRepositories(tx, next, selectedIds.map(id => ({ id })));
+        // Atualização completa: a próxima coleta de cada repositório volta aos 12 meses (26/10/2026).
+        await queueRepositories(tx, next, selectedIds.map(id => ({ id })), action === "full");
       }
     }, { timeout: 60000 });
   }

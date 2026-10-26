@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, KeyRound, Pencil, Plus, RefreshCw, Search, UserRound, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, KeyRound, Pencil, Plus, RefreshCw, Search, UserRound, X, XCircle } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -135,8 +135,13 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
   </div>;
 
   return <PageContainer>
-    <PageHeader title="Ops Center" subtitle="Acompanhe a saúde e os resultados das suas automações."
-      meta={<span>{painel ? `Atualizado em ${data(painel.serverTime)} · atualização a cada 30 segundos` : "Carregando o painel…"}</span>} />
+    {/* Cabeçalho enxuto (26/10/2026): sem subtítulo, sem "Atualizado em" e sem a
+        linha de sucessos/avisos/taxa — os números do dia ficam na faixa abaixo. */}
+    <PageHeader title="Ops Center" action={<div className="flex flex-wrap gap-2">
+      {podeGerir && <Button size="sm" variant="secondary" href="/admin/integracoes?integracao=ops_center"><KeyRound size={14} /> Integração dos bots</Button>}
+      <IconButton variant="framed" title="Atualizar agora" aria-label="Atualizar agora" onClick={() => void atualizar()} disabled={loading}><RefreshCw size={16} className={loading ? "motion-safe:animate-spin" : ""} /></IconButton>
+      {podeGerir && <Button size="sm" onClick={() => editar("novo")}><Plus size={14} /> Nova automação</Button>}
+    </div>} />
     {/* O resumo saiu da ação do cabeçalho para a faixa de números do app: lá ele
         pedia largura fixa (`100vw-3rem`) para caber no celular (26/10/2026). */}
     <FaixaDeTotais destaque={false} itens={[
@@ -145,43 +150,34 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
       { rotulo: "Com erro", valor: summary ? numero(summary.error) : "—", tom: summary?.error ? "text-danger" : undefined },
     ]} />
 
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <SegmentedControl label="Visualizações do Ops Center" active={visao} onChange={setVisao} tone="brand" items={[
-        { key: "automations", label: "Automações", icon: <Activity size={14} /> },
-        { key: "history", label: "Histórico", icon: <History size={14} />, contagem: painel?.total },
-      ]} />
-      <div className="flex flex-wrap gap-2">
-        {podeGerir && <Button size="sm" variant="secondary" href="/admin/integracoes?integracao=ops_center"><KeyRound size={14} /> Integração dos bots</Button>}
-        <Button size="sm" variant="secondary" onClick={() => void atualizar()} disabled={loading}><RefreshCw size={14} className={loading ? "motion-safe:animate-spin" : ""} /> Atualizar</Button>
-        {podeGerir && <Button size="sm" onClick={() => editar("novo")}><Plus size={14} /> Nova automação</Button>}
-      </div>
-    </div>
-
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <SegmentedControl label="Automações por responsável" active={minhas ? "mine" : "all"} onChange={value => { setMinhas(value === "mine"); setWatcher(""); setPagina(1); }} items={[
-        { key: "all", label: "Todas" }, { key: "mine", label: "Minhas automações", icon: <UserRound size={14} /> },
-      ]} />
-      {summary && <p className="flex flex-wrap gap-x-4 gap-y-1 text-helper text-fg-secondary">
-        <span><strong className="font-semibold text-success-fg">{numero(summary.success)}</strong> sucessos hoje</span>
-        <span><strong className={summary.warning ? "font-semibold text-warning-fg" : "font-semibold"}>{numero(summary.warning)}</strong> avisos</span>
-        <span>Taxa de sucesso: <strong className="font-semibold text-fg">{summary.successRate === null ? "—" : `${numero(summary.successRate)}%`}</strong></span>
-      </p>}
-    </div>
-
     {erro && <Aviso className="mb-5">{erro} {painel && "Os dados abaixo são da última atualização recebida."} <Button variant="link" onClick={() => void atualizar()}>Tentar novamente</Button></Aviso>}
     {!painel && !erro && <Card className="p-8 text-center text-fg-secondary" role="status">Carregando automações e resultados…</Card>}
-    {painel && <>
-      {visao === "automations" ? <section aria-labelledby="ops-automacoes">
-        <Card className="mb-5 flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between">
-          <label className="block w-full lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>
+    {/* As abas Automações e Histórico ficam dentro do bloco que elas controlam,
+        e "Minhas automações" virou um filtro ao lado da busca (26/10/2026). */}
+    {painel && <div className="rounded-xl border border-border bg-surface-2/60 p-3 sm:p-4">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+        <SegmentedControl label="Visualizações do Ops Center" active={visao} onChange={setVisao} tone="brand" items={[
+          { key: "automations", label: "Automações", icon: <Activity size={14} />, contagem: painel.watchers.length },
+          { key: "history", label: "Histórico", icon: <History size={14} />, contagem: painel.total },
+        ]} />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
+          {visao === "automations" && <label className="block min-w-48 flex-1 lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>}
+          <button type="button" aria-pressed={minhas} onClick={() => { setMinhas(!minhas); setWatcher(""); setPagina(1); }} title={minhas ? "Mostrar todas as automações" : "Mostrar só as automações sob sua responsabilidade"}
+            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-ui font-medium transition-colors focus-visible:outline-2 focus-visible:outline-brand ${minhas ? "border-brand/40 bg-brand-subtle text-brand" : "border-border bg-surface text-fg-secondary hover:text-fg"}`}>
+            <UserRound size={14} aria-hidden /> Minhas automações{minhas && <X size={14} aria-hidden className="-mr-1" />}
+          </button>
+        </div>
+      </div>
+      {visao === "automations" ? <section aria-label="Automações">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="max-w-full overflow-x-auto p-1">
             <SegmentedControl label="Filtrar automações por status" active={filtroSituacao} onChange={setFiltroSituacao} items={[
               { key: "all", label: "Todos" }, { key: "online", label: "Online", tone: "success" },
               { key: "unstable", label: "Instável", tone: "warning" }, { key: "offline", label: "Offline", tone: "danger" },
             ]} />
           </div>
-        </Card>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 id="ops-automacoes" className="text-section-title font-semibold text-fg">Automações</h2><span className="text-helper text-fg-muted" role="status">{numero(automacoes.length)} de {numero(painel.watchers.length)} automações{minhas ? " · sob sua responsabilidade" : ""}</span></div>
+          <span className="text-helper text-fg-muted" role="status">{numero(automacoes.length)} de {numero(painel.watchers.length)} automações</span>
+        </div>
         {!painel.watchers.length ? <Card><EmptyState icon={<Activity />} title={minhas ? "Nenhuma automação atribuída a você" : "Nenhuma automação cadastrada"} description={minhas ? "O gestor pode definir o dono de cada automação no cadastro." : "Cadastre a automação e configure o envio de atividade e resultados para começar."}
             action={podeGerir && !minhas ? <Button onClick={() => editar("novo")}><Plus size={14} /> Nova automação</Button> : undefined} /></Card> :
           !automacoes.length ? <Card><EmptyState icon={<Search />} title="Nenhuma automação encontrada" description="Tente ajustar sua busca ou o filtro de status."
@@ -220,7 +216,7 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
 
       <section aria-labelledby="ops-historico">
         <Card className="overflow-hidden">
-          <div className="flex items-start gap-3 border-b border-border p-5"><span aria-hidden className="rounded-md bg-brand-subtle p-2 text-brand"><History size={18} /></span><div><h2 id="ops-historico" className="text-section-title font-semibold text-fg">Histórico de processamento</h2><p className="mt-1 text-helper text-fg-secondary">Últimos arquivos processados pelas automações, do mais recente para o mais antigo.</p></div></div>
+          <h2 id="ops-historico" className="sr-only">Histórico de processamento</h2>
           <div className="grid gap-3 border-b border-border p-4 sm:grid-cols-2 lg:grid-cols-4">
             <CampoForm label="Automação" htmlFor="ops-filtro-automacao"><Select id="ops-filtro-automacao" compact value={watcher} onChange={e => { setWatcher(e.target.value); setPagina(1); }}><option value="">Todas as automações</option>{painel.watchers.map(w => <option key={w.slug} value={w.slug}>{w.name}</option>)}</Select></CampoForm>
             <CampoForm label="Resultado" htmlFor="ops-filtro-resultado"><Select id="ops-filtro-resultado" compact value={status} onChange={e => { setStatus(e.target.value); setPagina(1); }}><option value="">Todos os resultados</option><option value="SUCCESS">Sucesso</option><option value="ERROR">Erro</option><option value="WARNING">Aviso</option></Select></CampoForm>
@@ -240,7 +236,7 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
           {totalPaginas > 1 && <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border p-4 text-helper text-fg-secondary"><span>{painel.total} eventos · página {paginaAtual} de {totalPaginas}</span><div className="flex gap-2"><Button size="sm" variant="secondary" aria-label="Página anterior" disabled={loading || paginaAtual <= 1} onClick={() => setPagina(paginaAtual - 1)}><ChevronLeft size={15} /> Anterior</Button><Button size="sm" variant="secondary" aria-label="Próxima página" disabled={loading || paginaAtual >= totalPaginas} onClick={() => setPagina(paginaAtual + 1)}>Próxima <ChevronRight size={15} /></Button></div></div>}
         </Card>
       </section>}
-    </>}
+    </div>}
 
     <Modal open={!!edicao} onClose={() => { if (!ocupado) setEdicao(null); }} title={edicao === "novo" ? "Nova automação" : "Editar automação"} maxWidth="max-w-xl">
       <form className="mt-3 space-y-4" onSubmit={e => { e.preventDefault(); void agir(async () => {

@@ -44,7 +44,7 @@ export function GithubOverview({ data, query }: { data: DashboardView; query: st
     </div>
     <section className={styles.panel} aria-labelledby="github-recent">
       <div className={styles.panelHeading}><div><h2 id="github-recent">Atividade recente</h2><p>{number(data.total)} contribuições no período</p></div></div>
-      <RecentActivity summary={summary} timezone={data.timezone} complete={data.complete} />
+      <RecentActivity summary={summary} timezone={data.timezone} />
     </section>
   </>;
 }
@@ -76,13 +76,12 @@ function CadenceChart({ data }: { data: DashboardView }) {
       <polyline points={points("prs")} className={styles.seriePrs} strokeWidth="2" strokeDasharray="5 4" />
       {values.map((row, index) => <g key={row.day}><circle cx={x(index)} cy={y(row.commits)} r="3" className={styles.serieCommits}><title>{dateLabel(row.day)}: {row.commits} commits e {row.prs} pull requests{bucket > 1 ? ` em até ${bucket} dias` : ""}</title></circle>
         {(index === 0 || index === values.length - 1 || values.length > 5 && index === Math.floor(values.length / 2)) && <text x={x(index)} y="203" textAnchor={index === 0 ? "start" : index === values.length - 1 ? "end" : "middle"}>{formatCalendarDate(new Date(`${row.day}T12:00:00Z`), { day: "2-digit", month: "short" })}</text>}</g>)}
-    </svg> : <EmptyState icon={<GitCommitHorizontal />} title={data.complete ? "Nenhum commit ou pull request no período" : "Aguardando a coleta de commits e pull requests"} />}
-    {!data.complete && hasActivity && <p className={styles.chartNote}>Dados parciais</p>}
+    </svg> : <EmptyState icon={<GitCommitHorizontal />} title="Nenhum commit ou pull request no período" />}
   </div>;
 }
 
-function RecentActivity({ summary, timezone, complete }: { summary: GithubSummary | null; timezone: string; complete: boolean }) {
-  if (!summary?.recent.length) return <EmptyState icon={<Activity />} title={complete ? "Nenhuma atividade neste período" : "Nenhuma atividade coletada para este período"} />;
+function RecentActivity({ summary, timezone }: { summary: GithubSummary | null; timezone: string }) {
+  if (!summary?.recent.length) return <EmptyState icon={<Activity />} title="Nenhuma atividade neste período" />;
   const atividade = (event: GithubSummary["recent"][number]) => <a href={event.url} target="_blank" rel="noreferrer" className={styles.activityLink}>
     <span className={styles.activityIcon} data-pr={event.type !== "COMMIT" || undefined}>{event.type === "COMMIT" ? <GitCommitHorizontal size={18} /> : <GitPullRequest size={18} />}</span>
     <span className="min-w-0"><strong>{TYPE_LABELS[event.type]} <span className={styles.reference}>{event.reference}</span></strong><small>{event.repository}</small></span>

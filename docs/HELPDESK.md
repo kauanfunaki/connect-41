@@ -8,7 +8,7 @@ O módulo `helpdesk` porta o atendimento do Hub para o Connect: categorias e for
 2. Publique o build normal do Connect, mantendo o volume persistente `storage/`.
 3. Em **Configurações → Setores e módulos**, no setor Tech, encontre **Chamados**. Escolha um setor ativo que será responsável pelo atendimento e habilite o módulo. Ele nasce desligado e continua sujeito aos módulos liberados pelo plano contratado.
 4. Em **Configurações → Rotinas e cálculos → Chamados internos** (`/admin/modulos/helpdesk`), escolha os setores solicitantes. Marque os setores que podem abrir chamados. A seleção começa vazia; administradores continuam podendo abrir.
-5. Em **Chamados → Configurar**, cadastre categorias, campos, evidências e checklist. Categorias sujeitas a aprovação precisam de outro aprovador ativo além de quem solicita.
+5. Em **Chamados → Configurar** (ícone de engrenagem), revise as políticas de SLA. Desde 26/10/2026 a configuração não cadastra categorias nem formulários: a IA interpreta o pedido e pergunta o que faltar. Sem categoria ativa, a primeira abertura cria a categoria **Geral**; as categorias já cadastradas continuam valendo (com uma só, a abertura nem pergunta a categoria).
 
 Chamados começa desativado no controle de módulos. Ao ativá-lo, o atalho aparece para quem tem acesso, sem uma ocultação adicional por padrão no menu Geral. Personalizações de visibilidade feitas explicitamente pelo administrador continuam sendo respeitadas.
 
@@ -20,8 +20,8 @@ Para desativar, desligue o módulo em Módulos. Telas, ações e downloads ficam
 
 - Usuários de setores liberados abrem chamados, mesmo sem papel de gestor. O setor ativo no cabeçalho é um filtro de navegação, não uma concessão de acesso.
 - Solicitantes veem o que abriram e aquilo em que foram incluídos como participantes. Gestores também veem os chamados originados nos seus setores.
-- A equipe do setor responsável atende a fila inteira, assume chamados, muda situações e registra mensagens e notas internas.
-- O gestor responsável também distribui responsáveis, inclui participantes, reordena a fila, ajusta prazos com justificativa e configura categorias e políticas de SLA.
+- A equipe do setor responsável atende a fila inteira, se adiciona como responsável (o **Adicionar** de Responsáveis, no chamado), muda a situação e registra mensagens e notas internas.
+- O gestor responsável também adiciona e retira responsáveis e participantes, reordena a fila pelas setas de subir e descer na aba Em Fila da lista (a ordem vale para todos), ajusta prazos com justificativa e configura as políticas de SLA.
 - Administradores têm acesso amplo. Somente leitura consulta, mas não modifica. Assinatura em somente leitura bloqueia gravações e análise por IA.
 - Aprovadores selecionados consultam o chamado que precisam decidir. O solicitante não aprova a própria abertura.
 - Notas, checklist e anexos internos só são entregues aos perfis com consulta interna. O download repete a autorização no servidor.
@@ -62,6 +62,8 @@ Prompts, documentos e corpos de erro do provedor não são gravados nos logs da 
 
 ## Arquivos
 
+No chamado, os arquivos vão junto com a mensagem: o clipe abre o seletor (vários arquivos de uma vez) e **Ctrl+V** cola prints e arquivos na caixa de texto. Cada arquivo sobe antes da mensagem e fica ligado a ela (`HelpdeskAttachment.commentId`); a mensagem pode ser só de arquivos. "Somente a equipe" vale para a mensagem e os arquivos dela. Os arquivos da abertura aparecem na solicitação.
+
 Upload autenticado de um arquivo por requisição, até 10 MB. Na abertura, até vinte anexos. Formatos: PDF, PNG/JPG, DOCX, XLSX, TXT, CSV, ZIP, MP4 e WEBM. Tipos são conferidos no servidor. Os arquivos ficam em `storage/helpdesk/<tenantId>/`, fora de `public/`, com nomes internos aleatórios.
 
 A análise considera até cinco arquivos, 10 MB por arquivo e 20 MB no total, priorizando as evidências obrigatórias. ZIP e vídeos são guardados para atendimento, mas não interpretados pela IA. Arquivos ilegíveis ou ignorados aparecem na cobertura do parecer. DOCX tem cobertura de texto; XLSX/CSV têm cobertura parcial de até mil linhas por aba, sem gráficos embutidos. Não presuma que um anexo ignorado foi validado.
@@ -84,6 +86,10 @@ O SLA começa em **Em andamento**. O calendário é o do Hub: segunda a quinta d
 As situações de espera pausam o ciclo. A retomada acrescenta o tempo útil da pausa ao prazo calculado; um prazo ajustado manualmente é preservado. A primeira resposta segue a convenção do Hub de início do atendimento. Alterar uma política vale para ciclos futuros, sem reescrever os anteriores.
 
 O solicitante pede reabertura de um chamado resolvido, e o gestor decide com justificativa. Aceitar retoma Em andamento e cria novo ciclo de SLA. Mudar para categoria que exige aprovação cria um novo pedido e pausa o atendimento; uma aprovação pendente precisa ser decidida antes de trocar a categoria novamente.
+
+A conversa do chamado é uma linha do tempo única: mensagens, arquivos e eventos (situação, responsáveis, prazo, aprovação, fila…) em ordem, cada evento com quem fez e o quê. Notas e eventos internos aparecem marcados e só para quem tem consulta interna.
+
+Na lista, a busca escolhe onde procurar — **Chamado** (título, descrição ou protocolo), **Setor** (solicitante) ou **Responsável** — e **Atribuídos a mim** fica junto da busca. Os parâmetros antigos `prioridade`, `categoria`, `setor` e `responsavel` continuam aceitos no endereço.
 
 Indicadores e filtros respeitam o mesmo acesso da lista. Os tempos médios de encerramento são horas corridas; os prazos de SLA usam minutos úteis. A posição apresentada na lista é relativa ao recorte visível da pessoa.
 

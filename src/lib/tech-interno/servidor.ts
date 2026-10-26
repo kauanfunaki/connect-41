@@ -2,6 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, type AuthContext } from "@/lib/auth/context";
 import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
+import { logAudit } from "@/lib/audit";
 import { intervaloMes } from "./agenda";
 import {
   MODULO_TECH_INTERNO, TAMANHO_PAGINA, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO,
@@ -32,6 +33,12 @@ function erroDaOperacao(e: unknown): { error: string } {
   // Não inclui dados livres, parâmetros ou credenciais no diagnóstico.
   console.error("[tech-interno] Falha na operação", e instanceof Prisma.PrismaClientKnownRequestError ? e.code : "indisponivel");
   return { error: "Não foi possível confirmar a operação. Atualize a página para conferir o que foi salvo antes de tentar novamente." };
+}
+
+// A trilha de Auditoria do Connect recebe cada ação, além do histórico do item
+// (26/10/2026). Fora da transação: o registro é best-effort e não desfaz a ação.
+function registrar(ctx: AuthContext, action: string, id: string, metadata: Record<string, string | number | null>) {
+  return logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action, entityType: "TechInternalItem", entityId: id, metadata });
 }
 
 export async function opcoesTech(ctx: AuthContext) {
@@ -80,15 +87,17 @@ export async function mudarSituacaoItem(id: string, raw: unknown, versao: unknow
     const ctx = await getAuthContext(); await conferirAcesso(ctx, "agir");
     const parsed = itemSchema.shape.status.safeParse(raw), version = versaoSchema.safeParse(versao);
     if (!parsed.success || !version.success || versao === null || versao === undefined || versao === "") return { error: CONFLITO };
-    return await getPrisma().$transaction(async tx => {
+    const result = await getPrisma().$transaction(async tx => {
       const item = await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId } });
       if (!item || item.version !== version.data) throw new ErroTechInterno(CONFLITO);
-      if (item.status === parsed.data) return { ok: true as const, id };
-      const result = await tx.techInternalItem.updateMany({ where: { id, tenantId: ctx.tenantId, version: version.data }, data: { status: parsed.data, version: { increment: 1 } } });
-      if (result.count !== 1) throw new ErroTechInterno(CONFLITO);
+      if (item.status === parsed.data) return null;
+      const atualizado = await tx.techInternalItem.updateMany({ where: { id, tenantId: ctx.tenantId, version: version.data }, data: { status: parsed.data, version: { increment: 1 } } });
+      if (atualizado.count !== 1) throw new ErroTechInterno(CONFLITO);
       await tx.techInternalChange.create({ data: { tenantId: ctx.tenantId, itemId: id, version: version.data + 1, changes: [{ field: "Situação", before: SITUACOES[item.status], after: SITUACOES[parsed.data] }], ...await autor(tx, ctx) } });
-      return { ok: true as const, id };
+      return { title: item.title, antes: SITUACOES[item.status], depois: SITUACOES[parsed.data] };
     });
+    if (result) await registrar(ctx, "tech_interno.item.status", id, result);
+    return { ok: true, id };
   } catch (e) { return erroDaOperacao(e); }
 }
 export async function detalheItem(ctx: AuthContext, id: string) {
@@ -154,9 +163,10 @@ export async function salvarItem(raw: unknown, id?: string, versao?: unknown): P
       if (changes.length || !anterior) await tx.techInternalChange.create({ data: {
         tenantId: ctx.tenantId, itemId: item.id, version: item.version, changes, ...await autor(tx, ctx),
       } });
-      return { ok: true as const, id: item.id };
+      return { ok: true as const, id: item.id, title: item.title, campos: changes.map(c => c.field).join(", ") };
     });
-    return result;
+    if (!id || result.campos) await registrar(ctx, id ? "tech_interno.item.update" : "tech_interno.item.create", result.id, { title: result.title, ...(id ? { campos: result.campos } : {}) });
+    return { ok: true, id: result.id };
   } catch (e) { return erroDaOperacao(e); }
 }
 
@@ -166,10 +176,11 @@ export async function comentarItem(id: string, body: unknown): Promise<Resultado
     const parsed = comentarioSchema.safeParse(body);
     if (!parsed.success) return { error: parsed.error.issues[0].message };
     return await getPrisma().$transaction(async tx => {
-      if (!await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true } })) throw new ErroTechInterno("Item não encontrado.");
+      const item = await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { title: true } });
+      if (!item) throw new ErroTechInterno("Item não encontrado.");
       await tx.techInternalComment.create({ data: { tenantId: ctx.tenantId, itemId: id, body: parsed.data, ...await autor(tx, ctx) } });
-      return { ok: true as const, id };
-    });
+      return item;
+    }).then(async item => { await registrar(ctx, "tech_interno.item.comment", id, { title: item.title }); return { ok: true as const, id }; });
   } catch (e) { return erroDaOperacao(e); }
 }
 
