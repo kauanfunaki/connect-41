@@ -26,6 +26,7 @@
 .person:last-child { border-bottom: 0; }
 .position { font-size: var(--fs-micro); color: var(--c41-fg-muted); }
 .avatar { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; background: var(--c41-brand-subtle); color: var(--c41-brand); font-size: var(--fs-micro); font-weight: 700; }
+img.avatar { object-fit: cover; }
 .personName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-ui); font-weight: 600; }
 .personCount { text-align: right; flex-shrink: 0; }
 .personCount strong { display: block; font-size: var(--fs-card-title); }

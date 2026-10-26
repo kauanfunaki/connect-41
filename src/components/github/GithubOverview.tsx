@@ -1,18 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Activity, GitCommitHorizontal, GitPullRequest, MessageSquare, Users } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao } from "@/components/shared/ListaResponsiva";
+import { avatarDoGithub, iniciaisDoLogin } from "@/lib/github/avatar";
 import { dateLabel } from "@/lib/github/calendar";
 import { TYPE_LABELS, type DashboardView, type GithubSummary } from "@/lib/github/types";
 import { formatCalendarDate, formatInstantDateTime } from "@/lib/format";
 import styles from "./GithubContributions.module.css";
 
 const number = (value: number) => Number(value).toLocaleString("pt-BR");
+// A foto do GitHub; sem login de conta ou com a imagem fora do ar, as iniciais.
 export function DeveloperAvatar({ login }: { login: string }) {
-  return <span aria-hidden className={styles.avatar}>{login.slice(0, 2).toUpperCase()}</span>;
+  const src = avatarDoGithub(login), [falhou, setFalhou] = useState<string | null>(null);
+  if (!src || falhou === src) return <span aria-hidden className={styles.avatar}>{iniciaisDoLogin(login)}</span>;
+  // eslint-disable-next-line @next/next/no-img-element -- foto de 32px já no tamanho pedido ao GitHub: o otimizador do next/image não teria o que fazer
+  return <img src={src} alt="" width={32} height={32} loading="lazy" referrerPolicy="no-referrer" className={styles.avatar} onError={() => setFalhou(src)} />;
 }
 
 export function GithubOverview({ data, query }: { data: DashboardView; query: string }) {

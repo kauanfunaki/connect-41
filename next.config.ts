@@ -8,7 +8,10 @@ const csp = [
   "default-src 'self'",
   // i.ytimg.com: miniaturas dos vídeos de passo a passo da ajuda (05/10/2026),
   // que aparecem antes do play (components/ajuda/VideoDoYouTube.tsx).
-  "img-src 'self' data: blob: https://i.ytimg.com",
+  // github.com e avatars.githubusercontent.com: a foto dos desenvolvedores no
+  // GitHub (26/10/2026) — `github.com/<login>.png` redireciona para a outra, e a
+  // CSP confere as duas (lib/github/avatar.ts).
+  "img-src 'self' data: blob: https://i.ytimg.com https://github.com https://avatars.githubusercontent.com",
   // O player desses vídeos, só no modo de privacidade do YouTube (sem cookie
   // até o play). 'self' repete o que o default-src já dava aos frames.
   "frame-src 'self' https://www.youtube-nocookie.com",
