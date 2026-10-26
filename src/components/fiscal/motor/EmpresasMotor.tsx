@@ -27,7 +27,7 @@ export async function EmpresasMotor({ tela, permiteGerir }: { tela: TelaDoMotor;
           for (const [k, val] of Object.entries(e.config)) valores[k] = val === null ? "" : String(val);
         }
         return { id: String(v.id), celulas: [
-          <span key="n" className="block text-left">{v.companyNome}<span className="block text-helper text-fg-muted">{v.rotulo}{v.matriz ? " · matriz" : ""}</span></span>,
+          <span key="n" className="block">{v.companyNome}<span className="block text-helper text-fg-muted">{v.rotulo}{v.matriz ? " · matriz" : ""}</span></span>,
           cnpjFormatado(v.cnpj),
           v.obrigacoes.map((o) => (o === "icms_ipi" ? "ICMS/IPI" : o === "contribuicoes" ? "Contribuições" : o)).join(", "),
           <Selo key="s" tom={v.ativo ? "sucesso" : "neutro"}>{v.ativo ? "Ativo" : "Inativo"}</Selo>,

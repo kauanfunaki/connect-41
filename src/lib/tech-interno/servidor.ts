@@ -47,7 +47,9 @@ export async function opcoesTech(ctx: AuthContext) {
 export function whereDosItens(tenantId: string, userId: string, filtros: Filtros): Prisma.TechInternalItemWhereInput {
   return {
     tenantId,
-    status: filtros.status === "ALL" ? undefined : filtros.status ? filtros.status as keyof typeof SITUACOES : { in: [...EM_ABERTO] },
+    // No Kanban, sem filtro, todas as situações: as colunas Concluído e Cancelado
+    // ficavam sempre vazias e o cartão sumia ao ser movido para lá (26/10/2026).
+    status: filtros.status === "ALL" || (!filtros.status && filtros.view === "kanban") ? undefined : filtros.status ? filtros.status as keyof typeof SITUACOES : { in: [...EM_ABERTO] },
     ...(filtros.type ? { type: filtros.type } : {}),
     ...(filtros.priority ? { priority: Number(filtros.priority) } : {}),
     ...(filtros.system ? filtros.system === "NONE" || filtros.system === "NEW" ? { systemMode: filtros.system } : { systemMode: "EXISTING", toolId: filtros.system } : {}),

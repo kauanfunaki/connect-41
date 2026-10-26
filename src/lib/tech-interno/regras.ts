@@ -52,6 +52,15 @@ export function lerFiltros(params: Record<string, string | string[] | undefined>
   };
 }
 export type Filtros = ReturnType<typeof lerFiltros>;
+// O "Voltar para a lista" volta ao recorte de onde a pessoa saiu — visão, filtros
+// e página (26/10/2026). Só aceita a própria lista; o resto cai na lista limpa.
+export function destinoDeVolta(raw: unknown): string {
+  if (typeof raw !== "string" || raw.length > 2000 || /[\\\s]|\/\//.test(raw)) return ROTA_TECH_INTERNO;
+  return raw === ROTA_TECH_INTERNO || raw.startsWith(`${ROTA_TECH_INTERNO}?`) ? raw : ROTA_TECH_INTERNO;
+}
+export function comVolta(href: string, voltar: string) {
+  return voltar === ROTA_TECH_INTERNO ? href : `${href}${href.includes("?") ? "&" : "?"}voltar=${encodeURIComponent(voltar)}`;
+}
 export function hojeEmSaoPaulo(agora = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(agora);
 }

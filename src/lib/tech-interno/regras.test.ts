@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getModuleDef, getModuleRoute } from "@/lib/module-catalog";
 import { alcancaModulo } from "@/lib/auth/modulo";
 import type { AuthContext } from "@/lib/auth/context";
-import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, diferencas, hojeEmSaoPaulo, comentarioSchema, sistemaSchema } from "./regras";
+import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, sistemaSchema } from "./regras";
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 vi.mock("@/lib/modules", () => ({ isModuleEnabled: vi.fn(), setorDoModulo: vi.fn() }));
@@ -38,6 +38,14 @@ describe("controle interno do Tech", () => {
     expect(lerFiltros({ q: "  lista  ", tipo: "TEST", situacao: "ALL", prioridade: "0", sistema: "NEW", responsavel: "me", atrasados: "1", page: "2" })).toMatchObject({ q: "lista", type: "TEST", status: "ALL", priority: "0", system: "NEW", assignee: "me", overdue: true, page: 2 });
     expect(lerFiltros({ page: "-1", situacao: "INVALID", prioridade: "URGENT" })).toMatchObject({ page: 1, status: undefined, priority: undefined });
     expect(lerFiltros({ q: ["a", "b"], page: "Infinity" })).toMatchObject({ q: "", page: 1 });
+  });
+  it("volta só para a própria lista, com o recorte de origem", () => {
+    expect(destinoDeVolta("/tech/controle-interno?visao=kanban&tipo=BUG&page=2")).toBe("/tech/controle-interno?visao=kanban&tipo=BUG&page=2");
+    expect(destinoDeVolta("/tech/controle-interno")).toBe("/tech/controle-interno");
+    for (const ruim of ["https://exemplo.test", "//exemplo.test", "/tech/controle-internox", "/tech/controle-interno?a=1//b", "/tech/controle-interno?\\a", ["/tech/controle-interno?a=1"], undefined]) expect(destinoDeVolta(ruim)).toBe("/tech/controle-interno");
+    expect(comVolta("/tech/controle-interno/abc", "/tech/controle-interno")).toBe("/tech/controle-interno/abc");
+    expect(comVolta("/tech/controle-interno/abc", "/tech/controle-interno?visao=kanban")).toBe("/tech/controle-interno/abc?voltar=%2Ftech%2Fcontrole-interno%3Fvisao%3Dkanban");
+    expect(destinoDeVolta(decodeURIComponent("%2Ftech%2Fcontrole-interno%3Fvisao%3Dkanban"))).toBe("/tech/controle-interno?visao=kanban");
   });
   it("registra só campos alterados e preserva valor anterior", () => {
     expect(diferencas({ Prazo: null, Título: "Antes" }, { Prazo: null, Título: "Depois" })).toEqual([{ field: "Título", before: "Antes", after: "Depois" }]);

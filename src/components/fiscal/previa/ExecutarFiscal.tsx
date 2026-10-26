@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Clock, CheckCircle2, AlertTriangle, Play } from "lucide-react";
 import { Select } from "@/components/ui/Select";
@@ -14,7 +14,7 @@ import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { Pagination } from "@/components/shared/Pagination";
 import { useFiscal } from "./ContextoFiscal";
-import { AcoesFiscais, BlocoFiscal, CampoFiscal, EstadoFiscal, MetricasFiscais, PreviaTexto, TabelaFiscal, dataFiscal } from "./Compartilhados";
+import { AcoesFiscais, BlocoFiscal, CampoFiscal, ETAPAS_DA_EXTRACAO, EstadoFiscal, MetricasFiscais, PreviaTexto, TabelaFiscal, dataFiscal } from "./Compartilhados";
 import { execucaoNoContexto, type AcaoFiscal, type ExecucaoTeste } from "@/lib/fiscal/previa/cenario";
 import { MODOS_EXECUCAO, geracao, mesInteiro, parametrosIniciais, parametrosExecucaoSchema, type ModoExecucao, type ParametrosExecucao } from "@/lib/fiscal/previa/execucao";
 
@@ -33,7 +33,7 @@ function ResumoParametros({ execucao: e }: { execucao: ExecucaoTeste }) {
   if (!e.parametros) return <span className="text-helper text-fg-muted">Parâmetros históricos indisponíveis</span>;
   const p = e.parametros;
   return <span className="block max-w-72 text-helper text-fg-secondary">
-    {geracao(p.modo) ? `${p.tipoSped === "1" ? "Substituto" : "Original"} · ${p.saida || "Nome automático por versão"}${p.forcarErros ? " · forçar erros" : ""}${p.forcarCobertura ? " · forçar cobertura" : ""}` : `${p.modo === "paralela" ? `${p.instancias} instâncias · ` : ""}${p.workers} workers · ${p.etapas.join(", ")}${p.semEntradas ? " · pular entradas" : ""}`}
+    {geracao(p.modo) ? `${p.tipoSped === "1" ? "Substituto" : "Original"} · ${p.saida || "Nome automático por versão"}${p.forcarErros ? " · forçar erros" : ""}${p.forcarCobertura ? " · forçar cobertura" : ""}` : `${p.modo === "paralela" ? `${p.instancias} instâncias · ` : ""}${p.workers} processos paralelos · ${p.etapas.map((e) => ETAPAS_DA_EXTRACAO[e].toLocaleLowerCase("pt-BR")).join(", ")}${p.semEntradas ? " · pular entradas" : ""}`}
     <span className="block">Solicitante: {p.solicitante || "Não informado"}</span>
   </span>;
 }
@@ -46,6 +46,12 @@ export function OperacaoFiscal({ aba }: { aba: string }) {
   const [workers, setWorkers] = useState({ paralela: 32, simples: 8, erros: 32 });
   const [erro, setErro] = useState("");
   const [logId, setLogId] = useState<string | null>(null);
+  const blocoDoLog = useRef<HTMLDivElement>(null);
+  // O log abre no fim da página: "Ver log" leva a tela e o foco até ele (26/10/2026).
+  function verLog(id: string) {
+    setLogId(id);
+    requestAnimationFrame(() => { blocoDoLog.current?.scrollIntoView({ block: "start", behavior: "smooth" }); blocoDoLog.current?.focus({ preventScroll: true }); });
+  }
   function simular(acao: AcaoFiscal) {
     setLogId("id" in acao ? acao.id : null);
     enviar(acao);
@@ -71,7 +77,7 @@ export function OperacaoFiscal({ aba }: { aba: string }) {
     {e.estado === "Na fila" && <><Button size="xs" disabled={!pronto} onClick={() => simular({ tipo: "iniciar-execucao", id: e.id })}>Simular início</Button><Button size="xs" variant="secondary" disabled={!pronto} onClick={() => simular({ tipo: "cancelar", id: e.id })}>Cancelar pedido</Button></>}
     {e.estado === "Executando" && <><Button size="xs" disabled={!pronto} onClick={() => simular({ tipo: "concluir-execucao", id: e.id })}>Simular conclusão</Button><Button size="xs" variant="secondary" disabled={!pronto} onClick={() => simular({ tipo: "falhar-execucao", id: e.id })}>Simular falha</Button></>}
     {e.estado === "Erro" && <Button size="xs" variant="secondary" disabled={!pronto} onClick={() => simular({ tipo: "reprocessar", id: e.id })}>Nova tentativa</Button>}
-    <Button size="xs" variant="ghost" onClick={() => setLogId(e.id)}>Ver log</Button>
+    <Button size="xs" variant="ghost" onClick={() => verLog(e.id)}>Ver log</Button>
   </AcoesFiscais>;
   const linhas = (lista: ExecucaoTeste[]) => lista.map((e) => ({ id: e.id, celulas: [
     <span key="acao">{e.acao}<ResumoParametros execucao={e} />{e.tentativaDe && <span className="block text-helper text-fg-muted">Nova tentativa de {e.tentativaDe.slice(0, 8)}</span>}</span>,
@@ -85,7 +91,7 @@ export function OperacaoFiscal({ aba }: { aba: string }) {
     {aba === "executar" ? <>
       <MetricasFiscais itens={[
         { rotulo: "Na fila", valor: fila.filter((e) => e.estado === "Na fila").length, icone: <Clock />, href: "/fiscal/operacao?aba=historico&estado=fila" },
-        { rotulo: "Em simulação", valor: fila.filter((e) => e.estado === "Executando").length, icone: <Play />, href: "/fiscal/operacao?aba=historico&estado=executando" },
+        { rotulo: "Executando", valor: fila.filter((e) => e.estado === "Executando").length, icone: <Play />, href: "/fiscal/operacao?aba=historico&estado=executando" },
         { rotulo: "Concluídas", valor: execucoes.filter((e) => e.estado === "Concluída").length, icone: <CheckCircle2 />, href: "/fiscal/operacao?aba=historico&estado=concluida" },
         { rotulo: "Com erro", valor: execucoes.filter((e) => e.estado === "Erro").length, icone: <AlertTriangle />, href: "/fiscal/operacao?aba=historico&estado=erro" },
       ]} />
@@ -96,7 +102,7 @@ export function OperacaoFiscal({ aba }: { aba: string }) {
           <CampoFiscal nome="Data final"><CampoData aria-label="Data final" min="2026-09-01" max="2026-10-31" value={p.dataFim} onChange={(valor) => campo("dataFim", valor)} /></CampoFiscal>
         </div>
         <div className="mt-4 flex flex-wrap gap-5">
-          {(["first_mile", "last_mile"] as const).map((etapa) => <Checkbox key={etapa} id={`exec-${etapa}`} label={etapa} checked={p.etapas.includes(etapa)} onChange={(e) => campo("etapas", e.target.checked ? [...p.etapas, etapa] : p.etapas.filter((v) => v !== etapa))} />)}
+          {(["first_mile", "last_mile"] as const).map((etapa) => <Checkbox key={etapa} id={`exec-${etapa}`} label={ETAPAS_DA_EXTRACAO[etapa]} checked={p.etapas.includes(etapa)} onChange={(e) => campo("etapas", e.target.checked ? [...p.etapas, etapa] : p.etapas.filter((v) => v !== etapa))} />)}
           <Checkbox id="exec-sem-entradas" label="Pular entradas (SIEG)" checked={p.semEntradas} onChange={(e) => campo("semEntradas", e.target.checked)} />
         </div>
       </BlocoFiscal>
@@ -105,7 +111,7 @@ export function OperacaoFiscal({ aba }: { aba: string }) {
         <p className="mb-4 text-ui text-fg-secondary">{modo === "paralela" ? "Divide o período entre instâncias de teste." : modo === "simples" ? "Simula uma única instância para o período." : "Recupera os documentos fictícios em quarentena para nova classificação."}</p>
         <div className="grid max-w-xl gap-4 sm:grid-cols-2">
           {modo === "paralela" && <CampoFiscal nome="Instâncias"><Input aria-label="Instâncias" type="number" min={1} max={16} value={p.instancias} onChange={(e) => campo("instancias", Number(e.target.value))} /></CampoFiscal>}
-          <CampoFiscal nome={modo === "paralela" ? "Workers por instância" : "Workers"}><Input aria-label={`Workers · ${MODOS_EXECUCAO[modo]}`} type="number" min={1} max={64} value={workers[modo]} onChange={(e) => setWorkers((atual) => ({ ...atual, [modo]: Number(e.target.value) }))} /></CampoFiscal>
+          <CampoFiscal nome={modo === "paralela" ? "Processos paralelos por instância" : "Processos paralelos"}><Input aria-label={`Processos paralelos · ${MODOS_EXECUCAO[modo]}`} type="number" min={1} max={64} value={workers[modo]} onChange={(e) => setWorkers((atual) => ({ ...atual, [modo]: Number(e.target.value) }))} /></CampoFiscal>
         </div>
         <Button className="mt-4" disabled={!podeExtrair || !pronto} onClick={() => solicitar(modo)}>Solicitar {MODOS_EXECUCAO[modo].toLocaleLowerCase("pt-BR")}</Button>
       </BlocoRecolhivel>)}
@@ -122,7 +128,7 @@ export function OperacaoFiscal({ aba }: { aba: string }) {
         <Button className="mt-4" disabled={!podeGerar || !pronto} onClick={() => solicitar(obrigacao)}>Solicitar geração de teste</Button>
       </BlocoRecolhivel>
       <BlocoFiscal titulo="Fila de simulação" descricao={`${fila.length} pedido(s). Use os controles para avançar a simulação ou cancelar um pedido pendente.`}>
-        <TabelaFiscal vazio="Nenhum pedido pendente ou em simulação." colunas={["Ação / parâmetros", "Período", "Estado", "Horários / duração", "Resultado", "Ações"]} linhas={linhas(fila.slice(0, 12))} />
+        <TabelaFiscal vazio="Nenhum pedido na fila ou executando." colunas={["Ação / parâmetros", "Período", "Estado", "Horários / duração", "Resultado", "Ações"]} linhas={linhas(fila.slice(0, 12))} />
         {fila.length > 12 && <Button href="/fiscal/operacao?aba=historico" variant="link">Consultar todos os pedidos no Histórico</Button>}
       </BlocoFiscal>
     </> : <>
@@ -131,6 +137,6 @@ export function OperacaoFiscal({ aba }: { aba: string }) {
       </CascoDaTabela>
       <Pagination page={pagina} totalPages={paginas} total={filtradas.length} rotulo="execuções" buildHref={(n) => { const q = new URLSearchParams(query.toString()); q.set("pagina", String(n)); return `/fiscal/operacao?${q}`; }} />
     </>}
-    {log && <BlocoFiscal titulo={`Log · ${log.acao}`} descricao={`Pedido ${log.id}`}><PreviaTexto texto={log.log.join("\n")} /></BlocoFiscal>}
+    {log && <div ref={blocoDoLog} tabIndex={-1} role="region" aria-label={`Log · ${log.acao}`} className="scroll-mt-4 outline-none"><BlocoFiscal titulo={`Log · ${log.acao}`} descricao={`Pedido ${log.id}`}><PreviaTexto texto={log.log.join("\n")} /></BlocoFiscal></div>}
   </div>;
 }

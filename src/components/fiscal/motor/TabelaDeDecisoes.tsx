@@ -90,7 +90,7 @@ export function TabelaDeDecisoes({ tipo, raiz, linhas, permiteAgir, permiteExclu
       linhas={linhas.map((l) => {
         const id = idDaLinha(l);
         return { id, celulas: [
-          ...(permiteAgir ? [<Checkbox key="sel" aria-label="Selecionar decisão" checked={selecionadas.includes(id)} onChange={() => setSelecionadas((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))} />] : []),
+          ...(permiteAgir ? [<Checkbox key="sel" aria-label={`Selecionar decisão ${def.chave.map((c) => texto(l.chave[c.nome])).filter(Boolean).join(" · ")}`.trim()} checked={selecionadas.includes(id)} onChange={() => setSelecionadas((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))} />] : []),
           ...def.colunas.map((c) => <span key={c} className="block max-w-56 break-words">{celula(l, c)}</span>),
           <span key="quem" className="text-helper">{l.decidido_por ?? "—"}<span className="block text-fg-muted">{dataHora(l.atualizado_em)}</span></span>,
           ...(permiteAgir ? [<AcoesFiscais key="acoes">
@@ -193,7 +193,7 @@ function EdicaoDeDecisao({ tipo, raiz, edicao, estabelecimentos, competencia, fe
     {edicao.modo === "editar" && !lote && <p className="mb-4 text-helper text-fg-secondary">{def.chave.map((c) => `${c.rotulo}: ${texto(edicao.linhas[0].chave[c.nome]) || "—"}`).join(" · ")}</p>}
     {lote && <p className="mb-4 text-helper text-fg-secondary">Só os campos que você alterar serão gravados nas {(edicao as { linhas: unknown[] }).linhas.length} decisões, tudo ou nada.</p>}
     <div className="grid gap-4 sm:grid-cols-2">
-      {[...camposDaChave, ...camposDoValor].map((c) => <CampoFiscal key={c.nome} nome={`${c.rotulo}${erro?.campos?.[c.nome] ? ` — ${erro.campos[c.nome]}` : ""}`}>{entrada(c)}</CampoFiscal>)}
+      {[...camposDaChave, ...camposDoValor].map((c) => <CampoFiscal key={c.nome} nome={c.rotulo} erro={erro?.campos?.[c.nome]}>{entrada(c)}</CampoFiscal>)}
     </div>
     {erro && <Aviso tom="atencao" className="mt-4">{erro.texto}</Aviso>}
     <div className="mt-5 flex flex-wrap gap-3">

@@ -18,17 +18,18 @@ O menu lateral apresenta uma entrada **SPED**, que abre ao passar o mouse ou
 clicar. Na faixa de ícones e no celular, o clique/toque também abre as opções,
 sempre sujeitas aos módulos habilitados:
 
+- **Painel** (`/fiscal`) abre o painel da competência, com as próprias abas.
 - **Classificação e apuração** abre Classificação. Seu menu superior tem Classificação, Apuração,
-  De-Para CFOP, Regras e DCIP e DIME. Sem Classificação, abre a primeira área
-  habilitada nessa ordem; o painel e as outras páginas antigas continuam acessíveis.
+  De-Para CFOP, Regras e DCIP e DIME (no modo real: Classificação, Apuração,
+  Empresas e DCIP e DIME). Sem Classificação, abre a primeira área habilitada nessa ordem.
 - **SPED gerados** (`/fiscal/entregas`) consulta as versões e suas ações.
 - **Executar** (`/fiscal/operacao`) tem somente as abas Executar e Histórico.
 
 A ordem da página é menu contextual, trilha, cabeçalho, empresa/estabelecimento/
 competência, avisos e conteúdo. O cabeçalho global do Connect permanece no topo.
 Classificação usa uma lista, com filtros para produtos, contratos/recibos e situação.
-Na Apuração, a obrigação é escolhida em um campo; demonstrativo, ajustes e decisões
-ficam em seções recolhíveis. DCIP e DIME tem um acesso superior próprio.
+Na Apuração, a obrigação é escolhida em um campo (no modo real, nas abas
+ICMS/IPI e PIS e COFINS); demonstrativo, ajustes e decisões ficam em seções recolhíveis. DCIP e DIME tem um acesso superior próprio.
 Parâmetros ficam disponíveis pela ação contextual da Apuração. De-Para CFOP
 continua indisponível enquanto não houver dados do motor; Regras é somente leitura.
 
@@ -46,8 +47,8 @@ continua indisponível enquanto não houver dados do motor; Regras é somente le
 
 Os valores iniciais seguem a referência: extração paralela com 4 instâncias e
 32 workers por instância; extração única com 8 workers; tentativa dos erros com
-32 workers. Os limites são 1–16 instâncias e 1–64 workers. As etapas first_mile
-e last_mile começam selecionadas. Esses parâmetros descrevem somente a simulação.
+32 processos paralelos. Os limites são 1–16 instâncias e 1–64 processos. A primeira
+e a última etapa da extração (`first_mile` e `last_mile`) começam selecionadas. Esses parâmetros descrevem somente a simulação.
 
 A conclusão da extração recebe documentos fictícios; Retentar erros recupera a
 quarentena do contexto. Depois, classifique os pendentes, simule a apuração e
@@ -146,6 +147,6 @@ destravar e editar o cadastro exigem `gerir`; apagar decisão exige também o
 perfil que exclui. O motor confere de novo (token, raiz, `CONNECT_DECISOES_ESCRITA`).
 
 Toda escrita leva o ator da sessão (`X-Connect-Ator`) e uma `Idempotency-Key`
-criada quando o formulário abre: duplo clique e nova tentativa repetem a mesma
+por ação, criada quando o formulário abre: duplo clique e nova tentativa repetem a mesma
 chave; depois de sucesso ou recusa, a próxima ação usa outra. Cada escrita
 também vai para a auditoria do Connect (`fiscal.sped.*`).
