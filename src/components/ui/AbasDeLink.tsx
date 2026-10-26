@@ -27,14 +27,17 @@ export function AbasDeLink({
   abas,
   ativa,
   className = "mb-4",
+  "aria-label": rotuloDaNav = "Abas",
 }: {
   abas: AbaDeLink[];
   ativa: string;
   /** Troca o respiro de baixo (padrão `mb-4`). */
   className?: string;
+  /** Nomeia a navegação quando a tela empilha mais de uma fileira de abas. */
+  "aria-label"?: string;
 }) {
   return (
-    <nav className={`scroll-x-hidden flex items-center gap-1 border-b border-border overflow-x-auto ${className}`.trim()} aria-label="Abas">
+    <nav className={`scroll-x-hidden flex items-center gap-1 border-b border-border overflow-x-auto ${className}`.trim()} aria-label={rotuloDaNav}>
       {abas.map((a) => {
         const ativo = a.chave === ativa;
         // Sem anel próprio: o `:focus-visible` global desenha o dele, e o

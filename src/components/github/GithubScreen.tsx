@@ -7,5 +7,5 @@ export async function GithubScreen({ searchParams, view }: { searchParams: Promi
   const { ctx } = await abrirTelaDoModulo(GITHUB_MODULE), params = await searchParams, query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) if (typeof value === "string") query.set(key, value);
   const canManage = await podeNoModulo(ctx, GITHUB_MODULE, "gerir");
-  return <GithubContributions view={view} initialQuery={query.toString()} canManage={canManage} canConfigure={canManage && isFullWrite(ctx.role)} />;
+  return <GithubContributions view={view} initialQuery={query.toString()} canConfigure={canManage && isFullWrite(ctx.role)} />;
 }

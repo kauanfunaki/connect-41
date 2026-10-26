@@ -8,6 +8,7 @@ import { BlocoFiscal, EstadoFiscal, PreviaTexto } from "@/components/fiscal/prev
 import { ESTADO_DA_EXECUCAO } from "@/lib/fiscal/previa/doMotor";
 import type { ExecucaoDoMotor } from "@/lib/sped/motor";
 import { lerExecucaoNoMotor } from "@/app/(app)/fiscal/motor-actions";
+import { FocoAoAbrir } from "./FocoAoAbrir";
 
 const INTERVALO_MS = 4000;
 const ABERTOS = new Set(["pendente", "executando"]);
@@ -22,7 +23,7 @@ export function AcompanhamentoDaExecucao({ raiz, inicial, logInicial, truncadoIn
   const [execucao, setExecucao] = useState(inicial);
   const [log, setLog] = useState({ texto: logInicial, truncado: truncadoInicial });
   const [erro, setErro] = useState<string | null>(null);
-  const fimDoLog = useRef<HTMLDivElement>(null);
+  const textoDoLog = useRef<HTMLPreElement>(null);
   const aberto = ABERTOS.has(execucao.estado);
 
   useEffect(() => {
@@ -41,14 +42,15 @@ export function AcompanhamentoDaExecucao({ raiz, inicial, logInicial, truncadoIn
     return () => { vivo = false; clearInterval(relogio); };
   }, [aberto, raiz, inicial.id, router]);
 
-  useEffect(() => { fimDoLog.current?.scrollIntoView({ block: "nearest" }); }, [log.texto]);
+  // Só o quadro do log acompanha o fim; a página rola uma vez, ao abrir (`FocoAoAbrir`).
+  // Rolar a página a cada consulta tirava o usuário do lugar (26/10/2026).
+  useEffect(() => { const pre = textoDoLog.current; if (pre) pre.scrollTop = pre.scrollHeight; }, [log.texto]);
 
-  return <BlocoFiscal titulo={`Execução #${execucao.id} · ${execucao.rotulo || execucao.acao}`} descricao={`${execucao.data_ini} a ${execucao.data_fim}${execucao.agente_host ? ` · agente ${execucao.agente_host}${execucao.pid ? ` (PID ${execucao.pid})` : ""}` : ""}${execucao.solicitado_por ? ` · pedido por ${execucao.solicitado_por}` : ""}`}
-    acao={<span className="flex items-center gap-2"><EstadoFiscal>{ESTADO_DA_EXECUCAO[execucao.estado]}</EstadoFiscal>{execucao.travada && <Selo tom="atencao">Sem sinal do agente</Selo>}{aberto && <Selo tom="marca">Atualizando</Selo>}</span>}>
+  return <FocoAoAbrir rotulo={`Log da execução #${execucao.id}`}><BlocoFiscal titulo={`Execução #${execucao.id} · ${execucao.rotulo || execucao.acao}`} descricao={`${execucao.data_ini} a ${execucao.data_fim}${execucao.agente_host ? ` · agente ${execucao.agente_host}${execucao.pid ? ` (PID ${execucao.pid})` : ""}` : ""}${execucao.solicitado_por ? ` · pedido por ${execucao.solicitado_por}` : ""}`}
+    acao={<span className="flex flex-wrap items-center gap-2"><EstadoFiscal>{ESTADO_DA_EXECUCAO[execucao.estado]}</EstadoFiscal>{execucao.travada && <Selo tom="atencao">Sem sinal do agente</Selo>}{aberto && <Selo tom="marca">Atualizando</Selo>}</span>}>
     {execucao.mensagem && <Aviso tom={execucao.estado === "erro" ? "atencao" : "info"} className="mb-3">{execucao.mensagem}</Aviso>}
     {erro && <Aviso tom="atencao" className="mb-3">{erro}</Aviso>}
     {log.truncado && <p className="mb-2 text-helper text-fg-muted">Mostrando as últimas 200 linhas do log.</p>}
-    <PreviaTexto texto={log.texto || (aberto ? "Aguardando o agente registrar o log…" : "Sem log registrado.")} />
-    <div ref={fimDoLog} />
-  </BlocoFiscal>;
+    <PreviaTexto ref={textoDoLog} texto={log.texto || (aberto ? "Aguardando o agente registrar o log…" : "Sem log registrado.")} />
+  </BlocoFiscal></FocoAoAbrir>;
 }

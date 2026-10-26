@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { GitCommitHorizontal, GitPullRequest, MessageSquare, Users } from "lucide-react";
+import { Activity, GitCommitHorizontal, GitPullRequest, MessageSquare, Users } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao } from "@/components/shared/ListaResponsiva";
 import { avatarDoGithub, iniciaisDoLogin } from "@/lib/github/avatar";
 import { dateLabel } from "@/lib/github/calendar";
 import { TYPE_LABELS, type DashboardView, type GithubSummary } from "@/lib/github/types";
@@ -22,21 +25,17 @@ export function GithubOverview({ data, query }: { data: DashboardView; query: st
   const summary = data.summary;
   const developers = new URLSearchParams(query); developers.delete("page"); developers.delete("view");
   const developersHref = `/github/desenvolvedores?${developers}`;
-  const cards = [
-    { label: "Total de commits", value: summary?.counts.COMMIT ?? 0, icon: GitCommitHorizontal, tone: "green" },
-    { label: "Pull requests", value: summary?.counts.PULL_REQUEST ?? 0, icon: GitPullRequest, tone: "blue" },
-    { label: "Revisões", value: summary?.counts.REVIEW ?? 0, icon: MessageSquare, tone: "violet" },
-    { label: "Devs ativos", value: summary?.activeDevelopers ?? 0, icon: Users, tone: "amber" },
-  ];
   return <>
-    <div className={styles.metrics}>{cards.map(card => <article key={card.label} className={styles.metric}>
-      <span className={styles.metricIcon} data-tone={card.tone}><card.icon size={20} /></span>
-      <p>{card.label}</p><strong>{number(card.value)}</strong>
-    </article>)}</div>
+    <FaixaDeTotais itens={[
+      { rotulo: "Total de commits", valor: number(summary?.counts.COMMIT ?? 0), icone: <GitCommitHorizontal /> },
+      { rotulo: "Pull requests", valor: number(summary?.counts.PULL_REQUEST ?? 0), icone: <GitPullRequest /> },
+      { rotulo: "Revisões", valor: number(summary?.counts.REVIEW ?? 0), icone: <MessageSquare /> },
+      { rotulo: "Desenvolvedores ativos", valor: number(summary?.activeDevelopers ?? 0), icone: <Users /> },
+    ]} />
     <div className={styles.overviewGrid}>
       <section className={styles.panel} aria-labelledby="github-cadence">
         <div className={styles.panelHeading}><div><h2 id="github-cadence">Cadência de entregas</h2><p>Commits e pull requests no período</p></div>
-          <div className={styles.legend}><span><i /> Commits</span><span><i data-pr /> PRs</span></div>
+          <div className={styles.legend}><span><i /> Commits</span><span><i data-pr /> Pull requests</span></div>
         </div>
         <CadenceChart data={data} />
       </section>
@@ -46,12 +45,12 @@ export function GithubOverview({ data, query }: { data: DashboardView; query: st
           <span className={styles.position}>{String(index + 1).padStart(2, "0")}</span><DeveloperAvatar login={person.login} />
           <Link href={`/github/desenvolvedores?${new URLSearchParams({ ...Object.fromEntries(developers), user: person.login })}`} className={styles.personName}>{person.login}</Link>
           <span className={styles.personCount}><strong>{number(person.total)}</strong><small>contribuições</small></span>
-        </div>) : <p className={styles.empty}>Nenhuma atividade no período.</p>}</div>
+        </div>) : <EmptyState icon={<Users />} title="Nenhuma atividade no período" />}</div>
       </section>
     </div>
     <section className={styles.panel} aria-labelledby="github-recent">
       <div className={styles.panelHeading}><div><h2 id="github-recent">Atividade recente</h2><p>{number(data.total)} contribuições no período</p></div></div>
-      <RecentActivity summary={summary} timezone={data.timezone} complete={data.complete} />
+      <RecentActivity summary={summary} timezone={data.timezone} />
     </section>
   </>;
 }
@@ -78,26 +77,34 @@ function CadenceChart({ data }: { data: DashboardView }) {
   return <div className={styles.chart}>
     {hasActivity ? <svg viewBox="0 0 744 218" role="img" aria-label={`Cadência de commits e pull requests de ${dateLabel(data.from)} a ${dateLabel(data.to)}`}>
       {[0, 1, 2, 3, 4].map(step => <g key={step}><line x1="42" x2="720" y1={y(step * ceiling / 4)} y2={y(step * ceiling / 4)} className={styles.gridLine} /><text x="28" y={y(step * ceiling / 4) + 4} textAnchor="end">{number(step * ceiling / 4)}</text></g>)}
-      <polygon points={`42,172 ${points("commits")} ${x(values.length - 1)},172`} fill="#10b981" fillOpacity=".08" />
-      <polyline points={points("commits")} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinejoin="round" />
-      <polyline points={points("prs")} fill="none" stroke="#0ea5e9" strokeWidth="2" strokeDasharray="5 4" />
-      {values.map((row, index) => <g key={row.day}><circle cx={x(index)} cy={y(row.commits)} r="3" fill="#10b981"><title>{dateLabel(row.day)}: {row.commits} commits e {row.prs} PRs{bucket > 1 ? ` em até ${bucket} dias` : ""}</title></circle>
+      <polygon points={`42,172 ${points("commits")} ${x(values.length - 1)},172`} className={styles.serieArea} />
+      <polyline points={points("commits")} fill="none" className={styles.serieCommits} strokeWidth="2.5" strokeLinejoin="round" />
+      <polyline points={points("prs")} className={styles.seriePrs} strokeWidth="2" strokeDasharray="5 4" />
+      {values.map((row, index) => <g key={row.day}><circle cx={x(index)} cy={y(row.commits)} r="3" className={styles.serieCommits}><title>{dateLabel(row.day)}: {row.commits} commits e {row.prs} pull requests{bucket > 1 ? ` em até ${bucket} dias` : ""}</title></circle>
         {(index === 0 || index === values.length - 1 || values.length > 5 && index === Math.floor(values.length / 2)) && <text x={x(index)} y="203" textAnchor={index === 0 ? "start" : index === values.length - 1 ? "end" : "middle"}>{formatCalendarDate(new Date(`${row.day}T12:00:00Z`), { day: "2-digit", month: "short" })}</text>}</g>)}
-    </svg> : <p className={styles.empty}>{data.complete ? "Nenhum commit ou pull request no período." : "Aguardando a coleta de commits e pull requests."}</p>}
-    {!data.complete && hasActivity && <p className={styles.chartNote}>Dados parciais</p>}
+    </svg> : <EmptyState icon={<GitCommitHorizontal />} title="Nenhum commit ou pull request no período" />}
   </div>;
 }
 
-function RecentActivity({ summary, timezone, complete }: { summary: GithubSummary | null; timezone: string; complete: boolean }) {
-  if (!summary?.recent.length) return <p className={styles.empty}>{complete ? "Nenhuma atividade neste período." : "Nenhuma atividade coletada para este período."}</p>;
-  return <div className={styles.tableScroller}><table className={styles.activityTable}><thead><tr><th>Atividade</th><th>Desenvolvedor</th><th>Quando</th></tr></thead>
-    <tbody>{summary.recent.map(event => <tr key={event.id}>
-      <td><a href={event.url} target="_blank" rel="noreferrer" className={styles.activityLink}>
-        <span className={styles.activityIcon} data-pr={event.type !== "COMMIT" || undefined}>{event.type === "COMMIT" ? <GitCommitHorizontal size={18} /> : <GitPullRequest size={18} />}</span>
-        <span><strong>{TYPE_LABELS[event.type]} <span className={styles.reference}>{event.reference}</span></strong><small>{event.repository}</small></span>
-      </a></td>
-      <td><span className={styles.developerCell}><DeveloperAvatar login={event.login} /><span>{event.login}</span></span></td>
-      <td><time dateTime={event.occurredAt}>{formatInstantDateTime(new Date(event.occurredAt), { timeZone: timezone })}</time></td>
-    </tr>)}</tbody>
-  </table></div>;
+function RecentActivity({ summary, timezone }: { summary: GithubSummary | null; timezone: string }) {
+  if (!summary?.recent.length) return <EmptyState icon={<Activity />} title="Nenhuma atividade neste período" />;
+  const atividade = (event: GithubSummary["recent"][number]) => <a href={event.url} target="_blank" rel="noreferrer" className={styles.activityLink}>
+    <span className={styles.activityIcon} data-pr={event.type !== "COMMIT" || undefined}>{event.type === "COMMIT" ? <GitCommitHorizontal size={18} /> : <GitPullRequest size={18} />}</span>
+    <span className="min-w-0"><strong>{TYPE_LABELS[event.type]} <span className={styles.reference}>{event.reference}</span></strong><small>{event.repository}</small></span>
+  </a>;
+  const quando = (event: GithubSummary["recent"][number]) => <time dateTime={event.occurredAt}>{formatInstantDateTime(new Date(event.occurredAt), { timeZone: timezone })}</time>;
+  // No celular, cartões no lugar da tabela que só rolava de lado (26/10/2026).
+  return <>
+    <CartoesNoCelular className={styles.activityCards}>{summary.recent.map(event => <Cartao key={event.id} className={styles.activityCard}>
+      {atividade(event)}
+      <div className={styles.activityCardFoot}><span className={styles.developerCell}><DeveloperAvatar login={event.login} /><span>{event.login}</span></span>{quando(event)}</div>
+    </Cartao>)}</CartoesNoCelular>
+    <TabelaNoDesktop><table className={styles.activityTable}><thead><tr><th>Atividade</th><th>Desenvolvedor</th><th>Quando</th></tr></thead>
+      <tbody>{summary.recent.map(event => <tr key={event.id}>
+        <td>{atividade(event)}</td>
+        <td><span className={styles.developerCell}><DeveloperAvatar login={event.login} /><span>{event.login}</span></span></td>
+        <td>{quando(event)}</td>
+      </tr>)}</tbody>
+    </table></TabelaNoDesktop>
+  </>;
 }

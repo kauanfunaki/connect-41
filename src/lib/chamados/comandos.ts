@@ -202,15 +202,19 @@ async function mudarStatus(tx: Tx, c: Contexto, t: Awaited<ReturnType<typeof par
 }
 
 export async function comentar(c: Contexto, id: string, version: number, input: unknown) {
-  const dados = z.object({ requestId: z.uuid(), body: z.string().trim().min(1).max(15000), internal: z.boolean().default(false) }).parse(input);
+  // Arquivos enviados junto com a mensagem (26/10/2026): sobem antes pela rota de
+  // anexos e chegam aqui pelos ids, para ficarem presos à mensagem na conversa.
+  const { attachmentIds, ...dados } = z.object({ requestId: z.uuid(), body: z.string().trim().max(15000).default(""), internal: z.boolean().default(false), attachmentIds: ids.default([]) }).parse(input);
+  if (!dados.body && !attachmentIds.length) throw new Error("Escreva uma mensagem ou anexe um arquivo.");
   await getPrisma().$transaction(async tx => {
     await travarEscritorio(tx, c.ctx.tenantId);
     if (await tx.helpdeskComment.findFirst({ where: { tenantId: c.ctx.tenantId, ticketId: id, requestId: dados.requestId, authorId: c.ctx.userId } })) return;
     const t = await paraAgir(tx, c, id, version);
     if (!podeResponder(c.ctx, c.config, { ...t, approverIds: strings(t.approverIds) }, t.status, dados.internal)) throw new Error("Não é possível responder neste estado ou com este acesso.");
     const comentario = await tx.helpdeskComment.create({ data: { tenantId: c.ctx.tenantId, ticketId: id, authorId: c.ctx.userId, ...dados } });
+    if (attachmentIds.length && (await tx.helpdeskAttachment.updateMany({ where: { tenantId: c.ctx.tenantId, ticketId: id, id: { in: attachmentIds }, uploadedById: c.ctx.userId, commentId: null, internal: dados.internal }, data: { commentId: comentario.id } })).count !== attachmentIds.length) throw new Error("Os arquivos não puderam ser ligados à mensagem. Atualize a página e tente novamente.");
     if (!dados.internal && aguardandoSolicitante(t.status) && !c.ctx.sectors.includes(c.config.sectorCode) && !isFullWrite(c.ctx.role)) await mudarStatus(tx, c, t, "EM_ANDAMENTO");
-    await evento(tx, c.ctx.tenantId, id, c.ctx.userId, "comment", { commentId: comentario.id }, dados.internal);
+    await evento(tx, c.ctx.tenantId, id, c.ctx.userId, "comment", { commentId: comentario.id, anexos: attachmentIds.length }, dados.internal);
   });
   await depois(c, id, "comment");
 }
@@ -251,7 +255,7 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
       if (operacao === "status") await mudarStatus(tx, c, t, z.enum(STATUS).parse(valor));
       else if (operacao === "assumir") {
         await tx.helpdeskAssignee.upsert({ where: { tenantId_ticketId_userId: { tenantId, ticketId: id, userId: c.ctx.userId } }, create: { tenantId, ticketId: id, userId: c.ctx.userId }, update: {} });
-        await evento(tx, tenantId, id, c.ctx.userId, "assignees");
+        await evento(tx, tenantId, id, c.ctx.userId, "assignees", { assumiu: true });
       } else if (operacao === "responsaveis" || operacao === "participantes") {
         exigirGestao(c); const escolhidos = ids.parse(valor);
         const validos = await tx.user.findMany({ where: { tenantId, active: true, id: { in: escolhidos }, ...(operacao === "responsaveis" ? { role: { not: "READONLY" }, sectors: { some: { sectorCode: c.config.sectorCode } } } : {}) }, select: { id: true } });
@@ -263,7 +267,7 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
           await tx.helpdeskParticipant.deleteMany({ where: { tenantId, ticketId: id } });
           if (escolhidos.length) await tx.helpdeskParticipant.createMany({ data: escolhidos.map(userId => ({ tenantId, ticketId: id, userId })) });
         }
-        await evento(tx, tenantId, id, c.ctx.userId, operacao === "responsaveis" ? "assignees" : "participants");
+        await evento(tx, tenantId, id, c.ctx.userId, operacao === "responsaveis" ? "assignees" : "participants", { userIds: escolhidos });
       } else if (operacao === "prioridade") {
         await tx.helpdeskTicket.update({ where: { id }, data: { priority: z.enum(PRIORIDADES).parse(valor) } });
         await evento(tx, tenantId, id, c.ctx.userId, "priority", { priority: valor });

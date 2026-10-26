@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { RotateCcw, ArrowLeft } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -42,6 +43,10 @@ export function ContextoFiscalProvider({ children, tenantId, userId, inicial, mo
   const fila = useRef(Promise.resolve());
   const [pendentes, setPendentes] = useState(0);
   const [resultado, setResultado] = useState<{ mensagem: string; erro?: boolean } | null>(null);
+  // O resultado é da tela em que a ação aconteceu: trocar de tela o apaga (26/10/2026).
+  const pathname = usePathname();
+  const [telaDoResultado, setTelaDoResultado] = useState(pathname);
+  if (telaDoResultado !== pathname) { setTelaDoResultado(pathname); setResultado(null); }
   const [previas, setPrevias] = useState<{ titulo: string; conteudo: ReactNode }[]>([]);
   const previa = previas.at(-1);
   const { dialog, requestConfirm } = useConfirm();
@@ -77,10 +82,15 @@ export function ContextoFiscalProvider({ children, tenantId, userId, inicial, mo
 
   return (
     <FiscalContext.Provider value={{ ...estado, pronto: pendentes === 0, resultado, simular: enviar, visualizar: (titulo, conteudo) => setPrevias((atuais) => [...atuais, { titulo, conteudo }]), pedirRestauracao, modulos, integrado }}>
-      <PageContainer>
-        {children}
-        <p className="mt-7 text-helper text-fg-muted">Dados fictícios no banco local · geração e validação simuladas, sem validade fiscal.</p>
-      </PageContainer>
+      {/* `aria-busy` enquanto há gravação pendente no banco local (26/10/2026):
+          substitui o texto "Salvo no banco local" como sinal de que a tela
+          terminou de gravar — para o leitor de tela e para o roteiro local. */}
+      <div data-fiscal-local aria-busy={pendentes > 0}>
+        <PageContainer>
+          {children}
+          <p className="mt-7 text-helper text-fg-muted">Dados fictícios no banco local · geração e validação simuladas, sem validade fiscal.</p>
+        </PageContainer>
+      </div>
       <Modal open={!!previa} title={previa?.titulo} onClose={() => setPrevias([])} maxWidth="max-w-3xl">
         <p className="mb-4 mt-1 text-helper text-fg-secondary">Ambiente local · esta prévia usa informações fictícias do banco de testes.</p>
         {previa?.conteudo}
@@ -117,7 +127,8 @@ export function FiltroDoContextoFiscal() {
   const empresa = cenario.empresas.find((e) => e.id === contexto.empresaId)!;
   const trocar = (mudanca: Partial<ContextoFiscal>) => simular({ tipo: "contexto", contexto: { ...contexto, ...mudanca } });
   return <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-    <div className="flex min-w-0 max-w-full items-center gap-2">
+    {/* O seletor não tem `disabled`; o fieldset o desliga com os vizinhos enquanto a gravação não volta (26/10/2026). */}
+    <fieldset disabled={!pronto} className="flex min-w-0 max-w-full items-center gap-2">
       <span className="c41-rotulo flex-shrink-0">Empresa</span>
       <SearchableSelect
         key={empresa.id}
@@ -132,7 +143,7 @@ export function FiltroDoContextoFiscal() {
         placeholder="Buscar empresa por nome ou CNPJ…"
         onChange={(id) => { if (id && id !== empresa.id) trocar({ empresaId: id, estabelecimentoId: "" }); }}
       />
-    </div>
+    </fieldset>
     <div className="flex min-w-0 max-w-full items-center gap-2">
       <label htmlFor="fiscal-estabelecimento" className="c41-rotulo flex-shrink-0">Estabelecimento</label>
       <Select id="fiscal-estabelecimento" compact className="w-60 max-w-full" disabled={!pronto} value={contexto.estabelecimentoId} onChange={(e) => trocar({ estabelecimentoId: e.target.value })}>

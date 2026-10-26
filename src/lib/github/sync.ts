@@ -182,9 +182,11 @@ async function resourceStep(connection: Connection, job: GithubSyncJob, repo: Gi
   await finishResource(connection, job, repo, owner, cursor, contributions, next, items);
 }
 async function resetCommitScan(connection: Connection, job: GithubSyncJob, owner: string, cursor: Record<string, Prisma.JsonValue>) {
+  // Branch reescrito: lista os commits da mesma janela incremental, sem voltar aos 12 meses.
+  // Commits antigos que saíram do branch são retirados pela atualização completa de Integrações (26/10/2026).
   await getPrisma().$transaction(async tx => {
     await guardLease(tx, connection, owner);
-    await tx.githubSyncJob.update({ where: { id: job.id }, data: { cursor: { ...cursor, compare: false, phase: "full", page: 1, scanId: randomUUID(), since: historyStart().toISOString() } } });
+    await tx.githubSyncJob.update({ where: { id: job.id }, data: { cursor: { ...cursor, compare: false, page: 1, scanId: randomUUID() } } });
   });
 }
 async function finishResource(connection: Connection, job: GithubSyncJob, repo: GithubRepository, owner: string,
@@ -211,7 +213,7 @@ async function finishResource(connection: Connection, job: GithubSyncJob, repo: 
     }
     const cursorNext = next ? { ...cursor, page: Number(cursor.page ?? 1) + 1 } : recent ? {
       phase: "full", page: 1, scanId: randomUUID(), since: historyStart(until).toISOString(), until: until.toISOString(),
-    } : { lastHead: cursor.head ?? cursor.lastHead ?? null, lastFullAt: cursor.phase === "full" ? until.toISOString() : cursor.lastFullAt ?? null, pullNumber: cursor.pullNumber ?? null };
+    } : { lastHead: cursor.head ?? cursor.lastHead ?? null, pullNumber: cursor.pullNumber ?? null };
     await tx.githubSyncJob.update({ where: { id: job.id }, data: { cursor: cursorNext as Prisma.InputJsonObject, state: next || recent ? "queued" : "done", priority: !next && recent ? 15 : job.priority,
       error: null, attempts: 0, ...(next ? {} : { coveredFrom: cursor.phase === "incremental" && job.coveredFrom ? job.coveredFrom : since, coveredThrough: until }) } });
     await tx.githubRepository.update({ where: { id: repo.id }, data: { accessible: true, accessCheckedAt: new Date(), lastError: null } });

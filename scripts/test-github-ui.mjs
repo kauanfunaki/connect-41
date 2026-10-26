@@ -139,7 +139,7 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   ok("Geral usa totais reais, gráfico e atividades recentes; abas funcionam em desktop e celular");
   const renderStart = performance.now();
   await page.goto(base + "/github/desenvolvedores"); await page.getByText("ana-dev", { exact: true }).waitFor();
-  assert.equal((await api()).total, 120); assert.equal((await api()).complete, true);
+  assert.equal((await api()).total, 120);
   const renderedDays = await page.locator("button[data-level]").count();
   assert.equal((await api()).totalUsers, 20);
   assert.ok(renderedDays > 0 && renderedDays < 20 * 300, "Calendários fora da viewport não devem montar milhares de botões");
@@ -165,21 +165,19 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   const metrics = (await cdp.send("Performance.getMetrics")).metrics;
   result.performance.domNodes = metrics.find(metric => metric.name === "Nodes")?.value;
   result.performance.heapBytes = metrics.find(metric => metric.name === "JSHeapUsedSize")?.value;
-  const pollStart = performance.now();
-  const poll = page.waitForResponse(response => new URL(response.url()).pathname === "/api/github" && response.request().method() === "GET");
-  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
-  const polled = await poll;
-  result.performance.pollMs = Math.round(performance.now() - pollStart);
-  result.performance.pollBytes = (await polled.body()).length;
-  result.performance.pollUnchanged = (await polled.json()).unchanged === true;
+  // Sem polling desde 26/10/2026: voltar à aba não consulta o painel de novo.
+  let reloads = 0; const countReload = request => { if (new URL(request.url()).pathname === "/api/github") reloads++; };
+  page.on("request", countReload);
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange"))); await page.waitForTimeout(500);
+  page.off("request", countReload); result.performance.reloadsOnVisibility = reloads;
   if (process.env.GITHUB_PERF_BASELINE !== "1") {
     assert.ok(result.performance.afterScrollDayButtons < 4 * 366, "Sair da viewport deve liberar os calendários visitados");
-    assert.equal(result.performance.pollUnchanged, true, "Polling sem mudanças deve dispensar os agregados/calendários");
+    assert.equal(reloads, 0, "Voltar à aba não deve recarregar o painel");
   }
   await page.getByRole("group", { name: "Calendário de ana-dev", exact: true }).scrollIntoViewIfNeeded();
   await page.getByRole("group", { name: "Calendário de ana-dev", exact: true }).locator("button[data-level]").first().waitFor();
   ok("Vinte usuários com calendários limitados à área visível, inclusive após rolagem completa");
-  await page.getByRole("group", { name: "Calendário de sem-atividade", exact: true }).waitFor(); ok("Calendários individuais, quatro tipos, cobertura e usuário sem atividade");
+  await page.getByRole("group", { name: "Calendário de sem-atividade", exact: true }).waitFor(); ok("Calendários individuais, quatro tipos e usuário sem atividade");
   await page.screenshot({ path: path.join(output, "github-desktop.png"), fullPage: true, animations: "disabled" });
   const calendar = page.getByRole("group", { name: "Calendário de ana-dev", exact: true });
   const first = calendar.locator("button[data-level]").first(); await first.focus(); await first.press("ArrowDown");
@@ -202,10 +200,11 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   await page.getByRole("dialog").getByRole("link", { name: /Abrir no GitHub/ }).first().waitFor();
   await page.screenshot({ path: path.join(output, "github-day.png"), fullPage: true, animations: "disabled" });
   await page.getByRole("dialog").getByRole("button", { name: "Fechar", exact: true }).click(); ok("Detalhe diário consulta os eventos e links que formam a contagem");
-  await page.getByRole("button", { name: "Filtros", exact: true }).click();
-  await page.getByRole("combobox", { name: "Tipo de contribuição", exact: true }).click(); await page.getByRole("option", { name: "Revisões", exact: true }).click();
-  await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click(); await page.waitForURL(/type=REVIEW/);
-  assert.equal((await api("/api/github?type=REVIEW")).total, 30); ok("Filtros persistem na URL e os totais por tipo conferem");
+  assert.equal(await page.getByRole("button", { name: /^(Filtros|Aplicar filtros|Atualizar dados)$/ }).count(), 0);
+  await page.getByRole("searchbox", { name: "Buscar desenvolvedor", exact: true }).fill("ana");
+  await page.waitForURL(url => url.searchParams.get("user") === "ana"); await page.getByRole("button", { name: "Limpar", exact: true }).waitFor();
+  assert.equal((await api("/api/github?type=REVIEW")).total, 30); ok("Busca se aplica sozinha, persiste na URL e os totais por tipo conferem");
+  await page.goto(base + "/github/desenvolvedores?type=REVIEW"); await page.getByRole("button", { name: "Limpar", exact: true }).waitFor();
   await page.getByRole("navigation", { name: "GitHub", exact: true }).getByRole("link", { name: "Geral", exact: true }).click();
   await page.waitForURL(url => url.pathname === "/github" && url.searchParams.get("type") === "REVIEW");
   await page.getByRole("heading", { name: "Atividade recente", exact: true }).waitFor();

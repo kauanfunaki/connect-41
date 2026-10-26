@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getModuleDef, getModuleRoute } from "@/lib/module-catalog";
 import { alcancaModulo } from "@/lib/auth/modulo";
 import type { AuthContext } from "@/lib/auth/context";
-import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, diferencas, hojeEmSaoPaulo, comentarioSchema, sistemaSchema } from "./regras";
+import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, sistemaSchema, fraseDaAlteracao } from "./regras";
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 vi.mock("@/lib/modules", () => ({ isModuleEnabled: vi.fn(), setorDoModulo: vi.fn() }));
@@ -39,6 +39,14 @@ describe("controle interno do Tech", () => {
     expect(lerFiltros({ page: "-1", situacao: "INVALID", prioridade: "URGENT" })).toMatchObject({ page: 1, status: undefined, priority: undefined });
     expect(lerFiltros({ q: ["a", "b"], page: "Infinity" })).toMatchObject({ q: "", page: 1 });
   });
+  it("volta só para a própria lista, com o recorte de origem", () => {
+    expect(destinoDeVolta("/tech/controle-interno?visao=kanban&tipo=BUG&page=2")).toBe("/tech/controle-interno?visao=kanban&tipo=BUG&page=2");
+    expect(destinoDeVolta("/tech/controle-interno")).toBe("/tech/controle-interno");
+    for (const ruim of ["https://exemplo.test", "//exemplo.test", "/tech/controle-internox", "/tech/controle-interno?a=1//b", "/tech/controle-interno?\\a", ["/tech/controle-interno?a=1"], undefined]) expect(destinoDeVolta(ruim)).toBe("/tech/controle-interno");
+    expect(comVolta("/tech/controle-interno/abc", "/tech/controle-interno")).toBe("/tech/controle-interno/abc");
+    expect(comVolta("/tech/controle-interno/abc", "/tech/controle-interno?visao=kanban")).toBe("/tech/controle-interno/abc?voltar=%2Ftech%2Fcontrole-interno%3Fvisao%3Dkanban");
+    expect(destinoDeVolta(decodeURIComponent("%2Ftech%2Fcontrole-interno%3Fvisao%3Dkanban"))).toBe("/tech/controle-interno?visao=kanban");
+  });
   it("registra só campos alterados e preserva valor anterior", () => {
     expect(diferencas({ Prazo: null, Título: "Antes" }, { Prazo: null, Título: "Depois" })).toEqual([{ field: "Título", before: "Antes", after: "Depois" }]);
     expect(diferencas(null, { Título: "Novo" })).toEqual([{ field: "Título", before: null, after: "Novo" }]);
@@ -57,5 +65,15 @@ describe("controle interno do Tech", () => {
     expect(alcancaModulo(ctx({ role: "READONLY" }), "tech", true, "agir")).toBe(false);
     expect(alcancaModulo(ctx({ subscriptionReadOnly: true }), "tech", true, "agir")).toBe(false);
     expect(alcancaModulo(ctx({ role: "ADMIN" }), "tech", false, "ver")).toBe(false);
+  });
+  it("o histórico descreve cada alteração em frase", () => {
+    expect(fraseDaAlteracao({ field: "Situação", before: "Pendente", after: "Em andamento" })).toBe("mudou a situação de Pendente para Em andamento");
+    expect(fraseDaAlteracao({ field: "Responsável", before: null, after: "Ana" })).toBe("definiu o responsável: Ana");
+    expect(fraseDaAlteracao({ field: "Responsável", before: "Ana", after: null })).toBe("removeu o responsável (Ana)");
+    expect(fraseDaAlteracao({ field: "Responsável", before: "Ana", after: "Bruno" })).toBe("trocou o responsável de Ana para Bruno");
+    expect(fraseDaAlteracao({ field: "Prazo", before: "2026-10-01", after: "2026-10-26" })).toBe("mudou o prazo de 01/10/2026 para 26/10/2026");
+    expect(fraseDaAlteracao({ field: "Descrição", before: "a", after: "b" })).toBe("editou a descrição");
+    expect(fraseDaAlteracao({ field: "Vínculo do responsável", before: "id-1", after: "id-2" })).not.toContain("id-");
+    expect(fraseDaAlteracao({ field: "Prioridade", before: null, after: "Alta" }, true)).toBe("Prioridade: Alta");
   });
 });
