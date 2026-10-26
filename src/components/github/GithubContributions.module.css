@@ -46,6 +46,7 @@
 .person:last-child { border-bottom: 0; }
 .position { font-size: 11px; color: var(--c41-fg-muted); }
 .avatar { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; background: #10b98115; color: var(--github-green); font-size: 10px; font-weight: 750; }
+img.avatar { object-fit: cover; }
 .personName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 650; }
 .personCount { text-align: right; flex-shrink: 0; }
 .personCount strong { display: block; font-size: 14px; }
