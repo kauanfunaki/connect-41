@@ -238,6 +238,15 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     mocks.auth.mockReturnValue(c.ctx); expect((await baixar(new Request("http://localhost/arquivo"), { params: Promise.resolve({ id: a.id }) })).status).toBe(404);
     mocks.auth.mockReturnValue(equipe.ctx); expect((await baixar(new Request("http://localhost/arquivo"), { params: Promise.resolve({ id: a.id }) })).status).toBe(200);
   });
+  it("liga os arquivos à mensagem enviada junto, sem aviso próprio do arquivo", async () => {
+    const id = await abrir(), t = await detalhe(equipe, id), form = new FormData();
+    form.set("id", randomUUID()); form.set("draftId", t.draftId); form.set("ticketId", id); form.set("version", String(t.version)); form.set("mensagem", "1"); form.set("file", new File(["Print fictício"], "print.txt", { type: "text/plain" }));
+    const a = await enviarAnexo(equipe, form); artefatos.push(await db!.helpdeskAttachment.findUniqueOrThrow({ where: { id: a.id } }));
+    await expect(comentar(equipe, id, a.version, { requestId: randomUUID(), body: "", internal: true, attachmentIds: [a.id] })).rejects.toThrow("não puderam ser ligados");
+    await comentar(equipe, id, a.version, { requestId: randomUUID(), body: "", attachmentIds: [a.id] });
+    const depois = await detalhe(equipe, id); expect(depois.attachments.find(x => x.id === a.id)?.commentId).toBe(depois.comments[0].id);
+    expect(depois.events.some(e => e.type === "attachment")).toBe(false);
+  });
   it("retirar setor preserva chamados antigos; desligar módulo bloqueia as rotas", async () => {
     const id = await abrir(); mocks.auth.mockReturnValue({ ...gestao.ctx, role: "ADMIN" }); await configurarSetores([]);
     const config = await configDoHelpdesk(tenantId); expect(config.requesterSectors).toEqual([]); await expect(criarRascunho({ ...c, config })).rejects.toThrow("não está autorizado"); expect((await detalhe({ ...c, config }, id)).id).toBe(id);
