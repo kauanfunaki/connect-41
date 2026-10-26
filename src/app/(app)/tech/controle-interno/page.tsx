@@ -5,7 +5,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { CascoDaTabela } from "@/components/shared/CascoDaTabela";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
@@ -13,12 +12,12 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, 
 import { formatCalendarDate } from "@/lib/format";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { VisoesTech } from "@/components/tech-interno/VisoesTech";
+import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 import { intervaloMes } from "@/lib/tech-interno/agenda";
 import { listarItens, opcoesTech } from "@/lib/tech-interno/servidor";
 import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, hojeEmSaoPaulo, lerFiltros, comVolta } from "@/lib/tech-interno/regras";
 
 export const dynamic = "force-dynamic";
-const TONS: Record<keyof typeof SITUACOES, TomDoSelo> = { PENDING: "marca", IN_PROGRESS: "atencao", VALIDATION: "atencao", DONE: "neutro", CANCELED: "neutro" };
 
 export default async function ControleInternoPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { ctx } = await abrirTelaDoModulo(MODULO_TECH_INTERNO);
@@ -65,13 +64,13 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
           <TopoDoCartao nome={<Link className="text-fg hover:text-brand" href={href(`${ROTA_TECH_INTERNO}/${item.id}`)}>{item.title}</Link>} />
           <InfoDoCartao>{TIPOS[item.type]} · {PRIORIDADES[item.priority]}</InfoDoCartao><InfoDoCartao>{nomeSistema(item)}</InfoDoCartao>
           <InfoDoCartao>{item.assignee?.name ?? "Sem responsável"} · {prazoDoItem(item)}</InfoDoCartao>
-          <PeDoCartao><Selo tom={TONS[item.status]}>{SITUACOES[item.status]}</Selo></PeDoCartao>
+          <PeDoCartao><SituacaoTech key={`${item.id}:${item.version}`} forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={podeEditar} /></PeDoCartao>
         </Cartao>)}</CartoesNoCelular>
         <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Tipo", "Prioridade", "Sistema", "Situação", "Responsável", "Prazo"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
           <tbody className="divide-y divide-border">{lista.items.map(item => <tr key={item.id} className="hover:bg-surface-hover">
             <td className="px-4 py-3 min-w-48 max-w-xs break-words"><Link href={href(`${ROTA_TECH_INTERNO}/${item.id}`)} className="font-medium text-fg hover:text-brand">{item.title}</Link></td>
             <td className="px-4 py-3">{TIPOS[item.type]}</td><td className={`px-4 py-3 ${item.priority >= 2 ? "font-semibold" : ""}`}>{PRIORIDADES[item.priority]}</td>
-            <td className="px-4 py-3 break-words max-w-48">{nomeSistema(item)}</td><td className="px-4 py-3"><Selo tom={TONS[item.status]}>{SITUACOES[item.status]}</Selo></td>
+            <td className="px-4 py-3 break-words max-w-48">{nomeSistema(item)}</td><td className="h-px w-44 min-w-40 !p-0"><SituacaoTech key={`${item.id}:${item.version}`} id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={podeEditar} /></td>
             <td className="px-4 py-3">{item.assignee?.name ?? "Sem responsável"}</td><td className="px-4 py-3 whitespace-nowrap">{prazoDoItem(item)}</td>
           </tr>)}</tbody>
         </table></TabelaNoDesktop>

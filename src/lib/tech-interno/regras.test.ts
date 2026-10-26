@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getModuleDef, getModuleRoute } from "@/lib/module-catalog";
 import { alcancaModulo } from "@/lib/auth/modulo";
 import type { AuthContext } from "@/lib/auth/context";
-import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, sistemaSchema } from "./regras";
+import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, sistemaSchema, fraseDaAlteracao } from "./regras";
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 vi.mock("@/lib/modules", () => ({ isModuleEnabled: vi.fn(), setorDoModulo: vi.fn() }));
@@ -65,5 +65,15 @@ describe("controle interno do Tech", () => {
     expect(alcancaModulo(ctx({ role: "READONLY" }), "tech", true, "agir")).toBe(false);
     expect(alcancaModulo(ctx({ subscriptionReadOnly: true }), "tech", true, "agir")).toBe(false);
     expect(alcancaModulo(ctx({ role: "ADMIN" }), "tech", false, "ver")).toBe(false);
+  });
+  it("o histórico descreve cada alteração em frase", () => {
+    expect(fraseDaAlteracao({ field: "Situação", before: "Pendente", after: "Em andamento" })).toBe("mudou a situação de Pendente para Em andamento");
+    expect(fraseDaAlteracao({ field: "Responsável", before: null, after: "Ana" })).toBe("definiu o responsável: Ana");
+    expect(fraseDaAlteracao({ field: "Responsável", before: "Ana", after: null })).toBe("removeu o responsável (Ana)");
+    expect(fraseDaAlteracao({ field: "Responsável", before: "Ana", after: "Bruno" })).toBe("trocou o responsável de Ana para Bruno");
+    expect(fraseDaAlteracao({ field: "Prazo", before: "2026-10-01", after: "2026-10-26" })).toBe("mudou o prazo de 01/10/2026 para 26/10/2026");
+    expect(fraseDaAlteracao({ field: "Descrição", before: "a", after: "b" })).toBe("editou a descrição");
+    expect(fraseDaAlteracao({ field: "Vínculo do responsável", before: "id-1", after: "id-2" })).not.toContain("id-");
+    expect(fraseDaAlteracao({ field: "Prioridade", before: null, after: "Alta" }, true)).toBe("Prioridade: Alta");
   });
 });
