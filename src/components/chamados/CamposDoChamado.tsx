@@ -15,8 +15,8 @@ export function nomeDaCategoria(categorias: CategoriaDaTela[], id: string): stri
 export function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="flex min-w-0 flex-col gap-1.5 text-ui text-fg-secondary"><span className="font-semibold">{label}</span>{children}</label>;
 }
-export function CamposDoChamado({ dados, onChange, categorias, setores, origemFixa = false, somenteCategoria = false, ocultarCategoria = false }: {
-  dados: DadosDoChamado; onChange: (d: DadosDoChamado) => void; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[]; origemFixa?: boolean; somenteCategoria?: boolean; ocultarCategoria?: boolean;
+export function CamposDoChamado({ dados, onChange, categorias, setores, origemFixa = false, somenteCategoria = false, ocultarCategoria = false, ocultarTitulo = false }: {
+  dados: DadosDoChamado; onChange: (d: DadosDoChamado) => void; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[]; origemFixa?: boolean; somenteCategoria?: boolean; ocultarCategoria?: boolean; ocultarTitulo?: boolean;
 }) {
   const categoria = categorias.find(c => c.id === dados.categoryId);
   const [buscaCategoria, setBuscaCategoria] = useState("");
@@ -63,7 +63,7 @@ export function CamposDoChamado({ dados, onChange, categorias, setores, origemFi
     <div className="grid gap-4 sm:grid-cols-2">
       <Campo label="Setor solicitante"><Select required value={dados.requesterSectorCode} disabled={origemFixa} onChange={e => mudar({ requesterSectorCode: e.target.value })}><option value="">Selecione o setor</option>{setores.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}</Select></Campo>
     </div>
-    <Campo label="Título"><Input required minLength={3} maxLength={255} value={dados.title} onChange={e => mudar({ title: e.target.value })} placeholder="O que você precisa?" /></Campo>
+    {!ocultarTitulo && <Campo label="Título"><Input required minLength={3} maxLength={255} value={dados.title} onChange={e => mudar({ title: e.target.value })} placeholder="O que você precisa?" /></Campo>}
     <Campo label="Descrição"><Textarea required rows={6} maxLength={15000} value={dados.description} onChange={e => mudar({ description: e.target.value })} placeholder="Descreva o pedido, o sistema ou recurso envolvido e o que aconteceu." /></Campo>
     {categoria?.formSchema.length ? <div className="grid gap-4 sm:grid-cols-2">{categoria.formSchema.map(f => <Campo key={f.key} label={`${f.label}${f.required ? " *" : ""}`}>
       {f.type === "textarea" ? <Textarea required={f.required} value={dados.requestData[f.key] ?? ""} onChange={e => mudar({ requestData: { ...dados.requestData, [f.key]: e.target.value } })} maxLength={f.rules.maxLen ?? 10000} minLength={f.rules.minLen} placeholder={f.placeholder} />

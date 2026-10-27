@@ -58,12 +58,12 @@ try {
   const escolher = async (indice, rotulo) => { await abertura.getByRole("combobox").nth(indice).click(); await page.getByRole("option", { name: rotulo, exact: true }).click(); };
   assert.equal(await page.getByRole("heading", { name: "Selecione a categoria do chamado", exact: true }).count(), 0);
   await escolher(0, "Fiscal");
-  await page.getByLabel("Título", { exact: true }).fill("Acesso fictício ao sistema de atendimento");
+  assert.equal(await page.getByLabel("Título", { exact: true }).count(), 0);
   await page.getByLabel("Descrição", { exact: true }).fill("Preciso de acesso ao ambiente fictício para registrar os atendimentos da equipe de testes.");
   await page.getByLabel("Tags (separadas por vírgula)").fill("sistema, acesso");
   await page.getByLabel("Adicionar arquivo").setInputFiles({ name: "evidencia-ficticia.txt", mimeType: "text/plain", buffer: Buffer.from("Evidência fictícia do teste de interface.") });
   await page.getByRole("link", { name: "evidencia-ficticia.txt" }).waitFor();
-  await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click(); await page.getByText("Rascunho salvo.", { exact: false }).waitFor();
+  await page.getByText("Rascunho salvo automaticamente", { exact: false }).waitFor();
   await page.screenshot({ path: path.join(saida, "novo-1366.png"), fullPage: true });
   console.log("Abertura e upload verificados. Conferindo envio opcional…");
   await page.getByRole("button", { name: "Enviar chamado", exact: true }).click(); await page.getByRole("button", { name: "Enviar sem análise", exact: true }).waitFor();

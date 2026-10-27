@@ -2,7 +2,7 @@ import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { podeAbrir, podeVerInterno, podeVer } from "./acesso";
 import type { Contexto } from "./contexto";
-import { categoriaSchema, dadosRascunhoSchema, parecerSchema, PRIORIDADES, STATUS, fechado } from "./regras";
+import { categoriaSchema, dadosRascunhoSchema, parecerSchema, tituloDaDescricao, PRIORIDADES, STATUS, fechado } from "./regras";
 
 export const strings = (v: unknown): string[] => Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
 export async function temAcessoAoModulo(c: Contexto) {
@@ -98,7 +98,8 @@ export async function usuarios(c: Contexto) {
   return getPrisma().user.findMany({ where: { tenantId: c.ctx.tenantId, active: true }, select: { id: true, name: true, role: true, sectors: { select: { sectorCode: true } } }, orderBy: { name: "asc" } });
 }
 export function resumoRascunho(payload: unknown) {
-  const dados = dadosRascunhoSchema.safeParse(payload); return dados.success ? dados.data.title : "Novo chamado";
+  const dados = dadosRascunhoSchema.safeParse(payload);
+  return !dados.success ? "Novo chamado" : dados.data.title || tituloDaDescricao(dados.data.description);
 }
 export function parecerAtual(d: { version: number; reviewVersion: number | null; review: unknown }) {
   const r = parecerSchema.safeParse(d.review); return d.reviewVersion === d.version && r.success ? r.data : null;
