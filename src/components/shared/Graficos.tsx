@@ -363,9 +363,11 @@ function Legenda({ segmentos, comValores = true }: { segmentos: Segmento[]; comV
   );
 }
 
+// `sr-only` no invólucro, não na tabela (27/10/2026): no Chrome o <caption> fica
+// fora da caixa recortada da tabela e aparecia por cima do gráfico.
 function TabelaOculta({ titulo, linhas }: { titulo: string; linhas: [string, string][] }) {
   return (
-    <table className="sr-only">
+    <div className="sr-only"><table>
       <caption>{titulo}</caption>
       <tbody>
         {linhas.map(([a, b]) => (
@@ -375,7 +377,7 @@ function TabelaOculta({ titulo, linhas }: { titulo: string; linhas: [string, str
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }
 
