@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { ControlesBuscaChamados } from "@/components/chamados/ControlesBuscaChamados";
 import { MoverNaFila } from "@/components/chamados/MoverNaFila";
+import { RascunhoDaLista } from "@/components/chamados/RascunhoDaLista";
 import { contexto } from "@/lib/chamados/contexto";
 import { podeAbrir, podeGerenciar, podeVerInterno } from "@/lib/chamados/acesso";
 import { lista, categorias, usuarios, resumoRascunho } from "@/lib/chamados/consultas";
@@ -50,7 +51,7 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
   ] : [{ id: "abertos", texto: "Abertos", total: dados.counts.abertos, Icone: Ticket }];
   return <PageContainer>
     <PageHeader title="Chamados" subtitle="Acompanhe e gerencie chamados de suporte." action={<div className="group flex flex-wrap items-center gap-2"><BotaoFixarTela code="helpdesk" fixada={fixadas.includes("helpdesk")} />{podeGerenciar(c.ctx, c.config) && <IconButton href="/chamados/configuracoes" variant="framed" size="lg" title="Configurar chamados"><Settings size={16} /></IconButton>}{podeAbrir(c.ctx, c.config) && <Button href="/chamados/novo"><Plus size={14} aria-hidden />Novo chamado</Button>}</div>} />
-    {!!dados.drafts.length && <Card className="mb-5 p-4"><h2 className="mb-2 font-semibold text-fg">Seus rascunhos</h2><div className="flex flex-wrap gap-2">{dados.drafts.map(d => <Button key={d.id} href={`/chamados/novo?rascunho=${d.id}`} variant="secondary" size="sm">{resumoRascunho(d.payload)}</Button>)}</div></Card>}
+    {!!dados.drafts.length && <Card className="mb-5 p-4"><h2 className="mb-2 font-semibold text-fg">Seu rascunho</h2><div className="flex flex-wrap gap-2">{dados.drafts.map(d => <RascunhoDaLista key={d.id} id={d.id} titulo={resumoRascunho(d.payload)} />)}</div></Card>}
     <div className="mb-4 flex flex-wrap items-center gap-3">
       <Card className="min-w-64 flex-1 p-3"><ControlesBuscaChamados key={`${filtros.q ?? ""}:${filtros.em ?? ""}`} atribuidos={internos} /></Card>
     </div>

@@ -15,6 +15,11 @@ describe("classificação automática", () => {
     const p = m.gerar.mock.calls[0][0]; expect(p.schema.properties.categoryId.anyOf[0].enum).toEqual(["bug", "senha", "treino"]);
     expect(JSON.parse(p.texto).categorias[1].caminho).toBe("Infraestrutura › Acesso | Senhas"); expect(p.store).toBe(false);
   });
+  it("devolve o título sugerido e o exige no esquema estrito", async () => {
+    m.gerar.mockResolvedValue({ valor: { categoryId: "senha", reason: "Senha", title: "Recuperar senha do sistema" }, origem: "principal" });
+    expect((await classificar(c, dados, cats, [])).title).toBe("Recuperar senha do sistema");
+    expect(m.gerar.mock.calls[0][0].schema.required).toContain("title");
+  });
   it.each(["d", "off", "pending", "outro-escritorio", null])("não aceita grupo, categoria inválida, desativada ou incerta: %s", async categoryId => {
     m.gerar.mockResolvedValue({ valor: { categoryId, reason: "Teste" }, origem: "groq" });
     expect((await classificar(c, dados, cats, [])).categoryId).toBeNull();
