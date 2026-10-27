@@ -59,6 +59,7 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   OPS_AUTOMACAO_ERRO: a("alerta", "danger", "Erro em automação"),
   CHAMADO_ATUALIZADO: p("solicitacao", "info", "Atualização no chamado"),
   CHAMADO_INTERNO: p("comentario", "info", "Atualização interna no chamado"),
+  CHAMADO_AGUARDANDO_VOCE: p("solicitacao", "warning", "Chamado aguardando sua resposta"),
   CHAMADO_SLA: a("prazo", "warning", "Prazo de chamado vencido"),
   // ── Para mim ──
   HANDOFF_RECEIVED: p("transferencia", "brand", "Transferência recebida"),

@@ -19,7 +19,8 @@ Para desativar, desligue o módulo em Módulos. Telas, ações e downloads ficam
 ## Quem vê e quem escreve
 
 - Usuários de setores liberados abrem chamados, mesmo sem papel de gestor. O setor ativo no cabeçalho é um filtro de navegação, não uma concessão de acesso.
-- Solicitantes veem o que abriram e aquilo em que foram incluídos como participantes. Gestores também veem os chamados originados nos seus setores.
+- Desde 27/10/2026, só a equipe do setor responsável e os administradores veem a fila inteira e as abas **Em Fila**, **Aguardando Usuário** e **Em Pausa**. Os demais veem só o que abriram, em **Abertos** e **Histórico**; o gestor do setor (coordenador) vê também tudo o que o setor dele abriu.
+- Na lista desses usuários, o chamado que aguarda a resposta do solicitante fica destacado ("Aguardando sua resposta"), com um aviso no topo. Quem abriu recebe a notificação **Chamado aguardando sua resposta** quando o chamado entra nessa situação.
 - A equipe do setor responsável atende a fila inteira, se adiciona como responsável (o **Adicionar** de Responsáveis, no chamado), muda a situação e registra mensagens e notas internas.
 - O gestor responsável também adiciona e retira responsáveis e participantes, reordena a fila pelas setas de subir e descer na aba Em Fila da lista (a ordem vale para todos), ajusta prazos com justificativa e configura as políticas de SLA.
 - Administradores têm acesso amplo. Somente leitura consulta, mas não modifica. Assinatura em somente leitura bloqueia gravações e análise por IA.
