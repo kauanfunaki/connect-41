@@ -58,12 +58,19 @@ for (const [index, login] of ["ana-dev", "bruno-dev", "carla-review", "sem-ativi
     const occurredAt = new Date(now.getTime() - (item * 3 + index + 1) * 86400000), day = dayAt(occurredAt), type = types[(item + index) % 4], repo = repositories[item % 2];
     const externalId = createHash("sha1").update(`${login}:${item}`).digest("hex");
     const link = `https://github.com/${repo.full_name}/${type === "COMMIT" ? `commit/${externalId}` : type === "ISSUE" ? `issues/${item + 1}` : `pull/${item + 1}`}`;
-    await db.query("INSERT INTO github_contributions (id,tenantId,repositoryId,userId,type,externalId,occurredAt,day,url,number) VALUES (?,?,?,?,?,?,?,?,?,?)", [randomUUID(), tenantId, repo.id, userId, type, externalId, occurredAt, day, link, type === "COMMIT" || type === "REVIEW" ? null : item + 1]);
+    await db.query("INSERT INTO github_contributions (id,tenantId,repositoryId,userId,type,externalId,occurredAt,day,url,number,title) VALUES (?,?,?,?,?,?,?,?,?,?,?)", [randomUUID(), tenantId, repo.id, userId, type, externalId, occurredAt, day, link, type === "COMMIT" || type === "REVIEW" ? null : item + 1, type === "REVIEW" ? null : `fix: ajuste fictício ${item + 1}`]);
     await db.query("INSERT INTO github_daily_contributions (id,tenantId,repositoryId,userId,day,type,`count`) VALUES (?,?,?,?,?,?,1)", [randomUUID(), tenantId, repo.id, userId, day, type]);
   }
 }
 // Volume representativo: vinte usuários com um ano de calendário cada.
 for (let index = 0; index < 16; index++) await db.query("INSERT INTO github_users (id,tenantId,connectionId,externalId,login,tracked) VALUES (?,?,?,?,?,true)", [randomUUID(), tenantId, connectionId, `U_volume_${index}`, `zz-volume-${String(index).padStart(2, "0")}`]);
+// O painel lê só quem vinculou a conta em Sua conta (27/10/2026): cada login fictício ganha
+// uma pessoa do Connect vinculada, e o nome aparece ao lado do login.
+for (const [externalId, login] of (await db.query("SELECT externalId, login FROM github_users WHERE tenantId = ?", [tenantId])).map(row => [row.externalId, row.login])) {
+  const personId = randomUUID();
+  await db.query("INSERT INTO users (id,tenantId,name,email,passwordHash,role,updatedAt) VALUES (?,?,?,?,?,?,NOW(3))", [personId, tenantId, `Pessoa ${login}`, `${personId}@example.test`, "sem-login-real", "SECTOR_USER"]);
+  await db.query("INSERT INTO github_account_links (id,tenantId,userId,externalId,login) VALUES (?,?,?,?,?)", [randomUUID(), tenantId, personId, externalId, login]);
+}
 // Liberação controlada no cenário de retomada abaixo; o cron precisa respeitá-la.
 await db.query("INSERT INTO github_account_leases (githubUserId,nextAttemptAt) VALUES (?,?)", [accountId, new Date(Date.now() + 3600000)]);
 const hook = path.join(output, "fixture-fetch.mjs");
@@ -111,7 +118,7 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
     }
   };
   await page.goto(base + "/github");
-  await page.getByRole("heading", { name: "Geral", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "GitHub — Contribuições", exact: true }).waitFor();
   await page.getByRole("heading", { name: "Atividade recente", exact: true }).waitFor();
   const overview = await api("/api/github?view=general");
   assert.equal(overview.summary.counts.COMMIT, 30); assert.equal(overview.summary.counts.PULL_REQUEST, 30);
@@ -128,7 +135,7 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), label);
     await page.getByRole("heading", { name: "Cadência de entregas", exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(output, `github-${label}-chart.png`), fullPage: true, animations: "disabled" });
-    await page.getByRole("heading", { name: "Geral", exact: true }).scrollIntoViewIfNeeded();
+    await page.getByRole("heading", { name: "GitHub — Contribuições", exact: true }).scrollIntoViewIfNeeded();
   }
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.getByRole("button", { name: "GitHub", exact: true }).click();
@@ -142,7 +149,10 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   assert.equal((await api()).total, 120);
   const renderedDays = await page.locator("button[data-level]").count();
   assert.equal((await api()).totalUsers, 20);
-  assert.ok(renderedDays > 0 && renderedDays < 20 * 300, "Calendários fora da viewport não devem montar milhares de botões");
+  // Calendário leve (27/10/2026): só os dias com contribuição são elementos; os vazios são o fundo da grade.
+  assert.ok(renderedDays > 0 && renderedDays < 20 * 300, "Dias vazios não devem virar elementos");
+  assert.equal(await page.locator('[role="group"][aria-label^="Calendário de "] span[title]').count(), 0, "Dias vazios não têm elemento próprio");
+  await page.getByText("ana-dev — Pessoa ana-dev", { exact: true }).waitFor();
   result.performance = { users: 20, mountedDayButtons: renderedDays, eagerDayButtons: 20 * 366, firstViewMs: Math.round(performance.now() - renderStart) };
   result.performance.firstLoad = await page.evaluate(() => {
     const navigation = performance.getEntriesByType("navigation")[0], resources = performance.getEntriesByType("resource");
@@ -171,33 +181,24 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange"))); await page.waitForTimeout(500);
   page.off("request", countReload); result.performance.reloadsOnVisibility = reloads;
   if (process.env.GITHUB_PERF_BASELINE !== "1") {
-    assert.ok(result.performance.afterScrollDayButtons < 4 * 366, "Sair da viewport deve liberar os calendários visitados");
+    assert.equal(result.performance.afterScrollDayButtons, renderedDays, "A rolagem não monta nem desmonta calendários");
     assert.equal(reloads, 0, "Voltar à aba não deve recarregar o painel");
   }
   await page.getByRole("group", { name: "Calendário de ana-dev", exact: true }).scrollIntoViewIfNeeded();
   await page.getByRole("group", { name: "Calendário de ana-dev", exact: true }).locator("button[data-level]").first().waitFor();
-  ok("Vinte usuários com calendários limitados à área visível, inclusive após rolagem completa");
+  ok("Vinte usuários com calendários leves, sem montar ou desmontar na rolagem");
   await page.getByRole("group", { name: "Calendário de sem-atividade", exact: true }).waitFor(); ok("Calendários individuais, quatro tipos e usuário sem atividade");
   await page.screenshot({ path: path.join(output, "github-desktop.png"), fullPage: true, animations: "disabled" });
   const calendar = page.getByRole("group", { name: "Calendário de ana-dev", exact: true });
   const first = calendar.locator("button[data-level]").first(); await first.focus(); await first.press("ArrowDown");
   assert.notEqual(await first.evaluate(element => element === document.activeElement), true); ok("Navegação por teclado no calendário");
-  if (process.env.GITHUB_PERF_BASELINE !== "1") {
-    const lastCalendar = page.getByRole("group", { name: "Calendário de zz-volume-15", exact: true });
-    await lastCalendar.scrollIntoViewIfNeeded();
-    await lastCalendar.locator("button[data-level]").first().waitFor();
-    assert.ok(await calendar.locator("button[data-level]").count() > 0, "Calendário com foco deve sobreviver fora da viewport");
-    await lastCalendar.locator("button[data-level]").first().focus();
-    await page.waitForFunction(() => !document.querySelector('[aria-label="Calendário de ana-dev"] button[data-level]'));
-    await calendar.scrollIntoViewIfNeeded();
-    await calendar.locator("button[data-level]").first().waitFor();
-    await calendar.locator("button[data-level]").first().focus();
-    await calendar.locator("button[data-level]").first().press("End");
-    assert.equal(await calendar.locator("button[data-level]").last().evaluate(element => element === document.activeElement), true);
-    ok("Virtualização preserva foco de teclado e libera calendários após mover o foco");
-  }
+  await calendar.locator("button[data-level]").first().focus();
+  await calendar.locator("button[data-level]").first().press("End");
+  assert.equal(await calendar.locator("button[data-level]").last().evaluate(element => element === document.activeElement), true);
+  ok("Home/End andam entre os dias com contribuição");
   await calendar.locator('button[data-level]:not([data-level="0"])').first().click();
   await page.getByRole("dialog").getByRole("link", { name: /Abrir no GitHub/ }).first().waitFor();
+  assert.ok(await page.getByRole("dialog").locator("code").count() > 0, "O detalhe mostra o SHA curto ou o número");
   await page.screenshot({ path: path.join(output, "github-day.png"), fullPage: true, animations: "disabled" });
   await page.getByRole("dialog").getByRole("button", { name: "Fechar", exact: true }).click(); ok("Detalhe diário consulta os eventos e links que formam a contagem");
   assert.equal(await page.getByRole("button", { name: /^(Filtros|Aplicar filtros|Atualizar dados)$/ }).count(), 0);
@@ -213,6 +214,12 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
   await page.getByRole("navigation", { name: "GitHub", exact: true }).getByRole("link", { name: "Desenvolvedores", exact: true }).click();
   await page.waitForURL(url => url.pathname === "/github/desenvolvedores" && url.searchParams.get("type") === "REVIEW");
   ok("Menu lateral abre as duas opções e as abas preservam os filtros");
+  await page.goto(base + "/github/repositorios"); await page.getByRole("heading", { name: "alpha/app" }).waitFor();
+  const repositoriesView = await api("/api/github?view=repositories");
+  assert.equal(repositoriesView.totalRepositories, 2); assert.ok(repositoriesView.repositories.every(repo => repo.contributors.length > 0));
+  await page.getByRole("button", { name: "Mostrar todos", exact: true }).click(); await page.waitForURL(url => url.searchParams.get("all") === "1");
+  await page.getByRole("button", { name: "Mostrar todos", exact: true }).click(); await page.waitForURL(url => !url.searchParams.has("all"));
+  ok("Repositórios mostram o calendário e a parte de cada desenvolvedor; Mostrar todos liga e desliga");
   await page.goto(base + "/github/desenvolvedores"); await page.getByText("ana-dev", { exact: true }).waitFor();
   for (const [label, width, height] of [["125", 1093, 614], ["150", 911, 512], ["200", 683, 384], ["mobile", 390, 844]]) {
     await page.setViewportSize({ width, height }); await datesFit(); await page.screenshot({ path: path.join(output, `github-${label}.png`), fullPage: true, animations: "disabled" });

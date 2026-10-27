@@ -1,6 +1,6 @@
 # GitHub — Contribuições
 
-O módulo mostra a atividade diária de cada usuário nos repositórios monitorados pela conta GitHub conectada ao escritório. Conta commits, aberturas de pull requests e issues e revisões submetidas. A conexão fica em **Integrações → GitHub**. O menu lateral **GitHub** oferece **Geral** (`/github`) e **Desenvolvedores** (`/github/desenvolvedores`).
+O módulo mostra a atividade diária de cada usuário nos repositórios monitorados pela conta GitHub conectada ao escritório. Conta commits, aberturas de pull requests e issues e revisões submetidas. A conexão fica em **Integrações → GitHub**. O menu lateral **GitHub** oferece **Geral** (`/github`), **Desenvolvedores** (`/github/desenvolvedores`) e **Repositórios** (`/github/repositorios`).
 
 O módulo `tech_github_contributions` é exclusivo do **Tech**, nasce desligado e respeita o plano contratado. Não pode ser transferido para outro setor. Administradores mantêm o acesso amplo previsto nos papéis do Connect.
 
@@ -21,15 +21,25 @@ Para ler repositórios privados, OAuth usa o escopo `repo`, que também concede 
 
 A conta é compartilhada pelo escritório. Quem tem permissão para consultar o módulo verá a atividade dos repositórios selecionados, inclusive privados, sem precisar conectar sua própria conta GitHub. Se houver exigência de token estritamente de leitura, será necessário adotar GitHub App e autorizar sua instalação nos repositórios; esse não é o fluxo desta versão.
 
+## Vínculo da conta pessoal (27/10/2026)
+
+Quem vê o módulo (o Tech e os administradores) encontra em **Sua conta → GitHub** o botão **Vincular conta GitHub**. O GitHub confirma quem a pessoa é pelo mesmo OAuth App do escritório, **sem escopo**: o token só lê dados públicos e é descartado depois de ler o ID estável da conta. Nada da conexão do escritório muda. O retorno usa `/api/integrations/github/callback/conta`, um subcaminho da Authorization callback URL já cadastrada — o GitHub aceita `redirect_uri` em subdiretório dela, então o OAuth App não precisa de outro cadastro. Estado e PKCE seguem as regras da conexão, em tentativas marcadas como `purpose = account`, que não servem para a conexão do escritório (nem o contrário).
+
+O vínculo fica em `github_account_links` (uma conta GitHub por pessoa e por escritório, pelo ID estável). Uma conta já vinculada a outra pessoa é recusada. **Desvincular** apaga só o vínculo; o histórico continua. Auditoria: `github.account_link` e `github.account_unlink`.
+
+No painel o nome aparece ao lado do login: `login — Nome no Connect`.
+
 ## Uso do painel
 
 - **Geral** reúne commits, PRs abertos, revisões e desenvolvedores ativos, gráfico de cadência, atividade do time e oito eventos mais recentes. As contagens abrangem todos os desenvolvedores dos filtros, sem o limite de vinte pessoas da lista. O gráfico agrupa períodos longos em até trinta janelas, somando as contribuições; o detalhe de cada ponto informa a janela. A atividade do time soma os quatro tipos, sem nota de produtividade.
+- **Por padrão as três abas contam só quem vinculou a conta** em Sua conta. **Mostrar todos** inclui os autores sem vínculo (`all=1` na URL); clicar de novo volta aos integrados. Sem nenhum vínculo, o painel avisa e aponta para Sua conta.
+- **Repositórios** lista todos os repositórios selecionados, do mais ativo ao menos (20 por página), cada um com os totais por tipo, o calendário do repositório e, ao lado, a contribuição de cada desenvolvedor no período. Clicar num dia abre as atividades daquele repositório.
 - **Desenvolvedores** lista as pessoas acompanhadas e autores descobertos nos repositórios com acesso confirmado, incluindo quem está sem atividade no período, com os heatmaps e o detalhe diário existentes. O tipo selecionado também restringe os autores descobertos. Bots e autorias não identificadas seguem as regras abaixo.
 - As duas abas preservam a busca e o período na navegação. Desde 26/10/2026 a barra tem só **De**, **Até** e a busca por desenvolvedor, sem a caixa **Filtros** nem o botão **Aplicar filtros**: a busca se aplica sozinha após 300 ms sem digitar, e cada data ao ser escolhida. **Limpar** aparece quando há busca ou período escolhido e volta ao padrão. Cobertura, fila e andamento da coleta ficam somente em **Integrações → GitHub**; o painel mostra um aviso apenas quando não há o que exibir (conta desconectada, nenhum repositório selecionado ou todos sem acesso).
-- O painel usa apenas os campos já coletados. Não apresenta títulos de commits/PRs, linhas alteradas, status de aprovação/merge nem variações percentuais, pois esses dados não são armazenados pela integração atual. Não exige nova migration.
+- O detalhe do dia mostra o SHA curto do commit (ou o número do PR/issue) e o título: a primeira linha da mensagem do commit ou o título do PR/issue, gravados em `github_contributions.title` desde 27/10/2026. Contribuições coletadas antes disso ficam sem título até a próxima coleta delas; para preencher o histórico de uma vez, usar **Forçar atualização completa** em Integrações. Linhas alteradas, status de aprovação/merge e variações percentuais continuam fora.
 - Filtrar por período de até 12 meses e login. A seleção fica na URL. A API ainda aceita repositório, organização/dono, tipo e bots, e links antigos com esses parâmetros continuam filtrando até usar **Limpar**.
 - Consultar os totais separados por tipo e o calendário de cada usuário. A comparação é paginada em 20 usuários.
-- Selecionar um dia com contribuições para abrir as atividades e seus links no GitHub. Os eventos são consultados só ao abrir o dia, em páginas de 50. Dias sem contribuição aparecem como uma caixa com um traço e não são botões.
+- Selecionar um dia com contribuições para abrir as atividades (SHA ou número, título, repositório e horário) e seus links no GitHub. Os eventos são consultados só ao abrir o dia, em páginas de 50. Dias sem contribuição aparecem como uma caixa com um traço e não são botões.
 - Usar as setas do teclado no calendário, que andam entre os dias com contribuições: cima/baixo vão ao dia anterior/seguinte com atividade; esquerda/direita, a um dia com atividade uma semana ou mais antes/depois; Home/End, ao primeiro/último dia com atividade.
 - Bots ficam ocultos no painel.
 - Para acompanhar uma pessoa sem atividade no período, informar seu login em **Integrações → GitHub → Acompanhar usuário**.
@@ -103,14 +113,14 @@ Tecnologia: Next.js 16, React 19, Prisma e MariaDB/MySQL existentes. Sem serviç
 - `src/lib/github/`: OAuth, cliente REST, regras, persistência, sincronização e consultas.
 - `src/components/github/`: painel, calendário e detalhe diário.
 - `src/lib/github/scheduler.ts`: relógio automático com um lote por vez; `progress.ts`: resumo persistido do andamento.
-- Calendários são montados perto da área visível e liberados ao sair dela, preservando altura, posição horizontal e o calendário com foco de teclado. A montagem adiada anterior acumulava todos os dias depois de percorrer a lista. Só os dias com contribuição são botões, com clique e teclado tratados uma vez na grade; os dias vazios são caixas com traço, sem foco nem consulta. Datas usam um único formatador e cache limitado.
+- Calendário leve (27/10/2026): os dias vazios são o fundo da grade — uma máscara CSS de 16 px repetida, com a caixa e o traço —, e só os dias com contribuição são elementos (botões posicionados na grade). A montagem/desmontagem por IntersectionObserver saiu: refazia milhares de nós a cada cartão que cruzava a área visível e era o que travava a rolagem de Desenvolvedores. Os cartões usam `content-visibility: auto`, então o navegador não pinta nem diagrama o que está fora da tela. No banco local, 20 calendários de um ano somam ~3,3 mil nós na página inteira e cada passo de rolagem custa ~2 ms de layout, sem trabalho do React. Clique e teclado continuam tratados uma vez na grade. Datas usam um único formatador e cache limitado.
 - O painel consulta `/api/github` uma vez por busca ou período, sem polling nem revisão (26/10/2026). A resposta não traz cobertura, fila ou progresso, que ficam em `/api/github/integration`; por isso a leitura não toca `github_sync_jobs` nem a lease. Cada consulta continua autorizada no servidor; não há cache compartilhado de dados privados. Consultas independentes são executadas em paralelo, e em Desenvolvedores os totais por tipo e o calendário por dia são agrupados em consultas separadas.
 - `src/components/admin/GithubIntegration.tsx`: conta, seleção e controles em Integrações.
 - `/api/github`, `/api/github/events`, `/api/github/integration` e `/api/github/sync`: APIs autenticadas.
 - `/api/integrations/github/connect` e `/callback`: autorização OAuth com PKCE e estado de uso único, vinculado à sessão e ao escritório.
 - `/api/cron/github-sync`: lotes do agendador com token de serviço.
 
-As oito tabelas são `github_connections`, `github_repositories`, `github_users`, `github_contributions`, `github_daily_contributions`, `github_sync_jobs`, `github_account_leases` e `github_oauth_attempts`. Credenciais ficam somente em `TenantIntegration.configEnc`. O histórico de rodadas reutiliza `IntegrationRun`.
+As nove tabelas são `github_connections`, `github_repositories`, `github_users`, `github_contributions`, `github_daily_contributions`, `github_sync_jobs`, `github_account_leases`, `github_oauth_attempts` e `github_account_links` (27/10/2026, migration aditiva `20261027120000_github_account_links`, que também acrescenta `github_contributions.title` e `github_oauth_attempts.purpose`). Credenciais ficam somente em `TenantIntegration.configEnc`. O histórico de rodadas reutiliza `IntegrationRun`.
 
 Verificações reproduzíveis:
 

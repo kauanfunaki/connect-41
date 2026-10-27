@@ -40,6 +40,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "github.credentials": e("configurou as credenciais do OAuth App do GitHub"),
   "github.settings": e("configurou os repositórios monitorados do GitHub"),
   "github.full_sync": o("forçou a atualização completa do histórico do GitHub"),
+  "github.account_link": o("vinculou a própria conta do GitHub"),
+  "github.account_unlink": o("desvinculou a própria conta do GitHub"),
   "helpdesk.created": c("abriu o chamado"),
   "helpdesk.updated": e("atualizou o chamado"),
   "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
