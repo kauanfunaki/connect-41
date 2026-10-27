@@ -8,9 +8,11 @@ const url = process.env.HELPDESK_TEST_DATABASE_URL;
 if (url) { const u = new URL(url); if (!["127.0.0.1", "localhost"].includes(u.hostname) || u.port !== "33379" || u.pathname !== "/connect41") throw new Error("Teste de integração recusou banco não isolado."); }
 const destino = url ? new URL(url) : null;
 const db = destino ? new PrismaClient({ adapter: new PrismaMariaDb({ host: destino.hostname, port: Number(destino.port), user: decodeURIComponent(destino.username), password: decodeURIComponent(destino.password), database: "connect41", allowPublicKeyRetrieval: true }) }) : null;
-const mocks = vi.hoisted(() => ({ analisar: vi.fn(), push: vi.fn(), auth: vi.fn() }));
+const mocks = vi.hoisted(() => ({ analisar: vi.fn(), classificar: vi.fn(), push: vi.fn(), auth: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => { if (!db) throw new Error("Banco de teste não configurado."); return db; } }));
 vi.mock("./triagem", () => ({ analisar: mocks.analisar }));
+vi.mock("./classificacao", () => ({ classificar: mocks.classificar }));
+vi.mock("@/lib/rateLimit", () => ({ hit: () => ({ allowed: true }) }));
 vi.mock("@/lib/webPush", () => ({ sendWebPushToUser: mocks.push }));
 vi.mock("@/lib/auth/context", async original => ({ ...await original<typeof import("@/lib/auth/context")>(), getAuthContext: mocks.auth }));
 
@@ -44,16 +46,18 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     await salvarCategoria(gestao, { name: "Acesso fictício", checklistTemplate: [{ key: "verificar", label: "Conferir o acesso" }] });
     categoriaId = (await db!.helpdeskCategory.findFirstOrThrow({ where: { tenantId } })).id;
   });
-  beforeEach(() => { mocks.analisar.mockReset(); mocks.push.mockReset().mockResolvedValue(undefined); mocks.auth.mockReturnValue(c.ctx); });
+  beforeEach(() => { mocks.analisar.mockReset(); mocks.classificar.mockReset().mockResolvedValue({ categoryId: categoriaId, reason: "Classificação fictícia", origem: "principal" }); mocks.push.mockReset().mockResolvedValue(undefined); mocks.auth.mockReturnValue(c.ctx); });
   afterAll(async () => { if (artefatos.length) await anexosDoChamado.apagarAnexosGravados(artefatos); await db!.$disconnect(); });
 
   it("salva e retoma rascunho sem gerar fila, SLA ou notificações", async () => {
     const d = await novo(); const salvo = await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: d.id } });
-    expect(salvo.payload).toMatchObject(payload()); expect(await db!.helpdeskTicket.count({ where: { draftId: d.id } })).toBe(0);
+    expect(salvo.payload).toMatchObject({ ...payload(), categoryId: "" }); expect(await db!.helpdeskTicket.count({ where: { draftId: d.id } })).toBe(0);
     expect(await db!.helpdeskSlaCycle.count({ where: { tenantId } })).toBe(0);
   });
   it("finaliza uma única vez mesmo com duas submissões concorrentes", async () => {
-    const d = await novo(); const [a, b] = await Promise.all([finalizarRascunho(c, d.id, d.version, true), finalizarRascunho(c, d.id, d.version, true)]);
+    const d = await novo(); mocks.analisar.mockResolvedValue({ status: "unavailable", summary: "Teste", questions: [], attachments: [] });
+    const avaliado = await avaliarRascunho(c, d.id, d.version);
+    const [a, b] = await Promise.all([finalizarRascunho(c, d.id, avaliado.version, true), finalizarRascunho(c, d.id, avaliado.version, true)]);
     expect(a.ticketId).toBe(b.ticketId); expect(await db!.helpdeskTicket.count({ where: { draftId: d.id } })).toBe(1);
     expect(await db!.helpdeskEvent.count({ where: { ticketId: a.ticketId, type: "created" } })).toBe(1);
     expect(await db!.helpdeskChecklistItem.count({ where: { ticketId: a.ticketId } })).toBe(1);
@@ -76,7 +80,8 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     const d = await novo(); let liberar!: (v: unknown) => void; let avisar!: () => void;
     const iniciou = new Promise<void>(resolve => { avisar = resolve; }); mocks.analisar.mockImplementation(() => { avisar(); return new Promise(resolve => { liberar = resolve; }); });
     const analise = avaliarRascunho(c, d.id, d.version); await iniciou;
-    await salvarRascunho(c, d.id, d.version, { ...payload(), description: "O contexto mudou durante a análise." });
+    const atual = await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: d.id } });
+    await salvarRascunho(c, d.id, atual.version, { ...payload(), description: "O contexto mudou durante a análise." });
     liberar({ status: "sufficient", summary: "Completo", questions: [], attachments: [] }); await expect(analise).rejects.toThrow("mudou");
     expect(await db!.helpdeskTicket.count({ where: { draftId: d.id } })).toBe(0);
   });
@@ -85,14 +90,71 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     const r = await avaliarRascunho(c, d.id, d.version); expect(r.parecer?.status).toBe("unavailable");
     expect((await finalizarRascunho(c, d.id, r.version, true)).ticketId).toBeTruthy();
   });
+  it("prepara o catálogo uma vez e mostra chamados ao filtrar seu grupo", async () => {
+    await novo();
+    const grupo = await db!.helpdeskCategory.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "Infraestrutura" } } });
+    const cat = await db!.helpdeskCategory.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "Acesso | Senhas" } } });
+    expect(cat.parentId).toBe(grupo.id);
+    const total = await db!.helpdeskCategory.count({ where: { tenantId } });
+    await db!.helpdeskCategory.update({ where: { id: cat.id }, data: { descriptionTemplate: "Preservar configuração" } });
+    const d = await novo(); expect(await db!.helpdeskCategory.count({ where: { tenantId } })).toBe(total);
+    expect((await db!.helpdeskCategory.findUniqueOrThrow({ where: { id: cat.id } })).descriptionTemplate).toBe("Preservar configuração");
+    mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Senha", origem: "groq" });
+    mocks.analisar.mockResolvedValue({ status: "sufficient", summary: "Completo", questions: [], attachments: [] });
+    const r = await avaliarRascunho(c, d.id, d.version);
+    expect(r.ticketId).toBeTruthy(); expect((await lista(c, { categoria: grupo.id })).rows.some(t => t.id === r.ticketId)).toBe(true);
+    expect((await detalhe(c, r.ticketId!)).categoryId).toBe(cat.id);
+  });
+  it("abre como A classificar quando nenhum provedor consegue categorizar", async () => {
+    const d = await novo(); mocks.classificar.mockResolvedValue({ categoryId: null, reason: "Indisponível", origem: null });
+    const r = await avaliarRascunho(c, d.id, d.version); expect(r.parecer?.status).toBe("unavailable"); expect(mocks.analisar).not.toHaveBeenCalled();
+    const aberto = await finalizarRascunho(c, d.id, r.version, true);
+    expect((await detalhe(c, aberto.ticketId)).category.name).toBe("A classificar");
+    expect(mocks.classificar).toHaveBeenCalledTimes(1);
+  });
+  it("retoma rascunho antigo sem catálogo nem categoria de contingência", async () => {
+    const t = await db!.tenant.create({ data: { name: "Escritório fictício com rascunho legado", slug: `helpdesk-legado-${randomUUID()}` } });
+    await db!.sector.createMany({ data: ["tech", "fiscal"].map(code => ({ tenantId: t.id, code, label: code })) });
+    await db!.tenantModule.create({ data: { tenantId: t.id, moduleCode: "helpdesk", enabled: true, sectorCode: "tech" } });
+    const user = await db!.user.create({ data: { tenantId: t.id, name: "Pessoa fictícia", email: `${randomUUID()}@example.test`, passwordHash: "sem-login", role: "ADMIN" } });
+    const legado = { ...c, ctx: { ...c.ctx, tenantId: t.id, userId: user.id, role: "ADMIN" as const } };
+    const d = await db!.helpdeskDraft.create({ data: { tenantId: t.id, createdById: user.id, payload: payload() } });
+    mocks.classificar.mockResolvedValue({ categoryId: null, reason: "Indisponível", origem: null });
+    const r = await avaliarRascunho(legado, d.id, d.version); expect(r.parecer?.status).toBe("unavailable");
+    expect(await db!.helpdeskCategory.count({ where: { tenantId: t.id } })).toBe(28);
+    expect((await finalizarRascunho(legado, d.id, r.version, true)).ticketId).toBeTruthy();
+  });
+  it("devolve campos exigidos pela classificação e preserva a categoria ao completá-los", async () => {
+    await salvarCategoria(gestao, { name: "Campos da classificação fictícia", formSchema: [{ key: "sistema", label: "Sistema", type: "text", required: true }] });
+    const cat = await db!.helpdeskCategory.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "Campos da classificação fictícia" } } });
+    const d = await novo(); mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Teste", origem: "principal" });
+    const r = await avaliarRascunho(c, d.id, d.version); expect(r.parecer?.status).toBe("needs_information"); expect(r.dados?.categoryId).toBe(cat.id);
+    await expect(finalizarRascunho(c, d.id, r.version, true)).rejects.toThrow("Preencha Sistema");
+    const v = await salvarRascunho(c, d.id, r.version, { ...payload(), categoryId: "id-forjado", requestData: { sistema: "Fictício" }, _classificacao: { categoryId: "id-forjado" } });
+    const t = await finalizarRascunho(c, d.id, v.version, true); expect((await detalhe(c, t.ticketId)).categoryId).toBe(cat.id);
+    expect(mocks.classificar).toHaveBeenCalledTimes(1);
+  });
+  it("descarta classificação atrasada sem substituir a edição salva", async () => {
+    const d = await novo(); let liberar!: (v: unknown) => void; let avisar!: () => void;
+    const iniciou = new Promise<void>(resolve => { avisar = resolve; });
+    mocks.classificar.mockImplementation(() => { avisar(); return new Promise(resolve => { liberar = resolve; }); });
+    const analise = avaliarRascunho(c, d.id, d.version); await iniciou;
+    await salvarRascunho(c, d.id, d.version, { ...payload(), description: "Novo pedido salvo enquanto a IA respondia." });
+    liberar({ categoryId: categoriaId, reason: "Teste", origem: "principal" }); await expect(analise).rejects.toThrow("mudou");
+    const atual = await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: d.id } });
+    expect(atual.payload).toMatchObject({ categoryId: "", description: "Novo pedido salvo enquanto a IA respondia." });
+    expect(atual.analysisToken).toBeNull(); expect(await db!.helpdeskTicket.count({ where: { draftId: d.id } })).toBe(0);
+  });
   it("não contorna campos obrigatórios e reverte a transação quando não há aprovador", async () => {
     await salvarCategoria(gestao, { name: "Restrito fictício", requiresApproval: true, approvalMode: "SPECIFIC_USERS", approvalUserIds: [solicitante] });
     const cat = await db!.helpdeskCategory.findFirstOrThrow({ where: { tenantId, name: "Restrito fictício" } });
+    mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Teste", origem: "principal" });
     const d = await criarRascunho(c), v = await salvarRascunho(c, d.id, 0, { ...payload(), categoryId: cat.id });
     await expect(finalizarRascunho(c, d.id, v.version, true)).rejects.toThrow("aprovador ativo");
     expect((await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: d.id } })).submittedAt).toBeNull();
     await salvarCategoria(gestao, { ...cat, formSchema: [{ key: "sistema", label: "Sistema", type: "text", required: true }] });
-    await expect(finalizarRascunho(c, d.id, v.version, true)).rejects.toThrow("Preencha Sistema");
+    const atual = await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: d.id } });
+    await expect(finalizarRascunho(c, d.id, atual.version, true)).rejects.toThrow("Preencha Sistema");
   });
   it("inicia e pausa SLA, protege versões e não expõe notas internas", async () => {
     const id = await abrir(); await alterar(equipe, id, 0, "status", "EM_ANDAMENTO");
@@ -108,6 +170,7 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
   it("aplica aprovação, reabertura e um novo ciclo sem reiniciar o anterior", async () => {
     await salvarCategoria(gestao, { name: "Compra fictícia", requiresApproval: true });
     const cat = await db!.helpdeskCategory.findFirstOrThrow({ where: { tenantId, name: "Compra fictícia" } });
+    mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Teste", origem: "principal" });
     const d = await criarRascunho(c); await salvarRascunho(c, d.id, 0, { ...payload(), categoryId: cat.id });
     const { ticketId: id } = await finalizarRascunho(c, d.id, 1, true);
     await expect(alterar(equipe, id, 0, "status", "EM_ANDAMENTO")).rejects.toThrow("aguarda aprovação");
@@ -174,6 +237,15 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     expect((await detalhe(c, id)).attachments).toHaveLength(0); expect((await detalhe(equipe, id)).attachments).toHaveLength(1);
     mocks.auth.mockReturnValue(c.ctx); expect((await baixar(new Request("http://localhost/arquivo"), { params: Promise.resolve({ id: a.id }) })).status).toBe(404);
     mocks.auth.mockReturnValue(equipe.ctx); expect((await baixar(new Request("http://localhost/arquivo"), { params: Promise.resolve({ id: a.id }) })).status).toBe(200);
+  });
+  it("liga os arquivos à mensagem enviada junto, sem aviso próprio do arquivo", async () => {
+    const id = await abrir(), t = await detalhe(equipe, id), form = new FormData();
+    form.set("id", randomUUID()); form.set("draftId", t.draftId); form.set("ticketId", id); form.set("version", String(t.version)); form.set("mensagem", "1"); form.set("file", new File(["Print fictício"], "print.txt", { type: "text/plain" }));
+    const a = await enviarAnexo(equipe, form); artefatos.push(await db!.helpdeskAttachment.findUniqueOrThrow({ where: { id: a.id } }));
+    await expect(comentar(equipe, id, a.version, { requestId: randomUUID(), body: "", internal: true, attachmentIds: [a.id] })).rejects.toThrow("não puderam ser ligados");
+    await comentar(equipe, id, a.version, { requestId: randomUUID(), body: "", attachmentIds: [a.id] });
+    const depois = await detalhe(equipe, id); expect(depois.attachments.find(x => x.id === a.id)?.commentId).toBe(depois.comments[0].id);
+    expect(depois.events.some(e => e.type === "attachment")).toBe(false);
   });
   it("retirar setor preserva chamados antigos; desligar módulo bloqueia as rotas", async () => {
     const id = await abrir(); mocks.auth.mockReturnValue({ ...gestao.ctx, role: "ADMIN" }); await configurarSetores([]);

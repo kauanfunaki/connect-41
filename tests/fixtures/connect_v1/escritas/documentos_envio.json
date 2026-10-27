@@ -1,0 +1,68 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/documentos?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "content_type": "multipart/form-data",
+    "cabecalhos": {
+      "Idempotency-Key": "c41:5071a5d5be0749d0997adc4b2030ea3e"
+    },
+    "partes": [
+      {
+        "campo": "arquivos",
+        "nome": "TESTE-ESCRITAS.pdf",
+        "tamanho": 49,
+        "sha256": "5025e7110f2576eed370952e54b04be9b702037fa234e69b7a7aa1bee4e348ed",
+        "conteudo": "%PDF-1.4 fixture 0eb6dadc16c44254946598a3d047bf32"
+      },
+      {
+        "campo": "arquivos",
+        "nome": "leia-me.txt",
+        "tamanho": 4,
+        "sha256": "41a698236b03374cdbd35a09c76cdea4caef37d4d202f18d3855250424ce98d0",
+        "conteudo": "nada"
+      }
+    ]
+  },
+  "resposta": {
+    "status": 201,
+    "corpo": {
+      "resumo": {
+        "lidos": 2,
+        "cancelamentos": 0,
+        "novos": 1,
+        "duplicados": 0,
+        "erros": 0,
+        "ignorados": 1,
+        "por_tipo": {
+          "CT-e": 0,
+          "NF-e": 0,
+          "NFS-e": 0,
+          "arquivo": 1
+        }
+      },
+      "relatorio": [
+        {
+          "arquivo": "TESTE-ESCRITAS.pdf",
+          "tipo": "arquivo",
+          "chave": "5025e7110f25",
+          "situacao": "novo",
+          "detalhe": "gravado"
+        },
+        {
+          "arquivo": "leia-me.txt",
+          "tipo": "-",
+          "situacao": "ignorado",
+          "detalhe": "extensão .txt não é aceita"
+        }
+      ],
+      "importacao_id": 100
+    },
+    "x_custo": "pesada"
+  }
+}

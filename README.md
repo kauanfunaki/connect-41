@@ -2,7 +2,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Chamados internos
 
-O módulo `helpdesk` oferece atendimento interno por setor, formulários por categoria, fila, SLA, aprovações, anexos e triagem conversacional opcional com OpenAI. Nasce desligado e usa os controles de módulo, assinatura e IA por escritório já existentes no Connect.
+O módulo `helpdesk` oferece atendimento interno por setor, classificação automática por grupo e categoria, formulários, fila, SLA, aprovações, anexos e triagem conversacional. Usa a IA do escritório (OpenAI/Anthropic), com alternativa Groq configurável na tela dos chamados. Nasce desligado e usa os controles de módulo, assinatura e IA por escritório já existentes no Connect.
 
 Configuração, migração, operação, limites e testes isolados: [guia do helpdesk](docs/HELPDESK.md). Verificações específicas: `npm run test:helpdesk`, `npm run test:helpdesk:db` e `npm run test:helpdesk:ui`; os dois últimos exigem um banco descartável local explícito.
 
@@ -52,3 +52,12 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+## Tech e SPED Contábil
+
+- [Controle interno do Tech](docs/TECH-CONTROLE-INTERNO.md): Lista, Kanban e Agenda por prazo. Ativar em Setores e módulos.
+- [SPED Contábil](docs/CONTABIL-SPED.md): conferência, regras e arquivos via API/fila do motor SPED.
+- [Ops Center](docs/OPS-CENTER.md): chave principal e chaves adicionais com revogação individual.
+
+Antes da publicação, aplicar as migrations `20261021160000_tech_internal` e `20261023120000_ops_multiple_keys` no ambiente autorizado. O motor SPED exige implantação separada da API contábil.

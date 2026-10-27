@@ -52,6 +52,7 @@ export type IconeDeModulo =
   | "Star"
   | "Stethoscope"
   | "Target"
+  | "Ticket"
   | "TrendingUp"
   | "UserRoundCheck"
   | "UserRoundPlus"
@@ -169,7 +170,23 @@ export type ModuleDef = {
   fixedSector?: boolean;
 };
 
+/** O modo das telas fiscais na descrição (23/10/2026): real com a integração do SPED, prévia sem ela. */
+const COM_O_MOTOR = "Opera o motor do SPED Generator quando a integração está configurada; sem ela, mostra a prévia de teste";
+/** A área que o motor expõe só para leitura (§11 da API do Connect): as ações dela continuam no painel do motor. */
+const SO_LEITURA = "Lê o motor do SPED Generator quando a integração está configurada, e as ações da área continuam no painel do motor; sem ela, mostra a prévia de teste";
+
 export const MODULE_CATALOG: ModuleDef[] = [
+  {
+    code: "contabil_sped", label: "SPED", sectorCode: "contabil",
+    description: "Conferência, de-para e arquivos de lançamentos para a Domínio",
+    defaultEnabled: true, icon: "FileSpreadsheet", group: "Operação", menuDireto: true,
+  },
+  {
+    code: "tech_controle_interno", label: "Controle interno", sectorCode: "tech",
+    description: "Lista, Kanban e agenda de bugs, melhorias e próximos passos da equipe Tech",
+    defaultEnabled: false, icon: "ClipboardList", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
+  },
+
   {
     code: "tech_github_contributions", label: "GitHub — Contribuições", sectorCode: "tech",
     description: "Heatmap de commits, pull requests, issues e revisões nos repositórios monitorados",
@@ -183,7 +200,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   {
     code: "helpdesk", label: "Chamados", sectorCode: "tech",
     description: "Helpdesk interno: solicitações dos setores, atendimento, SLA e triagem conversacional por IA",
-    defaultEnabled: false, icon: "MessageSquareWarning", group: "Atendimento",
+    defaultEnabled: false, icon: "Ticket", group: "Atendimento",
   },
   {
     // Era item do menu geral até 30/09; o Kauan decidiu que é do setor novo
@@ -427,16 +444,23 @@ export const MODULE_CATALOG: ModuleDef[] = [
     icon: "ReceiptText",
     group: "Documentos",
   },
+  // As telas do processamento fiscal. Desde a PR #279 (22/10/2026) operam o
+  // motor do SPED Generator quando a integração `sped` está configurada; sem
+  // ela, mostram a prévia de teste do banco local (ver `fiscal/layout.tsx`).
+  // As descrições diziam "em teste/simulado" em todas, o que deixou de ser
+  // verdade no modo real (23/10/2026): agora dizem o que cada uma faz, e se o
+  // motor opera a área ou só a lê (Documentos e Conferência, cujas ações ficam
+  // no painel do motor).
   ...([
-    ["fiscal_painel", "Painel fiscal", "Indicadores, progresso e pendências do cenário de teste", "ChartColumn", "Operação"],
-    ["fiscal_classificacao", "Classificação", "Destinação e crédito de produtos, contratos e recibos em teste", "ClipboardList", "Operação"],
-    ["fiscal_operacao", "Executar", "Extração, geração, fila, logs e erros simulados", "Workflow", "Operação"],
-    ["fiscal_acervo", "Documentos e importações", "Acervo, serviços, contratos, importação e cobertura com dados fictícios", "ReceiptText", "Documentos"],
-    ["fiscal_icms_ipi", "ICMS e IPI", "Apuração, demonstrativo, ajustes e DCIP/DIME em teste", "FileSpreadsheet", "Apuração"],
-    ["fiscal_contribuicoes", "PIS e COFINS", "Parâmetros, ajustes, fechamento e SPED Contribuições em teste", "Receipt", "Apuração"],
-    ["fiscal_entregas", "SPED gerados", "Versões de SPED, validação e entregas simuladas", "CheckCheck", "Conferência"],
-    ["fiscal_conferencia", "Conferência fiscal", "Prévia financeira e confronto de documentos em teste", "Landmark", "Conferência"],
-    ["fiscal_configuracoes", "Configurações fiscais", "Parâmetros e consulta de regras fiscais por CFOP e fonte", "Building2", "Cadastros"],
+    ["fiscal_painel", "Painel fiscal", `Saúde dos agentes, fila e arquivos da competência. ${COM_O_MOTOR}`, "ChartColumn", "Operação"],
+    ["fiscal_classificacao", "Classificação", `Destinação e crédito de produtos, contratos e recibos. ${COM_O_MOTOR}`, "ClipboardList", "Operação"],
+    ["fiscal_operacao", "Executar", `Pedidos de extração e geração, fila, histórico e logs. ${COM_O_MOTOR}`, "Workflow", "Operação"],
+    ["fiscal_acervo", "Documentos e importações", `Acervo, serviços, contratos, importação e cobertura. ${SO_LEITURA}`, "ReceiptText", "Documentos"],
+    ["fiscal_icms_ipi", "ICMS e IPI", `Ajustes da apuração (E111, DIME e DCIP), apuração e demonstrativo. ${COM_O_MOTOR}`, "FileSpreadsheet", "Apuração"],
+    ["fiscal_contribuicoes", "PIS e COFINS", `Ajustes do bloco M, decisões por registro, parâmetros e fechamento da EFD Contribuições. ${COM_O_MOTOR}`, "Receipt", "Apuração"],
+    ["fiscal_entregas", "SPED gerados", `Versões de SPED, validação, entrega e decisões depois da geração. ${COM_O_MOTOR}`, "CheckCheck", "Conferência"],
+    ["fiscal_conferencia", "Conferência fiscal", `Prévia financeira e confronto de documentos. ${SO_LEITURA}`, "Landmark", "Conferência"],
+    ["fiscal_configuracoes", "Configurações fiscais", `Cadastro dos estabelecimentos, parâmetros e regras fiscais por CFOP e fonte. ${COM_O_MOTOR}`, "Building2", "Cadastros"],
   ] satisfies [string, string, string, IconeDeModulo, GrupoDeModulo][]).map(([code, label, description, icon, group]) => ({
     code, label, description, icon, group, sectorCode: "fiscal", defaultEnabled: true,
   })),
@@ -714,6 +738,8 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
+  contabil_sped: "/contabil/sped",
+  tech_controle_interno: "/tech/controle-interno",
   tech_github_contributions: "/github",
   tech_ops_center:         "/ops",
   helpdesk: "/chamados",
@@ -790,6 +816,18 @@ export const MODULOS_NOS_CADASTROS: ReadonlySet<string> = new Set(["bpo_cadastro
  * e Chamados são para todos; os de `MODULOS_NOS_CADASTROS`, só para o setor.
  */
 export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS]);
+
+/**
+ * Chamados fica no Geral para todo setor, menos o que atende os chamados
+ * (26/10/2026): lá a tela vai para o menu do próprio setor, junto das outras
+ * telas dele. É a Tech por padrão, mas vale o setor que opera o módulo no
+ * escritório (`setorDoModulo`), e não o do catálogo. Em "Todos os setores" não
+ * há menu de setor, e os Chamados seguem no Geral. Só lugar no menu: quem abre
+ * continua decidido por `temAcessoAoModulo`.
+ */
+export function chamadosNoMenuDoSetor(setorAtivo: string | null, setorDosChamados: string): boolean {
+  return !!setorAtivo && setorAtivo === setorDosChamados;
+}
 
 /**
  * As telas do grupo "Cliente" do BPO que moram nas abas das Solicitações

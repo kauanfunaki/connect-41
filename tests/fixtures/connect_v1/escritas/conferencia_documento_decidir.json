@@ -1,0 +1,42 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/conferencia/documentos/130/decidir?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "decisao": "corrigido",
+      "chave": "11111111111111111111111111111111111111111111",
+      "observacao": "é a nota 1"
+    }
+  },
+  "resposta": {
+    "status": 200,
+    "corpo": {
+      "id": 130,
+      "arquivo": "TESTE-ESCRITAS-omie.csv",
+      "competencia": "2032-03",
+      "linha_num": 1,
+      "numero": "1",
+      "fornecedor": "FORNECEDOR OMIE 1",
+      "data_documento": "2032-03-02",
+      "valor": "900.00",
+      "situacao": "sem_documento",
+      "chave": "11111111111111111111111111111111111111111111",
+      "nome_emit": "",
+      "cnpj_emit": "",
+      "valor_nota": null,
+      "evidencia": "nenhuma nota com este número na base",
+      "decisao": "corrigido",
+      "decidido_por": "Kátia Souza",
+      "observacao": "é a nota 1",
+      "decidido_em": "2026-10-23T14:31:31+00:00"
+    },
+    "x_custo": "leve"
+  }
+}

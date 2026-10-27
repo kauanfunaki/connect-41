@@ -1,0 +1,40 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/pagamentos-apoio/importar?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "content_type": "multipart/form-data",
+    "cabecalhos": {
+      "Idempotency-Key": "c41:2faead3afafc408589ad774f3c683033"
+    },
+    "partes": [
+      {
+        "campo": "tipo",
+        "valor": "nota_fiscal"
+      },
+      {
+        "campo": "arquivos",
+        "nome": "recibo frete.pdf",
+        "tamanho": 1068,
+        "sha256": "f06b7d0500610033393eb5fb0e96597a5148d640a6bc3ca3c9a84ae75bb31f7c",
+        "conteudo_base64": "JVBERi0xLjMKJenr8b8KMSAwIG9iago8PAovQ291bnQgMQovS2lkcyBbMyAwIFJdCi9NZWRpYUJveCBbMCAwIDU5NS4yOCA4NDEuODldCi9UeXBlIC9QYWdlcwo+PgplbmRvYmoKMiAwIG9iago8PAovT3BlbkFjdGlvbiBbMyAwIFIgL0ZpdEggbnVsbF0KL1BhZ2VMYXlvdXQgL09uZUNvbHVtbgovUGFnZXMgMSAwIFIKL1R5cGUgL0NhdGFsb2cKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL0NvbnRlbnRzIDQgMCBSCi9QYXJlbnQgMSAwIFIKL1Jlc291cmNlcyA2IDAgUgovVHlwZSAvUGFnZQo+PgplbmRvYmoKNCAwIG9iago8PAovRmlsdGVyIC9GbGF0ZURlY29kZQovTGVuZ3RoIDE2Mgo+PgpzdHJlYW0KeJxlzLEKwjAQgOG9T3GDg4Jek4sxiWNrC7oopS8Q2ytUsEoI+PrWioN0/fn4CU6JQG3glWQ1pKUEKVEIqDso6k9SEqUF4yy6sbawrIr8mJ1XUN/+hdkhqa/ghq89eOjvz0eIfmh6Dy1DtQCpxXq8B+448BB5RF3gyDj/aYVaT7/8UoImh84S0tZsSM+1EmjNpA8++j1IkQqVklD0s2/TJDgtCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PAovQmFzZUZvbnQgL0hlbHZldGljYQovRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZwovU3VidHlwZSAvVHlwZTEKL1R5cGUgL0ZvbnQKPj4KZW5kb2JqCjYgMCBvYmoKPDwKL0ZvbnQgPDwvRjEgNSAwIFI+PgovUHJvY1NldCBbL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSV0KPj4KZW5kb2JqCjcgMCBvYmoKPDwKL0NyZWF0aW9uRGF0ZSAoRDoyMDI2MTAyMzE1MTM1M1opCj4+CmVuZG9iagp4cmVmCjAgOAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDEwMiAwMDAwMCBuIAowMDAwMDAwMjA1IDAwMDAwIG4gCjAwMDAwMDAyODUgMDAwMDAgbiAKMDAwMDAwMDUxOSAwMDAwMCBuIAowMDAwMDAwNjE2IDAwMDAwIG4gCjAwMDAwMDA3MDMgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA4Ci9Sb290IDIgMCBSCi9JbmZvIDcgMCBSCi9JRCBbPDM0QkM1NEZBMUI0NTQxM0E2MzNENjUxM0FGRTk1ODJGPjwzNEJDNTRGQTFCNDU0MTNBNjMzRDY1MTNBRkU5NTgyRj5dCj4+CnN0YXJ0eHJlZgo3NTgKJSVFT0YK"
+      }
+    ]
+  },
+  "resposta": {
+    "status": 422,
+    "corpo": {
+      "erro": "tipo deve ser rpa, recibo, contrato_motorista, contrato_locacao, fatura",
+      "codigo": "parametro_invalido",
+      "campos": {
+        "tipo": "tipo deve ser rpa, recibo, contrato_motorista, contrato_locacao, fatura"
+      }
+    },
+    "x_custo": "pesada"
+  }
+}

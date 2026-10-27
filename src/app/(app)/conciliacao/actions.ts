@@ -49,6 +49,8 @@ import { lerEmpresaEmFoco, recusaDoFoco } from "@/lib/empresas/focoServidor";
 import { motivoForaDoFoco } from "@/lib/empresas/foco";
 import { lancarEConciliar, RecusaDaLinha } from "@/lib/financeiro/conciliacao/lancarDaTransacao";
 import { lancarPelasRegrasNaImportacao } from "@/lib/financeiro/conciliacao/regrasServidor";
+import { lerRateio, resumoDoRateio } from "@/lib/financeiro/rateio";
+import { conferirRateio } from "@/lib/financeiro/rateioServidor";
 
 const MODULE = "bpo_conciliacao";
 
@@ -712,10 +714,18 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
  * lançamento manual nasce quando não está pago. Desfazer a conciliação deixa o
  * lançamento em aberto (e candidato a casar de novo), em vez de apagá-lo.
  */
-/** O que foi lançado — a tela oferece a regra "sempre que vier assim" com isto (21/10). */
+/**
+ * O que foi lançado — a tela oferece a regra "sempre que vier assim" com isto
+ * (21/10). `rateado`: a conta saiu rateada, e a regra (uma categoria só) não
+ * repetiria isso — a tela não oferece.
+ */
 export type ResultadoDoLancamento =
   | { error: string }
-  | { ok: true; lancamento: { counterpartyId: string; categoryId: string | null; costCenterId: string | null; projectId: string | null } };
+  | {
+      ok: true;
+      lancamento: { counterpartyId: string; categoryId: string | null; costCenterId: string | null; projectId: string | null };
+      rateado?: boolean;
+    };
 
 export async function criarLancamentoDaTransacao(formData: FormData): Promise<ResultadoDoLancamento> {
   const c = await contexto();
@@ -735,7 +745,15 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
   if (!kind) return { error: "Transação de valor zero não gera lançamento." };
   const dataKey = saoPauloParts(t.postedAt).dateKey;
 
-  const categoryId = texto(formData, "categoryId") || null;
+  // O rateio na conciliação (lote M1 do mercado, 23/10/2026): a linha do
+  // extrato vira a conta já rateada, como no lançamento manual — as linhas
+  // fecham o valor da linha, e categoria, centro e projeto são o resumo delas.
+  const comRateio = texto(formData, "comRateio") === "1";
+  const lidoRateio = comRateio ? lerRateio(texto(formData, "rateio")) : { ok: true as const, linhas: [] };
+  if (!lidoRateio.ok) return { error: lidoRateio.erro };
+  const linhasDoRateio = lidoRateio.linhas;
+
+  const categoryId = comRateio ? resumoDoRateio(linhasDoRateio).categoriaId : texto(formData, "categoryId") || null;
   const v = validarCamposDoLancamento(
     {
       kind,
@@ -781,15 +799,26 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
       : null;
   if (counterpartyId && !existente) return { error: "Contraparte não encontrada nesta empresa." };
 
-  // Mesma herança do lançamento manual: o centro escolhido, senão o padrão da contraparte.
-  const centro = await centroNaCriacao({
-    tenantId: c.tenantId,
-    companyId,
-    informadoId: texto(formData, "costCenterId") || null,
-    padraoDaContraparteId: existente?.defaultCostCenterId ?? null,
-  });
+  const rateio = comRateio
+    ? await conferirRateio({ tenantId: c.tenantId, companyId, kind: d.kind, linhas: linhasDoRateio, totalCentavos: d.centavos })
+    : null;
+  if (rateio && !rateio.ok) return { error: rateio.erro };
+  const resumo = rateio?.ok ? rateio.resumo : null;
+
+  // Mesma herança do lançamento manual: o centro escolhido, senão o padrão da
+  // contraparte. Rateada, o centro e o projeto são os comuns às linhas.
+  const centro = resumo
+    ? { ok: true as const, centroId: resumo.centroId }
+    : await centroNaCriacao({
+        tenantId: c.tenantId,
+        companyId,
+        informadoId: texto(formData, "costCenterId") || null,
+        padraoDaContraparteId: existente?.defaultCostCenterId ?? null,
+      });
   if (!centro.ok) return { error: centro.erro };
-  const projeto = await projetoInformado({ tenantId: c.tenantId, companyId, informadoId: texto(formData, "projectId") || null });
+  const projeto = resumo
+    ? { ok: true as const, projetoId: resumo.projetoId }
+    : await projetoInformado({ tenantId: c.tenantId, companyId, informadoId: texto(formData, "projectId") || null });
   if (!projeto.ok) return { error: projeto.erro };
 
   let entryId: string;
@@ -827,6 +856,7 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
         projectId: projeto.projetoId,
         competencia: d.competencia,
         descricao: d.descricao,
+        rateio: resumo ? linhasDoRateio : undefined,
       });
 
       if (d.kind === "PAGAR" && d.categoryId && !contraparte.defaultCategoryId) {
@@ -853,6 +883,7 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
       competencia: d.competencia,
       centroDeCusto: centro.centroId,
       projeto: projeto.projetoId,
+      ...(resumo ? { rateio: `${linhasDoRateio.length} linhas` } : {}),
     },
   });
 
@@ -860,6 +891,7 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
   return {
     ok: true,
     lancamento: { counterpartyId: counterpartyIdCriado, categoryId: d.categoryId, costCenterId: centro.centroId, projectId: projeto.projetoId },
+    ...(resumo ? { rateado: true } : {}),
   };
 }
 

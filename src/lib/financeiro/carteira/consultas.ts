@@ -11,8 +11,10 @@
 //   nos números do Início do portal. Conta que veio do Omie e ainda não virou
 //   entra como na lista: aparece, e a baixa é que fica no Omie;
 // - extrato, linhas a conciliar e saldo: as contas com extrato da conciliação
-//   (`TIPOS_COM_EXTRATO`) — o saldo pela mesma conferência da tela
-//   (`saldosDasContas`), divergente quando calculado e banco não fecham no centavo;
+//   (`TIPOS_COM_EXTRATO`) — o saldo pelo mesmo veredito da conferência da tela
+//   (`saldosDasContas`), divergente quando calculado e banco não fecham no
+//   centavo, mas somando só a janela entre o saldo inicial e o saldo do banco
+//   (`contasComSaldoDivergente`, 23/10/2026);
 // - pendências: em andamento (aberta ou respondida), do setor das pendências
 //   do BPO e as antigas sem setor, como /pendencias;
 // - aprovações: contas a pagar aguardando, como /aprovacoes;
@@ -20,21 +22,78 @@
 //   (`lerContasDasEmpresas`: ligada direto ou pela matriz com as filiais).
 
 import { getPrisma } from "@/lib/prisma";
-import { saoPauloParts } from "@/lib/agenda";
+import { addDaysToKey, saoPauloDateTimeToUtc, saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import { STATUS_OCULTOS_POR_PADRAO } from "@/lib/companyStatusFilter";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { whereDoRecorte } from "@/lib/financeiro/data";
 import { TIPOS_COM_EXTRATO } from "@/lib/financeiro/tiposDeConta";
-import { saldosDasContas } from "@/lib/financeiro/conciliacao/saldoDasContas";
 import { soDoSetorPadrao, whereDoRecorteDeSetor } from "@/lib/financeiro/pendencias/setor";
 import { lerContasDasEmpresas } from "@/lib/portal/empresasDaContaDb";
-import type { LinhaDaCarteira, SomaDeVencidos } from "./regras";
+import { janelaDaConferencia, saldoDiverge, type LinhaDaCarteira, type SomaDeVencidos } from "./regras";
 
 const ZERO: SomaDeVencidos = { n: 0, centavos: 0 };
 
 function contar<T>(mapa: Map<string, T>, chave: string, inicial: T, somar: (atual: T) => T) {
   mapa.set(chave, somar(mapa.get(chave) ?? inicial));
+}
+
+type ContaParaConferir = { id: string; openingBalance: { toString(): string } | null; openingBalanceDate: Date | null };
+
+/**
+ * As contas cujo saldo não bate com o do banco (23/10/2026) — o mesmo
+ * veredito de `saldosDasContas` (conferido e com divergência diferente de
+ * zero), sem o peso dela. Lá, cada transação do histórico inteiro de cada
+ * conta volta agrupada por dia, porque a tela da conciliação mostra também o
+ * saldo "de agora"; era a consulta mais pesada do painel. Aqui são duas
+ * consultas, quantas forem as contas: as importações com saldo do banco (para
+ * achar a de referência e a data do corte) e **uma** soma por conta, só das
+ * transações entre o dia do saldo inicial e o dia do saldo do banco.
+ *
+ * Os limites são o começo do dia em Brasília: `situacaoDoSaldo` compara o dia
+ * de `postedAt` em Brasília (`saoPauloParts`), e "do dia X ao dia Y" é
+ * `postedAt` em [início de X, início de Y+1).
+ */
+export async function contasComSaldoDivergente(tenantId: string, contas: ContaParaConferir[]): Promise<Set<string>> {
+  const prisma = getPrisma();
+  const conferiveis = contas.filter((c) => c.openingBalance !== null && c.openingBalanceDate !== null);
+  if (conferiveis.length === 0) return new Set();
+
+  const importacoes = await prisma.bankStatementImport.findMany({
+    where: { tenantId, bankAccountId: { in: conferiveis.map((c) => c.id) }, ledgerBalance: { not: null } },
+    select: { bankAccountId: true, ledgerBalance: true, ledgerBalanceAt: true, createdAt: true },
+  });
+  const janelas = conferiveis.flatMap((c) => {
+    const janela = janelaDaConferencia(
+      { id: c.id, saldoInicialCentavos: centavosDeDecimal(c.openingBalance!), saldoInicialKey: saoPauloParts(c.openingBalanceDate!).dateKey },
+      importacoes
+        .filter((i) => i.bankAccountId === c.id)
+        .map((i) => ({
+          ledgerCentavos: i.ledgerBalance ? centavosDeDecimal(i.ledgerBalance) : null,
+          ledgerKey: i.ledgerBalanceAt ? saoPauloParts(i.ledgerBalanceAt).dateKey : null,
+          importadoEm: i.createdAt,
+        }))
+    );
+    return janela ? [janela] : [];
+  });
+  if (janelas.length === 0) return new Set();
+
+  const somas = await prisma.bankTransaction.groupBy({
+    by: ["bankAccountId"],
+    where: {
+      tenantId,
+      OR: janelas.map((j) => ({
+        bankAccountId: j.contaId,
+        postedAt: {
+          gte: saoPauloDateTimeToUtc(j.inicioKey, 0, 0),
+          ...(j.corteKey === null ? {} : { lt: saoPauloDateTimeToUtc(addDaysToKey(j.corteKey, 1), 0, 0) }),
+        },
+      })),
+    },
+    _sum: { amount: true },
+  });
+  const somaPor = new Map(somas.map((s) => [s.bankAccountId, s._sum.amount ? centavosDeDecimal(s._sum.amount) : 0]));
+  return new Set(janelas.filter((j) => saldoDiverge(j, somaPor.get(j.contaId) ?? 0)).map((j) => j.contaId));
 }
 
 /**
@@ -97,11 +156,9 @@ export async function carregarCarteira(
 
   const contaIds = contas.map((c) => c.id);
   const ativas = contas.filter((c) => c.active);
-  // Sem saldo inicial a conferência nunca chega a "conferido": nem entra na soma por dia.
-  const conferiveis = ativas.filter((c) => c.openingBalance !== null && c.openingBalanceDate !== null);
   const idsDoPortal = [...new Set([...contasDoPortal.values()].flatMap((m) => [...m.keys()]))];
 
-  const [importacoes, pendentes, saldos, acessos] = await Promise.all([
+  const [importacoes, pendentes, comSaldoDivergente, acessos] = await Promise.all([
     ativas.length > 0
       ? prisma.bankStatementImport.groupBy({
           by: ["bankAccountId"],
@@ -116,7 +173,8 @@ export async function carregarCarteira(
           _count: { _all: true },
         })
       : Promise.resolve([]),
-    conferiveis.length > 0 ? saldosDasContas(tenantId, conferiveis) : Promise.resolve(new Map()),
+    // Sem saldo inicial a conferência nunca chega a "conferido": a conta nem entra na soma.
+    contasComSaldoDivergente(tenantId, ativas),
     idsDoPortal.length > 0
       ? prisma.portalUser.findMany({ where: { tenantId, id: { in: idsDoPortal }, active: true }, select: { id: true, lastLoginAt: true } })
       : Promise.resolve([]),
@@ -143,8 +201,7 @@ export async function carregarCarteira(
   }
 
   const divergentes = new Map<string, number>();
-  for (const [contaId, situacao] of saldos) {
-    if (situacao.tipo !== "conferido" || situacao.divergenciaCentavos === 0) continue;
+  for (const contaId of comSaldoDivergente) {
     const empresa = empresaDaConta.get(contaId);
     if (empresa) contar(divergentes, empresa, 0, (n) => n + 1);
   }

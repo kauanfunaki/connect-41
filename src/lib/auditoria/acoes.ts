@@ -47,6 +47,11 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
   "helpdesk.category": e("configurou a categoria de chamados"),
   "helpdesk.sla": e("configurou a política de SLA dos chamados"),
+  "tech_interno.item.create": c("criou o item do controle interno do Tech"),
+  "tech_interno.item.update": e("editou o item do controle interno do Tech"),
+  "tech_interno.item.status": e("mudou a situação do item do controle interno do Tech"),
+  "tech_interno.item.comment": e("comentou no item do controle interno do Tech"),
+  "helpdesk.ai_fallback": e("configurou a IA alternativa dos chamados"),
   // ── Cadastros ──────────────────────────────────────────────────────────────
   "company.create": c("criou a empresa"),
   "company.update": e("editou a empresa"),
@@ -85,6 +90,30 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "fiscal.sped.decisao.gravada": e("gravou no motor SPED a decisão"),
   "fiscal.sped.decisao.apagada": x("apagou no motor SPED a decisão"),
   "fiscal.sped.decisao.criada": c("lançou no motor SPED a decisão"),
+  // As escritas das telas fiscais (23/10/2026, API-CONNECT §13).
+  "fiscal.sped.cobertura.apurada": c("pediu ao motor SPED a apuração da cobertura, na execução"),
+  "fiscal.sped.quarentena.resolvida": e("resolveu no motor SPED o rejeitado da quarentena"),
+  "fiscal.sped.quarentena.reaberta": e("reabriu no motor SPED o rejeitado da quarentena"),
+  "fiscal.sped.documentos.enviados": c("enviou documentos ao motor SPED, na"),
+  "fiscal.sped.pagamento.decidido": e("decidiu no motor SPED o pagamento"),
+  "fiscal.sped.pagamento.corrigido": e("corrigiu no motor SPED o pagamento"),
+  "fiscal.sped.contrato.informado": e("informou no motor SPED o contrato de aluguel de"),
+  "fiscal.sped.cte.apurado": o("apurou no motor SPED o CT-e do arquivo"),
+  "fiscal.sped.simulacao.gravada": e("gravou no motor SPED a simulação"),
+  "fiscal.sped.simulacao.apagada": x("apagou no motor SPED a simulação"),
+  "fiscal.sped.combustivel.apurado": o("apurou no motor SPED o combustível de"),
+  "fiscal.sped.omie.conferido": c("conferiu no motor SPED o relatório do Omie"),
+  "fiscal.sped.conferencia.decidida": e("decidiu no motor SPED o documento da conferência"),
+  "fiscal.sped.confronto.enviado": c("confrontou no motor SPED a planilha do BPO"),
+  // As lacunas fechadas (23/10/2026, API-CONNECT §14).
+  "fiscal.sped.regime.definido": e("corrigiu no motor SPED o regime do prestador"),
+  "fiscal.sped.regime.apagado": x("apagou no motor SPED a correção de regime do prestador"),
+  "fiscal.sped.quarentena.reprocessada": c("pediu ao motor SPED o reprocessamento da quarentena, na execução"),
+  "fiscal.sped.pagamentos_apoio.importados": c("importou no motor SPED os pagamentos de apoio"),
+  "fiscal.sped.faturas_bpo.importadas": c("importou no motor SPED as faturas do BPO da planilha"),
+  "fiscal.sped.upload.criado": c("abriu no motor SPED o envio em partes"),
+  "fiscal.sped.upload.concluido": c("concluiu no motor SPED o envio em partes, na"),
+  "fiscal.sped.upload.cancelado": x("cancelou no motor SPED o envio em partes"),
   "autorizacoes.quem_recebe": e("mudou quem recebe as autorizações de acesso"),
   "autorizacoes.salvar": e("atualizou a autorização de acesso"),
   "autorizacoes.serpro": o("conferiu no Serpro a autorização de acesso"),
@@ -289,6 +318,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "clientDocument.scheduled_send_now": o("mandou já o envio agendado do documento"),
   "clientDocument.reminder": o("lembrou o cliente de abrir o documento"),
   "clientDocument.receipt": o("baixou o comprovante de leitura do documento"),
+  // O padrão do escritório, em Administração › Portal do cliente › Envios (23/10/2026).
+  "clientDocument.reminder_default": e("mudou o lembrete de não lido padrão dos envios", { comNome: false }),
   "comunicado.enviado": o("enviou um comunicado aos clientes"),
   "portal.user.created": c("deu acesso ao portal para"),
   "portal.user.updated": e("editou o acesso ao portal de"),
@@ -460,6 +491,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   HelpdeskTicket: "chamado",
   HelpdeskCategory: "categoria de chamados",
   HelpdeskSlaPolicy: "política de SLA dos chamados",
+  TechInternalItem: "item do controle interno",
   AccessAuthorization: "autorização de acesso",
   AccessAuthorizationGrantee: "quem recebe as autorizações",
   SerproMensagem: "mensagem da Caixa Postal",
@@ -508,6 +540,18 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   SpedDecisao: "decisão fiscal do SPED",
   SpedEstabelecimento: "estabelecimento do SPED",
   SpedExecucao: "execução do SPED",
+  SpedRejeitado: "rejeitado da quarentena do SPED",
+  SpedImportacao: "importação do SPED",
+  SpedPagamento: "pagamento de apoio do SPED",
+  SpedContrato: "contrato de aluguel do SPED",
+  SpedSimulacao: "simulação da prévia do SPED",
+  SpedCombustivel: "apuração de combustível do SPED",
+  SpedConferencia: "conferência do relatório do Omie",
+  SpedConferenciaDocumento: "documento da conferência do Omie",
+  SpedConfronto: "confronto da planilha do BPO",
+  SpedPrestador: "prestador de NFS-e do SPED",
+  SpedImportacaoApoio: "importação de apoio do SPED",
+  SpedUpload: "envio em partes do SPED",
   Handoff: "transferência",
   Holiday: "feriado",
   Lead: "lead",
@@ -520,6 +564,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   PipelineItem: "atividade",
   PortalApprovalLimit: "alçada de aprovação",
   PortalTelaBloqueada: "tela do portal",
+  TenantEnviosConfig: "padrão dos envios",
   PortalUser: "acesso ao portal",
   Process: "processo",
   RecurringObligation: "obrigação recorrente",
@@ -551,6 +596,7 @@ export function nomeDoTipo(entityType: string | null | undefined): string | null
 
 export type ChaveDaAreaDaAuditoria =
   | "chamados"
+  | "tech"
   | "cadastros"
   | "fiscal"
   | "bpo"
@@ -570,6 +616,7 @@ export type ChaveDaAreaDaAuditoria =
 /** Rótulo e cor do ponto de cada área (a cor dos setores padrão, onde há setor). */
 export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotulo: string; cor: string }>> = {
   chamados: { rotulo: "Chamados", cor: "#2E6FB8" },
+  tech: { rotulo: "Tech", cor: "#3B7BE8" },
   cadastros: { rotulo: "Cadastros", cor: "#0891B2" },
   fiscal: { rotulo: "Fiscal", cor: "#C5374B" },
   bpo: { rotulo: "BPO", cor: "#B7791F" },
@@ -594,6 +641,7 @@ export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotul
  */
 const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]> = [
   ["helpdesk.", "chamados"],
+  ["tech_interno.", "tech"],
   ["company.", "cadastros"],
   ["person.", "cadastros"],
   ["companyservice.", "cadastros"],

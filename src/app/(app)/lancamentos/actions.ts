@@ -37,10 +37,17 @@ import { arquivosDoFormulario, type AnexoGravado } from "@/lib/financeiro/penden
 import { armazenamentoDosAnexos } from "@/lib/financeiro/anexos";
 import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
 import { AJUSTES_DO_DIA, horizonteDaSerie, ocorrenciasDaRepeticao, totalDaSerie, validarRepeticao, type AjusteDoDia } from "@/lib/financeiro/repeticao";
-import { lerParcelas, type Parcela } from "@/lib/financeiro/parcelamento";
-import { lerRateio, resumoDoRateio } from "@/lib/financeiro/rateio";
+import {
+  competenciaDaParcela,
+  lerCompetenciaDasParcelas,
+  lerParcelas,
+  type CompetenciaDasParcelas,
+  type Parcela,
+} from "@/lib/financeiro/parcelamento";
+import { lerRateio, resumoDoRateio, type LinhaDoRateio } from "@/lib/financeiro/rateio";
 import { conferirRateio, gravarRateio } from "@/lib/financeiro/rateioServidor";
-import { lerRetencoes, liquidoDaConta, resumoDasRetencoes } from "@/lib/financeiro/retencoes";
+import { lerRetencoes, resumoDasRetencoes } from "@/lib/financeiro/retencoes";
+import { dividirLancamento, type ContaDaDivisao } from "@/lib/financeiro/divisaoDoLancamento";
 import { aplicarRetencoes, cancelarContasDosImpostos, RecusaDaRetencao } from "@/lib/financeiro/retencoesServidor";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 import { feriadosDoEscritorio } from "@/lib/feriados";
@@ -135,17 +142,21 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const parcelar = texto("parcelar") === "1";
   let parcelas: Parcela[] | null = null;
   let ajusteDasParcelas: AjusteDoDia = "ADIAR";
+  let competenciaDasParcelas: CompetenciaDasParcelas = "COMPRA";
   if (parcelar) {
     if (rep.repeticao) return { error: "Parcelar e repetir juntos não — parcelar divide um valor; repetir lança a conta inteira de novo a cada mês. Escolha um." };
     // Nasce em aberto: a baixa de cada parcela é dada quando ela for paga.
     if (d.pagoEmKey) return { error: "Conta parcelada nasce em aberto — deixe \"já pago em\" vazio e dê a baixa de cada parcela quando ela for paga." };
-    if (comRateio) return { error: "Rateio e parcelamento juntos ainda não — parcele, e faça o rateio de cada parcela na edição da conta." };
     const lidas = lerParcelas(texto("parcelas"), d.centavos);
     if (!lidas.ok) return { error: lidas.erro };
     parcelas = lidas.parcelas;
     const ajuste = texto("parcelarAjuste") || "ADIAR";
     if (!AJUSTES_DO_DIA.some((a) => a.valor === ajuste)) return { error: "Ajuste de fim de semana inválido." };
     ajusteDasParcelas = ajuste as AjusteDoDia;
+    // A competência de cada parcela (23/10/2026): a da compra, ou o mês do vencimento dela.
+    const competencia = lerCompetenciaDasParcelas(texto("parcelarCompetencia"));
+    if (!competencia) return { error: "Escolha a competência das parcelas: a da compra ou a do vencimento de cada uma." };
+    competenciaDasParcelas = competencia;
   }
 
   // As retenções na fonte (lote D, 20/10), só na conta a pagar: o valor
@@ -154,18 +165,20 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const lidas = d.kind === "PAGAR" ? lerRetencoes(texto) : { ok: true as const, retencoes: [] };
   if (!lidas.ok) return { error: lidas.erro };
   const retencoes = lidas.retencoes;
-  let valorDaConta = d.centavos;
-  if (retencoes.length > 0) {
-    if (parcelas) return { error: "Retenção ainda não vai junto com o parcelamento — parcele sem retenção e informe a de cada parcela na edição." };
-    if (rep.repeticao) return { error: "Retenção ainda não vai junto com a repetição — lance a série sem retenção e informe a de cada conta na edição." };
-    if (comRateio) return { error: "Rateio e retenção juntos ainda não — lance com a retenção e faça o rateio do líquido na edição da conta." };
-    const l = liquidoDaConta(d.centavos, retencoes);
-    if (!l.ok) return { error: l.erro };
-    valorDaConta = l.liquidoCentavos;
+  if (retencoes.length > 0 && rep.repeticao) {
+    return { error: "Retenção ainda não vai junto com a repetição — lance a série sem retenção e informe a de cada conta na edição." };
   }
-  // Parcelada, a conta lançada é a primeira parcela.
-  if (parcelas) valorDaConta = parcelas[0]!.centavos;
+  // Rateio, retenção e parcelamento juntos (lote M1 do mercado, 23/10/2026):
+  // tudo digitado sobre o bruto; cada conta guarda a parte dela — o bruto da
+  // parcela, as retenções na proporção dele, o líquido e o rateio do líquido.
+  // Ver `divisaoDoLancamento.ts`.
+  const divisao = dividirLancamento({ brutoCentavos: d.centavos, parcelas, retencoes, rateio: comRateio ? linhasDoRateio : [] });
+  if (!divisao.ok) return { error: divisao.erro };
+  const [primeira, ...demais] = divisao.contas;
+  const valorDaConta = primeira!.liquidoCentavos;
   const vencimentoDaConta = parcelas ? parcelas[0]!.vencimentoKey : d.vencimentoKey;
+  // Com a competência do vencimento (23/10/2026), a primeira parcela é do mês dela, não do digitado.
+  const competenciaDaConta = parcelas ? competenciaDaParcela(parcelas[0]!, d.competencia, competenciaDasParcelas) : d.competencia;
 
   const rateio = comRateio
     ? await conferirRateio({ tenantId: c.tenantId, companyId, kind: d.kind, linhas: linhasDoRateio, totalCentavos: d.centavos })
@@ -246,8 +259,8 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
   const total = rep.repeticao ? totalDaSerie(primeiraDaSerie, rep.repeticao, feriados) : null;
   if (total && !total.ok) return { error: total.erro };
   // Cada próxima com o valor dela: na repetição, a conta inteira de novo; no
-  // parcelamento, a parcela — e a competência da compra, que é uma só (ver
-  // `parcelamento.ts`).
+  // parcelamento, a parcela — e a competência da compra, que é uma só, ou a do
+  // vencimento de cada parcela, quando a pessoa escolheu (ver `parcelamento.ts`).
   const proximas: { indice: number; vencimentoKey: string; competencia: string; centavos: number }[] = rep.repeticao
     ? ocorrenciasDaRepeticao(
         primeiraDaSerie,
@@ -258,8 +271,24 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         .slice(1)
         .map((o) => ({ ...o, centavos: d.centavos }))
     : parcelas
-      ? parcelas.slice(1).map((p) => ({ indice: p.indice, vencimentoKey: p.vencimentoKey, competencia: d.competencia, centavos: p.centavos }))
+      ? parcelas.slice(1).map((p, i) => ({
+          indice: p.indice,
+          vencimentoKey: p.vencimentoKey,
+          competencia: competenciaDaParcela(p, d.competencia, competenciaDasParcelas),
+          // O líquido da parcela: o bruto dela menos as retenções dela.
+          centavos: demais[i]!.liquidoCentavos,
+        }))
       : [];
+  // O rateio de cada próxima: na repetição, as linhas digitadas (cada conta é a
+  // conta inteira de novo); no parcelamento, o da parcela (`dividirLancamento`).
+  const rateioDaProxima = (i: number): LinhaDoRateio[] => (parcelas ? demais[i]!.rateio : comRateio ? linhasDoRateio : []);
+  // Categoria, centro e projeto de uma conta da divisão: com rateio, o resumo
+  // das linhas dela; sem, os do formulário.
+  const classificacao = (conta: ContaDaDivisao) => ({
+    categoryId: conta.resumo ? conta.resumo.categoriaId : d.categoryId,
+    costCenterId: conta.resumo ? conta.resumo.centroId : centro.centroId,
+    projectId: conta.resumo ? conta.resumo.projetoId : projeto.projetoId,
+  });
   const serie =
     rep.repeticao && total?.ok
       ? { recurrenceId: randomUUID(), recurrenceTotal: total.total }
@@ -328,13 +357,11 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           status: status === "PAGO" ? "CONFERIDO" : status,
           approvalStatus,
           counterpartyId: contraparte.id,
-          categoryId: d.categoryId,
-          costCenterId: centro.centroId,
-          projectId: projeto.projetoId,
+          ...classificacao(primeira!),
           bankAccountId: contaPrevista.contaId,
           issueDate: d.emissaoKey ? instanteDaData(d.emissaoKey) : null,
           documentNumber: d.numeroDocumento,
-          competence: d.competencia,
+          competence: competenciaDaConta,
           dueDate: instanteDaData(vencimentoDaConta),
           forecastDate: previsaoKey && !d.pagoEmKey ? instanteDaData(previsaoKey) : null,
           amount: decimalDeCentavos(valorDaConta),
@@ -347,7 +374,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         },
         select: { id: true, amount: true },
       });
-      if (resumo) await gravarRateio(tx, { tenantId: c.tenantId, entryId: criado.id, linhas: linhasDoRateio });
+      if (primeira!.rateio.length > 0) await gravarRateio(tx, { tenantId: c.tenantId, entryId: criado.id, linhas: primeira!.rateio });
       if (serie && regraDaSerie) {
         await tx.financeRecurrence.create({
           data: {
@@ -357,29 +384,31 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
             ...regraDaSerie,
             total: serie.recurrenceTotal,
             firstDueDate: vencimentoDaConta,
-            firstCompetence: d.competencia,
+            firstCompetence: competenciaDaConta,
             lastIndex: 1 + proximas.length,
             createdById: c.ctx.userId || null,
           },
         });
       }
-      if (retencoes.length > 0) {
-        await aplicarRetencoes(tx, {
-          tenantId: c.tenantId,
-          userId: c.ctx.userId || null,
-          conta: {
-            id: criado.id,
-            companyId,
-            counterpartyId: contraparte.id,
-            competence: d.competencia,
-            categoryId: d.categoryId,
-            costCenterId: centro.centroId,
-            projectId: projeto.projetoId,
-            documentNumber: d.numeroDocumento,
-          },
-          passos: retencoes.map((r) => ({ tipo: "criar" as const, tributo: r.tributo, centavos: r.centavos })),
-        });
-      }
+      // As contas dos impostos de uma conta da divisão, herdando dela a
+      // classificação e a competência — na parcela, as da parcela.
+      const reterNa = (entryId: string, conta: ContaDaDivisao, competence: string) =>
+        conta.retencoes.length === 0
+          ? Promise.resolve()
+          : aplicarRetencoes(tx, {
+              tenantId: c.tenantId,
+              userId: c.ctx.userId || null,
+              conta: {
+                id: entryId,
+                companyId,
+                counterpartyId: contraparte.id,
+                competence,
+                ...classificacao(conta),
+                documentNumber: d.numeroDocumento,
+              },
+              passos: conta.retencoes.map((r) => ({ tipo: "criar" as const, tributo: r.tributo, centavos: r.centavos })),
+            });
+      await reterNa(criado.id, primeira!, competenciaDaConta);
       // As próximas da série: a mesma conta em outro vencimento — sem emissão,
       // número, previsão, baixa nem anexo, que são desta. A conta corrente
       // prevista vale para a série inteira.
@@ -394,9 +423,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
             status: statusDasProximas,
             approvalStatus: aprovacaoDasProximas,
             counterpartyId: contraparte.id,
-            categoryId: d.categoryId,
-            costCenterId: centro.centroId,
-            projectId: projeto.projetoId,
+            ...classificacao(parcelas ? demais[i]! : primeira!),
             bankAccountId: contaPrevista.contaId,
             competence: o.competencia,
             dueDate: instanteDaData(o.vencimentoKey),
@@ -412,8 +439,13 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           })),
         });
         if (aprovacaoDasProximas === "AGUARDANDO") await registrarEnvios(tx, idsDasProximas, c.ctx.userId || null);
-        // O rateio vale para a série inteira, como a categoria.
-        if (resumo) for (const entryId of idsDasProximas) await gravarRateio(tx, { tenantId: c.tenantId, entryId, linhas: linhasDoRateio });
+        // O rateio vale para a série inteira, como a categoria — na parcela, o
+        // rateio do líquido dela; e cada parcela com as retenções dela.
+        for (const [i, entryId] of idsDasProximas.entries()) {
+          const linhas = rateioDaProxima(i);
+          if (linhas.length > 0) await gravarRateio(tx, { tenantId: c.tenantId, entryId, linhas });
+          if (parcelas) await reterNa(entryId, demais[i]!, proximas[i]!.competencia);
+        }
       }
       if (d.pagoEmKey) {
         await quitarConta(tx, {
@@ -462,7 +494,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
       kind: d.kind,
       valor: decimalDeCentavos(valorDaConta),
       ...(retencoes.length > 0 ? { bruto: decimalDeCentavos(d.centavos), retencoes: resumoDasRetencoes(retencoes) } : {}),
-      competencia: d.competencia,
+      competencia: competenciaDaConta,
       approvalStatus,
       centroDeCusto: centro.centroId,
       projeto: projeto.projetoId,
@@ -479,7 +511,15 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           }
         : {}),
       ...(parcelas && serie
-        ? { parcelamento: { parcelas: parcelas.length, total: decimalDeCentavos(d.centavos), ajusteDoDia: ajusteDasParcelas, serie: serie.recurrenceId } }
+        ? {
+            parcelamento: {
+              parcelas: parcelas.length,
+              total: decimalDeCentavos(d.centavos),
+              ajusteDoDia: ajusteDasParcelas,
+              competencia: competenciaDasParcelas,
+              serie: serie.recurrenceId,
+            },
+          }
         : {}),
     },
   });
@@ -490,7 +530,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
     aguardandoAprovacao: approvalStatus === "AGUARDANDO",
     repetidas: parcelas ? 0 : proximas.length,
     ...(parcelas ? { parcelas: parcelas.length } : {}),
-    impostos: retencoes.length,
+    impostos: divisao.contas.reduce((s, conta) => s + conta.retencoes.length, 0),
   };
 }
 
@@ -580,9 +620,14 @@ export async function cancelarProximasDaSerie(entryId: string): Promise<Resultad
   if (!ctx.tenantId) return { error: "Não autenticado." };
   const conta = await prisma.financeEntry.findFirst({
     where: { id: entryId, tenantId: ctx.tenantId },
-    select: { id: true, companyId: true, recurrenceId: true, recurrenceIndex: true },
+    select: { id: true, companyId: true, recurrenceId: true, recurrenceIndex: true, fiscalDocumentId: true },
   });
   if (!conta) return { error: "Lançamento não encontrado." };
+  // A série que nasceu das duplicatas da nota (23/10) é da nota: todas as
+  // parcelas são ligadas a ela, e nenhuma se cancela por aqui — o caminho é o
+  // estorno, na ficha da nota, que leva a série inteira. Sem esta recusa a
+  // série seria desligada (`active: false`) sem cancelar conta nenhuma.
+  if (conta.fiscalDocumentId) return { error: "Estas parcelas vieram de um documento fiscal — estorne na ficha da nota." };
   if (!conta.recurrenceId || !conta.recurrenceIndex) return { error: "Este lançamento não faz parte de uma repetição." };
 
   const c = await contexto(conta.companyId);

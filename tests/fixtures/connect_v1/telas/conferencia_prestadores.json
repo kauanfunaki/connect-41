@@ -1,0 +1,19 @@
+{
+  "status": 200,
+  "corpo": {
+    "mei": "0.00",
+    "normal": "300.00",
+    "prestadores_mei": [],
+    "prestadores_normal": [
+      {
+        "cnpj": "11222333000181",
+        "nome": "PRESTADOR TESTE",
+        "documentos": 1,
+        "valor": "300.00",
+        "regime": "normal",
+        "por_cadastro": false
+      }
+    ]
+  },
+  "x_custo": "leve"
+}

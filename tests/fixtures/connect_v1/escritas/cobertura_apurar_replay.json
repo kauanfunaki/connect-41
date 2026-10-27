@@ -1,0 +1,48 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/cobertura/apurar?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {
+      "Idempotency-Key": "c41:97f92bffcdc74dbcb934f57bc59f01fc"
+    },
+    "corpo": {
+      "empresa_id": 1,
+      "competencia": "2032-02"
+    }
+  },
+  "resposta": {
+    "status": 202,
+    "corpo": {
+      "id": 38,
+      "acao": "cobertura",
+      "rotulo": "apurar cobertura",
+      "empresa_id": 1,
+      "cnpj": "17122471001147",
+      "competencia": "2032-02",
+      "data_ini": "2032-02-01",
+      "data_fim": "2032-02-29",
+      "parametros": {},
+      "estado": "pendente",
+      "solicitado_por": "Kátia Souza",
+      "solicitado_em": "2026-10-23T14:31:31+00:00",
+      "agente_host": null,
+      "pid": null,
+      "iniciado_em": null,
+      "concluido_em": null,
+      "batida_em": null,
+      "codigo_saida": null,
+      "mensagem": null,
+      "travada": false,
+      "pode_cancelar": true,
+      "pode_destravar": false,
+      "arquivo_ids": []
+    },
+    "idempotent_replay": "true"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/fechamento/pagamentos/decidir?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "caminho": "TESTE-TELAS/recibo_sem_competencia.pdf",
+      "pagina": 1,
+      "ordem": 1,
+      "decisao": "aceito"
+    }
+  },
+  "resposta": {
+    "status": 422,
+    "corpo": {
+      "erro": "não dá para aceitar: sem competência — a geração é por mês e esta linha não pertence a nenhum; preencha a competência (AAAA-MM) no cartão e salve a correção. Corrija o campo na conferência (o botão 'corrigir' aceita e grava junto) ou descarte a linha.",
+      "codigo": "pagamento_nao_aceitavel"
+    },
+    "x_custo": "leve"
+  }
+}

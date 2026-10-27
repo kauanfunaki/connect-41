@@ -1,0 +1,26 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/cobertura/apurar?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {
+      "Idempotency-Key": "c41:97f92bffcdc74dbcb934f57bc59f01fc"
+    },
+    "corpo": {
+      "empresa_id": 1,
+      "competencia": "2032-01"
+    }
+  },
+  "resposta": {
+    "status": 409,
+    "corpo": {
+      "erro": "esta Idempotency-Key já foi usada com outra requisição",
+      "codigo": "idempotencia_conflito"
+    }
+  }
+}

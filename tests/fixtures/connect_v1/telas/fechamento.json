@@ -1,0 +1,77 @@
+{
+  "status": 200,
+  "corpo": {
+    "competencia": "2032-03",
+    "fiscais": [
+      {
+        "tipo": "cte",
+        "sentido": "saida",
+        "documentos": 3,
+        "valor": null,
+        "sem_valor": 3,
+        "origem": "contagem do último SPED gerado de cada filial",
+        "rotulo": "CT-e"
+      },
+      {
+        "tipo": "nfe",
+        "sentido": "entrada",
+        "documentos": 1,
+        "valor": "1000.00",
+        "sem_valor": 0,
+        "origem": "índice de documentos",
+        "rotulo": "NF-e"
+      },
+      {
+        "tipo": "nfse",
+        "sentido": "entrada",
+        "documentos": 1,
+        "valor": "300.00",
+        "sem_valor": 0,
+        "origem": "índice de documentos",
+        "rotulo": "NFS-e"
+      }
+    ],
+    "apoio": [
+      {
+        "competencia": "2032-03",
+        "tipo": "contrato_motorista",
+        "documentos": 1,
+        "valor_bruto": "2000.00",
+        "valor_liquido": "1800.00",
+        "vias": 0,
+        "conferir": 0,
+        "invalidos": 0,
+        "sem_valor": 0,
+        "pessoas": 1,
+        "linhas": 1,
+        "rotulo": "Contrato de motorista",
+        "cadastro": false
+      },
+      {
+        "competencia": "2032-03",
+        "tipo": "rpa",
+        "documentos": 2,
+        "valor_bruto": "200.00",
+        "valor_liquido": "180.00",
+        "vias": 0,
+        "conferir": 1,
+        "invalidos": 0,
+        "sem_valor": 0,
+        "pessoas": 2,
+        "linhas": 3,
+        "rotulo": "RPA",
+        "cadastro": false
+      }
+    ],
+    "totais": {
+      "fiscais_entrada": "1300.00",
+      "fiscais_saida": "0.00",
+      "sem_valor": 3,
+      "apoio_bruto": "2200.00",
+      "apoio_liquido": "1980.00",
+      "apoio_documentos": 3,
+      "fora": 1
+    }
+  },
+  "x_custo": "leve"
+}
