@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext } from "@/lib/auth/context";
 import { acessoAsAutorizacoes } from "@/lib/autorizacoes/servidor";
 import { pedirSituacaoFiscal } from "@/lib/serpro/situacaoFiscal";
+import { emitirGuia } from "@/lib/serpro/emissaoDeGuia";
 import { abrirMensagem, mensagemJaAberta, type MensagemAberta } from "@/lib/serpro/acompanhamento";
 
 const ehId = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
@@ -18,6 +19,21 @@ export async function pedirSituacaoFiscalAction(companyId: unknown): Promise<{ o
   if (!acesso?.podeEditar) return { ok: false, erro: "Sem permissão para pedir a situação fiscal." };
   if (!ehId(companyId)) return { ok: false, erro: "Empresa não encontrada." };
   const r = await pedirSituacaoFiscal(acesso.tenantId, acesso.ctx.userId, companyId);
+  revalidatePath(`/empresas/${companyId}`);
+  return r;
+}
+
+/**
+ * Emite uma guia federal pelo Serpro (Fase 2 enxuta, 27/10/2026): uma
+ * emissão, cobrada; o PDF vai para a pasta Guias. Quem edita no Fiscal, como
+ * a situação fiscal. Os campos vêm soltos da tela e são conferidos lá dentro.
+ */
+export async function emitirGuiaAction(companyId: unknown, campos: unknown): Promise<{ ok: true; texto: string; arquivoId: string } | { ok: false; erro: string }> {
+  const acesso = await acessoAsAutorizacoes(await getAuthContext());
+  if (!acesso?.podeEditar) return { ok: false, erro: "Sem permissão para emitir guias." };
+  if (!ehId(companyId)) return { ok: false, erro: "Empresa não encontrada." };
+  if (!campos || typeof campos !== "object" || Array.isArray(campos)) return { ok: false, erro: "Pedido inválido." };
+  const r = await emitirGuia(acesso.tenantId, acesso.ctx.userId, companyId, campos as Record<string, unknown>);
   revalidatePath(`/empresas/${companyId}`);
   return r;
 }
