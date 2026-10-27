@@ -19,6 +19,8 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   if (n.type === "GESTAO_PARADO" || n.type === "GESTAO_PRAZO" || n.type === "GESTAO_ALERTA") return "/gestao/alertas";
   // Fim (ou parada) da conferência das autorizações no Serpro: abre a lista.
   if (n.type === "SERPRO_CONFERENCIA") return "/autorizacoes";
+  // Certificado ou termo da conexão do Serpro vencendo: abre as Integrações.
+  if (n.type === "SERPRO_VENCIMENTO") return "/admin/integracoes";
   // Várias conversas do WhatsApp passadas de uma vez (02/10/2026): o aviso é um
   // só, sem conversa própria, e abre a lista das que estão com a pessoa.
   if (n.type === "WHATSAPP_HANDOFF" && !n.entityId) return "/whatsapp?ver=minhas";

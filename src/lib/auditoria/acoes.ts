@@ -431,6 +431,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "integration.save": e("salvou uma integração"),
   "integration.webhook_url": e("apontou para o Connect o endereço dos avisos da integração"),
   "integration.omie.conta": e("configurou a conta do Omie da empresa"),
+  "integration.serpro_termo": e("guardou o termo de autorização do Serpro", { comNome: false }),
 
   // ── Clientes e planos (só a 41 Tech) ───────────────────────────────────────
   "subscription.create": c("criou a assinatura do escritório", { comNome: false }),
@@ -495,6 +496,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   AccessAuthorization: "autorização de acesso",
   AccessAuthorizationGrantee: "quem recebe as autorizações",
   SerproMensagem: "mensagem da Caixa Postal",
+  SerproTermo: "termo de autorização do Serpro",
   AgentConversation: "conversa com a Ceci",
   AgentProposal: "proposta da IA",
   AssessmentTemplate: "modelo de teste",
