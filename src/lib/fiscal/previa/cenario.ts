@@ -315,7 +315,7 @@ export function executarAcao(cenario: Cenario, acao: AcaoFiscal, contexto = cena
     }
   } else if (acao.tipo === "gerar") {
     adicionarArquivo(s, contexto, acao.imposto, id, agora);
-    s.execucoes.unshift({ id: `${id}-execucao`, contexto: { ...contexto }, acao: `Gerar ${acao.imposto}`, criadoEm: agora, estado: "Concluída", log: ["Simulação executada no servidor local.", "Dados fictícios preparados.", "Prévia adicionada a Arquivos e entregas. Nenhum arquivo fiscal foi gerado."] });
+    s.execucoes.unshift({ id: `${id}-execucao`, contexto: { ...contexto }, acao: `Gerar ${acao.imposto}`, criadoEm: agora, estado: "Concluída", log: ["Simulação executada no servidor local.", "Dados fictícios preparados.", "Prévia adicionada a SPED gerados. Nenhum arquivo fiscal foi gerado."] });
     mensagem = "Nova versão de teste criada. Continue em Validação.";
   } else if (acao.tipo === "validar" || acao.tipo === "entregar") {
     const arquivo = s.arquivos.find((a) => a.id === acao.id && a.contexto.empresaId === contexto.empresaId && a.contexto.competencia === contexto.competencia && (!contexto.estabelecimentoId || !a.contexto.estabelecimentoId || a.contexto.estabelecimentoId === contexto.estabelecimentoId));
@@ -351,7 +351,7 @@ export function executarAcao(cenario: Cenario, acao: AcaoFiscal, contexto = cena
     else if (acao.tipo === "cancelar") { execucao.estado = "Cancelada"; execucao.concluidoEm = agora; execucao.log.push("Cancelada no servidor local."); mensagem = "Execução de teste cancelada."; }
     else if (acao.tipo === "processar" && execucao.parametros) return recusar("Use os controles de início e conclusão para este pedido.");
     else if (acao.tipo === "processar" && execucao.log.includes("Cenário: falha de extração.")) { execucao.estado = "Erro"; execucao.log.push("Falha simulada de extração. Solicite uma nova tentativa no Histórico."); mensagem = "Falha de teste registrada. Abra o Histórico para solicitar uma nova tentativa."; }
-    else { execucao.estado = "Concluída"; execucao.log.push("Recuperação e processamento concluídos no servidor local."); adicionarArquivo(s, execucao.contexto, execucao.acao.includes("Contribuições") ? "Contribuições" : "ICMS/IPI", `${id}-arquivo`, agora); mensagem = "Execução concluída; prévia disponível em Arquivos e entregas."; }
+    else { execucao.estado = "Concluída"; execucao.log.push("Recuperação e processamento concluídos no servidor local."); adicionarArquivo(s, execucao.contexto, execucao.acao.includes("Contribuições") ? "Contribuições" : "ICMS/IPI", `${id}-arquivo`, agora); mensagem = "Execução concluída; prévia disponível em SPED gerados."; }
   } else if (acao.tipo === "confrontar") {
     s.confrontos = s.confrontos.filter((c) => !mesmoEscopo(c.contexto, contexto));
     docs.filter((d) => ["Contrato", "Recibo", "RPA", "Fatura"].includes(d.tipo)).forEach((d, i) => s.confrontos.push({ id: `${id}-${i}`, contexto: { empresaId: d.empresaId, estabelecimentoId: d.estabelecimentoId, competencia: d.competencia }, documentoId: d.id, estado: "Sem nota", valor: d.valor }));

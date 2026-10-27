@@ -6,8 +6,12 @@ import { isFullWrite } from "@/lib/auth/papeis";
 import { logAudit } from "@/lib/audit";
 import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestao, exigirOperacao, type Contexto } from "./contexto";
 import { podeResponder, podeVer } from "./acesso";
-import { categoriaAtual, rascunho, strings } from "./consultas";
-import { categoriaSchema, dadosSchema, validarFormulario, parecerSchema, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Status, type DadosDoChamado } from "./regras";
+import { categoriaAtual, categorias, rascunho, strings } from "./consultas";
+import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, indisponivel, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Status, type DadosDoChamado } from "./regras";
+import { prepararCatalogo } from "./catalogo-servidor";
+import { A_CLASSIFICAR, categoriasClassificaveis } from "./catalogo";
+import { classificar } from "./classificacao";
+import { hit } from "@/lib/rateLimit";
 import { SLA_PADRAO, somarMinutosUteis, minutosUteisEntre } from "./sla";
 import { analisar } from "./triagem";
 import { despacharEventos } from "./notificacoes";
@@ -33,6 +37,7 @@ export async function depois(c: Contexto, id: string, action: string) {
 }
 export async function criarRascunho(c: Contexto) {
   exigirAbertura(c);
+  await prepararCatalogo(c.ctx.tenantId);
   return getPrisma().helpdeskDraft.create({ data: { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, payload: {} }, select: { id: true, version: true } });
 }
 async function conferirOrigem(c: Contexto, dados: DadosDoChamado) {
@@ -42,17 +47,57 @@ async function conferirOrigem(c: Contexto, dados: DadosDoChamado) {
 }
 export async function salvarRascunho(c: Contexto, id: string, version: number, input: unknown) {
   exigirAbertura(c);
-  const dados = dadosSchema.parse(input); await conferirOrigem(c, dados); await categoriaAtual(c.ctx.tenantId, dados.categoryId);
-  const result = await getPrisma().helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, submittedAt: null }, data: { payload: json(dados), version: { increment: 1 }, review: Prisma.DbNull, reviewVersion: null, analysisToken: null } });
+  const dados = dadosRascunhoSchema.parse(input); await conferirOrigem(c, dados);
+  const anterior = await rascunho(c, id), payload = anterior.payload as Record<string, unknown>;
+  const mesmosDados = payload.title === dados.title && payload.description === dados.description && payload.requesterSectorCode === dados.requesterSectorCode;
+  const classificacao = mesmosDados ? payload._classificacao : null;
+  // O navegador não pode forjar uma classificação. Preserva apenas a salva
+  // pelo servidor para o mesmo conteúdo, incluindo campos complementares.
+  dados.categoryId = classificacao ? String(payload.categoryId) : "";
+  const result = await getPrisma().helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, submittedAt: null }, data: { payload: json({ ...dados, ...(classificacao ? { _classificacao: classificacao } : {}) }), version: { increment: 1 }, review: Prisma.DbNull, reviewVersion: null, analysisToken: null } });
   if (result.count !== 1) throw desatualizado();
   return { version: version + 1 };
+}
+async function classificarRascunho(c: Contexto, id: string, version: number, forcar = false) {
+  const d = await rascunho(c, id);
+  if (d.ticket) return d;
+  if (d.version !== version) throw desatualizado();
+  const dados = dadosRascunhoSchema.parse(d.payload), payload = d.payload as Record<string, unknown>;
+  if (payload._classificacao && dados.categoryId && !forcar) return d;
+  await conferirOrigem(c, dados);
+  const limite = hit(`helpdesk-classificacao:${c.ctx.tenantId}:${c.ctx.userId}`, 10, 60000);
+  if (!limite.allowed) throw new Error("Limite de classificações atingido. Aguarde um minuto e tente novamente.");
+  const token = randomUUID();
+  const reserva = await getPrisma().helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, submittedAt: null, OR: [{ analysisToken: null }, { analysisStartedAt: { lt: new Date(Date.now() - 60000) } }] }, data: { analysisToken: token, analysisStartedAt: new Date() } });
+  if (reserva.count !== 1) throw new Error("Já há uma análise em andamento. Aguarde ou atualize a página.");
+  try {
+    // Rascunhos anteriores à classificação automática também precisam da
+    // lista e da categoria de contingência ao serem retomados.
+    await prepararCatalogo(c.ctx.tenantId);
+    const cats = (await categorias(c, true)).map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id, version: cat.version }));
+    const resultado = await classificar({ tenantId: c.ctx.tenantId, userId: c.ctx.userId, draftId: id }, dados, cats, d.messages);
+    const categoryId = resultado.categoryId ?? cats.find(cat => cat.name === A_CLASSIFICAR && cat.active)?.id;
+    if (!categoryId) throw new Error("A categoria A classificar está indisponível. Peça ao gestor para reativá-la.");
+    const escolhida = cats.find(cat => cat.id === categoryId)!;
+    await getPrisma().$transaction(async tx => {
+      const atuais = await tx.helpdeskCategory.findMany({ where: { tenantId: c.ctx.tenantId } });
+      if (!atuais.some(cat => cat.id === escolhida.id && cat.active && cat.version === escolhida.version)
+        || (resultado.categoryId && !categoriasClassificaveis(atuais).some(cat => cat.id === escolhida.id))) throw desatualizado();
+      const r = await tx.helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, analysisToken: token, submittedAt: null }, data: { payload: json({ ...dados, categoryId, _classificacao: resultado }), version: { increment: 1 }, review: Prisma.DbNull, reviewVersion: null, analysisToken: null } });
+      if (r.count !== 1) throw desatualizado();
+    });
+  } finally {
+    await getPrisma().helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, analysisToken: token }, data: { analysisToken: null } });
+  }
+  return rascunho(c, id);
 }
 export async function finalizarRascunho(c: Contexto, id: string, version: number, semAnalise = false) {
   c = { ...c, config: await configDoHelpdesk(c.ctx.tenantId) };
   if (!c.config.enabled) throw new Error("O módulo de chamados não está disponível neste escritório.");
-  const d = await rascunho(c, id);
+  let d = await rascunho(c, id);
   if (d.ticket) return { ticketId: d.ticket.id };
   exigirAbertura(c);
+  d = await classificarRascunho(c, id, version); version = d.version;
   const dados = dadosSchema.parse(d.payload); await conferirOrigem(c, dados);
   const { categoria } = await categoriaAtual(c.ctx.tenantId, dados.categoryId);
   validarFormulario(dados, categoria, d.attachments);
@@ -79,7 +124,7 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
     await tx.helpdeskAttachment.updateMany({ where: { tenantId: c.ctx.tenantId, draftId: id, ticketId: null }, data: { ticketId: ticket.id } });
     if (cat.checklistTemplate.length) await tx.helpdeskChecklistItem.createMany({ data: cat.checklistTemplate.map(i => ({ tenantId: c.ctx.tenantId, ticketId: ticket.id, key: i.key, label: i.label })) });
     if (cat.requiresApproval) await tx.helpdeskApproval.create({ data: { tenantId: c.ctx.tenantId, ticketId: ticket.id, cycleNumber: 1 } });
-    await evento(tx, c.ctx.tenantId, ticket.id, c.ctx.userId, "created", { semAnalise });
+    await evento(tx, c.ctx.tenantId, ticket.id, c.ctx.userId, "created", { semAnalise, classificacao: (d.payload as Record<string, unknown>)._classificacao });
     return ticket.id;
   });
   await depois(c, ticketId, "created"); return { ticketId };
@@ -95,16 +140,21 @@ export async function avaliarRascunho(c: Contexto, id: string, version: number, 
     });
     version++;
   }
-  const d = await rascunho(c, id);
+  let d = await rascunho(c, id);
   if (d.ticket) return { ticketId: d.ticket.id, version: d.version };
   if (d.version !== version) throw desatualizado();
+  const classificacaoAnterior = (d.payload as { _classificacao?: { categoryId: string | null } })._classificacao;
+  d = await classificarRascunho(c, id, version, resposta !== undefined || classificacaoAnterior?.categoryId === null); version = d.version;
   const dados = dadosSchema.parse(d.payload); await conferirOrigem(c, dados);
   const { row, categoria } = await categoriaAtual(c.ctx.tenantId, dados.categoryId);
-  validarFormulario(dados, categoria, d.attachments);
+  let pendencia = "";
+  try { validarFormulario(dados, categoria, d.attachments); } catch (e) { pendencia = e instanceof Error ? e.message : "Confira os campos da categoria."; }
   const token = randomUUID(), agora = new Date();
-  const reserva = await getPrisma().helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, submittedAt: null, OR: [{ analysisToken: null }, { analysisStartedAt: { lt: new Date(agora.getTime() - 45000) } }] }, data: { analysisToken: token, analysisStartedAt: agora } });
+  const reserva = await getPrisma().helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, submittedAt: null, OR: [{ analysisToken: null }, { analysisStartedAt: { lt: new Date(agora.getTime() - 70000) } }] }, data: { analysisToken: token, analysisStartedAt: agora } });
   if (reserva.count !== 1) throw new Error("Já há uma análise em andamento. Aguarde ou atualize a página.");
-  const parecer = await analisar({ tenantId: c.ctx.tenantId, userId: c.ctx.userId, draftId: id }, dados, categoria, d.messages, d.attachments);
+  const parecer = pendencia ? { status: "needs_information" as const, summary: "Categoria identificada. Complete os campos e evidências indicados no formulário para enviar.", questions: [pendencia], attachments: [] }
+    : categoria.name === A_CLASSIFICAR ? indisponivel("A classificação automática está indisponível ou precisa de mais contexto. Você pode detalhar o pedido e tentar novamente ou enviar como A classificar para a equipe.")
+    : await analisar({ tenantId: c.ctx.tenantId, userId: c.ctx.userId, draftId: id }, dados, categoria, d.messages, d.attachments);
   await getPrisma().$transaction(async tx => {
     const categoriaAindaAtual = await tx.helpdeskCategory.count({ where: { tenantId: c.ctx.tenantId, id: row.id, version: row.version, active: true } });
     if (!categoriaAindaAtual) throw desatualizado();
@@ -113,7 +163,7 @@ export async function avaliarRascunho(c: Contexto, id: string, version: number, 
     await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "assistant", body: [parecer.summary, ...parecer.questions].join("\n\n") } });
   });
   if (parecer.status === "sufficient") return { ...await finalizarRascunho(c, id, version), version };
-  return { parecer, version };
+  return { parecer, version, dados, categorias: (await categorias(c, true)).map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id })) };
 }
 
 export async function paraAgir(tx: Tx, c: Contexto, id: string, version: number) {
@@ -152,15 +202,19 @@ async function mudarStatus(tx: Tx, c: Contexto, t: Awaited<ReturnType<typeof par
 }
 
 export async function comentar(c: Contexto, id: string, version: number, input: unknown) {
-  const dados = z.object({ requestId: z.uuid(), body: z.string().trim().min(1).max(15000), internal: z.boolean().default(false) }).parse(input);
+  // Arquivos enviados junto com a mensagem (26/10/2026): sobem antes pela rota de
+  // anexos e chegam aqui pelos ids, para ficarem presos à mensagem na conversa.
+  const { attachmentIds, ...dados } = z.object({ requestId: z.uuid(), body: z.string().trim().max(15000).default(""), internal: z.boolean().default(false), attachmentIds: ids.default([]) }).parse(input);
+  if (!dados.body && !attachmentIds.length) throw new Error("Escreva uma mensagem ou anexe um arquivo.");
   await getPrisma().$transaction(async tx => {
     await travarEscritorio(tx, c.ctx.tenantId);
     if (await tx.helpdeskComment.findFirst({ where: { tenantId: c.ctx.tenantId, ticketId: id, requestId: dados.requestId, authorId: c.ctx.userId } })) return;
     const t = await paraAgir(tx, c, id, version);
     if (!podeResponder(c.ctx, c.config, { ...t, approverIds: strings(t.approverIds) }, t.status, dados.internal)) throw new Error("Não é possível responder neste estado ou com este acesso.");
     const comentario = await tx.helpdeskComment.create({ data: { tenantId: c.ctx.tenantId, ticketId: id, authorId: c.ctx.userId, ...dados } });
+    if (attachmentIds.length && (await tx.helpdeskAttachment.updateMany({ where: { tenantId: c.ctx.tenantId, ticketId: id, id: { in: attachmentIds }, uploadedById: c.ctx.userId, commentId: null, internal: dados.internal }, data: { commentId: comentario.id } })).count !== attachmentIds.length) throw new Error("Os arquivos não puderam ser ligados à mensagem. Atualize a página e tente novamente.");
     if (!dados.internal && aguardandoSolicitante(t.status) && !c.ctx.sectors.includes(c.config.sectorCode) && !isFullWrite(c.ctx.role)) await mudarStatus(tx, c, t, "EM_ANDAMENTO");
-    await evento(tx, c.ctx.tenantId, id, c.ctx.userId, "comment", { commentId: comentario.id }, dados.internal);
+    await evento(tx, c.ctx.tenantId, id, c.ctx.userId, "comment", { commentId: comentario.id, anexos: attachmentIds.length }, dados.internal);
   });
   await depois(c, id, "comment");
 }
@@ -201,7 +255,7 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
       if (operacao === "status") await mudarStatus(tx, c, t, z.enum(STATUS).parse(valor));
       else if (operacao === "assumir") {
         await tx.helpdeskAssignee.upsert({ where: { tenantId_ticketId_userId: { tenantId, ticketId: id, userId: c.ctx.userId } }, create: { tenantId, ticketId: id, userId: c.ctx.userId }, update: {} });
-        await evento(tx, tenantId, id, c.ctx.userId, "assignees");
+        await evento(tx, tenantId, id, c.ctx.userId, "assignees", { assumiu: true });
       } else if (operacao === "responsaveis" || operacao === "participantes") {
         exigirGestao(c); const escolhidos = ids.parse(valor);
         const validos = await tx.user.findMany({ where: { tenantId, active: true, id: { in: escolhidos }, ...(operacao === "responsaveis" ? { role: { not: "READONLY" }, sectors: { some: { sectorCode: c.config.sectorCode } } } : {}) }, select: { id: true } });
@@ -213,7 +267,7 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
           await tx.helpdeskParticipant.deleteMany({ where: { tenantId, ticketId: id } });
           if (escolhidos.length) await tx.helpdeskParticipant.createMany({ data: escolhidos.map(userId => ({ tenantId, ticketId: id, userId })) });
         }
-        await evento(tx, tenantId, id, c.ctx.userId, operacao === "responsaveis" ? "assignees" : "participants");
+        await evento(tx, tenantId, id, c.ctx.userId, operacao === "responsaveis" ? "assignees" : "participants", { userIds: escolhidos });
       } else if (operacao === "prioridade") {
         await tx.helpdeskTicket.update({ where: { id }, data: { priority: z.enum(PRIORIDADES).parse(valor) } });
         await evento(tx, tenantId, id, c.ctx.userId, "priority", { priority: valor });

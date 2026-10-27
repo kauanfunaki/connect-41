@@ -1,0 +1,24 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/arquivos/103/apurar-cte?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {}
+  },
+  "resposta": {
+    "status": 200,
+    "corpo": {
+      "arquivo_id": 103,
+      "qtd_cte": 3,
+      "valor_total": "10416.67",
+      "segundos": "0.00",
+      "series": 2
+    },
+    "x_custo": "pesada"
+  }
+}

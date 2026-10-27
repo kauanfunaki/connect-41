@@ -11,7 +11,7 @@ import { anexosDoChamado } from "./armazenamento";
 import { depois, evento, paraAgir, travarEscritorio } from "./comandos";
 
 export async function enviarAnexo(c: Contexto, form: FormData) {
-  const d = z.object({ id: z.uuid(), draftId: z.string().min(1).max(191), ticketId: z.string().max(191).optional(), version: z.coerce.number().int().nonnegative(), attachmentKey: z.string().max(80).nullable(), internal: z.boolean() }).parse({ id: form.get("id"), draftId: form.get("draftId"), ticketId: form.get("ticketId") || undefined, version: form.get("version"), attachmentKey: form.get("attachmentKey") || null, internal: form.get("internal") === "1" });
+  const d = z.object({ id: z.uuid(), draftId: z.string().min(1).max(191), ticketId: z.string().max(191).optional(), version: z.coerce.number().int().nonnegative(), attachmentKey: z.string().max(80).nullable(), internal: z.boolean(), mensagem: z.boolean() }).parse({ id: form.get("id"), draftId: form.get("draftId"), ticketId: form.get("ticketId") || undefined, version: form.get("version"), attachmentKey: form.get("attachmentKey") || null, internal: form.get("internal") === "1", mensagem: form.get("mensagem") === "1" });
   const arquivo = form.get("file");
   if (!(arquivo instanceof File) || arquivo.size === 0 || arquivo.size > 10 * 1024 * 1024) throw new Error("Envie um arquivo de até 10 MB.");
   const sha256 = createHash("sha256").update(Buffer.from(await arquivo.arrayBuffer())).digest("hex");
@@ -35,7 +35,9 @@ export async function enviarAnexo(c: Contexto, form: FormData) {
         if (r.count !== 1) throw new Error("O rascunho mudou. Atualize a página.");
       }
       await tx.helpdeskAttachment.create({ data: { id: d.id, tenantId: c.ctx.tenantId, draftId: d.draftId, ticketId: d.ticketId ?? null, uploadedById: c.ctx.userId, sha256, attachmentKey: d.attachmentKey, internal: d.ticketId ? d.internal : false, ...gravados.anexos[0] } });
-      if (d.ticketId) await evento(tx, c.ctx.tenantId, d.ticketId, c.ctx.userId, "attachment", {}, d.internal);
+      // Arquivo que segue com uma mensagem não gera aviso próprio: o aviso é o
+      // da mensagem, que liga o arquivo a ela logo depois (26/10/2026).
+      if (d.ticketId && !d.mensagem) await evento(tx, c.ctx.tenantId, d.ticketId, c.ctx.userId, "attachment", {}, d.internal);
     });
   } catch (err) { await anexosDoChamado.apagarAnexosGravados(gravados.anexos); throw err; }
   if (d.ticketId) await depois(c, d.ticketId, "attachment");

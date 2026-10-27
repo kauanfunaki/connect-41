@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ gerar: vi.fn(), ler: vi.fn(), hit: vi.fn() }));
-vi.mock("@/lib/ai", () => ({ gerarEstruturado: mocks.gerar }));
+vi.mock("./ia-fallback", () => ({ gerarComFallback: mocks.gerar }));
 vi.mock("./armazenamento", () => ({ anexosDoChamado: { lerAnexo: mocks.ler } }));
 vi.mock("@/lib/rateLimit", () => ({ hit: mocks.hit }));
 import { analisar, selecionarAnexos, PROMPT } from "./triagem";

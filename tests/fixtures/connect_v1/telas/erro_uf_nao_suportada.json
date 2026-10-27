@@ -1,0 +1,8 @@
+{
+  "status": 422,
+  "corpo": {
+    "erro": "DCIP e DIME são obrigações de Santa Catarina; este estabelecimento não é de SC",
+    "codigo": "uf_nao_suportada"
+  },
+  "x_custo": "leve"
+}

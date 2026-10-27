@@ -7,6 +7,106 @@ datasource db {
   provider = "mysql"
 }
 
+enum TechInternalType {
+  BUG
+  IMPROVEMENT
+  FEATURE
+  TEST
+  MIGRATION
+}
+
+enum TechInternalStatus {
+  PENDING
+  IN_PROGRESS
+  VALIDATION
+  DONE
+  CANCELED
+}
+
+enum TechInternalSystemMode {
+  NONE
+  EXISTING
+  NEW
+}
+
+model TechInternalTool {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String   @db.VarChar(120)
+  active    Boolean  @default(true)
+  version   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  items     TechInternalItem[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@index([tenantId, active])
+  @@map("tech_internal_tools")
+}
+
+model TechInternalItem {
+  id            String                 @id @default(uuid())
+  tenantId      String
+  title         String                 @db.VarChar(200)
+  description   String?                @db.Text
+  type          TechInternalType
+  priority      Int                    @default(1)
+  status        TechInternalStatus     @default(PENDING)
+  systemMode    TechInternalSystemMode @default(NONE)
+  toolId        String?
+  assigneeId    String?
+  dueDate       DateTime?              @db.Date
+  version       Int                    @default(0)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id])
+  tool          TechInternalTool?      @relation(fields: [tenantId, toolId], references: [tenantId, id], onDelete: Restrict)
+  assignee      User?                  @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  comments      TechInternalComment[]
+  changes       TechInternalChange[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, status, priority, dueDate])
+  @@index([tenantId, toolId])
+  @@index([tenantId, assigneeId])
+  @@map("tech_internal_items")
+}
+
+model TechInternalComment {
+  id         String   @id @default(uuid())
+  tenantId   String
+  itemId     String
+  authorId   String
+  authorName String   @db.VarChar(120)
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  item       TechInternalItem @relation(fields: [tenantId, itemId], references: [tenantId, id])
+
+  @@index([tenantId, itemId, createdAt])
+  @@map("tech_internal_comments")
+}
+
+model TechInternalChange {
+  id         String   @id @default(uuid())
+  tenantId   String
+  itemId     String
+  authorId   String
+  authorName String   @db.VarChar(120)
+  /// Versão resultante e valores legíveis no momento da alteração.
+  version    Int
+  changes    Json
+  createdAt  DateTime @default(now())
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  item       TechInternalItem @relation(fields: [tenantId, itemId], references: [tenantId, id])
+
+  @@unique([tenantId, itemId, version])
+  @@index([tenantId, itemId, createdAt])
+  @@map("tech_internal_changes")
+}
+
 /// Conta compartilhada do escritório. A credencial existe somente em TenantIntegration.configEnc.
 model GithubConnection {
   id                   String @id @default(uuid())
@@ -218,6 +318,20 @@ model OpsApiCredential {
   updatedAt DateTime @updatedAt
   tenant Tenant @relation(fields: [tenantId], references: [id])
   @@map("ops_api_credentials")
+}
+
+/// Chaves adicionais, com revogação individual. A chave original é preservada.
+model OpsApiKey {
+  id String @id @default(uuid())
+  tenantId String
+  name String @db.VarChar(120)
+  tokenHash String? @unique @db.Char(64)
+  version Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  @@index([tenantId, createdAt])
+  @@map("ops_api_keys")
 }
 
 model OpsEvent {
@@ -982,6 +1096,11 @@ enum TrainingParticipantStatus {
 // ─── Tenancy + Auth ──────────────────────────────────────────────────────────
 
 model Tenant {
+  opsApiKeys OpsApiKey[]
+  techInternalTools TechInternalTool[]
+  techInternalItems TechInternalItem[]
+  techInternalComments TechInternalComment[]
+  techInternalChanges TechInternalChange[]
   opsWatchers             OpsWatcher[]
   opsApiCredential        OpsApiCredential?
   helpdeskRequesterSectors HelpdeskRequesterSector[]
@@ -1070,6 +1189,7 @@ model Tenant {
   meetings                  Meeting[]
   agendaConfig              TenantAgendaConfig?
   aparencia                 TenantAparencia?
+  enviosConfig              TenantEnviosConfig?
   userAgendaConfigs         UserAgendaConfig[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
@@ -1401,6 +1521,7 @@ model Subscription {
 }
 
 model User {
+  techInternalAssignments TechInternalItem[]
   opsWatchers                 OpsWatcher[]
   id           String   @id @default(uuid())
   tenantId     String
@@ -3112,6 +3233,14 @@ model FiscalDocument {
   /// os números do XML não fecham, e na nota que chegou sem XML (o SPED só manda
   /// o índice) ou antes desta coluna — aí as retenções se informam na edição.
   retentionsByTax Json?
+  /// As duplicatas da NF-e (`<cobr><dup>`, 23/10/2026): [{ "numero": "001",
+  /// "vencimento": "2026-06-08", "valor": "333.34" }], o formato do motor — ver
+  /// src/lib/fiscal/duplicatas.ts. Vêm do XML no upload e do campo `duplicatas`
+  /// do índice do SPED. É o que faz a conta a pagar da nota de compra nascer
+  /// parcelada (src/lib/financeiro/parcelasDaNota.ts). `[]` é nota lida e sem
+  /// cobrança; nulo é "a nota não disse" — NFS-e, CT-e, linha parcial do SPED ou
+  /// nota anterior à coluna —, e a conta nasce como sempre.
+  installments    Json?
   issuedAt        DateTime
 
   /// Competência "AAAA-MM" — string e não data, porque é agrupador de mês e não
@@ -3181,7 +3310,8 @@ model FiscalDocument {
   tenant       Tenant        @relation(fields: [tenantId], references: [id])
   company      Company       @relation(fields: [companyId], references: [id])
   uploadedBy   User?         @relation(fields: [uploadedById], references: [id])
-  financeEntry FinanceEntry?
+  /// As contas que a nota gerou: uma, ou uma por duplicata (23/10/2026).
+  financeEntries FinanceEntry[]
   /// A emissão pelo Connect (via Omie) que gerou esta nota, quando foi assim.
   omieEmissao  OmieEmissao?
 
@@ -3432,9 +3562,18 @@ model FinanceEntry {
   /// (vencida, a vencer) continua pelo vencimento.
   forecastDate DateTime?
 
-  /// Documento fiscal que originou o lançamento. **1:1**: relançar o mesmo
-  /// documento duplicaria valor no financeiro, e o unique é quem impede.
-  fiscalDocumentId String? @unique
+  /// Documento fiscal que originou o lançamento. **1:N** desde 23/10/2026: a
+  /// conta que nasce parcelada pelas duplicatas da nota tem todas as parcelas
+  /// ligadas a ela (a trava da edição, o cancelamento e o estorno valem para
+  /// cada uma). Relançar o mesmo documento duplicaria valor no financeiro — o
+  /// que impede é o unique de (`fiscalDocumentId`, `fiscalDocumentInstallment`).
+  fiscalDocumentId String?
+  /// A posição desta conta entre as que a nota gerou: 1 na conta única e na 1ª
+  /// parcela, 2..N nas outras. **Não nulo, padrão 1**, de propósito: todo
+  /// lançamento de nota que não diga a posição é o 1º, e o segundo clique de
+  /// "lançar" bate no unique antes de qualquer parcela nascer. Sem nota
+  /// (`fiscalDocumentId` nulo) o número não significa nada e o unique não casa.
+  fiscalDocumentInstallment Int @default(1)
 
   /// Título do Omie que originou o lançamento (`nCodTitulo` dos movimentos
   /// financeiros). É a chave da sincronização: o mesmo título lido de novo
@@ -3573,6 +3712,8 @@ model FinanceEntry {
   @@unique([companyId, omieTitleId])
   @@unique([companyId, omieMovementId])
   @@unique([cardAccountId, cardCycle])
+  /// A guarda do "lançar" da nota (1:N, 23/10/2026) — ver `fiscalDocumentInstallment`.
+  @@unique([fiscalDocumentId, fiscalDocumentInstallment])
   @@index([companyId, omieAccountId, omieReconciledAt])
   @@index([tenantId, companyId, competence])
   @@index([tenantId, companyId, kind, status])
@@ -6293,6 +6434,25 @@ model TenantAparencia {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("tenant_aparencias")
+}
+
+// O padrão do escritório para os envios ao cliente (23/10/2026): o lembrete
+// de não lido que um envio novo já traz escolhido (e quem envia ainda pode
+// trocar, envio a envio). Administração › Portal do cliente › Envios. Leitura
+// em src/lib/envios/lembretePadrao.ts, que nunca derruba o novo envio. Tabela
+// própria pelo mesmo motivo do TenantAgendaConfig: coluna nova em `tenants`
+// lida antes da migration derrubaria toda leitura de tenant.
+
+/// Sem linha, o envio novo vem "sem lembrete", como sempre foi.
+model TenantEnviosConfig {
+  tenantId     String   @id
+  /// 2, 5 ou 10 (`DIAS_DO_LEMBRETE`); null = sem lembrete.
+  lembreteDias Int?
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_envios_configs")
 }
 
 /// Horário próprio de uma pessoa. Sem linha, ela usa o do escritório. Por

@@ -1,0 +1,73 @@
+{
+  "status": 200,
+  "corpo": {
+    "competencia": "2032-03",
+    "mostrando_sem_credito": false,
+    "conferir": [
+      {
+        "caminho": "TESTE-TELAS/rpa.pdf",
+        "raiz": "//srv/BPO",
+        "pagina": 4,
+        "ordem": 1,
+        "tipo": "rpa",
+        "arquivo": "rpa.pdf",
+        "competencia": "2032-03",
+        "nome": "MARIA TESTE",
+        "documento": "98765432100",
+        "numero": "",
+        "data_pagamento": "2032-03-10",
+        "data_servico": "",
+        "valor_bruto": "50.00",
+        "valor_liquido": "45.00",
+        "retencoes": null,
+        "centro_custo": "",
+        "comprovante": "",
+        "categoria": "",
+        "situacao": "conferir",
+        "observacao": "",
+        "chave_negocio": "rpa|98765432100|50",
+        "valor_corrigido": null,
+        "documento_corrigido": "",
+        "corrigido_por": "",
+        "corrigido_em": null,
+        "competencia_corrigida": "",
+        "data_pagamento_corrigida": "",
+        "nome_corrigido": "",
+        "tipo_corrigido": "",
+        "categoria_corrigida": "",
+        "decisao": "",
+        "decidido_por": "",
+        "motivo_decisao": "",
+        "mesmo_documento_em": [],
+        "falta_para_aceitar": null
+      }
+    ],
+    "conferir_truncado": false,
+    "ocultos": {
+      "linhas": 0,
+      "valor": "0.00",
+      "motivos": {}
+    },
+    "duplicatas_topo": [
+      {
+        "chave_negocio": "rpa|12345678909|100",
+        "tipo": "rpa",
+        "competencia": "2032-03",
+        "nome": "JOAO TESTE",
+        "documento": "12345678909",
+        "data_pagamento": "2032-03-10",
+        "valor_bruto": "100.00",
+        "ocorrencias": 2,
+        "valor_excedente": "100.00",
+        "paginas": "rpa.pdf p.1 | rpa.pdf p.2",
+        "caminhos": "//srv/BPO/TESTE-TELAS/rpa.pdf#page=1 | //srv/BPO/TESTE-TELAS/rpa.pdf#page=2"
+      }
+    ],
+    "duplicatas_resumo": {
+      "grupos": 1,
+      "valor_excedente": "100.00",
+      "ocorrencias": 2
+    }
+  },
+  "x_custo": "leve"
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 const nova = () => `c41:${globalThis.crypto.randomUUID()}`;
 
@@ -17,4 +17,23 @@ export function useChaveDeIdempotencia(): [string, () => void, (r: { ok: boolean
     if (r.ok || r.renovarChave) setChave(nova());
   }, []);
   return [chave, renovar, depoisDe];
+}
+
+/**
+ * Uma chave por ação quando o mesmo formulário envia ações diferentes
+ * (26/10/2026): as quatro do "Executar" dividiam uma chave só, e trocar de
+ * ação depois de uma falha de rede reaproveitava a chave da outra. Mesmas
+ * regras de troca do `useChaveDeIdempotencia`, por ação.
+ */
+export function useChavesPorAcao(): [(acao: string) => string, (acao: string, r: { ok: boolean; renovarChave?: boolean }) => void] {
+  const chaves = useRef(new Map<string, string>());
+  const chaveDe = useCallback((acao: string) => {
+    const chave = chaves.current.get(acao) ?? nova();
+    chaves.current.set(acao, chave);
+    return chave;
+  }, []);
+  const depoisDe = useCallback((acao: string, r: { ok: boolean; renovarChave?: boolean }) => {
+    if (r.ok || r.renovarChave) chaves.current.delete(acao);
+  }, []);
+  return [chaveDe, depoisDe];
 }

@@ -32,6 +32,7 @@ import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { Aviso } from "@/components/ui/Aviso";
 import { Selo, tomDaVariante, type TomDoSelo } from "@/components/ui/Selo";
 import { OpsCredentialForm } from "@/components/admin/OpsCredentialForm";
+import { listarChavesOps } from "@/lib/ops/chaves";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { MODULO_OPS } from "@/lib/ops/regras";
 import { GithubIntegration } from "@/components/admin/GithubIntegration";
@@ -127,6 +128,8 @@ export default async function IntegracoesPage({
         podeGerirOps ? prisma.opsApiCredential.findUnique({ where: { tenantId: ctx.tenantId }, select: { tokenHash: true, version: true } }) : Promise.resolve(null),
       ])
     : [[], [], [], null, null, null, { labels: {} as Record<string, string> }, null];
+  const chavesOps = podeGerirOps ? await listarChavesOps(ctx.tenantId!) : [];
+  const temChaveOps = Boolean(credencialOps?.tokenHash) || chavesOps.some(c => c.hasToken);
   const prontidaoSerpro = serpro ? prontidaoDoSerpro(serpro) : null;
   const chatwootWebhookUrl =
     chatwootConnection && process.env.APP_PUBLIC_URL
@@ -193,8 +196,8 @@ export default async function IntegracoesPage({
       nome: "Ops Center — bots",
       icone: <Activity />,
       descricao: "Uma chave compartilhada pelo escritório para todas as automações do Ops Center.",
-      selo: credencialOps?.tokenHash ? { tom: "sucesso", rotulo: "Chave configurada" } : { tom: "neutro", rotulo: "Sem chave" },
-      estado: credencialOps?.tokenHash ? "ligada" : "desligada",
+      selo: temChaveOps ? { tom: "sucesso", rotulo: "Chave configurada" } : { tom: "neutro", rotulo: "Sem chave" },
+      estado: temChaveOps ? "ligada" : "desligada",
       detalhe: "Os bots continuam identificados pelo próprio slug.",
     });
     if (podeGerirGithub) blocos.push({
@@ -293,7 +296,7 @@ export default async function IntegracoesPage({
           ) : bloco.chave === "github" ? (
             <GithubIntegration />
           ) : bloco.chave === "ops_center" ? (
-            <OpsCredentialForm hasToken={Boolean(credencialOps?.tokenHash)} version={credencialOps?.version ?? 0} />
+            <OpsCredentialForm hasToken={Boolean(credencialOps?.tokenHash)} version={credencialOps?.version ?? 0} keys={chavesOps} />
           ) : bloco.chave === "chatwoot" ? (
             <div className="flex flex-col gap-5">
               <p className="text-fs-3 text-fg-secondary">

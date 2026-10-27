@@ -2,7 +2,7 @@ import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { podeAbrir, podeVerInterno, podeVer } from "./acesso";
 import type { Contexto } from "./contexto";
-import { categoriaSchema, dadosSchema, parecerSchema, PRIORIDADES, STATUS, fechado } from "./regras";
+import { categoriaSchema, dadosRascunhoSchema, parecerSchema, PRIORIDADES, STATUS, fechado } from "./regras";
 
 export const strings = (v: unknown): string[] => Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
 export async function temAcessoAoModulo(c: Contexto) {
@@ -31,9 +31,14 @@ export async function rascunho(c: Contexto, id: string) {
 }
 export async function lista(c: Contexto, filtros: Record<string, string | undefined>) {
   const page = Math.min(100000, Math.max(1, Number.parseInt(filtros.pagina ?? "1", 10) || 1));
-  const base: Prisma.HelpdeskTicketWhereInput = { AND: [whereVisivel(c),
-    filtros.q ? { OR: [{ title: { contains: filtros.q.slice(0, 255) } }, { description: { contains: filtros.q.slice(0, 255) } }] } : {},
-    filtros.categoria ? { categoryId: filtros.categoria } : {}, filtros.setor ? { requesterSectorCode: filtros.setor } : {},
+  const idsCategoria = new Set(filtros.categoria ? [filtros.categoria] : []);
+  if (filtros.categoria) {
+    const arvore = await getPrisma().helpdeskCategory.findMany({ where: { tenantId: c.ctx.tenantId }, select: { id: true, parentId: true } });
+    let mudou = true;
+    while (mudou) { mudou = false; for (const cat of arvore) if (cat.parentId && idsCategoria.has(cat.parentId) && !idsCategoria.has(cat.id)) { idsCategoria.add(cat.id); mudou = true; } }
+  }
+  const base: Prisma.HelpdeskTicketWhereInput = { AND: [whereVisivel(c), await filtroDaBusca(c, filtros.q?.trim().slice(0, 255) ?? "", filtros.em),
+    filtros.categoria ? { categoryId: { in: [...idsCategoria] } } : {}, filtros.setor ? { requesterSectorCode: filtros.setor } : {},
     filtros.responsavel ? { assignees: { some: { userId: filtros.responsavel } } } : {},
     filtros.meus === "1" ? { assignees: { some: { userId: c.ctx.userId } } } : {},
   ] };
@@ -57,6 +62,20 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
   const fila = await getPrisma().helpdeskTicket.findMany({ where: { AND: [whereVisivel(c), { status: "NA_FILA" }] }, orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true } });
   return { rows, total, page, drafts, counts: { fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, historico: historicoCount }, posicoes: new Map(fila.map((t, i) => [t.id, i + 1])), totalFila: fila.length };
 }
+// A busca procura no escopo escolhido ao lado da caixa (26/10/2026): no próprio
+// chamado (título, descrição, protocolo), no setor solicitante ou no responsável.
+async function filtroDaBusca(c: Contexto, q: string, em?: string): Promise<Prisma.HelpdeskTicketWhereInput> {
+  if (!q) return {};
+  if (em === "setor") {
+    const setores = await getPrisma().sector.findMany({ where: { tenantId: c.ctx.tenantId, OR: [{ label: { contains: q } }, { code: { contains: q } }] }, select: { code: true } });
+    return { requesterSectorCode: { in: setores.map(s => s.code) } };
+  }
+  if (em === "responsavel") {
+    const pessoas = await getPrisma().user.findMany({ where: { tenantId: c.ctx.tenantId, name: { contains: q } }, select: { id: true }, take: 200 });
+    return { assignees: { some: { userId: { in: pessoas.map(u => u.id) } } } };
+  }
+  return { OR: [{ title: { contains: q } }, { description: { contains: q } }, { id: { startsWith: q } }] };
+}
 export async function detalhe(c: Contexto, id: string) {
   const interno = podeVerInterno(c.ctx, c.config);
   const t = await getPrisma().helpdeskTicket.findFirst({ where: { AND: [whereVisivel(c), { id }] }, include: {
@@ -75,7 +94,7 @@ export async function usuarios(c: Contexto) {
   return getPrisma().user.findMany({ where: { tenantId: c.ctx.tenantId, active: true }, select: { id: true, name: true, role: true, sectors: { select: { sectorCode: true } } }, orderBy: { name: "asc" } });
 }
 export function resumoRascunho(payload: unknown) {
-  const dados = dadosSchema.safeParse(payload); return dados.success ? dados.data.title : "Novo chamado";
+  const dados = dadosRascunhoSchema.safeParse(payload); return dados.success ? dados.data.title : "Novo chamado";
 }
 export function parecerAtual(d: { version: number; reviewVersion: number | null; review: unknown }) {
   const r = parecerSchema.safeParse(d.review); return d.reviewVersion === d.version && r.success ? r.data : null;

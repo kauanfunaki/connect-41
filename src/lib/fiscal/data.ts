@@ -21,6 +21,12 @@ export type FiltroDoAcervo = {
   situacao?: FiscalDocumentSituation;
   /** Número da nota ou nome da contraparte. */
   busca?: string;
+  /**
+   * O lado do documento em que está o CNPJ (só dígitos): `emitente` é a saída
+   * desse estabelecimento, `destinatario` a entrada. É o filtro de sentido do
+   * Acervo no modo motor (API-CONNECT §11.1).
+   */
+  parte?: { lado: "emitente" | "destinatario"; documento: string };
 };
 
 const POR_PAGINA = 50;
@@ -90,6 +96,11 @@ export function whereDoFiltro(alcance: AlcanceFiscal, filtro: FiltroDoAcervo): P
     ...(filtro.tipo ? { type: filtro.tipo } : {}),
     ...(filtro.destino ? { destination: filtro.destino } : {}),
     ...(filtro.situacao ? { situation: filtro.situacao } : {}),
+    ...(filtro.parte
+      ? filtro.parte.lado === "emitente"
+        ? { issuerDocument: filtro.parte.documento }
+        : { recipientDocument: filtro.parte.documento }
+      : {}),
     ...(busca
       ? {
           OR: [
@@ -189,10 +200,14 @@ export async function obterDocumento(alcance: AlcanceFiscal, id: string) {
     include: {
       company: { select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true } },
       uploadedBy: { select: { name: true } },
-      // O lançamento vem junto: a tela precisa saber se já existe para oferecer
-      // "lançar" ou "estornar", e uma segunda consulta para isso seria uma
-      // chance a mais de as duas discordarem.
-      financeEntry: {
+      // Os lançamentos vêm junto: a tela precisa saber se já existem para
+      // oferecer "lançar" ou "estornar", e uma segunda consulta para isso seria
+      // uma chance a mais de as duas discordarem. **1:N** desde 23/10: a conta
+      // que nasce parcelada pelas duplicatas tem todas as parcelas ligadas à
+      // nota, na ordem da nota (`fiscalDocumentInstallment`); a conta única é
+      // uma lista de um.
+      financeEntries: {
+        orderBy: { fiscalDocumentInstallment: "asc" },
         select: {
           id: true,
           kind: true,
@@ -200,6 +215,10 @@ export async function obterDocumento(alcance: AlcanceFiscal, id: string) {
           closeReason: true,
           dueDate: true,
           amount: true,
+          fiscalDocumentInstallment: true,
+          // A série, quando a conta nasceu parcelada pelas duplicatas da nota.
+          recurrenceId: true,
+          recurrenceTotal: true,
           category: { select: { name: true } },
           counterparty: { select: { name: true } },
           costCenter: { select: { name: true } },

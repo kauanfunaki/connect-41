@@ -22,3 +22,21 @@ export function param(params: Record<string, string | string[] | undefined>, nom
   const v = params[nome];
   return Array.isArray(v) ? v[0] : v;
 }
+
+/**
+ * O endereço atual com mudanças: `null` tira o parâmetro. Para "tentar de
+ * novo", paginação e o clique numa linha, sem perder o resto do recorte.
+ */
+export function hrefComParams(caminho: string, params: Record<string, string | string[] | undefined>, mudancas: Record<string, string | number | null | undefined> = {}): string {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    const valor = Array.isArray(v) ? v[0] : v;
+    if (valor !== undefined && valor !== "") q.set(k, valor);
+  }
+  for (const [k, v] of Object.entries(mudancas)) {
+    if (v === null || v === undefined || v === "") q.delete(k);
+    else q.set(k, String(v));
+  }
+  const s = q.toString();
+  return s ? `${caminho}?${s}` : caminho;
+}

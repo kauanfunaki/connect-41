@@ -1,0 +1,22 @@
+{
+  "status": 200,
+  "corpo": {
+    "itens": [
+      {
+        "chave_negocio": "rpa|12345678909|100",
+        "tipo": "rpa",
+        "competencia": "2032-03",
+        "nome": "JOAO TESTE",
+        "documento": "12345678909",
+        "data_pagamento": "2032-03-10",
+        "valor_bruto": "100.00",
+        "ocorrencias": 2,
+        "valor_excedente": "100.00",
+        "paginas": "rpa.pdf p.1 | rpa.pdf p.2",
+        "caminhos": "//srv/BPO/TESTE-TELAS/rpa.pdf#page=1 | //srv/BPO/TESTE-TELAS/rpa.pdf#page=2"
+      }
+    ],
+    "proximo_cursor": null
+  },
+  "x_custo": "leve"
+}

@@ -5,6 +5,8 @@ export type StepStatus = "done" | "current" | "error" | "upcoming";
 export type StepDef = {
   label: string;
   status: StepStatus;
+  /** Disponibilidade independente da conclusão, para fluxos de consulta. */
+  disabled?: boolean;
 };
 
 type Props = {
@@ -29,22 +31,26 @@ const STATUS_LABEL: Record<StepStatus, string> = {
 // que dava pra rolar. Com wrap, etapas extras descem pra uma segunda linha em
 // vez de vazar/cortar.
 //
+// No celular (26/10/2026) as etapas empilham com a ligação vertical: com o
+// wrap, a linha de ligação ficava solta no fim e no começo de cada linha.
+// Do `sm` para cima, segue a fileira horizontal.
+//
 // Lista ordenada com `aria-current="step"`, e não `tablist`/`tab` (07/10/2026):
 // não há `tabpanel` do outro lado, e o leitor de tela anunciava "aba 1 de 6"
 // num assistente — o mesmo erro que o `SegmentedControl` descreve.
 export function Stepper({ steps, onStepClick }: Props) {
   return (
-    <ol className="flex items-center justify-center flex-wrap gap-y-3 px-6 py-5 border-b border-border">
+    <ol className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-center sm:flex-wrap sm:gap-y-3 px-6 py-5 border-b border-border">
       {steps.map((step, i) => (
-        <li key={step.label} className="flex items-center">
+        <li key={step.label} className="flex flex-col items-start sm:flex-row sm:items-center">
           <button
             type="button"
-            disabled={step.status === "upcoming"}
+            disabled={step.disabled ?? step.status === "upcoming"}
             aria-current={step.status === "current" ? "step" : undefined}
             aria-invalid={step.status === "error" ? true : undefined}
-            aria-label={`${i + 1}. ${step.label} — ${STATUS_LABEL[step.status]}`}
+            aria-label={`${i + 1}. ${step.label} — ${step.status === "upcoming" && step.disabled === false ? "disponível" : STATUS_LABEL[step.status]}`}
             onClick={() => onStepClick?.(i)}
-            className={`flex items-center gap-2.5 ${step.status === "upcoming" ? "cursor-not-allowed" : "cursor-pointer"}`}
+            className={`flex items-center gap-2.5 ${(step.disabled ?? step.status === "upcoming") ? "cursor-not-allowed" : "cursor-pointer"}`}
           >
             <span
               // Concluída e atual em tom fixo nos dois temas (07/10/2026): o
@@ -56,7 +62,7 @@ export function Stepper({ steps, onStepClick }: Props) {
                     ? "bg-brand-solid border-brand-solid text-on-brand"
                     : step.status === "error"
                       ? "bg-danger-bg border-danger text-danger"
-                      : "bg-surface-hover border-border-strong text-fg-muted opacity-50"
+                      : step.disabled === false ? "bg-surface-hover border-border-strong text-fg-secondary" : "bg-surface-hover border-border-strong text-fg-muted opacity-50"
               }`}
             >
               {i + 1}
@@ -75,7 +81,8 @@ export function Stepper({ steps, onStepClick }: Props) {
           </button>
           {i < steps.length - 1 && (
             <span
-              className={`w-8 sm:w-14 h-[1.5px] mx-2.5 flex-shrink-0 ${
+              aria-hidden
+              className={`ml-[14px] my-1 h-4 w-[1.5px] sm:ml-2.5 sm:mr-2.5 sm:my-0 sm:h-[1.5px] sm:w-14 flex-shrink-0 ${
                 step.status === "done" ? "bg-success" : "bg-border-strong"
               }`}
             />

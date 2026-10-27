@@ -1,0 +1,55 @@
+{
+  "requisicao": {
+    "metodo": "POST",
+    "caminho": "/api/connect/v1/fechamento/alugueis-imoveis/informar?cnpj_raiz=17122471",
+    "ator": {
+      "id": "usr_teste",
+      "nome": "Kátia Souza",
+      "email": "katia@41contabil.com.br",
+      "tenant": "ten_teste"
+    },
+    "cabecalhos": {},
+    "corpo": {
+      "fornecedor": "FORNECEDOR TESTE ESCRITAS",
+      "locador_documento": "11222333000181",
+      "vigencia_inicio": "2032-01-01",
+      "vigencia_fim": "2032-12-31"
+    }
+  },
+  "resposta": {
+    "status": 200,
+    "corpo": {
+      "contrato": {
+        "fornecedor": "FORNECEDOR TESTE ESCRITAS",
+        "existe_contrato": "S",
+        "onde_esta": "",
+        "locador_nome": "",
+        "locador_documento": "11222333000181",
+        "vigencia_inicio": "2032-01-01",
+        "vigencia_fim": "2032-12-31",
+        "locataria_bld": "S",
+        "e_imovel": "S",
+        "observacao": "",
+        "informado_por": "Kátia Souza",
+        "informado_em": "2026-10-23T14:31:31+00:00",
+        "aprovado_fora_da_regra": "N",
+        "tratativa": "",
+        "so_contabil": "N",
+        "cnpj_raiz": "17122471"
+      },
+      "resultado": {
+        "pagamentos": 0,
+        "aceitos": 0,
+        "conferir": 0,
+        "bloqueados": [],
+        "fora_vigencia": 0,
+        "sem_documento": 0,
+        "sem_credito": 0
+      },
+      "registro_ids": [
+        285
+      ]
+    },
+    "x_custo": "leve"
+  }
+}

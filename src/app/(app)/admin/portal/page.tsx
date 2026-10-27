@@ -26,12 +26,16 @@ import { definirCeciDaEmpresa } from "./ceci-actions";
 import { CeciDoPortalAdmin } from "@/components/portal/CeciDoPortalAdmin";
 import { FALTA_ATUALIZAR_O_BANCO_DA_CECI, LIMITE_DE_PERGUNTAS_DO_PORTAL_POR_DIA, empresasDoPortalParaACeci, situacaoDaCeci } from "@/lib/portal/ceci";
 import { formatarReaisDeCentavos } from "@/lib/format";
+import { FALTA_ATUALIZAR_O_BANCO_DOS_ENVIOS, lerLembretePadrao } from "@/lib/envios/lembretePadrao";
+import { definirLembretePadraoDosEnvios } from "./envios-actions";
+import { LembretePadraoDosEnvios } from "@/components/portal/LembretePadraoDosEnvios";
 import Link from "next/link";
 
 const ABAS = [
   { chave: "acessos", rotulo: "Acessos", href: "/admin/portal" },
   { chave: "telas", rotulo: "Telas liberadas", href: "/admin/portal?aba=telas" },
   { chave: "ceci", rotulo: "Ceci", href: "/admin/portal?aba=ceci" },
+  { chave: "envios", rotulo: "Envios", href: "/admin/portal?aba=envios" },
 ];
 
 // O portal do cliente, do lado do escritório. Tela de administração do tenant,
@@ -52,6 +56,7 @@ export default async function AdminPortalPage({ searchParams }: { searchParams: 
   const { aba } = await searchParams;
   if (aba === "telas") return <AbaDasTelas tenantId={ctx.tenantId} somenteLeitura={ctx.subscriptionReadOnly} />;
   if (aba === "ceci") return <AbaDaCeci tenantId={ctx.tenantId} somenteLeitura={ctx.subscriptionReadOnly} />;
+  if (aba === "envios") return <AbaDosEnvios tenantId={ctx.tenantId} somenteLeitura={ctx.subscriptionReadOnly} />;
 
   const prisma = getPrisma();
   const [acessos, empresas] = await Promise.all([
@@ -210,6 +215,55 @@ async function AbaDaCeci({ tenantId, somenteLeitura }: { tenantId: string; somen
       )}
 
       <CeciDoPortalAdmin empresas={empresas ?? []} definirAction={definirCeciDaEmpresa} somenteLeitura={empresas === null || somenteLeitura} />
+    </PageContainer>
+  );
+}
+
+/**
+ * O padrão dos envios ao cliente (23/10/2026): o lembrete de não lido que um
+ * envio novo já traz escolhido. Os envios são de Solicitações › Envios, mas
+ * o que o escritório configura para o portal mora aqui — e o lembrete é o
+ * aviso que o cliente recebe no portal e por e-mail.
+ */
+async function AbaDosEnvios({ tenantId, somenteLeitura }: { tenantId: string; somenteLeitura: boolean }) {
+  const leitura = await lerLembretePadrao(tenantId);
+
+  return (
+    <PageContainer>
+      <PageHeader
+        title="Portal do cliente"
+        subtitle="O padrão dos envios de documentos ao cliente, em Solicitações › Envios."
+      />
+      <AbasDeLink abas={ABAS} ativa="envios" />
+
+      <div className="mb-5 max-w-3xl space-y-2 text-fs-2 text-fg-secondary leading-relaxed">
+        <p>
+          Com lembrete, se ninguém do cliente abrir o documento no prazo, sai um aviso só: o mesmo e-mail do envio, com o
+          texto de lembrete, e o aviso no portal.
+        </p>
+      </div>
+
+      {leitura.situacao === "sem-tabela" && (
+        <Aviso tom="atencao" className="mb-4 max-w-3xl">
+          {FALTA_ATUALIZAR_O_BANCO_DOS_ENVIOS}
+        </Aviso>
+      )}
+      {leitura.situacao === "erro" && (
+        <Aviso tom="perigo" className="mb-4 max-w-3xl">
+          Não foi possível ler o padrão dos envios agora. Atualize a página em instantes.
+        </Aviso>
+      )}
+      {somenteLeitura && (
+        <Aviso tom="atencao" className="mb-4 max-w-3xl">
+          A assinatura está em somente leitura: dá para ver, mas não para mudar.
+        </Aviso>
+      )}
+
+      <LembretePadraoDosEnvios
+        dias={leitura.dias}
+        definirAction={definirLembretePadraoDosEnvios}
+        somenteLeitura={leitura.situacao !== "ok" || somenteLeitura}
+      />
     </PageContainer>
   );
 }

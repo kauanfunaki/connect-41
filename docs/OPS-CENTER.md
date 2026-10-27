@@ -4,10 +4,10 @@ Módulo `tech_ops_center`, rota `/ops`, grupo Operação do Tech. Reproduz o pai
 
 ## Ativação
 
-1. Aplicar as migrations `20261020120000_ops_center` e `20261020230000_ops_shared_credential` no ambiente escolhido pelo responsável pelo deploy. A segunda cria uma tabela nova; não altera nem remove dados existentes. Esta implementação não aplica migrations no banco de uso do Connect.
+1. Aplicar as migrations `20261020120000_ops_center`, `20261020230000_ops_shared_credential` e `20261023120000_ops_multiple_keys` no ambiente escolhido pelo responsável pelo deploy. As duas últimas criam tabelas novas e preservam as chaves existentes. Esta implementação não aplica migrations no banco de uso do Connect.
 2. Em Administração → Setores → Tech, habilitar Ops Center para o escritório. O plano também precisa permitir o módulo caso tenha uma lista restrita.
 3. Abrir Ops Center, cadastrar cada automação e escolher seu dono. Gestores do setor e administradores podem configurar; usuários do setor e perfis de leitura podem consultar. O setor efetivo do módulo é respeitado se houver transferência.
-4. Em Administração → Integrações → Ops Center — bots, gerar a chave única do escritório e copiá-la para a configuração protegida das automações autorizadas. Ela aparece uma vez; o banco guarda apenas seu hash. Todos os bots usam a mesma chave e informam o próprio slug. Trocar a chave revoga a anterior para todos os bots; desativar uma automação preserva seu histórico e impede novos sinais e eventos.
+4. Em Administração → Integrações → Ops Center — bots, manter a chave principal ou usar **Chaves adicionais → Adicionar chave**, informando um nome. Podem coexistir duas ou mais chaves. Cada uma aparece uma única vez e tem troca/revogação própria; o banco guarda apenas o hash. Trocar ou revogar uma chave afeta somente os bots que a usam. A chave principal existente continua válida. Desativar uma automação preserva seu histórico e impede novos sinais e eventos.
 
 As chaves individuais emitidas antes desta mudança continuam válidas durante a transição para não interromper bots já configurados. Depois de trocar cada bot para a chave compartilhada, desative e reative a automação correspondente para revogar sua chave antiga.
 
@@ -15,9 +15,9 @@ O dono é um usuário ativo do mesmo escritório com acesso ao setor do módulo.
 
 ## Recebimento pelos bots
 
-Usar HTTPS e `Authorization: Bearer <chave>`. A chave só aceita dados da automação à qual pertence. Os endpoints de consulta e configuração exigem a sessão da equipe. O corpo JSON tem limite de 32 KiB.
+Usar HTTPS e `Authorization: Bearer <chave>`. Chaves compartilhadas valem para as automações ativas do mesmo escritório; as individuais antigas continuam limitadas ao seu slug. Os endpoints de consulta e configuração exigem a sessão da equipe. O corpo JSON tem limite de 32 KiB.
 
-Atividade: `POST /api/ops/watchers/<slug>/heartbeat`, sem corpo, a cada 30 segundos. Sem sinal durante três minutos a tela mostra Sem comunicação; antes do primeiro sinal, Sem sinal de atividade. O painel não inicia nem encerra processos e não lê pastas da rede.
+Atividade: `POST /api/ops/watchers/<slug>/heartbeat`, sem corpo, a cada 30 segundos. Sem sinal durante três minutos, antes do primeiro sinal ou com recebimento desativado, a tela mostra Offline. O painel não inicia nem encerra processos e não lê pastas da rede.
 
 Arquivos da pasta de rede (21/10/2026): `POST /api/ops/watchers/<slug>/arquivos`, multipart, até 10 MB por arquivo. O robô `scripts/pasta-de-rede.mjs` usa esse endpoint para guardar nos Arquivos o que acha na pasta de rede das empresas do piloto, e o Connect registra cada entrada ou recusa como evento da automação. O roteiro está em `docs/PASTA-DE-REDE.md`.
 
@@ -65,7 +65,7 @@ Os dois agentes do motor SPED (`agente.py`, um na VPS e um no Windows do escrit�
    - `OPS_SLUG` = `sped-agente-vps` na VPS e `sped-agente-windows` no Windows.
    Sem as três, o agente não envia nada e continua processando a fila normalmente.
 4. Reiniciar o agente. O heartbeat sai a cada 30 segundos, inclusive durante uma geração longa; cada pedido finalizado vira um evento (`SUCCESS` com código de saída 0, `ERROR` nos outros casos), com `eventId` `sped-fila-<id>-<uuid>`, o rótulo do estabelecimento em `client` e a mensagem da fila (nunca o log) em `errorMessage`.
-5. Conferir no `/ops`: a automação sai de "Sem sinal de atividade" no primeiro heartbeat; um pedido concluído e um com erro aparecem no histórico, e o erro avisa o dono.
+5. Conferir no `/ops`: a automação fica Online no primeiro heartbeat, ou Instável se tiver uma sinalização de instabilidade em aberto; um pedido concluído e um com erro aparecem no histórico, e o erro avisa o dono.
 
 O Ops Center só observa: pausar, reiniciar ou destravar a fila continua nas telas fiscais (Executar › Histórico › Destravar) ou no painel do motor. A saúde vista pelo próprio motor (`GET /saude`, tabela `agentes_batimento`) aparece no Painel fiscal, e as duas fontes podem divergir por alguns segundos.
 
@@ -76,6 +76,10 @@ Cada evento `ERROR` gera um aviso para o dono atual no sino/central do Connect, 
 É possível sinalizar uma instabilidade, abrir um chamado pelo fluxo existente e vincular seu ID, desde que o chamado esteja visível para quem faz o vínculo. Resolver a sinalização preserva o histórico de processamento. O módulo não cria nem transmite chamados automaticamente.
 
 Resumo e contadores usam o dia em São Paulo. Os filtros de automação, resultado e data recortam o histórico. A tela atualiza a cada 30 segundos quando visível, permite atualização manual e informa falhas sem apresentar os dados anteriores como atuais. Desativação de usuário interrompe novos avisos; exclusão do usuário deixa a automação sem responsável.
+
+A visualização **Automações** mostra cartões com responsável, sucessos e erros do dia, último sinal e caminhos de entrada/saída. A busca local aceita nome, responsável, descrição, cliente e identificador. Os filtros Online, Instável e Offline recortam somente os cartões; o resumo do dia continua considerando todas as automações do recorte Todas/Minhas. Online significa comunicação recente sem instabilidade sinalizada; Instável indica comunicação recente com sinalização em aberto. Offline inclui recebimento desativado, nenhum sinal recebido e ausência de comunicação por pelo menos três minutos. Online agora conta todas as automações com comunicação recente, inclusive as instáveis.
+
+A visualização **Histórico** mantém os filtros e a paginação dos arquivos processados, com tabela no computador e cartões em telas menores. Links de notificações com filtros abrem diretamente o histórico. Entrada e Saída copiam os caminhos configurados; ficam indisponíveis quando a pasta não foi informada. A tela segue as fontes, cores, ícones e temas do Connect; a animação de atividade respeita a preferência por movimento reduzido.
 
 ## Verificação local
 
