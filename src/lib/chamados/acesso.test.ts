@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AuthContext } from "@/lib/auth/context";
-import { podeAbrir, podeVer, podeVerInterno, podeOperar, podeGerenciar, podeResponder } from "./acesso";
+import { podeAbrir, podeVer, podeVerInterno, podeOperar, podeGerenciar, podeResponder, escoposDaBusca } from "./acesso";
 
 const ctx: AuthContext = { userId: "u", tenantId: "t", homeTenantId: "t", role: "SECTOR_USER", sectors: ["fiscal"], activeSector: "fiscal", subscriptionReadOnly: false, canSelfRegularizeSubscription: false };
 const config = { enabled: true, sectorCode: "tech", requesterSectors: ["fiscal"] };
@@ -54,5 +54,11 @@ describe("acesso aos chamados", () => {
   it("módulo desligado impede leitura, abertura e atendimento", () => {
     const off = { ...config, enabled: false };
     expect(podeVer({ ...ctx, role: "ADMIN" }, off, alvo)).toBe(false); expect(podeAbrir(ctx, off)).toBe(false); expect(podeOperar({ ...ctx, role: "ADMIN" }, off)).toBe(false);
+  });
+  it("a busca da lista tem escopos por papel: só o chamado, o solicitante para o coordenador, tudo para a equipe", () => {
+    expect(escoposDaBusca(ctx, config)).toEqual(["chamado"]);
+    expect(escoposDaBusca({ ...ctx, role: "SECTOR_ADMIN" }, config)).toEqual(["chamado", "solicitante"]);
+    expect(escoposDaBusca({ ...ctx, sectors: ["tech"] }, config)).toEqual(["chamado", "solicitante", "setor", "responsavel"]);
+    expect(escoposDaBusca({ ...ctx, role: "ADMIN" }, config)).toContain("responsavel");
   });
 });

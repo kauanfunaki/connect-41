@@ -1,6 +1,6 @@
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { podeAbrir, podeVerInterno, podeVer } from "./acesso";
+import { podeAbrir, podeVerInterno, podeVer, escoposDaBusca, type EscopoDaBusca } from "./acesso";
 import type { Contexto } from "./contexto";
 import { categoriaSchema, dadosRascunhoSchema, parecerSchema, tituloDaDescricao, PRIORIDADES, STATUS, fechado } from "./regras";
 
@@ -67,9 +67,15 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
   return { rows, total, page, drafts, counts: { abertos: abertosCount, fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, historico: historicoCount }, posicoes: new Map(fila.map((t, i) => [t.id, i + 1])), totalFila: fila.length };
 }
 // A busca procura no escopo escolhido ao lado da caixa (26/10/2026): no próprio
-// chamado (título, descrição, protocolo), no setor solicitante ou no responsável.
+// chamado (título, descrição, protocolo), em quem abriu, no setor solicitante ou
+// no responsável. Um escopo que o papel não tem vira busca no chamado.
 async function filtroDaBusca(c: Contexto, q: string, em?: string): Promise<Prisma.HelpdeskTicketWhereInput> {
   if (!q) return {};
+  if (!escoposDaBusca(c.ctx, c.config).includes(em as EscopoDaBusca)) em = "chamado";
+  if (em === "solicitante") {
+    const pessoas = await getPrisma().user.findMany({ where: { tenantId: c.ctx.tenantId, name: { contains: q } }, select: { id: true }, take: 200 });
+    return { createdById: { in: pessoas.map(u => u.id) } };
+  }
   if (em === "setor") {
     const setores = await getPrisma().sector.findMany({ where: { tenantId: c.ctx.tenantId, OR: [{ label: { contains: q } }, { code: { contains: q } }] }, select: { code: true } });
     return { requesterSectorCode: { in: setores.map(s => s.code) } };
