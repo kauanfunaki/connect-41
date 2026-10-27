@@ -42,25 +42,29 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
     filtros.responsavel ? { assignees: { some: { userId: filtros.responsavel } } } : {},
     filtros.meus === "1" ? { assignees: { some: { userId: c.ctx.userId } } } : {},
   ] };
+  // Quem não acompanha a fila (27/10/2026) vê só "Abertos" e o Histórico: as
+  // abas de atendimento são da equipe responsável e do administrador.
+  const padrao = podeVerInterno(c.ctx, c.config) ? "fila" : "abertos";
   const estadosPorAba: Record<string, Prisma.HelpdeskTicketWhereInput> = {
+    abertos: { status: { notIn: ["RESOLVIDO", "CANCELADO"] } },
     fila: { status: { in: ["ABERTO", "NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_APROVACAO"] } },
     aguardando: { status: { in: ["AGUARDANDO_USUARIO", "AGUARDANDO_REQUERENTE"] } },
     pausa: { status: "STANDBY" },
     historico: { status: { in: ["RESOLVIDO", "CANCELADO"] } },
   };
   const statusFiltro = filtros.status && STATUS.includes(filtros.status as never) ? { status: filtros.status as never } : null;
-  const filtroAba = statusFiltro ?? estadosPorAba[filtros.aba ?? "fila"] ?? (filtros.encerrados === "1" ? estadosPorAba.historico : estadosPorAba.fila);
+  const filtroAba = statusFiltro ?? estadosPorAba[filtros.aba ?? padrao] ?? (filtros.encerrados === "1" ? estadosPorAba.historico : estadosPorAba[padrao]);
   const filtroPrioridade = filtros.prioridade && PRIORIDADES.includes(filtros.prioridade as never) ? { priority: filtros.prioridade as never } : {};
   const where: Prisma.HelpdeskTicketWhereInput = { AND: [base, filtroAba, filtroPrioridade] };
   const countAba = (aba: string) => getPrisma().helpdeskTicket.count({ where: { AND: [base, estadosPorAba[aba]] } });
   const [rows, total, drafts] = await Promise.all([
-    getPrisma().helpdeskTicket.findMany({ where, include: { category: true, assignees: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 } }, orderBy: filtros.status === "NA_FILA" || (!filtros.status && (filtros.aba ?? "fila") === "fila") ? [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }] : [{ updatedAt: "desc" }, { id: "desc" }], take: 25, skip: (page - 1) * 25 }),
+    getPrisma().helpdeskTicket.findMany({ where, include: { category: true, assignees: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 } }, orderBy: filtros.status === "NA_FILA" || (!filtros.status && (filtros.aba ?? padrao) === "fila") ? [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }] : [{ updatedAt: "desc" }, { id: "desc" }], take: 25, skip: (page - 1) * 25 }),
     getPrisma().helpdeskTicket.count({ where }),
     getPrisma().helpdeskDraft.findMany({ where: { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, submittedAt: null }, orderBy: { updatedAt: "desc" }, take: 20 }),
   ]);
-  const [filaCount, aguardandoCount, pausaCount, historicoCount] = await Promise.all(["fila", "aguardando", "pausa", "historico"].map(countAba));
+  const [abertosCount, filaCount, aguardandoCount, pausaCount, historicoCount] = await Promise.all(["abertos", "fila", "aguardando", "pausa", "historico"].map(countAba));
   const fila = await getPrisma().helpdeskTicket.findMany({ where: { AND: [whereVisivel(c), { status: "NA_FILA" }] }, orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true } });
-  return { rows, total, page, drafts, counts: { fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, historico: historicoCount }, posicoes: new Map(fila.map((t, i) => [t.id, i + 1])), totalFila: fila.length };
+  return { rows, total, page, drafts, counts: { abertos: abertosCount, fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, historico: historicoCount }, posicoes: new Map(fila.map((t, i) => [t.id, i + 1])), totalFila: fila.length };
 }
 // A busca procura no escopo escolhido ao lado da caixa (26/10/2026): no próprio
 // chamado (título, descrição, protocolo), no setor solicitante ou no responsável.
