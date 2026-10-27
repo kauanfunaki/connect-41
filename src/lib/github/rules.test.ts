@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayAt, filtersSchema, identity, normalize, period, safeGithubUrl } from "./rules";
+import { contributionTitle, dayAt, filtersSchema, identity, normalize, period, safeGithubUrl } from "./rules";
 import { calendarDays, calendarLevel } from "./calendar";
 
 const author = { node_id: "U_fictional", login: "pessoa-ficticia", type: "User" };
@@ -48,5 +48,18 @@ describe("regras do heatmap GitHub", () => {
     expect(days.length % 7).toBe(0);
     expect(calendarDays("2026-10-21", "2026-10-01")).toEqual([]);
     expect([0, 1, 3, 6, 10, 100].map(calendarLevel)).toEqual([0, 1, 2, 3, 4, 4]);
+  });
+  it("guarda só a primeira linha da mensagem do commit e o título do PR/issue", () => {
+    expect(contributionTitle("feat: painel\r\n\ncorpo longo")).toBe("feat: painel");
+    expect(contributionTitle("   ")).toBeNull();
+    expect(contributionTitle(42)).toBeNull();
+    expect(contributionTitle("x".repeat(400))).toHaveLength(300);
+    const commit = { sha: "a".repeat(40), author: author, html_url: "https://github.com/example/test/commit/aaa", commit: { committer: { date: "2026-10-20T12:00:00Z" }, message: "fix: arredonda ICMS\n\nDetalhes" } };
+    expect(normalize(commit, "COMMIT")?.title).toBe("fix: arredonda ICMS");
+    expect(normalize({ ...issue, title: "Erro na importação" }, "ISSUE")?.title).toBe("Erro na importação");
+  });
+  it("lê só integrados por padrão e aceita a aba Repositórios", () => {
+    expect(filtersSchema.parse({}).all).toBe("0");
+    expect(filtersSchema.parse({ all: "1", view: "repositories" })).toMatchObject({ all: "1", view: "repositories" });
   });
 });

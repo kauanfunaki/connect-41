@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SecaoDeConfiguracao } from "@/components/configuracoes/SecaoDeConfiguracao";
 import { notFound } from "next/navigation";
-import { ChevronRight, UserRound, ShieldCheck, KeyRound, Palette, Bell, Settings2, CalendarClock } from "lucide-react";
+import { ChevronRight, UserRound, ShieldCheck, KeyRound, Palette, Bell, Settings2, CalendarClock, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { getPrisma } from "@/lib/prisma";
@@ -19,24 +19,30 @@ import { getVapidPublicKey } from "@/lib/vapid";
 import { ExpedienteForm } from "@/components/agenda/ExpedienteForm";
 import { EXPEDIENTE_PADRAO } from "@/lib/agendaExpediente";
 import { carregarExpedientes } from "@/lib/agendaExpedienteDb";
-import { atualizarMeuPerfil, alterarMinhaSenha, salvarMeuExpediente } from "./actions";
+import { ContaGithub } from "@/components/configuracoes/ContaGithub";
+import { accountLinkView } from "@/lib/github/conta";
+import { atualizarMeuPerfil, alterarMinhaSenha, salvarMeuExpediente, desvincularGithub } from "./actions";
 
 // Configurações da conta do próprio usuário — o que antes era só um botão
 // desabilitado ("Em breve") no rodapé da sidebar pra quem não é admin. Nada
 // aqui gerencia o workspace: papel e setores aparecem como leitura, e mudar
 // qualquer um dos dois continua sendo /admin/usuarios.
-export default async function ConfiguracoesPage() {
+export default async function ConfiguracoesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await getAuthContext();
   if (!ctx.userId) notFound();
 
   const prisma = getPrisma();
-  const [me, { labels: sectorLabels }, expedientes] = await Promise.all([
+  const [me, { labels: sectorLabels }, expedientes, github, params] = await Promise.all([
     prisma.user.findFirst({
       where: { id: ctx.userId, tenantId: ctx.tenantId },
       select: { name: true, email: true, photoUrl: true },
     }),
     getSectorMaps(ctx.tenantId),
     carregarExpedientes(ctx.tenantId, ctx.userId),
+    // Só quem vê GitHub — Contribuições (o Tech e os administradores) tem a seção.
+    // Sem a migration do GitHub aplicada, a tela segue sem a seção.
+    accountLinkView(ctx).catch(() => null),
+    searchParams,
   ]);
   if (!me) notFound();
   const doEscritorio = expedientes.escritorio ?? EXPEDIENTE_PADRAO;
@@ -97,6 +103,12 @@ export default async function ConfiguracoesPage() {
           doEscritorio={{ expediente: doEscritorio, seguindo: expedientes.pessoa === null }}
         />
       </SecaoDeConfiguracao>
+
+      {github && (
+        <SecaoDeConfiguracao id="github" titulo="GitHub" descricao="Sua conta do GitHub, para o painel de contribuições mostrar o seu nome ao lado do login." icone={<GitBranch />}>
+          <ContaGithub view={github} retorno={typeof params.github === "string" ? params.github : undefined} desvincular={desvincularGithub} />
+        </SecaoDeConfiguracao>
+      )}
 
       <SecaoDeConfiguracao titulo="Notificações" descricao="Avisos no celular e no navegador, e o histórico do que chegou." icone={<Bell />}>
         <PushNotificationToggle

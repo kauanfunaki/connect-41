@@ -28,20 +28,20 @@ export async function queueInventory(db: GithubDb, connection: Pick<GithubConnec
     create: { tenantId: connection.tenantId, connectionId: connection.id, key: "inventory", resource: "INVENTORY", ...data }, update: data });
 }
 export async function queueResource(db: GithubDb, connection: Pick<GithubConnection, "id" | "tenantId" | "generation">, repositoryId: string,
-  resource: string, key = `${repositoryId}:${resource}`, pullNumber?: number) {
+  resource: string, key = `${repositoryId}:${resource}`, pullNumber?: number, forceFull = false) {
   const old = await db.githubSyncJob.findUnique({ where: { connectionId_key: { connectionId: connection.id, key } } });
   if (old?.state === "queued" && old.generation === connection.generation) return;
   const cursor = old?.cursor && typeof old.cursor === "object" && !Array.isArray(old.cursor) ? old.cursor as Record<string, Prisma.JsonValue> : {};
-  const keep = { lastHead: typeof cursor.lastHead === "string" ? cursor.lastHead : undefined,
-    lastFullAt: typeof cursor.lastFullAt === "string" ? cursor.lastFullAt : undefined, pullNumber };
+  // A atualização completa pedida ou interrompida no meio sobrevive a pausar/retomar.
+  const keep = { lastHead: typeof cursor.lastHead === "string" ? cursor.lastHead : undefined, pullNumber, forceFull: forceFull || cursor.forceFull === true || cursor.phase === "full" || undefined };
   const cleaned = JSON.parse(JSON.stringify(keep)) as Prisma.InputJsonObject;
   const data = { generation: connection.generation, state: "queued", priority: resource === "REVIEW" ? 4 : old?.coveredFrom ? 10 : 2,
     cursor: cleaned, nextAttemptAt: new Date(), attempts: 0, error: null };
   await db.githubSyncJob.upsert({ where: { connectionId_key: { connectionId: connection.id, key } },
     create: { tenantId: connection.tenantId, connectionId: connection.id, repositoryId, key, resource, ...data }, update: data });
 }
-export async function queueRepositories(db: GithubDb, connection: Pick<GithubConnection, "id" | "tenantId" | "generation">, repositories: Pick<GithubRepository, "id">[]) {
-  for (const repo of repositories) for (const resource of ["COMMIT", "ISSUE", "PULL_REQUEST"]) await queueResource(db, connection, repo.id, resource);
+export async function queueRepositories(db: GithubDb, connection: Pick<GithubConnection, "id" | "tenantId" | "generation">, repositories: Pick<GithubRepository, "id">[], forceFull = false) {
+  for (const repo of repositories) for (const resource of ["COMMIT", "ISSUE", "PULL_REQUEST"]) await queueResource(db, connection, repo.id, resource, undefined, undefined, forceFull);
   const reviews = await db.githubSyncJob.findMany({ where: { connectionId: connection.id, tenantId: connection.tenantId,
     repositoryId: { in: repositories.map(repo => repo.id) }, resource: "REVIEW", state: { in: ["canceled", "error"] } } });
   for (const review of reviews) {
@@ -64,7 +64,7 @@ export async function persistContributions(db: GithubDb, connection: GithubConne
     const old = await db.githubContribution.findUnique({ where: { repositoryId_type_externalId: { repositoryId, type: item.type, externalId: item.externalId } }, select: { userId: true, day: true, type: true } });
     if (old) touched.set(`${old.userId}:${old.day}:${old.type}`, old);
     touched.set(`${user.id}:${day}:${item.type}`, { userId: user.id, day, type: item.type });
-    const values = { userId: user.id, day, occurredAt: item.occurredAt, url: item.url, number: item.number, current: true, ...(scanId ? { seenIn: scanId } : {}) };
+    const values = { userId: user.id, day, occurredAt: item.occurredAt, url: item.url, number: item.number, title: item.title, current: true, ...(scanId ? { seenIn: scanId } : {}) };
     await db.githubContribution.upsert({ where: { repositoryId_type_externalId: { repositoryId, type: item.type, externalId: item.externalId } },
       create: { tenantId: connection.tenantId, repositoryId, type: item.type, externalId: item.externalId, ...values }, update: values });
   }
@@ -79,9 +79,11 @@ export function jobCursor(job: GithubSyncJob): Record<string, Prisma.JsonValue> 
   return job.cursor && typeof job.cursor === "object" && !Array.isArray(job.cursor) ? job.cursor as Record<string, Prisma.JsonValue> : {};
 }
 export function initialWindow(job: GithubSyncJob, now = new Date()) {
-  const cursor = jobCursor(job);
-  // Uma reconciliação semanal revalida o histórico; no restante, apenas alterações com sobreposição.
-  const full = !job.coveredFrom || !cursor.lastFullAt || Date.parse(String(cursor.lastFullAt)) < now.getTime() - 7 * 86400000;
+  const { forceFull, ...cursor } = jobCursor(job);
+  // O histórico de 12 meses só é percorrido na primeira coleta do repositório ou quando
+  // a pessoa força em Integrações; a rotina busca apenas as alterações, com um dia de
+  // sobreposição. A reconciliação semanal de todos os repositórios saiu (26/10/2026).
+  const full = !job.coveredFrom || !job.coveredThrough || forceFull === true;
   const recent = !job.coveredFrom && cursor.phase !== "full";
   return { ...cursor, page: 1, scanId: randomUUID(), phase: recent ? "recent" : full ? "full" : "incremental",
     since: (recent ? new Date(now.getTime() - 30 * 86400000) : full ? historyStart(now) : new Date(job.coveredThrough!.getTime() - 86400000)).toISOString(),

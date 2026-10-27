@@ -21,6 +21,7 @@ import { connectionQuery, ensureConnection, getConnection, guardGeneration, queu
 import { processConnection, processGithubCron, scheduleSync, withGithubLease } from "./sync";
 import { filtersSchema, historyStart, dayAt } from "./rules";
 import { dashboard, dayEvents } from "./queries";
+import { beginAccountLink, finishAccountLink, unlinkAccount } from "./conta";
 import { changeIntegration, integrationView } from "./service";
 import { getDashboard, githubResponse, postIntegration, validCronToken } from "./http";
 import { setModuleSector, setModuleSharedSectors, setorDoModulo, setoresDoModulo, getTenantModuleStates } from "@/lib/modules";
@@ -94,11 +95,27 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
   };
   it("coleta os quatro tipos, incluindo revisão recente em PR antigo e usuário sem commits", async () => {
     await collect();
-    const view = await dashboard(tenantId, filtersSchema.parse({}));
-    expect(view.total).toBe(4); expect(view.complete).toBe(true);
+    const view = await dashboard(tenantId, filtersSchema.parse({ all: "1" }));
+    expect(view.total).toBe(4); expect(view.message).toBeNull();
     expect(view.users.map(person => person.login)).toEqual(["ana", "bruno", "carla", "daniela"]);
     expect(view.users.find(person => person.login === "daniela")?.counts).toMatchObject({ COMMIT: 0, REVIEW: 1 });
     expect(await db!.githubContribution.count({ where: { tenantId, type: "ISSUE" } })).toBe(1);
+  });
+  it("por padrão lê só quem vinculou a conta, com o nome do Connect, também na aba Repositórios", async () => {
+    await collect();
+    const ana = await db!.githubUser.findFirstOrThrow({ where: { tenantId, login: "ana" } });
+    expect(await dashboard(tenantId, filtersSchema.parse({}))).toMatchObject({ total: 0, users: [], linked: 0, all: false });
+    await db!.githubAccountLink.create({ data: { tenantId, userId: ctx.userId!, externalId: ana.externalId, login: "ana" } });
+    const view = await dashboard(tenantId, filtersSchema.parse({}));
+    expect(view.users.map(person => [person.login, person.name])).toEqual([["ana", "Administrador fictício"]]);
+    const repositories = await dashboard(tenantId, filtersSchema.parse({ view: "repositories" }));
+    expect(repositories.totalRepositories).toBe(1);
+    expect(repositories.repositories[0]).toMatchObject({ fullName: "acme/exemplo", total: view.total });
+    expect(repositories.repositories[0].contributors.map(person => person.name)).toEqual(["Administrador fictício"]);
+    const everyone = await dashboard(tenantId, filtersSchema.parse({ all: "1", view: "repositories" }));
+    expect(everyone.repositories[0].contributors).toHaveLength(4);
+    const events = await dayEvents(tenantId, filtersSchema.parse({ all: "1", repository: repositoryId }), null, dayAt(new Date(stamp())), 1);
+    expect(events.total).toBe(4); expect(events.events.every(event => event.reference.length > 0)).toBe(true);
   });
   it("repetir a coleta ou a janela sobreposta não duplica eventos ou agregados", async () => {
     await collect(); await collect();
@@ -111,7 +128,7 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     const people = Array.from({ length: 21 }, (_, index) => ({ id: randomUUID(), tenantId, connectionId, externalId: `U_summary_${index}`, login: `resumo-${index}` }));
     await db!.githubUser.createMany({ data: people });
     await db!.githubDailyContribution.createMany({ data: people.map(person => ({ tenantId, repositoryId, userId: person.id, day, type: "COMMIT", count: 2 })) });
-    const view = await dashboard(tenantId, filtersSchema.parse({ view: "general" }));
+    const view = await dashboard(tenantId, filtersSchema.parse({ all: "1", view: "general" }));
     expect(view.users).toEqual([]); expect(view.total).toBe(46);
     expect(view.summary?.activeDevelopers).toBe(25);
     expect(view.summary?.counts).toEqual({ COMMIT: 43, PULL_REQUEST: 1, ISSUE: 1, REVIEW: 1 });
@@ -119,98 +136,99 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     expect(view.summary?.leaders.every(person => person.total === 2)).toBe(true);
     expect(view.summary?.recent).toHaveLength(4);
     expect(view.summary?.days.reduce((sum, row) => sum + row.counts.COMMIT, 0)).toBe(43);
-    const filtered = await dashboard(tenantId, filtersSchema.parse({ view: "general", user: "daniela", type: "REVIEW" }));
+    const filtered = await dashboard(tenantId, filtersSchema.parse({ all: "1", view: "general", user: "daniela", type: "REVIEW" }));
     expect(filtered.total).toBe(1); expect(filtered.summary?.activeDevelopers).toBe(1);
     expect(filtered.summary?.recent.map(event => event.login)).toEqual(["daniela"]);
-    const unchanged = await dashboard(tenantId, filtersSchema.parse({ view: "general" }), view.revision);
-    expect(unchanged).toMatchObject({ unchanged: true });
   });
   it("mantém os desenvolvedores cadastrados quando não há atividade no período filtrado", async () => {
     await collect();
-    const view = await dashboard(tenantId, filtersSchema.parse({ from: dayAt(new Date()), to: dayAt(new Date()) }));
+    const view = await dashboard(tenantId, filtersSchema.parse({ all: "1", from: dayAt(new Date()), to: dayAt(new Date()) }));
     expect(view.totalUsers).toBe(4); expect(view.users).toHaveLength(4);
-    expect(view.users.every(person => person.total === 0)).toBe(true);
-    const general = await dashboard(tenantId, filtersSchema.parse({ view: "general" }));
-    await db!.githubRepository.update({ where: { id: repositoryId }, data: { accessCheckedAt: new Date(Date.now() - 301000) } });
-    const expired = await dashboard(tenantId, filtersSchema.parse({ view: "general" }), general.revision);
-    expect(expired).toMatchObject({ total: 0, summary: null });
+    expect(view.users.every(person => person.total === 0 && person.days.length === 0)).toBe(true);
   });
-  it("revalida o acesso e dispensa calendários, totais e cobertura no polling sem mudanças", async () => {
+  it("lê o acervo gravado sem exigir confirmação recente de acesso nem consultar a fila", async () => {
     await collect();
-    const filters = filtersSchema.parse({}), first = await dashboard(tenantId, filters);
-    sqlQueries.length = 0;
-    const next = await dashboard(tenantId, filters, first.revision);
-    expect(next).toMatchObject({ unchanged: true, revision: first.revision, pending: 0, failed: 0 });
-    expect(sqlQueries.some(sql => /github_daily_contributions|github_users/.test(sql))).toBe(false);
-    expect(sqlQueries.some(sql => /github_repositories/.test(sql))).toBe(true);
-    expect(sqlQueries.filter(sql => /GROUP BY/.test(sql))).toHaveLength(1);
-    // A lease pode mudar sem alterar contribuições: o progresso continua atual.
-    await db!.githubAccountLease.update({ where: { githubUserId: githubId }, data: { owner: "fixture-active-worker", expiresAt: new Date(Date.now() + 60000) } });
-    expect(await dashboard(tenantId, filters, first.revision)).toMatchObject({ unchanged: true, progress: { state: "processing" } });
+    await db!.githubConnection.update({ where: { id: connectionId }, data: { verifiedAt: new Date(0) } });
+    await db!.githubRepository.update({ where: { id: repositoryId }, data: { accessCheckedAt: new Date(0) } });
+    const calls = fetcher.mock.calls.length; sqlQueries.length = 0;
+    const view = await dashboard(tenantId, filtersSchema.parse({ all: "1" }));
+    expect(view).toMatchObject({ total: 4, message: null }); expect(view.users).toHaveLength(4);
+    expect(sqlQueries.some(sql => /github_sync_jobs|github_account_leases/.test(sql))).toBe(false);
+    expect(fetcher.mock.calls).toHaveLength(calls);
   });
-  it("descarta a revisão quando mudam filtros, acompanhamento ou um lote confirmado", async () => {
+  it("reflete filtros, acompanhamento e novos lotes na leitura seguinte", async () => {
     await collect();
-    const filters = filtersSchema.parse({}), first = await dashboard(tenantId, filters);
-    const filtered = await dashboard(tenantId, filtersSchema.parse({ type: "REVIEW" }), first.revision);
-    expect(filtered).toMatchObject({ total: 1 }); expect(filtered.revision).not.toBe(first.revision);
+    const filters = filtersSchema.parse({ all: "1" });
+    expect(await dashboard(tenantId, filtersSchema.parse({ all: "1", type: "REVIEW" }))).toMatchObject({ total: 1 });
     const connection = (await getConnection(tenantId))!;
     await db!.$transaction(async tx => {
       await guardGeneration(tx, connection);
       await tx.githubUser.create({ data: { tenantId, connectionId, externalId: "U_tracked", login: "sem-atividade", tracked: true } });
     });
-    const tracked = await dashboard(tenantId, filters, first.revision);
-    expect("users" in tracked && tracked.users.some(user => user.login === "sem-atividade")).toBe(true);
-    expect(tracked.revision).not.toBe(first.revision);
+    expect((await dashboard(tenantId, filters)).users.some(user => user.login === "sem-atividade")).toBe(true);
     sha = "b".repeat(40);
     const original = fetcher.getMockImplementation()!;
     fetcher.mockImplementation(async (input, init) => new URL(String(input)).pathname.includes("/compare/")
       ? Response.json({ status: "ahead", commits: [commit()] }) : original(input, init));
     await collect();
-    const collected = await dashboard(tenantId, filters, tracked.revision);
-    expect(collected).toMatchObject({ total: 5 }); expect(collected.revision).not.toBe(tracked.revision);
+    expect(await dashboard(tenantId, filters)).toMatchObject({ total: 5 });
   });
-  it("a revisão não prolonga acesso expirado nem ignora a remoção de um repositório", async () => {
+  it("retira do painel o repositório sem acesso ou fora da seleção", async () => {
     await collect();
-    const filters = filtersSchema.parse({}), first = await dashboard(tenantId, filters);
-    await db!.githubRepository.update({ where: { id: repositoryId }, data: { accessCheckedAt: new Date(Date.now() - 301000) } });
-    const expired = await dashboard(tenantId, filters, first.revision);
-    expect(expired).toMatchObject({ total: 0, unavailable: 1, repositories: [] });
-    await db!.githubRepository.update({ where: { id: repositoryId }, data: { selected: false } });
-    expect(await dashboard(tenantId, filters, expired.revision)).toMatchObject({ total: 0, unavailable: 0, repositories: [] });
+    const filters = filtersSchema.parse({ all: "1" });
+    await db!.githubRepository.update({ where: { id: repositoryId }, data: { accessible: false, accessCheckedAt: new Date() } });
+    expect(await dashboard(tenantId, filters)).toMatchObject({ total: 0, users: [], message: expect.stringContaining("sem acesso") });
+    await expect(dayEvents(tenantId, filters, (await db!.githubUser.findFirstOrThrow({ where: { tenantId, login: "ana" } })).id, dayAt(new Date(stamp())), 1)).rejects.toMatchObject({ status: 403 });
+    await db!.githubRepository.update({ where: { id: repositoryId }, data: { accessible: true, selected: false } });
+    expect(await dashboard(tenantId, filters)).toMatchObject({ total: 0, users: [], message: expect.stringContaining("Selecione") });
   });
-  it("confere a autorização em cada polling mesmo com revisão válida", async () => {
+  it("confere a autorização em cada leitura", async () => {
     await collect();
-    const first = await dashboard(tenantId, filtersSchema.parse({}));
     mocks.auth.mockResolvedValue({ ...ctx, role: "SECTOR_USER", sectors: ["fiscal"] });
-    const response = await githubResponse(() => getDashboard(new Request(`http://localhost/api/github?revision=${first.revision}`)));
+    const response = await githubResponse(() => getDashboard(new Request("http://localhost/api/github")));
     expect(response.status).toBe(403);
   });
-  it("mantém o polling leve com vinte pessoas e um ano cheio de agregados", async () => {
+  it("mantém a leitura leve com vinte pessoas e um ano cheio de agregados", async () => {
     const users = Array.from({ length: 20 }, (_, index) => ({ id: randomUUID(), tenantId, connectionId, externalId: `U_volume_${index}`, login: `volume-${index}`, tracked: true }));
     await db!.githubUser.createMany({ data: users });
     const records = users.flatMap(user => Array.from({ length: 366 }, (_, offset) => dayAt(new Date(Date.now() - offset * 86400000))).flatMap(day =>
       ["COMMIT", "PULL_REQUEST", "ISSUE", "REVIEW"].map(type => ({ tenantId, repositoryId, userId: user.id, day, type, count: 1 }))));
     for (let offset = 0; offset < records.length; offset += 500) await db!.githubDailyContribution.createMany({ data: records.slice(offset, offset + 500) });
-    const filters = filtersSchema.parse({}), fullMs: number[] = [], unchangedMs: number[] = [];
-    let full!: DashboardView, fullQueries = 0, unchangedQueries = 0, compactBytes = 0;
+    const filters = filtersSchema.parse({ all: "1" }), fullMs: number[] = [];
+    let full!: DashboardView, fullQueries = 0;
     for (let attempt = 0; attempt < 3; attempt++) {
       sqlQueries.length = 0; const start = performance.now(); full = await dashboard(tenantId, filters);
       fullMs.push(performance.now() - start); fullQueries = sqlQueries.length;
     }
     expect(full.total).toBe(29280); expect(full.users).toHaveLength(20);
-    for (let attempt = 0; attempt < 5; attempt++) {
-      sqlQueries.length = 0; const start = performance.now(), next = await dashboard(tenantId, filters, full.revision);
-      unchangedMs.push(performance.now() - start); unchangedQueries = sqlQueries.length;
-      expect(next).toMatchObject({ unchanged: true, revision: full.revision });
-      expect(sqlQueries.some(sql => /github_daily_contributions|github_users/.test(sql))).toBe(false);
-      compactBytes = Buffer.byteLength(JSON.stringify(next));
-    }
-    expect(unchangedQueries).toBeLessThan(fullQueries);
+    expect(full.users.every(user => user.total === 1464 && user.activeDays === 366 && user.days.length === 366 && user.counts.REVIEW === 366)).toBe(true);
+    expect(sqlQueries.some(sql => /github_sync_jobs|github_account_leases/.test(sql))).toBe(false);
     await mkdir(".local/github", { recursive: true });
     await writeFile(".local/github/query-performance.json", JSON.stringify({ users: 20, aggregateRows: records.length,
-      full: { queries: fullQueries, bytes: Buffer.byteLength(JSON.stringify(full)), milliseconds: fullMs.map(ms => Math.round(ms)) },
-      unchanged: { queries: unchangedQueries, bytes: compactBytes, milliseconds: unchangedMs.map(ms => Math.round(ms)) } }, null, 2));
+      full: { queries: fullQueries, bytes: Buffer.byteLength(JSON.stringify(full)), milliseconds: fullMs.map(ms => Math.round(ms)) } }, null, 2));
   }, 60000);
+  it("a rotina busca só alterações e a atualização completa forçada volta aos 12 meses uma vez", async () => {
+    const issuesSince = () => fetcher.mock.calls.map(([input]) => new URL(String(input))).filter(address => address.pathname.endsWith("/issues")).map(address => Date.parse(address.searchParams.get("since")!));
+    await collect();
+    // Repositório novo: últimos 30 dias e depois o histórico de 12 meses.
+    expect(Math.min(...issuesSince())).toBeLessThan(Date.now() - 300 * 86400000);
+    fetcher.mockClear(); await collect();
+    expect(issuesSince().length).toBeGreaterThan(0);
+    expect(issuesSince().every(since => since > Date.now() - 3 * 86400000)).toBe(true);
+    await changeIntegration(ctx, { action: "full", generation: 0 });
+    expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ tenantId, action: "github.full_sync" }));
+    const jobs = await db!.githubSyncJob.findMany({ where: { connectionId, resource: { in: ["COMMIT", "ISSUE", "PULL_REQUEST"] } } });
+    expect(jobs).toHaveLength(3); expect(jobs.every(job => job.state === "queued" && (job.cursor as { forceFull?: boolean }).forceFull === true)).toBe(true);
+    fetcher.mockClear(); await processConnection(tenantId, { steps: 100, milliseconds: 25000 });
+    expect(issuesSince().length).toBeGreaterThan(0);
+    expect(issuesSince().every(since => since < Date.now() - 300 * 86400000)).toBe(true);
+    expect((await db!.githubSyncJob.findMany({ where: { connectionId, resource: { in: ["COMMIT", "ISSUE", "PULL_REQUEST"] } } })).some(job => (job.cursor as { forceFull?: boolean }).forceFull)).toBe(false);
+    fetcher.mockClear(); await collect();
+    expect(issuesSince().every(since => since > Date.now() - 3 * 86400000)).toBe(true);
+    expect((await dashboard(tenantId, filtersSchema.parse({ all: "1" }))).total).toBe(4);
+    await changeIntegration(ctx, { action: "pause", generation: 1 });
+    await expect(changeIntegration(ctx, { action: "full", generation: 2 })).rejects.toThrow("pausada");
+  });
   it("pagina o inventário e não seleciona novos repositórios automaticamente", async () => {
     const original = fetcher.getMockImplementation()!;
     const extras = Array.from({ length: 100 }, (_, index) => ({ ...repo(), node_id: `R_extra_${index}_${tenantId}`, name: `r${index}`, full_name: `acme/r${index}` }));
@@ -241,14 +259,15 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     expect(await db!.githubContribution.count({ where: { tenantId, type: "COMMIT" } })).toBe(100);
     broken = false; await db!.githubSyncJob.update({ where: { id: job.id }, data: { nextAttemptAt: new Date(0) } });
     await processConnection(tenantId, { steps: 100, milliseconds: 25000 });
-    const view = await dashboard(tenantId, filtersSchema.parse({})); expect(view.total).toBe(104); expect(view.complete).toBe(true);
+    expect((await dashboard(tenantId, filtersSchema.parse({ all: "1" }))).total).toBe(104);
+    expect((await db!.githubSyncJob.findUniqueOrThrow({ where: { id: job.id } })).coveredThrough).not.toBeNull();
   }, 30000);
   it("renova tokens expirados sob a mesma lease e guarda a rotação somente cifrada", async () => {
     const connection = (await getConnection(tenantId))!, original = fetcher.getMockImplementation()!;
     await db!.tenantIntegration.update({ where: { id: connection.integrationId }, data: { configEnc: encryptSecret(JSON.stringify({ ...credentials(), accessToken: "old-fake", refreshToken: "old-refresh-fake", expiresAt: new Date(0).toISOString(), scope: "repo read:user" })) } });
     fetcher.mockImplementation(async (input, init) => String(input).includes("/login/oauth/access_token")
       ? Response.json({ access_token: "renewed-fake", refresh_token: "rotated-fake", expires_in: 3600, scope: "repo,read:user" }) : original(input, init));
-    await collect(); await dashboard(tenantId, filtersSchema.parse({}));
+    await collect(); await dashboard(tenantId, filtersSchema.parse({ all: "1" }));
     const stored = (await getConnection(tenantId))!.integration.configEnc;
     expect(stored).not.toContain("renewed-fake");
     expect(JSON.parse(decryptSecret(stored))).toMatchObject({ ...credentials(), accessToken: "renewed-fake", refreshToken: "rotated-fake" });
@@ -262,16 +281,16 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     fetcher.mockImplementation(async (input, init) => new URL(String(input)).pathname.endsWith("/pulls") ? Response.json([]) : original(input, init));
     await changeIntegration(ctx, { action: "resume", generation: 1 });
     await processConnection(tenantId, { steps: 100, milliseconds: 25000 });
-    const view = await dashboard(tenantId, filtersSchema.parse({})); expect(view.total).toBe(4); expect(view.complete).toBe(true);
+    expect((await dashboard(tenantId, filtersSchema.parse({ all: "1" }))).total).toBe(4);
+    expect(await db!.githubSyncJob.count({ where: { connectionId, state: { not: "done" }, resource: { not: "INVENTORY" } } })).toBe(0);
   });
   it("retoma após resposta truncada sem confirmar cobertura ou pular a página", async () => {
     malformed = true; await collect();
     const job = await db!.githubSyncJob.findFirstOrThrow({ where: { connectionId, resource: "COMMIT" } });
     expect(job.coveredThrough).toBeNull(); expect(job.attempts).toBe(1);
-    expect((await dashboard(tenantId, filtersSchema.parse({}))).complete).toBe(false);
     malformed = false; await db!.githubSyncJob.update({ where: { id: job.id }, data: { nextAttemptAt: new Date(0) } });
     await processConnection(tenantId, { steps: 100, milliseconds: 25000 });
-    const recovered = await dashboard(tenantId, filtersSchema.parse({}));
+    const recovered = await dashboard(tenantId, filtersSchema.parse({ all: "1" }));
     expect(recovered.total).toBe(4); expect(recovered.message).toBeNull();
   });
   it("persiste Retry-After e coordena a espera entre executores", async () => {
@@ -310,47 +329,48 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     await collect(); sha = "b".repeat(40); rewritten = true; await collect();
     expect(await db!.githubContribution.count({ where: { tenantId, type: "COMMIT", current: true } })).toBe(1);
     expect(await db!.githubContribution.findFirst({ where: { tenantId, externalId: "a".repeat(40) } })).toMatchObject({ current: false });
-    expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(4);
+    expect((await dashboard(tenantId, filtersSchema.parse({ all: "1" }))).total).toBe(4);
   });
-  it("exclui dados após revogação e preserva os registros para recuperação", async () => {
+  it("bloqueia a visualização após revogação detectada e preserva os registros para recuperação", async () => {
     await collect(); revoked = true;
     await db!.githubConnection.update({ where: { id: connectionId }, data: { verifiedAt: new Date(0) } });
     const calls = fetcher.mock.calls.length;
-    expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(0);
+    // A leitura não consulta o GitHub: o acervo continua até o executor detectar a revogação.
+    expect((await dashboard(tenantId, filtersSchema.parse({ all: "1" }))).total).toBe(4);
     expect(fetcher.mock.calls).toHaveLength(calls);
     await processGithubCron();
-    const view = await dashboard(tenantId, filtersSchema.parse({}));
+    const view = await dashboard(tenantId, filtersSchema.parse({ all: "1" }));
     expect(view.connected).toBe(false); expect(view.users).toEqual([]); expect(view.total).toBe(0);
     expect(await db!.githubContribution.count({ where: { tenantId } })).toBe(4);
   });
   it("coleta e retoma lotes automaticamente sem nenhuma página aberta", async () => {
     for (let round = 0; round < 12; round++) await processGithubCron();
-    const view = await dashboard(tenantId, filtersSchema.parse({}));
-    expect(view.total).toBe(4); expect(view.pending).toBe(0); expect(view.complete).toBe(true);
-    expect(view.progress).toMatchObject({ state: "idle", pending: 0, failed: 0 });
+    const view = await dashboard(tenantId, filtersSchema.parse({ all: "1" }));
+    expect(view.total).toBe(4);
+    expect((await integrationView(tenantId)).progress).toMatchObject({ state: "idle", pending: 0, failed: 0 });
     expect(await db!.integrationRun.count({ where: { integrationId: (await getConnection(tenantId))!.integrationId, trigger: "CRON", ok: true } })).toBeGreaterThan(0);
     // A leitura repetida não disputa a lease nem gera novas requisições GitHub.
     const calls = fetcher.mock.calls.length;
     await withGithubLease(githubId, async () => {
-      expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(4);
+      expect((await dashboard(tenantId, filtersSchema.parse({ all: "1" }))).total).toBe(4);
     });
     expect(fetcher.mock.calls).toHaveLength(calls);
-    await processGithubCron(); expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(4);
+    await processGithubCron(); expect((await dashboard(tenantId, filtersSchema.parse({ all: "1" }))).total).toBe(4);
   });
   it("isola detalhes por escritório, repositório selecionado e tipo", async () => {
     await collect();
     const ana = await db!.githubUser.findFirstOrThrow({ where: { tenantId, login: "ana" } });
-    const view = await dayEvents(tenantId, filtersSchema.parse({}), ana.id, dayAt(new Date(stamp())), 1);
+    const view = await dayEvents(tenantId, filtersSchema.parse({ all: "1" }), ana.id, dayAt(new Date(stamp())), 1);
     expect(view.total).toBe(1);
-    const filtered = await dashboard(tenantId, filtersSchema.parse({ type: "REVIEW" }));
+    const filtered = await dashboard(tenantId, filtersSchema.parse({ all: "1", type: "REVIEW" }));
     expect(filtered.users.map(person => person.login)).toEqual(["daniela"]);
     await expect(changeIntegration(ctx, { action: "settings", generation: 0, repositories: [randomUUID()], timezone: "America/Sao_Paulo", intervalMinutes: 30 })).rejects.toMatchObject({ status: 403 });
     await db!.githubRepository.update({ where: { id: repositoryId }, data: { selected: false } });
-    expect((await dashboard(tenantId, filtersSchema.parse({}))).total).toBe(0);
+    expect((await dashboard(tenantId, filtersSchema.parse({ all: "1" }))).total).toBe(0);
   });
   it("inclui usuário acompanhado sem inventar contribuições e protege a projeção dos tokens", async () => {
     await collect(); await changeIntegration(ctx, { action: "track", generation: 0, login: "sem-atividade" });
-    const view = await dashboard(tenantId, filtersSchema.parse({}));
+    const view = await dashboard(tenantId, filtersSchema.parse({ all: "1" }));
     expect(view.users.find(person => person.login === "sem-atividade")).toMatchObject({ total: 0, tracked: true });
     expect(JSON.stringify(await integrationView(tenantId))).not.toMatch(/fake-access|configEnc|refreshToken|accessToken/);
   });
@@ -358,7 +378,7 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     await collect(); await changeIntegration(ctx, { action: "pause", generation: 0 });
     expect((await getConnection(tenantId))?.integration.enabled).toBe(false);
     await changeIntegration(ctx, { action: "disconnect", generation: 1 });
-    expect((await dashboard(tenantId, filtersSchema.parse({}))).connected).toBe(false);
+    expect((await dashboard(tenantId, filtersSchema.parse({ all: "1" }))).connected).toBe(false);
     expect(await db!.githubContribution.count({ where: { tenantId } })).toBe(4);
     expect(JSON.parse(decryptSecret((await getConnection(tenantId))!.integration.configEnc))).toEqual(credentials());
   });
@@ -390,6 +410,23 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     expect(parsed.searchParams.get("client_id")).toBe(credentials().clientId);
     expect(new URLSearchParams(String(sent)).get("client_secret")).toBe(credentials().clientSecret);
     expect(JSON.parse(decryptSecret((await getConnection(tenantId))!.integration.configEnc))).toMatchObject(credentials());
+  });
+  it("o vínculo de Sua conta usa estado próprio, não toca a conexão e não aceita a mesma conta para duas pessoas", async () => {
+    const before = (await getConnection(tenantId))!;
+    const attempt = await beginAccountLink(ctx, "sessao-ficticia");
+    expect(new URL(attempt.url).searchParams.get("redirect_uri")).toBe("http://localhost:3111/api/integrations/github/callback/conta");
+    await expect(finishOAuth(ctx, "sessao-ficticia", attempt.state, "codigo-ficticio")).rejects.toMatchObject({ status: 403 });
+    await expect(finishAccountLink(ctx, "outra-sessao", attempt.state, "codigo-ficticio")).rejects.toMatchObject({ status: 403 });
+    expect(await finishAccountLink(ctx, "sessao-ficticia", attempt.state, "codigo-ficticio")).toBe("conta-ficticia");
+    await expect(finishAccountLink(ctx, "sessao-ficticia", attempt.state, "codigo-ficticio")).rejects.toMatchObject({ status: 403 });
+    expect(await db!.githubAccountLink.findUnique({ where: { userId: ctx.userId! } })).toMatchObject({ tenantId, externalId: githubId, login: "conta-ficticia" });
+    const after = (await getConnection(tenantId))!;
+    expect(after.generation).toBe(before.generation); expect(after.integration.configEnc).toBe(before.integration.configEnc);
+    const otherId = randomUUID(), other = { ...ctx, userId: otherId };
+    await db!.user.create({ data: { id: otherId, tenantId, name: "Outra pessoa fictícia", email: `${otherId}@example.test`, passwordHash: "sem-login-real", role: "ADMIN" } });
+    const second = await beginAccountLink(other, "sessao-ficticia");
+    await expect(finishAccountLink(other, "sessao-ficticia", second.state, "codigo-ficticio")).rejects.toMatchObject({ status: 409 });
+    await unlinkAccount(ctx); expect(await db!.githubAccountLink.count({ where: { tenantId } })).toBe(0);
   });
   it("trocar de conta arquiva a conexão anterior e não mistura nem apaga seus dados", async () => {
     await collect(); const attempt = await beginOAuth(ctx, "sessao-ficticia"); secondIdentity = true;
@@ -424,7 +461,7 @@ describe.skipIf(!url)("GitHub com MySQL descartável e API simulada", { timeout:
     expect(JSON.parse(decryptSecret(connection.integration.configEnc))).toEqual({ clientId: credentials().clientId, clientSecret: "novo-segredo-ficticio" });
     await expect(finishOAuth(ctx, "sessao-ficticia", attempt.state, "codigo-ficticio")).rejects.toMatchObject({ status: 403 });
     expect(await db!.githubContribution.count({ where: { tenantId } })).toBe(4);
-    expect((await dashboard(tenantId, filtersSchema.parse({}))).connected).toBe(false);
+    expect((await dashboard(tenantId, filtersSchema.parse({ all: "1" }))).connected).toBe(false);
     const next = await beginOAuth(ctx, "sessao-ficticia");
     await finishOAuth(ctx, "sessao-ficticia", next.state, "novo-codigo-ficticio");
     expect((await getConnection(tenantId))?.id).toBe(connectionId);

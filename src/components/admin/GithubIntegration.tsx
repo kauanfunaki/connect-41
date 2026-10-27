@@ -92,7 +92,9 @@ export function GithubIntegration() {
         <label className="space-y-1 text-fg-secondary"><span>Fuso dos dias</span><Input value={timezone} onChange={event => { dirty.current = true; setTimezone(event.target.value); }} /><span className="block text-fs-1 text-fg-muted">Fica fixo após a primeira coleta.</span></label></div>
       <div className="flex flex-wrap gap-2"><Button disabled={busy} onClick={() => void act("settings", { repositories: selection, timezone, intervalMinutes: interval })}>Salvar e sincronizar</Button>
         <Button variant="secondary" disabled={busy} onClick={() => void act(data.enabled ? "pause" : "resume")}>{data.enabled ? "Pausar" : "Retomar"}</Button>
+        <Button variant="secondary" disabled={busy || !data.enabled} onClick={() => requestConfirm({ title: "Forçar atualização completa?", description: "Os repositórios selecionados serão consultados de novo nos últimos 12 meses. A coleta demora mais e consome mais do limite da API do GitHub.", confirmLabel: "Forçar atualização" }, () => act("full"))}>Forçar atualização completa</Button>
         <Button href="/github" variant="secondary">Abrir contribuições</Button></div>
+      <p className="text-fs-2 text-fg-muted">A cada intervalo, a coleta busca só as alterações. Um repositório novo traz os últimos 12 meses na primeira coleta. Use Forçar atualização completa para consultar de novo o histórico de todos os selecionados.</p>
       <SyncStatus progress={data.progress} timezone={data.timezone} />
       <Button size="sm" variant="secondary" onClick={() => void refresh().catch(err => setError(err.message))}>Atualizar status</Button>
       <form className="space-y-2 border-t border-border pt-4" onSubmit={event => { event.preventDefault(); void act("track", { login }).then(() => setLogin("")); }}><label className="block text-fg-secondary" htmlFor="github-track-login">Acompanhar usuário mesmo sem atividade</label>
