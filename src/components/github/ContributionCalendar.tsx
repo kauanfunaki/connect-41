@@ -21,7 +21,8 @@ export const ContributionCalendar = memo(function ContributionCalendar({ from, t
   const blanks = useMemo(() => cells.flatMap((day, index) => day ? [] : [index]), [cells]);
   const grid = useRef<HTMLDivElement>(null), focused = useRef<number | null>(null);
   const button = (index: number) => grid.current?.querySelector<HTMLButtonElement>(`button[data-index="${index}"]`);
-  return <div className="overflow-x-auto pb-2" role="group" aria-label={`Calendário de ${label}`}>
+  // 3 px de respiro: a rolagem lateral recortava o anel de destaque da primeira linha (27/10/2026).
+  return <div className="overflow-x-auto p-[3px] pb-2" role="group" aria-label={`Calendário de ${label}`}>
     <div ref={grid} className={styles.calendar} style={{ "--weeks": cells.length / 7 } as CSSProperties}
       onClick={event => { const day = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-day]")?.dataset.day; if (day) onDay(id, day); }}
       onFocus={event => {
