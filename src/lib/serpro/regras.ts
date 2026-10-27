@@ -274,6 +274,35 @@ export function tempoDeEsperaDoEtag(etag: string | null | undefined): number | n
   return Number.isFinite(v) && v > 0 ? v : null;
 }
 
+/**
+ * O token do termo de autorização (27/10/2026), na resposta do Autentica
+ * Procurador. O 200 traz `autenticar_procurador_token` e
+ * `data_hora_expiracao` (AAAA-MM-DDTHH:MM:SS, hora de Brasília) no `dados`; o
+ * 304 (o mesmo termo, ainda válido no cache do Serpro) vem sem corpo, com o
+ * token no ETag e a validade no `expires`, em GMT. Sem validade legível, vale
+ * até a meia-noite seguinte em Brasília, que é a regra da documentação.
+ * Cinco minutos de folga: melhor renovar antes que receber o 401 no meio.
+ */
+export function tokenDoTermoNaResposta(
+  r: RespostaLida,
+  cabecalhos: { etag?: string; expires?: string },
+  agora = Date.now()
+): { token: string; expiraEm: number } | null {
+  const dados = (r.dados && typeof r.dados === "object" ? r.dados : {}) as Record<string, unknown>;
+  const doCorpo = typeof dados.autenticar_procurador_token === "string" ? dados.autenticar_procurador_token.trim() : "";
+  const token = doCorpo || valorDoEtag(cabecalhos.etag, "autenticar_procurador_token") || "";
+  if (!token) return null;
+  const dataHora = typeof dados.data_hora_expiracao === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(dados.data_hora_expiracao) ? dados.data_hora_expiracao : null;
+  let expira = dataHora ? Date.parse(`${dataHora}-03:00`) : cabecalhos.expires ? Date.parse(cabecalhos.expires) : NaN;
+  if (!Number.isFinite(expira) || expira <= agora) {
+    // A meia-noite que começa o dia seguinte, em Brasília (UTC-3, sem horário de
+    // verão desde 2019): o termo enviado de madrugada vale "cerca de 24 horas".
+    const hojeEmBrasilia = new Date(agora - 3 * 3_600_000).toISOString().slice(0, 10);
+    expira = Date.parse(`${hojeEmBrasilia}T00:00:00-03:00`) + 86_400_000;
+  }
+  return { token, expiraEm: expira - 5 * 60_000 };
+}
+
 // ─── Certificado ─────────────────────────────────────────────────────────────
 
 /**

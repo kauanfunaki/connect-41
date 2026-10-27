@@ -58,6 +58,7 @@ function servico(
 export const CONFERIR_PROCURACAO = servico(45, "PROCURACOES", "OBTERPROCURACAO41", "Consultar", [], "Conferir a autorização (procuração)");
 export const DAS_DO_SIMPLES = servico(2, "PGDASD", "GERARDAS12", "Emitir", ["00146"], "DAS do Simples (com data de consolidação futura, recalculado)");
 export const DAS_DO_MEI = servico(18, "PGMEI", "GERARDASPDF21", "Emitir", [], "DAS do MEI em PDF");
+export const ENVIO_DO_TERMO = servico(57, "AUTENTICAPROCURADOR", "ENVIOXMLASSINADO81", "Apoiar", [], "Enviar o termo de autorização assinado");
 export const GUIA_DA_DCTFWEB = servico(28, "DCTFWEB", "GERARGUIA31", "Emitir", ["00103"], "Guia da DCTFWeb");
 // "Não listado" em Serviços x Procuração: presumido o código do sistema.
 export const GUIA_DA_DCTFWEB_EM_ANDAMENTO = servico(40, "DCTFWEB", "GERARGUIAANDAMENTO313", "Emitir", ["00103"], "Guia de declaração da DCTFWeb em andamento");
@@ -114,7 +115,7 @@ export const SERVICOS_DO_SERPRO: readonly ServicoDoSerpro[] = [
   servico(55, "PAGTOWEB", "COMPARRECADACAO72", "Emitir", ["00004"], "Comprovante de arrecadação"),
   servico(56, "PAGTOWEB", "CONTACONSDOCARRPG73", "Consultar", ["00004"], "Contar pagamentos"),
   // O termo de autorização (modelo software house), grátis.
-  servico(57, "AUTENTICAPROCURADOR", "ENVIOXMLASSINADO81", "Apoiar", [], "Enviar o termo de autorização assinado"),
+  ENVIO_DO_TERMO,
   // Eventos de atualização: grátis; vale a autorização do sistema monitorado,
   // em D-1, e quem não a tem volta "x" na matriz.
   servico(59, "EVENTOSATUALIZACAO", "SOLICEVENTOSPF131", "Monitorar", [], "Eventos de pessoa física: pedir", { assincrono: true }),

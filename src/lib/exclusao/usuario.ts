@@ -161,6 +161,13 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
     coluna: "pedidoPorId",
     executar: (tx, a) => n(tx.serproPedido.updateMany({ where: { tenantId: a.tenantId, pedidoPorId: a.id }, data: { pedidoPorId: null } })),
   },
+  // Quem enviou o termo de autorização do Serpro (27/10/2026): o termo fica, e a auditoria guarda quem foi.
+  {
+    modelo: "SerproTermo",
+    acao: "anular",
+    coluna: "enviadoPorId",
+    executar: (tx, a) => n(tx.serproTermo.updateMany({ where: { tenantId: a.tenantId, enviadoPorId: a.id }, data: { enviadoPorId: null } })),
+  },
   {
     modelo: "Vaga",
     acao: "anular",

@@ -9,6 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { converterPfxAntigo } from "./pkcs12";
 import { certificadoDeTeste } from "./pfx.fixture";
+import { CONTRATANTE_DO_TERMO } from "./termo.fixture";
 import type { CabecalhosDaResposta, RequisicaoHttps, RespostaHttps, Transporte } from "./transporte";
 
 export const TENANT = "t-41";
@@ -68,6 +69,20 @@ export function configDeProducao(): Record<string, string> {
     senhaDoCertificado: SENHA_DO_PFX,
     tetoMensal: "400",
   };
+}
+
+/**
+ * Fase 3 (27/10/2026): a conexão do modelo software house — o certificado é
+ * de quem contratou (a "software house" do termo de teste), não do escritório.
+ */
+let pfxDaSoftwareHouse: string | null = null;
+export function configDaSoftwareHouse(): Record<string, string> {
+  if (!pfxDaSoftwareHouse) {
+    const c = converterPfxAntigo(certificadoDeTeste("SOFTWARE HOUSE FICTICIA LTDA", CONTRATANTE_DO_TERMO).legado(SENHA_DO_PFX), SENHA_DO_PFX);
+    if (!c.ok) throw new Error("o certificado de teste não converteu");
+    pfxDaSoftwareHouse = c.pfx.toString("base64");
+  }
+  return { ...configDeProducao(), certificado: pfxDaSoftwareHouse };
 }
 
 // ─── Uma tabela genérica (Fase 1, 20/10/2026) ────────────────────────────────
@@ -175,6 +190,8 @@ export function bancoFalso() {
     serproEvento: tabela({ semAcesso: false, pendente: false, ultimoEm: null }),
     serproPedido: tabela({ tentativas: 0, protocolo: null, companyId: null, erro: null, driveFileId: null, pedidoPorId: null }),
     serproMensagem: tabela({ lidaNoSerpro: false, abertaEm: null, abertaPorId: null, corpo: null, cienciaEm: null, validaAte: null, origem: null, numeroControle: null }),
+    // Fase 3: o termo de autorização.
+    serproTermo: tabela({ aceitoEm: null, erro: null, certificadoTitular: null, enviadoPorId: null }),
     company: tabela({ displayName: null, cpf: null, cnpj: null }),
     driveFolder: tabela({ parentId: null, deletedAt: null, systemKey: null }),
     user: tabela(),
