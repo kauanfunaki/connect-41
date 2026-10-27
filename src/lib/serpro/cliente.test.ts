@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { createSecureContext } from "node:tls";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { certificadoDeTeste } from "./pfx.fixture";
-import { configDeProducao, corpoDoSerpro, ESCRITORIO, TENANT, transporteFalso } from "./teste.fixture";
+import { configDaSoftwareHouse, configDeProducao, corpoDoSerpro, ESCRITORIO, TENANT, transporteFalso, transportePorServico } from "./teste.fixture";
+import { CONTRATANTE_DO_TERMO, TERMO_ASSINADO } from "./termo.fixture";
 import { FORA_DO_CENARIO, PROCURACOES } from "./servicos.fixture";
 import { CONFERIR_PROCURACAO, DAS_DO_MEI, DAS_DO_SIMPLES, EXEMPLO_DA_DEMONSTRACAO, pedidoDoServico, servicoDoCatalogo } from "./servicos";
 import { pedidoDeProcuracao } from "./regras";
@@ -301,5 +302,113 @@ describe("o A1 antigo ao salvar e ao conectar", () => {
     expect(prontidaoDoSerpro(cfg)).toEqual({ pronta: true });
     expect(cfg!.pfx!.equals(legado)).toBe(false);
     expect(() => createSecureContext({ pfx: cfg!.pfx!, passphrase: senha })).not.toThrow();
+  });
+});
+
+describe("o modelo software house: o termo de autorização (Fase 3)", () => {
+  const TOKEN_DO_TERMO = "token-do-termo-1";
+  const termoAceito = () => ({ status: 200, corpo: corpoDoSerpro({ autenticar_procurador_token: TOKEN_DO_TERMO, data_hora_expiracao: "2099-01-01T00:00:01" }) });
+  const guardarTermo = (extra: Record<string, unknown> = {}) =>
+    m.banco.tabelas.serproTermo.create({
+      data: {
+        tenantId: TENANT,
+        xml: TERMO_ASSINADO,
+        contratante: CONTRATANTE_DO_TERMO,
+        autor: ESCRITORIO,
+        assinadoEm: "2026-10-27",
+        vigencia: "2099-10-27",
+        certificadoValidoAte: "2099-12-31",
+        ...extra,
+      },
+    });
+  const termos = () => m.banco.tabelas.serproTermo.linhas;
+
+  it("sem termo: não está pronta e nada sai", async () => {
+    m.banco.conectar(configDaSoftwareHouse());
+    const cfg = await configuracaoDoSerpro(TENANT);
+    expect(prontidaoDoSerpro(cfg)).toEqual({ pronta: false, motivo: expect.stringContaining("Falta o termo de autorização") });
+    const t = transporteFalso(() => ok());
+    const r = await chamarSerpro(TENANT, pedidoDeProcuracao(CLIENTE, ESCRITORIO), { origem: "teste", transporte: t.transporte });
+    expect(r).toMatchObject({ ok: false, motivo: "nao_pronta" });
+    expect(t.chamadas()).toHaveLength(0);
+  });
+
+  it("com termo: envia o termo uma vez (Apoiar), e as chamadas vão com o token, a software house contratante e o escritório autor", async () => {
+    m.banco.conectar(configDaSoftwareHouse());
+    await guardarTermo();
+    const t = transportePorServico({ ENVIOXMLASSINADO81: () => termoAceito(), OBTERPROCURACAO41: () => ok() });
+
+    expect((await chamarSerpro(TENANT, pedidoDeProcuracao(CLIENTE, ESCRITORIO), { origem: "teste", transporte: t.transporte })).ok).toBe(true);
+    expect((await chamarSerpro(TENANT, pedidoDeProcuracao(CLIENTE, ESCRITORIO), { origem: "teste", transporte: t.transporte })).ok).toBe(true);
+
+    const [envio] = t.doServico("ENVIOXMLASSINADO81");
+    expect(t.doServico("ENVIOXMLASSINADO81")).toHaveLength(1);
+    expect(envio.url).toMatch(/\/Apoiar$/);
+    expect(envio.cabecalhos).not.toHaveProperty("autenticar_procurador_token");
+    const corpo = JSON.parse(envio.corpo);
+    expect(corpo).toMatchObject({ contratante: { numero: CONTRATANTE_DO_TERMO }, autorPedidoDados: { numero: ESCRITORIO }, contribuinte: { numero: ESCRITORIO } });
+    expect(Buffer.from(JSON.parse(corpo.pedidoDados.dados).xml, "base64").toString("utf8")).toBe(TERMO_ASSINADO);
+
+    for (const c of t.doServico("OBTERPROCURACAO41")) {
+      expect(c.cabecalhos).toMatchObject({ autenticar_procurador_token: TOKEN_DO_TERMO, jwt_token: "jwt-1" });
+      expect(JSON.parse(c.corpo)).toMatchObject({ contratante: { numero: CONTRATANTE_DO_TERMO }, autorPedidoDados: { numero: ESCRITORIO }, contribuinte: { numero: CLIENTE } });
+    }
+    expect(termos()[0]).toMatchObject({ aceitoEm: expect.any(Date), erro: null });
+    // O envio do termo é grátis e fica no registro, com a origem "termo".
+    expect(m.banco.estado.chamadas.find((c) => c.idServico === "ENVIOXMLASSINADO81")).toMatchObject({ cobrada: false, origem: "termo" });
+  });
+
+  it("304: o termo ainda está no cache do Serpro, e o token vem no ETag", async () => {
+    m.banco.conectar(configDaSoftwareHouse());
+    await guardarTermo();
+    const t = transportePorServico({
+      ENVIOXMLASSINADO81: () => ({ status: 304, cabecalhos: { etag: '"autenticar_procurador_token:do-cache"', expires: "Fri, 01 Jan 2099 03:00:01 GMT" } }),
+      OBTERPROCURACAO41: () => ok(),
+    });
+    expect((await chamarSerpro(TENANT, pedidoDeProcuracao(CLIENTE, ESCRITORIO), { origem: "teste", transporte: t.transporte })).ok).toBe(true);
+    expect(t.doServico("OBTERPROCURACAO41")[0].cabecalhos).toMatchObject({ autenticar_procurador_token: "do-cache" });
+  });
+
+  it("termo recusado: para antes da chamada paga, e a recusa fica no termo para a tela", async () => {
+    m.banco.conectar(configDaSoftwareHouse());
+    await guardarTermo();
+    const t = transportePorServico({
+      ENVIOXMLASSINADO81: () => ({
+        status: 403,
+        corpo: JSON.stringify({ status: 403, dados: "", mensagens: [{ codigo: "[AcessoNegado-AUTENTICAPROCURADOR-013]", texto: "O XML assinado é inválido." }] }),
+      }),
+    });
+    const r = await chamarSerpro(TENANT, pedidoDeProcuracao(CLIENTE, ESCRITORIO), { origem: "teste", transporte: t.transporte });
+    expect(r).toMatchObject({ ok: false, motivo: "termo", erro: expect.stringContaining("O Serpro recusou o termo de autorização") });
+    expect(t.doServico("OBTERPROCURACAO41")).toHaveLength(0);
+    expect(termos()[0].erro).toEqual(expect.stringContaining("O Serpro recusou o termo de autorização"));
+  });
+
+  it("termo de outro contratante ou vencido: não está pronta", async () => {
+    m.banco.conectar(configDaSoftwareHouse());
+    await guardarTermo({ contratante: "33444555000101" });
+    expect(prontidaoDoSerpro(await configuracaoDoSerpro(TENANT))).toEqual({ pronta: false, motivo: expect.stringContaining("Gere e assine um termo novo") });
+
+    m.banco.zerar();
+    m.banco.conectar(configDaSoftwareHouse());
+    await guardarTermo({ certificadoValidoAte: "2026-01-01" });
+    expect(prontidaoDoSerpro(await configuracaoDoSerpro(TENANT), "2026-10-27")).toEqual({
+      pronta: false,
+      motivo: "O termo de autorização perdeu a validade com o certificado de quem assinou, que venceu em 01/01/2026. Gere e assine um termo novo.",
+    });
+  });
+
+  it("o certificado do próprio escritório segue sem termo, como antes", async () => {
+    m.banco.conectar(configDeProducao());
+    expect(prontidaoDoSerpro(await configuracaoDoSerpro(TENANT))).toEqual({ pronta: true });
+  });
+
+  it("testar a conexão autentica e envia o termo, de graça", async () => {
+    m.banco.conectar(configDaSoftwareHouse());
+    await guardarTermo();
+    const t = transportePorServico({ ENVIOXMLASSINADO81: () => termoAceito() });
+    expect(await testarConexao(TENANT, t.transporte)).toEqual({ ok: true, texto: "O Serpro aceitou a chave, o segredo, o certificado e o termo de autorização." });
+    expect(t.autenticacoes()).toHaveLength(1);
+    expect(t.doServico("ENVIOXMLASSINADO81")).toHaveLength(1);
   });
 });
