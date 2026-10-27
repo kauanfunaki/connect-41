@@ -17,8 +17,8 @@ type Props = { id: string; titulo: string; status: Situacao; version: number; po
 export function SituacaoTech({ id, titulo, status, version, podeEditar, forma = "celula" }: Props) {
   const router = useRouter(), toast = useToast(), [pendente, iniciar] = useTransition(), [atual, setAtual] = useState(status);
   const cor = CORES_DA_SITUACAO[atual], celula = forma === "celula";
-  const caixa = celula ? "flex h-full min-h-12 w-full items-center justify-center gap-1.5 px-3 text-ui" : "inline-flex h-7 max-w-full items-center gap-1 whitespace-nowrap rounded-md px-2.5 text-helper";
-  if (!podeEditar) return <span className={`${caixa} font-semibold`} style={{ backgroundColor: cor.fundo, color: cor.tinta }}>{SITUACOES[atual]}</span>;
+  const caixa = celula ? "flex h-full w-full items-center justify-center gap-1.5 px-3 text-ui" : "inline-flex h-7 max-w-full items-center gap-1 whitespace-nowrap rounded-md px-2.5 text-helper";
+  if (!podeEditar) return <span className={`${caixa} font-semibold${celula ? " absolute inset-0" : ""}`} style={{ backgroundColor: cor.fundo, color: cor.tinta }}>{SITUACOES[atual]}</span>;
   function mudar(proxima: Situacao, fechar: () => void) {
     fechar();
     if (proxima === atual || pendente) return;
@@ -31,7 +31,7 @@ export function SituacaoTech({ id, titulo, status, version, podeEditar, forma = 
       } catch { setAtual(anterior); toast.error("Não foi possível confirmar a mudança. Atualize a página antes de tentar novamente."); }
     });
   }
-  return <div className={celula ? "h-full w-full [&>span]:flex [&>span]:h-full [&>span]:w-full" : "inline-flex max-w-full min-w-0 [&>span]:max-w-full"}>
+  return <div className={celula ? "absolute inset-0 [&>span]:flex [&>span]:h-full [&>span]:w-full" : "inline-flex max-w-full min-w-0 [&>span]:max-w-full"}>
     <Popover width={200} aria-label={`Situação de ${titulo}`} trigger={({ open, toggle }) => <button type="button" onClick={toggle} disabled={pendente} aria-haspopup="menu" aria-expanded={open}
       aria-label={`Situação de ${titulo}: ${SITUACOES[atual]}. Alterar`} title="Alterar situação"
       className={`${caixa} cursor-pointer font-semibold transition-[filter] hover:brightness-95 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand disabled:cursor-wait disabled:opacity-80`}
