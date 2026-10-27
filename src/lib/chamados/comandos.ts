@@ -7,7 +7,8 @@ import { logAudit } from "@/lib/audit";
 import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestao, exigirOperacao, type Contexto } from "./contexto";
 import { podeResponder, podeVer } from "./acesso";
 import { categoriaAtual, categorias, rascunho, strings } from "./consultas";
-import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, indisponivel, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Status, type DadosDoChamado } from "./regras";
+import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, indisponivel, tituloDaDescricao, perguntaAtual, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Status, type DadosDoChamado } from "./regras";
+import { anexosDoChamado } from "./armazenamento";
 import { prepararCatalogo } from "./catalogo-servidor";
 import { A_CLASSIFICAR, categoriasClassificaveis } from "./catalogo";
 import { classificar } from "./classificacao";
@@ -35,10 +36,25 @@ export async function depois(c: Contexto, id: string, action: string) {
     despacharEventos(c.ctx.tenantId, id),
   ]);
 }
+// Apaga rascunhos abertos da própria pessoa e, depois do banco, os arquivos
+// deles: um rascunho descartado não tem mais quem retome os anexos.
+async function apagarRascunhos(c: Contexto, ids?: string[]) {
+  const where = { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, submittedAt: null, ...(ids ? { id: { in: ids } } : {}) };
+  const anexos = await getPrisma().helpdeskAttachment.findMany({ where: { tenantId: c.ctx.tenantId, ticketId: null, draft: where }, select: { fileUrl: true } });
+  const r = await getPrisma().helpdeskDraft.deleteMany({ where });
+  if (anexos.length) await anexosDoChamado.apagarArquivos(anexos.map(a => a.fileUrl));
+  return r.count;
+}
 export async function criarRascunho(c: Contexto) {
   exigirAbertura(c);
   await prepararCatalogo(c.ctx.tenantId);
+  // Fica só o último rascunho (27/10/2026): começar outro descarta o anterior.
+  await apagarRascunhos(c);
   return getPrisma().helpdeskDraft.create({ data: { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, payload: {} }, select: { id: true, version: true } });
+}
+export async function excluirRascunho(c: Contexto, id: string) {
+  exigirAbertura(c);
+  if (!await apagarRascunhos(c, [identidade.parse(id)])) throw new Error("Rascunho não encontrado ou já enviado.");
 }
 async function conferirOrigem(c: Contexto, dados: DadosDoChamado) {
   const valido = isFullWrite(c.ctx.role) || (c.ctx.sectors.includes(dados.requesterSectorCode) && c.config.requesterSectors.includes(dados.requesterSectorCode));
@@ -49,8 +65,10 @@ export async function salvarRascunho(c: Contexto, id: string, version: number, i
   exigirAbertura(c);
   const dados = dadosRascunhoSchema.parse(input); await conferirOrigem(c, dados);
   const anterior = await rascunho(c, id), payload = anterior.payload as Record<string, unknown>;
-  const mesmosDados = payload.title === dados.title && payload.description === dados.description && payload.requesterSectorCode === dados.requesterSectorCode;
+  // A tela de abertura não tem título: um título vazio mantém o que a IA deu.
+  const mesmosDados = payload.description === dados.description && payload.requesterSectorCode === dados.requesterSectorCode && (!dados.title || payload.title === dados.title);
   const classificacao = mesmosDados ? payload._classificacao : null;
+  dados.title = dados.title || (mesmosDados && typeof payload.title === "string" ? payload.title : "");
   // O navegador não pode forjar uma classificação. Preserva apenas a salva
   // pelo servidor para o mesmo conteúdo, incluindo campos complementares.
   dados.categoryId = classificacao ? String(payload.categoryId) : "";
@@ -83,7 +101,8 @@ async function classificarRascunho(c: Contexto, id: string, version: number, for
       const atuais = await tx.helpdeskCategory.findMany({ where: { tenantId: c.ctx.tenantId } });
       if (!atuais.some(cat => cat.id === escolhida.id && cat.active && cat.version === escolhida.version)
         || (resultado.categoryId && !categoriasClassificaveis(atuais).some(cat => cat.id === escolhida.id))) throw desatualizado();
-      const r = await tx.helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, analysisToken: token, submittedAt: null }, data: { payload: json({ ...dados, categoryId, _classificacao: resultado }), version: { increment: 1 }, review: Prisma.DbNull, reviewVersion: null, analysisToken: null } });
+      const title = dados.title || (resultado.title.length >= 3 ? resultado.title : tituloDaDescricao(dados.description));
+      const r = await tx.helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, analysisToken: token, submittedAt: null }, data: { payload: json({ ...dados, title, categoryId, _classificacao: resultado }), version: { increment: 1 }, review: Prisma.DbNull, reviewVersion: null, analysisToken: null } });
       if (r.count !== 1) throw desatualizado();
     });
   } finally {
@@ -160,10 +179,32 @@ export async function avaliarRascunho(c: Contexto, id: string, version: number, 
     if (!categoriaAindaAtual) throw desatualizado();
     const r = await tx.helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, analysisToken: token, submittedAt: null }, data: { review: json(parecer), reviewVersion: version, analysisToken: null } });
     if (r.count !== 1) throw desatualizado();
-    await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "assistant", body: [parecer.summary, ...parecer.questions].join("\n\n") } });
+    // Uma pergunta por vez (27/10/2026): a mensagem leva o resumo e a primeira;
+    // as seguintes entram conforme a pessoa responde (responderPergunta).
+    await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "assistant", body: [parecer.summary, ...parecer.questions.slice(0, 1)].join("\n\n") } });
   });
   if (parecer.status === "sufficient") return { ...await finalizarRascunho(c, id, version), version };
   return { parecer, version, dados, categorias: (await categorias(c, true)).map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id })) };
+}
+// Guarda a resposta e faz a próxima pergunta do mesmo parecer, sem chamar a IA.
+// A resposta da última pergunta volta para a análise com a conversa inteira.
+export async function responderPergunta(c: Contexto, id: string, version: number, resposta: string) {
+  exigirAbertura(c);
+  const texto = z.string().trim().min(1).max(10000).parse(resposta);
+  const d = await rascunho(c, id);
+  const parecer = parecerSchema.safeParse(d.review);
+  const atual = d.reviewVersion === version && parecer.success ? perguntaAtual(parecer.data, d.messages) : null;
+  if (!parecer.success || !atual || atual.indice + 1 >= atual.total) return avaliarRascunho(c, id, version, texto);
+  const proxima = parecer.data.questions[atual.indice + 1];
+  await getPrisma().$transaction(async tx => {
+    const r = await tx.helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, reviewVersion: version, submittedAt: null }, data: { version: { increment: 1 }, reviewVersion: version + 1 } });
+    if (r.count !== 1) throw desatualizado();
+    // Horários explícitos: a conversa é lida por createdAt e as duas linhas não podem empatar.
+    const agora = Date.now();
+    await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "user", body: texto, createdAt: new Date(agora) } });
+    await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "assistant", body: proxima, createdAt: new Date(agora + 1) } });
+  });
+  return { parecer: parecer.data, version: version + 1, pergunta: proxima };
 }
 
 export async function paraAgir(tx: Tx, c: Contexto, id: string, version: number) {

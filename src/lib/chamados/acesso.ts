@@ -5,7 +5,10 @@ export type ConfigDeAcesso = { enabled: boolean; sectorCode: string; requesterSe
 export type Alvo = { tenantId: string; createdById: string; requesterSectorCode: string; participants: { userId: string }[]; approverIds: string[] };
 export const podeOperar = (ctx: AuthContext, config: ConfigDeAcesso) => config.enabled && ctx.sectors.includes(config.sectorCode) && canActOnSector(ctx, config.sectorCode);
 export const podeGerenciar = (ctx: AuthContext, config: ConfigDeAcesso) => config.enabled && canManageSector(ctx, config.sectorCode);
-export const podeVerInterno = (ctx: AuthContext, config: ConfigDeAcesso) => config.enabled && ctx.sectors.includes(config.sectorCode);
+// Quem acompanha a fila inteira (27/10/2026): a equipe do setor responsável e o
+// administrador. O resto vê só o que abriu; o gestor do setor, também o que o
+// setor dele abriu (`podeVer`/`whereVisivel`).
+export const podeVerInterno = (ctx: AuthContext, config: ConfigDeAcesso) => config.enabled && (ctx.sectors.includes(config.sectorCode) || isFullWrite(ctx.role));
 export const podeVerIndicadores = podeOperar;
 export function podeAbrir(ctx: AuthContext, config: ConfigDeAcesso) {
   return !!ctx.userId && !!ctx.tenantId && config.enabled && !ctx.subscriptionReadOnly && ctx.role !== "READONLY" && (isFullWrite(ctx.role) || ctx.sectors.some(s => config.requesterSectors.includes(s)));

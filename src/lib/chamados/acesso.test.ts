@@ -10,8 +10,12 @@ describe("acesso aos chamados", () => {
     expect(podeAbrir(ctx, config)).toBe(true); expect(podeVer(ctx, config, alvo)).toBe(false);
     expect(podeAbrir({ ...ctx, sectors: ["contabil"] }, config)).toBe(false);
     expect(podeVer(ctx, config, { ...alvo, createdById: ctx.userId })).toBe(true);
-    expect(podeVer({ ...ctx, role: "ADMIN" }, config, alvo)).toBe(false);
     expect(podeOperar({ ...ctx, role: "ADMIN" }, config)).toBe(false);
+  });
+  it("administrador acompanha todos os chamados, sem passar a atender", () => {
+    expect(podeVer({ ...ctx, role: "ADMIN" }, config, alvo)).toBe(true);
+    expect(podeVerInterno({ ...ctx, role: "SUPER_ADMIN" }, config)).toBe(true);
+    expect(podeVerInterno(ctx, config)).toBe(false);
   });
   it("participante não vê o chamado e gestor do setor solicitante vê", () => {
     expect(podeVer(ctx, config, { ...alvo, participants: [{ userId: "u" }] })).toBe(false);
