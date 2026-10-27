@@ -32,10 +32,19 @@ try {
     await db.query(migration);
     if (Number((await db.query("SELECT COUNT(*) AS n FROM tenants"))[0].n) !== before) throw new Error("Migration alterou dados existentes.");
   }
+  // Vínculo de contas, títulos e finalidade OAuth (27/10/2026): também só aditiva e só do GitHub.
+  if (!names.has("github_account_links")) {
+    const migration = await readFile("prisma/migrations/20261027120000_github_account_links/migration.sql", "utf8");
+    const statements = migration.replace(/^\s*--.*$/gm, "");
+    if (/DROP\s+(?:TABLE|COLUMN)|TRUNCATE|MODIFY|CHANGE/i.test(statements) || githubBlocks(migration).join("") !== migration.slice(migration.indexOf("-- AlterTable"))) throw new Error("Migration de vínculos não é exclusivamente aditiva do GitHub.");
+    const before = Number((await db.query("SELECT COUNT(*) AS n FROM github_contributions"))[0].n);
+    await db.query(migration);
+    if (Number((await db.query("SELECT COUNT(*) AS n FROM github_contributions"))[0].n) !== before) throw new Error("Migration alterou dados existentes.");
+  }
   const diff = run(["node_modules/prisma/build/index.js", "migrate", "diff", "--from-config-datasource", "--to-schema", "prisma/schema.prisma", "--script"]);
   if (githubBlocks(diff).length) throw new Error("As tabelas GitHub da migration divergem do schema.");
-  await writeFile(".local/github/migration-result.json", JSON.stringify({ host: "127.0.0.1:33381", tables: 8, schemaMatches: true, additive: true }, null, 2));
-  console.log("Migration GitHub validada: oito tabelas novas, schema compatível e dados anteriores preservados.");
+  await writeFile(".local/github/migration-result.json", JSON.stringify({ host: "127.0.0.1:33381", tables: 9, schemaMatches: true, additive: true }, null, 2));
+  console.log("Migrations GitHub validadas: nove tabelas, schema compatível e dados anteriores preservados.");
 } finally { await db.end(); }
 const tests = spawnSync(process.execPath, ["node_modules/vitest/vitest.mjs", "run", "src/lib/github"], { env, stdio: "inherit" });
 process.exitCode = tests.status ?? 1;

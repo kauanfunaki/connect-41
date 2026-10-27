@@ -89,6 +89,8 @@ model GithubContribution {
   day                  String @db.Char(10)
   url                  String @db.VarChar(1000)
   number               Int?
+  /// Primeira linha da mensagem do commit ou título do PR/issue (27/10/2026).
+  title                String? @db.VarChar(300)
   current              Boolean @default(true)
   seenIn               String? @db.VarChar(40)
   repository           GithubRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
@@ -159,8 +161,24 @@ model GithubOAuthAttempt {
   verifierEnc          String @db.Text
   generation           Int
   expiresAt            DateTime
+  /// "connection": a conta do escritório em Integrações; "account": a pessoa vinculando a própria conta em Sua conta.
+  purpose              String @default("connection") @db.VarChar(20)
   @@index([expiresAt])
   @@map("github_oauth_attempts")
+}
+
+/// A conta GitHub de uma pessoa do Connect, vinculada por ela em Sua conta (27/10/2026).
+/// O painel junta pelo ID estável do GitHub (`externalId`), não pelo login.
+model GithubAccountLink {
+  id                   String @id @default(uuid())
+  tenantId             String
+  userId               String @unique
+  externalId           String @db.VarChar(100)
+  login                String @db.VarChar(100)
+  linkedAt             DateTime @default(now())
+  user                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([tenantId, externalId])
+  @@map("github_account_links")
 }
 
 model OpsWatcher {
@@ -1477,6 +1495,7 @@ model User {
   leadsAtribuidos             Lead[]                     @relation("LeadResponsavel")
 
   driveFilesEnviados          DriveFile[]                @relation("DriveFileEnviadoPor")
+  githubLink                  GithubAccountLink?
   @@unique([tenantId, email])
   @@index([tenantId])
   @@map("users")

@@ -7,7 +7,9 @@ const STATES: Record<SyncProgress["state"], string> = {
 };
 export function SyncStatus({ progress, timezone }: { progress: SyncProgress | null; timezone: string }) {
   if (!progress) return null;
-  return <div role="status" className="space-y-1 rounded-lg border border-border bg-surface-2 p-3 text-fs-2 text-fg-secondary">
+  // Sem `role="status"`: o painel é refeito a cada 30 s e o leitor de tela
+  // repetia a fila inteira a cada leitura (26/10/2026).
+  return <div className="space-y-1 rounded-lg border border-border bg-surface-2 p-3 text-helper text-fg-secondary">
     <p className="font-medium text-fg">{STATES[progress.state]}</p>
     <p>{progress.done} de {progress.total} tarefas concluídas · {progress.pending} pendentes · {progress.failed} com falha</p>
     {progress.pending > 0 && <p className="text-fg-muted">Novas tarefas podem surgir ao encontrar pull requests. {progress.automatic ? "A coleta continua no servidor; você pode fechar esta página." : "O executor interno está desativado nesta instância. Confira o agendador do servidor."}</p>}

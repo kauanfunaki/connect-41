@@ -23,15 +23,20 @@ export function githubOrigin() {
   return origin.origin;
 }
 export function githubCallback() { return `${githubOrigin()}/api/integrations/github/callback`; }
-export function authUrl(state: string, verifier: string, clientId: string) {
+// O vínculo pessoal de Sua conta volta por um subcaminho do callback cadastrado no
+// OAuth App: o GitHub aceita redirect_uri em subdiretório da URL registrada (27/10/2026).
+export function githubAccountCallback() { return `${githubCallback()}/conta`; }
+export function authUrl(state: string, verifier: string, clientId: string, purpose: "connection" | "account" = "connection") {
   const url = new URL("https://github.com/login/oauth/authorize");
-  url.search = new URLSearchParams({ client_id: clientId, redirect_uri: githubCallback(),
+  url.search = new URLSearchParams({ client_id: clientId, redirect_uri: purpose === "account" ? githubAccountCallback() : githubCallback(),
     scope: "read:user repo", state, code_challenge: createHash("sha256").update(verifier).digest("base64url"), code_challenge_method: "S256", allow_signup: "false" }).toString();
+  // Para vincular a pessoa basta confirmar quem ela é: sem escopo, o token só lê dados públicos.
+  if (purpose === "account") url.searchParams.delete("scope");
   return url.toString();
 }
 const tokenSchema = z.object({ access_token: z.string().min(1), refresh_token: z.string().optional(), expires_in: z.number().positive().optional(), scope: z.string().optional(), token_type: z.string().optional() });
 export type TokenConfig = { accessToken: string; refreshToken: string; expiresAt: string; scope: string };
-export async function exchangeToken(credentials: OAuthCredentials, params: Record<string, string>, previous?: TokenConfig): Promise<TokenConfig> {
+export async function exchangeToken(credentials: OAuthCredentials, params: Record<string, string>, previous?: TokenConfig, requireRepo = true): Promise<TokenConfig> {
   let response: Response;
   try {
     response = await fetch("https://github.com/login/oauth/access_token", { method: "POST", headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
@@ -42,7 +47,7 @@ export async function exchangeToken(credentials: OAuthCredentials, params: Recor
   const parsed = tokenSchema.safeParse(await readResponse(response));
   if (!parsed.success) throw new GithubError("A autorização GitHub não pôde ser confirmada.", 401, undefined, "auth");
   const token = parsed.data, scope = token.scope ?? previous?.scope ?? "";
-  if (!scope.split(/[ ,]+/).includes("repo")) throw new GithubError("Autorize o acesso aos repositórios para conectar o módulo.", 403);
+  if (requireRepo && !scope.split(/[ ,]+/).includes("repo")) throw new GithubError("Autorize o acesso aos repositórios para conectar o módulo.", 403);
   return { accessToken: token.access_token, refreshToken: token.refresh_token ?? previous?.refreshToken ?? "",
     expiresAt: token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : "", scope };
 }
@@ -61,9 +66,9 @@ export async function beginOAuth(ctx: AuthContext, session: string) {
 }
 export async function finishOAuth(ctx: AuthContext, session: string, state: string, code: string) {
   const db = getPrisma(), stateHash = oauthHash(state), sessionHash = oauthHash(session);
-  const attempt = await db.githubOAuthAttempt.findFirst({ where: { stateHash, tenantId: ctx.tenantId, userId: ctx.userId, sessionHash, expiresAt: { gt: new Date() } } });
+  const attempt = await db.githubOAuthAttempt.findFirst({ where: { stateHash, tenantId: ctx.tenantId, userId: ctx.userId, sessionHash, purpose: "connection", expiresAt: { gt: new Date() } } });
   if (!attempt || !session) throw new GithubError("A sessão de conexão expirou ou mudou de escritório. Tente novamente.", 403);
-  const consumed = await db.githubOAuthAttempt.deleteMany({ where: { stateHash, sessionHash, expiresAt: { gt: new Date() } } });
+  const consumed = await db.githubOAuthAttempt.deleteMany({ where: { stateHash, sessionHash, purpose: "connection", expiresAt: { gt: new Date() } } });
   if (consumed.count !== 1) throw new GithubError("Esta tentativa de conexão já foi utilizada.", 403);
   const connection = await db.githubConnection.findFirst({ where: { id: attempt.connectionId, tenantId: ctx.tenantId }, include: { integration: true } });
   if (!connection || connection.generation !== attempt.generation) throw new GithubError("A conexão foi alterada. Inicie uma nova autorização.", 409);
