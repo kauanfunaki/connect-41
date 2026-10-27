@@ -72,15 +72,24 @@ const SELECT_PEDIDO = {
  * "Fiscal" do modelo padrão não é compartilhada com o portal.
  */
 export async function pastaFiscalDaEmpresa(tenantId: string, companyId: string): Promise<string | null> {
+  return pastaDoModeloDaEmpresa(tenantId, companyId, "fiscal");
+}
+
+/**
+ * Uma pasta de primeiro nível da empresa pelo nome do modelo ("fiscal",
+ * "guias"): a criada pelo modelo do escritório, senão uma com esse nome.
+ */
+export async function pastaDoModeloDaEmpresa(tenantId: string, companyId: string, nome: string): Promise<string | null> {
+  const alvo = normalizar(nome);
   const modelo = await garantirPastasDaEmpresa(tenantId, companyId);
-  const doModelo = modelo.find((m) => m.active && normalizar(m.name) === "fiscal");
+  const doModelo = modelo.find((m) => m.active && normalizar(m.name) === alvo);
   const pastas = await getPrisma().driveFolder.findMany({
     where: { tenantId, companyId, parentId: null, deletedAt: null },
     select: { id: true, name: true, systemKey: true },
   });
   return (
     (doModelo && pastas.find((p) => p.systemKey === chaveDoModelo(doModelo.id))?.id) ||
-    pastas.find((p) => normalizar(p.name) === "fiscal")?.id ||
+    pastas.find((p) => normalizar(p.name) === alvo)?.id ||
     null
   );
 }

@@ -119,6 +119,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "autorizacoes.serpro": o("conferiu no Serpro a autorização de acesso"),
   "autorizacoes.serpro_lote": o("conferiu no Serpro as autorizações de acesso, em lote"),
   "autorizacoes.serpro_sitfis": o("pediu no Serpro a situação fiscal da empresa"),
+  "autorizacoes.serpro_guia": o("emitiu no Serpro uma guia federal da empresa"),
   "autorizacoes.serpro_caixa_postal": o("abriu uma mensagem da Caixa Postal da Receita, dando ciência"),
 
   // ── BPO ────────────────────────────────────────────────────────────────────
