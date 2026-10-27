@@ -64,8 +64,11 @@ export const GUIA_DA_DCTFWEB = servico(28, "DCTFWEB", "GERARGUIA31", "Emitir", [
 export const GUIA_DA_DCTFWEB_EM_ANDAMENTO = servico(40, "DCTFWEB", "GERARGUIAANDAMENTO313", "Emitir", ["00103"], "Guia de declaração da DCTFWeb em andamento");
 export const DARF_DO_SICALC = servico(46, "SICALC", "CONSOLIDARGERARDARF51", "Emitir", [], "DARF consolidado (Sicalc), PDF e Pix");
 
+/** As modalidades de parcelamento do Simples e do MEI, na ordem do Catálogo. */
+export const MODALIDADES_DE_PARCELAMENTO = ["PARCSN", "PARCSN-ESP", "PERTSN", "RELPSN", "PARCMEI", "PARCMEI-ESP", "PERTMEI", "RELPMEI"] as const;
+
 /** Os parcelamentos: os cinco serviços de cada modalidade seguem o mesmo molde no Catálogo. */
-const PARCELAMENTOS: [idSistema: string, grupo: number, autorizacao: string[], sequencial: number][] = [
+const PARCELAMENTOS: [idSistema: (typeof MODALIDADES_DE_PARCELAMENTO)[number], grupo: number, autorizacao: string[], sequencial: number][] = [
   ["PARCSN", 16, ["00076", "00188"], 65],
   ["PARCSN-ESP", 17, ["00125"], 70],
   ["PERTSN", 18, ["00149", "10011"], 75],
@@ -138,6 +141,12 @@ const PELO_ID = new Map(SERVICOS_DO_SERPRO.map((s) => [`${s.idSistema}/${s.idSer
 
 export function servicoDoCatalogo(idSistema: string, idServico: string): ServicoDoSerpro | null {
   return PELO_ID.get(`${idSistema}/${idServico}`) ?? null;
+}
+
+/** O DAS da parcela de uma modalidade: GERARDAS161 no PARCSN, GERARDAS201 no PARCMEI… */
+export function dasDaParcela(modalidade: (typeof MODALIDADES_DE_PARCELAMENTO)[number]): ServicoDoSerpro {
+  const [sistema, grupo] = PARCELAMENTOS.find(([s]) => s === modalidade)!;
+  return servicoDoCatalogo(sistema, `GERARDAS${grupo}1`)!;
 }
 
 /** O pedido de um serviço do catálogo, com o caminho e a versão dele. `dados` null = vai vazio. */
@@ -341,6 +350,17 @@ export function lerDarfDoSicalc(r: RespostaLida): Leitura<DarfDoSicalcLido> {
       qrCode: texto(o.qrCode),
     },
   };
+}
+
+/**
+ * O DAS da parcela de um parcelamento (Fase 2, 27/10/2026): só o PDF, em
+ * `docArrecadacaoPdfB64` — o mesmo nas oito modalidades.
+ */
+export function lerDasDaParcela(r: RespostaLida): Leitura<{ pdf: string }> {
+  const erro = recusada(r);
+  if (erro) return { ok: false, erro };
+  const pdf = texto(objeto(r.dados)?.docArrecadacaoPdfB64);
+  return pdf ? { ok: true, dados: { pdf } } : { ok: false, erro: "O Serpro não devolveu o PDF do DAS da parcela." };
 }
 
 /** Quem lê o quê. A conferência de procurações tem o leitor dela em regras.ts (`resultadoDaConferencia`). */

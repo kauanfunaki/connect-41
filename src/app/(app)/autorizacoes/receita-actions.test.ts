@@ -9,6 +9,7 @@ const m = vi.hoisted(() => ({
   abrirMensagem: vi.fn(async () => ({ ok: true as const, mensagem: { id: "m", assunto: "a", corpo: "<p>c</p>", abertaEm: "2026-10-20T13:00:00.000Z", abertaPor: "x" } })),
   mensagemJaAberta: vi.fn(async () => null),
   pedirSituacaoFiscal: vi.fn(async () => ({ ok: true as const, texto: "ok", pronto: false })),
+  emitirGuia: vi.fn(async () => ({ ok: true as const, texto: "ok", arquivoId: "a" })),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -16,8 +17,9 @@ vi.mock("@/lib/auth/context", () => ({ getAuthContext: async () => ({}) }));
 vi.mock("@/lib/autorizacoes/servidor", () => ({ acessoAsAutorizacoes: async () => m.acesso }));
 vi.mock("@/lib/serpro/acompanhamento", () => ({ abrirMensagem: m.abrirMensagem, mensagemJaAberta: m.mensagemJaAberta }));
 vi.mock("@/lib/serpro/situacaoFiscal", () => ({ pedirSituacaoFiscal: m.pedirSituacaoFiscal }));
+vi.mock("@/lib/serpro/emissaoDeGuia", () => ({ emitirGuia: m.emitirGuia }));
 
-const { abrirMensagemAction, pedirSituacaoFiscalAction, verMensagemAction } = await import("./receita-actions");
+const { abrirMensagemAction, emitirGuiaAction, pedirSituacaoFiscalAction, verMensagemAction } = await import("./receita-actions");
 
 const ID = "0f8e7c1a-2b3d-4e5f-8a9b-0c1d2e3f4a5b";
 const acesso = (podeEditar: boolean, podeConfigurar: boolean) => ({ tenantId: "t-41", ctx: { userId: "u-1" }, podeEditar, podeConfigurar });
@@ -64,5 +66,17 @@ describe("pedir a situação fiscal", () => {
     expect(await pedirSituacaoFiscalAction("não é id")).toMatchObject({ ok: false, erro: "Empresa não encontrada." });
     expect(await pedirSituacaoFiscalAction(ID)).toMatchObject({ ok: true });
     expect(m.pedirSituacaoFiscal).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("emitir guia (Fase 2, 27/10/2026)", () => {
+  it("só quem edita no Fiscal, com id de empresa e os campos num objeto", async () => {
+    m.acesso = acesso(false, true);
+    expect(await emitirGuiaAction(ID, { tipo: "DAS" })).toMatchObject({ ok: false, erro: "Sem permissão para emitir guias." });
+    m.acesso = acesso(true, false);
+    expect(await emitirGuiaAction("não é id", { tipo: "DAS" })).toMatchObject({ ok: false, erro: "Empresa não encontrada." });
+    expect(await emitirGuiaAction(ID, "DAS")).toMatchObject({ ok: false, erro: "Pedido inválido." });
+    expect(await emitirGuiaAction(ID, { tipo: "DAS", periodo: "2026-09" })).toMatchObject({ ok: true });
+    expect(m.emitirGuia).toHaveBeenCalledWith("t-41", "u-1", ID, { tipo: "DAS", periodo: "2026-09" });
   });
 });

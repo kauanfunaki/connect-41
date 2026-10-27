@@ -24,6 +24,7 @@ import { hojeIso } from "@/lib/datas/calendario";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { receitaDaEmpresa } from "@/lib/serpro/acompanhamento";
 import { ReceitaNaFicha } from "@/components/autorizacoes/ReceitaNaFicha";
+import { guiaDoRegime } from "@/lib/serpro/guias";
 import { CompanyFiliaisSection } from "@/components/empresas/CompanyFiliaisSection";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import type { CompanyStatus } from "@/generated/prisma/enums";
@@ -247,6 +248,7 @@ export default async function EmpresaPage({
                 podePedir={acessoAutorizacao!.podeEditar}
                 podeAbrir={acessoAutorizacao!.podeConfigurar}
                 motivo={prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null}
+                guiaSugerida={guiaDoRegime(company.taxRegimeKind)}
               />
             )}
             <ServicesSection
