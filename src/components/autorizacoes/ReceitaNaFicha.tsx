@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { Selo } from "@/components/ui/Selo";
-import { AbrirMensagem, PedirSituacaoFiscal, VerMensagem } from "@/components/autorizacoes/BotoesDaReceita";
+import { AbrirMensagem, EmitirGuia, PedirSituacaoFiscal, VerMensagem } from "@/components/autorizacoes/BotoesDaReceita";
+import type { TipoDeGuia } from "@/lib/serpro/guias";
 import type { MensagemNaTela, ReceitaDaEmpresa } from "@/lib/serpro/acompanhamento";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 
@@ -35,6 +36,7 @@ export function ReceitaNaFicha({
   podePedir,
   podeAbrir,
   motivo,
+  guiaSugerida,
 }: {
   dados: ReceitaDaEmpresa;
   companyId: string;
@@ -43,6 +45,8 @@ export function ReceitaNaFicha({
   podeAbrir: boolean;
   /** Por que a ligação não chama agora; null = pronta. */
   motivo: string | null;
+  /** A guia que a janela abre escolhida, pelo regime da empresa. */
+  guiaSugerida: TipoDeGuia;
 }) {
   const sitfis = dados.sitfis;
   return (
@@ -130,6 +134,15 @@ export function ReceitaNaFicha({
           <p className="text-micro text-fg-muted">Uma emissão, cobrada pelo Serpro. O PDF vai para Arquivos › Fiscal.</p>
         </div>
         {podePedir && <PedirSituacaoFiscal companyId={companyId} desabilitado={!!motivo} />}
+      </section>
+
+      <section className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="text-label font-medium text-fg">Guias federais</h3>
+          <p className="text-ui text-fg-secondary">DAS do Simples e do MEI, guia da DCTFWeb, DARF e parcela de parcelamento, com recálculo pela data de pagamento.</p>
+          <p className="text-micro text-fg-muted">Uma emissão, cobrada pelo Serpro. O PDF vai para Arquivos › Guias, que o cliente vê no portal.</p>
+        </div>
+        {podePedir && <EmitirGuia companyId={companyId} desabilitado={!!motivo} sugestao={guiaSugerida} />}
       </section>
     </Card>
   );
