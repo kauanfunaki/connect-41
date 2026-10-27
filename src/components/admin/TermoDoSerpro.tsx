@@ -9,7 +9,7 @@ import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { Select } from "@/components/ui/Select";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { baixarAssinadorDoTermo, enviarTermoAssinado } from "@/app/(app)/admin/integracoes/serpro-actions";
-import { BOM_DO_ASSINADOR, NOME_DO_TERMO_ASSINADO, VIGENCIAS_DO_TERMO } from "@/lib/serpro/assinador";
+import { BOM_DO_ASSINADOR, NOME_DO_ASSINADOR, NOME_DO_TERMO_ASSINADO, VIGENCIAS_DO_TERMO } from "@/lib/serpro/assinador";
 
 const dataBr = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
 
@@ -136,9 +136,13 @@ export function TermoDoSerpro({
           </li>
           <li>
             <p>
-              Na máquina onde está o e-CNPJ de {autor.nome}, clique com o botão direito no arquivo › <strong>Executar com o PowerShell</strong>. Ele assina com o
-              certificado instalado (o token A3 pede o PIN) e grava <code className="text-micro">{NOME_DO_TERMO_ASSINADO}</code> na mesma pasta. O certificado não sai
-              da máquina.
+              Na máquina onde está o e-CNPJ de {autor.nome}, abra o PowerShell na pasta do arquivo e rode o comando abaixo. Ele assina com o certificado instalado (o
+              token A3 pede o PIN) e grava <code className="text-micro">{NOME_DO_TERMO_ASSINADO}</code> na mesma pasta. O certificado não sai da máquina.
+            </p>
+            <code className="block mt-2 text-micro break-all">powershell.exe -ExecutionPolicy Bypass -File .\{NOME_DO_ASSINADOR}</code>
+            <p className="mt-1 text-micro text-fg-muted">
+              O “Executar com o PowerShell” do botão direito costuma fechar sem fazer nada: o Windows barra script baixado da internet. O comando libera só esta
+              execução.
             </p>
           </li>
           <li>
