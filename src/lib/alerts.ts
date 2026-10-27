@@ -38,6 +38,10 @@ import { representantesDasChaves, setorDasAutorizacoes } from "@/lib/autorizacoe
 import { processarConferencias } from "@/lib/autorizacoes/serpro";
 import { acompanharNoSerpro } from "@/lib/serpro/acompanhamento";
 import { processarPedidosDoSitfis } from "@/lib/serpro/situacaoFiscal";
+import { configuracaoDoSerpro, ehSoftwareHouse } from "@/lib/serpro/cliente";
+import { validadeDoTermo } from "@/lib/serpro/termo";
+import { CODIGO_DA_INTEGRACAO } from "@/lib/serpro/regras";
+import { integracaoDoCatalogo } from "@/lib/integracoes/catalogo";
 import {
   diasEntre as diasAteODia,
   faixaDeAviso as faixaDaAutorizacao,
@@ -643,6 +647,40 @@ async function checkCertificadosVencendo(tenantId: string, today: Date): Promise
   return sent;
 }
 
+// O certificado e o termo de autorização da conexão do Serpro (Fase 3,
+// 27/10/2026): vencido um dos dois, o Connect para de chamar o Serpro. Mesmas
+// faixas dos certificados (60, 30, 15 e 7 dias, no dia e vencido), um aviso
+// por faixa e por data — renovar volta a avisar. Vai para o setor da
+// integração (o Fiscal). Só a conexão de produção ligada.
+async function checkSerproVencendo(tenantId: string, today: Date): Promise<number> {
+  const cfg = await configuracaoDoSerpro(tenantId);
+  if (!cfg || !cfg.ligada || cfg.ambiente !== "producao") return 0;
+  const itens: { chave: string; data: string; nome: string }[] = [];
+  if (cfg.certificado?.ok && cfg.certificado.validoAte) {
+    itens.push({ chave: `SERPRO_CERT:${cfg.certificado.validoAte}`, data: cfg.certificado.validoAte, nome: `O certificado do Serpro${cfg.certificado.titular ? ` (${cfg.certificado.titular})` : ""}` });
+  }
+  if (cfg.termo && ehSoftwareHouse(cfg)) {
+    const ate = validadeDoTermo(cfg.termo);
+    itens.push({ chave: `SERPRO_TERMO:${ate}`, data: ate, nome: "O termo de autorização do Serpro" });
+  }
+  const setor = integracaoDoCatalogo(CODIGO_DA_INTEGRACAO)!.sectorCode ?? "fiscal";
+  const agora = new Date();
+  let sent = 0;
+  for (const item of itens) {
+    const vence = new Date(`${item.data}T12:00:00Z`);
+    const faixa = faixaDeAviso(vence, agora);
+    if (faixa === null) continue;
+    if (!(await reservarPorChave(tenantId, `${item.chave}:${faixa}`, today))) continue;
+    const dias = diasAte(vence, agora);
+    const data = item.data.split("-").reverse().join("/");
+    const quando = dias < 0 ? `venceu em ${data}` : dias === 0 ? "vence hoje" : `vence em ${dias} dia(s), ${data}`;
+    const message = `${item.nome} ${quando}. Sem ele, o Connect para de chamar o Serpro.`.slice(0, 255);
+    await notifySector(setor, { tenantId, type: "SERPRO_VENCIMENTO", message });
+    sent++;
+  }
+  return sent;
+}
+
 // Arquivo dos Arquivos (Drive) com vencimento — contrato, procuração, certidão,
 // alvará (09/10/2026, quando a aba Documentos da empresa se juntou aos
 // Arquivos). Faixas de 30 e 7 dias, no dia, e vencido; um aviso por faixa,
@@ -870,6 +908,7 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["certificados", () => checkCertificadosVencendo(tenantId, today)],
     ["arquivos", () => checkArquivosVencendo(tenantId, today)],
     ["autorizações", () => checkAutorizacoes(tenantId, today)],
+    ["serpro vencimento", () => checkSerproVencendo(tenantId, today)],
     // Não é alerta: é o lote da conferência das autorizações no Serpro, que
     // anda aqui porque precisa de um relógio e o agendador já roda por tenant.
     ["serpro", () => processarConferencias(tenantId)],

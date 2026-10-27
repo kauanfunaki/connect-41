@@ -103,6 +103,8 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   // Fase 1 do Integra Contador (20/10/2026).
   SERPRO_CAIXA_POSTAL: a("mensagem", "warning", "Caixa Postal da Receita"),
   SERPRO_SITFIS: a("documento", "info", "Situação fiscal"),
+  // Fase 3 (27/10/2026): o certificado e o termo de autorização da conexão.
+  SERPRO_VENCIMENTO: a("documento", "warning", "Serpro a vencer"),
   ADMISSAO_STALE: a("alerta", "warning", "Admissão parada"),
   HANDOFF_STALE: a("alerta", "warning", "Transferência parada"),
   FINANCE_CONTAS_DIA: a("dinheiro", "info", "Contas do dia"),

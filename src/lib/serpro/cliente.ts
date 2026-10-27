@@ -12,6 +12,7 @@
 // - o 304 é sucesso, o 204 traz o novo tempo de espera no ETag, e cada
 //   chamada leva e grava o X-Request-Tag.
 
+import { createHash } from "node:crypto";
 import { getPrisma } from "@/lib/prisma";
 import { executar, lerConfig } from "@/lib/integracoes/data";
 import { camposFaltando, integracaoDoCatalogo } from "@/lib/integracoes/catalogo";
@@ -20,7 +21,8 @@ import { formatCnpj } from "@/lib/format";
 import { lerCertificado, TAMANHO_MAXIMO_DO_CERTIFICADO, type CertificadoLido } from "./certificado";
 import { transporteHttps, type CabecalhosDaResposta, type RespostaHttps, type Transporte } from "./transporte";
 import { podeChamar } from "./portao";
-import { EXEMPLO_DA_DEMONSTRACAO, servicoDoCatalogo } from "./servicos";
+import { ENVIO_DO_TERMO, EXEMPLO_DA_DEMONSTRACAO, pedidoDoServico, servicoDoCatalogo } from "./servicos";
+import { validadeDoTermo } from "./termo";
 import {
   cabeNoTeto,
   CODIGO_DA_INTEGRACAO,
@@ -38,6 +40,7 @@ import {
   temMensagemDeErro,
   tempoDeEsperaDoEtag,
   tipoDeCobranca,
+  tokenDoTermoNaResposta,
   TIPOS_DE_COBRANCA,
   type Ambiente,
   type ContagemDoMes,
@@ -82,17 +85,47 @@ export type ConfiguracaoDoSerpro = {
   certificado: CertificadoLido | null;
   /** Quem recebe as autorizações (só dígitos): é o autor de cada pedido. */
   escritorio: { nome: string; cnpj: string } | null;
+  /** O termo de autorização guardado (modelo software house, 27/10/2026). */
+  termo: TermoGuardado | null;
+};
+
+export type TermoGuardado = {
+  xml: string;
+  contratante: string;
+  autor: string;
+  assinadoEm: string;
+  vigencia: string;
+  certificadoTitular: string | null;
+  certificadoValidoAte: string;
+  aceitoEm: Date | null;
+  erro: string | null;
+  updatedAt: Date;
 };
 
 /** A conexão do Serpro do tenant, decifrada. null = ninguém conectou. Só no servidor. */
 export async function configuracaoDoSerpro(tenantId: string): Promise<ConfiguracaoDoSerpro | null> {
   const prisma = getPrisma();
-  const [conexao, recebe] = await Promise.all([
+  const [conexao, recebe, termo] = await Promise.all([
     prisma.tenantIntegration.findUnique({
       where: { tenantId_integrationCode_instanceKey: { tenantId, integrationCode: CODIGO_DA_INTEGRACAO, instanceKey: "default" } },
       select: { id: true, enabled: true, configEnc: true, updatedAt: true },
     }),
     prisma.accessAuthorizationGrantee.findUnique({ where: { tenantId }, select: { name: true, cnpj: true } }),
+    prisma.serproTermo.findUnique({
+      where: { tenantId },
+      select: {
+        xml: true,
+        contratante: true,
+        autor: true,
+        assinadoEm: true,
+        vigencia: true,
+        certificadoTitular: true,
+        certificadoValidoAte: true,
+        aceitoEm: true,
+        erro: true,
+        updatedAt: true,
+      },
+    }),
   ]);
   if (!conexao) return null;
   const config = lerConfig(conexao.configEnc);
@@ -112,6 +145,7 @@ export async function configuracaoDoSerpro(tenantId: string): Promise<Configurac
     tetoCentavos: lerTeto(config.tetoMensal),
     certificado,
     escritorio: recebe ? { nome: recebe.name, cnpj: recebe.cnpj } : null,
+    termo: termo ?? null,
   };
 }
 
@@ -137,13 +171,37 @@ export function validarConfigDoSerpro(config: Record<string, string>): string | 
 }
 
 /**
- * Dá para chamar o Serpro? O motivo, quando não, é o que a tela mostra.
- *
- * Contratante e autor do pedido são o mesmo CNPJ por enquanto: o escritório
- * contrata e pede em nome próprio. Contratante diferente (a empresa do Connect
- * atendendo vários escritórios) exige o termo de autorização assinado pelo
- * escritório, que espera a decisão de em nome de quem contratar.
+ * O modelo software house (27/10/2026): o certificado é de quem contratou o
+ * Serpro (a 41 Tech) e as autorizações são de outro CNPJ (a 41 Contábil). Aí
+ * cada chamada vai com o token do termo de autorização. Sem o CNPJ legível no
+ * certificado, vale o modelo antigo: o escritório contrata e pede em nome próprio.
  */
+export function ehSoftwareHouse(cfg: ConfiguracaoDoSerpro): boolean {
+  return cfg.ambiente === "producao" && !!cfg.certificado?.ok && !!cfg.certificado.cnpj && !!cfg.escritorio && cfg.certificado.cnpj !== cfg.escritorio.cnpj;
+}
+
+/** O termo serve para esta conexão? null = serve; senão, o porquê. */
+export function problemaDoTermo(cfg: ConfiguracaoDoSerpro, hoje = hojeIso()): string | null {
+  const t = cfg.termo;
+  const contratante = cfg.certificado?.ok ? cfg.certificado.cnpj : null;
+  if (!t) {
+    return `Falta o termo de autorização: o certificado é de ${formatCnpj(contratante ?? "")} e quem recebe as autorizações é ${formatCnpj(cfg.escritorio?.cnpj ?? "")}, que precisa autorizar o contratante a pedir em nome dele (Termo de autorização, logo abaixo).`;
+  }
+  if (t.contratante !== contratante) {
+    return `O termo de autorização é para o CNPJ ${formatCnpj(t.contratante)}, e o certificado guardado é de ${formatCnpj(contratante ?? "")}. Gere e assine um termo novo.`;
+  }
+  if (t.autor !== cfg.escritorio?.cnpj) {
+    return `O termo de autorização foi assinado por ${formatCnpj(t.autor)}, e quem recebe as autorizações é ${formatCnpj(cfg.escritorio?.cnpj ?? "")}. Gere e assine um termo novo.`;
+  }
+  const ate = validadeDoTermo(t);
+  if (ate < hoje) {
+    const porque = ate === t.vigencia ? "venceu" : "perdeu a validade com o certificado de quem assinou, que venceu";
+    return `O termo de autorização ${porque} em ${ate.split("-").reverse().join("/")}. Gere e assine um termo novo.`;
+  }
+  return null;
+}
+
+/** Dá para chamar o Serpro? O motivo, quando não, é o que a tela mostra. */
 export function prontidaoDoSerpro(cfg: ConfiguracaoDoSerpro | null, hoje = hojeIso()): { pronta: true } | { pronta: false; motivo: string } {
   if (!cfg) return { pronta: false, motivo: "O Serpro ainda não foi conectado (Configurações › Integrações)." };
   if (cfg.faltando.length) return { pronta: false, motivo: `Falta preencher na conexão do Serpro: ${cfg.faltando.join(", ")}.` };
@@ -164,11 +222,9 @@ export function prontidaoDoSerpro(cfg: ConfiguracaoDoSerpro | null, hoje = hojeI
   }
   if (cfg.tetoCentavos === null) return { pronta: false, motivo: "O teto mensal do Serpro está inválido." };
   if (!cfg.escritorio) return { pronta: false, motivo: "Falta definir quem recebe as autorizações (em Autorizações de acesso)." };
-  if (cfg.certificado.cnpj && cfg.certificado.cnpj !== cfg.escritorio.cnpj) {
-    return {
-      pronta: false,
-      motivo: `O certificado é do CNPJ ${formatCnpj(cfg.certificado.cnpj)} e quem recebe as autorizações é ${formatCnpj(cfg.escritorio.cnpj)}. Por enquanto os dois precisam ser o mesmo: o termo de autorização, que permitiria contratar por outro CNPJ, ainda não está no Connect.`,
-    };
+  if (ehSoftwareHouse(cfg)) {
+    const problema = problemaDoTermo(cfg, hoje);
+    if (problema) return { pronta: false, motivo: problema };
   }
   return { pronta: true };
 }
@@ -251,8 +307,65 @@ async function autenticar(cfg: ConfiguracaoDoSerpro, transporte: Transporte, ren
   return token;
 }
 
+// ─── Token do termo de autorização ───────────────────────────────────────────
+
+// Por cliente e pelo próprio XML: um termo novo não herda o token do anterior.
+const tokensDoTermo = new Map<string, { token: string; expiraEm: number }>();
+const chaveDoTermo = (tenantId: string, t: TermoGuardado) => `${tenantId}:${createHash("sha256").update(t.xml).digest("hex")}`;
+
+/** O pedido que leva o termo ao Serpro: grátis (Apoiar), e o contribuinte é o próprio autor. */
+export function pedidoDoTermo(t: TermoGuardado): PedidoAoSerpro {
+  return pedidoDoServico(ENVIO_DO_TERMO, t.autor, { xml: Buffer.from(t.xml, "utf8").toString("base64") });
+}
+
 /**
- * Testa a ligação, de graça. Na produção, só autentica; na demonstração, que
+ * O token que vai no cabeçalho `autenticar_procurador_token` (modelo software
+ * house, 27/10/2026). Vale até a meia-noite seguinte: até lá fica guardado, e
+ * depois o termo vai de novo — o mesmo XML, enquanto a vigência e o
+ * certificado de quem assinou valerem. O Serpro responde 304 ao termo que
+ * ainda tem no cache, com o token no ETag. A tela mostra o último aceite e a
+ * última recusa.
+ */
+async function tokenDoTermo(tenantId: string, cfg: ConfiguracaoDoSerpro, transporte: Transporte, renovar = false): Promise<{ ok: true; token: string } | { ok: false; erro: string }> {
+  const termo = cfg.termo!;
+  const chave = chaveDoTermo(tenantId, termo);
+  const guardado = tokensDoTermo.get(chave);
+  if (!renovar && guardado && guardado.expiraEm > Date.now()) return { ok: true, token: guardado.token };
+
+  const r = await chamarSerpro(tenantId, pedidoDoTermo(termo), { origem: "termo", transporte, semTermo: true });
+  const lido = r.ok ? tokenDoTermoNaResposta(r.resposta, r.cabecalhos) : null;
+  const prisma = getPrisma();
+  if (!lido) {
+    const erro = r.ok ? "O Serpro aceitou o termo de autorização, mas não devolveu o token." : `O Serpro recusou o termo de autorização: ${r.erro}`;
+    tokensDoTermo.delete(chave);
+    await prisma.serproTermo.updateMany({ where: { tenantId }, data: { erro: erro.slice(0, 500) } });
+    return { ok: false, erro };
+  }
+  tokensDoTermo.set(chave, lido);
+  await prisma.serproTermo.updateMany({ where: { tenantId }, data: { aceitoEm: new Date(), erro: null } });
+  return { ok: true, token: lido.token };
+}
+
+/**
+ * Leva o termo recém-guardado ao Serpro, quando a conexão já está pronta. Não
+ * pronta (as chaves ainda não chegaram, por exemplo), o termo fica guardado e
+ * vai na primeira chamada.
+ */
+export async function enviarTermoAoSerpro(
+  tenantId: string,
+  transporte: Transporte = transporteHttps
+): Promise<{ enviado: true } | { enviado: false; erro: string; recusado: boolean }> {
+  const cfg = await configuracaoDoSerpro(tenantId);
+  const pronta = prontidaoDoSerpro(cfg);
+  if (!pronta.pronta) return { enviado: false, erro: pronta.motivo, recusado: false };
+  if (!ehSoftwareHouse(cfg!)) return { enviado: false, erro: "Esta conexão não usa termo: o certificado é do próprio escritório.", recusado: false };
+  const t = await tokenDoTermo(tenantId, cfg!, transporte, true);
+  return t.ok ? { enviado: true } : { enviado: false, erro: t.erro, recusado: true };
+}
+
+/**
+ * Testa a ligação, de graça. Na produção, só autentica — e, no modelo
+ * software house, envia o termo, que também é grátis; na demonstração, que
  * não autentica, faz a consulta de exemplo da documentação. Fica registrado
  * na saúde da integração.
  */
@@ -261,10 +374,15 @@ export async function testarConexao(tenantId: string, transporte: Transporte = t
   const pronta = prontidaoDoSerpro(cfg);
   if (!pronta.pronta) return { ok: false, erro: pronta.motivo };
   const demonstracao = cfg!.ambiente === "demonstracao";
+  const comTermo = ehSoftwareHouse(cfg!);
   try {
     await executar({ tenantId, integrationId: cfg!.integrationId, trigger: "MANUAL" }, async () => {
       if (!demonstracao) {
         await autenticar(cfg!, transporte, true);
+        if (comTermo) {
+          const t = await tokenDoTermo(tenantId, cfg!, transporte, true);
+          if (!t.ok) throw new Error(t.erro);
+        }
       } else {
         const r = await chamarSerpro(tenantId, EXEMPLO_DA_DEMONSTRACAO, { origem: "teste", transporte });
         if (!r.ok) throw new Error(r.erro);
@@ -273,7 +391,11 @@ export async function testarConexao(tenantId: string, transporte: Transporte = t
     });
     return {
       ok: true,
-      texto: demonstracao ? "A demonstração do Serpro respondeu à consulta de exemplo." : "O Serpro aceitou a chave, o segredo e o certificado.",
+      texto: demonstracao
+        ? "A demonstração do Serpro respondeu à consulta de exemplo."
+        : comTermo
+          ? "O Serpro aceitou a chave, o segredo, o certificado e o termo de autorização."
+          : "O Serpro aceitou a chave, o segredo e o certificado.",
     };
   } catch (e) {
     return { ok: false, erro: e instanceof Error ? e.message : "Falha ao testar a conexão." };
@@ -323,10 +445,11 @@ export type ResultadoDaChamada =
       /**
        * nao_pronta, fora_do_catalogo, precisa_de_pessoa, sem_autorizacao e
        * teto: nada foi chamado. autenticacao: o /authenticate recusou ou não
-       * respondeu. rede: a chamada ficou sem resposta. falha: o Serpro
+       * respondeu. termo: o Serpro recusou o termo de autorização (o serviço
+       * não foi chamado). rede: a chamada ficou sem resposta. falha: o Serpro
        * respondeu, com erro.
        */
-      motivo: "nao_pronta" | "fora_do_catalogo" | "precisa_de_pessoa" | "sem_autorizacao" | "teto" | "autenticacao" | "rede" | "falha";
+      motivo: "nao_pronta" | "fora_do_catalogo" | "precisa_de_pessoa" | "sem_autorizacao" | "teto" | "autenticacao" | "termo" | "rede" | "falha";
       erro: string;
       /** O status da resposta do serviço; null quando não houve. */
       status: number | null;
@@ -345,6 +468,8 @@ export async function chamarSerpro(
      * isso, o serviço que dá ciência não é chamado — o agendador nunca passa.
      */
     cienciaConfirmada?: boolean;
+    /** O próprio envio do termo: vai sem o token dele. Só o `tokenDoTermo` usa. */
+    semTermo?: boolean;
   }
 ): Promise<ResultadoDaChamada> {
   const transporte = opcoes.transporte ?? transporteHttps;
@@ -391,6 +516,16 @@ export async function chamarSerpro(
     }
   }
 
+  // Software house (27/10/2026): sem o token do termo, o Serpro não aceita o
+  // pedido em nome de quem recebe as autorizações. O termo recusado para aqui,
+  // antes da chamada — que seria cobrada e voltaria negada.
+  let termo: string | null = null;
+  if (!demonstracao && ehSoftwareHouse(cfg!) && !opcoes.semTermo) {
+    const t = await tokenDoTermo(tenantId, cfg!, transporte);
+    if (!t.ok) return { ok: false, motivo: "termo", erro: t.erro, status: null };
+    termo = t.token;
+  }
+
   const partes = partesDoPedido(cfg!, pedido);
   const corpo = JSON.stringify(corpoDoPedido(pedido, partes.contratante, partes.autor));
   const requestTag = tagDaRequisicao(partes.autor, pedido.lote ? { tipo: pedido.lote.tipo, numero: "" } : pedido.contribuinte, servico.sequencial);
@@ -414,7 +549,13 @@ export async function chamarSerpro(
       const enviar = (t: Token) =>
         transporte({
           url,
-          cabecalhos: { Authorization: `Bearer ${t.access}`, jwt_token: t.jwt, "Content-Type": "application/json", "X-Request-Tag": requestTag },
+          cabecalhos: {
+            Authorization: `Bearer ${t.access}`,
+            jwt_token: t.jwt,
+            ...(termo ? { autenticar_procurador_token: termo } : {}),
+            "Content-Type": "application/json",
+            "X-Request-Tag": requestTag,
+          },
           corpo,
           pfx: cfg!.pfx!,
           senha: cfg!.senha,
@@ -471,4 +612,5 @@ export async function chamarSerpro(
 /** Só para os testes: esquece os tokens guardados. */
 export function esquecerTokens() {
   tokens.clear();
+  tokensDoTermo.clear();
 }
