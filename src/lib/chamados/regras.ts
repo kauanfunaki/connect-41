@@ -42,7 +42,21 @@ export const categoriaSchema = z.object({
 export type Categoria = z.infer<typeof categoriaSchema>;
 export const dadosSchema = z.object({ title: z.string().trim().min(3).max(255), description: z.string().trim().min(1).max(15000), categoryId: id, requesterSectorCode: z.string().min(1).max(40), priority: z.enum(PRIORIDADES).default("MEDIA"), requestData: z.record(z.string(), z.string().max(10000)).default({}), tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]) });
 export type DadosDoChamado = z.infer<typeof dadosSchema>;
-export const dadosRascunhoSchema = dadosSchema.extend({ categoryId: z.string().trim().max(191).default("") });
+// O título é da IA (27/10/2026): o rascunho nasce sem ele e a classificação o
+// preenche; sem IA, sai do começo da descrição.
+export const dadosRascunhoSchema = dadosSchema.extend({ title: z.string().trim().max(255).default(""), categoryId: z.string().trim().max(191).default("") });
+export function tituloDaDescricao(descricao: string) {
+  const linha = descricao.trim().split(/\r?\n/).find(l => l.trim())?.trim().replace(/\s+/g, " ") ?? "";
+  const curto = linha.length <= 80 ? linha : `${linha.slice(0, 80).replace(/\s+\S*$/, "")}…`;
+  return curto.length >= 3 ? curto : `Chamado: ${curto || "sem descrição"}`;
+}
+/** A pergunta em aberto é a última que o assistente fez: as perguntas do parecer vão uma por mensagem. */
+export function perguntaAtual(parecer: Parecer | null, mensagens: { role: string; body: string }[]) {
+  if (parecer?.status !== "needs_information") return null;
+  const ultima = [...mensagens].reverse().find(m => m.role === "assistant")?.body ?? "";
+  const indice = parecer.questions.findIndex(q => ultima.endsWith(q));
+  return indice < 0 ? null : { indice, total: parecer.questions.length };
+}
 
 export function validarFormulario(dados: DadosDoChamado, categoria: Categoria, anexos: { attachmentKey: string | null; mimeType: string }[]) {
   if (!categoria.active) throw new Error("Esta categoria está desativada.");

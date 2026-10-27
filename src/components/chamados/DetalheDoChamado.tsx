@@ -36,6 +36,9 @@ export function DetalheDoChamado({ chamado: t, eu, usuarios, categorias, setores
   const nome = (id: string) => usuarios.find(u => u.id === id)?.name ?? "Usuário indisponível";
   const ciclo = t.cycles[0], encerrado = fechado(t.status);
   const parecer = parecerSchema.safeParse(t.draft.review);
+  // Cada parecer já vira mensagem do assistente (resumo + perguntas); repetir o
+  // resumo embaixo duplicava o texto quando a análise aprovava o chamado.
+  const resumoNaConversa = parecer.success && t.draft.messages.some(m => m.role === "assistant" && m.body.startsWith(parecer.data.summary));
   // Os arquivos da abertura ficam com a solicitação; os seguintes, na conversa.
   const daAbertura = t.attachments.filter(a => a.createdAt <= t.createdAt);
   const linha = montarLinhaDoTempo({ mensagens: t.comments, anexos: t.attachments.filter(a => a.createdAt > t.createdAt), eventos: t.events });
@@ -65,7 +68,8 @@ export function DetalheDoChamado({ chamado: t, eu, usuarios, categorias, setores
           {linha.length ? <LinhaDoTempo itens={linha} nome={nome} /> : <p className="text-ui text-fg-muted">Ainda não há mensagens de atendimento.</p>}
           {p.responder && <CaixaDeMensagem chamado={{ id: t.id, draftId: t.draftId, version: t.version }} podeInterno={p.operar} />}
         </Card>
-        <Card className="p-5"><Accordion titulo="Conversa da triagem" classeDoCabecalho="font-semibold text-fg"><p className="my-3 text-helper text-fg-muted">As mensagens abaixo complementam a descrição original.</p>{t.draft.messages.map(m => <div key={m.id} className="my-3 rounded-md bg-surface-hover p-3"><p className="text-helper font-semibold text-fg">{m.role === "user" ? "Solicitante" : "Assistente"}</p><p className="whitespace-pre-wrap break-words text-ui text-fg-secondary">{m.body}</p></div>)}{parecer.success && <div className="space-y-2 text-helper text-fg-secondary"><p>{parecer.data.summary}</p>{parecer.data.attachments.map(a => <p key={a.id}><strong>{a.name}:</strong> {a.reason}</p>)}</div>}{!t.draft.messages.length && <p className="mt-3 text-ui text-fg-muted">Chamado enviado sem conversa de triagem.</p>}</Accordion></Card>
+        {/* A conversa com a IA é material da equipe, como as notas internas. */}
+        {p.interno && <Card className="p-5"><Accordion titulo="Conversa da triagem" classeDoCabecalho="font-semibold text-fg"><p className="my-3 text-helper text-fg-muted">As mensagens abaixo complementam a descrição original.</p>{t.draft.messages.map(m => <div key={m.id} className="my-3 rounded-md bg-surface-hover p-3"><p className="text-helper font-semibold text-fg">{m.role === "user" ? "Solicitante" : "Assistente"}</p><p className="whitespace-pre-wrap break-words text-ui text-fg-secondary">{m.body}</p></div>)}{parecer.success && <div className="space-y-2 text-helper text-fg-secondary">{!resumoNaConversa && <p>{parecer.data.summary}</p>}{parecer.data.attachments.map(a => <p key={a.id}><strong>{a.name}:</strong> {a.reason}</p>)}</div>}{!t.draft.messages.length && <p className="mt-3 text-ui text-fg-muted">Chamado enviado sem conversa de triagem.</p>}</Accordion></Card>}
         {!!t.reopenRequests.length && <Card className="p-5"><Accordion titulo="Histórico de reaberturas" classeDoCabecalho="font-semibold text-fg">{t.reopenRequests.map(r => <div key={r.id} className="my-3 space-y-2 border-b border-border pb-3 text-ui text-fg-secondary"><p className="text-helper">Pedido por {nome(r.requestedById)} em {data(r.createdAt)} · {r.status === "PENDING" ? "Pendente" : r.status === "APPROVED" ? "Aceito" : "Recusado"}</p><p className="whitespace-pre-wrap break-words">{r.reason}</p>{r.decidedById && <><p className="text-helper">Decisão de {nome(r.decidedById)}{r.decidedAt ? " em " + data(r.decidedAt) : ""}</p><p className="whitespace-pre-wrap break-words">{r.note}</p></>}</div>)}</Accordion></Card>}
       </div>
       <div className="min-w-0 space-y-5">
