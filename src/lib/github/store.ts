@@ -64,7 +64,7 @@ export async function persistContributions(db: GithubDb, connection: GithubConne
     const old = await db.githubContribution.findUnique({ where: { repositoryId_type_externalId: { repositoryId, type: item.type, externalId: item.externalId } }, select: { userId: true, day: true, type: true } });
     if (old) touched.set(`${old.userId}:${old.day}:${old.type}`, old);
     touched.set(`${user.id}:${day}:${item.type}`, { userId: user.id, day, type: item.type });
-    const values = { userId: user.id, day, occurredAt: item.occurredAt, url: item.url, number: item.number, current: true, ...(scanId ? { seenIn: scanId } : {}) };
+    const values = { userId: user.id, day, occurredAt: item.occurredAt, url: item.url, number: item.number, title: item.title, current: true, ...(scanId ? { seenIn: scanId } : {}) };
     await db.githubContribution.upsert({ where: { repositoryId_type_externalId: { repositoryId, type: item.type, externalId: item.externalId } },
       create: { tenantId: connection.tenantId, repositoryId, type: item.type, externalId: item.externalId, ...values }, update: values });
   }

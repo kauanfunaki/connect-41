@@ -21,6 +21,11 @@ export function DeveloperAvatar({ login }: { login: string }) {
   return <img src={src} alt="" width={32} height={32} loading="lazy" referrerPolicy="no-referrer" className={styles.avatar} onError={() => setFalhou(src)} />;
 }
 
+// "login — nome no Connect" de quem vinculou a conta em Sua conta (27/10/2026).
+export function DeveloperName({ login, name }: { login: string; name: string | null }) {
+  return <><span>{login}</span>{name && <span className={styles.developerName}> — {name}</span>}</>;
+}
+
 export function GithubOverview({ data, query }: { data: DashboardView; query: string }) {
   const summary = data.summary;
   const developers = new URLSearchParams(query); developers.delete("page"); developers.delete("view");
@@ -43,7 +48,7 @@ export function GithubOverview({ data, query }: { data: DashboardView; query: st
         <div className={styles.panelHeading}><div><h2 id="github-team">Atividade do time</h2><p>Contribuições no período</p></div><Link href={developersHref}>Ver todos</Link></div>
         <div className={styles.leaders}>{summary?.leaders.length ? summary.leaders.map((person, index) => <div key={person.id} className={styles.person}>
           <span className={styles.position}>{String(index + 1).padStart(2, "0")}</span><DeveloperAvatar login={person.login} />
-          <Link href={`/github/desenvolvedores?${new URLSearchParams({ ...Object.fromEntries(developers), user: person.login })}`} className={styles.personName}>{person.login}</Link>
+          <Link href={`/github/desenvolvedores?${new URLSearchParams({ ...Object.fromEntries(developers), user: person.login })}`} className={styles.personName}><DeveloperName login={person.login} name={person.name} /></Link>
           <span className={styles.personCount}><strong>{number(person.total)}</strong><small>contribuições</small></span>
         </div>) : <EmptyState icon={<Users />} title="Nenhuma atividade no período" />}</div>
       </section>
@@ -90,19 +95,19 @@ function RecentActivity({ summary, timezone }: { summary: GithubSummary | null; 
   if (!summary?.recent.length) return <EmptyState icon={<Activity />} title="Nenhuma atividade neste período" />;
   const atividade = (event: GithubSummary["recent"][number]) => <a href={event.url} target="_blank" rel="noreferrer" className={styles.activityLink}>
     <span className={styles.activityIcon} data-pr={event.type !== "COMMIT" || undefined}>{event.type === "COMMIT" ? <GitCommitHorizontal size={18} /> : <GitPullRequest size={18} />}</span>
-    <span className="min-w-0"><strong>{TYPE_LABELS[event.type]} <span className={styles.reference}>{event.reference}</span></strong><small>{event.repository}</small></span>
+    <span className="min-w-0"><strong>{TYPE_LABELS[event.type]} <span className={styles.reference}>{event.reference}</span></strong><small>{event.title ? `${event.title} · ` : ""}{event.repository}</small></span>
   </a>;
   const quando = (event: GithubSummary["recent"][number]) => <time dateTime={event.occurredAt}>{formatInstantDateTime(new Date(event.occurredAt), { timeZone: timezone })}</time>;
   // No celular, cartões no lugar da tabela que só rolava de lado (26/10/2026).
   return <>
     <CartoesNoCelular className={styles.activityCards}>{summary.recent.map(event => <Cartao key={event.id} className={styles.activityCard}>
       {atividade(event)}
-      <div className={styles.activityCardFoot}><span className={styles.developerCell}><DeveloperAvatar login={event.login} /><span>{event.login}</span></span>{quando(event)}</div>
+      <div className={styles.activityCardFoot}><span className={styles.developerCell}><DeveloperAvatar login={event.login} /><span><DeveloperName login={event.login} name={event.name} /></span></span>{quando(event)}</div>
     </Cartao>)}</CartoesNoCelular>
     <TabelaNoDesktop><table className={styles.activityTable}><thead><tr><th>Atividade</th><th>Desenvolvedor</th><th>Quando</th></tr></thead>
       <tbody>{summary.recent.map(event => <tr key={event.id}>
         <td>{atividade(event)}</td>
-        <td><span className={styles.developerCell}><DeveloperAvatar login={event.login} /><span>{event.login}</span></span></td>
+        <td><span className={styles.developerCell}><DeveloperAvatar login={event.login} /><span><DeveloperName login={event.login} name={event.name} /></span></span></td>
         <td>{quando(event)}</td>
       </tr>)}</tbody>
     </table></TabelaNoDesktop>

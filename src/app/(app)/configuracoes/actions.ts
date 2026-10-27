@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { revokeAllUserSessions } from "@/lib/auth/sessions";
 import { logAudit } from "@/lib/audit";
 import { lerExpediente } from "@/lib/agendaExpediente";
+import { unlinkAccount } from "@/lib/github/conta";
 
 // Conta do próprio usuário. Tudo aqui é escopado a ctx.userId — nunca a um id
 // vindo do formulário — então SECTOR_USER e READONLY também podem usar: não é
@@ -142,4 +143,13 @@ export async function alterarMinhaSenha(_prev: TrocaSenhaState, form: FormData):
   await revokeAllUserSessions(ctx.userId);
 
   return { loggedOut: true };
+}
+
+// Desfaz o vínculo da própria conta GitHub feito em Sua conta (27/10/2026).
+// O histórico de contribuições continua; a pessoa só sai do filtro de integrados.
+export async function desvincularGithub(): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.userId || !ctx.tenantId) return;
+  await unlinkAccount(ctx);
+  revalidatePath("/configuracoes");
 }

@@ -15,7 +15,10 @@ export const filtersSchema = z.object({
   organization: z.string().max(100).optional(), user: z.string().max(100).optional(),
   type: z.enum(CONTRIBUTION_TYPES).optional(), bots: z.enum(["0", "1"]).default("0"),
   page: z.coerce.number().int().min(1).max(10000).default(1),
-  view: z.enum(["general", "developers"]).default("developers"),
+  view: z.enum(["general", "developers", "repositories"]).default("developers"),
+  // Por padrão só entram as pessoas que vincularam a conta GitHub em Sua conta;
+  // `all=1` mostra também os autores sem vínculo (27/10/2026).
+  all: z.enum(["0", "1"]).default("0"),
 });
 export type Filters = z.infer<typeof filtersSchema>;
 export const settingsSchema = z.object({
@@ -51,20 +54,26 @@ export function safeGithubUrl(value: unknown): string {
 }
 const instant = z.string().datetime({ offset: true });
 const common = z.object({ node_id: z.string().min(1).max(100), user: z.unknown(), html_url: z.string(), number: z.number().int().positive().optional() });
+// Só a primeira linha da mensagem ou o título, no tamanho da coluna (27/10/2026).
+export function contributionTitle(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const line = value.split(/\r?\n/, 1)[0].trim();
+  return line ? line.slice(0, 300) : null;
+}
 export function normalize(value: unknown, resource: "COMMIT" | "ISSUE" | "PULL_REQUEST" | "REVIEW"): Contribution | null {
   if (resource === "COMMIT") {
     const raw = z.object({ sha: z.string().regex(/^[a-f\d]{40,64}$/i), author: z.unknown(), html_url: z.string(),
-      commit: z.object({ committer: z.object({ date: instant }) }) }).parse(value);
-    return { externalId: raw.sha, type: resource, user: identity(raw.author ?? null), occurredAt: new Date(raw.commit.committer.date), url: safeGithubUrl(raw.html_url), number: null };
+      commit: z.object({ committer: z.object({ date: instant }), message: z.unknown().optional() }) }).parse(value);
+    return { externalId: raw.sha, type: resource, user: identity(raw.author ?? null), occurredAt: new Date(raw.commit.committer.date), url: safeGithubUrl(raw.html_url), number: null, title: contributionTitle(raw.commit.message) };
   }
   if (resource === "REVIEW") {
     const raw = common.extend({ submitted_at: instant.nullish(), state: z.string() }).parse(value);
     if (!raw.submitted_at || raw.state === "PENDING") return null;
-    return { externalId: raw.node_id, type: resource, user: identity(raw.user ?? null), occurredAt: new Date(raw.submitted_at), url: safeGithubUrl(raw.html_url), number: null };
+    return { externalId: raw.node_id, type: resource, user: identity(raw.user ?? null), occurredAt: new Date(raw.submitted_at), url: safeGithubUrl(raw.html_url), number: null, title: null };
   }
-  const raw = common.extend({ created_at: instant, pull_request: z.unknown().optional() }).parse(value);
+  const raw = common.extend({ created_at: instant, pull_request: z.unknown().optional(), title: z.unknown().optional() }).parse(value);
   if (resource === "ISSUE" && raw.pull_request !== undefined) return null;
-  return { externalId: raw.node_id, type: resource, user: identity(raw.user ?? null), occurredAt: new Date(raw.created_at), url: safeGithubUrl(raw.html_url), number: raw.number ?? null };
+  return { externalId: raw.node_id, type: resource, user: identity(raw.user ?? null), occurredAt: new Date(raw.created_at), url: safeGithubUrl(raw.html_url), number: raw.number ?? null, title: contributionTitle(raw.title) };
 }
 export const emptyCounts = () => Object.fromEntries(CONTRIBUTION_TYPES.map(type => [type, 0])) as Record<ContributionType, number>;
 export function intensity(count: number) { return count === 0 ? 0 : count < 3 ? 1 : count < 6 ? 2 : count < 10 ? 3 : 4; }

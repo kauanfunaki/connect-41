@@ -24,6 +24,7 @@ import {
   ClipboardList,
   ShieldCheck,
   LayoutGrid,
+  FolderGit2,
   CalendarCheck,
   ChevronDown,
   ClipboardCheck,
@@ -544,6 +545,7 @@ export function AppShell({
                   const itemModulo = (m: SectorModule) => m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" cor={activeSector.color} abrirPorClique telas={[
                     { label: "Geral", href: "/github", icon: <LayoutGrid size={16} />, ativa: pathname === "/github" },
                     { label: "Desenvolvedores", href: "/github/desenvolvedores", icon: <Users size={16} />, ativa: pathname.startsWith("/github/desenvolvedores") },
+                    { label: "Repositórios", href: "/github/repositorios", icon: <FolderGit2 size={16} />, ativa: pathname.startsWith("/github/repositorios") },
                   ]}>
                     {({ aberto, alternar, painelId }) => <NavItem href="/github" icon={<GitBranch size={16} />} label="GitHub" comTelas menu={{ aberto, onClick: alternar, painelId }} />}
                   </PainelDoItem> : <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />;

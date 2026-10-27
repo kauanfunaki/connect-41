@@ -57,10 +57,42 @@ img.avatar { object-fit: cover; }
 .developerIdentity p { font-size: var(--fs-helper); color: var(--c41-fg-muted); margin-top: 3px; }
 .developerCounts { display: flex; flex-wrap: wrap; gap: 14px; font-size: var(--fs-helper); color: var(--c41-fg-muted); }
 .developerCounts strong { font-weight: 600; color: var(--c41-fg); }
-/* Dia sem contribuições (26/10/2026): caixa com um traço, sem botão nem consulta. */
-.emptyDay { display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--c41-border) 40%, transparent); border-radius: 3px; background: var(--c41-surface-hover); }
-.emptyDay::after { content: ""; width: 5px; height: 1px; border-radius: 1px; background: var(--c41-fg-muted); opacity: .7; }
-@media (max-width: 1100px) { .overviewGrid { grid-template-columns: minmax(0, 1fr); } }
+/* Calendário (27/10/2026): os dias vazios são o fundo da grade, uma máscara de
+   16 px (13 do dia + 3 de espaço) repetida — a caixa no ::before e o traço no
+   ::after —, em vez de um elemento por dia. Só os dias com contribuição são
+   botões, por cima do fundo; `.blank` esconde as pontas fora do período. */
+.calendar { position: relative; display: grid; grid-template-rows: repeat(7, 13px); grid-template-columns: repeat(var(--weeks), 13px); gap: 3px; width: max-content; }
+.calendar::before, .calendar::after { content: ""; position: absolute; inset: 0; pointer-events: none; -webkit-mask-size: 16px 16px; mask-size: 16px 16px; }
+.calendar::before { background: var(--c41-surface-hover);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='13' height='13' rx='3'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='13' height='13' rx='3'/%3E%3C/svg%3E"); }
+.calendar::after { background: var(--c41-fg-muted); opacity: .7;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect x='4' y='6' width='5' height='1' rx='.5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect x='4' y='6' width='5' height='1' rx='.5'/%3E%3C/svg%3E"); }
+.calendar > * { z-index: 1; }
+.blank { background: var(--c41-surface); margin: -1px; }
+.day { padding: 0; border: 1px solid color-mix(in srgb, var(--c41-border) 40%, transparent); border-radius: 3px; cursor: pointer; outline: none; }
+.day:hover, .day:focus-visible { box-shadow: 0 0 0 2px var(--c41-brand); }
+/* Tons opacos (misturados à superfície) para o traço do fundo não aparecer por baixo. */
+.day[data-level="1"], .legendCell[data-level="1"] { background: color-mix(in srgb, var(--c41-success) 20%, var(--c41-surface)); }
+.day[data-level="2"], .legendCell[data-level="2"] { background: color-mix(in srgb, var(--c41-success) 40%, var(--c41-surface)); }
+.day[data-level="3"], .legendCell[data-level="3"] { background: color-mix(in srgb, var(--c41-success) 70%, var(--c41-surface)); }
+.day[data-level="4"], .legendCell[data-level="4"] { background: var(--c41-success); }
+.legendCell { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c41-surface-hover); }
+/* Cartões fora da tela não são pintados nem diagramados até chegarem perto (27/10/2026). */
+.developer { content-visibility: auto; contain-intrinsic-size: auto 260px; }
+.developerName { font-weight: 400; color: var(--c41-fg-muted); }
+/* Aba Repositórios: o calendário do repositório e, ao lado, a parte de cada desenvolvedor. */
+.repositoryBody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 24px; align-items: start; }
+.contributors { display: grid; gap: 10px; max-height: 190px; overflow-y: auto; padding-right: 4px; }
+.contributors h3 { font-size: var(--fs-helper); font-weight: 600; color: var(--c41-fg-secondary); }
+.contributor { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: var(--fs-helper); }
+.contributor .avatar { width: 24px; height: 24px; }
+.contributorName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contributorBar { grid-column: 2 / 4; height: 4px; border-radius: 2px; background: var(--c41-surface-hover); overflow: hidden; margin-top: -4px; }
+.contributorBar span { display: block; height: 100%; background: var(--c41-success); border-radius: inherit; }
+.eventCode { font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--fs-helper); padding: 1px 6px; border-radius: 4px; background: var(--c41-surface-2, var(--c41-surface-hover)); color: var(--c41-fg-secondary); }
+@media (max-width: 1100px) { .overviewGrid, .repositoryBody { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {
   .panelHeading, .developer { padding: 16px; }
   .toolbar { gap: 10px; }

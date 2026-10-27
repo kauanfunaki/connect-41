@@ -38,7 +38,7 @@ export async function getDashboard(request: Request) {
 }
 export async function getDayEvents(request: Request) {
   const ctx = await githubAccess(), params = Object.fromEntries(new URL(request.url).searchParams), filters = filtersSchema.parse(params);
-  const userId = z.string().uuid().parse(params.userId), date = filtersSchema.parse({ from: params.day, to: params.day }).from;
+  const userId = params.userId ? z.string().uuid().parse(params.userId) : null, date = filtersSchema.parse({ from: params.day, to: params.day }).from;
   if (!date) throw new GithubError("Informe o dia.");
   return dayEvents(ctx.tenantId, filters, userId, date, filters.page);
 }
