@@ -27,6 +27,7 @@ export function CascoDaTabela({
   acoes,
   children,
   className = "",
+  buscaAEsquerda = false,
 }: {
   /** "38 contas" — o que a lista tem agora, já com os filtros. Ver `contarItens`. */
   contagem?: ReactNode;
@@ -39,9 +40,27 @@ export function CascoDaTabela({
   acoes?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Busca na frente, ocupando o espaço livre, e a contagem à direita (27/10/2026, como em Chamados). */
+  buscaAEsquerda?: boolean;
 }) {
   const temResumo = Boolean(contagem || total);
   const temControles = Boolean(busca || filtros || acoes);
+  const resumo = temResumo && (
+    <p className={`flex flex-wrap items-baseline gap-x-2 min-w-0 text-ui${buscaAEsquerda ? " ml-auto" : ""}`}>
+      {contagem && <span className="font-semibold text-fg">{contagem}</span>}
+      {total && <span className="text-fg-muted tabular-nums">{total}</span>}
+    </p>
+  );
+  if (buscaAEsquerda) return (
+    <div className={`c41-casco ${className}`.trim()}>
+      <div className="c41-casco-barra flex flex-wrap items-center gap-x-4 gap-y-2 min-h-[52px] px-4 py-2.5 mb-2 bg-surface border border-border rounded-lg shadow-xs">
+        {busca && <div className="flex-1 min-w-52 max-w-md">{busca}</div>}
+        {(filtros || acoes) && <div className="flex flex-wrap items-center gap-2 min-w-0">{filtros}{acoes}</div>}
+        {resumo}
+      </div>
+      {children}
+    </div>
+  );
   return (
     <div className={`c41-casco ${className}`.trim()}>
       <div className="c41-casco-barra flex flex-wrap items-center gap-x-4 gap-y-2 min-h-[52px] px-4 py-2.5 mb-2 bg-surface border border-border rounded-lg shadow-xs">
