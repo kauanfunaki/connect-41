@@ -319,8 +319,9 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
     // e-CNPJ dele (mTLS) e a chave da Loja; o certificado fica na configuração
     // cifrada e só sai dela para abrir a conexão com o Serpro. Onde guardar o A1
     // é decisão pendente da coordenação — trocar a origem do certificado não
-    // muda o resto. O termo de autorização (software house) também espera a
-    // decisão de em nome de quem contratar: até lá, contratante = escritório.
+    // muda o resto. Desde 27/10/2026 (Fase 3), o certificado pode ser de quem
+    // contratou (a 41 Tech, software house) e não do escritório: aí entra o
+    // termo de autorização, guardado à parte (serpro_termos), não aqui.
     //
     // O ambiente (20/10/2026): a demonstração é o trial do Serpro, com dados
     // fictícios e token público, sem contrato — serve para escrever e testar
@@ -366,7 +367,7 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         type: "certificado",
         required: true,
         dispensadoQuando: { campo: "ambiente", valor: "demonstracao" },
-        help: "O mesmo e-CNPJ usado na contratação. Fica cifrado no Connect e só é usado na conexão com o Serpro.",
+        help: "O e-CNPJ de quem contratou o Serpro. Fica cifrado no Connect e só é usado na conexão com o Serpro. Se for de outro CNPJ que não o de quem recebe as autorizações, o Connect pede o termo de autorização.",
       },
       {
         name: "senhaDoCertificado",

@@ -28,7 +28,9 @@ import { getSectorMaps } from "@/lib/sectors";
 import { desconectarIntegracao } from "./actions";
 import { ServicoDoSped } from "@/components/admin/ServicoDoSped";
 import { ServicoDoSerpro } from "@/components/admin/ServicoDoSerpro";
-import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
+import { TermoDoSerpro } from "@/components/admin/TermoDoSerpro";
+import { configuracaoDoSerpro, ehSoftwareHouse, problemaDoTermo, prontidaoDoSerpro } from "@/lib/serpro/cliente";
+import { validadeDoTermo } from "@/lib/serpro/termo";
 import { Aviso } from "@/components/ui/Aviso";
 import { Selo, tomDaVariante, type TomDoSelo } from "@/components/ui/Selo";
 import { OpsCredentialForm } from "@/components/admin/OpsCredentialForm";
@@ -333,6 +335,27 @@ export default async function IntegracoesPage({
                   }
                   motivo={prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null}
                   demonstracao={serpro.ambiente === "demonstracao"}
+                />
+              )}
+              {/* O termo de autorização: só quando o certificado é de outro CNPJ (software house, 27/10/2026). */}
+              {bloco.chave === "serpro_integra_contador" && serpro && serpro.escritorio && serpro.certificado?.ok && serpro.certificado.cnpj && ehSoftwareHouse(serpro) && (
+                <TermoDoSerpro
+                  contratante={{ nome: serpro.certificado.titular ?? formatCnpj(serpro.certificado.cnpj), cnpj: formatCnpj(serpro.certificado.cnpj) }}
+                  autor={{ nome: serpro.escritorio.nome, cnpj: formatCnpj(serpro.escritorio.cnpj) }}
+                  termo={
+                    serpro.termo
+                      ? {
+                          assinadoEm: serpro.termo.assinadoEm,
+                          vigencia: serpro.termo.vigencia,
+                          certificadoTitular: serpro.termo.certificadoTitular,
+                          certificadoValidoAte: serpro.termo.certificadoValidoAte,
+                          validoAte: validadeDoTermo(serpro.termo),
+                          aceitoEm: serpro.termo.aceitoEm?.toISOString() ?? null,
+                          erro: serpro.termo.erro,
+                        }
+                      : null
+                  }
+                  problema={problemaDoTermo(serpro)}
                 />
               )}
               {/* O motor SPED: o que está guardado (nunca o valor) e o teste do /saude. */}

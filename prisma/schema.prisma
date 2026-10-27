@@ -1261,6 +1261,7 @@ model Tenant {
   serproEventos             SerproEvento[]
   serproPedidos             SerproPedido[]
   serproMensagens           SerproMensagem[]
+  serproTermo               SerproTermo?
   omieEmissoes              OmieEmissao[]
   @@map("tenants")
 }
@@ -8309,6 +8310,39 @@ model SerproMensagem {
   @@unique([tenantId, chave, isn])
   @@index([tenantId, abertaEm])
   @@map("serpro_mensagens")
+}
+
+/// O termo de autorização do modelo software house (Fase 3, 27/10/2026): quem
+/// recebe as autorizações (o autor do pedido) autoriza quem contratou o Serpro
+/// a pedir em nome dele. O XML é gerado pelo Connect e assinado fora do
+/// servidor, com o e-CNPJ do autor. Um por cliente do Connect: o novo substitui.
+model SerproTermo {
+  id                   String    @id @default(uuid())
+  tenantId             String    @unique
+  /// O XML assinado, como veio (sem o BOM). Vai em base64 ao Autenticar Procurador.
+  xml                  String    @db.Text
+  /// CNPJ de quem contratou o Serpro (o destinatário do termo), só dígitos.
+  contratante          String    @db.VarChar(14)
+  /// CNPJ ou CPF de quem assinou (o autor do pedido), só dígitos.
+  autor                String    @db.VarChar(14)
+  /// AAAA-MM-DD, como no termo.
+  assinadoEm           String    @db.VarChar(10)
+  vigencia             String    @db.VarChar(10)
+  /// O certificado que assinou: o Serpro o confere a cada envio, então o termo
+  /// para de valer quando ele vence, mesmo dentro da vigência.
+  certificadoTitular   String?   @db.VarChar(200)
+  certificadoValidoAte String    @db.VarChar(10)
+  /// Última vez que o Serpro aceitou o termo; nulo = ainda não foi enviado.
+  aceitoEm             DateTime?
+  /// A última recusa do Serpro, para a tela; nula depois de um aceite.
+  erro                 String?   @db.VarChar(500)
+  enviadoPorId         String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("serpro_termos")
 }
 
 // ── Triagem de currículos (R1) ─────────────────────────────────────────────

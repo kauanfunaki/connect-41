@@ -350,6 +350,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "SerproCall", coluna: "userId", tratamento: "manter", motivo: "trilha de consultas ao Serpro (cobradas por chamada)" },
   { modelo: "SerproMensagem", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a mensagem deu ciência da intimação" },
   { modelo: "SerproPedido", coluna: "pedidoPorId", tratamento: "desligar" },
+  { modelo: "SerproTermo", coluna: "enviadoPorId", tratamento: "desligar" },
   { modelo: "AccessAuthorization", coluna: "updatedByUserId", tratamento: "manter", motivo: "trilha de quem mexeu na autorização" },
   { modelo: "AccessAuthorizationGrantee", coluna: "updatedByUserId", tratamento: "manter", motivo: "trilha de quem mexeu na autorização" },
   { modelo: "DriveFolderSeen", coluna: "seenByUserId", tratamento: "manter", motivo: "marca de leitura da pasta de enviados" },
