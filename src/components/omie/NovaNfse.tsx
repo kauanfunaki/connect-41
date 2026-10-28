@@ -20,7 +20,7 @@ import { formatCnpj, formatCpf, formatarCompetencia, formatarNumero, formatarRea
 import { centavosDeTexto } from "@/lib/financeiro/manual";
 import { MAXIMO_DA_DESCRICAO } from "@/lib/integracoes/omie/emissao";
 import type { ListasParaATela } from "@/lib/integracoes/omie/emissaoServidor";
-import { carregarListasAction, emitirNfseAction } from "@/app/(app)/emitir-nfse/actions";
+import { buscarTomadoresAction, carregarListasAction, emitirNfseAction } from "@/app/(app)/emitir-nfse/actions";
 
 function documento(doc: string | null): string | undefined {
   if (!doc) return undefined;
@@ -83,6 +83,41 @@ export function NovaNfse({
   const [entendi, setEntendi] = useState(false);
   const [erroDaConfirmacao, setErroDaConfirmacao] = useState<string | null>(null);
   const [emitindo, startEmitir] = useTransition();
+
+  // Busca do tomador que ficou fora da lista (28/10/2026): a lista para em
+  // 1.000 clientes. Os achados entram nas opções; um achado só já fica escolhido.
+  const [termoDaBusca, setTermoDaBusca] = useState("");
+  const [avisoDaBusca, setAvisoDaBusca] = useState<string | null>(null);
+  const [buscando, startBuscar] = useTransition();
+  const [versaoDoTomador, setVersaoDoTomador] = useState(0);
+
+  function buscarTomador() {
+    setAvisoDaBusca(null);
+    startBuscar(async () => {
+      const r = await buscarTomadoresAction(companyId, termoDaBusca);
+      if (!r.ok) {
+        setAvisoDaBusca(r.erro);
+        return;
+      }
+      const bloqueados = r.bloqueados > 0 ? ` ${r.bloqueados === 1 ? "1 achado está" : `${r.bloqueados} achados estão`} com o faturamento bloqueado no Omie e ficou de fora.` : "";
+      if (r.clientes.length === 0) {
+        setAvisoDaBusca(`Nenhum cliente ativo com esse nome ou documento no Omie desta empresa.${bloqueados}`);
+        return;
+      }
+      setListas((atual) => {
+        if (!atual) return atual;
+        const novos = r.clientes.filter((c) => !atual.clientes.some((x) => x.codigo === c.codigo));
+        return { ...atual, clientes: [...atual.clientes, ...novos].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")) };
+      });
+      if (r.clientes.length === 1) setTomador(r.clientes[0].codigo);
+      setVersaoDoTomador((v) => v + 1);
+      setAvisoDaBusca(
+        r.clientes.length === 1
+          ? `Achado e escolhido: ${r.clientes[0].nome}.${bloqueados}`
+          : `${r.clientes.length} achados entraram na lista do campo Tomador.${bloqueados}`
+      );
+    });
+  }
 
   function carregar(atualizar: boolean) {
     setErroDasListas(null);
@@ -256,10 +291,9 @@ export function NovaNfse({
               aplicativo no Omie. Na primeira nota, confira o CNPJ do prestador — o Connect avisa se vier outro.
             </Aviso>
           )}
-          {(listas.clientesCortados || listas.servicosCortados) && (
+          {listas.servicosCortados && (
             <Aviso tom="atencao">
-              A lista {listas.clientesCortados ? "de tomadores" : "de serviços"} parou nos primeiros registros do Omie. Se quem você procura não aparece, emita esta pela
-              tela do Omie.
+              A lista de serviços parou nos primeiros registros do Omie. Se o serviço que você procura não aparece, emita esta pela tela do Omie.
             </Aviso>
           )}
           {resultado && <Aviso tom={resultado.tom}>{resultado.texto}</Aviso>}
@@ -276,6 +310,7 @@ export function NovaNfse({
               }`}
             >
               <SearchableSelect
+                key={`tomador-${versaoDoTomador}`}
                 id={`${id}-tomador`}
                 name="tomador"
                 options={opcoesDeTomador}
@@ -283,6 +318,32 @@ export function NovaNfse({
                 placeholder={opcoesDeTomador.length ? "Buscar por nome ou CNPJ…" : "Nenhum cliente ativo no Omie"}
                 onChange={setTomador}
               />
+              {listas.clientesCortados && (
+                <div className="mt-2 flex flex-col gap-1.5">
+                  <p className="text-helper text-fg-muted">
+                    A lista traz os primeiros 1.000 clientes do Omie. Não achou? Busque no cadastro do Omie pelo CNPJ, CPF ou nome.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      id={`${id}-busca-tomador`}
+                      aria-label="Buscar tomador no Omie"
+                      value={termoDaBusca}
+                      placeholder="CNPJ, CPF ou nome"
+                      onChange={(e) => setTermoDaBusca(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          buscarTomador();
+                        }
+                      }}
+                    />
+                    <Button type="button" variant="secondary" size="sm" onClick={buscarTomador} loading={buscando} loadingLabel="Buscando…">
+                      Buscar no Omie
+                    </Button>
+                  </div>
+                  {avisoDaBusca && <p className="text-helper text-fg-muted" role="status">{avisoDaBusca}</p>}
+                </div>
+              )}
             </CampoForm>
             <CampoForm label="Serviço" htmlFor={`${id}-servico`} required helper="Do cadastro de serviços do Omie — é de lá que vêm código municipal, tributação e alíquotas.">
               <SearchableSelect
