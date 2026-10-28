@@ -24,6 +24,9 @@ import {
   ClipboardList,
   ShieldCheck,
   LayoutGrid,
+  Bot,
+  Globe,
+  AppWindow,
   FolderGit2,
   CalendarCheck,
   ChevronDown,
@@ -548,6 +551,13 @@ export function AppShell({
                     { label: "Repositórios", href: "/github/repositorios", icon: <FolderGit2 size={16} />, ativa: pathname.startsWith("/github/repositorios") },
                   ]}>
                     {({ aberto, alternar, painelId }) => <NavItem href="/github" icon={<GitBranch size={16} />} label="GitHub" comTelas menu={{ aberto, onClick: alternar, painelId }} />}
+                  </PainelDoItem> : m.code === "tech_ops_center" ? <PainelDoItem key={m.code} titulo="Ops Center" cor={activeSector.color} abrirPorClique telas={[
+                    // O que o Tech entregou (28/10/2026): a triagem dos chamados consulta as três abas.
+                    { label: "Robôs", href: "/ops?view=automations", icon: <Bot size={16} /> },
+                    { label: "Sites", href: "/ops?view=sites", icon: <Globe size={16} /> },
+                    { label: "Apps", href: "/ops?view=apps", icon: <AppWindow size={16} /> },
+                  ]}>
+                    {({ aberto, alternar, painelId }) => <NavItem href="/ops" icon={<ModuleIcon code={m.code} />} label={m.label} comTelas menu={{ aberto, onClick: alternar, painelId }} />}
                   </PainelDoItem> : <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />;
                   const diretos = modulos.filter((m) => getModuleDef(m.code)?.menuDireto);
                   const grupos = agruparModulos(modulos.filter((m) => !getModuleDef(m.code)?.menuDireto));

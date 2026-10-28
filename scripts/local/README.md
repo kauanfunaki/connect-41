@@ -190,3 +190,15 @@ A limpeza tira **todas** as empresas "[demo]" do banco — a Transportes Modelo 
 Ver o cabeçalho de `scripts/videos/gravar.ts`: grupos `portal` e `equipe`, e
 `RASCUNHO=1` para acertar um roteiro novo a um décimo das pausas. A lista do que
 foi gravado (título, chave da ajuda e duração) sai em `videos/{grupo}/_lista.json`.
+
+## Ops Center: robôs, sites e apps fictícios
+
+A triagem dos chamados procura no Ops Center se o pedido já existe (28/10/2026). Para
+ter o que encontrar no banco local, depois de recriá-lo:
+
+```
+node scripts/local/com-banco-local.mjs npx tsx scripts/local/catalogo-ops.ts
+```
+
+Liga o módulo Ops Center e cria 3 robôs, 2 sites e 2 apps, todos com responsável.
+Um pedido de "planilha de conferência de rendimentos" deve cair no robô correspondente.
