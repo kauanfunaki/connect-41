@@ -69,7 +69,6 @@ describe("AGENT_CATALOG", () => {
       "triagem_curriculo",
       "perfil_profissional",
       "pontuador_de_vaga",
-      "assistente_de_vaga",
       "atendente_de_candidato",
       "assistente_do_recrutamento",
     ]);
@@ -161,7 +160,6 @@ describe("configEfetiva", () => {
     expect(ligados.sort()).toEqual(
       ["avaliacao_escrita", "resumo_agente", "resumo_empresa", "triagem_curriculo"].sort()
     );
-    expect(configEfetiva(agenteDoCatalogo("assistente_de_vaga")!, null).enabled).toBe(false);
     expect(configEfetiva(agenteDoCatalogo("atendente_de_candidato")!, null).enabled).toBe(false);
   });
 });

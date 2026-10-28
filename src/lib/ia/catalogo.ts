@@ -161,31 +161,6 @@ export const AGENT_CATALOG: AgenteDef[] = [
     padraoLigado: true,
   },
   {
-    code: "assistente_de_vaga",
-    label: "Assistente da vaga",
-    sectorCode: "recrutamento",
-    description:
-      "Lê a vaga, os candidatos e as fichas de entrevista para responder o recrutador e sugerir movimentos no funil",
-    faixa: "padrao",
-    // Sugere mover e encerrar, mas as duas ferramentas são de escrita e viram
-    // proposta — o recrutador confirma. Ver `ferramentas.ts`.
-    escreve: false,
-    ferramentas: [
-      "ver_vaga",
-      "listar_candidatos",
-      "ver_candidato",
-      "propor_mover_etapa",
-      "propor_encerrar_candidatura",
-    ],
-    // Teto maior que o dos outros porque uma conversa com ferramentas custa
-    // várias idas ao provedor, não uma.
-    tetoMensalCentavos: 30_000,
-    tetoMensalChamadas: 800,
-    // Agente novo nasce desligado — diferente dos quatro que já rodavam antes
-    // da fundação. Ligar é decisão de quem administra, na tela de Agentes.
-    padraoLigado: false,
-  },
-  {
     code: "atendente_de_candidato",
     label: "Atendente de candidato (WhatsApp)",
     sectorCode: "recrutamento",
