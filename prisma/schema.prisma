@@ -1903,6 +1903,7 @@ model Company {
   dominioAccountMaps       DominioAccountMap[]
   dominioExportacoes       DominioExportacao[]
   guias                    Guia[]
+  certidoes                Certidao[]
   bankReconciliationRules  BankReconciliationRule[]
   financeRecurrences       FinanceRecurrence[]
   financeEntryPayments     FinanceEntryPayment[]
@@ -8310,6 +8311,46 @@ model Guia {
   @@map("guias")
 }
 
+// As certidões da carteira (Certidões pelo Connect, 28/10/2026): cada consulta
+// à InfoSimples vira uma linha — a rotina do trimestre e o "Emitir agora". A
+// certidão vigente de uma empresa é a linha mais recente do tipo que saiu.
+model Certidao {
+  id          String    @id @default(uuid())
+  tenantId    String
+  companyId   String
+  /// "FEDERAL", "FGTS", "TRABALHISTA", "ESTADUAL_PR", "CURITIBA".
+  tipo        String    @db.VarChar(20)
+  /// "NEGATIVA", "POSITIVA_COM_EFEITO", "POSITIVA" ou "NAO_SAIU".
+  situacao    String    @db.VarChar(20)
+  codigo      String?   @db.VarChar(80)
+  /// "AAAA-MM-DD".
+  emitidaEm   String?   @db.VarChar(10)
+  /// "AAAA-MM-DD".
+  validaAte   String?   @db.VarChar(10)
+  /// O que o órgão disse, ou por que não saiu.
+  mensagem    String?   @db.VarChar(500)
+  /// "AAAA-T4" quando veio da rotina; nulo no "Emitir agora".
+  trimestre   String?   @db.VarChar(7)
+  /// O comprovante nos Arquivos: Certidões quando regular, Societário quando positiva.
+  driveFileId String?
+  /// Quem pediu; nulo quando foi a rotina.
+  pedidaPorId String?
+  /// A positiva que alguém do setor já viu.
+  vistaEm     DateTime?
+  vistaPorId  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driveFile DriveFile? @relation(fields: [driveFileId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, companyId, tipo, createdAt])
+  @@index([tenantId, trimestre])
+  @@index([tenantId, createdAt])
+  @@index([driveFileId])
+  @@map("certidoes")
+}
+
 /// Eventos de Atualização do Serpro (Fase 1 do Integra Contador, 20/10/2026):
 /// o último evento de cada tipo por contribuinte. Uma vez por dia o agendador
 /// pede a matriz em lote (até 1.000 por pedido), que é de graça (Monitorar).
@@ -8698,6 +8739,7 @@ model DriveFile {
   uploadedByPortal PortalUser?       @relation("DriveFileEnviadoPeloCliente", fields: [uploadedByPortalUserId], references: [id], onDelete: SetNull)
   accesses         DriveFileAccess[]
   guias            Guia[]
+  certidoes        Certidao[]
 
   @@index([tenantId, folderId])
   @@index([tenantId, deletedAt])

@@ -41,6 +41,7 @@ import { representantesDasChaves, setorDasAutorizacoes } from "@/lib/autorizacoe
 import { processarConferencias } from "@/lib/autorizacoes/serpro";
 import { acompanharNoSerpro } from "@/lib/serpro/acompanhamento";
 import { processarPedidosDoSitfis } from "@/lib/serpro/situacaoFiscal";
+import { rotinaDasCertidoes } from "@/lib/certidoes/servidor";
 import { configuracaoDoSerpro, ehSoftwareHouse } from "@/lib/serpro/cliente";
 import { validadeDoTermo } from "@/lib/serpro/termo";
 import { CODIGO_DA_INTEGRACAO } from "@/lib/serpro/regras";
@@ -976,6 +977,8 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     // fiscal pedido na ficha, que o Serpro entrega depois do tempo de espera.
     ["serpro eventos", () => acompanharNoSerpro(tenantId)],
     ["serpro sitfis", () => processarPedidosDoSitfis(tenantId)],
+    // Nem esta: a rotina das certidões do trimestre, um lote por passada (28/10/2026).
+    ["certidões", () => rotinaDasCertidoes(tenantId)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],
     ["risco de multa", () => checkObrigacoesEmRiscoDeMulta(tenantId, today)],
   ];
