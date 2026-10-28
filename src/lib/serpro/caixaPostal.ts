@@ -63,6 +63,18 @@ export function montarAssunto(modelo: string, parametro: string): string {
   return modelo.replace(/\+\+VARIAVEL\+\+/g, parametro).replace(/\s+/g, " ").trim();
 }
 
+/**
+ * A mensagem é (também) do Societário? Pelo assunto: cadastro do CNPJ,
+ * inaptidão, suspensão, baixa, sócios e responsável, REDESIM, enquadramento do
+ * MEI (Societário, 28/10/2026). É palpite por palavra — o Fiscal continua
+ * recebendo tudo; o Societário recebe o aviso a mais.
+ */
+const DO_SOCIETARIO = /\bCNPJ\b|CADASTR|\bINAPT|\bBAIXA\b|SUSPENS|\bNULIDADE|\bQSA\b|\bSOCIO|RESPONSAVEL|REDESIM|REATIVA|ENQUADRA|\bSIMEI\b/;
+
+export function assuntoDoSocietario(assunto: string): boolean {
+  return DO_SOCIETARIO.test(assunto.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase());
+}
+
 export type MensagemDaLista = {
   isn: string;
   assunto: string;
